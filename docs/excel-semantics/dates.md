@@ -1151,11 +1151,21 @@ Status: VERIFIED (web)
 ## Other date functions floor a serial just below midnight; their counts take no near-integer snap but WEEKNUM's return_type
 Rule: unlike YEAR, MONTH, DAY and WEEKDAY (the half-second carry above), every other probed serial argument floors
 plainly: EDATE and EOMONTH start, WORKDAY and WORKDAY.INTL start, NETWORKDAYS and NETWORKDAYS.INTL start and end,
-WEEKNUM, ISOWEEKNUM, DAYS (both), DATEDIF (both) and YEARFRAC basis 1. N-0.4 s, `fl(N-0.5/86400)` and even
+WEEKNUM, ISOWEEKNUM, DAYS (both), DATEDIF (both, "D" only) and YEARFRAC (bases 0, 1 and 4). N-0.4 s, `fl(N-0.5/86400)` and even
 N-(2^-22+2^-33) day read as day N-1, and only N itself is day N: `EOMONTH(45017-0.4/86400,0)` is 45016,
 `WEEKNUM(45018-(2^-22+2^-33))` 13 (the Saturday's week), `YEARFRAC(44927,45292-0.4/86400,1)` 0.997260274 (A1:O7).
 DAYS360 alone rounds the serial to the nearest second before flooring. The observed cut: `fl(N-0.5/86400)` is day N
 and one ulp below it (2^-37 at N = 45020) is day N-1 (P1:Q7), for its start and end alike.
+DATEDIF splits by unit (T-4574): "D" floors, but the calendar units "M", "YM", "MD" and "YD" read each date rounded to
+the nearest second, with DAYS360's cut: `DATEDIF(44927,45017-0.5/86400,"m")` is 3 (2023-04-01), one ulp lower and
+N-0.6 s are 2, and N-0.4 s and N-(2^-22+2^-33) are 3 (probes/t4574-near-midnight-calendar-units A1:H8). "Y" agrees
+with either reading on every probed cell (I1:J8). YEARFRAC floors on bases 0 and 4 as on 1 (K1:N8): basis 4 does not
+round like DAYS360(...,TRUE), so `YEARFRAC(44927,45017-0.4/86400,4)` is 89/360.
+Around the fictitious 1900-02-29 the same split holds (probes/t4574-near-midnight-serial-60, rows 59, 60 and 61 minus
+0.4 s and minus 2^-22+2^-33, against the integer controls): `DATEDIF(1,61-0.4/86400,"m")` is 2 (1900-03-01) while
+"d" is 59; `DATEDIF(60-0.4/86400,45000,"md")` is 14 (it reads 1900-02-29) and from 59-0.4 s 15 (1900-02-28);
+`YEARFRAC(59-0.4/86400,45000,4)` is 123.05, the value for serial 58; DAYS360 rounds and all YEARFRAC bases floor
+(A1:Z9). Which reading DATEDIF orders its arguments by, when the floored and rounded orders differ, is unprobed.
 The count arguments, except WEEKNUM's return_type, take no near-integer snap either: they truncate or floor exactly,
 unlike DATE's and TIME's arguments (`near_integer_whole`). EDATE and EOMONTH months truncate toward zero (`EDATE(45000,1-(2^-22+2^-33))` is
 45000, `EDATE(45000,-1+2^-23)` 45000, `-1-2^-23` 44972; the same below 12 and -12: S1:T10, Z1:Z10). WORKDAY and
@@ -1167,9 +1177,9 @@ WEEKNUM's return_type snaps like LEFT's count: within 2^-22 + 2^-33 below an int
 2^-22 + 9*2^-36 or 1E-6 below truncates (14, type 1's or 16's; AA1:AB4). W1:X4 sit on a Sunday where every type gives
 14, so they do not tell the models apart. A negative return_type's snap is unprobed (it truncates in the engine).
 Evidence: probes/t4454-near-midnight-date-args A1:AD10 (serials built exactly in formulas; excel-graph, 2026-11-06,
-T-4454).
-Ours: matches, all 197 cells (plain `floor` in month_shift.rs, workday.rs, networkdays.rs, weeknum.rs, yearfrac.rs and
-`datedif_value`/`fn_days`; `days360_serial` rounds to the second; the counts' `trunc`/`floor` and `weekend_mask`;
+T-4454); probes/t4574-near-midnight-calendar-units and t4574-near-midnight-serial-60 (excel-graph, 2026-11-06, T-4574).
+Ours: matches, all 197 cells and the 346 of T-4574 (plain `floor` in month_shift.rs, workday.rs, networkdays.rs,
+weeknum.rs, yearfrac.rs (basis 4 included) and `fn_days` and DATEDIF's "D"; DATEDIF's calendar units through `days360_serial`; `days360_serial` rounds to the second; the counts' `trunc`/`floor` and `weekend_mask`;
 WEEKNUM's positive return_type through `near_integer_count`, T-4454).
 Status: VERIFIED (web)
 

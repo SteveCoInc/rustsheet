@@ -59,7 +59,7 @@ fn datedif_month_days(start: (i32, u32, u32), end: (i32, u32, u32)) -> i64 {
     days + i64::from(displayed_month_length(year, month))
 }
 
-// The date serial of a raw argument (DAYS360), rounding the
+// The date serial of a raw argument (DAYS360, and DATEDIF's calendar units), rounding the
 // time-of-day to the nearest second first: Excel rolls 46000.999999 up to 46001.
 fn days360_serial(raw: f64) -> i64 {
     ((raw * SECONDS_PER_DAY_F64).round() / SECONDS_PER_DAY_F64).floor() as i64
@@ -644,6 +644,13 @@ impl Model {
         end_serial: f64,
         unit: Result<&str, Error>,
     ) -> Result<f64, Error> {
+        // "D" and the order check read the floored serials, while the calendar units read each
+        // date rounded to the nearest second first, like DAYS360: `DATEDIF(44927,45017-0.5/86400,"M")`
+        // is 3 and one ulp lower is 2, while `DATEDIF(44000,45019-0.4/86400,"D")` is 1018
+        // (probes/t4574-near-midnight-calendar-units A1:J8, t4454-near-midnight-date-args M1:N7;
+        // dates.md "Other date functions floor a serial just below midnight", T-4574).
+        let (start_calendar, end_calendar) =
+            (days360_serial(start_serial), days360_serial(end_serial));
         let (start_serial, end_serial) = (start_serial.floor() as i64, end_serial.floor() as i64);
         // A unit error beats a reversed pair and an out-of-calendar date: `DATEDIF(10,5,NA())` and
         // `DATEDIF(3000000,5,NA())` are #N/A (probes/datedif-days360-error-order A1, A16; dates.md
@@ -652,10 +659,19 @@ impl Model {
         if end_serial < start_serial {
             return Err(Error::NUM);
         }
-        let start_1900 = date_system.to_1900_serial(start_serial).ok_or(Error::NUM)?;
+        // Both readings must be on the calendar (the floored one for "D"'s range check).
+        for serial in [start_serial, end_serial] {
+            date_system
+                .to_1900_serial(serial)
+                .and_then(excel_serial_to_ymd)
+                .ok_or(Error::NUM)?;
+        }
+        let start_1900 = date_system
+            .to_1900_serial(start_calendar)
+            .ok_or(Error::NUM)?;
         let start = excel_serial_to_ymd(start_1900).ok_or(Error::NUM)?;
         let end = date_system
-            .to_1900_serial(end_serial)
+            .to_1900_serial(end_calendar)
             .and_then(excel_serial_to_ymd)
             .ok_or(Error::NUM)?;
         // The units are ASCII, so an ASCII case-blind match is the upper-casing it replaces.

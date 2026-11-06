@@ -44,3 +44,24 @@ fn yearfrac_out_of_calendar_start_beats_an_error_end() {
     assert_eq!(model._get_text("A2"), *"#N/A");
     assert_eq!(model._get_text("A3"), *"#NUM!");
 }
+
+#[test]
+fn datedif_calendar_units_round_to_the_second_while_d_and_yearfrac_floor() {
+    // dates.md "Other date functions floor a serial just below midnight" (T-4574,
+    // probes/t4574-near-midnight-calendar-units): DATEDIF's "M"/"MD"/"YM"/"YD" read the date
+    // rounded to the nearest second, "D" and YEARFRAC basis 4 floor.
+    let mut model = new_empty_model();
+    model._set("A1", "=DATEDIF(44927,45017-0.5/86400,\"m\")");
+    model._set("A2", "=DATEDIF(44927,45017-0.5/86400-2^-37,\"m\")");
+    model._set("A3", "=DATEDIF(45017-0.4/86400,45366,\"md\")");
+    model._set("A4", "=DATEDIF(1,61-0.4/86400,\"m\")");
+    model._set("A5", "=DATEDIF(1,61-0.4/86400,\"d\")");
+    model._set("A6", "=YEARFRAC(44927,45017-0.4/86400,4)*360");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"3");
+    assert_eq!(model._get_text("A2"), *"2");
+    assert_eq!(model._get_text("A3"), *"14");
+    assert_eq!(model._get_text("A4"), *"2");
+    assert_eq!(model._get_text("A5"), *"59");
+    assert_eq!(model._get_text("A6"), *"89");
+}
