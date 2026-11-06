@@ -280,7 +280,7 @@ probes/t4480-lcid-sublanguage-fallback.case.json	3
 probes/t4492-locale-comma-tag-shapes.case.json	5
 probes/t4515-fraction-tail-holdout.case.json	1
 probes/t4515-fresh-sweep.case.json	29
-probes/t4519-row-column-randarray-over-arrays.case.json	23
+probes/t4519-row-column-randarray-over-arrays.case.json	29
 probes/t4543-xlookup-not-found-address-sheet-lift.case.json	2
 probes/t4554-api-name-local-name-body.case.json	5
 probes/t4554-api-name-scoped-name-choice-first.case.json	9

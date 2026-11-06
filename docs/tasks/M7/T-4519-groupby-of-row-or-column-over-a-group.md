@@ -27,7 +27,7 @@ ARRAYTOTEXT and INDEX as Excel's does.
   engine's element is an array and the ERROR.TYPE spills (J64).
 
 ## Acceptance criteria
-- [ ] (split to T-4610, T-4611) F109, F115, J64 and J65 of probes/t4450-eta-special-forms pass, with a probe of the guess
+- [ ] (moved to T-4610 and T-4611, which own these cells) F109, F115, J64 and J65 of probes/t4450-eta-special-forms pass, with a probe of the guess
       (excel-probe skill), recorded in docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY".
 - [x] The eval gate shows 0 regressions (probes/groupby-*, probes/t4449-*).
 - [x] `make check` green; reviewers approve.
@@ -44,7 +44,22 @@ Probed and split. The fixes go to two owner tasks, because they are two separate
 - Refused forms: Excel for the web refuses a workbook holding ROW or COLUMN of an array constant, of a function call or of an
   operator: `ROW({1;2})`, `ROW({1,2,3})`, `COLUMN({1,2,3})`, `ROW({7})`, `COLUMN({1;2})`, `ROW(SEQUENCE(2,2))`, `COLUMN(SEQUENCE(1,3))` and
   `ROW(A1:A3*1)` (FileCorruptTryRepair, bisected with single-formula workbooks). The case reaches ROW through LET instead.
-  F2:F4, F7 and F8 print random numbers and are not scored.
+  F2:F4, F7 and F8 print random numbers and are not scored; D2:E4 and G2:H4 (shape and type of a volatile call) are scored as `invariant`.
 - Owners: T-4610 (opus) owns ROW and COLUMN: t4519 D1:F1, D5:F6, D9:F11 and t4450 F109, F115, J65. T-4611 (sonnet) owns RANDARRAY's lift:
-  t4519 D7, D8, E8, G8, H8 and t4450 J64.
-- No engine change. Eval delta: probes gain 1 case (38 scored cells: 15 pass, 23 new-coverage failures, all owned); 0 regressions.
+  t4519 D2, D3, E3, G3, H3, D4, D7, D8, E8, G8, H8 and t4450 J64.
+- No engine change. Eval delta: probes gain 1 case (50 scored cells: 21 pass, 29 new-coverage failures, all owned); 0 regressions.
+
+## Landing notes
+- PR #3622 (draft), branch agent/engine/T-4519-groupby-row-column. The head is the commit that adds these notes.
+- Round 1 on c35f686: security APPROVE, design APPROVE (MINOR: name the split in the unchecked box; done here), excel-fidelity
+  REQUEST_CHANGES. Its two MAJORs: rows 2-4 (direct RANDARRAY) were unscored because the harness skips volatile cells; and T-4611 said
+  they "pass already by shape". This commit fixes both. D2:E4 and G2:H4 are now `invariant` and scored (6 new owned failures: D2, D3, E3, G3, H3, D4),
+  and T-4611, arrays.md and the Outcome are corrected. The two fidelity MINORs (two refused forms missing from arrays.md, and the
+  "top-left" claim not probed) are fixed too.
+- The PR conflicted with main in eval/baseline/ only. `make catch-up` (36f2807) cleared it, then a second clean merge of origin/main (847d85e).
+  The baselines were then regenerated from main's copy with `make eval-baseline`: probes +1 C line and +29 F lines, visible-parity +1 line, 0 regressions.
+- Next step: excel-fidelity round 2 on this head. Security and design approved c35f686 and must re-run only if a reviewer counts
+  the case or docs change as theirs; the change is a case-file `invariant` list, docs and baselines. Then mark the PR ready, and enqueue
+  it once CI is green.
+- Do not restore eval/baseline/ from a stale origin/main ref: merge main first, then regenerate (an earlier attempt pulled in
+  newer PRs' baseline lines).

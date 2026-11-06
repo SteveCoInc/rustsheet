@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4519: ROW, COLUMN and RANDARRAY over an array argument, alone and as GROUPBY's function (A1:A3 1,3,5; B1:B3 2,4,6). Excel for the web refuses a workbook holding ROW or COLUMN of an array constant, of a function call (`ROW(SEQUENCE(2,2))`, `COLUMN(SEQUENCE(1,3))`) or of an operator (`ROW(A1:A3*1)`) (FileCorruptTryRepair, one single-formula workbook each), so the arrays come through LET. Row r holds X: 1 LET(x,{1;2},ROW(x)), 2 RANDARRAY({2}), 3 RANDARRAY({2;3}), 4 RANDARRAY({2},{3}), 5 INDEX(GROUPBY(A1:A3,B1:B3,_xleta.ROW),4,2), 6 INDEX(GROUPBY(A1:A3,B1:B3,_xleta.ROW),1,2), 7 INDEX(GROUPBY(A1:A3,B1:B3,_xleta.RANDARRAY),1,2), 8 INDEX(GROUPBY(A1:A3,B1:B3,_xleta.RANDARRAY),4,2), 9 INDEX(GROUPBY(A1:A3,B1:B3,LAMBDA(v,ROW(v))),4,2), 10 INDEX(GROUPBY(A1:A3,B1:B3,_xleta.COLUMN),4,2), 11 ROW(LET(x,{7},x)). Columns: D ROWS(X)&\"x\"&COLUMNS(X), E TYPE(X), F ARRAYTOTEXT(X), G ERROR.TYPE(INDEX(X,1,1)), H IFERROR(ERROR.TYPE of X's bottom-right element,\"n\"). RANDARRAY rows read only shapes and types. F2:F4, F7 and F8 print random numbers and are not scored (not in `check`).",
+  "description": "T-4519: ROW, COLUMN and RANDARRAY over an array argument, alone and as GROUPBY's function (A1:A3 1,3,5; B1:B3 2,4,6). Excel for the web refuses a workbook holding ROW or COLUMN of an array constant, of a function call (`ROW(SEQUENCE(2,2))`, `COLUMN(SEQUENCE(1,3))`) or of an operator (`ROW(A1:A3*1)`) (FileCorruptTryRepair, one single-formula workbook each), so the arrays come through LET. Row r holds X: 1 LET(x,{1;2},ROW(x)), 2 RANDARRAY({2}), 3 RANDARRAY({2;3}), 4 RANDARRAY({2},{3}), 5 INDEX(GROUPBY(A1:A3,B1:B3,_xleta.ROW),4,2), 6 INDEX(GROUPBY(A1:A3,B1:B3,_xleta.ROW),1,2), 7 INDEX(GROUPBY(A1:A3,B1:B3,_xleta.RANDARRAY),1,2), 8 INDEX(GROUPBY(A1:A3,B1:B3,_xleta.RANDARRAY),4,2), 9 INDEX(GROUPBY(A1:A3,B1:B3,LAMBDA(v,ROW(v))),4,2), 10 INDEX(GROUPBY(A1:A3,B1:B3,_xleta.COLUMN),4,2), 11 ROW(LET(x,{7},x)). Columns: D ROWS(X)&\"x\"&COLUMNS(X), E TYPE(X), F ARRAYTOTEXT(X), G ERROR.TYPE(INDEX(X,1,1)), H IFERROR(ERROR.TYPE of X's bottom-right element,\"n\"). RANDARRAY rows read only shapes and types. F2:F4, F7 and F8 print random numbers and are not scored (not in `check`); D2:E4 and G2:H4 read only shapes and types of a volatile call, so they are listed as `invariant` and scored.",
   "tags": [
     "M7",
     "probe",
@@ -126,5 +126,19 @@
     "Sheet1!F11",
     "Sheet1!G11",
     "Sheet1!H11"
+  ],
+  "invariant": [
+    "Sheet1!D2",
+    "Sheet1!E2",
+    "Sheet1!G2",
+    "Sheet1!H2",
+    "Sheet1!D3",
+    "Sheet1!E3",
+    "Sheet1!G3",
+    "Sheet1!H3",
+    "Sheet1!D4",
+    "Sheet1!E4",
+    "Sheet1!G4",
+    "Sheet1!H4"
   ]
 }

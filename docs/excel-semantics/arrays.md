@@ -1289,7 +1289,8 @@ Tasks: T-1276, T-1328, T-1322, T-1323, T-1326, T-1324, T-1700, T-1325, T-1327, T
 
 ## ROW, COLUMN and RANDARRAY over an array value (GROUPBY's per-group function)
 Rule: ROW and COLUMN of an array value (no reference) give an array of `#VALUE!` in that value's shape, not one `#VALUE!`. RANDARRAY
-lifts over an array `rows` or `columns`, one call per element whose value is that call's top-left. So GROUPBY with `_xleta.ROW`,
+lifts over an array `rows` or `columns`, one call per element, each element a number (that it is the call's top-left is
+assumed, not probed; T-4611). So GROUPBY with `_xleta.ROW`,
 `_xleta.COLUMN` or `LAMBDA(v,ROW(v))` holds a nested array of `#VALUE!` in each value cell: it displays `#VALUE!` (ERROR.TYPE 3,
 probes/t4450-eta-special-forms H109:H112), but ARRAYTOTEXT of the whole result is `#CALC!` (F109, F115, J65), as for any nested cell
 ("GROUPBY and PIVOTBY" above). SHEET's `#N/A` is a scalar and prints (F121). With `_xleta.RANDARRAY`, each cell holds one number per
@@ -1302,10 +1303,10 @@ record: the cell of a one-record group is a 1x1 array, so `ERROR.TYPE(INDEX(..,1
   - `RANDARRAY({2})` is 1x1, `RANDARRAY({2;3})` 2x1 and `RANDARRAY({2},{3})` 1x1 (D2:H4). The RANDARRAY Total cell is a 3x1 of numbers
     and a group cell 1x1 (D7:H8).
 - Excel for the web refuses a workbook holding ROW or COLUMN of an array constant, a function call or an operator:
-  `ROW({1;2})`, `ROW({7})`, `COLUMN({1,2,3})`, `ROW(SEQUENCE(2,2))`, `COLUMN(SEQUENCE(1,3))` and `ROW(A1:A3*1)` (FileCorruptTryRepair,
+  `ROW({1;2})`, `ROW({1,2,3})`, `ROW({7})`, `COLUMN({1,2,3})`, `COLUMN({1;2})`, `ROW(SEQUENCE(2,2))`, `COLUMN(SEQUENCE(1,3))` and `ROW(A1:A3*1)` (FileCorruptTryRepair,
   one single-formula workbook each, T-4519). So an array reaches ROW only as a LET-bound value, a LAMBDA parameter or a pick.
 Ours: ROW and COLUMN of an array value are one `#VALUE!` (T-4610 owns D1:F1, D5:F6, D9:F11 and t4450 F109, F115, J65). RANDARRAY
-does not lift: `RANDARRAY({2})` is 2x1 and over `{2;4;6}` `#N/IMPL!` (T-4611 owns D7, D8, E8, G8, H8 and t4450 J64).
+does not lift: `RANDARRAY({2})` is 2x1 and over `{2;4;6}` `#N/IMPL!` (T-4611 owns D2, D3, E3, G3, H3, D4, D7, D8, E8, G8, H8 and t4450 J64).
 Status: VERIFIED (excel-graph)
 Tasks: T-4519, T-4610, T-4611
 
