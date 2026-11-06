@@ -3,7 +3,7 @@ id: T-4157
 title: "xlsx import reads table and table-column dataDxfId from dataDxfId, not headerRowDxfId"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
