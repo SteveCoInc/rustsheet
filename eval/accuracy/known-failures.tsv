@@ -287,3 +287,7 @@ accuracy/GAMMA.INV/e-T-3863!Calc!A199	T-3364	R3 closed-form point: the engine re
 accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 0^k
 accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
+accuracy/YIELD/s1!Calc!A225	T-4523	Excel #NUM! (its Newton leaves PRICE's domain at a price and redemption near 0.01); the engine converges to the root
+accuracy/YIELD/s1!Calc!A230	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
+accuracy/YIELD/s1!Calc!A252	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
+accuracy/YIELD/s1!Calc!A261	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
