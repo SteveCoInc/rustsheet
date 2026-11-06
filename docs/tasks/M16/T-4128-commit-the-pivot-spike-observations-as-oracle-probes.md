@@ -27,13 +27,15 @@ oracle-spike.md (2026-11-04) holds the runs; they are observations until committ
 ## Outcome
 probes/t4128-pivot-spike (excel-graph, 2026-11-06) commits the spike observations as builder-v2
 pivots, captured in the sidecar's `pivots` section:
-- **R:** refresh on open over a stale cache (East/A 1004). Closes T-2327.
+- **R:** refresh on open over a stale cache (East/A 1004). This answers half of T-2327:
+  whether the original builder's rendered constants are overwritten stays open there.
 - **K:** a calculated field on sums (28.1), a Top-N filter that changes the subtotals (East Total 19),
   and a descending label sort.
 - **G:** Excel's numeric group labels.
 - **S:** a layout meeting a constant collapses to `#SPILL!` at the anchor, with location A3.
 
 The tabular two-field layout with percentOfTotal was already in probes/t4123-pivot-capture.
-docs/excel-semantics/pivots.md moves these entries to VERIFIED, and web.md's T-2327 note is resolved.
+docs/excel-semantics/pivots.md moves these entries to VERIFIED. web.md's T-2327 note is narrowed to what R
+shows.
 K also shows that a second, compact data field keeps `Row Labels`, recorded for T-4137 and T-4138.
 The case-variant, flag and item-order observations stay UNVERIFIED for T-4134, whose probe they are.

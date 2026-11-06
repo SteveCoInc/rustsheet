@@ -11,10 +11,12 @@ committed probes.
 ## Excel for the web re-renders a refreshOnLoad pivot when it opens the file
 Rule: a pivot whose cache has `refreshOnLoad="1"` is rebuilt from its source and re-rendered on open,
 before any calculate or refresh call. The values the file's cache held do not survive.
-Evidence: probes/t4128-pivot-spike R (excel-graph, 2026-11-06, T-4128). DataF!C2 is a formula
+Evidence: probes/t4128-pivot-spike R (excel-graph, 2026-11-06, T-4128). R's area held no cells, so
+whether Excel also overwrites rendered constants already in the area is a separate, open question
+(T-2327). DataF!C2 is a formula
 (`=1000`). The sheet caches it as 0 and the pivot cache record is missing (`<m/>`), yet R!B5 (East/A) is 1004, R!E5 is 1012 and R!E7 is 1039.
 The saved file holds Excel's own cache and definition (`rowItems`, `location`), as oracle-spike.md
-run 1 also showed. This closes T-2327.
+run 1 also showed.
 Status: VERIFIED (excel-graph)
 
 ## Excel for the web renders authored pivot definitions
@@ -27,8 +29,8 @@ needs:
 
 Without items or records Excel refuses the file (`OpenWorkbookBlockedWorkbook`, oracle-spike.md run
 2, a scratch observation).
-Evidence: every pivot of probes/t4123-pivot-capture and probes/t4128-pivot-spike (excel-graph,
-2026-11-06): compact, tabular, a calculated field with a Top-N filter and a sort, numeric grouping.
+Evidence: every pivot of probes/t4123-pivot-capture and probes/t4128-pivot-spike except S, the
+`#SPILL!` control (excel-graph, 2026-11-06): compact, tabular, a calculated field with a Top-N filter and a sort, numeric grouping.
 The case builder relies on it (tools/src/rustsheet_tools/pivot_definition.py).
 Status: VERIFIED (excel-graph) for rendering; the refusal of an inconsistent package is UNVERIFIED
 (probe pending: T-4134)
@@ -107,8 +109,9 @@ differ only in the Sales field:
 - T4 (`outline="0"` only): `Row Labels`.
 
 oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on that field, showed
-`Region` too, which this rule likely explains. Observation, cause not isolated: probes/t4128-pivot-spike K!A4 is `Row Labels` with Sales
-`compact="0"` and the calculated field Double at the default (T-4128). K also has a Top-N filter and a
+`Region` too, which this rule likely explains. Probed with one source field, Sales, behind every data field of T to T4. Observation, cause not
+isolated: probes/t4128-pivot-spike K!A4 is `Row Labels` with Sales `compact="0"` and the calculated
+field Double at the default (T-4128). K also has a Top-N filter and a
 sort, so whether every data field must be non-compact, and the layout without a Values axis, are left
 to T-4137 and T-4138.
 Status: VERIFIED (excel-graph)
