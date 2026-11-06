@@ -32,5 +32,7 @@ A table with a data-area style therefore gets its header style instead, and lose
 `headerRowDxfId`). The parse moved into `parse_table` so a unit test can feed it XML:
 `data_dxf_id_is_read_from_data_dxf_id` loads distinct header/data/totals ids on a table and on its columns, and a
 column with only `headerRowDxfId` gets no data style. Export already writes `dataDxfId` from the field
-(`export/tables.rs`), so the value now round-trips. No corpus workbook was searched for a `dataDxfId` sample; the
-test uses inline XML. Eval delta: none expected (no baseline change).
+(`export/tables.rs`), so the value now round-trips. The Excel-saved corpus workbook
+`tests/calc_test_tables/tables.xlsx` covers both ends in `excel_authored_table_dxf_ids_round_trip`: Table7 has
+`headerRowDxfId` only and loads with no data style, its columns load their `dataDxfId` values, and every table's and
+column's ids survive a save and reload. Eval delta: none (no baseline change).
