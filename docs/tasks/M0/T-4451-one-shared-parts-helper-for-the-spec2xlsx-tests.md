@@ -3,7 +3,7 @@ id: T-4451
 title: "One shared _parts helper for the spec2xlsx tests instead of five copies"
 milestone: M0
 lane: quality
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
