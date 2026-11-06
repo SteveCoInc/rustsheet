@@ -267,27 +267,27 @@ default gives `Row Labels` in every role and position probed:
 For the roles where `outline` was varied apart from `compact` (the outer row field, the column field
 and the data field), only `compact` counts and `outline` makes no difference. With every field
 `compact="0"`, an outer row field (t4609 L3), a column field (L7) and the data field (t4123 T3, T4)
-left at the default `outline` still give the field's name. With `compact` at the default, `outline="0"` on the outer row field (L4) or
-the column field (L8) still gives `Row Labels`. `outline` was never varied apart from `compact` on the
-inner row field (Product is `compact="0" outline="0"` in every L sheet), a page field, an unused field
-or a calculated field. The second row field's header is its name (`Product`)
-whenever it keeps its own column.
+left at the default `outline` still give the field's name. With `compact` at the default,
+`outline="0"` on the outer row field (L4) or the column field (L8) still gives `Row Labels`.
+`outline` was never varied apart from `compact` on the inner row field (Product is
+`compact="0" outline="0"` in every L sheet), a page field, an unused field or a calculated field.
+The second row field's header is its name (`Product`) whenever it keeps its own column.
 
 When the field name wins, `rowHeaderCaption` is ignored: L5, with every field `compact="0"` and
 `rowHeaderCaption="Regions"`, shows `Region` at A3. With a column field, `Row Labels` (or the name)
 sits on the row below the data caption (L1!A4, L7!A4), and the column field's header beside it reads
 `Column Labels` when the column field's `compact` is at the default (L1!C3 with both attributes at
-the default, L8!C3 with `outline="0"`) and its name `Channel` when
-every field is `compact="0"` (L7!C3). Whether a non-compact column field reads its name while another
-field is at the default is not probed.
+the default, L8!C3 with `outline="0"`) and its name `Channel` when every field is `compact="0"`
+(L7!C3). Whether a non-compact column field reads its name while another field is at the default is
+not probed.
 
 The outer row field's two attributes split the layout of R1 (both at the default) between them:
 - `compact` and `outline` both on put the inner field in the outer field's column: R1's location is
   A3:B11 and firstDataCol 1. Either off gives the inner field its own column: L3 (`compact="0"`) and
   L4 (`outline="0"`) are A3:C11 with firstDataCol 2, like R2 to R6;
-- `outline` alone decides the lines and the subtotals. With it on (R1, L3) each outer item has a line
-  of its own carrying its subtotal (L3!A4 `East` with C4 22 and B4 blank, A8 `West` with C8 27) and
-  there are no `<item> Total` lines; with it off (L4) the item shares its first child's line and
+- `outline` alone decides the lines and the subtotals. With it on (R1, L3) each outer item has a
+  line of its own carrying its subtotal (L3!A4 `East` with C4 22 and B4 blank, A8 `West` with C8 27)
+  and there are no `<item> Total` lines; with it off (L4) the item shares its first child's line and
   `East Total` (A7) and `West Total` (A10) follow, as in R2 to R6.
 
 Evidence (excel-graph, 2026-11-06):
@@ -309,7 +309,8 @@ Evidence (excel-graph, 2026-11-06):
   - L4 Region `outline="0"`, `compact` at the default: A3 `Row Labels`, tabular lines, A3:C11;
   - L5 none at the default, `rowHeaderCaption="Regions"`: A3 `Region`;
   - L7 column field Channel `compact="0"`, `outline` at the default: A4 `Region`, C3 `Channel`;
-  - L8 column field Channel `outline="0"`, `compact` at the default: A4 `Row Labels`, C3 `Column Labels`.
+  - L8 column field Channel `outline="0"`, `compact` at the default: A4 `Row Labels`,
+    C3 `Column Labels`.
 - probes/t4123-pivot-capture A4 (T-4123): T and T4, with Sales at the default, give `Row Labels`; T2
   and T3, with every field non-compact, give `Region`.
 - probes/t4128-pivot-spike K!A4 (T-4128): a calculated field at the default gives `Row Labels`.
@@ -324,9 +325,9 @@ Status: VERIFIED (excel-graph) for the roles, positions and attributes probed. U
 pending: T-4660): the column header of a non-compact column field while another field is at the
 default, and `outline` varied apart from `compact` (either way round) on the inner row field, a page
 field, an unused field or a calculated field.
-Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (the outer field's own line from its
-`outline`, and in `label_columns` the shared column from `compact` and `outline` both on; T-4147,
-checked against every L sheet by T-4609)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (the outer field's own line from
+its `outline`, and in `label_columns` the shared column from `compact` and `outline` both on;
+T-4147, checked against every L sheet by T-4609)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (the header text, every probe
 above reproduced; T-4149)
 
@@ -376,9 +377,9 @@ Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`render`; T-
 
 ## Caption attributes, empty and error captions, page captions, custom subtotal labels
 Rule:
-- `rowHeaderCaption` replaces `Row Labels` (K1!A4 `Regions`). In a tabular pivot whose every field is
-  `compact="0"` it is ignored and the field name shows (probes/t4609-pivot-row-labels-2 L5!A3 `Region`;
-  see "A tabular pivot's first row header..." above).
+- `rowHeaderCaption` replaces `Row Labels` (K1!A4 `Regions`). In a tabular pivot whose every field
+  is `compact="0"` it is ignored and the field name shows (probes/t4609-pivot-row-labels-2 L5!A3
+  `Region`; see "A tabular pivot's first row header..." above).
 - `grandTotalCaption` replaces `Grand Total` (K1!A7 `All of it`).
 - `dataCaption` replaces the `Values` caption over the data fields (K1!B3 `Measures`).
 - `colHeaderCaption` replaces `Column Labels` beside a real column field in compact form
@@ -482,12 +483,12 @@ the Values field (`x="-2"`) as one more level whose items are the data fields; a
 own last one), and `<x>` lists the rest. An `x` is the item's position in the pivot field's `<items>`,
 or the data field's index at the Values level (`i` repeats it).
 - Every tuple of one item per level is a `t="data"` line.
-- On rows, an item of a field in outline form (`outline` on, which compact form also has) has a line of
-  its own above its children, which carries its subtotal values (with `subtotalTop`, the default). An item of a tabular field
-  (`outline="0"`) shares its first child's line, and its subtotal lines follow its children. The form
-  is per field and follows `outline` alone: an outer field left at the default inside a tabular pivot
-  is outline form (t4583 R1), and so is one with only `compact="0"` (t4609 L3), while one with only
-  `outline="0"` is tabular (L4).
+- On rows, an item of a field in outline form (`outline` on, which compact form also has) has a line
+  of its own above its children, which carries its subtotal values (with `subtotalTop`, the
+  default). An item of a tabular field (`outline="0"`) shares its first child's line, and its
+  subtotal lines follow its children. The form is per field and follows `outline` alone: an outer
+  field left at the default inside a tabular pivot is outline form (t4583 R1), and so is one with
+  only `compact="0"` (t4609 L3), while one with only `outline="0"` is tabular (L4).
 - On columns every item shares its first child's line, and subtotal lines follow the children.
 - A field has subtotal lines only when a field other than Values is inside it. They are one
   `t="default"` line, or one line per custom subtotal in the field's order (`t="sum"`, `t="count"`).
@@ -502,8 +503,9 @@ lines (T-4147):
   two column fields with `default` lines after their children, G6 Values on rows with two `grand`
   lines, G7 and G9 `<i/>`, G8 page fields only);
 - probes/t4137-pivot-captions K1 to K6 (K5 tabular `sum` and `count` lines), t4583-pivot-row-labels
-  R1 to R6, C1, C2, t4609-pivot-row-labels-2 L1 to L8, t4134-pivot-items I1, I2, I4, I5, t4135-pivot-aggregates (all twelve),
-  t4589-pivot-total-order, t4614-pivot-total-order-2 and t4616-pivot-total-order-3 (every sheet);
+  R1 to R6, C1, C2, t4609-pivot-row-labels-2 L1 to L8, t4134-pivot-items I1, I2, I4, I5,
+  t4135-pivot-aggregates (all twelve), t4589-pivot-total-order, t4614-pivot-total-order-2 and
+  t4616-pivot-total-order-3 (every sheet);
 - the lines of probes/t4128-pivot-spike S (its #SPILL! location is the grid's, T-4151);
 - the Excel-saved pivot of crates/rustsheet-xlsx/tests/example.xlsx: three compact row fields whose
   `<items>` list the cache items out of order, so `x` is the position in `<items>`, not the cache index.
