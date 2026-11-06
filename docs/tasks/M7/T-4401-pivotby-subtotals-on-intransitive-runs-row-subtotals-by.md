@@ -27,6 +27,8 @@ gives the reached classes).
   T-4378 did; docs/research/t4382/gen_probe.py and predict_engine.py are the pattern.
 - Cells: probes/t4382-pivotby-intransitive-paths Calc!B31, B32, B33, B35, B39, B41, C31, C33, C39 (level-2
   subtotals).
+- Owned until PR #3430 (T-4388, the rule) lands, which passes them: probes/t4401-pivotby-unreached-subtotal-holdout
+  Calc!B2, Calc!B3, Calc!B4, Calc!B5, Calc!B6, Calc!B7, Calc!B8, Calc!B9, Calc!B10, Calc!B12, Calc!B13, Calc!B14, Calc!B17, Calc!B18, Calc!B20, Calc!B21, Calc!B22, Calc!B23, Calc!C1, Calc!C3, Calc!C5, Calc!C9, Calc!C11, Calc!C13, Calc!C15, Calc!C16, Calc!C17, Calc!C19, Calc!C22, Calc!C24.
 
 ## Acceptance criteria
 - [ ] Every probes/t4382-pivotby-intransitive-paths cell named in Context passes (or the cells the hold-out
