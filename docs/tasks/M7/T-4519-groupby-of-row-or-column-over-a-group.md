@@ -49,7 +49,7 @@ Probed and split. The fixes go to two owner tasks, because they are two separate
   t4519 D2, D3, E3, G3, H3, D4, D7, D8, E8, G8, H8 and t4450 J64.
 - No engine change. Eval delta: probes gain 1 case (50 scored cells: 21 pass, 29 new-coverage failures, all owned); 0 regressions.
 
-## Landing notes
+## Landing notes (resumed)
 - PR #3622 (draft), branch agent/engine/T-4519-groupby-row-column. The head is the commit that adds these notes.
 - Round 1 on c35f686: security APPROVE, design APPROVE (MINOR: name the split in the unchecked box; done here), excel-fidelity
   REQUEST_CHANGES. Its two MAJORs: rows 2-4 (direct RANDARRAY) were unscored because the harness skips volatile cells; and T-4611 said
