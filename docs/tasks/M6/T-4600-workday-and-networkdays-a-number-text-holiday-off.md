@@ -3,7 +3,7 @@ id: T-4600
 title: "WORKDAY and NETWORKDAYS: a number-text holiday off the calendar (a \"-1\" cell or literal): probe whether it errs before or after the weekend, and match"
 milestone: M6
 lane: functions-date
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -52,3 +52,10 @@ excel-probe skill, excel-graph, tag M6. Name the case probes/t4600-holiday-numbe
 
 ## Out of scope
 - Holiday text forms returned by a formula (T-4408) and the weekend argument's own coercion (T-2591).
+
+## Outcome
+Probed (probes/t4600-holiday-number-text-off-calendar, 176 cells, excel-graph): number text off the calendar
+is error-order step (6), after the weekend, in every form; our engine already matched, all cells pass, no
+engine change. dates.md states the rule; the stale "Unprobed" sentence and the skip-vs-count clause are gone
+(the latter now cites probes/t4397-holiday-text-forms). Eval delta: +176 probe cells passing, no new known
+failures. The case has no Gate A one-call cell, so it needs no `.math.json` sidecar (`make eval-math-check` current).
