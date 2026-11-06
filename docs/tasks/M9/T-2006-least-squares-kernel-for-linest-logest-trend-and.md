@@ -209,3 +209,13 @@ Remaining work before a PR:
    sweep (this is a structural-model choice, so it owes them but needs no `FITTED` tag).
 4. Replace the `KERNEL` scaffold with the one chosen form. Today it is dead-code variants, and clippy has not been run
    on it.
+
+LINEST A184 in detail: the intercept is pure cancellation. ym is -4.65E18 and b·xm is about the same, so one ulp of
+b·xm is 1024 to 2048. The values:
+- Excel 5206016, math 5205576.09 (Excel is 8.4E-5 off the math);
+- KERNEL 9 5208064 (4.8E-4 off);
+- the reflected-column diagonal 5203968, LINPACK 5208064, LAPACK 5209088;
+- ym + c0 - b·xm (c0 is the ones-column coefficient) 5207040.
+
+The table has no slope point for this formula, so Excel's b is not known to the last bit. A table point holding this
+call's slope (index 1,1) would decide between the reflector forms. I would probe it before fitting further.
