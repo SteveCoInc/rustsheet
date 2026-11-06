@@ -264,17 +264,6 @@ impl Model {
         self.result_to_array(result, cell)
     }
 
-    /// [`Model::eval_to_array`] for an argument that must be an array ([`reject_empty_value`]).
-    pub(crate) fn eval_array_arg(
-        &mut self,
-        node: &Node,
-        cell: CellReferenceIndex,
-    ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
-        let result = self.evaluate_node_in_context(node, cell);
-        let result = reject_empty_value(node, result, cell)?;
-        self.result_to_array(result, cell)
-    }
-
     /// [`Model::eval_to_array`] that keeps a lone blank cell blank, as a blank cell of a range is:
     /// `TOROW(Z1,3)` is `#CALC!` and `UNIQUE(Z1)&"x"` is "x" (docs/excel-semantics/arrays.md
     /// "TOROW and UNIQUE of a lone blank cell", T-2409).
@@ -287,8 +276,8 @@ impl Model {
         self.result_to_array_keep_blank(result, cell)
     }
 
-    /// [`Model::eval_array_arg`] that keeps a lone blank cell blank, as
-    /// [`Model::eval_to_array_keep_blank`] does.
+    /// [`Model::eval_to_array_keep_blank`] for an argument that must be an array
+    /// ([`reject_empty_value`]).
     pub(crate) fn eval_array_arg_keep_blank(
         &mut self,
         node: &Node,
@@ -365,7 +354,8 @@ impl Model {
         }
 
         // An error array is each call's result, as the argument errors below are.
-        let data = self.eval_to_array(&args[0], cell);
+        // A lone blank cell stays blank (`SORT(Z1)&"x"` is "x"; probes/t4448-lone-blank-reshapers A1:D5, T-4448).
+        let data = self.eval_to_array_keep_blank(&args[0], cell);
         if data.as_ref().is_ok_and(|d| d.is_empty() || d[0].is_empty()) {
             return CalcResult::Array(vec![]);
         }
@@ -593,7 +583,8 @@ impl Model {
         // An error array is lifted like any other: every element is that error, in the sort_orders'
         // shape (`ROWS(SORTBY(NA(),C1:C3,{1;-1}))` is 2; probes/sortby-lifted-element-corners F7,
         // excel-graph, T-2349).
-        let data = self.eval_to_array(&args[0], cell);
+        // A lone blank cell stays blank (`SORT(Z1)&"x"` is "x"; probes/t4448-lone-blank-reshapers A1:D5, T-4448).
+        let data = self.eval_to_array_keep_blank(&args[0], cell);
         if data.as_ref().is_ok_and(|d| d.is_empty() || d[0].is_empty()) {
             return CalcResult::Array(vec![]);
         }

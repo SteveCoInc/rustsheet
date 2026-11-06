@@ -1395,8 +1395,8 @@ Also: an error pad_with is an ordinary pad value: it fills the padded cells (WRA
 `WRAPCOLS(B5:H5,100,NA())` is 7x1, unpadded. wrap_count is `#NUM!` below 1 for WRAPROWS too (gen-m9/50f10c4062fb2e98 A21;
 the full set is under "WRAPROWS and WRAPCOLS" below).
 Evidence: probes/wrapcols-wraprows-pad-with (excel-graph, 2026-10-18, T-1840).
-Unprobed: an omitted vector (`WRAPCOLS(,2)`) and an empty cell reached indirectly (`WRAPCOLS(IF(TRUE,Z1),2)`,
-`WRAPCOLS(INDEX(Z1:Z2,1),2)`); the engine treats the omitted vector like an empty cell (`#VALUE!`).
+An omitted vector and an empty cell reached indirectly are `#VALUE!` too: `WRAPCOLS(,2)`, `WRAPCOLS(IF(TRUE,Z1),2)` and
+`WRAPCOLS(INDEX(Z1:Z2,1),2)` (probes/t4448-lone-blank-reshapers A24:E26, excel-graph 2026-11-06, T-4448).
 Ours: all of the above since T-1786, T-1348 and T-1840 (wrap_count is read before truncation, so 0.5 is `#NUM!`).
 Status: VERIFIED (excel-graph).
 Tasks: T-1348, T-1840
@@ -2189,10 +2189,18 @@ Rule: a one-cell reference to a blank cell stays blank in TOROW and UNIQUE: `TOR
 left; gen-m7/9bb61f6ae34c7e20 Calc!A3029), and `UNIQUE(Data!Z1,TRUE)&..` joins as "" (`TEXTAFTER(UNIQUE(Data!Z1,Data!A$2)&IF(TRUE,
 Data!E5,"a"),"")` is "1000000000000000": gen-m7/f7e94a817e5385ac A2942), as a blank range cell would.
 Evidence: gen-m7 (excel-graph, 2026-10-22, T-2254 triage).
-Ours (T-2409): TOROW, TOCOL and UNIQUE keep a lone blank reference blank (`Model::eval_to_array_keep_blank`); before, it was read as 0;
-TOCOL keeps a lone blank too (gen-m9/8dd2312c96effb1b Calc!A399 `TOCOL(Data!Z1,3,..)` is `#CALC!`; gen-m9/928d08e3e1eecb5f A333 `TOROW(Data!E1,1)`; gen-m9/7980ffb6095a340d A294 `UNIQUE(Data!D$4)`); SORT and TAKE still read it as 0 and are unprobed (T-2409).
+Ours (T-2409, T-4448): TOROW, TOCOL, UNIQUE, SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP's value path
+keep a lone blank reference blank (`Model::eval_to_array_keep_blank` and its wrappers); before, it was read as 0;
+TOCOL keeps a lone blank too (gen-m9/8dd2312c96effb1b Calc!A399 `TOCOL(Data!Z1,3,..)` is `#CALC!`; gen-m9/928d08e3e1eecb5f A333 `TOROW(Data!E1,1)`; gen-m9/7980ffb6095a340d A294 `UNIQUE(Data!D$4)`).
+SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP of a value keep it blank too
+(probes/t4448-lone-blank-reshapers, excel-graph 2026-11-06, T-4448; Z1, Z2 blank): `SORT(Z1)&"x"`, `SORT(Z1,1,-1)&"x"`,
+`SORTBY(Z1,Z1)&"x"`, `SORTBY(Z1,5)&"x"`, `CHOOSEROWS(Z1,1)&"x"`, `CHOOSECOLS(Z1,1)&"x"`, `CHOOSEROWS(Z1,-1)&"x"` and
+`TAKE(IF(TRUE,Z1),1)&"x"` are "x"; `TOCOL(X,1)` of each is `#CALC!` and `ISBLANK(INDEX(X,1,1))` is TRUE (A1:D4, A9:D9,
+A11:D13). `EXPAND(Z1,2,1,"p")` is a blank and "p" (A15:D15). TAKE, DROP and CHOOSEROWS of the reference itself
+already kept it (A6:D8, A10:D10). `TYPE(TAKE(IF(TRUE,Z1),1))` is 1 (B9): TAKE keeps IF's one-cell reference a
+reference. Ours gives 64 (a 1x1 array); T-4469 owns that cell.
 Status: VERIFIED (excel-graph)
-Tasks: T-2409
+Tasks: T-2409, T-4448
 
 ## GROUPBY and PIVOTBY lift over an array field_headers or total depth
 Rule: an array (or a multi-cell range) given as GROUPBY's `field_headers` or `total_depth`, or PIVOTBY's `field_headers`,
