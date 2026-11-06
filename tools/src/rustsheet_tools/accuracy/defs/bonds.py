@@ -71,16 +71,8 @@ from rustsheet_tools.accuracy.defs.yearfrac import (
     us_30_360,
     whole_serial,
 )
-from rustsheet_tools.accuracy.literal import Arg, round15
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    DomainError,
-    Interval,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.literal import Arg
+from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 from rustsheet_tools.fitlab.kernels.solvers import schedule
 from rustsheet_tools.fitlab.sweep import EPOCH
@@ -505,7 +497,7 @@ def _yield_draw(stratum: str, rng: random.Random) -> list[Arg]:
         with mpmath.workdps(30), contextlib.suppress(DomainError, NoValueError):
             pr = float(price_of(b, coupons(b.settlement, b.maturity, b.frequency, b.basis)))
     if not (1e-3 * d.redemption <= pr <= 1e4 * d.redemption):
-        pr = round15(d.redemption * rng.uniform(0.5, 1.5))
+        pr = d.redemption * rng.uniform(0.5, 1.5)  # the sampler cuts it to 15 digits
     d.fourth = pr
     return d.args(with_redemption=True)
 
@@ -518,9 +510,10 @@ def _bond_definition(
     solver: bool = False,
 ) -> Definition:
     draw = _yield_draw if function == "YIELD" else _price_draw if len(names) == 7 else _duration_draw
-    params = [Param(name, "real", Interval(), source=ORDER_SOURCE) for name in names[:-2]]
-    params.append(Param(names[-2], "int", Interval(), source=ORDER_SOURCE))
-    params.append(Param(names[-1], "int", Interval(), source=ORDER_SOURCE, optional=True))
+    # every domain rule is the value's (Excel reads the arguments in its own order): no interval checks
+    params = [Param(name, "real", source=ORDER_SOURCE) for name in names[:-2]]
+    params.append(Param(names[-2], "int", source=ORDER_SOURCE))
+    params.append(Param(names[-1], "int", source=ORDER_SOURCE, optional=True))
     return register(
         Definition(
             function=function,
