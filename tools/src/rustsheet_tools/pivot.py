@@ -56,9 +56,9 @@ from xml.sax.saxutils import quoteattr
 
 import xlsxwriter.utility
 
-_MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-_PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
+from rustsheet_tools.pivot_definition import DefinedPivot
+from rustsheet_tools.pivot_xml import MAIN_NS, PACKAGE_REL_NS, REL_NS, number_text
+
 _CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.{}+xml"
 _FUNCTIONS: dict[str, tuple[str, Callable[[list[float]], float]]] = {
     "sum": ("Sum", sum),
@@ -112,9 +112,13 @@ def _split_range(ref: str) -> tuple[int, int, int, int]:
     return r1, c1, r2, c2
 
 
-def _source(spec: dict[str, Any], own_sheet: str, source: str) -> tuple[str, str, list[list[Any]]]:
-    """The source's sheet name, normalized range and rows of constants, header row first; an
-    absent cell is None (the caller says where a blank is allowed)."""
+def _source(
+    spec: dict[str, Any], own_sheet: str, source: str, *, strict: bool = True
+) -> tuple[str, str, list[list[Any]]]:
+    """The source's sheet name, normalized range and rows of raw spec cells, header row first; an
+    absent cell is None (the caller says where a blank is allowed). `strict` (the original builder)
+    accepts only literal texts and numbers besides blanks; otherwise any cell passes as is
+    (pivot_definition.py caches it)."""
     sheet_name, bang, ref = source.rpartition("!")
     sheet_name = sheet_name.strip("'").replace("''", "'") if bang else own_sheet
     by_name = {s["name"]: s for s in spec["sheets"]}
@@ -132,11 +136,15 @@ def _source(spec: dict[str, Any], own_sheet: str, source: str) -> tuple[str, str
         for col in range(c1, c2 + 1):
             a1 = xlsxwriter.utility.xl_rowcol_to_cell(row, col)
             raw = cells.get(a1)
-            if raw is not None and (
-                isinstance(raw, bool)
-                or not isinstance(raw, str | int | float)
-                or raw == ""
-                or (isinstance(raw, str) and raw.startswith("="))
+            if (
+                strict
+                and raw is not None
+                and (
+                    isinstance(raw, bool)
+                    or not isinstance(raw, str | int | float)
+                    or raw == ""
+                    or (isinstance(raw, str) and raw.startswith("="))
+                )
             ):
                 msg = f"pivot source cell {sheet_name}!{a1} must be a literal text or number: {raw!r}"
                 raise ValueError(msg)
@@ -146,10 +154,6 @@ def _source(spec: dict[str, Any], own_sheet: str, source: str) -> tuple[str, str
         f"{xlsxwriter.utility.xl_rowcol_to_cell(r1, c1)}:{xlsxwriter.utility.xl_rowcol_to_cell(r2, c2)}"
     )
     return sheet_name, normalized, rows
-
-
-def _number(value: float) -> str:
-    return str(int(value)) if float(value).is_integer() and abs(value) < 1e15 else repr(float(value))
 
 
 class _Pivot:
@@ -340,14 +344,14 @@ class _Pivot:
                     integer = ' containsInteger="1"' if all(n.is_integer() for n in numbers) else ""
                     shared = (
                         f'<sharedItems containsSemiMixedTypes="0" containsString="0" containsNumber="1"{integer}'
-                        f'{blank} minValue="{_number(min(numbers))}" maxValue="{_number(max(numbers))}"/>'
+                        f'{blank} minValue="{number_text(min(numbers))}" maxValue="{number_text(max(numbers))}"/>'
                     )
             if i == self.row and self.group is not None:
                 shared += self.group.xml(base=i)
             fields.append(f'<cacheField name={quoteattr(name)} numFmtId="0">{shared}</cacheField>')
         refresh = "" if self.unused or self.column_unused else ' refreshOnLoad="1"'
         return (
-            f'<pivotCacheDefinition xmlns="{_MAIN_NS}" xmlns:r="{_REL_NS}" r:id="rId1"{refresh}'
+            f'<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"{refresh}'
             f' createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{len(self.records)}">'
             f'<cacheSource type="worksheet"><worksheetSource ref="{self.source_ref}"'
             f" sheet={quoteattr(self.source_sheet)}/></cacheSource>"
@@ -364,14 +368,14 @@ class _Pivot:
                 if v is None
                 else f'<d v="{_iso(float(v))}"/>'
                 if self._dates(i)
-                else f'<n v="{_number(float(v))}"/>'
+                else f'<n v="{number_text(float(v))}"/>'
                 for i, v in enumerate(record)
             )
             + "</r>"
             for record in self.records
         )
         return (
-            f'<pivotCacheRecords xmlns="{_MAIN_NS}" count="{len(self.records)}">{records}</pivotCacheRecords>'
+            f'<pivotCacheRecords xmlns="{MAIN_NS}" count="{len(self.records)}">{records}</pivotCacheRecords>'
         )
 
     def _axis_items(self, index: int) -> tuple[str, str]:
@@ -414,7 +418,7 @@ class _Pivot:
             columns += f'<colItems count="{len(self._shown(self.column)) + 1}">{column_lines}</colItems>'
         subtotal = "" if self.function == "sum" else f' subtotal="{self.function}"'
         return (
-            f'<pivotTableDefinition xmlns="{_MAIN_NS}" name={quoteattr(self.name)} cacheId="{cache_id}"'
+            f'<pivotTableDefinition xmlns="{MAIN_NS}" name={quoteattr(self.name)} cacheId="{cache_id}"'
             ' applyNumberFormats="0" applyBorderFormats="0" applyFontFormats="0" applyPatternFormats="0"'
             ' applyAlignmentFormats="0" applyWidthHeightFormats="1" dataCaption="Values" updatedVersion="6"'
             ' minRefreshableVersion="3" useAutoFormatting="1" itemPrintTitles="1" createdVersion="6" indent="0"'
@@ -440,12 +444,13 @@ class _Group:
 
     def xml(self, *, base: int) -> str:
         items = "".join(
-            f"<s v={quoteattr(v)}/>" if isinstance(v, str) else f'<n v="{_number(v)}"/>' for v in self.items
+            f"<s v={quoteattr(v)}/>" if isinstance(v, str) else f'<n v="{number_text(v)}"/>'
+            for v in self.items
         )
         if self.by is None:
             bounds = (
-                f'startNum="{_number(self.start)}" endNum="{_number(self.end)}"'
-                f' groupInterval="{_number(self.interval)}"'
+                f'startNum="{number_text(self.start)}" endNum="{number_text(self.end)}"'
+                f' groupInterval="{number_text(self.interval)}"'
             )
         else:
             bounds = f'groupBy="{self.by}" startDate="{_iso(self.start)}" endDate="{_iso(self.end)}"'
@@ -505,11 +510,11 @@ def rendered_cells(spec: dict[str, Any], sheet: dict[str, Any], pivot: dict[str,
 
 def relationships_xml(*relationships: str) -> bytes:
     """A relationships part holding `relationships`."""
-    return _xml(f'<Relationships xmlns="{_PACKAGE_REL_NS}">{"".join(relationships)}</Relationships>')
+    return _xml(f'<Relationships xmlns="{PACKAGE_REL_NS}">{"".join(relationships)}</Relationships>')
 
 
 def _relationship(rid: str, kind: str, target: str) -> str:
-    return f'<Relationship Id="{rid}" Type="{_REL_NS}/{kind}" Target="{target}"/>'
+    return f'<Relationship Id="{rid}" Type="{REL_NS}/{kind}" Target="{target}"/>'
 
 
 def _xml(text: str) -> bytes:
@@ -525,6 +530,10 @@ def pivot_tables(spec: dict[str, Any], write: Callable[[int, int, int, Cell], No
     for number, sheet in enumerate(spec["sheets"], start=1):
         taken = {xlsxwriter.utility.xl_cell_to_rowcol(a1) for a1 in sheet["cells"]}
         for raw in sheet.get("pivot_tables", ()):
+            if "definition" in raw:
+                cache_id += 1
+                _defined(spec, sheet, raw, number=number, n=cache_id, taken=taken, out=out)
+                continue
             pivot = _Pivot(spec, sheet, raw)
             cells = pivot.cells()
             if pivot.rendered is not None and pivot.rendered != pivot.a1_cells():
@@ -537,34 +546,73 @@ def pivot_tables(spec: dict[str, Any], write: Callable[[int, int, int, Cell], No
             for (row, col), value in sorted(cells.items()):
                 write(number, row, col, value)
             cache_id += 1
-            n = cache_id
-            definition = f"xl/pivotCache/pivotCacheDefinition{n}.xml"
-            records = f"xl/pivotCache/pivotCacheRecords{n}.xml"
-            table = f"xl/pivotTables/pivotTable{n}.xml"
-            out.parts[definition] = _xml(pivot.cache_definition())
-            out.parts[records] = _xml(pivot.cache_records())
-            out.parts[table] = _xml(pivot.table_definition(n))
-            out.parts[f"xl/pivotCache/_rels/pivotCacheDefinition{n}.xml.rels"] = relationships_xml(
-                _relationship("rId1", "pivotCacheRecords", f"pivotCacheRecords{n}.xml")
+            _link(
+                out,
+                number=number,
+                n=cache_id,
+                definition_xml=pivot.cache_definition(),
+                records_xml=pivot.cache_records(),
+                table_xml=pivot.table_definition(cache_id),
             )
-            out.parts[f"xl/pivotTables/_rels/pivotTable{n}.xml.rels"] = relationships_xml(
-                _relationship("rId1", "pivotCacheDefinition", f"../pivotCache/pivotCacheDefinition{n}.xml")
-            )
-            out.workbook_caches.append(f'<pivotCache cacheId="{n}" r:id="rIdPivotCache{n}"/>')
-            out.workbook_rels.append(
-                _relationship(
-                    f"rIdPivotCache{n}", "pivotCacheDefinition", f"pivotCache/pivotCacheDefinition{n}.xml"
-                )
-            )
-            out.sheet_rels.setdefault(number, []).append(
-                _relationship(f"rIdPivotTable{n}", "pivotTable", f"../pivotTables/pivotTable{n}.xml")
-            )
-            for part, kind in (
-                (definition, "pivotCacheDefinition"),
-                (records, "pivotCacheRecords"),
-                (table, "pivotTable"),
-            ):
-                out.content_types.append(
-                    f'<Override PartName="/{part}" ContentType="{_CONTENT_TYPE.format(kind)}"/>'
-                )
     return out
+
+
+def _link(
+    out: PivotParts, *, number: int, n: int, definition_xml: str, records_xml: str, table_xml: str
+) -> None:
+    """Adds pivot `n`'s cache definition, records and table parts to `out`, linked from the workbook,
+    sheet `number` and the content types."""
+    definition = f"xl/pivotCache/pivotCacheDefinition{n}.xml"
+    records = f"xl/pivotCache/pivotCacheRecords{n}.xml"
+    table = f"xl/pivotTables/pivotTable{n}.xml"
+    out.parts[definition] = _xml(definition_xml)
+    out.parts[records] = _xml(records_xml)
+    out.parts[table] = _xml(table_xml)
+    out.parts[f"xl/pivotCache/_rels/pivotCacheDefinition{n}.xml.rels"] = relationships_xml(
+        _relationship("rId1", "pivotCacheRecords", f"pivotCacheRecords{n}.xml")
+    )
+    out.parts[f"xl/pivotTables/_rels/pivotTable{n}.xml.rels"] = relationships_xml(
+        _relationship("rId1", "pivotCacheDefinition", f"../pivotCache/pivotCacheDefinition{n}.xml")
+    )
+    out.workbook_caches.append(f'<pivotCache cacheId="{n}" r:id="rIdPivotCache{n}"/>')
+    out.workbook_rels.append(
+        _relationship(f"rIdPivotCache{n}", "pivotCacheDefinition", f"pivotCache/pivotCacheDefinition{n}.xml")
+    )
+    out.sheet_rels.setdefault(number, []).append(
+        _relationship(f"rIdPivotTable{n}", "pivotTable", f"../pivotTables/pivotTable{n}.xml")
+    )
+    for part, kind in (
+        (definition, "pivotCacheDefinition"),
+        (records, "pivotCacheRecords"),
+        (table, "pivotTable"),
+    ):
+        out.content_types.append(f'<Override PartName="/{part}" ContentType="{_CONTENT_TYPE.format(kind)}"/>')
+
+
+def _defined(
+    spec: dict[str, Any],
+    sheet: dict[str, Any],
+    raw: dict[str, Any],
+    *,
+    number: int,
+    n: int,
+    taken: set[tuple[int, int]],
+    out: PivotParts,
+) -> None:
+    """Adds a pivot with a `definition` (pivot_definition.py): parts only, Excel renders it on open."""
+    source_sheet, source_ref, rows = _source(spec, sheet["name"], str(raw["source"]), strict=False)
+    pivot = DefinedPivot(raw, rows[0], rows[1:])
+    top, left = xlsxwriter.utility.xl_cell_to_rowcol(str(raw["location"]).replace("$", ""))
+    cells = pivot.footprint(top, left)
+    if overlap := taken & cells:
+        msg = f"pivot {pivot.name} needs empty cells at {sorted(overlap)} (Excel shows #SPILL! otherwise)"
+        raise ValueError(msg)
+    taken |= cells
+    _link(
+        out,
+        number=number,
+        n=n,
+        definition_xml=pivot.cache_definition(source_sheet, source_ref),
+        records_xml=pivot.cache_records(),
+        table_xml=pivot.table_definition(n, top, left),
+    )

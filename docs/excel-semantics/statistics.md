@@ -3002,8 +3002,35 @@ b0·ln1p a double; TOMS bpser(1, b0, x0) (bratio's dispatch there: WBpser) is fu
 Evidence: probes-numeric t2220-f-dist-sweep-cdf, t2220-f-dist-sweep-rt, t2220-f-dist-sweep-d1-1, t2220-f-dist-sweep-d2-1,
 t1745-beta-inv-roundtrip; probes/ftest-decomposition; gen-m9 58e3253bbd3a7a82, 60b0b6e69ad35a45, fd9fa22d212080d6
 (excel-graph).
-Ours: `incomplete_beta.rs::shape_one_tails` (w = -`excel_expm1`(b0·`excel_ln_one_minus`(x0)), w1 = (0.5 - w) + 0.5),
-through `bratio::kernel_tails` and `fisher.rs::f_tail`. The 6 cells above stay off.
+- **From |z| = 1 Excel's w is 1 - EXP(z), not Kahan's expm1 (T-3764).** With z = b0·ln1p(-x0), Excel's w at |z| >= 1 is
+  `1 - EXP(z)` (Excel's EXP), the switch PMT's `1-Q`, WEIBULL.DIST's and EXPON.DIST's cdfs make at 1 (numbers.md "Excel's
+  expm1 is Kahan's formula"). Below 1 it stays Kahan's. The cut is copied from those functions, not fitted here.
+  - Evidence: the 508 column-B cells of probes-numeric t3568-r5-bup-tune, -hold and -fresh at x > 0.9
+    (`BETA.DIST(x, a, 1, TRUE)`, a from 17.8 to 2970, |z| from 3.9 to 215). Kahan's form at |z| >= 1 rounds its product
+    (u - 1)·z and quotient each to a double, which put w one 2^-53 step off on 47 of them, 44 visibly off at the 13-digit
+    bar (`BETA.DIST(0.9094554,241.0,1.0,TRUE)`, tune B856: Excel 1.1649814446457185E-10, Kahan 1.164980334422694E-10).
+    The switch matches all 508, and there Excel's w1 is 1 - RN(1 - x^a) on every cell (Kahan's 461). The four cells with
+    x^a below 2^-53 (fresh B744, hold B1130, B1546, tune B1609) are 2^-53, the complement's step, not x^a (T-3150).
+  - Hold-out (the split fixed before scoring: sha256 of `case!cell`, first byte below 77; T-3764's task file), bit-exact
+    of all 1,785 column-B cells (the b0 = 1 closed form included): train 1,258 of 1,258 (Kahan 1,226, correctly rounded
+    14), hold-out 527 of 527 (Kahan 512, correctly rounded 5). On the shape-of-1 cells alone: train 359 (Kahan 327),
+    hold-out 149 (134).
+  - Over every suite it makes 77 cells bit-exact and moves none: the 47 above, 15 F.DIST and 15 F.DIST.RT (t2220,
+    t3567-r5-fdf1-hold and six t4017-f-huge-df2-above-mean cases, 2 of them Tier A).
+  - Fresh sweep, built and filled after the model froze (probes-numeric t3764-shape-one-complement-fresh, 1,800 cells,
+    excel-graph, 2026-11-06): 600 rows of `BETA.DIST(x, b0, 1, TRUE)` with `F.DIST.RT` and `F.DIST` companions at
+    d1 = 2, x0 log-uniform in [1E-3, 0.1], b0 in [2, 3000], half the rows log-uniform in |z| from 0.3 to 40. Bit-exact /
+    within 4 ulp / within 15 digits, the switch against Kahan's: BETA.DIST 555/590/591 against 493/533/535,
+    F.DIST.RT 558/592/592 against 493/527/527, F.DIST 525/600/600 against 460/600/600. Within 13 digits: 599 and 600
+    against 566 and 569. The two forms differ on 4 rows between |z| 0.7 and 1.5, all at 1.38 to 1.48, where the switch
+    is right, so the probe brackets Excel's cut in (0.7, 1.38) here. Below |z| = 0.5 both forms miss the same 13 of 155
+    BETA.DIST rows. Gate A envelope: 1,800 of 1,800 (the 17 cells outside 15 digits are within 1E-14 of the 50-digit
+    math, where Excel is 0.6E-15 to 7.2E-15 off it too).
+  - What is left: on 17 fresh cells (9 BETA.DIST, 8 F.DIST.RT, w1 1E-4 to 0.05, BETA.DIST |z| 3.0 to 9.2) w is still one 2^-53
+    step off, all within 13 digits but one (`BETA.DIST(0.914472771402,102.725,1,TRUE)`, A120, 12th digit). The 6
+    contrary cells above (T-3886) are at small |z| and stay off.
+Ours: `incomplete_beta.rs::shape_one_tails` (w = `x87_exp::excel_one_minus_exp`(b0·`excel_ln_one_minus`(x0)), w1 =
+(0.5 - w) + 0.5), through `bratio::kernel_tails` and `fisher.rs::f_tail`. The 6 cells above stay off.
 - Negative result on the 6 contrary cells (T-3886, docs/research/t3886 RESULTS.md section 2): no one form of w fits
   them.
   - At our l = ln(1 - x0) and product p:
@@ -3021,8 +3048,9 @@ through `bratio::kernel_tails` and `fisher.rs::f_tail`. The 6 cells above stay o
     not Excel's form.
   - It does make all 47 t3568-r5-bup column-B cells bit-exact (T-3764), plus 24 t4017-f-huge-df2 cells. Its wins and
     losses both span b0 from 1/2 to 1E10, so no shape cut separates them.
-Status: VERIFIED (excel-graph) for the complement down to w1 of about 1E-16; w's form PARTIAL (71 cells for it, 6
-contrary cells with no form, T-3886); below 2^-53 UNVERIFIED
+Status: VERIFIED (excel-graph) for the complement down to w1 of about 1E-16, and for w at |z| >= 1 (T-3764); w's form
+below |z| = 1 PARTIAL (71 cells for it, 6 contrary cells with no form, T-3886); below 2^-53 UNVERIFIED but for the
+four t3568 cells
 Tasks: T-3007, T-2511, T-3150, T-3170, T-3886, T-3764
 
 ## Excel's log1p is a 14-term atanh series in alnrel's variable (T-2464)
@@ -4729,7 +4757,14 @@ within 1E-15 relative / largest relative error:
   and still read 0, while `F.DIST.RT(20,60,1E8)` (z 600) keeps 1.164E-211. FDIST is the same function: column D (df1 30,
   df2 1E8, z 716 to 736) is 0 like column A. The df1 = 2 zeros are Excel's closed form (not this path) and stay unexplained.
   Ours (T-4045): F's tails only (`bratio` `f_closed_or_ported_tails` asks `bup.rs` `l140_bup_prefactor_underflows`,
-  at any a0). That makes every 0 of t4045 and t4017 exact. BETA.DIST's cdf keeps today's kernel there: F.INV at a huge df1 searches it, and a 0 there moves
+  at any a0). That makes every 0 of t4045 and t4017 exact. Since T-3764 BETA.DIST's and BETADIST's worksheet cdf
+  takes the rule too (`bratio::beta_dist_cdf`). Column A of probes-numeric t3568-r5-bup-tune, -hold and -fresh has 47
+  Excel zeros (true tails up to 2E-257, for example `BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)`,
+  t3568-r5-bup-fresh A291). The rule matches all 47 (28 before; train 32 of 32, T-3764's hold-out 15 of 15), zeroes
+  none of the column's 4,078 Excel numbers, and the 44 zeros of
+  probes/t4254-beta-t-l140-zero-cut at ln ret -709 and below (A12:A22, B12:B22, C12:C22, D12:D22) become exact, and no
+  Excel number in the eval moves.
+  The quantile searches keep today's kernel: F.INV at a huge df1 searches BETA.DIST's cdf, and a 0 there moves
   `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) 0.6% off the math.
   BETA.DIST and the t (T-4254, probes/t4254-beta-t-l140-zero-cut, 132 cells, and probes/t4254-beta-t-zero-wide, 180 cells,
   excel-graph, 2026-11-06), walked in ln ret (BETA.DIST on L140 bup+bgrat: a huge, b < 40, x0 > 0.7) or in ln of the
@@ -4744,9 +4779,11 @@ within 1E-15 relative / largest relative error:
   - T.DIST.RT never reaches L140: its kernel is K(df/2, 1/2), and b = 1/2 takes the small-shape branches. Still, Excel
     is 0 once the true tail falls between e^-680 and e^-690 at df 1E7, and between e^-690 and e^-698 at df 1E5
     (about 3E-300), far above the subnormals. Unmodelled (T-4437).
-  - Excel never returns a subnormal or a non-zero value below these cuts in any probed cell. Ours keeps a number at
-    every Excel 0 above (a type-level miss on 0 against a number, owned by T-4437) and matches every number to the last
-    digits, except three cells just above the n = 3 cut that are off in the 9th digit.
+  - Excel never returns a subnormal or a non-zero value below these cuts in any probed cell. Ours matches every number
+    to the last digits, except three cells just above the n = 3 cut that are off in the 9th digit. Since T-3764 it is
+    Excel's 0 wherever ln ret is below ln(DBL_MIN) (the rule above); it still keeps a number at the n = 3 zeros above
+    that (t4254-beta-t-l140-zero-cut B1:B11, D1:D11, and t4254-beta-t-zero-wide A30, B30, C30) and the t's (owned by
+    T-4437).
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
@@ -6898,7 +6935,7 @@ QUARTILE*, PERCENTILE* and TRIMMEAN are `#NUM!` (`QUARTILE(Data!E2,3)` with E2 =
 44a8841352dc48e9 A52). This answers T-2344's single-cell question and T-2066's (`QUARTILE` of one text cell).
 Evidence: gen-m9 (excel-graph, 2026-10-23, T-2256); 72 cells in T-2344.
 Ours: since T-2429 a cell holding text or a boolean is no number in QUARTILE*, PERCENTILE* and PERCENTRANK* ("A single cell holding a boolean is no number in the PERCENTILE and QUARTILE data"), and since T-2621 a cell holding nothing, text or a boolean in TRIMMEAN.
-T-2344 probed the same data given as a defined name, INDEX, OFFSET, IF or CHOOSE result (probes/t2344-percentile-name-index-data A1-A30, excel-graph, 2026-10-27): a reference of any of these forms holding one text (also numeric text "1") or boolean cell is no number, `#NUM!` for QUARTILE*/PERCENTILE* and `#N/A` for PERCENTRANK*, after quart's own error (`QUARTILE(INDEX(..),NA())` `#N/A`); ours since T-2344 (`percentile_numbers` reads the argument once in reference context). T-2883 probed the same data given as a defined name, an INDEX result or an IF result, for 14 statistical functions (probes/t2883-stat-name-index-data A1-A168, excel-graph, 2026-11-05): TRIMMEAN and Z.TEST read such a lone text, boolean or numeric-text cell as a plain reference does (TRIMMEAN `#NUM!`, Z.TEST `#N/A`; MODE, MODE.SNGL, CORREL, COVARIANCE.P, SLOPE, FORECAST, CHISQ.TEST, STDEV.S, VAR.P, AVERAGE, LARGE and RANK already did); ours since T-2883 (TRIMMEAN's data and Z.TEST's read the argument once with `evaluate_picked_reference_arg`, as `percentile_numbers`). LET, IFS, SWITCH, LAMBDA and OFFSET/CHOOSE picks of these functions are unprobed, as are a 3-D reference and a union as TRIMMEAN's or Z.TEST's data (ours: a 3-D reference is `#VALUE!` since T-2883, it was `#REF!`; a union `#VALUE!`; Excel accepts both in LARGE and SMALL, T-4309).
+T-2344 probed the same data given as a defined name, INDEX, OFFSET, IF or CHOOSE result (probes/t2344-percentile-name-index-data A1-A30, excel-graph, 2026-10-27): a reference of any of these forms holding one text (also numeric text "1") or boolean cell is no number, `#NUM!` for QUARTILE*/PERCENTILE* and `#N/A` for PERCENTRANK*, after quart's own error (`QUARTILE(INDEX(..),NA())` `#N/A`); ours since T-2344 (`percentile_numbers` reads the argument once in reference context). T-2883 probed the same data given as a defined name, an INDEX result or an IF result, for 14 statistical functions (probes/t2883-stat-name-index-data A1-A168, excel-graph, 2026-11-05): TRIMMEAN and Z.TEST read such a lone text, boolean or numeric-text cell as a plain reference does (TRIMMEAN `#NUM!`, Z.TEST `#N/A`; MODE, MODE.SNGL, CORREL, COVARIANCE.P, SLOPE, FORECAST, CHISQ.TEST, STDEV.S, VAR.P, AVERAGE, LARGE and RANK already did); ours since T-2883 (TRIMMEAN's data and Z.TEST's read the argument once with `evaluate_picked_reference_arg`, as `percentile_numbers`). LET, IFS, SWITCH, LAMBDA and OFFSET/CHOOSE picks of these functions are unprobed, and so is a union. A 3-D reference (`Sheet1:Data!A4:A6`) and a union (`(A1:A2,A4:A6)`) as the data of TRIMMEAN, Z.TEST, PERCENTILE, PERCENTILE.INC/.EXC, QUARTILE, QUARTILE.INC/.EXC and PERCENTRANK, PERCENTRANK.INC/.EXC are accepted, as in LARGE and SMALL: the areas are read as written (a 3-D range reads every sheet of its span, probed; an overlap counting twice, an error cell and text or boolean cells are by analogy with LARGE and SMALL, unprobed for these functions), e.g. `TRIMMEAN(Sheet1:Data!A4:A6,0.2)` 4, `Z.TEST((A1:A2,A4:A6),4,1)` 0.98732634066, `PERCENTILE((A1:A2,A4:A6),0.5)` 3, `PERCENTRANK.EXC(Sheet1:Data!A4:A6,3)` 0.142 (probes/t4309-3d-union-trimmean-percentile H1:H22, excel-graph, 2026-11-06, T-4309). Ours since T-4309 (`RefArg::into_areas_or_single`, `area_numbers`); it was `#VALUE!` after T-2883 (and `#REF!` for a 3-D reference before).
 Status: VERIFIED (excel-graph)
 
 ## COVARIANCE: a boolean scalar is one value (T-2436)
@@ -7446,7 +7483,8 @@ error, so matching those digits means reproducing Excel's op order, not computin
 BETADIST, BINOMDIST and NEGBINOMDIST had no sample of their own. They are in the counted family as the legacy forms of
 BETA.DIST, BINOM.DIST and NEGBINOM.DIST on the same kernel ("Incomplete beta is TOMS 708 `bratio`", above).
 
-Status: MEASURED (excel-graph values, mpmath 1.3 at 50 digits; 2026-11-04). Counted at 13 digits since decision 0267 and
+Status: MEASURED (excel-graph values, mpmath 1.3 at 50 digits; 2026-11-04). The 1% figure covers only cells the engine
+was already visibly off on; it says nothing of cells where both agree. Counted at 13 digits since decision 0267 and
 SPEC-0030 (`closeness::THIRTEEN_DIGIT_FAMILY`, the `residue13` bucket). The branch-level noise entries above (bgrat's
 increment, bup with 10 or more terms, bfrac past 10 terms, the F density) are the mechanisms.
 
