@@ -2509,9 +2509,18 @@ its digits below, -expm1(b*ln1p(-x)) as far as the cells tell, the same cut as T
   B450) bit for bit, 1 ulp from the closed form.
 Ours: `incomplete_beta.rs` `shape_one_tails` (oriented, x0 < 0.1 there) for BETA.DIST's cdf, BETA.INV and the F tails,
 and `fisher.rs` `unoriented_shape_one_tail` with the cut `A1_EXPM1_MAX_X` for F.TEST and the F quantiles' search (T-2977).
-Status: VERIFIED (excel-graph) at x from 1E-11 to 4E-4 below the cut and at 0.1; the cut itself between 4E-4 and 0.1
-is UNVERIFIED (assumed T.DIST.RT's).
-Tasks: T-0974, T-2119
+- F.TEST at a = 1 (T-4497, probes-numeric t4497-f-a1-cut-sweep and t4497-f-a1-cut-dense, x 4E-4 to 0.2): the cut lies
+  between x = 0.0996048 (dense A15, the uncancelled form) and x = 0.100089 (dense A12, 1 - exp), so 0.1 stands; and
+  below it F.TEST takes Excel's own kernels, 1 - e^y by its Kahan expm1 of y = b times its stored-atanh ln(1 - x)
+  (`x87_exp::excel_one_minus_exp`, `x87_log1p::excel_ln_one_minus`): with them all 220 F.TEST cells are bit-exact
+  (71 of 71 held out), against 142 with libm's `exp_m1`/`ln_1p`, the engine's form today (T-4498 applies it).
+  The df 2 quantiles' cells do not place the cut: their search stops a few ulps from the crossing whatever the tail's
+  form. Below 0.1 they agree that the cancelling form is wrong (168 of 334 cells visibly off with it). From 0.1 up they
+  lean slightly against cancelling (8 of 106 off against 4), which T-4498 checks. Their 9 visibly-off cells are T-3485's.
+  Details: docs/research/t4497/README.md.
+Status: VERIFIED (excel-graph) at x from 1E-11 to 4E-4 below the cut and at 0.1; the cut between 0.0996048 and
+0.100089 and Excel's kernels below it VERIFIED (excel-graph) for F.TEST's a = 1 tail (T-4497).
+Tasks: T-0974, T-2119, T-4497, T-4498
 
 ## F.INV is a crossing of F.DIST's tails (T-0974)
 Rule: as BETA.INV (T-1745), F.INV and F.INV.RT/FINV return a double where Excel's own cdf crosses p. The smaller tail is
@@ -5987,7 +5996,8 @@ so `TREND(..,SORTBY(Data!A1:D12,..))` and `GROWTH(LOOKUP(NA(),..),..,GROUPBY(..)
 Evidence: probes/regression-trend (excel-graph, 2026-10-16, T-1620); gen-m9 (excel-graph, 2026-10-22/23, T-2255, T-2256).
 Ours: matches since T-1726 (`trend_or_growth` in functions/statistical/trend.rs), but for the last-digit differences of the
 shared least-squares solve (T-2006) and A187 above. A single point without a constant term (`TREND(5,2,4,FALSE)`) is a fit
-through the origin, UNVERIFIED (T-2569). LINEST and LOGEST of one point are accepted by Excel (linest-modes K141, logest-modes
+through the origin (VERIFIED by T-4096's Gate A tables: TREND s1 A140 and GROWTH s1 A123 and A125, where new_x differs
+from known_x, so only a fit through the origin gives Excel's value; TREND A116, A118, A131 and A136 are consistent; see "LINEST, LOGEST, TREND and GROWTH: Gate A tables"). LINEST and LOGEST of one point are accepted by Excel (linest-modes K141, logest-modes
 K162), and ours since T-1741.
 Status: VERIFIED (excel-graph)
 Tasks: T-1726 (overlaps T-1402, T-1743)
@@ -6909,6 +6919,39 @@ Evidence: gen-m9 (excel-graph, 2026-10-22); probes/logest-modes and probes/growt
 Ours: as described; T-2006, T-2468, T-2484, T-2569, T-2614, T-2615.
 Status: VERIFIED (excel-graph) for the values; the pivot and the four cross-function causes (PRICEMAT, HLOOKUP, DISC, PROB) UNVERIFIED
 Tasks: T-2006, T-2468, T-2484, T-2569, T-2614, T-2615
+
+## LINEST, LOGEST, TREND and GROWTH: Gate A tables (T-4096)
+Rule: on the Gate A tables accuracy/{LINEST,LOGEST,TREND,GROWTH}/s1 (excel-graph, 2026-11-06; 799 points, one-row
+array literals for known_y, 2-D literals for known_x and new_x, one element read through INDEX) Excel's numbers are
+the exact least-squares values to within 2E-8 relative on all but four points, and every error cell is one of the
+rules above: unequal shapes `#REF!`, LOGEST's and GROWTH's non-positive y `#NUM!`, and the stats block's `#N/A`
+cells (rows 3-5 right of the second column, b's standard error with const FALSE). The math (tools
+accuracy/defs/array_regression.py) solves the normal equations in rational arithmetic, LOGEST and GROWTH on ln y.
+- Covered elements: LINEST's and LOGEST's coefficient row (m_k..m_1, b) and the whole stats block (standard errors,
+  r^2, se_y, F, df, ss_reg, ss_resid), up to four x variables; every element of TREND's and GROWTH's result, new_x of
+  any shape for one variable and k rows for k variables. Not claimed: designs within a relative 1E-7 of collinear
+  (which column Excel drops, and at what cut-off, is T-2569's), the residual cells of an exact fit or of one with no
+  degree of freedom left (Excel's rounding: `#NUM!` or a huge F), and r^2 of a constant y.
+- One point without a constant term is a fit through the origin: `TREND({-87.2811895514037},{126966.940466164},
+  {..,117175.728079905,..},FALSE)` is -80.55039284884894 (A140), GROWTH's the same in ln (A123, A125).
+- A slope whose e^coefficient underflows is no error: GROWTH s1 A119 (coefficient -710.56) and A127 (-1430.22), const
+  FALSE, match the exact value, so Excel does not multiply by an underflowed multiplier.
+- GROWTH s1 A104 is `#NUM!` where the prediction is 8.13890815167933E-18: two variables (x1 near 7.3E+7, x2 near
+  77.9407 with a spread of 2E-4), whose ln fit's intercept is 1289.95, so b = e^1289.95 is past the double range. It
+  is the only table point with an intercept past ln(max double); unexplained, the intercept's overflow is the lead
+  (T-4590). Ours is 8.138904702791959E-18.
+- Excel off the exact value: LINEST s1 A197 (`INDEX(LINEST(<4 points from 1E-48 to 6E+20>,<2 variables>,FALSE,TRUE),5,1)`,
+  ss_reg) is 0 where the exact value is 1.19E-52, the cancellation of ss_tot (3.9E+41) and ss_resid: more than 1E-4
+  off, kept as the target under decision 0300; ours is 0 too. LINEST A184 (an intercept over data from 1E-44 to
+  1E+34) is 8.5E-5 off, LOGEST A98 (ss_resid of a near-exact fit, 1.9E-22) 3E-6 and LOGEST A82 (F of a near-exact
+  fit, 9.9E+19) 8E-7.
+- Ours solves the normal equations in doubles: on 21 ill-conditioned points (large offsets with a small relative
+  spread, mixed magnitudes) it is from 2E-9 to 20 relative off where Excel is within 2E-8, and TREND A193 (data from
+  1E-45 to 1E+49) is `#NUM!` where Excel and the math are -1.3025416638036628E+49 (T-2006, known failures).
+Evidence: eval/accuracy/tables/{LINEST,LOGEST,TREND,GROWTH}/s1 (excel-graph, 2026-11-06, T-4096).
+Ours: as described; T-2006 (the solve), T-4590 (A104).
+Status: VERIFIED (excel-graph) for the table points; A104's cause UNVERIFIED
+Tasks: T-4096, T-2006, T-4590, T-2569
 
 ## TRIMMEAN: an error percent before data with no number (T-1742)
 Rule: TRIMMEAN returns an error-valued percent before it reports data with no number: `TRIMMEAN(Data!E11:E11,<#N/A>)`
