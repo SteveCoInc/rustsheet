@@ -85,6 +85,9 @@ pub(crate) enum SetId {
     All,
     /// Set `n` of PIVOTBY's relative sets (`RelativeSets`).
     Pivot(usize),
+    /// Set `n` of PIVOTBY's parent sets, `relative_to` 3 and 4 (`ParentSets`): unique within
+    /// one PIVOTBY call only, which is all a set id needs (the sets of one call are compared).
+    ParentCell(usize),
     /// Parent `group` at sort level `level` of `axis` ([`Grouping::sort_by_aggregate`]).
     Parent {
         axis: Axis,
@@ -116,6 +119,14 @@ pub(crate) struct Group {
 }
 
 impl Group {
+    /// The id of the group's leaf class, which no other group of its grouping has, whether or
+    /// not a row reached it: it names the group across the sorts. (Its first row does not: a
+    /// leaf no row reaches holds every row, so it shares its first row with a reached group;
+    /// probes/t4382-pivotby-intransitive-paths Calc!B2, T-4403.)
+    pub(crate) fn leaf_id(&self) -> usize {
+        self.cells.last().copied().unwrap_or(usize::MAX)
+    }
+
     /// Orders two groups' keys in `field`: texts under one parent (equal keys in the fields
     /// before it) by their rank, the order [`Grouping::new`] sorted them in, `built` (ascending
     /// or not), so `"AB"` before `"ab"&U+00AD` (probes/t4195-groupby-intransitive Calc!B31:B38);
@@ -314,7 +325,7 @@ impl Grouping {
     /// group: headers and filtered rows). A row in a group no row reached too ([`Grouping::new`]
     /// step 4) maps to the group it reached; such a group gets only the rows in no other
     /// (PIVOTBY's columns give such a group every record instead, [`Grouping::unreached`];
-    /// relative sets unprobed).
+    /// `relative_to` 0 to 2 sets unprobed; 3 and 4 read the grid's cells instead, `ParentSets`).
     pub(crate) fn group_of(&self, height: usize) -> Vec<usize> {
         let mut group_of = vec![usize::MAX; height];
         for reached in [true, false] {
@@ -871,7 +882,7 @@ impl Grouping {
     /// probes/groupby-subtotals G!A331, G!A1081). On an intransitive run, whatever the sort, it
     /// counts a row that reached the class but no leaf under it, and not the extra rows of a leaf
     /// no row reaches (probes/t4359-groupby-value-sort-holdout Calc!E, F; T-4359).
-    fn subtotal_rows(&self, level: usize, start: usize) -> &[usize] {
+    pub(crate) fn subtotal_rows(&self, level: usize, start: usize) -> &[usize] {
         let field = level.saturating_sub(1);
         match self
             .groups

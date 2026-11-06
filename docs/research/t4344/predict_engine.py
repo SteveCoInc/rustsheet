@@ -79,5 +79,12 @@ def main() -> None:
     print(len(values), "predictions")
 
 
+def run(case: str, out: str) -> None:
+    """`main` for another probe: its case path (without `.case.json`) and its predictions file."""
+    global CASE, OUT
+    CASE, OUT = case, out
+    main()
+
+
 if __name__ == "__main__":
     main()

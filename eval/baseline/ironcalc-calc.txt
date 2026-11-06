@@ -33,6 +33,7 @@ C	ironcalc-calc/ENGINEERING/CONVERT.xlsx	509
 C	ironcalc-calc/ENGINEERING/ERFs.xlsx	96
 C	ironcalc-calc/ENGINEERING/GESTEP_DELTA.xlsx	63
 C	ironcalc-calc/ENGINEERING/NUMBER_SYSTEMS.xlsx	710
+C	ironcalc-calc/FINANCIAL/1682.xlsx	21
 C	ironcalc-calc/FINANCIAL/ACCRINT.xlsx	39
 C	ironcalc-calc/FINANCIAL/ACCRINTM.xlsx	17
 C	ironcalc-calc/FINANCIAL/ACCRINT_ACCRINTM.xlsx	51

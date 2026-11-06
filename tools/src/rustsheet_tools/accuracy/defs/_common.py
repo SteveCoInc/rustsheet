@@ -13,10 +13,12 @@ from fractions import Fraction
 import mpmath
 
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import DomainError, Draw, MathArg
+from rustsheet_tools.accuracy.model import DomainError, Draw, MathArg, NoValueError
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 DF_CUT = 1e10  # the cumulative functions' last valid (truncated) df (statistics.md Student-t df limits)
+CONDITION_LIMIT = 1e-10  # an ill-conditioned point (kappa * 2^-52 above this) is redrawn
+EPS = 2.0**-52
 
 
 def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
@@ -26,6 +28,13 @@ def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
         assert not isinstance(a, (bool, tuple))
         out.append(a)
     return out
+
+
+def ill_conditioned(kappa: float) -> None:
+    """NoValueError (redraw) when a relative condition number `kappa` puts one rounding past `CONDITION_LIMIT`."""
+    if kappa * EPS > CONDITION_LIMIT:
+        msg = f"ill-conditioned (kappa {kappa:.3g})"
+        raise NoValueError(msg)
 
 
 def zero_pole(args: Sequence[MathArg]) -> str | None:

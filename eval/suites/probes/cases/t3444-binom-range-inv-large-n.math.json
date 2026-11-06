@@ -1920,6 +1920,16 @@
     "v": "0.00027237191471360355638987740844170424119367236362585",
     "f": "=BINOM.DIST(2147484,2147483646,0.001,FALSE)"
    },
+   "B13": {
+    "t": "n",
+    "v": "0.54055393052495109840194231765053700655698776245117",
+    "f": "=BINOM.DIST(20,10000,0.001,TRUE)-BINOM.DIST(9,10000,0.001,TRUE)"
+   },
+   "B14": {
+    "t": "n",
+    "v": "0.96271390124896051403158292458783762413077056407928",
+    "f": "=BINOM.DIST(16,10000,0.001,TRUE)-BINOM.DIST(3,10000,0.001,TRUE)"
+   },
    "B15": {
     "t": "n",
     "v": "0.12517263665023892963122428905980952674312008645425",
@@ -1929,6 +1939,16 @@
     "t": "n",
     "v": "0.58303976062925740925826248635256392670914799268013",
     "f": "=BINOM.DIST(10,10000,0.001,TRUE)-0"
+   },
+   "B17": {
+    "t": "n",
+    "v": "0.54213287602098153561414051182509865611791610717773",
+    "f": "=BINOM.DIST(10000,10000,0.001,TRUE)-BINOM.DIST(9,10000,0.001,TRUE)"
+   },
+   "B18": {
+    "t": "n",
+    "v": "0.0071518279848732380088449644972570240497589111328125",
+    "f": "=BINOM.DIST(26,10000,0.001,TRUE)-BINOM.DIST(18,10000,0.001,TRUE)"
    },
    "B21": {
     "t": "n",
@@ -1945,6 +1965,16 @@
     "v": "0.0087053613650670565189701046817801323857757589153229",
     "f": "=BINOM.DIST(3000,10000,0.3,FALSE)"
    },
+   "B31": {
+    "t": "n",
+    "v": "0.36629856639548907804027066958951763808727264404297",
+    "f": "=BINOM.DIST(110,100000,0.001,TRUE)-BINOM.DIST(99,100000,0.001,TRUE)"
+   },
+   "B32": {
+    "t": "n",
+    "v": "0.9599785921420832743300444178657926386222243309021",
+    "f": "=BINOM.DIST(120,100000,0.001,TRUE)-BINOM.DIST(79,100000,0.001,TRUE)"
+   },
    "B33": {
     "t": "n",
     "v": "0.039880942234625597116117712087137894759799111523173",
@@ -1954,6 +1984,16 @@
     "t": "n",
     "v": "0.52656220185507298848112555545980123696257738884234",
     "f": "=BINOM.DIST(100,100000,0.001,TRUE)-0"
+   },
+   "B35": {
+    "t": "n",
+    "v": "0.51331874037955260714483074480085633695125579833984",
+    "f": "=BINOM.DIST(100000,100000,0.001,TRUE)-BINOM.DIST(99,100000,0.001,TRUE)"
+   },
+   "B36": {
+    "t": "n",
+    "v": "0.0022700469607418449768942991795483976602554321289063",
+    "f": "=BINOM.DIST(150,100000,0.001,TRUE)-BINOM.DIST(129,100000,0.001,TRUE)"
    },
    "B39": {
     "t": "n",
@@ -1970,6 +2010,11 @@
     "v": "0.012620923387767838287846635047021346926959306667027",
     "f": "=BINOM.DIST(1000,1000000,0.001,FALSE)"
    },
+   "B54": {
+    "t": "n",
+    "v": "0.0015896690428311988085852135554887354373931884765625",
+    "f": "=BINOM.DIST(1158,1000000,0.001,TRUE)-BINOM.DIST(1094,1000000,0.001,TRUE)"
+   },
    "B57": {
     "t": "n",
     "v": "0.00027529631924020770334104363933152492538415072218091",
@@ -1980,6 +2025,16 @@
     "v": "0.0002523132458941847786222160007348515179525361434361",
     "f": "=BINOM.DIST(5000000,10000000,0.5,FALSE)"
    },
+   "B67": {
+    "t": "n",
+    "v": "0.34400102421002887176371132227359339594841003417969",
+    "f": "=BINOM.DIST(10100,10000000,0.001,TRUE)-BINOM.DIST(9999,10000000,0.001,TRUE)"
+   },
+   "B68": {
+    "t": "n",
+    "v": "0.95514676444428864635072251587644132087007164955139",
+    "f": "=BINOM.DIST(10200,10000000,0.001,TRUE)-BINOM.DIST(9799,10000000,0.001,TRUE)"
+   },
    "B69": {
     "t": "n",
     "v": "0.0039913857509778728983360944475214826472964634200442",
@@ -1989,6 +2044,16 @@
     "t": "n",
     "v": "0.50265958155178868539784679537822586568688095119935",
     "f": "=BINOM.DIST(10000,10000000,0.001,TRUE)-0"
+   },
+   "B71": {
+    "t": "n",
+    "v": "0.50133180419918921266742017905926331877708435058594",
+    "f": "=BINOM.DIST(10000000,10000000,0.001,TRUE)-BINOM.DIST(9999,10000000,0.001,TRUE)"
+   },
+   "B72": {
+    "t": "n",
+    "v": "0.0014250089761463913262673486315179616212844848632813",
+    "f": "=BINOM.DIST(10500,10000000,0.001,TRUE)-BINOM.DIST(10299,10000000,0.001,TRUE)"
    },
    "B75": {
     "t": "n",
@@ -2024,6 +2089,10 @@
  },
  "skipped": {
   "Range": {
+   "B1": {
+    "f": "=BINOM.DIST(3010,10000,0.3,TRUE)-BINOM.DIST(2999,10000,0.3,TRUE)",
+    "why": "not converged"
+   },
    "B10": {
     "f": "=BINOM.DIST(5000,10000,0.5,TRUE)-0",
     "why": "not converged"
@@ -2032,28 +2101,152 @@
     "f": "=BINOM.DIST(500000000,1000000000,0.5,TRUE)-0",
     "why": "not converged"
    },
+   "B101": {
+    "f": "=BINOM.DIST(1000000000,1000000000,0.5,TRUE)-BINOM.DIST(499999999,1000000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B102": {
+    "f": "=BINOM.DIST(500079057,1000000000,0.5,TRUE)-BINOM.DIST(500047433,1000000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B103": {
+    "f": "=BINOM.DIST(1000100,1000000000,0.001,TRUE)-BINOM.DIST(999999,1000000000,0.001,TRUE)",
+    "why": "not converged"
+   },
+   "B104": {
+    "f": "=BINOM.DIST(1001999,1000000000,0.001,TRUE)-BINOM.DIST(998000,1000000000,0.001,TRUE)",
+    "why": "not converged"
+   },
    "B106": {
     "f": "=BINOM.DIST(1000000,1000000000,0.001,TRUE)-0",
+    "why": "not converged"
+   },
+   "B107": {
+    "f": "=BINOM.DIST(1000000000,1000000000,0.001,TRUE)-BINOM.DIST(999999,1000000000,0.001,TRUE)",
+    "why": "not converged"
+   },
+   "B108": {
+    "f": "=BINOM.DIST(1004997,1000000000,0.001,TRUE)-BINOM.DIST(1002997,1000000000,0.001,TRUE)",
+    "why": "not converged"
+   },
+   "B109": {
+    "f": "=BINOM.DIST(644245194,2147483646,0.3,TRUE)-BINOM.DIST(644245093,2147483646,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B11": {
+    "f": "=BINOM.DIST(10000,10000,0.5,TRUE)-BINOM.DIST(4999,10000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B110": {
+    "f": "=BINOM.DIST(644287566,2147483646,0.3,TRUE)-BINOM.DIST(644202621,2147483646,0.3,TRUE)",
     "why": "not converged"
    },
    "B112": {
     "f": "=BINOM.DIST(644245094,2147483646,0.3,TRUE)-0",
     "why": "not converged"
    },
+   "B113": {
+    "f": "=BINOM.DIST(2147483646,2147483646,0.3,TRUE)-BINOM.DIST(644245093,2147483646,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B114": {
+    "f": "=BINOM.DIST(644351274,2147483646,0.3,TRUE)-BINOM.DIST(644308801,2147483646,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B115": {
+    "f": "=BINOM.DIST(1073741923,2147483646,0.5,TRUE)-BINOM.DIST(1073741822,2147483646,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B116": {
+    "f": "=BINOM.DIST(1073788164,2147483646,0.5,TRUE)-BINOM.DIST(1073695481,2147483646,0.5,TRUE)",
+    "why": "not converged"
+   },
    "B118": {
     "f": "=BINOM.DIST(1073741823,2147483646,0.5,TRUE)-0",
+    "why": "not converged"
+   },
+   "B119": {
+    "f": "=BINOM.DIST(2147483646,2147483646,0.5,TRUE)-BINOM.DIST(1073741822,2147483646,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B12": {
+    "f": "=BINOM.DIST(5250,10000,0.5,TRUE)-BINOM.DIST(5149,10000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B120": {
+    "f": "=BINOM.DIST(1073857675,2147483646,0.5,TRUE)-BINOM.DIST(1073811333,2147483646,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B121": {
+    "f": "=BINOM.DIST(2147584,2147483646,0.001,TRUE)-BINOM.DIST(2147483,2147483646,0.001,TRUE)",
+    "why": "not converged"
+   },
+   "B122": {
+    "f": "=BINOM.DIST(2150413,2147483646,0.001,TRUE)-BINOM.DIST(2144553,2147483646,0.001,TRUE)",
     "why": "not converged"
    },
    "B124": {
     "f": "=BINOM.DIST(2147484,2147483646,0.001,TRUE)-0",
     "why": "not converged"
    },
+   "B125": {
+    "f": "=BINOM.DIST(2147483646,2147483646,0.001,TRUE)-BINOM.DIST(2147483,2147483646,0.001,TRUE)",
+    "why": "not converged"
+   },
+   "B126": {
+    "f": "=BINOM.DIST(2154807,2147483646,0.001,TRUE)-BINOM.DIST(2151877,2147483646,0.001,TRUE)",
+    "why": "not converged"
+   },
+   "B19": {
+    "f": "=BINOM.DIST(30010,100000,0.3,TRUE)-BINOM.DIST(29999,100000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B2": {
+    "f": "=BINOM.DIST(3092,10000,0.3,TRUE)-BINOM.DIST(2907,10000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B20": {
+    "f": "=BINOM.DIST(30290,100000,0.3,TRUE)-BINOM.DIST(29709,100000,0.3,TRUE)",
+    "why": "not converged"
+   },
    "B22": {
     "f": "=BINOM.DIST(30000,100000,0.3,TRUE)-0",
     "why": "not converged"
    },
+   "B23": {
+    "f": "=BINOM.DIST(100000,100000,0.3,TRUE)-BINOM.DIST(29999,100000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B24": {
+    "f": "=BINOM.DIST(30725,100000,0.3,TRUE)-BINOM.DIST(30434,100000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B25": {
+    "f": "=BINOM.DIST(50010,100000,0.5,TRUE)-BINOM.DIST(49999,100000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B26": {
+    "f": "=BINOM.DIST(50316,100000,0.5,TRUE)-BINOM.DIST(49683,100000,0.5,TRUE)",
+    "why": "not converged"
+   },
    "B28": {
     "f": "=BINOM.DIST(50000,100000,0.5,TRUE)-0",
+    "why": "not converged"
+   },
+   "B29": {
+    "f": "=BINOM.DIST(100000,100000,0.5,TRUE)-BINOM.DIST(49999,100000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B30": {
+    "f": "=BINOM.DIST(50791,100000,0.5,TRUE)-BINOM.DIST(50473,100000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B37": {
+    "f": "=BINOM.DIST(300100,1000000,0.3,TRUE)-BINOM.DIST(299999,1000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B38": {
+    "f": "=BINOM.DIST(300917,1000000,0.3,TRUE)-BINOM.DIST(299082,1000000,0.3,TRUE)",
     "why": "not converged"
    },
    "B4": {
@@ -2064,36 +2257,192 @@
     "f": "=BINOM.DIST(300000,1000000,0.3,TRUE)-0",
     "why": "not converged"
    },
+   "B41": {
+    "f": "=BINOM.DIST(1000000,1000000,0.3,TRUE)-BINOM.DIST(299999,1000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B42": {
+    "f": "=BINOM.DIST(302291,1000000,0.3,TRUE)-BINOM.DIST(301374,1000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B43": {
+    "f": "=BINOM.DIST(500100,1000000,0.5,TRUE)-BINOM.DIST(499999,1000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B44": {
+    "f": "=BINOM.DIST(501000,1000000,0.5,TRUE)-BINOM.DIST(498999,1000000,0.5,TRUE)",
+    "why": "not converged"
+   },
    "B46": {
     "f": "=BINOM.DIST(500000,1000000,0.5,TRUE)-0",
+    "why": "not converged"
+   },
+   "B47": {
+    "f": "=BINOM.DIST(1000000,1000000,0.5,TRUE)-BINOM.DIST(499999,1000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B48": {
+    "f": "=BINOM.DIST(502500,1000000,0.5,TRUE)-BINOM.DIST(501499,1000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B49": {
+    "f": "=BINOM.DIST(1100,1000000,0.001,TRUE)-BINOM.DIST(999,1000000,0.001,TRUE)",
+    "why": "not converged"
+   },
+   "B5": {
+    "f": "=BINOM.DIST(10000,10000,0.3,TRUE)-BINOM.DIST(2999,10000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B50": {
+    "f": "=BINOM.DIST(1063,1000000,0.001,TRUE)-BINOM.DIST(936,1000000,0.001,TRUE)",
     "why": "not converged"
    },
    "B52": {
     "f": "=BINOM.DIST(1000,1000000,0.001,TRUE)-0",
     "why": "not converged"
    },
+   "B53": {
+    "f": "=BINOM.DIST(1000000,1000000,0.001,TRUE)-BINOM.DIST(999,1000000,0.001,TRUE)",
+    "why": "not converged"
+   },
+   "B55": {
+    "f": "=BINOM.DIST(3000100,10000000,0.3,TRUE)-BINOM.DIST(2999999,10000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B56": {
+    "f": "=BINOM.DIST(3002898,10000000,0.3,TRUE)-BINOM.DIST(2997101,10000000,0.3,TRUE)",
+    "why": "not converged"
+   },
    "B58": {
     "f": "=BINOM.DIST(3000000,10000000,0.3,TRUE)-0",
+    "why": "not converged"
+   },
+   "B59": {
+    "f": "=BINOM.DIST(10000000,10000000,0.3,TRUE)-BINOM.DIST(2999999,10000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B6": {
+    "f": "=BINOM.DIST(3229,10000,0.3,TRUE)-BINOM.DIST(3136,10000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B60": {
+    "f": "=BINOM.DIST(3007246,10000000,0.3,TRUE)-BINOM.DIST(3004346,10000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B61": {
+    "f": "=BINOM.DIST(5000100,10000000,0.5,TRUE)-BINOM.DIST(4999999,10000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B62": {
+    "f": "=BINOM.DIST(5003162,10000000,0.5,TRUE)-BINOM.DIST(4996837,10000000,0.5,TRUE)",
     "why": "not converged"
    },
    "B64": {
     "f": "=BINOM.DIST(5000000,10000000,0.5,TRUE)-0",
     "why": "not converged"
    },
+   "B65": {
+    "f": "=BINOM.DIST(10000000,10000000,0.5,TRUE)-BINOM.DIST(4999999,10000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B66": {
+    "f": "=BINOM.DIST(5007906,10000000,0.5,TRUE)-BINOM.DIST(5004742,10000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B7": {
+    "f": "=BINOM.DIST(5010,10000,0.5,TRUE)-BINOM.DIST(4999,10000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B73": {
+    "f": "=BINOM.DIST(30000100,100000000,0.3,TRUE)-BINOM.DIST(29999999,100000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B74": {
+    "f": "=BINOM.DIST(30009165,100000000,0.3,TRUE)-BINOM.DIST(29990834,100000000,0.3,TRUE)",
+    "why": "not converged"
+   },
    "B76": {
     "f": "=BINOM.DIST(30000000,100000000,0.3,TRUE)-0",
+    "why": "not converged"
+   },
+   "B77": {
+    "f": "=BINOM.DIST(100000000,100000000,0.3,TRUE)-BINOM.DIST(29999999,100000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B78": {
+    "f": "=BINOM.DIST(30022913,100000000,0.3,TRUE)-BINOM.DIST(30013747,100000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B79": {
+    "f": "=BINOM.DIST(50000100,100000000,0.5,TRUE)-BINOM.DIST(49999999,100000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B8": {
+    "f": "=BINOM.DIST(5100,10000,0.5,TRUE)-BINOM.DIST(4899,10000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B80": {
+    "f": "=BINOM.DIST(50010000,100000000,0.5,TRUE)-BINOM.DIST(49989999,100000000,0.5,TRUE)",
     "why": "not converged"
    },
    "B82": {
     "f": "=BINOM.DIST(50000000,100000000,0.5,TRUE)-0",
     "why": "not converged"
    },
+   "B83": {
+    "f": "=BINOM.DIST(100000000,100000000,0.5,TRUE)-BINOM.DIST(49999999,100000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B84": {
+    "f": "=BINOM.DIST(50025000,100000000,0.5,TRUE)-BINOM.DIST(50014999,100000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B85": {
+    "f": "=BINOM.DIST(100100,100000000,0.001,TRUE)-BINOM.DIST(99999,100000000,0.001,TRUE)",
+    "why": "not converged"
+   },
+   "B86": {
+    "f": "=BINOM.DIST(100632,100000000,0.001,TRUE)-BINOM.DIST(99367,100000000,0.001,TRUE)",
+    "why": "not converged"
+   },
    "B88": {
     "f": "=BINOM.DIST(100000,100000000,0.001,TRUE)-0",
     "why": "not converged"
    },
+   "B89": {
+    "f": "=BINOM.DIST(100000000,100000000,0.001,TRUE)-BINOM.DIST(99999,100000000,0.001,TRUE)",
+    "why": "not converged"
+   },
+   "B90": {
+    "f": "=BINOM.DIST(101580,100000000,0.001,TRUE)-BINOM.DIST(100947,100000000,0.001,TRUE)",
+    "why": "not converged"
+   },
+   "B91": {
+    "f": "=BINOM.DIST(300000100,1000000000,0.3,TRUE)-BINOM.DIST(299999999,1000000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B92": {
+    "f": "=BINOM.DIST(300028983,1000000000,0.3,TRUE)-BINOM.DIST(299971016,1000000000,0.3,TRUE)",
+    "why": "not converged"
+   },
    "B94": {
     "f": "=BINOM.DIST(300000000,1000000000,0.3,TRUE)-0",
+    "why": "not converged"
+   },
+   "B95": {
+    "f": "=BINOM.DIST(1000000000,1000000000,0.3,TRUE)-BINOM.DIST(299999999,1000000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B96": {
+    "f": "=BINOM.DIST(300072457,1000000000,0.3,TRUE)-BINOM.DIST(300043473,1000000000,0.3,TRUE)",
+    "why": "not converged"
+   },
+   "B97": {
+    "f": "=BINOM.DIST(500000100,1000000000,0.5,TRUE)-BINOM.DIST(499999999,1000000000,0.5,TRUE)",
+    "why": "not converged"
+   },
+   "B98": {
+    "f": "=BINOM.DIST(500031623,1000000000,0.5,TRUE)-BINOM.DIST(499968376,1000000000,0.5,TRUE)",
     "why": "not converged"
    }
   }

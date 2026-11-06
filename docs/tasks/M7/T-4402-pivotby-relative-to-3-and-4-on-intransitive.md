@@ -3,7 +3,7 @@ id: T-4402
 title: "PIVOTBY relative_to 3 and 4 on intransitive runs: the parent set is the parent subtotal's records, and an empty one is an error"
 milestone: M7
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -33,10 +33,29 @@ PERCENTOF `#DIV/0!` and a two-argument LAMBDA `#VALUE!`.
   E29 and E30 pass since T-4359).
 
 ## Acceptance criteria
-- [ ] Every probes/t4382-pivotby-intransitive-paths cell named in Context passes, or the misses are recorded in
+- [x] Every probes/t4382-pivotby-intransitive-paths cell named in Context passes, or the misses are recorded in
       coercion.md and owned.
-- [ ] The empty-parent errors are confirmed on a hold-out (PERCENTOF and a two-argument LAMBDA, both axes).
-- [ ] `make check` green; reviewers approve.
+- [x] The empty-parent errors are confirmed on a hold-out (PERCENTOF and a two-argument LAMBDA, both axes).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- `relative_to` 3 and 4 now read each cell's set from its parent's cell: `ParentSets` (relative_to.rs) builds,
+  per row line, the records of the parent column item's cell in the row (3), or of the cell of the parent row
+  item in the column (4), by the grid's own rules (`Grid::column_records` in pivotby.rs, which shares
+  `Grid::reached_class` with `Grid::cell_rows`; row parents by `Grouping::subtotal_rows`). Sets are shared per
+  parent (a `SetId::ParentCell` each, so PERCENTOF sums a parent once), the latest parent per row level kept;
+  the `MAX_SET_ENTRIES` check (`check_set_entries`) still runs first. `relative_to` 0 to 2 keep `RelativeSets`.
+- A two-argument function on an empty set is `#VALUE!` (`Model::aggregate_result`); PERCENTOF's `#DIV/0!` was
+  already its total of 0.
+- Eval: probes/t4382-pivotby-intransitive-paths 780 -> 810 of 819 (all 30 cells named in Context; the 9 left,
+  B31:B33, B35, B39, B41, C31, C33, C39, are T-4401's/T-4388's). New hold-out
+  probes/t4402-pivotby-parent-sets-holdout (excel-graph, 2026-11-05; generator and predictions in
+  docs/research/t4402, predictions committed before the fill): 64 of 64 formulas, 544 of 544 cells, 36 of
+  them the empty-parent errors on both axes (PERCENTOF `#DIV/0!`, LAMBDA `#VALUE!`). Not a numeric fit: the
+  rule is a structural model chosen on T-4382's cells and checked here on fresh runs.
+- coercion.md "PIVOTBY's other paths on intransitive runs (T-4382)" records the hold-out and the implementation.
+- Follow-up: T-4420 (review MINORs: one shared set for unreached column leaves, the empty-set note's scope, a
+  three-field probe).

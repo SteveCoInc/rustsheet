@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "c453ef04bca3b0dc741f59f6a3d945cb0b1870bb5e9c05f5a9c0c8717964c2f4"
+ },
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "e",
+    "why": "the density where shape / x overflows",
+    "f": "=GAMMA.DIST(5.3E-308,10,2.3E-308,FALSE)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "3.1567355300634831292459174233417532429465853855555e+304",
+    "f": "=GAMMA.DIST(5.6E-308,10,2.3E-308,FALSE)"
+   },
+   "A3": {
+    "t": "e",
+    "why": "the density where shape / x overflows",
+    "f": "=GAMMA.DIST(2.5E-308,5,2.3E-308,FALSE)"
+   },
+   "A4": {
+    "t": "n",
+    "v": "1.2976359691114241675319854237750542825697158265967e+306",
+    "f": "=GAMMA.DIST(2.9E-308,5,2.3E-308,FALSE)"
+   },
+   "A5": {
+    "t": "n",
+    "v": "0.00014612050406710177263365073516355472783232403234685",
+    "f": "=GAMMA.DIST(5.3E-308,10,2.3E-308,TRUE)"
+   },
+   "A6": {
+    "t": "n",
+    "v": "0.0051749524018498249403156805593868892430934450130477",
+    "f": "=GAMMA.DIST(2.5E-308,5,2.3E-308,TRUE)"
+   }
+  }
+ }
+}

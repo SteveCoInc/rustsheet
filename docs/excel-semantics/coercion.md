@@ -1049,13 +1049,33 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       `ARRAYTOTEXT(x)&" / "&ARRAYTOTEXT(a)`); parent row totals read the parent subtotal row's cell in the same
       column, Total column included (E17). **An empty parent set is an error**: PERCENTOF `#DIV/0!` and the
       two-argument LAMBDA's cell `#VALUE!` (C7, D7: a column leaf no record reaches under an empty subtotal).
-      T-4402 owns the cells.
+      Confirmed on a hold-out (T-4402): probes/t4402-pivotby-parent-sets-holdout, 32 fresh runs (seed "T-4402",
+      none of T-4382's), relative_to 3 in Calc rows 1-16 and 4 in rows 17-32, PERCENTOF and the two-argument
+      LAMBDA, written with the engine's predictions (docs/research/t4402) before the fill: 64 of 64, the empty
+      parent's `#DIV/0!` and `#VALUE!` in 36 cells on both axes. Implemented in (T-4402): `ParentSets`
+      (functions/lookup_and_reference/relative_to.rs) reads each cell's set from its parent's cell by the grid's
+      own rule (`Grid::column_records`, pivotby.rs), and `Model::aggregate_result` makes a two-argument call on
+      an empty set `#VALUE!`. That arm covers every relative set, but its evidence is `relative_to` 3 and 4 only
+      (C7, D7 and the hold-out); whether a `relative_to` 0 to 2 set can be empty in Excel is unprobed. The column
+      items whose cell holds every record of the line (the Total and the leaves no record reached) share one set
+      (T-4420).
+      **Three key fields** (T-4420): probes/t4420-pivotby-parent-sets-three-fields, 24 fresh runs (seed
+      "T-4420", none of T-4382's or T-4402's), three key fields with subtotals at levels 1 and 2, relative_to 3
+      in Calc rows 1-12 and 4 in rows 13-24, PERCENTOF and the two-argument LAMBDA, written with the engine's
+      predictions (docs/research/t4420) before the fill: 514 of 528 cells. Every relative_to 4 cell matches. The
+      14 off cells (B3, B4, B7, B8, B10, B11, B12, C3, C4, C7, C8, C10, C11, C12) each hold a leaf no record
+      reached under a level-2 subtotal no record reached: **such a parent subtotal holds every record of the
+      line**, as its own cell does (T-4401's rule), so the leaf's parent set is every record. Over BxC AyB BxC
+      BxB CyB (p p q p p) the (`ab`&U+00AD,y,`ab`&U+00AD) cell of p is `1, 2, 4, 5 / 1, 2, 4, 5` (C3), where the
+      engine reads the subtotal's reached-class records (none) and gives `#VALUE!`. T-4428 owns them (it waits on
+      T-4401); with T-4401 merged and that rule in `Grid::column_records`, a scratch run gives 528 of 528.
     - **The subtotal error gate is the leaf buckets'**: with one function over two value columns, a subtotal
       whose records reached its class while every leaf under it is empty for the row group is not computed (its
-      NA() makes no `#VALUE!`; Calc!B1, B3, B4 and the other `!` targets of B1:B15), as `Grid::has_records`
-      decides. The three B misses (B2, B5, B14) are the
-      moved subtotal cell of that layout showing `""` where Excel shows the reached-class records (`12` and
-      `11, 14, 15` in B2), an engine defect on a tree with a leaf no record reaches (T-4403).
+      NA() makes no `#VALUE!`), as `Grid::has_records` decides. The gate cells are Calc!B1, B3, B4, B6, B8, B9,
+      B12, B13, B14 and B15, whose LAMBDA is NA() on exactly that subtotal's records (the record list after `!` in
+      column A). In B2, B5 and B14 the moved subtotal cell of that layout showed `""` where Excel shows the
+      reached-class records (`12` and `11, 14, 15` in B2): `Placement` named each column group by its first row,
+      which a leaf no record reaches shares with a reached group. Fixed (T-4403): `Group::leaf_id` names it.
 
 Implemented in (T-4342): `Grouping::new` (functions/lookup_and_reference/grouping.rs) takes UNIQUE's kept rows
 (`unique_first_lines`, shared with `unique_of`), sorts them with `Keys::sorted` (`sort_indices_pairwise` on whole
