@@ -3,7 +3,7 @@ id: T-4173
 title: "Round-trip suites over calipers (with init.xlsx), poi, corpus-bench and fixtures, with fidelity baselines"
 milestone: M15
 lane: harness
-status: blocked
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
@@ -28,7 +28,3 @@ follow their gating pattern.
 
 ## Out of scope
 - New corpora.
-
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275): M15 waits until Phase 1 parity exits. Unblock when
-docs/status.md has the line `**Phase 1:** exited <date>`.
