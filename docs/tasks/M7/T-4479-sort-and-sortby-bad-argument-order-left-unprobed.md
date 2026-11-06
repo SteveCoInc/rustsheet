@@ -77,4 +77,4 @@ Probed; the engine already matches every cell, so no engine code changed.
   sentences are replaced, and the new section "SORT and SORTBY: which of several bad arguments wins (T-4479)" cites
   the cells.
 - Unit test `sort_and_sortby_read_a_text_sort_order_apart` (test_spill_functions.rs) pins both rules.
-- Eval delta: +163 passing probe cells in two new cases, 0 regressions. No baseline changes: the new cases pass.
+- Eval delta: +163 passing probe cells in two new cases (eval/baseline/probes.txt records them), 0 regressions.
