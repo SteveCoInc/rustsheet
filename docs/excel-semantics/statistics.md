@@ -5758,11 +5758,28 @@ Unequal sizes and single points follow "Array arguments given a scalar, a single
   0.6423163656267105, SLOPE 1.0213333333333334, INTERCEPT and FORECAST -2.1333333333333018E158 are finite and only STEYX is
   `#NUM!` (its variance subtracts sxy*sxy/sxx, which overflows). Ours gave STEYX `#DIV/0!` for the y-only case until T-4047.
   Unprobed: y's overflow alone for STEYX with two or three points (ours is `#DIV/0!` for two).
+- Gate A tables (T-4094; accuracy/{FORECAST,FORECAST.LINEAR,INTERCEPT,SLOPE,RSQ,PEARSON,CORREL}/s1, excel-graph
+  2026-11-06, one-row array literals): every error cell is one of the rules above (unequal lengths `#N/A`, one pair or a
+  constant x `#DIV/0!`, a constant y `#DIV/0!` for the correlations only, a sum about the mean past the double range
+  `#NUM!`), and a constant y gives SLOPE 0 and INTERCEPT and FORECAST its mean.
+  - Last digits: the sums of the values are x87-accumulated and the slope Sxy/Sxx is rounded to a 64-bit significand and
+    then to a double (the sums about the means and a + b*x stay plain doubles). That model fits all 597 numeric points of
+    the FORECAST, FORECAST.LINEAR, SLOPE and INTERCEPT tables. Plain doubles fit 595 and miss
+    FORECAST A67 (`FORECAST(0.838499859843194,{-0.109514844082525,-3.34908202370414},{0.838499859843194,50.1841931039674})`
+    is -0.1095148440825254, plain doubles -0.10951484408252497: the division's double rounding, amplified by the
+    cancelling line) and A79 (568833.0148482913, the x87 sum). Ours is plain doubles: T-4550.
+  - Cancellation: INTERCEPT is ȳ - SLOPE*x̄ and FORECAST INTERCEPT + SLOPE*x in doubles. Over data spanning 1E-150 to
+    1E+150 these cancel far from the exact value. Examples: `INTERCEPT({3.6982834462689E+67,1.76799207788302E+128},
+    {-7.50118897397527E-141,7.65430059879691E+81})` is 0, where the exact value is 3.70E+67 (INTERCEPT A109), and
+    FORECAST.LINEAR A184 is -4.21E+65 where it is exactly -7.85E-40. Nine points are more than 1E-4 relative off the
+    exact value: INTERCEPT A109, A110, A112, A116, A117, A119, A120; FORECAST A192; FORECAST.LINEAR A184. Ours computes
+    in the same order and matches Excel to the bit on all nine. CORREL, PEARSON, RSQ and SLOPE are within 1E-9 of the
+    exact value on every numeric point.
 Evidence: probes/regression-pairs-a, regression-pairs-b, regression-forecast (excel-graph, 2026-10-16, T-1620); the
 error cells in these cases are `#DIV/0!`, so whether a range error propagates or is replaced is unprobed.
 Ours: the unequal-size `#N/A` matches since T-1292, single points since T-1401; CORREL, PEARSON, RSQ, SLOPE, INTERCEPT, STEYX and FORECAST compute from the sums about the means in Excel's order, a typed text or boolean argument is one value with no number, and STEYX of a negative difference is `#NUM!` (T-1723). COVAR with text, blank or boolean cells (`#N/A` in ours) is still open.
 Status: VERIFIED (web)
-Tasks: T-1723, T-1724, T-1725, T-2080, T-4047 (overlaps T-1292, T-1707, T-1401, T-1290)
+Tasks: T-1723, T-1724, T-1725, T-2080, T-4047, T-4094, T-4550 (overlaps T-1292, T-1707, T-1401, T-1290)
 
 ## TREND: defaults, shapes, single points and error inputs
 Rule: TREND treats an empty known_x or new_x argument as the default (`TREND(A1:A6,B1:B6,,FALSE)` fits the known x's: 6 rows,
