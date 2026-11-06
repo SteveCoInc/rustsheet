@@ -109,13 +109,30 @@ Rule (excel-graph, replayed sheet edits, T-1608):
   The engine rewrites them before the move (`move_sheet_in_node`, T-1691), and its undo puts the
   written text back.
 - Moving the sheet that holds the formula changes nothing (sheet-ops-move-formula-sheet).
-Unprobed: moving the first sheet of a two-sheet span past the last (the engine writes the last
-sheet alone), a span written backwards (`Mar:Jan`, which the engine rewrites in tab order when it
-shrinks), deleting an end sheet and inserting or deleting rows or columns. The excel-graph backend
-cannot delete a sheet (T-1181), and the M14 desktop question is T-1310. The engine makes a span
-that lost an end sheet `#REF!` and does not shift a span for row or column edits.
-Status: VERIFIED (Excel for the web) for renames and moves; UNVERIFIED for deletes
-Tasks: T-1691, T-0198
+- Moving the first sheet of a two-sheet span past the last leaves the other sheet as a plain
+  reference: moving Jan to the end turns `=SUM(Jan:Feb!A1)` into `=SUM(Feb!A1)`
+  (t4272-3d-span-move-two-sheet-start-last).
+- **A span written backwards is read in tab order.** `=SUM(Mar:Jan!A1)` shows as
+  `=SUM(Jan:Mar!A1)` with no edit at all (t4272-3d-span-backwards), and then follows the rules
+  above: moving Mar to position 1 gives `Jan:Feb` (t4272-3d-span-backwards-move-first), moving
+  Feb out keeps `Jan:Mar` (t4272-3d-span-backwards-move-middle-out). The engine swaps the ends
+  when it parses the span.
+- **Deleting an end sheet moves that end to the next sheet inward**, as a move past the other
+  end does: deleting Mar turns `Jan:Mar!A1` into `Jan:Feb!A1` (30), deleting Jan gives
+  `Feb:Mar!A1` (50), and a two-sheet span left with one sheet becomes a plain reference
+  (`Jan:Feb` without Feb is `Jan!A1`). Deleting the middle sheet keeps the ends (40). Spans in
+  defined names shrink the same way. Evidence: t4272-3d-span-delete-end, -delete-start,
+  -delete-two-sheet-end, -delete-middle (A1:B2, A3:A4 for the name). The engine rewrites them
+  before the delete (`delete_sheet_in_node`), and the undo puts the written text back.
+- **Row and column edits never shift a 3-D span.** Inserting or deleting row 1 on Jan, deleting
+  row 2 inside the span's rows, or inserting column A on Feb keeps `Jan:Mar!A1:A3` and `Jan:Mar!B2`
+  as written; the span reads what is now in those cells. A plain `Jan!A1:A3` on the same sheet
+  shifts as usual (`Jan!A2:A4`, `Jan!A1:A2`). Row and column edits on the formula's own sheet move
+  the formula and leave its spans alone. Evidence: t4272-3d-span-jan-insert-row,
+  -jan-delete-row, -jan-delete-inner-row, -feb-insert-column, -calc-insert-row,
+  -calc-delete-row, -calc-insert-column.
+Status: VERIFIED (Excel for the web) for renames, moves, sheet deletes and row and column edits
+Tasks: T-1691, T-0198, T-4272
 
 ## A sheet rename rewrites references, names and FORMULATEXT, but not INDIRECT text
 Rule (excel-graph, T-1608):
