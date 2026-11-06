@@ -52,8 +52,10 @@ pub(super) fn to_string_array_node(
 /// higher, and `14550E-15` (one ulp above the nearest double) as `1.455e-11`, which reads as the
 /// nearest (probes-numeric/t3658-round-scaling Hits!C18 and C59). Such a number prints its digits
 /// with trailing zeros added (`4910e-9`, `14550e-15`: the digits as written times 10^-n), or
-/// failing that all 15 digits (`4.91000000000000e-6`), which read to the nearest double. A double
-/// none of these reads back to keeps the shortest text, as before T-3932.
+/// failing that all 15 digits (`4.91000000000000e-6`), which read to the nearest double where n is
+/// 15 or less. Past 15 places the read multiplies by x87 power tables (T-4467), and trailing zeros
+/// change it too, so the same search finds the text that reads back. A double none of these reads
+/// back to keeps the shortest text, as before T-3932.
 fn literal_text(number: f64) -> String {
     let short = to_excel_precision_str(number);
     if !number.is_finite() || parse_excel_number(&short) == Some(number) {

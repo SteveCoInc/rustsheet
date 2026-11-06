@@ -1473,9 +1473,16 @@ cut falls between the same adjacent cells as the double model's. Each order's la
 
 Order 1 answers at every normal x probed (down to 3E-308; `BESSELY(3E-308,1)` is -2.1220659066666666E+307, which is
 `-TWO_OVER_PI/x` with NR's 0.636619772). Orders 2 to 7 hold to 4 significant digits; orders 8 to 10 were mapped on
-mantissas 9..1 only. The digits next to a cut follow the model, with one exception: `BESSELY(2.036E-77,4)` is
--1.7783214437962194E+308 in both fills, where the model gives -1.7783214437962202E+308 (4 ulp; T-4467). Its neighbours
-2.035E-77 and 2.037E-77 match.
+mantissas 9..1 only. The digits next to a cut follow the model. `BESSELY(2.036E-77,4)` looked like an exception: it is
+-1.7783214437962194E+308 in all three fills (t4458-bessely-tiny-x-cuts D32 twice, t4467-bessely-d32-refill D3), 4 ulp
+from the model at the nearest double of 2.036E-77. But Excel reads that literal one ulp high, as 2.0360000000000002E-77
+(t4467-bessely-d32-refill E1; numbers.md "Literals past n = 15 multiply by a table of 10^±16q", T-4467), and the model
+at that x is Excel's value. `2036E-80` and `20.36E-78` read and answer the same (D6, D7). So the cell is a literal-read
+quirk, not a BESSELY one.
+Order 1 over the normal band below 3E-308 (t4467-bessely-d32-refill A1:A6, excel-graph, 2026-11-06): 2.5E-308, 2.3E-308,
+2.226E-308 and 2.2250738585073E-308 answer `-TWO_OVER_PI/x` (2.2250738585073E-308 gives -2.8611174841049047E+307).
+`BESSELY(2.2250738585072014E-308,1)` is `#NUM!`: the literal's 15-digit cut, 2.22507385850720E-308, is below DBL_MIN
+and reads as 0.
 Unreliable, so no target (the reproducibility floor): a subnormal x. Excel reads a subnormal literal as 0 ("Subnormal
 flush edges"), and Excel for the web refuses a workbook that holds one (`unsupportedWorkbook`). A subnormal built as a
 difference (`3.06E-308-2.5E-308`) is kept (`(x)*1E300` gives 5.6E-9). Excel's BESSELY of it was inconsistent within
