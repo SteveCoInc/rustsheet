@@ -11,8 +11,6 @@
 //! - probes/t4128-pivot-spike: S is the `#SPILL!` collapse (T-4151), R's source holds a
 //!   formula the case file does not evaluate (T-4152), G is grouped (T-4171) and K has a
 //!   calculated field, a Top-N filter and a sort (T-4174, T-4165);
-//! - probes/t4622-pivot-count-subtotals East's custom Count subtotal values over an error under
-//!   a Sum field (CA, CN C6; B1, B4, B5 C6:C7): the result's count rule is T-4168's (T-4636);
 //! - t4134 I3, t4582, t4585 and t4627: formulas in their sources (T-4152 runs them through the
 //!   engine), and t4582 J3, J4 date items against cached numbers (T-4612).
 
@@ -127,17 +125,22 @@ fn the_caption_probes_cells_are_excels() {
         "t4609-pivot-row-labels-2",
         &["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8"],
     );
-    // A custom Count subtotal under a Sum field over an error is a count in Excel and the error
-    // in the engine's result (T-4168, T-4636): East's subtotal values are left out, their
-    // labels compared.
-    check("t4622-pivot-count-subtotals", "B2", &[]);
-    check("t4622-pivot-count-subtotals", "B3", &[]);
-    for sheet in ["CA", "CN"] {
-        check("t4622-pivot-count-subtotals", sheet, &["C6"]);
-    }
-    for sheet in ["B1", "B4", "B5"] {
-        check("t4622-pivot-count-subtotals", sheet, &["C6", "C7"]);
-    }
+    // Custom countA and count subtotals, alone and both, under a Sum field over an error (the
+    // count ends at the error within its inner-item cell), with no error, and under Count.
+    check_all(
+        "t4622-pivot-count-subtotals",
+        &["CA", "CN", "B1", "B2", "B3", "B4", "B5"],
+    );
+}
+
+#[test]
+fn the_layout_option_probes_cells_are_excels() {
+    // Every custom subtotal function's label and value, tabular and compact (F1, F2), custom
+    // subtotals over a Count field (F3), insertBlankRow (BR, BR2) and a collapsed item (SD, SD2).
+    check_all(
+        "t4168-pivot-layout-options",
+        &["F1", "F2", "F3", "BR", "BR2", "SD", "SD2"],
+    );
 }
 
 #[test]

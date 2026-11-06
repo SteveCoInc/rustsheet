@@ -170,7 +170,7 @@ pub struct Workbook {
     /// (SPEC-0034 D1). `None` for a workbook created with [`Workbook::new`].
     source: Option<Arc<Source>>,
     /// Whether the first [`Workbook::recalculate`] refreshes the `refreshOnLoad` pivots.
-    pivots_due: bool,
+    pub(crate) pivots_due: bool,
 }
 
 pub(crate) fn engine_load_error(message: impl std::fmt::Display) -> LoadError {

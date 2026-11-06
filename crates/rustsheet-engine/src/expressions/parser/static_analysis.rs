@@ -1,7 +1,7 @@
 use super::reference_operators::{at_outside, wrong_range_shape};
 use super::{for_each_chain_operand_mut, Node};
 use crate::functions::lift::lifting_table_functions;
-use crate::functions::lookup_and_reference::lifts_into_references;
+use crate::functions::lookup_and_reference::lifts_into_reference_elements;
 use crate::functions::Function;
 use broadcast::{broadcast_shapes, static_analysis_operator_chain};
 use if_arm::{indexes_one_reference_cell, returns_range_arm, returns_single_cell_index};
@@ -414,7 +414,8 @@ fn criteria_static_result(args: &[Node], first: usize) -> StaticResult {
 /// once per element of an array of references in a range argument
 /// (`Function::per_reference_element`; SPEC-0014 rule 6,
 /// `COUNTIF(OFFSET(A1,{0;1},0),">0")` spills 1, 1, probes/reference-lift-consumers E57): a range
-/// argument that is a lifted OFFSET or INDIRECT gives the shape, the criteria
+/// argument that is a lifted OFFSET or INDIRECT, or an XLOOKUP with an `if_not_found`
+/// ([`lifts_into_reference_elements`]), gives the shape, the criteria
 /// (`args[first]`, `args[first + 2]`, ...) only without one. Anything else does not:
 /// `SUMIF(IF(TRUE,A1:A6),"a",B1:B6)` stays a scalar call (probes/legacy-if-arm-range-argument U12).
 fn criteria_and_grid_static_result(kind: &Function, args: &[Node], first: usize) -> StaticResult {
@@ -424,12 +425,22 @@ fn criteria_and_grid_static_result(kind: &Function, args: &[Node], first: usize)
             per_element.takes_reference
         });
     let grids = args.iter().enumerate().filter_map(|(index, arg)| {
-        if !lifts_into_references(arg) || !takes_reference(index) {
+        if !lifts_into_reference_elements(arg) || !takes_reference(index) {
             return None;
         }
-        match run_static_analysis_on_node(arg) {
-            shape @ StaticResult::Array(..) => Some(shape),
-            _ => None,
+        match arg.ungrouped() {
+            // An XLOOKUP's grid has its lookup_value's shape; one cell gives none.
+            Node::FunctionKind {
+                kind: Function::Xlookup,
+                args,
+            } => {
+                let (rows, columns) = run_static_analysis_on_node(args.first()?).counts()?;
+                ((rows, columns) != (1, 1)).then_some(StaticResult::Array(rows, columns))
+            }
+            _ => match run_static_analysis_on_node(arg) {
+                shape @ StaticResult::Array(..) => Some(shape),
+                _ => None,
+            },
         }
     });
     // Over a grid each call's own spill is cut to its top-left value (as the engine runs it),

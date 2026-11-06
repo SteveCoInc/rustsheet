@@ -175,8 +175,7 @@ pub struct PivotField {
     pub default_subtotal: bool,
     /// The custom subtotals (`sumSubtotal`, `countASubtotal`, ...), each once, in the schema's
     /// attribute order. `countASubtotal` is read as [`Aggregate::Count`] and `countSubtotal` as
-    /// [`Aggregate::CountNums`] (ECMA-376's meanings, unproven for Excel: see
-    /// [`ItemType::Function`]).
+    /// [`Aggregate::CountNums`], what Excel computes (see [`ItemType::Function`]).
     pub custom_subtotals: Vec<Aggregate>,
     /// `sortType` (default manual).
     pub sort_type: SortType,
@@ -273,9 +272,9 @@ pub enum ItemType {
     /// `default`: the automatic subtotal, by each data field's own function.
     Default,
     /// A custom subtotal line (`sum`, `countA`, `avg`, ..., `varP`), by its function. `countA` is
-    /// read as [`Aggregate::Count`] and `count` as [`Aggregate::CountNums`], ECMA-376's meanings;
-    /// that is unproven for Excel, which labels a `count` line `Count` over a numbers-only field
-    /// (probes/t4137-pivot-captions K5!A8; UNVERIFIED in docs/excel-semantics/pivots.md, T-4622).
+    /// [`Aggregate::Count`] (COUNTA) and `count` [`Aggregate::CountNums`], and Excel labels both
+    /// `Count` (probes/t4622-pivot-count-subtotals; docs/excel-semantics/pivots.md "Which function
+    /// the countA and count custom subtotals compute").
     Function(Aggregate),
     /// `grand`.
     Grand,
@@ -401,6 +400,46 @@ pub enum Aggregate {
     Var,
     /// `varp`.
     VarP,
+}
+
+impl Aggregate {
+    /// The function a `dataField@subtotal` (`ST_DataConsolidateFunction`) names.
+    #[must_use]
+    pub fn from_consolidate_name(name: &str) -> Option<Self> {
+        Some(match name {
+            "sum" => Self::Sum,
+            "count" => Self::Count,
+            "average" => Self::Average,
+            "max" => Self::Max,
+            "min" => Self::Min,
+            "product" => Self::Product,
+            "countNums" => Self::CountNums,
+            "stdDev" => Self::StdDev,
+            "stdDevp" => Self::StdDevP,
+            "var" => Self::Var,
+            "varp" => Self::VarP,
+            _ => return None,
+        })
+    }
+
+    /// Excel's word for the function: a new data field's caption starts with it (`Sum of Sales`,
+    /// the case builder's `_AGGREGATE_VERBS`) and a custom subtotal line ends with it, `Count`
+    /// for both `countA` and `count` (probes/t4622-pivot-count-subtotals B1!A6:A7).
+    #[must_use]
+    pub fn word(self) -> &'static str {
+        match self {
+            Self::Sum => "Sum",
+            Self::Count | Self::CountNums => "Count",
+            Self::Average => "Average",
+            Self::Max => "Max",
+            Self::Min => "Min",
+            Self::Product => "Product",
+            Self::StdDev => "StdDev",
+            Self::StdDevP => "StdDevp",
+            Self::Var => "Var",
+            Self::VarP => "Varp",
+        }
+    }
 }
 
 /// `ST_ShowDataAs`: the calculation a data field shows instead of its plain values.

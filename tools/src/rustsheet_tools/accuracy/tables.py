@@ -201,14 +201,17 @@ def math_sidecar_bytes(
     sheets: dict[str, dict[str, dict[str, str]]],
     seed: int | None = None,
     skipped: dict[str, dict[str, dict[str, str]]] | None = None,
+    inputs: dict[str, Any] | None = None,
 ) -> bytes:
     """A `rustsheet-math/v1` sidecar for the case file `case_bytes`: the one envelope a table
     batch (with its `seed`) and an eval case's math references (`eval_math`, no seed, with the
-    candidates the generator dropped as `skipped` when there are any) share."""
+    candidates the generator dropped as `skipped` when there are any, and the `inputs` fingerprints
+    `math --check` compares, T-4231) share."""
     source: dict[str, Any] = {"generator": "rustsheet-accuracy", "version": VERSION, "dps": DPS[-1]}
     if seed is not None:
         source["seed"] = seed
     source["input_sha256"] = hashlib.sha256(case_bytes).hexdigest()
+    source.update(inputs or {})
     data: dict[str, Any] = {"format": MATH_FORMAT, "source": source, "sheets": sheets}
     if skipped:
         data["skipped"] = skipped

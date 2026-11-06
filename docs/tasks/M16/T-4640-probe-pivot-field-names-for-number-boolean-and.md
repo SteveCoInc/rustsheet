@@ -20,6 +20,7 @@ T-4627 (probes/t4627-pivot-field-name-collisions) showed that a taken name takes
 - whether names compare by Excel's `=` collation (coercion.md "Collation equality in lookups and criteria"): probe `æ`/`ae`, `œ`/`oe`, `ĳ`/`ij`, `þ`/`th`, `á`/`a`&UNICHAR(769) and `ab`/`a`&UNICHAR(173)&`b` (U+00AD ignored by `=`) as header pairs;
 - other case folds in names: `ẞ`/`ß`/`SS` (the engine folds `ẞ` to `ß` and so to `ss`; exact MATCH keeps `ẞ = ß` apart from `ss`, lookup.md), `ﬁ`/`FI`, `ǆ`/`Ǆ`, `ς`/`σ` (the engine already folds `ς` to `σ`), `ı`/`I`;
 - a blank's `Field<n>` meeting a suffixed name from a later duplicate (`Field`, `=""` in column 2, `="Field"`): is the duplicate `Field2` and the blank `Field22`, or the reverse? And `Field4` meeting `field4` typed in lower case.
+- an empty-text (`=""`) item on a column field: is its label cell empty, as a row item's is (t4627 P_Rec!A6)? The renderer leaves both empty (T-4152, render.rs `Cells::lines`).
 - carried over from T-4627's code pointers: whether a refresh matches the new fields to the old cache's by name, by case or by position (`refresh_builder` matches by case-folded name), and whether GETPIVOTDATA's item argument `"#N/A"` names an error item (pivot_index.rs).
 
 Use the formula-header trick and the case builder's `cache_names` option (pivot_definition.py) for empty cells and typed duplicates.

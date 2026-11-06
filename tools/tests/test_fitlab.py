@@ -24,7 +24,16 @@ from rustsheet_tools.fitlab.score import (
     score,
     ulp_distance,
 )
-from rustsheet_tools.fitlab.sweep import Cell, Sweep, UnparsedError, Workbook, parse_arg, select, split_args
+from rustsheet_tools.fitlab.sweep import (
+    Cell,
+    Sweep,
+    UnparsedError,
+    Workbook,
+    parse_arg,
+    select,
+    split_args,
+    unquoted,
+)
 from rustsheet_tools.snapshot import UNDECODED, parse_show
 
 CASES = repo_root() / "eval" / "suites" / "probes-numeric" / "cases"
@@ -56,6 +65,12 @@ def _book() -> Workbook:
 def test_split_args_respects_nesting_and_strings() -> None:
     assert split_args('1, "a,b", F(2,3), {1,2}') == ["1", '"a,b"', "F(2,3)", "{1,2}"]
     assert split_args("") == []
+
+
+def test_unquoted_skips_strings_and_tracks_depth() -> None:
+    # The quote characters and everything between them are skipped; brackets inside a string do not count.
+    assert list(unquoted('a(")"}')) == [(0, "a", 0), (1, "(", 1), (5, "}", 0)]
+    assert [d for _i, _ch, d in unquoted("x)", 1)] == [-1]
 
 
 def test_parse_arg_literals_and_references() -> None:

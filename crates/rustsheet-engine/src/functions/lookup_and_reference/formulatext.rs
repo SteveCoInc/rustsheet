@@ -118,6 +118,9 @@ impl Model {
             for element in row {
                 values.push(match element {
                     RefElement::Error(error) => ArrayNode::Error(error.clone()),
+                    // A value is not a reference: `#VALUE!`, as an array's element is
+                    // ([`not_a_reference_array`]; unprobed for a mixed grid).
+                    RefElement::Value(_) => ArrayNode::Error(Error::VALUE),
                     // A multi-cell element is its top-left cell's text, with no spill of its own.
                     RefElement::Reference(Range { left, .. }) => {
                         match self.formula_text_element(*left, cell, &mut text_bytes) {

@@ -274,6 +274,7 @@ fn crafted_diffs_are_refused() {
                 count: BIG,
                 old_data: vec![],
                 tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -284,6 +285,7 @@ fn crafted_diffs_are_refused() {
                 count: BIG,
                 old_data: vec![],
                 tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -297,6 +299,7 @@ fn crafted_diffs_are_refused() {
                     data: HashMap::new(),
                 }],
                 tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -310,6 +313,7 @@ fn crafted_diffs_are_refused() {
                     data: HashMap::from([(BIG, number(0))]),
                 }],
                 tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -323,6 +327,7 @@ fn crafted_diffs_are_refused() {
                     data: HashMap::new(),
                 }],
                 tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -343,6 +348,7 @@ fn crafted_diffs_are_refused() {
                     data: HashMap::new(),
                 }],
                 tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -637,6 +643,7 @@ fn a_restored_table_extent_naming_no_table_is_refused() {
             reference: "A1:B9".to_string(),
             totals_row_count: 0,
         }],
+        rewritten: vec![],
     };
     let error = assert_refused(&mut model, &one(DiffType::Undo, restore), "table extent");
     assert!(error.contains("No table"), "{error}");
@@ -665,6 +672,7 @@ fn a_restored_table_naming_no_table_is_refused_before_columns_return() {
                 ["a".to_string(), "b".to_string()],
             ),
         )],
+        rewritten: vec![],
     };
     let error = assert_refused(&mut model, &one(DiffType::Undo, restore), "table restore");
     assert!(error.contains("No table"), "{error}");

@@ -990,10 +990,11 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
       result is 2x1 (B24:B28, B30, B33:B34): it is `#SPILL!` in A, where the next row's formula blocks it, and the last one,
       `CELL("row",..)`, spills `#VALUE!`, 1 (A34:A35). ISREF of the whole result is FALSE (A29), and
       ISNUMBER lifts to TRUE, FALSE (C30:D30).
-  Ours gives `#VALUE!` for the element, so every reader above differs (106 cells). SPEC-0018's nested cell would
-  fail ISREF, TYPE, AREAS, CELL and the aggregates, and SPEC-0014's `RefGrid` holds no values, so matching this
-  needs an array that mixes values and references: SPEC-0014's "Mixed grids" amendment (T-4569); implementation
-  T-4570 (it owns t4543 W45, W46, the t4563 cells and the t4569 cells).
+  Ours (T-4570): implemented by SPEC-0014's "Mixed grids" amendment (a `RefElement::Value` beside the reference
+  elements, T-4569's spec). Every cell above matches but two: one-argument INDEX keeps the element as a 1x1 *value*
+  array, so it shows `#VALUE!`, ROWS 1 and `#REF!` at (2,1) as Excel, but `INDEX(that,1,1)` does not hand the range
+  back (t4563 V25:V26; T-4701). Unprobed and ours: a whole-column key (`SUM(XLOOKUP(A:A,..,H1))`) builds the grid in
+  full, as the keyed head-and-tail reading (SPEC-0020 Amendment 2) holds values only.
   ADDRESS's sheet_text lifts like its other arguments: `ADDRESS(1,1,1,TRUE,{"S1";"S2"})` is 2x1 `'S1'!$A$1`,
   `'S2'!$A$1` (a name that reads as a cell reference is quoted), a 1x2 and the range D1:D2 (`x!$A$1`, `y!$A$1`) alike,
   beside a lifted row_num it pairs by position and pads with `#N/A` (`ADDRESS({1;2;3},1,1,TRUE,{"S1";"S2"})` third
@@ -1727,8 +1728,10 @@ Same-sheet: `MEDIAN(OFFSET(A1,{0;1;2},0))`, `LARGE(OFFSET(A1,{0;1},0),1)` and `S
 (data as probes/reference-lift-consumers-b2) all give `#VALUE!`.
 Evidence: probes/t2065-lift-median, -large, -small E1 (excel-graph, 2026-10-29; they failed to open on Excel for the web
 on 2026-10-26 with createSession "retries exhausted", and opened on the 2026-10-29 steward run's fill).
-Status: VERIFIED (excel-graph). Ours matches all three cells. This answers T-1075 item 18.
-Tasks: T-2065, T-2063, T-2064, T-2823, T-2824
+Status: VERIFIED (excel-graph). Ours matches all three cells, and the other-sheet `#N/A` too (T-4570:
+`RefGrid::order_statistic_error`, read by LARGE and SMALL's data reader and MEDIAN's `GridReading::OrderStatistic`).
+This answers T-1075 item 18.
+Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570
 
 ## MATCH match_type that is a reference to an error cell is #REF! (excel-graph)
 Rule: `MATCH(30,A1:A5,M2)` with M2 `=NA()` gives `#REF!` (ERROR.TYPE 4) in Excel for the web, not the #N/A the

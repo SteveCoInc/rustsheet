@@ -113,23 +113,6 @@ fn item_text(item: &CacheItem) -> String {
     }
 }
 
-/// The word a custom subtotal line puts after its item: Excel's name of the function, `Count`
-/// for both `countA` and `count` (probes/t4622-pivot-count-subtotals B1!A6:A7).
-fn function_word(function: Aggregate) -> &'static str {
-    match function {
-        Aggregate::Sum => "Sum",
-        Aggregate::Count | Aggregate::CountNums => "Count",
-        Aggregate::Average => "Average",
-        Aggregate::Max => "Max",
-        Aggregate::Min => "Min",
-        Aggregate::Product => "Product",
-        Aggregate::StdDev => "StdDev",
-        Aggregate::StdDevP => "StdDevp",
-        Aggregate::Var => "Var",
-        Aggregate::VarP => "Varp",
-    }
-}
-
 /// One axis as the renderer reads it.
 struct Axis<'a> {
     tree: &'a AxisTree,
@@ -265,7 +248,7 @@ impl Cells<'_> {
             )),
             ItemType::Default => Some(format!("{} Total", item()?)),
             ItemType::Function(function) => {
-                Some(format!("{} {}", item()?, function_word(function)))
+                Some(format!("{} {}", item()?, Aggregate::word(function)))
             }
             _ => None,
         }
@@ -275,6 +258,10 @@ impl Cells<'_> {
     /// `level`.
     fn lines(&mut self, axis: &Axis<'_>, place: impl Fn(u32, usize) -> Option<(u32, u32)>) {
         for (i, line) in (0u32..).zip(axis.lines) {
+            // An `insertBlankRow` line is empty (probes/t4168-pivot-layout-options BR, BR2).
+            if line.kind == ItemType::Blank {
+                continue;
+            }
             let end = line.repeat as usize + line.items.len();
             if let Some(text) = self.total_label(axis, line) {
                 let level = if line.kind == ItemType::Grand {
@@ -289,6 +276,10 @@ impl Cells<'_> {
             }
             for (level, &x) in (line.repeat as usize..).zip(&line.items) {
                 let cell = self.label(axis, line, level, x);
+                // An empty-text item's label cell is left empty (pivots.md "Pivot field names
+                // for duplicate and blank source headers", probes/t4627-pivot-field-name-collisions
+                // P_Rec!A6, a row item; a column item's is taken to match, UNVERIFIED).
+                let cell = cell.filter(|c| !matches!(c, PivotCell::Text(t) if t.is_empty()));
                 if let (Some(cell), Some((row, column))) = (cell, place(i, level)) {
                     self.put(row, column, cell);
                 }

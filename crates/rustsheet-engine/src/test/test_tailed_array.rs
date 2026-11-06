@@ -874,7 +874,7 @@ fn keyed_xlookup_and_xmatch_over_a_whole_column_key() {
             "XLOOKUP(A:A,$J$1:$J$6,$K$1:$K$6)",
             "XLOOKUP(A:A,$J$1:$J$6,$K$1:$K$6,-1)",
             "XLOOKUP(A:A,$J$1:$J$6,$K$1:$K$6,\"nf\",0,-1)",
-            "XLOOKUP(A:A,$J$1:$J$6,$J$1:$K$6,$H$1)",
+            "XLOOKUP(A:A,$J$1:$J$6,$J$1:$K$6,7)",
             "XLOOKUP(A:A&\"*\",$J$1:$J$6,$K$1:$K$6,0,2)",
             "XLOOKUP(A:A,$J$1:$J$6,$K$1:$K$6,0,3,-1)",
             "XLOOKUP(A:A,$L$1:$L$5,$L$1:$L$5,0,1,2)",
@@ -888,7 +888,9 @@ fn keyed_xlookup_and_xmatch_over_a_whole_column_key() {
 
 /// XLOOKUP and XMATCH shapes a keyed lookup refuses: an array `match_mode` or `search_mode`, a
 /// function-call `lookup_array` or `return_array`, a named table, an operator or an omitted
-/// argument before a given one, and a key that reaches no leaf.
+/// argument before a given one, a reference `if_not_found` (each miss is that reference, an
+/// element of an array of references; SPEC-0014 amendment "Mixed grids"), and a key that reaches
+/// no leaf.
 #[test]
 fn keyed_xlookup_shapes_that_are_not_tailed() {
     let formulas: Vec<String> = [
@@ -899,6 +901,7 @@ fn keyed_xlookup_shapes_that_are_not_tailed() {
         "=COUNTA(XLOOKUP(A:A,Tbl,$K$1:$K$6))",
         "=COUNTA(XLOOKUP(A:A,$J$1:$J$6,$K$1:$K$6,1+1))",
         "=COUNTA(XLOOKUP(A:A,$J$1:$J$6,$K$1:$K$6,,2))",
+        "=SUM(XLOOKUP(A:A,$J$1:$J$6,$J$1:$K$6,$H$1))",
         "=SUM(--(XLOOKUP(1,$J$1:$J$6,$K$1:$K$6)=A:A))",
     ]
     .iter()

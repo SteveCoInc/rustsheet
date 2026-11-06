@@ -251,7 +251,12 @@ same mirroring for a fetched suite), attaches math values to the cells of any ev
   arguments read another formula cell, or that the reader leaves unparsed, gets no math value. Strata do not apply (`"s"` absent). A candidate the
   generator drops (no single value, not converged) is listed under an optional top-level `"skipped"` map (sheet → A1
   → `{"f","why"}`), which the runner ignores and `rustsheet-accuracy math --check` (`make eval-math-check`, decision
-  0243) reads to tell it from a cell whose sidecar is missing or stale.
+  0243) reads to tell it from a cell whose sidecar is missing or stale. The sidecar's `source` also records what its
+  values were computed from (T-4231, `accuracy/fingerprint.py`): `definitions` (function → a hash of the code of its
+  definition's module and the `rustsheet_tools` modules it imports, docstrings and comments left out) and
+  `arguments_sha256` (a hash of every computable candidate's arguments as the reader gives them). `math --check`
+  recomputes both without mpmath and fails on a definition whose code changed (naming it, to regenerate with
+  `--function`), on arguments the reader now reads otherwise, and on another generator `version`.
 - The runner reads the sidecar when present and puts the math value on the cell's `CellResult` (an optional field,
   absent from the JSON when none), dropping a stale one. R1(c) counts a visibly-off numeric cell as inside the envelope
   when `envelope` says so; a cell with no math value counts as outside (decision 0188 R1(c)), so nothing reads as met
