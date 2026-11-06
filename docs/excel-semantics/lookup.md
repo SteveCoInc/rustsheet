@@ -1290,7 +1290,8 @@ call's result), not a value. What the caller sees depends on who reads the eleme
   values), and a lifted count over such a grid is unprobed (T-2212). Full table with cells: SPEC-0014 "Excel behavior to match" (probes/reference-lift-consumers,
   -b1c, -b1d, -b2, excel-graph, 2026-10-19, T-1955). COUNTIFS, AVERAGEIF and MAXIFS lift per element too
   (T-2065 probes; ours since T-2823); see "Statistical aggregates over a lifted OFFSET" below for STDEV.S,
-  VAR.S, SUMSQ, AVERAGEA, MAXA, MINA, VAR.P, STDEV.P, the VARA family, CONCAT, MEDIAN, LARGE and SMALL. AVERAGEIFS and MINIFS are unprobed.
+  VAR.S, SUMSQ, AVERAGEA, MAXA, MINA, VAR.P, STDEV.P, the VARA family, CONCAT, MEDIAN, LARGE and SMALL. AVERAGEIFS and MINIFS
+  lift like SUMIFS and MAXIFS (probes/t4396-lift-*, T-4396; same section below).
 - Per element, the scalar rules hold: an element off the sheet is `#REF!` (`OFFSET(A1,{0;-1},0)`, second element);
   `INDIRECT("R2C1",{TRUE;FALSE})` is `#REF!`, A2; a scalar error argument next to the lifted one is that error in every
   element (`INDEX(OFFSET(A1,{0;1},NA()),1,1)` is `#N/A`).
@@ -1598,7 +1599,17 @@ Evidence: probes/t2065-lift-* (one formula per workbook, excel-graph 2026-10-26;
 - `STDEV.S(OFFSET(A1,{0;1},0))` is 70.0035713374682, `VAR.S` 4900.5, `SUMSQ` 10001: single-cell elements read as their values (multi-cell elements: top-left cell, T-2816 below).
 - COUNTIFS, AVERAGEIF and MAXIFS lift per element, spilling one value each (1, 1; 1, 50.5; 1, 100). CONCAT is `#VALUE!`.
   The engine implements these three since T-2823 (`Function::per_reference_element`, each element charged as
-  COUNTIF/SUMIFS are, with the same bound DEVIATION); AVERAGEIFS and MINIFS are unprobed and read the value view.
+  COUNTIF/SUMIFS are, with the same bound DEVIATION).
+- AVERAGEIFS and MINIFS lift per element too: the first range and the criteria ranges (probes/t4396-lift-*, one formula
+  per workbook, excel-graph 2026-11-05, E1:E2 each; ours since T-4396, charged per criteria pair like SUMIFS):
+  - both ranges lifted, `AVERAGEIFS(OFFSET(A1,{0;1},0),OFFSET(A1,{0;1},0),">0")` and the MINIFS form spill 1, 100
+    (-averageifs-both, -minifs-both); a height lift `OFFSET(A1,0,0,{1;2})` in both spills 1, 50.5 and 1, 1 (-height);
+  - the first range lifted alone against `A1:A2` spills `#VALUE!`, `#VALUE!` (-first): each one-cell element against
+    the two-cell criteria range is the shape mismatch, not one `#VALUE!` for the call;
+  - a criteria range lifted alone, `AVERAGEIFS(A1,OFFSET(A1,{0;1},0),">0")` and the MINIFS form, spills 1, 1 (-criteria);
+  - a second criteria pair lifted with the first, `AVERAGEIFS(OFFSET(A1,{0;1},0),OFFSET(A1,{0;1},0),">0",OFFSET(B1,{0;1},0),">0")`,
+    spills 1, 100 (-averageifs-pair2). UNVERIFIED: a later criteria range lifted alone, and MINIFS with two pairs; the
+    engine lifts every criteria range, as for SUMIFS and MAXIFS.
   Which arguments lift is inferred from SUMIF/SUMIFS (COUNTIFS every criteria range, AVERAGEIF range and average_range,
   MAXIFS max_range and every criteria range); forms with only some ranges lifted are unprobed (T-2833).
 - T-2816 (probes/t2816-lift-*, E1, excel-graph 2026-10-31, same data; A4 "5", A5 blank, A6 TRUE, A7 7): multi-cell

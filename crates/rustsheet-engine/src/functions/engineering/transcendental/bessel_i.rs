@@ -2,6 +2,7 @@ use super::bessel_excel::{
     miller_stays_finite, EXCEL_MAX_ORDER, LN_COMPUTED_ZERO, MAX_ORDER, MILLER_ACCURACY,
     MILLER_RESCALE, MILLER_RESCALE_FACTOR,
 };
+use crate::arithmetic::{extended_product, extended_quotient, extended_sum};
 use crate::functions::statistical::ln_gamma;
 use crate::x87_exp::excel_exp;
 
@@ -175,19 +176,37 @@ pub(super) fn in_miller(n: i32, x: f64) -> f64 {
     let m = in_start_order(n) as i32;
 
     for j in (1..=m).rev() {
-        (bip, bi) = (bi, bip + (j as f64) * tox * bi);
-        // Prevent overflow
+        // Every step, rescale and the final `ans * (i0 / bi)` round twice (x87 code stored to
+        // doubles), as BESSELJ's `jn_miller`: plain doubles miss `BESSELI(1E-6,7)`,
+        // `(7E-15,6)` and `(1E-15,6)` by 1 ulp, and these match all 3,168 cells of
+        // probes/t4422-bessel-tiny-x-cuts and -bisect bit for bit (T-4422). Keeping `i0 / bi` in a
+        // register instead misses 58 of them.
+        (bip, bi) = (
+            bi,
+            extended_sum(
+                bip,
+                extended_product(extended_product(f64::from(j), tox), bi),
+            ),
+        );
         if bi.abs() > MILLER_RESCALE {
-            result *= MILLER_RESCALE_FACTOR;
-            bi *= MILLER_RESCALE_FACTOR;
-            bip *= MILLER_RESCALE_FACTOR;
+            result = extended_product(result, MILLER_RESCALE_FACTOR);
+            bi = extended_product(bi, MILLER_RESCALE_FACTOR);
+            bip = extended_product(bip, MILLER_RESCALE_FACTOR);
         }
         if j == n {
             result = bip;
         }
     }
 
-    result *= bessel_i0(x) / bi;
+    // A recurrence that overflowed is `#NUM!`, also where the overflow came only after the step
+    // j == n and `i0 / inf` would flush the result to 0: Excel's cut at a tiny x is exactly the
+    // first overflowing x at every order 2 to 7, and it never returns that 0 (`BESSELI(2.04E-24,2)`
+    // answers, `(2.03E-24,2)` is `#NUM!`; probes/t4422-bessel-tiny-x-bisect, engineering.md
+    // "BESSELJ and BESSELI at a tiny x and a small order").
+    if !bi.is_finite() {
+        return f64::NAN;
+    }
+    result = extended_product(result, extended_quotient(bessel_i0(x), bi));
     if (x < 0.0) && (n % 2 == 1) {
         result = -result;
     }
