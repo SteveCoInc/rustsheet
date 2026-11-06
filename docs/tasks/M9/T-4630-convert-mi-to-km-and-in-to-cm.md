@@ -53,8 +53,7 @@ Cells:
   |---|---|
   | metre base (old) | 143 |
   | angstrom base | 160 |
-  | 1E-8 m | 157 |
-  | 1E-7 m | 154 |
+  | any other power of ten from 1E-12 m to 1E12 m | 155 or fewer |
   | `value*((F_from/F_to)*P)` (order change) | 8 more fixed but 16 other CONVERT cells lost; rejected |
 
   - Hold-out by cell hash (30%, SHA-256 of case and cell). The split was computed after the candidates were scored on
@@ -63,12 +62,15 @@ Cells:
 
     | candidate | train (116) exact / 4 ulp / 15 digits | hold-out (44) exact / 4 ulp / 15 digits |
     |---|---|---|
-    | angstrom base | 116 / 116 / 116 | 42 / 44 / 44 |
+    | angstrom base | 116 / 116 / 116 | 44 / 44 / 44 |
     | metre base | 104 / 116 / 115 | 39 / 44 / 44 |
-    | correctly rounded | 107 / 116 / 115 | 42 / 44 / 44 |
+    | correctly rounded | 106 to 107 / 116 / 115 | 42 / 44 / 44 |
 
-    The angstrom base's hold-out (95.5%) is within the margin of its train (100%). It ties the correctly rounded
-    value on the hold-out and leads it on train.
+    The angstrom base's hold-out (100%) is within the margin of its train (100%) and beats the correctly rounded
+    value (42 of 44) and the metre base (39). The angstrom counts are the engine's own (every one of the 160 cells
+    passes in `make eval-check`). An earlier script count of 42 was a scoring-script error, corrected in review
+    round 2. The correctly rounded train count is 107 or 106: two independent exact-rational scorers differ on one
+    cell.
   - Fresh sweep after the factors were frozen: probes-numeric/t4630-convert-distance-sweep (seed 4630, 150 calls
     between distance units, with decimal prefixes on neither, one or both units), excel-graph 2026-11-06. 100 of the
     calls are `#N/A` (a prefix on a unit that takes none), and every candidate gets those right; 50 are numeric.
@@ -92,4 +94,4 @@ Cells:
   - In all: probes 15 fixed, gen-m9 1 fixed, 0 regressions in every suite.
   - ironcalc-calc CONVERT.xlsx and Gate A are unchanged.
   - T-2047's m to ft cells now pass; its area cells (`m2` to `ly2`) are untouched.
-- **Follow-up:** T-4666 (from #3708's review, T-4475).
+- **Follow-ups:** T-4666 (from #3708's review, T-4475); T-4670 (non-round values near the overflow path).

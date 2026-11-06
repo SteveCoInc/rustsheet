@@ -204,16 +204,17 @@ bit-exact, against 108 correctly rounded and 125 for the pure-decimal rule; all 
 The lbf factor is 444822.16152605
 (`CONVERT(1,"lbf","dyn")` is exactly that).
 Distance is in angstroms (m = 1E10), as area is in square angstroms, not in metres (T-4630). Each distance factor is
-the nearest double to the unit's exact length in angstroms: mi 16093440000000, in 254000000, ft 3048000000, ly
+the nearest double to Excel's length of the unit in angstroms (the parsec is Excel's 3.0856775812815532E+16 m, not the
+IAU value): mi 16093440000000, in 254000000, ft 3048000000, ly
 9.4607304725808E+25, the pica 1/6 inch (42333333.333333336) and the point 1/72 inch (3527777.777777778). The base shows
 in the last digit of a conversion between two non-base units or to a prefixed unit: `CONVERT(255,"mi","km")` is
 410.38272 and `CONVERT(255,"in","cm")` 647.7 (in metres 410.38272000000006 and 647.6999999999999; probes/t4534-bessel-
 convert-web-values B1:B4, D1:D4, the calipers formulas_engineering golden D26:J27 agrees), `CONVERT(1,"m","ft")`
 3.2808398950131235 (probes/scalar-lift-open-a Z8:Z10, convert-unit-names B33), and the light-year and parsec cells of
 the T-3861 sweeps. Of the 160 literal distance cells with oracle values in probes and probes-numeric, the metre base
-fits 143, the correctly rounded value 149 and the angstrom base 160 (the best other powers of ten: 1E-8 m, 157, and
-1E-7 m, 154). Hold-out by cell hash (30%, SHA-256 of case and cell, scored after the choice, so not blind): 42 of 44
-exact, all 44 within 4 ulp, against 39 for the metre base and 42 correctly rounded; train 116 of 116 against 104 and 107.
+fits 143, the correctly rounded value 148 or 149 and the angstrom base 160; no other power of ten from 1E-12 m to
+1E12 m fits more than 155. Hold-out by cell hash (30%, SHA-256 of case and cell, scored after the choice, so not blind): 44 of 44
+exact, against 39 for the metre base and 42 correctly rounded; train 116 of 116 against 104 and 106 to 107.
 Fresh sweep after the factors were frozen (probes-numeric/t4630-convert-distance-sweep, 150 seeded calls between
 distance units with decimal prefixes on neither, one or both units; 100 are `#N/A`, a prefix on a unit that takes none):
 the angstrom base is exact on all 50 numeric cells, against 33 for both the metre base and the correctly rounded value;
