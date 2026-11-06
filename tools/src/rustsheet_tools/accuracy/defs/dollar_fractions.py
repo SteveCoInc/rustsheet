@@ -27,7 +27,6 @@ from rustsheet_tools.accuracy.defs._common import by_stratum, scalars, signed, t
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
-    Interval,
     MathArg,
     NoValueError,
     Param,
@@ -132,8 +131,10 @@ def _definition(
         Definition(
             function=function,
             params=(
-                Param("dollar", "real", Interval(), source=DOLLAR_SOURCE),
-                Param("fraction", "int", Interval(), source=DOLLAR_SOURCE),
+                Param(
+                    "fractional_dollar" if decimal_form else "decimal_dollar", "real", source=DOLLAR_SOURCE
+                ),
+                Param("fraction", "int", source=DOLLAR_SOURCE),
             ),
             value=value,
             draw=by_stratum(

@@ -41,7 +41,6 @@ from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
     DomainError,
-    Interval,
     MathArg,
     NoValueError,
     Param,
@@ -205,7 +204,7 @@ RRI_EDGES: tuple[Shape, ...] = (
 
 
 def _param(name: str, kind: str, source: str, truncates: str = "") -> Param:
-    return Param(name, "int" if kind == "int" else "real", Interval(), source=source, truncates=truncates)
+    return Param(name, "int" if kind == "int" else "real", source=source, truncates=truncates)
 
 
 EFFECT = register(
