@@ -3,7 +3,7 @@ id: T-4424
 title: "SUMX2MY2 overflow order: probe whether Excel adds x^2 and then -y^2 to its running sum, or keeps an overflowing square in 80 bits, where the pair term is finite"
 milestone: M5
 lane: functions-math
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -49,14 +49,14 @@ one-row ranges holding the same numbers, with an `ERROR.TYPE` companion for each
 - Controls: the same pairs through SUMXMY2 and SUMX2PY2.
 
 ## Acceptance criteria
-- [ ] probes/t4424-sumx2my2-overflow-order is committed with excel-graph oracle values.
-- [ ] Every cell passes. If Excel follows model b or c, the closure in `fn_sumx2my2` (and SUMX2PY2's, if its cells
+- [x] probes/t4424-sumx2my2-overflow-order is committed with excel-graph oracle values.
+- [x] Every cell passes. If Excel follows model b or c, the closure in `fn_sumx2my2` (and SUMX2PY2's, if its cells
       differ) changes to that order, with a unit test per model-deciding cell. If no single model explains every cell,
       or the fix would change any digit of a passing SUMX2MY2, SUMX2PY2 or SUMXMY2 cell, hand the task up (work-loop
       step 5b): that is an operation-order fit.
-- [ ] numbers.md's "Unprobed: whether SUMX2MY2's running sum takes x^2 and then -y^2" is replaced by the result, citing
+- [x] numbers.md's "Unprobed: whether SUMX2MY2's running sum takes x^2 and then -y^2" is replaced by the result, citing
       the cells.
-- [ ] `make eval-baseline` records no regression; `rustsheet-eval accuracy` passes; `make check` green; reviewers approve.
+- [x] `make eval-baseline` records no regression; `rustsheet-eval accuracy` passes; `make check` green; reviewers approve.
 
 ## Out of scope
 - SUMXMY2's last digit on a 1.5E+16 sum (T-2384).
@@ -65,3 +65,18 @@ one-row ranges holding the same numbers, with an `ERROR.TYPE` companion for each
 ## Handoff (resumed)
 Probe done and evidenced (excel-graph): Excel follows model (a), one double term per pair, as `fn_sumx2my2` already does (rows 1-7 SUMX2MY2: 1.69E+308, 1.69E+308, -1.69E+308, -1.69E+308, #NUM!, #NUM!, #NUM!). No engine change needed. numbers.md is updated and the case + oracle sidecar are committed.
 Missing: `probes/t4424-sumx2my2-overflow-order.math.json`. `cd tools && uv run rustsheet-accuracy math --suite probes` has no per-case option, recomputes the Bessel cases (m9-bessel-order-limits, t2546, t2881) with mpmath and was killed at the 30 min background limit twice without writing the new sidecar. Next: run it with `--workers` on a bigger box or in a dedicated long session, commit only the t4424 sidecar (restore the other .math.json files), then `--check`, `make check-fast`, mark done with the Outcome (model a confirmed; no code change), review, PR.
+
+## Outcome
+- **Probe:** probes/t4424-sumx2my2-overflow-order, excel-graph, 84 cells. The engine passes all 84 with no code change
+  (`rustsheet-eval show`: checked 84, passed 84).
+- **Result:** Excel follows model (a), one finished double term x^2 - y^2 per pair, which is what `fn_sumx2my2`
+  already does.
+  - A1:A2 are 1.6899999999999998E+308 in either order, which rules out model b.
+  - A3:A4 are the negative twin.
+  - A5:A7 are `#NUM!`, where x^2 or -y^2 overflows alone while the term is finite. That rules out an 80-bit square
+    (model c).
+- **Docs:** numbers.md's "Unprobed" line is replaced by this result, with the cells cited.
+- **Math sidecar:** the handoff's blocker was that `rustsheet-accuracy math --suite probes` recomputes every case.
+  The resumed run instead wrote this case's sidecar with `eval_math.case_math` on the one case. It has 42 math
+  values. `eval_math.check_suite('probes')` reports no problems.
+- **Eval delta:** one new case of 84 cells, all passing. No baseline change, and no regression.
