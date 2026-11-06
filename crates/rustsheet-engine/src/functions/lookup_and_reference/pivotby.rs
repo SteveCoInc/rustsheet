@@ -925,6 +925,7 @@ impl<'a> Grid<'a> {
     /// The records of column item `item`'s cell over a row whose records are `records`, by
     /// [`Grid::cell_rows`]'s rule, without the buckets: the parent cells of [`ParentSets`]
     /// (`None` for every record, the Total's and a leaf no record reached; [`ColumnRecords`]).
+    /// A subtotal of a class no record reached does not yet follow that rule here (T-4428).
     fn column_records(&self, item: Item, records: &[usize]) -> ColumnRecords {
         match item {
             Some(Line::Group(group)) if self.unreached.contains(&group) => None,

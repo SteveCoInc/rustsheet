@@ -1046,7 +1046,8 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       none reached does (T-4359). Confirmed on a hold-out of 30 fresh runs with three and four column fields
       (`col_total_depth` 3 and 4, ascending and `col_sort_order` -1; probes/t4401-pivotby-level-subtotal-holdout,
       excel-graph, 2026-11-05, 60 of 60 committed predictions matched; T-4401). Implemented by T-4388
-      (`Grouping::class_reached`, below).
+      (`Grouping::class_reached`, below), whose datasets are probes/t4388-pivotby-intransitive-subtotals and the 9
+      level-2 cells here (Calc!B31, B32, B33, B35, B39, B41, C31, C33, C39).
     - **relative_to 3 and 4 take the parent subtotal's records by the same rule**: over Ay Ay Bx Cx Cy (q p p q q)
       the parent column total of q's (`ab`,y) cell is `1, 4, 5`, not `1, 5` (Calc!D2, a two-argument LAMBDA
       `ARRAYTOTEXT(x)&" / "&ARRAYTOTEXT(a)`); parent row totals read the parent subtotal row's cell in the same
