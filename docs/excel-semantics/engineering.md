@@ -964,9 +964,11 @@ Edges probed by T-2077 (probes/eng-im-overflow-edges, excel-graph):
   `4.34782608695652E+307`, sign kept) and IMSEC and IMSECH give `1`. For a tiny pure imaginary y, IMSEC and
   IMSECH give `1`; IMCSC and IMCOT are `#NUM!` at every probed size (`1E-20i` to `-1E-200i`, as T-2531);
   IMCSCH gives `-1/y` as an imaginary number for `1E-20i` and `1E-100i` (`-1E+100i`) but `#NUM!` from
-  `1E-200i` down. `IMCOT("1E-310")` and the subnormal `"2.2E-308"` are `#NUM!` from the parse (a subnormal
-  part is `#NUM!` in every IM* function, T-2541), not from a denominator; `"0"` gives `#NUM!` for IMCSC, IMCOT
-  and IMCSCH and `1` for IMSEC and IMSECH. RustSheet matches every cell.
+  `1E-200i` down. The subnormal `"2.2E-308"` and `"0"` give the same row: `#NUM!` for IMCSC, IMCOT and IMCSCH and `1` for IMSEC
+  and IMSECH (so a subnormal real part is read, and acts as a zero denominator for the reciprocals). `#NUM!` from the
+  parse is evidenced only for much smaller parts (`IMREAL("1E-310")`, probes/eng-inumber-reading, T-2541;
+  `IMSECH("1E-320")`), so `IMCOT("1E-310")` is `#NUM!` by that parse rule, inferred from IMREAL and not probed for
+  IMCOT itself. RustSheet matches every cell.
 - IMTAN and IMCOT near the edge answer `i` / `-i` (`IMTAN("1.5+710.4i")`); IMLN, IMLOG10, IMLOG2
   and IMSQRT do not overflow there. Already matched.
 - Last-digit differences remain as known failures (a kernel question, not a rule; T-2231): IMCOSH/IMSINH
