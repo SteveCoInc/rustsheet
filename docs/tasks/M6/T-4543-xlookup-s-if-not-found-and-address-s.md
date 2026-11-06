@@ -3,7 +3,7 @@ id: T-4543
 title: "XLOOKUP's if_not_found and ADDRESS's sheet_text over an array or range: probe and match, and retire lookup.md's stale UNVERIFIED list"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
