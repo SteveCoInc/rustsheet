@@ -170,7 +170,9 @@ pub struct CaseResult {
     /// report reads a case's milestone tag from them (decision 0051).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
-    /// Every scored cell (reports may drop passing cells when serializing).
+    /// Every scored cell (reports may drop passing cells when serializing). Each is written with
+    /// its closeness bucket and family flag ([`crate::closeness::serialize_cells`]).
+    #[serde(serialize_with = "crate::closeness::serialize_cells")]
     pub cells: Vec<CellResult>,
     /// Displayed-text verdicts, beside the values' (T-1610, decision 0068).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
