@@ -879,8 +879,6 @@ impl Model {
     }
 }
 
-/// ROW's numbers `first..=last` down a column (`by_row`) or COLUMN's across a row; one number
-/// when they are one or with `first_only` (implicit intersection keeps the first).
 /// ROW or COLUMN of an array value, element by element in its shape: an error element is that
 /// error, any other `#VALUE!` (probes/t4610-row-column-array-error-element, T-4610).
 fn not_a_reference_elements(rows: Vec<Vec<ArrayNode>>) -> CalcResult {
@@ -898,6 +896,8 @@ fn not_a_reference_elements(rows: Vec<Vec<ArrayNode>>) -> CalcResult {
     )
 }
 
+/// ROW's numbers `first..=last` down a column (`by_row`) or COLUMN's across a row; one number
+/// when they are one or with `first_only` (implicit intersection keeps the first).
 fn row_or_column_numbers(first: i32, last: i32, by_row: bool, first_only: bool) -> CalcResult {
     if first == last || first_only {
         return CalcResult::Number(f64::from(first));
