@@ -88,3 +88,9 @@ Next step: make `lambda_initial_value` (map_reduce.rs) share `Model::bind_argume
 results that are references (check `eval_ref_or_index`'s callers before widening it), pass a union as a multi-area reference, and
 make the 3-D span `#VALUE!`. Then make `fn_reduce` (not `fn_scan`) carry a reference result into the next step. After that,
 docs/excel-semantics/arrays.md and the unit tests. Do not repeat: eta COUNT/PRODUCT probes, which are all `#VALUE!`.
+Design note (07:05 UTC): `lambda_initial_value` returns a `CalcResult`, and `call_lambda_caller` takes `[CalcResult; 2]`,
+so a union (`Binding::Areas`), a LET grid variable (`Binding::Grid`) or a 3-D span (`Binding::Span`) cannot reach the LAMBDA
+as a reference. The H/I-column and D9/E9 cells need a `Binding` path into the call: `bind_argument` (let.rs) already
+produces it. A REDUCE accumulator that is a reference (D11, F11) needs the same path for each step's result. Check how
+`helper_caller`/`call_lambda_caller` bind parameters before choosing between widening the caller to take `Binding`s
+and adding a second entry point. That choice may push the task to size L: split it if so (planner).
