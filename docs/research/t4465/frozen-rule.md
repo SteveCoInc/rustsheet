@@ -30,3 +30,15 @@ Correction made before scoring: `predict.py` first read the base-0 cells `-2^-k`
 Excel's unary minus binds before `^`, so they are (-2)^-k, positive for even k (the engine
 parses them the same way). The candidate rules are unchanged; only the argument values of those
 cells were re-derived.
+
+## Fresh sweep (written after the freeze, before its fill)
+
+Review round 1 (excel-fidelity) asked for a post-freeze sweep of SEQUENCE over its whole
+domain. `gen_sweep.py` writes `probes/t4465-extent-sweep` (SEQUENCE rows and columns) and
+`-sweep-randarray` (RANDARRAY rows and columns): 16 log-uniform bases per column up to 1048576
+(16384 for RANDARRAY's columns), offsets k*2^-30, k in [96, 320], seeded random.Random(44652).
+
+Margin, fixed here before the fill: the frozen rule passes if it misses no sweep cell; the sweep
+discriminates if the best other candidate (eps23, f32, floor, trunc) misses at least 10% of its
+cells. No margin was fixed for the hold-out cases above before they were scored; this sweep is the
+uncontaminated check.
