@@ -23,6 +23,11 @@
     "v": "-5.0000000000000015483071880762065241040547773451747e+199",
     "f": "=INTERCEPT(B1:B4,A1:A4)"
    },
+   "H4": {
+    "t": "e",
+    "why": "#NUM!: the sum about y's mean is beyond the double range (T-4047)",
+    "f": "=STEYX(B1:B4,A1:A4)"
+   },
    "H5": {
     "t": "n",
     "v": "2.0999999999999999704323881865448538010301020978135e+200",
@@ -53,6 +58,11 @@
     "why": "#NUM!: the sum about x's mean is beyond the double range",
     "f": "=INTERCEPT(D1:D4,C1:C4)"
    },
+   "I4": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=STEYX(D1:D4,C1:C4)"
+   },
    "I5": {
     "t": "e",
     "why": "#NUM!: the sum about x's mean is beyond the double range",
@@ -82,6 +92,11 @@
     "t": "n",
     "v": "-2.1347565043361810857385867230947423973098246937949e+158",
     "f": "=INTERCEPT(F1:F4,E1:E4)"
+   },
+   "J4": {
+    "t": "e",
+    "why": "#NUM!: Excel's double Syy - Sxy^2/Sxx is below zero",
+    "f": "=STEYX(F1:F4,E1:E4)"
    },
    "J5": {
     "t": "n",
