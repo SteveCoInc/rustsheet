@@ -31,7 +31,7 @@ use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::parser::parse_range;
 use crate::expressions::types::CellReferenceIndex;
 use crate::formatter::lexer::is_likely_date_number_format;
-use crate::functions::util::collation::fold_case;
+use crate::functions::util::collation::{fold_case, fold_char};
 use crate::model::Model;
 use crate::number_format::get_num_fmt;
 
@@ -172,9 +172,10 @@ pub fn refresh(
 /// ungrouped, for a caller that adds items before finishing it (`Txn::add_pivot_table`'s unused
 /// items). The fields are in source order, and nothing remaps a pivot table's field indices
 /// ([`refresh`]). Fields are matched to `cache`'s by case-folded name: whether Excel matches
-/// by name, by case or by position is UNVERIFIED (probe pending: T-4640); a matched ungrouped field keeps its items, in their order,
-/// and new items follow in source order (pivots.md "Items show in the order the pivot field
-/// lists them; new items are appended", probes/t4134-pivot-items I2, I3,
+/// by name, by case or by position is UNVERIFIED (probe pending: T-4640); a matched ungrouped
+/// field keeps its items, in their order, and new items follow in source order (pivots.md
+/// "Items show in the order the pivot field lists them; new items are appended",
+/// probes/t4134-pivot-items I2, I3,
 /// t4582-pivot-item-edges J2).
 ///
 /// # Errors
@@ -281,21 +282,31 @@ fn field_names(headers: impl Iterator<Item = CacheItem>) -> Result<Vec<String>, 
             _ => Err(PivotCacheError::Header { column }),
         })
         .collect::<Result<_, _>>()?;
+    // One key per field, so `taken` is no larger than the headers' own text plus the suffixes.
     let mut taken: HashSet<String> = HashSet::with_capacity(headers.len());
+    // Per colliding base key, the next k to try. Every k below it was taken when it was passed,
+    // and `taken` only grows, so each search resumes there: n equal headers cost O(n) probes, not
+    // O(n^2) (directive 5). A candidate's key is the base key and k, since digits fold to
+    // themselves and `name_key` maps character by character.
+    let mut next: HashMap<String, u64> = HashMap::new();
     let mut unique = |base: String| {
-        if taken.insert(name_key(&base)) {
+        let base_key = name_key(&base);
+        if !taken.contains(&base_key) {
+            taken.insert(base_key);
             return base;
         }
-        // Each taken name blocks at most one k, so a free one is found by k = taken + 2.
+        let start = next.get(&base_key).copied().unwrap_or(2);
+        // Each taken key blocks at most one k, so a free one is found by k = start + taken.
         let last = u64::try_from(taken.len())
             .unwrap_or(u64::MAX)
-            .saturating_add(2);
-        let name = (2..=last)
-            .map(|k| format!("{base}{k}"))
-            .find(|name| !taken.contains(&name_key(name)))
+            .saturating_add(start);
+        let k = (start..=last)
+            .find(|k| !taken.contains(&format!("{base_key}{k}")))
+            // Unreachable: `last - start + 1` candidates exceed the taken keys (pigeonhole).
             .unwrap_or_default();
-        taken.insert(name_key(&name));
-        name
+        taken.insert(format!("{base_key}{k}"));
+        next.insert(base_key, k.saturating_add(1));
+        format!("{base}{k}")
     };
     let mut names: Vec<Option<String>> = headers.into_iter().map(|h| h.map(&mut unique)).collect();
     for (name, position) in names.iter_mut().zip(1u64..) {
@@ -306,13 +317,28 @@ fn field_names(headers: impl Iterator<Item = CacheItem>) -> Result<Vec<String>, 
     Ok(names.into_iter().flatten().collect())
 }
 
-/// The key under which two field names are the same: case-folded ([`fold_case`]), with `ß` as
-/// `ss`, since a header `SS` after `ß` saves as `SS2` (t4627 `P_Fold`: `é`, `="É"`, `ß`,
-/// `="SS"`, `="s"&"s"` save as `é`, `É2`, `ß`, `SS2`, `ss3`), though the items `ß` and `SS` stay
-/// apart ([`ItemKey::identity`]). Other multi-character folds (`ẞ`, ligatures) are UNVERIFIED
-/// (probe pending: T-4640).
+/// The key under which two field names are the same: each character case-folded
+/// ([`fold_char`]), with `ß` as `ss`, since a header `SS` after a header `ß` saves as `SS2`
+/// (t4627 `P_Fold`: `é`, `="É"`, `ß`, `="SS"`, `="s"&"s"` save as `é`, `É2`, `ß`, `SS2`, `ss3`),
+/// though the items `ß` and `SS` stay apart ([`ItemKey::identity`]). Only that whole-text `ß`
+/// header is evidenced; the rest is an unprobed extrapolation, UNVERIFIED (probe pending:
+/// T-4640):
+/// - `ß` inside a longer name (`Straße` against `STRASSE`) is replaced the same way;
+/// - `ẞ` folds to `ß` ([`fold_char`]) and so to `ss`, making `ẞ`, `ß`, `SS` and `ss` one name,
+///   though exact MATCH keeps `ẞ = ß` apart from `ss` (lookup.md "MATCH, VLOOKUP and HLOOKUP
+///   exact-match keys fold case one character to one");
+/// - whether names compare by Excel's `=` collation instead (`æ`/`ae`, `œ`/`oe`, `ĳ`/`ij`,
+///   `þ`/`th`, `á`/`a`+U+0301, U+00AD ignored; coercion.md), and the other folds (`ǆ`/`Ǆ`,
+///   `ı`/`I`, `ς`/`σ`, ligatures).
 fn name_key(name: &str) -> String {
-    fold_case(name).replace('ß', "ss")
+    let mut key = String::with_capacity(name.len());
+    for c in name.chars() {
+        match fold_char(c) {
+            'ß' => key.push_str("ss"),
+            folded => key.push(folded),
+        }
+    }
+    key
 }
 
 /// One field's items and records as a refresh reads them.

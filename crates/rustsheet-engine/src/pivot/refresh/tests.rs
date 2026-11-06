@@ -308,6 +308,26 @@ fn field_names_avoid_every_taken_name() {
     );
 }
 
+/// Untrusted input (directive 5): [`MAX_FIELDS`] equal headers, or two repeated headers whose
+/// suffixed names collide, are named in linear time, each search resuming where its base's left
+/// off.
+#[test]
+fn many_equal_headers_are_named_in_linear_time() {
+    let n = MAX_FIELDS;
+    let names = field_names((0..n).map(|_| text("Sales"))).unwrap();
+    assert_eq!(names.len(), n);
+    assert_eq!(names[1], "Sales2");
+    assert_eq!(names[n - 1], format!("Sales{n}"));
+    // `A2` repeated meets the `A2<k>` names the repeated `A` took first: `A` took `A2` to
+    // `A8192`, so `A22` to `A2999` (k = 2 to 999) are taken and the first `A2` repeat is `A21000`.
+    let half = n / 2;
+    let mixed = field_names((0..n).map(|i| text(if i < half { "A" } else { "A2" }))).unwrap();
+    let distinct: HashSet<String> = mixed.iter().map(|m| name_key(m)).collect();
+    assert_eq!(distinct.len(), n);
+    assert_eq!(mixed[half], "A21000");
+    assert_eq!(mixed[half + 1], "A21001");
+}
+
 #[test]
 fn a_non_text_header_or_a_missing_source_is_refused() {
     let model = source(&[&plain(&["K", "a"]), &plain(&["7", "1"])]);

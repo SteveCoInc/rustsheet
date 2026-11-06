@@ -626,11 +626,16 @@ Rule: on refresh Excel names each cache field after its source header, made uniq
   the same way: `X`, `=""`, `Field4` save as `X`, `Field42`, `Field4`.
 - A constant header typed twice is renamed like a formula one (`Sales`, `Sales`, `SALES` save as
   `Sales`, `Sales2`, `SALES3`).
-- The name comparison folds `ß` with `SS`: `é`, `="É"`, `ß`, `="SS"`, `="s"&"s"` save as `é`,
-  `É2`, `ß`, `SS2`, `ss3`. Items do not: in the same source the Region items `ß` and `SS` stay apart,
-  as do `Straße` and `STRASSE`, while `é` and `É` are one item (casing of the first, `é`).
+- A whole-text header `ß` blocks a later `SS`: `é`, `="É"`, `ß`, `="SS"`, `="s"&"s"` save as `é`,
+  `É2`, `ß`, `SS2`, `ss3`. Items do not equate them: in the same source the Region items `ß` and
+  `SS` stay apart, as do `Straße` and `STRASSE`, while `é` and `É` are one item (casing of the
+  first, `é`). Whether `ß` inside a longer name blocks its `ss` spelling, and whether names compare
+  by the `=` collation, are open (below).
 - A record cell holding `=""` is a text item of its own, apart from an empty cell's `(blank)` item;
-  its row label is an empty cell.
+  its row label is an empty cell. It is listed after `(blank)`: a, (blank), then the `""` item. That
+  fits new items being appended on refresh ("Items show in the order the pivot field lists them;
+  new items are appended"), since the builder caches formula cells as blank, so `""` is the one new
+  item.
 
 Evidence: probes/t4585-pivot-field-names (excel-graph, 2026-11-06, T-4585): headers D!A1:F1 Region,
 Sales, `="Sales"`, `=""`, `="region"`, `="Sales"&""` save as Region, Sales, Sales2, Field4, region2,
@@ -647,8 +652,9 @@ cache_fields of the pivot on sheet P_<source>:
 - Fold!A1:G1 Region, Sales, é, `="É"`, ß, `="SS"`, `="s"&"s"` → Region, Sales, é, É2, ß, SS2, ss3.
   Its pivot (rows Region over é, É, ß, SS, ss, Straße, STRASSE with Sales 1, 2, ..., 64) shows
   P_Fold!A4:B8 é 3, ß 4, Straße 32, SS 24, STRASSE 64;
-- Rec!A2:A6 a, `=""`, empty, `=""`, a with Sales 1, 2, 4, 8, 16: P_Rec!A4:B6 a 17, (blank) 4, an empty
-  label cell 10.
+- Rec!A2:A6 a, `=""`, empty, `=""`, a with Sales 1, 2, 4, 8, 16: the rendered cells P_Rec!A4:B6 are
+  a 17, (blank) 4 and an empty label cell 10 (the sidecar holds no shared items, so the rendered
+  cells are the evidence).
 
 Empty and Const are built with the case builder's `cache_names` (pivot_definition.py), which saves
 placeholder names that Excel replaces on refresh, as it replaces formula headers' text.
@@ -658,8 +664,19 @@ earlier equal headers; both give every name above.
 
 Open (T-4640):
 - number, boolean and error headers;
-- other multi-character case folds in names (`ẞ`, ligatures, `ς`/`σ`);
-- a blank's `Field<n>` meeting a suffixed name from a later duplicate.
+- `ß` inside a longer name (`Straße` against `STRASSE`): the engine's `name_key` folds it to `ss`
+  anywhere, an unprobed extrapolation of the one whole-text `ß` header;
+- whether names compare by Excel's `=` collation, where `ß`/`ss` is one of several expansions
+  (coercion.md "Collation equality in lookups and criteria"): `æ`/`ae`, `œ`/`oe`, `ĳ`/`ij`, `þ`/`th`,
+  `á`/`a`+U+0301, U+00AD ignored;
+- other case folds: `ẞ` (the engine folds it to `ß` and so treats `ẞ`, `ß`, `SS` and `ss` as one
+  name, though exact MATCH keeps `ẞ = ß` apart from `ss`: lookup.md "MATCH, VLOOKUP and HLOOKUP
+  exact-match keys fold case one character to one"), `ǆ`/`Ǆ`, `ı`/`I`, `ς`/`σ`, ligatures;
+- a blank's `Field<n>` meeting a suffixed name from a later duplicate, and `Field4` against a typed
+  `field4`;
+- carried over to T-4640 from code pointers: whether a refresh matches new fields to the old
+  cache's by name, case or position (`refresh_builder`, pivot/refresh.rs), and whether
+  GETPIVOTDATA's item `"#N/A"` names an error item (functions/lookup_and_reference/pivot_index.rs).
 
 Status: VERIFIED (excel-graph) for the rules above; the open points are UNVERIFIED (probe pending:
 T-4640)
