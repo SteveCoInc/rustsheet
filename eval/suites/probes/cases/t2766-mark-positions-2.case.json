@@ -1,0 +1,48 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-2766 review: the ERROR.TYPE/CELL mark through nested wrapper orders (CHOOSE of LET or of a LAMBDA call, LET of CHOOSE, INDEX of LET, IF of LET, a LAMBDA call of CHOOSE, INDEX of CHOOSE, IFERROR of LET; IRR through CHOOSE of LET), a marked array through IF, CHOOSE, LET, a LAMBDA call and INDEX(..,0,..) (A10 the array unwrapped), an array condition of IF, an array of references as the second argument of CORREL, SLOPE, INTERCEPT, SUMXMY2 and CHITEST, LINEST's known_x error, SUMXMY2's error second argument, CORREL against a marked array with an error element, IFERROR's fallback and IF's false branch, CHITEST either argument marked, and a recursive LAMBDA whose inner level alone returns ERROR.TYPE (A29 the outer adds +0, A30 it returns the inner value). Predictions before the fill (the engine at 94297c024): A1 #DIV/0!; A2 #DIV/0!; A3 #DIV/0!; A4 #DIV/0!; A5 #NUM!; A6 #NUM!; A7 #DIV/0!; A8 #DIV/0!; A9 #NUM!; A10 #NUM!; A11 #NUM!; A12 #NUM!; A13 #NUM!; A14 #NUM!; A15 #NUM!; A16 #DIV/0!; A17 #DIV/0!; A18 #DIV/0!; A19 #DIV/0!; A20 #NUM!; A21 #VALUE!; A22 #NUM!; A23 #DIV/0!; A24 #DIV/0!; A25 #NUM!; A26 a number (0.3246...); A27 #NUM!; A28 #VALUE!; A29 #DIV/0!; A30 #NUM!",
+  "tags": [
+    "M9",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "B1": 5,
+        "D2": 7,
+        "A1": "=FTEST({1;2;3},CHOOSE(1,LET(x,ERROR.TYPE(#REF!),x)))",
+        "A2": "=FTEST({1;2;3},CHOOSE(1,LAMBDA(x,x)(ERROR.TYPE(#REF!))))",
+        "A3": "=FTEST({1;2;3},LET(x,CHOOSE(1,ERROR.TYPE(#REF!)),x))",
+        "A4": "=FTEST({1;2;3},INDEX(LET(x,ERROR.TYPE(#REF!),x),1))",
+        "A5": "=IRR(CHOOSE(1,LET(x,CELL(\"row\",D2),x)))",
+        "A6": "=FTEST({1;2;3},IF(TRUE,LET(x,ERROR.TYPE(#REF!),x)))",
+        "A7": "=FTEST({1;2;3},LAMBDA(x,x)(CHOOSE(1,ERROR.TYPE(#REF!))))",
+        "A8": "=FTEST({1;2;3},INDEX(CHOOSE(1,ERROR.TYPE(#REF!)),1))",
+        "A9": "=FTEST({1;2;3},IFERROR(LET(x,ERROR.TYPE(#REF!),x),0))",
+        "A10": "=FTEST({1;2;3},ERROR.TYPE({#REF!;#N/A}))",
+        "A11": "=FTEST({1;2;3},IF(TRUE,ERROR.TYPE({#REF!;#N/A})))",
+        "A12": "=FTEST({1;2;3},CHOOSE(1,ERROR.TYPE({#REF!;#N/A})))",
+        "A13": "=FTEST({1;2;3},LET(x,ERROR.TYPE({#REF!;#N/A}),x))",
+        "A14": "=FTEST({1;2;3},LAMBDA(x,x)(ERROR.TYPE({#REF!;#N/A})))",
+        "A15": "=FTEST({1;2;3},INDEX(ERROR.TYPE({#REF!;#N/A}),0,1))",
+        "A16": "=FTEST({1;2;3},IF({TRUE;TRUE},ERROR.TYPE(#REF!)))",
+        "A17": "=CORREL({1;2},INDIRECT(\"B1\",{1;1}))",
+        "A18": "=SLOPE({1;2},INDIRECT(\"B1\",{1;1}))",
+        "A19": "=INTERCEPT(5,INDIRECT(\"B1\",{1}))",
+        "A20": "=SUMXMY2(4,INDIRECT(\"B1\",{1}))",
+        "A21": "=LINEST(ERROR.TYPE(#REF!),1/0)",
+        "A22": "=SUMXMY2(ERROR.TYPE(#REF!),{#N/A})",
+        "A23": "=CORREL({1;2;3},ERROR.TYPE({#REF!;5;#VALUE!}))",
+        "A24": "=FTEST({1;2;3},IFERROR(1/0,ERROR.TYPE(#REF!)))",
+        "A25": "=FTEST({1;2;3},IF(FALSE,4,ERROR.TYPE(#REF!)))",
+        "A26": "=CHITEST({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))",
+        "A27": "=CHITEST(ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}),{1;2;3})",
+        "A28": "=CHITEST({1;2},INDIRECT(\"B1\",{1;1}))",
+        "A29": "=FTEST({1;2;3},LET(f,LAMBDA(f,n,IF(n=0,ERROR.TYPE(#REF!),f(f,n-1)+0)),f(f,1)))",
+        "A30": "=FTEST({1;2;3},LET(f,LAMBDA(f,n,IF(n=0,ERROR.TYPE(#REF!),f(f,n-1))),f(f,1)))"
+      }
+    }
+  ],
+  "expected": {}
+}
