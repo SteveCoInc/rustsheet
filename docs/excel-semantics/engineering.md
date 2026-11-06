@@ -280,19 +280,24 @@ Status: VERIFIED
 Implemented in: `parse_unit` and `fn_convert` in functions/engineering/convert.rs (T-3817)
 Tasks: T-3817, T-3861
 
-## CONVERT from a micro-prefixed Kelvin to Réaumur drops the prefix (T-4085)
-Rule: with a micro prefix on a Kelvin source and `Reau` as the target, Excel converts the unprefixed number:
+## CONVERT drops a Kelvin prefix toward Rank and Reau (T-4085, T-4615)
+Rule: of the temperature units only `K` and `kel` take a decimal prefix, and Excel ignores that prefix in three
+directions: from a prefixed Kelvin to `Rank` or `Reau`, and from `Reau` to a prefixed Kelvin. The written number is
+converted as if the unit were plain `K`. From `Rank` to a prefixed Kelvin, and between a prefixed Kelvin and `C` or `F`
+in either direction, the prefix applies as "CONVERT temperature" reads it (the value is scaled by the source prefix
+before the formula and the result divided by the target prefix after it).
+Examples: `CONVERT(1000,"YK","Rank")` and `CONVERT(1000,"yK","Rank")` are both 1800, `CONVERT(1000,"mkel","Reau")`
+581.48, `CONVERT(1000,"Reau","YK")` 1523.15, but `CONVERT(1000,"Rank","YK")` is 5.555555555555556E-22 and
+`CONVERT(1000,"mK","C")` -272.15. The asymmetry between Rank to K (kept) and K to Rank (dropped) holds for every one of
+the 21 decimal prefixes, on `K` and `kel` alike. T-4085's Gate A cells are this rule:
 `CONVERT(-56.8944444765809,"ukel","Reau")` is -264.03555558126476 and `CONVERT(-68268277991730.8,"uK","Reau")`
--54614622393603.16, which are `(v - 273.15)*0.8` of the written v, not of v × 1E-6 (-218.52004551555558 and
--54614840.91338464). The same table applies a prefix to the other targets it drew: `CONVERT(-101.399620892439,"Ykel","C")`
-is -1.01399620892439E+26 and `CONVERT(-1.19864311078515E-11,"F","hkel")` 2.5537222222221554, as "CONVERT temperature"
-reads them. Only these two cells show the drop; the mechanism (whether any prefix is dropped toward `Reau`, or only
-`u`, and what a prefixed `Reau` side or `Rank` does) is unprobed.
-Evidence: accuracy/CONVERT/s1 Calc!A65, A81 (Excel's values), A2 to A200 for the other temperature cells
-(excel-graph, 2026-11-06, T-4085).
-Ours: scales by the prefix first, so both cells are off by the prefix. Gate A does not fail on them (the engine is
-inside the envelope through the math), but Excel is the target (decision 0300): T-4615 probes the rule and matches it.
-Status: VERIFIED (excel-graph, the two cells; the rule beyond them is unprobed)
+-54614622393603.16, `(v - 273.15)*0.8` of the written v. The math, which scales by the prefix, differs; Excel is the
+target (decision 0300).
+Evidence: probes/t4615-convert-prefixed-kelvin (346 cells: the 21 decimal prefixes on `K` and `kel` against `C`, `F`,
+`Rank` and `Reau` in both directions at 1000, plus S!A23:J23 at other values), excel-graph 2026-11-06;
+accuracy/CONVERT/s1 Calc!A65, A81 (T-4085).
+Ours: follows it (`convert_of`'s temperature branch, T-4615).
+Status: VERIFIED (excel-graph)
 Tasks: T-4085, T-4615
 
 ## Gate A tables for IMABS, IMARGUMENT and CONVERT (T-4085)
