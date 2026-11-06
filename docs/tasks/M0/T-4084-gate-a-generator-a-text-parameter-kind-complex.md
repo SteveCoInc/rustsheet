@@ -3,7 +3,7 @@ id: T-4084
 title: "Gate A generator: a text parameter kind (complex numbers and CONVERT units)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
