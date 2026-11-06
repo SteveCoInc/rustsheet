@@ -28,18 +28,20 @@ mod date_groups;
 pub(crate) mod layout;
 mod model;
 mod number_groups;
+#[cfg(test)]
+mod probe_cases;
 mod refresh;
 mod result;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
 pub use layout::{
-    layout_extent, max_layout_rows, row_layout, LayoutCell, BLANK_ITEM, GRAND_TOTAL,
-    LAYOUT_COLUMNS, ROW_LABELS,
+    lay_out, layout_extent, max_layout_rows, row_layout, AxisLine, LayoutCell, PivotLayout,
+    BLANK_ITEM, GRAND_TOTAL, LAYOUT_COLUMNS, MAX_PIVOT_CELLS, ROW_LABELS,
 };
 pub use model::{
     Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry, OpaqueNode,
-    OpaqueOwner, PageField, PivotField, PivotItem, PivotOptions, PivotTable, ShowDataAs, SortType,
-    NO_BASE_ITEM,
+    OpaqueOwner, PageField, PivotField, PivotGeometry, PivotItem, PivotOptions, PivotTable,
+    ShowDataAs, SortType, NO_BASE_ITEM,
 };
 pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
 pub use refresh::{

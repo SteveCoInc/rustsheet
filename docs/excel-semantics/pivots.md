@@ -241,6 +241,8 @@ Correction: T-4123 first read the rule as "the data field's `compact`". T-4137 n
 non-axis fields, and T-4583's R1 and R2 show that axis fields count too.
 Status: VERIFIED (excel-graph) for the roles and positions probed. UNVERIFIED (probe pending: T-4609):
 column and page fields, `outline` alone on axis fields, and which attribute moves R1's subtotals.
+Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (R1's lines and `firstDataCol`, read as the
+outer field's outline form with `compact` and `outline` both on; T-4147). The header text is T-4149's.
 
 ## Rendered pivot cells: blanks, repeated labels, subtotals and the Values caption
 Rule:
@@ -339,6 +341,73 @@ the file as corrupt (`FileCorruptTryRepair`). Case builder v2 now writes it. Thi
 excel-graph runs of T-4138, not committed: G6's package was refused without the attribute and opened
 with it, all else equal.
 Status: VERIFIED (excel-graph) for the table; the refusal is a builder observation
+Also VERIFIED (excel-graph, T-4147): the rule above reproduces the saved `location`, `firstHeaderRow`,
+`firstDataRow`, `firstDataCol`, `rowPageCount` and `colPageCount` of every probe pivot in scope
+(listed under "Layout lines" below): page counts are `pageWrap` fields per column (`rowPageCount`) with
+the default order (t4137 K4: 3 by 1), per row with `pageOverThenDown` (t4138 G8: 2 by 2), and a row
+field shares its column with the next level only with `compact` and `outline` both on (t4583 R1 against
+R2). UNVERIFIED (probe pending: T-4650): `firstHeaderRow` other than 1, and the page grid's other two
+orders (G8's 2 by 2 cannot tell them apart); (T-4609): whether `compact` or `outline` alone decides
+the shared column.
+Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`geometry`, `location`; T-4147)
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`geometry`: the saved offsets typed
+in `PivotTable::geometry`, T-4147)
+
+## Layout lines: rowItems and colItems per form
+Rule: Excel saves each axis's lines as `<i t r i><x v/></i>`. Each axis is its fields in order, with
+the Values field (`x="-2"`) as one more level whose items are the data fields; a line's tuple is one
+`x` per level down to its own, `r` counts the leading `x`s it shares with the line before (never its
+own last one), and `<x>` lists the rest. An `x` is the item's position in the pivot field's `<items>`,
+or the data field's index at the Values level (`i` repeats it).
+- Every tuple of one item per level is a `t="data"` line.
+- On rows, an item of a field in outline form (`outline` on, which compact form also has) has a line of
+  its own above its children, which carries its subtotal values. An item of a tabular field
+  (`outline="0"`) shares its first child's line, and its subtotal lines follow its children. The form
+  is per field: an outer field left at the default inside a tabular pivot is outline form (t4583 R1).
+- On columns every item shares its first child's line, and subtotal lines follow the children.
+- A field has subtotal lines only when a field other than Values is inside it. They are one
+  `t="default"` line, or one line per custom subtotal in the field's order (`t="sum"`, `t="count"`).
+- The grand total is one `t="grand"` line `<x/>` per data field when Values is on the axis, one
+  otherwise, and none on an axis whose only level is Values.
+- An axis with no level at all saves one empty line `<i/>`.
+
+Evidence (excel-graph, 2026-11-06), the sidecars' `row_items` and `col_items`, all equal to the engine's
+lines (T-4147):
+- probes/t4123-pivot-capture C, T to T4 (compact with a column field; tabular with Values on columns);
+- probes/t4138-pivot-geometry G1 to G9 (G2 compact, G3 outline, G4 tabular with three row fields, G5
+  two column fields with `default` lines after their children, G6 Values on rows with two `grand`
+  lines, G7 and G9 `<i/>`, G8 page fields only);
+- probes/t4137-pivot-captions K1 to K6 (K5 tabular `sum` and `count` lines), t4583-pivot-row-labels
+  R1 to R6, C1, C2, t4134-pivot-items I1, I2, I4, I5, t4135-pivot-aggregates (all twelve),
+  t4589-pivot-total-order, t4614-pivot-total-order-2 and t4616-pivot-total-order-3 (every sheet);
+- the lines of probes/t4128-pivot-spike S (its #SPILL! location is the grid's, T-4151);
+- the Excel-saved pivot of crates/rustsheet-xlsx/tests/example.xlsx: three compact row fields whose
+  `<items>` list the cache items out of order, so `x` is the position in `<items>`, not the cache index.
+
+Not compared, because the engine-side harness cannot rebuild their cache or tree yet: t4128 R, t4134
+I3, t4582 J1, J2 and t4585 N1 have formulas in their sources, which the case file does not evaluate
+(T-4152 runs them through the engine); t4582 J3 and J4 depend on date items against cached numbers
+(T-4612); t4128 G is grouped (T-4171) and t4128 K has a calculated field, a Top-N filter and a
+descending sort (T-4174, T-4165).
+
+The engine's own readings, not probed:
+- `subtotalTop="0"` on an outline row field: the item's own line holds no values and a `default` line
+  follows its children; custom subtotals in outline form follow the children too; with
+  `defaultSubtotal="0"` and no custom subtotal there is no subtotal line, and `defaultSubtotal="1"` with
+  custom subtotals is the default line alone; `rowGrandTotals="0"` drops the grand line of `rowItems`
+  and `colGrandTotals="0"` that of `colItems` (an Excel-saved corpus file shows the latter,
+  oss-engines.md §0.5, not committed);
+- the Values field outer or in the middle of an axis: a field with Values inside gets one subtotal line
+  per data field after its children; on rows with `outlineData`, each data field has a line of its own
+  above the inner items;
+- an item the pivot field does not list (Excel's files list every one) takes the positions after the
+  listed items, in display order.
+
+Status: VERIFIED (excel-graph) for the probes listed. UNVERIFIED (probe pending: T-4649): subtotal
+placement and grand totals off; (T-4650): the Values field away from the innermost level and
+`outlineData`; the unlisted-item positions are an engine convention for files Excel does not write.
+Blank rows, items with no data and collapsed items are T-4168's.
+Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`lay_out`, `AxisPlan::lines`; T-4147)
 
 ## Aggregates over text, blanks, booleans and errors
 Rule (each aggregate in a value field that also holds other kinds of value):
@@ -602,10 +671,16 @@ unit per record and stage, per item ordered, per sort step, per node or accumula
 fed to an accumulator. It holds at most 10,000,000 nodes (`MAX_PIVOT_NODES`): axis nodes plus one
 accumulator per (row node, column node, data field) some record reaches. Past either the pivot has no
 result (`PivotComputeError::Limit`), where Excel would render it.
+Its layout (`lay_out`, T-4147) draws on the same work units, one per line and `x` made, and has no
+result past 4,000,000 cells (`MAX_PIVOT_CELLS`: the location's rows times columns plus two per page
+field, checked from the line counts before any cell is made) or when the location would pass the
+sheet's last row or column. What Excel does with a pivot that does not fit the sheet is not probed.
+The values stay without a layout, so GETPIVOTDATA still has them.
 Evidence: none for Excel; this is a resource limit (SPEC-0032 "Untrusted-input limits", T-4142).
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `MAX_PIVOT_NODES`, `charge`,
 `count_nodes`)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`MAX_PIVOT_CELLS`, `location`; T-4147)
 
 ## Pivots without refreshOnLoad, and source edits
 Rule: unknown. Two things are unprobed: whether Excel for the web re-renders a pivot whose cache lacks

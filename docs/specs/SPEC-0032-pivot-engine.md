@@ -171,8 +171,10 @@ otherwise as a hypothesis to probe:
 7. **Layout lines:** Excel's `rowItems`/`colItems` (`t`, `r`, `i`, `x`) for the form, subtotal placement,
    grand totals, Values position and blank rows (T-4147, T-4168).
 
-`PivotResult` holds the lines, the cell value of each (row line, column line, data field), the page-area
-items and the location size. It is derived state and never encoded.
+`PivotResult` holds the cell value of each (row line, column line, data field). The lines, the location
+and its offsets are `pivot::layout::lay_out(table, cache, &result, work)`'s `PivotLayout`, a separate call
+on the result (T-4147), so a pivot past `MAX_PIVOT_CELLS` or the sheet's edge keeps its values for
+GETPIVOTDATA; the page-area items are the renderer's (T-4149). It is derived state and never encoded.
 
 It lives in `Evaluation` (evaluation.rs) as `pivot_results`, beside `pivot_indexes`, keyed like them.
 It is built on demand by render and by GETPIVOTDATA. It is dropped at every point where `pivot_indexes`

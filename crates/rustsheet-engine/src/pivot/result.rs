@@ -34,6 +34,9 @@
 //!      T-4634); the Var and `StdDev` one is row-major, which fits t4616 V1 E11 and V2 E11 among
 //!      other readings (UNVERIFIED, T-4634).
 //!
+//! Stage 7, the layout lines and location, is `pivot::layout::lay_out`, a separate call on the
+//! result, so that a pivot too large to lay out still has its values (T-4147).
+//!
 //! Every stage charges its work before doing it, and the nodes and accumulators are counted
 //! against [`MAX_PIVOT_NODES`] as they are made, so an untrusted pivot is bounded (CLAUDE.md
 //! directive 5; pivots.md "A pivot result is bounded in work and nodes", DEVIATION).
@@ -239,7 +242,7 @@ impl PivotResult {
 }
 
 /// Takes `units` from `work`, or empties it and fails.
-fn charge(work: &mut u64, units: u64) -> Result<(), PivotComputeError> {
+pub(super) fn charge(work: &mut u64, units: u64) -> Result<(), PivotComputeError> {
     match work.checked_sub(units) {
         Some(left) => {
             *work = left;
@@ -253,7 +256,7 @@ fn charge(work: &mut u64, units: u64) -> Result<(), PivotComputeError> {
 }
 
 /// `count` as a work charge, saturating.
-fn units(count: usize) -> u64 {
+pub(super) fn units(count: usize) -> u64 {
     u64::try_from(count).unwrap_or(u64::MAX)
 }
 
