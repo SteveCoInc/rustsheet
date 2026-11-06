@@ -4708,9 +4708,24 @@ within 1E-15 relative / largest relative error:
   and still read 0, while `F.DIST.RT(20,60,1E8)` (z 600) keeps 1.164E-211. FDIST is the same function: column D (df1 30,
   df2 1E8, z 716 to 736) is 0 like column A. The df1 = 2 zeros are Excel's closed form (not this path) and stay unexplained.
   Ours (T-4045): F's tails only (`bratio` `f_closed_or_ported_tails` asks `bup.rs` `l140_bup_prefactor_underflows`,
-  at any a0). That makes every 0 of t4045 and t4017 exact. BETA.DIST and the t are unprobed at this edge (T-4254), and
-  BETA.DIST's cdf keeps today's kernel there: F.INV at a huge df1 searches it, and a 0 there moves
+  at any a0). That makes every 0 of t4045 and t4017 exact. BETA.DIST's cdf keeps today's kernel there: F.INV at a huge df1 searches it, and a 0 there moves
   `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) 0.6% off the math.
+  BETA.DIST and the t (T-4254, probes/t4254-beta-t-l140-zero-cut, 132 cells, and probes/t4254-beta-t-zero-wide, 180 cells,
+  excel-graph, 2026-11-06), walked in ln ret (BETA.DIST on L140 bup+bgrat: a huge, b < 40, x0 > 0.7) or in ln of the
+  true tail (T.DIST.RT):
+  - BETA.DIST follows the rule at many bup terms. At (a, b) = (2E6, 10.5) (c = 1/2) and (2E6, 10) (c = 1), ln ret -708
+    is a number (`BETA.DIST(0.999649...,2E6,10.5,TRUE)` row 11, 1.221542276089495E-288) and -709 is 0. (5E6, 10.5) is
+    a number at every ln ret down to -690.
+  - At n = 3 bup terms Excel's 0 starts earlier, between ln ret -680 and -690, at (5E6, 3.5), (5E6, 4) and (1E6, 3.5)
+    alike. The last numbers are about 6E-291 and 3.8E-291, and the first 0 has a true tail near 2.8E-295. Neither ln of
+    bgrat's increment I_x0(a0, c) (-687 to -697 at that bracket, while (5E6, 10.5) keeps a number at -697) nor the
+    tail explains it. Unmodelled (T-4437).
+  - T.DIST.RT never reaches L140: its kernel is K(df/2, 1/2), and b = 1/2 takes the small-shape branches. Still, Excel
+    is 0 once the true tail falls between e^-680 and e^-690 at df 1E7, and between e^-690 and e^-698 at df 1E5
+    (about 3E-300), far above the subnormals. Unmodelled (T-4437).
+  - Excel never returns a subnormal or a non-zero value below these cuts in any probed cell. Ours keeps a number at
+    every Excel 0 above (a type-level miss on 0 against a number, owned by T-4437) and matches every number to the last
+    digits, except three cells just above the n = 3 cut that are off in the 9th digit.
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
