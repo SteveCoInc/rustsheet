@@ -82,8 +82,10 @@ impl SourceCells for Model {
     }
 
     fn value(&self, sheet: u32, row: u32, column: u32) -> CacheItem {
-        // Rows and columns within the sheet fit an i32 (`resolve`); anything else is a blank.
-        let (Ok(row), Ok(column)) = (i32::try_from(row + 1), i32::try_from(column + 1)) else {
+        // 1-based, without overflow; a row or column past an i32 is outside every sheet, so a
+        // blank (`resolve` never gives one).
+        let one_based = |n: u32| n.checked_add(1).and_then(|n| i32::try_from(n).ok());
+        let (Some(row), Some(column)) = (one_based(row), one_based(column)) else {
             return CacheItem::Missing;
         };
         let Some(cell) = self
@@ -110,7 +112,9 @@ impl SourceCells for Model {
 impl Model {
     /// Whether the cell style at `index` shows numbers as dates (`is_likely_date_number_format`),
     /// which Excel caches as dates: probes/t4582-pivot-item-edges J3 and J4 (`m/d/yyyy`,
-    /// `m/d/yyyy h:mm`) do not match the cached number items.
+    /// `m/d/yyyy h:mm`) do not match the cached number items. Those two are the evidence: that a
+    /// time-only or elapsed format (`h:mm`, `[h]:mm`), which this also counts as a date, caches
+    /// as a date too is UNVERIFIED (probe pending: T-4612).
     fn is_date_style(&self, index: i32) -> bool {
         let styles = &self.workbook.styles;
         usize::try_from(index)
@@ -126,6 +130,10 @@ impl Model {
 /// version had a range grouping grouped again ([`regroup`]). `workbook_values_left` is how many
 /// record values the workbook may still hold without this cache's old ones. The caller swaps the
 /// result in only on success.
+///
+/// The fields are in source order, whatever order `cache` had them in, and a pivot table's field
+/// indices into `cache` are not remapped: the caller that swaps the cache in (T-4151) must remap
+/// them by name.
 ///
 /// # Errors
 /// [`read_source`]'s, and [`PivotCacheError::Group`] when a field's new values do not fit its
@@ -162,15 +170,16 @@ pub fn refresh(
 
 /// The first step of [`refresh`]: a builder holding `cache`'s source read again, every field
 /// ungrouped, for a caller that adds items before finishing it (`Txn::add_pivot_table`'s unused
-/// items). Fields are matched to `cache`'s by name, ignoring case (UNVERIFIED: a field Excel
-/// matches by position is unprobed); a matched ungrouped field keeps its items, in their order,
+/// items). The fields are in source order, and nothing remaps a pivot table's field indices
+/// ([`refresh`]). Fields are matched to `cache`'s by case-folded name: whether Excel matches
+/// by name, by case or by position is UNVERIFIED (probe pending: T-4627); a matched ungrouped field keeps its items, in their order,
 /// and new items follow in source order (pivots.md "Items show in the order the pivot field
 /// lists them; new items are appended", probes/t4134-pivot-items I2, I3,
 /// t4582-pivot-item-edges J2).
 ///
 /// # Errors
 /// [`PivotCacheError::Source`] when `cache` has no source or it does not resolve,
-/// [`PivotCacheError::Header`] for a header that is not text or blank, and the cache limits,
+/// [`PivotCacheError::Header`] for a header that is not text or blank ([`field_names`]), and the cache limits,
 /// checked on the source's size before anything is read.
 pub fn read_source(
     cache: &PivotCache,
@@ -185,7 +194,7 @@ pub fn read_source(
     ) else {
         return Err(PivotCacheError::Source);
     };
-    let (width, records) = (width as usize + 1, height as usize);
+    let (width, records) = ((width as usize).saturating_add(1), height as usize);
     if width > MAX_FIELDS {
         return Err(PivotCacheError::TooManyFields);
     }
@@ -210,9 +219,12 @@ pub fn read_source(
             FieldReader::new(prior, records)
         })
         .collect();
-    for row in area.top.saturating_add(1)..=area.bottom {
-        for (reader, column) in readers.iter_mut().zip(area.left..=area.right) {
-            reader.push(source.value(sheet, row, column), &mut items)?;
+    // The records start below the header; a header on the last u32 row has none.
+    if let Some(first) = area.top.checked_add(1) {
+        for row in first..=area.bottom {
+            for (reader, column) in readers.iter_mut().zip(area.left..=area.right) {
+                reader.push(source.value(sheet, row, column), &mut items)?;
+            }
         }
     }
     let mut builder = CacheBuilder::new(cache.source.clone(), workbook_values_left);
@@ -257,14 +269,18 @@ fn fields_by_name(cache: &PivotCache) -> HashMap<String, &CacheField> {
 /// - a numbered or `Field<n>` name that meets a real header (a source that already has `Sales2`
 ///   or `Field4`) is not made unique: UNVERIFIED (probe pending: T-4627).
 ///
-/// A number, boolean or error header is refused: how Excel names it is unprobed.
+/// A number, boolean or error header is refused ([`PivotCacheError::Header`]): how Excel names
+/// it is UNVERIFIED (probe pending: T-4627). `Txn::add_pivot_table` reads its source here, so
+/// a literal `#N/A` header, once a field named `#N/A`, is now refused there too.
 fn field_names(headers: impl Iterator<Item = CacheItem>) -> Result<Vec<String>, PivotCacheError> {
     let mut seen: HashMap<String, u32> = HashMap::new();
     headers
         .zip(0u32..)
         .map(|(header, column)| match header {
-            CacheItem::Missing => Ok(format!("Field{}", column + 1)),
-            CacheItem::Text(name) if name.is_empty() => Ok(format!("Field{}", column + 1)),
+            CacheItem::Missing => Ok(format!("Field{}", u64::from(column) + 1)),
+            CacheItem::Text(name) if name.is_empty() => {
+                Ok(format!("Field{}", u64::from(column) + 1))
+            }
             CacheItem::Text(name) => {
                 let count = seen.entry(fold_case(&name)).or_insert(0);
                 *count += 1;
@@ -427,7 +443,8 @@ pub fn regroup(
 /// them: Excel for the web refuses a cache whose flags contradict its items (pivots.md
 /// "Shared-item flags Excel accepts for mixed fields"; T-4122 runs). Written by the export
 /// (T-4176). Booleans and errors count as strings. A date counts as neither a string nor a
-/// number: how Excel flags dates (`containsDate`, `containsNonDate`, `minDate`) is unprobed.
+/// number: how Excel flags dates (`containsDate`, `containsNonDate`, `minDate`) is UNVERIFIED
+/// (probe pending: T-4612).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SharedItemsFlags {
     /// `containsSemiMixedTypes`: false only when the field has no string and no blank.

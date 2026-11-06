@@ -544,6 +544,28 @@ fn a_date_grouping_over_a_blank_is_dropped() {
     assert!(matches!(wb.value("F4").unwrap(), Value::Error(_)));
 }
 
+/// Adds `input`'s pivot over A1:C4 with row field `row`, returning the cache's field names and
+/// its third field's items.
+fn third_column_pivot(
+    wb: &mut Workbook,
+    input: PivotTableInput,
+    row: &str,
+) -> (Vec<String>, Vec<CacheItem>) {
+    let input = PivotTableInput {
+        source: wb.range_ref("A1:C4").unwrap(),
+        row: row.into(),
+        ..input
+    };
+    wb.edit(|tx| tx.add_pivot_table(&input)).unwrap();
+    assert_eq!(
+        wb.model.workbook.pivot_tables[0].row_fields,
+        [AxisField::Field(2)]
+    );
+    let cache = &wb.model.workbook.pivot_caches[0];
+    let names = cache.fields.iter().map(|f| f.name.clone()).collect();
+    (names, cache.fields[2].items.clone())
+}
+
 /// The cache is read as the engine's refresh reads a source: a repeated header is numbered
 /// (probes/t4585-pivot-field-names; `rustsheet_engine::pivot::read_source`).
 #[test]
@@ -554,21 +576,33 @@ fn a_repeated_header_is_numbered() {
         tx.set("C2", Input::from("x"))
     })
     .unwrap();
-    let input = PivotTableInput {
-        source: wb.range_ref("A1:C4").unwrap(),
-        row: "region2".into(),
-        ..input
-    };
-    wb.edit(|tx| tx.add_pivot_table(&input)).unwrap();
-    let cache = &wb.model.workbook.pivot_caches[0];
-    let names: Vec<&str> = cache.fields.iter().map(|f| f.name.as_str()).collect();
+    let (names, items) = third_column_pivot(&mut wb, input, "region2");
     assert_eq!(names, ["Region", "Sales", "region2"]);
+    assert_eq!(items, [CacheItem::Text("x".into()), CacheItem::Missing]);
+}
+
+/// The source is typed as a refresh types it (`rustsheet_engine::pivot::read_source`): an
+/// empty-text header is `Field<n>` (probes/t4585-pivot-field-names), an error cell is an error
+/// item, and a number in a date format is a date item (probes/t4582-pivot-item-edges J3).
+#[test]
+fn a_blank_header_error_and_date_cells_are_read_as_a_refresh_reads_them() {
+    let (mut wb, input) = book();
+    wb.edit(|tx| {
+        tx.set("C1", Input::from("=\"\""))?;
+        tx.set("C2", Input::from(45000.0))?;
+        tx.set_number_format("C2", "m/d/yyyy")?;
+        tx.set("C3", Input::from("=NA()"))?;
+        tx.set("C4", Input::from(7.0))
+    })
+    .unwrap();
+    let (names, items) = third_column_pivot(&mut wb, input, "Field3");
+    assert_eq!(names, ["Region", "Sales", "Field3"]);
     assert_eq!(
-        cache.fields[2].items,
-        [CacheItem::Text("x".into()), CacheItem::Missing]
-    );
-    assert_eq!(
-        wb.model.workbook.pivot_tables[0].row_fields,
-        [AxisField::Field(2)]
+        items,
+        [
+            CacheItem::Date(45000.0),
+            CacheItem::Error(rustsheet_engine::expressions::token::Error::NA),
+            CacheItem::Number(7.0)
+        ]
     );
 }

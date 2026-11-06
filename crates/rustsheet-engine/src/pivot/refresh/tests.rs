@@ -306,7 +306,9 @@ fn the_record_value_budget_is_checked_first() {
 }
 
 /// A field with a saved numeric grouping is grouped again over the new values, its labels
-/// kept; over a blank the grouping is dropped.
+/// kept; over a blank the grouping is dropped. The expectation is `group_by_numbers` over the
+/// read values (the importer's grouping step), not Excel's: no probe refreshes a grouped field's
+/// cache yet (PV3).
 #[test]
 fn a_grouped_field_is_grouped_again() {
     let model = source(&[&plain(&["N", "1", "4", "7"]), &plain(&["V", "1", "1", "1"])]);
@@ -354,4 +356,42 @@ fn shared_items_flags_follow_the_items() {
     assert!(mixed.contains_string && mixed.contains_mixed_types);
     let errors = SharedItemsFlags::of(&field(vec![CacheItem::Error(Error::NA)]));
     assert!(errors.contains_string && !errors.contains_number);
+}
+
+/// A field with a saved date grouping is grouped again by `group_by_dates` over the dates read,
+/// its labels and grouping kept. As for numbers, the expectation is the grouping step's, pending
+/// a refresh probe of grouped fields (PV3).
+#[test]
+fn a_date_grouped_field_is_grouped_again() {
+    let model = source(&[
+        &[
+            ("D", None),
+            ("1/1/2019", None),
+            ("5/5/2019", None),
+            ("2/1/2019", None),
+        ],
+        &plain(&["V", "1", "1", "1"]),
+    ]);
+    let months: Vec<CacheItem> = ["<1/1/2019", "Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+        .into_iter()
+        .chain(["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", ">12/31/2019"])
+        .map(text)
+        .collect();
+    let groups = DateGroups::new(DateGroupBy::Months, 43466.0, 43830.0, months.len()).unwrap();
+    let base = cache("A1:B4", vec![("D", vec![num(43466.0)]), ("V", vec![])]);
+    let mut grouped = base.clone();
+    grouped.fields[0] = group_by_dates(&base.fields[0], groups, months.clone()).unwrap();
+    let fresh = refresh(&grouped, &model, MAX_RECORD_VALUES).unwrap();
+    let read = CacheField {
+        name: "D".to_string(),
+        items: [43466.0, 43590.0, 43497.0].map(CacheItem::Date).to_vec(),
+        records: vec![0, 1, 2],
+        ..CacheField::default()
+    };
+    assert_eq!(
+        fresh.fields[0],
+        group_by_dates(&read, groups, months).unwrap()
+    );
+    assert_eq!(fresh.fields[0].date_groups, Some(groups));
+    assert_eq!(fresh.fields[0].records, [1, 5, 2]);
 }

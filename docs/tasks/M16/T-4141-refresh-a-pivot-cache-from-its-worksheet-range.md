@@ -18,7 +18,7 @@ SPEC-0032; evidence from task `p-items`. The CacheBuilder of SPEC-0015 is the on
 
 ## Acceptance criteria
 - [x] Unit tests and the p-items probes' cache-level expectations pass.
-- [x] Duplicate and blank source header names follow T-4585's probe.
+- [x] Duplicate and blank source header names follow T-4585's probe: the verified cases, with the open points per T-4627.
 - [x] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -39,4 +39,7 @@ text slot relabelled with the source's casing (t4582 J1), date values never matc
 (t4582 J3/J4). Left open: which casing relabels and whether appended dates are `<d>` (T-4612); `Field<n>`
 by position or sheet column, an empty header cell, and name collisions (T-4627); defined-name and Table
 sources, which refresh as `PivotCacheError::Source` (T-4506); the refresh-on-open trigger (T-4151); a number,
-boolean or error header (refused as `PivotCacheError::Header`, unprobed).
+boolean or error header (refused as `PivotCacheError::Header`; a literal `#N/A` header was a field `#N/A`
+in `Txn::add_pivot_table` before) and case-folded old-to-new field matching (T-4627); date flags in
+`SharedItemsFlags` and time-only or elapsed formats read as dates (T-4612). A refresh returns the fields
+in source order and does not remap pivot tables' field indices: T-4151's swap must.
