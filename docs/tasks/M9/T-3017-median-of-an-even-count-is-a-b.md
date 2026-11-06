@@ -35,6 +35,12 @@ formula is already settled and needs no fit.
     Excel 3.4999499999999997, ours 3.49995.
   - calipers/pv_goldens/pv23_051/golden.xlsx WACC!E23 `=MEDIAN(E16:E21)`, middle pair 12.302999999999999 and
     43.90399999999999 (Mac desktop cached): Excel 28.103499999999997, ours 28.103499999999993.
+- Gate A check (T-4092): `eval/accuracy/tables/MEDIAN/s1` has 48 even-count points, and `a + (b - a)/2` matches all
+  48 Excel values bit for bit. The engine differs from Excel at 10 of them, all inside the Gate A envelope through the
+  math: Calc!A4, A6, A15, A17, A45, A52, A53, A62, A95 and A109. Two are near-cancelling pairs where Excel is far from
+  the midpoint: A52 `MEDIAN(87.01,-87.0099999999999)` is 5.684341886080802E-14 in Excel and 4.973799150320701E-14 in
+  ours, and A53 is -1.4432899320127035E-15 against ours -1.4988010832439613E-15. After the fix, `rustsheet-eval
+  accuracy` should show the engine bit-exact with Excel on all 120 MEDIAN points.
 - Edge: when `b - a` overflows (a = -9E+307, b = 9E+307), no Excel cell is known. Keep the result finite the way the
   current halving fallback does. The probe aggregate-overflow (`MEDIAN` over 9E+307 twice is 9E+307, numbers.md) must
   still pass. File a probe task for the opposite-sign overflow; do not guess it.
