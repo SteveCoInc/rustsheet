@@ -3,7 +3,7 @@ id: T-2946
 title: "CHAR lifts over an array argument"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -30,3 +30,6 @@ depends_on: []
 
 ## Out of scope
 -
+
+## Outcome
+The task's premise was stale: CHAR already lifts (T-3302, `lift_text`). Added probes/t2946-char-array (7 formulas, 18 cells, excel-graph filled, all pass with no engine change) covering 0, 256, text and blank elements and the packed-string formula, and recorded the per-element rules in text.md. Eval delta: 18 new passing cells, no regressions.
