@@ -276,7 +276,7 @@ Status: VERIFIED
 Implemented in: `parse_unit` and `fn_convert` in functions/engineering/convert.rs (T-3817)
 Tasks: T-3817, T-3861
 
-## CONVERT from a prefixed Kelvin to Réaumur drops the prefix (T-4085)
+## CONVERT from a micro-prefixed Kelvin to Réaumur drops the prefix (T-4085)
 Rule: with a micro prefix on a Kelvin source and `Reau` as the target, Excel converts the unprefixed number:
 `CONVERT(-56.8944444765809,"ukel","Reau")` is -264.03555558126476 and `CONVERT(-68268277991730.8,"uK","Reau")`
 -54614622393603.16, which are `(v - 273.15)*0.8` of the written v, not of v × 1E-6 (-218.52004551555558 and
@@ -297,14 +297,16 @@ with definitions in `tools/src/rustsheet_tools/accuracy/defs/complex_modulus.py`
 - IMABS is |z| and IMARGUMENT atan2(y, x) on (-π, π] of the text's two parts. `IMARGUMENT("0")` and
   `IMARGUMENT("0+0i")` are `#DIV/0!` (s1 A75, A80, A81, A84; im-last-digit-sweep C21). A point whose quotient y/x
   overflows has no value: ATAN2's `#NUM!` there is not probed for IMARGUMENT, so no such point is drawn.
-- CONVERT is the exact conversion with each unit's definition (or Excel's documented double: `sg`, `parsec`, `eV`, `u`,
-  `mmHg`), the prefixes as the doubles of "CONVERT constants and evaluation order" and the temperature forms with their
+- CONVERT is the exact conversion with each unit's definition (or Excel's documented double: `sg`, `parsec`, `eV`, `u`
+  (probes/convert-unit-names A145, 1.660538782E-24), `mmHg` (A337, 133.322)), the prefixes as the doubles of "CONVERT constants and evaluation order" and the temperature forms with their
   constants as doubles. The `flb` factor is ft × lbf, 1.3558179483314003 J (probes/convert-unit-names A481, B481).
   Units of two classes are `#N/A` (12 table cells: A116, A121, A122, A123, A127, A128, A129, A130, A133, A134, A136,
   A137). Over the literal one-call cells of eval/suites (gen-m9, probes, probes-numeric), the definitions give 2,746
   numbers where Excel gives a number, 58 `#N/A` where Excel gives `#N/A`, and 2 `#DIV/0!` for IMARGUMENT; 269 IMABS
   and 237 IMARGUMENT numbers match Excel's numbers, and no math number meets an Excel error or the reverse. Every
-  skipped unit string (1,966 cells, all `#N/A` or `#VALUE!` in Excel) is outside the evidenced list.
+  skipped unit string (1,966 cells, all `#N/A` or `#VALUE!` in Excel) is outside the list. The list's 1,259
+  strings are 1,257 that oracle cells accept plus the bare `cel` and `fah`, which the unit-names entry names
+  but no oracle cell has yet (no table point draws them).
 - Excel kept as the target (decision 0300): Excel is more than 1E-4 relative off the math at CONVERT s1 A65 and A81,
   the prefixed-Kelvin-to-Réaumur cells above (21% and a factor of 1E6). No IMABS or IMARGUMENT point, and no eval cell
   with a math sidecar, is that far off.

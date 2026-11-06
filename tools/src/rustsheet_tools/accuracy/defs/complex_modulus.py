@@ -1,20 +1,20 @@
 """IMABS and IMARGUMENT: the modulus and the argument of a complex number's text (T-4085).
 
-The math: |z| and arg(z) of the complex number whose parts are the doubles of the text's two written literals, at the
-working precision. The text parameter is T-4084's complex kind (`Param(kind="text")`, no choices).
+The math: |z| and arg(z) of the complex number whose parts are the doubles of the text's two written literals,
+at the working precision. The text parameter is T-4084's complex kind (`Param(kind="text")`, no choices).
 
 Sources:
 - engineering.md, "IM* reciprocal kernels, IMABS and IMARGUMENT (T-2044)": Excel's IMABS is the scaled form
-  `a·sqrt(1 + (b/a)²)` and IMARGUMENT is ATAN2's kernel, `atan(y/x)` plus or minus π. Those are Excel's kernels,
-  not semantic rules, so the definitions are the true modulus and the true atan2(y, x) on (-π, π]; the envelope
-  judges the kernels' last digits (T-2538).
-- engineering.md, "IM* last-digit sweep: IMSEC and IMSECH use different kernels (T-2043)": `IMARGUMENT("0")` is
-  `#DIV/0!` (probes-numeric/im-last-digit-sweep C21), ATAN2's `ATAN2(0,0)`: a domain error at z = 0.
-- engineering.md, "IM* reciprocal kernels, IMABS and IMARGUMENT (T-2044)": the overflow and subnormal edges of the
-  ATAN2 kernel are UNVERIFIED for IMARGUMENT. ATAN2 itself is `#NUM!` where y/x overflows (numbers.md "ATAN2 is
-  ATAN(y/x) plus or minus π"), but that is not evidenced for IMARGUMENT, so such a point has no value here
-  (NoValueError: the sampler redraws, an eval cell is skipped). A quotient that underflows moves the result by less
-  than Gate A's absolute floor, as for ATAN2.
+  `a·sqrt(1 + (b/a)²)` and IMARGUMENT is ATAN2's kernel, `atan(y/x)` plus or minus π. Those are Excel's
+  kernels, not semantic rules, so the definitions are the true modulus and the true atan2(y, x) on (-π, π];
+  the envelope judges the kernels' last digits (T-2538).
+- engineering.md, "IM* last-digit sweep: IMSEC and IMSECH use different kernels (T-2043)": `IMARGUMENT("0")`
+  is `#DIV/0!` (probes-numeric/im-last-digit-sweep C21), ATAN2's `ATAN2(0,0)`: a domain error at z = 0.
+- engineering.md, "IM* reciprocal kernels, IMABS and IMARGUMENT (T-2044)": the overflow and subnormal edges of
+  the ATAN2 kernel are UNVERIFIED for IMARGUMENT. ATAN2 itself is `#NUM!` where y/x overflows (numbers.md
+  "ATAN2 is ATAN(y/x) plus or minus π"), but that is not evidenced for IMARGUMENT, so such a point has no
+  value here (NoValueError: the sampler redraws, an eval cell is skipped). A quotient that underflows moves
+  the result by less than Gate A's absolute floor, as for ATAN2.
 - engineering.md, "Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2* (T-2420)": the texts
   `a+bi`, `a-bj`, `bi`, `i`, `-j` and a bare real are complex numbers; the edge stratum writes each form.
 - A modulus beyond the double range cannot occur: a part is a literal below 1E+308, so |z| < 1.42E+308.
@@ -102,9 +102,9 @@ def _text(rng: random.Random, re: float, im: float) -> str:
 
 
 def draw(stratum: str, rng: random.Random) -> list[Arg]:
-    """One complex text: centre parts in [-100, 100]; the tail near an axis (one part 1E-15 to 1E-1 of the other,
-    either sign, so the argument nears 0, ±π/2 and both sides of ±π); the edge texts, zero for a quarter of them; extreme parts of any magnitude;
-    log-uniform parts over 1E-100 to 1E+100."""
+    """One complex text: centre parts in [-100, 100]; the tail near an axis (one part 1E-15 to 1E-1 of the
+    other, either sign, so the argument nears 0, ±π/2 and both sides of ±π); the edge texts, zero for a quarter
+    of them; extreme parts of any magnitude; log-uniform parts over 1E-100 to 1E+100."""
     if stratum == "tail":
         big = rng.uniform(-100, 100) or 1.0
         small = big * _signed(rng, 1e-15, 1e-1)

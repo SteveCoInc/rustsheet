@@ -67,9 +67,10 @@ _SURVEY_FT = Fraction(1200, 3937)  # m
 _GAL = Fraction("3.785411784")  # l (US gallon)
 _HP = 550 * _FT * _LBM * _GN / 1000  # W (550 ft·lbf/s)
 _LBF = _LBM * _GN * 100  # dyn
-_EXCEL_DOUBLE = Fraction  # a documented Excel constant, exact as its double (see the module doc)
 
-# Each class's factors in Excel's internal base unit (engineering.md "CONVERT constants and evaluation order").
+# Each class's factors in Excel's internal base unit. `Fraction(<float>)` is a documented Excel constant, exact as
+# its double (see the module doc); every other factor is the unit's exact definition.
+# (engineering.md "CONVERT constants and evaluation order").
 _FACTORS: dict[str, dict[str, Fraction]] = {
     "area": {  # square angstroms (m2 = 1E20)
         "uk_acre": Fraction("4046.8564224") * 10**20,
@@ -108,8 +109,8 @@ _FACTORS: dict[str, dict[str, Fraction]] = {
         "ang": Fraction(1, 10**10),
         "ell": 45 * _IN,
         "ly": _LY,
-        "parsec": _EXCEL_DOUBLE(3.0856775812815532e16),
-        "pc": _EXCEL_DOUBLE(3.0856775812815532e16),
+        "parsec": Fraction(3.0856775812815532e16),
+        "pc": Fraction(3.0856775812815532e16),
         "Picapt": _PICA_POINT,
         "Pica": _PICA_POINT,
         "pica": _IN / 6,
@@ -120,8 +121,8 @@ _FACTORS: dict[str, dict[str, Fraction]] = {
         "e": Fraction(1),
         "c": Fraction("4.184") * 10**7,
         "cal": Fraction("4.1868") * 10**7,
-        "eV": _EXCEL_DOUBLE(1.602176487e-12),
-        "ev": _EXCEL_DOUBLE(1.602176487e-12),
+        "eV": Fraction(1.602176487e-12),
+        "ev": Fraction(1.602176487e-12),
         "HPh": _HP * 3600 * 10**7,
         "hh": _HP * 3600 * 10**7,
         "Wh": Fraction(3600 * 10**7),
@@ -213,9 +214,9 @@ _FACTORS: dict[str, dict[str, Fraction]] = {
     },
     "weight": {  # grams
         "g": Fraction(1),
-        "sg": _EXCEL_DOUBLE(14593.902937206363),
+        "sg": Fraction(14593.902937206363),
         "lbm": _LBM,
-        "u": _EXCEL_DOUBLE(1.660538782e-24),
+        "u": Fraction(1.660538782e-24),
         "ozm": _LBM / 16,
         "grain": _LBM / 7000,
         "cwt": 100 * _LBM,
@@ -264,7 +265,8 @@ def _choices() -> tuple[str, ...]:
 
 
 UNITS = _choices()
-"""Every unit string the entries evidence: each unit name, and each prefix on each unit that takes it."""
+"""Each unit name and each prefix on each unit that takes it (engineering.md "CONVERT unit names"). Oracle
+cells accept all but the bare `cel` and `fah`, which the entry names but no cell has yet."""
 
 
 def read_unit(units: dict[str, Fraction], text: str) -> tuple[str, Fraction, int, int] | None:
@@ -322,33 +324,36 @@ _RF = _double(459.67)
 _RE = _double(0.8)
 
 
+_TEMPERATURE_FORMS = {
+    ("C", "F"): lambda v: v * _R + 32,
+    ("C", "K"): lambda v: v + _C0,
+    ("C", "Rank"): lambda v: (v + _C0) * _R,
+    ("C", "Reau"): lambda v: v * _RE,
+    ("F", "C"): lambda v: (v - 32) / _R,
+    ("F", "K"): lambda v: (v - 32) / _R + _C0,
+    ("F", "Rank"): lambda v: v + _RF,
+    ("F", "Reau"): lambda v: (v - 32) * _RE / _R,
+    ("K", "C"): lambda v: v - _C0,
+    ("K", "F"): lambda v: (v - _C0) * _R + 32,
+    ("K", "Rank"): lambda v: v * _R,
+    ("K", "Reau"): lambda v: (v - _C0) * _RE,
+    ("Rank", "C"): lambda v: v / _R - _C0,
+    ("Rank", "F"): lambda v: v - _RF,
+    ("Rank", "K"): lambda v: v / _R,
+    ("Rank", "Reau"): lambda v: (v / _R - _C0) * _RE,
+    ("Reau", "C"): lambda v: v * mpmath.mpf(1.25),
+    ("Reau", "F"): lambda v: v * mpmath.mpf(2.25) + 32,
+    ("Reau", "K"): lambda v: v * mpmath.mpf(1.25) + _C0,
+    ("Reau", "Rank"): lambda v: (v * mpmath.mpf(1.25) + _C0) * _R,
+}
+
+
 def _temperature(v: mpmath.mpf, source: str, target: str) -> mpmath.mpf:
-    pair = (source, target)
+    """`v` from the temperature `source` to `target` by the pair's own form (the identity for one scale)."""
     if source == target:
         return v
-    forms = {
-        ("C", "F"): lambda: v * _R + 32,
-        ("C", "K"): lambda: v + _C0,
-        ("C", "Rank"): lambda: (v + _C0) * _R,
-        ("C", "Reau"): lambda: v * _RE,
-        ("F", "C"): lambda: (v - 32) / _R,
-        ("F", "K"): lambda: (v - 32) / _R + _C0,
-        ("F", "Rank"): lambda: v + _RF,
-        ("F", "Reau"): lambda: (v - 32) * _RE / _R,
-        ("K", "C"): lambda: v - _C0,
-        ("K", "F"): lambda: (v - _C0) * _R + 32,
-        ("K", "Rank"): lambda: v * _R,
-        ("K", "Reau"): lambda: (v - _C0) * _RE,
-        ("Rank", "C"): lambda: v / _R - _C0,
-        ("Rank", "F"): lambda: v - _RF,
-        ("Rank", "K"): lambda: v / _R,
-        ("Rank", "Reau"): lambda: (v / _R - _C0) * _RE,
-        ("Reau", "C"): lambda: v * mpmath.mpf(1.25),
-        ("Reau", "F"): lambda: v * mpmath.mpf(2.25) + 32,
-        ("Reau", "K"): lambda: v * mpmath.mpf(1.25) + _C0,
-        ("Reau", "Rank"): lambda: (v * mpmath.mpf(1.25) + _C0) * _R,
-    }
-    return forms[pair]()
+    result: mpmath.mpf = _TEMPERATURE_FORMS[source, target](v)
+    return result
 
 
 def _unprobed_tiny(x: mpmath.mpf, what: str) -> None:
@@ -400,12 +405,15 @@ def _convert(args: Sequence[MathArg]) -> mpmath.mpf:
 # -- the draw ------------------------------------------------------------------------------------------------------
 
 
+_UNIT_TRIES = 100
+
+
 def _unit(rng: random.Random, kind: str) -> str:
     """A unit string of class `kind`: a unit name, or (half the time, where the class has one) a prefixed name that
     reads back as that unit in the class."""
     names = list(_FACTORS[kind])
     prefixable = [n for n in names if n in DECIMAL_PREFIXED]
-    while True:
+    for _ in range(_UNIT_TRIES):
         if not prefixable or rng.random() < 0.5:
             return rng.choice(names)
         name = rng.choice(prefixable)
@@ -416,6 +424,7 @@ def _unit(rng: random.Random, kind: str) -> str:
         reading = read_unit(_FACTORS[kind], text)
         if reading is not None and reading[0] == name:  # not shadowed by a unit name or a longer one
             return text
+    return rng.choice(names)  # a bounded draw (directive 5); no class needs this many tries
 
 
 def _signed(rng: random.Random, lo: float, hi: float) -> float:

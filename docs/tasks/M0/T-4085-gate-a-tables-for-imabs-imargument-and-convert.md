@@ -36,8 +36,10 @@ IMABS, IMARGUMENT and CONVERT get Gate A tables, and their `composite` lines lea
   them, extreme and log-uniform parts).
   - Domain error: `IMARGUMENT` of 0 is `#DIV/0!` (im-last-digit-sweep C21). A quotient y/x past the double range has no
     value (NoValueError): ATAN2's `#NUM!` there is unprobed for IMARGUMENT.
-- `tools/src/rustsheet_tools/accuracy/defs/convert.py`: CONVERT over 1,259 evidenced unit strings (every unit name and
-  every prefix on every unit that takes it, engineering.md "CONVERT unit names"), read within the other unit's class.
+- `tools/src/rustsheet_tools/accuracy/defs/convert.py`: CONVERT over 1,259 unit strings (every unit name and every
+  prefix on every unit that takes it, engineering.md "CONVERT unit names"), read within the other unit's class:
+  1,257 evidenced by oracle cells plus the bare `cel` and `fah`, which no oracle cell has yet (no table point
+  draws them).
   - The math is exact with each unit's definition (or Excel's documented double: `sg`, `parsec`, `eV`, `u`, `mmHg`), the
     prefixes as the documented doubles (one combined constant; each unit's own with a binary prefix) and the
     temperature forms with their constants as doubles. Units of two classes are `#N/A`.
@@ -57,9 +59,10 @@ IMABS, IMARGUMENT and CONVERT get Gate A tables, and their `composite` lines lea
 - **Excel kept as the target (decision 0300):** CONVERT s1 A65 `CONVERT(-56.8944444765809,"ukel","Reau")` (Excel
   -264.03555558126476, math -218.52004551555558) and A81 `CONVERT(-68268277991730.8,"uK","Reau")` (Excel
   -54614622393603.16, math -54614840.91338464): Excel drops the micro prefix on a Kelvin source toward Réaumur. New
-  quirk in engineering.md "CONVERT from a prefixed Kelvin to Réaumur drops the prefix (T-4085)"; the engine follows the
+  quirk in engineering.md "CONVERT from a micro-prefixed Kelvin to Réaumur drops the prefix (T-4085)"; the engine follows the
   math there today, so T-4615 probes the rule and matches Excel. No IMABS or IMARGUMENT point and no eval cell with a
   math sidecar is more than 1E-4 off the math.
 - Math sidecars regenerated with `--function` for probes (23 new, 2 extended) and probes-numeric (3 new); additions
   only; `make eval-math-check` current.
+- Review follow-up: T-4620 cross-checks `UNITS` and the factors against the engine's table.
 - Semantics: engineering.md "Gate A tables for IMABS, IMARGUMENT and CONVERT (T-4085)" and the Réaumur entry.

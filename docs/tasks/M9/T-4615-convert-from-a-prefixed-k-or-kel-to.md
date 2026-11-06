@@ -1,6 +1,6 @@
 ---
 id: T-4615
-title: "CONVERT from a prefixed K or kel to Reau: probe and match Excel, which drops the prefix"
+title: "CONVERT from a micro-prefixed K or kel to Reau: probe and match Excel, which drops the prefix"
 milestone: M9
 lane: functions-engineering
 status: todo
@@ -19,7 +19,7 @@ prefix and every temperature target.
   `Reau`: `CONVERT(-56.8944444765809,"ukel","Reau")` is -264.03555558126476 and
   `CONVERT(-68268277991730.8,"uK","Reau")` is -54614622393603.16, which are `(v - 273.15)*0.8` of the unprefixed value
   (accuracy/CONVERT/s1 A65, A81, excel-graph). Ours, and the math, scale by 1E-6 first (-218.52..., -54614840.9...).
-  engineering.md "CONVERT from a prefixed Kelvin to Réaumur drops the prefix (T-4085)".
+  engineering.md "CONVERT from a micro-prefixed Kelvin to Réaumur drops the prefix (T-4085)".
 - The same table applies a prefix to C and F as the math does (`Ykel`, `Zkel` to `C`, `F` to `hkel`), and
   probes/convert-temperature-prefix-a/-b show the prefix applies between K and kel. Prefixes against `Rank`, a prefixed
   target `Reau` side (`Reau` to `uK`), and other prefixes to `Reau` are unprobed.
