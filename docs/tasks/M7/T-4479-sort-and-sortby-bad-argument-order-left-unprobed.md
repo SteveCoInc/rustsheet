@@ -3,7 +3,7 @@ id: T-4479
 title: "SORT and SORTBY bad-argument order left unprobed: a text or computed #VALUE! sort_order before a later error, and three or more bad arguments, probe and match"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -46,17 +46,35 @@ order per function.
   predictions frozen before its fill (decision 0188 R4).
 
 ## Acceptance criteria
-- [ ] probes/t4479-sort-bad-argument-order (excel-graph, canary-verified) covers every form in Context; its
+- [x] probes/t4479-sort-bad-argument-order (excel-graph, canary-verified) covers every form in Context; its
       predictions are committed before the fill, and the hold-out case's predictions before its fill.
-- [ ] Every cell of both cases passes, or each cell that does not is recorded in arrays.md and owned by a filed task
+- [x] Every cell of both cases passes, or each cell that does not is recorded in arrays.md and owned by a filed task
       named in the Outcome.
-- [ ] arrays.md: the two UNVERIFIED sentences quoted in Context are replaced by the evidenced rule, with cells cited.
-- [ ] If SORT and SORTBY turn out to share one reading order, they read it through one helper (directive 3), not two
+- [x] arrays.md: the two UNVERIFIED sentences quoted in Context are replaced by the evidenced rule, with cells cited.
+- [x] If SORT and SORTBY turn out to share one reading order, they read it through one helper (directive 3), not two
       copies; unit tests in test_spill_functions.rs pin each rule.
-- [ ] No regressions in any baseline; the cells of probes/sort-error-args, t2929, t2947 and t4447 still pass;
+- [x] No regressions in any baseline; the cells of probes/sort-error-args, t2929, t2947 and t4447 still pass;
       `make check` green; reviewers approve.
 
 ## Out of scope
 - Fractional and near-integer sort_order and sort_index (T-4447, done).
 - A lone blank cell as SORT's array (T-4448).
 - The three SORTBY forms Excel for the web refuses to load (arrays.md, desktop question, decision 0039).
+
+## Outcome
+Probed; the engine already matches every cell, so no engine code changed.
+- probes/t4479-sort-bad-argument-order (93 cells: every form in Context, then a grid of a text, out-of-range, blank or
+  error value per argument, each argument with its own error) and the hold-out probes/t4479-sort-bad-argument-holdout
+  (70 cells, a `random.Random(4479)` sample of other combinations with other values). Both were filled on excel-graph
+  (`rustsheet-oracle fill`, which canary-verifies every workbook; 0 failures). `docs/research/t4479/gen_probe.py` writes them.
+- Predictions: the engine's values for both cases were committed (`docs/research/t4479/predictions-*.tsv`, commit
+  "probe cases and the engine's predictions, before the fill") before either fill, and the hold-out was filled only
+  after the main case had been scored. Main 93/93 and hold-out 70/70 match the predictions. The rule is structural
+  (which argument stops the read), not a numeric fit, so no `FITTED` tag applies.
+- Rule found: SORT and SORTBY do not share a reading order, so there is no shared helper to extract. SORT stops at an
+  error or a blank sort_index/sort_order, and text fails only in validation. SORTBY stops at an error or a non-numeric
+  text order, and a blank, FALSE or out-of-range order fails only in validation. arrays.md: the two UNVERIFIED
+  sentences are replaced, and the new section "SORT and SORTBY: which of several bad arguments wins (T-4479)" cites
+  the cells.
+- Unit test `sort_and_sortby_read_a_text_sort_order_apart` (test_spill_functions.rs) pins both rules.
+- Eval delta: +163 passing probe cells in two new cases, 0 regressions. No baseline changes: the new cases pass.
