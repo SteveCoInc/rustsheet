@@ -3,7 +3,7 @@ id: T-4594
 title: "Placeholders after a fraction with a decimal point among them: one rule for the digits on each side of the tail's point"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
