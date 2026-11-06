@@ -3,7 +3,7 @@ id: T-2766
 title: "The ERROR.TYPE/CELL mark of the paired functions passes through LET, IF, CHOOSE, IFERROR, a LAMBDA call and INDEX (probes/t2576, 8 cells)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -45,9 +45,31 @@ Known failures left in eval/baseline/probes.txt for probes/t2576-error-type-cell
 Carrying the mark through bindings needs a design (a value flag, not syntax); split if bigger than S.
 
 ## Acceptance criteria
-- [ ] The cells above leave eval/baseline/probes.txt (`make eval-baseline`), with no new known-failure lines.
-- [ ] statistics.md updated.
+- [x] The cells above leave eval/baseline/probes.txt (`make eval-baseline`), with no new known-failure lines.
+- [x] statistics.md updated.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- Design: the mark is a flag beside the evaluation, not in `CalcResult` and not a syntax walk
+  (crates/rustsheet-engine/src/number_mark.rs). Each `evaluate_node_in_context` call gets a serial; `NumberMark`
+  keeps the latest call whose value carries the mark (serial + node address, constant memory). ERROR.TYPE and
+  `CELL("col"|"row")` make it; LET, IF, CHOOSE, IFERROR/IFNA (of a number), INDEX, a LAMBDA called in place and a called
+  name hand it on (`pass_number_mark` at the point each reads the argument it returns); any other call that receives a
+  handed mark clears it at its end, so a function reached by a bypass path never looks marked. `bind_argument` records
+  whether a LET value or LAMBDA argument is marked and `VariableStack` keeps the marked ids (and treats a name bound to an
+  array of references holding a reference as marked, T-2577). Readers ask with `Model::evaluate_marked`; the old
+  syntactic `is_marked_number` (functions/util.rs) is gone.
+- Consumers: F.TEST/paired functions (`evaluate_sample_arg`), IRR, SUMXMY2/SUMX2MY2/SUMX2PY2 (either argument `#NUM!`
+  after the other's error value and the count check), the regression family's second argument (`SecondMark::NoNumber`:
+  cells with no number; CHITEST keeps reading the values, unprobed), LINEST/LOGEST/TREND/GROWTH known_y (`#VALUE!`).
+- Probe probes/t2766-mark-positions (30 cells, excel-graph, predictions committed before the fill): confirmed the
+  analogy positions of T-2577; found the regression second argument is no-number (not the number), SUMX order, IFNA and a
+  called LET name keep the mark, IFS/SWITCH drop it. Recorded in statistics.md; all 30 pass.
+- The five t2728-irr-guess-ref-mark wrapper cells (P!A53:A61, odd rows) are back in its `check` list and pass.
+- Eval delta: probes known failures 7525 -> 7508 (fixed 17: t2576 D1, D2, D3, D5, D19, D20, D24, E16, E34, F34; t2577
+  A64, A148, T64, T148, U64, U148; irr-guess-edges-2 P!A37), no regressions, no new known-failure lines; new case
+  t2766-mark-positions 30/30.
+- Unit tests: test/statistical/test_number_mark.rs, test_fn_irr_xirr_fits.rs `irr_rejects_a_marked_number_through_its_wrappers`.

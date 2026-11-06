@@ -75,7 +75,11 @@ impl Model {
     }
 
     /// [`Self::read_data`] of an argument evaluated already.
-    fn data_read(&mut self, value: CalcResult, cell: CellReferenceIndex) -> Result<DataRead, CalcResult> {
+    fn data_read(
+        &mut self,
+        value: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Result<DataRead, CalcResult> {
         Ok(match value {
             CalcResult::Range { left, right } => {
                 let n_rows = (right.row - left.row + 1) as usize;

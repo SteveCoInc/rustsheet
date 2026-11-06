@@ -65,8 +65,9 @@ fn makes_mark(node: &Node) -> bool {
 }
 
 /// Whether `node` (ungrouped) hands on the mark of the argument it returns unchanged: LET, IF,
-/// CHOOSE, IFERROR, INDEX and a LAMBDA called in place (probes/t2576-error-type-cell-paired D1:D5,
-/// D19, D20). IFNA, IFS, SWITCH and a called LET name are unprobed and drop it.
+/// CHOOSE, IFERROR, IFNA, INDEX, a LAMBDA called in place and a called name
+/// (probes/t2576-error-type-cell-paired D1:D5, D19, D20; t2766-mark-positions A23, A28). IFS and
+/// SWITCH drop it (`FTEST({1;2;3},IFS(TRUE,ERROR.TYPE(#REF!)))` is `#DIV/0!`, A24, A25).
 fn passes_mark(node: &Node) -> bool {
     matches!(
         node,
@@ -75,9 +76,11 @@ fn passes_mark(node: &Node) -> bool {
                 | Function::If
                 | Function::Choose
                 | Function::Iferror
+                | Function::Ifna
                 | Function::Index,
             ..
         } | Node::LambdaCallKind { .. }
+            | Node::NamedFunctionKind { .. }
     )
 }
 

@@ -2,7 +2,7 @@ use crate::calc_result::Range;
 use crate::expressions::parser::is_multi_sheet_span;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::statistical::element_errors::array_element_error;
-use crate::functions::statistical::paired::{marked_number_error, PairedArg};
+use crate::functions::statistical::paired::{marked_number_error, PairedArg, SecondMark};
 use crate::functions::util::aggregate_args::{
     AggregatePolicy, AggregateWalk, ArgReading, ErrorRule, GridReading, NestedReading, NumberRules,
 };
@@ -53,21 +53,20 @@ impl Model {
         if args.len() != 2 {
             return CalcResult::new_args_number_error(cell);
         }
-        // A marked first argument (a number from ERROR.TYPE or CELL, an array of references) is
-        // `#NUM!`, as an error value would be, at once: `SUMXMY2(ERROR.TYPE(#REF!),5)` and
-        // `SUMXMY2(INDIRECT("B1",{1}),4)` (probes/t2576-error-type-cell-paired E16,
-        // t2577-indirect-ref-array A148). Its place against the count check and the second
-        // argument's errors, and SUMX2MY2 and SUMX2PY2, are unprobed (statistics.md "ERROR.TYPE and
-        // CELL results are #NUM! in the paired functions").
+        // A marked argument (a number from ERROR.TYPE or CELL, an array of references), first or
+        // second, is `#NUM!` after the other's error value and the count check:
+        // `SUMXMY2(ERROR.TYPE(#REF!),5)`, `SUMXMY2(5,ERROR.TYPE(#REF!))`, SUMX2MY2 and SUMX2PY2 alike,
+        // and `SUMXMY2(INDIRECT("B1",{1}),4)`, are `#NUM!`, while `SUMXMY2(ERROR.TYPE(#REF!),1/0)` is
+        // `#DIV/0!` and `SUMXMY2(ERROR.TYPE(#REF!),{1;2})` `#N/A` (probes/t2576-error-type-cell-paired
+        // E16, t2577-indirect-ref-array A148, t2766-mark-positions A15:A19; statistics.md
+        // "ERROR.TYPE and CELL results are #NUM! in the paired functions").
         let (first_value, first_marked) = self.evaluate_sample_arg(&args[0], cell);
-        if first_marked {
-            return marked_number_error(cell);
-        }
         let first = match self.sumx_arg_value(first_value, cell) {
             Ok(arg) => arg,
             Err(e) => return e,
         };
-        let second = match self.sumx_arg(&args[1], cell) {
+        let (second_value, second_marked) = self.evaluate_sample_arg(&args[1], cell);
+        let second = match self.sumx_arg_value(second_value, cell) {
             Ok(arg) => arg,
             Err(e) => return e,
         };
@@ -82,6 +81,9 @@ impl Model {
             if m != n {
                 return unequal_counts();
             }
+        }
+        if first_marked || second_marked {
+            return marked_number_error(cell);
         }
         let array_error = |_, error| array_element_error(error, cell);
         let paired = match self.paired_values(first, second, cell, array_error) {
@@ -109,12 +111,6 @@ impl Model {
     // value, or a one-cell reference holding an error, is returned at once, and so is #VALUE! for
     // a blank one-cell reference or an omitted argument; errors inside a longer range or an array
     // wait for the count check.
-    fn sumx_arg(&mut self, arg: &Node, cell: CellReferenceIndex) -> Result<PairedArg, CalcResult> {
-        let value = self.evaluate_node_in_context(arg, cell);
-        self.sumx_arg_value(value, cell)
-    }
-
-    /// [`Self::sumx_arg`] of an argument evaluated already.
     fn sumx_arg_value(
         &mut self,
         value: CalcResult,
@@ -139,11 +135,14 @@ impl Model {
     }
 
     // Helper function to extract and validate two matrices (ranges or arrays) with compatible shapes.
-    // Returns (rows, cols, values_left, values_right) or an error.
+    // Returns (rows, cols, values_left, values_right) or an error. `marked_second` says whether a
+    // marked second argument is cells with no number (the regression family) or the values it
+    // holds (CHITEST's expected values, unprobed).
     pub(crate) fn fn_get_two_matrices(
         &mut self,
         args: &[Node],
         cell: CellReferenceIndex,
+        marked_second: SecondMark,
     ) -> Result<TwoMatricesResult, CalcResult> {
         if args.len() != 2 {
             return Err(CalcResult::new_args_number_error(cell));
@@ -151,10 +150,14 @@ impl Model {
         // A marked first argument (a number straight from ERROR.TYPE or CELL, an array of
         // references) is `#NUM!` once the sizes match (`INTERCEPT(ERROR.TYPE(#REF!),5)`,
         // `SLOPE(INDIRECT("B1",{1;1}),{1;2})`, while `RSQ(ERROR.TYPE(#NAME?),Data!C8:C11)` is
-        // `#N/A`; T-2576, T-2577). The second reads as the number it is
-        // (`INTERCEPT(5,ERROR.TYPE(#REF!))` is `#DIV/0!` like (5,4)).
+        // `#N/A`; T-2576, T-2577). A marked second argument of CORREL, PEARSON, SLOPE, RSQ and
+        // STEYX is cells with no number: `CORREL({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))` is
+        // `#DIV/0!` where `CORREL({1;2;3},{4;2;3})` is -0.5 (probes/t2766-mark-positions A8:A12).
         let (x_range, first_marked) = self.evaluate_sample_arg(&args[0], cell);
-        let y_range = self.evaluate_node_in_context(&args[1], cell);
+        let (y_range, second_marked) = match marked_second {
+            SecondMark::NoNumber => self.evaluate_sample_arg(&args[1], cell),
+            SecondMark::Values => (self.evaluate_node_in_context(&args[1], cell), false),
+        };
         let x_range = self.blank_one_cell_as_error(x_range, cell);
         let y_range = self.blank_one_cell_as_error(y_range, cell);
         if let (CalcResult::Range { left: l1, .. }, CalcResult::Range { left: l2, .. }) =
@@ -190,6 +193,12 @@ impl Model {
         if first_marked {
             return Err(marked_number_error(cell));
         }
+        let second = if second_marked {
+            let cells = usize::try_from(rows2 * cols2).unwrap_or(0);
+            PairedArg::Values(vec![None; cells])
+        } else {
+            second
+        };
         let array_error = |_, error| array_element_error(error, cell);
         let paired = self.paired_values(first, second, cell, array_error)?;
         Ok((rows1, cols1, paired.first, paired.second))

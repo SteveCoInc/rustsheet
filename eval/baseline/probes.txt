@@ -1581,7 +1581,7 @@ C	probes/t2723-unary-plus-formula-text.case.json	53
 C	probes/t2725-index-scalar-nonzero-t-n.case.json	48
 C	probes/t2728-irr-guess-ref-mark-2.case.json	32
 C	probes/t2728-irr-guess-ref-mark-3.case.json	4
-C	probes/t2728-irr-guess-ref-mark.case.json	43
+C	probes/t2728-irr-guess-ref-mark.case.json	48
 C	probes/t2729-hijri-locale-tag-names.case.json	317
 C	probes/t2729-hijri-locale-tag.case.json	278
 C	probes/t2737-subnormal-cdf-shapes.case.json	34
@@ -1607,6 +1607,7 @@ C	probes/t2759-lunar-packed-6101.case.json	20
 C	probes/t2759-lunar-packed-7101.case.json	20
 C	probes/t2759-lunar-packed-8101.case.json	20
 C	probes/t2759-lunar-packed-9101.case.json	18
+C	probes/t2766-mark-positions.case.json	30
 C	probes/t2769-formula-text-whitespace.case.json	47
 C	probes/t2771-roundup-subnormal-cuts.case.json	176
 C	probes/t2771-roundup-subnormal-sign-controls.case.json	56
@@ -4011,7 +4012,6 @@ F	probes/irr-fallback-roots.case.json	P!A24
 F	probes/irr-guess-edges-2.case.json	P!A20
 F	probes/irr-guess-edges-2.case.json	P!A28
 F	probes/irr-guess-edges-2.case.json	P!A29
-F	probes/irr-guess-edges-2.case.json	P!A37
 F	probes/irr-guess-edges.case.json	P!A28
 F	probes/irr-guess-edges.case.json	P!A29
 F	probes/irr-guess-edges.case.json	P!A38
@@ -4444,22 +4444,6 @@ F	probes/t2475-stat-subexpressions.case.json	P!A63
 F	probes/t2496-fin-subexpressions.case.json	P!A24
 F	probes/t2496-fin-subexpressions.case.json	P!A25
 F	probes/t2565-irr-guess-sweeps.case.json	P!C157
-F	probes/t2576-error-type-cell-paired.case.json	Calc!D1
-F	probes/t2576-error-type-cell-paired.case.json	Calc!D19
-F	probes/t2576-error-type-cell-paired.case.json	Calc!D2
-F	probes/t2576-error-type-cell-paired.case.json	Calc!D20
-F	probes/t2576-error-type-cell-paired.case.json	Calc!D24
-F	probes/t2576-error-type-cell-paired.case.json	Calc!D3
-F	probes/t2576-error-type-cell-paired.case.json	Calc!D5
-F	probes/t2576-error-type-cell-paired.case.json	Calc!E16
-F	probes/t2576-error-type-cell-paired.case.json	Calc!E34
-F	probes/t2576-error-type-cell-paired.case.json	Calc!F34
-F	probes/t2577-indirect-ref-array.case.json	Calc!A148
-F	probes/t2577-indirect-ref-array.case.json	Calc!A64
-F	probes/t2577-indirect-ref-array.case.json	Calc!T148
-F	probes/t2577-indirect-ref-array.case.json	Calc!T64
-F	probes/t2577-indirect-ref-array.case.json	Calc!U148
-F	probes/t2577-indirect-ref-array.case.json	Calc!U64
 F	probes/t2657-pv-irr-div0.case.json	I!A1
 F	probes/t2657-pv-irr-div0.case.json	I!A10
 F	probes/t2657-pv-irr-div0.case.json	I!A11

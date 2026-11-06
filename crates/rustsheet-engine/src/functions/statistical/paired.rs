@@ -56,6 +56,16 @@ pub(crate) enum MarkedSample {
     NoNumber,
 }
 
+/// What `Model::fn_get_two_matrices` makes of a second argument carrying the ERROR.TYPE/CELL
+/// mark or an array of references (`number_mark.rs`).
+#[derive(Clone, Copy)]
+pub(crate) enum SecondMark {
+    /// Cells with no number (the regression family, probes/t2766-mark-positions A8:A12).
+    NoNumber,
+    /// The values it holds, as unmarked (CHITEST's expected values: unprobed).
+    Values,
+}
+
 /// The `#NUM!` of a marked number ([`Model::evaluate_marked`]) as an argument that rejects it.
 pub(crate) fn marked_number_error(cell: CellReferenceIndex) -> CalcResult {
     CalcResult::new_error(

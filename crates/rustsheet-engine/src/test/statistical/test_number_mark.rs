@@ -16,7 +16,11 @@ fn assert_texts(cases: &[(&str, &str)]) {
     }
     model.evaluate();
     for (row, (formula, want)) in (1..).zip(cases) {
-        assert_eq!(model._get_text(&format!("A{row}")), *want, "A{row}: {formula}");
+        assert_eq!(
+            model._get_text(&format!("A{row}")),
+            *want,
+            "A{row}: {formula}"
+        );
     }
 }
 
@@ -32,7 +36,10 @@ fn the_mark_passes_through_let_if_choose_iferror_lambda_and_index() {
         ("=FTEST({1;2;3},INDEX(ERROR.TYPE(#REF!),1))", "#NUM!"),
         ("=FTEST({1;2;3},ERROR.TYPE({#REF!}))", "#NUM!"),
         ("=FTEST({1;2;3},(LET(x,(CELL(\"col\",B1)),(x))))", "#NUM!"),
-        ("=FTEST({1;2;3},IF(TRUE,LET(x,ERROR.TYPE(#REF!),y,x,y)))", "#NUM!"),
+        (
+            "=FTEST({1;2;3},IF(TRUE,LET(x,ERROR.TYPE(#REF!),y,x,y)))",
+            "#NUM!",
+        ),
     ]);
 }
 
@@ -51,7 +58,10 @@ fn anything_else_drops_the_mark() {
         ("=FTEST({1;2;3},IF(FALSE,ERROR.TYPE(#REF!),4))", "#DIV/0!"),
         ("=FTEST({1;2;3},IFERROR(ERROR.TYPE(1),4))", "#DIV/0!"),
         ("=FTEST({1;2;3},SUM(LET(x,ERROR.TYPE(#REF!),x)))", "#DIV/0!"),
-        ("=FTEST({1;2;3},LAMBDA(x,x+0)(ERROR.TYPE(#REF!)))", "#DIV/0!"),
+        (
+            "=FTEST({1;2;3},LAMBDA(x,x+0)(ERROR.TYPE(#REF!)))",
+            "#DIV/0!",
+        ),
         ("=FTEST({1;2;3},INDEX({4,5},1))", "#DIV/0!"),
     ]);
 }
@@ -73,8 +83,33 @@ fn sumxmy2_and_linest_reject_a_marked_first_argument() {
         ("=SUMXMY2(ERROR.TYPE(#REF!),5)", "#NUM!"),
         ("=SUMXMY2(INDIRECT(\"B1\",{1}),4)", "#NUM!"),
         ("=SUMXMY2(ERROR.TYPE(#REF!)+0,5)", "1"),
-        ("=SUMXMY2(5,ERROR.TYPE(#REF!))", "1"),
         ("=LINEST(ERROR.TYPE(#REF!))", "#VALUE!"),
         ("=LINEST(2)", "0"),
+    ]);
+}
+
+#[test]
+fn the_mark_in_the_positions_probed_by_t2766() {
+    // probes/t2766-mark-positions A8:A12, A15:A19, A23:A25, A28
+    assert_texts(&[
+        (
+            "=CORREL({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))",
+            "#DIV/0!",
+        ),
+        (
+            "=SLOPE({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))",
+            "#DIV/0!",
+        ),
+        ("=CORREL({1;2;3},{4;2;3})", "-0.5"),
+        ("=SUMX2MY2(ERROR.TYPE(#REF!),5)", "#NUM!"),
+        ("=SUMXMY2(ERROR.TYPE(#REF!),{1;2})", "#N/A"),
+        ("=SUMXMY2(ERROR.TYPE(#REF!),1/0)", "#DIV/0!"),
+        ("=SUMXMY2(5,ERROR.TYPE(#REF!))", "#NUM!"),
+        ("=FTEST({1;2;3},IFNA(ERROR.TYPE(#REF!),0))", "#NUM!"),
+        ("=FTEST({1;2;3},IFS(TRUE,ERROR.TYPE(#REF!)))", "#DIV/0!"),
+        (
+            "=FTEST({1;2;3},LET(f,LAMBDA(x,x),f(ERROR.TYPE(#REF!))))",
+            "#NUM!",
+        ),
     ]);
 }

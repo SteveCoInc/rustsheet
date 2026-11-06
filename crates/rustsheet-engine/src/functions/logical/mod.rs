@@ -356,9 +356,9 @@ impl Model {
         } else {
             let since = self.number_mark.next_serial();
             let value = self.evaluate_node_in_context(&args[0], cell);
-            // A number IFERROR returns keeps its ERROR.TYPE/CELL mark (`number_mark.rs`;
-            // probes/t2576-error-type-cell-paired D5). An array, whose errors may be replaced, is
-            // unprobed and drops it.
+            // A number IFERROR or IFNA returns keeps its ERROR.TYPE/CELL mark (`number_mark.rs`;
+            // probes/t2576-error-type-cell-paired D5, t2766-mark-positions A23). An array, whose
+            // errors may be replaced, drops it (A27).
             if matches!(value, CalcResult::Number(_)) {
                 self.pass_number_mark(since, &args[0]);
             }
