@@ -3,7 +3,7 @@ id: T-4433
 title: "numbers.md SUMX2MY2 overflow order: cite the deciding cells (A1, A3 for model b; A5:A6 for the 80-bit square) and re-wrap T-4424's sentence"
 milestone: M5
 lane: functions-math
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -27,10 +27,17 @@ wrapped at about 120 characters like the text around it.
   The oracle sidecar is eval/suites/probes/cases/t4424-sumx2my2-overflow-order.oracle.json.
 
 ## Acceptance criteria
-- [ ] The sentence cites A1 and A3 for "not model b" and A5:A6 for "not an 80-bit square". It may still quote A2,
+- [x] The sentence cites A1 and A3 for "not model b" and A5:A6 for "not an 80-bit square". It may still quote A2,
       A4 and A7 as values, but not as deciding cells.
-- [ ] The paragraph is re-wrapped at about 120 characters, with no other wording change.
-- [ ] `make check` green; reviewers approve.
+- [x] The paragraph is re-wrapped at about 120 characters, with no other wording change.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Any engine or probe change: the result itself (model a) stands.
+
+## Outcome
+Fixed in T-4424's own PR (#3462) before it merged, so no separate change was needed. The fidelity review of the
+first fix found a further slip: A3 does not decide model b either, because it stays finite under it. The sentence now
+says that A1 alone rules out x^2-then-(-y^2) and that A2:A4 stay finite in every model, cites A5:A6 for the 80-bit
+square, and is wrapped at about 120 characters. The excel-fidelity and design reviewers approved it on #3462's head
+616a11698.
