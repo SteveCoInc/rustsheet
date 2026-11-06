@@ -3,7 +3,7 @@ id: T-1856
 title: "Refuse LET names and defined names Excel refuses at load: Turkish dotted İ and circled letters such as Ⓐ"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
