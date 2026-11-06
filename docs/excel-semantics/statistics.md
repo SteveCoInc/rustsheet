@@ -4678,6 +4678,37 @@ Evidence: probes-numeric cases `m9-legacy-betadist`, `-betainv`, `-binomdist`, `
 Status: VERIFIED (excel-graph)
 Tasks: T-1047
 
+## CONFIDENCE.NORM forms 1 - alpha/2 in doubles (T-4101)
+Rule: CONFIDENCE.NORM(alpha, sd, n) and CONFIDENCE are NORM.S.INV(p)*sd/SQRT(n) with p the double 1 - alpha/2, so the
+rounding of p decides the value at both ends of alpha:
+- p rounds to 1 for alpha <= 2^-53, and the result is `#NUM!` (as `NORM.S.INV(1)` is) although the math has a value:
+  `CONFIDENCE(1E-16,0.5,6)`, `CONFIDENCE.NORM(1E-16,0.5,6)`, `CONFIDENCE(1E-20,2.5,15)`, `CONFIDENCE.NORM(1E-100,2,5)`,
+  `CONFIDENCE(1E-300,99999,9)` are `#NUM!` (accuracy/CONFIDENCE/s1 A131, A138, A112; accuracy/CONFIDENCE.NORM/s1 A113,
+  A128; gen-m9/320d51765af9b6b7 A217, gen-m9/f2bd5f380ec002bf A62), while `CONFIDENCE(1E-15,0.01,9)` is a number
+  (gen-m9/8dd2312c96effb1b A251). `NORM.S.INV(1-1E-16)` is 8.209536151601386 (probes-numeric/t1543-inverse-cdf-tiny-p
+  A11), and 1-1E-16 is the double 1-2^-53, the largest p below 1: so every alpha above 2^-53 gives a p below 1 and a
+  number, which with `#NUM!` at alpha = 1E-16 pins the cut at alpha <= 2^-53. Only (1E-16, 2^-53] has no direct cell.
+- Near alpha = 0 the tail probability alpha/2 keeps only the digits 1 - alpha/2 holds: `CONFIDENCE(1E-15,0.01,9)` is
+  0.026713386495918482 against the math 0.026756196275115137 (1.6E-3 low), and `CONFIDENCE(1E-15,1E-300,2)` is
+  5.6667650219163304E-300 against 5.6758463474676471E-300 (gen-m9/c6cfda6bd10cae93 A73). At alpha = 1E-9 and 1E-10
+  the gap is 2.2E-9 and 1.9E-9 (probes-numeric/m9-legacy-confidence A9 and A10: 0.8640010751150629 against
+  0.86400107698268906; gen-m9/06b4e8f5de409d5e A373).
+- Near alpha = 1, p is 0.5 + (1 - alpha)/2 and loses the digits of 1 - alpha: `CONFIDENCE(1-1E-16,0.1,6)`,
+  `CONFIDENCE(1-1E-16,99999,26)`, `CONFIDENCE.NORM(1-1E-16,1E+8,2)` and `(..,1E+8,6)` are 0 (p rounds to 0.5), where
+  the math is positive (5.68E-18 for the first) (gen-m9/05d44f6dd6cfc567 A230, 8d3588d8df0812df A124, 8dd2312c96effb1b
+  A346, 146b46e74f2dac3b A349); `CONFIDENCE(0.999999,2,10)` is 1.1E-10 off (gen-m9/68d8ffb69ff739d8 A230).
+On all 65 literal numeric cells (the cells above, probes-numeric/m9-legacy-confidence and gen-m9), Excel's value is
+the exact NORM.S.INV of the double 1 - alpha/2 times sd/SQRT(n) within 6E-16 relative, so the gaps are the rounding of
+p alone. The points more than 1e-4 off the math (alpha = 1E-15 and 1 - 1E-16, and gen-m9/9cca17438a7e6f8a A229,
+whose alpha is 4.14159E-15 from cell arithmetic: 24.568906699324142 against 24.576163526554711, 3.0E-4) are kept as
+Excel's (decision 0300).
+Gate A (tools/src/rustsheet_tools/accuracy/defs/confidence.py): alpha <= 2^-53 is a domain rule (`#NUM!`); points where
+p's rounding can move the value by more than 1e-10 (alpha below about 4E-8 or above about 1 - 1.1E-6) are not drawn.
+Ours: `functions/statistical/normal.rs` `confidence_norm_of` computes `1.0 - alpha / 2.0` the same way: the `#NUM!` and
+0 cells above match, and the numbers are within a few ulp (the central NORM.S.INV, T-1746).
+Status: VERIFIED (excel-graph)
+Tasks: T-4101
+
 ## Legacy distribution names sweep, second family (T-1048)
 Implemented in: `functions/statistical/hypegeom.rs`, `weibull.rs` (HYPGEOMDIST/HYPGEOM.DIST sample_s above min(number_sample, population_s) is 0 or 1, zero counts valid, TRUE sample_s; WEIBULL density 0 at x = 0, TRUE x)
 Tasks: T-2035
