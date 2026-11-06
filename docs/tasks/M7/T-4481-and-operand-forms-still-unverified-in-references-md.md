@@ -3,7 +3,7 @@ id: T-4481
 title: "@ and # operand forms still UNVERIFIED in references.md: @(INDEX(..)), @(D1#), @(name), (@(A1 B1))#, a typed (1/0)#, @TRUE and two error operands of :, probe and match"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
