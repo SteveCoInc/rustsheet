@@ -463,8 +463,9 @@ Evidence: probes/t2738-gamma-dist-tiny-ratio (excel-graph 2026-10-25): #NUM! at 
 subnormal density is 0 (`(10,1,1E+307*10,FALSE)`, `(1E+300,1,1E+307*10,FALSE)`). Near the bound Excel's density is
 about 1E-14 relative off the exact value: see "GAMMA.DIST's density below shape 3 is a log-space form" (T-2753, T-2852).
 Implemented in: functions/statistical/gamma.rs `gamma_dist_of`; x = 0 keeps its own rule. Unprobed: CHISQ.DIST at x
-below 4.45E-308 (its scale is 2), an x / beta that overflows, and a computed subnormal x with a normal x / beta (a
-typed one reads as 0, numbers.md "Formula literals").
+below 4.45E-308 (its scale is 2) and a computed subnormal x with a normal x / beta (a typed one reads as 0, numbers.md
+"Formula literals"). An x / beta that overflows is `#NUM!` for both forms at shape 1 (probes/incomplete-gamma-cap E6,
+E18; "Incomplete gamma: per-call cap and lifting (T-1872)" below), unprobed at other shapes.
 Status: VERIFIED
 
 ## GAMMA.DIST's density below shape 3 is a log-space form (T-2753, T-2852)
@@ -515,7 +516,8 @@ the exponent about 1E-14 high; no tried order of a LN(y), y and GAMMALN(50) in d
 ratio form, Loader's saddle point or `rcomp`, reproduces it (13 to 435 ulp off).
 Where a*LN(y) is below EXP's underflow the form is 0 though the true density is a normal double: at shape 2,
 `GAMMA.DIST(1E-250,2,1,FALSE)` and `(1E-200,2,1,FALSE)` are 0 against about 1E-250 and 1E-200 (probes/t2753-gamma-density-
-ratio-sweep A14, A15; A13 at 1E-300 too), relative error 1 against the T-3925 math sidecars; an R3 candidate the owner ruled
+ratio-sweep A14, A15; A13 at 1E-300 too; A16 at 1E-150 is a number, so the cut is between: about 1E-162, where
+2*LN(y) passes EXP's underflow near -745, is derived, UNVERIFIED), relative error 1 against the T-3925 math sidecars; an R3 candidate the owner ruled
 to keep Excel's (decision 0300, T-4392), not marked.
 Implemented in: functions/statistical/gamma.rs `log_form_density` (GAMMA.DIST, GAMMADIST, and CHISQ.DIST through
 chisq.rs).
@@ -2465,6 +2467,41 @@ Ours: `student_t.rs` `student_t_tail_at` since T-0969 attempt 5. T.TEST/TTEST vi
 t1048-ttest A3/B3 (6 ulp) and t1049-ttest A48 (5 ulp), all Welch.
 Status: VERIFIED (excel-graph)
 Tasks: T-0969, T-2993
+
+## T.TEST, TTEST, F.TEST and FTEST: Gate A tables (T-4097)
+Rule: on the Gate A tables `accuracy/{T.TEST,TTEST}/s1` (200 points each) and `accuracy/{F.TEST,FTEST}/s1` (120 each),
+excel-graph 2026-11-06, one-row array literals, Excel's errors are the rules of the entries cited by
+`tools/src/rustsheet_tools/accuracy/defs/sample_tests.py`, with the same codes: tails outside {1, 2} or type outside
+{1, 2, 3} `#NUM!`; a paired test of different lengths `#N/A`; one pair, fewer than two numbers on a side (type 2 and
+F.TEST), zero variance of the differences (type 1), of both samples (types 2 and 3) or of either sample (F.TEST)
+`#DIV/0!`; the `{1E+200,1E+200,-1E+200}` sample `#NUM!` after an ordinary one (type 2 and F.TEST). Every numeric point
+is within 1E-10 of the exact value (Welch's df fractional, not truncated); the largest gaps are T.TEST A65 (4.8E-11, p
+near 0.5 over two nearly equal samples) and TTEST A11 (4.7E-13), and every other point is within 1.6E-13.
+- One more error rule from a gen-m9 cell, stated only for its shape: a Welch test (type 3) of one number after a
+  constant sample is `#DIV/0!` (`T.TEST({3,3,3,3},{5},2,3)`, 607e85cfee83a689 A132). A Welch test of one number beside
+  a varying sample is unprobed.
+- Argument order: every evidencing cell has the special sample second (A132's single number; the overflowing
+  `{1E+200,1E+200,-1E+200}` in T-2432's T.TEST, T-2255's F.TEST and gen-m9 3e98b26cf6713e77 A339). The definitions
+  state both rules for that order only; the reversed order (`T.TEST({5},{3,3,3,3},2,3)`, the overflowing sample first)
+  is unprobed and gets no math value. T-4579 probes it.
+- New quirk, one cell (UNVERIFIED as a rule): `TTEST({-497.50530749878,-0.254481178828704},{-515.88030749878,
+  -18.6294811788287},1,1)` is `#DIV/0!` (TTEST/s1 A136). The differences are not constant: as doubles they are 18.375
+  and 18.374999999999996, so the exact p is 2.3E-17. The one-pass variance of the differences,
+  (Σd² - (Σd)²/n)/(n - 1), is -1.1E-13 there, the only negative one among the tables' paired points; every paired
+  point whose one-pass variance is positive is a number, including the ones VAR.S would switch to the two-pass form
+  ("VAR/STDEV switch between a one-pass and a two-pass formula"). Hypothesis: a paired test is `#DIV/0!` when that
+  one-pass variance is 0 or below. T-4579 probes and implements it.
+- The paired offsets keep their digits: TTEST/s1 A101 (ten pairs, x near -108519.3, y near 204025.4, spread about
+  1E-4) is 6.268514994599738E-70 in Excel, 1E-15 from the exact value of the doubles' exact differences, where the
+  double differences x - y put ours 1.6E-9 off. Owned by T-4579.
+- Excel kept as the target (decision 0300): no table point and no probes or probes-numeric cell of these functions
+  (272 cells with a math value) is more than 1E-4 relative off the exact value, so the list is empty.
+Ours: bit-exact with Excel on 214 of the 583 numeric points (T.TEST 54, TTEST 50, F.TEST 55, FTEST 55) and on every
+error point but A136; every point but A136 and A101 is inside the envelope (known failures owned by T-4579). The rest
+of the last-digit gaps are the tail noise of the entries above.
+Evidence: eval/accuracy/tables/{T.TEST,TTEST,F.TEST,FTEST}/s1 (excel-graph, 2026-11-06).
+Status: VERIFIED (excel-graph) for the cited cells; the A136 rule is a one-cell hypothesis.
+Tasks: T-4097, T-4579
 
 ## T.DIST.RT follows the rounded y beyond t = 1 (T-0969)
 Rule: away from the deep tail, T.DIST.RT (and so T.DIST, T.DIST.2T and TDIST) takes the tail at

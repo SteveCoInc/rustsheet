@@ -27,7 +27,7 @@ import mpmath
 from rustsheet_tools.accuracy import literal
 from rustsheet_tools.accuracy.model import Definition, DomainError, NoValueError, OverBudgetError, work_budget
 from rustsheet_tools.accuracy.sampler import STRATA, Sampler, math_arg, point_count, seed, stratum_counts
-from rustsheet_tools.fitlab.sweep import number_literal, split_args, string_literal
+from rustsheet_tools.fitlab.sweep import is_array_literal, number_literal, split_args, string_literal
 
 VERSION = "1"  # bump when a definition or the sampler changes what a batch would contain
 DPS = (60, 80)  # the value is the dps-80 one; dps 60 is the convergence check
@@ -297,7 +297,7 @@ def parse_formula(definition: Definition, text: str) -> list[literal.Arg]:
                 raise ValueError(msg)
             args.append(string)
         elif param.kind in ("array", "matrix"):
-            if not (token.startswith("{") and token.endswith("}")):
+            if not is_array_literal(token):
                 msg = f"{text!r}: {param.name} is not an array literal"
                 raise ValueError(msg)
             rows = [tuple(number_literal(t) for t in split_args(row)) for row in token[1:-1].split(";")]
