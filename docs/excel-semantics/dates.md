@@ -1148,6 +1148,26 @@ Ours: matches. `carried_day` (`floor(v + 0.5/86400)`, negatives only floored) se
 MINUTE and SECOND (T-3176; all 223 cells of the probe pass).
 Status: VERIFIED (web)
 
+## Other date functions floor a serial just below midnight; their counts take no near-integer snap
+Rule: unlike YEAR, MONTH, DAY and WEEKDAY (the half-second carry above), every other probed serial argument floors
+plainly: EDATE and EOMONTH start, WORKDAY and WORKDAY.INTL start, NETWORKDAYS and NETWORKDAYS.INTL start and end,
+WEEKNUM, ISOWEEKNUM, DAYS (both), DATEDIF (both) and YEARFRAC basis 1. N-0.4 s, `fl(N-0.5/86400)` and even
+N-(2^-22+2^-33) day read as day N-1, and only N itself is day N: `EOMONTH(45017-0.4/86400,0)` is 45016,
+`WEEKNUM(45018-(2^-22+2^-33))` 13 (the Saturday's week), `YEARFRAC(44927,45292-0.4/86400,1)` 0.997260274 (A1:O7).
+DAYS360 alone rounds the serial to the nearest second before flooring, with the tie going up: `fl(N-0.5/86400)` is day
+N, one ulp below it (2^-37 at N = 45020) is day N-1 (P1:Q7), for its start and end alike.
+The count arguments take no near-integer snap either; they truncate or floor exactly, unlike DATE's and TIME's
+arguments (`near_integer_whole`). EDATE and EOMONTH months truncate toward zero (`EDATE(45000,1-(2^-22+2^-33))` is
+45000, `EDATE(45000,-1+2^-23)` 45000, `-1-2^-23` 44972; the same below 12 and -12: S1:T10, Z1:Z10). WORKDAY and
+WORKDAY.INTL days floor (`WORKDAY(45019,1-(2^-22+2^-33))` is 45019; `-1+2^-23` and `-1E-10` are a day back, 45016;
+`-1-2^-23` two days, 45015: U1:V10). WEEKNUM's return_type (2 and 17 just below) and NETWORKDAYS.INTL's weekend number
+(2 just below) truncate, reading 1, 16 and 1 (W1:Y4).
+Evidence: probes/t4454-near-midnight-date-args A1:Z10 (serials built exactly in formulas; excel-graph, 2026-11-06,
+T-4454).
+Ours: matches, all 181 cells (plain `floor` in month_shift.rs, workday.rs, networkdays.rs, weeknum.rs, yearfrac.rs and
+`datedif_value`/`fn_days`; `days360_serial` rounds to the second; the counts' `trunc`/`floor` and `weekend_mask`).
+Status: VERIFIED (web)
+
 ## HOUR, MINUTE and SECOND round to the nearest second
 Rule: HOUR, MINUTE and SECOND take the time of day rounded to the nearest second, and the carry goes all the way up:
 - `SECOND(TIME(10,59,59)+0.6/86400)` is 0, MINUTE 0 and HOUR 11.

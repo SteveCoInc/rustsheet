@@ -3,7 +3,7 @@ id: T-4454
 title: "Serials just below midnight and counts just below an integer in EDATE, EOMONTH, WORKDAY, NETWORKDAYS, WEEKNUM, ISOWEEKNUM, DAYS, DATEDIF and YEARFRAC: probe which take YEAR's half-second carry or the 2^-22 snap, and match"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -50,22 +50,43 @@ them.
   rounding is inferred from one engine comment rather than a cited cell.
 
 ## Acceptance criteria
-- [ ] A committed probe case (excel-probe skill, excel-graph sidecar) gives, for each serial
+- [x] A committed probe case (excel-probe skill, excel-graph sidecar) gives, for each serial
       argument named above (EDATE, EOMONTH, WORKDAY, WORKDAY.INTL, NETWORKDAYS, NETWORKDAYS.INTL
       start and end, WEEKNUM, ISOWEEKNUM, DAYS, DATEDIF, YEARFRAC, DAYS360), the serials
       `fl(N-0.5/86400)`, one ulp below it, `N-0.4/86400`, `N-0.6/86400` and `N-2^-22-2^-33`, built
       exactly in formulas as t3137 did, at a base N where the day matters.
-- [ ] The same case brackets the counts (EDATE/EOMONTH months, WORKDAY/WORKDAY.INTL days, WEEKNUM
+- [x] The same case brackets the counts (EDATE/EOMONTH months, WORKDAY/WORKDAY.INTL days, WEEKNUM
       return_type, the .INTL weekend number) at `n-2^-22-2^-33`, `n-2^-22-9*2^-36` and, for the
       signed counts, `-n+2^-23` and `-n+2^-22`.
-- [ ] docs/excel-semantics/dates.md gets an entry (or extends "YEAR, MONTH and DAY of a serial just
+- [x] docs/excel-semantics/dates.md gets an entry (or extends "YEAR, MONTH and DAY of a serial just
       below midnight") naming the model of every probed argument, citing the cells; DAYS360's
       rounding cites a cell.
-- [ ] The engine reads each argument with its model through the existing helpers; every probe cell
+- [x] The engine reads each argument with its model through the existing helpers; every probe cell
       passes bit-exact, and the t3137 cells keep passing.
-- [ ] No new known-failure line in eval/baseline/; `make check` green; reviewers approve.
+- [x] No new known-failure line in eval/baseline/; `make check` green; reviewers approve.
 
 ## Out of scope
 - DATEVALUE/TIMEVALUE text parsing, TEXT and cell display of such serials (functions-text, M10).
 - The 1904 date system (a follow-up if the 1900 probe shows a carry the 1904 code paths must copy).
 - COUP*, ACCRINT and other financial date arguments (functions-financial).
+
+## Outcome
+- Probe `probes/t4454-near-midnight-date-args` (181 cells, excel-graph 2026-11-06, tag M6). Serials are built exactly
+  in formulas at bases where the day changes the answer.
+- Serial arguments:
+  - Every serial argument except DAYS360's floors plainly: EDATE, EOMONTH, WORKDAY(.INTL), NETWORKDAYS(.INTL) start
+    and end, WEEKNUM, ISOWEEKNUM, DAYS, DATEDIF and YEARFRAC. Even N-0.4 s and N-(2^-22+2^-33) are day N-1.
+  - So neither YEAR's half-second carry nor the near-integer snap applies to these functions.
+  - DAYS360 rounds to the nearest second, with the tie going up: `fl(N-0.5/86400)` is day N and one ulp below it is
+    day N-1, for start and end alike.
+- Count arguments take no snap:
+  - EDATE/EOMONTH months truncate toward zero.
+  - WORKDAY(.INTL) days floor (`-1E-10` is a day back).
+  - WEEKNUM's return_type and NETWORKDAYS.INTL's weekend number truncate.
+- The engine already matched all 181 cells, so this PR has no code change. Every acceptance criterion is met by the
+  existing helpers and `days360_serial`, which now has a cited cell. The t3137 cells are untouched.
+- dates.md: new entry "Other date functions floor a serial just below midnight; their counts take no near-integer
+  snap".
+- Eval delta: probes +1 case, 181/181 bit-exact; the baseline gains the case's line only, with 0 known failures and
+  0 regressions.
+- Follow-up: T-4468, filed here for T-4453's review MINORs.
