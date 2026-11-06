@@ -95,7 +95,7 @@ pub struct PivotLayout {
 
 /// One level of an axis: a field of the result's tree, or the Values field.
 #[derive(Debug, Clone, Copy)]
-enum Level<'a> {
+pub(super) enum Level<'a> {
     Values,
     Field {
         /// The field's index among the tree's fields.
@@ -107,7 +107,7 @@ enum Level<'a> {
 
 /// The levels of `axis` (whose fields are the result tree's, in order), the Values field left out
 /// when there is no data field.
-fn levels<'a>(table: &'a PivotTable, axis: &[AxisField]) -> Vec<Level<'a>> {
+pub(super) fn levels<'a>(table: &'a PivotTable, axis: &[AxisField]) -> Vec<Level<'a>> {
     let mut depth = 0;
     axis.iter()
         .filter_map(|level| match level {
@@ -481,13 +481,8 @@ pub fn lay_out(
 fn geometry(table: &PivotTable, rows: &AxisPlan<'_>, columns: &AxisPlan<'_>) -> PivotGeometry {
     let count = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
     let options = &table.options;
-    // A row level in compact form puts the next level in its own column.
-    let shares_column = |level: &Level<'_>| match level {
-        Level::Field { field, .. } => field.is_none_or(|f| f.compact && f.outline),
-        Level::Values => options.compact_data && options.outline_data,
-    };
-    let label_columns = match rows.levels.split_last() {
-        Some((_, outer)) => 1 + outer.iter().filter(|l| !shares_column(l)).count(),
+    let label_columns = match label_columns(&rows.levels, options).last() {
+        Some(&last) => last as usize + 1,
         None => usize::from(!columns.tree.fields().is_empty()),
     };
     let pages = table.page_fields.len();
@@ -508,6 +503,28 @@ fn geometry(table: &PivotTable, rows: &AxisPlan<'_>, columns: &AxisPlan<'_>) -> 
         row_page_count: count(row_pages),
         column_page_count: count(column_pages),
     }
+}
+
+/// Per row level, its label column counted from the location's left: a row level in compact
+/// form (`compact` and `outline` both on; the Values field with `compactData` and
+/// `outlineData`) shares its column with the next level, and any other level puts the next one
+/// in a column of its own.
+pub(super) fn label_columns(levels: &[Level<'_>], options: &PivotOptions) -> Vec<u32> {
+    let shares_column = |level: &Level<'_>| match level {
+        Level::Field { field, .. } => field.is_none_or(|f| f.compact && f.outline),
+        Level::Values => options.compact_data && options.outline_data,
+    };
+    let mut column = 0u32;
+    levels
+        .iter()
+        .map(|level| {
+            let at = column;
+            if !shares_column(level) {
+                column = column.saturating_add(1);
+            }
+            at
+        })
+        .collect()
 }
 
 /// The location of `geometry` with `lines` row and column lines from the definition's anchor;

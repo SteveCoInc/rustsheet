@@ -21,6 +21,15 @@
 //!    order within an item: Excel's order for Average, Var, `StdDev` and Product, and for Sum
 //!    beside another aggregate (pivots.md "Summation order of Sum, Average and Product totals":
 //!    probes/t4616-pivot-total-order-3 S2, S3, V1 to V4, P1, P2; t4614 S2, P2; t4589 S1).
+//!    An axis of one field with `showAll` on (`pivotField@showAll`, on when absent; Excel and the
+//!    case builder write `showAll="0"`) also shows the items it does not hide that no kept
+//!    record holds, in display order, with no accumulator, so their cells are blank
+//!    (probes/t4311-pivot-showall-column-and-groups H: a grouped row field, read back from
+//!    Excel's own layout in Calc I1:J8). On a column field only GETPIVOTDATA is evidenced
+//!    (t4311 Calc B1, B3, B5 answer 0 on P!A13 with `showAll="1"`, against `#REF!` with it off;
+//!    P!A13's `rendered` cells are the builder's, not Excel's), so the rendered column is
+//!    UNVERIFIED (T-4657). On an axis of several fields `showAll` is not applied, and whether an
+//!    item the page filter leaves without records shows is unprobed (both UNVERIFIED, T-4657).
 //!    The rest is read from the accumulators ([`PivotResult::value_as`]):
 //!    - in a pivot whose data fields are all Sum, a total is the sum of its child cells in
 //!      display order, and the 2-D grand-grand total the sum of the row totals (t4616 S1, S4 to
@@ -48,7 +57,9 @@ use thiserror::Error as ThisError;
 use crate::expressions::token::Error;
 
 use super::accumulate::{sum_in_order, Accumulator};
-use super::{Aggregate, Axis, AxisField, CacheItem, ItemType, PivotCache, PivotField, PivotTable};
+use super::{
+    Aggregate, Axis, AxisField, CacheItem, ItemType, PageField, PivotCache, PivotField, PivotTable,
+};
 
 /// Most nodes one pivot result holds: axis nodes, plus one accumulator per (row node, column
 /// node, data field) that some record reaches (SPEC-0032 "Untrusted-input limits").
@@ -304,11 +315,13 @@ struct AxisColumns<'a> {
     fields: Vec<u32>,
     records: Vec<&'a [u32]>,
     orders: Vec<Order>,
+    /// The axis's one field when it has `showAll` on: its items with no record are shown too.
+    show_all: Option<&'a PivotField>,
 }
 
 impl<'a> AxisColumns<'a> {
     fn new(
-        table: &PivotTable,
+        table: &'a PivotTable,
         cache: &'a PivotCache,
         axis: &[AxisField],
         work: &mut u64,
@@ -333,11 +346,36 @@ impl<'a> AxisColumns<'a> {
             records.push(cache_field.records.as_slice());
             orders.push(Order::of(pivot_field, cache_field.items.len()));
         }
+        let show_all = match fields.as_slice() {
+            [field] => table.fields.get(*field as usize).filter(|f| f.show_all),
+            _ => None,
+        };
         Ok(AxisColumns {
             fields,
             records,
             orders,
+            show_all,
         })
+    }
+
+    /// Under the axis field's `showAll`, interns every item it does not hide, in display
+    /// order, so that an item no kept record holds is shown with blank values (see the module
+    /// documentation).
+    fn show_all_keys(
+        &self,
+        keys: &mut HashMap<Box<[u32]>, u32>,
+        work: &mut u64,
+    ) -> Result<(), PivotComputeError> {
+        let (Some(field), Some(order)) = (self.show_all, self.orders.first()) else {
+            return Ok(());
+        };
+        charge(work, units(order.item.len()))?;
+        for (rank, &item) in (0u32..).zip(&order.item) {
+            if !field.is_hidden(item) {
+                intern(keys, &[rank])?;
+            }
+        }
+        Ok(())
     }
 
     /// Writes the display ranks of `record`'s items into `key`.
@@ -457,14 +495,7 @@ fn filter(
     };
     for page in &table.page_fields {
         let records = column(page.field)?;
-        // An item index past the field's items, or naming a line that is no data item, is
-        // `(All)` (UNVERIFIED, T-4633).
-        let selected = table
-            .fields
-            .get(page.field as usize)
-            .and_then(|f| f.items.get(page.item? as usize))
-            .filter(|item| item.kind == ItemType::Data)
-            .and_then(|item| item.index);
+        let selected = page_selection(table, page);
         if selected.is_some() {
             tests.push((records, selected, None));
         }
@@ -493,6 +524,17 @@ fn filter(
         kept.push(record);
     }
     Ok(kept)
+}
+
+/// The cache item page field `page` selects, if any. An item index past the field's items, or
+/// naming a line that is no data item, selects none, as `(All)` does (UNVERIFIED, T-4633).
+pub(super) fn page_selection(table: &PivotTable, page: &PageField) -> Option<u32> {
+    table
+        .fields
+        .get(page.field as usize)
+        .and_then(|f| f.items.get(page.item? as usize))
+        .filter(|item| item.kind == ItemType::Data)
+        .and_then(|item| item.index)
 }
 
 /// The id of `key` in `keys`, adding it when new.
@@ -542,6 +584,8 @@ pub fn compute(
         let column = intern(&mut column_keys, &key)?;
         placed.push((row, column, record));
     }
+    rows.show_all_keys(&mut row_keys, work)?;
+    columns.show_all_keys(&mut column_keys, work)?;
     let mut nodes = 1;
     let (rows, row_leaves) = rows.tree(row_keys, work, &mut nodes)?;
     let (columns, column_leaves) = columns.tree(column_keys, work, &mut nodes)?;

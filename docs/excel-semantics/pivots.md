@@ -218,7 +218,8 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 The default order of a newly created pivot (ascending, by type) is a UI action and not reachable from a
 file.
 Status: VERIFIED (excel-graph)
-Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader`; the rendering is T-4142's)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader`)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`item_cell`: how an item renders; T-4149)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`Order`: the display order of a computed
 result)
 
@@ -296,7 +297,9 @@ non-axis fields, and T-4583's R1 and R2 show that axis fields count too.
 Status: VERIFIED (excel-graph) for the roles and positions probed. UNVERIFIED (probe pending: T-4609):
 column and page fields, `outline` alone on axis fields, and which attribute moves R1's subtotals.
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (R1's lines and `firstDataCol`, read as the
-outer field's outline form with `compact` and `outline` both on; T-4147). The header text is T-4149's.
+outer field's outline form with `compact` and `outline` both on; T-4147)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (the header text, every probe
+above reproduced; T-4149)
 
 ## Rendered pivot cells: blanks, repeated labels, subtotals and the Values caption
 Rule:
@@ -311,9 +314,35 @@ Rule:
 - A compact pivot with a column field puts the data field's caption (`Sum of Sales`) at the
   location's corner and `Column Labels` beside it (C!A3, B3), with `Row Labels` below (C!A4).
 
+- The headers follow the lines: each column line labels its levels from `r` on, one header row
+  per column level below the location's top row (t4138 G5: `A` in C5, `Web` and `Store` in C6
+  and D6, `A Total` in E5); each row line labels its levels from `r` on in its level's label
+  column, compact form putting several levels in one column (G2). The sidecars hold values
+  only, so a label cell's indentation is not evidenced; the engine writes the item's text alone.
+- A single data field with Values on no axis puts its caption at the corner with fields on both
+  axes (C!A3), over the data column with no column field (t4138 G1!C4, G8!B8), and as the label
+  of the only row with no row field (G7!B6). With Values on an axis, its items are the data
+  fields' captions, and its grand-total lines read `Total <data field>` (G6!B11:B12, t4135
+  A_sum!N4:S4), with no `grandTotalCaption` set; whether that caption replaces the text there is
+  unprobed (the engine keeps `Total <data field>`; UNVERIFIED, T-4650).
+- Items render as in "Items show in the order the pivot field lists them" (t4134 I2, I4, I5).
+
 Evidence: probes/t4123-pivot-capture, the `pivots` cells of its sidecar (excel-graph, 2026-11-06,
-T-4123). Scored once T-4124 lands; the engine renders none of these yet.
-Status: VERIFIED (excel-graph)
+T-4123); t4138-pivot-geometry G1 to G9 (T-4138); t4135-pivot-aggregates (T-4135). The engine's
+render reproduces every cell of the probe pivots listed in its tests (t4123 C and T to T4 but
+T's show-values-as column D, t4138 G1 to G9, t4137 K1 to K6, t4583 R1 to R6, C1, C2, t4134 I1,
+I2, I4, I5, t4135 all twelve, t4589, t4614, t4616, and t4622 but East's custom Count subtotal
+values over an error, a result rule of T-4168's, T-4636). Number formats are PV2's (T-4169).
+The engine's own readings, not probed: a number or date item's subtotal label (`number_to_text`
+of the value, then ` Total`); a subtotal label with Values inside its field (`<item> <data
+field>`); the grand-total caption with Values on its axis (always `Total <data field>`, even with
+`grandTotalCaption`); the
+header over a Values level in a label column of its own (left empty); `rowHeaderCaption`
+beside the all-`compact="0"` rule (the field name wins, as over `colHeaderCaption` in C2).
+Status: VERIFIED (excel-graph) for the probes listed. UNVERIFIED (probe pending: T-4657): number
+and date item subtotal labels; (T-4650): the Values-inside and Values-axis captions and header;
+(T-4609): `rowHeaderCaption` under the all-`compact="0"` rule.
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`render`; T-4149)
 
 ## Caption attributes, empty and error captions, page captions, custom subtotal labels
 Rule:
@@ -330,7 +359,9 @@ Rule:
   the caption as text: the cell, its row and column totals and the grand total (K3!C5, E5, C7 and E7 `ERR`; the
   data hold one `#DIV/0!` at East/B). The empty West/C stays blank (K3!D6).
 - Page fields show `(All)` with no selection, the item with one (`A`), and `(Multiple Items)` when
-  several items stay visible (K4!B2:B4).
+  several items stay visible (K4!B2:B4). What a page field shows when its hidden items leave one
+  item visible, and a selected number, boolean or blank item, are unprobed: the engine shows
+  `(Multiple Items)` and the item as a row label renders it (UNVERIFIED, T-4657).
 - Custom subtotal functions label each subtotal line `<item> <Function>`: `East Sum`, `East Count`
   (K5!A7:A8), with Count counting records (4). `countA` is labelled `Count` too
   (probes/t4622-pivot-count-subtotals CA!A6; see "Which function the countA and count custom
@@ -345,6 +376,7 @@ Evidence: probes/t4137-pivot-captions (excel-graph, 2026-11-06, T-4137). Default
 creating a pivot in the UI is where Excel picks them (T-2327 keeps that question). For other
 aggregates and `#DIV/0!` under `errorCaption`, see "errorCaption replaces every error value" below.
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`render`, `page_area`; T-4149)
 
 ## Page fields render above the location
 Rule: page fields render in the rows above the pivot's `location`, ending one blank row before it. Each
@@ -364,7 +396,10 @@ the second pair starts at E, three columns after B, and the five-column window e
 cannot see past its own window, though, so a page cell outside it would go unseen (row 1 of K4,
 rows 1–4 of G8).
 Status: VERIFIED (excel-graph) for the rendering; the window is consistent with both probes, not
-independently confirmed (probe pending: T-4584)
+independently confirmed (probe pending: T-4584). Page grids filled down with `pageWrap` are
+T-4650's (G8 cannot tell the orders apart).
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`page_area`: `rowPageCount`
+rows ending one row above the location, three columns per page column; T-4149)
 
 ## Pivot geometry: location and header offsets per layout
 Rule: Excel writes the pivot's `location` as the body's bounding box (page fields excluded), with
@@ -660,6 +695,7 @@ Evidence: probes/t4135-pivot-aggregates EC (excel-graph, 2026-11-06, T-4135):
 - West (B6:L6) shows `ERR` for StdDev and Var, which have one value, and 0 for StdDevp and Varp.
 - The Grand Total row (B7:L7) is `ERR` everywhere; see the next entry for Count and CountNums.
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::value`; T-4149)
 
 ## A Count total over an error field is the error when the pivot mixes aggregates
 Rule: Count and CountNums never show an error in an item's cell. When the pivot's data fields mix
@@ -726,6 +762,9 @@ unit per record and stage, per item ordered, per sort step, per node or accumula
 fed to an accumulator. It holds at most 10,000,000 nodes (`MAX_PIVOT_NODES`): axis nodes plus one
 accumulator per (row node, column node, data field) some record reaches. Past either the pivot has no
 result (`PivotComputeError::Limit`), where Excel would render it.
+Its cells (`render`, T-4149) hold at most 134,217,728 bytes of text together
+(`MAX_PIVOT_TEXT_BYTES`, about 32 per cell of the cell cap), since each cell copies its label;
+past it the render fails with `Limit`, where Excel would show the pivot.
 Its layout (`lay_out`, T-4147) draws on the same work units, one per line and `x` made, and has no
 result past 4,000,000 cells (`MAX_PIVOT_CELLS`: the location's rows times columns plus two per page
 field, checked from the line counts before any cell is made) or when the location would pass the
@@ -736,6 +775,7 @@ Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `MAX_PIVOT_NODES`, `charge`,
 `count_nodes`)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`MAX_PIVOT_CELLS`, `location`; T-4147)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`MAX_PIVOT_TEXT_BYTES`; T-4149)
 
 ## Pivots without refreshOnLoad, and source edits
 Rule: unknown. Two things are unprobed: whether Excel for the web re-renders a pivot whose cache lacks
