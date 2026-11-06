@@ -3,7 +3,7 @@ id: T-4467
 title: "BESSELY order 4 next to its tiny-x overflow cut is 4 ulp below ours: find the rounding of the recurrence that reproduces probes/t4458-bessely-tiny-x-cuts Calc!D32"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
