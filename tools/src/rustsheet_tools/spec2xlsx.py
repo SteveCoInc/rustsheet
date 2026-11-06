@@ -84,6 +84,9 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     formats (`<cfRule type="expression">`) and `"data_validations": [{"ref": "A1", "formula": "=A1>0"}]`
     custom data validations, their formulas prefixed like cell formulas (T-3263). The engine adapter
     ignores both.
+  * `"active_sheet": "S2"` at the top level makes that sheet the workbook's active (and only selected)
+    sheet, `<workbookView activeTab>`; the first sheet otherwise (T-4394). Excel binds an unqualified
+    reference in an API-defined name to it. The engine adapter ignores it.
 """
 
 from __future__ import annotations
@@ -420,6 +423,7 @@ def build_xlsx(spec: dict[str, Any]) -> bytes:
             (number, _add_data_table(ws, sheet, t)) for t in sheet.get("data_tables", ())
         )
 
+    _activate(spec, worksheets)
     patches.pivots = pivot_tables(spec, _pivot_cell_writer(worksheets, patches, tables))
     for name, formula in spec.get("names", {}).items():
         wb.define_name(name, _formula_text(formula, tables))
@@ -489,6 +493,18 @@ def _patch_package(xlsx: bytes, spec: dict[str, Any], patches: _Patches) -> byte
     xlsx = _write_calculation(_write_data_tables(xlsx, patches.data_tables), spec.get("calculation"))
     xlsx = _write_pivots(xlsx, patches.pivots)
     return _store_numbers(xlsx, patches.lossy) if patches.lossy else xlsx
+
+
+def _activate(spec: dict[str, Any], worksheets: list[Any]) -> None:
+    """Makes the spec's `active_sheet` the active sheet (T-4394); the first sheet is by default."""
+    if "active_sheet" not in spec:
+        return
+    name = spec["active_sheet"]
+    names = [sheet["name"] for sheet in spec["sheets"]]
+    if not isinstance(name, str) or name not in names:
+        msg = f"active_sheet must name a sheet of the spec: {name!r}"
+        raise ValueError(msg)
+    worksheets[names.index(name)].activate()
 
 
 def _date_1904(spec: dict[str, Any]) -> bool:
