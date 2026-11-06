@@ -43,6 +43,21 @@ records of both casings count under it on refresh: East/A summed the `East` and 
 Evidence: T-4122 runs (cases a and a2: corrupt with both items, rendered with one).
 Status: UNVERIFIED (probe pending: T-4134, which also asks which casing wins)
 
+## Item identity: exact for numbers and types, case-insensitive for text
+Rule: on refresh, texts that differ only in case are one item, shown with the casing first seen, and
+their records add up. Numbers are compared exactly, so 0.3 and 0.30000000000000004 are two items. The
+text `"1"` and the number 1 are two items as well.
+Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
+- I1: east, East and EAST count 3 under `east`, and west counts 1.
+- I4: 0.3 counts 2 and 0.30000000000000004 counts 1.
+- I5: the number 1 counts 2 and the text `1` counts 1.
+
+I1 cannot tell "first seen in the source" from "the builder's listed item", both `east`. A probe with
+the variants in another source order, against a cache that lists a different casing, would. Dates with
+and without times are not probed yet.
+Status: VERIFIED (excel-graph) for the identity; UNVERIFIED which casing wins when cache and source
+disagree
+
 ## Shared-item flags Excel accepts for mixed fields
 Rule: Excel for the web refuses a cache whose `sharedItems` flags contradict its items. The flags that
 open are the ones Excel itself writes:
@@ -56,12 +71,23 @@ Evidence: T-4122 runs (bool+text, error+text and number+blank refused with other
 these); Excel-saved caches in the LibreOffice fixtures (oss-engines.md §5).
 Status: UNVERIFIED (probe pending: T-4134)
 
-## Items show in the order the pivot field lists them
-Rule: on refresh Excel keeps the order of a pivot field's `<items>` for existing items; it does not
-re-sort them. A field listing `a`, blank, `b` shows `a`, `(blank)`, `b`. Booleans show as `TRUE` and
-`FALSE`, errors as their text (`#N/A`), and blanks as `(blank)`.
-Evidence: T-4122 runs (f_blankstr, f_boolstr, f_err, f_num_blank).
-Status: UNVERIFIED (probe pending: T-4134, together with the default order of a newly created pivot)
+## Items show in the order the pivot field lists them; new items are appended
+Rule: on refresh Excel keeps the order of a pivot field's `<items>`. An item the refresh finds that the
+field does not list yet goes after the listed ones, in the order of first appearance in the source,
+not sorted. How items render:
+- a number item renders as a number cell;
+- a boolean as the text `TRUE` or `FALSE`;
+- an error item as the text of the error (`#N/A`), not an error value;
+- a blank as `(blank)`.
+
+Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
+- I2: the builder lists a, FALSE, 1, b, TRUE, 2, then #N/A and blank (first seen); Excel shows that
+  order in I2!A4:A11, with A6 and A9 numbers, A10 the text `#N/A` and A11 `(blank)`.
+- I3: Zed and Alpha come from formulas the cache records as missing; Excel shows M, Zed, Alpha.
+
+The default order of a newly created pivot (ascending, by type) is a UI action and not reachable from a
+file.
+Status: VERIFIED (excel-graph)
 
 ## A calculated field applies its formula to the field sums
 Rule: a calculated field `Sales*2+0.1` shows, at every level including subtotals and the grand total,

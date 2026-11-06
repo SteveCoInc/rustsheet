@@ -1,0 +1,18 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4134: how Excel builds a pivot field's items on refresh, each sheet one builder-v2 pivot (rows: the field K, data: Count of V) that Excel renders on open. I1: case variants seen as east, East, EAST (the builder lists one item, first-seen casing): which casing shows, and that their records merge. I2: mixed types (2, b, TRUE, #N/A, blank, 1, a, FALSE) listed by the builder in a scrambled order: whether Excel keeps the listed order. I3: items only refresh can see: formula cells (=\"Zed\", =\"Alpha\") the builder caches as missing beside literal M: where Excel places new items. I4: 0.3 and 0.30000000000000004 (one item or two). I5: the text \"1\" beside the number 1 (one item or two). Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+  "tags": ["probe", "pivot", "T-4134", "M16"],
+  "sheets": [
+    {"name": "D1", "cells": {"A1": "K", "B1": "V", "A2": "east", "B2": 1, "A3": "East", "B3": 2, "A4": "EAST", "B4": 3, "A5": "west", "B5": 4}},
+    {"name": "D2", "cells": {"A1": "K", "B1": "V", "A2": 2, "B2": 1, "A3": "b", "B3": 1, "A4": true, "B4": 1, "A5": {"t": "e", "v": "#N/A"}, "B5": 1, "B6": 1, "A7": 1, "B7": 1, "A8": "a", "B8": 1, "A9": false, "B9": 1}},
+    {"name": "D3", "cells": {"A1": "K", "B1": "V", "A2": "M", "B2": 1, "A3": "=\"Zed\"", "B3": 1, "A4": "=\"Alpha\"", "B4": 1, "A5": "M", "B5": 1}},
+    {"name": "D4", "cells": {"A1": "K", "B1": "V", "A2": 0.3, "B2": 1, "A3": 0.30000000000000004, "B3": 1, "A4": 0.3, "B4": 1}},
+    {"name": "D5", "cells": {"A1": "K", "B1": "V", "A2": 1, "B2": 1, "A3": {"t": "s", "v": "1"}, "B3": 1, "A4": 1, "B4": 1}},
+    {"name": "I1", "cells": {}, "pivot_tables": [{"name": "Case", "source": "D1!A1:B5", "location": "A3", "definition": {"rows": ["K"], "data": [{"field": "V", "subtotal": "count"}]}}]},
+    {"name": "I2", "cells": {}, "pivot_tables": [{"name": "Types", "source": "D2!A1:B9", "location": "A3", "definition": {"rows": ["K"], "data": [{"field": "V", "subtotal": "count"}], "fields": {"K": {"order": ["a", false, 1, "b", true, 2]}}}}]},
+    {"name": "I3", "cells": {}, "pivot_tables": [{"name": "New", "source": "D3!A1:B5", "location": "A3", "definition": {"rows": ["K"], "data": [{"field": "V", "subtotal": "count"}]}}]},
+    {"name": "I4", "cells": {}, "pivot_tables": [{"name": "Bits", "source": "D4!A1:B4", "location": "A3", "definition": {"rows": ["K"], "data": [{"field": "V", "subtotal": "count"}]}}]},
+    {"name": "I5", "cells": {}, "pivot_tables": [{"name": "TextNum", "source": "D5!A1:B4", "location": "A3", "definition": {"rows": ["K"], "data": [{"field": "V", "subtotal": "count"}]}}]},
+    {"name": "Q", "cells": {"A1": "=COUNTA(D1!A2:A5)"}}
+  ]
+}
