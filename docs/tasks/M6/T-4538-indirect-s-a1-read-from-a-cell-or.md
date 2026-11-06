@@ -3,7 +3,7 @@ id: T-4538
 title: "INDIRECT's a1 read from a cell or omitted: probe FALSE/TRUE text, booleans, numbers, blank and empty-text cells and INDIRECT(ref,), and match"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -40,13 +40,24 @@ One case, probes/t4538-indirect-a1-cells (excel-probe skill, excel-graph, tag M6
 Write the predictions (ours, from a scratch build) into docs/research/t4538 before the fill, as other probe tasks do.
 
 ## Acceptance criteria
-- [ ] probes/t4538-indirect-a1-cells is committed with excel-graph oracle values (the questions above, each in both
+- [x] probes/t4538-indirect-a1-cells is committed with excel-graph oracle values (the questions above, each in both
       reference styles).
-- [ ] Every cell of it passes; any rule ours did not already follow is fixed in `indirect_of` (or the shared
+- [x] Every cell of it passes; any rule ours did not already follow is fixed in `indirect_of` (or the shared
       coercion helper it calls, extended rather than copied) with a unit test citing the probe cells.
-- [ ] docs/excel-semantics/lookup.md "INDIRECT's a1 argument is coerced like a boolean" lists the new forms with
+- [x] docs/excel-semantics/lookup.md "INDIRECT's a1 argument is coerced like a boolean" lists the new forms with
       their cells and drops the "Not probed" line it answers.
-- [ ] No new known-failure lines in any eval/baseline/*.txt; `make check-fast` green, CI green; reviewers approve.
+- [x] No new known-failure lines in any eval/baseline/*.txt; `make check-fast` green, CI green; reviewers approve.
 
 ## Out of scope
 - The array-lift of a1 (`INDIRECT("B1",{1})`: T-2577, done) and ref_text kinds (T-2865).
+
+## Outcome
+- probes/t4538-indirect-a1-cells (excel-graph, 2026-11-06): 24 a1 forms, each asked as `INDIRECT("H2",a1)` (B20:B43) and
+  `INDIRECT("R2C8",a1)` (C20:C43). The predictions in docs/research/t4538/predictions.md were written from `indirect_of`
+  and `cast_bool_ref` before the fill, and Excel agreed with all 48 formula cells. So no engine change was needed:
+  `cast_bool_ref` already reads FALSE/TRUE text in any case, `#VALUE!` for spaced or numeric text and empty text, and
+  FALSE for a blank cell, a blank one-cell range and an omitted a1 (`INDIRECT("H2",)` is `#REF!`).
+- lookup.md "INDIRECT's a1 argument is coerced like a boolean" lists the new forms and drops its "Not probed" line.
+- Eval delta: probes +1 case, 50 cells, all passing (a `C` line only); 0 new known failures, 0 regressions. No Gate A
+  one-call cells, so no math sidecar.
+- Also lands T-4539 and T-4540 (gap triage of functions-lookup and functions-criteria, 2026-11-06).

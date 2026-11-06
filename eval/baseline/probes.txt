@@ -2402,6 +2402,7 @@ C	probes/t4464-groupby-spent-filter-shapes.case.json	323
 C	probes/t4477-filter-include-error-shapes.case.json	49
 C	probes/t4480-lcid-sublanguage-fallback.case.json	98
 C	probes/t4492-locale-comma-tag-shapes.case.json	24
+C	probes/t4538-indirect-a1-cells.case.json	50
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
