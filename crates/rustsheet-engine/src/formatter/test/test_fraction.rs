@@ -316,3 +316,28 @@ fn commas_after_the_point_or_a_fraction() {
     assert_eq!(text(1234567.891, "0.0,0,"), "1234.57");
     assert_eq!(text(1234567.89, "# ?/?|#,##0"), "1234567 8/9|0000");
 }
+
+// A `.` among the placeholders after a fraction splits them like a number's point: before it the
+// last `?` takes every spilled digit and zeros are left pending; after it nothing spills, pending
+// zeros print first, and blanks run while a space is due (probes/t4594-fraction-tail-point-explore
+// rows 2, 3, 6, 22, t4594-fraction-tail-point-explore-wide C82, t4594-fraction-tail-point-holdout-2
+// A22, t4594-fraction-tail-point-holdout-3 A24, t4594-fraction-tail-point-holdout-4 B12,
+// t4515-fresh-sweep A1, A5, C5, A8; T-4594).
+#[test]
+fn placeholders_after_a_fraction_with_a_point() {
+    assert_eq!(text(0.0123, "# ?/7 ?.0"), " 123/7 0000.0");
+    assert_eq!(text(0.0123, "# ?/1000|?.#"), " 123/1000|0.");
+    assert_eq!(text(0.123456789, "# ?/1000|?.#"), " 10/10  |0.0");
+    assert_eq!(text(0.0123, "# ?/40|?.0#"), " 123/40|000.00");
+    assert_eq!(text(0.0123, "# ?/7|?.0#"), " 123/7|0000.00");
+    assert_eq!(text(0.0123, "# ?/7|?.##"), " 123/7|0000.");
+    assert_eq!(text(0.0123, "# ?/7|?.#?"), " 123/7|0000.0");
+    assert_eq!(text(0.0123, "# ?/7|0.0#"), " 123/7|00000.0");
+    // Pending zeros: two `?` spaces, `??0`, `#?#`, and blanks after the point.
+    assert_eq!(text(0.5, "# ?/7|??.###"), " 1/7|  .00");
+    assert_eq!(text(0.04, "# ?/3|??0.?0?"), " 1/3|5 00.000");
+    assert_eq!(text(0.07, "# ?/64|#?#.0##"), " 7/64|00000.00");
+    assert_eq!(text(0.55, "# ?/128|?.##0?"), " 11/12 |0.00");
+    // A blank fraction's tail is as wide as what it would print.
+    assert_eq!(text(12.0, "# ?/1000|?.#"), "12           ");
+}

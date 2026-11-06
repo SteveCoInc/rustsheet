@@ -15,6 +15,16 @@ use crate::pivot::{
     SourceCells, MAX_RECORD_VALUES,
 };
 
+/// The pivot sheets of probes/t4634-pivot-total-order-4 that the result, line and render tests
+/// check: Sum beside each other aggregate (X1 to X12) and alone (S1, O1 to O4), Average alone (A1
+/// to A3), Var, Varp and `StdDevp` totals (V1 to V7), two fields per axis (T1 to T3), and Count or
+/// `CountNums` beside only Max, Min, Product or a variance (C1 to C7).
+pub(crate) const T4634_SHEETS: &[&str] = &[
+    "S1", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12", "A1", "A2",
+    "A3", "O1", "O2", "O3", "O4", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "T1", "T2", "T3", "C1",
+    "C2", "C3", "C4", "C5", "C6", "C7",
+];
+
 pub(crate) fn read(stem: &str, kind: &str) -> Json {
     let path = format!(
         "{}/../../eval/suites/probes/cases/{stem}.{kind}.json",
