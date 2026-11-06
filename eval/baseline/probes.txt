@@ -2330,6 +2330,7 @@ C	probes/t4397-days-two-errors.case.json	36
 C	probes/t4397-holiday-text-forms.case.json	516
 C	probes/t4402-pivotby-parent-sets-holdout.case.json	544
 C	probes/t4420-pivotby-parent-sets-three-fields.case.json	528
+C	probes/t4430-legacy-at-name-body-rest.case.json	181
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
