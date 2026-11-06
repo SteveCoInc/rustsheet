@@ -35,7 +35,7 @@ Merged since b2f4a8bd: 76 commits, from #3386 to #3489, #3417 among them. None w
 - the Python `Transaction.add_table`, `set_row_hidden` and `set_number_format`: T-2903, T-2902 and T-2901 (#3481, #3474, #3421);
 - the salvage of #3105's CUMPRINC probes: T-4385 (#3444).
 
-Blocked: 28 on `main` as merged into this PR (35 last run). The new ones are T-4392 and T-4400, both owner rulings filed this period. Decision 0300 (#3508, merged during this run) then ruled "keep Excel" on nine R3 candidates, and T-3484, T-3775, T-3794, T-4196 and T-4392 closed with it, so their "Needs owner" entry is removed. T-4400 is still open there. No task on `main` is `Blocked because: review-round limit`.
+Blocked: 28 on `main` as merged into this PR (35 last run). The new ones are T-4392 and T-4400, both owner rulings filed this period. Decision 0300 (#3508, merged during this run) then ruled "keep Excel" on nine R3 candidates, and T-3484, T-3775, T-3794, T-4196 and T-4392 closed with it, so their "Needs owner" entry is removed. Decision 0300 left T-3544 open (T.INV and F.INV outside the R3 region), and it stays under "Needs owner" with T-4239 and T-4400. No task on `main` is `Blocked because: review-round limit`.
 
 Open PRs: 27 at 06:35 UTC (12 last run), 9 of them drafts.
 - Orphaned-PR check (`agent/*` or `claude/*`, not draft, not queued, idle 4 h; no PR carries `queue-dropped`):
@@ -86,6 +86,10 @@ The steward keeps this line as it is until the owner changes it.
 
 ## Needs owner
 
+- **T.INV and F.INV outside the R3 region, T-3544** (2026-11-06). Decision 0300 keeps Excel as the target for nine R3
+  candidates but leaves this one open: decision 0267 item 3 already lets the math win for T.INV at a tiny p, and at
+  T-3544's points (T.INV A91, A96; F.INV A164, A169, A167) the engine returns the math today. Please choose: keep
+  0267's math (and extend it to these points), or match Excel there (an engine change).
 - **Owner ruling on RATE's keep-r0 secant model, T-4239** (2026-11-04). T-3963 found why RATE's same-state flat
   secants split (Excel keeps the older iterate when a step leaves the residual unchanged) and built the model on draft
   PR #3019: +78 bit-exact of 2,400 literal RATE cells, 59 against 9 on a blind fresh probe. But it moves five
