@@ -3,7 +3,7 @@ id: T-4559
 title: "Source-preserving export 1: retain the source and write it back verbatim when nothing changed (SPEC-0034 D1, D2)"
 milestone: M15
 lane: engine
-status: blocked
+status: in-progress
 priority: P1
 size: M
 tier: opus
@@ -33,8 +33,3 @@ R0 recalculates. A workbook whose recalculation reproduces every cached value is
 
 ## Out of scope
 - Patching (T-4560).
-
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275, 0306): M15 waits until Phase 1 parity exits, except for the task the
-owner-directed session claims. Unblock when docs/status.md has the line `**Phase 1:** exited <date>`, or by claiming
-it in that session.

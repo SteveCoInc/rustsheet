@@ -33,7 +33,7 @@ Goals:
   that Excel itself rewrites the thing on every save.
 
 Non-goals:
-- How preservation works (ownership matrix, closure rule, fragments, patching). That is SPEC-0034 (T-4183), with stage 4 in T-4567. This spec only
+- How preservation works (ownership matrix, closure rule, fragments, patching). That is SPEC-0034 (T-4183), with stage 5 in T-4567. This spec only
   says how to tell whether preservation worked.
 - XSD validation rules (T-4179) and the oracle round-trip flow (T-4180). They plug into the verdicts defined here.
 - R2 implementation. R2 is defined here so its items have keys, but no R2 run is scored until M4 provides
@@ -276,7 +276,7 @@ pub enum DropReason {
     StaleAfterStructuralEdit { sheet: String },
     /// Its owner (a sheet, a table) was deleted.
     OwnerDeleted,
-    /// Its relationship closure reaches a part the export regenerates (the closure rule of T-4567, SPEC-0034 stage 4).
+    /// Its relationship closure reaches a part the export regenerates (the closure rule of T-4567, SPEC-0034 stage 5).
     ClosureReachesRegenerated,
     /// Keeping it would exceed a preservation limit.
     LimitExceeded { limit: String },
