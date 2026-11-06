@@ -3,7 +3,7 @@ id: T-4501
 title: "PERMUTATIONA is #NUM! at a number_chosen of 2^31-1 or more"
 milestone: M9
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -27,10 +27,20 @@ so the three Gate A known failures of accuracy/PERMUTATIONA/s1 go and its cells 
 - Known failures: `eval/accuracy/known-failures.tsv` lines owned by T-4501 (remove them when they pass).
 
 ## Acceptance criteria
-- [ ] The number_chosen cut is probed and recorded in the semantics entry, and the engine is `#NUM!` from it on.
+- [x] The number_chosen cut is probed and recorded in the semantics entry, and the engine is `#NUM!` from it on.
 - [ ] PERMUTATIONA is binary powering in doubles; `rustsheet-eval accuracy` shows PERMUTATIONA/s1 bit-exact except any
       documented miss, and the T-4501 known failures are gone.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - PERMUTATIONA's number cut (about 1E+15 is `#NUM!`; T-2752 probes it).
+
+## Outcome
+Probe probes/t4501-permutationa-chosen-cut (36 cells, excel-graph 2026-11-06): the cut is exactly 2^31 - 1 on the
+truncated number_chosen, at numbers 1 and 0 (2147483646.9 is a number; 2147483647, 2^31, 2^32 and 1E10 are `#NUM!`).
+`permutationa_of` (permut.rs) is `#NUM!` from it, reusing PERMUT's `COUNT_LIMIT_EXCLUSIVE`; a unit test covers both
+sides. Gate A: accuracy/PERMUTATIONA/s1 A71, A76 and A79 pass, and their three known-failures lines are gone
+(`rustsheet-eval accuracy`: 0 failing). statistics.md records the cut as VERIFIED.
+Not done here, on purpose: criterion 2, binary powering. It was chosen by scoring candidates against the s1 cells,
+so it is a fit under decision 0188 R4 and owes a hold-out and a fresh sweep; every one of those cells is already inside
+Gate A's envelope, so it is Phase 1b work, split to T-4557 (`defer: phase-1b`).

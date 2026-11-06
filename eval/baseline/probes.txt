@@ -2420,6 +2420,7 @@ C	probes/t4480-lcid-sublanguage-fallback.case.json	98
 C	probes/t4485-groupby-function-array-error-order.case.json	31
 C	probes/t4492-comma-suffix-reading.case.json	29
 C	probes/t4492-locale-comma-tag-shapes.case.json	24
+C	probes/t4501-permutationa-chosen-cut.case.json	36
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
