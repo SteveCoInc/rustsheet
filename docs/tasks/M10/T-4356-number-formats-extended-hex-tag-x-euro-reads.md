@@ -24,4 +24,4 @@ T-4107 probed `[$-x-euro]0` on 123: Excel prints "123" while `locale_tag::extend
 -
 
 ## Outcome
-Rule found by probe: a tag opening `x-` (either case) prints ASCII digits at every extended-hex numeral byte; the same values without the prefix keep their numerals. `locale_tag::numerals` now skips the extended-hex reading for `x-` tags. Probes: t4356-extended-hex-xeuro, t4356-private-use-prefix, t4356-private-use-value. Documented in docs/excel-semantics/number-formats.md. Eval delta: see PR.
+Rule found by probe: a tag opening `x-` (either case) prints ASCII digits at every extended-hex numeral byte; the same values without the prefix keep their numerals. `locale_tag::numerals` now skips the extended-hex reading for `x-` tags. Probes: t4356-extended-hex-xeuro, t4356-private-use-prefix, t4356-private-use-value. Documented in docs/excel-semantics/number-formats.md. Eval delta: 4 new probe cases (t4356-*) added to eval/baseline/probes.txt, every cell matching Excel; known failures unchanged, 0 regressions. Also corrects the earlier "ASCII past byte 31" reading: bytes 32+ of extended-hex tags take their digits (that ASCII result was the x- prefix).
