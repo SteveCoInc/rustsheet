@@ -215,7 +215,17 @@ saved, from `rustsheet-eval snapshot`'s `pivots`:
 - `cells`: every cell of the location and of the page-field rows above it, A1 to value, a blank one
   as `{"t":"empty"}` (`snapshot.py` `pivot_areas`; an area over 100,000 cells is not captured).
 
-`OracleFile::pivots` reads it, and T-4124 scores it.
+`OracleFile::pivots` reads it. For a spec case, every one of those cells is a scored Excel cell (T-4124,
+`crates/rustsheet-eval/src/pivot_scoring.rs`): a pivot the engine does not render fails cell by cell, and
+its failures enter the baseline like any other cell's. A cell the sidecar's `sheets` also give keeps that
+value. Each sidecar pivot's layout is also compared with the engine's, matched by sheet and name:
+- `Missing`: no such engine pivot;
+- `LocationDiffers`: another location;
+- `LinesNotEmitted`: Excel's location, but no `rowItems`/`colItems` from the engine yet (T-4147).
+
+Mismatches are listed in report.md's "Pivot layout" section and in report.json's `pivot_layout` per case.
+xlsx cases' sidecars are not read for pivots yet: their pivot cells are cached constants the importer keeps
+(pivot-corpus, T-4131).
 Tools never re-derive case discovery: `rustsheet-eval cases <suite>` prints each case's path,
 sidecar path, formula-cell count and whether the suite trusts its cached values.
 

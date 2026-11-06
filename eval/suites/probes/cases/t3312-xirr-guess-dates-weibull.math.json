@@ -68,6 +68,11 @@
     "v": "0.0",
     "f": "=WEIBULL.DIST(0,400,10,TRUE)"
    },
+   "A57": {
+    "t": "e",
+    "why": "beta^alpha overflows",
+    "f": "=WEIBULL(0,400,10,FALSE)"
+   },
    "A58": {
     "t": "e",
     "why": "beta^alpha overflows",
