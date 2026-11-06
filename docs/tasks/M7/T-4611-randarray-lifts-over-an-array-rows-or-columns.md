@@ -3,7 +3,7 @@ id: T-4611
 title: "RANDARRAY lifts over an array rows or columns: RANDARRAY({2}) is one number, RANDARRAY({2;3}) a 2x1 of numbers"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
