@@ -60,8 +60,8 @@ Every failing table point has an owner.
 - Tables `eval/accuracy/tables/{DISC,INTRATE,RECEIVED,PRICEDISC,YIELDDISC,TBILLEQ,TBILLPRICE}/s1`, 200 points each
   (1,400), filled from excel-graph with 0 failures. Every error point in Excel matches a coded domain, and each is `#NUM!`.
 - `rustsheet-eval accuracy`: all 1,400 points inside the envelope (1,388 on both sides, 11 TBILLEQ points through
-  Excel's 15 digits only, 1 through the math only), 0 failing, 0 known failures added. `missing tables` went from
-  121 to 114. The engine is bit-exact with Excel on 1,398 of 1,400. The other two are TBILLEQ from 183 days, a few ulps
+  Excel's 15 digits only, 1 through the math only), 0 failing, 0 known failures added. `missing tables` lower by 7
+  (121 to 114 at the first merge of origin/main, 100 after the final one, which brought other groups' tables). The engine is bit-exact with Excel on 1,398 of 1,400. The other two are TBILLEQ from 183 days, a few ulps
   apart and both near the math (A39 `TBILLEQ(33842,34067,0.213177283226975)`, A127 `TBILLEQ(45351,45716,0.178249140751279)`).
 - **Excel kept as the target (decision 0300):** no point is more than 1e-4 relative off the math. The largest are
   TBILLEQ from 183 days at tiny discounts (A110 8.7E-5, A175 5.7E-5), where Excel's `-t + sqrt(...)` cancels. The engine
@@ -71,6 +71,6 @@ Every failing table point has an owner.
   only inferred), PRICEDISC's negative discount and overflow, the T-bills' negative discount, DISC at settlement 0, the
   zero-price rounding, and TBILLEQ's cancellation at tiny discounts.
 - Math sidecars: `rustsheet-accuracy math --function` over the seven functions, for probes (probes-numeric has no cell
-  of them), run after merging origin/main. That gives 10 new sidecars and 98 cells added to 8 existing ones, with no
+  of them), run after the final merge of origin/main. That gives 9 new sidecars and 107 cells added to 9 existing ones, with no
   existing cell changed. `make eval-math-check` prints "current".
 - Eval delta: none in the gated suites (tools, tables, sidecars and docs only).
