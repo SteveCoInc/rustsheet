@@ -52,7 +52,6 @@ top; 100·rate, a dirty sum or a price past the double range (unprobed for the o
 from __future__ import annotations
 
 import calendar
-import contextlib
 import datetime
 import math
 import random
@@ -68,12 +67,16 @@ from rustsheet_tools.accuracy.defs.bonds import (
     CARET_SOURCE,
     DAY_SOURCE,
     FREQUENCIES,
+    VALUE_EDGES,
     YEAR,
     basis_days,
+    bond_definition,
     coupons,
     date_serial,
     ln_or_minus_inf,
     past_double_top,
+    price_or_par,
+    value_edge,
 )
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.defs.yearfrac import (
@@ -84,7 +87,7 @@ from rustsheet_tools.accuracy.defs.yearfrac import (
     whole_serial,
 )
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
+from rustsheet_tools.accuracy.model import DomainError, MathArg, NoValueError
 from rustsheet_tools.accuracy.sampler import log_uniform
 from rustsheet_tools.fitlab.kernels.solvers import add_months, month_end, schedule
 
@@ -502,16 +505,8 @@ def _first_edge(rng: random.Random, *, price_given: bool) -> Draft:
         d.dates[2] = date_serial(add_months(real_date(first), -months, month_end(real_date(maturity))))
         d.dates[0] = rng.randint(int(d.dates[2]) + 1, first - 1)
         d.basis = rng.choice((0, 1, 4))
-    elif shape == 5:
-        d.rate = -rng.choice((1e-9, 0.01, 0.5))
-    elif shape == 6:
-        d.fourth = 0.0 if price_given else -rng.choice((1e-9, 0.01))
-    elif shape == 7:
-        d.redemption = rng.choice((0.0, -100.0))
-    elif shape == 8:
-        d.frequency = rng.choice((0, 3, 6, 12))
-    elif shape == 9:
-        d.basis = rng.choice((-1, 5))
+    elif shape < 5 + VALUE_EDGES:
+        value_edge(d, shape - 5, rng, price_given=price_given)
     elif shape == 10:  # a date off the calendar
         d.dates[rng.randrange(4)] = rng.choice((-1.0, 2958466.0))
     elif not price_given:  # huge yields: the redemption's power overflows past about 1E+15 for 10-year bonds
@@ -526,11 +521,12 @@ def _price_given(d: Draft, price: Callable[[OddArgs], mpmath.mpf], n_dates: int,
     o = d.checked(n_dates)
     if o is not None and d.fourth > -d.frequency:
         o = OddArgs(o.dates, o.rate, mpmath.mpf(d.fourth), o.redemption, o.frequency, o.basis)
-        with mpmath.workdps(30), contextlib.suppress(DomainError, NoValueError):
-            pr = float(price(o))
-    if not (1e-3 * d.redemption <= pr <= 1e4 * d.redemption):
-        pr = d.redemption * rng.uniform(0.5, 1.5)
-    d.fourth = pr
+        with mpmath.workdps(30):
+            try:
+                pr = float(price(o))
+            except (DomainError, NoValueError):
+                pr = math.nan
+    d.fourth = price_or_par(pr, d.redemption, rng)
 
 
 def _oddfprice_draw(stratum: str, rng: random.Random) -> list[Arg]:
@@ -599,16 +595,8 @@ def _last_edge(rng: random.Random, *, price_given: bool) -> Draft:
         d.dates[0] = maturity + rng.choice((0, 1))
     elif shape == 2:
         d.dates[2] = maturity + rng.choice((0, 1))
-    elif shape == 3:
-        d.rate = -rng.choice((1e-9, 0.01, 0.5))
-    elif shape == 4:
-        d.fourth = 0.0 if price_given else -rng.choice((1e-9, 0.01))
-    elif shape == 5:
-        d.redemption = rng.choice((0.0, -100.0))
-    elif shape == 6:
-        d.frequency = rng.choice((0, 3, 6, 12))
-    elif shape == 7:
-        d.basis = rng.choice((-1, 5))
+    elif shape < 3 + VALUE_EDGES:
+        value_edge(d, shape - 3, rng, price_given=price_given)
     elif shape == 8:
         d.dates[rng.randrange(3)] = rng.choice((-1.0, 2958466.0))
     elif shape == 9:  # a quasi-coupon date past 9999-12-31 (`ODDLPRICE(DATE(9999,8,1),DATE(9999,12,31),...)`)
@@ -645,62 +633,37 @@ def _oddlyield_draw(stratum: str, rng: random.Random) -> list[Arg]:
     return d.args()
 
 
-def _definition(
-    function: str,
-    names: Sequence[str],
-    value: Callable[[Sequence[MathArg]], mpmath.mpf],
-    draw: Callable[[str, random.Random], list[Arg]],
-    sources: Sequence[str],
-    *,
-    solver: bool = False,
-) -> Definition:
-    # every domain rule is the value's (Excel reads the arguments in its own order): no interval checks
-    params = [Param(name, "real", source=ORDER_SOURCE) for name in names[:-2]]
-    params.append(Param(names[-2], "int", source=ORDER_SOURCE))
-    params.append(Param(names[-1], "int", source=ORDER_SOURCE, optional=True))
-    return register(
-        Definition(
-            function=function,
-            params=tuple(params),
-            value=value,
-            draw=draw,
-            solver=solver,
-            serials_1900=True,
-            sources=(ORDER_SOURCE, DAY_SOURCE, WORK_SOURCE, ENGINE_SOURCE, *sources),
-        )
-    )
-
-
 _FIRST = ("settlement", "maturity", "issue", "first_coupon", "rate")
 _LAST = ("settlement", "maturity", "last_interest", "rate")
+_COMMON = (ORDER_SOURCE, DAY_SOURCE, WORK_SOURCE, ENGINE_SOURCE)  # ORDER_SOURCE first: the parameters cite it
 _FIRST_SOURCES = (FIRST_ORDER_SOURCE, FIRST_SCHEDULE_SOURCE, CARET_SOURCE)
 
-ODDFPRICE = _definition(
+ODDFPRICE = bond_definition(
     "ODDFPRICE",
     (*_FIRST, "yld", "redemption", "frequency", "basis"),
     _oddfprice,
     _oddfprice_draw,
-    (*_FIRST_SOURCES, HUGE_SOURCE),
+    (*_COMMON, *_FIRST_SOURCES, HUGE_SOURCE),
 )
-ODDFYIELD = _definition(
+ODDFYIELD = bond_definition(
     "ODDFYIELD",
     (*_FIRST, "pr", "redemption", "frequency", "basis"),
     _oddfyield,
     _oddfyield_draw,
-    (*_FIRST_SOURCES, SHORT_SOURCE, FAR_SOURCE, EXTREME_SOURCE),
+    (*_COMMON, *_FIRST_SOURCES, SHORT_SOURCE, FAR_SOURCE, EXTREME_SOURCE),
     solver=True,
 )
-ODDLPRICE = _definition(
+ODDLPRICE = bond_definition(
     "ODDLPRICE",
     (*_LAST, "yld", "redemption", "frequency", "basis"),
     _oddlprice,
     _oddlprice_draw,
-    (LAST_CALENDAR_SOURCE, HUGE_SOURCE),
+    (*_COMMON, LAST_CALENDAR_SOURCE, HUGE_SOURCE),
 )
-ODDLYIELD = _definition(
+ODDLYIELD = bond_definition(
     "ODDLYIELD",
     (*_LAST, "pr", "redemption", "frequency", "basis"),
     _oddlyield,
     _oddlyield_draw,
-    (LAST_CALENDAR_SOURCE, FAR_SOURCE),
+    (*_COMMON, LAST_CALENDAR_SOURCE, FAR_SOURCE),
 )

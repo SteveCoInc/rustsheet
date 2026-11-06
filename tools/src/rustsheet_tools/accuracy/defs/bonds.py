@@ -61,6 +61,7 @@ import random
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
+from typing import Protocol
 
 import mpmath
 
@@ -433,6 +434,70 @@ def _base(stratum: str, rng: random.Random) -> Draft:
     return Draft(settlement, maturity, rate, yld, redemption, frequency, _basis(rng))
 
 
+class BondDraft(Protocol):
+    """A drawn bond's value arguments, which `value_edge` breaks."""
+
+    rate: float
+    fourth: float
+    redemption: float
+    frequency: int
+    basis: int | None
+
+
+VALUE_EDGES = 5  # the shapes of `value_edge`
+
+
+def value_edge(d: BondDraft, shape: int, rng: random.Random, *, price_given: bool) -> None:
+    """Breaks one value argument of a bond function, each `#NUM!` (`shape` 0..4): a negative rate, a negative yld or a
+    pr of 0, a redemption of 0 or below, a frequency other than 1, 2 or 4, a basis outside 0..4 ("PRICE, YIELD,
+    DURATION and MDURATION check order", "ODDFPRICE, ODDFYIELD, ODDLPRICE and ODDLYIELD check order")."""
+    if shape == 0:
+        d.rate = -rng.choice((1e-9, 0.01, 0.5))
+    elif shape == 1:
+        d.fourth = 0.0 if price_given else -rng.choice((1e-9, 0.01))
+    elif shape == 2:
+        d.redemption = rng.choice((0.0, -100.0))
+    elif shape == 3:
+        d.frequency = rng.choice((0, 3, 6, 12))
+    else:
+        d.basis = rng.choice((-1, 5))
+
+
+def price_or_par(pr: float, redemption: float, rng: random.Random) -> float:
+    """A yield function's drawn price: `pr` (the price at a drawn yld) when it is from 1E-3 to 1E4 of the redemption,
+    else one within half the redemption of it (the sampler cuts it to 15 digits)."""
+    if 1e-3 * redemption <= pr <= 1e4 * redemption:
+        return pr
+    return redemption * rng.uniform(0.5, 1.5)
+
+
+def bond_definition(
+    function: str,
+    names: Sequence[str],
+    value: Callable[[Sequence[MathArg]], mpmath.mpf],
+    draw: Callable[[str, random.Random], list[Arg]],
+    sources: Sequence[str],
+    *,
+    solver: bool = False,
+) -> Definition:
+    """A bond function's registered definition: real arguments, then the frequency and an optional basis (`int`);
+    every domain rule is the value's (Excel reads the arguments in its own order), so no interval checks."""
+    params = [Param(name, "real", source=sources[0]) for name in names[:-2]]
+    params.append(Param(names[-2], "int", source=sources[0]))
+    params.append(Param(names[-1], "int", source=sources[0], optional=True))
+    return register(
+        Definition(
+            function=function,
+            params=tuple(params),
+            value=value,
+            draw=draw,
+            solver=solver,
+            serials_1900=True,
+            sources=tuple(sources),
+        )
+    )
+
+
 def _edge(rng: random.Random, *, price_given: bool) -> Draft:
     """Domain edges: reversed or equal dates, a settlement below 1, a negative rate or yld, a price or redemption of
     0, frequency 3, basis 5 or -1, a PCD before 1900, the yld at which q^(s+N-1) overflows and coupons whose sum
@@ -443,16 +508,8 @@ def _edge(rng: random.Random, *, price_given: bool) -> Draft:
         d.maturity = int(d.settlement) - rng.choice((0, 1, 400))
     elif shape == 1:
         d.settlement = rng.choice((0.0, 0.5))
-    elif shape == 2:
-        d.rate = -rng.choice((1e-9, 0.01, 0.5))
-    elif shape == 3:
-        d.fourth = 0.0 if price_given else -rng.choice((1e-9, 0.01))
-    elif shape == 4:
-        d.redemption = rng.choice((0.0, -100.0))
-    elif shape == 5:
-        d.frequency = rng.choice((0, 3, 6, 12))
-    elif shape == 6:
-        d.basis = rng.choice((-1, 5))
+    elif shape < 2 + VALUE_EDGES:
+        value_edge(d, shape - 2, rng, price_given=price_given)
     elif shape == 7:  # a PCD before 1900-01-01 (#NUM!) or on 1900-01-01 (serial 1)
         d.settlement = rng.randint(1, 120)
         d.maturity = rng.choice((1000, 43831, 43830, 54788, 47484))
@@ -511,9 +568,7 @@ def _yield_draw(stratum: str, rng: random.Random) -> list[Arg]:
         )
         with mpmath.workdps(30), contextlib.suppress(DomainError, NoValueError):
             pr = float(price_of(b, coupons(b.settlement, b.maturity, b.frequency, b.basis)))
-    if not (1e-3 * d.redemption <= pr <= 1e4 * d.redemption):
-        pr = d.redemption * rng.uniform(0.5, 1.5)  # the sampler cuts it to 15 digits
-    d.fourth = pr
+    d.fourth = price_or_par(pr, d.redemption, rng)
     return d.args(with_redemption=True)
 
 
@@ -525,32 +580,19 @@ def _bond_definition(
     solver: bool = False,
 ) -> Definition:
     draw = _yield_draw if function == "YIELD" else _price_draw if len(names) == 7 else _duration_draw
-    # every domain rule is the value's (Excel reads the arguments in its own order): no interval checks
-    params = [Param(name, "real", source=ORDER_SOURCE) for name in names[:-2]]
-    params.append(Param(names[-2], "int", source=ORDER_SOURCE))
-    params.append(Param(names[-1], "int", source=ORDER_SOURCE, optional=True))
-    return register(
-        Definition(
-            function=function,
-            params=tuple(params),
-            value=value,
-            draw=draw,
-            solver=solver,
-            serials_1900=True,
-            sources=(
-                ORDER_SOURCE,
-                CALENDAR_SOURCE,
-                EDGES_SOURCE,
-                DAY_SOURCE,
-                COUPDAYS_SOURCE,
-                CARET_SOURCE,
-                SUM_SOURCE,
-                HUGE_SOURCE,
-                ENGINE_SOURCE,
-                *((ONE_PERIOD_SOURCE, SHORT_SOURCE, NEWTON_SOURCE, WORK_SOURCE) if solver else ()),
-            ),
-        )
+    sources = (
+        ORDER_SOURCE,
+        CALENDAR_SOURCE,
+        EDGES_SOURCE,
+        DAY_SOURCE,
+        COUPDAYS_SOURCE,
+        CARET_SOURCE,
+        SUM_SOURCE,
+        HUGE_SOURCE,
+        ENGINE_SOURCE,
+        *((ONE_PERIOD_SOURCE, SHORT_SOURCE, NEWTON_SOURCE, WORK_SOURCE) if solver else ()),
     )
+    return bond_definition(function, names, value, draw, sources, solver=solver)
 
 
 _PRICE_NAMES = ("settlement", "maturity", "rate", "yld", "redemption", "frequency", "basis")

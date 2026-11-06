@@ -50,7 +50,8 @@ Every failing table point has an owner.
   4, `coupNumber`'s month-end quasi count, the DFC = E `#NUM!`) and the drifting odd-last walk with basis 0's
   both-dates 30/360 period lengths (new `yearfrac.us_30_360_both`). It reuses bonds.py (`coupons`, `basis_days`,
   `date_serial`, the double-range tests, now public), the fit lab's `schedule`, `add_months` and `month_end` (now
-  public) and `annuity.unique_rate`. ODDFYIELD is ODDFPRICE's unique root (`solver=True`, 300 points; every flow is
+  public) and `annuity.unique_rate`. bonds.py now holds what both modules draw and register with (`value_edge`,
+  `price_or_par`, `bond_definition`); PRICE's, YIELD's, DURATION's and MDURATION's tables regenerate byte-identical. ODDFYIELD is ODDFPRICE's unique root (`solver=True`, 300 points; every flow is
   positive and after the dirty price); ODDLYIELD is ODDLPRICE's closed-form inverse.
   - Domain errors, each from a semantics entry: dates off the calendar, frequency, basis, a negative rate or yld, a pr
     or redemption of 0 or below, the date orders, a first coupon off the maturity's schedule, DFC = E, an ODDL*
