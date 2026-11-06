@@ -21,11 +21,12 @@ use std::time::Duration;
 use rayon::prelude::*;
 use rustsheet::{LoadOptions, SaveOptions, Workbook};
 use serde::Serialize;
+use sha2::{Digest as _, Sha256};
 
 use crate::baseline::{self as ratchet, Baseline};
 use crate::engine::harness_options;
 use crate::runner::{run_in_worker, CaseStatus};
-use crate::suite::{CaseFile, Suite};
+use crate::suite::{BaselineMode, CaseFile, Suite};
 use crate::xlsx_snapshot::read_snapshot;
 
 use package::{validate, Package, Problem};
@@ -77,6 +78,10 @@ pub struct Item {
     /// T-4503 evidences it: tagged, never applied.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub candidate: Option<&'static str>,
+    /// Source items the item covers that were not kept: a lost element's whole subtree, a lost
+    /// XML part's elements, a `<truncated>` item's hidden differences, 1 for another change or
+    /// loss, and 0 for an addition or a validator check ([`KeptRate`]).
+    pub weight: usize,
 }
 
 impl Item {
@@ -129,12 +134,12 @@ impl CaseResult {
 
 /// Runs every case of `suites` in parallel, each isolated against panics and `timeout`.
 #[must_use]
-pub fn run_suites(suites: &[Suite], filter: Option<&str>, timeout: Duration) -> Vec<CaseResult> {
+pub fn run_suites(suites: &[&Suite], filter: Option<&str>, timeout: Duration) -> Vec<CaseResult> {
     let mut jobs = Vec::new();
     let mut failed = Vec::new();
     for suite in suites {
         match suite.cases() {
-            Ok(cases) => jobs.extend(cases.into_iter().map(|c| (suite, c))),
+            Ok(cases) => jobs.extend(cases.into_iter().map(|c| (*suite, c))),
             Err(e) => failed.push(CaseResult {
                 id: format!("{}/<discovery>", suite.manifest.name),
                 suite: suite.manifest.name.clone(),
@@ -250,6 +255,7 @@ fn score(scenario: &'static str, sides: &Sides<'_>, out: &[u8]) -> (Vec<Item>, u
         verdict: Verdict::PackageInvalid,
         detail: Some(p.detail),
         candidate: None,
+        weight: 0,
     };
     let output = match Package::read(out) {
         Ok(pkg) => pkg,
@@ -304,6 +310,7 @@ fn score(scenario: &'static str, sides: &Sides<'_>, out: &[u8]) -> (Vec<Item>, u
                 verdict,
                 detail,
                 candidate: None,
+                weight: xmldiff::unit_weight(verdict),
             }));
         }
     }
@@ -326,17 +333,36 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
         key,
         verdict,
         detail,
+        weight: xmldiff::unit_weight(verdict),
     };
     for (key, part) in &src {
         checked += 1;
+        // A part lost, retyped or not comparable keeps none of the items a kept part would have
+        // counted: its elements and attributes count, and weigh, with it.
+        let whole = |verdict, detail| {
+            let inside = source
+                .xml
+                .get(*part)
+                .and_then(|xml| xmldiff::element_count(xml).ok())
+                .unwrap_or(0);
+            let it = Item {
+                weight: 1 + inside,
+                ..item("part", key.clone(), verdict, detail)
+            };
+            (it, inside)
+        };
         let Some(out_part) = out.get(key) else {
-            items.push(item("part", key.clone(), Verdict::Lost, None));
+            let (it, inside) = whole(Verdict::Lost, None);
+            checked += inside;
+            items.push(it);
             continue;
         };
         let (was, now) = (source.content_type(part), output.content_type(out_part));
         if was != now {
             let detail = Some(format!("content type {was:?} became {now:?}"));
-            items.push(item("part", key.clone(), Verdict::Changed, detail));
+            let (it, inside) = whole(Verdict::Changed, detail);
+            checked += inside;
+            items.push(it);
             continue;
         }
         let (mut verdict, mut detail) = (Verdict::Kept, None);
@@ -345,25 +371,35 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
                 Ok(part_diff) => {
                     checked += part_diff.checked;
                     for diff in part_diff.differences {
-                        items.push(item(
-                            diff.kind,
-                            format!("{key}:{}", diff.path),
-                            diff.verdict,
-                            diff.detail,
-                        ));
+                        items.push(Item {
+                            weight: diff.weight,
+                            ..item(
+                                diff.kind,
+                                format!("{key}:{}", diff.path),
+                                diff.verdict,
+                                diff.detail,
+                            )
+                        });
                     }
                     if part_diff.truncated > 0 {
                         let more = Some(format!("{} more differences", part_diff.truncated));
-                        items.push(item(
-                            "element",
-                            format!("{key}:<truncated>"),
-                            Verdict::Changed,
-                            more,
-                        ));
+                        items.push(Item {
+                            weight: part_diff.truncated_weight,
+                            ..item(
+                                "element",
+                                format!("{key}:<truncated>"),
+                                Verdict::Changed,
+                                more,
+                            )
+                        });
                     }
                 }
                 Err(why) => {
-                    (verdict, detail) = (Verdict::Changed, Some(format!("not comparable: {why}")));
+                    let (it, inside) =
+                        whole(Verdict::Changed, Some(format!("not comparable: {why}")));
+                    checked += inside;
+                    items.push(it);
+                    continue;
                 }
             },
             _ => {
@@ -380,19 +416,74 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
     (items, checked)
 }
 
-/// The results as a cells-mode baseline (SPEC-0033 D8): a case's checked count is the number of
-/// source items it compared, and each failing item is one known failure. A case that did not run
-/// is one `!Status` failure, as in the cell suites.
+/// The share of a run's source items that were kept (SPEC-0033 D2): the source items compared,
+/// less those the failing items cover ([`Item::weight`]: a lost subtree counts every element and
+/// attribute in it), over the items compared. `added` items and validator failures cover no source item, so
+/// the baseline gates them but they do not lower the rate. A case that did not run compares
+/// nothing, so it is counted in `unscored`, never as kept. M15's goal is stated as this figure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
+pub struct KeptRate {
+    /// Source items compared.
+    pub checked: usize,
+    /// Source items covered by `changed` or `lost` items.
+    pub not_kept: usize,
+    /// Cases that did not run (`!Status`), whose items are not in either count.
+    pub unscored: usize,
+}
+
+impl KeptRate {
+    /// The rate over `results`.
+    #[must_use]
+    pub fn of(results: &[&CaseResult]) -> KeptRate {
+        let mut rate = KeptRate::default();
+        for r in results {
+            if !matches!(r.status, CaseStatus::Pass | CaseStatus::Fail) {
+                rate.unscored += 1;
+                continue;
+            }
+            rate.checked += r.checked;
+            rate.not_kept += r.items.iter().map(|i| i.weight).sum::<usize>();
+        }
+        rate
+    }
+
+    /// The kept share in percent; 100 when nothing was compared.
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)] // item counts stay far below 2^52
+    pub fn percent(self) -> f64 {
+        if self.checked == 0 {
+            return 100.0;
+        }
+        100.0 * (self.checked.saturating_sub(self.not_kept)) as f64 / self.checked as f64
+    }
+}
+
+/// The results as a baseline (SPEC-0033 D8). A case that did not run is one `!Status` failure,
+/// as in the cell suites.
+///
+/// - `cells`: a case's checked count is the number of source items it compared, and each failing
+///   item is one known failure.
+/// - `cases`, for the corpora, whose item lists would make a baseline of tens of megabytes: a
+///   failing case is one line, `* <n> <digest>`. n weighs its failing items as [`KeptRate`] does,
+///   with at least 1 for each, and the digest names their set of keys; see [`diff`].
 #[must_use]
-pub fn baseline(results: &[&CaseResult]) -> Baseline {
+pub fn baseline(results: &[&CaseResult], mode: BaselineMode) -> Baseline {
     let mut b = Baseline::default();
+    if mode == BaselineMode::None {
+        return b;
+    }
     for r in results {
         b.checked.insert(r.id.clone(), r.checked);
         match r.status {
             CaseStatus::Pass => {}
             CaseStatus::Fail => {
-                for i in r.items.iter().filter(|i| !i.verdict.passes()) {
-                    b.failing.insert((r.id.clone(), i.baseline_key()));
+                let failing = r.items.iter().filter(|i| !i.verdict.passes());
+                if mode == BaselineMode::Cases {
+                    b.failing.insert((r.id.clone(), case_line(failing)));
+                } else {
+                    for i in failing {
+                        b.failing.insert((r.id.clone(), i.baseline_key()));
+                    }
                 }
             }
             other => {
@@ -401,6 +492,79 @@ pub fn baseline(results: &[&CaseResult]) -> Baseline {
         }
     }
     b
+}
+
+/// The item of a failing case in a `cases`-mode round-trip baseline, before its count.
+const CASE_ITEM: &str = "*";
+
+/// `* <n> <digest>` for a failing case's items: their weight, at least 1 each, and the first 16
+/// hex digits of the SHA-256 of their sorted baseline keys.
+fn case_line<'a>(failing: impl Iterator<Item = &'a Item>) -> String {
+    let mut n = 0;
+    let mut keys = Vec::new();
+    for i in failing {
+        n += i.weight.max(1);
+        keys.push(i.baseline_key());
+    }
+    keys.sort_unstable();
+    let mut hash = Sha256::new();
+    for k in &keys {
+        hash.update(k.as_bytes());
+        hash.update(b"\n");
+    }
+    let digest = crate::fetch::hex(&hash.finalize()[..8]);
+    format!("{CASE_ITEM} {n} {digest}")
+}
+
+/// The ratchet's delta between two round-trip baselines: [`ratchet::diff`] with three changes.
+/// - In `cases` mode a changed line whose n fell is a fix, whatever its digest. A line whose n
+///   held or rose is a regression: a different digest with the same n is a loss traded for a
+///   fix. A fix that outweighs a new loss passes; the cells-mode fixtures suite names each item.
+/// - A case whose checked count fell is a regression, since a round trip's count includes what
+///   the output let it compare: an unreadable output compares one item.
+/// - A case that newly did not run (`!Status`) is a regression whatever its count.
+#[must_use]
+pub fn diff(old: &Baseline, new: &Baseline) -> ratchet::Delta {
+    let mut delta = ratchet::diff(old, new);
+    let items = |b: &'_ Baseline, case: &str| -> Vec<String> {
+        b.failing
+            .range((case.to_string(), String::new())..)
+            .take_while(|(c, _)| c == case)
+            .map(|(_, item)| item.clone())
+            .collect()
+    };
+    let count = |b: &Baseline, case: &str| {
+        items(b, case).iter().find_map(|item| {
+            let rest = item.strip_prefix(CASE_ITEM)?.trim_start();
+            rest.split(' ').next()?.parse::<usize>().ok()
+        })
+    };
+    // The old line of a case whose count fell is already in `fixed` (old minus new).
+    delta.regressions.retain(|line| {
+        let Some((case, _)) = line.split_once('\t') else {
+            return true;
+        };
+        !matches!((count(old, case), count(new, case)), (Some(a), Some(b)) if b < a)
+    });
+    for (case, &now) in &new.checked {
+        let Some(&was) = old.checked.get(case) else {
+            continue;
+        };
+        let line = |what: String| format!("{case}\t{what}");
+        if now < was {
+            delta
+                .regressions
+                .push(line(format!("checked fell from {was} to {now}")));
+        }
+        let not_run = |b: &Baseline| items(b, case).into_iter().find(|i| i.starts_with('!'));
+        if let (None, Some(status)) = (not_run(old), not_run(new)) {
+            let it = line(status);
+            if !delta.regressions.contains(&it) {
+                delta.regressions.push(it);
+            }
+        }
+    }
+    delta
 }
 
 /// The Markdown summary of a run: per suite, case statuses, items by verdict, the most often lost
@@ -436,10 +600,15 @@ pub fn report_markdown(results: &[CaseResult]) -> String {
                 }
             }
         }
+        let rate = KeptRate::of(&cases);
         let _ = writeln!(
             md,
-            "## {suite}\n\n{} cases: {status:?}\n\nItems by verdict: {verdicts:?}\n",
-            cases.len()
+            "## {suite}\n\n{} cases: {status:?}\n\nKept {:.2}% of {} source items ({} not kept; {} cases not scored)\n\nItems by verdict: {verdicts:?}\n",
+            cases.len(),
+            rate.percent(),
+            rate.checked,
+            rate.not_kept,
+            rate.unscored
         );
         let mut lost: Vec<_> = lost.into_iter().collect();
         lost.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
@@ -490,7 +659,23 @@ pub fn command(
             "--filter is not allowed for baseline operations (partial runs look like regressions)"
         );
     }
-    let results = run_suites(suites, filter, timeout);
+    let mut lines = Vec::new();
+    // A suite over another suite's fetched cache (calipers, poi, corpus-bench) is skipped while
+    // that cache is absent, so a run never records an empty baseline over a real one. A gated
+    // suite's cases must be there.
+    let (suites, missing): (Vec<&Suite>, Vec<&Suite>) =
+        suites.iter().partition(|s| s.root().is_dir());
+    for s in missing {
+        if s.manifest.gate && mode != Mode::Report {
+            anyhow::bail!("{}: no cases at {}", s.manifest.name, s.root().display());
+        }
+        lines.push(format!(
+            "skipping {}: {} is not there (fetch the suite it reads)",
+            s.manifest.name,
+            s.root().display()
+        ));
+    }
+    let results = run_suites(&suites, filter, timeout);
     let out = root.join("eval/runs/latest");
     std::fs::create_dir_all(&out)?;
     std::fs::write(
@@ -499,15 +684,17 @@ pub fn command(
     )?;
     std::fs::write(out.join("roundtrip.md"), report_markdown(&results))?;
     let mut ok = true;
-    let mut lines = Vec::new();
     for suite in suites {
         let name = &suite.manifest.name;
         let mine: Vec<&CaseResult> = results.iter().filter(|r| &r.suite == name).collect();
-        let items: usize = mine.iter().map(|r| r.checked).sum();
-        let current = baseline(&mine);
+        let rate = KeptRate::of(&mine);
+        let current = baseline(&mine, suite.manifest.baseline);
         lines.push(format!(
-            "[{name}] {} cases, {items} items, {} failing",
+            "[{name}] {} cases ({} not scored), {} items, {:.2}% kept, {} failing",
             mine.len(),
+            rate.unscored,
+            rate.checked,
+            rate.percent(),
             current.failing.len()
         ));
         if mode == Mode::Report {
@@ -515,7 +702,7 @@ pub fn command(
         }
         let path = root.join("eval/baseline").join(format!("{name}.txt"));
         let old = Baseline::read(&path)?;
-        let delta = ratchet::diff(&old, &current);
+        let delta = diff(&old, &current);
         lines.extend(
             delta
                 .regressions
@@ -533,6 +720,22 @@ pub fn command(
             Mode::Update if !delta.regressions.is_empty() => {
                 ok = false;
                 lines.push("  refusing to record regressions".into());
+            }
+            // A case gone from a corpus (the `cases` suites) is a cache fetched under an older include, not a
+            // fix: refetch the suite (`rustsheet-eval fetch --suite <cell suite>`).
+            Mode::Update
+                if suite.manifest.baseline == BaselineMode::Cases
+                    && !delta.removed_cases.is_empty() =>
+            {
+                ok = false;
+                lines.extend(
+                    delta
+                        .removed_cases
+                        .iter()
+                        .take(25)
+                        .map(|c| format!("  REMOVED {c}")),
+                );
+                lines.push("  refusing to drop cases: refetch the suite they come from".into());
             }
             Mode::Update => current.write(&path)?,
             _ => {}

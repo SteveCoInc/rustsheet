@@ -333,7 +333,7 @@ def _typical(rng: random.Random, low: int = 2) -> list[Arg]:
     return list(_noisy_line(rng, n, log_uniform(rng, 1e-3, 1.0)))
 
 
-def _offset_series(
+def offset_series(
     rng: random.Random,
     n: int,
     offsets: tuple[float, float] = (1.0, 1e10),
@@ -349,10 +349,10 @@ def _tail(rng: random.Random, noise: float = 1e-12) -> list[Arg]:
     n = rng.randint(3, 12)
     shape = rng.randrange(3)
     if shape == 0:  # both offset
-        return [_offset_series(rng, n), _offset_series(rng, n)]
+        return [offset_series(rng, n), offset_series(rng, n)]
     if shape == 1:  # one offset, against a plain series
         plain = array_of(rng, n, 1e-3, 1e6)
-        return [_offset_series(rng, n), plain] if rng.random() < 0.5 else [plain, _offset_series(rng, n)]
+        return [offset_series(rng, n), plain] if rng.random() < 0.5 else [plain, offset_series(rng, n)]
     return list(_noisy_line(rng, n, log_uniform(rng, noise, 1e-4)))  # near-exact lines: r near +-1
 
 
@@ -410,7 +410,7 @@ _DRAWS: StratumDraws = {
 }
 
 
-def _forecast_x(rng: random.Random, xs: Sequence[float]) -> float:
+def forecast_x(rng: random.Random, xs: Sequence[float]) -> float:
     """FORECAST's x: inside the x data's range mostly, at a data point or the mean, or extrapolated."""
     lo, hi = min(xs), max(xs)
     width = (hi - lo) or abs(lo) or 1.0
@@ -431,7 +431,7 @@ def _forecast_draws() -> Callable[[str, random.Random], list[Arg]]:
             known_x = args[1]
             assert isinstance(known_x, tuple)
             xs = [v for v in known_x if isinstance(v, (int, float))]
-            return [_forecast_x(rng, xs), *args]
+            return [forecast_x(rng, xs), *args]
 
         return drawn
 
@@ -451,7 +451,7 @@ def _decimal_line(rng: random.Random) -> list[Arg]:
 
 def _near_1e160(rng: random.Random, n: int) -> tuple[float, ...]:
     """Values near 1E+160 a relative 1E-12 to 1E-9 apart: the sums about the means stay finite and Sxy^2 overflows."""
-    return _offset_series(rng, n, (1e159, 1e161), (1e-12, 1e-9))
+    return offset_series(rng, n, (1e159, 1e161), (1e-12, 1e-9))
 
 
 def _steyx_edge(rng: random.Random) -> list[Arg]:
