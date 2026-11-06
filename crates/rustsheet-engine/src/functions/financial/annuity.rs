@@ -14,7 +14,7 @@ use crate::x87_exp::{dd_add, dd_div, dd_mul, dd_neg, excel_exp, excel_expm1, two
 use crate::x87_log10::excel_ln;
 use crate::x87_register::Register;
 use crate::{
-    arithmetic::{extended_product, extended_quotient, extended_sum, power},
+    arithmetic::{extended_product, extended_quotient, extended_sum, flush_subnormal, power},
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
     functions::Function,
@@ -392,11 +392,17 @@ fn payment_factor(rate: f64, period_start: bool) -> Option<f64> {
 
 /// The discounted balance `A = (pv+fv)/(1-Q(-nper*L))` of Excel's PMT, IPMT and PPMT, with
 /// [`growth_log`]'s L, and the L itself. `None` where `1-Q` is not finite and normal (no
-/// periods, or `(1+rate)^-nper` past the double range).
+/// periods, `(1+rate)^-nper` past the double range, or `-nper*L` below the normal range) or `A`
+/// is not finite (`pv+fv` or the quotient past the double range). Excel's IPMT is `#NUM!` in
+/// each of these (financial.md "IPMT is #NUM! where its discounted balance fails", T-4314).
 fn discounted_balance(rate: f64, nper: f64, pv: f64, fv: f64) -> Option<(f64, f64)> {
     let log = growth_log(rate);
     let periods = discount_complement(-nper * log);
-    periods.is_normal().then_some(((pv + fv) / periods, log))
+    if !periods.is_normal() {
+        return None;
+    }
+    let balance = (pv + fv) / periods;
+    balance.is_finite().then_some((balance, log))
 }
 
 /// Excel's PMT (docs/excel-semantics/financial.md "PMT is a discounted payment"): with
@@ -433,7 +439,10 @@ fn discounted_split(
     let (balance, log) = discounted_balance(rate, nper, pv, fv)?;
     let factor = payment_factor(rate, period_start)?;
     let x = (period - 1.0 - nper) * log;
-    let interest = -((balance * discount_complement(x) - fv) * factor);
+    // The product with `d` below the normal range is a true 0, as Excel's `*` is
+    // (`IPMT(2.2250738585073E-308,2,1E+9,1E-10)` is 0 and `(..)=0` TRUE; probes/
+    // t4314-ipmt-balance-overflow C9:C11, E1:E3; numbers.md "Subnormal results become 0").
+    let interest = flush_subnormal(-((balance * discount_complement(x) - fv) * factor));
     // The discounted balance `A*Q(x)` below the normal range is 0, whatever the period: a subnormal
     // discount alone is kept where `A` lifts the product (`PPMT(7,1,341,1.9999)` is 0,
     // `PPMT(7,1,341,2)` and `PPMT(7,10,350,2)` -1.5575517009551696E-307, the discount 8^-341 =
@@ -593,12 +602,21 @@ fn period_payments(
     }
     let values = (present_value, future_value);
     let (mut interest, mut principal) = (None, None);
+    let mut interest_fails = false;
     if rate != 0.0 {
         if let Some((interest, principal)) =
             discounted_split(rate, period_count, period, values, period_start)
         {
             return (Ok(interest), Ok(principal));
         }
+        // Excel's IPMT is #NUM! where the split has no balance `A` or factor `d`: `A` past the
+        // double range, `1-Q` below the normal range, a subnormal rate (all 319 such cells of
+        // probes-numeric/t3523-ipmt-selector-sweep and probes/t4314-ipmt-balance-overflow;
+        // financial.md "IPMT is #NUM! where its discounted balance fails", T-4314). PPMT keeps
+        // the forms below (TODO(T-4488)).
+        interest_fails = discounted_balance(rate, period_count, present_value, future_value)
+            .is_none()
+            || payment_factor(rate, period_start).is_none();
         let e = if period_start {
             period - 2.0
         } else {
@@ -612,10 +630,7 @@ fn period_payments(
             .or_else(|| {
                 discounted_principal(rate, period_count, period, values, period_start, true)
             });
-        // Where T-2243's split declines, the exact balance interest. T-2587's switch to Excel's
-        // own discount past 6E-16 moved no cell once that split landed: no gated cell, and none of
-        // the 234 cells of probes-numeric/t3523-ipmt-selector-sweep that reach this branch, where
-        // Excel is `#NUM!` on every one (T-3523, decision 0188 R4; T-4314 owns the errors).
+        // Where T-2243's split declines on a finite product, the exact balance interest.
         interest = match balance_interest(rate, period_count, period, values, period_start) {
             Some((interest, true)) => Some(interest),
             balance => split
@@ -623,21 +638,28 @@ fn period_payments(
                 .or(balance.map(|(interest, _)| interest)),
         };
     }
-    if let (Some(interest), Some(principal)) = (interest, principal) {
-        return (Ok(interest), Ok(principal));
-    }
-    let fallback = payment.ok_or(Error::NUM).and_then(|payment| {
-        double_period_payments(rate, period, present_value, payment.0, period_start)
-    });
-    match fallback {
-        Ok((fallback_interest, fallback_principal)) => (
-            Ok(interest.unwrap_or(fallback_interest)),
-            Ok(principal.unwrap_or(fallback_principal)),
-        ),
-        Err(error) => (
-            interest.ok_or_else(|| error.clone()),
-            principal.ok_or(error),
-        ),
+    let (interest, principal) = match (interest, principal) {
+        (Some(interest), Some(principal)) => (Ok(interest), Ok(principal)),
+        (interest, principal) => {
+            let fallback = payment.ok_or(Error::NUM).and_then(|payment| {
+                double_period_payments(rate, period, present_value, payment.0, period_start)
+            });
+            match fallback {
+                Ok((fallback_interest, fallback_principal)) => (
+                    Ok(interest.unwrap_or(fallback_interest)),
+                    Ok(principal.unwrap_or(fallback_principal)),
+                ),
+                Err(error) => (
+                    interest.ok_or_else(|| error.clone()),
+                    principal.ok_or(error),
+                ),
+            }
+        }
+    };
+    if interest_fails {
+        (Err(Error::NUM), principal)
+    } else {
+        (interest, principal)
     }
 }
 
