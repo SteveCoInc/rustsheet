@@ -39,9 +39,9 @@ Goals:
 3. **Refresh semantics as Excel's:**
    - a pivot refreshes on load when its cache is `refreshOnLoad`, on an explicit API call, and when it is
      created;
-   - by design default, pending probe T-4586: never on a source edit (Auto Refresh only as T-4182
-     evidences), and a pivot loaded without `refreshOnLoad` keeps the cells the file saved. No probe yet
-     shows what Excel does in either case, because every rendered probe so far is `refreshOnLoad`.
+   - never on a source edit (Auto Refresh only as T-4182 evidences) nor on a calculate, and a pivot
+     loaded without `refreshOnLoad` keeps the cells the file saved, even when they or its `rowItems`
+     disagree with the cache or are absent (probes/t4586-pivot-refresh-on-load, T-4586).
 4. **Bounded work and memory on untrusted pivots** (directive 5), with every cap a `DEVIATION` entry.
 
 Non-goals (decision 0274):
@@ -56,7 +56,9 @@ The evidence lives in docs/excel-semantics/pivots.md and web.md (GETPIVOTDATA an
 design depends on:
 - **Refresh:** a `refreshOnLoad` cache is rebuilt from the source on open, from the recalculated
   values (probes/t4128-pivot-spike R: `DataF!C2` `=1000` cached as 0, and the pivot shows 1004). Whether
-  Excel also overwrites rendered constants already in the area is open (T-2327).
+  Excel also overwrites rendered constants already in the area is open (T-2327). Without `refreshOnLoad`
+  Excel keeps the saved cells and layout lines as they are, and a source edit followed by a full
+  calculate leaves a rendered pivot unchanged (probes/t4586-pivot-refresh-on-load).
 - **Item identity and order** (probes/t4134-pivot-items):
   - text items are case-insensitive; numbers compare exactly; text is never a number. Which casing shows
     when the cache and the source disagree, and whether date items with and without a time part are one
