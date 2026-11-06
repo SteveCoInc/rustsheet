@@ -2356,6 +2356,7 @@ C	probes/t4323-fraction-ties.case.json	150
 C	probes/t4331-typed-xlpm-remaining.case.json	13
 C	probes/t4332-fraction-fresh.case.json	120
 C	probes/t4333-count-ulp-scan.case.json	56
+C	probes/t4341-elapsed-second-forms.case.json	42
 C	probes/t4342-groupby-tree-holdout.case.json	1107
 C	probes/t4344-groupby-descending-search.case.json	1200
 C	probes/t4347-numeral-bytes-24-27.case.json	140

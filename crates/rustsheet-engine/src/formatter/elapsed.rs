@@ -214,11 +214,12 @@ pub(super) fn elapsed_after_larger_clock(tokens: &[TextToken]) -> bool {
 /// `[s] m` prints like `s [m]`, the seconds field then the elapsed minutes counted from the date
 /// section's register ([`date_section_register`], which a clock token in front selects). So
 /// `TEXT(1.7/24+0.3/1440,"[s] m")` is "18 26640", `"[s] h"` "18 444", `"[s] m s"` "18 26640 18".
-/// The rewrite also drops the elapsed flag the parser gave a later `s`. Evidence:
-/// probes/t4295-elapsed-with-month A1:D9, K1:K9 (excel-graph, 2026-11-05, T-4295); `[ss]`, and a
-/// second hour or minute token after the first, are UNVERIFIED (not probed). A clock token before
-/// the `[s]` leaves the section as parsed, so [`elapsed_after_larger_clock`] keeps `s [s] m` and
-/// `h [s] m` `#VALUE!` like `s [s]` (UNVERIFIED with the `m` after; not probed).
+/// The rewrite also drops the elapsed flag the parser gave a later `s`. The first hour token takes
+/// the count even behind a minute token (`[s] m h` is "18 42 444"), else the first minute token
+/// does. Evidence: probes/t4295-elapsed-with-month A1:D9, K1:K9 (excel-graph, 2026-11-05, T-4295);
+/// probes/t4341-elapsed-second-forms (excel-graph, 2026-11-06, T-4341). A clock, date or elapsed
+/// token before the `[s]` leaves the section as parsed or the rewrite moves on ([`elapsed_after_larger_clock`]
+/// keeps `s [s] m` and `[h] [s] m` `#VALUE!` like `s [s]`).
 pub(super) fn move_elapsed_second(tokens: &mut [TextToken]) {
     let Some(start) = tokens
         .iter()
@@ -229,12 +230,18 @@ pub(super) fn move_elapsed_second(tokens: &mut [TextToken]) {
     if tokens[..start].iter().any(|t| clock_unit(t).is_some()) {
         return;
     }
-    let Some(target) = tokens[start..].iter().position(|t| {
-        matches!(
-            t,
-            TextToken::Hour | TextToken::HourPadded | TextToken::Minute | TextToken::MinutePadded
-        )
-    }) else {
+    // The first hour token after `[s]` takes the count even behind a minute token, else the first
+    // minute token does (`[s] m h` is "18 42 444", `[s] m m` "18 26640 1"; probes/t4341).
+    let after = &tokens[start..];
+    let Some(target) = after
+        .iter()
+        .position(|t| matches!(t, TextToken::Hour | TextToken::HourPadded))
+        .or_else(|| {
+            after
+                .iter()
+                .position(|t| matches!(t, TextToken::Minute | TextToken::MinutePadded))
+        })
+    else {
         return;
     };
     for token in tokens.iter_mut() {
