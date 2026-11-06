@@ -3,7 +3,7 @@ id: T-4202
 title: "Correct T-3396's CHISQ.INV wording: df above 1E10 is #NUM! by the domain limit, not the band"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
