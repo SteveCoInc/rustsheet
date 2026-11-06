@@ -427,6 +427,14 @@ fn spec_defined_pivot_parses_and_is_not_registered() {
         evaluated.value("S", Addr { row: 2, col: 8 }),
         Some(Value::Error(_))
     ));
+    // Without a definition, `row` and `value` are required.
+    let bare = spec(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{"A1":"Key","B1":"Val"},
+            "pivot_tables":[{"name":"Pv","source":"A1:B2","location":"D1","value":"Val",
+            "rendered":{"D1":"Row Labels"}}]}]}"#,
+    );
+    let err = RustSheetEngine.evaluate_spec(&bare, None).err();
+    assert!(err.is_some_and(|e| e.contains("needs `row` and `value`")));
 }
 
 #[test]

@@ -57,10 +57,8 @@ from xml.sax.saxutils import quoteattr
 import xlsxwriter.utility
 
 from rustsheet_tools.pivot_definition import DefinedPivot
+from rustsheet_tools.pivot_xml import MAIN_NS, PACKAGE_REL_NS, REL_NS, number_text
 
-_MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-_PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 _CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.{}+xml"
 _FUNCTIONS: dict[str, tuple[str, Callable[[list[float]], float]]] = {
     "sum": ("Sum", sum),
@@ -156,10 +154,6 @@ def _source(
         f"{xlsxwriter.utility.xl_rowcol_to_cell(r1, c1)}:{xlsxwriter.utility.xl_rowcol_to_cell(r2, c2)}"
     )
     return sheet_name, normalized, rows
-
-
-def _number(value: float) -> str:
-    return str(int(value)) if float(value).is_integer() and abs(value) < 1e15 else repr(float(value))
 
 
 class _Pivot:
@@ -350,14 +344,14 @@ class _Pivot:
                     integer = ' containsInteger="1"' if all(n.is_integer() for n in numbers) else ""
                     shared = (
                         f'<sharedItems containsSemiMixedTypes="0" containsString="0" containsNumber="1"{integer}'
-                        f'{blank} minValue="{_number(min(numbers))}" maxValue="{_number(max(numbers))}"/>'
+                        f'{blank} minValue="{number_text(min(numbers))}" maxValue="{number_text(max(numbers))}"/>'
                     )
             if i == self.row and self.group is not None:
                 shared += self.group.xml(base=i)
             fields.append(f'<cacheField name={quoteattr(name)} numFmtId="0">{shared}</cacheField>')
         refresh = "" if self.unused or self.column_unused else ' refreshOnLoad="1"'
         return (
-            f'<pivotCacheDefinition xmlns="{_MAIN_NS}" xmlns:r="{_REL_NS}" r:id="rId1"{refresh}'
+            f'<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"{refresh}'
             f' createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{len(self.records)}">'
             f'<cacheSource type="worksheet"><worksheetSource ref="{self.source_ref}"'
             f" sheet={quoteattr(self.source_sheet)}/></cacheSource>"
@@ -374,14 +368,14 @@ class _Pivot:
                 if v is None
                 else f'<d v="{_iso(float(v))}"/>'
                 if self._dates(i)
-                else f'<n v="{_number(float(v))}"/>'
+                else f'<n v="{number_text(float(v))}"/>'
                 for i, v in enumerate(record)
             )
             + "</r>"
             for record in self.records
         )
         return (
-            f'<pivotCacheRecords xmlns="{_MAIN_NS}" count="{len(self.records)}">{records}</pivotCacheRecords>'
+            f'<pivotCacheRecords xmlns="{MAIN_NS}" count="{len(self.records)}">{records}</pivotCacheRecords>'
         )
 
     def _axis_items(self, index: int) -> tuple[str, str]:
@@ -424,7 +418,7 @@ class _Pivot:
             columns += f'<colItems count="{len(self._shown(self.column)) + 1}">{column_lines}</colItems>'
         subtotal = "" if self.function == "sum" else f' subtotal="{self.function}"'
         return (
-            f'<pivotTableDefinition xmlns="{_MAIN_NS}" name={quoteattr(self.name)} cacheId="{cache_id}"'
+            f'<pivotTableDefinition xmlns="{MAIN_NS}" name={quoteattr(self.name)} cacheId="{cache_id}"'
             ' applyNumberFormats="0" applyBorderFormats="0" applyFontFormats="0" applyPatternFormats="0"'
             ' applyAlignmentFormats="0" applyWidthHeightFormats="1" dataCaption="Values" updatedVersion="6"'
             ' minRefreshableVersion="3" useAutoFormatting="1" itemPrintTitles="1" createdVersion="6" indent="0"'
@@ -450,12 +444,13 @@ class _Group:
 
     def xml(self, *, base: int) -> str:
         items = "".join(
-            f"<s v={quoteattr(v)}/>" if isinstance(v, str) else f'<n v="{_number(v)}"/>' for v in self.items
+            f"<s v={quoteattr(v)}/>" if isinstance(v, str) else f'<n v="{number_text(v)}"/>'
+            for v in self.items
         )
         if self.by is None:
             bounds = (
-                f'startNum="{_number(self.start)}" endNum="{_number(self.end)}"'
-                f' groupInterval="{_number(self.interval)}"'
+                f'startNum="{number_text(self.start)}" endNum="{number_text(self.end)}"'
+                f' groupInterval="{number_text(self.interval)}"'
             )
         else:
             bounds = f'groupBy="{self.by}" startDate="{_iso(self.start)}" endDate="{_iso(self.end)}"'
@@ -515,11 +510,11 @@ def rendered_cells(spec: dict[str, Any], sheet: dict[str, Any], pivot: dict[str,
 
 def relationships_xml(*relationships: str) -> bytes:
     """A relationships part holding `relationships`."""
-    return _xml(f'<Relationships xmlns="{_PACKAGE_REL_NS}">{"".join(relationships)}</Relationships>')
+    return _xml(f'<Relationships xmlns="{PACKAGE_REL_NS}">{"".join(relationships)}</Relationships>')
 
 
 def _relationship(rid: str, kind: str, target: str) -> str:
-    return f'<Relationship Id="{rid}" Type="{_REL_NS}/{kind}" Target="{target}"/>'
+    return f'<Relationship Id="{rid}" Type="{REL_NS}/{kind}" Target="{target}"/>'
 
 
 def _xml(text: str) -> bytes:

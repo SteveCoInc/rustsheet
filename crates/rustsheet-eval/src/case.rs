@@ -279,7 +279,7 @@ pub struct PivotTableSpec {
     pub column_show_all: bool,
     /// The pivot's definition, one-to-one with `pivotTableDefinition`
     /// (`tools/src/rustsheet_tools/pivot_definition.py`, which validates it). Kept opaque here: only
-    /// spec2xlsx reads it so far.
+    /// spec2xlsx reads it so far; T-4152 types it when the adapter builds the pivot from it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub definition: Option<serde_json::Value>,
 }

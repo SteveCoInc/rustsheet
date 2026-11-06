@@ -65,6 +65,14 @@ fn pivot_input(
     id: SheetId,
     pivot: &PivotTableSpec,
 ) -> Result<PivotTableInput, EditError> {
+    // `row` and `value` default to empty only so a pivot with a `definition` parses (T-4122); a
+    // pivot without one needs both.
+    if pivot.row.is_empty() || pivot.value.is_empty() {
+        return Err(EditError::Engine(format!(
+            "pivot {} needs `row` and `value`, or a `definition`",
+            pivot.name
+        )));
+    }
     let (source_sheet, range) = split_qualified(&pivot.source)
         .unwrap_or_else(|| (sheet.name.clone(), pivot.source.clone()));
     let source_id = spec
