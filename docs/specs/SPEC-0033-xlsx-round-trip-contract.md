@@ -104,7 +104,7 @@ renumbering. The comparison (D3, D4) finds each item of the source in the output
 | Kind | Key | Compared as |
 |---|---|---|
 | `cell` | sheet name, A1 | value and type, formula text, resolved style properties (D3.4) |
-| `sheet` | sheet name | state, order, kind (worksheet, chartsheet, macro sheet, dialog sheet), sheetPr, views, dimension-free sheet settings |
+| `sheet` | sheet name | state, order, kind (worksheet, chartsheet, macro sheet, dialog sheet), sheetPr (tab colour, outline, codeName), sheet views, sheetFormatPr, and every other sheet setting except `dimension` (which N9 derives) |
 | `name` | scope, name | formula text, hidden, comment |
 | `feature` | owner (workbook, sheet name, table name), feature, ordinal or natural key (D3.2) | the feature's canonical form: one record per merge range, CF rule, DV rule, hyperlink, note, threaded comment, table, autoFilter, page setup, header/footer, protection, outline, and so on |
 | `part` | owner chain from the package root by relationship type, plus the ordinal among its siblings of the same type (never the part name) | presence, content type, relationship closure, bytes or XML (D4) |
@@ -305,6 +305,9 @@ pub enum DropReason {
 3. A reported item that is in fact still in the output is a `SaveReport` bug, scored `changed`.
 
 ### D8. The `roundtrip` suite kind
+Round-trip suites live under `eval/roundtrip/<name>/suite.toml`, outside `eval/suites/` (as Gate A's tables do), so
+no cell report or milestone measure counts them (T-4172).
+
 ```toml
 name = "roundtrip-calipers"
 kind = "roundtrip"
@@ -315,14 +318,14 @@ scenarios = ["R0", "R1/E1", "R1/E2", "R1/E3", "R1/E4", "R1/E5", "R1/E6", "R1/all
 golden = { R0 = "golden.xlsx" }
 exceptions = "exceptions.toml"
 gate = false
-baseline = "items"
+baseline = "cells"   # fidelity items take the item slot of the ordinary cells-mode baseline
 milestone = ["M15"]
 ```
 
 - **Discovery and fetch.** These reuse the `xlsx` kind's machinery (`include`, `exclude`, `[fetch]`, licence and
   origin keys). There is one case discoverer, not two (directive 3).
-- **Baseline.** `eval/baseline/<suite>.txt` lists the items not passing, one per line:
-  `<case>\t<scenario>\t<item key>\t<verdict>`. The ratchet is the usual one. A line may disappear (fixed). A new
+- **Baseline.** `eval/baseline/<suite>.txt` is the ordinary cells-mode file: `C` gives a case's item count, and each
+  `F` line holds a failing item, `<scenario> <kind> <item key> <verdict>`. The ratchet is the usual one. A line may disappear (fixed). A new
   failing item is a regression unless the case is new (new coverage). `update-baseline` refuses regressions.
   `--allow-regressions` needs a decision record, as everywhere.
 - **Exceptions.** `exceptions.toml` holds narrow, per-case tokens in Calipers' style. Each token names the decision

@@ -41,6 +41,7 @@ use rustsheet_eval::phase1_exceptions::Phase1Exceptions;
 use rustsheet_eval::probe_milestones::{self, Mapping, Rules};
 use rustsheet_eval::r1c::R1cCells;
 use rustsheet_eval::report::RunReport;
+use rustsheet_eval::roundtrip;
 use rustsheet_eval::run_meta::RunMeta;
 use rustsheet_eval::runner::{run_suites, CaseResult, RunOptions};
 use rustsheet_eval::suite::{BaselineMode, FetchState, Suite, SuiteKind, ACCURACY_DIR};
@@ -168,6 +169,18 @@ enum Cmd {
         cached: PathBuf,
         recalculated: PathBuf,
     },
+    /// Round-trip fidelity (SPEC-0033): load and save each workbook of the suites under
+    /// eval/roundtrip, validate the output and score what it kept; writes
+    /// eval/runs/latest/roundtrip.{json,md}. `--check` gates the baselines, `--update-baseline`
+    /// ratchets them (refusing regressions).
+    Roundtrip {
+        #[command(flatten)]
+        sel: Selection,
+        #[arg(long, conflicts_with = "update")]
+        check: bool,
+        #[arg(long = "update-baseline")]
+        update: bool,
+    },
     /// Gate A (SPEC-0029, decision 0188 R2): fail when a reference-table point of eval/accuracy
     /// is outside the envelope, a known-failure line is stale, an R3 mark lacks evidence or a
     /// table is defective.
@@ -252,7 +265,11 @@ fn find_root(explicit: Option<PathBuf>) -> Result<PathBuf> {
 }
 
 fn select(root: &Path, sel: &Selection, gate_only: bool) -> Result<Vec<Suite>> {
-    let all = Suite::load_all(&root.join("eval/suites"))?;
+    select_from(Suite::load_all(&root.join("eval/suites"))?, sel, gate_only)
+}
+
+/// [`select`] over a given list of suites (the round-trip suites use it too).
+fn select_from(all: Vec<Suite>, sel: &Selection, gate_only: bool) -> Result<Vec<Suite>> {
     let chosen: Vec<Suite> = all
         .into_iter()
         .filter(|s| {
@@ -827,24 +844,7 @@ fn run() -> Result<ExitCode> {
     }
     let root = find_root(cli.root)?;
     match cli.cmd {
-        Cmd::Suites => {
-            for s in Suite::load_all(&root.join("eval/suites"))? {
-                let n = s.cases().map_or(0, |c| c.len());
-                let cases = match s.fetch_state() {
-                    FetchState::NotFetched => rustsheet_eval::run_meta::NOT_FETCHED.to_string(),
-                    _ => format!("{n} cases"),
-                };
-                println!(
-                    "{:<28} {:>12}  gate={:<5} license={:<20} {}",
-                    s.manifest.name,
-                    cases,
-                    s.manifest.gate,
-                    s.manifest.license,
-                    s.manifest.description
-                );
-            }
-            Ok(ExitCode::SUCCESS)
-        }
+        Cmd::Suites => cmd_suites(&root),
         Cmd::Fetch { suites } => {
             let all = Suite::load_all(&root.join("eval/suites"))?;
             let mut fetched = 0;
@@ -929,8 +929,47 @@ fn run() -> Result<ExitCode> {
         Cmd::Show { case_id, all } => cmd_show(&root, &case_id, all),
         Cmd::Cases { suite } => cmd_cases(&root, &suite),
         Cmd::Accuracy { json, timeout } => cmd_accuracy(&root, json, timeout),
+        Cmd::Roundtrip { sel, check, update } => cmd_roundtrip(&root, &sel, check, update),
         Cmd::Snapshot { .. } | Cmd::Compare { .. } => unreachable!("handled above"),
     }
+}
+
+/// `rustsheet-eval suites`: the cell suites, then the round-trip suites (SPEC-0033).
+fn cmd_suites(root: &Path) -> Result<ExitCode> {
+    let mut all = Suite::load_all(&root.join("eval/suites"))?;
+    all.extend(Suite::load_roundtrip(root)?);
+    for s in all {
+        let n = s.cases().map_or(0, |c| c.len());
+        let cases = match s.fetch_state() {
+            FetchState::NotFetched => rustsheet_eval::run_meta::NOT_FETCHED.to_string(),
+            _ => format!("{n} cases"),
+        };
+        println!(
+            "{:<28} {:>12}  gate={:<5} license={:<20} {}",
+            s.manifest.name, cases, s.manifest.gate, s.manifest.license, s.manifest.description
+        );
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+/// `rustsheet-eval roundtrip` (SPEC-0033): the gate suites with `--check`, else the selection.
+fn cmd_roundtrip(root: &Path, sel: &Selection, check: bool, update: bool) -> Result<ExitCode> {
+    let suites = select_from(Suite::load_roundtrip(root)?, sel, check)?;
+    let mode = match (check, update) {
+        (true, _) => roundtrip::Mode::Check,
+        (_, true) => roundtrip::Mode::Update,
+        _ => roundtrip::Mode::Report,
+    };
+    let timeout = Duration::from_secs(sel.timeout);
+    let (ok, lines) = roundtrip::command(root, &suites, sel.filter.as_deref(), timeout, mode)?;
+    for line in lines {
+        println!("{line}");
+    }
+    Ok(if ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
 }
 
 fn main() -> ExitCode {

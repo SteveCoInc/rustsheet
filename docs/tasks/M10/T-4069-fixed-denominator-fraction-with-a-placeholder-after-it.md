@@ -23,3 +23,5 @@ Found by T-3711: probes/t3711-placeholder-after-fraction S!A13. With a fixed den
 
 ## Out of scope
 -
+
+Note (T-4507): T-4515 takes this case into one model of the placeholders after a fraction; close this with it.
