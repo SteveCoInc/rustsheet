@@ -3,7 +3,7 @@ id: T-4386
 title: "Salvage draft PR #3211's IRR near-zero-root fresh sweep and T-4232 task onto main"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
