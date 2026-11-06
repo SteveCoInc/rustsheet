@@ -644,14 +644,23 @@ impl Model {
         end_serial: f64,
         unit: Result<&str, Error>,
     ) -> Result<f64, Error> {
-        let (start_serial, end_serial) = (start_serial.floor() as i64, end_serial.floor() as i64);
         // A unit error beats a reversed pair and an out-of-calendar date: `DATEDIF(10,5,NA())` and
         // `DATEDIF(3000000,5,NA())` are #N/A (probes/datedif-days360-error-order A1, A16; dates.md
         // "DATEDIF argument errors before date checks").
         let unit = unit?;
-        if end_serial < start_serial {
+        if end_serial.floor() < start_serial.floor() {
             return Err(Error::NUM);
         }
+        // "D" floors the serials, while the calendar units read the day YEAR, MONTH and DAY see,
+        // with its half-second carry: `DATEDIF(60-0.4/86400,425,"M")` is 11, from the fictitious
+        // 1900-02-29, while its "D" is 366, from 1900-02-28 (probes/t4574-feb29-near-midnight-date-args;
+        // dates.md "DATEDIF's calendar units carry half a second", T-4574).
+        let day: fn(f64) -> f64 = if unit.eq_ignore_ascii_case("D") {
+            f64::floor
+        } else {
+            carried_day
+        };
+        let (start_serial, end_serial) = (day(start_serial) as i64, day(end_serial) as i64);
         let start_1900 = date_system.to_1900_serial(start_serial).ok_or(Error::NUM)?;
         let start = excel_serial_to_ymd(start_1900).ok_or(Error::NUM)?;
         let end = date_system

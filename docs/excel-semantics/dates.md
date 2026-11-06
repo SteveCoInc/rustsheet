@@ -1151,7 +1151,8 @@ Status: VERIFIED (web)
 ## Other date functions floor a serial just below midnight; their counts take no near-integer snap but WEEKNUM's return_type
 Rule: unlike YEAR, MONTH, DAY and WEEKDAY (the half-second carry above), every other probed serial argument floors
 plainly: EDATE and EOMONTH start, WORKDAY and WORKDAY.INTL start, NETWORKDAYS and NETWORKDAYS.INTL start and end,
-WEEKNUM, ISOWEEKNUM, DAYS (both), DATEDIF (both) and YEARFRAC basis 1. N-0.4 s, `fl(N-0.5/86400)` and even
+WEEKNUM, ISOWEEKNUM, DAYS (both), DATEDIF's "D" (both; its other units carry half a second: "DATEDIF's calendar
+units carry half a second" below) and YEARFRAC (basis 1 here; every basis, T-4574). N-0.4 s, `fl(N-0.5/86400)` and even
 N-(2^-22+2^-33) day read as day N-1, and only N itself is day N: `EOMONTH(45017-0.4/86400,0)` is 45016,
 `WEEKNUM(45018-(2^-22+2^-33))` 13 (the Saturday's week), `YEARFRAC(44927,45292-0.4/86400,1)` 0.997260274 (A1:O7).
 DAYS360 alone rounds the serial to the nearest second before flooring. The observed cut: `fl(N-0.5/86400)` is day N
@@ -1171,6 +1172,24 @@ T-4454).
 Ours: matches, all 197 cells (plain `floor` in month_shift.rs, workday.rs, networkdays.rs, weeknum.rs, yearfrac.rs and
 `datedif_value`/`fn_days`; `days360_serial` rounds to the second; the counts' `trunc`/`floor` and `weekend_mask`;
 WEEKNUM's positive return_type through `near_integer_count`, T-4454).
+Status: VERIFIED (web)
+
+## DATEDIF's calendar units carry half a second; YEARFRAC floors on every basis (around serial 60)
+Rule: DATEDIF's "M", "Y", "MD", "YM" and "YD" read each date as YEAR, MONTH and DAY do, `floor(x + 0.5/86400)`
+(the half-second carry above), while its "D" and its reversed-pair check floor plainly. So a start just below midnight
+of the fictitious 1900-02-29 (serial 60) counts days from 1900-02-28 but months from 1900-02-29:
+`DATEDIF(60-0.4/86400,425,"D")` is 366 (425-59), while its "M" is 11, "Y" 0, "MD" 30, "YM" 11 and "YD" 365, the
+values of start 60 itself (B4:F5; 425 is 1901-02-28). The cut is the same double as YEAR's: `fl(N-0.5/86400)` reads
+day N and one ulp below it (2^-47 here) day N-1, at N = 59, 60 and 61, for the start (A:F) and the end
+(`DATEDIF(31,s,u)`, G:L; `DATEDIF(31,61-0.4/86400,"MD")` is -1, end 61's value, A7:L18).
+YEARFRAC floors both dates on all five bases, basis 4 included: `YEARFRAC(59-0.4/86400,425,4)` is 361/360 (from
+1900-02-27), not DAYS360's second-rounded 1 (Q1:Q18, V1:V18). DAYS360 itself rounds to the second here too, as at
+N = 45020 above (W1:Z18).
+Evidence: probes/t4574-feb29-near-midnight-date-args A1:Z18 (N = 59, 60, 61 minus 0.4 s, 2^-22+2^-33, 0.6 s,
+`fl(N-0.5/86400)` and one ulp below it, and N; excel-graph, 2026-11-06, T-4574).
+Ours: matches, all 468 cells (`datedif_value` reads the calendar units through `carried_day`; YEARFRAC basis 4's
+`days360_eu` takes the floored dates, T-4574). Before T-4574 we floored DATEDIF's calendar units (51 cells off) and
+rounded basis 4 to the second (18 cells off).
 Status: VERIFIED (web)
 
 ## HOUR, MINUTE and SECOND round to the nearest second

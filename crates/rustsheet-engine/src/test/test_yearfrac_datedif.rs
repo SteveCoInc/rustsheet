@@ -44,3 +44,35 @@ fn yearfrac_out_of_calendar_start_beats_an_error_end() {
     assert_eq!(model._get_text("A2"), *"#N/A");
     assert_eq!(model._get_text("A3"), *"#NUM!");
 }
+
+#[test]
+fn datedif_calendar_units_carry_half_a_second_and_yearfrac_floors() {
+    // dates.md "DATEDIF's calendar units carry half a second; YEARFRAC floors on every basis"
+    // (probes/t4574-feb29-near-midnight-date-args, T-4574): just below midnight of the fictitious
+    // 1900-02-29, "D" floors to 1900-02-28 while "M", "MD" and "YD" read 1900-02-29.
+    let mut model = new_empty_model();
+    model._set("A1", "=DATEDIF(60-0.4/86400,425,\"D\")");
+    model._set("A2", "=DATEDIF(60-0.4/86400,425,\"M\")");
+    model._set("A3", "=DATEDIF(60-0.4/86400,425,\"MD\")");
+    model._set("A4", "=DATEDIF(60-0.4/86400,425,\"YD\")");
+    model._set("A5", "=DATEDIF(31,61-0.4/86400,\"MD\")");
+    // The cut is fl(N-0.5/86400): one ulp below it is still day N-1.
+    model._set("A6", "=DATEDIF(59-0.5/86400,425,\"MD\")");
+    model._set("A7", "=DATEDIF(59-0.5/86400-2^-47,425,\"MD\")");
+    model._set("B1", "=YEARFRAC(59-0.4/86400,425,4)");
+    model._set("B2", "=YEARFRAC(31,61-0.4/86400,4)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"366");
+    assert_eq!(model._get_text("A2"), *"11");
+    assert_eq!(model._get_text("A3"), *"30");
+    assert_eq!(model._get_text("A4"), *"365");
+    assert_eq!(model._get_text("A5"), *"-1");
+    assert_eq!(model._get_text("A6"), *"0");
+    assert_eq!(model._get_text("A7"), *"1");
+    model._set("C1", "=361/360");
+    model._set("C2", "=29/360");
+    model.evaluate();
+    assert_eq!(model._get_text("B1"), model._get_text("C1"));
+    assert_eq!(model._get_text("B2"), model._get_text("C2"));
+}
