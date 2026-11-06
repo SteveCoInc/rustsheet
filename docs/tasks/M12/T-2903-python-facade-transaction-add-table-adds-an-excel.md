@@ -3,7 +3,7 @@ id: T-2903
 title: "Python facade: Transaction.add_table adds an Excel table over an A1 range"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
