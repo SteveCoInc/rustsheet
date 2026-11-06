@@ -3,7 +3,7 @@ id: T-4062
 title: "Probe a comma between placeholders in a scientific exponent (0.00E+0,0 and 0E+0,0)"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet

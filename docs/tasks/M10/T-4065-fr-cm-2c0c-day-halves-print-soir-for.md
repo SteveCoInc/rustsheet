@@ -3,7 +3,7 @@ id: T-4065
 title: "fr-CM [2C0C] day halves print soir for AM/PM, A/P and a/p"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet

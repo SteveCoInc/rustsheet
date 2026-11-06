@@ -3,7 +3,7 @@ id: T-4069
 title: "Fixed-denominator fraction with a placeholder after it: '# ?/4|0' on 12.5 is '12 1/4|0', not '12 2/4|0'"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet

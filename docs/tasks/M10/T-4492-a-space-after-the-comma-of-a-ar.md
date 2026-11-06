@@ -3,7 +3,7 @@ id: T-4492
 title: "A space after the comma of a [ar-SA, 200] tag still picks the numeral system"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
