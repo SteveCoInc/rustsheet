@@ -398,7 +398,7 @@ fn past_the_work_or_the_sheet_the_layout_fails() {
     let mut work = MAX_PIVOT_WORK;
     assert_eq!(
         lay_out(&table, &cache, &result, &mut work),
-        Err(PivotComputeError::Limit)
+        Err(PivotComputeError::PastSheet)
     );
     table.location.top = last_row - 6;
     assert_eq!(layout(&table, &cache).location.bottom, last_row);

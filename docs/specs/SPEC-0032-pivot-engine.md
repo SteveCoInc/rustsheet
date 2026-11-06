@@ -145,7 +145,11 @@ refresh is ordered after that calculation.
 - The importer only records `refreshOnLoad` on the cache, since import cannot calculate.
 - The facade's open path refreshes every marked cache after the first recalculation. It then
   recalculates what depends on the pivots (GETPIVOTDATA, and formulas that read pivot cells).
-- `Txn` refreshes a pivot when it creates the pivot, and when asked to.
+- `Txn` refreshes a pivot when asked to (`Txn::refresh_pivot_table`). `Txn::add_pivot_table` builds
+  the cache from the source as it is (the snapshot a refresh gives) and lays out only a grouped
+  pivot; laying out every new pivot is T-4152's (eval adapter) and T-4178's (public API).
+- The refresh on open plans every marked cache within one shared work and cell budget, and writes
+  and recalculates only when at least one plan succeeds.
 - Auto Refresh is added only as T-4182 evidences it.
 
 ### PivotResult (T-4142, T-4163, T-4165, T-4174, T-4175)
