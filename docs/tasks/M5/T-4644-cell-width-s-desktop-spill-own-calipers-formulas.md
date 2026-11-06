@@ -3,7 +3,7 @@ id: T-4644
 title: "CELL(\"width\")'s desktop spill: own calipers formulas_information Sheet1 O140:O160 (FALSE, the second element of desktop's {width, FALSE}) under decision 0308 item 4"
 milestone: M5
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
