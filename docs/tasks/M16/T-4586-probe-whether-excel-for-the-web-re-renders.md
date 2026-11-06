@@ -33,7 +33,8 @@ probes/t4586-pivot-refresh-on-load (excel-graph, 2026-11-06) answers all three; 
 "Pivots without refreshOnLoad keep their saved cells; a source edit does not re-render" (VERIFIED):
 - (a) `refreshOnLoad` off, saved cells East 99 / Grand Total 99 and `rowItems` listing East only, over a source
   whose cache says East 5, West 20 and whose refresh would say East 15: Excel keeps the saved cells and saves the
-  `rowItems`, location and cache back unchanged.
+  `rowItems`, location and the cache's field flags and shared items back unchanged (the snapshot
+  does not record cache records).
 - (b) the same with no `rowItems`/`colItems`: the same saved cells; Excel adds no layout lines.
 - (c) a `refreshOnLoad` pivot renders East 5 on open; after a Graph range write of the source (B2 = 100, read
   back as 100) and a FullRebuild calculate it still shows East 5 and total 25: no re-render without a refresh.

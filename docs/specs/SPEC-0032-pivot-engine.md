@@ -39,8 +39,9 @@ Goals:
 3. **Refresh semantics as Excel's:**
    - a pivot refreshes on load when its cache is `refreshOnLoad`, on an explicit API call, and when it is
      created;
-   - never on a source edit (Auto Refresh only as T-4182 evidences) nor on a calculate, and a pivot
-     loaded without `refreshOnLoad` keeps the cells the file saved, even when they or its `rowItems`
+   - never on a source edit (Auto Refresh only as T-4182 evidences) nor on a calculate (probed through
+     a Graph write on a refreshOnLoad pivot only; pivots.md lists what is not probed), and a pivot loaded
+     without `refreshOnLoad` keeps the cells the file saved, even when its `rowItems`/`colItems`
      disagree with the cache or are absent (probes/t4586-pivot-refresh-on-load, T-4586).
 4. **Bounded work and memory on untrusted pivots** (directive 5), with every cap a `DEVIATION` entry.
 
@@ -93,7 +94,7 @@ design depends on:
 - **Grid:** a layout that would meet a foreign cell collapses to `#SPILL!` at the anchor, with the
   location saved as that one cell (t4128 S).
 
-Unknowns are owned by probe tasks: T-4582, T-4583, T-4584 and T-4586 (above), T-2327 (rendered constants
+Unknowns are owned by probe tasks: T-4582, T-4583 and T-4584 (above), T-2327 (rendered constants
 under a refreshOnLoad pivot), T-4585 (field names), T-4135 (aggregates over text,
 blank and error, now evidenced in pivots.md; the summation order of totals is T-4589's), T-4161
 (show-values-as),
@@ -313,8 +314,8 @@ introducing it adds:
 - **Render from a query engine** (mog's GROUP BY/rollup). It hides Excel's line encoding, so layout bugs
   show up only as wrong cells. Rejected; the line contract is cheaper to check.
 - **Re-render on import, as LibreOffice does.** That would lose Excel-saved cells that are already
-  right, if Excel itself keeps them (T-4586). Rejected for now: re-render only on `refreshOnLoad`, or on
-  request. Revisit if T-4586 shows that Excel re-renders.
+  right, if Excel itself keeps them (T-4586). Rejected: re-render only on `refreshOnLoad`, or on
+  request. T-4586 showed that Excel for the web does not re-render such a pivot.
 - **Separate code paths per form.** The forms differ only in line-to-cell placement. One renderer with
   per-field form flags.
 

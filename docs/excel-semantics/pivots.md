@@ -825,7 +825,8 @@ source to 35) all differ:
   grand total only: A4:B5 stay East 99, Grand Total 99 (Q!A1:D1; A6:B6 stay empty, Q!E1:F1 read 0). The saved
   `rowItems`, `colItems`, location and the cache's flags (`containsBlank`) come back unchanged.
 - (b) sheet B, the same with no `rowItems` or `colItems`: the same saved cells (Q!A2:F2), and Excel saves
-  the pivot still without `rowItems` or `colItems`. Absent layout lines do not make it render.
+  the pivot with no row or column lines (the snapshot does not tell an absent `<rowItems>` from an
+  empty one). Absent layout lines do not make it render.
 - (c) sheet C, a `refreshOnLoad` pivot over Src, whose B2 is blank in the file: Excel renders East 5,
   West 20, Grand Total 25 on open. The oracle then writes Src!B2 = 100 through a Graph range write
   (`entered`) and runs a FullRebuild calculate, with no pivot refresh: Q!A4 reads 100, and the pivot
