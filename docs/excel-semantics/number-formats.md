@@ -420,6 +420,12 @@ Below serial 1, and the counts:
   probes/t4389-holdout A272; t4389-confirm A41:A80). It moves the serial only below 2^-18 days (about 0.33 s). From
   2^-19 days it is exactly half an ulp, which the double addition rounds to even, and Excel follows that in 29 of 40
   probed cells (t4389-confirm A1:A40); the other 11 (A4, A6, A9, A14:A19, A31, A36) are not explained (T-4419).
+  A dense map of the band, probes/t4419-band-ulp-map (83 ties from 0.166 to 0.33 s, each 19 to 9 ulp below the tie,
+  excel-graph 2026-11-06), shows Excel's digit flip from the tie minus 1 ms to the tie at one ulp step per tie, one
+  step before or after the model's on 66 of 913 cells (the model 847, no offset 838). Excel's serials are the
+  generator's doubles (probes/t4419-band-serials). No single threshold on the exact distance to the tie separates the
+  flips, and no operation order, extended intermediate or double-precision 15-digit rounding tried fits them (best
+  887/913; candidates in docs/research/t4419 and T-4419's Findings). Status in the band: OPEN.
   `.0` and `.00` show no offset (`TEXT(0.005/86400-8*2^-77,"s.00")` ".01", -12 ulp ".00", 0.45 and 0.68 units of the
   15th digit below). The constant is FITTED: every offset from 1.74E-17 to 1.86E-17 s scores all 538 `.000` cells of
   the t4323, t4332 and t4370 fraction cases, and 2^-72 days is the power of two inside that window; no operation that
