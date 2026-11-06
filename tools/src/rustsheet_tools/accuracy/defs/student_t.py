@@ -32,6 +32,10 @@ from rustsheet_tools.fitlab.kernels.beta import betacf
 
 DF_SOURCE = "statistics.md#student-t-sweep-df-truncation-df-limits-tinv2t-above-1-t-1043"
 TINY_P_SOURCE = "statistics.md#student-t-quantile-at-a-tiny-probability-t-1531"
+HUGE_X_SOURCE = "statistics.md#scalar-distributions-at-extreme-arguments-part-2-t-2256"
+DENSITY_HUGE_X_SOURCE = (
+    "statistics.md#tdists-density-is-num-at-a-huge-x-and-tinv2t-and-tinv-at-p--22e-308-t-3358"
+)
 # The continued fraction converges for y < (a + 1)/(a + b + 2), which holds for x² ≥ 3 at every df; from |x| = 2 it
 # takes at most about 600 terms (df 1E10), fewer as |x| grows.
 CF_MIN_X = 2
@@ -128,7 +132,8 @@ def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _t_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df, cumulative = args
-    assert not isinstance(x, bool) and not isinstance(df, bool)
+    assert not isinstance(x, (bool, str, tuple)) and not isinstance(df, (bool, str, tuple))
+    _t_dist_cut(x, cumulative=bool(cumulative)).check_probed(x)
     return cdf(x, df) if cumulative else density(x, df)
 
 
@@ -136,7 +141,8 @@ def _t_dist_domain(args: Sequence[MathArg]) -> str | None:
     df, cumulative = args[1], args[2]
     if cumulative and not isinstance(df, (bool, str, tuple)) and df > DF_CUT:
         return "cumulative df above 1E+10"
-    return None
+    x = _x_of(args)
+    return _t_dist_cut(x, cumulative=bool(cumulative)).domain(x)
 
 
 def _t_inv(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -197,7 +203,7 @@ T_DIST = register(
         domain=_t_dist_domain,
         tail=_tail_x,
         tail_param="x",
-        sources=(DF_SOURCE, "Abramowitz and Stegun 26.7.1"),
+        sources=(DF_SOURCE, HUGE_X_SOURCE, DENSITY_HUGE_X_SOURCE, "Abramowitz and Stegun 26.7.1"),
     )
 )
 
@@ -270,7 +276,6 @@ TINV = register(_two_tailed("TINV"))
 # arguments, part 2"): `HugeXCut` holds each function's evidenced bracket.
 UPPER_SOURCE = "statistics.md#tdistrt-and-tdist2t-are-not-1---tdist"
 LEGACY_T_SOURCE = "statistics.md#legacy-distribution-names-sweep-second-family-t-1048"
-HUGE_X_SOURCE = "statistics.md#scalar-distributions-at-extreme-arguments-part-2-t-2256"
 
 
 @dataclass(frozen=True)
@@ -307,6 +312,28 @@ T_DIST_2T_CUT = HugeXCut(  # accuracy/T.DIST.2T/s1 A88 (value 0) and A99
 TDIST_CUT = HugeXCut(  # accuracy/TDIST/s1 A185 (value 0) and A176
     last_number=1.76387937163976e150, first_error=2.08984434704072e166
 )
+# T.DIST's brackets, keyed by (cumulative, x ≥ 0) (T-4580, decision 0321), from every Excel cell of one T.DIST call
+# with |x| above 1E10: only its three Gate A tables have one (no probe or gen-m9 cell does outside a composite). A
+# cumulative cell whose df is above 1E10 is #NUM! for its df whatever x is, so it brackets nothing.
+T_DIST_CUTS = {
+    (True, True): HugeXCut(  # accuracy/T.DIST/e-T-3425 A92 (value 1) and r4-T-2585 A217
+        last_number=7.33561600112214e146, first_error=1.89648831921934e159
+    ),
+    (True, False): HugeXCut(  # accuracy/T.DIST/r4-T-2585 A223 (value 0) and e-T-3425 A88
+        last_number=2.01264664929796e153, first_error=5.43165733249003e196
+    ),
+    (False, True): HugeXCut(  # accuracy/T.DIST/s1 A97 (value 0) and r4-T-2585 A267
+        last_number=9.93424108915371e137, first_error=3.83716580917453e200
+    ),
+    (False, False): HugeXCut(  # accuracy/T.DIST/r4-T-2585 A236 (value 0) and A266
+        last_number=1.12173766596864e153, first_error=9.72379926420781e176
+    ),
+}
+
+
+def _t_dist_cut(x: mpmath.mpf, *, cumulative: bool) -> HugeXCut:
+    """T.DIST's huge-x bracket for `cumulative` and the sign of x (x = 0 is far from every cut)."""
+    return T_DIST_CUTS[(cumulative, x >= 0)]
 
 
 def _rt_cut(x: mpmath.mpf) -> HugeXCut:

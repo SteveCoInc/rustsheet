@@ -7178,9 +7178,21 @@ probes and gen-m9 together. Every bracket fits the x² overflow (about 1.34E+154
 The engine matches each of these cells. The Gate A definitions of the three functions encode each bracket
 (`student_t.HugeXCut`, per sign for T.DIST.RT). From the smallest evidenced `#NUM!` |x| on, x is outside the domain.
 Strictly between the largest evidenced number and that `#NUM!`, the point has no math value, because the cut there is
-unprobed. T.DIST's own definition does not use the rule yet (T-4580).
+unprobed.
+
+T.DIST (T-4580): all three T.DIST tables (s1, e-T-3425, r4-T-2585) together narrow the cumulative brackets above. Cells
+whose df is above 1E10 are left out: the cumulative T.DIST is `#NUM!` there for its df.
+- Cumulative, x > 0: 1 up to 7.3E+146 (e-T-3425 A92, `T.DIST(7.33561600112214E+146,228757,TRUE)`), `#NUM!` from
+  1.9E+159 (r4-T-2585 A217, `T.DIST(1.89648831921934E+159,51740,TRUE)`, and 9 more cells). The s1 table alone had
+  only `#NUM!` cells at a positive x.
+- Cumulative, x < 0: 0 up to |x| 2.0E+153 (r4-T-2585 A223, `T.DIST(-2.01264664929796E+153,43530,TRUE)`), `#NUM!` from
+  5.4E+196 (e-T-3425 A88, `T.DIST(-5.43165733249003E+196,3768,TRUE)`, and 5 more cells).
+- The density's brackets are in "T.DIST's density is #NUM! at a huge x" below.
+
+The T.DIST definition encodes the four brackets (per `cumulative` and per sign), and decision 0321 moved its 34
+committed table points at or past each `#NUM!` from a math number to a domain error.
 Status: VERIFIED (excel-graph), the cuts UNVERIFIED
-Tasks: T-2256, T-2474, T-4102
+Tasks: T-2256, T-2474, T-4102, T-4580
 
 ## Student t quantile at p = 0 with df below 2 is #DIV/0! (T-2256)
 Rule: TINV, T.INV.2T and T.INV with p = 0 and a df that truncates to 1 are `#DIV/0!`, not `#NUM!`: `TINV(0,1)`
@@ -7698,6 +7710,12 @@ Rule:
   A smaller huge x gives 0, not `#NUM!`: `T.DIST(9.93424108915371E+137,24,FALSE)` (s1 A97), although the density
   underflows there too. The positive cut lies between 9.9E+137 and 4.2E+220, which fits the x² overflow cut (about
   1.34E+154) of the cumulative t functions (T-2474 entry above). The engine returns 0.
+  - T-4580 narrows both brackets with the r4-T-2585 table. A positive x is `#NUM!` from 3.8E+200
+    (`T.DIST(3.83716580917453E+200,4209,FALSE)`, A267), so its cut lies between 9.9E+137 and 3.8E+200. A negative x is
+    0 up to |x| 1.1E+153 (`T.DIST(-1.12173766596864E+153,8,FALSE)`, A236) and `#NUM!` from 9.7E+176
+    (`T.DIST(-9.72379926420781E+176,5,FALSE)`, A266), so its cut lies between 1.1E+153 and 9.7E+176.
+  - Every density cell of the three tables at or past these `#NUM!` points is `#NUM!`: 11 at a positive x and 7 at a
+    negative x. The T.DIST definition encodes both brackets (`student_t.T_DIST_CUTS`, decision 0321).
 - `T.INV.2T(2.22507385850721E-308,df)` and `TINV(2.22507385850721E-308,df)` are `#NUM!` at df 8, 9, 12 and 14, although
   the quantile is a finite double (about 3.2E+22 to 6.9E+38). T.INV accepts p down to 1E-300 (T-1531).
   `CONFIDENCE.T(2.22507385850721E-308,sd,n)`, which is T.INV.2T at df n - 1, is `#NUM!` too, at n 38, 68 and 79 (df 37,
@@ -7712,11 +7730,12 @@ Evidence: Gate A tables, excel-graph:
 - accuracy/T.INV.2T/s1 A68 and A78, and accuracy/TINV/s1 A68 and A78;
 - accuracy/CONFIDENCE.T/s1 A112, A123 and A134 (T-4102);
 - accuracy/T.DIST/s1 A94 and A97 (density 0 below the cut);
+- accuracy/T.DIST/r4-T-2585 A236 (density 0), and A266 and A267 (`#NUM!`; T-4580);
 - accuracy/F.INV/s1 A111 (`F.INV(0,38,10)`) and A125 (`F.INV(0,9,50)`), and probes-numeric/t1049-finv A16 (`F.INV(0,3,7)`).
 Status: VERIFIED (excel-graph) for the cited cells; the cut points are UNVERIFIED.
 Ours: T.DIST returns 0, and T.INV.2T, TINV and CONFIDENCE.T return the quantile or margin. These are Gate A known
 failures owned by T-3554 and T-4541 (moved from T-3386).
-Tasks: T-3554, T-3386, T-3358, T-4541, T-4102
+Tasks: T-3554, T-3386, T-3358, T-4541, T-4102, T-4580
 
 ## A text scalar argument is #VALUE! before an error cell as the data (T-3781)
 Rule: when the data of SMALL, LARGE, PERCENTILE*, QUARTILE*, TRIMMEAN or PERCENTRANK* is a one-cell reference to an error
