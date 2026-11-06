@@ -888,12 +888,7 @@ impl<'a> Grid<'a> {
             // (over CyB BxC CxC AyB BxB of p q q q q the `ab`&U+00AD `y` subtotal of q is `2, 3, 4, 5`;
             // probes/t4388-pivotby-intransitive-subtotals Calc!D2; T-4388).
             Slot::Subtotal { level, start, .. } => {
-                let prefix = self.cols.prefix(start, level);
-                let reached = level
-                    .checked_sub(1)
-                    .zip(prefix.last())
-                    .is_some_and(|(field, &class)| self.cols.class_reached(field, class));
-                if !reached {
+                if !self.subtotal_class_reached(level, start) {
                     return records;
                 }
                 let mut merged = std::mem::take(&mut self.merged);
@@ -904,6 +899,17 @@ impl<'a> Grid<'a> {
             }
             Slot::Total { .. } => records,
         }
+    }
+
+    /// Whether any record reached the column class of group `start`'s first `level` keys; a
+    /// class none reached holds every record of the line ([`Grid::cell_rows`], T-4388; the
+    /// parent sets of [`Grid::column_records`], T-4428).
+    fn subtotal_class_reached(&self, level: usize, start: usize) -> bool {
+        let prefix = self.cols.prefix(start, level);
+        level
+            .checked_sub(1)
+            .zip(prefix.last())
+            .is_some_and(|(field, &class)| self.cols.class_reached(field, class))
     }
 
     /// The records among `records` (in source order) that reached the column class of group
@@ -938,12 +944,8 @@ impl<'a> Grid<'a> {
             Some(Line::Subtotal { level, start, .. }) => {
                 // A class no record reached holds every record of the line, as in
                 // `cell_rows` (probes/t4420-pivotby-parent-sets-three-fields; T-4428).
-                let prefix = self.cols.prefix(start, level);
-                let reached = level
-                    .checked_sub(1)
-                    .zip(prefix.last())
-                    .is_some_and(|(field, &class)| self.cols.class_reached(field, class));
-                reached.then(|| self.reached_class(level, start, records).collect())
+                self.subtotal_class_reached(level, start)
+                    .then(|| self.reached_class(level, start, records).collect())
             }
             None => None,
         }
