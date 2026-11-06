@@ -62,6 +62,6 @@ one-row ranges holding the same numbers, with an `ERROR.TYPE` companion for each
 - SUMXMY2's last digit on a 1.5E+16 sum (T-2384).
 - SUMPRODUCT's running overflow and snap (T-3677, done).
 
-## Handoff
+## Handoff (resumed)
 Probe done and evidenced (excel-graph): Excel follows model (a), one double term per pair, as `fn_sumx2my2` already does (rows 1-7 SUMX2MY2: 1.69E+308, 1.69E+308, -1.69E+308, -1.69E+308, #NUM!, #NUM!, #NUM!). No engine change needed. numbers.md is updated and the case + oracle sidecar are committed.
 Missing: `probes/t4424-sumx2my2-overflow-order.math.json`. `cd tools && uv run rustsheet-accuracy math --suite probes` has no per-case option, recomputes the Bessel cases (m9-bessel-order-limits, t2546, t2881) with mpmath and was killed at the 30 min background limit twice without writing the new sidecar. Next: run it with `--workers` on a bigger box or in a dedicated long session, commit only the t4424 sidecar (restore the other .math.json files), then `--check`, `make check-fast`, mark done with the Outcome (model a confirmed; no code change), review, PR.
