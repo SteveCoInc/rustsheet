@@ -38,7 +38,8 @@ impl Model {
     /// where `LINEST(2)` is 0, and so are LOGEST, TREND and GROWTH of it, while
     /// `LINEST(ERROR.TYPE(#REF!),1/0)` is `#DIV/0!` (probes/t2576-error-type-cell-paired E34,
     /// t2766-mark-positions A20:A22, t2766-mark-positions-2 A21; statistics.md "ERROR.TYPE and
-    /// CELL results are #NUM! in the paired functions").
+    /// CELL results are #NUM! in the paired functions"). TREND's and GROWTH's against an error
+    /// new_x are unprobed: TODO(T-4653).
     pub(super) fn read_known_y_and_x(
         &mut self,
         args: &[Node],

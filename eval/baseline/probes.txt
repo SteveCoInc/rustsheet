@@ -1607,6 +1607,7 @@ C	probes/t2759-lunar-packed-6101.case.json	20
 C	probes/t2759-lunar-packed-7101.case.json	20
 C	probes/t2759-lunar-packed-8101.case.json	20
 C	probes/t2759-lunar-packed-9101.case.json	18
+C	probes/t2766-mark-positions-2.case.json	30
 C	probes/t2766-mark-positions.case.json	30
 C	probes/t2769-formula-text-whitespace.case.json	47
 C	probes/t2771-roundup-subnormal-cuts.case.json	176

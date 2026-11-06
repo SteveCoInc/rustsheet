@@ -111,7 +111,7 @@ pub(crate) struct VariableStack {
     /// (`Model::bind_captures`), shares that one copy.
     shared: HashMap<usize, Arc<Binding>>,
     /// The ids bound to a number or array carrying the ERROR.TYPE/CELL mark
-    /// (`crate::number_mark`), set by [`VariableStack::mark`] after [`VariableStack::insert`].
+    /// (`crate::number_mark`), set by [`VariableStack::insert_marked`].
     marked: HashSet<usize>,
 }
 

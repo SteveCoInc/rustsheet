@@ -68,6 +68,7 @@ pub(crate) enum SecondMark {
     NoNumber,
     /// `#NUM!`, as a marked first argument is: CHITEST
     /// (`CHITEST({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))`, probes/t2766-mark-positions-2 A26).
+    /// Whether it comes before an error element of the other argument is unprobed: TODO(T-4653).
     NumError,
 }
 
@@ -132,7 +133,8 @@ impl PairedArg {
     /// error elements stay errors. A reference element of an array of references reads as
     /// `#VALUE!` in its value view (SPEC-0014) and is a cell with no number here like the rest
     /// (probes/t2766-mark-positions-2 A17:A19); ERROR.TYPE and CELL never give `#VALUE!`, so no
-    /// error of theirs is lost. A grid mixing references and error elements is unprobed.
+    /// error of theirs is lost. A grid mixing references and error elements is unprobed:
+    /// TODO(T-4653).
     pub(crate) fn without_numbers(self) -> Self {
         let no_number = |element: ArrayNode| match element {
             ArrayNode::Error(Error::VALUE) | ArrayNode::Number(_) => ArrayNode::Boolean(false),

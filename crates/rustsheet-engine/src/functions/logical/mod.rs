@@ -390,7 +390,7 @@ impl Model {
                 // probes/t2475-stat-subexpressions P!A158).
                 // A number fallback keeps its mark too: `FTEST({1;2;3},IFERROR(1/0,
                 // ERROR.TYPE(#REF!)))` is `#NUM!` (probes/t2766-mark-positions-2 A24; a marked
-                // array fallback is unprobed and drops it).
+                // array fallback is unprobed and drops it: TODO(T-4653)).
                 return self
                     .evaluate_passing_number_mark(&args[1], cell)
                     .blank_as_empty_value();
