@@ -3,11 +3,11 @@ id: T-3408
 title: "IRR's digits on conventional flows where the secant fails: match Excel's stop (21 cells of the T-3347 cases)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P0
 size: M
 tier: opus
-depends_on: [T-3347]
+depends_on: []
 campaign: accuracy
 ---
 
@@ -17,17 +17,22 @@ IRR returns Excel's value to 15 significant digits on the conventional cash-flow
 2.2e-11 relative from Excel's double on 21 of the 162 cells of the T-3347 cases.
 
 ## Context
-- T-3347 removed the `#NUM!` (docs/excel-semantics/financial.md "IRR on conventional flows near 0 and -10%"): a
-  Newton stage on P(v) from v = 1, after the secant and the v = 0 fallback, fitted on which flows return. Its digits
-  are a converged, polished Newton; Excel's are not (its stop is looser), and neither a longer secant nor any secant
-  stop variant gives Excel's bits (the T-3347 entry lists the variants tried).
-- Cells: probes/t3347-irr-conventional-num A10-A13, A16, A17, A19, A37-A40; probes-numeric/t3347-irr-conventional-sweep
-  (the numeric_close cells after T-3347; `make eval-show CASE=...`). Exact roots in each case's `.roots.tsv`.
-- Digit cells of T-3347's hold-out, right type, beyond 15 digits (gap triage 2026-11-01; its `#NUM!` cells are T-3411's):
+- Corrected 2026-11-06 (claim): the Goal above assumed T-3347's Newton stage `irr_conventional` landed. It did not:
+  draft #2529 closed unmerged, and T-3347 merged (#3580) blocked, time-boxed (decision 0056), with only its
+  `#DIV/0!` flat-step rule (decision 0316). There is no `irr_conventional`/`irr_newton` stage; the engine runs the
+  secant, then its fallbacks (crates/rustsheet-engine/src/functions/financial/financial_util.rs). T-3347 no longer
+  gates this task (`depends_on` cleared).
+- State on origin/main 73e09221b (`rustsheet-eval run --suite probes --suite probes-numeric --filter irr`):
+  - probes/t3347-irr-conventional-num A10-A13, A16, A17, A19, A37-A40 (11): all `#NUM!` for Excel's root.
+  - probes-numeric/t3347-irr-conventional-sweep: 23 cells `#NUM!` for Excel's root; A33 and A82 numeric_close.
+  - The `#NUM!` cells are T-3347's blocked cells, accepted under decision 0267 item 4 (T-3347's "Blocked
+    because"). They are out of this task's scope.
+- In scope: the cells where the engine returns a root on digits other than Excel's (numeric_close, and
+  t3411-irr-r4-fresh A53 numeric_mismatch): the sweep's A33 and A82, the hold-out's four below and the t3411 cells.
+- Digit cells of T-3347's hold-out, right type, beyond 15 digits (gap triage 2026-11-01):
 - probes-numeric/t3347-irr-conventional-holdout.case.json (4): P!A12, A20, A22, A41
-- Code: `irr_conventional`, `irr_newton` in crates/rustsheet-engine/src/functions/financial/financial_util.rs.
 - Related: T-2928 (blocked: the v = 0 fallback's digits, the same question for non-conventional flows).
-- Any fit follows decision 0188 R4 (hold-out split, fresh sweep, `FITTED` tag via T-3361).
+- Any fit follows decision 0188 R4 (hold-out split, fresh sweep, `FITTED` tag).
 
 ## Acceptance criteria
 - [ ] Every cell of the two T-3347 cases is within 15 significant digits of Excel's value, with the right type.
