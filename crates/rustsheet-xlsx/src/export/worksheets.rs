@@ -290,11 +290,7 @@ pub(crate) fn get_worksheet_xml(
     row_indices.sort_unstable();
     row_indices.dedup();
 
-    // Per shared formula, whether a legacy reading of it would add an `@` (T-1552).
-    let legacy_reading: Vec<bool> = parsed_formulas
-        .iter()
-        .map(|formula| legacy_reading_intersects(&formula.evaluated))
-        .collect();
+    let legacy_reading = legacy_readings(parsed_formulas);
     let table_formulas = super::data_tables::anchor_formulas(&worksheet.data_tables);
     let cells = CellWriter {
         worksheet,
@@ -461,6 +457,14 @@ pub(crate) fn get_worksheet_xml(
   {cf_ext_lst}\
 </worksheet>"
     )
+}
+
+/// Per shared formula, whether a legacy reading of it would add an `@` (T-1552).
+pub(crate) fn legacy_readings(parsed_formulas: &[ParsedFormula]) -> Vec<bool> {
+    parsed_formulas
+        .iter()
+        .map(|formula| legacy_reading_intersects(&formula.evaluated))
+        .collect()
 }
 
 /// What writing one cell needs from its sheet: one definition for the regenerating export and the
