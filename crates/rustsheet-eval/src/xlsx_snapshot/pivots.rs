@@ -38,7 +38,9 @@ pub struct PivotLine {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PivotCacheField {
     pub name: String,
-    /// `<fieldGroup><groupItems>`, as Excel wrote them; empty for an ungrouped field.
+    /// `<fieldGroup><groupItems>`, as Excel wrote them; empty for an ungrouped field. A `<d>`
+    /// (date) item is kept as its ISO text, not converted to a serial: a scorer comparing date
+    /// groups (T-4124) converts it.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub group_items: Vec<Value>,
 }
@@ -82,8 +84,13 @@ pub(super) fn read_sheet_pivots(
     let Ok(rels) = relationships(&rels, file) else {
         return Ok(());
     };
+    // A part listed twice is read once: repeated relationships must not multiply the work.
+    let mut seen = std::collections::HashSet::new();
     for rel in rels.iter().filter(|r| r.kind.ends_with("/pivotTable")) {
         let path = resolve_target(dir, &rel.target);
+        if !seen.insert(path.clone()) {
+            continue;
+        }
         let Ok(Some(xml)) = read_part(zip, &path) else {
             continue;
         };
@@ -100,15 +107,26 @@ fn number(e: &quick_xml::events::BytesStart<'_>, key: &str) -> u32 {
     attr(e, key).and_then(|v| v.parse().ok()).unwrap_or(0)
 }
 
+/// Where the reader is inside a pivot definition.
+#[derive(Clone, Copy, PartialEq)]
+enum In {
+    Other,
+    Rows,
+    Cols,
+}
+
+/// The `<rowItems>` or `<colItems>` list `within` names.
+fn lines_mut(pivot: &mut PivotDef, within: In) -> &mut Vec<PivotLine> {
+    if within == In::Rows {
+        &mut pivot.row_items
+    } else {
+        &mut pivot.col_items
+    }
+}
+
 /// The pivot definition, or `None` when the part is malformed, has no `<location>`, or lists more
 /// lines or indices than the engine's limits allow.
 fn parse_pivot(xml: &str, sheet: &str) -> Option<PivotDef> {
-    #[derive(Clone, Copy, PartialEq)]
-    enum In {
-        Other,
-        Rows,
-        Cols,
-    }
     let mut reader = Reader::from_str(xml);
     let mut pivot: Option<PivotDef> = None;
     let mut within = In::Other;
@@ -146,12 +164,7 @@ fn parse_pivot(xml: &str, sheet: &str) -> Option<PivotDef> {
                     "rowItems" if !empty => within = In::Rows,
                     "colItems" if !empty => within = In::Cols,
                     "i" if within != In::Other => {
-                        let p = pivot.as_mut()?;
-                        let lines = if within == In::Rows {
-                            &mut p.row_items
-                        } else {
-                            &mut p.col_items
-                        };
+                        let lines = lines_mut(pivot.as_mut()?, within);
                         if lines.len() >= MAX_ITEMS {
                             return None;
                         }
@@ -163,12 +176,7 @@ fn parse_pivot(xml: &str, sheet: &str) -> Option<PivotDef> {
                         });
                     }
                     "x" if within != In::Other => {
-                        let p = pivot.as_mut()?;
-                        let lines = if within == In::Rows {
-                            &mut p.row_items
-                        } else {
-                            &mut p.col_items
-                        };
+                        let lines = lines_mut(pivot.as_mut()?, within);
                         indices += 1;
                         if indices > MAX_ITEMS * 4 {
                             return None;
@@ -230,7 +238,10 @@ fn parse_cache_fields(xml: &str) -> Option<Vec<PivotCacheField>> {
                         let v = attr(e, "v");
                         let value = match tag {
                             "s" | "d" => Value::Text(v.unwrap_or_default()),
-                            "n" => Value::Number(v.and_then(|s| s.parse().ok())?),
+                            "n" => Value::Number(
+                                v.and_then(|s| s.parse::<f64>().ok())
+                                    .filter(|f| f.is_finite())?,
+                            ),
                             "b" => Value::Bool(v.as_deref() == Some("1")),
                             "e" => Value::Error(v.unwrap_or_default()),
                             "m" => Value::Empty,
@@ -286,9 +297,15 @@ mod tests {
             <cacheField name="Region"><sharedItems/></cacheField>
             <cacheField name="Day"><sharedItems/><fieldGroup base="1"><rangePr/>
               <groupItems count="3"><s v="&lt;45000"/><s v="45000-45100"/><n v="3"/></groupItems>
+            </fieldGroup></cacheField>
+            <cacheField name="Bad"><fieldGroup base="2"><rangePr/>
+              <groupItems count="1"><n v="inf"/></groupItems>
             </fieldGroup></cacheField></cacheFields></pivotCacheDefinition>"#;
-        let fields = parse_cache_fields(xml).expect("parses");
-        assert_eq!(fields.len(), 2);
+        // A non-finite number item makes the cache unreadable (the snapshot is JSON).
+        assert!(parse_cache_fields(xml).is_none());
+        let finite = xml.replace(r#"<n v="inf"/>"#, r#"<n v="1"/>"#);
+        let fields = parse_cache_fields(&finite).expect("parses");
+        assert_eq!(fields.len(), 3);
         assert!(fields[0].group_items.is_empty());
         assert_eq!(
             fields[1].group_items,

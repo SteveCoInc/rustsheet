@@ -36,6 +36,11 @@ Sidecars hold formula cells only today (probes/pivot-rendered-cells reads the pi
   `OracleFile::pivots` reads it, and T-4124 scores it.
 - **Probe:** `probes/t4123-pivot-capture` (excel-graph, 2026-11-06) holds Excel's compact pivot
   (C!A3:E7, 3 row lines and 4 column lines) and tabular pivot (T!A3:E12, 8 and 3 lines), with
-  full-precision percentages.
+  full-precision percentages, plus T2: the same tabular pivot with a non-compact data field.
 - **Docs:** docs/architecture/eval-harness.md documents the sidecar format and the builder-v2
   `definition` schema, the follow-up the #3516 review deferred.
+- **Semantics:** docs/excel-semantics/pivots.md gains two VERIFIED entries from the probe. First, a
+  tabular pivot's first row header is `Row Labels` unless the data field is `compact="0"` (T vs T2;
+  this explains spike run 4's `Region`). Second, the rendered-cell rules: blank intersections,
+  repeated outer labels left blank, `<item> Total`, and where the `Values` caption sits. The page-area
+  capture window is recorded as an assumption for T-4138 to confirm.

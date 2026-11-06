@@ -1,18 +1,37 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4123: the oracle sidecar captures Excel's render of two pivots built by case builder v2 (a `definition`, which Excel lays out on open): a compact pivot (Region rows, Product columns, Sum of Sales) on C and a tabular one (Region and Product rows, Sum, % of grand total and Count of Sales) on T. The sidecar's `pivots` section holds each pivot's location, rowItems/colItems and every cell of its area. The formula on Q only makes the case scored; the pivot cells are scored by T-4124.",
-  "tags": ["probe", "pivot", "T-4123", "M16"],
+  "description": "T-4123: the oracle sidecar captures Excel's render of two pivots built by case builder v2 (a `definition`, which Excel lays out on open): a compact pivot (Region rows, Product columns, Sum of Sales) on C and a tabular one (Region and Product rows, Sum, % of grand total and Count of Sales) on T. The sidecar's `pivots` section holds each pivot's location, rowItems/colItems and every cell of its area. T2 repeats T with `compact=\"0\" outline=\"0\"` on the Sales data field too, which turns T's `Row Labels` header into `Region`. The formula on Q only makes the case scored; the pivot cells are scored by T-4124.",
+  "tags": [
+    "probe",
+    "pivot",
+    "T-4123",
+    "M16"
+  ],
   "sheets": [
     {
       "name": "Data",
       "cells": {
-        "A1": "Region", "B1": "Product", "C1": "Sales",
-        "A2": "East", "B2": "A", "C2": 10,
-        "A3": "West", "B3": "A", "C3": 20,
-        "A4": "East", "B4": "B", "C4": 5,
-        "A5": "West", "B5": "B", "C5": 7,
-        "A6": "East", "B6": "C", "C6": 3,
-        "A7": "East", "B7": "A", "C7": 4
+        "A1": "Region",
+        "B1": "Product",
+        "C1": "Sales",
+        "A2": "East",
+        "B2": "A",
+        "C2": 10,
+        "A3": "West",
+        "B3": "A",
+        "C3": 20,
+        "A4": "East",
+        "B4": "B",
+        "C4": 5,
+        "A5": "West",
+        "B5": "B",
+        "C5": 7,
+        "A6": "East",
+        "B6": "C",
+        "C6": 3,
+        "A7": "East",
+        "B7": "A",
+        "C7": 4
       }
     },
     {
@@ -23,7 +42,19 @@
           "name": "Compact",
           "source": "Data!A1:C7",
           "location": "A3",
-          "definition": {"rows": ["Region"], "columns": ["Product"], "data": [{"field": "Sales"}]}
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales"
+              }
+            ]
+          }
         }
       ]
     },
@@ -36,21 +67,112 @@
           "source": "Data!A1:C7",
           "location": "A3",
           "definition": {
-            "table": {"outline": false, "outlineData": false, "compact": false, "compactData": false},
-            "rows": ["Region", "Product"],
+            "table": {
+              "outline": false,
+              "outlineData": false,
+              "compact": false,
+              "compactData": false
+            },
+            "rows": [
+              "Region",
+              "Product"
+            ],
             "data": [
-              {"field": "Sales"},
-              {"field": "Sales", "showDataAs": "percentOfTotal", "name": "Pct", "numFmtId": 10},
-              {"field": "Sales", "subtotal": "count"}
+              {
+                "field": "Sales"
+              },
+              {
+                "field": "Sales",
+                "showDataAs": "percentOfTotal",
+                "name": "Pct",
+                "numFmtId": 10
+              },
+              {
+                "field": "Sales",
+                "subtotal": "count"
+              }
             ],
             "fields": {
-              "Region": {"attrs": {"compact": false, "outline": false}},
-              "Product": {"attrs": {"compact": false, "outline": false}}
+              "Region": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Product": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              }
             }
           }
         }
       ]
     },
-    {"name": "Q", "cells": {"A1": "=SUM(Data!C2:C7)"}}
+    {
+      "name": "T2",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "TabularDataNotCompact",
+          "source": "Data!A1:C7",
+          "location": "A3",
+          "definition": {
+            "table": {
+              "outline": false,
+              "outlineData": false,
+              "compact": false,
+              "compactData": false
+            },
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales"
+              },
+              {
+                "field": "Sales",
+                "showDataAs": "percentOfTotal",
+                "name": "Pct",
+                "numFmtId": 10
+              },
+              {
+                "field": "Sales",
+                "subtotal": "count"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Product": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Sales": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Q",
+      "cells": {
+        "A1": "=SUM(Data!C2:C7)"
+      }
+    }
   ]
 }

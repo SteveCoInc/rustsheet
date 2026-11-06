@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Any
 
 from rustsheet_tools import repo_root
+from rustsheet_tools.sheetop import column_letters
+from rustsheet_tools.spec2xlsx import parse_a1
 
 
 def eval_binary() -> Path:
@@ -131,34 +133,13 @@ def formula_values(snap: dict[str, Any]) -> dict[str, dict[str, Any]]:
 MAX_PIVOT_AREA_CELLS = 100_000
 
 
-def _a1_to_rowcol(a1: str) -> tuple[int, int]:
-    """0-based (row, column) of an A1 address (`$` allowed)."""
-    m = re.fullmatch(r"\$?([A-Z]{1,3})\$?([0-9]+)", a1.strip().upper())
-    if m is None:
-        msg = f"bad cell address {a1!r}"
-        raise ValueError(msg)
-    col = 0
-    for ch in m.group(1):
-        col = col * 26 + ord(ch) - ord("A") + 1
-    return int(m.group(2)) - 1, col - 1
-
-
-def _rowcol_to_a1(row: int, col: int) -> str:
-    letters = ""
-    col += 1
-    while col:
-        col, rem = divmod(col - 1, 26)
-        letters = chr(ord("A") + rem) + letters
-    return f"{letters}{row + 1}"
-
-
 def pivot_area(pivot: dict[str, Any]) -> tuple[int, int, int, int]:
     """(top, left, bottom, right), 0-based, of a snapshot pivot's cells: its `location` and the
     page-field area above it (`row_page_count` rows plus the blank row before the location), at
     least as wide as the location."""
     first, _, last = str(pivot["location"]).partition(":")
-    top, left = _a1_to_rowcol(first)
-    bottom, right = _a1_to_rowcol(last or first)
+    top, left = parse_a1(first)
+    bottom, right = parse_a1(last or first)
     pages = int(pivot.get("row_page_count") or 0)
     if pages:
         top = max(0, top - pages - 1)
@@ -182,7 +163,7 @@ def pivot_areas(snap: dict[str, Any]) -> list[dict[str, Any]]:
         area = {}
         for row in range(top, bottom + 1):
             for col in range(left, right + 1):
-                a1 = _rowcol_to_a1(row, col)
+                a1 = f"{column_letters(col + 1)}{row + 1}"
                 cell = cells.get(a1)
                 area[a1] = cell["value"] if cell is not None else {"t": "empty"}
         out.append({**pivot, "cells": area})
