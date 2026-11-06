@@ -216,7 +216,7 @@ impl NameTokens {
 }
 
 /// Excel's Arabic Hijri names, which a bare `B2` prints: calendar digit 6's names with no locale
-/// (locale/excel_calendars.tsv).
+/// (`locale/excel_calendars.tsv`).
 fn arabic_hijri_names() -> &'static DateNames {
     match calendar_names(6, CalendarKey::Lcid(0)) {
         Some(CalendarNames::Set { names, .. }) => names,
