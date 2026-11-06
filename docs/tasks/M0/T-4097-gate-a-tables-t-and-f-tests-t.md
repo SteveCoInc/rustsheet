@@ -3,7 +3,7 @@ id: T-4097
 title: "Gate A tables, T and F tests: T.TEST, TTEST, F.TEST and FTEST"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
