@@ -216,6 +216,7 @@ probes/t3912-imcsch-band-edges.case.json	2
 probes/t3914-imsech-sign-sweep.case.json	4
 probes/t3963-rate-keep-r0-fresh.case.json	147
 probes/t4045-f-dist-rt-zero-cut-fresh.case.json	24
+probes/t4069-fixed-denominator-tail.case.json	1
 probes/t4254-beta-t-l140-zero-cut.case.json	93
 probes/t4254-beta-t-zero-wide.case.json	15
 probes/t4255-gamma-window-exact-ratio.case.json	1

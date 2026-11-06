@@ -3,7 +3,7 @@ id: T-4069
 title: "Fixed-denominator fraction with a placeholder after it: '# ?/4|0' on 12.5 is '12 1/4|0', not '12 2/4|0'"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -18,8 +18,17 @@ Found by T-3711: probes/t3711-placeholder-after-fraction S!A13. With a fixed den
   Owns probes/t3711-placeholder-after-fraction.case.json S!A13.
 
 ## Acceptance criteria
-- [ ] probes/t3711-placeholder-after-fraction S!A13 passes; a probe covers the forms above; number-formats.md records the rule.
-- [ ] `make check` green; reviewers approve.
+- [x] probes/t3711-placeholder-after-fraction S!A13 passes; a probe covers the forms above; number-formats.md records the rule.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+Probed the shapes: probes/t4069-fixed-denominator-tail (26 cells, excel-graph 2026-11-06). A digit
+placeholder after a fixed denominator makes Excel pick the fraction as for placeholders as wide as
+the denominator and print the code's digits cut to the picked denominator's length, as a fixed
+denominator past 32768 does (formatter/fraction.rs `format_fraction`, `tail_placeholders`).
+probes/t3711-placeholder-after-fraction A13 passes; the new case passes 25/26. Its A4 (`# ?/4|0`
+on 12.1 is "12 1/4|00") is filed as T-4526. number-formats.md "After a fixed denominator";
+0 regressions.
