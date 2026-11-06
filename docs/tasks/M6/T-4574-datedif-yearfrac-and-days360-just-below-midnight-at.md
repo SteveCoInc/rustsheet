@@ -3,10 +3,10 @@ id: T-4574
 title: "DATEDIF, YEARFRAC and DAYS360 just below midnight at serials 59, 60 and 61 (the fictitious 1900-02-29): probe and match"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: todo
 priority: P3
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -35,3 +35,16 @@ DAYS360 at the bases around Excel's fictitious 1900-02-29 (serial 60), and the e
 
 ## Out of scope
 - Negative WEEKNUM return types (T-4470).
+
+## Handoff
+Probe `probes/t4574-near-midnight-serial-60` (234 cells, excel-graph 2026-11-06, committed with its oracle sidecar) is filled; the engine passes 198 and
+fails 36, so this is beyond a probe-and-match for sonnet. Rows 1-9 are s = 59-0.4s, 59-(2^-22+2^-33), 59, 60-0.4s, 60-(2^-22+2^-33), 60, 61-0.4s,
+61-(2^-22+2^-33), 61. `make eval-show` lists the failing cells; the patterns:
+- DATEDIF "m", "ym", "md", "yd" (D, J, G/H, K/L): Excel gives the same value for 59-eps as for 59 (e.g. G1:G3 = 15, 15, 15; H7:H9 = 0, 0, 0; D7:D9 = 2, 2, 2),
+  i.e. it does NOT floor the serial for these units here (it reads the next day), while "d" and "y" (and the engine) floor. The engine floors for all units.
+- YEARFRAC basis 4 (U, V): the opposite. Excel floors (U1 = 123.05 = the value for serial 58, U3 = 123.0472 for 59); the engine reads 59-0.4s as 59. Other bases pass.
+- DAYS360 (W:Z) passes.
+Next: probe at a modern base with N-0.4 day, N-0.6 day and N-0.4 s to separate ceil, round and floor for DATEDIF's calendar units, find where the
+engine's DATEDIF/YEARFRAC basis 4 take the serial from (`datedif_value` floors up front; check `yearfrac` basis 4), implement, record the rule in dates.md
+"Other date functions floor a serial just below midnight", and baseline. The probe's off cells need owners (`scripts/new_case_owners.py`) until fixed. Do not
+treat the rule as a plain floor: the evidence says it is per unit.
