@@ -3,7 +3,7 @@ id: T-4425
 title: "IMTAN and IMCOT past the 2^27 cut: probe the |y| where #NUM! turns into ±i (inferred from cosh 2y overflowing near 355.24, bracketed only by y = 20 and 700)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
