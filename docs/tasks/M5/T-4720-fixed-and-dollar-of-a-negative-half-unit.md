@@ -3,7 +3,7 @@ id: T-4720
 title: "FIXED and DOLLAR of a negative half-unit tie (FIXED(-0.005,2)) and TEXT of 1E+100 under 0.0E+0: probe the two UNVERIFIED number-to-text notes and match"
 milestone: M5
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -52,3 +52,11 @@ the observed results.
 ## Out of scope
 - FIXED's no_commas argument and DOLLAR's currency symbol under other locales.
 - Engineering formats (`##0.0E+0`) beyond the exponent-digit count; the engineering-format tie is T-4542's.
+
+## Outcome
+Probe `probes/t4720-fixed-sign-and-exponent-digits` (37 cells, excel-graph, 2026-11-06) is committed with its oracle
+sidecar; all 37 cells pass with no engine change. FIXED/DOLLAR keep the minus sign of a negative value that rounds away
+from zero, ties included; TEXT prints a full 3-digit exponent under a single placeholder. text.md and numbers.md now
+state the observed results. The case writes `1.5*10^308` for the 1.5E+308 row: the Graph workbook service rejects the
+literal `1.5E+308` in a formula as an unsupported workbook (value is identical). No Gate A definition covers FIXED,
+DOLLAR or TEXT, so there is no math sidecar. Eval delta: +37 passing probe cells, no baseline change.
