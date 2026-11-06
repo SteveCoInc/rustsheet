@@ -3,7 +3,7 @@ id: T-4605
 title: "arrays.md: two stale unprobed notes (INDEX of a LAMBDA out of range, IFERROR over blank FILTER/INDEX/VSTACK elements) now answered by T-1946 and T-2999"
 milestone: M7
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
