@@ -64,7 +64,8 @@ MARGIN_RANGE = (NORMAL_MIN, 1e300)  # an intermediate inside this is a normal do
 def confidence_margin(quantile: mpmath.mpf, sd: mpmath.mpf, n: mpmath.mpf) -> mpmath.mpf:
     """quantile·sd/√n, the margin CONFIDENCE.NORM, CONFIDENCE and CONFIDENCE.T share (T-4581): each passes its own
     quantile and size. NoValueError where sd, sd·quantile, sd/√n, quantile/√n or the margin leaves `MARGIN_RANGE`: no
-    cell shows where Excel's products overflow or underflow, so such a point is unprobed."""
+    cell shows where Excel's products overflow or underflow, so such a point is unprobed. The bounds are compared
+    exactly on the mpf (confidence.py's old check compared `abs(float(x))`, about one ulp looser)."""
     root = mpmath.sqrt(n)
     for intermediate in (sd, sd * quantile, sd / root, quantile / root, sd * quantile / root):
         if not MARGIN_RANGE[0] <= abs(intermediate) <= MARGIN_RANGE[1]:

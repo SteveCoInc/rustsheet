@@ -8,6 +8,7 @@ import random
 import mpmath
 import pytest
 
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, confidence_margin
 from rustsheet_tools.accuracy.defs.confidence import (
     CONFIDENCE,
     CONFIDENCE_NORM,
@@ -121,3 +122,12 @@ def test_draws_avoid_the_cancellation_region(definition: Definition) -> None:
             assert isinstance(size, int)
             assert isinstance(sd, float)
             assert not confidence_cancels(alpha)
+
+
+def test_the_shared_margin_and_its_range_check() -> None:
+    # `_common.confidence_margin`, shared with CONFIDENCE.T (T-4581): quantile 2, sd 3, n 4 is 2*3/2 exactly
+    assert confidence_margin(mp(2), mp(3), mp(4)) == 3
+    with pytest.raises(NoValueError):  # sd*quantile = 2e300 overflows MARGIN_RANGE
+        confidence_margin(mp(2), mp("1e300"), mp(1))
+    with pytest.raises(NoValueError):  # sd below the smallest normal double
+        confidence_margin(mp(2), mp(NORMAL_MIN) / 2, mp(1))
