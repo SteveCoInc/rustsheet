@@ -53,13 +53,35 @@ Non-goals:
 
 ## Design
 
-### D1. Retaining the source
+### D1. Retaining the source, and who does what
 - `rustsheet::Workbook::from_xlsx_bytes` (and `open`, which reads into bytes first) keeps the source bytes as an
-  `Arc<[u8]>` beside the model. That is at most `LoadOptions::max_uncompressed_bytes` already read, so no new memory
-  bound is needed.
-- `Workbook::new` has none.
+  `Arc<[u8]>` beside the model. It also keeps the import options it loaded them with: locale, time zone, language
+  and `ImportLimits`, the inputs of `rustsheet_xlsx::import::load_from_xlsx_bytes_with_limits`.
+- `Workbook::new` has neither.
 - A workbook loaded with a password keeps the decrypted package. The save writes it unencrypted, as today
   (SPEC-0031 non-goal).
+
+Layering. The facade owns retention and builds the pristine model. `rustsheet-xlsx` owns the diff and the
+patcher, and never depends on the facade. The entry point is:
+
+```rust
+/// Writes `model`, preserving `source` where SPEC-0034 allows: verbatim, patched or regenerated.
+pub fn save_preserving<W: Write + Seek>(
+    model: &Model,
+    pristine: &Model,
+    source: &[u8],
+    writer: W,
+) -> Result<(W, SaveTier), XlsxError>;
+```
+
+- The facade's `to_xlsx_bytes` re-imports `source` with the stored options into `pristine` and calls it.
+- With no source it calls `save_xlsx_to_writer` as today.
+- `save_xlsx_to_writer` stays the regenerating export, and the Structural tier calls it.
+
+**Memory (directive 5).** The pristine model makes a save's peak about twice the model's size, bounded by the same
+`ImportLimits` the load already passed. The retained bytes are at most `max_uncompressed_bytes`. A caller that cannot
+afford twice the model should save a workbook created with `Workbook::new`, which has no source, and keep today's
+cost.
 
 ### D2. What changed: a save-time diff
 At save, the export re-imports the retained source into a second `Model` (the pristine model) and compares it with
@@ -112,9 +134,9 @@ The pass is bounded (directive 5):
 - **Shared strings:** a changed cell whose text already exists in the source table uses its index. New text is
   appended at the end of `sharedStrings.xml`, and `count` and `uniqueCount` are updated. If the source has no table and
   a new string is needed, the patcher falls back to regeneration, so that it never adds a part.
-- **Styles:** the importer keeps the source's `cellXfs` order, and the model appends new styles at the end. The
-  patcher checks this holds, meaning the first *n* records of the live style table equal the pristine one's;
-  otherwise it falls back. New records (`xf`, and the `font`, `fill`, `border` and `numFmt` they need) are appended to
+- **Styles:** the importer is assumed to keep the source's `cellXfs` order, with the model appending new styles at
+  the end. This is an assumption: T-4561 verifies it against `import/styles.rs`. The patcher checks it holds, meaning
+  the first *n* records of the live style table equal the pristine one's; otherwise it falls back. New records (`xf`, and the `font`, `fill`, `border` and `numFmt` they need) are appended to
   their collections in `styles.xml`, with the counts updated.
 - **Inline strings** in the source stay inline when unchanged. A changed string cell is written as a shared string.
 
@@ -122,22 +144,51 @@ The pass is bounded (directive 5):
 - A changed cached value rewrites the cell's `<v>` (and `t`), keeping its `<f>` as stored, `t="shared"` and `si`
   included.
 - A changed formula is written as the regenerating export writes it.
-- The master of a shared-formula group whose text changed breaks the group: its members are written with their own
-  formulas. Otherwise the patch would change cells it was not asked to.
+- A shared-formula group whose master's formula changed, or whose master was cleared or replaced by a constant,
+  breaks: every member is written with its own formula. Otherwise the patch would change cells it was not asked to.
+- An edited member leaves the group and is written with its own formula. The other members keep `t="shared"`.
 - Dynamic-array anchors and their spill ranges follow the regenerating export's rules for `cm` and `metadata.xml`.
   If the source had no `metadata.xml` and one is needed, the patcher falls back.
 
-**D3.5. calcChain** follows E2. **docProps** are kept as the source had them: the source's `modified` time stays
-(SPEC-0033 N2 decides later whether to touch it).
+**D3.5. calcChain** follows E2.
+
+**docProps.** The Unchanged tier keeps docProps byte-identical, `dcterms:modified` included. The Content tier also
+keeps them as the source had them, which on purpose departs from today's export: today's export stamps
+`dcterms:modified` from the workbook clock (`Workbook::set_clock`, SPEC-0008). Keeping the source's time keeps the
+part byte-identical until SPEC-0033 N2's evidence (T-4503) says whether Excel restamps it. If it does, the Content
+tier restamps only that element.
 
 ### D4. SaveReport
-`save_xlsx_with_report` (SPEC-0033 D7) reports the tier:
-- `Verbatim`, `Patched { sheets }` or `Regenerated { reason }`;
-- every drop: `Policy` for calcChain; `NotPreserved` for each unmodelled part a regeneration loses.
+SPEC-0033 D7's `SaveReport` gains the tier:
+
+```rust
+/// How a save wrote the package (SPEC-0034).
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SaveTier {
+    /// Every part is the source's, byte for byte.
+    Verbatim,
+    /// The source with these sheets' cells patched (and shared strings and styles appended).
+    Patched { sheets: Vec<String> },
+    /// Rebuilt from the model, for this reason (a structural change, a fallback trigger, no source).
+    Regenerated { reason: String },
+}
+// SaveReport { tier: SaveTier, dropped: Vec<Dropped> }
+```
+
+The drops are:
+- `Policy` for calcChain;
+- `NotPreserved` for each unmodelled source part a regeneration loses.
+
+This replaces SPEC-0033 D7.1's plan of a coarse report in T-4183's first stage: the report ships with T-4562.
+Until then the round-trip suite scores every missing item `lost`, which is the same score.
 
 ### D5. Stage 4: preserving under regeneration
-For structural edits, the ownership matrix, closure rule and fragment slots of decision 0275 apply. That is a later
-spec section, written when stage 3 lands. It needs M4's reference shifting for range-bound content.
+For structural edits, the ownership matrix, closure rule, fragment slots, invalidation table and preservation limits
+of decision 0275 apply. T-4183 was filed to specify them. This spec chose instead to make preservation the default
+through the source and the patcher, which needs none of them, and moved them to stage 4. Its spec is task
+T-4567, which depends on M4's reference shifting for range-bound content. SPEC-0033 D7's
+`ClosureReachesRegenerated` and the `Drop` policy are defined there.
 
 ## Alternatives considered
 - **Dirty flags through the engine.** These are cheaper at save, but every mutation path (edits, recalculation,
@@ -167,4 +218,4 @@ spec section, written when stage 3 lands. It needs M4's reference shifting for r
 2. **Sheet patcher for changed cached values and inputs** (D3.1, D3.2, D3.4), with the shared-strings append (D3.3).
 3. **The styles append** (D3.3) and the `metadata.xml` and calcChain rules (D3.4, D3.5, E2).
 4. **SaveReport tiers** (D4), wired into the round-trip `dropped` verdict.
-5. **Stage 4** (D5), after M4: its own spec section and tasks.
+5. **Stage 4** (D5), after M4: T-4567 specifies it, then its own tasks.

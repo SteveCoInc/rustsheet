@@ -7,7 +7,7 @@ status: blocked
 priority: P1
 size: M
 tier: opus
-depends_on: [T-4183, T-4561]
+depends_on: [T-4183, T-4559]
 spec: docs/specs/SPEC-0034-xlsx-source-preserving-export.md
 ---
 

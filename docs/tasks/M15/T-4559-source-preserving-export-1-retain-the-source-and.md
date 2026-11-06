@@ -19,7 +19,7 @@ keeps today's regenerating export.
 ## Context
 SPEC-0034. The save-time diff re-imports the retained source into a pristine `Model` and compares it with the live
 one, using the typed model's own fields (D2.1). This first slice only needs the Unchanged decision. Classifying
-Content against Structural, and acting on it, is T-T-4560.
+Content against Structural, and acting on it, is T-4560.
 
 R0 recalculates. A workbook whose recalculation reproduces every cached value is Unchanged, so in
 `roundtrip-fixtures` such cases become fully kept. That is the first big step towards the owner's 99% goal.
@@ -32,7 +32,7 @@ R0 recalculates. A workbook whose recalculation reproduces every cached value is
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- Patching (T-T-4560).
+- Patching (T-4560).
 
 ## Blocked because
 Deferred to Phase 2 (decisions 0027, 0275, 0306): M15 waits until Phase 1 parity exits, except for the task the
