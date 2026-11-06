@@ -3,7 +3,7 @@ id: T-4116
 title: "Gate A tables, cash-flow arrays: NPV, XNPV, MIRR and FVSCHEDULE"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
