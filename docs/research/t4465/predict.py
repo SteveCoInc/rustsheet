@@ -60,7 +60,10 @@ def outcome(kind: str, n: int) -> str:
 
 
 def arg_value(text: str) -> float:
-    # Exact: every term is an integer or a power of two times a small integer.
+    """The argument's value under Excel's precedence. Exact: every term is an integer or a power
+    of two times a small integer. Excel's unary minus binds before `^`, so `-2^-22` is (-2)^-22,
+    which is +2^-22 (even power): the generator's base-0 cells `-2^-k` are positive for even k."""
+    text = re.sub(r"^-2\^", "(-2)^", text)
     return float(eval(text.replace("^", "**"), {"__builtins__": {}}))  # noqa: S307 - generated input
 
 
