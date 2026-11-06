@@ -2374,6 +2374,7 @@ C	probes/t4375-xnpv-refused-first-and-one-cell.case.json	114
 C	probes/t4378-pivotby-subtotal-holdout.case.json	450
 C	probes/t4379-pivotby-repeated-unreached-leaf.case.json	351
 C	probes/t4380-unique-keep-head-holdout.case.json	622
+C	probes/t4381-xnpv-literal-and-named-text.case.json	10
 C	probes/t4382-pivotby-intransitive-paths.case.json	819
 C	probes/t4388-pivotby-intransitive-subtotals.case.json	705
 C	probes/t4389-confirm.case.json	80
