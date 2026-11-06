@@ -1754,27 +1754,30 @@ Rule (fitted proxy; Excel's mechanism is not known): on long conventional series
 inflows) IRR's secant from 0.1 takes a first step far toward r = -1 (d = 1 - v of -1E+3 to -3E+11), where NPV is
 1E+200 or more, steps back near d = 0.0919, takes a zero step (d2 = d1) and goes flat (f1 = f0, d1 = d0: the next step
 is 0/0). There Excel is `#DIV/0!` when the run's largest |NPV| was large, and `#NUM!` (or, on other series, the root)
-when it was not. The engine cuts at 3E+226: the largest `#NUM!` run in eval reaches 1.556E+226 (probes/
-t3406-irr-num-boundary A65, a 40-flow annuity of 1 after -48614255.03) and the smallest `#DIV/0!` one above it
-5.16E+226 (probes-numeric/t3411-irr-r4-fresh-4 A86). Every NPV of these runs is a finite double, so this is not
-T-3407's overflow ("IRR is #DIV/0! where its secant cannot evaluate NPV").
+when it was not. The engine cuts at 3E+226, placed on the train side of the fit lab's split (decision 0188 R4.1,
+`holdout.is_holdout`): the largest train `#NUM!` run reaches 1.556E+226 (probes/t3406-irr-num-boundary A65, a 40-flow
+annuity of 1 after -48614255.03) and the smallest train `#DIV/0!` one above it 6.57E+230 (A81). Every NPV of these
+runs is a finite double, so this is not T-3407's overflow ("IRR is #DIV/0! where its secant cannot evaluate NPV").
+Every evidenced run starts from 0.1 (the default guess, or the retry from 0.1), so the engine applies the cut only
+there, and only for 27 to 144 flows with the largest |flow| 1.3E+4 to 6.7E+14.
 - A flat 0/0 step alone is not the rule: making every one `#DIV/0!` moves A131 and A138 of t3347-irr-conventional-
   holdout but breaks about 150 cells where Excel is `#NUM!` or returns the root (T-3347, attempt 1).
-- In sample, over every IRR cell in eval, the cut moves 19 cells to Excel's `#DIV/0!` and none away:
-  t3347-irr-conventional-holdout P!A131 and A138; probes/t3406-irr-num-boundary P!A66, A67, A68, A81, A82;
-  t3411-irr-r4-fresh A83, A91; -2 A1, A6, A19, A92; -3 A78; -4 A4, A86, A89, A94, A103.
+- In sample, over every IRR cell in eval, the cut moves 19 cells to Excel's `#DIV/0!` and none away. Train (13):
+  t3347-irr-conventional-holdout P!A138; probes/t3406-irr-num-boundary P!A66, A67, A68, A81; t3411-irr-r4-fresh A83,
+  A91; -2 A6, A92; -3 A78; -4 A4, A89, A103. Test (6): t3347-irr-conventional-holdout P!A131; t3406 P!A82;
+  t3411-irr-r4-fresh-2 A1, A19; -4 A86, A94.
 - Out of sample (decision 0188 R4.2): probes-numeric/t3347-irr-r4-fresh, 150 long series in six strata
   (docs/research/t3411/gen_sweep.py, seed "T-3347/r4-fresh"), drawn and filled (excel-graph, 2026-11-06) after the cut
   was frozen: 8 cells move to Excel's `#DIV/0!` (A37, A49, A54, A61, A84, A131, A144, A148) and none away.
 - Against it: two `#DIV/0!` runs peak below the cut, at 1.3E+215 and 3.0E+221 (t3411-irr-r4-fresh A85, -3 A24), and on
-  12 runs past it Excel returns the root, all from -4% to -11% except A136 (1.6E-4) (t3411-irr-r4-fresh A15, A22; -4 A17, A79,
-  A88, A93, A136; t3347-irr-r4-fresh A52, A53, A58, A74, A109). The engine was `#NUM!` there and is `#DIV/0!` now:
-  wrong either way. Those roots are the "near -10%" returns of T-3347 and T-3408, so Excel's secant does not take
-  the engine's path on them.
+  11 runs past it Excel returns a root from -4% to -11% (t3411-irr-r4-fresh A15, A22; -4 A17, A79, A88, A93;
+  t3347-irr-r4-fresh A52, A53, A58, A74, A109). The engine was `#NUM!` there and is `#DIV/0!` now: wrong either way.
+  Those roots are the "near -10%" returns of T-3347's Goal, so Excel's secant does not take the engine's path on them.
 Evidence: the cells above (excel-graph); the cut is scored by an engine run with the rule and without it
-Status: VERIFIED (excel-graph) for the cells; the rule is a FITTED proxy (decision 0188 R4)
+Status: VERIFIED (excel-graph) for the cells; the rule is a FITTED proxy (decision 0188 R4, decision 0316)
 Implemented in: `irr_flat_is_div_zero`, `IRR_FLAT_DIV_ZERO_NPV` (functions/financial/financial_util.rs)
-Tasks: T-3347, T-3408, T-3548
+Tasks: T-3347, T-3548
+
 ## RATE: an empty guess is guess 0, not the default 0.1
 Rule: an empty guess argument (`RATE(48,-200,8000,0,1,)`) or a reference to an empty cell behaves as
 guess 0, not the default 0.1: the result has the same bits as an explicit `0` (0.008052981923885287)
