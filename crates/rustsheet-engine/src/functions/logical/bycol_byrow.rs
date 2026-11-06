@@ -211,7 +211,15 @@ impl Model {
             left: slice.left,
             right: slice.right,
         };
-        let result = self.call_lambda_caller(caller, [reference], cell);
+        let result = match self.call_lambda_caller(caller, [reference], cell) {
+            // A one-cell reference a function in the body returns is that cell's value, as a
+            // written one is: `BYCOL(D6:E11,LAMBDA(y,REDUCE(y,y,LAMBDA(acc,v,D1))))` is D1's value
+            // (gen-m7/611ce3bbfab27cef A1421) now that REDUCE returns the reference (T-4478).
+            reference @ CalcResult::Range { .. } if !reference.is_multi_value() => self
+                .lambda_result_value(reference, cell)
+                .unwrap_or_else(|error| error),
+            result => result,
+        };
         (!makes_calc_error(&result)).then(|| lambda_result_to_array_node(result))
     }
 

@@ -237,6 +237,7 @@ mod test_networkdays_closed_form;
 mod test_now;
 mod test_percentage;
 mod test_range_evaluation;
+mod test_reduce_reference_accumulator;
 mod test_set_functions_error_handling;
 mod test_sheet_names;
 mod test_spill_functions;
