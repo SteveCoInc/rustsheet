@@ -3,7 +3,7 @@ id: T-2612
 title: "A plain reference to a deleted sheet is stored and exported as #REF!C4:C7, so a same-name sheet does not revive it (T-2340)"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -31,9 +31,26 @@ existed (a loaded `Nope!A1`), which the engine now displays as `#REF!A1`; and wh
 as `#REF!` then `(1)`).
 
 ## Acceptance criteria
-- [ ] A probe (excel-graph) of delete sheet S, then add sheet S: the plain `S!C4:C7` value and FORMULATEXT.
-- [ ] The engine matches it; the export writes Excel's text; undo of the delete still restores the reference.
-- [ ] `make check` green; reviewers approve.
+- [x] A probe (excel-graph) of delete sheet S, then add sheet S: the plain `S!C4:C7` value and FORMULATEXT.
+- [x] The engine matches it; the export writes Excel's text; undo of the delete still restores the reference.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Desktop-only undo (T-2325).
+
+## Outcome
+- Probe probes/table-edits/t2612-delete-sheet-then-add (excel-graph, 2026-11-06): delete S, add a new blank S.
+  Excel revives nothing: `SUM(S!C4:C7)`, `S!C4`, `COUNTBLANK(S!C4:C7)` stay `#REF!`; FORMULATEXT `=SUM(#REF!C4:C7)`,
+  `=#REF!C4`; `ISREF(#REF!A1)` FALSE; `INDIRECT("S!C4")` reads the new sheet. The engine passes all 10 cells (it
+  had 2 before: A1, A3, A5 read the new sheet, the FORMULATEXT cells kept `S!`, ISREF was TRUE).
+- `delete_sheet_in_node` (stringify/sheet_edits.rs) now also turns each reference and range on the deleted sheet
+  into a wrong reference to `DELETED_SHEET` (`*#REF!`, wrong_reference.rs; `*` cannot be in a sheet name, and `:`
+  would have read as `#NAME?` through `wrong_sheet_error`). `is_missing_sheet` prints it as `#REF!` in the display
+  and the xlsx export; only the stored R1C1 text holds the sentinel. Undo (`restore_sheet`, `UserModel`
+  `Diff::DeleteSheet`) restores the old text through the existing rewritten-formula list.
+- Tests: `a_sheet_added_under_a_deleted_name_does_not_revive_its_references` (sheet_undo.rs: value, formula, undo);
+  T-2340's `a_sheet_delete_is_a_ref_error_and_restore_brings_the_tables_back` now pins `#REF!` for the plain twin;
+  rustsheet-xlsx `deleted_sheet_reference_export` checks the saved `<f>SUM(#REF!C4:C7)+#REF!$A$1</f>`.
+- references.md "A deleted table or sheet" records the probe and replaces the "Known gaps (T-2612)" sentence.
+- Eval delta: probes +1 case (10 cells), all pass.
+- Follow-up: T-4628 (a loaded `#REF!C4:C7` loses its range in the lexer; probe first).

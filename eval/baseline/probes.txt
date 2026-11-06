@@ -2471,6 +2471,7 @@ C	probes/t4554-api-name-scoped-name-choice.case.json	27
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
+C	probes/table-edits/t2612-delete-sheet-then-add.case.json	10
 C	probes/table-edits/t3629-convert-names.case.json	9
 C	probes/table-edits/t3629-convert-plain.case.json	4
 C	probes/table-edits/t3629-readd-other-area.case.json	6
