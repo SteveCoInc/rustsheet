@@ -3,7 +3,7 @@ id: T-4472
 title: "GROUPBY's key tree and descent on T-4393's UNIQUE: t4393 hold-out column C 32/60 and t4380 column C 38/45 under docs/research/t4241's tree"
 milestone: M7
 lane: research
-status: todo
+status: dropped
 priority: P2
 size: M
 tier: opus
@@ -36,3 +36,9 @@ fresh hold-out; or the negatives recorded and the cells parked with their reason
 
 ## Out of scope
 - UNIQUE's merge (T-4471).
+
+## Outcome
+Dropped (T-4471, 2026-11-06). Once `coalesce_equal_lines` took T-4393's merge, the engine's own GROUPBY tree passed
+every owned cell: probes/t4393-unique-merge-holdout 884 of 884 and probes/t4380-unique-keep-head-holdout 622 of
+622. The shortfall this task was filed for, 32 of 60 and 38 of 45, came from docs/research/t4241/model.py's Python
+descent, not from Excel or the engine. No model is left to find.

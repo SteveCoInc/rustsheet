@@ -1,0 +1,52 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4314: where Excel's IPMT is #NUM!. A: IPMT across the overflow of the discounted balance A = (pv+fv)/(1-(1+rate)^-nper) at rate 0.5, nper 2 (A = 1.8*(pv+fv), finite at pv 9.9E+307, past the double range at 1E+308), and pv+fv itself overflowing or cancelling. B: PPMT and PMT on A's inputs. C: subnormal rates (kept-subnormal differences) where A is finite, against the smallest normal rates. D: a normal rate with 1-(1+rate)^-nper subnormal (nper 1E-10). E1:E4: the `(x)=0` companions of C9, C10, C11 and C5, which tell a true 0 from a kept subnormal (Graph reports both as 0; numbers.md \"Subnormal results become 0\").",
+ "tags": [
+  "M9",
+  "financial",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": "=IPMT(0.5,1,2,9.9E+307)",
+    "A2": "=IPMT(0.5,1,2,2*5E+307)",
+    "A3": "=IPMT(0.5,2,2,9.9E+307)",
+    "A4": "=IPMT(0.5,2,2,2*5E+307)",
+    "A5": "=IPMT(0.5,1,2,5E+307,5E+307)",
+    "A6": "=IPMT(0.5,1,2,2*5E+307,-2*5E+307)",
+    "A7": "=IPMT(0.5,1,2,2*8.5E+307,2*8.5E+307)",
+    "A8": "=IPMT(0.5,2,2,2*5E+307,0,1)",
+    "A9": "=IPMT(0.5,2,2,9.9E+307,0,1)",
+    "A10": "=IPMT(0.5,1,2,0,2*5E+307)",
+    "B1": "=PPMT(0.5,1,2,9.9E+307)",
+    "B2": "=PPMT(0.5,1,2,2*5E+307)",
+    "B3": "=PMT(0.5,2,9.9E+307)",
+    "B4": "=PMT(0.5,2,2*5E+307)",
+    "B5": "=PPMT(0.5,2,2,2*5E+307)",
+    "B6": "=CUMIPMT(0.5,2,2*5E+307,1,1,0)",
+    "C1": "=IPMT((7.245817E-308-6.217028E-308),2,1E+9,1E-10,0,0)",
+    "C2": "=IPMT((7.245817E-308-6.217028E-308),2,1E+9,1E-10,0,1)",
+    "C3": "=IPMT(-(7.245817E-308-6.217028E-308),2,1E+9,1E-10,0,0)",
+    "C4": "=IPMT((7.245817E-308-6.217028E-308),2,1E+9,0,0,0)",
+    "C5": "=IPMT((7.245817E-308-6.217028E-308),1,1E+9,1E-10,0,1)",
+    "C6": "=IPMT((7.245817E-308-6.217028E-308),2,1E+9,0,1E-10,0)",
+    "C7": "=PPMT((7.245817E-308-6.217028E-308),2,1E+9,1E-10,0,0)",
+    "C8": "=PMT((7.245817E-308-6.217028E-308),1E+9,1E-10)",
+    "C9": "=IPMT(2.2250738585073E-308,2,1E+9,1E-10,0,0)",
+    "C10": "=IPMT(4.4501477170144E-308,2,1E+9,1E-10,0,0)",
+    "C11": "=IPMT(2.2250738585073E-308,2,1E+9,1E-10,0,1)",
+    "C12": "=IPMT((7.245817E-308-6.217028E-308),1,1E+9,1E-10,0,0)",
+    "D1": "=IPMT(1E-300,1,1E-10,1E-300)",
+    "D2": "=IPMT(1E-300,1,1E-10,1)",
+    "D3": "=PPMT(1E-300,1,1E-10,1E-300)",
+    "E1": "=(IPMT(2.2250738585073E-308,2,1E+9,1E-10,0,0))=0",
+    "E2": "=(IPMT(4.4501477170144E-308,2,1E+9,1E-10,0,0))=0",
+    "E3": "=(IPMT(2.2250738585073E-308,2,1E+9,1E-10,0,1))=0",
+    "E4": "=(IPMT((7.245817E-308-6.217028E-308),1,1E+9,1E-10,0,1))=0"
+   }
+  }
+ ],
+ "expected": {}
+}
