@@ -225,6 +225,7 @@ probes/t3906-rate-restart-oos.case.json	137
 probes/t3912-imcsch-band-edges.case.json	2
 probes/t3914-imsech-sign-sweep.case.json	4
 probes/t3963-rate-keep-r0-fresh.case.json	147
+probes/t4027-irr-annuity-scale-guess.case.json	35
 probes/t4043-fixed-denominator-cut.case.json	78
 probes/t4043-fixed-denominator-slots.case.json	204
 probes/t4043-frozen-model-holdout.case.json	82
