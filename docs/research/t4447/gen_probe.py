@@ -38,10 +38,20 @@ def main(out: Path) -> None:
     cells[f"H{row}"] = "{1.5,2.0000001}"
     cells[f"I{row}"] = read("SORT(A1:B3,{1.5,2.0000001},-1)")
     cells[f"J{row}"] = read("SORT(TRANSPOSE(A1:B3),{1.5,2.0000001},-1,TRUE)")
+    # O1:P3 orders column P apart from column O, so the key a sort_index reads is visible
+    # (A1:B3 sorts the same rows by either column).
+    for cell, value in [("O1", 3), ("P1", "a"), ("O2", 1), ("P2", "c"), ("O3", 2), ("P3", "b")]:
+        cells[cell] = value
+    row = 1
+    for index in INDEXES:
+        cells[f"Q{row}"] = index
+        cells[f"R{row}"] = read(f"SORT(O1:P3,{index},1)")
+        cells[f"S{row}"] = read(f"SORT(TRANSPOSE(O1:P3),{index},1,TRUE)")
+        row += 1
     case = {
         "format": "rustsheet-case/v1",
         "description": "T-4447: SORT's sort_order (column E scalar, F a one-element array IF({1},x)) and sort_index "
-        "(column I, and J by_col over TRANSPOSE) at fractions and 2^-21..2^-24 from an integer, over "
+        "(column I, and J by_col over TRANSPOSE; R and S again over O1:P3 = (3,a),(1,c),(2,b), whose columns sort apart) at fractions and 2^-21..2^-24 from an integer, over "
         "A1:B3 = (3,c),(1,a),(2,b); each read as TEXTJOIN, or ERROR.TYPE on an error.",
         "tags": ["M7", "probe", "lookup", "T-4447"],
         "sheets": [{"name": "Calc", "cells": cells}],
