@@ -22,7 +22,7 @@ probes/t4204-fraction-denominator-mixed; reconcile it with "A placeholder denomi
 place". Subsumes T-4069. Hold-out: a fresh probe written after the model is frozen.
 
 ## Owned cases
-Every visibly-off cell of these probes (decision 0245):
+Every visibly-off cell of these probes, or of the cells named (decision 0245):
 - probes/t4043-fixed-denominator-cut
 - probes/t4043-fixed-denominator-slots
 - probes/t4043-frozen-model-holdout
@@ -32,7 +32,7 @@ Every visibly-off cell of these probes (decision 0245):
 - probes/t3711-fixed-denominator-then-placeholder
 - probes/t3711-placeholders-after-fraction
 - probes/t3598-decimal-part-commas
-- probes/t3666-review-followups
+- probes/t3666-review-followups A7:A12 (commas; the rest of the case is T-4508's)
 
 ## Acceptance criteria
 - [ ] The t4043-* probes, t3711-fixed-denominator-then-placeholder and the comma cells above pass, with no regression.

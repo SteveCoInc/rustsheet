@@ -1507,7 +1507,8 @@ Tasks: T-1611, T-2029, T-2030, T-1740, T-0982, T-2061, T-2072, T-2073, T-2074, T
 
 ## Placeholders after a fraction
 Rule: digit placeholders after a fraction's denominator get no digit of the value; they print what the denominator hands
-on, by one rule for every denominator. A `.` among them prints and a `,` prints nothing.
+on, by one rule for every fixed denominator (a placeholder denominator follows "A placeholder denominator prints its
+unused placeholders in place" above, which this model does not fit). A `.` among them prints and a `,` prints nothing.
 - **Which fraction.** A fixed denominator is used as written only when it is at most 32768 and no digit placeholder
   follows it in the section; otherwise Excel picks the fraction as for one past 32768 (see "Fraction formats"): the last
   convergent with a denominator up to 9999999 (0.0625 is 1/16, 0.3 3/10, 0.123456789 10/81, PI() 3 + 244252/1725033).

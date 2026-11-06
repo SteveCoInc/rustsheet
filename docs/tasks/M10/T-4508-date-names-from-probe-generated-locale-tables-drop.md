@@ -22,13 +22,13 @@ T-4507 generated the tables with a tool (`rustsheet-excel-locales`) and passed e
 locale. number-formats.md "Which LCIDs have a locale", "Calendar names per locale".
 
 ## Owned cases
-Every visibly-off cell of these probes (decision 0245):
+Every visibly-off cell of these probes, or of the cells named (decision 0245):
 - probes/t3666-calendar-top-bit
 - probes/t3666-lcid-locale-map
 - probes/t3666-lcid-sublanguage-sweep
 - probes/t3666-locale-names
 - probes/t3666-locale-tag-names
-- probes/t3666-review-followups
+- probes/t3666-review-followups A1:A6, B1:B8 (tags after `B2`; the comma cells A7:A12 are T-4515's)
 - probes/t4061-calendar-names-all
 - probes/t4061-calendar-names-by-language
 - probes/t4061-calendar-names-digest
