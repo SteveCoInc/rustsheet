@@ -32,7 +32,7 @@ Reviewer findings on PR #3412 (all MINOR, none changes a table or sidecar value 
 ## Acceptance criteria
 - [x] Each item above is done or noted moot in the Outcome; `make eval-math-check` stays current (regenerate the
       stale cases only if a definition change moves a value).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The R3 ruling itself (T-4392).
