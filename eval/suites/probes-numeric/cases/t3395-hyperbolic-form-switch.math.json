@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "602cf468489efc38c77c0b5f82510a3f2b9d9f4acea51e310c3994c084d2e434",
   "definitions": {
-   "SINH": "9d0790bcfc9417a4",
-   "TANH": "9d0790bcfc9417a4"
+   "SINH": "2d02d6a90ec4f657",
+   "TANH": "2d02d6a90ec4f657"
   },
   "arguments_sha256": "4392483064fcd7fc3df4c8db246a631858ed6c1e3c45f7dcc1ab12f5e73f7ad2"
  },

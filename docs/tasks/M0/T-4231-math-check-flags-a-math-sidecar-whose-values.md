@@ -44,7 +44,8 @@ that the current generator code would no longer write, not only when a candidate
 - New `tools/src/rustsheet_tools/accuracy/fingerprint.py`: every eval math sidecar's `source` records `definitions`
   (function → 16-hex hash of the code computing its definition: the modules of its `value`, `domain` and `tail`
   and every `rustsheet_tools` module they import, transitively, each hashed as its syntax tree without docstrings,
-  so comments and docstrings do not count) and `arguments_sha256` (every computable candidate's sheet, cell,
+  so comments and docstrings do not count; the tree is dumped without empty fields, so CI's Python 3.12 and a
+  local 3.11 agree: the whole `rustsheet_tools` package hashes the same on 3.11.18, 3.12.3 and 3.13.18) and `arguments_sha256` (every computable candidate's sheet, cell,
   formula and arguments as the definitions receive them, by exact `repr`; a composite by its tree).
   `fingerprint.MACHINERY` (model, literal, sampler, tables, the fit lab's sweep reader and scoring modules,
   snapshot) is not hashed: nearly every definition imports it, the reader is covered by the argument hash, and an

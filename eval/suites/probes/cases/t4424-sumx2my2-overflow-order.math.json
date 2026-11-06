@@ -6,9 +6,9 @@
   "dps": 80,
   "input_sha256": "a5b2f8e98c5acf7c05b3f4da07c0901a9687206d7e8b653cc96a366924d2412f",
   "definitions": {
-   "SUMX2MY2": "2b30975c73c98f93",
-   "SUMX2PY2": "2b30975c73c98f93",
-   "SUMXMY2": "2b30975c73c98f93"
+   "SUMX2MY2": "75e3a541c3378a0e",
+   "SUMX2PY2": "75e3a541c3378a0e",
+   "SUMXMY2": "75e3a541c3378a0e"
   },
   "arguments_sha256": "790474c167c46636566ed03e334d17d310f8c53e2fa0263527effc742611429d"
  },

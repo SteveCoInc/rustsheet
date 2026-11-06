@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "7bbb20ad1d1175aa10e2636e03713e4e4c4075f8b7f98fc03dee56c2ecb30dae",
   "definitions": {
-   "F.INV.RT": "ba49c059ed503bc9",
-   "FINV": "ba49c059ed503bc9"
+   "F.INV.RT": "2082d42adde3a9ef",
+   "FINV": "2082d42adde3a9ef"
   },
   "arguments_sha256": "32b949c5cd5658e537444d7111ab695daad5dcf02b9a7c5e5659ea0fcf6d8d41"
  },

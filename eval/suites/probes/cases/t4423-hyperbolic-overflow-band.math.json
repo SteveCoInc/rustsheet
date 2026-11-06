@@ -6,10 +6,10 @@
   "dps": 80,
   "input_sha256": "ddd7d0d37b10cb2d8e7a8bbd81554a9e9b66a714e83a44424389bb44a848d6a2",
   "definitions": {
-   "COSH": "9d0790bcfc9417a4",
-   "CSCH": "9d0790bcfc9417a4",
-   "SECH": "9d0790bcfc9417a4",
-   "SINH": "9d0790bcfc9417a4"
+   "COSH": "2d02d6a90ec4f657",
+   "CSCH": "2d02d6a90ec4f657",
+   "SECH": "2d02d6a90ec4f657",
+   "SINH": "2d02d6a90ec4f657"
   },
   "arguments_sha256": "6899bcde6b269b54792e6d2975117460f533a140fbd066c46880f9547e50fb5e"
  },

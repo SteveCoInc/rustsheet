@@ -6,10 +6,10 @@
   "dps": 80,
   "input_sha256": "ee288566920620eb73ac9cebb0024edbbf2e35a96218a51e305dfdbe3fa125a6",
   "definitions": {
-   "BINOM.DIST": "8871ae48603ed045",
-   "BINOM.DIST.RANGE": "7c8bb298ad2055cc",
-   "BINOM.INV": "7c8bb298ad2055cc",
-   "CRITBINOM": "7c8bb298ad2055cc"
+   "BINOM.DIST": "eee69c2ed987357d",
+   "BINOM.DIST.RANGE": "a2aded2d12e1ffc5",
+   "BINOM.INV": "a2aded2d12e1ffc5",
+   "CRITBINOM": "a2aded2d12e1ffc5"
   },
   "arguments_sha256": "814b583d1d80e45b51e76ff4ebcdaf4d0b04d2976969e5485d717545731e749d"
  },

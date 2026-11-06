@@ -6,14 +6,14 @@
   "dps": 80,
   "input_sha256": "f36cd8bb64120252ab7c1f264a6e4ca7bbb82c7e4fc56d2084401bf0bbcb02e7",
   "definitions": {
-   "CORREL": "d32e089eca1e2e92",
-   "COVARIANCE.P": "e71e13c9c442a2d5",
-   "FORECAST": "d32e089eca1e2e92",
-   "INTERCEPT": "d32e089eca1e2e92",
-   "PEARSON": "d32e089eca1e2e92",
-   "RSQ": "d32e089eca1e2e92",
-   "SLOPE": "d32e089eca1e2e92",
-   "STEYX": "d32e089eca1e2e92"
+   "CORREL": "f9447b92676d617d",
+   "COVARIANCE.P": "7e3e8708690e3d2f",
+   "FORECAST": "f9447b92676d617d",
+   "INTERCEPT": "f9447b92676d617d",
+   "PEARSON": "f9447b92676d617d",
+   "RSQ": "f9447b92676d617d",
+   "SLOPE": "f9447b92676d617d",
+   "STEYX": "f9447b92676d617d"
   },
   "arguments_sha256": "69308d01f1e863480b616bc0603c35db7955bde410dceaa5550c1074de8cd84a"
  },

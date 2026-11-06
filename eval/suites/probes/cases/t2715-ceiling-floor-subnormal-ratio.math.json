@@ -6,15 +6,15 @@
   "dps": 80,
   "input_sha256": "d62954c030445421503f5f95561d918e8a79bd06a16b3b0cfe5b7bb486d62771",
   "definitions": {
-   "CEILING": "85d90bd16a46b3c0",
-   "CEILING.MATH": "85d90bd16a46b3c0",
-   "CEILING.PRECISE": "85d90bd16a46b3c0",
-   "ECMA.CEILING": "85d90bd16a46b3c0",
-   "FLOOR": "85d90bd16a46b3c0",
-   "FLOOR.MATH": "85d90bd16a46b3c0",
-   "FLOOR.PRECISE": "85d90bd16a46b3c0",
-   "ISO.CEILING": "85d90bd16a46b3c0",
-   "MROUND": "bda21ea4274b68c4"
+   "CEILING": "dcab9afe9ac335c5",
+   "CEILING.MATH": "dcab9afe9ac335c5",
+   "CEILING.PRECISE": "dcab9afe9ac335c5",
+   "ECMA.CEILING": "dcab9afe9ac335c5",
+   "FLOOR": "dcab9afe9ac335c5",
+   "FLOOR.MATH": "dcab9afe9ac335c5",
+   "FLOOR.PRECISE": "dcab9afe9ac335c5",
+   "ISO.CEILING": "dcab9afe9ac335c5",
+   "MROUND": "fca439ea61338e49"
   },
   "arguments_sha256": "8180479ce6b496b952a5c81d7d34faf79936e7ea5d03ddbe89a4ce99a7ac7a35"
  },

@@ -6,10 +6,10 @@
   "dps": 80,
   "input_sha256": "eb352b679150bf736d62251c432276cdfff8e0d108dbc1d2c55d7b9fdf130524",
   "definitions": {
-   "NORM.INV": "1eb64c3631bab40a",
-   "NORM.S.DIST": "1eb64c3631bab40a",
-   "NORM.S.INV": "1eb64c3631bab40a",
-   "NORMSINV": "1eb64c3631bab40a"
+   "NORM.INV": "8e4045d7b4e4bcab",
+   "NORM.S.DIST": "8e4045d7b4e4bcab",
+   "NORM.S.INV": "8e4045d7b4e4bcab",
+   "NORMSINV": "8e4045d7b4e4bcab"
   },
   "arguments_sha256": "200c57ab1e7ed351613f206b9e9a19cda9613e27e365609b0f73b679be37ba7a"
  },

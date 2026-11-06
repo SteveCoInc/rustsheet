@@ -6,11 +6,11 @@
   "dps": 80,
   "input_sha256": "283bc4221bac6856fad4ebe19e0c5af9701f21b128fee753cd8da505b378b0c8",
   "definitions": {
-   "DDB": "89b29e33f12c4544",
-   "HOUR": "48f556383dc5abec",
-   "MINUTE": "48f556383dc5abec",
-   "SECOND": "48f556383dc5abec",
-   "TIME": "48f556383dc5abec"
+   "DDB": "233e90ed5293d2f5",
+   "HOUR": "6ee22fff0f9f7716",
+   "MINUTE": "6ee22fff0f9f7716",
+   "SECOND": "6ee22fff0f9f7716",
+   "TIME": "6ee22fff0f9f7716"
   },
   "arguments_sha256": "55f9b7d63453405eb19ec2e266d78af11171a076ebc0d6ee3f1abfcefc722e3a"
  },

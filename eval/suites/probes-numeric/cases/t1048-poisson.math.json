@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "d5cb85ed13ed006f04d3fae8b2a94b6743760923311d8931ddf0325a1fc32c59",
   "definitions": {
-   "POISSON": "8871ae48603ed045",
-   "POISSON.DIST": "8871ae48603ed045"
+   "POISSON": "eee69c2ed987357d",
+   "POISSON.DIST": "eee69c2ed987357d"
   },
   "arguments_sha256": "6868c130961e5c1f0ff008a8dd9b89400934e85f7725c894134923d90dd6de43"
  },

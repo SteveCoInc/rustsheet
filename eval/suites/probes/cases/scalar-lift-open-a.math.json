@@ -6,15 +6,15 @@
   "dps": 80,
   "input_sha256": "2ed8859a7982777ee052d3a38cc3773148e70fa4f0e1cf8eeac45e26f7010da1",
   "definitions": {
-   "ACCRINT": "c927f8b582569312",
-   "CONVERT": "f582b46c5a35943a",
-   "DOLLARDE": "1c095e51ec49c7a9",
-   "DOLLARFR": "1c095e51ec49c7a9",
-   "FACTDOUBLE": "340fcace3d98d5f7",
-   "MULTINOMIAL": "340fcace3d98d5f7",
-   "PRICE": "6664b7272070158a",
-   "QUOTIENT": "6ba5647ec844e522",
-   "SERIESSUM": "936dd5e17a9771fb"
+   "ACCRINT": "c130f249b462c121",
+   "CONVERT": "8f956768ccba4018",
+   "DOLLARDE": "9a10086afa1b4a41",
+   "DOLLARFR": "9a10086afa1b4a41",
+   "FACTDOUBLE": "1ff230db6691ac48",
+   "MULTINOMIAL": "1ff230db6691ac48",
+   "PRICE": "93982788afd6a279",
+   "QUOTIENT": "f3652f667cdcece1",
+   "SERIESSUM": "6e26060e67fa2d13"
   },
   "arguments_sha256": "62d0954bc1405c4b4c9a5f01d48a4e8f7d8a5323b3b3a499910e8216c26ab5fd"
  },

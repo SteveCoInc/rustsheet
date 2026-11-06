@@ -6,10 +6,10 @@
   "dps": 80,
   "input_sha256": "d115a67bf16ffc0d6def65e04c1b92b947164f80d7e6893259c65e8b1b446b4a",
   "definitions": {
-   "SUMPRODUCT": "2b30975c73c98f93",
-   "SUMX2MY2": "2b30975c73c98f93",
-   "SUMX2PY2": "2b30975c73c98f93",
-   "SUMXMY2": "2b30975c73c98f93"
+   "SUMPRODUCT": "75e3a541c3378a0e",
+   "SUMX2MY2": "75e3a541c3378a0e",
+   "SUMX2PY2": "75e3a541c3378a0e",
+   "SUMXMY2": "75e3a541c3378a0e"
   },
   "arguments_sha256": "38770e0b075755c68b8543c22c55dc05a722e8bf74dfc1227d04687c6d1b7ca0"
  },

@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "acecbc1823c06c9afb24c4239e05357db5420556693bfde4ef5675d230549a7f",
   "definitions": {
-   "ERF.PRECISE": "09d6821418333b05",
-   "ERFC.PRECISE": "09d6821418333b05"
+   "ERF.PRECISE": "6f259dedefdf7d53",
+   "ERFC.PRECISE": "6f259dedefdf7d53"
   },
   "arguments_sha256": "82b73e7cf063ade67b3280daaacb730bdb09785a77f7aec597248224a6711e3f"
  },

@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "ac4ff30aae1bdc90dac457ca2c2a30f45f3e19668006da408a15d89ff989e0ed",
   "definitions": {
-   "HYPGEOM.DIST": "8871ae48603ed045",
-   "HYPGEOMDIST": "8871ae48603ed045"
+   "HYPGEOM.DIST": "eee69c2ed987357d",
+   "HYPGEOMDIST": "eee69c2ed987357d"
   },
   "arguments_sha256": "ebf493737c7fc0fad97a46c76fb9ee2ccf3d2159c044900eb582e81d01e38b03"
  },

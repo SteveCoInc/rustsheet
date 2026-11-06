@@ -6,9 +6,9 @@
   "dps": 80,
   "input_sha256": "38996deea865df48a56c0ef0487be8095fc2cd9923596f37dd1f03339c4c7cd6",
   "definitions": {
-   "AMORLINC": "c2c308fdc67ff5db",
-   "PDURATION": "5d6e5cc7bce30f78",
-   "SLN": "89b29e33f12c4544"
+   "AMORLINC": "3f09aaaf59ae981e",
+   "PDURATION": "6deed963023981ca",
+   "SLN": "233e90ed5293d2f5"
   },
   "arguments_sha256": "70979e2aadaa46662f4989ad4bbb581fa1d15de9444cb51bef6f0ed8310942a8"
  },

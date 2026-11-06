@@ -6,15 +6,15 @@
   "dps": 80,
   "input_sha256": "0e6d0b011cf4e39852902bfd689814cca41864f471dd68acc411d9554c42a794",
   "definitions": {
-   "AVERAGE": "2baf0f569bf11452",
-   "PRODUCT": "a96f0862bcff2e3b",
-   "SERIESSUM": "936dd5e17a9771fb",
-   "SUM": "2baf0f569bf11452",
-   "SUMPRODUCT": "2b30975c73c98f93",
-   "SUMSQ": "a96f0862bcff2e3b",
-   "SUMX2MY2": "2b30975c73c98f93",
-   "SUMX2PY2": "2b30975c73c98f93",
-   "SUMXMY2": "2b30975c73c98f93"
+   "AVERAGE": "a929cc013d1216b5",
+   "PRODUCT": "9d49d571b41c134b",
+   "SERIESSUM": "6e26060e67fa2d13",
+   "SUM": "a929cc013d1216b5",
+   "SUMPRODUCT": "75e3a541c3378a0e",
+   "SUMSQ": "9d49d571b41c134b",
+   "SUMX2MY2": "75e3a541c3378a0e",
+   "SUMX2PY2": "75e3a541c3378a0e",
+   "SUMXMY2": "75e3a541c3378a0e"
   },
   "arguments_sha256": "be2aa7dc997bb48167f61e9eaa3fd65f89061da77906b1712473f285c93315b8"
  },

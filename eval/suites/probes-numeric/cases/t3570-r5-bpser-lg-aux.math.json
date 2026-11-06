@@ -6,9 +6,9 @@
   "dps": 80,
   "input_sha256": "afe38feac30cf177a05566bde72d5e9457be2fcf9cd0682e05db6bd2338c7793",
   "definitions": {
-   "GAMMA": "2734729e363c2625",
-   "GAMMALN": "2734729e363c2625",
-   "LN": "37d9536498f77785"
+   "GAMMA": "4acfca79d79a43ec",
+   "GAMMALN": "4acfca79d79a43ec",
+   "LN": "9de1fa5084c01ced"
   },
   "arguments_sha256": "43c2771dd045bd88ff9539ea838a3ab063dca7c2e365007fddeaef9c53f35ffe"
  },

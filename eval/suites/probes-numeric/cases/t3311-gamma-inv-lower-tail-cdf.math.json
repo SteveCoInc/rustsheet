@@ -6,9 +6,9 @@
   "dps": 80,
   "input_sha256": "2aa9a4b3a8d1c47e74f688c2af3c16459f816e6819e3734831790a2f20166957",
   "definitions": {
-   "CHISQ.INV": "54fd52eda6d7737e",
-   "CHISQ.INV.RT": "54fd52eda6d7737e",
-   "GAMMA.INV": "54fd52eda6d7737e"
+   "CHISQ.INV": "5d12acfc19639d7a",
+   "CHISQ.INV.RT": "5d12acfc19639d7a",
+   "GAMMA.INV": "5d12acfc19639d7a"
   },
   "arguments_sha256": "fa86ba414d19f594bf3e3df660689ec49c25a3a4513decf4e0eee87677206ae1"
  },

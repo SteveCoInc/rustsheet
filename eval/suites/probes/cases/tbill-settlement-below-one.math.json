@@ -6,9 +6,9 @@
   "dps": 80,
   "input_sha256": "3ca19748b24450b0ea8b4721ac9aa1867834c3005698e2135a0486752c904c1a",
   "definitions": {
-   "TBILLEQ": "70088ae88f66c816",
-   "TBILLPRICE": "70088ae88f66c816",
-   "TBILLYIELD": "70088ae88f66c816"
+   "TBILLEQ": "d78f0dcbb4bdac42",
+   "TBILLPRICE": "d78f0dcbb4bdac42",
+   "TBILLYIELD": "d78f0dcbb4bdac42"
   },
   "arguments_sha256": "250d99d004a774b6ee5d4727f79149bac047128095a2d6ae1d7db25f67b99072"
  },

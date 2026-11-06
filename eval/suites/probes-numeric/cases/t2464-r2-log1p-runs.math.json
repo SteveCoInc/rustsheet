@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "6d0ee85df6ad03d0f87ad50379ebdcafde4dd2e84ef194c69de34d9720a326fc",
   "definitions": {
-   "BETA.DIST": "bdce27ab573f5eb8",
-   "BINOM.DIST": "8871ae48603ed045"
+   "BETA.DIST": "a9652f0571fdcdd2",
+   "BINOM.DIST": "eee69c2ed987357d"
   },
   "arguments_sha256": "5499819b20256b0866d20aa125999113629d2cd11db28eadda1a8afbf6de8653"
  },

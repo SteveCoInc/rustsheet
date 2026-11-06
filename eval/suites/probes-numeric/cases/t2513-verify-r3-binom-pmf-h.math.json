@@ -6,9 +6,9 @@
   "dps": 80,
   "input_sha256": "f2e21dd991cb154dbad98b5f076bd062d7109634e021d140dcf4c6966b8843b1",
   "definitions": {
-   "BETA.DIST": "bdce27ab573f5eb8",
-   "BINOM.DIST": "8871ae48603ed045",
-   "NEGBINOM.DIST": "8871ae48603ed045"
+   "BETA.DIST": "a9652f0571fdcdd2",
+   "BINOM.DIST": "eee69c2ed987357d",
+   "NEGBINOM.DIST": "eee69c2ed987357d"
   },
   "arguments_sha256": "5c8d8d88f1e3ed5ff51fd0d02fc68ab1254e62a6bc110395650636562ef10c82"
  },

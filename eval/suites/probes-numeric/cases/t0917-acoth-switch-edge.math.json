@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "364d2bfb220f8aafe2962026baa0f1a0eba88772e3acf00dfb85f1aa377ce396",
   "definitions": {
-   "ACOTH": "25b8dbff280f1320",
-   "ATANH": "25b8dbff280f1320"
+   "ACOTH": "0d475ed6c5341c37",
+   "ATANH": "0d475ed6c5341c37"
   },
   "arguments_sha256": "c0aa09733a08a8a0d40aa249faafba65c414748fefd5c356f5c0ed175190c0c1"
  },

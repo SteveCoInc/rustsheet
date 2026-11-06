@@ -6,9 +6,9 @@
   "dps": 80,
   "input_sha256": "85ded2dacb52b3c16034e62470d96b2a095813963d679372e354cdb69d57992a",
   "definitions": {
-   "PERCENTRANK": "4e7e7a3a8a19ff6a",
-   "PERCENTRANK.EXC": "4e7e7a3a8a19ff6a",
-   "PERCENTRANK.INC": "4e7e7a3a8a19ff6a"
+   "PERCENTRANK": "cb7cd78e2f7f3e18",
+   "PERCENTRANK.EXC": "cb7cd78e2f7f3e18",
+   "PERCENTRANK.INC": "cb7cd78e2f7f3e18"
   },
   "arguments_sha256": "7761e06e44f19527ff7ce38bf1f8a1ade17de8e0a5d0bd0654fd193aca268754"
  },

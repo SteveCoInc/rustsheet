@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import inspect
 import json
 from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -348,9 +349,7 @@ def test_check_names_a_definition_whose_code_changed(tmp_path: Path, monkeypatch
         text: str = real(module)
         return text + "\nEDITED = 1\n" if module.__name__ == T_DIST.value.__module__ else text
 
-    fingerprint._modules_digest.cache_clear()
-    fingerprint._module_digest.cache_clear()
-    fingerprint._module_tree.cache_clear()
+    fingerprint.clear_caches()
     monkeypatch.setattr(inspect, "getsource", edited)
     try:
         assert check_suite("t") == [
@@ -358,9 +357,7 @@ def test_check_names_a_definition_whose_code_changed(tmp_path: Path, monkeypatch
             "regenerate: cd tools && uv run rustsheet-accuracy math --suite t",
         ]
     finally:
-        fingerprint._modules_digest.cache_clear()
-        fingerprint._module_digest.cache_clear()
-        fingerprint._module_tree.cache_clear()
+        fingerprint.clear_caches()
 
 
 def test_check_names_values_read_from_other_arguments(
@@ -398,6 +395,17 @@ def test_check_names_a_sidecar_without_fingerprints_or_of_another_version(
     assert eval_math.check_case("t/c", case, sidecar) == [
         "t/c: math sidecar version 0 is not the generator's 1"
     ]
+
+
+def test_the_digest_leaves_out_empty_fields() -> None:
+    # Python 3.12 adds an empty `type_params` to every function: the digest must not see it, or CI's
+    # Python and a local one would disagree on every sidecar.
+    tree = ast.parse("def f(x):\n    return x\n")
+    before = fingerprint._tree_digest(tree)
+    func = tree.body[0]
+    assert isinstance(func, ast.FunctionDef)
+    func.type_params = []  # type: ignore[attr-defined,unused-ignore]
+    assert fingerprint._tree_digest(tree) == before
 
 
 def test_source_digest_ignores_comments_and_docstrings_only() -> None:

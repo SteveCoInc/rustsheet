@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "35814dcf42e42611c2cc1344343bd791223c68fd5d65985d5d35a4e50177d8b4",
   "definitions": {
-   "BESSELI": "c5edde8656a89fad",
-   "BESSELJ": "c5edde8656a89fad"
+   "BESSELI": "7b6d52d8d609219a",
+   "BESSELJ": "7b6d52d8d609219a"
   },
   "arguments_sha256": "3fa61a63220cbd497df459995196e7b073aac5027da6d444dcc5ad4c5fe0143f"
  },

@@ -6,9 +6,9 @@
   "dps": 80,
   "input_sha256": "a0571465a7f6854b38ced96a000e3f12baa2c038cadee285131b8e7d206b0268",
   "definitions": {
-   "DURATION": "6664b7272070158a",
-   "MDURATION": "6664b7272070158a",
-   "RRI": "c9c5fd753f085537"
+   "DURATION": "93982788afd6a279",
+   "MDURATION": "93982788afd6a279",
+   "RRI": "6be44e87e29a5079"
   },
   "arguments_sha256": "6dbe9588d0b656da4dd4e0c4cac9064a2bb2f96721982853b6fc8e67f0e7d8ee"
  },

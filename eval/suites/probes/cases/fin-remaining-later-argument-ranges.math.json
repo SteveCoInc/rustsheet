@@ -6,14 +6,14 @@
   "dps": 80,
   "input_sha256": "5fadec0282eb5e80adb22efddf90af208d05089928ce63d0e7c8f0732a0ad23a",
   "definitions": {
-   "ACCRINT": "c927f8b582569312",
-   "AMORDEGRC": "c2c308fdc67ff5db",
-   "AMORLINC": "c2c308fdc67ff5db",
-   "CUMIPMT": "ab5d802c024fbad7",
-   "CUMPRINC": "ab5d802c024fbad7",
-   "DURATION": "6664b7272070158a",
-   "PRICE": "6664b7272070158a",
-   "YIELD": "6664b7272070158a"
+   "ACCRINT": "c130f249b462c121",
+   "AMORDEGRC": "3f09aaaf59ae981e",
+   "AMORLINC": "3f09aaaf59ae981e",
+   "CUMIPMT": "8f3c70a4dbc0fdec",
+   "CUMPRINC": "8f3c70a4dbc0fdec",
+   "DURATION": "93982788afd6a279",
+   "PRICE": "93982788afd6a279",
+   "YIELD": "93982788afd6a279"
   },
   "arguments_sha256": "e35b5b12a78c11387f98ce20e3fcf36391696b5b6a008c6e46682ba3524415b8"
  },

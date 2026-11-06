@@ -6,7 +6,9 @@ recomputes both from the current code without mpmath:
   code that computes it. That is the module of the definition's `value`, `domain` and `tail`, and every
   `rustsheet_tools` module those modules import, transitively, but the generator's machinery
   (`MACHINERY`). Each module is hashed as its parsed syntax tree with docstrings removed, so a comment or
-  docstring edit changes nothing and any code edit does. A shared helper (`defs/_common.py`, a fit-lab
+  docstring edit changes nothing and any code edit does. The tree is dumped so that the same code gives
+  the same hash on Python 3.11 to 3.13 (`_stable_dump`); a Python whose parser reads the same source
+  into another tree would flag every sidecar, and the fix is to regenerate them on it. A shared helper (`defs/_common.py`, a fit-lab
   kernel such as `fitlab.kernels.beta`) is covered through its importers.
 - `arguments_sha256`: a hash of every computable candidate's cell, formula and arguments as the
   definitions receive them (exact `repr`s, so a reader change such as a subnormal flush shows), and of
@@ -95,11 +97,42 @@ def _strip_docstrings(tree: ast.Module) -> ast.Module:
     return tree
 
 
+def _stable_dump(node: Any, out: list[str]) -> None:
+    """Appends a dump of `node` that is the same on every Python the tools run on: like `ast.dump`
+    without positions, but an empty field (None or []) is left out, so a field a newer Python adds
+    empty (3.12's `type_params` on every function and class) does not change it. CI's Python (the
+    runner's) and a local one can differ by a minor version."""
+    if isinstance(node, ast.AST):
+        out.append(type(node).__name__ + "(")
+        for name in node._fields:
+            value = getattr(node, name, None)
+            if value is None or value == []:
+                continue
+            out.append(name + "=")
+            _stable_dump(value, out)
+            out.append(",")
+        out.append(")")
+    elif isinstance(node, list):
+        out.append("[")
+        for item in node:
+            _stable_dump(item, out)
+            out.append(",")
+        out.append("]")
+    else:
+        out.append(repr(node))
+
+
+def _tree_digest(tree: ast.AST) -> str:
+    """The hash of a parsed module's `_stable_dump`."""
+    out: list[str] = []
+    _stable_dump(tree, out)
+    return hashlib.sha256("".join(out).encode("utf-8")).hexdigest()
+
+
 def source_digest(source: str) -> str:
-    """The hash of Python `source`'s code: its syntax tree, docstrings removed (`ast.dump` leaves out
+    """The hash of Python `source`'s code: its syntax tree, docstrings removed (the dump leaves out
     positions and comments, so only a code edit changes it)."""
-    tree = _strip_docstrings(ast.parse(source))
-    return hashlib.sha256(ast.dump(tree).encode("utf-8")).hexdigest()
+    return _tree_digest(_strip_docstrings(ast.parse(source)))
 
 
 @functools.cache
@@ -112,7 +145,13 @@ def _module_tree(name: str) -> ast.Module:
 @functools.cache
 def _module_digest(name: str) -> str:
     """`source_digest` of module `name`, from its one parse."""
-    return hashlib.sha256(ast.dump(_module_tree(name)).encode("utf-8")).hexdigest()
+    return _tree_digest(_module_tree(name))
+
+
+def clear_caches() -> None:
+    """Forgets every cached parse and digest (a test that edits a module's source needs it)."""
+    for cached in (_module_tree, _module_digest, _imports, _modules_digest):
+        cached.cache_clear()
 
 
 def _ours(name: str) -> bool:

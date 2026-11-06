@@ -6,10 +6,10 @@
   "dps": 80,
   "input_sha256": "0dec191200c3841bafd32817f3d7392f1564ce23ef84fb0f75527b14f23adf6c",
   "definitions": {
-   "IRR": "c600c8e85730f650",
-   "MIRR": "566893f413694b7d",
-   "XIRR": "c600c8e85730f650",
-   "XNPV": "566893f413694b7d"
+   "IRR": "b7bd2ac117248389",
+   "MIRR": "cd9c76178750f2c0",
+   "XIRR": "b7bd2ac117248389",
+   "XNPV": "cd9c76178750f2c0"
   },
   "arguments_sha256": "c4ed0f2f5ed9394ca8e421a55f02cae20222ac6a6c3ab9a1a7beaee96f5eff83"
  },

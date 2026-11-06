@@ -6,13 +6,13 @@
   "dps": 80,
   "input_sha256": "b094b9cd28a86c7db243c40ed13a5e497b007cb959283b76cdbeeb4a80b03036",
   "definitions": {
-   "CORREL": "d32e089eca1e2e92",
-   "FORECAST": "d32e089eca1e2e92",
-   "INTERCEPT": "d32e089eca1e2e92",
-   "PEARSON": "d32e089eca1e2e92",
-   "RSQ": "d32e089eca1e2e92",
-   "SLOPE": "d32e089eca1e2e92",
-   "STEYX": "d32e089eca1e2e92"
+   "CORREL": "f9447b92676d617d",
+   "FORECAST": "f9447b92676d617d",
+   "INTERCEPT": "f9447b92676d617d",
+   "PEARSON": "f9447b92676d617d",
+   "RSQ": "f9447b92676d617d",
+   "SLOPE": "f9447b92676d617d",
+   "STEYX": "f9447b92676d617d"
   },
   "arguments_sha256": "a3dbf6bc5aa5dbf19f8ff796ccbb9173a5913a74ebda27620745a2e703ad1ca2"
  },

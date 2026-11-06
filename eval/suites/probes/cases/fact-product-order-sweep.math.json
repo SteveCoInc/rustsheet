@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "6b60a381a3b1889cdb5553fc96473c59ca1e9e48b5d65e3ca2c23064daae855c",
   "definitions": {
-   "FACT": "340fcace3d98d5f7",
-   "FACTDOUBLE": "340fcace3d98d5f7"
+   "FACT": "1ff230db6691ac48",
+   "FACTDOUBLE": "1ff230db6691ac48"
   },
   "arguments_sha256": "51dab2e02a72dcbf92bd1960f0d1c3ccf23655b88088694530afee4003cc129c"
  },

@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "88ca679ea6f3f41f58dc45ec73d544dbdae4c16a70bd12394ff0f79094f21416",
   "definitions": {
-   "WEIBULL": "666967b00930b2fb",
-   "WEIBULL.DIST": "666967b00930b2fb"
+   "WEIBULL": "90a93c98b90756bc",
+   "WEIBULL.DIST": "90a93c98b90756bc"
   },
   "arguments_sha256": "6ce5c7cd505d7afbb7fdf93822a15b020fc65f2a4830b2cc45b1fc043d05ff64"
  },

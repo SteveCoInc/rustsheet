@@ -6,10 +6,10 @@
   "dps": 80,
   "input_sha256": "ef3974192a9c0b07e48b68c22f8b24d38e203be381eca47a80c3041d8e55b9a0",
   "definitions": {
-   "EFFECT": "c9c5fd753f085537",
-   "EXP": "37d9536498f77785",
-   "LN": "37d9536498f77785",
-   "POWER": "37d9536498f77785"
+   "EFFECT": "6be44e87e29a5079",
+   "EXP": "9de1fa5084c01ced",
+   "LN": "9de1fa5084c01ced",
+   "POWER": "9de1fa5084c01ced"
   },
   "arguments_sha256": "7bf387b5f947929bb42e93f4cf1a838d9a77a8a34603364722a80e5340ce0901"
  },

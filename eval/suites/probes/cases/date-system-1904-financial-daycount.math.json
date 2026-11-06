@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "1a3920e74aa7928dd4258d9a382e4356ef372cc119dd2af0d1451127c62e7213",
   "definitions": {
-   "XIRR": "c600c8e85730f650",
-   "XNPV": "566893f413694b7d"
+   "XIRR": "b7bd2ac117248389",
+   "XNPV": "cd9c76178750f2c0"
   },
   "arguments_sha256": "3fdf894608c3b6f63c900908073afb246965902bfa44c8d9f011b47f419243b4"
  },

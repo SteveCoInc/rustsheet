@@ -6,12 +6,12 @@
   "dps": 80,
   "input_sha256": "fe6012365bebfe2c0072c502211dc994c1ddcdf3c1855d3bc5dbb5a5562a1158",
   "definitions": {
-   "CSCH": "9d0790bcfc9417a4",
-   "ERFC": "09d6821418333b05",
-   "ERFC.PRECISE": "09d6821418333b05",
-   "NORM.DIST": "1eb64c3631bab40a",
-   "NORM.S.DIST": "1eb64c3631bab40a",
-   "PHI": "1eb64c3631bab40a"
+   "CSCH": "2d02d6a90ec4f657",
+   "ERFC": "6f259dedefdf7d53",
+   "ERFC.PRECISE": "6f259dedefdf7d53",
+   "NORM.DIST": "8e4045d7b4e4bcab",
+   "NORM.S.DIST": "8e4045d7b4e4bcab",
+   "PHI": "8e4045d7b4e4bcab"
   },
   "arguments_sha256": "c245a4c8b12dff879efbd1ebbd6949abaedf0e76131fb56f6f60b41a227cf0b7"
  },
