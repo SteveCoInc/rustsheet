@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4565: SHEET of a LET variable bound to a LAMBDA and of an omitted LAMBDA parameter; SHEETS of array-bound parameters (constant and LET-bound arrays of numbers, text, booleans) passed through _xleta.SHEETS, the form the oracle's canary guard accepts. Sheet2 and Sheet3 hold 10..60. One question per cell in Sheet1!D1:D13.",
+  "description": "T-4565: SHEET of a LET variable bound to a LAMBDA, of a required parameter called with too few arguments (D2, D3) and of an optional parameter left omitted (D14:D16); SHEETS of array-bound parameters (constant and LET-bound arrays of numbers, text, booleans) passed through _xleta.SHEETS, the form the oracle's canary guard accepts. Sheet2 and Sheet3 hold 10..60. One question per cell in Sheet1!D1:D16.",
   "tags": [
     "M7",
     "probe",
@@ -30,7 +30,10 @@
         "D10": "=ARRAYTOTEXT(MAP({1;2},LAMBDA(r,SHEET(r))))",
         "D11": "=ARRAYTOTEXT(BYROW({1,2;3,4},_xleta.SHEET))",
         "D12": "=LET(f,LAMBDA(x,x),ISERROR(SHEET(f)))",
-        "D13": "=ARRAYTOTEXT(MAP(A1:A3,LAMBDA(r,LET(g,LAMBDA(q,q),SHEET(g)))))"
+        "D13": "=ARRAYTOTEXT(MAP(A1:A3,LAMBDA(r,LET(g,LAMBDA(q,q),SHEET(g)))))",
+        "D14": "=LAMBDA(x,[r],SHEET(r))(1)",
+        "D15": "=LAMBDA([r],SHEET(r))()",
+        "D16": "=LAMBDA(x,[r],SHEET(r))(1,)"
       }
     },
     {

@@ -451,14 +451,19 @@ in each value cell). A bound error is that error: `LET(x,1/0,SHEET(x))` is `#DIV
 argument is `#N/A` (section above). SHEETS of a parameter bound to a one-sheet reference is 1
 (`MAP(A1:A3,_xleta.SHEETS)` 1, 1, 1, `BYCOL(Sheet2!A1:B3,_xleta.SHEETS)` 1, 1), and of a GROUPBY group `#N/A`
 (probes/t4450-eta-special-forms J59). SHEETS of a parameter bound to a number, text or boolean is `#N/A`, and so
-is SHEETS of a LET-bound array (probes/t4565-sheet-sheets-lambda-omitted-array D4:D8, excel-graph, 2026-11-06, T-4565:
-`MAP({1;2},_xleta.SHEETS)`, `MAP({"a";"b"},_xleta.SHEETS)`, `MAP({TRUE;FALSE},_xleta.SHEETS)` and
-`BYROW(LET(a,{1,2;3,4},a),_xleta.SHEETS)` give `#N/A` in each element). SHEET of a variable bound to a LAMBDA is `#N/A`
-(`LET(f,LAMBDA(x,x),SHEET(f))`, also inside a MAP, D1, D13), while SHEET of an omitted parameter is `#VALUE!`
-(`LAMBDA(r,SHEET(r))()`, D2; `LAMBDA(r,ISOMITTED(r))()` is `#VALUE!` too, D3). SHEETS of a written omitted parameter
-(`LAMBDA(r,SHEETS(r))()`) and of a written LAMBDA-bound variable are unprobeable: the oracle's canary sheet guard refuses
-`SHEETS(<parameter>)`, because a count of sheets would include the canary. Ours matches every cell; SHEETS of any
-other bound value stays `#N/IMPL!`.
+is SHEETS of a parameter bound to a row of a LET-built array (probes/t4565-sheet-sheets-lambda-omitted-array D4:D8,
+excel-graph, 2026-11-06, T-4565: `MAP({1;2},_xleta.SHEETS)`, `MAP({"a";"b"},_xleta.SHEETS)`,
+`MAP({TRUE;FALSE},_xleta.SHEETS)` and `BYROW(LET(a,{1,2;3,4},a),_xleta.SHEETS)` give `#N/A` in each element). The same
+probe re-confirms the T-4518 SHEET rules for bound arrays and text (D9 `MAP(LET(a,{"Sheet2";"Sheet3"},a),_xleta.SHEET)` 2, 3;
+D10 `MAP({1;2},LAMBDA(r,SHEET(r)))` and D11 `BYROW({1,2;3,4},_xleta.SHEET)` `#N/A` per element). SHEET of a variable bound
+to a LAMBDA is `#N/A` (`LET(f,LAMBDA(x,x),SHEET(f))`, also inside a MAP, D1, D13). SHEET of an omitted optional parameter
+is `#N/A` in all three forms (`LAMBDA(x,[r],SHEET(r))(1)`, `LAMBDA([r],SHEET(r))()` and the empty slot
+`LAMBDA(x,[r],SHEET(r))(1,)`, D14:D16). A required parameter called with too few arguments is not an omitted
+parameter but a call error, `#VALUE!` before SHEET runs (`LAMBDA(r,SHEET(r))()` D2, `LAMBDA(r,ISOMITTED(r))()` D3; arrays.md).
+SHEETS written on a parameter or LET variable (`LAMBDA(r,SHEETS(r))()`, `LET(x,1,SHEETS(x))`, SHEETS of an omitted or
+LAMBDA-bound parameter) is unprobeable: the oracle's canary sheet guard refuses `SHEETS(<parameter>)`, because a count of
+sheets would include the canary. Ours treats a LET variable like a MAP parameter there (inferred, not probed). Ours matches
+every cell; SHEETS of any other bound value stays `#N/IMPL!`.
 Volatile functions through shape-stable formulas (probes/volatile-now-today-shapes, probes/volatile-and-info-rand-true-false-sheet):
 NOW, TODAY and RAND are numbers (`TYPE` 1, never text or boolean), `NOW()-NOW()` is 0 within one recalculation,
 `INT(NOW())=TODAY()`, `RAND()` is in [0,1) and two calls differ, `TRUE()` and `FALSE()` behave as the literals in

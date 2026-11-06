@@ -731,7 +731,7 @@ impl Model {
                         return CalcResult::Number(1.0);
                     }
                     // A number, text or boolean is #N/A too (probes/t4565-sheet-sheets-lambda-omitted-array
-                    // D4:D6, excel-graph).
+                    // D4:D6, excel-graph); a LET variable is read the same way (inferred: the canary guard refuses SHEETS of it).
                     RefArg::Value(
                         CalcResult::Array(_)
                         | CalcResult::Number(_)

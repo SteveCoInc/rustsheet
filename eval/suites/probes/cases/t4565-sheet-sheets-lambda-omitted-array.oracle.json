@@ -22,6 +22,18 @@
     "t": "s",
     "v": "#N/A, #N/A, #N/A"
    },
+   "D14": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "D15": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "D16": {
+    "t": "e",
+    "v": "#N/A"
+   },
    "D2": {
     "t": "e",
     "v": "#VALUE!"
@@ -60,10 +72,10 @@
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "ab025ac2b96eb242dc5d0feda72fa353458550c9d9c48df6a008a728af1fd5b4",
+  "input_sha256": "d65f670b31472bb2d4c54fa64889fcc4324f7106134e8ed3a04d1c2d53b6cf1a",
   "kind": "excel-graph",
-  "produced_at": "2026-11-06T22:02:08+00:00",
+  "produced_at": "2026-11-06T22:35:48+00:00",
   "version": null,
-  "workbook_name": "c101813a77a6850c4fc6c670bbd11f63f1769ad67d1c6b04c3c0ef0189fe278f.xlsx"
+  "workbook_name": "eaa9b589fb269ac6c1d90da51fdf34d0535858245d000da42737cb1137dd381b.xlsx"
  }
 }
