@@ -2399,6 +2399,7 @@ C	probes/t4422-bessel-tiny-x-cuts.case.json	2736
 C	probes/t4422-besseli-fresh-sweep.case.json	400
 C	probes/t4423-hyperbolic-overflow-band.case.json	300
 C	probes/t4424-sumx2my2-overflow-order.case.json	84
+C	probes/t4426-aggregate-empty-and-bound-data.case.json	391
 C	probes/t4430-legacy-at-name-body-rest.case.json	181
 C	probes/t4444-dfunction-text-equal-one.case.json	52
 C	probes/t4447-sort-fractional-keys.case.json	84
