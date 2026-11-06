@@ -3,7 +3,7 @@ id: T-4626
 title: "Probe text and text-number matrix elements in MDETERM, MINVERSE and MMULT"
 milestone: M0
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
