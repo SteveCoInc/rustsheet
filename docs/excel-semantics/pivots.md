@@ -253,7 +253,15 @@ group items" (T-4225, T-4228, T-4235, T-4236, T-4249, T-4253, T-4287, T-4311, T-
 record placement, Excel's own labels whatever the file lists, whole-number labels `lo-(lo+interval-1)`,
 relabel order, and groupings dropped over blanks or dates. probes/t4128-pivot-spike G (`45000-45100`,
 `45100-45200`, `45300-45400` for fractional data, empty groups hidden) agrees with it.
-Status: VERIFIED (excel-graph; evidence in web.md)
+
+Excel also tolerates group items it does not rebuild. The case builder's numeric labels (`group_labels`,
+`while lo <= end`) write one bin past `endNum`: t4128 G's `<fieldGroup>` lists 7 `groupItems`
+(`<45000`, five bins up to `45400-45500`, `>45400`) where Excel's own grouping of startNum 45000, endNum
+45400, interval 100 has 6 (`<45000`, four bins, `>45400`), and its pivotField lists 7 `<item x>`. Excel
+opens the file (refreshOnLoad), rebuilds the groups and renders its own items without error. The
+xlsx importer instead refuses the pivot (`item index 6 is past the field's items`,
+crates/rustsheet-xlsx/src/import/pivots/table.rs), so it is not rendered (T-4171).
+Status: VERIFIED (excel-graph; evidence in web.md, the tolerance by t4128 G's sidecar)
 
 ## A pivot that would meet a foreign cell collapses to #SPILL!
 Rule: when a pivot's layout would overwrite cells it does not own, Excel for the web renders nothing
@@ -566,11 +574,13 @@ lines (T-4147):
 - the Excel-saved pivot of crates/rustsheet-xlsx/tests/example.xlsx: three compact row fields whose
   `<items>` list the cache items out of order, so `x` is the position in `<items>`, not the cache index.
 
-Not compared, because the engine-side harness cannot rebuild their cache or tree yet: t4128 R, t4134
-I3, t4582 J1, J2 and t4585 N1 have formulas in their sources, which the case file does not evaluate
-(T-4152 runs them through the engine); t4582 J3 and J4 depend on date items against cached numbers
-(T-4612); t4128 G is grouped (T-4171) and t4128 K has a calculated field, a Top-N filter and a
-descending sort (T-4174, T-4165).
+Not compared in these engine unit tests, because their harness cannot rebuild the cache or tree
+yet: t4128 R, t4134 I3, t4582 J1, J2 and t4585 N1 have formulas in their sources, which the case
+file does not evaluate; t4582 J3 and J4 depend on date items against cached numbers (T-4612);
+t4128 G is grouped (T-4171) and t4128 K has a calculated field, a Top-N filter and a descending
+sort (T-4174, T-4165). The eval scores them all through the engine since T-4152: t4128 R, t4134 I3
+and t4582 J1 to J4 pass there; t4585 N1 fails because the refresh refuses to renumber its renamed
+fields (T-4694); t4128 G and K do not load (T-4171, T-4174).
 
 The engine's own readings, not probed:
 - `subtotalTop="0"` on an outline row field: the item's own line holds no values and a `default` line
@@ -635,32 +645,172 @@ Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotRe
 ## Summation order of Sum, Average and Product totals
 Rule:
 - **Item cells.** A cell accumulates its records in record order.
-- **Sum, when Sum is the only aggregate (2-D).** A row total adds the row's cells in the column
-  field's display (first-seen) item order. A column total adds the column's cells in the row field's
-  display order. The grand-grand total adds the row totals (the Grand Total column) down the rows, in
-  display order. These are sums of the child cells, not of the records.
-- **Sum beside Average (2-D).** The row and column totals accumulate the records item by item, in the
-  display item order of the field being totalled and in record order within each item. Child cells are
-  not used. So the same data can give a different Sum total once an Average field is added.
-- **Average (alone or beside Sum, 2-D).** A row or column total divides the same item-by-item
-  accumulation by the count.
-- **Var and StdDev, alone or together.** Every Var cell and total is the textbook formula
-  (Σx² − (Σx)²/n) / (n − 1). Its two sums accumulate the records item by item in display item order,
-  in record order within each item. StdDev is the square root of that Var.
-- **Product (alone, one axis field).** The total multiplies the records item by item in display
-  item order, in record order within each item.
-- **Totals over one axis field in mixed pivots.** In a pivot that mixes Sum with other aggregates,
-  a total over a pivot's only axis field accumulates the records item by item in display item order
-  (T-4614 S2, T-4589 S1).
+- **Sum, when every data field is a Sum.** A total adds leaf cells, in display (first-seen) item
+  order, and never the subtotals between them:
+  - a cell of a subtotal or grand-total row adds the cells of the leaf rows below it, in its column,
+    down the rows;
+  - a total in a leaf row adds that row's leaf-column cells below its column, across the columns.
 
-What is open (T-4634):
-- which mixes switch Sum from the cells to the records;
-- whether a Sum-only total over one axis field sums the item cells or accumulates the records (no
-  probe separates them);
-- the grand-grand total of a mixed 2-D pivot (one data point);
-- which of several fitting readings gives the 2-D Var grand-grand total.
+  So a column total adds the column's cells, a row total the row's cells, and the grand-grand total
+  the row totals (the Grand Total column) down the rows. With one axis field the Grand Total adds the
+  item cells. These are sums of the child cells, not of the records.
+- **Sum beside any other aggregate.** Count, CountNums, Max, Min, Product, StdDev, Var, Varp, StdDevp
+  and Average each switch Sum to the records. A row or column total then accumulates the records
+  item by item, in the display item order of the field being totalled and in record order within
+  each item. Child cells are not used, so the same data can give a different Sum total once any
+  non-Sum field is added.
+- **Average (alone or beside other fields), Var, StdDev, Varp, StdDevp and Product.** A row or column
+  total, and a total over a pivot's only axis field, uses that same item-by-item accumulation of the
+  records. Average divides its sum by the count.
+- **A cell that is a total on both axes**, outside the Sum-only case. This covers the grand-grand
+  total, a subtotal by a subtotal and a subtotal by a grand total. The cell does not accumulate its
+  records. It adds the partial results of the leaf rows below it, in its column, down the rows in
+  display order. Each leaf-row cell is accumulated item by item. For Sum and Average that means the
+  leaf rows' record sums. For Var, StdDev, Varp and StdDevp the leaf rows' Σx and Σx² are added
+  separately, and the formula is applied to the totals. For Product the leaf rows' products are
+  multiplied. Sum, Average, Var and StdDev are evidenced. For Varp, StdDevp and Product the engine
+  applies this rule by analogy: their cells fit it, but other readings fit them too (UNVERIFIED,
+  T-4678).
+- **Formulas.** Var is the textbook (Σx² − (Σx)²/n) / (n − 1), and StdDev its square root. Varp is
+  (n·Σx² − (Σx)²) / n², and StdDevp its square root. Each total feeds these formulas in the order
+  above.
+
+What is open (T-4678):
+- Var, StdDev, Varp, StdDevp and Product at a subtotal crossing with two fields per axis, where the
+  engine applies the leaf-row rule that T2 and T3 show for Sum and Average;
+- the order of the Varp and StdDevp grand-grand total with one field per axis, which the engine takes
+  from Var by analogy;
+- the order of the Product grand-grand total, where one cell fits several readings;
+- Max and Min beside an error field at such cells;
+- a pivot with column fields only;
+- Values on rows.
 
 Evidence (excel-graph, 2026-11-06):
+- probes/t4634-pivot-total-order-4 (T-4634). Python doubles were used to choose the data so that the
+  candidate readings below give different values. Every claim is among the candidates tried.
+  - Which mixes switch Sum to the records. X1 to X12 have rows R and columns K: Sum of V beside a
+    second field of V. Each sheet uses its own 27-record source, E1 to E12. In each source the cells
+    added in display order differ from the records accumulated item by item in at least five of the
+    six row and column totals. The candidates for each total were:
+    - the cells added in display, reverse or ascending item order;
+    - the records accumulated item by item in each of those orders;
+    - record order, and reverse record order.
+
+    | Sheet | Beside Sum | Totals fitting records, item by item, display order | Totals fitting cells, display order | Example (Excel; cells would give) |
+    |---|---|---|---|---|
+    | X1 | Count | 6 of 6 | 1 of 6 | H6 103461.13000000002 (103461.13) |
+    | X2 | CountNums | 6 of 6 | 0 of 6 | H6 107904.41000000002 (107904.40999999999) |
+    | X3 | Max | 6 of 6 | 0 of 6 | H6 717.1499999999999 (717.15) |
+    | X4 | Min | 6 of 6 | 0 of 6 | H6 71912.50000000001 (71912.5) |
+    | X5 | Product | 6 of 6 | 1 of 6 | H6 92141.79000000001 (92141.79) |
+    | X6 | StdDev | 6 of 6 | 1 of 6 | H6 19260.650000000005 (19260.649999999998) |
+    | X7 | Var | 6 of 6 | 0 of 6 | H6 9706.31 (9706.310000000001) |
+    | X8 | Varp | 6 of 6 | 1 of 6 | H6 114117.63999999998 (114117.64) |
+    | X9 | StdDevp | 6 of 6 | 1 of 6 | H6 105410.12000000001 (105410.12) |
+    | X10 to X12 | Average | 6 of 6 each | 0, 1 and 0 of 6 | X10 H6 70896.70999999999 (70896.71) |
+
+    X10 does not separate display item order from reverse record order: both fit its six totals.
+
+    The six totals of each sheet are H6:H8 and B9, D9 and F9. S1, Sum alone over E1, fits the cells in
+    display order in all six (E5:E7, B8:D8), with E5 103461.13 against X1 H6 103461.13000000002 over
+    the same records.
+  - Mixed grand-grand total, Sum and Average. These are X1 to X12 H9, X10 to X12 I9, and A1 E8
+    (Average alone over E11). The candidates were:
+    - the row totals or the column totals added in display, reverse or ascending order, with each
+      total taken as either cells or records;
+    - the cells added row by row or column by column;
+    - the records row-major or column-major, item by item over R or over K, in record order, or in
+      reverse record order;
+    - each of those in every combination of display, reverse and ascending orders, 56 readings in
+      all.
+
+    Each sheet fits between 2 and 14 of them, for example X2 H9 230121.09000000005 fits 2 and X12 H9
+    102980.28999999998 fits 2. Only one reading fits all sixteen cells: the row totals' record sums,
+    each accumulated item by item, added down the rows in display order. For X2 H9, record order gives
+    230121.08999999997 and the column totals' record sums 230121.09.
+  - Var-family grand-grand total. The sources are G1 and G2 (36 records, R first seen Q X B F N C, K
+    first seen M Z A, values 800 to 1300 so that rounding differences grow). The candidates (Σx, Σx²)
+    were accumulated in many ways:
+    - records row-major or column-major in every combination of display, reverse and ascending
+      orders, by R item, by K item, in record order and in reverse record order;
+    - the cells' sums added row by row or column by column;
+    - each row's sums added down the rows, or each column's sums added across the columns, in every
+      order.
+
+    These were combined with four Var formulas (textbook, n·Σx², two-pass, Welford) and five Varp
+    formulas (n·Σx², textbook /n, Σx²/n − mean², two-pass, Welford):
+
+    | Cell | Aggregate | Excel | row partials, display | row-major records | column partials | record order |
+    |---|---|---|---|---|---|---|
+    | V1 E11 | Var | 22664.877200872772 | 22664.877200872772 | 22664.87720087405 | 22664.877200872772 | 22664.877200872772 |
+    | V2 E11 | Varp | 22035.297278626465 | 22035.297278626465 | 22035.297278627568 | 22035.297278626465 | 22035.297278626465 |
+    | V3 E11 | StdDevp | 148.4429091557642 | 148.4429091557642 | 148.44290915576792 | 148.4429091557642 | 148.4429091557642 |
+    | V6 E11 | Var | 19695.45869357139 | 19695.45869357139 | 19695.45869357224 | 19695.45869357139 | 19695.458693570963 |
+    | V7 E11 | Varp | 19148.362618749892 | 19148.362618749892 | 19148.362618750813 | 19148.362618749892 | 19148.362618749525 |
+    | X7 I9 | Var | 6029222.866869232 | 6029222.866869232 | 6029222.866869232 | 6029222.866869231 | 6029222.866869231 |
+    | X8 I9 | Varp | 112914562.50268146 | 112914562.50268146 | 112914562.50268148 | 112914562.50268146 | 112914562.50268148 |
+
+    X6 I9 (StdDev, 21611.79840781048) and X9 I9 (StdDevp, 12429.806341554762) fit all of these.
+    - **Var and StdDev** (V1, V6 E11; X6, X7 I9). Of the candidates, only textbook Var over the rows'
+      sums fits all four cells. Each row's sums are accumulated item by item and then added down the
+      rows in display order. X7 I9 refutes column partials, and V1 and V6 E11 refute row-major order.
+    - **Varp and StdDevp** (V2, V3, V7 E11; X8, X9 I9). These cells fit the rows' sums with the n·Σx²
+      form. On their own they also fit at least two other readings: column partials in display order,
+      and cell sums added row by row (R ascending, K in display order). The engine takes the Varp and
+      StdDevp order from Var by analogy (UNVERIFIED, T-4678).
+  - Var-family row and column totals. V1, V2, V3, V6 and V7 E5:E10 and B11:D11, and X6 to X9 I6:I8
+    and C9, E9, G9, all fit the item-by-item display-order accumulation. Varp and StdDevp take Var's
+    order. Over one axis field, V4 B10 (Varp, rows R, 22035.2972786272) and V5 B7 (rows K,
+    22035.29727862628) each fit only the item-by-item display order with the n·Σx² form.
+  - Product (X5, beside Sum). The row and column totals I6:I8, C9, E9 and G9 fit the item-by-item
+    product. The cells' product differs in I6, I8 and C9. The grand-grand I9 is 7.444417258525587e+39.
+    That one cell fits about 8 of the 54 product readings tried. Among them are the product of the row
+    totals' products in display order, the shared leaf-row rule, and row-major records with R
+    reversed. Several cell-product orders also fit. It does not exclude those, so it is consistent
+    with the shared rule but does not settle it (UNVERIFIED, T-4678). Among the readings it does
+    refute are row-major order (7.444417258525588e+39), the column totals (7.444417258525589e+39) and
+    record order (7.444417258525589e+39).
+  - Sum alone over one axis field. O1 and O2 are rows R and rows K over F1, and O3 and O4 the same
+    over F2. The candidates were the item cells added in display, reverse or ascending order, the
+    records item by item in each order, record order, and reverse record order. The item cells in
+    display order are the only one that fits all four: O1 B7 154959.82000000004, O2 B7 154959.82,
+    O3 B7 22667.72 and O4 B7 22667.72. Item-by-item display order gives 154959.82000000007,
+    154959.82000000004, 22667.719999999994 and 22667.719999999994.
+  - Average alone over one axis field: A2 B7 5739.252592592595 (rows R) and A3 B7 839.545185185185
+    (rows K). Together they fit only the item-by-item display-order sum divided by 27. A2 alone also
+    fits reverse item order, and A3 alone ascending item order. The item cells would give
+    5739.252592592594 and 839.5451851851852. Among the cells probed, Average never follows the cells:
+    A1 E5:E7 and B8:D8 (2-D) fit item by item too.
+  - Two fields per axis. H1 has 32 records: rows P (H, E), then Q (t, s); columns U (G, D), then W
+    (d, c); compact form, so subtotals sit on the outer item's row. Seventeen readings were tried, and
+    the data was chosen so that every pair differs somewhere:
+    - a total adds its children (the subtotals) or its leaf cells, rows first or columns first;
+    - the leaf cells flat, row-major or column-major;
+    - the records row-major, column-major, by row leaf, by column leaf, or in record order;
+    - the engine's earlier mixed reading.
+
+    In the first table, each total adds leaf cells and each subtotal adds its children. In the
+    second, the leaf-row record sums are added, and the earlier mixed engine is row-major records
+    with the grand-grand cell the sum of the outer subtotals.
+
+    | T1, Sum alone | Excel | adds leaf cells | adds subtotals |
+    |---|---|---|---|
+    | H12, grand by grand | 153907.15 | 153907.15 | 153907.14999999997 |
+    | G12, grand by D | 29529.63 | 29529.63 | 29529.630000000005 |
+    | H6, H by grand | 19409.61 | 19409.61 | 19409.609999999997 |
+
+    | T2 (Sum beside Average) and T3 (Average alone) | Excel | leaf-row record sums | earlier mixed engine |
+    |---|---|---|---|
+    | T2 N13, grand by grand | 153907.15000000002 | 153907.15000000002 | 153907.14999999997 |
+    | T2 F13, grand by G | 124377.52 | 124377.52 | 124377.51999999999 |
+    | T2 N10, E by grand | 134497.54 | 134497.54 | 134497.53999999998 |
+    | T3 H12, grand by grand | 4809.598437500001 | 4809.598437500001 | 4809.598437499999 |
+    | T3 D12, grand by G | 7773.595 | 7773.595 | 7773.594999999999 |
+
+    T1 fits only "rows first, leaf cells" in every cell (B6:H12). Adding subtotals fails seven cells:
+    B12, F12, G12, H12 and H6:H8. In T2 (Sum and Average, B7:O13) and T3 (B6:H12), only the leaf-row
+    rule fits every cell. Row-major records fail four cells in each. Adding the row subtotals fails two,
+    adding the column subtotals three, and adding the leaf columns five.
 - probes/t4616-pivot-total-order-3 (T-4616). D1 has 27 records, three per cell: R items first seen
   Q, X, B, and K items first seen M, Z, A. Python doubles were used to choose values for which the
   candidate totals differ. The candidates are:
@@ -714,7 +864,7 @@ Evidence (excel-graph, 2026-11-06):
     display-order accumulation. About 38 other readings also fit: textbook, n·Σx², two-pass and
     Welford's update over many orders, and textbook over per-row or per-column partial sums.
     Column-major display order gives
-    4337674.5270196805.
+    4337674.5270196805. T-4634 settles it: textbook Var over the rows' partial sums.
   - Var over one axis field: V3 (rows K) B8 is 4337674.52701968 and V4 (rows R) B11 is
     4337674.527019681. Each equals textbook Var accumulated item by item in its own field's display
     order. For V3 that is the only fitting candidate. The item cells V3 B5:B7 and V4 B5:B10 are
@@ -753,30 +903,39 @@ Evidence (excel-graph, 2026-11-06):
   - A_average!S6 is 0.19999999999999998 = 0.6 / 3, the item-by-item accumulation, which fits the
     Average rule.
 
+- Varp's formula: probes/t4135-pivot-aggregates A_stdDevp!N6 and M8 (T-4142). Of the candidates
+  tried, only (n·Σx² − (Σx)²)/n² fits both. On those t4135 cells it gives the same bits as dividing
+  by n twice, but t4634 rules that out: dividing by n twice differs from /(n·n) at V2 E7, E8 and
+  C11, at V7 E8, E9 and E10, and at X8 G9, and Excel shows /(n·n). The others were
+  textbook /n, Σx²/n − mean², two-pass, Welford and (Σx² − Σx·mean)/n. t4589 S1 G5:H7 fits it too.
+
 Correction: T-4135 first recorded Sum as the sum of the children. T-4614 then recorded item-by-item
-accumulation for totals over one axis field. T-4616 shows that both happen, depending on the pivot's
-data fields: Sum alone in 2-D uses the cells, and Sum beside Average uses the records.
+accumulation for totals over one axis field. T-4616 showed that both happen, depending on the pivot's
+data fields. T-4634 shows that any non-Sum field switches Sum to the records. It also shows that a
+Sum-only total adds leaf cells, not subtotals. Finally, a total on both axes adds the leaf rows' partial
+results. The engine's earlier row-major reading for the Var grand-grand total, and its sum of the
+outer subtotals for a mixed grand-grand total, were wrong (t4634 V1 E11, T2 N13).
 
 Status: VERIFIED (excel-graph) for these totals:
-- 2-D Sum totals over one field, Sum alone and beside Average;
-- the Sum-alone grand-grand total;
-- Average, Var and StdDev row and column totals;
-- Var and StdDev over one axis field;
-- Product over one axis field;
-- totals over one axis field in mixed pivots.
+- every Sum total with one field per axis, Sum alone and beside each of the other ten aggregates;
+- Sum alone over one axis field, and Sum alone with two fields per axis;
+- Average, Var, StdDev, Varp, StdDevp and Product row and column totals, and totals over one axis
+  field;
+- grand-grand totals with one field per axis, for Sum, Average, Var and StdDev;
+- every cell of Sum beside Average, and of Average alone, with two fields per axis.
 
-UNVERIFIED (probe pending: T-4634): which data-field mixes switch Sum to the records, a Sum-only total
-over one axis field, and the mixed and Var grand-grand totals.
-Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs (`Accumulator::finish`). The engine reads the open points this way, each UNVERIFIED
-(T-4634): Sum uses the child cells only when every data field is a Sum; a Sum-only total over one axis
-field sums the item cells; the mixed 2-D grand-grand Sum and Average sum the row totals' record sums
-(t4616 S2 H9 and I9, S3 E8 fit it); the Var and StdDev grand-grand total is row-major (t4616 V1 E11
-fits it); and a Sum-only cell that is a total on both axes (a subtotal by a subtotal or by a grand
-total, with several fields on an axis) sums its row children first, which is probed only for the
-grand-grand total. Varp and StdDevp use (n·Σx² − (Σx)²)/n² (bit-identical when divided by n twice).
-Of the candidates tried (textbook /n, Σx²/n − mean², two-pass, Welford, (Σx² − Σx·mean)/n) it is the
-only family that fits probes/t4135-pivot-aggregates A_stdDevp!N6 and M8 (t4589 S1 G5:H7 fits it too);
-the order of their totals is assumed to be Var's.
+UNVERIFIED (probe pending: T-4678). These are the same items as "What is open" above:
+- Var, StdDev, Varp, StdDevp and Product at crossings with two fields per axis;
+- the Varp, StdDevp and Product grand-grand order with one field per axis;
+- Max and Min beside an error field at such cells;
+- a pivot with column fields only;
+- Values on rows.
+
+The engine applies the leaf-row rule to the crossings, and to the Varp, StdDevp and Product
+grand-grand totals.
+Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `merge_crossings`,
+`child_cells`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs
+(`Accumulator::finish`, `Accumulator::add_folds`).
 
 ## errorCaption replaces every error value
 Rule: with `showError` and `errorCaption`, every error value a pivot cell would show becomes the
@@ -791,12 +950,18 @@ Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::valu
 
 ## A Count total over an error field is the error when the pivot mixes aggregates
 Rule: Count and CountNums never show an error in an item's cell. When the pivot's data fields mix
-aggregates (Count or CountNums beside Sum or Average), though, every total of a Count or CountNums
+aggregates (Count or CountNums beside any aggregate other than Count and CountNums: Sum, Average,
+Max, Min, Product, Var, Varp or StdDev among those probed), though, every total of a Count or CountNums
 that covers a record holding an error is that error: `#N/A`, or the errorCaption when one is set.
 This covers subtotals of an outer row field over an inner one, row and column grand totals, and the
 grand total. Totals that cover no such record stay counts. With one data field, with only Count fields,
 or with Count beside CountNums, every total is a count. A column field makes no difference.
 Evidence (excel-graph, 2026-11-06):
+- probes/t4634-pivot-total-order-4 (T-4634), over ER (t4616's D3), rows Region, then Kind. C1 to C5
+  are Count of Err beside only Max, Min, Product, Var or Varp of Num, C6 is CountNums of Err beside
+  Max, and C7 is Count of Err beside StdDev. In all seven, East's subtotal (B5) and the Grand Total
+  (B11) are `#N/A`. The items stay counts: East A 2 (B6), East B 1 (B7; 0 under CountNums in C6), and
+  West 2 (B8).
 - probes/t4616-pivot-total-order-3 (T-4616), over D3: East A (Err 10), East B (Err `#N/A`), East A
   (3), West A (7), West B (5); rows Region, then Kind; no showError:
   - I1, Count of Err beside Sum of Num: East's subtotal is `#N/A` (B5), while its items A and B are 2
@@ -826,7 +991,7 @@ Evidence (excel-graph, 2026-11-06):
   - EC, eleven mixed aggregates: `ERR`.
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs (`Accumulator::finish`). The engine treats any aggregate other than Count and CountNums as
-mixing; Count beside only Max, Min, Product or the variances is unprobed (UNVERIFIED, T-4634).
+mixing. StdDevp beside Count alone is not probed, but every other aggregate is.
 
 ## Record filters: page selections and hidden items
 Rule: a page field's selected item keeps only the records holding it, and a hidden item (`item h="1"`)
@@ -968,6 +1133,8 @@ Open (T-4640):
   GETPIVOTDATA's item `"#N/A"` names an error item (functions/lookup_and_reference/pivot_index.rs).
 
 Status: VERIFIED (excel-graph) for the rules above; the open points are UNVERIFIED (probe pending:
-T-4640)
+T-4640). The empty label cell is evidenced for a row item (P_Rec!A6); that a column item's is
+empty too is the engine's assumption, UNVERIFIED (probe pending: T-4640).
 Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141, T-4627) (`field_names`,
-`name_key`)
+`name_key`); the empty label cell in crates/rustsheet-engine/src/pivot/layout/render.rs
+(`Cells::lines`, T-4152)

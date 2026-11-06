@@ -2,12 +2,15 @@
 //! Every value cell of the oracle-rendered aggregate probes, against the result tree: the
 //! source, the definition and the expected cells all come from the probes' case and sidecar
 //! files (probes/t4135-pivot-aggregates, t4589-pivot-total-order, t4614-pivot-total-order-2,
+//! t4616-pivot-total-order-3, t4634-pivot-total-order-4,
 //! t4137-pivot-captions), read through the sidecar's own line encoding (`rowItems`/`colItems`).
 
 use serde_json::Value as Json;
 
 use super::*;
-use crate::pivot::probe_cases::{address, diagonal, position, probe_pivot, read, subtotal_named};
+use crate::pivot::probe_cases::{
+    address, diagonal, position, probe_pivot, read, subtotal_named, T4634_SHEETS,
+};
 use crate::pivot::{
     CacheBuilder, CellArea, DataField, ItemType, PageField, PivotItem, RecordValue,
     MAX_RECORD_VALUES,
@@ -174,6 +177,13 @@ fn every_t4616_total_order_cell_is_excels() {
         "I4", "M1", "M2", "M3",
     ] {
         check("t4616-pivot-total-order-3", sheet);
+    }
+}
+
+#[test]
+fn every_t4634_total_order_cell_is_excels() {
+    for sheet in T4634_SHEETS {
+        check("t4634-pivot-total-order-4", sheet);
     }
 }
 

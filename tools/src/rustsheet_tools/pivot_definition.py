@@ -44,6 +44,10 @@ A pivot with `"refresh_on_load": false` (T-4586) is saved without `refreshOnLoad
 saves are. Its area may then hold spec cells: they are the cells the file saved for the pivot. With `area`
 (its `<location>` ref) and the raw `rowItems` and `colItems` slots of `xml`, a case can save a render that
 disagrees with the cache, to ask whether Excel keeps it on open or renders the pivot again.
+
+The eval adapter writes the same parts in Rust (crates/rustsheet-eval/src/pivot_definition.rs, T-4152), so the
+engine loads what Excel opened: keep the two in step. tests/test_pivot_parts_golden.py and the Rust module's
+tests pin both to the golden parts in tests/pivot_parts_golden/.
 """
 
 from __future__ import annotations
