@@ -3,7 +3,7 @@ id: T-4404
 title: "Probe how Excel reads an exported colorFilter without dxfId (a dxf index past the workbook's dxfs)"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -33,3 +33,9 @@ repair and still counts its hidden rows as filtered for SUBTOTAL.
 
 ## Out of scope
 - Re-applying a color filter.
+
+## Outcome
+excel-graph (2026-11-06): the dangling `dxfId=7` file is refused; the export (`<colorFilter/>`), a direct `<colorFilter/>`
+and `<colorFilter cellColor="0"/>` open and read as manual hides (SUBTOTAL 9/109/3/103 = 21/15/6/4). Import now reads a
+`<colorFilter>` without `dxfId` as criterion-less (unit test in filter_criteria.rs). Recorded in xlsx-storage.md.
+No eval delta.
