@@ -31,6 +31,10 @@ output cell are a reference or a value exactly as in Excel, evidenced on excel-g
   returned (`call_lambda_caller`) straight on as the next accumulator, so a returned `Range` stays a reference to the
   end; `lambda_result_value` (bycol_byrow.rs) reads SCAN's output cells. Whether Excel keeps it, reads it to a value
   (so `a:v` on the next step is `#VALUE!`), or keeps it only for some steps is unknown.
+- T-4475 (2026-11-06) probed the step's accumulator once: probes/t4475-scan-reduce-reference-initial D11 and F11 (REDUCE
+  keeps a returned reference in the next `a`: "r" and 0; ours "1" and 2.5) stay in eval/baseline/probes.txt for this
+  task, and E11, G11 show SCAN does not keep it (ours matches). That case also settles the union and 3-D span initial
+  values (a union is a reference, a span `#VALUE!`), so this probe need not repeat them.
 - Probe (excel-probe skill, excel-graph, tag M7), A1:A4 = 1, 2, 3, "x", B1:B2 = 10, 20, each result read through
   `ISREF`, `ROWS(..)&"x"&COLUMNS(..)`, `ERROR.TYPE` and `ARRAYTOTEXT` where it is not a reference test:
   - accumulator after a step: `REDUCE(A1,A2:A3,LAMBDA(a,v,IF(ISREF(a),1,0)+IF(ISREF(v),10,0)))` with a step that

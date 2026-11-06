@@ -2366,6 +2366,7 @@ C	probes/t4447-sort-fractional-keys.case.json	84
 C	probes/t4449-groupby-function-array-edges.case.json	145
 C	probes/t4453-near-integer-text-args.case.json	168
 C	probes/t4464-groupby-spent-filter-shapes.case.json	323
+C	probes/t4475-scan-reduce-reference-initial.case.json	64
 C	probes/t4492-locale-comma-tag-shapes.case.json	24
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
@@ -8236,6 +8237,8 @@ F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C3
 F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C4
 F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C7
 F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C8
+F	probes/t4475-scan-reduce-reference-initial.case.json	Sheet1!D11
+F	probes/t4475-scan-reduce-reference-initial.case.json	Sheet1!F11
 F	probes/t4492-locale-comma-tag-shapes.case.json	S!A16
 F	probes/t4492-locale-comma-tag-shapes.case.json	S!A2
 F	probes/t4492-locale-comma-tag-shapes.case.json	S!A20

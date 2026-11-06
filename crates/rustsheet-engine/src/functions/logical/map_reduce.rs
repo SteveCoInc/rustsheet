@@ -6,6 +6,7 @@ use crate::{
     expressions::{parser::ArrayNode, parser::Node, token::Error, types::CellReferenceIndex},
     limits::check_array_cells,
     model::Model,
+    variable_stack::Binding,
 };
 
 impl Model {
@@ -124,14 +125,18 @@ impl Model {
             return CalcResult::new_error(Error::VALUE, cell, "empty array".to_string());
         }
 
-        let (mut accumulator, start) = if has_initial {
-            (self.lambda_initial_value(&args[0], cell), 0)
-        } else {
-            (data.at(0, 0), 1)
-        };
-
         let mut caller = caller.keeping_trimrange_references();
-        for index in start..count {
+        let mut accumulator = if has_initial {
+            let initial = self.lambda_initial_value(&args[0], cell);
+            self.call_lambda_caller_bound(
+                &mut caller,
+                [initial, Binding::Value(data.at(0, 0))],
+                cell,
+            )
+        } else {
+            data.at(0, 0)
+        };
+        for index in 1..count {
             accumulator = self.call_lambda_caller(
                 &mut caller,
                 [accumulator, data.at(index / columns, index % columns)],
@@ -142,22 +147,25 @@ impl Model {
         accumulator
     }
 
-    /// SCAN's and REDUCE's `initial_value` as the LAMBDA's first accumulator. A cell or range
-    /// reference stays a reference, a single cell too, as in the common case of a LAMBDA call's
-    /// argument ([`Model::bind_argument`], whose OFFSET, INDIRECT, TRIMRANGE and grid-variable
-    /// forms are not taken here): `REDUCE(Data!C7,Data!E12,COUNT)` with C7 the text "1" is 1, and
-    /// `REDUCE(Data!A12,Data!C11,PRODUCT)` with both cells TRUE is 0 (gen-m7/2c5ea078f25443a2
-    /// A1767, 18b80d3fd292d63a A467; docs/excel-semantics/arrays.md "SCAN and REDUCE keep errors
-    /// in the LAMBDA", T-2307). An error goes to the LAMBDA like any value (same entry). A union
-    /// and a 3-D span are read as before (unprobed).
+    /// SCAN's and REDUCE's `initial_value` as the LAMBDA's first accumulator: bound as a LAMBDA
+    /// call's argument is ([`Model::bind_argument`]), so a cell, and an IF, CHOOSE, INDEX,
+    /// XLOOKUP, OFFSET or INDIRECT that picks one, a LET variable bound to any of them and a union
+    /// reach the LAMBDA as references, and IFERROR as a value: `REDUCE(IF(TRUE,A2),A3,
+    /// LAMBDA(a,v,COUNT(a)))` with A2 the text "1" is 0, `REDUCE((A1,A3),A1,LAMBDA(a,v,PRODUCT(a)))`
+    /// with A1 TRUE and A3 2.5 is 2.5 and ISREF(a) is TRUE (probes/t4475-scan-reduce-reference-initial
+    /// D2:I9; gen-m7/2c5ea078f25443a2 A1767, T-2307). A 3-D span is `#VALUE!`, not a reference
+    /// (D10:I10: COUNT(a) 0, PRODUCT(a) `#VALUE!`, ISREF(a) FALSE). An empty `initial_value`
+    /// is read as before, not as an omitted parameter (T-2670). docs/excel-semantics/arrays.md
+    /// "SCAN and REDUCE keep errors in the LAMBDA".
     pub(super) fn lambda_initial_value(
         &mut self,
         node: &Node,
         cell: CellReferenceIndex,
-    ) -> CalcResult {
-        if self.is_multi_area(node) || matches!(node.ungrouped(), Node::SheetSpanKind { .. }) {
-            return self.evaluate_node_in_context(node, cell);
+    ) -> Binding {
+        match self.bind_argument(node, cell) {
+            Binding::Omitted => Binding::Value(self.evaluate_node_in_context(node, cell)),
+            span @ Binding::Span(_) => Binding::Value(span.value(cell)),
+            binding => binding,
         }
-        self.eval_ref_or_index(node, cell)
     }
 }

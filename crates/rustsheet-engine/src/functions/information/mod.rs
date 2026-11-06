@@ -331,11 +331,16 @@ impl Model {
                 }
             }
             // A LET variable or LAMBDA parameter is a reference if it was bound to one
-            // (upstream MIN_MAX_extras.xlsx A14-A16).
-            Node::NamedVariableKind { .. } => matches!(
-                self.evaluate_node_with_reference(node, cell),
-                CalcResult::Range { .. }
-            ),
+            // (upstream MIN_MAX_extras.xlsx A14-A16), a union included: SCAN's and REDUCE's
+            // accumulator bound to `(A2,A3)` is (probes/t4475-scan-reduce-reference-initial F9,
+            // G9; T-4475). One bound to a 3-D span is not (references.md, T-1158).
+            Node::NamedVariableKind { .. } => {
+                self.is_union_variable(node)
+                    || matches!(
+                        self.evaluate_node_with_reference(node, cell),
+                        CalcResult::Range { .. }
+                    )
+            }
             _ => false,
         }
     }

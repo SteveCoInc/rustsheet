@@ -1655,7 +1655,7 @@ arrays and every element counts: `BYCOL(IFERROR(A1:B3,1),LAMBDA(c,COUNTA(c)))` i
 Evidence: probes/lambda-helper-range-slices (excel-graph, 2026-10-12, T-1395).
 Ours: BYROW and BYCOL pass references since T-1395 (`by_slices_source`, bycol_byrow.rs); a range keeps its full size
 (a whole column gives 1,048,576 calls and full-column slices) under the 2^20-cell array bound of "Array results above
-1,048,576 cells". MAP, SCAN and REDUCE pass each cell of a one-sheet range as a one-cell reference too (`lambda_cells`, T-1442); a reference the LAMBDA returns is read when it becomes a MAP or SCAN output cell, while a REDUCE or SCAN accumulator stays as returned (what Excel does with `ISREF(a)` on an accumulator is unprobed); the bare COUNTA of E32 is `#VALUE!` since T-1466 (a bare name read from a file is unknown, and BYROW and BYCOL refuse anything but a LAMBDA; see "Functions passed by name").
+1,048,576 cells". MAP, SCAN and REDUCE pass each cell of a one-sheet range as a one-cell reference too (`lambda_cells`, T-1442); a reference the LAMBDA returns is read when it becomes a MAP or SCAN output cell, while a REDUCE or SCAN accumulator stays as returned (Excel: REDUCE keeps a returned reference in the next step's `a`, SCAN does not; probes/t4475-scan-reduce-reference-initial D11:G11, owned by T-4478; see "SCAN and REDUCE keep errors in the LAMBDA"); the bare COUNTA of E32 is `#VALUE!` since T-1466 (a bare name read from a file is unknown, and BYROW and BYCOL refuse anything but a LAMBDA; see "Functions passed by name").
 Status: VERIFIED (excel-graph)
 Tasks: T-1395, T-1442
 
@@ -1848,14 +1848,29 @@ A285). Both are references:
 - A285 and A1767 need a reference initial value: a text value would make PRODUCT `#VALUE!` and COUNT 2.
 - A467 needs a reference element too. PRODUCT of a reference TRUE and a value TRUE would be 1.
 - Elements from a range, a one-cell range included, were already references (T-1442).
-- Unprobed initial values:
-  - a function result such as `IF(TRUE,A1)`;
-  - an INDEX or XLOOKUP that picks a cell (ours: a reference, as `eval_ref_or_index` gives it);
-  - a union or a 3-D span (ours: read as values, as before);
-  - ISREF of the accumulator (ours: TRUE for a cell).
-Evidence: gen-m7 cases above (excel-graph, 2026-10-21, T-2225).
+- The initial value is bound as a LAMBDA call's argument is (probes/t4475-scan-reduce-reference-initial, excel-graph,
+  2026-11-06, T-4475; Sheet1 A1 TRUE, A2 the text "1", A3 2.5; each form asked as `COUNT(a)`, `PRODUCT(a)` and `ISREF(a)`,
+  where a reference gives 0, 0 and TRUE and a value 1, 1 and FALSE):
+  - a reference: the cell itself (D1:G1), `IF(TRUE,A2)` (D2:G2), `CHOOSE(1,A2)` (D3:G3), `INDEX(A1:A3,2)` (D5:G5),
+    `XLOOKUP("y",B1:B3,A1:A3)` (D6:G6), `OFFSET(A1,1,0)` (D7:G7) and `INDIRECT("A2")` (D8:G8), in REDUCE and SCAN alike;
+  - a value: `IFERROR(A2,0)` (D4:G4);
+  - a LET variable bound to any of these keeps its kind: `LET(c,IF(TRUE,A2),REDUCE(c,A3,LAMBDA(a,v,COUNT(a))))` is 0
+    (H1:I8), `IFERROR`'s variable 1 (H4, I4);
+  - a union stays its areas: `REDUCE((A2,A3),A3,LAMBDA(a,v,COUNT(a)))` is 1, `REDUCE((A1,A3),A1,LAMBDA(a,v,PRODUCT(a)))`
+    2.5 and ISREF(a) TRUE (D9:I9);
+  - a 3-D span is `#VALUE!`, not a reference: COUNT(a) 0, PRODUCT(a) `#VALUE!` and ISREF(a) FALSE (D10:I10). A LET
+    variable bound to the span gives the same (H10, I10), unlike `LAMBDA(x,SUM(x))(Data1:Data3!A1)` (references.md).
+  - Eta forms do not separate the kinds: `REDUCE(A2,A3,COUNT)` and `REDUCE(A1,A1,PRODUCT)` are `#VALUE!` for every form
+    (the probe's first fill), so the case calls a LAMBDA.
+- The accumulator a step returns (row 11, handed to T-4478): REDUCE keeps a returned reference in the next step's `a`
+  (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(ISREF(a),"r",v)))` is "r", D11; the COUNT form 0, F11), SCAN does not
+  (`SCAN(0,A1:A3,LAMBDA(a,v,ISREF(a)))` is FALSE at every step, G11; E11 {TRUE;"1";2.5}).
+Evidence: gen-m7 cases above (excel-graph, 2026-10-21, T-2225); probes/t4475-scan-reduce-reference-initial (T-4475).
 Ours: implemented (T-2306): `fn_scan` and `fn_reduce` hand error values to the LAMBDA and SCAN keeps an error step in its slot.
-Since T-2307, `lambda_initial_value` keeps a reference initial_value a reference, as `eval_ref_or_index` binds a LAMBDA argument.
+Since T-2307, `lambda_initial_value` keeps a reference initial_value a reference; since T-4475 it binds it with
+`Model::bind_argument`, as a LAMBDA call binds an argument (the 3-D span read as its `#VALUE!`), and REDUCE and SCAN pass that
+binding to the first call (`call_lambda_caller_bound`); ISREF of a parameter bound to a union is TRUE. D11 and F11 (REDUCE
+keeping a returned reference) stay off for T-4478.
 A blank cell taken into an array by HSTACK counts as a 0 argument when an element reaches AVERAGE: `REDUCE(<3x1 text array>,
 HSTACK(Data!Z1:Z2,{1;2}),_xleta.AVERAGE)` is 1.125 = AVERAGE(AVERAGE(AVERAGE(AVERAGE(texts,0),1),0),2) (gen-m7/f19581ac44da1653 Calc!A2088,
 excel-graph, 2026-10-22). Probed (probes/t2413-blank-in-stacked-arrays, excel-graph, 2026-10-23, T-2413): the element is the

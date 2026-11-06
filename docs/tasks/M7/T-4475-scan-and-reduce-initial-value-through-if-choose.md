@@ -3,7 +3,7 @@ id: T-4475
 title: "SCAN and REDUCE initial_value through IF, CHOOSE, INDEX, XLOOKUP, OFFSET, INDIRECT, a union and a 3-D span: probe whether the LAMBDA gets a reference (ISREF, PRODUCT, COUNT) and match"
 milestone: M7
 lane: functions-logic
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -43,17 +43,17 @@ PRODUCT and COUNT over the accumulator give Excel's results. The rules are probe
   `ARRAYTOTEXT`.
 
 ## Acceptance criteria
-- [ ] probes/t4475-scan-reduce-reference-initial is committed with oracle values (excel-graph) for every formula above;
+- [x] probes/t4475-scan-reduce-reference-initial is committed with oracle values (excel-graph) for every formula above;
       a formula excel-graph refuses or cannot decode is left pending and named in arrays.md.
-- [ ] Every filled cell passes (`make eval-show CASE=probes/t4475-scan-reduce-reference-initial`). Forms that Excel
+- [x] Every filled cell passes (`make eval-show CASE=probes/t4475-scan-reduce-reference-initial`). Forms that Excel
       passes as references reuse the reference producers `Model::bind_argument` already uses (no second copy of its
       OFFSET/INDIRECT/grid-variable match): either `lambda_initial_value` calls a shared helper factored out of
       `bind_argument`, or it documents with probe cells why a form differs.
-- [ ] gen-m7 (the T-2307 cells A1767, A467, A285 above in particular), probes/lambda-helper-range-slices and
+- [x] gen-m7 (the T-2307 cells A1767, A467, A285 above in particular), probes/lambda-helper-range-slices and
       probes/scan-over-groupby still pass; the eval gate shows 0 regressions in every suite.
-- [ ] docs/excel-semantics/arrays.md: the "Unprobed initial values" list and the "what Excel does with `ISREF(a)` on an
+- [x] docs/excel-semantics/arrays.md: the "Unprobed initial values" list and the "what Excel does with `ISREF(a)` on an
       accumulator is unprobed" clause are replaced by the probed rules with their cells.
-- [ ] Unit tests pin `REDUCE(IF(TRUE,A2),A3,COUNT)` at its probed value (the accumulator formula belongs to T-4478).
+- [x] Unit tests pin `REDUCE(IF(TRUE,A2),A3,COUNT)` at its probed value (the accumulator formula belongs to T-4478).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -64,6 +64,30 @@ PRODUCT and COUNT over the accumulator give Excel's results. The rules are probe
 - ISOMITTED of an empty initial value (T-2670) and error or multi-cell-range initial values as argument kinds (T-2878).
 - BYROW/BYCOL/MAP slices (already references, T-1395, T-1442). PIVOTBY subtotal work (T-4388, T-4401, T-4414,
   T-4428), function arrays (T-4449) and eta names (T-4450) are unrelated.
+
+## Outcome
+Done 2026-11-06 (resumed from the landing notes below).
+- **Probe:** probes/t4475-scan-reduce-reference-initial (excel-graph, 2026-11-06, 64 cells). The task's suggested eta
+  `REDUCE(X,A3,COUNT)` design was `#VALUE!` for every form, so the case calls `LAMBDA(a,v,COUNT(a))`,
+  `LAMBDA(a,v,PRODUCT(a))` and `LAMBDA(a,v,ISREF(a))`.
+- **Rule:** the initial value is bound as a LAMBDA call's argument is. IF, CHOOSE, INDEX, XLOOKUP, OFFSET and INDIRECT
+  that pick a cell are references, and so is a LET variable bound to one. A union stays its areas (ISREF TRUE).
+  IFERROR gives a value, and a 3-D span gives `#VALUE!` (ISREF FALSE). REDUCE keeps a returned reference in the next
+  step's accumulator, and SCAN does not (row 11, handed to T-4478).
+- **Engine:** `lambda_initial_value` (map_reduce.rs) now returns `Model::bind_argument`'s `Binding`. It reuses
+  bind_argument's OFFSET/INDIRECT/grid-variable/picked-reference producers with no second copy. It reads a 3-D span as
+  its `#VALUE!` and keeps an empty slot as before (T-2670). A new `call_lambda_caller_bound` (lambda.rs), which
+  `call_lambda_caller` now wraps, hands that binding to REDUCE's and SCAN's first call. ISREF of a variable bound to a
+  union is TRUE (`Model::is_union_variable`, let.rs; information/mod.rs).
+- **Eval delta:** the new case has 62/64 cells (it had 33 on main). D11 and F11 are REDUCE's returned-reference
+  accumulator, which is out of scope here: they are in eval/baseline/probes.txt and named in T-4478. `make eval-gates`
+  shows 0 regressions in every suite (gen-m7, lambda-helper-range-slices and scan-over-groupby are unchanged). The
+  visible-parity lock adds the new case's 2.
+- **Tests:** `scan_reduce_initial_value_forms_bind_as_lambda_arguments` (test_fn_map_reduce.rs) pins
+  `REDUCE(IF(TRUE,A2),A3,LAMBDA(a,v,COUNT(a)))` at 0, plus the IFERROR, XLOOKUP, LET/OFFSET, union and span forms.
+  The task's `REDUCE(IF(TRUE,A2),A3,COUNT)` is `#VALUE!` in Excel (eta), so the test uses the LAMBDA form.
+- docs/excel-semantics/arrays.md: the "Unprobed initial values" list and the accumulator "unprobed" clause are
+  replaced by the probed rules.
 
 ## Landing notes (resumed 2026-11-06 18:05 UTC)
 State at the session's landing window (2026-11-06 07:10 UTC): branch `agent/functions-logic/T-4475-scan-reduce-reference-initial`,
