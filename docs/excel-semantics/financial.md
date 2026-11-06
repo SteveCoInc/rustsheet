@@ -388,7 +388,7 @@ TRUE, where the double product is about 2.2E-318.
 
 The same inputs make PMT, PPMT and CUMIPMT `#NUM!` (`PMT(0.5,2,2*5E+307)`, `PPMT(0.5,1,2,2*5E+307)`,
 `CUMIPMT(0.5,2,2*5E+307,1,1,0)`, `PPMT((7.245817E-308-6.217028E-308),2,1E+9,1E-10,0,0)`,
-`PPMT(1E-300,1,1E-10,1E-300)`); the engine does not follow that yet (T-4488).
+`PPMT(1E-300,1,1E-10,1E-300)`); the engine follows that for all three (T-4488). CUMPRINC is unprobed there and keeps its values.
 
 The boundary is A's own overflow: the largest Excel-finite `|A|` in the sweep is 1.43E+308 (column C) and 1.36E+308
 (column D), and every `#NUM!` cell of columns C and D has A past the double range; of column B (all `#NUM!`), 188
@@ -404,8 +404,8 @@ Evidence:
 
 Status: VERIFIED (excel-graph).
 Implemented in: `period_payments` (crates/rustsheet-engine/src/functions/financial/annuity.rs) errs IPMT where
-`discounted_balance` or `payment_factor` declines; `discounted_split` flushes its interest. PMT, PPMT and CUMIPMT:
-not yet (T-4488).
+`discounted_balance` or `payment_factor` declines (`discounted_fails`); `discounted_split` flushes its interest.
+PMT (`compute_payment`), PPMT (`period_payments`) and CUMIPMT (`cumulative_of`) err on the same test (T-4488).
 Tasks: T-2587, T-2943, T-3523, T-4314, T-4488
 
 ## IPMT and PPMT split Excel's discounted payment
@@ -2807,8 +2807,12 @@ Rule: AMORLINC and AMORDEGRC read cost, date_purchased, first_period, salvage, p
 error, text or boolean is returned; text "1" is 1), and a date that does not floor to 0-2958465 (9999-12-31) is `#NUM!` as it
 is read (`AMORLINC(2400,-1,NA(),..)` and `AMORLINC(2400,39679,2958466,NA(),..)` are `#NUM!`, `AMORLINC(NA(),-1,..)` `#N/A`;
 dates 0 and 0.5 pass, `AMORLINC(2400,0.5,NA(),..)` is `#N/A`). Then the values are checked, all `#NUM!`: a negative cost or
-salvage, a salvage not below the cost, a negative period, a rate of 0 or less, a purchase after the first period (one on
-it is valid: `AMORLINC(2400,1,1,300,1,0.15,1)` is 360). Only then the basis is read: its error, text or boolean, then
+salvage, a salvage above the cost, a negative period, a rate of 0 or less, a purchase after the first period (one on
+it is valid: `AMORLINC(2400,1,1,300,1,0.15,1)` is 360). A salvage *equal* to the cost is no error: both functions are 0
+at the periods probed, 1 to 5 (`AMORLINC(99977.707698474,42751,42993,99977.707698474,2,0.213533204746625)` is 0;
+accuracy/AMORDEGRC/s1 A114, A118, A128, A130, A131 and accuracy/AMORLINC/s1 A124, A125, excel-graph, 2026-11-06,
+T-4111), though AMORDEGRC's walk would charge `rate·remain` at period 1 there. Period 0 and periods below 1 with a
+salvage equal to the cost are unprobed; ours is `#NUM!` (T-4504). Only then the basis is read: its error, text or boolean, then
 `#NUM!` for any basis but 0, 1, 3 or 4 (`AMORLINC(-1,39679,39813,300,1,0.15,NA())` is `#NUM!`). AMORDEGRC's asset-life check
 comes last (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is `#N/A`). A purchase date below 1 is serial 0, the day before
 serial 1: `AMORDEGRC(2400,0,366,300,1,0.15,1)` is 562 (366 days), `AMORDEGRC(2400,0,1,..)` 899, `AMORDEGRC(2400,1,366,..)` 563,
@@ -2825,7 +2829,7 @@ Dates -1, -0.5, 0, 1E-15, 0.5, 0.99, 1 and 2958466 were probed (-0.5 is `#NUM!`,
 inferred (the floor is taken from the shared reader's other functions).
 Ours: since T-2485 (`amortization_of` and `amor_date` in functions/financial/amortization.rs).
 Status: VERIFIED (excel-graph)
-Tasks: T-2485, T-1895
+Tasks: T-2485, T-1895, T-4111, T-4504
 
 ## AMORDEGRC below period 1
 Rule: AMORDEGRC with a period strictly between 0 and 1 computes no charge of its own: it returns a value left behind by
@@ -4248,6 +4252,17 @@ build the per-period charges differently, so the same inputs give different last
   fraction of .2 or .3 (T-3022). LibreOffice's model (a restart from the start with its half-life shift) and the
   running-total difference this replaced both miss visibly: fin-vdb-schedule A44 is 250.50773812499992 and
   242.0635349999999 with them.
+- Straight line from period 0 (T-4111): where straight line already wins at period 0, `(cost - salvage)/life >
+  cost·rate` (a factor below `1 - salvage/cost`, salvage at most cost), every period of the window charges
+  `(cost - salvage)/life`, the start's fraction included: there is no declining-balance fraction first. So the result
+  is `(end - start)·(cost - salvage)/life`: `VDB(121503138647.778,3864354372.11506,4,0.5,4,0.15833054798759,FALSE)` is
+  102933936241.20506, `3.5·(cost - salvage)/4`, where the fractional grid above gives 115234076960.1236 (10.7% off),
+  and `VDB(147.345559004139,0.00344462972942079,21,12.5,18.5,0.295807274286059)` is 42.09774696411702, `6·(cost -
+  salvage)/21` (the grid: 42.82078686786086). The rule gives Excel's value to the bit or within one ulp on all seven
+  table points where it applies (accuracy/VDB/s1 A119 with a whole start, where both readings agree, and A158, A183,
+  A187, A188, A189, A200, factors 0.10 to 0.60 and starts 0.5 to 53.25; excel-graph, 2026-11-06), and it changes no
+  probe or gen-m9 VDB cell (T-4111 ran it over the 257 literal one-call VDB eval cells with a math value). The engine still lays the fraction first
+  on these six (T-4510).
 Evidence: probes/fin-vdb-schedule (78 cells), fin-vdb-modes, fin-rri-vdb-edges (excel-graph, 2026-10-20, T-1975);
 fin-vdb-fractional-start (45 cells), fin-vdb-fractional-start-edges (14 cells) (excel-graph, 2026-10-28, T-2185);
 fin-vdb-amordegrc-edges A1-A59 (excel-graph, 2026-10-30, T-1978): salvage at or above cost in both modes (switching
@@ -4258,7 +4273,7 @@ salvage before period 8). The model already matched all 59 cells.
 Status: VERIFIED (excel-graph)
 Implemented (T-1975, T-2185): `vdb_no_switch_between` and `vdb_switching_between` in
 functions/financial/financial_depreciation.rs.
-Tasks: T-1975, T-2185, T-3022
+Tasks: T-1975, T-2185, T-3022, T-4111, T-4510
 
 ## AMORDEGRC life bands
 Rule: AMORDEGRC refuses (#NUM!) an asset life `1/rate` of 2 or less, that is a rate of 0.5 or more, and nothing else
@@ -4317,6 +4332,39 @@ G10, G20, G31, G35-G37, G39, G42, H10), probes/fin-argument-modes H88, H95 and t
 Status: VERIFIED (excel-graph)
 Implemented (T-2033): `db_depreciation` and `ddb_depreciation` in functions/financial/financial_depreciation.rs.
 Tasks: T-2033
+
+## SLN, SYD, DB, DDB and VDB argument domains
+Rule: beside the domains "DB and SYD argument domains" states, these errors hold (each with the eval cells and the Gate
+A table cells that show it; the engine matched every one):
+- SLN: a life of 0 is `#DIV/0!` (`SLN(99396,203,0)`, gen-m9 67a4c03afd63f988 A120; accuracy/SLN/s1 A112 and 9 more). A
+  negative life is a value (accuracy/SLN/s1 A82, A83 and 8 more).
+- SYD: a per above the life is `#NUM!`, a negative life included (`SYD(74613,683,-1,12)`, gen-m9 30e20ba3302fea8b A83;
+  accuracy/SYD/s1 A111, A119), and so is a per of 0 or less (`SYD(7528,..,32,0)`, gen-m9 01523d247594952e A153;
+  accuracy/SYD/s1 A114 and 5 more). A fractional per or life is a value (accuracy/SYD/s1 A82-A85).
+- DB: a negative cost (`DB(-1,441,12,3)`, gen-m9 1b60bf99d71424e7 A79), a month of 0 or less (gen-m9 3c06f9298f65a3ba
+  A292) or above 12 (`DB(82870,563,20,10,123456789.123)`, gen-m9 3aa168259335be54 A378) and a period of 0 or less
+  (gen-m9 3c06f9298f65a3ba A341, 5422bdbf173fc233 A385) are `#NUM!`.
+- DDB: a period above the life (`DDB(1E-300,497,34,360)`, gen-m9 0a957119475760c5 A225; accuracy/DDB/s1 A112, A117,
+  A121, A132), a negative cost (`DDB(-100,78,14,4)`, gen-m9 3c06f9298f65a3ba A34; accuracy/DDB/s1 A113, A114, A119,
+  A130) or salvage (`DDB(13936,-1000,25,1)`, gen-m9 30e20ba3302fea8b A218), a period of 0 or less (gen-m9
+  b73c6cc96e093f03 A217; accuracy/DDB/s1 A118, A120, A137, A140) and a factor of 0 or less (accuracy/DDB/s1 A123,
+  A124, A133-A135, A139; factor 0 also "VDB, DDB and ACCRINT argument types") are `#NUM!`. A period between 0 and 1 is
+  period 1's value (accuracy/DDB/s1 A115, A122, A127, A136).
+- VDB: a negative cost (gen-m9 6376e27be7a05871 A163; accuracy/VDB/s1 A111), salvage (`VDB(64334,-1,32,2,9)`, gen-m9
+  abb7d565af89b849 A180; accuracy/VDB/s1 A121), factor (accuracy/VDB/s1 A118, A123) or start (`VDB(14349,333,33,-1,10,1)`,
+  gen-m9 5422bdbf173fc233 A304; accuracy/VDB/s1 A116, A120, A127, A129), a life of 0 or less (`VDB(24437,541,0,3,7)`,
+  gen-m9 79d87fc527927626 A371), a start above the life (`VDB(71180,203,0.1,3,9)`, gen-m9 ba4ddb817a8e700e A145;
+  accuracy/VDB/s1 A114, A128, A134, A137) or an end above it (`VDB(70284,111,17,3,360)`, gen-m9 6376e27be7a05871 A359;
+  accuracy/VDB/s1 A122, A135), and a start above the end (`VDB(22104,684,36,2,-1)`, gen-m9 30e20ba3302fea8b A19;
+  accuracy/VDB/s1 A112, A133) are `#NUM!`. An empty window at the life with `no_switch` TRUE is 0 (accuracy/VDB/s1 A19, A115).
+Unprobed: VDB switching with life, start and end all equal (ours `#NUM!`, the library's check), and DB with a life of 0
+or less that passes the period checks.
+Evidence: the gen-m9 cells above (excel-graph, T-2257 sweep) and the T-4111 Gate A tables accuracy/{SLN,SYD,DB,DDB,VDB}/s1
+(excel-graph, 2026-11-06), where every Excel error falls on one of these rules or on "DB and SYD argument domains".
+Status: VERIFIED (excel-graph)
+Implemented in: `fn_sln`, `fn_syd`, `fn_db`, `fn_ddb`, `fn_vdb` (functions/financial/financial_depreciation.rs); the Gate A
+definitions in tools/src/rustsheet_tools/accuracy/defs/depreciation.py.
+Tasks: T-4111
 
 ## DURATION and RRI operation order
 Rule: DURATION discounts each cash flow with Excel's `^` (not libm `pow`) and weights it as `(t·cf)/v^t`, then
