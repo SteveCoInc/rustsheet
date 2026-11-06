@@ -1,0 +1,565 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "K"
+    },
+    {
+     "name": "V"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "east"
+    },
+    "A5": {
+     "t": "s",
+     "v": "west"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 3.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 4.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "Case",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "I1"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "K"
+    },
+    {
+     "name": "V"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "#N/A"
+    },
+    "A11": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "A12": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "a"
+    },
+    "A5": {
+     "t": "s",
+     "v": "FALSE"
+    },
+    "A6": {
+     "t": "n",
+     "v": 1.0
+    },
+    "A7": {
+     "t": "s",
+     "v": "b"
+    },
+    "A8": {
+     "t": "s",
+     "v": "TRUE"
+    },
+    "A9": {
+     "t": "n",
+     "v": 2.0
+    },
+    "B10": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B11": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B12": {
+     "t": "n",
+     "v": 8.0
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B9": {
+     "t": "n",
+     "v": 1.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B12",
+   "name": "Types",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      5
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      6
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      7
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "I2"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "K"
+    },
+    {
+     "name": "V"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "M"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Zed"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Alpha"
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 2.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 4.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B7",
+   "name": "New",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "I3"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "K"
+    },
+    {
+     "name": "V"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 0.3
+    },
+    "A5": {
+     "t": "n",
+     "v": 0.30000000000000004
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 2.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "Bits",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "I4"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "K"
+    },
+    {
+     "name": "V"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "A5": {
+     "t": "s",
+     "v": "1"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 2.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "TextNum",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "I5"
+  }
+ ],
+ "sheets": {
+  "D1": {},
+  "D2": {
+   "A5": {
+    "t": "e",
+    "v": "#N/A"
+   }
+  },
+  "D3": {
+   "A3": {
+    "t": "s",
+    "v": "Zed"
+   },
+   "A4": {
+    "t": "s",
+    "v": "Alpha"
+   }
+  },
+  "D4": {},
+  "D5": {},
+  "I1": {},
+  "I2": {},
+  "I3": {},
+  "I4": {},
+  "I5": {},
+  "Q": {
+   "A1": {
+    "t": "n",
+    "v": 4.0
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "a74277136d5c8477d37cd6d583ba73926f5d8208e35ab2fee408e558dbce85fd",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-06T10:19:26+00:00",
+  "version": null,
+  "workbook_name": "fb6018e93ba0e76cbe2ea688ca48e3e061dd319a55c9c5b5e699a6d35f2ed998.xlsx"
+ }
+}
