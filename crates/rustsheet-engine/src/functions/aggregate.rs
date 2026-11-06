@@ -241,9 +241,9 @@ impl Model {
             };
             // Several areas are walked as a union's, on the formula's walk budget, as SUM's are.
             let of_union = areas.len() > 1;
-            for area in areas {
+            for area in areas.iter() {
                 if let Err(error) =
-                    self.aggregate_collect_area(&area, of_union, ignore, &mut collected, cell)
+                    self.aggregate_collect_area(area, of_union, ignore, &mut collected, cell)
                 {
                     return error;
                 }

@@ -1120,17 +1120,36 @@ same Data sheet, excel-graph, 2026-10-16; "functions", "functions2", "functions3
   G!A301-A361, G!A441, G!A681). So `LAMBDA(x,y,SUM(x)/SUM(y))` equals PERCENTOF (G!A281), also sorted by it (G!A661).
 - A LAMBDA whose result is a reference, written (`Data!D2`, `Data!D2:D3`), picked by IF or returned by INDEX, is `#VALUE!` in
   every cell (functions G!A541-A581; PIVOTBY P!A841).
-Unprobed (T-1325): mismatched heights inside a function array (the engine pads with `#N/A`, so the result is `#N/A`); which of
-several error elements wins (the engine: the first evaluated); a labelled row of several functions with detected headers (the
-engine does not show them); a LAMBDA without parameters (the engine: `#VALUE!`). CORREL, PEARSON and RSQ over arrays of different sizes
+- Function-array edges (probes/t4449-groupby-function-array-edges, excel-graph, 2026-11-06, T-4449; every cell GROUPBY and
+  PIVOTBY alike, over one value column and two): a ragged array of functions (`HSTACK(VSTACK(SUM,MAX),MIN)`,
+  `VSTACK(HSTACK(SUM,MAX),MIN)`) is `#VALUE!`, not the `#N/A` its padding holds: the stack is a 2-D array of functions (G!C1,
+  G!C2, G!C13, G!C14, G!C25, G!C26). Of several error elements the first in argument order is the result (`HSTACK(NA(),1/0)`
+  `#N/A`, `HSTACK(1/0,NA())` `#DIV/0!`, `VSTACK(SUM,NA(),1/0)` `#N/A`, `HSTACK(SUM,#REF!,NA())` `#REF!`: G!C3:C6), and an error
+  beats a plain value on either side of it (`HSTACK(NA(),5)` and `HSTACK(5,NA())` are both `#N/A`: G!C7, G!C8). A LAMBDA without
+  parameters is `#VALUE!` for the whole result: `LAMBDA(1)`, `LAMBDA(SUM(Data!D2:D3))`, `HSTACK(SUM,LAMBDA(1))` and
+  `LET(f,LAMBDA(1),f)` (G!C9:C12, G!C21:C24, G!C33:C36, G!C45:C48).
+  Which error wins in a 2-D array (probes/t4485-groupby-function-array-error-order, excel-graph, 2026-11-06, T-4485; GROUPBY and
+  PIVOTBY alike): an explicit error beats the `#VALUE!` of a 2-D array of functions, and of several errors the first one is the
+  first in argument order, depth first, not in reading order or column-major order. `VSTACK(HSTACK(SUM,1/0),HSTACK(NA(),MAX))`
+  and `HSTACK(VSTACK(SUM,1/0),VSTACK(NA(),MAX))` are `#DIV/0!` (G!C1, G!C2; reading order would give `#N/A` for the second);
+  `VSTACK(HSTACK(NA(),SUM),HSTACK(MAX,1/0))` and `VSTACK(HSTACK(SUM,NA()),HSTACK(1/0,MAX))` are `#N/A` (G!C3, G!C9; column-major
+  order would give `#DIV/0!` for the second); a ragged `HSTACK(VSTACK(SUM,MAX),NA())` is `#N/A`, not `#VALUE!` (G!C4).
+  The whole result is the error (`ROWS&"x"&COLUMNS` is `ERR`, `ERROR.TYPE` 2 or 7). The engine already matches (31 of 31 cells).
+Unprobed (T-1325): a labelled row of several functions with detected headers (the engine does not show them). CORREL, PEARSON and RSQ over arrays of different sizes
 are `#N/A` per group in Excel, `#VALUE!` here, and their total rows differ in the last digit (functions G!B421, functions2
 G!B281, G!B301): a CORREL/PEARSON/RSQ gap, T-1707.
-T-1706: every function passed by name gets its catalog minimum argument count (1 or 2; 0 or 3+ is `#VALUE!` overall):
+T-1706: every function passed by name gets its catalog minimum argument count (1 or 2; 3+ is `#VALUE!` overall, and 0 is one
+argument or `#VALUE!` overall, below):
 COVARIANCE.S, SLOPE, SUMX2MY2, INTERCEPT get two (grouped as usual), RANK, PERCENTILE, MOD two (`#VALUE!` per cell),
 SUBSTITUTE none (`#VALUE!`; probes/groupby-eta-arity G!A1-A141). SLOPE and INTERCEPT over arrays of different sizes are
 `#N/A` per group in Excel, `#VALUE!` here (G!B21:B25, G!B61:B65): T-1867.
-Unprobed (T-1706): minimum-0 functions that take optional arguments (ROW, COLUMN, SHEET, SHEETS, RANDARRAY) are
-extrapolated from NOW (`#VALUE!` overall); only NOW is probed.
+Minimum-0 functions that take one argument get one (probes/t4450-eta-special-forms, excel-graph, 2026-11-06, T-4450,
+T-2644): `GROUPBY(A1:A3,B1:B3,_xleta.ROW)` and `..COLUMN` are 4x2 with `#VALUE!` in each value cell (H109:H118, J9), SHEET
+and SHEETS `#N/A` in each (H121:H124, J59; ours `#NAME?` and `#N/IMPL`, T-4518), RANDARRAY 4 rows with a value that is not
+an error (J61:J63; ours an array there, T-4519), `PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.ROW)` 5x5 (J69). Yet `ARRAYTOTEXT` of the
+ROW and COLUMN results is `#CALC!` (F109, F115, also `LAMBDA(v,ROW(v))` J65; `ARRAYTOTEXT(INDEX(..,0,1))` is
+"1, 3, 5, Total", J15; ours prints the cells, T-4519). Functions that take none stay a whole-call `#VALUE!`: NOW (J55), PI
+in GROUPBY and PIVOTBY (J67, J73).
 T-1327 follow-up (PIVOTBY relative_to; probes/groupby-pivotby-functions P!A1-A841 show each cell's set with
 `LAMBDA(x,y,SUM(y))`, and -functions3 P!A61-A181):
 - A cell's relative set is a row selection crossed with a column selection, each all records, the cell's own row (column)
@@ -1710,14 +1729,40 @@ not an error, whatever it is (TRUE, FALSE, 1, 0, text, a blank cell; so `ISLOGIC
 (`f({1,0})` and `f(A1:B1)` are 1x2 `#VALUE!`, `f({1,#N/A,#DIV/0!})` `#VALUE!`, `#N/A`, `#DIV/0!`), with `f` bound by
 `LET(f,_xleta.IF,..)`. So `MAP({1,0},_xleta.IF)` and `BYROW({1;0},_xleta.IF)` are `#VALUE!` per element, and BYROW and BYCOL
 over two-cell slices are one `#CALC!` (E101 above). With two arguments it is IF (`f(TRUE,5)` 5, `f(FALSE,5)` FALSE);
-with none (`f()`) the error is one excel-graph cannot decode (left pending). Evidence: probes/eta-if-one-argument
+with none (`f()`) the error is one excel-graph cannot decode in the cell (left pending), and `ERROR.TYPE` of it is 3, a
+`#VALUE!` (probes/t4450-eta-special-forms L5, T-4450). Evidence: probes/eta-if-one-argument
 (excel-graph, 2026-10-19, T-1947).
-Unprobed: other errors (`#DIV/0!`, `#REF!`) and an array as BYROW's or BYCOL's function (the engine says `#VALUE!` for
-both), a special form passed by name (`_xleta.LET`, `_xleta.LAMBDA`, `_xleta.SUBTOTAL`, `_xleta.OFFSET`) and a call with too
-few arguments (`LET(f,_xleta.SUM,f())`): the engine gives whatever the function gives for those arguments.
+Other errors and an array as a helper's function are a whole-call `#VALUE!` ("LAMBDA helpers refuse a function they cannot
+call", T-3655). Special forms and reference functions by name (probes/t4450-eta-special-forms, excel-graph, 2026-11-06,
+T-4450; A1:B3 = 1..6, each result read through ROWS&"x"&COLUMNS in E, ARRAYTOTEXT in F, ERROR.TYPE in G; follow-ups in J):
+- LET and LAMBDA are not functions by name: `_xleta.LET` and `_xleta.LAMBDA` are `#NAME?` like an unknown name
+  (`ERROR.TYPE` 5, J31:J35), so `LET(f,_xleta.LAMBDA,f(1))` and `LET(f,_xleta.LET,f(1,2,3))` are `#NAME?` (E19:G19, J29)
+  and `BYROW(A1:B3,_xleta.LET)`, `MAP(A1:A3,_xleta.LAMBDA)`, `MAKEARRAY(2,2,_xleta.LET)`, `MAKEARRAY(2,2,_xleta.LAMBDA)` and
+  `MAP(A1:A3,B1:B3,{1;2;3},_xleta.LET)` a whole-call `#VALUE!` (E1:G13, J19, J21).
+- IF and CHOOSE by name read a reference given as a value argument (any but the first) as a blank: with A1:A3 1, 3, 5 and
+  B1:B3 2, 4, 6, `MAP(A1:A3,B1:B3,_xleta.IF)` is three blanks (J23), `MAP(A1:A3,B1:B3,_xleta.CHOOSE)` a blank, `#VALUE!`,
+  `#VALUE!` (E25:G27; the blank: ISBLANK TRUE, LEN 0, +0 is 0, J1:J7), `MAP({1;1;1},B1:B3,_xleta.IF)` and
+  `MAP({1;2;1},A1:A3,B1:B3,_xleta.CHOOSE)` blanks (J45, J51), and `LET(f,_xleta.IF,f(TRUE,A1))` and
+  `LET(f,_xleta.CHOOSE,f(1,A1))` 0 with ISBLANK TRUE (J39:J43). A union is a blank too (`f(TRUE,(A1,B1))`, ISBLANK TRUE,
+  L19:L21), but a reference to several cells is `#VALUE!` (`LET(f,_xleta.IF,f(TRUE,A1:A3))`,
+  `LET(f,_xleta.CHOOSE,f(2,A1,B1:B3))`, L15:L17, L23). Unprobed: a 3-D span and a lifted OFFSET grid (ours: `#VALUE!`, as
+  several cells). A reference condition or index reads as usual
+  (`MAP(A1:A3,{7;8;9},_xleta.IF)` 7, 8, 9, J47), and values pick as IF and CHOOSE do (`MAP({1;0},{5;6},_xleta.IF)` 5, FALSE;
+  `MAP({1;2},{5;6},{7;8},_xleta.CHOOSE)` 5, 8; `MAP({2;9},..)` 7, `#VALUE!`: E37, J25, J27). IFERROR, INDEX and OFFSET
+  return their references' values: `MAP(A1:A3,B1:B3,_xleta.IFERROR)` 1, 3, 5 (E31, J49),
+  `MAP(A1:A3,{1;2;1},_xleta.INDEX)` 1, `#REF!`, 5 (E67), `MAP(A1:A3,{0;1;0},{0;0;1},_xleta.OFFSET)` 1, 5, 6 (J17).
+- The other functions follow the argument counts: `MAKEARRAY(2,2,_xleta.OFFSET)` (two of OFFSET's three) is a whole-call
+  `#VALUE!` (E61), `MAKEARRAY(2,2,_xleta.SUBTOTAL)` `#VALUE!` per cell (SUBTOTAL(1,1): E73), `BYROW(A1:B3,_xleta.ROW)` 1, 2, 3
+  and `BYCOL(A1:B3,_xleta.COLUMN)` 1, 2 (E43, E49), `BYROW(A1:B3,_xleta.SHEET)` 1, 1, 1 (J53; ours `#NAME?`, T-4518).
+- Called through LET with an argument count it does not take, a function by name is `#VALUE!`: too few,
+  `LET(f,_xleta.SUM,f())` (E85:G85), `f()` of IF, CHOOSE and IFERROR, `f(1)` of CHOOSE and IFERROR (L5:L13), and too many,
+  `LET(f,_xleta.ABS,f(1,2))` (L1:L3); `LET(f,_xleta.SUM,f(1,2,3))` is 6 (L25).
+  One that takes none runs: `LET(f,_xleta.NOW,f())` a number, `LET(f,_xleta.ROW,f())` 97 (the formula's row),
+  `LET(f,_xleta.PI,f())` pi (E91:F103).
 Evidence: probes/eta-reduced-names (30 questions, excel-graph, 2026-10-14, T-1466); probes/m7-argument-modes F28:H51.
 Ours: an unbound `_xleta.` name of a known function evaluates to a LAMBDA whose definition is made per call
-(`Model::unbound_name`, `eta_definition`, lambda.rs); BYROW and BYCOL take only a LAMBDA (`by_slices_lambda`). IF with
+(`Model::unbound_name`, `eta_definition`, lambda.rs; not LET or LAMBDA, a call with a count the function does not take is
+`#VALUE!` in `lambda_definition`, and IF and CHOOSE blank a reference value argument: `eta_blanks_references`, T-4450); BYROW and BYCOL take only a LAMBDA (`by_slices_lambda`). IF with
 only a condition is the one-argument eta IF above (`Model::if_pick`, T-1947; stored only: a typed `=IF(x)` is refused,
 by Excel (Graph PATCH 400) and by ours (T-2568), and a file-stored one is refused by excel-graph, below, T-1990, T-2939); `ISERROR(_xleta.SUM)` is FALSE since T-1511. GROUPBY and PIVOTBY call an eta name through the same path (T-1322, T-1326), with its minimum argument count (two for PERCENTOF and CORREL: "GROUPBY and PIVOTBY", T-1325), and share the "is it a LAMBDA" check with BYROW and BYCOL (`as_lambda`, bycol_byrow.rs).
 A one-argument `IF(x)` stored in a file (`=IF(TRUE)`, `=IF(1)`, `=IF({1,0})`, `=IF(A1:B1)`, each alone in a workbook) is refused by
@@ -1980,16 +2025,26 @@ to 0) are `#VALUE!`; `"-1"` is descending and TRUE ascending (H97-H165). The sna
 `1-2^-22`, `1-2^-23`, `1-2^-24` and `1-(2^-22+2^-33)` sort ascending, `1-2^-21`, `1-2^-20` and `1-(2^-22+2^-32)` are `#VALUE!` (floor 0), `2-2^-22` is `#VALUE!`
 (snapped to 2) and `2-2^-21` ascending. Just below -1 it is at least 2^-23 + 2^-34 and under 2^-22 (the half, as DATE and TIME bracket it more tightly, T-2267): `-1-2^-23`, `-1-2^-24` and `-1-(2^-23+2^-34)` sort descending (snapped to -1), but `-1-2^-22`,
 `-1-(2^-22+2^-33)`, `-1-(2^-22+2^-32)` and `-1-2^-21` are `#VALUE!` (floor -2); the cells just above -1 and -2 (`-1+2^-22`, `-2+2^-22`) say nothing of
-the tolerance, their floor is -1 and -2 either way. SORT's own sort_order still truncates (unprobed for fractions).
+the tolerance, their floor is -1 and -2 either way.
+SORT reads its sort_order and sort_index the same way (probes/t4447-sort-fractional-keys, excel-graph, 2026-11-06, T-4447;
+A1:B3 = (3,c),(1,a),(2,b)): a sort_order of -0.0001, -0.5, -0.9999, `"-0.5"`, `-1+2^-21`, `-1-2^-23` and `-1-2^-24` sorts
+descending; 1.5, 1.9999, `1-2^-22`, `1-2^-23` and `1-2^-24` ascending; 0.0001, 0.5, 0.9999, -1.5, `1-2^-21`, `-1-2^-22` and
+`2-2^-22` (snapped to 2) are `#VALUE!` (E1:E20, the same as a one-element array F1:F20, and per key in a list E21:E22). A
+sort_index of `1-2^-23`, `1-2^-24`, 1.5 reads key 1 and `2-2^-23`, 2.5, `2+2^-22` key 2, while 0.9999, `1-2^-21` and -0.5
+are `#VALUE!` and `3-2^-23` (snapped to 3, past the two columns) is `#VALUE!` too (I1:I11, by_col J1:J11; the key itself
+shows in R1:R10 and by_col S1:S10, over O1:P3 = (3,a),(1,c),(2,b), whose columns sort apart: `1-2^-23` and 1.5 sort by
+column 1, `2-2^-23` and 2.5 by column 2). The lifted by_col path (one SORT per by_col element) reads its single
+sort_index the same way in ours, unprobed there away from 2.7 (t2929 K18). Before T-4447 ours truncated both, so -0.5 and the values just below 1 were `#VALUE!` and `2-2^-22`
+and `3-2^-23` sorted.
 This is why `SORTBY(Data!E1:E12,MAX(..)%,-1)` (gen-m7/18b80d3fd292d63a Calc!A123:A134), `SORTBY(Data!C1:C12,IFNA(TIMEVALUE(..),..),1)`
 (7307132bb8820f17 A966:A977) keep their one-column arrays, `SORTBY(Data!B1:C12,(-1),1)` (0e40208f51c2454c Calc!A2) and the
 by_array 0.5 on Data!B1:C12 (7d67c559ce7536fa A1358) are `#VALUE!`, and `SORTBY(Data!B1:E12,Data!E1:E12,-0.0001,..)`
 (07d27aa0add0247f A658) sorts descending. The "Invalid values" list of "SORT and SORTBY argument errors" (`SORTBY(arr,key,0)`
 `#VALUE!`) still holds.
 Evidence: probes/t2310-sortby-single-by-array (42 formulas, excel-graph, 2026-10-22); gen-m7 (excel-graph, 2026-10-21, T-2225).
-Ours: implemented (T-2310): `by_array_axes` and `sortby_of` in functions/spill_functions.rs.
+Ours: implemented (T-2310): `by_array_axes` and `sortby_of` in functions/spill_functions.rs; SORT's in `sort_by_keys` (T-4447).
 Status: VERIFIED (excel-graph)
-Tasks: T-2310
+Tasks: T-2310, T-4447
 
 ## PIVOTBY: an error column total over several value columns is #VALUE! (T-2311)
 Rule (excel-graph, 2026-10-22, probes/t2311-pivotby-value-columns-error P!A1-A42, probes/t2311-pivotby-value-cause): with one
@@ -2264,13 +2319,38 @@ SEQUENCE: rows and columns both reach 1048576, and an extent that is negative or
 `SEQUENCE(0,1048576)` and `SEQUENCE(0.0123,16385)` are `#CALC!`, `SEQUENCE(0,1048577)`, `SEQUENCE(0,-1)` and
 `SEQUENCE(0.0123,123456789.123)` `#VALUE!` (so the oversized columns are the cause, gen-m9 f280df8ba95f96b9 A222); with a
 non-zero rows a columns past the grid's 16384 gives an array (A155:A157: `COLUMNS(SEQUENCE(1,20000))` is 20000, `COLUMNS(SEQUENCE(1,1048576))` 1048576, `ERROR.TYPE(SEQUENCE(1,1048576))`
-`#SPILL!`) up to 1048576, `#VALUE!` above (A158). Ours builds them since T-2600 within the cell bound. An extent is floored after adding 2^-23 (the single-precision epsilon, 1.1920929E-7): `SEQUENCE(4,-1.19E-7)` and
+`#SPILL!`) up to 1048576, `#VALUE!` above (A158). Ours builds them since T-2600 within the cell bound. An extent is read by the shared near-integer rule (`near_integer_whole`, as DATE, TIME, XMATCH's mode and SORTBY's
+sort_order): floored, but within 2^-22 + 2^-33 below an integer it is that integer, and within half that (2^-23 + 2^-34)
+below 0 it is 0. `SEQUENCE(4,-1.19E-7)` and
 `SEQUENCE(0,-1E-8)` are `#CALC!` (a zero extent; gen-m7 c36ff5f42a1a4d47 A359), `SEQUENCE(4,-1.2E-7)` and `SEQUENCE(0,-1)`
-`#VALUE!`, and `SEQUENCE(0.99999999,1)` is 1, `SEQUENCE(0.999999,1)` `#CALC!`. The epsilon is probed near 0, 1 and 1048577 only; for large extents a relative or float32 rounding is UNVERIFIED.
+`#VALUE!`, and `SEQUENCE(0.99999999,1)` is 1, `SEQUENCE(0.999999,1)` `#CALC!`.
 Evidence: probes/empty-array-args-sequence (excel-graph, 2026-10-24), probes/t2436/computed-scalar, probes/t2436/f280df8ba95f96b9.
 Ours: `CalcResult::is_empty_array` in those readers.
 Status: VERIFIED (excel-graph)
 Tasks: T-2580
+
+## Array-constructor extents just below an integer (T-4465)
+Rule: SEQUENCE (rows and columns) and RANDARRAY read an extent by the shared near-integer rule above, the bound
+absolute at 1, 2, 1000 and 100000: `SEQUENCE(1-1.5*2^-23)`, `SEQUENCE(1-(2^-22+2^-33))` and `SEQUENCE(100000-2^-22)` reach
+the integer while `1-(2^-22+2^-32)` reads 0 (`#CALC!`) and `100000-2^-21` 99999; below 0, `-2^-23` reads 0 (`#CALC!`) and
+`-1.5*2^-23` -1 (`#VALUE!`). This tells 2^-23 added before the floor (which reads `1-1.5*2^-23` as 0) and a float32
+rounding of the extent (which reads `1000-2^-21` as 1000) apart from it. The other constructors do not snap: TAKE, DROP,
+EXPAND, WRAPROWS and WRAPCOLS truncate (`TAKE(r,2-2^-24)` is one row, `DROP(r,1-2^-24)` drops none, `EXPAND(x,1-2^-24)`
+and `WRAPROWS(v,1-2^-24)` are `#VALUE!` and `#NUM!` for an extent read as 0, `TAKE(r,-2^-24)` `#CALC!`), and MAKEARRAY is
+`#VALUE!` for any fractional extent, `2+2^-24` too. A wrap of 3 or more over a 3-cell vector gives the vector's 3 cells
+(1x3, not padded to the wrap).
+Evidence: probes/t4465-extent-near-integer-main (63 extents stepping 2^-24 to 2^-21 below and above 1, 2, 1000, 100000
+and below 0; B:J = SEQUENCE rows, SEQUENCE columns, RANDARRAY, MAKEARRAY, TAKE, DROP, EXPAND, WRAPROWS, WRAPCOLS), with
+the rule frozen on it before -holdout (seed 4465) and -fresh (seed 44651, generated after the freeze) were filled
+(excel-graph, 2026-11-06); docs/research/t4465 holds the generator, the candidate rules' predictions and the scorer.
+Main 539/539, hold-out 318/318, fresh 316/316 for the rule; the best single alternative scores 469, 276 and 290. The
+rows that tell the shared rule from 2^-23 added before the floor are 12 of main's and 6 of the hold-out's; the fresh
+sweep has only 1 such row, so it confirms the other constructors' rules more than that choice.
+Ours: implemented (T-4465): SEQUENCE and RANDARRAY call `near_integer_whole` (sequence.rs's `EXTENT_EPSILON` is gone);
+TAKE, DROP, EXPAND, WRAPROWS/WRAPCOLS and MAKEARRAY already matched. RANDARRAY's columns argument shares
+`randarray_extent` with its rows but no probe cell reads it.
+Status: VERIFIED (excel-graph)
+Tasks: T-4465
 
 ## GROUPBY and PIVOTBY in the gen-m9 sweep (T-2436)
 Rule: Excel computes these calls that ours rejected or computes differently: `PIVOTBY(Data!B1:E12,Data!B1:D12,Data!D1:E12,
@@ -2457,9 +2537,32 @@ so the later calls meet a filter taller than them.
   depth {1,#N/A} is `#N/A`, {0,""} with {1,#N/A} is `#VALUE!`, and {0,#N/A} with {1,blank} or {1,""} is `#N/A`; position
   1 is -1 in every call, and the no-filter controls give the same cells (probes/t4028-groupby-lifted-spent-filter-blank
   G!A1:B23, T-4028).
+- A filter that keeps no row (`(Data!D1:D12="zz")`; column D holds no text) makes the call `#VALUE!`: the scalar call
+  is `#VALUE!` (probes/t4464-groupby-spent-filter-shapes G!A85), and so is every element of a lifted
+  `field_relationship` {0,1;0,1}, `{"x",0;0,1}` or {2,0;0,1}, `field_headers` {0,1;0,0} or `{"x",0;0,0}`, or total depth
+  {1,2;1,1} or {5,1;1,1} beside it (G!A9:B10, A21:B22, A33:B34, A45:B46, A57:B58, A69:B70, A81:B82), while the same calls
+  without a filter or with `(Data!C1:C12<0.2)` give the elements their values as above (G!A1:B82). Every element meets
+  the same filter, so whether a no-row filter is spent cannot be seen: an element is `#VALUE!` either way. Note that
+  `(Data!C1:C12>99)` is no such filter: it keeps C10 (123456789.123), and text and FALSE compare above every number, so
+  it keeps C1, C3, C5, C10 and C11 and is spent like any dropping filter (123456789.123, `#VALUE!`; `#VALUE!`, `#VALUE!`, G!A89:B90).
+- A table `field_relationship` (1) refuses subtotals after the filter, so its refusal spends it. Over two key columns
+  (Data!B1:C12), {1,0;0,1} with total depth 2 is `#VALUE!`, 0.3; 0.3, `#VALUE!` without a filter but `#VALUE!` in all
+  four beside `(Data!C1:C12<0.2)` (G!A173:B178), and `{"x",1;0,1}` with depth 2 is `#VALUE!` in all four beside it, where
+  position 3 is 0.3 without it (G!A221:B226): the text refuses before the filter and spends nothing, the table after it.
+  {0,1;0,1} with depth 2 is 1, `#VALUE!`; `#VALUE!`, `#VALUE!` (G!A201:B202). With depth 1 or -1 a table element is served
+  like a hierarchy one (G!A165:B170, A181:B186, A213:B218, A229:B234). Over one key column a depth of 2 is `#VALUE!` in
+  every element, with or without the filter (G!A101:B106, A125:B130, A149:B154).
+- A GROUPBY nested in another spends nothing outside itself. An outer `field_relationship` or total depth computed from
+  an inner lifted GROUPBY (`0*IFERROR(GROUPBY(..,(Data!C1:C12<0.2),{0,1;0,1}),0)`) or from a MAP of scalar GROUPBY
+  calls with that filter gives every outer element its value without an outer filter, and is spent by the outer filter
+  only (G!A237:B298). An inner GROUPBY with that filter, scalar or lifted, inside the outer call's function
+  (`LAMBDA(v,ROWS(GROUPBY(..)))`) spends nothing either (G!A301:B314). A MAP of scalar GROUPBY calls with a dropping
+  filter gives each call its value: one call's filter is not spent for the next (G!A321:B322).
 Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840), t3880-groupby-scalar-filter-edges (T-3880) and
 t3964-groupby-filter-lift-errors (T-3964), t3985-groupby-two-lifted-spent-filter (T-3985),
-t4019-groupby-lifted-spent-filter-kinds (T-4019) and t4028-groupby-lifted-spent-filter-blank (T-4028).
+t4019-groupby-lifted-spent-filter-kinds (T-4019), t4028-groupby-lifted-spent-filter-blank (T-4028) and
+t4464-groupby-spent-filter-shapes (T-4464, excel-graph, 2026-11-06; 323 cells, every one as the engine predicted before the
+fill, docs/research/t4464/predictions.tsv).
 Ours: `Model::groupby_args` sets `Model::groupby_filter_spent` when its filter dropped rows (it reads field_relationship
 before the filter and checks the total depth's range after it, Excel's order here) and `Model::lift_by_class` makes
 every later element `#VALUE!`, except an error `field_relationship` element, which stays its error (its `settled`
@@ -2467,10 +2570,9 @@ argument, T-3880), and, since T-3964, a lifted option position whose first error
 no number (`Model::lift_options`; numeric text no longer stops it since T-3985; T-4019 and T-4028 found numbers, booleans
 and a blank pass through as well, and `""` stops it as other text does); a cell read on demand during an element's call
 keeps its own filter to itself. PIVOTBY's lift beside a filter column is unprobed (T-3892).
-Status: VERIFIED (excel-graph) for the cells named; UNVERIFIED, and modeled from the order above: a filter that keeps no
-row (ours: not spent, the call is `#VALUE!` before it filters anything), a table relationship with subtotals (ours: spent,
-that check comes after the filter), and a lift nested inside another lift (ours: the inner lift spends nothing outside it)
-Tasks: T-3840, T-3880, T-3964, T-3985, T-4019, T-4028
+Status: VERIFIED (excel-graph) for the cells named. Whether a filter that keeps no row is spent is not observable (every
+element is `#VALUE!` either way); ours does not spend it.
+Tasks: T-3840, T-3880, T-3964, T-3985, T-4019, T-4028, T-4464
 
 ## Array-value edges in the gen-m9 sweep (T-2436)
 Rule (one gen-m9 cell each, probes/t2436, excel-graph, 2026-10-24; mechanisms probed in probes/t2579-array-value-edges,
@@ -2557,13 +2659,25 @@ of the result. With Data!G9 holding `#DIV/0!`:
 - A literal error is not a reference and is still the error: `TOROW(#N/A,-1)` is `#N/A` (gen-m7/20df23f84a528470
   A8907) and `FILTER(#DIV/0!,(Data!C1:C12<>0.3),-1)` is `#DIV/0!` (gen-m7/ee81c689b5fde629 A977).
 Evidence: gen-m7 arg-pairs batch (excel-graph, 2026-10-31, T-3497); the full cell list is in T-3506.
-Ours: implemented (T-3506): `one_cell_error_ref_as_array` in functions/spill_functions.rs wraps any error read through a
-reference argument (a `ReferenceKind`, one cell by construction) as a 1x1 array, which is how a one-cell error reference
-shows up, for TOCOL's and TOROW's array and FILTER's array and include; FILTER checks the shape of an include it wrapped
-before its elements. Only stored cell errors are evidenced; other errors read through a reference (a `#REF!` for a sheet
-index, a circular read) are wrapped unprobed. Unprobed, so kept as before: a one-cell error include that fits the
-array's shape (a one-row or one-column array) is its error, and a wrongly shaped multi-cell include holding an error
-still returns the error first. T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
+FILTER's include shape and indirect references (T-4477, probes/t4477-filter-include-error-shapes, excel-graph,
+2026-11-06; G9 `#DIV/0!`, G7 and G8 1, G2 0, A1:C3 numbers; each formula read as `ROWS&"x"&COLUMNS`, ARRAYTOTEXT and
+ERROR.TYPE in J:L of rows 11, 15, ..., 71):
+- FILTER checks the include's shape before its elements, for every include. A one-cell error include that fits a one-row
+  or one-column array is its error: `FILTER(A1:C1,G9)`, `FILTER(A1:A3,G9)`, `FILTER(A1:A1,G9)` and `FILTER(A1:C1,G9,"e")`
+  are `#DIV/0!` (J11:L23). A wrongly shaped include holding an error is `#VALUE!`, not the error:
+  `FILTER(A1:A3,{1;#N/A})`, `FILTER(A1:A3,{#N/A,1})`, `FILTER(A1:A3,G8:G9)` and `FILTER(A1:C3,G8:G9,"e")` (J27:L39);
+  a right-shaped one is its error, `FILTER(A1:A3,{1;#N/A;1})` `#N/A` and `FILTER(A1:A3,G7:G9)` `#DIV/0!` (J43:L47).
+- A one-cell error reference reached through LET, INDEX or IF is a 1x1 array too: `FILTER(A1:C3,LET(x,G9,x))`,
+  `FILTER(A1:C3,INDEX(G1:G9,9))` and `FILTER(A1:C3,IF(TRUE,G9))` are `#VALUE!` (J51:L59), `FILTER(LET(x,G9,x),G2)` is
+  `#CALC!` (J67:L67) and `FILTER(INDEX(G1:G9,9),TRUE)` is a 1x1 array holding `#DIV/0!` (`ROWS&"x"&COLUMNS` "1x1", J71).
+  Inside a LAMBDA nothing changes: `MAP(1,LAMBDA(p,FILTER(A1:C3,G9)))` is a 1x1 array holding `#VALUE!` (J63:L63).
+Ours: implemented (T-3506, T-4477). `one_cell_error_ref_as_array` in functions/spill_functions.rs wraps any error read
+through a reference argument (a `ReferenceKind`, one cell by construction) as a 1x1 array, which is how a one-cell error
+reference shows up, for TOCOL's and TOROW's array. FILTER reads its array and include as references
+(`Model::filter_arg_array`, filter.rs, through `evaluate_picked_reference_arg`), which covers a written reference, a LET
+variable, INDEX and the arm IF picks alike, and checks every include's shape before its elements. Only stored cell
+errors are evidenced; other errors read through a reference (a `#REF!` for a sheet index, a circular read) are wrapped
+unprobed. An include one column tall as the array is wide filters its columns (`include_axis`; not probed by T-4477). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
 (spill_functions.rs) so VSTACK/HSTACK also wrap a LET variable or LAMBDA parameter bound to a one-cell error reference.
 Blank-cell variables (T-3887, probes/t3887-stack-blank-variable, excel-graph 2026-11-03): with z bound to a blank cell
 (D!Z1) by LET or as a MAP LAMBDA parameter, `INDEX(VSTACK(z,1),1,1)` and `INDEX(HSTACK(z,1),1,1)` are the same "empty value"

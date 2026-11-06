@@ -3,7 +3,7 @@ id: T-3004
 title: "Give the 10 FORECAST.ETS cells of the stat argument-modes probe to T-2425 so the Phase 1 rate leaves them out (decision 0143)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: dropped
 priority: P3
 size: S
 tier: sonnet
@@ -38,3 +38,7 @@ FORECAST.ETS functions meet it.
 ## Out of scope
 - Implementing the FORECAST.ETS family (T-2425).
 - Changing the ownership rule.
+
+## Outcome (dropped, 2026-11-06, decision 0308)
+Moot: T-2425 was dropped by decision 0266, and decision 0308 lists these FORECAST.ETS cells in
+eval/milestones/phase1-exceptions.tsv (owner T-4373), so the Phase 1 rate leaves them out without M14 ownership.

@@ -58,20 +58,24 @@ pub(crate) fn sort_indices_pairwise(
 }
 
 /// For each of `count` lines, the smallest line of its group, where lines group as Excel's
-/// UNIQUE groups them under a comparison `cmp` that need not be transitive (T-4200): the natural
-/// merge of [`sort_indices_pairwise`], except that two groups `cmp` finds equal become one group
-/// as soon as they meet, either as neighbours in a run, as the heads of two runs being merged
-/// or as the last group out of a merge and the next one, and a group is compared through the
-/// line that started it. On a total order this is grouping by equality. On the comparison
-/// cycles of probes/t4200-unique-cycle-permutations it is Excel's grouping in every row, where
-/// grouping the neighbours of SORT's order is not (`{a͂;a̧;a͂͂}` sorts to a̧, a͂, a͂͂, yet Excel
-/// groups a̧ with a͂͂: rows 146 and 150). `cmp` errors end the walk (a work budget's). It makes
-/// O(n log n) comparisons and holds O(n) indices.
+/// UNIQUE groups them under a comparison `cmp` that need not be transitive (T-4200, T-4393): the
+/// natural merge of [`sort_indices_pairwise`] over groups. A line `cmp` finds equal to the last
+/// group of its run joins that group. When the heads of two runs being merged are equal, the
+/// right head's group joins the left head's, which stays the head and meets the next right head
+/// too; a group taken out of a merge is never compared with the one taken out before it. A group
+/// is compared through the line that started it. On a total order this is grouping by equality.
+/// On the comparison cycles of probes/t4200-unique-cycle-permutations it is Excel's grouping in
+/// every row, where grouping the neighbours of SORT's order is not (`{a͂;a̧;a͂͂}` sorts to a̧, a͂,
+/// a͂͂, yet Excel groups a̧ with a͂͂: rows 146 and 150), and on the two-field intransitive runs of
+/// probes/t4379, t4380 and the t4393 hold-out (docs/excel-semantics/coercion.md, "UNIQUE's
+/// merge: equal heads join, the output never coalesces"). `cmp` errors end the walk (a work
+/// budget's). It makes O(n log n) comparisons and holds O(n) indices.
 pub(crate) fn coalesce_equal_lines<E>(
     count: usize,
     mut cmp: impl FnMut(usize, usize) -> Result<Ordering, E>,
 ) -> Result<Vec<usize>, E> {
-    /// Appends `group` to `out`, or makes it part of `out`'s last group when the two are equal.
+    /// Appends `group` to the run `out`, or makes it part of `out`'s last group when the two are
+    /// equal (run building only: merges never coalesce, T-4393).
     fn push<E>(
         parent: &mut [usize],
         out: &mut Vec<usize>,
@@ -121,29 +125,26 @@ pub(crate) fn coalesce_equal_lines<E>(
             while let (Some(&a), Some(&b)) = (left.get(i), right.get(j)) {
                 match cmp(b, a)? {
                     Ordering::Less => {
-                        push(&mut parent, &mut out, b, &mut cmp)?;
+                        out.push(b);
                         j += 1;
                     }
                     Ordering::Greater => {
-                        push(&mut parent, &mut out, a, &mut cmp)?;
+                        out.push(a);
                         i += 1;
                     }
+                    // The right head joins the left head, which stays and meets the next right
+                    // head too (T-4393: over Cy Cx Ay Bx Cy, the last Cy joins Cy).
                     Ordering::Equal => {
                         parent[b] = a;
-                        push(&mut parent, &mut out, a, &mut cmp)?;
-                        i += 1;
                         j += 1;
                     }
                 }
             }
-            for &group in left
-                .get(i..)
-                .into_iter()
-                .flatten()
-                .chain(right.get(j..).into_iter().flatten())
-            {
-                push(&mut parent, &mut out, group, &mut cmp)?;
-            }
+            // Nothing out of a merge is compared with the group out before it (T-4393: over
+            // Cy Cx Ay Bx Ay, Bx follows Cx though Bx = Cx, and the second Ay, < Bx, never meets
+            // Cy and is kept).
+            out.extend_from_slice(left.get(i..).unwrap_or_default());
+            out.extend_from_slice(right.get(j..).unwrap_or_default());
             next.push(out);
         }
         runs = next;

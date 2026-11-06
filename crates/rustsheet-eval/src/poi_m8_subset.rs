@@ -265,6 +265,7 @@ mod tests {
                 body: "Jan!$A$1".to_string(),
             }],
             tables: Vec::new(),
+            pivots: Vec::new(),
         }
     }
 

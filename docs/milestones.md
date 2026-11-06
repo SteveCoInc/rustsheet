@@ -13,9 +13,9 @@ whose exit criteria are not met.
 
 | Phase | Milestones, in order | Status |
 |---|---|---|
-| 1. Parity (fifteen digits) | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11 | active |
+| 1. Parity (fifteen digits) | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11, M16 | active |
 | 1b. Bit parity | the `defer: phase-1b` tasks of every milestone | after Phase 1 exits (decision 0114) |
-| 2. Architecture and performance | M3, M4, M13 | deferred until Phase 1 exits |
+| 2. Architecture and performance | M3, M4, M13, M15 | deferred until Phase 1 exits |
 | 3. Release | M12 | after Phase 2 |
 | 4. Desktop oracle | M14 | out of scope; tasks dropped (decision 0266) |
 
@@ -281,7 +281,7 @@ row less exit exceptions at ≥ 99.95% not visibly off, every M9 function covere
   fractions, scientific).
 - `formatted()` cell text identical to Excel's `.Text`.
 - TEXT/FIXED/DOLLAR.
-- Style storage and round-trip (deduplicated).
+- Style storage (deduplicated). Style round-trip fidelity moved to M15 (decision 0275).
 - Locale plumbing (en-US first).
 
 **Exit criteria:** formatted-text oracle suite (≥ 10k cells) at 100%;
@@ -293,7 +293,6 @@ none failing) and value cells, and the M10 probes' value cells and text items.
 
 **Scope:**
 - Real-world corpora: POI, FUSE/SpreadsheetBench via xlsx-corpus-bench.
-- xlsx round-trip preservation of unknown parts.
 - Data tables (TABLE()) and iterative calculation parity. The oracle cases come in Phase 1;
   the implementation needs the M3 graph.
 
@@ -325,6 +324,69 @@ Split out of M11 by decision 0027.
 - Comparison against Excel desktop timings, LibreOffice and Formualizer.
 
 **Exit criteria:** full recalc faster than Excel desktop on the benchmark suite.
+
+## M15 — xlsx round-trip fidelity (Phase 2)
+
+Created by decision 0275 from the orphan round-trip lines of M10 and M11. Plan and evidence:
+docs/research/xlsx-round-trip-2026-11-04.md.
+
+**Scope:**
+- The round-trip contract: R0 (load, save), R1 (content edits), R2 (structural edits, with M4);
+  semantic and package equivalence; the expected-delta rule; a SaveReport of every drop.
+- A `roundtrip` eval suite kind with fidelity baselines, a package validator, XSD validation and
+  Excel goldens.
+- Preservation of what the model does not hold: an ownership matrix, the closure rule, bounded
+  source-package retention, and element and extension fragments in regenerated parts.
+- Index-stable output: verbatim untouched parts, and a cell patcher for content-only edits.
+- Modelling the frequent features: page setup, data validation, comments, autoFilter,
+  protection, sheet properties, rich text, full styles, theme, views.
+- Charts, drawings, pivots and slicers are preserved, not modelled.
+
+**Exit criteria** (measured by a `milestone_exit` M15 row once the suite exists):
+1. 100% of outputs pass the package validator and the XSD check, over every corpus and scenario.
+2. R0 over Calipers `roundtrip/` against Excel goldens: 100% of fidelity items S-equal, except
+   items owned by an open M14 task.
+3. R0 over every other corpus: at least 99.9% of items kept, and no lost part outside the
+   `Drop` policy.
+4. R1 on the standard edit set: the expected-delta rule holds on 100% of corpus files, and the
+   output is S-equal to Excel's own edited save on at least 99% of the feature probes.
+5. Unknown-feature probes: 100% kept under R0 and R1. Under R2, kept or dropped exactly as the
+   ownership matrix says, each drop reported.
+6. The features in scope are modelled and shift correctly under R2.
+7. The hostile set never panics and stays within bounded memory.
+8. Untouched parts are byte-identical under R1 on index-stable files.
+
+## M16 — Pivot tables (Phase 1)
+
+Added by decision 0274 (owner request, 2026-11-04). Research and plan:
+docs/research/pivot-tables-2026-11-04/plan.md. Design: SPEC-0032 (a task of PV0). Today the engine only imports
+pivots read-only and answers GETPIVOTDATA (SPEC-0015).
+
+**Scope:** every in-scope row of the pivot feature catalog `eval/catalog/pivot-features.tsv`, staged:
+- **PV0 Foundations:** the feature catalog (schema-driven), SPEC-0032, case builder v2 (pivot definitions
+  one-to-one with OOXML), sidecar capture and scoring of rendered pivot areas and `rowItems`/`colItems`, the
+  oracle capability matrix, the `pivots`, `gen-pivot` and `pivot-corpus` suites.
+- **PV1 Refresh and core render:** refresh from ranges and Tables with Excel's item rules; the eleven aggregates;
+  compact, outline and tabular forms; subtotals, grand totals, several data fields, page fields, hidden items,
+  label sort, captions; grid ownership and the `#SPILL!` collapse; GETPIVOTDATA over every shape.
+- **PV2 Analysis:** show-values-as (all modes), label/value/date filters, Top-N, sort by value, layout options,
+  data-field number formats.
+- **PV3 Grouping and calculation:** numeric, date and manual groups; calculated fields and items.
+- **PV4 Lifecycle and I/O:** xlsx export validated by an Excel round trip, the create/edit/refresh API and
+  Python binding, shared caches and named sources, drill-down, Auto Refresh as evidenced.
+- **PV5 PivotCharts, slicers, timelines:** PivotChart data (series and categories) and chart-part round trip
+  (no drawing); slicer and timeline state as filters.
+
+Out of scope (decision 0274): OLAP, the Data Model and Power Pivot, external and consolidation sources,
+styles and conditional formats beyond preservation, UI-only commands.
+
+**Exit criteria** (per stage, then for the milestone):
+- Every in-scope catalog row has at least 30 oracle cells (its edge pools counted).
+- The `pivots`, `gen-pivot` and fresh `pivot-corpus` cells are not visibly off (decision 0083), apart from
+  accepted deviations; rendered layouts match Excel's `rowItems`/`colItems`.
+- Every remaining catalog row has a filed task or an out-of-scope ruling; rows Excel for the web cannot
+  render are M14 tasks and do not block (decision 0039).
+- Measured by report.json's `milestone_exit` M16 row; until that row exists M16 counts as not met.
 
 ## M14 — Desktop-oracle parity (Phase 4)
 

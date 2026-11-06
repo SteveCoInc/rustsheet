@@ -35,7 +35,7 @@ def _definition(name: str) -> Definition:
     return found
 
 
-def _math(suites: list[str], *, check: bool, workers: int | None) -> int:
+def _math(suites: list[str], *, check: bool, workers: int | None, functions: list[str] | None = None) -> int:
     """`math`: write one suite's sidecars, or (`--check`) report the suites' missing or stale ones."""
     if check:
         stale = [line for suite in suites for line in check_suite(suite)]
@@ -46,7 +46,8 @@ def _math(suites: list[str], *, check: bool, workers: int | None) -> int:
     if len(suites) != 1:
         raise SystemExit("math writes one suite at a time")
     (suite,) = suites
-    results = write_suite(suite, workers)
+    names = [_definition(f).function for f in functions] if functions else None
+    results = write_suite(suite, workers, names)
     skipped: dict[str, int] = {}
     for math in results:
         for reason, n in math.skipped.items():
@@ -74,6 +75,11 @@ def main(argv: list[str] | None = None) -> int:
     mth.add_argument("--suite", required=True, action="append", help="suite (repeatable with --check)")
     mth.add_argument("--check", action="store_true", help="check the sidecars without mpmath (T-3588)")
     mth.add_argument("--workers", type=int, help="processes (default: one per CPU)")
+    mth.add_argument(
+        "--function",
+        action="append",
+        help="only the cases that call this function (repeatable; T-4483): the other sidecars are left as they are",
+    )
     args = parser.parse_args(argv)
     tables: Path = args.tables or repo_root() / "eval" / "accuracy" / "tables"
 
@@ -82,7 +88,9 @@ def main(argv: list[str] | None = None) -> int:
             print(name)
         return 0
     if args.command == "math":
-        return _math(args.suite, check=args.check, workers=args.workers)
+        if args.check and args.function:
+            raise SystemExit("--function selects the sidecars to write; --check reads them all")
+        return _math(args.suite, check=args.check, workers=args.workers, functions=args.function)
     definition = _definition(args.function)
     if args.command == "generate":
         if args.count is not None and args.count < 1:

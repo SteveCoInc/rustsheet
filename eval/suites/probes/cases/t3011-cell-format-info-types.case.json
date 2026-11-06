@@ -1,0 +1,69 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3011: CELL color, parentheses, prefix, and protect (format as control; width is web-unsupported, oracle canary refuses it) on excel-graph: blank, number, text, a red-negative format, a parenthesised format, another sheet, a range, upper/mixed case, and no reference",
+  "tags": [
+    "M5",
+    "information",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "C2": 42,
+        "C3": "abc",
+        "C4": -5,
+        "C5": -7,
+        "A1": "=CELL(\"color\",C1)",
+        "A2": "=CELL(\"color\",C2)",
+        "A3": "=CELL(\"color\",C3)",
+        "A4": "=CELL(\"color\",C4)",
+        "A5": "=CELL(\"color\",C5)",
+        "A6": "=CELL(\"color\",Other!A1)",
+        "A7": "=CELL(\"color\",C2:C3)",
+        "A8": "=CELL(\"parentheses\",C1)",
+        "A9": "=CELL(\"parentheses\",C2)",
+        "A10": "=CELL(\"parentheses\",C3)",
+        "A11": "=CELL(\"parentheses\",C4)",
+        "A12": "=CELL(\"parentheses\",C5)",
+        "A13": "=CELL(\"parentheses\",Other!A1)",
+        "A14": "=CELL(\"parentheses\",C2:C3)",
+        "A15": "=CELL(\"prefix\",C1)",
+        "A16": "=CELL(\"prefix\",C2)",
+        "A17": "=CELL(\"prefix\",C3)",
+        "A18": "=CELL(\"prefix\",C4)",
+        "A19": "=CELL(\"prefix\",C5)",
+        "A20": "=CELL(\"prefix\",Other!A1)",
+        "A21": "=CELL(\"prefix\",C2:C3)",
+        "A22": "=CELL(\"protect\",C1)",
+        "A23": "=CELL(\"protect\",C2)",
+        "A24": "=CELL(\"protect\",C3)",
+        "A25": "=CELL(\"protect\",C4)",
+        "A26": "=CELL(\"protect\",C5)",
+        "A27": "=CELL(\"protect\",Other!A1)",
+        "A28": "=CELL(\"protect\",C2:C3)",
+        "A29": "=CELL(\"format\",C1)",
+        "A30": "=CELL(\"format\",C2)",
+        "A31": "=CELL(\"format\",C3)",
+        "A32": "=CELL(\"format\",C4)",
+        "A33": "=CELL(\"format\",C5)",
+        "A34": "=CELL(\"format\",Other!A1)",
+        "A35": "=CELL(\"format\",C2:C3)",
+        "A36": "=CELL(\"COLOR\",C2)",
+        "A37": "=CELL(\"PrEfIx\",C2)",
+        "A38": "=CELL(\"protect\")"
+      },
+      "number_formats": {
+        "C4": "0.00;[Red]-0.00",
+        "C5": "0;(0)"
+      }
+    },
+    {
+      "name": "Other",
+      "cells": {
+        "A1": 1
+      }
+    }
+  ],
+  "expected": {}
+}

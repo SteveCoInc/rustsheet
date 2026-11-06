@@ -1,5 +1,5 @@
 """Sheet settings spec2xlsx hands straight to XlsxWriter: column widths (T-1610), formula conditional formats
-and custom data validations (T-3263)."""
+and custom data validations (T-3263), and the active sheet (T-4394)."""
 
 from __future__ import annotations
 
@@ -30,3 +30,15 @@ def add_range_formulas(ws: Any, sheet: dict[str, Any], formula_text: Callable[[s
         if ws.data_validation(rule["ref"], options) != 0:
             msg = f"data validation on {rule['ref']} was not written"
             raise ValueError(msg)
+
+
+def activate_sheet(spec: dict[str, Any], worksheets: list[Any]) -> None:
+    """Makes the spec's `active_sheet` the workbook's active sheet (T-4394); the first sheet is by default."""
+    if "active_sheet" not in spec:
+        return
+    name = spec["active_sheet"]
+    names = [sheet["name"] for sheet in spec["sheets"]]
+    if not isinstance(name, str) or name not in names:
+        msg = f"active_sheet must name a sheet of the spec: {name!r}"
+        raise ValueError(msg)
+    worksheets[names.index(name)].activate()

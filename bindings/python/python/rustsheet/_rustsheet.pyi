@@ -54,6 +54,20 @@ class Transaction:
         A multi-cell target, a target outside the sheet or an unknown sheet raises an error when
         the `with` block exits and rolls the block back.
         """
+    def set_row_hidden(self, sheet: str, row: int, hidden: bool = True) -> None:
+        """Hide (or show) a row of `sheet`; `row` is the 1-based row number Excel shows.
+
+        A row outside 1..=1048576 raises EditError at once; an unknown sheet raises RefError when
+        the `with` block exits.
+        """
+    def add_table(
+        self, range: str, name: str, filtered: bool = False, totals_row: bool = False
+    ) -> None:
+        """Add an Excel table over `range` (its first row is the header row).
+
+        EditError (invalid or taken name, overlap, no data row, bad header) or RefError (unknown
+        sheet) surfaces when the `with` block exits and rolls the block back.
+        """
     def add_sheet(self, name: str) -> None: ...
     def rename_sheet(self, name: str, new_name: str) -> None: ...
     def delete_sheet(self, name: str) -> None: ...

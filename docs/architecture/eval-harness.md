@@ -10,14 +10,14 @@ side by side.
 | key | meaning |
 |---|---|
 | `name`, `description`, `license`, `origin` | identity and provenance (license decides vendor vs fetch) |
-| `kind` | `xlsx` (workbooks) or `spec` (`*.case.json`) |
+| `kind` | `xlsx` (workbooks) or `spec` (`*.case.json`); `roundtrip` only under `eval/roundtrip/` (below) |
 | `root`, `include`, `exclude` | where the cases are (globs relative to `root`) |
 | `use_cached_values` | for xlsx: Excel's cached `<v>` values are the oracle (when no sidecar exists) |
 | `require_excel_authored` | only trust caches written by Microsoft Excel (`docProps/app.xml`; XlsxWriter's fake `12.0000` rejected) |
 | `oracle_dir` | optional, relative path inside the suite directory: sidecars live there, mirroring the case path, instead of next to the case (for fetched suites, whose cases sit in the git-ignored cache; decision 0019) |
 | `cached_overrides` | xlsx: optional file (relative to the manifest) replacing single cached values that are not en-US evidence with cells of committed `excel-graph`/`excel-desktop` sidecars (`overrides.rs`, decision 0032); an excel-graph evidence cell whose probe companion `(x)=0` is FALSE also carries decision 0042's kept-subnormal rule (decision 0090) |
 | `gate` | part of the CI no-regression gate |
-| `baseline` | `cells` (default), `cases` (large corpora) or `none` |
+| `baseline` | `cells` (default), `cases` (large corpora) or `none`; a round-trip suite's `cells` baseline lists fidelity items in the item slot |
 | `milestone` | which milestone(s) the suite measures |
 | `[fetch]` | optional pinned external source: `url` (`https://` or `file://`), exactly one pin (`rev` = 40-hex git commit, or `sha256` of a `.zip`/`.tar*` archive), optional `subdir` and `include` globs |
 
@@ -33,6 +33,42 @@ Current suites:
 - `smoke`: hand-written core semantics.
 - `probes`: Excel-behavior questions awaiting the oracle.
 - `gen-m2`: generator output (30 cases, 12,000 cells), oracle-filled and gated (T-0203).
+
+## Round-trip suites
+`eval/roundtrip/<name>/suite.toml` (SPEC-0033, T-4172) uses the same manifest with `kind = "roundtrip"`:
+- Its cases are the `.xlsx` and `.xlsm` files under `root`, discovered as an xlsx suite's are.
+- `scenarios` lists what each case runs. Only `R0` (load, recalculate with the harness clock, save) exists yet; T-4514
+  adds R1.
+- The output is checked by the package validator, checks V1–V6 and V8 of SPEC-0033 D6.
+- The source's parts are scored as `part` fidelity items, matched by a key built from the relationship graph, never
+  by part name (D2). An item is kept, changed (content type or bytes), lost, added, or package-invalid.
+- Each kept XML part pair is diffed structurally (`roundtrip/xmldiff.rs`, D4; T-4509):
+  - names compare by namespace URI;
+  - children compare in order, except at the listed unordered paths and inside `extLst`, which match by key;
+  - an absent attribute equals its schema default, and xsd:boolean spellings compare equal;
+  - `mc:Ignorable` compares as a set of URIs.
+
+  This yields `element` and `attribute` items keyed `<part key>:<path>`. A lost element absorbs its descendants.
+  The children of `worksheet/sheetData` and of the shared-string table are left to the semantic items (T-4513).
+  Items that fall under a candidate normalization N1–N12 carry a `candidate-N<k>` tag, and are never normalized
+  until T-4503's evidence. A part pair reports at most 500 items; the rest are counted in a `<truncated>` item.
+- A package is read once, every part under one inflated-byte budget (the importer's default).
+- A case's checked count is the number of source parts, elements and attributes compared. Only failing element and
+  attribute items are listed.
+
+Round-trip suites live outside `eval/suites/`, as Gate A's tables do, so no cell report, milestone row or gate counts
+them. `Suite::load_all` refuses a `roundtrip` manifest under `eval/suites/`, and a round-trip suite may not reuse an
+`eval/suites/` name, because both keep their baseline at `eval/baseline/<name>.txt`.
+
+The baseline is the ordinary cells-mode file:
+- `C` gives a case's number of items;
+- each `F` line is a failing item, `<scenario> <kind> <key> <verdict>` (calcChain carries `candidate-N1` until
+  T-4503's evidence);
+- the ratchet is `baseline::diff`.
+
+`rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. `--check` (in `make eval-gates`, gate
+suites only) fails on a regression or an out-of-date baseline. `--update-baseline` (in `make eval-baseline`) records
+fixes and new cases, and refuses regressions. `make eval` runs every round-trip suite (decision 0307).
 
 ## Case formats
 **`rustsheet-case/v1`** (`*.case.json`):
@@ -90,6 +126,20 @@ Input conventions:
   (`<cfRule type="expression">`) and custom data validations, their formulas prefixed like cell
   formulas (T-3263). They probe what Excel accepts in those formulas (a refused workbook is the
   answer); the engine adapter ignores both, as neither changes a cell value.
+- Optional per-sheet `"pivot_tables"` places pivots on the sheet (T-1705). The original form names
+  one `row`, an optional `column`, one `value` and a `function`, and the builder renders the cells
+  itself (`tools/src/rustsheet_tools/pivot.py`). A pivot with a `"definition"` (case builder v2,
+  T-4122) maps one-to-one onto `pivotTableDefinition`:
+  - `rows`, `columns` and `pages` name the fields (`"Values"` is the Σ field);
+  - `data` lists the data fields (`subtotal`, `showDataAs`, `baseField`, `baseItem`, `numFmtId`);
+  - `fields` gives per-field `attrs`, `hidden`, `collapsed`, `order`, `subtotals` and a numeric
+    `group`;
+  - `calculated` lists calculated fields; `table` and `cache` hold attributes;
+  - `xml` holds raw `formats`, `filters` and similar children.
+
+  The builder writes only the cache, records and table parts, and Excel renders the pivot on open
+  (`refreshOnLoad`). The full schema is in `tools/src/rustsheet_tools/pivot_definition.py`. The
+  engine adapter does not register a defined pivot until the engine renders pivots (T-4152).
 - Optional `"names": {"rate": "=Sheet1!$B$1"}` declares workbook-scoped defined names (any
   formula Excel accepts as a name body, e.g. an intersection). A key `Sheet1!name` is a name scoped
   to that sheet.
@@ -143,6 +193,17 @@ A sidecar may also hold `text{Sheet:{A1:"shown text"}}`: Excel's displayed text 
 case lists in `"text": ["Sheet!A1", ...]` (T-1610, decision 0068). spec2xlsx records those cells in
 the `rustsheet.text.<n>` custom properties, and the excel-graph backend reads each one's
 `Range.text` after the recalculation, in the same session.
+A sidecar of a workbook with pivots also holds `pivots: [...]` (T-4123), one entry per pivot Excel
+saved, from `rustsheet-eval snapshot`'s `pivots`:
+- `name`, `sheet` and `location` (`<location ref>`);
+- `first_header_row`, `first_data_row` and `first_data_col`;
+- `row_page_count` and `col_page_count`;
+- `row_items` and `col_items`, Excel's layout lines `{t?, r, i, x:[...]}`;
+- `cache_fields` (`{name, group_items?}`);
+- `cells`: every cell of the location and of the page-field rows above it, A1 to value, a blank one
+  as `{"t":"empty"}` (`snapshot.py` `pivot_areas`; an area over 100,000 cells is not captured).
+
+`OracleFile::pivots` reads it, and T-4124 scores it.
 Tools never re-derive case discovery: `rustsheet-eval cases <suite>` prints each case's path,
 sidecar path, formula-cell count and whether the suite trusts its cached values.
 
@@ -207,7 +268,10 @@ Only `pass` counts as passing. Case statuses:
   scored cells into the closeness buckets of `closeness.rs` (bit-exact, 1 ulp, 2–4 ulp,
   `digits15` within half a unit in the 15th significant digit, `residue13` for incomplete-beta
   family numbers past it but within half a unit in the 13th (decision 0267, SPEC-0030; not visibly
-  off), `visible_numeric`, `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
+  off), `r3_math` for numbers where the engine returns the 50-digit math instead of Excel's value by
+  design (decision 0188 R3: an R3 mark, Excel more than 1e-4 off the math, the engine within 1e-9 of
+  it; the test is `r1c::r3_math`, marked once per run as `CellResult::target` = `Target::Math`; decision 0310; not
+  visibly off), `visible_numeric`, `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
   cell is blamed on the functions it calls other than glue (`closeness::GLUE`: IF, SUM, DATE,
   INDEX and the like), or on its glue when it calls nothing else.
   A "Parity tiers (glue-aware)" section (T-0068, decision 0118, `attribution.rs`) counts the

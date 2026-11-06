@@ -5,8 +5,7 @@ use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, value_error};
 use crate::functions::statistical::beta_density::beta_density_small_shape;
 use crate::functions::statistical::bratio::{
-    beta_dist_lower_tail, beta_search_tails, dispatch, l140_overflows, l140_prefactor_zero_tails,
-    Branch,
+    beta_dist_cdf, beta_search_tails, dispatch, l140_overflows, Branch,
 };
 use crate::functions::statistical::incomplete_beta::beta_density;
 use crate::functions::statistical::inverse_beta::{beta_inverse_cdf, beta_quantile_crossing};
@@ -136,9 +135,10 @@ fn beta_cumulative(value: &CalcResult, cell: CellReferenceIndex) -> Result<bool,
 impl Model {
     /// `BETA.DIST(x, alpha, beta, cumulative, [A], [B])`: every argument lifts over an array and
     /// a range (SPEC-0011; probes/stat-argument-modes H84-H89, probes/stat-later-argument-lift
-    /// H1-H5, K3-K6). The cdf is `bratio::beta_dist_lower_tail`: Excel's closed forms on bratio's
-    /// oriented arguments at a shape of 1 (T-2502), the ported bpser branches of TOMS 708 bratio
-    /// (T-2505), and the T-0970 incomplete beta (T-2119) for the branches not ported yet;
+    /// H1-H5, K3-K6). The cdf is `bratio::beta_dist_cdf` (`bratio::beta_dist_lower_tail` plus
+    /// T-4045's L140 zero, T-3764): Excel's closed forms on bratio's oriented arguments at a shape
+    /// of 1 (T-2502), the ported bpser branches of TOMS 708 bratio (T-2505), and the T-0970
+    /// incomplete beta (T-2119) for the branches not ported yet;
     /// the density is `beta_density::beta_density_small_shape` for min(alpha, beta) <= 1 (T-2503)
     /// and `incomplete_beta::beta_density` where it applies above.
     pub(crate) fn fn_beta_dist(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
@@ -216,14 +216,7 @@ impl Model {
             if l140_overflows(alpha, beta_param, t, 1.0 - t) {
                 return Err(num_error(cell));
             }
-            // L140 bup+bgrat is Excel's exact 0 once bup's prefactor is below DBL_MIN, as on F's
-            // tails (T-4045): probes/t4456-beta-t-zero-cut C9 `BETA.DIST(0.999857729248015,5e+06,
-            // 25.5,TRUE)` (ln ret -708.0) is 2.7722115421194987E-264 and C10 (ln ret -709.0) is 0,
-            // with the 1E-264 the math gives; D9:D10 at b = 30 alike (T-4456).
-            if let Some((lower, _)) = l140_prefactor_zero_tails(alpha, beta_param, t, 1.0 - t) {
-                return Ok(lower);
-            }
-            let cdf = beta_dist_lower_tail(t, 1.0 - t, alpha, beta_param);
+            let cdf = beta_dist_cdf(t, 1.0 - t, alpha, beta_param);
             if beta_param == 1.0 {
                 cdf
             } else {
@@ -316,7 +309,8 @@ impl Model {
 
 #[cfg(test)]
 mod tests {
-    use super::{beta_dist_lower_tail, beta_quantile};
+    use super::beta_quantile;
+    use crate::functions::statistical::bratio::beta_dist_lower_tail;
 
     #[test]
     fn quantile_is_the_crossing_of_beta_dist_own_cdf() {

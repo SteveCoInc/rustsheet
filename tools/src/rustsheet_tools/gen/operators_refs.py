@@ -28,6 +28,7 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+from rustsheet_tools.excel_errors import ERRORS
 from rustsheet_tools.gen.common import SeededDraws
 from rustsheet_tools.gen.generator import col_letter
 from rustsheet_tools.gen.numeric_rules import CMP_OPS
@@ -43,7 +44,6 @@ NUMBERS = ["0", "1", "2", "3", "0.5", "1.5", "10", "100", "0.1", "1E+3", "2.5", 
 # Non-canonical spellings Excel's literal parser accepts (it stores them normalized).
 LITERALS = [".5", "1.", "007", "1e3", "1E+0", "0.0", "1.50", "2E-3", "1E+15", "123456789012345", "0.000001"]
 TEXTS = ['"a"', '"A"', '""', '"abc"', '"1"', '" 2 "', '"1e3"', '"0.5"', '"-1"', '"TRUE"', '"x y"']
-ERRORS = ["#DIV/0!", "#N/A", "#VALUE!", "#NUM!", "#REF!", "#NAME?", "#NULL!"]
 ARITH = ["+", "-", "*", "/"]
 # Data-sheet values: numbers, text (numeric-looking too), bools, errors and blanks (None).
 DATA_POOL: list[Any] = [0, 1, -1, 2, 0.5, 3.25, 100, 1e-15, "a", "ABC", "1", " 2 ", "", True, False]

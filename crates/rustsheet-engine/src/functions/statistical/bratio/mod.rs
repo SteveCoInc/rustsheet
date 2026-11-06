@@ -222,6 +222,18 @@ pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
     kernel_tails_with(x, y, a, b, true).0
 }
 
+/// BETA.DIST's worksheet cdf: [`beta_dist_lower_tail`], and Excel's exact 0 where L140 bup+bgrat's
+/// prefactor underflows ([`l140_prefactor_zero_tails`], T-4045's rule). Column A of probes-numeric
+/// t3568-r5-bup-tune, -hold and -fresh has 47 Excel zeros where the true tail is up to 2E-257
+/// (`BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)`, t3568-r5-bup-fresh A291): the rule gives all 47
+/// (28 before), zeroes none of the column's Excel numbers, and gives the 44 zeros of
+/// probes/t4254-beta-t-l140-zero-cut below `ln(DBL_MIN)` (T-3764). The quantile searches keep
+/// [`beta_dist_lower_tail`]: with the 0 under F.INV's search
+/// `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) leaves Gate A's envelope.
+pub(crate) fn beta_dist_cdf(x: f64, y: f64, a: f64, b: f64) -> f64 {
+    l140_prefactor_zero_tails(a, b, x, y).map_or_else(|| beta_dist_lower_tail(x, y, a, b), |t| t.0)
+}
+
 /// (w, w1) of BETA.DIST's kernel ([`beta_dist_lower_tail`]) where it is closed or ported, the tails
 /// BETA.INV's search crosses (T-3398). On the branches not ported yet BETA.DIST sums the accurate
 /// half-integer series (thousands of double-double terms near x = 1: 0.32 ms a cdf at
@@ -291,11 +303,9 @@ pub(crate) fn f_closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option
 
 /// The tails (lower, upper) of K(a, b, x, y) where L140 bup+bgrat's w is Excel's exact 0 because
 /// bup's prefactor underflows ([`bup::l140_bup_prefactor_underflows`], T-4045): w is 0 and its
-/// complement 1, oriented back through bratio's swap. F's tails ([`f_closed_or_ported_tails`]) and
-/// the worksheet BETA.DIST cdf (`beta.rs`, T-4456) ask it; [`beta_dist_lower_tail`] does not,
-/// because F.INV's search crosses that cdf (`inverse_beta.rs` `beta_lower_crossing`) and a 0 there
-/// moves `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) off the math.
-pub(crate) fn l140_prefactor_zero_tails(a: f64, b: f64, x: f64, y: f64) -> Option<(f64, f64)> {
+/// complement 1, oriented back through bratio's swap. F's tails and BETA.DIST's worksheet cdf
+/// ([`beta_dist_cdf`]), not the quantile searches.
+fn l140_prefactor_zero_tails(a: f64, b: f64, x: f64, y: f64) -> Option<(f64, f64)> {
     let d = dispatch(a, b, x, y)?;
     (d.branch == Branch::L140BupBgrat && l140_bup_prefactor_underflows(d.a0, d.b0, d.x0, d.y0))
         .then_some(if d.swapped { (1.0, 0.0) } else { (0.0, 1.0) })

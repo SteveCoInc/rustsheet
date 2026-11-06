@@ -95,7 +95,7 @@ fn l140_bup_ret(density: f64, c: f64, x0: f64, y0: f64) -> Register {
 /// `F.DIST.RT(47.6,30,1E8)` is a number and `F.DIST.RT(47.6666666667,30,1E8)` is 0 (statistics.md
 /// "Incomplete beta at a huge first shape", T-4045). BETA.DIST's cdf takes the same edge
 /// (probes/t4456-beta-t-zero-cut C and D, a0 = 5E6 at b0 = 25.5 and 30: the first 0 is between ln ret
-/// -708 and -709, T-4456), and F's tails and the worksheet BETA.DIST ask it; the cdf under F.INV's
+/// -708 and -709, T-4456). F's tails and BETA.DIST's worksheet cdf (T-3764) ask it; the cdf under F.INV's
 /// search keeps today's kernel there (`F.INV(1.43795578761177E-262,107702,58)`, accuracy/F.INV/s1
 /// A146). The t never reaches L140 (its second shape is 1/2).
 pub(super) fn l140_bup_prefactor_underflows(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {

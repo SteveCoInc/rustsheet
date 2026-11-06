@@ -229,6 +229,9 @@ pub struct DataTableSpec {
 
 /// A pivot table in a spec sheet (T-1705): `row` (and optionally `column`) are text fields of the
 /// `source` range's header row, `value` a number field aggregated by `function` (`sum` when absent).
+/// A pivot with a `definition` (case builder v2, T-4122) has none of those: Excel renders it from the
+/// definition on open, and the engine adapter does not register it until the engine renders pivots
+/// (T-4152 and SPEC-0032).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PivotTableSpec {
@@ -238,12 +241,14 @@ pub struct PivotTableSpec {
     pub source: String,
     /// Top-left cell of the rendered pivot.
     pub location: String,
-    /// The row field (a text column of the source).
+    /// The row field (a text column of the source); empty for a pivot with a `definition`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub row: String,
     /// The column field (another text column), if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub column: Option<String>,
-    /// The data field (a number column).
+    /// The data field (a number column); empty for a pivot with a `definition`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
     /// `sum` (when absent), `count`, `average`, `max` or `min`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -272,6 +277,11 @@ pub struct PivotTableSpec {
     /// The column field's `showAll` (T-4311); false when absent.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub column_show_all: bool,
+    /// The pivot's definition, one-to-one with `pivotTableDefinition`
+    /// (`tools/src/rustsheet_tools/pivot_definition.py`, which validates it). Kept opaque here: only
+    /// spec2xlsx reads it so far; T-4152 types it when the adapter builds the pivot from it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub definition: Option<serde_json::Value>,
 }
 
 /// A pivot row field's range or date grouping (`<fieldGroup>` with `<rangePr>`), as
@@ -566,6 +576,21 @@ pub struct OracleFile {
     /// Displayed text of the cells a case lists in `text`: sheet → A1 → text (T-1610).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub text: BTreeMap<String, BTreeMap<String, String>>,
+    /// Every pivot Excel saved, with its layout and the cells of its area (T-4123); scored by
+    /// T-4124.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivots: Vec<OraclePivot>,
+}
+
+/// A pivot of an oracle sidecar: Excel's saved definition (location, layout lines, group labels)
+/// and every cell of its area, a blank one as `empty` (`tools/src/rustsheet_tools/snapshot.py`
+/// `pivot_areas`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OraclePivot {
+    #[serde(flatten)]
+    pub definition: crate::xlsx_snapshot::PivotDef,
+    /// A1 address on the pivot's sheet → Excel's value there.
+    pub cells: BTreeMap<String, Value>,
 }
 
 /// The formulas `x` of `spec` whose companion `=(x)=0` the excel-graph `oracle` answers FALSE:
@@ -659,6 +684,28 @@ pub fn load_oracle(case: &CaseFile) -> Result<Option<OracleFile>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sidecar_pivots_round_trip_and_older_sidecars_have_none() {
+        let json = r#"{"format":"rustsheet-oracle/v1","source":{"kind":"excel-graph"},
+            "sheets":{"P":{}},"pivots":[{"name":"Pv","sheet":"P","location":"A3:B5",
+            "first_header_row":1,"first_data_row":1,"first_data_col":1,"row_page_count":0,
+            "col_page_count":0,"row_items":[{"r":0,"i":0,"x":[0]},{"t":"grand","r":0,"i":0,"x":[0]}],
+            "col_items":[],"cells":{"A3":{"t":"s","v":"Row Labels"},"B5":{"t":"empty"}}}]}"#;
+        let file: OracleFile = serde_json::from_str(json).expect("parses");
+        let pivot = &file.pivots[0];
+        assert_eq!(pivot.definition.location, "A3:B5");
+        assert_eq!(pivot.definition.row_items[1].t.as_deref(), Some("grand"));
+        assert_eq!(pivot.cells.get("B5"), Some(&Value::Empty));
+        let again: OracleFile =
+            serde_json::from_str(&serde_json::to_string(&file).expect("writes")).expect("reads");
+        assert_eq!(again, file);
+        let old: OracleFile = serde_json::from_str(
+            r#"{"format":"rustsheet-oracle/v1","source":{"kind":"hand"},"sheets":{}}"#,
+        )
+        .expect("parses");
+        assert!(old.pivots.is_empty());
+    }
 
     #[test]
     fn deletes_and_column_inserts_move_the_inputs_they_shift() {
