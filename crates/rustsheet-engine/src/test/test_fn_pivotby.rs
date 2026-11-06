@@ -900,3 +900,43 @@ fn moved_subtotal_cell_beside_a_leaf_no_record_reaches() {
     );
     assert_eq!(model._get_text("H1"), expected);
 }
+
+/// T-4402: over Ay Bx Cx Cy Ax of q q p p q (A = ab, B = ab&U+00AD, C = U+00AD&ab) a cell's
+/// parent column total (`relative_to` 3) is its parent subtotal's records, those of its row that
+/// reached the class: q's (`ab`&U+00AD,y) leaf, which no record reaches, holds `1, 2, 5`, its
+/// parent `2`. p reached no record of the `ab`&U+00AD class, so p's cell there has an empty
+/// parent, which a two-argument LAMBDA gets as `#VALUE!`
+/// (probes/t4382-pivotby-intransitive-paths Calc!D10, excel-graph 2026-11-05).
+#[test]
+fn parent_column_total_is_the_parent_subtotal_s_records() {
+    let mut model = new_empty_model();
+    let texts = ["\"ab\"", "\"ab\"&UNICHAR(173)", "UNICHAR(173)&\"ab\""];
+    let rows = [
+        (0, "y", "q"),
+        (1, "x", "q"),
+        (2, "x", "p"),
+        (2, "y", "p"),
+        (0, "x", "q"),
+    ];
+    for (i, &(t, xy, pq)) in rows.iter().enumerate() {
+        let n = i + 1;
+        model._set(&format!("A{n}"), &format!("={}", texts[t]));
+        model._set(&format!("B{n}"), xy);
+        model._set(&format!("D{n}"), &n.to_string());
+        model._set(&format!("F{n}"), pq);
+    }
+    model._set(
+        "H1",
+        "=ARRAYTOTEXT(PIVOTBY(F1:F5,A1:B5,D1:D5,\
+         LAMBDA(x,a,ARRAYTOTEXT(x)&\" / \"&ARRAYTOTEXT(a)),0,0,,2,,,3),1)",
+    );
+    model.evaluate();
+    let (a, b) = ("ab", "ab\u{ad}");
+    let expected = format!(
+        "{{\"\",\"{a}\",\"{a}\",\"{a}\",\"{b}\",\"{b}\",\"{b}\",\"Grand Total\";\"\",\"x\",\"y\",\
+         \"\",\"x\",\"y\",\"\",\"\";\"p\",\"3 / 3, 4\",\"4 / 3, 4\",\"3, 4 / 3, 4\",\"\",#VALUE!,\
+         \"\",\"3, 4 / 3, 4\";\"q\",\"5 / 1, 5\",\"1 / 1, 5\",\"1, 5 / 1, 2, 5\",\"2 / 2\",\
+         \"1, 2, 5 / 2\",\"2 / 1, 2, 5\",\"1, 2, 5 / 1, 2, 5\"}}"
+    );
+    assert_eq!(model._get_text("H1"), expected);
+}

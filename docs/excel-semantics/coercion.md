@@ -1049,7 +1049,15 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       `ARRAYTOTEXT(x)&" / "&ARRAYTOTEXT(a)`); parent row totals read the parent subtotal row's cell in the same
       column, Total column included (E17). **An empty parent set is an error**: PERCENTOF `#DIV/0!` and the
       two-argument LAMBDA's cell `#VALUE!` (C7, D7: a column leaf no record reaches under an empty subtotal).
-      T-4402 owns the cells.
+      Implemented by T-4402: a cell's relative set is the records of its row item's class that are in its column
+      item's class, each class's records those that reached it or every record when none did (`AxisSets::class`,
+      relative_to.rs); the two-argument LAMBDA gets an empty set as `#VALUE!` (group_functions.rs), and PERCENTOF's
+      zero total is its `#DIV/0!`. **Confirmed out of sample** (T-4402, probes/t4402-pivotby-parent-set-holdout,
+      excel-graph, 2026-11-05): 24 fresh seeded two-field runs (seed "T-4402"), 12 with an empty parent set, 12
+      other runs with a leaf no record reaches or a record in no leaf, PERCENTOF and the LAMBDA at relative_to 3
+      (keys as column fields) and 4 (keys as row fields). The engine's values, committed before the fill
+      (docs/research/t4402/predictions.tsv), matched all 96 cells; the bucketing by each record's group it
+      replaced matched 18. A structural rule confirmed on a hold-out (decision 0188 R4), not a fit.
     - **The subtotal error gate is the leaf buckets'**: with one function over two value columns, a subtotal
       whose records reached its class while every leaf under it is empty for the row group is not computed (its
       NA() makes no `#VALUE!`), as `Grid::has_records` decides. The gate cells are Calc!B1, B3, B4, B6, B8, B9,

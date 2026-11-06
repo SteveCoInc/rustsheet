@@ -3,7 +3,7 @@ id: T-4402
 title: "PIVOTBY relative_to 3 and 4 on intransitive runs: the parent set is the parent subtotal's records, and an empty one is an error"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -33,10 +33,30 @@ PERCENTOF `#DIV/0!` and a two-argument LAMBDA `#VALUE!`.
   E29 and E30 pass since T-4359).
 
 ## Acceptance criteria
-- [ ] Every probes/t4382-pivotby-intransitive-paths cell named in Context passes, or the misses are recorded in
+- [x] Every probes/t4382-pivotby-intransitive-paths cell named in Context passes, or the misses are recorded in
       coercion.md and owned.
-- [ ] The empty-parent errors are confirmed on a hold-out (PERCENTOF and a two-argument LAMBDA, both axes).
-- [ ] `make check` green; reviewers approve.
+- [x] The empty-parent errors are confirmed on a hold-out (PERCENTOF and a two-argument LAMBDA, both axes).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- PIVOTBY's relative sets (relative_to.rs) now come from the classes each record reached, not each record's group
+  (`AxisSets::class`, `Grouping::reached_class`). A cell's set is the records of its row item's class that are in its
+  column item's class. A class's records are those whose descent reached it, or every record when none did, as a
+  subtotal cell's are. While `=` is transitive these are the records of the item's groups, so nothing else changes.
+- A two-argument LAMBDA given an empty relative set is `#VALUE!` (group_functions.rs). PERCENTOF's zero total
+  already gave `#DIV/0!`.
+- Every probes/t4382-pivotby-intransitive-paths cell named in Context passes. A unit test covers Calc!D10
+  (`parent_column_total_is_the_parent_subtotal_s_records`).
+- Hold-out probes/t4402-pivotby-parent-set-holdout (excel-graph, 2026-11-05) from docs/research/t4402/gen_probe.py:
+  - 24 fresh seeded runs (seed "T-4402"): 12 with an empty parent set, 12 other intransitive runs.
+  - PERCENTOF and the two-argument LAMBDA at relative_to 3 and 4, 96 cells.
+  - The engine's values, with PR #3430 (T-4388) merged in, were committed in 353a65823 before the fill.
+  - They matched 96 of 96. Main's bucketing matched 18.
+  - The new case passes in full on this branch alone, without #3430.
+  - This is a structural rule confirmed out of sample (decision 0188 R4), not a fit. Recorded in coercion.md.
+- `docs/research/t4344/predict_engine.py` takes the case and output path as arguments. This is the same edit as
+  #3430's, so the two merge cleanly, and this branch adds no copied wrapper.
+- Eval delta: probes known failures 4911 -> 4881 (30 fixed, all in t4382). New case: 96 of 96 pass. No regressions.

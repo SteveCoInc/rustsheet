@@ -4,7 +4,9 @@ its class, every record of the line when none did), and an empty parent set is P
 two-argument LAMBDA `#VALUE!`.
 
 Run from the repo root: python3 -I docs/research/t4402/gen_probe.py, then (after `make build`, before the fill)
-python3 -I docs/research/t4402/predict_engine.py, which commits the engine's values as the predictions.
+python3 -I docs/research/t4344/predict_engine.py eval/suites/probes/cases/t4402-pivotby-parent-set-holdout
+docs/research/t4402/predictions.tsv, which commits the engine's values as the predictions (written with PR #3430,
+T-4388's subtotal rule, merged in).
 
 Texts: A = ab, B = ab&U+00AD, C = U+00AD&ab (A = C, B = C, A < B). Data per block row: A the text, B x/y, D the
 row's position, E 2^(position-1), F p/q. Fresh seeded five-row runs (seed "T-4402"), two key fields (text, x/y)
