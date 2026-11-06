@@ -48,14 +48,16 @@ and references, and what each reader sees, so that T-4570 can implement Excel's 
 - The implementation (T-4570).
 
 ## Outcome
-- Probe `probes/t4569-xlookup-ref-element-max-min` (excel-graph, 2026-11-06), 51 formula cells in two rounds. The
+- Probe `probes/t4569-xlookup-ref-element-max-min` (excel-graph, 2026-11-06), the formulas filled in three rounds. The
   predictions for each round were written before its fill (docs/research/t4569/predictions.md).
   - Every aggregate reads the reference element's top-left cell: MAX 50 not 60, SUMSQ 401, AVERAGE 35. This also
     corrects lookup.md's T-4563 line: `SUM(..F1:F2)` = 23 is 20 + F1, not 20 + 3 + 4, which is 27. So SPEC-0014
     rule 4 holds unchanged for the reference element.
   - COUNT, COUNTA and SUMPRODUCT follow rule 5.
-  - LARGE, SMALL and MEDIAN are `#N/A`, over a grid of references alone too. This answers SPEC-0014's open
-    question.
+  - LARGE, SMALL and MEDIAN are `#N/A` over references on another sheet, and `#VALUE!` over references on the
+    formula's own sheet. Round 3 reproduced t2065's VERIFIED `#VALUE!` on its own sheet in the same fill. This was
+    found in review round 1, and the spec keeps today's same-sheet behaviour.
+  - Text and TRUE hits are read as array elements (`TopLeftElements`).
   - Per-element callers give `#VALUE!` (N: the value) for the value element and the range call for the
     reference element.
 - Spec: SPEC-0014 amendment "Mixed grids, value elements beside references":
@@ -65,7 +67,7 @@ and references, and what each reader sees, so that T-4570 can implement Excel's 
   - Readers: one arm in each reader class. Unprobed readers fall back to the value view.
   - Bounds: no new budget.
 - lookup.md entry extended. T-4570 now names the spec in its Context and acceptance criteria, and owns the
-  t4569 visibly-off cells (A1:A8, A11:A15, A17, A20:A24, A26, A31:A32, A35, B20:B24, B26, B31:B32, B34, C20:C23,
-  C31:C32, D20:D28, D31:D34).
-- Eval delta: +1 probe case, 78 cells scored. The 27 that match are the value-view and COUNT/COUNTA cells, and the
-  per-element cells already right. The rest are new known failures owned by T-4570. No regressions.
+  t4569 visibly-off cells (Calc A1:A8, A11:A15, A17, A20:A24, A26, A31:A32, A35, A40:A44, A50:A53, A56:A60, A63,
+  B20:B24, B26, B31:B32, B34, C20:C23, C31:C32, D20:D28, D31:D34; Local E4:E5).
+- Eval delta: +1 probe case, 102 cells scored. The 34 that match are the value-view and COUNT/COUNTA cells, and the
+  per-element cells already right, plus the same-sheet t2065 forms (Local E1:E3). The other 68 are new known failures owned by T-4570. No regressions.

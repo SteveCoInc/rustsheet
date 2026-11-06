@@ -35,8 +35,12 @@ sees.
 ## Visible-parity stage
 Owner of the visibly-off cells of probes/t4543-xlookup-not-found-address-sheet-lift (W45, W46) and of
 probes/t4563-xlookup-not-found-ref-element (A1, A5, A9, A13:A14, A17, A21:A22, A29:A30, A33, A37, A41, A45, A49, A53, A73, A109, A113, T13, T17, T21, T29, T33, T45, T49, T53, T73, T109, T113, U13, U17, U21, U29, U33, U45, U49, U53, U73, U109, U113, V1, V5, V9, V13, V17, V21, V25:V26, V29, V33, V37, V41, V45, V49, V53, V73, V109, V113, W13, W17, W21, W29, W33, W45, W49, W53, W73, W97, W101:W102, W109, W113, X13, X17, X21, X29, X33, X45, X49, X53, X73, X109, X113, Y13, Y17, Y21, Y29, Y33, Y45, Y49, Y53, Y73, Y109, Y113, Z13, Z17, Z21, Z29, Z33, Z45, Z49, Z53, Z73, Z109, Z113): Excel's reference element and its readers, where ours is
-`#VALUE!`. Also owner of the visibly-off cells of probes/t4569-xlookup-ref-element-max-min (listed in that task's
-Outcome).
+`#VALUE!`.
+
+- Also owner of the visibly-off cells of probes/t4569-xlookup-ref-element-max-min: Calc A1:A8, A11:A15, A17,
+  A20:A24, A26, A31:A32, A35, A40:A44, A50:A53, A56:A60, A63, B20:B24, B26, B31:B32, B34, C20:C23, C31:C32, D20:D28,
+  D31:D34, and Local E4:E5. Keep the same-sheet `#VALUE!` of LARGE, SMALL and MEDIAN (t2065-lift-*, t4569 Local
+  E1:E3).
 
 ## Out of scope
 - An array (not a range) if_not_found, which takes its first element and matches today.

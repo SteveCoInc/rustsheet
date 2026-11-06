@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4569: MAX, MIN and other aggregates over XLOOKUP({2;9},A1:A3,B1:B3,range), whose element 2 is the if_not_found range kept as a reference (T-4563): do they walk the referenced cells as SUM does? Data: A1:A3 = 1,2,3; B1:B3 = 10,20,30 (the hit is 20); G1:G2 = 50, 60 (above the hit); H1:H2 = 1, 2 (below it). One formula per row in column A. Rows 20-34: more readers of the same result over G1:G2 (column A the formula; B its ROWS; C, D its INDEX (1,1) and (2,1)), and LARGE/SMALL over a lifted OFFSET grid (A31, A32).",
+  "description": "T-4569: MAX, MIN and other aggregates over XLOOKUP({2;9},A1:A3,B1:B3,range), whose element 2 is the if_not_found range kept as a reference (T-4563): do they walk the referenced cells as SUM does? Data: A1:A3 = 1,2,3; B1:B3 = 10,20,30 (the hit is 20); G1:G2 = 50, 60 (above the hit); H1:H2 = 1, 2 (below it). One formula per row in column A. Rows 20-34: more readers of the same result over G1:G2 (column A the formula; B its ROWS; C, D its INDEX (1,1) and (2,1)), and LARGE/SMALL over a lifted OFFSET grid (A31, A32). Rows 40-44 and sheet Local (T-4569 round 3): t2065's exact LARGE/SMALL/MEDIAN-over-OFFSET formulas and data, same-sheet on Local!E1:E3 and cross-sheet from Calc and Local, plus MEDIAN over a plain OFFSET grid and LARGE over INDIRECT. Rows 50-63: the hit is text (return C1:C3, C2 = \"t\"; rows 50-56) or TRUE (D1:D3, D2 = TRUE; rows 57-63) under SUM, MAXA, AVERAGEA, AVERAGE, COUNTA, COUNT, MINA.",
   "tags": [
     "M6",
     "probe"
@@ -18,7 +18,13 @@
         "G1": 50,
         "G2": 60,
         "H1": 1,
-        "H2": 2
+        "H2": 2,
+        "C1": 10,
+        "C2": "t",
+        "C3": 30,
+        "D1": 10,
+        "D2": true,
+        "D3": 30
       }
     },
     {
@@ -100,7 +106,45 @@
         "A34": "=CELL(\"row\",XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2))",
         "B34": "=ROWS(CELL(\"row\",XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2)))",
         "C34": "=INDEX(CELL(\"row\",XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2)),1,1)",
-        "D34": "=INDEX(CELL(\"row\",XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2)),2,1)"
+        "D34": "=INDEX(CELL(\"row\",XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2)),2,1)",
+        "A40": "=LARGE(OFFSET(Local!$A$1,{0;1},0),1)",
+        "A41": "=SMALL(OFFSET(Local!$A$1,0,0,{2;3}),2)",
+        "A42": "=MEDIAN(OFFSET(Local!$A$1,{0;1;2},0))",
+        "A43": "=MEDIAN(OFFSET(Data!$G$1,{0;1},0))",
+        "A44": "=LARGE(INDIRECT({\"Data!G1\";\"Data!G2\"}),1)",
+        "A50": "=SUM(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$C$1:$C$3,Data!$G$1:$G$2))",
+        "A51": "=MAXA(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$C$1:$C$3,Data!$G$1:$G$2))",
+        "A52": "=AVERAGEA(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$C$1:$C$3,Data!$G$1:$G$2))",
+        "A53": "=AVERAGE(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$C$1:$C$3,Data!$G$1:$G$2))",
+        "A54": "=COUNTA(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$C$1:$C$3,Data!$G$1:$G$2))",
+        "A55": "=COUNT(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$C$1:$C$3,Data!$G$1:$G$2))",
+        "A56": "=MINA(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$C$1:$C$3,Data!$G$1:$G$2))",
+        "A57": "=SUM(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$D$1:$D$3,Data!$G$1:$G$2))",
+        "A58": "=MAXA(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$D$1:$D$3,Data!$G$1:$G$2))",
+        "A59": "=AVERAGEA(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$D$1:$D$3,Data!$G$1:$G$2))",
+        "A60": "=AVERAGE(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$D$1:$D$3,Data!$G$1:$G$2))",
+        "A61": "=COUNTA(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$D$1:$D$3,Data!$G$1:$G$2))",
+        "A62": "=COUNT(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$D$1:$D$3,Data!$G$1:$G$2))",
+        "A63": "=MINA(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$D$1:$D$3,Data!$G$1:$G$2))"
+      }
+    },
+    {
+      "name": "Local",
+      "cells": {
+        "A1": 1,
+        "A2": 100,
+        "A3": 10000,
+        "B1": 2,
+        "B2": 200,
+        "B3": 20000,
+        "A4": "5",
+        "A6": true,
+        "A7": 7,
+        "E1": "=LARGE(OFFSET(A1,{0;1},0),1)",
+        "E2": "=SMALL(OFFSET(A1,0,0,{2;3}),2)",
+        "E3": "=MEDIAN(OFFSET(A1,{0;1;2},0))",
+        "E4": "=LARGE(OFFSET(Data!$G$1,{0;1},0),1)",
+        "E5": "=MEDIAN(OFFSET(Data!$G$1,{0;1},0))"
       }
     }
   ],

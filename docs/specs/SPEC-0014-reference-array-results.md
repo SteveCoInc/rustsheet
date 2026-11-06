@@ -86,9 +86,12 @@ b2; E1 holds the formula):
   result is 0: not 5 and not 1, but which elements count is open, as the data holds no number (follow-up task).
 - Failed to open on Excel for the web on 2026-10-26 (createSession "retries exhausted", two runs, alone in a
   workbook): MEDIAN, LARGE and SMALL over a lifted OFFSET. Desktop question T-1075 item 18 (decision 0039); until
-  answered they keep today's value view. Answered on the web since (T-4569, probes/t4569-xlookup-ref-element-max-min
-  A31, A32): `LARGE(OFFSET(G1,{0;1},0),1)` and `SMALL(..)` are `#N/A`, and MEDIAN over a mixed grid is too (A22);
-  the amendment below gives these three the `#N/A` reading.
+  answered they keep today's value view. Answered since, on the web: `#VALUE!` (lookup.md "MEDIAN, LARGE and SMALL
+  over a lifted OFFSET", probes/t2065-lift-median, -large, -small, 2026-10-29). T-4569 found that holds only when
+  the references are on the formula's own sheet. Over references on another sheet the three are `#N/A`
+  (probes/t4569-xlookup-ref-element-max-min: t2065's formulas on its own data sheet Local!E1:E3 `#VALUE!`; the same
+  read from another sheet Local!E4:E5, Calc A31:A32, A40:A44 `#N/A`; one fill, 2026-11-06). The amendment's
+  rule 5 carries this.
 
 ## Design
 
@@ -215,11 +218,17 @@ an array value. In detail:
 3. **Top-left aggregates** (rule 4, extended). SUM, AVERAGE, MIN, MAX, MINA, MAXA, PRODUCT, SUMSQ and STDEV.S read
    the reference element's top-left cell as a range cell and the value element as an array value: SUM 23 = 20 + F1,
    25 = 20 + E1 (A73, A109); over G1:G2 = 50, 60 MAX 50, AVERAGE 35, SUM 70, STDEV.S 21.2132…; over H1:H2 = 1, 2
-   MIN 1, PRODUCT 20, SUMSQ 401 (t4569 A1-A15, A20, A23).
+   PRODUCT 20, SUMSQ 401 (t4569 A1-A15, A20, A23). MIN and MINA there are 1 under either reading, so they confirm
+   nothing. A text or TRUE value element is read as `TopLeftElements` reads a top-left cell, that is as an array
+   element: SUM, AVERAGE and COUNT skip both (50, 50, 0), AVERAGEA counts text as 0 and skips TRUE (25, 50), and
+   MAXA and MINA skip both (50, 50) (t4569 A50:A63, the hit "t" or TRUE beside G1:G2's element).
 4. **Not numbers** (rule 5). COUNT 1 (the value 20 counts, the reference element does not), COUNTA 2, SUMPRODUCT 20:
    the reference element is 0 (A77, A81, t4569 A9, A10, A21).
-5. **Order statistics.** LARGE, SMALL and MEDIAN over a grid that holds a reference element are `#N/A` (t4569 A12,
-   A13, A22), and so is a grid of references alone (t4569 A31, A32).
+5. **Order statistics: the sheet decides.** LARGE, SMALL and MEDIAN over a grid holding a reference element give
+   `#N/A` when its references are on another sheet than the formula's. This covers a mixed grid (t4569 A12, A13,
+   A22) and a grid of references alone, from OFFSET or INDIRECT (A31, A32, A40:A44, Local!E4:E5). They give
+   `#VALUE!` when the references are on the formula's own sheet (t2065-lift-*, Local!E1:E3; data and formulas as
+   t2065, same fill). Unprobed: a grid with references on both sheets, and a mixed grid read on its own sheet.
 6. **Per-element callers** (rule 6). They lift over every element. A value element is passed as the scalar
    non-reference argument it is: ROW, AREAS, COUNTIF, SUBTOTAL, COUNTBLANK and CELL give `#VALUE!` for it, and N
    gives 20. The reference element is the call on the range: ROW 1, AREAS 1, COUNTIF 2, N 50, SUBTOTAL 110,
@@ -244,12 +253,15 @@ an array value. In detail:
   - `to_values`: `Value(v)` gives `v`. This is the only value view (rule 1).
   - INDEX (`index_grid`): `Value(v)` gives `v` as a value, not a reference. The one-index form is still a 1x1
     sub-grid, so `INDEX(INDEX(X(r),2),1,1)` gives the range (rule 2).
-  - The aggregate walker (`GridReading`): `TopLeft` reads `Value(v)` as an array element, so text and booleans are
-    skipped as they are in an array argument, not read as range cells. `NotANumber` counts a number value for COUNT
-    and reads it for SUMPRODUCT. `TopLeftElements` follows `TopLeft`.
-  - Order statistics: LARGE, SMALL and MEDIAN given a `RefArg::Grid` with a reference element return `#N/A`. This is
-    one check in their argument reader, not a per-element walk. An error element comes first, as for the other
-    aggregates; this is unprobed and follows rule 4.
+  - The aggregate walker (`GridReading`): `TopLeft` and `TopLeftElements` both read `Value(v)` as an array
+    element, the reading `TopLeftElements` already gives a top-left cell. So SUM, AVERAGE and COUNT skip text and
+    booleans, AVERAGEA counts text as 0 and skips TRUE, and MAXA and MINA skip both (rule 3, t4569 A50:A63).
+    `NotANumber` counts a number value for COUNT and reads it for SUMPRODUCT.
+  - Order statistics (rule 5): LARGE, SMALL and MEDIAN given a `RefArg::Grid` with a reference element return
+    `#N/A` if any reference element is on a sheet other than the formula's, and keep today's `#VALUE!` otherwise.
+    This is one scan of the elements in their argument reader. A grid with references on both sheets is unprobed;
+    the rule above gives it `#N/A`. A probe before T-4570 lands can amend that. An error element comes first, as
+    for the other aggregates; this is unprobed and follows rule 4.
   - Per-element callers (`ref_lift.rs`): `Value(v)` calls the scalar function with `v` as a value argument. That is
     `#VALUE!` where a reference is required, and N reads the value. `put_back` keeps the result.
   - ROWS/COLUMNS, ISREF and the pass-throughs (IF, CHOOSE, LET, VSTACK, TAKE, DROP) need no change: they handle
@@ -266,7 +278,8 @@ an array value. In detail:
   `Value(String)` holds a text the kernel already built, so there is no extra allocation beyond today's
   `ArrayNode`.
 - **What changes.** XLOOKUP under a lifted lookup_value with a range if_not_found, and LARGE, SMALL and MEDIAN over
-  any grid (`#N/A` replaces today's `#VALUE!`). Nothing else.
+  a grid whose references are on another sheet (`#N/A` replaces today's `#VALUE!`). Their same-sheet `#VALUE!` (the
+  t2065 cells, which pass today) stays. Nothing else.
 
 ### Test plan and rollout
 T-4570 implements it: the t4543 W45:W46, t4563 and t4569 cells it owns leave eval/baseline. Unit tests: a mixed

@@ -41,3 +41,16 @@ element of a mixed grid. Predictions:
   20: `#VALUE!` where a reference is required (ROW, AREAS, COUNTIF, SUBTOTAL, COUNTBLANK, CELL), N 20.
 - ISREF FALSE, and ISNUMBER lifted {TRUE; FALSE}.
 - `LARGE(OFFSET(G1,{0;1},0),1)` and SMALL: `#N/A`, as in round 1 (SPEC-0014 left these open).
+
+## Round 3 (sheet Local, rows 40-63), predicted before its fill
+
+The fidelity review found that VERIFIED t2065 cells (`LARGE(OFFSET(A1,{0;1},0),1)`, SMALL and MEDIAN; same-sheet,
+one formula per workbook) are `#VALUE!`. Round 2's cross-sheet `LARGE(OFFSET(Data!G1,{0;1},0),1)` is `#N/A`.
+Round 3 tests whether the sheet decides this:
+- Local!E1:E3, t2065's exact formulas and data: `#VALUE!` (as t2065).
+- The cross-sheet forms (Local!E4:E5, Calc A40:A44): `#N/A` if the sheet decides; `#VALUE!` everywhere if round 2's
+  cells are an artifact of the crowded workbook.
+- A text hit "t" (rows 50-56) and a TRUE hit (rows 57-63), each next to G1:G2's reference element. The prediction
+  reads the value element as an array element: SUM 50 (text and TRUE skipped), MAXA 50, AVERAGEA 25 (text in an
+  array counts 0) and 25 for TRUE (1: (1+50)/2 = 25.5)? Uncertain. AVERAGE 50. COUNTA 2. COUNT 0. MINA 0 for text,
+  1 for TRUE.
