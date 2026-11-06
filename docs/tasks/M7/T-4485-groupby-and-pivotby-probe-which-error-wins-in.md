@@ -3,7 +3,7 @@ id: T-4485
 title: "GROUPBY and PIVOTBY: probe which error wins in a 2-D array of functions (and against the 2-D #VALUE!); fix T-4449's citation nits"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -41,3 +41,10 @@ and match it.
 
 ## Out of scope
 - Anything else about the `function` argument (T-4449 covered it).
+
+## Outcome
+Probe probes/t4485-groupby-function-array-error-order (excel-graph, 10 formulas x 3 reads) shows an explicit error beats
+the 2-D `#VALUE!` and the first error is the first in argument order (depth first), not reading or column-major order.
+The engine already matched (31 of 31 cells), so no engine change; arrays.md and the `function_grid` doc comment state it.
+Citation nit (test comment) and the over-long arrays.md line fixed. Eval delta: +31 passing cells in a new case, no
+one baseline line for the new case (passing cells recorded), no regressions.

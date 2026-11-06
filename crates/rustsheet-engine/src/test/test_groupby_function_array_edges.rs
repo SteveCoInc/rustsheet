@@ -44,7 +44,7 @@ fn first_error_element_in_reading_order_is_the_result() {
 
 #[test]
 fn lambda_without_parameters_is_value_error() {
-    // G!C9:C12, G!C33:C36: alone, in an array beside an eta function and through LET.
+    // G!C9, G!C23, G!C12, G!C34: alone, in an array beside an eta function and through LET.
     let actual = results(&[
         "=GROUPBY(A2:A11,D2:D11,LAMBDA(1))",
         "=GROUPBY(A2:A11,D2:E11,HSTACK(_xleta.SUM,LAMBDA(1)))",
