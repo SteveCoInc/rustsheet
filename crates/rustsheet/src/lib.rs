@@ -7,6 +7,7 @@
 
 mod edit;
 mod error;
+mod pivot_read;
 mod refs;
 mod source;
 mod value;
@@ -16,6 +17,8 @@ pub use edit::{ChangeSet, Input, InputChange, SheetChange, Txn, ValueChange};
 #[doc(hidden)]
 pub use edit::{PivotDateGroupBy, PivotError, PivotFunction, PivotRangeGroup, PivotTableInput};
 pub use error::{EditError, LoadError, RefError, SaveError, UnsupportedKind};
+#[doc(hidden)]
+pub use pivot_read::PivotPlace;
 pub use refs::{
     parse_cell, parse_range, resolve_sheet_by_name, CellRef, RangeRef, SheetId, Target,
 };

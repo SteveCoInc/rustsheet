@@ -58,8 +58,9 @@ Non-goals:
   `Arc<[u8]>` beside the model. It also keeps the import options it loaded them with: locale, time zone, language
   and `ImportLimits`, the inputs of `rustsheet_xlsx::import::load_from_xlsx_bytes_with_limits`.
 - `Workbook::new` has neither.
-- A workbook loaded with a password keeps the decrypted package. The save writes it unencrypted, as today
-  (SPEC-0031 non-goal).
+- A workbook loaded with a password keeps the decrypted package, moved into zeroizing storage that is wiped when
+  the workbook is dropped. It is never copied into plain memory, and its `Debug` shows only its length. The save
+  writes it unencrypted, as today (SPEC-0031 non-goal): a verbatim save of an encrypted file is its plaintext.
 
 Layering. The facade owns retention and builds the pristine model. `rustsheet-xlsx` owns the diff and the
 patcher, and never depends on the facade. The entry point is:

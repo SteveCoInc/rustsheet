@@ -482,9 +482,14 @@ Rule (observed, ElapsedFormatTests, a 1904-date-system workbook):
   `[h] m` keep their own counts ("6138 0", "6138 Jan", "102 18", "1 42"), and an elapsed token after a month,
   day or year token counts from the same register whatever the date: `m [h]` is "1 444", `d [h]` "0 444", `yy [h]`
   on 45000 "23 12" (VERIFIED, probes/t4295-elapsed-with-month A1:N9 and -b A1:D18, excel-graph 2026-11-05,
-  T-4295; t2135-fractional-second-edges-1900/-1904 A39, A40). `[ss]` before `h`/`m`, and a second hour or minute
-  token after the first, are UNVERIFIED (not probed). A clock token before the `[s]` leaves the section as parsed, so
-  `s [s] m` stays `#VALUE!` like `s [s]` (UNVERIFIED with the `m` after). Implemented in `move_elapsed_second`
+  T-4295; t2135-fractional-second-edges-1900/-1904 A39, A40). `[ss]` counts like `[s]` (`[ss] m` "18 26640",
+  `[ss] h` "18 444", with a padded seconds field on 45000.123: "07 11088"). With several targets the count goes to the
+  first hour token even behind a minute token, else to the first minute token: `[s] h m` "18 444 42", `[s] m m`
+  "18 26640 1", but `[s] m h` "18 42 444" (the `m` is then the clock minute). A date token before `[s]` does not stop it
+  (`d [s] m` "0 18 26640", `mmm [s] h` "Jan 18 444"); an elapsed token (`[h] [s] m`, `[m] [s] h`) or a clock `s`
+  (`s [s] m`, `s [s] h`) before it leaves the section `#VALUE!`; `[s].0 m` is "18.0 720" and `[s].0 h` "18.0 12" (the fraction digits
+  split the serial, so the register is the shown fraction, as in "`General` in a date section")
+  (VERIFIED, probes/t4341-elapsed-second-forms A1:N3, excel-graph, 2026-11-06, T-4341). Implemented in `move_elapsed_second`
   (formatter/elapsed.rs).
 - Past 9999-12-31 a fraction of a second is #VALUE! with or without an elapsed token:
   `TEXT(1234567890,"[mm]:ss.0")` and `TEXT(1234567890,"h:mm:ss.00")` (gen-m10 810fee377a42575b
