@@ -377,6 +377,18 @@ Status: VERIFIED
 Implemented in: `resize_to` in `crates/rustsheet-engine/src/functions/statistical/if_ifs.rs`
 Tasks: T-0214
 
+### AVERAGEIF's numeric-like criteria pick the same rows under a resized average_range
+Rule: with an average_range, AVERAGEIF matches its range exactly as without one, and averages the matched rows of the
+range resized from average_range's top-left cell. Over A1:A6 = 0, -1, 0.5, text "1", TRUE, 1 with D1:D6 = 10 to 60:
+`0`, `-1` and `0.5` each match their one number (10, 20, 30); the text criterion `"1"` matches the text "1" and the
+number 1 (50); `"0.5"` matches the number 0.5 (30); `TRUE` matches the TRUE cell only, not the number 1 (50); `FALSE`
+matches nothing (`#DIV/0!`). A literal and the same value in a criteria cell agree, and D1 and D1:E1 give what D1:D6
+gives (each resized to D1:D6).
+Evidence: probes/t4540-averageif-criteria-average-range H1:M7 (42 cells). Oracle: excel-graph, 2026-11-06 (T-4540).
+Status: VERIFIED
+Implemented in: `resize_to`, `apply_ifs` in `crates/rustsheet-engine/src/functions/statistical/if_ifs.rs`
+Tasks: T-4540
+
 ### SUMIF/AVERAGEIF resize clamps at the sheet edge; single-cell ranges are 1x1
 Rule: when the resized sum_range would run past XFD1048576 Excel clamps it to the sheet edge (no `#REF!`):
 `SUMIF(A1:B2,">0",XFD1)` sums XFD1:XFD2. After clamping, AVERAGEIF averages only the cells inside the clamped range (`AVERAGEIF(A1:B2,">0",XFD1048576)` = 30/1, not 30/4).

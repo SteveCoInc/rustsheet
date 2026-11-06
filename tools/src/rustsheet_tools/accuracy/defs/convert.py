@@ -41,6 +41,7 @@ from fractions import Fraction
 
 import mpmath
 
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -52,7 +53,8 @@ TEMPERATURE_SOURCE = "engineering.md#convert-temperature"
 MISMATCH_SOURCE = (
     "engineering.md#convert-a-boolean-unit-is-value-t-2676 (A30), probes/convert-temperature-ov10, ov11"
 )
-SMALLEST_NORMAL = mpmath.mpf(2) ** -1022
+# NORMAL_MIN as an exact mpf (2^-1022): it bounds a working-precision mpf.
+SMALLEST_NORMAL = mpmath.mpf(NORMAL_MIN)
 
 _LBM = Fraction("453.59237")  # g (the international avoirdupois pound)
 _FT = Fraction("0.3048")  # m

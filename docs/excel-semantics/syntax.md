@@ -221,10 +221,10 @@ before T-3338: minus-paren-, minus-paren2-, plus-paren- and minus-abs-1023-typed
 ours shared were dropped then, because the harness scored a typed input the engine refuses as an engine
 error, not as a blank cell. Since T-3338 (sign cap) and T-3689 (parenthesis and call caps) each is a
 typed formula that does not parse (`TYPED_FORMULA_DOES_NOT_PARSE`) and scores as the blank cell Excel
-leaves (T-3870 added `ISBLANK(A1)` to every restored typed refusal, the t3097-*-66-typed and the t3172 and
-t3266 ones, and refilled them, excel-graph 2026-11-03: TRUE on all 23, so A1 is blank, not text), so T-3689 restored them, one past each accepted neighbour, and re-ran them (excel-graph
+leaves, so T-3689 restored them, one past each accepted neighbour, and re-ran them (excel-graph
 2026-11-02, every one PATCH 400, B1 FALSE): t3266-plus-num-1025-, minus-ref-1024-, minus-true-1024-,
-minus-spaced-1024-, nested-200-825-, nested-50-975- and nested-paren-257-typed. Ours matches all of it since T-3338 (the 2026-11-01 eval had the four typed
+minus-spaced-1024-, nested-200-825-, nested-50-975- and nested-paren-257-typed. T-3870 then added `ISBLANK(A1)` to every restored typed refusal, the t3097-*-66-typed and the t3172 and
+t3266 ones, and refilled them (excel-graph 2026-11-03): TRUE on all 23, so A1 is blank, not text. Ours matches all of it since T-3338 (the 2026-11-01 eval had the four typed
 1,023 cases above failing on S!B1 and nested-paren-128, -200, -255, -256 and nested-200-823, -824
 not running, `EngineError`, stored and typed). In ours a plus directly before a
 number literal folds into it and adds no node. Typed whitespace adds no
@@ -332,9 +332,23 @@ name. The result is the same on every sheet and with First, S2 or Last active. W
 
 First < Last < S2 is alphabetical, not sheet order (First, S2, Last), and not "the active sheet first"
 (probes/t4554-api-name-scoped-name-choice, -first, -last D1:D9; t4554-api-name-local-name-body, where `=LocLoc`,
-S2's only, is 7 and `=Dup` is Last's 90; excel-graph 2026-11-06, T-4554). Whether the name order is case-insensitive
-is unprobed. Ours reads the active sheet's definition, else the workbook one, and stores the name bare, so a name
-only another sheet defines is `#NAME?` (T-4587 owns the cells).
+S2's only, is 7 and `=Dup` is Last's 90; excel-graph 2026-11-06, T-4554). The name order ignores letter case and puts
+`_` before the letters (probes/t4587-api-name-sheet-order-case, excel-graph 2026-11-06: tabs Z, B, a, _u, Z active,
+no workbook names; B + a reads a's, so not ordinal, where `B` < `a`; a + _u and B + _u read _u's, so `_` sorts as
+below the lower-case letters, not after `Z`; Z + a reads a's). Digits, other punctuation, spaces and non-ASCII names
+are unprobed (ours compares lower-cased names by code point). A sheet-scoped name's body follows the same rule:
+Last's `LD` = `=Dup` reads Last's 90 (t4554-api-name-local-name-body; Last is also the first by name there, so a
+sheet-scoped body's own sheet winning is not ruled out, UNVERIFIED). Ours since T-4587: the parser reads a bare
+defined name of an API-added body (`Parser::set_api_name_body`) as `Sheet!Name` on the first defining sheet by
+lower-cased name (`Parser::api_body_sheet_name`), so the body is stored qualified and a sheet rename rewrites it; a
+name only the workbook defines stays bare; a LET name or LAMBDA parameter of the body is no defined name.
+One cell of t4554-api-name-local-name-body stays off: Last!D3, `=LD` on Last loaded before the add of the Last-scoped
+`LD`, is 90 in Excel, where "A sheet-scoped name added after load" above leaves such a use `#NAME?` (ours). Four
+probes keep that rule against the obvious differences (excel-graph 2026-11-06, T-4587, all `#NAME?` on the scoped
+sheet, as t4049-sheet-api-name-plain): the other sheet active (t4587-sheet-api-name-inactive-sheet), the sheet
+already holding a file sheet-scoped name (t4587-sheet-api-name-sheet-has-names), a bare-name body `=Src`
+(t4587-sheet-api-name-name-body), and an earlier tab holding the qualified `=S!N` (t4587-sheet-api-name-qualified-use-first).
+What makes Last!D3 resolve is open (T-4618 owns the cell).
 Our choices that no probe covers yet, all UNVERIFIED:
 - (a) the body is stored qualified, so making another sheet active later does not move an existing name;
 - (b) renaming the bound sheet rewrites the body, and deleting it makes the body `#REF!`. A case cannot yet edit a

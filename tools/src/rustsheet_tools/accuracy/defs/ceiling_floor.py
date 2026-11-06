@@ -41,7 +41,7 @@ from fractions import Fraction
 import mpmath
 
 from rustsheet_tools.accuracy import model
-from rustsheet_tools.accuracy.defs._common import is_real
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, is_real
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, MIN_LITERAL, Arg, decimal15, exponent10
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import decimal_literal, log_uniform, random_sign
@@ -53,7 +53,8 @@ ALIAS_DECISION = "decision 0246"
 # ECMA.CEILING is two-argument CEILING (numbers.md, "ECMA.CEILING", probes/ecma-ceiling); ISO.CEILING
 # is CEILING.PRECISE (every family entry above names it beside CEILING.PRECISE: ties, subnormal ratios).
 ALIAS_SOURCES = {"ECMA.CEILING": "numbers.md#ecmaceiling", "ISO.CEILING": TIE_SOURCE}
-SMALLEST_NORMAL = Fraction(2) ** -1022
+# NORMAL_MIN as an exact Fraction (2^-1022): the ratio it bounds is an exact Fraction.
+SMALLEST_NORMAL = Fraction(NORMAL_MIN)
 DOUBLE_MAX = Fraction(sys.float_info.max)
 # Exact for a whole number of steps (at most 16 digits) times a 15-digit significance.
 _CONTEXT = Context(prec=60, Emax=10**6, Emin=-(10**6))

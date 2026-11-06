@@ -24,8 +24,9 @@ double moves p by up to 2^-54, which moves z by about 2^-54/phi(z) and the value
 `CONDITION_LIMIT` (alpha below about 4E-8 or above about 1 - 1.1E-6) is redrawn, as GAUSS's region is (normal.py),
 so no table point depends on it; its eval cells keep their math values and stay in the eval suites.
 
-Also left out, as unprobed: points whose sd, sd*z, sd/sqrt(n) or value leaves the normal double range below 1E+300
-(no cell shows where Excel's product overflows or underflows).
+Also left out, as unprobed: points whose sd, sd*z, sd/sqrt(n), z/sqrt(n) or value leaves the normal double range below
+1E+300 (no cell shows where Excel's product overflows or underflows): `_common.confidence_margin`, shared with
+CONFIDENCE.T (T-4581).
 """
 
 from __future__ import annotations
@@ -36,18 +37,17 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import CONDITION_LIMIT, NORMAL_MIN, real_args
+from rustsheet_tools.accuracy.defs._common import CONDITION_LIMIT, confidence_margin, real_args
 from rustsheet_tools.accuracy.defs.continuous import LEGACY_FIRST_SOURCE
 from rustsheet_tools.accuracy.defs.normal import INV_SOURCE, density, standard_quantile
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, NoValueError, Param, register
+from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 DOUBLE_P_SOURCE = "statistics.md#confidencenorm-forms-1---alpha2-in-doubles-t-4101"
 MICROSOFT_SOURCE = "Microsoft CONFIDENCE.NORM / CONFIDENCE pages: argument limits"
 
 P_ROUNDING = 2.0**-54  # the largest rounding of 1 - alpha/2 in [1/2, 1)
-RANGE = (NORMAL_MIN, 1e300)  # an intermediate inside this is a normal double, clear of the overflow
 REDRAWS = 50
 
 
@@ -75,13 +75,7 @@ def _domain(args: Sequence[MathArg]) -> str | None:
 
 def _confidence(args: Sequence[MathArg]) -> mpmath.mpf:
     alpha, sd, size = real_args(args)
-    z = standard_quantile(1 - alpha / 2)
-    root = mpmath.sqrt(size)
-    for intermediate in (sd, sd * z, sd / root, sd * z / root):
-        if not RANGE[0] <= abs(float(intermediate)) <= RANGE[1]:
-            msg = "an intermediate leaves the normal double range (unprobed)"
-            raise NoValueError(msg)
-    return z * sd / root
+    return confidence_margin(standard_quantile(1 - alpha / 2), sd, size)
 
 
 # Evidenced error points and their neighbours (probes-numeric/m9-legacy-confidence, gen-m9 literal cells).

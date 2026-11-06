@@ -1,0 +1,105 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "INDIRECT of a sheet-scoped name behind an unquoted non-ASCII or digit-then-letter sheet prefix, read through ISREF, SUM, ERROR.TYPE and ROWS (T-4545; the name forms of probes/indirect-sheet-scoped-name).",
+ "tags": [
+  "M8",
+  "probe",
+  "lookup",
+  "T-4545"
+ ],
+ "names": {
+  "Données!tn": "='Données'!$B$2",
+  "1Q!tn": "='1Q'!$B$2",
+  "Ünïcode!tn": "='Ünïcode'!$B$2",
+  "Q1!tn": "='Q1'!$B$2",
+  "2024!tn": "='2024'!$B$2"
+ },
+ "sheets": [
+  {
+   "name": "Summary",
+   "cells": {
+    "B1": "=ISREF(INDIRECT(\"Données!tn\"))",
+    "C1": "=SUM(INDIRECT(\"Données!tn\"))",
+    "D1": "=ERROR.TYPE(INDIRECT(\"Données!tn\"))",
+    "E1": "=ROWS(INDIRECT(\"Données!tn\"))",
+    "B2": "=ISREF(INDIRECT(\"'Données'!tn\"))",
+    "C2": "=SUM(INDIRECT(\"'Données'!tn\"))",
+    "D2": "=ERROR.TYPE(INDIRECT(\"'Données'!tn\"))",
+    "E2": "=ROWS(INDIRECT(\"'Données'!tn\"))",
+    "B3": "=ISREF(INDIRECT(\"1Q!tn\"))",
+    "C3": "=SUM(INDIRECT(\"1Q!tn\"))",
+    "D3": "=ERROR.TYPE(INDIRECT(\"1Q!tn\"))",
+    "E3": "=ROWS(INDIRECT(\"1Q!tn\"))",
+    "B4": "=ISREF(INDIRECT(\"'1Q'!tn\"))",
+    "C4": "=SUM(INDIRECT(\"'1Q'!tn\"))",
+    "D4": "=ERROR.TYPE(INDIRECT(\"'1Q'!tn\"))",
+    "E4": "=ROWS(INDIRECT(\"'1Q'!tn\"))",
+    "B5": "=ISREF(INDIRECT(\"1q!tn\"))",
+    "C5": "=SUM(INDIRECT(\"1q!tn\"))",
+    "D5": "=ERROR.TYPE(INDIRECT(\"1q!tn\"))",
+    "E5": "=ROWS(INDIRECT(\"1q!tn\"))",
+    "B6": "=ISREF(INDIRECT(\"Ünïcode!tn\"))",
+    "C6": "=SUM(INDIRECT(\"Ünïcode!tn\"))",
+    "D6": "=ERROR.TYPE(INDIRECT(\"Ünïcode!tn\"))",
+    "E6": "=ROWS(INDIRECT(\"Ünïcode!tn\"))",
+    "B7": "=ISREF(INDIRECT(\"Q1!tn\"))",
+    "C7": "=SUM(INDIRECT(\"Q1!tn\"))",
+    "D7": "=ERROR.TYPE(INDIRECT(\"Q1!tn\"))",
+    "E7": "=ROWS(INDIRECT(\"Q1!tn\"))",
+    "B8": "=ISREF(INDIRECT(\"2024!tn\"))",
+    "C8": "=SUM(INDIRECT(\"2024!tn\"))",
+    "D8": "=ERROR.TYPE(INDIRECT(\"2024!tn\"))",
+    "E8": "=ROWS(INDIRECT(\"2024!tn\"))"
+   }
+  },
+  {
+   "name": "Données",
+   "cells": {
+    "B1": 7,
+    "B2": 8,
+    "B3": 9
+   }
+  },
+  {
+   "name": "1Q",
+   "cells": {
+    "B1": 7,
+    "B2": 8,
+    "B3": 9
+   }
+  },
+  {
+   "name": "2024",
+   "cells": {
+    "B1": 7,
+    "B2": 8,
+    "B3": 9
+   }
+  },
+  {
+   "name": "Ünïcode",
+   "cells": {
+    "B1": 7,
+    "B2": 8,
+    "B3": 9
+   }
+  },
+  {
+   "name": "Q1",
+   "cells": {
+    "B1": 7,
+    "B2": 8,
+    "B3": 9
+   }
+  },
+  {
+   "name": "x.y",
+   "cells": {
+    "B1": 7,
+    "B2": 8,
+    "B3": 9
+   }
+  }
+ ],
+ "expected": {}
+}
