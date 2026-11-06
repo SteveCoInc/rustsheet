@@ -53,11 +53,14 @@ PRODUCT and COUNT over the accumulator give Excel's results. The rules are probe
       probes/scan-over-groupby still pass; the eval gate shows 0 regressions in every suite.
 - [ ] docs/excel-semantics/arrays.md: the "Unprobed initial values" list and the "what Excel does with `ISREF(a)` on an
       accumulator is unprobed" clause are replaced by the probed rules with their cells.
-- [ ] Unit tests pin `REDUCE(IF(TRUE,A2),A3,COUNT)` and the REDUCE accumulator ISREF formula at their probed values.
+- [ ] Unit tests pin `REDUCE(IF(TRUE,A2),A3,COUNT)` at its probed value (the accumulator formula belongs to T-4478).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - A LAMBDA result that is a multi-cell range (MAP/SCAN `#CALC!`, REDUCE's last accumulator): T-4476.
+- Implementing the accumulator a step returns (REDUCE and SCAN keeping or dropping a returned reference, `a:v` across
+  steps): T-4478, which shares this task's context cell gen-m7/2c5ea078f25443a2 A1767. This task only probes the
+  accumulator (the row-11 cells) and hands what it finds to T-4478.
 - ISOMITTED of an empty initial value (T-2670) and error or multi-cell-range initial values as argument kinds (T-2878).
 - BYROW/BYCOL/MAP slices (already references, T-1395, T-1442). PIVOTBY subtotal work (T-4388, T-4401, T-4414,
   T-4428), function arrays (T-4449) and eta names (T-4450) are unrelated.
