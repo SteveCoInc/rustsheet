@@ -11,16 +11,19 @@ STDEVA and VARA over numbers are STDEV.S and VAR.S: they differ only in how text
 
 Domain (an Excel error region, never a math value):
 - VAR and STDEV of one number is `#DIV/0!` (n - 1 = 0).
-- A one-pass sum of squares beyond the double range is `#NUM!` (statistics.md: "`VAR.P` of 1E+200 twice is
-  `#NUM!`"). The draws keep |x| at or below 1E+150, so no drawn point is there; the rule keeps an eval cell over
-  larger literals from getting a value.
+- VAR and STDEV: a one-pass sum of squares beyond the double range is `#NUM!` (statistics.md: "`VAR.P` of 1E+200
+  twice is `#NUM!`").
+- DEVSQ: an overflow in its two-pass form (the sum of the numbers, a squared deviation or their sum) is `#NUM!`,
+  inferred from statistics.md "DEVSQ is a two-pass sum" and not probed.
+The draws keep |x| at or below 1E+150, so no drawn point reaches either overflow; the rules keep an eval cell over
+larger literals from getting a value.
 Squares that are subnormal are flushed to 0 by Excel (statistics.md, `STDEV.S({0,2.2E-154})` is 0); the draws keep
 every number at or above 1E-60 in magnitude, so a deviation small enough to flush would need a number within 1E-154
 of the mean, which a draw does not aim at.
 
 The arity is drawn per stratum: 2 to 10 numbers (typical), offset data near the one-pass/two-pass switch (tail),
-small shapes such as one equal pair, two numbers and Excel's argument limit (edge; 254 for VAR.S and STDEV.S), 50 to 255 numbers of mixed
-magnitudes (extreme) and a log-uniform count of log-uniform numbers (log-uniform).
+small shapes such as equal numbers, one or two numbers and the argument limit (edge; the limit is 254 for VAR.S
+and STDEV.S), 50 to 255 numbers of mixed magnitudes (extreme) and a log-uniform count of log-uniform numbers (log-uniform).
 """
 
 from __future__ import annotations
@@ -66,8 +69,9 @@ def _stdev(args: Sequence[MathArg]) -> mpmath.mpf:
     return mpmath.sqrt(_var(args))
 
 
-def overflow(args: Sequence[MathArg]) -> str | None:
-    """Why the point is `#NUM!`: a square, or the one-pass running sum of squares, beyond the double range."""
+def squares_overflow(args: Sequence[MathArg]) -> str | None:
+    """VAR's and STDEV's `#NUM!`: a square, or the one-pass running sum of squares, beyond the double range
+    (statistics.md: `VAR.P` of 1E+200 twice is `#NUM!`)."""
     squares = [float(x) * float(x) for x in scalars(args)]
     if not all(math.isfinite(s) for s in squares):
         return "a square is beyond the double range"
@@ -75,10 +79,26 @@ def overflow(args: Sequence[MathArg]) -> str | None:
     return None if math.isfinite(total) else "the sum of squares is beyond the double range"
 
 
+def deviations_overflow(args: Sequence[MathArg]) -> str | None:
+    """DEVSQ's `#NUM!`, inferred from its two-pass form (statistics.md "DEVSQ is a two-pass sum": the double mean, then
+    the squared deviations summed left to right) and not probed: the running sum of the numbers, a squared deviation
+    or the running sum of squared deviations beyond the double range. The draws never reach it."""
+    xs = [float(x) for x in scalars(args)]
+    _, total = running_total(xs)
+    if not math.isfinite(total):
+        return "the sum of the numbers is beyond the double range"
+    mean = total / len(xs)
+    squares = [(x - mean) * (x - mean) for x in xs]
+    if not all(math.isfinite(s) for s in squares):
+        return "a squared deviation is beyond the double range"
+    _, total = running_total(squares)
+    return None if math.isfinite(total) else "the sum of squared deviations is beyond the double range"
+
+
 def _var_domain(args: Sequence[MathArg]) -> str | None:
     if len(args) < 2:
         return "#DIV/0!: the sample variance of one number"
-    return overflow(args)
+    return squares_overflow(args)
 
 
 # -- draws -------------------------------------------------------------------------------------
@@ -92,18 +112,19 @@ def _offset(rng: random.Random) -> list[float]:
     """Offset data, where Excel's one-pass sum cancels and its switch picks the two-pass form (statistics.md: `VAR.P`
     of {1000000003,1000000001,...}): a large offset plus a small spread, written to 15 digits."""
     offset = signed_log_uniform(rng, 1.0, 1e9)
-    # a relative spread from 1E-6: below it the rounding of Excel's double mean moves the variance past 1E-9
-    spread = abs(offset) * log_uniform(rng, 1e-6, 1e-1)
+    spread = abs(offset) * log_uniform(rng, 1e-9, 1e-1)
     return [round15(offset + spread * rng.uniform(-1, 1)) for _ in range(rng.randint(2, 12))]
 
 
 def _edge(rng: random.Random, max_args: int) -> list[float]:
-    shape = rng.randrange(5)
+    shape = rng.randrange(6)
     if shape == 0:  # two numbers, the smallest sample
         return [_number(rng), _number(rng)]
-    if shape == 1:  # an equal pair: S is exactly 0 (Excel's double mean of more equal numbers can be inexact)
+    if shape == 1:  # equal numbers: S is exactly 0 (Excel's double mean of three or more may not be x)
         x = _number(rng)
-        return [x, x]
+        return [x] * rng.randint(2, 6)
+    if shape == 5:  # one number, the invalid neighbour: VAR and STDEV are #DIV/0!, DEVSQ is 0
+        return [_number(rng)]
     if shape == 2:  # small integers, where Excel keeps the one-pass form ({1,2,4}: 2.333333333333334)
         return [float(rng.randint(-20, 20)) for _ in range(rng.randint(2, 8))]
     if shape == 3:  # the argument limit
@@ -143,12 +164,14 @@ def _definition(
     value: Callable[[Sequence[MathArg]], mpmath.mpf],
     domain: Callable[[Sequence[MathArg]], str | None],
     sources: tuple[str, ...],
+    *,
     draw: Callable[[str, random.Random], list[Arg]] = _draw,
+    param: str = "number",
 ) -> Definition:
     return register(
         Definition(
             function=function,
-            params=(Param("number", "real", source=sources[0]),),
+            params=(Param(param, "real", source=sources[0]),),
             value=value,
             domain=domain,
             draw=draw,
@@ -159,9 +182,9 @@ def _definition(
 
 
 VAR = _definition("VAR", _var, _var_domain, (SWITCH_SOURCE,))
-VAR_S = _definition("VAR.S", _var, _var_domain, (SWITCH_SOURCE,), _draw_xlfn)
-VARA = _definition("VARA", _var, _var_domain, (SWITCH_SOURCE, VARA_SOURCE))
+VAR_S = _definition("VAR.S", _var, _var_domain, (SWITCH_SOURCE,), draw=_draw_xlfn)
+VARA = _definition("VARA", _var, _var_domain, (SWITCH_SOURCE, VARA_SOURCE), param="value")
 STDEV = _definition("STDEV", _stdev, _var_domain, (SWITCH_SOURCE,))
-STDEV_S = _definition("STDEV.S", _stdev, _var_domain, (SWITCH_SOURCE,), _draw_xlfn)
-STDEVA = _definition("STDEVA", _stdev, _var_domain, (SWITCH_SOURCE, VARA_SOURCE))
-DEVSQ = _definition("DEVSQ", _devsq, overflow, (DEVSQ_SOURCE,))
+STDEV_S = _definition("STDEV.S", _stdev, _var_domain, (SWITCH_SOURCE,), draw=_draw_xlfn)
+STDEVA = _definition("STDEVA", _stdev, _var_domain, (SWITCH_SOURCE, VARA_SOURCE), param="value")
+DEVSQ = _definition("DEVSQ", _devsq, deviations_overflow, (DEVSQ_SOURCE,))

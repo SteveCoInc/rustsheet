@@ -50,7 +50,9 @@ def test_domain() -> None:
     assert VAR_S.domain(mp([2.0])) is not None
     # statistics.md: VAR.P of 1E+200 twice is #NUM! (the one-pass sum of squares overflows).
     assert VAR_S.domain(mp([1e200, 1e200])) is not None
-    assert DEVSQ.domain(mp([1e200, 1e200])) is not None
+    # DEVSQ's two-pass form does not overflow where VAR's one-pass sum of squares does
+    assert DEVSQ.domain(mp([1e200, 1e200])) is None
+    assert DEVSQ.domain(mp([1e200, -1e200])) is not None  # (x - m)^2 = 1E+400
     assert VAR_S.domain(mp([1e150] * 255)) is None
 
 
@@ -59,5 +61,8 @@ def test_draws_stay_inside_the_domain(stratum: str) -> None:
     rng = random.Random(4089)
     for _ in range(200):
         args = _draw(stratum, rng)
-        assert 2 <= len(args) <= 255
-        assert VAR_S.domain is not None and VAR_S.domain(mp([float(a) for a in args])) is None  # type: ignore[arg-type]
+        assert 1 <= len(args) <= 255
+        assert VAR_S.domain is not None and DEVSQ.domain is not None
+        numbers = mp([float(a) for a in args])  # type: ignore[arg-type]
+        assert DEVSQ.domain(numbers) is None
+        assert (VAR_S.domain(numbers) is None) == (len(args) >= 2)

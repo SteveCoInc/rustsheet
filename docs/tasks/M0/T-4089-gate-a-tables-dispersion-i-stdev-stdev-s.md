@@ -50,21 +50,24 @@ Every failing table point has an owner.
     `#NUM!` (statistics.md).
   - The definitions reuse aggregate.py's `running_total` and `MAX_ARGS` and _common's `scalars` and
     `signed_log_uniform`.
-- **Draws:** typical, offset data near the one-pass/two-pass switch (relative spread 1E-6 to 0.1), edge shapes, and
-  long mixed-magnitude calls. The edge shapes are an equal pair, two numbers, small integers and the argument limit.
-  - Two first draws were dropped before any table was committed, because each gave a point the math does not model.
-  - Six equal numbers: Excel's double mean of them is inexact, so the engine (and Excel) return about 1E-16 where
-    the math is 0. Only the equal pair stays.
-  - A relative spread below 1E-6: there the mean's rounding moves the variance past 1E-9.
-  - These are draw-range choices, not fits. No digit was scored, and they were made before the oracle saw the
-    tables.
-- **New quirk (syntax.md "The repeating maxima"):** an xlsx with a 255-argument `_xlfn.VAR.S` call does not open in
-  Excel for the web, while 254 arguments, or legacy `VAR` with 255, do. VAR.S and STDEV.S are therefore drawn to
+- **Draws:**
+  - Strata: typical, offset data near the one-pass/two-pass switch (relative spread 1E-9 to 0.1), edge shapes, and
+    long mixed-magnitude calls.
+  - Edge shapes: one number (VAR and STDEV `#DIV/0!`, DEVSQ 0), two numbers, two to six equal numbers, small
+    integers, and the argument limit.
+  - After review round 1, the equal numbers and the spread below 1E-6 are drawn again rather than cut.
+- **DEVSQ domain:** DEVSQ has its own two-pass overflow rule (the sum, a squared deviation, or their sum), inferred
+  and not probed. `DEVSQ(1E+200,1E+200)` is 0, not `#NUM!` (review round 1).
+- **New quirk (syntax.md "The repeating maxima"; inputs in docs/research/t4089/xlfn-arguments.md):** an xlsx with a
+  255-argument `_xlfn.VAR.S` call does not open in Excel for the web, while 254 arguments, or legacy `VAR` with 255,
+  do. VAR.S and STDEV.S are therefore drawn to
   254 arguments.
 - **Tables:** `eval/accuracy/tables/{VAR,VAR.S,VARA,STDEV,STDEV.S,STDEVA,DEVSQ}/s1`, 120 points each, filled from
   excel-graph.
   - `rustsheet-eval accuracy` puts all 840 points in the envelope, with 0 failing and 0 known failures.
   - Missing tables went from 135 to 128.
   - R3 candidates (Excel more than 1E-4 off the math): none. The worst relative difference between Excel and the
-    math is 7.8E-15 (DEVSQ).
+    math is 1.0E-14 (DEVSQ A117).
+  - 4 points are within 15 digits of Excel only (accuracy's "Excel 15 digits only" went from 1333 to 1337). The
+    engine matches Excel to 15 digits there but is outside the math envelope.
 - **Eval delta:** none, because no engine or eval-suite case changed.
