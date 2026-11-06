@@ -3,7 +3,7 @@ id: T-4329
 title: "Fill the probe suites' math sidecars at huge gamma shapes now that Temme's expansion gives them values"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
