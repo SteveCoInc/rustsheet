@@ -57,7 +57,7 @@
     "A85": "=_xlfn.GROUPBY(Data!C1:C12,Data!D1:D12,_xleta.SUM,0,1,,(Data!D1:D12=\"zz\"))",
     "E85": "(a) scalar call, filter empty",
     "A89": "=_xlfn.GROUPBY(Data!C1:C12,Data!D1:D12,_xleta.SUM,0,1,,(Data!C1:C12>99),{0,1;0,1})",
-    "E89": "(a) rel {0,1;0,1} filter C>99 (keeps 4 text/FALSE rows)",
+    "E89": "(a) rel {0,1;0,1} filter C>99 (keeps C10 and the text/FALSE rows)",
     "A93": "=_xlfn.GROUPBY(Data!C1:C12,Data!D1:D12,_xleta.SUM,0,1,,,{1,0;0,1})",
     "E93": "(b) keys Data!C1:C12 rel {1,0;0,1} depth 1 filter none",
     "A97": "=_xlfn.GROUPBY(Data!C1:C12,Data!D1:D12,_xleta.SUM,0,1,,(Data!C1:C12<0.2),{1,0;0,1})",

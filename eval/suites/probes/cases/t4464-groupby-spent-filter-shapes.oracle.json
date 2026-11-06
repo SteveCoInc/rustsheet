@@ -1300,10 +1300,10 @@
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "80077445db21f1759ec50d026859c4946af8feac7cf034df8b3834b53b6a076b",
+  "input_sha256": "f36bb6b646f8df0ae8dcd0b46afe2f6ffe4b82a88016c0085300fc5909c5adf8",
   "kind": "excel-graph",
-  "produced_at": "2026-11-06T05:40:44+00:00",
+  "produced_at": "2026-11-06T06:00:14+00:00",
   "version": null,
-  "workbook_name": "26e2ee690db9a2b6288d3d5b425b913960741a0d74442437d32c90fe43d1962f.xlsx"
+  "workbook_name": "2d174ab4f7dd4dec557b8aa34afd7cf06c23775519c048297965019ecd6422cf.xlsx"
  }
 }

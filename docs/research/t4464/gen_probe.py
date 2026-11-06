@@ -5,8 +5,9 @@ probes/t3840-groupby-lifted-filter-consumed's (the gen-m7 batch Data sheet), so 
 Each call is at A<r> on sheet G with its label in E<r>; calls are 4 rows apart, so a result of up to 3x3 fits.
 
 Filters: DROP (`Data!C1:C12<0.2`) drops rows, as in T-3840. EMPTY (`Data!D1:D12="zz"`) keeps no row: column D holds
-numbers and booleans only. GT99 is the task's `Data!C1:C12>99`, which is not a no-row filter in Excel: column C's text
-and FALSE compare greater than any number, so it keeps four rows (C1, C3, C5, C11).
+numbers and booleans only. GT99 is the task's `Data!C1:C12>99`, which is not a no-row filter in Excel: besides C10
+(123456789.123), column C's text and FALSE compare greater than any number, so it keeps five rows (C1, C3, C5, C10,
+C11).
 """
 
 import json
@@ -41,7 +42,7 @@ def calls() -> list[tuple[str, str]]:
         for name, filt in (("none", ""), ("drop", DROP), ("empty", EMPTY)):
             out.append((gb(depth=depth, filt=filt), f"(a) depth {depth} filter {name}"))
     out.append((gb(filt=EMPTY), "(a) scalar call, filter empty"))
-    out.append((gb(rel="{0,1;0,1}", filt=GT99), "(a) rel {0,1;0,1} filter C>99 (keeps 4 text/FALSE rows)"))
+    out.append((gb(rel="{0,1;0,1}", filt=GT99), "(a) rel {0,1;0,1} filter C>99 (keeps C10 and the text/FALSE rows)"))
     # (b) a lifted table relationship (1) with total depth 1, 2 and -1 beside a dropping filter; one and two key
     # columns (a subtotal needs a second key column).
     for keys in ("Data!C1:C12", "Data!B1:C12"):

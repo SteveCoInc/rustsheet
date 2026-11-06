@@ -2463,8 +2463,8 @@ so the later calls meet a filter taller than them.
   {1,2;1,1} or {5,1;1,1} beside it (G!A9:B10, A21:B22, A33:B34, A45:B46, A57:B58, A69:B70, A81:B82), while the same calls
   without a filter or with `(Data!C1:C12<0.2)` give the elements their values as above (G!A1:B82). Every element meets
   the same filter, so whether a no-row filter is spent cannot be seen: an element is `#VALUE!` either way. Note that
-  `(Data!C1:C12>99)` is no such filter: text and FALSE compare above every number, so it keeps C1, C3, C5 and C11 and is
-  spent like any dropping filter (123456789.123, `#VALUE!`; `#VALUE!`, `#VALUE!`, G!A89:B90).
+  `(Data!C1:C12>99)` is no such filter: it keeps C10 (123456789.123), and text and FALSE compare above every number, so
+  it keeps C1, C3, C5, C10 and C11 and is spent like any dropping filter (123456789.123, `#VALUE!`; `#VALUE!`, `#VALUE!`, G!A89:B90).
 - A table `field_relationship` (1) refuses subtotals after the filter, so its refusal spends it. Over two key columns
   (Data!B1:C12), {1,0;0,1} with total depth 2 is `#VALUE!`, 0.3; 0.3, `#VALUE!` without a filter but `#VALUE!` in all
   four beside `(Data!C1:C12<0.2)` (G!A173:B178), and `{"x",1;0,1}` with depth 2 is `#VALUE!` in all four beside it, where
