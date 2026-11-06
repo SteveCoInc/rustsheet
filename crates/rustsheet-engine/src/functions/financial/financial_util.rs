@@ -344,34 +344,53 @@ fn irr_flat_is_div_zero(values: &[f64], guess: f64, largest_npv: f64) -> bool {
 }
 
 /// The steps an IRR secant run takes before it fails, where its flows and guess are inside
-/// [`IRR_LONG_RUN_FLOWS`]; elsewhere a run fails after [`IRR_SHORT_RUN_STEPS`]. Excel finishes runs
-/// longer than 50 steps on the run's own digits: over every IRR cell in eval and Gate A, the 83 cells
-/// whose run (from the guess, or the retry from 0.1) stops at its 51st to 200th step by the residual
-/// stop are Excel's value bit for bit (t3411-irr-r4-fresh-3 A53 and t3478-irr-r4-wide A221 at the
-/// 200th, t3411-irr-r4-fresh A53 at the 90th). A run that needs its 208th step is not finished:
-/// Excel returns the retry's digits there (t3411-irr-r4-fresh-4 A70; also fresh A55 at 215, fresh-2
-/// A63 at 217). The round value is placed in that bracket (financial.md "IRR's secant runs longer
-/// than 50 steps"; T-3408). It was no rule of its own before (T-3548, T-3806): the cells that
-/// refuted a cap, Excel `#NUM!` where the run converges (t3478-irr-r4-wide A227 at 189 steps, Gate A
-/// r4-T-3411 A228 at 129 and A215 at 132), all stop on a stalled zero step, which past
-/// [`IRR_SHORT_RUN_STEPS`] fails the run ([`irr_secant`]).
-/// FITTED(T-3408, 89 cells, IRR secant runs of 51..200 steps: 6..54 flows, largest |c| 5.6E-9..9.6E+8, guess -0.9997..9.81E+7; cap bracketed 200..207)
+/// [`IRR_LONG_RUN_RANGE`]; elsewhere a run fails after [`IRR_SHORT_RUN_STEPS`]. Excel finishes runs
+/// longer than 50 steps on the run's own digits. Over every IRR literal cell in eval and Gate A, the
+/// 83 runs (from the guess, or the retry from 0.1) that reach the residual stop at their 51st to 200th
+/// step are Excel's value bit for bit (t3411-irr-r4-fresh A53 at the 90th step). The bracket is read
+/// from the fit lab's train side only (decision 0188 R4.1): the last train run Excel finishes stops at
+/// its 200th step (t3411-irr-r4-fresh-3 A53), and the first train run it does not finish, where it
+/// returns the retry's digits, needs its 217th (t3411-irr-r4-fresh-2 A63). The test side narrows it to
+/// 200..207 (t3411-irr-r4-fresh-4 A70 at 208). The cells are listed with their step counts in
+/// `docs/research/t3408/long_runs.tsv` (financial.md "IRR's secant runs longer than 50 steps"; T-3408,
+/// decision 0320).
+/// FITTED(T-3408, 83 cells, IRR secant runs of 51..200 steps: 6..54 flows, largest |c| 5.6E-9..9.6E+8, guess -0.9997..9.81E+7; cap bracketed 200..216 on train)
 const IRR_LONG_RUN_STEPS: usize = 200;
 
-/// The steps of an IRR secant run outside [`IRR_LONG_RUN_FLOWS`], and the steps within which a
-/// stalled zero step still stops a run (T-3120's evidence is all inside it): a directive-5 bound
-/// (financial.md "The IRR and XIRR solver caps").
+/// The steps of an IRR secant run outside [`IRR_LONG_RUN_RANGE`], and the steps within which a
+/// stalled zero step still stops a run: a directive-5 bound (financial.md "The IRR and XIRR solver
+/// caps"). As the stall bound it sits in a bracket of 41..69 steps: Excel returns every stalled stop
+/// in eval up to the 41st step (t3478-irr-r4-wide A260) and is `#NUM!` on all six from there to
+/// Excel's cap (70th to 189th: probes/irr-guess-edges-2 A25-A27, Gate A r4-T-3411 A228 and A215, t3478-irr-r4-wide
+/// A227). Those six are all outside [`IRR_LONG_RUN_RANGE`], where runs stop at 50 steps anyway, so no
+/// scored cell tests the stall bound inside the range; there it follows them (T-3408).
 const IRR_SHORT_RUN_STEPS: usize = 50;
 
-/// The calls [`IRR_LONG_RUN_STEPS`] is evidenced on (decision 0188 R4.3): 6 to 54 flows with the
-/// largest |flow| from 5.6E-9 to 9.6E+8 and a guess from -0.9997 to 9.81E+7, the range of the 83
-/// long runs Excel finishes.
-const IRR_LONG_RUN_FLOWS: (usize, usize, f64, f64, f64, f64) =
-    (6, 54, 5.6e-9, 9.6e8, -0.9997, 9.81e7);
+/// The calls an IRR secant cap is evidenced on: flow count, largest |flow| and guess, each inclusive.
+struct IrrRunRange {
+    flows: (usize, usize),
+    largest_flow: (f64, f64),
+    guess: (f64, f64),
+}
+
+/// The calls [`IRR_LONG_RUN_STEPS`] is evidenced on (decision 0188 R4.3): the range of the 57
+/// returning long runs on the fit lab's train side, which is also that of all 83. 6 flows
+/// (t2927-irr-fallback-sweep A93) to 54 (t3411-irr-r4-fresh-4 A148); largest |flow| 5.6E-9
+/// (t3478-irr-r4-wide A270) to 9.52E+8 (A278); guess -0.99970 (t3411-irr-r4-fresh-3 A57) to
+/// 9.81E+7 (t3478-irr-r4-wide A234). The bounds are rounded outward in the last kept digit.
+const IRR_LONG_RUN_RANGE: IrrRunRange = IrrRunRange {
+    flows: (6, 54),
+    largest_flow: (5.6e-9, 9.6e8),
+    guess: (-0.9997, 9.81e7),
+};
 
 /// The step cap of an IRR secant run on `values` from `guess` ([`IRR_LONG_RUN_STEPS`]).
 fn irr_secant_steps(values: &[f64], guess: f64) -> usize {
-    let (fewest, most, smallest, largest, lowest, highest) = IRR_LONG_RUN_FLOWS;
+    let IrrRunRange {
+        flows: (fewest, most),
+        largest_flow: (smallest, largest),
+        guess: (lowest, highest),
+    } = IRR_LONG_RUN_RANGE;
     let peak = largest_flow(values);
     if (fewest..=most).contains(&values.len())
         && (smallest..=largest).contains(&peak)
@@ -452,9 +471,8 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
         // A107-C141). The bound is fitted: anything from 1E-20 to 1E-7 of the largest flow
         // scores the same, and an absolute residual from 1E-5 to 0.1 would too.
         // Past [`IRR_SHORT_RUN_STEPS`] a stalled zero step is no stop: the run goes flat on its
-        // next step and fails. Excel is `#NUM!` on all 6 runs in eval and Gate A that stall there
-        // (51 to 189 steps: probes/irr-guess-edges-2 A25-A27, t3478-irr-r4-wide A227, Gate A
-        // r4-T-3411 A215 and A228) and returns on runs that stall within it (T-3408).
+        // next step and fails. Excel is `#NUM!` on all 6 stalled stops in eval and Gate A between the
+        // 41st step and its cap; all of them lie outside [`IRR_LONG_RUN_RANGE`] (T-3408).
         let stalled = d2 == d1 && f2.abs() < 1e-7 * peak && step < IRR_SHORT_RUN_STEPS;
         if (d2 - d1).abs() < 1e-7 && (f2.abs() < 1e-7 || stalled) {
             return irr_from_discount(1.0 - d2).ok_or(SecantStop::Failed);

@@ -1,6 +1,6 @@
 ---
 id: T-3408
-title: "IRR's digits on conventional flows where the secant fails: match Excel's stop (21 cells of the T-3347 cases)"
+title: "IRR's long secant runs: Excel finishes runs of up to 200 steps on their own digits"
 milestone: M9
 lane: functions-financial
 status: done
@@ -35,9 +35,9 @@ IRR returns Excel's value to 15 significant digits on the conventional cash-flow
 - Any fit follows decision 0188 R4 (hold-out split, fresh sweep, `FITTED` tag).
 
 ## Acceptance criteria
-- [ ] Every cell of the two T-3347 cases is within 15 significant digits of Excel's value, with the right type.
-      (Rescoped at the claim: their `#NUM!` cells are T-3347's accepted block. Of the digit cells, see Outcome: 20
-      of 36 in-scope cells fixed; the 16 noise-floor cells move to T-4213.)
+- [ ] ~~Every cell of the two T-3347 cases is within 15 significant digits of Excel's value, with the right
+      type.~~ Rescoped at the claim: their `#NUM!` cells are T-3347's accepted block. Of the in-scope digit cells, 20
+      of 36 are fixed (Outcome); the 16 noise-floor cells move to T-4213.
 - [x] A fresh hold-out sweep (decision 0188 R4.1) shows the same, and the Gate A floor still holds.
 - [ ] ~~Oracle cells for the shapes the stage takes~~: obsolete, the Newton stage from v = 1 never landed.
 - [x] No gated cell regresses.
@@ -80,16 +80,26 @@ The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, 
 
 ## Outcome (2026-11-06, branch agent/functions-financial/T-3408-irr-conventional-digits)
 - **Engine:** `irr_secant` runs up to `IRR_LONG_RUN_STEPS` = 200 steps (was 50) on 6..54 flows with the largest |c|
-  in 5.6E-9..9.6E+8 and a guess in -0.9997..9.81E+7 (`IRR_LONG_RUN_FLOWS`, R4.3), 50 elsewhere. A stalled zero step
-  stops a run only within its first 50 steps. `FITTED(T-3408, ...)`, quality/fitted.json 95 -> 96, decision 0320.
+  in 5.6E-9..9.6E+8 and a guess in -0.9997..9.81E+7 (`IRR_LONG_RUN_RANGE`, R4.3), 50 elsewhere. A stalled zero step
+  stops a run only within its first 50 steps (the old cap; Excel's stall bound is bracketed 41..69, not fitted). `FITTED(T-3408, ...)`, quality/fitted.json 95 -> 96, decision 0320.
   Unit tests: `irr_secant_runs_up_to_200_steps_on_the_evidenced_flows`, `the_long_secant_cap_applies_only_inside_its_evidence`.
 - **Why:** Excel's value on 21 of the in-scope cells is the guess run's own stop iterate after 51..200 steps (see "R4
   plan"). The counterexamples that refuted a cap before (T-3548, T-3806: t3478-irr-r4-wide A227, Gate A A228, A215)
-  are all stalled stops past step 50, and so are irr-guess-edges-2 A25-A27. All 6 are `#NUM!` in Excel.
+  are stalled stops past step 41, as are irr-guess-edges-2 A25-A27; all 6 are `#NUM!` in Excel. All six lie outside
+  the cap's range, so they explain the earlier refutations but do not test the stall bound inside it.
+- **Review round 1 (fidelity, R4.1):** the R4 plan's bracket and range were read off all cells. Re-derived from train
+  only (docs/research/t3408/bounds.py on long_runs.tsv, the replay's cell list with step counts and sides): bracket
+  200..216 (train edges t3411-irr-r4-fresh-3 A53 at step 200, t3411-irr-r4-fresh-2 A63 at 217; test narrows it to
+  200..207); range 6..54 flows (t2927 A93, t3411-irr-r4-fresh-4 A148), |c| 5.62E-9..9.52E+8 (t3478-irr-r4-wide A270,
+  A278), guess -0.99970..9.81E+7 (t3411-irr-r4-fresh-3 A57, t3478 A234). Identical to the shipped gate, so the
+  hold-out result is unchanged. The tag now counts the 83 returning runs. Tiered R4.1 table (bit-exact / 4 ulp / 15
+  digits) for main, model and the correctly rounded root in decision 0320; `IRR_LONG_RUN_FLOWS` became the named
+  `IRR_LONG_RUN_RANGE`.
 - **R4.1** (fit lab split, 2,333 IRR literal cells of eval/suites, margin 5 points): train 1,126 -> 1,175 of 1,620
   (69.51% -> 72.53%), test 507 -> 529 of 713 (71.11% -> 74.19%); type/error mismatches 352 -> 336 and 167 -> 154.
-  49 train and 22 test cells fixed, 0 worse, 0 changed-still-failing. The correctly rounded root is bit-exact on 0 of
-  the 28 changed cells with a math sidecar.
+  49 train and 22 test cells fixed, 0 worse, 0 changed-still-failing. Within 4 ulp / 15 digits: train 1,156 -> 1,203
+  and 1,159 -> 1,206; test 513 -> 534 and 514 -> 535. The correctly rounded root, where a math root exists, is
+  bit-exact on 71 of 951 train and 37 of 424 test cells.
 - **R4.2** fresh sweep probes-numeric/t3408-irr-r4-fresh (seed "T-3408/r4-fresh", committed after the freeze commit
   04bd27413, excel-graph 2026-11-06): passed 76 -> 119 of 150, 43 fixed, none away. Gate A envelope against its
   50-digit roots: 108 -> 119 in, per stratum 21/24/18/11/20/14 -> 23/25/22/14/21/14. The 31 left are all `#NUM!` for

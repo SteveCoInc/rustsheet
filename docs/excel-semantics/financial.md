@@ -4582,26 +4582,35 @@ is `#NUM!`, 21 of them with 42 to 150 flows; a 100-step cap recovers 12 of the 3
 of the 21 long ones (T-3548).
 Tasks: T-3406, T-3411 (the model), T-3407 (`#DIV/0!`), T-3347, T-3548
 
-## IRR's secant runs longer than 50 steps: up to 200, and a stalled stop past step 50 is no root
-Rule (T-3408, 2026-11-06; supersedes "no step cap is Excel's rule" below): Excel's IRR secant run (from the guess,
-then the retry from 0.1) returns its own stop iterate after up to at least 200 steps and not after 208 or more. A run
-that reaches its stop only by a stalled zero step (d2 = d1 with |NPV| above 1e-7, the stop T-3120 fitted on short
-runs) after its 50th step is `#NUM!` in Excel.
-- In an engine replay of every IRR literal cell with an oracle value (3,233 cells of eval/suites and Gate A), the
-  runs that stop at their 51st..207th step split cleanly. The 83 that stop by the residual stop are Excel's value bit
-  for bit, up to the 200th step (t3411-irr-r4-fresh-3 A53, t3478-irr-r4-wide A221; t3411-irr-r4-fresh A53 at the
-  90th). The 6 that stop on a stalled zero step are all `#NUM!`: probes/irr-guess-edges-2 A25, A26, A27 (69th, 73rd,
-  124th step), Gate A r4-T-3411 A228 (129th) and A215 (132nd), and t3478-irr-r4-wide A227 (189th). Those were the
-  cells that refuted a plain cap below, and all of them are stalled stops.
-- From the 208th step Excel has the retry's digits: t3411-irr-r4-fresh-4 A70 (208th), fresh A55 (215th), fresh-2 A63
-  (217th). So Excel's cap is between 200 and 207 steps.
+## IRR's secant runs longer than 50 steps: up to 200, and a stalled stop past the 41st step is no root
+Rule (T-3408, 2026-11-06; supersedes "no step cap is Excel's rule" below): an IRR secant run in Excel (from the guess,
+then the retry from 0.1) returns its own stop iterate after up to at least 200 steps. It does not after 208 or more.
+A run that reaches its stop only by a stalled zero step (d2 = d1 with |NPV| above 1e-7, the stop T-3120 fitted on
+short runs) returns up to its 41st step and is `#NUM!` from its 70th. That is shown only on flow sets outside the cap's
+range below.
+- The replay: an engine replay of every IRR literal cell with an oracle value, 3,233 cells of eval/suites and Gate
+  A. Its cells, with step counts and fit lab sides, are in docs/research/t3408/long_runs.tsv;
+  `python3 -I docs/research/t3408/bounds.py docs/research/t3408/long_runs.tsv` prints the bounds.
+- The 83 runs that reach the residual stop at their 51st..200th step are Excel's value bit for bit, for example
+  t3411-irr-r4-fresh A53 at the 90th step and t3411-irr-r4-fresh-3 A53 and t3478-irr-r4-wide A221 at the 200th.
+- From the 208th step Excel has the retry's digits: t3411-irr-r4-fresh-4 A70 (208th), fresh A55 (215th) and fresh-2
+  A63 (217th). So Excel's cap is between 200 and 207 steps. On the fit lab's train side alone it is 200..216.
+- Stalled stops: Excel returns them up to the 41st step (t3478-irr-r4-wide A260). It is `#NUM!` on all 6 between there
+  and its cap:
+  - probes/irr-guess-edges-2 A25, A26, A27 (70th, 74th, 125th step; 3 and 4 flows, |c| 1E+28 to 1E+45);
+  - Gate A r4-T-3411 A228 (129th; 63 flows) and A215 (132nd; 164 flows);
+  - t3478-irr-r4-wide A227 (189th; |c| 4.6E+17).
+
+  These include the cells that refuted a plain cap below. All six lie outside the range the engine gives the 200-step
+  cap (6..54 flows, |c| up to 9.6E+8).
 - Fresh sweep (decision 0188 R4.2), drawn after the model was frozen: probes-numeric/t3408-irr-r4-fresh (150 series
-  of long runs, seed "T-3408/r4-fresh" of docs/research/t3411/gen_sweep.py, excel-graph 2026-11-06). With the
-  200-step cap 119 of 150 cells pass, against 76 with 50, and none moves away. Its 31 other cells are `#NUM!` where
-  Excel returns a root (T-3548's class). 11 of them are on 55..148 flows, outside the range the engine applies the cap
-  on, so Excel may finish long runs on longer series too.
-- Not shown: what Excel does at a stalled stop past step 50 on the flows inside the cap's range (no cell has one), or
-  whether the bound on the stall is exactly 50.
+  of long runs, seed "T-3408/r4-fresh" of docs/research/t3411/gen_sweep.py, excel-graph 2026-11-06).
+  - With the 200-step cap 119 of 150 cells pass, against 76 with 50, and none moves away.
+  - Its 31 other cells are `#NUM!` where Excel returns a root (T-3548's class).
+  - 11 of those 31 are on 55..148 flows, outside the range the engine applies the cap on, so Excel may finish long
+    runs on longer series too.
+- Not shown: what Excel does at a stalled stop past the 41st step on flows inside the cap's range (no cell has one), or
+  where in 42..70 its stall bound is.
 The earlier, partial picture (kept for its evidence):
 - Runs of 51 to 136 steps return Excel's digits bit for bit in an engine-faithful replica (the engine's twice-rounded
   operators): probes-numeric/t3347-irr-conventional-holdout A23, A57, A50, A47 and A56 (51 to 75 steps) and
@@ -4639,8 +4648,9 @@ Evidence: probes-numeric/t3411-irr-r4-fresh and t3411-irr-r4-fresh-2 (excel-grap
 the step counts was scratch code and is not committed.
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
 Ours: `irr_secant` takes up to 200 steps (`IRR_LONG_RUN_STEPS`, FITTED, decision 0320) on 6..54 flows with the largest
-|c| in 5.6E-9..9.6E+8 and a guess in -0.9997..9.81E+7 (the 83 returning runs' range), 50 elsewhere; a stalled zero
-step stops a run only within its first 50 steps (T-3408). Earlier, a 213-step cap without the stall limit was tried
+|c| in 5.6E-9..9.6E+8 and a guess in -0.9997..9.81E+7 (`IRR_LONG_RUN_RANGE`, the returning train runs' range), 50
+elsewhere; a stalled zero step stops a run only within its first 50 steps (the old cap, inside the 41..69 bracket, not
+fitted; T-3408). Earlier, a 213-step cap without the stall limit was tried
 (T-3806) and dropped because it loses A227, and a 185-step one (T-3548) because it loses Gate A A228.
 Tasks: T-3411, T-3806 (dropped), T-3548, T-3408
 
