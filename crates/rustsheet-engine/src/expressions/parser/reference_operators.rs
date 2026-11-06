@@ -444,8 +444,21 @@ impl Parser {
             Function::Areas => 0,
             _ => return Node::FunctionKind { kind, args },
         };
+        // AREAS also takes a REDUCE, which may end on a reference: `AREAS(REDUCE(A1,A2:A3,
+        // LAMBDA(a,v,(a,v))))` is 3 (probes/t4478-reduce-scan-reference-accumulator Calc!H7, H16,
+        // H22, T-4494). Only there: REDUCE as an intersection, range or SUBTOTAL operand is not
+        // probed, so it stays out of `is_reference_operand`.
         let refused = args.iter().skip(first_reference).any(|arg| {
-            matches!(arg.unwrap_spaced(), Node::EmptyArgKind) || !is_reference_operand(arg)
+            let reduce = kind == Function::Areas
+                && matches!(
+                    arg.ungrouped(),
+                    Node::FunctionKind {
+                        kind: Function::Reduce,
+                        ..
+                    }
+                );
+            matches!(arg.unwrap_spaced(), Node::EmptyArgKind)
+                || !(reduce || is_reference_operand(arg))
         });
         if refused {
             return Node::ParseErrorKind {

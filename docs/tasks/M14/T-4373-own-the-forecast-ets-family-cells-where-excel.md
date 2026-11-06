@@ -118,3 +118,7 @@ phase1-exceptions.tsv):
 - ironcalc-calc/ENGINEERING/COMPLEXs.xlsx (4): Sheet1!N6, AL12, AL26 (decision 0188 R6), K25 (decision 0196)
 - ironcalc-calc/FINANCIAL/IRR.xlsx (1): Two Values!C4 (decision 0196)
 - poi/FormulaEvalTestData_Copy.xlsx (5): EverythingTests!J136, G936, H936, K936 (decision 0134), J1328 (decision 0324)
+
+Spill cells of desktop's two-cell `CELL("width")` (T-4644; no exception line: no Phase 1 or exit measure counts them,
+since a spill cell has no formula of its own). A desktop oracle would refill them with the N cells above:
+- calipers/roundtrip/formulas_information/golden.xlsx (21): Sheet1!O140:O160

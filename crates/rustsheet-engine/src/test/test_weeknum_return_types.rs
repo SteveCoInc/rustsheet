@@ -79,3 +79,24 @@ fn weeknum_return_type_snaps_near_an_integer() {
     assert_eq!(model._get_text("A3"), *"13");
     assert_eq!(model._get_text("A4"), *"14");
 }
+
+#[test]
+fn weeknum_negative_return_type_snaps_within_half_the_positive_window() {
+    // probes/t4619-weeknum-negative-snap-window (T-4619): A3 sets Monday, A2 is the edge type, A1
+    // reads the state A2 leaves. A snap to 0 is #NUM! and empties it; a floor to -1 reads it (16).
+    for (edge, snaps) in [
+        ("-(2^-22+2^-33)", false),
+        ("-2^-23", true),
+        ("-(2^-23+2^-34)", true),
+        ("-(2^-22+9*2^-36)", false),
+    ] {
+        let mut model = new_empty_model();
+        model._set("A1", "=WEEKNUM(100,99)");
+        model._set("A2", &format!("=WEEKNUM(100,{edge})"));
+        model._set("A3", "=WEEKNUM(100,2)");
+        model.evaluate();
+        let expected = if snaps { "#NUM!" } else { "16" };
+        assert_eq!(model._get_text("A2"), *expected, "{edge}");
+        assert_eq!(model._get_text("A1"), *expected, "{edge}");
+    }
+}

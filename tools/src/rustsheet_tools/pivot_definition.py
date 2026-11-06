@@ -20,7 +20,10 @@ oracle-spike.md runs 1, 4-6). The definition maps one-to-one onto `pivotTableDef
                               "group": {"start": 0, "end": 100, "interval": 10}}},  # numeric fieldGroup
        "calculated": [{"name": "Double", "formula": "Sales*2"}],    # calculated cache fields
        "cache": {"missingItemsLimit": 0},                       # pivotCacheDefinition attributes
-       "xml": {"filters": "<filters count=\\"1\\">...</filters>"}}}   # raw children, by slot
+       "cache_names": ["Region", "Sales", "Sales_b", "Blank"],  # cacheField names in place of the header
+       "xml": {"filters": "<filters count=\\"1\\">...</filters>"},    # raw children, by slot
+       "refresh_on_load": false,                                # the cache's refreshOnLoad (default true)
+       "area": "A3:B6"}}                                        # the <location> ref (default A3:B4)
 
 Field indices (`fld` in raw XML, `baseField`) count the source columns left to right, then the calculated
 fields in order. Excel for the web refuses a package whose parts disagree with each other (run 2:
@@ -30,8 +33,17 @@ invariants, docs/research/pivot-tables-2026-11-04/oss-engines.md §4). It does n
 Excel will compute: Excel rebuilds the cache, the items and the layout on open. Source formulas are cached as
 blank for that reason.
 
+The cache's field names are the source header, which must be distinct non-empty texts. `cache_names` saves
+other names instead, one per source column, so a header Excel names itself on refresh (a blank cell, a
+repeated constant; T-4627) can be given; the definition refers to the fields by these names.
+
 The pivot's area must hold no spec cell: a layout that meets a foreign cell collapses to `#SPILL!` (run 3).
 The builder checks the anchor and the page-field area; the case author keeps the rest of the area empty.
+
+A pivot with `"refresh_on_load": false` (T-4586) is saved without `refreshOnLoad`, as most files Excel
+saves are. Its area may then hold spec cells: they are the cells the file saved for the pivot. With `area`
+(its `<location>` ref) and the raw `rowItems` and `colItems` slots of `xml`, a case can save a render that
+disagrees with the cache, to ask whether Excel keeps it on open or renders the pivot again.
 """
 
 from __future__ import annotations
@@ -49,7 +61,20 @@ from rustsheet_tools.pivot_xml import MAIN_NS, REL_NS, number_text
 
 VALUES = "Values"  # the Σ (data) field on an axis: `<field x="-2"/>`
 _KEYS = {"name", "source", "location", "definition"}
-_DEFINITION_KEYS = {"table", "rows", "columns", "pages", "data", "fields", "calculated", "cache", "xml"}
+_DEFINITION_KEYS = {
+    "table",
+    "rows",
+    "columns",
+    "pages",
+    "data",
+    "fields",
+    "calculated",
+    "cache",
+    "cache_names",
+    "xml",
+    "refresh_on_load",
+    "area",
+}
 _FIELD_KEYS = {"attrs", "hidden", "collapsed", "subtotals", "group", "order"}
 _DATA_KEYS = {"field", "name", "subtotal", "showDataAs", "baseField", "baseItem", "numFmtId"}
 # ST_DataConsolidateFunction, with the verb Excel puts in a data field's default name.
@@ -115,7 +140,10 @@ _MANAGED_FIELD = {
 _MANAGED_CACHE = {"refreshOnLoad", "recordCount", "id"}
 # CT_pivotTableDefinition's children after `dataFields`, in schema order: the raw-XML slots.
 _SLOTS = ("formats", "conditionalFormats", "chartFormats", "pivotHierarchies", "filters", "extLst")
+# Saved layout lines (T-4586), raw: each goes right after its axis's fields element, in schema order.
+_AXIS_SLOTS = ("rowItems", "colItems")
 _ATTR_NAME = re.compile(r"[A-Za-z][A-Za-z0-9]*")
+_AREA = re.compile(r"[A-Z]{1,3}[1-9][0-9]{0,6}:[A-Z]{1,3}[1-9][0-9]{0,6}")
 
 # A cached value: text, number, boolean, ("e", error text) or None (blank or not known to the builder).
 Value = str | float | bool | tuple[str, str] | None
@@ -289,6 +317,11 @@ class DefinedPivot:
         if not isinstance(definition, dict) or (unknown := set(definition) - _DEFINITION_KEYS):
             raise ValueError(f"pivot {self.name}: definition has unknown keys {sorted(unknown or [])}")
         self.d = definition
+        cache_names = definition.get("cache_names")
+        if cache_names is not None:
+            if not isinstance(cache_names, list) or len(cache_names) != len(header):
+                raise ValueError(f"pivot {self.name}: cache_names needs one name per source column")
+            header = cache_names
         if not all(isinstance(h, str) and h for h in header) or len({h.casefold() for h in header}) != len(
             header
         ):
@@ -315,6 +348,10 @@ class DefinedPivot:
         self.pages = self._pages(definition.get("pages", []))
         self.data = self._data(definition.get("data", []))
         self._values_field()
+        refresh = definition.get("refresh_on_load", True)
+        if not isinstance(refresh, bool):
+            raise ValueError(f"pivot {self.name}: refresh_on_load is true or false")
+        self.refresh_on_load = refresh
         for f in self.fields:
             if f.formula is not None and (f.axis is not None or f.spec):
                 raise ValueError(f"pivot {self.name}: calculated field {f.name!r} can only be a data field")
@@ -440,8 +477,9 @@ class DefinedPivot:
             )
         extra = _attrs(self.d.get("cache"), _MANAGED_CACHE, f"pivot {self.name} cache")
         return (
-            f'<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1" refreshOnLoad="1"'
-            f' createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{self.records}"{extra}>'
+            f'<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"'
+            + (' refreshOnLoad="1"' if self.refresh_on_load else "")
+            + f' createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{self.records}"{extra}>'
             f'<cacheSource type="worksheet"><worksheetSource ref="{source_ref}" sheet={quoteattr(source_sheet)}/>'
             f'</cacheSource><cacheFields count="{len(fields)}">{"".join(fields)}</cacheFields></pivotCacheDefinition>'
         )
@@ -509,26 +547,30 @@ class DefinedPivot:
             -2 in self.rows
         ):  # the Values field on rows: Excel for the web refuses the file without it (T-4138)
             head += ' dataOnRows="1"'
-        anchor = xlsxwriter.utility.xl_rowcol_to_cell(top, left)
-        corner = xlsxwriter.utility.xl_rowcol_to_cell(top + 1, left + 1)
+        raw = self.d.get("xml") or {}
+        if not isinstance(raw, dict) or (unknown := set(raw) - {*_SLOTS, *_AXIS_SLOTS}):
+            raise ValueError(
+                f"pivot {self.name}: xml slots are {[*_AXIS_SLOTS, *_SLOTS]}, not {sorted(unknown or [])}"
+            )
         parts = [
-            f'<location ref="{anchor}:{corner}" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"'
+            f'<location ref="{self._area(top, left)}" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"'
             + (f' rowPageCount="{len(self.pages)}" colPageCount="1"' if self.pages else "")
             + "/>",
             f'<pivotFields count="{len(self.fields)}">{"".join(self._pivot_field(f) for f in self.fields)}</pivotFields>',
         ]
-        for tag, axis in (("rowFields", self.rows), ("colFields", self.columns)):
+        for tag, axis, lines in (
+            ("rowFields", self.rows, "rowItems"),
+            ("colFields", self.columns, "colItems"),
+        ):
             if axis:
                 fields = "".join(f'<field x="{x}"/>' for x in axis)
                 parts.append(f'<{tag} count="{len(axis)}">{fields}</{tag}>')
+            parts.append(self._raw(raw, lines))
         if self.pages:
             pages = "".join(self._page_item(i, item) for i, item in self.pages)
             parts.append(f'<pageFields count="{len(self.pages)}">{pages}</pageFields>')
         data = "".join(self._data_field(e) for e in self.data)
         parts.append(f'<dataFields count="{len(self.data)}">{data}</dataFields>')
-        raw = self.d.get("xml") or {}
-        if not isinstance(raw, dict) or (unknown := set(raw) - set(_SLOTS)):
-            raise ValueError(f"pivot {self.name}: xml slots are {list(_SLOTS)}, not {sorted(unknown or [])}")
         for slot in _SLOTS[:4]:
             parts.append(self._raw(raw, slot))
         parts.append(
@@ -540,6 +582,21 @@ class DefinedPivot:
             f'<pivotTableDefinition xmlns="{MAIN_NS}" name={quoteattr(self.name)} cacheId="{cache_id}"{head}{extra}>'
             f"{''.join(parts)}</pivotTableDefinition>"
         )
+
+    def _area(self, top: int, left: int) -> str:
+        """The `<location>` ref: `area` when given (starting at the location), else the anchor and the
+        cell diagonally below it, which Excel replaces when it renders."""
+        area = self.d.get("area")
+        if area is None:
+            corner = xlsxwriter.utility.xl_rowcol_to_cell(top + 1, left + 1)
+            return f"{xlsxwriter.utility.xl_rowcol_to_cell(top, left)}:{corner}"
+        bad = ValueError(f"pivot {self.name}: area {area!r} is a range A1:B2 starting at the location")
+        if not isinstance(area, str) or not _AREA.fullmatch(area):
+            raise bad
+        (r0, c0), (r1, c1) = (xlsxwriter.utility.xl_cell_to_rowcol(e) for e in area.split(":"))
+        if (r0, c0) != (top, left) or r1 < r0 or c1 < c0:
+            raise bad
+        return area
 
     def _data_field(self, e: dict[str, Any]) -> str:
         """One `<dataField>` (sum, `showDataAs`, `numFmtId` written only when given)."""

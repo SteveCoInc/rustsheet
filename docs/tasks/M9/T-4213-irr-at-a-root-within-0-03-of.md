@@ -94,3 +94,16 @@ sweep probes-numeric/t4213-irr-r4-fresh (T-4386) and the findings in financial.m
 fails are Newton iterates". The visibly-off cells of the sweep are owned by T-4232. The branch's fidelity review asked
 for the hold-out from the fit lab's split and for the sweep as a Gate A batch (`eval/accuracy/tables/IRR` r4-T-4213);
 neither is done.
+
+## Cells from T-3408 (2026-11-06)
+T-3408 (done, decision 0320) fixed its long-run cells with a 200-step secant cap. Its remaining digit cells are this
+task's class: both secant runs go flat or stall at NPV's noise floor, and Excel's value is a secant iterate before the
+flat step or a fallback Newton iterate past the stop. Measured on origin/main 73e09221b plus T-3408's cap; all are
+numbers on both sides, off at the 10th to 15th significant digit. Draft #3211's one-step-past model fixes holdout A41
+and residual-scale A31, A32, A48, A49 (financial.md "IRR's returns where the secant fails are Newton iterates").
+- probes-numeric/t3347-irr-conventional-sweep.case.json (2): P!A33, A82
+- probes-numeric/t3347-irr-conventional-holdout.case.json (4): P!A12, A20, A22, A41
+- probes-numeric/t3411-irr-r4-fresh.case.json (1): Calc!A146
+- probes-numeric/t3411-irr-r4-fresh-2.case.json (3): Calc!A64, A119, A125
+- probes-numeric/t3411-irr-residual-scale.case.json (6): Calc!A22, A23, A31, A32, A48, A49
+- Gate A: accuracy/IRR/r4-T-3411!Calc!A286 (known-failures.tsv; two flows within 5E-10 of a zero root).

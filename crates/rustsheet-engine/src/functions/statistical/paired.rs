@@ -10,21 +10,21 @@ use crate::calc_result::{CalcResult, Range};
 use crate::expressions::parser::{ArrayNode, Node};
 use crate::expressions::token::Error;
 use crate::expressions::types::CellReferenceIndex;
-use crate::functions::util::is_marked_number;
 use crate::functions::Function;
 use crate::model::Model;
-use crate::reference_operators::{RefArg, RefElement};
+use crate::reference_operators::RefArg;
 
 impl Model {
     /// The value of `node` as a sample of F.TEST or a paired function, and whether Excel marks it
-    /// (`#NUM!` where [`MarkedSample::NumError`] applies): a number straight from ERROR.TYPE or
-    /// CELL ([`is_marked_number`]), or an OFFSET or INDIRECT lifted into an array of references
+    /// (`#NUM!` where [`MarkedSample::NumError`] applies): a number from ERROR.TYPE or CELL, as
+    /// such or through LET, IF, CHOOSE, IFERROR, a LAMBDA call or INDEX
+    /// ([`Model::evaluate_marked`]), or an OFFSET or INDIRECT lifted into an array of references
     /// holding a reference, whose value is its `#VALUE!` view. `F.TEST(INDIRECT("B1",{1}),{-1,0,1})`,
     /// `COVARIANCE.P(OFFSET(B1,{0;1},0),{1;2})` and `CORREL(INDIRECT("B1",{1;1}),{1;2})` are
     /// `#NUM!` where `{#VALUE!}` gives `#VALUE!`; an array of references holding only errors is
     /// those errors (`F.TEST(INDIRECT("B1",{0}),..)` is `#REF!`; statistics.md "An array of
-    /// references is #NUM! in the paired functions", probes/t2577-indirect-ref-array). A LET
-    /// handing such an array on keeps the mark in Excel and is not followed here: TODO(T-2766).
+    /// references is #NUM! in the paired functions", probes/t2577-indirect-ref-array), also
+    /// through a LET name (`F.TEST(LET(x,INDIRECT("B1",{1}),x),{-1,0,1})`, A64).
     pub(crate) fn evaluate_sample_arg(
         &mut self,
         node: &Node,
@@ -37,23 +37,15 @@ impl Model {
         {
             // What `fn_offset` and `fn_indirect` give, read once with the grid kept.
             return match self.reference_producer(kind, args, cell) {
-                RefArg::Grid(grid) => {
-                    let marked = grid
-                        .elements()
-                        .iter()
-                        .any(|element| matches!(element, RefElement::Reference(_)));
-                    (grid.to_values(), marked)
-                }
+                RefArg::Grid(grid) => (grid.to_values(), grid.holds_reference()),
                 read => (read.into_single_area(cell), false),
             };
         }
-        let value = self.evaluate_node_in_context(node, cell);
-        let marked = is_marked_number(node, &value, cell.row);
-        (value, marked)
+        self.evaluate_marked(node, cell)
     }
 }
 
-/// What a marked number ([`is_marked_number`]) is as a sample of [`Model::paired_samples`].
+/// What a marked number ([`Model::evaluate_marked`]) is as a sample of [`Model::paired_samples`].
 #[derive(Clone, Copy)]
 pub(crate) enum MarkedSample {
     /// `#NUM!` when its turn comes: any first sample, T.TEST's second
@@ -64,7 +56,23 @@ pub(crate) enum MarkedSample {
     NoNumber,
 }
 
-/// The `#NUM!` of a marked number ([`is_marked_number`]) as an argument that rejects it.
+/// What `Model::fn_get_two_matrices` makes of a second argument carrying the ERROR.TYPE/CELL
+/// mark or an array of references (`number_mark.rs`), once the cell counts match.
+#[derive(Clone, Copy)]
+pub(crate) enum SecondMark {
+    /// Cells with no number, its error elements kept ([`PairedArg::without_numbers`]): the
+    /// regression family. `CORREL({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))` is `#DIV/0!` where
+    /// `CORREL({1;2;3},{4;2;3})` is a number, while `CORREL({1;2;3},ERROR.TYPE({#REF!;5;#VALUE!}))`
+    /// is `#N/A`, and `CORREL({1;2},INDIRECT("B1",{1;1}))` is `#DIV/0!`
+    /// (probes/t2766-mark-positions A8:A12, t2766-mark-positions-2 A17:A19, A23).
+    NoNumber,
+    /// `#NUM!`, as a marked first argument is: CHITEST
+    /// (`CHITEST({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))`, probes/t2766-mark-positions-2 A26).
+    /// Whether it comes before an error element of the other argument is unprobed: TODO(T-4653).
+    NumError,
+}
+
+/// The `#NUM!` of a marked number ([`Model::evaluate_marked`]) as an argument that rejects it.
 pub(crate) fn marked_number_error(cell: CellReferenceIndex) -> CalcResult {
     CalcResult::new_error(
         Error::NUM,
@@ -116,6 +124,29 @@ impl PairedArg {
             {
                 Ok(Self::Values(vec![None]))
             }
+            other => other,
+        }
+    }
+
+    /// This argument, carrying the ERROR.TYPE/CELL mark, as the regression family's second
+    /// argument reads it ([`SecondMark::NoNumber`]): its numbers are cells with no number and its
+    /// error elements stay errors. A reference element of an array of references reads as
+    /// `#VALUE!` in its value view (SPEC-0014) and is a cell with no number here like the rest
+    /// (probes/t2766-mark-positions-2 A17:A19); ERROR.TYPE and CELL never give `#VALUE!`, so no
+    /// error of theirs is lost. A grid mixing references and error elements is unprobed:
+    /// TODO(T-4653).
+    pub(crate) fn without_numbers(self) -> Self {
+        let no_number = |element: ArrayNode| match element {
+            ArrayNode::Error(Error::VALUE) | ArrayNode::Number(_) => ArrayNode::Boolean(false),
+            other => other,
+        };
+        match self {
+            Self::Array(rows) => Self::Array(
+                rows.into_iter()
+                    .map(|row| row.into_iter().map(no_number).collect())
+                    .collect(),
+            ),
+            Self::Values(values) => Self::Values(vec![None; values.len()]),
             other => other,
         }
     }

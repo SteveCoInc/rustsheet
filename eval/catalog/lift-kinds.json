@@ -272,6 +272,7 @@
   {"name":"QUARTILE.INC","required":2,"params":["WholeByCaller","Lift"],"repeat":[],"max":2,"work":"Constant"},
   {"name":"QUOTIENT","required":2,"params":["LiftArrays","LiftArrays"],"repeat":[],"max":2,"work":"Constant"},
   {"name":"RADIANS","required":1,"params":["Lift"],"repeat":[],"max":1,"work":"Constant"},
+  {"name":"RANDARRAY","required":0,"params":["Lift","Lift","Lift","Lift","Lift"],"repeat":[],"max":5,"work":"Output { weight: 1 }"},
   {"name":"RANK","required":2,"params":["Lift","ReferenceByCaller","Lift"],"repeat":[],"max":3,"work":"Constant"},
   {"name":"RANK.AVG","required":2,"params":["Lift","ReferenceByCaller","Lift"],"repeat":[],"max":3,"work":"Constant"},
   {"name":"RANK.EQ","required":2,"params":["Lift","ReferenceByCaller","Lift"],"repeat":[],"max":3,"work":"Constant"},

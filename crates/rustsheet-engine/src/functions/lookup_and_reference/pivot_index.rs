@@ -39,6 +39,12 @@ impl PivotIndexes {
         self.pivots.clear();
     }
 
+    /// Drops the index of the pivot at position `pivot`, whose definition or cache changed in
+    /// place (the grid writer, T-4151).
+    pub(crate) fn forget(&mut self, pivot: usize) {
+        self.pivots.remove(&pivot);
+    }
+
     /// How many indices were built so far.
     #[cfg(test)]
     pub(crate) fn builds(&self) -> u64 {
@@ -192,7 +198,7 @@ impl Model {
             for (item, i) in items.iter().zip(0u32..) {
                 // Why only text: an error source cell is an error item (`CacheItem::Error`, as
                 // `pivot::read_source` reads it), so a `"#N/A"` text argument does not name it;
-                // whether Excel's GETPIVOTDATA matches it is UNVERIFIED (probe pending: T-4627).
+                // whether Excel's GETPIVOTDATA matches it is UNVERIFIED (probe pending: T-4640).
                 if let CacheItem::Text(text) = item {
                     map.entry(text.to_lowercase())
                         .and_modify(|m| *m = ItemMatch::Several)
@@ -380,6 +386,7 @@ mod tests {
                 date_groups: None,
             }],
             record_count: 4,
+            refresh_on_load: false,
         }
     }
 

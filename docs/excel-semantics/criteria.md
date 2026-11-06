@@ -293,8 +293,12 @@ exactly the scalar criterion's result, in a 1x6 array for COUNTIF, SUMIF, SUMIFS
 (`""` the blank and the `""` cell, `"="` the blank only, `"<>"` all but the blank, and `0`, `"0"`, `"=0"` each the number 0 and the text "0"),
 SUMIF/SUMIFS 3, 1, 14, 12, 12, 12, AVERAGEIFS 1.5, 1, 14/3, 6, 6, 6, MAXIFS 2, 1, 8, 8, 8, 8
 (probes/criteria-tilde-blank-single-cell-edges Arr!D1:K8, excel-graph 2026-10-21, T-2235);
-for SUMIFS and SUMIF an error in the sum range is `#N/A` only at the criteria positions whose rows select it
-(`SUMIFS(E1:E3,A1:A3,{"a","b"})` with E1 = #N/A is #N/A, 5; AVERAGEIFS and MAXIFS probed only at position 1: `#N/A`);
+for SUMIFS, SUMIF, AVERAGEIFS, AVERAGEIF, MAXIFS and MINIFS an error in the sum (value) range is the result only at the criteria
+positions whose selected rows include it (which error wins when one position selects two different errors is unprobed)
+(`SUMIFS(E1:E3,A1:A3,{"a","b"})` with E1 = #N/A is #N/A, 5). With A1:A4 = a, b, a, c and E1:E4 = #N/A, 5, 7, #DIV/0!, all five
+functions (MINIFS too) give `{"a","b","c"}` -> #N/A, 5, #DIV/0!; `{"b";"c"}` -> 5, #DIV/0!; `{"c"}` -> #DIV/0! (ERROR.TYPE 7, 2);
+a second pair `B1:B4,">0"` (B = 1, 1, 0, 1) drops only row 3, so the error rows still select and the row gives #N/A, 5, #DIV/0!
+(probes/t4606-ifs-array-criterion-value-error, excel-graph 2026-11-06, T-4606; ours matches all 86 cells);
 `COUNTIFS(E1:E3,{"a","b"})` ignores it (0 at position 1). A `NA()`/non-range first argument with an array criterion
 (`COUNTIF(NA(),{"a","b"})`, `COUNTIFS(NA(),{"a"})`, `SUMIFS(NA(),...)`) made excel-graph reject the whole workbook as unsupported,
 so those cases are unprobed.
@@ -382,7 +386,7 @@ Rule: with an average_range, AVERAGEIF matches its range exactly as without one,
 range resized from average_range's top-left cell. Over A1:A6 = 0, -1, 0.5, text "1", TRUE, 1 with D1:D6 = 10 to 60:
 `0`, `-1` and `0.5` each match their one number (10, 20, 30); the text criterion `"1"` matches the text "1" and the
 number 1 (50); `"0.5"` matches the number 0.5 (30); `TRUE` matches the TRUE cell only, not the number 1 (50); `FALSE`
-matches nothing (`#DIV/0!`). A literal and the same value in a criteria cell agree, and D1 and D1:E1 give what D1:D6
+does not match the number 0 in A1 (`#DIV/0!` in every column of H7:M7, not 10). A literal and the same value in a criteria cell agree, and D1 and D1:E1 give what D1:D6
 gives (each resized to D1:D6).
 Evidence: probes/t4540-averageif-criteria-average-range H1:M7 (42 cells). Oracle: excel-graph, 2026-11-06 (T-4540).
 Status: VERIFIED

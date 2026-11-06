@@ -435,7 +435,8 @@ the web keeps the cache on upload):
   ROWS `#VALUE!`, as for a span of this workbook ("3-D references outside the aggregates"), while
   without a link `SUM('[other.xlsx]S1:S2'!A1)` is `#BLOCKED!` (T-1381). Engine (T-1654): the lexer
   reads the unquoted `[n]First:Last!` prefix as the quoted `'[n]First:Last'!` (the formula text
-  keeps the quoted form, as for `'[1]Uses'!`), and `Model::cached_span_cells` gives the cells the
+  prints it bare, as a span of this workbook is: "A formula's reference to another workbook is
+  written `[1]Sheet!A1`", T-4140), and `Model::cached_span_cells` gives the cells the
   cache holds in the written area on the sheets between the two ends in `sheetNames` order, in
   sheet, row and column order, in one walk of the cache, which the aggregates and COUNTA read
   (blanks skipped); it is `#REF!` as a value and `#VALUE!` where one sheet is needed. Unprobed, so
@@ -1614,8 +1615,27 @@ quoted (`'Me lo invente'!$C$2`, `'A Wird One$'!$A$1`) and `"Sheet2"` is not.
 Evidence: poi/FormulaEvalTestData_Copy.xlsx (Excel-cached, Excel 15) EverythingTests!F128;
 ironcalc-calc LOOKUP_AND_REFERENCE/ADDRESS.xlsx (Excel-cached) Sheet1!E2, B33, B38.
 Status: VERIFIED (Excel-cached). Open (unprobed): `[Book1]My Sheet`, brackets elsewhere in the name, an empty book (`[]Sheet1`), a book part with spaces or dots, an empty sheet part (`[Book1]`) and a cell-reference-like sheet part (`[Book1]A1`); the implementation decides on the part after `]` only.
-Implemented in: `address_sheet_text` in functions/lookup_and_reference/address_areas.rs
-Tasks: T-0984
+Implemented in: `address_sheet_text` in functions/lookup_and_reference/address_areas.rs, through
+`quote_name` (expressions/utils/mod.rs), which formulas share since T-4140 ("A formula's reference to
+another workbook is written `[1]Sheet!A1`")
+Tasks: T-0984, T-4140
+
+## A formula's reference to another workbook is written `[1]Sheet!A1`
+Rule: in the formula text Excel saves, the `[n]` book index of a reference to another workbook is
+outside any quotes, and the quotes, when the sheet name needs them, go around the whole `[n]Sheet`
+token: `VLOOKUP(C2,[1]Sort!$B:$C,2,FALSE)`, `COUNTIFS('[1]XA Data Pull'!$J:$J,…)`. `'[1]Sort'!A1`
+would name a sheet of this workbook called `[1]Sort`. The sheet part is quoted exactly as a sheet of
+this workbook would be (`'[1]56737'!$B$2`, a leading digit), the same rule as ADDRESS's (above).
+Evidence: corpus-bench 59932 (Excel-saved, 16,998 cells of `[1]Sort!`) and 52450 (1,830 COUNTIFS over
+`'[1]XA Data Pull'!`), and poi ref-56737 (Excel-saved, `[1]Uses!`, `[1]!NR_Range`); round-trip census
+docs/research/xlsx-round-trip-2026-11-04.md §2.2.
+Status: VERIFIED (Excel-saved files) for single sheets. UNVERIFIED: a 3-D span of the other workbook's
+sheets is printed bare unless either end needs quotes (`[1]Uses:Defines!$B$2`), as a span of this
+workbook is; fixtures/external-link-cached-3d-span holds that form and Excel for the web opened it, but
+Excel's own saved form for it is unprobed.
+Implemented in: `quote_name` (expressions/utils/mod.rs), used by the display, FORMULATEXT, the stored
+R1C1 text and the xlsx export alike.
+Tasks: T-4140
 
 ## T of a multi-cell range is not intersected
 Rule: T, like N, reads a multi-cell range as its top-left cell, in legacy and dynamic formulas
@@ -2921,15 +2941,26 @@ description says why). table-convert-cross-sheet-this-row holds only data-row ce
 (T-2340): `delete_table` and `take_sheet` rewrite the stored text of every structured reference to the
 removed tables (bare `Sales` included) to `#REF!` (`Model::rewrite_table_references`, tables.rs), and an
 undo of the sheet delete (`restore_sheet`, `UserModel` undo) puts the old text back; a reference to a
-missing sheet is displayed with `#REF!` for its sheet (`is_missing_sheet`, stringify/wrong_reference.rs)
-while its stored text keeps the name, and the lexer reads `#REF!C4:C7` back as `#REF!` (engine choice: whether
-Excel accepts that text typed in is unprobed). Known gaps (T-2612): because the stored text keeps the name, a
-sheet added later under the old name revives a plain reference (Excel's formula has lost the sheet), and the
-xlsx export writes `S!C4:C7` where Excel stores `#REF!C4:C7`. The `#REF!` display also covers a sheet that never
-existed (a loaded `Nope!A1`), an engine choice with no evidence. The adapter's delete_table clears the whole table range (header, text and Qty columns: COUNTA 0 each)
+missing sheet is displayed with `#REF!` for its sheet (`is_missing_sheet`, stringify/wrong_reference.rs),
+and the lexer reads `#REF!C4:C7` back as `#REF!` (engine choice: whether Excel accepts that text typed in is
+unprobed). A plain reference loses the deleted sheet for good (T-2612, probes/table-edits/t2612-delete-sheet-then-add,
+excel-graph 2026-11-06): after deleting S and adding a new blank S, `SUM(S!C4:C7)`, `S!C4` and `COUNTBLANK(S!C4:C7)`
+stay `#REF!` (a revived reference would read 0, 0 and 4), FORMULATEXT shows `=SUM(#REF!C4:C7)`, `=#REF!C4`, and
+`ISREF(#REF!A1)` (written `ISREF(S!A1)`) is FALSE, while `INDIRECT("S!C4")` reads the new sheet ("|" for a blank).
+The engine rewrites such a reference on the delete (`delete_sheet_in_node`, stringify/sheet_edits.rs) to a wrong
+reference to the internal sheet name `DELETED_SHEET` (`*#REF!`, which no real sheet can take), which the display
+and the xlsx export both print as `#REF!C4:C7` (the file text is inferred from Excel's en-US FORMULATEXT; no
+Excel-saved file was inspected); the undo puts the old text back through `TakenSheet`'s rewritten
+formulas. The xlsx loader refuses a workbook whose sheet name contains `*` (`XlsxError::Workbook`, `load_workbook`,
+T-4655): Excel cannot write one, so no Excel file is lost, and a crafted `*#REF!` sheet could otherwise capture
+references stored under `DELETED_SHEET`. Status: DEVIATION (decision 0014, directive 5: Excel's reaction to such a file
+is unknown, and the sentinel must not collide). Workbook names lose the sheet the same way (probes/table-edits/t2612-delete-sheet-then-add-names,
+excel-graph 2026-11-06): with nm = `S!$C$4` and rng = `S!$C$4:$C$7`, `=nm` and `=SUM(rng)` stay `#REF!` after the new S
+is added and `ISREF(nm)` is FALSE; the engine stores such a name as `#REF!$C$4`. The `#REF!` display also covers a sheet that never existed (a loaded `Nope!A1`), an engine choice with
+no evidence; its stored text and export keep the name. The adapter's delete_table clears the whole table range (header, text and Qty columns: COUNTA 0 each)
 and keeps the rows in place: `S!C9` still 99 and `SUM(S!C9:C10)` still 104 with unshifted text
 (T-2341, table-delete-table-cells, excel-graph 2026-10-22).
-Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734, T-3629, T-4020, T-4021
+Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734, T-3629, T-4020, T-4021, T-2612, T-4655
 
 ## Calculated columns: a formula typed into a table column
 Rule (excel-graph `entered` cells, typed one at a time in the case's order, 2026-10-27, T-2957; table `T` A1:C4,

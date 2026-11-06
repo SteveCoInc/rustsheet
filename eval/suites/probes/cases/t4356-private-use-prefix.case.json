@@ -1,0 +1,55 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Is the x- BCP-47 private-use prefix what keeps extended-hex numerals ASCII? Other single-letter prefixes and x- tag shapes, digits and month names (T-4356).",
+  "tags": [
+    "M10",
+    "probe",
+    "number-format",
+    "T-4356"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=TEXT(123,\"[$-X-euro]0\")",
+        "B1": "=TEXT(45000,\"[$-X-euro]mmmm\")",
+        "A2": "=TEXT(123,\"[$-a-euro]0\")",
+        "B2": "=TEXT(45000,\"[$-a-euro]mmmm\")",
+        "A3": "=TEXT(123,\"[$-i-euro]0\")",
+        "B3": "=TEXT(45000,\"[$-i-euro]mmmm\")",
+        "A4": "=TEXT(123,\"[$-z-euro]0\")",
+        "B4": "=TEXT(45000,\"[$-z-euro]mmmm\")",
+        "A5": "=TEXT(123,\"[$-y-eur]0\")",
+        "B5": "=TEXT(45000,\"[$-y-eur]mmmm\")",
+        "A6": "=TEXT(123,\"[$-y-euros]0\")",
+        "B6": "=TEXT(45000,\"[$-y-euros]mmmm\")",
+        "A7": "=TEXT(123,\"[$-x-]0\")",
+        "B7": "=TEXT(45000,\"[$-x-]mmmm\")",
+        "A8": "=TEXT(123,\"[$-x-1]0\")",
+        "B8": "=TEXT(45000,\"[$-x-1]mmmm\")",
+        "A9": "=TEXT(123,\"[$-x-1111]0\")",
+        "B9": "=TEXT(45000,\"[$-x-1111]mmmm\")",
+        "A10": "=TEXT(123,\"[$-xx-euro]0\")",
+        "B10": "=TEXT(45000,\"[$-xx-euro]mmmm\")",
+        "A11": "=TEXT(123,\"[$-x--euro]0\")",
+        "B11": "=TEXT(45000,\"[$-x--euro]mmmm\")",
+        "A12": "=TEXT(123,\"[$-x-x-euro]0\")",
+        "B12": "=TEXT(45000,\"[$-x-x-euro]mmmm\")",
+        "A13": "=TEXT(123,\"[$-x-fr]0\")",
+        "B13": "=TEXT(45000,\"[$-x-fr]mmmm\")",
+        "A14": "=TEXT(123,\"[$-x-de-DE]0\")",
+        "B14": "=TEXT(45000,\"[$-x-de-DE]mmmm\")",
+        "A15": "=TEXT(123,\"[$-x-g]0\")",
+        "B15": "=TEXT(45000,\"[$-x-g]mmmm\")",
+        "A16": "=TEXT(123,\"[$-x-0]0\")",
+        "B16": "=TEXT(45000,\"[$-x-0]mmmm\")",
+        "A17": "=TEXT(123,\"[$-x-5]0\")",
+        "B17": "=TEXT(45000,\"[$-x-5]mmmm\")",
+        "A18": "=TEXT(123,\"[$-x-3gC]0\")",
+        "B18": "=TEXT(45000,\"[$-x-3gC]mmmm\")",
+        "A19": "=TEXT(123,\"[$-x-aaaa]0\")",
+        "B19": "=TEXT(45000,\"[$-x-aaaa]mmmm\")"
+      }
+    }
+  ]
+}

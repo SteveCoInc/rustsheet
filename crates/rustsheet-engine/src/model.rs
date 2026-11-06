@@ -32,6 +32,7 @@ use crate::{
 
 use crate::evaluation::{CellKey, Evaluation, FormulaCell, Seen};
 use crate::limits::{spill_past_grid_error, spills_past_grid};
+use crate::number_mark::MarkCarrier;
 use crate::tailed_array::range_corners;
 use crate::{clock::Clock, tz::Tz, variable_stack::VariableStack};
 
@@ -157,6 +158,8 @@ pub struct Model {
     pub(crate) view_id: u32,
     /// A stack of variables used for LET function evaluation. The key is the variable id, and the value is the variable value.
     pub(crate) variable_stack: VariableStack,
+    /// Which evaluated value carries the ERROR.TYPE/CELL mark (`number_mark.rs`, T-2766).
+    pub(crate) number_mark: crate::number_mark::NumberMark,
     /// Last variable id used. It is incremented every time a new variable is created (for example, when evaluating a LET function).
     pub(crate) last_variable_id: usize,
     /// Lambdas
@@ -257,6 +260,13 @@ impl Model {
         node: &Node,
         cell: CellReferenceIndex,
     ) -> CalcResult {
+        // Bracketed for the ERROR.TYPE/CELL mark: a LET, CHOOSE or LAMBDA call read here never
+        // goes through `evaluate_node_in_context` (`number_mark.rs`).
+        self.marking(node, |model| model.node_with_reference(node, cell))
+    }
+
+    /// [`Self::evaluate_node_with_reference`] without the bracket.
+    fn node_with_reference(&mut self, node: &Node, cell: CellReferenceIndex) -> CalcResult {
         // `ROWS((A1:A3))` is `ROWS(A1:A3)` (SPEC-0007), and a `#This Row` area is its cell or range
         // on the formula's row (SPEC-0016 step 2).
         let node: &Node = &node.ungrouped_at(cell.row);
@@ -543,6 +553,7 @@ impl Model {
         if let Err(error) = self.spend_node(cell) {
             return error;
         }
+        let outer_call = self.number_mark.begin();
         let result = match node {
             OpSumKind { .. }
             | OpProductKind { .. }
@@ -614,7 +625,9 @@ impl Model {
             | LambdaDefKind { .. }
             | LambdaCallKind { .. } => self.evaluate_cold_node(node, cell),
         };
-        self.charged(result, cell)
+        let result = self.charged(result, cell);
+        self.end_number_mark(node, result.can_carry(), outer_call);
+        result
     }
 
     fn cell_reference_to_string(
@@ -2283,18 +2296,26 @@ impl Model {
         name: &str,
         scope: Option<u32>,
     ) -> Result<String, String> {
+        Ok(self.find_defined_name(name, scope)?.formula.clone())
+    }
+
+    /// The defined name `name` (case-insensitive) of `scope`, for a caller that needs more than its
+    /// formula (the delete diff keeps `hidden` and `comment`, T-4637).
+    pub(crate) fn find_defined_name(
+        &self,
+        name: &str,
+        scope: Option<u32>,
+    ) -> Result<&crate::types::DefinedName, String> {
         let name_upper = name.to_uppercase();
-        let defined_names = &self.workbook.defined_names;
         let sheet_id = match scope {
             Some(index) => Some(self.workbook.worksheet(index)?.sheet_id),
             None => None,
         };
-        for df in defined_names {
-            if df.name.to_uppercase() == name_upper && df.sheet_id == sheet_id {
-                return Ok(df.formula.clone());
-            }
-        }
-        Err("Defined name not found".to_string())
+        self.workbook
+            .defined_names
+            .iter()
+            .find(|df| df.name.to_uppercase() == name_upper && df.sheet_id == sheet_id)
+            .ok_or_else(|| "Defined name not found".to_string())
     }
 
     /// Returns the list of defined names as `(name, scope, formula)`.

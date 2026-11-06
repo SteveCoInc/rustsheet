@@ -136,6 +136,13 @@ def test_excel_values_of_the_semantics_entries() -> None:
         (AMORLINC, (2400, 39679, 39813, 300, 1, 0.15, 2)),
         (AMORLINC, (2400, 39679, 39813, 300, 1, 0.15, -1)),
         (AMORDEGRC, (2400, 39679, 39813, 300, 0, 0.5, 1)),  # an asset life of 2: #NUM!
+        # a salvage equal to the cost still meets the asset-life check and the basis, and a cost of 0 is #NUM!
+        # (probes/amor-salvage-equal-cost E1, E4, E5, E11, E21, E24)
+        (AMORDEGRC, (2400, 39679, 39813, 2400, 1, 0.5, 1)),
+        (AMORDEGRC, (2400, 39679, 39813, 2400, 0.5, 0.5, 1)),
+        (AMORDEGRC, (2400, 39679, 39813, 2400, 1, 0.15, 2)),
+        (AMORDEGRC, (0, 39679, 39813, 0, 1, 0.15, 1)),
+        (AMORLINC, (0, 39679, 39813, 0, 0, 0.15, 1)),
         (AMORDEGRC, (2400, 39679, 39813, 300, 0, 1 / 1.99, 1)),
     ],
 )
@@ -153,14 +160,15 @@ def test_points_without_a_value() -> None:
         # 46117 in Excel, the cost less the salvage, but the 30/360 count of serial 0 is not probed where it shows
         (AMORLINC, (46557, 0, 39881, 440, 0, 0.1)),
         (AMORDEGRC, (2400, 1, 366, 300, 1, 0.15, 1)),  # 563 in Excel: a charge of 562.5 and a few 1e-16 more
-        (
-            AMORLINC,
-            (2400, 39679, 39813, 2400, 0, 0.15, 1),
-        ),  # a salvage equal to the cost at period 0 (unprobed)
         (VDB, (2400, 300, 10, 10, 10)),  # switching with life, start and end equal (unprobed)
     ]:
         with pytest.raises(NoValueError):
             definition.evaluate([mp(a) for a in args])
+    # a salvage equal to the cost is 0 at every period, fractions and period 0 included
+    # (probes/amor-salvage-equal-cost A1-C18)
+    for period in (0, 0.0001, 0.5, 1, 1.5, 5, 6, 8):
+        assert value(AMORLINC, 2400, 39679, 39813, 2400, period, 0.15, 1) == 0
+        assert value(AMORDEGRC, 2400, 39679, 39813, 2400, period, 0.15, 1) == 0
     # past the asset life a period charges 0
     assert value(AMORLINC, 2400, 39679, 39813, 300, 8, 0.15, 1) == 0
     assert value(AMORDEGRC, 2400, 39679, 39813, 300, 20, 0.15, 1) == 0

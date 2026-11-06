@@ -1,20 +1,24 @@
-//! [`Txn::add_pivot_table`]: test support that registers a pivot over a source range (SPEC-0015).
+//! [`Txn::add_pivot_table`]: test support that registers a pivot over a source range (SPEC-0015),
+//! and the pivot lifecycle (SPEC-0032 "Who refreshes, and when", T-4151):
+//! [`Txn::refresh_pivot_table`], and the refresh of `refreshOnLoad` pivots after a loaded
+//! workbook's first recalculation. A source edit never refreshes a pivot. Every write goes through
+//! the engine's grid writer (`rustsheet_engine::pivot`'s `plan_pivot_refresh`,
+//! `apply_pivot_refresh`), which owns a pivot's area and collapses it to `#SPILL!`.
 
 use rustsheet_engine::pivot::{
-    layout_extent, read_source, regroup, row_layout, Aggregate, Axis, AxisField, CacheField,
-    CacheItem, CacheSource, CellArea, DataField, DateGroupError, LayoutCell, NumberGroupError,
-    PivotCache, PivotCacheError, PivotField, PivotTable, RangeGrouping, RegroupError,
-    MAX_RECORD_VALUES,
+    read_source, regroup, Aggregate, Axis, AxisField, CacheField, CacheItem, CacheSource, CellArea,
+    DataField, DateGroupError, NumberGroupError, PivotBudget, PivotCache, PivotCacheError,
+    PivotComputeError, PivotField, PivotRefresh, PivotRefreshError, PivotSwap, PivotTable,
+    RangeGrouping, RegroupError, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::Model;
 
 pub use rustsheet_engine::pivot::DateGroupBy as PivotDateGroupBy;
 
-use super::{Input, Txn, Undo};
+use super::{Txn, Undo};
 use crate::error::{EditError, RefError};
-use crate::refs::RangeRef;
-use crate::value::{ErrorKind, Value};
-use crate::workbook::sheet_index;
+use crate::refs::{CellRef, RangeRef, SheetId};
+use crate::workbook::{engine_rc, sheet_index, Workbook};
 
 /// A data field's summary function.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -210,6 +214,49 @@ pub enum PivotError {
     /// Unused items on a grouped row field: their place among the group items is unprobed.
     #[error("a grouped pivot has no unused items")]
     GroupedWithUnusedItems,
+    /// The grouped pivot could not be computed or laid out (past a work or size limit, or a
+    /// definition that does not match its cache).
+    #[error(transparent)]
+    Compute(#[from] PivotComputeError),
+    /// No pivot of that name on the sheet.
+    #[error("no pivot table {0:?} on the sheet")]
+    UnknownPivot(String),
+    /// The pivot could not be refreshed: a field it shows left the source, or its fields would
+    /// be renumbered under parts of its definition kept verbatim.
+    #[error(transparent)]
+    Refresh(PivotRefreshError),
+}
+
+impl From<PivotRefreshError> for PivotError {
+    fn from(error: PivotRefreshError) -> Self {
+        match error {
+            PivotRefreshError::Cache(error) => Self::Cache(error),
+            PivotRefreshError::Compute(error) => Self::Compute(error),
+            error => Self::Refresh(error),
+        }
+    }
+}
+
+/// How [`roll_back`](super::roll_back) undoes a pivot change.
+pub(super) enum PivotUndo {
+    /// `add_pivot_table`: the lengths of the workbook's pivot caches and tables before it.
+    Added { caches: usize, tables: usize },
+    /// A refresh or layout: the cache and pivots it replaced.
+    Swapped(Box<PivotSwap>),
+}
+
+impl PivotUndo {
+    pub(super) fn roll_back(self, model: &mut Model) {
+        match self {
+            Self::Added { caches, tables } => {
+                model.workbook.pivot_caches.truncate(caches);
+                model.workbook.pivot_tables.truncate(tables);
+            }
+            Self::Swapped(swap) => {
+                model.restore_pivot_swap(*swap);
+            }
+        }
+    }
 }
 
 impl Txn<'_> {
@@ -225,8 +272,11 @@ impl Txn<'_> {
     #[doc(hidden)]
     pub fn add_pivot_table(&mut self, input: &PivotTableInput) -> Result<(), EditError> {
         let (cache, mut table) = self.build_pivot(input)?;
-        if input.group.is_some() {
-            table.location = self.lay_out_grouped(input, &cache, &table)?;
+        let grouped = input.group.is_some();
+        if grouped {
+            // Only the anchor is read: the grid writer lays the pivot out from it.
+            table.location.bottom = table.location.top;
+            table.location.right = table.location.left;
         }
         let (caches, tables) = (
             self.model.workbook.pivot_caches.len(),
@@ -235,7 +285,72 @@ impl Txn<'_> {
         self.model.workbook.pivot_caches.push(cache);
         self.model.workbook.pivot_tables.push(table);
         self.sheet_op = true;
-        self.undo.push(Undo::Pivot { caches, tables });
+        self.undo
+            .push(Undo::Pivot(PivotUndo::Added { caches, tables }));
+        if grouped {
+            self.lay_out_grouped(tables)?;
+        }
+        Ok(())
+    }
+
+    /// Refreshes the pivot `name` on `sheet` from its source as it holds now: its cache is read
+    /// again, and every pivot over that cache is laid out again from its anchor, its old cells
+    /// cleared and its new ones written as constants, or collapsed to `#SPILL!` at the anchor when
+    /// the layout would meet a cell it does not own (pivots.md "A pivot that would meet a foreign
+    /// cell collapses to #SPILL!", probes/t4128-pivot-spike S). Nothing else refreshes a pivot:
+    /// editing its source does not, nor does a recalculation
+    /// (probes/t4586-pivot-refresh-on-load C). The transaction then recalculates, so
+    /// GETPIVOTDATA and formulas reading the pivot's cells see it. Doc-hidden until T-4178 makes
+    /// the pivot API public (SPEC-0032 "API").
+    ///
+    /// # Errors
+    /// [`EditError::Ref`] for an unknown sheet, [`EditError::Pivot`] for an unknown pivot or one
+    /// that does not refresh ([`PivotError::Cache`], [`PivotError::Compute`],
+    /// [`PivotError::Refresh`]), and the engine refusing a cell (a merged or array-formula cell in
+    /// the pivot's area). The pivot and its cells are then as they were.
+    #[doc(hidden)]
+    pub fn refresh_pivot_table(&mut self, sheet: SheetId, name: &str) -> Result<(), EditError> {
+        sheet_index(self.model, sheet)?;
+        let cache = (self.model.workbook.pivot_tables.iter())
+            .find(|p| p.sheet_id == sheet.get() && p.name == name)
+            .map(|p| p.cache)
+            .ok_or_else(|| PivotError::UnknownPivot(name.to_string()))?;
+        let plan = self
+            .model
+            .plan_pivot_refresh(cache, &mut PivotBudget::default())
+            .map_err(PivotError::from)?;
+        self.write_pivots(plan)
+    }
+
+    /// Lays out the grouped pivot at index `table` over its cache: Excel lays out a grouped
+    /// pivot itself on load (probes/t4228-pivot-range-groups reads it back), and the case builder
+    /// renders none (SPEC-0015 "Spec cases in the eval adapter", T-4235).
+    fn lay_out_grouped(&mut self, table: usize) -> Result<(), EditError> {
+        let plan = self
+            .model
+            .plan_pivot_render(table, &mut PivotBudget::default())
+            .map_err(PivotError::from)?;
+        self.write_pivots(plan)
+    }
+
+    /// Writes `plan` through the grid writer, logging every cell it clears or writes first so
+    /// the transaction's undo restores them and its change set lists them.
+    fn write_pivots(&mut self, plan: PivotRefresh) -> Result<(), EditError> {
+        for (sheet, row, col) in plan.touched() {
+            let id = (self.model.workbook.worksheet(sheet))
+                .map_err(EditError::Engine)?
+                .get_sheet_id();
+            let (r, c) = engine_rc(row, col).ok_or(RefError::OutOfBounds)?;
+            let sheet_id = SheetId::new(id);
+            self.log_cell(sheet, (id, r, c), CellRef::new(sheet_id, row, col)?)?;
+        }
+        self.sheet_op = true;
+        let swap = (self.model.apply_pivot_refresh(plan)).map_err(|error| match error {
+            PivotRefreshError::Write(message) => EditError::from_engine_message(message, None),
+            error => PivotError::from(error).into(),
+        })?;
+        self.undo
+            .push(Undo::Pivot(PivotUndo::Swapped(Box::new(swap))));
         Ok(())
     }
 
@@ -348,58 +463,45 @@ impl Txn<'_> {
         };
         Ok((cache, table))
     }
+}
 
-    /// Writes the compact-form layout of grouped pivot `table` from `input.location`'s top-left
-    /// cell ([`row_layout`]: the captions, each group that holds a record with its value, every
-    /// group under the row field's `showAll`, and the grand total) and returns the area it covers. Excel lays out a grouped pivot itself on
-    /// load (probes/t4228-pivot-range-groups reads it back), and the case builder renders none
-    /// (SPEC-0015 "Spec cases in the eval adapter", T-4235).
-    fn lay_out_grouped(
-        &mut self,
-        input: &PivotTableInput,
-        cache: &PivotCache,
-        table: &PivotTable,
-    ) -> Result<CellArea, EditError> {
-        let bad = || PivotError::Cache(PivotCacheError::BadRecord);
-        let (Some(AxisField::Field(row)), Some(data)) =
-            (table.row_fields.first(), table.data_fields.first())
+impl Workbook {
+    /// Refreshes the `refreshOnLoad` pivots of a loaded workbook (`Workbook::recalculate`), one
+    /// cache after another in workbook order, within one [`PivotBudget`] for them all. Each cache
+    /// is planned against the grid as the caches before it left it, so its source reads their
+    /// pivots' new cells and its pivots meet their new areas. A cache whose plan fails (a Table
+    /// or named source, T-4506; a limit; a field gone) keeps its pivots' saved cells. Until a
+    /// plan succeeds nothing is edited; from the first one on, the writes are one edit with no
+    /// value diff, which recalculates once more.
+    pub(crate) fn refresh_pivots_on_load(&mut self) {
+        let mut budget = PivotBudget::default();
+        let caches = (self.model.workbook.pivot_caches.iter()).zip(0u32..);
+        let due: Vec<u32> = (caches.filter(|(c, _)| c.refresh_on_load))
+            .map(|(_, i)| i)
+            .collect();
+        let mut rest = due.into_iter();
+        let Some(first) = rest
+            .by_ref()
+            .find_map(|i| self.model.plan_pivot_refresh(i, &mut budget).ok())
         else {
-            return Err(bad().into());
+            return;
         };
-        let show_all = table.fields.get(*row as usize).is_some_and(|f| f.show_all);
-        let rows = row_layout(
-            cache,
-            [*row, data.field],
-            data.function,
-            &data.caption,
-            show_all,
-        )
-        .ok_or_else(bad)?;
-        let (sheet, top, left) = (
-            input.location.sheet,
-            input.location.top,
-            input.location.left,
-        );
-        let (bottom, right) =
-            layout_extent(top, left, u32::try_from(rows.len()).unwrap_or(u32::MAX));
-        for (r, cells) in (top..).zip(rows) {
-            for (c, cell) in (left..).zip(cells) {
-                // Typed values: a label such as `1-1.1` is text, never parsed as a date.
-                let value = match cell {
-                    LayoutCell::Text(text) => Value::Text(text.into()),
-                    LayoutCell::Number(n) => Value::Number(n),
-                    LayoutCell::Error(error) => Value::Error(ErrorKind::from_engine(&error).into()),
-                    LayoutCell::Blank => continue,
-                };
-                self.set(crate::refs::CellRef::new(sheet, r, c)?, Input::Value(value))?;
+        let track = std::mem::replace(&mut self.track_changes, false);
+        // A plan's areas hold no merged range, Table or array formula, so a write fails only for
+        // a plan that does not match the workbook, which nothing here can cause. Should one fail
+        // all the same, the edit rolls back and every pivot keeps its saved cells: a load does not
+        // fail for a pivot, so the error is dropped on purpose.
+        let written = self.edit(|tx| {
+            tx.write_pivots(first)?;
+            for cache in rest {
+                if let Ok(plan) = tx.model.plan_pivot_refresh(cache, &mut budget) {
+                    tx.write_pivots(plan)?;
+                }
             }
-        }
-        Ok(CellArea {
-            top,
-            left,
-            bottom,
-            right,
-        })
+            Ok(())
+        });
+        drop(written);
+        self.track_changes = track;
     }
 }
 

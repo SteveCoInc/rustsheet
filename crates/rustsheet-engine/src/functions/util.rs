@@ -28,34 +28,6 @@ use existing_walk::{span, WalkBudget};
 
 use collation::cmp_text;
 
-/// Whether `value`, the value of the argument `node`, is a number that ERROR.TYPE or
-/// `CELL("col"|"row",..)` returned straight to the argument (parentheses aside): the "mark" some
-/// array-taking arguments reject where the same number from anywhere else is accepted. F.TEST
-/// and the paired functions give `#NUM!` for it (`FTEST({1;2;3},ERROR.TYPE(#REF!))`, statistics.md
-/// "ERROR.TYPE and CELL results are #NUM! in the paired functions") and IRR's flows `#VALUE!`
-/// (`IRR(CELL("row",D2))`, financial.md "IRR's error order", T-2728). `+0`, `@`, SINGLE, MAX or
-/// a cell holding the value make it a plain number. LET, IF, CHOOSE, IFERROR, a LAMBDA call and
-/// INDEX keep it in Excel and are not followed here: TODO(T-2766).
-pub(crate) fn is_marked_number(node: &Node, value: &CalcResult, row: i32) -> bool {
-    if !matches!(value, CalcResult::Number(_)) {
-        return false;
-    }
-    match &*node.ungrouped_at(row) {
-        Node::FunctionKind {
-            kind: Function::ErrorType,
-            ..
-        } => true,
-        Node::FunctionKind {
-            kind: Function::Cell,
-            args,
-        } => matches!(
-            args.first(),
-            Some(Node::StringKind(info)) if info.eq_ignore_ascii_case("col") || info.eq_ignore_ascii_case("row")
-        ),
-        _ => false,
-    }
-}
-
 /// The number a referenced cell gives an aggregate: numbers count, booleans, text and empty cells
 /// are skipped (SPEC-0009 `CellNumbers::Numbers`).
 pub(crate) fn cell_number(value: &CalcResult) -> Option<f64> {
@@ -388,6 +360,17 @@ impl Model {
         blanks: CachedBlanks,
         cell: CellReferenceIndex,
     ) -> RefArg {
+        // Bracketed for the ERROR.TYPE/CELL mark (`number_mark.rs`).
+        self.marking(node, |model| model.reference_arg_read(node, blanks, cell))
+    }
+
+    /// [`Self::reference_arg_reading`] without the bracket.
+    fn reference_arg_read(
+        &mut self,
+        node: &Node,
+        blanks: CachedBlanks,
+        cell: CellReferenceIndex,
+    ) -> RefArg {
         // An IF or CHOOSE that may pick a reference into another workbook is the argument it
         // picks (`SUM(IF(TRUE,…!A1))` is `#BLOCKED!`; probes/external-ref-no-link-ifchoose A3).
         // An aggregate reading cells of another workbook reads what its externalLink cache
@@ -452,6 +435,12 @@ impl Model {
             } => return self.let_impl(args, cell, true),
             // A LET variable bound to a union is its areas (probes/multiarea-let H1).
             Node::NamedVariableKind { .. } => return self.variable_reference(node, cell),
+            // REDUCE ends on the accumulator, a union kept (probes/t4478-reduce-scan-reference-
+            // accumulator Calc!H7, T-4494).
+            Node::FunctionKind {
+                kind: Function::Reduce,
+                args,
+            } => return self.reduce_reference(args, cell),
             Node::LambdaCallKind { lambda, args } => {
                 return self.call_callee_as_reference(lambda, args, cell)
             }
@@ -506,6 +495,19 @@ impl Model {
         blanks: CachedBlanks,
         cell: CellReferenceIndex,
     ) -> RefArg {
+        // Bracketed for the ERROR.TYPE/CELL mark (`number_mark.rs`).
+        self.marking(node, |model| {
+            model.picked_reference_arg_read(node, blanks, cell)
+        })
+    }
+
+    /// [`Self::picked_reference_arg_reading`] without the bracket.
+    fn picked_reference_arg_read(
+        &mut self,
+        node: &Node,
+        blanks: CachedBlanks,
+        cell: CellReferenceIndex,
+    ) -> RefArg {
         // The arm a scalar IF, CHOOSE, IFS or SWITCH picks and a LET body follow the same rule,
         // however deeply they nest: `SUBTOTAL(9,IF(TRUE,XLOOKUP(1,J1:J2,H1:I2)))` is 9 and
         // `AREAS(LET(v,1,XLOOKUP(..)))` 1 (probes/subtotal-if-choose-over-xlookup A10-A42,
@@ -517,7 +519,9 @@ impl Model {
         };
         if let Some(picked) = self.pick_step(kind, args, cell) {
             return match picked {
-                Picked::Node(arm) => self.picked_reference_arg_reading(arm, blanks, cell),
+                Picked::Node(arm) => self.passing_mark(arm, |model| {
+                    model.picked_reference_arg_reading(arm, blanks, cell)
+                }),
                 Picked::Value(value) => RefArg::Value(value),
             };
         }
@@ -926,7 +930,9 @@ impl Function {
     }
 
     /// The built-ins whose result can be a reference they pick or build: INDEX, OFFSET and INDIRECT, the arm a
-    /// scalar IF, CHOOSE, SWITCH or IFS takes, a LET body, and [`Function::picks_reference`]'s.
+    /// scalar IF, CHOOSE, SWITCH or IFS takes, a LET body, the accumulator REDUCE ends with
+    /// (`AREAS(REDUCE(A1,A2:A3,LAMBDA(a,v,(a,v))))` is 3, probes/t4478-reduce-scan-reference-accumulator
+    /// Calc!H7, T-4494), and [`Function::picks_reference`]'s.
     /// The parser takes them as reference operands (`is_reference_operand`) and FORMULATEXT
     /// reads the reference they pick (`fn_formulatext`, T-2726).
     pub(crate) fn may_be_reference(&self) -> bool {

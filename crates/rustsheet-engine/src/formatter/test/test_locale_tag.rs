@@ -185,6 +185,22 @@ fn a_tag_neither_hex_nor_bcp47_reads_as_extended_hex() {
     assert_eq!(text(45000.0, "[$-fr-FR_x]mmmm"), "mars");
 }
 
+// probes/t4356-extended-hex-xeuro, t4356-private-use-prefix, t4356-private-use-value (T-4356).
+#[test]
+fn an_x_prefixed_tag_prints_ascii_digits_whatever_its_numeral_byte() {
+    for tag in ["x-euro", "X-euro", "x-abcd", "x-000000", "x-0000001"] {
+        assert_eq!(text(123.0, &format!("[$-{tag}]0")), "123", "{tag}");
+    }
+    // The same values without the prefix keep their numerals.
+    assert_eq!(text(123.0, "[$-1gdffc8]0"), "١٢٣");
+    assert_eq!(text(123.0, "[$-y-euro]0"), "١٢٣");
+    assert_eq!(text(123.0, "[$-x_euro]0"), "١٢٣");
+    assert_eq!(text(123.0, "[$-0d0000g0]0"), "๑๒๓");
+    // Bytes 32 and up take their digits too.
+    assert_eq!(text(123.0, "[$-y-euros]0"), "一二三");
+    assert_eq!(text(123.0, "[$-xx-euro]0"), "１２３");
+}
+
 #[test]
 fn a_calendar_digit_over_an_lcid_without_a_locale_keeps_its_date() {
     // de_DE is 0xE0FDE and en_US 0xFA0FC (calendars E and F): lunar dates with en-US names.

@@ -16,7 +16,7 @@
 //! A source is a worksheet range; a defined name or a Table source resolves to its range in
 //! T-4506 and refreshes as [`PivotCacheError::Source`] until then.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use thiserror::Error as ThisError;
 
@@ -31,7 +31,7 @@ use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::parser::parse_range;
 use crate::expressions::types::CellReferenceIndex;
 use crate::formatter::lexer::is_likely_date_number_format;
-use crate::functions::util::collation::fold_case;
+use crate::functions::util::collation::{fold_case, fold_char};
 use crate::model::Model;
 use crate::number_format::get_num_fmt;
 
@@ -112,9 +112,9 @@ impl SourceCells for Model {
 impl Model {
     /// Whether the cell style at `index` shows numbers as dates (`is_likely_date_number_format`),
     /// which Excel caches as dates: probes/t4582-pivot-item-edges J3 and J4 (`m/d/yyyy`,
-    /// `m/d/yyyy h:mm`) do not match the cached number items. Those two are the evidence: that a
-    /// time-only or elapsed format (`h:mm`, `[h]:mm`), which this also counts as a date, caches
-    /// as a date too is UNVERIFIED (probe pending: T-4612).
+    /// `m/d/yyyy h:mm`) do not match the cached number items, and a time-only `h:mm` and an
+    /// elapsed `[h]:mm` format cache as `<d>` items too (probes/t4612-pivot-date-items-and-casing
+    /// T2, T3).
     fn is_date_style(&self, index: i32) -> bool {
         let styles = &self.workbook.styles;
         usize::try_from(index)
@@ -144,6 +144,7 @@ pub fn refresh(
     workbook_values_left: usize,
 ) -> Result<PivotCache, PivotCacheError> {
     let mut fresh = read_source(cache, source, workbook_values_left)?.finish();
+    fresh.refresh_on_load = cache.refresh_on_load;
     let old = fields_by_name(cache);
     for field in &mut fresh.fields {
         let Some(prior) = old.get(&fold_case(&field.name)) else {
@@ -172,9 +173,10 @@ pub fn refresh(
 /// ungrouped, for a caller that adds items before finishing it (`Txn::add_pivot_table`'s unused
 /// items). The fields are in source order, and nothing remaps a pivot table's field indices
 /// ([`refresh`]). Fields are matched to `cache`'s by case-folded name: whether Excel matches
-/// by name, by case or by position is UNVERIFIED (probe pending: T-4627); a matched ungrouped field keeps its items, in their order,
-/// and new items follow in source order (pivots.md "Items show in the order the pivot field
-/// lists them; new items are appended", probes/t4134-pivot-items I2, I3,
+/// by name, by case or by position is UNVERIFIED (probe pending: T-4640); a matched ungrouped
+/// field keeps its items, in their order, and new items follow in source order (pivots.md
+/// "Items show in the order the pivot field lists them; new items are appended",
+/// probes/t4134-pivot-items I2, I3,
 /// t4582-pivot-item-edges J2).
 ///
 /// # Errors
@@ -256,43 +258,104 @@ fn fields_by_name(cache: &PivotCache) -> HashMap<String, &CacheField> {
     by_name
 }
 
-/// The cache field names of a source's `headers`, as Excel names them on refresh
-/// (probes/t4585-pivot-field-names, whose headers Region, Sales, `="Sales"`, `=""`, `="region"`
-/// and `="Sales"&""` save as Region, Sales, Sales2, Field4, region2 and Sales3; pivots.md "Pivot
-/// field names for duplicate and blank source headers"):
-/// - a header equal to an earlier one ignoring case gets the next number of that name, from 2,
-///   and keeps its own casing;
-/// - a blank header is `Field<n>`, n its 1-based position in the source. Only empty text (`=""`)
-///   in the 4th column of a source starting at column A is evidenced, so whether n is the
-///   position in the source or the sheet's column number is UNVERIFIED, and so is an empty
-///   header cell, named here as empty text is (probe pending: T-4627);
-/// - a numbered or `Field<n>` name that meets a real header (a source that already has `Sales2`
-///   or `Field4`) is not made unique: UNVERIFIED (probe pending: T-4627).
+/// Per field of `old`, the index of the field of `new` it refreshed into: the field of the same
+/// case-folded name, as [`refresh`] matches a field's prior version ([`fields_by_name`]); `None`
+/// when the source no longer has it. The grid writer remaps a pivot's field indices by it
+/// (T-4151).
+pub(super) fn field_map(old: &PivotCache, new: &PivotCache) -> Vec<Option<u32>> {
+    let mut by_name = HashMap::with_capacity(new.fields.len());
+    for (index, field) in (0u32..).zip(&new.fields) {
+        by_name.entry(fold_case(&field.name)).or_insert(index);
+    }
+    old.fields
+        .iter()
+        .map(|field| by_name.get(&fold_case(&field.name)).copied())
+        .collect()
+}
+
+/// The cache field names of a source's `headers`, as Excel names them on refresh (pivots.md
+/// "Pivot field names for duplicate and blank source headers"):
+/// - each text header in order keeps its text when no earlier name equals it ignoring case
+///   ([`name_key`]), else takes the first free `<header><k>`, k from 2, in its own casing: in
+///   probes/t4627-pivot-field-name-collisions `Sales`, `Sales2`, `="Sales"` save as `Sales`,
+///   `Sales2`, `Sales3` (`P_SufA`) and `Sales`, `="Sales"`, `Sales2` as `Sales`, `Sales2`,
+///   `Sales22` (`P_SufB`); a whitespace header is kept, `" "` then `" 2"` (`P_Space`);
+/// - a blank header, an empty cell or empty text, is `Field<n>`, n its 1-based position in the
+///   source (`P_Off`: the 4th column of B1:G3 is `Field4`; `P_Empty`), named after every text
+///   header and made unique the same way: `X`, `=""`, `Field4` save as `X`, `Field42`, `Field4`
+///   (`P_FldB`).
 ///
 /// A number, boolean or error header is refused ([`PivotCacheError::Header`]): how Excel names
-/// it is UNVERIFIED (probe pending: T-4627). `Txn::add_pivot_table` reads its source here, so
+/// it is UNVERIFIED (probe pending: T-4640). `Txn::add_pivot_table` reads its source here, so
 /// a literal `#N/A` header, once a field named `#N/A`, is now refused there too.
 fn field_names(headers: impl Iterator<Item = CacheItem>) -> Result<Vec<String>, PivotCacheError> {
-    let mut seen: HashMap<String, u32> = HashMap::new();
-    headers
+    let headers: Vec<Option<String>> = headers
         .zip(0u32..)
         .map(|(header, column)| match header {
-            CacheItem::Missing => Ok(format!("Field{}", u64::from(column) + 1)),
-            CacheItem::Text(name) if name.is_empty() => {
-                Ok(format!("Field{}", u64::from(column) + 1))
-            }
-            CacheItem::Text(name) => {
-                let count = seen.entry(fold_case(&name)).or_insert(0);
-                *count += 1;
-                Ok(if *count == 1 {
-                    name
-                } else {
-                    format!("{name}{count}")
-                })
-            }
+            CacheItem::Missing => Ok(None),
+            CacheItem::Text(name) if name.is_empty() => Ok(None),
+            CacheItem::Text(name) => Ok(Some(name)),
             _ => Err(PivotCacheError::Header { column }),
         })
-        .collect()
+        .collect::<Result<_, _>>()?;
+    // One key per field, so `taken` is no larger than the headers' own text plus the suffixes.
+    let mut taken: HashSet<String> = HashSet::with_capacity(headers.len());
+    // Per colliding base key, the next k to try. Every k below it was taken when it was passed,
+    // and `taken` only grows, so each search resumes there: n equal headers cost O(n) probes, not
+    // O(n^2) (directive 5). A candidate's key is the base key and k, since digits fold to
+    // themselves and `name_key` maps character by character.
+    let mut next: HashMap<String, u64> = HashMap::new();
+    let mut unique = |base: String| {
+        let base_key = name_key(&base);
+        if !taken.contains(&base_key) {
+            taken.insert(base_key);
+            return base;
+        }
+        let start = next.get(&base_key).copied().unwrap_or(2);
+        // Each taken key blocks at most one k, so a free one is found by k = start + taken.
+        let last = u64::try_from(taken.len())
+            .unwrap_or(u64::MAX)
+            .saturating_add(start);
+        let k = (start..=last)
+            .find(|k| !taken.contains(&format!("{base_key}{k}")))
+            // Unreachable: `last - start + 1` candidates exceed the taken keys (pigeonhole).
+            .unwrap_or_default();
+        taken.insert(format!("{base_key}{k}"));
+        next.insert(base_key, k.saturating_add(1));
+        format!("{base}{k}")
+    };
+    let mut names: Vec<Option<String>> = headers.into_iter().map(|h| h.map(&mut unique)).collect();
+    for (name, position) in names.iter_mut().zip(1u64..) {
+        if name.is_none() {
+            *name = Some(unique(format!("Field{position}")));
+        }
+    }
+    Ok(names.into_iter().flatten().collect())
+}
+
+/// The key under which two field names are the same: each character case-folded
+/// ([`fold_char`]), with `ß` as `ss`, since a header `SS` after a header `ß` saves as `SS2`
+/// (t4627 `P_Fold`: `é`, `="É"`, `ß`, `="SS"`, `="s"&"s"` save as `é`, `É2`, `ß`, `SS2`, `ss3`),
+/// though the items `ß` and `SS` stay apart ([`ItemKey::identity`]). Only that whole-text `ß`
+/// header is evidenced; the rest is an unprobed extrapolation, UNVERIFIED (probe pending:
+/// T-4640):
+/// - `ß` inside a longer name (`Straße` against `STRASSE`) is replaced the same way;
+/// - `ẞ` folds to `ß` ([`fold_char`]) and so to `ss`, making `ẞ`, `ß`, `SS` and `ss` one name,
+///   though exact MATCH keeps `ẞ = ß` apart from `ss` (lookup.md "MATCH, VLOOKUP and HLOOKUP
+///   exact-match keys fold case one character to one");
+/// - whether names compare by Excel's `=` collation instead (`æ`/`ae`, `œ`/`oe`, `ĳ`/`ij`,
+///   `þ`/`th`, `á`/`a`+U+0301, U+00AD ignored; coercion.md), and the other folds (`ǆ`/`Ǆ`,
+///   `ı`/`I`, `ς`/`σ`, ligatures; `fold_char` already folds `ς` to `σ`, so those two are one
+///   name here).
+fn name_key(name: &str) -> String {
+    let mut key = String::with_capacity(name.len());
+    for c in name.chars() {
+        match fold_char(c) {
+            'ß' => key.push_str("ss"),
+            folded => key.push(folded),
+        }
+    }
+    key
 }
 
 /// One field's items and records as a refresh reads them.
@@ -328,8 +391,11 @@ impl FieldReader {
     /// An old text item a source value finds keeps its slot but takes that value's casing: in
     /// probes/t4582-pivot-item-edges J1 the cached `EAST` shows `east` (pivots.md "Item casing
     /// when cache and source disagree, and date items"). The first source value's casing is
-    /// used; J1's `east` is also the lowercase and the ordinally greatest casing, so which of
-    /// those decides is UNVERIFIED (probe pending: T-4612).
+    /// used, whatever the listed one: probes/t4612-pivot-date-items-and-casing C1 shows `EAST`
+    /// over a listed and lowercase `east`, C2 and C3 `East` over a listed `EAST` or `east`. In
+    /// every probed case that first value is a formula the old cache holds as `<m/>`: whether a
+    /// literal first record, whose value the old cache already holds, relabels the slot the same
+    /// way is UNVERIFIED (probe pending: T-4654).
     fn push(&mut self, value: CacheItem, items: &mut usize) -> Result<(), PivotCacheError> {
         let key = ItemKey::identity(&value);
         let index = if let Some(&index) = self.keys.get(&key) {
@@ -350,9 +416,9 @@ impl FieldReader {
             // At most MAX_ITEMS items, so the index fits a u32.
             let index =
                 u32::try_from(self.items.len()).map_err(|_| PivotCacheError::TooManyItems)?;
-            // A date item appended for a value no cached number matched: whether Excel saves it
-            // as a `<d>` item is UNVERIFIED (probe pending: T-4612); it renders as its serial
-            // either way (t4582 J3, J4).
+            // A date item appended for a value no cached number matched: Excel saves it as a
+            // `<d>` item (probes/t4612-pivot-date-items-and-casing T1 to T5) and renders it as
+            // its serial (t4582 J3, J4).
             self.items.push(value);
             self.keys.insert(key, index);
             *items += 1;
@@ -443,15 +509,19 @@ pub fn regroup(
 /// them: Excel for the web refuses a cache whose flags contradict its items (pivots.md
 /// "Shared-item flags Excel accepts for mixed fields"; T-4122 runs). Written by the export
 /// (T-4176). Booleans and errors count as strings. A date counts as neither a string nor a
-/// number: how Excel flags dates (`containsDate`, `containsNonDate`, `minDate`) is UNVERIFIED
-/// (probe pending: T-4612).
+/// number, but as a type of its own beside them: with a date, Excel writes `containsMixedTypes`
+/// beside a number and no number flags at all (probes/t4612-pivot-date-items-and-casing T5;
+/// pivots.md "Shared-item flags Excel accepts for mixed fields"). Whether a date beside a string
+/// and no number is mixed (T4 also held numbers), and `containsNonDate`, `minDate` and `maxDate`
+/// (not derived: how Excel counts the stale items left from the old cache in them) are UNVERIFIED
+/// (probe pending: T-4654).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SharedItemsFlags {
     /// `containsSemiMixedTypes`: false only when the field has no string and no blank.
     pub contains_semi_mixed_types: bool,
     /// `containsString`: a text, boolean or error item.
     pub contains_string: bool,
-    /// `containsMixedTypes`: strings beside numbers.
+    /// `containsMixedTypes`: strings beside numbers, or dates beside numbers (t4612 T5).
     pub contains_mixed_types: bool,
     /// `containsNumber`.
     pub contains_number: bool,
@@ -488,7 +558,14 @@ impl SharedItemsFlags {
             }
         }
         flags.contains_semi_mixed_types = flags.contains_string || flags.contains_blank;
-        flags.contains_mixed_types = flags.contains_string && flags.contains_number;
+        flags.contains_mixed_types =
+            (flags.contains_string || flags.contains_date) && flags.contains_number;
+        if flags.contains_date {
+            // t4612 T5: dates beside equal and other numbers, saved without `containsNumber`,
+            // `minValue` or `maxValue`.
+            flags.contains_number = false;
+            flags.number_range = None;
+        }
         flags.contains_integer = flags.contains_number && whole;
         flags
     }

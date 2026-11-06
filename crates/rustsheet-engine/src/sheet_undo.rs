@@ -132,6 +132,38 @@ mod tests {
     }
 
     #[test]
+    fn a_sheet_added_under_a_deleted_name_does_not_revive_its_references() {
+        // probes/table-edits/t2612-delete-sheet-then-add (T-2612): Excel keeps `#REF!`.
+        let mut model = model();
+        let sheet = model.take_sheet(1).expect("take");
+        model.add_sheet("Two").expect("sheet");
+        model
+            .set_user_input(1, 1, 1, "41".to_string())
+            .expect("input");
+        model.evaluate();
+        assert_eq!(
+            model.get_formatted_cell_value(0, 1, 1).expect("value"),
+            "#REF!"
+        );
+        assert_eq!(
+            model.get_cell_formula(0, 1, 1).expect("formula").as_deref(),
+            Some("=#REF!A1+1")
+        );
+        // The undo puts the reference back once the new sheet is gone.
+        model.delete_sheet(1).expect("delete");
+        model.restore_sheet(1, sheet).expect("restore");
+        model.evaluate();
+        assert_eq!(
+            model.get_formatted_cell_value(0, 1, 1).expect("value"),
+            "42"
+        );
+        assert_eq!(
+            model.get_cell_formula(0, 1, 1).expect("formula").as_deref(),
+            Some("=Two!A1+1")
+        );
+    }
+
+    #[test]
     fn take_sheet_rejects_the_only_sheet_and_bad_indexes() {
         let mut model = model();
         assert_eq!(model.take_sheet(5).unwrap_err(), "Sheet index too large");
