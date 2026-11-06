@@ -64,7 +64,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, scalars, signed
+from rustsheet_tools.accuracy.defs._common import edge_strata, scalars, signed
 from rustsheet_tools.accuracy.defs.annuity import _annuity, present_value
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
@@ -301,20 +301,6 @@ def _fractional(rng: random.Random, n: int) -> float:
     return n + rng.choice((0.25, 0.5, 0.731))
 
 
-def _strata(
-    make: Callable[[str, random.Random], list[Arg]], edges: Sequence[Shape], doc: str
-) -> Callable[[str, random.Random], list[Arg]]:
-    """Every stratum but the edge from `make`; the edge one of `edges` or, one time in four, `make`'s typical."""
-
-    def edge(rng: random.Random) -> list[Arg]:
-        if rng.random() < 0.25:
-            return make("typical", rng)
-        return rng.choice(edges)(rng)
-
-    draws = {s: (lambda rng, s=s: make(s, rng)) for s in ("typical", "tail", "extreme", "log-uniform")}
-    return by_stratum({**draws, "edge": edge}, doc)
-
-
 def _fv_like(stratum: str, rng: random.Random) -> list[Arg]:
     r, n, pmt, pv, fv, due = _base(stratum, rng)
     del fv
@@ -410,7 +396,7 @@ def _annuity_definition(  # noqa: PLR0917 (the definition's parts, each named at
             function=function,
             params=tuple(params),
             value=value,
-            draw=_strata(make, edges, f"{function}: ({', '.join(names)}) by stratum."),
+            draw=edge_strata(make, edges, f"{function}: ({', '.join(names)}) by stratum."),
             sources=sources,
         )
     )
@@ -527,7 +513,7 @@ ISPMT = register(
             Param(name, "real", Interval(), source=ISPMT_SOURCE) for name in ("rate", "per", "nper", "pv")
         ),
         value=_ispmt,
-        draw=_strata(_ispmt_draw, [_ispmt_edge], "ISPMT: (rate, per, nper, pv) by stratum."),
+        draw=edge_strata(_ispmt_draw, [_ispmt_edge], "ISPMT: (rate, per, nper, pv) by stratum."),
         sources=(ISPMT_SOURCE,),
     )
 )
@@ -538,7 +524,7 @@ PDURATION = register(
             Param(name, "real", Interval(), source=PDURATION_SOURCE) for name in ("rate", "pv", "fv")
         ),
         value=_pduration,
-        draw=_strata(_pduration_draw, [_pduration_edge], "PDURATION: (rate, pv, fv) by stratum."),
+        draw=edge_strata(_pduration_draw, [_pduration_edge], "PDURATION: (rate, pv, fv) by stratum."),
         sources=(PDURATION_SOURCE, KINDS_SOURCE),
     )
 )

@@ -82,6 +82,27 @@ def by_stratum(draws: StratumDraws, doc: str) -> Draw:
     return draw
 
 
+def edge_strata(
+    make: Callable[[str, random.Random], list[Arg]],
+    edges: Sequence[Callable[[random.Random], list[Arg]]],
+    doc: str,
+    typical_share: float = 0.25,
+) -> Draw:
+    """A `draw` taking every stratum but the edge from `make`; the edge is one of `edges` or, a `typical_share` of
+    the time, `make`'s typical point (the annuity and cash-flow families, T-4109, T-4116)."""
+
+    def edge(rng: random.Random) -> list[Arg]:
+        if rng.random() < typical_share:
+            return make("typical", rng)
+        return rng.choice(edges)(rng)
+
+    def stratum(name: str) -> Callable[[random.Random], list[Arg]]:
+        return lambda rng: make(name, rng)
+
+    draws: StratumDraws = {s: stratum(s) for s in ("typical", "tail", "extreme", "log-uniform")}
+    return by_stratum({**draws, "edge": edge}, doc)
+
+
 def one_of(rng: random.Random, shapes: Sequence[Callable[[], list[Arg]]]) -> list[Arg]:
     """One of the edge `shapes`, drawn uniformly."""
     return rng.choice(shapes)()
