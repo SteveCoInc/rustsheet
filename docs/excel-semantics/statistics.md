@@ -6715,7 +6715,7 @@ Ours: `#NUM!` where the quantile underflows for p up to 1/2 since T-2808 (functi
 `lower_quantile_underflows`; before it the search stopped at 3.333333333333333E-302 at alpha 1E-300, where every cdf it
 evaluates rounds to 1); 0.5 is not reproduced (T-4663).
 Status: VERIFIED (excel-graph) for the cells; the 0.5's mechanism UNVERIFIED
-Tasks: T-2435, T-2808, T-4663
+Tasks: T-2435, T-2808, T-4663, T-4676
 
 ## BETA.INV's Gate A table: 1 - 2^-53 near 1, 2^-53 by the flip, 0.5 at a DBL_MIN shape, `#NUM!` at a huge alpha (T-3578)
 Rule: on accuracy/BETA.INV/s1 (199 points, excel-graph 2026-11-02) Excel's BETA.INV differs from the engine in four
@@ -6761,9 +6761,17 @@ that gives the order (2E150 to 5E150 over df1) and the 1/df1 scaling, but its st
 geometric path down from the start (0.64 to 1.36 times the constant over df2 1.5 to 1.999, returning the last
 iterate or the stepped one), where Excel's value is the same to the last digit. So it is not Excel's search, and the
 constant is not implemented: copying it would be a fitted value (owner rule; reviewer-excel-fidelity check 7).
+Lead (gap triage 2026-11-06). This is arithmetic on the cells above, not new evidence, and is UNVERIFIED. In the
+beta variable of the upper tail, x = df2/(df2 + df1*F) at shape a = df2/2 and b = df1/2, the saturated x is
+proportional to a. x/a is 5.411158434229572E-151 for df2 = 1.5, 1.9 and 1.999 (b = 0.5), and 5.4111530230729346E-151
+at df1 = 2 (b = 1). BETA.INV's own saturation `BETA.INV(1E-300,0.5,100)` = `BETA.INV(1E-200,0.5,100)` =
+2.7050408442680296E-151 (probes-numeric/t1543-inverse-cdf-tiny-p A91, A92) gives 5.41008E-151 at b = 100. So the stop
+looks like "x/a below about 1E-150", the Newton correction near the origin, with a weak dependence on b. Against
+that, accuracy/BETA.INV/s1 A131 (9.192367895421942E-151 at a = 1.12, b = 2.10) gives 8.2E-151. T-4675's sweep tests
+this.
 Ours: `#NUM!` where the quantile saturates, and 7 ulp off at `F.INV.RT(1E-20,3,9)`; T-4662.
 Status: VERIFIED (excel-graph) for the cells; the mechanism UNVERIFIED
-Tasks: T-2435, T-2808, T-4662
+Tasks: T-2435, T-2808, T-4662, T-4675
 
 ## F.INV.RT and FINV at a tiny probability: Excel's own search, far from the math (T-4103)
 Rule: below p of about 1E-130, and at p = 2.22507385850721E-308 (DBL_MIN), Excel's F.INV.RT and FINV are often far
