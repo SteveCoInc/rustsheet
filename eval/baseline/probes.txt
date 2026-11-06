@@ -2500,6 +2500,7 @@ C	probes/t4554-api-name-local-name-body.case.json	12
 C	probes/t4554-api-name-scoped-name-choice-first.case.json	27
 C	probes/t4554-api-name-scoped-name-choice-last.case.json	27
 C	probes/t4554-api-name-scoped-name-choice.case.json	27
+C	probes/t4558-color-filter-subtotal.case.json	12
 C	probes/t4563-xlookup-not-found-ref-element.case.json	245
 C	probes/t4574-feb29-near-midnight-date-args.case.json	504
 C	probes/t4578-prob-sum-tolerance.case.json	24
