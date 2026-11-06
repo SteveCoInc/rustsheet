@@ -3,7 +3,7 @@ id: T-2903
 title: "Python facade: Transaction.add_table adds an Excel table over an A1 range"
 milestone: M12
 lane: api
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -48,3 +48,11 @@ added earlier in the same block can be named. Reuse that resolver; do not add a 
   feature of crates/rustsheet and not public API).
 - Hidden rows (T-2902); other missing mirrors (T-2916, T-2900, T-2901, T-2904, T-0460, T-2054); any change to
   crates/rustsheet or the engine.
+
+## Outcome
+`Transaction.add_table(range, name, filtered=False, totals_row=False)` added: buffers `Op::AddTable`; `apply` parses the
+A1 range with `parse_range` over the block's local sheet list (same resolver as the data-table op) and calls
+`Txn::add_table_with_totals`. Stub in `_rustsheet.pyi` (the file the task calls `_ironcalc.pyi`), docstring, five
+test functions in test_facade.py (structured ref, totals row, duplicate/overlap rollback, failed block leaves no
+table, sheet added in same block). Errors surface when the block exits (`EditError`; unknown sheet `RefError`, like
+every other facade sheet op). Binding-only; no eval delta.
