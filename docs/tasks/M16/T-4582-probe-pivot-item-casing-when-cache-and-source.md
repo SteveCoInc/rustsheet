@@ -31,9 +31,12 @@ T-4134 (probes/t4134-pivot-items) verified case-insensitive text identity. But i
 ## Outcome
 probes/t4582-pivot-item-edges (excel-graph, 2026-11-06) holds four builder-v2 pivots. Recorded in
 docs/excel-semantics/pivots.md:
-- **Casing (J1):** a merged text item shows the first source record's casing (`east`), not the cache's
-  listed `EAST`.
+- **Casing (J1):** Excel reuses the listed `EAST` slot and relabels it `east`; the listed casing does
+  not win. Whether the first record's casing, the lowercase one or the ordinal maximum decides is
+  T-4612's.
 - **Append order (J2):** items only a refresh finds follow the listed ones in source order: Alpha, Zed,
   Beta, neither ascending nor descending.
-- **Dates (J3, J4):** 45000 and 45000.5 are two items whatever the date format. Date items render as
-  serial numbers; their displayed format is T-4169's.
+- **Dates (J3, J4):** date-formatted values do not match the cached number items. Those stay empty, and
+  three new items are appended (`rowItems` x = 3–5). 45000 and 45000.5 are two items under both
+  formats probed (`m/d/yyyy` and `m/d/yyyy h:mm`). The appended items render as serial numbers. Their
+  type (date items?) is T-4612's, and their displayed format is T-4169's.
