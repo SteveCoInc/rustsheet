@@ -1164,15 +1164,15 @@
   "Calc": {
    "A106": {
     "f": "=BETA.DIST(0.999999,5E9,39.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A110": {
     "f": "=BETA.DIST(0.999999,5E9,1000,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A113": {
     "f": "=BETA.DIST(0.99999,1E+09,39.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A114": {
     "f": "=BETA.DIST(0.99999,5E+09,39.5,TRUE)",
