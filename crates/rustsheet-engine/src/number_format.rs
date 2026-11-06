@@ -96,10 +96,12 @@ pub fn get_num_fmt(num_fmt_id: i32, num_fmts: &[NumFmt]) -> String {
     DEFAULT_NUM_FMTS[0].to_string()
 }
 
-/// The first id of a workbook's own number formats: Excel numbers them from 164, ids below being
-/// built-in or reserved for built-ins (ECMA-376 §18.8.30), so a format the engine adds gets the id
-/// Excel and the case builder (XlsxWriter) give it (probes/t4169-pivot-number-formats: a data
-/// field's `numFmtId="164"` names the workbook's first custom format).
+/// The first id of a workbook's own number formats, by convention: ids below 164 are built-in or
+/// reserved for built-ins (ECMA-376 §18.8.30), and the case builder (XlsxWriter) numbers custom
+/// formats from 164, so a spec workbook's first custom format has the same id here as in the file
+/// Excel opens. Which ids Excel itself gives on save is UNVERIFIED (T-4731), and so is the match
+/// with several custom formats (T-4730; number-formats.md "Custom number format ids start at
+/// 164").
 const FIRST_CUSTOM_NUM_FMT_ID: i32 = 164;
 
 pub fn get_new_num_fmt_index(num_fmts: &[NumFmt]) -> i32 {

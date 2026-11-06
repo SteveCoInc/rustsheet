@@ -32,10 +32,14 @@ Rendered value cells now carry their data field's number format, and their displ
 - Engine: `RenderedCell::number_format` is the data field's `numFmtId` on every value cell, including
   subtotals and grand totals. `apply_pivot_refresh` sets that format on the cell
   (`Model::set_pivot_number_format`, reusing `get_num_fmt` and the style pool) and keeps the rest of the
-  cell's style. Built-in id 14 is now `m/d/yyyy` (Excel en-US), and new custom ids start at 164, as in
-  Excel and XlsxWriter (number-formats.md).
+  cell's style. Built-in id 14 is now `m/d/yyyy` (Excel en-US), and new custom ids start at 164, a
+  convention matching XlsxWriter (number-formats.md).
 - Probe: probes/t4169-pivot-number-formats, two pivots with formats 7, 10, 14, 164, 0, none and 4. All 84
   value cells and 76 text cells pass; eval known failures did not change (REGRESSIONS 0).
 - Findings: pivots.md "Value cells show their data field's number format" and number-formats.md
-  "Built-in id 14 is the short date; custom ids start at 164". UNVERIFIED readings (cells that stop being
+  "Built-in id 14 is the short date" and
+  "Custom number format ids start at 164 (convention)". UNVERIFIED readings (cells that stop being
   value cells, preserveFormatting, showDataAs and axis-field formats) are owned by T-4717.
+- The custom-format cells pass only because the case's one custom format is 164 in both the builder and the
+  spec adapter (UNVERIFIED, eval-harness): owner T-4730. The 164 start as Excel's own save numbering and the
+  other locale-dependent built-in ids are unprobed: owner T-4731.

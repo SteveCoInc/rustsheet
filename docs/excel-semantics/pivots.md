@@ -1005,7 +1005,7 @@ Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::valu
 ## Value cells show their data field's number format
 Rule: every value cell of a pivot, on item, subtotal and grand-total lines and in the grand-total
 column, displays its value in its data field's `numFmtId`: a built-in id, or a custom format of the
-workbook's `numFmts` (the first is 164). Excel stores the unrounded value: only the displayed text
+workbook's `numFmts` (164 in the probe, as the builder wrote it). Excel stores the unrounded value: only the displayed text
 is rounded. A data field with `numFmtId="0"` and one with no `numFmtId` both show General. Labels,
 captions and the header rows keep their own text. Built-in id 14 shows as `m/d/yyyy` in en-US, not
 as the ECMA table's `mm-dd-yy`.
@@ -1023,12 +1023,17 @@ displayed text (`Range.text`, the sidecar pivots' `text`) beside its values. The
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`RenderedCell::number_format`),
 crates/rustsheet-engine/src/pivot/grid.rs (`Model::set_pivot_number_format`), and
-crates/rustsheet-engine/src/number_format.rs (id 14, and new custom ids from 164; T-4169).
+crates/rustsheet-engine/src/number_format.rs (id 14, and new custom ids from 164 by convention; T-4169).
 UNVERIFIED (T-4169, owner T-4717): the engine only sets a value cell's format when its data field has a
 `numFmtId`, and leaves other cells' formats alone. Not probed: whether Excel resets a cell's format
 when it stops being a value cell after a refresh, or when the data field has no `numFmtId` (the
 "preserve cell formatting" option), and whether a showDataAs field or a page, row or column field's
 `numFmtId` changes the text.
+UNVERIFIED (eval-harness, T-4169, owner T-4730): the Kg cells (E5:E11) pass only because the case has
+one custom format, which the builder (XlsxWriter) and the spec adapter (`set_number_formats`, by sheet
+then address order) each number 164. With two or more custom formats the two numberings can differ, so
+a definition's `numFmtId` could name another code in the engine than in Excel. The engine's unit test
+hand-sets Q!B1 for the same reason.
 
 ## A Count total over an error field is the error when the pivot mixes aggregates
 Rule: Count and CountNums never show an error in an item's cell. When the pivot's data fields mix
