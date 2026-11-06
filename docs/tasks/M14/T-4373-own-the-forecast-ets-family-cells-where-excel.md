@@ -3,18 +3,22 @@ id: T-4373
 title: "Own the FORECAST.ETS family cells where excel-graph gives #N/A (re-probe 2026-11-05)"
 milestone: M14
 lane: functions-stat
-status: todo
+status: blocked
 priority: P3
 size: S
 tier: opus
 depends_on: []
-defer: phase-1b
 ---
 
 ## Goal
 The 16 visibly-off cells of probes/forecast-ets-reprobe-2026-11 and the 40 of probes/forecast-ets-longer-series have
 an owner: the web oracle gives `#N/A` on every FORECAST.ETS* call while the engine computes a number or a validation
 error (decision 0221), so they stay known failures until a desktop-Excel backend exists.
+
+## Blocked because
+Blocked because: no oracle can evidence these cells. Excel for the web returns `#N/A` for the FORECAST.ETS family and
+`#VALUE!` for CELL's desktop-only info types, and desktop Excel is out of scope (decision 0266). Unblock only if a
+desktop or web oracle computes them; until then the cells are Phase 1 rate exceptions (decision 0308).
 
 ## Context
 T-3641 re-probed excel-graph on 2026-11-05; see statistics.md "FORECAST.ETS family: excel-graph never computes it".
