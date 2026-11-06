@@ -23,6 +23,7 @@ scored since T-4124, decision 0317), probes/t4583-pivot-row-labels, probes/t4582
 
 ## Acceptance criteria
 - [ ] Pivot-area cells of the PV1 probes match the oracle.
+- [ ] Retire T-4235's one-field `row_layout`/`layout_extent` (pivot/layout.rs, used by `lay_out_grouped` in crates/rustsheet/src/edit/pivot.rs) onto `lay_out`'s lines, so one layout path remains (T-4147 design review).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
