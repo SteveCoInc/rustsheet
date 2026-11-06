@@ -3,7 +3,7 @@ id: T-4593
 title: "Gate A eval math: read IM* parts past 15 digits by cutting them"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
