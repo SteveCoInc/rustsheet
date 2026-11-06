@@ -3,7 +3,7 @@ id: T-4468
 title: "Near-integer snap at the upper limit: SUBSTITUTE instance_num, FIXED/DOLLAR decimals, CHAR and FIND start just below their caps; tidy T-4453's citations"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -41,7 +41,7 @@ nits are fixed in the same PR.
 - Interior bases (T-4453 has them).
 - TEXTBEFORE/TEXTAFTER and REGEX occurrence arguments (M7).
 
-## Handoff
+## Handoff (resumed)
 Done: committed probes/t4468-near-integer-text-caps (oracle filled, excel-graph 2026-11-06), the two citation nits, and the
 text.md result. FIXED/DOLLAR(128-2^-23), CHAR(256-2^-23) and FIND start at the cap already match the engine (all
 bit-exact). Only SUBSTITUTE instance_num at 2^31-1 differs: Excel snaps over a far wider window there (`#VALUE!` for
