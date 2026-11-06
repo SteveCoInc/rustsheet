@@ -174,6 +174,7 @@ probes/t2429-hypgeom-threshold.case.json	2
 probes/t2435-dist-extremes.case.json	25
 probes/t2436/4250f880ab640c49.case.json	3
 probes/t2436/abc2939ebd1e2365.case.json	6
+probes/t2475-stat-subexpressions-refill-1106.case.json	3
 probes/t2475-stat-subexpressions.case.json	4
 probes/t2496-fin-subexpressions.case.json	2
 probes/t2565-irr-guess-sweeps.case.json	1

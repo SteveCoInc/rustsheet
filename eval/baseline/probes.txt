@@ -633,6 +633,7 @@ C	probes/gcd-lcm-bounds.case.json	38
 C	probes/gcd-lcm-multinomial-error-order.case.json	52
 C	probes/gcd-lcm-multinomial-negative-precedence.case.json	71
 C	probes/gcd-lcm-overflow-ranges.case.json	57
+C	probes/gen-m9-17c110a53924beb8-refill-1106.case.json	412
 C	probes/geomean-exponent-sum-2.case.json	34
 C	probes/geomean-exponent-sum.case.json	28
 C	probes/geomean-in-range-many.case.json	72
@@ -1502,6 +1503,7 @@ C	probes/t2455-transpose-single-value.case.json	95
 C	probes/t2461-blank-array-sources.case.json	55
 C	probes/t2466-cell-contents-stack.case.json	39
 C	probes/t2473-percentrank-significance.case.json	69
+C	probes/t2475-stat-subexpressions-refill-1106.case.json	574
 C	probes/t2475-stat-subexpressions.case.json	574
 C	probes/t2479-expand-padarray-cellbound.case.json	2
 C	probes/t2479-expand-padarray-past-grid.case.json	1
@@ -3911,6 +3913,11 @@ F	probes/forecast-ets-reprobe-2026-11.case.json	Sheet1!J6
 F	probes/forecast-ets-reprobe-2026-11.case.json	Sheet1!J7
 F	probes/forecast-ets-reprobe-2026-11.case.json	Sheet1!J8
 F	probes/ftest-decomposition.case.json	Calc!B12
+F	probes/gen-m9-17c110a53924beb8-refill-1106.case.json	Calc!A11
+F	probes/gen-m9-17c110a53924beb8-refill-1106.case.json	Calc!A175
+F	probes/gen-m9-17c110a53924beb8-refill-1106.case.json	Calc!A190
+F	probes/gen-m9-17c110a53924beb8-refill-1106.case.json	Calc!A197
+F	probes/gen-m9-17c110a53924beb8-refill-1106.case.json	Calc!A361
 F	probes/geomean-exponent-sum-2.case.json	Sheet1!C24
 F	probes/geomean-exponent-sum-2.case.json	Sheet1!C28
 F	probes/geomean-exponent-sum.case.json	Sheet1!C2
@@ -4452,6 +4459,10 @@ F	probes/t2436/abc2939ebd1e2365.case.json	Calc!T1
 F	probes/t2436/abc2939ebd1e2365.case.json	Calc!T16
 F	probes/t2436/abc2939ebd1e2365.case.json	Calc!U1
 F	probes/t2436/abc2939ebd1e2365.case.json	Calc!U16
+F	probes/t2475-stat-subexpressions-refill-1106.case.json	P!A317
+F	probes/t2475-stat-subexpressions-refill-1106.case.json	P!A417
+F	probes/t2475-stat-subexpressions-refill-1106.case.json	P!A520
+F	probes/t2475-stat-subexpressions-refill-1106.case.json	P!A64
 F	probes/t2475-stat-subexpressions.case.json	P!A317
 F	probes/t2475-stat-subexpressions.case.json	P!A417
 F	probes/t2475-stat-subexpressions.case.json	P!A520

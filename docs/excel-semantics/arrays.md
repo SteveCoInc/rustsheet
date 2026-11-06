@@ -981,11 +981,13 @@ excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is
   Ours matches all of these (`own_error` and `array_node_to_number` in arithmetic.rs and cast.rs read a nested cell as `#VALUE!`).
 - So `MEDIAN({1;2;"";4},GROUPBY(..,LAMBDA(z,z))-x,..)` is `#VALUE!` in today's Excel, as ours: the gen-m9/17c110a53924beb8 Data sheet
   (and-d04 A1:A17, whose MAP of `TYPE` shows each nested cell 16 after `-0` and 64 before) and byte-identical copies refilled on
-  2026-11-06 and not committed give `#VALUE!` for P!A62, our 13x3 listing for P!A63 and a full listing for P!A64 of
-  probes/t2475-stat-subexpressions (input sha256 4e41b349…, every other cell as on 2026-10-28), and `#VALUE!` for gen-m9/17c110a53924beb8
-  Calc!A300 (a copy in the probes suite, every other cell as on 2026-10-23). The October fills had `#N/A`, `?`, `?` and `#N/A`
+  2026-11-06 give `#VALUE!` for P!A62, our 13x3 listing for P!A63 and a full listing for P!A64 (ours `?`) of
+  probes/t2475-stat-subexpressions-refill-1106 (input sha256 4e41b349…, every other cell as on 2026-10-28), and `#VALUE!` for Calc!A300
+  of probes/gen-m9-17c110a53924beb8-refill-1106 (the same sheets as gen-m9/17c110a53924beb8, every other cell as on 2026-10-23; its
+  input sha256 differs from the October sidecar's only because the xlsx builder has changed since: both cases build the same bytes). The October fills had `#N/A`, `?`, `?` and `#N/A`
   there: Excel's earlier behavior.
-- Excel changed what reads a nested cell between 2026-10-28 and 2026-11-06. Byte-identical copies of the T-2592, T-2594, T-2625, T-2360
+- Excel changed what reads a nested cell between 2026-10-28 and 2026-11-06 (excel-graph, Excel for the web, on both dates; no desktop
+  fill confirms it yet, decision 0039). Byte-identical copies of the T-2592, T-2594, T-2625, T-2360
   and T-2311 probes refilled on 2026-11-06 (`<case>-refill-1106`, twice for the first two, identical) agree with their October fills
   except: SUM over a nested result is `#N/A` and COUNT skips its nested cells (t2592-refill-1106 A6, A7: `#N/A`, 0; A8 COUNTA 9, one per
   cell; t2594-refill-1106 A26:A29; t2625-refill-1106 A13, A17, A26, and COUNT over an INDEXed row or column of nested cells A20, A25,

@@ -43,7 +43,10 @@ No engine change: T-2609's probes (excel-graph, 2026-11-06) show that an operato
 nested cell `#VALUE!`, whatever its size (1x1 included), kind, depth or operator, which is what ours already does (every operator
 cell of probes/t2609-nested-operators-and-lifts, -one-cell and -d04 passes). The owned cells' `#N/A` is Excel's October behavior:
 refills on 2026-11-06 of the same workbooks give `#VALUE!` for gen-m9/17c110a53924beb8 Calc!A300 and t2475-stat-subexpressions
-P!A62, and our listing for P!A63 (-d04 A6, A7 repeat them; the refills of the original bytes are not committed). Re-filling until a
+P!A62, and our listing for P!A63 (committed as probes/gen-m9-17c110a53924beb8-refill-1106 and
+probes/t2475-stat-subexpressions-refill-1106, byte-identical copies; -d04 A6, A7 repeat them). The same t2475 refill gives a full
+listing for P!A64 where ours (and October) print `?`; T-4661 owns that new-coverage cell. Re-filling until a
 run matches us is ruled out (T-3610), so the October values stay and the cells pass to T-4661, which decides which fill is the
 target alongside Excel's other 2026-11 nested-cell changes. SPEC-0018 rule 4 and "Consumers with their own rule" and arrays.md
-now state the operator rule with this evidence. Eval: no cell fixed, no regression.
+now state the operator rule with this evidence. Eval: no cell fixed, no regression; the two refill copies add 986 probe cells
+(9 known failures: P!A64 owned by T-4661, the rest repeat their originals' known failures).

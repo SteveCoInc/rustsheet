@@ -33,9 +33,14 @@ New cases owned here (every off cell):
 - probes/t2609-nested-operators-and-lifts P!A44:A46 (two-level cells read as an error by a lift), P!A50 (SUM over a reference-body
   result reads the values, 60), P!A56:A59 (a lifted INDEX of nested cells gives each one's top-left)
 - probes/t2609-nested-operators-one-cell P!A27 (a lift over a 1x1 cell holding a nested array)
-October cells that today's Excel answers as ours does (refill of a byte-identical copy on 2026-11-06, not committed), handed from T-2686:
+- probes/t2475-stat-subexpressions-refill-1106 P!A64 (a lifted `ERROR.TYPE`/`&""` listing: 2026-11-06 a full listing, ours `?` as in
+  October)
+October cells that today's Excel answers as ours does (refills of byte-identical copies on 2026-11-06, committed as
+probes/t2475-stat-subexpressions-refill-1106 and probes/gen-m9-17c110a53924beb8-refill-1106), handed from T-2686:
 - probes/t2475-stat-subexpressions P!A62, P!A63 (2026-10-28 `#N/A` and `?`; 2026-11-06 `#VALUE!` and our 13x3 listing)
 - gen-m9/17c110a53924beb8 Calc!A300 (2026-10-23 `#N/A`; 2026-11-06 `#VALUE!`, ours)
+Every fill on both dates is excel-graph (Excel for the web); the decision record weighs whether a desktop or second-backend fill must
+confirm the change before a November value becomes the target (oracle-calibration.md's reproducibility floor, decision 0039, T-3610).
 The old values stay committed (T-3610's draft rule: re-filling until a run matches us is ruled out; decision 0284 precedent). Moving
 the engine to the November reads turns the October cells of the original probes (t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20,
 A25, A26, A32, t2360 P!C1, C9, C17, C25, C33, t2311 P!C12) into known failures, so the switch needs this task's decision record
