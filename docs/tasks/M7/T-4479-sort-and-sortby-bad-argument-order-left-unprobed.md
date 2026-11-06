@@ -3,7 +3,7 @@ id: T-4479
 title: "SORT and SORTBY bad-argument order left unprobed: a text or computed #VALUE! sort_order before a later error, and three or more bad arguments, probe and match"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
