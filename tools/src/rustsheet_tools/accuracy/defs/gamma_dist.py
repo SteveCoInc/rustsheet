@@ -11,10 +11,13 @@ Sources:
   `CHISQ.DIST(x,k,TRUE)` = `GAMMA.DIST(x/2,k/2,1,TRUE)` = `GAMMA.DIST(x,k/2,2,TRUE)` and
   `GAMMA.DIST(x,a,b,TRUE)` = `GAMMA.DIST(x/b,a,1,TRUE)`: one P(a, y) and Q(a, y).
 - statistics.md, "GAMMA.DIST's density is #NUM! at a subnormal x / beta (T-2738)": the density of a positive x is
-  `#NUM!` where x / beta (in doubles) is subnormal; an x / beta that overflows is `#NUM!` for both forms
-  (probes/incomplete-gamma-cap E6, E18, cited by `gamma_dist_of`). Both of those cells are at shape 1
-  (`GAMMA.DIST(1E300,1,1E-10,..)`); `_gamma_dist_domain` applies the rule at every shape, as `gamma_dist_of` does,
-  unprobed at the others.
+  `#NUM!` where x / beta (in doubles) is subnormal; an x / beta that overflows is `#NUM!` for both forms at every
+  probed shape, 3.7E-188 to 1E300 (probes/incomplete-gamma-cap E6, E18 at shape 1; probes/t4625-gamma-dist-ratio-overflow
+  rows 1-8 at 0.01, 0.5, 2, 10, 1E5, 1E10 and 1E300, T-4625; Gate A tables GAMMADIST/s1 A182 at 3.7490322860808E-188,
+  A118 and GAMMA.DIST/s1 A141). `_gamma_dist_domain` applies it in that shape range
+  (`OVERFLOW_SHAPES`); outside it the point has no value. The same probe found an unexplained `#NUM!` at a finite
+  x / beta of 1E308 at shapes 1.5 and 2 (B9, F9, B10, B11), not at 0.5, 1, 2.5, 2.9, 3, 10 or 1E5, and not at shape 2
+  from 1E200 down (F10-I11): a ratio above 1E200 between shapes 1 and 2.5 (`HUGE_RATIO_*`) has no value.
 - statistics.md, "GAMMA.DIST at a huge shape (T-2435, T-3316)": rule 1, the density of a positive x is `#NUM!` where
   shape / x overflows a double; rule 2, from a shape of about 1E+55 a computed 0 is `#NUM!` at some points and not
   others, with no threshold (decision 0267 accepts those cells), so such a point has no math value.
@@ -94,6 +97,12 @@ MAX_DRAWN_DIST_SHAPE = 1e10
 # y g(y) times 1 / |a - y| from a distance of 1 from the mode, so it is below e^this where y g(y) is (and its
 # complement is 1 to the working precision).
 DEEP_TAIL_LOG = -2000
+# T-4625: the shapes at which an overflowing x / beta is #NUM! in Excel's cells (probes/t4625-gamma-dist-ratio-overflow;
+# the low end is GAMMADIST/s1 A182).
+OVERFLOW_SHAPES = (3.7490322860808e-188, 1e300)
+# T-4625: finite x / beta above HUGE_RATIO_MIN is #NUM! at shapes 1.5 and 2 and a number at 1 and 2.5 (no rule found).
+HUGE_RATIO_MIN = 1e200
+HUGE_RATIO_SHAPES = (1.0, 2.5)  # open interval
 DENSITY_GUARD_DPS = 10  # digits added to the density's exponent, besides the log10(a) it cancels
 
 
@@ -179,7 +188,13 @@ def _gamma_dist_domain(args: Sequence[MathArg]) -> str | None:
         return None
     ratio = fx / fbeta
     if math.isinf(ratio):
+        if not OVERFLOW_SHAPES[0] <= fa <= OVERFLOW_SHAPES[1]:
+            msg = "an overflowing x / beta is probed #NUM! only at shapes 3.7E-188 to 1E300 (T-4625)"
+            raise NoValueError(msg)
         return "x / beta overflows"
+    if ratio > HUGE_RATIO_MIN and HUGE_RATIO_SHAPES[0] < fa < HUGE_RATIO_SHAPES[1]:
+        msg = "Excel's #NUM! at a finite x / beta of 1E308 at shapes 1.5 and 2 has no rule (T-4625)"
+        raise NoValueError(msg)
     return None if cumulative else _density_domain(fx, fa, ratio)
 
 
