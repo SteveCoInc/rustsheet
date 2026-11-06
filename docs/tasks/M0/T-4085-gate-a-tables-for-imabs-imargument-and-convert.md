@@ -3,7 +3,7 @@ id: T-4085
 title: "Gate A tables for IMABS, IMARGUMENT and CONVERT, replacing their composite exemptions (after T-4084)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
