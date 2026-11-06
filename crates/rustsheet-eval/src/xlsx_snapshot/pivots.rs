@@ -89,7 +89,9 @@ pub(super) struct PivotReader {
     caches: HashMap<String, Option<Vec<PivotCacheField>>>,
     /// Pivot relationships looked at, read or not: at most `MAX_PIVOTS`, so malformed parts count.
     attempts: usize,
-    /// Layout lines, item indices and group items still allowed, over every pivot and copy.
+    /// What the snapshot may still hold over every pivot and every copy of a shared cache: one
+    /// unit per layout line, item index, field and group item, plus one per byte of every string
+    /// kept (names, locations, labels).
     values_left: usize,
     /// The pivots read, at most `MAX_PIVOTS`, the importer's own workbook cap.
     pub(super) pivots: Vec<PivotDef>,
@@ -105,6 +107,35 @@ impl PivotReader {
             pivots: Vec::new(),
         }
     }
+}
+
+/// The budget cost of keeping a copy of `fields`: one per field and item, plus their text bytes.
+fn fields_cost(fields: &[PivotCacheField]) -> usize {
+    fields
+        .iter()
+        .map(|f| 1 + f.name.len() + f.group_items.iter().map(value_cost).sum::<usize>())
+        .sum()
+}
+
+fn value_cost(v: &Value) -> usize {
+    1 + match v {
+        Value::Text(t) | Value::Error(t) => t.len(),
+        _ => 0,
+    }
+}
+
+/// The workbook budget ran out.
+struct OverBudget;
+
+/// `attr(e, key)`, charged its byte length against `budget`.
+fn kept_attr(
+    e: &quick_xml::events::BytesStart<'_>,
+    key: &str,
+    budget: &mut usize,
+) -> Result<Option<String>, OverBudget> {
+    let value = attr(e, key);
+    spend(budget, value.as_ref().map_or(0, String::len)).ok_or(OverBudget)?;
+    Ok(value)
 }
 
 /// The package entry a resolved part path names. The package matches names ignoring case, `\\`
@@ -158,8 +189,7 @@ pub(super) fn read_sheet_pivots(
             continue;
         };
         let fields = cache_fields(zip, &path, reader);
-        let copies: usize = fields.iter().map(|f| f.group_items.len() + 1).sum();
-        if spend(&mut reader.values_left, copies).is_none() {
+        if spend(&mut reader.values_left, fields_cost(&fields)).is_none() {
             continue;
         }
         pivot.cache_fields = fields;
@@ -235,7 +265,7 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
                 match e.local_name().as_ref() {
                     "pivotTableDefinition" => {
                         pivot = Some(PivotDef {
-                            name: attr(e, "name").unwrap_or_default(),
+                            name: kept_attr(e, "name", budget).ok()?.unwrap_or_default(),
                             sheet: sheet.to_string(),
                             location: String::new(),
                             first_header_row: 0,
@@ -250,7 +280,7 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
                     }
                     "location" => {
                         let p = pivot.as_mut()?;
-                        p.location = attr(e, "ref")?;
+                        p.location = kept_attr(e, "ref", budget).ok()??;
                         p.first_header_row = number(e, "firstHeaderRow");
                         p.first_data_row = number(e, "firstDataRow");
                         p.first_data_col = number(e, "firstDataCol");
@@ -263,7 +293,7 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
                         let lines = lines_mut(pivot.as_mut()?, within);
                         spend(budget, 1)?;
                         lines.push(PivotLine {
-                            t: attr(e, "t"),
+                            t: kept_attr(e, "t", budget).ok()?,
                             r: number(e, "r"),
                             i: number(e, "i"),
                             x: Vec::new(),
@@ -301,15 +331,16 @@ fn parse_cache_fields(xml: &str, budget: &mut usize) -> Option<Vec<PivotCacheFie
                         if fields.len() >= MAX_FIELDS {
                             return None;
                         }
+                        spend(budget, 1)?;
                         fields.push(PivotCacheField {
-                            name: attr(e, "name").unwrap_or_default(),
+                            name: kept_attr(e, "name", budget).ok()?.unwrap_or_default(),
                             group_items: Vec::new(),
                         });
                     }
                     "groupItems" if !empty => in_group = true,
                     tag if in_group => {
                         spend(budget, 1)?;
-                        let v = attr(e, "v");
+                        let v = kept_attr(e, "v", budget).ok()?;
                         let value = match tag {
                             "s" | "d" => Value::Text(v.unwrap_or_default()),
                             "n" => Value::Number(
@@ -401,17 +432,18 @@ mod tests {
     fn the_workbook_budget_stops_lines_indices_and_group_items() {
         let xml = r#"<pivotTableDefinition name="p"><location ref="A1:B3"/>
             <rowItems><i><x/></i><i><x v="1"/></i></rowItems></pivotTableDefinition>"#;
-        // Two lines and two indices cost four.
-        let mut budget = 4;
+        // The name `p` and location `A1:B3` cost their 6 bytes, two lines and two indices 4 more.
+        let mut budget = 10;
         assert!(parse_pivot(xml, "P", &mut budget).is_some());
         assert_eq!(budget, 0);
-        let mut short = 3;
+        let mut short = 9;
         assert!(parse_pivot(xml, "P", &mut short).is_none());
         assert_eq!(short, 0);
         let cache = r#"<pivotCacheDefinition><cacheField name="n"><fieldGroup><groupItems>
             <s v="a"/><s v="b"/></groupItems></fieldGroup></cacheField></pivotCacheDefinition>"#;
-        assert!(parse_cache_fields(cache, &mut 1).is_none());
-        assert!(parse_cache_fields(cache, &mut 2).is_some());
+        // One field (1) named `n` (1), two items (2) of one byte each (2).
+        assert!(parse_cache_fields(cache, &mut 5).is_none());
+        assert!(parse_cache_fields(cache, &mut 6).is_some());
     }
 
     #[test]
@@ -500,5 +532,22 @@ mod tests {
         assert!(reader.pivots.is_empty());
         assert_eq!(reader.seen.len(), 1);
         assert_eq!(reader.attempts, MAX_PIVOTS);
+    }
+
+    #[test]
+    fn copies_of_a_long_named_shared_cache_are_charged_their_bytes() {
+        let long = "n".repeat(100_000);
+        let fields = vec![PivotCacheField {
+            name: long,
+            group_items: vec![Value::Text("abc".into())],
+        }];
+        assert_eq!(fields_cost(&fields), 1 + 100_000 + 1 + 3);
+        // A budget the size of the engine's runs out after about a hundred copies, not thousands.
+        let mut budget = MAX_RECORD_VALUES;
+        let copies = (0..MAX_PIVOTS)
+            .take_while(|_| spend(&mut budget, fields_cost(&fields)).is_some())
+            .count();
+        assert_eq!(copies, MAX_RECORD_VALUES / fields_cost(&fields));
+        assert!(copies < 100);
     }
 }

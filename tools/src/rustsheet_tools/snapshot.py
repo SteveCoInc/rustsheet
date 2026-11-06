@@ -157,7 +157,7 @@ def pivot_areas(snap: dict[str, Any]) -> list[dict[str, Any]]:
     for pivot in snap.get("pivots", []):
         try:
             top, left, bottom, right = pivot_area(pivot)
-        except ValueError as e:  # an untrusted location: skip this pivot, not the fill
+        except (ValueError, KeyError) as e:  # an untrusted location: skip this pivot, not the fill
             print(f"PIVOT {pivot.get('sheet')}!{pivot.get('name')}: {e}, not captured", file=sys.stderr)
             continue
         if (bottom - top + 1) * (right - left + 1) > MAX_PIVOT_AREA_CELLS:

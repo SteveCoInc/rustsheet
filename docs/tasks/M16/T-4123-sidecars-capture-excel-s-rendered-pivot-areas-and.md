@@ -51,5 +51,6 @@ Sidecars hold formula cells only today (probes/pivot-rendered-cells reads the pi
 - **Hardening from review:** pivot and cache parts are read once per workbook, keyed by the package's own entry
   name so alias spellings (case, `\\`) share one key, and every pivot relationship counts toward
   `MAX_PIVOTS`, a malformed one included. The workbook's pivots stop at the importer's `MAX_PIVOTS`, and all layout lines,
-  indices and group items share one `MAX_RECORD_VALUES` budget (test: 1,005 pivots sharing one
+  indices, fields and group items share one `MAX_RECORD_VALUES` budget, which also charges every
+  kept string's bytes on every copy of a shared cache (test: 1,005 pivots sharing one
   cache). A pivot whose location does not parse is skipped by the fill, not the whole case.
