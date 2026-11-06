@@ -79,14 +79,17 @@ impl Model {
         // number_chosen truncates toward zero before its sign check, so one in (-1, 0) is 0 and
         // the result 1 (`PERMUTATIONA(10,-0.75)`, `PERMUTATIONA(0,-0.0001)`; gen-m9 0620505280d2ea6e
         // A280, probes/t2475-stat-subexpressions P!A28).
-        let k = self.cast_number_ref(k, cell)?.trunc() as i64;
+        let k = self.cast_number_ref(k, cell)?.trunc();
         // Excel: a number of about 1E+15 is #NUM!, even with number_chosen 0
         // (`PERMUTATIONA(1000000000000000,0)`, `PERMUTATIONA(FACT(18),2)`; gen-m9 775d053de498b8c7
         // A152, b9a32ce9a1fd0d71 A378), while `PERMUTATIONA(123456789.123,1)` is a number
         // (1b31092a0d79e5f1 A306). The cut is UNVERIFIED: PERMUT's 2^31 - 1 is taken (T-2474).
-        if n < 0.0 || k < 0 || n >= PERMUT_NUMBER_LIMIT {
+        // Excel: a truncated number_chosen of 2^31 - 1 or more is #NUM!, at any number, PERMUT's own
+        // limit (`PERMUTATIONA(1,2147483647)` and `(0,2147483647)` are #NUM!, `(1,2147483646.9)` is 1;
+        // probes/t4501-permutationa-chosen-cut; statistics.md "PERMUTATIONA ... #NUM! at a huge number_chosen").
+        if n < 0.0 || k < 0.0 || n >= PERMUT_NUMBER_LIMIT || k >= PERMUT_NUMBER_LIMIT {
             return Err(num_error(cell));
         }
-        Ok(n.powf(k as f64))
+        Ok(n.powf(k))
     }
 }

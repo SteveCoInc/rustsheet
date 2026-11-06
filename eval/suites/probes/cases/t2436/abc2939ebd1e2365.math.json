@@ -6,16 +6,12 @@
   "dps": 80,
   "input_sha256": "91188d395be582fb704aee1eb15966bdd8d83613ed9064138729c20add936005"
  },
- "sheets": {},
- "skipped": {
+ "sheets": {
   "Calc": {
-   "A1": {
-    "f": "=F.INV.RT(1E-200,1,1.999)",
-    "why": "no single value"
-   },
-   "A16": {
-    "f": "=CHIDIST(F.INV.RT(1E-200,1,1.999),10)",
-    "why": "no single value"
+   "A136": {
+    "t": "n",
+    "v": "2.0",
+    "f": "=IMABS(\"2i\")"
    }
   }
  }

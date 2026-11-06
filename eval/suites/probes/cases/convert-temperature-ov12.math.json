@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "6bdf5e70b1a5548a4d168037eb272ae156e9421313d650656783ad1737d40ab2"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A1": {
+    "t": "n",
+    "v": "9.9999999999999984740099910340565508421389245666368e-49",
+    "f": "=CONVERT(1E-24,\"yK\",\"K\")"
+   }
+  }
+ }
+}

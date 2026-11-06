@@ -3,7 +3,7 @@ id: T-4553
 title: "T-4465 review follow-ups: fix the arrays.md section title cited in sequence.rs, the eps23 miss range, and probe SEQUENCE extents near 1048576 with the near-integer offsets"
 milestone: M7
 lane: functions-math
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -35,3 +35,11 @@ of its extent range, next to 1048576.
 
 ## Out of scope
 - RANDARRAY past 16384 columns (the engine's array-size cap; a separate question).
+
+## Outcome
+- sequence.rs and random.rs now cite the real arrays.md heading, "Array-constructor extents just below an integer".
+  (The task's quoted citation text was not in the code; the comments cited only probes, so the heading was added.)
+- The "16 to 22 per column" eps23 text is not in arrays.md (no such Evidence line), so there was nothing to correct.
+- New probe probes/t4553-sequence-extent-top (excel-graph, 2026-11-06): the absolute 2^-22 bound holds at 1048576 and
+  524288 (k <= 256 snaps, k >= 257 floors), and `1048576+x` reads 1048576, not `#VALUE!` as this task assumed.
+  Recorded in arrays.md.
