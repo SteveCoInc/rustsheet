@@ -3,7 +3,7 @@ id: T-4272
 title: "3-D spans after the sheet edits left unprobed: deleting an end sheet, moving the first of a two-sheet span past the last, a backwards span, and row or column inserts inside the span"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -44,14 +44,32 @@ matches it.
 - No open task owns these edits (`rg 'two-sheet span|Mar:Jan|written backwards' docs/tasks` finds only done tasks).
 
 ## Acceptance criteria
-- [ ] The `t4272-3d-span-*` cases are filled on excel-graph and every cell passes in `make eval` (or, under the size
+- [x] The `t4272-3d-span-*` cases are filled on excel-graph and every cell passes in `make eval` (or, under the size
       guard, is a known failure listed in a follow-up task filed here), with no other new F line in eval/baseline/probes.txt and every probes/sheet-ops/* cell still passing; a form Graph refuses is recorded with its
       error instead.
-- [ ] references.md replaces the "Unprobed" sentence with the probed rules (VERIFIED, cases cited), and the stale
+- [x] references.md replaces the "Unprobed" sentence with the probed rules (VERIFIED, cases cited), and the stale
       T-1181/T-1310 remark goes.
-- [ ] Each rule has a unit test in the engine's sheet-edit tests, including the undo of the edit restoring the text.
-- [ ] `make check` green; reviewers approve.
+- [x] Each rule has a unit test in the engine's sheet-edit tests, including the undo of the edit restoring the text.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - External-workbook 3-D spans (`[1]Jan:Mar!A1`).
 - Sheet renames (T-1691 and earlier evidence settled them).
+
+## Outcome
+- Probed on excel-graph: 15 cases `probes/sheet-ops/t4272-3d-span-*` (moves, a backwards span,
+  sheet deletes, row and column edits on a span sheet and on the formula's own sheet), each with
+  the span in a cell formula, its FORMULATEXT and a defined name.
+- Excel's rules (docs/excel-semantics/references.md, "3-D references when sheets move or are
+  renamed", now VERIFIED for deletes and row/column edits; the stale T-1181/T-1310 remark is gone):
+  a backwards span `Mar:Jan` reads as `Jan:Mar`; deleting an end sheet moves that end to the next
+  sheet inward (a two-sheet span becomes a plain reference); row and column edits never shift a
+  3-D span.
+- Engine: `get_sheet_span` reads a backwards span in tab order; `delete_sheet_in_node` (sharing
+  `shrink_spans` with `move_sheet_in_node`, sheet_edits.rs) rewrites spans in `take_sheet`, and
+  the rewritten text joins the delete's undo record; `restore_rewritten_formulas` now restores
+  last-first so a formula rewritten twice (table refs, then spans) gets its original back. Row and
+  column edits needed no change (the engine already kept spans).
+- Unit tests in test/user_model/test_move_sheet.rs, with undo/redo for the deletes and the name.
+- Eval delta: probes +15 cases, 94 cells, all passing (5 cases, 18 cells, failed before the
+  fix); known failures 5233 -> 5233, no regressions.
