@@ -11,17 +11,27 @@ permissions:
 jobs:
   full-eval:
     runs-on: ubuntu-24.04
+    # The report, the corpus fetches and the round trips (300 s per case at most) fit well inside this.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.97
       - uses: Swatinem/rust-cache@v2
       - run: make eval
-      # Decision 0323: the corpus round-trip gates (T-4173, T-4629), which the PR gate cannot fetch. The fetch is
-      # its own step so a failed download fails the job instead of skipping a suite. Calipers' 1.4M-formula
-      # workbooks take about 55 s of the default 60 s per case, hence the longer timeout.
-      - run: target/release/rustsheet-eval fetch --suite calipers --suite poi --suite corpus-bench
+      # Decision 0323: the corpus round-trip gates (T-4173, T-4629), which the PR gate cannot fetch.
+      # - The fetch is its own step, so a download that fails three times fails the job instead of skipping a suite.
+      # - Both steps run under eval_guard.sh, as the make targets do (decision 0041).
+      # - Calipers' 1.4M-formula workbooks take about 55 s of the default 60 s per case, hence the longer timeout.
+      # - The check rewrites eval/runs/latest/roundtrip.{json,md}, so the artifact holds the corpus run, not
+      #   make eval's.
+      - run: |
+          for attempt in 1 2 3; do
+            scripts/eval_guard.sh target/release/rustsheet-eval fetch --suite calipers --suite poi --suite corpus-bench && exit 0
+            sleep 30
+          done
+          exit 1
       - run: >-
-          target/release/rustsheet-eval roundtrip --check --timeout 300
+          scripts/eval_guard.sh target/release/rustsheet-eval roundtrip --check --timeout 300
           --suite roundtrip-calipers --suite roundtrip-poi --suite roundtrip-corpus-bench
       # The report is kept when a gate above fails, which is when it is needed.
       - if: always()

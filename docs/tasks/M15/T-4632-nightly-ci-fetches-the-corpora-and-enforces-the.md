@@ -26,16 +26,25 @@ PR gate checks only the fixtures.
 - [x] It runs `rustsheet-eval roundtrip --check` on the three corpus round-trip suites with a 300 s per-case
       timeout, so a regression turns it red.
 - [x] Decision 0323 records the protected-path change.
+- [x] A red nightly run reaches the steward: a row in docs/process/agent-workflow.md and a bullet in the steward
+      skill. The gate is listed in docs/process/quality-gates.md.
 - [x] `make check` green; reviewers approve.
+- [ ] The first scheduled nightly run (or a `workflow_dispatch` on `main` after the merge) passes the two steps. Its
+      run id and duration go here, and the steward records them.
 
 ## Out of scope
 - Fetching corpora in the PR gate.
 - Making Calipers' heavy cases faster.
 
 ## Outcome
-- `.github/workflows/nightly.yml` gains two steps after `make eval`: `rustsheet-eval fetch` for the three suites, then
-  `rustsheet-eval roundtrip --check --timeout 300` over `roundtrip-calipers`, `roundtrip-poi` and
-  `roundtrip-corpus-bench`.
+- `.github/workflows/nightly.yml` gains two steps after `make eval`, both under `scripts/eval_guard.sh`:
+  - `rustsheet-eval fetch` for the three suites, retried three times;
+  - `rustsheet-eval roundtrip --check --timeout 300` over `roundtrip-calipers`, `roundtrip-poi` and
+    `roundtrip-corpus-bench`.
+
+  The job gets a 120-minute timeout, and the report is uploaded `if: always()`.
+- Triage for a red run: a "Nightly eval run red" row in docs/process/agent-workflow.md and a steward-skill bullet. The
+  round-trip gate's row in docs/process/quality-gates.md covers the PR, `make check` and nightly parts.
 - Locally on main (e725f06), the same command passes:
 
   | suite | cases | kept |
