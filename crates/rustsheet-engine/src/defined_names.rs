@@ -2,7 +2,6 @@
 
 use crate::{
     calc_result::{CalcResult, Range},
-    constants::{DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH},
     evaluation_limits::stack_address,
     expressions::{
         parser::{
@@ -525,11 +524,7 @@ impl Model {
         self.workbook
             .views
             .entry(self.view_id)
-            .or_insert(WorkbookView {
-                sheet,
-                window_width: DEFAULT_WINDOW_WIDTH,
-                window_height: DEFAULT_WINDOW_HEIGHT,
-            })
+            .or_insert(WorkbookView::new(sheet))
             .sheet = sheet;
         Ok(())
     }

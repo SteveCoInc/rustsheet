@@ -3,7 +3,7 @@ id: T-4591
 title: "T-4528/T-4554 review follow-ups: fix the array_constant_context path in information.md, probe a nested legacy ATP call over {5}, add WorkbookView::new"
 milestone: M5
 lane: functions-logic
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -35,3 +35,13 @@ nested legacy ATP form has evidence, and a repeated struct literal gets one cons
 
 ## Out of scope
 - Other lifting-table kinds.
+
+## Outcome
+- information.md and the T-4528 Outcome now name static_analysis/lifted.rs.
+- New probe probes/nested-legacy-atp-array-constant (excel-graph): a nested legacy ATP call over an array
+  constant gets no `@` under SUM/SUMPRODUCT (`=SUM(EDATE({45000},1))` = 45031, the two-element form 90092,
+  `=SUMPRODUCT(ISEVEN({5}))` = 0) and gets it under ABS (`=ABS(QUOTIENT(@{7},2))` = 3). The engine already
+  matches all four; arrays.md records the rule.
+- `WorkbookView::new(sheet)` replaces the literals in new_empty.rs and defined_names.rs (T-4554 merged as #3607).
+  The xlsx importer keeps its own 800x600 literal and was not touched.
+- Eval delta: +8 passing cells in the new probe; no baseline change.
