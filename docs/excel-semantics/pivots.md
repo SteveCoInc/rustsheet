@@ -199,8 +199,8 @@ Rule:
 
 Evidence: probes/t4137-pivot-captions (excel-graph, 2026-11-06, T-4137). Default data-field names
 (`Sum of`, `Count of`...) are written by the file, not chosen by Excel, so a file cannot probe them;
-creating a pivot in the UI is where Excel picks them (T-2327 keeps that question). Other error kinds
-and aggregates under `errorCaption` are not probed.
+creating a pivot in the UI is where Excel picks them (T-2327 keeps that question). For other
+aggregates and `#DIV/0!` under `errorCaption`, see "errorCaption replaces every error value" below.
 Status: VERIFIED (excel-graph)
 
 ## Page fields render above the location
@@ -252,3 +252,70 @@ the file as corrupt (`FileCorruptTryRepair`). Case builder v2 now writes it. Thi
 excel-graph runs of T-4138, not committed: G6's package was refused without the attribute and opened
 with it, all else equal.
 Status: VERIFIED (excel-graph) for the table; the refusal is a builder observation
+
+## Aggregates over text, blanks, booleans and errors
+Rule (each aggregate in a value field that also holds other kinds of value):
+- **Skipped values.** Text, blanks and booleans are skipped by Sum, Average, Max, Min, Product, StdDev,
+  StdDevp, Var, Varp and CountNums. A boolean is not a number: `TRUE` is not 1.
+- **Count** counts every non-blank value: numbers, text, booleans and errors.
+- **CountNums** counts numbers only. An error does not poison it.
+- **Errors.** An error poisons every aggregate except Count and CountNums. The aggregate shows the error
+  (`#N/A`) in the cell holding it and in every subtotal and grand total that covers that cell. Cells that
+  do not cover it are unaffected.
+- **One value.** Over a single number, StdDev and Var are `#DIV/0!`, while StdDevp and Varp are 0. This
+  holds wherever the other values in the cell are text, blank or boolean. A data error wins over it:
+  East/A of Err holds one number beside `#N/A` and shows `#N/A` (A_stdDev!L6, A_var!L6).
+- **Empty intersections.** An intersection with no records is blank for every aggregate, Count and
+  CountNums included.
+
+Evidence: probes/t4135-pivot-aggregates (excel-graph, 2026-11-06, T-4135). Each sheet A_<aggregate> has
+rows Region, columns Kind and six value fields. The Data!A2:H5 records are East/B, East/A, East/A and
+West/A, and East/A row 4 holds the odd value: text `abc`, a blank, `TRUE` or `#N/A`.
+- **Skipped values:** A_sum!I6:K6 are 10 for Txt, Blk and Bool, against H6 = 14 for Num. A_average!I6:K6
+  are 10 and A_product!I6:K6 are 10.
+- **Count:** A_count!I6, K6 and L6 are 2 for Txt, Bool and Err; J6 is 1 for Blk.
+- **CountNums:** A_countNums!I6:L6 are 1.
+- **Errors:** column L (Err) of A_sum, A_average, A_max, A_min, A_product, A_stdDev, A_stdDevp, A_var and
+  A_varp is `#N/A` at row 6, at the East total R6 and at the grand totals L8 and R8. West/A (L7) shows
+  its own one-value result: 7 for Sum to Product, `#DIV/0!` for StdDev and Var, and 0 for StdDevp and
+  Varp.
+- **One value:** A_stdDev and A_var are `#DIV/0!` at East/B (B6:G6) and West/A (H7:M7), and at I6
+  (East/A Txt: 10 and `abc`). A_stdDevp and A_varp are 0 there.
+- **Empty intersections:** West/B (B7:G7) is blank on every sheet.
+Status: VERIFIED (excel-graph)
+
+## Summation order of Sum, Average and Product totals
+Rule (on the evidenced cells):
+- **Sum.** A subtotal or grand total of Sum is the sum of its children's sums. It is neither the sum of
+  its records in record order nor the sum in display order.
+- **Average** divides the sum of the records taken in record order.
+- **Product** totals multiply the records in record order, not the children's products.
+
+Evidence: probes/t4135-pivot-aggregates, field Dec. The East records in record order are 0.3 (B), 0.2
+(A) and 0.1 (A), and West's is 0.7. Excel displays Kind as B, then A (A_sum!B4 `B`, H4 `A`).
+- **Sum:** A_sum!S6 (East total) is 0.6000000000000001. That is the sum of the children, M6 + G6 =
+  0.30000000000000004 + 0.3. Record order and display order both give 0.6. A_sum!S8 is 1.3, which is
+  the children's sum on either axis; the records in record order give 1.2999999999999998.
+- **Average:** A_average!S6 is 0.19999999999999998 = 0.6 / 3, not 0.6000000000000001 / 3. A_average!S8
+  is 0.32499999999999996 = 1.2999999999999998 / 4. Display order equals record order here, so the two
+  cannot be told apart for Average.
+- **Product:** A_product!S6 is 0.006, which is 0.3 × 0.2 × 0.1 in record order. The children's product
+  would be 0.006000000000000001. A_product!S8 is 0.0042; the children would give 0.004200000000000001.
+
+StdDev and Var totals are not separated by this data. An accumulation that takes A's records first
+(0.2, 0.1, then 0.3) would also give the Sum cells. The sum of the children is not yet told apart from
+it.
+Status: VERIFIED (excel-graph) for these cells; the general rule is UNVERIFIED (probe pending: T-4589)
+
+## errorCaption replaces every error value
+Rule: with `showError` and `errorCaption`, every error value a pivot cell would show becomes the
+caption, as text. That includes `#DIV/0!` from StdDev and Var over one value, not only errors from the
+data. In probes/t4135-pivot-aggregates EC, with no column field and eleven data fields over Err, the
+caption also fills the Grand Total row of Count and CountNums, which show no error without the caption
+(A_count!R8 is 4). Why is open.
+Evidence: probes/t4135-pivot-aggregates EC (excel-graph, 2026-11-06, T-4135):
+- East (B5:L5) shows `ERR` for every aggregate except Count (3) and CountNums (2).
+- West (B6:L6) shows `ERR` for StdDev and Var, which have one value, and 0 for StdDevp and Varp.
+- The Grand Total row B7:L7 is `ERR` everywhere.
+Status: VERIFIED (excel-graph) for the caption replacing errors; the Count and CountNums grand totals
+are UNVERIFIED (probe pending: T-4589)

@@ -24,6 +24,9 @@ three rules unprobed:
 - gen-m9 abc2939ebd1e2365 A187: `GROWTH(PHI(-1E+300),Data!C11:D12,Data!E5:E9,Data!D1)`, a 0 y against a 2x2 x, is
   `#NUM!` in Excel (ours the size `#REF!`); probe a non-positive single y against wrongly sized x for TREND and GROWTH,
   and `TREND(5,2,4,FALSE)` (one point without a constant term), plus GROWTH predictions that overflow `exp`.
+  Update (T-4096): the one-point clause is settled by T-4096's Gate A tables (a fit through the origin: TREND s1 A140,
+  GROWTH s1 A123 and A125; statistics.md "LINEST, LOGEST, TREND and GROWTH: Gate A tables"), and the GROWTH exp-overflow
+  probe is T-4590's (GROWTH s1 A104). Do not run either here.
 
 Also (T-1741): probe LINEST's collinear column choice with y not in x (`LINEST(y,A:C)` with C = 2A): ours drops
 A, keeping the last column first (from linest-modes K106 alone); `test_linest_drops_a_collinear_column` pins that
