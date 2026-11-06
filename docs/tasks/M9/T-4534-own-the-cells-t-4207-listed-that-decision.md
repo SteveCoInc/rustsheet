@@ -86,4 +86,6 @@ Every listed cell is triaged. The two partial PRs settled the calipers cells (de
 - `eval/runs/desktop-owned.tsv` lists the forecast and J1328 cells under T-4373.
 - SUMPRODUCT: `rate_excepted` 1, `rate_visible` 0.
 - No stale or unchecked exception lines.
+The Rust test pinning the committed phase1-exceptions.tsv rows (`phase1_exceptions::tests::the_committed_file_parses`)
+names T-4373 and the J1328 row.
 Eval delta: none (no engine change, no baseline change).
