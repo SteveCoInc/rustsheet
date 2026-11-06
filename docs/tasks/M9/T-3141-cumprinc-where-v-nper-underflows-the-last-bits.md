@@ -98,3 +98,20 @@ because cumulative.rs conflicted with T-3524 and T-4349; the core was applied ag
   parity 6638 against an allowance of 6741.
 - **Unit tests** (test_fn_cumulative_lift.rs): `an_underflowed_principal_is_one_core_for_both_types` and
   `an_underflowed_principal_keeps_the_core_past_a_leading_exponent_of_0_3`.
+
+## Landing notes
+- **State.** PR #3105 is still a draft at head 8a531e9 plus this notes commit. This session could not mark it ready
+  for review: "steveash does not have permission to mark the pull request ready". CI has not run since 2026-11-04,
+  because drafts do not run CI here.
+- **Reviews.** Security, design and Excel fidelity all returned APPROVE on 8a531e9. Their MINORs are in the PR body and
+  in T-4716. This commit adds only these notes and the T-4716 task file, so no reviewer needs to run again.
+- **Order.** It must land after #3761 (T-4059). That PR adds the Gate A batches e-T-3141, e-T-4059 and r4-T-3141 and
+  the financial.md entry this PR cites. At the window's close #3761 was approved, with CI running on 3a0c72c.
+- **Next step.** Mark #3105 ready for review. Once #3761 has merged and CI is green here, enqueue it with SQUASH.
+  - If main conflicts again in cumulative.rs or financial.md, merge `origin/main` in and run `make eval-baseline`.
+  - The code change is small: `underflowed_principal`'s body, the call ahead of `short_principal` in `principal()`,
+    and dropping its call from `short_principal`.
+- **Do not repeat.**
+  - Do not score a batch and then call it a fresh sweep. Round 1 of #3761 rejected an aimed `r4` batch, and round 2
+    rejected calling post-freeze data fit data.
+  - Do not cite the old aimed `r4-T-3141`: it is e-T-3141 now.
