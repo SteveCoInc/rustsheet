@@ -188,7 +188,7 @@ of case and cell): 336 of 338 bit-exact, against 314 for the correctly rounded c
 801 of 807 against 742. Fresh sweep generated after the model was frozen (t3861-convert-prefix-sweep,
 150 seeded calls with prefixes on one or both units): 142 of 150 bit-exact, against 123 correctly
 rounded and 97 for the previous form; all 150 within 4 ulp, 15 digits and Gate A's envelope.
-Open gap: seven of the eight misses have a light-year or parsec factor (T-2047's digits).
+Seven of the eight misses have a light-year or parsec factor; the angstrom distance base below fixes them (T-4630).
 The eighth mixes a binary and a decimal prefix, and mixed pairs follow another rule (T-3975,
 probes/convert-mixed-prefix, excel-graph): with a binary prefix on either unit the prefixes are each
 unit's own constant, `(P_from × B_from) / (P_to × B_to)`, so a decimal prefix on the target enters as
@@ -203,12 +203,19 @@ pure-decimal rule; train 475 of 475 against 338 and 415. Fresh sweep after the r
 bit-exact, against 108 correctly rounded and 125 for the pure-decimal rule; all inside Gate A's envelope.
 The lbf factor is 444822.16152605
 (`CONVERT(1,"lbf","dyn")` is exactly that).
-Open gap: `CONVERT(1,"m","ft")` is 3.2808398950131235 in Excel and one ulp low in ours (probes/scalar-lift-open-a,
-probes/eng-convert-boolean-unit A7; T-2046, T-2047).
-Open gap: `CONVERT(255,"mi","km")` is 410.38272 and `CONVERT(255,"in","cm")` 647.7 in Excel for the web (the desktop
-calipers formulas_engineering golden agrees, D26:J27), and the engine is one ulp off (410.38272000000006,
-647.6999999999999); the negatives mirror them (probes/t4534-bessel-convert-web-values B1:B4, D1:D4, excel-graph,
-2026-11-06; T-4630).
+Distance is in angstroms (m = 1E10), as area is in square angstroms, not in metres (T-4630). Each distance factor is
+the nearest double to the unit's exact length in angstroms: mi 16093440000000, in 254000000, ft 3048000000, ly
+9.4607304725808E+25, the pica 1/6 inch (42333333.333333336) and the point 1/72 inch (3527777.777777778). The base shows
+in the last digit of a conversion between two non-base units or to a prefixed unit: `CONVERT(255,"mi","km")` is
+410.38272 and `CONVERT(255,"in","cm")` 647.7 (in metres 410.38272000000006 and 647.6999999999999; probes/t4534-bessel-
+convert-web-values B1:B4, D1:D4, the calipers formulas_engineering golden D26:J27 agrees), `CONVERT(1,"m","ft")`
+3.2808398950131235 (probes/scalar-lift-open-a Z8:Z10, convert-unit-names B33), and the light-year and parsec cells of
+the T-3861 sweeps. Of the 160 literal distance cells with oracle values in probes and probes-numeric, the metre base
+fits 143 and the angstrom base 160 (the best other powers of ten: 1E-8 m, 157, and 1E-7 m, 154). Hold-out by cell hash
+(30%, SHA-256 of case and cell, scored after the choice, so not blind): 42 of 44 against 39 for the metre base, train
+116 of 116 against 104. Fresh sweep after the factors were frozen (probes-numeric/t4630-convert-distance-sweep, 150
+seeded calls between distance units with decimal prefixes on neither, one or both units): 150 of 150 bit-exact, against
+133 for the metre base. ironcalc-calc ENGINEERING/CONVERT.xlsx is unchanged.
 Overflow: `value * F_from` is not allowed to overflow when the answer is representable:
 `CONVERT(1E290,"m2","m2")` is 1E+290, `CONVERT(1E300,"ha","m2")` 1.0000000000000001E+304,
 `CONVERT(1E302,"J","J")` 1E+302. The engine divides first (`value / F_to * F_from`) when the
