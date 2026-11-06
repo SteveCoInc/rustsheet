@@ -23,6 +23,9 @@ rustsheet_engine = { path = "../crates/rustsheet-engine" }
 rustsheet_xlsx = { path = "../crates/rustsheet-xlsx" }
 # Only for `cfb_seeds`, which writes `cfb_container`'s corpus; the same pin as rustsheet_xlsx.
 cfb = "=0.16.0"
+# Only for `pivot_import` and `pivot_seeds`, which rebuild a package around untrusted pivot parts;
+# the same crate and features as rustsheet_xlsx.
+zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 [[bin]]
 name = "formula_parse"
@@ -66,6 +69,13 @@ test = false
 doc = false
 bench = false
 
+[[bin]]
+name = "pivot_import"
+path = "fuzz_targets/pivot_import.rs"
+test = false
+doc = false
+bench = false
+
 # Not a fuzz target: writes `bitcode_workbook`'s seed corpus (run by seed_corpus.py).
 [[bin]]
 name = "bitcode_seeds"
@@ -78,6 +88,14 @@ bench = false
 [[bin]]
 name = "cfb_seeds"
 path = "seeds/cfb_seeds.rs"
+test = false
+doc = false
+bench = false
+
+# Not a fuzz target: writes `pivot_import`'s seed corpus (run by seed_corpus.py).
+[[bin]]
+name = "pivot_seeds"
+path = "seeds/pivot_seeds.rs"
 test = false
 doc = false
 bench = false

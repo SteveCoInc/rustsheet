@@ -212,6 +212,21 @@ fn read_part_capped(
     name: &str,
     limit: u64,
 ) -> Result<Option<String>, SnapshotError> {
+    let Some(bytes) = read_part_bytes_capped(zip, name, limit)? else {
+        return Ok(None);
+    };
+    String::from_utf8(bytes)
+        .map(Some)
+        .map_err(|_| SnapshotError::Malformed(format!("part {name} is not UTF-8")))
+}
+
+/// The bytes of part `name`, read through the same guard as [`read_part`]: at most `limit`
+/// bytes may inflate.
+pub(crate) fn read_part_bytes_capped(
+    zip: &mut Zip,
+    name: &str,
+    limit: u64,
+) -> Result<Option<Vec<u8>>, SnapshotError> {
     let Some(entry) = zip.names.entry(name) else {
         return Ok(None);
     };
@@ -220,14 +235,16 @@ fn read_part_capped(
         Err(zip::result::ZipError::FileNotFound) => return Ok(None),
         Err(e) => return Err(e.into()),
     };
-    let mut s = String::new();
-    (&mut file).take(limit + 1).read_to_string(&mut s)?;
-    if s.len() as u64 > limit {
+    let mut bytes = Vec::new();
+    (&mut file)
+        .take(limit.saturating_add(1))
+        .read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > limit {
         return Err(SnapshotError::Malformed(format!(
             "part {name} exceeds the {limit}-byte decompressed size limit"
         )));
     }
-    Ok(Some(s))
+    Ok(Some(bytes))
 }
 
 pub(crate) fn xml_err(part: &str, e: impl std::fmt::Display) -> SnapshotError {
@@ -376,7 +393,7 @@ fn read_shared_strings(zip: &mut Zip) -> Result<Vec<String>, SnapshotError> {
     Ok(out)
 }
 
-fn resolve_entity(r: &quick_xml::events::BytesRef<'_>) -> String {
+pub(crate) fn resolve_entity(r: &quick_xml::events::BytesRef<'_>) -> String {
     if let Ok(Some(c)) = r.resolve_char_ref() {
         return c.to_string();
     }
