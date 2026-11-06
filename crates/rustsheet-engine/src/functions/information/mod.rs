@@ -332,11 +332,16 @@ impl Model {
                 }
             }
             // A LET variable or LAMBDA parameter is a reference if it was bound to one
-            // (upstream MIN_MAX_extras.xlsx A14-A16).
-            Node::NamedVariableKind { .. } => matches!(
-                self.evaluate_node_with_reference(node, cell),
-                CalcResult::Range { .. }
-            ),
+            // (upstream MIN_MAX_extras.xlsx A14-A16), a union included: REDUCE's `a` bound to
+            // `(A1,A3)` is one (`REDUCE((A1,A3),{1},LAMBDA(a,v,ISREF(a)))` is TRUE,
+            // probes/t4478-reduce-scan-reference-accumulator Calc!H17, T-4494).
+            Node::NamedVariableKind { .. } => {
+                self.is_areas_variable(node)
+                    || matches!(
+                        self.evaluate_node_with_reference(node, cell),
+                        CalcResult::Range { .. }
+                    )
+            }
             _ => false,
         }
     }

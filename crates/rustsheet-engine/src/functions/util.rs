@@ -435,6 +435,12 @@ impl Model {
             } => return self.let_impl(args, cell, true),
             // A LET variable bound to a union is its areas (probes/multiarea-let H1).
             Node::NamedVariableKind { .. } => return self.variable_reference(node, cell),
+            // REDUCE ends on the accumulator, a union kept (probes/t4478-reduce-scan-reference-
+            // accumulator Calc!H7, T-4494).
+            Node::FunctionKind {
+                kind: Function::Reduce,
+                args,
+            } => return self.reduce_reference(args, cell),
             Node::LambdaCallKind { lambda, args } => {
                 return self.call_callee_as_reference(lambda, args, cell)
             }
@@ -924,7 +930,9 @@ impl Function {
     }
 
     /// The built-ins whose result can be a reference they pick or build: INDEX, OFFSET and INDIRECT, the arm a
-    /// scalar IF, CHOOSE, SWITCH or IFS takes, a LET body, and [`Function::picks_reference`]'s.
+    /// scalar IF, CHOOSE, SWITCH or IFS takes, a LET body, the accumulator REDUCE ends with
+    /// (`AREAS(REDUCE(A1,A2:A3,LAMBDA(a,v,(a,v))))` is 3, probes/t4478-reduce-scan-reference-accumulator
+    /// Calc!H7, T-4494), and [`Function::picks_reference`]'s.
     /// The parser takes them as reference operands (`is_reference_operand`) and FORMULATEXT
     /// reads the reference they pick (`fn_formulatext`, T-2726).
     pub(crate) fn may_be_reference(&self) -> bool {
