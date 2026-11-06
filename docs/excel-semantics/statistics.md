@@ -737,7 +737,7 @@ What the probes show about the kernel itself (none of it yet reproduces Excel bi
   - CHIDIST, CHISQ.TEST at df 1 and Z.TEST are wrappers too.
   - Z.TEST with a single-value array returns #DIV/0!. A typed TRUE as the array is such a single value:
     `Z.TEST(TRUE,0.5,1)` is #DIV/0! (probes-numeric/t1049-ztest A51; a direct boolean is accepted as one value; whether it is counted as 1 or skipped is not distinguishable here, both give #DIV/0!, T-2049), while typed text is
-    #VALUE! (`Z.TEST("a",4)`, A50) and `Z.TEST(7,4)` #DIV/0! (A41).
+    #VALUE! (`Z.TEST("a",4)`, A50) and `Z.TEST(7,4)` #DIV/0! (A41); direct numeric text is one value, `ZTEST("3",3)` #DIV/0! (T-4223).
   - Odd-df upper chi-square (Q(1.5), Q(2.5)) and the shape-0.5 density use separate generic paths, not this kernel.
 - ERFC kernel for 0.5 < x <= 4 (rounds 7-9): bit-exact.
   - **Form.** The same family as the tail. ERFC = fl53(fl64(E*R)) with R = fl53(fl64(N/D)). N (degree 9) and D
@@ -2755,10 +2755,26 @@ Evidence: probes-numeric t2513-r3-tdensity-a1, -a2, -hold, -hold2, t2513-verify-
 m9-t-dist-pdf; docs/research/t2464/r3-tdensity (`tdlib.py`, `s10_eset.py`, `s11_fsel.py`, `s12_logbr.py`,
 `s17_final.py`, `s21_small.py`), verify-r3-tdensity (`vhold.out`, `hold2.out`, `vconst.out`, `vband.out`, `vsmall.out`,
 `vold_perdf.out`).
-Ours: `student_t.rs` `student_t_density`, a double-double cos^(n+1) times a gamma ratio.
+- bd0's result stays in an x87 register into u (its series sum unstored, its log form `t + (M - k)` summed there),
+  unlike the beta density's stored bd0: storing it moves `T.DIST(2.20146...,11,FALSE)` (hold2) 3 ulp off Excel and
+  hold2 to 572 exact (T-2585).
+- Subnormal results (T-2585): for df >= 3 a subnormal density is 0. `T.DIST(-1.1002374143529E+20,15,FALSE)` is 0
+  (Gate A T.DIST/r4-T-2585 A138, where the math is 2.18E-312), its companion `(x)=0` is TRUE and `x*1E300` is 0, and
+  `T.DIST(1E78,3,FALSE)*1E300` and `T.DIST(1E80,3,FALSE)*1E300` are 0. That is the flush of Excel's `*` (numbers.md
+  "Subnormal results become 0") on the last product. df 2's EXP keeps it: `T.DIST(1E103,2,FALSE)*1E300` is
+  9.99999999999997E-10 and `T.DIST(1E104,2,FALSE)*1E300` 9.999999999984654E-13. df 1 has no subnormal case: where
+  `π·fl(1 + t·t)` overflows, `T.DIST(1E154,1,FALSE)` is `#DIV/0!` (`T.DIST(3E153,1,FALSE)*1E300` is 3.5367765131532296E-8,
+  normal), and `T.DIST(1E155,1,FALSE)`, where t·t itself overflows, is `#NUM!` (T-3554). Ours: the flush on df >= 3
+  and the kept df 2 subnormal are implemented; df 1's `#DIV/0!` is T-4427 (ours 0). Evidence: scratch excel-graph
+  recalcs of 2026-11-06 (A138 is in the committed batch; T-4427 commits the rest as a probe case).
+Implemented in: `loader.rs` `excel_t_density` (with `loader_t_constant` and `excel_bd0_unstored`), called by T.DIST's
+density through `student_t.rs` `t_density`; `student_t_density` stays the fallback and T.INV's centre estimate (T-2585). On cells.tsv the
+engine gets 7,046 exact and 19,725 within 15 digits of 19,793 cells (df >= 3: 18,646 of 18,714; df 1 and 2: all
+1,079 exact); hold2 573 exact, the verifier's hold-out at least 505 exact and 977 within 15 digits (unit test over
+`test/fixtures/t_density_hold.fixture`).
 Status: PARTIAL (excel-graph): the structure VERIFIED on two hold-outs for df >= 3, df 1 and df 2 VERIFIED; the per-df
 constant UNVERIFIED
-Tasks: T-2585, T-2586, T-0969
+Tasks: T-2585, T-2586, T-0969, T-4427
 
 ## Incomplete beta sweep (T-1044)
 Rule: Excel's incomplete-beta values are not the correctly rounded ones, are not exactly symmetric, and saturate to exactly 1.
@@ -4708,9 +4724,24 @@ within 1E-15 relative / largest relative error:
   and still read 0, while `F.DIST.RT(20,60,1E8)` (z 600) keeps 1.164E-211. FDIST is the same function: column D (df1 30,
   df2 1E8, z 716 to 736) is 0 like column A. The df1 = 2 zeros are Excel's closed form (not this path) and stay unexplained.
   Ours (T-4045): F's tails only (`bratio` `f_closed_or_ported_tails` asks `bup.rs` `l140_bup_prefactor_underflows`,
-  at any a0). That makes every 0 of t4045 and t4017 exact. BETA.DIST and the t are unprobed at this edge (T-4254), and
-  BETA.DIST's cdf keeps today's kernel there: F.INV at a huge df1 searches it, and a 0 there moves
+  at any a0). That makes every 0 of t4045 and t4017 exact. BETA.DIST's cdf keeps today's kernel there: F.INV at a huge df1 searches it, and a 0 there moves
   `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) 0.6% off the math.
+  BETA.DIST and the t (T-4254, probes/t4254-beta-t-l140-zero-cut, 132 cells, and probes/t4254-beta-t-zero-wide, 180 cells,
+  excel-graph, 2026-11-06), walked in ln ret (BETA.DIST on L140 bup+bgrat: a huge, b < 40, x0 > 0.7) or in ln of the
+  true tail (T.DIST.RT):
+  - BETA.DIST follows the rule at many bup terms. At (a, b) = (2E6, 10.5) (c = 1/2) and (2E6, 10) (c = 1), ln ret -708
+    is a number (`BETA.DIST(0.999649...,2E6,10.5,TRUE)` row 11, 1.221542276089495E-288) and -709 is 0. (5E6, 10.5) is
+    a number at every ln ret down to -690.
+  - At n = 3 bup terms Excel's 0 starts earlier, between ln ret -680 and -690, at (5E6, 3.5), (5E6, 4) and (1E6, 3.5)
+    alike. The last numbers are about 6E-291 and 3.8E-291, and the first 0 has a true tail near 2.8E-295. Neither ln of
+    bgrat's increment I_x0(a0, c) (-687 to -697 at that bracket, while (5E6, 10.5) keeps a number at -697) nor the
+    tail explains it. Unmodelled (T-4437).
+  - T.DIST.RT never reaches L140: its kernel is K(df/2, 1/2), and b = 1/2 takes the small-shape branches. Still, Excel
+    is 0 once the true tail falls between e^-680 and e^-690 at df 1E7, and between e^-690 and e^-698 at df 1E5
+    (about 3E-300), far above the subnormals. Unmodelled (T-4437).
+  - Excel never returns a subnormal or a non-zero value below these cuts in any probed cell. Ours keeps a number at
+    every Excel 0 above (a type-level miss on 0 against a number, owned by T-4437) and matches every number to the last
+    digits, except three cells just above the n = 3 cut that are off in the 9th digit.
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
@@ -7384,3 +7415,30 @@ probes/t3185-m9-statistical-argument-kinds-a to -c (excel-graph, 2026-11-04, 335
   (b A62, A86, A91, c A69): TREND's 5.8 is the fit at 6 with `const` TRUE, and LINEST's 0.6 its slope. As
   `stats`, LINEST and LOGEST are `#SPILL!` (b A89, A94): a result taller than one row, where ours spills 1-by-2. The
   shape is unprobed (T-4222). Ours is `#VALUE!` for GROWTH's and TREND's `const` (T-4222).
+
+## M9 statistical argument kinds of an array, aggregate or criteria parameter (T-4223)
+Evidence: probes/t4223-m9-statistical-array-kinds-a and -b (100 cells, excel-graph, 2026-11-06). Each cell is one valid
+base call over `Data!A1:A5` (2, 4, 5, 4, 5) and `Data!B1:B5` (1 to 5), with one argument replaced by the kind. For an
+aggregate (AVEDEV, DEVSQ, HARMEAN, KURT, MEDIAN, MODE*, SKEW*, STDEV*, VAR*, VARPA), the kind is the first argument
+and the data is the second.
+- An aggregate given `""` directly is `#VALUE!` (AVEDEV, DEVSQ, HARMEAN, KURT, MEDIAN, SKEW, SKEW.P, STDEV*, VAR*,
+  VARPA; a A1, A21, A37, A38, b A3, A13:A14, A16:A18, A20, A37:A39, A41, A43), and `#N/A` directly is `#N/A`. The
+  exception is MODE: `MODE("",Data!A1:A5)` and `MODE.SNGL(...)` skip the text and give 4 (b A10, A12).
+  `MODE.MULT("",Data!A1:A5)` is `#SPILL!` in the probe's layout (b A11), so it skips the text too.
+- Array parameters given a scalar:
+  - CHISQ.TEST, CHITEST, T.TEST and TTEST are `#N/A` for `""`, numeric text and `#N/A`, in either array (a A12:A20,
+    b A22:A23, A32:A36).
+  - F.TEST and FTEST are `#DIV/0!` for `""` (a lone value has no variance) and `#N/A` for `#N/A` (a A22:A29).
+  - LINEST, LOGEST, GROWTH and TREND are `#VALUE!` for `""` as `known_y's` and `#REF!` for `""` as `known_x's` (a
+    A30, A32, A39, A41, A43, A45, b A24, A26). As `new_x's`, numeric text, `""` and `TRUE` are `#VALUE!` (a A34:A35,
+    b A28:A30). `#N/A` is `#N/A` everywhere.
+  - Z.TEST and ZTEST: 0 and numeric text are one value and `#DIV/0!` (`ZTEST("3",3)`, b A44, A47, A48), `""` is
+    `#VALUE!` (b A45, A49) and `#N/A` is `#N/A`.
+- Criteria (AVERAGEIF, AVERAGEIFS, MAXIFS, MINIFS): a number, a boolean or an error criterion matches cells holding that
+  value. None of 0, -1, 0.5, TRUE or `#N/A` occurs in the data, so AVERAGEIF(S) is `#DIV/0!` and MAXIFS and MINIFS are
+  0 (a A2:A3, A5:A8, A10:A11, A47:A49, b A1:A2, A4:A6, A8:A9). Numeric text matches the number, so `"3"` against B1:B5
+  picks A3 = 5 (a A9, A50, b A7), and `AVERAGEIF(Data!A1:A5,"3")` is `#DIV/0!`, because the data holds no 3 (a A4).
+Ours: every cell matches. `ZTEST("3",3)` (b A48) was `#VALUE!` until T-4223: `z_test.rs` now reads direct numeric
+text as one value, like a direct boolean.
+Status: VERIFIED (excel-graph)
+Tasks: T-4223

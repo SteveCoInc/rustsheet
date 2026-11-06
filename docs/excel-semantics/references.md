@@ -11,7 +11,7 @@ Evidence: poi/FormulaSheetRange.xlsx test!D11 = 10, D12 = 60 and poi/48703.xlsx 
 excel-graph, 2026-10-04); poi/55906-MultiSheetRefs.xlsx A3 = 66, I6 = 4 (Excel-cached);
 probes/3d-ref-aggregates (excel-graph, 2026-10-06).
 Status: VERIFIED
-Implemented in: `get_sheet_span_range` (crates/rustsheet-engine/src/reference_operators.rs) and
+Implemented in: `get_sheet_span_range` (crates/rustsheet-engine/src/reference_operators/mod.rs) and
 `for_each_cell_or_error_in_range` (crates/rustsheet-engine/src/functions/util.rs); AVERAGEA, MAXA,
 MINA, PRODUCT, CONCAT, LARGE and RANK take their arguments through `evaluate_aggregate_arg` too (T-0196).
 CONCAT no longer rejects a cross-sheet range with #VALUE!. LARGE/RANK read 3-D spans through
@@ -81,9 +81,9 @@ kind other than those above reaching COUNTBLANK as a value (`#DIV/0!`, `#NUM!`, 
 the engine returns it like the others.
 Status: VERIFIED (web).
 Implemented in: `get_sheet_span_value` (`#REF!`) and `get_sheet_span_reference` (`#VALUE!`) in
-crates/rustsheet-engine/src/reference_operators.rs; VLOOKUP, MATCH and COUNTBLANK reach
+crates/rustsheet-engine/src/reference_operators/mod.rs; VLOOKUP, MATCH and COUNTBLANK reach
 the `#VALUE!` through `evaluate_single_sheet_arg` (functions/util.rs), which passes IF's chosen branch through
-the same check (`IfBranchMode::SingleSheet`, T-1026); INDEX and AREAS read their argument with `evaluate_reference_arg` and refuse a 3-D result with `three_d_needs_one_sheet` (T-1063); IF-wrapped spans inside AREAS and VLOOKUP go through that path, HLOOKUP and COUNTBLANK read it through `evaluate_single_sheet_arg` (T-1170). A span whose end is not a sheet is `#NAME?` (`Model::wrong_sheet_error`, reference_operators.rs); `@` of a multi-sheet span is `#REF!` (`evaluate_at_operand_reference`).
+the same check (`IfBranchMode::SingleSheet`, T-1026); INDEX and AREAS read their argument with `evaluate_reference_arg` and refuse a 3-D result with `three_d_needs_one_sheet` (T-1063); IF-wrapped spans inside AREAS and VLOOKUP go through that path, HLOOKUP and COUNTBLANK read it through `evaluate_single_sheet_arg` (T-1170). A span whose end is not a sheet is `#NAME?` (`Model::wrong_sheet_error`, reference_operators/mod.rs); `@` of a multi-sheet span is `#REF!` (`evaluate_at_operand_reference`).
 CHOOSE in an aggregate argument: `Model::choose_impl` (T-1064). A span bound by LET or LAMBDA is a `Binding::Span`
 (`Model::bind_argument`, functions/logical/let.rs). Only `Model::variable_reference` hands it out as a range, so it reaches the aggregates;
 every value read is `three_d_needs_one_sheet`, and ROWS/COLUMNS and COUNTBLANK refuse it through `RefArg::into_single_sheet_area` (T-1158).
@@ -645,7 +645,7 @@ reversed corners (`Data!C8:B3`) and range-of-ranges (`Data!A7:A7:Data!C11`).
 Evidence: gen-m1/4dc8ed1de05a61be Calc!A5, A2, A3, A16; gen-m1/7cb99acdd82402f1 Calc!A25, A4;
 gen-m1/1ce5b2467b3b19fd Calc!A9, A25 (oracle: excel-graph, 2026-10-05; 632 cells across the three cases, T-0109).
 Status: VERIFIED
-Implemented in: expressions/parser/reference_operators.rs (`Parser::parse_intersection`); reference_operators.rs (`Model::get_intersection`)
+Implemented in: expressions/parser/reference_operators.rs (`Parser::parse_intersection`); reference_operators/mod.rs (`Model::get_intersection`)
 Tasks: T-0105
 
 ## Intersection operator: separators
@@ -960,7 +960,7 @@ Rule: an intersection of references that share no cell is `#NULL!` (all 51 `inte
 `Data!A3:D4 Data!Z99` → `#NULL!`, `Data!B4:E11 Data!A1:A3` → `#NULL!`.
 Evidence: gen-m1/4dc8ed1de05a61be Calc!A6, A10 (oracle: excel-graph, 2026-10-05, T-0109).
 Status: VERIFIED
-Implemented in: reference_operators.rs (`Model::get_intersection`)
+Implemented in: reference_operators/mod.rs (`Model::get_intersection`)
 Tasks: T-0105
 
 ## Cross-sheet intersection is #VALUE!
@@ -968,7 +968,7 @@ Rule: an intersection of references on two different sheets is `#VALUE!`, not `#
 the coordinates overlap (all 43 `intersection/cross-sheet` cells): `Data!C5:C10 'My Data'!C9:D9` → `#VALUE!`.
 Evidence: gen-m1/4dc8ed1de05a61be Calc!A4, A17, A29 (oracle: excel-graph, 2026-10-05, T-0109).
 Status: VERIFIED
-Implemented in: reference_operators.rs (`Model::get_intersection`)
+Implemented in: reference_operators/mod.rs (`Model::get_intersection`)
 Tasks: T-0105
 
 ## Union (comma) reference in a value context is #VALUE!
@@ -983,7 +983,7 @@ An intersection that leaves two areas is `#VALUE!` even when both are the same c
 `=A1:A3 (A2:B2,A2)` (probes/intersection-function-operands H5, see "Intersection operands must be references").
 Status: VERIFIED
 Implemented in: expressions/parser/reference_operators.rs (`Parser::parse_parenthesized`, `union_text`);
-reference_operators.rs (`Model::get_union`, `Model::get_intersection` over the areas of a union)
+reference_operators/mod.rs (`Model::get_union`, `Model::get_intersection` over the areas of a union)
 Tasks: T-0134
 
 ## Union: parsing and evaluation
@@ -1055,7 +1055,7 @@ formula, which were not kept as cases.
 T-0998: probes/union-operand-{double-minus,nested-parens,neg-cut-group} (same oracle and date); T-1031: probes/union-operand-{triple,quad}-minus (excel-graph, 2026-10-07); its refusals (percent,
 negated operand cut by an intersection, and the T-1031 forms) came from scratch fills that failed with FileCorruptTryRepair and were not kept.
 Status: VERIFIED (except the parts marked as engine choices; engine mismatches tracked in T-1024)
-Implemented in: expressions/parser/reference_operators.rs (`Parser::parse_parenthesized`); reference_operators.rs
+Implemented in: expressions/parser/reference_operators.rs (`Parser::parse_parenthesized`); reference_operators/mod.rs
 Tasks: T-0134, T-0187, T-0193, T-0194, T-0133, T-0998, T-1024, T-1031, T-1039
 
 ## Union area cap
@@ -1147,9 +1147,9 @@ A defined name's union body is capped like a written union, at each use: more th
 needed (SPEC-0004 planned one for stored area lists): names keep only their parsed body, never an area list,
 so memory is bounded by the workbook's formula text and each use by the caps above.
 Status: DEVIATION (decision 0014)
-Implemented in: reference_operators.rs (`MAX_AREAS`, `Model::union_areas`,
+Implemented in: reference_operators/areas.rs (`MAX_AREAS`); reference_operators/mod.rs (`Model::union_areas`,
 `Model::count_union_areas`, `Model::intersect_areas`); area_budget.rs (`MAX_AREA_PAIRS`,
-`MAX_AREA_WALK`, `SLOTS_PER_WALK_STEP`); functions/util.rs (`Model::for_each_position_in_area`, `Model::walk_area`, `Model::for_each_cell_or_error_in_whole_range`); functions/util/existing_walk.rs (`Model::for_each_existing_position`, `Model::for_each_indexed_position`, `Model::walks_sparsely`); sheet_data.rs (`SheetData::rows_in_column_between`, `SheetData::cells_in_columns`); reference_operators.rs (`MAX_HELD_AREAS`, `VariableStack`)
+`MAX_AREA_WALK`, `SLOTS_PER_WALK_STEP`); functions/util.rs (`Model::for_each_position_in_area`, `Model::walk_area`, `Model::for_each_cell_or_error_in_whole_range`); functions/util/existing_walk.rs (`Model::for_each_existing_position`, `Model::for_each_indexed_position`, `Model::walks_sparsely`); sheet_data.rs (`SheetData::rows_in_column_between`, `SheetData::cells_in_columns`); variable_stack.rs (`MAX_HELD_AREAS`, `VariableStack`)
 Tasks: T-0134, T-1062, T-1064, T-1065, T-1162, T-1462, T-1497, T-1502, T-1690, T-2710
 
 ## Seen-range cap
@@ -1246,7 +1246,7 @@ probes/multiarea-*, oracle: excel-graph, 2026-10-07, T-1061):
   union name, which is TRUE).
 - 3-D: `SUM(Sheet1:Sheet2!A1,(A1,B2))` = 107 (3-D argument plus the union), but a 3-D operand inside the union,
   `SUM((Sheet1:Sheet2!A1,B2))`, is `#NAME?`.
-  Implemented in `evaluate_union_operand` (reference_operators.rs, T-1070). VERIFIED by T-1159
+  Implemented in `evaluate_union_operand` (reference_operators/mod.rs, T-1070). VERIFIED by T-1159
   (probes/multiarea-3d-union-h1..h8, excel-graph, 2026-10-08): a multi-sheet span as a direct operand of a union
   is `#NAME?` whichever side it is on and whichever context reads it: `SUM((A1,Sheet1:Sheet2!B2))`, the bare
   `=(Sheet1:Sheet2!A1,B2)`, `SUM((Sheet1:Sheet2!A1,Sheet1:Sheet2!B2))` and `AREAS((A1,Sheet1:Sheet2!B2))` are all
@@ -1286,7 +1286,7 @@ STDEVPA since T-1184) walks the areas one after the
 other (`Model::for_each_cell_in_areas`). Since T-1068 LARGE, SMALL, RANK.EQ/RANK.AVG and the data_array of FREQUENCY
 take a union the same way (`Model::values_from_areas`; FREQUENCY's bins_array is unprobed and stays a single reference).
 Since T-1064 a LET variable or LAMBDA parameter bound to a union
-(`Binding::Areas`, reference_operators.rs; `Model::bind_argument`, functions/logical/let.rs), the branch IF or
+(`Binding::Areas`, variable_stack.rs; `Model::bind_argument`, functions/logical/let.rs), the branch IF or
 CHOOSE picks with a scalar condition or index (`Model::if_impl`, `Model::choose_impl`) and LET's body
 (`Model::let_impl`) stay areas in reference context and as intersection operands.
 UNVERIFIED (no probe): an IF or CHOOSE over an array condition keeps its value form.
@@ -1493,7 +1493,7 @@ None of these forms made the workbook unloadable.
 Evidence: probes/sheet-qualified-corner-order Calc!A1-A4, B1, B2, B4 (order, text), A6-A9 (two sheets),
 A11/B11 (control) (oracle: excel-graph, 2026-10-08, T-1138).
 Status: VERIFIED (web)
-Implemented in: `get_range` (crates/rustsheet-engine/src/reference_operators.rs) and `is_reference`
+Implemented in: `get_range` (crates/rustsheet-engine/src/reference_operators/mod.rs) and `is_reference`
 (crates/rustsheet-engine/src/functions/information/mod.rs), which is TRUE for `a:b` only when `get_range` gives
 a range (T-1166).
 The same holds when an operand errors or is not a reference (probes/isref-range-operands, excel-graph
@@ -1647,7 +1647,7 @@ Evidence: probes/defined-name-grouped-reference A8:A13 (excel-graph, 2026-10-09)
 Unnamed multi-cell operands join the same way (T-1205, probes/range-operator-unnamed-operands, excel-graph 2026-10-09; B1:B3 = 1, 2, 3, C1:C3 = 10, 20, 30): `ROWS(OFFSET(B1,0,0,2,1):B3)` is 3, `SUM(INDEX(B1:B3,1):INDEX(B1:B3,3))` 6, `SUM(B1:B2:C3)` and `SUM(B1:B2:C3:C2)` 66, `ROWS((B1:B2):B3)` 3, and the OFFSET form is a reference (`ISREF` TRUE). An undefined name on either side of `:` is `#NAME?` (`SUM(xx:B3)`, `SUM(B3:xx)`), `ISREF(xx:B3)` FALSE and the bare `=xx:B3` is `#NAME?` too, and so is a bare column letter: `=SUM(A:B3)` is accepted and gives `#NAME?` (probes/range-operator-column-letter-before-colon), which is why the lexer reads a column-spelled identifier before a non-column-range `:` as a name.
 Status: VERIFIED. Corner order: see "Sheet-qualified range corners" above.
 Implemented in: `Model::get_range`, `range_operand` and `defined_name_range_operand`
-(reference_operators.rs, defined_names.rs); the lexer keeps a column-spelled name before `:` an identifier (lexer/mod.rs).
+(reference_operators/mod.rs, defined_names.rs); the lexer keeps a column-spelled name before `:` an identifier (lexer/mod.rs).
 Tasks: T-1173, T-1205
 
 ## COUNTBLANK of a name that is not a reference is an error
@@ -1745,7 +1745,7 @@ Tasks: T-1210, T-1234
 Rule (probes/at-signed-operand, excel-graph, 2026-10-11, T-1285): `@` takes a signed operand and the sign binds inside it. `=@-1` = -1; `=@+1` = 1 and prints `=@1` (unary plus dropped); `=@-B1:B3` = top-left of the negated range, -5 (formula on row 31, off the range rows, and not #VALUE!); `=@-B1 B1:C1` = -5; `=@-B1` = -5; `=@-B1:B3*2` = -10; `=@-1%` = -0.01; `=@-2^2` = 4, `(-2)^2`, and FORMULATEXT prints it as written `=@-2^2` (fixed in T-1320). `=ANCHORARRAY(@IF(TRUE,D1))` spills D1's array (`@` of an IF that picks one cell keeps the reference, like `@INDEX`; the engine gave #VALUE! until T-1321). `=@OFFSET(B1,0,0,3,1)` and `=@INDIRECT("B1:B3")` placed off-row are #VALUE! and print as written.
 Rule (probes/at-if-spill-anchor-operand, excel-graph, 2026-10-11, T-1337): `ANCHORARRAY(@IF(TRUE,D1:D3))` implicitly intersects the picked range at the formula cell, then takes that cell as the anchor: in H1 it spills D1# (1,2,3); in J2 the pick is D2, which is not a spill anchor, so #REF!; in L5 (off the range rows) #VALUE!. `ANCHORARRAY(@IF(TRUE,(D1,E1)))` (a picked union) and `ANCHORARRAY(@IF(FALSE,D1,5))` (a non-reference) are #VALUE!. Outside spill anchors `@IF(TRUE,B1)` stays a reference: `VLOOKUP(1,A1:C3,@IF(TRUE,B1))` with B1 text "2" gives "2" (column index "2" coerced), and `LOOKUP(99,A1:A3,@IF(TRUE,F1))` = 1, equal to the plain `LOOKUP(99,A1:A3,F1)` (1, although F1 is 77; unexplained), while a scalar result_vector `LOOKUP(99,A1:A3,77)` is #N/A. The engine matches since T-1368.
 Status: VERIFIED (excel-graph)
-Implemented in: expressions/parser/operands.rs (signed operand, T-1247); FORMULATEXT of `=@-2^2` fixed (T-1320); `ANCHORARRAY(@IF(...))` in `spill_anchor_operand` (reference_operators.rs, T-1321; spill anchors; the other lookup callers of `eval_ref_or_index` are probed for `@IF` by T-1337: VLOOKUP matches); LOOKUP result_vector `@IF` in `lookup_result` (functions/lookup_and_reference/lookup.rs, T-1368)
+Implemented in: expressions/parser/operands.rs (signed operand, T-1247); FORMULATEXT of `=@-2^2` fixed (T-1320); `ANCHORARRAY(@IF(...))` in `spill_anchor_operand` (reference_operators/mod.rs, T-1321; spill anchors; the other lookup callers of `eval_ref_or_index` are probed for `@IF` by T-1337: VLOOKUP matches); LOOKUP result_vector `@IF` in `lookup_result` (functions/lookup_and_reference/lookup.rs, T-1368)
 Tasks: T-1285, T-1320, T-1321, T-1337, T-1368
 
 ## FORMULATEXT of @ next to ^
@@ -2118,19 +2118,31 @@ same columns, one name per row from 30, nNum = 3 and nRng = Sheet1!$Z$1:$Z$6 as 
   with no `@` (row 34).
 - Over n2d = `{1,2;3,4}`, `INDEX(n2d,1,1)` is one element and shows no `@`, under ABS, `+0` or as an IF arm, while
   `=@INDEX(n2d,1)` and `=ABS(@INDEX(n2d,1))`, a row, keep it (`=SUM(INDEX(n2d,1))` 3) (row 45).
+The remaining bodies (probes/t4430-legacy-at-name-body-rest, 181 scored cells, excel-graph, 2026-11-06, T-4430;
+same columns, rows 30-33 `nRef` = #REF!, `nDiv` = #DIV/0!, `nPlus` = +3, `nNN` = --3; rows 45-49 INDEX shapes):
+- `nRef` and `nDiv` read as their literal like #N/A: no `@` at the root, under ABS, SUM or as an IF arm; as an INDEX
+  index the INDEX keeps its own (`=@INDEX(Z1:Z6,nRef)`, `=@IF(TRUE,INDEX(Z1:Z6,nRef))`) (A30:L31, M30:P31).
+- `nPlus` = +3 reads as the literal 3 everywhere, even as an index (`=INDEX(Z1:Z6,nPlus)` no `@`), but `nNN` = --3 takes
+  the `@` like a computed body (`=@nNN`, `=@INDEX(Z1:Z6,@nNN)`; SUM none) (rows 32-33).
+- INDEX over an array-constant body: with a row and a column index it is one element and shows no `@` for `{3}`,
+  `{3,4}`, `{3;4}` (`INDEX(nRow,1,2)`, `INDEX(nCol,2,1)`), for an out-of-range `INDEX(n2d,5,5)` and `INDEX(n2d,1,5)`
+  (`#REF!`), and for an area number, `INDEX(n2d,1,1,1)` (1); one index keeps the `@` over all three, `{3}` included
+  (`=@INDEX(nOne,1)`, `=@INDEX(nRow,2)`, `=@INDEX(nCol,1)`), raw, under ABS, `+0` and as an IF arm
+  (`=@IF(TRUE,INDEX(nRow,1))`); none under SUM (rows 45-49). Ours showed the IF arm without its `@` and the area
+  number with one before T-4430.
 Ours matches every cell of both probes (`scalar_body`, static_analysis/name_body.rs, read by `add_legacy_intersection`,
 `run_static_analysis_on_node`, `is_range_arm` and `indexes_one_cell`; `indexes_one_reference_cell` makes a single-cell
 INDEX a scalar shape in `fallback_shape` when its area is a range, a union or a name whose body is a reference, or a
 name whose body is an array constant with a row and a column index, `is_array_body`; T-4273). One index into a
-one-row or one-column array body and an area number over an array body are unprobed (ours: the `@`). The `@` is
+one-row or one-column array body and an area number over an array body are probed in T-4430 (above). The `@` is
 decided when the legacy formula is read (xlsx import or `set_cell_with_legacy_formula`), from the body the name has
 then, and is kept in the formula after that; whether Excel redraws a legacy formula's `@` when a name's body changes
 later is unprobed: the case format sets names before the workbook loads, so it needs a name-edit sheet op the
 harness does not have.
-Evidence: probes/t3856-legacy-at-name-body; probes/t4273-legacy-at-name-body-more;
+Evidence: probes/t3856-legacy-at-name-body; probes/t4273-legacy-at-name-body-more; probes/t4430-legacy-at-name-body-rest;
 probes/t3297-legacy-if-index-arm-name-table I35, K35, M35, I36, K36.
 Status: VERIFIED (excel-graph)
-Tasks: T-3297, T-3856, T-4273
+Tasks: T-3297, T-3856, T-4273, T-4430
 
 ## Legacy N and T over a reference-returning call (T-1713)
 Rule: in a legacy (non-array) formula, N and T read their argument as a reference: no `@` goes on it,

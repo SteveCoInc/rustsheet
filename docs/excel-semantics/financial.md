@@ -1147,8 +1147,8 @@ The cap's return test (T-2689; probes/rate-cap-return-rule, rate-pmt-zero-cap, r
   formulas_financial F142 = rate-pmt-zero-cap A24, -0.9970141220397587), n 25 and up have a step over 1e-4.
 Whether a test is `<` or `<=` and whether the last one is 1 + r or r + 1 are not separated by any cell.
 Not probed, kept from the model: `#NUM!` for a residual whose `^` overflows (a flat secant is probed:
-rate-zero-residual-guess A1, A2); only the iterates r2 are tested against -1 (not r1 = guess - 0.001); a -0
-residual at the guess (the zero's sign picks r1; the probe's residuals are all +0); f(0) is pv + pmt·n + fv in plain doubles (the three
+rate-zero-residual-guess A1, A2); only the iterates r2 are tested against -1 (not r1 = guess ± 0.001); a -0
+residual at the guess (a +0 one steps up, T-3876's entry "RATE steps up from a zero residual"; no probed one is -0); f(0) is pv + pmt·n + fv in plain doubles (the three
 guess-0 cells are bit-exact, but no cell separates the order); the cap probe's guesses were chosen by the model's own
 step count, so the cap's position is measured in model steps (A30's exact unconverged bits confirm it).
 Ours: `compute_rate` (functions/financial/financial_util.rs), this model.
@@ -1325,6 +1325,37 @@ test in the noise floor; the outcome of a flat secant there; a non-integer nper 
 |f1| < 1e-7)
 Tasks: T-3348, T-3389, T-3424, T-3579, T-3698, T-3963, T-4146
 
+## RATE steps up from a zero residual
+Rule: the secant's second point is r1 = guess - 0.001 only when f(guess) > 0; when f(guess) is exactly 0 (and when it is
+negative) r1 = guess + 0.001. The rest of "RATE is a secant on the FV residual" is unchanged.
+Evidence: probes/t3876-rate-noise-residual (T-3876), 26 cells, 25 bit-exact with the rule:
+- Rounding-noise annuities (nper 1 with pv + pmt = 0 at the payment date and fv 0, type 1; or pv 0 and pmt = -fv, type 0):
+  every rate is a root and f is 0 or a few ulp of the flows. In 14 cells f(guess) is exactly 0. Excel returns the guess
+  in exactly the 5 where the model's f(guess + 0.001) is not 0 (A1, A8 `RATE(1,±13501.684222927,∓13501.684222927,0,1,1.74874265618351)`
+  at f ±7.3e-12, A11 `RATE(1,-3,0,3,0,3)`, A17, A26): the secant steps from guess + 0.001 back onto the guess, where
+  f = 0 stops it. In the other 9 (A2:A7, A9, A10, A12; guesses -0.99999999 to 10) f(guess + 0.001) is 0 too, the first
+  secant is flat on 0 and the call is `#NUM!`. Stepping down instead (the model before T-3876) agrees on 11 of the 14:
+  A1, A8 and A11 have f(guess - 0.001) = 0.
+- Every argument 0 (`RATE(1,0,0,0,1,0.3)`, `RATE(2,0,0,0,0,1.74874265618351)`, A18:A21) stays `#NUM!`: the flat secant on 0.
+- Nonzero noise at the guess (A13:A16) runs the secant as before. A13 commits T-3698's first draw,
+  `RATE(1,702.59374702126,-702.59374702126,0,1)` = 0.09577777777777774, which the model gives bit for bit.
+- nper 2 controls (A24, A25, type 1, pmt = -pv) are `#NUM!` in both.
+- The off cell: A22, `RATE(1,0,0,1E-300,0,0.3)`, a constant residual 1E-300, is `#NUM!` in Excel; the model holds at
+  r1 = 0.299 and returns it (flat secant, entry "RATE holds on a flat secant"). T-4431 owns it. A23 (guess -0.9999) is
+  `#NUM!` in both.
+Fresh sweep (R4, drawn after the rule was frozen): probes/t3876-rate-noise-residual-fresh, 126 cells, 121 bit-exact.
+A61:A126 are the 66 of 20,000 random noise-only draws (seed 38762) where f(guess) is exactly 0 and exactly one of
+f(guess ± 0.001) is 0, so the two step directions predict opposite results: the step-up rule matches all 66 (27 return
+the guess, 39 `#NUM!`), stepping down matches none. A1:A60 are plain random draws, 55 bit-exact under either rule; the
+5 off (A1, A16, A26, A31 `#NUM!` in Excel where the model holds a flat secant on nonzero noise at guess - 0.001, and A5
+on another noise path) are T-4431's, with A22 above.
+Not separated: whether a residual of -0 at the guess steps up too. No probed residual at the guess is -0, and the
+engine's rule (step down only when f > 0) sends both zeros up.
+On the existing evidence the change is neutral: rate-zero-residual-guess (guess-0 roots A8:A10, exact roots A3:A6, A12)
+and every other RATE cell in probes, probes-numeric, gen-m9 and ironcalc-calc keep their results.
+Ours: `rate_secant` (functions/financial/financial_util.rs), T-3876.
+Status: VERIFIED (excel-graph, the cells above) / UNVERIFIED (a -0 residual at the guess)
+
 ## RATE restarts once on an early flat secant
 Rule: an amendment to "RATE holds on a flat secant and runs on below -1" above. A flat secant (f1 = f0, f1 ≠ 0)
 restarts the run once, as a fresh run whose guess is the flat step's older iterate r0, when all of these hold:
@@ -1422,12 +1453,11 @@ Evidence (excel-graph, 2026-11-02, T-3698):
 - Misses inside the rule's region (T-3698 review): t3698-rate-flat-restart A9 (|f1| 8.57e-5, step 3; Excel
   0.002094170434467432 matches neither path), and A17, A21, A25 and -fresh A22 (Excel `#NUM!`, both paths a number).
 - Found in passing (T-3698's fresh sweep A201): with nper 1, type 1, fv 0 and pmt = -pv, every residual is rounding
-  noise (pv + pmt = 0 at t = 0). Excel returns the guess, 1.74874265618351, and the model returns `#NUM!`. The
-  zero-residual probe's `RATE(1,0,0,0,0,0.3)` is `#NUM!` in Excel, so a residual that is noise and not exactly 0
-  behaves differently. The restart cannot fire here, because these residuals are far below 1.3e-7. T-3876 owns it.
+  noise (pv + pmt = 0 at t = 0). Excel returns the guess, 1.74874265618351. The model returned `#NUM!` until T-3876
+  found the cause: a zero residual at the guess steps up, not down (entry "RATE steps up from a zero residual").
 Ours: `compute_rate` and `rate_secant` (functions/financial/financial_util.rs), T-3698.
 Status: VERIFIED (excel-graph, on the cells above) / UNVERIFIED (the step bound's position in 16..17; late
-restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1; a noise-only residual)
+restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1)
 Tasks: T-3698, T-3424, T-3876, T-3916, T-3963
 
 ## RATE flat secants: no rule on the model's state separates Excel's restarts from its holds
@@ -2442,6 +2472,34 @@ T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
     the 104 tiny-rate principals. The best geometric sum over all three cases (both types, ranges up to 12 periods) has
     339 of 634 (the task file lists the families). Multi-period values are not the double sum of the probe's own one-period values
     either: they agree up to m = 5 and then drift by 1 to 2 ulps.
+- Where `v^nper` underflows, the principal is one core for both types (T-3141, excel-graph 2026-11-04;
+  probes/fin-cumprinc-underflow-type1, 72 cells, and probes/fin-cumprinc-underflow-fresh, 200 cells). Rule: over a short
+  range with `1 - v^nper` = 1, `C = pv·((1-v^m)·v^(nper-end+1))` in doubles, with `1-v^m` PMT's `1-Q` of `-m·L` (Kahan's
+  expm1 below m·L = 1, `1 - EXP` from 1 on, as PMT's: "PMT is a discounted payment"), `v^(nper-end+1)` Excel's EXP of
+  `-(nper-end+1)·L` and L `growth_log`'s; type 1's CUMPRINC is `-C` and type 0's `-(C·(1+r))`. The `1+r` is a last
+  product: folding it into the power (`v^(nper-end)`, T-3067's balance drop) is what left 38 of 108 type 0 cells an ulp
+  off. Consequences, all in Excel's own values: type 1 is nearly type 0 over `1+r` in doubles (`A/1.01 = F` on all 12
+  near-1e15 pairs and 12 underflow-ends pairs; 34 of 36 pairs of the type1 case, the other two, A8/E8 and C6/G6, are
+  `C·(1+r)/(1+r) ≠ C`; the reciprocal product `A·(1/(1+r))` has 27); the CUMIPMT is `PMT·m - CUMPRINC` as everywhere
+  ("How the interest is built"), so E2-E4 and E7 near 1E15 follow. Past a leading exponent `(nper-end+1)·L` of 0.3 the
+  core is Excel's too on every probed cell where it and the geometric sum differ (type1 C7-C9, G7-G9 at 0.2 ending 2
+  before nper, exponent 0.55; fresh I10, K10; integer rates: gen-m9 `CUMPRINC(10,230,351888,4,21,0)` d0854366830dcdee
+  A98, 67a4c03afd63f988 A208, b73c6cc96e093f03 A111), but no fractional rate is probed deeper than 0.56.
+  How it was found: the 132 principals of near-1e15 and underflow-ends were the fit set and the type1 case the hold-out,
+  split before scoring. Every expression tree over {pv, 1-v^m, v^(nper-end), 1/(1+r)} with optional `r/r` and
+  `(1+r)/(1+r)` pairs (10,343 type 0 and 108,691 type 1 distinct value sets, products and quotients in every
+  association) puts type 1's `pv·((1-v^m)·(v^(nper-end)·(1/(1+r))))` at 24 of 24 and type 0's same core times `1+r` at
+  98 of 108, and the core with the power taken whole as EXP of `-(nper-end+1)·L` is exact on all 132 and on all 72 of
+  the hold-out. Frozen, it was exact on 98 of the fresh sweep's 100 principals (5 rates 0.0004 to 0.15, nper 77777 to
+  2E13, pv 1 to 3.3E6, ranges ending at nper, 1 and 3 before); the 2 misses (I5, J5: 0.15 over 10 periods, m·L 1.40,
+  the largest probed) are `1 - EXP(-m·L)`'s, and Kahan's is right at 0.98 (I4), so the cut sits in 0.98..1.40, which
+  PMT's cut at 1 (T-3014) fits; T-3141's kernel (on its branch) reuses that helper. Taking that cut from the fresh case made it fit data,
+  so it is no R4.2 sweep: that sweep is T-4059's `r4-T-3141` batch of a CUMPRINC Gate A table. With the fit lab's split
+  (decision 0188 R4.1, margin 5 points) over all 304 principals, the core is 216/216 bit-exact on train and 88/88 on
+  test (all within 4 ulps and 15 digits), the correctly rounded value 65/216 and 33/88 (all within 4 ulps). Forms that lost on the fit set: x87-register
+  intermediates for Kahan's product and quotient and for the exponent (at most 25 of 36 distinct principals), the
+  extended-precision LN in Kahan's divide (25), libm's expm1 (19 to 21), `1 - EXP` throughout (5), and every per-period
+  and geometric ordering of the T-3067 notes (at most 21).
 Status: PARTLY VERIFIED (excel-graph; visibly right but for A7 (= G2) and A10 near period 1E15, fin-cumipmt-period-bound
 A18, fin-cumprinc-near-1e15 E7, and the CUMIPMT cells that amplify our CUMPRINC's last bits (gate-edges A1-A4, A6, A7,
 E3-E10, H3, gen-m9 A352: T-3413; tiny-rate-structure's other 37: T-3776 (blocked time-boxed after T-3552 and T-3731 found no form); T-3118 moved 7 off the bit, decision 0197: gen-m9 A329,
