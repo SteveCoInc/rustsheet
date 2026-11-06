@@ -27,7 +27,7 @@ import mpmath
 from rustsheet_tools.accuracy import literal
 from rustsheet_tools.accuracy.model import Definition, DomainError, NoValueError, OverBudgetError, work_budget
 from rustsheet_tools.accuracy.sampler import STRATA, Sampler, math_arg, point_count, seed, stratum_counts
-from rustsheet_tools.fitlab.sweep import number_literal, split_args
+from rustsheet_tools.fitlab.sweep import number_literal, split_args, string_literal
 
 VERSION = "1"  # bump when a definition or the sampler changes what a batch would contain
 DPS = (60, 80)  # the value is the dps-80 one; dps 60 is the convergence check
@@ -149,7 +149,7 @@ class Point:
 
 
 def formula(definition: Definition, args: Sequence[literal.Arg]) -> str:
-    """`=T.INV(1.87E-297,3937)`, or for an indexed definition the one element it reads:
+    """`=T.INV(1.87E-297,3937)`, `=IMABS("3-4E-05j")` (a text quoted, `literal.text`), or for an indexed definition the one element it reads:
     `=INDEX(MINVERSE({1,2;3,4}),2,1)`."""
     texts = [literal.text(a) for a in args]
     if definition.indexed:
@@ -291,6 +291,11 @@ def parse_formula(definition: Definition, text: str) -> list[literal.Arg]:
         token = part.strip()
         if param.kind == "bool":
             args.append(token.upper() == "TRUE")
+        elif param.kind == "text":
+            if (string := string_literal(token)) is None:
+                msg = f"{text!r}: {param.name} is not a string literal"
+                raise ValueError(msg)
+            args.append(string)
         elif param.kind in ("array", "matrix"):
             if not (token.startswith("{") and token.endswith("}")):
                 msg = f"{text!r}: {param.name} is not an array literal"

@@ -125,8 +125,8 @@ def _exp_or_inf(y: float) -> float:
 
 def _lognorm_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, mean, sd, cumulative = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(mean, (bool, tuple))
-    assert not isinstance(sd, (bool, tuple))
+    assert not isinstance(x, (bool, str, tuple)) and not isinstance(mean, (bool, str, tuple))
+    assert not isinstance(sd, (bool, str, tuple))
     fx, fmean, fsd = float(x), float(mean), float(sd)
     ln_x = math.log(fx)
     z = (ln_x - fmean) / fsd
@@ -226,7 +226,7 @@ def _draw_lognorm_inv(stratum: str, rng: random.Random) -> list[Arg]:
 
 def _expon_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, lam, cumulative = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(lam, (bool, tuple))
+    assert not isinstance(x, (bool, str, tuple)) and not isinstance(lam, (bool, str, tuple))
     if float(x) * float(lam) > EXPON_PRODUCT_MAX:
         msg = "lambda*x past 1E+300 (unprobed)"
         raise NoValueError(msg)
@@ -303,8 +303,8 @@ def _weibull_domain(args: Sequence[MathArg]) -> str | None:
 
 def _weibull_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, alpha, beta, cumulative = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(alpha, (bool, tuple))
-    assert not isinstance(beta, (bool, tuple))
+    assert not isinstance(x, (bool, str, tuple)) and not isinstance(alpha, (bool, str, tuple))
+    assert not isinstance(beta, (bool, str, tuple))
     if x == 0:
         if cumulative or alpha > 1:
             return mpmath.mpf(0)

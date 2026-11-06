@@ -118,6 +118,12 @@ def fraction_to_mpf(r: Fraction | int) -> mpmath.mpf:
     return mpmath.mpf(r.numerator) / r.denominator
 
 
+def mpf_to_fraction(v: mpmath.mpf) -> Fraction:
+    """An mpf's exact binary value as a rational (the inverse of `fraction_to_mpf`); `man_exp` gives |v|."""
+    man, exp = v.man_exp
+    return (-1 if v < 0 else 1) * Fraction(int(man)) * Fraction(2) ** int(exp)
+
+
 def trunc(x: mpmath.mpf) -> int:
     """`x` truncated toward zero."""
     return int(mpmath.floor(x)) if x >= 0 else -int(mpmath.floor(-x))

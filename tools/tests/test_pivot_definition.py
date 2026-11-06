@@ -238,3 +238,16 @@ def test_page_fields_need_room_and_the_anchor_must_be_empty() -> None:
         build_xlsx(_spec({"pages": [{"field": "Region"}], "data": [{"field": "Sales"}]}, location="A1"))
     with pytest.raises(ValueError, match=r"#SPILL!"):
         build_xlsx(_spec({"rows": ["Region"], "data": [{"field": "Sales"}]}, cells={"A3": 1}))
+
+
+def test_values_on_rows_sets_data_on_rows() -> None:
+    table = _parts(
+        _spec(
+            {
+                "rows": ["Region", "Values"],
+                "data": [{"field": "Sales"}, {"field": "Sales", "subtotal": "count"}],
+            }
+        )
+    )["xl/pivotTables/pivotTable1.xml"]
+    assert ' dataOnRows="1"' in table
+    assert '<rowFields count="2"><field x="0"/><field x="-2"/></rowFields>' in table
