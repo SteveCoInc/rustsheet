@@ -360,3 +360,6 @@ accuracy/HYPGEOMDIST/s1!Calc!A190	T-4502	pmf past the double-double walk: the en
 accuracy/HYPGEOMDIST/s1!Calc!A194	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
 accuracy/HYPGEOMDIST/s1!Calc!A197	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
 accuracy/HYPGEOMDIST/s1!Calc!A199	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 0^k
+accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
+accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k

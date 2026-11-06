@@ -205,6 +205,7 @@ probes/t3585-rate-num-near-minus-one.case.json	7
 probes/t3638-subnormal-upper-tail.case.json	7
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22
+probes/t3711-placeholder-after-fraction.case.json	1
 probes/t3850-rate-same-state.case.json	46
 probes/t3876-rate-noise-residual-fresh.case.json	5
 probes/t3876-rate-noise-residual.case.json	1
@@ -220,6 +221,7 @@ probes/t4254-beta-t-zero-wide.case.json	15
 probes/t4255-gamma-window-exact-ratio.case.json	1
 probes/t4290-gamma-window-large-pow2.case.json	6
 probes/t4302-poisson-cdf-beside-pmf.case.json	47
+probes/t4314-ipmt-balance-overflow.case.json	7
 probes/t4323-carry-sweep.case.json	3
 probes/t4323-carry-ties.case.json	2
 probes/t4323-fraction-holdout.case.json	1
@@ -236,8 +238,11 @@ probes/t4370-ulp-map.case.json	7
 probes/t4379-pivotby-repeated-unreached-leaf.case.json	20
 probes/t4380-unique-keep-head-holdout.case.json	50
 probes/t4382-pivotby-intransitive-paths.case.json	66
+probes/t4389-confirm.case.json	11
 probes/t4393-unique-merge-holdout.case.json	100
 probes/t4420-pivotby-parent-sets-three-fields.case.json	14
+probes/t4480-lcid-sublanguage-fallback.case.json	3
+probes/t4492-locale-comma-tag-shapes.case.json	5
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1
