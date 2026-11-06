@@ -3,7 +3,7 @@ id: T-4595
 title: "A literal right after a number section's decimal point prints after the point (`0.|0` on 1234567.891 is \"1234567.|9\")"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -25,10 +25,22 @@ A literal written right after the decimal point of a number section prints after
 - probes/t4515-fresh-sweep A15:D15
 
 ## Acceptance criteria
-- [ ] probes/t4515-fresh-sweep A15:D15 pass, with no regression in any suite.
-- [ ] A probe of `0.|0`, `0."x"0`, `#.\-#` and `0.|` (three values) is committed with excel-graph values and passes.
-- [ ] number-formats.md records the rule with its cells.
+- [x] probes/t4515-fresh-sweep A15:D15 pass, with no regression in any suite.
+- [x] A probe of `0.|0`, `0."x"0`, `#.\-#` and `0.|` (three values) is committed with excel-graph values and passes.
+- [x] number-formats.md records the rule with its cells.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Commas after the decimal point (T-4515).
+
+## Outcome
+- The number branch of `format_number` (formatter/format.rs) prints the decimal point where the `Period` token
+  stands instead of deferring it to the first decimal digit, so a literal right after the point follows it
+  (`0.,|0` and `0.|0` on 1234567.891 are "1234567.|9"). The deferral changed nothing else: every decimal-digit
+  branch printed the deferred point first, so the `needs_period` state is gone.
+- Probe probes/t4595-literal-after-point (`0.|0`, `0."x"0`, `#.\-#`, `0.|` on 1234567.891, -0.5, 0): predictions
+  committed before the excel-graph fill (2026-11-06); all 12 cells matched them and pass.
+- Unit test `literal_right_after_the_point_prints_after_it` (formatter/test/test_digit_edges.rs).
+- number-formats.md: new "A literal right after the decimal point (T-4595)" entry; the T-4515 note points to it.
+- Eval delta: probes known failures 7308 -> 7304 (t4515-fresh-sweep A15:D15 fixed), new case 12/12 passing, no
+  regression in any suite.
