@@ -18,7 +18,15 @@ from collections.abc import Sequence
 import mpmath
 
 from rustsheet_tools.accuracy.defs._common import DF_CUT
-from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register, solve_log_bracket
+from rustsheet_tools.accuracy.model import (
+    Definition,
+    Interval,
+    MathArg,
+    NoValueError,
+    Param,
+    register,
+    solve_log_bracket,
+)
 from rustsheet_tools.fitlab.kernels.beta import betacf
 
 DF_SOURCE = "statistics.md#student-t-sweep-df-truncation-df-limits-tinv2t-above-1-t-1043"
@@ -166,19 +174,21 @@ _DF = Param(
     truncates=DF_SOURCE,
 )
 
+_X = Param(
+    "x",
+    "real",
+    Interval(),
+    typical=(-6, 6),
+    extreme=(1e2, 1e300),
+    edges=(0.0,),
+    source="A&S 26.7",
+)
+
 T_DIST = register(
     Definition(
         function="T.DIST",
         params=(
-            Param(
-                "x",
-                "real",
-                Interval(),
-                typical=(-6, 6),
-                extreme=(1e2, 1e300),
-                edges=(0.0,),
-                source="A&S 26.7",
-            ),
+            _X,
             _DF,
             Param("cumulative", "bool", source="catalog"),
         ),
@@ -248,3 +258,170 @@ T_INV_2T = register(_two_tailed("T.INV.2T"))
 # TINV is T.INV.2T's legacy name with the same rules (statistics.md, "T.INV.2T(p,1) and TINV(p,1)
 # are t2(p) for p up to 1, and -t2(2-p) for p in (1, 2)").
 TINV = register(_two_tailed("TINV"))
+
+
+# -- The upper tails: T.DIST.RT, T.DIST.2T and TDIST (T-4102) -----------------------------------------------------
+#
+# Each is the tail `lower_tail` computes, so no complement 1 - cdf is taken (statistics.md, "T.DIST.RT and T.DIST.2T
+# are not 1 - T.DIST": Excel computes the upper tail on its own and keeps full relative precision in the far tail).
+# Like the cumulative T.DIST, they are #NUM! above df 1E10 (`bounded_df`; statistics.md T-1043 probes T.DIST.RT and
+# T.DIST.2T at 1.5E10 and 2E10). Where x² overflows (|x| past about 1.34E+154) Excel is #NUM! while the math is a
+# number ("Scalar distributions at extreme arguments, part 2"): an Excel error against a math number is held to
+# Excel's code, so no domain rule claims that unprobed cut.
+UPPER_SOURCE = "statistics.md#tdistrt-and-tdist2t-are-not-1---tdist"
+LEGACY_T_SOURCE = "statistics.md#legacy-distribution-names-sweep-second-family-t-1048"
+HUGE_X_SOURCE = "statistics.md#scalar-distributions-at-extreme-arguments-part-2-t-2256"
+
+
+def upper_tail(x: mpmath.mpf, df: mpmath.mpf) -> mpmath.mpf:
+    """P(T > x) = P(T ≤ -x) by symmetry: the far tail of either sign keeps its digits."""
+    return cdf(-x, df)
+
+
+def _upper_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
+    """The x ≥ 0 whose upper tail is q (a two-tailed function's x is never negative, so `upper` is ignored)."""
+    del upper
+    return _tail_x(q, True, args)
+
+
+def _t_dist_rt(args: Sequence[MathArg]) -> mpmath.mpf:
+    x, df = args
+    assert not isinstance(x, (bool, tuple)) and not isinstance(df, (bool, tuple))
+    return upper_tail(x, df)
+
+
+def _tails_upper(args: Sequence[MathArg]) -> mpmath.mpf:
+    """T.DIST.2T(x, df) and TDIST(x, df, tails): `tails` (2 for T.DIST.2T) times the upper tail at x ≥ 0."""
+    x, df = args[0], args[1]
+    tails = args[2] if len(args) > 2 else mpmath.mpf(2)
+    assert not isinstance(x, (bool, tuple)) and not isinstance(df, (bool, tuple))
+    assert not isinstance(tails, (bool, tuple))
+    return tails * lower_tail(-x, df)
+
+
+def _tail_df(truncates: str) -> Param:
+    return bounded_df("deg_freedom", (1, 30), DF_SOURCE, truncates=truncates)
+
+
+T_DIST_RT = register(
+    Definition(
+        function="T.DIST.RT",
+        # a negative x is valid: `T.DIST.RT(-2,1)` = 0.8524163823495667 (statistics.md T-1043)
+        params=(_X, _tail_df(DF_SOURCE)),
+        value=_t_dist_rt,
+        tail=_tail_x,
+        tail_param="x",
+        sources=(UPPER_SOURCE, DF_SOURCE, HUGE_X_SOURCE, "Abramowitz and Stegun 26.7.1"),
+    )
+)
+
+# x ≥ 0: `T.DIST.2T(-1,3)`, `TDIST(-1,3,1)` and `TDIST(-1,3,2)` are #NUM! (statistics.md T-1043, T-1048).
+_X_NONNEGATIVE = Param(
+    "x",
+    "real",
+    Interval(0, float("inf"), lo_open=False),
+    typical=(0, 6),
+    extreme=(1e2, 1e300),
+    source=LEGACY_T_SOURCE,
+)
+
+T_DIST_2T = register(
+    Definition(
+        function="T.DIST.2T",
+        params=(_X_NONNEGATIVE, _tail_df(DF_SOURCE)),
+        value=_tails_upper,
+        tail=_upper_x,
+        tail_param="x",
+        sources=(UPPER_SOURCE, DF_SOURCE, LEGACY_T_SOURCE, HUGE_X_SOURCE, "Abramowitz and Stegun 26.7.1"),
+    )
+)
+
+# TDIST(x, df, 2) = T.DIST.2T(x, df), and TDIST(x, df, 1) = T.DIST.RT(x, df) at x ≥ 0, where TDIST alone rejects a
+# negative x (statistics.md T-1048). df truncates (`TDIST(1,1.9,2)` = `T.DIST.2T(1,1.9)`), tails truncates
+# (`TDIST(1,3,1.9)` is tails 1, `TDIST(1,3,2.1)` tails 2), and tails 0 or 3 is #NUM! (T-1048).
+TDIST = register(
+    Definition(
+        function="TDIST",
+        params=(
+            _X_NONNEGATIVE,
+            _tail_df(LEGACY_T_SOURCE),
+            Param(
+                "tails",
+                "int",
+                Interval(1, 2, lo_open=False, hi_open=False),
+                typical=(1, 2),
+                source=LEGACY_T_SOURCE,
+                truncates=LEGACY_T_SOURCE,
+            ),
+        ),
+        value=_tails_upper,
+        tail=_upper_x,
+        tail_param="x",
+        sources=(UPPER_SOURCE, DF_SOURCE, LEGACY_T_SOURCE, HUGE_X_SOURCE, "Abramowitz and Stegun 26.7.1"),
+    )
+)
+
+
+# -- CONFIDENCE.T (T-4102) ----------------------------------------------------------------------------------------
+#
+# CONFIDENCE.T(alpha, sd, n) = T.INV.2T(alpha, n - 1)·sd/√n, with n the size truncated toward zero
+# (`CONFIDENCE.T(0.05,1,10.9)` = 0.7153569059706648 is n = 10; statistics.md T-1043). n = 1 is #DIV/0!, sd 0 and alpha
+# 0, 1, -0.1 or 1.5 are #NUM! (T-1043), so alpha is in (0, 1), unlike T.INV.2T's (0, 2). The df n - 1 is cut at 1E10:
+# n = 10000000001 is a number and 10000000002 #NUM! (T-1043, `t1518-t-df-cut`). A tiny alpha has a finite margin
+# (`CONFIDENCE.T(1E-300,1,2)` = 4.50158158078553E299; statistics.md T-1531).
+CONFIDENCE_RANGE = (2.2250738585072014e-308, 1e300)  # a normal double, clear of the overflow
+
+
+def confidence_margin(alpha: mpmath.mpf, sd: mpmath.mpf, n: mpmath.mpf) -> mpmath.mpf:
+    """T.INV.2T(alpha, n - 1)·sd/√n. NoValueError where sd·t, sd/√n, t/√n or the margin leaves the normal double
+    range: no cell shows where Excel's products overflow or underflow, so such a point is unprobed."""
+    t = two_tailed_quantile(alpha, n - 1)
+    root = mpmath.sqrt(n)
+    for intermediate in (sd * t, sd / root, t / root, sd * t / root):
+        if not CONFIDENCE_RANGE[0] <= abs(intermediate) <= CONFIDENCE_RANGE[1]:
+            msg = "an intermediate leaves the normal double range (unprobed)"
+            raise NoValueError(msg)
+    return sd * t / root
+
+
+def _confidence_t(args: Sequence[MathArg]) -> mpmath.mpf:
+    alpha, sd, n = args
+    assert not isinstance(alpha, (bool, tuple)) and not isinstance(sd, (bool, tuple))
+    assert not isinstance(n, (bool, tuple))
+    return confidence_margin(alpha, sd, n)
+
+
+CONFIDENCE_T = register(
+    Definition(
+        function="CONFIDENCE.T",
+        params=(
+            Param(
+                "alpha",
+                "real",
+                Interval(0, 1),
+                typical=(0.001, 0.999),
+                extreme=(1e-300, 1e-15),
+                source=DF_SOURCE,
+            ),
+            Param(
+                "standard_dev",
+                "real",
+                Interval(0, float("inf")),
+                typical=(0.1, 100),
+                extreme=(1e-100, 1e100),
+                source=DF_SOURCE,
+            ),
+            Param(
+                "size",
+                "int",
+                Interval(2, DF_CUT + 1, lo_open=False, hi_open=False),
+                typical=(2, 100),
+                extreme=(1e3, DF_CUT + 1),
+                source=DF_SOURCE,
+                truncates=DF_SOURCE,
+            ),
+        ),
+        value=_confidence_t,
+        sources=(DF_SOURCE, TINY_P_SOURCE, "Abramowitz and Stegun 26.7.1"),
+    )
+)
