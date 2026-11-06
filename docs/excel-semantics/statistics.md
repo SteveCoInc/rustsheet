@@ -7560,6 +7560,47 @@ Ours: matches, including the 63 no-number cells (T-3789: the significance is cas
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3789
 
+## PERCENTRANK ranks x by the count of values below it (T-4093)
+Rule: over n numbers sorted a[1] <= ... <= a[n] (ties kept), with c the count of values strictly below x:
+- **Position.** An x equal to a value has the position p = c, also when that value is tied. An x strictly between
+  a[c] and a[c + 1] has p = c - 1 + (x - a[c]) / (a[c + 1] - a[c]), interpolated linearly. When the lower
+  neighbour a[c] is tied, the interpolation starts from its last copy, position c - 1, not its first:
+  `PERCENTRANK({1,1,1,3},2)` is 0.833, not 0.5.
+- **Rank.** PERCENTRANK and PERCENTRANK.INC give p / (n - 1). PERCENTRANK.EXC gives (p + 1) / (n + 1). The rank is
+  then cut to `significance` digits as "PERCENTRANK: a huge significance is #DIV/0!; truncation does not lose a digit
+  at a cut (T-2256)" states.
+- **Ends.** x at the smallest or the largest value is in range, EXC too: the INC rank is 0 or 1 and the EXC rank
+  1/(n + 1) or n/(n + 1).
+- **Ties.** An x equal to a tied value ranks at the value's first copy. When every value is the same and x equals
+  it, PERCENTRANK and PERCENTRANK.INC give 0 and PERCENTRANK.EXC gives 1/(n + 1), evidenced at n = 5. A single value
+  gives 1 instead ("Scalar distributions at extreme arguments, part 2").
+Cells (eval/accuracy/tables, excel-graph, 2026-11-06, unless a probe is named):
+- A tied lower neighbour, probes/t4093-percentrank-tied-neighbour (excel-graph, 2026-11-06), at 15 digits, with
+  columns A, B and C for PERCENTRANK, PERCENTRANK.INC and PERCENTRANK.EXC. All 27 cells follow the last-copy rule.
+  - `{1,2,2,2,3}` at 2.5 gives 0.875, 0.875 and 0.75 (A1:C1). At the default significance it gives the same (A9:C9).
+  - `{13,12,11,8,4,3,2,1,1,1}` at 1.5 gives 0.277777777777778 for INC and 0.318181818181818 for EXC (A2:C2).
+  - `{1,1,1,3}` at 2 gives 0.833333333333333 and 0.7 (A3:C3).
+  - `{1,2,2,3}` at 2.5 and 2.25, `{3,1,2,2}` at 2.75 and `{1,1,2,2,5}` at 1.5 agree too (A4:C6, A8:C8).
+  - A tied upper neighbour does not move the position: `{1,3,3,3}` at 2 gives 0.166666666666667 and 0.3 (A7:C7).
+- Ties: `PERCENTRANK({1,2,2,2,3},2)` is 0.25 (PERCENTRANK/s1 A135), and `PERCENTRANK.INC({1,2,2,2,3},1.5)` 0.125
+  (PERCENTRANK.INC/s1 A139). `PERCENTRANK.INC({13,12,11,8,4,3,2,1,1,1},4)` is 0.555 and 5 gives 0.583 (A133, A121;
+  Microsoft's example).
+- Every value the same, n = 5, with x equal to the value: PERCENTRANK and PERCENTRANK.INC give 0 (PERCENTRANK/s1
+  A114, PERCENTRANK.INC/s1 A134). PERCENTRANK.EXC gives 1/(n + 1) = 1/6, which is 0.166 at 3 digits
+  (PERCENTRANK.EXC/s1 A113).
+- Ends: `PERCENTRANK({1,2,3,6,6,6,7,8,9},1)` is 0 and 9 gives 1 (PERCENTRANK/s1 A121, A118).
+  `PERCENTRANK.EXC({1,2,3,6,6,6,7,8,9},1)` is 0.1 (PERCENTRANK.EXC/s1 A138) and 7 gives 0.7 (A125).
+- The error regions match the existing entries: 10 `#N/A` (x outside the data), 8 `#NUM!` (a significance of 0 or
+  -1) and 9 `#DIV/0!` (309 or more), in PERCENTRANK/s1, PERCENTRANK.INC/s1 and PERCENTRANK.EXC/s1.
+- All 573 numeric cells of the three tables are within 1e-9 of the exact rank cut by that rule.
+Status: VERIFIED (excel-graph) for the cited cells
+Ours: `percentrank_inc_impl` and `percentrank_exc_impl` (functions/statistical/percentile.rs) match 598 of the 600
+cells bit for bit. The other two are `PERCENTRANK.EXC({0,3},2,17)` (PERCENTRANK.EXC/s1 A128, A140). There Excel gives
+0.555555555555556 and the engine 0.555555555555555, because its double rank (2/3 + 1)/3 = 0.55555555555555547 is
+below the correctly rounded 5/9. Excel's operation order for EXC is not pinned (T-4556).
+Ours matches every t4093-percentrank-tied-neighbour cell.
+Tasks: T-4093, T-4556
+
 ## TRIMMEAN of a typed scalar (T-3781)
 Rule: a typed numeric text or boolean literal as TRIMMEAN's data is one number: `TRIMMEAN("2.5",0)` is 2.5 and
 `TRIMMEAN(TRUE,0)` 1 (as are the forms with a blank cell as the percent), a percent out of [0, 1) is then
