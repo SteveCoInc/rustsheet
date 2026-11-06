@@ -422,6 +422,43 @@ fn fn_offset_lifted_into_countifs_averageif_maxifs() {
     assert_eq!(model._get_text("G1"), *"#ERROR!");
 }
 
+// AVERAGEIFS and MINIFS lift like SUMIFS and MAXIFS: the first range and every criteria range,
+// one value each (probes/t4396-lift-*, excel-graph 2026-11-05). A lifted first range against a
+// two-cell criteria range is a shape mismatch per element, and the bound charges every pair.
+#[test]
+fn fn_offset_lifted_into_averageifs_minifs() {
+    let mut model = new_empty_model();
+    model._set("A1", "1");
+    model._set("A2", "100");
+    model._set("B1", "2");
+    model._set("B2", "200");
+    model._set("A1048576", "1");
+    model._set(
+        "C1",
+        "=AVERAGEIFS(OFFSET(A1,{0;1},0),OFFSET(A1,{0;1},0),\">0\",OFFSET(B1,{0;1},0),\">0\")",
+    );
+    model._set(
+        "D1",
+        "=MINIFS(OFFSET(A1,0,0,{1;2}),OFFSET(A1,0,0,{1;2}),\">0\")",
+    );
+    model._set("E1", "=AVERAGEIFS(OFFSET(A1,{0;1},0),A1:A2,\">0\")");
+    model._set("F1", "=MINIFS(A1,OFFSET(A1,{0;1},0),\">0\")");
+    model._set(
+        "G1",
+        "=AVERAGEIFS(OFFSET(A:A,0,0,,SEQUENCE(1,1000)),A:A,\">0\")",
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("C1"), *"1");
+    assert_eq!(model._get_text("C2"), *"100");
+    assert_eq!(model._get_text("D1"), *"1");
+    assert_eq!(model._get_text("D2"), *"1");
+    assert_eq!(model._get_text("E1"), *"#VALUE!");
+    assert_eq!(model._get_text("E2"), *"#VALUE!");
+    assert_eq!(model._get_text("F1"), *"1");
+    assert_eq!(model._get_text("F2"), *"1");
+    assert_eq!(model._get_text("G1"), *"#ERROR!");
+}
+
 // SPEC-0014 "Bounds": the elements' cells are charged before any element runs, so a SUBTOTAL
 // over a thousand whole columns is the bound's error, not 10^9 reads (a DEVIATION, lookup.md).
 #[test]

@@ -8,7 +8,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    functions::Function,
+    functions::{util::near_integer::near_integer_count, Function},
     model::Model,
 };
 
@@ -94,7 +94,9 @@ impl Model {
             let [number] = values else {
                 return Err(Error::ERROR);
             };
-            let n = model.calc_result_to_number(number)?.floor() as u32;
+            // Excel: a code just below an integer counts as that integer, while UNICHAR truncates
+            // exactly (probes/t4453-near-integer-text-args D1:E21; docs/excel-semantics/text.md).
+            let n = near_integer_count(model.calc_result_to_number(number)?) as u32;
             match win1252_to_char(n) {
                 Some(c) => Ok(ArrayNode::String(c.to_string().into())),
                 None => Err(Error::VALUE),

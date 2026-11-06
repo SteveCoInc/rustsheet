@@ -4,6 +4,7 @@
 use std::borrow::Cow;
 
 use crate::functions::util::collation::fold_case;
+use crate::functions::util::near_integer::near_integer_count;
 use crate::{
     calc_result::CalcResult,
     cast::calc_result_to_text,
@@ -25,7 +26,9 @@ pub(super) fn find_element(
 ) -> Result<ArrayNode, Error> {
     let find_text = calc_result_to_text(find_text)?;
     let within_text = calc_result_to_text(within_text)?;
-    let start_num = start_num?.floor();
+    // Excel: a start just below an integer counts as that integer, as LEFT's count does
+    // (probes/t4453-near-integer-text-args B1:C14; docs/excel-semantics/text.md).
+    let start_num = near_integer_count(start_num?);
     if start_num < 1.0 {
         return Err(Error::VALUE);
     }

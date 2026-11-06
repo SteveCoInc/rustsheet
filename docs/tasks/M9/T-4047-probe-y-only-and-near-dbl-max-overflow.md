@@ -3,7 +3,7 @@ id: T-4047
 title: "Probe y-only and near-DBL_MAX overflow in STEYX, INTERCEPT, FORECAST and the correlation family"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -23,3 +23,6 @@ Re-filed from draft PR #2717 (it reserved T-3688, never merged). T-2080 (probes/
 
 ## Out of scope
 - Overflow in the single-series statistics (STDEV, VAR).
+
+## Outcome
+Added probes/t4047-paired-overflow (3 scenarios x 7 functions, 21 cells, excel-graph filled). One mismatch: STEYX with only y's sum of squares overflowing is `#NUM!` in Excel, ours was `#DIV/0!`; `fn_steyx` (statistical/correl.rs) now returns `#NUM!` there. All 21 cells pass. The three scenarios and their values are in statistics.md "Paired regression functions". The two-point y-only case stays unprobed. Eval delta: 21 new passing cells, no regressions.

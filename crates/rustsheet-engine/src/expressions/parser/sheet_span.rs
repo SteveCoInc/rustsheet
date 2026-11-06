@@ -48,11 +48,22 @@ impl Parser {
     /// The sheets of a 3-D reference prefix `First:Last` (a `:` cannot occur in a sheet name),
     /// or `None` if `name` is not a span or either end is not a sheet (then the reference is
     /// `#REF!` like any other on a missing sheet).
+    ///
+    /// A span written backwards (`Mar:Jan`) is read in tab order: Excel shows it as `Jan:Mar`
+    /// (probes/sheet-ops/t4272-3d-span-backwards B1, B2; docs/excel-semantics/references.md,
+    /// "3-D references when sheets move or are renamed").
     fn get_sheet_span(&self, name: &str) -> Option<SheetSpan> {
         let (first, last) = name.split_once(':')?;
+        let first_index = self.get_sheet_index_by_name(first)?;
+        let last_index = self.get_sheet_index_by_name(last)?;
+        let ((first_index, first), (last_index, last)) = if first_index <= last_index {
+            ((first_index, first), (last_index, last))
+        } else {
+            ((last_index, last), (first_index, first))
+        };
         Some(SheetSpan {
-            first_index: self.get_sheet_index_by_name(first)?,
-            last_index: self.get_sheet_index_by_name(last)?,
+            first_index,
+            last_index,
             first_sheet: first.to_string(),
             last_sheet: last.to_string(),
         })

@@ -8,6 +8,17 @@ accuracy/T.DIST/s1!Calc!A85	T-3554	Excel #NUM! for the density at a huge x; the 
 accuracy/T.DIST/s1!Calc!A95	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.DIST/s1!Calc!A105	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.DIST/s1!Calc!A110	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A218	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A238	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A245	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A252	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A256	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A258	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A260	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A266	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A267	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A271	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A277	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.INV/s1!Calc!A75	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/T.INV/s1!Calc!A102	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/T.INV.2T/s1!Calc!A68	T-3386	Excel #NUM! at p = 2.2E-308 where the quantile is finite

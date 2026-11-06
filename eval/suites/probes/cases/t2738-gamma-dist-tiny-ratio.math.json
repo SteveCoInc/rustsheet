@@ -1,0 +1,108 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "ae132c553c725542c32802ccee3c6d038512f2da19c60aee3fc78b6ef2e09a1c"
+ },
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "e",
+    "why": "the density at a subnormal x / beta",
+    "f": "=GAMMA.DIST(1E-10,1,1E+307,FALSE)"
+   },
+   "A10": {
+    "t": "n",
+    "v": "1.0000000000000000254531336860572858823090496609493e-318",
+    "f": "=GAMMA.DIST(1E-10,1,1E+307*10,TRUE)"
+   },
+   "A12": {
+    "t": "e",
+    "why": "the density at a subnormal x / beta",
+    "f": "=GAMMA.DIST(1E-300,1,1E+10,FALSE)"
+   },
+   "A13": {
+    "t": "n",
+    "v": "1.0000000000000000250590918352087596856961468077037e-310",
+    "f": "=GAMMA.DIST(1E-300,1,1E+10,TRUE)"
+   },
+   "A14": {
+    "t": "e",
+    "why": "the density at a subnormal x / beta",
+    "f": "=GAMMA.DIST(1E-300,2,1E+10,FALSE)"
+   },
+   "A15": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(3E-308,1,1,FALSE)"
+   },
+   "A16": {
+    "t": "e",
+    "why": "the density at a subnormal x / beta",
+    "f": "=GAMMA.DIST(3E-308,1,2,FALSE)"
+   },
+   "A17": {
+    "t": "n",
+    "v": "1.5000000000000001110227609264959650814901295351588e-308",
+    "f": "=GAMMA.DIST(3E-308,1,2,TRUE)"
+   },
+   "A18": {
+    "t": "e",
+    "why": "the density at a subnormal x / beta",
+    "f": "=GAMMA.DIST(4.4E-308,1,2,FALSE)"
+   },
+   "A19": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=GAMMA.DIST(4.5E-308,1,2,FALSE)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "1.0000000000000000139689402397435424234310272377137e-307",
+    "f": "=GAMMA.DIST(1,1,1E+307,FALSE)"
+   },
+   "A20": {
+    "t": "e",
+    "why": "the density at a subnormal x / beta",
+    "f": "=GAMMA.DIST(1E-300,1,1E+8,FALSE)"
+   },
+   "A3": {
+    "t": "e",
+    "why": "the density at a subnormal x / beta",
+    "f": "=GAMMA.DIST(1E-10,1,1E+300,FALSE)"
+   },
+   "A4": {
+    "t": "n",
+    "v": "9.9999999999999994749523974479558250804538087538543e-301",
+    "f": "=GAMMA.DIST(1E-5,1,1E+300,FALSE)"
+   },
+   "A5": {
+    "t": "n",
+    "v": "9.9999999999999998902093637055954470313491508252911e-309",
+    "f": "=GAMMA.DIST(10,1,1E+307*10,FALSE)"
+   },
+   "A6": {
+    "t": "n",
+    "v": "9.9999999000000003902093589842655209351629019448588e-309",
+    "f": "=GAMMA.DIST(1E+300,1,1E+307*10,FALSE)"
+   },
+   "A7": {
+    "t": "e",
+    "why": "the density at a subnormal x / beta",
+    "f": "=GAMMA.DIST(1E-10,2,1E+300,FALSE)"
+   },
+   "A8": {
+    "t": "e",
+    "why": "the density at a subnormal x / beta",
+    "f": "=GAMMA.DIST(1E-10,0.5,1E+300,FALSE)"
+   },
+   "A9": {
+    "t": "n",
+    "v": "9.9999999999999998392743706029332217434714232047418e-311",
+    "f": "=GAMMA.DIST(1E-10,1,1E+300,TRUE)"
+   }
+  }
+ }
+}

@@ -524,8 +524,13 @@ excel-graph, 2026-11-03, T-3677; B = ERROR.TYPE): `SUMPRODUCT(F1:F3,G1:G3)` (F1:
 `#NUM!`, the same pairs in the order (1.2E+154, 0), (0, 1.2E+154), (1.2E+154, 0) give 1.4400000000000002E+308, and two
 (1.2E+154, 1.2E+154) pairs give 0 (A4:A6; SUMX2 - SUMY2 would overflow on the last two). `SUMX2PY2` over (1.2E+154, 0),
 (0, 1.2E+154), (1.2E+154, 0) is `#NUM!` (A7), and so are `SUMX2PY2({1.2E+154},{1.2E+154})` (the term x^2+y^2, A20) and
-`SUMXMY2({1E+154,-1E+154},{-1E+154,1E+154})` (A19). Unprobed: whether SUMX2MY2's running sum takes x^2 and then -y^2
-(which could overflow where the term does not). SUMX2MY2 never snaps near zero: with J1:J2 = 1, 0 and K1:K2 = 0,
+`SUMXMY2({1E+154,-1E+154},{-1E+154,1E+154})` (A19). SUMX2MY2's running sum adds one finished double term x^2 - y^2
+per pair (model a), not x^2 and then -y^2 and not an 80-bit square (probes/t4424-sumx2my2-overflow-order, excel-graph,
+T-4424): `{1.3E+154,1.2E+154}` against `{0,1.2E+154}` is 1.6899999999999998E+308 (A1; x^2 and then -y^2 would overflow
+at 1.69E+308 + 1.44E+308, so A1 alone rules that order out), and so is the reverse order (A2); the negative twin is
+-1.6899999999999998E+308 (A3:A4; A2:A4 stay finite in every model, so they decide nothing); and a pair whose x^2 or
+-y^2 overflows alone is `#NUM!` even when x^2 - y^2 is finite (A5:A6, 2.25E+308 - 1.96E+308, so not an 80-bit square;
+A7's -y^2 is out of range in every model). SUMX2MY2 never snaps near zero: with J1:J2 = 1, 0 and K1:K2 = 0,
 1+2^-52, `SUMX2MY2(J1:J2,K1:K2)` is -4.440892098500626E-16 (2 ULP of 1), `SUMX2MY2(K1:K2,J1:J2)` +4.440892098500626E-16 and
 the one pair `SUMX2MY2(J1,K2)` -4.440892098500626E-16 (A8, A10, A11); 1+4*2^-52 gives -1.7763568394002505E-15 (A9).
 `SUMPRODUCT(P1:P3,{1;1;1})` over 0.1, 0.2, -0.3 is 5.551115123125783E-17 (A17, T-3048's no-snap rule). The engine matches
@@ -857,14 +862,15 @@ Evidence: probes/tiny-vs-zero-criteria (A1-A33); the general 15-digit rule rests
 Implemented in: `numbers_equal` (functions/criteria.rs), `Ord for CalcResult` (calc_result.rs). Tasks: T-1028. Oracle: excel-graph, 2026-10-06. Status: VERIFIED
 
 ## Criteria ordering operators compare at 15 digits too
-Rule: the ordering criteria `"<1"`, `"<=1"`, `">1"` and `">=1"` of COUNTIF, SUMIF, COUNTIFS and SUMIFS compare the
+Rule: the ordering criteria `"<1"`, `"<=1"`, `">1"` and `">=1"` of COUNTIF, SUMIF, COUNTIFS, SUMIFS, AVERAGEIF(S), MINIFS, MAXIFS and the D-functions compare the
 cell's 15-digit value, exactly as `"=1"` and `"<>1"` do: a cell is never at once "equal to 1" and "greater than 1".
 Over one-cell ranges holding `=1+k*2^-52` and `=1-k*2^-53`, the cells at k = 1, 2, 3, 8, 22 above and k = 1-4 below (all
 of which print as 1) counts for `"<=1"`, `">=1"` and `"=1"` and not for `"<1"` or `">1"`; `1+23*2^-52`
 (1.00000000000001) and `1-5*2^-53` (0.999999999999999) flip all six at once. The flip sits on the 15th-digit rounding
 boundary (5E-15 above 1, 5E-16 below), not at a fixed ULP count, so it is neither an exact comparison nor a relative
-tolerance. All four functions agree on all 288 criteria cells.
-Evidence: probes/t3072-criteria-near-equal-order (excel-graph, 2026-10-29): rows 1-12 (B = value, D = its text),
+tolerance. All four functions agree on all 288 criteria cells; AVERAGEIF(S), MINIFS, MAXIFS and the D-functions agree too
+(probes/t4399-criteria-near-equal-others, 379 cells).
+Evidence: probes/t4399-criteria-near-equal-others (excel-graph, 2026-11-05; same rule for AVERAGEIF(S), MINIFS, MAXIFS, D-functions) and probes/t3072-criteria-near-equal-order (excel-graph, 2026-10-29): rows 1-12 (B = value, D = its text),
 E:J COUNTIF, K:P SUMIF, Q:V COUNTIFS, W:AB SUMIFS in the order `<`, `<=`, `>`, `>=`, `=`, `<>`; e.g. F5
 `COUNTIF(B5,"<=1")` = 1 and G5 `">1"` = 0 for 1+22·2^-52, G6 = 1 for 1+23·2^-52; E10 `"<1"` = 0 for 1-4·2^-53,
 E11 = 1 for 1-5·2^-53.
@@ -1376,8 +1382,13 @@ Status: VERIFIED (excel-graph). Implemented in `fn_coth`, `fn_csch`, `fn_sech` (
 
 ### SINH and COSH overflow is `#NUM!` at once; SECH there is 0 (T-2169)
 Rule: SINH and COSH are `#NUM!` once `e^|x|` overflows a double, although the true sinh(710) = 1.117E+308 is finite:
-`SINH(710)`, `SINH(-710)`, `COSH(710)` and `COSH(-710)` are `#NUM!` (SINH(709.78) is a number, above; the cut in
-(709.78, 710) is unprobed). SECH of the same arguments is 0, not an error, as CSCH(710) is: `SECH(710)` = `SECH(-710)` = 0, so
+`SINH(710)`, `SINH(-710)`, `COSH(710)` and `COSH(-710)` are `#NUM!` (SINH(709.78) is a number, above). The cut is
+exactly where `e^|x|` overflows, at ln(DBL_MAX) = 709.782712893384, not at asinh(DBL_MAX) = 710.4758600739439 where
+the true sinh would overflow: SINH, COSH of ±ln(DBL_MAX) and of the double below it are numbers (±8.988465674311366E+307
+and ±8.988465674310344E+307), and from the next double up (709.7827128933841) through 709.79 ... 710.47, asinh(DBL_MAX)
+and its neighbours and 710.48 every SINH and COSH of either sign is `#NUM!` (probes/t4423-hyperbolic-overflow-band,
+excel-graph 2026-11-06, T-4423: rows 2 and 3 bracket the cut by adjacent doubles). So Excel rounds e^x to a double
+before the subtraction and halving, as the engine does. SECH of the same arguments is 0, not an error, as CSCH(710) is: `SECH(710)` = `SECH(-710)` = 0, so
 `(x)^SECH(710)` is `x^0` = 1 (`CEILING(-999999999999999.9,(-2.5)^SECH(710))` is -1E+15). The error is the function's own result
 and survives nesting, as for EXP: `ISERR(COSH(-710))` is TRUE, `ISNUMBER(SINH(134217728))` FALSE, and `ISODD(EXP(2^53+1))`,
 `ATAN(COSH(1E+15))`, `MOD(2^53+1,SINH(1E+9))`, `MOD(ACOT(SINH(1E+15)),<#REF!>)`, `GCD(EXP(1E+15),..)`,
@@ -1392,11 +1403,14 @@ gen-m5/ecd1b828aebad1e8 Calc!A185; the full list of 37 cells is in T-2169. A156 
 Past the smallest normal double the reciprocals read 0 too: `SECH(709.78)`, `SECH(-709.78)`, `CSCH(709.78)` and
 `CSCH(-709.78)` are 0 (accuracy/SECH/s1 Calc!A83, A84; accuracy/CSCH/s1 Calc!A84, A72, A79; excel-graph, 2026-11-01, T-3670),
 where the true values ±1.1156E-308 are subnormal (as are CSCH(-713.44) and CSCH(-717.64), 2.9E-310 and 4.3E-312). Graph
-reports a kept subnormal as 0 as well and those tables hold no `(x)=0` companion, so whether Excel flushes these is not
-told. From about |x| = 745 on (the tables' 803 to 993) the true value is below the smallest subnormal, so 0 is its
+reports a kept subnormal as 0 as well, but the T-4423 companions settle it: Excel flushes a subnormal SECH result to a
+true 0, as it does CSCH's (T-1143). `SECH(x)=0` is TRUE and `ISNUMBER(SECH(x))` TRUE at ±709.5, ±709.7, ±ln(DBL_MAX)
+and the double below it, where 1/cosh is 1.48E-308 to 1.11E-308, and `CSCH(±x)=0` TRUE likewise
+(probes/t4423-hyperbolic-overflow-band columns J to O). The engine flushes SECH with `arithmetic::flush_subnormal`
+(T-4423), as CSCH. From about |x| = 745 on (the tables' 803 to 993) the true value is below the smallest subnormal, so 0 is its
 correctly rounded double and no flush question arises.
-COSH(702.659631014027) and COSH(±709.78) are numbers within 1.2E-16 of the true value (accuracy/COSH/s1, T-3670); the cut in
-(709.78, 710) stays unprobed for COSH and SECH as for SINH. libm's cosh was finite up to 710.47 and ours now overflows just above 709.78, as SINH does.
+COSH(702.659631014027) and COSH(±709.78) are numbers within 1.2E-16 of the true value (accuracy/COSH/s1, T-3670); COSH
+cuts where SINH does, at ln(DBL_MAX) (T-4423, above), and SECH is 0 on both sides of it. libm's cosh was finite up to 710.47 and ours now overflows just above 709.78, as SINH does.
 Status: VERIFIED (excel-graph) for SINH, COSH and EXP. Implemented (T-2169): `hyperbolic::{sinh,cosh}` overflow to infinity and
 `number_fn` maps a non-finite result to `#NUM!`. That mapping applies to every one-number math function through `number_fn`
 (DEGREES, RADIANS, FACT, the reciprocal trig functions, ...); outside SINH, COSH and EXP it is unprobed (hand: Excel has no

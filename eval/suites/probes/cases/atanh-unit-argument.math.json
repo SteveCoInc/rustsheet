@@ -43,6 +43,11 @@
     "why": "number outside (-1, 1)",
     "f": "=ATANH(-1+0)"
    },
+   "A5": {
+    "t": "e",
+    "why": "number outside (-1, 1)",
+    "f": "=SUM(ATANH(1),1)"
+   },
    "A9": {
     "t": "e",
     "why": "number outside (-1, 1)",

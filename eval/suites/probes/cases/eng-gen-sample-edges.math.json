@@ -43,6 +43,11 @@
     "why": "a negative order",
     "f": "=BESSELI(5,-0.0001)"
    },
+   "E7": {
+    "t": "e",
+    "why": "a negative order",
+    "f": "=BESSELK(5,BESSELY(14,5))"
+   },
    "E8": {
     "t": "e",
     "why": "a negative order",

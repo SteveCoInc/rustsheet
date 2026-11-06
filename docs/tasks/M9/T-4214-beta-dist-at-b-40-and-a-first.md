@@ -83,7 +83,8 @@ task blocks as time-boxed (decision 0056).
 - The `#NUM!` band at b < 40 and the F cells of t4030 (T-4044).
 - Excel's bgrat digits at b < 40 (T-3209, deferred), and the three t4080 cells at b < 40 that are only 13th-digit
   residue (A38, A223, A283).
-- Our F accuracy at a huge df2 (T-3754).
+- Our F accuracy at a huge df2: T-3754 (done) and, at b0 >= 40, T-4435 (our F route is 4.7E-8 off the math at
+  `FDIST(1.5,80,1E10)`, where our BETA.DIST at the same shapes is on it).
 
 ## Decision 0267 cells
 Gap triage (origin/main b450050f8) gives this task the 28 b = 40 cells of t4080 columns A and B. Before, the only owner
@@ -92,6 +93,13 @@ family bar. A63 and A147 are first wrong at the 10th digit, but Excel is within 
 Phase 1b evidence (decision 0188 R1(c)). Decision 0056's time-box applies.
 
 - probes-numeric/t4080-beta-num-band-edge.case.json (28): Calc!A21, B21, A42, B42, A63, B63, A84, B84, A105, B105, A126, B126, A147, B147, A168, B168, A189, B189, A210, B210, A231, B231, A252, B252, A273, B273, A294, B294
+
+Gap triage 2026-11-06 (origin/main 39f04d556) adds `FDIST(1.5,80,1E10)`, which is 1 - I(40, 5E9) on this path
+(a0 = 5E9, b0 = 40). Before, it was listed only by deferred T-3209, and T-4254 named its case in passing (T-4436).
+- Excel 0.0025481923984377957 is 1.0E-8 off the math 0.0025481924241211687 (60-digit mpmath at the exact ratio).
+- Ours 0.002548192305228901 is 4.7E-8 off, through the F route that T-4435 makes accurate.
+- So the cell needs both: T-4435 brings ours to the math, and this task's model brings it to Excel.
+- probes-numeric/t4045-f-dist-rt-zero-cut.case.json (1): Calc!E3
 
 ## Visible-parity stage
 Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit (decisions 0083, 0267).

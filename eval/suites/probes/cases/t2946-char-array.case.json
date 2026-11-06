@@ -1,0 +1,26 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "CHAR over arrays with 0, 256, text and blank elements, and the LET/SEQUENCE packed string (T-2946)",
+ "tags": [
+  "M2",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": 65,
+    "A2": 256,
+    "A3": "x",
+    "A5": 66,
+    "C1": "=LET(s,SEQUENCE(10),CONCAT(CHAR(48+s)))",
+    "D1": "=CHAR({65;0;66})",
+    "E1": "=CHAR({65;256;66})",
+    "F1": "=CHAR({65;\"x\";66})",
+    "G1": "=CHAR(A1:A5)",
+    "H1": "=CHAR(A4:A5)",
+    "I1": "=CONCAT(IF(SEQUENCE(3)>1,CHAR(80+SEQUENCE(3)),CHAR(48+SEQUENCE(3))))"
+   }
+  }
+ ]
+}

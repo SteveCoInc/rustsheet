@@ -1,0 +1,61 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "Paired regression functions when only y's sum of squares overflows, when sum x overflows and when only the sum of products overflows (T-4047)",
+ "tags": [
+  "M9",
+  "statistics",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": 1,
+    "B1": 1e+200,
+    "A2": 2,
+    "B2": 2e+200,
+    "A3": 3,
+    "B3": 3e+200,
+    "A4": 4,
+    "B4": 5e+200,
+    "C1": 1.5e+308,
+    "D1": 1,
+    "C2": 1.4e+308,
+    "D2": 2,
+    "C3": 1.3e+308,
+    "D3": 3,
+    "C4": 1.2e+308,
+    "D4": 4,
+    "E1": 1e+160,
+    "F1": 1e+160,
+    "E2": 1.000000000000001e+160,
+    "F2": 1.000000000000003e+160,
+    "E3": 1.000000000000002e+160,
+    "F3": 1.000000000000001e+160,
+    "E4": 1.000000000000004e+160,
+    "F4": 1.000000000000005e+160,
+    "H1": "=CORREL(B1:B4,A1:A4)",
+    "H2": "=SLOPE(B1:B4,A1:A4)",
+    "H3": "=INTERCEPT(B1:B4,A1:A4)",
+    "H4": "=STEYX(B1:B4,A1:A4)",
+    "H5": "=FORECAST(2,B1:B4,A1:A4)",
+    "H6": "=RSQ(B1:B4,A1:A4)",
+    "H7": "=PEARSON(B1:B4,A1:A4)",
+    "I1": "=CORREL(D1:D4,C1:C4)",
+    "I2": "=SLOPE(D1:D4,C1:C4)",
+    "I3": "=INTERCEPT(D1:D4,C1:C4)",
+    "I4": "=STEYX(D1:D4,C1:C4)",
+    "I5": "=FORECAST(2,D1:D4,C1:C4)",
+    "I6": "=RSQ(D1:D4,C1:C4)",
+    "I7": "=PEARSON(D1:D4,C1:C4)",
+    "J1": "=CORREL(F1:F4,E1:E4)",
+    "J2": "=SLOPE(F1:F4,E1:E4)",
+    "J3": "=INTERCEPT(F1:F4,E1:E4)",
+    "J4": "=STEYX(F1:F4,E1:E4)",
+    "J5": "=FORECAST(2,F1:F4,E1:E4)",
+    "J6": "=RSQ(F1:F4,E1:E4)",
+    "J7": "=PEARSON(F1:F4,E1:E4)"
+   }
+  }
+ ]
+}

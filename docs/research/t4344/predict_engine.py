@@ -7,13 +7,15 @@ its values are that model's committed predictions for every cell, PIVOTBY, table
 
 `rustsheet-eval show` prints values only for a case with a sidecar, so this writes a placeholder sidecar (every
 Calc formula cell the empty text), reads each cell's `actual`, and removes the placeholder again. The values go to
-docs/research/t4344/predictions.tsv as JSON strings (cell, value).
+docs/research/t4344/predictions.tsv as JSON strings (cell, value). Another probe passes its case (without
+`.case.json`) and output path as arguments (T-4388), instead of copying this script.
 """
 
 import json
 import os
 import re
 import subprocess
+import sys
 
 CASE = "eval/suites/probes/cases/t4344-groupby-descending-search"
 OUT = "docs/research/t4344/predictions.tsv"
@@ -29,6 +31,9 @@ def unescape(debug: str) -> str:
 
 
 def main() -> None:
+    global CASE, OUT
+    if len(sys.argv) == 3:
+        CASE, OUT = sys.argv[1], sys.argv[2]
     sidecar = CASE + ".oracle.json"
     if os.path.exists(sidecar):
         raise SystemExit("the case already has a sidecar: predictions are written before the fill")
@@ -66,12 +71,19 @@ def main() -> None:
         raise SystemExit(f"no engine value for {missing}")
     with open(OUT, "w") as fh:
         fh.write(
-            "# T-4344: the engine's values (the current model) for probes/t4344-groupby-descending-search, written "
+            f"# the engine's values (the current model) for probes/{os.path.basename(CASE)}, written "
             "before the oracle fill (cell, value as a JSON string)\n"
         )
         for c in sorted(values, key=lambda c: (int(c[1:]), c[0])):
             fh.write(f"{c}\t{json.dumps(values[c], ensure_ascii=False)}\n")
     print(len(values), "predictions")
+
+
+def run(case: str, out: str) -> None:
+    """`main` for another probe: its case path (without `.case.json`) and its predictions file."""
+    global CASE, OUT
+    CASE, OUT = case, out
+    main()
 
 
 if __name__ == "__main__":
