@@ -368,3 +368,6 @@ accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-
 accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/MIRR/s1!Calc!A125	T-4537	Excel #DIV/0! for a finance power overflow beside a later negative flow; the engine gives #NUM!
+accuracy/F.INV.RT/s1!Calc!A155	T-1871	deep-tail F quantile (p 4.7E-162, df 3216, 23): the engine is 1.8% off; Excel matches the math
+accuracy/F.INV.RT/s1!Calc!A112	T-4568	Excel 0.9% below the math at p = DBL_MIN (df 29, 57); the engine returns the math
+accuracy/F.INV.RT/s1!Calc!A142	T-4568	Excel #NUM! at p 1.5E-247 (df 9, 51); the engine returns the math

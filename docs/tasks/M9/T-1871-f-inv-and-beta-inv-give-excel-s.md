@@ -16,7 +16,7 @@ F.INV (and BETA.INV where its shapes are extreme) gives Excel's value at a tiny 
 the engine uses saturates, panicked or never finished, instead of `#NUM!` or a wrong number.
 
 ## Context
-- Gate A known failures this task owns (T-3358, eval/accuracy/known-failures.tsv): accuracy/F.INV/s1 A154 and A168 (deep-tail F.INV, the engine far off where Excel matches the math). Removing the lines
+- Gate A known failures this task owns (T-3358, eval/accuracy/known-failures.tsv): accuracy/F.INV/s1 A154 and A168 (deep-tail F.INV, the engine far off where Excel matches the math), and accuracy/F.INV.RT/s1 A155 (T-4103, `F.INV.RT(4.6950979439918E-162,3216,23)`: the engine 2.4605E+14, Excel and the math 2.4164E+14). Removing the lines
   once they pass is part of this task (a passing listed point fails the check as stale).
 Found by T-1848, which capped statrs' `inv_beta_reg` (`statistical/inverse_beta.rs`) so that it is `#NUM!` where statrs
 panicked or hung (statistics.md "Quantile searches: per-call cap and lifting", a DEVIATION). Excel's values,
