@@ -23,6 +23,10 @@ SPEC-0033 X1 and RQ2: a normalization is allowed only with evidence (directive 1
    Calipers already shows it (`init.xlsx` against `golden.xlsx`).
 3. Diff with the differ of T-4172, or with docs/research/xlsx-round-trip/rtdiff.py until it lands.
 
+Also tag a whole lost element whose every attribute is an N item: for example a lost `fileVersion` should carry
+`candidate-N5`, not only its attributes (T-4509 review). Retagging existing baseline lines reads as a regression to
+the ratchet, so do it in the same PR that turns evidenced items into normalizations.
+
 Record per item: always rewritten, rewritten only on edit, or kept. Note where Excel for the web differs from
 desktop (RQ1, which T-4180 owns more widely).
 

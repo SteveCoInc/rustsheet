@@ -508,6 +508,11 @@ pub struct CaseSpec {
     /// the engine adapter with `Txn::define_name` (`Txn::define_sheet_name`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub api_names: Vec<ApiName>,
+    /// The workbook's active sheet (spec2xlsx makes it the active, only selected tab; T-4394): the
+    /// engine adapter sets it before `api_names`, which bind unqualified references to it
+    /// (T-4445). The first sheet when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_sheet: Option<String>,
     /// Workbook-scoped defined names: name → formula (e.g. `"=Sheet1!$A$1:$B$2"`).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub names: BTreeMap<String, String>,
@@ -576,6 +581,21 @@ pub struct OracleFile {
     /// Displayed text of the cells a case lists in `text`: sheet → A1 → text (T-1610).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub text: BTreeMap<String, BTreeMap<String, String>>,
+    /// Every pivot Excel saved, with its layout and the cells of its area (T-4123); scored by
+    /// T-4124.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivots: Vec<OraclePivot>,
+}
+
+/// A pivot of an oracle sidecar: Excel's saved definition (location, layout lines, group labels)
+/// and every cell of its area, a blank one as `empty` (`tools/src/rustsheet_tools/snapshot.py`
+/// `pivot_areas`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OraclePivot {
+    #[serde(flatten)]
+    pub definition: crate::xlsx_snapshot::PivotDef,
+    /// A1 address on the pivot's sheet → Excel's value there.
+    pub cells: BTreeMap<String, Value>,
 }
 
 /// The formulas `x` of `spec` whose companion `=(x)=0` the excel-graph `oracle` answers FALSE:
@@ -669,6 +689,28 @@ pub fn load_oracle(case: &CaseFile) -> Result<Option<OracleFile>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sidecar_pivots_round_trip_and_older_sidecars_have_none() {
+        let json = r#"{"format":"rustsheet-oracle/v1","source":{"kind":"excel-graph"},
+            "sheets":{"P":{}},"pivots":[{"name":"Pv","sheet":"P","location":"A3:B5",
+            "first_header_row":1,"first_data_row":1,"first_data_col":1,"row_page_count":0,
+            "col_page_count":0,"row_items":[{"r":0,"i":0,"x":[0]},{"t":"grand","r":0,"i":0,"x":[0]}],
+            "col_items":[],"cells":{"A3":{"t":"s","v":"Row Labels"},"B5":{"t":"empty"}}}]}"#;
+        let file: OracleFile = serde_json::from_str(json).expect("parses");
+        let pivot = &file.pivots[0];
+        assert_eq!(pivot.definition.location, "A3:B5");
+        assert_eq!(pivot.definition.row_items[1].t.as_deref(), Some("grand"));
+        assert_eq!(pivot.cells.get("B5"), Some(&Value::Empty));
+        let again: OracleFile =
+            serde_json::from_str(&serde_json::to_string(&file).expect("writes")).expect("reads");
+        assert_eq!(again, file);
+        let old: OracleFile = serde_json::from_str(
+            r#"{"format":"rustsheet-oracle/v1","source":{"kind":"hand"},"sheets":{}}"#,
+        )
+        .expect("parses");
+        assert!(old.pivots.is_empty());
+    }
 
     #[test]
     fn deletes_and_column_inserts_move_the_inputs_they_shift() {

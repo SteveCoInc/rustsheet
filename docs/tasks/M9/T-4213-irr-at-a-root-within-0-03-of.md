@@ -85,3 +85,12 @@ digit), 4 Tier B (12th or 13th), and 3 Tier C/D (14th or 15th), which come along
 
 ## Visible-parity stage
 Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit (decisions 0083, 0267).
+
+## Time-box note (salvaged onto main by T-4386)
+Draft PR #3211 (branch `agent/functions-financial/T-4213-irr-near-zero-root`) holds the IRR change (the fallback returns
+the Newton iterate one step past its stop), its R4 guards and a blocked, time-boxed status (decision 0056): two attempts
+ran, the second lands 2 of the 9 cells, and the other 7 stay for decision 0267. Its Excel evidence is on main: the fresh
+sweep probes-numeric/t4213-irr-r4-fresh (T-4386) and the findings in financial.md "IRR's returns where the secant
+fails are Newton iterates". The visibly-off cells of the sweep are owned by T-4232. The branch's fidelity review asked
+for the hold-out from the fit lab's split and for the sweep as a Gate A batch (`eval/accuracy/tables/IRR` r4-T-4213);
+neither is done.
