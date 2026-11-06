@@ -3,7 +3,7 @@ id: T-4094
 title: "Gate A tables, paired regression: FORECAST, FORECAST.LINEAR, INTERCEPT, SLOPE, RSQ, PEARSON and CORREL"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
