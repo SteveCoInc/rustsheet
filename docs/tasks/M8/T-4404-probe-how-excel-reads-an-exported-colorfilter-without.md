@@ -3,7 +3,7 @@ id: T-4404
 title: "Probe how Excel reads an exported colorFilter without dxfId (a dxf index past the workbook's dxfs)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
