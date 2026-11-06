@@ -1,4 +1,5 @@
-"""The legacy chi-squared, gamma and beta names: CHIDIST, CHIINV, GAMMADIST, GAMMAINV, BETADIST and BETAINV.
+"""The legacy chi-squared, gamma and beta names: CHIDIST, GAMMADIST, GAMMAINV, BETADIST and BETAINV (CHIINV is
+`gamma.CHIINV`, T-3337).
 
 Each returns exactly the same value or error as its modern equivalent on every paired cell, so each reuses that
 function's Definition under its own name (one definition per concept, T-4104):
@@ -18,7 +19,7 @@ import dataclasses
 from typing import TYPE_CHECKING
 
 from rustsheet_tools.accuracy.defs.beta import BETA_DIST, BETA_INV
-from rustsheet_tools.accuracy.defs.gamma import CHISQ_INV_RT, GAMMA_INV
+from rustsheet_tools.accuracy.defs.gamma import GAMMA_INV
 from rustsheet_tools.accuracy.defs.gamma_dist import CHISQ_DIST_RT, GAMMA_DIST
 from rustsheet_tools.accuracy.model import Definition, register
 
@@ -53,7 +54,6 @@ def _betadist_domain(args: Sequence[MathArg]) -> str | None:
 
 
 CHIDIST = register(_alias(CHISQ_DIST_RT, "CHIDIST", FIRST_SOURCE))
-CHIINV = register(_alias(CHISQ_INV_RT, "CHIINV", FIRST_SOURCE))
 GAMMADIST = register(_alias(GAMMA_DIST, "GAMMADIST", SECOND_SOURCE))
 GAMMAINV = register(_alias(GAMMA_INV, "GAMMAINV", SECOND_SOURCE))
 BETAINV = register(_alias(BETA_INV, "BETAINV", FIRST_SOURCE))
