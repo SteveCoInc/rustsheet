@@ -57,7 +57,7 @@ Every failing table point has an owner.
     draws, the legacy names).
 - Tables `eval/accuracy/tables/{BINOMDIST,NEGBINOMDIST,HYPGEOM.DIST,HYPGEOMDIST,POISSON}/s1`: 197, 200, 200, 200 and 120
   points (3 BINOMDIST points dropped: mpmath's incomplete beta did not converge), filled from excel-graph.
-- `rustsheet-eval accuracy`: 0 failing. `missing tables` 121 to 116 (on main as merged).
+- `rustsheet-eval accuracy`: 0 failing. `missing tables` 102 to 97 (on main as merged).
   - BINOMDIST, NEGBINOMDIST and POISSON: every point inside the envelope.
   - HYPGEOM.DIST: 164 inside. HYPGEOMDIST: 160 inside.
   - 76 known failures added, all owned by the new T-4502 (engine bugs; Excel matches the math):
