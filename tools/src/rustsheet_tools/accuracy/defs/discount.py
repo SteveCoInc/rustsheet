@@ -61,15 +61,7 @@ from rustsheet_tools.accuracy.defs.yearfrac import (
     whole_serial,
 )
 from rustsheet_tools.accuracy.literal import Arg, round15
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    DomainError,
-    Interval,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 MODES_SOURCE = "financial.md#discount-security-functions-settlement-0-basis-and-argument-modes"
@@ -413,9 +405,9 @@ def _security_definition(
     value: Callable[[Sequence[MathArg]], mpmath.mpf],
     draw: Callable[..., list[Arg]],
 ) -> Definition:
-    dates = (Param(n, "real", Interval(), source=MODES_SOURCE) for n in ("settlement", "maturity"))
-    amounts = (Param(n, "real", Interval(), source=PARTS_SOURCE) for n in names)
-    basis = Param("basis", "int", Interval(), source=BASIS_SOURCE, optional=True)
+    dates = (Param(n, "real", source=MODES_SOURCE) for n in ("settlement", "maturity"))
+    amounts = (Param(n, "real", source=PARTS_SOURCE) for n in names)
+    basis = Param("basis", "int", source=BASIS_SOURCE, optional=True)
     return register(
         Definition(
             function=function,
@@ -433,9 +425,9 @@ def _tbill_definition(function: str, value: Callable[[Sequence[MathArg]], mpmath
         Definition(
             function=function,
             params=(
-                Param("settlement", "real", Interval(), source=BELOW_ONE_SOURCE),
-                Param("maturity", "real", Interval(), source=BELOW_ONE_SOURCE),
-                Param("discount", "real", Interval(), source=TBILL_SOURCE),
+                Param("settlement", "real", source=BELOW_ONE_SOURCE),
+                Param("maturity", "real", source=BELOW_ONE_SOURCE),
+                Param("discount", "real", source=TBILL_SOURCE),
             ),
             value=value,
             draw=_strata(
