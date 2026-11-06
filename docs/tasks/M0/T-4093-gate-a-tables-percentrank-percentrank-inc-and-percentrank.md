@@ -62,7 +62,7 @@ Every failing table point has an owner.
 - **Tables:** `eval/accuracy/tables/{PERCENTRANK,PERCENTRANK.INC,PERCENTRANK.EXC}/s1` have 200 points each. They were
   filled from excel-graph with 0 failures.
   - `rustsheet-eval accuracy` puts all 600 points inside the envelope (598 on both sides, 2 through the math only).
-    0 failing, 0 table defects, 0 known failures added. `missing tables` went from 88 to 85.
+    0 failing, 0 table defects, 0 known failures added. `missing tables` went from 88 to 85 (76 to 73 after merging main).
   - The engine is bit-exact with Excel on 598 of 600. The other two are `PERCENTRANK.EXC({0,3},2,17)` (A128, A140).
     Excel gives 0.555555555555556 and the engine 0.555555555555555, 1.8E-16 apart. The engine's double rank of
     5/9 is below the correctly rounded one. This is filed as T-4556.
