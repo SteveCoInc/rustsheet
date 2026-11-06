@@ -1005,7 +1005,8 @@ halves (probes/t4061-review-followups B1:B8).
 Evidence: probes/t3666-lcid-sublanguage-sweep, t3666-lcid-locale-map (every language 0x01-0xFF x sublanguage 0-63),
 t3666-locale-names (853 LCIDs probed, 845 with a locale, x 38 names and 3 day halves), t3666-locale-tag-names (1122 tags), excel-graph 2026-11-04; languages
 0x100-0x3FF are unprobed (no locale here). Ours: partly. The hand-written tables of locale/excel_date_names.rs and locale/indic_date_names.rs cover the
-languages probed before, and `sublanguage_defined` bounds four languages' sublanguages; the probes' other cells are
+languages probed before, and `by_language` falls back to a language's names for the LCIDs Windows assigns
+(locale/lcids.rs, T-4480); the probes' other cells are
 known failures until T-4508 generates the tables from them.
 Status: VERIFIED (excel-graph). Tasks: T-3666, T-4507, T-4508
 
@@ -1506,7 +1507,8 @@ Tasks: T-1611, T-2029, T-2030, T-1740, T-0982, T-2061, T-2072, T-2073, T-2074, T
 
 ## Placeholders after a fraction
 Rule: digit placeholders after a fraction's denominator get no digit of the value; they print what the denominator hands
-on, by one rule for every denominator. A `.` among them prints and a `,` prints nothing.
+on, by one rule for every fixed denominator (a placeholder denominator follows "A placeholder denominator prints its
+unused placeholders in place" above, which this model does not fit). A `.` among them prints and a `,` prints nothing.
 - **Which fraction.** A fixed denominator is used as written only when it is at most 32768 and no digit placeholder
   follows it in the section; otherwise Excel picks the fraction as for one past 32768 (see "Fraction formats"): the last
   convergent with a denominator up to 9999999 (0.0625 is 1/16, 0.3 3/10, 0.123456789 10/81, PI() 3 + 244252/1725033).

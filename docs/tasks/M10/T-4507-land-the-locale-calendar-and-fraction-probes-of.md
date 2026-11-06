@@ -31,7 +31,7 @@ reached main; their work is T-4508 and T-4515.
 - Engine changes (T-4508 locale tables, T-4515 fraction and comma model).
 
 ## Outcome
-Done. 27 cases, 11460 Excel cells (excel-graph, 2026-11-04): main passes 2989; the rest are known
+Done. 27 cases, 11460 Excel cells (excel-graph, 2026-11-04): main passes 2989 cells bit-exact (3308 not visibly off); the rest are known
 failures, owned by T-4508 (locale and calendar names, calendar digits 0x15-0x17 and the top bit: t3666-*, t4061-*) and
 T-4515 (t4043-*, t3711-fixed-denominator-then-placeholder, and t3598-decimal-part-commas rows 23, 24, 26,
 t3666-review-followups A7:A12). number-formats.md: new "Which LCIDs have a locale" and "Calendar names per locale",
