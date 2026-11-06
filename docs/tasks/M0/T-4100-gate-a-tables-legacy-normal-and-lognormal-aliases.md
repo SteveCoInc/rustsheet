@@ -60,7 +60,7 @@ Every failing table point has an owner.
 - `rustsheet-eval accuracy`: 1,182 new points, all inside the envelope (1,174 on both sides, 8 through the math only:
   4 NORMINV, 3 NORMSINV, 1 LOGINV). The engine is bit-exact with Excel on 1,098 (all of LOGNORMDIST, STANDARDIZE,
   NORMDIST and NORMSDIST; NORMINV 177 of 200, LOGINV 169 of 200, NORMSINV 90 of 120). 0 failing, 0 table defects,
-  0 known failures added. `missing tables` 102 to 95.
+  0 known failures added. `missing tables` 95 to 88 against the origin/main merged last (102 to 95 at the claim).
 - **Excel kept as the target (decision 0300):** 14 points are more than 1e-4 relative off the math, all Excel's
   lower-tail flush to 0 where the math is a subnormal below the 1e-300 absolute floor (T-1040): `NORMSDIST(-37.625)`
   (A68, A70, A72, A74, A76, A78, A80, A82, A84; math 4.19E-310) and LOGNORMDIST A77, A116, A118, A134, A139 (math
