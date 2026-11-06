@@ -3,7 +3,7 @@ id: T-4109
 title: "Gate A tables, annuity I: FV, PV, PMT, IPMT, PPMT, ISPMT and PDURATION"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
