@@ -580,3 +580,23 @@ probes/stat-argument-modes.case.json!Sheet1!H274	0308	T-4373
 probes/stat-argument-modes.case.json!Sheet1!H275	0308	T-4373
 probes/stat-argument-modes.case.json!Sheet1!H277	0308	T-4373
 probes/stat-argument-modes.case.json!Sheet1!H278	0308	T-4373
+# calipers Mac desktop goldens where Excel for the web gives the engine's value: trig at k pi/2 (x87 pi), CHAR(255),
+# INFO("release") (probes/t4534-desktop-golden-web-values): decision 0315.
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!C23	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!C25	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!D22	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!D24	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!E22	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!E23	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!E24	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!E25	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!F22	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!F24	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!G23	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!G25	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!H22	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!H23	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!H24	0315	T-4373
+calipers/roundtrip/formulas_math_trig/golden.xlsx!Sheet1!H25	0315	T-4373
+calipers/roundtrip/formulas_text/golden.xlsx!Text Functions!C190	0315	T-4373
+calipers/roundtrip/formula_stress_test/golden.xlsx!Information!B3	0315	T-4373
