@@ -3,7 +3,7 @@ id: T-3915
 title: "Reword the MAX_PARENTHESES doc and its syntax.md notes (T-3870 review MINORs)"
 milestone: M2
 lane: quality
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -26,8 +26,11 @@ wording changes, not what they claim.
   concerned its own code, which never landed, so they are dropped.
 
 ## Acceptance criteria
-- [ ] Each place above is reworded or moved, and the facts and the cited cases are unchanged.
-- [ ] `make check` green; reviewers approve.
+- [x] Each place above is reworded or moved, and the facts and the cited cases are unchanged.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Any change to the parser or to a probe case.
+
+## Outcome
+Reworded the `MAX_PARENTHESES` doc (call-parenthesis point is its own sentence after the `-(` clause) and moved the T-3870 sentence in syntax.md after the T-3689 one. Facts and cited cases unchanged. Eval delta: none (docs/comments only).
