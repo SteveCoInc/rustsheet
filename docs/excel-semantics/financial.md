@@ -2688,19 +2688,19 @@ Evidence: accuracy/CUMPRINC/e-T-4059 and accuracy/CUMIPMT/e-T-4059. Each has 200
 
 T-3141's core at every leading exponent is to the bit on 199 of the 200 CUMPRINC principals and on all 200 CUMIPMT
 interests. Main's forms get 81 and 151. From a leading exponent of 0.3 up, the geometric sum gets 70 of 170
-CUMPRINC principals to the bit. An earlier aimed draw of 400 points, which this PR does not keep, gave the same split:
-the core matched 399, and its only miss is the CUMIPMT entry below.
+CUMPRINC principals to the bit. The first aimed draw, accuracy/CUMPRINC/e-T-3141 and accuracy/CUMIPMT/e-T-3141
+(200 points each, filled 2026-11-06; T-3141's fit data for dropping its 0.3 cut), gives the same split: the core
+matches 399 of 400, and its only miss is the CUMIPMT entry below.
 
 Open misses:
 - `CUMPRINC(0.273951989085243,2756,134494.948128047,9,9,1)` (e-T-4059 A119; lead 665, result -3.2E-285) is
   -3.166759757937701E-285 in Excel. The core gives -3.1667597579380603E-285, 962 ulps away, and the math is
   -3.1667597579377963E-285. Excel is 3.0E-14 off the math relative and the core 8.3E-14, so at a result this
   deep Excel keeps digits that the core loses. Its form there is open.
-- From the earlier draw: `CUMIPMT(0.103414751928719,17312013078,200894.020467694,17312013077,17312013078,1)` (the
-  last two periods of a type 1 loan at 0.1034) is -5128.51360859488 in Excel. Ours is -5128.513608594883, 4 ulps
-  off with any principal form, so the miss sits in the `PMT·m` half of `PMT·m - CUMPRINC`. It is not kept as a
-  table point.
-Status: PARTLY VERIFIED (excel-graph, Gate A e-T-4059 batches; A119 and the CUMIPMT miss are open, T-4710)
+- `CUMIPMT(0.103414751928719,17312013078,200894.020467694,17312013077,17312013078,1)` (accuracy/CUMIPMT/e-T-3141 A41;
+  the last two periods of a type 1 loan at 0.1034) is -5128.51360859488 in Excel. Ours is -5128.513608594883, 4 ulps
+  off with any principal form, so the miss sits in the `PMT·m` half of `PMT·m - CUMPRINC`.
+Status: PARTLY VERIFIED (excel-graph, Gate A e-T-3141 and e-T-4059 batches; A119 and the CUMIPMT miss are open, T-4710)
 Tasks: T-4059, T-3141
 
 ## CUMIPMT and CUMPRINC work cap

@@ -34,7 +34,7 @@ requires, and T-3141 can land.
 
 ## Acceptance criteria
 - [x] The `r4-T-3141` batches are filled after T-3141's freeze, their failing points are owned, and their envelope
-  result is in T-3141's Outcome (on its branch, PR #3105, which lands after this PR).
+  result is in T-3141's Outcome (on its branch, PR #3105, which lands after this PR and cites these batches).
 - [x] probes/fin-cumprinc-underflow-type1 C7:C9 and G7:G9 and fin-cumprinc-underflow-fresh I10 and K10 pass, or the
   sweep shows the geometric sum is Excel's there.
 - [x] `make check` green; reviewers approve.
@@ -57,22 +57,31 @@ requires, and T-3141 can land.
     - type 1 from period 2;
     - nper up to 1E15.
   - `s1` regenerates byte-identically for both functions, and `verify` reports 0 differences.
-- **Evidence batches `e-T-4059`.** 200 aimed points each, filled from excel-graph on 2026-11-06. The finding is in
-  financial.md "CUMPRINC where `v^nper` underflows, at deep leading exponents (T-4059)":
-  - T-3141's core holds at every leading exponent probed, out to 695. Matched to the bit: CUMPRINC 199/200 and
-    CUMIPMT 200/200; main gets 81 and 151.
-  - From 0.3 up, the geometric sum gets 70 of 170 CUMPRINC principals to the bit.
-  - T-3141 used these points as fit data to drop its 0.3 cut, together with the probe cells type1 C7:C9 and G7:G9,
-    fresh I10 and K10, and three gen-m9 cells. That form was frozen at T-3141's commit 0a1f01a (2026-11-06 22:20 UTC).
-  - The first aimed draw scored before that freeze is dropped: it was named `r4-T-3141` and is not kept.
-  - Open misses (A119, and a CUMIPMT `PMT·m` case): T-4710.
+- **Fit data `e-T-3141`.** These are the first aimed draw, 200 points per function. Their history:
+  - They were generated as `generate --batch r4-T-3141 --stratum aimed` and filled from excel-graph at 2026-11-06
+    21:53 UTC. That was after T-3141's kernel froze on 2026-11-04.
+  - They are kept byte for byte, so their description still names that batch. Their seed is in the math sidecar,
+    and `verify` reports 0 differences.
+  - With T-3141's kernel they are exact on CUMPRINC 52/52 below a leading exponent of 0.3, but on only 63/148 from 0.3
+    up, where the geometric sum takes over. With the core at every lead they are exact on 200/200, and on CUMIPMT
+    199/200.
+  - T-3141 then dropped its 0.3 cut on this result together with the probe cells type1 C7:C9 and G7:G9, fresh I10 and
+    K10, and three gen-m9 cells. So these points are fit data, not a sweep, and they are named after T-3141.
+  - The new form froze at T-3141's commit 0a1f01a (2026-11-06 22:20:15 UTC).
+- **Aimed hold-out `e-T-4059`.** 200 aimed points per function, drawn after the refreeze and filled from 22:20:43 UTC
+  on. T-3141's form is exact on CUMPRINC 199/200 and CUMIPMT 200/200; main gets 81 and 151. From 0.3 up, the
+  geometric sum gets 70 of 170 CUMPRINC principals to the bit. The finding is in financial.md "CUMPRINC where
+  `v^nper` underflows, at deep leading exponents (T-4059)". Its open misses go to T-4710: e-T-4059 A119 and e-T-3141
+  CUMIPMT A41.
 - **R4.2 sweep `r4-T-3141`.** 200 points each, drawn and filled after T-3141's freeze. Each is 100% log-uniform over
   the full domain (`--stratum log-uniform`), as SPEC-0029 asks.
   - Main and T-3141's frozen form score the same on every point except 4 CUMPRINC principals from a leading exponent
     of 0.3 up. T-3141 gets all 4 to the bit: 24 of those 39 against main's 20, and it loses none.
+  - A full-domain draw seldom lands in T-3141's region: 7 of the 200 CUMPRINC points are short ranges where `v^nper`
+    underflows. T-3141 gets all 7 to the bit and main 3. The aimed hold-out above covers the region itself.
   - Envelope: 28 CUMIPMT points fail on main and on T-3141 alike. All are tiny rates, 1E-10 to 4E-8, where the
     interest `PMT·m - CUMPRINC` cancels. Those are T-4390's class, so their known-failure lines name T-4390.
   - Every other point is in the envelope on both.
-- **Eval delta.** Gate A gains 800 points: 772 in the envelope and 28 known failures (T-4390). The eval suites do not
+- **Eval delta.** Gate A gains 1,200 points: 1,172 in the envelope and 28 known failures (T-4390). The eval suites do not
   change.
 - **Follow-up:** T-4710.
