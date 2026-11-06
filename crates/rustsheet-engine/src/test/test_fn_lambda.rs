@@ -608,6 +608,8 @@ fn special_forms_passed_by_name() {
     model._set("D7", "=ARRAYTOTEXT(MAP(A1:A3,{7;8;9},_xleta.IF))");
     model._set("D8", "=ARRAYTOTEXT(MAP(A1:A3,B1:B3,_xleta.IFERROR))");
     model._set("D9", "=ARRAYTOTEXT(MAP(A1:A3,{1;2;1},_xleta.INDEX))");
+    model._set("D10", "=ROWS(LET(f,_xleta.IF,f(TRUE,A1:A3)))");
+    model._set("D11", "=ISBLANK(LET(f,_xleta.IF,f(TRUE,(A1,B1))))");
     model.evaluate();
 
     assert_eq!(model._get_text("D1"), *"5");
@@ -619,10 +621,12 @@ fn special_forms_passed_by_name() {
     assert_eq!(model._get_text("D7"), *"7, 8, 9");
     assert_eq!(model._get_text("D8"), *"1, 3, 5");
     assert_eq!(model._get_text("D9"), *"1, #REF!, 5");
+    assert_eq!(model._get_text("D10"), *"#VALUE!");
+    assert_eq!(model._get_text("D11"), *"TRUE");
 }
 
-/// A function passed by name and called through LET with fewer arguments than it takes is
-/// `#VALUE!`; one that takes none runs (probes/t4450-eta-special-forms E85:F103).
+/// A function passed by name and called through LET with a count it does not take is `#VALUE!`;
+/// one that takes none runs (probes/t4450-eta-special-forms E85:F103, L1:L13).
 #[test]
 fn function_by_name_called_without_arguments() {
     let mut model = new_empty_model();
@@ -630,10 +634,14 @@ fn function_by_name_called_without_arguments() {
     model._set("A2", "=LET(f,_xleta.PI,f())");
     model._set("A3", "=LET(f,_xleta.ROW,f())");
     model._set("A4", "=LET(f,_xleta.SUM,f(1,2))");
+    model._set("A5", "=LET(f,_xleta.ABS,f(1,2))");
+    model._set("A6", "=ERROR.TYPE(LET(f,_xleta.IF,f()))");
     model.evaluate();
 
     assert_eq!(model._get_text("A1"), *"#VALUE!");
     assert_eq!(model._get_text("A2"), *"3.141592654");
     assert_eq!(model._get_text("A3"), *"3");
     assert_eq!(model._get_text("A4"), *"3");
+    assert_eq!(model._get_text("A5"), *"#VALUE!");
+    assert_eq!(model._get_text("A6"), *"3");
 }

@@ -129,8 +129,9 @@ fn eta_arity(kind: &Function) -> Option<usize> {
     let name = kind.to_localized_name(get_default_language());
     let min = arg_counts::min_args(&name);
     match min {
-        // ROW, COLUMN and SHEET take one: each group's value is ROW's or COLUMN's `#VALUE!` or
-        // SHEET's `#N/A` (probes/t4450-eta-special-forms E109:H124).
+        // One that takes none or one gets one (ROW, COLUMN, SHEET, SHEETS, RANDARRAY): each
+        // group's value is ROW's or COLUMN's `#VALUE!`, SHEET's or SHEETS' `#N/A`
+        // (probes/t4450-eta-special-forms E109:H124, J59:J63).
         0 if arg_counts::takes_count(&name, 1) => Some(1),
         1 => Some(1),
         2 => Some(2),

@@ -44,7 +44,7 @@ docs/excel-semantics/arrays.md "Functions passed by name (`_xleta.`)".
 ## Acceptance criteria
 - [x] probes/t4450-eta-special-forms is committed with oracle values (excel-graph) for every formula above; a formula
       excel-graph refuses or cannot decode is left pending and named in the arrays.md entry, as T-1466 did.
-- [ ] Every filled cell passes (`make eval-show CASE=probes/t4450-eta-special-forms`): 124 of 135; the other 11 are owned by T-4518 and T-4519 (see Outcome).
+- [ ] Every filled cell passes (`make eval-show CASE=probes/t4450-eta-special-forms`): 142 of 152 scored cells; the other 10, and the spill cell J64, are owned by T-4518 and T-4519 (see Outcome).
 - [x] The eval gate shows 0 regressions (probes/eta-reduced-names, probes/t3655-*, probes/t3814-lambda-helper-arity and
       gen-m7 in particular).
 - [x] docs/excel-semantics/arrays.md "Functions passed by name (`_xleta.`)": the "Unprobed" sentence is replaced by the
@@ -62,17 +62,20 @@ docs/excel-semantics/arrays.md "Functions passed by name (`_xleta.`)".
 - New probe probes/t4450-eta-special-forms (excel-graph, 2026-11-06): every formula of the Context, plus follow-ups
   in column J (what the blank IF and CHOOSE return, OFFSET with three arguments, LET and LAMBDA given 2 or 3 values,
   `ERROR.TYPE(_xleta.LET)`, GROUPBY and PIVOTBY with SHEETS, RANDARRAY, NOW, PI and ROW). `ARRAYTOTEXT` of the
-  volatile `LET(f,_xleta.NOW,f())` is read as ISNUMBER instead (F91). 135 cells, 124 pass.
+  volatile `LET(f,_xleta.NOW,f())` is read as ISNUMBER instead (F91). Column L (review round 1): too many and no
+  arguments through LET, and IF and CHOOSE given a multi-cell range or a union. 152 scored cells, 142 pass.
 - Engine (lambda.rs, variable_stack.rs, group_functions.rs):
   - `_xleta.LET` and `_xleta.LAMBDA` are `#NAME?` like an unknown name (`Model::unbound_name`).
-  - A function by name called with a count it does not take is `#VALUE!` (`lambda_definition`): `LET(f,_xleta.SUM,f())`.
-  - IF and CHOOSE by name read a reference value argument as a blank (`eta_blanks_references`, `Binding::is_reference`).
+  - A function by name called with a count it does not take is `#VALUE!` (`lambda_definition`): `LET(f,_xleta.SUM,f())`,
+    `LET(f,_xleta.ABS,f(1,2))`, `f()` of IF, CHOOSE and IFERROR.
+  - IF and CHOOSE by name read a one-cell reference or a union value argument as a blank and a reference to several
+    cells as `#VALUE!` (`eta_blanks_references`, `picked_reference_read`).
   - GROUPBY and PIVOTBY pass one argument to a minimum-0 function that takes one (ROW, COLUMN, SHEET, SHEETS,
     RANDARRAY), `eta_arity`; NOW and PI stay a whole-call `#VALUE!`.
 - docs/excel-semantics/arrays.md: "Functions passed by name" replaces its "Unprobed" sentence with the rules and their
   cells; "GROUPBY and PIVOTBY" replaces "Unprobed (T-1706)". T-2644 (sonnet research) now names what is left (PIVOTBY
   with COLUMN, SHEET, SHEETS, RANDARRAY).
-- Eval delta: probes +1 case, 124 of 135 cells pass; the 11 visibly-off cells are owned by T-4518 (SHEET and SHEETS of
+- Eval delta: probes +1 case, 142 of 152 scored cells pass; the 11 visibly-off cells are owned by T-4518 (SHEET and SHEETS of
   a LAMBDA parameter: F121, H121:H124, J53, J59) and T-4519 (GROUPBY's ROW and COLUMN results print `#CALC!` in
   ARRAYTOTEXT, and RANDARRAY's group value: F109, F115, J64, J65). 0 regressions in every suite.
 - Unit tests: `special_forms_passed_by_name`, `function_by_name_called_without_arguments` (test_fn_lambda.rs),

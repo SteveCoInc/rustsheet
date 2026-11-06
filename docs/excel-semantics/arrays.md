@@ -1722,7 +1722,8 @@ not an error, whatever it is (TRUE, FALSE, 1, 0, text, a blank cell; so `ISLOGIC
 (`f({1,0})` and `f(A1:B1)` are 1x2 `#VALUE!`, `f({1,#N/A,#DIV/0!})` `#VALUE!`, `#N/A`, `#DIV/0!`), with `f` bound by
 `LET(f,_xleta.IF,..)`. So `MAP({1,0},_xleta.IF)` and `BYROW({1;0},_xleta.IF)` are `#VALUE!` per element, and BYROW and BYCOL
 over two-cell slices are one `#CALC!` (E101 above). With two arguments it is IF (`f(TRUE,5)` 5, `f(FALSE,5)` FALSE);
-with none (`f()`) the error is one excel-graph cannot decode (left pending). Evidence: probes/eta-if-one-argument
+with none (`f()`) the error is one excel-graph cannot decode in the cell (left pending), and `ERROR.TYPE` of it is 3, a
+`#VALUE!` (probes/t4450-eta-special-forms L5, T-4450). Evidence: probes/eta-if-one-argument
 (excel-graph, 2026-10-19, T-1947).
 Other errors and an array as a helper's function are a whole-call `#VALUE!` ("LAMBDA helpers refuse a function they cannot
 call", T-3655). Special forms and reference functions by name (probes/t4450-eta-special-forms, excel-graph, 2026-11-06,
@@ -1735,7 +1736,10 @@ T-4450; A1:B3 = 1..6, each result read through ROWS&"x"&COLUMNS in E, ARRAYTOTEX
   B1:B3 2, 4, 6, `MAP(A1:A3,B1:B3,_xleta.IF)` is three blanks (J23), `MAP(A1:A3,B1:B3,_xleta.CHOOSE)` a blank, `#VALUE!`,
   `#VALUE!` (E25:G27; the blank: ISBLANK TRUE, LEN 0, +0 is 0, J1:J7), `MAP({1;1;1},B1:B3,_xleta.IF)` and
   `MAP({1;2;1},A1:A3,B1:B3,_xleta.CHOOSE)` blanks (J45, J51), and `LET(f,_xleta.IF,f(TRUE,A1))` and
-  `LET(f,_xleta.CHOOSE,f(1,A1))` 0 with ISBLANK TRUE (J39:J43). A reference condition or index reads as usual
+  `LET(f,_xleta.CHOOSE,f(1,A1))` 0 with ISBLANK TRUE (J39:J43). A union is a blank too (`f(TRUE,(A1,B1))`, ISBLANK TRUE,
+  L19:L21), but a reference to several cells is `#VALUE!` (`LET(f,_xleta.IF,f(TRUE,A1:A3))`,
+  `LET(f,_xleta.CHOOSE,f(2,A1,B1:B3))`, L15:L17, L23). Unprobed: a 3-D span and a lifted OFFSET grid (ours: `#VALUE!`, as
+  several cells). A reference condition or index reads as usual
   (`MAP(A1:A3,{7;8;9},_xleta.IF)` 7, 8, 9, J47), and values pick as IF and CHOOSE do (`MAP({1;0},{5;6},_xleta.IF)` 5, FALSE;
   `MAP({1;2},{5;6},{7;8},_xleta.CHOOSE)` 5, 8; `MAP({2;9},..)` 7, `#VALUE!`: E37, J25, J27). IFERROR, INDEX and OFFSET
   return their references' values: `MAP(A1:A3,B1:B3,_xleta.IFERROR)` 1, 3, 5 (E31, J49),
@@ -1743,7 +1747,9 @@ T-4450; A1:B3 = 1..6, each result read through ROWS&"x"&COLUMNS in E, ARRAYTOTEX
 - The other functions follow the argument counts: `MAKEARRAY(2,2,_xleta.OFFSET)` (two of OFFSET's three) is a whole-call
   `#VALUE!` (E61), `MAKEARRAY(2,2,_xleta.SUBTOTAL)` `#VALUE!` per cell (SUBTOTAL(1,1): E73), `BYROW(A1:B3,_xleta.ROW)` 1, 2, 3
   and `BYCOL(A1:B3,_xleta.COLUMN)` 1, 2 (E43, E49), `BYROW(A1:B3,_xleta.SHEET)` 1, 1, 1 (J53; ours `#NAME?`, T-4518).
-- Called with fewer arguments than it takes, through LET, a function by name is `#VALUE!`: `LET(f,_xleta.SUM,f())` (E85:G85).
+- Called through LET with an argument count it does not take, a function by name is `#VALUE!`: too few,
+  `LET(f,_xleta.SUM,f())` (E85:G85), `f()` of IF, CHOOSE and IFERROR, `f(1)` of CHOOSE and IFERROR (L5:L13), and too many,
+  `LET(f,_xleta.ABS,f(1,2))` (L1:L3); `LET(f,_xleta.SUM,f(1,2,3))` is 6 (L25).
   One that takes none runs: `LET(f,_xleta.NOW,f())` a number, `LET(f,_xleta.ROW,f())` 97 (the formula's row),
   `LET(f,_xleta.PI,f())` pi (E91:F103).
 Evidence: probes/eta-reduced-names (30 questions, excel-graph, 2026-10-14, T-1466); probes/m7-argument-modes F28:H51.

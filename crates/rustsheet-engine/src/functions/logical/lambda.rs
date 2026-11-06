@@ -382,10 +382,9 @@ impl Model {
     }
 
     /// Whether `lambda_result` is IF or CHOOSE passed by name, which read a reference given as a
-    /// value argument (any but the first) as a blank: `MAP(A1:A3,B1:B3,IF)` is three blanks and
-    /// `LET(f,IF,f(TRUE,A1))` is 0 with ISBLANK TRUE, while a reference condition or index reads
-    /// as usual and IFERROR, INDEX and OFFSET return their references' values
-    /// (probes/t4450-eta-special-forms E25:G37, J1:J7, J23, J39:J51).
+    /// value argument (any but the first) as [`picked_reference_read`] says, while a reference
+    /// condition or index reads as usual and IFERROR, INDEX and OFFSET return their references'
+    /// values (probes/t4450-eta-special-forms E25:G37, J1:J7, J23, J39:J51, L15:L23).
     /// Excel: see docs/excel-semantics/arrays.md "Functions passed by name".
     fn eta_blanks_references(&self, lambda_result: &CalcResult) -> bool {
         matches!(
@@ -530,8 +529,8 @@ impl Model {
                 let blanks_references = self.eta_blanks_references(&caller.lambda);
                 for (i, &(raw_id, once)) in ids.iter().enumerate() {
                     let binding = match bind(self, i) {
-                        binding if blanks_references && i > 0 && binding.is_reference() => {
-                            Binding::Value(CalcResult::EmptyCell)
+                        binding if blanks_references && i > 0 => {
+                            picked_reference_read(binding, cell)
                         }
                         Binding::Value(value) if once => Binding::ReadOnce(value),
                         binding => binding,
@@ -767,6 +766,36 @@ impl Model {
         self.named_lambdas.ids.insert(address, (definition, id));
         self.named_lambdas.named.insert(id);
         CalcResult::Lambda(id)
+    }
+}
+
+/// What IF and CHOOSE passed by name read for a value argument (`Model::eta_blanks_references`):
+/// a one-cell reference or a union is a blank (`MAP(A1:A3,B1:B3,IF)` three blanks,
+/// `LET(f,IF,f(TRUE,A1))` 0 with ISBLANK TRUE, `f(TRUE,(A1,B1))` ISBLANK TRUE), a reference to
+/// several cells `#VALUE!` (`f(TRUE,A1:A3)`, `CHOOSE`'s `f(2,A1,B1:B3)`), anything else itself
+/// (probes/t4450-eta-special-forms J23, J39:J51, L15:L23). A 3-D span and a lifted OFFSET grid are
+/// unprobed and read as several cells. Excel: see docs/excel-semantics/arrays.md "Functions passed
+/// by name".
+fn picked_reference_read(binding: Binding, cell: CellReferenceIndex) -> Binding {
+    let several = || {
+        Binding::Value(CalcResult::new_error(
+            Error::VALUE,
+            cell,
+            "IF or CHOOSE passed by name cannot pick a reference to several cells".to_string(),
+        ))
+    };
+    match binding.resolved() {
+        Binding::Value(CalcResult::Range { left, right })
+        | Binding::ReadOnce(CalcResult::Range { left, right }) => {
+            if left == right {
+                Binding::Value(CalcResult::EmptyCell)
+            } else {
+                several()
+            }
+        }
+        Binding::Areas(_) => Binding::Value(CalcResult::EmptyCell),
+        Binding::Span(_) | Binding::Grid(_) => several(),
+        Binding::Value(_) | Binding::ReadOnce(_) | Binding::Omitted | Binding::Shared(_) => binding,
     }
 }
 

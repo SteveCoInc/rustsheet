@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-4450: functions passed by name that are special forms (LET, LAMBDA, CHOOSE, IFERROR) or take or return references (ROW, COLUMN, OFFSET, INDEX, SUBTOTAL) in BYROW, BYCOL, MAP and MAKEARRAY; an eta name called through LET with no arguments; GROUPBY with ROW, COLUMN and SHEET. A1:B3 = 1..6, C1:C3 = x, empty text, 7. One question per 6 rows: E ROWS&\"x\"&COLUMNS of the result, F ARRAYTOTEXT of it, G ERROR.TYPE of it (spills right and down). Column J (every other row): follow-ups - what CHOOSE's first MAP element is, GROUPBY+ROW's cells, OFFSET with three arguments, LAMBDA and LET given 2 or 3 values, CHOOSE with three; GROUPBY and PIVOTBY with SHEETS, RANDARRAY, PI and ROW (T-2644).",
+ "description": "T-4450: functions passed by name that are special forms (LET, LAMBDA, CHOOSE, IFERROR) or take or return references (ROW, COLUMN, OFFSET, INDEX, SUBTOTAL) in BYROW, BYCOL, MAP and MAKEARRAY; an eta name called through LET with no arguments; GROUPBY with ROW, COLUMN and SHEET. A1:B3 = 1..6, C1:C3 = x, empty text, 7. One question per 6 rows: E ROWS&\"x\"&COLUMNS of the result, F ARRAYTOTEXT of it, G ERROR.TYPE of it (spills right and down). Column J (every other row): follow-ups - what CHOOSE's first MAP element is, GROUPBY+ROW's cells, OFFSET with three arguments, LAMBDA and LET given 2 or 3 values, CHOOSE with three; GROUPBY and PIVOTBY with SHEETS, RANDARRAY, PI and ROW (T-2644). Column L (every other row): review follow-ups - too many and no arguments through LET, IF and CHOOSE given a multi-cell range or a union.",
  "tags": [
   "M7",
   "probe",
@@ -120,7 +120,20 @@
     "J67": "=ARRAYTOTEXT(GROUPBY(A1:A3,B1:B3,_xleta.PI))",
     "J69": "=ROWS(PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.ROW))&\"x\"&COLUMNS(PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.ROW))",
     "J71": "=ERROR.TYPE(INDEX(PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.ROW),3,2))",
-    "J73": "=ARRAYTOTEXT(PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.PI))"
+    "J73": "=ARRAYTOTEXT(PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.PI))",
+    "L1": "=ERROR.TYPE(LET(f,_xleta.ABS,f(1,2)))",
+    "L3": "=LET(f,_xleta.ABS,f(1,2))",
+    "L5": "=ERROR.TYPE(LET(f,_xleta.IF,f()))",
+    "L7": "=ERROR.TYPE(LET(f,_xleta.CHOOSE,f()))",
+    "L9": "=ERROR.TYPE(LET(f,_xleta.IFERROR,f()))",
+    "L11": "=ERROR.TYPE(LET(f,_xleta.IFERROR,f(1)))",
+    "L13": "=ERROR.TYPE(LET(f,_xleta.CHOOSE,f(1)))",
+    "L15": "=ROWS(LET(f,_xleta.IF,f(TRUE,A1:A3)))",
+    "L17": "=ARRAYTOTEXT(LET(f,_xleta.IF,f(TRUE,A1:A3)))",
+    "L19": "=ERROR.TYPE(LET(f,_xleta.IF,f(TRUE,(A1,B1))))",
+    "L21": "=ISBLANK(LET(f,_xleta.IF,f(TRUE,(A1,B1))))",
+    "L23": "=ARRAYTOTEXT(LET(f,_xleta.CHOOSE,f(2,A1,B1:B3)))",
+    "L25": "=ERROR.TYPE(LET(f,_xleta.SUM,f(1,2,3)))"
    }
   }
  ],
