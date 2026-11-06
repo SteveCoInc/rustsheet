@@ -23,26 +23,36 @@ use crate::expressions::token::Error;
 use crate::model::Model;
 use crate::types::sheet_names_match;
 
+mod accumulate;
 mod date_groups;
+mod grid;
 pub(crate) mod layout;
 mod model;
 mod number_groups;
+#[cfg(test)]
+mod probe_cases;
 mod refresh;
+mod result;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
+pub use grid::{PivotBudget, PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};
 pub use layout::{
-    layout_extent, max_layout_rows, row_layout, LayoutCell, BLANK_ITEM, GRAND_TOTAL,
-    LAYOUT_COLUMNS, ROW_LABELS,
+    lay_out, render, AxisLine, PivotCell, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM,
+    COLUMN_LABELS, GRAND_TOTAL, MAX_PIVOT_CELLS, MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS,
+    VALUES,
 };
 pub use model::{
     Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry, OpaqueNode,
-    OpaqueOwner, PageField, PivotField, PivotItem, PivotOptions, PivotTable, ShowDataAs, SortType,
-    NO_BASE_ITEM,
+    OpaqueOwner, PageField, PivotField, PivotGeometry, PivotItem, PivotOptions, PivotTable,
+    ShowDataAs, SortType, NO_BASE_ITEM,
 };
 pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
 pub use refresh::{
     read_source, refresh, regroup, RangeGrouping, RegroupError, SharedItemsFlags, SourceArea,
     SourceCells,
+};
+pub use result::{
+    compute, AxisNode, AxisTree, PivotComputeError, PivotResult, MAX_PIVOT_NODES, MAX_PIVOT_WORK,
 };
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
@@ -63,6 +73,9 @@ pub struct PivotCache {
     pub fields: Vec<CacheField>,
     /// How many records; every [`CacheField::records`] has this length.
     pub record_count: u32,
+    /// `refreshOnLoad`: the facade refreshes the cache after a loaded workbook's first
+    /// recalculation (SPEC-0032 "Who refreshes, and when"; pivots.md, probes/t4128-pivot-spike R).
+    pub refresh_on_load: bool,
 }
 
 /// The worksheet range a cache was read from.

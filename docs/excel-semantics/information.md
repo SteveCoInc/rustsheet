@@ -44,7 +44,7 @@ array constant as a scalar argument does and the call takes no `@` of its own. E
 probes/iseven-isodd-range-derived-arrays Leg!A2:N3, A40:N41 (excel-graph, 2026-11-06, T-4528). Ours
 put no `@` on the constant (and `@` on the call for a multi-element one) before T-4528, which changed
 only the shown text, as the values agree either way; `array_constant_context` in
-static_analysis/legacy.rs now gives a `LiftArrays` argument the scalar signature for its array
+static_analysis/lifted.rs now gives a `LiftArrays` argument the scalar signature for its array
 constants. The dynamic-array flag Excel writes for the range form is not probed.
 Implemented in: `Model::lifted_parity` and the `ARRAYS_1` entry in functions/lift/kinds/general.rs.
 Status: VERIFIED (excel-graph)
@@ -288,11 +288,13 @@ poi/47804.xlsx caches 10 and 11; no committed sidecar, since the oracle canary n
 formulas_information Sheet1 E140:N160 cache color 0, filename a path, format "G", parentheses 0, prefix "",
 protect 1, width 15 on General cells), so these cells are web-vs-desktop conflicts.
 On desktop, "width" alone is a two-cell row, not a scalar: in that golden each
-`=IFERROR(CELL("width",$C$n),"Error")` in N140:N160 is a dynamic-array formula whose spill range is two cells wide
+`=IFERROR(CELL("width",$C$5),"Error")` in N140 (through `$C$25` in N160) is a dynamic-array formula whose spill range is two cells wide
 (`<f t="array" ref="N140:O140">`, through `N160:O160`), and the spill cell in column O caches the boolean FALSE beside
 the width 15. Every other info type in the same rows (C140:M140) has a one-cell range. The web's `#VALUE!` does not
-spill, so the engine leaves O140:O160 empty (T-4644 owns those 21 cells). What the FALSE means (default width or
-not) is UNVERIFIED: only cells with a set width (15) were cached.
+spill, so the engine leaves O140:O160 empty (T-4373 owns those 21 cells with the N cells; they count toward no
+Phase 1 or exit measure, T-4644). What the FALSE means is UNVERIFIED: column C, the referenced cells, has
+`customWidth="1"` (15.84375) against the sheet's `defaultColWidth` 11.07421875, so FALSE fits "not the default width",
+but no cell at the default width was cached.
 Evidence: probes/t3011-cell-format-info-types A1:A38 (excel-graph, 2026-11-06).
 Status: VERIFIED (excel-graph); desktop values are out of scope (decision 0266).
 Ours: `cell_info` returns `#VALUE!` for all seven, matching the web. The calipers cells are Phase 1 rate exceptions

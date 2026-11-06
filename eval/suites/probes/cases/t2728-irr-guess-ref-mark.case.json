@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-2728: IRR's multi-cell reference guess (#REF! in gen-m9 5c6a23c4f6597f1c A153), flows-vs-guess error order, which wrappers keep CELL's mark in IRR, and XIRR on flows whose XNPV(0) is exactly 0. Unscored (in the sidecar): A15 and A47 are IRR's known last-digit gap at guess 0.1 (financial.md \"IRR is a secant in v\"); A53-A61 are the wrapped CELL mark that T-2766 follows.",
+  "description": "T-2728: IRR's multi-cell reference guess (#REF! in gen-m9 5c6a23c4f6597f1c A153), flows-vs-guess error order, which wrappers keep CELL's mark in IRR, and XIRR on flows whose XNPV(0) is exactly 0. Unscored (in the sidecar): A15 and A47 are IRR's known last-digit gap at guess 0.1 (financial.md \"IRR is a secant in v\"); A53-A61, the wrapped CELL mark, are scored since T-2766.",
   "tags": [
     "M9",
     "financial",
@@ -135,6 +135,11 @@
     "P!A45",
     "P!A49",
     "P!A51",
+    "P!A53",
+    "P!A55",
+    "P!A57",
+    "P!A59",
+    "P!A61",
     "P!A63",
     "P!A65",
     "P!A67",

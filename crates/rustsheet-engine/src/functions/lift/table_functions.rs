@@ -67,6 +67,7 @@ macro_rules! lifting_table_functions {
             | Function::Trimmean
             | Function::Address
             | Function::Sequence
+            | Function::Randarray
             | Function::Makearray
             | Function::Take
             | Function::Drop

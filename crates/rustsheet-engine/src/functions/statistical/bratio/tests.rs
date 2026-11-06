@@ -1,6 +1,6 @@
 use super::{
-    beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement, l140_overflows,
-    l140_prefactor_zero_tails, Branch,
+    beta_dist_l140_zero, beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement,
+    l140_bup_prefactor_underflows, l140_overflows, l140_zero_tails, Branch,
 };
 
 fn branch(a: f64, b: f64, x: f64) -> (Branch, bool) {
@@ -610,10 +610,26 @@ fn l140_bup_sum_overflow_is_excels_num_error() {
 // -708.0 too, so the rule does not apply there (Excel's 0 there is the earlier cut T-4437 owns).
 #[test]
 fn l140_prefactor_zero_is_beta_dists_zero() {
-    let zero = |x: f64, a: f64, b: f64| l140_prefactor_zero_tails(a, b, x, 1.0 - x);
+    let zero =
+        |x: f64, a: f64, b: f64| l140_zero_tails(a, b, x, 1.0 - x, l140_bup_prefactor_underflows);
     assert_eq!(zero(0.999_857_729_248_015, 5e6, 25.5), None);
     assert_eq!(zero(0.999_857_529_135_952, 5e6, 25.5), Some((0.0, 1.0)));
     assert_eq!(zero(0.999_857_095_889_413, 5e6, 30.0), None);
     assert_eq!(zero(0.999_856_895_637_99, 5e6, 30.0), Some((0.0, 1.0)));
     assert_eq!(zero(0.999_644_361_097_655, 2e6, 5.5), None);
+}
+
+// At n >= 3 bup terms BETA.DIST's cdf is also Excel's exact 0 where bup's sum W is below 2^-970
+// (T-4437): the second fresh sweep, probes/t4437-beta-zero-fresh2, rows 0.05 nats apart around the
+// edge. H11 (4.5E6, 3.5; n = 3) is 1.027452053743555E-292 and H12 is 0; D11 and D12 (7E6, 5;
+// n = 4, c = 1) alike. n = 2 is outside the rule (T-4564): I22 (3E6, 2.5) is a number 0.525 nats
+// below the edge.
+#[test]
+fn l140_sum_flush_is_beta_dists_zero_at_three_terms() {
+    let zero = |x: f64, a: f64, b: f64| l140_zero_tails(a, b, x, 1.0 - x, beta_dist_l140_zero);
+    assert_eq!(zero(0.999_847_242_166_822, 4.5e6, 3.5), None);
+    assert_eq!(zero(0.999_847_231_016_925, 4.5e6, 3.5), Some((0.0, 1.0)));
+    assert_eq!(zero(0.999_900_671_670_924, 7e6, 5.0), None);
+    assert_eq!(zero(0.999_900_664_487_516, 7e6, 5.0), Some((0.0, 1.0)));
+    assert_eq!(zero(0.999_772_564_701_615, 3e6, 2.5), None);
 }

@@ -34,6 +34,7 @@ fn lifts(kinds: &ArgKinds, index: usize) -> bool {
 /// `checked` collects the positions checked.
 fn mismatches(function: &Function, kinds: &ArgKinds, checked: &mut Vec<usize>) -> Vec<String> {
     let name = function.to_localized_name(get_default_language());
+    let volatile = matches!(function, Function::Randarray);
     // A repeated parameter is checked up to one repeat past the listed ones.
     let last = kinds.max.min(kinds.params.len() + 1).min(SAMPLES[0].len());
     let mut calls = Vec::new();
@@ -71,7 +72,16 @@ fn mismatches(function: &Function, kinds: &ArgKinds, checked: &mut Vec<usize>) -
             let value = |cell: String| model.get_cell_value_by_ref(&format!("Sheet1!{cell}"));
             let want = value(format!("C{row}"));
             let got = [value(format!("A{row}")), value(format!("A{}", row + 1))];
-            (got[0] != want || got[1] != want)
+            // A volatile function draws anew on each call, so only the kind of value is shared
+            // (RANDARRAY, T-4611).
+            let differs = |got: &_| {
+                if volatile {
+                    std::mem::discriminant(got) != std::mem::discriminant(&want)
+                } else {
+                    *got != want
+                }
+            };
+            (differs(&got[0]) || differs(&got[1]))
                 .then(|| format!("{lifted}: {got:?}, scalar {want:?}"))
         })
         .collect()

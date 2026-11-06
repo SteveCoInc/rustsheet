@@ -16,7 +16,10 @@ use crate::functions::util::collation::fold_char;
 fn fold_match_char(c: char) -> char {
     match c {
         '\u{130}' => 'i',
-        '\u{212A}' | '\u{212B}' => c,
+        // `ẞ` stays unfolded although it lowercases to `ß`: the delimiter `ß` does not match a
+        // text `ẞ` nor the reverse, in TEXTSPLIT, TEXTBEFORE and TEXTAFTER
+        // (probes/t4499-textsplit-sharp-s A3, A7, A12; probes/textbefore-casefold-length A9).
+        '\u{212A}' | '\u{212B}' | '\u{1E9E}' => c,
         _ => fold_char(c),
     }
 }
@@ -42,19 +45,10 @@ fn fold_sigma_by_position(text: &str, fold: impl Fn(char) -> char) -> String {
     folded
 }
 
-/// TEXTSPLIT's `match_mode` 1 folding: [`fold_match_char`] with sigma by position.
-pub(super) fn fold_for_split(text: &str) -> String {
+/// The `match_mode` 1 folding of TEXTSPLIT, TEXTBEFORE and TEXTAFTER: [`fold_match_char`] with
+/// sigma by position.
+pub(super) fn fold_for_match(text: &str) -> String {
     fold_sigma_by_position(text, fold_match_char)
-}
-
-/// TEXTBEFORE and TEXTAFTER's `match_mode` 1 folding: [`fold_match_char`] with sigma by
-/// position, and `ẞ` does not fold to `ß`.
-pub(super) fn fold_for_before_after(text: &str) -> String {
-    fold_sigma_by_position(text, |c| match c {
-        // The delimiter `ß` does not match `ẞ` in the text (A9), although `ẞ` lowercases to `ß`.
-        '\u{1E9E}' => c,
-        _ => fold_match_char(c),
-    })
 }
 
 /// Byte offset of every char of `s`, plus `s.len()` for the end.

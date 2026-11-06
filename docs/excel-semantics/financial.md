@@ -941,14 +941,15 @@ Tasks: T-3410
 Rule: Excel's caps on its IRR secant, XIRR's bracket walk and XIRR's bisection are unknown: no probe
 reaches them. The engine bounds each loop itself, so an untrusted workbook cannot make one cell iterate
 without end (CLAUDE.md directive 5). XIRR walks at most 100 points per chain and bisects at most 200
-steps. IRR's secant takes at most 50 steps per run, with one retry from 0.1, and then the fallback's Newton search
+steps. IRR's secant takes at most 50 steps per run (200 on the flows where Excel's longer runs are evidenced, T-3408:
+"IRR's secant runs longer than 50 steps"), with one retry from 0.1, and then the fallback's Newton search
 at most 50 steps ("IRR's fallback when the secant fails"; Excel's own cap there lies between 29 and 119). A run that reaches its
 cap gives `#NUM!` (or, for IRR, moves on to the next stage). Every oracle cell of the fit sets finishes
 well inside the caps.
 Evidence: none for Excel; this is a resource limit, not an Excel observation. Probing Excel's caps, the
 fallback path and overflowing trial rates is T-1686.
 Status: DEVIATION (decision 0014)
-Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`MAX_STEPS`),
+Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`irr_secant_steps`),
 `irr_fallback` (`IRR_FALLBACK_STEPS`) (functions/financial/financial_util.rs)
 Tasks: T-0916, T-1686
 
@@ -990,14 +991,14 @@ cell's), as is; (2) the guess: an error guess, as is, then the guess range (`#VA
   `IRR(@CELL("row",D2))` are `#NUM!` (irr-guess-edges A20-A26, irr-guess-edges-2 A35-A44; A51, A63). It is the mark of
   statistics.md "ERROR.TYPE and CELL results are #NUM! in the paired functions", and it passes through the same wrappers:
   `LET(x,..,x)`, `IF(TRUE,..)`, `CHOOSE(1,..)`, `INDEX(..,1)`, `IFERROR(..,0)` and `LAMBDA(x,x)(..)` keep the `#VALUE!`
-  (A53-A61).
+  (A53-A61), nested too: `IRR(CHOOSE(1,LET(x,CELL("row",D2),x)))` is `#VALUE!` (probes/t2766-mark-positions-2 A5).
 - A single error cell as the flows is (3): with A1 `=1/0`, `IRR(A1,NA())`, `IRR(A1:A1,NA())` and `IRR((A1),NA())` are `#N/A`
   and `IRR(A1,0.1)` `#VALUE!` (probes/t2728-irr-guess-ref-mark-3 A2-A5).
 Evidence: probes/t2728-irr-guess-ref-mark (cells A1-A81, "-2" is probes/t2728-irr-guess-ref-mark-2), -3, excel-graph,
 2026-10-26; probes/irr-guess-edges, irr-guess-edges-2 (2026-10-25); gen-m9 5422bdbf173fc233 A63, 5c6a23c4f6597f1c A153.
 Status: VERIFIED (excel-graph)
-Implemented in: `fn_irr` (functions/financial/mod.rs), `is_marked_number` (functions/util.rs); the wrapped forms are
-TODO(T-2766), unscored in the probe until then.
+Implemented in: `fn_irr` (functions/financial/mod.rs) through `Model::evaluate_marked` (number_mark.rs), the wrapped
+forms included since T-2766 (A53-A61 scored again; irr-guess-edges-2 A37 `IRR(LET(x,CELL("row",D2),x))`).
 Tasks: T-2728, T-2766
 
 ## IRR's far-root bound
@@ -2864,14 +2865,28 @@ Rule: AMORLINC and AMORDEGRC read cost, date_purchased, first_period, salvage, p
 error, text or boolean is returned; text "1" is 1), and a date that does not floor to 0-2958465 (9999-12-31) is `#NUM!` as it
 is read (`AMORLINC(2400,-1,NA(),..)` and `AMORLINC(2400,39679,2958466,NA(),..)` are `#NUM!`, `AMORLINC(NA(),-1,..)` `#N/A`;
 dates 0 and 0.5 pass, `AMORLINC(2400,0.5,NA(),..)` is `#N/A`). Then the values are checked, all `#NUM!`: a negative cost or
-salvage, a salvage above the cost, a negative period, a rate of 0 or less, a purchase after the first period (one on
-it is valid: `AMORLINC(2400,1,1,300,1,0.15,1)` is 360). A salvage *equal* to the cost is no error: both functions are 0
-at the periods probed, 1 to 5 (`AMORLINC(99977.707698474,42751,42993,99977.707698474,2,0.213533204746625)` is 0;
-accuracy/AMORDEGRC/s1 A114, A118, A128, A130, A131 and accuracy/AMORLINC/s1 A124, A125, excel-graph, 2026-11-06,
-T-4111), though AMORDEGRC's walk would charge `rate·remain` at period 1 there. Period 0 and periods below 1 with a
-salvage equal to the cost are unprobed; ours is `#NUM!` (T-4504). Only then the basis is read: its error, text or boolean, then
+salvage, a salvage above the cost, a cost of 0 (with its salvage of 0: `AMORLINC(0,39679,39813,0,0,0.15,1)` and
+`AMORDEGRC(0,..,0,1,..)` are `#NUM!`), a negative period, a rate of 0 or less, a purchase after the first period (one on
+it is valid: `AMORLINC(2400,1,1,300,1,0.15,1)` is 360). Only then the basis is read: its error, text or boolean, then
 `#NUM!` for any basis but 0, 1, 3 or 4 (`AMORLINC(-1,39679,39813,300,1,0.15,NA())` is `#NUM!`). AMORDEGRC's asset-life check
-comes last (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is `#N/A`). A purchase date below 1 is serial 0, the day before
+comes next (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is `#N/A`). Last, a salvage *equal* to a positive cost is 0 at
+every period, with no charge computed:
+- Both functions are 0 at periods 0, 0.0001, 0.5, 1 to 8 and 1.5, AMORDEGRC's half period and the rest periods after it
+  included (rates 0.15, 0.25 and 0.4, prorated and full first periods), and AMORLINC at rates 0.5, 1 and 2
+  (probes/amor-salvage-equal-cost A1-C18, E7-E9; also `AMORLINC(99977.707698474,42751,42993,99977.707698474,2,
+  0.213533204746625)`, accuracy/AMORDEGRC/s1 A114, A118, A128, A130, A131 and accuracy/AMORLINC/s1 A124, A125, T-4111).
+- Every check above still wins: AMORDEGRC at rates 0.5, 0.6, 1 and 2 is `#NUM!` (periods 0, 0.5 and 1), a basis of
+  `NA()` is `#N/A` (rate 0.5 too), bases 2 and 5 `#NUM!`, and a purchase after the first period, a rate of 0 and a
+  period of -1 `#NUM!` (E1-E6, E10-E20, E25).
+- It is an early 0, not the walk's salvage comparison turned to `<=`: a remain *equal* to a salvage below the cost
+  still charges (`AMORDEGRC(2400,39679,39813,2070,1,0.15,1)` is 776 with the remain 2070 before period 1, and
+  `(..,1293.75,2,..)` 485 with the remain 1293.75 before period 2; G1-G6). AMORLINC charges what fits as before
+  (G7-G10).
+- It leaves the value an AMORDEGRC below period 1 reads as it was, at any period, AMORLINC included (which otherwise
+  leaves its first charge): 485 + the call + a fraction is 970 for each (F2-F6), and an AMORDEGRC below period 1
+  with a salvage equal to the cost is 0, not the 485 left before it (F1, F7, F8).
+Evidence: probes/amor-salvage-equal-cost (81 cells, excel-graph, 2026-11-06, T-4504; predictions committed before the
+fill: the early 0 was the alternative, `remain <= salvage` the pick). A purchase date below 1 is serial 0, the day before
 serial 1: `AMORDEGRC(2400,0,366,300,1,0.15,1)` is 562 (366 days), `AMORDEGRC(2400,0,1,..)` 899, `AMORDEGRC(2400,1,366,..)` 563,
 `AMORLINC(46557,0,39881,440,0,0.1)` 46117.
 AMORDEGRC with a period strictly between 0 and 1 returns a value the previous AMORDEGRC or AMORLINC left behind
@@ -2884,7 +2899,8 @@ other position, `NA()` and `1/0` in every pair, booleans and text alone, purchas
 excel-graph, 2026-10-24, T-2485) and probes/amordegrc-fractional-period (32 cells). Every order cell fits the rule.
 Dates -1, -0.5, 0, 1E-15, 0.5, 0.99, 1 and 2958466 were probed (-0.5 is `#NUM!`, A410-A412, A843-A845); 2958465.5 is
 inferred (the floor is taken from the shared reader's other functions).
-Ours: since T-2485 (`amortization_of` and `amor_date` in functions/financial/amortization.rs).
+Ours: since T-2485 (`amortization_of` and `amor_date` in functions/financial/amortization.rs); the salvage equal to
+the cost since T-4504 (`amortization_values_valid` and the early return in `amortization_of`).
 Status: VERIFIED (excel-graph)
 Tasks: T-2485, T-1895, T-4111, T-4504
 
@@ -4637,7 +4653,8 @@ secant's one-ulp-of-v resolution.
 Evidence: the two cases above (salvaged from draft #2529); docs/research/t3347_irr_conventional_sweep.py builds them
 and the roots; docs/research/t3347_irr_holdout_score.py scores the hold-out.
 Ours (2026-11-04): `#NUM!` against Excel's number on the 19 probe cells and 23 of the 25 sweep cells listed in T-3347;
-sweep A33 and A82 return a number off from about the 10th to 12th significant digit.
+sweep A33 and A82 return a number off from about the 10th to 12th significant digit. Since T-3408's 200-step secant
+cap, probe A10 and A11 and sweep A38 and A88 return Excel's value (their runs from 0.1 stop at steps 86 to 196).
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED
 Tasks: T-3347, T-3406, T-3408
 
@@ -4699,14 +4716,55 @@ Evidence: probes/t4027-irr-annuity-scale-guess (inputs and 50-digit roots in its
 docs/research/t4027_irr_annuity_probe.py; the engine's predictions before the fill in docs/research/t4027/predictions.md).
 The guess sweep and the caps were run on a scratch build of the engine (not committed).
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
-Ours: `#NUM!` on 35 of the 68 cells, all where Excel returns the root (A1-A4, A7-A10, A13-A16, A19-A22, A25-A28, A34,
-A35, A43-A46, A49-A51, A54-A56, A59-A61); every returned value matches.
+Ours: `#NUM!` on 33 of the 68 cells, all where Excel returns the root (A1-A4, A7-A10, A13-A16, A19-A22, A25-A28,
+A43-A46, A49-A51, A54-A56, A59-A61); every returned value matches. A34 and A35 (guess -0.1) match Excel's digits since
+T-3408's longer secant run ("IRR's secant runs longer than 50 steps" below).
 Tasks: T-4027
 
-## IRR's secant runs longer than 50 steps, but no step cap is Excel's rule
-Rule: unknown. Excel's IRR secant (from the guess, then the retry from 0.1) finishes runs longer than the engine's
-50-step cap, but no single cap on the run separates Excel's returns from its errors, so the cap is not the mechanism
-(or not the only one).
+## IRR's secant runs longer than 50 steps: up to 200 always finish, and past that the step count does not decide
+Rule (T-3408, 2026-11-06): an IRR secant run in Excel (from the guess, then the retry from 0.1) returns its own stop
+iterate after 51 to 200 steps. Past 200 steps, Excel's outcome is not a clean function of the step count, so no cap is
+Excel's rule. A run that reaches its stop only by a stalled zero step (d2 = d1 with |NPV| above 1e-7, the stop T-3120
+fitted on short runs) returns up to its 41st step and is `#NUM!` from its 70th. That stall evidence is shown only on
+flow sets outside the cap's range below.
+- Evidence files: an engine replay of every IRR literal cell with an oracle value (3,233 cells of eval/suites and
+  Gate A), each cell with its fit lab side, in docs/research/t3408/:
+  - long_runs.tsv: runs of 51..300 steps, with whether run and retry give the same bits;
+  - cap_runs.tsv: the engine's result at each candidate cap;
+  - stalls.tsv: every stalled stop.
+
+  `python3 -I docs/research/t3408/bounds.py docs/research/t3408` prints all of the counts below.
+- All 83 runs that reach the residual stop at their 51st..200th step are Excel's value bit for bit. Examples:
+  t3411-irr-r4-fresh A53 at the 90th step, and t3411-irr-r4-fresh-3 A53 and t3478-irr-r4-wide A221 at the 200th.
+- Past 200 steps the outcomes interleave:
+  - Excel returns the run's own value after 241, 256, 281 and 291 steps (t3411-irr-r4-fresh A2,
+    t2927-irr-fallback-sweep A97, t3411-irr-r4-fresh-4 A63, t3411-irr-r4-fresh A70);
+  - it returns the retry's value after 208 to 287 steps (t3411-irr-r4-fresh-4 A70 at 208, t3411-irr-r4-fresh A55 at
+    215, t3411-irr-r4-fresh-2 A63 at 217, up to t3411-irr-r4-fresh-2 A57 at 287).
+- The engine's cap of 200 is chosen by score, not taken from Excel. Over the 87 train cells whose result depends on
+  the cap, it matches Excel on 64 for any cap from 200 to 216, 62 at 241 and 61 at 291. 200 is the low end of that
+  plateau.
+- Stalled stops: Excel returns them up to the 41st step (t3478-irr-r4-wide A260). It is `#NUM!` on all 6 from the 70th
+  to the 189th step:
+  - probes/irr-guess-edges-2 A25, A26, A27 (70th, 74th, 125th step; 3 and 4 flows, |c| 1E+28 to 1E+45);
+  - Gate A r4-T-3411 A228 (129th; 63 flows) and A215 (132nd; 164 flows);
+  - t3478-irr-r4-wide A227 (189th; |c| 4.6E+17).
+
+  These include the cells that refuted a plain cap below. All six lie outside the range the engine gives the 200-step
+  cap (6..54 flows, |c| up to 2.2E+8).
+- Fresh sweep (decision 0188 R4.2), drawn after the model was frozen: probes-numeric/t3408-irr-r4-fresh (150 series
+  of long runs, seed "T-3408/r4-fresh" of docs/research/t3411/gen_sweep.py, excel-graph 2026-11-06).
+  - With the 200-step cap 115 of 150 cells pass, against 76 with 50, and none moves away.
+  - Its 31 cells outside the Gate A envelope are `#NUM!` where Excel returns a root (T-3548's class).
+  - A2, A13, A31 and A48 keep main's retry digits: their guesses or flows lie outside the narrowed range (decision
+    0320).
+  - 11 of those 31 are on 55..148 flows, outside the range the engine applies the cap on, so Excel may finish long
+    runs on longer series too.
+- Not shown:
+  - what decides Excel's outcome past 200 steps;
+  - what Excel does at a stalled stop past the 41st step on flows inside the cap's range (no cell has one);
+  - where in 42..70 its stall bound is.
+The earlier, partial picture (kept for its evidence):
 - Runs of 51 to 136 steps return Excel's digits bit for bit in an engine-faithful replica (the engine's twice-rounded
   operators): probes-numeric/t3347-irr-conventional-holdout A23, A57, A50, A47 and A56 (51 to 75 steps) and
   probes/t3406-irr-num-boundary A26 and A5 (118, 136); the level annuity `IRR({-72.25,1,...,1})` (20 flows of 1) is
@@ -4742,9 +4800,13 @@ Evidence: probes-numeric/t3411-irr-r4-fresh and t3411-irr-r4-fresh-2 (excel-grap
 50-digit roots in their `.math.tsv`, docs/research/t3411/gen_sweep.py), plus the cells named above. The replica behind
 the step counts was scratch code and is not committed.
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
-Ours: `irr_secant` keeps its 50-step cap ("The IRR and XIRR solver caps"); a 213-step cap was tried (T-3806) and dropped
-because it loses A227.
-Tasks: T-3411, T-3806 (dropped)
+Ours: `irr_secant` takes up to 200 steps (`IRR_LONG_RUN_STEPS`, FITTED, decision 0320) on 6..54 flows with the largest
+|c| in 5.6E-9..2.2E+8 and a guess in -0.99934..9.81E+7 (`IRR_LONG_RUN_RANGE`, the range of the returning train runs
+whose run and retry differ; the cap is a train-score plateau point, not Excel's), 50
+elsewhere; a stalled zero step stops a run only within its first 50 steps (the old cap, inside the 41..69 bracket, not
+fitted; T-3408). Earlier, a 213-step cap without the stall limit was tried
+(T-3806) and dropped because it loses A227, and a 185-step one (T-3548) because it loses Gate A A228.
+Tasks: T-3411, T-3806 (dropped), T-3548, T-3408
 
 ## IRR's returns where the secant fails are Newton iterates on P(v) from v = 0, past the 1e-7 stop
 Rule (partial): where both runs of the engine's secant fail and Excel returns a number, Excel's double is often
@@ -5383,7 +5445,10 @@ unless noted; values `-100, 30, 40, 50` on dates `39448, 39508, 39600, 39700` wi
   D20, D24, D25, D30), except a non-numeric text or boolean cell, `#VALUE!` (D15-D17, D26, D27, D31), and an error
   cell, its error, the value's first (D19, D22, D32-D38). One TRUE value cell against one `#DIV/0!` date cell is
   `#VALUE!` (D39), where a values range holding text against an error dates argument is that error
-  (gen-m9/67a4c03afd63f988 A241).
+  (gen-m9/67a4c03afd63f988 A241). The same `#VALUE!` holds for a literal TRUE, FALSE or "x", a one-cell range
+  `A1:A1` holding TRUE or "x", and a TRUE cell with guess -1 or -2 (not T-3312's `#NUM!`), each against a literal
+  `1/0` or `NA()` dates argument and a `#DIV/0!` or `#N/A` dates cell (probes/t4415-xirr-error-dates-scalar-forms,
+  excel-graph, 2026-11-06, 28 cells, T-4415; the engine already matched).
 - A values row against a dates column, 2x2 against a column or 2x2, and a 2x2 or row array constant against a column
   all read in row-major order with the same result (rows 44-49).
 
@@ -5392,7 +5457,7 @@ which writes T-3815's XNPV case too).
 Status: VERIFIED (excel-graph)
 Code: `Model::xirr_walk_error`, `Model::xirr_flows` and `xirr_date_error` (functions/financial/flows.rs),
 `Model::xirr_size_error`, `Model::fn_xirr` and `Model::array_of_numbers_from` (functions/financial/mod.rs)
-Tasks: T-3816
+Tasks: T-3816, T-4415
 
 ## Financial cells of the T-2436 sub-expression probe
 Rule (excel-graph, 2026-10-24, probes/t2436): `YIELD(36563,45559,999999999999995,107,107,2,1)` (a huge rate) is `#NUM!`;

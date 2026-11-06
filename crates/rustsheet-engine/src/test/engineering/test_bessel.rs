@@ -121,3 +121,26 @@ fn besselk_recurrence_flushes_a_subnormal_term() {
     assert_eq!(bits("A4"), 4.699_795_140_140_56e-306_f64.to_bits());
     assert_eq!(bits("A5"), 6.310_849_433_265_845e-307_f64.to_bits());
 }
+
+/// BESSELJ and BESSELI return 0 for a subnormal result; BESSELK answers at x = 2^-1021 exactly
+/// and BESSELY answers down to 2^-1022 (probes/t4552-bessel-tiny-x-cut B1:B2, C6, C8, D2, D6, D8,
+/// E8; engineering.md "BESSELK at a tiny x").
+#[test]
+fn bessel_results_at_the_bottom_of_the_normal_range() {
+    let mut model = new_empty_model();
+    model._set("A1", "=BESSELJ(2^-1022,1)");
+    model._set("A2", "=BESSELI(4.4501477170144E-308,1)");
+    model._set("A3", "=BESSELI(2^-1022,1)");
+    model._set("A4", "=BESSELI(2^-1021,1)=2^-1022");
+    model._set("A5", "=BESSELJ(2^-1021,1)>0");
+    model._set("A6", "=BESSELK(2^-1021,0)");
+    model._set("A7", "=BESSELY(2^-1022,0)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"0");
+    assert_eq!(model._get_text("A2"), *"0");
+    assert_eq!(model._get_text("A3"), *"0");
+    assert_eq!(model._get_text("A4"), *"TRUE");
+    assert_eq!(model._get_text("A5"), *"TRUE");
+    assert_eq!(model._get_text("A6"), *"707.8192029");
+    assert_eq!(model._get_text("A7"), *"-451.052972");
+}

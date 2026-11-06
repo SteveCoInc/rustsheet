@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use memchr::memmem::Finder;
 
 use super::{
-    casefold::{char_offsets, fold_for_split},
+    casefold::{char_offsets, fold_for_match},
     lifted::SEARCHED_BYTES_PER_VISIT,
     util::{Case, Delimiters},
 };
@@ -96,7 +96,7 @@ impl Model {
         let exact = self.delimiter_list(list, cell)?;
         Ok(SplitList::new(Delimiters::folded_with(
             exact,
-            fold_for_split,
+            fold_for_match,
         )))
     }
 
@@ -223,11 +223,11 @@ impl Model {
         let pad_node = pad_with.as_ref().unwrap_or(&na_node);
 
         // Normalize to comparison strings for optional case-insensitive matching.
-        // `fold_for_split` maps every char to exactly one char (TEXTSPLIT's folding, probes/
+        // `fold_for_match` maps every char to exactly one char (TEXTSPLIT's folding, probes/
         // textsplit-casefold-length), so char positions in `cmp_text` are char positions in
         // `text`; `split_grid` converts them to byte offsets of the original (T-1794).
         let cmp_text = if matches!(case, Case::Insensitive) {
-            Cow::Owned(fold_for_split(&text))
+            Cow::Owned(fold_for_match(&text))
         } else {
             Cow::Borrowed(text.as_str())
         };

@@ -4,8 +4,8 @@
 //! K15-K16). The BINOM.DIST and NEGBINOM.DIST pmfs are Loader's kernel in Excel's arithmetic
 //! (T-2146). Their cdfs and BINOM.DIST.RANGE take Excel's closed forms and the bratio port, or sum
 //! their pmf terms in double-double (`discrete.rs`, T-0927), and past that walk's budget fall back
-//! to statrs' incomplete beta, a continued fraction of at most 140 steps, as BINOM.INV's search
-//! does throughout. BINOM.DIST at k = 0, and its pmf at k = n, take Excel's closed forms (T-2645).
+//! to statrs' incomplete beta, a continued fraction of at most 140 steps. BINOM.INV's search runs
+//! on that same cdf (T-3444). BINOM.DIST at k = 0, and its pmf at k = n, take Excel's closed forms (T-2645).
 
 use statrs::distribution::{Binomial, Discrete, DiscreteCDF, NegativeBinomial};
 

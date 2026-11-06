@@ -212,6 +212,14 @@ pub struct FilterColumnSpec {
     /// `false`: the filterColumn holds no criterion.
     #[serde(default = "crate::suite::default_true")]
     pub criterion: bool,
+    /// `true`: the filterColumn holds a `<colorFilter/>` with no `dxfId`, which Excel reads as no
+    /// criterion (probes/t4558-color-filter-subtotal, T-4558).
+    #[serde(default)]
+    pub color: bool,
+    /// `false` with `color`: the colorFilter says `cellColor="0"` (a font colour); Excel reads it
+    /// as no criterion too, so the engine adapter does not consult it.
+    #[serde(default = "crate::suite::default_true")]
+    pub cell_color: bool,
 }
 
 /// A what-if data table in a spec sheet: `ref` holds its result cells; `row_input` alone is a

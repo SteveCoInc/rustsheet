@@ -210,6 +210,8 @@ fn load_package<R: Read + Seek>(
         &theme,
         &mut styles.dxfs,
     )?;
+    // Color filters name a differential format, so this waits for `styles.dxfs` (T-4558).
+    tables::drop_dangling_color_filters(&mut tables, styles.dxfs.len());
     let pivot_sheets: Vec<PivotSheet> = workbook
         .worksheets
         .iter()

@@ -648,8 +648,9 @@ fn deleting_every_data_row_at_once_keeps_one_cleared_row() {
     assert_eq!(value(model, 0, 4, 3), "");
     user.undo().unwrap();
     let model = user.get_model();
-    // TODO(T-3634): undo restores the rows but not the table's extent (B3:C7), as for any delete
-    // of a table's bottom data rows.
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C7");
+    assert_eq!(value(model, 1, 7, 1), "4");
+    assert_eq!(value(model, 1, 8, 1), "5");
     assert_eq!(value(model, 0, 4, 3), "1");
     assert_eq!(value(model, 0, 5, 3), "2");
     assert_eq!(value(model, 0, 7, 3), "8");
@@ -659,6 +660,187 @@ fn deleting_every_data_row_at_once_keeps_one_cleared_row() {
     assert_eq!(model.workbook.tables["Sales"].reference, "B3:C4");
     assert_eq!(value(model, 0, 4, 3), "");
     assert_eq!(value(model, 0, 7, 3), "99");
+}
+
+/// Undo of a delete of a table's bottom data rows gives the table its extent back: the insert that
+/// undoes the delete is just below the table's data, where an insert does not grow a table
+/// (table-insert-row-below), so the diff carries the extent (T-3634). Redo shrinks it again.
+#[test]
+fn undo_of_a_delete_of_the_bottom_data_rows_restores_the_table() {
+    let mut user = crate::UserModel::from_model(edge_model(false));
+    user.delete_rows(0, 6, 2).unwrap();
+    assert_eq!(user.get_model().workbook.tables["Sales"].reference, "B3:C5");
+    assert_eq!(value(user.get_model(), 1, 1, 1), "3");
+    user.undo().unwrap();
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C7");
+    assert_eq!(value(model, 1, 1, 1), "15");
+    assert_eq!(value(model, 1, 2, 1), "4");
+    user.redo().unwrap();
+    assert_eq!(user.get_model().workbook.tables["Sales"].reference, "B3:C5");
+    assert_eq!(value(user.get_model(), 1, 1, 1), "3");
+    user.undo().unwrap();
+    assert_eq!(user.get_model().workbook.tables["Sales"].reference, "B3:C7");
+    // With a totals row the delete moves the totals row up; undo moves it back down.
+    let mut user = crate::UserModel::from_model(edge_model(true));
+    user.delete_rows(0, 6, 2).unwrap();
+    assert_eq!(user.get_model().workbook.tables["Sales"].reference, "B3:C6");
+    user.undo().unwrap();
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C8");
+    assert_eq!(model.workbook.tables["Sales"].totals_row_count, 1);
+    assert_eq!(value(model, 0, 8, 3), "15");
+}
+
+/// The extents an undo restores can come from a peer (directive 5): one that names no table on
+/// the sheet, or moves the table's columns, is refused and changes nothing (T-3634).
+#[test]
+fn a_restored_table_extent_is_checked() {
+    let mut model = edge_model(false);
+    let extent = |name: &str, reference: &str, totals_row_count| crate::types::TableExtent {
+        name: name.to_string(),
+        reference: reference.to_string(),
+        totals_row_count,
+    };
+    for bad in [
+        extent("Nope", "B3:C9", 0),
+        extent("Sales", "B3:D9", 0),
+        extent("Sales", "B9:C3", 0),
+        extent("Sales", "B3:C3", 1),
+        extent("Sales", "B3:C9", 2),
+        extent("Sales", "not a range", 0),
+    ] {
+        assert!(model.restore_table_extents(0, &[bad]).is_err());
+        assert_eq!(model.workbook.tables["Sales"].reference, "B3:C7");
+    }
+    assert!(model
+        .restore_table_extents(1, &[extent("Sales", "B3:C9", 0)])
+        .is_err());
+    model
+        .restore_table_extents(0, &[extent("Sales", "B3:C9", 0)])
+        .unwrap();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C9");
+}
+
+/// `S` with the table `Sales` over B3:D7 (Region, Qty, Extra) and `F` with `=SUM(Sales[Qty])`,
+/// `=COLUMNS(Sales)` and `=SUM(Sales[Extra])`, for the column-delete undo tests (T-4652).
+fn three_column_model() -> Model {
+    let mut model = edge_model(false);
+    model.remove_table("Sales").unwrap();
+    let extra = [(3, "Extra"), (4, "10"), (5, "20"), (6, "40"), (7, "80")];
+    for (row, input) in extra {
+        model.set_user_input(0, row, 4, input.to_string()).unwrap();
+    }
+    model.add_table(0, "Sales", (3, 2, 7, 4), false).unwrap();
+    for (row, input) in ["=SUM(Sales[Qty])", "=COLUMNS(Sales)", "=SUM(Sales[Extra])"]
+        .into_iter()
+        .enumerate()
+    {
+        model
+            .set_user_input(1, row as i32 + 1, 1, input.to_string())
+            .unwrap();
+    }
+    model.evaluate();
+    model
+}
+
+/// The names of the columns of `Sales`.
+fn column_names(model: &Model) -> Vec<String> {
+    let columns = &model.workbook.tables["Sales"].columns;
+    columns.iter().map(|c| c.name.clone()).collect()
+}
+
+/// Undo of a column delete puts the table back as it was, extent and column list, wherever the
+/// deleted columns were: at the right edge the re-insert is just right of the table, where an
+/// insert does not grow it, at the left edge it moves the table, and inside it names the
+/// re-inserted column `Column1` (T-4652). Redo shrinks the table again.
+#[test]
+fn undo_of_a_column_delete_restores_the_table() {
+    let names = ["Region", "Qty", "Extra"].map(str::to_string).to_vec();
+    for (column, count, shrunk) in [
+        (4, 1, "B3:C7"),
+        (3, 2, "B3:B7"),
+        (2, 1, "B3:C7"),
+        (3, 1, "B3:C7"),
+    ] {
+        let mut user = crate::UserModel::from_model(three_column_model());
+        let before = user.get_model().workbook.tables["Sales"].clone();
+        user.delete_columns(0, column, count).unwrap();
+        assert_eq!(user.get_model().workbook.tables["Sales"].reference, shrunk);
+        user.undo().unwrap();
+        let model = user.get_model();
+        assert_eq!(model.workbook.tables["Sales"], before, "delete at {column}");
+        assert_eq!(column_names(model), names);
+        if column != 3 {
+            // A formula naming a deleted column stays `#REF!` after the undo, as a plain range
+            // does (T-4668); `Sales[Qty]` survives the deletes that keep Qty.
+            assert_eq!(value(model, 1, 1, 1), "15");
+        }
+        assert_eq!(value(model, 1, 2, 1), "3");
+        user.redo().unwrap();
+        assert_eq!(user.get_model().workbook.tables["Sales"].reference, shrunk);
+        user.undo().unwrap();
+        assert_eq!(user.get_model().workbook.tables["Sales"], before);
+    }
+}
+
+/// The tables a column-delete undo restores can come from a peer (directive 5): one that names no
+/// table on the sheet, moves its rows, has a column list that does not fit its width or repeats
+/// a name, or overlaps another table, is refused and changes nothing (T-4652).
+#[test]
+fn a_restored_table_is_checked() {
+    let mut model = three_column_model();
+    model.set_user_input(0, 3, 6, "Other".to_string()).unwrap();
+    model.set_user_input(0, 4, 6, "1".to_string()).unwrap();
+    model.add_table(0, "Other", (3, 6, 4, 6), false).unwrap();
+    let sales = model.workbook.tables["Sales"].clone();
+    let with = |edit: &dyn Fn(&mut crate::types::Table)| {
+        let mut table = sales.clone();
+        edit(&mut table);
+        ("Sales".to_string(), table)
+    };
+    let wide = |t: &mut crate::types::Table| {
+        t.reference = "B3:E7".to_string();
+        t.columns.push(crate::types::TableColumn {
+            id: 4,
+            name: "More".to_string(),
+            ..Default::default()
+        });
+    };
+    let bads = [
+        ("Nope".to_string(), sales.clone()),
+        with(&|t| t.name = "Nope".to_string()),
+        with(&|t| t.sheet_name = "F".to_string()),
+        with(&|t| t.reference = "B4:D7".to_string()),
+        with(&|t| t.reference = "B3:E7".to_string()),
+        with(&|t| t.reference = "not a range".to_string()),
+        with(&|t| t.columns[1].name = "region".to_string()),
+        with(&|t| t.columns[1].name = String::new()),
+        with(&|t| t.totals_row_count = 2),
+        with(&|t| {
+            t.reference = "B3:F7".to_string();
+            wide(t);
+            wide(t);
+            t.columns[4].name = "Most".to_string();
+        }),
+    ];
+    for bad in bads {
+        assert!(
+            model
+                .restore_tables_of_sheet(0, std::slice::from_ref(&bad))
+                .is_err(),
+            "{bad:?}"
+        );
+        assert_eq!(model.workbook.tables["Sales"], sales);
+    }
+    assert!(model
+        .restore_tables_of_sheet(1, &[("Sales".to_string(), sales.clone())])
+        .is_err());
+    let good = with(&wide);
+    model
+        .restore_tables_of_sheet(0, std::slice::from_ref(&good))
+        .unwrap();
+    assert_eq!(model.workbook.tables["Sales"], good.1);
 }
 
 /// A delete of every data row that would cut an array formula is refused before anything
@@ -777,12 +959,13 @@ fn a_sheet_delete_is_a_ref_error_and_restore_brings_the_tables_back() {
     let names = model.workbook.defined_names.clone();
     assert_eq!(names[0].formula, "SUM(#REF!)");
     assert!(model.workbook.tables.is_empty());
-    // A new sheet with the old name does not bring the table back. The plain twin, whose stored
-    // text keeps the sheet name, reads the new sheet: a known gap from Excel (T-2612).
+    // A new sheet with the old name brings back neither the table nor the plain twin, as in
+    // Excel (probes/table-edits/t2612-delete-sheet-then-add, T-2612).
     model.add_sheet("Data").unwrap();
     model.evaluate();
     assert_eq!(value(&model, 0, 1, 1), "#REF!");
-    assert_eq!(value(&model, 0, 1, 2), "0");
+    assert_eq!(value(&model, 0, 1, 2), "#REF!");
+    assert_eq!(formula(&model, 0, 1, 2), "=SUM(#REF!$A$2:$A$3)");
     model
         .delete_sheet(model.get_sheet_index_by_name("Data").unwrap())
         .unwrap();

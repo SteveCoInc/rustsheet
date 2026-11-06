@@ -10,7 +10,7 @@ use crate::functions::statistical::bratio::{
 use crate::functions::statistical::incomplete_beta::beta_density;
 use crate::functions::statistical::inverse_beta::{beta_inverse_cdf, beta_quantile_crossing};
 use crate::functions::statistical::loader::excel_beta_density;
-use crate::functions::statistical::special::{nearest_crossing_from, refine_increasing};
+use crate::functions::statistical::special::{ln_gamma, nearest_crossing_from, refine_increasing};
 use crate::functions::Function;
 use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 
@@ -39,6 +39,9 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
     if alpha > BETA_QUANTILE_STATRS_SHAPE_MAX || beta > BETA_QUANTILE_STATRS_SHAPE_MAX {
         return beta_quantile_crossing(alpha, beta, p);
     }
+    if p <= 0.5 && lower_quantile_underflows(alpha, beta, p) {
+        return 0.0;
+    }
     if let Some(x) = beta_quantile_shape_one(alpha, beta, p) {
         return x;
     }
@@ -65,6 +68,20 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
         )
     };
     flush_subnormal(t)
+}
+
+/// Whether the x with `I_x(alpha, beta) = p` lies below the smallest normal double, where the
+/// quantile underflows: `I_x` at x = `f64::MIN_POSITIVE` is at least p. There `I_x` is its
+/// series' leading term `x^alpha/(alpha B(alpha, beta))` to the double (the next term is
+/// `alpha (1 - beta) x/(alpha + 1)` relative, far below an ulp at shapes up to 1E5), taken in logs so a
+/// tiny alpha does not overflow it. Excel's BETA.INV and BETAINV are `#NUM!` there for p up to 1/2
+/// (docs/excel-semantics/statistics.md "BETAINV is #NUM! where its quantile underflows, but 0.5 at
+/// a tiny alpha and a high p (T-2435)"); the crossing search cannot see it at alpha 1E-300, where
+/// every cdf it evaluates rounds to 1 and it stopped at 3.333333333333333E-302
+/// (`BETAINV(1E-20,1E-300,30)`, probes/t2435-dist-extremes A68).
+fn lower_quantile_underflows(alpha: f64, beta: f64, p: f64) -> bool {
+    let ln_beta = ln_gamma(alpha) + ln_gamma(beta) - ln_gamma(alpha + beta);
+    alpha * f64::MIN_POSITIVE.ln() - alpha.ln() - ln_beta >= p.ln()
 }
 
 /// The crossing of the search's tail `f` with `target` (`refine_increasing`'s even-significand end
@@ -331,6 +348,37 @@ mod tests {
         assert_eq!(
             0.15 + beta_quantile(2.0, 2.5, 0.588_288_666_859_693_7) * (1.2 - 0.15),
             0.665_562_343_784_611_5
+        );
+    }
+
+    #[test]
+    fn a_quantile_below_the_smallest_normal_double_is_zero() {
+        // probes/t2435-dist-extremes (excel-graph): #NUM! where the quantile underflows, for p up
+        // to 1/2. `BETAINV(1E-20,1E-300,30)` (A68, A110; gen-m9/3e98b26cf6713e77 A151) and
+        // `BETAINV(0.5,1E-300,30)` (A69), where the search crossed at 3.333333333333333E-302,
+        // and the tiny alphas of A70, A71, A74:A76.
+        for (p, alpha, beta) in [
+            (1e-20, 1e-300, 30.0),
+            (0.5, 1e-300, 30.0),
+            (0.5, 1e-10, 30.0),
+            (0.5, 1e-5, 1.0),
+            (1e-20, 0.01, 30.0),
+            (1e-20, 0.02, 30.0),
+            (1e-20, 0.05, 30.0),
+        ] {
+            assert_eq!(
+                beta_quantile(alpha, beta, p),
+                0.0,
+                "BETAINV({p},{alpha},{beta})"
+            );
+        }
+        // Just above it, Excel's quantile is a number: A112 `BETAINV(0.5,1E-3,1)` = 0.5^1000,
+        // A108 `BETAINV(1E-20,0.1,30)` = 2.05508004608823E-202.
+        assert_eq!(beta_quantile(1e-3, 1.0, 0.5), 9.332_636_185_032_827e-302);
+        let a108 = beta_quantile(0.1, 30.0, 1e-20);
+        assert!(
+            (a108 / 2.055_080_046_088_23e-202 - 1.0).abs() < 1e-12,
+            "{a108}"
         );
     }
 

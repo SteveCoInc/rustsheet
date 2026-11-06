@@ -558,7 +558,7 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
 
 /// Whether the spec table's filter makes its sheet's hidden rows filtered: Excel calls them
 /// filtered only for a filterColumn with a criterion inside the table, not for a criterion-less
-/// one or one whose `colId` is past the table's width (probes/t4003-filter-column-criterion), and
+/// one, a `<colorFilter/>` without a dxfId (probes/t4558-color-filter-subtotal) or one whose `colId` is past the table's width (probes/t4003-filter-column-criterion), and
 /// the facade's `filtered` flag is that "filtered" (docs/excel-semantics/numbers.md, "SUBTOTAL and
 /// AGGREGATE over hidden and filtered rows").
 fn filters_hidden_rows(table: &TableSpec, range: RangeRef) -> bool {
@@ -567,7 +567,7 @@ fn filters_hidden_rows(table: &TableSpec, range: RangeRef) -> bool {
         && table
             .filter_column
             .as_ref()
-            .is_none_or(|c| c.criterion && u64::from(c.col_id) < width)
+            .is_none_or(|c| c.criterion && !c.color && u64::from(c.col_id) < width)
 }
 
 /// Gives each cell of `sheet` (sheet `id`) its spec number format.

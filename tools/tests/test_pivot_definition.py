@@ -256,6 +256,24 @@ def test_refusals(definition: dict[str, Any], message: str) -> None:
         build_xlsx(_spec(definition))
 
 
+def test_cache_names_replace_a_blank_or_repeated_header() -> None:
+    spec = _spec(
+        {"rows": ["Area"], "data": [{"field": "Amount"}], "cache_names": ["Area", "P", "Amount", "F"]}
+    )
+    cells = spec["sheets"][0]["cells"]
+    del cells["A1"]  # an empty header cell
+    cells.update({"B1": "Sales", "D1": "Sales"})  # a repeated constant
+    cache = _parts(spec)["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert re.findall(r'<cacheField name="([^"]*)"', cache) == ["Area", "P", "Amount", "F"]
+    for names, message in (
+        (["Area", "P"], "one name per source column"),
+        (["Area", "P", "area", "F"], "distinct non-empty texts"),
+        (["Area", "", "Amount", "F"], "distinct non-empty texts"),
+    ):
+        with pytest.raises(ValueError, match=re.escape(message)):
+            build_xlsx(_spec({"data": [{"field": "Amount"}], "cache_names": names}))
+
+
 def test_page_fields_need_room_and_the_anchor_must_be_empty() -> None:
     with pytest.raises(ValueError, match="free rows above"):
         build_xlsx(_spec({"pages": [{"field": "Region"}], "data": [{"field": "Sales"}]}, location="A1"))
@@ -274,3 +292,45 @@ def test_values_on_rows_sets_data_on_rows() -> None:
     )["xl/pivotTables/pivotTable1.xml"]
     assert ' dataOnRows="1"' in table
     assert '<rowFields count="2"><field x="0"/><field x="-2"/></rowFields>' in table
+
+
+def test_a_pivot_saved_without_refresh_on_load_keeps_its_saved_render() -> None:
+    """T-4586: no `refreshOnLoad`, spec cells in the area, `area` as the location and raw layout lines."""
+    rows = '<rowItems count="2"><i><x/></i><i t="grand"><x/></i></rowItems>'
+    columns = '<colItems count="1"><i/></colItems>'
+    saved = {"A3": "Row Labels", "B3": "Sum of Sales", "A4": "East", "B4": 99, "A5": "Grand Total", "B5": 99}
+    parts = _parts(
+        _spec(
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "refresh_on_load": False,
+                "area": "A3:B5",
+                "xml": {"rowItems": rows, "colItems": columns},
+            },
+            cells=saved,
+        )
+    )
+    assert "refreshOnLoad" not in parts["xl/pivotCache/pivotCacheDefinition1.xml"]
+    table = parts["xl/pivotTables/pivotTable1.xml"]
+    assert '<location ref="A3:B5" ' in table
+    # Schema order: rowFields, rowItems, colFields, colItems, then the data fields.
+    assert f'<rowFields count="1"><field x="0"/></rowFields>{rows}{columns}<dataFields' in table
+    assert '<c r="B4"' in parts["xl/worksheets/sheet2.xml"]
+
+
+def test_refresh_on_load_and_area_refusals() -> None:
+    base: dict[str, Any] = {"rows": ["Region"], "data": [{"field": "Sales"}]}
+    for extra, message in (
+        ({"refresh_on_load": 0}, "refresh_on_load is true or false"),
+        ({"area": "B3:C5"}, "starting at the location"),
+        ({"area": "A3:A2"}, "starting at the location"),
+        ({"area": "A3"}, "starting at the location"),
+        ({"xml": {"rowItem": "<rowItem/>"}}, "xml slots are"),
+        ({"xml": {"rowItems": "<colItems/>"}}, "one <rowItems> element"),
+    ):
+        with pytest.raises(ValueError, match=re.escape(message)):
+            build_xlsx(_spec({**base, **extra}))
+    # A refreshing pivot still refuses a spec cell at its anchor.
+    with pytest.raises(ValueError, match=r"#SPILL!"):
+        build_xlsx(_spec({**base, "refresh_on_load": True}, cells={"A3": 1}))

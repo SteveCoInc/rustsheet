@@ -58,6 +58,17 @@ rustsheet (public facade crate, M1)          stable API: Workbook / Txn / Change
    re-parsing text.
 6. **Determinism:** clock, RNG seed and timezone are injected (`WorkbookOptions`), so volatile
    functions are testable.
+7. **Side channels beside `CalcResult`:** where Excel tells two equal values apart by where they
+   came from, the flag is kept beside the evaluation, never in `CalcResult`, so the ~all code that
+   does not care is untouched. The one today is `NumberMark` (`crates/rustsheet-engine/src/number_mark.rs`,
+   T-2766): a number from ERROR.TYPE or `CELL("col"|"row")` that F.TEST, the paired functions,
+   CHITEST, SUMXMY2, LINEST and IRR reject. Every read of a node is bracketed (each
+   `evaluate_node_in_context` call and the reference-context entry points); a bracket records
+   whether its value carries the mark, wrappers that return an argument unchanged hand it on
+   (`Model::passing_mark`), LET and LAMBDA bindings keep it per variable, and a reader asks
+   `Model::evaluate_marked`. Until a mark is made in a calculation pass, a bracket costs two counter
+   updates. A new value-provenance quirk extends this channel rather than adding a field to
+   `CalcResult`.
 
 The migration path is incremental and test-guarded. Every step keeps `make eval-check` green; the
 full-recalc path stays as the reference implementation for metamorphic tests (incremental ==

@@ -2,7 +2,7 @@ use crate::calc_result::Range;
 use crate::expressions::parser::is_multi_sheet_span;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::statistical::element_errors::array_element_error;
-use crate::functions::statistical::paired::{marked_number_error, PairedArg};
+use crate::functions::statistical::paired::{marked_number_error, PairedArg, SecondMark};
 use crate::functions::util::aggregate_args::{
     AggregatePolicy, AggregateWalk, ArgReading, ErrorRule, GridReading, NestedReading, NumberRules,
 };
@@ -53,11 +53,20 @@ impl Model {
         if args.len() != 2 {
             return CalcResult::new_args_number_error(cell);
         }
-        let first = match self.sumx_arg(&args[0], cell) {
+        // A marked argument (a number from ERROR.TYPE or CELL, an array of references), first or
+        // second, is `#NUM!` after the other's error value and the count check:
+        // `SUMXMY2(ERROR.TYPE(#REF!),5)`, `SUMXMY2(5,ERROR.TYPE(#REF!))`, SUMX2MY2 and SUMX2PY2 alike,
+        // and `SUMXMY2(INDIRECT("B1",{1}),4)`, are `#NUM!`, while `SUMXMY2(ERROR.TYPE(#REF!),1/0)` is
+        // `#DIV/0!` and `SUMXMY2(ERROR.TYPE(#REF!),{1;2})` `#N/A` (probes/t2576-error-type-cell-paired
+        // E16, t2577-indirect-ref-array A148, t2766-mark-positions A15:A19; statistics.md
+        // "ERROR.TYPE and CELL results are #NUM! in the paired functions").
+        let (first_value, first_marked) = self.evaluate_sample_arg(&args[0], cell);
+        let first = match self.sumx_arg_value(first_value, cell) {
             Ok(arg) => arg,
             Err(e) => return e,
         };
-        let second = match self.sumx_arg(&args[1], cell) {
+        let (second_value, second_marked) = self.evaluate_sample_arg(&args[1], cell);
+        let second = match self.sumx_arg_value(second_value, cell) {
             Ok(arg) => arg,
             Err(e) => return e,
         };
@@ -72,6 +81,9 @@ impl Model {
             if m != n {
                 return unequal_counts();
             }
+        }
+        if first_marked || second_marked {
+            return marked_number_error(cell);
         }
         let array_error = |_, error| array_element_error(error, cell);
         let paired = match self.paired_values(first, second, cell, array_error) {
@@ -99,8 +111,12 @@ impl Model {
     // value, or a one-cell reference holding an error, is returned at once, and so is #VALUE! for
     // a blank one-cell reference or an omitted argument; errors inside a longer range or an array
     // wait for the count check.
-    fn sumx_arg(&mut self, arg: &Node, cell: CellReferenceIndex) -> Result<PairedArg, CalcResult> {
-        let value = match self.evaluate_node_in_context(arg, cell) {
+    fn sumx_arg_value(
+        &mut self,
+        value: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Result<PairedArg, CalcResult> {
+        let value = match value {
             CalcResult::Range { left, right } if left == right => self.evaluate_cell(left),
             value => value,
         };
@@ -119,11 +135,13 @@ impl Model {
     }
 
     // Helper function to extract and validate two matrices (ranges or arrays) with compatible shapes.
-    // Returns (rows, cols, values_left, values_right) or an error.
+    // Returns (rows, cols, values_left, values_right) or an error. `marked_second` says what a
+    // marked second argument is: cells with no number (the regression family) or `#NUM!` (CHITEST).
     pub(crate) fn fn_get_two_matrices(
         &mut self,
         args: &[Node],
         cell: CellReferenceIndex,
+        marked_second: SecondMark,
     ) -> Result<TwoMatricesResult, CalcResult> {
         if args.len() != 2 {
             return Err(CalcResult::new_args_number_error(cell));
@@ -131,10 +149,12 @@ impl Model {
         // A marked first argument (a number straight from ERROR.TYPE or CELL, an array of
         // references) is `#NUM!` once the sizes match (`INTERCEPT(ERROR.TYPE(#REF!),5)`,
         // `SLOPE(INDIRECT("B1",{1;1}),{1;2})`, while `RSQ(ERROR.TYPE(#NAME?),Data!C8:C11)` is
-        // `#N/A`; T-2576, T-2577). The second reads as the number it is
-        // (`INTERCEPT(5,ERROR.TYPE(#REF!))` is `#DIV/0!` like (5,4)).
+        // `#N/A`; T-2576, T-2577). So is CHITEST's marked second argument
+        // (probes/t2766-mark-positions-2 A26, A28). A marked second argument of CORREL, PEARSON,
+        // SLOPE, INTERCEPT, RSQ and STEYX is cells with no number, its errors kept
+        // ([`SecondMark::NoNumber`]).
         let (x_range, first_marked) = self.evaluate_sample_arg(&args[0], cell);
-        let y_range = self.evaluate_node_in_context(&args[1], cell);
+        let (y_range, second_marked) = self.evaluate_sample_arg(&args[1], cell);
         let x_range = self.blank_one_cell_as_error(x_range, cell);
         let y_range = self.blank_one_cell_as_error(y_range, cell);
         if let (CalcResult::Range { left: l1, .. }, CalcResult::Range { left: l2, .. }) =
@@ -167,9 +187,12 @@ impl Model {
                 "Arguments must have the same number of cells".to_string(),
             ));
         }
-        if first_marked {
-            return Err(marked_number_error(cell));
-        }
+        let second = match marked_second {
+            _ if first_marked => return Err(marked_number_error(cell)),
+            SecondMark::NumError if second_marked => return Err(marked_number_error(cell)),
+            SecondMark::NoNumber if second_marked => second.without_numbers(),
+            _ => second,
+        };
         let array_error = |_, error| array_element_error(error, cell);
         let paired = self.paired_values(first, second, cell, array_error)?;
         Ok((rows1, cols1, paired.first, paired.second))

@@ -49,6 +49,22 @@ fn overflowing_data_is_an_error() {
     assert_eq!(model._get_text("D1"), *"#NUM!");
 }
 
+/// With sigma given, a z past the double range is `#NUM!` when the mean is above x and 0.5 when
+/// it is below (probes/t4098-tests-prob-domains A48, A49; statistics.md "CHISQ.TEST, Z.TEST and
+/// PROB: Gate A domains (T-4098)").
+#[test]
+fn an_overflowing_z_with_sigma_given() {
+    let mut model = new_empty_model();
+    model._set("A1", "=Z.TEST({1,2,3},-1E+300,1E-300)");
+    model._set("A2", "=Z.TEST({1,2,3},1E+300,1E-300)");
+    model._set("A3", "=ZTEST({1,2,3},-1E+300,1E-300)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model._get_text("A2"), *"0.5");
+    assert_eq!(model._get_text("A3"), *"#NUM!");
+}
+
 /// A data argument that is an error value comes first in every element; an error inside a range
 /// or array comes after `x` (probes/t2428-ztest-error-data).
 #[test]

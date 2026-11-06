@@ -15,8 +15,8 @@ use quick_xml::events::BytesStart;
 use rustsheet_engine::expressions::utils::{is_valid_column_number, is_valid_row};
 use rustsheet_engine::pivot::{
     Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry, OpaqueNode,
-    OpaqueOwner, PageField, PivotCache, PivotField, PivotItem, PivotOptions, PivotTable,
-    ShowDataAs, SortType, NO_BASE_ITEM,
+    OpaqueOwner, PageField, PivotCache, PivotField, PivotGeometry, PivotItem, PivotOptions,
+    PivotTable, ShowDataAs, SortType, NO_BASE_ITEM,
 };
 
 use super::super::package::ImportLimits;
@@ -110,6 +110,16 @@ const FIELD_TYPED: [&str; 9] = [
     "sortType",
     "insertBlankRow",
     "numFmtId",
+];
+
+/// The `<location>` attributes the model types.
+const LOCATION_TYPED: [&str; 6] = [
+    "ref",
+    "firstHeaderRow",
+    "firstDataRow",
+    "firstDataCol",
+    "rowPageCount",
+    "colPageCount",
 ];
 
 const DATA_FIELD_TYPED: [&str; 7] = [
@@ -230,8 +240,9 @@ impl TableReader<'_> {
         let typed: fn(&str) -> bool = match name.as_str() {
             "location" => {
                 self.table.location = location(attribute(element, "ref")?.as_deref())?;
+                self.table.geometry = geometry(element)?;
                 self.located = true;
-                |key| key == "ref"
+                |key| LOCATION_TYPED.contains(&key)
             }
             "pivotField" => {
                 self.read_field(cache, element)?;
@@ -526,7 +537,7 @@ fn read_data_field(element: &BytesStart, limits: &ImportLimits) -> Result<DataFi
 
 /// An `xsd:boolean` attribute: `default` when absent or not a boolean, as Excel's own writer never
 /// leaves one malformed (and `showAll` has always read so, T-4276).
-fn flag(element: &BytesStart, name: &str, default: bool) -> Result<bool, Skip> {
+pub(super) fn flag(element: &BytesStart, name: &str, default: bool) -> Result<bool, Skip> {
     Ok(match attribute(element, name)?.as_deref() {
         Some("1" | "true") => true,
         Some("0" | "false") => false,
@@ -582,6 +593,20 @@ fn location(reference: Option<&str>) -> Result<CellArea, Skip> {
         }),
         _ => skip("a location outside the sheet"),
     }
+}
+
+/// The offsets and page counts of a `<location>`; a missing or malformed one reads as 0, as
+/// [`number`] reads every count, so a pivot is never dropped for it (the layout stage recomputes
+/// them, `pivot::layout::lines`).
+fn geometry(element: &BytesStart) -> Result<PivotGeometry, Skip> {
+    let count = |name: &str| -> Result<u32, Skip> { Ok(number(element, name)?.unwrap_or(0)) };
+    Ok(PivotGeometry {
+        first_header_row: count("firstHeaderRow")?,
+        first_data_row: count("firstDataRow")?,
+        first_data_column: count("firstDataCol")?,
+        row_page_count: count("rowPageCount")?,
+        column_page_count: count("colPageCount")?,
+    })
 }
 
 /// A `dataField@subtotal`; absent is `sum`.
