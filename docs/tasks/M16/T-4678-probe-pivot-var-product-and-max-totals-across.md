@@ -21,7 +21,7 @@ fields per axis (T2, T3), and Var, Varp, StdDev, StdDevp, Product and Sum/Averag
 axis (V1 to V3, V6, V7, X1 to X12). The engine (`merge_crossings` in
 crates/rustsheet-engine/src/pivot/result.rs) applies the same rule to every aggregate and axis shape.
 Open:
-- Var, Varp and Product at a subtotal-by-subtotal or subtotal-by-grand cell with two fields per axis
+- Var, StdDev, Varp, StdDevp and Product at a subtotal-by-subtotal or subtotal-by-grand cell with two fields per axis
   (the engine adds the leaf-row partials, as T-4634 T2 and T3 show for Sum and Average);
 - the order of the Varp and StdDevp grand-grand total with one field per axis. The engine takes it
   from Var by analogy. T-4634's Varp cells (V2, V3, V7 E11; X8, X9 I9) also fit column partials in
