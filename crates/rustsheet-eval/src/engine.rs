@@ -296,6 +296,14 @@ impl Engine for RustSheetEngine {
             .map_err(|e| e.to_string())?;
         type_entries(&mut workbook, entered)?;
         apply_sheet_ops(&mut workbook, &spec.sheet_ops)?;
+        if let Some(active) = &spec.active_sheet {
+            let id = workbook
+                .sheet_id(active)
+                .map_err(|e| format!("active_sheet {active}: {e}"))?;
+            workbook
+                .set_active_sheet(id)
+                .map_err(|e| format!("active_sheet {active}: {e}"))?;
+        }
         define_api_names(&mut workbook, &spec.api_names)?;
         // The edit calculated once; an iterative case gets the oracle's other calculations.
         for _ in 1..calculations(spec) {
