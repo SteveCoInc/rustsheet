@@ -3,7 +3,7 @@ id: T-4667
 title: "Probe an IFS second criteria pair that drops an error row, and a #NUM! value-range error under AVERAGEIF(S) (T-4606 review follow-up)"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
