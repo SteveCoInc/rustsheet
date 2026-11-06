@@ -1,0 +1,29 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4610: ROW and COLUMN of an array value with error elements (A1-A8: {1;#N/A}, {#DIV/0!,2}, {#N/A}), a 2x2 (A9-A10), text and logical elements (A11), and a LET-bound scalar and scalar error (A12-A13).",
+  "tags": [
+    "M7",
+    "probe",
+    "dynamic-arrays"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=ARRAYTOTEXT(LET(x,{1;#N/A},ROW(x)))",
+        "A2": "=ERROR.TYPE(INDEX(LET(x,{1;#N/A},ROW(x)),1,1))",
+        "A3": "=ERROR.TYPE(INDEX(LET(x,{1;#N/A},ROW(x)),2,1))",
+        "A4": "=ROWS(LET(x,{1;#N/A},ROW(x)))&\"x\"&COLUMNS(LET(x,{1;#N/A},ROW(x)))",
+        "A5": "=ARRAYTOTEXT(LET(x,{#DIV/0!,2},COLUMN(x)))",
+        "A6": "=ERROR.TYPE(INDEX(LET(x,{#DIV/0!,2},COLUMN(x)),1,1))",
+        "A7": "=ERROR.TYPE(LET(x,{#N/A},ROW(x)))",
+        "A8": "=ROWS(LET(x,{#N/A},ROW(x)))&\"x\"&COLUMNS(LET(x,{#N/A},ROW(x)))",
+        "A9": "=ARRAYTOTEXT(LET(x,{1,2;3,4},COLUMN(x)))",
+        "A10": "=ROWS(LET(x,{1,2;3,4},COLUMN(x)))&\"x\"&COLUMNS(LET(x,{1,2;3,4},COLUMN(x)))",
+        "A11": "=ARRAYTOTEXT(LET(x,{\"a\";TRUE},ROW(x)))",
+        "A12": "=ERROR.TYPE(LET(x,5,ROW(x)))",
+        "A13": "=ERROR.TYPE(LET(x,#N/A,ROW(x)))"
+      }
+    }
+  ]
+}
