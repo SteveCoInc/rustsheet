@@ -114,9 +114,10 @@ class Param:
     `truncates` cites the semantics entry showing that Excel truncates a non-integer given to this
     `int` parameter toward zero (F.DIST's, T.DIST's and CHISQ.INV.RT's df); without one an eval cell that passes a
     non-integer gets no math value, since whether Excel truncates is per function.
-    A `text` parameter (T-4084) is written as a string literal. With `choices` it is drawn from that
+    A `text` parameter (T-4084) is written as a string literal. With `choices` (distinct, non-empty
+    texts; an empty tuple is refused) it is drawn from that
     fixed list (CONVERT's unit names, engineering.md "CONVERT unit names") and the math receives the
-    text; without, it is a complex number's text `a+bi` / `a-bj` whose two parts are drawn as reals
+    text; without (None), it is a complex number's text `a+bi` / `a-bj` whose two parts are drawn as reals
     over this parameter's domain and ranges (engineering.md "Leading plus in IM*..."), and the math
     receives the parsed parts as an `mpc`.
     """
@@ -131,17 +132,24 @@ class Param:
     draw_hi: float | None = None
     optional: bool = False
     truncates: str = ""
-    choices: tuple[str, ...] = ()
+    choices: tuple[str, ...] | None = None
 
     def __post_init__(self) -> None:
-        if self.choices and self.kind != "text":
+        if self.choices is not None and self.kind != "text":
             msg = f"{self.name}: only a text parameter takes choices"
             raise ValueError(msg)
+        if self.choices is not None and self.kind == "text":
+            if not self.choices:
+                msg = f"{self.name}: empty choices (leave them out for a complex number)"
+                raise ValueError(msg)
+            if "" in self.choices or len(set(self.choices)) != len(self.choices):
+                msg = f"{self.name}: choices must be distinct, non-empty texts"
+                raise ValueError(msg)
 
     @property
     def is_complex(self) -> bool:
         """Whether this is a complex number's text (a `text` parameter without `choices`)."""
-        return self.kind == "text" and not self.choices
+        return self.kind == "text" and self.choices is None
 
     def finite_bounds(self) -> list[tuple[float, bool, bool]]:
         """The finite domain bounds as (value, open, is_lower)."""

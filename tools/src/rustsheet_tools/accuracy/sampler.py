@@ -115,8 +115,9 @@ class Sampler:
         self.rng = rng
         self.edges = self._edge_candidates()
         # One suffix per point for every complex text of the point (`literal.COMPLEX_SUFFIXES`); drawn
-        # only for a definition with one, so no other definition's draws move.
-        self.complex = any(p.is_complex for p in definition.params)
+        # only for a definition with one, so no other definition's draws move. `suffix` is meaningful
+        # only inside `draw()`, which sets it before the point's parameters are drawn.
+        self.has_complex = any(p.is_complex for p in definition.params)
         self.suffix = COMPLEX_SUFFIXES[0]
 
     # -- per-parameter draws --------------------------------------------------------------
@@ -221,7 +222,7 @@ class Sampler:
     def draw(self, stratum: str, index: int) -> list[Arg]:
         """Point number `index` of `stratum`."""
         d = self.definition
-        if self.complex:
+        if self.has_complex:
             self.suffix = self.rng.choice(COMPLEX_SUFFIXES)
         if d.draw is not None:
             drawn = d.draw(stratum, self.rng)

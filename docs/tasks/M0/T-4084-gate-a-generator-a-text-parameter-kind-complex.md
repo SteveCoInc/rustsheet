@@ -28,14 +28,14 @@ The Gate A generator has a `text` parameter kind, so a definition can draw compl
 - [x] `Kind` gains a text kind with a complex-number sampler and a fixed-list sampler, with tests. The formula writer
       quotes it and escapes `"`.
 - [x] Existing tables regenerate byte for byte (no table changes).
-- [x] `make check` green; [ ] reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The tables themselves (T-4085).
 
 ## Outcome
 - `model.Kind` gains `text`; `literal.Arg` gains `str`, written by `literal.text` as a string literal (`gen.common.quoted`,
-  a `"` doubled). `Param.choices` makes a fixed-list text (CONVERT's units); without choices `Param.is_complex` holds and
+  a `"` doubled). `Param.choices` (distinct, non-empty texts; an empty tuple is refused) makes a fixed-list text (CONVERT's units); with `choices=None` `Param.is_complex` holds and
   the text is a complex number `a+bi` / `a-bj` (`literal.complex_text`, both parts 15-digit literals, the imaginary part
   always signed). The sampler draws the two parts with the parameter's own typical, extreme and whole-domain draws over
   the parameter as a real, and one suffix per point for all its complex texts (mixed suffixes are an error,
@@ -45,10 +45,12 @@ The Gate A generator has a `text` parameter kind, so a definition can draw compl
   `check_domain` checks each complex part against the parameter's interval. `tables.parse_formula` reads a string
   literal back (`sweep.string_literal`, split out of `_literal`).
 - Eval cells: `eval_math.fit_arg` takes a string literal or text cell for a text parameter: a listed choice, or a complex
-  text `parse_complex_text` reads with numbers of at most 15 significant digits (longer IM* parts are unprobed); one
+  text `parse_complex_text` reads with numbers of at most 15 significant digits and no subnormal part. Excel cuts a longer
+  IM* part to 15 digits, which is not modelled yet (engineering.md "Engineering functions in the gen-m9 engineering sweep
+  (T-2258)", probes/eng-inumber-grammar-digits; T-4593), and how it reads a subnormal part is not established. One
   call's complex texts must share a suffix. A reason is now an `model.Unfit` (a str subclass) so it is told apart from a
   fitted text; composite cells use the same path.
-- `MathArg` gains `mpc | str`, so six defs files narrow with `(bool, str, tuple)` where they narrowed `(bool, tuple)`.
+- `MathArg` gains `mpc | str`, so six defs files narrow with `(bool, str, tuple)` where they narrowed `(bool, tuple)`; T-4592 replaces those tuples with one helper.
 - Tests: `tools/tests/test_accuracy_text_param.py` (both samplers, quoting and escaping, round trip, math, eval cells).
 - Byte-identical: all 228 committed batches (224, then 4 more after merging origin/main) were regenerated in memory (committed math reused for points it holds,
   everything else computed). 217 are byte-identical; the other 11 (BETA.DIST s1 and r4-T-3879, BETA.INV, CHISQ.INV,

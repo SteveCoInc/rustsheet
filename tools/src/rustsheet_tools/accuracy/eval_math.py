@@ -24,8 +24,9 @@ A candidate cell gets no math value when:
 - an argument is anything else the fit lab's sweep reader leaves unparsed, text, empty or a range.
   A `text` parameter (T-4084) takes a string literal or a text cell: one of its `choices`, or for a
   complex number a text `parse_complex_text` reads whose numbers have at most 15 significant digits
-  (how Excel reads a longer IM* part is not probed: engineering.md "Engineering functions in the
-  gen-m9 engineering sweep"), and one
+  (Excel cuts a longer IM* part to 15 digits, not modelled yet: engineering.md "Engineering functions
+  in the gen-m9 engineering sweep (T-2258)", probes/eng-inumber-grammar-digits) and whose parts are 0
+  or normal doubles (how Excel reads a subnormal part is not established), and one
   call's complex texts share one suffix (`i` or `j`).
   A nested call, or arithmetic between call results, makes the cell a composite instead
   (`composite`, T-3993, decision 0297): it gets the outermost node's math at its inner nodes'
@@ -256,18 +257,23 @@ def _fit_number(param: Param, value: Any) -> literal.Arg | str:
 def fit_text(param: Param, value: Any) -> str | Unfit:
     """A text for a `text` parameter as is, or why it does not fit: a non-text (whether each
     function reads a number as its text is not evidenced), a text outside `choices`, or for a complex
-    number one `parse_complex_text` does not read or with a number past 15 significant digits."""
+    number one `parse_complex_text` does not read, with a number past 15 significant digits (Excel cuts
+    it to 15 digits, not modelled yet: engineering.md "Engineering functions in the gen-m9 engineering
+    sweep (T-2258)", probes/eng-inumber-grammar-digits), or with a subnormal part (how Excel reads one is
+    not established)."""
     if not isinstance(value, str):
         return Unfit("non-text for a text parameter")
     if param.choices:
         return value if value in param.choices else Unfit("text outside the parameter's list")
     try:
-        parse_complex_text(value)
+        parts = parse_complex_text(value)
     except ValueError:
         return Unfit("not a complex number text")
     for m in _TEXT_NUMBER.finditer(value):
         if len(m.group("mantissa").replace(".", "").strip("0")) > 15:
             return Unfit("complex number part past 15 significant digits")
+    if not all(_normal_or_zero(mpmath.mpf(part)) for part in parts):
+        return Unfit("subnormal complex number part")
     return value
 
 

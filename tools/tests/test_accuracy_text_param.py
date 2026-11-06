@@ -123,6 +123,12 @@ def test_choices_belong_to_a_text_parameter() -> None:
     assert Param("z", "text").is_complex and not Param("u", "text", choices=("m",)).is_complex
 
 
+@pytest.mark.parametrize("choices", [(), ("m", "m"), ("m", "")])
+def test_choices_are_distinct_non_empty_texts(choices: tuple[str, ...]) -> None:
+    with pytest.raises(ValueError, match="choices"):
+        Param("u", "text", choices=choices)
+
+
 def test_text_formulas_round_trip_and_the_math_gets_the_parsed_values() -> None:
     assert formula(ZABS, ["3-4j"]) == '=ZABS("3-4j")'
     assert parse_formula(ZABS, '=ZABS("3-4j")') == ["3-4j"]
@@ -162,6 +168,9 @@ def test_fit_args_reads_text_parameters() -> None:
     assert fit_args(ZABS, ["1.23456789012345+2i"]) == ["1.23456789012345+2i"]
     assert fit_args(ZABS, ["1.234567890123456+2i"]) == "complex number part past 15 significant digits"
     assert fit_args(ZABS, ["1.50000000000000000+2E-300i"]) == ["1.50000000000000000+2E-300i"]
+    assert fit_args(ZABS, ["1E-320+1i"]) == "subnormal complex number part"
+    assert fit_args(ZABS, ["1-2.2250738585072E-308i"]) == "subnormal complex number part"
+    assert fit_args(ZABS, ["0+2.2250738585073E-308i"]) == ["0+2.2250738585073E-308i"]
     assert fit_args(ZDIV, ["1+i", "2-3i"]) == ["1+i", "2-3i"]
     assert fit_args(ZDIV, ["1+i", "2-3j"]) == "mixed complex suffixes"
     assert fit_args(ZSCALE, [1.0, "km"]) == [1.0, "km"]
