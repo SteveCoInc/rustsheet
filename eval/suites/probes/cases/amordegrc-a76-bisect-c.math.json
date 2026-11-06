@@ -1,0 +1,38 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "c139c17ede485f2fb71cc2b1644d8f043ab2776dd54b5d27c4102f924a20ed10"
+ },
+ "sheets": {
+  "Calc": {
+   "A21": {
+    "t": "e",
+    "why": "maturity more than a year after settlement: #NUM!",
+    "f": "=TBILLEQ(39448,43890,1)"
+   },
+   "A36": {
+    "t": "e",
+    "why": "an amount at most 0: #NUM!",
+    "f": "=RECEIVED(38759,46816,102952,(-0.5))"
+   },
+   "A41": {
+    "t": "n",
+    "v": "0.0060644516444209852487828982463627328215984322269453",
+    "f": "=YIELDDISC(38052,44009,91,100)"
+   },
+   "A69": {
+    "t": "n",
+    "v": "0.0083250052598358931201346517988638754470860509152114",
+    "f": "=DISC(39447,44879,92,105,1)"
+   },
+   "A70": {
+    "t": "e",
+    "why": "maturity more than a year after settlement: #NUM!",
+    "f": "=TBILLEQ(39050,45322,1E-10)"
+   }
+  }
+ }
+}
