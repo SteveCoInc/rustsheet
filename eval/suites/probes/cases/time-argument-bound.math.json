@@ -4,7 +4,14 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "9d1141545de17be95b4338260b3efe42c859ae800e96b1bcb973404957a63339"
+  "input_sha256": "9d1141545de17be95b4338260b3efe42c859ae800e96b1bcb973404957a63339",
+  "definitions": {
+   "HOUR": "48f556383dc5abec",
+   "MINUTE": "48f556383dc5abec",
+   "POWER": "37d9536498f77785",
+   "TIME": "48f556383dc5abec"
+  },
+  "arguments_sha256": "25f3819f3b2e41108a5f67f0515ecbe5e31fdc9132d912a4a0fb0fbae18a7741"
  },
  "sheets": {
   "S": {

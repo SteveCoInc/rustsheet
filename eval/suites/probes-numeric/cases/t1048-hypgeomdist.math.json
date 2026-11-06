@@ -4,7 +4,12 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "d53197b2c492ec539712dde9eb41d5a1b78027b918169e94595027a368033569"
+  "input_sha256": "d53197b2c492ec539712dde9eb41d5a1b78027b918169e94595027a368033569",
+  "definitions": {
+   "HYPGEOM.DIST": "8871ae48603ed045",
+   "HYPGEOMDIST": "8871ae48603ed045"
+  },
+  "arguments_sha256": "10c7a7abc8794ed029bec9da0870915e5352cb7163b19e61e66f5625f2a8fd12"
  },
  "sheets": {
   "Calc": {

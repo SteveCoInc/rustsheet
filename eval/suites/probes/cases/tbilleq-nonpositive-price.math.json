@@ -4,7 +4,12 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "d84d30f6fd5dfec589fb9bb299c2dfe6a9ae6505293b488d0c58828ee80f6dfb"
+  "input_sha256": "d84d30f6fd5dfec589fb9bb299c2dfe6a9ae6505293b488d0c58828ee80f6dfb",
+  "definitions": {
+   "TBILLEQ": "70088ae88f66c816",
+   "TBILLPRICE": "70088ae88f66c816"
+  },
+  "arguments_sha256": "aae6c265a8b67b5bb8f613d4a5bb08344a9b1ef5457b2a4fc5bc10693dbd3a5a"
  },
  "sheets": {
   "Calc": {

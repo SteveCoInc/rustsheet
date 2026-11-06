@@ -4,7 +4,31 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "c139c17ede485f2fb71cc2b1644d8f043ab2776dd54b5d27c4102f924a20ed10"
+  "input_sha256": "c139c17ede485f2fb71cc2b1644d8f043ab2776dd54b5d27c4102f924a20ed10",
+  "definitions": {
+   "ACCRINTM": "70088ae88f66c816",
+   "AMORDEGRC": "c2c308fdc67ff5db",
+   "AMORLINC": "c2c308fdc67ff5db",
+   "ATAN": "a08a02ed324397b5",
+   "DB": "89b29e33f12c4544",
+   "DISC": "70088ae88f66c816",
+   "EFFECT": "c9c5fd753f085537",
+   "FVSCHEDULE": "566893f413694b7d",
+   "ISPMT": "5d6e5cc7bce30f78",
+   "LN": "37d9536498f77785",
+   "MDURATION": "6664b7272070158a",
+   "NOMINAL": "c9c5fd753f085537",
+   "NORMSDIST": "1eb64c3631bab40a",
+   "ODDFYIELD": "a78a3d3c1d73c6a2",
+   "ODDLYIELD": "a78a3d3c1d73c6a2",
+   "RECEIVED": "70088ae88f66c816",
+   "SLN": "89b29e33f12c4544",
+   "TBILLEQ": "70088ae88f66c816",
+   "TBILLYIELD": "70088ae88f66c816",
+   "YIELDDISC": "70088ae88f66c816",
+   "YIELDMAT": "70088ae88f66c816"
+  },
+  "arguments_sha256": "d992276e8cd5010da135be3ecf4207b669c637cb03829a2c6243d5cb50e65f65"
  },
  "sheets": {
   "Calc": {

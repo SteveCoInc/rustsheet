@@ -4,7 +4,28 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "1443aa974a1b3c712a012ae409e26d1e2463b9e01324ac625901a8155153bd2c"
+  "input_sha256": "1443aa974a1b3c712a012ae409e26d1e2463b9e01324ac625901a8155153bd2c",
+  "definitions": {
+   "ACCRINT": "c927f8b582569312",
+   "ACCRINTM": "70088ae88f66c816",
+   "AMORLINC": "c2c308fdc67ff5db",
+   "DISC": "70088ae88f66c816",
+   "DURATION": "6664b7272070158a",
+   "INTRATE": "70088ae88f66c816",
+   "ODDFPRICE": "a78a3d3c1d73c6a2",
+   "ODDLPRICE": "a78a3d3c1d73c6a2",
+   "PRICE": "6664b7272070158a",
+   "PRICEDISC": "70088ae88f66c816",
+   "PRICEMAT": "70088ae88f66c816",
+   "RECEIVED": "70088ae88f66c816",
+   "TBILLPRICE": "70088ae88f66c816",
+   "XIRR": "c600c8e85730f650",
+   "XNPV": "566893f413694b7d",
+   "YEARFRAC": "e691e50d7ecf0168",
+   "YIELDDISC": "70088ae88f66c816",
+   "YIELDMAT": "70088ae88f66c816"
+  },
+  "arguments_sha256": "276332aab45f90a735fef92fce299b23ac5d5859dd1ee50de4e081ddf78b18e4"
  },
  "sheets": {
   "S": {

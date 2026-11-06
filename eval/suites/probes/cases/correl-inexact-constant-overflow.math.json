@@ -4,7 +4,18 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "f36cd8bb64120252ab7c1f264a6e4ca7bbb82c7e4fc56d2084401bf0bbcb02e7"
+  "input_sha256": "f36cd8bb64120252ab7c1f264a6e4ca7bbb82c7e4fc56d2084401bf0bbcb02e7",
+  "definitions": {
+   "CORREL": "d32e089eca1e2e92",
+   "COVARIANCE.P": "e71e13c9c442a2d5",
+   "FORECAST": "d32e089eca1e2e92",
+   "INTERCEPT": "d32e089eca1e2e92",
+   "PEARSON": "d32e089eca1e2e92",
+   "RSQ": "d32e089eca1e2e92",
+   "SLOPE": "d32e089eca1e2e92",
+   "STEYX": "d32e089eca1e2e92"
+  },
+  "arguments_sha256": "69308d01f1e863480b616bc0603c35db7955bde410dceaa5550c1074de8cd84a"
  },
  "sheets": {
   "Calc": {
