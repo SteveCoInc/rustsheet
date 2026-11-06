@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "5fadec0282eb5e80adb22efddf90af208d05089928ce63d0e7c8f0732a0ad23a"
+ },
+ "sheets": {},
+ "skipped": {
+  "Sheet1": {
+   "K4": {
+    "f": "=AMORLINC(2400,39679,39813,300,1E9,0.15,1)",
+    "why": "no single value"
+   },
+   "K5": {
+    "f": "=AMORDEGRC(2400,39679,39813,300,1E9,0.15,1)",
+    "why": "no single value"
+   }
+  }
+ }
+}
