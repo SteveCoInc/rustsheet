@@ -3,7 +3,7 @@ id: T-3577
 title: "BETA.DIST cdf is 0 at tiny shapes where Excel and the math are positive, and 0 where Excel is #NUM! at a huge beta"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
