@@ -3,7 +3,7 @@ id: T-4630
 title: "CONVERT mi to km and in to cm: Excel for the web is one ulp from the engine (calipers formulas_engineering D26, D27, J26, J27)"
 milestone: M9
 lane: functions-engineering
-status: done
+status: blocked
 priority: P3
 size: S
 tier: opus
@@ -39,6 +39,26 @@ Cells:
 
 ## Out of scope
 - The light-year and parsec factors (T-2047), unless the same rule fixes them.
+
+## Blocked because
+Blocked because: review-round limit
+
+The excel-fidelity review's round 3 (adopted by an opus run, 2026-11-06 22:25 UTC, on 8c46dc5f7; c396ece22 adds only
+a `make catch-up` merge) asked for changes. Design and security approved 8c46dc5f7. The open findings:
+- [MAJOR] Before this change, CONVERT between metre units (m to m, km to m, m to cm) returned the value scaled by
+  powers of ten from a factor of 1. With m = 1E10 it now computes `x*1E10/1E10`, which is one ulp off x for about 9%
+  of full-precision values, for example `CONVERT(7.42716535250082,"m","m")` gives 7.427165352500819, and
+  `CONVERT(3.70923578582955,"km","m")` changes the same way. No oracle cell covers this region: the fresh sweep has no
+  numeric cell with metre units on both sides, and the one non-round metre-to-metre literal cell in eval/suites
+  (t3861 `25292.7191962,"m","am"`) agrees under both bases. Gate A's `CONVERT(484.091427716597,"yd","yd")` =
+  484.0914277165971 shows same-unit calls go through the factor, so the model is plausible, but unprobed. Fix: add
+  10 to 15 excel-graph cells (m to m, km to m, m to cm, mm to km at 15-digit values where the two bases differ,
+  including the two above) to the sweep case or a small probe, and act on what they show.
+- [MINOR] engineering.md's Gate A note still says 188 of 200 CONVERT points are bit-exact. On this head
+  `rustsheet-eval accuracy` gives 194 of 200. The misses left are ym2/ly^2, Zga/daT, Reau/F, Ega/ga, ly2/mi2 and
+  ga/ga, and yd/yd is now exact.
+- [MINOR] The hold-out split and its margin were fixed after scoring (decision 0188 R4.1). The Outcome says so, and
+  the blind fresh sweep covers it. Do not repeat this ordering.
 
 ## Outcome
 - **Cause:** the factors, not the prefix step. Excel keeps distance in angstroms (m = 1E10), as it keeps area in
