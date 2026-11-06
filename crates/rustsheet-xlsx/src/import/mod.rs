@@ -63,6 +63,11 @@ use util::get_attribute;
 use workbook::load_workbook;
 use worksheets::load_sheets;
 
+/// The workbook's relationships part, which the importer reads and the export writes.
+pub(crate) const WORKBOOK_RELS_PART: &str = "xl/_rels/workbook.xml.rels";
+/// The package's content types.
+pub(crate) const CONTENT_TYPES_PART: &str = "[Content_Types].xml";
+
 /// A `<Relationship>` of a relationships part.
 pub(crate) struct Relationship {
     pub(crate) target: String,
@@ -74,7 +79,7 @@ pub(crate) struct Relationship {
 fn load_relationships<R: Read + Seek>(
     archive: &mut Package<R>,
 ) -> Result<HashMap<String, Relationship>, XlsxError> {
-    let file = archive.open("xl/_rels/workbook.xml.rels")?;
+    let file = archive.open(WORKBOOK_RELS_PART)?;
     Ok(parse_relationships(&XmlNode::parse(file)?)?
         .into_iter()
         .collect())
