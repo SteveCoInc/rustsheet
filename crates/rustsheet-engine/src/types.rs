@@ -178,6 +178,11 @@ pub struct DefinedName {
     pub name: String,
     pub formula: String,
     pub sheet_id: Option<u32>,
+    /// `<definedName hidden="1">`: Excel's Name Manager does not list the name, but formulas
+    /// still evaluate it. Kept so a saved workbook does not unhide it (T-3301).
+    pub hidden: bool,
+    /// `<definedName comment="...">`, the Name Manager comment, kept through a round trip.
+    pub comment: Option<String>,
 }
 
 /// * state:
