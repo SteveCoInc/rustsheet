@@ -3,7 +3,7 @@ id: T-4492
 title: "A space after the comma of a [ar-SA, 200] tag still picks the numeral system"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -22,8 +22,17 @@ Hypothesis to test first: the suffix is read like an extended-hex tag (formatter
   Owns probes/t4492-locale-comma-tag-shapes.case.json S!A2, S!A16, S!A20, S!A21 and S!A22.
 
 ## Acceptance criteria
-- [ ] probes/t4492-locale-comma-tag-shapes passes in full; the rule is in number-formats.md.
-- [ ] `make check` green; reviewers approve.
+- [x] probes/t4492-locale-comma-tag-shapes passes in full; the rule is in number-formats.md.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+Probed the suffix and locale shapes: probes/t4492-comma-suffix-reading (29 cells, excel-graph
+2026-11-06). The suffix after the comma is read with the extended-hex arithmetic, without its
+length limit and wrapping at 32 bits, and bits 8-15 pick the numeral system
+(locale_tag.rs `suffix_value`, sharing `extended_hex_digits` with `extended_hex`). Before the
+comma only a BCP-47 name, spaces trimmed, is a locale (`resolve_with`). probes/t4492-locale-
+comma-tag-shapes A2, A16, A20:A22 pass and both cases pass in full; the T-3891, T-4107 and
+text-locale-date-names probes still pass in full; 0 regressions.

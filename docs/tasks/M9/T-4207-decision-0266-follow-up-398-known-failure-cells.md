@@ -3,7 +3,7 @@ id: T-4207
 title: "Decision 0266 follow-up: 398 known-failure cells only dropped M14 tasks owned (342 FORECAST.ETS cells visibly off against the web's #N/A) are unowned and back in M9's Phase 1 rate"
 milestone: M9
 lane: harness
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -152,7 +152,7 @@ Mac golden and `#VALUE!` on the web (T-2182):
 - calipers/roundtrip/formula_stress_test/golden.xlsx (1): Information!B3
 
 ## Acceptance criteria
-- [ ] A decision record (`make new-decision`) rules how cells count when their only owner was dropped by decision 0266
+- [x] A decision record (`make new-decision`) rules how cells count when their only owner was dropped by decision 0266
       and excel-graph cannot settle them. At least two options are compared: (a) list them in
       eval/milestones/phase1-exceptions.tsv (and exit-exceptions.tsv where the exit row counts them), naming the new
       decision and no dropped task; (b) count them like any other visibly-off cell, so the four FORECAST.ETS functions
@@ -161,10 +161,10 @@ Mac golden and `#VALUE!` on the web (T-2182):
 - [ ] scripts/desktop_owned.py, exit_owners.py and the eval's `--desktop-owned` path either implement the ruling or are
       retired, with their tests updated. No code path depends on an open M14 task any more, since none can exist.
       The report's "M14-owned" column and the R7 wording follow the ruling.
-- [ ] The rows of phase1-exceptions.tsv and exit-exceptions.tsv that name T-1075 name an owner the ruling accepts
+- [x] The rows of phase1-exceptions.tsv and exit-exceptions.tsv that name T-1075 name an owner the ruling accepts
       (decision 0044: in the PR of that decision).
-- [ ] T-3004 is set to `dropped` with an Outcome that points here.
-- [ ] After `make eval`, `make unowned-off ALL=1` lists none of the cells above (each is owned or excepted by the
+- [x] T-3004 is set to `dropped` with an Outcome that points here.
+- [x] After `make eval`, `make unowned-off ALL=1` lists none of the cells above (each is owned or excepted by the
       ruling). eval/baseline is unchanged: no F line added or removed by this task.
 - [ ] `make check` green; reviewers approve.
 
@@ -172,3 +172,13 @@ Mac golden and `#VALUE!` on the web (T-2182):
 - Changing what the FORECAST.ETS family computes (decision 0221; decision 0266 rule 2).
 - gen-m9/fa25422d6f18c157 Calc!A75, which Excel gives as `#REF!` (T-4208).
 - Re-probing excel-graph (T-3641).
+
+## Outcome
+Decision 0308 (owner request, 2026-11-06) takes option (a): the 402 FORECAST.ETS-family cells that expect the web's
+`#N/A` and the 153 desktop-only CELL cells of the calipers goldens are lines of eval/milestones/phase1-exceptions.tsv,
+owned by T-4373 (now `blocked`: no oracle evidences them), and stay known failures. The rows of phase1-exceptions.tsv
+and exit-exceptions.tsv that named T-1075 now name T-4534. T-3004 is dropped. gen-m9/fa25422d6f18c157 Calc!A75 stays
+with T-4208. `make eval` on eab4b108: the Phase 1 rate leaves out 564 cells (CELL 149, FORECAST.ETS.STAT 51,
+.CONFINT 30, .SEASONALITY 31, FORECAST.ETS 34, plus the earlier 9); Gate B 462 of 506; `make phase1-exit` owners met
+(0 unowned). T-4207's other named cells (calipers math, text and engineering goldens, ironcalc-calc, poi) are owned by T-4534 and
+stay counted. Not done here: the code criterion (retire or rewrite decision 0143's M14-owned path), split to T-4527.

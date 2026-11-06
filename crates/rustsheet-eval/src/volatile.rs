@@ -628,6 +628,7 @@ mod tests {
             }],
             defined_names: Vec::new(),
             tables: Vec::new(),
+            pivots: Vec::new(),
         };
         let (scored, skipped) = scorable_cells(&snapshot, false);
         let scored: Vec<String> = scored.iter().map(|(_, a, _)| a.to_string()).collect();

@@ -91,8 +91,11 @@ by the case builder (`pivot_tables`, tools/src/rustsheet_tools/pivot.py); excel-
 cell as the builder does (the builder also writes the rendered cells into the sheet). probes/pivot-rendered-cells
 (T-2084) reads every cell of both pivots through `=P!A3` and `ISBLANK`; excel-graph opens the workbook and agrees with
 the layout (caption, `Row Labels`/`Column Labels`, items, aggregates, grand totals, West/C blank: `ISBLANK` true,
-reference 0). UNVERIFIED: whether Excel re-rendered the pivot under `refreshOnLoad` or kept the builder's cells, since
-the probe cannot tell the two apart (T-2327 adds a control with stale rendered cells).
+reference 0). Excel rebuilds a `refreshOnLoad` pivot's cache from its source on open and renders from it: a pivot
+whose cache record is stale shows the source's value (probes/t4128-pivot-spike R!B5 1004, T-4128;
+docs/excel-semantics/pivots.md). That pivot's area held no cells, though. UNVERIFIED: whether Excel overwrites
+rendered constants the original builder writes inside the pivot's own area, which this probe relies on; it needs a
+control with stale rendered cells (T-2327).
 Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081). Not probed: several data fields (the
 `Values` field), two row fields and their subtotals, filters, hidden items, dates and numbers as items, and
 pivots in tabular or outline form.
@@ -104,6 +107,7 @@ includes time-only dates if Excel writes them so), and a pivot whose data field 
 (`showDataAs`, such as % of total), whose index points past its cache, whose `axis` or `subtotal` is unknown, which has
 no `location` or not one `pivotField` per cache field, or whose parts are reached outside the package (absolute,
 escaping or External targets), twice, or through a duplicate `cacheId`: GETPIVOTDATA against it is `#REF!`.
+The fuzz target `pivot_import` feeds hostile pivot parts to this importer and GETPIVOTDATA (T-4133, decision 0312).
 UNVERIFIED: what Excel answers for each of these (presumably it computes them, refreshing a cache saved without
 records); a known gap, not a deviation. A cache `<d>` date is converted to the workbook's date system (T-2393); one before
 the 1904 epoch in a `date1904` workbook has no serial there and skips the cache like a pre-1900 date (UNVERIFIED: Excel's answer). The 1904 serial is the 1900 sum minus 1462, so a timestamp's fraction can differ by one ulp from the 1904 sum's; compute the date part in the target system before pivot date items are matched (T-2085). The 1904 values are derived from the 1462-day epoch offset, not from a 1904 pivot workbook.

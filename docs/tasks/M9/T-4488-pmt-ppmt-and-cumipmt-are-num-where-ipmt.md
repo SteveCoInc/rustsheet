@@ -3,7 +3,7 @@ id: T-4488
 title: "PMT, PPMT and CUMIPMT are #NUM! where IPMT's discounted balance fails (A past the double range, 1-Q subnormal, a subnormal rate)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -31,10 +31,17 @@ the rule (PPMT's `discounted_principal` past-range form, `PPMT(1E+307,7,292,1766
 PMT overflows).
 
 ## Acceptance criteria
-- [ ] The cells above pass, or the ones that do not are named with their owner; no other cell regresses
+- [x] The cells above pass, or the ones that do not are named with their owner; no other cell regresses
       (`make eval-baseline`).
-- [ ] financial.md records which of PMT, PPMT and CUMIPMT follow the rule.
-- [ ] `make check` green; reviewers approve.
+- [x] financial.md records which of PMT, PPMT and CUMIPMT follow the rule.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - IPMT (T-4314).
+
+## Outcome
+PMT (`compute_payment`), PPMT (`period_payments`) and CUMIPMT (`cumulative_of`) now return `#NUM!` where
+`discounted_fails` (the discounted balance `A` or factor `d` declines), the rule IPMT already had. All 7 cells
+of probes/t4314-ipmt-balance-overflow (B2, B4:B6, C7:C8, D3) pass; `make eval-baseline` shrank by those 7
+cells and refused nothing. The PPMT past-range `discounted_principal` cells stayed (no regression). CUMPRINC is
+unprobed there and unchanged. financial.md updated.

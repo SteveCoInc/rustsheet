@@ -13,7 +13,7 @@ from fractions import Fraction
 import mpmath
 
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import DomainError, Draw, MathArg, NoValueError
+from rustsheet_tools.accuracy.model import DomainError, Draw, MathArg, NoValueError, spend
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 DF_CUT = 1e10  # the cumulative functions' last valid (truncated) df (statistics.md Student-t df limits)
@@ -57,6 +57,8 @@ def zero_pole(args: Sequence[MathArg]) -> str | None:
 
 
 StratumDraws = dict[str, Callable[[random.Random], list[Arg]]]
+Shape = Callable[[random.Random], list[Arg]]
+"""One edge shape (or any one-stratum draw): rng → a whole point."""
 
 
 def domain_of(value: Callable[[Sequence[MathArg]], mpmath.mpf]) -> Callable[[Sequence[MathArg]], str | None]:
@@ -80,6 +82,29 @@ def by_stratum(draws: StratumDraws, doc: str) -> Draw:
 
     draw.__doc__ = doc
     return draw
+
+
+def by_stratum_with_edge(make: Draw, edge: Shape, doc: str) -> Draw:
+    """A `draw` taking the edge stratum from `edge` and every other stratum from `make(stratum, rng)` (an unknown
+    stratum is `make`'s log-uniform, as in `by_stratum`)."""
+
+    def one(stratum: str) -> Shape:
+        def draw(rng: random.Random) -> list[Arg]:
+            return make(stratum, rng)
+
+        return draw
+
+    draws: StratumDraws = {s: one(s) for s in ("typical", "tail", "extreme", "log-uniform")}
+    return by_stratum({**draws, "edge": edge}, doc)
+
+
+def any_edge(edges: Sequence[Shape]) -> Shape:
+    """An edge draw picking one of `edges` uniformly, then drawing it."""
+
+    def edge(rng: random.Random) -> list[Arg]:
+        return rng.choice(edges)(rng)
+
+    return edge
 
 
 def one_of(rng: random.Random, shapes: Sequence[Callable[[], list[Arg]]]) -> list[Arg]:
@@ -113,3 +138,23 @@ def signed_log_uniform(rng: random.Random, lo: float, hi: float, negative: float
     """A log-uniform magnitude in [lo, hi], negated with probability `negative` (the aggregate families' draws)."""
     x = log_uniform(rng, lo, hi)
     return -x if rng.random() < negative else x
+
+
+def sum_away_from_mode(
+    term: mpmath.mpf, j: mpmath.mpf, end: mpmath.mpf, step: int, ratio: Callable[[mpmath.mpf], mpmath.mpf]
+) -> mpmath.mpf:
+    """The sum of a log-concave pmf from count `j` (whose pmf is `term`) to `end`, moving away from the mode by
+    `step` (+1 or -1); `ratio(j)` is pmf(j + step) / pmf(j). The ratio falls monotonically away from the mode, so once
+    it is below 1 the rest of the sum is at most term * r / (1 - r) (a geometric bound) and the walk stops there.
+    Every term is charged to the work budget (BINOM.DIST.RANGE, T-3741; HYPGEOM.DIST, T-4105)."""
+    eps = mpmath.eps * 2**-10
+    total = term
+    while (j < end) if step > 0 else (j > end):
+        spend()
+        r = ratio(j)
+        term *= r
+        total += term
+        j += step
+        if r < 1 and term * r / (1 - r) <= eps * total:
+            break
+    return total

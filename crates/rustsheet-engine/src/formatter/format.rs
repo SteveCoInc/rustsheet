@@ -361,7 +361,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             let date_valid = ymd.is_some();
             // A Saka or Hebrew section of a date with no such date is `#VALUE!` even with only
             // time tokens (`TEXT(60.5,"[$-80409]h:mm")`; probes/t2779-hebrew-saka-more E5, E6).
-            if !date_valid && matches!(p.calendar, Some(Calendar::Saka | Calendar::Hebrew(_))) {
+            if !date_valid && matches!(p.calendar, Some(Calendar::Saka | Calendar::Hebrew)) {
                 return invalid_date(value);
             }
             let (ymd_year, ymd_month, ymd_day) = ymd.unwrap_or((0, 1, 0));
@@ -438,23 +438,42 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                             return invalid_date(value);
                         }
                         let weekday = excel_weekday_index(serial_1900);
-                        if let (Some(Calendar::Hebrew(adars)), Some(names)) = (p.calendar, p.names)
+                        if let (Some(Calendar::Hebrew), Some(names), leap_months) =
+                            (p.calendar, p.names, p.leap_months)
                         {
                             let month_name = !matches!(
                                 token,
                                 TextToken::DayName(..) | TextToken::DayNameShort(..)
                             );
-                            if month_name && adars.is_some() && ymd_year > HEBREW_LAST_NAMED_YEAR {
+                            if month_name
+                                && leap_months.is_some()
+                                && ymd_year > HEBREW_LAST_NAMED_YEAR
+                            {
                                 return invalid_date(value);
                             }
-                            if let Some(name) = hebrew_month_name(token, names, adars, serial_1900)
+                            if let Some(name) =
+                                hebrew_month_name(token, names, leap_months, serial_1900)
                             {
                                 text.push_str(name);
                                 continue;
                             }
                         }
-                        // Lunar months 13 and 14 take the twelfth name (`[$-110409]mmmm` of
-                        // 2024-01-11 is "十二月"; probes/text-locale-lunar-edges A26).
+                        // A month past the twelfth has no name when the months go by Gregorian
+                        // number, `mmmmm` printing U+0001 (`[$-80000]m|mmm|mmmm|mmmmm` of
+                        // 2024-09-20 is "13|||\u{1}"; probes/t2779-hebrew-saka-more E1); a lunar
+                        // calendar's own names give months 13 and 14 the twelfth (`[$-110409]mmmm`
+                        // of 2024-01-11 is "十二月"; probes/text-locale-lunar-edges A26).
+                        if ymd_month > 12 && p.months_by_number {
+                            let is_day = matches!(
+                                token,
+                                TextToken::DayName(..) | TextToken::DayNameShort(..)
+                            );
+                            if !is_day {
+                                let month_letter = matches!(token, TextToken::MonthLetter);
+                                text.push_str(if month_letter { "\u{1}" } else { "" });
+                                continue;
+                            }
+                        }
                         let month = ymd_month.min(12);
                         names.push(token, &mut text, p.names, locale, month, weekday);
                     }
@@ -611,7 +630,15 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     // rounded down (`##0.0E+0` on 123456.789 is "123.5E+3", on 61 "61.0E+0";
                     // `00.0E+0` on 36.5 "36.5E+0"; eval/suites/gen-m10, T-1730). A zero
                     // exponent carries no minus (`0.00E+00` on 1.5 is "1.50E+00").
-                    let group = f64::from(p.digit_count.max(1));
+                    // A grouping `,` in the mantissa makes the step at least 4 (`0,0E+0` and
+                    // `#,##0E+0` on 1234567.89 are "123E+4", `##,##0E+0` "12E+5";
+                    // probes/t4062-grouping-in-scientific; number-formats.md "Commas in
+                    // scientific formats").
+                    let group = f64::from(if p.use_thousands {
+                        p.digit_count.max(4)
+                    } else {
+                        p.digit_count.max(1)
+                    });
                     let exponent;
                     let mut shifted = false;
                     if group > 1.0 {

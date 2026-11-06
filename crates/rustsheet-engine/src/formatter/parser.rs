@@ -117,6 +117,10 @@ pub struct DatePart {
     pub b2_overridden: bool,
     /// The names from the section's first `mmm` on (`Localized::names_after_mmm`).
     pub names_after_mmm: Option<&'static DateNames>,
+    /// Whether the calendar's months go by Gregorian number (`Localized::months_by_number`).
+    pub months_by_number: bool,
+    /// A Hebrew leap year's month names (`Localized::leap_months`).
+    pub leap_months: Option<&'static [&'static str; 13]>,
     /// The digits of the section's locale tag (`locale_tag::numerals`).
     pub numerals: Numerals,
 }
@@ -393,6 +397,16 @@ impl Parser {
                         comma += 1;
                     } else if after_percent || (fraction.is_some() && !last_token_is_digit) {
                         tokens.push(TextToken::Literal(','));
+                    } else if last_token_is_digit
+                        && next_token_is_digit
+                        && is_scientific
+                        && !found_decimal_dot
+                    {
+                        // Excel: a `,` between exponent placeholders is #VALUE! when the mantissa
+                        // has no decimal point (`0E+0,0`, `0E+00,0`), and ignored when it has one
+                        // (`0.00E+0,0` is "1.23E+06"; probes/t4062-comma-in-exponent A1, A2, A16;
+                        // number-formats.md "Commas in scientific formats").
+                        return ParsePart::Error(ErrorPart::default());
                     } else if last_token_is_digit && next_token_is_digit && found_decimal_dot {
                         // Excel: a `,` between placeholders after the decimal point neither groups
                         // nor scales, even after a literal (`0.00|#,##0` on 1234567.89 is
@@ -885,6 +899,8 @@ impl Parser {
                 hijri,
                 b2_overridden,
                 names_after_mmm: localized.and_then(|l| l.names_after_mmm),
+                months_by_number: localized.is_some_and(|l| l.months_by_number),
+                leap_months: localized.and_then(|l| l.leap_months),
                 numerals,
             })
         } else {

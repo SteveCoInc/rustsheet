@@ -3,7 +3,7 @@ id: T-4064
 title: "ru-MD [819] and [F419] date names: lowercase month (and weekday under 819) where ru-RU capitalises"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -18,8 +18,19 @@ Found by T-3666/T-4480 (number-formats.md "LCIDs with no table of their own"). B
   Owns probes/t4480-lcid-sublanguage-fallback.case.json S!A17 and S!A91.
 
 ## Acceptance criteria
-- [ ] probes/t4480-lcid-sublanguage-fallback S!A17 and S!A91 pass; a probe covers the other names.
-- [ ] `make check` green; reviewers approve.
+- [x] probes/t4480-lcid-sublanguage-fallback S!A17 and S!A91 pass; a probe covers the other names.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+Probed every month and weekday under ru-MD (`[$-819]`, `[$-ru-MD]`), the Russian high sublanguages
+and ru-RU: probes/t4064-ru-md-names (72 cells, excel-graph 2026-11-06). ru-MD gets its own table
+(dotted short months, lowercase months and short weekdays; locale/variant_date_names.rs), and
+`[$-F419]`, `[$-F819]`, `[$-FC19]` get the month-case variants Excel prints (lowercase nominative,
+capitalised genitive, lowercase genitive) through `SUBLANGUAGE_VARIANTS`, which `locale_tag::table`
+reads after `LOCALES`. probes/t4480-lcid-sublanguage-fallback A17 and A91 pass; the new case passes
+in full; 0 regressions.
+
+Since T-4508 these names come from the generated locale tables; locale/variant_date_names.rs is gone.

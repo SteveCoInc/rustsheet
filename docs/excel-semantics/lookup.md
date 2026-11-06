@@ -109,8 +109,17 @@ Tasks: T-2660, T-2867
 Rule: `a1` is coerced like a logical argument: a nonzero number is TRUE (`INDIRECT("H2",2)` and
 `INDIRECT("H2",-1)` = 5, `"TRUE"` text = TRUE), `0` is FALSE, so `INDIRECT("H2",0)` reads "H2" as R1C1
 and is `#REF!`, while `INDIRECT("R2C8",0)` = 5. Empty-string text is `#VALUE!` in both styles (B4, B10) and `"x"` is `#VALUE!` in A1 style (B5).
-Not probed: `"FALSE"` text and booleans read from cells.
-Evidence: eval/suites/probes/cases/indirect-text-broadcast.case.json B3:B10 (oracle: excel-graph, 2026-10-05, T-0957).
+The same holds when a1 comes from a cell, a one-cell range or nowhere (T-4538):
+- Text is matched case-insensitively and exactly: `"FALSE"`, `"false"`, a cell holding the text `FALSE` or `false` are FALSE;
+  `"True"` and a cell holding the text `TRUE` are TRUE. Text with a space (`" TRUE"`, `"TRUE "`) and numeric text (`"1"`,
+  as a literal or from a cell) are `#VALUE!`: a1 never converts text to a number.
+- TRUE/FALSE, 0, 1, -0.5 and 0.5 in cells read as in a literal (0.5 and -0.5 are TRUE). An empty-text cell (`=""`) is
+  `#VALUE!`, like the literal `""`.
+- A blank cell, a one-cell range of a blank cell and an omitted a1 (`INDIRECT("H2",)`) are FALSE, so they read the text as
+  R1C1: `INDIRECT("H2",)` is `#REF!` and `INDIRECT("R2C8",)` is 5. Only a1 left out entirely (`INDIRECT("H2")`) is A1.
+- A one-cell range (`D2:D2`) reads as its cell. An error in the a1 cell is returned (`=NA()` gives `#N/A`).
+Evidence: eval/suites/probes/cases/indirect-text-broadcast.case.json B3:B10 (oracle: excel-graph, 2026-10-05, T-0957);
+probes/t4538-indirect-a1-cells B20:C43 (oracle: excel-graph, 2026-11-06, T-4538; rows listed in docs/research/t4538/predictions.md).
 Status: VERIFIED (Excel for the web only; the engine matches all of these)
 
 ## INDIRECT R1C1 relative offsets
@@ -911,10 +920,32 @@ or array of indexes is read whole as a list, whatever its orientation (`CHOOSECO
 array literal whole: `LOOKUP(2,{1,2,3},{4,5,6})` = 5, `LOOKUP(2,{1,2,3})` = 2, `XLOOKUP(2,{1,2,3},{4,5,6})` = 5,
 `XMATCH(2,{1,2,3})` = 2, `ROWS({1;2;3})` = 3, `COLUMNS({1,2})` = 2, `CHOOSEROWS({1;2;3},{1;3})` is 2x1,
 `TRANSPOSE({1,2,3})` is 3x1. INDEX of a single value is that value (`INDEX(LOOKUP(2,{1,2,3},{4,5,6}),1,1)` = 5,
-`INDEX(AREAS(A1:B3),1,1)` = 1). UNVERIFIED (not probed): OFFSET's cols, height and width, XLOOKUP/XMATCH search_mode,
-XLOOKUP's if_not_found, ADDRESS's sheet_text, INDIRECT's a1 and TRIMRANGE's trim_cols; which problem wins inside a
+`INDEX(AREAS(A1:B3),1,1)` = 1). Probed since (T-4543 checked each against its oracle cells): OFFSET's cols
+(`OFFSET(A1,0,{0,1})` is 1x2, probes/reference-lift-elements F1:H1, K4), height and width (`OFFSET(A1,0,0,{2;3})`,
+probes/t2065-lift-small E1, reference-lift-consumers-b2 E129, E137, E177, E193; `OFFSET(A1,0,0,1,{2;1})`,
+reference-lift-consumers E201), XLOOKUP/XMATCH search_mode (probes/xlookup-array-search-mode-indirect A11, A12, and the
+T-1958 XMATCH entry), INDIRECT's a1 (`INDIRECT("B1",{1})`, probes/t2577-indirect-ref-array A1:A22), TRIMRANGE's trim_cols
+(`TRIMRANGE(A1:B3,0,{0;1})`, probes/reference-lift-pass-through-b E7, E8), XLOOKUP's if_not_found and ADDRESS's
+sheet_text (probes/t4543-xlookup-not-found-address-sheet-lift; the entry "XLOOKUP's if_not_found and ADDRESS's
+sheet_text over an array" below). UNVERIFIED (not probed): which problem wins inside a
 CHOOSECOLS/CHOOSEROWS index list between uncoercible text and a later error, or between two errors (an error beats an
 out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible text's `#VALUE!` or the first error found at once).
+
+- **XLOOKUP's if_not_found and ADDRESS's sheet_text over an array** (T-4543; probes/t4543-xlookup-not-found-address-sheet-lift,
+  excel-graph, 2026-11-06; Data A1:A3 = 1, 2, 3, B1:B3 = 10, 20, 30, D1:D2 = "x", "y"). XLOOKUP's if_not_found does
+  not lift: with a scalar lookup_value a miss returns it whole (`XLOOKUP(9,A1:A3,B1:B3,{"p";"q"})` is 2x1 "p", "q"; a
+  1x2, a 2x2 and the range D1:D2 alike, A1:A29), a hit ignores it (`XLOOKUP(2,..,{"p";"q"})` is 1x1 20), an error
+  element is kept (`{"p";#N/A}`, A49:A50), and beside a 2-D return_array the miss is still the if_not_found shape
+  (A57). Under an array lookup_value, every missed element takes the array's first element, whatever its position or
+  the lengths (`XLOOKUP({2;9;7},..,{"p";"q"})` is 20, "p", "p"; `{9;2}` is "p", 20; A33:A43). A range if_not_found
+  there is kept as a reference element: the grid shows `#VALUE!` (A46), but `INDEX(..,2,1)` returns the range and
+  spills "x", "y" (W45:W46). Ours gives `#VALUE!` for that element (T-4563 owns W45, W46).
+  ADDRESS's sheet_text lifts like its other arguments: `ADDRESS(1,1,1,TRUE,{"S1";"S2"})` is 2x1 `'S1'!$A$1`,
+  `'S2'!$A$1` (a name that reads as a cell reference is quoted), a 1x2 and the range D1:D2 (`x!$A$1`, `y!$A$1`) alike,
+  beside a lifted row_num it pairs by position and pads with `#N/A` (`ADDRESS({1;2;3},1,1,TRUE,{"S1";"S2"})` third
+  element `#N/A`), an error element is that error, a number element is text (`'5'!$A$1`), and an empty text element
+  gives `!$A$1` (A69:A112). Ours matches every cell of the case but W45:W46.
+
 XLOOKUP's match_mode and search_mode both lift (probes/lookup-argument-modes; probes/xlookup-array-lookup-value-args;
 probes/xlookup-array-search-mode-indirect). An error lookup_value does not stop the lift when match_mode is an array: the
 result is still an array, so a blocked spill is `#SPILL!`. Real oracle cell (gen-m6/fe0972380d030e4a Calc!A224,

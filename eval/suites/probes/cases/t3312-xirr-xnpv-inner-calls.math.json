@@ -13,6 +13,16 @@
     "why": "beta^alpha overflows",
     "f": "=WEIBULL.DIST(0,1.5E+10,99999,FALSE)"
    },
+   "A12": {
+    "t": "e",
+    "why": "a date past 9999-12-31: #NUM!",
+    "f": "=XNPV(0.1,{-100;30;40;50},P!B1:B4)"
+   },
+   "A13": {
+    "t": "e",
+    "why": "a negative date or date 0: #NUM!",
+    "f": "=XNPV(0.1,{-100;30;40;50},P!C1:C4)"
+   },
    "A2": {
     "t": "n",
     "v": "0.0",
@@ -27,6 +37,11 @@
     "t": "e",
     "why": "beta^alpha overflows",
     "f": "=WEIBULL.DIST(1,1.5E+10,99999,FALSE)"
+   },
+   "A38": {
+    "t": "e",
+    "why": "a rate at or below 0: #NUM!",
+    "f": "=XNPV(0,{-100,60,70},P!I1:I3)"
    },
    "A4": {
     "t": "n",
