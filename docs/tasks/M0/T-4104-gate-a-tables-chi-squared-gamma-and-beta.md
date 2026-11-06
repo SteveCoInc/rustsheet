@@ -41,8 +41,9 @@ Every failing table point has an owner.
 - The other groups of decision 0272.
 
 ## Outcome
-- `defs/legacy_gamma_beta.py` registers CHIDIST, CHIINV, GAMMADIST, GAMMAINV and BETAINV as their modern Definitions
-  (CHISQ.DIST.RT, CHISQ.INV.RT, GAMMA.DIST, GAMMA.INV, BETA.INV) under the legacy name (`dataclasses.replace`, one
+- `defs/legacy_gamma_beta.py` registers CHIDIST, GAMMADIST, GAMMAINV and BETAINV as their modern Definitions
+  (CHISQ.DIST.RT, GAMMA.DIST, GAMMA.INV, BETA.INV); CHIINV's definition landed meanwhile as `gamma.CHIINV` (T-3337,
+  #3563), and its table here verifies against it with 0 differences under the legacy name (`dataclasses.replace`, one
   definition per concept), citing the T-1047 and T-1048 sweeps. BETADIST is BETA.DIST's cdf without the flag (its value
   and domain wrap BETA.DIST's with TRUE inserted; the bounds follow). tests/test_accuracy_legacy_gamma_beta.py checks
   Microsoft's published examples and the paired modern values.
