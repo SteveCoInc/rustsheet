@@ -91,6 +91,33 @@ pub struct CellResult {
     /// formula is stale and never attaches.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub math: Option<MathValue>,
+    /// The value the engine deliberately returns here: Excel's, or the 50-digit math where
+    /// decision 0188 R3 has it follow the math. Set once per run by
+    /// [`crate::r1c::mark_r3_math`], the test behind R1(c)'s [`crate::r1c::R1c::R3Pass`]. The
+    /// closeness buckets read it: a [`Target::Math`] cell is `r3_math`, not visibly off
+    /// (decision 0310).
+    #[serde(default, skip_serializing_if = "Target::is_excel")]
+    pub target: Target,
+}
+
+/// What a [`CellResult`]'s engine value is meant to match (decision 0310).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Target {
+    /// Excel's value: every cell but the ones below.
+    #[default]
+    Excel,
+    /// The 50-digit math, which the engine returns where decision 0188 R3 marks the cell and Excel
+    /// is more than G = 1e-4 off it ([`crate::r1c::r3_math`]).
+    Math,
+}
+
+impl Target {
+    /// Whether the cell is held to Excel's value (the serialized default).
+    #[must_use]
+    pub fn is_excel(&self) -> bool {
+        *self == Self::Excel
+    }
 }
 
 /// Where a [`CellResult`] comes from.
@@ -130,6 +157,7 @@ impl CellResult {
             graph_subnormal: false,
             kind: CellKind::Scored,
             math: None,
+            target: Target::Excel,
         }
     }
 
@@ -602,6 +630,7 @@ fn score(evaluated: &dyn Evaluated, expectations: &[Expectation], listed: bool) 
                 graph_subnormal,
                 kind: CellKind::Scored,
                 math: None,
+                target: Target::Excel,
             }
         })
         .collect()
@@ -653,6 +682,7 @@ fn refused(expectations: &[Expectation]) -> Vec<CellResult> {
             graph_subnormal: false,
             kind: CellKind::Scored,
             math: None,
+            target: Target::Excel,
         })
         .collect()
 }
