@@ -4695,6 +4695,35 @@ functions/financial/discount.rs; `day_count_basis_of` in financial/dates.rs, sha
 Status: VERIFIED (excel-graph)
 Tasks: T-2484
 
+## Discount securities and T-bills: amount domains (T-4112)
+Rule: with valid dates and basis, the amounts' domains are:
+- DISC: a price of 0 or below and a negative redemption are `#NUM!` (`DISC(43831,45494,0,104,0)`,
+  `DISC(1,45749,-1,107,2)`, `DISC(38874,46818,99,-1,3)`). A redemption of exactly 0 with a positive price is unprobed.
+- RECEIVED: a discount of 0 or below is `#NUM!` (`RECEIVED(38015,45886,14389,0)`, `RECEIVED(37603,46059,339731,-0.05)`),
+  and so is every `1 - discount*DIM/B` below 0, not only 0 itself ("Discount-security functions: settlement 0, basis and
+  argument modes" had inferred the "< 0" side): `RECEIVED(36767,46418,285642,0.05)` (26 years at 5%),
+  `RECEIVED(51445,51750,6463.56213591132,1.5,2)`.
+- PRICEDISC: a negative discount is `#NUM!` (`PRICEDISC(37716,46874,-0.5,107)`), as zero is in the entry above. A
+  price past the double range is `#NUM!` (`PRICEDISC(37415,44610,1E+10,1E+300)`).
+- TBILLEQ, TBILLPRICE: a negative discount is `#NUM!` even where the price is positive (`TBILLEQ(39427,39448,-0.5)`,
+  `TBILLEQ(45000,45315,-0.05)`). A discount of exactly 0 with valid dates is unprobed: the engine returns `#NUM!`.
+- DISC accepts settlement 0 like INTRATE, PRICEDISC and YIELDDISC (`DISC(0,366,95,100,0)` = 0.04986149584487539,
+  basis 4 0.050000000000000044: probes/discount-serial-zero A1:E2).
+Near a zero price, Excel's doubles decide which side of 0 the price falls on: `TBILLEQ(1000,1100,3.6)` and
+`TBILLPRICE(1000,1100,3.6)` are 0 because `3.6*100` is 360 in doubles, though the exact product of the double 3.6 and
+100 is just above 360, a negative price. So the Gate A definitions give no math value within cancellation of a zero
+price (defs/discount.py `_price_share`), and a math value of 0 or `#NUM!` only where the product is exact.
+Unprobed: a day count of 0 (30/360 from the 30th to the 31st of one month), where the engine returns `#DIV/0!`.
+Evidence: gen-m9 1dce4774f5c0e736 A227, A276; 31474c20fc1dafd6 A376, A241; 5c6a23c4f6597f1c A113; 30e20ba3302fea8b A49;
+6376e27be7a05871 A152, A8; 79d87fc527927626 A225; bc04c1f478c9896c A216; 01523d247594952e A152, A222, A278, A219, A163;
+probes/discount-serial-zero; accuracy/DISC/s1 A113, A122, A123, A129, A132; accuracy/RECEIVED/s1 A6, A8, A13, A14,
+A15, A22, A24, A30, A38, A67, A79, A112, A116, A118, A120, A131, A144 (1 - discount*DIM/B below 0, and amounts at most
+0); accuracy/PRICEDISC/s1 A112, A120, A125, A131, A132; accuracy/TBILLEQ/s1 A111, A135; accuracy/TBILLPRICE/s1 A128,
+A129 (excel-graph, 2026-11-06, T-4112). All 1,400 table points of the seven functions match these rules.
+Ours: matches (`discount_days`, `received_of`, `tbill_arguments` in functions/financial/discount.rs).
+Status: VERIFIED (excel-graph)
+Tasks: T-4112
+
 ## Booleans in ACCRINT, ACCRINTM, AMORLINC and AMORDEGRC (T-2455)
 Rule: a boolean is `#VALUE!`, typed or from a cell, in ACCRINTM's par (`ACCRINTM(34825,37622,1E-9,TRUE,4)`, A41, A54; text "2"
 is 2, A55), ACCRINT's issue, also before first_interest's error (`ACCRINT(TRUE,39500,..)`, `ACCRINT(TRUE,SQRT(-1),..)`, A52,
