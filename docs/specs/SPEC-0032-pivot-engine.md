@@ -7,7 +7,8 @@
     T-4165, T-4168, T-4169, T-4171, T-4174, T-4175, T-4176, T-4178, T-4182, T-4184, T-4186, T-4187,
     T-4188 and T-4506.
   - Tests: T-4132, T-4133, T-4155, T-4160, T-4177.
-  - Probes it waits on: T-4135, T-4161, T-4164, T-4170, T-4185, T-4505, T-4582, T-4583, T-4584, T-4585.
+  - Probes it waits on: T-2327, T-4130, T-4135, T-4161, T-4164, T-4170, T-4185, T-4505, T-4582, T-4583,
+    T-4584, T-4585, T-4586.
 
 ## Problem
 The engine keeps a loaded workbook's pivots read-only (SPEC-0015). It answers GETPIVOTDATA from the cache
@@ -73,7 +74,7 @@ design depends on:
     data field and no column field there is no Values row (t4137 K5). With Values on rows, the grand
     total reads `Total <data field>` (t4138 G6);
   - in tabular form the first row header is `Row Labels` while a non-axis field is compact, and which
-    fields decide is open (T-4583). Compact pivots show `Row Labels`;
+    fields decide is open (T-4583). Compact pivots left at the default show `Row Labels` (t4123 C, t4128 K, t4138);
   - `rowHeaderCaption`, `grandTotalCaption` and `dataCaption` apply (`colHeaderCaption` beside a real
     column field is T-4583's), and so do `missingCaption` and `errorCaption` (under Sum);
   - page fields are laid out with `pageWrap`; the sidecar capture window is confirmed by T-4584.
@@ -185,7 +186,8 @@ Every refresh dirties GETPIVOTDATA cells as SPEC-0015 requires.
 Reads the `PivotResult` for every PV1 shape (several data fields, page fields, hidden items, nested axes),
 with SPEC-0015's rules and T-2085's answers. The SPEC-0015 index is rebuilt by T-4154 as a lookup table
 over the result's nodes, built once per result. It keeps its role as the fast lookup, but folds nothing
-itself, so a cell and a GETPIVOTDATA call can never disagree and no second computation remains.
+itself, so a cell and a GETPIVOTDATA call never disagree on the accumulated value (the reading-side rules above
+still apply), and no second computation remains.
 
 ### Export (T-4176, T-4187)
 Writes the typed model plus the verbatim rest, the cache and records, and the result's `rowItems`/`colItems`
@@ -210,7 +212,8 @@ The facade keeps today's names and makes them public:
 - New: `Txn::set_pivot_table(sheet, name, &PivotTableInput)` and `Txn::refresh_pivot_table(sheet, name)`.
 - New: `Workbook::pivot_table(sheet, name) -> Option<PivotView>`.
 
-Pivot names are unique per sheet, so every call takes the sheet and the name. Each `Txn` change returns
+The engine keeps pivot names unique per sheet, which is its own rule and has not been probed against
+Excel, so every call takes the sheet and the name. Each `Txn` change returns
 the `ChangeSet` of the cells it wrote and cleared (api-design.md rule 2). The grid writer records them
 as it renders.
 
@@ -312,7 +315,7 @@ introducing it adds:
 3. T-4142: result tree.
 4. T-4147: layout lines.
 5. T-4149: cells.
-6. T-4151: grid and lifecycle.
+6. T-4151: grid and lifecycle (its refresh defaults follow T-4586).
 7. T-4152: the adapter renders through the engine, so the probes' pivot cells start passing.
 8. T-4154: GETPIVOTDATA over the result.
 9. PV2 and PV3 stages (T-4163, T-4165, T-4168, T-4169, T-4171, T-4174, T-4175), each after its probe
