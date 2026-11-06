@@ -1097,13 +1097,18 @@ orders by and a subtotal line shows, are `Grouping::class_rows`: the rows that r
 did (T-4359). T-4388 confirmed it out of sample on PIVOTBY's row axis (row subtotals, and a sort by the first value
 column with them) and on GROUPBY's subtotals under `sort_order` -1 and -2: its 120 B, C, F and G cells matched the
 engine's predictions committed before the fill; its D and E column subtotals matched in 45 of 60, the 15 misses all
-the unreached-class rule above (fixed). Not implemented: UNIQUE's drop of Bx after Cx Ay Ax, which removes a
+the unreached-class rule above (fixed). A class that records of another row line reach but no record of this line
+does is not unreached: its column subtotal shows this line nothing (an empty cell), as in transitive data. Over AyB
+CxB BxA AxC AxC of p p p q q, p's records 2 and 3 reach (`ab`&U+00AD, `x`) and q's do not, and that subtotal shows
+`2, 3` for p and nothing for q, ascending and with `col_sort_order` -1 (probes/t4414-pivotby-mixed-column-subtotal
+Calc!B1, C1); all 60 calls of that probe (30 seeded three-field runs, each with such a class in both orders) matched
+the engine's predictions committed before the fill (docs/research/t4414; T-4414). Not implemented: UNIQUE's drop of Bx after Cx Ay Ax, which removes a
 repeated leaf (T-4380) on these runs.
 The T-4195 per-field model this replaces was selected on its own cells without a hold-out; the tree model was
 chosen by T-4241 on seen values and confirmed by T-4342's hold-out (205 of 206 after the search revision, which
 was chosen on the hold-out and checked against all 234 earlier blocks; a structural choice, decision 0188 R4,
 not a fit).
-Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358, t4378, t4359 and t4388 fills, 2026-11-05) for the cells cited.
+Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358, t4378, t4359 and t4388 fills, 2026-11-05; t4414, 2026-11-06) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless
