@@ -515,8 +515,8 @@ the exponent about 1E-14 high; no tried order of a LN(y), y and GAMMALN(50) in d
 ratio form, Loader's saddle point or `rcomp`, reproduces it (13 to 435 ulp off).
 Where a*LN(y) is below EXP's underflow the form is 0 though the true density is a normal double: at shape 2,
 `GAMMA.DIST(1E-250,2,1,FALSE)` and `(1E-200,2,1,FALSE)` are 0 against about 1E-250 and 1E-200 (probes/t2753-gamma-density-
-ratio-sweep A14, A15; A13 at 1E-300 too), relative error 1 against the T-3925 math sidecars; an R3 candidate for the owner
-(T-4392), not marked.
+ratio-sweep A14, A15; A13 at 1E-300 too), relative error 1 against the T-3925 math sidecars; an R3 candidate the owner ruled
+to keep Excel's (decision 0300, T-4392), not marked.
 Implemented in: functions/statistical/gamma.rs `log_form_density` (GAMMA.DIST, GAMMADIST, and CHISQ.DIST through
 chisq.rs).
 Status: VERIFIED for the forms (every probed density the form moves ends 0 to 2 ulp from Excel; UNVERIFIED from y = 2
@@ -629,7 +629,7 @@ What the probes show about the kernel itself (none of it yet reproduces Excel bi
     Because both values are rounded first, Excel's `ERF(a,b)` is more than 1e-4 relative off erf(b) - erf(a)
     wherever the two nearly cancel: 602 of the 915 two-argument cells of probes-numeric `t1916-erf-wrappers` are,
     up to 3.28 relative. For example, `ERF(0.5000000000000002,0.5000000000000003)` is -2.220446049250313E-16
-    against the math's +9.756E-17. The engine matches Excel there until the owner rules on R3 (T-3794).
+    against the math's +9.756E-17. The engine matches Excel there; the owner ruled to keep Excel (decision 0300, T-3794).
 - Generic shape a: at z = m*2^-60, `GAMMA.DIST(z,a,1,TRUE)` for a = 2, 3, 10 is off by up to 640E-16
   relative, and that error follows the rounding of fl(a*fl(ln z)) to within about 2E-16 (the docs/research
   script prints both). For a = 10 a constant -25E-16 remains, the error of Excel's own
