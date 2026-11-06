@@ -344,9 +344,7 @@ Evidence: none beyond probes/t4128-pivot-spike S (a constant in the body, no pag
 Status: UNVERIFIED (probe pending: T-4664; T-2327 for constants in a refreshOnLoad pivot's area;
 T-4712 for field indices in verbatim parts under a renumbering)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`owned_areas`, `meets_foreign`,
-`remap`, `PivotBudget`; T-4151)
-Implemented in: crates/rustsheet-engine/src/pivot/model.rs (`OpaqueEntry::holds_field_index`;
-T-4694)
+`remap`, `PivotBudget`; T-4151) and model.rs (`OpaqueEntry::holds_field_index`; T-4694)
 
 ## A tabular pivot's first row header is the field name only when every pivotField has compact="0"
 Rule: in a tabular pivot, the header cell of the first row field reads the field's own name (`Region`)
