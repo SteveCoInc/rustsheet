@@ -3,7 +3,7 @@ id: T-4423
 title: "SINH, COSH, SECH and CSCH between ln(DBL_MAX) and 710.48: probe whether Excel's #NUM! starts where e^x overflows (the engine's cut) or where sinh itself does"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
