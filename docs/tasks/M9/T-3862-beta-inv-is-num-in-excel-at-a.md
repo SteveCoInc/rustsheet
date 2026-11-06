@@ -74,11 +74,11 @@ Second fill (excel-graph, 2026-11-06): Q1 and Q2 hold. A, B, C and the flipped D
   BETA.INV reports as `#NUM!`). Unit test `quantile_is_nan_once_the_square_of_as109_first_shape_overflows`.
 - Gate A: all 12 BETA.INV/s1 lines and 12 of the 13 BETAINV/s1 lines owned here pass and are removed from
   eval/accuracy/known-failures.tsv (412 known failures, 0 failing). BETAINV/s1 A179 (alpha 1.55E+145, beta
-  4.2E+128) is below the cut: re-pointed to T-4699.
+  4.2E+128) is below the cut: re-pointed to T-4713.
 - Probes: probes/t3862-beta-inv-sqrt-dbl-max (80 cells) and t3862-beta-inv-huge-alpha (44 cells), predictions
   committed before each fill. A fill with BETA.INV(0.1,alpha,1E+100) at alpha 1E+110 to 1E+160 never finished
   (createSession retries exhausted), so those columns were dropped.
-- Follow-ups (open; T-4699 campaign: semantics, T-4700 campaign: visible): T-4699 (`#NUM!` with beta above 1 from alpha about 1E+16; the start-rounds-to-1 and
+- Follow-ups (open; T-4713 campaign: semantics, T-4700 campaign: visible): T-4713 (`#NUM!` with beta above 1 from alpha about 1E+16; the start-rounds-to-1 and
   quantile-rounds-to-1 rules refuted), T-4700 (Excel's 0.999999 and 1 - 1/e below the cut at a tiny beta, an unmoved
   AS 109 start; and E1:E6, ours 0.5% off at a huge second shape). They own the probes' off cells.
 - statistics.md: new entry "BETA.INV is #NUM! once the square of AS 109's first shape overflows (T-3862)"; the

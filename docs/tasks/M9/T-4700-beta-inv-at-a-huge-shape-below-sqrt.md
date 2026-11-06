@@ -44,4 +44,4 @@ is reproducing Excel's own AS 109 start and stop (task-format.md: campaign `visi
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- The `#NUM!` above sqrt(DBL_MAX) (T-3862) and at a beta above 1 (T-4699).
+- The `#NUM!` above sqrt(DBL_MAX) (T-3862) and at a beta above 1 (T-4713).

@@ -6816,7 +6816,7 @@ stays the second shape, is a number on both sides (5.85776711227727E-157) and so
 - Not this rule: with beta above 1 Excel is `#NUM!` far lower. `BETA.INV(1E-10,a,10)` is 0.9999999999999956 at
   a = 1E+16 and `#NUM!` from 1E+18 (where AS 109's start pp/(pp + qq exp(2w)) rounds to 1), but `BETA.INV(0.1,a,2)` is
   `#NUM!` from 1E+16, where that start is 0.9999999999999996 and the quantile about 1 - 3.9E-16, so "the start rounds
-  to 1" is refuted as the rule; BETAINV/s1 A179 (alpha 1.55E+145, beta 4.2E+128) is in this class (T-4699).
+  to 1" is refuted as the rule; BETAINV/s1 A179 (alpha 1.55E+145, beta 4.2E+128) is in this class (T-4713).
 - Below the cut, at beta 1E-100 or 0.5, Excel's values are not the crossing: 0.999999 at p = 1E-10 and 0.4, and
   0.6321205588285577 = 1 - 1/e at p = beta = 1E-100, for every alpha from 1E+110 to 1.34E+154 (likewise
   accuracy/BETA.INV/s1 A183, 0.999999 at alpha 3.4E+20). 1 - exp(-p/beta) is AS 109's start for a tiny second
@@ -6828,9 +6828,9 @@ before each fill (task file). Fills with `BETA.INV(0.1,alpha,1E+100)` at those a
 retries exhausted).
 Ours: `#NUM!` from the cut since T-3862 (functions/statistical/beta.rs `first_shape_square_overflows`); below it
 1 - 2^-53 where Excel has 0.999999 or 1 - 1/e, and 5.888648679911079E-157 where Excel has 5.85776711227727E-157
-(T-4700); a number where beta is above 1 (T-4699).
+(T-4700); a number where beta is above 1 (T-4713).
 Status: VERIFIED (excel-graph) for the cut; the expression that squares pp UNVERIFIED
-Tasks: T-3862, T-4699, T-4700
+Tasks: T-3862, T-4713, T-4700
 
 ## F.INV.RT saturates at 3.696066238512854E+150/df1 in the far tail (T-2435)
 Rule: for a probability far in the tail and a df2 below 2, Excel's F quantile search stops at a
