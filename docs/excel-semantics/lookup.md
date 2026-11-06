@@ -1336,7 +1336,7 @@ call's result), not a value. What the caller sees depends on who reads the eleme
   T-2299 owns the difference).
 - XMATCH's search_mode lifts too, as a value (for the array modes only the second element is probed, `INDEX(…,2,1)`): it is 2 in
   `XMATCH(2,A1:A3,0,{1;-1})` and 3 in `XMATCH(2,{1;2;2},0,{2;-2})`; an invalid mode element is `#VALUE!` in its slot
-  (`{1;3}`); a boolean range element counts as its number (TRUE is 1). The first array-mode elements are unprobed, as is an error lookup_value next to a lifted search_mode (`XMATCH(NA(),A1:A3,0,{1;-1})`, implemented as a 2x1 of `#N/A` by analogy with MATCH's match_type, UNVERIFIED). Implemented (T-1958): `fn_xmatch` lifts search_mode with lookup_value and match_mode.
+  (`{1;3}`); a boolean range element counts as its number (TRUE is 1). The first array-mode elements follow the same rule (T-4544, probes/t4544-xmatch-error-modes A136:A169): `XMATCH(2,A1:A3,{9;0})` and `XMATCH(2,A1:A3,0,{3;1})` are `#VALUE!` then 2, `INDEX(…,1,1)` of `XMATCH(2,A1:A3,{0;1})` and `XMATCH(2,A1:A3,0,{1;-1})` is 2. An error lookup_value beats every lifted mode element, valid or not: `XMATCH(NA(),A1:A3,0,{1;-1})` is a 2x1 of `#N/A`, and so are `{9;8}` as match_mode, `{3;5}` as search_mode, both modes as arrays at once and a 2-cell range of modes in place of either array; `1/0` and a cell holding `#N/A` give their own error the same way (t4544-xmatch-error-modes A1:A133, hold-out t4544-xmatch-error-modes-holdout, excel-graph 2026-11-06). Implemented (T-1958): `fn_xmatch` lifts search_mode with lookup_value and match_mode.
 - ERROR.TYPE and ISERROR of an INDEX pick whose multi-cell element cannot spill are the cell's `#SPILL!`, not a code or
   TRUE (`ERROR.TYPE(INDEX(OFFSET(A1,0,0,{1;2}),2,1))`, `ISERROR(INDEX(TRIMRANGE(A1:B5,{0;1}),2,1))`; F11, G11, H11).
 Evidence: probes/reference-lift-elements (excel-graph, 2026-10-19, T-1810); probes/lookup-argument-modes F14:H15,
@@ -1707,5 +1707,14 @@ XMATCH with search_mode = Data!G9 (#DIV/0!): when match_mode converts to a numbe
 (315644f84093cf49 A292:B293, 75b38d80dd3152b2 A388 A448 A544); non-numeric text in match_mode still wins with #VALUE! (315644f84093cf49 A64, 75b38d80dd3152b2 A598).
 Evidence: gen-m6 21db5363d711888d, ad47b47c4e97019d, 315644f84093cf49, 75b38d80dd3152b2 (excel-graph).
 Ours: matches all of these cells (T-3667, a one-cell error reference in arrays.md; T-3542: XMATCH reports an out-of-range numeric match_mode only after search_mode's cast error).
-Status: UNVERIFIED (probe pending; cells are oracle values, the general rule is not probed)
-Tasks: T-3667, T-3542
+Probed for XMATCH by T-4544 (probes/t4544-xmatch-error-modes A172:A364, excel-graph 2026-11-06; a generated hold-out,
+t4544-xmatch-error-modes-holdout, with its predictions frozen in docs/research/t4544 before the fill). The order for a scalar
+search_mode that is an error (a literal `#N/A`, `NA()`, `1/0`, a cell holding `#N/A` or `#DIV/0!`): an error match_mode
+wins first, with its own error (`XMATCH(2,A1:A3,NA(),1/0)` is #N/A, A277; `XMATCH(2,A1:A3,1/0,NA())` is #DIV/0!, A241);
+then a match_mode that does not convert to a number (`"x"`, `""`) gives #VALUE! (A187, A190, A265, A343); otherwise the
+search_mode's error is the result, whether match_mode is valid (0), out of range (9, -2.5, numeric text "12"),
+numeric text "1", TRUE or a blank cell (A172:A184, A193, A196, A250:A274, A328:A352). So search_mode is read before
+match_mode's range check, and match_mode's own cast comes before both. The CHOOSEROWS and CHOOSECOLS rule above rests on
+the gen-m6 cells only.
+Status: VERIFIED (excel-graph)
+Tasks: T-3667, T-3542, T-4544

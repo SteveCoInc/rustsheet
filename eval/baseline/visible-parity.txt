@@ -289,6 +289,7 @@ probes/t4554-api-name-scoped-name-choice.case.json	9
 probes/t4582-pivot-item-edges.case.json	40
 probes/t4583-pivot-row-labels.case.json	165
 probes/t4589-pivot-total-order.case.json	80
+probes/t4614-pivot-total-order-2.case.json	97
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1
