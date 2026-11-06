@@ -48,10 +48,15 @@ fn fetch_git(spec: &FetchSpec, rev: &str, dest: &Path) -> Result<()> {
 fn sha256_hex(path: &Path) -> Result<String> {
     let mut hasher = Sha256::new();
     io::copy(&mut fs::File::open(path)?, &mut hasher)?;
-    Ok(hasher.finalize().iter().fold(String::new(), |mut acc, b| {
+    Ok(hex(&hasher.finalize()))
+}
+
+/// `bytes` as lowercase hex digits.
+pub(crate) fn hex(bytes: &[u8]) -> String {
+    bytes.iter().fold(String::new(), |mut acc, b| {
         let _ = write!(acc, "{b:02x}");
         acc
-    }))
+    })
 }
 
 /// Zip-bomb guard (CLAUDE.md directive 5): the public API's per-package limit, so one

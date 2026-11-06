@@ -429,3 +429,25 @@ accuracy/BETAINV/s1!Calc!A94	T-3351	BETAINV (as BETA.INV): the quantile rounds t
 accuracy/BETAINV/s1!Calc!A97	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
 accuracy/BETAINV/s1!Calc!A99	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
 accuracy/CHIINV/s1!Calc!A93	T-3364	CHIINV R3 closed-form point (decision 0318): Excel's Wilson-Hilferty value, 2.66e-4 off the math; the engine 1.7e-13 from Excel
+accuracy/LINEST/s1!Calc!A85	T-2006	the engine's normal-equations solve on an ill-conditioned design is 2e-05 relative off the math; Excel is 3e-15 off it
+accuracy/LINEST/s1!Calc!A87	T-2006	the engine's normal-equations solve on an ill-conditioned design is 0.06 relative off the math; Excel is 1e-13 off it
+accuracy/LINEST/s1!Calc!A93	T-2006	the engine's normal-equations solve on an ill-conditioned design is 1e-05 relative off the math; Excel is 1e-13 off it
+accuracy/LINEST/s1!Calc!A98	T-2006	the engine's normal-equations solve on an ill-conditioned design is 0.003 relative off the math; Excel is 8e-15 off it
+accuracy/LINEST/s1!Calc!A100	T-2006	the engine's normal-equations solve on an ill-conditioned design is 1e-05 relative off the math; Excel is 2e-12 off it
+accuracy/LINEST/s1!Calc!A102	T-2006	the engine's normal-equations solve on an ill-conditioned design is 7e-09 relative off the math; Excel is 1e-08 off it
+accuracy/LINEST/s1!Calc!A103	T-2006	the engine's normal-equations solve on an ill-conditioned design is 1 relative off the math; Excel is 1e-12 off it
+accuracy/LINEST/s1!Calc!A104	T-2006	the engine's normal-equations solve on an ill-conditioned design is 0.002 relative off the math; Excel is 9e-12 off it
+accuracy/LINEST/s1!Calc!A110	T-2006	the engine's normal-equations solve on an ill-conditioned design is 3e-09 relative off the math; Excel matches the math
+accuracy/LINEST/s1!Calc!A129	T-2006	the engine's normal-equations solve on an ill-conditioned design is 6e-08 relative off the math; Excel is 2e-14 off it
+accuracy/LINEST/s1!Calc!A187	T-2006	the engine's normal-equations solve on an ill-conditioned design is 3e-06 relative off the math; Excel is 5e-16 off it
+accuracy/LOGEST/s1!Calc!A81	T-2006	the engine's normal-equations solve on an ill-conditioned design is 0.0005 relative off the math; Excel is 2e-10 off it
+accuracy/LOGEST/s1!Calc!A82	T-2006	the engine's normal-equations solve on an ill-conditioned design is 6e-07 relative off the math; Excel is 8e-07 off it
+accuracy/LOGEST/s1!Calc!A86	T-2006	the engine's normal-equations solve on an ill-conditioned design is 0.0001 relative off the math; Excel is 9e-09 off it
+accuracy/LOGEST/s1!Calc!A98	T-2006	the engine's normal-equations solve on an ill-conditioned design is 2e+01 relative off the math; Excel is 3e-06 off it
+accuracy/LOGEST/s1!Calc!A103	T-2006	the engine's normal-equations solve on an ill-conditioned design is 3e-07 relative off the math; Excel is 6e-13 off it
+accuracy/LOGEST/s1!Calc!A110	T-2006	the engine's normal-equations solve on an ill-conditioned design is 2e-09 relative off the math; Excel is 1e-08 off it
+accuracy/TREND/s1!Calc!A94	T-2006	the engine's normal-equations solve on an ill-conditioned design is 4e-07 relative off the math; Excel matches the math
+accuracy/TREND/s1!Calc!A98	T-2006	the engine's normal-equations solve on an ill-conditioned design is 2e-09 relative off the math; Excel matches the math
+accuracy/TREND/s1!Calc!A193	T-2006	the engine's normal-equations solve is #NUM! on data from 1E-45 to 1E+49 (absolute pivot test); Excel matches the math
+accuracy/GROWTH/s1!Calc!A97	T-2006	the engine's normal-equations solve on an ill-conditioned design is 2e-09 relative off the math; Excel is 1e-15 off it
+accuracy/GROWTH/s1!Calc!A104	T-4590	Excel #NUM! where the ln fit's intercept e^1289.95 is past the double range; the engine and the math are 8.1E-18

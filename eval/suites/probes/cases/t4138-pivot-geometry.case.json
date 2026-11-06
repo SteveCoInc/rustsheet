@@ -1,0 +1,351 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4138: pivot layout geometry, each sheet one builder-v2 pivot anchored at B4 (B8 for G8) that Excel lays out on open; the sidecar's `pivots` section records Excel's location, firstHeaderRow/firstDataRow/firstDataCol, page counts, rowItems/colItems and every cell. G1 compact 1 row field; G2 compact 2 row fields and a column field; G3 outline 2 row fields and 2 data fields (Values on columns); G4 tabular 3 row fields; G5 compact 1 row field and 2 column fields; G6 compact with the Values field on rows; G7 a column field only; G9 three data fields and no axis field; G8 three page fields wrapped two per row (pageWrap 2, pageOverThenDown), for the page-area capture window. Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4138",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Channel",
+    "D1": "Sales",
+    "E1": "Units",
+    "A2": "East",
+    "B2": "A",
+    "C2": "Web",
+    "D2": 10,
+    "E2": 1,
+    "A3": "West",
+    "B3": "A",
+    "C3": "Store",
+    "D3": 20,
+    "E3": 2,
+    "A4": "East",
+    "B4": "B",
+    "C4": "Web",
+    "D4": 5,
+    "E4": 3,
+    "A5": "West",
+    "B5": "B",
+    "C5": "Web",
+    "D5": 7,
+    "E5": 4,
+    "A6": "East",
+    "B6": "C",
+    "C6": "Store",
+    "D6": 3,
+    "E6": 5,
+    "A7": "East",
+    "B7": "A",
+    "C7": "Store",
+    "D7": 4,
+    "E7": 6
+   }
+  },
+  {
+   "name": "G1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PG1",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "G2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PG2",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Channel"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "G3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PG3",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Channel": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "G4",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PG4",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [
+       "Region",
+       "Product",
+       "Channel"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Channel": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "G5",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PG5",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Product",
+       "Channel"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "G6",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PG6",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "rows": [
+       "Region",
+       "Values"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "G7",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PG7",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "columns": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "G9",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PG9",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       },
+       {
+        "field": "Sales",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "G8",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PG8",
+     "source": "Data!A1:E7",
+     "location": "B8",
+     "definition": {
+      "table": {
+       "pageWrap": 2,
+       "pageOverThenDown": true
+      },
+      "pages": [
+       {
+        "field": "Region"
+       },
+       {
+        "field": "Product"
+       },
+       {
+        "field": "Channel"
+       }
+      ],
+      "rows": [],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=SUM(Data!D2:D7)"
+   }
+  }
+ ]
+}
