@@ -99,6 +99,8 @@ Evidence: probes/t4582-pivot-item-edges (excel-graph, 2026-11-06, T-4582):
 
 Status: VERIFIED (excel-graph) for the cells and items above. The casing rule's deciding property and
 the appended items' type are UNVERIFIED (probe pending: T-4612).
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader::push` relabels the reused
+slot; `ItemKey::identity` keeps date items apart from cached numbers)
 
 ## Shared-item flags Excel accepts for mixed fields
 Rule: Excel for the web refuses a cache whose `sharedItems` flags contradict its items. The flags that
@@ -454,3 +456,5 @@ Open (T-4627):
 
 Status: VERIFIED (excel-graph) for the names above; the open points are UNVERIFIED (probe pending:
 T-4627)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`field_names`, position-in-source
+reading of n)
