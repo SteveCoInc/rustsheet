@@ -369,24 +369,77 @@ fn picked_denominator(code: &str, picked: &str, question_numerator: bool) -> (St
 /// `# ?/4|?|?` on 0.5 is " 1/4| |0", `# ?/4|?|?|#` " 1/4| |0|00", `# ?/16|?|?` " 1/1 |0| ",
 /// `# ?/100|#|?|?` " 1/1  ||0|0", `# ?/4 ? 0` on 0.0625 " 1/4 6 00" (probes/t4043-separated-slots
 /// A12, A24, A36, A71; number-formats.md "Placeholders after a fraction"). Commas print nothing.
+///
+/// A `.` among them splits them like a number's point (T-4594). Before it, a `?` that is the last
+/// placeholder takes every spilled digit left (`# ?/7 ?.0` on 0.0123 is " 123/7 0000.0"). After
+/// it nothing spills and nothing owed is paid: each placeholder prints a zero for a lacking digit
+/// (leaving the space due as it was); else a zero for each `?` in a row before the point that
+/// printed a space (`# ?/7|??.#|#` on 0.5 is " 1/7|  .0|0"), and a space becomes due; else, when
+/// a space is due, its blank (a space for `?`,
+/// nothing for `#`, a zero for `0`) and the space stays due; else a zero, and a space becomes
+/// due. A blank ends the space due before anything but a placeholder of its own kind:
+/// `# ?/7|?.##` on 0.0123 is " 123/7|0000.", `.#?` " 123/7|0000.0", `.0#` " 123/7|0000.00",
+/// `# ?/7|0.0#` " 123/7|00000.0" (probes/t4594-fraction-tail-point-explore rows 3, 6, 2, 22).
 fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
     let HandedOn {
         spilled,
         mut lacking,
     } = handed_on;
     let mut spilled = spilled.into_iter();
+    let point = tokens.iter().position(|t| matches!(t, TextToken::Period));
+    let takes_all = point.and_then(|p| {
+        tokens[..p]
+            .iter()
+            .rposition(|t| matches!(t, TextToken::Digit(_)))
+    });
     let (mut owed, mut due, mut after_space) = (0_usize, true, false);
+    // The `?`s in a row before the point that printed a space: as many zeros start the decimals.
+    let mut spaces = 0_usize;
+    // The kind of the decimal-side placeholder that just printed its blank.
+    let mut blank_kind: Option<char> = None;
     let mut printed = Vec::new();
-    for token in tokens {
+    for (index, token) in tokens.iter().enumerate() {
         let TextToken::Digit(digit) = token else {
-            if after_space {
+            if after_space || blank_kind.is_some() {
                 due = false;
                 after_space = false;
+                blank_kind = None;
             }
             continue;
         };
+        if point.is_some_and(|p| index > p) {
+            if blank_kind.is_some_and(|kind| kind != digit.kind) {
+                due = false;
+            }
+            blank_kind = None;
+            let text = if lacking > 0 {
+                lacking -= 1;
+                "0"
+            } else if spaces > 0 {
+                spaces -= 1;
+                due = true;
+                "0"
+            } else if due {
+                blank_kind = Some(digit.kind);
+                match digit.kind {
+                    '?' => " ",
+                    '#' => "",
+                    _ => "0",
+                }
+            } else {
+                due = true;
+                "0"
+            };
+            printed.push(text.to_owned());
+            continue;
+        }
         let text = if digit.kind == '?' {
-            let text = if let Some(d) = spilled.next() {
+            let text = if takes_all == Some(index) && spilled.len() > 0 {
+                let rest: String = spilled.by_ref().collect();
+                owed += rest.chars().count();
+                due = true;
+                rest
+            } else if let Some(d) = spilled.next() {
                 owed += 1;
                 due = true;
                 d.to_string()
@@ -401,9 +454,10 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
                 "0".to_owned()
             };
             after_space = text == " ";
+            spaces = if after_space { spaces + 1 } else { 0 };
             text
         } else {
-            (due, after_space) = (false, false);
+            (due, after_space, spaces) = (false, false, 0);
             if lacking > 0 {
                 lacking -= 1;
                 if digit.kind == '0' { "0" } else { "" }.to_owned()
