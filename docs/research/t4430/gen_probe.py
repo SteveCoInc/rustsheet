@@ -22,7 +22,7 @@ NAMES = {
     "nPlus": "=+3",
     "nNN": "=--3",
 }
-SUPPORT = {"n1": "={3}", "nR": "={3,4}", "nC": "={3;4}", "n2d": "={1,2;3,4}", "nRel": "=Sheet1!Z3"}
+SUPPORT = {"nOne": "={3}", "nRow": "={3,4}", "nCol": "={3;4}", "n2d": "={1,2;3,4}", "nRel": "=Sheet1!Z3"}
 SHAPES = [
     "{n}",
     "ABS({n})",
@@ -36,13 +36,13 @@ SHAPES = [
     "SUM(IF(TRUE,INDEX(Z1:Z6,{n})))",
 ]
 INDEXES = [
-    "INDEX(n1,1,1)",
-    "INDEX(n1,1)",
-    "INDEX(nR,1,2)",
-    "INDEX(nC,2,1)",
-    "INDEX(nR,1)",
-    "INDEX(nR,2)",
-    "INDEX(nC,1)",
+    "INDEX(nOne,1,1)",
+    "INDEX(nOne,1)",
+    "INDEX(nRow,1,2)",
+    "INDEX(nCol,2,1)",
+    "INDEX(nRow,1)",
+    "INDEX(nRow,2)",
+    "INDEX(nCol,1)",
     "INDEX(n2d,5,5)",
     "INDEX(n2d,1,1,1)",
     "INDEX(n2d,1,5)",
@@ -83,7 +83,7 @@ def main() -> None:
         "format": "rustsheet-case/v1",
         "description": (
             "T-4430: legacy (no cm) formulas over the defined-name bodies T-3856 left unprobed, which show the "
-            "implicit-intersection @. Z1:Z6 = 1..6; n1 ={3}, nR ={3,4}, nC ={3;4}, n2d ={1,2;3,4}. One name per "
+            "implicit-intersection @. Z1:Z6 = 1..6; nOne ={3}, nRow ={3,4}, nCol ={3;4}, n2d ={1,2;3,4}. One name per "
             f"row from 30: {rows}. nRel is relative (stored relative to A1): each value column's shifted cell on row "
             "32 (Z32, AB32, ..., AR32) holds 2. Columns (value, FORMULATEXT beside it) as t3856-legacy-at-name-body: "
             "A/B root, C/D ABS, E/F SUM, G/H IF arm, I/J ABS(IF arm), K/L SUM(IF arm), M/N INDEX(Z1:Z6,name), O/P "
