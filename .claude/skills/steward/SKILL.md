@@ -177,9 +177,13 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
 - **CI failures**: reproduce locally with the same `make` target first. A failing test is never
   "flaky" without proof; fix the root cause. Never skip/disable/quarantine tests, never add lint
   allows or lint-debt entries, never use `--allow-regressions` without a decision record.
-- **Nightly fuzz failures** (`.github/workflows/fuzz.yml`, decision 0035): a red run is a
-  directive-5 bug, not a flake. File one P0 task per distinct crash (dedupe by panic site/stack
-  against open tasks) per docs/process/agent-workflow.md "When something goes wrong".
+- **Nightly fuzz failures** (`.github/workflows/fuzz.yml`, decisions 0035, 0302): a red run is a
+  directive-5 bug, not a flake, and a timeout or out-of-memory counts as much as a crash. The run
+  opens a `fuzz-failure` issue per failed target (or comments on the open one), and the issue
+  intake works it; the daily issue sweep is the backstop. If a red scheduled run on `main` has no
+  such issue or comment (its `report` job failed), file one P0 task per distinct finding yourself
+  (dedupe by panic site/stack against open tasks) per docs/process/agent-workflow.md "When
+  something goes wrong".
 - **Eval regressions** in CI (`eval-check`): the PR broke previously-passing Excel behavior. Fix
   the code, do not touch the baseline.
 - **Accepted deviations** (decision 0036): a suite's `deviations` file lists cells that differ

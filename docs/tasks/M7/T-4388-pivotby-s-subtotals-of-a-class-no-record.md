@@ -30,7 +30,7 @@ column subtotal of a class no record of the row group reached, and the row axis'
 ## Acceptance criteria
 - [x] A probe of PIVOTBY row-axis subtotals and value sorts, column subtotals over a class no record reached, and
       GROUPBY subtotals under a descending key sort, on intransitive runs, filled; the engine matches it or the cells are owned by a task.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - GROUPBY's ascending and value-sort subtotals (T-4359, probed).
@@ -53,7 +53,8 @@ column subtotal of a class no record of the row group reached, and the row axis'
     `Grouping::class_reached` (grouping.rs).
   - Recorded in docs/excel-semantics/coercion.md, "GROUPBY on an intransitive run".
   - This is a structural rule read off the cells, not a fit. Every one of the 15 cells it fixes has the same shape.
-- Eval delta: new case, 705/705 cells pass (180 Excel formula cells), no new known failures. Other cases: no change;
+- Eval delta: new case, 705/705 cells pass (180 Excel formula cells), no new known failures. Other cases: no change (out-of-sample, the same rule also gives the 9 level-2 cells of
+  probes/t4382-pivotby-intransitive-paths that T-4401 had owned: Calc!B31, B32, B33, B35, B39, B41, C31, C33, C39);
   the t4358, t4378 and t4379 PIVOTBY cases score as before.
 - Follow-up filed with this PR: T-4404, a probe of a color filter exported without `dxfId` (a minor finding of the
   T-4004 review, PR #3425).
