@@ -282,3 +282,18 @@ fn elapsed_second_moves_onto_a_later_hour_or_minute() {
     // A clock token before `[s]` keeps the section as parsed: `s [s]` is #VALUE! (T-3419).
     assert_eq!(text(value, "s [s] m"), "#VALUE!");
 }
+
+// probes/t4341-elapsed-second-forms A1:N3 (excel-graph, T-4341): the first hour token after `[s]`
+// takes the count even behind a minute token; else the first minute token does.
+#[test]
+fn elapsed_second_picks_the_first_hour_token_else_the_first_minute_token() {
+    let value = 1.7 / 24.0 + 0.3 / 1440.0;
+    assert_eq!(text(value, "[ss] m"), "18 26640");
+    assert_eq!(text(value, "[s] m m"), "18 26640 1");
+    assert_eq!(text(value, "[s] h m"), "18 444 42");
+    assert_eq!(text(value, "[s] m h"), "18 42 444");
+    assert_eq!(text(value, "d [s] m"), "0 18 26640");
+    assert_eq!(text(value, "[h] [s] m"), "#VALUE!");
+    assert_eq!(text(value, "[s].0 m"), "18.0 720");
+    assert_eq!(text(value, "s [s] h"), "#VALUE!");
+}

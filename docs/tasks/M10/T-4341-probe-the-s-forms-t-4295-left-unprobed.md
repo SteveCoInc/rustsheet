@@ -3,7 +3,7 @@ id: T-4341
 title: "Probe the [s] forms T-4295 left unprobed: [ss] m, a second h/m token, a date or elapsed token before [s], [s].0 m and s [s] m"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -37,3 +37,9 @@ matches it, or the gap is filed.
 
 ## Out of scope
 - Elapsed tokens without `[s]`.
+
+## Outcome
+Probe probes/t4341-elapsed-second-forms (14 formats x 3 values, excel-graph 2026-11-06) is committed. 39 of 42 cells already
+matched; `[s] m h` did not (Excel gives the count to the first hour token, "18 42 444"), so `move_elapsed_second` now
+picks the first hour token, else the first minute token. number-formats.md "Elapsed-time tokens" states every shape and
+drops the UNVERIFIED marks. Eval delta: probes +42 cells, all passing (3 newly fixed).
