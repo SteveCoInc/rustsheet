@@ -155,6 +155,21 @@ def test_layout_attributes_fields_items_and_raw_slots() -> None:
     assert table.index("<pivotTableStyleInfo") < table.index("<filters")
 
 
+def test_custom_subtotals_use_the_item_type_names() -> None:
+    # countA and count are ST_ItemType names (T-4622): countASubtotal="1" and <item t="countA"/>.
+    table = _parts(
+        _spec(
+            {
+                "rows": ["Region", "Product"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"subtotals": ["countA", "count", "avg", "stdDevP"]}},
+            }
+        )
+    )["xl/pivotTables/pivotTable1.xml"]
+    assert 'countASubtotal="1" countSubtotal="1" avgSubtotal="1" stdDevPSubtotal="1"' in table
+    assert '<item t="countA"/><item t="count"/><item t="avg"/><item t="stdDevP"/></items>' in table
+
+
 def test_calculated_fields_page_fields_and_numeric_groups() -> None:
     parts = _parts(
         _spec(
@@ -201,6 +216,14 @@ def test_calculated_fields_page_fields_and_numeric_groups() -> None:
         ({"rows": ["Values"], "data": [{"field": "Sales"}]}, "two or more data fields"),
         ({"rows": ["Region"], "data": [{"field": "Sales", "subtotal": "median"}]}, "subtotal 'median'"),
         ({"rows": ["Region"], "data": [{"field": "Sales"}, {"field": "Sales"}]}, "names must differ"),
+        (
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"subtotals": ["countNums"]}},
+            },
+            "subtotals of 'Region' must be a list of",
+        ),
         (
             {"rows": ["Region"], "data": [{"field": "Sales"}], "table": {"cacheId": 3}},
             "may not set attribute 'cacheId'",
