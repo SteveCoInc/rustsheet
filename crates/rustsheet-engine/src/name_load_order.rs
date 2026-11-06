@@ -14,7 +14,7 @@
 //! 2026-11-06).
 
 use crate::expressions::lexer::LexerMode;
-use crate::expressions::parser::stringify::{name_load_events, NameLoadEvent};
+use crate::expressions::parser::stringify::name_binding::{name_load_events, NameLoadEvent};
 use crate::expressions::types::CellReferenceRC;
 use crate::model::Model;
 
