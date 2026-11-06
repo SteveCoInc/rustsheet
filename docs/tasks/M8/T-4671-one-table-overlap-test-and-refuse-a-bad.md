@@ -3,7 +3,7 @@ id: T-4671
 title: "One table-overlap test and refuse a bad restored table before an undo re-inserts columns (T-4652 review follow-ups)"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -27,10 +27,18 @@ diff before it re-inserts any column.
   - The `fits` closure of `restore_tables_of_sheet` is about 25 lines; a named helper reads better.
 
 ## Acceptance criteria
-- [ ] One overlap definition used by `add_table_with_rows` and `restore_tables_of_sheet`.
-- [ ] A crafted `Diff::DeleteColumns` whose `tables` entry is refused changes nothing (columns and cells included);
+- [x] One overlap definition used by `add_table_with_rows` and `restore_tables_of_sheet`.
+- [x] A crafted `Diff::DeleteColumns` whose `tables` entry is refused changes nothing (columns and cells included);
       unit test in test_external_diffs_untrusted.rs.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Formulas rewritten to `#REF!` by the delete (T-4668).
+
+## Outcome
+- `add_table_with_rows` now uses `Bounds::overlaps` (one overlap definition).
+- Split `check_table_extents` / `check_tables_of_sheet` out of the two restore functions; the
+  `DeleteRows` and `DeleteColumns` undo arms run them before moving any row or column. The overlap
+  test of `restore_tables_of_sheet` stays after the column insert: the other tables' extents only
+  settle once the columns are back. The 25-line `fits` closure is now `table_fits_restore`.
+- New test `a_restored_table_naming_no_table_is_refused_before_columns_return`. No eval change.
