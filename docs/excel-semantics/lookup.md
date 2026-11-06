@@ -88,12 +88,21 @@ define one, and `"Summary!tn"` is `#REF!` too. The prefix follows formula quotin
 sheet name may hold only letters, digits, `_` and `.`, so `"Co A!tn"`, `"P&L!tn"` and `"O'B!tn"`
 are `#REF!` (also with `a1` FALSE) while `"2024!tn"`, `"Q1!tn"` and `"x.y!tn"` resolve; quoted,
 `''` is one quote (`"'O''B'!tn"` resolves) and any sheet name may be quoted (`"'CoB'!tn"`).
-Verified for ASCII sheet names only; unquoted non-ASCII names (`"Données!tn"`) and letter-after-digit
-names (`"1Q!tn"`) are unprobed (the engine accepts them).
+Unquoted non-ASCII letters count as letters and a digit-then-letter name needs no quotes: `"Données!tn"`,
+`"Ünïcode!tn"`, `"1Q!tn"` and `"1q!tn"` (case-insensitive) resolve like their quoted forms
+(probes/t4545-indirect-sheet-prefix-names rows 1:8, excel-graph 2026-11-06, T-4545).
 Cell text follows the same quoting for `"Co A!B1"`, `"P&L!B1"` and `"O'B!B1"` (`#REF!`), and
 `"Q1!B1"`, `"x.y!B1"` and `"2024!B1"` (an unquoted all-digit sheet, `"y2024"`) resolve; the engine
-quotes a digit-leading prefix for its lexer (T-2678). A typed `=2024!B1`, the R1C1 form `INDIRECT("2024!R1C1",FALSE)` and `"2024!B1:2024!B3"` are unprobed.
-Evidence: probes/indirect-sheet-scoped-name (excel-graph, 2026-10-25, T-2660).
+quotes a digit-leading prefix for its lexer (T-2678). The same holds for cell text on non-ASCII and digit-then-letter
+sheets (`"Données!B1"`, `"données!B1"`, `"Ünïcode!B1"`, `"1Q!B1"`, `"1q!B1"` are 7; probes/t4545-indirect-sheet-prefix-spellings
+rows 1:12) and for R1C1 text with `a1` FALSE (`"2024!R1C2"`, `"'2024'!R1C2"`, `"2024!R[-23]C2"`, `"1Q!R1C2"`,
+`"Données!R1C2"` are 7, `"2024!R1C2:R3C2"` sums to 24; rows 22:29). A range text that names its sheet on both corners
+is `#REF!` (ISREF FALSE, ERROR.TYPE 4), whatever the quoting or sheet: `"2024!B1:2024!B3"`, `"Q1!B1:Q1!B3"`,
+`"'1Q'!B1:'1Q'!B3"`, `"'2024'!B1:'2024'!B3"`, two different sheets `"Q1!B1:x.y!B3"`, the R1C1 `"2024!R1C2:2024!R3C2"`
+and a three-part `"Q1!B1:Q1!B3:Q1!B2"` (rows 13:18, 20, 21, 30); `"2024!B1:B3"` is the 3-cell range (row 19). A typed
+`=2024!B1` is unprobed.
+Evidence: probes/indirect-sheet-scoped-name (excel-graph, 2026-10-25, T-2660); probes/t4545-indirect-sheet-prefix-spellings
+and t4545-indirect-sheet-prefix-names (excel-graph, 2026-11-06, T-4545; predictions in docs/research/t4545).
 Calipers note: `calipers/pv_goldens/pv26_020` and `pv26_2_020` `Summary!C17:...17` are not evidence
 for this rule: the corpus anonymisation renamed the text in `Summary!B17` to `Company0691` but left
 the sheet it names as `ConAgra` (whose `TargetName`, D24, is the cached `Company2277`), so the
