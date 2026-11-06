@@ -3,7 +3,7 @@ id: T-3301
 title: "Port ironcalc 1e88d67b/5d6e7be2/fde5d637: defined names keep hidden and comment through xlsx import and export"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
