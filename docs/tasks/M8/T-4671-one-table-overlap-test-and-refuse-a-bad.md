@@ -3,7 +3,7 @@ id: T-4671
 title: "One table-overlap test and refuse a bad restored table before an undo re-inserts columns (T-4652 review follow-ups)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
