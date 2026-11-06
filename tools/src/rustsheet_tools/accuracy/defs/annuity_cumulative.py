@@ -116,9 +116,9 @@ def _periods(rng: random.Random, nper: int) -> tuple[int, int]:
 
 
 def _make(stratum: str, rng: random.Random) -> list[Arg]:
-    """[rate, nper, pv, start_period, end_period, type] from RATE's annuity (`_annuity`, defs/annuity.py) with a
+    """[rate, nper, pv, start_period, end_period, type] from RATE's annuity (`draw_annuity`, defs/annuity.py) with a
     positive pv and rate; the tail stratum's rate is tiny or large, the extreme stratum adds long terms."""
-    _sign, nper, r, pv, _fv, due = annuity._annuity(stratum, rng)
+    _sign, nper, r, pv, _fv, due = annuity.draw_annuity(stratum, rng)
     r, pv = abs(r), abs(pv)
     if stratum == "tail":
         r = log_uniform(rng, 1e-12, 1e-4) if rng.random() < 0.5 else rng.uniform(0.5, 5)

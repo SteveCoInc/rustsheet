@@ -18,6 +18,7 @@ fn a_calc_workbook_claiming_excel_is_not_excel_authored() {
         sheets: Vec::new(),
         defined_names: Vec::new(),
         tables: Vec::new(),
+        pivots: Vec::new(),
     };
     assert!(!snapshot(Some("Calc")).is_excel_authored());
     assert!(snapshot(Some("xl")).is_excel_authored());

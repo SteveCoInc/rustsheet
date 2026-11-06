@@ -510,7 +510,10 @@ nper + 1 is a value, the split of "IPMT and PPMT split Excel's discounted paymen
 60.5849877072275,1)` 5.466510612214358. At nper + 1 it is `#NUM!`: `PPMT(0.0449398904217299,315,314,-3107.59202412783,
 0,1)`, `PPMT(0.0805588428682658,227,226,16.1638393072709,0,0)` and `IPMT(0.0104741966355263,249,248,340880.668375193,0,0)`;
 so is a period of 0.5 (`IPMT(0.00268654404805728,0.5,11,-557.559050130903,0,0)`), 0 or -1.
-Unprobed: IPMT at a period strictly between nper and nper + 1 (the engine takes PPMT's bound for both).
+Unprobed: IPMT at a period strictly between nper and nper + 1 (the engine takes PPMT's bound for both). The only IPMT
+cells in that band, probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,1E-300)`, period 1 over nper 1E-10),
+are `#NUM!` for a subnormal `1-Q` ("IPMT is #NUM! where its discounted balance fails"), so they do not settle the band;
+the Gate A definition keeps the closed form there and the cells keep their math value (T-4516).
 Evidence: accuracy/PPMT/s1 A112, A118 (values), A128, A137, A139 (`#NUM!`); accuracy/IPMT/s1 A113, A114, A117, A120,
 A123, A139 (`#NUM!`) (excel-graph, 2026-11-06, T-4109); gen-m9 a91bad4e84f49739 A354 `PPMT(1,0.5,323,401723)` and
 c0681a8b150ce301 A375 `PPMT(0.1,9,1.5,404118,62,1)` (`#NUM!`); "Financial edge-pool smoke check" (IPMT 13 of 12).
@@ -532,6 +535,8 @@ rate 1.1E-16 is `#DIV/0!` (A124), 2.3E-16 a value (A135). The double form above 
 the tiny-rate ones included (A82, A85, A89, A107, A112, A116, A120, A135 are 2.2E-4 to 9.9E-2 off the math). Earlier
 cells: gen-m9 31474c20fc1dafd6 A194 `PDURATION(0,7968,32308)` and 9a1fa5366bc50918 A196 `PDURATION(100,0,49370)`
 (`#NUM!`), e168be7f6d3f84c2 A180 `PDURATION(1E-300,4938,46197)` (`#DIV/0!`).
+Unprobed: a rate so small that `1+rate` is 1 with fv equal to pv (`LN(fv)-LN(pv)` and `LN(1+rate)` both 0); the Gate A
+definition gives it no value (T-4516).
 Status: VERIFIED (excel-graph)
 Implemented in: `pduration_of` (functions/financial/growth.rs)
 Tasks: T-4109
@@ -1961,6 +1966,20 @@ Backend: excel-graph.
 Status: VERIFIED (excel-graph)
 Implemented in: `fn_mirr` in functions/financial/mirr.rs (T-1798); replaces the hand-taken limits at rate -1.
 Tasks: T-1798
+
+## MIRR at finance 1E+200 over five flows with a negative flow at index 2 is #DIV/0! (T-4116)
+Rule (one probed point): `MIRR({-3496.38522311601,97.9347197399849,-81.6919783865016,180.891974550287,218.629532704649},1E+200,0.00166838654471219)`
+is `#DIV/0!` (accuracy/MIRR/s1 A125): finance rate 1E+200, five flows with positive ones, and a negative flow at index 2,
+the first index whose finance power (1+fr)^2 = 1E+400 overflows. With a positive flow and the first flow the only
+negative one, a finance overflow is `#NUM!` instead (`MIRR({-100,50,80},1E+200,0.1)` and `-1E+200`, "MIRR error and edge
+cases" A15, A24); with no positive flow it is `#DIV/0!` (A29).
+Hypotheses for T-4537 to probe (neither is settled by A125): (a) any negative flow after the first makes a finance
+overflow `#DIV/0!`; (b) only a negative flow whose own finance power overflows does (a negative flow at index 1 under
+1E+200, whose power is finite, would then stay `#NUM!`).
+Evidence: accuracy/MIRR/s1 A125 (excel-graph, 2026-11-06, T-4116).
+Ours: `#NUM!` (`fn_mirr` takes the finance overflow's error from whether a positive flow exists); T-4537.
+Status: VERIFIED (excel-graph)
+Tasks: T-4116, T-4537
 
 ## Coupon settlement before the calendar
 Rule: PRICE, YIELD, DURATION, MDURATION and ACCRINT are `#NUM!` for a settlement (ACCRINT: an issue, first interest
@@ -4505,12 +4524,34 @@ the engine's stop. What decides which iterate Excel returns, and when it is `#NU
 - Also refuted on t3406 (type agreement of the secant alone, 144 cells, cap 213): Illinois regula falsi once a step
   brackets the root 104 (plain secant 92), but none of its returns has Excel's digits; keeping the two points of
   smallest |NPV| 85.
+- Near-zero roots (T-4213; evidence salvaged from draft PR #3211 by T-4386, the IRR change itself is not on main). On
+  conventional series whose root is within 0.03 of zero and whose flows are large (|c| 1E+8 to 7E+11), both secant
+  runs go flat in NPV's rounding noise (|NPV| 2E-7 to 7E-5, above the 1e-7 stop, a few 1E-16 of the discounted flows),
+  so the fallback answers, and a 1E-16 absolute step of the rate is an 11th to 15th-digit difference. Excel's value
+  there is sometimes the fallback's iterate one step past the stop (t3411-irr-r4-fresh-2 A43 -0.0022000456147424075
+  and A44 -0.0038627368146444407; the stop iterates are -0.0022000456147435177 and -0.003862736814644663) and
+  sometimes a secant iterate the engine passes on its way to flat: fresh-2 A30 and A32, fresh-3 A38, A45 and A109 and
+  fresh-4 A110 are bit for bit 1/(1 - d) - 1 at the first secant iterate whose |NPV| is under about 1.2E-15 to
+  2.1E-15 of sum |c_i| v^i (fresh-2 A37 is no iterate of either). That relative stop is not Excel's rule, though:
+  added to the secant at any constant from 6E-16 to 3E-15, it turns 98 cells Excel is `#NUM!` on into numbers
+  (`IRR({1E+15,1,-1E+15},0.05)`, probes/irr-guess-edges A37, among them) and costs 27 bit-exact cells; the same holds
+  when |NPV| is measured against the largest flow (which also loses t2565-irr-guess-sweeps A107-C141) or against the
+  guess's NPV. Which iterate Excel returns at the noise floor, and when it is `#NUM!` instead, stays unknown.
+- Returning the iterate one step past the stop instead (measured on the T-4213 branch, not on main) makes 12 IRR
+  cells of eval bit-exact (t2927-irr-fallback-sweep A79, A80, A135, A137; t3347-irr-conventional-holdout A41;
+  t3411-irr-r4-fresh-2 A43, A44; t3411-irr-residual-scale A31, A32, A48, A49; t3478-irr-r4-wide A292) and costs one
+  (t3411-irr-r4-fresh A129, the stop iterate), with no change of type; 4 t2927-irr-fallback-sweep cells move one ulp
+  past the 15th digit. The fresh sweep drawn after that choice was frozen is probes-numeric/t4213-irr-r4-fresh (150
+  conventional series with roots 1E-7 to 0.05, filled from excel-graph 2026-11-04, seed "T-4213/r4-fresh" of
+  docs/research/t3411/gen_sweep.py): Excel returns a number on 104 and `#NUM!` on 46. The branch's engine returned 59
+  of the 104 (57 bit-exact) and was `#NUM!` on 45 where Excel returns a root (T-3548's type rule); T-4232 owns the
+  visibly-off cells. On main (the stop iterate) the case scores 102 of 150 (56 of the 104 numbers bit-exact).
 Evidence: the oracle values of the cases above; `python3 -I docs/research/t3411/fallback_iterates.py .` prints the
 counts of the first four points, each iterate's step and stopping step size (an exact replay of the engine's
 secant, then Newton from v = 0). The NPV variants and the Illinois and two-point secants were scratch code.
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
 Ours: `irr_fallback` stops at the first step under 1e-7 max(|v|, 1) within 50 steps; unchanged.
-Tasks: T-3411
+Tasks: T-3411, T-4213, T-4386
 
 ## IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more
 Rule (partial; the type rule where both secant runs fail): where Excel's IRR reaches the root by the fallback (the

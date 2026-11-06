@@ -270,3 +270,20 @@ fn bessel_i_tiny_x_overflow_is_nan() {
         assert_eq!(bessel_i(n, x), excel, "BESSELI({x},{n})");
     }
 }
+
+#[test]
+fn besselk_is_num_once_half_x_is_subnormal() {
+    // probes/t4459-besselk-tiny-x-ulps: Excel reads its 16-digit literals at 15 digits, so A1:B4 ask
+    // 4.4501477170144E-308 (#NUM! for orders 0 and 1) and A5:B6 ask 4.45014771701441E-308, which
+    // answers 707.8192028722641 and 2.2471164185778914E+307. 2^-1021 lies between them.
+    let below = 4.450_147_717_014_4e-308;
+    let above = 4.450_147_717_014_41e-308;
+    for n in 0..=2 {
+        assert!(
+            bessel_k(n, below).is_nan(),
+            "BESSELK(4.4501477170144E-308,{n})"
+        );
+    }
+    assert_eq!(bessel_k(0, above), 707.819_202_872_264_1);
+    assert_eq!(bessel_k(1, above), 2.247_116_418_577_891_4e307);
+}

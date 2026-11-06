@@ -13,6 +13,11 @@
     "why": "pmf at k = 0 with p = 1 (Excel's LN(1 - p) closed form)",
     "f": "=BINOM.DIST(0,2,1,FALSE)"
    },
+   "A10": {
+    "t": "e",
+    "why": "pmf at k = 0 with p = 1 (Excel's LN(1 - p) closed form)",
+    "f": "=BINOMDIST(0,2,1,FALSE)"
+   },
    "A100": {
     "t": "n",
     "v": "0.0",
