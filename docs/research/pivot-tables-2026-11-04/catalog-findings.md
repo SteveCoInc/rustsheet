@@ -30,20 +30,21 @@ in scope unless a decision rules it out. `tools/src/rustsheet_tools/pivot_catalo
   ST_DataConsolidateFunction, ST_ShowDataAs, x14 ST_PivotShowAs, ST_PivotFilterType, ST_GroupBy,
   ST_ItemType, ST_FieldSortType and ST_Axis.
 - **Size.** The catalog has 1,634 rows:
-  - 932 are in scope;
-  - 406 are out of scope (OLAP, the Data Model, what-if edits, consolidation sources);
-  - 296 are round-trip only (formatting, styles, UI-only flags and file metadata), which decision
-    0274 rules out beyond preservation.
+  - 879 are in scope;
+  - 420 are out of scope (OLAP, the Data Model, what-if edits, consolidation sources);
+  - 335 are round-trip only (formatting and styles, UI-only flags, slicer and timeline chrome, and
+    file metadata), which decision 0274 rules out beyond preservation.
 - **Committed copies.** The generator also writes the node list to
   `eval/catalog/pivot-schema-nodes.txt`. `tools/tests/test_pivot_catalog.py` fails when:
   - a node has no row;
-  - a row has no node;
+  - a row has no node, unless it is `retired`;
   - a row's default disagrees with the schema;
   - a row's family, scope or stage disagrees with the rules.
 
   It runs without the schemas.
 - **Hand-filled columns.** A row's `web`, `status` and `evidence` are filled by probes and
-  implementations. Regeneration keeps them, together with the row's id, so ids are stable.
+  implementations. Regeneration keeps them, together with the row's id, so ids are stable. A row
+  whose node leaves the walk stays, with status `retired`, so its id is never reused.
 - **Classification.** Path-keyword rules in `RULES` set the family, `affects` and stage. The first
   match wins, and no node is left uncategorized. The rules are a heuristic: a row whose probe shows
   otherwise gets its rule corrected, not a hand edit to the TSV, because the test would reject one.
@@ -59,7 +60,8 @@ feature list in excel-docs.md §1.
      `stdDevp` = StandardDeviationP), plus `Automatic` and `Unknown`. Neither extra has an OOXML
      value. `Automatic` is the field default (sum for numbers, count otherwise), which the file
      spells out as `subtotal`.
-   - Distinct Count is in neither. It is Data Model only, so it is out of scope by decision 0274.
+   - Distinct Count is in neither. Only the x15 schema has it, as `x15:dataField@isCountDistinct`.
+     It is Data Model only, so it is out of scope by decision 0274.
    - Finding: probe what `Automatic` writes for a mixed field (T-4142's aggregate probes).
 2. **Show Values As.**
    - ECMA has 9 modes and x14 adds 6. That is 15 modes counting `normal`, and Office.js has the same
@@ -77,10 +79,9 @@ feature list in excel-docs.md §1.
    - Office.js's date conditions map to the `date*` and relative values and to `M1`–`M12` and
      `Q1`–`Q4`.
    - Findings:
-     - **(a)** The schema has `dateNotBetween`, `dateNotEqual`, `valueNotBetween` and
-       `valueNotEqual`, but Office.js has no `exclusive` on value filters and its date filter's
-       `exclusive` is undocumented. Excel for the web's UI behaviour for these is unknown, so T-4164
-       probes it.
+     - **(a)** The schema's `dateNotBetween`, `dateNotEqual`, `valueNotBetween` and
+       `valueNotEqual` are Office.js's value and date filters with `exclusive` set (excel-docs.md
+       §1.7), as for captions. What Excel for the web renders for them is still unprobed (T-4164).
      - **(b)** The `unknown` value is listed in the schema but has no meaning in any source. The
        catalog keeps it as a row.
 4. **Layout.**
@@ -102,7 +103,8 @@ feature list in excel-docs.md §1.
 7. **Defaults the standard states differently from Excel.** The `default` column is the schema's.
    MS-OI29500 inverts or changes these, so the row's probe must assume Excel's meaning (excel-docs.md
    §7):
-   - `asteriskTotals`;
+   - `asteriskTotals` (OLAP, so out of scope; listed for the round trip);
+   - `immersive`;
    - `preserveFormatting`;
    - `item@s` (manual filter);
    - `item@sd` (expanded);
@@ -116,6 +118,9 @@ feature list in excel-docs.md §1.
    - Its content is Data Model only (decision 0274: out of scope), so v1 omits it. If a Data Model
      row is ever ruled in, it needs its own fetch.
 9. **Slicers and timelines.**
-   - They are 170 in-scope rows at stage PV5. Their OLAP slicer cache parts are out of scope.
-   - Office.js's `Slicer` has `sortBy` and `hasData`. Their file counterparts are x14 `sortOrder` and
-     `showMissing`, and x15 `slicerCacheHideItemsWithNoData`.
+   - They are 114 in-scope rows at stage PV5. Their OLAP slicer cache parts are out of scope. Their
+     styles, geometry and chrome (`rowHeight`, `columnCount`, `scrollPosition`, `showHeader` and the
+     like) are round-trip only.
+   - Office.js's `Slicer.sortBy` maps to the slicer cache's `sortOrder`. `SlicerItem.hasData` is the
+     cross-filter state: the tabular cache's `crossFilter` and the item's `i@nd` (excel-docs.md
+     §1.14).

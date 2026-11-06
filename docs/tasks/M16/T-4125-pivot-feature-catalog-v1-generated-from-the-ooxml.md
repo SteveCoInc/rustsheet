@@ -28,13 +28,13 @@ docs/research/pivot-tables-2026-11-04/plan.md §4. A script walks the ECMA-376 t
 ## Outcome
 - `tools/src/rustsheet_tools/pivot_catalog.py` (`rustsheet-pivot-catalog --xsd DIR`) walks the ECMA-376 transitional, x14 and x15 schemas from the pivot parts' roots. The schemas are read from a docx4j checkout pinned at f960df59, not vendored (Apache-2.0; the schemas are ECMA's and [MS-XLSX]'s).
 - Output:
-  - `eval/catalog/pivot-features.tsv`: 1,634 rows (932 in scope, 406 out, 296 round-trip only), each with id, family, OOXML path, default, affects, scope and stage.
+  - `eval/catalog/pivot-features.tsv`: 1,634 rows (879 in scope, 420 out, 335 round-trip only), each with id, family, OOXML path, default, affects, scope and stage.
   - `eval/catalog/pivot-schema-nodes.txt`: the node list.
-- Ids and the hand-filled `web`/`status`/`evidence` columns survive regeneration.
+- Ids and the hand-filled `web`/`status`/`evidence` columns survive regeneration. A row whose node leaves the walk is kept as `retired`, so an id is never reused.
 - `tools/tests/test_pivot_catalog.py` fails when a node has no row, a row has no node, a default differs, or a row's classification is not what the rules give. It runs offline.
 - Findings: docs/research/pivot-tables-2026-11-04/catalog-findings.md.
   - Office.js `Automatic` and `Unknown` aggregates have no OOXML value.
-  - Value and date `Not*` filters have no counterpart in Office.js (T-4164).
+  - Value and date `Not*` filters are Office.js `exclusive` filters; what the web renders for them is T-4164's.
   - Auto Refresh and `#SPILL!` are behaviours with no schema node. The report-table task needs `PVB` rows for them.
   - The `xpdl` schema was not walked; it is Data Model only, out of scope.
   - The MS-OI29500 default inversions are listed.

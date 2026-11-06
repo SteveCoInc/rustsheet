@@ -1,9 +1,15 @@
 """The pivot feature catalog (T-4125): every schema node has a row, and the generator's walk, rules and
-id merge behave."""
+id merge behave.
+
+The node list these tests read is the generator's own committed output; the schemas are not vendored,
+so drift between it and the XSDs shows only when someone regenerates (catalog-findings.md says how).
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
+
+import pytest
 
 from rustsheet_tools import repo_root
 from rustsheet_tools.pivot_catalog import HEADER, RULES, Node, classify, read_table, rows, walk, write
@@ -23,7 +29,7 @@ def test_every_schema_node_has_one_row() -> None:
     assert len(nodes) > 1000  # the walk reached the whole pivot schema
     missing = [n.path for n in nodes if n.path not in table]
     assert missing == []
-    stale = sorted(set(table) - {n.path for n in nodes})
+    stale = [p for p in set(table) - {n.path for n in nodes} if table[p]["status"] != "retired"]
     assert stale == []
     for n in nodes:
         assert table[n.path]["default"] == n.default, n.path
@@ -62,6 +68,18 @@ def test_classification_examples() -> None:
     assert style[:3] == ("formatting", "none", "round-trip only (decision 0274)")
     assert classify(Node("x14:slicerCacheDefinition/data/olap@pivotCacheId"))[0] == "olap-datamodel"
     assert classify(Node("x14:slicers/slicer@caption"))[0] == "slicers-timelines"
+    # Slicer chrome and styles, and file metadata under a slicer, are round-trip only.
+    assert classify(Node("x14:slicers/slicer@rowHeight"))[:2] == ("ui", "none")
+    assert classify(Node("x14:slicerStyles/slicerStyle@name"))[0] == "formatting"
+    assert classify(Node("x14:slicers/slicer@xr10:uid"))[0] == "metadata"
+    # Features excel-docs.md marks as changing values or layout are in scope.
+    assert classify(Node("pivotTableDefinition/pivotFields/pivotField@includeNewItemsInFilter"))[:2] == (
+        "filtering",
+        "values",
+    )
+    assert classify(Node("x14:pivotTableDefinition@hideValuesRow"))[0] == "layout"
+    assert classify(Node("pivotTableDefinition/pivotFields/pivotField@subtotalTop"))[0] == "totals"
+    assert classify(Node("pivotTableDefinition/dataFields/dataField@subtotal"))[0] == "aggregation"
 
 
 XSD = """<?xml version="1.0"?>
@@ -128,3 +146,27 @@ def test_regeneration_keeps_ids_and_hand_filled_columns(tmp_path: Path) -> None:
     added = rows([*walk(xsd), Node("ST_Axis=axisCol")], read_table(tsv))
     new = next(r for r in added if r["ooxml"] == "ST_Axis=axisCol")
     assert new["id"] == f"PV-{len(table) + 1:04d}"
+
+
+def test_a_dropped_node_keeps_its_row_retired_and_its_id_is_not_reused(tmp_path: Path) -> None:
+    xsd = _schemas(tmp_path / "xsd")
+    previous = {r["ooxml"]: r for r in rows(walk(xsd), {})}
+    last = max(previous.values(), key=lambda r: r["id"])
+    survivors = [n for n in walk(xsd) if n.path != last["ooxml"]]
+    again = rows([*survivors, Node("ST_Axis=axisNew")], previous)
+    retired = next(r for r in again if r["ooxml"] == last["ooxml"])
+    assert (retired["id"], retired["status"]) == (last["id"], "retired")
+    new = next(r for r in again if r["ooxml"] == "ST_Axis=axisNew")
+    assert new["id"] > last["id"]
+
+
+def test_bad_inputs_fail_clearly(tmp_path: Path) -> None:
+    bad = tmp_path / "pivot-features.tsv"
+    bad.write_text("\t".join(HEADER) + "\nPV-0001\tlayout\n")
+    with pytest.raises(ValueError, match="tab-separated"):
+        read_table(bad)
+    xsd = _schemas(tmp_path / "xsd")
+    main = xsd / "sml/sml_ECMA376_4ed_transitional.xsd"
+    main.write_text(XSD.replace('type="CT_Location"', 'type="zz:CT_Location"'))
+    with pytest.raises(ValueError, match="namespace prefix"):
+        walk(xsd)

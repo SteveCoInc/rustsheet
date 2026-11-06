@@ -356,7 +356,7 @@ PV-0354	captions	pivotCacheDefinition/cacheFields/cacheField@caption		text	unkno
 PV-0355	calculated	pivotCacheDefinition/cacheFields/cacheField@databaseField	true	values	unknown	in	PV3	todo	
 PV-0356	calculated	pivotCacheDefinition/cacheFields/cacheField@formula		values	unknown	in	PV3	todo	
 PV-0357	olap-datamodel	pivotCacheDefinition/cacheFields/cacheField@hierarchy	0	none	unknown	out (decision 0274)	out	todo	
-PV-0358	olap-datamodel	pivotCacheDefinition/cacheFields/cacheField@level	0	none	unknown	out (decision 0274)	out	todo	
+PV-0358	metadata	pivotCacheDefinition/cacheFields/cacheField@level	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0359	cache	pivotCacheDefinition/cacheFields/cacheField@mappingCount		values	unknown	in	PV1	todo	
 PV-0360	olap-datamodel	pivotCacheDefinition/cacheFields/cacheField@memberPropertyField	false	none	unknown	out (decision 0274)	out	todo	
 PV-0361	captions	pivotCacheDefinition/cacheFields/cacheField@name		text	unknown	in	PV1	todo	
@@ -364,18 +364,18 @@ PV-0362	aggregation	pivotCacheDefinition/cacheFields/cacheField@numFmtId		values
 PV-0363	cache	pivotCacheDefinition/cacheFields/cacheField@propertyName		values	unknown	in	PV1	todo	
 PV-0364	olap-datamodel	pivotCacheDefinition/cacheFields/cacheField@serverField	false	none	unknown	out (decision 0274)	out	todo	
 PV-0365	cache	pivotCacheDefinition/cacheFields/cacheField@sqlType	0	values	unknown	in	PV1	todo	
-PV-0366	olap-datamodel	pivotCacheDefinition/cacheFields/cacheField@uniqueList	true	none	unknown	out (decision 0274)	out	todo	
+PV-0366	metadata	pivotCacheDefinition/cacheFields/cacheField@uniqueList	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0367	cache	pivotCacheDefinition/cacheFields@count		values	unknown	in	PV1	todo	
 PV-0368	olap-datamodel	pivotCacheDefinition/cacheHierarchies		none	unknown	out (decision 0274)	out	todo	
 PV-0369	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy		none	unknown	out (decision 0274)	out	todo	
-PV-0370	metadata	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-0370	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/extLst		none	unknown	out (decision 0274)	out	todo	
 PV-0371	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/fieldsUsage		none	unknown	out (decision 0274)	out	todo	
 PV-0372	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/fieldsUsage/fieldUsage		none	unknown	out (decision 0274)	out	todo	
 PV-0373	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/fieldsUsage/fieldUsage@x		none	unknown	out (decision 0274)	out	todo	
 PV-0374	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/fieldsUsage@count		none	unknown	out (decision 0274)	out	todo	
 PV-0375	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels		none	unknown	out (decision 0274)	out	todo	
 PV-0376	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel		none	unknown	out (decision 0274)	out	todo	
-PV-0377	metadata	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-0377	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/extLst		none	unknown	out (decision 0274)	out	todo	
 PV-0378	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/groups		none	unknown	out (decision 0274)	out	todo	
 PV-0379	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/groups/group		none	unknown	out (decision 0274)	out	todo	
 PV-0380	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/groups/group/groupMembers		none	unknown	out (decision 0274)	out	todo	
@@ -384,7 +384,7 @@ PV-0382	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/grou
 PV-0383	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/groups/group/groupMembers/groupMember@uniqueName		none	unknown	out (decision 0274)	out	todo	
 PV-0384	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/groups/group/groupMembers@count		none	unknown	out (decision 0274)	out	todo	
 PV-0385	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/groups/group@caption		none	unknown	out (decision 0274)	out	todo	
-PV-0386	metadata	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/groups/group@id		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-0386	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/groups/group@id		none	unknown	out (decision 0274)	out	todo	
 PV-0387	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/groups/group@name		none	unknown	out (decision 0274)	out	todo	
 PV-0388	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/groups/group@uniqueName		none	unknown	out (decision 0274)	out	todo	
 PV-0389	olap-datamodel	pivotCacheDefinition/cacheHierarchies/cacheHierarchy/groupLevels/groupLevel/groups/group@uniqueParent		none	unknown	out (decision 0274)	out	todo	
@@ -432,7 +432,7 @@ PV-0430	olap-datamodel	pivotCacheDefinition/cacheSource/consolidation/rangeSets/
 PV-0431	olap-datamodel	pivotCacheDefinition/cacheSource/consolidation/rangeSets/rangeSet@i3		none	unknown	out (decision 0274)	out	todo	
 PV-0432	olap-datamodel	pivotCacheDefinition/cacheSource/consolidation/rangeSets/rangeSet@i4		none	unknown	out (decision 0274)	out	todo	
 PV-0433	olap-datamodel	pivotCacheDefinition/cacheSource/consolidation/rangeSets/rangeSet@name		none	unknown	out (decision 0274)	out	todo	
-PV-0434	metadata	pivotCacheDefinition/cacheSource/consolidation/rangeSets/rangeSet@r:id		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-0434	olap-datamodel	pivotCacheDefinition/cacheSource/consolidation/rangeSets/rangeSet@r:id		none	unknown	out (decision 0274)	out	todo	
 PV-0435	olap-datamodel	pivotCacheDefinition/cacheSource/consolidation/rangeSets/rangeSet@ref		none	unknown	out (decision 0274)	out	todo	
 PV-0436	olap-datamodel	pivotCacheDefinition/cacheSource/consolidation/rangeSets/rangeSet@sheet		none	unknown	out (decision 0274)	out	todo	
 PV-0437	olap-datamodel	pivotCacheDefinition/cacheSource/consolidation/rangeSets@count		none	unknown	out (decision 0274)	out	todo	
@@ -490,7 +490,7 @@ PV-0488	calculated	pivotCacheDefinition/calculatedItems/calculatedItem@formula		
 PV-0489	calculated	pivotCacheDefinition/calculatedItems@count		values	unknown	in	PV3	todo	
 PV-0490	olap-datamodel	pivotCacheDefinition/calculatedMembers		none	unknown	out (decision 0274)	out	todo	
 PV-0491	olap-datamodel	pivotCacheDefinition/calculatedMembers/calculatedMember		none	unknown	out (decision 0274)	out	todo	
-PV-0492	metadata	pivotCacheDefinition/calculatedMembers/calculatedMember/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-0492	olap-datamodel	pivotCacheDefinition/calculatedMembers/calculatedMember/extLst		none	unknown	out (decision 0274)	out	todo	
 PV-0493	olap-datamodel	pivotCacheDefinition/calculatedMembers/calculatedMember@hierarchy		none	unknown	out (decision 0274)	out	todo	
 PV-0494	olap-datamodel	pivotCacheDefinition/calculatedMembers/calculatedMember@mdx		none	unknown	out (decision 0274)	out	todo	
 PV-0495	olap-datamodel	pivotCacheDefinition/calculatedMembers/calculatedMember@memberName		none	unknown	out (decision 0274)	out	todo	
@@ -617,7 +617,7 @@ PV-0615	olap-datamodel	pivotCacheDefinition/tupleCache/entries/s@u		none	unknown
 PV-0616	olap-datamodel	pivotCacheDefinition/tupleCache/entries/s@un	false	none	unknown	out (decision 0274)	out	todo	
 PV-0617	olap-datamodel	pivotCacheDefinition/tupleCache/entries/s@v		none	unknown	out (decision 0274)	out	todo	
 PV-0618	olap-datamodel	pivotCacheDefinition/tupleCache/entries@count		none	unknown	out (decision 0274)	out	todo	
-PV-0619	metadata	pivotCacheDefinition/tupleCache/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-0619	olap-datamodel	pivotCacheDefinition/tupleCache/extLst		none	unknown	out (decision 0274)	out	todo	
 PV-0620	olap-datamodel	pivotCacheDefinition/tupleCache/queryCache		none	unknown	out (decision 0274)	out	todo	
 PV-0621	olap-datamodel	pivotCacheDefinition/tupleCache/queryCache/query		none	unknown	out (decision 0274)	out	todo	
 PV-0622	olap-datamodel	pivotCacheDefinition/tupleCache/queryCache/query/tpls		none	unknown	out (decision 0274)	out	todo	
@@ -653,14 +653,14 @@ PV-0651	olap-datamodel	pivotCacheDefinition/tupleCache/sets/set@queryFailed	fals
 PV-0652	olap-datamodel	pivotCacheDefinition/tupleCache/sets/set@setDefinition		none	unknown	out (decision 0274)	out	todo	
 PV-0653	olap-datamodel	pivotCacheDefinition/tupleCache/sets/set@sortType	none	none	unknown	out (decision 0274)	out	todo	
 PV-0654	olap-datamodel	pivotCacheDefinition/tupleCache/sets@count		none	unknown	out (decision 0274)	out	todo	
-PV-0655	olap-datamodel	pivotCacheDefinition@backgroundQuery	false	none	unknown	out (decision 0274)	out	todo	
+PV-0655	ui	pivotCacheDefinition@backgroundQuery	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0656	metadata	pivotCacheDefinition@createdVersion	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0657	source-refresh	pivotCacheDefinition@enableRefresh	true	values	unknown	in	PV1	todo	
 PV-0658	metadata	pivotCacheDefinition@invalid	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0659	metadata	pivotCacheDefinition@mc:Ignorable		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0660	metadata	pivotCacheDefinition@minRefreshableVersion	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0661	source-refresh	pivotCacheDefinition@missingItemsLimit		values	unknown	in	PV1	todo	
-PV-0662	olap-datamodel	pivotCacheDefinition@optimizeMemory	false	none	unknown	out (decision 0274)	out	todo	
+PV-0662	ui	pivotCacheDefinition@optimizeMemory	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0663	metadata	pivotCacheDefinition@r:id		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0664	metadata	pivotCacheDefinition@recordCount		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0665	source-refresh	pivotCacheDefinition@refreshOnLoad	false	values	unknown	in	PV1	todo	
@@ -1080,13 +1080,13 @@ PV-1078	layout	pivotTableDefinition/pivotFields/pivotField/items/item@f	false	la
 PV-1079	filtering	pivotTableDefinition/pivotFields/pivotField/items/item@h	false	values	unknown	in	PV2	todo	
 PV-1080	layout	pivotTableDefinition/pivotFields/pivotField/items/item@m	false	layout	unknown	in	PV1	todo	
 PV-1081	captions	pivotTableDefinition/pivotFields/pivotField/items/item@n		text	unknown	in	PV1	todo	
-PV-1082	layout	pivotTableDefinition/pivotFields/pivotField/items/item@s	false	layout	unknown	in	PV1	todo	
+PV-1082	filtering	pivotTableDefinition/pivotFields/pivotField/items/item@s	false	values	unknown	in	PV2	todo	
 PV-1083	layout	pivotTableDefinition/pivotFields/pivotField/items/item@sd	true	layout	unknown	in	PV1	todo	
 PV-1084	totals	pivotTableDefinition/pivotFields/pivotField/items/item@t	data	layout	unknown	in	PV1	todo	
 PV-1085	layout	pivotTableDefinition/pivotFields/pivotField/items/item@x		layout	unknown	in	PV1	todo	
 PV-1086	layout	pivotTableDefinition/pivotFields/pivotField/items@count		layout	unknown	in	PV1	todo	
 PV-1087	layout	pivotTableDefinition/pivotFields/pivotField@allDrilled	false	layout	unknown	in	PV1	todo	
-PV-1088	layout	pivotTableDefinition/pivotFields/pivotField@autoShow	false	layout	unknown	in	PV1	todo	
+PV-1088	filtering	pivotTableDefinition/pivotFields/pivotField@autoShow	false	values	unknown	in	PV2	todo	
 PV-1089	totals	pivotTableDefinition/pivotFields/pivotField@avgSubtotal	false	layout	unknown	in	PV1	todo	
 PV-1090	layout	pivotTableDefinition/pivotFields/pivotField@axis		layout	unknown	in	PV1	todo	
 PV-1091	layout	pivotTableDefinition/pivotFields/pivotField@compact	true	layout	unknown	in	PV1	todo	
@@ -1103,20 +1103,20 @@ PV-1101	ui	pivotTableDefinition/pivotFields/pivotField@dragToPage	true	none	unkn
 PV-1102	ui	pivotTableDefinition/pivotFields/pivotField@dragToRow	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1103	filtering	pivotTableDefinition/pivotFields/pivotField@hiddenLevel	false	values	unknown	in	PV2	todo	
 PV-1104	filtering	pivotTableDefinition/pivotFields/pivotField@hideNewItems	false	values	unknown	in	PV2	todo	
-PV-1105	ui	pivotTableDefinition/pivotFields/pivotField@includeNewItemsInFilter	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1105	filtering	pivotTableDefinition/pivotFields/pivotField@includeNewItemsInFilter	false	values	unknown	in	PV2	todo	
 PV-1106	layout	pivotTableDefinition/pivotFields/pivotField@insertBlankRow	false	layout	unknown	in	PV1	todo	
 PV-1107	ui	pivotTableDefinition/pivotFields/pivotField@insertPageBreak	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1108	layout	pivotTableDefinition/pivotFields/pivotField@itemPageCount	10	layout	unknown	in	PV1	todo	
+PV-1108	filtering	pivotTableDefinition/pivotFields/pivotField@itemPageCount	10	values	unknown	in	PV2	todo	
 PV-1109	totals	pivotTableDefinition/pivotFields/pivotField@maxSubtotal	false	layout	unknown	in	PV1	todo	
 PV-1110	filtering	pivotTableDefinition/pivotFields/pivotField@measureFilter	false	values	unknown	in	PV2	todo	
 PV-1111	totals	pivotTableDefinition/pivotFields/pivotField@minSubtotal	false	layout	unknown	in	PV1	todo	
-PV-1112	ui	pivotTableDefinition/pivotFields/pivotField@multipleItemSelectionAllowed	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1112	filtering	pivotTableDefinition/pivotFields/pivotField@multipleItemSelectionAllowed	false	values	unknown	in	PV2	todo	
 PV-1113	captions	pivotTableDefinition/pivotFields/pivotField@name		text	unknown	in	PV1	todo	
 PV-1114	sorting	pivotTableDefinition/pivotFields/pivotField@nonAutoSortDefault	false	layout	unknown	in	PV2	todo	
 PV-1115	aggregation	pivotTableDefinition/pivotFields/pivotField@numFmtId		values	unknown	in	PV1	todo	
 PV-1116	layout	pivotTableDefinition/pivotFields/pivotField@outline	true	layout	unknown	in	PV1	todo	
 PV-1117	totals	pivotTableDefinition/pivotFields/pivotField@productSubtotal	false	layout	unknown	in	PV1	todo	
-PV-1118	layout	pivotTableDefinition/pivotFields/pivotField@rankBy		layout	unknown	in	PV1	todo	
+PV-1118	filtering	pivotTableDefinition/pivotFields/pivotField@rankBy		values	unknown	in	PV2	todo	
 PV-1119	olap-datamodel	pivotTableDefinition/pivotFields/pivotField@serverField	false	none	unknown	out (decision 0274)	out	todo	
 PV-1120	layout	pivotTableDefinition/pivotFields/pivotField@showAll	true	layout	unknown	in	PV1	todo	
 PV-1121	ui	pivotTableDefinition/pivotFields/pivotField@showDropDowns	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1126,17 +1126,17 @@ PV-1124	ui	pivotTableDefinition/pivotFields/pivotField@showPropTip	false	none	un
 PV-1125	sorting	pivotTableDefinition/pivotFields/pivotField@sortType	manual	layout	unknown	in	PV2	todo	
 PV-1126	totals	pivotTableDefinition/pivotFields/pivotField@stdDevPSubtotal	false	layout	unknown	in	PV1	todo	
 PV-1127	totals	pivotTableDefinition/pivotFields/pivotField@stdDevSubtotal	false	layout	unknown	in	PV1	todo	
-PV-1128	aggregation	pivotTableDefinition/pivotFields/pivotField@subtotalCaption		values	unknown	in	PV1	todo	
-PV-1129	aggregation	pivotTableDefinition/pivotFields/pivotField@subtotalTop	true	values	unknown	in	PV1	todo	
+PV-1128	totals	pivotTableDefinition/pivotFields/pivotField@subtotalCaption		layout	unknown	in	PV1	todo	
+PV-1129	totals	pivotTableDefinition/pivotFields/pivotField@subtotalTop	true	layout	unknown	in	PV1	todo	
 PV-1130	totals	pivotTableDefinition/pivotFields/pivotField@sumSubtotal	false	layout	unknown	in	PV1	todo	
-PV-1131	layout	pivotTableDefinition/pivotFields/pivotField@topAutoShow	true	layout	unknown	in	PV1	todo	
+PV-1131	filtering	pivotTableDefinition/pivotFields/pivotField@topAutoShow	true	values	unknown	in	PV2	todo	
 PV-1132	olap-datamodel	pivotTableDefinition/pivotFields/pivotField@uniqueMemberProperty		none	unknown	out (decision 0274)	out	todo	
 PV-1133	totals	pivotTableDefinition/pivotFields/pivotField@varPSubtotal	false	layout	unknown	in	PV1	todo	
 PV-1134	totals	pivotTableDefinition/pivotFields/pivotField@varSubtotal	false	layout	unknown	in	PV1	todo	
 PV-1135	layout	pivotTableDefinition/pivotFields@count		layout	unknown	in	PV1	todo	
 PV-1136	olap-datamodel	pivotTableDefinition/pivotHierarchies		none	unknown	out (decision 0274)	out	todo	
 PV-1137	olap-datamodel	pivotTableDefinition/pivotHierarchies/pivotHierarchy		none	unknown	out (decision 0274)	out	todo	
-PV-1138	metadata	pivotTableDefinition/pivotHierarchies/pivotHierarchy/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1138	olap-datamodel	pivotTableDefinition/pivotHierarchies/pivotHierarchy/extLst		none	unknown	out (decision 0274)	out	todo	
 PV-1139	olap-datamodel	pivotTableDefinition/pivotHierarchies/pivotHierarchy/members		none	unknown	out (decision 0274)	out	todo	
 PV-1140	olap-datamodel	pivotTableDefinition/pivotHierarchies/pivotHierarchy/members/member		none	unknown	out (decision 0274)	out	todo	
 PV-1141	olap-datamodel	pivotTableDefinition/pivotHierarchies/pivotHierarchy/members/member@name		none	unknown	out (decision 0274)	out	todo	
@@ -1202,7 +1202,7 @@ PV-1200	captions	pivotTableDefinition@dataCaption		text	unknown	in	PV1	todo
 PV-1201	layout	pivotTableDefinition@dataOnRows	false	layout	unknown	in	PV1	todo	
 PV-1202	layout	pivotTableDefinition@dataPosition		layout	unknown	in	PV1	todo	
 PV-1203	ui	pivotTableDefinition@disableFieldList	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1204	ui	pivotTableDefinition@editData	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1204	olap-datamodel	pivotTableDefinition@editData	false	none	unknown	out (decision 0274)	out	todo	
 PV-1205	ui	pivotTableDefinition@enableDrill	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1206	ui	pivotTableDefinition@enableFieldProperties	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1207	ui	pivotTableDefinition@enableWizard	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1210,7 +1210,7 @@ PV-1208	captions	pivotTableDefinition@errorCaption		text	unknown	in	PV1	todo
 PV-1209	ui	pivotTableDefinition@fieldListSortAscending	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1210	ui	pivotTableDefinition@fieldPrintTitles	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1211	totals	pivotTableDefinition@grandTotalCaption		layout	unknown	in	PV1	todo	
-PV-1212	ui	pivotTableDefinition@gridDropZones	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1212	layout	pivotTableDefinition@gridDropZones	false	layout	unknown	in	PV1	todo	
 PV-1213	ui	pivotTableDefinition@immersive	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1214	formatting	pivotTableDefinition@indent	1	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1215	ui	pivotTableDefinition@itemPrintTitles	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1237,15 +1237,15 @@ PV-1235	ui	pivotTableDefinition@showDataDropDown	true	none	unknown	round-trip on
 PV-1236	ui	pivotTableDefinition@showDataTips	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1237	ui	pivotTableDefinition@showDrill	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1238	ui	pivotTableDefinition@showDropZones	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1239	layout	pivotTableDefinition@showEmptyCol	false	layout	unknown	in	PV1	todo	
-PV-1240	layout	pivotTableDefinition@showEmptyRow	false	layout	unknown	in	PV1	todo	
+PV-1239	olap-datamodel	pivotTableDefinition@showEmptyCol	false	none	unknown	out (decision 0274)	out	todo	
+PV-1240	olap-datamodel	pivotTableDefinition@showEmptyRow	false	none	unknown	out (decision 0274)	out	todo	
 PV-1241	captions	pivotTableDefinition@showError	false	text	unknown	in	PV1	todo	
 PV-1242	captions	pivotTableDefinition@showHeaders	true	text	unknown	in	PV1	todo	
-PV-1243	ui	pivotTableDefinition@showItems	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1243	layout	pivotTableDefinition@showItems	true	layout	unknown	in	PV1	todo	
 PV-1244	olap-datamodel	pivotTableDefinition@showMemberPropertyTips	true	none	unknown	out (decision 0274)	out	todo	
 PV-1245	captions	pivotTableDefinition@showMissing	true	text	unknown	in	PV1	todo	
 PV-1246	captions	pivotTableDefinition@showMultipleLabel	true	text	unknown	in	PV1	todo	
-PV-1247	aggregation	pivotTableDefinition@subtotalHiddenItems	false	values	unknown	in	PV1	todo	
+PV-1247	totals	pivotTableDefinition@subtotalHiddenItems	false	layout	unknown	in	PV1	todo	
 PV-1248	metadata	pivotTableDefinition@tag		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1249	metadata	pivotTableDefinition@updatedVersion	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1250	formatting	pivotTableDefinition@useAutoFormatting	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1267,7 +1267,7 @@ PV-1265	olap-datamodel	x14:cacheHierarchy/setLevels/setLevel@hierarchy		none	unk
 PV-1266	olap-datamodel	x14:cacheHierarchy/setLevels@count		none	unknown	out (decision 0274)	out	todo	
 PV-1267	olap-datamodel	x14:cacheHierarchy@flattenHierarchies	true	none	unknown	out (decision 0274)	out	todo	
 PV-1268	olap-datamodel	x14:cacheHierarchy@hierarchizeDistinct	true	none	unknown	out (decision 0274)	out	todo	
-PV-1269	metadata	x14:cacheHierarchy@ignore	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1269	olap-datamodel	x14:cacheHierarchy@ignore	false	none	unknown	out (decision 0274)	out	todo	
 PV-1270	olap-datamodel	x14:cacheHierarchy@measuresSet	false	none	unknown	out (decision 0274)	out	todo	
 PV-1271	aggregation	x14:dataField		values	unknown	in	PV1	todo	
 PV-1272	show-values-as	x14:dataField@pivotShowAs		values	unknown	in	PV2	todo	
@@ -1283,7 +1283,7 @@ PV-1281	layout	x14:pivotField		layout	unknown	in	PV1	todo
 PV-1282	layout	x14:pivotField@fillDownLabels	false	layout	unknown	in	PV1	todo	
 PV-1283	metadata	x14:pivotField@ignore	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1284	olap-datamodel	x14:pivotHierarchy		none	unknown	out (decision 0274)	out	todo	
-PV-1285	metadata	x14:pivotHierarchy@ignore	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1285	olap-datamodel	x14:pivotHierarchy@ignore	false	none	unknown	out (decision 0274)	out	todo	
 PV-1286	layout	x14:pivotTableDefinition		layout	unknown	in	PV1	todo	
 PV-1287	formatting	x14:pivotTableDefinition/conditionalFormats		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1288	formatting	x14:pivotTableDefinition/conditionalFormats/conditionalFormat		none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1336,19 +1336,19 @@ PV-1334	olap-datamodel	x14:pivotTableDefinition/pivotChanges		none	unknown	out (
 PV-1335	olap-datamodel	x14:pivotTableDefinition/pivotChanges/pivotChange		none	unknown	out (decision 0274)	out	todo	
 PV-1336	olap-datamodel	x14:pivotTableDefinition/pivotChanges/pivotChange/editValue		none	unknown	out (decision 0274)	out	todo	
 PV-1337	olap-datamodel	x14:pivotTableDefinition/pivotChanges/pivotChange/editValue@valueType		none	unknown	out (decision 0274)	out	todo	
-PV-1338	metadata	x14:pivotTableDefinition/pivotChanges/pivotChange/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1338	olap-datamodel	x14:pivotTableDefinition/pivotChanges/pivotChange/extLst		none	unknown	out (decision 0274)	out	todo	
 PV-1339	olap-datamodel	x14:pivotTableDefinition/pivotChanges/pivotChange/tupleItems		none	unknown	out (decision 0274)	out	todo	
 PV-1340	olap-datamodel	x14:pivotTableDefinition/pivotChanges/pivotChange/tupleItems/tupleItem		none	unknown	out (decision 0274)	out	todo	
 PV-1341	olap-datamodel	x14:pivotTableDefinition/pivotChanges/pivotChange@allocationMethod	equalAllocation	none	unknown	out (decision 0274)	out	todo	
 PV-1342	olap-datamodel	x14:pivotTableDefinition/pivotChanges/pivotChange@weightExpression		none	unknown	out (decision 0274)	out	todo	
 PV-1343	olap-datamodel	x14:pivotTableDefinition/pivotEdits		none	unknown	out (decision 0274)	out	todo	
 PV-1344	olap-datamodel	x14:pivotTableDefinition/pivotEdits/pivotEdit		none	unknown	out (decision 0274)	out	todo	
-PV-1345	metadata	x14:pivotTableDefinition/pivotEdits/pivotEdit/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1345	olap-datamodel	x14:pivotTableDefinition/pivotEdits/pivotEdit/extLst		none	unknown	out (decision 0274)	out	todo	
 PV-1346	olap-datamodel	x14:pivotTableDefinition/pivotEdits/pivotEdit/pivotArea		none	unknown	out (decision 0274)	out	todo	
-PV-1347	metadata	x14:pivotTableDefinition/pivotEdits/pivotEdit/pivotArea/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1347	olap-datamodel	x14:pivotTableDefinition/pivotEdits/pivotEdit/pivotArea/extLst		none	unknown	out (decision 0274)	out	todo	
 PV-1348	olap-datamodel	x14:pivotTableDefinition/pivotEdits/pivotEdit/pivotArea/references		none	unknown	out (decision 0274)	out	todo	
 PV-1349	olap-datamodel	x14:pivotTableDefinition/pivotEdits/pivotEdit/pivotArea/references/reference		none	unknown	out (decision 0274)	out	todo	
-PV-1350	metadata	x14:pivotTableDefinition/pivotEdits/pivotEdit/pivotArea/references/reference/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1350	olap-datamodel	x14:pivotTableDefinition/pivotEdits/pivotEdit/pivotArea/references/reference/extLst		none	unknown	out (decision 0274)	out	todo	
 PV-1351	olap-datamodel	x14:pivotTableDefinition/pivotEdits/pivotEdit/pivotArea/references/reference/x		none	unknown	out (decision 0274)	out	todo	
 PV-1352	olap-datamodel	x14:pivotTableDefinition/pivotEdits/pivotEdit/pivotArea/references/reference/x@v		none	unknown	out (decision 0274)	out	todo	
 PV-1353	olap-datamodel	x14:pivotTableDefinition/pivotEdits/pivotEdit/pivotArea/references/reference@avgSubtotal	false	none	unknown	out (decision 0274)	out	todo	
@@ -1390,11 +1390,11 @@ PV-1388	olap-datamodel	x14:pivotTableDefinition/pivotEdits/pivotEdit/userEdit/xm
 PV-1389	olap-datamodel	x14:pivotTableDefinition@allocationMethod	equalAllocation	none	unknown	out (decision 0274)	out	todo	
 PV-1390	metadata	x14:pivotTableDefinition@altText		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1391	metadata	x14:pivotTableDefinition@altTextSummary		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1392	ui	x14:pivotTableDefinition@autoApply	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1392	olap-datamodel	x14:pivotTableDefinition@autoApply	false	none	unknown	out (decision 0274)	out	todo	
 PV-1393	olap-datamodel	x14:pivotTableDefinition@calculatedMembersInFilters	false	none	unknown	out (decision 0274)	out	todo	
 PV-1394	olap-datamodel	x14:pivotTableDefinition@enableEdit	false	none	unknown	out (decision 0274)	out	todo	
 PV-1395	layout	x14:pivotTableDefinition@fillDownLabelsDefault	false	layout	unknown	in	PV1	todo	
-PV-1396	ui	x14:pivotTableDefinition@hideValuesRow	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1396	layout	x14:pivotTableDefinition@hideValuesRow	false	layout	unknown	in	PV1	todo	
 PV-1397	olap-datamodel	x14:pivotTableDefinition@visualTotalsForSets	false	none	unknown	out (decision 0274)	out	todo	
 PV-1398	olap-datamodel	x14:pivotTableDefinition@weightExpression		none	unknown	out (decision 0274)	out	todo	
 PV-1399	slicers-timelines	x14:slicerCacheDefinition		values	unknown	in	PV5	todo	
@@ -1426,7 +1426,7 @@ PV-1424	olap-datamodel	x14:slicerCacheDefinition/data/olap/selections/selection@
 PV-1425	olap-datamodel	x14:slicerCacheDefinition/data/olap/selections@count		none	unknown	out (decision 0274)	out	todo	
 PV-1426	olap-datamodel	x14:slicerCacheDefinition/data/olap@pivotCacheId		none	unknown	out (decision 0274)	out	todo	
 PV-1427	slicers-timelines	x14:slicerCacheDefinition/data/tabular		values	unknown	in	PV5	todo	
-PV-1428	slicers-timelines	x14:slicerCacheDefinition/data/tabular/extLst		values	unknown	in	PV5	todo	
+PV-1428	metadata	x14:slicerCacheDefinition/data/tabular/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1429	slicers-timelines	x14:slicerCacheDefinition/data/tabular/items		values	unknown	in	PV5	todo	
 PV-1430	slicers-timelines	x14:slicerCacheDefinition/data/tabular/items/i		values	unknown	in	PV5	todo	
 PV-1431	slicers-timelines	x14:slicerCacheDefinition/data/tabular/items/i@nd	false	values	unknown	in	PV5	todo	
@@ -1435,41 +1435,41 @@ PV-1433	slicers-timelines	x14:slicerCacheDefinition/data/tabular/items/i@x		valu
 PV-1434	slicers-timelines	x14:slicerCacheDefinition/data/tabular/items@count		values	unknown	in	PV5	todo	
 PV-1435	slicers-timelines	x14:slicerCacheDefinition/data/tabular@crossFilter	showItemsWithDataAtTop	values	unknown	in	PV5	todo	
 PV-1436	slicers-timelines	x14:slicerCacheDefinition/data/tabular@customListSort	true	values	unknown	in	PV5	todo	
-PV-1437	slicers-timelines	x14:slicerCacheDefinition/data/tabular@pivotCacheId		values	unknown	in	PV5	todo	
+PV-1437	metadata	x14:slicerCacheDefinition/data/tabular@pivotCacheId		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1438	slicers-timelines	x14:slicerCacheDefinition/data/tabular@showMissing	true	values	unknown	in	PV5	todo	
 PV-1439	slicers-timelines	x14:slicerCacheDefinition/data/tabular@sortOrder	ascending	values	unknown	in	PV5	todo	
-PV-1440	slicers-timelines	x14:slicerCacheDefinition/extLst		values	unknown	in	PV5	todo	
+PV-1440	metadata	x14:slicerCacheDefinition/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1441	slicers-timelines	x14:slicerCacheDefinition/pivotTables		values	unknown	in	PV5	todo	
 PV-1442	slicers-timelines	x14:slicerCacheDefinition/pivotTables/pivotTable		values	unknown	in	PV5	todo	
 PV-1443	slicers-timelines	x14:slicerCacheDefinition/pivotTables/pivotTable@name		values	unknown	in	PV5	todo	
 PV-1444	slicers-timelines	x14:slicerCacheDefinition/pivotTables/pivotTable@tabId		values	unknown	in	PV5	todo	
-PV-1445	slicers-timelines	x14:slicerCacheDefinition@mc:Ignorable		values	unknown	in	PV5	todo	
+PV-1445	metadata	x14:slicerCacheDefinition@mc:Ignorable		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1446	slicers-timelines	x14:slicerCacheDefinition@name		values	unknown	in	PV5	todo	
 PV-1447	slicers-timelines	x14:slicerCacheDefinition@sourceName		values	unknown	in	PV5	todo	
-PV-1448	slicers-timelines	x14:slicerCacheDefinition@xr10:uid		values	unknown	in	PV5	todo	
-PV-1449	slicers-timelines	x14:slicerStyles		values	unknown	in	PV5	todo	
-PV-1450	slicers-timelines	x14:slicerStyles/slicerStyle		values	unknown	in	PV5	todo	
-PV-1451	slicers-timelines	x14:slicerStyles/slicerStyle/slicerStyleElements		values	unknown	in	PV5	todo	
-PV-1452	slicers-timelines	x14:slicerStyles/slicerStyle/slicerStyleElements/slicerStyleElement		values	unknown	in	PV5	todo	
-PV-1453	slicers-timelines	x14:slicerStyles/slicerStyle/slicerStyleElements/slicerStyleElement@dxfId		values	unknown	in	PV5	todo	
-PV-1454	slicers-timelines	x14:slicerStyles/slicerStyle/slicerStyleElements/slicerStyleElement@type		values	unknown	in	PV5	todo	
-PV-1455	slicers-timelines	x14:slicerStyles/slicerStyle@name		values	unknown	in	PV5	todo	
-PV-1456	slicers-timelines	x14:slicerStyles@defaultSlicerStyle		values	unknown	in	PV5	todo	
+PV-1448	metadata	x14:slicerCacheDefinition@xr10:uid		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1449	formatting	x14:slicerStyles		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1450	formatting	x14:slicerStyles/slicerStyle		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1451	formatting	x14:slicerStyles/slicerStyle/slicerStyleElements		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1452	formatting	x14:slicerStyles/slicerStyle/slicerStyleElements/slicerStyleElement		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1453	formatting	x14:slicerStyles/slicerStyle/slicerStyleElements/slicerStyleElement@dxfId		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1454	formatting	x14:slicerStyles/slicerStyle/slicerStyleElements/slicerStyleElement@type		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1455	formatting	x14:slicerStyles/slicerStyle@name		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1456	formatting	x14:slicerStyles@defaultSlicerStyle		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1457	slicers-timelines	x14:slicers		values	unknown	in	PV5	todo	
 PV-1458	slicers-timelines	x14:slicers/slicer		values	unknown	in	PV5	todo	
-PV-1459	slicers-timelines	x14:slicers/slicer/extLst		values	unknown	in	PV5	todo	
+PV-1459	metadata	x14:slicers/slicer/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1460	slicers-timelines	x14:slicers/slicer@cache		values	unknown	in	PV5	todo	
 PV-1461	slicers-timelines	x14:slicers/slicer@caption		values	unknown	in	PV5	todo	
-PV-1462	slicers-timelines	x14:slicers/slicer@columnCount	1	values	unknown	in	PV5	todo	
-PV-1463	slicers-timelines	x14:slicers/slicer@level	0	values	unknown	in	PV5	todo	
-PV-1464	slicers-timelines	x14:slicers/slicer@lockedPosition	false	values	unknown	in	PV5	todo	
+PV-1462	ui	x14:slicers/slicer@columnCount	1	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1463	ui	x14:slicers/slicer@level	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1464	ui	x14:slicers/slicer@lockedPosition	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1465	slicers-timelines	x14:slicers/slicer@name		values	unknown	in	PV5	todo	
-PV-1466	slicers-timelines	x14:slicers/slicer@rowHeight		values	unknown	in	PV5	todo	
-PV-1467	slicers-timelines	x14:slicers/slicer@showCaption	true	values	unknown	in	PV5	todo	
-PV-1468	slicers-timelines	x14:slicers/slicer@startItem	0	values	unknown	in	PV5	todo	
-PV-1469	slicers-timelines	x14:slicers/slicer@style		values	unknown	in	PV5	todo	
-PV-1470	slicers-timelines	x14:slicers/slicer@xr10:uid		values	unknown	in	PV5	todo	
-PV-1471	slicers-timelines	x14:slicers@mc:Ignorable		values	unknown	in	PV5	todo	
+PV-1466	ui	x14:slicers/slicer@rowHeight		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1467	ui	x14:slicers/slicer@showCaption	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1468	ui	x14:slicers/slicer@startItem	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1469	formatting	x14:slicers/slicer@style		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1470	metadata	x14:slicers/slicer@xr10:uid		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1471	metadata	x14:slicers@mc:Ignorable		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1472	olap-datamodel	x15:cacheHierarchy		none	unknown	out (decision 0274)	out	todo	
 PV-1473	olap-datamodel	x15:cacheHierarchy@aggregatedColumn		none	unknown	out (decision 0274)	out	todo	
 PV-1474	olap-datamodel	x15:dataField		none	unknown	out (decision 0274)	out	todo	
@@ -1495,7 +1495,7 @@ PV-1493	olap-datamodel	x15:pivotTableData/pivotRow/c@i		none	unknown	out (decisi
 PV-1494	olap-datamodel	x15:pivotTableData/pivotRow/c@t	n	none	unknown	out (decision 0274)	out	todo	
 PV-1495	olap-datamodel	x15:pivotTableData/pivotRow@count		none	unknown	out (decision 0274)	out	todo	
 PV-1496	olap-datamodel	x15:pivotTableData/pivotRow@r		none	unknown	out (decision 0274)	out	todo	
-PV-1497	metadata	x15:pivotTableData@cacheId		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1497	olap-datamodel	x15:pivotTableData@cacheId		none	unknown	out (decision 0274)	out	todo	
 PV-1498	olap-datamodel	x15:pivotTableData@columnCount		none	unknown	out (decision 0274)	out	todo	
 PV-1499	olap-datamodel	x15:pivotTableData@rowCount		none	unknown	out (decision 0274)	out	todo	
 PV-1500	source-refresh	x15:pivotTableReferences		values	unknown	in	PV1	todo	
@@ -1514,14 +1514,14 @@ PV-1512	olap-datamodel	x15:slicerCacheHideItemsWithNoData/slicerCacheOlapLevelNa
 PV-1513	olap-datamodel	x15:slicerCacheHideItemsWithNoData/slicerCacheOlapLevelName@uniqueName		none	unknown	out (decision 0274)	out	todo	
 PV-1514	slicers-timelines	x15:slicerCacheHideItemsWithNoData@count	0	values	unknown	in	PV5	todo	
 PV-1515	slicers-timelines	x15:tableSlicerCache		values	unknown	in	PV5	todo	
-PV-1516	slicers-timelines	x15:tableSlicerCache/extLst		values	unknown	in	PV5	todo	
+PV-1516	metadata	x15:tableSlicerCache/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1517	slicers-timelines	x15:tableSlicerCache@column		values	unknown	in	PV5	todo	
 PV-1518	slicers-timelines	x15:tableSlicerCache@crossFilter	showItemsWithDataAtTop	values	unknown	in	PV5	todo	
 PV-1519	slicers-timelines	x15:tableSlicerCache@customListSort	true	values	unknown	in	PV5	todo	
 PV-1520	slicers-timelines	x15:tableSlicerCache@sortOrder	ascending	values	unknown	in	PV5	todo	
 PV-1521	slicers-timelines	x15:tableSlicerCache@tableId		values	unknown	in	PV5	todo	
 PV-1522	slicers-timelines	x15:timelineCacheDefinition		values	unknown	in	PV5	todo	
-PV-1523	slicers-timelines	x15:timelineCacheDefinition/extLst		values	unknown	in	PV5	todo	
+PV-1523	metadata	x15:timelineCacheDefinition/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1524	slicers-timelines	x15:timelineCacheDefinition/pivotTables		values	unknown	in	PV5	todo	
 PV-1525	slicers-timelines	x15:timelineCacheDefinition/pivotTables/pivotTable		values	unknown	in	PV5	todo	
 PV-1526	slicers-timelines	x15:timelineCacheDefinition/pivotTables/pivotTable@name		values	unknown	in	PV5	todo	
@@ -1530,22 +1530,22 @@ PV-1528	slicers-timelines	x15:timelineCacheDefinition/state		values	unknown	in	P
 PV-1529	slicers-timelines	x15:timelineCacheDefinition/state/bounds		values	unknown	in	PV5	todo	
 PV-1530	slicers-timelines	x15:timelineCacheDefinition/state/bounds@endDate		values	unknown	in	PV5	todo	
 PV-1531	slicers-timelines	x15:timelineCacheDefinition/state/bounds@startDate		values	unknown	in	PV5	todo	
-PV-1532	slicers-timelines	x15:timelineCacheDefinition/state/extLst		values	unknown	in	PV5	todo	
+PV-1532	metadata	x15:timelineCacheDefinition/state/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1533	slicers-timelines	x15:timelineCacheDefinition/state/selection		values	unknown	in	PV5	todo	
 PV-1534	slicers-timelines	x15:timelineCacheDefinition/state/selection@endDate		values	unknown	in	PV5	todo	
 PV-1535	slicers-timelines	x15:timelineCacheDefinition/state/selection@startDate		values	unknown	in	PV5	todo	
 PV-1536	slicers-timelines	x15:timelineCacheDefinition/state@filterType		values	unknown	in	PV5	todo	
-PV-1537	slicers-timelines	x15:timelineCacheDefinition/state@lastRefreshVersion		values	unknown	in	PV5	todo	
-PV-1538	slicers-timelines	x15:timelineCacheDefinition/state@minimalRefreshVersion		values	unknown	in	PV5	todo	
-PV-1539	slicers-timelines	x15:timelineCacheDefinition/state@pivotCacheId		values	unknown	in	PV5	todo	
+PV-1537	metadata	x15:timelineCacheDefinition/state@lastRefreshVersion		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1538	metadata	x15:timelineCacheDefinition/state@minimalRefreshVersion		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1539	metadata	x15:timelineCacheDefinition/state@pivotCacheId		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1540	slicers-timelines	x15:timelineCacheDefinition/state@singleRangeFilterState	true	values	unknown	in	PV5	todo	
 PV-1541	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter		values	unknown	in	PV5	todo	
 PV-1542	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter		values	unknown	in	PV5	todo	
-PV-1543	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/extLst		values	unknown	in	PV5	todo	
+PV-1543	metadata	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1544	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn		values	unknown	in	PV5	todo	
 PV-1545	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/colorFilter		values	unknown	in	PV5	todo	
 PV-1546	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/colorFilter@cellColor	true	values	unknown	in	PV5	todo	
-PV-1547	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/colorFilter@dxfId		values	unknown	in	PV5	todo	
+PV-1547	formatting	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/colorFilter@dxfId		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1548	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/customFilters		values	unknown	in	PV5	todo	
 PV-1549	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/customFilters/customFilter		values	unknown	in	PV5	todo	
 PV-1550	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/customFilters/customFilter@operator	equal	values	unknown	in	PV5	todo	
@@ -1557,7 +1557,7 @@ PV-1555	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFi
 PV-1556	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/dynamicFilter@type		values	unknown	in	PV5	todo	
 PV-1557	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/dynamicFilter@val		values	unknown	in	PV5	todo	
 PV-1558	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/dynamicFilter@valIso		values	unknown	in	PV5	todo	
-PV-1559	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/extLst		values	unknown	in	PV5	todo	
+PV-1559	metadata	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1560	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/filters		values	unknown	in	PV5	todo	
 PV-1561	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/filters/dateGroupItem		values	unknown	in	PV5	todo	
 PV-1562	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn/filters/dateGroupItem@dateTimeGrouping		values	unknown	in	PV5	todo	
@@ -1583,11 +1583,11 @@ PV-1581	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFi
 PV-1582	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn@hiddenButton	false	values	unknown	in	PV5	todo	
 PV-1583	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/filterColumn@showButton	true	values	unknown	in	PV5	todo	
 PV-1584	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState		values	unknown	in	PV5	todo	
-PV-1585	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState/extLst		values	unknown	in	PV5	todo	
+PV-1585	metadata	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1586	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState/sortCondition		values	unknown	in	PV5	todo	
 PV-1587	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState/sortCondition@customList		values	unknown	in	PV5	todo	
 PV-1588	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState/sortCondition@descending	false	values	unknown	in	PV5	todo	
-PV-1589	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState/sortCondition@dxfId		values	unknown	in	PV5	todo	
+PV-1589	formatting	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState/sortCondition@dxfId		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1590	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState/sortCondition@iconId		values	unknown	in	PV5	todo	
 PV-1591	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState/sortCondition@iconSet	3Arrows	values	unknown	in	PV5	todo	
 PV-1592	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState/sortCondition@ref		values	unknown	in	PV5	todo	
@@ -1597,39 +1597,39 @@ PV-1595	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFi
 PV-1596	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState@ref		values	unknown	in	PV5	todo	
 PV-1597	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter/sortState@sortMethod	none	values	unknown	in	PV5	todo	
 PV-1598	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter@ref		values	unknown	in	PV5	todo	
-PV-1599	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter@xr:uid		values	unknown	in	PV5	todo	
+PV-1599	metadata	x15:timelineCacheDefinition/timelinePivotFilter/autoFilter@xr:uid		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1600	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter@description		values	unknown	in	PV5	todo	
 PV-1601	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter@fld		values	unknown	in	PV5	todo	
-PV-1602	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter@id		values	unknown	in	PV5	todo	
+PV-1602	metadata	x15:timelineCacheDefinition/timelinePivotFilter@id		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1603	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter@name		values	unknown	in	PV5	todo	
 PV-1604	slicers-timelines	x15:timelineCacheDefinition/timelinePivotFilter@useWholeDay	false	values	unknown	in	PV5	todo	
-PV-1605	slicers-timelines	x15:timelineCacheDefinition@mc:Ignorable		values	unknown	in	PV5	todo	
+PV-1605	metadata	x15:timelineCacheDefinition@mc:Ignorable		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1606	slicers-timelines	x15:timelineCacheDefinition@name		values	unknown	in	PV5	todo	
 PV-1607	slicers-timelines	x15:timelineCacheDefinition@sourceName		values	unknown	in	PV5	todo	
-PV-1608	slicers-timelines	x15:timelineCacheDefinition@xr10:uid		values	unknown	in	PV5	todo	
+PV-1608	metadata	x15:timelineCacheDefinition@xr10:uid		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1609	slicers-timelines	x15:timelinePivotCacheDefinition		values	unknown	in	PV5	todo	
 PV-1610	slicers-timelines	x15:timelinePivotCacheDefinition@timelineData	false	values	unknown	in	PV5	todo	
-PV-1611	slicers-timelines	x15:timelineStyles		values	unknown	in	PV5	todo	
-PV-1612	slicers-timelines	x15:timelineStyles/timelineStyle		values	unknown	in	PV5	todo	
-PV-1613	slicers-timelines	x15:timelineStyles/timelineStyle/timelineStyleElements		values	unknown	in	PV5	todo	
-PV-1614	slicers-timelines	x15:timelineStyles/timelineStyle/timelineStyleElements/timelineStyleElement		values	unknown	in	PV5	todo	
-PV-1615	slicers-timelines	x15:timelineStyles/timelineStyle/timelineStyleElements/timelineStyleElement@dxfId		values	unknown	in	PV5	todo	
-PV-1616	slicers-timelines	x15:timelineStyles/timelineStyle/timelineStyleElements/timelineStyleElement@type		values	unknown	in	PV5	todo	
-PV-1617	slicers-timelines	x15:timelineStyles/timelineStyle@name		values	unknown	in	PV5	todo	
-PV-1618	slicers-timelines	x15:timelineStyles@defaultTimelineStyle		values	unknown	in	PV5	todo	
+PV-1611	formatting	x15:timelineStyles		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1612	formatting	x15:timelineStyles/timelineStyle		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1613	formatting	x15:timelineStyles/timelineStyle/timelineStyleElements		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1614	formatting	x15:timelineStyles/timelineStyle/timelineStyleElements/timelineStyleElement		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1615	formatting	x15:timelineStyles/timelineStyle/timelineStyleElements/timelineStyleElement@dxfId		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1616	formatting	x15:timelineStyles/timelineStyle/timelineStyleElements/timelineStyleElement@type		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1617	formatting	x15:timelineStyles/timelineStyle@name		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1618	formatting	x15:timelineStyles@defaultTimelineStyle		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1619	slicers-timelines	x15:timelines		values	unknown	in	PV5	todo	
 PV-1620	slicers-timelines	x15:timelines/timeline		values	unknown	in	PV5	todo	
-PV-1621	slicers-timelines	x15:timelines/timeline/extLst		values	unknown	in	PV5	todo	
+PV-1621	metadata	x15:timelines/timeline/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1622	slicers-timelines	x15:timelines/timeline@cache		values	unknown	in	PV5	todo	
 PV-1623	slicers-timelines	x15:timelines/timeline@caption		values	unknown	in	PV5	todo	
-PV-1624	slicers-timelines	x15:timelines/timeline@level		values	unknown	in	PV5	todo	
+PV-1624	ui	x15:timelines/timeline@level		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1625	slicers-timelines	x15:timelines/timeline@name		values	unknown	in	PV5	todo	
-PV-1626	slicers-timelines	x15:timelines/timeline@scrollPosition		values	unknown	in	PV5	todo	
+PV-1626	ui	x15:timelines/timeline@scrollPosition		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1627	slicers-timelines	x15:timelines/timeline@selectionLevel		values	unknown	in	PV5	todo	
-PV-1628	slicers-timelines	x15:timelines/timeline@showHeader	true	values	unknown	in	PV5	todo	
-PV-1629	slicers-timelines	x15:timelines/timeline@showHorizontalScrollbar	true	values	unknown	in	PV5	todo	
-PV-1630	slicers-timelines	x15:timelines/timeline@showSelectionLabel	true	values	unknown	in	PV5	todo	
-PV-1631	slicers-timelines	x15:timelines/timeline@showTimeLevel	true	values	unknown	in	PV5	todo	
-PV-1632	slicers-timelines	x15:timelines/timeline@style		values	unknown	in	PV5	todo	
-PV-1633	slicers-timelines	x15:timelines/timeline@xr10:uid		values	unknown	in	PV5	todo	
-PV-1634	slicers-timelines	x15:timelines@mc:Ignorable		values	unknown	in	PV5	todo	
+PV-1628	ui	x15:timelines/timeline@showHeader	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1629	ui	x15:timelines/timeline@showHorizontalScrollbar	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1630	ui	x15:timelines/timeline@showSelectionLabel	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1631	ui	x15:timelines/timeline@showTimeLevel	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1632	formatting	x15:timelines/timeline@style		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1633	metadata	x15:timelines/timeline@xr10:uid		none	unknown	round-trip only (decision 0274)	round-trip	todo	
+PV-1634	metadata	x15:timelines@mc:Ignorable		none	unknown	round-trip only (decision 0274)	round-trip	todo	

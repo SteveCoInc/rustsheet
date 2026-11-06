@@ -83,6 +83,10 @@ ENUMS = (
     "ST_Axis",
 )
 XS = "{http://www.w3.org/2001/XMLSchema}"
+MAX_NODES = 100_000
+# Namespaces whose types the walk does not enter: XML Schema built-ins, the shared simple types, and
+# the drawing and formula types a pivot part never holds.
+NOT_WALKED = {"xsd", "s", "xdr", "xm"}
 HEADER = ("id", "family", "ooxml", "default", "affects", "web", "scope", "stage", "status", "evidence")
 
 
@@ -101,7 +105,13 @@ def _resolve(type_ref: str, file_prefix: str) -> str:
     if ":" not in type_ref:
         return file_prefix + type_ref
     ns, local = type_ref.split(":", 1)
-    return {"x": "", "x14": "x14:", "x15": "x15:"}.get(ns, "?") + local
+    if ns in NOT_WALKED:
+        return ""
+    prefixes = {"x": "", "x14": "x14:", "x15": "x15:"}
+    if ns not in prefixes:
+        # A schema bump that references another namespace must not drop its nodes silently.
+        raise ValueError(f"unknown schema namespace prefix in type {type_ref!r}")
+    return prefixes[ns] + local
 
 
 def walk(xsd_dir: Path) -> list[Node]:
@@ -127,6 +137,8 @@ def walk(xsd_dir: Path) -> list[Node]:
         ct = types.get(type_key)
         if ct is None or type_key in seen:
             return
+        if len(nodes) > MAX_NODES:  # a wrong --xsd directory, not the pinned schemas (about 1,600)
+            raise ValueError(f"the schema walk passed {MAX_NODES} nodes")
         file_prefix = type_key[: type_key.index(":") + 1] if ":" in type_key else ""
         for a in ct.iter(XS + "attribute"):
             name = a.get("name") or a.get("ref")
@@ -154,53 +166,57 @@ def walk(xsd_dir: Path) -> list[Node]:
 
 
 # --------------------------------------------------------------------------- classification
-# (pattern, family, affects, stage). First match wins, so the families that override (slicers,
-# metadata, OLAP, formatting, UI) come first. `out` and `round-trip` stages are decision 0274's scope
+# (pattern, family, affects, stage). First match wins, so the families that override come first: OLAP,
+# metadata, formatting and UI, then slicers and timelines (whose styles and chrome are formatting). `out` and `round-trip` stages are decision 0274's scope
 # rulings; an `affects none` row says why in its family (metadata, formatting, ui).
 RULES: tuple[tuple[str, str, str, str], ...] = (
     (r"(?i)slicer.*olap", "olap-datamodel", "none", "out"),
-    (r"(?i)(slicer|timeline)", "slicers-timelines", "values", "PV5"),
-    (
-        r"(createdVersion|updatedVersion|minRefreshableVersion|refreshedVersion|refreshedBy|refreshedDate|"
-        r"upgradeOnRefresh|uid$|@mc:|@id$|@r:id|extLst|invalid|@pivotCacheId|@cacheId|@tag$|@published|"
-        r"@altText|@ignore$|@recordCount)",
-        "metadata",
-        "none",
-        "round-trip",
-    ),
     (
         r"(?i)(hierarch|kpi|dimension|measureGroup|/maps|calculatedMember|olap|@mdx|@serverField|"
         r"@uniqueMemberProperty|@uniqueName|consolidation|@connectionId|pivotEdit|pivotChange|userEdit|"
-        r"editValue|tupleItem|tupleCache|@weightExpression|@enableEdit|x15:pivotTableData|"
-        r"x15:dataField|x15:cacheHierarchy|cachedUniqueNames|@supportAddCalcMems|@supportSubquery|"
-        r"@supportAdvancedDrill|@allocation|@showCalcMbrs|@showMemberPropertyTips|@asteriskTotals|@member|@isMeasure|"
-        r"@visualTotals|@backgroundQuery|@optimizeMemory|@sourceField|@level|@mpMap|@uniqueList|"
-        r"@isDataModel|@isMeasure)",
+        r"editValue|tupleItem|tupleCache|@weightExpression|@enableEdit|@editData|@autoApply|"
+        r"x15:pivotTableData|x15:dataField|x15:cacheHierarchy|cachedUniqueNames|@supportAddCalcMems|"
+        r"@supportSubquery|@supportAdvancedDrill|@allocation|@showCalcMbrs|@showMemberPropertyTips|"
+        r"@asteriskTotals|@member|@isMeasure|@visualTotals|@sourceField|@mpMap|@isDataModel|"
+        # OLAP only per MS-OI29500 18.10.1.73 (excel-docs.md §2, totals and filters).
+        r"@showEmptyRow|@showEmptyCol)",
         "olap-datamodel",
         "none",
         "out",
     ),
     (
+        r"(createdVersion|updatedVersion|minRefreshableVersion|refreshedVersion|refreshedBy|refreshedDate|"
+        r"upgradeOnRefresh|RefreshVersion|uid$|@mc:|@id$|@r:id|extLst|invalid|@pivotCacheId|@cacheId|"
+        r"@tag$|@published|@altText|@ignore$|@recordCount|cacheField@level$|cacheField@uniqueList$)",
+        "metadata",
+        "none",
+        "round-trip",
+    ),
+    (
         r"(?i)(style|/formats|/format/|conditionalFormat|chartFormat|@apply[A-Z]|autoFormat|Stripes|"
         r"@showRowHeaders|@showColHeaders|@showLastColumn|@indent|@mergeItem|@preserveFormatting|"
-        r"@vacatedStyle|@pageStyle|@dxfId|@chartFormat)",
+        r"@pageStyle|@dxfId)",
         "formatting",
         "none",
         "round-trip",
     ),
     (
-        r"(@disableFieldList|@editData|@enableDrill|@enableFieldProperties|@enableWizard|@showDropZones|"
+        r"(@disableFieldList|@enableDrill|@enableFieldProperties|@enableWizard|@showDropZones|"
         r"@showDataDropDown|@showDataTips|@printDrill|@fieldPrintTitles|@itemPrintTitles|@immersive|"
         r"@showDrill|@dragTo|@dragOff|@showDropDowns|@showPropTip|@showPropCell|@showPropAsCaption|"
-        r"@hideValuesRow|@autoApply|@showItems|@multipleItemSelectionAllowed|@fieldListSortAscending|"
-        r"@insertPageBreak|@gridDropZones|pivotTableUISettings|@disableEdit|@trueOnly|@includeNewItemsInFilter)",
+        r"@fieldListSortAscending|@insertPageBreak|pivotTableUISettings|@disableEdit|@trueOnly|"
+        r"@backgroundQuery|@optimizeMemory|"
+        # A slicer's or timeline's geometry and chrome: how it is drawn, not what it selects.
+        r"(?i:slicer|timeline).*@(rowHeight|columnCount|lockedPosition|startItem|scrollPosition|showHeader|"
+        r"showHorizontalScrollbar|showSelectionLabel|showTimeLevel|showCaption|level)$)",
         "ui",
         "none",
         "round-trip",
     ),
+    (r"(?i)(slicer|timeline)", "slicers-timelines", "values", "PV5"),
     (
         r"(cacheSource|worksheetSource|@refreshOnLoad|@saveData|@missingItemsLimit|@enableRefresh|"
-        r"@refreshOnLoad|pivotCacheIdVersion|pivotTableReferences)",
+        r"pivotCacheIdVersion|pivotTableReferences)",
         "source-refresh",
         "values",
         "PV1",
@@ -209,7 +225,11 @@ RULES: tuple[tuple[str, str, str, str], ...] = (
     (r"(calculatedItem|@formula|@databaseField)", "calculated", "values", "PV3"),
     (r"(?i)(showDataAs|PivotShowAs|@baseField|@baseItem)", "show-values-as", "values", "PV2"),
     (
-        r"(filter|Filter|pageFields|pageField|@hideNewItems|@measureFilter|@h$|@hidden|@hier$)",
+        # The legacy AutoShow attributes are a Top-N filter; `item@s` marks a manual filter (MS-OI29500
+        # 18.10.1.45). Both decide which items exist (excel-docs.md §1.7).
+        r"(filter|Filter|pageFields|pageField|@hideNewItems|@includeNewItemsInFilter|"
+        r"@multipleItemSelectionAllowed|@measureFilter|@h$|@hidden|@hier$|@autoShow|@topAutoShow|"
+        r"@itemPageCount|@rankBy|/item@s$)",
         "filtering",
         "values",
         "PV2",
@@ -221,13 +241,14 @@ RULES: tuple[tuple[str, str, str, str], ...] = (
         "PV2",
     ),
     # Before totals: a data field's `subtotal` is its aggregate function, not a subtotal line.
-    (r"(dataField|DataConsolidateFunction|@numFmtId|@subtotal)", "aggregation", "values", "PV1"),
     (
-        r"(Subtotal|subtotal|GrandTotals|@sumSubtotal|ST_ItemType|@t$|@avgSubtotal|Total)",
-        "totals",
-        "layout",
+        r"(dataFields|^x14:dataField|DataConsolidateFunction|@numFmtId$|pivotField@dataField$)",
+        "aggregation",
+        "values",
         "PV1",
     ),
+    # `Total` is deliberately broad: every *Total* name in the pivot schema is a totals feature.
+    (r"(?i)(subtotal|GrandTotals|ST_ItemType|@t$|Total)", "totals", "layout", "PV1"),
     (
         r"(Caption|caption|@showError|@showMissing|@name$|@n$|@showHeaders|@showMultipleLabel)",
         "captions",
@@ -235,6 +256,7 @@ RULES: tuple[tuple[str, str, str, str], ...] = (
         "PV1",
     ),
     (
+        # The cache records' value elements are one letter (`x`, `n`, `s`, `b`, `e`, `m`, `d`, `r`).
         r"(sharedItems|cacheField|pivotCacheRecords|/[xnsbemd]$|/[xnsbemd]@|/r$|/r/|/r@|pivotCacheDefinition$)",
         "cache",
         "values",
@@ -243,7 +265,7 @@ RULES: tuple[tuple[str, str, str, str], ...] = (
     (
         r"(location|rowItems|colItems|rowFields|colFields|pivotField|compact|outline|@showAll|"
         r"insertBlankRow|pageWrap|pageOverThenDown|@dataOnRows|@dataPosition|ST_Axis|@axis|@sd$|"
-        r"@showEmpty|fillDownLabels|@rowGrandTotals|@colGrandTotals|pivotTableDefinition$|/i$|/i@|/i/)",
+        r"fillDownLabels|@hideValuesRow|@showItems|@gridDropZones|pivotTableDefinition$|/i$|/i@|/i/)",
         "layout",
         "layout",
         "PV1",
@@ -263,6 +285,8 @@ def classify(node: Node) -> tuple[str, str, str, str]:
 
 # Columns later work fills by hand (probes, implementations); regeneration keeps them, and the id.
 KEPT = ("web", "status", "evidence")
+# The status of a row whose node left the schema walk. The row is kept so its id is never reused.
+RETIRED = "retired"
 
 
 def read_table(path: Path) -> dict[str, dict[str, str]]:
@@ -271,15 +295,21 @@ def read_table(path: Path) -> dict[str, dict[str, str]]:
         return {}
     lines = path.read_text().splitlines()
     header = lines[0].split("\t")
-    table = [dict(zip(header, line.split("\t"), strict=True)) for line in lines[1:] if line]
-    return {r["ooxml"]: r for r in table}
+    table = {}
+    for n, line in enumerate(lines[1:], start=2):
+        cells = line.split("\t")
+        if len(cells) != len(header) or not re.fullmatch(r"PV-\d{4,}", cells[0]):
+            raise ValueError(f"{path}:{n}: expected {len(header)} tab-separated cells and a PV-nnnn id")
+        row = dict(zip(header, cells, strict=True))
+        table[row["ooxml"]] = row
+    return table
 
 
 def rows(nodes: list[Node], previous: dict[str, dict[str, str]]) -> list[dict[str, str]]:
-    """One row per node. A node the previous table had keeps its id and the hand-filled columns; a new
-    one gets the next free id. Rows for nodes that left the schema walk are dropped."""
-    used = [int(r["id"].removeprefix("PV-")) for r in previous.values()]
-    next_id = max(used, default=0) + 1
+    """One row per node, then the retired rows. A node the previous table had keeps its id and the
+    hand-filled columns; a new one gets the next id after every id the table ever held. A previous
+    row whose node left the walk stays, with status `retired`, so its id keeps naming it."""
+    next_id = max((int(r["id"].removeprefix("PV-")) for r in previous.values()), default=0) + 1
     out = []
     for node in nodes:
         family, affects, scope, stage = classify(node)
@@ -302,13 +332,18 @@ def rows(nodes: list[Node], previous: dict[str, dict[str, str]]) -> list[dict[st
         }
         if old is not None:
             row.update({k: old[k] for k in KEPT})
+            if row["status"] == RETIRED:  # the node came back
+                row["status"] = "todo"
         out.append(row)
+    live = {n.path for n in nodes}
+    out += [{**r, "status": RETIRED} for p, r in sorted(previous.items()) if p not in live]
     return out
 
 
 def write(xsd_dir: Path, catalog_dir: Path) -> tuple[int, int]:
     """Writes the node list and the TSV; returns (nodes, uncategorized rows)."""
     nodes = walk(xsd_dir)
+    catalog_dir.mkdir(parents=True, exist_ok=True)
     (catalog_dir / "pivot-schema-nodes.txt").write_text(
         f"# Generated by rustsheet-pivot-catalog from {SCHEMA_SOURCE}\n"
         + "".join(f"{n.path}\t{n.default}\n" for n in nodes)
