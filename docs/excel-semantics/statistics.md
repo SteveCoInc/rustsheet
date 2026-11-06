@@ -4676,6 +4676,10 @@ Oracle sweep (excel-graph), 12 cases, 33-92 cells each. Aliases were paired with
 - CHITEST of a 1x1 range is #N/A (`CHITEST(N1:N1,G1:G1)`). A text cell in the actual range drops that pair but the degrees of freedom still come from the range shape: `CHITEST(F1:F3,G1:G3)` with F = {5,0,"x"} = 0.00012340980408667956 (= CHIDIST(18,2)).
 Evidence: probes-numeric cases `m9-legacy-betadist`, `-betainv`, `-binomdist`, `-chidist`, `-chiinv`, `-chitest`, `-confidence`, `-critbinom`, `-expondist`, `-fdist`, `-finv`, `-ftest`. Oracle: excel-graph, 2026-10-13.
 Status: VERIFIED (excel-graph)
+Gate A tables (T-4104, excel-graph 2026-11-06): accuracy/CHIDIST, CHIINV, BETADIST and BETAINV s1 take their modern
+function's definition, and every Excel value and error there (typical, tail, edge, extreme and log-uniform points) is the
+modern rule. The points outside the envelope are the modern siblings' known behaviours: BETAINV T-3351, T-2808 and
+T-3862; BETADIST T-3577; CHIINV A93 T-3364 (R3 case 3, decision 0318).
 Tasks: T-1047
 
 ## CONFIDENCE.NORM forms 1 - alpha/2 in doubles (T-4101)
@@ -4711,6 +4715,8 @@ Tasks: T-4101
 
 ## Legacy distribution names sweep, second family (T-1048)
 Implemented in: `functions/statistical/hypegeom.rs`, `weibull.rs` (HYPGEOMDIST/HYPGEOM.DIST sample_s above min(number_sample, population_s) is 0 or 1, zero counts valid, TRUE sample_s; WEIBULL density 0 at x = 0, TRUE x)
+Gate A tables (T-4104, excel-graph 2026-11-06): accuracy/GAMMADIST and GAMMAINV s1 take GAMMA.DIST's and GAMMA.INV's
+definitions, and every Excel value and error there is the modern rule; both tables are inside the envelope.
 Tasks: T-2035
 Rule: GAMMADIST, GAMMAINV, HYPGEOMDIST, LOGINV, LOGNORMDIST, NEGBINOMDIST, NORMDIST, NORMINV, NORMSDIST, NORMSINV, POISSON, TINV, WEIBULL return exactly the same value or error as their modern equivalent (GAMMA.DIST, GAMMA.INV, HYPGEOM.DIST with cumulative FALSE, LOGINV = LOGNORM.INV, LOGNORM.DIST cum TRUE, NEGBINOM.DIST cum FALSE, NORM.DIST, NORM.INV, NORM.S.DIST cum TRUE, NORM.S.INV, POISSON.DIST, T.INV.2T, WEIBULL.DIST) on every paired cell, so the aliases need no separate kernel. TDIST with tails 1 is the exception: it differs from T.DIST.RT for negative x (T.DIST.2T agrees with TDIST tails 2). TTEST = T.TEST and ZTEST = Z.TEST on every paired cell too.
 Oracle sweep (excel-graph), 16 cases, 34-102 cells each; every paired cell (column B) is identical except the TDIST row below. Quirks seen:
@@ -7527,6 +7533,8 @@ at Excel's start x0 is below the smallest normal double), Excel returns x0, abou
 relative error above G = 1e-4; there RustSheet returns the math (decision 0188 R3). The branch serves GAMMA.INV,
 GAMMAINV, CHISQ.INV, CHISQ.INV.RT and CHIINV (shape df/2, scale 2), so all five are in this case. The branch's `#NUM!`
 cells and its true-quantile band still match Excel.
+Gate A: accuracy/CHIINV/s1 A93 (`CHIINV(1.44764470787181E-250,2585098457)`, shape 1.29E9) is on the branch too, below the
+3.9E9 lowest shape decision 0289 recorded (T-4104, decision 0318).
 Evidence: probes/t3070-gamma-inv-band A110 (`GAMMA.INV(0.999999,1.5E10,1)` = 15004569623.957905) and the
 closed-form numeric cells of the five functions among A304-A327 (not A315-A317, which are CHISQ.DIST and
 CHISQ.DIST.RT and stay `#NUM!` in Excel; CHIINV
