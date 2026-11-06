@@ -3,7 +3,7 @@ id: T-4454
 title: "Serials just below midnight and counts just below an integer in EDATE, EOMONTH, WORKDAY, NETWORKDAYS, WEEKNUM, ISOWEEKNUM, DAYS, DATEDIF and YEARFRAC: probe which take YEAR's half-second carry or the 2^-22 snap, and match"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
