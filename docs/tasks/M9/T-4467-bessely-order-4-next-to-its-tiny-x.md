@@ -74,5 +74,5 @@ losing a cell that passes today.
   - No keep-matched branch: the read applies at every place of 16 or more.
 - **Also probed (engineering.md):** order 1 answers over the normal band down to 2.2250738585073E-308.
   `BESSELY(2.2250738585072014E-308,1)` is `#NUM!`, because the 15-digit cut is below DBL_MIN.
-- **Eval delta:** probes 1 known failure fixed (t4458-bessely-tiny-x-cuts Calc!D32), 0 regressions. The 3 new cases (544 cells)
+- **Eval delta:** probes 1 known failure fixed (t4458-bessely-tiny-x-cuts Calc!D32), 0 regressions. The 3 new cases (498 cells)
   all pass. No other suite moves: lifting the n <= 15 cap changes no other oracle cell.
