@@ -123,26 +123,29 @@ impl CaseResult {
 #[must_use]
 pub fn run_suites(suites: &[Suite], filter: Option<&str>, timeout: Duration) -> Vec<CaseResult> {
     let mut jobs = Vec::new();
+    let mut failed = Vec::new();
     for suite in suites {
         match suite.cases() {
             Ok(cases) => jobs.extend(cases.into_iter().map(|c| (suite, c))),
-            Err(e) => {
-                let case = CaseFile {
-                    id: format!("{}/<discovery>", suite.manifest.name),
-                    path: suite.root(),
-                    sidecar: std::path::PathBuf::new(),
-                };
-                jobs.push((suite, case));
-                eprintln!("{}: case discovery failed: {e}", suite.manifest.name);
-            }
+            Err(e) => failed.push(CaseResult {
+                id: format!("{}/<discovery>", suite.manifest.name),
+                suite: suite.manifest.name.clone(),
+                status: CaseStatus::InvalidCase,
+                message: Some(e.to_string()),
+                millis: 0,
+                items: Vec::new(),
+            }),
         }
     }
     if let Some(f) = filter {
         jobs.retain(|(_, c)| c.id.contains(f));
     }
-    jobs.par_iter()
+    let mut results: Vec<CaseResult> = jobs
+        .par_iter()
         .map(|(suite, case)| run_case(suite, case, timeout))
-        .collect()
+        .collect();
+    results.extend(failed);
+    results
 }
 
 /// Runs one case: R0 in a worker thread, so a panic or a hang is a verdict, not a crash.
@@ -404,7 +407,8 @@ pub enum Mode {
 
 /// Runs `suites`, writes `eval/runs/latest/roundtrip.{json,md}` under `root`, and in `Check` or
 /// `Update` mode compares each suite with `eval/baseline/<suite>.txt` as the cell suites do.
-/// A `--filter` run never touches a baseline. Returns whether the gate passed.
+/// A `--filter` run never touches a baseline. Returns whether the gate passed, and the lines to
+/// print.
 ///
 /// # Errors
 /// When the report or a baseline cannot be read or written.
@@ -414,7 +418,7 @@ pub fn command(
     filter: Option<&str>,
     timeout: Duration,
     mode: Mode,
-) -> anyhow::Result<bool> {
+) -> anyhow::Result<(bool, Vec<String>)> {
     if filter.is_some() && mode != Mode::Report {
         anyhow::bail!(
             "--filter is not allowed for baseline operations (partial runs look like regressions)"
@@ -429,40 +433,45 @@ pub fn command(
     )?;
     std::fs::write(out.join("roundtrip.md"), report_markdown(&results))?;
     let mut ok = true;
+    let mut lines = Vec::new();
     for suite in suites {
         let name = &suite.manifest.name;
         let mine: Vec<&CaseResult> = results.iter().filter(|r| &r.suite == name).collect();
         let items: usize = mine.iter().map(|r| r.items.len()).sum();
         let current = baseline(&mine);
-        println!(
+        lines.push(format!(
             "[{name}] {} cases, {items} items, {} failing",
             mine.len(),
             current.failing.len()
-        );
+        ));
         if mode == Mode::Report {
             continue;
         }
         let path = root.join("eval/baseline").join(format!("{name}.txt"));
         let old = Baseline::read(&path)?;
         let delta = ratchet::diff(&old, &current);
-        for r in delta.regressions.iter().take(25) {
-            println!("  REGRESSION {r}");
-        }
+        lines.extend(
+            delta
+                .regressions
+                .iter()
+                .take(25)
+                .map(|r| format!("  REGRESSION {r}")),
+        );
         match mode {
             Mode::Check if delta.is_dirty() => {
                 ok = false;
                 if delta.regressions.is_empty() {
-                    println!("  baseline is out of date: run `rustsheet-eval roundtrip --update-baseline`");
+                    lines.push("  baseline is out of date: run `make eval-baseline` and commit eval/baseline/".into());
                 }
             }
             Mode::Update if !delta.regressions.is_empty() => {
                 ok = false;
-                println!("  refusing to record regressions");
+                lines.push("  refusing to record regressions".into());
             }
             Mode::Update => current.write(&path)?,
             _ => {}
         }
     }
-    println!("report: {}", out.join("roundtrip.md").display());
-    Ok(ok)
+    lines.push(format!("report: {}", out.join("roundtrip.md").display()));
+    Ok((ok, lines))
 }

@@ -253,10 +253,7 @@ impl Package {
 /// The source part of a `.rels` part (`""` for the package's own), or `None` for any other part.
 fn rels_source(part: &str) -> Option<String> {
     let rest = part.strip_suffix(".rels")?;
-    let (dir, name) = match rest.rsplit_once('/') {
-        Some((dir, name)) => (dir, name),
-        None => return None,
-    };
+    let (dir, name) = rest.rsplit_once('/')?;
     let parent = dir.strip_suffix("_rels")?.trim_end_matches('/');
     Some(if parent.is_empty() {
         name.to_string()
@@ -270,7 +267,9 @@ fn short_kind(uri: &str) -> &str {
 }
 
 fn is_xml_part(part: &str) -> bool {
-    part.ends_with(".xml")
+    std::path::Path::new(part)
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("xml"))
 }
 
 fn xml_error(part: &str, e: impl std::fmt::Display) -> SnapshotError {

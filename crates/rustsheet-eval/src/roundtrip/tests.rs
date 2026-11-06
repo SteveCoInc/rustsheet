@@ -1,3 +1,4 @@
+use std::fmt::Write as _;
 use std::io::{Cursor, Write as _};
 
 use super::package::{validate, Package};
@@ -9,25 +10,28 @@ const ROOT_RELS: &str = r#"<Relationships xmlns="http://schemas.openxmlformats.o
 const R: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
 fn workbook(sheets: &[(&str, &str)]) -> String {
-    let sheets: String = sheets
-        .iter()
-        .enumerate()
-        .map(|(n, (name, rid))| {
-            format!(r#"<sheet name="{name}" sheetId="{}" r:id="{rid}"/>"#, n + 1)
-        })
-        .collect();
+    let mut body = String::new();
+    for (n, (name, rid)) in sheets.iter().enumerate() {
+        let _ = write!(
+            body,
+            r#"<sheet name="{name}" sheetId="{}" r:id="{rid}"/>"#,
+            n + 1
+        );
+    }
+    let sheets = body;
     format!(
         r#"<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="{R}"><sheets>{sheets}</sheets></workbook>"#
     )
 }
 
 fn rels(entries: &[(&str, &str, &str)]) -> String {
-    let body: String = entries
-        .iter()
-        .map(|(id, kind, target)| {
-            format!(r#"<Relationship Id="{id}" Type="{R}/{kind}" Target="{target}"/>"#)
-        })
-        .collect();
+    let mut body = String::new();
+    for (id, kind, target) in entries {
+        let _ = write!(
+            body,
+            r#"<Relationship Id="{id}" Type="{R}/{kind}" Target="{target}"/>"#
+        );
+    }
     format!(
         r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">{body}</Relationships>"#
     )
