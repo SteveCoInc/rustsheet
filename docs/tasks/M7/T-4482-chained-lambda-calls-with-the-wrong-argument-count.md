@@ -3,7 +3,7 @@ id: T-4482
 title: "Chained LAMBDA calls with the wrong argument count at a later link: LAMBDA(x,LAMBDA(y,x+y))(1)(), (1)(2,3) and an outer link with too many, probe and match"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
