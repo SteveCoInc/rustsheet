@@ -614,8 +614,9 @@ yet: t4128 R, t4134 I3, t4582 J1, J2 and t4585 N1 have formulas in their sources
 file does not evaluate; t4582 J3 and J4 depend on date items against cached numbers (T-4612);
 t4128 G is grouped (T-4171) and t4128 K has a calculated field, a Top-N filter and a descending
 sort (T-4174, T-4165). The eval scores them all through the engine since T-4152: t4128 R, t4134 I3
-and t4582 J1 to J4 pass there; t4585 N1 fails because the refresh refuses to renumber its renamed
-fields (T-4694); t4128 G and K do not load (T-4171, T-4174).
+and t4582 J1 to J4 pass there, as do t4585 N1 and the t4627 P_ pivots since T-4694, whose renamed
+fields renumber (the grid writer's unit tests compare them against their sidecars); t4128 G and K
+do not load (T-4171, T-4174).
 
 The engine's own readings, not probed:
 - `subtotalTop="0"` on an outline row field: the item's own line holds no values and a `default` line
