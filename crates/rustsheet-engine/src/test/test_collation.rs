@@ -622,6 +622,35 @@ fn unique_grouping_coalesces_equal_lines_before_merging() {
     assert_eq!(coalesce_equal_lines(3, |_, _| Err("budget")), Err("budget"));
 }
 
+/// UNIQUE's merge on two-field rows of A = ab, B = ab&U+00AD, C = U+00AD&ab (A = C, B = C, A < B;
+/// x < y), compared field by field (T-4393, probes/t4380-unique-keep-head-holdout rows 6 and 10):
+/// an equal right head joins the left head, which stays, and nothing out of a merge is compared
+/// with the group out before it. Over Cy Cx Ay Bx Ay the second Ay never meets Cy and is kept.
+#[test]
+fn unique_merge_keeps_the_left_head_and_never_coalesces_its_output() {
+    use crate::functions::util::coalesce_equal_lines;
+    use std::cmp::Ordering;
+    let text = |a: u8, b: u8| -> Ordering {
+        match (a, b) {
+            _ if a == b => Ordering::Equal,
+            (b'A', b'B') => Ordering::Less,
+            (b'B', b'A') => Ordering::Greater,
+            _ => Ordering::Equal,
+        }
+    };
+    let group = |run: &str| {
+        let rows: Vec<&[u8]> = run.split(' ').map(str::as_bytes).collect();
+        coalesce_equal_lines::<()>(rows.len(), |i, j| {
+            Ok(text(rows[i][0], rows[j][0]).then(rows[i][1].cmp(&rows[j][1])))
+        })
+        .unwrap_or_default()
+    };
+    // Kept: Cy, Cx, Bx, Ay (row 3's Ay joins Cy; row 5's stays apart).
+    assert_eq!(group("Cy Cx Ay Bx Ay"), vec![0, 1, 0, 3, 4]);
+    // Kept: Cy, Cx, Bx (the last Cy joins Cy).
+    assert_eq!(group("Cy Cx Ay Bx Cy"), vec![0, 1, 0, 3, 0]);
+}
+
 /// SORT's sort (`sort_indices_pairwise`) under Excel's intransitive text comparison
 /// (`cmp_text_pairwise`) ends on the data of probes/t3201-collation-wrapped-run-pairs (37 texts,
 /// hundreds of intransitive triples) in several input orders, without panicking, with a
