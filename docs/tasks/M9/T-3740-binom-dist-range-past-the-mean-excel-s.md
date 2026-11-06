@@ -32,6 +32,10 @@ BINOM.DIST.RANGE ranges whose lower end is past the mean are bit-exact with Exce
   threshold other than the mean (the mode, cdf(s1 - 1) > 0.5), and the walk's behavior at n = 1E4 to 1E5. Score them
   against the 21 rows plus the 105 cdf-difference rows (none may move off). A choice among ranked forms owes the
   decision 0188 R4 hold-out and fresh sweep (work-loop step 4, "Numeric fits").
+- T-3741 (2026-11-04): Gate A table accuracy/BINOM.DIST.RANGE/s1 has 9 ranges above the mean carried by
+  `eval/accuracy/known-failures.tsv` lines owned by this task (A85, A91, A94, A101, A107, A146, A172, A177, A180). Ours
+  cancels to 0 on four of them (down to 1.9E-134) where Excel is within 7E-12 of the math; a fix must remove those
+  lines (a passing listed point fails the check as stale).
 
 ## Acceptance criteria
 - [ ] The 21 rows' Range!A cells pass, or the remaining misses are characterized in statistics.md with the forms tried.

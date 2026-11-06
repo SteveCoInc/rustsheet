@@ -20,7 +20,8 @@ T-2620 made DB read a boolean `month` as a number. The only evidence is `DB(1577
 Excel's formulas (financial.md "Annuity and DB argument domains at their limits"). Probe with the excel-probe skill:
 - `DB(10000,1000,6,1,TRUE)`, `DB(10000,1000,6,1,FALSE)`, and the same with TRUE/FALSE cells (valid period 1);
 - `PV(-1.5,400,-100)` (P underflows at a rate in (-2,-1)), `PV(-1.5,401,-100)`;
-- `NPER(1E-300,0,100,200)` (LN of a negative ratio before the ln(1+rate) division).
+- `NPER(1E-300,0,100,200)` (the order of the LN of a negative ratio and the ln(1+rate) division; T-3367 found
+  `#DIV/0!` first at rates 1E-17 to 1.1E-16, probes-numeric/t3367-nper-tiny-rate A7, A14, A21).
 
 ## Acceptance criteria
 - [ ] A probes case with these cells, filled from excel-graph; financial.md's Status line updated with the cells.

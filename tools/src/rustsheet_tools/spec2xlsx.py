@@ -46,7 +46,10 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     (data from its first row, columns `Column1`, ...; no filter or calculated column, T-3260). With `"filter": true` the table's autoFilter
     gets a values filter on its first column that keeps exactly the visible data rows, so the hidden rows
     inside the table are the rows the filter hides; that column's data cells must be literal numbers or
-    text, and no value may be both kept and hidden. The engine adapter loads both. With
+    text, and no value may be both kept and hidden. `"filter_column": {"col_id": 5}` writes that values
+    filter under `colId` 5, which must be 0 or past the table's last column, and `"criterion": false` there
+    writes `<filterColumn colId="N"/>` with no criterion; Excel reads neither as filtered, and the
+    engine adapter loads such a table unfiltered (T-4003). The engine adapter loads both. With
     `"totals_row": true` the last row of `ref` is the totals row: its cells (labels or formulas) are
     written with the table's totals metadata (T-1607). `"calculated": {"C": "T[[#This Row],[Col]]*2"}`
     writes a `<calculatedColumnFormula>` for column C (T-2969), leaving the data cells as the spec has them. Structured references are stored in their file
@@ -106,7 +109,7 @@ from rustsheet_tools.oracle.package import patch_parts, read_parts
 from rustsheet_tools.pivot import PivotParts, pivot_tables, relationships_xml
 from rustsheet_tools.sheetop import column_number, sheet_op
 from rustsheet_tools.spec_sheet_extras import add_range_formulas, set_column_widths
-from rustsheet_tools.spec_tables import filter_value, has_header_row
+from rustsheet_tools.spec_tables import auto_filter, has_header_row
 
 # XlsxWriter stamps docProps/core.xml with the wall clock; a fixed instant keeps identical specs
 # byte-identical so `input_sha256` (sidecars, eval/.cache/oracle) is stable across runs (T-0015).
@@ -237,7 +240,7 @@ def prefix_bound_names(formula: str) -> str:
     An optional LAMBDA parameter `[y]` is declared as `_xlop.y`, brackets dropped, and used as
     `_xlpm.y`: Excel for the web stores `=LAMBDA(x,[y],ISOMITTED(y))(1)` as
     `_xlfn.LAMBDA(_xlpm.x,_xlop.y,_xlfn.ISOMITTED(_xlpm.y))(1)`, and refuses `[_xlpm.y]` as a
-    corrupt file (T-1274; docs/excel-semantics/xlsx-storage.md).
+    corrupt file (T-1274; docs/excel-semantics/xlsx-storage.md). `_xlpm._xlpm.x` declares `_xlpm.x` (T-4224).
     """
     out: list[str] = []
     scopes: list[tuple[int, set[str]]] = []  # (end index of the call, lower-cased names)
@@ -258,7 +261,7 @@ def prefix_bound_names(formula: str) -> str:
             args, close = _call_args(formula, end)
             decl = args[0:-1:2] if upper == "LET" else args[:-1]
             names = {a.strip().strip("[]").strip().lower() for a in decl}
-            scopes.append((close, {n for n in names if _IDENT.fullmatch(n)}))
+            scopes.append((close, {n for n in names if _IDENT.fullmatch(n) and not n.startswith("_xlpm.")}))
             if upper == "LAMBDA":
                 start = end + 1
                 for arg in args[:-1]:
@@ -569,19 +572,7 @@ def _add_table(
         raise ValueError(msg)
     if not table.get("filter"):
         return name, ""
-    kept: set[str] = set()
-    dropped: set[str] = set()
-    last_data = r2 - 1 if totals else r2
-    for row in range(r1 + 1, last_data + 1):
-        a1 = cell(row, c1)
-        (dropped if row + 1 in hidden else kept).add(filter_value(cells.get(a1), a1))
-    if kept & dropped:
-        msg = f"table {name}: values {sorted(kept & dropped)} are both kept and hidden by the filter"
-        raise ValueError(msg)
-    values = "".join(f'<filter val="{escape(v, {chr(34): "&quot;"})}"/>' for v in sorted(kept))
-    ref_abs = f"{cell(r1, c1)}:{cell(last_data, c2)}"
-    column = f'<filterColumn colId="0"><filters>{values}</filters></filterColumn>'
-    return name, f'<autoFilter ref="{ref_abs}">{column}</autoFilter>'
+    return name, auto_filter(table, cells, hidden, (r1, c1, r2 - 1 if totals else r2, c2))
 
 
 def _calculated_columns(

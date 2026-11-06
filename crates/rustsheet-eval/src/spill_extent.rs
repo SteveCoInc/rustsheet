@@ -7,7 +7,9 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
-use crate::case::{cell_key, CaseSpec, SheetOp};
+use rustsheet_engine::pivot::{layout_extent, max_layout_rows};
+
+use crate::case::{cell_key, split_qualified, CaseSpec, SheetOp};
 use crate::cellref::{parse_range, Addr};
 use crate::engine::Evaluated;
 use crate::runner::{CellKind, CellResult};
@@ -126,7 +128,28 @@ impl SpillExtent {
                             (first.col..=last.col).map(move |col| Addr { row, col })
                         })
                     });
-                    inputs.chain(results.map(|addr| cell_key(&s.name, addr)))
+                    // The engine lays out a grouped pivot itself (T-4235): the area `layout_extent`
+                    // gives from its location, at most `max_layout_rows` rows.
+                    let grouped = s.pivot_tables.iter().filter(|p| p.group.is_some());
+                    let grouped = grouped.filter_map(|p| {
+                        let top = Addr::parse(&p.location.replace('$', ""))?;
+                        let source =
+                            split_qualified(&p.source).map_or(p.source.clone(), |(_, r)| r);
+                        let (first, last) = parse_range(&source)?;
+                        let shown = p.group.as_ref().filter(|_| p.show_all);
+                        let items = shown.and_then(|g| u32::try_from(g.items.len()).ok());
+                        let rows = max_layout_rows(last.row.checked_sub(first.row)?, items);
+                        let (bottom, right) = layout_extent(top.row, top.col, rows);
+                        Some((top, bottom, right))
+                    });
+                    let grouped = grouped.flat_map(|(top, bottom, right)| {
+                        (top.row..=bottom).flat_map(move |row| {
+                            (top.col..=right).map(move |col| Addr { row, col })
+                        })
+                    });
+                    inputs
+                        .chain(results.map(|addr| cell_key(&s.name, addr)))
+                        .chain(grouped.map(|addr| cell_key(&s.name, addr)))
                 })
                 .chain(expected.keys().cloned())
                 .collect(),

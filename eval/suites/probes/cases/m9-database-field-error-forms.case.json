@@ -1,0 +1,128 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4256: D-function field reaching an error cell (Data!A3 =NA()) through a defined name (ferr), INDEX, @ on a two-cell range, IF(TRUE,ref), a bare reference (T-4247 control) and the formula own cell (circular). Db and criteria as in m9-database-argument-kinds.",
+  "tags": [
+    "M9",
+    "database",
+    "probe",
+    "argument-modes",
+    "T-4256"
+  ],
+  "names": {
+    "ferr": "=Data!$A$3"
+  },
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A2": "=\"\"",
+        "A3": "=NA()",
+        "A4": 0,
+        "A5": true,
+        "A6": 2
+      }
+    },
+    {
+      "name": "Db",
+      "cells": {
+        "A1": "Name",
+        "B1": "Qty",
+        "C1": "Price",
+        "D1": "Date",
+        "A2": "apple",
+        "B2": 4,
+        "C2": 2.5,
+        "D2": 45351,
+        "A3": "Apricot",
+        "B3": 10,
+        "C3": "x",
+        "D3": 45000,
+        "A4": "banana",
+        "B4": 0,
+        "C4": 4,
+        "A5": "a*b",
+        "B5": 2,
+        "C5": true,
+        "D5": 45657,
+        "B6": 1,
+        "C6": 10,
+        "D6": 45322,
+        "A7": "cherry",
+        "B7": -4,
+        "C7": 0.5,
+        "D7": 45412,
+        "A8": "apple pie",
+        "B8": 7,
+        "C8": 100,
+        "D8": 45535,
+        "A9": {
+          "t": "s",
+          "v": "123"
+        },
+        "B9": 5,
+        "C9": -1,
+        "D9": 45291,
+        "F1": "Qty",
+        "F2": ">2",
+        "G1": "Qty",
+        "G2": ">9"
+      }
+    },
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=DSUM(Db!A1:D9,ferr,Db!F1:F2)",
+        "A2": "=DSUM(Db!A1:D9,INDEX(Data!A3:A4,1),Db!F1:F2)",
+        "A3": "=DSUM(Db!A1:D9,@Data!A3:A4,Db!F1:F2)",
+        "A4": "=DSUM(Db!A1:D9,IF(TRUE,Data!A3),Db!F1:F2)",
+        "A5": "=DSUM(Db!A1:D9,Data!A3,Db!F1:F2)",
+        "A6": "=DSUM(Db!A1:D9,Calc!A6,Db!F1:F2)",
+        "A7": "=DCOUNT(Db!A1:D9,ferr,Db!F1:F2)",
+        "A8": "=DCOUNT(Db!A1:D9,INDEX(Data!A3:A4,1),Db!F1:F2)",
+        "A9": "=DCOUNT(Db!A1:D9,@Data!A3:A4,Db!F1:F2)",
+        "A10": "=DCOUNT(Db!A1:D9,IF(TRUE,Data!A3),Db!F1:F2)",
+        "A11": "=DCOUNT(Db!A1:D9,Data!A3,Db!F1:F2)",
+        "A12": "=DCOUNT(Db!A1:D9,Calc!A12,Db!F1:F2)",
+        "A13": "=DCOUNTA(Db!A1:D9,ferr,Db!F1:F2)",
+        "A14": "=DCOUNTA(Db!A1:D9,INDEX(Data!A3:A4,1),Db!F1:F2)",
+        "A15": "=DCOUNTA(Db!A1:D9,@Data!A3:A4,Db!F1:F2)",
+        "A16": "=DCOUNTA(Db!A1:D9,IF(TRUE,Data!A3),Db!F1:F2)",
+        "A17": "=DCOUNTA(Db!A1:D9,Data!A3,Db!F1:F2)",
+        "A18": "=DCOUNTA(Db!A1:D9,Calc!A18,Db!F1:F2)",
+        "A19": "=DGET(Db!A1:D9,ferr,Db!G1:G2)",
+        "A20": "=DGET(Db!A1:D9,INDEX(Data!A3:A4,1),Db!G1:G2)",
+        "A21": "=DGET(Db!A1:D9,@Data!A3:A4,Db!G1:G2)",
+        "A22": "=DGET(Db!A1:D9,IF(TRUE,Data!A3),Db!G1:G2)",
+        "A23": "=DGET(Db!A1:D9,Data!A3,Db!G1:G2)",
+        "A24": "=DGET(Db!A1:D9,Calc!A24,Db!G1:G2)"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Calc!A1",
+    "Calc!A2",
+    "Calc!A3",
+    "Calc!A4",
+    "Calc!A5",
+    "Calc!A6",
+    "Calc!A7",
+    "Calc!A8",
+    "Calc!A9",
+    "Calc!A10",
+    "Calc!A11",
+    "Calc!A12",
+    "Calc!A13",
+    "Calc!A14",
+    "Calc!A15",
+    "Calc!A16",
+    "Calc!A17",
+    "Calc!A18",
+    "Calc!A19",
+    "Calc!A20",
+    "Calc!A21",
+    "Calc!A22",
+    "Calc!A23",
+    "Calc!A24"
+  ]
+}

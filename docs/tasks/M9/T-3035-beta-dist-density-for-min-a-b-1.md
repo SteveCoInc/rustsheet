@@ -25,9 +25,11 @@ files the group that stays off as a Phase 1b task with that evidence.
 - Filed by T-2981 (eval of 2026-10-28 at `main` 9586958b). T-2503 shipped model M2 for min(a,b) <= 1
   (`functions/statistical/beta_density.rs` `beta_density_small_shape`) and T-2645 Excel's log1p; T-2821, the
   bit-level residue, is `defer: phase-1b`, so these visibly-off cells had no open owner. They are in three groups:
-  1. **algdiv, min < 1 < 8 < max (133 cells):** t2513-r3-m1-residual-a 86, -hold 28, t2513-verify-r3-m1-residual-hold
+  1. **algdiv, min < 1 < 8 < max (142 cells):** t2513-r3-m1-residual-a 86, -hold 28, t2513-verify-r3-m1-residual-hold
      15, m9-beta-dist-a0p0001 2 (`BETA.DIST(0.1,0.0001,50,FALSE)` Excel 5.727663409649543e-6, ours
-     5.727663409649533e-6) and m9-beta-dist-a50 2. M2's lnB there is fl(GL(min) + algdiv(min, max)) with TOMS algdiv
+     5.727663409649533e-6) and m9-beta-dist-a50 2.
+     T-3252 added probes/t3252-gamma-prefactor-window A171:A179 (10 to 15 ulp, none visibly off).
+     M2's lnB there is fl(GL(min) + algdiv(min, max)) with TOMS algdiv
      in doubles, "the frozen choice" (docs/research/t2464/r3-m1-residual/RESULTS.md section 1: algdiv OPEN). Its
      "algdiv accurate" column is a first candidate. T-2512 (deferred) owns cracking Excel's algdiv; this task owns
      only the visible cells, so a form that wins on them without being Excel's is enough.

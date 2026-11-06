@@ -6,7 +6,8 @@
 use super::super::token::{self, TableReference, TokenType};
 use super::super::types::ParsedReference;
 use super::super::utils::{
-    is_out_of_range_r1c1_name, parse_dotted_a1_range, parse_reference_a1, quote_name,
+    is_out_of_range_r1c1_name, parse_dotted_a1_range, parse_spelled_a1_cell, quote_name,
+    spelled_like_a1_cell,
 };
 use super::reference_operators::is_reference_operand;
 use super::structured_reference::{
@@ -16,6 +17,13 @@ use super::*;
 use crate::functions::kinds::arg_counts;
 use crate::language::get_default_language;
 use crate::typed_input::TYPED_FORMULA_DOES_NOT_PARSE;
+
+/// Whether `name` starts with [`XLPM_PREFIX`] in any letter case (typed, Excel matches it so;
+/// probes/t4299-typed-xlpm-extrapolations).
+fn has_xlpm_prefix(name: &str) -> bool {
+    name.get(..XLPM_PREFIX.len())
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case(XLPM_PREFIX))
+}
 
 impl Parser {
     /// The parse error for a token that cannot start an operand.
@@ -177,6 +185,28 @@ impl Parser {
                 (column2, column1) = (column1, column2);
                 (absolute_column2, absolute_column1) = (absolute_column1, absolute_column2);
             }
+        } else if self.typed {
+            // Typed in R1C1 mode, the corners are ordered by the cells they name, as A1 text
+            // orders them: `ROWS(R[-50]:R[-49])` in row 50, rows 1048576 and 1 after the wrap,
+            // is `ROWS(1:1048576)` (probes/t3212-r1c1-bare-offsets I50, T-3212). The storage
+            // form keeps its corners as written.
+            let at = |n: i32, absolute: bool, base: i32| {
+                if absolute {
+                    n
+                } else {
+                    base.saturating_add(n)
+                }
+            };
+            if at(row1, absolute_row1, context.row) > at(row2, absolute_row2, context.row) {
+                (row2, row1) = (row1, row2);
+                (absolute_row2, absolute_row1) = (absolute_row1, absolute_row2);
+            }
+            if at(column1, absolute_column1, context.column)
+                > at(column2, absolute_column2, context.column)
+            {
+                (column2, column1) = (column1, column2);
+                (absolute_column2, absolute_column1) = (absolute_column1, absolute_column2);
+            }
         }
 
         if self.lexer.is_a1_mode() {
@@ -279,7 +309,7 @@ impl Parser {
                 .unwrap_or((scope, String::new())),
             None => {
                 let formula = self
-                    .defined_name_formula(None, &bare.to_lowercase())
+                    .defined_name_formula(None, bare)
                     .map(str::to_owned)
                     .unwrap_or_default();
                 (None, formula)
@@ -294,6 +324,11 @@ impl Parser {
             Some(file) if scope.is_none() && !prefix.is_empty() && !formula.is_empty() => {
                 format!("{}!{bare}", quote_name(file))
             }
+            // An undefined workbook name read through `[0]!` is shown bare: that is how Excel
+            // shows a use that a sheet-scoped add left bound to the workbook name, which is
+            // stored so (`name_binding::pin_unresolved_name`; probes/t4049-sheet-api-name-plain
+            // S!B1, FORMULATEXT `=N`, T-4049).
+            _ if scope.is_none() && formula.is_empty() && prefix == "[0]" => bare.to_string(),
             _ => name.to_string(),
         };
         Some(Node::DefinedNameKind((text, scope, formula)))
@@ -307,7 +342,14 @@ impl Parser {
     }
 
     /// A name that is not called: a defined name, a table or a LAMBDA parameter.
-    fn name_operand(&mut self, name: String) -> Node {
+    fn name_operand(&mut self, mut name: String) -> Node {
+        // Typed, Excel lowercases the prefix only before a name an enclosing LET or LAMBDA binds:
+        // `=LET(x,2,_XLPM.x*3)` reads back `_xlpm.x*3` in FORMULATEXT, while a bare `=_XLPM.x` and
+        // the doubled `_XLPM._XLPM.x` keep their case (`#NAME?` in all of them; probes/
+        // t4299-typed-xlpm-extrapolations C2, probes/t4331-typed-xlpm-remaining C2:C3, T-4343).
+        if self.typed && has_xlpm_prefix(&name) && self.binds_name(&name[XLPM_PREFIX.len()..]) {
+            name.replace_range(..XLPM_PREFIX.len(), XLPM_PREFIX);
+        }
         // A defined name of a linked workbook, `[1]!Name` or `[1]Sheet!Name` (one identifier to
         // the lexer), keeps its prefix: evaluation reads it from the link's cache.
         if let Some(node) = self.prefixed_name_operand(&name) {
@@ -353,9 +395,13 @@ impl Parser {
                 true,
             );
         }
-        // xlpm: Excel Lambda Parameter
-        let name = name.trim_start_matches("_xlpm.").to_string();
-        Node::NamedVariableKind { name, id: None }
+        // xlpm: Excel Lambda Parameter. The prefix stays until the end of the parse, which drops
+        // it from a use some LET or LAMBDA binds and keeps it on an unbound one
+        // (`call_names::settle_lambda_prefixes`, T-4099).
+        Node::NamedVariableKind {
+            name: self.written_lambda_name(&name),
+            id: None,
+        }
     }
 
     /// The range a name spelled like a Lotus-style range is (`A1.B2` is `A1:B2`; see
@@ -367,6 +413,37 @@ impl Parser {
         }
         let (left, right) = parse_dotted_a1_range(name)?;
         Some(self.range_operand(None, left, right))
+    }
+
+    /// The name a use written `name` (used or called) reads, before the end of the parse drops
+    /// the `_xlpm.` mark from the bound ones (`call_names::settle_lambda_prefixes`): an unbound
+    /// name written with its prefix keeps it, as FORMULATEXT shows it (T-4099). In a file (A1
+    /// text, not typed) exactly one prefix is the mark, so a name keeps every prefix it was
+    /// written with until the end of the parse decides whether one of them is the mark: a file's
+    /// `_xlpm._xlpm.f1` is the undefined name FORMULATEXT shows `=_xlpm._xlpm.f1`
+    /// (probes/t4224-doubled-xlpm-prefix A1:C2, T-4224). The R1C1 storage form prefixes a name
+    /// that would read back as something else (`variable_text`, `callee_text`), so there exactly
+    /// one prefix is the storage's own, dropped here, and any more are the name's own. Typed, in
+    /// A1 or R1C1 mode, `_xlpm.` is no mark but part of the name: `=_xlpm._xlpm.f1` is that
+    /// undefined name, and `=LET(x,2,_xlpm.x*3)` uses a name `_xlpm.x` no LET binds (`#NAME?`,
+    /// probes/t4224-doubled-xlpm-prefix A3:C6, A9:C14, T-4288).
+    ///
+    /// | prefixes | R1C1 storage form    | A1 text (a file) | typed (A1 or R1C1) |
+    /// |----------|----------------------|------------------|--------------------|
+    /// | 0        | `f1`                 | `f1`             | `f1`               |
+    /// | 1        | `f1` (its mark)      | `_xlpm.f1`       | `_xlpm.f1`         |
+    /// | 2        | `_xlpm.f1`           | `_xlpm._xlpm.f1` | `_xlpm._xlpm.f1`   |
+    fn written_lambda_name(&self, name: &str) -> String {
+        if self.storage_form() {
+            return name.strip_prefix(XLPM_PREFIX).unwrap_or(name).to_string();
+        }
+        name.to_string()
+    }
+
+    /// Whether the text being parsed is the R1C1 storage form (R1C1 grammar, not typed), whose
+    /// `_xlpm.` prefix is its own mark ([`Parser::written_lambda_name`]).
+    pub(super) fn storage_form(&self) -> bool {
+        !self.lexer.is_a1_mode() && !self.typed
     }
 
     /// Whether an enclosing LET or LAMBDA binds `name` ([`Parser::bind_name`]),
@@ -433,11 +510,21 @@ impl Parser {
         // is the variable, not a function of its name (`calls_bound_name`, T-2567). A name
         // declared `_xlpm.Sum`, as Excel and the export write it, is not: there every call of
         // the variable is `_xlpm.Sum(` too, and a bare `SUM(` is the function.
-        if let (TokenType::Ident(_), Node::NamedVariableKind { name, .. }) = (token, &node) {
-            if !text.trim_start().starts_with("_xlpm.") {
+        if let (TokenType::Ident(_), Node::NamedVariableKind { name, id }) = (token, &node) {
+            // A declaration is bound by definition: it drops the prefix a use keeps until the
+            // end of the parse. In a file exactly one prefix is the mark: `_xlpm._xlpm.x`
+            // declares `_xlpm.x`, which FORMULATEXT shows (probes/t4224-doubled-xlpm-prefix A8,
+            // T-4224); the storage form's mark is already gone ([`Parser::written_lambda_name`]),
+            // and typed text has none (T-4288).
+            let name = if self.storage_form() || self.typed {
+                name.clone()
+            } else {
+                name.strip_prefix(XLPM_PREFIX).unwrap_or(name).to_string()
+            };
+            if !text.trim_start().starts_with(XLPM_PREFIX) {
                 self.bound_names.push(name.clone());
             }
-            return node;
+            return Node::NamedVariableKind { name, id: *id };
         }
         if !self.lexer.is_a1_mode() {
             // Typed in R1C1 mode, a name that reads as a reference there (`r`, `c`, `rc`, `r1c1`:
@@ -465,7 +552,7 @@ impl Parser {
                     ..
                 },
                 Node::ReferenceKind { .. } | Node::WrongReferenceKind { .. },
-            ) if parse_reference_a1(&text.to_ascii_uppercase()).is_some() => {
+            ) if spelled_like_a1_cell(text) => {
                 if self.cell_shaped_binding.is_none() {
                     self.cell_shaped_binding = Some(text.to_string());
                 }
@@ -537,9 +624,17 @@ impl Parser {
                 "{TYPED_FORMULA_DOES_NOT_PARSE}: a TAB or no-break space between tokens"
             ));
         }
+        // Excel refuses these two as it refuses a formula that does not parse: the cell stays
+        // blank (probes/t3212-r1c1-bare-offsets H30:J35, probes/t4224-doubled-xlpm-prefix
+        // A10:C10, A12:C12; decision 0179).
         if let Some(name) = &self.cell_shaped_binding {
             return Some(format!(
-                "Formula: the LET or LAMBDA name '{name}' is spelled like a cell"
+                "{TYPED_FORMULA_DOES_NOT_PARSE}: the LET or LAMBDA name '{name}' is spelled like a cell"
+            ));
+        }
+        if let Some(name) = &self.prefixed_declaration {
+            return Some(format!(
+                "{TYPED_FORMULA_DOES_NOT_PARSE}: the LET name '{name}' is written with the _xlpm. prefix"
             ));
         }
         if self.spelled_anchorarray {
@@ -549,6 +644,19 @@ impl Parser {
         Some(format!(
             "Formula: {name} is called with the wrong number of arguments"
         ))
+    }
+
+    /// Records the LET name written `text` when it starts with `_xlpm.` and the formula is typed,
+    /// for [`Parser::typed_refusal`]: typed, the prefix is part of the name, and Excel refuses
+    /// `=LET(_xlpm.x,1,_xlpm.x+1)` in A1 and in R1C1 mode (the cell stays blank,
+    /// probes/t4224-doubled-xlpm-prefix A10, A12, T-4288). A file declares every LET name so.
+    /// The match ignores case (`=LET(_XLPM.x,1,_XLPM.x+1)` is refused too) and a LAMBDA parameter
+    /// typed with the prefix is refused alike (probes/t4299-typed-xlpm-extrapolations A1, A4, T-4299).
+    pub(super) fn note_prefixed_declaration(&mut self, text: &str) {
+        let name = text.trim();
+        if self.typed && self.prefixed_declaration.is_none() && has_xlpm_prefix(name) {
+            self.prefixed_declaration = Some(name.to_string());
+        }
     }
 
     /// Records `name` as the first call of the formula with a count of arguments Excel refuses
@@ -572,7 +680,7 @@ impl Parser {
         let display_name = if name.starts_with('_') {
             name.trim_start_matches("_xlfn._xlws.")
                 .trim_start_matches("_xlfn.")
-                .trim_start_matches("_xlpm.")
+                .trim_start_matches(XLPM_PREFIX)
                 .to_string()
         } else {
             name.clone()
@@ -677,7 +785,7 @@ impl Parser {
         // (`LET(mk,..,add5,mk(5),add5(1))`, T-2040). A1 grammar only: in R1C1 mode (stored
         // forms, and the raw A1 text of a formula that did not parse) `AB1` is no cell, and reading
         // it as one would turn A1 coordinates into R1C1 offsets.
-        if let Some(cell) = parse_reference_a1(&name.to_ascii_uppercase()).filter(|_| {
+        if let Some(cell) = parse_spelled_a1_cell(&name).filter(|_| {
             self.lexer.is_a1_mode()
                 && !name.contains('$')
                 && !self.binds_reference_shaped_name(&name)
@@ -689,7 +797,7 @@ impl Parser {
             });
         }
         self.chain_calls(Node::NamedFunctionKind {
-            name: name.trim_start_matches("_xlpm.").to_string(),
+            name: self.written_lambda_name(&name),
             args,
             id: None,
         })
@@ -750,6 +858,9 @@ impl Parser {
             extent: None,
         };
         let lowered = self.lower_structured_reference(table_name, specifier, table_reference);
+        if let Some(table) = self.table_named(&reference.table_name) {
+            reference.use_table_spelling(table);
+        }
         if let Node::ThisRowKind {
             data_start,
             data_end,

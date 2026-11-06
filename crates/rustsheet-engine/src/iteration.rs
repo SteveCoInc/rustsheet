@@ -15,7 +15,7 @@ use bitcode::{Decode, Encode};
 
 use crate::{
     calc_result::CalcResult,
-    evaluation::{key, CellKey as Key},
+    evaluation::{key, CellKey as Key, KeyBuild},
     expressions::types::CellReferenceIndex,
     model::Model,
     types::{Cell, FormulaValue},
@@ -76,15 +76,17 @@ impl Iteration {
 /// way.
 const MAX_SWEEP_EVALUATIONS: usize = 1 << 25;
 
-/// What a recalculation with iteration on keeps about its circular references.
+/// What a recalculation with iteration on keeps about its circular references. Its maps are keyed
+/// by formula positions, as the evaluation's are, and use the same hasher (`KeyBuild`): every read
+/// of a sweep looks a member up, and the default hasher was 15% of a sweep's cost (T-4078).
 #[derive(Default)]
 pub(crate) struct IterationState {
     /// The recalculated set: cycle cells and the cells that read them.
-    members: HashSet<Key>,
+    members: HashSet<Key, KeyBuild>,
     /// Every formula cell as it was before the recalculation.
-    prior: HashMap<Key, Cell>,
+    prior: HashMap<Key, Cell, KeyBuild>,
     /// The members as the first round's sweeps left them.
-    settled: HashMap<Key, Cell>,
+    settled: HashMap<Key, Cell, KeyBuild>,
     /// Calls of `join_stack` so far: a pass cache built while this moved read a member, so its
     /// reader joined, and is not stored (`search_cache.rs`, `ifs_cache.rs`; T-0485).
     joins: u64,

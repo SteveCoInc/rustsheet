@@ -553,16 +553,17 @@ impl UserModel {
                     column,
                     new_value,
                     legacy,
+                    external,
                     old_value: _,
                 } => {
                     needs_evaluation = true;
-                    self.model.reenter_user_input(
-                        *sheet,
-                        *row,
-                        *column,
-                        new_value.to_string(),
-                        *legacy,
-                    )?;
+                    let value = new_value.to_string();
+                    if *external {
+                        self.model.set_user_input(*sheet, *row, *column, value)?;
+                    } else {
+                        self.model
+                            .reenter_user_input(*sheet, *row, *column, value, *legacy)?;
+                    }
                 }
                 Diff::SetArrayValue {
                     sheet,

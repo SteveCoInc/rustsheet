@@ -1,0 +1,87 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4248: GETPIVOTDATA on a recordless item of an ungrouped pivot row field. The cache lists 'North' as a shared item no record uses (refreshOnLoad off so Excel keeps it); pivot P has showAll=0, pivot Q showAll=1. H/J1 the recordless item, 2 a control item, 3 a text not in the cache, 4 the grand total, 5 the recordless item in lower case.",
+  "tags": [
+    "probe",
+    "getpivotdata",
+    "pivot",
+    "T-4248",
+    "M6"
+  ],
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "Region",
+        "B1": "Sales",
+        "A2": "East",
+        "B2": 10,
+        "A3": "West",
+        "B3": 20,
+        "A4": "East",
+        "B4": 5
+      }
+    },
+    {
+      "name": "P",
+      "cells": {
+        "H1": "=GETPIVOTDATA(\"Sales\",$A$3,\"Region\",\"North\")",
+        "H2": "=GETPIVOTDATA(\"Sales\",$A$3,\"Region\",\"East\")",
+        "H3": "=GETPIVOTDATA(\"Sales\",$A$3,\"Region\",\"Nowhere\")",
+        "H4": "=GETPIVOTDATA(\"Sales\",$A$3)",
+        "H5": "=GETPIVOTDATA(\"Sales\",$A$3,\"Region\",\"north\")",
+        "J1": "=GETPIVOTDATA(\"Sales\",$A$13,\"Region\",\"North\")",
+        "J2": "=GETPIVOTDATA(\"Sales\",$A$13,\"Region\",\"East\")",
+        "J3": "=GETPIVOTDATA(\"Sales\",$A$13,\"Region\",\"Nowhere\")",
+        "J4": "=GETPIVOTDATA(\"Sales\",$A$13)",
+        "J5": "=GETPIVOTDATA(\"Sales\",$A$13,\"Region\",\"north\")"
+      },
+      "pivot_tables": [
+        {
+          "name": "ShowAll0",
+          "source": "Data!A1:B4",
+          "location": "A3",
+          "row": "Region",
+          "value": "Sales",
+          "unused_items": [
+            "North"
+          ],
+          "show_all": false,
+          "rendered": {
+            "A3": "Row Labels",
+            "B3": "Sum of Sales",
+            "A4": "East",
+            "B4": 15.0,
+            "A5": "West",
+            "B5": 20.0,
+            "A6": "Grand Total",
+            "B6": 35.0
+          }
+        },
+        {
+          "name": "ShowAll1",
+          "source": "Data!A1:B4",
+          "location": "A13",
+          "row": "Region",
+          "value": "Sales",
+          "unused_items": [
+            "North"
+          ],
+          "show_all": true,
+          "rendered": {
+            "A13": "Row Labels",
+            "B13": "Sum of Sales",
+            "A14": "East",
+            "B14": 15.0,
+            "A15": "North",
+            "A16": "West",
+            "B16": 20.0,
+            "A17": "Grand Total",
+            "B17": 35.0
+          }
+        }
+      ]
+    }
+  ],
+  "expected": {}
+}

@@ -57,6 +57,13 @@ The engine never renders a pivot: rendered cells are whatever the file holds. xl
 items: T-2085 (GETPIVOTDATA unknowns), T-2327 (re-render on load, now answered by the spike) and T-2402.
 PIVOTBY/GROUPBY (SPEC-0006) are functions and share only aggregation semantics with pivot tables.
 
+**Update 2026-11-06.** While this plan waited to merge, the M6 GETPIVOTDATA track probed and implemented
+numeric and single-level date grouping. That covered import, record placement, Excel's labels and
+GETPIVOTDATA (T-4225–T-4324; web.md "Grouped pivot fields import as their group items"). It also added a
+compact one-field engine layout for grouped spec pivots (`pivot/layout.rs`). T-4170 and T-4171 were
+rescoped to what is left, and the layout and spec tasks build on that code. The pivot spec is SPEC-0032:
+the number 0030 was taken.
+
 ## 3. What the feature space is (summary; full catalog in `excel-docs.md`)
 
 | Family | Features (abridged) | Affects cell values? |
@@ -251,7 +258,7 @@ round trip.
 
 | Stage | Scope | Exit evidence |
 |---|---|---|
-| **PV0 Foundations** | decision (M15, lanes, scope ruling, PivotChart ambition); SPEC-0030 (model, result, layout contract, refresh semantics, limits); feature catalog (schema walk + API + docs); oracle capability matrix (which catalog rows the web opens and renders; desktop-only ones go to M14); builder generalization; sidecar `pivots` capture; harness scoring of pivot areas; corpus fetcher; the spike findings committed as probes | catalog merged; `pivots` suite with ≥ 1 filled probe per family; capability matrix in `docs/excel-semantics/pivots.md` |
+| **PV0 Foundations** | decision (M15, lanes, scope ruling, PivotChart ambition); SPEC-0032 (model, result, layout contract, refresh semantics, limits); feature catalog (schema walk + API + docs); oracle capability matrix (which catalog rows the web opens and renders; desktop-only ones go to M14); builder generalization; sidecar `pivots` capture; harness scoring of pivot areas; corpus fetcher; the spike findings committed as probes | catalog merged; `pivots` suite with ≥ 1 filled probe per family; capability matrix in `docs/excel-semantics/pivots.md` |
 | **PV1 Refresh and core render** | refresh from a worksheet range or Table into the cache with Excel's item typing, identity and order; the 11 aggregates over records with text, blank and error rules; compact/outline/tabular; default subtotals top/bottom; grand totals; several data fields and the Values field on either axis; page fields (single/multi); manual hidden items; label sort; captions, `(blank)`, empty/error captions; location growth, page-area offsets and collisions; grid writer; refresh on load and by API; GETPIVOTDATA over every PV1 shape (closes T-2085) | `pivots` + `gen-pivot` (core) 100%; corpus files with only PV1 features re-render exactly |
 | **PV2 Analysis** | all 14 show-values-as modes; sort by value; label/value/date filters; Top/Bottom N; filter order and totals of filtered items; custom subtotal functions; show items with no data; repeat labels; blank rows; per-field layout mixes; data-field number formats (displayed text) | the same, per row |
 | **PV3 Grouping and calculation** | numeric, date and manual groups, with Excel's labels; shared group fields; calculated fields; calculated items with solve order and Excel's restrictions; errors they produce | the same |
@@ -272,7 +279,7 @@ All are size S or M, as CLAUDE.md requires; anything bigger becomes a spec first
 2. **Commit the spike as probes:** the re-render on load (closes T-2327); a calculated field on sums;
    Top-N totals; label sort; numeric group labels; the collision that gives `#SPILL!`. Research lane, S, each
    needing builder support from task 4.
-3. **SPEC-0030**, the pivot engine: model, `PivotResult`, `rowItems` contract, refresh semantics, grid
+3. **SPEC-0032**, the pivot engine: model, `PivotResult`, `rowItems` contract, refresh semantics, grid
    ownership, limits, export. Pivot lane, M.
 4. **Builder v2:** a definition JSON one-to-one with OOXML; a consistent cache, records and items; an empty
    target area; validation that refuses what Excel would refuse (ClosedXML's invariants). Harness lane, M.

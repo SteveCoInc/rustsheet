@@ -110,3 +110,20 @@ fn lone_values_and_cells() {
         assert_eq!(model._get_text(cell), *want, "{cell}");
     }
 }
+
+/// Direct numeric text is one data value like a number, so a lone one is `#DIV/0!`; empty and
+/// other text are `#VALUE!` (probes/t4223-m9-statistical-array-kinds-b A47:A49, T-4223).
+#[test]
+fn direct_numeric_text_is_one_value() {
+    let mut model = new_empty_model();
+    model._set("A1", "=ZTEST(\"3\",3)");
+    model._set("A2", "=Z.TEST(\"\",3)");
+    model._set("A3", "=Z.TEST(\"abc\",3)");
+    model._set("A4", "=ZTEST(0,3)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#DIV/0!");
+    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    assert_eq!(model._get_text("A3"), *"#VALUE!");
+    assert_eq!(model._get_text("A4"), *"#DIV/0!");
+}

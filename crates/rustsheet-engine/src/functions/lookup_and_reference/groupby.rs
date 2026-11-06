@@ -6,8 +6,8 @@
 
 use super::group_functions::{Aggregate, Element, Functions};
 use super::grouping::{
-    at, effective_depth, empty_text, subtotal_levels, value_error, Axis, Grouping, ParentOrder,
-    Relative, SetId, SortOrder,
+    at, effective_depth, empty_text, subtotal_levels, tree_directions, value_error, Axis, Grouping,
+    ParentOrder, Relative, SetId, SortOrder,
 };
 use super::lifted_options::Bound;
 use super::relative_to::Elements;
@@ -649,9 +649,15 @@ impl Model {
         let to_error = |(error, message)| CalcResult::new_error(error, cell, message);
         // The output size is checked while grouping, before the sort, any LAMBDA call or the
         // output allocation (SPEC-0006 step 6).
-        let limit = |groups: usize| check_array_size(tall(groups), columns);
-        let mut grouping =
-            Grouping::new(keys, args.rows.iter().copied(), limit).map_err(to_error)?;
+        let limit = |groups: usize| check_array_size(tall(groups), columns).map(to_error);
+        let mut grouping = Grouping::new(
+            keys,
+            args.rows.iter().copied(),
+            tree_directions(&args.sort, args.order),
+            limit,
+            |units| self.spend_work(units, cell),
+            cell,
+        )?;
         // The subtotal rows count too, still before any call (CLAUDE.md directive 5): counted in
         // key order, they bound the subtotals after a value sort, which keeps each parent's
         // groups together.

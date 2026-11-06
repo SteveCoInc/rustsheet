@@ -45,8 +45,9 @@ Work is partitioned into **lanes** so that parallel workers rarely touch the sam
   minutes and 10 tasks per run, then landing its own PRs until minute 110 (decisions 0022, 0025,
   0229). Each walks the `**Critical lane:**` list in `docs/status.md`, then
   `functions` (every `functions-*` lane; allowlist and rules in `routines.md`).
-- One task in flight per lane. `make next-task` enforces it: it skips tasks claimed by a pushed
-  branch and lanes with a branch that moved in the last 2 hours (handoffs, and branches whose task
+- One task in flight per lane, three in `engine` (decision 0269). `make next-task` enforces it: it
+  skips tasks claimed by a pushed branch and lanes whose slots are all taken by branches that moved
+  in the last 2 hours (handoffs, and branches whose task
   is already done on main, excepted).
 - The functions work is split into the nine `functions-*` lanes above so several workers can fix
   functions at once; plain `functions` is retired for open tasks (`scripts/tasks.py validate`).
@@ -57,6 +58,16 @@ Work is partitioned into **lanes** so that parallel workers rarely touch the sam
   (`make ready-tasks TIER=sonnet`). The steward and the opus worker (work-loop
   step 6.5) top it up with the gap-triager or planner, cutting sonnet-sized tasks by the tier rubric.
 - Add the optional worker only after a week with a revert rate under 5%.
+
+**Worktrees** (T-3832): every worktree, including a subagent's `isolation: worktree` copy, builds
+into its own Cargo target directory, its default `target/` inside the worktree. Never share one
+(a common `CARGO_TARGET_DIR`, a `target` symlink to another tree) to save disk: Cargo fingerprints
+by package, not by source tree, and the Makefile runs `target/release/rustsheet-eval` by path, so a
+shared directory runs binaries built from another worktree's sources. In the 2026-11-02 cleanup
+that made FORECAST.ETS return `#N/IMPL!` from an older engine and once recorded a baseline with the
+wrong one. `make build` (so every eval gate) and `make check-fast` refuse a target directory outside
+the worktree (`make target-dir-guard`, `scripts/target_dir_guard.py`). Short of disk, delete stale
+worktrees' `target/` directories instead.
 
 ## Task lifecycle
 

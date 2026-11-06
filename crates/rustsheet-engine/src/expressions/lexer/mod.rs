@@ -426,7 +426,7 @@ impl Lexer {
                         }
                     }
                     _ => {
-                        if char.is_alphabetic()
+                        if utils::is_letter_name_start(char)
                             || char == '_'
                             || char == '\\'
                             || utils::is_typographic_quote(char)
@@ -474,6 +474,15 @@ impl Lexer {
                                 return TokenType::Ident(name);
                             }
                             if self.mode == LexerMode::A1 {
+                                // `A1. B2`, `A1.. B2`: the identifier stops at the whitespace
+                                // after the dots, but to Excel this is the range `A1:B2`, as
+                                // `A1 . B2` is (probes/t4271-lotus-dot-one-side-space-after,
+                                // -space-after-dotdot, excel-graph, T-4271).
+                                if let Some(range) =
+                                    self.dotted_range_after_cell_name(&name_upper, position - 1)
+                                {
+                                    return range;
+                                }
                                 let parsed_reference = utils::parse_reference_a1(&name_upper);
                                 if parsed_reference.is_some()
                                     || (utils::is_valid_column(name_upper.trim_start_matches('$'))
@@ -706,6 +715,7 @@ impl Lexer {
     /// Whether `c` may continue a name.
     fn is_name_char(&self, c: char) -> bool {
         c.is_alphanumeric()
+            || (!c.is_ascii() && utils::is_mark(c))
             || c == '_'
             || c == '.'
             || (c == '\\' && self.backslash_in_names())

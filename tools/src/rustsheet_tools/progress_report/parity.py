@@ -38,9 +38,9 @@ TIER_MEANINGS = {
     "exact": "every cell bit-exact",
     "ulp4": "every cell within 4 ulp",
     "digits15": "every cell within 15 significant digits",
-    "rate999": f"{GE} 99.9% of cells within 15 digits",
-    "rate99": f"99{EN}99.9% of cells within 15 digits",
-    "below99": "< 99% of cells within 15 digits",
+    "rate999": f"{GE} 99.9% of cells not visibly off (15 digits; 13 for the decision 0267 family)",
+    "rate99": f"99{EN}99.9% of cells not visibly off",
+    "below99": "< 99% of cells not visibly off",
     "unscored": "no scored Excel cell",
 }
 BUCKET_LABELS = {
@@ -48,6 +48,7 @@ BUCKET_LABELS = {
     "ulp1": "Within 1 ulp",
     "ulp4": f"Within 2{EN}4 ulp",
     "digits15": "Within 15 digits",
+    "residue13": "Beta family, 14th or 15th digit (residue, decision 0267)",
     "visible_numeric": "Visibly off: number",
     "visible_other": "Visibly off: type or text",
 }
@@ -151,7 +152,8 @@ def closeness_summary(p: Parity) -> str:
     off = sum(cells[b] for b in VISIBLE)
     return (
         f"**{n:,}** attributed Excel cells: {pct(cells['pass'], n)} bit-exact, "
-        f"{pct(n - off, n)} within 15 digits, **{off:,}** ({pct(off, n)}) visibly off."
+        f"{pct(n - off - cells['residue13'], n)} within 15 digits, {cells['residue13']:,} "
+        f"incomplete-beta residue at the 14th or 15th digit (decision 0267), **{off:,}** ({pct(off, n)}) visibly off."
     )
 
 

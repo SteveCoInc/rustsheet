@@ -1,12 +1,16 @@
 pub(crate) mod bound_variables;
 mod literals;
+mod name_binding;
+mod range_shrink;
 mod rename_defined_name;
 mod sheet_edits;
 mod structured;
 mod wrapped;
 mod wrong_reference;
+use crate::expressions::parser::XLPM_PREFIX;
 use std::fmt::Write;
 
+use self::range_shrink::delete_corners;
 use super::reference_operators::{
     at_text, callee_operand, intersection_text, spill_operand, tight_operand, union_text,
 };
@@ -23,16 +27,17 @@ use crate::expressions::token::OpUnary;
 use crate::expressions::types::CellReferenceRC;
 use crate::language::{get_default_language, Language};
 use crate::locale::{get_default_locale, Locale};
-use bound_variables::{callee_text, prefix_bound_variables, variable_text};
+use bound_variables::{called_variable_text, callee_text, prefix_bound_variables, variable_text};
 pub(crate) use literals::argument_separator;
 use literals::{format_number_locale, to_string_array_node};
+pub(crate) use name_binding::{pin_unresolved_name, rebind_workbook_name_to_sheet};
 pub(crate) use rename_defined_name::rename_defined_name_in_node;
 pub(crate) use sheet_edits::{
-    move_sheet_in_node, rename_sheet_in_node, retarget_unqualified_references,
+    delete_sheet_in_node, move_sheet_in_node, rename_sheet_in_node, retarget_unqualified_references,
 };
 pub(crate) use structured::{
     to_localized_string_this_row_lowered, to_rc_lowering_at, to_string_lowering,
-    to_string_with_ref_errors,
+    to_string_with_ref_errors, OffRows,
 };
 use wrapped::wrapped_text;
 
@@ -111,11 +116,11 @@ impl Displacement<'_> {
     }
 
     /// The displacements of the two corners of the plain range `rows` x `columns` on sheet
-    /// `sheet_index` where a row edit does not displace them one by one; `None` for any other
+    /// `sheet_index` where a row or column edit does not displace them one by one; `None` for any other
     /// range, whose corners displace as usual.
     ///
     /// A row delete that takes a range's first or last rows, but not all of them, shrinks it to
-    /// the rows left (plain-range-delete-row-first and -last A1:A4, excel-graph, T-2338:
+    /// the rows left (a column delete likewise, `range_shrink.rs`; plain-range-delete-row-first and -last A1:A4, excel-graph, T-2338:
     /// `=SUM(S!C4:C7)` and `=SUM(S!$C$4:$C$7)` become `S!C4:C6` either way), where displacing the
     /// deleted corner alone would give `#REF!`. Only one-row deletes are probed; a wider delete
     /// across an edge shrinks the same way (hand, T-2851).
@@ -133,10 +138,14 @@ impl Displacement<'_> {
         rows: (i32, i32),
         columns: (i32, i32),
     ) -> Option<(DisplaceData, DisplaceData)> {
+        if let Some(shrunk) = delete_corners(self.data, sheet_index, rows, columns) {
+            return Some(shrunk);
+        }
         let DisplaceData::Row { sheet, row, delta } = *self.data else {
             return None;
         };
-        if sheet != sheet_index {
+        // A row delete that shrinks nothing leaves the corners to displace as usual.
+        if sheet != sheet_index || delta < 0 {
             return None;
         }
         // The corner on row `from` moved to row `to`.
@@ -145,16 +154,6 @@ impl Displacement<'_> {
             row: from.min(to),
             delta: to - from,
         };
-        if delta < 0 {
-            let deleted = row..=row - delta - 1;
-            return if deleted.contains(&rows.0) && !deleted.contains(&rows.1) {
-                Some((shift_to(rows.0, row), shift_to(rows.1, rows.1 + delta)))
-            } else if !deleted.contains(&rows.0) && deleted.contains(&rows.1) {
-                Some((DisplaceData::None, shift_to(rows.1, row - 1)))
-            } else {
-                None
-            };
-        }
         let block = self.grown_edges.iter().find(|block| {
             block.sheet == sheet_index
                 && block.rows.0 <= rows.0
@@ -179,8 +178,9 @@ enum Rewrite<'a> {
     Move(&'a MoveContext<'a>),
     /// Prints the area of every structured reference to one of these tables (lowercase names)
     /// instead of its text: the tables of a sheet being deleted (SPEC-0016 "Sheet rename, delete
-    /// and restore"). A `#This Row` area is resolved at the cell's row, or the given one (T-1699).
-    Lower(&'a [String], Option<i32>),
+    /// and restore"). A `#This Row` area is resolved at the cell's row, or the given one (T-1699);
+    /// off the data rows it prints as [`OffRows`] says.
+    Lower(&'a [String], Option<i32>, OffRows),
     /// Prints every `#This Row` as its area on the printing cell's row (T-1699), except one to
     /// these tables (lowercase names), the tables a structural edit follows, which keeps its
     /// text (T-3037).
@@ -729,8 +729,8 @@ fn stringify(
             }
             format!("{s1}:{s2}")
         }
-        // Rows and columns inserted or moved on one sheet of the span do not shift the span's
-        // cells (edit semantics are not modelled yet), so no displacement reaches `reference`.
+        // Excel never shifts a span for row or column edits on its sheets (references.md,
+        // probes/sheet-ops/t4272-3d-span-jan-insert-row), so no displacement reaches `reference`.
         SheetSpanKind {
             first_sheet,
             last_sheet,
@@ -769,7 +769,7 @@ fn stringify(
             text
         }
         NamedFunctionKind { name, args, id: _ } => format_function(
-            &callee_text(name, context),
+            &callee_text(name, context, export_to_excel),
             args,
             context,
             rewrite,
@@ -824,12 +824,13 @@ fn stringify(
             }
             format!("{{{matrix_string}}}")
         }
-        DefinedNameKind((name, scope, _)) => crate::expressions::utils::defined_name_text(
+        DefinedNameKind((name, scope, formula)) => crate::expressions::utils::defined_name_text(
             name,
             *scope,
+            !formula.is_empty(),
             context.is_none() || export_to_excel,
         ),
-        NamedVariableKind { name, id: _ } => variable_text(name, context),
+        NamedVariableKind { name, id: _ } => variable_text(name, context, export_to_excel),
         UnaryKind {
             kind: OpUnary::Minus,
             ..
@@ -879,12 +880,12 @@ fn stringify(
                         if p.is_optional {
                             format!("_xlop.{}", p.name)
                         } else {
-                            format!("_xlpm.{}", p.name)
+                            format!("{XLPM_PREFIX}{}", p.name)
                         }
                     } else if p.is_optional {
-                        format!("[{}]", variable_text(&p.name, context))
+                        format!("[{}]", variable_text(&p.name, context, false))
                     } else {
-                        variable_text(&p.name, context)
+                        variable_text(&p.name, context, false)
                     }
                 })
                 .collect();
@@ -892,11 +893,10 @@ fn stringify(
             format!("{}({})", lambda_name, parts.join(arg_sep))
         }
         LambdaCallKind { lambda, args } => {
-            // When the callee is a plain named variable (unknown identifier used as a function),
-            // use lowercase to distinguish from real function calls in R1C1 format and
-            // to match the display behaviour of InvalidFunctionKind.
             let lambda_str = match lambda.as_ref() {
-                Node::NamedVariableKind { name, id: _ } => name.to_lowercase(),
+                Node::NamedVariableKind { name, id: _ } => {
+                    called_variable_text(name, context, export_to_excel)
+                }
                 other => callee_operand(sub(other), other),
             };
             let call_args: Vec<String> = args.iter().map(sub).collect();

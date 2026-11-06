@@ -107,7 +107,7 @@ def rate(nper: int, pmt: mpmath.mpf, pv: mpmath.mpf, fv: mpmath.mpf, due: bool) 
 
 
 def _rate(args: Sequence[MathArg]) -> mpmath.mpf:
-    nper, pmt, pv, fv, kind = scalars(args)
+    nper, pmt, pv, fv, kind = scalars(args)[:5]  # a call's guess (the sixth) does not move a unique root
     return rate(int(nper), pmt, pv, fv, kind != 0)
 
 
@@ -181,6 +181,9 @@ RATE = register(
             Param("fv", "real", _AMOUNT, source=RATE_SOURCE),
             Param("type", "int", Interval(0, 1, lo_open=False, hi_open=False), source=RATE_SOURCE),
         ),
+        # The guess only picks among several roots, and a point here has one (the module doc); a guess Excel
+        # cannot converge from is Excel's error, which Gate A reads as error against number (T-3923).
+        call_params=(Param("guess", "real", _AMOUNT, source=RATE_SOURCE, optional=True),),
         value=_rate,
         draw=_draw,
         solver=True,

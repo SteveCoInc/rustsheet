@@ -25,8 +25,10 @@ pub enum TextToken {
     // Dates
     Day,
     DayPadded,
-    DayNameShort,
-    DayName,
+    /// `ddd`; `true` when written `aaa`
+    DayNameShort(bool),
+    /// `dddd`; `true` when written `aaaa`
+    DayName(bool),
     Month,
     MonthPadded,
     MonthNameShort,
@@ -326,6 +328,8 @@ impl Parser {
         let mut is_time = false;
         // Excel: after a minute, later `m`/`mm` are months (number-formats.md "`mm` after a minute").
         let mut minute_read = false;
+        // An `[m]` was seen: every later `m`/`mm` is a month, even one before seconds.
+        let mut elapsed_minute_seen = false;
         let mut hijri = false;
         let mut calendar_prefix = false;
         // Whether the previous token is an unescaped colon, which the next one joins.
@@ -583,13 +587,13 @@ impl Parser {
                     is_date = true;
                     tokens.push(TextToken::DayPadded);
                 }
-                Token::DayNameShort => {
+                Token::DayNameShort | Token::WeekdayShort => {
                     is_date = true;
-                    tokens.push(TextToken::DayNameShort);
+                    tokens.push(TextToken::DayNameShort(token == Token::WeekdayShort));
                 }
-                Token::DayName => {
+                Token::DayName | Token::WeekdayFull => {
                     is_date = true;
-                    tokens.push(TextToken::DayName);
+                    tokens.push(TextToken::DayName(token == Token::WeekdayFull));
                 }
                 Token::MonthNameShort => {
                     is_date = true;
@@ -602,8 +606,8 @@ impl Parser {
                 Token::Month | Token::MonthPadded => {
                     // A `mm.0` minute leaves `minute_read` ("mm.0 h:mm" is "57.7 2:57"; t3575-b A30).
                     let fraction = self.minute_before_fraction(&next_token);
-                    let clock =
-                        (is_time && !minute_read) || self.minute_before_seconds(&next_token);
+                    let clock = !elapsed_minute_seen
+                        && ((is_time && !minute_read) || self.minute_before_seconds(&next_token));
                     let minute = clock || fraction;
                     minute_read |= clock;
                     is_date |= !minute || fraction;
@@ -661,6 +665,10 @@ impl Parser {
                 Token::Hour => {
                     is_date = true;
                     is_time = true;
+                    // Excel: an hour token makes the next `m`/`mm` a minute again, even after a
+                    // minute (`h:mm|h:mm` of 45000.5432 is "13:02|13:02"; probes/t3710-ampm-hour-tokens
+                    // B3, B14; number-formats.md "`mm` after a minute is a month").
+                    minute_read = false;
                     tokens.push(if elapsed_hour {
                         TextToken::ElapsedHour
                     } else {
@@ -670,6 +678,7 @@ impl Parser {
                 Token::HourPadded => {
                     is_date = true;
                     is_time = true;
+                    minute_read = false;
                     tokens.push(if elapsed_hour {
                         TextToken::ElapsedHourPadded
                     } else {
@@ -752,6 +761,9 @@ impl Parser {
                     is_date = true;
                     bracketed_elapsed += 1;
                     is_time = true;
+                    // Excel: an `m` after `[m]` is a month, not a clock minute
+                    // (`[m] m` is "102 1"; probes/t2135-fractional-second-edges-1900 A34, T-2135).
+                    elapsed_minute_seen = true;
                     tokens.push(TextToken::ElapsedMinute);
                 }
                 Token::ElapsedSecond => {
@@ -772,6 +784,9 @@ impl Parser {
                     is_date = true;
                     bracketed_elapsed += 1;
                     is_time = true;
+                    // Excel: an `m` after `[m]` is a month, not a clock minute
+                    // (`[m] m` is "102 1"; probes/t2135-fractional-second-edges-1900 A34, T-2135).
+                    elapsed_minute_seen = true;
                     tokens.push(TextToken::ElapsedMinutePadded);
                 }
                 Token::ElapsedSecondPadded => {
@@ -801,6 +816,7 @@ impl Parser {
         if bare_digit && tokens.iter().any(is_calendar_or_clock) {
             return ParsePart::Error(ErrorPart { whole_code: true });
         }
+        super::elapsed::move_elapsed_second(&mut tokens);
         // Excel: a section with two bracketed elapsed tokens is #VALUE! for any value (`[h]:[mm]`,
         // `[mm]:[ss]`; probes/negative-date-sections-1900 and -1904 A9, A21, A22; dates.md "Negative
         // serials under an explicit negative section"). A bare `h` after `[h]` is not bracketed.
@@ -842,6 +858,11 @@ impl Parser {
             // Excel: `%` beside `General` prints, no scaling (probes/text-format-general-company A3).
             percent = 0;
         }
+        // `E+` or `E-` with no digit after it is invalid: `TEXT(1.5,"0E+")` and `0.0E-"x"` are
+        // #VALUE! (probes/text-scientific-edges, excel-graph 2026-11-05, T-2230).
+        if is_scientific && exponent_digit_count == 0 {
+            return ParsePart::Error(ErrorPart::default());
+        }
         if is_date {
             if is_number {
                 return ParsePart::Error(ErrorPart::default());
@@ -867,6 +888,16 @@ impl Parser {
                 numerals,
             })
         } else {
+            // Excel prints a number section's currency symbol where it is written, after any literal
+            // before it (`([$$-409]#,##0.00)` on 12 is "($12.00)", `0[$€]` "12€", `"x"[$€-40C]0`
+            // "x€12"; probes/t4108-currency-tag-position, excel-graph, T-4108). A fraction keeps its
+            // symbol in front: its token indices are positions into `tokens`.
+            if fraction.is_none() {
+                for (position, symbol) in currency_positions.into_iter().rev() {
+                    tokens.insert(position, TextToken::Literal(symbol));
+                }
+                currency = None;
+            }
             ParsePart::Number(NumberPart {
                 color,
                 condition,

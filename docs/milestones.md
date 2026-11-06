@@ -17,7 +17,7 @@ whose exit criteria are not met.
 | 1b. Bit parity | the `defer: phase-1b` tasks of every milestone | after Phase 1 exits (decision 0114) |
 | 2. Architecture and performance | M3, M4, M13 | deferred until Phase 1 exits |
 | 3. Release | M12 | after Phase 2 |
-| 4. Desktop oracle | M14 | after Phase 3; not started (decision 0039) |
+| 4. Desktop oracle | M14 | out of scope; tasks dropped (decision 0266) |
 
 **Phase 1 exit (decisions 0114, 0188):** every Excel function is in the catalog with its parity scope
 (T-0040). Every in-scope function has oracle-backed cases covering each parameter mode and edge
@@ -329,11 +329,11 @@ Split out of M11 by decision 0027.
 ## M15 — Pivot tables (Phase 1)
 
 Added by decision 0274 (owner request, 2026-11-04). Research and plan:
-docs/research/pivot-tables-2026-11-04/plan.md. Design: SPEC-0030 (a task of PV0). Today the engine only imports
+docs/research/pivot-tables-2026-11-04/plan.md. Design: SPEC-0032 (a task of PV0). Today the engine only imports
 pivots read-only and answers GETPIVOTDATA (SPEC-0015).
 
 **Scope:** every in-scope row of the pivot feature catalog `eval/catalog/pivot-features.tsv`, staged:
-- **PV0 Foundations:** the feature catalog (schema-driven), SPEC-0030, case builder v2 (pivot definitions
+- **PV0 Foundations:** the feature catalog (schema-driven), SPEC-0032, case builder v2 (pivot definitions
   one-to-one with OOXML), sidecar capture and scoring of rendered pivot areas and `rowItems`/`colItems`, the
   oracle capability matrix, the `pivots`, `gen-pivot` and `pivot-corpus` suites.
 - **PV1 Refresh and core render:** refresh from ranges and Tables with Excel's item rules; the eleven aggregates;
@@ -359,6 +359,9 @@ styles and conditional formats beyond preservation, UI-only commands.
 - Measured by report.json's `milestone_exit` M15 row; until that row exists M15 counts as not met.
 
 ## M14 — Desktop-oracle parity (Phase 4)
+
+**Out of scope (decision 0266, 2026-11-04).** Its open tasks are dropped and no new task is filed here;
+the text below is kept as the record of what Phase 4 would have covered.
 
 Added by decision 0039. Planned after Release; not started. It starts when the owner sets up the
 `excel-desktop` backend: a Windows machine with Microsoft 365 Apps and a self-hosted runner, as in

@@ -3,7 +3,7 @@ id: T-3089
 title: "TEXT: aaa as the first token before b after B2[40409] gives code 51, not ddd's 15"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P0
 size: S
 tier: sonnet
@@ -27,3 +27,8 @@ its code first) without changing what it prints anywhere else.
 
 ## Out of scope
 - Any other effect of `aaa` (T-1880).
+
+## Outcome
+`aaa`/`aaaa` now lex to their own tokens and map to `TextToken::DayNameShort(true)` / `DayName(true)`; `first_token_code` gives
+51 and 52 (probed: probes/t3089-b2-aaa-code A1:A6, excel-graph 2026-11-04; `aaaa`, `AAAA` and `aaaAAA` are 52). Printing unchanged.
+probes/t3028-b2-taiwan-cuts A65 and C65 leave eval/baseline/probes.txt.

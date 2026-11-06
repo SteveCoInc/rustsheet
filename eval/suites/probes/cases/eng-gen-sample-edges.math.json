@@ -1,0 +1,63 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "0c8357e5290073af069aee92b365b85009b8af51a55e4a558aa6957db356d3b2"
+ },
+ "sheets": {
+  "Sheet1": {
+   "E1": {
+    "t": "e",
+    "why": "a negative order",
+    "f": "=BESSELK(5,-0.0001)"
+   },
+   "E10": {
+    "t": "n",
+    "v": "0.0036910983340425942747352610074569950990019443446957",
+    "f": "=BESSELK(5,0.9999)"
+   },
+   "E2": {
+    "t": "e",
+    "why": "a negative order",
+    "f": "=BESSELK(5,-0.5)"
+   },
+   "E3": {
+    "t": "e",
+    "why": "a negative order",
+    "f": "=BESSELK(5,-1)"
+   },
+   "E4": {
+    "t": "e",
+    "why": "a negative order",
+    "f": "=BESSELJ(5,-0.0001)"
+   },
+   "E5": {
+    "t": "e",
+    "why": "a negative order",
+    "f": "=BESSELY(5,-0.0001)"
+   },
+   "E6": {
+    "t": "e",
+    "why": "a negative order",
+    "f": "=BESSELI(5,-0.0001)"
+   },
+   "E7": {
+    "t": "e",
+    "why": "a negative order",
+    "f": "=BESSELK(5,BESSELY(14,5))"
+   },
+   "E8": {
+    "t": "e",
+    "why": "a negative order",
+    "f": "=BESSELJ(5,-0.9999)"
+   },
+   "E9": {
+    "t": "e",
+    "why": "a negative order",
+    "f": "=BESSELK(5,-1E-300)"
+   }
+  }
+ }
+}

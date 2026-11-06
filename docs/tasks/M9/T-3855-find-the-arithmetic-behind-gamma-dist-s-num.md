@@ -3,11 +3,12 @@ id: T-3855
 title: "Find the arithmetic behind GAMMA.DIST's #NUM! at shapes from 1E56 (density and cdf share it)"
 milestone: M9
 lane: functions-stat
-status: todo
-priority: P2
+status: blocked
+priority: P0
 size: M
 tier: opus
 depends_on: []
+campaign: semantics
 ---
 
 ## Goal
@@ -28,6 +29,45 @@ not a cut.
   factor (an x87 EXP of a huge argument, `x87_exp.rs`), a Loader or Temme form, or a loop that stops on NaN.
   Test candidates against every probed cell before probing more.
 - Opus: kernel research with unclear evidence.
+- **Attempt 1 (2026-11-04, decision 0056 time-box, about 15 minutes).** The four cases hold 73 distinct huge-shape
+  points (shape >= 1E+40, y = x/beta < 1, Excel 0 or `#NUM!`; 34 `#NUM!`); only (shape, y) matters (the same y
+  through different x and beta agrees every time). Ruled out as a single separating feature: any one bit (0 to 63)
+  of the double t = shape·LN(y), of t - LNGAMMA(shape) or t - LNGAMMA(shape + 1) (exact lgamma rounded once), of
+  t·log2(e), LN(y) or shape·LOG10(y), and any threshold on t/LNGAMMA(shape). Patterns worth testing next:
+  - At shape 1E+70 the `#NUM!` y are 1E-2, 1E-5, 2E-5, 1E-10, 2E-10, 3E-10, 2E-20, 1E-26, 1E-42, 1E-54, 1E-66,
+    1E-86, 1E-98 and 1E-100: the decades from 1E-26 down recur about every 12 (LN(y) steps of about 27.6, so t steps
+    of about 2.8E+71), which looks like a remainder of t (or of t·log2(e)) against a fixed modulus. One x87 `fprem`
+    pass without looping on C2 leaves a partial remainder that depends on t's bits; f2xm1 of an out-of-range
+    operand is undefined. Model the EXP of t (or of t - LNGAMMA) through that sequence (`x87_exp.rs`) and score it
+    against the 73 points before probing.
+  - At y = 2E-10 every shape from 1E+56 to 1.85E+76 is `#NUM!` except 1E+76 and 1.84E+76, and 1E+40 to 1E+55
+    are 0: whatever separates them is mostly a function of y, with an onset in shape.
+  - The extraction script is short: parse the GAMMA.DIST/GAMMADIST cells of the four cases with their oracle
+    values, keep shape >= 1E+40 and y < 1.
+
+## Blocked because: time-boxed (decision 0056)
+Two attempts ran (attempt 1 in Context, attempt 2 below) and neither found the arithmetic, so no cell moves. The 54
+cells in "Decision 0267 cells" stay with this task for decision 0267 to accept; no follow-up is filed for them. The
+engine keeps `HUGE_SHAPE_CDF_CUT` unchanged.
+
+## Attempt 2 (2026-11-04, opus run, decision 0056 time-box, about 35 minutes)
+Scored against the same 73 points (shape >= 1E+40, y = x/beta < 1, Excel 0 or `#NUM!`, 34 `#NUM!`; the
+extraction now scans every eval case with an oracle, which finds the same 73). The majority class alone gets 39.
+- Rounding direction to k bits (k = 1..52, nearest, the bits below against a half) of a·phi for three phi forms
+  ((y - a)/a - LN(y/a), y/a - 1 - LN(y/a), (y - a)/a - (LN(y) - LN(a))), of sqrt(a·phi), sqrt(a·phi/2) and
+  sqrt(2 phi) (an erfc whose exp(-x²) is split at a rounded x would give inf·0 when the rounding goes up), of
+  a·LN(y), LN(a/y), a·LN(a/y) and of Loader's log-form bd0 a·LN(a/y) + (y - a) (statistics.md "POISSON.DIST pmf"):
+  best 51 of 73. Single bits of those: best 56 of 73 (bit 2 of a·LN(y)), chance among about 900 features tried.
+- Structural forms that cannot make the pattern: R's Loader `dpois_raw` with Welinder's `ebd0` (y_h, y_l) split
+  (its residuals d - floor(d + 0.5) are 0 for every term above 2^53, so exp(-y_l)·exp(-y_h) is never inf·0); and a
+  GAMMALN-based Stirling error taken as a separate exp factor (its rounding noise has a random sign, but it depends
+  on the shape alone, while Excel's pattern changes with y at a fixed shape 1E+70).
+- What the points do say: at y = 2E-10, 16 of the 18 shapes from 1E+56 to 1.85E+76 are `#NUM!` (0 at 1E+76 and
+  1.84E+76), while at shape 1E+70 only 14 of 45 y are; so the deciding quantity is mostly a function of y, with an
+  onset in shape. The onset, between 1E+55 and 1E+56, is where shape^-5.5 becomes subnormal and
+  sqrt(2 pi shape)·shape^5 overflows (UNVERIFIED: a coincidence until a model uses it). A next attempt would need
+  more points along the shape at a few fixed y (the probe freeze, decision 0267, allows them only under this task),
+  not more candidate features on these 73.
 
 ## Acceptance criteria
 - [ ] A model that reproduces every probed huge-shape cell (or the remaining misses listed), implemented in place
@@ -36,3 +76,18 @@ not a cut.
 
 ## Out of scope
 - The shape/x-overflow density rule (T-3316, pinned).
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 54 probes-numeric cells that no open task listed: 54 with the wrong type or error.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/fit-audit-t3271-cdf-cut.case.json (22): S!A4, A6-A7, A9-A11, A13-A17, A28-A29, A32, A34-A40, A42
+- probes-numeric/t3316-gamma-cdf-huge-shape.case.json (15): S!A1-A7, A10, A13-A14, A16-A20
+- probes-numeric/t3316-gamma-cdf-y-sweep.case.json (15): S!A1, A3, A7, A11, A14, A17, A22, A25-A26, A28, A35-A36, A38, A42, A46
+- probes-numeric/t3316-gamma-density-overflow.case.json (2): S!A20, A24
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).

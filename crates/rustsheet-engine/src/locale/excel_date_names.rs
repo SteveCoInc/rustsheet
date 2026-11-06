@@ -6,6 +6,7 @@
 //! probes/text-locale-six-languages), except the morning "AM" of locales whose afternoon is "PM", which
 //! is probed for fr, de, de-AT, th, sk, uk and he only.
 
+use super::indic_date_names::{BN, BN_BD, KN, KOK, MR, NE, NE_IN, TA, TA_LK, TE};
 use super::regional_date_names::{
     AR, DE_AT, DE_LU, EL, ES_419, ES_AR, ES_CL, ES_MX, HE, HI, ID, KK, LT, MK, PT_AO, SK, SL, TG,
     TH, UK, ZH_SG,
@@ -663,11 +664,23 @@ static TR: DateNames = DateNames {
 /// names with other `ddd` and day halves (probes/text-locale-regional-lcids-2 J1-J21, T-1875).
 pub(crate) static BCP47_ONLY: [(&str, &DateNames); 1] = [("pt-AO", &PT_AO)];
 
+/// The English names with lowercase day halves, which en-IE, en-BZ and en-HK print: `[$-1809]h AM/PM|h A/P|h a/p`
+/// is "6 pm|6 pm|6 pm" and their month and day names are en-US's (probes/text-locale-invalid-sublanguage
+/// S!J1:L4, excel-graph; T-4066). The morning "am" is the same rule, unprobed.
+static EN_LOWER_HALVES: DateNames = DateNames {
+    am: "am",
+    pm: "pm",
+    ..EN
+};
+
 /// The probed locales: LCID, BCP-47 tag and names. For a fallback by language the first entry
 /// of the language wins, so the order matters: `[$-zh]` and `[$-4]` are Traditional Chinese.
-pub(crate) static LOCALES: [(u16, &str, &DateNames); 48] = [
+pub(crate) static LOCALES: [(u16, &str, &DateNames); 61] = [
     (0x409, "en-US", &EN),
     (0x809, "en-GB", &EN),
+    (0x1809, "en-IE", &EN_LOWER_HALVES),
+    (0x2809, "en-BZ", &EN_LOWER_HALVES),
+    (0x3C09, "en-HK", &EN_LOWER_HALVES),
     (0x40C, "fr-FR", &FR),
     (0xC0C, "fr-CA", &FR),
     (0x407, "de-DE", &DE),
@@ -714,6 +727,17 @@ pub(crate) static LOCALES: [(u16, &str, &DateNames); 48] = [
     (0x428, "tg-Cyrl-TJ", &TG),
     (0x42F, "mk-MK", &MK),
     (0x43F, "kk-KZ", &KK),
+    // bn-BD first: neutral 0x45 and `bn` resolve to it, not bn-IN (probes/t4201-indic-regional-variants).
+    (0x845, "bn-BD", &BN_BD),
+    (0x445, "bn-IN", &BN),
+    (0x44E, "mr-IN", &MR),
+    (0x449, "ta-IN", &TA),
+    (0x44A, "te-IN", &TE),
+    (0x44B, "kn-IN", &KN),
+    (0x457, "kok-IN", &KOK),
+    (0x461, "ne-NP", &NE),
+    (0x849, "ta-LK", &TA_LK),
+    (0x861, "ne-IN", &NE_IN),
 ];
 
 /// The names of en-US, the locale of the system tags.

@@ -3,7 +3,7 @@ id: T-2425
 title: "FORECAST.ETS family: implement from desktop Excel values; owns the 877 gen-m9 cells excel-graph leaves #N/A"
 milestone: M14
 lane: functions-stat
-status: blocked
+status: dropped
 priority: P3
 size: M
 tier: opus
@@ -311,3 +311,7 @@ The FORECAST.ETS cells of the statistical argument-modes probe below, `#N/A` on 
 through a line naming it without a cell; it now names only its own cells, so these are owned by this M14 task alone
 (decision 0143; R7 of decision 0188 for the M9 probe row):
 - probes/stat-argument-modes.case.json (10): Sheet1!H266, H267, H270, H271, H274, H275, H276, H277, H278, H281
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

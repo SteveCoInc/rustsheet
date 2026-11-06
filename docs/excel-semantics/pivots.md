@@ -72,12 +72,13 @@ cover only the products shown. East Total is 19, not 22 (C is dropped).
 Evidence: oracle-spike.md run 5; T-4122 runs (sheet C).
 Status: UNVERIFIED (probe pending: T-4128)
 
-## Numeric group labels are rewritten by Excel
-Rule: Excel replaces the group items a file gives with its own, and hides groups with no records.
-For fractional data (45031.5 present) and start 45000, interval 100, the labels are `45000-45100`,
-`45100-45200`, `45300-45400`. Whether integer data gives `a-(a+interval-1)` is open.
-Evidence: oracle-spike.md run 6; T-4122 runs (sheet G).
-Status: UNVERIFIED (probe pending: T-4128, then T-4170)
+## Numeric and date group labels are rewritten by Excel
+Rule: verified and recorded by the M6 grouping work. See web.md "Grouped pivot fields import as their
+group items" (T-4225, T-4228, T-4235, T-4236, T-4249, T-4253, T-4287, T-4311, T-4316). It covers
+record placement, Excel's own labels whatever the file lists, whole-number labels `lo-(lo+interval-1)`,
+relabel order, and groupings dropped over blanks or dates. The spike's run 6 (`45000-45100` for
+fractional data) agrees with it.
+Status: VERIFIED (excel-graph; evidence in web.md)
 
 ## A pivot that would meet a foreign cell collapses to #SPILL!
 Rule: when a pivot's new layout would overwrite cells it does not own, Excel for the web shows

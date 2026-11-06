@@ -3,7 +3,7 @@ id: T-2684
 title: "A fraction token after minutes with no seconds ([h]:mm.0) shows the tenths of the seconds"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -20,8 +20,11 @@ fraction token handling in crates/rustsheet-engine/src/formatter (`SecondFractio
 `mm.0` and `[m].0` too before generalizing (excel-probe skill).
 
 ## Acceptance criteria
-- [ ] probes/elapsed-no-seconds-boundary A32 passes; the probed variants are recorded in number-formats.md and match.
+- [x] probes/elapsed-no-seconds-boundary A32 passes; the probed variants are recorded in number-formats.md and match.
 - [ ] `make check` green; reviewers approve.
+
+## Outcome
+A32 already passed on main. Probed 21 variants in probes/elapsed-minutes-fraction; 20 match, `A21` (rounding of the hidden seconds) is owned by T-4323. Recorded in number-formats.md.
 
 ## Out of scope
 -

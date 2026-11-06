@@ -14,7 +14,7 @@ depends_on: [T-4173, T-4142]
 Calculated fields are evaluated on the aggregated sums with the engine's own parser and evaluator, in a sandbox with no references, names or I/O, bounded by the work budget.
 
 ## Context
-SPEC-0030; directive 3 (reuse the parser), directive 5. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
+SPEC-0032; directive 3 (reuse the parser), directive 5. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
 ## Acceptance criteria
 - [ ] p-calc field probes pass.

@@ -622,6 +622,11 @@ fn sign_run_tree_walks_fit_a_quarter_of_the_stack() {
                 let text = to_rc_format(&copy);
                 assert_eq!(text.matches('-').count(), MAX_SIGNS / 2);
                 let _ = run_static_analysis_on_node(&copy);
+                let text = format!("{copy:?}");
+                assert_eq!(text.matches("UnaryKind").count(), MAX_SIGNS / 2);
+                let text = format!("{copy:#?}");
+                assert_eq!(text.matches("UnaryPlus").count(), MAX_SIGNS / 2 - 1);
+                drop(text);
                 let mut stripped = copy;
                 stripped.strip_spaces();
                 assert!(stripped != tree || !tree.has_spaces());
@@ -692,11 +697,11 @@ fn hand_written_clone_and_eq_agree_with_the_formula_text() {
 }
 
 /// T-3691: the heaviest wrapper shapes a formula can write (`- ( ` nested to the 256-parenthesis
-/// cap with whitespace at every sign and group, a run of 1,022 signs spaced or not before a
+/// cap with whitespace at every sign and group, a run of 1,023 signs spaced or not before a
 /// reference, and 200 `-(` levels around 824 more signs) set, evaluate, clone, compare, print and
 /// drop on a 2 MiB stack even in an unoptimized build: the walks that see every node loop over a
 /// run of wrappers (T-3253; `walk_names`, T-3691), so an embedder's small debug thread cannot
-/// abort (directive 5). The derived `Debug` still recurses per node (TODO(T-4031)).
+/// abort (directive 5). `Debug` loops over a run as well (T-4002).
 #[test]
 fn heaviest_wrapper_shapes_take_every_walk_on_a_2_mib_stack() {
     let mut shapes = vec![
@@ -719,6 +724,8 @@ fn heaviest_wrapper_shapes_take_every_walk_on_a_2_mib_stack() {
                 let mut stripped = copy;
                 stripped.strip_spaces();
                 let _ = run_static_analysis_on_node(&stripped);
+                assert!(format!("{stripped:?}").ends_with(" }"));
+                assert!(format!("{tree:#?}").ends_with("\n}"));
                 drop(stripped);
                 drop(tree);
                 let mut model = crate::test::util::new_empty_model();
@@ -731,4 +738,98 @@ fn heaviest_wrapper_shapes_take_every_walk_on_a_2_mib_stack() {
             });
         assert!(walk.is_ok_and(|handle| handle.join().is_ok()));
     }
+}
+
+/// The derived `Debug` of `-+ (A1)` (captured before T-4002 replaced it): every kind of wrapper
+/// over a reference, `{:?}` then `{:#?}`.
+const DERIVED_COMPACT: &str = "UnaryKind { kind: Minus, right: UnaryPlus { child: Spaced { space: Spacing { before: Run { line_feeds: 0, spaces: 1 }, after: Run { line_feeds: 0, spaces: 0 } }, child: Group { levels: 1, child: ReferenceKind { sheet_name: None, sheet_index: 0, absolute_row: false, absolute_column: false, row: 0, column: 0 } } } } }";
+const DERIVED_PRETTY: &str = r"UnaryKind {
+    kind: Minus,
+    right: UnaryPlus {
+        child: Spaced {
+            space: Spacing {
+                before: Run {
+                    line_feeds: 0,
+                    spaces: 1,
+                },
+                after: Run {
+                    line_feeds: 0,
+                    spaces: 0,
+                },
+            },
+            child: Group {
+                levels: 1,
+                child: ReferenceKind {
+                    sheet_name: None,
+                    sheet_index: 0,
+                    absolute_row: false,
+                    absolute_column: false,
+                    row: 0,
+                    column: 0,
+                },
+            },
+        },
+    },
+}";
+
+/// The derived format of `levels` nested `-+ (`..`)` around `A1`, built from the captured one:
+/// each level puts the level below where `A1`'s `ReferenceKind` was, indented to its depth.
+fn derived_nested(levels: usize, pretty: bool) -> String {
+    let (template, inner_depth) = if pretty {
+        (DERIVED_PRETTY, 4)
+    } else {
+        (DERIVED_COMPACT, 0)
+    };
+    let start = template.find("ReferenceKind").unwrap_or_default();
+    // `A1`'s fields hold no braces: its own closing brace is the first after its name.
+    let end = start + template[start..].find('}').unwrap_or_default() + 1;
+    let (head, leaf, tail) = (&template[..start], &template[start..end], &template[end..]);
+    // The template indents `A1` to its depth; the levels below indent it again.
+    let mut text = leaf.replace(&format!("\n{}", "    ".repeat(inner_depth)), "\n");
+    for _ in 0..levels {
+        let indent = format!("\n{}", "    ".repeat(inner_depth));
+        text = format!("{head}{}{tail}", text.replace('\n', &indent));
+    }
+    text
+}
+
+#[test]
+fn debug_keeps_the_derived_format() {
+    // T-4002: the hand-written `Debug` prints what the derived one did, `{:?}` and `{:#?}`, for a
+    // short run (printed per node) and for a run long enough to print in a loop.
+    assert_eq!(derived_nested(1, false), DERIVED_COMPACT);
+    assert_eq!(derived_nested(1, true), DERIVED_PRETTY);
+    for levels in [1, 2, 7, 8, 9, 40] {
+        let formula = format!("{}A1{}", "-+ (".repeat(levels), ")".repeat(levels));
+        let tree = parse(&formula);
+        assert_eq!(
+            format!("{tree:?}"),
+            derived_nested(levels, false),
+            "{formula}"
+        );
+        assert_eq!(
+            format!("{tree:#?}"),
+            derived_nested(levels, true),
+            "{formula}"
+        );
+    }
+    // Under an operator, a function and an `@`: the run starts mid-line and mid-indent.
+    let tree = parse(&format!(
+        "1+SUM(@{}A1{})",
+        "-+ (".repeat(40),
+        ")".repeat(40)
+    ));
+    let compact = format!("{tree:?}");
+    assert!(compact.contains(&format!(
+        "args: [ImplicitIntersection {{ automatic: false, child: {} }}]",
+        derived_nested(40, false)
+    )));
+    let pretty = format!("{tree:#?}");
+    let indent = format!("\n{}", "    ".repeat(4));
+    let nested = derived_nested(40, true).replace('\n', &indent);
+    assert!(pretty.contains(&format!("child: {nested},\n")), "{pretty}");
+    // Flags reach the values: a width pads every number, as the derived impl's did.
+    let tree = parse("-+ (1.5+A1)");
+    assert!(format!("{tree:8.2?}").contains("NumberKind(    1.50)"));
+    assert!(format!("{tree:#8.2?}").contains("NumberKind(\n"));
 }

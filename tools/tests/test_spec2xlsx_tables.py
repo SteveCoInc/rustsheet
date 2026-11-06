@@ -6,6 +6,7 @@ import zipfile
 from xml.sax.saxutils import unescape
 
 import pytest
+from spec_parts import spec_parts
 
 from rustsheet_tools.spec2xlsx import build_xlsx
 
@@ -28,21 +29,19 @@ def _stored(sheet_xml: str, a1: str) -> str:
     return unescape(m.group(1))
 
 
-def _parts(sheet: dict[str, object]) -> dict[str, str]:
-    xlsx = build_xlsx({"sheets": [{"name": "S", "cells": dict(_CELLS)} | sheet]})
-    z = zipfile.ZipFile(io.BytesIO(xlsx))
-    return {n: z.read(n).decode() for n in z.namelist() if n.endswith(".xml")}
+def _table_parts(sheet: dict[str, object]) -> dict[str, str]:
+    return spec_parts({"sheets": [{"name": "S", "cells": dict(_CELLS)} | sheet]})
 
 
 def test_hidden_rows_are_written_hidden() -> None:
-    sheet = _parts({"hidden_rows": [3, 9]})["xl/worksheets/sheet1.xml"]
+    sheet = _table_parts({"hidden_rows": [3, 9]})["xl/worksheets/sheet1.xml"]
     assert '<row r="3" spans="1:2" hidden="1">' in sheet
     assert '<row r="9" spans="1:2" hidden="1"/>' in sheet
     assert '<row r="2" spans="1:2">' in sheet
 
 
 def test_filtered_table_keeps_the_visible_rows() -> None:
-    table = _parts({"hidden_rows": [3], "tables": [{"name": "Data", "ref": "A1:B4", "filter": True}]})[
+    table = _table_parts({"hidden_rows": [3], "tables": [{"name": "Data", "ref": "A1:B4", "filter": True}]})[
         "xl/tables/table1.xml"
     ]
     assert (
@@ -52,8 +51,29 @@ def test_filtered_table_keeps_the_visible_rows() -> None:
     assert '<tableColumn id="1" name="Key"/><tableColumn id="2" name="Val"/>' in table
 
 
+def test_filter_column_col_id_and_no_criterion() -> None:
+    """The T-4003 forms: a values filter under a colId past the table, and no criterion."""
+
+    def table(**options: object) -> str:
+        spec = {"hidden_rows": [3], "tables": [{"name": "Data", "ref": "A1:B4", "filter": True} | options]}
+        return _table_parts(spec)["xl/tables/table1.xml"]
+
+    assert '<filterColumn colId="5"><filters><filter val="a"/><filter val="c"/></filters>' in table(
+        filter_column={"col_id": 5}
+    )
+    assert '<autoFilter ref="A1:B4"><filterColumn colId="1"/></autoFilter>' in table(
+        filter_column={"col_id": 1, "criterion": False}
+    )
+    with pytest.raises(ValueError, match="past the table's last column"):
+        table(filter_column={"col_id": 1})
+    with pytest.raises(ValueError, match="whole number"):
+        table(filter_column={"col_id": -1})
+    with pytest.raises(ValueError, match="takes only col_id and criterion"):
+        table(filter_column={"colId": 1})
+
+
 def test_unfiltered_table_has_an_empty_autofilter() -> None:
-    parts = _parts({"tables": [{"name": "Plain", "ref": "A1:B4"}]})
+    parts = _table_parts({"tables": [{"name": "Plain", "ref": "A1:B4"}]})
     assert '<autoFilter ref="A1:B4"/>' in parts["xl/tables/table1.xml"]
 
 
@@ -95,7 +115,7 @@ def test_second_table_is_patched_in_its_own_part() -> None:
 )
 def test_invalid_specs_are_rejected(sheet: dict[str, object], match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        _parts(sheet)
+        _table_parts(sheet)
 
 
 def test_a_value_both_kept_and_hidden_is_rejected() -> None:
@@ -138,12 +158,12 @@ def test_a_value_both_kept_and_hidden_is_rejected() -> None:
     ],
 )
 def test_structured_references_are_stored_in_file_form(formula: str, stored: str) -> None:
-    sheet = _parts({"cells": {**_CELLS, "D3": formula}, "tables": [{"name": "Data", "ref": "A1:B4"}]})
+    sheet = _table_parts({"cells": {**_CELLS, "D3": formula}, "tables": [{"name": "Data", "ref": "A1:B4"}]})
     assert _stored(sheet["xl/worksheets/sheet1.xml"], "D3") == stored
 
 
 def test_a_name_that_is_not_a_table_is_left_alone() -> None:
-    sheet = _parts(
+    sheet = _table_parts(
         {"cells": {**_CELLS, "D3": "=ROWS(Other)+Data2"}, "tables": [{"name": "Data", "ref": "A1:B4"}]}
     )
     assert _stored(sheet["xl/worksheets/sheet1.xml"], "D3") == "ROWS(Other)+Data2"
@@ -151,7 +171,7 @@ def test_a_name_that_is_not_a_table_is_left_alone() -> None:
 
 def test_totals_row_is_the_last_row_of_the_table() -> None:
     cells = {**_CELLS, "A5": "Total", "B5": "=SUBTOTAL(109,Data[Val])"}
-    parts = _parts({"cells": cells, "tables": [{"name": "Data", "ref": "A1:B5", "totals_row": True}]})
+    parts = _table_parts({"cells": cells, "tables": [{"name": "Data", "ref": "A1:B5", "totals_row": True}]})
     table = parts["xl/tables/table1.xml"]
     assert 'ref="A1:B5"' in table
     assert 'totalsRowCount="1"' in table
@@ -165,7 +185,7 @@ def test_totals_row_is_the_last_row_of_the_table() -> None:
 
 def test_filtered_table_with_a_totals_row_filters_only_its_data() -> None:
     cells = {**_CELLS, "A5": "Total"}
-    table = _parts(
+    table = _table_parts(
         {
             "cells": cells,
             "hidden_rows": [3],
@@ -179,16 +199,16 @@ def test_filtered_table_with_a_totals_row_filters_only_its_data() -> None:
 
 def test_totals_row_needs_a_data_row() -> None:
     with pytest.raises(ValueError, match="totals row"):
-        _parts({"tables": [{"name": "Data", "ref": "A1:B2", "totals_row": True}]})
+        _table_parts({"tables": [{"name": "Data", "ref": "A1:B2", "totals_row": True}]})
 
 
 def test_totals_row_cells_are_labels_or_formulas() -> None:
     with pytest.raises(ValueError, match="totals row cell B4"):
-        _parts({"tables": [{"name": "Data", "ref": "A1:B4", "totals_row": True}]})
+        _table_parts({"tables": [{"name": "Data", "ref": "A1:B4", "totals_row": True}]})
 
 
 def test_calculated_column_writes_the_formula_and_leaves_the_cells() -> None:
-    parts = _parts(
+    parts = _table_parts(
         {"tables": [{"name": "Data", "ref": "A1:B5", "calculated": {"B": "=Data[[#This Row],[Key]]*2"}}]}
     )
     table = parts["xl/tables/table1.xml"]
@@ -199,11 +219,11 @@ def test_calculated_column_writes_the_formula_and_leaves_the_cells() -> None:
 
 def test_calculated_column_must_be_inside_the_table() -> None:
     with pytest.raises(ValueError, match="calculated column"):
-        _parts({"tables": [{"name": "Data", "ref": "A1:B5", "calculated": {"D": "=1"}}]})
+        _table_parts({"tables": [{"name": "Data", "ref": "A1:B5", "calculated": {"D": "=1"}}]})
 
 
 def test_table_without_a_header_row_names_its_columns_column1_on() -> None:
-    parts = _parts({"tables": [{"name": "Data", "ref": "A2:B4", "header_row": False}]})
+    parts = _table_parts({"tables": [{"name": "Data", "ref": "A2:B4", "header_row": False}]})
     table = parts["xl/tables/table1.xml"]
     assert 'ref="A2:B4"' in table
     assert 'headerRowCount="0"' in table
@@ -214,7 +234,7 @@ def test_table_without_a_header_row_names_its_columns_column1_on() -> None:
 
 
 def test_table_without_a_header_row_needs_one_data_row_and_no_filter() -> None:
-    one_row = _parts({"tables": [{"name": "Data", "ref": "A2:B2", "header_row": False}]})
+    one_row = _table_parts({"tables": [{"name": "Data", "ref": "A2:B2", "header_row": False}]})
     assert 'ref="A2:B2"' in one_row["xl/tables/table1.xml"]
     with pytest.raises(ValueError, match="no filter or calculated column"):
-        _parts({"tables": [{"name": "Data", "ref": "A2:B4", "header_row": False, "filter": True}]})
+        _table_parts({"tables": [{"name": "Data", "ref": "A2:B4", "header_row": False, "filter": True}]})

@@ -3,7 +3,7 @@ id: T-4020
 title: "Convert to range turns a #This Row reference off the data rows into #REF!, not a detached reference"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P0
 size: M
 tier: opus
@@ -33,10 +33,21 @@ the xlsx export writes `<f>#REF!</f>`, as Excel does; a table re-created under t
   table-convert-cross-sheet-this-row's sidecars mean once T-4021 can tell a no-op convert.
 
 ## Acceptance criteria
-- [ ] The five t3629 cases above pass on F1, F2, F9 and F10; the xlsx export writes `#REF!` for such a cell.
-- [ ] table-convert-names-this-row and table-convert-cross-sheet-this-row are re-probed with a convert that took
+- [x] The five t3629 cases above pass on F1, F2, F9 and F10; the xlsx export writes `#REF!` for such a cell.
+- [x] table-convert-names-this-row and table-convert-cross-sheet-this-row are re-probed with a convert that took
   effect (T-4021) or recorded as no-op converts; references.md updated.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Desktop Excel (M14).
+
+## Outcome
+- `Rewrite::Lower` takes an `OffRows`: a convert to range (`lower_this_row_references`) prints a `#This Row`
+  reference off the data rows as `#REF!`; a duplicated sheet keeps the detached reference (`OffRows::Detach`,
+  unprobed for Excel, which copies the table), so `detached` stays for that path.
+- probes/table-edits/t3629-convert-plain, -convert-names, -save-detached, -readd-same-area and -readd-other-area now
+  pass F1, F2, F9, F10; the export writes `#REF!` (unit test `convert_to_range_turns_an_off_row_this_row_into_ref`).
+- table-convert-names-this-row: its off-row cells S!F1, S!F2, S!F9, S!F10, T!A1, T!A2 came from a no-op convert
+  (the table stayed, T-3629), so they leave its `check` list, with the reason in the case description;
+  table-convert-cross-sheet-this-row's six data-row cells show a convert that took effect and stay scored.
+- references.md convert-to-range entry updated.

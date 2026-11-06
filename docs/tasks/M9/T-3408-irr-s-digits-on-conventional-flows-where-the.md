@@ -4,7 +4,7 @@ title: "IRR's digits on conventional flows where the secant fails: match Excel's
 milestone: M9
 lane: functions-financial
 status: todo
-priority: P1
+priority: P0
 size: M
 tier: opus
 depends_on: [T-3347]
@@ -53,3 +53,6 @@ A53 Excel -0.00016023194079306524, engine -0.00016023193850578377). Lifting the 
 
 ## Out of scope
 - Bit-level parity (Phase 1b, decision 0188 R5).
+
+## Decision 0267
+The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, worked first: its cells have the wrong type or error, or are first wrong at the 11th digit or earlier. Decision 0056's time-box applies. If two attempts do not move the cells, block the task as time-boxed, and decision 0267 accepts the cells that are left.

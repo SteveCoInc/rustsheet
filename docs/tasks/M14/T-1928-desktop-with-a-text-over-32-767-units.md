@@ -3,7 +3,7 @@ id: T-1928
 title: "Desktop: & with a text over 32,767 units as the left operand"
 milestone: M14
 lane: functions-text
-status: blocked
+status: dropped
 priority: P2
 size: S
 tier: opus
@@ -25,3 +25,7 @@ Phase 4 (decision 0039): not a "Needs owner" item, and it blocks no milestone or
 
 ## Out of scope
 -
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

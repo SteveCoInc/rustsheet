@@ -1,0 +1,315 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Calc": {
+   "B1": {
+    "t": "b",
+    "v": false
+   },
+   "B10": {
+    "t": "b",
+    "v": true
+   },
+   "B11": {
+    "t": "b",
+    "v": false
+   },
+   "B12": {
+    "t": "b",
+    "v": false
+   },
+   "B13": {
+    "t": "b",
+    "v": false
+   },
+   "B14": {
+    "t": "b",
+    "v": true
+   },
+   "B15": {
+    "t": "b",
+    "v": true
+   },
+   "B16": {
+    "t": "b",
+    "v": false
+   },
+   "B17": {
+    "t": "b",
+    "v": false
+   },
+   "B18": {
+    "t": "b",
+    "v": false
+   },
+   "B19": {
+    "t": "b",
+    "v": true
+   },
+   "B2": {
+    "t": "b",
+    "v": true
+   },
+   "B20": {
+    "t": "b",
+    "v": true
+   },
+   "B21": {
+    "t": "b",
+    "v": true
+   },
+   "B22": {
+    "t": "b",
+    "v": false
+   },
+   "B3": {
+    "t": "b",
+    "v": true
+   },
+   "B30": {
+    "t": "b",
+    "v": false
+   },
+   "B31": {
+    "t": "b",
+    "v": true
+   },
+   "B32": {
+    "t": "b",
+    "v": false
+   },
+   "B33": {
+    "t": "b",
+    "v": true
+   },
+   "B34": {
+    "t": "b",
+    "v": true
+   },
+   "B35": {
+    "t": "b",
+    "v": true
+   },
+   "B36": {
+    "t": "b",
+    "v": true
+   },
+   "B37": {
+    "t": "b",
+    "v": true
+   },
+   "B38": {
+    "t": "b",
+    "v": false
+   },
+   "B4": {
+    "t": "b",
+    "v": true
+   },
+   "B40": {
+    "t": "b",
+    "v": true
+   },
+   "B41": {
+    "t": "b",
+    "v": false
+   },
+   "B42": {
+    "t": "b",
+    "v": true
+   },
+   "B43": {
+    "t": "b",
+    "v": false
+   },
+   "B44": {
+    "t": "b",
+    "v": true
+   },
+   "B45": {
+    "t": "b",
+    "v": false
+   },
+   "B46": {
+    "t": "b",
+    "v": true
+   },
+   "B47": {
+    "t": "b",
+    "v": false
+   },
+   "B48": {
+    "t": "b",
+    "v": true
+   },
+   "B49": {
+    "t": "b",
+    "v": true
+   },
+   "B50": {
+    "t": "b",
+    "v": true
+   },
+   "B51": {
+    "t": "b",
+    "v": false
+   },
+   "B52": {
+    "t": "b",
+    "v": false
+   },
+   "C1": {
+    "t": "b",
+    "v": false
+   },
+   "C2": {
+    "t": "b",
+    "v": true
+   },
+   "C3": {
+    "t": "b",
+    "v": true
+   },
+   "C4": {
+    "t": "b",
+    "v": true
+   },
+   "D1": {
+    "t": "b",
+    "v": true
+   },
+   "D2": {
+    "t": "b",
+    "v": true
+   },
+   "D3": {
+    "t": "b",
+    "v": true
+   },
+   "D4": {
+    "t": "b",
+    "v": true
+   },
+   "E1": {
+    "t": "b",
+    "v": true
+   },
+   "E2": {
+    "t": "b",
+    "v": true
+   },
+   "E3": {
+    "t": "b",
+    "v": true
+   },
+   "E4": {
+    "t": "b",
+    "v": true
+   },
+   "F1": {
+    "t": "b",
+    "v": false
+   },
+   "F2": {
+    "t": "b",
+    "v": false
+   },
+   "F3": {
+    "t": "b",
+    "v": true
+   },
+   "F4": {
+    "t": "b",
+    "v": true
+   },
+   "G1": {
+    "t": "b",
+    "v": false
+   },
+   "G2": {
+    "t": "b",
+    "v": false
+   },
+   "G3": {
+    "t": "b",
+    "v": true
+   },
+   "G4": {
+    "t": "b",
+    "v": true
+   },
+   "H1": {
+    "t": "b",
+    "v": false
+   },
+   "H2": {
+    "t": "b",
+    "v": false
+   },
+   "H3": {
+    "t": "b",
+    "v": true
+   },
+   "H4": {
+    "t": "b",
+    "v": true
+   },
+   "I1": {
+    "t": "b",
+    "v": false
+   },
+   "I2": {
+    "t": "b",
+    "v": false
+   },
+   "I3": {
+    "t": "b",
+    "v": true
+   },
+   "I4": {
+    "t": "b",
+    "v": true
+   },
+   "J1": {
+    "t": "b",
+    "v": true
+   },
+   "J2": {
+    "t": "b",
+    "v": true
+   },
+   "J3": {
+    "t": "b",
+    "v": false
+   },
+   "J4": {
+    "t": "b",
+    "v": false
+   },
+   "K1": {
+    "t": "b",
+    "v": false
+   },
+   "K2": {
+    "t": "b",
+    "v": false
+   },
+   "K3": {
+    "t": "b",
+    "v": true
+   },
+   "K4": {
+    "t": "b",
+    "v": true
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "e52ec898355bcdf19b044957bc0eb87e8e5f4cd2b693094cda81eb2ff473e6a5",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-04T09:33:55+00:00",
+  "version": null,
+  "workbook_name": "0d59ea0ff30124b6242ef338bfb9e1e6dc06d6bc17b2af6bbdf4440e6c834cec.xlsx"
+ }
+}

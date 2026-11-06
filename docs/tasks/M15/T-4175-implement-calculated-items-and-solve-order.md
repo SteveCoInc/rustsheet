@@ -14,7 +14,7 @@ depends_on: [T-4173, T-4174]
 Calculated items are evaluated per record over items of one field, with Excel's solve order and restrictions.
 
 ## Context
-SPEC-0030; LibreOffice does not support them (libreoffice.md), so evidence is oracle-only. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
+SPEC-0032; LibreOffice does not support them (libreoffice.md), so evidence is oracle-only. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
 ## Acceptance criteria
 - [ ] p-calc item probes pass.

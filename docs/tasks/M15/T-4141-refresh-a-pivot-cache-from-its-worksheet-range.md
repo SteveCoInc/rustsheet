@@ -14,7 +14,7 @@ depends_on: [T-4139, T-4134]
 Refreshing reads the source (range, Table, or defined name) and rebuilds the cache exactly as Excel does: field names (duplicates renamed), item typing, identity and order, sharedItems flags, record values.
 
 ## Context
-SPEC-0030; evidence from task `p-items`. The CacheBuilder of SPEC-0015 is the one builder (directive 3). Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
+SPEC-0032; evidence from task `p-items`. The CacheBuilder of SPEC-0015 is the one builder (directive 3). Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
 ## Acceptance criteria
 - [ ] Unit tests and the p-items probes' cache-level expectations pass.

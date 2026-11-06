@@ -56,10 +56,11 @@ Input conventions:
   `Input::Parse`. Formulas can only observe the value: `CELL("format")` is `#VALUE!` on excel-graph.
 - `{"entered_r1c1":"=R1C2+1"}` is typed the same way in R1C1 mode (T-3113, decision 0179): recorded with
   a fourth element `"r1c1"` and written with a range `formulasR1C1` PATCH (excel-desktop:
-  `Range.FormulaR1C1`, UNVERIFIED like `Range.Value`). The engine adapter converts
-  it to A1 text relative to its cell (`rustsheet_engine::r1c1_formula_to_a1`) and enters that as
-  `Input::Parse`. Typed text Excel for the web refuses (PATCH 400 `InvalidArgument`) leaves the cell blank, and so
-  does R1C1 text the engine cannot parse; probe a refusal through a dependant such as `=ISBLANK(A1)`.
+  `Range.FormulaR1C1`, UNVERIFIED like `Range.Value`). The engine adapter enters it as
+  `Input::ParseR1C1`, which the engine parses in the R1C1 grammar against its cell and stores as parsed
+  (`Model::set_typed_r1c1_user_input`, T-4288; no A1 text in between). Typed text Excel for the web refuses
+  (PATCH 400 `InvalidArgument`) leaves the cell blank, and so does text the engine refuses with
+  `TYPED_FORMULA_DOES_NOT_PARSE`, in either mode; probe a refusal through a dependant such as `=ISBLANK(A1)`.
 - Optional per-sheet `"legacy_formulas": ["H1"]` lists formula cells that spec2xlsx writes as plain
   legacy `<f>` formulas (no dynamic-array `cm`), to probe what Excel shows for a non-array formula
   (T-1077). The engine adapter enters them as `Input::LegacyFormula`, which adds the implicit
@@ -70,8 +71,10 @@ Input conventions:
   the first row of `ref` and must hold literal text. With `"filter": true` spec2xlsx gives the table's
   autoFilter a values filter on its first column that keeps exactly the visible data rows (those
   cells must be literal text or whole numbers, and no value may be both kept and hidden), so Excel
-  reads the hidden rows as filtered. The engine adapter loads both through `Txn::add_table` and
-  `Txn::set_row_hidden`. With `"totals_row": true` the last row of `ref` is the table's totals row; its
+  reads the hidden rows as filtered. `"filter_column": {"col_id": 5}` writes that values filter under `colId` 5 (0 or
+  past the table's last column) and `"criterion": false` there writes a criterion-less `<filterColumn colId="N"/>`; Excel
+  reads neither as filtered, so the adapter adds such a table unfiltered (T-4003). The engine adapter loads both
+  through `Txn::add_table` and `Txn::set_row_hidden`. With `"totals_row": true` the last row of `ref` is the table's totals row; its
   cells must be labels or formulas, which spec2xlsx writes with the totals-row metadata Excel needs. The
   facade cannot add a totals row yet, so the adapter registers the table without that row (T-1671).
   Formulas use structured references as typed (`Sales[@Qty]`, a bare `Sales`); spec2xlsx stores their
@@ -202,8 +205,9 @@ Only `pass` counts as passing. Case statuses:
   either are listed by name, tagged `oracle: none` or `volatile`. Informational; never gated.
   A "Visibly off (fifteen digits)" section (T-0061, decision 0088) splits each suite's in-scope
   scored cells into the closeness buckets of `closeness.rs` (bit-exact, 1 ulp, 2–4 ulp,
-  `digits15` within half a unit in the 15th significant digit, `visible_numeric`,
-  `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
+  `digits15` within half a unit in the 15th significant digit, `residue13` for incomplete-beta
+  family numbers past it but within half a unit in the 13th (decision 0267, SPEC-0030; not visibly
+  off), `visible_numeric`, `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
   cell is blamed on the functions it calls other than glue (`closeness::GLUE`: IF, SUM, DATE,
   INDEX and the like), or on its glue when it calls nothing else.
   A "Parity tiers (glue-aware)" section (T-0068, decision 0118, `attribution.rs`) counts the

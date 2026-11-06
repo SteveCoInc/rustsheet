@@ -1,4 +1,6 @@
-use super::{beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement, Branch};
+use super::{
+    beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement, l140_overflows, Branch,
+};
 
 fn branch(a: f64, b: f64, x: f64) -> (Branch, bool) {
     let d = dispatch(a, b, x, 1.0 - x).expect("in domain");
@@ -577,4 +579,26 @@ fn bup_bgrat_at_a_shape_below_one_matches_excel() {
     assert_eq!(cdf(0.2910, 0.75, 2.5), 0.679_493_919_530_290_7);
     assert_eq!(branch(0.9, 2.5, 0.2916), (Branch::BupBgrat, false));
     assert_eq!(cdf(0.2916, 0.9, 2.5), 0.617_681_544_291_794);
+}
+
+// L140's bup sum overflows (T-3576): Excel's kernel is #NUM! exactly where the running ratio product
+// passes the largest double, on bup + bpser and bup + bgrat alike and in either orientation.
+// probes/t3576-negbinom-cdf-huge-s A4 (ln 707.81, a value), A5 and A34 (713.72, #NUM!), A66 (bup +
+// bgrat), A88 (swapped); probes/t3576-r2-ratio-overflow-sweep A33, A34 (2.401E+16 at 21.5) and A31
+// (2.261E+16, a value), excel-graph.
+#[test]
+fn l140_bup_sum_overflow_is_excels_num_error() {
+    let p = 0.323_212_154_487_823;
+    let negbinom = |f: f64, s: f64, p: f64| l140_overflows(s, f + 1.0, p, 1.0 - p);
+    assert!(!negbinom(28.0, 3e12, p));
+    assert!(negbinom(28.0, 4e12, p));
+    assert!(negbinom(27.0, 1e13, p));
+    assert!(!negbinom(26.0, 1e13, p));
+    assert!(negbinom(28.0, 1e13, 0.9));
+    assert!(negbinom(1e13, 28.0, p));
+    assert!(!negbinom(40.0, 1e20, p), "bfrac, not L140");
+    let beta = |x: f64, a: f64, b: f64| l140_overflows(a, b, x, 1.0 - x);
+    assert!(beta(0.3, 2.401e16, 21.5));
+    assert!(beta(0.7, 21.5, 2.401e16));
+    assert!(!beta(0.3, 2.261e16, 21.5));
 }

@@ -3,7 +3,7 @@ id: T-3865
 title: "PERCENTOF: desktop probe of a defined name whose body is a 3-D span"
 milestone: M14
 lane: functions-math
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: opus
@@ -29,3 +29,7 @@ when the desktop backend is available.
 
 ## Out of scope
 -
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

@@ -1,3 +1,4 @@
+use crate::calc_result::Range;
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::reference_operators::RefArg;
@@ -74,6 +75,20 @@ impl Model {
                     .collect();
                 self.numeric_flat_of(CalcResult::Array(kept), cell)
                     .map_err(FreqError::element)
+            }
+            // An error cell of a bins range is skipped like the error element of a bins array:
+            // `ROWS(FREQUENCY(0,B1:B3))` over `1,#N/A,3` is 3 and its first row 1
+            // (probes/frequency-bins-ref-cells A1-A2); a data error still wins (A3-A4).
+            CalcResult::Range { left, right } if !is_data => {
+                let mut bins = Vec::new();
+                self.for_each_cell_or_error_in_areas(&[Range { left, right }], cell, |_, v| {
+                    if let CalcResult::Number(n) = v {
+                        bins.push(n);
+                    }
+                    Ok(())
+                })
+                .map_err(FreqError::element)?;
+                Ok(bins)
             }
             // Every other data error, a range's error cell included, comes before the bins' as
             // on `main` (the reverse is unprobed); the bins' own lose to the data's.

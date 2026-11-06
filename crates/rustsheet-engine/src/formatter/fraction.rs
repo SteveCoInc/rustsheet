@@ -196,11 +196,21 @@ pub(super) fn format_fraction(
         .iter()
         .rposition(|t| matches!(t, TextToken::Digit(_)))
         .map_or(0, |i| i + 1);
+    // Digit placeholders after the denominator print a zero each (a space under `?`), and a blank
+    // fraction blanks everything from the fraction up to the last of them (`# ?/? 0` on 12.5 is
+    // "12 1/2 0", `# ?/?0` on 12 "12     ", `# ?/?|0 "12"|\5` on 12 "12       12|5"; `#` prints
+    // "0" there and `0.0` is "0.0"; probes/t3711-fraction-trailing-placeholders).
+    let trailing_end = tokens
+        .iter()
+        .rposition(|t| matches!(t, TextToken::Digit(_)))
+        .filter(|end| *end >= fraction.denominator_at);
     for (index, token) in tokens.iter().enumerate() {
         if index == fraction.denominator_at {
             push_denominator(&mut text, &denominator_text, blank, blank_spaces);
         }
         let in_fraction = (fraction.numerator_start..fraction.denominator_at).contains(&index);
+        let in_trailing =
+            trailing_end.is_some_and(|end| (fraction.denominator_at..=end).contains(&index));
         let in_separator = has_integer && (integer_end..fraction.numerator_start).contains(&index);
         match token {
             _ if in_separator && separator == Separator::Dropped => {}
@@ -222,6 +232,17 @@ pub(super) fn format_fraction(
                         .digits(&numerator_fill.next().unwrap_or_default()),
                 );
             }
+            _ if in_trailing && blank && !blank_spaces => {}
+            _ if in_trailing && blank => push_spaces(&mut text, token),
+            TextToken::Digit(_) if in_trailing => {
+                let zero = if placeholder_kinds(std::slice::from_ref(token)) == ['?'] {
+                    " ".to_owned()
+                } else {
+                    part.numerals.digits("0")
+                };
+                text.push_str(&zero);
+            }
+            TextToken::Period if in_trailing => text.push('.'),
             TextToken::Literal(c) => text.push(*c),
             TextToken::Text(t) => text.push_str(t),
             TextToken::Ghost(_) => text.push(' '),
@@ -414,21 +435,54 @@ fn fill(digits: &str, kinds: &[char]) -> Vec<String> {
         .collect()
 }
 
-/// Like [`fill`] for a denominator: each placeholder past `digits` prints nothing (`#`), a space
-/// after the digits (`?`) or a zero before them (`0`): `# ???/???` on 1.5 is "1   1/2  ", `?/00`
-/// on 1.5 "3/02" (number-formats.md "Fraction formats", probes/fraction-format-features B13) and
-/// `#\:? ?0#/000` on 23.75 "2:3  03/004" (poi/NumberFormatTests A160).
+/// A denominator's text: `digits` in `kinds`. Leading `#`s take no digit. When there are fewer
+/// digits than the other placeholders, the `0`s are left out first, then the `#`s (each from
+/// the left), then the rightmost `?`s; a placeholder left out prints in its place nothing (`#`), a space (`?`) or a
+/// zero (`0`). `# ???/???` on 1.5 is "1   1/2  ", `?/00` on 1.5 "3/02" (fraction-format-features
+/// B13), `#\:? ?0#/000` on 23.75 "2:3  03/004" (poi/NumberFormatTests A160); on 12.5 `# ?/?0` is
+/// "12 1/20", `# ?/??0` "12 1/2 0", `# ?/#?0` "12 1/20", `# ?/0??` "12 1/02 ", `# ?/0#?` "12 1/02", `# ?/#0#` "12 1/02",
+/// and `# ?/?0?` on 0.3 " 3/100". The run's length still bounds the digits (`# ?/?0` on 0.123 is
+/// " 8/65", `# ?/#0` on `PI()` "3 1/7"; probes/t3711-fraction-trailing-placeholders,
+/// t4204-fraction-denominator-mixed; number-formats.md "Fraction formats").
 fn fill_left(digits: &str, kinds: &[char]) -> String {
-    let mut zeros = String::new();
-    let mut spaces = String::new();
-    for kind in kinds.iter().skip(digits.chars().count()) {
-        match kind {
-            '?' => spaces.push(' '),
-            '0' => zeros.push('0'),
-            _ => {}
+    let skipped = kinds.iter().take_while(|kind| **kind == '#').count();
+    let kinds = &kinds[skipped..];
+    let digits: Vec<char> = digits.chars().collect();
+    let mut unused = vec![false; kinds.len()];
+    let mut to_leave = kinds.len().saturating_sub(digits.len());
+    for left_out in ['0', '#'] {
+        for (i, kind) in kinds.iter().enumerate() {
+            if to_leave > 0 && *kind == left_out {
+                unused[i] = true;
+                to_leave -= 1;
+            }
         }
     }
-    format!("{zeros}{digits}{spaces}")
+    for i in (0..kinds.len()).rev() {
+        if to_leave > 0 && !unused[i] {
+            unused[i] = true;
+            to_leave -= 1;
+        }
+    }
+    // More digits than placeholders: the first one takes the extra (as in [`fill`]).
+    let extra = digits.len().saturating_sub(kinds.len());
+    let mut next = 0;
+    let mut text = String::new();
+    for (kind, unused) in kinds.iter().zip(unused) {
+        if unused {
+            match kind {
+                '?' => text.push(' '),
+                '0' => text.push('0'),
+                _ => {}
+            }
+        } else {
+            let take = if next == 0 { extra + 1 } else { 1 };
+            text.extend(digits.iter().skip(next).take(take));
+            next += take;
+        }
+    }
+    text.extend(digits.iter().skip(next));
+    text
 }
 
 #[cfg(test)]

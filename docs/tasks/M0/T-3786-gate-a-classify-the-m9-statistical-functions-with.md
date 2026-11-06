@@ -3,7 +3,7 @@ id: T-3786
 title: "Gate A: classify the M9 statistical functions with no table or exemption, rule on the legacy names and the sample-array functions, and file their table tasks"
 milestone: M0
 lane: harness
-status: todo
+status: dropped
 priority: P2
 size: M
 tier: opus
@@ -76,3 +76,8 @@ compatibility names and the functions over sample arrays get a ruling on how a t
 ## Out of scope
 - Building any table: the filed tasks do that.
 - The financial, engineering and database functions (T-3787).
+
+## Outcome (dropped, 2026-11-04)
+Dropped as a duplicate. T-3798 (decision 0272: the distribution and special functions, with the ruling on legacy names)
+and T-3799 (decision 0271: the sample-array functions) classified every M9 statistical function on its list. Every
+function Gate A still counts as missing is named by an open table task.

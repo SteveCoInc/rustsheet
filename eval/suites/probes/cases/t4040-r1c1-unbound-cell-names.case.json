@@ -1,0 +1,92 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4040: an unbound name spelled like an A1 cell typed in R1C1 mode (xy1, Xfe1 which is no cell, AB12, as an argument, called, in a LAMBDA, under ISREF), and the quoted spelling 'f1' that FORMULATEXT shows for one, typed in A1 and R1C1 mode ('abc' is no cell). F1 holds 7. A14:A16 store an unbound _xlpm.f1, _xlpm.AB12, _xlpm.xy1 in the file.",
+ "tags": [
+  "M2",
+  "syntax",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "F1": 7,
+    "A1": {
+     "entered": "='f1'"
+    },
+    "B1": "=ISBLANK(A1)",
+    "C1": "=IFERROR(FORMULATEXT(A1),\"none\")",
+    "A2": {
+     "entered": "='f1'+1"
+    },
+    "B2": "=ISBLANK(A2)",
+    "C2": "=IFERROR(FORMULATEXT(A2),\"none\")",
+    "A3": {
+     "entered": "='abc'"
+    },
+    "B3": "=ISBLANK(A3)",
+    "C3": "=IFERROR(FORMULATEXT(A3),\"none\")",
+    "A4": {
+     "entered": "='F1'"
+    },
+    "B4": "=ISBLANK(A4)",
+    "C4": "=IFERROR(FORMULATEXT(A4),\"none\")",
+    "A5": {
+     "entered": "=LET(x,1,x+'f1')"
+    },
+    "B5": "=ISBLANK(A5)",
+    "C5": "=IFERROR(FORMULATEXT(A5),\"none\")",
+    "A6": {
+     "entered_r1c1": "='f1'"
+    },
+    "B6": "=ISBLANK(A6)",
+    "C6": "=IFERROR(FORMULATEXT(A6),\"none\")",
+    "A7": {
+     "entered_r1c1": "=xy1"
+    },
+    "B7": "=ISBLANK(A7)",
+    "C7": "=IFERROR(FORMULATEXT(A7),\"none\")",
+    "A8": {
+     "entered_r1c1": "=Xfe1"
+    },
+    "B8": "=ISBLANK(A8)",
+    "C8": "=IFERROR(FORMULATEXT(A8),\"none\")",
+    "A9": {
+     "entered_r1c1": "=AB12*2"
+    },
+    "B9": "=ISBLANK(A9)",
+    "C9": "=IFERROR(FORMULATEXT(A9),\"none\")",
+    "A10": {
+     "entered_r1c1": "=SUM(f1,2)"
+    },
+    "B10": "=ISBLANK(A10)",
+    "C10": "=IFERROR(FORMULATEXT(A10),\"none\")",
+    "A11": {
+     "entered_r1c1": "=f1(2)"
+    },
+    "B11": "=ISBLANK(A11)",
+    "C11": "=IFERROR(FORMULATEXT(A11),\"none\")",
+    "A12": {
+     "entered_r1c1": "=LAMBDA(x,x+F1)(1)"
+    },
+    "B12": "=ISBLANK(A12)",
+    "C12": "=IFERROR(FORMULATEXT(A12),\"none\")",
+    "A13": {
+     "entered_r1c1": "=ISREF(f1)"
+    },
+    "B13": "=ISBLANK(A13)",
+    "C13": "=IFERROR(FORMULATEXT(A13),\"none\")",
+    "A14": "=_xlpm.f1",
+    "B14": "=ISBLANK(A14)",
+    "C14": "=IFERROR(FORMULATEXT(A14),\"none\")",
+    "A15": "=_xlpm.AB12*2",
+    "B15": "=ISBLANK(A15)",
+    "C15": "=IFERROR(FORMULATEXT(A15),\"none\")",
+    "A16": "=SUM(_xlpm.xy1,2)",
+    "B16": "=ISBLANK(A16)",
+    "C16": "=IFERROR(FORMULATEXT(A16),\"none\")"
+   }
+  }
+ ],
+ "expected": {}
+}

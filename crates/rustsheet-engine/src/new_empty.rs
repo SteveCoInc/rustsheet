@@ -11,7 +11,7 @@ use crate::{
         parser::{
             stringify::{
                 move_sheet_in_node, rename_sheet_in_node, to_english_string, to_localized_string,
-                to_rc_format, to_string_lowering,
+                to_rc_format, to_string_lowering, OffRows,
             },
             CallNameSpellings, Node, Parser,
         },
@@ -234,7 +234,7 @@ impl Model {
             };
 
             parsed_defined_names.insert(
-                (local_sheet_index, name.to_lowercase()),
+                crate::name_key::NameKey::new(local_sheet_index, &name),
                 parsed_defined_name_formula,
             );
         }
@@ -445,7 +445,13 @@ impl Model {
             }
         }
         new_worksheet.shared_formulas = shared_formulas;
-        lower_this_row_cells(&mut new_worksheet, &by_row, &source_tables, None);
+        lower_this_row_cells(
+            &mut new_worksheet,
+            &by_row,
+            &source_tables,
+            None,
+            OffRows::Detach,
+        );
         self.parser.set_lexer_mode(LexerMode::A1);
 
         // Insert the copy right after the source sheet.

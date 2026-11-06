@@ -189,9 +189,12 @@ fn round_digits(value: f64, num_digits: f64, mode: RoundMode, x87: bool) -> Opti
     Some(magnitude.copysign(value))
 }
 
-/// Kept digits beyond this bound are converted to the nearest double: the x87 model of
-/// [`x87_decimal_to_f64`] was probed for kept digits below 1,000,000 only (T-3931 out of scope).
+/// ROUND's and ROUNDDOWN's kept digits beyond this bound are converted to the nearest double: the
+/// x87 model of [`x87_decimal_to_f64`] was probed for them below 1,000,000 only (T-3931).
 const X87_PROBED_DIGITS: u64 = 1_000_000;
+/// Number text and literals keep at most 15 significant digits, and the x87 model holds for all of
+/// them (probes-numeric/t4077-long-literal-x87, T-4077), so their bound is 10^15.
+const X87_TEXT_DIGITS: u64 = 1_000_000_000_000_000;
 /// The largest `n` of `10^-n` the x87 model was probed at.
 const X87_PROBED_PLACES: i64 = 15;
 
@@ -207,7 +210,8 @@ fn strip_trailing_zeros(mut digits: u64, mut place: i64) -> (u64, i64) {
     (digits, place)
 }
 
-/// The double Excel's ROUND and ROUNDDOWN return for the decimal `digits * 10^place` (`place` =
+/// The double Excel's ROUND and ROUNDDOWN return for the decimal `digits * 10^place`, and the
+/// double number text and literals read as (`parse_excel_number`, digits as written; T-3932) (`place` =
 /// -n): `digits` times 10^-n rounded to a 64-bit significand, that product rounded to 64 bits and
 /// then to a double, an x87 multiply in extended precision stored to a double. It is one ulp from
 /// the nearest double for about 1 in 5,000 short decimals: `ROUND(4.91499999999999E-06,8)` is
@@ -215,8 +219,29 @@ fn strip_trailing_zeros(mut digits: u64, mut place: i64) -> (u64, i64) {
 /// through an x87 multiply by 10^-n"; probes-numeric/t3658-round-scaling and -fresh, 2,539 and 724
 /// cells, excel-graph). `None` outside the probed range (n = 1..15, `digits` below 1,000,000),
 /// where the caller keeps the nearest double; at n = 0 the conversion is exact either way.
-fn x87_decimal_to_f64(digits: u64, place: i64) -> Option<f64> {
-    if digits == 0 || digits >= X87_PROBED_DIGITS || !(-X87_PROBED_PLACES..0).contains(&place) {
+pub(crate) fn x87_decimal_to_f64(digits: u64, place: i64) -> Option<f64> {
+    if digits >= X87_PROBED_DIGITS {
+        return None;
+    }
+    x87_multiply(digits, place)
+}
+
+/// The double number text and literals read as: [`x87_decimal_to_f64`]'s conversion of their
+/// first 15 significant digits (later digits truncated) at n = 1..15. It holds at 7 to 15 digits,
+/// with positive exponents and past the 15-digit cut: `=0.190581435720431` is
+/// 0.19058143572043101 and `=1.234567891234567E+3` reads its 15 digits at n = 11
+/// (docs/excel-semantics/numbers.md "Decimals reach a double through an x87 multiply by 10^-n";
+/// probes-numeric/t4077-long-literal-x87, 516 cells, excel-graph). `None` outside n = 1..15.
+pub(crate) fn x87_text_to_f64(digits: u64, place: i64) -> Option<f64> {
+    if digits >= X87_TEXT_DIGITS {
+        return None;
+    }
+    x87_multiply(digits, place)
+}
+
+/// `digits` times 10^`place` through the x87 multiply, for `place` in -15..=-1 and nonzero `digits`.
+fn x87_multiply(digits: u64, place: i64) -> Option<f64> {
+    if digits == 0 || !(-X87_PROBED_PLACES..0).contains(&place) {
         return None;
     }
     let power = 10_u128.checked_pow(u32::try_from(-place).ok()?)?;

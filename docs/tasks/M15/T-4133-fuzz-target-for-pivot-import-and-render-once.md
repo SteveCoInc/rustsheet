@@ -14,7 +14,7 @@ depends_on: []
 A cargo-fuzz target feeds hostile pivot parts (indices, items, rowItems, groups, formulas, huge counts) to the importer, and later the renderer: no panic, bounded work.
 
 ## Context
-Directive 5. SPEC-0015 limits; SPEC-0030 adds render limits. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
+Directive 5. SPEC-0015 limits; SPEC-0032 adds render limits. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
 ## Acceptance criteria
 - [ ] Fuzz target committed with a seed corpus from the builder.

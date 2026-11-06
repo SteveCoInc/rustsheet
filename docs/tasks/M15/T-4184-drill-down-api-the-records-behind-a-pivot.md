@@ -14,7 +14,7 @@ depends_on: [T-4142, T-4178]
 The API returns the source records behind any value cell (Excel's Show Details content).
 
 ## Context
-SPEC-0030. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
+SPEC-0032. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
 ## Acceptance criteria
 - [ ] Tests against probes.

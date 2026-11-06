@@ -157,6 +157,7 @@ fn function_closeness_buckets_sum_to_the_scored_cells() {
         ulp1: 1,
         ulp4: 1,
         digits15: 1,
+        residue13: 0,
         visible_numeric: 1,
         visible_other: 1,
     };

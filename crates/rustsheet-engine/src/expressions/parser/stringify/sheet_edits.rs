@@ -6,7 +6,7 @@ use crate::types::sheet_names_match;
 
 /// Calls `f` on every node of `node` that names a sheet (a reference, a 3-D span, a wrong
 /// reference or a defined name) and walks through every other node to reach them.
-fn for_each_sheet_reference_mut(node: &mut Node, f: &mut impl FnMut(&mut Node)) {
+pub(super) fn for_each_sheet_reference_mut(node: &mut Node, f: &mut impl FnMut(&mut Node)) {
     match node {
         Node::ReferenceKind { .. }
         | Node::RangeKind { .. }
@@ -143,6 +143,47 @@ pub(crate) fn retarget_unqualified_references(node: &mut Node, to: u32) {
 /// into `Jan!A1` (docs/excel-semantics/references.md, "3-D references when sheets move or are
 /// renamed"). Every other move keeps the ends, which then resolve by name in the new order.
 pub(crate) fn move_sheet_in_node(node: &mut Node, from: u32, to: u32, sheet_names: &[String]) {
+    // After the move, the last sheet lands before the first one when it goes to `low` or
+    // earlier; the first sheet lands after the last one when it goes to `high` or later (the
+    // last sheet is at `high - 1` once the first sheet is taken out).
+    shrink_spans(node, sheet_names, |low, high| {
+        if from == high && to <= low {
+            Some((low, high - 1))
+        } else if from == low && to >= high {
+            Some((low + 1, high))
+        } else {
+            None
+        }
+    });
+}
+
+/// Rewrites the 3-D spans of `node` for deleting the sheet at `deleted`. The index and
+/// `sheet_names` (in tab order) are from before the delete.
+///
+/// Excel moves an end that is deleted to the next sheet inward, and a span left with one sheet
+/// becomes a plain reference: with Calc, Jan, Feb, Mar, deleting Mar turns `Jan:Mar!A1` into
+/// `Jan:Feb!A1`, and deleting Feb turns `Jan:Feb!A1` into `Jan!A1`
+/// (probes/sheet-ops/t4272-3d-span-delete-end, -delete-start, -delete-two-sheet-end).
+/// Deleting a middle sheet keeps the ends.
+pub(crate) fn delete_sheet_in_node(node: &mut Node, deleted: u32, sheet_names: &[String]) {
+    shrink_spans(node, sheet_names, |low, high| {
+        if deleted == low {
+            Some((low + 1, high))
+        } else if deleted == high {
+            Some((low, high - 1))
+        } else {
+            None
+        }
+    });
+}
+
+/// Gives every multi-sheet 3-D span of `node` the ends `ends(low, high)` returns for its ends in
+/// tab order (`low < high`, indices into `sheet_names`), or leaves it when that is `None`.
+fn shrink_spans(
+    node: &mut Node,
+    sheet_names: &[String],
+    ends: impl Fn(u32, u32) -> Option<(u32, u32)>,
+) {
     for_each_sheet_reference_mut(node, &mut |node| {
         let Node::SheetSpanKind {
             first_sheet,
@@ -159,16 +200,10 @@ pub(crate) fn move_sheet_in_node(node: &mut Node, from: u32, to: u32, sheet_name
         } else {
             (*last_index, *first_index)
         };
-        // After the move, the last sheet lands before the first one when it goes to `low` or
-        // earlier; the first sheet lands after the last one when it goes to `high` or later
-        // (the last sheet is at `high - 1` once the first sheet is taken out).
-        let (low, high) = if low == high {
+        if low == high {
             return;
-        } else if from == high && to <= low {
-            (low, high - 1)
-        } else if from == low && to >= high {
-            (low + 1, high)
-        } else {
+        }
+        let Some((low, high)) = ends(low, high) else {
             return;
         };
         let (Some(first), Some(last)) = (

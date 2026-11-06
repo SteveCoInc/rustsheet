@@ -62,6 +62,13 @@ invalid or missing or has an incorrect format", the response to any formula Exce
 length: 255 one-character arguments (`=CONCAT(1,...)`, 518 characters; `=TEXTJOIN("",TRUE,1,...)`, 524) are refused while
 254 (-concat-254-short, -textjoin-254-short) and a 2,548-character CONCAT of 254 arguments (-concat-254-long) are accepted. So CONCAT takes 254 texts, one more than Microsoft's
 documented 253, and TEXTJOIN the documented 252; the engine table holds 254 for both as cited overrides.
+In a file, VAR.S and STDEV.S take at most 254 arguments: an xlsx whose one cell is `_xlfn.VAR.S(1,2,...,255)` does not
+open in Excel for the web (Graph `createSession` 501 `unsupportedWorkbook`, "The workbook contains unsupported features
+or exceeds the size limit"), while `_xlfn.VAR.S(1,2,...,254)` and the legacy `VAR(1,2,...,255)` open and calculate
+(T-4089, excel-graph, 2026-11-06; docs/research/t4089/xlfn-arguments.md holds the inputs). Gate A batches of VAR.S and
+STDEV.S holding 255-argument calls failed to open the same way, and the same batches drawn to 254 filled. UNVERIFIED:
+that every `_xlfn.` function is capped the same way (CONCAT's and TEXTJOIN's 254 above would fit a call spending one
+of 255 slots on its name), and whether VAR.S refuses 255 arguments when typed.
 Status: VERIFIED
 
 ## Unary minus binds tighter than `^`
@@ -270,10 +277,44 @@ A sheet-scoped name defined through the API is held to the same 65 (T-4014, prob
 2026-11-04): Graph `worksheets('S')/names/add` adds a body of 65 nested ABS calls (`T!A1 =S!N` is 1, sheet-api-name-65)
 and refuses one of 66 with 400 `InvalidArgument` (`S!N` is `#NAME?`, sheet-api-name-66); `Txn::define_sheet_name`
 refuses the same body. A quirk on the way: after the 65-call add and a FullRebuild, `S!A1 =N` on the name's own sheet,
-typed before the add, is still `#NAME?`, while the workbook-scoped twin's `=N` is 1 (t3264-api-name-65). Which rule
-that is (a binding made at entry that only a workbook-scoped add renews, or a Graph artefact) is open, T-4049; the
-engine gives 1 there. An undo of a deleted name puts it back whatever its body: `update_defined_name` is unchecked, so
+typed before the add, is still `#NAME?`, while the workbook-scoped twin's `=N` is 1 (t3264-api-name-65). That is
+not the call cap: it is how a sheet-scoped add binds names, below ("A sheet-scoped name added after load", T-4049). An undo of a deleted name puts it back whatever its body: `update_defined_name` is unchecked, so
 a body past the cap can exist, and the undo does not refuse it (`Model::restore_defined_name`, T-4014).
+**A sheet-scoped name added after load** (T-4049, probes/t4049-sheet-api-name-plain and -over-book, excel-graph
+2026-11-05). Excel binds a cell's names when its formula is loaded or entered, and a sheet-scoped add of N on sheet S
+(Graph `worksheets('S')/names/add`, then a FullRebuild) re-binds only uses of a *defined* workbook N, and only on S:
+- No workbook N (plain, body `=1`): on S, `=N`, `=N+1` and `=ISERROR(N)` loaded from the file, and `=N` typed through
+  the API before the add, stay `#NAME?` (TRUE), FORMULATEXT still `=N`; `=S!N` on S and on T read the new name (1;
+  FORMULATEXT `=S!N`); `=N` on T is `#NAME?`. The same body nested 65 calls deep (probes/t4014-sheet-api-name-65)
+  behaves alike, so the cap plays no part. A workbook-scoped add instead fills the unresolved `=N`
+  (probes/t3264-api-name-65: 1).
+- A workbook N (`=10`) in the file (over-book): on S, `=N` (loaded or typed) and `=S!N`, which at load fell back to the
+  workbook N, both read the new sheet name (1), FORMULATEXT `=N` and `=S!N` (before the add, `=S!N` shows as
+  `='<file>.xlsx'!N`, references.md "A sheet-qualified workbook name is rewritten to the workbook's file name"); on T,
+  `=N` and `=S!N` keep the workbook N (10), the latter still shown `='<file>.xlsx'!N`.
+- `INDIRECT("N")` on S and `INDIRECT("S!N")` on T are `#REF!` in both: a name whose body is a constant is no reference.
+RustSheet keeps a formula's binding in its stored text, and `Model::define_name` with a sheet scope rewrites the
+formulas of that sheet before re-parsing (`Model::bind_added_sheet_name`): with no workbook name, an unresolved use
+of N is stored `[0]!N` (the own-workbook prefix: still the undefined workbook name, `#NAME?`, shown `N`); with one,
+a sheet-qualified read of the workbook N (stored `[0]!N`) becomes `S!N`. Unprobed, so UNVERIFIED (the oracle
+harness types every cell before the API add, so it cannot show what happens after it; T-4348): a formula typed on S
+after the add (ours binds by its text, so `=N` reads the sheet name) and a cell of S edited after it (ours leaves a
+pinned `=N` pinned); `=T!N` typed on S with no local N on T (it loads as the same workbook binding as `=S!N`, so ours
+moves it to `S!N` too); a file-stored `[0]!N` on S (taken to move with `=S!N`, likewise); what a later workbook-scoped add of N does to a use pinned so (ours fills it, as Excel fills
+an unresolved `=N`; it then shows as `'<file>.xlsx'!N`); how a pinned use is saved (ours writes `[0]!N`) and how
+Excel saves it; a typed `=[0]!Missing` (ours now shows `=Missing`); uses inside other names' bodies, conditional-format
+and data-validation formulas on S, and names called as functions (`N(2)`), which the add leaves alone; and desktop
+Excel's Name Manager.
+**An unqualified reference in an API-defined name binds to the first sheet** (T-4353,
+probes/t4353-api-name-unqualified-ref, excel-graph 2026-11-05). In a book of First, S2 and Last (B1 = 1, 7, 9; B2 =
+10, 70, 90), Graph `worksheets('S2')/names/add` of `Rate` = `=$B$1` and `Span` = `=$B$1:$B$2`, of `Rate2` = `=$B$1`
+on Last, and `workbook/names/add` of `W` = `=$B$1` all read First's cells: `=S2!Rate` is 1 on S2 and on Last, `=SUM(Span)`
+on S2 is 11, `=Rate2` on Last is 1, `=W` is 1 on every sheet. The name's scope does not qualify the reference; the
+first sheet is also the active one in the probe's workbook, so which of the two it is stays unprobed. `Txn::define_name`
+and `Txn::define_sheet_name` do the same (the engine parses a name body against the first sheet;
+`an_unqualified_name_reference_binds_to_the_first_sheet`, crates/rustsheet/src/edit/tests.rs). The same probe shows
+an exception to the rule above: of the uses typed before the adds, S2's `=Rate` stays `#NAME?` but S2's `=SUM(Span)`
+and Last's `=Rate2` resolve (T-4391 owns S2!A3 and Last!A1, which the engine leaves `#NAME?`).
 Conditional formats and data validation (T-3263, probes/t3263-*, excel-graph 2026-10-31): a formula
 conditional format (`<cfRule type="expression">`) and a custom data validation (`<dataValidation
 type="custom">`, `<formula1>`) on S!A1 whose formula nests 65 ABS calls load (t3263-cf-abs-65,
@@ -349,8 +390,10 @@ operator cap. The xlsx importer refuses a workbook holding one, as Excel does (s
 Before T-0128 chains were capped at 255 terms.
 These bounds keep the recursive parser, evaluator, printer and tree copy/drop from overflowing the
 stack on untrusted formulas (CLAUDE.md directive 5). The heaviest shapes the sign and parenthesis caps admit (256 levels of spaced
-`- ( `, 1,023 spaced signs) fit a 1 MiB stack optimized, but an unoptimized build needs about 16 MiB
-for them, in the derived `Clone`/`Drop` of the tree (T-3338 measured; T-3691 makes those walks iterative); before T-0931, 200 nested parentheses crashed
+`- ( `, 1,023 spaced signs) fit a 1 MiB stack optimized and a 2 MiB stack unoptimized, every walk
+over the tree included: `Clone`, `PartialEq`, `Debug` and the name walk loop over a run of signs,
+whitespace and parentheses (T-3253, T-3691, T-4002; an unoptimized build needed about 16 MiB
+before, T-3338 measured); before T-0931, 200 nested parentheses crashed
 the process. A new recursive consumer of the tree (or a heavier evaluator frame) must be
 re-measured against these limits (the at-limit tests run on a 1 MiB stack in release builds), and
 must walk operator chains with `expressions/parser/chain.rs`.
@@ -598,17 +641,20 @@ agree):
   read the same way and are unprobed, T-3240). Since T-3241 the printing cell decides the `@` form: a `#This Row`
   reference written with its table name prints `[@Col]` (padding kept) in a data row of its own table, as Excel does
   above. Any reference written without the name prints with it in a cell outside the table (`[@Col]` as
-  `T[[#This Row],[Col]]`, `[Col]` as `T[Col]`), so a copy, fill or move out of the table, or a resize that leaves the
-  cell outside, gives text that parses there (an engine choice; header, totals and outside-the-table spellings are
-  unprobed, T-3240). `T[ Col ]` is only
+  `T[@Col]`, `[Col]` as `T[Col]`), so a copy, fill or move out of the table, or a resize that leaves the
+  cell outside, gives text that parses there (an engine choice). A `#This Row` reference written with the name prints
+  `T[@Col]` outside its table, as Excel does (references.md "Structured references: FORMULATEXT", T-1683); the copied-out,
+  header and totals-row spellings are unprobed (T-3240). `T[ Col ]` is only
   the engine's own printed text for `T[ [Col] ]`, which it re-parses after edits: typed or loaded, a padded bare column
   reads the run as part of the column name, so it is a parse error typed and `#REF!` loaded, and the xlsx export writes
   `T[ [Col] ]`. Since T-3258 untyped text from outside the engine (`Model::set_user_input`, the Python bindings) reads
   it so too (a formula that does not parse, `#ERROR!`), while the engine's own re-entries (fill, copy, paste, move,
-  merge) keep reading the column. **A defined name whose stored body is a padded bare column loads as `#REF!`**: with
+  merge) keep reading the column. Since T-4023 so do a CSE entry (`set_user_array_formula`), a legacy entry
+  (`set_cell_with_legacy_formula`) and the redo of an external entry or pasted text (the undo diff records where its
+  text came from), while a moved array formula, a filled legacy cell and the redo of a copy keep the column. The facade's `Input::LegacyFormula` is stored text and goes through `Model::set_loaded_legacy_formula`: `=SUM(T[ Col ])` is `#REF!` as for `Input::StoredFormula` (T-4221). **A defined name whose stored body is a padded bare column loads as `#REF!`**: with
   `<definedName name="N">T[ Col ]</definedName>` (or `T[ Col]`, `T[Col ]`) `=SUM(N)` and `=ROWS(N)` are `#REF!` and
   `=ISREF(N)` is FALSE, as in a cell (probes/t3258-name-padded-column-0..2, excel-graph, 2026-11-04, T-3258). Ours: a
-  name body loaded through `Model::define_loaded_name` is read as a file's text and loads as `#REF!`; a name defined
+  name body loaded through `Model::define_loaded_name` or the xlsx importer (`load_from_xlsx`, T-4022) is read as a file's text and loads as `#REF!`; a name defined
   through the API keeps reading the column (a typed Name Manager body is unprobed).
 Evidence: probes/t2800-this-row-whitespace B2:F3 and t2800-stored-ws-0..3 (excel-graph, 2026-10-28, T-2800); probes/t2786-whitespace-structured-refs-runs (excel-graph `entered`, 2026-10-26, T-2786): E4:E15 (F4:F15), H1:H13
 (I1:I13). Each refused formula was entered alone against the same case. probes/t2966-empty-call-runs and
@@ -626,7 +672,7 @@ whitespace followed the comma, which prints as one space (`TableSpacing`); F4:F1
 `T[ Col ]` reading back as column `Col` now contradicts Excel, which gives `#REF!` (stored-ws-0, T-3069); the one-sided
 `T[ Col]` and `T[Col ]` already match (stored-ws-1 and -2 pass). Padded `#` or `@` starts (`T[ #Data ]`) read as before.
 Status: VERIFIED (excel-graph)
-Implemented in: expressions/lexer/structured_references.rs, expressions/parser/structured_reference.rs (`text`)
+Implemented in: expressions/lexer/structured_references.rs, expressions/parser/structured_reference.rs (`text`), typed_input.rs (`Model::as_external`, `Model::set_loaded_user_input`), model.rs (`reenter_array_formula`), legacy_formula.rs (`reenter_legacy_formula`, `Model::set_loaded_legacy_formula`), user_model/history.rs and undo_redo.rs (`Diff::SetCellValue`'s `external`)
 Tasks: T-2786, T-2944, T-2966, T-2800, T-3069, T-2801, T-2955, T-2956, T-2957, T-2958
 
 ## FORMULATEXT keeps every written parenthesis
@@ -684,22 +730,83 @@ Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms
   `=LET(ab12,2,f1,ab12*10,f1+ab12)` 22, an optional `[b2]` is ISOMITTED, and a LAMBDA bound to `f1` is called
   (`=LET(f1,LAMBDA(x,x+1),f1(2))` is 3). FORMULATEXT shows each as typed.
 - Unbound, such a name is an undefined name, not the A1 cell: with F1 holding 7, `=f1`, `=F1+1`, `=LET(x,1,x+F1)` and
-  `=LET(f1,5,f1+1)+F1` are all `#NAME?`. FORMULATEXT lower-cases the name and quotes it like a sheet name: `='f1'`,
-  `='f1'+1`, `=LET(x,1,x+'f1')`, `=LET(f1,5,f1+1)+'f1'`.
+  `=LET(f1,5,f1+1)+F1` are all `#NAME?`. FORMULATEXT quotes the name like a sheet name: `='f1'`,
+  `='f1'+1`, `=LET(x,1,x+'f1')`, `=LET(f1,5,f1+1)+'f1'`. The lower case there is no rule of its own: it is the
+  workbook's first spelling of the name (as for unknown function names, references.md "Unknown function call names"),
+  `f1` in A8; a name first typed upper-case keeps it (`=AB12*2` is `='AB12'*2`). Any position quotes it: an argument
+  `=SUM('f1',2)`, a call `='f1'(2)`, a LAMBDA body `=LAMBDA(x,x+'f1')(1)`, and `=ISREF(f1)` is FALSE, `=ISREF('f1')`.
+  `=xy1` is `='xy1'`; a name that is no cell stays bare (`=Xfe1`, `#NAME?`). The quoted spelling itself is refused
+  typed, in A1 and in R1C1 mode (`='f1'`, `='f1'+1`, `='abc'`, `='F1'`, `=LET(x,1,x+'f1')`: the cell stays blank).
+- A file that stores such a name unbound with its prefix (`=_xlpm.f1`, `=_xlpm.AB12*2`, `=SUM(_xlpm.xy1,2)`) reads it
+  as the same undefined name (`#NAME?`), but FORMULATEXT shows the prefix: `=_xlpm.f1` (T-4099).
+- The prefix stays on any unbound name written with it, not only one spelled like a cell, and typed as well as in a
+  file: `=_xlpm.abc`, `=_xlpm.Xfe1`, `=_xlpm.R1C1`, `=_xlpm.abc+_xlpm.f1`, a call `=_xlpm.f1(2)`, in a LET or LAMBDA
+  that binds another name (`=LET(x,1,x+_xlpm.f1)`, `=LAMBDA(x,x+_xlpm.abc)(1)`) are all `#NAME?` with that
+  FORMULATEXT, `=ISREF(_xlpm.f1)` is FALSE, and `=_xlpm.f1` and `=_xlpm.abc` typed in A1 or R1C1 mode keep it too. The
+  letter case is the workbook's first spelling, as for the quoted name: `=_xlpm.F1` after `_xlpm.f1` reads
+  `=_xlpm.f1`. Only a bare `f1` typed in R1C1 mode is quoted. Unprobed: what Excel writes to a file for a typed
+  R1C1 `=f1` (ours writes `_xlpm.f1`, which Excel would show prefixed).
+- In a file exactly one `_xlpm.` is the mark; the rest is the name. A doubled prefix is the undefined name
+  `_xlpm.f1` written with its mark: `=_xlpm._xlpm.f1` and `=_xlpm._xlpm.abc` are `#NAME?` and FORMULATEXT shows them
+  as written. `_xlfn.LET(_xlpm._xlpm.x,1,_xlpm._xlpm.x+1)` declares a variable named `_xlpm.x`: 2, FORMULATEXT
+  `=LET(_xlpm.x,1,_xlpm.x+1)`. A use binds only the name it spells after its mark:
+  `_xlfn.LET(_xlpm.x,2,_xlpm._xlpm.x*3)` is `#NAME?`, FORMULATEXT `=LET(x,2,_xlpm._xlpm.x*3)`
+  (and `_xlfn.LET(_xlpm.x,2,_xlpm.x*3)` is the ordinary 6, `=LET(x,2,x*3)`) (T-4224).
+- Typed, `_xlpm.` is no mark but part of the name, in A1 and in R1C1 mode: `=_xlpm._xlpm.f1` and `=_xlpm._xlpm.abc`
+  are `#NAME?` with that FORMULATEXT; `=LET(x,2,_xlpm.x*3)` is `#NAME?`, FORMULATEXT `=LET(x,2,_xlpm.x*3)` (the use
+  is not `x`), as is `=LET(x,2,_xlpm._xlpm.x*3)`; and a declaration written with it, `=LET(_xlpm.x,1,_xlpm.x+1)`, is
+  refused (the cell stays blank) (T-4224). Ours matches (T-4288).
+- Typed `_xlpm.` extrapolations (probes/t4299-typed-xlpm-extrapolations, 22 cells, excel-graph, 2026-11-05, T-4299): the
+  prefix matches ignoring case, and Excel writes it back lowercase: `=LET(_XLPM.x,1,_XLPM.x+1)` is refused (blank),
+  `=LET(x,2,_XLPM.x*3)` is `#NAME?`, FORMULATEXT `=LET(x,2,_xlpm.x*3)`. A LAMBDA body use `_xlpm.x` of a parameter `x`
+  is `#NAME?` (`=LAMBDA(x,_xlpm.x*2)(3)`, FORMULATEXT `=LAMBDA(x,_xlpm.x*2)(3)`; the control `=LAMBDA(x,x*2)(3)` is 6),
+  and a LAMBDA parameter typed `_xlpm.x` is refused (blank), like a LET name. Typed in R1C1 mode `=LET(x,2,_xlpm._xlpm.x*3)`
+  is `#NAME?` like A1's. A structured reference typed in R1C1 mode parses against the workbook's tables: `=SUM(T[Col])`
+  is 7 in both modes. Ours matches (T-4299). Probed in all-uppercase `_XLPM.` and in a LET body, and (T-4331, probes/t4331-typed-xlpm-remaining) in the forms
+  below. Mixed case `=LET(_Xlpm.x,1,_Xlpm.x+1)` is refused like the uppercase form (A1, blank). A bare `=_XLPM.x` is
+  `#NAME?` and FORMULATEXT keeps its case, `=_XLPM.x` (C2; ours matches, T-4343). A doubled
+  `=LET(x,2,_XLPM._XLPM.x*3)` is `#NAME?`, FORMULATEXT keeps both prefixes' case (C3; ours matches, T-4343). So Excel
+  lowercases the typed prefix only when what follows it is a name the LET or LAMBDA binds. A called `=LAMBDA(x,_XLPM.f(3))(1)`
+  is `#NAME?` and keeps its case, as ours does (C4). A LET-bound lambda called as `_XLPM.f(3)` is refused (A5). The rule is inferred from t4299 C2 and t4331 C2:C4, not probed beyond them.
+- Typed in R1C1 mode, a range's corners are ordered by the cells they name: `=ROWS(R[-50]:R[-49])` in row 50 names rows
+  1048576 and 1 after the wrap, and FORMULATEXT shows `=ROWS(1:1048576)` (probes/t3212-r1c1-bare-offsets I50).
+- Unprobed: a file's `_xlfn.LET(_xlpm._xlpm.x,2,_xlpm.x*3)` (one prefix on the use of a `_xlpm.x`; ours binds it), a
+  doubled prefix on a LAMBDA parameter, and what Excel writes to a file for a typed `=LET(x,2,_xlpm.x*3)`, whose
+  FORMULATEXT is also the text of a file formula that binds the use.
 Evidence: probes/t3212-r1c1-bare-offsets (excel-graph, 2026-11-03), S!H10:J55: the typed cell, its FORMULATEXT and
 ISBLANK. The ISBLANK of its two circular cells (J39, J50) is TRUE, a recalc rule that T-3898 owns.
 probes/t3897-r1c1-let-cell-names (excel-graph, 2026-11-04), S!A1:C13: names spelled like an A1 cell, bound (rows 1 to
 7, 11, 12) and unbound (rows 8 to 10, 13).
-Ours: `rustsheet_engine::r1c1_formula_to_a1` rewrites the short forms into the storage grammar before it parses
-(`typed_input/r1c1.rs`, `expand_short_forms`) and parses them as typed. In R1C1 mode the parser records a binding that
-reads as a reference for `Parser::typed_refusal`. Stored R1C1 text is not rewritten, so `r`, `c` and `rc` LAMBDA
-parameters still re-parse from storage. A structured reference typed in R1C1 mode does not parse (no tables, T-3113).
-The R1C1 lexer reads a name spelled like an A1 cell as a name in any case (`is_valid_r1c1_identifier`), and the A1 text
-writes a bound one `_xlpm.f1` (`stringify::to_english_string_typed_from_r1c1`), which the typed A1 entry binds where it
-refuses a bare `f1`. An unbound one is refused, so its cell stays blank instead of `#NAME?` (T-4040).
+probes/t4040-r1c1-unbound-cell-names (excel-graph, 2026-11-04), S!A1:C16: the quoted spelling typed (rows 1 to 6),
+unbound names typed in R1C1 mode (rows 7 to 13) and a file's `_xlpm.` names (rows 14 to 16).
+probes/t4099-file-xlpm-unbound-names (excel-graph, 2026-11-04), S!A1:C13: a file's unbound `_xlpm.` names that are no
+cell, mixed, called, under LET, LAMBDA and ISREF, `F1` and `R1C1` (rows 1 to 9), and `_xlpm.f1`, `_xlpm.abc` typed in
+A1 mode (rows 10, 11) and R1C1 mode (rows 12, 13).
+probes/t4224-doubled-xlpm-prefix (excel-graph, 2026-11-05), S!A1:C14: a doubled prefix from a file (rows 1, 2), typed
+in A1 mode (3, 4) and R1C1 mode (5, 6); LETs whose declaration and use differ in the prefix from a file (7, 8, 13) and
+typed (9 to 12, 14). The case's A1 text is the builder's input: it adds the mark to a bare declared name only
+(`spec2xlsx.prefix_bound_names`), so row 8 is written `_xlpm._xlpm.x`.
+Ours: `Model::set_typed_r1c1_user_input` (the facade's `Input::ParseR1C1`) rewrites the short forms into the storage
+grammar (`typed_input/r1c1.rs`, `expand_short_forms`), parses them as typed in the R1C1 grammar with the workbook's
+names and tables, and stores the parsed formula, with no A1 text in between (T-4288). In R1C1 mode the parser records
+a binding that reads as a reference for `Parser::typed_refusal`, and orders a typed range's corners
+(`Parser::range_operand`). Stored R1C1 text is not rewritten, so `r`, `c` and `rc` LAMBDA parameters still re-parse
+from storage. The R1C1 lexer reads a name spelled like an A1 cell as a name in any case (`is_valid_r1c1_identifier`),
+so a LET binds it. An unbound one becomes the quoted name `'f1'` when the formula is parsed
+(`call_names::quote_unbound_cell_shaped_names`, on R1C1 typed text and on storage text with `_xlpm.`): no LET
+binds it and no defined name matches it, so it is `#NAME?`, and A1 output prints it quoted. The R1C1 storage form and
+a file write it `_xlpm.f1`, which the storage reads back quoted (T-4040, T-4099). Typed text, in either mode, keeps
+every `_xlpm.` as part of the name, and a typed LET name written with it is refused
+(`Parser::note_prefixed_declaration`, T-4288). A file's
+(untyped A1) use keeps every prefix it was written with until the end of the parse, and
+`call_names::settle_lambda_prefixes` drops one, the mark, from the ones a LET or LAMBDA binds after it; an unbound one
+keeps them all and prints them (`Parser::written_lambda_name`). A declaration drops one (T-4224). The storage form
+writes a name that starts with `_xlpm.` with one more prefix, its own mark for a name that would read back as
+something else, and drops exactly one when it reads it (T-4099, T-4224). The first-spelling table
+(`CallNameSpellings`) gives it the workbook's spelling.
 Status: VERIFIED (excel-graph) for the cells named. Not probed: `C0`, `R[0]`, and a wrap past the grid's end on a
 whole-row range's second corner.
-Tasks: T-3212, T-3897, T-3898, T-4040
+Tasks: T-3212, T-3897, T-3898, T-4040, T-4099, T-4224, T-4288
 
 ## A typed formula that does not parse is refused; a call's missing `)` is added
 Rule: Excel refuses a formula typed through the API (Graph PATCH 400 `InvalidArgument`) that does

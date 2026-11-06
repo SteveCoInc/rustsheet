@@ -17,7 +17,7 @@ import re
 import signal
 import sys
 import threading
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -25,7 +25,7 @@ from typing import Any
 import mpmath
 
 from rustsheet_tools.accuracy import literal
-from rustsheet_tools.accuracy.model import Definition, DomainError, NoValueError
+from rustsheet_tools.accuracy.model import Definition, DomainError, NoValueError, OverBudgetError, work_budget
 from rustsheet_tools.accuracy.sampler import STRATA, Sampler, math_arg, point_count, seed, stratum_counts
 from rustsheet_tools.fitlab.sweep import number_literal, split_args
 
@@ -33,14 +33,26 @@ VERSION = "1"  # bump when a definition or the sampler changes what a batch woul
 DPS = (60, 80)  # the value is the dps-80 one; dps 60 is the convergence check
 CONVERGENCE = mpmath.mpf("1e-45")  # relative agreement the two precisions must reach
 DIGITS = 50  # significant digits written
-TIME_LIMIT = 10.0  # seconds per point (both precisions)
+# A hang guard, never a drop: a point past it fails the whole run (PointTimeoutError), so no run
+# writes a sidecar that depends on the machine's speed or load. Points are dropped only by the
+# definitions' deterministic budgets (mpmath's maxterms and maxprec, the bracket's steps). The
+# slowest committed point, probes-numeric/t3350-r4-chisq-inv-sweep A237, takes about 10 s (T-3680).
+# Summed-expansion terms a point may spend at each precision (`model.spend`): the deterministic
+# drop that replaced the 10 s clock. Calibrated on 2026-11-04 over every gamma-family cell of probes
+# and probes-numeric: the costliest cell that had a value under the clock spends 1.51M terms
+# (t3505-gamma-inv-budget-band A32, GAMMA.INV(0.5,1000000,1)); the clock had dropped cells needing
+# 0.24M to 1.9M (t3350-chisq-inv-huge-df A15, A200). About 10 µs a term, so at most about 20 s per
+# precision on a loaded 4-core machine (T-3680).
+WORK_BUDGET: int | None = 2_000_000
+HANG_LIMIT = 600.0  # seconds per point (both precisions)
 MAX_REDRAWS = 20  # a point whose math overflows is redrawn this many times, then dropped
 BATCH_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")  # a file name, never a path
 DOUBLE_MAX = mpmath.mpf(1.7976931348623157e308)
 
 
 class PointTimeoutError(Exception):
-    """A point's math took longer than `TIME_LIMIT`."""
+    """A point's math took longer than `HANG_LIMIT`: the run stops rather than drop the point by
+    the clock (T-3680)."""
 
 
 @contextlib.contextmanager
@@ -52,7 +64,8 @@ def time_limit(seconds: float) -> Iterator[None]:
         return
 
     def expire(_signum: int, _frame: object) -> None:
-        raise PointTimeoutError
+        msg = f"a point took over {seconds:g} s: give its definition a deterministic budget (T-3680)"
+        raise PointTimeoutError(msg)
 
     previous = signal.signal(signal.SIGALRM, expire)
     signal.setitimer(signal.ITIMER_REAL, seconds)
@@ -76,27 +89,32 @@ class MathValue:
 
 
 class DroppedError(Exception):
-    """The point is left out of the batch (not converged, too slow, or no single value)."""
+    """The point is left out of the batch (not converged at the definition's deterministic budget)."""
 
 
 def compute(definition: Definition, args: Sequence[literal.Arg]) -> MathValue:
     """The math value of `args` at dps 80, checked against dps 60 (DroppedError when they differ
-    by more than 1e-45 relative, when one is a domain error and the other not, or past the time
-    limit). NoValueError (redraw) when the value overflows the double range or has no single
-    value."""
+    by more than 1e-45 relative, or when one is a domain error and the other not). NoValueError
+    (redraw) when the value overflows the double range or has no single value. PointTimeoutError,
+    which nothing catches, past `HANG_LIMIT`: the clock never decides what a sidecar holds."""
     math_args = [math_arg(p, a) for p, a in zip(definition.params_for(len(args)), args, strict=True)]
+    return compute_value(lambda: definition.evaluate(math_args))
+
+
+def compute_value(evaluate: Callable[[], mpmath.mpf]) -> MathValue:
+    """`compute` for any math `evaluate` runs at the current mpmath precision (a definition's, or a
+    composite's, T-3993): its value at dps 80 checked against dps 60, with the same drops."""
     results: list[mpmath.mpf | DomainError] = []
     try:
-        with time_limit(TIME_LIMIT):
+        with time_limit(HANG_LIMIT):
             for dps in DPS:
-                with mpmath.workdps(dps):
+                with mpmath.workdps(dps), work_budget(WORK_BUDGET):
                     try:
-                        results.append(+definition.evaluate(math_args))
+                        results.append(+evaluate())
                     except DomainError as err:
                         results.append(err)
-    except PointTimeoutError as err:
-        msg = f"over {TIME_LIMIT:g} s"
-        raise DroppedError(msg) from err
+    except OverBudgetError as err:
+        raise DroppedError(str(err)) from err
     except mpmath.libmp.NoConvergence as err:  # e.g. a hypergeometric series at a huge df
         msg = f"mpmath did not converge ({err})"
         raise DroppedError(msg) from err

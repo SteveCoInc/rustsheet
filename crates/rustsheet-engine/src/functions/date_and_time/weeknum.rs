@@ -7,6 +7,7 @@ use crate::{
     formatter::dates::from_excel_date,
     functions::Function,
     model::Model,
+    tailed_array::range_corners,
 };
 
 /// WEEKNUM's stale `return_type` state: the start weekday the last WEEKNUM or ISOWEEKNUM of the
@@ -16,6 +17,117 @@ use crate::{
 pub(crate) enum WeeknumStart {
     Sunday,
     Monday,
+}
+
+/// Whether `node` is a written range spanning more than one cell (`C1:C2`; `C1` is not), and
+/// whether it spans more than one row and more than one column (`C1:D2`). Other forms (a name,
+/// INDEX) are unprobed and count as neither.
+fn written_extent(node: &Node, cell: CellReferenceIndex) -> (bool, bool) {
+    let Some((first, last)) = range_corners(node.ungrouped(), cell) else {
+        return (false, false);
+    };
+    let (rows, columns) = (first.row != last.row, first.column != last.column);
+    (rows || columns, rows && columns)
+}
+
+/// Whether `node` is a written reference to one cell (`C1`, or a range such as `C1:C1`).
+fn is_one_cell(node: &Node, cell: CellReferenceIndex) -> bool {
+    match node.ungrouped() {
+        Node::ReferenceKind { .. } => true,
+        Node::RangeKind { .. } => !written_extent(node, cell).0,
+        _ => false,
+    }
+}
+
+/// Whether `node` is, as written, a reference CONCAT and TEXTJOIN join: a cell, a range, or a call
+/// that returns one (`CONCAT(INDEX(C1:D2,1,1))` keeps WEEKNUM's state, probes/weeknum-stale-call-
+/// shapes-2 S26; `CONCAT(INDEX({1,2},1))` empties it, probes/weeknum-stale-call-shapes-3 S17).
+/// Read from the formula, never by evaluating the argument again. IF and CHOOSE count when a
+/// result argument does, LET when any argument does, and a defined name always (shapes-3
+/// S20-S23, a name for a range; a name for a constant is unprobed).
+fn joins_a_reference(node: &Node) -> bool {
+    match node.ungrouped() {
+        Node::ReferenceKind { .. }
+        | Node::RangeKind { .. }
+        | Node::OpRangeKind { .. }
+        | Node::SheetSpanKind { .. } => true,
+        Node::FunctionKind { kind, args } => match kind {
+            Function::Index => args.first().is_some_and(joins_a_reference),
+            Function::If | Function::Choose => args.iter().skip(1).any(joins_a_reference),
+            Function::Let => args.iter().any(joins_a_reference),
+            _ => kind.returns_reference(),
+        },
+        Node::DefinedNameKind(_) => true,
+        _ => false,
+    }
+}
+
+impl Model {
+    /// Empties WEEKNUM's state after a call of `kind` with `args` when Excel's does (dates.md
+    /// "Which calls empty WEEKNUM's state", T-4289, T-4315; probes/weeknum-stale-between-calls,
+    /// -between-ranges, -call-shapes, -call-shapes-2 and -call-shapes-3). The rule is per function and argument
+    /// shape, nested calls included, and Excel gives no reason for it:
+    /// - CHOOSEROWS, CHOOSECOLS, TOCOL, TOROW, VSTACK, HSTACK, TAKE, DROP, TRIMRANGE, WRAPROWS, WRAPCOLS,
+    ///   TEXTSPLIT and EXPAND always do (a constant array, one cell or a range);
+    /// - SORT and UNIQUE with a multi-cell range (`SORT(C1:C2)`; `SORT({3,1})` and `SORT(C1)` keep
+    ///   it); SORTBY unless its array is one cell (`SORTBY({1,2},{2,1})` empties, `SORTBY(C1,1)`
+    ///   keeps it); ARRAYTOTEXT with a range of more than one row and column (`C1:D2`; `C1:C2`,
+    ///   `C1` and `{1,2}` keep it);
+    /// - CONCAT and TEXTJOIN unless a joined argument is a reference (`CONCAT("a",1)` and
+    ///   `CONCAT(C1&"")` empty it; `CONCAT(C1:D2,"x")`, `CONCAT(INDEX(C1:D2,1,1))` and
+    ///   `TEXTJOIN(",",1,C1,"x")` keep it; only TEXTJOIN's joined arguments are read).
+    ///
+    /// FILTER, TRANSPOSE, OFFSET, INDEX, SEQUENCE, XLOOKUP, LET and LAMBDA keep it. Whether the
+    /// emptying comes before or after the call's own arguments run is unprobed (here: after).
+    fn weeknum_effect_of_call(&mut self, kind: &Function, args: &[Node], cell: CellReferenceIndex) {
+        let first = || args.first().map(|node| written_extent(node, cell));
+        let empties = match kind {
+            Function::Chooserows
+            | Function::Choosecols
+            | Function::Tocol
+            | Function::Torow
+            | Function::Vstack
+            | Function::Hstack
+            | Function::Take
+            | Function::Drop
+            | Function::Trimrange
+            | Function::Wraprows
+            | Function::Wrapcols
+            | Function::Textsplit
+            | Function::Expand => true,
+            Function::Sort | Function::Unique => first().is_some_and(|(multi, _)| multi),
+            Function::Sortby => !args.first().is_some_and(|node| is_one_cell(node, cell)),
+            Function::Arraytotext => first().is_some_and(|(_, both)| both),
+            Function::Concat => !args.iter().any(joins_a_reference),
+            Function::Textjoin => !args.iter().skip(2).any(joins_a_reference),
+            _ => false,
+        };
+        if empties {
+            self.empty_weeknum_state();
+        }
+    }
+
+    /// Calls `implementation` (through `call_by_reference_elements`), then applies the call's
+    /// effect on WEEKNUM's state (`weeknum_effect_of_call`): every function call goes through it
+    /// (`evaluate_function`).
+    pub(crate) fn call_with_order_effects(
+        &mut self,
+        kind: &Function,
+        args: &[Node],
+        cell: CellReferenceIndex,
+        implementation: fn(&mut Model, &[Node], CellReferenceIndex) -> CalcResult,
+    ) -> CalcResult {
+        let result = self.call_by_reference_elements(kind, args, cell, implementation);
+        self.weeknum_effect_of_call(kind, args, cell);
+        result
+    }
+
+    /// Empties WEEKNUM's state and counts it, so an Excel-order anchor's run can tell that it did
+    /// (`AnchorEffects::emptied_weeknum`).
+    pub(crate) fn empty_weeknum_state(&mut self) {
+        self.evaluation.order_state.weeknum_start = None;
+        self.evaluation.anchor_effects.weeknum_empties += 1;
+    }
 }
 
 impl Model {

@@ -3,7 +3,7 @@ id: T-0473
 title: "External links: O(1) per-sheet has-cells and extent lookups in the cache"
 milestone: M11
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -25,9 +25,12 @@ extent they span, instead of a scan of every cached cell.
   side table on the model avoids changing its serialized form.
 
 ## Acceptance criteria
-- [ ] `cached_sheet` and `cached_extent` no longer scan `book.cells`.
-- [ ] Eval: 0 regressions (fixtures external-link-* and corpus-bench unchanged).
-- [ ] `make check` green; reviewers approve.
+- [x] `cached_sheet` and `cached_extent` no longer scan `book.cells`.
+- [x] Eval: 0 regressions (fixtures external-link-* and corpus-bench unchanged).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Any change to what a reference reads.
+
+## Outcome
+`Model::cached_extents` (a lazily built `OnceLock` side table on the model, so `ExternalBook` keeps its serialized form) holds each cached sheet's extent, built in one walk of each book. `cached_sheet` and `cached_extent` read it in O(1) and no longer scan `book.cells`. Engine external tests pass; no change to what a reference reads, so eval delta is 0.

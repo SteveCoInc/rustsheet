@@ -161,7 +161,7 @@ Cell errors past the limit (probes/text-result-limit-errors, excel-graph, 2026-1
 Other reference kinds behave like a direct A1 cell or range (probes/text-result-limit-errors-refs, excel-graph, 2026-10-08, T-0285; same layout, `Sheet2` repeats `A1:A2`): a defined name, `INDEX`, `IF`, `OFFSET`, `INDIRECT`, `INDEX(..):INDEX(..)` and a 3-D reference (`Sheet1:Sheet2!A1:A2`) are references, so a range that includes "b" gives `#CALC!` for CONCAT and TEXTJOIN (C1-C2, C4-C5, C7, C10, D1-D2, D4-D5, D7, D10), a single cell holding `#N/A` gives `#N/A` for CONCAT (exactly 32,767, C3, C6, C8, C11-C12) and `#CALC!` for TEXTJOIN (the delimiter takes it over, D3, D6, D8, D11-D12). `@A1:A2` from row 9 or 10 is `#VALUE!` (no intersection; C9, D9), which says nothing about the limit. Unprobed: TEXTJOIN with ignore_empty FALSE over a whole-column 3-D span (the engine's 3-D walk does not add the delimiters of the empty cells outside the used area, unlike the single-sheet walk).
 Array arguments (probes/round-concat-array-edges F1-F7, with F1 the same `#CALC!` for the error-free row form, excel-graph 2026-10-13, T-1400): an error element of an array constant behaves like a range cell error. After 32,767 characters `CONCAT(REPT("a",32767),{"b",#N/A})` is `#CALC!` (so are `{"b";#DIV/0!}` and `{"b";"c"}`); an error met before the limit wins (`CONCAT({"b",#N/A},REPT("a",32767))` is `#N/A`, and `CONCAT(REPT("a",32767),{#N/A,"b"})` is `#N/A` since the error comes before any character overflows). With two errors the first wins (`CONCAT({"b",#N/A},{"c",#DIV/0!})` is `#N/A`). The engine matches.
 Status: VERIFIED
-Implemented in: `fn_concat`/`fn_textjoin` in functions/text/concatenate.rs (`ConcatText`, `JoinSize`) stop appending text once over the limit but still evaluate later arguments. `fn_concat` drops a range or reference cell error met once over the limit and continues; `fn_textjoin` does the same for range cells (through `JoinSize::push_cell`, also used for the sheet-by-sheet 3-D walk) and, in its `Node::ReferenceKind` arm, for a direct single-cell reference, counting the preceding delimiter through `JoinSize::exceeds_with_separator`. Both read their arguments through `evaluate_aggregate_arg` (which also treats `:` expressions, `Node::OpRangeKind`, as references), and `get_range` (reference_operators.rs) keeps an INDEX operand of `:` a reference (T-0243, T-0262, T-0284, T-0285)
+Implemented in: `fn_concat`/`fn_textjoin` in functions/text/concatenate.rs (`ConcatText`, `JoinSize`) stop appending text once over the limit but still evaluate later arguments. `fn_concat` drops a range or reference cell error met once over the limit and continues; `fn_textjoin` does the same for range cells (through `JoinSize::push_cell`, also used for the sheet-by-sheet 3-D walk) and, in its `Node::ReferenceKind` arm, for a direct single-cell reference, counting the preceding delimiter through `JoinSize::exceeds_with_separator`. Both read their arguments through `evaluate_aggregate_arg` (which also treats `:` expressions, `Node::OpRangeKind`, as references), and `get_range` (reference_operators/mod.rs) keeps an INDEX operand of `:` a reference (T-0243, T-0262, T-0284, T-0285)
 Tasks: T-0243, T-0262, T-0284, T-0285, T-1400
 
 ## CONCAT joins an array argument element by element
@@ -238,15 +238,25 @@ character. The bound is absolute, identical below 1, 10, 1000 and 30000, and it 
 `MID(t,1,1-1E-15)` is "" and `MID(t,1-1E-15,5)` is `#VALUE!` (start below 1). The negative check sees the
 raw value (`LEFT(t,-1E-300)` is `#VALUE!`); REPLACE's start_num < 1 check comes after the rounding
 (`REPLACE(t,1-2E-7,1,"z")` starts at 1, `1-1E-5` is `#VALUE!`). A computed `TRUE-1E-15` count is 1 for LEFT
-(gen-m2/b4392a6514a36ade Calc!A14). INDEX's row and column indexes share it (lookup.md, T-1407); whether other
-functions (REPT, FIND/SEARCH start_num, CHAR) do is UNVERIFIED. The cutoff is known to 2^-36: 2^-22 + 8·2^-36 (= 2^-22 + 2^-33) rounds up, 2^-22 + 9·2^-36 does not;
+(gen-m2/b4392a6514a36ade Calc!A14). INDEX's row and column indexes share it (lookup.md, T-1407). Among the other
+M5 text arguments (probes/t4453-near-integer-text-args, excel-graph 2026-11-06, T-4453), FIND and SEARCH start_num
+(B1:C14), CHAR (D1:D21), SUBSTITUTE instance_num (F1:F21) and FIXED and DOLLAR decimals (G1:H14) snap with the same
+bound: `FIND("a",t,1-2^-23)` is 1 and `CHAR(1-1E-15)` is U+0001, while 2^-22 + 9·2^-36 below the integer floors
+(`FIND("a",t,1-2^-22-9*2^-36)` and `CHAR(1-1E-6)` are `#VALUE!`). The bound is the full one, not DATE's halved
+negative one, and it holds below 1000 and 255 alike. Negative decimals snap their magnitude and truncate toward zero,
+symmetric with the positive side: `FIXED(1234.5678,-1+2^-23)` is "1230", `-1+2^-22+9*2^-36` "1235", `-1E-6`
+"1235" (not -1), `-3+2^-23` "1000" and `-3+1E-6` "1200" (I1:J21). REPT's number_times and UNICHAR do **not** snap:
+they truncate exactly like MID, so `REPT("a",1-1E-15)` is "" and `UNICHAR(66-2^-23)` is "A" (A1:A14, E1:E14; the
+n-1E-15 cells at 1000 and 66 read n only because that value rounds to n in binary). The cutoff is known to 2^-36: 2^-22 + 8·2^-36 (= 2^-22 + 2^-33) rounds up, 2^-22 + 9·2^-36 does not;
 the engine takes the bound as exactly 2^-22 + 2^-33, inclusive. Unprobed: REPLACE start_num 32767.9999999 (rounds
 up to 32,768, so the engine gives `#VALUE!`).
-Evidence: probes/text-count-argument-bounds A-D, N-S, T-V, X-Y, Z, AA (excel-graph, 2026-10-11, T-0219).
+Evidence: probes/text-count-argument-bounds A-D, N-S, T-V, X-Y, Z, AA (excel-graph, 2026-10-11, T-0219);
+probes/t4453-near-integer-text-args A1:J21 (excel-graph, 2026-11-06, T-4453).
 Status: VERIFIED
-Implemented in: functions/util.rs (`near_integer_count`), used by `left_element`, `right_element`
-(common.rs) and `replace_element` (string_format.rs).
-Tasks: T-0219
+Implemented in: functions/util/near_integer.rs (`near_integer_count`, `near_integer_trunc`), used by `left_element`,
+`right_element` (common.rs), `replace_element` (string_format.rs), `find_element` (position.rs), `fn_char`
+(char_code.rs), `substitute_element` (util.rs) and `decimals_arg` (string_format.rs).
+Tasks: T-0219, T-4453
 
 ## Text function argument modes
 Rule: the M5 text functions take scalar arguments that lift over a range or array (one result per cell, a spill;
@@ -637,7 +647,9 @@ Implemented in: crates/rustsheet-engine/src/functions/text/string_format.rs (`MA
 
 ## DOLLAR and FIXED decimals
 Rule: `decimals` is truncated toward zero, not floored: `DOLLAR(1234.5,-1.5)` is "$1,230" (decimals -1), `FIXED(1234.5,-0.5)`
-is "1,235" (decimals 0), `DOLLAR(1234.5,1.9)` is "$1,234.5". A `decimals` of 128 or more (also 128.5) is `#VALUE!`;
+is "1,235" (decimals 0), `DOLLAR(1234.5,1.9)` is "$1,234.5"; a magnitude within 2^-22 + 2^-33 below an integer counts
+as that integer on either side of zero (`FIXED(1234.5678,-1+2^-23)` "1230"; see "LEFT, RIGHT and REPLACE round counts up
+near an integer", T-4453). A `decimals` of 128 or more (also 128.5) is `#VALUE!`;
 127 is fine and prints 127 fraction digits; large negatives just give "0" (`FIXED(1,-400)`, `DOLLAR(1,-129)`).
 `FIXED(1234,0,"x")` is `#VALUE!`; a numeric no_commas is a boolean (`FIXED(1234,0,2)` = "1234").
 Evidence: probes/dollar-fixed-unichar-edges A1-A29, A46-A50, D69-D75 (excel-graph, T-1281).
@@ -1298,8 +1310,9 @@ Tasks: T-2314, T-2412, T-2581
 ## TEXTSPLIT: argument errors first, an all-empty result
 Rule: TEXTSPLIT checks its arguments in this order, the first failure being the result: the text (an error); a delimiter that is
 itself an error (col_delimiter, then row_delimiter); ignore_empty (an error, or a value that is not a boolean or number: `#VALUE!`);
-match_mode, alike; an array pad_with (`#VALUE!`); an error element of a delimiter list (an array holding an error, or an OFFSET array
-of references, which is `#VALUE!`); then TEXTSPLIT's own `#VALUE!` for an empty delimiter, no delimiter or empty text.
+match_mode, alike; an error element of a delimiter list (an array or a multi-cell range holding an error, or an OFFSET array
+of references, which is `#VALUE!`); an array pad_with (`#VALUE!`); then TEXTSPLIT's own `#VALUE!` for an empty delimiter, no
+delimiter or empty text (the last three are all `#VALUE!`, so their order among themselves is unobservable).
 So `TEXTSPLIT("abc",",",NA(),1/0)` is `#N/A` and `TEXTSPLIT("abc",",",NA(),"x")` `#N/A`, but `TEXTSPLIT("abc",{",",#N/A},,1/0)` is
 `#DIV/0!`; `TEXTSPLIT("abc",",",,1/0,NA())` is `#DIV/0!`, `TEXTSPLIT("abc",",",,"x",NA())` `#VALUE!`; `TEXTSPLIT("abc",",",,1/0,,{1,2})`
 is `#DIV/0!`, `TEXTSPLIT("abc",NA(),,,,{1,2})` and `TEXTSPLIT("abc",",",,,NA(),{1,2})` are `#N/A`; `TEXTSPLIT("abc",",",
@@ -1330,11 +1343,21 @@ A one-cell range `TRANSPOSE(B2:B2)` is the value too, while a 1x1 array stays an
 A blank cell transposes to a blank value: `ISBLANK(TRANSPOSE(B10))` is FALSE and `FTEST(TRANSPOSE(B10),{1;2;3})` is the
 one-value `#DIV/0!`, not the blank-cell `#VALUE!` (A92, A93).
 Ours: since T-2455 (`fn_transpose`: a 1x1 result of an argument that did not evaluate to an array is its element).
-Unprobed: an array pad_with against an error element of a delimiter list (ours: the pad_with `#VALUE!`), and a one-cell reference to an
-error cell as the delimiter, which ours reads as a list, so `TEXTSPLIT("abc",B1,,1/0)` with B1 `#N/A` is ours `#DIV/0!`.
-Ours: this order and the `#CALC!` since T-2315 (`fn_textsplit`, `textsplit_element` in functions/text/textsplit.rs).
+A one-cell reference to an error cell is a delimiter that is itself an error, in every spelling: with B1 `#N/A`,
+`TEXTSPLIT("abc",F,,1/0)`, `TEXTSPLIT("abc",F,,"x")` and `TEXTSPLIT("abc",F)` are all `#N/A` for F = `B1`, `B1:B1`, `$B$1`,
+`Calc!B1`, `INDEX(B1:B2,1)` and a defined name for B1, and for a LET-bound `B1` (probes/t4198-textsplit-error-ref-delimiter A1-A21);
+the same as row_delimiter, `B1` or `B1:B1` (A22-A27). So it does not follow TOCOL's rule that a one-cell error reference is a 1x1
+array (arrays.md, T-3497). An error text still comes first (`TEXTSPLIT(B2,B1)` with B2 `#DIV/0!` is `#DIV/0!`, also with `B1:B1` or as
+row_delimiter, A28-A31); a one-cell reference to "," splits (A32, A33). A two-cell range of errors is a list: `TEXTSPLIT("abc",B1:B2,,1/0)`
+is `#DIV/0!`, with ignore_empty `"x"` `#VALUE!`, alone `#N/A` (A34-A36). An error element of a list beats an array pad_with:
+`TEXTSPLIT("a,b;c",{",",#N/A},";",,,{1,2})`, `TEXTSPLIT("abc",{",",#N/A},,,,{1,2})` and the same over the range B1:C1 (C1 ",") are
+`#N/A` (A37-A40), as are `TEXTSPLIT("abc",B1,,,,{1,2})` and its `B1:B1` form (A42, A43). TEXTBEFORE and TEXTAFTER read `B1` and
+`B1:B1` alike too (`#N/A`, also against an instance_num `1/0`, A44-A51).
+Evidence for this paragraph: probes/t4198-textsplit-error-ref-delimiter (excel-graph, 2026-11-04, T-4198).
+Ours: this order and the `#CALC!` since T-2315 (`fn_textsplit`, `textsplit_element` in functions/text/textsplit.rs); a one-cell
+reference read as its cell's value, and the list errors before the array pad_with, since T-4198.
 Status: VERIFIED (excel-graph)
-Tasks: T-2315
+Tasks: T-2315, T-4198
 
 
 ## TEXTSPLIT: column delimiters first, match_mode 0 or 1
@@ -1375,6 +1398,12 @@ intersected. An error element (`CHAR(0)` is `#VALUE!`, a `#N/A` cell) is the joi
 Evidence: probes/t3302-text-funcs-arrays (E1-E20, oracle-filled). The probe shows
 `CONCAT`/`TEXTJOIN` over `CHAR`, `UNICHAR`, `CODE`, `UNICODE` ranges and computed arrays already
 agree; the only gap was `CHAR`, fixed in T-3302.
+
+Per-element errors (T-2946, probes/t2946-char-array, excel-graph 2026-11-06, 18/18 cells match): in a spilled
+`CHAR(array)` an element 0, 256, text ("x") or blank gives `#VALUE!` in its own slot and the neighbours keep their
+characters (`CHAR({65;0;66})` is "A", `#VALUE!`, "B"; same for 256 and "x"; `CHAR(A1:A5)` over 65, 256, "x", blank, 66 is
+"A", `#VALUE!`, `#VALUE!`, `#VALUE!`, "B"). `=LET(s,SEQUENCE(10),CONCAT(CHAR(48+s)))` is "123456789:" and
+`CONCAT(IF(SEQUENCE(3)>1,CHAR(80+SEQUENCE(3)),CHAR(48+SEQUENCE(3))))` is "1RS". The engine already did all of this.
 
 ## ARRAYTOTEXT format range lifts and spills; TEXTJOIN text ignore_empty beats an error delimiter (T-3512 batch)
 

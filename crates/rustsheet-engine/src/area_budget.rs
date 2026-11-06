@@ -7,6 +7,10 @@
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
+    functions::util::collation::{
+        restore_compared_ticks, restore_cut_short, set_compared_allowance, take_compared_ticks,
+        take_cut_short,
+    },
     limits::too_many_visits,
     model::Model,
     recalc_budget::RunBound,
@@ -80,6 +84,16 @@ pub(crate) const CELL_UNITS: u64 = 3;
 
 /// Bytes of a text value charged as one work unit ([`MAX_FORMULA_WORK`]).
 pub(crate) const TEXT_BYTES_PER_UNIT: u64 = 4;
+
+/// Ticks of text comparison charged as one work unit ([`MAX_FORMULA_WORK`],
+/// [`Model::spend_compared`]). A tick is about the time of one byte of the ASCII first pass of a
+/// comparison (about 1.6 ns, release build); the slower paths (the second pass, non-ASCII text,
+/// collation keys, folds) note several ticks a character, each fitted by time
+/// (`functions::util::collation::compared`; SPEC-0024 section 4, T-4233; the timings are in
+/// arrays.md "One formula evaluation does at most 268,435,456 work units"). At 16, each path's
+/// worst case reaches the limit in about 7 s or less, and a single SORT of a million texts
+/// sharing a 100-character prefix still computes.
+pub(crate) const COMPARED_TICKS_PER_UNIT: u64 = 16;
 
 /// Work units of one visit of a per-call cap (`limits::MAX_LIFTED_CELL_VISITS`: a lifted call's
 /// cell visits and kernel units, GROUPBY and PIVOTBY's) ([`MAX_FORMULA_WORK`]). One, the cap's own
@@ -216,6 +230,19 @@ pub(crate) fn text_units(bytes: usize) -> u64 {
         .div_ceil(TEXT_BYTES_PER_UNIT)
 }
 
+/// The ticks of text comparison `work` units pay for ([`COMPARED_TICKS_PER_UNIT`] each): pending
+/// ticks past it make the next [`Model::spend_compared`] fail ([`compared_units`] rounds up), so
+/// the readers may stop there (`set_compared_allowance`, T-4278).
+pub(crate) fn compared_allowance(work: u64) -> u64 {
+    work.saturating_mul(COMPARED_TICKS_PER_UNIT)
+}
+
+/// The units of `ticks` ticks of text comparison ([`Model::spend_compared`]): one per
+/// [`COMPARED_TICKS_PER_UNIT`], rounded up.
+pub(crate) fn compared_units(ticks: u64) -> u64 {
+    ticks.div_ceil(COMPARED_TICKS_PER_UNIT)
+}
+
 /// The units of building a `rows` x `columns` array: [`CELL_UNITS`] per cell, saturating, so an
 /// oversized shape fails its charge instead of wrapping into a small one.
 pub(crate) fn cell_units(rows: usize, columns: usize) -> u64 {
@@ -254,8 +281,26 @@ impl Model {
         #[cfg(test)]
         let fresh = self.start_run(self.area_budget.limit);
         let outer = std::mem::replace(&mut self.area_budget, fresh);
+        // The outer run's node may have compared texts before it read this cell: those ticks are
+        // its own, so they wait until this run is done ([`Model::spend_compared`]). At the top
+        // level this also sets aside ticks noted outside any run (an API sort, say), so no run
+        // ever pays for them.
+        let outer_compared = take_compared_ticks();
+        // The readers stop once the pending ticks pass what this run has left (T-4278); the
+        // interrupted run's allowance and cut-short mark come back afterwards.
+        let outer_allowance = set_compared_allowance(compared_allowance(self.area_budget.work));
+        let outer_cut_short = take_cut_short();
         let result = f(self);
+        // Ticks a run noted after its last node (none today) are not charged to the outer one.
+        let _ = take_compared_ticks();
+        restore_compared_ticks(outer_compared);
+        set_compared_allowance(outer_allowance);
+        let cut_short = take_cut_short();
+        restore_cut_short(outer_cut_short);
         let mut inner = std::mem::replace(&mut self.area_budget, outer);
+        // A reader that stopped short returned a value it did not compute: the run is past its
+        // budget whether or not the charge that fails came (`compared::out_of_ticks`).
+        inner.work_exceeded |= cut_short;
         // Past the work budget, the run was cut short wherever the charge failed, and `f` may have
         // turned that into a value (`IFERROR`), so the formula's value is the error (SPEC-0024).
         let exceeded = self.end_run(&mut inner, cell);
@@ -313,9 +358,13 @@ impl Model {
         self.spend_work(NODE_UNITS, cell)
     }
 
-    /// `value`, a node's, once charged ([`Model::spend_value`]), or the budget's error.
+    /// `value`, a node's, once charged ([`Model::spend_value`]) with the text its comparisons read
+    /// ([`Model::spend_compared`]), or the budget's error.
     #[inline]
     pub(crate) fn charged(&mut self, value: CalcResult, cell: CellReferenceIndex) -> CalcResult {
+        if let Err(error) = self.spend_compared(cell) {
+            return error;
+        }
         match self.spend_value(&value, cell) {
             Ok(()) => value,
             Err(error) => error,
@@ -338,6 +387,27 @@ impl Model {
             _ => return Ok(()),
         };
         self.spend_work(units, cell)
+    }
+
+    /// Charges the text comparison ticks since the last node ([`take_compared_ticks`],
+    /// [`compared_units`]): the node that just ran pays for the texts its reader compared, keyed or
+    /// folded (MATCH, the lookups, UNIQUE, SORT, the criteria, GROUPBY), which its cell charges do not
+    /// cover when it reads a bound array of long texts again and again (SPEC-0024 section 1, "text
+    /// values"; T-4233). [`Model::charged`] runs it for each node `evaluate_node_in_context` ends.
+    #[inline]
+    pub(crate) fn spend_compared(&mut self, cell: CellReferenceIndex) -> Result<(), CalcResult> {
+        let charged = match take_compared_ticks() {
+            0 => Ok(()),
+            ticks => self.spend_work(compared_units(ticks), cell),
+        };
+        // What the next node's readers may compare before its charge must fail (T-4278).
+        let left = if self.area_budget.work_exceeded {
+            0
+        } else {
+            self.area_budget.work
+        };
+        set_compared_allowance(compared_allowance(left));
+        charged
     }
 
     /// Charges a LAMBDA value made with body `body`: [`LAMBDA_UNITS`] for storing it and the

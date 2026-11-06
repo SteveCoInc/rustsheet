@@ -22,23 +22,19 @@ use crate::{
 };
 
 /// `P = (1+r)^n` as Excel's PV and FV compute it: `1+r` with Excel's `+` and the power with its `^`
-/// (right-to-left square-and-multiply for an integer `n`). With [`annuity_factor`] this matches all
+/// (right-to-left square-and-multiply for an integer `n`). With [`annuity_factor_rounded`] this
+/// matches all
 /// 308 PV and 308 FV cells of probes-numeric/m9-fin-pv-fv (docs/excel-semantics/financial.md
 /// "Annuity evaluation order"; fit lab `annuity-pv`, `annuity-fv`, T-1524).
 pub(super) fn annuity_power(rate: f64, nper: f64) -> Result<f64, Error> {
     power(extended_sum(1.0, rate), nper)
 }
 
-/// The annuity factor `k*((P-1)/r)`, `k = 1+r*type`, evaluated in doubles in exactly this
-/// parenthesization: `(pmt*k)*((P-1)/r)` instead misses 38 of the 308 PV cells (financial.md).
-pub(super) fn annuity_factor(rate: f64, p: f64, period_start: bool) -> f64 {
-    let k = if period_start { 1.0 + rate } else { 1.0 };
-    k * ((p - 1.0) / rate)
-}
-
-/// [`annuity_factor`] with each `+`, `*` and `/` Excel's twice-rounded operator: RATE's residual
-/// (`financial_util::rate_residual`), where the once-rounded factor misses 4 of the 782 fit-lab
-/// cells (financial.md "RATE is a secant on the FV residual", T-2527).
+/// The annuity factor `k*((P-1)/r)`, `k = 1+r*type`, in exactly this parenthesization (`(pmt*k)*
+/// ((P-1)/r)` misses 38 of the 308 PV cells), with each `+`, `*` and `/` Excel's twice-rounded
+/// operator: RATE's residual (`financial_util::rate_residual`, T-2527), FV and PV (T-4146: the
+/// once-rounded factor misses all 360 cancelling FV/PV calls of probes/t4146-annuity-twice-*;
+/// financial.md "FV and PV round each operation twice").
 pub(super) fn annuity_factor_rounded(rate: f64, p: f64, period_start: bool) -> f64 {
     let k = if period_start {
         extended_sum(1.0, rate)
@@ -69,6 +65,10 @@ const ACCURATE_EXPONENT_LIMIT: f64 = 4_294_967_296.0; // 2^32
 /// quotients PMT, IPMT and PPMT build on P keep their low parts normal.
 const ACCURATE_GROWTH_MIN: f64 = 1e-270;
 const ACCURATE_GROWTH_MAX: f64 = 1e270;
+
+/// Below this positive rate NPER returns the math, not Excel's value (decision 0188 R3, the owner's
+/// region; financial.md "NPER at a tiny positive rate", MATH-OVER-EXCEL).
+const NPER_MATH_RATE: f64 = 1e-14;
 
 /// `(1+rate)^n` in double-double arithmetic, for |n| up to [`ACCURATE_EXPONENT_LIMIT`]: the
 /// integer part of `n` by right-to-left square-and-multiply from the exact `1+rate` (relative
@@ -291,34 +291,6 @@ fn discounted_principal(
     usable.then_some(principal)
 }
 
-/// Where IPMT's exact balance and [`discounted_interest`] differ by more than this relative
-/// amount (about 3 ulp), Excel has the discounted one; below it the exact one matches Excel's bits
-/// more often (financial.md "IPMT follows Excel's own discount where it moves the value"). 3E-16
-/// and 1E-15 each fit fewer cells than 5E-16 to 7E-16 (T-2587).
-/// FITTED(T-2587, 8 cells, IPMT nper 167..1E300, rate -0.05..10)
-const DISCOUNTED_INTEREST_FROM: f64 = 6e-16;
-
-/// IPMT on Excel's own discount, as [`discounted_principal`] has PPMT: `-rate*((pv+fv)*Y - fv)` in
-/// doubles, divided by `1+rate` for type 1, with `Y = expm1((period-1-nper)*L)/expm1(-nper*L)`,
-/// Excel's expm1 and [`growth_log`]'s L. For long terms at negative rates `(1+rate)^-nper` is huge
-/// and carries L's error into the value (`IPMT(-0.05,10,336,1)` is 0.03151246988087522, the exact
-/// value 0.03151246988087528; gen-m9 e168be7f6d3f84c2 A385). `None` where it is not finite.
-fn discounted_interest(
-    rate: f64,
-    nper: f64,
-    period: f64,
-    (pv, fv): (f64, f64),
-    period_start: bool,
-) -> Option<f64> {
-    let log = growth_log(rate);
-    let share = excel_expm1((period - 1.0 - nper) * log) / excel_expm1(-nper * log);
-    let mut interest = -rate * ((pv + fv) * share - fv);
-    if period_start {
-        interest /= 1.0 + rate;
-    }
-    interest.is_finite().then_some(interest)
-}
-
 /// `(1+rate)^x` for `x <= 0` as [`accurate_growth`] has it, and 0 where that declines for a
 /// positive rate (the power is then below 1E-270, which a double near 1 cannot see).
 fn accurate_discount(rate: f64, x: f64) -> Option<Pair> {
@@ -370,7 +342,7 @@ fn balance_interest(
         // probes/t2665-ipmt-fractional-nper-past-range, fin-ipmt-ppmt-huge-rate A186 and gen-m9
         // b73c6cc96e093f03 A268; financial.md "IPMT cancels on fv". IPMT itself now takes
         // `discounted_split`, which explains these cells (T-2243); this switch is left for the
-        // non-finite fallback and CUMIPMT's exact sum, TODO(T-3179).
+        // non-finite fallback and CUMIPMT's exact sum, TODO(T-4197).
         -balance.0 * (rate / (1.0 + rate))
     } else if period_start {
         dd_div(dd_neg(dd_mul(balance, (rate, 0.0))), two_sum(1.0, rate)).0
@@ -551,9 +523,13 @@ fn compute_future_value(
         return Err(Error::DIV);
     }
 
-    // FV = -(pv*P + pmt*(k*((P-1)/r))), every operation in doubles (financial.md)
+    // FV = -(pv*P + pmt*(k*((P-1)/r))), every `+`, `*` and `/` Excel's twice-rounded operator
+    // (financial.md "FV and PV round each operation twice", T-4146)
     let p = annuity_power(rate, nper)?;
-    let fv = -(pv * p + pmt * annuity_factor(rate, p, period_start));
+    let fv = -extended_sum(
+        extended_product(pv, p),
+        extended_product(pmt, annuity_factor_rounded(rate, p, period_start)),
+    );
     if fv.is_nan() {
         return Err(Error::NUM);
     }
@@ -564,8 +540,8 @@ fn compute_future_value(
 }
 
 /// `(IPMT, PPMT)` of one period, each with its own error: [`discounted_split`] where it is
-/// finite; the forms after it (the exact split, [`discounted_principal`], [`balance_interest`],
-/// [`discounted_interest`] and the FV recurrence) decide elsewhere. Past PMT's overflow
+/// finite; the forms after it (the exact split, [`discounted_principal`], [`balance_interest`]
+/// and the FV recurrence) decide elsewhere. Past PMT's overflow
 /// at a positive rate IPMT and PPMT keep their values (`PPMT(1E+307,7,292,
 /// 176644,89)` is 0, gen-m9 3aa168259335be54 A340), and IPMT is 0 in period 1 of type 1 even where
 /// PMT is `#NUM!` (`IPMT(-0.5,1,2000,1,0,1)`, probes/fin-ipmt-ppmt-huge-rate B1).
@@ -636,24 +612,15 @@ fn period_payments(
             .or_else(|| {
                 discounted_principal(rate, period_count, period, values, period_start, true)
             });
+        // Where T-2243's split declines, the exact balance interest. T-2587's switch to Excel's
+        // own discount past 6E-16 moved no cell once that split landed: no gated cell, and none of
+        // the 234 cells of probes-numeric/t3523-ipmt-selector-sweep that reach this branch, where
+        // Excel is `#NUM!` on every one (T-3523, decision 0188 R4; T-4314 owns the errors).
         interest = match balance_interest(rate, period_count, period, values, period_start) {
             Some((interest, true)) => Some(interest),
-            balance => {
-                let exact = split
-                    .map(|(interest, _)| interest.0)
-                    .or(balance.map(|(interest, _)| interest));
-                let discounted =
-                    discounted_interest(rate, period_count, period, values, period_start);
-                // An exact 0 makes the ratio NaN (keeps 0) or infinite (takes the finite discount).
-                match (exact, discounted) {
-                    (Some(exact), Some(discounted))
-                        if ((discounted - exact) / exact).abs() > DISCOUNTED_INTEREST_FROM =>
-                    {
-                        Some(discounted)
-                    }
-                    _ => exact,
-                }
-            }
+            balance => split
+                .map(|(interest, _)| interest.0)
+                .or(balance.map(|(interest, _)| interest)),
         };
     }
     if let (Some(interest), Some(principal)) = (interest, principal) {
@@ -752,7 +719,8 @@ impl Model {
         if rate == 0.0 {
             return Ok(-future_value - payment * period_count);
         }
-        // PV = -(fv + pmt*(k*((P-1)/r)))/P, every operation in doubles (financial.md). P is Excel's
+        // PV = -(fv + pmt*(k*((P-1)/r)))/P, every `+`, `*` and `/` Excel's twice-rounded operator
+        // (financial.md "FV and PV round each operation twice", T-4146). P is Excel's
         // `^`, with its errors: a rate of -1 with nper 0 is 0^0, `#NUM!` (`PV(-1,0,-713)`), and a P
         // of 0 (a rate of -1, or one so near it that P underflows) is the division's `#DIV/0!`
         // (`PV(-1+2^-52,165,-978,224,0)`; probes/t2475-stat-subexpressions A39, A136).
@@ -760,7 +728,13 @@ impl Model {
         if p == 0.0 {
             return Err(div_error(cell));
         }
-        let result = -(future_value + payment * annuity_factor(rate, p, period_start)) / p;
+        let result = -extended_quotient(
+            extended_sum(
+                future_value,
+                extended_product(payment, annuity_factor_rounded(rate, p, period_start)),
+            ),
+            p,
+        );
         if result.is_nan() || result.is_infinite() {
             return Err(num_error(cell));
         }
@@ -820,18 +794,30 @@ impl Model {
         // log1p gives 11 (financial.md "Annuity evaluation order"; fit lab `annuity-nper`, T-1524).
         let k = if period_start { 1.0 + rate } else { 1.0 };
         let payment_k = payment * k;
-        let ratio = (payment_k - future_value * rate) / (payment_k + present_value * rate);
-        if ratio.is_nan() || ratio <= 0.0 || ratio.is_infinite() {
-            return Err(num_error(cell));
-        }
         // A rate so small that 1+rate is 1 divides by ln 1 = 0: `#DIV/0!` (`NPER(1E-300,-236,2766,945)`,
-        // gen-m9/3c06f9298f65a3ba A148; probes/t2475-stat-subexpressions A92).
+        // gen-m9/3c06f9298f65a3ba A148; probes/t2475-stat-subexpressions A92), before a non-positive
+        // ratio's `#NUM!` (`NPER(1E-17,0,100,200,0)`, probes-numeric/t3367-nper-tiny-rate A7, A14, A21).
         let growth_log = (1.0 + rate).ln();
         if growth_log == 0.0 {
             return Err(div_error(cell));
         }
-        // The final division is Excel's `/`, rounded twice (A9 `NPER(0.2,-1000,-1000,20000)`)
-        let result = extended_quotient(ratio.ln(), growth_log);
+        let ratio = (payment_k - future_value * rate) / (payment_k + present_value * rate);
+        if ratio.is_nan() || ratio <= 0.0 || ratio.is_infinite() {
+            return Err(num_error(cell));
+        }
+        let result = if rate > 0.0 && rate < NPER_MATH_RATE {
+            // Decision 0188 R3 (financial.md "NPER at a tiny positive rate", MATH-OVER-EXCEL): below
+            // 1E-14 Excel's ln of the doubles 1+rate and ratio is up to 46% off the period count
+            // (probes-numeric/t3367-nper-tiny-rate), so the value is the math, from the exact
+            // difference ratio - 1 = -(fv+pv)·rate / (pmt·k + pv·rate) and log1p; Excel's errors
+            // above still decide which cells are errors.
+            let excess =
+                -(future_value + present_value) * rate / (payment_k + present_value * rate);
+            excess.ln_1p() / rate.ln_1p()
+        } else {
+            // The final division is Excel's `/`, rounded twice (A9 `NPER(0.2,-1000,-1000,20000)`)
+            extended_quotient(ratio.ln(), growth_log)
+        };
         if !result.is_finite() {
             return Err(num_error(cell));
         }

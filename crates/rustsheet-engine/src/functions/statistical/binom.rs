@@ -1,14 +1,15 @@
 //! BINOM.DIST, BINOM.DIST.RANGE, BINOM.INV and NEGBINOM.DIST (and BINOMDIST, CRITBINOM,
 //! NEGBINOMDIST): every argument lifts over an array and a range (SPEC-0011;
 //! probes/stat-argument-modes H105-H131, H374-H384, probes/stat-later-argument-lift H11-H23,
-//! K15-K16). BINOM.DIST, BINOM.DIST.RANGE and NEGBINOM.DIST sum their pmf terms in double-double
-//! (`discrete.rs`, T-0927), and past that walk's budget fall back to statrs' incomplete beta, a
-//! continued fraction of at most 140 steps, as BINOM.INV's search does throughout. BINOM.DIST at
-//! k = 0, and its pmf at k = n, take Excel's closed forms instead (T-2645).
+//! K15-K16). The BINOM.DIST and NEGBINOM.DIST pmfs are Loader's kernel in Excel's arithmetic
+//! (T-2146). Their cdfs and BINOM.DIST.RANGE take Excel's closed forms and the bratio port, or sum
+//! their pmf terms in double-double (`discrete.rs`, T-0927), and past that walk's budget fall back
+//! to statrs' incomplete beta, a continued fraction of at most 140 steps, as BINOM.INV's search
+//! does throughout. BINOM.DIST at k = 0, and its pmf at k = n, take Excel's closed forms (T-2645).
 
 use statrs::distribution::{Binomial, Discrete, DiscreteCDF, NegativeBinomial};
 
-use super::bratio::{closed_or_ported_tails, dispatch, ported_tails, Branch};
+use super::bratio::{closed_or_ported_tails, dispatch, l140_overflows, ported_tails, Branch};
 use super::discrete::{binomial_cdf, binomial_pmf, binomial_range, odds, times_ratio};
 use super::incomplete_beta::closed_form_tails;
 use super::loader::excel_dbinom_exponent;
@@ -301,6 +302,10 @@ impl Model {
             if let Some((lower, _)) = closed_form_tails(x, y, a, b) {
                 return Ok(lower);
             }
+            // Excel's kernel is `#NUM!` where bratio's L140 bup sum overflows (T-3576).
+            if l140_overflows(a, b, x, y) {
+                return Err(num_error(cell));
+            }
             // bfrac's points take the double-double walk below first, and bfrac only past its
             // budget: Excel's `NEGBINOM.DIST(1,100,0.99,TRUE)` (ironcalc-calc BINOM.xlsx
             // NEGBINOM.DIST!E39) is the correctly rounded I_0.99(100, 2), which the walk hits and
@@ -312,9 +317,15 @@ impl Model {
                 }
             }
         }
+        // The pmf is Excel's own kernel ([`excel_negbinom_pmf`], T-2146), before the walk.
+        if !cumulative && number_f + number_s < 2f64.powi(53) {
+            if let Some(pmf) = excel_negbinom_pmf(number_f, number_s, probability_s) {
+                return Ok(pmf);
+            }
+        }
         // F failures before the r-th success: P(F <= f) is P(at most f failures in f + r trials),
         // a binomial cdf whose "success" is a failure, and P(F = f) = r / (f + r) times that
-        // binomial's pmf at f.
+        // binomial's pmf at f (where Excel's kernel is not finite).
         if number_f + number_s < 2f64.powi(53) {
             let r_u = number_s as u64;
             let trials = f_u + r_u;
@@ -339,20 +350,6 @@ impl Model {
             };
             if let Some(result) = walked {
                 return Ok(result);
-            }
-            // Past the walk's budget the pmf is p times the shifted binomial kernel
-            // dbinom_raw(r - 1, f + r - 1, p, q) (statistics.md "NEGBINOM.DIST pmf sits on the
-            // shifted binomial kernel"), Loader's in the interior and q^f at r = 1 (T-3352: statrs
-            // was 3E-11 off at f = 1E4 and 9E-6 at 1E9).
-            if !cumulative {
-                let kernel = if r_u == 1 {
-                    Some(excel_exp(number_f * excel_ln_one_minus(probability_s)))
-                } else {
-                    loader_pmf(number_s - 1.0, number_f + number_s - 1.0, probability_s)
-                };
-                if let Some(kernel) = kernel {
-                    return Ok(flush_subnormal(probability_s * kernel));
-                }
             }
         }
         if walk_first {
@@ -412,9 +409,9 @@ impl Model {
 /// pmf, and so the cdf, is EXP(fl(n·l)) with l Excel's ln(1 - p), bit-exact on all 345
 /// BINOM.DIST(0,n,p) cells of the T-2464 research set; at k = n it is EXP(fl(n·LN(p))), 172 of
 /// 172. Off those a subnormal pmf is 0, as in Excel (`(x)=0` TRUE: probes-numeric/
-/// t2513-r3-binom-pmf-n E1729:E1792; numbers.md "Distribution densities"). Past the walk's budget
-/// it is Excel's own interior kernel, Loader's `dbinom_raw` (T-3352: statrs' log-gamma difference
-/// was 1E-11 off at n = 1E4 and 1E-6 at 1E9).
+/// t2513-r3-binom-pmf-n E1729:E1792; numbers.md "Distribution densities"). In between it is
+/// Excel's own interior kernel, Loader's `dbinom_raw` (T-3352, T-2146), and the exact walk only
+/// where that kernel is not finite.
 fn excel_binom_pmf(n: u64, p: f64, k: u64) -> Option<f64> {
     if k == 0 {
         return Some(excel_binom_at_zero(n, p));
@@ -422,9 +419,33 @@ fn excel_binom_pmf(n: u64, p: f64, k: u64) -> Option<f64> {
     if k == n {
         return Some(excel_exp(n as f64 * excel_ln(p)));
     }
-    binomial_pmf(n, odds(p), k)
-        .map(|pmf| flush_subnormal(pmf.to_f64()))
-        .or_else(|| loader_pmf(k as f64, n as f64, p))
+    // Loader's kernel first, everywhere in the interior (T-2146): its model of Excel's stored chain
+    // is not bit-exact, but it beats the exact walk on every sweep, the fresh one included
+    // (statistics.md "BINOM.DIST and NEGBINOM.DIST pmfs take Loader's kernel everywhere"). The walk
+    // is left for points where a piece of the kernel is not finite (an n p that underflows).
+    loader_pmf(k as f64, n as f64, p)
+        .or_else(|| binomial_pmf(n, odds(p), k).map(|pmf| flush_subnormal(pmf.to_f64())))
+}
+
+/// Excel's NEGBINOM.DIST pmf `P(F = f)` for `0 < p < 1` and r >= 1 (statistics.md "NEGBINOM.DIST
+/// pmf sits on the shifted binomial kernel", "BINOM.DIST and NEGBINOM.DIST pmfs take Loader's
+/// kernel everywhere"): EXP(fl(r·LN(p))) at f = 0, kept when subnormal (`NEGBINOMDIST(0,1,1E-200)`
+/// 9.99999999999978E-201, gen-m9 d8f44d556674c2fd A281; probes/t2706-subnormal-density-paths
+/// B12:B13); p times the shifted kernel otherwise, q^f = EXP(fl(f·l)) at r = 1 and Loader's
+/// `dbinom_raw(r - 1, f + r - 1, p, q)` above, a subnormal result flushed to 0 (t2706 B9:B11).
+/// `None` where the kernel is not finite.
+fn excel_negbinom_pmf(f: f64, r: f64, p: f64) -> Option<f64> {
+    if f == 0.0 {
+        let pmf = excel_exp(r * excel_ln(p));
+        return pmf.is_finite().then_some(pmf);
+    }
+    let kernel = if r == 1.0 {
+        Some(excel_exp(f * excel_ln_one_minus(p)))
+    } else {
+        loader_pmf(r - 1.0, f + r - 1.0, p)
+    }?;
+    let pmf = p * kernel;
+    pmf.is_finite().then(|| flush_subnormal(pmf))
 }
 
 /// Excel's binomial cdf `P(X <= k)` for `0 < p < 1`, as BINOM.DIST computes it, or `None` where

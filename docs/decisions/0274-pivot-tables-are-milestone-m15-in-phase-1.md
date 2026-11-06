@@ -43,7 +43,7 @@
      the row exists the milestone counts as not met.
 - **Consequences:**
   - M15 tasks are filed under docs/tasks/M15 from the plan's task list.
-  - Implementation follows SPEC-0030, written as its own task.
+  - Implementation follows SPEC-0032, written as its own task.
   - scripts/phase1_exit.py gains M15 with the report row (its own task); until then the script still
     lists M1–M11.
   - Because M15 comes last in Phase 1's order, workers reach it after the earlier milestones unless the

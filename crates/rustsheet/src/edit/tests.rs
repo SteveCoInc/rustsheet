@@ -255,6 +255,33 @@ fn defined_names_apply_and_roll_back() {
         .unwrap();
 }
 
+/// An unqualified reference in an API-defined name binds to the first sheet, not the name's own:
+/// Graph `worksheets('S2')/names/add` of `Rate` = `=$B$1` reads First!B1 from S2 and from Last
+/// (probes/t4353-api-name-unqualified-ref S2!A3, S2!A7, Last!A3; docs/excel-semantics/syntax.md "An
+/// unqualified reference in an API-defined name"; T-4353).
+#[test]
+fn an_unqualified_name_reference_binds_to_the_first_sheet() {
+    let mut wb = book();
+    wb.edit(|tx| {
+        let s2 = tx.add_sheet("S2")?;
+        tx.set("B1", 1.0)?;
+        tx.set("B2", 10.0)?;
+        tx.set("S2!B1", 7.0)?;
+        tx.set("S2!B2", 70.0)?;
+        tx.define_sheet_name(s2, "Rate", "=$B$1")?;
+        tx.define_sheet_name(s2, "Span", "=$B$1:$B$2")?;
+        tx.define_name("W", "=$B$1")?;
+        tx.set("S2!A1", Input::Formula("=S2!Rate".into()))?;
+        tx.set("S2!A2", Input::Formula("=SUM(Span)".into()))?;
+        tx.set("S2!A3", Input::Formula("=W".into()))?;
+        Ok(())
+    })
+    .unwrap();
+    assert_eq!(wb.value("S2!A1").unwrap(), Value::Number(1.0));
+    assert_eq!(wb.value("S2!A2").unwrap(), Value::Number(11.0));
+    assert_eq!(wb.value("S2!A3").unwrap(), Value::Number(1.0));
+}
+
 #[test]
 fn sheet_names_are_local_and_roll_back() {
     let mut wb = book();

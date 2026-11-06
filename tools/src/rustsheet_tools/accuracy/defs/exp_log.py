@@ -35,7 +35,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars
+from rustsheet_tools.accuracy.defs._common import scalars, signed
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -131,10 +131,6 @@ def _power(args: Sequence[MathArg]) -> mpmath.mpf:
     return -magnitude  # an odd root of a negative base
 
 
-def _signed(rng: random.Random, magnitude: float) -> float:
-    return -magnitude if rng.random() < 0.5 else magnitude
-
-
 def _away_from(x: float, band: tuple[float, float]) -> float:
     """Move a draw out of an unpinned band to its probed lower end."""
     return math.copysign(band[0], x) if band[0] < abs(x) < band[1] else x
@@ -146,9 +142,9 @@ def _exp_draw(stratum: str, rng: random.Random) -> list[Arg]:
     elif stratum == "edge":
         x = rng.choice((0.0, 1.0, -1.0, 709.78, 710.0, -745.0, -1000.0, 1e-300, 2958465.0, MAX_LITERAL))
     elif stratum == "extreme":
-        x = _signed(rng, log_uniform(rng, 10, 709.78))
+        x = signed(rng, log_uniform(rng, 10, 709.78))
     elif stratum == "log-uniform":
-        x = _signed(rng, log_uniform(rng, 1e-300, 709.78))
+        x = signed(rng, log_uniform(rng, 1e-300, 709.78))
     else:
         x = rng.uniform(-20, 20)
     return [_away_from(x, EXP_BAND)]
@@ -158,7 +154,7 @@ def _log_like_draw(stratum: str, rng: random.Random, *, near_one: bool) -> float
     """LN, LOG10, SQRT and SQRTPI's argument (and LOG's number): positive, except the edge stratum's 0 and -1."""
     if stratum == "tail":
         if near_one:
-            return 1 + _signed(rng, 10 ** -rng.uniform(1, 14))
+            return 1 + signed(rng, 10 ** -rng.uniform(1, 14))
         return log_uniform(rng, 1e-300, 1e-100)
     if stratum == "edge":
         return rng.choice((0.0, -1.0, 1.0, 1e-300, MAX_LITERAL, 1e307, 1e-15, 10.0))
@@ -183,7 +179,7 @@ def _log_draw(stratum: str, rng: random.Random) -> list[Arg]:
         )
     number = _log_like_draw(stratum, rng, near_one=True)
     if stratum == "tail" and rng.random() < 0.5:  # a base near 1
-        return [number, 1 + _signed(rng, 10 ** -rng.uniform(1, 14))]
+        return [number, 1 + signed(rng, 10 ** -rng.uniform(1, 14))]
     if stratum in ("extreme", "log-uniform"):
         base = log_uniform(rng, 1e-300, MAX_LITERAL)
     else:
@@ -234,17 +230,17 @@ def _power_pair(stratum: str, rng: random.Random) -> tuple[float, float]:
     if stratum == "tail":
         kind = rng.randrange(3)
         if kind == 0:  # an odd root of a negative base
-            return -log_uniform(rng, 1e-3, 1e3), _signed(rng, 1 / rng.choice((3, 5, 7, 9, 11, 101)))
+            return -log_uniform(rng, 1e-3, 1e3), signed(rng, 1 / rng.choice((3, 5, 7, 9, 11, 101)))
         if kind == 1:  # a negative base to an integer power
             return -rng.uniform(0.5, 10), float(rng.randint(-60, 60))
         # a base near 1 to a large power, the power within the double range
         d = 10 ** -rng.uniform(3, 14)
-        y = _signed(rng, rng.uniform(0.1, 600) / d)
-        return 1 + _signed(rng, d), y
+        y = signed(rng, rng.uniform(0.1, 600) / d)
+        return 1 + signed(rng, d), y
     if stratum in ("extreme", "log-uniform"):
         x = log_uniform(rng, 1e-300, 1e300) if stratum == "extreme" else log_uniform(rng, 1e-10, 1e10)
         span = 700 / max(abs(math.log(x)), 1e-3)  # keeps |y·ln x| below about 700
-        return x, _signed(rng, log_uniform(rng, min(1e-6, span), span))
+        return x, signed(rng, log_uniform(rng, min(1e-6, span), span))
     return rng.uniform(0, 10), rng.uniform(-10, 10)
 
 

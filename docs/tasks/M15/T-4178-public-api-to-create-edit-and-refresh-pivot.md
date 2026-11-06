@@ -14,7 +14,7 @@ depends_on: [T-4151]
 The facade creates a pivot from a definition, edits its fields and options, refreshes it, and returns its result; the Python binding mirrors it.
 
 ## Context
-SPEC-0030 API section; `Txn::add_pivot_table` is doc-hidden test support today. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
+SPEC-0032 API section; `Txn::add_pivot_table` is doc-hidden test support today. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
 ## Acceptance criteria
 - [ ] API tests and Python binding tests.

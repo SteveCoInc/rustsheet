@@ -18,10 +18,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    functions::{
-        lift::{LiftCost, LiftOptions},
-        Function,
-    },
+    functions::lift::{LiftCost, LiftOptions},
     model::Model,
     reference_operators::{Ranges, RefArg},
 };
@@ -244,9 +241,9 @@ impl Model {
             };
             // Several areas are walked as a union's, on the formula's walk budget, as SUM's are.
             let of_union = areas.len() > 1;
-            for area in areas {
+            for area in areas.iter() {
                 if let Err(error) =
-                    self.aggregate_collect_area(&area, of_union, ignore, &mut collected, cell)
+                    self.aggregate_collect_area(area, of_union, ignore, &mut collected, cell)
                 {
                     return error;
                 }
@@ -332,6 +329,11 @@ impl Model {
                     Ok(Vec::new())
                 }
                 error @ CalcResult::Error { .. } => Err(error),
+                // A scalar text or boolean is not a number, not an argument error: it is
+                // skipped, so `AGGREGATE(14,0,"3",1)`, `(14,0,TRUE,1)` and `(14,6,"x",1)` are
+                // #NUM! (no numbers), not #VALUE! (probes/t4193-aggregate-scalar-data-error-order
+                // Calc!A8:A10; docs/excel-semantics/numbers.md "AGGREGATE").
+                CalcResult::String(_) | CalcResult::Boolean(_) => Ok(Vec::new()),
                 _ => Err(CalcResult::new_error(
                     Error::VALUE,
                     cell,
@@ -379,7 +381,6 @@ impl Model {
         collected: &mut Collected,
         cell: CellReferenceIndex,
     ) -> Result<(), CalcResult> {
-        let nested = [Function::Subtotal, Function::Aggregate];
         // The hidden rows of each sheet, read once per AGGREGATE call: a per-cell (or per-area)
         // lookup would rescan the sheet's row styles (cells or areas x styled rows).
         if ignore.hidden {
@@ -408,12 +409,7 @@ impl Model {
                 return Ok(());
             }
             if ignore.nested
-                && model.cell_formula_is_one_of(
-                    position.sheet,
-                    position.row,
-                    position.column,
-                    &nested,
-                )
+                && model.cell_formula_calls_subtotal(position.sheet, position.row, position.column)
             {
                 return Ok(());
             }

@@ -11,7 +11,7 @@ use crate::{
 
 /// RATE's residual f(r) = ((pv·P) + (pmt·(k·((P-1)/r)))) + fv, P = (1+r)^n by FV's power
 /// (`annuity_power`), k = 1+r for type 1, with each `+`, `*` and `/` Excel's twice-rounded operator
-/// ([`annuity_factor_rounded`]; FV's once-rounded `annuity_factor` misses 4 of the 782 fit-lab
+/// ([`annuity_factor_rounded`]; a once-rounded factor misses 4 of the 782 fit-lab
 /// cells); f(0) is the limit pv + pmt·n + fv. `None` where Excel's `^` errs (a power past the
 /// double range). Fit lab `rate` (T-2527): bit-exact on all 782 RATE cells of the fit set, a
 /// nested PMT at Excel's bits (financial.md "RATE is a secant on the FV residual";
@@ -40,7 +40,7 @@ fn rate_residual(
 pub(crate) const RATE_MAX_STEPS: u32 = 200;
 
 /// RATE as Excel computes it: a secant on the residual [`rate_residual`] from r0 = guess and
-/// r1 = r0 - 0.001·sign(f(r0)), each step `r2 = r1 - f1·(r1-r0)/(f1-f0)` with Excel's
+/// r1 = r0 - 0.001 if f(r0) > 0, else r0 + 0.001 (a zero residual steps up, T-3876), each step `r2 = r1 - f1·(r1-r0)/(f1-f0)` with Excel's
 /// twice-rounded `-`, `*` and `/`. It stops at the first iterate with |r2 - r1| < 1e-7 and
 /// |f(r2)| < 1e-7. The iterate of step [`RATE_MAX_STEPS`] is returned unconverged when it passes
 /// a looser test: |r2 - r1|, |f(r2)| and 1 + r2 against 1e-4, all absolute
@@ -131,7 +131,13 @@ fn rate_secant(
     const RATE_RESTART_F_MAX: f64 = 1e-4;
     let residual = |rate: f64| rate_residual(rate, args, period_start).ok_or(Error::NUM);
     let (mut r0, mut f0) = (guess, residual(guess)?);
-    let mut r1 = r0 - OFFSET.copysign(f0);
+    // Only a positive residual steps down: a residual of exactly 0 at the guess steps up, to
+    // guess + 0.001. With every residual rounding noise (nper 1, pv + pmt = 0, fv 0) Excel returns
+    // the guess exactly where f(guess + 0.001) is not 0 (the secant steps back onto the guess) and
+    // is `#NUM!` where it is 0 too (a flat secant on 0), on all 14 such cells of
+    // probes/t3876-rate-noise-residual; stepping down gets 11 (financial.md "RATE steps up from a
+    // zero residual", T-3876).
+    let mut r1 = if f0 > 0.0 { r0 - OFFSET } else { r0 + OFFSET };
     let mut f1 = residual(r1)?;
     for step in 1..=RATE_MAX_STEPS {
         // A flat secant (f1 = f0) has no finite step: 0/0 after a zero-step stall (r1 = r0),
@@ -251,7 +257,7 @@ fn discounted_sum(base: f64, values: &[f64]) -> Option<f64> {
 /// NPV at the discount factor `v` = 1/(1 + r), as IRR's search evaluates it: the
 /// [`discounted_sum`] at x = 1/v, the running product worksheet NPV uses (financial.md "IRR is a
 /// secant in d = 1 - v"; fit lab `irr`, T-3120). `None` when a discount overflows or underflows
-/// or the sum is not finite: that ends the run.
+/// or the sum is not finite: that ends the secant's call with `#DIV/0!` (T-3407).
 fn irr_npv(values: &[f64], v: f64) -> Option<f64> {
     discounted_sum(extended_quotient(1.0, v), values).filter(|total| total.is_finite())
 }
@@ -301,9 +307,10 @@ fn irr_from_discount(v: f64) -> Option<f64> {
     (x < IRR_FAR_ROOT_BOUND).then_some(x - 1.0)
 }
 
-/// One run of IRR's secant from `guess`, or `None` when it fails (a flat secant, an iterate that
-/// is not a positive discount factor, or no stop in 50 steps). The state is d = 1 - v = r/(1 + r),
-/// so from v = 0.5 down the iterates' v = 1 - d sit on Excel's grid of multiples of 2^-53
+/// One run of IRR's secant from `guess`, or why it stopped without a root: [`SecantStop::Failed`]
+/// on a flat secant, an iterate that is not a positive discount factor or no stop in 50 steps;
+/// [`SecantStop::DivZero`] at v = 0 or where NPV cannot be evaluated. The state is
+/// d = 1 - v = r/(1 + r), so from v = 0.5 down the iterates' v = 1 - d sit on Excel's grid of multiples of 2^-53
 /// (probes/t2565-irr-guess-sweeps), and each step is anchored on the newer iterate.
 /// Chosen by scoring on the fit set (financial.md "IRR is a secant in d = 1 - v"): the start offset
 /// of 1E-3 toward larger |NPV| (+1E-3 on both sides scores 121 of 263) and the 1E-7 residual stop
@@ -320,7 +327,13 @@ fn irr_from_discount(v: f64) -> Option<f64> {
 /// FITTED(T-3120, 36 cells, IRR of {-2.5,-1,123456789.123} over a guess sweep)
 fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     const MAX_STEPS: usize = 50;
-    let npv = |d: f64| irr_npv(values, 1.0 - d).ok_or(SecantStop::Failed);
+    // An NPV the run cannot evaluate (a discount power out of the double range, or a sum that is
+    // not finite) ends the call with `#DIV/0!`, worksheet NPV's error for the same sum, and without
+    // the retry from 0.1: probes/t3406-irr-num-boundary A69-A72 and A84-A94, the 7 long-series
+    // hold-out cells of probes-numeric/t3347-irr-conventional-holdout (A123..A143) and 28 cells of
+    // the t3411 fresh sweeps are `#DIV/0!` in Excel exactly where the secant's step lands there
+    // (financial.md "IRR is #DIV/0! where its secant cannot evaluate NPV", T-3407).
+    let npv = |d: f64| irr_npv(values, 1.0 - d).ok_or(SecantStop::DivZero);
     let largest_flow = values.iter().fold(0.0_f64, |m, c| m.max(c.abs()));
     let mut d0 = extended_quotient(guess, 1.0 + guess);
     let mut f0 = npv(d0)?;
@@ -361,7 +374,7 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
 enum SecantStop {
     /// No root: the call retries from 0.1, then falls back ([`compute_irr`]).
     Failed,
-    /// An iterate reached v = 0: the call is `#DIV/0!`.
+    /// An iterate reached v = 0, or NPV could not be evaluated: the call is `#DIV/0!`.
     DivZero,
 }
 
@@ -594,8 +607,10 @@ pub(crate) fn compute_xirr(
 ) -> Result<f64, (Error, String)> {
     const BISECTION_CAP: usize = 200;
     let no_result = || (Error::NUM, "Failed to converge".to_string());
+    // A guess at or below -1 is `#NUM!`: `XIRR({-100,110},{39448,39508},-1)`
+    // (probes/t3312-xirr-guess-dates-weibull A9, T-3312).
     if guess <= -1.0 {
-        return Err((Error::VALUE, "Rate initial guess must be > -1".to_string()));
+        return Err((Error::NUM, "Rate initial guess must be > -1".to_string()));
     }
     // The values cannot be all positive or all negative
     if values.iter().all(|&x| x >= 0.0) || values.iter().all(|&x| x <= 0.0) {

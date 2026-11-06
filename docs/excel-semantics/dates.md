@@ -87,7 +87,7 @@ it runs them, and a WEEKNUM with a return_type of 22 or more, or negative, reads
 - **Emptying:** a scalar WEEKNUM with return_type 12-16 (Tuesday to Saturday starts are never
   kept), one with an always-#NUM! return_type (0, 3-10, 18-20; probed 0, 3, 10, 18, 20), and any WEEKNUM that lifts over an
   array, valid types included (`SUM(WEEKNUM(100,{2,2}))`, `SUM(WEEKNUM({100,101},2))`).
-- **A dynamic-array formula empties it** (T-2068, gen-m6, excel-graph 2026-10-21): with a
+- **A dynamic-array formula empties it** (T-2068, gen-m6, excel-graph 2026-10-21; refined by T-4289: not every anchor does, see "Which calls empty WEEKNUM's state" below): with a
   dynamic-array formula between a reader and the setter that runs before it in the order, the
   reader is `#NUM!` (OFFSET, TRANSPOSE, TRIMRANGE, CHOOSEROWS or CHOOSECOLS, none of them
   calling WEEKNUM). In the evidence none of them spilled: each is `#SPILL!`, an error or a 1×1
@@ -99,7 +99,7 @@ it runs them, and a WEEKNUM with a return_type of 22 or more, or negative, reads
   c4edd76f46980c5f A307 and fde83d52a9d1fc63 A131 and A359, all `#NUM!`; the four readers with no
   dynamic-array formula in between read the setter (121a7c17092038d9 A238 = 33, 3e51213f35889d06 A74,
   c96ac1ada46179c4 A219 and A295). Whether it is the spill itself or where Excel runs the anchor
-  that empties it is open (T-2070).
+  that empties it is open (T-2070); T-4289 answers it, see "Which calls empty WEEKNUM's state" below.
 - **No effect:** a call whose serial is an error (`WEEKNUM(-1,2)`, `WEEKNUM(-1,0)`,
   `ISOWEEKNUM(-1)`), a `#VALUE!` return_type (`TRUE`, `"x"`), a call IF does not run, and WEEKDAY of
   any return_type.
@@ -149,6 +149,59 @@ lifts over one (we leave the state as it is), where a spilling formula sits
 in the order, WEEKNUM in a defined name, LET or LAMBDA, conditional formatting formulas, and
 a return_type in (-1, 0) (truncates to 0, so presumably empties), and whether a reference to an
 uncalculated cell in an IF branch that is not taken also moves the cell.
+
+### Which calls empty WEEKNUM's state (T-4289, VERIFIED)
+Rule: a dynamic-array formula, spilling or not, does NOT empty WEEKNUM's state as such; some calls do, and they are not
+AMORDEGRC's (financial.md "AMORDEGRC below period 1"). Layout: A1 `=WEEKNUM(100,99)`, A2 the formula, A3
+`=WEEKNUM(100,2)` (Monday); the reader reads 16 when A2 keeps the state, `#NUM!` when it empties it.
+- Keep (16): `=1`, `=SEQUENCE(1,2)`, `=SEQUENCE(2,1)` (`#SPILL!`), `=SUM(SEQUENCE(2))`, `=SORT({3,1})`, `=UNIQUE({1,1})`,
+  `={1,2}`, `=TRANSPOSE({1,2})` (`#SPILL!`), `=LET(x,{1,2},x)`, `=LAMBDA(x,x)(1)` and `({1,2})`, `=XLOOKUP(1,{1,2},{5,6})`,
+  `=MMULT({1,2},{3;4})`, `=INDEX({1,2},1)`, `=MDETERM(..)`: 26 of the 27 sheets of
+  probes/weeknum-stale-between-calls (the exception is `=TEXTJOIN(",",1,1,2)`, which empties). A spill does not empty it.
+- Empty (`#NUM!`) with a range argument C1:D2: `CHOOSEROWS(C1:D2,1)`, `CHOOSECOLS(C1:D2,1)`, `TRIMRANGE(C1:D2)` and
+  `(C1:C2)`, `SORT(C1:D2)`, `UNIQUE(C1:D2)`, `ARRAYTOTEXT(C1:D2)`.
+- Empty with scalar arguments: `TEXTJOIN(",",1,1)`, `TEXTJOIN(",",1,1,2)`, `CONCAT(1,2)`.
+- Keep with a range argument: `TRANSPOSE(C1:D2)`, `TRANSPOSE(C1)`, `OFFSET(C1:D2,0,0,1)`, `OFFSET(C1,0,0)`, `INDEX(C1:D2,1,1)`,
+  `=C1:D2`, `SUM(C1:D2)`, `TEXTJOIN(",",1,C1:D2)`, `CONCAT(C1:D2)`, `SEQUENCE(1,2)+C1`, `OFFSET(C1:D2,2,2,3)` (`#SPILL!`). Also `SUM(TRANSPOSE(C1:D2))`, `SUM(OFFSET(C1:D2,0,0,1))` and `TRANSPOSE(C1:C2)`.
+A spilling anchor runs at its own place, not elsewhere: `CHOOSEROWS(C1:D2,1)` spills 1x2 and empties the state. The gen-m6 `#NUM!` readers are probably explained by another call between reader and setter (e.g. CHOOSEROWS in 9c615d338d990644 A26), not by the OFFSET; cross-sheet versus same-sheet ranges is unprobed.
+So the earlier T-2068 reading (every dynamic anchor empties) is wrong for TRANSPOSE and OFFSET, which keep it here; the
+argument shape matters (SORT/UNIQUE of a constant keep, of a range empty; TEXTJOIN/CONCAT the other way round), and why
+is not known. Evidence: probes/weeknum-stale-between-calls (27 sheets) and -between-ranges (23 sheets), excel-graph
+2026-11-05.
+
+The shape probes (T-4315; probes/weeknum-stale-call-shapes and -call-shapes-2, 30 sheets each, and -call-shapes-3, 24 sheets, excel-graph 2026-11-05,
+same layout) give the rule per function. It is neither a number-to-text conversion (`=1&2`, `TEXT(1,"0")`,
+`FIXED(1)` and `VALUE("1")` keep it; `CONCAT("a","b")` empties it) nor "a range argument" alone:
+- Always empty: CHOOSEROWS, CHOOSECOLS, TOCOL, VSTACK and TAKE with a constant array, one cell and a range
+  (`CHOOSEROWS({1,2;3,4},1)`, `CHOOSEROWS(C1,1)`, `TOCOL({1,2})`, `TAKE(C1,1)`, ...); TRIMRANGE with one cell and
+  ranges (`TRIMRANGE(C1)`, `C1:C2`, `C1:D2`); HSTACK, DROP, TOROW, WRAPROWS and EXPAND with `C1:D2`, a constant array and
+  one cell (T-4330, probes/weeknum-stale-call-shapes-3 S01:S10, excel-graph 2026-11-05); WRAPCOLS with a range, a
+  constant array and one cell (S11:S13); TEXTSPLIT of a constant text and of a cell (S14:S15).
+- SORT and UNIQUE empty it with a multi-cell range (`SORT(C1:C2)`, `UNIQUE(C1:C2)`, `SORT(E1:F2)` of texts,
+  `SORT(C1:D2,1,-1)`); a constant array or one cell keeps it (`SORT({3,1})`, `SORT(C1)`, `UNIQUE(C1)`).
+- SORTBY empties it unless its array is one cell: `SORTBY({1,2},{2,1})` and `SORTBY(C1:C2,{2;1})` empty it,
+  `SORTBY(C1,1)` keeps it.
+- ARRAYTOTEXT empties it only with a range of more than one row and more than one column: `ARRAYTOTEXT(C1:D2)`
+  empties it; `C1:C2`, `C1`, `{1,2}`, `{"a","b"}` and `1` keep it (`ARRAYTOTEXT(C1:D1)`, a one-row range, keeps it: shapes-3 S16).
+- CONCAT and TEXTJOIN empty it unless one of the joined arguments is a reference: `CONCAT("a","b")`, `CONCAT(1)`,
+  `CONCAT({1,2})`, `CONCAT("a",1)`, `CONCAT(C1&"")` and `TEXTJOIN(",",1,{1,2})` empty it; `CONCAT(C1)`,
+  `CONCAT(C1:D2,"x")`, `CONCAT(INDEX(C1:D2,1,1))`, `TEXTJOIN(",",1,C1,"x")`, `TEXTJOIN(",",1,C1:D2,C1)` and
+  `TEXTJOIN(C1,1,C1)` keep it. Probed in T-4330 (shapes-3 S17:S24): `CONCAT(OFFSET(C1,0,0))`,
+  `CONCAT(INDIRECT("C1"))`, `CONCAT(IF(TRUE,C1))`, `CONCAT(CHOOSE(1,C1))`, `CONCAT(LET(x,C1,x))` and `CONCAT(name)`
+  of a defined name for `C1:D2` keep it; `CONCAT(INDEX({1,2},1))` (INDEX of a constant array) empties it, and so
+  does `TEXTJOIN(C1,1,"a")`: only TEXTJOIN's joined arguments count, not its delimiter.
+- Keep: FILTER (`FILTER(C1:D2,{TRUE;FALSE})`, `FILTER(C1:C2,{TRUE;TRUE})`), with the T-4289 list.
+- A nested call empties it as an anchor does (`SUM(CHOOSEROWS(C1:D2,1))`, `COUNT(...)`, `CHOOSEROWS(C1:D2,1)+0`,
+  `SUM(SORT(C1:D2))`); one in an IF branch that does not run does not (`IF(FALSE,CHOOSEROWS(C1:D2,1),1)`).
+Ours (T-4315): `Model::weeknum_effect_of_call` (weeknum.rs), applied after every function call (`call_with_order_effects`), holds this table; an
+Excel-order anchor whose run emptied the state empties it at its place in the order (`AnchorEffects::emptied_weeknum`,
+excel_order.rs), and a dynamic-array formula as such no longer does. T-4330 added WRAPCOLS and TEXTSPLIT, INDEX counting only
+with a reference as its array, and IF, CHOOSE, LET and defined names counting (read from the formula, never evaluated
+again; IF or CHOOSE picking a constant (`CONCAT(IF(TRUE,1,C1))`), LET binding a reference and returning a constant, and a name for a constant are unprobed). Unprobed: the functions not listed
+(GROUPBY, ...), a name or a reference-returning call as SORT's or ARRAYTOTEXT's argument (counted as no
+range), and whether the emptying comes before or after the
+call's own arguments run (we empty after).
+Status: VERIFIED (excel-graph); implemented
 
 ### WEEKNUM readers past the move budget of Excel's order (T-2068)
 Rule (Excel): the chain moves a cell that read an uncalculated formula cell to just after it, as
@@ -1386,10 +1439,14 @@ Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number;
   time-argument-window A73, A75 and A76, and time-argument-negative A65 and A66. All eight are numbers now, while
   `TIME(-32768,0,0)`, `TIME(-32767,32767,32767)`, `TIME(32768,0,0)` and `TIME(0,0,32768)` stay `#NUM!` (G9:G12).
   Gate A's TIME/s1 table found the change at A149: `TIME(14120,-33313.544720951,-1389.80591442708)` =
-  0.6936342592592837. The older sidecars still hold the 2026-10-21 values. Unprobed: arguments below -131072. Two fills two weeks apart show the change, but a staged rollout cannot be ruled out, so T-3983 re-probes column G right before the engine change.
-Ours: `time_argument` in `functions/date_and_time.rs` (T-2267). It does not wrap yet: it gives `#NUM!` below
--32768, which T-3983 owns.
-Status: VERIFIED (excel-graph probes above, 2026-10-21; the wrap 2026-11-03).
+  0.6936342592592837. T-3983 refilled time-argument-bound, -window and -negative from excel-graph on 2026-11-04,
+  and they confirm the wrap.
+- Below -131072 (probes/t3983-time-argument-below-131072, excel-graph, 2026-11-04): the wrap holds down to -2^31
+  (`TIME(600,-131073,0)` = 23:59, `TIME(600,-1000000,0)` = 0.2222222222222214, `TIME(-131073,0,0)` is `#NUM!`).
+  A whole value below -2^31 reads as 0 (`TIME(600,-2147483649,0)` = 0, where the wrap would be -1; the same for -2^32,
+  -1E15 and -1E20 in the minute, second and hour), as a clamp to the 32-bit minimum -2^31 would give.
+Ours: matches. `time_argument` in `functions/date_and_time.rs` wraps (T-3983).
+Status: VERIFIED (excel-graph probes above, 2026-10-21; the wrap 2026-11-03 and 2026-11-04).
 Tasks: T-2267, T-3983
 
 ## DATE: a year, month or day just below an integer reads as that integer (T-2268)
@@ -1467,7 +1524,7 @@ Rule (excel-graph, gen-m6, 2026-10-21):
   `#N/A` (columns F-L of rows 1, 22, 27-29; Q60:Q64).
   T-1954's question: `WORKDAY.INTL(45000,5,"1111111",NA())` is `#N/A` (row 15 column E), and with the holidays in an array or a
   range the all-weekend `#VALUE!` wins.
-Ours: implemented (T-2270, T-2272): a blank one-cell reference is no holiday; a cell holding number text is a holiday, counted rather than skipped (serial 1 in 1aa50086e42bff9a A67 and 752959b8d3db0285 A393 lies outside every range, so skip-vs-count is UNVERIFIED). Also UNVERIFIED: the scalar branch accepts any text `cast_number` reads (a literal `"45001"`, a formula's number text, date, currency or percent text) as a holiday; the cells only show holidays reached through a reference. Other text is `#VALUE!` as before. The order is `Model::workday_of` and `Model::networkdays_of`, with `HolidaysError::before_weekend` for step (4) (crates/rustsheet-engine/src/functions/date_and_time/). Unprobed: whether single number text off the calendar (a `"-1"` cell) is step (4) or (6); ours (6) (T-2271 probes it).
+Ours: implemented (T-2270, T-2272): a blank one-cell reference is no holiday; a cell holding number text is a holiday, counted rather than skipped (serial 1 in 1aa50086e42bff9a A67 and 752959b8d3db0285 A393 lies outside every range, so skip-vs-count is UNVERIFIED). A holiday given as text is read the same way in every form: a text literal, a cell holding the text, a one-element array of it, or a range holding it beside a number. Number text (`"45001"`), date text (`"3/16/2023"`, `"March 16, 2023"`), currency text (`"$45,001"`) and percent text (`"4500100%"`) each act as the serial they read as, in WORKDAY, WORKDAY.INTL, NETWORKDAYS and NETWORKDAYS.INTL (probes/t4397-holiday-text-forms rows 3:22 and 24:43, excel-graph; T-4397). A text literal is a scalar holiday for the NETWORKDAYS.INTL weekend rule below: `NETWORKDAYS.INTL(45000,45010,13,"3/18/2023")` drops the Saturday and is 10, as the number 45003 is, while the same text in a cell or `{"3/18/2023"}` is subtracted and gives 9 (G23:G43). Other text is `#VALUE!` as before. The order is `Model::workday_of` and `Model::networkdays_of`, with `HolidaysError::before_weekend` for step (4) (crates/rustsheet-engine/src/functions/date_and_time/). Unprobed: whether single number text off the calendar (a `"-1"` cell) is step (4) or (6); ours (6) (T-2271 probes it).
 Status: VERIFIED
 Tasks: T-2270, T-2272
 
@@ -1533,11 +1590,25 @@ not by the day-0 start/end.
 Evidence: probes/networkdays-intl-holiday-forms (22 cells), networkdays-intl-holiday-weekend-masks (45),
 networkdays-intl-holiday-weekend-dedupe (112), networkdays-intl-early-holidays (88), networkdays-intl-serial-zero-holiday (120);
 gen-m6 102b2df13f6891d2 A547, 1b4963f7cb42e2fa A385, ade135f51e0b7a36 A31 and A385, b91dcfba0176956e A493 and A499.
-Ours: implemented (T-3537): `Holidays::scalar`, set from the argument's node (`is_scalar_node`), read by `networkdays_of`.
-UNVERIFIED: a holidays argument that is a function returning a reference (INDEX, OFFSET, INDIRECT, CHOOSE, IF) is treated
-as a reference; only SUM, literals and `+` are probed. A named range is a reference.
-Status: VERIFIED for the probed forms
-Tasks: T-3537
+Which kind an argument is (VERIFIED, excel-graph, 2026-11-04, T-4190): it is a reference exactly when ISREF of it is
+TRUE; the rule follows the evaluated kind, not the syntax. References: `(C1)`, `@C1`, `@(C1)`, `INDEX(C1:C2,1)`, `OFFSET(C1,0,0)`,
+`INDIRECT("C1")`, `INDEX(..):INDEX(..)`, `TRIMRANGE(C1:C1)`, and `IF`, `CHOOSE`, `IFS`, `SWITCH`, `XLOOKUP(1,{1},C1:C1)`,
+`LET(h,C1,h)`, `LAMBDA(x,x)(C1)`, `TAKE`/`DROP` of a range, and a defined name bound to a cell, when what they pick or return is a
+reference. A cell holding the text "45003" is a reference too. Scalars: the same pickers when they give a value (`IF(TRUE,45003)`,
+`CHOOSE(1,45003)`, `XLOOKUP(1,{1},{45003})`, `LET(h,45003,h)`, `LAMBDA(x,x)(45003)`, `LET(h,C1,h+0)`), a name bound to
+`=45003`, text `"45003"`, `--"45003"`, `N(C1)`, `MAX(C1)`, `ABS(C1)`, `DATE(..)`, `C1&""`, `IFERROR(C1,0)` (IFERROR does not
+hand the reference on), and every unary plus: `+C1`, `+(C1)`, `(+C1)`, `+@C1` are scalar. ISREF agrees on each unary form
+(`ISREF(+C1)` FALSE, `ISREF(@C1)` TRUE; see references.md "ISREF: a unary plus makes a value"). WORKDAY.INTL keeps no
+split for any of these forms (its controls are 45012 / 45011 throughout).
+Evidence: probes/networkdays-intl-holiday-kinds A1:H38 (M6), networkdays-intl-holiday-kinds-let A1:F11 (M7),
+networkdays-intl-holiday-kinds-names A1:F7 (M8; names in the case's `names`).
+Ours: implemented (T-3537, T-4190): `Holidays::scalar` is "neither an array nor `Model::is_reference`" of the argument (on the
+arm IF picked), set in `holiday_serials`, read by `networkdays_of`.
+A unary plus over a reference-returning function is scalar too: `+INDEX(C1:C2,n)`, `+OFFSET(Cn,0,0)`,
+`+XLOOKUP(1,{1},Cn:Cn)`, `+IF(TRUE,Cn)` give 87 for the Saturday holiday and 86 for the Tuesday one
+(probes/networkdays-intl-holiday-unary-fn A1:B4, excel-graph 2026-11-05, T-4209).
+Status: VERIFIED
+Tasks: T-3537, T-4190, T-4209
 
 ## DAYS error order
 Rule: DAYS reports an error-valued argument first, then goes through the arguments left to
@@ -1545,6 +1616,7 @@ right: unreadable text is `#VALUE!`, a number off the calendar `#NUM!`. `DAYS(-1
 `#NUM!`; `DAYS("abc",#NAME?)` is `#NAME?`; `DAYS(#DIV/0!,"")` is `#DIV/0!` (A403); `DAYS(A1:B2,"abc")` with a
 negative top-left is `#NUM!`; `DAYS("abc",-1)` and `DAYS("",-1)` are `#VALUE!` (A211, A271).
 Evidence: gen-m6/a4a301d00b46acf3 Calc!A79, A82, A85, A88, A241, A244, A307, A310, A493, A499 (excel-graph; T-3536).
-Ours: implemented (T-3536). Two error arguments at once (which one wins) is not probed; the code returns the leftmost.
-Status: VERIFIED (excel-graph) for the cited cells; UNVERIFIED for two simultaneous errors
-Tasks: T-3536
+Two error arguments at once: the leftmost wins, whether the errors are literals, error-returning calls or one-cell references to error cells (`DAYS(NA(),1/0)` `#N/A`, `DAYS(1/0,NA())` `#DIV/0!`, `DAYS(#REF!,#NAME?)` `#REF!`, `DAYS(#NUM!,#NULL!)` `#NUM!`); and an error beats unreadable text in either position (`DAYS("abc",NA())` `#N/A`). Evidence: probes/t4397-days-two-errors A1:A16, with ERROR.TYPE in B1:B16 (excel-graph; T-4397).
+Ours: implemented (T-3536); T-4397 pins the two-error cases.
+Status: VERIFIED (excel-graph)
+Tasks: T-3536, T-4397

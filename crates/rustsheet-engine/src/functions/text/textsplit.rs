@@ -49,9 +49,14 @@ impl Model {
         let mut lists = lists.into_iter();
         // A delimiter that is itself an error is an argument error, the first after the text's;
         // an error element of a list comes after ignore_empty and match_mode (probes/
-        // textsplit-error-order A1-A4, A13, A14).
+        // textsplit-error-order A1-A4, A13, A14). A one-cell reference is its cell's value in
+        // every spelling (`B1:B1`, `INDEX(..)`, a LET-bound or defined name), so a one-cell
+        // error reference is an argument error too, while a two-cell one is a list (probes/
+        // t4198-textsplit-error-ref-delimiter A1-A27, A34; text.md "TEXTSPLIT: argument errors
+        // first, an all-empty result").
         let mut delimiter_error = None;
         let mut split = |model: &mut Model, list: CalcResult| {
+            let list = model.collapse_single_cell(list);
             if delimiter_error.is_none() && matches!(list, CalcResult::Error { .. }) {
                 delimiter_error = Some(list.clone());
             }
@@ -137,14 +142,6 @@ impl Model {
             0.0
         };
 
-        if call.pad_is_array {
-            return CalcResult::new_error(
-                Error::VALUE,
-                cell,
-                "pad_with must be a single value".to_string(),
-            );
-        }
-
         let no_delimiters = SplitList::new(Delimiters::new(vec![]));
         let col_delims = match &call.col_delimiters {
             Some(Ok(d)) => d,
@@ -157,6 +154,17 @@ impl Model {
             Some(Err(e)) => return e.clone(),
             None => &no_delimiters,
         };
+
+        // An array pad_with is #VALUE! after an error element of a delimiter list (probes/
+        // t4198-textsplit-error-ref-delimiter A37-A40). The #VALUE! checks after it cannot be
+        // told apart from it.
+        if call.pad_is_array {
+            return CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "pad_with must be a single value".to_string(),
+            );
+        }
 
         // match_mode is cut toward zero and must then be 0 or 1, as in TEXTBEFORE, but checked
         // only after an error element of a delimiter list (probes/t2581-textsplit-textbefore

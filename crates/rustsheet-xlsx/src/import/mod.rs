@@ -2,10 +2,13 @@ mod array_refs;
 mod call_cap;
 mod columns;
 mod conditional_formatting;
+mod encryption;
 mod external_links;
+mod filter_criteria;
 mod iso_date;
 mod merged_cells;
 mod metadata;
+mod ole;
 mod package;
 mod pivots;
 pub(crate) mod relocation_key;
@@ -33,14 +36,18 @@ use rustsheet_engine::{
         parser::{new_parser_english, stringify::to_english_string},
         types::CellReferenceRC,
     },
-    types::{Metadata, Workbook, WorkbookSettings, WorkbookView},
+    types::{Metadata, Table, Workbook, WorkbookSettings, WorkbookView},
     Model,
 };
 
 use crate::error::XlsxError;
 
+pub use encryption::{
+    decrypt_package, MAX_ENCRYPTION_INFO_BYTES, MAX_PASSWORD_UNITS, MAX_SPIN_COUNT,
+};
 pub use iso_date::{iso8601_to_date_system_serial, iso8601_to_serial};
-pub use package::{ImportLimits, PartNames};
+pub use ole::{classify_ole_compound_file, decrypt_ole_package};
+pub use package::{is_ole_compound_file, ImportLimits, PartNames};
 pub use shared_strings::decode_xlsx_escapes;
 use shared_strings::read_shared_strings;
 pub use workbook::date_system_from_attribute;
@@ -97,15 +104,18 @@ fn resolve_theme_path(rels: &HashMap<String, Relationship>) -> Option<String> {
 }
 
 // FIXME: This is a bit of a HACK. We basically re-parse all the defined names assuming the context is `A1`
-// and there is no tables or defined names.
+// and there are no defined names.
 fn reparse_formula_hack(
     name: &str,
     formula: &str,
     worksheets: &[String],
+    tables: &HashMap<String, Table>,
 ) -> Result<String, XlsxError> {
     let defined_names = Vec::new();
-    let tables = HashMap::new();
-    let mut parser = new_parser_english(worksheets.to_owned(), defined_names, tables);
+    let mut parser = new_parser_english(worksheets.to_owned(), defined_names, tables.clone());
+    // The body is a file's stored text: a padded bare column `T[ Col ]` loads as `#REF!`, as
+    // Excel loads it (probes/t3258-name-padded-column-0..2, T-3258, T-4022).
+    parser.set_loaded(true);
     let cell_reference = CellReferenceRC {
         sheet: worksheets[0].clone(),
         column: 1,
@@ -186,7 +196,7 @@ fn load_package<R: Read + Seek>(
         .map(|s| s.name.clone())
         .collect::<Vec<_>>();
     for dn in &mut workbook.defined_names {
-        dn.formula = reparse_formula_hack(&dn.name, &dn.formula, &worksheet_names)?;
+        dn.formula = reparse_formula_hack(&dn.name, &dn.formula, &worksheet_names, &tables)?;
     }
     let external_books = load_external_books(archive, &rels, &workbook.external_references);
     let metadata = match load_metadata(archive) {

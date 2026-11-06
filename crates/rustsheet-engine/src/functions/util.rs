@@ -15,11 +15,12 @@ use crate::{
     number_format::cmp_excel_precision,
     reference_operators::{Picked, RefArg},
 };
-use std::cmp::Ordering;
 
 pub(crate) mod aggregate_args;
 pub(crate) mod collation;
 pub(crate) mod collation_tables;
+mod pairwise_order;
+pub(crate) use pairwise_order::{coalesce_equal_lines, sort_indices_pairwise};
 mod existing_walk;
 
 pub(crate) use existing_walk::StoredWalk;
@@ -215,64 +216,6 @@ pub(crate) fn compare_values_pairwise(left: &CalcResult, right: &CalcResult) -> 
     match (left, right) {
         (CalcResult::String(l), CalcResult::String(r)) => collation::cmp_text_pairwise(l, r) as i32,
         _ => compare_values(left, right),
-    }
-}
-
-/// Sorts `indices` stably by `cmp`, which need not be a total order: Excel's text comparison is
-/// not transitive (docs/excel-semantics/coercion.md "Not a total order"), and `slice::sort_by`
-/// may panic on such a comparator. A natural merge sort: the input is cut into runs, each
-/// non-descending or strictly descending (reversed in place), and neighbouring runs are merged
-/// pairwise, a tie taking the left run's element, until one is left. On any comparator it ends
-/// with a permutation of `indices`, in O(n log n) comparisons and one buffer of n indices. On a
-/// cycle it reproduces Excel's SORT for every order of three texts; on longer inputs holding
-/// cycles Excel's order differs in some cells (probes/t3211-collation-sort-cycles, T-3211).
-pub(crate) fn sort_indices_pairwise(
-    indices: &mut [usize],
-    mut cmp: impl FnMut(usize, usize) -> Ordering,
-) {
-    let n = indices.len();
-    let mut runs: Vec<(usize, usize)> = Vec::new();
-    let mut start = 0;
-    while start < n {
-        let mut end = start + 1;
-        if end < n && cmp(indices[end], indices[end - 1]) == Ordering::Less {
-            while end < n && cmp(indices[end], indices[end - 1]) == Ordering::Less {
-                end += 1;
-            }
-            indices[start..end].reverse();
-        } else {
-            while end < n && cmp(indices[end], indices[end - 1]) != Ordering::Less {
-                end += 1;
-            }
-        }
-        runs.push((start, end));
-        start = end;
-    }
-    let mut merged: Vec<usize> = Vec::with_capacity(n);
-    while runs.len() > 1 {
-        let mut next = Vec::with_capacity(runs.len().div_ceil(2));
-        for pair in runs.chunks(2) {
-            let &[(lo, mid), (_, hi)] = pair else {
-                next.extend_from_slice(pair);
-                continue;
-            };
-            merged.clear();
-            let (mut i, mut j) = (lo, mid);
-            while i < mid && j < hi {
-                if cmp(indices[j], indices[i]) == Ordering::Less {
-                    merged.push(indices[j]);
-                    j += 1;
-                } else {
-                    merged.push(indices[i]);
-                    i += 1;
-                }
-            }
-            merged.extend_from_slice(&indices[i..mid]);
-            merged.extend_from_slice(&indices[j..hi]);
-            indices[lo..hi].copy_from_slice(&merged);
-            next.push((lo, hi));
-        }
-        runs = next;
     }
 }
 
@@ -588,9 +531,17 @@ impl Model {
             // top-left cells (`SUM(TRIMRANGE(A1:B5,{0;1}))` is 10 with A1 = 5;
             // probes/trimrange-lift-sources D27).
             Function::Trimrange => self.trimrange_reference(args, cell, true),
-            // So does a lifted TAKE or DROP over a range (T-1838).
-            Function::Take => self.take_drop_reference(args, cell, Edge::Take, true),
-            Function::Drop => self.take_drop_reference(args, cell, Edge::Drop, true),
+            // So does a lifted TAKE or DROP over a range (T-1838), which still empties
+            // AMORDEGRC's left-over value (probes/amordegrc-fraction-state-bp, -bq).
+            Function::Take | Function::Drop => {
+                let edge = match kind {
+                    Function::Take => Edge::Take,
+                    _ => Edge::Drop,
+                };
+                let value = self.take_drop_reference(args, cell, edge, true);
+                self.empty_amor_left_over();
+                value
+            }
             _ if kind.picks_reference() => match self.evaluate_reference_form(kind, args, cell) {
                 Some(result) => RefArg::from(result),
                 None => self.reference_arg_reading(node, blanks, cell),

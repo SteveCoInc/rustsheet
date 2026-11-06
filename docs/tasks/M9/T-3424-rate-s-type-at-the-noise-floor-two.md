@@ -3,7 +3,7 @@ id: T-3424
 title: "RATE's type at the noise floor: Gate A sweep cells where one side errs"
 milestone: M9
 lane: functions-financial
-status: todo
+status: blocked
 priority: P0
 size: M
 tier: opus
@@ -72,3 +72,99 @@ cells, so RATE's Gate A fails until they are settled.
 
 ## Out of scope
 - The cells of the right type that are not Excel's bits (T-3389).
+
+## Progress notes (2026-10-31, opus run; resumed 2026-11-01 after 3 h idle)
+- First experiment: the power form inside the residual. The T-3348 hold model (the engine's `compute_rate`) was re-run
+  in Python with P = (1+r)^n from five forms, every other operation Excel's twice-rounded one, on the 1,260 literal
+  RATE cells of t3348-rate-gate-a-sweep, t3348-rate-gate-a-fresh, t3348-rate-fv-nonzero and the fit lab's
+  `RATE_CASES` (number or `#NUM!` type agreement / bit-exact numbers):
+  | P | type | bits |
+  |---|---|---|
+  | Excel's `^` model (`caret_pow`, shipped) | 1211 | 990 |
+  | correctly rounded pow of Excel's 1+r | 1203 | 256 |
+  | correctly rounded (1+r)^n, r exact | 1204 | 201 |
+  | `exp(n*log(1+r))` in doubles | 1234 | 252 |
+  | `exp(n*log1p(r))` in doubles | 1239 | 190 |
+- So the `^` model is Excel's for the bits (990 against at most 256): RATE's noise does not come from a different
+  power routine. The log/exp forms win type on the noise-floor cells only by moving the noise, at the cost of most
+  bits, so they are not Excel's either. Next: per-cell comparison on the 16 cells (the experiment's watch list did not
+  match the cell keys), then the residual's sum order and fused forms (pv·P + pmt·A as one extended sum before + fv,
+  or the 80-bit sum kept across all three terms) under the same hold.
+- Second experiment (2026-11-01, opus run that did T-3389): the precision of each residual operation, on the same
+  hold model. The operations are 1+r, the power's products, P-1, the quotient by r, the two products and the two
+  sums. Each was twice-rounded or kept at 64 bits as in an x87 register, and P-1 was also tried exact: 64
+  combinations. They were scored on the 600 cells of t3348-rate-gate-a-sweep and t3348-rate-gate-a-fresh,
+  exploration only, no fit taken from them. The shipped form gives 584 types and 562 bits, and 0 of the 16. The best
+  on the 16 keeps 1+r and the power's products at 64 bits with P-1 exact: 5 of 16, with 581 types and 126 bits. The
+  best on all types keeps the two products at 64 bits: 588 types and 4 of 16, but 177 bits. Every variant loses 176
+  to 436 bits. So no precision change in the residual is Excel's noise. This also covers the fused forms the first
+  experiment named next: the two sums kept at 64 bits. T-3389 adds the algebraic forms and the step forms, also
+  negative, in financial.md "Not reproduced".
+
+## Unblocked (2026-11-04, decision 0264 stale-draft triage)
+T-3579, the blocker, is `done` on `main` (#2728): Excel's residual bits at nper 1 are probed, and the misses are
+flat-secant restarts. RATE has also changed on `main` since this branch's experiments: T-3585 (#2816) makes RATE
+`#NUM!` when a converged iterate has 1 + r at or below 1e-7. The next run re-scores the 16 cells on current `main`
+before it uses the two experiments above, then fits the residual from T-3579's cells.
+
+## Progress (2026-11-04, opus run, third attempt)
+- **Re-scored on current `main`:** all 16 cells still have the wrong type, with T-3698's restart and T-3585's floor
+  in place. The engine returns a number on sweep A296 and fresh A59, A70, A74, A77, A89, A90, A95, A157, A162,
+  A173, A275 and A292, and gives `#NUM!` on sweep A272 and fresh A251 and A272.
+- **Probe:** probes/t3424-rate-noise-trace (433 cells, excel-graph, 0 fill failures). Generator and scorers are in
+  docs/research/t3424/.
+  - FV at 355 iterates of the model's run on the 16 cells reads Excel's FV (the residual less + fv) along the path.
+  - RATE seeded with the last 12 iterates of each nper 1 and 2 cell (78 cells) reads Excel's run from there.
+- **Finding:** no residual difference shows in Excel's FV, but Excel's RATE path still leaves the model's in the noise
+  floor, so RATE's own residual, step or stop test differs somewhere, unobserved (financial.md "Excel's FV along
+  the path is the model's annuity value; how RATE decides in the noise floor is not").
+  - Excel's FV is the model's annuity value on 355 of 355 cells, at nper 1 to 351.
+  - The model's step form is bit-exact on 1,951 of the 2,475 literal RATE cells. Six other forms get 1,039 to
+    1,945, and 80-bit iterates get 1,111 and 1,048.
+  - Seeded runs that hold at the same iterate get different Excel outcomes, a number on one and `#NUM!` on the other
+    (fresh A275).
+  - No single quantity at the hold separates Excel's 549 returned holds from its 60 errors.
+- No engine change was made, so no gated cell regresses. T-3963's context records this probe's result.
+- **Follow-up:** T-4146 (opus). Excel's FV is the twice-rounded form on all 355 probe cells and on all 587 literal FV
+  oracle cells. The engine's plain-double FV misses probe A132 (587 against 586).
+- **Eval delta:** probes +1 case (433 cells: 394 pass, 39 new-coverage known failures, 0 regressions;
+  `make eval-baseline`). No other case changes.
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 17 probes-numeric cells that no open task listed: 15 with the wrong type or error, 2 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t3348-rate-gate-a-fresh.case.json (16): Calc!A59, A70, A74, A77, A89-A90, A95, A157, A162, A173, A251, A272, A275, A280, A285, A292
+- probes-numeric/t3348-rate-gate-a-sweep.case.json (1): Calc!A272
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).
+
+## Blocked because: time-boxed (decision 0056)
+Three attempts have not moved any of the 16 type cells: the power-form experiment (2026-10-31), the residual-precision
+experiment (2026-11-01; both in "Progress notes") and this run's probe (2026-11-04, "Progress" above). Decision 0267
+item 4 applies: the cells this task lists, including its "Decision 0267 cells", are accepted, and no follow-up is
+filed for them. RATE's Gate A stays failed on them.
+
+Candidates tried, none of which moves a cell:
+- the power P = (1+r)^n: Excel's `^` model (shipped), correctly rounded pow, exp(n·log(1+r)), exp(n·log1p(r)), the x87
+  sequence;
+- each residual operation twice-rounded, kept at 64 bits, or P-1 exact (64 and 96 combinations), k·(P-1) before /r,
+  the expm1 factor and the PV form (T-3389);
+- six step forms, a flat secant as `#NUM!`, and iterates kept at 80 bits (this run);
+- single thresholds on 13 quantities at the hold (this run).
+
+Reopen only on a new hypothesis recorded here (decision 0056). This run's probe found no difference in Excel's FV along the
+path and ranked the model's step first, yet Excel's RATE path leaves the model's: seeded runs that hold at the same
+iterate get different Excel outcomes. A direct read of RATE's own residual or step (a seeded or one-step RATE probe)
+is the next hypothesis. T-3963 studies that for the flat-secant cells it owns.
+
+## Landing notes (2026-11-04; adopted as an orphan, work-loop step 0.3)
+- Round 4 (full panel on 119d188f9): security and design APPROVE; fidelity REQUEST_CHANGES on one stale pointer in
+  docs/research/t3424/README.md, which still named the old financial.md heading. Fixed in the next commit; the panel
+  re-runs on that head before the PR is enqueued.
+- Do not repeat: do not state that RATE's residual or step is Excel's; the probe reads FV, and the step result is a
+  ranking. Keep T-3424 `blocked` (time-boxed, decision 0267 item 4), not `done`, and keep its cells with it.

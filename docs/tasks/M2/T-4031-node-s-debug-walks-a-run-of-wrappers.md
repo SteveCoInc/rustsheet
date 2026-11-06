@@ -3,7 +3,7 @@ id: T-4031
 title: "Node's Debug walks a run of wrappers in a loop, so a 1,022-sign spaced run formats on a 2 MiB debug stack"
 milestone: M2
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -38,9 +38,16 @@ walk over `Node`. An embedder that logs a parsed tree on a small debug thread th
     share one `&mut` wrapper-child accessor with `Node::shell` (node_walks.rs).
 
 ## Acceptance criteria
-- [ ] The T-3691 test formats every shape with `{:?}`. Its `TODO(T-4031)` is gone.
-- [ ] `{:?}` output is unchanged for a sample of formulas (a test pins it against the derived form).
-- [ ] `make check` green; reviewers approve.
+- [x] The T-3691 test formats every shape with `{:?}`. Its `TODO(T-4031)` is gone.
+- [x] `{:?}` output is unchanged for a sample of formulas (a test pins it against the derived form).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Any accepted limit.
+
+## Outcome
+- Done by T-4002 (same PR): `Node`'s `Debug` loops over a run of wrappers; T-3691's test formats every shape with
+  `{:?}` and `{:#?}` and its `TODO(T-4031)` is gone; `debug_keeps_the_derived_format` pins the derived form.
+- Carry-overs: syntax.md's nesting paragraph rewritten; 1,022 → 1,023 in the test doc and `walk_names`'s comment;
+  `walk_names`'s unreachable wrapper arms folded into the leaf arm. The collation `fold` comment already cites
+  probes/t4013-class-equality-order on main.

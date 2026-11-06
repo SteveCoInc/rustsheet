@@ -3,7 +3,7 @@ id: T-3709
 title: "Make test_tailed_array's full-array reference evaluations cheaper"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -25,10 +25,22 @@ evaluate the reference formulas once and cache them across tests, or build the e
 tests -110 s) when the whole suite was 585 CPU-s; it is about 2,000 now.
 
 ## Acceptance criteria
-- [ ] Every formula `test_tailed_array` checks today is still compared tailed against full.
-- [ ] Before/after test-seconds for the module, and for `make test` wall time locally and in CI,
+- [x] Every formula `test_tailed_array` checks today is still compared tailed against full.
+- [x] Before/after test-seconds for the module, and for `make test` wall time locally and in CI,
       in the Outcome (a decision record if the profile, Makefile or CI change).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Changing the tailed reading itself (SPEC-0020).
+
+## Outcome
+- `Cargo.toml` builds `rustsheet_engine` at `opt-level = 1` with `debug = "line-tables-only"` in
+  the `test` profile (decision 0276). The test module is unchanged, so every formula is still
+  compared tailed against the full reading.
+- Local, 4 threads, 2026-11-04: `test_tailed_array` 679 -> 317 test-s (186 -> 85 s wall; the
+  slowest test, `index_picks_from_a_tailed_argument`, 100 -> 50 s). `make test` 512 -> 377 s
+  wall (compile 114 -> 151 s, engine unit tests 359 -> 192 s).
+- A test-side cache was not taken: gdb samples show the full reading spread over the generic
+  evaluator, and each test already evaluates all its formulas in one model per reading.
+- CI shard times: see the PR (measured on its first green run).
+- Eval delta: none (test build profile only).

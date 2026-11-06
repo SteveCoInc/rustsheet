@@ -3,7 +3,7 @@ id: T-3093
 title: "Probe the near-zero snap of LAMBDA calls in other positions (LET-bound, parameter, chained, under a picker, as an aggregate argument)"
 milestone: M2
 lane: research
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -33,3 +33,6 @@ docs/excel-semantics/numbers.md "Near-zero snapping" records, with excel-graph e
 
 ## Out of scope
 - Changing the engine (the filed tasks do).
+
+## Outcome
+Probe `probes/t3093-lambda-snap-positions` (15 cells, excel-graph): LET-bound, parameter-passed, chained, under-IF and SUM-argument LAMBDA calls all snap the body root (0 at 0.1+0.2-0.3 and k = 7; k = 8 keeps 1.7763568394002505e-15). The engine already matches all 15 cells, so no engine task is filed. Recorded in docs/excel-semantics/numbers.md. Eval delta: +15 bit-exact probe cells, no baseline change.

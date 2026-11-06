@@ -1,4 +1,5 @@
 import rustsheet as ic
+from rustsheet import legacy
 import pytest
 
 
@@ -24,12 +25,12 @@ def test_invalid_style_path_raises(um):
 
 def test_invalid_locale_raises():
     with pytest.raises(ic.WorkbookError):
-        ic.create("wb", locale="not-a-locale")
+        legacy.create("wb", locale="not-a-locale")
 
 
 def test_invalid_timezone_raises():
     with pytest.raises(ic.WorkbookError):
-        ic.UserModel("wb", tz="Mars/Olympus_Mons")
+        legacy.UserModel("wb", tz="Mars/Olympus_Mons")
 
 
 def test_invalid_color_raises(um):

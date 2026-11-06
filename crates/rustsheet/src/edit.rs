@@ -13,7 +13,9 @@ mod calculated_column;
 mod diff;
 mod pivot;
 
-pub use self::pivot::{PivotError, PivotFunction, PivotTableInput};
+pub use self::pivot::{
+    PivotDateGroupBy, PivotError, PivotFunction, PivotRangeGroup, PivotTableInput,
+};
 
 use rustsheet_engine::clock::Clock;
 use rustsheet_engine::types::{
@@ -54,6 +56,8 @@ pub enum Input {
     /// table's data rows fills the column when its other data cells are all blank or all hold
     /// one formula (a calculated column, T-2958); the filled cells are part of the edit.
     Parse(String),
+    /// [`Input::Parse`] typed in R1C1 style (`=R[-1]C+1` in A3 is `=A2+1`; T-4288).
+    ParseR1C1(String),
     /// Empties the cell (its style is kept).
     Clear,
 }
@@ -256,8 +260,9 @@ impl Txn<'_> {
         match &input {
             // `Input::Formula` without `=` is refused in `apply` before it writes anything.
             Input::Formula(text) if !text.starts_with('=') => {}
-            Input::Parse(text) | Input::Formula(text) => {
-                self.log_typed_fill(sheet, key, cell, text)?;
+            Input::Parse(text) | Input::Formula(text) | Input::ParseR1C1(text) => {
+                let r1c1 = matches!(input, Input::ParseR1C1(_));
+                self.log_typed_fill(sheet, key, cell, text, r1c1)?;
             }
             _ => {}
         }
@@ -356,10 +361,9 @@ impl Txn<'_> {
             Input::Parse(text) | Input::Formula(text) => {
                 model.set_typed_user_input(sheet, row, col, text)
             }
+            Input::ParseR1C1(text) => model.set_typed_r1c1_user_input(sheet, row, col, text),
             Input::StoredFormula(text) => model.set_loaded_user_input(sheet, row, col, text),
-            Input::LegacyFormula(text) => {
-                model.set_cell_with_legacy_formula(sheet, row, col, &text)
-            }
+            Input::LegacyFormula(text) => model.set_loaded_legacy_formula(sheet, row, col, &text),
             Input::Value(value) => {
                 // Typed setters skip the spill/array/merge checks that `set_user_input` does.
                 model

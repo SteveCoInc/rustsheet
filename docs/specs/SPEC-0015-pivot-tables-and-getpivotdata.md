@@ -63,8 +63,9 @@ T-1703 behavior where one exists), never a guessed value:
 11. whether the answer follows the cache when the records disagree with the rendered cells (a file
     saved without refreshing), and the summation order (cache order or display order) on
     non-representable decimals (one data point: web.md "GETPIVOTDATA on real-model pivots", T-2662);
-12. grouped fields (`<fieldGroup>`, date grouping), calculated fields, and a cache saved without
-    records (`saveData="0"`): skipped at import (`#REF!`), a non-parity gap T-2085 records.
+12. calculated fields and a cache saved without records (`saveData="0"`): skipped at import
+    (`#REF!`), a non-parity gap T-2085 records. Grouped fields (`<fieldGroup>`) import as their group
+    items (T-4225); which group Excel puts each value in, and GETPIVOTDATA on them, are unprobed.
 13. an error in a field or item argument (ours `#REF!`), an error held by a single-cell
     `pivot_table` inside a pivot (ours: the error, as T-1703 does with no pivot), and an error
     cell inside a multi-cell `pivot_table` range (ours: not looked at);
@@ -149,9 +150,14 @@ edits".
   that cache or pivot, never a panic or a read outside the package.
 - `pivotCacheDefinition`: `<cacheSource type="worksheet"><worksheetSource ref sheet|name>`,
   `<cacheField name>` with `<sharedItems>` (`s`, `n`, `b`, `e`, `d`, `m`); other source types and
-  `<cacheHierarchies>` (OLAP) give no pivot. `<fieldGroup>` and calculated fields (`formula`
-  attribute) make the cache unusable: the pivot is skipped, so GETPIVOTDATA on it is `#REF!`
-  (UNVERIFIED, logged by the importer as a skipped feature).
+  `<cacheHierarchies>` (OLAP) give no pivot. Calculated fields (`formula` attribute) make the
+  cache unusable: the pivot is skipped, so GETPIVOTDATA on it is `#REF!` (UNVERIFIED, logged by the
+  importer as a skipped feature). A grouped field (`<fieldGroup>` with `<rangePr>` or
+  `<discretePr>` and `<groupItems>`; T-4225) becomes an ordinary `CacheField` at import: its items
+  are the group labels and its records each record's group, derived from the `base` field's values;
+  a grouping field (`databaseField="0"`, written after the database fields and absent from the
+  records part) is appended as a field of its own. The model needs no new type (web.md "Grouped
+  pivot fields import as their group items").
 - `pivotCacheRecords`: `<r>` rows of `x v` (shared index) or inline `s n b e d m` values, the inline
   ones interned into the field's items. With no records part (`saveData="0"`) the cache and its
   pivots are skipped, so GETPIVOTDATA is `#REF!` (unknown 12; Excel would refresh).
@@ -244,6 +250,15 @@ A spec case has no xlsx, and its rendered pivot cells exist only in the built fi
   already written: the same snapshot `refreshOnLoad` gives) and the definition from the spec's
   fields. It is test support, not public API: `#[doc(hidden)]`, not mirrored in the Python binding
   (explicitly deferred per api-design.md), and the only engine-side cache building.
+- A grouped spec pivot (`group`, T-4228) has no `rendered`: which group a record falls in is what
+  such a case probes, so the builder cannot lay it out (T-4235). `PivotTableInput::group` groups
+  the row field with the importer's rule (`rustsheet_engine::pivot::group_by_numbers`, which
+  `apply_groups` calls too), and `Txn::add_pivot_table` then writes the layout itself from the
+  location's top-left cell, before the pivot is registered: the builder's compact form with one
+  row field (`Row Labels`, the caption, the groups holding a record, `Grand Total`), in one place,
+  `rustsheet_engine::pivot::row_layout`. This is the Rust layout the alternative below rejects for
+  baking, kept to the one shape the builder cannot bake; oracle reads of Excel's own layout
+  (probes/t4228-pivot-range-groups, probes/t4235-pivot-range-rounding) keep it in step.
 
 ## Alternatives considered
 - Reading the rendered pivot cell instead of aggregating the cache: needs the layout of every
