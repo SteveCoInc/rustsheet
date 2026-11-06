@@ -19,7 +19,7 @@ Evidence from `p-captions` and `p-geometry`. Program: docs/research/pivot-tables
 Owner of the pivot probes' visibly-off cells (decision 0245); they pass once rendering lands:
 probes/t4134-pivot-items, probes/t4137-pivot-captions, probes/t4138-pivot-geometry,
 probes/t4135-pivot-aggregates, probes/t4123-pivot-capture, probes/t4128-pivot-spike (pivot areas
-scored since T-4124, decision 0317), probes/t4583-pivot-row-labels.
+scored since T-4124, decision 0317), probes/t4583-pivot-row-labels, probes/t4582-pivot-item-edges.
 
 ## Acceptance criteria
 - [ ] Pivot-area cells of the PV1 probes match the oracle.

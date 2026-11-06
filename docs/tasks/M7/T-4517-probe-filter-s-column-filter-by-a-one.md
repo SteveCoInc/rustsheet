@@ -3,7 +3,7 @@ id: T-4517
 title: "Probe FILTER's column filter by a one-column include as tall as the array is wide (include_axis), with and without an error element"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -33,3 +33,6 @@ an error element in that include.
 
 ## Out of scope
 - FILTER's one-cell error includes and indirect references (T-4477, done).
+
+## Outcome
+Probe probes/t4517-filter-transposed-include (excel-graph 2026-11-06): a vertical include as tall as the array is wide is `#VALUE!` in Excel; `include_axis` accepted it as a column filter. Fixed `include_axis` (only a row include filters columns), arrays.md records the rule. Eval: 15 new probe cells all pass, no baseline change.
