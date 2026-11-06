@@ -433,9 +433,10 @@ impl Model {
         if sorted.len() < 2 {
             return result;
         }
-        // sort_index truncates, so 2.7 is key 2 too (probes/t2929-sort-lifted-by-col-errors K18).
+        // sort_index reads as `sort_by_keys` reads it, so 2.7 is key 2 too
+        // (probes/t2929-sort-lifted-by-col-errors K18).
         let only_key_two =
-            matches!(raw_index.as_deref(), Ok([index]) if (2.0..3.0).contains(index));
+            matches!(raw_index.as_deref(), Ok([index]) if near_integer_whole(*index) == 2.0);
         sort_lifted_elements(result, &sorted, only_key_two)
     }
 
@@ -466,8 +467,12 @@ impl Model {
             );
         }
         let mut keys: Vec<(usize, bool)> = Vec::with_capacity(raw_index.len());
+        // A fractional sort_index and sort_order read as SORTBY's sort_order does: floored, snapped
+        // up just below an integer (`near_integer_whole`), so -0.5 sorts descending, `1-2^-23` is
+        // key 1, `2-2^-22` is order 2 (`#VALUE!`) and `3-2^-23` is key 3
+        // (probes/t4447-sort-fractional-keys; docs/excel-semantics/arrays.md, T-4447).
         for (k, &index) in raw_index.iter().enumerate() {
-            let index = index as i64;
+            let index = near_integer_whole(index) as i64;
             if index < 1 {
                 return CalcResult::new_error(
                     Error::VALUE,
@@ -480,7 +485,8 @@ impl Model {
                 .or(raw_order.first())
                 .copied()
                 .unwrap_or(1.0);
-            let ascending = match Self::validate_sort_order(order as i32, cell) {
+            let ascending = match Self::validate_sort_order(near_integer_whole(order) as i32, cell)
+            {
                 Ok(a) => a,
                 Err(e) => return e,
             };
