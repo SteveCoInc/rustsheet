@@ -159,11 +159,15 @@ impl UserModel {
                     count: _,
                     old_data,
                     tables,
+                    rewritten,
                 } => {
                     self.model.check_table_extents(*sheet, tables)?;
+                    let lines = (*sheet, *row, old_data.len(), true);
+                    let rewritten = self.checked_rewritten_cells(rewritten, lines)?;
                     needs_evaluation = true;
                     self.undo_delete_rows(*sheet, *row, old_data)?;
                     self.model.restore_table_extents(*sheet, tables)?;
+                    self.restore_rewritten_cells(rewritten)?;
                 }
                 Diff::InsertColumns {
                     sheet,
@@ -179,11 +183,15 @@ impl UserModel {
                     count: _,
                     old_data,
                     tables,
+                    rewritten,
                 } => {
                     self.model.check_tables_of_sheet(*sheet, tables)?;
+                    let lines = (*sheet, *column, old_data.len(), false);
+                    let rewritten = self.checked_rewritten_cells(rewritten, lines)?;
                     needs_evaluation = true;
                     self.undo_delete_columns(*sheet, *column, old_data)?;
                     self.model.restore_tables_of_sheet(*sheet, tables)?;
+                    self.restore_rewritten_cells(rewritten)?;
                 }
                 Diff::SetFrozenRowsCount {
                     sheet,
@@ -707,6 +715,7 @@ impl UserModel {
                     count,
                     old_data: _,
                     tables: _,
+                    rewritten: _,
                 } => {
                     self.model.delete_rows(*sheet, *row, *count)?;
                     needs_evaluation = true;
@@ -725,6 +734,7 @@ impl UserModel {
                     count,
                     old_data: _,
                     tables: _,
+                    rewritten: _,
                 } => {
                     self.model.delete_columns(*sheet, *column, *count)?;
                     needs_evaluation = true;

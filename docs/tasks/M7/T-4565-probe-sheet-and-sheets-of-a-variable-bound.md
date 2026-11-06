@@ -3,7 +3,7 @@ id: T-4565
 title: "Probe SHEET and SHEETS of a variable bound to a LAMBDA, an omitted parameter and a LET-bound array (T-4518 review follow-ups)"
 milestone: M7
 lane: functions-logic
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -34,3 +34,10 @@ to a LET-bound array or a scalar value give Excel's result, probed.
 
 ## Out of scope
 - SHEET and SHEETS of 3-D references (references.md).
+
+## Outcome
+Probe `probes/t4565-sheet-sheets-lambda-omitted-array` (16 cells, excel-graph) answers: SHEET of a LAMBDA-bound variable
+`#N/A`; SHEET of an omitted optional parameter `#N/A` (three forms); a required parameter called with too few arguments is
+`#VALUE!` (a call error, not an omitted parameter); SHEETS of a bound number, text, boolean or row of a LET-built array
+`#N/A`. Ours now matches all 16 (`fn_sheet`, `fn_sheets`); recorded in information.md. SHEETS written on a parameter is
+unprobeable (canary guard), left as is.

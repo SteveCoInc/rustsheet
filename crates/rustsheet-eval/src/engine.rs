@@ -303,6 +303,9 @@ impl Engine for RustSheetEngine {
                 Ok(entered)
             })
             .map_err(|e| e.to_string())?;
+        // Excel opens the built file, calculates and then refreshes its `refreshOnLoad` pivots
+        // before the oracle types any entry.
+        spec_pivots::load_defined(&mut workbook, spec)?;
         type_entries(&mut workbook, entered)?;
         apply_sheet_ops(&mut workbook, &spec.sheet_ops)?;
         if let Some(active) = &spec.active_sheet {

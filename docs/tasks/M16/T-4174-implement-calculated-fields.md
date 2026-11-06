@@ -16,6 +16,10 @@ Calculated fields are evaluated on the aggregated sums with the engine's own par
 ## Context
 SPEC-0032; directive 3 (reuse the parser), directive 5. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
+Owner of these visibly-off pivot cells (decision 0245; moved from T-4152, whose adapter loads the
+  case builder's parts through the importer, which skips a cache with a calculated field; K's Top-N filter and sort are T-4165's once it loads):
+  probes/t4128-pivot-spike K!A3:D11.
+
 ## Acceptance criteria
 - [ ] p-calc field probes pass.
 - [ ] `make check` green; reviewers approve.

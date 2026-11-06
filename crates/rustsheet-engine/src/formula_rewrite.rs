@@ -1,16 +1,20 @@
 //! Rewriting the stored text of every formula and defined name for a workbook edit (a table or
-//! sheet delete, a sheet move), keeping what changed so the undo can put it back.
+//! sheet delete, a sheet move), keeping what changed so the undo can put it back; and the formula
+//! cells a row or column delete rewrote past what re-inserting them undoes.
+
+use std::collections::HashMap;
 
 use crate::{
     expressions::{
         lexer::LexerMode,
         parser::{
-            stringify::{to_english_string, to_rc_format},
+            stringify::{to_english_string, to_rc_format, to_string_displaced, DisplaceData},
             Node,
         },
         types::CellReferenceRC,
     },
     model::Model,
+    types::Cell,
 };
 
 impl Model {
@@ -145,6 +149,71 @@ impl Model {
             }
         }
     }
+}
+
+impl Model {
+    /// Whether `displaced`, the text the row or column delete `data` gave a formula that read
+    /// `original` (both in the active locale, on the cell `context`), reads otherwise once the
+    /// rows or columns are inserted again: a reference to a deleted cell made `#REF!` stays so,
+    /// and a range that lost an edge does not get it back (T-4668). Any other edit is never lost.
+    pub(crate) fn lost_on_reinsert(
+        &mut self,
+        data: &DisplaceData,
+        context: &CellReferenceRC,
+        original: &str,
+        displaced: &str,
+    ) -> bool {
+        let reinsert = match *data {
+            DisplaceData::Column {
+                sheet,
+                column,
+                delta,
+            } if delta < 0 => DisplaceData::Column {
+                sheet,
+                column,
+                delta: delta.saturating_neg(),
+            },
+            DisplaceData::Row { sheet, row, delta } if delta < 0 => DisplaceData::Row {
+                sheet,
+                row,
+                delta: delta.saturating_neg(),
+            },
+            _ => return false,
+        };
+        let node = self.parser.parse(displaced, context);
+        to_string_displaced(&node, context, &reinsert, self.locale, self.language) != original
+    }
+}
+
+/// A formula cell that a row or column delete rewrote so that re-inserting the rows or columns
+/// does not give its formula back ([`Model::lost_on_reinsert`]), as it was before the delete and at
+/// its place then, so the undo can put it back (T-4668).
+#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+pub(crate) struct RewrittenCell {
+    /// The index of the cell's sheet.
+    pub(crate) sheet: u32,
+    pub(crate) row: i32,
+    pub(crate) column: i32,
+    pub(crate) cell: Cell,
+}
+
+/// The formula cells a delete moved on one sheet, by the place it moved each to: the place it had
+/// before and the cell as it was there (its formula is relative to that place).
+pub(crate) type MovedFormulas = HashMap<(i32, i32), ((i32, i32), Cell)>;
+
+/// `rewritten`, read on the cells after a delete moved them, at the places and with the cells they
+/// had before it: a cell the delete moved on `sheet` is in `moved`.
+pub(crate) fn before_moves(
+    mut rewritten: Vec<RewrittenCell>,
+    sheet: u32,
+    mut moved: MovedFormulas,
+) -> Vec<RewrittenCell> {
+    for entry in rewritten.iter_mut().filter(|entry| entry.sheet == sheet) {
+        if let Some(((row, column), cell)) = moved.remove(&(entry.row, entry.column)) {
+            (entry.row, entry.column, entry.cell) = (row, column, cell);
+        }
+    }
+    rewritten
 }
 
 /// A formula that a workbook edit rewrote, kept so the undo can put it back.

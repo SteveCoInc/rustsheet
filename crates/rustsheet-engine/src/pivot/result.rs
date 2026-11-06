@@ -55,7 +55,7 @@ use thiserror::Error as ThisError;
 
 use crate::expressions::token::Error;
 
-use super::accumulate::{sum_in_order, Accumulator};
+use super::accumulate::{sum_in_order, Accumulator, CutCount};
 use super::{
     Aggregate, Axis, AxisField, CacheItem, ItemType, PageField, PivotCache, PivotField, PivotTable,
 };
@@ -227,6 +227,17 @@ impl PivotResult {
         let base = *self.cells.get(&(row, column))? as usize;
         let accumulator = self.accumulators.get(base + data_field)?;
         let total = !self.rows.is_leaf(row) || !self.columns.is_leaf(column);
+        // A custom Count or CountNums subtotal under a Sum data field counts each inner-item
+        // cell up to its first error (pivots.md "Which function the countA and count custom
+        // subtotals compute", t4622). Under the other aggregates it is unprobed and keeps the
+        // Count total rule (UNVERIFIED, T-4636).
+        let own = self.functions.get(data_field).copied();
+        if total
+            && own == Some(Aggregate::Sum)
+            && matches!(function, Aggregate::Count | Aggregate::CountNums)
+        {
+            return Some(accumulator.cut_count(function, self.counts_mixed));
+        }
         let sum = (function == Aggregate::Sum && total && self.sum_only)
             .then(|| accumulator.children_sum());
         Some(accumulator.finish(function, total, self.counts_mixed, sum))
@@ -626,6 +637,7 @@ fn accumulate(
         ..
     } = result;
     let mut bases: Vec<usize> = Vec::new();
+    let mut cuts: Vec<CutCount> = Vec::new();
     for run in placed.chunk_by(|a, b| (a.0, a.1) == (b.0, b.1)) {
         let Some(&(row_leaf, column_leaf, _)) = run.first() else {
             continue;
@@ -659,16 +671,28 @@ fn accumulate(
                     .saturating_mul(data.len()),
             ),
         )?;
+        // The run is one inner-item cell, in record order: its counts that end at its first
+        // error go to every cell that covers it (`Accumulator::cut_count`).
+        cuts.clear();
+        cuts.resize(data.len(), CutCount::default());
         for &(_, _, record) in run {
-            for (d, (records, items)) in data.iter().enumerate() {
+            for (d, ((records, items), cut)) in data.iter().zip(&mut cuts).enumerate() {
                 let item = records
                     .get(record as usize)
                     .and_then(|&i| items.get(i as usize))
                     .ok_or(PivotComputeError::Malformed)?;
+                cut.push(item);
                 for &base in &bases {
                     if let Some(acc) = accumulators.get_mut(base + d) {
                         acc.push(item);
                     }
+                }
+            }
+        }
+        for (d, cut) in cuts.iter().enumerate() {
+            for &base in &bases {
+                if let Some(acc) = accumulators.get_mut(base + d) {
+                    acc.add_cut(*cut);
                 }
             }
         }

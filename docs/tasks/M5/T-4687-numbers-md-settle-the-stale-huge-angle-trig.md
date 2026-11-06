@@ -3,7 +3,7 @@ id: T-4687
 title: "numbers.md: settle the stale huge-angle trig and huge num_digits ROUND notes from the entries that answered them"
 milestone: M5
 lane: functions-math
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -54,3 +54,9 @@ change.
 
 ## Out of scope
 - Any other numbers.md entry; the trig last-digit fits (T-3018, T-3020, T-2744, T-3727).
+
+## Outcome
+Rewrote the "Ours" and "Status" lines of "Huge arguments of trig functions" (engine: `trig_arg`/`EXCEL_TRIG_LIMIT`, error for
+|x| >= 2^27, `#NUM!` for out-of-domain ACOS/ASIN) and the Status of "ROUND family with huge num_digits" (VERIFIED, each gen-m2
+cell placed on its branch of the wrap rule), with "See" pointers. `rustsheet-eval show --all` passes every named cell
+(gen-m2 A35, A136, A336, A270; gen-m5 A32, A26, A23). No engine change, no new tasks.

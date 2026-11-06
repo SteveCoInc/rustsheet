@@ -125,38 +125,7 @@ pub(crate) fn source_cache(case: &Json, source: &str) -> PivotCache {
 }
 
 pub(crate) fn aggregate_named(name: &str) -> Aggregate {
-    match name {
-        "sum" => Aggregate::Sum,
-        "count" => Aggregate::Count,
-        "average" => Aggregate::Average,
-        "max" => Aggregate::Max,
-        "min" => Aggregate::Min,
-        "product" => Aggregate::Product,
-        "countNums" => Aggregate::CountNums,
-        "stdDev" => Aggregate::StdDev,
-        "stdDevp" => Aggregate::StdDevP,
-        "var" => Aggregate::Var,
-        "varp" => Aggregate::VarP,
-        _ => panic!("unknown aggregate {name}"),
-    }
-}
-
-/// The verb the builder puts in a data field's default name, `<verb> of <field>`
-/// (`pivot_definition.py` `_AGGREGATE_VERBS`).
-fn default_verb(subtotal: &str) -> &'static str {
-    match subtotal {
-        "sum" => "Sum",
-        "count" | "countNums" => "Count",
-        "average" => "Average",
-        "max" => "Max",
-        "min" => "Min",
-        "product" => "Product",
-        "stdDev" => "StdDev",
-        "stdDevp" => "StdDevp",
-        "var" => "Var",
-        "varp" => "Varp",
-        _ => panic!("unknown aggregate {subtotal}"),
-    }
+    Aggregate::from_consolidate_name(name).unwrap_or_else(|| panic!("unknown aggregate {name}"))
 }
 
 /// A custom subtotal line's function by its `item@t`, as the importer reads it.
@@ -276,6 +245,15 @@ pub(crate) fn probe_pivot_over(
         for hidden in spec["hidden"].as_array().into_iter().flatten() {
             pivot_field.hide(item_of(&cache, index, hidden));
         }
+        // `collapsed` items are written `sd="0"`.
+        for collapsed in spec["collapsed"].as_array().into_iter().flatten() {
+            let item = item_of(&cache, index, collapsed);
+            for listed in &mut pivot_field.items {
+                if listed.index == Some(item) {
+                    listed.expanded = false;
+                }
+            }
+        }
         if let Some(subtotals) = spec["subtotals"].as_array() {
             pivot_field.default_subtotal = false;
             pivot_field.custom_subtotals = subtotals
@@ -300,7 +278,7 @@ pub(crate) fn probe_pivot_over(
             let subtotal = subtotal.unwrap_or("sum");
             DataField {
                 caption: d["name"].as_str().map_or_else(
-                    || format!("{} of {name}", default_verb(subtotal)),
+                    || format!("{} of {name}", aggregate_named(subtotal).word()),
                     str::to_string,
                 ),
                 field: field(name),
@@ -339,6 +317,7 @@ pub(crate) fn probe_pivot_over(
         pivot_field.compact = flag(&attrs["compact"], pivot_field.compact);
         pivot_field.outline = flag(&attrs["outline"], pivot_field.outline);
         pivot_field.subtotal_top = flag(&attrs["subtotalTop"], pivot_field.subtotal_top);
+        pivot_field.insert_blank_row = flag(&attrs["insertBlankRow"], pivot_field.insert_blank_row);
     }
     (cache, table)
 }

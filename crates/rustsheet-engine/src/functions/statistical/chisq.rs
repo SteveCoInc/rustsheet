@@ -466,6 +466,22 @@ impl Model {
             RefArg::Ranges(areas @ Ranges::Areas(_)) => {
                 return self.values_from_areas(&areas, cell)
             }
+            // LARGE and SMALL over an array of references on another sheet are `#N/A`, on the
+            // formula's own sheet its value view (SPEC-0014 amendment rule 5,
+            // [`RefGrid::order_statistic_error`]). The RANK family is unprobed and keeps the
+            // value view.
+            RefArg::Grid(grid) if !arrays_are_value_errors => {
+                match grid.order_statistic_error(cell.sheet) {
+                    Some(error) => {
+                        return Err(CalcResult::new_error(
+                            error,
+                            cell,
+                            "Array of references on another sheet".to_string(),
+                        ))
+                    }
+                    None => grid.to_values(),
+                }
+            }
             single => single.into_single_area(cell),
         };
         match single {
