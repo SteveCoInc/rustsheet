@@ -3,7 +3,7 @@ id: T-4458
 title: "BESSELY at a tiny x and orders 1 to 7: probe where Excel turns #NUM! (overflow of the upward recurrence or of 1/x) and match the cut"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus

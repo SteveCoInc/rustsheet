@@ -1438,6 +1438,46 @@ Evidence: eval/accuracy/tables/BESSELJ/s1 and BESSELI/s1 oracle sidecars (T-4083
 probes/t4422-bessel-tiny-x-bisect (432 cells, the 3-digit brackets above, excel-graph, 2026-11-06).
 Status: VERIFIED (excel-graph)
 Implemented in: functions/engineering/transcendental/bessel_excel.rs (`jn_miller`), bessel_i.rs (`in_miller`)
+
+## BESSELY at a tiny x and a small order (T-4458)
+Rule: at a tiny x, BESSELY of orders 2 to 10 is `#NUM!` exactly from the first x at which the upward recurrence
+(`b * (2j * (1/x)) - a` from NR's `y0`/`y1`, each product and difference stored as a double; T-2548) overflows a
+double. Below the cut every probed x is `#NUM!` down to the 10^-k grid's last decade, and no probed cell is 0. Excel's
+cut falls between the same adjacent cells as the double model's. Each order's last answering x and first `#NUM!` x:
+
+| order | answers / `#NUM!` | the model's cut |
+|---|---|---|
+| 2 | 8.416E-155 / 8.415E-155 | 8.41584E-155 |
+| 3 | 3.049E-103 / 3.048E-103 | 3.04849E-103 |
+| 4 | 2.031E-77 / 2.030E-77 | 2.03049E-77 |
+| 5 | 6.710E-62 / 6.709E-62 | 6.70964E-62 |
+| 6 | 1.545E-51 / 1.544E-51 | 1.54496E-51 |
+| 7 | 3.998E-44 / 3.997E-44 | 3.99771E-44 |
+| 8 | 2E-38 / 1E-38 | 1.47860E-38 |
+| 9 | 4E-34 / 3E-34 | 3.21360E-34 |
+| 10 | 1E-30 / 9E-31 | 9.59003E-31 |
+
+Order 1 answers at every normal x probed (down to 3E-308; `BESSELY(3E-308,1)` is -2.1220659066666666E+307, which is
+`-TWO_OVER_PI/x` with NR's 0.636619772). Orders 2 to 7 hold to 4 significant digits; orders 8 to 10 were mapped on
+mantissas 9..1 only. The digits next to a cut follow the model, with one exception: `BESSELY(2.036E-77,4)` is
+-1.7783214437962194E+308 in both fills, where the model gives -1.7783214437962202E+308 (4 ulp; T-4467). Its neighbours
+2.035E-77 and 2.037E-77 match.
+Unreliable, so no target (the reproducibility floor): a subnormal x. Excel reads a subnormal literal as 0 ("Subnormal
+flush edges"), and Excel for the web refuses a workbook that holds one (`unsupportedWorkbook`). A subnormal built as a
+difference (`3.06E-308-2.5E-308`) is kept (`(x)*1E300` gives 5.6E-9). Excel's BESSELY of it was inconsistent within
+one workbook:
+- `BESSELY(x,1)` was `#NUM!` in one cell and 0 in another for the same x;
+- `ISNUMBER` of the same formula disagreed with both;
+- the same workbook's order-7 cells turned `#NUM!` a decade early (`BESSELY(3E-43,7)` `#NUM!`).
+The bisection fill gives that cell its model value, -1.3413552397695476E+302, and so does the refill without subnormal
+arguments. Whatever Excel does at a subnormal x leaks into later cells, so the cut of order 1 across 1/DBL_MAX
+(5.5627E-309) is unprobed. The first fill is kept as research data (docs/research/t4458/fill1), not as an eval case.
+Ours: `excel_bessel_y`'s non-finite result is `#NUM!` at the formula layer, so its cut is the model's.
+Evidence: probes/t4458-bessely-tiny-x-cuts (430 cells, orders 1 to 7 at decade, 1-digit, 3-digit and 4-digit
+resolution around each cut) and probes/t4458-bessely-tiny-x-bisect (263 cells: order 7 from 4E-43 to 3E-43, orders 8
+to 10), both from excel-graph, 2026-11-06. Generator: docs/research/t4458/gen_probe.py.
+Status: VERIFIED (excel-graph)
+Implemented in: functions/engineering/transcendental/bessel_excel.rs (`excel_bessel_y`)
 Tasks: T-4083, T-4422
 
 ## BESSELI overflow point (T-2613)
