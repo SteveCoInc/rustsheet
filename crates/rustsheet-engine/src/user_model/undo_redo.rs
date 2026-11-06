@@ -177,9 +177,11 @@ impl UserModel {
                     column,
                     count: _,
                     old_data,
+                    tables,
                 } => {
                     needs_evaluation = true;
                     self.undo_delete_columns(*sheet, *column, old_data)?;
+                    self.model.restore_tables_of_sheet(*sheet, tables)?;
                 }
                 Diff::SetFrozenRowsCount {
                     sheet,
@@ -262,9 +264,18 @@ impl UserModel {
                     name,
                     scope,
                     old_value,
+                    hidden,
+                    comment,
                 } => {
-                    // The name existed: an undo puts it back even past the API's call cap (T-4014).
-                    self.model.restore_defined_name(name, *scope, old_value)?;
+                    // The name existed: an undo puts it back even past the API's call cap (T-4014),
+                    // with the flags it was loaded with (T-4637).
+                    self.model.restore_defined_name(
+                        name,
+                        *scope,
+                        old_value,
+                        *hidden,
+                        comment.clone(),
+                    )?;
                 }
                 Diff::UpdateDefinedName {
                     name,
@@ -711,6 +722,7 @@ impl UserModel {
                     column,
                     count,
                     old_data: _,
+                    tables: _,
                 } => {
                     self.model.delete_columns(*sheet, *column, *count)?;
                     needs_evaluation = true;
@@ -792,6 +804,8 @@ impl UserModel {
                     name,
                     scope,
                     old_value: _,
+                    hidden: _,
+                    comment: _,
                 } => self.model.delete_defined_name(name, *scope)?,
                 Diff::UpdateDefinedName {
                     name,

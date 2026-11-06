@@ -337,8 +337,16 @@ impl Model {
         name: &str,
         scope: Option<u32>,
         formula: &str,
+        hidden: bool,
+        comment: Option<String>,
     ) -> Result<(), String> {
-        self.insert_defined_name(name, scope, formula, NameSource::Restored)
+        self.insert_defined_name(name, scope, formula, NameSource::Restored)?;
+        // The name just pushed is the last one; its flags are the deleted name's (T-4637).
+        if let Some(restored) = self.workbook.defined_names.last_mut() {
+            restored.hidden = hidden;
+            restored.comment = comment;
+        }
+        Ok(())
     }
 
     /// Adds a defined name whose formula is any formula that parses, as Excel stores them: an

@@ -6625,8 +6625,12 @@ too: `BINOM.INV(2147483647,0.5,0.5)` and `CRITBINOM(2147483647,0.5,0.5)` are `#N
 Evidence: probes/t2435-dist-extremes A15:A19 (excel-graph, 2026-10-26); gen-m9 a61e547a1cab994c A127
 (`CRITBINOM(1E+15,0.5,0.001)`) and ee2497a5e683c5d9 A345 (`BINOM.INV(1E+15,5.2E-16,0.5)`).
 Ours: matches since T-2435 (`TRIALS_LIMIT` in functions/statistical/binom.rs now also in
-`binom_inv_of`). The count itself at a huge trial count is ours to fix: `BINOM.INV(2147483646,0.5,
-0.5)` is 1073744668 against Excel's 1073741823 (statrs' binomial cdf; T-2809).
+`binom_inv_of`). The count at 2^31 - 2 trials matches too, since T-3444: statrs' binomial cdf gave
+`BINOM.INV(2147483646,0.5,0.5)` 1073744668 against Excel's 1073741823, and the search now runs on
+BINOM.DIST's own cdf, the bratio port of TOMS 708 on `I_p(k + 1, n - k)` (basym, its asymptotic
+expansion, near the median and bfrac further out; no fitted constant), which crosses alpha at n/2
+(T-2809 confirmed it on A15 and A18; "BINOM.DIST.RANGE and BINOM.INV at a large n sit on BINOM.DIST's
+own cdf").
 Status: VERIFIED (excel-graph)
 Tasks: T-2435, T-2809
 
