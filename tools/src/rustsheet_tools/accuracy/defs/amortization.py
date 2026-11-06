@@ -47,7 +47,7 @@ import mpmath
 
 from rustsheet_tools.accuracy.defs._common import ill_conditioned, one_of, scalars, trunc
 from rustsheet_tools.accuracy.defs.depreciation import stratified
-from rustsheet_tools.accuracy.defs.yearfrac import _serial, displayed_date, eu_30_360, us_30_360
+from rustsheet_tools.accuracy.defs.yearfrac import displayed_date, eu_30_360, us_30_360, whole_serial
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
@@ -121,7 +121,7 @@ class _Asset:
         a = scalars(args)
         self.cost, self.salvage, self.period, self.rate = a[0], a[3], a[4], a[5]
         self.fully_salvaged = False
-        purchased, first = _serial(float(a[1])), _serial(float(a[2]))
+        purchased, first = whole_serial(float(a[1])), whole_serial(float(a[2]))
         if not (self.cost >= 0 and self.salvage >= 0 and self.salvage <= self.cost):
             msg = "a negative cost or salvage, or a salvage above the cost: #NUM!"
             raise DomainError(msg)

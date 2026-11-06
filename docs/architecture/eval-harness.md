@@ -230,7 +230,10 @@ Only `pass` counts as passing. Case statuses:
   scored cells into the closeness buckets of `closeness.rs` (bit-exact, 1 ulp, 2–4 ulp,
   `digits15` within half a unit in the 15th significant digit, `residue13` for incomplete-beta
   family numbers past it but within half a unit in the 13th (decision 0267, SPEC-0030; not visibly
-  off), `visible_numeric`, `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
+  off), `r3_math` for numbers where the engine returns the 50-digit math instead of Excel's value by
+  design (decision 0188 R3: an R3 mark, Excel more than 1e-4 off the math, the engine within 1e-9 of
+  it; the test is `r1c::r3_math`, marked once per run as `CellResult::target` = `Target::Math`; decision 0310; not
+  visibly off), `visible_numeric`, `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
   cell is blamed on the functions it calls other than glue (`closeness::GLUE`: IF, SUM, DATE,
   INDEX and the like), or on its glue when it calls nothing else.
   A "Parity tiers (glue-aware)" section (T-0068, decision 0118, `attribution.rs`) counts the
