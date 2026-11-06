@@ -3,7 +3,7 @@ id: T-4341
 title: "Probe the [s] forms T-4295 left unprobed: [ss] m, a second h/m token, a date or elapsed token before [s], [s].0 m and s [s] m"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
