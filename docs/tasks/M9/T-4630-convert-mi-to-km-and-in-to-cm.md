@@ -108,6 +108,6 @@ the commit after dd7fc87f0, which adds only these notes.
   figure, and files T-4670 for the overflow-path minor.
 - Next step: wait for green CI on the head, then re-run the reviewers on it. Fidelity must re-check the corrected R4
   table; design and security only need to confirm the docs-only delta. Then mark the PR ready and enqueue it.
-- Do not repeat: scoring with the Python model in the session scratchpad; it mis-scored the angstrom hold-out. Use
+- Do not repeat: scoring with the Python model in the session scratchpad; it scored the angstrom hold-out wrongly. Use
   `rustsheet-eval show` or the engine for counts. calipers/formulas_engineering D26, D27, J26, J27 should leave
   eval/baseline/calipers.txt the next time `make eval-baseline` runs with calipers fetched (never by hand).
