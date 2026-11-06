@@ -921,7 +921,7 @@ Evidence: probes/eng-im-overflow (excel-graph).
   `...915853`).
 - An input part of `1E308` or more is `#NUM!` in every IM* function (`IMREAL("1E308")`,
   `IMSUM("1E308","0")`); ours already matches. `IMSQRT("1E307")` and `IMSQRT("4E307")` are `#NUM!`
-  too (A33, A34). The threshold per part lies between 1.34E154 and 1.35E154, consistent with sqrt(DBL_MAX) = 1.34078E154 (exact boundary unprobed): IMSQRT squares each
+  too (A33, A34). The threshold per part lies between 1.34E154 and 1.35E154, consistent with sqrt(DBL_MAX) = 1.34078E154. The measured bracket: the text `1.3407807929942594E154`, `...596E154` and `...597E154` (the doubles at and either side of sqrt(DBL_MAX)) are all accepted as a real part, an imaginary part, negated, and with a `+1i` or `-1i` other part (`IMSQRT("1.3407807929942597E154")` is `1.15792089237316E+77`, `"-1.3407807929942597E154"` is `7.09312496098692E+60+1.15792089237316E+77i`), while `"1.3408E154"` and `"1.3408E154i"`, and every larger probe to `1.349E154`, are `#NUM!` (probes/t4461-imsqrt-cut A1:A36, excel-graph, T-4461; ours matches every cell). IMSQRT squares each
   part, and a part past it is `#NUM!` (`"1.34E154"` is `1.15758369027902E+77`, `"1.35E154"`,
   `"1E160i"`, `"-1E160"`, `"1E154+1.4E154i"` are `#NUM!`). When each square is finite but their
   sum overflows, the result is `0`, not an error: `IMSQRT("1E154+1E154i")`, `"-1E154-1E154i"`,

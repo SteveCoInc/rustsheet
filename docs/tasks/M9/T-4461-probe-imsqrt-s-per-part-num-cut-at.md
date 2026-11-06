@@ -3,7 +3,7 @@ id: T-4461
 title: "Probe IMSQRT's per-part #NUM! cut at sqrt(DBL_MAX): the doubles either side of 1.3407807929942596E154, real and imaginary"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -39,3 +39,9 @@ for both signs. The engine either matches every new cell or a follow-up task is 
 
 ## Out of scope
 - IMSQRT's digits away from the cut, and the other IM* overflow edges (T-2631, T-4425).
+
+## Outcome
+Probe `probes/t4461-imsqrt-cut` (36 cells, excel-graph): the doubles around sqrt(DBL_MAX) are all accepted per part
+(real, imaginary, negated, with a `+-1i` other part); `1.3408E154` and above are `#NUM!`. The cut lies between
+`1.3407807929942597E154` and `1.3408E154`; the engine matches all 36 cells, so no baseline change and no follow-up.
+engineering.md updated. IMSQRT has no Gate A definition, so no `.math.json` sidecar.
