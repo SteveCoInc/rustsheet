@@ -524,8 +524,10 @@ excel-graph, 2026-11-03, T-3677; B = ERROR.TYPE): `SUMPRODUCT(F1:F3,G1:G3)` (F1:
 `#NUM!`, the same pairs in the order (1.2E+154, 0), (0, 1.2E+154), (1.2E+154, 0) give 1.4400000000000002E+308, and two
 (1.2E+154, 1.2E+154) pairs give 0 (A4:A6; SUMX2 - SUMY2 would overflow on the last two). `SUMX2PY2` over (1.2E+154, 0),
 (0, 1.2E+154), (1.2E+154, 0) is `#NUM!` (A7), and so are `SUMX2PY2({1.2E+154},{1.2E+154})` (the term x^2+y^2, A20) and
-`SUMXMY2({1E+154,-1E+154},{-1E+154,1E+154})` (A19). Unprobed: whether SUMX2MY2's running sum takes x^2 and then -y^2
-(which could overflow where the term does not). SUMX2MY2 never snaps near zero: with J1:J2 = 1, 0 and K1:K2 = 0,
+`SUMXMY2({1E+154,-1E+154},{-1E+154,1E+154})` (A19). SUMX2MY2's running sum adds one finished double term x^2 - y^2 per pair (model a), not x^2 and then -y^2 and not an
+80-bit square (probes/t4424-sumx2my2-overflow-order, excel-graph, T-4424): `{1.3E+154,1.2E+154}` against `{0,1.2E+154}`
+(either order) is 1.6899999999999998E+308 (A1:A2, so not model b), the negative twin is -1.6899999999999998E+308 (A3:A4),
+and a pair whose x^2 or -y^2 overflows alone is `#NUM!` even when x^2 - y^2 is finite (A5:A7, so not an 80-bit square). SUMX2MY2 never snaps near zero: with J1:J2 = 1, 0 and K1:K2 = 0,
 1+2^-52, `SUMX2MY2(J1:J2,K1:K2)` is -4.440892098500626E-16 (2 ULP of 1), `SUMX2MY2(K1:K2,J1:J2)` +4.440892098500626E-16 and
 the one pair `SUMX2MY2(J1,K2)` -4.440892098500626E-16 (A8, A10, A11); 1+4*2^-52 gives -1.7763568394002505E-15 (A9).
 `SUMPRODUCT(P1:P3,{1;1;1})` over 0.1, 0.2, -0.3 is 5.551115123125783E-17 (A17, T-3048's no-snap rule). The engine matches
