@@ -3,7 +3,7 @@ id: T-4426
 title: "AGGREGATE with an empty data or k argument, or data from a LET or defined name: probe Excel (numbers.md 'Still unprobed')"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
