@@ -3,7 +3,7 @@ id: T-4688
 title: "criteria.md: settle the D* edge-pool entry's probe-pending status from T-1390's probes, and mark the conditional-format notes unprobeable (decision 0266)"
 milestone: M9
 lane: functions-criteria
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -58,3 +58,11 @@ change.
 ## Out of scope
 - New D* probes (file them as research tasks), the engine's conditional-format code, and the criteria entries other
   than these three.
+
+## Outcome
+Docs only (docs/excel-semantics/criteria.md). The T-2249 entry now cites committed excel-graph cells
+(probes/db-computed-criteria-shapes, probes/db-header-criteria-shapes, db-front-end-sweep) for five of its six bullets
+and is VERIFIED for them; "trailing blank rows are not records" has no committed cell and stays UNVERIFIED, filed as
+T-4732. The two conditional-format entries no longer name T-1051/T-1075 and cite decision 0266 as the reason no probe is
+planned. Found while citing: a text condition under an unknown header (`">2"`) matches nothing (DSUM 0, AB43), unlike a
+numeric condition (recorded in the entry). No eval delta.
