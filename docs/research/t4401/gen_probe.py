@@ -2,7 +2,8 @@
 intransitive runs.
 
 Run from the repo root: python3 -I docs/research/t4401/gen_probe.py, then (after `make build`, before the fill)
-python3 -I docs/research/t4401/predict_engine.py, which commits the engine's values as the predictions.
+python3 -I docs/research/t4401/gen_probe.py --predict, which writes the engine's values to predictions.tsv here
+with docs/research/t4344/predict_engine.py's `main` (the predictions committed before the fill).
 
 The rule under test (chosen on probes/t4382-pivotby-intransitive-paths Calc!B31:C42): a column subtotal whose class
 no record reached holds every record of the line, as a leaf no record reaches does; one whose class a record
@@ -17,6 +18,7 @@ position, F p/q.
 
 import importlib.util
 import random
+import sys
 
 _spec = importlib.util.spec_from_file_location("t4382_gen_probe", "docs/research/t4382/gen_probe.py")
 assert _spec and _spec.loader
@@ -83,5 +85,16 @@ def main() -> None:
     print(r, "blocks,", len(calc) - r, "formulas")
 
 
+def predict() -> None:
+    """The engine's values for the case, before the fill (docs/research/t4344/predict_engine.py)."""
+    spec = importlib.util.spec_from_file_location("t4344_predict", "docs/research/t4344/predict_engine.py")
+    assert spec and spec.loader
+    engine = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(engine)
+    engine.CASE = OUT.removesuffix(".case.json")
+    engine.OUT = "docs/research/t4401/predictions.tsv"
+    engine.main()
+
+
 if __name__ == "__main__":
-    main()
+    predict() if sys.argv[1:] == ["--predict"] else main()

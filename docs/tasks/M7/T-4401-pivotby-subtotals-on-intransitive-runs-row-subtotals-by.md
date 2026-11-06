@@ -49,8 +49,8 @@ gives the reached classes).
   pass (777 -> 786 of 819; the rest are T-4402's and T-4403's).
 - Hold-out (decision 0188 R4, a structural choice): probes/t4401-pivotby-level-subtotal-holdout (new, seed
   "T-4401", 16 runs with three column fields and 14 with four, `col_total_depth` 3 and 4, ascending and
-  `col_sort_order` -1; 60 formulas). The engine's predictions were committed before the fill (docs/research/t4401,
-  commit 89c6e5d); 21 of the 60 differ from main's engine. Filled from excel-graph: 60 of 60 predictions match
+  `col_sort_order` -1; 60 formulas). The engine's predictions were committed before the fill
+  (docs/research/t4401/predictions.tsv, commit 89c6e5d; `gen_probe.py --predict` writes them); 21 of the 60 differ from main's engine. Filled from excel-graph: 60 of 60 predictions match
   (730 of 730 cells).
 - coercion.md: the T-4382 entry's level-2 bullet records the hold-out.
 - Eval delta: probes fixed 9, known failures 4914 -> 4905, 0 regressions; the new case passes all its cells.
