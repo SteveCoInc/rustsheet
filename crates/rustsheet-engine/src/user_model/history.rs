@@ -181,6 +181,9 @@ pub(crate) enum Diff {
         column: i32,
         count: i32,
         old_data: Vec<ColumnData>,
+        /// The tables the delete changed, as they were before it, which the undo puts back
+        /// (T-4652); redo's delete changes them again.
+        tables: Vec<(String, Table)>,
     },
     DeleteSheet {
         sheet: u32,

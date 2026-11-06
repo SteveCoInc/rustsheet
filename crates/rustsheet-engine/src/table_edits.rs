@@ -149,6 +149,16 @@ pub(crate) struct Bounds {
     pub(crate) data: (i32, i32),
 }
 
+impl Bounds {
+    /// Whether the two ranges share a cell.
+    pub(crate) fn overlaps(&self, other: &Bounds) -> bool {
+        self.left <= other.right
+            && other.left <= self.right
+            && self.top <= other.bottom
+            && other.top <= self.bottom
+    }
+}
+
 /// The [`Bounds`] of `table`; `None` when its reference or row counts do not fit (directive 5).
 pub(crate) fn bounds(table: &Table) -> Option<Bounds> {
     let (left, top, right, bottom) = parse_range(&table.reference).ok()?;
