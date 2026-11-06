@@ -3,7 +3,7 @@ id: T-4395
 title: "GAMMA.DIST and CHISQ Gate A definitions: tidy the T-3925 review's minor findings"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
