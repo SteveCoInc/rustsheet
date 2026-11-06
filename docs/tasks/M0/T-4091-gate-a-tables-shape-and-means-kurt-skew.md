@@ -81,7 +81,7 @@ Every failing table point has an owner.
   from excel-graph with 0 failures.
   - `rustsheet-eval accuracy`: all 840 points are inside the envelope (803 on both sides, 32 through Excel's 15
     digits only, 5 through the math only). 0 failing, 0 table defects, 0 known failures added. `missing tables` went
-    from 88 to 81.
+    from 88 to 81 (from 76 to 69 after merging origin/main, which added other tables).
   - The engine is bit-exact with Excel on 777 of 840: AVERAGEA 120, HARMEAN 120, SKEW 120, SKEW.P 119, GEOMEAN 110,
     KURT 94 and TRIMMEAN 94. The other 63 are last-digit differences inside the envelope.
   - All 49 error points are the coded domain's error in Excel too. New entry: statistics.md "KURT, SKEW, SKEW.P,
