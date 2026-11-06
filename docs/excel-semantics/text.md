@@ -1389,6 +1389,14 @@ engine, unprobed beyond that cell). UNPROBED: a multi-cell range of only errors 
 
 See also: RIGHT num_chars numeric-text coercion is recorded in criteria.md "Zero and negative SUMIFS criteria; IF error arguments; RIGHT numeric-text num_chars" (T-2980).
 
+## CHAR(128..255) is Windows-1252 on the web; Mac desktop is Mac Roman
+Rule (excel-graph, 2026-11-06, T-4534): `CHAR(n)` for 128 <= n <= 255 maps through Windows-1252 in Excel for the web:
+`CHAR(255)` is ÿ, `CHAR(254)` þ, `CHAR(128)` € (probes/t4534-desktop-golden-web-values A1, A7, A8). Desktop Excel for Mac
+(16.0300) maps through Mac Roman: its cached `CHAR(255)` is ˇ (U+02C7; calipers formulas_text Text Functions!C190).
+Status: VERIFIED (excel-graph); the Mac value is a desktop cached value, out of scope (decision 0266).
+Ours: Windows-1252, as the web. The calipers cell is a Phase 1 rate exception (decision 0315).
+Tasks: T-4534
+
 ## CHAR lifts over ranges and arrays
 
 `CHAR` takes a range or array argument and returns an array, like `UNICHAR`, `CODE` and

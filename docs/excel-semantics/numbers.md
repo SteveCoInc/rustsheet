@@ -1615,6 +1615,10 @@ Owner ruling (decision 0300, 2026-11-06, T-3775): at the 15-digit neighbour of k
 Status: VERIFIED
 Tasks: T-0915
 
+Desktop Excel for Mac (16.0300) gives the correctly rounded values instead (calipers formulas_math_trig: `COS(PI()/2)`
+6.123233995736766E-17, `CSC(PI())` 8165619676597685); the web gives the k·6.1257422745431E-17 family for SIN, COS, TAN,
+SEC, CSC and COT at PI()/2, PI(), 3*PI()/2 and 2*PI() (probes/t4534-desktop-golden-web-values A12:A35), as the engine
+does. The 16 calipers cells are Phase 1 rate exceptions (decision 0315).
 ## ACOS is PI()/2 - ASIN(x)
 Rule: Excel's `ACOS(x)` is `π/2 - ASIN(x)` in doubles, on ASIN's kernel ("ASIN's formulation"). So `ACOS(0.5)` =
 1.0471975511965976, one ulp below the double nearest π/3: libm's 1.0471975511965979 is the correctly rounded value

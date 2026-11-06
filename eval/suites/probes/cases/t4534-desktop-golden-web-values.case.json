@@ -1,0 +1,52 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4534: web values for the calipers Mac desktop golden cells: CHAR(255), INFO(\"release\"), COS and CSC at multiples of pi/2",
+  "tags": [
+    "M5",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=CHAR(255)",
+        "A2": "=INFO(\"release\")",
+        "A3": "=COS(PI()/2)",
+        "A4": "=COS(3*PI()/2)",
+        "A5": "=CSC(PI())",
+        "A6": "=CSC(2*PI())",
+        "A7": "=CHAR(254)",
+        "A8": "=CHAR(128)",
+        "A9": "=INFO(\"RELEASE\")",
+        "A10": "=SIN(PI())",
+        "A11": "=COS(PI()/2)*1E17",
+        "A12": "=SIN(PI()/2)",
+        "A13": "=SIN(PI())",
+        "A14": "=SIN(3*PI()/2)",
+        "A15": "=SIN(2*PI())",
+        "A16": "=COS(PI()/2)",
+        "A17": "=COS(PI())",
+        "A18": "=COS(3*PI()/2)",
+        "A19": "=COS(2*PI())",
+        "A20": "=TAN(PI()/2)",
+        "A21": "=TAN(PI())",
+        "A22": "=TAN(3*PI()/2)",
+        "A23": "=TAN(2*PI())",
+        "A24": "=SEC(PI()/2)",
+        "A25": "=SEC(PI())",
+        "A26": "=SEC(3*PI()/2)",
+        "A27": "=SEC(2*PI())",
+        "A28": "=CSC(PI()/2)",
+        "A29": "=CSC(PI())",
+        "A30": "=CSC(3*PI()/2)",
+        "A31": "=CSC(2*PI())",
+        "A32": "=COT(PI()/2)",
+        "A33": "=COT(PI())",
+        "A34": "=COT(3*PI()/2)",
+        "A35": "=COT(2*PI())",
+        "A36": "=MID(CELL(\"filename\",A1),FIND(\"]\",CELL(\"filename\",A1))+1,255)"
+      }
+    }
+  ],
+  "expected": {}
+}
