@@ -3,7 +3,7 @@ id: T-4450
 title: "Eta names of special forms and reference functions: probe and match _xleta.LET, LAMBDA, SUBTOTAL, OFFSET, INDEX, CHOOSE, IFERROR, ROW and COLUMN in BYROW, MAP and GROUPBY, and an eta call with no arguments"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
