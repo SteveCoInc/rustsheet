@@ -36,7 +36,7 @@ Every failing table point has an owner.
       each citing its sources, with unit tests against Microsoft's published examples or the semantics entries' values.
 - [x] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
       their number. Every point outside the envelope has a `known-failures.tsv` owner.
-- [ ] `make check` green; reviewers approve. (`make check-fast` green locally; reviewers pending.)
+- [x] `make check` green; reviewers approve. (`make check-fast` green locally, CI runs `make check`; design, security and Excel fidelity approve at 22b1cca9.)
 
 ## Out of scope
 - The other groups of decision 0273.

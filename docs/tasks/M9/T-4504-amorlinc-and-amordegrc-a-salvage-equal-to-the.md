@@ -27,10 +27,19 @@ AMORLINC and AMORDEGRC with a salvage equal to the cost return Excel's value (0 
   salvage` in the walk; probe to tell them apart).
 - Unprobed: period 0 and periods between 0 and 1 with a salvage equal to the cost, and whether the equal case still
   meets AMORDEGRC's asset-life check. Probe them (excel-probe skill) before choosing the rule.
+- Two assumptions in T-4111's Gate A definitions (defs/amortization.py) still need evidence, from the T-4111
+  fidelity review:
+  - Check order. A salvage equal to the cost with a rate of 0.5 or more (life 2 or less) is `#NUM!` from the
+    asset-life check, which runs before the salvage-equal-to-cost branch.
+  - AMORDEGRC's 0 at its half period (life - 3) and at the rest periods after it. Nothing probes those periods;
+    the evidence covers periods 1, 2, 4 and 5.
+  No table point hits either case. The probe settles both, and `fully_salvaged` becomes `NoValueError` wherever
+  the probe leaves a case open.
 
 ## Acceptance criteria
 - [ ] The seven points pass Gate A; their lines in eval/accuracy/known-failures.tsv are removed.
-- [ ] A probe of the unprobed cases above, recorded in financial.md.
+- [ ] A probe of the unprobed cases above, including the two definition assumptions, recorded in financial.md;
+      the Gate A definition follows the result.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
