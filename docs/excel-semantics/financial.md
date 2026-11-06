@@ -4452,14 +4452,16 @@ build the per-period charges differently, so the same inputs give different last
 - Straight line from period 0 (T-4111): where straight line already wins at period 0, `(cost - salvage)/life >
   cost·rate` (a factor below `1 - salvage/cost`, salvage at most cost), every period of the window charges
   `(cost - salvage)/life`, the start's fraction included: there is no declining-balance fraction first. So the result
-  is `(end - start)·(cost - salvage)/life`: `VDB(121503138647.778,3864354372.11506,4,0.5,4,0.15833054798759,FALSE)` is
+  is `(end - start)·sl` with `sl = (cost - salvage)/life` rounded first, one product like the whole straight-line
+  periods above: `VDB(121503138647.778,3864354372.11506,4,0.5,4,0.15833054798759,FALSE)` is
   102933936241.20506, `3.5·(cost - salvage)/4`, where the fractional grid above gives 115234076960.1236 (10.7% off),
   and `VDB(147.345559004139,0.00344462972942079,21,12.5,18.5,0.295807274286059)` is 42.09774696411702, `6·(cost -
-  salvage)/21` (the grid: 42.82078686786086). The rule gives Excel's value to the bit or within one ulp on all seven
+  salvage)/21` (the grid: 42.82078686786086). In that operation order the rule gives Excel's value to the bit on all seven
   table points where it applies (accuracy/VDB/s1 A119 with a whole start, where both readings agree, and A158, A183,
   A187, A188, A189, A200, factors 0.10 to 0.60 and starts 0.5 to 53.25; excel-graph, 2026-11-06), and it changes no
-  probe or gen-m9 VDB cell (T-4111 ran it over the 257 literal one-call VDB eval cells with a math value). The engine still lays the fraction first
-  on these six (T-4510).
+  probe or gen-m9 VDB cell (T-4111 ran it over the 257 literal one-call VDB eval cells with a math value). `(end - start)·(cost - salvage)/life`, rounding
+  the product first, is one ulp off at A187 and at gen-m9/67a4c03afd63f988 A334 (`VDB(86661,45,37,0,6,0.2)`,
+  14045.837837837837), a whole start. Implemented (T-4510).
 Evidence: probes/fin-vdb-schedule (78 cells), fin-vdb-modes, fin-rri-vdb-edges (excel-graph, 2026-10-20, T-1975);
 fin-vdb-fractional-start (45 cells), fin-vdb-fractional-start-edges (14 cells) (excel-graph, 2026-10-28, T-2185);
 fin-vdb-amordegrc-edges A1-A59 (excel-graph, 2026-10-30, T-1978): salvage at or above cost in both modes (switching
@@ -4468,7 +4470,7 @@ equal to cost give 0 everywhere), fractional windows near the end of life (`VDB(
 3.0082099200000414, TRUE 11.061273600000135), and a fractional life 9.5 (an end past it is #NUM!, factor 3 reaches the
 salvage before period 8). The model already matched all 59 cells.
 Status: VERIFIED (excel-graph)
-Implemented (T-1975, T-2185): `vdb_no_switch_between` and `vdb_switching_between` in
+Implemented (T-1975, T-2185, T-4510): `vdb_no_switch_between` and `vdb_switching_between` in
 functions/financial/financial_depreciation.rs.
 Tasks: T-1975, T-2185, T-3022, T-4111, T-4510
 

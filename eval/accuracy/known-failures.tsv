@@ -264,12 +264,6 @@ accuracy/GAMMA.INV/e-T-3863!Calc!A194	T-3364	R3 closed-form point: the engine re
 accuracy/GAMMA.INV/e-T-3863!Calc!A196	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A198	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A199	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
-accuracy/VDB/s1!Calc!A158	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
-accuracy/VDB/s1!Calc!A183	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
-accuracy/VDB/s1!Calc!A187	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
-accuracy/VDB/s1!Calc!A188	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
-accuracy/VDB/s1!Calc!A189	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
-accuracy/VDB/s1!Calc!A200	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
 accuracy/CUMIPMT/s1!Calc!A87	T-4390	tiny rate 1.3E-10, 41 periods: PMT·m - CUMPRINC cancels; ours 1.5E-8 off Excel, 3.3E-8 off the math
 accuracy/CUMIPMT/s1!Calc!A90	T-4390	tiny rate 1.5E-12, 5 periods of type 1: PMT·m - CUMPRINC cancels; ours 2.5E-6 off Excel, which is 2.2E-6 off the math
 accuracy/CUMIPMT/s1!Calc!A92	T-4390	tiny rate 3.1E-11, 42 periods: PMT·m - CUMPRINC cancels; ours 9.1E-8 off Excel, 2.0E-8 off the math

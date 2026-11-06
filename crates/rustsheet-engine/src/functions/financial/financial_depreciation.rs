@@ -113,6 +113,15 @@ fn vdb_switching_between(
 ) -> f64 {
     let switches = salvage <= cost;
     let rate = factor / life;
+    let straight_from_zero = (cost - salvage) / life;
+    if switches && straight_from_zero > cost * rate {
+        // Straight line already wins at period 0: every period of the window charges
+        // `(cost - salvage)/life`, a fractional start's share too, with no declining-balance
+        // fraction laid first, and the window is one product `n·sl` like the whole
+        // straight-line periods below (financial.md "VDB charge order"; to the bit on
+        // accuracy/VDB/s1 A119, A158, A183, A187, A188, A189, A200, excel-graph, T-4111).
+        return (end - start) * straight_from_zero;
+    }
     let whole = start.floor();
     let fraction = start - whole;
     let mut book = cost;

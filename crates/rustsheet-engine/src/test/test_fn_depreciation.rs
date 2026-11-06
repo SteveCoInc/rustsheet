@@ -306,6 +306,49 @@ fn fn_vdb_fractional_start_bits() {
     assert_eq!(bits("A8"), 94.623_498_24_f64.to_bits());
 }
 
+// Where straight line already wins at period 0, the whole window charges `(cost - salvage)/life`
+// as one product `n·sl`, a fractional start included (financial.md "VDB charge order";
+// accuracy/VDB/s1 and gen-m9/67a4c03afd63f988 A334, excel-graph, T-4111, T-4510).
+#[test]
+fn fn_vdb_straight_line_from_period_zero_bits() {
+    let mut model = new_empty_model();
+    model._set("A1", "=VDB(7.00815007310244E-276,0,1793,53.25,1099,0.603)");
+    model._set(
+        "A2",
+        "=VDB(133385333.387961,232343.987648587,8,1.25,4.75,0.570826109457717,FALSE)",
+    );
+    model._set(
+        "A3",
+        "=VDB(147.345559004139,0.00344462972942079,21,12.5,18.5,0.295807274286059)",
+    );
+    model._set(
+        "A4",
+        "=VDB(121503138647.778,3864354372.11506,4,0.5,4,0.15833054798759,FALSE)",
+    );
+    model._set(
+        "A5",
+        "=VDB(2802973.77427359,454.661570023026,24,6.5,18.75,0.101632427134068)",
+    );
+    model._set(
+        "A6",
+        "=VDB(9.95316729348141,4.66310160542375,20,16.3,16.5,0.334748293043145)",
+    );
+    model._set("A7", "=VDB(86661,45,37,0,6,0.2)");
+    model.evaluate();
+    let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
+        Ok(CellValue::Number(n)) => n.to_bits(),
+        other => panic!("expected number, got {other:?}"),
+    };
+
+    assert_eq!(bits("A1"), 4.087_436_106_495_748e-276_f64.to_bits());
+    assert_eq!(bits("A2"), 58_254_432.862_636_68_f64.to_bits());
+    assert_eq!(bits("A3"), 42.097_746_964_117_02_f64.to_bits());
+    assert_eq!(bits("A4"), 102_933_936_241.205_06_f64.to_bits());
+    assert_eq!(bits("A5"), 1_430_452.463_775_779_1_f64.to_bits());
+    assert_eq!(bits("A6"), 0.052_900_656_880_576_415_f64.to_bits());
+    assert_eq!(bits("A7"), 14_045.837_837_837_837_f64.to_bits());
+}
+
 // RRI and DURATION use Excel's own operators (financial.md "DURATION and RRI operation order";
 // probes/fin-mduration-rri-fit A13, A37, T-1975). RRI is `EXP(LN(fv/pv)*(1/nper))-1`, and
 // `fv/pv-1` at nper 1 (RRI.xlsx D12, probes-numeric/m9-fin-rri-nper-one row 32, T-2217).
