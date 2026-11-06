@@ -3,7 +3,7 @@ id: T-4112
 title: "Gate A tables, discount securities and T-bills: DISC, INTRATE, RECEIVED, PRICEDISC, YIELDDISC, TBILLEQ and TBILLPRICE"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
