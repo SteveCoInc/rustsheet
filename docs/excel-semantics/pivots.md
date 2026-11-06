@@ -100,8 +100,8 @@ differ only in the Sales field:
 - T4 (`outline="0"` only): `Row Labels`.
 
 oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on that field, showed
-`Region` too, which this rule likely explains. Probed with one data field on one shape only; whether
-several data fields need all of them non-compact is open.
+`Region` too, which this rule likely explains. Probed with one source field (three data fields over Sales) on one shape only;
+whether several source fields used as data need all of them non-compact is open.
 Status: VERIFIED (excel-graph)
 
 ## Rendered pivot cells: blanks, repeated labels, subtotals and the Values caption
@@ -127,7 +127,7 @@ selected item, or `(All)` when none is selected.
 Evidence: T-4122 runs (sheet Pg: `Region | East`, `Product | (All)`, location A5).
 Status: UNVERIFIED (probe pending: T-4138)
 Capture assumption (T-4123): oracle sidecars capture the page area as the `rowPageCount` rows above
-the location, ending one blank row before it, and `3 * colPageCount - 2` columns wide but at least as
+the location, ending one blank row before it, and `3 * colPageCount - 1` columns wide but at least as
 wide as the location (`snapshot.py` `pivot_area`). Only the one-page, one-column shape is evidenced
 (Calipers officejs/pivot_filter: one page field at A1:B1, body from A3). T-4138 must confirm the
 multi-page offset and the `colPageCount > 1` width, and widen the window if Excel differs.

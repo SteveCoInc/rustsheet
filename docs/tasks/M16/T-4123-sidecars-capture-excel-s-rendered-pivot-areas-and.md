@@ -48,7 +48,8 @@ Sidecars hold formula cells only today (probes/pivot-rendered-cells reads the pi
   formats, for example `Pct` at numFmtId 10). Excel for the web reports text only through a
   `Range.text` read in the session, which the fill does only for a case's listed `text` cells.
   Handed to T-4169, the data-field number-format task, which needs it.
-- **Hardening from review:** pivot and cache parts are read once per workbook (a cache is memoized
-  by path). The workbook's pivots stop at the importer's `MAX_PIVOTS`, and all layout lines,
+- **Hardening from review:** pivot and cache parts are read once per workbook, keyed by the package's own entry
+  name so alias spellings (case, `\\`) share one key, and every pivot relationship counts toward
+  `MAX_PIVOTS`, a malformed one included. The workbook's pivots stop at the importer's `MAX_PIVOTS`, and all layout lines,
   indices and group items share one `MAX_RECORD_VALUES` budget (test: 1,005 pivots sharing one
   cache). A pivot whose location does not parse is skipped by the fill, not the whole case.

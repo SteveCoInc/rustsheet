@@ -83,10 +83,12 @@ pub struct PivotDef {
 /// What reading a workbook's pivots has used so far: one budget for the whole workbook, so a
 /// crafted file cannot multiply the work by repeating parts or pivots (directive 5).
 pub(super) struct PivotReader {
-    /// Pivot parts already read, by resolved path.
+    /// Pivot parts already read, by the package's own entry name (`canonical`).
     seen: HashSet<String>,
-    /// Cache parts already parsed, by resolved path (`None`: missing, malformed or over budget).
+    /// Cache parts already parsed, by entry name (`None`: missing, malformed or over budget).
     caches: HashMap<String, Option<Vec<PivotCacheField>>>,
+    /// Pivot relationships looked at, read or not: at most `MAX_PIVOTS`, so malformed parts count.
+    attempts: usize,
     /// Layout lines, item indices and group items still allowed, over every pivot and copy.
     values_left: usize,
     /// The pivots read, at most `MAX_PIVOTS`, the importer's own workbook cap.
@@ -98,10 +100,17 @@ impl PivotReader {
         Self {
             seen: HashSet::new(),
             caches: HashMap::new(),
+            attempts: 0,
             values_left: MAX_RECORD_VALUES,
             pivots: Vec::new(),
         }
     }
+}
+
+/// The package entry a resolved part path names. The package matches names ignoring case, `\\`
+/// against `/` and a leading `/` (`PartNames`), so spellings of one part share one key here.
+fn canonical(zip: &Zip, path: &str) -> Option<String> {
+    zip.names.entry(path).map(str::to_owned)
 }
 
 /// Takes `n` from `budget`, or `None` (leaving it at 0) when it has fewer.
@@ -117,7 +126,7 @@ fn spend(budget: &mut usize, n: usize) -> Option<()> {
 
 /// Reads the pivots of the sheet part at `sheet_path`, found through its relationships, into
 /// `reader`. A part already read, a pivot whose parts cannot be read or parsed, and anything past
-/// the workbook budget are skipped.
+/// the workbook budget are skipped. Every pivot relationship counts toward `MAX_PIVOTS`.
 pub(super) fn read_sheet_pivots(
     zip: &mut Zip,
     sheet_path: &str,
@@ -132,10 +141,13 @@ pub(super) fn read_sheet_pivots(
         return Ok(());
     };
     for rel in rels.iter().filter(|r| r.kind.ends_with("/pivotTable")) {
-        if reader.pivots.len() >= MAX_PIVOTS {
+        if reader.attempts >= MAX_PIVOTS {
             break;
         }
-        let path = resolve_target(dir, &rel.target);
+        reader.attempts += 1;
+        let Some(path) = canonical(zip, &resolve_target(dir, &rel.target)) else {
+            continue;
+        };
         if !reader.seen.insert(path.clone()) {
             continue;
         }
@@ -184,7 +196,7 @@ fn cache_path(zip: &mut Zip, pivot_path: &str) -> Option<String> {
         .ok()?
         .into_iter()
         .find(|r| r.kind.ends_with("/pivotCacheDefinition"))?;
-    Some(resolve_target(dir, &rel.target))
+    canonical(zip, &resolve_target(dir, &rel.target))
 }
 
 /// An attribute as a `u32`, 0 when absent or not a number.
@@ -421,7 +433,7 @@ mod tests {
             )
             .expect("formats");
         }
-        // One part listed twice too.
+        // One part listed twice too, and spelled differently (the package ignores case and `\`).
         rels.push_str(
             r#"<Relationship Id="dup" Type="x/pivotTable" Target="../pivotTables/p0.xml"/>"#,
         );
@@ -453,5 +465,40 @@ mod tests {
             reader.pivots[7].cache_fields[0].group_items,
             vec![Value::Text("g".into())]
         );
+    }
+
+    #[test]
+    fn aliases_of_a_malformed_part_are_read_once_and_count_toward_max_pivots() {
+        use std::fmt::Write as _;
+        use std::io::{Cursor, Write as _};
+        let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let opts = zip::write::SimpleFileOptions::default();
+        let mut rels = String::from("<Relationships>");
+        for k in 0..MAX_PIVOTS * 3 {
+            let target = match k % 3 {
+                0 => "../pivotTables/bad.xml",
+                1 => "../pivotTables/BAD.xml",
+                _ => "..\\pivotTables\\bad.XML",
+            };
+            write!(
+                rels,
+                r#"<Relationship Id="r{k}" Type="x/pivotTable" Target="{target}"/>"#
+            )
+            .expect("formats");
+        }
+        rels.push_str("</Relationships>");
+        w.start_file("xl/worksheets/_rels/sheet1.xml.rels", opts)
+            .expect("start");
+        w.write_all(rels.as_bytes()).expect("write");
+        w.start_file("xl/pivotTables/bad.xml", opts).expect("start");
+        w.write_all(b"<pivotTableDefinition name='x'/>")
+            .expect("write");
+        let bytes = w.finish().expect("finish").into_inner();
+        let mut zip = Zip::new(&bytes).expect("zip");
+        let mut reader = PivotReader::new();
+        read_sheet_pivots(&mut zip, "xl/worksheets/sheet1.xml", "S", &mut reader).expect("reads");
+        assert!(reader.pivots.is_empty());
+        assert_eq!(reader.seen.len(), 1);
+        assert_eq!(reader.attempts, MAX_PIVOTS);
     }
 }
