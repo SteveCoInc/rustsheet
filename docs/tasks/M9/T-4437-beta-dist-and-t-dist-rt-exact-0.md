@@ -94,6 +94,7 @@ it.
   by T-4564: the n = 2 and t cells, and 8th to 9th digit numbers near the edge).
 
 ## Landing notes
+- Resumed 2026-11-06 by an opus run (work-loop step 2: branch idle 2 h). Next: re-freeze and a second fresh sweep.
 - PR #3587 (draft), head after this commit. CI has not run on a finished head. The math sidecars of both new cases
   are in this commit (`rustsheet-accuracy math --suite probes --function BETA.DIST`; it also rewrote two unrelated
   sidecars, t2436/35e8168aae2b00f8 and t3576-negbinom-cdf-huge-s, which were reverted, so check `make
