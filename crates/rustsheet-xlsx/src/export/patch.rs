@@ -4,21 +4,25 @@
 //!
 //! The patch never guesses. Anything it does not handle exactly is a fallback reason, and the
 //! caller regenerates instead:
-//! - a structural change, or a style table that changed (T-4561);
+//! - a structural change, or a style table that changed (T-4623);
 //! - out-of-order rows or cells, a cell without `r`, or a prefixed worksheet;
 //! - a changed formula, or a cleared cell, in a shared-formula group;
-//! - a cell that needs value or cell metadata (`vm`, `cm`) it did not have (T-4561);
-//! - a formula cell added or removed while the source keeps a `calcChain` (SPEC-0034 E2, T-4561);
+//! - a rich value or dynamic array that needs value or cell metadata (`vm`, `cm`) in a source that
+//!   has its own `metadata.xml`, whose layout is not the export's;
 //! - shared strings the model interned from inline cells, which the part does not hold;
 //! - a part over the import's size limit, not UTF-8, or a zip with clashing names;
 //! - a patched sheet that does not index again (rows or cells out of order).
+//!
+//! A source without `metadata.xml` gets the export's metadata parts when a patched cell needs them
+//! (SPEC-0034 D3.4), and a calcChain is dropped with its relationship and override when the set of
+//! formula cells changed (E2).
 //!
 //! What the patch leaves as the source had it is listed in docs/excel-semantics/xlsx-storage.md
 //! ("A patched package keeps the source's hints"): row `spans`, a `<dimension>` that only grows,
 //! and a `<row>` emptied by clearing its cells.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io::{Cursor, Read, Seek, Write};
+use std::io::Cursor;
 
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
@@ -27,9 +31,18 @@ use rustsheet_engine::types::{Cell, FormulaValue, Worksheet};
 use rustsheet_engine::Model;
 
 use super::escape::escape_xml;
+use super::rich_errors::{has_rich_errors, metadata_parts};
 use super::worksheets::{cell_xml, CellWriter};
 use crate::error::XlsxError;
-use crate::import::{part_paths, ImportLimits, PartNames};
+use crate::import::rich_errors::{METADATA_PART, RICH_VALUE_PART, RICH_VALUE_STRUCTURE_PART};
+use crate::import::{part_paths, ImportLimits, PartNames, CONTENT_TYPES_PART, WORKBOOK_RELS_PART};
+use package::{add_parts, read_entry, remove_part, rewrite_zip, NewPart};
+use strings::{append_strings, count_si, shared_refs};
+
+mod package;
+mod strings;
+#[cfg(test)]
+mod tests;
 
 /// Deepest element nesting the patcher reads in a worksheet (directive 5).
 const MAX_DEPTH: usize = 256;
@@ -69,6 +82,12 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
         return Err("the source has part names that clash".into());
     }
     let has_calc_chain = names.entry(CALC_CHAIN_PART).is_some();
+    // Without metadata parts of its own, the source can take the export's, whose `vm` and `cm`
+    // numbering the export's cell writer uses (SPEC-0034 D3.4).
+    let export_layout = [METADATA_PART, RICH_VALUE_PART, RICH_VALUE_STRUCTURE_PART]
+        .iter()
+        .all(|part| names.entry(part).is_none());
+    let mut drop_calc_chain = false;
     let strings_entry = names.entry(paths.shared_strings).map(str::to_string);
     let source_strings = match &strings_entry {
         Some(entry) => Some(read_entry(&mut archive, entry)?),
@@ -79,6 +98,7 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
     let in_part = source_strings.as_deref().map_or(Ok(0), count_si)?;
     let strings_line_up = base.shared_strings.len() == in_part;
     let mut replaced: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut sheet_entries = Vec::new();
     let mut patched_sheets = Vec::new();
     for (index, (sheet, before)) in live.worksheets.iter().zip(&base.worksheets).enumerate() {
         let changed = changed_cells(sheet, before);
@@ -86,14 +106,13 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
             continue;
         }
         let at = |c: &(i32, i32), w: &Worksheet| w.sheet_data.cell(c.0, c.1).cloned();
-        if has_calc_chain
+        // A chain naming a cell that lost its formula, or missing a new one, is stale: drop it,
+        // as the regenerating export does (SPEC-0034 E2).
+        drop_calc_chain |= has_calc_chain
             && changed.iter().any(|c| {
                 at(c, sheet).is_some_and(|x| x.has_formula())
                     != at(c, before).is_some_and(|x| x.has_formula())
-            })
-        {
-            return Err("a formula cell was added or removed, and calcChain would go stale".into());
-        }
+            });
         if !strings_line_up
             && changed
                 .iter()
@@ -106,9 +125,17 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
         };
         let xml = read_entry(&mut archive, &entry)?;
         let writer = cell_writer_for(model, index);
-        let patched = splice(&xml, sheet, before, &changed, &writer.as_ref())
-            .map_err(|reason| format!("sheet {}: {reason}", sheet.name))?;
-        replaced.insert(entry, patched.into_bytes());
+        let patched = splice(
+            &xml,
+            sheet,
+            before,
+            &changed,
+            &writer.as_ref(),
+            export_layout,
+        )
+        .map_err(|reason| format!("sheet {}: {reason}", sheet.name))?;
+        replaced.insert(entry.clone(), patched.into_bytes());
+        sheet_entries.push(entry);
         patched_sheets.push(sheet.name.clone());
     }
     let added = &live.shared_strings[base.shared_strings.len()..];
@@ -122,7 +149,89 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
             .ok_or("the shared-string part has no closing </sst>")?;
         replaced.insert(entry, text.into_bytes());
     }
-    Ok((rewrite_zip(&mut archive, &replaced)?, patched_sheets))
+    // Only a source with no metadata of its own takes the export's; one that has its own keeps
+    // it, and its cells' `vm`/`cm` were checked against it while splicing.
+    let mut needs_metadata = false;
+    if export_layout {
+        for entry in &sheet_entries {
+            let xml = replaced.get(entry).map(|b| String::from_utf8_lossy(b));
+            needs_metadata |= xml.is_some_and(|xml| cells_carry(&xml, &["vm", "cm"]));
+        }
+    }
+    if needs_metadata {
+        // A `vm` the source already holds, with no part to resolve it, loads as a plain error;
+        // under the export's metadata it would name a rich error, so such a source falls back.
+        for path in &paths.worksheets {
+            let Some(entry) = names.entry(path) else {
+                continue;
+            };
+            if cells_carry(&read_entry(&mut archive, entry)?, &["vm"]) {
+                return Err("a source cell holds a vm with no metadata to resolve it".into());
+            }
+        }
+    }
+    let mut removed = BTreeSet::new();
+    let mut added = Vec::new();
+    if needs_metadata || drop_calc_chain {
+        let rels_entry = names
+            .entry(WORKBOOK_RELS_PART)
+            .ok_or("the source has no workbook relationships")?
+            .to_string();
+        let types_entry = names
+            .entry(CONTENT_TYPES_PART)
+            .ok_or("the source has no content types")?
+            .to_string();
+        let mut rels = read_entry(&mut archive, &rels_entry)?;
+        let mut types = read_entry(&mut archive, &types_entry)?;
+        if drop_calc_chain {
+            let calc_chain = names.entry(CALC_CHAIN_PART).unwrap_or(CALC_CHAIN_PART);
+            removed.insert(calc_chain.to_string());
+            (rels, types) = remove_part(&rels, &types, "calcChain", CALC_CHAIN_PART)
+                .ok_or("the calcChain relationship or override cannot be removed exactly")?;
+        }
+        if needs_metadata {
+            let new = metadata_parts(has_rich_errors(live));
+            if new.iter().any(|(name, ..)| names.entry(name).is_some()) {
+                return Err("a metadata part to add is already in the source".into());
+            }
+            let parts: Vec<NewPart<'_>> = new
+                .iter()
+                .map(|(name, content_type, relationship, _)| NewPart {
+                    name,
+                    content_type,
+                    relationship,
+                })
+                .collect();
+            (rels, types) = add_parts(&rels, &types, &parts)
+                .ok_or("the metadata parts cannot be linked exactly")?;
+            added.extend(
+                new.into_iter()
+                    .map(|(name, _, _, xml)| (name.to_string(), xml.into_bytes())),
+            );
+        }
+        replaced.insert(rels_entry, rels.into_bytes());
+        replaced.insert(types_entry, types.into_bytes());
+    }
+    let package = rewrite_zip(&mut archive, &replaced, &removed, &added)?;
+    Ok((package, patched_sheets))
+}
+
+/// Whether some `<c>` start tag of a worksheet's XML carries one of `keys`. A part that does not
+/// parse counts as carrying them, so the caller falls back.
+fn cells_carry(xml: &str, keys: &[&str]) -> bool {
+    let mut reader = Reader::from_str(xml);
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e) | Event::Empty(e)) if e.local_name().as_ref() == "c" => {
+                if keys.iter().any(|k| attr(&e, k).is_some()) {
+                    return true;
+                }
+            }
+            Ok(Event::Eof) => return false,
+            Err(_) => return true,
+            _ => {}
+        }
+    }
 }
 
 /// Why the workbook's structure differs between `model` and `pristine`, if it does: everything
@@ -417,33 +526,42 @@ fn to_offset(position: u64) -> Result<usize, String> {
     usize::try_from(position).map_err(|_| "a part too large to index".to_string())
 }
 
-/// The `t` attribute and the `<v>` element of a cell's XML, as the export wrote them.
-fn value_parts(xml: &str) -> Option<(Option<String>, String)> {
+/// The `t` and `vm` attributes and the `<v>` element of a cell's XML, as the export wrote them.
+fn value_parts(xml: &str) -> Option<(Option<String>, Option<String>, String)> {
     let mut reader = Reader::from_str(xml);
     let mut t = None;
+    let mut vm = None;
     let mut v = String::new();
     loop {
         let start = usize::try_from(reader.buffer_position()).ok()?;
         match reader.read_event().ok()? {
             Event::Start(e) | Event::Empty(e) if e.local_name().as_ref() == "c" => {
                 t = attr(&e, "t");
+                vm = attr(&e, "vm");
             }
             Event::Start(e) if e.local_name().as_ref() == "v" => {
                 reader.read_to_end(e.name()).ok()?;
                 let end = usize::try_from(reader.buffer_position()).ok()?;
                 v = xml[start..end].to_string();
             }
-            Event::Eof => return Some((t, v)),
+            Event::Eof => return Some((t, vm, v)),
             _ => {}
         }
     }
 }
 
 /// The source cell `old` with its cached value replaced by the one `new` (the export's XML for the
-/// live cell) holds, keeping its `<f>` and every other attribute, its `vm` included, and child
-/// byte for byte. The caller keeps the source's `vm` only for the same rich error ([`rich_value`]).
-fn patch_value(old: &str, new: &str) -> Option<String> {
-    let (t, v) = value_parts(new)?;
+/// live cell) holds, keeping its `<f>` and every other attribute and child byte for byte. With
+/// `export_vm`, the cell takes the export's `vm` (a package on the export's metadata layout);
+/// without it, it keeps its own, which the caller allows only for the same rich error
+/// ([`rich_value`]).
+fn patch_value(old: &str, new: &str, export_vm: bool) -> Option<String> {
+    let (t, vm, v) = value_parts(new)?;
+    let vm = if export_vm {
+        Vm::Set(vm.as_deref())
+    } else {
+        Vm::Keep
+    };
     let mut reader = Reader::from_str(old);
     let mut out = String::with_capacity(old.len() + v.len());
     let mut had_v = false;
@@ -454,7 +572,7 @@ fn patch_value(old: &str, new: &str) -> Option<String> {
         let end = usize::try_from(reader.buffer_position()).ok()?;
         match event {
             Event::Start(ref e) | Event::Empty(ref e) if e.local_name().as_ref() == "c" => {
-                out.push_str(&rewrite_start_tag(e, t.as_deref())?);
+                out.push_str(&rewrite_start_tag(e, t.as_deref(), vm)?);
                 out.push('>');
                 if matches!(event, Event::Empty(_)) {
                     // `<c .../>` had no value: it becomes a full element.
@@ -487,35 +605,57 @@ fn patch_value(old: &str, new: &str) -> Option<String> {
 }
 
 /// `<c ...` (without its closing `>`) with `t` set to the given value in its place (or removed,
-/// or added last), every other attribute kept in its order and spelling. A value is re-quoted with `"`, so one
+/// or added last), every other attribute kept in its order and spelling. With `vm` given, `vm` is
+/// set the same way; without it, the source's `vm` is kept. A value is re-quoted with `"`, so one
 /// that held a `"` inside `'...'` gets it as `&quot;`. `None` for a malformed attribute.
-fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>) -> Option<String> {
+fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>, vm: Vm<'_>) -> Option<String> {
     let mut out = String::from("<c");
-    let mut t = t.map(|t| escape_xml(t).into_owned());
+    // `Some(new)` is an attribute to rewrite (`new` its value, or `None` to remove it); `None`
+    // leaves the source's as it is.
+    let mut t = Some(t.map(|t| escape_xml(t).into_owned()));
+    let mut vm = match vm {
+        Vm::Keep => None,
+        Vm::Set(v) => Some(v.map(|v| escape_xml(v).into_owned())),
+    };
     for a in e.attributes() {
         let a = a.ok()?;
         let key = a.key.as_ref();
-        // `t` is rewritten where the source had it.
-        let value = if key == "t" {
-            match t.take() {
+        // `t` and a given `vm` are rewritten where the source had them.
+        let slot = match key {
+            "t" => Some(&mut t),
+            "vm" if vm.is_some() => Some(&mut vm),
+            _ => None,
+        };
+        let value = match slot {
+            Some(slot) => match slot.take().flatten() {
                 Some(value) => value,
                 None => continue,
-            }
-        } else {
-            a.value.replace('"', "&quot;")
+            },
+            None => a.value.replace('"', "&quot;"),
         };
         out.push_str(&format!(" {key}=\"{value}\""));
     }
-    if let Some(t) = t {
-        out.push_str(&format!(" t=\"{t}\""));
+    for (key, value) in [("t", t), ("vm", vm)] {
+        if let Some(Some(value)) = value {
+            out.push_str(&format!(" {key}=\"{value}\""));
+        }
     }
     Some(out)
+}
+
+/// What a value patch does with a cell's `vm`.
+#[derive(Clone, Copy)]
+enum Vm<'a> {
+    /// The source's `vm`, unchanged.
+    Keep,
+    /// The export's: this value, or none.
+    Set(Option<&'a str>),
 }
 
 /// Whether a value patch may keep the source cell's `vm`. The source's `vm` indexes its own
 /// `metadata.xml` and the export's indexes the export's layout, so the numbers cannot be compared
 /// (docs/excel-semantics/arrays.md). Only the same error kind keeps its source `vm`; any other rich
-/// value falls back until T-4561 writes metadata.
+/// value falls back: the source's metadata.xml has no block for it.
 fn rich_value(old: &str, new: &str, before: &Cell, after: &Cell) -> Result<(), String> {
     let (had, needs) = (old.contains(" vm="), new.contains(" vm="));
     if !had && !needs {
@@ -534,7 +674,7 @@ fn rich_value(old: &str, new: &str, before: &Cell, after: &Cell) -> Result<(), S
     };
     match (had, error(before), error(after)) {
         (true, Some(a), Some(b)) if a == b => Ok(()),
-        _ => Err("a rich value changed, which needs value metadata (T-4561)".into()),
+        _ => Err("a rich value changed, which the source's metadata.xml has no block for".into()),
     }
 }
 
@@ -575,6 +715,7 @@ fn splice(
     before: &Worksheet,
     changed: &BTreeSet<(i32, i32)>,
     writer: &CellWriter<'_>,
+    export_layout: bool,
 ) -> Result<String, String> {
     let index = index_sheet(xml)?;
     let mut edits: Vec<Edit> = Vec::new();
@@ -598,12 +739,15 @@ fn splice(
                 };
                 let old = &xml[c.start..c.end];
                 let text = if value_only(a, b) {
-                    rich_value(old, &text, a, b)?;
-                    patch_value(old, &text).ok_or("a cell value could not be patched")?
+                    if !export_layout {
+                        rich_value(old, &text, a, b)?;
+                    }
+                    patch_value(old, &text, export_layout)
+                        .ok_or("a cell value could not be patched")?
                 } else if c.shared {
                     return Err("a changed formula in a shared-formula group".into());
                 } else {
-                    whole_cell(text)?
+                    whole_cell(text, export_layout)?
                 };
                 edits.push(Edit {
                     at: c.start,
@@ -626,7 +770,7 @@ fn splice(
             (None, Some(text)) => inserts
                 .entry(row)
                 .or_default()
-                .push((column, whole_cell(text)?)),
+                .push((column, whole_cell(text, export_layout)?)),
             (None, None) => {}
         }
     }
@@ -660,11 +804,11 @@ fn new_cell_xml(
         .ok_or_else(|| "a cell the export cannot write".to_string())
 }
 
-/// A cell written whole by the export, unless it needs value or cell metadata: the export's
-/// `vm`/`cm` index its own `metadata.xml` layout, not the source's (T-4561).
-fn whole_cell(text: String) -> Result<String, String> {
-    if text.contains(" cm=") || text.contains(" vm=") {
-        return Err("a cell needs value or cell metadata (T-4561)".into());
+/// A cell written whole by the export. Its `vm`/`cm` index the export's `metadata.xml` layout,
+/// so they are only right in a package that takes the export's metadata parts.
+fn whole_cell(text: String, export_layout: bool) -> Result<String, String> {
+    if !export_layout && (text.contains(" cm=") || text.contains(" vm=")) {
+        return Err("a cell needs value or cell metadata in the source's own layout".into());
     }
     Ok(text)
 }
@@ -783,144 +927,3 @@ fn apply(xml: &str, mut edits: Vec<Edit>) -> String {
     }
     out
 }
-
-/// The `<si>` elements directly under the shared-string part's root.
-fn count_si(xml: &str) -> Result<usize, String> {
-    let mut reader = Reader::from_str(xml);
-    let (mut depth, mut count) = (0usize, 0usize);
-    loop {
-        match reader.read_event().map_err(|e| e.to_string())? {
-            Event::Start(e) => {
-                depth += 1;
-                if depth > MAX_DEPTH {
-                    return Err("the shared-string part is nested too deep".into());
-                }
-                count += usize::from(depth == 2 && e.local_name().as_ref() == "si");
-            }
-            Event::Empty(e) => {
-                count += usize::from(depth == 1 && e.local_name().as_ref() == "si");
-            }
-            Event::End(_) => depth = depth.saturating_sub(1),
-            Event::Eof => return Ok(count),
-            _ => {}
-        }
-    }
-}
-
-/// The shared-string part with `added` appended and its counts updated.
-fn append_strings(
-    xml: &str,
-    added: &[String],
-    unique: usize,
-    (live_refs, pristine_refs): (usize, usize),
-) -> Option<String> {
-    let close = xml.rfind("</sst>")?;
-    let mut out = String::with_capacity(xml.len() + added.len() * 16);
-    let head = set_count(&xml[..close], "uniqueCount", |_| unique);
-    // `count` is the source's own reference count, moved by the change in references: a source
-    // whose count was already off stays off by the same amount rather than being recounted.
-    let head = set_count(&head, "count", |old| {
-        (old + live_refs).saturating_sub(pristine_refs)
-    });
-    out.push_str(&head);
-    for s in added {
-        let space = if s.starts_with(char::is_whitespace) || s.ends_with(char::is_whitespace) {
-            r#" xml:space="preserve""#
-        } else {
-            ""
-        };
-        out.push_str(&format!("<si><t{space}>{}</t></si>", escape_xml(s)));
-    }
-    out.push_str(&xml[close..]);
-    Some(out)
-}
-
-/// `head` with the `name="..."` attribute of its `<sst ...>` start tag set to `value` of its old
-/// number, when the tag has it and it is a number. Nothing past the start tag is searched.
-fn set_count(head: &str, name: &str, value: impl Fn(usize) -> usize) -> String {
-    let Some(sst) = head
-        .match_indices("<sst")
-        .map(|(i, _)| i)
-        .find(|&i| head[i + 4..].starts_with(|c: char| c.is_whitespace() || c == '>'))
-    else {
-        return head.to_string();
-    };
-    let Some(tag_len) = head[sst..].find('>') else {
-        return head.to_string();
-    };
-    let tag = &head[sst..sst + tag_len];
-    let needle = format!(" {name}=\"");
-    let Some(at) = tag.find(&needle).map(|i| sst + i + needle.len()) else {
-        return head.to_string();
-    };
-    let Some(len) = head[at..sst + tag_len].find('"') else {
-        return head.to_string();
-    };
-    let Ok(old) = head[at..at + len].parse::<usize>() else {
-        return head.to_string();
-    };
-    format!("{}{}{}", &head[..at], value(old), &head[at + len..])
-}
-
-/// A part's text, within the import's byte budget: a larger part, a missing one or one that is
-/// not UTF-8 is a fallback reason, never a truncated read.
-fn read_entry<R: Read + Seek>(
-    archive: &mut zip::ZipArchive<R>,
-    name: &str,
-) -> Result<String, String> {
-    let limit = ImportLimits::default().max_uncompressed_bytes;
-    let mut bytes = Vec::new();
-    archive
-        .by_name(name)
-        .map_err(|e| format!("{name}: {e}"))?
-        .take(limit.saturating_add(1))
-        .read_to_end(&mut bytes)
-        .map_err(|e| format!("{name}: {e}"))?;
-    if u64::try_from(bytes.len()).map_or(true, |n| n > limit) {
-        return Err(format!("{name} is over the size limit"));
-    }
-    String::from_utf8(bytes).map_err(|_| format!("{name} is not UTF-8"))
-}
-
-/// The number of cells holding a shared string, as the `count` of `sharedStrings.xml` counts
-/// references.
-fn shared_refs(workbook: &rustsheet_engine::types::Workbook) -> usize {
-    workbook
-        .worksheets
-        .iter()
-        .flat_map(|w| w.sheet_data.cells())
-        .filter(|(_, _, c)| matches!(c, Cell::SharedString { .. }))
-        .count()
-}
-
-/// The source package with the `replaced` entries' contents swapped in and every other entry
-/// copied raw, so it keeps its exact compressed bytes. A repeated or non-UTF-8 entry name is a
-/// fallback reason.
-fn rewrite_zip<R: Read + Seek>(
-    archive: &mut zip::ZipArchive<R>,
-    replaced: &BTreeMap<String, Vec<u8>>,
-) -> Result<Vec<u8>, String> {
-    let zip_err = |e: zip::result::ZipError| format!("rewriting the zip: {e}");
-    let io_err = |e: std::io::Error| format!("rewriting the zip: {e}");
-    let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
-    let mut seen = BTreeSet::new();
-    for i in 0..archive.len() {
-        let file = archive.by_index_raw(i).map_err(zip_err)?;
-        let name = file.name().map_err(zip_err)?.to_string();
-        if !seen.insert(name.clone()) {
-            return Err(format!("the zip holds {name} twice"));
-        }
-        if let Some(bytes) = replaced.get(&name) {
-            drop(file);
-            out.start_file(name, zip::write::SimpleFileOptions::default())
-                .map_err(zip_err)?;
-            out.write_all(bytes).map_err(io_err)?;
-        } else {
-            out.raw_copy_file(file).map_err(zip_err)?;
-        }
-    }
-    Ok(out.finish().map_err(zip_err)?.into_inner())
-}
-
-#[cfg(test)]
-mod tests;

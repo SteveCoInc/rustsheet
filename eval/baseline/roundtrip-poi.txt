@@ -373,12 +373,12 @@ F	roundtrip-poi/FormulaEvalTestData_Copy.xlsx	* 3 b6eb38c5633c5d01
 F	roundtrip-poi/LIBRE_OFFICE-116306-0.xlsx	* 1 ac3bcbe7501ca811
 F	roundtrip-poi/bug62181.xlsx	* 1 4104e5ce01c743e5
 F	roundtrip-poi/bug63189.xlsx	* 2 dcd9dabd025cf0a6
-F	roundtrip-poi/bug67784.xlsx	* 275 7a0a3295c905add7
+F	roundtrip-poi/bug67784.xlsx	* 6 a2dd96991e9b9e0e
 F	roundtrip-poi/clone_sheet.xlsx	* 16 30ceb0c4fc44e4a6
 F	roundtrip-poi/deep-data.xlsx	!InvalidCase
 F	roundtrip-poi/duplicate-filename-case-insensitive.xlsx	* 1 301f948117dcc5f9
 F	roundtrip-poi/invalid_cell_reference.xlsx	!EngineError
-F	roundtrip-poi/link-external-workbook-b.xlsx	* 47 80f537cc8b4d4561
+F	roundtrip-poi/link-external-workbook-b.xlsx	* 4 ae8bef3e867ec041
 F	roundtrip-poi/picture.xlsx	* 4 56d2f7965d1ba28b
 F	roundtrip-poi/poc-shared-strings.xlsx	!EngineError
 F	roundtrip-poi/poc-xmlbomb-empty.xlsx	!EngineError

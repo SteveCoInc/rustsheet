@@ -12,6 +12,11 @@
     "t": "e",
     "why": "'F' and 'yd' share no class (#N/A)",
     "f": "=CONVERT(42,\"F\",\"yd\")"
+   },
+   "A76": {
+    "t": "e",
+    "why": "'F' and 'yd' share no class (#N/A)",
+    "f": "=ODDFPRICE(2958466,46506,33984,39398,Data!C6,CONVERT(42,\"F\",\"yd\"),104,4,2)"
    }
   }
  }

@@ -4097,6 +4097,76 @@ Status: VERIFIED for the cell values (the mechanism is the engine's T-2007 model
 Tasks: T-3990, T-3031.
 Evidence: probes/oddfyield-extreme-price (T-3990), all 72 cells matching the engine in type and value (T-3031 follow-up).
 
+## ODDFYIELD is #NUM! at a price and redemption far from par
+Rule: ODDFYIELD can be `#NUM!` where ODDFPRICE has a root (every flow is positive and comes after the dirty price, so
+there is exactly one), with a redemption far from 100 or a price far below it. On the Gate A table 15 points are
+`#NUM!` with a root:
+- a price far below a redemption near 100, roots in the hundreds:
+  `ODDFYIELD(44927,45040,44903,44950,0.00105291760193462,0.0201046452468288,104.806177882375,4,1)` (A188, root 3216.2)
+  and `ODDFYIELD(35531,35635,35502,35544,0.137503628270339,0.0901795679194373,100,4)` (A197, root 524.93);
+- a redemption from 0.037 to 3441, with the price near it or a few times it (roots 7.3E-7 to 1.46):
+  A218 (redemption 0.350456807761596), A221 (0.036925299804218), A229 (0.558045732426464), A235 (11.9845303447765),
+  A237 (6.33993775602189), A243 (1.62199180104625), A251 (3441.41032295667), A277 (1.43681184856485), A280
+  (2.43718966572268), A285 (8.36657840509682), A292 (2.29511375165819), A297 (917.902213204161) and A299
+  (4.63735536111899), e.g. `ODDFYIELD(49922,50428,49884,49971,2.22723839884459E-06,4.63765939631562,4.63735536111899,4,0)`
+  (root 7.29E-7).
+It is not the scale alone: the table's 247 numeric ODDFYIELD points include redemptions from 0.030 to 8.3E5 and prices
+from 5.9E-5 to 6.6E3 times the redemption, and a price near a redemption far from 100 often computes. Where the cut lies
+is unprobed.
+Inferred, not observed: Excel's Newton runs from YIELD's start fitted on par bonds ("ODDFYIELD stops short of
+ODDFPRICE's root") and leaves ODDFPRICE's domain, as YIELD's does ("YIELD is #NUM! at a price and redemption far from
+par"). The evidence for this mechanism is that the engine's model of that Newton (`odd_first_yield`) gives `#NUM!` at
+all 15 points.
+At a root near 0, Excel's absolute step test leaves a large relative gap ("ODDFYIELD stops short of ODDFPRICE's
+root"): table points A129, A132, A143, A150, A153, A170, A174 and A202 (roots from -1.1E-15 to 4.6E-10), A291 and A295
+(roots 1.4E-7 and 2.9E-8, 1.1E-4 and 1.6E-4 relative), and probes/oddfyield-solver-sweep S!E1 and S!F1 (roots 5.0E-18
+and 6.8E-18).
+Excel kept as the target (decision 0300): Excel is more than 1E-4 relative off the math at:
+- accuracy/ODDFYIELD/s1: A126 (next entry), A129 (Excel 4.533275529406585E-16, root 4.388E-16), A132
+  (2.8002528713848925E-10, 2.817E-10), A143 (4.6355090386611066E-10, 4.633E-10), A150 (-7.717045174648507E-18,
+  -5.928E-18), A153 (-5.974504409461947E-15, root 0), A170 (8.906550524312836E-12, -1.25E-16), A174
+  (9.116830996141099E-11, -1.11E-15), A202 (-1.8167704768983512E-12, -7.09E-15), A291 (1.4084037213640614E-7,
+  1.40855E-7) and A295 (2.9357184518689303E-8, 2.93524E-8);
+- the math sidecars: probes/odd-yield-far-from-par F1-F16 (redemption 1E300: Excel 235.95 to 302.53, the 100th iterates
+  of "ODDFYIELD and ODDLYIELD at a price far from par", roots 3.6E14 to 2.1E15) and G4 (price 3E4:
+  -3.5048035053499063, root -0.48894); probes/oddfyield-extreme-price K5 (2.8858649274745423, root 2.7686), K6
+  (5.502269165947319, root 6.0316) and L6 (4.275092925366498, root 4.2951); probes/oddfyield-solver-sweep S!E1
+  (5.716981438845498E-18, root 4.958E-18) and S!F1 (-3.3959306358422327E-12, root 6.82E-18); and
+  probes-numeric/t3988-r4-oddfyield-fresh-2 S!A46 (next entry).
+No R3 marks.
+Evidence: accuracy/ODDFYIELD/s1 (excel-graph, 2026-11-06, T-4115); the probes named above (excel-graph).
+Ours: matches on all 15 `#NUM!` points and bit-exact on every point listed. Two table points are off Excel, owned by
+T-4551: A272 (a root near 0, 1.1E-11 relative off Excel) and A289 (an extra-quasi-period point, next entry; 2E-13).
+Status: VERIFIED (excel-graph)
+Tasks: T-4115, T-4551
+
+## ODDFYIELD off ODDFPRICE's root when ODDFPRICE counts a quasi period too many
+Rule: on a long first period with a month-end first coupon, oddbonds.fs' `coupNumber` moves the settlement to its
+month's end and so counts one quasi-coupon period more than lies between settlement and first coupon ("ODDFYIELD stops
+short of ODDFPRICE's root", T-3988). ODDFYIELD's value can then be far from ODDFPRICE's root.
+Observed (excel-graph):
+- ODDFPRICE keeps the extra period: the 7 table points with the extra count, accuracy/ODDFPRICE/s1 A83, A92, A101,
+  A145, A152, A166 and A194, are bit-exact in the engine (which counts it) and within 1E-15 of the math with it.
+- `ODDFYIELD(DATE(2030,2,4),DATE(2031,4,30),DATE(2026,4,7),DATE(2030,4,30),0.0943,102.489,100,1,0)`
+  (probes-numeric/t3988-r4-oddfyield-fresh-2 S!A46) is 0.19995383929563632.
+- `ODDFYIELD(46782,47149,46148,46783,0.00872796956994154,121.065357690152,100,1,4)` (accuracy/ODDFYIELD/s1 A126:
+  settlement 2028-01-30, first coupon 2028-01-31, basis 4) is -0.5526841759064842.
+- The engine is bit-exact on both.
+- Not every such point is far off: the other 9 ODDFYIELD table points with the extra count (A17, A76, A80, A115, A121,
+  A123, A138, A157, A289) are within 2E-7 of the root. "Can be far" is observed only at A126 and S!A46.
+Computed (not Excel cells): at S!A46, ODDFPRICE at Excel's yield is 67.2665427726564 (the definition and the engine
+agree), and the root of ODDFPRICE = 102.489 is 0.0330399456396704 (nq 1, the lead 1.24 periods away where 0.24 is the
+truth). At A126 the root is -0.0866553525315469 (nq 1 and DSC 0: the lead a whole period away instead of one day).
+Inferred, from the engine's model reproducing both cells bit-exact: ODDFYIELD's Newton slope counts the true periods
+and its price the extra one, so the Newton stops away from the price's root.
+Excel kept as the target (decision 0300): both cells, 5.05 and 5.38 relative off the math. No R3 marks.
+Evidence: accuracy/ODDFPRICE/s1 A83, A92, A101, A145, A152, A166, A194 and accuracy/ODDFYIELD/s1 A126 (excel-graph,
+2026-11-06, T-4115); probes-numeric/t3988-r4-oddfyield-fresh-2 S!A46 (excel-graph, 2026-11-06, T-3988).
+Ours: matches both bit-exact (`odd_first_yield`: `OddFirstSchedule::price` with `coup_number`, `dprice` on the true
+schedule).
+Status: VERIFIED (excel-graph) for the cells; UNVERIFIED for the mechanism
+Tasks: T-4115, T-3988
+
 ## YIELD's #NUM! cells and its 100-step cap
 Rule: with more than one coupon left, YIELD is analytic Newton on PRICE from the fitted start ("YIELD stops short of
 PRICE's root") with no fallback. An iterate where the step is not finite (PRICE or its slope leaves its domain) makes

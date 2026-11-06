@@ -96,8 +96,9 @@ def us_30_360(start: YMD, end: YMD) -> int:
 
 
 def us_30_360_both(start: YMD, end: YMD) -> int:
-    """US 30/360 that moves both dates: a 31st or February's last day is day 30 at either end, whatever the other date
-    (ACCRINT's issue-period length on bases 0 and 2, defs/accrint.py)."""
+    """US 30/360 that moves both dates (ExcelFinancialFunctions' `ModifyBothDates`): a 31st or February's last day is
+    day 30 at either end, whatever the other date. ODDLPRICE's and ODDLYIELD's quasi-coupon period lengths on basis 0
+    (defs/odd_bonds.py) and ACCRINT's issue-period length on bases 0 and 2 (defs/accrint.py) count with it."""
     (y1, m1, d1), (y2, m2, d2) = start, end
     d1 = 30 if d1 == 31 or _feb_last(*start) else d1
     d2 = 30 if d2 == 31 or _feb_last(*end) else d2
