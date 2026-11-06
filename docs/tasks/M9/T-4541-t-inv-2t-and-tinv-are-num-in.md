@@ -45,7 +45,8 @@ and their lines leave eval/accuracy/known-failures.tsv.
   reject the workbook (the probe computes them). No numeric fit: the cut is the structural flush of p/2.
 - Engine: `two_tailed_half_underflows` (t_dist.rs, on `flush_subnormal`) shared by T.INV.2T/TINV (`t_inv_of` takes
   such a p as 0) and CONFIDENCE.T (`#NUM!`, checked after its size checks). Unit test
-  `two_tailed_p_with_a_subnormal_half_is_zero`.
+  `two_tailed_p_with_a_subnormal_half_is_zero`. t_dist.rs's unit tests moved unchanged to t_dist/tests.rs to keep the
+  file under the 1000-line gate.
 - Gate A: the 7 known failures (T.INV.2T/s1 A68, A78; TINV/s1 A68, A78; CONFIDENCE.T/s1 A112, A123, A134) pass and
   their lines are removed; `rustsheet-eval accuracy` 0 failing. The Gate A definitions are unchanged (their math values
   at those points stay finite; the points pass on Excel's error), so no eval/accuracy math sidecar moved.

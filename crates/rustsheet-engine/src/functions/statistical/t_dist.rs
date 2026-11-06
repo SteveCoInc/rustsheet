@@ -295,7 +295,7 @@ fn t_test_p(
 pub(crate) const T_DF_MAX: f64 = 1e10;
 
 /// Whether the half `p / 2` of a positive two-tailed probability falls below the smallest normal
-/// double, which Excel flushes to 0 (p below 2·DBL_MIN): T.INV.2T and TINV then answer as at p = 0
+/// double, which Excel flushes to 0 (p below `2.0 * f64::MIN_POSITIVE`): T.INV.2T and TINV then answer as at p = 0
 /// (`#DIV/0!` at df 1, `#NUM!` from df 2) and CONFIDENCE.T is `#NUM!`, although T.INV at p itself is
 /// a number. The cut is df independent: `T.INV.2T(4.4501477170144E-308,df)` is an error and
 /// `T.INV.2T(4.45014771701441E-308,df)` a number at df 1, 2, 9 and 30 (probes/t4541-t-inv-2t-tiny-p;

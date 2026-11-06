@@ -16,7 +16,7 @@ fn formulas_near_the_limits_do_not_panic() {
 
 /// A two-tailed p whose half is below the smallest normal double is p = 0: T.INV.2T and TINV
 /// are `#DIV/0!` at df 1 and `#NUM!` from df 2, CONFIDENCE.T `#NUM!` at every df; just above
-/// 2·DBL_MIN, and T.INV at the same p, are numbers (probes/t4541-t-inv-2t-tiny-p rows 1-5;
+/// `2.0 * f64::MIN_POSITIVE`, and T.INV at the same p, are numbers (probes/t4541-t-inv-2t-tiny-p rows 1-5;
 /// statistics.md "T.DIST's density is #NUM! at a huge x, and T.INV.2T and TINV at p = 2.2E-308").
 #[test]
 fn two_tailed_p_with_a_subnormal_half_is_zero() {
