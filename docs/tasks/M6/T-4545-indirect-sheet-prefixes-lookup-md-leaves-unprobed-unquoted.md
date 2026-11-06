@@ -3,7 +3,7 @@ id: T-4545
 title: "INDIRECT sheet prefixes lookup.md leaves unprobed: unquoted non-ASCII and digit-then-letter sheet names, an R1C1 text on an all-digit sheet, and a two-sided 2024!B1:2024!B3 range: probe and match"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
