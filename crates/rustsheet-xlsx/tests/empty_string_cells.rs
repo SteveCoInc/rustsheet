@@ -1,4 +1,9 @@
 //! A cell holding the empty string stays a text cell through load and save (T-4148).
+//!
+//! The four XML shapes below are read as the text "" by the importer. That mapping is UNVERIFIED
+//! against Excel (xlsx-storage.md "Empty `t=\"str\"` and empty inline-string cells", probe T-4723):
+//! this test pins the round trip, not Excel's reading. ISBLANK FALSE and COUNTA counting a cell
+//! holding "" are verified (references.md, criteria.md).
 
 use std::error::Error;
 use std::io::{Cursor, Read, Write};
@@ -10,7 +15,7 @@ use rustsheet_xlsx::import::load_from_xlsx_bytes;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
-/// `tests/basic_text.xlsx` with row 100 holding the empty-string cell shapes Excel files carry.
+/// `tests/basic_text.xlsx` with row 100 holding the empty-text cell shapes of poi/bug66675.xlsx.
 fn book() -> Result<Vec<u8>, Box<dyn Error>> {
     let row = concat!(
         "<sheetData><row r=\"100\">",
@@ -62,7 +67,7 @@ fn empty_string_cells_survive_load_and_save() -> TestResult {
     let mut reloaded =
         Model::from_workbook(load_from_xlsx_bytes(&saved, "case", "en", "UTC")?, "en")?;
     assert_empty_text(&reloaded, "reload")?;
-    // Excel's ISBLANK is FALSE and COUNTA counts a cell holding "" (the census, T-4148).
+    // A cell holding "" is not blank: ISBLANK is FALSE and COUNTA counts it (references.md).
     reloaded.set_user_input(0, 101, 1, "=OR(ISBLANK(A100:D100))".to_string())?;
     reloaded.set_user_input(0, 101, 2, "=COUNTA(A100:D100)".to_string())?;
     reloaded.evaluate();

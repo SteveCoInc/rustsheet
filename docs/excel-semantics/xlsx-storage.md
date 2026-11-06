@@ -719,3 +719,19 @@ Unicode White_Space, not only XML whitespace) and whether a leading `+` is accep
 Implemented in: `parse_shared_string_index` in crates/rustsheet-xlsx/src/util.rs, shared by the importer
 (`get_cell_from_excel`) and the snapshot reader (`decode_value`). A negative index (`<v>-1</v>`) stays a dangling index in both (empty text); an
 unparseable index still loads as index 0 in the importer and as empty in the snapshot reader (not aligned; predates T-4145).
+
+
+## Empty `t="str"` and empty inline-string cells (T-4148)
+Rule (as implemented, not yet probed): a cell `<c t="str"></c>` with no `<v>`, `<c t="str"><v></v></c>`, and an
+inline string with an empty `<t>` (`<t></t>` or `<t/>`) are each read as the text "". They are not blank cells, and
+the export writes each one back as `t="s"` pointing to the shared string "".
+Evidence: none from Excel. poi/bug66675.xlsx (`WGT-D01 By Production Day` B9:D9 `t="str"`, E9 `inlineStr`) carries
+these shapes, but no Excel-authored app.xml names Excel as its writer, and no cached formula value shows how Excel
+reads them. The 2026-11-04 round-trip census and `rustsheet-eval snapshot` are our own readers.
+A text cell holding "" is VERIFIED: ISBLANK is FALSE and COUNTA counts it (references.md, criteria.md). What is
+unverified is the mapping from these XML shapes to that "".
+Status: UNVERIFIED (probe pending, T-4723). Note the asymmetry with a `t="d"` cell with no `<v>`, which is imported
+as blank (UNVERIFIED, above).
+Implemented in: `get_cell_from_excel` in crates/rustsheet-xlsx/src/import/worksheets.rs. Pinned through load, save and
+reload by crates/rustsheet-xlsx/tests/empty_string_cells.rs.
+Tasks: T-4148, T-4723.

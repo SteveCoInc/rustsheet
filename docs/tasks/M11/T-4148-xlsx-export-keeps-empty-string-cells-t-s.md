@@ -37,8 +37,9 @@ the task. The 2026-11-04 census ran on ee79bfa4. Since then, the round-trip harn
 constant as not blank (`stored_facts`, crates/rustsheet-eval/src/roundtrip/semantic.rs, SPEC-0033: "An empty-string cell
 is not a blank cell"), and the engine keeps these cells.
 - bug66675.xlsx stores them as `t="str"` with no `<v>` (B9, C9, D9) and as an `inlineStr` with an empty `<t>` (E9). The
-  import reads both as the shared string "", and the export writes `t="s"` to "". `rustsheet-eval snapshot` reads the
-  original's B9 and E9 as `{"t":"s","v":""}`.
+  import reads both as the shared string "", and the export writes `t="s"` to "". Our own snapshot reader agrees
+  (`{"t":"s","v":""}`), but that is not Excel evidence. How Excel reads these XML shapes is UNVERIFIED: the new
+  xlsx-storage.md entry records it, and T-4723 is the probe (fidelity review, round 1).
 - New test `crates/rustsheet-xlsx/tests/empty_string_cells.rs`: `t="str"` with no value and with an empty `<v>`, and
   `inlineStr` with an empty and a self-closed `<t>`. All four stay text "" after load, after save and after reload, where
   `OR(ISBLANK(...))` is FALSE and COUNTA counts 4.
@@ -46,3 +47,5 @@ is not a blank cell"), and the engine keeps these cells.
   failing), 60512.xlsm (0 failing), calipers pv23_056 (0 failing) and corpus-bench 124-46 (0 failing). xssf-enum.xltx
   keeps 100% of its items; its one failure is an unrelated package check, a sheet name ending in `_x000a_`.
 - Eval delta: none. The test is the only code change.
+- Follow-ups: T-4723 probes the four shapes in Excel. Not filed: a shared zip-rewrite helper for the xlsx
+  integration tests (design MINOR). Several test files already carry the pattern, and this PR adds one more copy.
