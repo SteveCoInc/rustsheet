@@ -87,14 +87,27 @@ The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, 
   plan"). The counterexamples that refuted a cap before (T-3548, T-3806: t3478-irr-r4-wide A227, Gate A A228, A215)
   are stalled stops past step 41, as are irr-guess-edges-2 A25-A27; all 6 are `#NUM!` in Excel. All six lie outside
   the cap's range, so they explain the earlier refutations but do not test the stall bound inside it.
-- **Review round 1 (fidelity, R4.1):** the R4 plan's bracket and range were read off all cells. Re-derived from train
-  only (docs/research/t3408/bounds.py on long_runs.tsv, the replay's cell list with step counts and sides): bracket
-  200..216 (train edges t3411-irr-r4-fresh-3 A53 at step 200, t3411-irr-r4-fresh-2 A63 at 217; test narrows it to
-  200..207); range 6..54 flows (t2927 A93, t3411-irr-r4-fresh-4 A148), |c| 5.62E-9..9.52E+8 (t3478-irr-r4-wide A270,
-  A278), guess -0.99970..9.81E+7 (t3411-irr-r4-fresh-3 A57, t3478 A234). Identical to the shipped gate, so the
-  hold-out result is unchanged. The tag now counts the 83 returning runs. Tiered R4.1 table (bit-exact / 4 ulp / 15
-  digits) for main, model and the correctly rounded root in decision 0320; `IRR_LONG_RUN_FLOWS` became the named
-  `IRR_LONG_RUN_RANGE`.
+- **Review rounds 1 and 2 (fidelity, R4.1):**
+  - The R4 plan's bracket was read off all cells, and round 1's "train bracket 200..216" used a step filter derived
+    from test cells.
+  - Past 200 steps Excel's outcome is not a clean function of the step count. Train runs of 241, 281 and 291 steps
+    return their own value (t3411-irr-r4-fresh A2, t3411-irr-r4-fresh-4 A63, t3411-irr-r4-fresh A70), while train
+    runs of 217..287 steps give the retry's value.
+  - So 200 is not Excel's cap but the low end of the train-score plateau. Of the 88 train cells whose result depends
+    on the cap, 65 match at any cap from 200 to 216; a cap of 50 matches 13, 291 matches 61 and 400 matches 56. The
+    FITTED text says so.
+  - The range comes from the train runs of 51..200 steps that return their own value:
+    - 6..54 flows (t2927 A93, t3411-irr-r4-fresh-4 A148);
+    - |c| 5.62E-9..9.52E+8 (t3478-irr-r4-wide A270, A278);
+    - guess -0.99970..9.81E+7 (t3411-irr-r4-fresh-3 A57, t3478 A234).
+  - Counting only cells where run and retry give different bits narrows that range to |c| up to 2.15E+8 and guesses
+    from -0.99933. The gate is kept wider: in that band, test A206 and fresh A2 and A48 match Excel only with the cap,
+    and no cell moves away from Excel.
+  - docs/research/t3408/ holds the replay (replay_test.rs), its cell lists (long_runs.tsv, cap_runs.tsv,
+    stalls.tsv) and bounds.py, which prints every count.
+  - The tiered R4.1 table (bit-exact / 4 ulp / 15 digits) for main, the model and the correctly rounded root is in
+    decision 0320. `IRR_LONG_RUN_FLOWS` became the named `IRR_LONG_RUN_RANGE`.
+  - Engine behaviour is unchanged by both rounds.
 - **R4.1** (fit lab split, 2,333 IRR literal cells of eval/suites, margin 5 points): train 1,126 -> 1,175 of 1,620
   (69.51% -> 72.53%), test 507 -> 529 of 713 (71.11% -> 74.19%); type/error mismatches 352 -> 336 and 167 -> 154.
   49 train and 22 test cells fixed, 0 worse, 0 changed-still-failing. Within 4 ulp / 15 digits: train 1,156 -> 1,203

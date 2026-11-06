@@ -1,51 +1,98 @@
-"""T-3408: the 200-step IRR secant cap's bracket and range, from the train side of the fit lab split only.
+"""T-3408: how the 200-step IRR secant cap and its range are chosen, from the fit lab's train side only.
 
-long_runs.tsv lists every IRR literal cell with an oracle value (eval/suites and the Gate A IRR tables, 3,233 cells
-on origin/main 73e09221b) whose secant run, replayed uncapped with the engine's own `irr_secant` arithmetic
-(replay_test.rs), stops at its 51st to 300th step, in Excel's run order (the guess run, then the retry from 0.1).
-Columns: the cell (case id as the fit lab keys it, Sheet!A1), its side (`fitlab.holdout.is_holdout`), the step the
-run stops at, how it stops (`residual`: |step| and |NPV| under 1e-7; `stall`: a zero step at |NPV| above 1e-7), what
-Excel shows (the run's value, the retry's value, another number, or its error), the flow count, the largest |flow|
-and the guess.
+Three files, all written by replay_test.rs (an uncapped and a per-cap replay of the engine's own `irr_secant` and
+`compute_irr`) over every IRR literal cell with an oracle value (eval/suites and the Gate A IRR tables, 3,233 cells,
+origin/main 73e09221b). Each row carries its fit lab side (`fitlab.holdout.is_holdout`, keys `suite/case` and
+`Sheet!A1`, Gate A cells `accuracy/IRR/<batch>`).
 
-Prints, from train cells only: the cap bracket (the last step whose residual stop Excel returns, the first step whose
-run Excel does not finish), the range of the returning runs (flows, largest |c|, guess), the stall steps, and the same
-counts on test as a check. Standard library only:
+- cap_runs.tsv: the cells whose result changes with the cap applied inside `IRR_LONG_RUN_RANGE`, with the engine's
+  result at each candidate cap (`cap_<n>`), the uncapped guess run and retry from 0.1, and Excel's value.
+- long_runs.tsv: every cell whose first finishing secant run (the guess run, else the retry) stops at its 51st..300th
+  step, uncapped and without the range: the step, how it stops (`residual` or `stall`), what Excel shows (the run's
+  value, the retry's value, another number, or its error) and whether the run and the retry give the same bits
+  (`yes`: the cell cannot tell them apart).
+- stalls.tsv: every stalled stop (a zero step at |NPV| above 1e-7, T-3120's stop), at any step.
 
-    python3 -I docs/research/t3408/bounds.py docs/research/t3408/long_runs.tsv
+Excel's outcome is not a clean function of the step count: on train, runs of 241..291 steps return their own value
+while runs of 217..287 steps do not. So no cap is Excel's; 200 is a point on the train-score plateau. This prints:
+the train and test score of each candidate cap; the train cells past 200 steps by outcome; the range of the returning
+train runs up to the chosen cap, with and without the cells where run and retry agree; and the stall evidence.
+
+    python3 -I docs/research/t3408/bounds.py docs/research/t3408
 """
 
 from __future__ import annotations
 
 import csv
 import sys
+from pathlib import Path
+
+CHOSEN = 200
+
+
+def read(path: Path) -> list[dict[str, str]]:
+    with path.open(newline="") as f:
+        return list(csv.DictReader(f, delimiter="\t"))
+
+
+def same(excel: str, value: str) -> bool:
+    try:
+        return float(excel) == float(value)
+    except ValueError:
+        return excel == value
+
+
+def caps(rows: list[dict[str, str]]) -> None:
+    names = [k for k in rows[0] if k.startswith("cap_")]
+    print("cap   train matched   test matched   (cells whose result depends on the cap)")
+    for name in names:
+        train = sum(same(r["excel"], r[name]) for r in rows if r["side"] == "train")
+        test = sum(same(r["excel"], r[name]) for r in rows if r["side"] == "test")
+        print(f"{name[4:]:>4}  {train:5}           {test:5}")
+    n_train = sum(r["side"] == "train" for r in rows)
+    print(f"      of {n_train} train and {len(rows) - n_train} test cells")
+
+
+def past_cap(rows: list[dict[str, str]]) -> None:
+    print(f"train runs past {CHOSEN} steps (residual stops), by what Excel shows:")
+    for r in sorted(rows, key=lambda r: int(r["step"])):
+        if r["side"] == "train" and r["stop"] == "residual" and int(r["step"]) > CHOSEN:
+            print(
+                f"  step {r['step']:>3}  {r['excel']:<14} run = retry: {r['run_equals_retry']:<8} {r['cell']}"
+            )
+
+
+def bounds(rows: list[dict[str, str]], label: str) -> None:
+    print(label, f"({len(rows)} cells)")
+    for key, conv in (("flows", int), ("largest_c", float), ("guess", float)):
+        lo = min(rows, key=lambda r: conv(r[key]))
+        hi = max(rows, key=lambda r: conv(r[key]))
+        print(f"  {key}: {lo[key]} ({lo['cell']}) .. {hi[key]} ({hi['cell']})")
 
 
 def main() -> None:
-    with open(sys.argv[1], newline="") as f:
-        rows = list(csv.DictReader(f, delimiter="\t"))
-    for side in ("train", "test"):
-        cells = [r for r in rows if r["side"] == side]
-        returns = [
-            r
-            for r in cells
-            if r["stop"] == "residual" and r["excel"] == "run's value" and int(r["step"]) <= 207
-        ]
-        unfinished = [r for r in cells if r["excel"] == "retry's value"]
-        stalls = [r for r in cells if r["stop"] == "stall"]
-        top = max(returns, key=lambda r: int(r["step"]))
-        first = min(unfinished, key=lambda r: int(r["step"]))
-        print(
-            f"{side}: {len(returns)} residual stops at steps 51..{top['step']} return the run's value ({top['cell']})"
-        )
-        print(f"  first run Excel does not finish: step {first['step']} ({first['cell']})")
-        for key, conv in (("flows", int), ("largest_c", float), ("guess", float)):
-            lo = min(returns, key=lambda r: conv(r[key]))
-            hi = max(returns, key=lambda r: conv(r[key]))
-            print(f"  {key}: {lo[key]} ({lo['cell']}) .. {hi[key]} ({hi['cell']})")
-        for r in sorted(stalls, key=lambda r: int(r["step"])):
+    folder = Path(sys.argv[1])
+    caps(read(folder / "cap_runs.tsv"))
+    long_runs = read(folder / "long_runs.tsv")
+    past_cap(long_runs)
+    returning = [
+        r
+        for r in long_runs
+        if r["side"] == "train"
+        and r["stop"] == "residual"
+        and r["excel"] == "run's value"
+        and int(r["step"]) <= CHOSEN
+    ]
+    bounds(returning, f"range of the train runs of 51..{CHOSEN} steps that return their own value")
+    bounds(
+        [r for r in returning if r["run_equals_retry"] != "yes"],
+        "  the same, without the cells where run and retry give the same bits",
+    )
+    print("stalled stops past step 30 (all sides):")
+    for r in sorted(read(folder / "stalls.tsv"), key=lambda r: int(r["step"])):
+        if int(r["step"]) > 30:
             print(
-                f"  stall at step {r['step']}: Excel {r['excel']}, {r['flows']} flows, |c| {r['largest_c']} ({r['cell']})"
+                f"  step {r['step']:>3}  {r['side']:<5} {r['excel']:<12} {r['flows']} flows, |c| {r['largest_c']}  {r['cell']}"
             )
 
 

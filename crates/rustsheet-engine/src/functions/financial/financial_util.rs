@@ -345,16 +345,17 @@ fn irr_flat_is_div_zero(values: &[f64], guess: f64, largest_npv: f64) -> bool {
 
 /// The steps an IRR secant run takes before it fails, where its flows and guess are inside
 /// [`IRR_LONG_RUN_RANGE`]; elsewhere a run fails after [`IRR_SHORT_RUN_STEPS`]. Excel finishes runs
-/// longer than 50 steps on the run's own digits. Over every IRR literal cell in eval and Gate A, the
-/// 83 runs (from the guess, or the retry from 0.1) that reach the residual stop at their 51st to 200th
-/// step are Excel's value bit for bit (t3411-irr-r4-fresh A53 at the 90th step). The bracket is read
-/// from the fit lab's train side only (decision 0188 R4.1): the last train run Excel finishes stops at
-/// its 200th step (t3411-irr-r4-fresh-3 A53), and the first train run it does not finish, where it
-/// returns the retry's digits, needs its 217th (t3411-irr-r4-fresh-2 A63). The test side narrows it to
-/// 200..207 (t3411-irr-r4-fresh-4 A70 at 208). The cells are listed with their step counts in
-/// `docs/research/t3408/long_runs.tsv` (financial.md "IRR's secant runs longer than 50 steps"; T-3408,
-/// decision 0320).
-/// FITTED(T-3408, 83 cells, IRR secant runs of 51..200 steps: 6..54 flows, largest |c| 5.6E-9..9.6E+8, guess -0.9997..9.81E+7; cap bracketed 200..216 on train)
+/// longer than 50 steps on the run's own digits: every train and test run that reaches the residual
+/// stop at its 51st to 200th step is Excel's value bit for bit (83 cells; t3411-irr-r4-fresh A53 at
+/// the 90th step, t3411-irr-r4-fresh-3 A53 at the 200th). Past 200 steps Excel's outcome is no clean
+/// function of the step count: on the fit lab's train side it returns the run's own value after 241
+/// to 291 steps (t3411-irr-r4-fresh A2, t3411-irr-r4-fresh-4 A63, t3411-irr-r4-fresh A70) and the
+/// retry's after 217 to 287 (t3411-irr-r4-fresh-2 A63, A54, A57, A74; t3411-irr-r4-fresh A142;
+/// t3478-irr-r4-wide A240; t3411-irr-r4-fresh-3 A74). So 200 is not Excel's cap: it is a point on
+/// the train-score plateau of 200..216 steps (65 of the 88 train cells whose result depends on the
+/// cap; 291 scores 61, 50 scores 13). `docs/research/t3408/bounds.py` prints the table from the
+/// replay's cell lists (financial.md "IRR's secant runs longer than 50 steps"; T-3408, decision 0320).
+/// FITTED(T-3408, 83 cells, IRR secant runs of 51..200 steps: 6..54 flows, largest |c| 5.6E-9..9.6E+8, guess -0.9997..9.81E+7; cap 200 = train-score plateau 200..216, no Excel cap)
 const IRR_LONG_RUN_STEPS: usize = 200;
 
 /// The steps of an IRR secant run outside [`IRR_LONG_RUN_RANGE`], and the steps within which a
@@ -373,11 +374,17 @@ struct IrrRunRange {
     guess: (f64, f64),
 }
 
-/// The calls [`IRR_LONG_RUN_STEPS`] is evidenced on (decision 0188 R4.3): the range of the 57
-/// returning long runs on the fit lab's train side, which is also that of all 83. 6 flows
-/// (t2927-irr-fallback-sweep A93) to 54 (t3411-irr-r4-fresh-4 A148); largest |flow| 5.6E-9
-/// (t3478-irr-r4-wide A270) to 9.52E+8 (A278); guess -0.99970 (t3411-irr-r4-fresh-3 A57) to
-/// 9.81E+7 (t3478-irr-r4-wide A234). The bounds are rounded outward in the last kept digit.
+/// The calls [`IRR_LONG_RUN_STEPS`] applies to (decision 0188 R4.3): the range of the 57 train runs
+/// of 51..200 steps that return their own value. 6 flows (t2927-irr-fallback-sweep A93) to 54
+/// (t3411-irr-r4-fresh-4 A148); largest |flow| 5.6E-9 (t3478-irr-r4-wide A270) to 9.52E+8 (A278);
+/// guess -0.99970 (t3411-irr-r4-fresh-3 A57) to 9.81E+7 (t3478-irr-r4-wide A234); bounds rounded
+/// outward. A278 and fresh-3 A57 give the same bits from the run and the retry, so they do not tell
+/// the cap apart. Without such cells the train range is narrower: largest |flow| up to 2.15E+8
+/// (t2927-irr-fallback-sweep A95), guess down to -0.99933 (t3478-irr-r4-wide A230). The band between
+/// is kept on held-out evidence: the test cell t3478-irr-r4-wide A206 (|c| 4.7E+8) and 2 cells of
+/// the fresh sweep t3408-irr-r4-fresh (A2, A48; guesses -0.99953 and -0.99968) match Excel only with
+/// the cap. The one train cell there whose result can depend on the cap, t3478-irr-r4-wide A240,
+/// matches Excel at 200 as at 50, and no cell moves away from Excel.
 const IRR_LONG_RUN_RANGE: IrrRunRange = IrrRunRange {
     flows: (6, 54),
     largest_flow: (5.6e-9, 9.6e8),

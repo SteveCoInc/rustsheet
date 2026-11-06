@@ -8,23 +8,50 @@
     of them are runs from the guess (mostly guesses near -0.99) that reach the residual stop after their 50th step.
     Excel's value is that run's stop iterate, bit for bit. The engine's 50-step cap sent them to the retry from 0.1.
   - Over all 3,233 cells, the 83 runs that reach the residual stop (|step| and |NPV| under 1e-7) at their 51st to
-    200th step are Excel's value bit for bit. From the 208th step Excel has the retry's digits instead. Every such
-    cell, with its side, step count and stop, is in docs/research/t3408/long_runs.tsv. `docs/research/t3408/bounds.py`
-    derives the bounds below from that file, and replay_test.rs is the uncapped replay of `irr_secant` that wrote it.
-  - **Bracket and range from train only (R4.1).** These come from the fit lab's train side only
+    200th step are Excel's value bit for bit. Past 200 steps Excel's outcome is not a clean function of the step
+    count. Train runs of 241, 281 and 291 steps return their own value: t3411-irr-r4-fresh A2, t3411-irr-r4-fresh-4
+    A63 and t3411-irr-r4-fresh A70. Train runs of 217 to 287 steps give the retry's value: t3411-irr-r4-fresh-2 A63,
+    A54, A74 and A57, t3411-irr-r4-fresh A142, t3478-irr-r4-wide A240 and t3411-irr-r4-fresh-3 A74. On test, A70
+    of t3411-irr-r4-fresh-4 (208th step) and A55 of t3411-irr-r4-fresh (215th) give the retry's value. So no step cap
+    is Excel's rule, and 200 is not Excel's cap.
+  - The evidence files are in docs/research/t3408/:
+    - long_runs.tsv: the replay's runs of 51..300 steps, with each cell's fit lab side, how it stops, what Excel
+      shows, and whether the run and the retry give the same bits;
+    - cap_runs.tsv: the engine's result at each candidate cap, for the cells whose result depends on it;
+    - stalls.tsv: every stalled stop;
+    - replay_test.rs: the replay that wrote them;
+    - bounds.py: prints everything below from them.
+  - **Cap and range from train only (R4.1).** These come from the fit lab's train side only
     (`fitlab.holdout.is_holdout`, keys `suite/case` and `Sheet!A1`; Gate A cells keyed `accuracy/IRR/<batch>`).
-    - Cap bracket 200..216. The last train run Excel finishes stops at its 200th step (t3411-irr-r4-fresh-3 A53).
-      The first train run it does not finish needs its 217th (t3411-irr-r4-fresh-2 A63). The test side's
-      t3411-irr-r4-fresh-4 A70 (208th) and fresh A55 (215th) agree and narrow it to 200..207. 200 is in both.
-    - Range (R4.3), from the 57 returning train runs:
+    - The cap is chosen by train score. Over the 88 train cells whose result depends on the cap inside the range,
+      Excel is matched by:
+
+      | cap | 50 | 100 | 150 | 190 | 200..216 | 217 | 241 | 281 | 291 | 400 |
+      |---|---|---|---|---|---|---|---|---|---|---|
+      | train cells | 13 | 40 | 54 | 62 | 65 | 64 | 62 | 62 | 61 | 56 |
+
+      200 is the low end of the train plateau 200..216. On test (38 cells), 200 and 207 match 36 and 216 matches 34.
+    - Range (R4.3), from the 57 train runs of 51..200 steps that return their own value:
       - 6 flows (t2927-irr-fallback-sweep A93) to 54 (t3411-irr-r4-fresh-4 A148);
       - largest |flow| 5.62E-9 (t3478-irr-r4-wide A270) to 9.52E+8 (A278);
       - guess -0.99970 (t3411-irr-r4-fresh-3 A57) to 9.81E+7 (t3478-irr-r4-wide A234).
-    - The 26 test runs fall inside that range. So the gate (6..54, 5.6E-9..9.6E+8, -0.9997..9.81E+7, rounded
-      outward) is the train-only range, and the hold-out result below does not change.
+    - The gate is that range rounded outward: 6..54, 5.6E-9..9.6E+8, -0.9997..9.81E+7.
+    - Two of those bounds rest on cells where the run and the retry give the same bits (A278 and fresh-3 A57), so
+      they cannot tell the cap apart. Counting only the 53 train cells where run and retry differ gives a narrower
+      range: largest |flow| up to 2.15E+8 (t2927-irr-fallback-sweep A95), guess down to -0.99933 (t3478-irr-r4-wide
+      A230).
+    - The gate is not narrowed to that range. The band between holds evidence from test and from the fresh sweep
+      only:
+      - the test cell t3478-irr-r4-wide A206 (|c| 4.7E+8) matches Excel only with the cap;
+      - so do two fresh-sweep cells, t3408-irr-r4-fresh A2 and A48 (guesses -0.99953 and -0.99968);
+      - the one train cell in the band whose result can depend on the cap (t3478-irr-r4-wide A240) matches Excel at
+        200 as at 50.
+
+      Narrowing would fix no cell and would lose those three. The band is therefore wider than the discriminating
+      train evidence, and this is stated as such.
   - **The stall bound.** A stalled zero step is d2 = d1 with |NPV| above 1e-7 (T-3120's stop).
-    - Excel returns a stalled stop up to the 41st step (t3478-irr-r4-wide A260). It is `#NUM!` on all 6 stalled
-      stops from there to its cap:
+    - Excel returns a stalled stop up to the 41st step (t3478-irr-r4-wide A260, stalls.tsv). It is `#NUM!` on all 6
+      stalled stops from the 70th to the 189th step:
       - probes/irr-guess-edges-2 A25, A26, A27 (70th, 74th, 125th step);
       - Gate A r4-T-3411 A228 (129th) and A215 (132nd);
       - t3478-irr-r4-wide A227 (189th).
@@ -73,7 +100,8 @@
   and `scripts/check_fitted.py --update` records it.
 - **Consequences:**
   - eval/baseline/probes.txt loses the lines of the gated cells that now pass (`make eval-baseline`).
-  - Excel's own cap lies between 200 and 207 steps. A probe that pins it, or a returning run outside the range
+  - 200 is not Excel's cap: past 200 steps Excel's outcome does not follow the step count. A model of what decides
+    it, or a returning run outside the range
     (stratum 5 of the sweep has 11 `#NUM!` cells on 55..148 flows), may widen the range. Widening it needs new
     evidence, not this sweep.
   - The remaining T-3408 digit cells are flat-secant and fallback stops at the noise floor. They move to T-4213,
