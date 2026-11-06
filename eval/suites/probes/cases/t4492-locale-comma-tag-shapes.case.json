@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4492: TEXT of 45000.75 under locale,N00 comma tags: a hex LCID or BCP-47 name before the comma, numeral values that are or are not multiples of 0x100, and spaces around the comma and the hex.",
+ "tags": [
+  "probe",
+  "number-format",
+  "locale",
+  "M10",
+  "T-4492"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=TEXT(45000.75,\"[$-40C,1]mmmm\")",
+    "A2": "=TEXT(45000.75,\"[$-40C,200]mmmm\")",
+    "A3": "=TEXT(45000.75,\"[$-fr-FR,200]mmmm\")",
+    "A4": "=TEXT(45000.75,\"[$-ar-SA,2]0\")",
+    "A5": "=TEXT(45000.75,\"[$-ar-SA,20]0\")",
+    "A6": "=TEXT(45000.75,\"[$-,200]0\")",
+    "A7": "=TEXT(45000.75,\"[$-fr-FR,1]mmmm\")",
+    "A8": "=TEXT(45000.75,\"[$-ar-SA,200]mmmm|dddd\")",
+    "A9": "=TEXT(45000.75,\"[$-ar-SA,201]0\")",
+    "A10": "=TEXT(45000.75,\"[$-ar-SA,2000]0\")",
+    "A11": "=TEXT(45000.75,\"[$-409,200]0\")",
+    "A12": "=TEXT(45000.75,\"[$-ar-SA,0]0\")",
+    "A13": "=TEXT(45000.75,\"[$-,1000]0\")",
+    "A14": "=TEXT(45000.75,\"[$-ar-SA,200]h:mm AM/PM\")",
+    "A15": "=TEXT(45000.75,\"[$-,200]h:mm AM/PM\")",
+    "A16": "=TEXT(45000.75,\"[$-ar-SA, 200]0\")",
+    "A17": "=TEXT(45000.75,\"[$-ar-SA,200,1]0\")",
+    "A18": "=TEXT(45000.75,\"[$-ar-SA,x]0\")",
+    "A19": "=TEXT(45000.75,\"[$-ar-SA ,200]0\")",
+    "A20": "=TEXT(45000.75,\"[$-ar-SA,  200]0\")",
+    "A21": "=TEXT(45000.75,\"[$-ar-SA,200 ]0\")",
+    "A22": "=TEXT(45000.75,\"[$-, 200]0\")",
+    "A23": "=TEXT(45000.75,\"[$-40C, 200]mmmm\")",
+    "A24": "=TEXT(45000.75,\"[$-40C,200]0\")"
+   }
+  }
+ ],
+ "expected": {}
+}
