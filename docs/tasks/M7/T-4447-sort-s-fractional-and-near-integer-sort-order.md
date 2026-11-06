@@ -3,7 +3,7 @@ id: T-4447
 title: "SORT's fractional and near-integer sort_order and sort_index: probe whether Excel floors them with SORTBY's near-integer snap, and match (ours truncates)"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
