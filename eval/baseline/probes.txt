@@ -2507,6 +2507,7 @@ C	probes/t4587-sheet-api-name-sheet-has-names.case.json	5
 C	probes/t4589-pivot-total-order.case.json	95
 C	probes/t4595-literal-after-point.case.json	12
 C	probes/t4600-holiday-number-text-off-calendar.case.json	176
+C	probes/t4607-xnpv-xirr-column-errors-and-day-minus-one.case.json	96
 C	probes/t4614-pivot-total-order-2.case.json	124
 C	probes/t4616-pivot-total-order-3.case.json	528
 C	probes/t4622-pivot-count-subtotals.case.json	202
