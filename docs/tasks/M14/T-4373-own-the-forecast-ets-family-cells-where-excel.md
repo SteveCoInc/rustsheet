@@ -34,8 +34,8 @@ hence `defer`.
 Also owns (decision 0308) the desktop-only CELL cells listed in eval/milestones/phase1-exceptions.tsv (calipers goldens,
 info types color, filename, format, parentheses, prefix, protect, width), and every FORECAST.ETS-family line there.
 
-Cell lists (decision 0308): every phase1-exceptions.tsv line under 0308, and the cells T-4207 named for the dropped M14
-owners (moved here when T-4207 closed):
+Cell lists. The ownership check (scripts/exit_owners.py) reads the cells a task names, so they are listed here once.
+Phase 1 rate exceptions under decision 0308 (eval/milestones/phase1-exceptions.tsv):
 - calipers/pv_goldens/pv26_001/golden.xlsx (1): Ticker0001_Validation_Sheet!A2
 - calipers/pv_goldens/pv26_011/golden.xlsx (1): CD market model!B3
 - calipers/pv_goldens/pv26_011/golden.xlsx (1): UC market model!B3
@@ -99,68 +99,17 @@ owners (moved here when T-4207 closed):
 - probes/forecast-ets-optional-settings-shape.case.json (12): Sheet1!M29, M30, M31, M32, M33, M34, M41, M42, M43, M44, M45, M46
 - probes/forecast-ets-reprobe-2026-11.case.json (16): Sheet1!I1, I2, I3, I4, I5, I6, I7, I8, J1, J2, J3, J4, J5, J6, J7, J8
 - probes/stat-argument-modes.case.json (8): Sheet1!H266, H267, H270, H271, H274, H275, H277, H278
-- gen-m9/09e6a8028f5acfae.case.json (1): Calc!A383
-- gen-m9/0a614cfe974b59c3.case.json (2): Calc!A173, A347
-- gen-m9/0a9226016e8f5f33.case.json (1): Calc!A210
-- gen-m9/0a957119475760c5.case.json (1): Calc!A239
-- gen-m9/165db58d1540f014.case.json (2): Calc!A145, A306
-- gen-m9/2138b909d8f810ea.case.json (1): Calc!A354
-- gen-m9/22656c225ff4f22a.case.json (48): Calc!A16, A20, A33, A34, A43, A52, A62, A63, A64, A66, A79, A81, A96, A99, A108, A115, A130, A135, A136, A139, A163, A176, A179, A196, A211, A215, A225, A227, A229, A230, A231, A239, A253, A254, A255, A272, A273, A283, A308, A319, A323, A326, A329, A334, A366, A374, A379, A386
-- gen-m9/23d82b62e9a85bdd.case.json (1): Calc!A1
-- gen-m9/30e20ba3302fea8b.case.json (1): Calc!A349
-- gen-m9/31f09e6c48ca245c.case.json (1): Calc!A321
-- gen-m9/3a25a03eb94fcfbd.case.json (1): Calc!A265
-- gen-m9/3b7990bd4e3307ba.case.json (2): Calc!A252, A351
-- gen-m9/43a13a091907b402.case.json (59): Calc!A4, A5, A7, A11, A15, A24, A26, A27, A35, A36, A37, A42, A61, A67, A87, A91, A95, A102, A107, A108, A113, A142, A147, A151, A155, A166, A167, A173, A175, A183, A192, A208, A212, A214, A227, A243, A244, A259, A269, A270, A280, A290, A299, A304, A306, A307, A309, A320, A323, A326, A339, A364, A366, A370, A382, A384, A387, A392, A395
-- gen-m9/46ac3ef5e61583ca.case.json (1): Calc!A291
-- gen-m9/5b6cc12a94f7bf14.case.json (1): Calc!A77
-- gen-m9/623663cacea53bbc.case.json (1): Calc!A160
-- gen-m9/67f5e0fe790e6bec.case.json (50): Calc!A8, A10, A14, A27, A37, A59, A93, A98, A99, A106, A109, A111, A121, A131, A139, A144, A156, A159, A161, A167, A168, A186, A190, A191, A197, A198, A213, A214, A218, A246, A252, A254, A272, A297, A315, A321, A329, A333, A336, A339, A350, A351, A359, A367, A368, A370, A373, A386, A388, A398
-- gen-m9/73f053591a54bc43.case.json (1): Calc!A30
-- gen-m9/7980ffb6095a340d.case.json (1): Calc!A253
-- gen-m9/7f7ca726c3f68554.case.json (1): Calc!A387
-- gen-m9/895a33aa8352864a.case.json (1): Calc!A158
-- gen-m9/899f9555e67da2d6.case.json (1): Calc!A142
-- gen-m9/932b33b1ef8b7608.case.json (1): Calc!A336
-- gen-m9/941c409532603d32.case.json (1): Calc!A227
-- gen-m9/9735c5ab72fa5ecf.case.json (1): Calc!A358
-- gen-m9/9e2225ead8a6a07b.case.json (1): Calc!A235
-- gen-m9/a013a45a8fbcab4f.case.json (1): Calc!A240
-- gen-m9/a2262ea466fcc142.case.json (1): Calc!A259
-- gen-m9/a7bf0d8d81d33ba6.case.json (1): Calc!A44
-- gen-m9/abc2939ebd1e2365.case.json (1): Calc!A392
-- gen-m9/afc00c8b70e78baf.case.json (1): Calc!A32
-- gen-m9/b6593d7dd13f2dac.case.json (1): Calc!A69
-- gen-m9/c2684066d8df263e.case.json (1): Calc!A241
-- gen-m9/c468f5046aadfbbc.case.json (1): Calc!A116
-- gen-m9/c6cfda6bd10cae93.case.json (1): Calc!A187
-- gen-m9/caa1eed48b1883fe.case.json (1): Calc!A61
-- gen-m9/cde551ea787f713a.case.json (1): Calc!A280
-- gen-m9/d208bbafc3bc1997.case.json (1): Calc!A243
-- gen-m9/d5fd9e05e9e6f466.case.json (1): Calc!A129
-- gen-m9/e6cf3b20a014e6a3.case.json (2): Calc!A183, A293
-- gen-m9/e8d55ec393460bb7.case.json (1): Calc!A110
-- gen-m9/ec2a1d9194a84396.case.json (66): Calc!A4, A8, A12, A14, A18, A26, A32, A40, A42, A47, A55, A61, A67, A68, A69, A74, A75, A88, A94, A95, A115, A117, A118, A126, A128, A136, A143, A150, A152, A158, A160, A168, A170, A171, A197, A200, A202, A207, A210, A213, A218, A219, A226, A235, A238, A242, A249, A250, A251, A254, A266, A271, A290, A293, A295, A310, A316, A346, A354, A355, A357, A367, A375, A378, A396, A398
-- gen-m9/ee2497a5e683c5d9.case.json (1): Calc!A312
-- gen-m9/f2bd5f380ec002bf.case.json (1): Calc!A214
-- gen-m9/f81bd3b6dc373e5c.case.json (1): Calc!A331
-- gen-m9/f82473275380882e.case.json (1): Calc!A20
-- gen-m9/fa25422d6f18c157.case.json (52): Calc!A3, A6, A11, A16, A17, A29, A42, A53, A81, A91, A96, A97, A116, A119, A128, A131, A137, A144, A151, A177, A181, A186, A187, A189, A207, A215, A227, A231, A235, A248, A252, A254, A258, A263, A272, A273, A278, A280, A299, A306, A316, A320, A332, A353, A360, A365, A371, A377, A378, A382, A384, A400
-- gen-m9/fd9fa22d212080d6.case.json (1): Calc!A58
-- probes/forecast-ets-optional-settings-shape.case.json (12): Sheet1!M29, M30, M31, M32, M33, M34, M41, M42, M43, M44, M45, M46
-- probes/stat-argument-modes.case.json (8): Sheet1!H266, H267, H270, H271, H274, H275, H277, H278
-- gen-m9/a91bad4e84f49739.case.json (1): Calc!A141
-- probes/forecast-ets-longer-series.case.json (40): Sheet1!K1:K36, K39:K42
-- gen-m9/589f42e67f4b4b8d.case.json (1): Calc!A329
-- ironcalc-calc/ENGINEERING/COMPLEXs.xlsx (4): Sheet1!N6, AL12, K25, AL26
+
+Cells T-4207 named for the M14 owners decision 0266 dropped, not visibly off or already exit exceptions (ironcalc-calc,
+poi, calipers engineering): kept owned here so no cell loses its owner.
+- probes/forecast-ets-longer-series.case.json (2): Sheet1!K1:K36, K39:K42
+- ironcalc-calc/ENGINEERING/COMPLEXs.xlsx (4): Sheet1!AL12, AL26, K25, N6
 - ironcalc-calc/ENGINEERING/BESSEL.xlsx (2): All!D18, F18
 - ironcalc-calc/LOGICAL/IF_ARRAY.xlsx (3): Sheet1!C4, C11, E4
 - ironcalc-calc/MATH_AND_TRIGONOMETRY/ATAN2_POWER.xlsx (1): Sheet1!D14
 - poi/FormulaEvalTestData_Copy.xlsx (5): EverythingTests!G936, H936, J136, J1328, K936
-- calipers/pv_goldens/pv26_001/golden.xlsx (1): Ticker0001_Validation_Sheet!A2
-- calipers/pv_goldens/pv26_011/golden.xlsx (2): CD market model!B3; UC market model!B3
-- calipers/pv_goldens/pv26_2_001/golden.xlsx (1): Ticker0001_Validation_Sheet!A2
-- calipers/pv_goldens/pv26_2_011/golden.xlsx (2): CD market model!B3; UC market model!B3
+- calipers/pv_goldens/pv26_011/golden.xlsx (1): CD market model!B3; UC market model!B3
+- calipers/pv_goldens/pv26_2_011/golden.xlsx (1): CD market model!B3; UC market model!B3
 - calipers/roundtrip/formulas_math_trig/golden.xlsx (33): Sheet1!C23, C25, D22, D24, D70, E19, E22, E23, E24, E25, E46, E48, E60, E71, F22, F24, F68, G19, G23, G25, G69, G72, G75, H19, H20, H22, H23, H24, H25, H26, H71, H74, J72
 - calipers/roundtrip/formulas_text/golden.xlsx (1): Text Functions!C190
 - calipers/roundtrip/formulas_engineering/golden.xlsx (4): Sheet1!D26, D27, J26, J27

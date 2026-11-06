@@ -158,7 +158,7 @@ Mac golden and `#VALUE!` on the web (T-2182):
       decision and no dropped task; (b) count them like any other visibly-off cell, so the four FORECAST.ETS functions
       stay below the Phase 1 rate until T-3641 or a later desktop decision. The record says what happens to them if
       T-3641 finds that the web computes the family.
-- [x] scripts/desktop_owned.py, exit_owners.py and the eval's `--desktop-owned` path either implement the ruling or are
+- [ ] scripts/desktop_owned.py, exit_owners.py and the eval's `--desktop-owned` path either implement the ruling or are
       retired, with their tests updated. No code path depends on an open M14 task any more, since none can exist.
       The report's "M14-owned" column and the R7 wording follow the ruling.
 - [x] The rows of phase1-exceptions.tsv and exit-exceptions.tsv that name T-1075 name an owner the ruling accepts
@@ -166,7 +166,7 @@ Mac golden and `#VALUE!` on the web (T-2182):
 - [x] T-3004 is set to `dropped` with an Outcome that points here.
 - [x] After `make eval`, `make unowned-off ALL=1` lists none of the cells above (each is owned or excepted by the
       ruling). eval/baseline is unchanged: no F line added or removed by this task.
-- [x] `make check` green; reviewers approve.
+- [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Changing what the FORECAST.ETS family computes (decision 0221; decision 0266 rule 2).
@@ -174,4 +174,10 @@ Mac golden and `#VALUE!` on the web (T-2182):
 - Re-probing excel-graph (T-3641).
 
 ## Outcome
-Decision 0308 (owner request, 2026-11-06): the 402 FORECAST.ETS-family cells that expect the web's `#N/A` and the 153 desktop-only CELL cells of the calipers goldens are lines of eval/milestones/phase1-exceptions.tsv, owned by T-4373; they stay known failures. gen-m9/fa25422d6f18c157 Calc!A75 stays with T-4208. The stale T-1075 owner of the older lines is left for the steward's next exception-file review (the file's owner field is a record, not a gate).
+Decision 0308 (owner request, 2026-11-06) takes option (a): the 402 FORECAST.ETS-family cells that expect the web's
+`#N/A` and the 153 desktop-only CELL cells of the calipers goldens are lines of eval/milestones/phase1-exceptions.tsv,
+owned by T-4373 (now `blocked`: no oracle evidences them), and stay known failures. The rows of phase1-exceptions.tsv
+and exit-exceptions.tsv that named T-1075 now name T-4373. T-3004 is dropped. gen-m9/fa25422d6f18c157 Calc!A75 stays
+with T-4208. `make eval` on bfc30b2a: the Phase 1 rate leaves out 564 cells (CELL 149, FORECAST.ETS.STAT 51,
+.CONFINT 30, .SEASONALITY 31, FORECAST.ETS 34, plus the earlier 9); Gate B 469 of 506; `make phase1-exit` owners met
+(0 unowned). Not done here: the code criterion (retire or rewrite decision 0143's M14-owned path), split to T-4527.

@@ -24,7 +24,7 @@ cells; gap triage 2026-10-28). If Excel for the web gives values here, those 105
 semantics gap rather than desktop-only, and an implementation task in functions-logic follows.
 
 ## Acceptance criteria
-- [x] A new probes case `info-cell-format-info-types` (excel-probe skill, oracle excel-graph, canary-verified)
+- [x] A new probes case (landed as `t3011-cell-format-info-types`; "width" left out because the oracle canary refuses it, and the apostrophe case because the case format cannot type one) (excel-probe skill, oracle excel-graph, canary-verified)
       covers, for each of "color", "parentheses", "prefix", "protect", "width" and, as a control, "format": a blank
       cell, a number, a text, a text typed with a leading apostrophe if the spec format can express it, a cell
       formatted `0.00;[Red]-0.00`, a cell formatted `(0)` style negative-in-parentheses, a reference on another
@@ -34,7 +34,7 @@ semantics gap rather than desktop-only, and an implementation task in functions-
 - [x] If any result differs from the engine, a functions-logic task is filed naming the differing cells and the
       formulas_information cells it would fix (and T-2663's Context is updated to say which of its CELL cells
       are web-fixable); otherwise the probe passes and the outcome says the placeholder matches.
-- [x] `make check` green; reviewers approve.
+- [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Implementing any CELL info type (the follow-up task does that).

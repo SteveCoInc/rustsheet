@@ -18,15 +18,23 @@
     record. The 153 visibly-off CELL cells (calipers goldens formulas_information and pv_goldens) carry desktop
     Excel's cached values (a width, a format code, a file path), which no web evidence can reach. CELL is below
     Gate B's rate (149 of 489 cells) only because of them.
+- **Options considered:**
+  - *Count them like any other visibly-off cell.* The four FORECAST.ETS functions and CELL stay below the Phase 1 rate
+    for good: no fix can move them, since the engine already matches the web where the web answers.
+  - *List them as Phase 1 rate exceptions (chosen),* the mechanism decision 0134 built for desktop-only evidence.
 - **Decision:**
   1. The 555 cells (402 FORECAST.ETS-family, 153 desktop-only CELL) are lines of `eval/milestones/phase1-exceptions.tsv`
      under this decision, owned by T-4373 (the open placeholder that refills them if a desktop or web oracle ever
      computes them). They leave the Phase 1 rate per decision 0134 and stay known failures; nothing else is hidden.
   2. gen-m9/fa25422d6f18c157 Calc!A75 (Excel `#REF!`, web-observable) is not listed (T-4208).
-  3. New cells of the same kind (a FORECAST.ETS-family call where the web gives `#N/A`, or a CELL info type above
+  3. If Excel for the web ever computes the FORECAST.ETS family or these CELL info types (T-3641's re-probe found it
+     does not, 2026-11-05), the cells become fixable: their lines go and the engine follows the web.
+  4. New cells of the same kind (a FORECAST.ETS-family call where the web gives `#N/A`, or a CELL info type above
      where the web gives `#VALUE!` and a desktop-authored workbook caches a value) may be added by a later PR citing
-     this decision, with the cell's evidence in its description.
+     this decision, each with its own oracle evidence (the web's `#N/A` or `#VALUE!` sidecar value) in the PR.
 - **Consequences:**
   - FORECAST.ETS, FORECAST.ETS.STAT, FORECAST.ETS.SEASONALITY, FORECAST.ETS.CONFINT and CELL should meet the Phase 1
-    rate; Gate B moves from 456 toward 461 of 506 at the next full run.
-  - T-4207 and T-3011 are done. T-4373 owns the listed cells.
+    rate. `make eval` on bfc30b2a leaves out 564 cells and puts Gate B at 469 of 506 (456 on c97e0b9c, with other merged
+    work in between); `make phase1-exit` owners met.
+  - T-3011 and T-4207 are done (T-4207's code criterion is T-4527). T-4373 owns the listed cells, and the rows that
+    named the dropped T-1075 now name T-4373. T-3004 is dropped.
