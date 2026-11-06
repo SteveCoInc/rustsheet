@@ -3,7 +3,7 @@ id: T-4534
 title: "Own the cells T-4207 listed that decision 0308 does not except"
 milestone: M9
 lane: functions-math
-status: in-progress
+status: todo
 priority: P3
 size: S
 tier: opus
@@ -48,3 +48,23 @@ formulas_math_trig trig cells at multiples of pi/2, formulas_text C190 `CHAR(255
 Still here: poi EverythingTests (J136, G936, H936, K936 are exceptions under 0134; J1328 SUMPRODUCT), ironcalc-calc
 ENGINEERING, IF_ARRAY and ATAN2_POWER (exit exceptions or not visibly off), the forecast-ets-longer-series cells
 (decision 0308's too) and calipers formulas_engineering.
+
+## Progress (2026-11-06, second partial PR)
+probes/t4534-bessel-convert-web-values (excel-graph, 14 cells) settles three more groups:
+- ironcalc-calc ENGINEERING/BESSEL.xlsx All!D18 and F18 (`BESSELJ(100000,5)`, `BESSELY(100000,5)`; Mac desktop cache
+  0.001846551246313725 and 0.001719431947654535): Excel for the web gives the engine's 0.0018465512463137278 and
+  0.0017194319476545319 (A1:A2, F1:F2). Both are within 15 digits (NumericClose), so not visibly off, and
+  `scripts/exit_owners.py --all-off` lists neither with this task closed.
+- calipers roundtrip/formulas_engineering Sheet1!D26, D27, J26, J27 (CONVERT mi to km, in to cm): the web gives the
+  golden's values and the engine is one ulp off (B1:B4, D1:D4), so they are web-fixable: T-4630 owns them and the
+  eight probe cells.
+- calipers pv26_011 and pv26_2_011 `CD market model!B3`, `UC market model!B3` (`CELL("filename")`): already decision
+  0308's lines (the web gives the engine's `#VALUE!`, probes/t4534-desktop-golden-web-values).
+- poi EverythingTests!J1328 `SUMPRODUCT(G1330:G1330,I1330:I1330)`: Microsoft 365 gives the engine's 0
+  (probes/t2921-sumproduct-one-cell-numeric-text A45; coercion.md, CONFLICTING with the Excel 15 cache).
+Still owned here, and why this task stays open: with it closed, the 40 probes/forecast-ets-longer-series cells have no
+open M9 owner (T-4373 is M14) and the four ironcalc-calc COMPLEXs exit-exception cells (N6, AL12, AL26, K25) have no
+open owner (`exit_owners.py --milestone M9` and `--all-off` against a copy of docs/tasks with this task done). Closing
+it needs an open M9 owner for those cells and the owner column of the T-4534 lines of eval/milestones/
+exit-exceptions.tsv and phase1-exceptions.tsv moved (a protected path: a decision). J1328 needs a line like J136's
+(decision 0134 mechanism) or an owner the same way.
