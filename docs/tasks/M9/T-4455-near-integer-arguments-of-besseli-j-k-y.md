@@ -3,7 +3,7 @@ id: T-4455
 title: "Near-integer arguments of BESSELI/J/K/Y order, DEC2*/BIN2*/HEX2*/OCT2* places and number, and BITLSHIFT/BITRSHIFT shift: probe the 2^-22 snap against truncation, and match"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
