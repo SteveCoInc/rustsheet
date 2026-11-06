@@ -3,7 +3,7 @@ id: T-4473
 title: "TEXTSPLIT, TEXTBEFORE and TEXTAFTER match_mode 1: probe and match the folds still UNVERIFIED (İ against i and I, final sigma in TEXTSPLIT, Å U+212B, ſ, µ, titlecase digraphs, Σ before a mark)"
 milestone: M7
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -41,17 +41,17 @@ the shared fold, and the UNVERIFIED notes in docs/excel-semantics/text.md are re
     UNICHAR(8203) in place of UNICHAR(769).
 
 ## Acceptance criteria
-- [ ] probes/t4473-textsplit-fold-gaps is committed with oracle values (excel-graph) for every formula above.
-- [ ] Every cell of it passes (`make eval-show CASE=probes/t4473-textsplit-fold-gaps`); each departure from SEARCH is
+- [x] probes/t4473-textsplit-fold-gaps is committed with oracle values (excel-graph) for every formula above.
+- [x] Every cell of it passes (`make eval-show CASE=probes/t4473-textsplit-fold-gaps`); each departure from SEARCH is
       one arm of `fold_match_char` (or of `fold_for_before_after` for a TEXTBEFORE/TEXTAFTER-only rule) with a comment
       citing its probe cells; `fold_char` and `sigma_is_final` are unchanged unless SEARCH's and LOWER's own probes
       (probes/text-search-casefold-length, probes/t3820-lower-sigma-next-char) still pass.
-- [ ] probes/textsplit-casefold-length, probes/textbefore-casefold-length and probes/textbefore-sigma-contexts still
+- [x] probes/textsplit-casefold-length, probes/textbefore-casefold-length and probes/textbefore-sigma-contexts still
       pass; the eval gate shows 0 regressions in every suite.
-- [ ] docs/excel-semantics/text.md: both case-folding entries state the probed rules with their cells and drop the
+- [x] docs/excel-semantics/text.md: both case-folding entries state the probed rules with their cells and drop the
       UNVERIFIED notes they answer.
-- [ ] A unit test pins one TEXTSPLIT and one TEXTBEFORE probed departure (or the agreement) next to the T-1794/T-1796 tests.
-- [ ] `make check` green; reviewers approve.
+- [x] A unit test pins one TEXTSPLIT and one TEXTBEFORE probed departure (or the agreement) next to the T-1794/T-1796 tests.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The instance_num bound and the too-long check measured in UTF-16 units, including a delimiter whose full fold is
@@ -59,3 +59,21 @@ the shared fold, and the UNVERIFIED notes in docs/excel-semantics/text.md are re
 - SEARCH, FIND, EXACT, lookup and criteria folds (`fold_char` callers): no change here.
 - TEXTSPLIT/TEXTBEFORE argument kinds (empty text, errors, ranges): T-2876. PIVOTBY subtotal work (T-4388, T-4401,
   T-4414, T-4428), function arrays (T-4449) and eta names (T-4450) are unrelated.
+
+## Outcome
+- probes/t4473-textsplit-fold-gaps (117 cells, excel-graph, 2026-11-06) answers every UNVERIFIED fold in the task: 93 cells
+  passed on main, 24 did not; all 117 pass now.
+- Two departures from SEARCH's fold, both now in casefold.rs:
+  - The Angstrom sign U+212B matches neither `å` nor `Å` in TEXTSPLIT, TEXTBEFORE or TEXTAFTER (A27:A38). It is an arm of
+    `fold_match_char`, beside the Kelvin sign.
+  - TEXTSPLIT folds sigma by position like TEXTBEFORE (A14:A23, A75:A80): `ς` and `σ` never match, a `Σ` before a letter
+    is `σ`, a final or lone `Σ` is `ς`. The loop moved out of `fold_for_before_after` into `fold_sigma_by_position`,
+    which both folds call; `fold_char` and `sigma_is_final` are unchanged.
+- Agreements with the existing code, now evidenced: `İ` against `i`/`I` both ways (A3:A11), `ſ` and `µ` match no other
+  form, the titlecase digraphs match their upper and lower forms (A39:A74, A81:A104), and a `Σ` before U+0301, U+2019 or
+  U+200B is `σ` (A105:A117).
+- docs/excel-semantics/text.md: both case-folding entries state these rules and drop the UNVERIFIED notes they answer.
+  Still UNVERIFIED: `ẞ` against `ß` in TEXTSPLIT, and whether a letter must precede the `Σ`.
+- Unit tests: `test_textsplit_case_insensitive_sigma_angstrom_and_digraph`,
+  `test_textbefore_case_insensitive_dotted_i_angstrom_and_sigma_before_mark`.
+- Eval delta: 1 new case, 117/117 cells passing; 0 fixed and 0 regressions in every other suite.
