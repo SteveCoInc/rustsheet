@@ -606,9 +606,6 @@ impl Model {
     }
 }
 
-/// An intersection operand as a single-sheet area with its corners in order, or the result to
-/// give instead: the operand's own error, or `#VALUE!` for anything that is not a reference
-/// (`(1+0) A1`) or spans sheets.
 /// Whether `node` (ungrouped) is a name, IF, CHOOSE or LET: a form whose reference, or value,
 /// [`Model::evaluate_reference_arg`] reads.
 fn picks_a_reference(node: &Node) -> bool {
@@ -635,6 +632,9 @@ fn bound_areas(arg: RefArg, cell: CellReferenceIndex) -> Result<AreaList, CalcRe
     }
 }
 
+/// An intersection operand as a single-sheet area with its corners in order, or the result to
+/// give instead: the operand's own error, or `#VALUE!` for anything that is not a reference
+/// (`(1+0) A1`) or spans sheets.
 fn single_sheet_area(operand: CalcResult, cell: CellReferenceIndex) -> Result<Range, CalcResult> {
     match operand {
         CalcResult::Range { left, right } if left.sheet == right.sheet => {

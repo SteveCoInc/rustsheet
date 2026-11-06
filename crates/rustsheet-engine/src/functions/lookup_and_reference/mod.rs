@@ -507,18 +507,7 @@ impl Model {
         // {#VALUE!;#N/A} (probes/t4519-row-column-randarray-over-arrays D1:H1,
         // t4610-row-column-array-error-element; arrays.md, T-4610).
         let not_a_reference = |value: CalcResult| match value {
-            CalcResult::Array(rows) => CalcResult::Array(
-                rows.into_iter()
-                    .map(|row| {
-                        row.into_iter()
-                            .map(|element| match element {
-                                error @ ArrayNode::Error(_) => error,
-                                _ => ArrayNode::Error(Error::VALUE),
-                            })
-                            .collect()
-                    })
-                    .collect(),
-            ),
+            CalcResult::Array(rows) => not_a_reference_elements(rows),
             error @ CalcResult::Error { .. } => error,
             _ => CalcResult::new_error(Error::VALUE, cell, "Expected a reference".into()),
         };
@@ -892,6 +881,23 @@ impl Model {
 
 /// ROW's numbers `first..=last` down a column (`by_row`) or COLUMN's across a row; one number
 /// when they are one or with `first_only` (implicit intersection keeps the first).
+/// ROW or COLUMN of an array value, element by element in its shape: an error element is that
+/// error, any other `#VALUE!` (probes/t4610-row-column-array-error-element, T-4610).
+fn not_a_reference_elements(rows: Vec<Vec<ArrayNode>>) -> CalcResult {
+    CalcResult::Array(
+        rows.into_iter()
+            .map(|row| {
+                row.into_iter()
+                    .map(|element| match element {
+                        error @ ArrayNode::Error(_) => error,
+                        _ => ArrayNode::Error(Error::VALUE),
+                    })
+                    .collect()
+            })
+            .collect(),
+    )
+}
+
 fn row_or_column_numbers(first: i32, last: i32, by_row: bool, first_only: bool) -> CalcResult {
     if first == last || first_only {
         return CalcResult::Number(f64::from(first));
