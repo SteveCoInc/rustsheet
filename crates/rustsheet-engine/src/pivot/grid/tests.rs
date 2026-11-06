@@ -41,8 +41,9 @@ fn cell(model: &Model, sheet: u32, at: &str) -> Option<PivotCell> {
 
 /// Every stored, non-empty cell of sheet `sheet`, as sorted A1 addresses.
 fn stored(model: &Model, sheet: u32) -> Vec<String> {
-    let mut cells: Vec<String> = (model.stored_in(sheet, &area("A1:Z100")).into_iter())
-        .map(|(row, column)| address(column, row))
+    let stored = model.stored_in(sheet, &area("A1:Z100"), &mut PivotBudget::default());
+    let mut cells: Vec<String> = (stored.unwrap().into_iter())
+        .map(|((row, column), _)| address(column, row))
         .collect();
     cells.sort();
     cells
@@ -121,7 +122,9 @@ fn spike(name: &str) -> Model {
 }
 
 fn refreshed(model: &mut Model) -> PivotSwap {
-    let plan = model.plan_pivot_refresh(0).unwrap();
+    let plan = model
+        .plan_pivot_refresh(0, &mut PivotBudget::default())
+        .unwrap();
     model.apply_pivot_refresh(plan).unwrap()
 }
 
@@ -141,7 +144,9 @@ fn the_spike_r_pivot_re_renders_from_the_recalculated_source() {
 fn the_spike_s_pivot_collapses_to_spill_at_its_anchor() {
     let mut model = spike("S");
     model.evaluate();
-    let plan = model.plan_pivot_refresh(0).unwrap();
+    let plan = model
+        .plan_pivot_refresh(0, &mut PivotBudget::default())
+        .unwrap();
     assert!(plan.placements[0].spilled);
     model.apply_pivot_refresh(plan).unwrap();
     assert_excels(&model, "S");
@@ -223,10 +228,14 @@ fn another_pivots_area_is_foreign_even_where_it_is_blank() {
     second.location = area("D6");
     second.geometry = PivotGeometry::default();
     model.workbook.pivot_tables.push(second);
-    let plan = model.plan_pivot_render(1).unwrap();
+    let plan = model
+        .plan_pivot_render(1, &mut PivotBudget::default())
+        .unwrap();
     assert!(plan.placements[0].spilled);
     // A refresh of the cache lays out both, each meeting the other's area.
-    let plan = model.plan_pivot_refresh(0).unwrap();
+    let plan = model
+        .plan_pivot_refresh(0, &mut PivotBudget::default())
+        .unwrap();
     assert_eq!(plan.placements.len(), 2);
     assert!(plan.placements.iter().all(|p| p.spilled));
 }
@@ -240,7 +249,9 @@ fn a_pivot_moved_by_a_row_insert_refreshes_where_it_now_is() {
     // T-2086: the pivot moves with its cells.
     model.insert_rows(r, 1, 2).unwrap();
     assert_eq!(model.workbook.pivot_tables[0].location, area("A5:E9"));
-    let plan = model.plan_pivot_refresh(0).unwrap();
+    let plan = model
+        .plan_pivot_refresh(0, &mut PivotBudget::default())
+        .unwrap();
     assert!(!plan.placements[0].spilled);
     model.apply_pivot_refresh(plan).unwrap();
     assert_eq!(model.workbook.pivot_tables[0].location, area("A5:E9"));
@@ -307,4 +318,136 @@ fn field_indices_follow_their_names() {
     // Appending a field renumbers nothing.
     let appended = cache_of(&["Region", "Product", "Sales", "Day"]);
     assert_eq!(remap(&table, &old, &appended).unwrap().fields.len(), 4);
+}
+
+/// The R pivot rendered once, and the plan of its next refresh with `extra` more copies of it on
+/// its cache, each anchored ten columns right of the one before.
+fn with_copies(extra: usize, budget: &mut PivotBudget) -> Result<PivotRefresh, PivotRefreshError> {
+    let mut model = spike("R");
+    model.evaluate();
+    refreshed(&mut model);
+    let pivot = model.workbook.pivot_tables[0].clone();
+    for k in 1..=extra {
+        let mut copy = pivot.clone();
+        let left = u32::try_from(k * 10).unwrap();
+        copy.location = CellArea {
+            left,
+            right: left,
+            ..pivot.location
+        };
+        copy.geometry = PivotGeometry::default();
+        model.workbook.pivot_tables.push(copy);
+    }
+    model.plan_pivot_refresh(0, budget)
+}
+
+#[test]
+fn every_pivot_of_a_plan_shares_one_budget() {
+    // What one refresh of R spends, to the unit.
+    let mut one = PivotBudget::default();
+    with_copies(0, &mut one).unwrap();
+    let full = PivotBudget::default();
+    let (work, cells) = (full.work - one.work, full.cells - one.cells);
+    // Ten pivots on the cache spend more than ten times the source read alone: well past what
+    // three of them may spend together.
+    let mut three = PivotBudget {
+        work: work * 3,
+        cells: cells * 3,
+    };
+    assert_eq!(
+        with_copies(9, &mut three),
+        Err(PivotRefreshError::Compute(PivotComputeError::Limit))
+    );
+    // The cells written count too, apart from the work.
+    let mut few_cells = PivotBudget {
+        work: full.work,
+        cells: cells * 3,
+    };
+    assert_eq!(
+        with_copies(9, &mut few_cells),
+        Err(PivotRefreshError::Compute(PivotComputeError::Limit))
+    );
+    let mut enough = PivotBudget::default();
+    assert_eq!(with_copies(9, &mut enough).unwrap().placements.len(), 10);
+}
+
+/// The R pivot's refresh plan, laid out from A3 again, after `block` changes the R sheet.
+fn r_blocked(block: impl FnOnce(&mut Model, u32)) -> PivotRefresh {
+    let mut model = spike("R");
+    model.evaluate();
+    let r = sheet_of(&model, "R");
+    block(&mut model, r);
+    model
+        .plan_pivot_refresh(0, &mut PivotBudget::default())
+        .unwrap()
+}
+
+#[test]
+fn merged_cells_tables_array_formulas_and_the_sheet_edge_collapse_it() {
+    // An empty merged range inside the layout (D5:D6).
+    let merged = r_blocked(|model, r| {
+        let ws = model.workbook.worksheet_mut(r).unwrap();
+        ws.merged_cells.push(crate::types::MergedCell {
+            row: 5,
+            column: 4,
+            width: 1,
+            height: 2,
+        });
+    });
+    assert!(merged.placements[0].spilled);
+    // A Table whose header D2 is above the layout and whose body D3:D9 is empty.
+    let table = r_blocked(|model, r| {
+        model.update_cell_with_text(r, 2, 4, "Head").unwrap();
+        model.add_table(r, "Blocker", (2, 4, 9, 4), false).unwrap();
+    });
+    assert!(table.placements[0].spilled);
+    // An array formula's cell inside the layout (G is outside it, so it alone does not block).
+    let array = r_blocked(|model, r| {
+        model
+            .set_user_input(r, 6, 3, "=SEQUENCE(2)".into())
+            .unwrap();
+        model.evaluate();
+    });
+    assert!(array.placements[0].spilled);
+    // A layout past the sheet's last row: the anchor at the last row but two.
+    let edge = r_blocked(|model, _| {
+        let last = u32::try_from(crate::constants::LAST_ROW).unwrap() - 1;
+        let location = &mut model.workbook.pivot_tables[0].location;
+        (location.top, location.bottom) = (last - 2, last - 2);
+        location.right = location.left;
+    });
+    let placement = &edge.placements[0];
+    assert!(placement.spilled);
+    assert_eq!(placement.cells.len(), 1);
+    assert_eq!(placement.cells[0].value, PivotCell::Error(Error::SPILL));
+}
+
+#[test]
+fn a_cleared_area_skips_array_formula_cells() {
+    let mut model = spike("R");
+    model.evaluate();
+    refreshed(&mut model);
+    let r = sheet_of(&model, "R");
+    // A constant on the pivot's blank D6 is the pivot's to clear; an array formula's cells in
+    // its saved area, outside the new layout, are not.
+    model.update_cell_with_text(r, 6, 4, "stale").unwrap();
+    let plan = model
+        .plan_pivot_refresh(0, &mut PivotBudget::default())
+        .unwrap();
+    assert_eq!(plan.placements[0].cleared, [(5, 3)]);
+    model
+        .set_user_input(r, 9, 1, "=SEQUENCE(1,2)".into())
+        .unwrap();
+    model.update_cell_with_text(r, 6, 4, "").unwrap();
+    model.evaluate();
+    let ws = model.workbook.worksheet_mut(r).unwrap();
+    ws.cell_clear_contents(6, 4).unwrap();
+    // The saved area stretched by hand over A9:B9, where the array spills.
+    model.workbook.pivot_tables[0].location.bottom = 8;
+    let plan = model
+        .plan_pivot_refresh(0, &mut PivotBudget::default())
+        .unwrap();
+    let placement = &plan.placements[0];
+    assert!(!placement.spilled);
+    assert!(!placement.cleared.contains(&(8, 0)) && !placement.cleared.contains(&(8, 1)));
 }

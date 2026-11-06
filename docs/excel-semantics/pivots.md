@@ -273,21 +273,32 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   or cleared, never foreign. Whether Excel overwrites rendered constants it finds in a
   `refreshOnLoad` pivot's area is T-2327's.
 - Foreign is a stored value or formula outside the owned area (a cell holding only a style is
-  empty), and any part of another pivot's area on the sheet, even a blank intersection. The new
-  page area is checked as the location is.
+  empty), and, inside or outside it, any part of another pivot's area on the sheet (even a blank
+  intersection), a merged range, a Table (even an empty body) and an array formula's cells. The new
+  page area is checked as the location is. Classic Excel instead refuses a refresh that would
+  overlap another pivot with a dialog (excel-docs.md, "Overlap rules").
+- A layout that would pass the sheet's last row or column collapses to `#SPILL!` too, rather than
+  failing. Microsoft's PivotTable `#SPILL!` announcement lists text, merged cells, tables and the
+  sheet edge as what blocks a pivot (excel-docs.md, PSPILL); that is documented for desktop Excel,
+  and Excel for the web is unprobed for merged cells, Tables and the edge.
+- On a collapse the location becomes the anchor and the geometry, page counts included, becomes
+  zero. That is evidenced only for a pivot with no page field (t4128 S).
 - A refresh reads the cache again and lays out every pivot over that cache, each from its
   anchor (the location's top-left cell).
 - A pivot's field indices follow its fields by case-folded name. A field new to the source joins
   on no axis. A field the pivot shows (row, column, page or data) that left the source refuses the
   refresh, and the pivot keeps its cells. So does any renumbering of a pivot that keeps unread
-  parts verbatim, which may hold field indices (every imported pivot keeps some).
-- A refresh that cannot complete (a source that does not resolve, such as a Table or defined name
-  until T-4506; a limit) leaves the pivot and its cells as they were. On load, that pivot keeps
-  its saved cells.
-Evidence: none beyond probes/t4128-pivot-spike S (a constant in the body).
+  parts verbatim, which may hold field indices (every imported pivot keeps some). A data field's
+  base field that left the source falls back to the first field.
+- A refresh that cannot be planned (a source that does not resolve, such as a Table or defined
+  name until T-4506; a field gone; past the shared budget) leaves the pivot and its cells as they
+  were. On load each cache is planned on its own, so a cache that does not plan keeps only its own
+  pivots' saved cells; the plans that do are written in one edit, so a write that fails (only
+  possible for a plan that does not match the workbook) rolls back every `refreshOnLoad` pivot.
+Evidence: none beyond probes/t4128-pivot-spike S (a constant in the body, no page field).
 Status: UNVERIFIED (probe pending: T-4664; T-2327 for constants in a refreshOnLoad pivot's area)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`owned_areas`, `meets_foreign`,
-`remap`; T-4151)
+`remap`, `PivotBudget`; T-4151)
 
 ## A tabular pivot's first row header is the field name only when every pivotField has compact="0"
 Rule: in a tabular pivot, the header cell of the first row field reads the field's own name (`Region`)
@@ -836,14 +847,20 @@ past it the render fails with `Limit`, where Excel would show the pivot.
 Its layout (`lay_out`, T-4147) draws on the same work units, one per line and `x` made, and has no
 result past 4,000,000 cells (`MAX_PIVOT_CELLS`: the location's rows times columns plus two per page
 field, checked from the line counts before any cell is made) or when the location would pass the
-sheet's last row or column. What Excel does with a pivot that does not fit the sheet is not probed.
-The values stay without a layout, so GETPIVOTDATA still has them.
-Evidence: none for Excel; this is a resource limit (SPEC-0032 "Untrusted-input limits", T-4142).
+sheet's last row or column. The cell cap is the resource limit; the sheet's edge is not one: past
+it the layout fails with `PastSheet`, which the grid writer renders as `#SPILL!` at the anchor
+("The grid writer's own readings", UNVERIFIED). The values stay without a layout, so GETPIVOTDATA
+still has them. A refresh of several pivots (one cache, or every `refreshOnLoad` cache on open)
+spends one budget of `MAX_PIVOT_WORK` work and `MAX_PIVOT_CELLS` cells written, cleared and
+scanned together (`PivotBudget`), not one per pivot.
+Evidence: none for Excel; the work, node, text and cell caps are resource limits (SPEC-0032
+"Untrusted-input limits", T-4142, T-4151).
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `MAX_PIVOT_NODES`, `charge`,
 `count_nodes`)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`MAX_PIVOT_CELLS`, `location`; T-4147)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`MAX_PIVOT_TEXT_BYTES`; T-4149)
+Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`PivotBudget`; T-4151)
 
 ## Pivots without refreshOnLoad keep their saved cells; a source edit does not re-render
 Rule: Excel for the web does not re-render a pivot whose cache lacks `refreshOnLoad` when it opens the

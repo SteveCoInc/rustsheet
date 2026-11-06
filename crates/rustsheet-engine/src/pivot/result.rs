@@ -79,6 +79,10 @@ pub enum PivotComputeError {
     /// A field index of the definition, or a record's item index, is not in the cache.
     #[error("a pivot does not match its cache")]
     Malformed,
+    /// The layout would pass the sheet's last row or column. The grid writer collapses such a
+    /// pivot to `#SPILL!` (pivots.md "The grid writer's own readings", T-4151).
+    #[error("a pivot's layout passes the sheet's last row or column")]
+    PastSheet,
 }
 
 /// One node of an axis tree: the grand total (the root), a subtotal, or a leaf tuple.

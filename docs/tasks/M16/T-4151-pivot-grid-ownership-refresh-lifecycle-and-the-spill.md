@@ -41,3 +41,10 @@ oracle-spike.md runs 1 and 3; SPEC-0032; formulas reading pivot cells need no ne
   pivot_tables.xlsx (`crates/rustsheet/tests/pivot_lifecycle.rs`).
 - Engine readings without evidence are in pivots.md "The grid writer's own readings", probe
   T-4664 filed. Eval wiring of the probes stays T-4152's.
+- Review round 1 fixes: one `PivotBudget` (work and cells, the source read and every scan
+  included) per plan and across every `refreshOnLoad` cache on open; the open path plans first and
+  edits (and recalculates) only when a plan succeeds; merged ranges, Tables, array formulas and
+  the sheet edge (`PivotComputeError::PastSheet`) collapse to `#SPILL!` (UNVERIFIED against
+  PSPILL, T-4664 g to j); `apply_pivot_refresh` returns `PivotRefreshError` (`Write`,
+  `OutsideSheet`); only the swapped pivots' GETPIVOTDATA indices are dropped. workbook.rs split
+  is T-4669.

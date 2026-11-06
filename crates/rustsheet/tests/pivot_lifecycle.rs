@@ -62,7 +62,7 @@ fn a_refresh_on_load_pivot_is_re_rendered_after_the_first_recalculation() -> Res
 fn without_refresh_on_load_the_saved_cells_are_kept_until_a_refresh() -> Res {
     let mut wb = load(&falsified(false)?, true)?;
     assert_eq!(wb.value("P!B5")?, Value::Number(999.0));
-    // A source edit does not refresh it (UNVERIFIED, T-4586).
+    // A source edit does not refresh it (probes/t4586-pivot-refresh-on-load C).
     wb.set("Data!C2", 11.0)?;
     assert_eq!(wb.value("P!B5")?, Value::Number(999.0));
     let p = wb.sheet_id("P")?;

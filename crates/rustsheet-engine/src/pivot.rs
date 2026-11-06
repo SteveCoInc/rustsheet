@@ -35,7 +35,7 @@ mod refresh;
 mod result;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
-pub use grid::{PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};
+pub use grid::{PivotBudget, PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};
 pub use layout::{
     lay_out, render, AxisLine, PivotCell, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM,
     COLUMN_LABELS, GRAND_TOTAL, MAX_PIVOT_CELLS, MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS,

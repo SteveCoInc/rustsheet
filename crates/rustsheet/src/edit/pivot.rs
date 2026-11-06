@@ -7,9 +7,9 @@
 
 use rustsheet_engine::pivot::{
     read_source, regroup, Aggregate, Axis, AxisField, CacheField, CacheItem, CacheSource, CellArea,
-    DataField, DateGroupError, NumberGroupError, PivotCache, PivotCacheError, PivotComputeError,
-    PivotField, PivotRefresh, PivotRefreshError, PivotSwap, PivotTable, RangeGrouping,
-    RegroupError, MAX_RECORD_VALUES,
+    DataField, DateGroupError, NumberGroupError, PivotBudget, PivotCache, PivotCacheError,
+    PivotComputeError, PivotField, PivotRefresh, PivotRefreshError, PivotSwap, PivotTable,
+    RangeGrouping, RegroupError, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::Model;
 
@@ -298,7 +298,8 @@ impl Txn<'_> {
     /// cleared and its new ones written as constants, or collapsed to `#SPILL!` at the anchor when
     /// the layout would meet a cell it does not own (pivots.md "A pivot that would meet a foreign
     /// cell collapses to #SPILL!", probes/t4128-pivot-spike S). Nothing else refreshes a pivot:
-    /// editing its source does not (UNVERIFIED, T-4586). The transaction then recalculates, so
+    /// editing its source does not, nor does a recalculation
+    /// (probes/t4586-pivot-refresh-on-load C). The transaction then recalculates, so
     /// GETPIVOTDATA and formulas reading the pivot's cells see it. Doc-hidden until T-4178 makes
     /// the pivot API public (SPEC-0032 "API").
     ///
@@ -316,7 +317,7 @@ impl Txn<'_> {
             .ok_or_else(|| PivotError::UnknownPivot(name.to_string()))?;
         let plan = self
             .model
-            .plan_pivot_refresh(cache)
+            .plan_pivot_refresh(cache, &mut PivotBudget::default())
             .map_err(PivotError::from)?;
         self.write_pivots(plan)
     }
@@ -327,7 +328,7 @@ impl Txn<'_> {
     fn lay_out_grouped(&mut self, table: usize) -> Result<(), EditError> {
         let plan = self
             .model
-            .plan_pivot_render(table)
+            .plan_pivot_render(table, &mut PivotBudget::default())
             .map_err(PivotError::from)?;
         self.write_pivots(plan)
     }
@@ -344,8 +345,10 @@ impl Txn<'_> {
             self.log_cell(sheet, (id, r, c), CellRef::new(sheet_id, row, col)?)?;
         }
         self.sheet_op = true;
-        let swap = (self.model.apply_pivot_refresh(plan))
-            .map_err(|message| EditError::from_engine_message(message, None))?;
+        let swap = (self.model.apply_pivot_refresh(plan)).map_err(|error| match error {
+            PivotRefreshError::Write(message) => EditError::from_engine_message(message, None),
+            error => PivotError::from(error).into(),
+        })?;
         self.undo
             .push(Undo::Pivot(PivotUndo::Swapped(Box::new(swap))));
         Ok(())
@@ -462,29 +465,29 @@ impl Txn<'_> {
     }
 }
 
-/// Refreshes every `refreshOnLoad` cache of `tx`'s workbook and the pivots over it. A cache that
-/// does not refresh (a Table or named source, T-4506; a limit) keeps its pivots' saved cells.
-fn refresh_pivots_on_load(tx: &mut Txn<'_>) -> Result<(), EditError> {
-    let caches = (tx.model.workbook.pivot_caches.iter()).zip(0u32..);
-    let due: Vec<u32> = caches
-        .filter(|(c, _)| c.refresh_on_load)
-        .map(|(_, i)| i)
-        .collect();
-    for cache in due {
-        if let Ok(plan) = tx.model.plan_pivot_refresh(cache) {
-            tx.write_pivots(plan)?;
-        }
-    }
-    Ok(())
-}
-
 impl Workbook {
-    /// Refreshes the `refreshOnLoad` pivots of a loaded workbook, as one edit with no value diff
-    /// (`Workbook::recalculate`). A write the engine refuses rolls the whole refresh back, so every
-    /// pivot keeps its saved cells.
+    /// Refreshes the `refreshOnLoad` pivots of a loaded workbook (`Workbook::recalculate`). Every
+    /// cache is planned first, within one [`PivotBudget`] for them all; a cache whose plan fails
+    /// (a Table or named source, T-4506; a limit; a field gone) keeps its pivots' saved cells.
+    /// The plans that succeed are then written as one edit with no value diff, which
+    /// recalculates once more, and only when there is one.
     pub(crate) fn refresh_pivots_on_load(&mut self) {
+        let mut budget = PivotBudget::default();
+        let caches = (self.model.workbook.pivot_caches.iter()).zip(0u32..);
+        let plans: Vec<PivotRefresh> = caches
+            .filter(|(c, _)| c.refresh_on_load)
+            .filter_map(|(_, i)| self.model.plan_pivot_refresh(i, &mut budget).ok())
+            .collect();
+        if plans.is_empty() {
+            return;
+        }
         let track = std::mem::replace(&mut self.track_changes, false);
-        self.edit(refresh_pivots_on_load).ok();
+        // A plan's areas hold no merged range, Table or array formula, so a write fails only for
+        // a plan that does not match the workbook, which nothing here can cause. Should one fail
+        // all the same, the edit rolls back and every pivot keeps its saved cells: a load does not
+        // fail for a pivot, so the error is dropped on purpose.
+        let written = self.edit(|tx| plans.into_iter().try_for_each(|plan| tx.write_pivots(plan)));
+        drop(written);
         self.track_changes = track;
     }
 }
