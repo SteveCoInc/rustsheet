@@ -3,7 +3,7 @@ id: T-4591
 title: "T-4528/T-4554 review follow-ups: fix the array_constant_context path in information.md, probe a nested legacy ATP call over {5}, add WorkbookView::new"
 milestone: M5
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
