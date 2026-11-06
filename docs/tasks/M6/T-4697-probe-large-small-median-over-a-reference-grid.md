@@ -38,10 +38,10 @@ formula's own sheet and some on another sheet. SPEC-0014's "Mixed grids" amendme
 - The implementation (T-4570).
 
 ## Outcome
-Probed `probes/t4697-large-small-median-mixed-sheet-refs` (excel-graph, 15 cells). Rule: over a grid of references on
+Probed `probes/t4697-large-small-median-mixed-sheet-refs` (excel-graph, 17 cells). Rule: over a grid of references on
 both sheets, the sheet of the FIRST element decides LARGE, SMALL and MEDIAN: `#VALUE!` when it is the formula's own
 sheet, `#N/A` when another (`{"A1";"Data!G1"}` vs `{"Data!G1";"A1"}`; three references starting on Local are
 `#VALUE!`, so not the last element). A mixed XLOOKUP grid has one reference element, so its sheet decides.
 Recorded in lookup.md and SPEC-0014 rule 5 (replacing the `#N/A` fallback); the three wording fixes are made.
-T-4570 must implement "first reference element's sheet" for a multi-sheet reference grid (see its tests for order statistics).
-Eval delta: a new probe case, no change to the baseline.
+H16 and H17 rule out the majority. T-4714 implements the first-element rule (T-4570 is done).
+Eval delta: a new probe case; 5 known failures (Local H1, H3, H5, H9, H17) added to the baseline, owned by T-4714.

@@ -40,7 +40,7 @@ probes/t4563-xlookup-not-found-ref-element (A1, A5, A9, A13:A14, A17, A21:A22, A
 - Also owner of the visibly-off cells of probes/t4569-xlookup-ref-element-max-min: Calc A1:A8, A11:A15, A17,
   A20:A24, A26, A31:A32, A35, A40:A44, A50:A53, A56:A60, A63, B20:B24, B26, B31:B32, B34, C20:C23, C31:C32, D20:D28,
   D31:D34, and Local E4:E5, F6, F9. Keep the same-sheet `#VALUE!` of LARGE, SMALL and MEDIAN (t2065-lift-*, t4569 Local
-  E1:E3, F1:F5, F7:F8). Amended by T-4697: for a grid with references on both sheets the sheet of the FIRST reference
+  E1:E3, F1:F5, F7:F8). Amended by T-4697 (implemented by T-4714): for a grid with references on both sheets the sheet of the FIRST reference
   element decides (own sheet `#VALUE!`, another `#N/A`, probes/t4697-large-small-median-mixed-sheet-refs).
 
 ## Out of scope

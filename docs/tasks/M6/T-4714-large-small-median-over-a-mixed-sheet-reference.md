@@ -17,11 +17,11 @@ first reference element is on the formula's own sheet and `#N/A` when it is on a
 ## Context
 Evidence: T-4697, probes/t4697-large-small-median-mixed-sheet-refs; SPEC-0014 rule 5; lookup.md. Today
 `RefGrid::order_statistic_error` (T-4570) answers `#N/A` when any reference is on another sheet.
-Owner of the visibly-off cells Local!H1, H3, H5, H9 of that case.
+Owner of the visibly-off cells Local!H1, H3, H5, H9, H17 of that case.
 
 ## Acceptance criteria
-- [ ] The four cells match Excel (`#VALUE!`), H2, H4, H6, H7, H8, H13:H15 keep passing, baseline updated.
+- [ ] The five cells match Excel (`#VALUE!`), H2, H4, H6:H8, H13:H16 keep passing, their baseline lines removed (`make eval-baseline`).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
--
+- Error elements in the grid, and other readers (rule 3, rule 4).

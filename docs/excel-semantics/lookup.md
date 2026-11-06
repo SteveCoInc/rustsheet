@@ -983,8 +983,10 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
     - A grid with references on both sheets: the sheet of the FIRST element decides (probes/t4697-large-small-median-
       mixed-sheet-refs, excel-graph, 2026-11-06, T-4697; Local formulas, Local!A1 = 1, Data!G1 = 50). With
       `{"A1";"Data!G1"}` (own sheet first) LARGE, SMALL and MEDIAN are `#VALUE!` (H1, H3, H5); with
-      `{"Data!G1";"A1"}` (other sheet first) they are `#N/A` (H2, H4, H6). Three references `{"A1";"Data!G1";"A2"}`
-      are `#VALUE!` (H9), so it is not the last element and not "any element on another sheet". Controls: all own
+      `{"Data!G1";"A1"}` (other sheet first) they are `#N/A` (H2, H4, H6). H1 against H2 shows
+      it is neither the last element nor "any element on another sheet". It is not the majority either:
+      `{"Data!G1";"A1";"A2"}` is `#N/A` (H16, first on Data, two of three on Local) and `{"A1";"Data!G1";"Data!G2"}`
+      is `#VALUE!` (H17), as is `{"A1";"Data!G1";"A2"}` (H9). Controls: all own
       sheet `#VALUE!` (H7, H13), all Data `#N/A` (H8). `MAX` is 50 either order (H11, H12). A mixed XLOOKUP grid has
       a value hit, so only its reference element has a sheet: a reference on the formula's sheet is `#VALUE!` (H14)
       and one on Data `#N/A` (H15). `LARGE(CHOOSE({1;2},A1,Data!G1),1)` makes values, not references: 50 (H10).
