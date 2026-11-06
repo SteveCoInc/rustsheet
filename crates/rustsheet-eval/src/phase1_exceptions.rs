@@ -234,8 +234,10 @@ mod tests {
     fn the_committed_file_parses() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let exceptions = Phase1Exceptions::load(&root).unwrap_or_else(|e| panic!("{e}"));
-        let (desktop_only, earlier): (Vec<_>, Vec<_>) =
-            exceptions.cells.iter().partition(|(_, e)| e.decision == "0308");
+        let (desktop_only, earlier): (Vec<_>, Vec<_>) = exceptions
+            .cells
+            .iter()
+            .partition(|(_, e)| e.decision == "0308");
         // Decision 0308: the FORECAST.ETS family (the web's #N/A) and CELL's desktop-only info
         // types, 555 cells, all owned by T-4373.
         assert_eq!(desktop_only.len(), 555);
