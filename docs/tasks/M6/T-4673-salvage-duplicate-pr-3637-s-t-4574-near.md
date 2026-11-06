@@ -3,7 +3,7 @@ id: T-4673
 title: "Salvage duplicate PR #3637's T-4574 near-midnight probes and its T-4624 follow-up onto main"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
