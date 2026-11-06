@@ -3,7 +3,7 @@ id: T-2585
 title: "Student t density T.DIST(.,FALSE): Loader's dt for df >= 3 and the df 1 and df 2 closed forms (T-2513)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P1
 size: M
 tier: opus
@@ -170,10 +170,7 @@ and T.INV's centre estimate.
   wording, the in-range fresh row of the R4.3 table, the measured-extremes wording on `T_LOG_BRANCH_CUT`'s tag, and a
   cell count on `EXCEL_BD0_CUT`'s T.DIST range. Security and design approved 9156e71.
 
-## Blocked because
+## Review-round limit (resumed)
 Resumed after the review-round limit (step 5c).
-- Three review rounds are used (1f4e8e1, 79b71dd, 9156e71). Round 3's only MAJOR (A138's subnormal flush) and its
-  MINORs are fixed on the head that carries this section, but none of the three reviewers has seen that head.
-- Next (work-loop step 5c): run the full panel on the current head. Security and design approved 9156e71; since then
-  the diff adds the `flush_subnormal` call, one model test, the statistics.md bullet, tag and Outcome wording, and
-  T-4427.
+- Three review rounds were used (1f4e8e1, 79b71dd, 9156e71); round 3's MAJOR (A138's subnormal flush) and its MINORs
+  were fixed on ab7cd2f. The step-5c run puts the full panel on the current head from round 1.
