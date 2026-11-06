@@ -69,10 +69,19 @@ external-reference printing bug (T-4140).
 Formula text compares as stored, canonicalized as Excel stores it: X5's leading spaces, TABs and LFs, and an
 `_xlfn.` prefix the function does not need (T-0172). SPEC-0033 D3.1 was amended to say so (fidelity review).
 
+Known gaps of the `_xlfn.` canonicalization:
+- Excel's re-store without the prefix is evidenced for CEILING only (T-0172); for the other classic functions Excel
+  is only known to accept it on load. T-4503's probe of what Excel rewrites on save covers it.
+- Because the canonicalization uses the export's own table, an export that wrongly drops a prefix a newer function
+  needs canonicalizes both sides to the bare name and is not seen here. The export-list check against XlsxWriter
+  (T-0412) guards that.
+
 Not covered yet:
 - the tint tolerance of D3.4: tints compare exactly, which is harmless while outputs are ours, but needed once
   Excel-written outputs are compared (T-4180);
-- cell protection, which `Style` does not hold, so only the package diff sees it.
+- cell protection, which `Style` does not hold, so only the package diff sees it, as `cellXfs/xf/protection`
+  element items. Modelling it is M15's "protection" feature (milestones.md scope), and SPEC-0034's patch tier keeps
+  it byte for byte meanwhile.
 
 Carried from the reviews of #3529 and #3551:
 - `xmldiff::compare` borrows the local path and builds no item path past `MAX_ITEMS`;
