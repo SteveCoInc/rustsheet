@@ -273,6 +273,7 @@ fn crafted_diffs_are_refused() {
                 row: 2,
                 count: BIG,
                 old_data: vec![],
+                tables: vec![],
             },
         ),
         (
@@ -294,6 +295,7 @@ fn crafted_diffs_are_refused() {
                     row: Some(row(2, 9999)),
                     data: HashMap::new(),
                 }],
+                tables: vec![],
             },
         ),
         (
@@ -306,6 +308,7 @@ fn crafted_diffs_are_refused() {
                     row: None,
                     data: HashMap::from([(BIG, number(0))]),
                 }],
+                tables: vec![],
             },
         ),
         (
@@ -318,6 +321,7 @@ fn crafted_diffs_are_refused() {
                     row: None,
                     data: HashMap::new(),
                 }],
+                tables: vec![],
             },
         ),
         (
@@ -611,4 +615,27 @@ fn undoing_the_clear_of_large_dynamic_spills_still_works() {
         model.get_formatted_cell_value(0, 600000, 2).unwrap(),
         "600000"
     );
+}
+
+/// A peer's undo of a row delete that names a table extent the sheet has no table for is refused
+/// before it changes anything, rows included (T-3634).
+#[test]
+fn a_restored_table_extent_naming_no_table_is_refused() {
+    let mut model = model();
+    let restore = Diff::DeleteRows {
+        sheet: 0,
+        row: 2,
+        count: 1,
+        old_data: vec![RowData {
+            row: None,
+            data: HashMap::new(),
+        }],
+        tables: vec![crate::types::TableExtent {
+            name: "Nope".to_string(),
+            reference: "A1:B9".to_string(),
+            totals_row_count: 0,
+        }],
+    };
+    let error = assert_refused(&mut model, &one(DiffType::Undo, restore), "table extent");
+    assert!(error.contains("No table"), "{error}");
 }

@@ -477,7 +477,8 @@ pub struct Comment {
 }
 
 pub use crate::table_types::{
-    CustomFilter, DateGroupItem, FilterColumn, FilterCriterion, Table, TableColumn, TableStyleInfo,
+    CustomFilter, DateGroupItem, FilterColumn, FilterCriterion, Table, TableColumn, TableExtent,
+    TableStyleInfo,
 };
 
 /// Whether two sheet names name the same sheet: sheet names match ignoring case.
