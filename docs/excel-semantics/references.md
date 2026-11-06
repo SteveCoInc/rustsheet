@@ -2118,19 +2118,31 @@ same columns, one name per row from 30, nNum = 3 and nRng = Sheet1!$Z$1:$Z$6 as 
   with no `@` (row 34).
 - Over n2d = `{1,2;3,4}`, `INDEX(n2d,1,1)` is one element and shows no `@`, under ABS, `+0` or as an IF arm, while
   `=@INDEX(n2d,1)` and `=ABS(@INDEX(n2d,1))`, a row, keep it (`=SUM(INDEX(n2d,1))` 3) (row 45).
+The remaining bodies (probes/t4430-legacy-at-name-body-rest, 181 scored cells, excel-graph, 2026-11-06, T-4430;
+same columns, rows 30-33 `nRef` = #REF!, `nDiv` = #DIV/0!, `nPlus` = +3, `nNN` = --3; rows 45-49 INDEX shapes):
+- `nRef` and `nDiv` read as their literal like #N/A: no `@` at the root, under ABS, SUM or as an IF arm; as an INDEX
+  index the INDEX keeps its own (`=@INDEX(Z1:Z6,nRef)`, `=@IF(TRUE,INDEX(Z1:Z6,nRef))`) (A30:L31, M30:P31).
+- `nPlus` = +3 reads as the literal 3 everywhere, even as an index (`=INDEX(Z1:Z6,nPlus)` no `@`), but `nNN` = --3 takes
+  the `@` like a computed body (`=@nNN`, `=@INDEX(Z1:Z6,@nNN)`; SUM none) (rows 32-33).
+- INDEX over an array-constant body: with a row and a column index it is one element and shows no `@` for `{3}`,
+  `{3,4}`, `{3;4}` (`INDEX(nRow,1,2)`, `INDEX(nCol,2,1)`), for an out-of-range `INDEX(n2d,5,5)` and `INDEX(n2d,1,5)`
+  (`#REF!`), and for an area number, `INDEX(n2d,1,1,1)` (1); one index keeps the `@` over all three, `{3}` included
+  (`=@INDEX(nOne,1)`, `=@INDEX(nRow,2)`, `=@INDEX(nCol,1)`), raw, under ABS, `+0` and as an IF arm
+  (`=@IF(TRUE,INDEX(nRow,1))`); none under SUM (rows 45-49). Ours showed the IF arm without its `@` and the area
+  number with one before T-4430.
 Ours matches every cell of both probes (`scalar_body`, static_analysis/name_body.rs, read by `add_legacy_intersection`,
 `run_static_analysis_on_node`, `is_range_arm` and `indexes_one_cell`; `indexes_one_reference_cell` makes a single-cell
 INDEX a scalar shape in `fallback_shape` when its area is a range, a union or a name whose body is a reference, or a
 name whose body is an array constant with a row and a column index, `is_array_body`; T-4273). One index into a
-one-row or one-column array body and an area number over an array body are unprobed (ours: the `@`). The `@` is
+one-row or one-column array body and an area number over an array body are probed in T-4430 (above). The `@` is
 decided when the legacy formula is read (xlsx import or `set_cell_with_legacy_formula`), from the body the name has
 then, and is kept in the formula after that; whether Excel redraws a legacy formula's `@` when a name's body changes
 later is unprobed: the case format sets names before the workbook loads, so it needs a name-edit sheet op the
 harness does not have.
-Evidence: probes/t3856-legacy-at-name-body; probes/t4273-legacy-at-name-body-more;
+Evidence: probes/t3856-legacy-at-name-body; probes/t4273-legacy-at-name-body-more; probes/t4430-legacy-at-name-body-rest;
 probes/t3297-legacy-if-index-arm-name-table I35, K35, M35, I36, K36.
 Status: VERIFIED (excel-graph)
-Tasks: T-3297, T-3856, T-4273
+Tasks: T-3297, T-3856, T-4273, T-4430
 
 ## Legacy N and T over a reference-returning call (T-1713)
 Rule: in a legacy (non-array) formula, N and T read their argument as a reference: no `@` goes on it,

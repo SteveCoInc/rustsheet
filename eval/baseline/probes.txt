@@ -2348,6 +2348,7 @@ C	probes/t4422-bessel-tiny-x-bisect.case.json	432
 C	probes/t4422-bessel-tiny-x-cuts.case.json	2736
 C	probes/t4422-besseli-fresh-sweep.case.json	400
 C	probes/t4424-sumx2my2-overflow-order.case.json	84
+C	probes/t4430-legacy-at-name-body-rest.case.json	181
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10

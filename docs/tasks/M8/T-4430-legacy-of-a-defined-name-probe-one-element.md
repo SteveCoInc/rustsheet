@@ -3,7 +3,7 @@ id: T-4430
 title: "Legacy @ of a defined name: probe one-element, 1-D and out-of-range INDEX over array bodies, #REF! and #DIV/0! bodies, +3 and --3 bodies"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -37,3 +37,15 @@ The legacy-formula `@` of a defined name is evidenced for the body kinds T-4273'
 
 ## Out of scope
 - The redraw question (needs a harness name-edit op).
+
+## Outcome
+- New probe `probes/t4430-legacy-at-name-body-rest` (181 scored cells, excel-graph, 2026-11-06), generator
+  `docs/research/t4430/gen_probe.py` (helpers shared with T-4273's). First fill: 174 pass, 7 off, all INDEX over an
+  array-constant name: the IF arm with one index kept no `@` (Excel keeps it), and the area number `INDEX(n2d,1,1,1)`
+  got an `@` (Excel none). Fixed in `static_analysis/if_arm.rs` (`one_index_into_array_body`, 3-4 argument
+  `indexes_one_reference_cell`); now 181/181. The engine's predictions were not committed before the fill (deviation
+  from the task text).
+- Probed and recorded in references.md ("A defined name takes the `@` by its body"): `#REF!` and `#DIV/0!` bodies read
+  as literals; `+3` reads as the literal, `--3` takes the `@`; one index into `{3}`, `{3,4}` and `{3;4}` keeps it, a
+  row and column index (or an area number, or out of range) is one element.
+- Eval delta: probes +181 passing cells in 1 new case, no regressions, baseline lists the new case.
