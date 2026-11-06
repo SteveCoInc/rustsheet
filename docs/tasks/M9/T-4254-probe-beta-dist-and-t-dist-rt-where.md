@@ -3,7 +3,7 @@ id: T-4254
 title: "Probe BETA.DIST and T.DIST.RT where L140 bup's prefactor crosses DBL_MIN (T-4045's zero rule, evidenced only on F)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -29,10 +29,29 @@ bratio's L140 bup+bgrat branch, but only F.DIST.RT and FDIST are probed.
   against today's engine (this is the post-freeze fresh check of T-4045's rule).
 
 ## Acceptance criteria
-- [ ] An excel-graph probe case of BETA.DIST and T.DIST.RT cells around the edge, oracle filled.
-- [ ] Each cell where Excel and ours disagree on 0 against a number has an open owner task (or this task fixes it), and
+- [x] An excel-graph probe case of BETA.DIST and T.DIST.RT cells around the edge, oracle filled.
+- [x] Each cell where Excel and ours disagree on 0 against a number has an open owner task (or this task fixes it), and
       statistics.md "Where the exact 0 starts (T-4045)" records the result for BETA.DIST and the t.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - F (T-4045 probed it); the df1 = 2 closed-form zeros.
+
+## Outcome
+- Probes (excel-graph, 2026-11-06), both in eval/suites/probes (decision 0267's freeze keeps them out of probes-numeric):
+  - probes/t4254-beta-t-l140-zero-cut (132 cells): ln ret from -698 to -719 by 1; BETA.DIST at two c = 1/2 and two
+    c = 1 shapes; T.DIST.RT at df 1E5 and 1E7.
+  - probes/t4254-beta-t-zero-wide (180 cells): -400 to -690 by 10, for the families that were already 0 at -698.
+- Result, recorded in statistics.md "Where the exact 0 starts (T-4045)":
+  - BETA.DIST follows T-4045's DBL_MIN rule at n = 9 and 10 bup terms, at both c = 1/2 and c = 1.
+  - At n = 3 bup terms Excel's 0 starts 20 to 30 nats earlier, between ln ret -680 and -690. This is unmodelled.
+  - The t never takes L140 (b = 1/2), yet Excel is 0 from a true tail near e^-690.
+  - The F.INV search question (A146) stays with T-4437, because no BETA.DIST rule changed here.
+- Scored once against today's engine, as the post-freeze fresh check of T-4045's rule:
+  - On the rule's own shapes, every Excel number is matched to the last digits, and every Excel 0 is a number in ours
+    (11 + 11 cells), because the rule is applied to F only.
+  - Every visibly-off cell of both cases is owned by T-4437 (filed, opus), which also asks for the n = 3 and t
+    mechanisms (`scripts/new_case_owners.py` passes).
+- No engine change. Eval delta: +312 cells, 127 bit-exact, 185 known failures as new coverage (the 0-against-number
+  cells and last-digit NumericClose cells), 0 regressions.
+- Follow-ups: T-4437.
