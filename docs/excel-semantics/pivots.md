@@ -12,7 +12,7 @@ committed probes.
 Rule: a pivot whose cache has `refreshOnLoad="1"` is rebuilt from its source and re-rendered on open,
 before any calculate or refresh call. The values the file's cache held do not survive.
 Evidence: probes/t4128-pivot-spike R (excel-graph, 2026-11-06, T-4128). DataF!C2 is a formula
-(`=1000`) that the builder caches as blank, yet R!B5 (East/A) is 1004, R!E5 is 1012 and R!E7 is 1039.
+(`=1000`). The sheet caches it as 0 and the pivot cache record is missing (`<m/>`), yet R!B5 (East/A) is 1004, R!E5 is 1012 and R!E7 is 1039.
 The saved file holds Excel's own cache and definition (`rowItems`, `location`), as oracle-spike.md
 run 1 also showed. This closes T-2327.
 Status: VERIFIED (excel-graph)
@@ -107,10 +107,10 @@ differ only in the Sales field:
 - T4 (`outline="0"` only): `Row Labels`.
 
 oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on that field, showed
-`Region` too, which this rule likely explains. With two source fields as data, one non-compact is not enough:
-probes/t4128-pivot-spike K!A4 is `Row Labels` with Sales `compact="0"` and the calculated field Double
-at the default (T-4128). Whether all of them must be non-compact, and the layout without a Values axis,
-are open (T-4137, T-4138).
+`Region` too, which this rule likely explains. Observation, cause not isolated: probes/t4128-pivot-spike K!A4 is `Row Labels` with Sales
+`compact="0"` and the calculated field Double at the default (T-4128). K also has a Top-N filter and a
+sort, so whether every data field must be non-compact, and the layout without a Values axis, are left
+to T-4137 and T-4138.
 Status: VERIFIED (excel-graph)
 
 ## Rendered pivot cells: blanks, repeated labels, subtotals and the Values caption
