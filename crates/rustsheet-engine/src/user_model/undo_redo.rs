@@ -177,9 +177,11 @@ impl UserModel {
                     column,
                     count: _,
                     old_data,
+                    tables,
                 } => {
                     needs_evaluation = true;
                     self.undo_delete_columns(*sheet, *column, old_data)?;
+                    self.model.restore_tables_of_sheet(*sheet, tables)?;
                 }
                 Diff::SetFrozenRowsCount {
                     sheet,
@@ -711,6 +713,7 @@ impl UserModel {
                     column,
                     count,
                     old_data: _,
+                    tables: _,
                 } => {
                     self.model.delete_columns(*sheet, *column, *count)?;
                     needs_evaluation = true;
