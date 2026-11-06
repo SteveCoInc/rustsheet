@@ -18,6 +18,7 @@ SPEC-0032's contract; scored structurally by task `scoring` against the oracle a
 
 ## Acceptance criteria
 - [ ] rowItems/colItems equal Excel's on the spike, geometry probes and fresh corpus pivots in scope.
+- [ ] Type the location geometry (`firstHeaderRow`/`firstDataRow`/`firstDataCol`, `rowPageCount`/`colPageCount`) in `PivotTable` and remove it from the `OpaqueOwner::Location` opaque set (T-4139 left it verbatim).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
