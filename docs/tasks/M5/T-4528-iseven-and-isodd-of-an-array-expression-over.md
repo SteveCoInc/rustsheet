@@ -3,7 +3,7 @@ id: T-4528
 title: "ISEVEN and ISODD of an array expression over a range (C1:C5+0, -C1:C5, IF over a range) and their legacy-formula @ forms: probe and match"
 milestone: M5
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
