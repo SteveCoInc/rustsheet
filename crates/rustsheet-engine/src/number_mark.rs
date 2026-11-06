@@ -1,43 +1,58 @@
 //! The "mark" of a number from ERROR.TYPE or `CELL("col"|"row",..)`: some array-taking arguments
-//! reject it where the same number from anywhere else is accepted. F.TEST, the paired functions and
-//! SUMXMY2 give `#NUM!` for it, LINEST and IRR's flows `#VALUE!` (statistics.md "ERROR.TYPE and
-//! CELL results are #NUM! in the paired functions", financial.md "IRR's error order"). LET, IF,
-//! CHOOSE, IFERROR, a LAMBDA call and INDEX hand it on; `+0`, `@`, SINGLE, MAX and a cell holding
-//! the value drop it (probes/t2576-error-type-cell-paired D1:D28). Why Excel does this is unknown.
+//! reject it where the same number from anywhere else is accepted. F.TEST, the paired functions,
+//! CHITEST and SUMXMY2 give `#NUM!` for it, LINEST and IRR's flows `#VALUE!` (statistics.md
+//! "ERROR.TYPE and CELL results are #NUM! in the paired functions", financial.md "IRR's error
+//! order"). LET, IF, CHOOSE, IFERROR, IFNA, INDEX, a LAMBDA call and a called name hand it on,
+//! nested in any order and for an array too; `+0`, `@`, SINGLE, MAX, IFS, SWITCH, IF over an
+//! array condition and a cell holding the value drop it (probes/t2576-error-type-cell-paired
+//! D1:D28, t2766-mark-positions, t2766-mark-positions-2). Why Excel does this is unknown.
 //!
 //! The mark is a flag on a value, not a form of the formula: it is kept beside the evaluation,
-//! not in [`CalcResult`]. Each [`Model::evaluate_node_in_context`] call gets a serial number, and
-//! [`NumberMark`] remembers the latest call whose value carries the mark, by its serial and the
-//! node it evaluated. A reader asks whether the call it just made is that one
-//! ([`Model::evaluate_marked`]); a function that hands an argument on unchanged moves the mark from
-//! that argument's call to its own ([`Model::pass_number_mark`]). Only the kinds listed in
-//! [`passes_mark`] keep a mark handed to them, so a call made by any other function, however it was
-//! reached, never looks marked. A LET name or LAMBDA parameter bound to a marked value is marked
-//! where it is read (`VariableStack::mark`). Constant memory: two serials and a flag.
+//! not in [`CalcResult`]. An evaluation of a node is bracketed ([`Model::marking`]): each
+//! [`Model::evaluate_node_in_context`] call is, and so are the reference-context entry points
+//! that read a node without it (`evaluate_node_with_reference`, `evaluate_reference_arg`,
+//! `evaluate_picked_reference_arg`), so a LET, CHOOSE or LAMBDA call read for its reference is
+//! bracketed too. Each bracket gets a serial number; [`NumberMark`] keeps the bracket running now
+//! and the one that finished last, with whether its value carries the mark. A bracket's value
+//! carries it when its node makes the mark, reads a marked LET name or LAMBDA parameter, or is
+//! one of the kinds in [`passes_mark`] and was handed the mark of the argument it returns
+//! ([`Model::passing_mark`]). Since the bracket of an evaluation is the last to finish within it,
+//! "the evaluation just made carries the mark" is a check of the last bracket's serial and node
+//! ([`Model::evaluate_marked`]): exact under recursion, where the same node is evaluated again
+//! inside itself. Constant memory: a few serials and flags.
 
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, types::CellReferenceIndex},
     functions::Function,
     model::Model,
+    reference_operators::RefArg,
     variable_stack::Binding,
 };
 
-/// One `evaluate_node_in_context` call: its serial and the address of the node it evaluated.
-type Call = (u64, usize);
+/// The bracket running now: its serial and whether it was handed a mark.
+#[derive(Clone, Copy, Default)]
+pub(crate) struct Frame {
+    serial: u64,
+    handed: bool,
+}
+
+/// The bracket that finished last.
+#[derive(Clone, Copy, Default)]
+struct Finished {
+    serial: u64,
+    /// The address of the node it evaluated (ungrouped).
+    node: usize,
+    marked: bool,
+}
 
 /// Where the mark is (module docs).
 #[derive(Clone, Copy, Default)]
 pub(crate) struct NumberMark {
-    /// The serial the next `evaluate_node_in_context` call gets.
+    /// The serial the next bracket gets.
     next: u64,
-    /// The call running now.
-    current: Call,
-    /// The latest call whose value carries the mark.
-    marked: Option<Call>,
-    /// Whether the last [`Model::bind_argument`] bound a marked value, for the LET or LAMBDA
-    /// call that binds it ([`Model::take_bound_mark`]).
-    bound: bool,
+    current: Frame,
+    last: Finished,
 }
 
 fn address(node: &Node) -> usize {
@@ -66,8 +81,9 @@ fn makes_mark(node: &Node) -> bool {
 
 /// Whether `node` (ungrouped) hands on the mark of the argument it returns unchanged: LET, IF,
 /// CHOOSE, IFERROR, IFNA, INDEX, a LAMBDA called in place and a called name
-/// (probes/t2576-error-type-cell-paired D1:D5, D19, D20; t2766-mark-positions A23, A28). IFS and
-/// SWITCH drop it (`FTEST({1;2;3},IFS(TRUE,ERROR.TYPE(#REF!)))` is `#DIV/0!`, A24, A25).
+/// (probes/t2576-error-type-cell-paired D1:D5, D19, D20; t2766-mark-positions A23, A28;
+/// t2766-mark-positions-2 A1:A15). IFS and SWITCH drop it (`FTEST({1;2;3},IFS(TRUE,
+/// ERROR.TYPE(#REF!)))` is `#DIV/0!`, t2766-mark-positions A24, A25).
 fn passes_mark(node: &Node) -> bool {
     matches!(
         node,
@@ -84,51 +100,87 @@ fn passes_mark(node: &Node) -> bool {
     )
 }
 
-/// Whether a value can carry the mark: a number, or an array (`ERROR.TYPE({#REF!})`, D24; an
+/// A result that may carry the mark: a number, or an array (`ERROR.TYPE({#REF!})`, D24; an
 /// array of references read through a LET name, probes/t2577-indirect-ref-array A64).
-fn can_carry(value: &CalcResult) -> bool {
-    matches!(value, CalcResult::Number(_) | CalcResult::Array(_))
+pub(crate) trait MarkCarrier {
+    /// Whether this value can carry the mark.
+    fn can_carry(&self) -> bool;
+}
+
+impl MarkCarrier for CalcResult {
+    fn can_carry(&self) -> bool {
+        matches!(self, CalcResult::Number(_) | CalcResult::Array(_))
+    }
+}
+
+impl MarkCarrier for RefArg {
+    fn can_carry(&self) -> bool {
+        matches!(self, RefArg::Value(value) if value.can_carry())
+    }
 }
 
 impl NumberMark {
-    /// Starts the call evaluating `node`; returns the call it interrupts, for [`Self::end`].
-    pub(crate) fn begin(&mut self, node: &Node) -> Call {
-        let call = (self.next, address(node));
+    /// Starts a bracket; returns the one it interrupts, for [`Model::end_number_mark`].
+    pub(crate) fn begin(&mut self) -> Frame {
+        let frame = Frame {
+            serial: self.next,
+            handed: false,
+        };
         self.next += 1;
-        std::mem::replace(&mut self.current, call)
+        std::mem::replace(&mut self.current, frame)
     }
 
-    /// Whether the latest marked call was made since `since` (a [`Self::next_serial`]) and
-    /// evaluated `node`.
-    fn is_marked(&self, since: u64, node: &Node) -> bool {
-        self.marked
-            .is_some_and(|(serial, at)| serial >= since && at == address(node))
+    /// Whether a bracket of `node` begun at or after `since` (a [`Self::next_serial`]) is the
+    /// last to have finished and carries the mark: the evaluation of `node` made since `since`
+    /// carries it.
+    fn was_marked(&self, since: u64, node: &Node) -> bool {
+        self.last.marked && self.last.serial >= since && self.last.node == address(node)
     }
 
-    /// The serial the next call gets.
+    /// The serial the next bracket gets.
     pub(crate) fn next_serial(&self) -> u64 {
         self.next
     }
 }
 
 impl Model {
-    /// Ends the call [`NumberMark::begin`] started for `node` (ungrouped), whose value is `value`,
-    /// and resumes `outer`: the call is marked when `node` makes the mark, reads a marked LET
-    /// name or LAMBDA parameter, or passes on a mark handed to it ([`Self::pass_number_mark`]).
-    pub(crate) fn end_number_mark(&mut self, node: &Node, value: &CalcResult, outer: Call) {
-        let mark = &mut self.number_mark;
-        let call = std::mem::replace(&mut mark.current, outer);
-        let handed = mark.marked == Some(call);
-        let marked = can_carry(value)
-            && (makes_mark(node)
-                || (handed && passes_mark(node))
-                || self.variable_stack.is_marked_variable(node));
-        let mark = &mut self.number_mark;
-        if marked {
-            mark.marked = Some(call);
-        } else if handed {
-            mark.marked = None;
-        }
+    /// Ends the bracket [`NumberMark::begin`] started for `node`, whose value `can_carry` says
+    /// may carry the mark, and resumes `outer`.
+    pub(crate) fn end_number_mark(&mut self, node: &Node, can_carry: bool, outer: Frame) {
+        let node = node.ungrouped();
+        let at = address(node);
+        let frame = std::mem::replace(&mut self.number_mark.current, outer);
+        let last = self.number_mark.last;
+        // Only a number or an array is ever marked, so most brackets stop at the first test.
+        let marked = can_carry
+            && match node {
+                Node::NamedVariableKind { id: Some(id), .. } => {
+                    self.variable_stack.is_marked(*id as usize)
+                }
+                // Read twice over (a reference-context entry point, then
+                // `evaluate_node_in_context`), the inner bracket's mark is this one's.
+                _ if passes_mark(node) => {
+                    frame.handed || (last.marked && last.node == at && last.serial > frame.serial)
+                }
+                _ => makes_mark(node),
+            };
+        self.number_mark.last = Finished {
+            serial: frame.serial,
+            node: at,
+            marked,
+        };
+    }
+
+    /// `evaluate(self)`, the evaluation of `node`, bracketed (module docs).
+    pub(crate) fn marking<T: MarkCarrier>(
+        &mut self,
+        node: &Node,
+        evaluate: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        let outer = self.number_mark.begin();
+        let result = evaluate(self);
+        self.end_number_mark(node, result.can_carry(), outer);
+        result
     }
 
     /// The value of `node` and whether it carries the mark.
@@ -139,44 +191,66 @@ impl Model {
     ) -> (CalcResult, bool) {
         let since = self.number_mark.next_serial();
         let value = self.evaluate_node_in_context(node, cell);
-        let marked = self.number_mark.is_marked(since, node);
-        (value, marked)
+        (value, self.number_mark.was_marked(since, node))
     }
 
-    /// Hands the mark of `node`, evaluated since `since` (a [`NumberMark::next_serial`]), to the
-    /// running call, which keeps it if it is one that [`passes_mark`]. Called by LET, IF, CHOOSE,
-    /// IFERROR, INDEX and a LAMBDA call right after reading the argument they return.
-    pub(crate) fn pass_number_mark(&mut self, since: u64, node: &Node) {
-        let mark = &mut self.number_mark;
-        if mark.is_marked(since, node) {
-            mark.marked = Some(mark.current);
+    /// `read(self)`, the reading of `node`, the argument the running bracket returns unchanged,
+    /// handing on its mark: LET's body, the branch IF picks, the argument CHOOSE picks, IFERROR's
+    /// value or fallback, INDEX's array and a LAMBDA's body. The bracket keeps it if its node is
+    /// one that [`passes_mark`].
+    pub(crate) fn passing_mark<T>(&mut self, node: &Node, read: impl FnOnce(&mut Self) -> T) -> T {
+        let since = self.number_mark.next_serial();
+        let value = read(self);
+        self.hand_on_mark(since, node);
+        value
+    }
+
+    /// Hands the running bracket the mark of `node`, read since `since`, if it carries it.
+    fn hand_on_mark(&mut self, since: u64, node: &Node) {
+        if self.number_mark.was_marked(since, node) {
+            self.number_mark.current.handed = true;
         }
     }
 
-    /// [`Self::evaluate_node_in_context`] of the argument the running call returns unchanged,
-    /// handing its mark on ([`Self::pass_number_mark`]).
-    pub(crate) fn evaluate_passing_mark(
+    /// [`Self::evaluate_node_in_context`] of `node` handing its mark on only when it is a
+    /// number: IFERROR and IFNA rebuild an array, which drops it
+    /// (probes/t2766-mark-positions A27).
+    pub(crate) fn evaluate_passing_number_mark(
         &mut self,
         node: &Node,
         cell: CellReferenceIndex,
     ) -> CalcResult {
         let since = self.number_mark.next_serial();
         let value = self.evaluate_node_in_context(node, cell);
-        self.pass_number_mark(since, node);
+        if matches!(value, CalcResult::Number(_)) {
+            self.hand_on_mark(since, node);
+        }
         value
     }
 
-    /// Records whether `binding`, which [`Self::bind_argument`] made of `node` from calls since
-    /// `since`, holds a marked value.
-    pub(crate) fn record_bound_mark(&mut self, since: u64, node: &Node, binding: &Binding) {
-        // A name bound to a marked name is marked too: `LET(x,ERROR.TYPE(#REF!),y,x,y)`.
-        self.number_mark.bound = matches!(binding, Binding::Value(value) if can_carry(value))
-            && (self.number_mark.is_marked(since, node)
-                || self.variable_stack.is_marked_variable(node.ungrouped()));
+    /// [`Self::evaluate_node_in_context`] of `node` through [`Self::passing_mark`].
+    pub(crate) fn evaluate_passing_mark(
+        &mut self,
+        node: &Node,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
+        self.passing_mark(node, |model| model.evaluate_node_in_context(node, cell))
     }
 
-    /// Whether the last binding made holds a marked value; clears it for the next.
-    pub(crate) fn take_bound_mark(&mut self) -> bool {
-        std::mem::take(&mut self.number_mark.bound)
+    /// `bind(self)`, the binding of a LET value or LAMBDA argument `node`, and whether the value
+    /// bound carries the mark. A name bound to a marked name is marked too:
+    /// `LET(x,ERROR.TYPE(#REF!),y,x,y)` (probes/t2766-mark-positions A26).
+    pub(crate) fn binding_marked(
+        &mut self,
+        node: &Node,
+        bind: impl FnOnce(&mut Self) -> Binding,
+    ) -> (Binding, bool) {
+        let since = self.number_mark.next_serial();
+        let binding = bind(self);
+        let marked = matches!(&binding, Binding::Value(value) if value.can_carry())
+            && (self.number_mark.was_marked(since, node)
+                || matches!(node.ungrouped(), Node::NamedVariableKind { id: Some(id), .. }
+                    if self.variable_stack.is_marked(*id as usize)));
+        (binding, marked)
     }
 }

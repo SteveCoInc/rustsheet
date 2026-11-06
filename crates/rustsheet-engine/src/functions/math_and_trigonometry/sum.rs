@@ -135,9 +135,8 @@ impl Model {
     }
 
     // Helper function to extract and validate two matrices (ranges or arrays) with compatible shapes.
-    // Returns (rows, cols, values_left, values_right) or an error. `marked_second` says whether a
-    // marked second argument is cells with no number (the regression family) or the values it
-    // holds (CHITEST's expected values, unprobed).
+    // Returns (rows, cols, values_left, values_right) or an error. `marked_second` says what a
+    // marked second argument is: cells with no number (the regression family) or `#NUM!` (CHITEST).
     pub(crate) fn fn_get_two_matrices(
         &mut self,
         args: &[Node],
@@ -150,14 +149,12 @@ impl Model {
         // A marked first argument (a number straight from ERROR.TYPE or CELL, an array of
         // references) is `#NUM!` once the sizes match (`INTERCEPT(ERROR.TYPE(#REF!),5)`,
         // `SLOPE(INDIRECT("B1",{1;1}),{1;2})`, while `RSQ(ERROR.TYPE(#NAME?),Data!C8:C11)` is
-        // `#N/A`; T-2576, T-2577). A marked second argument of CORREL, PEARSON, SLOPE, RSQ and
-        // STEYX is cells with no number: `CORREL({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))` is
-        // `#DIV/0!` where `CORREL({1;2;3},{4;2;3})` is -0.5 (probes/t2766-mark-positions A8:A12).
+        // `#N/A`; T-2576, T-2577). So is CHITEST's marked second argument
+        // (probes/t2766-mark-positions-2 A26, A28). A marked second argument of CORREL, PEARSON,
+        // SLOPE, INTERCEPT, RSQ and STEYX is cells with no number, its errors kept
+        // ([`SecondMark::NoNumber`]).
         let (x_range, first_marked) = self.evaluate_sample_arg(&args[0], cell);
-        let (y_range, second_marked) = match marked_second {
-            SecondMark::NoNumber => self.evaluate_sample_arg(&args[1], cell),
-            SecondMark::Values => (self.evaluate_node_in_context(&args[1], cell), false),
-        };
+        let (y_range, second_marked) = self.evaluate_sample_arg(&args[1], cell);
         let x_range = self.blank_one_cell_as_error(x_range, cell);
         let y_range = self.blank_one_cell_as_error(y_range, cell);
         if let (CalcResult::Range { left: l1, .. }, CalcResult::Range { left: l2, .. }) =
@@ -190,14 +187,11 @@ impl Model {
                 "Arguments must have the same number of cells".to_string(),
             ));
         }
-        if first_marked {
-            return Err(marked_number_error(cell));
-        }
-        let second = if second_marked {
-            let cells = usize::try_from(rows2 * cols2).unwrap_or(0);
-            PairedArg::Values(vec![None; cells])
-        } else {
-            second
+        let second = match marked_second {
+            _ if first_marked => return Err(marked_number_error(cell)),
+            SecondMark::NumError if second_marked => return Err(marked_number_error(cell)),
+            SecondMark::NoNumber if second_marked => second.without_numbers(),
+            _ => second,
         };
         let array_error = |_, error| array_element_error(error, cell);
         let paired = self.paired_values(first, second, cell, array_error)?;

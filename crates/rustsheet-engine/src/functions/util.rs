@@ -360,6 +360,17 @@ impl Model {
         blanks: CachedBlanks,
         cell: CellReferenceIndex,
     ) -> RefArg {
+        // Bracketed for the ERROR.TYPE/CELL mark (`number_mark.rs`).
+        self.marking(node, |model| model.reference_arg_read(node, blanks, cell))
+    }
+
+    /// [`Self::reference_arg_reading`] without the bracket.
+    fn reference_arg_read(
+        &mut self,
+        node: &Node,
+        blanks: CachedBlanks,
+        cell: CellReferenceIndex,
+    ) -> RefArg {
         // An IF or CHOOSE that may pick a reference into another workbook is the argument it
         // picks (`SUM(IF(TRUE,…!A1))` is `#BLOCKED!`; probes/external-ref-no-link-ifchoose A3).
         // An aggregate reading cells of another workbook reads what its externalLink cache
@@ -478,6 +489,19 @@ impl Model {
         blanks: CachedBlanks,
         cell: CellReferenceIndex,
     ) -> RefArg {
+        // Bracketed for the ERROR.TYPE/CELL mark (`number_mark.rs`).
+        self.marking(node, |model| {
+            model.picked_reference_arg_read(node, blanks, cell)
+        })
+    }
+
+    /// [`Self::picked_reference_arg_reading`] without the bracket.
+    fn picked_reference_arg_read(
+        &mut self,
+        node: &Node,
+        blanks: CachedBlanks,
+        cell: CellReferenceIndex,
+    ) -> RefArg {
         // The arm a scalar IF, CHOOSE, IFS or SWITCH picks and a LET body follow the same rule,
         // however deeply they nest: `SUBTOTAL(9,IF(TRUE,XLOOKUP(1,J1:J2,H1:I2)))` is 9 and
         // `AREAS(LET(v,1,XLOOKUP(..)))` 1 (probes/subtotal-if-choose-over-xlookup A10-A42,
@@ -489,7 +513,9 @@ impl Model {
         };
         if let Some(picked) = self.pick_step(kind, args, cell) {
             return match picked {
-                Picked::Node(arm) => self.picked_reference_arg_reading(arm, blanks, cell),
+                Picked::Node(arm) => self.passing_mark(arm, |model| {
+                    model.picked_reference_arg_reading(arm, blanks, cell)
+                }),
                 Picked::Value(value) => RefArg::Value(value),
             };
         }

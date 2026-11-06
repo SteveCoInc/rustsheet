@@ -147,7 +147,7 @@ impl Model {
             if as_reference {
                 model.evaluate_reference_arg(body, cell)
             } else {
-                RefArg::Value(model.evaluate_passing_mark(body, cell))
+                RefArg::Value(model.evaluate_node_in_context(body, cell))
             }
         })
         .unwrap_or_else(RefArg::Value)
@@ -239,16 +239,15 @@ impl Model {
             // Eagerly evaluate the binding value and cache it.
             // CalcResult::Range stores only bounds (no cell data), so range bindings are
             // effectively lazy — values are only read when a consuming function iterates the range.
-            let binding = self.bind_argument(&cloned[2 * i + 1], cell);
-            let marked = self.take_bound_mark();
-            self.variable_stack.insert(raw_id, binding, cell);
-            if marked {
-                self.variable_stack.mark(raw_id);
-            }
+            let (binding, marked) = self.bind_argument(&cloned[2 * i + 1], cell);
+            self.variable_stack
+                .insert_marked(raw_id, binding, marked, cell);
         }
 
-        // Evaluate the body with all bindings in scope.
-        let result = read_body(self, &cloned[args.len() - 1]);
+        // Evaluate the body with all bindings in scope; its ERROR.TYPE/CELL mark is LET's
+        // (`number_mark.rs`).
+        let body = &cloned[args.len() - 1];
+        let result = self.passing_mark(body, |model| read_body(model, body));
         self.close_over(&result, &bound_ids, mark, cell);
 
         // Remove only the ids introduced by this LET frame.
@@ -265,13 +264,14 @@ impl Model {
     /// called `LET(f,INDEX(A1:A3,2),f(2))` is `#REF!`, let-name-call-refs H5). An argument that
     /// may stand for several areas is read in reference context, so a union stays its areas
     /// wherever it comes from: written out, another variable, IF, CHOOSE or LET
-    /// (probes/multiarea-let H1, multiarea-letbind H1:H3 and H7). Whether the value carries the
-    /// ERROR.TYPE/CELL mark is left for the binder ([`Model::take_bound_mark`]).
-    pub(crate) fn bind_argument(&mut self, node: &Node, cell: CellReferenceIndex) -> Binding {
-        let since = self.number_mark.next_serial();
-        let binding = self.bind_argument_value(node, cell);
-        self.record_bound_mark(since, node, &binding);
-        binding
+    /// (probes/multiarea-let H1, multiarea-letbind H1:H3 and H7). Also whether the value carries
+    /// the ERROR.TYPE/CELL mark ([`Model::binding_marked`]).
+    pub(crate) fn bind_argument(
+        &mut self,
+        node: &Node,
+        cell: CellReferenceIndex,
+    ) -> (Binding, bool) {
+        self.binding_marked(node, |model| model.bind_argument_value(node, cell))
     }
 
     /// [`Self::bind_argument`] without the mark.

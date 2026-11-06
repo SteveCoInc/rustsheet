@@ -113,3 +113,126 @@ fn the_mark_in_the_positions_probed_by_t2766() {
         ),
     ]);
 }
+
+#[test]
+fn the_mark_passes_through_nested_wrappers_in_any_order() {
+    // probes/t2766-mark-positions-2 A1:A9
+    assert_texts(&[
+        (
+            "=FTEST({1;2;3},CHOOSE(1,LET(x,ERROR.TYPE(#REF!),x)))",
+            "#NUM!",
+        ),
+        (
+            "=FTEST({1;2;3},CHOOSE(1,LAMBDA(x,x)(ERROR.TYPE(#REF!))))",
+            "#NUM!",
+        ),
+        (
+            "=FTEST({1;2;3},LET(x,CHOOSE(1,ERROR.TYPE(#REF!)),x))",
+            "#NUM!",
+        ),
+        (
+            "=FTEST({1;2;3},INDEX(LET(x,ERROR.TYPE(#REF!),x),1))",
+            "#NUM!",
+        ),
+        ("=IRR(CHOOSE(1,LET(x,CELL(\"row\",B1),x)))", "#VALUE!"),
+        (
+            "=FTEST({1;2;3},IF(TRUE,LET(x,ERROR.TYPE(#REF!),x)))",
+            "#NUM!",
+        ),
+        (
+            "=FTEST({1;2;3},LAMBDA(x,x)(CHOOSE(1,ERROR.TYPE(#REF!))))",
+            "#NUM!",
+        ),
+        (
+            "=FTEST({1;2;3},INDEX(CHOOSE(1,ERROR.TYPE(#REF!)),1))",
+            "#NUM!",
+        ),
+        (
+            "=FTEST({1;2;3},IFERROR(LET(x,ERROR.TYPE(#REF!),x),0))",
+            "#NUM!",
+        ),
+        // Still dropped by anything that makes a new value on the way.
+        (
+            "=FTEST({1;2;3},CHOOSE(1,LET(x,ERROR.TYPE(#REF!),x+0)))",
+            "#DIV/0!",
+        ),
+        (
+            "=FTEST({1;2;3},LET(x,CHOOSE(1,ERROR.TYPE(#REF!)+0),x))",
+            "#DIV/0!",
+        ),
+    ]);
+}
+
+#[test]
+fn a_marked_array_passes_and_an_array_condition_drops_it() {
+    // probes/t2766-mark-positions-2 A10:A16
+    assert_texts(&[
+        ("=FTEST({1;2;3},IF(TRUE,ERROR.TYPE({#REF!;#N/A})))", "#NUM!"),
+        (
+            "=FTEST({1;2;3},CHOOSE(1,ERROR.TYPE({#REF!;#N/A})))",
+            "#NUM!",
+        ),
+        ("=FTEST({1;2;3},LET(x,ERROR.TYPE({#REF!;#N/A}),x))", "#NUM!"),
+        (
+            "=FTEST({1;2;3},LAMBDA(x,x)(ERROR.TYPE({#REF!;#N/A})))",
+            "#NUM!",
+        ),
+        (
+            "=FTEST({1;2;3},INDEX(ERROR.TYPE({#REF!;#N/A}),0,1))",
+            "#NUM!",
+        ),
+        (
+            "=FTEST({1;2;3},IF({TRUE;TRUE},ERROR.TYPE(#REF!)))",
+            "#DIV/0!",
+        ),
+    ]);
+}
+
+#[test]
+fn second_arguments_and_fallbacks_probed_by_the_review() {
+    // probes/t2766-mark-positions-2 A17:A28
+    assert_texts(&[
+        ("=CORREL({1;2},INDIRECT(\"B1\",{1;1}))", "#DIV/0!"),
+        ("=INTERCEPT(5,INDIRECT(\"B1\",{1}))", "#DIV/0!"),
+        ("=SUMXMY2(4,INDIRECT(\"B1\",{1}))", "#NUM!"),
+        ("=LINEST(ERROR.TYPE(#REF!),1/0)", "#DIV/0!"),
+        ("=SUMXMY2(ERROR.TYPE(#REF!),{#N/A})", "#NUM!"),
+        ("=CORREL({1;2;3},ERROR.TYPE({#REF!;5;#VALUE!}))", "#N/A"),
+        ("=FTEST({1;2;3},IFERROR(1/0,ERROR.TYPE(#REF!)))", "#NUM!"),
+        ("=FTEST({1;2;3},IF(FALSE,4,ERROR.TYPE(#REF!)))", "#NUM!"),
+        (
+            "=CHITEST({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))",
+            "#NUM!",
+        ),
+        ("=CHITEST({1;2},INDIRECT(\"B1\",{1;1}))", "#NUM!"),
+    ]);
+}
+
+#[test]
+fn a_recursive_lambda_is_marked_only_when_its_outer_call_returns_the_mark() {
+    // probes/t2766-mark-positions-2 A29, A30: only the inner call returns ERROR.TYPE. The outer
+    // call evaluates the same `f(f,n-1)` node again inside itself, so the inner evaluation's
+    // mark must not be read as the outer one's.
+    assert_texts(&[
+        (
+            "=FTEST({1;2;3},LET(f,LAMBDA(f,n,IF(n=0,ERROR.TYPE(#REF!),f(f,n-1)+0)),f(f,1)))",
+            "#DIV/0!",
+        ),
+        (
+            "=FTEST({1;2;3},LET(f,LAMBDA(f,n,IF(n=0,ERROR.TYPE(#REF!),f(f,n-1))),f(f,1)))",
+            "#NUM!",
+        ),
+        (
+            "=FTEST({1;2;3},LET(f,LAMBDA(f,n,IF(n=0,ERROR.TYPE(#REF!),IF(n=1,f(f,n-1)+0,f(f,n-1)))),f(f,2)))",
+            "#DIV/0!",
+        ),
+        // The reader's own argument node re-entered: at n=2 LINEST reads `f(f,n-1)`, whose
+        // evaluation runs LINEST of the same node at n=1, marked there (`#VALUE!`, so 7). The
+        // outer read is the unmarked 7, and `LINEST(7)` is 0 (the rules of
+        // t2576-error-type-cell-paired E34 and t2766-mark-positions A28 combined).
+        (
+            "=LET(f,LAMBDA(f,n,IF(n=0,ERROR.TYPE(#REF!),IFERROR(LINEST(f(f,n-1)),7))),f(f,2))",
+            "0",
+        ),
+    ]);
+}

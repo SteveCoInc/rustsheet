@@ -28,28 +28,24 @@ pub(super) enum DataRead {
 }
 
 impl Model {
-    /// Reads `known_y` as [`Model::read_data`] does. A computed blank y is `#VALUE!` at once,
-    /// before x's and const's errors: `LINEST(IFERROR(B10,1),1/0)` and
-    /// `LINEST(IFERROR(B10,1),{1;2},NA())` with B10 blank are `#VALUE!`, while the blank reference
-    /// itself and a computed text or boolean y wait (`LINEST(B10,1/0)`, `LINEST("abc",1/0)` and
-    /// `LINEST(IF(TRUE,"abc"),1/0)` are `#DIV/0!`; probes/t2455-transpose-single-value A62:A84).
-    /// A y carrying the ERROR.TYPE/CELL mark is `#VALUE!` at once too: `LINEST(ERROR.TYPE(#REF!))`
-    /// where `LINEST(2)` is 0 (probes/t2576-error-type-cell-paired E34; LOGEST, TREND and GROWTH,
-    /// which read y here, are unprobed; statistics.md "ERROR.TYPE and CELL results are #NUM! in the
-    /// paired functions").
-    pub(super) fn read_known_y(
+    /// Reads `known_y` (`args[0]`) as [`Model::read_data`] does, then `known_x` (`args[1]`) when
+    /// given. A computed blank y is `#VALUE!` at once, before x's and const's errors:
+    /// `LINEST(IFERROR(B10,1),1/0)` and `LINEST(IFERROR(B10,1),{1;2},NA())` with B10 blank are
+    /// `#VALUE!`, while the blank reference itself and a computed text or boolean y wait
+    /// (`LINEST(B10,1/0)`, `LINEST("abc",1/0)` and `LINEST(IF(TRUE,"abc"),1/0)` are `#DIV/0!`;
+    /// probes/t2455-transpose-single-value A62:A84). A y carrying the ERROR.TYPE/CELL mark is
+    /// `#VALUE!` once x is read, after x's error value: `LINEST(ERROR.TYPE(#REF!))` is `#VALUE!`
+    /// where `LINEST(2)` is 0, and so are LOGEST, TREND and GROWTH of it, while
+    /// `LINEST(ERROR.TYPE(#REF!),1/0)` is `#DIV/0!` (probes/t2576-error-type-cell-paired E34,
+    /// t2766-mark-positions A20:A22, t2766-mark-positions-2 A21; statistics.md "ERROR.TYPE and
+    /// CELL results are #NUM! in the paired functions").
+    pub(super) fn read_known_y_and_x(
         &mut self,
-        y_arg: &Node,
+        args: &[Node],
         cell: CellReferenceIndex,
-    ) -> Result<DataRead, CalcResult> {
+    ) -> Result<(DataRead, Option<DataRead>), CalcResult> {
+        let y_arg = &args[0];
         let (value, marked) = self.evaluate_marked(y_arg, cell);
-        if marked {
-            return Err(CalcResult::new_error(
-                Error::VALUE,
-                cell,
-                "Regression: known_y from ERROR.TYPE or CELL".to_string(),
-            ));
-        }
         let y = self.data_read(value, cell)?;
         if matches!(y, DataRead::Scalar(Element::Blank))
             && !matches!(*y_arg.resolved_at(cell.row), Node::ReferenceKind { .. })
@@ -60,7 +56,18 @@ impl Model {
                 "Regression: known_y is blank".to_string(),
             ));
         }
-        Ok(y)
+        let x = match given(args.get(1)) {
+            Some(node) => Some(self.read_data(node, cell)?),
+            None => None,
+        };
+        if marked {
+            return Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "Regression: known_y from ERROR.TYPE or CELL".to_string(),
+            ));
+        }
+        Ok((y, x))
     }
 
     /// Reads a data argument of the regression functions element by element, failing only when it

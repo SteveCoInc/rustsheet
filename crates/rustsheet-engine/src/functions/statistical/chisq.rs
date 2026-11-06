@@ -552,7 +552,7 @@ impl Model {
     // CHISQ.TEST(actual_range, expected_range)
     pub(crate) fn fn_chisq_test(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         let (width, height, values_left, values_right) =
-            match self.fn_get_two_matrices(args, cell, SecondMark::Values) {
+            match self.fn_get_two_matrices(args, cell, SecondMark::NumError) {
                 Ok(v) => v,
                 Err(r) => return r,
             };

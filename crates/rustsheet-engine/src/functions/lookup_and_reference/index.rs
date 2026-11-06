@@ -291,11 +291,10 @@ impl Model {
                         return value;
                     }
                 }
-                let since = self.number_mark.next_serial();
-                let source = self.index_source(reference, cell);
                 // The array's ERROR.TYPE/CELL mark is INDEX's (`number_mark.rs`;
                 // probes/t2576-error-type-cell-paired D20).
-                self.pass_number_mark(since, reference);
+                let source =
+                    self.passing_mark(reference, |model| model.index_source(reference, cell));
                 scalar_as_one_element_array(source, cell)
             }
             PickedReference::Read(read) => scalar_as_one_element_array(read, cell),

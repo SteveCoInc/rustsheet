@@ -57,13 +57,18 @@ pub(crate) enum MarkedSample {
 }
 
 /// What `Model::fn_get_two_matrices` makes of a second argument carrying the ERROR.TYPE/CELL
-/// mark or an array of references (`number_mark.rs`).
+/// mark or an array of references (`number_mark.rs`), once the cell counts match.
 #[derive(Clone, Copy)]
 pub(crate) enum SecondMark {
-    /// Cells with no number (the regression family, probes/t2766-mark-positions A8:A12).
+    /// Cells with no number, its error elements kept ([`PairedArg::without_numbers`]): the
+    /// regression family. `CORREL({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))` is `#DIV/0!` where
+    /// `CORREL({1;2;3},{4;2;3})` is a number, while `CORREL({1;2;3},ERROR.TYPE({#REF!;5;#VALUE!}))`
+    /// is `#N/A`, and `CORREL({1;2},INDIRECT("B1",{1;1}))` is `#DIV/0!`
+    /// (probes/t2766-mark-positions A8:A12, t2766-mark-positions-2 A17:A19, A23).
     NoNumber,
-    /// The values it holds, as unmarked (CHITEST's expected values: unprobed).
-    Values,
+    /// `#NUM!`, as a marked first argument is: CHITEST
+    /// (`CHITEST({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))`, probes/t2766-mark-positions-2 A26).
+    NumError,
 }
 
 /// The `#NUM!` of a marked number ([`Model::evaluate_marked`]) as an argument that rejects it.
@@ -118,6 +123,28 @@ impl PairedArg {
             {
                 Ok(Self::Values(vec![None]))
             }
+            other => other,
+        }
+    }
+
+    /// This argument, carrying the ERROR.TYPE/CELL mark, as the regression family's second
+    /// argument reads it ([`SecondMark::NoNumber`]): its numbers are cells with no number and its
+    /// error elements stay errors. A reference element of an array of references reads as
+    /// `#VALUE!` in its value view (SPEC-0014) and is a cell with no number here like the rest
+    /// (probes/t2766-mark-positions-2 A17:A19); ERROR.TYPE and CELL never give `#VALUE!`, so no
+    /// error of theirs is lost. A grid mixing references and error elements is unprobed.
+    pub(crate) fn without_numbers(self) -> Self {
+        let no_number = |element: ArrayNode| match element {
+            ArrayNode::Error(Error::VALUE) | ArrayNode::Number(_) => ArrayNode::Boolean(false),
+            other => other,
+        };
+        match self {
+            Self::Array(rows) => Self::Array(
+                rows.into_iter()
+                    .map(|row| row.into_iter().map(no_number).collect())
+                    .collect(),
+            ),
+            Self::Values(values) => Self::Values(vec![None; values.len()]),
             other => other,
         }
     }

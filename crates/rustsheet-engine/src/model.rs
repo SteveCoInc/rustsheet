@@ -32,6 +32,7 @@ use crate::{
 
 use crate::evaluation::{CellKey, Evaluation, FormulaCell, Seen};
 use crate::limits::{spill_past_grid_error, spills_past_grid};
+use crate::number_mark::MarkCarrier;
 use crate::tailed_array::range_corners;
 use crate::{clock::Clock, tz::Tz, variable_stack::VariableStack};
 
@@ -259,6 +260,13 @@ impl Model {
         node: &Node,
         cell: CellReferenceIndex,
     ) -> CalcResult {
+        // Bracketed for the ERROR.TYPE/CELL mark: a LET, CHOOSE or LAMBDA call read here never
+        // goes through `evaluate_node_in_context` (`number_mark.rs`).
+        self.marking(node, |model| model.node_with_reference(node, cell))
+    }
+
+    /// [`Self::evaluate_node_with_reference`] without the bracket.
+    fn node_with_reference(&mut self, node: &Node, cell: CellReferenceIndex) -> CalcResult {
         // `ROWS((A1:A3))` is `ROWS(A1:A3)` (SPEC-0007), and a `#This Row` area is its cell or range
         // on the formula's row (SPEC-0016 step 2).
         let node: &Node = &node.ungrouped_at(cell.row);
@@ -545,7 +553,7 @@ impl Model {
         if let Err(error) = self.spend_node(cell) {
             return error;
         }
-        let outer_call = self.number_mark.begin(node);
+        let outer_call = self.number_mark.begin();
         let result = match node {
             OpSumKind { .. }
             | OpProductKind { .. }
@@ -618,7 +626,7 @@ impl Model {
             | LambdaCallKind { .. } => self.evaluate_cold_node(node, cell),
         };
         let result = self.charged(result, cell);
-        self.end_number_mark(node, &result, outer_call);
+        self.end_number_mark(node, result.can_carry(), outer_call);
         result
     }
 
