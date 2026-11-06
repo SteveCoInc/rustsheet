@@ -434,3 +434,7 @@ accuracy/TREND/s1!Calc!A98	T-2006	the engine's normal-equations solve on an ill-
 accuracy/TREND/s1!Calc!A193	T-2006	the engine's normal-equations solve is #NUM! on data from 1E-45 to 1E+49 (absolute pivot test); Excel matches the math
 accuracy/GROWTH/s1!Calc!A97	T-2006	the engine's normal-equations solve on an ill-conditioned design is 2e-09 relative off the math; Excel is 1e-15 off it
 accuracy/GROWTH/s1!Calc!A104	T-4590	Excel #NUM! where the ln fit's intercept e^1289.95 is past the double range; the engine and the math are 8.1E-18
+accuracy/BETA.DIST/r4-T-4437!Calc!A185	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETA.DIST/r4-T-4437!Calc!A189	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETA.DIST/r4-T-4437!Calc!A192	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETA.DIST/r4-T-4437!Calc!A194	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
