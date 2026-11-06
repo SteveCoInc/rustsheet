@@ -3,7 +3,7 @@ id: T-2808
 title: "F.INV.RT far-tail saturation and BETAINV's underflow and 0.5 quirk (T-2435 split)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P3
 size: M
 tier: opus
@@ -40,12 +40,40 @@ Owned gen-m9 cells (T-2435 split, 2026-10-26): 4 known-failure lines in eval/bas
   failures owned by this task; remove their lines from eval/accuracy/known-failures.tsv when they pass.
 
 ## Acceptance criteria
-- [ ] These 4 gen-m9 known-failure lines disappear from eval/baseline/gen-m9.txt, with no new
-      known-failure lines in any baseline.
-- [ ] probes/t2435-dist-extremes A68:A81, A108:A112 and A115:A118 and their column-B companions pass (or the ones that cannot are
-      named with evidence in the statistics.md entries above).
+Narrowed 2026-11-06 (owner rule: "do not overfit any function values"; see the Outcome): this task keeps the
+underflow `#NUM!`; F.INV.RT's saturation moved to T-4662 and BETA.INV's 0.5 to T-4663, both `defer: phase-1b`.
+- [x] The underflow cells pass: gen-m9/3e98b26cf6713e77 A151 and probes/t2435-dist-extremes A68, A69, A110 with
+      B68, B69, B110, with no new known-failure lines in any baseline.
+- [x] The cells that cannot pass without a fitted value are named with evidence in the statistics.md entries above
+      and owned by T-4662 (F.INV.RT: A77, A79, A115:A118, B77, B79, B115:B118, gen-m9 abc2939ebd1e2365 A11,
+      a612e89321a6df9c A23, 01523d247594952e A377) and T-4663 (A73, A111 and the 10 Gate A lines).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The BINOM, normal-density, BETA.DIST-endpoint and F-cdf rules (T-2435, done).
 - GAMMA.DIST at a huge shape (T-1891).
+
+## Outcome
+Implemented: BETA.INV and BETAINV are `#NUM!` where the quantile underflows, for p up to 1/2
+(functions/statistical/beta.rs `lower_quantile_underflows`). Structural justification: the quantile lies below
+DBL_MIN exactly when I_x(a, b) at x = DBL_MIN is at least p, and at that x the incomplete beta is its series'
+leading term x^a/(a B(a, b)) to the double (next term a (1 - b) x/(a + 1) relative). That is the math plus the
+existing flush-to-`#NUM!` rule, with no constant fitted; it agrees with every probed `#NUM!` and number in
+statistics.md's entry (A68:A76, A108:A112). The old search could not see it at alpha 1E-300, where every cdf rounds
+to 1, and stopped at 3.333333333333333E-302. Unit test `a_quantile_below_the_smallest_normal_double_is_zero`.
+
+Not implemented, with the reason (statistics.md entries updated):
+- F.INV.RT's 3.696066238512854E+150/df1: no structural derivation found. The constant is no simple closed form of
+  DBL_MAX, epsilon or a power of two (2^500 x 1.1291247153936121, sqrt(DBL_MAX)/3627.59, e^346.695), and the df1 = 2
+  value is not exactly half (ratio 1.0000010000006678 to C/2). An AS 109 replay with acu = 1E-300 stops where the
+  Newton correction falls below 1E-150, giving the order and the 1/df1 scaling, but depends on df2 (0.64 to 1.36
+  times C) where Excel's does not. Copying the constant would be a fit, so it stays a known failure: T-4662.
+- BETA.INV's 0.5: the candidate rule (AS 109's first approximation is 1 in its own orientation and the search is
+  reset to the midpoint) fits 12 of 13 cells, but BETAINV/s1 A125 is `#NUM!` from the same start, and neither the
+  start nor a non-moving first step separates it from A135 (0.5). With the candidate refuted in-sample there was no
+  rule to commit predictions for, so no probe was filled: T-4663. Its 10 Gate A lines moved from T-2808 to T-4663
+  in eval/accuracy/known-failures.tsv.
+
+Eval delta: gen-m9 known failures 1768 -> 1767 (3e98b26cf6713e77 A151), probes 8364 -> 8358
+(t2435-dist-extremes A68, A69, A110, B68, B69, B110), 0 regressions; Gate A `rustsheet-eval accuracy` 0 failing
+(T-4663: 10 known).

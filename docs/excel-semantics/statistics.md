@@ -6699,10 +6699,23 @@ p = 0.9 and p = 0.99 are exactly 0.5, the midpoint of [A, B] (`BETAINV(0.9,1E-30
 `BETAINV(0.99,1E-300,30)`), so Excel's search stops at its start there.
 Evidence: probes/t2435-dist-extremes A68:A76, A108:A112 (excel-graph, 2026-10-26); gen-m9
 3e98b26cf6713e77 A151 (`BETAINV(1E-20,1E-300,30)`).
-Ours: the search's floor rather than 0 (`BETAINV(1E-20,1E-300,30)` is 3.333333333333333E-302), and
-0.5 is not reproduced; T-2808.
-Status: VERIFIED (excel-graph)
-Tasks: T-2435, T-2808
+Underflow test (T-2808): the quantile of p lies below the smallest normal double DBL_MIN exactly when
+I_x(a, b) at x = DBL_MIN is at least p, and there I_x is its series' leading term x^a/(a B(a, b)) to the double (the
+next term is a (1 - b) x/(a + 1) relative). This is the math, not a fit: it gives `#NUM!` at every `#NUM!` cell above
+with p up to 1/2 and a number at A108, A109 and A112.
+Not established (T-2808): what gives the 0.5. Candidate: in AS 109's orientation (1 - p with the shapes swapped above
+1/2) AS 109's first approximation is 1 there (its branch 1 - exp((ln((1 - a) q) + ln B)/q), the exp underflowing),
+and a start outside (fpu, 1 - eps) is reset to the midpoint, as R's old AS 109 port did; Excel's search would then stop
+at that start. It fits 12 of the 13 such cells on file (A73, A111 and the DBL_MIN class of the Gate A entry below), but
+BETAINV/s1 A125 (`BETAINV(0.826804627471484,2.22507385850721E-308,0.478796631378503)`) is `#NUM!` from the same start
+while A135 (0.692122660100602, DBL_MIN, 0.517627748014771) is 0.5, and AS 109's first Newton step from 0.5 is finite at
+both (ln of its density factor 707.34 and 707.37), so neither "the start is 1" nor "the first step cannot move" separates
+them. Not implemented (owner rule: no fitted values).
+Ours: `#NUM!` where the quantile underflows for p up to 1/2 since T-2808 (functions/statistical/beta.rs
+`lower_quantile_underflows`; before it the search stopped at 3.333333333333333E-302 at alpha 1E-300, where every cdf it
+evaluates rounds to 1); 0.5 is not reproduced (T-4663).
+Status: VERIFIED (excel-graph) for the cells; the 0.5's mechanism UNVERIFIED
+Tasks: T-2435, T-2808, T-4663
 
 ## BETA.INV's Gate A table: 1 - 2^-53 near 1, 2^-53 by the flip, 0.5 at a DBL_MIN shape, `#NUM!` at a huge alpha (T-3578)
 Rule: on accuracy/BETA.INV/s1 (199 points, excel-graph 2026-11-02) Excel's BETA.INV differs from the engine in four
@@ -6726,7 +6739,7 @@ classes (A123 is listed separately after them), all where the quantile is at or 
 Evidence: eval/accuracy/tables/BETA.INV/s1 (oracle and 50-digit math sidecars; `rustsheet-eval accuracy`)
 Ours: `#NUM!` in the first three classes, 1 - 2^-53 in the fourth; 27 known failures in eval/accuracy/known-failures.tsv
 Status: VERIFIED (excel-graph) for the cells; the reasons (flip, start) UNVERIFIED
-Tasks: T-3578, T-3351 (classes 1 and 2), T-2808 (class 3), T-3862 (class 4)
+Tasks: T-3578, T-3351 (classes 1 and 2), T-4663 (class 3, after T-2808), T-3862 (class 4)
 
 ## F.INV.RT saturates at 3.696066238512854E+150/df1 in the far tail (T-2435)
 Rule: for a probability far in the tail and a df2 below 2, Excel's F quantile search stops at a
@@ -6738,9 +6751,19 @@ closed form instead (`F.INV.RT(1E-200,1,2)` is 1.0000000000000202E+200), and df2
 Evidence: probes/t2435-dist-extremes A77:A81, A115:A118 (excel-graph, 2026-10-26); gen-m9
 abc2939ebd1e2365 A11 (`CHIDIST(F.INV.RT(1E-200,1,1.999),10)` is 0, so the quantile is finite),
 a612e89321a6df9c A23 and 01523d247594952e A377 (the far tail's last digits).
-Ours: `#NUM!` where the quantile saturates, and 7 ulp off at `F.INV.RT(1E-20,3,9)`; T-2808.
-Status: VERIFIED (excel-graph)
-Tasks: T-2435, T-2808
+`F.INV.RT(1E-200,2,1.999)` is not exactly half the df1 = 1 value: its ratio to 3.696066238512854E+150/2 is
+1.0000010000006678.
+Not established (T-2808): where the constant comes from. It is no simple closed form of the double format: it is
+2^500 times 1.1291247153936121, sqrt(DBL_MAX)/3627.588648, e^346.69503302440125, and none of these factors is a
+known constant. An AS 109 replay (start clamped to [1E-4, 0.9999], acu = 1E-300) on the upper tail's beta
+variable u, I_u(df2/2, df1/2) = p, stops where its Newton correction (about u/b) falls below sqrt(acu) = 1E-150:
+that gives the order (2E150 to 5E150 over df1) and the 1/df1 scaling, but its stop depends on df2 through the
+geometric path down from the start (0.64 to 1.36 times the constant over df2 1.5 to 1.999, returning the last
+iterate or the stepped one), where Excel's value is the same to the last digit. So it is not Excel's search, and the
+constant is not implemented: copying it would be a fitted value (owner rule; reviewer-excel-fidelity check 7).
+Ours: `#NUM!` where the quantile saturates, and 7 ulp off at `F.INV.RT(1E-20,3,9)`; T-4662.
+Status: VERIFIED (excel-graph) for the cells; the mechanism UNVERIFIED
+Tasks: T-2435, T-2808, T-4662
 
 ## F.INV.RT and FINV at a tiny probability: Excel's own search, far from the math (T-4103)
 Rule: below p of about 1E-130, and at p = 2.22507385850721E-308 (DBL_MIN), Excel's F.INV.RT and FINV are often far
