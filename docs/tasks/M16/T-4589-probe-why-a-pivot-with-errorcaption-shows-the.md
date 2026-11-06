@@ -1,6 +1,6 @@
 ---
 id: T-4589
-title: "Probe why a pivot with errorCaption shows the caption in the Count and CountNums grand totals, and the Sum and Product accumulation order"
+title: "Probe why a pivot with errorCaption shows the caption in the Count and CountNums grand totals, and the Sum, StdDev and Var accumulation order"
 milestone: M16
 lane: research
 status: todo
