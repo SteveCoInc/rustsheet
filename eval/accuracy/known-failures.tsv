@@ -297,3 +297,6 @@ accuracy/VDB/s1!Calc!A187	T-4510	fractional start where straight line wins at pe
 accuracy/VDB/s1!Calc!A188	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
 accuracy/VDB/s1!Calc!A189	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
 accuracy/VDB/s1!Calc!A200	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
+accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 0^k
+accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
+accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
