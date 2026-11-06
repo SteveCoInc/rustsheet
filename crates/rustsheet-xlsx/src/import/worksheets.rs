@@ -435,7 +435,9 @@ pub(super) fn get_cell_from_excel(
                 None => Cell::EmptyCell { s: cell_style },
             },
             "inlineStr" => {
-                let s = rich_text_inline.unwrap_or_default();
+                // An inline string's `_xHHHH_` escapes decode like a shared string's (poi/60289.xlsx
+                // TABLE!B2 stores `Rich Text_x000d_` inline; T-4150).
+                let s = decode_xlsx_escapes(&rich_text_inline.unwrap_or_default());
                 let si = shared_strings.intern(&s) as i32;
 
                 Cell::SharedString { si, s: cell_style }
@@ -505,7 +507,7 @@ pub(super) fn get_cell_from_excel(
             "inlineStr" => {
                 // NB: This is untested, I don't know of any engine that uses inline strings in formulas
                 make_cell(FormulaValue::Text(
-                    rich_text_inline.unwrap_or("".to_string()).into(),
+                    decode_xlsx_escapes(&rich_text_inline.unwrap_or_default()).into(),
                 ))
             }
             _ => {
