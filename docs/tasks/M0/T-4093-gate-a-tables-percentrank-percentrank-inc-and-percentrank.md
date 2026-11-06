@@ -3,7 +3,7 @@ id: T-4093
 title: "Gate A tables, PERCENTRANK, PERCENTRANK.INC and PERCENTRANK.EXC"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
