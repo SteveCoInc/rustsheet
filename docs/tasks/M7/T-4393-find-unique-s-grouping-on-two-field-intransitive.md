@@ -3,7 +3,7 @@ id: T-4393
 title: "Find UNIQUE's grouping on two-field intransitive runs: the t4379 and t4380 probes no coalescing merge fits"
 milestone: M7
 lane: research
-status: in-progress
+status: todo
 priority: P2
 size: M
 tier: opus
@@ -26,6 +26,10 @@ or the negatives recorded and the cells parked with their reason.
   sort-then-group-neighbours model under the row-by-row field comparison does that. Leads: how Excel compares two
   rows (all fields at once, or a per-field pass, or a hashed key), and whether UNIQUE sorts at all. One-field runs
   (t4200, t4237) never tell the rules apart.
+- Ruled out (2026-11-06, docs/research/t4393/sort_search.py): sort-then-group-neighbours models with no coalescing
+  in the merge. Eleven sorts, both source orders, four grouping tests and four representatives, plus a no-sort scan
+  of the kept rows, all miss 35 or more of the 60 runs. The search belongs among coalescing merges (`pushkeep`
+  misses 5).
 - Any model must still give every cell of t4195's, t4200's, t4237's, t4241's, t4342's, t4344's and t4358's probes
   (docs/research/t4241/model.py scores 234 blocks); GROUPBY and PIVOTBY build their key trees on UNIQUE's kept rows.
 - Owned cells: probes/t4379-pivotby-repeated-unreached-leaf (20, moved from T-4380): Calc!B1, Calc!C1, Calc!D1,
