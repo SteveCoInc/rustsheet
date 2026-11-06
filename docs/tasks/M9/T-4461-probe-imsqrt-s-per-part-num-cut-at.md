@@ -47,7 +47,7 @@ and above (`1.3408E154` ...) are `#NUM!`. The cut lies between those two 15-digi
 The engine matches all 41 cells: no engine change, no follow-up. The only baseline change is the new `C` line for
 the case in `eval/baseline/probes.txt`. engineering.md updated. IMSQRT has no Gate A definition, so no sidecar.
 
-## Handoff
+## Handoff (resumed)
 Work is complete; only a clean review round 3 and the enqueue remain (PR #3605).
 - Round 1 (excel-fidelity) REQUEST_CHANGES: my first reading of the 17-digit cells was wrong (complex text truncates to
   15 digits, so they are one value). Fixed: added A37:A41 (`1.34078079299426E154`, all `#NUM!`), rewrote the
