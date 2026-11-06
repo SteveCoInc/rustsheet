@@ -2519,6 +2519,7 @@ C	probes/t4596-take-drop-picker-name-index-choose.case.json	28
 C	probes/t4600-holiday-number-text-off-calendar.case.json	176
 C	probes/t4602-clock-text-colon-am-pm-and-spaces.case.json	95
 C	probes/t4603-im-reciprocal-tiny-parts.case.json	78
+C	probes/t4606-ifs-array-criterion-value-error.case.json	86
 C	probes/t4609-pivot-row-labels-2.case.json	298
 C	probes/t4610-row-column-array-error-element.case.json	13
 C	probes/t4611-randarray-min-max-whole-arrays.case.json	13
@@ -2526,6 +2527,7 @@ C	probes/t4612-pivot-date-items-and-casing.case.json	66
 C	probes/t4614-pivot-total-order-2.case.json	124
 C	probes/t4615-convert-prefixed-kelvin.case.json	346
 C	probes/t4616-pivot-total-order-3.case.json	528
+C	probes/t4619-weeknum-negative-snap-window.case.json	12
 C	probes/t4622-pivot-count-subtotals.case.json	202
 C	probes/t4625-gamma-dist-ratio-overflow.case.json	62
 C	probes/t4626-matrix-text-elements.case.json	28

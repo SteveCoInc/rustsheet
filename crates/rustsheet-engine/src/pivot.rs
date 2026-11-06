@@ -25,6 +25,7 @@ use crate::types::sheet_names_match;
 
 mod accumulate;
 mod date_groups;
+mod grid;
 pub(crate) mod layout;
 mod model;
 mod number_groups;
@@ -34,6 +35,7 @@ mod refresh;
 mod result;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
+pub use grid::{PivotBudget, PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};
 pub use layout::{
     lay_out, render, AxisLine, PivotCell, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM,
     COLUMN_LABELS, GRAND_TOTAL, MAX_PIVOT_CELLS, MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS,
@@ -71,6 +73,9 @@ pub struct PivotCache {
     pub fields: Vec<CacheField>,
     /// How many records; every [`CacheField::records`] has this length.
     pub record_count: u32,
+    /// `refreshOnLoad`: the facade refreshes the cache after a loaded workbook's first
+    /// recalculation (SPEC-0032 "Who refreshes, and when"; pivots.md, probes/t4128-pivot-spike R).
+    pub refresh_on_load: bool,
 }
 
 /// The worksheet range a cache was read from.

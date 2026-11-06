@@ -52,7 +52,7 @@ fn cache(range: &str, fields: Vec<(&str, Vec<CacheItem>)>) -> PivotCache {
                 ..CacheField::default()
             })
             .collect(),
-        record_count: 0,
+        ..PivotCache::default()
     }
 }
 

@@ -144,6 +144,7 @@ pub fn refresh(
     workbook_values_left: usize,
 ) -> Result<PivotCache, PivotCacheError> {
     let mut fresh = read_source(cache, source, workbook_values_left)?.finish();
+    fresh.refresh_on_load = cache.refresh_on_load;
     let old = fields_by_name(cache);
     for field in &mut fresh.fields {
         let Some(prior) = old.get(&fold_case(&field.name)) else {
@@ -255,6 +256,21 @@ fn fields_by_name(cache: &PivotCache) -> HashMap<String, &CacheField> {
         by_name.entry(fold_case(&field.name)).or_insert(field);
     }
     by_name
+}
+
+/// Per field of `old`, the index of the field of `new` it refreshed into: the field of the same
+/// case-folded name, as [`refresh`] matches a field's prior version ([`fields_by_name`]); `None`
+/// when the source no longer has it. The grid writer remaps a pivot's field indices by it
+/// (T-4151).
+pub(super) fn field_map(old: &PivotCache, new: &PivotCache) -> Vec<Option<u32>> {
+    let mut by_name = HashMap::with_capacity(new.fields.len());
+    for (index, field) in (0u32..).zip(&new.fields) {
+        by_name.entry(fold_case(&field.name)).or_insert(index);
+    }
+    old.fields
+        .iter()
+        .map(|field| by_name.get(&fold_case(&field.name)).copied())
+        .collect()
 }
 
 /// The cache field names of a source's `headers`, as Excel names them on refresh (pivots.md
