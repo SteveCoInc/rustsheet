@@ -3,7 +3,7 @@ id: T-4485
 title: "GROUPBY and PIVOTBY: probe which error wins in a 2-D array of functions (and against the 2-D #VALUE!); fix T-4449's citation nits"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
