@@ -15,7 +15,9 @@ use super::grouping::{
 };
 use super::lifted_options::Bound;
 use super::pivot_placement::{CheckedTotal, Placement, Shown, Slot};
-use super::relative_to::{Item, RelativeSets, RelativeTo};
+use super::relative_to::{
+    check_set_entries, ColumnRecords, Item, ParentSets, RelativeSets, RelativeTo,
+};
 use crate::{
     calc_result::CalcResult,
     cast::{array_node_to_string, MAX_TEXT_UNITS},
@@ -140,8 +142,23 @@ impl Model {
         let col_lines = cols.lines(col_levels, pivot.col_depth < 0);
         let row_lines = rows.lines(subtotal_levels(pivot.row_depth), pivot.row_depth < 0);
         // The sets name groups by index, so they are built once the groups are sorted.
-        let sets = if functions.needs_relative() {
-            let lines = (&row_lines[..], &col_lines[..]);
+        // `relative_to` 3 and 4 read their sets from the grid's cells ([`ParentSets`]).
+        let lines = (&row_lines[..], &col_lines[..]);
+        let parents = if functions.needs_relative() {
+            pivot.relative_to.parent_axis()
+        } else {
+            None
+        };
+        if parents.is_some() {
+            check_set_entries(
+                pivot.relative_to,
+                (&rows, &cols),
+                lines,
+                &pivot.records,
+                cell,
+            )?;
+        }
+        let sets = if functions.needs_relative() && parents.is_none() {
             let sets = RelativeSets::new(
                 pivot.relative_to,
                 (&rows, &cols),
@@ -168,12 +185,13 @@ impl Model {
             rows: row_totals,
             cols: col_totals,
         };
+        let parents = parents.map(|axis| ParentSets::new(axis, (&rows, &cols), &pivot.records));
         let lines = (&rows, &cols, &row_lines[..]);
         let (grid, total_error) = self.grid_rows(
             functions,
             &pivot,
             lines,
-            (&shown, &checked_totals, sets.as_ref()),
+            (&shown, &checked_totals, (sets.as_ref(), parents)),
             &totals,
             cell,
         );
@@ -200,7 +218,7 @@ impl Model {
         functions: &mut Functions,
         pivot: &Pivot,
         (rows, cols, lines): (&Grouping, &Grouping, &[Line]),
-        (shown, checked_totals, sets): (&[Shown], &[CheckedTotal], Option<&RelativeSets>),
+        (shown, checked_totals, (sets, parents)): (&[Shown], &[CheckedTotal], GridSets<'_>),
         totals: &Totals,
         cell: CellReferenceIndex,
     ) -> (Vec<Vec<ArrayNode>>, bool) {
@@ -217,6 +235,7 @@ impl Model {
             buckets: vec![Vec::new(); cols.groups.len()],
             merged: Vec::new(),
             sets,
+            parents,
             row: None,
             checked_totals,
             total_error: false,
@@ -275,6 +294,7 @@ impl Model {
                 bucket.extend_from_slice(records);
             }
         }
+        let parents = grid.prepare_parents(records);
         let shape = functions.shape();
         let mut output = Vec::with_capacity(shape.rows_per_group);
         for sub_row in 0..shape.rows_per_group {
@@ -291,7 +311,7 @@ impl Model {
                     row.push(value);
                     continue;
                 }
-                let relative = grid.relative_of(slot);
+                let relative = grid.relative_of(slot, parents.as_ref());
                 let values = grid.values;
                 let at = Aggregate {
                     rows: grid.cell_rows(slot, records),
@@ -301,7 +321,8 @@ impl Model {
             }
             output.push(row);
         }
-        self.check_totals(functions, grid, records, cell);
+        self.check_totals(functions, grid, (records, parents.as_ref()), cell);
+        grid.parents = parents;
         output
     }
 
@@ -316,7 +337,7 @@ impl Model {
         &mut self,
         functions: &mut Functions,
         grid: &mut Grid<'_>,
-        records: &[usize],
+        (records, parents): (&[usize], Option<&ParentSets<'_>>),
         cell: CellReferenceIndex,
     ) {
         if records.is_empty() {
@@ -329,7 +350,7 @@ impl Model {
             if !grid.has_records(gate) {
                 continue;
             }
-            let relative = grid.relative_of(slot);
+            let relative = grid.relative_of(slot, parents);
             let values = grid.values;
             let at = Aggregate {
                 rows: grid.cell_rows(slot, records),
@@ -828,6 +849,9 @@ struct Grid<'a> {
     /// The relative sets, when a function takes them, and the row item being laid out (`None`
     /// for the Total row).
     sets: Option<&'a RelativeSets>,
+    /// The `relative_to` 3 and 4 sets instead, taken out while a row line is laid out
+    /// ([`Grid::prepare_parents`]).
+    parents: Option<ParentSets<'a>>,
     row: Item,
     /// The Total column slots of one function over several value columns, whose cells are
     /// computed whether or not they are shown; one that is an error makes the whole result
@@ -861,26 +885,87 @@ impl<'a> Grid<'a> {
             // reached (over Bx Cy Cy Ax By of q q q p p the `ab` subtotal of q is `2, 3`, its one
             // leaf empty; probes/t4358-pivotby-unreached-column-leaf column D; T-4378).
             Slot::Subtotal { level, start, .. } => {
-                let prefix = self.cols.prefix(start, level);
-                self.merged.clear();
-                self.merged
-                    .extend(records.iter().copied().filter(|&record| {
-                        self.reached
-                            .get(record)
-                            .is_some_and(|path| path.get(..level) == Some(prefix))
-                    }));
+                let mut merged = std::mem::take(&mut self.merged);
+                merged.clear();
+                merged.extend(self.reached_class(level, start, records));
+                self.merged = merged;
                 &self.merged
             }
             Slot::Total { .. } => records,
         }
     }
 
-    /// The relative set of `slot`'s cell in the row being laid out ([`RelativeSets::of_cell`]).
-    fn relative_of(&self, slot: Slot) -> Relative<'a> {
-        self.sets
-            .map_or(NO_RELATIVE, |sets| sets.of_cell(self.row, slot_item(slot)))
+    /// The records among `records` (in source order) that reached the column class of group
+    /// `start`'s first `level` keys ([`Grid::cell_rows`]).
+    fn reached_class<'r>(
+        &'r self,
+        level: usize,
+        start: usize,
+        records: &'r [usize],
+    ) -> impl Iterator<Item = usize> + 'r {
+        let prefix = self.cols.prefix(start, level);
+        records.iter().copied().filter(move |&record| {
+            self.reached
+                .get(record)
+                .is_some_and(|path| path.get(..level) == Some(prefix))
+        })
+    }
+
+    /// The records of column item `item`'s cell over a row whose records are `records`, by
+    /// [`Grid::cell_rows`]'s rule, without the buckets: the parent cells of [`ParentSets`]
+    /// (`None` for every record, the Total's and a leaf no record reached; [`ColumnRecords`]).
+    fn column_records(&self, item: Item, records: &[usize]) -> ColumnRecords {
+        match item {
+            Some(Line::Group(group)) if self.unreached.contains(&group) => None,
+            Some(Line::Group(group)) => Some(
+                records
+                    .iter()
+                    .copied()
+                    .filter(|&record| self.column_of.get(record) == Some(&group))
+                    .collect(),
+            ),
+            Some(Line::Subtotal { level, start, .. }) => {
+                Some(self.reached_class(level, start, records).collect())
+            }
+            None => None,
+        }
+    }
+
+    /// Takes the `relative_to` 3 and 4 sets out and builds those of the row line being laid
+    /// out, whose records are `records`, for every slot it computes.
+    fn prepare_parents(&mut self, records: &[usize]) -> Option<ParentSets<'a>> {
+        let mut parents = self.parents.take()?;
+        let shown = self.shown.iter().filter_map(|&shown| match shown {
+            Shown::Own(slot) | Shown::Moved(slot) => Some(slot),
+            Shown::Empty => None,
+        });
+        let checked = self.checked_totals.iter().map(|total| total.slot);
+        parents.prepare(
+            (self.row, records),
+            shown.chain(checked).map(slot_item),
+            |item, records| self.column_records(item, records),
+        );
+        Some(parents)
+    }
+
+    /// The relative set of `slot`'s cell in the row being laid out: from `parents`
+    /// ([`ParentSets::of_cell`]), or [`RelativeSets::of_cell`].
+    fn relative_of<'p>(&self, slot: Slot, parents: Option<&'p ParentSets<'_>>) -> Relative<'p>
+    where
+        'a: 'p,
+    {
+        match parents {
+            Some(parents) => parents.of_cell(slot_item(slot)),
+            None => self
+                .sets
+                .map_or(NO_RELATIVE, |sets| sets.of_cell(self.row, slot_item(slot))),
+        }
     }
 }
+
+/// The relative sets of the grid's cells: shared sets for `relative_to` 0 to 2, parent sets for
+/// 3 and 4 (none for a function that takes no set).
+type GridSets<'a> = (Option<&'a RelativeSets>, Option<ParentSets<'a>>);
 
 /// The column item of a slot ([`RelativeSets::of_cell`]).
 fn slot_item(slot: Slot) -> Item {

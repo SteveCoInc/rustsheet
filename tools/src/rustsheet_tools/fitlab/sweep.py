@@ -92,10 +92,10 @@ _MAX_RANGE_CELLS = 1_000_000
 # One cell reference inside arithmetic (`A1249`, `Calc!$A$2`), never a function name such as
 # `LOG10(` or the start of a range.
 _CELL_TOKEN = rf"(?:(?:{_SHEET})!)?{_A1}(?![\w.$:!]|\s*[(:])"
-_ARITH = re.compile(rf"\s*(?:(?P<num>{_UNSIGNED})|(?P<ref>{_CELL_TOKEN})|(?P<op>[-+*/^()]))")
+ARITH_TOKEN = re.compile(rf"\s*(?:(?P<num>{_UNSIGNED})|(?P<ref>{_CELL_TOKEN})|(?P<op>[-+*/^()]))")
 _MAX_EXACT_EXPONENT = 1100  # beyond the double range either way
 _OPERATORS = frozenset("+-*/^()")
-_MAX_NESTING = 50  # parentheses and unary signs: a bound on the parser's recursion (directive 5)
+MAX_NESTING = 50  # parentheses and unary signs: a bound on the parser's recursion (directive 5)
 _CALL = re.compile(r"=[A-Za-z][\w.]*\([^()]*\)")  # one call over literals: `=PMT(0.2,1,10000)`
 _DATE = re.compile(r"DATE\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)", re.IGNORECASE)
 EPOCH = datetime.date(1899, 12, 30)  # serial 61 = 1900-03-01 (Excel's phantom 1900-02-29 is 60)
@@ -210,7 +210,7 @@ def _tokens(text: str) -> list[str]:
     out: list[str] = []
     pos, end = 0, len(text.rstrip())
     while pos < end:
-        m = _ARITH.match(text, pos)
+        m = ARITH_TOKEN.match(text, pos)
         if not m:
             msg = f"cannot evaluate argument {text!r}"
             raise UnparsedError(msg)
@@ -270,7 +270,7 @@ class _Arithmetic:
         return self.tokens[self.pos - 1]
 
     def primary(self, depth: int) -> float:
-        if depth > _MAX_NESTING:
+        if depth > MAX_NESTING:
             raise self.fail("nesting too deep")
         tok = self.take()
         if tok in ("+", "-"):

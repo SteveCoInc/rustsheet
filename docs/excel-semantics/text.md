@@ -1387,6 +1387,12 @@ Evidence: probes/t3302-text-funcs-arrays (E1-E20, oracle-filled). The probe show
 `CONCAT`/`TEXTJOIN` over `CHAR`, `UNICHAR`, `CODE`, `UNICODE` ranges and computed arrays already
 agree; the only gap was `CHAR`, fixed in T-3302.
 
+Per-element errors (T-2946, probes/t2946-char-array, excel-graph 2026-11-06, 18/18 cells match): in a spilled
+`CHAR(array)` an element 0, 256, text ("x") or blank gives `#VALUE!` in its own slot and the neighbours keep their
+characters (`CHAR({65;0;66})` is "A", `#VALUE!`, "B"; same for 256 and "x"; `CHAR(A1:A5)` over 65, 256, "x", blank, 66 is
+"A", `#VALUE!`, `#VALUE!`, `#VALUE!`, "B"). `=LET(s,SEQUENCE(10),CONCAT(CHAR(48+s)))` is "123456789:" and
+`CONCAT(IF(SEQUENCE(3)>1,CHAR(80+SEQUENCE(3)),CHAR(48+SEQUENCE(3))))` is "1RS". The engine already did all of this.
+
 ## ARRAYTOTEXT format range lifts and spills; TEXTJOIN text ignore_empty beats an error delimiter (T-3512 batch)
 
 Oracle-filled cells of the arg-pairs batch (ARRAYTOTEXT implemented, T-3884; TEXTJOIN T-3885):

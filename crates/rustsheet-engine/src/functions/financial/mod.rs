@@ -83,7 +83,7 @@ impl Model {
         result: CalcResult,
         cell: &CellReferenceIndex,
         accept_number_node: bool,
-        range_text_as_number: bool,
+        text_as_number: bool,
         handle_empty_cell: impl Fn() -> Result<Option<f64>, CalcResult>,
         handle_non_number_cell: impl Fn() -> Result<Option<f64>, CalcResult>,
     ) -> Result<Vec<f64>, CalcResult> {
@@ -126,7 +126,7 @@ impl Model {
                                     values.push(value);
                                 }
                             }
-                            CalcResult::String(text) if range_text_as_number => {
+                            CalcResult::String(text) if text_as_number => {
                                 match self.cast_number(&text) {
                                     Some(value) => values.push(value),
                                     None => {
@@ -168,6 +168,16 @@ impl Model {
                             ArrayNode::Empty => {
                                 if let Some(value) = handle_empty_cell()? {
                                     values.push(value);
+                                }
+                            }
+                            ArrayNode::String(text) if text_as_number => {
+                                match self.cast_number(&text) {
+                                    Some(value) => values.push(value),
+                                    None => {
+                                        if let Some(value) = handle_non_number_cell()? {
+                                            values.push(value);
+                                        }
+                                    }
                                 }
                             }
                             _ => {
@@ -265,7 +275,7 @@ impl Model {
             arg,
             cell,
             false,            // Do not accept a single number node
-            true, // numeric text in a range cell reads as its number (probes/xirr-back-dated-stop A31)
+            true,             // numeric text reads as its number (probes/xirr-back-dated-stop A31)
             || Ok(Some(0.0)), // Treat empty cells as zero
             || {
                 Err(CalcResult::new_error(
@@ -293,12 +303,16 @@ impl Model {
         let value_count = self.flow_element_count(values)?;
         let date_count = self.flow_element_count(dates)?;
         let error = if value_count == 1 && date_count == 1 {
-            // A text or boolean cell keeps the old `#VALUE!` (gen-m9/097af1ca33638670 A255,
-            // a91bad4e84f49739 A203, bc04c1f478c9896c A318; `XIRR(5,"x")`,
+            // A non-numeric text or boolean cell keeps the old `#VALUE!` (gen-m9/097af1ca33638670
+            // A255, a91bad4e84f49739 A203, bc04c1f478c9896c A318; `XIRR(5,"x")`,
             // probes/t3312-xirr-xnpv-inner-calls A45), but an empty cell is a number here:
             // `XIRR(<empty>,39448)` and `XIRR(5,<empty>)` are `#N/A` (A20-A25, A40, A43, A44;
-            // T-3312).
-            if self.text_or_boolean_cell(values) || self.text_or_boolean_cell(dates) {
+            // T-3312), and so is a numeric or date text cell: `XIRR(<-100>,<"39508">)` and
+            // `XIRR(<"1/1/2025">,<39448>)` are `#N/A` (probes/t3816-xirr-element-reading D13,
+            // D14, D20, D24, D25, D30; T-3816).
+            if self.non_numeric_text_or_boolean_cell(values)
+                || self.non_numeric_text_or_boolean_cell(dates)
+            {
                 return None;
             }
             Error::NA
@@ -789,7 +803,13 @@ impl Model {
         // comes first (financial.md "XIRR and XNPV under the gen-m9 statistical cells" and
         // "Financial functions in the gen-m9 financial sweep (T-2257)", T-2428).
         let size_error = if matches!(dates, CalcResult::Error { .. }) {
-            None
+            // One values cell that is a boolean or non-numeric text is read before an error dates
+            // argument: `XIRR(<TRUE>,<#DIV/0!>)` is `#VALUE!` (probes/t3816-xirr-element-reading
+            // D39, T-3816), but a larger values range is not (`XIRR(<" x " in range>,<#N/A>)` is
+            // `#N/A`, gen-m9/67a4c03afd63f988 A241).
+            (self.flow_element_count(&values) == Some(1)
+                && self.non_numeric_text_or_boolean_cell(&values))
+            .then(|| CalcResult::new_error(Error::VALUE, cell, String::new()))
         } else {
             self.xirr_size_error(&values, &dates, cell)
         };

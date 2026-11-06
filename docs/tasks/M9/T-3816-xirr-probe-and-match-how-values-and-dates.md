@@ -3,7 +3,7 @@ id: T-3816
 title: "XIRR: probe and match how values and dates elements are read (fractional, negative and out-of-range dates, text and booleans in ranges and arrays, shapes) and which error wins"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -44,10 +44,27 @@ Code: `fn_xirr`, `xirr_numbers` and `xirr_size_error` in crates/rustsheet-engine
 where both functions agree, fix the shared helper, not each copy (directive 3).
 
 ## Acceptance criteria
-- [ ] A probe case (excel-graph, canary-verified) covers the element kinds and shapes above.
-- [ ] The engine matches every probed cell; cells owned by T-3312, T-3267 or T-2118 are left to them and named.
-- [ ] financial.md gains an XIRR element-reading entry (rule, probe cells, VERIFIED) in the same PR.
-- [ ] `make check` green; eval known failures only shrink (baseline updated, no new lines); reviewers approve.
+- [x] A probe case (excel-graph, canary-verified) covers the element kinds and shapes above.
+- [x] The engine matches every probed cell; cells owned by T-3312, T-3267 or T-2118 are left to them and named.
+- [x] financial.md gains an XIRR element-reading entry (rule, probe cells, VERIFIED) in the same PR.
+- [x] `make check` green; eval known failures only shrink (baseline updated, no new lines); reviewers approve.
 
 ## Out of scope
 - XNPV (T-3815); the guess argument (T-3312); the solver's root, stops and digits (T-3287, T-3484).
+
+## Outcome
+Probe probes/t3816-xirr-element-reading (excel-graph, 2026-11-05, 175 cells; written by
+docs/research/t3815/gen_case.py, now one generator for T-3815's XNPV case and this one, whose XNPV output is
+byte-identical). Before the fix 25 cells were off; now 175/175 match. Rules found (financial.md "XIRR reads its values
+and dates element by element, the date first (T-3816)"):
+- numeric and date text elements read as numbers in array constants too (B13, B14, B20, B24, B25, B30), and a one-cell
+  numeric or date text value or date is the size check's `#N/A` (D13, D14, D20, D24, D25, D30), not `#VALUE!`;
+- over two ranges or arrays XIRR walks index by index, the date before the value, with error elements at their index
+  (rows 35-37, 40 in A, B, C): `Model::xirr_walk_error` over the existing sparse `flow_elements` reader, which gains a
+  `text_as_number` flag for XIRR;
+- one TRUE value cell against one error date cell is `#VALUE!` (D39).
+The element kinds the task lists are all covered; no cell needed T-3312, T-3267 or T-2118 (the guess is left out of
+the probe, and numeric-text cells all match).
+
+Eval delta: probes +1 case (175 cells, all bit-exact); known failures unchanged elsewhere (`make eval-check`:
+0 regressions, 0 fixed in other cases).

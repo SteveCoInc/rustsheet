@@ -225,10 +225,13 @@ probes/t4332-fraction-fresh.case.json	17
 probes/t4333-count-ulp-scan.case.json	6
 probes/t4344-groupby-descending-search.case.json	2
 probes/t4358-pivotby-unreached-column-leaf.case.json	21
+probes/t4368-poisson-shape-and-edge.case.json	40
 probes/t4370-ulp-map-2.case.json	55
 probes/t4370-ulp-map.case.json	7
 probes/t4379-pivotby-repeated-unreached-leaf.case.json	20
 probes/t4380-unique-keep-head-holdout.case.json	50
+probes/t4382-pivotby-intransitive-paths.case.json	66
+probes/t4420-pivotby-parent-sets-three-fields.case.json	14
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1

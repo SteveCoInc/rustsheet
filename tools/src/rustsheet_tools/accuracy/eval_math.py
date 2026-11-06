@@ -21,8 +21,10 @@ A candidate cell gets no math value when:
   may itself be arithmetic over number literals and such cells or constant cells
   (`A112*A112`, `1/(1+20/(4*A1249))`; T-3924): the fit lab's one evaluator (`arithmetic`) gives its
   double, and the math is the function at that double;
-- an argument is anything else the fit lab's sweep reader leaves unparsed (a nested call), text,
-  empty or a range;
+- an argument is anything else the fit lab's sweep reader leaves unparsed, text, empty or a range.
+  A nested call, or arithmetic between call results, makes the cell a composite instead
+  (`composite`, T-3993, decision 0297): it gets the outermost node's math at its inner nodes'
+  doubles, unless it calls a function with no definition (`no definition for ...`);
 - an array parameter of a `literal_arrays` definition is not written as an array literal (AGGREGATE over
   a range, whose hidden rows the math does not model);
 - the case is a 1904 workbook and the definition reads date serials in the 1900 system
@@ -55,7 +57,7 @@ from typing import Any
 
 import mpmath
 
-from rustsheet_tools.accuracy import defs, literal
+from rustsheet_tools.accuracy import composite, defs, literal
 from rustsheet_tools.accuracy.model import REGISTRY, Definition, NoValueError, Param
 from rustsheet_tools.accuracy.tables import (
     DIGITS,
@@ -269,14 +271,25 @@ def scored_cells(spec: dict[str, Any], oracle: dict[str, Any] | None) -> Iterabl
 @dataclass(frozen=True)
 class Candidate:
     """A scored one-call cell of a function with a definition: its arguments as the definition
-    reads them, or why it gets no math value without running the generator."""
+    reads them, or why it gets no math value without running the generator. A composite cell
+    (`composite`, T-3993) has no `definition`; its `tree` is the parsed formula."""
 
     sheet: str
     a1: str
     text: str
-    definition: Definition
+    definition: Definition | None
     args: list[literal.Arg] | str
     scale: int | None = None  # the exact outer scale's power of two (`scaled_call`), else None
+    tree: composite.Node | None = None
+
+    def compute(self) -> MathValue:
+        """The math value of a candidate whose arguments fit (`args` is not a reason)."""
+        if self.tree is not None:
+            return composite.compute(self.tree)
+        if self.definition is None or isinstance(self.args, str):
+            msg = f"{self.sheet}!{self.a1} has no math to compute"
+            raise ValueError(msg)
+        return compute(self.definition, self.args)
 
 
 def candidates(case_path: Path, sidecar: Path) -> list[Candidate]:
@@ -288,7 +301,11 @@ def candidates(case_path: Path, sidecar: Path) -> list[Candidate]:
     out: list[Candidate] = []
     for sheet, a1 in scored_cells(spec, oracle):
         text = sheets.get(sheet, {}).get(a1)
-        if not isinstance(text, str) or (call := scaled_call(text)) is None:
+        if not isinstance(text, str):
+            continue
+        if (call := scaled_call(text)) is None:
+            if (tree := composite.parse(text, sheet, book, fit_arg)) is not None:
+                out.append(Candidate(sheet, a1, text, None, tree.why or [], tree=tree.root))
             continue
         name, inner, scale = call
         definition = REGISTRY.get(name)
@@ -304,7 +321,10 @@ def candidates(case_path: Path, sidecar: Path) -> list[Candidate]:
         try:
             values = [parse_arg(a, sheet, book, cell_refs=True) for a in texts]
         except (UnparsedError, ValueError) as err:
-            out.append(Candidate(sheet, a1, text, definition, f"unparsed ({type(err).__name__})", scale))
+            if (tree := composite.parse(text, sheet, book, fit_arg)) is not None:  # a nested call
+                out.append(Candidate(sheet, a1, text, None, tree.why or [], tree=tree.root))
+            else:
+                out.append(Candidate(sheet, a1, text, definition, f"unparsed ({type(err).__name__})", scale))
             continue
         out.append(Candidate(sheet, a1, text, definition, fit_args(definition, values), scale))
     return out
@@ -329,7 +349,10 @@ def case_math(case_id: str, case_path: Path, sidecar: Path) -> CaseMath:
             out.skip(c.args)
             continue
         try:
-            value = compute(c.definition, c.args)
+            value = c.compute()
+        except composite.CompositeSkipError as err:
+            out.drop(c.sheet, c.a1, c.text, str(err))
+            continue
         except NoValueError:
             out.drop(c.sheet, c.a1, c.text, NO_VALUE)
             continue

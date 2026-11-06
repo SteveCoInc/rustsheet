@@ -508,6 +508,10 @@ Still off: shape 50 below a/100 (sweep A46:A48, B46:B48, 32 to 114 ulp; T-3219):
 value, and its error is 50 times LN(y)'s rounding error plus 41 to 52 units of 2^-52 there, a log form with the rest of
 the exponent about 1E-14 high; no tried order of a LN(y), y and GAMMALN(50) in doubles or in an x87 register, nor the
 ratio form, Loader's saddle point or `rcomp`, reproduces it (13 to 435 ulp off).
+Where a*LN(y) is below EXP's underflow the form is 0 though the true density is a normal double: at shape 2,
+`GAMMA.DIST(1E-250,2,1,FALSE)` and `(1E-200,2,1,FALSE)` are 0 against about 1E-250 and 1E-200 (probes/t2753-gamma-density-
+ratio-sweep A14, A15; A13 at 1E-300 too), relative error 1 against the T-3925 math sidecars; an R3 candidate for the owner
+(T-4392), not marked.
 Implemented in: functions/statistical/gamma.rs `log_form_density` (GAMMA.DIST, GAMMADIST, and CHISQ.DIST through
 chisq.rs).
 Status: VERIFIED for the forms (every probed density the form moves ends 0 to 2 ulp from Excel; UNVERIFIED from y = 2
@@ -1536,6 +1540,11 @@ not take the density's or the pmf's prefactor); Excel's `ERFC.PRECISE` of Temme'
 `SQRT(a*(m/a-1-LN(m/a)))`, halved, plus the exact remainder 3/4/56, 0/1/68, 3/10/47 (so it is not Temme's leading
 term on Excel's erfc). Excel's cdf stays closer to the correctly rounded Q (within 4 ulp at 29 of 42 points) than to
 any model built on a companion value.
+T-4368 (probes/t4368-poisson-shape-and-edge, excel-graph 2026-11-05; docs/research/t4368/score.py; splits fixed before scoring: T-4357's train rows 1:9, hold-out 10:18, fresh 19:42, plus edge rows 43:94) found three things.
+- One kernel: `POISSON.DIST(k,m,TRUE)` equals `CHISQ.DIST.RT(2m,2k+2)` bit for bit at all 94 points.
+- The error is not special to integer shapes. Below 1.3a the half-integer upper tails `CHISQ.DIST.RT(2m,2a-1)` and `(2m,2a+1)` (Q at a - 1/2, a + 1/2) are as far from the truth as the cdf. Bit-exact / within 4 ulp / max ulp, train, hold-out, fresh: the cdf 1/6/9, 1/4/17, 7/18/8; Q(a - 1/2) 2/6/18, 0/0/41, 4/17/11; Q(a + 1/2) 3/5/12, 1/3/25, 6/21/7. So Excel's error lies in a gamma-Q kernel that every shape shares. `GAMMA.DIST(m,a+0.5,1,TRUE)` (P, near 1 here) is within 1 ulp throughout, which says nothing about Q's relative error.
+- Across x = a (k 50, 100, 200, 300, m/a 0.996 to 1.008, rows 43:94) every column is within 1 ulp. No switch between a series and a continued fraction at x = a shows, so the error grows somewhere between 1.008a and 1.3a (T-4409).
+Ours is several ulp off at some of the near-x = a cells where Excel is within 1 ulp: CHISQ.DIST.RT B72, D73, C83 and GAMMA.DIST E91, E94 (T-4409).
 The
 large-shape BETA.DIST cdf and density with b 20.5 to 39 and a 1E-5 or 1E-6 (window A141:A188) do not change with the
 prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path (the algdiv residue, T-3035). Below shape 20 neither this form nor the direct one is Excel's
@@ -1562,7 +1571,7 @@ and Q keep the direct form below 20 (T-3219). The bounds are fits inside their b
 (`CHISQ.DIST(50,5,FALSE)` against `CHISQ.DIST(37.5,6,FALSE)`); the lower end 1.4a is the large-shape `NEAR_MODE` bound,
 unbracketed below 20 (UNVERIFIED: no probed density between a and 1.5a changes with the form).
 Status: VERIFIED (excel-graph)
-Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4322, T-4339, T-4340, T-4334, T-4345, T-4346, T-4357
+Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4322, T-4339, T-4340, T-4334, T-4345, T-4346, T-4357, T-4368, T-4409
 Deep upper tail sweep (T-3289): probes-numeric/t3284-gamma-deep-upper-tail (343 cells: POISSON cdf at mean 4(k+1) to 100(k+1),
 its CHISQ.DIST.RT twin, half-integer shapes at x = 4 to 100 df, and 32-double ulp runs at POISSON(2,100) and CHISQ.DIST.RT(200,5)).
 Excel is within 1 ulp of the 50-digit value in 64 of the 343 cells (docs/research/t3284/ulp_vs_exact.py), and today's engine is
@@ -5603,7 +5612,7 @@ Tasks: T-2035 (partial), T-2093, T-2095
   gap triage 2026-10-19). The density at x = 0 is 0 for every probed shape. Implementing these edges is T-2035 (HYPGEOM.DIST, WEIBULL.DIST, PHI) and T-2095 (F.DIST). `F.DIST.RT(0,...)` and `CHISQ.DIST.RT(0,...)` are 1.
 - **Boundary probabilities:** `CHISQ.INV(0,3)`, `F.INV(0,3,7)` are 0 and p = 1 is `#NUM!`; the RT inverses
   are the mirror (`p=1` -> 0, `p=0` -> `#NUM!`). TRUE as p is 1 (`CHISQ.INV(TRUE,3)` = `#NUM!`).
-  `CHISQ.INV(0.5,1E10)` = 9999999999.333334 (not probed above 1E10; the T.INV and F limits are in T-1043 and T-1530).
+  `CHISQ.INV(0.5,1E10)` = 9999999999.333334 (`#NUM!` above 1E10, the deg_freedom domain limit: probes/t3396-gamma-inv-band-huge column B, df 1.4E10 to 2.4E10; the T.INV and F limits are in T-1043 and T-1530).
 - **HYPGEOM.DIST domain:** `#NUM!` for N = 0 (even `(0,4,8,0)`; negative N not probed), for n > N (`(1,25,8,20)`), M > N, sample_s above
   min(n,M) is not an error but 0 / 1 (`(5,4,8,20)` = 0 density, 1 cumulative), and N = 1E10 is `#NUM!` while N =
   2E9 works. `(0,0,0,1,FALSE)` = 1. Zero n or M gives density 1 at s = 0 and 0 above.
@@ -5705,13 +5714,19 @@ Unequal sizes and single points follow "Array arguments given a scalar, a single
   a constant 1E200 series against {1,2,3} is `#DIV/0!` in both orders (CORREL, SLOPE), and x = 1.00E155, 1.01E155, 1.02E155
   (raw squares overflow, deviation squares do not) gives finite CORREL 1.0000000000000002, SLOPE 1.0000000000000014E-153 and
   STEYX 0 (Z73-Z79). Two pairs: STEYX, CORREL, SLOPE and RSQ of {1,2} on {1E200,2E200} are all `#NUM!` (Z69-Z72), so the
-  overflow check also comes before STEYX's n < 3 `#DIV/0!`. Unprobed: y's overflow alone for STEYX, and a sum of products
-  that overflows alone while both sums of squares are finite (ours is `#DIV/0!`).
+  overflow check also comes before STEYX's n < 3 `#DIV/0!`.
+  T-4047 (probes/t4047-paired-overflow, excel-graph 2026-11-06, 21/21 cells match): with only y's Σ(y-ȳ)² overflowing
+  (x = 1,2,3,4; y = 1E200, 2E200, 3E200, 5E200) CORREL, PEARSON, RSQ and STEYX are `#NUM!` while SLOPE (1.3E200),
+  INTERCEPT (-5E199) and FORECAST (2.1E200) are finite. With Σx overflowing (x near 1.5E308) all seven are `#NUM!`. With
+  values near 1E160 whose products overflow but whose deviation sums of squares do not, CORREL 0.8014464209332465, RSQ
+  0.6423163656267105, SLOPE 1.0213333333333334, INTERCEPT and FORECAST -2.1333333333333018E158 are finite and only STEYX is
+  `#NUM!` (its variance subtracts sxy*sxy/sxx, which overflows). Ours gave STEYX `#DIV/0!` for the y-only case until T-4047.
+  Unprobed: y's overflow alone for STEYX with two or three points (ours is `#DIV/0!` for two).
 Evidence: probes/regression-pairs-a, regression-pairs-b, regression-forecast (excel-graph, 2026-10-16, T-1620); the
 error cells in these cases are `#DIV/0!`, so whether a range error propagates or is replaced is unprobed.
 Ours: the unequal-size `#N/A` matches since T-1292, single points since T-1401; CORREL, PEARSON, RSQ, SLOPE, INTERCEPT, STEYX and FORECAST compute from the sums about the means in Excel's order, a typed text or boolean argument is one value with no number, and STEYX of a negative difference is `#NUM!` (T-1723). COVAR with text, blank or boolean cells (`#N/A` in ours) is still open.
 Status: VERIFIED (web)
-Tasks: T-1723, T-1724, T-1725, T-2080 (overlaps T-1292, T-1707, T-1401, T-1290)
+Tasks: T-1723, T-1724, T-1725, T-2080, T-4047 (overlaps T-1292, T-1707, T-1401, T-1290)
 
 ## TREND: defaults, shapes, single points and error inputs
 Rule: TREND treats an empty known_x or new_x argument as the default (`TREND(A1:A6,B1:B6,,FALSE)` fits the known x's: 6 rows,
@@ -6502,7 +6517,9 @@ falls from ln(1/p) about 201 at 7E9 by about 11.5 per 1E9 to about 167 at 1E10, 
 Neither T-3350's cdf ratio (the start's lower tail is about 1 here, so the ratio is ln(1/p) and would stay at 205.3)
 nor the start's distance in standard deviations, o - z (the last value and first `#NUM!` are 41.8 and 42.4 at 7E9,
 44.3 and 45.0 at 1E10, 43.6 and 44.3 at 1.1E10), is constant along it. `CHISQ.INV(3E-k,2a)` is `#NUM!` at every probed
-k (22 to 122 by 10) at every one of these shapes, inside the band GAMMA.INV has at the same shape.
+k (22 to 122 by 10) at every one of these shapes, but only because its df, 1.4E10 to 2.4E10, is above CHISQ.INV's
+deg_freedom limit of 1E10 (the case's math sidecar gives every B cell "deg_freedom outside [1, 1e+10]"). The column
+says nothing about the band and is not a hold-out for any band rule.
 Ours: `GAMMA.INV` is a value past this lower edge from 8E9 on (A35, A55:A56, A75:A77, A95:A98), and at 1.1E10 to
 1.2E10 inside Excel's empty band (A107:A108, A114:A119, A129:A140, A151:A161); the CHISQ.INV cells match. T-3409's model
 of Excel's search explains both edges (the start past the mode pays (zs^2)/2 steps to come down).
