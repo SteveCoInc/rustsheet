@@ -1540,6 +1540,11 @@ not take the density's or the pmf's prefactor); Excel's `ERFC.PRECISE` of Temme'
 `SQRT(a*(m/a-1-LN(m/a)))`, halved, plus the exact remainder 3/4/56, 0/1/68, 3/10/47 (so it is not Temme's leading
 term on Excel's erfc). Excel's cdf stays closer to the correctly rounded Q (within 4 ulp at 29 of 42 points) than to
 any model built on a companion value.
+T-4368 (probes/t4368-poisson-shape-and-edge, excel-graph 2026-11-05; docs/research/t4368/score.py; splits fixed before scoring: T-4357's train rows 1:9, hold-out 10:18, fresh 19:42, plus edge rows 43:94) found three things.
+- One kernel: `POISSON.DIST(k,m,TRUE)` equals `CHISQ.DIST.RT(2m,2k+2)` bit for bit at all 94 points.
+- The error is not special to integer shapes. Below 1.3a the half-integer upper tails `CHISQ.DIST.RT(2m,2a-1)` and `(2m,2a+1)` (Q at a - 1/2, a + 1/2) are as far from the truth as the cdf. Bit-exact / within 4 ulp / max ulp, train, hold-out, fresh: the cdf 1/6/9, 1/4/17, 7/18/8; Q(a - 1/2) 2/6/18, 0/0/41, 4/17/11; Q(a + 1/2) 3/5/12, 1/3/25, 6/21/7. So Excel's error lies in a gamma-Q kernel that every shape shares. `GAMMA.DIST(m,a+0.5,1,TRUE)` (P, near 1 here) is within 1 ulp throughout, which says nothing about Q's relative error.
+- Across x = a (k 50, 100, 200, 300, m/a 0.996 to 1.008, rows 43:94) every column is within 1 ulp. No switch between a series and a continued fraction at x = a shows, so the error grows somewhere between 1.008a and 1.3a (T-4409).
+Ours is several ulp off at some of the near-x = a cells where Excel is within 1 ulp: CHISQ.DIST.RT B72, D73, C83 and GAMMA.DIST E91, E94 (T-4409).
 The
 large-shape BETA.DIST cdf and density with b 20.5 to 39 and a 1E-5 or 1E-6 (window A141:A188) do not change with the
 prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path (the algdiv residue, T-3035). Below shape 20 neither this form nor the direct one is Excel's
@@ -1566,7 +1571,7 @@ and Q keep the direct form below 20 (T-3219). The bounds are fits inside their b
 (`CHISQ.DIST(50,5,FALSE)` against `CHISQ.DIST(37.5,6,FALSE)`); the lower end 1.4a is the large-shape `NEAR_MODE` bound,
 unbracketed below 20 (UNVERIFIED: no probed density between a and 1.5a changes with the form).
 Status: VERIFIED (excel-graph)
-Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4322, T-4339, T-4340, T-4334, T-4345, T-4346, T-4357
+Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4322, T-4339, T-4340, T-4334, T-4345, T-4346, T-4357, T-4368, T-4409
 Deep upper tail sweep (T-3289): probes-numeric/t3284-gamma-deep-upper-tail (343 cells: POISSON cdf at mean 4(k+1) to 100(k+1),
 its CHISQ.DIST.RT twin, half-integer shapes at x = 4 to 100 df, and 32-double ulp runs at POISSON(2,100) and CHISQ.DIST.RT(200,5)).
 Excel is within 1 ulp of the 50-digit value in 64 of the 343 cells (docs/research/t3284/ulp_vs_exact.py), and today's engine is
