@@ -2270,6 +2270,7 @@ C	probes/t4069-fixed-denominator-tail.case.json	26
 C	probes/t4086-collation-later-passes.case.json	75
 C	probes/t4086-groupby-weightless.case.json	28
 C	probes/t4088-groupby-multifield.case.json	50
+C	probes/t4098-tests-prob-domains.case.json	56
 C	probes/t4099-file-xlpm-unbound-names.case.json	39
 C	probes/t4107-numeral-2000-suffix.case.json	135
 C	probes/t4108-currency-tag-position.case.json	34
@@ -8168,6 +8169,15 @@ F	probes/t4045-f-dist-rt-zero-cut-fresh.case.json	Calc!F7
 F	probes/t4045-f-dist-rt-zero-cut-fresh.case.json	Calc!F8
 F	probes/t4045-f-dist-rt-zero-cut-fresh.case.json	Calc!F9
 F	probes/t4069-fixed-denominator-tail.case.json	S!A4
+F	probes/t4098-tests-prob-domains.case.json	Calc!A3
+F	probes/t4098-tests-prob-domains.case.json	Calc!A32
+F	probes/t4098-tests-prob-domains.case.json	Calc!A33
+F	probes/t4098-tests-prob-domains.case.json	Calc!A4
+F	probes/t4098-tests-prob-domains.case.json	Calc!A44
+F	probes/t4098-tests-prob-domains.case.json	Calc!A45
+F	probes/t4098-tests-prob-domains.case.json	Calc!A48
+F	probes/t4098-tests-prob-domains.case.json	Calc!A49
+F	probes/t4098-tests-prob-domains.case.json	Calc!A5
 F	probes/t4222-regression-flag-ranges.case.json	Calc!A1
 F	probes/t4222-regression-flag-ranges.case.json	Calc!A101
 F	probes/t4222-regression-flag-ranges.case.json	Calc!A103
