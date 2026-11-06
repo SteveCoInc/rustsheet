@@ -39,4 +39,6 @@ no R3 case; (b) an R3 case over a bounded region (which functions, which |x - kÂ
 ## Outcome
 - Owner ruling 2026-11-06, decision 0300: keep matching Excel. This is not an R3 case: no `MATH-OVER-EXCEL`
   entry, no R3 mark, no engine change (the engine already matches Excel here).
+- numbers.md "SIN / COS at multiples of 90Â°" and engineering.md "IMSIN and IMCOS reduce the real part by the x87 64-bit
+  pi (T-3726)" now state the ruling.
 - Eval delta: none.
