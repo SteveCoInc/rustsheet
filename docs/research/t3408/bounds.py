@@ -15,8 +15,10 @@ origin/main 73e09221b). Each row carries its fit lab side (`fitlab.holdout.is_ho
 
 Excel's outcome is not a clean function of the step count: on train, runs of 241..291 steps return their own value
 while runs of 217..287 steps do not. So no cap is Excel's; 200 is a point on the train-score plateau. This prints:
-the train and test score of each candidate cap; the train cells past 200 steps by outcome; the range of the returning
-train runs up to the chosen cap, with and without the cells where run and retry agree; and the stall evidence.
+the train and test score of each candidate cap (inside the shipped range); the train cells past 200 steps by outcome;
+the range of the returning train runs up to the chosen cap, first over the cells where run and retry give different
+bits (the shipped range, rounded outward: largest |c| up to 2.2E+8, guess from -0.99934), then over all of them; and
+the stall evidence.
 
     python3 -I docs/research/t3408/bounds.py docs/research/t3408
 """
@@ -83,11 +85,11 @@ def main() -> None:
         and r["excel"] == "run's value"
         and int(r["step"]) <= CHOSEN
     ]
-    bounds(returning, f"range of the train runs of 51..{CHOSEN} steps that return their own value")
     bounds(
         [r for r in returning if r["run_equals_retry"] != "yes"],
-        "  the same, without the cells where run and retry give the same bits",
+        f"range of the train runs of 51..{CHOSEN} steps that return their own value, run and retry differing (shipped)",
     )
+    bounds(returning, "  the same, with the cells where run and retry give the same bits (not used)")
     print("stalled stops past step 30 (all sides):")
     for r in sorted(read(folder / "stalls.tsv"), key=lambda r: int(r["step"])):
         if int(r["step"]) > 30:

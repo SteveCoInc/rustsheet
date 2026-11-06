@@ -3,7 +3,7 @@ id: T-3408
 title: "IRR's long secant runs: Excel finishes runs of up to 200 steps on their own digits"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P0
 size: M
 tier: opus
@@ -80,58 +80,68 @@ The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, 
 
 ## Outcome (2026-11-06, branch agent/functions-financial/T-3408-irr-conventional-digits)
 - **Engine:** `irr_secant` runs up to `IRR_LONG_RUN_STEPS` = 200 steps (was 50) on 6..54 flows with the largest |c|
-  in 5.6E-9..9.6E+8 and a guess in -0.9997..9.81E+7 (`IRR_LONG_RUN_RANGE`, R4.3), 50 elsewhere. A stalled zero step
+  in 5.6E-9..2.2E+8 and a guess in -0.99934..9.81E+7 (`IRR_LONG_RUN_RANGE`, R4.3), 50 elsewhere. A stalled zero step
   stops a run only within its first 50 steps (the old cap; Excel's stall bound is bracketed 41..69, not fitted). `FITTED(T-3408, ...)`, quality/fitted.json 95 -> 96, decision 0320.
   Unit tests: `irr_secant_runs_up_to_200_steps_on_the_evidenced_flows`, `the_long_secant_cap_applies_only_inside_its_evidence`.
 - **Why:** Excel's value on 21 of the in-scope cells is the guess run's own stop iterate after 51..200 steps (see "R4
   plan"). The counterexamples that refuted a cap before (T-3548, T-3806: t3478-irr-r4-wide A227, Gate A A228, A215)
   are stalled stops past step 41, as are irr-guess-edges-2 A25-A27; all 6 are `#NUM!` in Excel. All six lie outside
   the cap's range, so they explain the earlier refutations but do not test the stall bound inside it.
-- **Review rounds 1 and 2 (fidelity, R4.1):**
+- **Review rounds 1 to 3 (fidelity, R4.1):**
   - The R4 plan's bracket was read off all cells, and round 1's "train bracket 200..216" used a step filter derived
     from test cells.
   - Past 200 steps Excel's outcome is not a clean function of the step count. Train runs of 241, 281 and 291 steps
-    return their own value (t3411-irr-r4-fresh A2, t3411-irr-r4-fresh-4 A63, t3411-irr-r4-fresh A70), while train
+    return their own value (t3411-irr-r4-fresh A2, t2927-irr-fallback-sweep A97 at 256, t3411-irr-r4-fresh-4 A63,
+    t3411-irr-r4-fresh A70), while train
     runs of 217..287 steps give the retry's value.
-  - So 200 is not Excel's cap but the low end of the train-score plateau. Of the 88 train cells whose result depends
-    on the cap, 65 match at any cap from 200 to 216; a cap of 50 matches 13, 291 matches 61 and 400 matches 56. The
-    FITTED text says so.
-  - The range comes from the train runs of 51..200 steps that return their own value:
+  - So 200 is not Excel's cap but the low end of the train-score plateau. Of the 87 train cells whose result depends
+    on the cap (inside the final range), 64 match at any cap from 200 to 216; a cap of 50 matches 12, 291 matches 61
+    and 400 matches 56. The FITTED text says so.
+  - The range comes from the 53 train runs of 51..200 steps that return their own value and whose run and retry give
+    different bits:
     - 6..54 flows (t2927 A93, t3411-irr-r4-fresh-4 A148);
-    - |c| 5.62E-9..9.52E+8 (t3478-irr-r4-wide A270, A278);
-    - guess -0.99970..9.81E+7 (t3411-irr-r4-fresh-3 A57, t3478 A234).
-  - Counting only cells where run and retry give different bits narrows that range to |c| up to 2.15E+8 and guesses
-    from -0.99933. The gate is kept wider: in that band, test A206 and fresh A2 and A48 match Excel only with the cap,
-    and no cell moves away from Excel.
+    - |c| 5.62E-9..2.15E+8 (t3478-irr-r4-wide A270, t2927 A95);
+    - guess -0.99933..9.81E+7 (t3478 A230, A234).
+
+    It is rounded outward to 2.2E+8 and -0.99934, the rounding chosen before any held-out cell was scored.
+  - Round 2 had kept the gate wider, at |c| 9.6E+8 and guess -0.9997, which rested on the run = retry cells A278 and
+    fresh-3 A57. Round 3 found that this kept a band on test and fresh-sweep evidence (test A206, fresh A2, A48),
+    which is tuning on held-out cells. The range was narrowed (work-loop step 5c, after the round limit).
+  - The cost of narrowing: test t3478-irr-r4-wide A206 goes back to main's `#NUM!`, and fresh-sweep A2, A13, A31 and
+    A48 go back to main's retry digits. No cell is worse than main.
+  - The tag now counts the 80 returning runs of 51..200 steps inside the range.
   - docs/research/t3408/ holds the replay (replay_test.rs), its cell lists (long_runs.tsv, cap_runs.tsv,
     stalls.tsv) and bounds.py, which prints every count.
   - The tiered R4.1 table (bit-exact / 4 ulp / 15 digits) for main, the model and the correctly rounded root is in
     decision 0320. `IRR_LONG_RUN_FLOWS` became the named `IRR_LONG_RUN_RANGE`.
-  - Engine behaviour is unchanged by both rounds.
+  - Engine behaviour was unchanged by rounds 1 and 2; round 3 narrowed the range.
 - **R4.1** (fit lab split, 2,333 IRR literal cells of eval/suites, margin 5 points): train 1,126 -> 1,175 of 1,620
-  (69.51% -> 72.53%), test 507 -> 529 of 713 (71.11% -> 74.19%); type/error mismatches 352 -> 336 and 167 -> 154.
-  49 train and 22 test cells fixed, 0 worse, 0 changed-still-failing. Within 4 ulp / 15 digits: train 1,156 -> 1,203
-  and 1,159 -> 1,206; test 513 -> 534 and 514 -> 535. The correctly rounded root, where a math root exists, is
+  (69.51% -> 72.53%), test 507 -> 528 of 713 (71.11% -> 74.05%).
+  49 train and 21 test cells fixed, 0 worse, 0 changed-still-failing. Within 4 ulp / 15 digits: train 1,156 -> 1,203
+  and 1,159 -> 1,206; test 513 -> 533 and 514 -> 534. The correctly rounded root, where a math root exists, is
   bit-exact on 71 of 951 train and 37 of 424 test cells.
 - **R4.2** fresh sweep probes-numeric/t3408-irr-r4-fresh (seed "T-3408/r4-fresh", committed after the freeze commit
-  04bd27413, excel-graph 2026-11-06): passed 76 -> 119 of 150, 43 fixed, none away. Gate A envelope against its
-  50-digit roots: 108 -> 119 in, per stratum 21/24/18/11/20/14 -> 23/25/22/14/21/14. The 31 left are all `#NUM!` for
-  Excel's root (11 on 55..148 flows, outside the range), listed in T-3548. Math sidecar
+  04bd27413, excel-graph 2026-11-06):
+  - passed 76 -> 115 of 150 (119 before round 3), 39 fixed, none away;
+  - Gate A envelope against its 50-digit roots: 108 -> 119 in, per stratum 21/24/18/11/20/14 ->
+    23/25/22/14/21/14;
+  - the 31 cells outside the envelope are all `#NUM!` for Excel's root (11 on 55..148 flows, outside the range);
+    they are listed in T-3548 with A2, A13, A31 and A48. Math sidecar
   `t3408-irr-r4-fresh.math.json` (25 one-argument cells; `rustsheet-accuracy math` skips the guess calls).
 - **Gate A:** `rustsheet-eval accuracy` 0 failing; 4 T-3548 known-failure lines are now inside the envelope and are
   removed (r4-T-3411 A208, A278; r4-T-3407 A128, A194). Line A286 (T-3408's, a two-flow zero root at the noise floor)
   moves to T-4213.
-- **Eval delta** (full `rustsheet-eval run`, main 73e09221b vs branch; 71 cells fixed, 0 worse):
+- **Eval delta** (full `rustsheet-eval run`, main 73e09221b vs branch; 70 cells fixed, 0 worse):
   - probes/t3347-irr-conventional-num: passed 23 -> 25 of 42 (A10, A11)
   - probes/t3406-irr-num-boundary: 88 -> 90 of 144 (A5, A26)
   - probes-numeric/t3347-irr-conventional-holdout: 110 -> 115 of 144 (A23, A47, A50, A56, A57)
   - probes-numeric/t3347-irr-conventional-sweep: 95 -> 97 of 120 (A38, A88)
   - probes-numeric/t3411-irr-r4-fresh: 91 -> 99 of 150; -2: 86 -> 93; -3: 90 -> 99; -4: 84 -> 87
   - probes-numeric/t3411-irr-residual-scale: 65 -> 66 of 72 (A10)
-  - probes-numeric/t3478-irr-r4-wide: 241 -> 264 of 300
+  - probes-numeric/t3478-irr-r4-wide: 241 -> 263 of 300
   - probes-numeric/t4213-irr-r4-fresh: 102 -> 108 of 150
   - probes-numeric/t2927-irr-fallback-sweep: 40 -> 43 of 165 (A22, A23, A96)
-  - new probes-numeric/t3408-irr-r4-fresh: 119 of 150
+  - new probes-numeric/t3408-irr-r4-fresh: 115 of 150
   - `make eval-baseline` drops t3347-irr-conventional-num A10, A11 and t3406-irr-num-boundary A5, A26 from
     eval/baseline/probes.txt.
 - **In-scope cells, per cell:** fixed (20): t3411-irr-r4-fresh A53, A63, A67, A68, A74, A75; fresh-2 A53, A60, A75,
@@ -147,15 +157,5 @@ The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, 
   "IRR on conventional flows near 0 and -10%" updated.
 - Follow-up evidence, not filed: stratum 5 of the sweep suggests Excel also finishes long runs on 55..148 flows; a
   future widening of the range needs its own probe (decision 0320).
-
-## Blocked because
-Resumed after the review-round limit (step 5c).
-- PR #3651, HEAD 807951447. CI is green. Security approved at 0a6fa8600 and design at 0a6fa8600 (minors applied since). Excel-fidelity asked for changes in rounds 1 to 3. Rounds 1 and 2 were fixed: the split and the tiered table; the cap is now chosen by train score, 200 being the low end of the plateau 200..216.
-- Round 3's open BLOCKING finding is R4.1 and R4.2. `IRR_LONG_RUN_RANGE` reaches past the train cells that discriminate. Those reach only |c| <= 2.15E+8 (t2927-irr-fallback-sweep A95) and guess >= -0.99933 (t3478-irr-r4-wide A230). The wider band rests on train only through run = retry cells: A278 and t3411-irr-r4-fresh-3 A57. The one train cell there that depends on the cap, A240, is indifferent. 0320 keeps the band because test A206 and fresh-sweep cells t3408-irr-r4-fresh A2 and A48 pass with it, which is tuning on held-out evidence.
-- Next step (work-loop 5c), which the reviewer gave:
-  - Narrow `IRR_LONG_RUN_RANGE` to the discriminating train range, rounded outward: largest |c| up to about 2.2E+8, guess from about -0.99934. Keep flows 6..54.
-  - Update the FITTED range and cell count, and rerun bounds.py, `make eval-baseline` and every check.
-  - Report the cost in the R4.1 table and in the R4.2 and Gate A sections: test A206, fresh A2 and A48.
-  - Fix 0320's heading "Cap and range from train only".
-  - MINOR: also cite t2927 A97 (step 256, Excel returns the run's value) among the past-200-step train runs.
-  - Do not keep the wider band without an owner ruling in a decision record.
+- History: the task blocked at the review-round limit after round 3 and was resumed under work-loop step 5c. Round
+  3's finding, the range kept wider than the discriminating train evidence, is fixed above.
