@@ -71,3 +71,30 @@ Every failing table point has an owner.
   - 4 points are within 15 digits of Excel only (accuracy's "Excel 15 digits only" went from 1333 to 1337). The
     engine matches Excel to 15 digits there but is outside the math envelope.
 - **Eval delta:** none, because no engine or eval-suite case changed.
+
+## Landing notes
+Session 2026-11-06 (opus worker): the landing window closed with this PR (#3465) not yet enqueued.
+- **State:** the head before these notes is 12bf9ab8a. All three reviewers approved that head in round 2
+  (security, design, excel-fidelity); their MINOR findings are filed as T-4439 (#3467).
+- **CI is red on 12bf9ab8a:** job "eval (Excel-compatibility gate)", run
+  https://github.com/SteveCoInc/rustsheet/actions/runs/42154393195. The failure is `make eval-math-check`: "math
+  sidecars: probes, probes-numeric: stale".
+  - Registering the seven new definitions turns every existing one-call STDEV, STDEV.S, STDEVA, VAR, VAR.S, VARA and
+    DEVSQ probe cell into a math candidate, and those cells have no sidecar entry yet. One example is
+    probes-numeric/t1749-devsq-fresh, which has about 200 DEVSQ cells.
+  - T-3925 met the same step: its Outcome lists the 42 stale cases it regenerated.
+  - Everything else passed: `rustsheet-eval accuracy` reports 0 failing and missing tables 128, and the eval run
+    itself is green.
+- **Next:**
+  1. Regenerate only the stale cases, additively. Take each case's sidecar as it stands on origin/main and add the
+     new candidates, so that no unrelated one-call entry drifts.
+     - The T-3993 session did exactly this with a short script over `eval_math._spec_entries(suite)`, calling
+       `case_math` per case. The whole-suite `rustsheet-accuracy math` takes over 30 minutes.
+     - Check the drift with a key-by-key comparison against origin/main. Expect no existing entry to be gone or
+       changed.
+  2. Run `make eval-math-check`, then `make check-fast`. Push, and add the regenerated case count to the Outcome.
+  3. Re-run only the reviewers the sidecar change concerns (excel-fidelity), then enqueue.
+- **Do not repeat:**
+  - The first draws cut out equal numbers (more than two) and relative spreads below 1E-6. The fidelity review
+    rejected that as tuning the domain to agreement, so both regions are drawn again.
+  - Giving DEVSQ VAR's one-pass overflow rule was also rejected.
