@@ -35,8 +35,8 @@ Cell lists:
 - calipers/roundtrip/formulas_engineering/golden.xlsx (4): Sheet1!D26, D27, J26, J27
 
 ## Acceptance criteria
-- [ ] Every cell above is triaged (fix, task, exception by decision, or not visibly off), recorded in the Outcome.
-- [ ] `make check` green; reviewers approve.
+- [x] Every cell above is triaged (fix, task, exception by decision, or not visibly off), recorded in the Outcome.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Decision 0308's cells (T-4373).
@@ -68,3 +68,22 @@ open owner (`exit_owners.py --milestone M9` and `--all-off` against a copy of do
 it needs an open M9 owner for those cells and the owner column of the T-4534 lines of eval/milestones/
 exit-exceptions.tsv and phase1-exceptions.tsv moved (a protected path: a decision). J1328 needs a line like J136's
 (decision 0134 mechanism) or an owner the same way.
+
+## Outcome (2026-11-06)
+Every listed cell is triaged. The two partial PRs settled the calipers cells (decision 0315, T-4630; 0308's
+`CELL("filename")`), BESSEL D18 and F18 (not visibly off) and poi J1328's evidence. Decision 0324 settles the rest:
+- Every line of eval/milestones/exit-exceptions.tsv and phase1-exceptions.tsv that named T-4534 now names T-4373, the
+  open M14 placeholder for desktop-only evidence, which lists them. These are IF_ARRAY C4, C11, E4 and ATAN2_POWER
+  D14, D26 (exit exceptions, not visibly off); COMPLEXs N6, AL12, AL26, K25 and IRR Two Values!C4 (exit and rate
+  exceptions; the engine follows the web); poi EverythingTests J136, G936, H936, K936 (decision 0134).
+- poi EverythingTests!J1328 `SUMPRODUCT(G1330:G1330,I1330:I1330)` is a Phase 1 rate exception under 0324, owned by
+  T-4373. Excel 15 cached `#VALUE!`; Microsoft 365 gives the engine's 0 (probes/t2921-sumproduct-one-cell-numeric-text
+  A45).
+- probes/forecast-ets-longer-series K1:K36, K39:K42 were already decision 0308's lines (T-4373).
+`make eval` with this task done, on main 4679d912 plus this branch, with calipers and poi fetched:
+- `scripts/exit_owners.py --milestone M9`: 0 cells without an open M9 owner.
+- `--all-off`: 0 visibly-off cells without an open owner.
+- `eval/runs/desktop-owned.tsv` lists the forecast and J1328 cells under T-4373.
+- SUMPRODUCT: `rate_excepted` 1, `rate_visible` 0.
+- No stale or unchecked exception lines.
+Eval delta: none (no engine change, no baseline change).
