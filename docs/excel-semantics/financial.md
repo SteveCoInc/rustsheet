@@ -1962,14 +1962,15 @@ Status: VERIFIED (excel-graph)
 Implemented in: `fn_mirr` in functions/financial/mirr.rs (T-1798); replaces the hand-taken limits at rate -1.
 Tasks: T-1798
 
-## MIRR's finance power overflowing under a later negative flow is #DIV/0! (T-4116)
-Rule: with a positive flow, a finance power past the double range is `#DIV/0!`, not `#NUM!`, when a negative flow
-follows the first: `MIRR({-3496.38522311601,97.9347197399849,-81.6919783865016,180.891974550287,218.629532704649},1E+200,0.00166838654471219)`
-is `#DIV/0!` (accuracy/MIRR/s1 A125), where `MIRR({-100,50,80},1E+200,0.1)` and `-1E+200` are `#NUM!` ("MIRR error and
-edge cases" A15, A24: the only negative flow is the first). It is the error the no-positive-flow case gives
-(`MIRR({-1,-2,-3},1E+200,0.1)`, A29), so the finance overflow's error follows the negative flows, not whether a positive
-flow exists. Unprobed: whether any negative flow after the first decides it or only one whose own power overflows
-(A125's negative flow at index 2 is divided by (1+fr)^2 = 1E+400, its first overflowing power).
+## MIRR at finance 1E+200 over five flows with a negative flow at index 2 is #DIV/0! (T-4116)
+Rule (one probed point): `MIRR({-3496.38522311601,97.9347197399849,-81.6919783865016,180.891974550287,218.629532704649},1E+200,0.00166838654471219)`
+is `#DIV/0!` (accuracy/MIRR/s1 A125): finance rate 1E+200, five flows with positive ones, and a negative flow at index 2,
+the first index whose finance power (1+fr)^2 = 1E+400 overflows. With a positive flow and the first flow the only
+negative one, a finance overflow is `#NUM!` instead (`MIRR({-100,50,80},1E+200,0.1)` and `-1E+200`, "MIRR error and edge
+cases" A15, A24); with no positive flow it is `#DIV/0!` (A29).
+Hypotheses for T-4537 to probe (neither is settled by A125): (a) any negative flow after the first makes a finance
+overflow `#DIV/0!`; (b) only a negative flow whose own finance power overflows does (a negative flow at index 1 under
+1E+200, whose power is finite, would then stay `#NUM!`).
 Evidence: accuracy/MIRR/s1 A125 (excel-graph, 2026-11-06, T-4116).
 Ours: `#NUM!` (`fn_mirr` takes the finance overflow's error from whether a positive flow exists); T-4537.
 Status: VERIFIED (excel-graph)

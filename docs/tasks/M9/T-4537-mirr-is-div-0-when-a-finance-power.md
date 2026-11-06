@@ -15,7 +15,7 @@ MIRR gives Excel's error code when its finance power overflows and the flows hol
 after the first, so the Gate A known failure accuracy/MIRR/s1 A125 goes.
 
 ## Context
-- financial.md "MIRR's finance power overflowing under a later negative flow is #DIV/0! (T-4116)": found by the T-4116
+- financial.md "MIRR at finance 1E+200 over five flows with a negative flow at index 2 is #DIV/0! (T-4116)": found by the T-4116
   Gate A table. `MIRR({-3496.38522311601,97.9347197399849,-81.6919783865016,180.891974550287,218.629532704649},1E+200,0.00166838654471219)`
   is `#DIV/0!` in Excel (accuracy/MIRR/s1 A125); the engine gives `#NUM!`, because it picks the finance overflow's error
   from whether a positive flow exists (`MIRR({-100,50,80},1E+200,0.1)` is `#NUM!`, probes/fin-mirr-edges A15).

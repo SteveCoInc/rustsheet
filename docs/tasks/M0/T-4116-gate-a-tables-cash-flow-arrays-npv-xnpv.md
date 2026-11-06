@@ -75,12 +75,15 @@ Every failing table point has an owner.
   - Known failure accuracy/MIRR/s1 A125, owner T-4537 (filed here, its scope is exactly this rule):
     `MIRR({-3496.38522311601,97.9347197399849,-81.6919783865016,180.891974550287,218.629532704649},1E+200,0.00166838654471219)`
     is `#DIV/0!` in Excel and `#NUM!` in the engine.
-- New quirk, recorded in financial.md, "MIRR's finance power overflowing under a later negative flow is #DIV/0!
-  (T-4116)": with a positive flow, the finance overflow is `#DIV/0!` beside a later negative flow (A125), not the
-  `#NUM!` of fin-mirr-edges A15 and A24, whose only negative flow is the first. What exactly separates the two is left
-  for T-4537 to probe.
+- New quirk, recorded in financial.md, "MIRR at finance 1E+200 over five flows with a negative flow at index 2 is #DIV/0! (T-4116)": that one point is `#DIV/0!`
+  where fin-mirr-edges A15 and A24 (the first flow the only negative one) are `#NUM!`. The entry states it as the
+  probed point and leaves two candidate rules (any later negative flow, or only one whose own finance power overflows)
+  as hypotheses for T-4537 to probe.
 - **Excel kept as the target (decisions 0300, 0301):** no point of the four tables is more than 1e-4 relative off the
-  math.
+  math. Among the eval cells that now get math values, probes/xirr-exact-root-sign A1, A2 and A4-A7 (two-flow XNPVs
+  at an exact root, residues of a few ulps near 0; A3 gets no math value: its sidecar lists it as not converged) are 0.78x to
+  6.3x off the math (A2 6.3, A1 4.6, A6 3.0, A7 0.87, A4 0.84, A5 0.78); the engine follows Excel there ("XNPV
+  discounts with Excel's `^`"), and no R3 mark is proposed.
 - Math sidecars: `rustsheet-accuracy math --function` over the four functions, for probes and probes-numeric: 13 new
   sidecars (539 cells, 62 of them math domain errors) and 606 cells added to 14 existing ones, with no existing cell
   changed or removed. `make eval-math-check` prints "current".

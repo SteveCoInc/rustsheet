@@ -31,9 +31,8 @@ Sources (financial.md):
   negative flow are `#DIV/0!`; all-negative flows are -1; a reinvest rate of -1 is `#DIV/0!`; a finance rate of -1 is
   `#DIV/0!` when a negative flow follows the first and a value otherwise; rates below -1 are values and `#NUM!` where
   the ratio goes negative (`MIRR({50,-100,80},-2,..)`, three flows: the square root); either power past the double
-  range is an error (`#DIV/0!` or `#NUM!` by the flows' signs; probes/fin-mirr-edges, fin-mirr-overflow-*; with a
-  later negative flow a finance overflow is `#DIV/0!`, "MIRR's finance power overflowing under a later negative flow
-  is #DIV/0! (T-4116)", found by this table).
+  range is an error (`#DIV/0!` or `#NUM!` by the flows' signs; probes/fin-mirr-edges, fin-mirr-overflow-*; "MIRR at
+  finance 1E+200 over five flows with a negative flow at index 2 is #DIV/0! (T-4116)", found by this table).
 - "NPV and FVSCHEDULE arguments", "FVSCHEDULE with one empty schedule cell is the principal" and "XNPV, XIRR and
   FVSCHEDULE beside their whole data": FVSCHEDULE reads a numeric schedule whole and has no domain on it.
   "FVSCHEDULE whose running product overflows: excel-graph cannot open it" is OPEN, so a product past the double range
@@ -91,7 +90,7 @@ WHOLE_DATA_SOURCE = "financial.md#xnpv-xirr-and-fvschedule-beside-their-whole-da
 MIRR_ORDER_SOURCE = "financial.md#mirrs-evaluation-order"
 MIRR_EDGES_SOURCE = "financial.md#mirr-error-and-edge-cases"
 MIRR_OVERFLOW_SOURCE = (
-    "financial.md#mirrs-finance-power-overflowing-under-a-later-negative-flow-is-div0-t-4116"
+    "financial.md#mirr-at-finance-1e200-over-five-flows-with-a-negative-flow-at-index-2-is-div0-t-4116"
 )
 FVSCHEDULE_EMPTY_SOURCE = "financial.md#fvschedule-with-one-empty-schedule-cell-is-the-principal"
 FVSCHEDULE_OVERFLOW_SOURCE = (
