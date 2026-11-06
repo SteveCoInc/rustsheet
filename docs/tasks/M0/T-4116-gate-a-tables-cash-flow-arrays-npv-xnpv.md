@@ -70,7 +70,7 @@ Every failing table point has an owner.
   NPV 4, XNPV 11, MIRR 11), filled from excel-graph with 0 failures. Every Excel error matches a coded domain.
 - `rustsheet-eval accuracy`: 639 of 640 inside the envelope (636 on both sides, 3 through Excel's 15 digits only:
   NPV A64, MIRR A190 and A199, cancelling sums or a MIRR near 0, 2.8E-6 at most), 0 failing, 1 known failure added,
-  `missing tables` 102 to 98. The engine is bit-exact with Excel on 639 of 640: all 614 numeric points and 25 of the 26
+  `missing tables` 102 to 98 at the first generation (83 to 79 after merging main with T-4105). The engine is bit-exact with Excel on 639 of 640: all 614 numeric points and 25 of the 26
   errors.
   - Known failure accuracy/MIRR/s1 A125, owner T-4537 (filed here, its scope is exactly this rule):
     `MIRR({-3496.38522311601,97.9347197399849,-81.6919783865016,180.891974550287,218.629532704649},1E+200,0.00166838654471219)`
