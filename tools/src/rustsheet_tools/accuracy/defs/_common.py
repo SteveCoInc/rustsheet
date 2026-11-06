@@ -58,6 +58,21 @@ def ill_conditioned(kappa: float) -> None:
         raise NoValueError(msg)
 
 
+MARGIN_RANGE = (NORMAL_MIN, 1e300)  # an intermediate inside this is a normal double, clear of the overflow
+
+
+def confidence_margin(quantile: mpmath.mpf, sd: mpmath.mpf, n: mpmath.mpf) -> mpmath.mpf:
+    """quantile·sd/√n, the margin CONFIDENCE.NORM, CONFIDENCE and CONFIDENCE.T share (T-4581): each passes its own
+    quantile and size. NoValueError where sd, sd·quantile, sd/√n, quantile/√n or the margin leaves `MARGIN_RANGE`: no
+    cell shows where Excel's products overflow or underflow, so such a point is unprobed."""
+    root = mpmath.sqrt(n)
+    for intermediate in (sd, sd * quantile, sd / root, quantile / root, sd * quantile / root):
+        if not MARGIN_RANGE[0] <= abs(intermediate) <= MARGIN_RANGE[1]:
+            msg = "an intermediate leaves the normal double range (unprobed)"
+            raise NoValueError(msg)
+    return sd * quantile / root
+
+
 def zero_pole(args: Sequence[MathArg]) -> str | None:
     """One-argument functions with a pole at 0 (COT, CSC, COTH, CSCH): Excel's `#DIV/0!`."""
     (x,) = scalars(args)
