@@ -8,6 +8,7 @@ use serde_json::Value as Json;
 
 use crate::expressions::token::get_error_by_english_name;
 use crate::expressions::utils::number_to_column;
+use crate::model::Model;
 use crate::pivot::{
     read_source, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea,
     DataField, PageField, PivotCache, PivotField, PivotItem, PivotTable, RecordValue, SourceArea,
@@ -170,7 +171,21 @@ pub(crate) fn item_of(cache: &PivotCache, field: u32, value: &Json) -> u32 {
 /// The pivot the case builder writes for the definition of sheet `name`'s pivot.
 pub(crate) fn probe_pivot(case: &Json, name: &str) -> (PivotCache, PivotTable) {
     let spec = &sheet(case, name)["pivot_tables"][0];
-    let cache = source_cache(case, spec["source"].as_str().unwrap());
+    probe_pivot_over(
+        case,
+        name,
+        source_cache(case, spec["source"].as_str().unwrap()),
+    )
+}
+
+/// [`probe_pivot`] over `cache`, a cache of the pivot's source read some other way (the
+/// engine's own refresh over a [`probe_model`], whose formulas it evaluates).
+pub(crate) fn probe_pivot_over(
+    case: &Json,
+    name: &str,
+    cache: PivotCache,
+) -> (PivotCache, PivotTable) {
+    let spec = &sheet(case, name)["pivot_tables"][0];
     let definition = &spec["definition"];
     let field = |name: &str| {
         u32::try_from(cache.fields.iter().position(|f| f.name == name).unwrap()).unwrap()
@@ -316,6 +331,37 @@ pub(crate) fn probe_pivot(case: &Json, name: &str) -> (PivotCache, PivotTable) {
         pivot_field.subtotal_top = flag(&attrs["subtotalTop"], pivot_field.subtotal_top);
     }
     (cache, table)
+}
+
+/// A model holding the case's sheets, in order, and their cells: a text starting with `=` is a
+/// formula, evaluated by [`Model::evaluate`] like any other.
+pub(crate) fn probe_model(case: &Json) -> Model {
+    let mut model = Model::new_empty("probe", "en", "UTC", "en").unwrap();
+    for (index, spec) in (0u32..).zip(case["sheets"].as_array().unwrap()) {
+        let name = spec["name"].as_str().unwrap();
+        if index == 0 {
+            model.rename_sheet_by_index(0, name).unwrap();
+        } else {
+            model.add_sheet(name).unwrap();
+        }
+        for (at, value) in spec["cells"].as_object().unwrap() {
+            let (column, row) = position(at);
+            let (row, column) = (
+                i32::try_from(row + 1).unwrap(),
+                i32::try_from(column + 1).unwrap(),
+            );
+            match value {
+                Json::String(text) => model.set_user_input(index, row, column, text.clone()),
+                Json::Number(n) => {
+                    model.update_cell_with_number(index, row, column, n.as_f64().unwrap())
+                }
+                Json::Bool(b) => model.update_cell_with_bool(index, row, column, *b),
+                other => panic!("case cell {at}: {other}"),
+            }
+            .unwrap();
+        }
+    }
+    model
 }
 
 /// A diagonal pivot: record `i` is row item `i` and column item `i`, Sum of its index.

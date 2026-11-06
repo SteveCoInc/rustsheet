@@ -245,7 +245,7 @@
    },
    "A243": {
     "t": "e",
-    "why": "a negative cost or salvage, or a salvage above the cost: #NUM!",
+    "why": "a cost of 0 or less, a negative salvage, or a salvage above the cost: #NUM!",
     "f": "=AMORLINC((-1E+300),36940,39176,(-439103),10,Data!C10,3)"
    },
    "A245": {

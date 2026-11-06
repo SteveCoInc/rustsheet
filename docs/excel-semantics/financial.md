@@ -2865,14 +2865,28 @@ Rule: AMORLINC and AMORDEGRC read cost, date_purchased, first_period, salvage, p
 error, text or boolean is returned; text "1" is 1), and a date that does not floor to 0-2958465 (9999-12-31) is `#NUM!` as it
 is read (`AMORLINC(2400,-1,NA(),..)` and `AMORLINC(2400,39679,2958466,NA(),..)` are `#NUM!`, `AMORLINC(NA(),-1,..)` `#N/A`;
 dates 0 and 0.5 pass, `AMORLINC(2400,0.5,NA(),..)` is `#N/A`). Then the values are checked, all `#NUM!`: a negative cost or
-salvage, a salvage above the cost, a negative period, a rate of 0 or less, a purchase after the first period (one on
-it is valid: `AMORLINC(2400,1,1,300,1,0.15,1)` is 360). A salvage *equal* to the cost is no error: both functions are 0
-at the periods probed, 1 to 5 (`AMORLINC(99977.707698474,42751,42993,99977.707698474,2,0.213533204746625)` is 0;
-accuracy/AMORDEGRC/s1 A114, A118, A128, A130, A131 and accuracy/AMORLINC/s1 A124, A125, excel-graph, 2026-11-06,
-T-4111), though AMORDEGRC's walk would charge `rate·remain` at period 1 there. Period 0 and periods below 1 with a
-salvage equal to the cost are unprobed; ours is `#NUM!` (T-4504). Only then the basis is read: its error, text or boolean, then
+salvage, a salvage above the cost, a cost of 0 (with its salvage of 0: `AMORLINC(0,39679,39813,0,0,0.15,1)` and
+`AMORDEGRC(0,..,0,1,..)` are `#NUM!`), a negative period, a rate of 0 or less, a purchase after the first period (one on
+it is valid: `AMORLINC(2400,1,1,300,1,0.15,1)` is 360). Only then the basis is read: its error, text or boolean, then
 `#NUM!` for any basis but 0, 1, 3 or 4 (`AMORLINC(-1,39679,39813,300,1,0.15,NA())` is `#NUM!`). AMORDEGRC's asset-life check
-comes last (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is `#N/A`). A purchase date below 1 is serial 0, the day before
+comes next (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is `#N/A`). Last, a salvage *equal* to a positive cost is 0 at
+every period, with no charge computed:
+- Both functions are 0 at periods 0, 0.0001, 0.5, 1 to 8 and 1.5, AMORDEGRC's half period and the rest periods after it
+  included (rates 0.15, 0.25 and 0.4, prorated and full first periods), and AMORLINC at rates 0.5, 1 and 2
+  (probes/amor-salvage-equal-cost A1-C18, E7-E9; also `AMORLINC(99977.707698474,42751,42993,99977.707698474,2,
+  0.213533204746625)`, accuracy/AMORDEGRC/s1 A114, A118, A128, A130, A131 and accuracy/AMORLINC/s1 A124, A125, T-4111).
+- Every check above still wins: AMORDEGRC at rates 0.5, 0.6, 1 and 2 is `#NUM!` (periods 0, 0.5 and 1), a basis of
+  `NA()` is `#N/A` (rate 0.5 too), bases 2 and 5 `#NUM!`, and a purchase after the first period, a rate of 0 and a
+  period of -1 `#NUM!` (E1-E6, E10-E20, E25).
+- It is an early 0, not the walk's salvage comparison turned to `<=`: a remain *equal* to a salvage below the cost
+  still charges (`AMORDEGRC(2400,39679,39813,2070,1,0.15,1)` is 776 with the remain 2070 before period 1, and
+  `(..,1293.75,2,..)` 485 with the remain 1293.75 before period 2; G1-G6). AMORLINC charges what fits as before
+  (G7-G10).
+- It leaves the value an AMORDEGRC below period 1 reads as it was, at any period, AMORLINC included (which otherwise
+  leaves its first charge): 485 + the call + a fraction is 970 for each (F2-F6), and an AMORDEGRC below period 1
+  with a salvage equal to the cost is 0, not the 485 left before it (F1, F7, F8).
+Evidence: probes/amor-salvage-equal-cost (81 cells, excel-graph, 2026-11-06, T-4504; predictions committed before the
+fill: the early 0 was the alternative, `remain <= salvage` the pick). A purchase date below 1 is serial 0, the day before
 serial 1: `AMORDEGRC(2400,0,366,300,1,0.15,1)` is 562 (366 days), `AMORDEGRC(2400,0,1,..)` 899, `AMORDEGRC(2400,1,366,..)` 563,
 `AMORLINC(46557,0,39881,440,0,0.1)` 46117.
 AMORDEGRC with a period strictly between 0 and 1 returns a value the previous AMORDEGRC or AMORLINC left behind
@@ -2885,7 +2899,8 @@ other position, `NA()` and `1/0` in every pair, booleans and text alone, purchas
 excel-graph, 2026-10-24, T-2485) and probes/amordegrc-fractional-period (32 cells). Every order cell fits the rule.
 Dates -1, -0.5, 0, 1E-15, 0.5, 0.99, 1 and 2958466 were probed (-0.5 is `#NUM!`, A410-A412, A843-A845); 2958465.5 is
 inferred (the floor is taken from the shared reader's other functions).
-Ours: since T-2485 (`amortization_of` and `amor_date` in functions/financial/amortization.rs).
+Ours: since T-2485 (`amortization_of` and `amor_date` in functions/financial/amortization.rs); the salvage equal to
+the cost since T-4504 (`amortization_values_valid` and the early return in `amortization_of`).
 Status: VERIFIED (excel-graph)
 Tasks: T-2485, T-1895, T-4111, T-4504
 

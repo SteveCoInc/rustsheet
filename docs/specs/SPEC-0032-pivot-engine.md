@@ -39,9 +39,10 @@ Goals:
 3. **Refresh semantics as Excel's:**
    - a pivot refreshes on load when its cache is `refreshOnLoad`, on an explicit API call, and when it is
      created;
-   - by design default, pending probe T-4586: never on a source edit (Auto Refresh only as T-4182
-     evidences), and a pivot loaded without `refreshOnLoad` keeps the cells the file saved. No probe yet
-     shows what Excel does in either case, because every rendered probe so far is `refreshOnLoad`.
+   - never on a source edit (Auto Refresh only as T-4182 evidences) nor on a calculate (probed through
+     a Graph write on a refreshOnLoad pivot only; pivots.md lists what is not probed), and a pivot loaded
+     without `refreshOnLoad` keeps the cells the file saved, even when its `rowItems`/`colItems`
+     disagree with the cache or are absent (probes/t4586-pivot-refresh-on-load, T-4586).
 4. **Bounded work and memory on untrusted pivots** (directive 5), with every cap a `DEVIATION` entry.
 
 Non-goals (decision 0274):
@@ -56,7 +57,9 @@ The evidence lives in docs/excel-semantics/pivots.md and web.md (GETPIVOTDATA an
 design depends on:
 - **Refresh:** a `refreshOnLoad` cache is rebuilt from the source on open, from the recalculated
   values (probes/t4128-pivot-spike R: `DataF!C2` `=1000` cached as 0, and the pivot shows 1004). Whether
-  Excel also overwrites rendered constants already in the area is open (T-2327).
+  Excel also overwrites rendered constants already in the area is open (T-2327). Without `refreshOnLoad`
+  Excel keeps the saved cells and layout lines as they are, and a source edit followed by a full
+  calculate leaves a rendered pivot unchanged (probes/t4586-pivot-refresh-on-load).
 - **Item identity and order** (probes/t4134-pivot-items):
   - text items are case-insensitive; numbers compare exactly; text is never a number. Which casing shows
     when the cache and the source disagree, and whether date items with and without a time part are one
@@ -91,7 +94,7 @@ design depends on:
 - **Grid:** a layout that would meet a foreign cell collapses to `#SPILL!` at the anchor, with the
   location saved as that one cell (t4128 S).
 
-Unknowns are owned by probe tasks: T-4582, T-4583, T-4584 and T-4586 (above), T-2327 (rendered constants
+Unknowns are owned by probe tasks: T-4582, T-4583 and T-4584 (above), T-2327 (rendered constants
 under a refreshOnLoad pivot), T-4585 (field names), T-4135 (aggregates over text,
 blank and error, now evidenced in pivots.md; the summation order of totals is T-4589's), T-4161
 (show-values-as),
@@ -142,7 +145,11 @@ refresh is ordered after that calculation.
 - The importer only records `refreshOnLoad` on the cache, since import cannot calculate.
 - The facade's open path refreshes every marked cache after the first recalculation. It then
   recalculates what depends on the pivots (GETPIVOTDATA, and formulas that read pivot cells).
-- `Txn` refreshes a pivot when it creates the pivot, and when asked to.
+- `Txn` refreshes a pivot when asked to (`Txn::refresh_pivot_table`). `Txn::add_pivot_table` builds
+  the cache from the source as it is (the snapshot a refresh gives) and lays out only a grouped
+  pivot; laying out every new pivot is T-4152's (eval adapter) and T-4178's (public API).
+- The refresh on open plans every marked cache within one shared work and cell budget, and writes
+  and recalculates only when at least one plan succeeds.
 - Auto Refresh is added only as T-4182 evidences it.
 
 ### PivotResult (T-4142, T-4163, T-4165, T-4174, T-4175)
@@ -311,8 +318,8 @@ introducing it adds:
 - **Render from a query engine** (mog's GROUP BY/rollup). It hides Excel's line encoding, so layout bugs
   show up only as wrong cells. Rejected; the line contract is cheaper to check.
 - **Re-render on import, as LibreOffice does.** That would lose Excel-saved cells that are already
-  right, if Excel itself keeps them (T-4586). Rejected for now: re-render only on `refreshOnLoad`, or on
-  request. Revisit if T-4586 shows that Excel re-renders.
+  right, if Excel itself keeps them (T-4586). Rejected: re-render only on `refreshOnLoad`, or on
+  request. T-4586 showed that Excel for the web does not re-render such a pivot.
 - **Separate code paths per form.** The forms differ only in line-to-cell placement. One renderer with
   per-field form flags.
 
