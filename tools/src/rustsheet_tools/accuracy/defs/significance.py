@@ -387,7 +387,7 @@ def _z_test(args: Sequence[MathArg]) -> mpmath.mpf:
     assert not isinstance(x, (bool, tuple))
     xs = _floats(data)
     sigma = args[2] if len(args) > 2 else None
-    assert not isinstance(sigma, (bool, tuple))
+    assert not isinstance(sigma, (bool, str, tuple))
     if len(xs) < 2:
         msg = "#DIV/0!: one value"
         raise DomainError(msg)
