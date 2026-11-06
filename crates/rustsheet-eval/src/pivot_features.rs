@@ -192,6 +192,10 @@ pub fn write_markdown(features: &PivotFeatures, md: &mut String) {
         in_scope.iter().filter(|r| !r.uncovered).count(),
         in_scope.len()
     );
+    let _ = writeln!(
+        md,
+        "A case's pivot cells count toward every id it names, so the stage totals overlap.\n"
+    );
     let _ = writeln!(md, "| stage | in scope | measured | cells | passing |");
     let _ = writeln!(md, "|---|---|---|---|---|");
     let mut by_stage: BTreeMap<&str, [usize; 4]> = BTreeMap::new();
@@ -308,6 +312,37 @@ mod tests {
         assert!(
             md.contains("Uncovered in-scope rows (report.json lists each): PV1 layout 1."),
             "{md}"
+        );
+    }
+
+    #[test]
+    fn the_tally_counts_excel_pivot_cells_only() {
+        use crate::report::tests::cell;
+        use crate::value::Verdict;
+        let at = |a1: &str, verdict: Verdict, from_excel: bool| {
+            let mut c = cell("", verdict);
+            c.cell = a1.into();
+            c.from_excel = from_excel;
+            c
+        };
+        let mut result = CaseResult::empty("probes/a", "probes", CaseStatus::Fail);
+        result.cells = vec![
+            at("A1", Verdict::Pass, true),             // a passing pivot cell
+            at("A2", Verdict::NumericMismatch, true),  // a failing pivot cell
+            at("A3", Verdict::NumericMismatch, false), // a pivot cell with a hand-written expectation
+            at("B9", Verdict::Pass, true),             // not a pivot cell
+        ];
+        let keys: BTreeSet<String> = ["A1", "A2", "A3"]
+            .iter()
+            .filter_map(|a| crate::cellref::Addr::parse(a))
+            .map(|a| crate::case::cell_key("S", a))
+            .collect();
+        assert_eq!(
+            PivotCellTally::of(&result, &keys),
+            PivotCellTally {
+                cells: 2,
+                passed: 1
+            }
         );
     }
 

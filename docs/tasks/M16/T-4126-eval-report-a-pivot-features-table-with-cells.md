@@ -33,3 +33,4 @@ Cases name the catalog ids they exercise (a `pivot_features` tag list); scored p
 - report.md gains a "Pivot features" section with per-stage totals, the measured rows, the uncovered rows by stage and family, and any ids that cases name but the catalog lacks.
 - probes/t4123-pivot-capture and t4128-pivot-spike are tagged with the layout, aggregation, calculated-field, Top-N, grouping, sort and refreshOnLoad ids they evidence. Later probes tag their own.
 - Measuring is not gating; gating is the M16 exit row's task.
+- Follow-up: T-4598 splits runner.rs (977 lines) before the next pivot change.
