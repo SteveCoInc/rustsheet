@@ -393,8 +393,11 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
             .rposition(|t| matches!(t, TextToken::Digit(_)))
     });
     let (mut owed, mut due, mut after_space) = (0_usize, true, false);
-    // The `?`s in a row before the point that printed a space: as many zeros start the decimals.
+    // How many zeros start the decimals: one per `?` in a row before the point that printed a
+    // space, or after a `0` or `#` one, two when a `?` that printed no lacking zero precedes it.
     let mut spaces = 0_usize;
+    // Whether the last placeholder was a `?` that printed a spilled digit or a space.
+    let mut after_question = false;
     // The kind of the decimal-side placeholder that just printed its blank.
     let mut blank_kind: Option<char> = None;
     let mut printed = Vec::new();
@@ -433,7 +436,9 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
             printed.push(text.to_owned());
             continue;
         }
-        let text = if digit.kind == '?' {
+        let question = digit.kind == '?';
+        let lacking_before = lacking;
+        let text = if question {
             let text = if takes_all == Some(index) && spilled.len() > 0 {
                 let rest: String = spilled.by_ref().collect();
                 owed += rest.chars().count();
@@ -457,7 +462,8 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
             spaces = if after_space { spaces + 1 } else { 0 };
             text
         } else {
-            (due, after_space, spaces) = (false, false, 0);
+            spaces = 1 + usize::from(after_question);
+            (due, after_space) = (false, false);
             if lacking > 0 {
                 lacking -= 1;
                 if digit.kind == '0' { "0" } else { "" }.to_owned()
@@ -468,6 +474,7 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
                 text
             }
         };
+        after_question = question && lacking == lacking_before;
         printed.push(text);
     }
     printed
