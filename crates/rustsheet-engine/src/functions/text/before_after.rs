@@ -23,6 +23,12 @@ struct AroundOptions {
     match_end: f64,
 }
 
+/// The length TEXTBEFORE and TEXTAFTER measure a text or a delimiter in: UTF-16 units of the
+/// string as written, never folded (probes/t4474-textbefore-utf16-bounds).
+fn units(s: &str) -> usize {
+    s.encode_utf16().count()
+}
+
 impl Model {
     /// `TEXTAFTER(text, delimiter, [instance_num], [match_mode], [match_end], [if_not_found])`
     pub(crate) fn fn_textafter(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
@@ -102,9 +108,14 @@ impl Model {
         };
         // With no delimiter shorter than the text a match is impossible. UNVERIFIED for a list
         // (text.md "TEXTSPLIT, TEXTBEFORE, TEXTAFTER and REGEX* lift their text and scalar
-        // arguments", T-1824): every entry longer than the text.
+        // arguments", T-1824): every entry longer than the text. Excel: see
+        // docs/excel-semantics/text.md "TEXTBEFORE and TEXTAFTER: instance_num past the text, a
+        // number if_not_found": lengths are UTF-16 units of the unfolded delimiter, under
+        // match_mode 1 too (probes/t4474-textbefore-utf16-bounds: `("a","é",1)` and `("ab","😀",1)`
+        // are `#N/A` B1, B5; `("😀","abc",1)` is `#VALUE!` B3; `("a","ß",1,1)` is `#N/A` A49).
         let exact = delimiters.exact();
-        if !exact.is_empty() && exact.iter().all(|d| d.len() > text.len()) {
+        let text_units = units(&text);
+        if !exact.is_empty() && exact.iter().all(|d| units(d) > text_units) {
             // With more than two arguments this is `#VALUE!`, with two `#N/A`, whatever their values.
             let error = if arg_count > 2 {
                 Error::VALUE
@@ -134,12 +145,12 @@ impl Model {
         // t2314-textbefore-instance-bound, t2581-textsplit-textbefore A30-A50).
         let shortest = exact
             .iter()
-            .map(|d| d.encode_utf16().count())
+            .map(|d| units(d))
             .min()
             // The list is never empty (the delimiter is required and a list has an entry); were
             // it, 1 keeps the text-length bound.
             .unwrap_or(1);
-        let positions = (text.encode_utf16().count() + 1).saturating_sub(shortest);
+        let positions = (text_units + 1).saturating_sub(shortest);
         if usize::try_from(options.instance_num.unsigned_abs()).map_or(true, |n| n > positions) {
             return CalcResult::new_error(
                 Error::VALUE,
