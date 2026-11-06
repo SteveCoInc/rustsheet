@@ -2,13 +2,15 @@
 
 Usage: python3 docs/research/t4465/gen_probe.py <out_dir>
 
-Writes four rustsheet-case/v1 files:
+Writes five rustsheet-case/v1 files:
 - t4465-extent-near-integer: SEQUENCE (rows, columns), MAKEARRAY, TAKE, DROP, EXPAND, WRAPROWS and
   WRAPCOLS at the fixed offsets of the task, below and above 0, 1, 2, 1000 and 100000 (and -1 for
   TAKE and DROP, which accept negative counts);
 - t4465-extent-near-integer-randarray: the same for RANDARRAY (volatile, read through ROWS);
 - t4465-extent-near-integer-holdout and -holdout-randarray: seeded offsets k*2^-30 (k from
-  random.Random(4465)), scored only after the rule is frozen (decision 0188 R4).
+  random.Random(4465)), scored only after the rule is frozen (decision 0188 R4);
+- t4465-extent-near-integer-randarray-cols: RANDARRAY's columns at the fixed offsets, added after
+  the freeze as a fresh sweep.
 Every argument is an exact double: base +/- (powers of two), computed by Excel's own arithmetic.
 """
 
@@ -48,6 +50,9 @@ VARIANTS = [
     ("wrapcols", f"=ROWS(WRAPCOLS(SEQUENCE({N_WRAP}),{{x}}))", [0, 1, 2, 1000, 100000]),
 ]
 RANDARRAY = [("randarray", "=ROWS(RANDARRAY({x}))", [0, 1, 2, 1000, 100000])]
+# Added after the rule was frozen (docs/research/t4465/frozen-rule.md): a fresh sweep of the
+# columns argument, which the fixed and hold-out cases did not step.
+RANDARRAY_COLUMNS = [("randarray_cols", "=COLUMNS(RANDARRAY(1,{x}))", [0, 1, 2, 1000])]
 
 
 def arg(base: int, sign: str, offset: str) -> str:
@@ -114,6 +119,12 @@ def main() -> None:
         "t4465-extent-near-integer-holdout": build(VARIANTS, lambda b: holdout_points(b, rng), hold, False),
         "t4465-extent-near-integer-holdout-randarray": build(RANDARRAY, lambda b: holdout_points(b, rng), hold + " RANDARRAY is volatile; ROWS of it does not depend on the draw.", True),
     }
+    files["t4465-extent-near-integer-randarray-cols"] = build(
+        RANDARRAY_COLUMNS,
+        fixed_points,
+        fixed + " Fresh sweep of RANDARRAY's columns, written after the rule was frozen. RANDARRAY is volatile; COLUMNS of it does not depend on the draw.",
+        True,
+    )
     for name, case in files.items():
         (out / f"{name}.case.json").write_text(json.dumps(case, indent=2) + "\n")
 

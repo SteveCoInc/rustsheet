@@ -2280,13 +2280,40 @@ SEQUENCE: rows and columns both reach 1048576, and an extent that is negative or
 `SEQUENCE(0,1048576)` and `SEQUENCE(0.0123,16385)` are `#CALC!`, `SEQUENCE(0,1048577)`, `SEQUENCE(0,-1)` and
 `SEQUENCE(0.0123,123456789.123)` `#VALUE!` (so the oversized columns are the cause, gen-m9 f280df8ba95f96b9 A222); with a
 non-zero rows a columns past the grid's 16384 gives an array (A155:A157: `COLUMNS(SEQUENCE(1,20000))` is 20000, `COLUMNS(SEQUENCE(1,1048576))` 1048576, `ERROR.TYPE(SEQUENCE(1,1048576))`
-`#SPILL!`) up to 1048576, `#VALUE!` above (A158). Ours builds them since T-2600 within the cell bound. An extent is floored after adding 2^-23 (the single-precision epsilon, 1.1920929E-7): `SEQUENCE(4,-1.19E-7)` and
-`SEQUENCE(0,-1E-8)` are `#CALC!` (a zero extent; gen-m7 c36ff5f42a1a4d47 A359), `SEQUENCE(4,-1.2E-7)` and `SEQUENCE(0,-1)`
-`#VALUE!`, and `SEQUENCE(0.99999999,1)` is 1, `SEQUENCE(0.999999,1)` `#CALC!`. The epsilon is probed near 0, 1 and 1048577 only; for large extents a relative or float32 rounding is UNVERIFIED.
+`#SPILL!`) up to 1048576, `#VALUE!` above (A158). Ours builds them since T-2600 within the cell bound. A fractional extent is read by the near-integer rule of "Array-constructor extents near an integer" below:
+`SEQUENCE(4,-1.19E-7)` and `SEQUENCE(0,-1E-8)` are `#CALC!` (a zero extent; gen-m7 c36ff5f42a1a4d47 A359), `SEQUENCE(4,-1.2E-7)` and `SEQUENCE(0,-1)`
+`#VALUE!`, and `SEQUENCE(0.99999999,1)` is 1, `SEQUENCE(0.999999,1)` `#CALC!`.
 Evidence: probes/empty-array-args-sequence (excel-graph, 2026-10-24), probes/t2436/computed-scalar, probes/t2436/f280df8ba95f96b9.
 Ours: `CalcResult::is_empty_array` in those readers.
 Status: VERIFIED (excel-graph)
 Tasks: T-2580
+
+## Array-constructor extents near an integer
+Rule: SEQUENCE's rows and columns and RANDARRAY's rows and columns read a fractional extent the way DATE, TIME and XMATCH
+read their arguments (`near_integer_whole`): floored, but counted as the next integer when within 2^-22 + 2^-33 below it,
+and within half that (2^-23 + 2^-34) when the extent is below 0. The bound is absolute, the same at 1, 2, 1000 and 100000:
+`ROWS(SEQUENCE(1-(2^-22+2^-33)))` and `ROWS(SEQUENCE(100000-(2^-22+2^-33)))` are 1 and 100000, `ROWS(SEQUENCE(1-(2^-22+2^-32)))`
+is `#CALC!` and `ROWS(SEQUENCE(100000-2^-21))` 99999; `SEQUENCE(-(2^-23+2^-34))` is `#CALC!` (snapped to 0) and
+`SEQUENCE(-(2^-23+2^-33))` `#VALUE!` (-1). It is neither a 2^-23 epsilon (`SEQUENCE(1-1.5*2^-23)` has one row) nor a float32
+rounding (`ROWS(SEQUENCE(1000-2^-21))` is 999). The other constructors do not snap:
+- MAKEARRAY refuses any fractional rows with `#VALUE!`, however close to an integer (`MAKEARRAY(1+2^-24,1,LAMBDA(r,c,0))`,
+  `MAKEARRAY(2-2^-24,..)`);
+- TAKE and DROP truncate a count toward zero (`ROWS(TAKE(SEQUENCE(100001),2-2^-24))` is 1, `ROWS(TAKE(SEQUENCE(100001),-(2^-23+2^-34)))` `#CALC!`,
+  `ROWS(DROP(SEQUENCE(100001),-1+2^-24))` 100001);
+- EXPAND's rows and the wrap_count of WRAPROWS and WRAPCOLS truncate too (`ROWS(EXPAND(1,2-2^-24))` is 1,
+  `COLUMNS(WRAPROWS(SEQUENCE(1,3),2-2^-24))` 1, `WRAPCOLS(SEQUENCE(3),1-2^-24)` `#NUM!`).
+A wrap_count past the vector's length gives as many columns (WRAPROWS) or rows (WRAPCOLS) as the vector has elements, not
+wrap_count: `COLUMNS(WRAPROWS(SEQUENCE(1,3),1000))` and `ROWS(WRAPCOLS(SEQUENCE(3),100000))` are 3.
+Probe note: Excel's unary minus binds before `^`, so the probe's `SEQUENCE(-2^-22)` reads +2^-22 (an even power) and is
+`#CALC!` as a positive tiny extent, not a negative one.
+Evidence: probes/t4465-extent-near-integer (760 cells), -randarray (95), the seeded hold-out cases -holdout (240) and
+-holdout-randarray (30), filled after the rule was frozen (docs/research/t4465/frozen-rule.md), and -randarray-cols (76,
+a fresh sweep of RANDARRAY's columns after the freeze); excel-graph, 2026-11-06. Of the candidate rules scored
+(docs/research/t4465/predictions.tsv), the shared rule misses no SEQUENCE or RANDARRAY cell, a 2^-23 epsilon 16 to 22 per column.
+Ours: `near_integer_whole` in sequence.rs and random.rs (RANDARRAY floored before T-4465, SEQUENCE added 2^-23); MAKEARRAY,
+TAKE, DROP, EXPAND, WRAPROWS and WRAPCOLS already matched.
+Status: VERIFIED (excel-graph)
+Tasks: T-4465
 
 ## GROUPBY and PIVOTBY in the gen-m9 sweep (T-2436)
 Rule: Excel computes these calls that ours rejected or computes differently: `PIVOTBY(Data!B1:E12,Data!B1:D12,Data!D1:E12,

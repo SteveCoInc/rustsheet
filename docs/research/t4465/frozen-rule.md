@@ -3,7 +3,7 @@
 Scored on the fixed cases only (`probes/t4465-extent-near-integer`, 760 cells, and
 `-randarray`, 95 cells; excel-graph 2026-11-06). The hold-out cases
 (`-holdout`, `-holdout-randarray`, offsets k*2^-30 from `random.Random(4465)`) were generated
-with the fixed cases at 6555ba068 and are filled only after this note is committed.
+in the same commit as the fixed cases and are filled only after this note is committed.
 
 Misses per candidate reading rule (`predict.py`; `predictions.tsv`):
 
