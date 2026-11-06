@@ -1,5 +1,6 @@
 use super::element_errors::array_element_error;
 use super::paired::PairedArg;
+use crate::decimal_round::cut_to_15_digits;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::LiftCost;
 use crate::functions::Function;
@@ -10,8 +11,8 @@ use crate::{
 impl Model {
     /// PROB's two data arguments read once: the numbers of `x_range` and `prob_range` paired
     /// by position, a pair kept only when both are numbers, or the error the data gives (an
-    /// error cell, unequal cell counts `#N/A`, no pair of numbers `#DIV/0!`, a probability out of
-    /// [0, 1] or a sum other than 1 `#NUM!`). Counts are cells, not numbers: `PROB(Data!C7:D7,1E-15,2)`
+    /// error cell, unequal cell counts `#N/A`, no pair of numbers `#DIV/0!`, a sum other than 1 at 15
+    /// significant digits `#NUM!`). Counts are cells, not numbers: `PROB(Data!C7:D7,1E-15,2)`
     /// with one blank is `#N/A`, a single text or boolean against a number is no pair
     /// (`PROB(Data!C$4,13,-2.5)` with C4 TRUE is `#DIV/0!`), and a probability whose x is text
     /// is dropped (statistics.md "PROB: an error data argument first", T-2468).
@@ -55,12 +56,14 @@ impl Model {
         if x_vals.is_empty() {
             return Err(error(Error::DIV));
         }
-        if prob_vals.iter().any(|p| !(0.0..=1.0).contains(p)) {
-            return Err(error(Error::NUM));
-        }
-        // Allow a small tolerance for floating-point imprecision.
+        // Only the sum is checked, not each probability: `PROB({1,2},{1.5,-0.5},1)` is 1.5
+        // (probes/t4098-tests-prob-domains A32, A33; statistics.md "CHISQ.TEST, Z.TEST and PROB:
+        // Gate A domains (T-4098)"). The double sum passes when, rounded to 15 significant digits,
+        // it is 1, so the tolerance is lopsided: 4.88E-15 above 1 and 4.44E-16 below pass,
+        // 5.11E-15 above and 5.55E-16 below are #NUM! (probes/t4578-prob-sum-tolerance A1:A24,
+        // predicted before the fill; t4098 A1:A31).
         let prob_sum: f64 = prob_vals.iter().sum();
-        if (prob_sum - 1.0).abs() > 1e-14 {
+        if cut_to_15_digits(prob_sum, true) != 1.0 {
             return Err(error(Error::NUM));
         }
         Ok((x_vals, prob_vals))
