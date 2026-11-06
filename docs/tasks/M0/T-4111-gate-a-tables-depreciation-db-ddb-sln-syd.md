@@ -64,7 +64,7 @@ Every failing table point has an owner.
 - Tables `eval/accuracy/tables/{SLN,SYD,DB,DDB,VDB,AMORLINC,AMORDEGRC}/s1`, 200 points each (1,400), filled from
   excel-graph with 0 failures.
 - `rustsheet-eval accuracy`: 1,387 points inside the envelope (all on both sides), 13 known failures added, 0 failing,
-  0 table defects. `missing tables` 107 to 100 (on main after T-4109 and T-4092). The engine is bit-exact with Excel on 1,364 of 1,400; 23 more are 1-2
+  0 table defects. `missing tables` 102 to 95 (on main after T-4109, T-4092 and T-4106). The engine is bit-exact with Excel on 1,364 of 1,400; 23 more are 1-2
   ulp off Excel inside the envelope (DB 12, VDB 9, SYD 1, DDB 1).
 - New quirks, recorded in financial.md (the first draft of each definition encoded the old reading, and the oracle
   check flagged the points):
