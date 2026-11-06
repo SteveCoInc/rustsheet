@@ -3,7 +3,7 @@ id: T-4418
 title: "lookup.md: move the 'Which arguments lift is inferred' sentence back under the COUNTIFS/AVERAGEIF/MAXIFS bullet"
 milestone: M9
 lane: functions-lookup
-status: in-progress
+status: todo
 priority: P3
 size: S
 tier: sonnet
