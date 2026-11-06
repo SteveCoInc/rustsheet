@@ -528,7 +528,15 @@ A totals-row cell holding a number, boolean or error constant gets no metadata (
 cells only), and Excel refuses that file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
 totals row with the label "Total" and the number 42 is refused, and so is the same file with 42 written as
 `totalsRowLabel="42"` or as a custom `<totalsRowFormula>42</totalsRowFormula>`, while it loads with a SUBTOTAL formula
-in that cell (T-4005).
+in that cell. **The form Excel loads for a constant is `totalsRowFunction="custom"` with no `<totalsRowFormula>`**
+(excel-graph uploads, 2026-11-06, T-4005; `Sales` A1:B8 with `Cat`/`Val` data rows, A8 "Total" as `totalsRowLabel`,
+`=Sales[[#Totals],[Val]]` read in D1): the number 42 loads and reads 42, TRUE (`t="b"`) TRUE and `#N/A` (`t="e"`)
+`#N/A`, the cell kept a constant. Also loading, but changing the cell: the cell written as the formula `=42`
+(`=TRUE`, `=#N/A`) with `<totalsRowFormula>` of the same text reads the same values; the text `"42"` with
+`totalsRowLabel="42"` reads as text. Still refused: the number with `totalsRowLabel="42"`, and the number with
+`custom` and `<totalsRowFormula>42</totalsRowFormula>`. The export writes the bare `custom` for a number, boolean or
+error totals cell (T-4005); an upload of our export of such a table (`Item`, `N`, `B`, `E` with totals "Total", 42,
+TRUE, `#N/A`) loads and `Sales[[#Totals],[N]]`, `[B]`, `[E]` read 42, TRUE, `#N/A`.
 Recipe (throwaway, not kept, as T-1607's): openpyxl writes each table (`Table`, `AutoFilter`, `FilterColumn` with
 `Filters`, `CustomFilters` or `Top10`, and for T-4004 `DynamicFilter`, `ColorFilter` with a
 `DifferentialStyle` in `wb._differential_styles`, `IconFilter` and `Filters` of `DateGroupItem`s, hidden rows through
@@ -536,15 +544,16 @@ Recipe (throwaway, not kept, as T-1607's): openpyxl writes each table (`Table`, 
 (`rustsheet_xlsx::import::load_from_xlsx`, `Model::delete_columns` for the deleted-column case,
 `rustsheet_xlsx::export::save_to_xlsx`), and `rustsheet-oracle recalc -b excel-graph <file>` uploads the export
 (T-4004 also uploaded the openpyxl file, to compare). A
-table named `T1` reads as a cell reference, not a table (`T1[Val]` is `#VALUE!`); the uploads used `Sales`.
+table named `T1` reads as a cell reference, not a table (`T1[Val]` is `#VALUE!`); the uploads used `Sales`. T-4005's
+variants set openpyxl's `TableColumn` `totalsRowLabel`, `totalsRowFunction` and `totalsRowFormula` (`TableFormula`), with B8's `<c>` patched in the zip to `t="b"` or `t="e"` for the boolean and error.
 A structured reference that lowers to an
 error because the table's metadata does not fit (an unparsable `ref`, an overflowing row count; directive 5) is
 written as that error.
 Evidence: crates/rustsheet-xlsx/tests/calc_test_tables/tables.xlsx (Excel-authored, 9 tables) now round-trips
 (import, export, import) with the same values (generated test `test_tables_tables`) and the same formula text
 (`excel_authored_tables_keep_their_formula_text`, export/test/test_tables.rs).
-Status: VERIFIED (web, T-3081): Excel loads every filter form and refuses a constant totals cell; T-4003, T-4004
-and T-4005 own the differences.
+Status: VERIFIED (web, T-3081, T-4005): Excel loads every filter form, and a constant totals cell with bare
+`custom` metadata; T-4003 and T-4004 own the filter differences.
 Implemented in: crates/rustsheet-xlsx/src/export/tables.rs
 Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005
 
