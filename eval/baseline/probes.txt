@@ -2429,6 +2429,7 @@ C	probes/t4485-groupby-function-array-error-order.case.json	31
 C	probes/t4492-comma-suffix-reading.case.json	29
 C	probes/t4492-locale-comma-tag-shapes.case.json	24
 C	probes/t4508-ms-lcid-tags-after-b2.case.json	27
+C	probes/t4529-yearfrac-calendar-vs-coercion.case.json	164
 C	probes/t4538-indirect-a1-cells.case.json	50
 C	probes/t4543-xlookup-not-found-address-sheet-lift.case.json	252
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
