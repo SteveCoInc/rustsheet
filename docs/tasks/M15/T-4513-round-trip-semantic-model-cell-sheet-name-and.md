@@ -41,7 +41,7 @@ Carried from the reviews of #3551 and #3529:
 - [x] Identity holds on the fixtures suite.
 - [x] Invariance: shuffled shared strings and renumbered style records compare `kept`.
 - [x] Sensitivity: one changed value, one changed formula and one changed style property are each found.
-- [x] V7 fails a crafted out-of-range style index.
+- [x] V7 fails a crafted out-of-range shared-string index. An out-of-range style index is refused by the importer, so V8 fails it.
 - [x] The fixtures baseline is updated.
 - [x] `make check` green; reviewers approve.
 
@@ -63,8 +63,16 @@ Sources of the facts:
 V7 flags an out-of-range shared-string index. An out-of-range style index is refused by the importer, so V8 already
 fails it.
 
-`roundtrip-fixtures`: 18,796 items, 3,378 known failures. The new ones are 211 `formula changed` items, the
+`roundtrip-fixtures`: 18,796 items, 3,377 known failures. The new ones are 210 `formula changed` items, the
 external-reference printing bug (T-4140).
+
+Formula text compares as stored, canonicalized as Excel stores it: X5's leading spaces, TABs and LFs, and an
+`_xlfn.` prefix the function does not need (T-0172). SPEC-0033 D3.1 was amended to say so (fidelity review).
+
+Not covered yet:
+- the tint tolerance of D3.4: tints compare exactly, which is harmless while outputs are ours, but needed once
+  Excel-written outputs are compared (T-4180);
+- cell protection, which `Style` does not hold, so only the package diff sees it.
 
 Carried from the reviews of #3529 and #3551:
 - `xmldiff::compare` borrows the local path and builds no item path past `MAX_ITEMS`;
@@ -74,6 +82,7 @@ Carried from the reviews of #3529 and #3551:
 
 Tests:
 - shuffled shared strings and renumbered style records compare `kept`;
+- a needless `_xlfn.` prefix is no difference, and a needed one is;
 - a changed constant, formula and style property are each found;
 - V7 on an out-of-range shared string, and the importer's refusal of an out-of-range style.
 

@@ -575,6 +575,17 @@ mod semantic_items {
     }
 
     #[test]
+    fn a_needless_xlfn_prefix_is_no_difference_and_a_needed_one_is() {
+        let a = base();
+        let prefixed = edit(&a, &[(SHEET, "<f>1+1</f>", "<f>_xlfn.SUM(1,1)</f>")]);
+        let bare = edit(&a, &[(SHEET, "<f>1+1</f>", "<f>SUM(1,1)</f>")]);
+        assert_eq!(compare(&facts(&prefixed), &facts(&bare)).0, vec![]);
+        let needed = edit(&a, &[(SHEET, "<f>1+1</f>", "<f>_xlfn.XLOOKUP(1,1,1)</f>")]);
+        let dropped = edit(&a, &[(SHEET, "<f>1+1</f>", "<f>XLOOKUP(1,1,1)</f>")]);
+        assert_eq!(compare(&facts(&needed), &facts(&dropped)).0.len(), 1);
+    }
+
+    #[test]
     fn v7_an_out_of_range_shared_string_index() {
         // An out-of-range style index is refused by the importer itself, so V8 already fails it.
         let bad_style = edit(

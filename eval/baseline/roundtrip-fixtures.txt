@@ -844,7 +844,6 @@ F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B75 
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B76 formula changed
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B77 formula changed
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B8 formula changed
-F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B80 formula changed
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B81 formula changed
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B82 formula changed
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B83 formula changed

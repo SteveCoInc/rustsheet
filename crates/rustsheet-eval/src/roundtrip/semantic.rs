@@ -15,9 +15,13 @@
 //! An engine-parity difference is the cell suites' to score, never an I/O loss here.
 
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
+
+use regex::Regex;
 
 use rustsheet::{CellRef, Value, Workbook};
 use rustsheet_engine::expressions::utils::number_to_column;
+use rustsheet_engine::language::get_default_language;
 use rustsheet_engine::types::Cell;
 use rustsheet_engine::Model;
 
@@ -134,7 +138,8 @@ pub(crate) fn model_facts(model: &Model) -> Facts {
 
 /// The stored formula text and constant value of every cell, as the snapshot reader (the
 /// harness's one reader of stored cells) reads the file (D3.1). Formula text drops the leading
-/// spaces, TABs and LFs Excel itself drops on import (SPEC-0033 X5); an empty-string constant is
+/// spaces, TABs and LFs Excel itself drops on import (SPEC-0033 X5) and compares `_xlfn.` prefixes
+/// as Excel stores them ([`canonical_prefixes`]); an empty-string constant is
 /// not a blank (T-4148). Array members carry no input of their own.
 pub(crate) fn stored_facts(snapshot: &WorkbookSnapshot) -> Facts {
     let mut facts = Facts::new();
@@ -148,13 +153,36 @@ pub(crate) fn stored_facts(snapshot: &WorkbookSnapshot) -> Facts {
                 // An array member, or a formula cell with no text: no input of its own.
                 (Some(FormulaKind::ArrayMember { .. }), _) | (Some(_), None) => {}
                 (Some(_), Some(text)) => {
-                    let text = text.trim_start_matches([' ', '\t', '\n', '\r']);
-                    facts.insert(format!("cell {at} formula"), text.to_string());
+                    let text = text.trim_start_matches([' ', '\t', '\n']);
+                    facts.insert(format!("cell {at} formula"), canonical_prefixes(text));
                 }
             }
         }
     }
     facts
+}
+
+/// `text` with each `_xlfn.` (or `_xlfn._xlws.`) prefix dropped where the function's stored form has
+/// none: Excel re-stores a hand-written prefix on a function that needs none without it
+/// (xlsx-storage.md "Classic CEILING is stored without `_xlfn.`", T-0172), so the prefix is no
+/// difference. The engine's one list of stored forms (`Function::to_xlsx_string`) decides; a
+/// prefix it requires, or one the export adds wrongly (T-0417), still compares. A prefix inside a
+/// string literal is canonicalized too; no fixture holds one.
+fn canonical_prefixes(text: &str) -> String {
+    static PREFIXED: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"_xlfn\.(?:_xlws\.)?([A-Za-z][A-Za-z0-9_.]*)\(")
+            .unwrap_or_else(|e| unreachable!("static regex: {e}"))
+    });
+    let functions = &get_default_language().functions;
+    PREFIXED
+        .replace_all(text, |c: &regex::Captures<'_>| {
+            let whole = &c[0];
+            match functions.lookup_stored(&whole[..whole.len() - 1]) {
+                Some(f) if !f.to_xlsx_string().starts_with('_') => format!("{}(", &c[1]),
+                _ => whole.to_string(),
+            }
+        })
+        .into_owned()
 }
 
 /// The cached value of every computed cell (a formula or a spill member, as `facts` marks them) of
