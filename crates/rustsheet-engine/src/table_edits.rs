@@ -29,6 +29,8 @@ struct TableEdits {
     deleted_columns: Vec<(String, String)>,
     /// The lowercase names of the tables a column delete removes whole (T-3733).
     deleted_tables: Vec<String>,
+    /// The lowercase names of the tables a column edit left of them moves whole (T-4680).
+    moved_tables: Vec<String>,
     /// The data blocks of the tables that grow with a row insert at their first data row or at
     /// their totals row, onto which plain ranges grow too (T-2321).
     grown_edges: Vec<DataBlock>,
@@ -432,6 +434,7 @@ impl Model {
             grown_edges: &edits.grown_edges,
             deleted_columns: &edits.deleted_columns,
             deleted_tables: &edits.deleted_tables,
+            moved_tables: &edits.moved_tables,
         };
         let column_formulas = self.displaced_column_formulas(displacement);
         let rewritten = self.displace_cells(displacement)?;
@@ -488,6 +491,22 @@ impl Model {
         (displace_data, kept)
     }
 
+    /// The lowercase names of the tables on `sheet` that follow the column insert (`delta > 0`
+    /// columns left of `column`) or delete (columns `column..column - delta`). A formula such an
+    /// edit moves out of one of them is parsed in that table ([`Model::kept_table_holding`]), so
+    /// an unqualified `[@Col]` in the table's own cells names it at its new place (T-4680:
+    /// probes/table-edits/t4274-calc-column-structured-insert-column-a, `=[@Col]*2` reads 2, 4,
+    /// 8 after `insert_column` A). The text is kept either way: a column edit moves no cell to
+    /// another row.
+    pub(crate) fn column_edit_kept(&self, sheet: u32, column: i32, delta: i32) -> Vec<String> {
+        self.table_edits(&DisplaceData::Column {
+            sheet,
+            column,
+            delta,
+        })
+        .kept
+    }
+
     /// The table in `kept` (lowercase names) on `sheet` whose range holds (`row`, `column`): a
     /// formula a row insert moves from there moves with the table, so an unqualified structured
     /// reference in it (`[@Qty]*2` in a calculated column) names that table at its new place,
@@ -540,6 +559,11 @@ impl Model {
                     edits
                         .grown_edges
                         .extend(grown_edge(table, sheet, displace_data));
+                    if resized.columns.is_none()
+                        && matches!(displace_data, DisplaceData::Column { .. })
+                    {
+                        edits.moved_tables.push(name.to_lowercase());
+                    }
                     if let Some(edit) = resized.columns {
                         let deleted = table.columns.iter().skip(edit.index).take(edit.deleted());
                         edits

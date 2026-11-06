@@ -2757,8 +2757,13 @@ text too, on every row (T-3037): a cell on another sheet that stays put, a cell 
 row, and a formula inside the table (`Model::row_edit`, `Model::moved_text`), and each reads its cell's row in the
 edited table, as the T-2845 bullet above shows. A formula the insert moves with the table is parsed in that table
 (`Model::kept_table_holding`), so an unqualified `[@Qty]*2` or `SUM([Qty])` keeps its text where the move takes it below
-the table's old range (before T-3037 that cell did not parse, `#ERROR!`). Under every other edit a `#This Row` reference
-keeps the fallback rule (a row delete or a column edit the table follows is unprobed for it, T-3739).
+the table's old range (before T-3037 that cell did not parse, `#ERROR!`). A whole-column insert left of a table, which
+moves the table whole, keeps a `#This Row` reference's text the same way, and a formula it moves out of the table is
+parsed in that table (`Model::column_edit_kept`, `Displacement::moved_tables`, T-4680): `=[@Col]*2` in the moved
+calculated column keeps its text and reads 2, 4, 8, as Excel does (probes/table-edits/
+t4274-calc-column-structured-insert-column-a, excel-graph). A column delete left of the table is taken to do the same
+(unprobed). Under every other edit a `#This Row` reference keeps the fallback rule (a row delete or a column edit inside
+the table is unprobed for it, T-3739).
 FORMULATEXT prints `Sales[@Qty]`, as Excel does (T-1683). An insert at
 the first row of a table without a header row is a fallback too (unprobed, T-3039). An insert that would
 carry a table past the last row or column is refused with an error and changes nothing, as Excel does
