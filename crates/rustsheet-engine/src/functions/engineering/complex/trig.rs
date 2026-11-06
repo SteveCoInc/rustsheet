@@ -400,7 +400,7 @@ pub(super) fn imcot((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
         return real_trig(x, suffix, cell, Some(0.0), |x| 1.0 / excel_tan(x));
     }
     let (sinh_2y, cosh_2y) = sec_sinh_cosh(2.0 * y);
-    if cosh_2y.is_infinite() || tan_saturates(y) {
+    if tan_saturates(y) {
         return complex_result(0.0, -y.signum(), suffix);
     }
     if past_trig_limit(x) {
@@ -622,7 +622,7 @@ pub(super) fn imtan((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
     if y == 0.0 {
         return real_trig(x, suffix, cell, None, excel_tan);
     }
-    // Past `cosh 2y`'s range the value is `±0 ± i` and Excel takes no sine of x
+    // Past `tan_saturates` the value is `±0 ± i` and Excel takes no sine of x
     // (`IMTAN("1E+10+700i")` is i; probes/im-trig-magnitude-grid, T-3642).
     if tan_saturates(y) {
         return complex_result(0.0, y.signum(), suffix);

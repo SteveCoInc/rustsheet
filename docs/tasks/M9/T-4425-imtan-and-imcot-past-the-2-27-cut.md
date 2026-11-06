@@ -61,3 +61,4 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4425-imtan-imcot-s
 ## Outcome
 - probes/t4425-imtan-imcot-switch (excel-graph, 192 cells) brackets the switch at 2y > 709 / 2y < -708 (y = 354.5 `#NUM!`, 354.500000000001 i; -354 `#NUM!`, -354.000000000001 -i), not at cosh 2y's overflow. All 192 cells pass.
 - `tan_saturates` in complex/trig.rs replaces the cosh-finiteness tests in `imtan` and `imcot`; unit test `imtan_imcot_switch_to_i_at_2y_709`. engineering.md updated.
+- The bracket matches neither libm's cosh nor e^x overflow, but no constant was fitted: the cut is IMCSCH's existing evidenced `in_csch_negated_band` (T-3881/T-3912), reused as `tan_saturates`, and the new probe brackets it at the 1E-12 input step for all four x.
