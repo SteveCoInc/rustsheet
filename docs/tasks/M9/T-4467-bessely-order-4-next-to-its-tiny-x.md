@@ -28,8 +28,12 @@ losing a cell that passes today.
   - an extended `inv_x`.
 - That choice is a rounding model, so it is kind (c) of reviewer-excel-fidelity check 7 and owes decision 0188 R4's
   guards. The hold-out split must be fixed before scoring, and the fresh sweep must sit under eval/suites/probes.
-  First check that the cell reproduces on a third fill. If it varies, it is below the reproducibility floor and
-  should be recorded, not fitted.
+  The miss is exactly 4 ulp, which is the edge of R4.4's web-vs-desktop reproducibility floor
+  (docs/research/oracle-calibration.md). So first show that it reproduces, on a third fill and on desktop if one is
+  available. If it varies, it is below the floor and should be recorded, not fitted.
+- In the same fill, probe order 1 over the normal band [2.2250738585072014E-308, 3E-308), for example 2.5E-308,
+  2.3E-308 and 2.2250738585072014E-308. T-4458 stopped at 3E-308, so "order 1 answers at every normal x" is open
+  there.
 - Owned cells: probes/t4458-bessely-tiny-x-cuts Calc!D32.
 
 ## Acceptance criteria
