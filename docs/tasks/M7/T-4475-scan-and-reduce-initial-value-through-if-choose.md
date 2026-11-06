@@ -67,9 +67,10 @@ PRODUCT and COUNT over the accumulator give Excel's results. The rules are probe
 
 ## Outcome
 Done 2026-11-06 (resumed from the landing notes below).
-- **Probe:** probes/t4475-scan-reduce-reference-initial (excel-graph, 2026-11-06, 64 cells). The task's suggested eta
-  `REDUCE(X,A3,COUNT)` design was `#VALUE!` for every form, so the case calls `LAMBDA(a,v,COUNT(a))`,
-  `LAMBDA(a,v,PRODUCT(a))` and `LAMBDA(a,v,ISREF(a))`.
+- **Probe:** probes/t4475-scan-reduce-reference-initial (excel-graph, 2026-11-06, 64 cells). It calls
+  `LAMBDA(a,v,COUNT(a))`, `LAMBDA(a,v,PRODUCT(a))` and `LAMBDA(a,v,ISREF(a))`. An uncommitted first fill wrote the bare
+  names `REDUCE(X,A3,COUNT)`, which are unknown names in a file (`#VALUE!`), not the stored eta form `_xleta.COUNT`.
+  The eta form with these initial values stays unprobed (review round 1).
 - **Rule:** the initial value is bound as a LAMBDA call's argument is. IF, CHOOSE, INDEX, XLOOKUP, OFFSET and INDIRECT
   that pick a cell are references, and so is a LET variable bound to one. A union stays its areas (ISREF TRUE).
   IFERROR gives a value, and a 3-D span gives `#VALUE!` (ISREF FALSE). REDUCE keeps a returned reference in the next
@@ -85,7 +86,7 @@ Done 2026-11-06 (resumed from the landing notes below).
   visible-parity lock adds the new case's 2.
 - **Tests:** `scan_reduce_initial_value_forms_bind_as_lambda_arguments` (test_fn_map_reduce.rs) pins
   `REDUCE(IF(TRUE,A2),A3,LAMBDA(a,v,COUNT(a)))` at 0, plus the IFERROR, XLOOKUP, LET/OFFSET, union and span forms.
-  The task's `REDUCE(IF(TRUE,A2),A3,COUNT)` is `#VALUE!` in Excel (eta), so the test uses the LAMBDA form.
+  The test uses the LAMBDA form the probe evidences.
 - docs/excel-semantics/arrays.md: the "Unprobed initial values" list and the accumulator "unprobed" clause are
   replaced by the probed rules.
 
@@ -94,8 +95,8 @@ State at the session's landing window (2026-11-06 07:10 UTC): branch `agent/func
 no PR yet, no engine change yet. The commit after the claim adds probes/t4475-scan-reduce-reference-initial with oracle values
 (excel-graph, 2026-11-06, 64 cells); 33 pass on main, 31 do not. The task's first acceptance criterion is met. What Excel showed
 (data: Sheet1 A1 TRUE, A2 text "1", A3 2.5, B1:B3 x,y,z; Sheet2 A2 text "1"):
-- **Eta COUNT/PRODUCT are useless here:** `REDUCE(A2,A3,COUNT)` and `REDUCE(A1,A1,PRODUCT)` are `#VALUE!` in Excel for every
-  form (the first fill; the task's suggested `REDUCE(X,A3,COUNT)` design is wrong). The committed case uses
+- **Bare COUNT/PRODUCT (corrected in review: these were bare names, unknown in a file, not eta forms):** `REDUCE(A2,A3,COUNT)` and `REDUCE(A1,A1,PRODUCT)` are `#VALUE!` in Excel for every
+  form (the first fill, uncommitted). The committed case uses
   `LAMBDA(a,v,COUNT(a))` and `LAMBDA(a,v,PRODUCT(a))` in columns D, E, H and I instead: a reference gives 0 and a value gives 1.
 - **References (Excel):** `IF(TRUE,A2)` (D2, E2, F2, G2), `XLOOKUP(...)` (D6, E6, F6, G6), CHOOSE, INDEX, OFFSET and INDIRECT all
   pass a reference. Ours evaluates IF and XLOOKUP to values. `IFERROR(A2,0)` passes a value (D4, F4), and ours matches.
@@ -111,7 +112,7 @@ no PR yet, no engine change yet. The commit after the claim adds probes/t4475-sc
 Next step: make `lambda_initial_value` (map_reduce.rs) share `Model::bind_argument`'s reference producers (let.rs). Add IF/XLOOKUP
 results that are references (check `eval_ref_or_index`'s callers before widening it), pass a union as a multi-area reference, and
 make the 3-D span `#VALUE!`. Then make `fn_reduce` (not `fn_scan`) carry a reference result into the next step. After that,
-docs/excel-semantics/arrays.md and the unit tests. Do not repeat: eta COUNT/PRODUCT probes, which are all `#VALUE!`.
+docs/excel-semantics/arrays.md and the unit tests.
 Design note (07:05 UTC): `lambda_initial_value` returns a `CalcResult`, and `call_lambda_caller` takes `[CalcResult; 2]`,
 so a union (`Binding::Areas`), a LET grid variable (`Binding::Grid`) or a 3-D span (`Binding::Span`) cannot reach the LAMBDA
 as a reference. The H/I-column and D9/E9 cells need a `Binding` path into the call: `bind_argument` (let.rs) already

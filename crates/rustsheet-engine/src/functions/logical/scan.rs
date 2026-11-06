@@ -25,13 +25,12 @@ impl Model {
         let num_rows = data.rows();
         let num_cols = data.columns();
 
-        // The first call takes `initial_value`'s binding, which may be a reference
-        // (`Model::lambda_initial_value`).
-        let mut initial = has_initial.then(|| self.lambda_initial_value(&args[0], cell));
+        // The accumulator is a binding, so that the first call takes `initial_value` as a reference
+        // where it is one (`Model::lambda_initial_value`); each later call takes the step's value.
         let mut accumulator = if has_initial {
-            CalcResult::EmptyArg
+            self.lambda_initial_value(&args[0], cell)
         } else {
-            data.at(0, 0)
+            Binding::Value(data.at(0, 0))
         };
 
         let mut result = vec![vec![ArrayNode::Empty; num_cols]; num_rows];
@@ -40,7 +39,7 @@ impl Model {
         // slot in the output is that seed value itself (not the result of calling lambda).
         let mut start_col = 0;
         if !has_initial {
-            let seed = match self.lambda_result_value(accumulator.clone(), cell) {
+            let seed = match self.lambda_result_value(data.at(0, 0), cell) {
                 Ok(value) => value,
                 Err(error) => return error,
             };
@@ -51,19 +50,16 @@ impl Model {
         for (i, result_row) in result.iter_mut().enumerate() {
             let col_start = if i == 0 { start_col } else { 0 };
             for (j, slot) in result_row.iter_mut().enumerate().skip(col_start) {
-                let first = match initial.take() {
-                    Some(binding) => binding,
-                    None => Binding::Value(accumulator),
-                };
-                accumulator = self.call_lambda_caller_bound(
+                let step = self.call_lambda_caller_bound(
                     &mut caller,
-                    [first, Binding::Value(data.at(i, j))],
+                    [accumulator, Binding::Value(data.at(i, j))],
                     cell,
                 );
-                let value = match self.lambda_result_value(accumulator.clone(), cell) {
+                let value = match self.lambda_result_value(step.clone(), cell) {
                     Ok(value) => value,
                     Err(error) => return error,
                 };
+                accumulator = Binding::Value(step);
                 *slot = calc_result_to_element(value);
             }
         }

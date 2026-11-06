@@ -1031,7 +1031,10 @@ Rule: how Excel parses and evaluates unions beyond the forms gen-m1 measured.
   `=(-A1,B1)`. The engine reads it as a union of `-A1` and `B1` and prints that (T-0193).
 - An error operand's own error comes before the `#VALUE!`: `=(A1,#REF!)` and `=(#REF!,A1) A1` are
   `#REF!`, and `ISREF((A1,#REF!))` is FALSE (probes/union-accepted H9; implemented in `Model::union_is_reference`, T-0194). `ISREF((A1,B2))` is
-  TRUE, and `=(A1,B2) A1` is 1. ISREF is also FALSE for a union with a negated operand (`(-A1,B1)`), with an
+  TRUE, and `=(A1,B2) A1` is 1. A LAMBDA parameter bound to a union is a reference too: SCAN's and REDUCE's accumulator
+  bound to `(A2,A3)` gives `ISREF(a)` TRUE (probes/t4475-scan-reduce-reference-initial F9, G9, T-4475). The engine
+  extends this to every LET variable and LAMBDA parameter bound to a union (`Model::is_union_variable`); a direct
+  `LET(x,(A1,B2),ISREF(x))` or `LAMBDA(x,ISREF(x))((A1,B2))` is an inference, not yet probed. ISREF is also FALSE for a union with a negated operand (`(-A1,B1)`), with an
   empty-intersection operand (`(A1 B2,C1)`) and with a 3D operand (`(Sheet1:Sheet2!A1,B1)`), and for an intersection
   that is empty: `ISREF(A1 B2)` is FALSE (`#NULL!`), while `ISREF(A1 A1)`, `ISREF((A1 A1,C1))` and a multi-area cut `ISREF((A1:B2,A1:C1) A1:B1)` are TRUE, and a cross-sheet intersection
   `ISREF(Sheet1!A1 Sheet2!A1)` is FALSE (probes/isref-union-operands H1:H9, oracle: excel-graph, 2026-10-07, T-1039). The engine matches since T-1039

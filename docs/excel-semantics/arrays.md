@@ -1860,8 +1860,10 @@ A285). Both are references:
     2.5 and ISREF(a) TRUE (D9:I9);
   - a 3-D span is `#VALUE!`, not a reference: COUNT(a) 0, PRODUCT(a) `#VALUE!` and ISREF(a) FALSE (D10:I10). A LET
     variable bound to the span gives the same (H10, I10), unlike `LAMBDA(x,SUM(x))(Data1:Data3!A1)` (references.md).
-  - Eta forms do not separate the kinds: `REDUCE(A2,A3,COUNT)` and `REDUCE(A1,A1,PRODUCT)` are `#VALUE!` for every form
-    (the probe's first fill), so the case calls a LAMBDA.
+  - The case calls a LAMBDA (`LAMBDA(a,v,COUNT(a))`). An uncommitted first fill wrote the bare names
+    `REDUCE(A2,A3,COUNT)` and `REDUCE(A1,A1,PRODUCT)` and got `#VALUE!`, which is the unknown name a bare function name
+    is in a file ("Functions passed by name", xlsx-storage.md), not an eta result. The stored eta form
+    (`_xleta.COUNT`) does tell a reference from a value (A1767 above); with these initial-value forms it is unprobed.
 - The accumulator a step returns (row 11, handed to T-4478): REDUCE keeps a returned reference in the next step's `a`
   (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(ISREF(a),"r",v)))` is "r", D11; the COUNT form 0, F11), SCAN does not
   (`SCAN(0,A1:A3,LAMBDA(a,v,ISREF(a)))` is FALSE at every step, G11; E11 {TRUE;"1";2.5}).
@@ -1869,7 +1871,8 @@ Evidence: gen-m7 cases above (excel-graph, 2026-10-21, T-2225); probes/t4475-sca
 Ours: implemented (T-2306): `fn_scan` and `fn_reduce` hand error values to the LAMBDA and SCAN keeps an error step in its slot.
 Since T-2307, `lambda_initial_value` keeps a reference initial_value a reference; since T-4475 it binds it with
 `Model::bind_argument`, as a LAMBDA call binds an argument (the 3-D span read as its `#VALUE!`), and REDUCE and SCAN pass that
-binding to the first call (`call_lambda_caller_bound`); ISREF of a parameter bound to a union is TRUE. D11 and F11 (REDUCE
+binding to the first call (`call_lambda_caller_bound`); ISREF of a parameter bound to a union is TRUE (references.md
+union entry). D11 and F11 (REDUCE
 keeping a returned reference) stay off for T-4478.
 A blank cell taken into an array by HSTACK counts as a 0 argument when an element reaches AVERAGE: `REDUCE(<3x1 text array>,
 HSTACK(Data!Z1:Z2,{1;2}),_xleta.AVERAGE)` is 1.125 = AVERAGE(AVERAGE(AVERAGE(AVERAGE(texts,0),1),0),2) (gen-m7/f19581ac44da1653 Calc!A2088,
