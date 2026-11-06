@@ -3,7 +3,7 @@ id: T-4470
 title: "WEEKNUM return_type snap at the type boundaries (1, 18, 21, 22), negative types and the start-weekday state; link the two WEEKNUM return_type entries"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
