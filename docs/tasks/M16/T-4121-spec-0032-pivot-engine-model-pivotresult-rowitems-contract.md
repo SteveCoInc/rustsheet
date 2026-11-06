@@ -28,10 +28,12 @@ docs/research/pivot-tables-2026-11-04/plan.md §5 (architecture sketch), §7 (Pi
 docs/specs/SPEC-0032-pivot-engine.md:
 - **Pipeline:** one pivot pipeline, (definition, cache) to `PivotResult`, in fixed stages. Its contract
   is Excel's `rowItems`/`colItems` encoding.
-- **Refresh:** on load with `refreshOnLoad`, on the API, on create; never on edit.
+- **Refresh:** on load with `refreshOnLoad`, on the API, on create. Not on a source edit, and no re-render without `refreshOnLoad`: both are design defaults pending probe T-4586.
 - **Grid:** pivot-owned cells, and the `#SPILL!` collapse.
 - **Consumers:** GETPIVOTDATA, export and PivotChart data read the result.
-- **Limits:** recorded as directive-5 caps.
+- **Limits:** work, result nodes and cells are capped, with a workbook total and atomic failure, each recorded as a directive-5 cap.
+- **Owners:** `PivotResult` lives in `Evaluation`, the facade's open path refreshes `refreshOnLoad` caches, and the API keeps the `add_pivot_table` naming.
+- **Follow-ups filed:** T-4585 (field names) and T-4586 (re-render without refreshOnLoad and after an edit).
 
 It names every later M16 engine task and their order, builds on the existing model, `pivot/layout.rs` and
 the group modules, and cites the committed probes as the evidence.

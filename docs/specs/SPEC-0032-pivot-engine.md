@@ -2,8 +2,12 @@
 
 - **Status:** draft (accepted on merge of T-4121)
 - **Milestone / lane:** M16 / engine (decision 0274)
-- **Tasks:** T-4121 (this spec); governs T-4139, T-4141, T-4142, T-4147, T-4149, T-4151, T-4152, T-4154,
-  T-4163, T-4165, T-4168, T-4169, T-4171, T-4174, T-4175, T-4176, T-4178, T-4184, T-4186, T-4506
+- **Tasks:** T-4121 (this spec).
+  - Governs engine and API tasks T-4139, T-4141, T-4142, T-4147, T-4149, T-4151, T-4152, T-4154, T-4163,
+    T-4165, T-4168, T-4169, T-4171, T-4174, T-4175, T-4176, T-4178, T-4182, T-4184, T-4186, T-4187,
+    T-4188 and T-4506.
+  - Tests: T-4132, T-4133, T-4155, T-4160, T-4177.
+  - Probes it waits on: T-4135, T-4161, T-4164, T-4170, T-4185, T-4505, T-4582, T-4583, T-4584, T-4585.
 
 ## Problem
 The engine keeps a loaded workbook's pivots read-only (SPEC-0015). It answers GETPIVOTDATA from the cache
@@ -34,8 +38,9 @@ Goals:
 3. **Refresh semantics as Excel's:**
    - a pivot refreshes on load when its cache is `refreshOnLoad`, on an explicit API call, and when it is
      created;
-   - never on a source edit (Auto Refresh only as T-4182 evidences);
-   - a pivot loaded without `refreshOnLoad` keeps the cells the file saved.
+   - by design default, pending probe T-4586: never on a source edit (Auto Refresh only as T-4182
+     evidences), and a pivot loaded without `refreshOnLoad` keeps the cells the file saved. No probe yet
+     shows what Excel does in either case, because every rendered probe so far is `refreshOnLoad`.
 4. **Bounded work and memory on untrusted pivots** (directive 5), with every cap a `DEVIATION` entry.
 
 Non-goals (decision 0274):
@@ -48,11 +53,13 @@ Non-goals (decision 0274):
 ## Excel behavior to match
 The evidence lives in docs/excel-semantics/pivots.md and web.md (GETPIVOTDATA and groups). Highlights the
 design depends on:
-- **Refresh:** a `refreshOnLoad` cache is rebuilt from the source on open
-  (probes/t4128-pivot-spike R).
+- **Refresh:** a `refreshOnLoad` cache is rebuilt from the source on open, from the recalculated
+  values (probes/t4128-pivot-spike R: `DataF!C2` `=1000` cached as 0, and the pivot shows 1004). Whether
+  Excel also overwrites rendered constants already in the area is open (T-2327).
 - **Item identity and order** (probes/t4134-pivot-items):
   - text items are case-insensitive; numbers compare exactly; text is never a number. Which casing shows
-    when the cache and the source disagree is open (T-4582);
+    when the cache and the source disagree, and whether date items with and without a time part are one
+    item, are open (T-4582);
   - a field keeps its listed item order. New items go after the listed ones, not ascending, though
     source order versus a descending sort is open (T-4582). A listed item with no records is left out
     without renumbering;
@@ -62,19 +69,24 @@ design depends on:
   - geometry per form: location, `firstHeaderRow`/`firstDataRow`/`firstDataCol`;
   - in tabular form, repeated outer labels are blank and subtotal lines read `<item> Total`, or
     `<item> <Function>` for custom subtotals;
-  - the `Values` caption sits above the first data column;
-  - the first row header is `Row Labels` while a non-axis field is compact; which fields decide is
-    open (T-4583);
-  - the caption attributes apply, and so do `missingCaption` and `errorCaption` (under Sum);
+  - with the Values field on columns, the `Values` caption sits above the first data column. With one
+    data field and no column field there is no Values row (t4137 K5). With Values on rows, the grand
+    total reads `Total <data field>` (t4138 G6);
+  - in tabular form the first row header is `Row Labels` while a non-axis field is compact, and which
+    fields decide is open (T-4583). Compact pivots show `Row Labels`;
+  - `rowHeaderCaption`, `grandTotalCaption` and `dataCaption` apply (`colHeaderCaption` beside a real
+    column field is T-4583's), and so do `missingCaption` and `errorCaption` (under Sum);
   - page fields are laid out with `pageWrap`; the sidecar capture window is confirmed by T-4584.
 - **Values:**
   - a calculated field applies to the sums at every level (t4128 K);
   - a Top-N filter changes the subtotals and grand totals (t4128 K);
-  - an empty intersection is a blank cell.
+  - an empty intersection is a blank cell, but GETPIVOTDATA answers 0 for it under Sum, Average, Count,
+    Max and Min (web.md, T-2404).
 - **Grid:** a layout that would meet a foreign cell collapses to `#SPILL!` at the anchor, with the
   location saved as that one cell (t4128 S).
 
-Unknowns are owned by probe tasks: T-4582, T-4583 and T-4584 (above), T-4135 (aggregates over text,
+Unknowns are owned by probe tasks: T-4582, T-4583, T-4584 and T-4586 (above), T-2327 (rendered constants
+under a refreshOnLoad pivot), T-4585 (field names), T-4135 (aggregates over text,
 blank and error), T-4161 (show-values-as),
 T-4164 (filters and sort), T-4170 (manual and nested groups), T-4505 (calculated fields and items),
 T-4130 (capability matrix 2). An engine task implements a rule only once its probe has landed (directive
@@ -98,39 +110,57 @@ attributes) for export (T-4176). The SPEC-0015 limits stay, and the importer fil
 change is bitcode-encoded like the rest (no stored format depends on it).
 
 ### Refresh (T-4141, T-4171, T-4506)
-`fn refresh(cache: &mut PivotCache, source: &dyn SourceCells) -> Result<(), PivotCacheError>` rebuilds
-the cache through the existing `CacheBuilder`, the one builder (directive 3):
-- field names come from the header row; duplicate names are renamed as Excel does, which no probe has
-  shown yet, so T-4141 probes it before implementing it;
+`pivot/refresh.rs` holds
+`fn refresh(cache: &PivotCache, source: &dyn SourceCells, workbook_values_left: usize) -> Result<PivotCache, PivotCacheError>`.
+It builds a new cache through the existing `CacheBuilder`, the one builder (directive 3), passing it the
+workbook's remaining record-value budget as the importer does. The caller swaps the new cache in only on
+success (see the limits). Its rules:
+- field names come from the header row, and duplicate or blank names follow Excel's rule (probe T-4585,
+  which T-4141 depends on);
 - items follow the identity rules above, existing items keep their order and new ones are appended;
 - the `sharedItems` flags are recomputed;
 - groups are rebuilt by `number_groups`/`date_groups` and, for manual groups, by T-4171.
 
-A Table or a defined name resolves to its range at refresh (T-4506). `SourceCells` reads values only:
-refresh does no I/O and never evaluates a formula itself. It reads the values the recalculation already
-produced, so a refresh is ordered after the calculation it depends on.
+A Table or a defined name resolves to its range at refresh (T-4506). `SourceCells` is a trait in
+`pivot/refresh.rs`, implemented by `Model` over the evaluated cell values. It reads values only, so a
+refresh does no I/O and never evaluates a formula. Because it reads what the recalculation produced, a
+refresh is ordered after that calculation.
+
+**Who refreshes, and when (T-4151).**
+- The importer only records `refreshOnLoad` on the cache, since import cannot calculate.
+- The facade's open path refreshes every marked cache after the first recalculation. It then
+  recalculates what depends on the pivots (GETPIVOTDATA, and formulas that read pivot cells).
+- `Txn` refreshes a pivot when it creates the pivot, and when asked to.
+- Auto Refresh is added only as T-4182 evidences it.
 
 ### PivotResult (T-4142, T-4163, T-4165, T-4174, T-4175)
-`fn compute(table: &PivotTable, cache: &PivotCache, budget: &mut WorkBudget) -> Result<PivotResult, PivotError>`
+`fn compute(table: &PivotTable, cache: &PivotCache, budget: &mut AreaBudget) -> Result<PivotResult, PivotComputeError>`
 runs in fixed stages. The order is Excel's where a probe shows one (Top-N totals: t4128 K), and LibreOffice's
 otherwise as a hypothesis to probe:
 1. **Record filter:** page field selections, hidden items (`h`), slicer state (T-4188).
 2. **Groups:** each record's group item per grouped field (precomputed in the cache).
 3. **Accumulate:** a result tree keyed by tuples of item indices. Each (row tuple, column tuple, data
    field) holds an accumulator, and so do subtotal and grand-total nodes. Aggregates reuse the
-   GETPIVOTDATA folds and `excel_variance` (SPEC-0015), so a cell and a GETPIVOTDATA call can never
-   disagree.
+   GETPIVOTDATA folds and `excel_variance` (SPEC-0015), so a cell and GETPIVOTDATA read one accumulator.
+   Where Excel shows them differently, the difference is a rule on the reading side: an empty
+   intersection renders blank but GETPIVOTDATA answers 0 (web.md); a caption substitute renders as text.
 4. **Calculated items** (T-4175, solve order) and **calculated fields** (T-4174). Calculated fields are
    evaluated over the sums by the engine's parser and evaluator, in a sandbox with no references, names
    or volatile functions and under the work budget.
-5. **Label, value and date filters, Top-N, then sorting** (T-4165). Totals cover what stays.
+5. **Label, value and date filters, Top-N, then sorting** (T-4165). Totals cover what stays: verified for
+   Top-N (t4128 K). For the other filters and for hidden items (stage 1), this is T-4164's to probe.
 6. **Show values as** (T-4163), in three passes: leaves, subtotals, grand total.
 7. **Layout lines:** Excel's `rowItems`/`colItems` (`t`, `r`, `i`, `x`) for the form, subtotal placement,
    grand totals, Values position and blank rows (T-4147, T-4168).
 
 `PivotResult` holds the lines, the cell value of each (row line, column line, data field), the page-area
-items and the location size. It is derived state, dropped whenever the pivot or its cache changes, and
-never encoded.
+items and the location size. It is derived state and never encoded.
+
+It lives in `Evaluation` (evaluation.rs) as `pivot_results`, beside `pivot_indexes`, keyed like them.
+It is built on demand by render and by GETPIVOTDATA. It is dropped at every point where `pivot_indexes`
+is cleared today: `displace_pivots` on structural edits, source renames, sheet deletion and sheet undo
+(sheet_undo.rs restores the `PivotTable`, never a result). It is also dropped when a refresh swaps the
+cache.
 
 ### Rendering and the grid (T-4149, T-4151, T-4169)
 `fn render(result, table) -> Vec<(CellRef, PivotCell)>` turns the lines into cells:
@@ -147,19 +177,21 @@ The grid writer owns a pivot's area:
   new dependency kind;
 - a layout that would meet a cell the pivot does not own writes `#SPILL!` at the anchor and sets the
   location to that cell;
-- structural edits keep T-2086 and T-2401's rules.
+- structural edits keep T-2086 and T-2401's rules, and implement nothing new before T-4185's probe.
 
 Every refresh dirties GETPIVOTDATA cells as SPEC-0015 requires.
 
 ### GETPIVOTDATA (T-4154)
-Reads the `PivotResult`, not the cache index, for every PV1 shape (several data fields, page fields,
-hidden items, nested axes), with SPEC-0015's rules and T-2085's answers. The SPEC-0015 index stays as the
-fast path, used only where the result is not built.
+Reads the `PivotResult` for every PV1 shape (several data fields, page fields, hidden items, nested axes),
+with SPEC-0015's rules and T-2085's answers. The SPEC-0015 index is rebuilt by T-4154 as a lookup table
+over the result's nodes, built once per result. It keeps its role as the fast lookup, but folds nothing
+itself, so a cell and a GETPIVOTDATA call can never disagree and no second computation remains.
 
 ### Export (T-4176, T-4187)
 Writes the typed model plus the verbatim rest, the cache and records, and the result's `rowItems`/`colItems`
 and location. The ClosedXML invariants (oss-engines.md §4) are the checklist, and the round-trip suite
-(T-4177) is the proof. Pivot parts move from M15's `Replay` class to modelled (decision 0275).
+(T-4177) is the proof. Pivot parts move from the `Replay` class of the M15 ownership matrix (T-4183, T-4567; decision 0275) to
+modelled.
 
 ### PivotChart data (T-4186)
 `PivotChartData { categories: Vec<Vec<CellValue>>, series: Vec<Series> }` is derived from the
@@ -171,30 +203,91 @@ and location. The ClosedXML invariants (oss-engines.md §4) are the checklist, a
 Export rewrites the chart part's caches from it (T-4187).
 
 ### API (T-4178, T-4184)
-The facade gains `Txn::create_pivot(PivotDefinition)`, `Txn::set_pivot(..)`, `Txn::refresh_pivot(name)`
-and `Workbook::pivot(name) -> Option<PivotView>`, plus drill-down
-(`PivotView::records(cell) -> Vec<RowIndex>`). `PivotDefinition` mirrors the case-builder-v2
-`definition` schema, so the harness and the API share one shape.
+The facade keeps today's names and makes them public:
+- `Txn::add_pivot_table(&PivotTableInput)`, today doc-hidden, becomes public. `PivotTableInput` grows into
+  the one input type, mirroring the case-builder-v2 `definition` schema, so the harness and the API share
+  one shape.
+- New: `Txn::set_pivot_table(sheet, name, &PivotTableInput)` and `Txn::refresh_pivot_table(sheet, name)`.
+- New: `Workbook::pivot_table(sheet, name) -> Option<PivotView>`.
 
-The doc-hidden `add_pivot_table` and `pivot_places` stay as harness support until T-4152 moves the eval
-adapter to the public API.
+Pivot names are unique per sheet, so every call takes the sheet and the name. Each `Txn` change returns
+the `ChangeSet` of the cells it wrote and cleared (api-design.md rule 2). The grid writer records them
+as it renders.
+
+Errors:
+- The engine's `PivotComputeError` (`Limit`, `Source`, ...) folds into the facade's existing
+  `edit::PivotError` as new variants.
+- `EditError::Pivot` is re-documented as public API (T-4178).
+- A pivot created through the API that hits a limit is not added: the `Txn` fails, and nothing is
+  written.
+
+Drill-down is `PivotView::records(cell)`, which returns an iterator of record indices (T-4184). The
+Python binding mirrors all of this (T-4178). `pivot_places` stays doc-hidden harness support.
 
 ### Untrusted-input limits
-- The import limits of SPEC-0015 stay.
-- The result's nodes are bounded by `MAX_RECORD_VALUES`, and the rendered cells by the sheet grid and a
-  `MAX_PIVOT_CELLS` of 4,000,000.
-- Calculated formulas are bounded by the formula work budget (SPEC-0024) and 64 levels of calculated-item
-  references; solve iterations are bounded.
-- Past a cap the pivot is not re-rendered: it keeps the cells the file saved, and the refresh returns
-  `PivotError::Limit` (the API's `EditError::Pivot`).
+Every pivot part comes from an untrusted file (directive 5). The import limits of SPEC-0015 stay (`MAX_RECORDS`,
+`MAX_ITEMS`, `MAX_FIELDS`, and `MAX_RECORD_VALUES` over cache record values). They bound the cache, not the
+work done on it. The new limits are below, and each is a `DEVIATION` entry (decision 0014) that the task
+introducing it adds:
+- **Work.** `compute` runs as a budgeted entry point, as a formula run does. It draws work units from
+  SPEC-0024's `AreaBudget`, opened by `Model::with_area_budget` with a pivot cap `MAX_PIVOT_WORK`, and on
+  load from the recalculation's `RecalcBudget` pool (SPEC-0028). There is no second budget type
+  (SPEC-0024 rejected a separate `WorkBudget`). Every stage charges it before doing the work:
+  - each record per stage;
+  - each result node created;
+  - each filter test;
+  - each sort comparison;
+  - each calculated-field or calculated-item evaluation;
+  - each layout line.
 
-Each cap is a `DEVIATION` entry (decision 0014) added by the task that introduces it.
+  Sorts are O(n log n) over precomputed keys, and a comparator never formats or re-evaluates. Running out
+  stops `compute` at once with `PivotComputeError::Limit`.
+- **Result nodes.** `MAX_PIVOT_NODES` (10,000,000, the same order as `MAX_RECORD_VALUES`, since a node
+  costs about one record value's memory) bounds the result tree's nodes, counted as they are
+  created in stages 3, 4 and 7. That count includes subtotal and grand-total nodes and the nodes `showAll`
+  or calculated items add without records. Axis depth is bounded by the fields on an axis.
+- **Cells.** `MAX_PIVOT_CELLS` (4,000,000, four columns of a full 1,048,576-row sheet, more than any
+  pivot of `MAX_RECORDS` records renders in tabular form with a few data fields) is checked in stage 7 from the line counts (row lines ×
+  column lines × data fields, plus the page area), in saturating arithmetic. The check runs before any
+  cell is allocated, not at render.
+- **Calculated formulas.** A calculated field or item is parsed under the parser's depth limit. It is
+  accepted only if it uses an allow-list of pure scalar functions and its own pivot's field and item
+  names. It is rejected at definition time if it contains:
+  - references, names, Tables or external links;
+  - volatile functions, or functions that reach the host (`INDIRECT`, `OFFSET`, `WEBSERVICE`, `RTD`,
+    `CALL`, `HYPERLINK`, `GETPIVOTDATA`);
+  - `LET` or `LAMBDA`;
+  - array-producing functions.
+
+  Each evaluation runs under SPEC-0024's per-formula budget and charges the pivot run's work units.
+  Calculated-item references are resolved with an explicit stack (no native recursion), with cycle
+  detection and a depth of 64.
+- **Workbook total.** The caps above are per pivot. A workbook can hold `MAX_PIVOTS` pivots, each with
+  `refreshOnLoad`, so load shares one workbook-wide work pool (the `RecalcBudget`) and cell total, as
+  `CacheBuilder` shares `workbook_values_left`. Once the shared total runs out, later pivots are not refreshed.
+- **Failure is atomic.** A refresh builds a new cache and a new `PivotResult` and swaps them in only on
+  success. Past any limit, or on an unresolvable source (an external sheet, a connection, or an
+  unresolved name or Table, which never fall back to a file or network read), the following stay as
+  they were: the cache, the result, the cells and GETPIVOTDATA's answers. Those answers may then be
+  stale, but they are consistent with the cells. On import this is a warning, never a load failure.
+  The API returns `edit::PivotError::Limit` or `Source` through `EditError::Pivot`. Excel would render
+  the pivot, which is the `DEVIATION`.
+- **Grid.** The area a refresh clears is the area this pivot wrote at its last render, clamped to the
+  sheet. It is never the file's `location` as given, because a foreign cell under a stale location must
+  not be cleared.
+- **Other bounds.**
+  - `PivotView::records` returns an iterator bounded by `MAX_RECORDS`.
+  - The `Opaque` verbatim store counts toward the import limits.
+- **No panics.** Item indexing, tuple building, `u32` index narrowing (by the cap argument the cache
+  builder uses) and show-values-as division all return `PivotError` or an Excel error value. The fuzz
+  target (T-4133) extended to compute and render is an acceptance criterion of T-4142 and T-4147.
 
 ## Alternatives considered
 - **Render from a query engine** (mog's GROUP BY/rollup). It hides Excel's line encoding, so layout bugs
   show up only as wrong cells. Rejected; the line contract is cheaper to check.
-- **Re-render on import, as LibreOffice does.** That loses Excel-saved cells that are already right.
-  Rejected: re-render only on `refreshOnLoad`, or on request.
+- **Re-render on import, as LibreOffice does.** That would lose Excel-saved cells that are already
+  right, if Excel itself keeps them (T-4586). Rejected for now: re-render only on `refreshOnLoad`, or on
+  request. Revisit if T-4586 shows that Excel re-renders.
 - **Separate code paths per form.** The forms differ only in line-to-cell placement. One renderer with
   per-field form flags.
 
@@ -205,7 +298,8 @@ Each cap is a `DEVIATION` entry (decision 0014) added by the task that introduce
 - **Corpora:** fresh pivot-corpus files (T-4131) re-render exactly.
 - **Metamorphic** (T-4155):
   - refresh is idempotent;
-  - GETPIVOTDATA of each value cell's tuple equals the cell;
+  - GETPIVOTDATA of each non-empty value cell's tuple equals the cell, when no missing or error caption
+    is set; empty intersections answer 0 instead; `#SPILL!`-collapsed pivots stay out until T-4130;
   - permuting source rows changes only order-dependent output;
   - import, export, import is a fixed point.
 - **Unit tests per stage**, and the fuzz target (T-4133) extended to compute and render.
@@ -221,8 +315,10 @@ Each cap is a `DEVIATION` entry (decision 0014) added by the task that introduce
 6. T-4151: grid and lifecycle.
 7. T-4152: the adapter renders through the engine, so the probes' pivot cells start passing.
 8. T-4154: GETPIVOTDATA over the result.
-9. PV2 and PV3 stages (T-4163, T-4165, T-4168, T-4169, T-4171, T-4174, T-4175), each after its probe.
-10. Export and API (T-4176–T-4178, T-4184), then PivotChart data and I/O (T-4186, T-4187) and slicers
+9. PV2 and PV3 stages (T-4163, T-4165, T-4168, T-4169, T-4171, T-4174, T-4175), each after its probe
+   (T-4161, T-4164, T-4170, T-4505, T-4582, T-4583, T-4584).
+10. Auto Refresh (T-4182), once its evidence lands.
+11. Export and API (T-4176–T-4178, T-4184), then PivotChart data and I/O (T-4186, T-4187) and slicers
     (T-4188).
 
 Until T-4152 lands, spec-case pivots with a `definition` stay unregistered and their cells known failures.
