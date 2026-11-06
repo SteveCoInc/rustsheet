@@ -3,7 +3,7 @@ id: T-4541
 title: "T.INV.2T and TINV are #NUM! in Excel at p 2.2E-308: probe the cut and match it (Gate A known failures left by T-3386)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
