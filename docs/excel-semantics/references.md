@@ -435,7 +435,8 @@ the web keeps the cache on upload):
   ROWS `#VALUE!`, as for a span of this workbook ("3-D references outside the aggregates"), while
   without a link `SUM('[other.xlsx]S1:S2'!A1)` is `#BLOCKED!` (T-1381). Engine (T-1654): the lexer
   reads the unquoted `[n]First:Last!` prefix as the quoted `'[n]First:Last'!` (the formula text
-  keeps the quoted form, as for `'[1]Uses'!`), and `Model::cached_span_cells` gives the cells the
+  prints it bare, as a span of this workbook is: "A formula's reference to another workbook is
+  written `[1]Sheet!A1`", T-4140), and `Model::cached_span_cells` gives the cells the
   cache holds in the written area on the sheets between the two ends in `sheetNames` order, in
   sheet, row and column order, in one walk of the cache, which the aggregates and COUNTA read
   (blanks skipped); it is `#REF!` as a value and `#VALUE!` where one sheet is needed. Unprobed, so
@@ -1614,8 +1615,27 @@ quoted (`'Me lo invente'!$C$2`, `'A Wird One$'!$A$1`) and `"Sheet2"` is not.
 Evidence: poi/FormulaEvalTestData_Copy.xlsx (Excel-cached, Excel 15) EverythingTests!F128;
 ironcalc-calc LOOKUP_AND_REFERENCE/ADDRESS.xlsx (Excel-cached) Sheet1!E2, B33, B38.
 Status: VERIFIED (Excel-cached). Open (unprobed): `[Book1]My Sheet`, brackets elsewhere in the name, an empty book (`[]Sheet1`), a book part with spaces or dots, an empty sheet part (`[Book1]`) and a cell-reference-like sheet part (`[Book1]A1`); the implementation decides on the part after `]` only.
-Implemented in: `address_sheet_text` in functions/lookup_and_reference/address_areas.rs
-Tasks: T-0984
+Implemented in: `address_sheet_text` in functions/lookup_and_reference/address_areas.rs, through
+`quote_name` (expressions/utils/mod.rs), which formulas share since T-4140 ("A formula's reference to
+another workbook is written `[1]Sheet!A1`")
+Tasks: T-0984, T-4140
+
+## A formula's reference to another workbook is written `[1]Sheet!A1`
+Rule: in the formula text Excel saves, the `[n]` book index of a reference to another workbook is
+outside any quotes, and the quotes, when the sheet name needs them, go around the whole `[n]Sheet`
+token: `VLOOKUP(C2,[1]Sort!$B:$C,2,FALSE)`, `COUNTIFS('[1]XA Data Pull'!$J:$J,…)`. `'[1]Sort'!A1`
+would name a sheet of this workbook called `[1]Sort`. The sheet part is quoted exactly as a sheet of
+this workbook would be (`'[1]56737'!$B$2`, a leading digit), the same rule as ADDRESS's (above).
+Evidence: corpus-bench 59932 (Excel-saved, 16,998 cells of `[1]Sort!`) and 52450 (1,830 COUNTIFS over
+`'[1]XA Data Pull'!`), and poi ref-56737 (Excel-saved, `[1]Uses!`, `[1]!NR_Range`); round-trip census
+docs/research/xlsx-round-trip-2026-11-04.md §2.2.
+Status: VERIFIED (Excel-saved files) for single sheets. UNVERIFIED: a 3-D span of the other workbook's
+sheets is printed bare unless either end needs quotes (`[1]Uses:Defines!$B$2`), as a span of this
+workbook is; fixtures/external-link-cached-3d-span holds that form and Excel for the web opened it, but
+Excel's own saved form for it is unprobed.
+Implemented in: `quote_name` (expressions/utils/mod.rs), used by the display, FORMULATEXT, the stored
+R1C1 text and the xlsx export alike.
+Tasks: T-4140
 
 ## T of a multi-cell range is not intersected
 Rule: T, like N, reads a multi-cell range as its top-left cell, in legacy and dynamic formulas
