@@ -3,7 +3,7 @@ id: T-4100
 title: "Gate A tables, legacy normal and lognormal aliases: NORMDIST, NORMINV, NORMSDIST, NORMSINV, LOGNORMDIST, LOGINV and STANDARDIZE"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
