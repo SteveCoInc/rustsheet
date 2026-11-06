@@ -199,8 +199,8 @@ Rule:
 
 Evidence: probes/t4137-pivot-captions (excel-graph, 2026-11-06, T-4137). Default data-field names
 (`Sum of`, `Count of`...) are written by the file, not chosen by Excel, so a file cannot probe them;
-creating a pivot in the UI is where Excel picks them (T-2327 keeps that question). Other error kinds
-and aggregates under `errorCaption` are not probed.
+creating a pivot in the UI is where Excel picks them (T-2327 keeps that question). For other
+aggregates and `#DIV/0!` under `errorCaption`, see "errorCaption replaces every error value" below.
 Status: VERIFIED (excel-graph)
 
 ## Page fields render above the location
@@ -263,7 +263,8 @@ Rule (each aggregate in a value field that also holds other kinds of value):
   (`#N/A`) in the cell holding it and in every subtotal and grand total that covers that cell. Cells that
   do not cover it are unaffected.
 - **One value.** Over a single number, StdDev and Var are `#DIV/0!`, while StdDevp and Varp are 0. This
-  holds wherever the other values in the cell are text, blank or boolean.
+  holds wherever the other values in the cell are text, blank or boolean. A data error wins over it:
+  East/A of Err holds one number beside `#N/A` and shows `#N/A` (A_stdDev!L6, A_var!L6).
 - **Empty intersections.** An intersection with no records is blank for every aggregate, Count and
   CountNums included.
 
@@ -283,21 +284,28 @@ West/A, and East/A row 4 holds the odd value: text `abc`, a blank, `TRUE` or `#N
 - **Empty intersections:** West/B (B7:G7) is blank on every sheet.
 Status: VERIFIED (excel-graph)
 
-## Summation order of Sum and Average totals
-Rule: a Sum subtotal or grand total is not the record-order sum of its records. It equals the sum in
-item (display) order, which is the same as adding the children's sums. An Average total, though,
-divides the record-order sum.
-Evidence: probes/t4135-pivot-aggregates field Dec, East records in record order 0.3 (B), 0.2 (A), 0.1
-(A), and West 0.7:
-- A_sum!S6 (East total) is 0.6000000000000001. That is (0.2 + 0.1) + 0.3; record order gives 0.6.
-- A_sum!S8 (grand total) is 1.3. Record order gives 1.2999999999999998.
-- A_average!S6 is 0.19999999999999998 = 0.6 / 3, and A_average!S8 is 0.32499999999999996 =
-  1.2999999999999998 / 4. Both use the record-order sum.
+## Summation order of Sum, Average and Product totals
+Rule (on the evidenced cells):
+- **Sum.** A subtotal or grand total of Sum is the sum of its children's sums. It is neither the sum of
+  its records in record order nor the sum in display order.
+- **Average** divides the sum of the records taken in record order.
+- **Product** totals multiply the records in record order, not the children's products.
 
-Item order and "sum of the children" agree on this data, and other aggregates' totals are not
-separated.
-Status: VERIFIED (excel-graph) for these cells; the general accumulation order is UNVERIFIED (probe
-pending: T-4589)
+Evidence: probes/t4135-pivot-aggregates, field Dec. The East records in record order are 0.3 (B), 0.2
+(A) and 0.1 (A), and West's is 0.7. Excel displays Kind as B, then A (A_sum!B4 `B`, H4 `A`).
+- **Sum:** A_sum!S6 (East total) is 0.6000000000000001. That is the sum of the children, M6 + G6 =
+  0.30000000000000004 + 0.3. Record order and display order both give 0.6. A_sum!S8 is 1.3, which is
+  the children's sum on either axis; the records in record order give 1.2999999999999998.
+- **Average:** A_average!S6 is 0.19999999999999998 = 0.6 / 3, not 0.6000000000000001 / 3. A_average!S8
+  is 0.32499999999999996 = 1.2999999999999998 / 4. Display order equals record order here, so the two
+  cannot be told apart for Average.
+- **Product:** A_product!S6 is 0.006, which is 0.3 × 0.2 × 0.1 in record order. The children's product
+  would be 0.006000000000000001. A_product!S8 is 0.0042; the children would give 0.004200000000000001.
+
+StdDev and Var totals are not separated by this data. An accumulation that takes A's records first
+(0.2, 0.1, then 0.3) would also give the Sum cells. The sum of the children is not yet told apart from
+it.
+Status: VERIFIED (excel-graph) for these cells; the general rule is UNVERIFIED (probe pending: T-4589)
 
 ## errorCaption replaces every error value
 Rule: with `showError` and `errorCaption`, every error value a pivot cell would show becomes the

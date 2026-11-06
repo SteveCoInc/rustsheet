@@ -33,13 +33,13 @@ over six value fields, and an errorCaption pivot. Recorded in docs/excel-semanti
 - **Errors:** an error poisons every other aggregate, in its cell and in every total over it.
 - **One value:** StdDev and Var are `#DIV/0!`, StdDevp and Varp 0.
 - **Empty intersections:** blank for every aggregate.
-- **Totals:** a Sum total is not the record-order sum; it matches item order and the sum of the
-  children. An Average total divides the record-order sum.
+- **Totals:** a Sum total is the sum of the children's sums, not the record-order or display-order
+  sum. An Average total divides the record-order sum. A Product total multiplies the records in record
+  order.
 - **errorCaption:** replaces every error value, `#DIV/0!` included.
 
 **Left open** (T-4589):
 - why EC's Count and CountNums grand totals show the caption;
-- whether Sum accumulates in item order or as the sum of the children.
+- whether Sum is the sum of the children or an A-first accumulation;
+- StdDev and Var totals.
 
-Not probed here: the summation order of Product, StdDev and Var totals (they ride T-4589 if it finds
-an order rule).
