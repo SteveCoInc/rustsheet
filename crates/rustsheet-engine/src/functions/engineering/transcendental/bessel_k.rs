@@ -74,6 +74,13 @@ pub(crate) fn bessel_k(n: i32, x: f64) -> f64 {
     if x.is_nan() || x <= 0.0 || !(0..=EXCEL_MAX_ORDER).contains(&n) {
         return f64::NAN;
     }
+    // Excel's BESSELK is `#NUM!` for every order once `x/2` (the `ln(x/2)` of K0 and K1) is
+    // subnormal, though K0 and K1 are finite there: 4.4501477170144E-308 is `#NUM!` and
+    // 4.45014771701441E-308 answers, either side of 2^-1021 (probes/t4459-besselk-tiny-x-ulps;
+    // engineering.md "BESSELK at a tiny x", T-4459). x = 2^-1021 itself is unprobed (T-4552).
+    if x < 2.0 * f64::MIN_POSITIVE {
+        return f64::NAN;
+    }
 
     if n == 0 {
         return bessel_k0(x);
