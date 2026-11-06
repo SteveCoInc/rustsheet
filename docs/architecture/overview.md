@@ -39,7 +39,7 @@ rustsheet (public facade crate, M1)          stable API: Workbook / Txn / Change
        ├─ functions  registry: one implementation per Excel function; shared arg iteration,
        │             criteria/wildcard matcher, numeric kernels (distributions, solvers)
        └─ format     number-format engine, formatted text
-  rustsheet-xlsx     streaming import, export, unknown-part passthrough
+  rustsheet-xlsx     streaming import, export (unmodelled parts are dropped today; M15 preserves them)
   rustsheet-ffi      flat C/UniFFI facade (M12) → Java
   bindings/python    PyO3 over the facade (bulk, GIL release)
 ```

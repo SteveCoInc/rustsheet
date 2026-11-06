@@ -1120,9 +1120,15 @@ same Data sheet, excel-graph, 2026-10-16; "functions", "functions2", "functions3
   G!A301-A361, G!A441, G!A681). So `LAMBDA(x,y,SUM(x)/SUM(y))` equals PERCENTOF (G!A281), also sorted by it (G!A661).
 - A LAMBDA whose result is a reference, written (`Data!D2`, `Data!D2:D3`), picked by IF or returned by INDEX, is `#VALUE!` in
   every cell (functions G!A541-A581; PIVOTBY P!A841).
-Unprobed (T-1325): mismatched heights inside a function array (the engine pads with `#N/A`, so the result is `#N/A`); which of
-several error elements wins (the engine: the first evaluated); a labelled row of several functions with detected headers (the
-engine does not show them); a LAMBDA without parameters (the engine: `#VALUE!`). CORREL, PEARSON and RSQ over arrays of different sizes
+- Function-array edges (probes/t4449-groupby-function-array-edges, excel-graph, 2026-11-06, T-4449; every cell GROUPBY and
+  PIVOTBY alike, over one value column and two): a ragged array of functions (`HSTACK(VSTACK(SUM,MAX),MIN)`,
+  `VSTACK(HSTACK(SUM,MAX),MIN)`) is `#VALUE!`, not the `#N/A` its padding holds: the stack is a 2-D array of functions (G!C1,
+  G!C2, G!C13, G!C14, G!C25, G!C26). Of several error elements the first in reading order is the result (`HSTACK(NA(),1/0)`
+  `#N/A`, `HSTACK(1/0,NA())` `#DIV/0!`, `VSTACK(SUM,NA(),1/0)` `#N/A`, `HSTACK(SUM,#REF!,NA())` `#REF!`: G!C3:C6), and an error
+  beats a plain value on either side of it (`HSTACK(NA(),5)` and `HSTACK(5,NA())` are both `#N/A`: G!C7, G!C8). A LAMBDA without
+  parameters is `#VALUE!` for the whole result: `LAMBDA(1)`, `LAMBDA(SUM(Data!D2:D3))`, `HSTACK(SUM,LAMBDA(1))` and
+  `LET(f,LAMBDA(1),f)` (G!C9:C12, G!C21:C24, G!C33:C36, G!C45:C48).
+Unprobed (T-1325): a labelled row of several functions with detected headers (the engine does not show them). CORREL, PEARSON and RSQ over arrays of different sizes
 are `#N/A` per group in Excel, `#VALUE!` here, and their total rows differ in the last digit (functions G!B421, functions2
 G!B281, G!B301): a CORREL/PEARSON/RSQ gap, T-1707.
 T-1706: every function passed by name gets its catalog minimum argument count (1 or 2; 0 or 3+ is `#VALUE!` overall):
@@ -1980,16 +1986,26 @@ to 0) are `#VALUE!`; `"-1"` is descending and TRUE ascending (H97-H165). The sna
 `1-2^-22`, `1-2^-23`, `1-2^-24` and `1-(2^-22+2^-33)` sort ascending, `1-2^-21`, `1-2^-20` and `1-(2^-22+2^-32)` are `#VALUE!` (floor 0), `2-2^-22` is `#VALUE!`
 (snapped to 2) and `2-2^-21` ascending. Just below -1 it is at least 2^-23 + 2^-34 and under 2^-22 (the half, as DATE and TIME bracket it more tightly, T-2267): `-1-2^-23`, `-1-2^-24` and `-1-(2^-23+2^-34)` sort descending (snapped to -1), but `-1-2^-22`,
 `-1-(2^-22+2^-33)`, `-1-(2^-22+2^-32)` and `-1-2^-21` are `#VALUE!` (floor -2); the cells just above -1 and -2 (`-1+2^-22`, `-2+2^-22`) say nothing of
-the tolerance, their floor is -1 and -2 either way. SORT's own sort_order still truncates (unprobed for fractions).
+the tolerance, their floor is -1 and -2 either way.
+SORT reads its sort_order and sort_index the same way (probes/t4447-sort-fractional-keys, excel-graph, 2026-11-06, T-4447;
+A1:B3 = (3,c),(1,a),(2,b)): a sort_order of -0.0001, -0.5, -0.9999, `"-0.5"`, `-1+2^-21`, `-1-2^-23` and `-1-2^-24` sorts
+descending; 1.5, 1.9999, `1-2^-22`, `1-2^-23` and `1-2^-24` ascending; 0.0001, 0.5, 0.9999, -1.5, `1-2^-21`, `-1-2^-22` and
+`2-2^-22` (snapped to 2) are `#VALUE!` (E1:E20, the same as a one-element array F1:F20, and per key in a list E21:E22). A
+sort_index of `1-2^-23`, `1-2^-24`, 1.5 reads key 1 and `2-2^-23`, 2.5, `2+2^-22` key 2, while 0.9999, `1-2^-21` and -0.5
+are `#VALUE!` and `3-2^-23` (snapped to 3, past the two columns) is `#VALUE!` too (I1:I11, by_col J1:J11; the key itself
+shows in R1:R10 and by_col S1:S10, over O1:P3 = (3,a),(1,c),(2,b), whose columns sort apart: `1-2^-23` and 1.5 sort by
+column 1, `2-2^-23` and 2.5 by column 2). The lifted by_col path (one SORT per by_col element) reads its single
+sort_index the same way in ours, unprobed there away from 2.7 (t2929 K18). Before T-4447 ours truncated both, so -0.5 and the values just below 1 were `#VALUE!` and `2-2^-22`
+and `3-2^-23` sorted.
 This is why `SORTBY(Data!E1:E12,MAX(..)%,-1)` (gen-m7/18b80d3fd292d63a Calc!A123:A134), `SORTBY(Data!C1:C12,IFNA(TIMEVALUE(..),..),1)`
 (7307132bb8820f17 A966:A977) keep their one-column arrays, `SORTBY(Data!B1:C12,(-1),1)` (0e40208f51c2454c Calc!A2) and the
 by_array 0.5 on Data!B1:C12 (7d67c559ce7536fa A1358) are `#VALUE!`, and `SORTBY(Data!B1:E12,Data!E1:E12,-0.0001,..)`
 (07d27aa0add0247f A658) sorts descending. The "Invalid values" list of "SORT and SORTBY argument errors" (`SORTBY(arr,key,0)`
 `#VALUE!`) still holds.
 Evidence: probes/t2310-sortby-single-by-array (42 formulas, excel-graph, 2026-10-22); gen-m7 (excel-graph, 2026-10-21, T-2225).
-Ours: implemented (T-2310): `by_array_axes` and `sortby_of` in functions/spill_functions.rs.
+Ours: implemented (T-2310): `by_array_axes` and `sortby_of` in functions/spill_functions.rs; SORT's in `sort_by_keys` (T-4447).
 Status: VERIFIED (excel-graph)
-Tasks: T-2310
+Tasks: T-2310, T-4447
 
 ## PIVOTBY: an error column total over several value columns is #VALUE! (T-2311)
 Rule (excel-graph, 2026-10-22, probes/t2311-pivotby-value-columns-error P!A1-A42, probes/t2311-pivotby-value-cause): with one
@@ -2457,9 +2473,32 @@ so the later calls meet a filter taller than them.
   depth {1,#N/A} is `#N/A`, {0,""} with {1,#N/A} is `#VALUE!`, and {0,#N/A} with {1,blank} or {1,""} is `#N/A`; position
   1 is -1 in every call, and the no-filter controls give the same cells (probes/t4028-groupby-lifted-spent-filter-blank
   G!A1:B23, T-4028).
+- A filter that keeps no row (`(Data!D1:D12="zz")`; column D holds no text) makes the call `#VALUE!`: the scalar call
+  is `#VALUE!` (probes/t4464-groupby-spent-filter-shapes G!A85), and so is every element of a lifted
+  `field_relationship` {0,1;0,1}, `{"x",0;0,1}` or {2,0;0,1}, `field_headers` {0,1;0,0} or `{"x",0;0,0}`, or total depth
+  {1,2;1,1} or {5,1;1,1} beside it (G!A9:B10, A21:B22, A33:B34, A45:B46, A57:B58, A69:B70, A81:B82), while the same calls
+  without a filter or with `(Data!C1:C12<0.2)` give the elements their values as above (G!A1:B82). Every element meets
+  the same filter, so whether a no-row filter is spent cannot be seen: an element is `#VALUE!` either way. Note that
+  `(Data!C1:C12>99)` is no such filter: it keeps C10 (123456789.123), and text and FALSE compare above every number, so
+  it keeps C1, C3, C5, C10 and C11 and is spent like any dropping filter (123456789.123, `#VALUE!`; `#VALUE!`, `#VALUE!`, G!A89:B90).
+- A table `field_relationship` (1) refuses subtotals after the filter, so its refusal spends it. Over two key columns
+  (Data!B1:C12), {1,0;0,1} with total depth 2 is `#VALUE!`, 0.3; 0.3, `#VALUE!` without a filter but `#VALUE!` in all
+  four beside `(Data!C1:C12<0.2)` (G!A173:B178), and `{"x",1;0,1}` with depth 2 is `#VALUE!` in all four beside it, where
+  position 3 is 0.3 without it (G!A221:B226): the text refuses before the filter and spends nothing, the table after it.
+  {0,1;0,1} with depth 2 is 1, `#VALUE!`; `#VALUE!`, `#VALUE!` (G!A201:B202). With depth 1 or -1 a table element is served
+  like a hierarchy one (G!A165:B170, A181:B186, A213:B218, A229:B234). Over one key column a depth of 2 is `#VALUE!` in
+  every element, with or without the filter (G!A101:B106, A125:B130, A149:B154).
+- A GROUPBY nested in another spends nothing outside itself. An outer `field_relationship` or total depth computed from
+  an inner lifted GROUPBY (`0*IFERROR(GROUPBY(..,(Data!C1:C12<0.2),{0,1;0,1}),0)`) or from a MAP of scalar GROUPBY
+  calls with that filter gives every outer element its value without an outer filter, and is spent by the outer filter
+  only (G!A237:B298). An inner GROUPBY with that filter, scalar or lifted, inside the outer call's function
+  (`LAMBDA(v,ROWS(GROUPBY(..)))`) spends nothing either (G!A301:B314). A MAP of scalar GROUPBY calls with a dropping
+  filter gives each call its value: one call's filter is not spent for the next (G!A321:B322).
 Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840), t3880-groupby-scalar-filter-edges (T-3880) and
 t3964-groupby-filter-lift-errors (T-3964), t3985-groupby-two-lifted-spent-filter (T-3985),
-t4019-groupby-lifted-spent-filter-kinds (T-4019) and t4028-groupby-lifted-spent-filter-blank (T-4028).
+t4019-groupby-lifted-spent-filter-kinds (T-4019), t4028-groupby-lifted-spent-filter-blank (T-4028) and
+t4464-groupby-spent-filter-shapes (T-4464, excel-graph, 2026-11-06; 323 cells, every one as the engine predicted before the
+fill, docs/research/t4464/predictions.tsv).
 Ours: `Model::groupby_args` sets `Model::groupby_filter_spent` when its filter dropped rows (it reads field_relationship
 before the filter and checks the total depth's range after it, Excel's order here) and `Model::lift_by_class` makes
 every later element `#VALUE!`, except an error `field_relationship` element, which stays its error (its `settled`
@@ -2467,10 +2506,9 @@ argument, T-3880), and, since T-3964, a lifted option position whose first error
 no number (`Model::lift_options`; numeric text no longer stops it since T-3985; T-4019 and T-4028 found numbers, booleans
 and a blank pass through as well, and `""` stops it as other text does); a cell read on demand during an element's call
 keeps its own filter to itself. PIVOTBY's lift beside a filter column is unprobed (T-3892).
-Status: VERIFIED (excel-graph) for the cells named; UNVERIFIED, and modeled from the order above: a filter that keeps no
-row (ours: not spent, the call is `#VALUE!` before it filters anything), a table relationship with subtotals (ours: spent,
-that check comes after the filter), and a lift nested inside another lift (ours: the inner lift spends nothing outside it)
-Tasks: T-3840, T-3880, T-3964, T-3985, T-4019, T-4028
+Status: VERIFIED (excel-graph) for the cells named. Whether a filter that keeps no row is spent is not observable (every
+element is `#VALUE!` either way); ours does not spend it.
+Tasks: T-3840, T-3880, T-3964, T-3985, T-4019, T-4028, T-4464
 
 ## Array-value edges in the gen-m9 sweep (T-2436)
 Rule (one gen-m9 cell each, probes/t2436, excel-graph, 2026-10-24; mechanisms probed in probes/t2579-array-value-edges,

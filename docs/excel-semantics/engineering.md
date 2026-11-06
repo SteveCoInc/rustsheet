@@ -1078,8 +1078,8 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   the EXP pair 297. Only 3 of its cells separate the two forms (|y| above about 5e-17, where they can differ: A79, B79,
   A118), so 5e-17 < |y| < 1e-7 rests on those 3. They show the reciprocal form's cancellation exactly:
   `IMSIN("0+5.67641786435809E-15i")` (A118) is 5.77315972805081E-15i, where the math is 5.6764178643581E-15 (relative
-  error 1.7e-2; A79 4.6e-4). That is above decision 0188 R3's threshold, but R3 lists no case for it and there is
-  no owner ruling, so Excel's value is matched (directive 1). `IMSIN("1E-200+1E-200i")` is still "1E-200"
+  error 1.7e-2; A79 4.6e-4). That is above decision 0188 R3's threshold, but R3 lists no case for it and the owner
+  keeps Excel as the target (decision 0300), so Excel's value is matched (directive 1). `IMSIN("1E-200+1E-200i")` is still "1E-200"
   (u = 1) and `IMCOS("150-0.002i")` keeps its digits. The form has no upper cut either (next entry, T-3589).
   Status: VERIFIED (excel-graph). Ours: `trig_sinh_cosh`.
 - **Below |x| = 0.01 IMSINH's sinh is the ascending Taylor sum, its cosh the reciprocal form; IMSIN and IMCOS keep
@@ -1384,7 +1384,7 @@ The order 3 case at the overflow cut ("BESSELI overflow point (T-2613)", `(-709.
 instance. Orders 0 and 1 are Excel's polynomial forms, far closer to the math (`BESSELI(709.7,0)` is 1.4E-7 low).
 The engine matches Excel bit for bit on all 120 points (it runs the same recurrence), so Gate A holds through Excel's
 15 digits. These points exceed decision 0188 R3's G = 1e-4, so they are R3 candidates; following the math there needs an
-owner ruling (T-4196), and until then Excel stays the target.
+owner ruling, and the owner ruled to keep Excel as the target (decision 0300, T-4196).
 Also from the BESSELJ table: `BESSELJ(11.0627245753426,4)` is -4.609392711411031E-4 against -4.60294628772423E-4 (0.14%),
 next to a root of J_4, where Excel's ~1E-7 absolute error is large relative to the value (the T-0900 profile).
 Evidence: eval/accuracy/tables/BESSELI/s1 and BESSELJ/s1 with their oracle and math sidecars (T-4083).
@@ -1516,6 +1516,7 @@ Evidence: probes-numeric/t3616-imsin-imcos-positive-cut-probe K1, L1, K22, L22 (
 probes-numeric/t3726-imsin-imcos-near-half-pi-sweep (400 texts, excel-graph, 2026-11-01; x = k·pi/2 + d to 15 digits,
 k = ±1..±4, d = 0 or |d| log-uniform in [1E-14, 1E-3], |y| log-uniform in [1, 709]; docs/research/t3726/gen_sweep.py):
 the x87 reduction matches 400, libm 28. Every other IM* cell of the suites and the six IM* fit labs is unchanged.
+Owner ruling (decision 0300, 2026-11-06, T-3775): at x near k·pi/2, where Excel's part is 4.1E-4 off the math, Excel stays the target; no R3 case.
 Status: VERIFIED (excel-graph)
 Implemented in: complex/trig.rs (`imsin`, `imcos` through `trig_sin_cos`)
 Tasks: T-3726

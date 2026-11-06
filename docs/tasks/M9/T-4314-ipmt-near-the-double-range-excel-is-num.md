@@ -3,7 +3,7 @@ id: T-4314
 title: "IPMT near the double range and at tiny rates: Excel is #NUM! where the engine has a value (319 cells of t3523-ipmt-selector-sweep)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -35,11 +35,43 @@ annuity.rs), then an intermediate of Excel's form overflowing or underflowing (`
 `1-(1+r)^-n` at a tiny rate).
 
 ## Acceptance criteria
-- [ ] The condition under which Excel's IPMT is `#NUM!` is identified from these cells and the passing ones of the
+- [x] The condition under which Excel's IPMT is `#NUM!` is identified from these cells and the passing ones of the
       same columns (a short probe where they do not decide it), and IPMT follows it.
-- [ ] The cells above pass, or the ones that do not are named with their owner; no other cell regresses
+- [x] The cells above pass, or the ones that do not are named with their owner; no other cell regresses
       (`make eval-baseline`).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - PPMT and PMT on the same inputs unless the same condition decides them (file a task if so).
+
+## Outcome
+Excel's IPMT is `#NUM!` where its discounted split (T-2243) has no balance or no factor, and IPMT now follows that:
+- The rule (financial.md "IPMT is #NUM! where its discounted balance fails"), outside period 1 of type 1 at a
+  nonzero rate:
+  - `A = (pv+fv)/(1-Q(-nper*L))` is past the double range;
+  - `1-Q` is below the normal range;
+  - or the rate is subnormal, so `d` is not normal.
+- How it was found: the sweep's intermediates in doubles split columns C and D exactly on A's overflow. The largest
+  Excel-finite |A| is 1.43E+308; every `#NUM!` cell has A infinite. Column B is A infinite (188), `1-Q` subnormal (11)
+  or only the subnormal rate (B127).
+- probes/t4314-ipmt-balance-overflow (35 cells, excel-graph 2026-11-06) checks each condition on its own:
+  - `IPMT(0.5,1,2,9.9E+307)` is -4.95E+307, `IPMT(0.5,1,2,2*5E+307)` `#NUM!`;
+  - pv+fv = 0 keeps a value;
+  - a subnormal rate with A = 9.7E+288 is `#NUM!`;
+  - `IPMT(1E-300,1,1E-10,1E-300)` (A = 1E+10, `1-Q` subnormal) is `#NUM!`;
+  - period 1 of type 1 stays a true 0.
+- It also showed that a subnormal interest at the smallest normal rates is a true 0 (`(x)=0` TRUE), so
+  `discounted_split` now flushes its interest.
+- Code: `discounted_balance` declines on a non-finite A; `period_payments` errs IPMT where `discounted_balance` or
+  `payment_factor` declines; `discounted_split`'s interest goes through `flush_subnormal`. Unit test
+  `interest_errs_where_the_discounted_balance_fails`.
+- Eval delta: cell by cell, report.json of an origin/main c97e0b9c build against this branch, each case's `passed`
+  count and its failing cells:
+  - probes-numeric/t3523-ipmt-selector-sweep goes from 480 to 799 of 800: all 319 `#NUM!` cells pass. C139 (13th
+    digit, Tier B) is left to T-4491.
+  - The new probes/t4314-ipmt-balance-overflow passes 28 of 35. The 7 off cells are PMT, PPMT and CUMIPMT on the
+    same inputs, where Excel is `#NUM!` too: Sheet1!B2, B4:B6, C7:C8, D3, owned by T-4488.
+  - No other cell of any suite changes. `make eval-baseline` records the new case (probes 5593 -> 5600 known
+    failures, all 7 new coverage; visible-parity line added).
+- Not a fit: the rule is three decline conditions the split already has, read off the evidence; no constant was
+  tuned.

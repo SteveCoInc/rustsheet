@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "c139c17ede485f2fb71cc2b1644d8f043ab2776dd54b5d27c4102f924a20ed10"
+ },
+ "sheets": {
+  "Calc": {
+   "A19": {
+    "t": "n",
+    "v": "-141113.59756097560975609756097560975609756097560976",
+    "f": "=ISPMT(0.5,12,205,299775)"
+   }
+  }
+ }
+}
