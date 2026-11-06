@@ -10,7 +10,12 @@ from collections.abc import Sequence
 import mpmath
 import pytest
 
-from rustsheet_tools.accuracy.defs.percentrank import PERCENTRANK, PERCENTRANK_EXC, PERCENTRANK_INC
+from rustsheet_tools.accuracy.defs.percentrank import (
+    PERCENTRANK,
+    PERCENTRANK_EXC,
+    PERCENTRANK_INC,
+    _significance_of,
+)
 from rustsheet_tools.accuracy.model import Definition, DomainError, NoValueError
 from rustsheet_tools.accuracy.sampler import STRATA, Sampler, math_arg
 
@@ -124,3 +129,24 @@ def test_draws_are_valid_outside_the_edge_stratum(definition: Definition) -> Non
             if stratum != "edge":
                 with contextlib.suppress(NoValueError):  # a cut inside the noise is redrawn
                     definition.evaluate(margs)
+
+
+@pytest.mark.parametrize("definition", ALL)
+def test_a_tied_lower_neighbour_interpolates_from_its_last_copy(definition: Definition) -> None:
+    # probes/t4093-percentrank-tied-neighbour (excel-graph): A1:C8 at 15 digits
+    exclusive = definition is PERCENTRANK_EXC
+    for data, x, inc, exc in (
+        ((1, 2, 2, 2, 3), 2.5, "0.875", "0.75"),
+        ((1, 1, 1, 3), 2, "0.833333333333333", "0.7"),
+        ((1, 2, 2, 3), 2.25, "0.75", "0.65"),
+        ((1, 1, 2, 2, 5), 1.5, "0.375", "0.416666666666667"),
+    ):
+        assert at(definition, data, x, 15) == mp(exc if exclusive else inc)
+
+
+def test_a_fractional_or_non_finite_significance_has_no_value() -> None:
+    with pytest.raises(NoValueError):
+        PERCENTRANK.evaluate([(mp(1), mp(2), mp(3)), mp(2), mp(2.5)])
+    for significance in (mpmath.inf, mpmath.nan):  # `evaluate` refuses these first; the helper must too
+        with pytest.raises(NoValueError):
+            _significance_of(significance)

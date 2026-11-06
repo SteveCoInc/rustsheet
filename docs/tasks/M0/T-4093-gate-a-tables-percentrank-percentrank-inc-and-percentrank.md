@@ -35,7 +35,7 @@ Every failing table point has an owner.
       entries' values.
 - [x] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
       their number. Every point outside the envelope has a `known-failures.tsv` owner.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other sample-statistics groups of decision 0271.
@@ -79,5 +79,15 @@ Every failing table point has an owner.
   - All 121 cells agree with Excel's oracle value: 85 numbers within 1e-9, and 36 errors on both sides.
   - Cells with a fractional significance (t2473 A13, B13, C13) get no value, because the parameter is an integer.
   - `make eval-math-check` reports current.
+- **Review round 1 (Excel fidelity):**
+  - New probe probes/t4093-percentrank-tied-neighbour, 27 cells, filled from excel-graph. When x lies between two
+    values and the lower neighbour is tied, Excel interpolates from that neighbour's last copy:
+    `PERCENTRANK({1,1,1,3},2)` is 0.833. That is the rule the definition and the engine use, and it matches all 27
+    cells.
+  - The probe's 27 math sidecar cells agree with the oracle. The statistics.md entry cites the probe.
+  - The Ties bullet now names PERCENTRANK and PERCENTRANK.INC (0) and gives n = 5, with EXC 1/6 at A113.
+  - The docstring marks the order of the `#N/A` against the `#DIV/0!` as UNVERIFIED.
+  - A non-integral or non-finite significance now gets no math value (`_significance_of`) instead of being
+    truncated by `int()`.
 - **Follow-up:** T-4556 (PERCENTRANK.EXC's last digit at 16 or more digits).
 - **Eval delta:** none in the gated suites (tools, tables, docs and sidecars only).

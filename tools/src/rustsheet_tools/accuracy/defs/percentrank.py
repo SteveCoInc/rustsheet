@@ -4,7 +4,8 @@ The rank, exact, on the literals' doubles sorted as a[1] <= ... <= a[n] (ties ke
 below x (statistics.md "PERCENTRANK ranks x by the count of values below it (T-4093)", fitted to Microsoft's examples
 and VERIFIED with this task's table cells, ties and a constant array included):
 - x equal to a value: the position p = c; x strictly between a[c] and a[c + 1]: p = c - 1 + (x - a[c]) / (a[c + 1] -
-  a[c]), the linear interpolation between the two neighbours.
+  a[c]), the linear interpolation between the two neighbours, from the last copy of a tied lower neighbour
+  (probes/t4093-percentrank-tied-neighbour A1:C8).
 - PERCENTRANK and PERCENTRANK.INC: p / (n - 1); PERCENTRANK.EXC: (p + 1) / (n + 1).
 
 The result is that rank at `significance` digits (3 when omitted), by Excel's own decimal rule, as decisions 0223
@@ -17,10 +18,11 @@ rounding noise of a point where that digit changes, the digit depends on how Exc
 has no math value (`NoValueError`); see `_scaled_rank`.
 
 Domain (an Excel error region, never a math value): x below the smallest value or above the largest is `#N/A`
-(x at either end is in range, EXC too), checked before significance (statistics.md "Order statistics: the scalar
-argument's error before the no-number result; PERCENTRANK's #N/A before significance"); then a significance below 1
-is `#NUM!` and one of 309 or more (10^significance overflows) `#DIV/0!` (statistics.md, the huge-significance entry
-above). One value equal to x ranks 1 for all three functions, whatever numeric significance (statistics.md
+(x at either end is in range, EXC too). A significance below 1 is `#NUM!` and one of 309 or more (10^significance
+overflows) `#DIV/0!` (statistics.md, the huge-significance entry above). The `#N/A` is evidenced before the `#NUM!`
+(statistics.md "Order statistics: the scalar argument's error before the no-number result; PERCENTRANK's #N/A before
+significance"); its order against the `#DIV/0!` is UNVERIFIED (the huge-significance entry), which no math value
+depends on: either way the point is an error. One value equal to x ranks 1 for all three functions, whatever numeric significance (statistics.md
 "Scalar distributions at extreme arguments, part 2": probes/percentrank-single-value B2-B20, EXC too); with a
 significance of 309 or more there it is unprobed (the entry's UNVERIFIED line), so such a point has no value. The data
 is a one-row array literal of numbers only, so no data rule (text, booleans, empty data, error order) applies.
@@ -132,12 +134,21 @@ def _scaled_rank(rank: Fraction, rank_double: float, significance: int) -> Fract
     return result
 
 
+def _significance_of(value: mpmath.mpf) -> int:
+    """A whole, finite significance; NoValueError otherwise (how Excel reads a fractional one is not evidenced
+    beyond a single value, and `int()` would truncate it silently)."""
+    if not mpmath.isfinite(value) or value != mpmath.floor(value):
+        msg = "a non-integral or non-finite significance (unprobed)"
+        raise NoValueError(msg)
+    return int(value)
+
+
 def _rank(args: Sequence[MathArg], exclusive: bool) -> mpmath.mpf:
     x_arg, *rest = scalars(args[1:])
     values = sorted_values(args[0])
     xs = [_exact(v) for v in values]
     x = _exact(x_arg)
-    significance = int(rest[0]) if rest else DEFAULT_SIGNIFICANCE
+    significance = _significance_of(rest[0]) if rest else DEFAULT_SIGNIFICANCE
     if x < xs[0] or x > xs[-1]:
         raise DomainError("x outside the data (#N/A)")
     n = len(xs)
