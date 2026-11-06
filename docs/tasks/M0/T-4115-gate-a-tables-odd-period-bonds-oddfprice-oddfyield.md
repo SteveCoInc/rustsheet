@@ -69,7 +69,7 @@ Every failing table point has an owner.
 - Tables `eval/accuracy/tables/{ODDFPRICE,ODDLPRICE,ODDLYIELD}/s1` (200 points each) and `ODDFYIELD/s1` (300), filled
   from excel-graph with 0 failures.
 - `rustsheet-eval accuracy`: 898 of the 900 points inside the envelope, 0 failing, 0 table defects; `missing tables` 50
-  to 46. The engine is bit-exact with Excel on 897 of 900 (ODDFPRICE 199, ODDFYIELD 298, ODDLPRICE 200, ODDLYIELD 200;
+  to 46 (39 after merging origin/main, where other tables landed). The engine is bit-exact with Excel on 897 of 900 (ODDFPRICE 199, ODDFYIELD 298, ODDLPRICE 200, ODDLYIELD 200;
   ODDFPRICE A162 is 1 ulp off, inside). Two ODDFYIELD points are known failures under T-4551, both roots near 0 where
   Excel and the engine stop short of the math: A272 (engine 1.1E-11 relative off Excel) and A289 (2E-13).
 - Every Excel error on the tables matches a coded domain, except 15 ODDFYIELD points where Excel's Newton is `#NUM!` at
