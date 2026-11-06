@@ -3,7 +3,7 @@ id: T-4540
 title: "AVERAGEIF numeric, numeric-text and boolean criteria with an average_range: probe the 5 unseen argument pairs, the resized average_range included, and match"
 milestone: M9
 lane: functions-criteria
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -39,12 +39,26 @@ D1:D6, once with D1 alone and once with the 1x2 range D1:E1 (both resized from t
 cell, if Excel follows the SUMIF rule). Record ours in docs/research/t4540 before the fill.
 
 ## Acceptance criteria
-- [ ] probes/t4540-averageif-criteria-average-range is committed with excel-graph oracle values; after `make eval`,
+- [x] probes/t4540-averageif-criteria-average-range is committed with excel-graph oracle values; after `make eval`,
       report.json `argument_coverage` shows no unseen pairs for AVERAGEIF.
-- [ ] Every cell of it passes; a rule ours did not follow is fixed in if_ifs.rs or criteria.rs (shared with
+- [x] Every cell of it passes; a rule ours did not follow is fixed in if_ifs.rs or criteria.rs (shared with
       SUMIF/COUNTIF, not copied) with a unit test citing the cells, and SUMIF/COUNTIF cells keep passing.
-- [ ] Any new rule is recorded in docs/excel-semantics/criteria.md citing the cells.
-- [ ] No new known-failure lines in any eval/baseline/*.txt; `make check-fast` green, CI green; reviewers approve.
+- [x] Any new rule is recorded in docs/excel-semantics/criteria.md citing the cells.
+- [x] No new known-failure lines in any eval/baseline/*.txt; `make check-fast` green, CI green; reviewers approve.
 
 ## Out of scope
 - AVERAGEIFS/MAXIFS/MINIFS criteria kinds (T-3129) and partly lifted ranges (T-2833).
+
+## Outcome
+- Probe: probes/t4540-averageif-criteria-average-range (42 cells, excel-graph, 2026-11-06), tagged M9 (AVERAGEIF's
+  catalog milestone) rather than the M2 the task's sketch implied by its suite neighbours. Ours was recorded before the
+  fill in docs/research/t4540/predictions.md.
+- Result: every cell matches Excel with no engine change. The text criterion `"1"` matches the text "1" and the number
+  1, `TRUE` matches the TRUE cell and not the number 1, `FALSE` matches nothing (`#DIV/0!`), and D1 and D1:E1 resize
+  to D1:D6 for every criteria kind, literal or cell. Recorded in criteria.md "AVERAGEIF's numeric-like criteria pick
+  the same rows under a resized average_range" (VERIFIED).
+- Coverage: report.json `argument_coverage` for AVERAGEIF is single 1.0, pairwise 1.0, `unseen_pairs: []` (0.78
+  before).
+- Eval delta: +42 passing cells in one new probes case, 0 new known failures, 0 regressions. No unit test: no rule
+  changed (the acceptance criterion asks for one only for a fix).
+
