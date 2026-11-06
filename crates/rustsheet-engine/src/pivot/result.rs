@@ -682,8 +682,8 @@ fn accumulate(
 /// item by item, so such a total adds those partial sums rather than accumulating its records
 /// (t4634 T2 and T3 every cell, X1 to X12 H9, V1 and V6 E11, X6 and X7 I9; t4616 S2 H9, V1
 /// E11). Varp, `StdDevp` and Product follow it by analogy: their t4634 cells fit it, but also
-/// fit other readings (UNVERIFIED, T-4678). Every leaf-row cell is folded into each of its row ancestors, so the work is the
-/// cells times the row depth.
+/// fit other readings (UNVERIFIED, T-4678). Every leaf-row cell is folded into each of its row
+/// ancestors, so the work is the cells times the row depth.
 fn merge_crossings(result: &mut PivotResult, work: &mut u64) -> Result<(), PivotComputeError> {
     let PivotResult {
         rows,

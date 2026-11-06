@@ -79,7 +79,7 @@ Engine (asked for by the task owner, though "Out of scope" listed engine changes
 - result/tests.rs, layout/render/tests.rs and layout/lines/tests.rs check all 37 t4634 sheets.
 
 The owner line is in T-4152. Left open, in T-4678:
-- Var, Varp and Product at crossings with two fields per axis;
+- Var, StdDev, Varp, StdDevp and Product at crossings with two fields per axis;
 - the Varp, StdDevp and Product grand-grand order;
 - Max and Min beside errors;
 - a pivot with column fields only;
