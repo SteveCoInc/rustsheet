@@ -23,6 +23,9 @@ as Excel does, which T-4049's rule (they stay `#NAME?`) does not cover.
   formula. Probe it (vary the order, the body kind and the using formula) before changing the binding, and record the
   rule in docs/excel-semantics/syntax.md "A sheet-scoped name added after load".
 - Owned cells: probes/t4353-api-name-unqualified-ref (2): S2!A3, Last!A1.
+- The same uses with another sheet active (T-4394): probes/t4394-api-name-active-s2 (2): S2!A3, Last!A1 (77 and 7 in
+  Excel), and probes/t4394-api-name-active-last (3): S2!A1, S2!A3, Last!A1 (9, 99 and 9). With Last active even S2's
+  `=Rate` resolves, so the active sheet takes part in the rule. Ours is `#NAME?` at each.
 
 ## Acceptance criteria
 - [ ] The rule is probed and recorded; the owned cells pass, or stay known failures with the reason recorded.

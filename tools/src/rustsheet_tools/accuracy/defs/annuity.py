@@ -120,7 +120,7 @@ def payment(r: float, nper: int, pv: float, fv: float, due: bool) -> float:
         return float(max(min(value, MAX_LITERAL), -MAX_LITERAL))
 
 
-def _annuity(stratum: str, rng: random.Random) -> tuple[float, int, float, float, float, bool]:
+def draw_annuity(stratum: str, rng: random.Random) -> tuple[float, int, float, float, float, bool]:
     """The base annuity of a whole-point draw, (sign, n, rate, pv, fv, due), at the extreme and log-uniform
     strata's scales; RATE's and NPER's draws then shape their tail and edge strata. The draw order is fixed, so a
     batch's seed reproduces its points."""
@@ -145,7 +145,7 @@ def _annuity(stratum: str, rng: random.Random) -> tuple[float, int, float, float
 
 def _draw(stratum: str, rng: random.Random) -> list[Arg]:
     """One annuity per stratum's shape: [nper, pmt, pv, fv, type]."""
-    sign, nper, r, pv, fv, due = _annuity(stratum, rng)
+    sign, nper, r, pv, fv, due = draw_annuity(stratum, rng)
     same_sign = False
     if stratum == "tail":  # rates near 0, or large
         r = (
@@ -238,7 +238,7 @@ def _nper_draw(stratum: str, rng: random.Random) -> list[Arg]:
     is the answer. The tail stratum covers R3's tiny positive rates (below 1E-14, where 1 + rate is
     still not 1) and rates near 0 of either sign; the edge stratum rate 0, a rate where 1 + rate is 1
     and a non-positive ratio."""
-    sign, n, r, pv, fv, due = _annuity(stratum, rng)
+    sign, n, r, pv, fv, due = draw_annuity(stratum, rng)
     if stratum == "tail":
         shape = rng.randrange(3)
         if shape == 0:

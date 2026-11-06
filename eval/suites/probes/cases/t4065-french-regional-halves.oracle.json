@@ -1,0 +1,231 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "S": {
+   "B1": {
+    "t": "s",
+    "v": "6 mat.|6 mat.|6 mat.|mat."
+   },
+   "B10": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B11": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B12": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B13": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B14": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B15": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B16": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B17": {
+    "t": "s",
+    "v": "6 mat.|6 mat.|6 mat.|mat."
+   },
+   "B18": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B2": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B3": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B4": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B5": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B6": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B7": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B8": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "B9": {
+    "t": "s",
+    "v": "6 AM|6 AM|6 AM|AM"
+   },
+   "C1": {
+    "t": "s",
+    "v": "6 soir|6 soir|6 soir|soir"
+   },
+   "C10": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C11": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C12": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C13": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C14": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C15": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C16": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C17": {
+    "t": "s",
+    "v": "6 soir|6 soir|6 soir|soir"
+   },
+   "C18": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C2": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C3": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C4": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C5": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C6": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C7": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C8": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "C9": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM|PM"
+   },
+   "D1": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D10": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D11": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D12": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D13": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D14": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D15": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D16": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D17": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D18": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D2": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D4": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D5": {
+    "t": "s",
+    "v": "mar.|mars|m|mer.|mercredi"
+   },
+   "D6": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D7": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D8": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D9": {
+    "t": "s",
+    "v": "Mars|Mars|M|mer.|mercredi"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "fc1466d2ffce3f2da73d1a040ec045e349fd001ef710064134e54dcabc60833e",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-06T07:38:37+00:00",
+  "version": null,
+  "workbook_name": "5822664d773062ba0fae3c51436b6f7e386871a6881944055a2fe71366137132.xlsx"
+ }
+}

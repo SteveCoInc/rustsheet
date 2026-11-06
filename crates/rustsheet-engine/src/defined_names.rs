@@ -8,6 +8,7 @@ use crate::{
             is_multi_sheet_span,
             stringify::{
                 pin_unresolved_name, rebind_workbook_name_to_sheet, rename_defined_name_in_node,
+                sheet_edits, to_english_string,
             },
             Node, TOO_MANY_NESTED_CALLS_MESSAGE,
         },
@@ -373,6 +374,54 @@ impl Model {
         self.insert_defined_name(name, scope, formula, NameSource::Loaded)
     }
 
+    /// Translates a formula the user typed (in the active language and locale)
+    /// into the canonical English representation that is stored internally.
+    ///
+    /// The formula is first parsed in the active language/locale. If that fails
+    /// it is parsed as English — this lets internally generated formulas (which
+    /// are already English, e.g. produced by undo/redo or cut & paste) round
+    /// trip unchanged regardless of the active language. Returns an error if the
+    /// formula parses in neither. Any leading `=` is preserved.
+    pub(crate) fn user_formula_to_internal(
+        &mut self,
+        formula: &str,
+        context: &CellReferenceRC,
+    ) -> Result<String, String> {
+        self.formula_to_internal_between(formula, context, context)
+    }
+
+    /// As [`Model::user_formula_to_internal`], but read in `read_on` and written as seen from
+    /// `write_from`: an unqualified reference read on another sheet comes out qualified.
+    pub(crate) fn formula_to_internal_between(
+        &mut self,
+        formula: &str,
+        read_on: &CellReferenceRC,
+        write_from: &CellReferenceRC,
+    ) -> Result<String, String> {
+        let context = read_on;
+        let trimmed = formula.trim();
+        let had_equals = trimmed.starts_with('=');
+        let body = trimmed.strip_prefix('=').unwrap_or(trimmed);
+        let mut node = self.parser.parse(body, context);
+        if let Node::ParseErrorKind { .. } = node {
+            // The user's language could not parse it: it might already be in the
+            // internal English form.
+            node = self.parse_internal_formula(body, context);
+        }
+        if let Node::ParseErrorKind { .. } = node {
+            return Err(format!("Invalid formula: '{formula}'"));
+        }
+        if read_on.sheet != write_from.sheet {
+            sheet_edits::qualify_unqualified_references(&mut node, &read_on.sheet);
+        }
+        let english = to_english_string(&node, write_from);
+        Ok(if had_equals {
+            format!("={english}")
+        } else {
+            english
+        })
+    }
+
     fn insert_defined_name(
         &mut self,
         name: &str,
@@ -385,11 +434,20 @@ impl Model {
         // Defined-name formulas are stored internally in English so they keep
         // working when the user switches language/locale.
         let context = self.defined_name_context();
+        // Excel's `names/add` binds an unqualified reference of the body to the active sheet
+        // (probes/t4394-api-name-active-s2, -last; syntax.md "An unqualified reference in an
+        // API-defined name binds to the active sheet"; T-4445): the body is read there and stored
+        // qualified, as the defined-name context would write a reference to that sheet.
+        let read_on = if source == NameSource::Api {
+            self.active_sheet_context()
+        } else {
+            context.clone()
+        };
         // A loaded body is read as a file's stored text: a structured reference Excel cannot
         // resolve, such as a padded bare column `T[ Col ]`, loads as `#REF!`
         // (probes/t3258-name-padded-column-0..2, T-3258).
         self.parser.set_loaded(loading);
-        let internal_formula = self.user_formula_to_internal(formula, &context);
+        let internal_formula = self.formula_to_internal_between(formula, &read_on, &context);
         self.parser.set_loaded(false);
         let internal_formula = internal_formula?;
         // Excel's `names/add` refuses a body nesting more than 65 calls (400 `InvalidArgument`;
@@ -440,6 +498,45 @@ impl Model {
                 pin_unresolved_name(node, name);
             }
         });
+    }
+
+    /// The index of the workbook's active sheet (the sheet of the current workbook view; an xlsx
+    /// import takes the sheet marked `tabSelected`). The first sheet when the view names none.
+    #[must_use]
+    pub fn active_sheet(&self) -> u32 {
+        self.workbook
+            .views
+            .get(&self.view_id)
+            .map(|view| view.sheet)
+            .filter(|&sheet| self.workbook.worksheet(sheet).is_ok())
+            .unwrap_or(0)
+    }
+
+    /// Makes the sheet at index `sheet` the active one: a name added through the API afterwards
+    /// binds its unqualified references to it.
+    ///
+    /// # Errors
+    /// An invalid sheet index.
+    pub fn set_active_sheet(&mut self, sheet: u32) -> Result<(), String> {
+        self.workbook.worksheet(sheet)?;
+        if let Some(view) = self.workbook.views.get_mut(&self.view_id) {
+            view.sheet = sheet;
+        }
+        Ok(())
+    }
+
+    /// A1 of the active sheet, where an API-added name's body is read.
+    fn active_sheet_context(&self) -> CellReferenceRC {
+        let sheet = self.active_sheet();
+        CellReferenceRC {
+            sheet: self
+                .workbook
+                .worksheet(sheet)
+                .map(|ws| ws.get_name())
+                .unwrap_or_else(|_| self.defined_name_context().sheet),
+            row: 1,
+            column: 1,
+        }
     }
 
     /// The context used to parse/stringify defined-name formulas. Defined names

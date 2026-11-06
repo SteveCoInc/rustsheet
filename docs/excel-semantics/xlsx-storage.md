@@ -643,3 +643,22 @@ Ours: `rustsheet_xlsx::compare` pins such a workbook's clock to `dcterms:modifie
 (T-0468, decision 0117); the engine itself reads the system clock unless pinned.
 Status: VERIFIED (desktop, one workbook)
 Tasks: T-0468
+
+## Round trips
+
+What Excel itself rewrites when it saves a workbook. This decides which differences the round-trip suites
+(SPEC-0033) may normalize. A difference is normalized only once a row here shows Excel rewriting it on every save
+(SPEC-0033 D4.4). Until then the candidates N1–N12 are scored as `changed`, `lost` or `added` and tagged, and
+T-4503 probes them.
+
+Status: UNVERIFIED (probe pending). Tasks: T-4503, T-4172, T-4509.
+
+| Item | Excel's behavior | Evidence |
+|---|---|---|
+| N1–N12 | not yet probed | T-4503 |
+
+Status: VERIFIED (excel-graph; desktop unprobed for NBSP). Tasks: T-2784, T-2949.
+Excel drops a stored formula's leading spaces, TAB or LF on import (T-2784; syntax.md "Remaining whitespace shapes
+(T-2949)"). A leading NBSP is refused by excel-graph instead; desktop Excel is unprobed. Dropping those leading spaces,
+TABs or LFs is therefore no semantic difference (SPEC-0033 X5). A leading NBSP is not covered.
+

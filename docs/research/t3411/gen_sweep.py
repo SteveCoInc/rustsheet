@@ -13,7 +13,8 @@ Strata (25 cells each), conventional flows (one outlay, then inflows; 30% negate
 Run: cd tools && uv run python -I ../docs/research/t3411/gen_sweep.py <repo> [case name, tNNNN-irr-<seed>]
 (t3411-irr-r4-fresh: seed "T-3411/r4-fresh"; t3411-irr-r4-fresh-2: seed "T-3411/r4-fresh-2", round 2;
 t3411-irr-r4-fresh-3: seed "T-3411/r4-fresh-3", round 3; t3411-irr-r4-fresh-4: seed "T-3411/r4-fresh-4",
-round 4; t3407-irr-r4-fresh: seed "T-3407/r4-fresh", T-3407's overflow rule)
+round 4; t3407-irr-r4-fresh: seed "T-3407/r4-fresh", T-3407's overflow rule; t4213-irr-r4-fresh: seed
+"T-4213/r4-fresh", T-4213's near-zero roots, its own six strata, below)
 """
 
 from __future__ import annotations
@@ -38,10 +39,15 @@ FROZEN = {
     "t3411-irr-r4-fresh-3": "round 3: fallback root residual 1E-4",
     "t3411-irr-r4-fresh-4": "round 4: fallback residual 1E-4 one Newton step past the stop",
     "t3407-irr-r4-fresh": "T-3407: a non-finite NPV at a secant iterate is #DIV/0!",
+    "t4213-irr-r4-fresh": "T-4213: the fallback returns the Newton iterate one step past its stop",
 }
 # The task a sweep belongs to (its seed, description and tags name it): the case name's tNNNN prefix.
 TASK = "T-" + NAME[1:5]
-STRATA = [
+# T-4213's sweep: conventional flows whose root is 1E-7..0.05 in absolute value (log-uniform), the
+# flows' scale rising by stratum so the secant's NPV noise crosses its 1e-7 stop.
+NEAR_ZERO_SCALES = [(1.0, 1e4), (1e4, 1e7), (1e7, 1e9), (1e9, 1e11), (1e11, 1e13), (1.0, 1e13)]
+NEAR_ZERO = TASK == "T-4213"
+STRATA = [f"root +-1E-7..0.05, |c| {lo:.0E}..{hi:.0E}" for lo, hi in NEAR_ZERO_SCALES] if NEAR_ZERO else [
     "long near-level, root -0.3..-0.01",
     "|c| 1E+8..1E+13, root near 0",
     "guess -0.9999..-0.99",
@@ -88,7 +94,10 @@ def irr_math(flows: list[float]) -> str | None:
 def point(rng: random.Random, stratum: int) -> tuple[str, str] | None:
     guess = None
     spread = (0.05, 1.0)
-    if stratum == 0:
+    if NEAR_ZERO:
+        n, scale = rng.randint(2, 60), log_uniform(rng, *NEAR_ZERO_SCALES[stratum])
+        root = (1 if rng.random() < 0.5 else -1) * log_uniform(rng, 1e-7, 0.05)
+    elif stratum == 0:
         n, scale, root = (
             round(log_uniform(rng, 20, 150)),
             log_uniform(rng, 1, 1e6),
