@@ -3,7 +3,7 @@ id: T-4510
 title: "VDB from a fractional start where straight line wins at period 0 (Gate A T-4111)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
