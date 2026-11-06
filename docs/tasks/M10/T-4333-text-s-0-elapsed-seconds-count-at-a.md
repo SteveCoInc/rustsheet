@@ -7,7 +7,7 @@ status: blocked
 priority: P2
 size: M
 tier: opus
-depends_on: []
+depends_on: [T-4460]
 ---
 
 ## Goal
@@ -54,3 +54,5 @@ Reopen on a new hypothesis recorded here. Two would be worth testing:
   ties, then exact arithmetic;
 - Excel may compute the count from the `[s]` token's own whole-second rounding with a carry test against the
   fraction it formats. A probe of `[s]` beside `.0`, `.00` and `.000` on the same serials would separate the two.
+
+Gap triage 2026-11-06: T-4460 (research) is the oracle sweep that tests both hypotheses. This task waits on it.
