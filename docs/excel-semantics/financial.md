@@ -4349,7 +4349,7 @@ the engine's stop. What decides which iterate Excel returns, and when it is `#NU
   conventional series with roots 1E-7 to 0.05, filled from excel-graph 2026-11-04, seed "T-4213/r4-fresh" of
   docs/research/t3411/gen_sweep.py): Excel returns a number on 104 and `#NUM!` on 46. The branch's engine returned 59
   of the 104 (57 bit-exact) and was `#NUM!` on 45 where Excel returns a root (T-3548's type rule); T-4232 owns the
-  visibly-off cells. Against main's stop iterate the case scores as the baseline records it.
+  visibly-off cells. On main (the stop iterate) the case scores 102 of 150 (56 of the 104 numbers bit-exact).
 Evidence: the oracle values of the cases above; `python3 -I docs/research/t3411/fallback_iterates.py .` prints the
 counts of the first four points, each iterate's step and stopping step size (an exact replay of the engine's
 secant, then Newton from v = 0). The NPV variants and the Illinois and two-point secants were scratch code.

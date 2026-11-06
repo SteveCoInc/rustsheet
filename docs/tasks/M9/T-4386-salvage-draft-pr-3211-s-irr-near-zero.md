@@ -44,4 +44,4 @@ findings of the T-4213 bullets in financial.md (the near-zero-root noise floor, 
 effect of the one-step-past choice, marked as not on main). T-4213 gains a time-box note linking all of it. Not taken:
 the IRR code change, its unit test, `eval/accuracy/known-failures.tsv`. Scored on main the case is 102 of 150 passing;
 its visibly-off cells are owned by T-4232 (`make check-fast` green, `new_case_owners` passes). `probes-numeric` has no
-`eval/baseline/` list, so there is no baseline line to record. #3211 stays a draft; the PR comment linking it is below.
+`eval/baseline/` list, so there is no baseline line to record. #3211 stays a draft; a comment on it links this task's PR.

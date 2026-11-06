@@ -22,7 +22,7 @@ decision 0267 accepts what is left.
   - 45 type mismatches. Excel returns a root and the engine is `#NUM!`: both secant runs fail and the fallback is
     `#NUM!`. This is T-3548's open type rule (blocked, time-boxed), "Excel errs on runs of 98 and 129 steps and
     returns runs of 182". Re-measure them against whatever T-3548's successor lands.
-  - A53 `-1.1597865900991877E-7` (ours -1.1597865923196338E-7, math -1.1597865918101396E-7): first wrong at the 9th
+  - A53 `-1.1597865900991877E-7` (ours on the T-4213 branch -1.1597865923196338E-7, on main -1.1597868432300373E-7 (first wrong at the 8th digit), math -1.1597865918101396E-7): first wrong at the 9th
     digit. The root sits 1.2E-7 from zero, so the engine's error is 2.2E-16 absolute.
   - A149 `9.855957131432724E-5` (ours 9.85595713141052E-5): first wrong at the 12th digit, also a 2.2E-16 absolute
     step.
