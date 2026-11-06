@@ -136,29 +136,33 @@ Evidence: probes/t4128-pivot-spike S (excel-graph, 2026-11-06, T-4128): the cons
 the layout, and the pivot is saved with location A3, where S!A3 is `#SPILL!`.
 Status: VERIFIED (excel-graph); GETPIVOTDATA against such a pivot is in T-4130
 
-## A tabular pivot's first row header is `Row Labels` while a non-axis field is compact
-Rule: in a tabular pivot, the header cell of the first row field reads `Row Labels` whenever some
-`pivotField` on no axis (a data-only field, an unused source field or a calculated field) is at the
-default `compact`. In every probe that showed the field's own name (`Region`), every `pivotField`
-carried `compact="0"`. `outline` on the non-axis field makes no difference. The second row field's
-header is its name (`Product`) in every variant probed. Open (T-4583): whether the rule is "every
-field", "every non-axis field" or "the last field". In every probe the default field was also the
-pivot's last field, and no probe left an axis field at the default.
+## A tabular pivot's first row header is `Row Labels` unless every pivot field is not compact
+Rule: in a tabular pivot, the header cell of the first row field reads `Row Labels` unless every
+`pivotField` carries `compact="0"`. Then it reads the field's own name (`Region`). Any field left at the
+default `compact` gives `Row Labels`, whatever its role or position: the outer or inner axis field, a
+data field, an unused source field or a calculated field, first, middle or last in the cache. An outer
+row field left compact also changes the layout: the inner field moves into the outer field's column
+(R1 location A3:B11, against A3:C11). `outline` makes no difference. The second row field's header is
+its name (`Product`) in every variant.
 Evidence (excel-graph, 2026-11-06):
-- probes/t4123-pivot-capture A4 (T-4123), whose source has three fields, all on an axis or used as data:
-  - T, with Sales compact by default: `Row Labels`;
-  - T2 and T3, with Sales `compact="0"`, every field non-compact: `Region`;
-  - T4, with Sales outline off only: `Row Labels`.
+- probes/t4583-pivot-row-labels A3 (T-4583). The cache fields are Region, Product, Sales, Units and
+  Risky; every field carries `compact="0" outline="0"` except the one named:
+  - R1 Region (outer axis, first): `Row Labels`;
+  - R2 Product (inner axis): `Row Labels`;
+  - R3 Units (unused, middle): `Row Labels`;
+  - R4 Sales (data, middle): `Row Labels`;
+  - R6 Risky (unused, last): `Row Labels`;
+  - R5 (none left at the default): `Region`.
+- probes/t4123-pivot-capture A4 (T-4123): T and T4, with Sales at the default, give `Row Labels`; T2
+  and T3, with every field non-compact, give `Region`.
 - probes/t4128-pivot-spike K!A4 (T-4128): a calculated field at the default gives `Row Labels`.
-- probes/t4137-pivot-captions K6!A4 (T-4137): every axis and data field non-compact, but the unused
-  source field `Risky` at the default, gives `Row Labels`. K5!A3 (two unused fields at the default)
-  gives `Row Labels` too.
+- probes/t4137-pivot-captions K5!A3 and K6!A4 (T-4137): unused fields at the default give `Row Labels`.
 
 oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on the Sales field, showed
 `Region` too.
-Correction: T-4123 first read the rule as "the data field's `compact`". K5 and K6 show that an unused
-field counts too.
-Status: VERIFIED (excel-graph) as stated; which fields count is UNVERIFIED (probe pending: T-4583)
+Correction: T-4123 first read the rule as "the data field's `compact`". T-4137 narrowed it to the
+non-axis fields, and T-4583's R1 and R2 show that axis fields count too.
+Status: VERIFIED (excel-graph)
 
 ## Rendered pivot cells: blanks, repeated labels, subtotals and the Values caption
 Rule:
@@ -182,8 +186,11 @@ Rule:
 - `rowHeaderCaption` replaces `Row Labels` (K1!A4 `Regions`).
 - `grandTotalCaption` replaces `Grand Total` (K1!A7 `All of it`).
 - `dataCaption` replaces the `Values` caption over the data fields (K1!B3 `Measures`).
-- `colHeaderCaption` (`Products`) shows nowhere in K1, whose column axis holds only Values; whether it
-  replaces `Column Labels` beside a real column field is open (T-4583).
+- `colHeaderCaption` replaces `Column Labels` beside a real column field in compact form
+  (probes/t4583-pivot-row-labels C1!B3 `Products`, with rowHeaderCaption C1!A4 `Regions`). In K1,
+  whose column axis holds only Values, it shows nowhere. In tabular form with every field non-compact
+  it shows nowhere either: the column header reads the field's name (C2!B3 `Product`) and the row
+  header reads its name too (C2!A4 `Region`; C2 sets no rowHeaderCaption).
 - With `showMissing` and `missingCaption`, an empty intersection shows the caption (K2!D6 `n/a`).
 - With `showError` and `errorCaption`, under Sum, every value cell whose aggregate is an error shows
   the caption as text: the cell, its row and column totals and the grand total (K3!C5, E5, C7 and E7 `ERR`; the
