@@ -296,23 +296,9 @@ mod tests {
 
     fn case(suite: &str, cells: Vec<CellResult>) -> CaseResult {
         CaseResult {
-            id: format!("{suite}/a"),
-            suite: suite.to_string(),
-            status: CaseStatus::Pass,
-            message: None,
-            expected_source: String::new(),
             checked: cells.len(),
-            passed: 0,
-            deviations: 0,
-            skipped_volatile: 0,
-            skipped_add_in: 0,
-            millis: 0,
-            tags: Vec::new(),
             cells,
-            text: Vec::new(),
-            defined_names: BTreeMap::new(),
-            arguments: Vec::new(),
-            reference_forms: crate::poi_m8_subset::ReferenceFormCells::default(),
+            ..CaseResult::empty(&format!("{suite}/a"), suite, CaseStatus::Pass)
         }
     }
 

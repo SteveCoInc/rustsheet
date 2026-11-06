@@ -19,7 +19,6 @@ BITXOR	exact	integer bit operation on values below 2^48
 CODE	exact	a character code
 COLUMN	exact	a column number
 COLUMNS	exact	a column count
-CONVERT	composite	takes unit names as text, which the generator has no kind for; T-4085 replaces this line with a table after T-4084 (decision 0270); gen-m9, probes and probes-numeric drive it
 COUNT	exact	counts cells
 COUNTA	exact	counts cells
 COUNTBLANK	exact	counts cells
@@ -63,9 +62,7 @@ FREQUENCY	exact	an array of counts (statistics.md "FREQUENCY: one row per bin pl
 GCD	exact	integer GCD of arguments up to 2^53 (numbers.md "GCD / LCM argument bound")
 GESTEP	exact	returns 0 or 1
 HEX2DEC	exact	a whole number from at most 10 digits of base text, two's complement (engineering.md "Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2*"; decision 0270)
-IMABS	composite	takes complex text, which the generator has no kind for; T-4085 replaces this line with a table after T-4084 (decision 0270); gen-m9, probes and probes-numeric drive it
 IMAGINARY	composite	the imaginary part parsed from complex text; numeric literals cannot drive it (decision 0270); gen-m9, probes and probes-numeric drive it
-IMARGUMENT	composite	takes complex text, which the generator has no kind for; T-4085 replaces this line with a table after T-4084 (decision 0270); gen-m9, probes and probes-numeric drive it
 IMREAL	composite	the real part parsed from complex text; numeric literals cannot drive it (decision 0270); gen-m9, probes and probes-numeric drive it
 ISOWEEKNUM	exact	an integer week number
 LARGE	exact	the k-th of its inputs (statistics.md "LARGE/SMALL: a fractional k rounds up for LARGE and down for SMALL"; decision 0271)

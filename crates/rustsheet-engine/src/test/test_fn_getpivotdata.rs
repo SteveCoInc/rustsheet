@@ -60,10 +60,6 @@ fn pivot(
         .map(|axis| PivotField::new(axis, 3))
         .collect();
     PivotTable {
-        name: caption.to_string(),
-        sheet_id: 1,
-        location,
-        cache,
         fields,
         row_fields: vec![AxisField::Field(0)],
         column_fields: if column {
@@ -75,7 +71,9 @@ fn pivot(
             caption: caption.to_string(),
             field: 2,
             function,
+            ..DataField::default()
         }],
+        ..PivotTable::new(caption.to_string(), 1, location, cache)
     }
 }
 

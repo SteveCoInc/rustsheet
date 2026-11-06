@@ -8,6 +8,11 @@
  },
  "sheets": {
   "Sheet1": {
+   "A2": {
+    "t": "e",
+    "why": "x outside [0, inf)",
+    "f": "=TDIST(-1,5,3)"
+   },
    "A3": {
     "t": "n",
     "v": "0.0",

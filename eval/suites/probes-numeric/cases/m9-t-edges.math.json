@@ -73,6 +73,21 @@
     "v": "0.053990966514132893864517264708920900854762495990853",
     "f": "=T.DIST(2,1E11,FALSE)"
    },
+   "A21": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=T.DIST.RT(2,1.5E10)"
+   },
+   "A22": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=T.DIST.RT(2,2E10)"
+   },
+   "A23": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=T.DIST.RT(2,5E10)"
+   },
    "A24": {
     "t": "e",
     "why": "deg_freedom outside [1, 1e+10]",
@@ -113,10 +128,25 @@
     "why": "deg_freedom outside [1, inf)",
     "f": "=T.DIST(2,0,TRUE)"
    },
+   "A31": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=T.DIST.RT(2,0)"
+   },
    "A32": {
     "t": "e",
     "why": "deg_freedom outside [1, inf)",
     "f": "=T.DIST(2,0.5,TRUE)"
+   },
+   "A33": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=T.DIST.2T(2,1.5E10)"
+   },
+   "A34": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=T.DIST.2T(2,2E10)"
    },
    "A35": {
     "t": "e",
@@ -128,15 +158,30 @@
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=T.INV.2T(0.1,2E10)"
    },
+   "A37": {
+    "t": "n",
+    "v": "0.045500263923353897658441585762572081702549390729354",
+    "f": "=T.DIST.2T(2,1E10)"
+   },
    "A38": {
     "t": "n",
     "v": "1.644853627103849602723708367430502689017560230825",
     "f": "=T.INV.2T(0.1,1E10)"
    },
+   "A39": {
+    "t": "e",
+    "why": "alpha outside (0, 1)",
+    "f": "=CONFIDENCE.T(-0.1,1,10)"
+   },
    "A4": {
     "t": "e",
     "why": "probability outside (0, 2)",
     "f": "=T.INV.2T(2,5)"
+   },
+   "A40": {
+    "t": "e",
+    "why": "alpha outside (0, 1)",
+    "f": "=CONFIDENCE.T(1.5,1,10)"
    },
    "A41": {
     "t": "e",

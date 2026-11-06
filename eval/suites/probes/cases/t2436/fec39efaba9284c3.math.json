@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "aca30398113094e0d68f15e70300671749fc85e9dfd32ff986af8f1ea1d20d65"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "e",
+    "why": "|x| at or above 2.22973889209998e+176 is #NUM!",
+    "f": "=T.DIST.RT(1E+300,7)"
+   }
+  }
+ }
+}

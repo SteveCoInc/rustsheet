@@ -20,6 +20,9 @@ pub(crate) fn case(id: &str, millis: u64) -> CaseResult {
         defined_names: BTreeMap::new(),
         arguments: Vec::new(),
         reference_forms: crate::poi_m8_subset::ReferenceFormCells::default(),
+        pivot_layout: Vec::new(),
+        pivot_features: Vec::new(),
+        pivot_cells: crate::pivot_features::PivotCellTally::default(),
     }
 }
 

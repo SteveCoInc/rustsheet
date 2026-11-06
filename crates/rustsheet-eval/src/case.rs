@@ -491,6 +491,10 @@ pub struct CaseSpec {
     pub description: String,
     #[serde(default)]
     pub tags: Vec<String>,
+    /// The pivot catalog ids (eval/catalog/pivot-features.tsv) the case's pivot cells evidence
+    /// (T-4126).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivot_features: Vec<String>,
     pub sheets: Vec<SheetSpec>,
     /// The workbook's date system, `1900` (the default) or `1904` (`<workbookPr date1904="1"/>`;
     /// SPEC-0005, T-1268). Any other value is refused when the case is built.

@@ -38,6 +38,7 @@ use rustsheet_eval::lift_kinds;
 use rustsheet_eval::milestone_exit;
 use rustsheet_eval::milestone_lists::{self, MilestoneList};
 use rustsheet_eval::phase1_exceptions::Phase1Exceptions;
+use rustsheet_eval::pivot_features;
 use rustsheet_eval::probe_milestones::{self, Mapping, Rules};
 use rustsheet_eval::r1c::{mark_r3_math, R1cCells};
 use rustsheet_eval::report::RunReport;
@@ -291,9 +292,11 @@ fn select_from(all: Vec<Suite>, sel: &Selection, gate_only: bool) -> Result<Vec<
                         }
                     };
                 }
+                // A round-trip suite over a cell suite's cache is fetched as that suite.
+                let fetch_as = s.manifest.cases_of.as_ref().unwrap_or(&s.manifest.name);
                 eprintln!(
-                    "skipping {}: not fetched (run `rustsheet-eval fetch --suite {}`)",
-                    s.manifest.name, s.manifest.name
+                    "skipping {}: not fetched (run `rustsheet-eval fetch --suite {fetch_as}`)",
+                    s.manifest.name
                 );
                 return false;
             }
@@ -346,6 +349,8 @@ struct Milestones {
     /// where the engine returns the math (decision 0188 R3), and the closeness buckets count as
     /// `r3_math` (decision 0310).
     r3: R3Marks,
+    /// eval/catalog/pivot-features.tsv (T-4126); empty when the root has none.
+    pivot_catalog: Vec<pivot_features::CatalogRow>,
 }
 
 /// Loads the frozen lists and the probe-milestone mapping, and fails when a line of either names
@@ -383,6 +388,7 @@ fn load_milestones(root: &Path, catalog: &Catalog) -> Result<Milestones> {
         exceptions,
         phase1_exceptions,
         r3,
+        pivot_catalog: pivot_features::load(root)?,
     })
 }
 
@@ -422,6 +428,7 @@ fn score_milestones(
         .collect();
     report.catalog_coverage =
         catalog_coverage::summarize(catalog, results, &report.evidence, &generated);
+    report.pivot_features = pivot_features::summarize(&milestones.pivot_catalog, results);
     let generated_names: Vec<&str> = generated.keys().map(String::as_str).collect();
     report.v15_checkpoint = v15_checkpoint::summarize(
         catalog,

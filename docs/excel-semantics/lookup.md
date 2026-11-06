@@ -920,10 +920,32 @@ or array of indexes is read whole as a list, whatever its orientation (`CHOOSECO
 array literal whole: `LOOKUP(2,{1,2,3},{4,5,6})` = 5, `LOOKUP(2,{1,2,3})` = 2, `XLOOKUP(2,{1,2,3},{4,5,6})` = 5,
 `XMATCH(2,{1,2,3})` = 2, `ROWS({1;2;3})` = 3, `COLUMNS({1,2})` = 2, `CHOOSEROWS({1;2;3},{1;3})` is 2x1,
 `TRANSPOSE({1,2,3})` is 3x1. INDEX of a single value is that value (`INDEX(LOOKUP(2,{1,2,3},{4,5,6}),1,1)` = 5,
-`INDEX(AREAS(A1:B3),1,1)` = 1). UNVERIFIED (not probed): OFFSET's cols, height and width, XLOOKUP/XMATCH search_mode,
-XLOOKUP's if_not_found, ADDRESS's sheet_text, INDIRECT's a1 and TRIMRANGE's trim_cols; which problem wins inside a
+`INDEX(AREAS(A1:B3),1,1)` = 1). Probed since (T-4543 checked each against its oracle cells): OFFSET's cols
+(`OFFSET(A1,0,{0,1})` is 1x2, probes/reference-lift-elements F1:H1, K4), height and width (`OFFSET(A1,0,0,{2;3})`,
+probes/t2065-lift-small E1, reference-lift-consumers-b2 E129, E137, E177, E193; `OFFSET(A1,0,0,1,{2;1})`,
+reference-lift-consumers E201), XLOOKUP/XMATCH search_mode (probes/xlookup-array-search-mode-indirect A11, A12, and the
+T-1958 XMATCH entry), INDIRECT's a1 (`INDIRECT("B1",{1})`, probes/t2577-indirect-ref-array A1:A22), TRIMRANGE's trim_cols
+(`TRIMRANGE(A1:B3,0,{0;1})`, probes/reference-lift-pass-through-b E7, E8), XLOOKUP's if_not_found and ADDRESS's
+sheet_text (probes/t4543-xlookup-not-found-address-sheet-lift; the entry "XLOOKUP's if_not_found and ADDRESS's
+sheet_text over an array" below). UNVERIFIED (not probed): which problem wins inside a
 CHOOSECOLS/CHOOSEROWS index list between uncoercible text and a later error, or between two errors (an error beats an
 out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible text's `#VALUE!` or the first error found at once).
+
+- **XLOOKUP's if_not_found and ADDRESS's sheet_text over an array** (T-4543; probes/t4543-xlookup-not-found-address-sheet-lift,
+  excel-graph, 2026-11-06; Data A1:A3 = 1, 2, 3, B1:B3 = 10, 20, 30, D1:D2 = "x", "y"). XLOOKUP's if_not_found does
+  not lift: with a scalar lookup_value a miss returns it whole (`XLOOKUP(9,A1:A3,B1:B3,{"p";"q"})` is 2x1 "p", "q"; a
+  1x2, a 2x2 and the range D1:D2 alike, A1:A29), a hit ignores it (`XLOOKUP(2,..,{"p";"q"})` is 1x1 20), an error
+  element is kept (`{"p";#N/A}`, A49:A50), and beside a 2-D return_array the miss is still the if_not_found shape
+  (A57). Under an array lookup_value, every missed element takes the array's first element, whatever its position or
+  the lengths (`XLOOKUP({2;9;7},..,{"p";"q"})` is 20, "p", "p"; `{9;2}` is "p", 20; A33:A43). A range if_not_found
+  there is kept as a reference element: the grid shows `#VALUE!` (A46), but `INDEX(..,2,1)` returns the range and
+  spills "x", "y" (W45:W46). Ours gives `#VALUE!` for that element (T-4563 owns W45, W46).
+  ADDRESS's sheet_text lifts like its other arguments: `ADDRESS(1,1,1,TRUE,{"S1";"S2"})` is 2x1 `'S1'!$A$1`,
+  `'S2'!$A$1` (a name that reads as a cell reference is quoted), a 1x2 and the range D1:D2 (`x!$A$1`, `y!$A$1`) alike,
+  beside a lifted row_num it pairs by position and pads with `#N/A` (`ADDRESS({1;2;3},1,1,TRUE,{"S1";"S2"})` third
+  element `#N/A`), an error element is that error, a number element is text (`'5'!$A$1`), and an empty text element
+  gives `!$A$1` (A69:A112). Ours matches every cell of the case but W45:W46.
+
 XLOOKUP's match_mode and search_mode both lift (probes/lookup-argument-modes; probes/xlookup-array-lookup-value-args;
 probes/xlookup-array-search-mode-indirect). An error lookup_value does not stop the lift when match_mode is an array: the
 result is still an array, so a blocked spill is `#SPILL!`. Real oracle cell (gen-m6/fe0972380d030e4a Calc!A224,
@@ -1314,7 +1336,7 @@ call's result), not a value. What the caller sees depends on who reads the eleme
   T-2299 owns the difference).
 - XMATCH's search_mode lifts too, as a value (for the array modes only the second element is probed, `INDEX(…,2,1)`): it is 2 in
   `XMATCH(2,A1:A3,0,{1;-1})` and 3 in `XMATCH(2,{1;2;2},0,{2;-2})`; an invalid mode element is `#VALUE!` in its slot
-  (`{1;3}`); a boolean range element counts as its number (TRUE is 1). The first array-mode elements are unprobed, as is an error lookup_value next to a lifted search_mode (`XMATCH(NA(),A1:A3,0,{1;-1})`, implemented as a 2x1 of `#N/A` by analogy with MATCH's match_type, UNVERIFIED). Implemented (T-1958): `fn_xmatch` lifts search_mode with lookup_value and match_mode.
+  (`{1;3}`); a boolean range element counts as its number (TRUE is 1). The first array-mode elements follow the same rule (T-4544, probes/t4544-xmatch-error-modes A136:A169): `XMATCH(2,A1:A3,{9;0})` and `XMATCH(2,A1:A3,0,{3;1})` are `#VALUE!` then 2, `INDEX(…,1,1)` of `XMATCH(2,A1:A3,{0;1})` and `XMATCH(2,A1:A3,0,{1;-1})` is 2. An error lookup_value beats every lifted mode element, valid or not: `XMATCH(NA(),A1:A3,0,{1;-1})` is a 2x1 of `#N/A`, and so are `{9;8}` as match_mode, `{3;5}` as search_mode, both modes as arrays at once and a 2-cell range of modes in place of either array; `1/0` and a cell holding `#N/A` give their own error the same way (t4544-xmatch-error-modes A1:A133, hold-out t4544-xmatch-error-modes-holdout, excel-graph 2026-11-06). Implemented (T-1958): `fn_xmatch` lifts search_mode with lookup_value and match_mode.
 - ERROR.TYPE and ISERROR of an INDEX pick whose multi-cell element cannot spill are the cell's `#SPILL!`, not a code or
   TRUE (`ERROR.TYPE(INDEX(OFFSET(A1,0,0,{1;2}),2,1))`, `ISERROR(INDEX(TRIMRANGE(A1:B5,{0;1}),2,1))`; F11, G11, H11).
 Evidence: probes/reference-lift-elements (excel-graph, 2026-10-19, T-1810); probes/lookup-argument-modes F14:H15,
@@ -1685,5 +1707,14 @@ XMATCH with search_mode = Data!G9 (#DIV/0!): when match_mode converts to a numbe
 (315644f84093cf49 A292:B293, 75b38d80dd3152b2 A388 A448 A544); non-numeric text in match_mode still wins with #VALUE! (315644f84093cf49 A64, 75b38d80dd3152b2 A598).
 Evidence: gen-m6 21db5363d711888d, ad47b47c4e97019d, 315644f84093cf49, 75b38d80dd3152b2 (excel-graph).
 Ours: matches all of these cells (T-3667, a one-cell error reference in arrays.md; T-3542: XMATCH reports an out-of-range numeric match_mode only after search_mode's cast error).
-Status: UNVERIFIED (probe pending; cells are oracle values, the general rule is not probed)
-Tasks: T-3667, T-3542
+Probed for XMATCH by T-4544 (probes/t4544-xmatch-error-modes A172:A364, excel-graph 2026-11-06; a generated hold-out,
+t4544-xmatch-error-modes-holdout, with its predictions frozen in docs/research/t4544 before the fill). The order for a scalar
+search_mode that is an error (a literal `#N/A`, `NA()`, `1/0`, a cell holding `#N/A` or `#DIV/0!`): an error match_mode
+wins first, with its own error (`XMATCH(2,A1:A3,NA(),1/0)` is #N/A, A277; `XMATCH(2,A1:A3,1/0,NA())` is #DIV/0!, A241);
+then a match_mode that does not convert to a number (`"x"`, `""`) gives #VALUE! (A187, A190, A265, A343); otherwise the
+search_mode's error is the result, whether match_mode is valid (0), out of range (9, -2.5, numeric text "12"),
+numeric text "1", TRUE or a blank cell (A172:A184, A193, A196, A250:A274, A328:A352). So search_mode is read before
+match_mode's range check, and match_mode's own cast comes before both. The CHOOSEROWS and CHOOSECOLS rule above rests on
+the gen-m6 cells only.
+Status: VERIFIED (excel-graph)
+Tasks: T-3667, T-3542, T-4544

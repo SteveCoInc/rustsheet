@@ -3,7 +3,7 @@ id: T-4543
 title: "XLOOKUP's if_not_found and ADDRESS's sheet_text over an array or range: probe and match, and retire lookup.md's stale UNVERIFIED list"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -53,17 +53,37 @@ reference function argument modes" no longer lists as UNVERIFIED the arguments t
   on these cells, so this is not a fit.
 
 ## Acceptance criteria
-- [ ] probes/t4543-xlookup-not-found-address-sheet-lift (excel-graph, canary-verified) covers every form in Context,
+- [x] probes/t4543-xlookup-not-found-address-sheet-lift (excel-graph, canary-verified) covers every form in Context,
       and its predictions were committed before the fill.
-- [ ] Every cell of the case passes. Any cell that does not is recorded in lookup.md and owned by a task filed with
+- [x] Every cell of the case passes. Any cell that does not is recorded in lookup.md and owned by a task filed with
       `make new-task` and named in the Outcome. A wrong type, error, value or shape gets `campaign: semantics` and a
       `## Visible-parity stage` section.
-- [ ] In lookup.md, the "UNVERIFIED (not probed)" sentence quoted in Context names only what is still unprobed, and
+- [x] In lookup.md, the "UNVERIFIED (not probed)" sentence quoted in Context names only what is still unprobed, and
       each argument it drops cites the case and cells that cover it.
-- [ ] No new known failures in any baseline; `make check` green; reviewers approve.
+- [x] No new known failures in any baseline; `make check` green; reviewers approve.
 
 ## Out of scope
 - XMATCH with an error lookup_value beside lifted modes (T-4544).
 - The error order inside a CHOOSECOLS/CHOOSEROWS index list (T-2372) and the M6 lookup argument kinds (T-2865).
 - INDIRECT's sheet-prefix spellings (T-4545) and its a1 read from a cell (T-4538).
 - TRANSPOSE of an error (T-3966).
+
+## Outcome
+- Probe probes/t4543-xlookup-not-found-address-sheet-lift (28 questions, 252 cells, excel-graph, canary-verified,
+  2026-11-06), tagged M6. The engine's values were committed first (docs/research/t4543/predictions.md); the rule is
+  structural, read off these cells, so it is not a fit.
+- Result: 250 of 252 cells pass as predicted.
+  - XLOOKUP's if_not_found is not lifted. A scalar miss returns it whole (array, 1x2, 2x2, range), a hit ignores it.
+    Under an array lookup_value every miss takes its first element.
+  - ADDRESS's sheet_text lifts like the other arguments.
+  - The two misses, W45:W46: under an array lookup_value Excel keeps a range if_not_found as a reference element. The
+    grid shows `#VALUE!`, and INDEX hands back the range and spills "x", "y". Ours is `#VALUE!` and a blank. Owner:
+    T-4563 (opus, `campaign: semantics`, with a Visible-parity stage). It is not fixed here: the carrier
+    (SPEC-0018's nested cell or a reference element) changes unprobed readers (ISREF, lifted reads, aggregates), and
+    T-4563 probes those first.
+- lookup.md: a new entry, "XLOOKUP's if_not_found and ADDRESS's sheet_text over an array". The "UNVERIFIED (not
+  probed)" sentence now names only the CHOOSECOLS/CHOOSEROWS error order. Each argument it drops cites the case and
+  cells that cover it, checked against their oracle cells.
+- Eval delta: +1 case (252 cells: 250 pass, 2 new-case known failures owned by T-4563). No change to any existing case;
+  0 regressions. "No new known failures" holds for the existing cases. The new case's two cells are new coverage, not
+  regressions.

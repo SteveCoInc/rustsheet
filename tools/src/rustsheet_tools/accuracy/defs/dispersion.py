@@ -57,10 +57,16 @@ MAX_MAGNITUDE = 1e150  # every square and the one-pass sum of 255 squares stay i
 MIN_MAGNITUDE = 1e-60  # every nonzero deviation of a draw stays far above the subnormal squares Excel flushes
 
 
+def deviation_power_sum(xs: Sequence[mpmath.mpf], power: int, mean: mpmath.mpf | None = None) -> mpmath.mpf:
+    """The exact sum of the deviations from the exact mean raised to `power` (2: DEVSQ's S; 3 and 4: the
+    skewness and kurtosis moments, T-4091). A caller summing several powers passes the exact `mean` once."""
+    m = mpmath.fsum(xs) / len(xs) if mean is None else mean
+    return mpmath.fsum((x - m) ** power for x in xs)
+
+
 def squared_deviations(xs: Sequence[mpmath.mpf]) -> mpmath.mpf:
     """The exact sum of squared deviations from the exact mean."""
-    m = mpmath.fsum(xs) / len(xs)
-    return mpmath.fsum((x - m) ** 2 for x in xs)
+    return deviation_power_sum(xs, 2)
 
 
 def _devsq(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -171,7 +177,7 @@ def _edge(rng: random.Random, max_args: int) -> list[float]:
     ]
 
 
-def _draws(max_args: int) -> Callable[[str, random.Random], list[Arg]]:
+def variance_draws(max_args: int) -> Callable[[str, random.Random], list[Arg]]:
     """The draw of a function whose calls take at most `max_args` numbers."""
 
     def draw(stratum: str, rng: random.Random) -> list[Arg]:
@@ -189,21 +195,22 @@ def _draws(max_args: int) -> Callable[[str, random.Random], list[Arg]]:
     return draw
 
 
-_draw = _draws(MAX_ARGS)
+_draw = variance_draws(MAX_ARGS)
 # A file holding a newer (`_xlfn.`) function with 255 arguments does not open in Excel; 254 does (syntax.md
 # "The repeating maxima", T-4089), so VAR.S and STDEV.S points take at most 254 numbers.
-_draw_xlfn = _draws(MAX_ARGS - 1)
+_draw_xlfn = variance_draws(MAX_ARGS - 1)
 
 
-def _definition(
+def variadic_definition(
     function: str,
     value: Callable[[Sequence[MathArg]], mpmath.mpf],
-    domain: Callable[[Sequence[MathArg]], str | None],
+    domain: Callable[[Sequence[MathArg]], str | None] | None,
     sources: tuple[str, ...],
     *,
     draw: Callable[[str, random.Random], list[Arg]] = _draw,
     param: str = "number",
 ) -> Definition:
+    """Register a variadic one-parameter Definition (shared by the dispersion and shape/means modules)."""
     return register(
         Definition(
             function=function,
@@ -217,17 +224,19 @@ def _definition(
     )
 
 
-VAR = _definition("VAR", _var, _var_domain, (SWITCH_SOURCE,))
-VAR_S = _definition("VAR.S", _var, _var_domain, (SWITCH_SOURCE,), draw=_draw_xlfn)
-VARA = _definition("VARA", _var, _var_domain, (SWITCH_SOURCE, VARA_SOURCE), param="value")
-STDEV = _definition("STDEV", _stdev, _var_domain, (SWITCH_SOURCE,))
-STDEV_S = _definition("STDEV.S", _stdev, _var_domain, (SWITCH_SOURCE,), draw=_draw_xlfn)
-STDEVA = _definition("STDEVA", _stdev, _var_domain, (SWITCH_SOURCE, VARA_SOURCE), param="value")
-DEVSQ = _definition("DEVSQ", _devsq, deviations_overflow, (DEVSQ_SOURCE,))
-VAR_P = _definition("VAR.P", _var_p, squares_overflow, (SWITCH_SOURCE,), draw=_draw_xlfn)
-VARP = _definition("VARP", _var_p, squares_overflow, (SWITCH_SOURCE,))
-VARPA = _definition("VARPA", _var_p, squares_overflow, (SWITCH_SOURCE, VARA_SOURCE), param="value")
-STDEV_P = _definition("STDEV.P", _stdev_p, squares_overflow, (SWITCH_SOURCE,), draw=_draw_xlfn)
-STDEVP = _definition("STDEVP", _stdev_p, squares_overflow, (SWITCH_SOURCE,))
-STDEVPA = _definition("STDEVPA", _stdev_p, squares_overflow, (SWITCH_SOURCE, VARA_SOURCE), param="value")
-AVEDEV = _definition("AVEDEV", _avedev, absolute_deviations_overflow, (AVEDEV_SOURCE,))
+VAR = variadic_definition("VAR", _var, _var_domain, (SWITCH_SOURCE,))
+VAR_S = variadic_definition("VAR.S", _var, _var_domain, (SWITCH_SOURCE,), draw=_draw_xlfn)
+VARA = variadic_definition("VARA", _var, _var_domain, (SWITCH_SOURCE, VARA_SOURCE), param="value")
+STDEV = variadic_definition("STDEV", _stdev, _var_domain, (SWITCH_SOURCE,))
+STDEV_S = variadic_definition("STDEV.S", _stdev, _var_domain, (SWITCH_SOURCE,), draw=_draw_xlfn)
+STDEVA = variadic_definition("STDEVA", _stdev, _var_domain, (SWITCH_SOURCE, VARA_SOURCE), param="value")
+DEVSQ = variadic_definition("DEVSQ", _devsq, deviations_overflow, (DEVSQ_SOURCE,))
+VAR_P = variadic_definition("VAR.P", _var_p, squares_overflow, (SWITCH_SOURCE,), draw=_draw_xlfn)
+VARP = variadic_definition("VARP", _var_p, squares_overflow, (SWITCH_SOURCE,))
+VARPA = variadic_definition("VARPA", _var_p, squares_overflow, (SWITCH_SOURCE, VARA_SOURCE), param="value")
+STDEV_P = variadic_definition("STDEV.P", _stdev_p, squares_overflow, (SWITCH_SOURCE,), draw=_draw_xlfn)
+STDEVP = variadic_definition("STDEVP", _stdev_p, squares_overflow, (SWITCH_SOURCE,))
+STDEVPA = variadic_definition(
+    "STDEVPA", _stdev_p, squares_overflow, (SWITCH_SOURCE, VARA_SOURCE), param="value"
+)
+AVEDEV = variadic_definition("AVEDEV", _avedev, absolute_deviations_overflow, (AVEDEV_SOURCE,))

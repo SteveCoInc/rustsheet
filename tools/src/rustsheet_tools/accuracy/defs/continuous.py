@@ -1,4 +1,5 @@
-"""LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER and FISHERINV (Gate A slice 4o, T-3785).
+"""LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER and FISHERINV (Gate A slice 4o, T-3785); the legacy
+LOGNORMDIST and LOGINV (T-4100); and the legacy EXPONDIST and WEIBULL (T-4101).
 
 The math, at the double of each written literal and the working precision:
 - LOGNORM.DIST is the normal of ln x: Phi(z) and phi(z)/(x*sd) with z = (ln x - mean)/sd, through normal.py's `cdf`
@@ -6,11 +7,17 @@ The math, at the double of each written literal and the working precision:
 - EXPON.DIST: the cdf -expm1(-lambda*x) and the density lambda*exp(-lambda*x).
 - WEIBULL.DIST: with t = (x/beta)^alpha, the cdf -expm1(-t) and the density alpha/beta*(x/beta)^(alpha-1)*exp(-t).
 - FISHER is atanh(x), FISHERINV tanh(y).
+- EXPONDIST and WEIBULL are EXPON.DIST's and WEIBULL.DIST's definitions under the legacy names (one factory each, so
+  nothing is copied): statistics.md "Legacy distribution names sweep (T-1047)" and "..., second family (T-1048)" find
+  each equal to its modern name on every paired cell, errors included.
 
 Sources:
 - statistics.md, "One incomplete-gamma kernel under ERF, ERFC, NORM, CHISQ, GAMMA.DIST and POISSON (T-1778)":
   `LOGNORM.DIST(x,m,s,TRUE)` = `NORM.DIST(LN(x),m,s,TRUE)` on 60 of 60 cells; "Normal CDF and ERFC sweep (T-1040)":
   its deep lower tail is up to about 2E-13 relative off, far under decision 0188 R3's 1e-4.
+- statistics.md, "Legacy distribution names sweep, second family (T-1048)": LOGNORMDIST = LOGNORM.DIST with cumulative
+  TRUE and LOGINV = LOGNORM.INV, value and error, on every paired cell (`LOGNORMDIST(0,0,1)` is `#NUM!`, LOGINV
+  rejects p = 0 and 1): each shares its modern Definition.
 - statistics.md, "LOGNORM.INV is EXP of NORM.INV's quantile (T-0925)": p in (0, 1), and Microsoft's pages for both:
   x <= 0 and standard_dev <= 0 are `#NUM!`.
 - statistics.md, "FISHER, FISHERINV, EXPON.DIST and HARMEAN are Excel operators around LN and EXP (T-2437)" and
@@ -50,14 +57,14 @@ from __future__ import annotations
 
 import math
 import random
-import sys
 from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import ill_conditioned, scalars, signed
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, ill_conditioned, scalars, signed
 from rustsheet_tools.accuracy.defs.exp_log import EXP_BAND
 from rustsheet_tools.accuracy.defs.normal import (
+    LEGACY_SOURCE,
     OVERFLOW_SOURCE,
     SWEEP_SOURCE,
     cdf,
@@ -90,6 +97,7 @@ WEIBULL_DIVISOR_SOURCE = (
     "statistics.md#weibulls-density-divides-by-lk-div0-when-it-underflows-num-when-it-overflows-t-2239"
 )
 WEIBULL_ZERO_SOURCE = "statistics.md#weibulldists-density-at-x--0-still-computes-betaalpha-t-3312"
+LEGACY_FIRST_SOURCE = "statistics.md#legacy-distribution-names-sweep-t-1047"
 MICROSOFT_SOURCE = (
     "Microsoft LOGNORM.DIST / LOGNORM.INV / EXPON.DIST / WEIBULL.DIST / FISHER pages: argument limits"
 )
@@ -97,7 +105,6 @@ MICROSOFT_SOURCE = (
 FISHER_CANCEL_HI = 1e-6  # FISHER and FISHERINV points with 0 < |x| below this are redrawn (the cancellation)
 EXP_MAX = EXP_BAND[0]  # an EXP argument from here up overflows or is in the unpinned band
 EXP_ZERO = -745.2  # EXP of an argument below this is 0 (gradual underflow ends near -745.13)
-NORMAL_MIN = sys.float_info.min
 NORMAL_RANGE = (1e-300, 1e300)  # an intermediate inside this is a normal double with room to spare
 EXPON_PRODUCT_MAX = 1e300  # lambda*x past this is unprobed
 REDRAWS = 50
@@ -116,8 +123,8 @@ def _exp_or_inf(y: float) -> float:
 
 def _lognorm_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, mean, sd, cumulative = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(mean, (bool, tuple))
-    assert not isinstance(sd, (bool, tuple))
+    assert not isinstance(x, (bool, str, tuple)) and not isinstance(mean, (bool, str, tuple))
+    assert not isinstance(sd, (bool, str, tuple))
     fx, fmean, fsd = float(x), float(mean), float(sd)
     ln_x = math.log(fx)
     z = (ln_x - fmean) / fsd
@@ -217,7 +224,7 @@ def _draw_lognorm_inv(stratum: str, rng: random.Random) -> list[Arg]:
 
 def _expon_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, lam, cumulative = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(lam, (bool, tuple))
+    assert not isinstance(x, (bool, str, tuple)) and not isinstance(lam, (bool, str, tuple))
     if float(x) * float(lam) > EXPON_PRODUCT_MAX:
         msg = "lambda*x past 1E+300 (unprobed)"
         raise NoValueError(msg)
@@ -294,8 +301,8 @@ def _weibull_domain(args: Sequence[MathArg]) -> str | None:
 
 def _weibull_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, alpha, beta, cumulative = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(alpha, (bool, tuple))
-    assert not isinstance(beta, (bool, tuple))
+    assert not isinstance(x, (bool, str, tuple)) and not isinstance(alpha, (bool, str, tuple))
+    assert not isinstance(beta, (bool, str, tuple))
     if x == 0:
         if cumulative or alpha > 1:
             return mpmath.mpf(0)
@@ -446,25 +453,35 @@ def _fisherinv(args: Sequence[MathArg]) -> mpmath.mpf:
 
 _SD = Param("standard_dev", "real", Interval(0, math.inf), typical=(0.1, 3), source=MICROSOFT_SOURCE)
 _CUMULATIVE = Param("cumulative", "bool", source="catalog")
+_LOGNORM_X = Param("x", "real", Interval(0, math.inf), typical=(0.01, 100), source=MICROSOFT_SOURCE)
+_LOGNORM_MEAN = Param("mean", "real", typical=(-3, 3), source=KERNEL_SOURCE)
 
 LOGNORM_DIST = register(
     Definition(
         function="LOGNORM.DIST",
-        params=(
-            Param("x", "real", Interval(0, math.inf), typical=(0.01, 100), source=MICROSOFT_SOURCE),
-            Param("mean", "real", typical=(-3, 3), source=KERNEL_SOURCE),
-            _SD,
-            _CUMULATIVE,
-        ),
+        params=(_LOGNORM_X, _LOGNORM_MEAN, _SD, _CUMULATIVE),
         value=_lognorm_dist,
         draw=_draw_lognorm_dist,
         sources=(KERNEL_SOURCE, SWEEP_SOURCE, OVERFLOW_SOURCE, MICROSOFT_SOURCE),
     )
 )
 
-LOGNORM_INV = register(
+# LOGNORMDIST is LOGNORM.DIST with cumulative TRUE (statistics.md T-1048): the same value and draws, the flag dropped.
+LOGNORMDIST = register(
     Definition(
-        function="LOGNORM.INV",
+        function="LOGNORMDIST",
+        params=(_LOGNORM_X, _LOGNORM_MEAN, _SD),
+        value=lambda args: _lognorm_dist([*args, True]),
+        draw=lambda stratum, rng: _draw_lognorm_dist(stratum, rng)[:3],
+        sources=(KERNEL_SOURCE, SWEEP_SOURCE, LEGACY_SOURCE, MICROSOFT_SOURCE),
+    )
+)
+
+
+def _lognorm_inv_definition(function: str) -> Definition:
+    """LOGNORM.INV and its legacy name LOGINV (statistics.md T-1048: both reject p = 0 and 1)."""
+    return Definition(
+        function=function,
         params=(
             Param("probability", "real", Interval(0, 1), typical=(0.001, 0.999), source=LOGNORM_INV_SOURCE),
             Param("mean", "real", typical=(-3, 3), source=LOGNORM_INV_SOURCE),
@@ -472,13 +489,19 @@ LOGNORM_INV = register(
         ),
         value=_lognorm_inv,
         draw=_draw_lognorm_inv,
-        sources=(LOGNORM_INV_SOURCE, MICROSOFT_SOURCE),
+        sources=(LOGNORM_INV_SOURCE, MICROSOFT_SOURCE, LEGACY_SOURCE),
     )
-)
 
-EXPON_DIST = register(
-    Definition(
-        function="EXPON.DIST",
+
+LOGNORM_INV = register(_lognorm_inv_definition("LOGNORM.INV"))
+LOGINV = register(_lognorm_inv_definition("LOGINV"))
+
+
+def _expon_definition(function: str) -> Definition:
+    """EXPON.DIST, and EXPONDIST with the same arguments and rules (statistics.md "Legacy distribution names sweep
+    (T-1047)": equal on every paired cell)."""
+    return Definition(
+        function=function,
         params=(
             Param("x", "real", Interval(0, math.inf, lo_open=False), typical=(0, 5), source=MICROSOFT_SOURCE),
             Param("lambda", "real", Interval(0, math.inf), typical=(0.1, 10), source=MICROSOFT_SOURCE),
@@ -486,13 +509,19 @@ EXPON_DIST = register(
         ),
         value=_expon_dist,
         draw=_draw_expon,
-        sources=(OPERATORS_SOURCE, MICROSOFT_SOURCE),
+        sources=(OPERATORS_SOURCE, MICROSOFT_SOURCE, LEGACY_FIRST_SOURCE),
     )
-)
 
-WEIBULL_DIST = register(
-    Definition(
-        function="WEIBULL.DIST",
+
+EXPON_DIST = register(_expon_definition("EXPON.DIST"))
+EXPONDIST = register(_expon_definition("EXPONDIST"))
+
+
+def _weibull_definition(function: str) -> Definition:
+    """WEIBULL.DIST, and WEIBULL with the same arguments and rules (statistics.md "Legacy distribution names sweep,
+    second family (T-1048)": equal on every paired cell)."""
+    return Definition(
+        function=function,
         params=(
             Param(
                 "x",
@@ -508,9 +537,18 @@ WEIBULL_DIST = register(
         value=_weibull_dist,
         domain=_weibull_domain,
         draw=_draw_weibull,
-        sources=(WEIBULL_SWEEP_SOURCE, WEIBULL_SWITCH_SOURCE, WEIBULL_DIVISOR_SOURCE, WEIBULL_ZERO_SOURCE),
+        sources=(
+            WEIBULL_SWEEP_SOURCE,
+            WEIBULL_SWITCH_SOURCE,
+            WEIBULL_DIVISOR_SOURCE,
+            WEIBULL_ZERO_SOURCE,
+            LEGACY_SOURCE,
+        ),
     )
-)
+
+
+WEIBULL_DIST = register(_weibull_definition("WEIBULL.DIST"))
+WEIBULL = register(_weibull_definition("WEIBULL"))
 
 FISHER = register(
     Definition(
