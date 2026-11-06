@@ -2518,6 +2518,7 @@ C	probes/t4595-literal-after-point.case.json	12
 C	probes/t4596-take-drop-picker-name-index-choose.case.json	28
 C	probes/t4600-holiday-number-text-off-calendar.case.json	176
 C	probes/t4602-clock-text-colon-am-pm-and-spaces.case.json	95
+C	probes/t4606-ifs-array-criterion-value-error.case.json	86
 C	probes/t4609-pivot-row-labels-2.case.json	298
 C	probes/t4610-row-column-array-error-element.case.json	13
 C	probes/t4611-randarray-min-max-whole-arrays.case.json	13
