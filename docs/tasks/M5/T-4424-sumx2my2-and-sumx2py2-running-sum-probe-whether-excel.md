@@ -71,7 +71,7 @@ Missing: `probes/t4424-sumx2my2-overflow-order.math.json`. `cd tools && uv run r
   (`rustsheet-eval show`: checked 84, passed 84).
 - **Result:** Excel follows model (a), one finished double term x^2 - y^2 per pair, which is what `fn_sumx2my2`
   already does.
-  - A1:A2 are 1.6899999999999998E+308 in either order, which rules out model b.
+  - A1 is 1.6899999999999998E+308 where model b overflows, which rules it out (A2:A4 match every model).
   - A3:A4 are the negative twin.
   - A5:A7 are `#NUM!`, where x^2 or -y^2 overflows alone while the term is finite. That rules out an 80-bit square
     (model c).
