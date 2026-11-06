@@ -3,7 +3,7 @@ id: T-2902
 title: "Python facade: Transaction.set_row_hidden hides or shows a row"
 milestone: M12
 lane: api
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -42,3 +42,9 @@ earlier in the same block can be named.
 - Hidden columns and reading the hidden flag (the Rust facade has neither).
 - Other missing mirrors (T-2916, T-2900, T-2901, T-2903, T-2904, T-0460, T-2054); any change to crates/rustsheet or
   the engine.
+
+## Outcome
+`Transaction.set_row_hidden(sheet, row, hidden=True)` added (1-based row; checked conversion; bad row raises
+`EditError` at call time, so the block rolls back). Stub and docstring added; four tests in test_facade.py.
+Deviation from the task text: an unknown sheet raises `RefError` (not `EditError`), matching every other facade
+sheet op and the existing tests. Eval delta: none (binding-only).

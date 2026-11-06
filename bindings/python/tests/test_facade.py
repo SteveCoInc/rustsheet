@@ -586,3 +586,41 @@ def test_define_name_errors_roll_back(wb, name, formula, sheet, exc):
             tx.define_name("Dup", "=2")
             tx.define_name(name, formula, sheet=sheet)
     assert wb["A1"] is None
+
+
+def test_set_row_hidden_feeds_subtotal(wb):
+    wb.set("A1", 1)
+    wb.set("A2", 2)
+    wb.set("A3", 4)
+    wb.set("B1", "=SUBTOTAL(109,A1:A3)")
+    wb.set("B2", "=SUBTOTAL(9,A1:A3)")
+    with wb.edit() as tx:
+        tx.set_row_hidden("Sheet1", 2)
+    assert wb["B1"] == 5
+    assert wb["B2"] == 7
+    with wb.edit() as tx:
+        tx.set_row_hidden("Sheet1", 2, False)
+    assert wb["B1"] == 7
+
+
+@pytest.mark.parametrize("row", [0, -1, 1048577])
+def test_set_row_hidden_bad_row_rolls_back(wb, row):
+    with pytest.raises(rs.EditError):
+        with wb.edit() as tx:
+            tx["A1"] = 1
+            tx.set_row_hidden("Sheet1", row)
+    assert wb["A1"] is None
+
+
+def test_set_row_hidden_unknown_sheet_rolls_back(wb):
+    # An unknown sheet is a RefError, as for every other sheet op.
+    with pytest.raises(rs.RefError):
+        with wb.edit() as tx:
+            tx["A1"] = 1
+            tx.set_row_hidden("Nope", 1)
+    assert wb["A1"] is None
+
+
+def test_set_row_hidden_last_row_accepted(wb):
+    with wb.edit() as tx:
+        tx.set_row_hidden("Sheet1", 1048576)
