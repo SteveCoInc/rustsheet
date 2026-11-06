@@ -7220,21 +7220,26 @@ Region (T-3358, from its R3-marked points; still bounded by p < 1e-150):
 
 The assessment's "df ≥ 1e6" does not hold for these points. Tables for BETA.INV and CHISQ.INV.RT are T-3529's and T-3578's (T-3529 landed CHISQ.INV.RT's s1 batch unmarked; T-3578 marks the region), and
 their regions are fixed there. Points of these functions outside the region are not covered, even where Excel is off by
-more than G, and they need an owner ruling:
-- T.INV and F.INV at p from 1.2E-69 to 8.2E-131 (accuracy/T.INV/s1 A91, A96; F.INV/s1 A164, A169), owned by T-3544;
+more than G:
+- T.INV and F.INV at p from 1.2E-69 to 8.2E-131 (accuracy/T.INV/s1 A91, A96; F.INV/s1 A164, A169). Owner ruling (decision
+  0301, 2026-11-06): Excel stays the target. T-4489 reproduces Excel's values there; until it lands they pass Gate A
+  through the math side.
 - T.INV.2T and TINV at any p (T.INV.2T/s1 A98, A99, A103, with A99 at p 4.4E-242; TINV/s1 A102), owned by T-3386.
 
-Owner ruling (decision 0267 item 3, 2026-11-04): the math also wins on each evidenced point where Excel is more than G
-off it for T.INV.2T, TINV, T.INV, CONFIDENCE.T and BETA.INV at a tiny p (probes-numeric t3349, t1531, t1543), and for
-CHISQ.INV.RT and CHIINV at df 1, p 1.5E-16 to 5E-16 (t3336). An example is `T.INV.2T(1E-300,100000)`: Excel 79.12,
+Owner ruling (decision 0267 item 3, 2026-11-04, narrowed by decision 0301): the math also wins on the probes-numeric
+cells T-3386 and T-3337 list where Excel is more than G off the math. Those are T.INV.2T, TINV, T.INV, CONFIDENCE.T and
+BETA.INV at a tiny p (t3349, t1531, t1543 and the m9 cases), and CHISQ.INV.RT and CHIINV at df 1, p 1.5E-16 to 5E-16
+(t3336). An example is `T.INV.2T(1E-300,100000)`: Excel 79.12,
 math and engine 37.19. That covers 50 of the 59 visibly-off tiny-p T cells, measured with mpmath at 60 digits. T-3386
 and T-3337 add the marks and widen this entry's Rule and Region when they land. df 1 near p = 1 (T-2858) stays Excel's.
+Decision 0301 keeps Excel as the target at the Gate A points accuracy/T.INV/s1 A91 and A96, which 0267's wording
+had covered.
 
 The engine is within ε of the math on all of them, so they pass Gate A through its math side. One point inside
 decision 0188's p < 1e-150 bound but outside the region the entry names needs a ruling of its own:
 `F.INV(4.36982683607437E-189,1,1698856)` (F.INV/s1 A167) is 3.85E-145 in Excel, while the true quantile, 3.0E-377, is
-below the double range. The engine returns 0, which passes only through Gate A's 1e-300 absolute floor; a mark would
-make 0 the target, so T-3544 leaves it to the owner.
+below the double range. The engine returns 0, which passes only through Gate A's 1e-300 absolute floor. Owner ruling
+(decision 0301): Excel's 3.85E-145 stays the target, and T-4489 owns reproducing it.
 Evidence: R3-marked points of the Gate A tables (eval/accuracy/math-over-excel.tsv), excel-graph and 50-digit mpmath:
 - T.INV: accuracy/T.INV/s1 A89, A93 and A95. For example, `T.INV(1.68092983773194E-249,10068)` is -77.496 in Excel and
   -34.691 in truth.
