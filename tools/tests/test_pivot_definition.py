@@ -256,6 +256,24 @@ def test_refusals(definition: dict[str, Any], message: str) -> None:
         build_xlsx(_spec(definition))
 
 
+def test_cache_names_replace_a_blank_or_repeated_header() -> None:
+    spec = _spec(
+        {"rows": ["Area"], "data": [{"field": "Amount"}], "cache_names": ["Area", "P", "Amount", "F"]}
+    )
+    cells = spec["sheets"][0]["cells"]
+    del cells["A1"]  # an empty header cell
+    cells.update({"B1": "Sales", "D1": "Sales"})  # a repeated constant
+    cache = _parts(spec)["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert re.findall(r'<cacheField name="([^"]*)"', cache) == ["Area", "P", "Amount", "F"]
+    for names, message in (
+        (["Area", "P"], "one name per source column"),
+        (["Area", "P", "area", "F"], "distinct non-empty texts"),
+        (["Area", "", "Amount", "F"], "distinct non-empty texts"),
+    ):
+        with pytest.raises(ValueError, match=re.escape(message)):
+            build_xlsx(_spec({"data": [{"field": "Amount"}], "cache_names": names}))
+
+
 def test_page_fields_need_room_and_the_anchor_must_be_empty() -> None:
     with pytest.raises(ValueError, match="free rows above"):
         build_xlsx(_spec({"pages": [{"field": "Region"}], "data": [{"field": "Sales"}]}, location="A1"))

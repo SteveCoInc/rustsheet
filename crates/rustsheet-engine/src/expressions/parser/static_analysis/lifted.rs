@@ -85,7 +85,10 @@ pub(super) fn lifts_arrays_at(kind: &Function, index: usize) -> bool {
 /// reads a range whole: a legacy `=ISEVEN({5})` shows `=ISEVEN(@{5})`, `=ISEVEN({2;3})`
 /// `=ISEVEN(@{2;3})`, `=ISEVEN(-{5})` `=ISEVEN(-@{5})`, and EDATE, YEARFRAC, BIN2DEC and QUOTIENT
 /// alike, on the rows of nothing and off them (probes/iseven-isodd-range-derived-arrays Leg!C3,
-/// F3, G3:N3, C41, F41, G41:N41, excel-graph, T-4528).
+/// F3, G3:N3, C41, F41, G41:N41, excel-graph, T-4528). Only at a value position (`arrays`): under
+/// an argument that takes arrays the constants stay as written, `=SUM(EDATE({45000},1))` and
+/// `=SUMPRODUCT(ISEVEN({5}))` show no `@`, while `=ABS(QUOTIENT({7},2))` shows
+/// `=ABS(QUOTIENT(@{7},2))` (probes/nested-legacy-atp-array-constant, excel-graph, T-4591).
 pub(super) fn array_constant_context<'a>(
     kind: &Function,
     signature: Option<&'a Signature>,
@@ -93,7 +96,7 @@ pub(super) fn array_constant_context<'a>(
     args: &[Node],
     arrays: bool,
 ) -> (Option<&'a Signature>, bool) {
-    let signature = if lifts_arrays_at(kind, index) {
+    let signature = if arrays && lifts_arrays_at(kind, index) {
         Some(&Signature::Scalar)
     } else {
         signature

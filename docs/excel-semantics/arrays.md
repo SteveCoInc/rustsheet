@@ -824,6 +824,12 @@ NETWORKDAYS.INTL is the exception: it lifts over a range (`INDEX(WORKDAY.INTL(45
   whatever its size and under a sign, and the call none: `=EDATE(@{45000;45031},1)`, `=YEARFRAC(@{45000},46000)`,
   `=BIN2DEC(@{101})`, `=QUOTIENT(@{7},2)`, `=ISEVEN(-@{5})` (probes/iseven-isodd-range-derived-arrays Leg!G3:N3,
   G41:N41, excel-graph, T-4528; information.md "ISEVEN/ISODD over a range").
+  The `@` follows the argument slot of the enclosing call, not nesting: the same constants as the
+  argument of a call that takes arrays show none (legacy `=SUM(EDATE({45000},1))`,
+  `=SUM(EDATE({45000;45031},1))` and `=SUMPRODUCT(ISEVEN({5}))` show their written text, the
+  first is 45031, the second 90092), and under a scalar-argument call they do (legacy
+  `=ABS(QUOTIENT({7},2))` shows `=ABS(QUOTIENT(@{7},2))`, 3; probes/nested-legacy-atp-array-constant
+  A1:A8, excel-graph, 2026-11-06, T-4591).
 Evidence: probes/scalar-lift-shapes H1-H50, J1-J8, K1-K8; probes/scalar-lift-shapes-b (each
 question on row 3 and row 70); probes/scalar-lift-shapes-c (legacy formulas and their FORMULATEXT).
 All three: excel-graph, 2026-10-17, T-1767. The per-family argument lists are in statistics.md,
@@ -1293,6 +1299,23 @@ to one cell, as `{FALSE}` is in followup G!A921).
 Status: VERIFIED (web)
 Tasks: T-1276, T-1328, T-1322, T-1323, T-1326, T-1324, T-1700, T-1325, T-1327, T-3838
 
+## RANDARRAY lifts over its arguments
+Rule: all five arguments of RANDARRAY (rows, columns, min, max, whole_number) lift over an array and a range, one call per
+element, each element that call's top-left number: `RANDARRAY({2})` is 1x1, `RANDARRAY({2;3})` 2x1, `RANDARRAY({2},{3})` 1x1, and
+inside GROUPBY `_xleta.RANDARRAY` is one number per group record.
+- (probes/t4519-row-column-randarray-over-arrays D2:H4, D7:H8, excel-graph 2026-11-06, T-4519) the shapes above.
+- (probes/t4611-randarray-min-max-whole-arrays A1:A14, excel-graph 2026-11-06, T-4611; Y1 5, Y2 7) `ROWS(RANDARRAY(1,1,{0;5}))`, `..,0,{1;5})`,
+  `..,5,5,{TRUE;FALSE})`, `..,{5;7},{5;7})`, `..,Y1:Y2,Y1:Y2)`, `..,{5;6},{5;6},{TRUE;FALSE})` and `ROWS(RANDARRAY({1;2},1,{5;6},{5;6}))` are
+  2; `COLUMNS(RANDARRAY(1,1,{5,7},{5,7}))` is 2. With min = max the elements are the bounds: `{5;7},{5;7}` gives 5 then 7 (A5:A6),
+  `{5,7},{5,7}` 5 then 7 (A9), and whole_number `{TRUE;FALSE}` over 5,5 starts at 5 (A10). The arguments pair element by
+  element (A5:A6, A9); A13, `RANDARRAY({1;2},1,{5;6},{5;7})`, is a draw (6.279) and unscored. An element with min > max is its own `#VALUE!`,
+  not the whole call: `ROWS(RANDARRAY(1,1,{0;5},{9;1}))` is 2 (A14). A range in rows, columns or whole_number is unprobed and lifts by
+  inference (SPEC-0011); only min and max were probed over a range (A7).
+Ours: implemented (T-4611): `Model::fn_randarray` calls `lift_call` with a `RANDARRAY` entry in `lift/kinds/general.rs`, each
+element charged the cells it builds.
+Status: VERIFIED (excel-graph)
+Tasks: T-4611
+
 ## ROW, COLUMN and RANDARRAY over an array value (GROUPBY's per-group function)
 Rule: ROW and COLUMN of an array value (no reference) give an array of `#VALUE!` in that value's shape, not one `#VALUE!`; an error
 element keeps its own error (`LET(x,{1;#N/A},ROW(x))` is {#VALUE!;#N/A}). RANDARRAY
@@ -1320,7 +1343,7 @@ Ours: ROW and COLUMN lift over an array value as above since T-4610 (`Model::row
 `reference_ranges_or_array`). It lifts over any array a name, IF, CHOOSE or LET gives; only the LET-bound and LAMBDA-parameter
 forms are probed, and an IF or CHOOSE that returns an array (`ROW(CHOOSE(1,{1;2}))`) or a defined name bound to an array constant
 follows by inference (before T-4610 each was one `#VALUE!`, unevidenced too). RANDARRAY
-does not lift: `RANDARRAY({2})` is 2x1 and over `{2;4;6}` `#N/IMPL!` (T-4611 owns D2, D3, E3, G3, H3, D4, D7, D8, E8, G8, H8 and t4450 J64).
+lifts since T-4611 (see "RANDARRAY lifts over its arguments" above).
 Status: VERIFIED (excel-graph)
 Tasks: T-4519, T-4610, T-4611
 
@@ -2347,18 +2370,24 @@ Status: VERIFIED (excel-graph)
 Tasks: T-2409, T-4448
 
 ## TAKE and DROP keep the one-cell reference a picker hands them
-Rule: when TAKE's or DROP's array is an IF, CHOOSE, IFS or SWITCH whose pick is a reference (one cell included), a defined name or
-an INDEX, the result is that reference's part, a reference, as TAKE or DROP of the reference itself is: never a 1x1 array.
+Rule: when TAKE's, DROP's or TRIMRANGE's array is an IF, CHOOSE, IFS or SWITCH whose pick is a reference (one cell included),
+a one-cell defined name or an INDEX of a range, the result is that reference's part, a reference, as TAKE or DROP of the
+reference itself is: never a 1x1 array.
 - (probes/t4469-take-drop-if-one-cell-reference, excel-graph 2026-11-06, T-4469; Y1 5, Y2 "t", Z1 blank) `TYPE(X)` is 1 (2
   for Y2), `ISREF(X)` TRUE, `X&"x"` "x" ("5x", "tx") and `ISBLANK(INDEX(X,1,1))` TRUE for Z1 for each X of
   `DROP(IF(TRUE,Z1),0)`, `TAKE(IF(TRUE,Y1),1)`, `TAKE(IF(FALSE,0,Z1),1)`, `TAKE(IF(TRUE,IF(TRUE,Z1)),1)`,
   `DROP(IF(TRUE,Y1),0)`, `TAKE(IFS(TRUE,Z1),1)`, `TAKE(SWITCH(1,1,Z1),1)`, `TAKE(IF(TRUE,Y2),1)`, `DROP(IF(TRUE,Y2),0,0)` and
-  `TAKE(IF(TRUE,Y1:Y2),1)` (A1:D10). probes/t4448-lone-blank-reshapers B9: `TYPE(TAKE(IF(TRUE,Z1),1))` is 1.
+  `TAKE(IF(TRUE,Y1:Y2),1)` (A1:D10); the same for `TRIMRANGE(IF(TRUE,Y1))`, `TRIMRANGE(IFS(TRUE,Y1))` and
+  `TRIMRANGE(SWITCH(1,1,Y2))` (A11:D13). probes/t4448-lone-blank-reshapers B9: `TYPE(TAKE(IF(TRUE,Z1),1))` is 1.
+- (probes/t4596-take-drop-picker-name-index-choose, excel-graph 2026-11-06, T-4596; names NMZ = Sheet1!$Z$1, NMY =
+  Sheet1!$Y$1) the same four results (TYPE 1, ISREF TRUE, blank stays blank) hold for `TAKE(IF(TRUE,NMZ),1)`,
+  `TAKE(IF(TRUE,NMY),1)`, `TAKE(IF(TRUE,INDEX(Y1:Y2,1)),1)`, `TAKE(CHOOSE(1,Z1),1)`, `DROP(CHOOSE(1,Y1),0)`,
+  `TRIMRANGE(CHOOSE(1,Y1))` and `TAKE(CHOOSE(1,Y2),1)` (A1:D7; TYPE 2 for Y2).
 - So a blank picked cell stays blank and a picked number is not lifted as an array.
 Ours (T-4469): `Model::take_drop_value_source` in drop_take.rs. Before, IF, IFS and SWITCH read a one-cell arm as its
-value, so TYPE was 64 and ISREF FALSE; CHOOSE already kept it.
+value, so TYPE was 64 and ISREF FALSE; CHOOSE already kept it (T-4596 now evidences that in Excel).
 Status: VERIFIED (excel-graph)
-Tasks: T-4469
+Tasks: T-4469, T-4596
 
 ## GROUPBY and PIVOTBY lift over an array field_headers or total depth
 Rule: an array (or a multi-cell range) given as GROUPBY's `field_headers` or `total_depth`, or PIVOTBY's `field_headers`,

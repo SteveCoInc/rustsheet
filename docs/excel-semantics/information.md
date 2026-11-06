@@ -44,7 +44,7 @@ array constant as a scalar argument does and the call takes no `@` of its own. E
 probes/iseven-isodd-range-derived-arrays Leg!A2:N3, A40:N41 (excel-graph, 2026-11-06, T-4528). Ours
 put no `@` on the constant (and `@` on the call for a multi-element one) before T-4528, which changed
 only the shown text, as the values agree either way; `array_constant_context` in
-static_analysis/legacy.rs now gives a `LiftArrays` argument the scalar signature for its array
+static_analysis/lifted.rs now gives a `LiftArrays` argument the scalar signature for its array
 constants. The dynamic-array flag Excel writes for the range form is not probed.
 Implemented in: `Model::lifted_parity` and the `ARRAYS_1` entry in functions/lift/kinds/general.rs.
 Status: VERIFIED (excel-graph)

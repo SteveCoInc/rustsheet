@@ -547,13 +547,13 @@ is only `ς`), the delimiter `ς` gives {"aΣb","cσd"}, the lone delimiter `Σ`
 Evidence: probes/textsplit-casefold-length A1-A8 (excel-graph, 2026-10-17, T-1794); probes/t4473-textsplit-fold-gaps A1:A6, A12:A25
 and, in A27:A104, the first two of every three cells (excel-graph, 2026-11-06, T-4473; each TEXTSPLIT is read through ARRAYTOTEXT and
 COLUMNS; match_mode 0 controls in A1:A2, A12:A13, A24:A26).
-Ours: `fold_for_split` (text/casefold.rs) folds char by char (one char in, one char out) with `fold_match_char`'s İ, Kelvin and Angstrom exceptions and `fold_sigma_by_position`'s sigma rule; positions are mapped back to
+Ours: `fold_for_match` (text/casefold.rs) folds char by char (one char in, one char out) with `fold_match_char`'s İ, Kelvin, Angstrom and `ẞ` exceptions and `fold_sigma_by_position`'s sigma rule; positions are mapped back to
 byte offsets of the original text. Before T-1794 the code sliced the original at byte offsets found in `to_lowercase()`, which panicked on
 `TEXTSPLIT("İİİ,a",",",,,1)`. Before T-4473 TEXTSPLIT folded sigma and U+212B as SEARCH does; both now share `fold_sigma_by_position` and
-`fold_match_char` with TEXTBEFORE. UNVERIFIED for TEXTSPLIT: `ẞ` against the delimiter `ß` (TEXTBEFORE does not match them; TEXTSPLIT
-keeps SEARCH's fold, which does).
+`fold_match_char` with TEXTBEFORE. `ẞ` and `ß` do not match each other in either direction (`TEXTSPLIT("assbẞc","ß",,,1)` is {"assbẞc"},
+`TEXTSPLIT("aßbẞc","ẞ",,,1)` is {"aßb","c"}, `TEXTSPLIT("aẞb","ẞ",,,1)` is {"a","b"}; probes/t4499-textsplit-sharp-s A3:A10, T-4499).
 Status: VERIFIED (web) for the listed forms
-Tasks: T-1794, T-4473
+Tasks: T-1794, T-4473, T-4499
 
 ## TEXTBEFORE and TEXTAFTER match_mode 1 case folding
 Rule: with match_mode 1 TEXTBEFORE and TEXTAFTER fold case like TEXTSPLIT, never changing the length of the text: `İ` (U+0130) matches `i`
@@ -573,11 +573,11 @@ and the titlecase digraphs fold as in TEXTSPLIT (above): U+212B, `ſ` and `µ` m
 and lower forms.
 Evidence: probes/textbefore-casefold-length A1-A25 (excel-graph, 2026-10-17, T-1796); probes/textbefore-sigma-contexts A1-A18 (excel-graph, 2026-10-19, T-1799);
 probes/t4473-textsplit-fold-gaps A7:A11, A29, A35, A41, A47, A53, A59, A65, A71, A77, A83, A89, A95, A101 (one direction; the reverse is
-the cell three below each) and A105:A117 (excel-graph, 2026-11-06, T-4473).
-Ours: `fold_for_before_after` (text/casefold.rs) folds char by char with `fold_match_char`'s İ, Kelvin and Angstrom exceptions, `fold_sigma_by_position`'s sigma rule (shared with TEXTSPLIT) and the `ẞ` rule,
+the cell three below each) and A105:A117 (excel-graph, 2026-11-06, T-4473), probes/t4499-textsplit-sharp-s A1:A12 (excel-graph, 2026-11-06, T-4499).
+Ours: `fold_for_match` (text/casefold.rs) folds char by char with `fold_match_char`'s İ, Kelvin, Angstrom and `ẞ` exceptions, `fold_sigma_by_position`'s sigma rule (shared with TEXTSPLIT),
 and `match_text` (util.rs) maps the match back to byte offsets of the original with `str::get`. Before T-1796 it searched `to_lowercase()` of the text
-and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. UNVERIFIED: whether a letter must precede the `Σ` (the code ignores what precedes it), `ẞ` against the delimiter `ß`'s mirror (text `ß`,
-delimiter `ẞ`), and whether TEXTSPLIT shares the `ẞ` rule (TEXTSPLIT shares the sigma rule: probes/t4473-textsplit-fold-gaps A14:A23).
+and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. UNVERIFIED: whether a letter must precede the `Σ` (the code ignores what precedes it). The mirror (text `ß`, delimiter `ẞ`) is also `#N/A`
+(`TEXTBEFORE("aßb","ẞ",1,1)`, probes/t4499-textsplit-sharp-s A12), and TEXTSPLIT shares the `ẞ` rule and the sigma rule (probes/t4473-textsplit-fold-gaps A14:A23).
 Status: VERIFIED (web) for the listed forms
 Tasks: T-1796, T-4473
 

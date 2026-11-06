@@ -137,10 +137,18 @@ fn captions_and_the_values_field_are_typed() {
     assert!(root.starts_with(
         r#" xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" updatedVersion="6""#
     ));
+    // The whole `<location>` is typed.
     assert_eq!(
-        kept(&pivot, OpaqueOwner::Location),
-        r#" firstHeaderRow="1" firstDataRow="1" firstDataCol="1""#
+        pivot.geometry,
+        PivotGeometry {
+            first_header_row: 1,
+            first_data_row: 1,
+            first_data_column: 1,
+            row_page_count: 0,
+            column_page_count: 0,
+        }
     );
+    assert_eq!(kept(&pivot, OpaqueOwner::Location), "");
     assert_eq!(kept(&pivot, OpaqueOwner::Field(2)), r#" dataField="1""#);
     // `count` follows from the lists.
     assert_eq!(kept(&pivot, OpaqueOwner::DataFields), "");
@@ -170,9 +178,16 @@ fn page_fields_hold_their_selection_and_hidden_items() {
         r#" multipleItemSelectionAllowed="1""#
     );
     assert_eq!(
-        kept(&pivot, OpaqueOwner::Location),
-        r#" firstHeaderRow="1" firstDataRow="1" firstDataCol="1" rowPageCount="3" colPageCount="1""#
+        pivot.geometry,
+        PivotGeometry {
+            first_header_row: 1,
+            first_data_row: 1,
+            first_data_column: 1,
+            row_page_count: 3,
+            column_page_count: 1,
+        }
     );
+    assert_eq!(kept(&pivot, OpaqueOwner::Location), "");
     assert!(pivot.row_fields.is_empty() && pivot.column_fields.is_empty());
 }
 
@@ -313,7 +328,7 @@ fn an_excel_saved_definition_keeps_its_extensions_and_rendered_lines() {
 fn typed_attribute(element: &str, key: &str) -> bool {
     match element {
         TABLE => ROOT_TYPED.contains(&key),
-        "location" => key == "ref",
+        "location" => LOCATION_TYPED.contains(&key),
         "pivotField" => FIELD_TYPED.contains(&key) || is_subtotal_attribute(key),
         "item" => matches!(key, "t" | "x" | "sd" | "s" | "h"),
         "field" => key == "x",

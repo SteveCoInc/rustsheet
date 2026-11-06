@@ -106,6 +106,27 @@ fn a_cached_text_item_keeps_its_slot_and_takes_the_source_casing() {
     assert_eq!(records, [1, 1, 1, 2]);
 }
 
+/// t4612 C1 to C3: the first record's casing relabels the listed slot, whatever the listed and
+/// the lowercase casing (C1 shows `EAST`, C2 and C3 `East`; saved rowItems x = 1). The first
+/// record is a formula the old cache holds as `<m/>`; a literal first record is T-4654's.
+#[test]
+fn the_first_records_casing_relabels_the_listed_item() {
+    for (column, listed, shown) in [
+        (&["K", "=\"EAST\"", "east"][..], "east", "EAST"),
+        (&["K", "=\"East\"", "EAST", "east"][..], "EAST", "East"),
+        (&["K", "=\"East\"", "east", "EAST"][..], "east", "East"),
+    ] {
+        let model = source(&[&plain(column), &plain(&V4[..column.len()])]);
+        let old = cache(
+            &format!("A1:B{}", column.len()),
+            vec![("K", vec![CacheItem::Missing, text(listed)]), ("V", vec![])],
+        );
+        let (items, records) = refreshed_k(&model, &old);
+        assert_eq!(items, [CacheItem::Missing, text(shown)], "{listed}");
+        assert_eq!(records, vec![1; column.len() - 1], "{listed}");
+    }
+}
+
 /// t4134 I2: the listed order of mixed types is kept (saved rowItems x = 0..=7).
 #[test]
 fn listed_items_keep_their_order_across_types() {
@@ -227,6 +248,79 @@ fn date_values_do_not_match_cached_numbers() {
     }
 }
 
+/// t4612 T2 and T3: a time-only `h:mm` and an elapsed `[h]:mm` format read as dates too, so
+/// they are appended `<d>` items beside the cached numbers (saved rowItems x = 2, 3).
+#[test]
+fn time_and_elapsed_formats_read_as_dates() {
+    for (format, values) in [
+        ("h:mm", ["0.25", "0.5", "0.25"]),
+        ("[h]:mm", ["1.5", "2.25", "1.5"]),
+    ] {
+        let k: Vec<Input> = [("K", None)]
+            .into_iter()
+            .chain(values.map(|v| (v, Some(format))))
+            .collect();
+        let model = source(&[&k, &plain(&V4[..4])]);
+        let listed: Vec<CacheItem> = values[..2]
+            .iter()
+            .map(|v| num(v.parse().unwrap()))
+            .collect();
+        let old = cache("A1:B4", vec![("K", listed.clone()), ("V", vec![])]);
+        let (items, records) = refreshed_k(&model, &old);
+        let dates: Vec<CacheItem> = values[..2]
+            .iter()
+            .map(|v| CacheItem::Date(v.parse().unwrap()))
+            .collect();
+        assert_eq!(items[..2], listed[..], "{format}");
+        assert_eq!(items[2..], dates[..], "{format}");
+        assert_eq!(records, [2, 3, 2], "{format}");
+    }
+}
+
+/// t4612 T5 and T4: a date is its own item beside an equal plain number (saved rowItems x = 0,
+/// 1, 2), and beside a text the cached text item is reused (x = 1, 3, 4).
+#[test]
+fn a_date_and_an_equal_number_are_two_items() {
+    let date = Some("m/d/yyyy");
+    let model = source(&[
+        &[
+            ("K", None),
+            ("45000", date),
+            ("45000", None),
+            ("45001", None),
+        ],
+        &plain(&V4[..4]),
+    ]);
+    let old = cache(
+        "A1:B4",
+        vec![("K", vec![num(45000.0), num(45001.0)]), ("V", vec![])],
+    );
+    let (items, records) = refreshed_k(&model, &old);
+    assert_eq!(
+        items,
+        [num(45000.0), num(45001.0), CacheItem::Date(45000.0)]
+    );
+    assert_eq!(records, [2, 0, 1]);
+
+    let model = source(&[
+        &[("K", None), ("45000", date), ("x", None), ("45001", date)],
+        &plain(&V4[..4]),
+    ]);
+    let old = cache(
+        "A1:B4",
+        vec![
+            ("K", vec![num(45000.0), text("x"), num(45001.0)]),
+            ("V", vec![]),
+        ],
+    );
+    let (items, records) = refreshed_k(&model, &old);
+    assert_eq!(
+        items[3..],
+        [CacheItem::Date(45000.0), CacheItem::Date(45001.0)]
+    );
+    assert_eq!(records, [3, 1, 4]);
+}
+
 /// t4585: repeated headers are numbered from 2 per name ignoring case, keeping their casing,
 /// and the empty-text header in the 4th column of an A-start source is `Field4`.
 #[test]
@@ -263,6 +357,69 @@ fn repeated_and_blank_headers_are_renamed() {
     assert_eq!(fresh.fields[0].items, [text("East"), text("West")]);
     assert_eq!(fresh.fields[1].items, [num(10.0), num(20.0)]);
     assert_eq!(fresh.fields[1].records, [0, 1]);
+}
+
+/// probes/t4627-pivot-field-name-collisions: a taken name takes the first free `<header><k>`
+/// from 2 (`P_SufA`, `P_SufB`, `P_Const`), whitespace is a name (`P_Space`), `ß` and `SS` are
+/// one name (`P_Fold`), and a blank is `Field<n>` by source position, named after the text
+/// headers (`P_FldA`, `P_FldB`, `P_Empty`).
+#[test]
+fn field_names_avoid_every_taken_name() {
+    fn all<'a>(headers: &[&'a str]) -> Vec<Option<&'a str>> {
+        headers.iter().map(|h| Some(*h)).collect()
+    }
+    let names = |headers: &[Option<&str>]| {
+        field_names(headers.iter().map(|h| h.map_or(CacheItem::Missing, text))).unwrap()
+    };
+    assert_eq!(
+        names(&all(&["Region", "Sales", "Sales2", "Sales"])),
+        ["Region", "Sales", "Sales2", "Sales3"]
+    );
+    assert_eq!(
+        names(&all(&["Region", "Sales", "Sales", "Sales2"])),
+        ["Region", "Sales", "Sales2", "Sales22"]
+    );
+    assert_eq!(
+        names(&all(&["Region", "Sales", "Sales", "SALES"])),
+        ["Region", "Sales", "Sales2", "SALES3"]
+    );
+    assert_eq!(names(&all(&[" ", " "])), [" ", " 2"]);
+    assert_eq!(
+        names(&all(&["é", "É", "ß", "SS", "ss"])),
+        ["é", "É2", "ß", "SS2", "ss3"]
+    );
+    assert_eq!(
+        names(&all(&["Region", "Sales", "Field4", ""])),
+        ["Region", "Sales", "Field4", "Field42"]
+    );
+    assert_eq!(
+        names(&all(&["Region", "Sales", "X", "", "Field4"])),
+        ["Region", "Sales", "X", "Field42", "Field4"]
+    );
+    assert_eq!(
+        names(&[Some("Region"), Some("Sales"), Some("X"), None, Some("Y")]),
+        ["Region", "Sales", "X", "Field4", "Y"]
+    );
+}
+
+/// Untrusted input (directive 5): [`MAX_FIELDS`] equal headers, or two repeated headers whose
+/// suffixed names collide, are named in linear time, each search resuming where its base's left
+/// off.
+#[test]
+fn many_equal_headers_are_named_in_linear_time() {
+    let n = MAX_FIELDS;
+    let names = field_names((0..n).map(|_| text("Sales"))).unwrap();
+    assert_eq!(names.len(), n);
+    assert_eq!(names[1], "Sales2");
+    assert_eq!(names[n - 1], format!("Sales{n}"));
+    // `A2` repeated meets the `A2<k>` names the repeated `A` took first: `A` took `A2` to
+    // `A8192`, so `A22` to `A2999` (k = 2 to 999) are taken and the first `A2` repeat is `A21000`.
+    let half = n / 2;
+    let mixed = field_names((0..n).map(|i| text(if i < half { "A" } else { "A2" }))).unwrap();
+    let distinct: HashSet<String> = mixed.iter().map(|m| name_key(m)).collect();
+    assert_eq!(distinct.len(), n);
+    assert_eq!(mixed[half], "A21000");
+    assert_eq!(mixed[half + 1], "A21001");
 }
 
 #[test]
@@ -356,6 +513,28 @@ fn shared_items_flags_follow_the_items() {
     assert!(mixed.contains_string && mixed.contains_mixed_types);
     let errors = SharedItemsFlags::of(&field(vec![CacheItem::Error(Error::NA)]));
     assert!(errors.contains_string && !errors.contains_number);
+    // t4612 T5: a date beside numbers is mixed, without number flags (`containsMixedTypes="1"`,
+    // `containsSemiMixedTypes="0"`, `containsString="0"`, no `containsNumber` or min/maxValue).
+    let dated = SharedItemsFlags::of(&field(vec![
+        CacheItem::Date(45000.0),
+        num(45000.0),
+        num(45001.0),
+    ]));
+    assert!(dated.contains_date && dated.contains_mixed_types);
+    assert!(!dated.contains_semi_mixed_types && !dated.contains_string);
+    assert!(!dated.contains_number && !dated.contains_integer);
+    assert_eq!(dated.number_range, None);
+    // t4612 T4: dates beside a text and (stale) numbers are mixed, with the string flags and no
+    // number flags.
+    let with_text = SharedItemsFlags::of(&field(vec![
+        num(45000.0),
+        text("x"),
+        num(45001.0),
+        CacheItem::Date(45000.0),
+        CacheItem::Date(45001.0),
+    ]));
+    assert!(with_text.contains_mixed_types && with_text.contains_string);
+    assert!(with_text.contains_semi_mixed_types && !with_text.contains_number);
 }
 
 /// A field with a saved date grouping is grouped again by `group_by_dates` over the dates read,

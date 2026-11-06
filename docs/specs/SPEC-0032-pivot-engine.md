@@ -143,17 +143,23 @@ refresh is ordered after that calculation.
 - Auto Refresh is added only as T-4182 evidences it.
 
 ### PivotResult (T-4142, T-4163, T-4165, T-4174, T-4175)
-`fn compute(table: &PivotTable, cache: &PivotCache, budget: &mut AreaBudget) -> Result<PivotResult, PivotComputeError>`
-runs in fixed stages. The order is Excel's where a probe shows one (Top-N totals: t4128 K), and LibreOffice's
+`fn compute(table: &PivotTable, cache: &PivotCache, work: &mut u64) -> Result<PivotResult, PivotComputeError>`
+runs in fixed stages. It takes the work units left rather than an `AreaBudget`, which is crate-private,
+so it stays a public pure function: T-4149 and T-4154 pass the run budget's units (`MAX_PIVOT_WORK` for
+a standalone call) and mark the run exceeded on `Limit`. The order is Excel's where a probe shows one (Top-N totals: t4128 K), and LibreOffice's
 otherwise as a hypothesis to probe:
 1. **Record filter:** page field selections, hidden items (`h`), slicer state (T-4188).
 2. **Groups:** each record's group item per grouped field (precomputed in the cache).
 3. **Accumulate:** a result tree keyed by tuples of item indices. Each (row tuple, column tuple, data
-   field) holds an accumulator, and so do subtotal and grand-total nodes. Aggregates reuse the
-   GETPIVOTDATA folds and `excel_variance` (SPEC-0015), so a cell and GETPIVOTDATA read one accumulator.
-   Mixed values follow pivots.md "Aggregates over text, blanks, booleans and errors" (T-4135). The
-   order in which a total accumulates its records is Excel's own: it is neither record order nor the
-   sum of the children (pivots.md "Summation order...", T-4589).
+   field) holds an accumulator, and so do subtotal and grand-total nodes (T-4142: `pivot/result.rs`,
+   `pivot/accumulate.rs`). Once T-4154 moves GETPIVOTDATA onto the result, a cell and GETPIVOTDATA read
+   one accumulator. Mixed values follow pivots.md "Aggregates over text, blanks, booleans and errors"
+   (T-4135). The order is Excel's own (pivots.md "Summation order...", probes/t4616-pivot-total-order-3):
+   an item cell accumulates its records in record order; a total accumulates them item by item in
+   display order (Average, Product, Var, StdDev, and Sum beside other aggregates), except that in a
+   pivot whose data fields are all Sum a total sums its child cells. Var and StdDev use the textbook
+   one-pass formula over those sums, not `excel_variance`, which GETPIVOTDATA's fold keeps until
+   T-4154.
    Where Excel shows them differently, the difference is a rule on the reading side: an empty
    intersection renders blank but GETPIVOTDATA answers 0 (web.md); a caption substitute renders as text.
 4. **Calculated items** (T-4175, solve order) and **calculated fields** (T-4174). Calculated fields are
@@ -165,8 +171,10 @@ otherwise as a hypothesis to probe:
 7. **Layout lines:** Excel's `rowItems`/`colItems` (`t`, `r`, `i`, `x`) for the form, subtotal placement,
    grand totals, Values position and blank rows (T-4147, T-4168).
 
-`PivotResult` holds the lines, the cell value of each (row line, column line, data field), the page-area
-items and the location size. It is derived state and never encoded.
+`PivotResult` holds the cell value of each (row line, column line, data field). The lines, the location
+and its offsets are `pivot::layout::lay_out(table, cache, &result, work)`'s `PivotLayout`, a separate call
+on the result (T-4147), so a pivot past `MAX_PIVOT_CELLS` or the sheet's edge keeps its values for
+GETPIVOTDATA; the page-area items are the renderer's (T-4149). It is derived state and never encoded.
 
 It lives in `Evaluation` (evaluation.rs) as `pivot_results`, beside `pivot_indexes`, keyed like them.
 It is built on demand by render and by GETPIVOTDATA. It is dropped at every point where `pivot_indexes`

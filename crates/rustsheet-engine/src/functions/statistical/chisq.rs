@@ -1,4 +1,5 @@
 use crate::calc_result::Range;
+use crate::functions::statistical::paired::SecondMark;
 use crate::nested_array::nested_array_error;
 use crate::reference_operators::{Ranges, RefArg};
 use statrs::distribution::{Continuous, Gamma};
@@ -550,11 +551,11 @@ impl Model {
 
     // CHISQ.TEST(actual_range, expected_range)
     pub(crate) fn fn_chisq_test(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let (width, height, values_left, values_right) = match self.fn_get_two_matrices(args, cell)
-        {
-            Ok(v) => v,
-            Err(r) => return r,
-        };
+        let (width, height, values_left, values_right) =
+            match self.fn_get_two_matrices(args, cell, SecondMark::NumError) {
+                Ok(v) => v,
+                Err(r) => return r,
+            };
 
         // A pair with a non-number on either side adds nothing; the degrees of freedom still come
         // from the first range's shape (statistics.md, CHITEST text rule; for two different shapes
@@ -601,7 +602,19 @@ impl Model {
                 );
             }
             let diff = obs - exp;
-            chi2 += (diff * diff) / exp;
+            let square = diff * diff;
+            // A squared difference past the double range is #NUM!, not a p of 0:
+            // `CHISQ.TEST({1E+160,1,1},{1,1,1})` (probes/t4098-tests-prob-domains A44, A45;
+            // statistics.md "CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)"). Where the
+            // finite squares' quotients or sum overflow is unprobed (a p of 0 here).
+            if square.is_infinite() {
+                return CalcResult::new_error(
+                    Error::NUM,
+                    cell,
+                    "CHISQ.TEST squared difference overflows".to_string(),
+                );
+            }
+            chi2 += square / exp;
         }
 
         if chi2 < 0.0 && chi2 > -1e-12 {

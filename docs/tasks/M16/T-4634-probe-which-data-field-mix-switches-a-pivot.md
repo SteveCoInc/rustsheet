@@ -30,6 +30,11 @@ Evidence: probes/t4616-pivot-total-order-3 (T-4616): S1 E7 871.3100000000001 (ce
 - the grand-grand total of a 2-D Var pivot: V1 E11 fits textbook Var over row-major (R, then K)
   display-order accumulation and textbook Var over per-row or per-column partial sums, among others;
 - whether Average's totals ever follow the cells (S3, Average alone, follows the records).
+- whether Count or CountNums beside only Max, Min, Product or a variance counts as mixed (T-4142's
+  `counts_mixed` treats any non-count aggregate as mixed);
+- Sum-only cells that are totals on both axes other than the grand-grand total (subtotal by subtotal,
+  subtotal by grand total, more than one field per axis);
+- the order of Varp and StdDevp totals (T-4142 assumes Var's).
 
 ## Acceptance criteria
 - [ ] A filled probe separates the readings above, and the pivots.md entry's UNVERIFIED part is

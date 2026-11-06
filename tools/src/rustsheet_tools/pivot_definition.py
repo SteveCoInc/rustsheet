@@ -20,6 +20,7 @@ oracle-spike.md runs 1, 4-6). The definition maps one-to-one onto `pivotTableDef
                               "group": {"start": 0, "end": 100, "interval": 10}}},  # numeric fieldGroup
        "calculated": [{"name": "Double", "formula": "Sales*2"}],    # calculated cache fields
        "cache": {"missingItemsLimit": 0},                       # pivotCacheDefinition attributes
+       "cache_names": ["Region", "Sales", "Sales_b", "Blank"],  # cacheField names in place of the header
        "xml": {"filters": "<filters count=\\"1\\">...</filters>"}}}   # raw children, by slot
 
 Field indices (`fld` in raw XML, `baseField`) count the source columns left to right, then the calculated
@@ -29,6 +30,10 @@ fields in order. Excel for the web refuses a package whose parts disagree with e
 invariants, docs/research/pivot-tables-2026-11-04/oss-engines.md §4). It does not need to agree with what
 Excel will compute: Excel rebuilds the cache, the items and the layout on open. Source formulas are cached as
 blank for that reason.
+
+The cache's field names are the source header, which must be distinct non-empty texts. `cache_names` saves
+other names instead, one per source column, so a header Excel names itself on refresh (a blank cell, a
+repeated constant; T-4627) can be given; the definition refers to the fields by these names.
 
 The pivot's area must hold no spec cell: a layout that meets a foreign cell collapses to `#SPILL!` (run 3).
 The builder checks the anchor and the page-field area; the case author keeps the rest of the area empty.
@@ -49,7 +54,18 @@ from rustsheet_tools.pivot_xml import MAIN_NS, REL_NS, number_text
 
 VALUES = "Values"  # the Σ (data) field on an axis: `<field x="-2"/>`
 _KEYS = {"name", "source", "location", "definition"}
-_DEFINITION_KEYS = {"table", "rows", "columns", "pages", "data", "fields", "calculated", "cache", "xml"}
+_DEFINITION_KEYS = {
+    "table",
+    "rows",
+    "columns",
+    "pages",
+    "data",
+    "fields",
+    "calculated",
+    "cache",
+    "cache_names",
+    "xml",
+}
 _FIELD_KEYS = {"attrs", "hidden", "collapsed", "subtotals", "group", "order"}
 _DATA_KEYS = {"field", "name", "subtotal", "showDataAs", "baseField", "baseItem", "numFmtId"}
 # ST_DataConsolidateFunction, with the verb Excel puts in a data field's default name.
@@ -289,6 +305,11 @@ class DefinedPivot:
         if not isinstance(definition, dict) or (unknown := set(definition) - _DEFINITION_KEYS):
             raise ValueError(f"pivot {self.name}: definition has unknown keys {sorted(unknown or [])}")
         self.d = definition
+        cache_names = definition.get("cache_names")
+        if cache_names is not None:
+            if not isinstance(cache_names, list) or len(cache_names) != len(header):
+                raise ValueError(f"pivot {self.name}: cache_names needs one name per source column")
+            header = cache_names
         if not all(isinstance(h, str) and h for h in header) or len({h.casefold() for h in header}) != len(
             header
         ):

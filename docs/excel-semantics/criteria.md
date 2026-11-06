@@ -382,7 +382,7 @@ Rule: with an average_range, AVERAGEIF matches its range exactly as without one,
 range resized from average_range's top-left cell. Over A1:A6 = 0, -1, 0.5, text "1", TRUE, 1 with D1:D6 = 10 to 60:
 `0`, `-1` and `0.5` each match their one number (10, 20, 30); the text criterion `"1"` matches the text "1" and the
 number 1 (50); `"0.5"` matches the number 0.5 (30); `TRUE` matches the TRUE cell only, not the number 1 (50); `FALSE`
-matches nothing (`#DIV/0!`). A literal and the same value in a criteria cell agree, and D1 and D1:E1 give what D1:D6
+does not match the number 0 in A1 (`#DIV/0!` in every column of H7:M7, not 10). A literal and the same value in a criteria cell agree, and D1 and D1:E1 give what D1:D6
 gives (each resized to D1:D6).
 Evidence: probes/t4540-averageif-criteria-average-range H1:M7 (42 cells). Oracle: excel-graph, 2026-11-06 (T-4540).
 Status: VERIFIED
