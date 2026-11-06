@@ -3019,7 +3019,8 @@ t1745-beta-inv-roundtrip; probes/ftest-decomposition; gen-m9 58e3253bbd3a7a82, 6
     F.DIST.RT 558/592/592 against 493/527/527, F.DIST 525/600/600 against 460/600/600. Within 13 digits: 599 and 600
     against 566 and 569. The two forms differ on 4 rows between |z| 0.7 and 1.5, all at 1.38 to 1.48, where the switch
     is right, so the probe brackets Excel's cut in (0.7, 1.38) here. Below |z| = 0.5 both forms miss the same 13 of 155
-    BETA.DIST rows.
+    BETA.DIST rows. Gate A envelope: 1,800 of 1,800 (the 17 cells outside 15 digits are within 1E-14 of the 50-digit
+    math, where Excel is 0.6E-15 to 7.2E-15 off it too).
   - What is left: on 17 fresh cells (9 BETA.DIST, 8 F.DIST.RT, w1 1E-4 to 0.05, BETA.DIST |z| 3.0 to 9.2) w is still one 2^-53
     step off, all within 13 digits but one (`BETA.DIST(0.914472771402,102.725,1,TRUE)`, A120, 12th digit). The 6
     contrary cells above (T-3886) are at small |z| and stay off.
@@ -4752,9 +4753,10 @@ within 1E-15 relative / largest relative error:
   df2 1E8, z 716 to 736) is 0 like column A. The df1 = 2 zeros are Excel's closed form (not this path) and stay unexplained.
   Ours (T-4045): F's tails only (`bratio` `f_closed_or_ported_tails` asks `bup.rs` `l140_bup_prefactor_underflows`,
   at any a0). That makes every 0 of t4045 and t4017 exact. Since T-3764 BETA.DIST's and BETADIST's worksheet cdf
-  takes the rule too (`bratio::beta_dist_cdf`): 60 Excel zeros of probes-numeric t3568-r5-bup-tune, -hold and -fresh
-  column A (23 of their 24 Tier A cells, true tails 1E-307 to 1E-257, for example
-  `BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)`, t3568-r5-bup-fresh A291) and the 44 zeros of
+  takes the rule too (`bratio::beta_dist_cdf`). Column A of probes-numeric t3568-r5-bup-tune, -hold and -fresh has 47
+  Excel zeros (true tails up to 2E-257, for example `BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)`,
+  t3568-r5-bup-fresh A291). The rule matches all 47 (28 before; train 32 of 32, T-3764's hold-out 15 of 15), zeroes
+  none of the column's 4,078 Excel numbers, and the 44 zeros of
   probes/t4254-beta-t-l140-zero-cut at ln ret -709 and below (A12:A22, B12:B22, C12:C22, D12:D22) become exact, and no
   Excel number in the eval moves.
   The quantile searches keep today's kernel: F.INV at a huge df1 searches BETA.DIST's cdf, and a 0 there moves
