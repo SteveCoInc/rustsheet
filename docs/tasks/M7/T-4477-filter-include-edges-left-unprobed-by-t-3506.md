@@ -3,7 +3,7 @@ id: T-4477
 title: "FILTER include edges left unprobed by T-3506: a one-cell error include that fits a one-row or one-column array, and a wrongly shaped multi-cell include holding an error"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
