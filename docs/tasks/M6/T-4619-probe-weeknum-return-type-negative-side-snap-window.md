@@ -3,7 +3,7 @@ id: T-4619
 title: "Probe WEEKNUM return_type negative-side snap window (-(2^-22+2^-33), -2^-23, -(2^-23+2^-34), -(2^-22+9*2^-36)) with a Monday state set first"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
