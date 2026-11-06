@@ -48,10 +48,11 @@ nothing for a file it refuses
 
 ## Which function the countA and count custom subtotals compute
 Rule: a pivot field's `countASubtotal` (subtotal line `item t="countA"`) is COUNTA: it counts every
-non-blank value, text, booleans and errors included (the data-field `count`). `countSubtotal` (`t="count"`)
+non-blank value, text, booleans and errors included (the data-field `count`; but see Errors below). `countSubtotal` (`t="count"`)
 counts numbers only (Count Numbers, the data-field `countNums`); text and booleans are not numbers. Both
 lines are labelled `<item> Count`, so with both on, two lines read `East Count`; the line's place
-(the `<items>` order, `countA` first in B1) is the only tell. The subtotal function overrides the data field's
+(the `<items>` order, `countA` first in B1) is the only visible tell; the file's `rowItems` carry
+`t="countA"` and `t="count"`. The subtotal function overrides the data field's
 aggregate: under Sum of Val the lines are counts, not sums, and stay numbers while the Sum cells and the
 Grand Total show `#N/A`.
 Errors, as observed (one outer field with the subtotals, one inner row field, one `#N/A`): under a Sum
