@@ -508,6 +508,11 @@ pub struct CaseSpec {
     /// the engine adapter with `Txn::define_name` (`Txn::define_sheet_name`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub api_names: Vec<ApiName>,
+    /// The workbook's active sheet (spec2xlsx makes it the active, only selected tab; T-4394): the
+    /// engine adapter sets it before `api_names`, which bind unqualified references to it
+    /// (T-4445). The first sheet when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_sheet: Option<String>,
     /// Workbook-scoped defined names: name → formula (e.g. `"=Sheet1!$A$1:$B$2"`).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub names: BTreeMap<String, String>,

@@ -1,0 +1,103 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "b094b9cd28a86c7db243c40ed13a5e497b007cb959283b76cdbeeb4a80b03036"
+ },
+ "sheets": {
+  "Calc": {
+   "H1": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(B1:B4,A1:A4)"
+   },
+   "H2": {
+    "t": "n",
+    "v": "1.3000000000000000626315534970827531057177899161655e+200",
+    "f": "=SLOPE(B1:B4,A1:A4)"
+   },
+   "H3": {
+    "t": "n",
+    "v": "-5.0000000000000015483071880762065241040547773451747e+199",
+    "f": "=INTERCEPT(B1:B4,A1:A4)"
+   },
+   "H5": {
+    "t": "n",
+    "v": "2.0999999999999999704323881865448538010301020978135e+200",
+    "f": "=FORECAST(2,B1:B4,A1:A4)"
+   },
+   "H6": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(B1:B4,A1:A4)"
+   },
+   "H7": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=PEARSON(B1:B4,A1:A4)"
+   },
+   "I1": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(D1:D4,C1:C4)"
+   },
+   "I2": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=SLOPE(D1:D4,C1:C4)"
+   },
+   "I3": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=INTERCEPT(D1:D4,C1:C4)"
+   },
+   "I5": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=FORECAST(2,D1:D4,C1:C4)"
+   },
+   "I6": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(D1:D4,C1:C4)"
+   },
+   "I7": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=PEARSON(D1:D4,C1:C4)"
+   },
+   "J1": {
+    "t": "n",
+    "v": "0.8013548901656221255958186686063432765068597375398",
+    "f": "=CORREL(F1:F4,E1:E4)"
+   },
+   "J2": {
+    "t": "n",
+    "v": "1.021347565043362241494329553035356904603068712475",
+    "f": "=SLOPE(F1:F4,E1:E4)"
+   },
+   "J3": {
+    "t": "n",
+    "v": "-2.1347565043361810857385867230947423973098246937949e+158",
+    "f": "=INTERCEPT(F1:F4,E1:E4)"
+   },
+   "J5": {
+    "t": "n",
+    "v": "-2.1347565043361810857385867230947423973098246937949e+158",
+    "f": "=FORECAST(2,F1:F4,E1:E4)"
+   },
+   "J6": {
+    "t": "n",
+    "v": "0.64216965999235630050423759576884247266829494817216",
+    "f": "=RSQ(F1:F4,E1:E4)"
+   },
+   "J7": {
+    "t": "n",
+    "v": "0.8013548901656221255958186686063432765068597375398",
+    "f": "=PEARSON(F1:F4,E1:E4)"
+   }
+  }
+ }
+}
