@@ -6,7 +6,7 @@ lane: functions-stat
 status: todo
 priority: P2
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -36,3 +36,6 @@ bratio's L140 bup+bgrat branch, but only F.DIST.RT and FDIST are probed.
 
 ## Out of scope
 - F (T-4045 probed it); the df1 = 2 closed-form zeros.
+
+## Handoff
+Escalated by a sonnet run without starting the probe (work-loop step 5b: numeric-edge probe design and a post-freeze fresh scoring against T-4045's rule). Oracle check: `rustsheet-oracle status` showed excel-graph OK at claim time. Next: read `bratio::dispatch` to find which BETA.DIST (a in the millions, b < 40, x0 > 0.7) and T.DIST.RT (huge df) cells take the L140 bup+bgrat branch; build the probe walking ln(x0^a0·y0^c/B(c,a0)) across -708.396 in steps of about 1 at two shapes per function and c = 1/2 and 1; check decision 0267's probe freeze for where the case may live; fill with the oracle; score once; then test whether Excel's BETA.DIST zero explains Excel's F.INV(1.43795578761177E-262,107702,58) (accuracy/F.INV/s1 A146). Record in statistics.md "Where the exact 0 starts (T-4045)".
