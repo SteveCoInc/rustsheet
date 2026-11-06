@@ -19,8 +19,15 @@ from rustsheet_tools.fitlab.sweep import parse_complex_text
 def close(value: str | None, excel: float, rel: float = 4.5e-16) -> bool:
     """`value` (the math) is within `rel` of Excel's double."""
     assert value is not None
-    m = mpmath.mpf(value)
-    return bool(abs(m - mpmath.mpf(excel)) <= rel * abs(m))
+    with mpmath.workdps(60):  # independent of the precision another test leaves behind
+        m = mpmath.mpf(value)
+        return bool(abs(m - mpmath.mpf(excel)) <= rel * abs(m))
+
+
+def rounds_to(value: str | None, excel: float) -> bool:
+    """`value` (the math) rounds to Excel's double."""
+    assert value is not None
+    return float(mpmath.mpf(value)) == excel
 
 
 def test_imabs_and_imargument_values() -> None:
@@ -67,9 +74,10 @@ def test_convert_documented_values() -> None:
     assert compute(CONVERT, [5.0, "cal", "J"]).value == "20.934"
     assert close(compute(CONVERT, [5.0, "eV", "J"]).value, 8.010882434999999e-19)
     assert close(compute(CONVERT, [0.0002, "Mang3", "m3"]).value, 2.0000000000000002e-16)
-    assert close(compute(CONVERT, [1.0, "sg", "g"]).value, 14593.902937206363, 0)
-    assert close(compute(CONVERT, [1.0, "parsec", "m"]).value, 3.0856775812815532e16, 0)
-    assert close(compute(CONVERT, [1.0, "lbf", "dyn"]).value, 444822.16152605, 0)
+    assert rounds_to(compute(CONVERT, [1.0, "sg", "g"]).value, 14593.902937206363)
+    assert rounds_to(compute(CONVERT, [1.0, "parsec", "m"]).value, 3.0856775812815532e16)
+    # the exact lbf (453.59237 g x 9.80665 m/s2), whose double is Excel's 444822.16152605
+    assert close(compute(CONVERT, [1.0, "lbf", "dyn"]).value, 444822.16152605, 1.2e-16)
     assert close(compute(CONVERT, [5.0, "cal", "eV"]).value, 1.3065976295281882e20)
     assert close(compute(CONVERT, [1.0, "uk_pt", "gal"]).value, 0.15011874068810688)
     assert close(compute(CONVERT, [1.0, "tsp", "tbs"]).value, 0.3333333333333333)
@@ -78,13 +86,13 @@ def test_convert_documented_values() -> None:
     )  # probes/convert-unit-names A481
     # prefixes: one constant, the double nearest the combined power of ten
     assert compute(CONVERT, [1.0, "m", "nm"]).value == "1000000000.0"
-    assert close(compute(CONVERT, [1.0, "Pm3", "l"]).value, 9.999999999999999e47, 0)
+    assert rounds_to(compute(CONVERT, [1.0, "Pm3", "l"]).value, 9.999999999999999e47)
     assert close(compute(CONVERT, [1e300, "Ym", "Zm"]).value, 1e303)
     assert close(compute(CONVERT, [1.0, "kar", "m2"]).value, 1e5)  # `ar` takes its prefix once
     assert close(compute(CONVERT, [1.0, "km2", "m2"]).value, 1e6)
     # a binary prefix: each unit's own constant, the target's decimal prefix as its rounded reciprocal (T-3975)
     assert close(compute(CONVERT, [4.73e-10, "Gibyte", "zbyte"]).value, 5.0787988275200007e20)
-    assert close(compute(CONVERT, [1.0, "kibyte", "bit"]).value, 8192.0, 0)
+    assert rounds_to(compute(CONVERT, [1.0, "kibyte", "bit"]).value, 8192.0)
     # temperature (engineering.md "CONVERT temperature")
     assert close(compute(CONVERT, [1.0, "F", "K"]).value, 255.92777777777775)
     assert close(compute(CONVERT, [0.1, "K", "Rank"]).value, 0.18000000000000002)
@@ -95,7 +103,9 @@ def test_convert_documented_values() -> None:
 
 def test_convert_reads_a_string_within_the_other_unit_s_class() -> None:
     assert close(compute(CONVERT, [1.0, "pc", "c"]).value, 1e-12)  # pico-calories against `c`
-    assert close(compute(CONVERT, [1.0, "pc", "m"]).value, 3.0856775812815532e16, 0)  # the parsec against `m`
+    assert rounds_to(
+        compute(CONVERT, [1.0, "pc", "m"]).value, 3.0856775812815532e16
+    )  # the parsec against `m`
     assert class_of("Pica", "m")[1][0] == "Pica"  # a unit name beats a prefixed reading
     assert close(compute(CONVERT, [1.0, "mmmHg", "Pa"]).value, 0.133322)
     assert close(compute(CONVERT, [1.0, "kmph", "m/s"]).value, 447.04)
