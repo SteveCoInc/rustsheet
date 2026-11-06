@@ -7189,10 +7189,11 @@ more than G:
 Owner ruling (decision 0267 item 3, 2026-11-04, narrowed by decision 0301): the math also wins on the probes-numeric
 cells T-3386 and T-3337 list where Excel is more than G off the math. Those are T.INV.2T, TINV, T.INV, CONFIDENCE.T and
 BETA.INV at a tiny p (t3349, t1531, t1543 and the m9 cases), and CHISQ.INV.RT and CHIINV at df 1, p 1.5E-16 to 5E-16
-(t3336). Decision 0301 keeps Excel as the target at the Gate A points accuracy/T.INV/s1 A91 and A96, which 0267's wording
-had covered. An example is `T.INV.2T(1E-300,100000)`: Excel 79.12,
+(t3336). An example is `T.INV.2T(1E-300,100000)`: Excel 79.12,
 math and engine 37.19. That covers 50 of the 59 visibly-off tiny-p T cells, measured with mpmath at 60 digits. T-3386
 and T-3337 add the marks and widen this entry's Rule and Region when they land. df 1 near p = 1 (T-2858) stays Excel's.
+Decision 0301 keeps Excel as the target at the Gate A points accuracy/T.INV/s1 A91 and A96, which 0267's wording
+had covered.
 
 The engine is within ε of the math on all of them, so they pass Gate A through its math side. One point inside
 decision 0188's p < 1e-150 bound but outside the region the entry names needs a ruling of its own:
