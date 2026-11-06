@@ -50,6 +50,44 @@ pub(crate) struct Accumulator {
     /// The sum of the child cells' Sums, for a total of a pivot whose data fields are all Sum
     /// ([`Accumulator::set_children_sum`]).
     children: Result<f64, Error>,
+    /// The [`CutCount`]s of the inner-item cells this cell covers, added up: what a custom Count
+    /// or `CountNums` subtotal shows under a Sum data field ([`Accumulator::cut_count`]).
+    cut: CutCount,
+}
+
+/// The counts of one inner-item cell (a row leaf by a column leaf) that stop at its first error
+/// in record order: `values` counts the error and nothing after it, `numbers` the numbers before
+/// it. Under a Sum data field a custom `countA` or `count` subtotal adds these up over the
+/// inner-item cells it covers (pivots.md "Which function the countA and count custom subtotals
+/// compute": probes/t4622-pivot-count-subtotals CA, CN, B1, B4, B5 C6:C7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) struct CutCount {
+    values: u32,
+    numbers: u32,
+    stopped: bool,
+}
+
+impl CutCount {
+    /// Feeds one record's value, in record order; nothing counts after the first error.
+    pub(crate) fn push(&mut self, item: &CacheItem) {
+        if self.stopped {
+            return;
+        }
+        match item {
+            CacheItem::Missing => {}
+            CacheItem::Number(_) | CacheItem::Date(_) => {
+                self.values = self.values.saturating_add(1);
+                self.numbers = self.numbers.saturating_add(1);
+            }
+            CacheItem::Text(_) | CacheItem::Boolean(_) => {
+                self.values = self.values.saturating_add(1);
+            }
+            CacheItem::Error(_) => {
+                self.values = self.values.saturating_add(1);
+                self.stopped = true;
+            }
+        }
+    }
 }
 
 impl Accumulator {
@@ -65,6 +103,25 @@ impl Accumulator {
             min: f64::INFINITY,
             error: None,
             children: Ok(0.0),
+            cut: CutCount::default(),
+        }
+    }
+
+    /// Adds the counts of one inner-item cell this cell covers.
+    pub(crate) fn add_cut(&mut self, part: CutCount) {
+        self.cut.values = self.cut.values.saturating_add(part.values);
+        self.cut.numbers = self.cut.numbers.saturating_add(part.numbers);
+    }
+
+    /// The cell's custom Count (`countA`) or `CountNums` (`count`) subtotal under a Sum data
+    /// field: the inner-item cells' counts, each ending at its first error, added up; never an
+    /// error (t4622 CA, CN, B1, B4, B5; with no error it is the plain count, B2). Any other
+    /// `function` is its [`Accumulator::finish`] as a total.
+    pub(crate) fn cut_count(&self, function: Aggregate, counts_mixed: bool) -> Result<f64, Error> {
+        match function {
+            Aggregate::Count => Ok(f64::from(self.cut.values)),
+            Aggregate::CountNums => Ok(f64::from(self.cut.numbers)),
+            _ => self.finish(function, true, counts_mixed, None),
         }
     }
 
@@ -256,6 +313,31 @@ mod tests {
             acc.finish(Aggregate::Count, true, true, None),
             Err(Error::NA)
         );
+    }
+
+    #[test]
+    fn a_cut_count_ends_at_the_first_error_of_each_inner_cell() {
+        // t4622 B1 East: A holds 10, `abc`; B a blank, `#N/A`, 5.
+        let cells: [&[CacheItem]; 2] = [
+            &[CacheItem::Number(10.0), CacheItem::Text("abc".to_string())],
+            &[
+                CacheItem::Missing,
+                CacheItem::Error(Error::NA),
+                CacheItem::Number(5.0),
+            ],
+        ];
+        let mut total = Accumulator::new();
+        for cell in cells {
+            let mut cut = CutCount::default();
+            for item in cell {
+                cut.push(item);
+                total.push(item);
+            }
+            total.add_cut(cut);
+        }
+        assert_eq!(total.cut_count(Aggregate::Count, true), Ok(3.0));
+        assert_eq!(total.cut_count(Aggregate::CountNums, true), Ok(1.0));
+        assert_eq!(total.cut_count(Aggregate::Sum, true), Err(Error::NA));
     }
 
     #[test]

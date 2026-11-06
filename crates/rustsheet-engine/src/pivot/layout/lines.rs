@@ -22,19 +22,25 @@
 //!   children (t4138 G5);
 //! - a field has subtotal lines only when a field other than Values is inside it: a field whose
 //!   only inner level is Values has none (t4138 G6, t4135 `A_sum`). The lines are one `default`
-//!   line, or one line per custom subtotal function in the field's order (t4137 K5 `sum`, `count`);
+//!   line, or one line per custom subtotal function in the field's order (t4137 K5 `sum`, `count`;
+//!   t4168 F1 all eleven), after the children in compact form too (t4168 F2);
 //! - the grand total is one `t="grand"` line `<x/>` per data field when Values is on the axis
 //!   (`i` the data field), one otherwise, and none on an axis with no field but Values (t4138 G6,
 //!   G9; t4135 `A_sum`, `EC`). `rowGrandTotals` gives the row axis's line and `colGrandTotals` the
 //!   column axis's (only the "on" case is probed: UNVERIFIED, T-4649);
-//! - an axis with no level at all has one empty line `<i/>` (t4138 G1, G7, G9; t4137 K4).
+//! - an axis with no level at all has one empty line `<i/>` (t4138 G1, G7, G9; t4137 K4);
+//! - a row field with `insertBlankRow` has a `t="blank"` line after each item, below its
+//!   subtotals, with the item's tuple and no values (probes/t4168-pivot-layout-options BR
+//!   tabular, BR2 compact);
+//! - a collapsed item (`item@sd="0"`) has one line, its own tuple, with its values and no
+//!   children or subtotal lines, in compact and tabular form (t4168 SD, SD2). On columns it is
+//!   the engine's reading (UNVERIFIED, T-4699).
 //!
 //! The engine's own readings where no probe shows Excel's (pivots.md "Layout lines", UNVERIFIED):
-//! subtotals at the bottom (`subtotalTop="0"`), custom subtotals and `defaultSubtotal="0"` in
-//! outline form, and grand totals off (T-4649); the Values field outer or in the middle of an axis,
-//! and its own line with `outlineData` (T-4650). Items with no data, blank rows and collapsed
-//! items are T-4168's, and filters, sorting, groups and calculated items reshape the trees first
-//! (T-4165, T-4171, T-4175).
+//! subtotals at the bottom (`subtotalTop="0"`), `defaultSubtotal="0"` with no custom subtotal,
+//! and grand totals off (T-4649); the Values field outer or in the middle of an axis, and its own
+//! line with `outlineData` (T-4650). Filters, sorting, groups and calculated items reshape the
+//! trees first (T-4165, T-4171, T-4175).
 //!
 //! The geometry (pivots.md "Pivot geometry: location and header offsets per layout"):
 //! `firstHeaderRow` 1, `firstDataRow` 1 plus the column levels, `firstDataCol` the row label
@@ -346,6 +352,11 @@ impl<'a> AxisPlan<'a> {
                         continue;
                     };
                     if let Some(own) = level.checked_sub(1) {
+                        if self.collapsed(own, &visit) {
+                            out.push(ItemType::Data, &visit, visit.data, true)?;
+                            self.blank_line(own, &visit, &mut out)?;
+                            continue;
+                        }
                         if self.own_line(own, options) {
                             let values = self.subtotal_on_top(own, options);
                             out.push(ItemType::Data, &visit, visit.data, values)?;
@@ -428,15 +439,56 @@ impl<'a> AxisPlan<'a> {
             }
             return Ok(());
         };
-        if self.subtotal_on_top(own, options) {
-            return Ok(());
-        }
-        for kind in self.subtotals(own) {
-            for data in per_data(self.values_inside(own)) {
-                out.push(kind, visit, data, true)?;
+        if !self.subtotal_on_top(own, options) {
+            for kind in self.subtotals(own) {
+                for data in per_data(self.values_inside(own)) {
+                    out.push(kind, visit, data, true)?;
+                }
             }
         }
+        self.blank_line(own, visit, out)
+    }
+
+    /// The `t="blank"` line after an item of a row field with `insertBlankRow`, below its
+    /// subtotals, the item's own tuple and no values (probes/t4168-pivot-layout-options BR,
+    /// BR2). Only an outer field is probed: on the innermost row field, whose items have no
+    /// children, the engine adds none (UNVERIFIED, T-4699).
+    fn blank_line(
+        &self,
+        level: usize,
+        visit: &Visit,
+        out: &mut Lines<'_>,
+    ) -> Result<(), PivotComputeError> {
+        let blank = match self.levels.get(level) {
+            Some(Level::Field { field: Some(f), .. }) => f.insert_blank_row,
+            _ => false,
+        };
+        if blank && self.rows && self.has_subtotals(level) {
+            out.push(ItemType::Blank, visit, visit.data, false)?;
+        }
         Ok(())
+    }
+
+    /// Whether `visit`'s item, at field level `level`, is collapsed (`item@sd="0"`): its line
+    /// stands alone, with the item's values and none of its children or subtotal lines
+    /// (probes/t4168-pivot-layout-options SD compact, SD2 tabular).
+    fn collapsed(&self, level: usize, visit: &Visit) -> bool {
+        let Some(Level::Field {
+            depth,
+            field: Some(field),
+        }) = self.levels.get(level)
+        else {
+            return false;
+        };
+        let item = self
+            .tree
+            .nodes()
+            .get(visit.node as usize)
+            .and_then(|n| n.item);
+        let position = item.and_then(|i| self.positions.get(*depth)?.get(i as usize));
+        position
+            .and_then(|&p| field.items.get(p as usize))
+            .is_some_and(|i| i.kind == ItemType::Data && !i.expanded)
     }
 }
 

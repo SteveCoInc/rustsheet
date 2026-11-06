@@ -258,6 +258,10 @@ impl Cells<'_> {
     /// `level`.
     fn lines(&mut self, axis: &Axis<'_>, place: impl Fn(u32, usize) -> Option<(u32, u32)>) {
         for (i, line) in (0u32..).zip(axis.lines) {
+            // An `insertBlankRow` line is empty (probes/t4168-pivot-layout-options BR, BR2).
+            if line.kind == ItemType::Blank {
+                continue;
+            }
             let end = line.repeat as usize + line.items.len();
             if let Some(text) = self.total_label(axis, line) {
                 let level = if line.kind == ItemType::Grand {

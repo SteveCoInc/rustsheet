@@ -245,6 +245,15 @@ pub(crate) fn probe_pivot_over(
         for hidden in spec["hidden"].as_array().into_iter().flatten() {
             pivot_field.hide(item_of(&cache, index, hidden));
         }
+        // `collapsed` items are written `sd="0"`.
+        for collapsed in spec["collapsed"].as_array().into_iter().flatten() {
+            let item = item_of(&cache, index, collapsed);
+            for listed in &mut pivot_field.items {
+                if listed.index == Some(item) {
+                    listed.expanded = false;
+                }
+            }
+        }
         if let Some(subtotals) = spec["subtotals"].as_array() {
             pivot_field.default_subtotal = false;
             pivot_field.custom_subtotals = subtotals
@@ -308,6 +317,7 @@ pub(crate) fn probe_pivot_over(
         pivot_field.compact = flag(&attrs["compact"], pivot_field.compact);
         pivot_field.outline = flag(&attrs["outline"], pivot_field.outline);
         pivot_field.subtotal_top = flag(&attrs["subtotalTop"], pivot_field.subtotal_top);
+        pivot_field.insert_blank_row = flag(&attrs["insertBlankRow"], pivot_field.insert_blank_row);
     }
     (cache, table)
 }
