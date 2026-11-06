@@ -62,6 +62,23 @@ F.DIST.RT cell of T-4017's huge-df2 sweep, in the 1e10 case the list above lacks
 wrong at the 13th digit (relative 1.7e-13):
 - probes-numeric/t4017-f-huge-df2-above-mean-1e10.case.json (1; F.DIST.RT): Calc!A203, `F.DIST.RT(10,60,1E10)`, Excel 4.421993244304403e-90, ours 4.421993244303664e-90
 
+Added by gap triage 2026-11-06 (`make eval` on origin/main 39f04d556, every suite fetched). No live task lists these
+34 visibly-off cells. The t4045 fresh cells are listed only by deferred T-3209, A3188 only by deferred T-2122, and the
+zero-cut cells by no task. The live tasks that name their cases do so only in passing: T-4280 (a tidy-up) and T-4254
+(a probe) cite the t4045 cases as evidence, and T-3764 has a copied fill-stability bullet. So `make unowned-off ALL=1`
+counted the cells as owned (T-4436 is the tool fix).
+
+Against 60-digit mpmath at the double arguments, both sides are within 1E-9 of the math on every one of them. On the
+F.DIST.RT tails near 1E-286, Excel is 3E-15 to 2.1E-13 off and ours 7E-15 to 1.9E-12. They are Phase 1b evidence
+(decision 0188 R1(c)) once F.DIST.RT and GAMMALN have math sidecars, which T-4103 and T-4106 add with their Gate A
+tables. Until then they count, because they have no math value.
+
+Ours is the worse side on the df2 1E6 columns (E, F), which are in T-4435's region 1. Move those cells to T-4435 if its
+change brings them within 15 digits of Excel.
+- probes/t4045-f-dist-rt-zero-cut-fresh.case.json (24; F.DIST.RT): Calc!A1, A5, A6, B1, B6, B7, B8, C1, C2, C6, C7, D1, D6, E1, E2, E3, E4, E7, E8, F1, F4, F6, F8, F9
+- probes-numeric/t4045-f-dist-rt-zero-cut.case.json (9; F.DIST.RT): Calc!A3, A15, B8, B9, B15, B18, C1, C2, C3
+- probes-numeric/t2464-r2-bpser-small-gl.case.json (1; GAMMALN): Calc!A3188, `GAMMALN((56921738*2^-25+29850023*2^-51))`, Excel -0.09655332490423914, ours -0.09655332490423907
+
 The 28 BETA.DIST b = 40 cells of probes-numeric/t4080-beta-num-band-edge that only deferred T-3209 owned went to
 T-4214 (decision 0267 Tier A), not here.
 

@@ -146,6 +146,11 @@ From T-2663:
 From T-2704:
 - calipers/roundtrip/formulas_engineering/golden.xlsx (4): Sheet1!D26, D27, J26, J27
 
+Added by gap triage 2026-11-06 (`make eval` on origin/main 39f04d556, calipers fetched). One more T-2663 cell, whose
+case only T-2906 names, and T-2906's Context says the INFO cells are not its own (T-4436). `INFO(C3)` is "16.0" in the
+Mac golden and `#VALUE!` on the web (T-2182):
+- calipers/roundtrip/formula_stress_test/golden.xlsx (1): Information!B3
+
 ## Acceptance criteria
 - [ ] A decision record (`make new-decision`) rules how cells count when their only owner was dropped by decision 0266
       and excel-graph cannot settle them. At least two options are compared: (a) list them in
