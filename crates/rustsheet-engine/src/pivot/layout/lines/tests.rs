@@ -7,7 +7,9 @@
 use serde_json::Value as Json;
 
 use super::*;
-use crate::pivot::probe_cases::{address, diagonal, probe_pivot, read, subtotal_named};
+use crate::pivot::probe_cases::{
+    address, diagonal, probe_pivot, read, subtotal_named, T4634_SHEETS,
+};
 use crate::pivot::{
     compute, Aggregate, Axis, CacheBuilder, CacheItem, DataField, PageField, PivotItem,
     RecordValue, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
@@ -181,6 +183,7 @@ fn the_item_and_aggregate_probes_lines_and_locations_are_excels() {
             "I3", "I4", "M1", "M2", "M3",
         ],
     );
+    check_all("t4634-pivot-total-order-4", T4634_SHEETS);
 }
 
 /// Region (a, a, b) by Product (x, y, x) on rows, Sum of V, at A3.
