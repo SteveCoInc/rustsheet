@@ -708,3 +708,14 @@ There is no oracle evidence yet that Excel opens such packages without a repair 
 T-4180 oracle flow is the probe.
 Status: UNVERIFIED (probe pending). Tasks: T-4560, T-4561, T-4180.
 
+## Shared-string index with surrounding whitespace (T-4145)
+A `t="s"` cell whose `<v>` holds its index with surrounding whitespace (`<v>2 </v>`) is read as that
+index. poi/bug69769.xlsx Tabelle1!B2 stores exactly that, with the sst `Konto`, `Name`, `Mustermann`; the
+importer used to read index 0 ("Konto"), the harness snapshot reader read "Mustermann".
+Evidence: the file only (app.xml: Microsoft Excel Online 16.0300); no formula reads B2, so no cached value
+shows how Excel resolves the index. We read it as index 2 on the strength of POI's bug report that Excel opened it.
+Status: UNVERIFIED (probe pending, T-4711). Also unprobed: which characters count as whitespace (the code trims all
+Unicode White_Space, not only XML whitespace) and whether a leading `+` is accepted (the code accepts it).
+Implemented in: `parse_shared_string_index` in crates/rustsheet-xlsx/src/util.rs, shared by the importer
+(`get_cell_from_excel`) and the snapshot reader (`decode_value`). An unparseable index still loads as index 0 in
+the importer and as empty in the snapshot reader (not aligned; predates T-4145).
