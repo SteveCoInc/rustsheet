@@ -2472,6 +2472,7 @@ C	probes/t4482-chained-call-arity.case.json	50
 C	probes/t4485-groupby-function-array-error-order.case.json	31
 C	probes/t4492-comma-suffix-reading.case.json	29
 C	probes/t4492-locale-comma-tag-shapes.case.json	24
+C	probes/t4499-textsplit-sharp-s.case.json	12
 C	probes/t4501-permutationa-chosen-cut.case.json	36
 C	probes/t4508-ms-lcid-tags-after-b2.case.json	27
 C	probes/t4515-fraction-tail-holdout.case.json	147

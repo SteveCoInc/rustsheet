@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use super::casefold::{char_offsets, fold_for_before_after};
+use super::casefold::{char_offsets, fold_for_match};
 
 use crate::{
     calc_result::CalcResult,
@@ -96,12 +96,12 @@ pub(crate) struct Delimiters {
 }
 
 impl Delimiters {
-    /// TEXTBEFORE and TEXTAFTER's list, folded by [`fold_for_before_after`].
+    /// TEXTBEFORE and TEXTAFTER's list, folded by [`fold_for_match`].
     pub(crate) fn new(exact: Vec<String>) -> Self {
-        Self::folded_with(exact, fold_for_before_after)
+        Self::folded_with(exact, fold_for_match)
     }
 
-    /// A list folded by `fold` (TEXTSPLIT's is `fold_for_split`).
+    /// A list folded by `fold` (TEXTSPLIT's is `fold_for_match`).
     pub(crate) fn folded_with(exact: Vec<String>, fold: fn(&str) -> String) -> Self {
         let folded = exact.iter().map(|d| fold(d)).collect();
         Delimiters { exact, folded }
@@ -260,7 +260,7 @@ fn match_text<S: AsRef<str>>(
             // Fold char by char (one char in, one char out) and map the match back to byte
             // offsets of the original; offsets found in a lowercased copy are not valid there
             // (T-1796, probes/textbefore-casefold-length).
-            let folded_text = fold_for_before_after(text);
+            let folded_text = fold_for_match(text);
             let (left, right) = if instance_num > 0 {
                 text_sensitive(&folded_text, delimiters, instance_num, instances)
             } else {
