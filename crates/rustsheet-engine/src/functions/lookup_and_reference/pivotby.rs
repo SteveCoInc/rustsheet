@@ -925,7 +925,6 @@ impl<'a> Grid<'a> {
     /// The records of column item `item`'s cell over a row whose records are `records`, by
     /// [`Grid::cell_rows`]'s rule, without the buckets: the parent cells of [`ParentSets`]
     /// (`None` for every record, the Total's and a leaf no record reached; [`ColumnRecords`]).
-    /// A subtotal of a class no record reached does not yet follow that rule here (T-4428).
     fn column_records(&self, item: Item, records: &[usize]) -> ColumnRecords {
         match item {
             Some(Line::Group(group)) if self.unreached.contains(&group) => None,
@@ -937,7 +936,14 @@ impl<'a> Grid<'a> {
                     .collect(),
             ),
             Some(Line::Subtotal { level, start, .. }) => {
-                Some(self.reached_class(level, start, records).collect())
+                // A class no record reached holds every record of the line, as in
+                // `cell_rows` (probes/t4420-pivotby-parent-sets-three-fields; T-4428).
+                let prefix = self.cols.prefix(start, level);
+                let reached = level
+                    .checked_sub(1)
+                    .zip(prefix.last())
+                    .is_some_and(|(field, &class)| self.cols.class_reached(field, class));
+                reached.then(|| self.reached_class(level, start, records).collect())
             }
             None => None,
         }

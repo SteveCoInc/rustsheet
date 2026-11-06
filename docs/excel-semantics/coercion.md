@@ -1089,8 +1089,8 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       reached under a level-2 subtotal no record reached: **such a parent subtotal holds every record of the
       line**, as its own cell does (T-4401's rule), so the leaf's parent set is every record. Over BxC AyB BxC
       BxB CyB (p p q p p) the (`ab`&U+00AD,y,`ab`&U+00AD) cell of p is `1, 2, 4, 5 / 1, 2, 4, 5` (C3), where the
-      engine reads the subtotal's reached-class records (none) and gives `#VALUE!`. T-4428 owns them (it waits on
-      T-4401); with T-4401 merged and that rule in `Grid::column_records`, a scratch run gives 528 of 528.
+      engine reads the subtotal's reached-class records (none) and gives `#VALUE!`. Implemented
+      (T-4428): `Grid::column_records` gives such a subtotal every record; the probe is 528 of 528.
     - **The subtotal error gate is the leaf buckets'**: with one function over two value columns, a subtotal
       whose records reached its class while every leaf under it is empty for the row group is not computed (its
       NA() makes no `#VALUE!`), as `Grid::has_records` decides. The gate cells are Calc!B1, B3, B4, B6, B8, B9,
