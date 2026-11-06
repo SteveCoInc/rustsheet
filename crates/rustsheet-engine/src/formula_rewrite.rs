@@ -117,13 +117,15 @@ impl Model {
     }
 
     /// Puts back the formulas [`Model::rewrite_formulas`] rewrote, where they still hold the
-    /// rewritten text (the undo of the edit). Does not reparse.
+    /// rewritten text (the undo of the edit). Does not reparse. It goes from the last entry to
+    /// the first, so an edit that rewrote a formula twice (a sheet delete's table references,
+    /// then its 3-D spans) gets its original text back.
     pub(crate) fn restore_rewritten_formulas(&mut self, rewritten: Vec<RewrittenFormula>) {
         for RewrittenFormula {
             place,
             original,
             rewritten,
-        } in rewritten
+        } in rewritten.into_iter().rev()
         {
             let slot = match place {
                 FormulaPlace::Shared { sheet_id, index } => self

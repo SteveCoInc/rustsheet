@@ -109,13 +109,30 @@ Rule (excel-graph, replayed sheet edits, T-1608):
   The engine rewrites them before the move (`move_sheet_in_node`, T-1691), and its undo puts the
   written text back.
 - Moving the sheet that holds the formula changes nothing (sheet-ops-move-formula-sheet).
-Unprobed: moving the first sheet of a two-sheet span past the last (the engine writes the last
-sheet alone), a span written backwards (`Mar:Jan`, which the engine rewrites in tab order when it
-shrinks), deleting an end sheet and inserting or deleting rows or columns. The excel-graph backend
-cannot delete a sheet (T-1181), and the M14 desktop question is T-1310. The engine makes a span
-that lost an end sheet `#REF!` and does not shift a span for row or column edits.
-Status: VERIFIED (Excel for the web) for renames and moves; UNVERIFIED for deletes
-Tasks: T-1691, T-0198
+- Moving the first sheet of a two-sheet span past the last leaves the other sheet as a plain
+  reference: moving Jan to the end turns `=SUM(Jan:Feb!A1)` into `=SUM(Feb!A1)`
+  (t4272-3d-span-move-two-sheet-start-last).
+- **A span written backwards is read in tab order.** `=SUM(Mar:Jan!A1)` shows as
+  `=SUM(Jan:Mar!A1)` with no edit at all (t4272-3d-span-backwards), and then follows the rules
+  above: moving Mar to position 1 gives `Jan:Feb` (t4272-3d-span-backwards-move-first), moving
+  Feb out keeps `Jan:Mar` (t4272-3d-span-backwards-move-middle-out). The engine swaps the ends
+  when it parses the span.
+- **Deleting an end sheet moves that end to the next sheet inward**, as a move past the other
+  end does: deleting Mar turns `Jan:Mar!A1` into `Jan:Feb!A1` (30), deleting Jan gives
+  `Feb:Mar!A1` (50), and a two-sheet span left with one sheet becomes a plain reference
+  (`Jan:Feb` without Feb is `Jan!A1`). Deleting the middle sheet keeps the ends (40). Spans in
+  defined names shrink the same way. Evidence: t4272-3d-span-delete-end, -delete-start,
+  -delete-two-sheet-end, -delete-middle (A1:B2, A3:A4 for the name). The engine rewrites them
+  before the delete (`delete_sheet_in_node`), and the undo puts the written text back.
+- **Row and column edits never shift a 3-D span.** Inserting or deleting row 1 on Jan, deleting
+  row 2 inside the span's rows, or inserting column A on Feb keeps `Jan:Mar!A1:A3` and `Jan:Mar!B2`
+  as written; the span reads what is now in those cells. A plain `Jan!A1:A3` on the same sheet
+  shifts as usual (`Jan!A2:A4`, `Jan!A1:A2`). Row and column edits on the formula's own sheet move
+  the formula and leave its spans alone. Evidence: t4272-3d-span-jan-insert-row,
+  -jan-delete-row, -jan-delete-inner-row, -feb-insert-column, -calc-insert-row,
+  -calc-delete-row, -calc-insert-column.
+Status: VERIFIED (Excel for the web) for renames, moves, sheet deletes and row and column edits
+Tasks: T-1691, T-0198, T-4272
 
 ## A sheet rename rewrites references, names and FORMULATEXT, but not INDIRECT text
 Rule (excel-graph, T-1608):
@@ -2062,10 +2079,11 @@ Status: VERIFIED (excel-graph)
 Tasks: T-1713, T-1717, T-1847, T-1910, T-1911, T-1964, T-2121, T-2419, T-2440
 
 ## A defined name takes the `@` by its body
-Rule: in a legacy (no `cm`) formula, a defined name whose body is one number, text or boolean literal or one cell
-reference, of this sheet or another, reads exactly as that body written in its place; any other body (an array
-constant even of one element, a range, the one-cell range `$Z$3:$Z$3`, a computed `1+2`, and the SWITCH, LET and
-call bodies of the previous section) makes the name take the `@` in a value position, as a range would.
+Rule: in a legacy (no `cm`) formula, a defined name whose body is one number (a negative one too), text, boolean or
+error literal or one cell reference (absolute or relative), of this sheet or another, reads exactly as that body
+written in its place; any other body (an array constant even of one element, a range, the one-cell range
+`$Z$3:$Z$3`, a computed `1+2`, a parenthesized `(3)`, another name, and the SWITCH, LET and call bodies of the
+previous section) makes the name take the `@` in a value position, as a range would.
 With Z1:Z6 = 1..6 and the formulas on row 30+ (probes/t3856-legacy-at-name-body, 261 scored cells, excel-graph,
 2026-11-04, T-3856):
 - `nNum` = 3, `nTxt` = "x", `nBool` = TRUE, `nCell` = Sheet1!$Z$3, `nOther` = S2!$A$3 show no `@` at the root
@@ -2085,17 +2103,34 @@ With Z1:Z6 = 1..6 and the formulas on row 30+ (probes/t3856-legacy-at-name-body,
   `=INDEX(Z1:Z6,nNum)+0`, while `=@INDEX(Z1:Z6,A20)` (A20 = 3), `=@INDEX(Z1:Z6,"3")` and `=@INDEX(Z1:Z6,0)`
   (`#VALUE!`) keep it. Before T-3856 ours showed `=@INDEX(Z1:Z6,3)`, the same value.
 - Z10 = `Z1:Z6*1` is `#VALUE!`, so the cells stayed legacy.
-Ours matches every cell (`scalar_body`, static_analysis/name_body.rs, read by `add_legacy_intersection`,
+The rest of the bodies (probes/t4273-legacy-at-name-body-more, 155 scored cells, excel-graph, 2026-11-06, T-4273;
+same columns, one name per row from 30, nNum = 3 and nRng = Sheet1!$Z$1:$Z$6 as bodies):
+- `nRel` = Sheet1!Z3, relative, reads as a cell (no `@` at the root, under ABS, SUM or as an IF arm; `=@INDEX(Z1:Z6,nRel)`
+  as for nCell), and its reference is relative to A1: from A30 it reads Z32, from C30 AB32 (2, the value put on row 32,
+  not Z3's 3; A30:S30).
+- `nNeg` = -3 and `nErr` = #N/A read as their literal: `=nNeg` -3, `=ABS(nNeg)` 3, `=IF(TRUE,nErr)` `#N/A`, no `@`
+  (A31:L32). As an INDEX index they keep the INDEX's `@` without one on the name, as a literal -3 or text does:
+  `=@INDEX(Z1:Z6,nNeg)` `#VALUE!`, `=@INDEX(Z1:Z6,nErr)` `#N/A`, `=ABS(@IF(TRUE,INDEX(Z1:Z6,nNeg)))`; none under SUM
+  (M31:T32).
+- `nPar` = (3) and a body that is another name, `nName` = nNum, take the `@` like a computed body (`=@nPar`,
+  `=ABS(@nName)`, `=@INDEX(Z1:Z6,@nPar)`, `=SUM(nName)` without), and so does `nNameRng` = nRng (`=@nNameRng`
+  `#VALUE!`, `=SUM(nNameRng)` 21) (rows 33, 35, 36). `nPad` = ` 3 ` reads as 3, spaces trimmed, `=INDEX(Z1:Z6,nPad)`
+  with no `@` (row 34).
+- Over n2d = `{1,2;3,4}`, `INDEX(n2d,1,1)` is one element and shows no `@`, under ABS, `+0` or as an IF arm, while
+  `=@INDEX(n2d,1)` and `=ABS(@INDEX(n2d,1))`, a row, keep it (`=SUM(INDEX(n2d,1))` 3) (row 45).
+Ours matches every cell of both probes (`scalar_body`, static_analysis/name_body.rs, read by `add_legacy_intersection`,
 `run_static_analysis_on_node`, `is_range_arm` and `indexes_one_cell`; `indexes_one_reference_cell` makes a single-cell
-INDEX a scalar shape in `fallback_shape` when its area is a range, a union or a name whose body is a reference, not
-over an array-bodied name, where `INDEX(n2d,1)` with n2d = `{1,2;3,4}` is a row: ours keeps `=@INDEX(n2d,1)`, unprobed). The `@` is decided when the legacy formula
-is read (xlsx import or `set_cell_with_legacy_formula`), from the body the name has then, and is kept in the formula
-after that; whether Excel redraws a legacy formula's `@` when a name's body changes later is unprobed.
-Unprobed: a relative one-cell body (ours: a cell, no `@`), and a negative number (`=-3`), an error literal, a
-parenthesized body or a body that is another name (ours: the `@`; spaces around one token are trimmed).
-Evidence: probes/t3856-legacy-at-name-body; probes/t3297-legacy-if-index-arm-name-table I35, K35, M35, I36, K36.
+INDEX a scalar shape in `fallback_shape` when its area is a range, a union or a name whose body is a reference, or a
+name whose body is an array constant with a row and a column index, `is_array_body`; T-4273). One index into a
+one-row or one-column array body and an area number over an array body are unprobed (ours: the `@`). The `@` is
+decided when the legacy formula is read (xlsx import or `set_cell_with_legacy_formula`), from the body the name has
+then, and is kept in the formula after that; whether Excel redraws a legacy formula's `@` when a name's body changes
+later is unprobed: the case format sets names before the workbook loads, so it needs a name-edit sheet op the
+harness does not have.
+Evidence: probes/t3856-legacy-at-name-body; probes/t4273-legacy-at-name-body-more;
+probes/t3297-legacy-if-index-arm-name-table I35, K35, M35, I36, K36.
 Status: VERIFIED (excel-graph)
-Tasks: T-3297, T-3856
+Tasks: T-3297, T-3856, T-4273
 
 ## Legacy N and T over a reference-returning call (T-1713)
 Rule: in a legacy (non-array) formula, N and T read their argument as a reference: no `@` goes on it,

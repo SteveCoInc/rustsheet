@@ -34,8 +34,8 @@ GAMMA.INV, CHISQ.INV and the other gamma quantiles at a huge shape are `#NUM!` e
   along the lower edge, and a 2-D cut fitted to these points would be an overfit (T-3409's owner ruling), so no rule
   changed. The probe's off cells, all GAMMA.INV values where Excel is `#NUM!`, are this task's:
   probes/t3396-gamma-inv-band-huge.case.json S!A35, S!A55:A56, S!A75:A77, S!A95:A98, S!A107:A108, S!A114:A119,
-  S!A129:A140, S!A151:A161. Column B (CHISQ.INV(3E-k,2a), the hold-out fixed before scoring) matches everywhere
-  (all `#NUM!`). Next: T-3409's search model, tested on these cells; this task now waits on it.
+  S!A129:A140, S!A151:A161. Column B (CHISQ.INV(3E-k,2a)) matches everywhere (all `#NUM!`), but its df, 1.4E10 to 2.4E10,
+  is above CHISQ.INV's deg_freedom limit of 1E10, so it is the domain limit and not a hold-out for any band rule (T-4202). Next: T-3409's search model, tested on these cells; this task now waits on it.
 
 ## Acceptance criteria
 - [x] A filled probe pins the lower edge at shapes 7E9 to 1.2E10; the rule separates every huge-shape quantile cell
