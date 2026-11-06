@@ -20,6 +20,9 @@ BETA.DIST at n = 2 bup terms and T.DIST.RT give Excel's exact 0 wherever Excel d
   - probes/t4437-beta-t-zero-bracket D (5E6, 2.5) and F (5E6, 3) are 0 at every row, at W 0.22 and 0.16 times
     2^-970 and below (consistent with the rule);
   - probes/t4437-beta-zero-fresh D (2E6, 2.5) is a number at every row, down to W 0.15 times 2^-970 (row 17).
+  - probes/t4437-beta-zero-fresh2 (T-4437's second sweep, ln of the true tail by 0.05 nats around ln 2^-970):
+    I (3E6, 2.5) is a number at every row, to 0.525 nats below the edge; J (7E6, 2.75) is a number to 0.225
+    below it (J16) and 0 from 0.275 below (J17). So the n = 2 cut moves with a0: lower at smaller a0.
   - The density P is no separator either (0 at ln P - ln 2^-970 = +0.56, a number at -0.71). Probe n = 2 across
     a0 from 1E6 to 1E7 and below the walked range, to find what a0 changes.
 - T.DIST.RT (kernel K(df/2, 1/2), small-shape branches, never L140): t4437-beta-t-zero-bracket G:I walk ln of the
@@ -29,8 +32,9 @@ BETA.DIST at n = 2 bup terms and T.DIST.RT give Excel's exact 0 wherever Excel d
   docs/research/t4437). Ours is a number in every row.
 - Owner of the visibly-off cells of probes/t4254-beta-t-l140-zero-cut E1:E11, F1:F11; t4254-beta-t-zero-wide F30;
   t4437-beta-t-zero-bracket D1:D37, F1:F37, G16:G37, H35:H37, I26:I37. Also owner of the numbers near the edge
-  that differ from Excel in the 8th or 9th digit: t4437-beta-t-zero-bracket and t4437-beta-zero-fresh, every
-  NumericMismatch cell, and t4254-beta-t-zero-wide A29, B28, B29.
+  that differ from Excel in the 8th or 9th digit: t4437-beta-t-zero-bracket, t4437-beta-zero-fresh and
+  t4437-beta-zero-fresh2, every NumericMismatch cell (and t4437-beta-zero-fresh2 J17:J22, Excel's n = 2
+  zeros), and t4254-beta-t-zero-wide A29, B28, B29.
 
 ## Acceptance criteria
 - [ ] The cells above match Excel's 0 or number; the near-edge numbers reach the family's digits bar.

@@ -4798,10 +4798,21 @@ within 1E-15 relative / largest relative error:
     17 rows 0.25 nats apart around the edge. Scored once: every family's first 0 is on the predicted row (row 10, W
     0.88 times 2^-970) and its last number on row 9 (1.13 times), 85 of 85 cells on the predicted side. The sweep's
     sixth family, (2E6, 2.5) at n = 2, is a number at every row, below the edge too, so the rule as frozen (any n)
-    scored 94 of 102. The n >= 3 domain was chosen after that score and is not yet re-swept (T-4437, in progress).
+    scored 94 of 102. The n >= 3 domain was chosen after that score, so the rule was frozen again with it
+    (docs/research/t4437/freeze2.md, pushed before the next fill) and swept fresh a second time.
+    Second fresh sweep (probes/t4437-beta-zero-fresh2, 220 cells, excel-graph, 2026-11-06;
+    docs/research/t4437/gen_fresh2.py): eight untouched n >= 3 families, (1.5E6, 3.25), (6E6, 3.75), (2.5E6, 4.25),
+    (7E6, 5), (1.2E6, 6.5), (9E6, 7.75), (3.5E6, 7.25) and (4.5E6, 3.5) (n 3 to 7, c 0.25 to 1, a0 1.2E6 to 9E6), 22
+    rows 0.05 nats apart from 0.525 above ln 2^-970 to 0.525 below. Every family is a number through row 11
+    (0.025 above) and 0 from row 12 (0.025 below): 176 of 176 cells on the predicted side, so the edge is 2^-970
+    to within 0.025 nats at every one. Last numbers: 1.0274520...E-292 (H11 `BETA.DIST(0.999847242166822,4500000,
+    3.5,TRUE)` is 1.027452053743555E-292); H12 is 0.
   - **n = 2 is not settled.** (5E6, 2.5) and (5E6, 3) (t4437-beta-t-zero-bracket D, F) are 0 at every row, all at W
-    0.22 times 2^-970 and below, which agrees with the rule. (2E6, 2.5) (t4437-beta-zero-fresh D) is a number at every row, down to 0.15 times it.
-    The density P does not separate them either. Unmodelled (T-4564).
+    0.22 times 2^-970 and below, which agrees with the rule. (2E6, 2.5) (t4437-beta-zero-fresh D) is a number at
+    every row, down to 0.15 times it. In the second sweep (3E6, 2.5) is a number to 0.525 nats below the edge and
+    (7E6, 2.75) to 0.225 below, 0 from 0.275 below (t4437-beta-zero-fresh2 I, J): the n = 2 cut lies below the
+    edge, lower at smaller a0. Every scale-free quantity tried (W, the tail, D, x^a, the density) collides between
+    (2E6, 2.5) numbers and (5E6, 2.5) zeros, so a0 itself enters. Unmodelled (T-4564).
   - **T.DIST.RT, bracketed** (t4437-beta-t-zero-bracket G:I, ln of the true tail by 0.5): the last number and the
     first 0 are at -687 / -687.5 at df 1E7, -692 / -692.5 at 1E6 and -696.5 / -697 at 1E5 (numbers down to
     3.3E-303). At those cuts ln x^a is -683, -688 and -692.5, so it is not x^a reaching DBL_MIN. Unmodelled (T-4564).

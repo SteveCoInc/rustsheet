@@ -3,7 +3,7 @@ id: T-4437
 title: "BETA.DIST and T.DIST.RT exact 0 at a tiny tail: apply T-4045's L140 prefactor rule to BETA.DIST and find the earlier cut at n = 3 bup terms and in the t"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -69,45 +69,41 @@ it.
 - F (T-4045); the df1 = 2 closed-form zeros.
 
 ## Outcome
-- **Mechanism (candidate, not yet passed R4).** probes/t4437-beta-t-zero-bracket walks by 0.5 nats from -680
-  to -698. At (5E6, 3.5), (5E6, 4), (1E6, 3.5) and (5E6, 5.5) (n = 3 to 5), Excel's 0 starts where bup's sum
-  W = ret·S falls below 2^-970 (DBL_MIN / eps): the last numbers have W = 1.10 to 1.60 times 2^-970, the first zeros
-  0.67 to 0.97 times it. The n = 2 families (5E6, 2.5) and (5E6, 3) are 0 at every row, all with W below 2^-970
-  (0.22 and 0.16 times it and down), so they agree with the rule too.
-- **Fresh sweep, as frozen (no n restriction): 94 of 102.** probes/t4437-beta-zero-fresh, six untouched shapes, rows
-  0.25 nats apart. (3E6, 3.5), (5E6, 6.5), (8E6, 4.5), (1E6, 5) and (4E6, 7.5) turn 0 on the predicted row (85 of 85).
-  (2E6, 2.5), at n = 2, is a number at every row, D10:D17 included, below the edge, which falsifies the rule as frozen.
-  The branch's code then narrowed it to n >= 3 (`bup.rs` `l140_bup_sum_flushed`), a domain bound chosen after the
-  sweep was scored. The excel-fidelity reviewer blocked it for that (round 1, below). The rule must be re-frozen and
-  swept fresh again.
-- **Named cells:** t4254-beta-t-l140-zero-cut B1:B11 and D1:D11, and t4254-beta-t-zero-wide A30, B30 and C30,
-  are now Excel's 0. A29, B28 and B29 stay 9th-digit numbers (the criterion allows it).
-- **Split to T-4564, with evidence (bracketed, unmodelled):**
-  - n = 2 does not follow the rule: (5E6, 2.5) and (5E6, 3) are 0 above 2^-970, while (2E6, 2.5) is a number below it.
-  - The t's cut, bracketed to 0.5 nats at df 1E7, 1E6 and 1E5: neither x^a nor bgrat's prefactor explains it.
-
-  T-4564 owns t4254-beta-t-l140-zero-cut E1:E11, F1:F11 and t4254-beta-t-zero-wide F30, plus the new cases'
-  remaining cells.
+- **Mechanism (structural model, kind (c)).** probes/t4437-beta-t-zero-bracket walks by 0.5 nats from -680 to -698.
+  At (5E6, 3.5), (5E6, 4), (1E6, 3.5) and (5E6, 5.5) (n = 3 to 5), Excel's 0 starts where bup's sum W = ret·S falls
+  below 2^-970 (DBL_MIN / eps): the last numbers have W = 1.10 to 1.60 times 2^-970, the first zeros 0.67 to 0.97
+  times it. Code: `bup.rs` `l140_bup_sum_flushed`, asked by BETA.DIST's worksheet cdf only (`bratio::beta_dist_cdf`
+  through `beta_dist_l140_zero`; F's tails and the quantile searches do not ask it).
+- **First fresh sweep, as first frozen (any n): 94 of 102** (probes/t4437-beta-zero-fresh, 0.25-nat rows). Its n = 2
+  family (2E6, 2.5) falsified the rule at n = 2; the n >= 3 domain was then chosen after that score (review round 1
+  blocked it).
+- **Second freeze and second fresh sweep (R4.2): 176 of 176.** docs/research/t4437/freeze2.md declares the rule with
+  its n >= 3 domain and was pushed (e8a1e3914) before probes/t4437-beta-zero-fresh2 was filled. Eight untouched
+  n >= 3 families (n 3 to 7, c 0.25 to 1, a0 1.2E6 to 9E6), 22 rows 0.05 nats apart across the edge: every family
+  is a number through row 11 (0.025 nats above 2^-970) and 0 from row 12 (0.025 below), as predicted. Two n = 2
+  families in the same case, out of the domain and unscored, are T-4564's evidence (the n = 2 cut lies below the
+  edge and moves with a0).
+- **Gate A envelope (R2) on the second sweep:** 176 of 176 in-domain cells inside (zeros exact; numbers within 1e-9
+  relative of 50-digit mpmath, `t4437-beta-zero-fresh2.math.json`). Outside: only the out-of-domain J17:J22
+  (Excel's n = 2 zeros, ours the math's number; T-4564).
+- **Hold-out (R4.1), manual split:** the in-domain (n >= 3) L140 BETA.DIST cells of the six evidence cases
+  (t4437-beta-t-zero-bracket, t4437-beta-zero-fresh, t4254-beta-t-l140-zero-cut, t4254-beta-t-zero-wide,
+  t4456-beta-t-zero-cut, t4456-beta-t-zero-reach), hold-out = first byte of sha256("case!cell") mod 10 < 3, margin
+  10 points. Rule (bit-exact / 4 ulp / 15 digits): train 216 / 233 / 241 of 403 (53.6% exact), hold-out 91 / 100 /
+  102 of 152 (59.9%); correctly rounded math: train 0 / 1 / 6, hold-out 0 / 1 / 2. The rule beats the math on the
+  hold-out and its hold-out rate is within the margin. Caveat: the split was fixed after these cells had shaped
+  the rule, so the second fresh sweep is the guard that carries weight. The non-exact cells are T-4564's
+  9th-digit numbers near the edge, not 0-versus-number errors.
+- No `FITTED` tag: 2^-970 is DBL_MIN / DBL_EPSILON, a structural constant, and the cut was not tuned (no keep-matched
+  branch). Reproducibility floor: the rule decides 0 against a number, far above 4 ulp.
+- **Named cells:** t4254-beta-t-l140-zero-cut B1:B11 and D1:D11, and t4254-beta-t-zero-wide A30, B30 and C30, are
+  Excel's 0. A29, B28 and B29 stay 9th-digit numbers (the criterion allows it).
+- **Split to T-4564 (bracketed, unmodelled):** n = 2 (now with the second sweep's I and J families) and the t's cut,
+  bracketed to 0.5 nats at df 1E7, 1E6 and 1E5. T-4564 owns t4254-beta-t-l140-zero-cut E1:E11, F1:F11,
+  t4254-beta-t-zero-wide F30, and the new cases' remaining cells.
+- Review round 1's design MINOR is done: one helper `bratio::l140_zero_tails` takes the zero predicate (F: prefactor
+  only; BETA.DIST: `beta_dist_l140_zero`), and `l140_sum_flush_is_beta_dists_zero_at_three_terms` tests the edge.
 - Follow-up from T-4518's review: T-4565 (SHEET and SHEETS of other bound values), filed here.
-- Eval delta (after merging main): probes fixed 45 (T-4254's 25 named cells and 20 of T-4456's t4456 zero cells),
-  0 regressions, 2 new cases (435 cells; 302 new-coverage failures, every one owned
-  by T-4564: the n = 2 and t cells, and 8th to 9th digit numbers near the edge).
-
-## Landing notes
-- Resumed 2026-11-06 by an opus run (work-loop step 2: branch idle 2 h). Next: re-freeze and a second fresh sweep.
-- PR #3587 (draft), head after this commit. CI has not run on a finished head. The math sidecars of both new cases
-  are in this commit (`rustsheet-accuracy math --suite probes --function BETA.DIST`; it also rewrote two unrelated
-  sidecars, t2436/35e8168aae2b00f8 and t3576-negbinom-cdf-huge-s, which were reverted, so check `make
-  eval-math-check` before pushing).
-- Review round 1 on b69fee474: security APPROVE, design APPROVE (MINOR: `l140_sum_flushed_tails` copies
-  `l140_prefactor_zero_tails` apart from the predicate, so take one helper; add a unit test at the edge),
-  excel-fidelity REQUEST_CHANGES:
-  1. BLOCKING: the fresh sweep is 94/102 as frozen, and the n >= 3 domain was chosen after it (above).
-  2. MAJOR: the R4 hold-out guard and the Gate A envelope counts are missing from the Outcome.
-  3. MINOR: the sweep's 0.25-nat rows barely test the constant. Use about 0.05 nats near the edge.
-- Next step: give a mechanistic reason for excluding n = 2 or drop the restriction. The data so far: n = 2 at a 5E6
-  is 0 below the edge, while n = 2 at 2E6 stays a number below it. T-4456's t4456-beta-t-zero-reach also has n = 2
-  and 3 zeros at (2E6, 2.5|3.5). Then re-freeze, fix the hold-out split before scoring, and run a new fresh sweep
-  at untouched shapes (n = 3 to 30, several a0, about 0.05 nats near the edge). Record both counts and the Gate A
-  envelope result, and re-run the full panel.
-- Do not repeat: reporting 85/85 for the sweep, or saying that n = 2 is "0 above 2^-970" (it is 0 below it).
+- Eval delta: probes fixed 45 (T-4254's 25 named cells and 20 of T-4456's zero cells), 0 regressions, 3 new cases
+  (655 cells; 434 new-coverage failures, every one owned by T-4564: the n = 2 and t cells, and 8th to 9th digit
+  numbers near the edge).

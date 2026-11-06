@@ -223,7 +223,7 @@ pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
 }
 
 /// BETA.DIST's worksheet cdf: [`beta_dist_lower_tail`], and Excel's exact 0 where L140 bup+bgrat's
-/// prefactor underflows ([`l140_prefactor_zero_tails`], T-4045's rule). Column A of probes-numeric
+/// prefactor underflows ([`l140_zero_tails`], T-4045's rule). Column A of probes-numeric
 /// t3568-r5-bup-tune, -hold and -fresh has 47 Excel zeros where the true tail is up to 2E-257
 /// (`BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)`, t3568-r5-bup-fresh A291): the rule gives all 47
 /// (28 before), zeroes none of the column's Excel numbers, and gives the 44 zeros of
@@ -233,18 +233,14 @@ pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
 /// At n >= 3 bup terms it is also 0 where bup's sum W is below 2^-970 ([`l140_bup_sum_flushed`],
 /// T-4437).
 pub(crate) fn beta_dist_cdf(x: f64, y: f64, a: f64, b: f64) -> f64 {
-    l140_prefactor_zero_tails(a, b, x, y)
-        .or_else(|| l140_sum_flushed_tails(a, b, x, y))
+    l140_zero_tails(a, b, x, y, beta_dist_l140_zero)
         .map_or_else(|| beta_dist_lower_tail(x, y, a, b), |t| t.0)
 }
 
-/// The tails (lower, upper) of K(a, b, x, y) where L140 bup+bgrat's w is Excel's exact 0 because
-/// bup's sum is below 2^-970 at n >= 3 terms ([`bup::l140_bup_sum_flushed`], T-4437), oriented back
-/// through bratio's swap. BETA.DIST's worksheet cdf only ([`beta_dist_cdf`]).
-fn l140_sum_flushed_tails(a: f64, b: f64, x: f64, y: f64) -> Option<(f64, f64)> {
-    let d = dispatch(a, b, x, y)?;
-    (d.branch == Branch::L140BupBgrat && l140_bup_sum_flushed(d.a0, d.b0, d.x0, d.y0))
-        .then_some(if d.swapped { (1.0, 0.0) } else { (0.0, 1.0) })
+/// BETA.DIST's worksheet cdf is Excel's exact 0 on L140 bup+bgrat where bup's prefactor underflows
+/// (T-4045) or, at n >= 3 bup terms, where bup's sum is below 2^-970 (T-4437).
+fn beta_dist_l140_zero(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
+    l140_bup_prefactor_underflows(a0, b0, x0, y0) || l140_bup_sum_flushed(a0, b0, x0, y0)
 }
 
 /// (w, w1) of BETA.DIST's kernel ([`beta_dist_lower_tail`]) where it is closed or ported, the tails
@@ -311,17 +307,28 @@ pub(crate) fn closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(
 /// incomplete-beta arguments keep r >= 1"). T-2510 kept F off bgrat because of the arguments it
 /// was handed, not the kernel.
 pub(crate) fn f_closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
-    l140_prefactor_zero_tails(a, b, x, y).or_else(|| closed_or_ported_with(x, y, a, b, true))
+    l140_zero_tails(a, b, x, y, l140_bup_prefactor_underflows)
+        .or_else(|| closed_or_ported_with(x, y, a, b, true))
 }
 
-/// The tails (lower, upper) of K(a, b, x, y) where L140 bup+bgrat's w is Excel's exact 0 because
-/// bup's prefactor underflows ([`bup::l140_bup_prefactor_underflows`], T-4045): w is 0 and its
-/// complement 1, oriented back through bratio's swap. F's tails and BETA.DIST's worksheet cdf
-/// ([`beta_dist_cdf`]), not the quantile searches.
-fn l140_prefactor_zero_tails(a: f64, b: f64, x: f64, y: f64) -> Option<(f64, f64)> {
+/// The tails (lower, upper) of K(a, b, x, y) where L140 bup+bgrat's w is Excel's exact 0 by `zero`,
+/// read at bratio's own (a0, b0, x0, y0): w is 0 and its complement 1, oriented back through
+/// bratio's swap. F's tails take bup's prefactor underflow
+/// ([`bup::l140_bup_prefactor_underflows`], T-4045); BETA.DIST's worksheet cdf
+/// ([`beta_dist_cdf`]) takes [`beta_dist_l140_zero`]; the quantile searches take neither.
+fn l140_zero_tails(
+    a: f64,
+    b: f64,
+    x: f64,
+    y: f64,
+    zero: fn(f64, f64, f64, f64) -> bool,
+) -> Option<(f64, f64)> {
     let d = dispatch(a, b, x, y)?;
-    (d.branch == Branch::L140BupBgrat && l140_bup_prefactor_underflows(d.a0, d.b0, d.x0, d.y0))
-        .then_some(if d.swapped { (1.0, 0.0) } else { (0.0, 1.0) })
+    (d.branch == Branch::L140BupBgrat && zero(d.a0, d.b0, d.x0, d.y0)).then_some(if d.swapped {
+        (1.0, 0.0)
+    } else {
+        (0.0, 1.0)
+    })
 }
 
 /// (w, w1) of K(a, b, x, y) on the branches ported so far, `None` elsewhere. bratio computes one

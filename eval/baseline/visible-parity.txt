@@ -271,6 +271,7 @@ probes/t4394-api-name-active-s2.case.json	5
 probes/t4420-pivotby-parent-sets-three-fields.case.json	14
 probes/t4437-beta-t-zero-bracket.case.json	222
 probes/t4437-beta-zero-fresh.case.json	30
+probes/t4437-beta-zero-fresh2.case.json	66
 probes/t4448-lone-blank-reshapers.case.json	1
 probes/t4450-eta-special-forms.case.json	11
 probes/t4456-beta-t-zero-cut.case.json	43

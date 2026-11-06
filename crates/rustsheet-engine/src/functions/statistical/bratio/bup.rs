@@ -111,11 +111,11 @@ pub(super) fn l140_bup_prefactor_underflows(a0: f64, b0: f64, x0: f64, y0: f64) 
 /// t4437-beta-t-zero-bracket walks BETA.DIST by 0.5 in ln ret at (a, b) = (5E6, 3.5), (5E6, 4),
 /// (1E6, 3.5) and (5E6, 5.5). Each family's last number has W between 1.10 and 1.60 times 2^-970,
 /// and its first 0 has W between 0.67 and 0.97 times it (`BETA.DIST(0.999862932,5E6,3.5,TRUE)`
-/// row 9 is 1.1078134827430778E-292, row 10 is 0). The fresh sweep after the rule froze, at five
-/// untouched shapes with n from 3 to 7 (probes/t4437-beta-zero-fresh, rows 0.25 nats apart), puts
-/// every family's first 0 on the predicted row (statistics.md "Where the exact 0 starts (T-4045)").
-/// It does not hold at n = 2: (5E6, 2.5) and (5E6, 3) are 0 above it, (2E6, 2.5) a number below it
-/// (T-4564).
+/// row 9 is 1.1078134827430778E-292, row 10 is 0). The domain n >= 3 is part of the rule as frozen
+/// (docs/research/t4437/freeze2.md): the second fresh sweep after it, eight untouched families with
+/// n from 3 to 7 (probes/t4437-beta-zero-fresh2, rows 0.05 nats apart), puts 176 of 176 cells on the
+/// predicted side, every cut within 0.025 nats of 2^-970 (statistics.md "Where the exact 0 starts
+/// (T-4045)"). At n = 2 Excel's cut lies below the edge and moves with a0 (T-4564).
 pub(super) fn l140_bup_sum_flushed(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
     /// 2^-970: Excel's L140 bup+bgrat tail is 0 below it at n >= 3.
     const FLUSH: f64 = f64::MIN_POSITIVE / f64::EPSILON;
