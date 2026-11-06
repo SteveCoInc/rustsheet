@@ -75,5 +75,11 @@ Every failing table point has an owner.
     (0.5%). Excel's double rank 1 + 0.3*70 is exactly 22.
   - All of these follow existing entries. The two MEDIAN cells and the 48/48 match of `a + (b - a)/2` over the
     table's even counts are added to statistics.md "MEDIAN of an even count is a + (b - a)/2". No new quirk.
-- **Math sidecars:** SIDECARS_PENDING
+- **Math sidecars:** made with `rustsheet-accuracy math --function` (T-4483) for the seven functions, in probes and
+  probes-numeric. There are 82 new math cells in four probes cases: stat-order-floor-batch (66),
+  stat-argument-modes (12), t3808-median-geomean-direct-overflow (3, new sidecar) and t2429-quartile-exc-no-number (1,
+  new sidecar). probes-numeric has none, because its cells pass ranges or scalars as the data.
+  - The change is additive: no existing entry changed.
+  - All 82 cells agree with Excel's oracle value, within 1E-9 or as an error on both sides.
+  - `make eval-math-check` reports current.
 - **Eval delta:** none (tools, tables, docs and sidecars only).
