@@ -294,7 +294,7 @@ exactly the scalar criterion's result, in a 1x6 array for COUNTIF, SUMIF, SUMIFS
 SUMIF/SUMIFS 3, 1, 14, 12, 12, 12, AVERAGEIFS 1.5, 1, 14/3, 6, 6, 6, MAXIFS 2, 1, 8, 8, 8, 8
 (probes/criteria-tilde-blank-single-cell-edges Arr!D1:K8, excel-graph 2026-10-21, T-2235);
 for SUMIFS, SUMIF, AVERAGEIFS, AVERAGEIF, MAXIFS and MINIFS an error in the sum (value) range is the result only at the criteria
-positions whose selected rows include it, and the position's own error is the first selected one in row order
+positions whose selected rows include it (which error wins when one position selects two different errors is unprobed)
 (`SUMIFS(E1:E3,A1:A3,{"a","b"})` with E1 = #N/A is #N/A, 5). With A1:A4 = a, b, a, c and E1:E4 = #N/A, 5, 7, #DIV/0!, all five
 functions (MINIFS too) give `{"a","b","c"}` -> #N/A, 5, #DIV/0!; `{"b";"c"}` -> 5, #DIV/0!; `{"c"}` -> #DIV/0! (ERROR.TYPE 7, 2);
 a second pair `B1:B4,">0"` (B = 1, 1, 0, 1) drops only row 3, so the error rows still select and the row gives #N/A, 5, #DIV/0!
