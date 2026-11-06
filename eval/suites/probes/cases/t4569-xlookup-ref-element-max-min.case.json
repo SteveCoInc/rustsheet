@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4569: MAX, MIN and other aggregates over XLOOKUP({2;9},A1:A3,B1:B3,range), whose element 2 is the if_not_found range kept as a reference (T-4563): do they walk the referenced cells as SUM does? Data: A1:A3 = 1,2,3; B1:B3 = 10,20,30 (the hit is 20); G1:G2 = 50, 60 (above the hit); H1:H2 = 1, 2 (below it). One formula per row in column A. Rows 20-34: more readers of the same result over G1:G2 (column A the formula; B its ROWS; C, D its INDEX (1,1) and (2,1)), and LARGE/SMALL over a lifted OFFSET grid (A31, A32). Rows 40-44 and sheet Local (T-4569 round 3): t2065's exact LARGE/SMALL/MEDIAN-over-OFFSET formulas and data, same-sheet on Local!E1:E3 and cross-sheet from Calc and Local, plus MEDIAN over a plain OFFSET grid and LARGE over INDIRECT. Rows 50-63: the hit is text (return C1:C3, C2 = \"t\"; rows 50-56) or TRUE (D1:D3, D2 = TRUE; rows 57-63) under SUM, MAXA, AVERAGEA, AVERAGE, COUNTA, COUNT, MINA.",
+  "description": "T-4569: MAX, MIN and other aggregates over XLOOKUP({2;9},A1:A3,B1:B3,range), whose element 2 is the if_not_found range kept as a reference (T-4563): do they walk the referenced cells as SUM does? Data: A1:A3 = 1,2,3; B1:B3 = 10,20,30 (the hit is 20); G1:G2 = 50, 60 (above the hit); H1:H2 = 1, 2 (below it). One formula per row in column A. Rows 20-34: more readers of the same result over G1:G2 (column A the formula; B its ROWS; C, D its INDEX (1,1) and (2,1)), and LARGE/SMALL over a lifted OFFSET grid (A31, A32). Rows 40-44 and sheet Local (T-4569 round 3): t2065's exact LARGE/SMALL/MEDIAN-over-OFFSET formulas and data, same-sheet on Local!E1:E3 and cross-sheet from Calc and Local, plus MEDIAN over a plain OFFSET grid and LARGE over INDIRECT. Rows 50-63: the hit is text (return C1:C3, C2 = \"t\"; rows 50-56) or TRUE (D1:D3, D2 = TRUE; rows 57-63) under SUM, MAXA, AVERAGEA, AVERAGE, COUNTA, COUNT, MINA. Local!F1:F9 (T-4569 round 4): does the references' sheet or the sheet-qualified form decide LARGE/SMALL/MEDIAN's #N/A vs #VALUE!? Own-sheet references qualified (F1, F3, F5, F8) and unqualified (F2, F4, F7), a relative cross-sheet one (F6), and a mixed grid read on its own sheet (F7:F9).",
   "tags": [
     "M6",
     "probe"
@@ -144,7 +144,16 @@
         "E2": "=SMALL(OFFSET(A1,0,0,{2;3}),2)",
         "E3": "=MEDIAN(OFFSET(A1,{0;1;2},0))",
         "E4": "=LARGE(OFFSET(Data!$G$1,{0;1},0),1)",
-        "E5": "=MEDIAN(OFFSET(Data!$G$1,{0;1},0))"
+        "E5": "=MEDIAN(OFFSET(Data!$G$1,{0;1},0))",
+        "F1": "=LARGE(OFFSET(Local!$A$1,{0;1},0),1)",
+        "F2": "=LARGE(OFFSET($A$1,{0;1},0),1)",
+        "F3": "=MEDIAN(OFFSET(Local!$A$1,{0;1;2},0))",
+        "F4": "=LARGE(INDIRECT({\"A1\";\"A2\"}),1)",
+        "F5": "=LARGE(OFFSET(Local!A1,{0;1},0),1)",
+        "F6": "=LARGE(OFFSET(Data!G1,{0;1},0),1)",
+        "F7": "=LARGE(XLOOKUP({1;9},A1:A3,B1:B3,A2:A3),1)",
+        "F8": "=LARGE(XLOOKUP({1;9},Local!$A$1:$A$3,Local!$B$1:$B$3,Local!$A$2:$A$3),1)",
+        "F9": "=MAX(XLOOKUP({1;9},A1:A3,B1:B3,A2:A3))"
       }
     }
   ],

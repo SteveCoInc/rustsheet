@@ -54,3 +54,23 @@ Round 3 tests whether the sheet decides this:
   reads the value element as an array element: SUM 50 (text and TRUE skipped), MAXA 50, AVERAGEA 25 (text in an
   array counts 0) and 25 for TRUE (1: (1+50)/2 = 25.5)? Uncertain. AVERAGE 50. COUNTA 2. COUNT 0. MINA 0 for text,
   1 for TRUE.
+
+## Round 4 (Local!F1:F9), predicted before its fill
+
+Fidelity review round 2 found rule 5 confounded: every `#N/A` cell so far used a sheet-qualified absolute reference
+and every `#VALUE!` cell (Local!E1:E3) an unqualified relative one. Local data: A1:A3 = 1, 100, 10000; B1:B3 = 2, 200,
+20000. Two readings:
+
+| cell | formula | sheet decides | qualifier decides |
+|---|---|---|---|
+| F1 | `LARGE(OFFSET(Local!$A$1,{0;1},0),1)` | `#VALUE!` | `#N/A` |
+| F2 | `LARGE(OFFSET($A$1,{0;1},0),1)` | `#VALUE!` | `#VALUE!` |
+| F3 | `MEDIAN(OFFSET(Local!$A$1,{0;1;2},0))` | `#VALUE!` | `#N/A` |
+| F4 | `LARGE(INDIRECT({"A1";"A2"}),1)` | `#VALUE!` | `#VALUE!` |
+| F5 | `LARGE(OFFSET(Local!A1,{0;1},0),1)` | `#VALUE!` | `#N/A` |
+| F6 | `LARGE(OFFSET(Data!G1,{0;1},0),1)` | `#N/A` | `#N/A` |
+| F7 | `LARGE(XLOOKUP({1;9},A1:A3,B1:B3,A2:A3),1)` (hit 2, element 2 the reference A2:A3) | `#VALUE!` | `#VALUE!` |
+| F8 | the same, every range `Local!$..` | `#VALUE!` | `#N/A` |
+| F9 | `MAX(XLOOKUP({1;9},A1:A3,B1:B3,A2:A3))` | 100 (top-left, rule 4) | 100 |
+
+A third reading (absolute vs relative decides) would split F2 from F5.
