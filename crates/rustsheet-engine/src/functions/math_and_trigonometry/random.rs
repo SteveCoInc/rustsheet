@@ -1,6 +1,7 @@
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{number_result, value_error, LiftCost, LiftOptions};
+use crate::functions::util::near_integer::near_integer_whole;
 use crate::limits::check_array_size;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
@@ -119,6 +120,38 @@ impl Model {
         }
     }
 
+    /// RANDARRAY's `rows` or `columns` (`name`): 1 when left out or empty, `#CALC!` at 0 and
+    /// `#VALUE!` below. An extent just below an integer reads as it, as SEQUENCE's does
+    /// (`near_integer_whole`; probes/t4465-extent-near-integer-main D1:D63, T-4465).
+    fn randarray_extent(
+        &mut self,
+        arg: Option<&Node>,
+        name: &str,
+        cell: CellReferenceIndex,
+    ) -> Result<usize, CalcResult> {
+        let Some(arg) = arg else {
+            return Ok(1);
+        };
+        let v = self.evaluate_node_in_context(arg, cell);
+        if matches!(v, CalcResult::EmptyArg) {
+            return Ok(1);
+        }
+        let n = near_integer_whole(self.cast_to_number(v, cell)?) as i64;
+        match n {
+            0 => Err(CalcResult::new_error(
+                Error::CALC,
+                cell,
+                format!("{name} must be >= 1"),
+            )),
+            n if n < 0 => Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                format!("{name} must be >= 1"),
+            )),
+            n => Ok(n as usize),
+        }
+    }
+
     /// `=RANDARRAY([rows], [cols], [min], [max], [whole_number])`
     ///
     /// Returns a 2-D array of random numbers.
@@ -132,66 +165,13 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         }
 
-        let rows = if !args.is_empty() {
-            let v = self.evaluate_node_in_context(&args[0], cell);
-            if matches!(v, CalcResult::EmptyArg) {
-                1
-            } else {
-                match self.cast_to_number(v, cell) {
-                    Ok(n) => {
-                        let n = n.floor() as i64;
-                        if n == 0 {
-                            return CalcResult::new_error(
-                                Error::CALC,
-                                cell,
-                                "rows must be >= 1".to_string(),
-                            );
-                        }
-                        if n < 0 {
-                            return CalcResult::new_error(
-                                Error::VALUE,
-                                cell,
-                                "rows must be >= 1".to_string(),
-                            );
-                        }
-                        n as usize
-                    }
-                    Err(e) => return e,
-                }
-            }
-        } else {
-            1
+        let rows = match self.randarray_extent(args.first(), "rows", cell) {
+            Ok(n) => n,
+            Err(e) => return e,
         };
-
-        let columns = if args.len() >= 2 {
-            let v = self.evaluate_node_in_context(&args[1], cell);
-            if matches!(v, CalcResult::EmptyArg) {
-                1
-            } else {
-                match self.cast_to_number(v, cell) {
-                    Ok(n) => {
-                        let n = n.floor() as i64;
-                        if n == 0 {
-                            return CalcResult::new_error(
-                                Error::CALC,
-                                cell,
-                                "columns must be >= 1".to_string(),
-                            );
-                        }
-                        if n < 0 {
-                            return CalcResult::new_error(
-                                Error::VALUE,
-                                cell,
-                                "columns must be >= 1".to_string(),
-                            );
-                        }
-                        n as usize
-                    }
-                    Err(e) => return e,
-                }
-            }
-        } else {
-            1
+        let columns = match self.randarray_extent(args.get(1), "columns", cell) {
+            Ok(n) => n,
+            Err(e) => return e,
         };
 
         if let Some((error, message)) = check_array_size(rows, columns) {

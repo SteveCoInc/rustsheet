@@ -156,3 +156,18 @@ fn scientific_zero_prints_all_integer_placeholders_and_carry_renormalises() {
         );
     }
 }
+
+// probes/t4062-comma-in-exponent and t4062-grouping-in-scientific (T-4062).
+#[test]
+fn commas_in_scientific_formats() {
+    let text = |value: f64, code: &str| super::text(value, code);
+    assert_eq!(text(1_234_567.89, "0.00E+0,0"), "1.23E+06");
+    assert_eq!(text(1_234_567.89, "0.00E+0,00"), "1.23E+006");
+    assert_eq!(text(1_234_567.89, "0E+0,0"), "#VALUE!");
+    assert_eq!(text(1_234_567.89, "0,0E+0"), "123E+4");
+    assert_eq!(text(1_234_567.89, "##,##0E+0"), "12E+5");
+    assert_eq!(text(123_456_789.0, "##,##0E+0"), "1,235E+5");
+    assert_eq!(text(1_234_567.89, "0,000E+0"), "0,123E+4");
+    assert_eq!(text(12.5, "#,##0E+0"), "13E+0");
+    assert_eq!(text(0.00123, "0,0E+0"), "12E-4");
+}

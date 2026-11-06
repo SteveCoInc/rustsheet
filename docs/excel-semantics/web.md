@@ -104,6 +104,7 @@ includes time-only dates if Excel writes them so), and a pivot whose data field 
 (`showDataAs`, such as % of total), whose index points past its cache, whose `axis` or `subtotal` is unknown, which has
 no `location` or not one `pivotField` per cache field, or whose parts are reached outside the package (absolute,
 escaping or External targets), twice, or through a duplicate `cacheId`: GETPIVOTDATA against it is `#REF!`.
+The fuzz target `pivot_import` feeds hostile pivot parts to this importer and GETPIVOTDATA (T-4133, decision 0312).
 UNVERIFIED: what Excel answers for each of these (presumably it computes them, refreshing a cache saved without
 records); a known gap, not a deviation. A cache `<d>` date is converted to the workbook's date system (T-2393); one before
 the 1904 epoch in a `date1904` workbook has no serial there and skips the cache like a pre-1900 date (UNVERIFIED: Excel's answer). The 1904 serial is the 1900 sum minus 1462, so a timestamp's fraction can differ by one ulp from the 1904 sum's; compute the date part in the target system before pivot date items are matched (T-2085). The 1904 values are derived from the 1462-day epoch offset, not from a 1904 pivot workbook.
