@@ -3,7 +3,7 @@ id: T-3819
 title: "Update docs/excel-semantics pointers to reference_operators.rs after the T-3439 split"
 milestone: M2
 lane: quality
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
