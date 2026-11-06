@@ -37,6 +37,9 @@ BETA.DIST at n = 2 bup terms and T.DIST.RT give Excel's exact 0 wherever Excel d
   t4437-beta-zero-fresh2, every NumericMismatch cell (and t4437-beta-zero-fresh2 J17:J22, Excel's n = 2
   zeros), and t4254-beta-t-zero-wide A29, B28, B29.
 
+- BETADIST shares BETA.DIST's worksheet cdf, so it takes T-4437's n >= 3 rule unprobed: put a few BETADIST cells
+  across the t4437-beta-zero-fresh2 edge in this task's next probe (T-4437's review).
+
 ## Acceptance criteria
 - [ ] The cells above match Excel's 0 or number; the near-edge numbers reach the family's digits bar.
 - [ ] Each cut is bracketed to about 0.5 nats and modelled from the mechanism (decision 0188 R4 guards: hold-out

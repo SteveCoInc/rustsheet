@@ -94,19 +94,18 @@ it.
   existing tiny-shape lines in known-failures.tsv. No point of the batch lands near the L140 edge, so it shows the
   predicate does no harm elsewhere; the second probes sweep is what tests the edge. `rustsheet-eval accuracy`:
   40,742 points, 0 failing.
-- **Hold-out (R4.1), the fit lab's split** (`rustsheet_tools.fitlab.holdout.is_holdout`, salt
-  `rustsheet-fitlab-holdout/v1`, 300 per mille, default margin 5 points) over the n >= 3 L140 BETA.DIST cells of the
-  six evidence cases (t4437-beta-t-zero-bracket, t4437-beta-zero-fresh, t4254-beta-t-l140-zero-cut,
-  t4254-beta-t-zero-wide, t4456-beta-t-zero-cut, t4456-beta-t-zero-reach): 422 train, 133 test.
-  - Bit-exact / 4 ulp / 15 digits, rule: train 244 / 263 / 270 (57.8% exact), test 63 / 70 / 73 (47.4%);
-    correctly rounded: train 0 / 2 / 8, test 0 / 0 / 0. The rule beats the correctly rounded candidate on test,
-    but its test exact rate is 10.4 points below train, **outside the 5-point margin**.
-  - The drop is the mix of cells, not the rule: the rule's 0-or-number class is right on 422 of 422 train and 133
-    of 133 test cells. Its zeros are exact on both sides (201 of 201, 53 of 53). The non-exact cells are all numbers,
-    where the rule does not fire and the value is the unchanged L140 kernel's 8th-9th digit (T-4564): 43 of 221
-    exact on train, 10 of 80 on test, and test happens to hold more numbers (60% against 52%).
-  - The split was not fixed before these cells shaped the rule (they are the fit's own evidence); the second fresh
-    sweep, filled after a pushed freeze, is the guard that carries weight.
+- **Hold-out (R4.1), on cells the rule never saw** (review round 2): the split and margin were stated in
+  docs/research/t4437/freeze2.md ("R4.1 re-split", pushed in 79bec905f) before scoring. Cells: the 176 in-domain
+  cells of probes/t4437-beta-zero-fresh2 (A:H), filled after the freeze; split: the fit lab's `is_holdout`
+  (salt `rustsheet-fitlab-holdout/v1`, 300 per mille); margin: the default 5 points. 121 train, 55 test.
+  - Bit-exact / 4 ulp / 15 digits, rule: train 60 / 60 / 60 (49.6% exact), test 28 / 28 / 28 (50.9%);
+    correctly rounded: train 0 / 0 / 0, test 0 / 1 / 1. The rule beats the correctly rounded candidate on test
+    (28 against 0) and its test rate is not below its train rate: **accepted**.
+  - The exact cells are the zeros (60 of 60 and 28 of 28; the 0-or-number class is right on 121 of 121 and 55 of
+    55). The numbers are the unchanged L140 kernel's 8th-9th digit (T-4564); they are inside the Gate A envelope
+    (within 1e-9 of the math, above).
+  - Round 1's split over the rule's own evidence cells (422 train, 133 test) is superseded: those cells shaped the
+    rule, so it was not a valid hold-out (test 47.4% against train 57.8%, the gap all in untouched number cells).
 - No `FITTED` tag: 2^-970 is DBL_MIN / DBL_EPSILON, a structural constant, and the cut was not tuned (no keep-matched
   branch). Reproducibility floor: the rule decides 0 against a number, far above 4 ulp.
 - **Named cells:** t4254-beta-t-l140-zero-cut B1:B11 and D1:D11, and t4254-beta-t-zero-wide A30, B30 and C30, are
