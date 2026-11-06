@@ -3,7 +3,7 @@ id: T-4603
 title: "IMCSC, IMCOT and IMSEC of a tiny real, and IMCSCH, IMSECH and IMCSC of a tiny imaginary part: probe the reciprocal cells engineering.md leaves UNVERIFIED, and match"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
