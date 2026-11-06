@@ -64,8 +64,8 @@ Every failing table point has an owner.
 - Tables `eval/accuracy/tables/{CUMIPMT,CUMPRINC,RRI}/s1` (200 points each) and `{EFFECT,NOMINAL,DOLLARDE,DOLLARFR}/s1`
   (120 each), 1,080 points, filled from excel-graph with 0 failures. Every Excel error (61, all `#NUM!`) is a coded
   domain error; 0 table defects.
-- `rustsheet-eval accuracy`: 1,076 of 1,080 points inside the envelope, 0 failing; `missing tables` 121 to 114. The
-  engine is bit-exact with Excel on 910 of 1,080 (CUMIPMT 144/200, CUMPRINC 86/200, all others every point).
+- `rustsheet-eval accuracy`: 1,076 of 1,080 points inside the envelope, 0 failing; `missing tables` lower by 7 (121 to 114 on the claimed main, 114 to
+  107 after merging origin/main). The engine is bit-exact with Excel on 910 of 1,080 (CUMIPMT 144/200, CUMPRINC 86/200, all others every point).
 - Known failures added (4, owner T-4390, which owns the visibly-off tiny-rate CUMIPMT cells of the same cancellation):
   CUMIPMT/s1 A87, A90, A92, A189, at rates 1.5E-12 to 4.9E-10, where `PMT·m - CUMPRINC` cancels and our principal's
   last bits put the interest 1E-9 to 2.5E-6 relative off Excel.
