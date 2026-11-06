@@ -3,7 +3,7 @@ id: T-4456
 title: "BETA.DIST takes T-4045's L140 prefactor zero rule (T-4437's first part)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -23,9 +23,26 @@ below DBL_MIN. F.INV's search keeps today's kernel.
   for F.INV's search (accuracy/F.INV/s1 A146).
 
 ## Acceptance criteria
-- [ ] BETA.DIST's cdf is 0 at the rule's cells of probes/t4254-beta-t-l140-zero-cut, and at those of the salvaged
+- [x] BETA.DIST's cdf is 0 at the rule's cells of probes/t4254-beta-t-l140-zero-cut, and at those of the salvaged
       probe; unit test; accuracy/F.INV/s1 A146 is unchanged.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- Engine: the worksheet BETA.DIST cdf (`beta.rs`) now asks `bratio::l140_prefactor_zero_tails`, T-4045's rule, which is
+  now `pub(crate)`. Where L140 bup+bgrat's prefactor ret is below DBL_MIN, the cdf is Excel's exact 0. Excel's
+  complement is 1, after a swap. `bratio::beta_dist_lower_tail` is unchanged, so F.INV's search
+  (`beta_lower_crossing`) and accuracy/F.INV/s1 A146 do not move. Unit test: `l140_prefactor_zero_is_beta_dists_zero`.
+- Cells fixed: probes/t4254-beta-t-l140-zero-cut A12:A22 and C12:C22 (from #3469). probes/t4456-beta-t-zero-cut
+  C10:C17 and D10:D17 (n = 25 and 29 bup terms, past the n <= 9 port).
+- Probes, salvaged from the parked T-4254 branch (PR #3464, closed as a duplicate of #3469) and renamed:
+  probes/t4456-beta-t-zero-cut (130 cells) and probes/t4456-beta-t-zero-reach (81 cells), excel-graph, 2026-11-06.
+  statistics.md "Where the exact 0 starts (T-4045)" gains a "More shapes" bullet. It finds:
+  - the earlier cut also reaches n = 5, and lies in w between 2.8E-295 and 8.5E-291 at every shape probed;
+  - the t's cut moves with df;
+  - Excel's F.INV root at A146 lies in its own cdf's flat 0.
+- Owners: T-4437 (scope narrowed to the earlier cut and the t) owns the visibly-off cells of the salvaged probes;
+  T-4442 (filed) owns cut G1 (F.INV). `scripts/new_case_owners.py` passes.
+- Follow-ups: T-4442; T-4457 (sonnet: T-4223's statistics.md wording, the MINORs of PR #3475's fidelity review).
