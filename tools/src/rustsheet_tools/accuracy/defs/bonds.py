@@ -69,6 +69,7 @@ from rustsheet_tools.accuracy.defs.yearfrac import (
     eu_30_360,
     real_date,
     us_30_360,
+    whole_serial,
 )
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import (
@@ -132,15 +133,6 @@ def _date_serial(d: datetime.date) -> int:
     return (d - EPOCH).days
 
 
-def whole_date(x: mpmath.mpf) -> int:
-    """A date argument floored to a whole serial; DomainError (`#NUM!`) outside 0..2958465."""
-    whole = int(mpmath.floor(x))
-    if not 0 <= whole <= LAST_DAY:
-        msg = f"date {x} is outside 0..9999-12-31"
-        raise DomainError(msg)
-    return whole
-
-
 def basis_days(start: int, end: int, basis: int) -> Fraction:
     """Days from serial `start` to `end` on the basis: 30/360 on Excel's displayed days (bases 0 and 4), serial days
     otherwise."""
@@ -193,7 +185,7 @@ def bond(args: Sequence[MathArg], *, redemption: bool, price_given: bool) -> Bon
     if not 0 <= basis <= 4:
         msg = f"basis {basis} is outside 0..4"
         raise DomainError(msg)
-    settlement, maturity = whole_date(s), whole_date(m)
+    settlement, maturity = whole_serial(float(s)), whole_serial(float(m))
     if int(f) not in FREQUENCIES:
         msg = f"frequency {f} is not 1, 2 or 4"
         raise DomainError(msg)

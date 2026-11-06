@@ -128,7 +128,9 @@ def actual_year(start: datetime.date, end: datetime.date) -> Fraction:
     return Fraction(366 if leap else 365)
 
 
-def _serial(x: float) -> int:
+def whole_serial(x: float) -> int:
+    """A date argument floored to a whole serial; DomainError (`#NUM!`) outside 0..2958465 (YEARFRAC, and the bond
+    functions' settlement and maturity, T-4113)."""
     whole = int(x // 1)
     if not 0 <= whole <= LAST_DAY:
         msg = f"date {x} is outside 1900-01-00..9999-12-31"
@@ -142,7 +144,7 @@ def yearfrac_value(start: float, end: float, basis: int = 0) -> Fraction:
     if not 0 <= basis < 5:
         msg = f"basis {basis} is outside 0..4"
         raise DomainError(msg)
-    s, e = sorted((_serial(start), _serial(end)))
+    s, e = sorted((whole_serial(start), whole_serial(end)))
     days = e - s
     if basis == 0:
         return Fraction(us_30_360(displayed_date(s), displayed_date(e)), 360)
