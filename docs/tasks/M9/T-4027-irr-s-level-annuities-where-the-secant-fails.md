@@ -3,7 +3,7 @@ id: T-4027
 title: "IRR's level annuities where the secant fails: find Excel's path (t3406 A1-A96; uncapped Newton plus the residual cut breaks 39 of them)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
