@@ -4796,9 +4796,11 @@ within 1E-15 relative / largest relative error:
     Fresh sweep after the rule froze (probes/t4437-beta-zero-fresh, 102 cells, excel-graph, 2026-11-06;
     docs/research/t4437/gen_fresh.py): (3E6, 3.5), (5E6, 6.5), (8E6, 4.5), (1E6, 5) and (4E6, 7.5), n from 3 to 7,
     17 rows 0.25 nats apart around the edge. Scored once: every family's first 0 is on the predicted row (row 10, W
-    0.88 times 2^-970) and its last number on row 9 (1.13 times), 85 of 85 cells on the predicted side.
-  - **n = 2 is not this rule.** (5E6, 2.5) and (5E6, 3) (t4437-beta-t-zero-bracket D, F) are 0 at every row from W
-    0.22 times 2^-970 down. (2E6, 2.5) (t4437-beta-zero-fresh D) is a number at every row, down to 0.15 times it.
+    0.88 times 2^-970) and its last number on row 9 (1.13 times), 85 of 85 cells on the predicted side. The sweep's
+    sixth family, (2E6, 2.5) at n = 2, is a number at every row, below the edge too, so the rule as frozen (any n)
+    scored 94 of 102. The n >= 3 domain was chosen after that score and is not yet re-swept (T-4437, in progress).
+  - **n = 2 is not settled.** (5E6, 2.5) and (5E6, 3) (t4437-beta-t-zero-bracket D, F) are 0 at every row, all at W
+    0.22 times 2^-970 and below, which agrees with the rule. (2E6, 2.5) (t4437-beta-zero-fresh D) is a number at every row, down to 0.15 times it.
     The density P does not separate them either. Unmodelled (T-4564).
   - **T.DIST.RT, bracketed** (t4437-beta-t-zero-bracket G:I, ln of the true tail by 0.5): the last number and the
     first 0 are at -687 / -687.5 at df 1E7, -692 / -692.5 at 1E6 and -696.5 / -697 at 1E5 (numbers down to

@@ -18,7 +18,7 @@ BETA.DIST at n = 2 bup terms and T.DIST.RT give Excel's exact 0 wherever Excel d
 - T-4437 (statistics.md "Where the exact 0 starts (T-4045)"): at n >= 3 bup terms L140 bup+bgrat's tail is 0 when
   bup's sum W is below 2^-970 (`bup.rs` `l140_bup_sum_flushed`). That rule does not hold at n = 2:
   - probes/t4437-beta-t-zero-bracket D (5E6, 2.5) and F (5E6, 3) are 0 at every row, at W 0.22 and 0.16 times
-    2^-970 and below;
+    2^-970 and below (consistent with the rule);
   - probes/t4437-beta-zero-fresh D (2E6, 2.5) is a number at every row, down to W 0.15 times 2^-970 (row 17).
   - The density P is no separator either (0 at ln P - ln 2^-970 = +0.56, a number at -0.71). Probe n = 2 across
     a0 from 1E6 to 1E7 and below the walked range, to find what a0 changes.

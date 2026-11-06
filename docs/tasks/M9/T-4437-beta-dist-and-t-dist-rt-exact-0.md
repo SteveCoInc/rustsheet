@@ -3,7 +3,7 @@ id: T-4437
 title: "BETA.DIST and T.DIST.RT exact 0 at a tiny tail: apply T-4045's L140 prefactor rule to BETA.DIST and find the earlier cut at n = 3 bup terms and in the t"
 milestone: M9
 lane: functions-stat
-status: done
+status: in-progress
 priority: P2
 size: M
 tier: opus
@@ -69,13 +69,17 @@ it.
 - F (T-4045); the df1 = 2 closed-form zeros.
 
 ## Outcome
-- **Mechanism (n >= 3 bup terms).** probes/t4437-beta-t-zero-bracket walks by 0.5 nats from -680 to -698 and puts
-  the cut on bup's sum W = ret·S. L140 bup+bgrat's BETA.DIST is 0 exactly where W < 2^-970 (DBL_MIN / eps), at
-  (5E6, 3.5), (5E6, 4), (1E6, 3.5) and (5E6, 5.5). The last numbers have W = 1.10 to 1.60 times 2^-970 and the
-  first zeros 0.67 to 0.97 times it. The threshold is a structural constant read off the mechanism's scale, not
-  scored. The fresh sweep after the freeze (probes/t4437-beta-zero-fresh, 5 untouched shapes with n from 3 to 7,
-  steps of 0.25 nats) was scored once: 85 of 85 cells on the predicted side. `bup.rs` `l140_bup_sum_flushed`,
-  asked by `bratio::beta_dist_cdf` only (not F, not the quantile searches); statistics.md records it.
+- **Mechanism (candidate, not yet passed R4).** probes/t4437-beta-t-zero-bracket walks by 0.5 nats from -680
+  to -698. At (5E6, 3.5), (5E6, 4), (1E6, 3.5) and (5E6, 5.5) (n = 3 to 5), Excel's 0 starts where bup's sum
+  W = ret·S falls below 2^-970 (DBL_MIN / eps): the last numbers have W = 1.10 to 1.60 times 2^-970, the first zeros
+  0.67 to 0.97 times it. The n = 2 families (5E6, 2.5) and (5E6, 3) are 0 at every row, all with W below 2^-970
+  (0.22 and 0.16 times it and down), so they agree with the rule too.
+- **Fresh sweep, as frozen (no n restriction): 94 of 102.** probes/t4437-beta-zero-fresh, six untouched shapes, rows
+  0.25 nats apart. (3E6, 3.5), (5E6, 6.5), (8E6, 4.5), (1E6, 5) and (4E6, 7.5) turn 0 on the predicted row (85 of 85).
+  (2E6, 2.5), at n = 2, is a number at every row, D10:D17 included, below the edge, which falsifies the rule as frozen.
+  The branch's code then narrowed it to n >= 3 (`bup.rs` `l140_bup_sum_flushed`), a domain bound chosen after the
+  sweep was scored. The excel-fidelity reviewer blocked it for that (round 1, below). The rule must be re-frozen and
+  swept fresh again.
 - **Named cells:** t4254-beta-t-l140-zero-cut B1:B11 and D1:D11, and t4254-beta-t-zero-wide A30, B30 and C30,
   are now Excel's 0. A29, B28 and B29 stay 9th-digit numbers (the criterion allows it).
 - **Split to T-4564, with evidence (bracketed, unmodelled):**
@@ -88,3 +92,21 @@ it.
 - Eval delta (after merging main): probes fixed 45 (T-4254's 25 named cells and 20 of T-4456's t4456 zero cells),
   0 regressions, 2 new cases (435 cells; 302 new-coverage failures, every one owned
   by T-4564: the n = 2 and t cells, and 8th to 9th digit numbers near the edge).
+
+## Landing notes
+- PR #3587 (draft), head after this commit. CI has not run on a finished head. The math sidecars of both new cases
+  are in this commit (`rustsheet-accuracy math --suite probes --function BETA.DIST`; it also rewrote two unrelated
+  sidecars, t2436/35e8168aae2b00f8 and t3576-negbinom-cdf-huge-s, which were reverted, so check `make
+  eval-math-check` before pushing).
+- Review round 1 on b69fee474: security APPROVE, design APPROVE (MINOR: `l140_sum_flushed_tails` copies
+  `l140_prefactor_zero_tails` apart from the predicate, so take one helper; add a unit test at the edge),
+  excel-fidelity REQUEST_CHANGES:
+  1. BLOCKING: the fresh sweep is 94/102 as frozen, and the n >= 3 domain was chosen after it (above).
+  2. MAJOR: the R4 hold-out guard and the Gate A envelope counts are missing from the Outcome.
+  3. MINOR: the sweep's 0.25-nat rows barely test the constant. Use about 0.05 nats near the edge.
+- Next step: give a mechanistic reason for excluding n = 2 or drop the restriction. The data so far: n = 2 at a 5E6
+  is 0 below the edge, while n = 2 at 2E6 stays a number below it. T-4456's t4456-beta-t-zero-reach also has n = 2
+  and 3 zeros at (2E6, 2.5|3.5). Then re-freeze, fix the hold-out split before scoring, and run a new fresh sweep
+  at untouched shapes (n = 3 to 30, several a0, about 0.05 nats near the edge). Record both counts and the Gate A
+  envelope result, and re-run the full panel.
+- Do not repeat: reporting 85/85 for the sweep, or saying that n = 2 is "0 above 2^-970" (it is 0 below it).
