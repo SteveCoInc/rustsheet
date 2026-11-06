@@ -3,7 +3,7 @@ id: T-4133
 title: "Fuzz target for pivot import (and render once it exists)"
 milestone: M16
 lane: quality
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
