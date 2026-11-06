@@ -23,13 +23,18 @@ from __future__ import annotations
 
 import math
 import random
-import sys
 from collections.abc import Callable, Sequence
 from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, one_of, scalars, signed_log_uniform
+from rustsheet_tools.accuracy.defs._common import (
+    NORMAL_MIN,
+    by_stratum,
+    one_of,
+    real_args,
+    signed_log_uniform,
+)
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, MathArg, Param, register
 from rustsheet_tools.fitlab.exact import double_round
@@ -40,7 +45,7 @@ MAX_ARGS = 255  # Excel's argument limit
 
 def flush(v: float) -> float:
     """`v`, or 0 when it is a nonzero below the smallest normal double (numbers.md "Subnormal results become 0")."""
-    return 0.0 if v != 0 and abs(v) < sys.float_info.min else v
+    return 0.0 if v != 0 and abs(v) < NORMAL_MIN else v
 
 
 def running(xs: Sequence[float], step: Callable[[float, float], Fraction], start: float) -> list[float]:
@@ -104,23 +109,23 @@ def _overflow(values: list[float]) -> str | None:
 
 
 def _product_domain(args: Sequence[MathArg]) -> str | None:
-    return _overflow(running_product([float(x) for x in scalars(args)]))
+    return _overflow(running_product([float(x) for x in real_args(args)]))
 
 
 def _sumsq_domain(args: Sequence[MathArg]) -> str | None:
-    return _overflow(running_sumsq([float(x) for x in scalars(args)]))
+    return _overflow(running_sumsq([float(x) for x in real_args(args)]))
 
 
 def _product(args: Sequence[MathArg]) -> mpmath.mpf:
     """The exact product, or 0 where a literal or running product is flushed."""
-    xs = scalars(args)
+    xs = real_args(args)
     products = running_product([float(x) for x in xs])
     return mpmath.mpf(0) if products and products[-1] == 0 else mpmath.fprod(xs)
 
 
 def _sumsq(args: Sequence[MathArg]) -> mpmath.mpf:
     """The exact sum of the squares that are not flushed."""
-    xs = scalars(args)
+    xs = real_args(args)
     return mpmath.fsum(
         x * x for x, square in zip(xs, squares([float(x) for x in xs]), strict=True) if square != 0
     )
@@ -131,7 +136,7 @@ def _sumsq(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _normal(values: list[float]) -> bool:
     """Whether no running value is a nonzero below the smallest normal double (underflow is not claimed)."""
-    return all(v == 0 or abs(v) >= sys.float_info.min for v in values)
+    return all(v == 0 or abs(v) >= NORMAL_MIN for v in values)
 
 
 def _near_one(rng: random.Random) -> float:

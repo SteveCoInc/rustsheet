@@ -63,7 +63,7 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import fraction_to_mpf, scalars
+from rustsheet_tools.accuracy.defs._common import fraction_to_mpf, real_args
 from rustsheet_tools.accuracy.defs.annuity import unique_rate
 from rustsheet_tools.accuracy.defs.bonds import (
     CARET_SOURCE,
@@ -125,7 +125,7 @@ class OddArgs:
 def odd_args(args: Sequence[MathArg], n_dates: int, *, price_given: bool) -> OddArgs:
     """The arguments read and checked ("ODDFPRICE, ODDFYIELD, ODDLPRICE and ODDLYIELD check order": every check here
     is `#NUM!`); the date order is the caller's."""
-    a = scalars(args)
+    a = real_args(args)
     dates = tuple(whole_serial(float(x)) for x in a[:n_dates])
     rate, fourth, red, f = a[n_dates : n_dates + 4]
     rest = a[n_dates + 4 :]

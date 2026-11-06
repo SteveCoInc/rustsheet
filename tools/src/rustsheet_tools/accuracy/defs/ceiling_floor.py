@@ -41,6 +41,7 @@ from fractions import Fraction
 import mpmath
 
 from rustsheet_tools.accuracy import model
+from rustsheet_tools.accuracy.defs._common import is_real
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, MIN_LITERAL, Arg, decimal15, exponent10
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import decimal_literal, log_uniform, random_sign
@@ -143,10 +144,10 @@ def snapped(function: str, number: float, significance: float, mode: int = 0) ->
 def _value(function: str) -> Callable[[Sequence[MathArg]], mpmath.mpf]:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
         number, significance, *rest = args
-        assert not isinstance(number, bool | tuple) and not isinstance(significance, bool | tuple)
+        assert is_real(number) and is_real(significance)
         mode = 0
         if rest:
-            assert not isinstance(rest[0], bool | tuple)
+            assert is_real(rest[0])
             mode = int(rest[0])
         return mpmath.mpf(str(snapped(function, float(number), float(significance), mode)))
 

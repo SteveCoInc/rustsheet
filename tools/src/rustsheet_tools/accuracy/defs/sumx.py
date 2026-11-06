@@ -31,13 +31,18 @@ from __future__ import annotations
 
 import math
 import random
-import sys
 from collections.abc import Callable, Sequence
 from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, one_of, signed_log_uniform
+from rustsheet_tools.accuracy.defs._common import (
+    NORMAL_MIN,
+    by_stratum,
+    domain_of,
+    one_of,
+    signed_log_uniform,
+)
 from rustsheet_tools.accuracy.defs.aggregate import SNAP_SOURCE, running_total
 from rustsheet_tools.accuracy.defs.product import OVERFLOW_SOURCE, flush, running_product, squares
 from rustsheet_tools.accuracy.literal import Arg, round15
@@ -141,7 +146,7 @@ def _normal(value: Callable[[Sequence[MathArg]], mpmath.mpf], args: list[Arg]) -
         bases = [float(x) for a in arrays for x in a]
         bases += [double_round(Fraction(float(x)) - Fraction(float(y))) for x, y in _pairs(arrays)]
         values = [double_round(Fraction(b) ** 2) for b in bases]
-    return all(v == 0 or abs(v) >= sys.float_info.min for v in values)
+    return all(v == 0 or abs(v) >= NORMAL_MIN for v in values)
 
 
 def _array(rng: random.Random, count: int, lo: float, hi: float, negative: float = 0.3) -> tuple[float, ...]:

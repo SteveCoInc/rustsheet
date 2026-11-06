@@ -32,12 +32,11 @@ from __future__ import annotations
 
 import math
 import random
-import sys
 from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import CONDITION_LIMIT, scalars
+from rustsheet_tools.accuracy.defs._common import CONDITION_LIMIT, NORMAL_MIN, real_args
 from rustsheet_tools.accuracy.defs.continuous import LEGACY_FIRST_SOURCE
 from rustsheet_tools.accuracy.defs.normal import INV_SOURCE, density, standard_quantile
 from rustsheet_tools.accuracy.literal import Arg
@@ -48,7 +47,7 @@ DOUBLE_P_SOURCE = "statistics.md#confidencenorm-forms-1---alpha2-in-doubles-t-41
 MICROSOFT_SOURCE = "Microsoft CONFIDENCE.NORM / CONFIDENCE pages: argument limits"
 
 P_ROUNDING = 2.0**-54  # the largest rounding of 1 - alpha/2 in [1/2, 1)
-RANGE = (sys.float_info.min, 1e300)  # an intermediate inside this is a normal double, clear of the overflow
+RANGE = (NORMAL_MIN, 1e300)  # an intermediate inside this is a normal double, clear of the overflow
 REDRAWS = 50
 
 
@@ -68,14 +67,14 @@ def confidence_cancels(alpha: float) -> bool:
 
 
 def _domain(args: Sequence[MathArg]) -> str | None:
-    alpha = float(scalars(args[:1])[0])
+    alpha = float(real_args(args[:1])[0])
     if 0 < alpha < 1 and p_rounds_to_one(alpha):
         return "1 - alpha/2 rounds to 1 in doubles (NORM.S.INV(1) is #NUM!)"
     return None
 
 
 def _confidence(args: Sequence[MathArg]) -> mpmath.mpf:
-    alpha, sd, size = scalars(args)
+    alpha, sd, size = real_args(args)
     z = standard_quantile(1 - alpha / 2)
     root = mpmath.sqrt(size)
     for intermediate in (sd, sd * z, sd / root, sd * z / root):

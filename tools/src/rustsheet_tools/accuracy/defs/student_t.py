@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import DF_CUT
+from rustsheet_tools.accuracy.defs._common import DF_CUT, is_real
 from rustsheet_tools.accuracy.model import (
     Definition,
     Interval,
@@ -123,7 +123,7 @@ def quantile(p: mpmath.mpf, df: mpmath.mpf) -> mpmath.mpf:
 
 def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     df = args[1]
-    if isinstance(df, (bool, str, tuple)) or df < 1:
+    if not is_real(df) or df < 1:
         msg = "no tail map below df 1"
         raise ValueError(msg)
     x = lower_quantile(q, mpmath.floor(df))
@@ -132,14 +132,14 @@ def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _t_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df, cumulative = args
-    assert not isinstance(x, (bool, str, tuple)) and not isinstance(df, (bool, str, tuple))
+    assert is_real(x) and is_real(df)
     _t_dist_cut(x, cumulative=bool(cumulative)).check_probed(x)
     return cdf(x, df) if cumulative else density(x, df)
 
 
 def _t_dist_domain(args: Sequence[MathArg]) -> str | None:
     df, cumulative = args[1], args[2]
-    if cumulative and not isinstance(df, (bool, str, tuple)) and df > DF_CUT:
+    if cumulative and is_real(df) and df > DF_CUT:
         return "cumulative df above 1E+10"
     x = _x_of(args)
     return _t_dist_cut(x, cumulative=bool(cumulative)).domain(x)
@@ -147,7 +147,7 @@ def _t_dist_domain(args: Sequence[MathArg]) -> str | None:
 
 def _t_inv(args: Sequence[MathArg]) -> mpmath.mpf:
     p, df = args
-    assert not isinstance(p, bool) and not isinstance(df, bool)
+    assert is_real(p) and is_real(df)
     return quantile(p, df)
 
 
@@ -237,7 +237,7 @@ def two_tailed_quantile(p: mpmath.mpf, df: mpmath.mpf) -> mpmath.mpf:
 
 def _t_inv_2t(args: Sequence[MathArg]) -> mpmath.mpf:
     p, df = args
-    assert not isinstance(p, bool) and not isinstance(df, bool)
+    assert is_real(p) and is_real(df)
     return two_tailed_quantile(p, df)
 
 
@@ -342,7 +342,7 @@ def _rt_cut(x: mpmath.mpf) -> HugeXCut:
 
 def _x_of(args: Sequence[MathArg]) -> mpmath.mpf:
     x = args[0]
-    assert not isinstance(x, (bool, tuple))
+    assert is_real(x)
     return x
 
 
@@ -359,7 +359,7 @@ def _upper_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _t_dist_rt(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(df, (bool, tuple))
+    assert is_real(x) and is_real(df)
     _rt_cut(x).check_probed(x)
     return upper_tail(x, df)
 
@@ -378,8 +378,8 @@ def _tails_upper(
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
         x, df = args[0], args[1]
         tails = args[2] if len(args) > 2 else mpmath.mpf(2)
-        assert not isinstance(x, (bool, tuple)) and not isinstance(df, (bool, tuple))
-        assert not isinstance(tails, (bool, tuple))
+        assert is_real(x) and is_real(df)
+        assert is_real(tails)
         cut.check_probed(x)
         return tails * upper_tail(x, df)
 
@@ -482,8 +482,8 @@ def confidence_margin(alpha: mpmath.mpf, sd: mpmath.mpf, n: mpmath.mpf) -> mpmat
 
 def _confidence_t(args: Sequence[MathArg]) -> mpmath.mpf:
     alpha, sd, n = args
-    assert not isinstance(alpha, (bool, str, tuple)) and not isinstance(sd, (bool, str, tuple))
-    assert not isinstance(n, (bool, str, tuple))
+    assert is_real(alpha) and is_real(sd)
+    assert is_real(n)
     if sd < 0:
         msg = "a negative standard_dev is unprobed"
         raise NoValueError(msg)
