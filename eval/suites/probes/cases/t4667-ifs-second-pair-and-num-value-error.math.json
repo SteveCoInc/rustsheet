@@ -1,0 +1,23 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "f9adb83972e8b111e34d6594c46420510602054f8281edf93193fcc187e0f8af"
+ },
+ "sheets": {
+  "P": {
+   "N1": {
+    "t": "e",
+    "why": "number outside [0, inf)",
+    "f": "=SQRT(-1)"
+   },
+   "N4": {
+    "t": "e",
+    "why": "number outside [0, inf)",
+    "f": "=SQRT(-1)"
+   }
+  }
+ }
+}
