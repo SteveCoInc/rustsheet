@@ -3,7 +3,7 @@ id: T-3994
 title: "Phase 1 exit owners line: decide how a visibly-off cell with no math value, owned only by a deferred last-digit task, counts (61 cells today)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
