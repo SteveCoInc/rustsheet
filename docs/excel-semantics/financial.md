@@ -510,7 +510,10 @@ nper + 1 is a value, the split of "IPMT and PPMT split Excel's discounted paymen
 60.5849877072275,1)` 5.466510612214358. At nper + 1 it is `#NUM!`: `PPMT(0.0449398904217299,315,314,-3107.59202412783,
 0,1)`, `PPMT(0.0805588428682658,227,226,16.1638393072709,0,0)` and `IPMT(0.0104741966355263,249,248,340880.668375193,0,0)`;
 so is a period of 0.5 (`IPMT(0.00268654404805728,0.5,11,-557.559050130903,0,0)`), 0 or -1.
-Unprobed: IPMT at a period strictly between nper and nper + 1 (the engine takes PPMT's bound for both).
+Unprobed: IPMT at a period strictly between nper and nper + 1 (the engine takes PPMT's bound for both). The only IPMT
+cells in that band, probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,1E-300)`, period 1 over nper 1E-10),
+are `#NUM!` for a subnormal `1-Q` ("IPMT is #NUM! where its discounted balance fails"), so they do not settle the band;
+the Gate A definition keeps the closed form there and the cells keep their math value (T-4516).
 Evidence: accuracy/PPMT/s1 A112, A118 (values), A128, A137, A139 (`#NUM!`); accuracy/IPMT/s1 A113, A114, A117, A120,
 A123, A139 (`#NUM!`) (excel-graph, 2026-11-06, T-4109); gen-m9 a91bad4e84f49739 A354 `PPMT(1,0.5,323,401723)` and
 c0681a8b150ce301 A375 `PPMT(0.1,9,1.5,404118,62,1)` (`#NUM!`); "Financial edge-pool smoke check" (IPMT 13 of 12).
@@ -532,6 +535,8 @@ rate 1.1E-16 is `#DIV/0!` (A124), 2.3E-16 a value (A135). The double form above 
 the tiny-rate ones included (A82, A85, A89, A107, A112, A116, A120, A135 are 2.2E-4 to 9.9E-2 off the math). Earlier
 cells: gen-m9 31474c20fc1dafd6 A194 `PDURATION(0,7968,32308)` and 9a1fa5366bc50918 A196 `PDURATION(100,0,49370)`
 (`#NUM!`), e168be7f6d3f84c2 A180 `PDURATION(1E-300,4938,46197)` (`#DIV/0!`).
+Unprobed: a rate so small that `1+rate` is 1 with fv equal to pv (`LN(fv)-LN(pv)` and `LN(1+rate)` both 0); the Gate A
+definition gives it no value (T-4516).
 Status: VERIFIED (excel-graph)
 Implemented in: `pduration_of` (functions/financial/growth.rs)
 Tasks: T-4109

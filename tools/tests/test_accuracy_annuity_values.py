@@ -122,9 +122,14 @@ def test_unprobed_points_have_no_value() -> None:
         (ISPMT, (0.1, 1, 0, 1000)),
         (FV, (-1.5, 3, -1, 1)),  # rate below -1
         (IPMT, (-1, 1, 5, 100)),
+        (PDURATION, (1e-300, 4938, 4938)),  # 1 + rate is 1 and fv = pv: 0/0, unprobed
     ]:
         with pytest.raises(NoValueError):
             definition.evaluate([mp(a) for a in args])
+    # accuracy/PPMT/s1 A118: PPMT(0.0798622533510215,139.5,139,-115683.067689867,0,0) is 8890.724785738455
+    assert value(PPMT, 0.0798622533510215, 139.5, 139, -115683.067689867, 0, 0) == pytest.approx(
+        8890.724785738455, rel=1e-14
+    )
     # IPMT in period 1 of type 1 is 0 even where 1/P overflows ("PMT when (1+rate)^nper overflows or underflows")
     assert value(IPMT, -0.5, 1, 2000, 1, 0, 1) == 0
 
