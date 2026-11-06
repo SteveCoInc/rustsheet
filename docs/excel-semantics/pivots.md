@@ -302,7 +302,9 @@ Status: VERIFIED (excel-graph) for the table; the refusal is a builder observati
 Rule (each aggregate in a value field that also holds other kinds of value):
 - **Skipped values.** Text, blanks and booleans are skipped by Sum, Average, Max, Min, Product, StdDev,
   StdDevp, Var, Varp and CountNums. A boolean is not a number: `TRUE` is not 1.
-- **Count** counts every non-blank value: numbers, text, booleans and errors.
+- **Count** counts every non-blank value: numbers, text, booleans and errors. Its grand total can still
+  be an error when the pivot mixes aggregates (see "A Count grand total over an error field is the
+  error when the pivot mixes aggregates").
 - **CountNums** counts numbers only. An error does not poison it.
 - **Errors.** An error poisons every aggregate except Count and CountNums. The aggregate shows the error
   (`#N/A`) in the cell holding it and in every subtotal and grand total that covers that cell. Cells that
@@ -336,7 +338,7 @@ Rule (on the evidenced cells):
   the records added item by item in ascending item order. Which of the two Excel uses is open (T-4614).
 - **Average** totals do not follow Sum's order. In both probes they equal the sum in first-seen item
   order, and also in descending value order, divided by the count. Which one is open (T-4614).
-- **Product** totals equal the record-order product in t4135.
+- **Product** totals equal the record-order product on t4135's one cell set (T-4614 checks it further).
 
 Evidence (excel-graph, 2026-11-06):
 - probes/t4135-pivot-aggregates (T-4135), field Dec: East records in record order 0.3 (B), 0.2 (A),
