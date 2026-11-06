@@ -725,6 +725,7 @@ C	probes/irr-guess-edges.case.json	47
 C	probes/is-functions-array-lift.case.json	79
 C	probes/is-functions-scalar-kinds.case.json	89
 C	probes/iseven-isodd-below-integer.case.json	78
+C	probes/iseven-isodd-range-derived-arrays.case.json	192
 C	probes/iseven-isodd-rounding-threshold.case.json	124
 C	probes/iseven-isodd-rounding-window.case.json	84
 C	probes/isref-function-results.case.json	6
