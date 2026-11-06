@@ -745,6 +745,7 @@ impl RunReport {
             }
             let _ = writeln!(md);
         }
+        crate::pivot_scoring::write_markdown(&self.cases, &mut md);
         self.write_evidence(&mut md);
         catalog_coverage::write_markdown(&self.catalog_coverage, &mut md);
         out_of_scope::write_markdown(&self.out_of_scope, &self.suites, &mut md);

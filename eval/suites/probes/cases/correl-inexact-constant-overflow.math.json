@@ -278,15 +278,30 @@
     "why": "#NUM!: the sum about x's mean is beyond the double range",
     "f": "=INTERCEPT(AC1:AC3,AA1:AA3)"
    },
+   "Z65": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=STEYX(AC1:AC3,AA1:AA3)"
+   },
    "Z66": {
     "t": "e",
     "why": "#NUM!: a sum about a mean is beyond the double range",
     "f": "=RSQ(AC1:AC3,AA1:AA3)"
    },
+   "Z67": {
+    "t": "n",
+    "v": "6.6666666666666664648874814167357443964966885030335e+199",
+    "f": "=COVARIANCE.P(AA1:AA3,AC1:AC3)"
+   },
    "Z68": {
     "t": "e",
     "why": "#NUM!: the sum about x's mean is beyond the double range",
     "f": "=FORECAST(1,AC1:AC3,AA1:AA3)"
+   },
+   "Z69": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=STEYX(AI1:AI2,AH1:AH2)"
    },
    "Z7": {
     "t": "e",
@@ -337,6 +352,11 @@
     "t": "n",
     "v": "9.9999999999999869723840906639560588046727528381431e+152",
     "f": "=SLOPE(AG1:AG3,AC1:AC3)"
+   },
+   "Z79": {
+    "t": "n",
+    "v": "0.0000000000000048616352421743322269585435027466662413383249622933",
+    "f": "=STEYX(AC1:AC3,AG1:AG3)"
    },
    "Z8": {
     "t": "e",

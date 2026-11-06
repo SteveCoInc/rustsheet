@@ -4678,6 +4678,37 @@ Evidence: probes-numeric cases `m9-legacy-betadist`, `-betainv`, `-binomdist`, `
 Status: VERIFIED (excel-graph)
 Tasks: T-1047
 
+## CONFIDENCE.NORM forms 1 - alpha/2 in doubles (T-4101)
+Rule: CONFIDENCE.NORM(alpha, sd, n) and CONFIDENCE are NORM.S.INV(p)*sd/SQRT(n) with p the double 1 - alpha/2, so the
+rounding of p decides the value at both ends of alpha:
+- p rounds to 1 for alpha <= 2^-53, and the result is `#NUM!` (as `NORM.S.INV(1)` is) although the math has a value:
+  `CONFIDENCE(1E-16,0.5,6)`, `CONFIDENCE.NORM(1E-16,0.5,6)`, `CONFIDENCE(1E-20,2.5,15)`, `CONFIDENCE.NORM(1E-100,2,5)`,
+  `CONFIDENCE(1E-300,99999,9)` are `#NUM!` (accuracy/CONFIDENCE/s1 A131, A138, A112; accuracy/CONFIDENCE.NORM/s1 A113,
+  A128; gen-m9/320d51765af9b6b7 A217, gen-m9/f2bd5f380ec002bf A62), while `CONFIDENCE(1E-15,0.01,9)` is a number
+  (gen-m9/8dd2312c96effb1b A251). `NORM.S.INV(1-1E-16)` is 8.209536151601386 (probes-numeric/t1543-inverse-cdf-tiny-p
+  A11), and 1-1E-16 is the double 1-2^-53, the largest p below 1: so every alpha above 2^-53 gives a p below 1 and a
+  number, which with `#NUM!` at alpha = 1E-16 pins the cut at alpha <= 2^-53. Only (1E-16, 2^-53] has no direct cell.
+- Near alpha = 0 the tail probability alpha/2 keeps only the digits 1 - alpha/2 holds: `CONFIDENCE(1E-15,0.01,9)` is
+  0.026713386495918482 against the math 0.026756196275115137 (1.6E-3 low), and `CONFIDENCE(1E-15,1E-300,2)` is
+  5.6667650219163304E-300 against 5.6758463474676471E-300 (gen-m9/c6cfda6bd10cae93 A73). At alpha = 1E-9 and 1E-10
+  the gap is 2.2E-9 and 1.9E-9 (probes-numeric/m9-legacy-confidence A9 and A10: 0.8640010751150629 against
+  0.86400107698268906; gen-m9/06b4e8f5de409d5e A373).
+- Near alpha = 1, p is 0.5 + (1 - alpha)/2 and loses the digits of 1 - alpha: `CONFIDENCE(1-1E-16,0.1,6)`,
+  `CONFIDENCE(1-1E-16,99999,26)`, `CONFIDENCE.NORM(1-1E-16,1E+8,2)` and `(..,1E+8,6)` are 0 (p rounds to 0.5), where
+  the math is positive (5.68E-18 for the first) (gen-m9/05d44f6dd6cfc567 A230, 8d3588d8df0812df A124, 8dd2312c96effb1b
+  A346, 146b46e74f2dac3b A349); `CONFIDENCE(0.999999,2,10)` is 1.1E-10 off (gen-m9/68d8ffb69ff739d8 A230).
+On all 65 literal numeric cells (the cells above, probes-numeric/m9-legacy-confidence and gen-m9), Excel's value is
+the exact NORM.S.INV of the double 1 - alpha/2 times sd/SQRT(n) within 6E-16 relative, so the gaps are the rounding of
+p alone. The points more than 1e-4 off the math (alpha = 1E-15 and 1 - 1E-16, and gen-m9/9cca17438a7e6f8a A229,
+whose alpha is 4.14159E-15 from cell arithmetic: 24.568906699324142 against 24.576163526554711, 3.0E-4) are kept as
+Excel's (decision 0300).
+Gate A (tools/src/rustsheet_tools/accuracy/defs/confidence.py): alpha <= 2^-53 is a domain rule (`#NUM!`); points where
+p's rounding can move the value by more than 1e-10 (alpha below about 4E-8 or above about 1 - 1.1E-6) are not drawn.
+Ours: `functions/statistical/normal.rs` `confidence_norm_of` computes `1.0 - alpha / 2.0` the same way: the `#NUM!` and
+0 cells above match, and the numbers are within a few ulp (the central NORM.S.INV, T-1746).
+Status: VERIFIED (excel-graph)
+Tasks: T-4101
+
 ## Legacy distribution names sweep, second family (T-1048)
 Implemented in: `functions/statistical/hypegeom.rs`, `weibull.rs` (HYPGEOMDIST/HYPGEOM.DIST sample_s above min(number_sample, population_s) is 0 or 1, zero counts valid, TRUE sample_s; WEIBULL density 0 at x = 0, TRUE x)
 Tasks: T-2035
@@ -5262,7 +5293,24 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
     69.33093). No closed form found; the engine takes the midpoint 8.32535E-17 (chisq.rs
     `ONE_DEGREE_RIGHT_TAIL_P_MIN`), and a fresh sweep after that choice (t3858-chisq-df1-num-cutoff-fresh, 40
     log-uniform p in [5.6E-17, 1.1E-16], CHISQ.INV.RT and CHIINV) agrees at all 80 cells. Mind the literals: a p literal with more than 15 significant digits is cut to 15
-    (numbers.md), so ulp-level p must be built from powers of two, as here.
+    (numbers.md), so ulp-level p must be built from powers of two, as here. Above the edge Excel's 68.7632522116684 is 0.3% to
+    0.8% off the math, so there the engine returns the math under T-3337's rule (marked under "Tiny-p quantiles", T-4555).
+  - T-3337 (2026-11-06; time-boxed under decision 0056). Where rounding 1 - p moves the quantile by more than G
+    (evidenced from 9E-17 to 3.5E-15), the engine returns the math (decision 0267 item 3; see "Tiny-p quantiles"
+    below). Everywhere else Excel's own landing is the target and stays unmatched:
+    Excel's value is the exact lower quantile of a double u near q = fl(1 - p), or a value inside one band of the cdf.
+    Two landing rules were scored against Excel on the 110 CHISQ.INV.RT and CHIINV cells of t3336 with p of 1E-12 or
+    more. For each rule, x is the correctly rounded exact quantile of u:
+    - H0, u = q, which is the engine: 16 cells bit-exact, 87 within 15 digits.
+    - H1, u = the double below q (draft PR #2503's lead): 5 bit-exact, 13 within 15 digits. It is bit-exact only at
+      1E-5 and 1E-9 (both functions) and at 1E-9 with df 1.5.
+    - H2, u = 2 * fl((1 + q) / 2) - 1, a normal-quantile route that drops q's last bit: 13 bit-exact, 74 within 15
+      digits. It fixes 11 cells H0 misses (1E-5, 5E-7, 1E-8, 1E-9 and 7E-10, both functions, and 1E-9 at df 1.5) but
+      loses 24 that H0 matches.
+    - Excel's step is not a last-bit error of its own cdf: `CHISQ.DIST(37.324893106518715,1,TRUE)` is exactly
+      0.999999999 = q in Excel (t3336 A256), yet Excel's `CHISQ.INV.RT(1E-9,1)` lands one band below. At 2E-6, 1E-7,
+      2E-9 and 1E-13 Excel is more than 2 ulp from the exact quantile of every double within 4 ulp of q. So the search
+      does not stop on a fixed band rule. Reopen only with a new hypothesis (decision 0056).
   - Excel's search gives up in the far right tail. Below an edge that depends on df, CHISQ.INV.RT and CHIINV are
     `#NUM!`, though the quantile exists and CHISQ.DIST.RT past it is a plain number. With p = 1E-k, the last k that
     is still a value is, for df 3 to 42: 20, 27, 35, 43, 52, 62, 72, 81, 87, 90, 94, 99, 104, 110, 116, 121, 127,
@@ -5856,11 +5904,38 @@ Unequal sizes and single points follow "Array arguments given a scalar, a single
     exact value on every table point. The probe data a few ulps apart near 1E+160 is the exception, as Excel's double
     mean decides there: probes/t4047-paired-overflow J1 and J7 (CORREL, PEARSON) are 1.1E-4 off the exact value, J6
     (RSQ) 2.3E-4, and J3 and J5 (INTERCEPT, FORECAST) 6.7E-4; ours matches Excel on all five.
+- Gate A tables (T-4095; accuracy/{COVAR,COVARIANCE.P,COVARIANCE.S,STEYX}/s1, excel-graph 2026-11-06, one-row array
+  literals, 120 points each): every error cell is one of the rules above or below, and ours matches Excel to the bit on
+  all 480 points.
+  - Covariance: COVAR and COVARIANCE.P are Sxy/n, COVARIANCE.S Sxy/(n - 1). Unequal lengths are `#N/A` (COVARIANCE.P
+    A69, A76, A77, A82; COVARIANCE.S A71, A78). One pair is 0 for COVAR and COVARIANCE.P and `#DIV/0!` for COVARIANCE.S
+    (COVARIANCE.S A68, A70, A74, A76, A79; as `COVARIANCE.P(4,5)` 0 and `COVARIANCE.S(4,5)` `#DIV/0!`,
+    probes/t2436/computed-scalar A29, A30). A sum about one mean past the double range does not matter: with one
+    argument of 1E+199 to 1E+201 scale, whose Σ(x-x̄)² overflows, all three are finite (COVAR A69, A71, A77, A79, A80,
+    A81, A83; COVARIANCE.P A70, A79, A83; COVARIANCE.S A67, A69, A84). Unprobed: a sum of the values, or Sxy itself,
+    past the double range.
+  - STEYX needs three pairs: two are `#DIV/0!` (A67, A73, A74, A75), as is a constant x (A78); x's overflow is `#NUM!`
+    first, also with two pairs (A80, Σx near 2E+308). The residual Syy - Sxy*Sxy/Sxx is Excel's double: below zero it is
+    `#NUM!`. That happens for exact decimal lines (A71 `STEYX({1,0.6,0.2},{1,2,3})`, A82), where Sxy*Sxy overflows
+    with finite sums about the means (data near 1E+160 a relative 1E-12 to 1E-9 apart: A68, A70, A72, A76, A77, A81),
+    and also far from any line: over data spanning 1E-150 to 1E+150, one pair dominating both sums leaves a residual
+    that is only rounding, and 7 of the 12 log-uniform points are `#NUM!` (A109, A110, A113, A114, A115, A116, A118)
+    where the exact value is a number. The two-pass double sums (x87 sums of the values, as above) predict all 16
+    `#NUM!` cells and every number to the bit.
+    STEYX's tail stratum keeps its line noise at 1E-6 or more on purpose (nearer, the residual is only Excel's
+    rounding); the edge stratum's exact decimal lines and probes/steyx-exact-fit cover the near-exact lines.
+  - Excel kept as the target (decision 0300): Excel is more than 1E-4 relative off the exact value at STEYX A79
+    (`STEYX({1.2,0.7,...,-2.3},{1,...,8})`, 0 against 7.2E-17) and A84 (`STEYX({-0.8,-0.7,...,-0.2},{1,...,7})`,
+    3.332000937312528E-09 against 3.2E-17), both exact decimal lines whose residual is rounding. Among the eval cells
+    with math sidecars, the same holds for probes/steyx-exact-fit A1, A2, A3, A4, A5, A7, A10, A11, A12 and A14 and for
+    probes/correl-inexact-constant-overflow Z79 (Excel 0 or a tiny number against an exact value below 1E-14). Ours
+    matches Excel on all of them. COVAR, COVARIANCE.P and COVARIANCE.S are within 1E-9 of the exact value on every
+    table point.
 Evidence: probes/regression-pairs-a, regression-pairs-b, regression-forecast (excel-graph, 2026-10-16, T-1620); the
 error cells in these cases are `#DIV/0!`, so whether a range error propagates or is replaced is unprobed.
 Ours: the unequal-size `#N/A` matches since T-1292, single points since T-1401; CORREL, PEARSON, RSQ, SLOPE, INTERCEPT, STEYX and FORECAST compute from the sums about the means in Excel's order, a typed text or boolean argument is one value with no number, and STEYX of a negative difference is `#NUM!` (T-1723). COVAR with text, blank or boolean cells (`#N/A` in ours) is still open.
 Status: VERIFIED (web)
-Tasks: T-1723, T-1724, T-1725, T-2080, T-4047, T-4094, T-4550 (overlaps T-1292, T-1707, T-1401, T-1290)
+Tasks: T-1723, T-1724, T-1725, T-2080, T-4047, T-4094, T-4095, T-4550 (overlaps T-1292, T-1707, T-1401, T-1290)
 
 ## TREND: defaults, shapes, single points and error inputs
 Rule: TREND treats an empty known_x or new_x argument as the default (`TREND(A1:A6,B1:B6,,FALSE)` fits the known x's: 6 rows,
@@ -7458,11 +7533,37 @@ Evidence: R3-marked points of the Gate A tables (eval/accuracy/math-over-excel.t
 
 The owner's 2026-10-31 assessment (decision 0188) gives `T.INV(1.87E-297,3937)` as -156.96 in Excel and -40.26 in
 truth.
+
+Region (T-3337, decision 0313: CHISQ.INV.RT and CHIINV at df 1, the R3-marked probes-numeric cells, each with its
+committed math sidecar value; point by point, no band is ruled). The ruling paragraph above names p 1.5E-16 to
+5E-16, the cells that were visibly off when decision 0267 was written. The evidenced points above G run from 9E-17
+to 3.5E-15:
+- t3336-chisq-df1-right-tail: CHISQ.INV.RT at A202, A217, A220, A223, A226, A229, A232 and A253, and CHIINV at A203,
+  A218, A221, A224, A227, A230 and A233. These are p 1.5E-15, 1E-16, 1.5E-16, 2E-16, 3E-16, 5E-16, 7E-16 and (RT
+  only) 9E-17. Excel is 1.1E-3 to 1.1E-2 relative off: `CHISQ.INV.RT(1.5E-16,1)` is 67.39648382445009 in Excel and
+  68.169874129795366 in the math.
+- t3337-chisq-df1-r3-fresh, A1 to A30: both functions at p 1.2E-16 to 3.5E-15, with Excel 3.9E-4 to 7.8E-3 off. The
+  case is the fresh sweep, taken after the engine rule was frozen. Its other 22 cells (p 4E-15 to 1.2E-12) have Excel
+  within 2.8E-5, so Excel stays the target there.
+- t3858-chisq-df1-num-cutoff (T-3858's case, marked by T-4555 in T-3337's PR): CHISQ.INV.RT in column A and CHIINV
+  in column C at A5:A11, A15:A17 and A72:A88, the value cells above the `#NUM!` edge (p 8.3254E-17 to 1.1E-16), where
+  Excel is 68.7632522116684 and 9.4E-4 to 8.2E-3 off. 54 cells. CHIINV's math values were added to this case's
+  sidecar and to the fresh case's.
+- t3858-chisq-df1-num-cutoff-fresh: both functions (columns A and B) at rows 1, 2, 6, 8, 10 to 14, 19, 21, 25, 27,
+  31 to 33 and 38, the value cells of that fresh sweep. 34 cells.
+- Not marked: t3336 A250 to A252 (p 6E-17 to 8E-17), where Excel is `#NUM!`. No mark is ever given to an error.
+
+How the engine picks these points: Excel's value is the lower quantile of the double 1 - p, or one cdf step from it.
+Rounding 1 - p moves the tail it stands for by up to 2^-54, a large part of p this low. Where the quantile of 1 - p
+is more than G off the upper-tail quantile of p itself, the engine returns the upper-tail quantile (chisq.rs
+`one_degree_right_tail_quantile`). Over the 225 numeric df 1 cells of the two cases that test fires at exactly the
+45 marked cells, and at A250 to A252. CHIINV's math values come from its Gate A definition, CHISQ.INV.RT's legacy
+name with no reference table (T-3337).
 Status: MATH-OVER-EXCEL (decision 0188)
 Ours: the engine returns the math within ε at every marked point (Gate A's R3 check). Such cells stay F
 lines of eval/baseline and count as passing in Gate B and the R1(c) rows (T-3359, T-3427). The math path
 keeps directive 5's caps.
-Tasks: T-3358, T-3359, T-3363, T-3386
+Tasks: T-3358, T-3359, T-3363, T-3386, T-3337
 
 ## GAMMA.INV at a huge shape, closed-form branch: Excel is about 2.7e-4 off, RustSheet returns the math (MATH-OVER-EXCEL)
 Rule: on the Wilson-Hilferty closed-form branch of "GAMMA.INV and CHISQ.INV at a huge shape" above (the gamma density
@@ -7576,6 +7677,47 @@ A100, A157; c149b14aa61b770d A10, A82; 8cbdca3221390122, 9240e43366ea4792 and de
 Ours: matches, including the 63 no-number cells (T-3789: the significance is cast right after x, before the empty-data `#N/A`).
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3789
+
+## PERCENTRANK ranks x by the count of values below it (T-4093)
+Rule: over n numbers sorted a[1] <= ... <= a[n] (ties kept), with c the count of values strictly below x:
+- **Position.** An x equal to a value has the position p = c, also when that value is tied. An x strictly between
+  a[c] and a[c + 1] has p = c - 1 + (x - a[c]) / (a[c + 1] - a[c]), interpolated linearly. When the lower
+  neighbour a[c] is tied, the interpolation starts from its last copy, position c - 1, not its first:
+  `PERCENTRANK({1,1,1,3},2)` is 0.833, not 0.5.
+- **Rank.** PERCENTRANK and PERCENTRANK.INC give p / (n - 1). PERCENTRANK.EXC gives (p + 1) / (n + 1). The rank is
+  then cut to `significance` digits as "PERCENTRANK: a huge significance is #DIV/0!; truncation does not lose a digit
+  at a cut (T-2256)" states.
+- **Ends.** x at the smallest or the largest value is in range, EXC too: the INC rank is 0 or 1 and the EXC rank
+  1/(n + 1) or n/(n + 1).
+- **Ties.** An x equal to a tied value ranks at the value's first copy. When every value is the same and x equals
+  it, PERCENTRANK and PERCENTRANK.INC give 0 and PERCENTRANK.EXC gives 1/(n + 1), evidenced at n = 5. A single value
+  gives 1 instead ("Scalar distributions at extreme arguments, part 2").
+Cells (eval/accuracy/tables, excel-graph, 2026-11-06, unless a probe is named):
+- A tied lower neighbour, probes/t4093-percentrank-tied-neighbour (excel-graph, 2026-11-06), at 15 digits, with
+  columns A, B and C for PERCENTRANK, PERCENTRANK.INC and PERCENTRANK.EXC. All 27 cells follow the last-copy rule.
+  - `{1,2,2,2,3}` at 2.5 gives 0.875, 0.875 and 0.75 (A1:C1). At the default significance it gives the same (A9:C9).
+  - `{13,12,11,8,4,3,2,1,1,1}` at 1.5 gives 0.277777777777778 for INC and 0.318181818181818 for EXC (A2:C2).
+  - `{1,1,1,3}` at 2 gives 0.833333333333333 and 0.7 (A3:C3).
+  - `{1,2,2,3}` at 2.5 and 2.25, `{3,1,2,2}` at 2.75 and `{1,1,2,2,5}` at 1.5 agree too (A4:C6, A8:C8).
+  - A tied upper neighbour does not move the position: `{1,3,3,3}` at 2 gives 0.166666666666667 and 0.3 (A7:C7).
+- Ties: `PERCENTRANK({1,2,2,2,3},2)` is 0.25 (PERCENTRANK/s1 A135), and `PERCENTRANK.INC({1,2,2,2,3},1.5)` 0.125
+  (PERCENTRANK.INC/s1 A139). `PERCENTRANK.INC({13,12,11,8,4,3,2,1,1,1},4)` is 0.555 and 5 gives 0.583 (A133, A121;
+  Microsoft's example).
+- Every value the same, n = 5, with x equal to the value: PERCENTRANK and PERCENTRANK.INC give 0 (PERCENTRANK/s1
+  A114, PERCENTRANK.INC/s1 A134). PERCENTRANK.EXC gives 1/(n + 1) = 1/6, which is 0.166 at 3 digits
+  (PERCENTRANK.EXC/s1 A113).
+- Ends: `PERCENTRANK({1,2,3,6,6,6,7,8,9},1)` is 0 and 9 gives 1 (PERCENTRANK/s1 A121, A118).
+  `PERCENTRANK.EXC({1,2,3,6,6,6,7,8,9},1)` is 0.1 (PERCENTRANK.EXC/s1 A138) and 7 gives 0.7 (A125).
+- The error regions match the existing entries: 10 `#N/A` (x outside the data), 8 `#NUM!` (a significance of 0 or
+  -1) and 9 `#DIV/0!` (309 or more), in PERCENTRANK/s1, PERCENTRANK.INC/s1 and PERCENTRANK.EXC/s1.
+- All 573 numeric cells of the three tables are within 1e-9 of the exact rank cut by that rule.
+Status: VERIFIED (excel-graph) for the cited cells
+Ours: `percentrank_inc_impl` and `percentrank_exc_impl` (functions/statistical/percentile.rs) match 598 of the 600
+cells bit for bit. The other two are `PERCENTRANK.EXC({0,3},2,17)` (PERCENTRANK.EXC/s1 A128, A140). There Excel gives
+0.555555555555556 and the engine 0.555555555555555, because its double rank (2/3 + 1)/3 = 0.55555555555555547 is
+below the correctly rounded 5/9. Excel's operation order for EXC is not pinned (T-4556).
+Ours matches every t4093-percentrank-tied-neighbour cell.
+Tasks: T-4093, T-4556
 
 ## TRIMMEAN of a typed scalar (T-3781)
 Rule: a typed numeric text or boolean literal as TRIMMEAN's data is one number: `TRIMMEAN("2.5",0)` is 2.5 and

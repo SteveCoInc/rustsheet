@@ -7,7 +7,7 @@ status: blocked
 priority: P1
 size: M
 tier: opus
-depends_on: [T-4183, T-4559]
+depends_on: [T-4183, T-4559, T-4560]
 spec: docs/specs/SPEC-0034-xlsx-source-preserving-export.md
 ---
 
@@ -16,6 +16,8 @@ spec: docs/specs/SPEC-0034-xlsx-source-preserving-export.md
 round-trip suite's `dropped` verdict reads it (SPEC-0034 D4, SPEC-0033 D7).
 
 ## Context
+`save_preserving`'s returned `SaveTier` is what fills `SaveReport.tier`; the `Patched` tier exists once T-4560 lands.
+
 SPEC-0033 D7 defines `SaveReport`, `Dropped` and `DropReason`, and SPEC-0034 D4 adds the tier. The facade's
 `save_xlsx` and `to_xlsx_bytes` keep their signatures.
 

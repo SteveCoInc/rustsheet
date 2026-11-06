@@ -1,0 +1,35 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4467: a third fill of BESSELY(2.036E-77,4) (probes/t4458-bessely-tiny-x-cuts D32) and its neighbours, with the same x written as 2036E-80 and 20.36E-78 (column D), the literals' own reads (column E), and order 1 over the normal band below 3E-308 (column A).",
+  "tags": [
+    "M9",
+    "probe",
+    "engineering",
+    "T-4467",
+    "bessel"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "D1": "=BESSELY(2.038E-77,4)",
+        "D2": "=BESSELY(2.037E-77,4)",
+        "D3": "=BESSELY(2.036E-77,4)",
+        "D4": "=BESSELY(2.035E-77,4)",
+        "D5": "=BESSELY(2.034E-77,4)",
+        "D6": "=BESSELY(2036E-80,4)",
+        "D7": "=BESSELY(20.36E-78,4)",
+        "A1": "=BESSELY(3E-308,1)",
+        "A2": "=BESSELY(2.5E-308,1)",
+        "A3": "=BESSELY(2.3E-308,1)",
+        "A4": "=BESSELY(2.226E-308,1)",
+        "A5": "=BESSELY(2.2250738585073E-308,1)",
+        "A6": "=BESSELY(2.2250738585072014E-308,1)",
+        "E1": "=2.036E-77",
+        "E2": "=2036E-80",
+        "E3": "=20.36E-78"
+      }
+    }
+  ],
+  "expected": {}
+}
