@@ -3,7 +3,7 @@ id: T-4720
 title: "FIXED and DOLLAR of a negative half-unit tie (FIXED(-0.005,2)) and TEXT of 1E+100 under 0.0E+0: probe the two UNVERIFIED number-to-text notes and match"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
