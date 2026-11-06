@@ -3,7 +3,7 @@ id: T-4140
 title: "xlsx export writes external-workbook references as [1]Sheet!A1, not '[1]Sheet'!A1"
 milestone: M11
 lane: engine
-status: in-progress
+status: done
 priority: P1
 size: S
 tier: opus
@@ -28,10 +28,33 @@ Without T-4143 the external link parts are still missing from the output. This t
 text, which is also what FORMULATEXT-style printing of external refs needs.
 
 ## Acceptance criteria
-- [ ] Load and save of the fixtures `external-link-*` workbooks and poi ref-56737 writes every external reference
+- [x] Load and save of the fixtures `external-link-*` workbooks and poi ref-56737 writes every external reference
       exactly as stored in the source (a test that compares the `<f>` text).
-- [ ] A sheet name that needs quoting is written as `'[1]My Sheet'!A1`, with a test, and the source evidence is cited.
-- [ ] `make check` green; reviewers approve.
+- [x] A sheet name that needs quoting is written as `'[1]My Sheet'!A1`, with a test, and the source evidence is cited.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Writing the externalLink parts (T-4143).
+
+## Outcome
+- `quote_name` (expressions/utils/mod.rs) leaves another workbook's `[book]Sheet` bare when the sheet part
+  needs no quotes and quotes the whole token otherwise (`[1]Sort`, `'[1]XA Data Pull'`, `'[1]56737'`).
+  That is ADDRESS's evidenced rule (T-0984), which moved out of `address_sheet_text` into
+  `quote_name`, so there is one definition. The display, FORMULATEXT, the stored R1C1 text and the xlsx
+  export all print through it.
+- A 3-D span of the other workbook's sheets, `[1]Uses:Defines`, is bare unless either end needs quotes,
+  as a local span is (`sheet_span_text`). That is the form fixtures/external-link-cached-3d-span holds;
+  Excel's own saved form for it is UNVERIFIED (references.md).
+- Tests:
+  - crates/rustsheet-xlsx/tests/external_reference_export.rs loads and saves the seven
+    `external-link-*` fixtures; every `<f>` with `[1]` comes back as the source holds it.
+    External-link-cached-ranges is poi ref-56737's Excel-written workbook, but its `Refs` sheet was
+    rewritten, so it is not Excel-written.
+  - `test_quote_name` covers the bare, quoted, escaped and span cases.
+  - test_implicit_intersection_export's external case now expects `[1]Uses!`, and T-1654's
+    `span_of_cached_sheets_round_trips` the bare span (it pinned the quoted form, which no evidence backed).
+- Excel evidence: references.md, new entry "A formula's reference to another workbook is written
+  `[1]Sheet!A1`" (corpus-bench 59932 and 52450, Excel-saved). The T-1654 note there about the quoted
+  form is updated.
+- Eval delta: none (every suite unchanged, 0 regressions; roundtrip-fixtures still 12 failing items, which the
+  external-link parts dropped by T-4143 account for).
