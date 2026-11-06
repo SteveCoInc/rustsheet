@@ -1,0 +1,17 @@
+name = "roundtrip-calipers"
+description = "Round-trip fidelity (SPEC-0033) of Calipers' Excel goldens and the authored round-trip inputs, read from the calipers suite's fetched cache"
+kind = "roundtrip"
+# The calipers cell suite's cache (`rustsheet-eval fetch --suite calipers`); skipped while absent.
+root = "../../.cache/suites/calipers"
+# Every Excel golden, and the authored `roundtrip/*/init.xlsx` inputs Excel's goldens were saved from.
+include = ["**/golden.xlsx", "roundtrip/**/init.xlsx"]
+# `_disabled/`: hostile files Calipers itself never loads.
+exclude = ["_disabled/**"]
+license = "MIT"
+origin = "https://github.com/fundamental-research-labs/calipers (verification/cases)"
+scenarios = ["R0"]
+# Not in `make check`, as the calipers cell suite is not (its heavy workbooks and the time budget).
+# `rustsheet-eval roundtrip --check --suite roundtrip-calipers` gates it; `make eval` reports it.
+gate = false
+baseline = "cases"
+milestone = ["M15"]

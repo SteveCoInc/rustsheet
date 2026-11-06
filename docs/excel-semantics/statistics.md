@@ -5987,7 +5987,8 @@ so `TREND(..,SORTBY(Data!A1:D12,..))` and `GROWTH(LOOKUP(NA(),..),..,GROUPBY(..)
 Evidence: probes/regression-trend (excel-graph, 2026-10-16, T-1620); gen-m9 (excel-graph, 2026-10-22/23, T-2255, T-2256).
 Ours: matches since T-1726 (`trend_or_growth` in functions/statistical/trend.rs), but for the last-digit differences of the
 shared least-squares solve (T-2006) and A187 above. A single point without a constant term (`TREND(5,2,4,FALSE)`) is a fit
-through the origin, UNVERIFIED (T-2569). LINEST and LOGEST of one point are accepted by Excel (linest-modes K141, logest-modes
+through the origin (VERIFIED by T-4096's Gate A tables: TREND s1 A140 and GROWTH s1 A123 and A125, where new_x differs
+from known_x, so only a fit through the origin gives Excel's value; TREND A116, A118, A131 and A136 are consistent; see "LINEST, LOGEST, TREND and GROWTH: Gate A tables"). LINEST and LOGEST of one point are accepted by Excel (linest-modes K141, logest-modes
 K162), and ours since T-1741.
 Status: VERIFIED (excel-graph)
 Tasks: T-1726 (overlaps T-1402, T-1743)
@@ -6910,6 +6911,39 @@ Ours: as described; T-2006, T-2468, T-2484, T-2569, T-2614, T-2615.
 Status: VERIFIED (excel-graph) for the values; the pivot and the four cross-function causes (PRICEMAT, HLOOKUP, DISC, PROB) UNVERIFIED
 Tasks: T-2006, T-2468, T-2484, T-2569, T-2614, T-2615
 
+## LINEST, LOGEST, TREND and GROWTH: Gate A tables (T-4096)
+Rule: on the Gate A tables accuracy/{LINEST,LOGEST,TREND,GROWTH}/s1 (excel-graph, 2026-11-06; 799 points, one-row
+array literals for known_y, 2-D literals for known_x and new_x, one element read through INDEX) Excel's numbers are
+the exact least-squares values to within 2E-8 relative on all but four points, and every error cell is one of the
+rules above: unequal shapes `#REF!`, LOGEST's and GROWTH's non-positive y `#NUM!`, and the stats block's `#N/A`
+cells (rows 3-5 right of the second column, b's standard error with const FALSE). The math (tools
+accuracy/defs/array_regression.py) solves the normal equations in rational arithmetic, LOGEST and GROWTH on ln y.
+- Covered elements: LINEST's and LOGEST's coefficient row (m_k..m_1, b) and the whole stats block (standard errors,
+  r^2, se_y, F, df, ss_reg, ss_resid), up to four x variables; every element of TREND's and GROWTH's result, new_x of
+  any shape for one variable and k rows for k variables. Not claimed: designs within a relative 1E-7 of collinear
+  (which column Excel drops, and at what cut-off, is T-2569's), the residual cells of an exact fit or of one with no
+  degree of freedom left (Excel's rounding: `#NUM!` or a huge F), and r^2 of a constant y.
+- One point without a constant term is a fit through the origin: `TREND({-87.2811895514037},{126966.940466164},
+  {..,117175.728079905,..},FALSE)` is -80.55039284884894 (A140), GROWTH's the same in ln (A123, A125).
+- A slope whose e^coefficient underflows is no error: GROWTH s1 A119 (coefficient -710.56) and A127 (-1430.22), const
+  FALSE, match the exact value, so Excel does not multiply by an underflowed multiplier.
+- GROWTH s1 A104 is `#NUM!` where the prediction is 8.13890815167933E-18: two variables (x1 near 7.3E+7, x2 near
+  77.9407 with a spread of 2E-4), whose ln fit's intercept is 1289.95, so b = e^1289.95 is past the double range. It
+  is the only table point with an intercept past ln(max double); unexplained, the intercept's overflow is the lead
+  (T-4590). Ours is 8.138904702791959E-18.
+- Excel off the exact value: LINEST s1 A197 (`INDEX(LINEST(<4 points from 1E-48 to 6E+20>,<2 variables>,FALSE,TRUE),5,1)`,
+  ss_reg) is 0 where the exact value is 1.19E-52, the cancellation of ss_tot (3.9E+41) and ss_resid: more than 1E-4
+  off, kept as the target under decision 0300; ours is 0 too. LINEST A184 (an intercept over data from 1E-44 to
+  1E+34) is 8.5E-5 off, LOGEST A98 (ss_resid of a near-exact fit, 1.9E-22) 3E-6 and LOGEST A82 (F of a near-exact
+  fit, 9.9E+19) 8E-7.
+- Ours solves the normal equations in doubles: on 21 ill-conditioned points (large offsets with a small relative
+  spread, mixed magnitudes) it is from 2E-9 to 20 relative off where Excel is within 2E-8, and TREND A193 (data from
+  1E-45 to 1E+49) is `#NUM!` where Excel and the math are -1.3025416638036628E+49 (T-2006, known failures).
+Evidence: eval/accuracy/tables/{LINEST,LOGEST,TREND,GROWTH}/s1 (excel-graph, 2026-11-06, T-4096).
+Ours: as described; T-2006 (the solve), T-4590 (A104).
+Status: VERIFIED (excel-graph) for the table points; A104's cause UNVERIFIED
+Tasks: T-4096, T-2006, T-4590, T-2569
+
 ## TRIMMEAN: an error percent before data with no number (T-1742)
 Rule: TRIMMEAN returns an error-valued percent before it reports data with no number: `TRIMMEAN(Data!E11:E11,<#N/A>)`
 with E11 = TRUE is `#N/A`, not `#NUM!` (a5342a7e24fd803e A288, the percent `COVARIANCE.P(8 cells,3 cells)-LOGEST(..)`).
@@ -7824,3 +7858,44 @@ within 15 digits, those two within 1e-9 of the math: inside the Gate A envelope)
 Excel is `#NUM!`: three Gate A known failures). Both are T-4501.
 Status: VERIFIED (excel-graph) for the cells cited; the number_chosen cut UNVERIFIED
 Tasks: T-4106, T-4501
+
+## KURT, SKEW, SKEW.P, GEOMEAN, HARMEAN and TRIMMEAN domain cells of the Gate A tables (T-4091)
+Rule (Excel, over literal numbers; each rule only as far as the cells below show it):
+- KURT of one, two or three numbers is `#DIV/0!` and of four is a number: accuracy/KURT/s1 A67, A70 (one number), A2, A5,
+  A36, A59, A68, A120 (two), A1, A12, A23, A39, A43, A60, A75 (three), and every KURT point of four or more numbers has a
+  value; `KURT(A1:A3)` is `#DIV/0!` and `KURT(A1:A4)` -0.28571428571429003 (probes/stats-evidence-floor-t1623 Q29, Q28).
+  Whether too few numbers are `#DIV/0!` before a sum of the numbers beyond the double range is checked is UNVERIFIED (the
+  Gate A definitions assume the count comes first).
+  SKEW and SKEW.P of one or two numbers are `#DIV/0!` (accuracy/SKEW/s1 A14, A15, A37, A38, A42, A46, A67, A69, A73, A78,
+  A83, A84, A116; accuracy/SKEW.P/s1 A1, A5, A10, A43, A46, A48, A75, A79, A80, A82, A84), as "SKEW.P of two numbers is
+  #DIV/0!" states.
+- Equal numbers are `#DIV/0!` in all three where Excel's double sum of them is exact: four copies of 0.889154832388048 in
+  SKEW (accuracy/SKEW/s1 A75) and of -0.0867711652174799 in SKEW.P (accuracy/SKEW.P/s1 A69), and
+  `KURT({0,0,0},{0,0,0},{0,0,0})` (gen-m9/f34f66fb7f81e673 A391). Equal numbers whose double sum is inexact (three
+  copies of 0.1: the double mean is not 0.1, so the double deviations are not 0) are UNVERIFIED; the Gate A definitions
+  give them no value.
+- GEOMEAN of data holding a negative number or a 0 is `#NUM!`: accuracy/GEOMEAN/s1 A71 (last number -2.07601566614114)
+  and A79 (a leading 0); ironcalc-calc/STATISTICAL/GEOMEAN.xlsx D11 and D16 (-4, 3 and 2, as a range and as cells; Excel-cached and excel-graph); `GEOMEAN(4,)` (coercion.md).
+  HARMEAN of data holding a 0 is `#NUM!` (accuracy/HARMEAN/s1 A71), as `HARMEAN(0)` is, and so is all-negative data
+  (`HARMEAN(-1,-2)`; probes/stats-evidence-floor-t1623 Q51, Q52). Negative and positive numbers with no 0
+  (`HARMEAN(1,-2)`) are UNVERIFIED; the Gate A definition gives them no value.
+- The cubes and fourth powers of the deviations may pass the double range without an error: with deviations up to
+  about 1E+149, S_3 or S_4 formed in doubles overflows, yet Excel gives finite values (accuracy/KURT/s1 A109-A119,
+  accuracy/SKEW/s1 A109-A115 and A117-A119, accuracy/SKEW.P/s1 A68, A70-A72 and A111-A120). Only the squared
+  deviations' overflow is an error ("Overflowing squares (T-2432)"), and only where a square overflows on its own
+  (`{1E+200,1E+200,-1E+200}`); a deviation that itself overflows, and finite squares whose sum overflows, are UNVERIFIED.
+- TRIMMEAN over an array literal with a percent outside [0, 1) is `#NUM!`: 1.5, 2, -1 and 1 (accuracy/TRIMMEAN/s1 A69,
+  A78, A79, A100, A109), as "TRIMMEAN of a typed scalar (T-3781)" shows for one typed number. Every TRIMMEAN point with a
+  percent in [0, 1) is within the Gate A envelope of the exact mean after dropping floor(n * percent / 2) values from each
+  end (Microsoft's rule). Where the double product n * percent and the exact one floor to different counts (n = 10,
+  percent 0.6: the exact product is just below 6, its double 6) Excel's count is UNVERIFIED; the tables draw no such point.
+Unprobed and left without a math value: a sum of the numbers beyond the double range in the three moments, the two
+squared-deviation overflows above, mixed-sign HARMEAN data with no 0, a reciprocal or sum of reciprocals beyond the
+double range in HARMEAN, and a running total beyond it in AVERAGEA (numbers.md's overflow entry lists
+AVERAGE, not AVERAGEA).
+Evidence: accuracy/{KURT,SKEW,SKEW.P,GEOMEAN,HARMEAN,AVERAGEA,TRIMMEAN}/s1 (excel-graph, 2026-11-06, T-4091); the probe
+and fixture cells cited.
+Ours: matches every cell cited (the engine is bit-exact with Excel on 777 of the tables' 840 points, and all 840 are inside
+the Gate A envelope).
+Status: VERIFIED (excel-graph) for the cells cited; the regions marked UNVERIFIED are not probed
+Tasks: T-4091

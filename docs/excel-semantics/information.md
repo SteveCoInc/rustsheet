@@ -527,3 +527,6 @@ Phases 1-3 (decision 0039): the engine follows it in T-2190, which is expected t
 non-literal INFO, T-2113), and `INFO("numfile")` (canary-dependent). The engine also returns `#VALUE!` for `"numfile"` and its
 engine-only `"timezone"`/`"timezones"` (T-2190), unprobed and awaiting oracle confirmation (T-2182).
 Evidence: probes/info-sheets-info-types Alpha!D25:D49 (excel-graph, 2026-10-20, T-2115).
+Desktop Excel for Mac (16.0300) caches "16.0" for `INFO("release")` (calipers formula_stress_test Information!B3); the
+web is `#VALUE!` there too (probes/t4534-desktop-golden-web-values A2, A9). That cell is a Phase 1 rate exception
+(decision 0315).
