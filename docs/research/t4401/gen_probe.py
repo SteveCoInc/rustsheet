@@ -2,7 +2,9 @@
 subtotal of a class no record reached holds every record of its row line (T-4388's finding, T-4382's Calc!B31:C41).
 
 Run from the repo root: python3 -I docs/research/t4401/gen_probe.py, then (after `make build`, before the fill)
-python3 -I docs/research/t4401/predict_engine.py, which commits the engine's values as the predictions.
+python3 -I docs/research/t4344/predict_engine.py eval/suites/probes/cases/t4401-pivotby-unreached-subtotal-holdout
+docs/research/t4401/predictions.tsv, which commits the engine's values as the predictions (written on PR #3430's
+head e4c7b2248, T-4388's rule).
 
 Texts: A = ab, B = ab&U+00AD, C = U+00AD&ab (A = C, B = C, A < B). Data per block row: A the text, B x/y, C and D
 more texts (D only in four-field blocks), E the row's position, F p/q. Fresh seeded five-row runs (seed "T-4401"),
