@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, reason = "tests")]
 
 //! The pivot definition model on the spike and corpus shapes (T-4139). The fixtures are the
 //! `pivotTableDefinition` parts Excel rendered: probes t4123, t4128, t4137 and t4138 as
@@ -185,10 +185,19 @@ fn tabular_form_and_custom_subtotals_are_typed_per_field() {
     assert!(!options.outline && !options.outline_data);
     let region = &pivot.fields[0];
     assert!(!region.compact && !region.outline && !region.default_subtotal);
-    assert_eq!(region.custom_subtotals, [ItemType::Sum, ItemType::Count]);
+    // `countSubtotal` reads as Count Numbers (ECMA-376; unproven for Excel, T-4622).
+    assert_eq!(
+        region.custom_subtotals,
+        [Aggregate::Sum, Aggregate::CountNums]
+    );
     assert_eq!(
         region.items,
-        [data(0), data(1), line(ItemType::Sum), line(ItemType::Count)]
+        [
+            data(0),
+            data(1),
+            line(ItemType::Function(Aggregate::Sum)),
+            line(ItemType::Function(Aggregate::CountNums))
+        ]
     );
     let product = &pivot.fields[1];
     assert!(product.default_subtotal && product.custom_subtotals.is_empty());
@@ -283,9 +292,7 @@ fn typed_attribute(element: &str, key: &str) -> bool {
     match element {
         TABLE => ROOT_TYPED.contains(&key),
         "location" => key == "ref",
-        "pivotField" => {
-            FIELD_TYPED.contains(&key) || CUSTOM_SUBTOTALS.iter().any(|(n, _)| *n == key)
-        }
+        "pivotField" => FIELD_TYPED.contains(&key) || is_subtotal_attribute(key),
         "item" => matches!(key, "t" | "x" | "sd" | "s" | "h"),
         "field" => key == "x",
         "pageField" => matches!(key, "fld" | "item" | "hier"),
@@ -385,13 +392,25 @@ fn malformed_typed_attributes_skip_the_pivot_or_read_as_the_default() {
             .unwrap_err()
     };
     assert!(skipped(r#"<item t="sum"/>"#, r#"<item t="total"/>"#).contains("item type"));
-    assert!(skipped(r#"compactData="0""#, r#"pageWrap="-1""#).contains("pageWrap"));
     assert!(skipped(
         r#"<pivotField dataField="1""#,
         r#"<pivotField sortType="up""#
     )
     .contains("sortType"));
-    assert!(skipped(r#"baseItem="0""#, r#"baseItem="x""#).contains("baseItem"));
+    // A value from the file is quoted at most 64 characters long.
+    let long = format!(r#"<item t="{}"/>"#, "z".repeat(1000));
+    assert_eq!(
+        skipped(r#"<item t="sum"/>"#, &long),
+        format!("unknown item type {:?}", "z".repeat(64))
+    );
+    // A number nothing computes from yet reads as absent: the pivot still loads.
+    let lenient = SUBTOTALS
+        .replacen(r#"compactData="0""#, r#"compactData="0" pageWrap="-1""#, 1)
+        .replacen(r#"baseItem="0""#, r#"baseItem="x" numFmtId="ten""#, 1);
+    let pivot = read(&lenient, &[2, 3, 6, 6, 6]);
+    assert_eq!(pivot.options.page_wrap, 0);
+    assert_eq!(pivot.data_fields[0].base_item, NO_BASE_ITEM);
+    assert_eq!(pivot.data_fields[0].number_format, None);
     // A boolean that is not one reads as the schema's default, as `showAll` always has.
     let lenient = SUBTOTALS.replacen(r#"compact="0""#, r#"compact="maybe""#, 1);
     assert!(read(&lenient, &[2, 3, 6, 6, 6]).options.compact);

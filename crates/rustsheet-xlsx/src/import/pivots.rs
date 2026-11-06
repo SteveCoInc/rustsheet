@@ -38,6 +38,12 @@ const MAX_AXIS_FIELDS: usize = 256;
 const MAX_DATA_FIELDS: usize = 256;
 /// Most pivots on one sheet; the ones past it are dropped.
 const MAX_PIVOTS_PER_SHEET: usize = 64;
+/// Most bytes the pivots' verbatim stores hold over a workbook (SPEC-0032 "Model"), each entry
+/// charged its text and its own size (`OpaqueEntry::cost`); never more than the package may
+/// inflate. A pivot whose store would pass what is left is dropped (web.md "Pivot caches past
+/// the import limits are dropped"). Excel-saved definitions keep a few kilobytes, mostly
+/// `rowItems`, about 30 bytes per rendered line.
+const MAX_OPAQUE_BYTES: usize = 32 << 20;
 /// Most pivots in a workbook; the ones past it are dropped. Every accepted pivot allocates a
 /// hidden-items bitset per field sized to its cache, so the per-sheet cap alone leaves the total
 /// to the file (T-2394, web.md "Pivot caches past the import limits are dropped").
@@ -81,6 +87,13 @@ impl From<quick_xml::events::attributes::AttrError> for Skip {
 
 fn skip<T>(reason: impl Into<String>) -> Result<T, Skip> {
     Err(Skip(reason.into()))
+}
+
+/// A value from the file as a skip reason quotes it: its first 64 characters, so a reason never
+/// copies an attacker's long value.
+fn shown(value: &str) -> String {
+    const MAX_CHARS: usize = 64;
+    value.chars().take(MAX_CHARS).collect()
 }
 
 /// A worksheet pivots may sit on.
@@ -136,9 +149,9 @@ pub(super) fn load_pivots<R: Read + Seek>(
     let keys: Vec<String> = parts.iter().map(|(_, part)| part_key(part)).collect();
     let reached = occurrences(keys.iter());
     let limits = *archive.limits();
-    // The pivots' verbatim stores together hold at most what the package may inflate: each
-    // kept byte is a byte of a part, so only an entry's own size can pass it.
-    let mut opaque_left = usize::try_from(limits.max_uncompressed_bytes).unwrap_or(usize::MAX);
+    let mut opaque_left = usize::try_from(limits.max_uncompressed_bytes)
+        .unwrap_or(usize::MAX)
+        .min(MAX_OPAQUE_BYTES);
     let mut pivot_tables = Vec::new();
     for ((sheet_id, part), key) in parts.iter().zip(&keys) {
         let left = Cell::new(opaque_left);
@@ -488,23 +501,23 @@ fn cache_item(
         }
         "n" => match v.trim().parse::<f64>() {
             Ok(n) if n.is_finite() => CacheItem::Number(n),
-            _ => return skip(format!("bad number {v:?}")),
+            _ => return skip(format!("bad number {:?}", shown(&v))),
         },
         "b" => match v.as_str() {
             "1" | "true" => CacheItem::Boolean(true),
             "0" | "false" => CacheItem::Boolean(false),
-            _ => return skip(format!("bad boolean {v:?}")),
+            _ => return skip(format!("bad boolean {:?}", shown(&v))),
         },
         "e" => match get_error_by_english_name(&v) {
             Some(error) => CacheItem::Error(error),
-            None => return skip(format!("unknown error {v:?}")),
+            None => return skip(format!("unknown error {:?}", shown(&v))),
         },
         // `<d>` is an ISO 8601 text; the cell serial it stands for depends on the workbook's date
         // system (1904 serials are 1462 days lower), and below serial 61 Excel writes it on the
         // 1899-12-30 epoch (T-3182).
         _ => match pivot_cache_date_serial(&v, date_system) {
             Some(serial) => CacheItem::Date(serial),
-            None => return skip(format!("bad date {v:?}")),
+            None => return skip(format!("bad date {:?}", shown(&v))),
         },
     };
     Ok(Some(item))
@@ -689,7 +702,7 @@ fn read_range_pr(element: &BytesStart, date_system: DateSystem) -> Result<RangeG
             None => Ok(None),
             Some(v) => match v.trim().parse::<f64>() {
                 Ok(n) if n.is_finite() => Ok(Some(n)),
-                _ => skip(format!("bad {name} {v:?}")),
+                _ => skip(format!("bad {name} {:?}", shown(&v))),
             },
         }
     };
@@ -712,7 +725,7 @@ fn read_range_pr(element: &BytesStart, date_system: DateSystem) -> Result<RangeG
                 None => Ok(None),
                 Some(v) => match pivot_cache_date_serial(&v, date_system) {
                     Some(serial) => Ok(Some(serial)),
-                    None => skip(format!("bad {name} {v:?}")),
+                    None => skip(format!("bad {name} {:?}", shown(&v))),
                 },
             }
         };

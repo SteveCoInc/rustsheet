@@ -4,7 +4,7 @@
 //! is kept verbatim in [`PivotTable::opaque`], owned by the typed element it was read in, for
 //! export (T-4176). The collections' `count` attributes are the one exception: they follow from
 //! the lists. What is kept is charged, entry by entry ([`OpaqueEntry::cost`]), to the workbook's
-//! opaque budget, so the store never grows past it (web.md "Pivot caches past the import limits
+//! opaque budget (`MAX_OPAQUE_BYTES`), so the store never grows past it (web.md "Pivot caches past the import limits
 //! are dropped").
 
 use std::cell::Cell;
@@ -22,7 +22,7 @@ use rustsheet_engine::pivot::{
 use super::super::package::ImportLimits;
 use super::super::worksheets::parse_range;
 use super::{
-    attribute, index_attribute, local_name, skip, walk_keeping, Skip, Tag, MAX_AXIS_FIELDS,
+    attribute, index_attribute, local_name, shown, skip, walk_keeping, Skip, Tag, MAX_AXIS_FIELDS,
     MAX_DATA_FIELDS,
 };
 
@@ -65,23 +65,39 @@ const ROOT_TYPED: [&str; 20] = [
     "pageOverThenDown",
 ];
 
-/// The custom subtotal attributes of a `<pivotField>`, in the schema's order, and the subtotal
-/// line (`item@t`) each asks for.
-const CUSTOM_SUBTOTALS: [(&str, ItemType); 11] = [
-    ("sumSubtotal", ItemType::Sum),
-    ("countASubtotal", ItemType::CountA),
-    ("avgSubtotal", ItemType::Average),
-    ("maxSubtotal", ItemType::Max),
-    ("minSubtotal", ItemType::Min),
-    ("productSubtotal", ItemType::Product),
-    ("countSubtotal", ItemType::Count),
-    ("stdDevSubtotal", ItemType::StdDev),
-    ("stdDevPSubtotal", ItemType::StdDevP),
-    ("varSubtotal", ItemType::Var),
-    ("varPSubtotal", ItemType::VarP),
+/// The custom subtotal functions by their `ST_ItemType` names: an `<item t>` names its subtotal
+/// line so, and a `<pivotField>` asks for it with `<name>Subtotal="1"`. In the schema's order.
+/// `countA` is COUNTA and `count` Count Numbers, as ECMA-376 reads them; unproven for Excel
+/// (`ItemType::Function`, T-4622).
+const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = [
+    ("sum", Aggregate::Sum),
+    ("countA", Aggregate::Count),
+    ("avg", Aggregate::Average),
+    ("max", Aggregate::Max),
+    ("min", Aggregate::Min),
+    ("product", Aggregate::Product),
+    ("count", Aggregate::CountNums),
+    ("stdDev", Aggregate::StdDev),
+    ("stdDevP", Aggregate::StdDevP),
+    ("var", Aggregate::Var),
+    ("varP", Aggregate::VarP),
 ];
 
-/// The `<pivotField>` attributes the model types, besides [`CUSTOM_SUBTOTALS`].
+/// The function of the custom subtotal named `name` (`sum`, `countA`, ...).
+fn subtotal_function(name: &str) -> Option<Aggregate> {
+    let mut functions = SUBTOTAL_FUNCTIONS.iter();
+    functions.find(|(n, _)| *n == name).map(|(_, f)| *f)
+}
+
+/// Whether `key` is a `<pivotField>` custom subtotal attribute (`sumSubtotal`, ...).
+fn is_subtotal_attribute(key: &str) -> bool {
+    key.strip_suffix("Subtotal")
+        .and_then(subtotal_function)
+        .is_some()
+}
+
+/// The `<pivotField>` attributes the model types, besides the custom subtotals
+/// ([`is_subtotal_attribute`]).
 const FIELD_TYPED: [&str; 9] = [
     "axis",
     "showAll",
@@ -217,7 +233,7 @@ impl TableReader<'_> {
             }
             "pivotField" => {
                 self.read_field(cache, element)?;
-                |key| FIELD_TYPED.contains(&key) || CUSTOM_SUBTOTALS.iter().any(|(n, _)| *n == key)
+                |key| FIELD_TYPED.contains(&key) || is_subtotal_attribute(key)
             }
             "item" => {
                 if self.read_item(cache, element)? {
@@ -330,7 +346,7 @@ impl TableReader<'_> {
             Some("axisCol") => Some(Axis::Column),
             Some("axisPage") => Some(Axis::Page),
             Some("axisValues") | None => None,
-            Some(other) => return skip(format!("unknown axis {other:?}")),
+            Some(other) => return skip(format!("unknown axis {:?}", shown(other))),
         };
         let mut field = PivotField::new(axis, cache_field.items.len());
         // ECMA-376's default is on; Excel writes `showAll="0"` (web.md, T-4276).
@@ -339,16 +355,16 @@ impl TableReader<'_> {
         field.outline = flag(element, "outline", field.outline)?;
         field.subtotal_top = flag(element, "subtotalTop", field.subtotal_top)?;
         field.default_subtotal = flag(element, "defaultSubtotal", field.default_subtotal)?;
-        for (name, line) in CUSTOM_SUBTOTALS {
-            if flag(element, name, false)? {
-                field.custom_subtotals.push(line);
+        for (name, function) in SUBTOTAL_FUNCTIONS {
+            if flag(element, &format!("{name}Subtotal"), false)? {
+                field.custom_subtotals.push(function);
             }
         }
         field.sort_type = match attribute(element, "sortType")?.as_deref() {
             None | Some("manual") => SortType::Manual,
             Some("ascending") => SortType::Ascending,
             Some("descending") => SortType::Descending,
-            Some(other) => return skip(format!("unknown sortType {other:?}")),
+            Some(other) => return skip(format!("unknown sortType {:?}", shown(other))),
         };
         field.insert_blank_row = flag(element, "insertBlankRow", field.insert_blank_row)?;
         field.number_format = number(element, "numFmtId")?;
@@ -464,7 +480,11 @@ impl TableReader<'_> {
     }
 
     /// Adds an entry to the opaque store, charging its cost to the budget.
-    fn keep(&mut self, owner: OpaqueOwner, node: OpaqueNode) -> Result<(), Skip> {
+    fn keep(&mut self, owner: OpaqueOwner, mut node: OpaqueNode) -> Result<(), Skip> {
+        // Held at its length, so the cost charged is the memory kept.
+        match &mut node {
+            OpaqueNode::Attributes(xml) | OpaqueNode::Element(xml) => xml.shrink_to_fit(),
+        }
         let entry = OpaqueEntry { owner, node };
         let Some(left) = self.opaque_left.get().checked_sub(entry.cost()) else {
             return skip("unread pivot definition content past the import limit");
@@ -489,7 +509,7 @@ fn read_data_field(element: &BytesStart, limits: &ImportLimits) -> Result<DataFi
         Some("percentOfCol") => ShowDataAs::PercentOfColumn,
         Some("percentOfTotal") => ShowDataAs::PercentOfTotal,
         Some("index") => ShowDataAs::Index,
-        Some(other) => return skip(format!("unknown showDataAs {other:?}")),
+        Some(other) => return skip(format!("unknown showDataAs {:?}", shown(other))),
     };
     Ok(DataField {
         caption,
@@ -512,15 +532,11 @@ fn flag(element: &BytesStart, name: &str, default: bool) -> Result<bool, Skip> {
     })
 }
 
-/// A numeric attribute; `None` when absent, and a value that does not parse skips the pivot.
+/// A numeric attribute nothing computes from yet; `None` when absent or not a number, as
+/// [`flag`] reads a malformed boolean, so a pivot GETPIVOTDATA answers from is never dropped for
+/// it.
 fn number<T: std::str::FromStr>(element: &BytesStart, name: &str) -> Result<Option<T>, Skip> {
-    match attribute(element, name)? {
-        None => Ok(None),
-        Some(text) => match text.parse::<T>() {
-            Ok(value) => Ok(Some(value)),
-            Err(_) => skip(format!("bad {name} {text:?}")),
-        },
-    }
+    Ok(attribute(element, name)?.and_then(|text| text.parse::<T>().ok()))
 }
 
 /// An `item@t`; absent is `data`.
@@ -528,20 +544,12 @@ fn item_type(t: Option<&str>) -> Result<ItemType, Skip> {
     Ok(match t.unwrap_or("data") {
         "data" => ItemType::Data,
         "default" => ItemType::Default,
-        "sum" => ItemType::Sum,
-        "countA" => ItemType::CountA,
-        "avg" => ItemType::Average,
-        "max" => ItemType::Max,
-        "min" => ItemType::Min,
-        "product" => ItemType::Product,
-        "count" => ItemType::Count,
-        "stdDev" => ItemType::StdDev,
-        "stdDevP" => ItemType::StdDevP,
-        "var" => ItemType::Var,
-        "varP" => ItemType::VarP,
         "grand" => ItemType::Grand,
         "blank" => ItemType::Blank,
-        other => return skip(format!("unknown item type {other:?}")),
+        other => match subtotal_function(other) {
+            Some(function) => ItemType::Function(function),
+            None => return skip(format!("unknown item type {:?}", shown(other))),
+        },
     })
 }
 
@@ -588,7 +596,7 @@ fn aggregate(subtotal: Option<&str>) -> Result<Aggregate, Skip> {
         "stdDevp" => Aggregate::StdDevP,
         "var" => Aggregate::Var,
         "varp" => Aggregate::VarP,
-        other => return skip(format!("unknown subtotal {other:?}")),
+        other => return skip(format!("unknown subtotal {:?}", shown(other))),
     })
 }
 

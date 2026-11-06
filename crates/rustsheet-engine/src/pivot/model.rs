@@ -150,12 +150,11 @@ pub struct PivotField {
     pub subtotal_top: bool,
     /// `defaultSubtotal` (default on): the automatic subtotal, by each data field's function.
     pub default_subtotal: bool,
-    /// The custom subtotals (`sumSubtotal`, `countASubtotal`, ...), each as the `t` of the
-    /// subtotal line it asks for (`sum`, `countA`, ...), once, in the schema's attribute order.
-    /// Which function `countA` and `count` compute is left to the probe of the renderer that
-    /// needs it: Excel labels a `count` line `Count` over a numbers-only field
-    /// (probes/t4137-pivot-captions K5!A8).
-    pub custom_subtotals: Vec<ItemType>,
+    /// The custom subtotals (`sumSubtotal`, `countASubtotal`, ...), each once, in the schema's
+    /// attribute order. `countASubtotal` is read as [`Aggregate::Count`] and `countSubtotal` as
+    /// [`Aggregate::CountNums`] (ECMA-376's meanings, unproven for Excel: see
+    /// [`ItemType::Function`]).
+    pub custom_subtotals: Vec<Aggregate>,
     /// `sortType` (default manual).
     pub sort_type: SortType,
     /// `insertBlankRow` (default off).
@@ -248,30 +247,13 @@ impl PivotItem {
 pub enum ItemType {
     /// `data`: a cache item.
     Data,
-    /// `default`: the automatic subtotal.
+    /// `default`: the automatic subtotal, by each data field's own function.
     Default,
-    /// `sum`.
-    Sum,
-    /// `countA`: the Count subtotal.
-    CountA,
-    /// `avg`.
-    Average,
-    /// `max`.
-    Max,
-    /// `min`.
-    Min,
-    /// `product`.
-    Product,
-    /// `count`: the Count Numbers subtotal.
-    Count,
-    /// `stdDev`.
-    StdDev,
-    /// `stdDevP`.
-    StdDevP,
-    /// `var`.
-    Var,
-    /// `varP`.
-    VarP,
+    /// A custom subtotal line (`sum`, `countA`, `avg`, ..., `varP`), by its function. `countA` is
+    /// read as [`Aggregate::Count`] and `count` as [`Aggregate::CountNums`], ECMA-376's meanings;
+    /// that is unproven for Excel, which labels a `count` line `Count` over a numbers-only field
+    /// (probes/t4137-pivot-captions K5!A8; UNVERIFIED in docs/excel-semantics/pivots.md, T-4622).
+    Function(Aggregate),
     /// `grand`.
     Grand,
     /// `blank`.
@@ -351,7 +333,9 @@ pub struct DataField {
     /// `baseItem`: the item it compares against; [`NO_BASE_ITEM`] for none, 1048828 for
     /// (previous) and 1048829 for (next) (MS-OI29500 §18.10.1.22).
     pub base_item: u32,
-    /// `numFmtId` of the values; absent is the application's default.
+    /// `numFmtId` of the values; absent is the application's default (MS-OI29500
+    /// §18.10.1.22 d, as docs/research/pivot-tables-2026-11-04/excel-docs.md §1 quotes it; not
+    /// probed).
     pub number_format: Option<u32>,
 }
 
@@ -465,9 +449,10 @@ pub enum OpaqueNode {
     /// still escaped, in file order. The collections' `count` attributes are not kept: export
     /// writes them from the lists.
     Attributes(String),
-    /// A child element of the owner the model does not read, with everything inside it.
-    /// `CT_pivotTableDefinition` and its parts are sequences, so the element's name fixes its
-    /// place among the owner's typed children.
+    /// A child element of the owner the model does not read (an unknown element, `extLst`,
+    /// `rowItems`, ...), with everything inside it. Its place among the owner's typed children is
+    /// not recorded: `CT_pivotTableDefinition` and its parts are sequences, so export (T-4176)
+    /// writes it where its name falls in the schema's order, the invariant it relies on.
     Element(String),
 }
 

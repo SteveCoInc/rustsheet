@@ -30,20 +30,22 @@ The definition model is `crates/rustsheet-engine/src/pivot/model.rs` (moved out 
   constructor that every builder now uses. `PivotOptions` types compact, outline, outlineData, compactData, both
   grand totals, dataOnRows, dataPosition, the four captions, showMissing/missingCaption, showError/errorCaption,
   pageWrap and pageOverThenDown, with the schema's defaults.
-- **Per field:** `PivotField` gains compact, outline, subtotalTop, defaultSubtotal, the custom subtotal set (as the
-  `ItemType` of each subtotal line), sortType, insertBlankRow, numFmtId and `items` (`PivotItem`: `t`, `x`, `sd` as
+- **Per field:** `PivotField` gains compact, outline, subtotalTop, defaultSubtotal, the custom subtotal set (`Aggregate`s:
+  `countA` as Count, `count` as Count Numbers, ECMA-376's reading, UNVERIFIED in pivots.md, probe T-4622), sortType, insertBlankRow, numFmtId and `items` (`PivotItem`: `t` as `ItemType`, whose subtotal lines carry their `Aggregate`, `x`, `sd` as
   expanded, `s` as a manual filter, per MS-OI29500). `h` of a cache item stays in the hidden bitset GETPIVOTDATA reads.
 - **Data and page fields:** `DataField` gains showDataAs, baseField/baseItem and numFmtId (`Default` is the
   schema's); `PageField` holds `fld`, `item` and `hier`.
 - **Verbatim:** every other attribute and element is an `OpaqueEntry` (owner element, attributes or a whole child
   element as written); the collections' `count` is derived. The importer (`crates/rustsheet-xlsx/src/import/pivots/table.rs`,
-  over a `walk_keeping` that reads unread subtrees verbatim) charges each entry to a workbook budget the size of
-  `max_uncompressed_bytes`, and caps a field's items at its cache items plus 14; both are in web.md's DEVIATION entry.
+  over a `walk_keeping` that reads unread subtrees verbatim) charges each entry (shrunk to its length) to a workbook budget, `MAX_OPAQUE_BYTES` (32 MiB, or the inflate limit if
+  lower), and caps a field's items at its cache items plus 14; both are in web.md's DEVIATION entry, with the rule
+  for malformed attributes (unknown enum values skip the pivot; malformed booleans and numbers nothing computes from
+  read as the default). Skip reasons quote at most 64 characters of a file value.
 - **Tests:** table/tests.rs imports the t4137 K1/K3/K4/K5, t4128 CalcTopSort, t4138 PG6/PG8 and t4123 Tabular
   definitions (fixtures built by `rustsheet-spec2xlsx`) and `tests/example.xlsx`'s Excel-saved pivot, and checks that
   every attribute of each is typed or kept.
 - **GETPIVOTDATA:** unchanged. A data field with showDataAs other than normal is now typed but still skips its pivot
   until T-4161/T-4163; filters and calculated items stay verbatim for T-4165/T-4175. `make eval` shows no regression.
 
-Open: which function `countSubtotal`/`countASubtotal` compute (K5 labels a `count` line `Count` over numbers only),
-left to the renderer task's probe.
+Open: which function `countSubtotal`/`countASubtotal` compute (K5 labels a `count` line `Count` over numbers only):
+filed as T-4622. T-4147 (and T-4176 as a fallback) now type the location geometry left verbatim here.

@@ -46,6 +46,17 @@ is VERIFIED by probes/t4134-pivot-items I1 (next entry).
 Status: the refusal is a builder observation (T-4122 runs), not committable as a probe: Excel saves
 nothing for a file it refuses
 
+## Which function the countA and count custom subtotals compute
+Rule (hypothesis, ECMA-376's reading): a pivot field's `countASubtotal` (subtotal line `item t="countA"`) counts every
+value (COUNTA, the data-field `count`) and `countSubtotal` (`t="count"`) counts numbers only (Count Numbers, the
+data-field `countNums`).
+Evidence: probes/t4137-pivot-captions K5 writes `countSubtotal="1"` with `<item t="count"/>`, and Excel labels the line
+`East Count` (K5!A8) and counts 4 records; its Sales field holds only numbers, so it cannot tell COUNTA from COUNT,
+and the `Count` label fits either. Probe pending: T-4622.
+Status: UNVERIFIED (probe pending, T-4622)
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`SUBTOTAL_FUNCTIONS`; the model only, nothing
+computes a custom subtotal yet)
+
 ## Item identity: exact for numbers and types, case-insensitive for text
 Rule: on refresh, texts that differ only in case are one item, and their records add up. In I1 the item
 shows `east`; see "Item casing when cache and source disagree, and date items" (T-4582). Numbers are
