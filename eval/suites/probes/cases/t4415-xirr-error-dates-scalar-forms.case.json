@@ -1,0 +1,57 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4415: XIRR with one boolean or text value against an error dates argument as a literal (rows 1-3: TRUE, FALSE, \"x\"), a one-cell range (4-5: TRUE, \"x\"), and a cell TRUE with guess -1 and -2 (6-7); columns: dates literal 1/0, literal NA(), cell #DIV/0!, cell #N/A. Extends t3816-xirr-element-reading D39.",
+ "tags": [
+  "M9",
+  "financial",
+  "xirr",
+  "probe",
+  "T-4415"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=XIRR(TRUE,1/0)",
+    "B1": "=XIRR(TRUE,NA())",
+    "C1": "=XIRR(TRUE,D!$B$1)",
+    "D1": "=XIRR(TRUE,D!$B$2)",
+    "A2": "=XIRR(FALSE,1/0)",
+    "B2": "=XIRR(FALSE,NA())",
+    "C2": "=XIRR(FALSE,D!$B$1)",
+    "D2": "=XIRR(FALSE,D!$B$2)",
+    "A3": "=XIRR(\"x\",1/0)",
+    "B3": "=XIRR(\"x\",NA())",
+    "C3": "=XIRR(\"x\",D!$B$1)",
+    "D3": "=XIRR(\"x\",D!$B$2)",
+    "A4": "=XIRR(D!A1:A1,1/0)",
+    "B4": "=XIRR(D!A1:A1,NA())",
+    "C4": "=XIRR(D!A1:A1,D!$B$1)",
+    "D4": "=XIRR(D!A1:A1,D!$B$2)",
+    "A5": "=XIRR(D!A2:A2,1/0)",
+    "B5": "=XIRR(D!A2:A2,NA())",
+    "C5": "=XIRR(D!A2:A2,D!$B$1)",
+    "D5": "=XIRR(D!A2:A2,D!$B$2)",
+    "A6": "=XIRR(D!A1,1/0,-1)",
+    "B6": "=XIRR(D!A1,NA(),-1)",
+    "C6": "=XIRR(D!A1,D!$B$1,-1)",
+    "D6": "=XIRR(D!A1,D!$B$2,-1)",
+    "A7": "=XIRR(D!A1,1/0,-2)",
+    "B7": "=XIRR(D!A1,NA(),-2)",
+    "C7": "=XIRR(D!A1,D!$B$1,-2)",
+    "D7": "=XIRR(D!A1,D!$B$2,-2)"
+   }
+  },
+  {
+   "name": "D",
+   "cells": {
+    "A1": true,
+    "A2": "x",
+    "A3": false,
+    "B1": "=1/0",
+    "B2": "=NA()"
+   }
+  }
+ ]
+}
