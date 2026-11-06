@@ -3,7 +3,7 @@ id: T-2244
 title: "Port ironcalc 4e6db1e6: malformed ZIP input stays a zip error; take zip 9.0.5"
 milestone: M5
 lane: quality
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
