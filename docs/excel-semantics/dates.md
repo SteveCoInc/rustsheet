@@ -73,17 +73,20 @@ the first 94-cell version of weeknum-serial-0 (commit 042ad31) reproduces determ
 Status: VERIFIED
 Implemented in: `fn_weeknum`, `iso_week` (crates/rustsheet-engine/src/functions/date_and_time/weeknum.rs), `fn_isoweeknum`.
 
-### WEEKNUM return_type snap and negative floor (T-4470, VERIFIED)
-Rule: WEEKNUM reads return_type as a floor that snaps up within 2^-22 + 2^-33 of the next integer, before choosing the type, for
-positive AND negative values (the same count rule as LEFT; "Other date functions floor a serial just below midnight; ... but WEEKNUM's
-return_type" in the T-4454 entry below). Consequences, each separating the snap from truncation:
-- `1-2^-23` is type 1 (not 0): it sets the Sunday start; `2-2^-23` is type 2 and sets Monday; `18-2^-23` is 18 (`#NUM!`, empties the
+### WEEKNUM return_type snap and negative floor (T-4470)
+Rule: WEEKNUM reads return_type as a floor that snaps up near the next integer, before choosing the type. Positive side: within
+2^-22 + 2^-33 below an integer (the LEFT count rule; the T-4454 entry below). Negative side: the floor (`-0.5` is -1) and the snap at
+`-2^-30` (reads 0) are VERIFIED, but the size of the negative-side snap window is NOT probed: the only negative point inside it is
+`-2^-30`, far below the bound. It may be the full tolerance or half of it, as DATE/TIME use for negatives (`near_integer_floor`);
+the engine uses the full one until probed (follow-up task). Cells and what each rules out:
+- `1-2^-23` is type 1 (not 0): sets the Sunday start; `2-2^-23` is type 2 and sets Monday; `18-2^-23` is 18 (`#NUM!`, empties the
   state; truncation would give 17); `21-2^-23` is 21 (ISO, week 15 for serial 100); `22-2^-23` is 22 and reads the stale state.
-- A negative return_type floors: `-0.5` and `-1.5` are -1 and -2, so they READ the stale state (truncation would make -0.5 type 0, always
-  `#NUM!`); `-2^-30` snaps up to 0 and is `#NUM!`, emptying the state.
+- `-0.5` is -1: it READS the stale state (a floor; truncation would make it type 0, always `#NUM!`). `-1.5` reads it too, but truncation
+  (-1) does the same, so it separates nothing. `-2^-30` is `#NUM!` and empties the state: it snaps up to 0 (a plain floor would give -1
+  and read the state).
 Evidence: probes/t4470-weeknum-return-type-edges (8 layouts, A3 sets the state, A2 the edge type, A1 `WEEKNUM(100,99)` reads it;
 excel-graph, 2026-11-06). Ours: matches all 24 cells (`near_integer_count` on every return_type, T-4470; negatives truncated before).
-Status: VERIFIED (web)
+Status: VERIFIED (web) for the cells above; negative snap bound unprobed
 
 ### WEEKNUM's stale return_type state (T-1484)
 Rule: one start-weekday state, Sunday, Monday or empty, lives for one recalculation. It is

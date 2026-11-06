@@ -40,4 +40,4 @@ agree with each other.
 Probe probes/t4470-weeknum-return-type-edges (excel-graph) showed the snap holds at the 1, 18, 21, 22 boundaries and the start-weekday state, and that a
 negative return_type FLOORS (with the snap) rather than truncating: `-0.5` reads the stale state, `-2^-30` is 0. The engine now applies
 `near_integer_count` to every return_type. dates.md has a new entry and the old WEEKNUM entries link to it. Eval delta: new probe, 24 cells,
-all pass with the fix (the negative-floor cells TNhalf and TN15 would differ under truncation).
+all pass with the fix. TNhalf separates floor from truncation; TN30 separates the snap from a plain floor; the negative-side snap window's size is unprobed (follow-up).
