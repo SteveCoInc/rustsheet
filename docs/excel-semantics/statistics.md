@@ -7345,12 +7345,41 @@ T-2576 probe (probes/t2576-error-type-cell-paired, excel-graph, 2026-10-26; FTES
   first sample is `#NUM!` too (`TTEST(CELL("col",Data!D4),Data!A5:B10,2,2)`, gen-m9 a5342a7e24fd803e A15), after its
   tails/type checks (gen-m9 d5fd9e05e9e6f466 A184 is the tails argument's `#CALC!`). A size mismatch comes first: `#N/A`
   (`COVARIANCE.S(ERROR.TYPE(#REF!),Data!C10:D10)`, gen-m9 abc2939ebd1e2365 A335; `RSQ(ERROR.TYPE(#NAME?),Data!C8:C11)`,
-  b9a32ce9a1fd0d71 A267). UNVERIFIED: the second argument of COVAR, COVARIANCE.S, CORREL, PEARSON, SLOPE, RSQ and STEYX
-  (the engine treats it as COVARIANCE.P's and INTERCEPT's), and a marked first argument against an error element of the
-  second (the engine gives `#NUM!`).
+  b9a32ce9a1fd0d71 A267).
+- T-2766 probe (probes/t2766-mark-positions, excel-graph, 2026-11-06): a marked second argument is cells with no number
+  in COVAR, COVARIANCE.S, CORREL, PEARSON, SLOPE, RSQ and STEYX: `CORREL({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))` is
+  `#DIV/0!` where the unmarked `CORREL({1;2;3},{4;2;3})` would be -0.5 (plain computation, not an oracle cell),
+  `COVAR({1;2},ERROR.TYPE({#REF!;#DIV/0!}))` `#DIV/0!` (A6:A12; so
+  E27's `INTERCEPT(5,ERROR.TYPE(#REF!))`, one point either way, does not tell the number from no number). A marked first
+  argument beats an error element of the second: `COVARIANCE.P(ERROR.TYPE({#REF!;#REF!}),{1;#N/A})` and the CORREL form
+  are `#NUM!` (A13, A14). SUMX2MY2 and SUMX2PY2 react like SUMXMY2, and the mark is `#NUM!` in either argument but after
+  the other argument's error value and the count check: `SUMXMY2(5,ERROR.TYPE(#REF!))` is `#NUM!`,
+  `SUMXMY2(ERROR.TYPE(#REF!),1/0)` `#DIV/0!`, `SUMXMY2(ERROR.TYPE(#REF!),{1;2})` `#N/A` (A15:A19). LOGEST, TREND and GROWTH
+  are `#VALUE!` like LINEST (A20:A22). IFNA and a called LET name keep the mark (`FTEST({1;2;3},IFNA(ERROR.TYPE(#REF!),0))`,
+  `FTEST({1;2;3},LET(f,LAMBDA(x,x),f(ERROR.TYPE(#REF!))))` are `#NUM!`, A23, A28), IFS and SWITCH drop it (`#DIV/0!`, A24,
+  A25), and so does IFERROR of an array (`IFERROR(ERROR.TYPE({#REF!}),0)`, A27); nested IFs, a LET name bound to a LET
+  name and INDEX of one element of a marked array keep it (A26, A29, A30).
+- T-2766 review probe (probes/t2766-mark-positions-2, excel-graph, 2026-11-06; 30 cells, predictions committed before the
+  fill). The wrappers nest in any order: CHOOSE of a LET name or of a LAMBDA call, LET of CHOOSE, INDEX of a LET name,
+  IF of a LET name, a LAMBDA call of CHOOSE, INDEX of CHOOSE and IFERROR of a LET name all keep the mark
+  (`FTEST({1;2;3},CHOOSE(1,LET(x,ERROR.TYPE(#REF!),x)))` is `#NUM!`, A1:A4, A6:A9), and `IRR(CHOOSE(1,LET(x,
+  CELL("row",D2),x)))` is `#VALUE!` (A5). A marked array passes IF, CHOOSE, a LET name, a LAMBDA call and
+  `INDEX(..,0,1)` (`FTEST({1;2;3},IF(TRUE,ERROR.TYPE({#REF!;#N/A})))` is `#NUM!`, A10:A15), while IF over an array
+  condition drops a marked number (`FTEST({1;2;3},IF({TRUE;TRUE},ERROR.TYPE(#REF!)))` is `#DIV/0!`, A16). IFERROR's
+  fallback keeps it (`FTEST({1;2;3},IFERROR(1/0,ERROR.TYPE(#REF!)))` is `#NUM!`, A24) and so does IF's false branch (A25).
+  An array of references as the second argument is cells with no number in CORREL, SLOPE and INTERCEPT
+  (`CORREL({1;2},INDIRECT("B1",{1;1}))`, `INTERCEPT(5,INDIRECT("B1",{1}))` are `#DIV/0!`, A17:A19) and `#NUM!` in SUMXMY2
+  (A20). A marked second argument's error element stays that error: `CORREL({1;2;3},ERROR.TYPE({#REF!;5;#VALUE!}))` is
+  `#N/A` (A23); `SUMXMY2(ERROR.TYPE(#REF!),{#N/A})` is `#NUM!` (A22). LINEST's marked known_y waits for known_x's error
+  value: `LINEST(ERROR.TYPE(#REF!),1/0)` is `#DIV/0!` (A21). CHITEST rejects a marked argument on either side:
+  `CHITEST({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))`, the swapped form and `CHITEST({1;2},INDIRECT("B1",{1;1}))` are
+  `#NUM!` (A26:A28). A recursive LAMBDA whose inner level alone returns ERROR.TYPE is marked only when every outer level
+  hands the value on: `+0` at the outer level drops it (`#DIV/0!`, A29), returning it unchanged keeps it (`#NUM!`, A30).
 - LINEST reacts: `LINEST(ERROR.TYPE(#REF!))` is `#VALUE!` (E34) where `LINEST(2)` is 0 (gen-m9 8d3588d8df0812df A186).
-  CHITEST and the one-list functions are unaffected: SUM, STDEV, VAR.P, KURT, PERCENTILE, LARGE, MEDIAN, DEVSQ, AVEDEV and
-  ZTEST give what 4 gives (E18:E22, E30:E33, E36:E38).
+  The one-list functions are unaffected: SUM, STDEV, VAR.P, KURT, PERCENTILE, LARGE, MEDIAN, DEVSQ, AVEDEV and ZTEST give
+  what 4 gives (E20:E22, E30:E33, E36:E38). `CHITEST({1,2},ERROR.TYPE(#REF!))` gives what `CHITEST({1,2},4)` gives
+  (E18, E19) only because the cell counts differ: with equal counts CHITEST rejects the mark (`#NUM!`,
+  probes/t2766-mark-positions-2 A26:A28).
 The third T-2255 cell, `F.TEST(INDIRECT("Data!B3",TOCOL(2,0,Data!A5)),{-1,0,1})`
 (06b4e8f5de409d5e A261), is `#NUM!` over an INDIRECT that is `#VALUE!` (references.md "INDIRECT: a 1x1 array a1 argument is
 #VALUE!"), as is `COVARIANCE.P(INDIRECT("Data!A1",FILTER(..)),Data!B11:D12)` (f2bd5f380ec002bf A383); T-2577 explained
@@ -7358,9 +7387,19 @@ that `#NUM!`: the INDIRECT is an array of references ("An array of references is
 Evidence: probes/t2436/computed-scalar (excel-graph, 2026-10-24), probes/t2576-error-type-cell-paired (excel-graph,
 2026-10-26); gen-m9 cells in T-2576 and T-2577.
 Ours: since T-2576 the same for the call itself (parentheses aside), in F.TEST/FTEST, the regression family, COVARIANCE
-and T.TEST (`is_marked_number`, functions/util.rs; `evaluate_sample_arg`, functions/statistical/paired.rs); the LET/IF/CHOOSE/IFERROR/LAMBDA/INDEX forms, an array of
-marked numbers, SUMXMY2 and LINEST are T-2766's (still `#DIV/0!` or a value); T-2577.
-Status: VERIFIED (excel-graph) for the listed calls; mechanism UNVERIFIED
+and T.TEST (`evaluate_sample_arg`, functions/statistical/paired.rs); since T-2766 the mark is a flag on the evaluated
+value (crates/rustsheet-engine/src/number_mark.rs: every read of a node is bracketed, and a reader asks whether the last
+bracket to finish, its own, carries it), which LET, IF, CHOOSE, IFERROR and IFNA (of a number, value or fallback),
+INDEX, a LAMBDA called in place and a called name hand on, nested in any order, and a LET name or LAMBDA parameter bound
+to a marked value carries; `ERROR.TYPE({#REF!})` marks its array, which the same wrappers hand on; CHITEST's marked
+second argument is `#NUM!` and the regression family's is cells with no number with its errors kept (`SecondMark`,
+functions/statistical/paired.rs); a marked known_y of LINEST, LOGEST, TREND and GROWTH is `#VALUE!` after known_x's
+error value (`read_known_y_and_x`, functions/statistical/regression.rs). T-2577.
+UNVERIFIED, and ours as said: a marked array as IFERROR's fallback (ours drops it, as IFERROR of an array does); TREND's
+and GROWTH's marked known_y against an error new_x (ours: `#VALUE!` first); an array of references mixing references
+and error elements as the regression family's second argument (ours: the references no number, the errors kept); which
+of CHITEST's `#NUM!` and an error element of the other argument comes first (ours: `#NUM!`).
+Status: VERIFIED (excel-graph) for the listed calls and the wrapper nesting; mechanism UNVERIFIED
 Tasks: T-2576, T-2577, T-2766
 
 ## An array of references is #NUM! in the paired functions (T-2577)
@@ -7383,9 +7422,12 @@ of an element (the cell, `#DIV/0!`); what keeps it: LET (`F.TEST(LET(x,INDIRECT(
 Evidence: probes/t2577-indirect-ref-array (excel-graph, 2026-10-26).
 Ours: since T-2577 for a direct OFFSET or INDIRECT argument in F.TEST, the `fn_get_two_matrices` family (CORREL,
 PEARSON, SLOPE, INTERCEPT, RSQ, STEYX, FORECAST, CHITEST), COVARIANCE and T.TEST (`Model::evaluate_sample_arg`,
-functions/statistical/paired.rs); the LET form, SUMXMY2 and LINEST are T-2766's, STDEV T-2065's. UNVERIFIED, marked by
-analogy with the ERROR.TYPE mark: the first argument of RSQ and STEYX, T.TEST's second sample, and COVARIANCE.S's and
-COVAR's second argument (read as cells with no number); probing them is T-2766's.
+functions/statistical/paired.rs); since T-2766 also through a LET name (a variable bound to an array of references
+holding a reference is marked, `VariableStack::insert_marked`) and as SUMXMY2's first argument; STDEV is T-2065's.
+The positions marked by analogy are confirmed by probes/t2766-mark-positions (excel-graph, 2026-11-06): `#NUM!` as the
+first argument of RSQ and STEYX and as T.TEST's second sample, cells with no number (`#DIV/0!`) as COVARIANCE.S's and
+COVAR's second argument (A1:A5); and by probes/t2766-mark-positions-2 (2026-11-06): cells with no number (`#DIV/0!`) as
+the second argument of CORREL, SLOPE and INTERCEPT, `#NUM!` as SUMXMY2's and CHITEST's (A17:A20, A28).
 Status: VERIFIED (excel-graph) for the listed calls
 Tasks: T-2577, T-2766, T-2065
 
