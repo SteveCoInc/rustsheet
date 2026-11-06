@@ -21,7 +21,7 @@ is split by cause into the open tasks that own the cells still off (see Outcome)
 
 ## Acceptance criteria
 - [x] pivots-suite cases scored through the engine render; baseline updated with `make eval-baseline`.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Removing the baked path.
@@ -55,7 +55,7 @@ Eval (`make eval-baseline` on main after T-4634, REGRESSIONS 0): probes known fa
 6544 (fixed 3940); every other suite unchanged (gen-m5 3, gen-m9 1767, ironcalc-calc 266, the
 rest 0). Thirteen of the 18 defined-pivot cases now pass whole (t4134, t4135, t4137, t4138,
 t4582, t4583, t4586, t4589, t4609, t4612, t4614, t4616 and T-4634's
-probes/t4634-pivot-total-order-4, whose 1376 cells all pass).
+probes/t4634-pivot-total-order-4, all 1643 of whose cells pass, 1376 newly).
 The 292 cells still off, by cause and owner:
 - `showDataAs` data fields, skipped by the importer: t4123 T to T4 (160) -> T-4163;
 - a calculated field, skipped by the importer: t4128 K (28) -> T-4174 (then T-4165);
