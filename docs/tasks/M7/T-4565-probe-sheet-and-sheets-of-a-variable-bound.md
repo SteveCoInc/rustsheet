@@ -3,7 +3,7 @@ id: T-4565
 title: "Probe SHEET and SHEETS of a variable bound to a LAMBDA, an omitted parameter and a LET-bound array (T-4518 review follow-ups)"
 milestone: M7
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
