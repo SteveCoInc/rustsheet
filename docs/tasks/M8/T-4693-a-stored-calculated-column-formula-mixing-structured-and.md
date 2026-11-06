@@ -3,11 +3,11 @@ id: T-4693
 title: "A stored calculated-column formula mixing structured and A1 references follows edits; one default-locale parser helper (T-4274 review follow-ups)"
 milestone: M8
 lane: engine
-status: in-progress
+status: todo
 priority: P2
 size: S
 tier: sonnet
-depends_on: []
+depends_on: [T-4274]
 ---
 
 ## Goal
@@ -34,3 +34,7 @@ one helper.
 
 ## Out of scope
 - `#This Row` cell evaluation after a column insert (T-4680).
+
+## Blocked because
+`Model::displaced_column_formulas` and its callers come from T-4274 (PR #3738), which has not merged to `main`,
+so the code this task changes does not exist there yet. Depends on T-4274; resume once it lands.
