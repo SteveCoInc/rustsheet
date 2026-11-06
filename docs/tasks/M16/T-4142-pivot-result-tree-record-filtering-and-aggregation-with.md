@@ -17,6 +17,7 @@ depends_on: [T-4139, T-4135]
 SPEC-0032; evidence from `p-aggregates`; aggregate kernels reused from GETPIVOTDATA's folds and excel_variance. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274. Since the plan (2026-11-06): M6 added `crates/rustsheet-engine/src/pivot/layout.rs` (a compact layout of one row field and one data field, used for grouped spec pivots, T-4235), `pivot/number_groups.rs`, `pivot/date_groups.rs` and `rustsheet-xlsx/src/import/pivots/groups.rs`; build on them, do not add a parallel layout or grouping path.
 
 ## Acceptance criteria
+- [ ] Decide, with a probe if needed, what a malformed `pageField@item` means. T-4139 reads it leniently as absent, which is `(All)`.
 - [ ] Unit tests; GETPIVOTDATA answers unchanged.
 - [ ] Bench on 100k records (crates/rustsheet/benches).
 - [ ] `make check` green; reviewers approve.
