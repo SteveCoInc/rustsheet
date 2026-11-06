@@ -32,10 +32,7 @@ Cell lists:
 - poi/FormulaEvalTestData_Copy.xlsx (5): EverythingTests!G936, H936, J136, J1328, K936
 - calipers/pv_goldens/pv26_011/golden.xlsx (1): CD market model!B3; UC market model!B3
 - calipers/pv_goldens/pv26_2_011/golden.xlsx (1): CD market model!B3; UC market model!B3
-- calipers/roundtrip/formulas_math_trig/golden.xlsx (33): Sheet1!C23, C25, D22, D24, D70, E19, E22, E23, E24, E25, E46, E48, E60, E71, F22, F24, F68, G19, G23, G25, G69, G72, G75, H19, H20, H22, H23, H24, H25, H26, H71, H74, J72
-- calipers/roundtrip/formulas_text/golden.xlsx (1): Text Functions!C190
 - calipers/roundtrip/formulas_engineering/golden.xlsx (4): Sheet1!D26, D27, J26, J27
-- calipers/roundtrip/formula_stress_test/golden.xlsx (1): Information!B3
 
 ## Acceptance criteria
 - [ ] Every cell above is triaged (fix, task, exception by decision, or not visibly off), recorded in the Outcome.
@@ -43,3 +40,11 @@ Cell lists:
 
 ## Out of scope
 - Decision 0308's cells (T-4373).
+
+## Progress (2026-11-06, partial PR)
+probes/t4534-desktop-golden-web-values (excel-graph): Excel for the web gives the engine's value on the calipers
+formulas_math_trig trig cells at multiples of pi/2, formulas_text C190 `CHAR(255)` and formula_stress_test Information!B3
+`INFO("release")`. Decision 0315 lists those 18 cells as Phase 1 rate exceptions (owner T-4373), and they left this list.
+Still here: poi EverythingTests (J136, G936, H936, K936 are exceptions under 0134; J1328 SUMPRODUCT), ironcalc-calc
+ENGINEERING, IF_ARRAY and ATAN2_POWER (exit exceptions or not visibly off), the forecast-ets-longer-series cells
+(decision 0308's too) and calipers formulas_engineering.

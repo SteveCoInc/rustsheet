@@ -1,0 +1,13 @@
+name = "roundtrip-corpus-bench"
+description = "Round-trip fidelity (SPEC-0033) of the SpreadsheetBench input workbooks, read from the corpus-bench suite's fetched cache"
+kind = "roundtrip"
+# The corpus-bench cell suite's fetched cache: fetched, skipped while not fetched, and gated as that suite is (T-4629).
+cases_of = "corpus-bench"
+include = ["**/1_*_input.xlsx"]
+license = "CC-BY-SA-4.0"
+origin = "https://github.com/RUCKBReasoning/SpreadsheetBench"
+scenarios = ["R0"]
+# Gated like the cell suite: `make check` holds it wherever its cache is fetched (T-4629).
+gate = true
+baseline = "cases"
+milestone = ["M15"]

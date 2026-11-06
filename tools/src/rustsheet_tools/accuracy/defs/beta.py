@@ -205,15 +205,15 @@ def quantile(p: mpmath.mpf, a: mpmath.mpf, b: mpmath.mpf) -> mpmath.mpf:
 def _bounds(given: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf]:
     """The [A, B] a call gives (A and B default to 0 and 1, as in Excel)."""
     lo, hi = (list(given) + [mpmath.mpf(0), mpmath.mpf(1)][len(given) :])[:2]
-    assert not isinstance(lo, (bool, tuple)) and not isinstance(hi, (bool, tuple))
+    assert not isinstance(lo, (bool, str, tuple)) and not isinstance(hi, (bool, str, tuple))
     return mpmath.mpf(lo), mpmath.mpf(hi)
 
 
 def _beta_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, a, b, cumulative = args[:4]
-    assert not isinstance(x, (bool, tuple))
-    assert not isinstance(a, (bool, tuple))
-    assert not isinstance(b, (bool, tuple))
+    assert not isinstance(x, (bool, str, tuple))
+    assert not isinstance(a, (bool, str, tuple))
+    assert not isinstance(b, (bool, str, tuple))
     lo, hi = _bounds(args[4:])
     t = (x - lo) / (hi - lo)
     if cumulative:
@@ -226,7 +226,7 @@ def _beta_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _beta_dist_domain(args: Sequence[MathArg]) -> str | None:
     x, a, b, cumulative = args[:4]
-    if len(args) > 4 and not isinstance(x, (bool, tuple)):
+    if len(args) > 4 and not isinstance(x, (bool, str, tuple)):
         lo, hi = _bounds(args[4:])
         if lo == hi or not lo <= x <= hi:
             return "x outside [A, B], or A = B"
@@ -236,9 +236,9 @@ def _beta_dist_domain(args: Sequence[MathArg]) -> str | None:
             return None
     if (
         cumulative
-        or isinstance(x, (bool, tuple))
-        or isinstance(a, (bool, tuple))
-        or isinstance(b, (bool, tuple))
+        or isinstance(x, (bool, str, tuple))
+        or isinstance(a, (bool, str, tuple))
+        or isinstance(b, (bool, str, tuple))
     ):
         return None
     if x == 0 and a <= 1:
@@ -250,7 +250,7 @@ def _beta_dist_domain(args: Sequence[MathArg]) -> str | None:
 
 def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     a, b = args[1], args[2]
-    if isinstance(a, (bool, tuple)) or isinstance(b, (bool, tuple)):
+    if isinstance(a, (bool, str, tuple)) or isinstance(b, (bool, str, tuple)):
         msg = "no tail map for a logical shape"
         raise ValueError(msg)
     return quantile(1 - q if upper else q, a, b)
@@ -259,9 +259,9 @@ def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
 def _beta_inv(args: Sequence[MathArg]) -> mpmath.mpf:
     p, a, b = args[:3]
     assert (
-        not isinstance(p, (bool, tuple))
-        and not isinstance(a, (bool, tuple))
-        and not isinstance(b, (bool, tuple))
+        not isinstance(p, (bool, str, tuple))
+        and not isinstance(a, (bool, str, tuple))
+        and not isinstance(b, (bool, str, tuple))
     )
     lo, hi = _bounds(args[3:])
     if lo == hi:

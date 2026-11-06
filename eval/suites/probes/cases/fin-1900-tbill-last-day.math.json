@@ -43,6 +43,11 @@
     "v": "94.958333333333333053464612542408455434876183668772",
     "f": "=TBILLPRICE(DATE(9998,1,2),DATE(9998,12,31),0.05)"
    },
+   "A17": {
+    "t": "e",
+    "why": "a settlement in 9999: #NUM!",
+    "f": "=TBILLYIELD(DATE(9999,1,1),DATE(9999,1,10),98)"
+   },
    "A18": {
     "t": "e",
     "why": "a settlement in 9999: #NUM!",
@@ -62,6 +67,11 @@
     "t": "e",
     "why": "a settlement in 9999: #NUM!",
     "f": "=TBILLPRICE(2958465-1,2958465,0.05)"
+   },
+   "A4": {
+    "t": "e",
+    "why": "a settlement in 9999: #NUM!",
+    "f": "=TBILLYIELD(2958465-100,2958465,98)"
    },
    "A5": {
     "t": "e",

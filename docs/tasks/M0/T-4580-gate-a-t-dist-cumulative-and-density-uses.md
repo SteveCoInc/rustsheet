@@ -1,0 +1,86 @@
+---
+id: T-4580
+title: "Gate A: T.DIST (cumulative and density) uses the evidenced huge-x #NUM! cut rule (HugeXCut)"
+milestone: M0
+lane: harness
+status: done
+priority: P2
+size: S
+tier: opus
+depends_on: []
+spec: docs/specs/SPEC-0029-gate-a-accuracy-gate.md
+---
+
+## Goal
+T.DIST's Gate A definition encodes Excel's huge-x `#NUM!` as T.DIST.RT, T.DIST.2T and TDIST do. Each of its
+committed tables keeps 0 differences under `verify`.
+
+## Context
+- T-4102 (Excel fidelity review) added `student_t.HugeXCut` (tools/src/rustsheet_tools/accuracy/defs/student_t.py).
+  - From the smallest evidenced `#NUM!` |x| on, x is outside the domain.
+  - Strictly between the largest evidenced number and that `#NUM!`, the point has no value (NoValueError, unprobed).
+  - The brackets come from every Excel cell: the tables, the probes and gen-m9.
+- T.DIST on main still gives a math number at a huge x where Excel is `#NUM!`. statistics.md, "Scalar distributions at
+  extreme arguments, part 2" and "T.DIST's density is #NUM! at a huge x":
+  - Cumulative, negative x: 0 at x -4.0E+136 and -2.1E+119 (accuracy/T.DIST/s1 A90, A96); `#NUM!` at -2.1E+217 and
+    -4.1E+259 (A103, A91).
+  - Cumulative, positive x: only `#NUM!` cells, at 5.4E+186 and 4.4E+221 (A86, A98).
+  - Density: `#NUM!` from 4.2E+220 for a positive x (e-T-3425 A116) and at -4.6E+224 (e-T-3425 A103). It is 0 at
+    9.9E+137 (s1 A97) and, for a negative x, up to |x| 7.6E+87.
+- The brackets are per sign and per `cumulative`. Re-derive them from every cell; do not assume the x² overflow point.
+- The T.DIST batches (s1, e-T-3425, r4-T-2585) are already committed on main, so their math values cannot be
+  rewritten in place: decision 0199 and SPEC-0029 require a changed value to be a new batch plus a decision record.
+  Write that decision record, citing T-4102's brackets, before changing any committed T.DIST math sidecar.
+  Only number cells may move to a domain error.
+- The density known failures owned by T-3554 (engine 0, Excel `#NUM!`) stay error mismatches. Their lines stay.
+
+## Acceptance criteria
+- [x] T.DIST's definition uses `HugeXCut` for both `cumulative` values, with the brackets cited from the evidence.
+- [x] `rustsheet-accuracy verify T.DIST` reports 0 differences, and `rustsheet-eval accuracy` reports 0 failing and 0
+      table defects.
+- [x] The probe sidecars are regenerated with `--function T.DIST`, and only number cells move.
+- [x] A decision record (decision 0199) authorizes the changed T.DIST math values, or they go in a new batch.
+- [x] `make check` green; reviewers approve.
+
+## Out of scope
+- Matching the engine's density to Excel's `#NUM!` (T-3554).
+
+## Outcome
+- `tools/src/rustsheet_tools/accuracy/defs/student_t.py`: T.DIST's value and domain use `HugeXCut`, one bracket per
+  `cumulative` and per sign (`T_DIST_CUTS`). The df cut is checked first, so its reason is unchanged.
+  - The brackets come from every Excel cell of one T.DIST call with |x| above 1E10: the tables, the probes and
+    gen-m9. Only the three T.DIST tables have one; gen-m9's 1E+300 and 1E+307 T.DIST calls are all inside composites.
+  - A cumulative cell whose df is above 1E10 is left out, because its `#NUM!` comes from the df.
+  - Re-derived as the task asked. The r4-T-2585 and e-T-3425 batches narrow every bracket the task's Context quoted
+    from s1. The cumulative T.DIST at a positive x does have numbers (1 up to 7.3E+146).
+
+    | T.DIST | Largest number | Smallest `#NUM!` |
+    |---|---|---|
+    | cumulative, x > 0 | 7.34E+146 (e-T-3425 A92) | 1.90E+159 (r4-T-2585 A217) |
+    | cumulative, x < 0 | 2.01E+153 (r4-T-2585 A223) | 5.43E+196 (e-T-3425 A88) |
+    | density, x > 0 | 9.93E+137 (s1 A97) | 3.84E+200 (r4-T-2585 A267) |
+    | density, x < 0 | 1.12E+153 (r4-T-2585 A236) | 9.72E+176 (r4-T-2585 A266) |
+
+  - No evidenced number lies past an evidenced `#NUM!` in any group, so each bracket is consistent.
+- Decision 0321 authorizes rewriting the committed T.DIST math sidecars in place (decision 0199).
+  - Only the 34 cells whose recomputed value changed were rewritten, each from a number to a domain error: 8 in s1,
+    8 in e-T-3425 and 18 in r4-T-2585. Every one is an Excel `#NUM!` cell. 16 are cumulative and 18 are density.
+  - Case and oracle files are unchanged.
+- `rustsheet-accuracy verify T.DIST`: 0 differences. Before the sidecar rewrite it reported 34, all from a number to a
+  domain error, and none "no longer computes".
+- `rustsheet-eval accuracy`: 0 failing, 0 table defects.
+  - "Excel 15 digits only" went from 1672 to 1656: the 16 cumulative points are now inside on both sides.
+  - The 18 density points stay error mismatches owned by T-3554 (engine 0, Excel `#NUM!`). Their known-failure lines
+    are unchanged.
+- The probes and probes-numeric math sidecars were regenerated with `--function T.DIST`. No sidecar changed: no probe
+  one-call T.DIST cell has |x| above 1E10. `make eval-math-check` reports "current".
+- Tests:
+  - tools/tests/test_accuracy_student_t_tails.py: the evidenced `#NUM!` points, points inside each unprobed bracket,
+    and the largest evidenced numbers, per `cumulative` and sign.
+  - tools/tests/test_accuracy_arith_scale.py: its subnormal-density cell `T.DIST(-1E+154,3,FALSE)*2^600` now sits
+    inside the negative density bracket, where it has no value. It moved to -1E+100, which keeps the cell's purpose (a
+    subnormal density, skipped as an inexact scale).
+- statistics.md:
+  - "Scalar distributions at extreme arguments, part 2" has T.DIST's narrowed cumulative brackets.
+  - "T.DIST's density is #NUM! at a huge x" has the narrowed density brackets from r4-T-2585 A236, A266 and A267.
+- Eval delta: none in the gated suites (tools, table math sidecars and docs only).

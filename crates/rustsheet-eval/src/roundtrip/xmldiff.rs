@@ -82,6 +82,7 @@ const UNORDERED: &[(&str, &str, &[&str])] = &[
     ("/worksheet/dataValidations", "dataValidation", &["sqref"]),
     // CT_ConditionalFormatting, D3.2 CF rules
     ("/worksheet", "conditionalFormatting", &["sqref"]),
+    // CT_DefinedNames, D3.2 defined names
     (
         "/workbook/definedNames",
         "definedName",
@@ -100,14 +101,17 @@ const UNORDERED: &[(&str, &str, &[&str])] = &[
 const DEFAULTS: &[(&str, &str)] = &[
     // CT_Cell
     ("c", "t=n s=0"),
+    // CT_Row
     (
         "row",
         "hidden=false customHeight=false customFormat=false outlineLevel=0 collapsed=false",
     ),
+    // CT_Col
     (
         "col",
         "hidden=false customWidth=false bestFit=false outlineLevel=0 collapsed=false style=0",
     ),
+    // CT_SheetView
     (
         "sheetView",
         "tabSelected=false showGridLines=true rightToLeft=false zoomScale=100 view=normal",
@@ -118,10 +122,12 @@ const DEFAULTS: &[(&str, &str)] = &[
     ("selection", "pane=topLeft activeCellId=0"),
     // CT_Sheet
     ("sheet", "state=visible"),
+    // CT_BookView
     (
         "workbookView",
         "activeTab=0 firstSheet=0 visibility=visible",
     ),
+    // CT_SheetFormatPr
     (
         "sheetFormatPr",
         "customHeight=false zeroHeight=false outlineLevelRow=0 outlineLevelCol=0",
@@ -186,6 +192,12 @@ impl Node {
     fn size(&self) -> usize {
         1 + self.skipped + self.children.iter().map(Node::size).sum::<usize>()
     }
+
+    /// The source items the subtree holds as [`compare`] counts them: each element, its
+    /// attributes, and the semantic-owned elements below it.
+    fn items(&self) -> usize {
+        1 + self.attrs.len() + self.skipped + self.children.iter().map(Node::items).sum::<usize>()
+    }
 }
 
 /// One difference: the item's path, what it is, and its verdict label.
@@ -198,6 +210,9 @@ pub(crate) struct Difference {
     /// `Lost`, `Added` or `Changed`.
     pub(crate) verdict: Verdict,
     pub(crate) detail: Option<String>,
+    /// Source items the difference covers that were not kept: the subtree's size for a lost
+    /// element, 1 for a change or a lost attribute, 0 for an addition.
+    pub(crate) weight: usize,
 }
 
 /// The result of diffing one part pair.
@@ -208,6 +223,8 @@ pub(crate) struct PartDiff {
     pub(crate) differences: Vec<Difference>,
     /// Differences beyond [`MAX_ITEMS`].
     pub(crate) truncated: usize,
+    /// The source items those truncated differences cover ([`Difference::weight`]).
+    pub(crate) truncated_weight: usize,
 }
 
 /// Diffs two XML parts. A part that does not parse is `Err` (the validator reports the output's).
@@ -223,21 +240,20 @@ pub(crate) fn diff(source: &str, output: &str) -> Result<PartDiff, String> {
         let mut local = path.clone();
         compare(&a, &b, &mut path, &mut local, &mut d);
     } else {
-        d.checked = a.size();
-        push(
-            &mut d,
-            element(
-                format!("/{}", a.name.label()),
-                Verdict::Changed,
-                Some(format!("root became {}", b.name.label())),
-            ),
+        d.checked = a.items();
+        let mut root = element(
+            format!("/{}", a.name.label()),
+            Verdict::Changed,
+            Some(format!("root became {}", b.name.label())),
         );
+        root.weight = a.items();
+        push(&mut d, root);
     }
     Ok(d)
 }
 
 /// At most 200 characters of `text`, for a detail line.
-fn clip(text: &str) -> String {
+pub(crate) fn clip(text: &str) -> String {
     match text.char_indices().nth(200) {
         Some((at, _)) => format!("{}…", &text[..at]),
         None => text.to_string(),
@@ -250,7 +266,14 @@ fn element(path: String, verdict: Verdict, detail: Option<String>) -> Difference
         path,
         verdict,
         detail,
+        weight: unit_weight(verdict),
     }
+}
+
+/// The weight of a difference that covers one source item at most: 1 unless nothing of the
+/// source is missing.
+pub(crate) fn unit_weight(verdict: Verdict) -> usize {
+    usize::from(matches!(verdict, Verdict::Changed | Verdict::Lost))
 }
 
 fn push(d: &mut PartDiff, diff: Difference) {
@@ -258,7 +281,17 @@ fn push(d: &mut PartDiff, diff: Difference) {
         d.differences.push(diff);
     } else {
         d.truncated += 1;
+        d.truncated_weight += diff.weight;
     }
+}
+
+/// The source items of a well-formed part (elements and attributes), as [`diff`] counts a lost
+/// subtree.
+///
+/// # Errors
+/// As [`diff`]'s parse.
+pub(crate) fn element_count(xml: &str) -> Result<usize, String> {
+    parse(xml).map(|n| n.items())
 }
 
 /// Compares two matched elements at `path` (the item path, with ordinals and keys) and `local`
@@ -287,20 +320,22 @@ fn compare(a: &Node, b: &Node, path: &mut String, local: &mut String, d: &mut Pa
         d.checked += a.skipped;
         return;
     }
-    let local_path = local.clone();
-    let unordered = |child: &Node| {
-        if child.name.local == "ext" && a.name.local == "extLst" {
-            return Some(&["uri"][..]);
-        }
-        UNORDERED
-            .iter()
-            .find(|(parent, name, _)| *parent == local_path && *name == child.name.local)
-            .map(|(_, _, keys)| *keys)
+    let (ka, kb) = {
+        let local_path = local.as_str();
+        let unordered = |child: &Node| {
+            if child.name.local == "ext" && a.name.local == "extLst" {
+                return Some(&["uri"][..]);
+            }
+            UNORDERED
+                .iter()
+                .find(|(parent, name, _)| *parent == local_path && *name == child.name.local)
+                .map(|(_, _, keys)| *keys)
+        };
+        (
+            keyed(&a.children, &unordered),
+            keyed(&b.children, &unordered),
+        )
     };
-    let (ka, kb) = (
-        keyed(&a.children, &unordered),
-        keyed(&b.children, &unordered),
-    );
     for ((name, key), nodes) in &ka {
         let others = kb.get(&(name.clone(), key.clone()));
         for (n, node) in nodes.iter().enumerate() {
@@ -311,11 +346,18 @@ fn compare(a: &Node, b: &Node, path: &mut String, local: &mut String, d: &mut Pa
                 local.push('/');
                 local.push_str(&name.local);
                 compare(node, other, path, local, d);
+            } else if d.differences.len() >= MAX_ITEMS {
+                // Past the cap, count the loss without building its path.
+                d.checked += node.items();
+                d.truncated += 1;
+                d.truncated_weight += node.items();
             } else {
-                d.checked += node.size();
+                d.checked += node.items();
                 let below = node.size() - 1;
                 let detail = (below > 0).then(|| format!("with {below} elements below it"));
-                push(d, element(path.clone(), Verdict::Lost, detail));
+                let mut lost = element(path.clone(), Verdict::Lost, detail);
+                lost.weight = node.items();
+                push(d, lost);
             }
             path.truncate(path_len);
             local.truncate(local_len);
@@ -324,6 +366,10 @@ fn compare(a: &Node, b: &Node, path: &mut String, local: &mut String, d: &mut Pa
     for ((name, key), nodes) in &kb {
         let have = ka.get(&(name.clone(), key.clone())).map_or(0, Vec::len);
         for n in have..nodes.len() {
+            if d.differences.len() >= MAX_ITEMS {
+                d.truncated += 1;
+                continue;
+            }
             push(
                 d,
                 element(
@@ -386,6 +432,7 @@ fn compare_attrs(src: &Node, out: &Node, path: &str, diffs: &mut PartDiff) {
                 path: format!("{path}@{}", name.label()),
                 verdict,
                 detail,
+                weight: unit_weight(verdict),
             },
         );
     }

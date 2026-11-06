@@ -12,7 +12,9 @@ Sources:
   `GAMMA.DIST(x,a,b,TRUE)` = `GAMMA.DIST(x/b,a,1,TRUE)`: one P(a, y) and Q(a, y).
 - statistics.md, "GAMMA.DIST's density is #NUM! at a subnormal x / beta (T-2738)": the density of a positive x is
   `#NUM!` where x / beta (in doubles) is subnormal; an x / beta that overflows is `#NUM!` for both forms
-  (probes/incomplete-gamma-cap E6, E18, cited by `gamma_dist_of`).
+  (probes/incomplete-gamma-cap E6, E18, cited by `gamma_dist_of`). Both of those cells are at shape 1
+  (`GAMMA.DIST(1E300,1,1E-10,..)`); `_gamma_dist_domain` applies the rule at every shape, as `gamma_dist_of` does,
+  unprobed at the others.
 - statistics.md, "GAMMA.DIST at a huge shape (T-2435, T-3316)": rule 1, the density of a positive x is `#NUM!` where
   shape / x overflows a double; rule 2, from a shape of about 1E+55 a computed 0 is `#NUM!` at some points and not
   others, with no threshold (decision 0267 accepts those cells), so such a point has no math value.
@@ -31,8 +33,10 @@ Sources:
 What has no math value (the sampler redraws; the Excel cells stay in the eval suites):
 - GAMMA.DIST's cdf at a positive x whose x / beta is subnormal in doubles, where the math is above 1E-300. Where the
   ratio underflows to 0, Excel gives 0 at every probed shape (statistics.md line "Where x / beta underflows to 0",
-  T-2982: probes/t2982-gamma-inv-huge-shape A117-A122), against a math value up to about 1: R3 candidates listed for
-  the owner (T-4392), not a cut of the math. A nonzero subnormal ratio below shape 1 is unprobed (T-1942).
+  T-2982: probes/t2982-gamma-inv-huge-shape A117-A122), against a math value up to about 1; the owner ruled to keep
+  Excel's (decision 0300, T-4392), and the math is not cut to match. A nonzero subnormal ratio below shape 1 is
+  unprobed (T-1942). CHISQ.DIST's cdf at a positive x whose x / 2 is subnormal gets the same rule: it is
+  `GAMMA.DIST(x,df/2,2,TRUE)` (KERNEL_SOURCE), and no cell probes it.
 - GAMMA.DIST's density at x = 0 with shape 1: the math is 1 / beta, but only the chi-squared df-2 value (0.5) is
   evidenced, so GAMMA.DIST there gets no value.
 - The chi-squared densities of a positive x whose x / 2 is subnormal or whose (df / 2) / x overflows: unprobed.
@@ -46,12 +50,11 @@ What has no math value (the sampler redraws; the Excel cells stay in the eval su
 from __future__ import annotations
 
 import math
-import sys
 from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import DF_CUT, ill_conditioned
+from rustsheet_tools.accuracy.defs._common import DF_CUT, NORMAL_MIN, ill_conditioned, scalar
 from rustsheet_tools.accuracy.defs.gamma import (
     CHI_SCALE,
     HUGE_SOURCE,
@@ -79,7 +82,6 @@ ZERO_SOURCE = "statistics.md#thin-distribution-functions-argument-coercion-trunc
 RT_TRUNC_SOURCE = "statistics.md#incomplete-gamma-accurate-kernel-t-0971"
 MATH_SOURCE = "Abramowitz and Stegun 6.5.1, 26.1.32, 26.4.19"
 
-NORMAL_MIN = sys.float_info.min
 TWO_PI = 2 * math.pi
 FLOOR = mpmath.mpf("1e-300")  # the envelope's absolute floor (SPEC-0029)
 # Rule 2 of HUGE_SHAPE_SOURCE: Excel's unexplained #NUM! for a computed 0 starts between shapes 1E+55 and 1E+56.
@@ -96,11 +98,7 @@ DENSITY_GUARD_DPS = 10  # digits added to the density's exponent, besides the lo
 
 
 def _floats(*args: MathArg) -> list[float]:
-    out: list[float] = []
-    for a in args:
-        assert not isinstance(a, (bool, tuple))
-        out.append(float(a))
-    return out
+    return [float(scalar(a)) for a in args]
 
 
 def log_density_y(y: mpmath.mpf, a: mpmath.mpf) -> mpmath.mpf:
@@ -144,6 +142,13 @@ def _density(y: mpmath.mpf, a: mpmath.mpf, scale: mpmath.mpf) -> mpmath.mpf:
     return value
 
 
+def _subnormal_ratio_cdf(fx: float, ratio: float, value: mpmath.mpf) -> None:
+    """NoValueError for a cdf above the floor at a positive x whose ratio (x / beta, or x / 2) is subnormal or 0."""
+    if fx > 0 and ratio < NORMAL_MIN and value > FLOOR:
+        msg = "a subnormal x / scale: Excel's 0 where it underflows (T-2982; Excel kept, decision 0300), unprobed otherwise"
+        raise NoValueError(msg)
+
+
 def _huge_shape_zero(a: float, value: mpmath.mpf) -> None:
     if a >= HUGE_SHAPE_NUM and value < NORMAL_MIN:
         msg = "Excel's computed 0 from a shape of 1E+55 is #NUM! at some points (rule 2, T-3316)"
@@ -151,25 +156,23 @@ def _huge_shape_zero(a: float, value: mpmath.mpf) -> None:
 
 
 def _gamma_dist(args: Sequence[MathArg]) -> mpmath.mpf:
-    x, a, beta, cumulative = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(a, (bool, tuple))
-    assert not isinstance(beta, (bool, tuple))
+    x, a, beta = (scalar(v) for v in args[:3])
+    cumulative = args[3]
     fx, fa, fbeta = _floats(x, a, beta)
     y = x / beta
     if not cumulative and y == 0 and a == 1:
         msg = "GAMMA.DIST's density at 0 with shape 1 is unprobed (only CHISQ.DIST's df 2 is evidenced)"
         raise NoValueError(msg)
     value = _cdf(y, a, upper=False) if cumulative else _density(y, a, beta)
-    if cumulative and fx > 0 and fx / fbeta < NORMAL_MIN and value > FLOOR:
-        msg = "a subnormal x / beta: Excel's 0 where it underflows (T-2982, R3 candidates T-4392), unprobed otherwise"
-        raise NoValueError(msg)
+    if cumulative:
+        _subnormal_ratio_cdf(fx, fx / fbeta, value)
     _huge_shape_zero(fa, value)
     return value
 
 
 def _gamma_dist_domain(args: Sequence[MathArg]) -> str | None:
     x, a, beta, cumulative = args
-    if any(isinstance(v, (bool, tuple)) for v in (x, a, beta)):
+    if any(isinstance(v, (bool, str, tuple)) for v in (x, a, beta)):
         return None
     fx, fa, fbeta = _floats(x, a, beta)
     if fx <= 0 or fbeta <= 0:
@@ -196,20 +199,21 @@ def _density_domain(fx: float, fa: float, ratio: float) -> str | None:
 
 def _gamma_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     a, beta = args[1], args[2]
-    if isinstance(a, (bool, tuple)) or isinstance(beta, (bool, tuple)):
+    if isinstance(a, (bool, str, tuple)) or isinstance(beta, (bool, str, tuple)):
         msg = "no tail map for a logical shape or scale"
         raise ValueError(msg)
     return beta * quantile(q, a, upper=upper)
 
 
 def _chisq_dist(args: Sequence[MathArg]) -> mpmath.mpf:
-    x, df, cumulative = args
-    assert not isinstance(x, (bool, tuple))
+    x, df, cumulative = scalar(args[0]), args[1], args[2]
     a = chi_shape(df)
     y = x / CHI_SCALE
-    if cumulative:
-        return _cdf(y, a, upper=False)
     fx = float(x)
+    if cumulative:
+        value = _cdf(y, a, upper=False)
+        _subnormal_ratio_cdf(fx, fx / 2, value)
+        return value
     if fx > 0 and (fx / 2 < NORMAL_MIN or math.isinf(float(a) / fx)):
         msg = "a chi-squared density at a subnormal x / 2 or an overflowing (df / 2) / x is unprobed"
         raise NoValueError(msg)
@@ -218,7 +222,7 @@ def _chisq_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _chisq_dist_domain(args: Sequence[MathArg]) -> str | None:
     x, df, cumulative = args
-    if isinstance(x, (bool, tuple)) or isinstance(df, (bool, tuple)):
+    if isinstance(x, (bool, str, tuple)) or isinstance(df, (bool, str, tuple)):
         return None
     if not cumulative and x == 0 and chi_shape(df) < 1:
         return "the density at 0 with one degree of freedom is infinite"
@@ -227,13 +231,12 @@ def _chisq_dist_domain(args: Sequence[MathArg]) -> str | None:
 
 def _chisq_dist_rt(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df = args
-    assert not isinstance(x, (bool, tuple))
-    return _cdf(x / CHI_SCALE, chi_shape(df), upper=True)
+    return _cdf(scalar(x) / CHI_SCALE, chi_shape(df), upper=True)
 
 
 def _chi_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     df = args[1]
-    if isinstance(df, (bool, tuple)):
+    if isinstance(df, (bool, str, tuple)):
         msg = "no tail map for a logical df"
         raise ValueError(msg)
     return CHI_SCALE * quantile(q, chi_shape(df), upper=upper)

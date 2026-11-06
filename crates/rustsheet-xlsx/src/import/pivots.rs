@@ -10,24 +10,24 @@
 //! table"). A grouped field imports as its group items ([`groups`], T-4225).
 
 mod groups;
+mod table;
 
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::io::{BufRead, Read, Seek};
 
 use quick_xml::events::{BytesStart, Event};
 use rustsheet_engine::expressions::token::get_error_by_english_name;
-use rustsheet_engine::expressions::utils::{is_valid_column_number, is_valid_row};
 use rustsheet_engine::pivot::{
-    Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea, DataField,
-    DateGroupBy, DateGroupError, NumberGroupError, PivotCache, PivotCacheError, PivotField,
-    PivotTable, RecordValue, MAX_FIELDS, MAX_ITEMS, MAX_RECORD_VALUES,
+    CacheBuilder, CacheItem, CacheSource, DateGroupBy, DateGroupError, NumberGroupError,
+    PivotCache, PivotCacheError, PivotTable, RecordValue, MAX_FIELDS, MAX_ITEMS, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 
 use self::groups::{apply_groups, FieldGroup, RangeGroup};
+use self::table::read_pivot_table;
 use super::iso_date::pivot_cache_date_serial;
 use super::package::{part_folder_and_rels, part_key, resolve_relative_target, Package};
-use super::worksheets::parse_range;
 use super::xml::{find_start_attribute, start_attribute, XmlNode};
 use super::{parse_relationships, Relationship};
 use crate::error::XlsxError;
@@ -38,6 +38,12 @@ const MAX_AXIS_FIELDS: usize = 256;
 const MAX_DATA_FIELDS: usize = 256;
 /// Most pivots on one sheet; the ones past it are dropped.
 const MAX_PIVOTS_PER_SHEET: usize = 64;
+/// Most bytes the pivots' verbatim stores hold over a workbook (SPEC-0032 "Model"), each entry
+/// charged its text and its own size (`OpaqueEntry::cost`); never more than the package may
+/// inflate. A pivot whose store would pass what is left is dropped (web.md "Pivot caches past
+/// the import limits are dropped"). Excel-saved definitions keep a few kilobytes, mostly
+/// `rowItems`, about 30 bytes per rendered line.
+const MAX_OPAQUE_BYTES: usize = 32 << 20;
 /// Most pivots in a workbook; the ones past it are dropped. Every accepted pivot allocates a
 /// hidden-items bitset per field sized to its cache, so the per-sheet cap alone leaves the total
 /// to the file (T-2394, web.md "Pivot caches past the import limits are dropped").
@@ -81,6 +87,13 @@ impl From<quick_xml::events::attributes::AttrError> for Skip {
 
 fn skip<T>(reason: impl Into<String>) -> Result<T, Skip> {
     Err(Skip(reason.into()))
+}
+
+/// A value from the file as a skip reason quotes it: its first 64 characters, so a reason never
+/// copies an attacker's long value.
+fn shown(value: &str) -> String {
+    const MAX_CHARS: usize = 64;
+    value.chars().take(MAX_CHARS).collect()
 }
 
 /// A worksheet pivots may sit on.
@@ -135,18 +148,25 @@ pub(super) fn load_pivots<R: Read + Seek>(
     // Part names match case-insensitively with `\` as `/` (`part_key`), so count on that key.
     let keys: Vec<String> = parts.iter().map(|(_, part)| part_key(part)).collect();
     let reached = occurrences(keys.iter());
+    let limits = *archive.limits();
+    let mut opaque_left = usize::try_from(limits.max_uncompressed_bytes)
+        .unwrap_or(usize::MAX)
+        .min(MAX_OPAQUE_BYTES);
     let mut pivot_tables = Vec::new();
     for ((sheet_id, part), key) in parts.iter().zip(&keys) {
+        let left = Cell::new(opaque_left);
         let result = if reached.get(key).is_some_and(|&n| n > 1) {
             skip("the part is reached twice")
         } else {
-            archive
-                .open(part)
-                .map_err(Skip::from)
-                .and_then(|reader| read_pivot_table(reader, *sheet_id, &pivot_caches, &cache_ids))
+            archive.open(part).map_err(Skip::from).and_then(|reader| {
+                read_pivot_table(reader, *sheet_id, &pivot_caches, &cache_ids, &limits, &left)
+            })
         };
         match result {
-            Ok(pivot) => pivot_tables.push(pivot),
+            Ok(pivot) => {
+                opaque_left = left.get();
+                pivot_tables.push(pivot);
+            }
             Err(reason) => log_skip("pivot table", part, &reason),
         }
     }
@@ -311,26 +331,77 @@ fn pivot_table_parts<R: Read + Seek>(
     Ok(parts)
 }
 
-/// An element start, or the end of the element named, as [`walk`] reports them.
+/// An element start, the end of the element named, or an element read whole, as [`walk`] and
+/// [`walk_keeping`] report them.
 enum Tag<'a> {
     Open(&'a BytesStart<'a>),
     Close(&'a str),
+    /// An element [`walk_keeping`]'s `keep` picked: its XML as written, everything inside it
+    /// included.
+    Kept(String),
 }
 
 /// Streams the elements of a part to `visit`, with the local names of the enclosing elements,
 /// outermost first (an empty element is an `Open` then a `Close`).
 fn walk<B: BufRead>(
     part: B,
+    visit: impl FnMut(&[String], Tag<'_>) -> Result<(), Skip>,
+) -> Result<(), Skip> {
+    walk_keeping(part, |_, _| false, &Cell::new(0), visit)
+}
+
+/// [`walk`], except that an element `keep` picks is not opened: it is read to its end and
+/// reported once as [`Tag::Kept`]. A kept element longer than `max_kept` bytes skips the part, so
+/// nothing past it is held (the caller charges what it keeps against that budget).
+fn walk_keeping<B: BufRead>(
+    part: B,
+    keep: impl Fn(&[String], &BytesStart) -> bool,
+    max_kept: &Cell<usize>,
     mut visit: impl FnMut(&[String], Tag<'_>) -> Result<(), Skip>,
 ) -> Result<(), Skip> {
     let mut reader = quick_xml::Reader::from_reader(part);
     let mut buffer = Vec::new();
     let mut path: Vec<String> = Vec::new();
+    // The element being kept: its XML so far, and how many of its elements are open.
+    let mut kept: Option<(String, usize)> = None;
     loop {
-        match reader
+        let event = reader
             .read_event_into(&mut buffer)
-            .map_err(XlsxError::from)?
-        {
+            .map_err(XlsxError::from)?;
+        if let Some((xml, open)) = kept.as_mut() {
+            match &event {
+                Event::Start(_) => {
+                    *open += 1;
+                    if path.len() + *open >= MAX_DEPTH {
+                        return skip("elements nest too deep");
+                    }
+                }
+                Event::End(_) => *open -= 1,
+                Event::Eof => return skip("an unclosed element"),
+                _ => {}
+            }
+            write_verbatim(xml, &event, max_kept.get())?;
+            if *open == 0 {
+                let xml = kept.take().map(|(xml, _)| xml).unwrap_or_default();
+                visit(&path, Tag::Kept(xml))?;
+            }
+            buffer.clear();
+            continue;
+        }
+        match event {
+            Event::Start(element) if keep(&path, &element) => {
+                if path.len() + 1 >= MAX_DEPTH {
+                    return skip("elements nest too deep");
+                }
+                let mut xml = String::new();
+                write_verbatim(&mut xml, &Event::Start(element), max_kept.get())?;
+                kept = Some((xml, 1));
+            }
+            Event::Empty(element) if keep(&path, &element) => {
+                let mut xml = String::new();
+                write_verbatim(&mut xml, &Event::Empty(element), max_kept.get())?;
+                visit(&path, Tag::Kept(xml))?;
+            }
             Event::Start(element) => {
                 visit(&path, Tag::Open(&element))?;
                 if path.len() >= MAX_DEPTH {
@@ -351,6 +422,31 @@ fn walk<B: BufRead>(
         }
         buffer.clear();
     }
+}
+
+/// Appends `event` to `xml` as the part wrote it (quick-xml keeps names, attributes and text
+/// still escaped), refusing to pass `max` bytes. A declaration or a doctype cannot occur inside
+/// an element and is dropped.
+fn write_verbatim(xml: &mut String, event: &Event, max: usize) -> Result<(), Skip> {
+    let (open, body, close): (&str, &str, &str) = match event {
+        Event::Start(e) => ("<", e, ">"),
+        Event::Empty(e) => ("<", e, "/>"),
+        Event::End(e) => ("</", e, ">"),
+        Event::Text(t) => ("", t, ""),
+        Event::CData(t) => ("<![CDATA[", t, "]]>"),
+        Event::Comment(t) => ("<!--", t, "-->"),
+        Event::PI(t) => ("<?", t, "?>"),
+        Event::GeneralRef(t) => ("&", t, ";"),
+        Event::Decl(_) | Event::DocType(_) | Event::Eof => return Ok(()),
+    };
+    let len = open.len() + body.len() + close.len();
+    if xml.len().saturating_add(len) > max {
+        return skip("unread pivot definition content past the import limit");
+    }
+    xml.push_str(open);
+    xml.push_str(body);
+    xml.push_str(close);
+    Ok(())
 }
 
 /// Whether the enclosing elements are exactly `names`.
@@ -405,23 +501,23 @@ fn cache_item(
         }
         "n" => match v.trim().parse::<f64>() {
             Ok(n) if n.is_finite() => CacheItem::Number(n),
-            _ => return skip(format!("bad number {v:?}")),
+            _ => return skip(format!("bad number {:?}", shown(&v))),
         },
         "b" => match v.as_str() {
             "1" | "true" => CacheItem::Boolean(true),
             "0" | "false" => CacheItem::Boolean(false),
-            _ => return skip(format!("bad boolean {v:?}")),
+            _ => return skip(format!("bad boolean {:?}", shown(&v))),
         },
         "e" => match get_error_by_english_name(&v) {
             Some(error) => CacheItem::Error(error),
-            None => return skip(format!("unknown error {v:?}")),
+            None => return skip(format!("unknown error {:?}", shown(&v))),
         },
         // `<d>` is an ISO 8601 text; the cell serial it stands for depends on the workbook's date
         // system (1904 serials are 1462 days lower), and below serial 61 Excel writes it on the
         // 1899-12-30 epoch (T-3182).
         _ => match pivot_cache_date_serial(&v, date_system) {
             Some(serial) => CacheItem::Date(serial),
-            None => return skip(format!("bad date {v:?}")),
+            None => return skip(format!("bad date {:?}", shown(&v))),
         },
     };
     Ok(Some(item))
@@ -606,7 +702,7 @@ fn read_range_pr(element: &BytesStart, date_system: DateSystem) -> Result<RangeG
             None => Ok(None),
             Some(v) => match v.trim().parse::<f64>() {
                 Ok(n) if n.is_finite() => Ok(Some(n)),
-                _ => skip(format!("bad {name} {v:?}")),
+                _ => skip(format!("bad {name} {:?}", shown(&v))),
             },
         }
     };
@@ -629,7 +725,7 @@ fn read_range_pr(element: &BytesStart, date_system: DateSystem) -> Result<RangeG
                 None => Ok(None),
                 Some(v) => match pivot_cache_date_serial(&v, date_system) {
                     Some(serial) => Ok(Some(serial)),
-                    None => skip(format!("bad {name} {v:?}")),
+                    None => skip(format!("bad {name} {:?}", shown(&v))),
                 },
             }
         };
@@ -682,200 +778,6 @@ fn read_records<B: BufRead>(
             _ => {}
         }
         Ok(())
-    })
-}
-
-const TABLE: &str = "pivotTableDefinition";
-
-/// A `pivotTableDefinition` part on the sheet `sheet_id`, against the loaded `caches`.
-fn read_pivot_table<B: BufRead>(
-    part: B,
-    sheet_id: u32,
-    caches: &[PivotCache],
-    cache_ids: &HashMap<u32, u32>,
-) -> Result<PivotTable, Skip> {
-    let mut pivot_name = String::new();
-    let mut cache_index = 0;
-    let mut area = None;
-    let mut fields: Vec<PivotField> = Vec::new();
-    let mut row_fields = Vec::new();
-    let mut column_fields = Vec::new();
-    let mut data_fields = Vec::new();
-    let mut cache: Option<&PivotCache> = None;
-    let mut page_fields = 0;
-    walk(part, |path, tag| {
-        let Tag::Open(element) = tag else {
-            return Ok(());
-        };
-        let name = local_name(element);
-        if path.is_empty() {
-            if name != TABLE {
-                return skip("not a pivotTableDefinition");
-            }
-            pivot_name = attribute(element, "name")?.unwrap_or_default();
-            let id = index_attribute(element, "cacheId")?;
-            let Some(&index) = cache_ids.get(&id) else {
-                return skip(format!("cacheId {id} has no loaded cache"));
-            };
-            cache_index = index;
-            cache = caches.get(index as usize);
-            return Ok(());
-        }
-        let Some(cache) = cache else {
-            return skip("no pivotTableDefinition root");
-        };
-        let field_count = cache.fields.len();
-        let field_index = |element: &BytesStart, attr: &str| -> Result<u32, Skip> {
-            let index = index_attribute(element, attr)?;
-            if index as usize >= field_count {
-                return skip(format!("field index {index} is past the cache's fields"));
-            }
-            Ok(index)
-        };
-        if at(path, &[TABLE]) && name == "location" {
-            area = Some(location(attribute(element, "ref")?.as_deref())?);
-        } else if at(path, &[TABLE, "pivotFields"]) && name == "pivotField" {
-            let Some(cache_field) = cache.fields.get(fields.len()) else {
-                return skip("more pivotFields than cache fields");
-            };
-            let axis = match attribute(element, "axis")?.as_deref() {
-                Some("axisRow") => Some(Axis::Row),
-                Some("axisCol") => Some(Axis::Column),
-                Some("axisPage") => Some(Axis::Page),
-                Some("axisValues") | None => None,
-                Some(other) => return skip(format!("unknown axis {other:?}")),
-            };
-            let mut field = PivotField::new(axis, cache_field.items.len());
-            // ECMA-376's default is on; Excel writes `showAll="0"` (web.md, T-4276).
-            field.show_all = !matches!(
-                attribute(element, "showAll")?.as_deref(),
-                Some("0" | "false")
-            );
-            fields.push(field);
-        } else if at(path, &[TABLE, "pivotFields", "pivotField", "items"]) && name == "item" {
-            // Subtotal rows (`t="default"`, `t="sum"`, ...) name no cache item.
-            if attribute(element, "t")?.is_some_and(|t| t != "data") {
-                return Ok(());
-            }
-            let current = fields.len().saturating_sub(1);
-            let (Some(field), Some(cache_field)) = (fields.last_mut(), cache.fields.get(current))
-            else {
-                return Ok(());
-            };
-            let item = index_attribute(element, "x")?;
-            if item as usize >= cache_field.items.len() {
-                return skip(format!("item index {item} is past the field's items"));
-            }
-            if matches!(attribute(element, "h")?.as_deref(), Some("1" | "true")) {
-                field.hide(item);
-            }
-        } else if at(path, &[TABLE, "rowFields"]) || at(path, &[TABLE, "colFields"]) {
-            if name != "field" {
-                return Ok(());
-            }
-            let axis_field = match attribute(element, "x")?.as_deref() {
-                Some("-2") => AxisField::Values,
-                _ => AxisField::Field(field_index(element, "x")?),
-            };
-            let axis_fields = if path.get(1).is_some_and(|p| p == "rowFields") {
-                &mut row_fields
-            } else {
-                &mut column_fields
-            };
-            if axis_fields.len() >= MAX_AXIS_FIELDS {
-                return skip("too many fields on an axis");
-            }
-            axis_fields.push(axis_field);
-        } else if at(path, &[TABLE, "pageFields"]) && name == "pageField" {
-            field_index(element, "fld")?;
-            page_fields += 1;
-            if page_fields > MAX_AXIS_FIELDS {
-                return skip("too many page fields");
-            }
-        } else if at(path, &[TABLE, "dataFields"]) && name == "dataField" {
-            if data_fields.len() >= MAX_DATA_FIELDS {
-                return skip("too many data fields");
-            }
-            // "Show values as" (% of total, running total, ...) changes every value; not modeled.
-            if attribute(element, "showDataAs")?.is_some_and(|s| s != "normal") {
-                return skip("a data field shown as a calculation");
-            }
-            let field = field_index(element, "fld")?;
-            let function = aggregate(attribute(element, "subtotal")?.as_deref())?;
-            let caption = attribute(element, "name")?.unwrap_or_default();
-            data_fields.push(DataField {
-                caption,
-                field,
-                function,
-            });
-        }
-        Ok(())
-    })?;
-    let Some(cache) = cache else {
-        return skip("not a pivotTableDefinition");
-    };
-    let Some(location) = area else {
-        return skip("no location");
-    };
-    if cache.fields.len() != fields.len() {
-        return skip("pivotFields do not match the cache fields");
-    }
-    Ok(PivotTable {
-        name: pivot_name,
-        sheet_id,
-        location,
-        cache: cache_index,
-        fields,
-        row_fields,
-        column_fields,
-        data_fields,
-    })
-}
-
-/// A `<location ref>` as a 0-based area, inside the sheet.
-fn location(reference: Option<&str>) -> Result<CellArea, Skip> {
-    let Some((top, left, bottom, right)) = reference.and_then(|r| parse_range(r).ok()) else {
-        return skip("no valid location");
-    };
-    let valid = is_valid_row(top)
-        && is_valid_row(bottom)
-        && is_valid_column_number(left)
-        && is_valid_column_number(right)
-        && top <= bottom
-        && left <= right;
-    let to_index = |n: i32| u32::try_from(n - 1).ok();
-    match (
-        valid,
-        to_index(top),
-        to_index(left),
-        to_index(bottom),
-        to_index(right),
-    ) {
-        (true, Some(top), Some(left), Some(bottom), Some(right)) => Ok(CellArea {
-            top,
-            left,
-            bottom,
-            right,
-        }),
-        _ => skip("a location outside the sheet"),
-    }
-}
-
-/// A `dataField@subtotal`; absent is `sum`.
-fn aggregate(subtotal: Option<&str>) -> Result<Aggregate, Skip> {
-    Ok(match subtotal.unwrap_or("sum") {
-        "sum" => Aggregate::Sum,
-        "count" => Aggregate::Count,
-        "average" => Aggregate::Average,
-        "max" => Aggregate::Max,
-        "min" => Aggregate::Min,
-        "product" => Aggregate::Product,
-        "countNums" => Aggregate::CountNums,
-        "stdDev" => Aggregate::StdDev,
-        "stdDevp" => Aggregate::StdDevP,
-        "var" => Aggregate::Var,
-        "varp" => Aggregate::VarP,
-        other => return skip(format!("unknown subtotal {other:?}")),
     })
 }
 

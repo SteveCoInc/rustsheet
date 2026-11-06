@@ -14,7 +14,7 @@ use crate::{
     reference_operators::{Picked, RefArg, RefGrid},
 };
 
-use super::ref_lift::lifts_one_by_one;
+use super::ref_lift::{lifts_one_by_one, may_hand_on_grid};
 
 /// Whether a call keeps (TAKE) or removes (DROP) the rows and columns it counts.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -36,6 +36,20 @@ fn edge_span(edge: Edge, len: usize, n: i64) -> Range<usize> {
         (Edge::Drop, true) => count..len,
         (Edge::Drop, false) => 0..len - count,
     }
+}
+
+/// Whether TAKE's or DROP's array `node` is read as the reference it is: a reference, a defined
+/// name or an INDEX call, so one cell stays a one-cell reference, not a 1x1 array (T-3072, T-3085).
+fn is_reference_form(node: &Node) -> bool {
+    matches!(
+        node.ungrouped(),
+        Node::ReferenceKind { .. }
+            | Node::DefinedNameKind(_)
+            | Node::FunctionKind {
+                kind: Function::Index,
+                ..
+            }
+    )
 }
 
 impl Model {
@@ -108,15 +122,7 @@ impl Model {
                 }
             );
         let mut grid = None;
-        let source = if matches!(
-            args[0].ungrouped(),
-            Node::ReferenceKind { .. }
-                | Node::DefinedNameKind(_)
-                | Node::FunctionKind {
-                    kind: Function::Index,
-                    ..
-                }
-        ) {
+        let source = if is_reference_form(&args[0]) {
             // A one-cell reference is a range of one cell, as `E7:E7` is, so TAKE/DROP keeps it a
             // reference: `ROWS(E9-TAKE(E7,2,42))` is `#VALUE!` with E7 text, not a 1x1 array, and
             // `ISREF(TAKE(E7,1))` is TRUE (probes/t3072-take-drop-one-cell-reference P1, P42;
@@ -124,7 +130,7 @@ impl Model {
             // already were; probes/t3085-take-drop-one-cell-forms; T-3085).
             self.evaluate_node_with_reference(&args[0], cell)
         } else if reads_grid {
-            match self.value_or_grid(&args[0], cell, true) {
+            match self.take_drop_value_source(&args[0], cell) {
                 RefArg::Grid(elements) => {
                     let values = elements.to_values();
                     grid = Some(elements);
@@ -172,11 +178,47 @@ impl Model {
             },
             Edge::Drop => source,
         };
-        let data = match self.result_to_array(source, cell) {
+        // A lone blank value stays blank (`TAKE(IF(TRUE,Z1),1)&"x"` is "x"; probes/t4448-lone-blank-reshapers A9:D9, T-4448).
+        let data = match self.result_to_array_keep_blank(source, cell) {
             Ok(d) => d,
             Err(e) => return RefArg::Value(e),
         };
         RefArg::Value(self.take_drop_of_array(&data, counts.as_slice(), edge, cell))
+    }
+
+    /// TAKE's or DROP's array read as a value argument ([`Self::value_or_grid`]), except that an
+    /// IF, CHOOSE, IFS or SWITCH that picks a reference form ([`is_reference_form`]) hands on
+    /// that reference, a one-cell one included: `TYPE(TAKE(IF(TRUE,Z1),1))` is 1 and
+    /// `ISREF(DROP(IFS(TRUE,Y1),0))` is TRUE, not a 1x1 array's 64 and FALSE
+    /// (probes/t4448-lone-blank-reshapers B9, probes/t4469-take-drop-if-one-cell-reference;
+    /// T-4469). A nested IF or CHOOSE arm is read the same way; any other arm as before.
+    fn take_drop_value_source(&mut self, node: &Node, cell: CellReferenceIndex) -> RefArg {
+        let Node::FunctionKind { kind, args } = node.ungrouped() else {
+            return self.value_or_grid(node, cell, true);
+        };
+        if !matches!(
+            kind,
+            Function::If | Function::Choose | Function::Ifs | Function::Switch
+        ) {
+            return self.value_or_grid(node, cell, true);
+        }
+        let Some(picked) = self.pick_step(kind, args, cell) else {
+            return self.value_or_grid(node, cell, true);
+        };
+        match picked {
+            // CHOOSE's arm read keeps a reference (an external one read first), for all four.
+            Picked::Node(arm) if is_reference_form(arm) => {
+                RefArg::from(self.choose_arm_value(arm, cell))
+            }
+            // IF and CHOOSE hand a grid-producing arm on, as `value_or_grid` does for them.
+            Picked::Node(arm)
+                if matches!(kind, Function::If | Function::Choose) && may_hand_on_grid(arm) =>
+            {
+                self.take_drop_value_source(arm, cell)
+            }
+            Picked::Node(arm) => RefArg::from(self.picked_value(kind, arm, cell)),
+            Picked::Value(value) => RefArg::Value(value),
+        }
     }
 
     /// A TAKE or DROP whose rows or cols lifts: over a single-sheet range an array of
@@ -312,7 +354,8 @@ impl Model {
     /// Any other node is read as `read` says (TAKE's own read, or the picking function's read of
     /// its arm), except that `keep_cell_variables` reads a variable bound to one cell, there too,
     /// as that reference ([`Model::cell_variable_reference`]): TAKE's, DROP's and TRIMRANGE's
-    /// array (`ISREF(TAKE(LET(v,A2,v),1))` is TRUE, T-2622), not OFFSET's counts. Each condition,
+    /// array (`ISREF(TAKE(LET(v,A2,v),1))` is TRUE, T-2622), not OFFSET's counts; so does a
+    /// picked [`is_reference_form`] there (T-4469). Each condition,
     /// index and binding is read once; bounded by the parser's depth cap.
     pub(super) fn evaluate_picked_source(
         &mut self,
@@ -337,6 +380,13 @@ impl Model {
                 _ => Self::evaluate_node_in_context,
             };
             return match picked {
+                // An array source keeps a picked reference form a reference, one cell included:
+                // `ISREF(TAKE(IF(TRUE,Y1),1))`, `ISREF(TAKE(IFS(TRUE,Z1),1))` and
+                // `ISREF(TRIMRANGE(SWITCH(1,1,Y2)))` are TRUE
+                // (probes/t4469-take-drop-if-one-cell-reference B1:B13; T-4469).
+                Picked::Node(arm) if keep_cell_variables && is_reference_form(arm) => {
+                    self.choose_arm_value(arm, cell)
+                }
                 Picked::Node(arm) => {
                     self.evaluate_picked_source(arm, cell, read_arm, keep_cell_variables)
                 }

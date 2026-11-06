@@ -645,3 +645,50 @@ fn function_by_name_called_without_arguments() {
     assert_eq!(model._get_text("A5"), *"#VALUE!");
     assert_eq!(model._get_text("A6"), *"3");
 }
+
+/// A wrong argument count at any link of a chained call is `#VALUE!`, ahead of an error argument;
+/// an optional parameter at a later link may be omitted, but a link with no arguments is still
+/// too few (probes/t4482-chained-call-arity A1:E10, -optional A1:E3; T-4482).
+#[test]
+fn a_chained_call_with_a_wrong_count_at_a_link_is_value_error() {
+    let mut model = new_empty_model();
+    model
+        .new_defined_name("MYFN", None, "=LAMBDA(x,LAMBDA(y,x*y))")
+        .unwrap();
+    let cases = [
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1)()", "#VALUE!"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1)(2,3)", "#VALUE!"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1,2)(3)", "#VALUE!"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))()(3)", "#VALUE!"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1/0)()", "#VALUE!"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1)(NA(),2)", "#VALUE!"),
+        ("=LET(f,LAMBDA(x,LAMBDA(y,x*y)),f(3)())", "#VALUE!"),
+        ("=MYFN(3)(4,5)", "#VALUE!"),
+        ("=MYFN(3)()", "#VALUE!"),
+        ("=IFERROR(LAMBDA(x,LAMBDA(y,x+y))(1)(),\"e\")", "e"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1)(2)", "3"),
+        (
+            "=LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(2)",
+            "3",
+        ),
+        (
+            "=LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)()",
+            "#VALUE!",
+        ),
+        (
+            "=LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(2,3)",
+            "6",
+        ),
+    ];
+    for (i, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("A{}", i + 1), formula);
+    }
+    model.evaluate();
+    for (i, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", i + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
+}

@@ -22,11 +22,30 @@
     "t": "n",
     "v": "-632.37175178052351815209510735753054330717730611767",
     "f": "=CUMIPMT(0.01,1E15,100000,1E15-10,1E15,0)"
+   },
+   "K7": {
+    "t": "e",
+    "why": "the previous coupon date is before 1900-01-01: #NUM!",
+    "f": "=PRICE(1,2958465,0.05,0.06,100,4,0)"
+   },
+   "K8": {
+    "t": "e",
+    "why": "the previous coupon date is before 1900-01-01: #NUM!",
+    "f": "=YIELD(1,2958465,0.05,90,100,4,0)"
+   },
+   "K9": {
+    "t": "e",
+    "why": "the previous coupon date is before 1900-01-01: #NUM!",
+    "f": "=DURATION(1,2958465,0.05,0.06,4,0)"
    }
   }
  },
  "skipped": {
   "Sheet1": {
+   "K10": {
+    "f": "=ACCRINT(1,2958400,2958465,0.05,1000,4,0,TRUE)",
+    "why": "no single value"
+   },
    "K4": {
     "f": "=AMORLINC(2400,39679,39813,300,1E9,0.15,1)",
     "why": "no single value"

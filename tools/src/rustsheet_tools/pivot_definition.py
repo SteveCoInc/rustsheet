@@ -501,6 +501,10 @@ class DefinedPivot:
         table = self.d.get("table") or {}
         extra = _attrs(table, _MANAGED_TABLE, f"pivot {self.name} table")
         head = "".join(f' {k}="{v}"' for k, v in _TABLE_DEFAULTS.items() if k not in table)
+        if (
+            -2 in self.rows
+        ):  # the Values field on rows: Excel for the web refuses the file without it (T-4138)
+            head += ' dataOnRows="1"'
         anchor = xlsxwriter.utility.xl_rowcol_to_cell(top, left)
         corner = xlsxwriter.utility.xl_rowcol_to_cell(top + 1, left + 1)
         parts = [

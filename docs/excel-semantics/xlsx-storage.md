@@ -666,7 +666,32 @@ Status: UNVERIFIED (probe pending). Tasks: T-4503, T-4172, T-4509.
 | N1–N12 | not yet probed | T-4503 |
 
 Status: VERIFIED (excel-graph; desktop unprobed for NBSP). Tasks: T-2784, T-2949.
+
 Excel drops a stored formula's leading spaces, TAB or LF on import (T-2784; syntax.md "Remaining whitespace shapes
 (T-2949)"). A leading NBSP is refused by excel-graph instead; desktop Excel is unprobed. Dropping those leading spaces,
 TABs or LFs is therefore no semantic difference (SPEC-0033 X5). A leading NBSP is not covered.
+
+## A patched package keeps the source's hints
+The patch tier of the source-preserving export (SPEC-0034 D3, T-4560, T-4561) rewrites only the changed `<c>`
+elements. The rest of the package is kept as the source had it, apart from the edits below. Each assumes that Excel
+opens the result without a repair:
+- **Row `spans`.** ECMA-376 Part 1 §18.3.1.73 calls them an optimization hint. A new cell outside a row's span
+  leaves the span stale.
+- **`<dimension>`.** It grows to cover new cells but never shrinks. Readers that trust it, such as openpyxl's
+  read-only mode, then see a range larger than the cells.
+- **Empty rows.** Clearing every cell of a row leaves its `<row>` element in place. A row without cells is valid
+  (§18.3.1.73) and is how Excel stores a row that has only a height or a style.
+- **`calcChain`.** It is copied unchanged while no formula cell is added or removed. When the set of formula cells
+  changes, the chain is dropped with its relationship and override, as the regenerating export drops it
+  (SPEC-0034 E2, T-4561). The regenerating export never writes a chain, and that Excel opens such packages
+  without one is equally unprobed. Excel's repair of a chain that names a non-formula cell ("Removed Records:
+  Formula from /xl/calcChain.xml") is never relied on.
+- **Added metadata.** A source with no `metadata.xml` of its own gets the export's parts once a patched cell needs
+  `vm` or `cm`, with one relationship and one override each (T-4561). Their names, content types and relationship
+  types match Excel's own (`tests/calc_tests/LOOKUP_AND_REFERENCE/DROP_TAKE.xlsx`), and the parts are what a
+  regenerated save writes.
+
+There is no oracle evidence yet that Excel opens such packages without a repair prompt. An Excel resave through the
+T-4180 oracle flow is the probe.
+Status: UNVERIFIED (probe pending). Tasks: T-4560, T-4561, T-4180.
 
