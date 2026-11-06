@@ -1,7 +1,7 @@
 //! The arms of a legacy IF or IFS that are references, which the formula passes on whole instead of
 //! intersecting (docs/excel-semantics/references.md "Legacy IF passes a range arm whole").
 
-use super::name_body::{is_reference_body, scalar_body, ScalarBody};
+use super::name_body::{is_array_body, is_reference_body, scalar_body, ScalarBody};
 use super::{run_static_analysis_on_node, Node, StaticResult};
 use crate::functions::Function;
 
@@ -100,7 +100,8 @@ fn is_whole_range_arm(arm: &Node) -> bool {
 fn is_single_cell_index(arm: &Node) -> bool {
     matches!(
         arm.ungrouped(),
-        Node::FunctionKind { kind: Function::Index, args } if indexes_one_cell(args)
+        Node::FunctionKind { kind: Function::Index, args }
+            if indexes_one_cell(args) && !one_index_into_array_body(args)
     )
 }
 
@@ -132,15 +133,28 @@ fn indexes_one_cell(args: &[Node]) -> bool {
 
 /// Whether `INDEX(args)` picks one cell ([`indexes_one_cell`]) of an area that is certainly a
 /// reference: a range, a union, or a defined name whose body is a cell or a range reference
-/// (`is_reference_body`). Only then is the INDEX a scalar shape (`fallback_shape`): over a name
-/// whose body is a 2-D array constant, `INDEX(n2d,1)` is a row, which a typed formula spills and a
-/// legacy one intersects (`=@INDEX(n2d,1)`); INDEX over an array-bodied name is unprobed.
+/// (`is_reference_body`), or one element of a name whose body is an array constant, given a row
+/// and a column index (`is_array_body`). Only then is the INDEX a scalar shape (`fallback_shape`):
+/// over a name whose body is a 2-D array constant, `=INDEX(n2d,1,1)` shows no `@` while
+/// `INDEX(n2d,1)` is a row, which a typed formula spills and a legacy one intersects
+/// (`=@INDEX(n2d,1)`; probes/t4273-legacy-at-name-body-more row 45, T-4273). Probed in T-4430
+/// (probes/t4430-legacy-at-name-body-rest rows 45-49): the same holds over `{3}`, `{3,4}` and `{3;4}`
+/// (`INDEX(nRow,1,2)`, `INDEX(nCol,2,1)` no `@`; one index keeps it), `INDEX(n2d,1,1,1)` (an area
+/// number) is one element too, and an out-of-range `INDEX(n2d,5,5)` is scalar.
 pub(super) fn indexes_one_reference_cell(args: &[Node]) -> bool {
     indexes_one_cell(args)
         && match &*args[0].ungrouped_static() {
             Node::RangeKind { .. } | Node::OpUnionKind { .. } => true,
-            name => is_reference_body(name),
+            name => is_reference_body(name) || (args.len() >= 3 && is_array_body(name)),
         }
+}
+
+/// Whether `args` is `INDEX(name,index)` over a name whose body is an array constant: one index into
+/// it keeps the `@` as an IF arm for a one-element, one-row and one-column body alike,
+/// `=@IF(TRUE,INDEX(nOne,1))`, `=@IF(TRUE,INDEX(nRow,2))`, `=@IF(TRUE,INDEX(nCol,1))`, while a row and a
+/// column index do not (probes/t4430-legacy-at-name-body-rest row 47, excel-graph, T-4430).
+fn one_index_into_array_body(args: &[Node]) -> bool {
+    args.len() == 2 && is_array_body(&args[0].ungrouped_static())
 }
 
 /// The number an INDEX index is written as: a number literal, possibly in parentheses, or a defined

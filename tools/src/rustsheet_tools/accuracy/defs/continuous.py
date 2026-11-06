@@ -55,7 +55,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars, signed
+from rustsheet_tools.accuracy.defs._common import ill_conditioned, scalars, signed
 from rustsheet_tools.accuracy.defs.exp_log import EXP_BAND
 from rustsheet_tools.accuracy.defs.normal import (
     OVERFLOW_SOURCE,
@@ -95,21 +95,12 @@ MICROSOFT_SOURCE = (
 )
 
 FISHER_CANCEL_HI = 1e-6  # FISHER and FISHERINV points with 0 < |x| below this are redrawn (the cancellation)
-CONDITION_LIMIT = 1e-10  # an ill-conditioned point (kappa * 2^-52 above this) is redrawn
-EPS = 2.0**-52
 EXP_MAX = EXP_BAND[0]  # an EXP argument from here up overflows or is in the unpinned band
 EXP_ZERO = -745.2  # EXP of an argument below this is 0 (gradual underflow ends near -745.13)
 NORMAL_MIN = sys.float_info.min
 NORMAL_RANGE = (1e-300, 1e300)  # an intermediate inside this is a normal double with room to spare
 EXPON_PRODUCT_MAX = 1e300  # lambda*x past this is unprobed
 REDRAWS = 50
-
-
-def _ill_conditioned(kappa: float) -> None:
-    """NoValueError (redraw) when a relative condition number `kappa` puts one rounding past `CONDITION_LIMIT`."""
-    if kappa * EPS > CONDITION_LIMIT:
-        msg = f"ill-conditioned (kappa {kappa:.3g})"
-        raise NoValueError(msg)
 
 
 def _exp_or_inf(y: float) -> float:
@@ -135,7 +126,7 @@ def _lognorm_dist(args: Sequence[MathArg]) -> mpmath.mpf:
         msg = "z or z*z overflows a double"
         raise NoValueError(msg)
     # ln x and mean each carry a rounding of their size; the lower tail and the density move by |z| per unit of z
-    _ill_conditioned((abs(ln_x) + abs(fmean)) / fsd * max(1.0, abs(z)))
+    ill_conditioned((abs(ln_x) + abs(fmean)) / fsd * max(1.0, abs(z)))
     w = mpmath.log(x)
     zz = (w - mean) / sd
     if cumulative:
@@ -158,7 +149,7 @@ def _lognorm_inv(args: Sequence[MathArg]) -> mpmath.mpf:
         msg = "LOGNORM.INV overflows or is next to the overflow (unprobed)"
         raise NoValueError(msg)
     # the sum's rounding, and NORM.S.INV's central 31 ulp (T-1746) scaled by sd*z
-    _ill_conditioned(abs(float(mean)) + 32 * abs(float(sd * z)))
+    ill_conditioned(abs(float(mean)) + 32 * abs(float(sd * z)))
     return mpmath.exp(exponent)
 
 
@@ -324,7 +315,7 @@ def _weibull_dist(args: Sequence[MathArg]) -> mpmath.mpf:
             msg = "a density intermediate leaves the normal range (unprobed)"
             raise NoValueError(msg)
         kappa += falpha * abs(math.log(fbeta)) + abs(power_log)
-    _ill_conditioned(kappa)
+    ill_conditioned(kappa)
     t = (x / beta) ** alpha
     if cumulative:
         return -mpmath.expm1(-t)

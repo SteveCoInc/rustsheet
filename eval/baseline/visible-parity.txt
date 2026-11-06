@@ -154,6 +154,7 @@ probes/fin-cumipmt-period-bound.case.json	1
 probes/fin-cumipmt-tiny-rate-structure.case.json	38
 probes/fin-cumprinc-near-1e15.case.json	4
 probes/fin-cumprinc-underflow-ends.case.json	4
+probes/fin-cumprinc-underflow-fresh.case.json	26
 probes/forecast-ets-longer-series.case.json	40
 probes/forecast-ets-optional-settings-shape.case.json	12
 probes/forecast-ets-reprobe-2026-11.case.json	16
@@ -205,6 +206,8 @@ probes/t3638-subnormal-upper-tail.case.json	7
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22
 probes/t3850-rate-same-state.case.json	46
+probes/t3876-rate-noise-residual-fresh.case.json	5
+probes/t3876-rate-noise-residual.case.json	1
 probes/t3881-imcsch-flip-start-negative.case.json	1
 probes/t3883-im-overflow-reciprocal-sweep.case.json	1
 probes/t3906-rate-restart-oos.case.json	137
@@ -212,6 +215,8 @@ probes/t3912-imcsch-band-edges.case.json	2
 probes/t3914-imsech-sign-sweep.case.json	4
 probes/t3963-rate-keep-r0-fresh.case.json	147
 probes/t4045-f-dist-rt-zero-cut-fresh.case.json	24
+probes/t4254-beta-t-l140-zero-cut.case.json	93
+probes/t4254-beta-t-zero-wide.case.json	15
 probes/t4255-gamma-window-exact-ratio.case.json	1
 probes/t4290-gamma-window-large-pow2.case.json	6
 probes/t4302-poisson-cdf-beside-pmf.case.json	47
@@ -225,12 +230,14 @@ probes/t4332-fraction-fresh.case.json	17
 probes/t4333-count-ulp-scan.case.json	6
 probes/t4344-groupby-descending-search.case.json	2
 probes/t4358-pivotby-unreached-column-leaf.case.json	21
+probes/t4368-poisson-shape-and-edge.case.json	40
 probes/t4370-ulp-map-2.case.json	55
 probes/t4370-ulp-map.case.json	7
 probes/t4379-pivotby-repeated-unreached-leaf.case.json	20
 probes/t4380-unique-keep-head-holdout.case.json	50
 probes/t4382-pivotby-intransitive-paths.case.json	66
 probes/t4389-confirm.case.json	11
+probes/t4420-pivotby-parent-sets-three-fields.case.json	14
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1

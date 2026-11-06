@@ -1043,13 +1043,36 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
     - **A subtotal whose class no record reached holds every record of the line**, as such a leaf does (step 4):
       with three column fields and `col_total_depth` 3, over BxC BxB CyA AxB AxB (p q p q p) the level-2 subtotal
       (`ab`&U+00AD,y), which no record reaches, is p `1, 3, 5`, q `2, 4` (Calc!B31; B31:C42), as GROUPBY's class
-      none reached does (T-4359). T-4401 owns them.
+      none reached does (T-4359). Confirmed on a hold-out of 30 fresh runs with three and four column fields
+      (`col_total_depth` 3 and 4, ascending and `col_sort_order` -1; probes/t4401-pivotby-level-subtotal-holdout,
+      excel-graph, 2026-11-05, 60 of 60 committed predictions matched; T-4401). Implemented by T-4388
+      (`Grouping::class_reached`, below), whose datasets are probes/t4388-pivotby-intransitive-subtotals and the 9
+      level-2 cells here (Calc!B31, B32, B33, B35, B39, B41, C31, C33, C39).
     - **relative_to 3 and 4 take the parent subtotal's records by the same rule**: over Ay Ay Bx Cx Cy (q p p q q)
       the parent column total of q's (`ab`,y) cell is `1, 4, 5`, not `1, 5` (Calc!D2, a two-argument LAMBDA
       `ARRAYTOTEXT(x)&" / "&ARRAYTOTEXT(a)`); parent row totals read the parent subtotal row's cell in the same
       column, Total column included (E17). **An empty parent set is an error**: PERCENTOF `#DIV/0!` and the
       two-argument LAMBDA's cell `#VALUE!` (C7, D7: a column leaf no record reaches under an empty subtotal).
-      T-4402 owns the cells.
+      Confirmed on a hold-out (T-4402): probes/t4402-pivotby-parent-sets-holdout, 32 fresh runs (seed "T-4402",
+      none of T-4382's), relative_to 3 in Calc rows 1-16 and 4 in rows 17-32, PERCENTOF and the two-argument
+      LAMBDA, written with the engine's predictions (docs/research/t4402) before the fill: 64 of 64, the empty
+      parent's `#DIV/0!` and `#VALUE!` in 36 cells on both axes. Implemented in (T-4402): `ParentSets`
+      (functions/lookup_and_reference/relative_to.rs) reads each cell's set from its parent's cell by the grid's
+      own rule (`Grid::column_records`, pivotby.rs), and `Model::aggregate_result` makes a two-argument call on
+      an empty set `#VALUE!`. That arm covers every relative set, but its evidence is `relative_to` 3 and 4 only
+      (C7, D7 and the hold-out); whether a `relative_to` 0 to 2 set can be empty in Excel is unprobed. The column
+      items whose cell holds every record of the line (the Total and the leaves no record reached) share one set
+      (T-4420).
+      **Three key fields** (T-4420): probes/t4420-pivotby-parent-sets-three-fields, 24 fresh runs (seed
+      "T-4420", none of T-4382's or T-4402's), three key fields with subtotals at levels 1 and 2, relative_to 3
+      in Calc rows 1-12 and 4 in rows 13-24, PERCENTOF and the two-argument LAMBDA, written with the engine's
+      predictions (docs/research/t4420) before the fill: 514 of 528 cells. Every relative_to 4 cell matches. The
+      14 off cells (B3, B4, B7, B8, B10, B11, B12, C3, C4, C7, C8, C10, C11, C12) each hold a leaf no record
+      reached under a level-2 subtotal no record reached: **such a parent subtotal holds every record of the
+      line**, as its own cell does (T-4401's rule), so the leaf's parent set is every record. Over BxC AyB BxC
+      BxB CyB (p p q p p) the (`ab`&U+00AD,y,`ab`&U+00AD) cell of p is `1, 2, 4, 5 / 1, 2, 4, 5` (C3), where the
+      engine reads the subtotal's reached-class records (none) and gives `#VALUE!`. T-4428 owns them (it waits on
+      T-4401); with T-4401 merged and that rule in `Grid::column_records`, a scratch run gives 528 of 528.
     - **The subtotal error gate is the leaf buckets'**: with one function over two value columns, a subtotal
       whose records reached its class while every leaf under it is empty for the row group is not computed (its
       NA() makes no `#VALUE!`), as `Grid::has_records` decides. The gate cells are Calc!B1, B3, B4, B6, B8, B9,
@@ -1067,15 +1090,21 @@ tree order and sort by their class's rank (`Group::key_order`). While no key tex
 its first equal row does, so the search runs once per distinct key. `Tree::descend` searches in the direction of
 the parent's first two classes (T-4344). PIVOTBY's column leaf no record reaches holds every record of the row line
 (`Grouping::unreached`, the bucket fill of `grid_row` in pivotby.rs; T-4358). A column subtotal holds the records that
-reached its class (T-4378). A GROUPBY (or PIVOTBY row) parent's rows, which a value sort orders by and a subtotal line
-shows, are `Grouping::class_rows`: the rows that reached the class, every row when none did (T-4359; PIVOTBY's row
-axis and descending key sorts unprobed, T-4388). Not implemented: UNIQUE's drop of Bx after Cx Ay Ax, which removes a
+reached its class (T-4378), and every record of the row line when no record reached the class, as its leaves do
+(`Grouping::class_reached`; T-4388): over CyB BxC CxC AyB BxB of p q q q q (three fields, ascending) no record reaches
+the (`ab`&U+00AD, `y`) class, whose one leaf (`ab`&U+00AD) and subtotal both show `1` for p and `2, 3, 4, 5` for q
+(probes/t4388-pivotby-intransitive-subtotals Calc!D2). A GROUPBY (or PIVOTBY row) parent's rows, which a value sort
+orders by and a subtotal line shows, are `Grouping::class_rows`: the rows that reached the class, every row when none
+did (T-4359). T-4388 confirmed it out of sample on PIVOTBY's row axis (row subtotals, and a sort by the first value
+column with them) and on GROUPBY's subtotals under `sort_order` -1 and -2: its 120 B, C, F and G cells matched the
+engine's predictions committed before the fill; its D and E column subtotals matched in 45 of 60, the 15 misses all
+the unreached-class rule above (fixed). Not implemented: UNIQUE's drop of Bx after Cx Ay Ax, which removes a
 repeated leaf (T-4380) on these runs.
 The T-4195 per-field model this replaces was selected on its own cells without a hold-out; the tree model was
 chosen by T-4241 on seen values and confirmed by T-4342's hold-out (205 of 206 after the search revision, which
 was chosen on the hold-out and checked against all 234 earlier blocks; a structural choice, decision 0188 R4,
 not a fit).
-Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358, t4378 and t4359 fills, 2026-11-05) for the cells cited.
+Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358, t4378, t4359 and t4388 fills, 2026-11-05) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless

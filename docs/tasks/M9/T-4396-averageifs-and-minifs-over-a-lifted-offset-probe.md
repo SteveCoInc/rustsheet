@@ -3,7 +3,7 @@ id: T-4396
 title: "AVERAGEIFS and MINIFS over a lifted OFFSET: probe, then spill per element like MAXIFS and SUMIFS (ours #VALUE!)"
 milestone: M9
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -52,16 +52,29 @@ refused some combined workbooks), on probes/reference-lift-consumers-b2's data:
 Name the cases probes/t4396-lift-averageifs-* and -minifs-*.
 
 ## Acceptance criteria
-- [ ] The probe cases above are committed with excel-graph oracle sidecars.
-- [ ] AVERAGEIFS and MINIFS match every probe cell: per element where Excel lifts (an entry in
+- [x] The probe cases above are committed with excel-graph oracle sidecars.
+- [x] AVERAGEIFS and MINIFS match every probe cell: per element where Excel lifts (an entry in
       `per_reference_element` with the probed positions and a per-pair cost), and the value view where it does not.
       A unit test in ref_lift.rs or if_ifs.rs pins one lifted call of each.
-- [ ] No cell of probes/t2065-lift-* or probes/reference-lift-consumers* changes, and `make eval-baseline` records no
+- [x] No cell of probes/t2065-lift-* or probes/reference-lift-consumers* changes, and `make eval-baseline` records no
       regression.
-- [ ] lookup.md's two "AVERAGEIFS and MINIFS are unprobed" sentences are replaced by the rule with the probe cells
+- [x] lookup.md's two "AVERAGEIFS and MINIFS are unprobed" sentences are replaced by the rule with the probe cells
       cited. The positions that are still inferred stay marked UNVERIFIED.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The partly lifted COUNTIFS, AVERAGEIF and MAXIFS forms (T-2833).
 - The D-functions and AGGREGATE over a lifted OFFSET.
+
+## Outcome
+- Probed (excel-graph, 2026-11-05) nine one-formula workbooks, probes/t4396-lift-averageifs-{both,first,criteria,height,pair2}
+  and -minifs-{both,first,criteria,height}. AVERAGEIFS and MINIFS lift per element exactly like SUMIFS and MAXIFS: the
+  first range and the criteria ranges. A lifted first range against a two-cell criteria range spills `#VALUE!` per element.
+- `Function::per_reference_element` (ref_lift.rs) now lists AVERAGEIFS and MINIFS with SUMIFS and MAXIFS (first range and
+  every criteria range, one walk per criteria pair). Static analysis gives them the lifted shape
+  (`criteria_and_grid_static_result`). Unit test: `fn_offset_lifted_into_averageifs_minifs` (test_fn_offset.rs), which
+  also covers the visit bound.
+- lookup.md: both "unprobed" sentences are replaced by the rule, with cells cited. A later criteria range lifted alone,
+  and MINIFS with two pairs, stay UNVERIFIED.
+- Eval delta: +18 passing cells, all of them new probe cells (9 cases × E1:E2). No regression. probes/t2065-lift-* and
+  probes/reference-lift-consumers* are unchanged.

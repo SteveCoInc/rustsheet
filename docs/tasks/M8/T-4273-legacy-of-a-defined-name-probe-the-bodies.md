@@ -3,7 +3,7 @@ id: T-4273
 title: "Legacy @ of a defined name: probe the bodies T-3856 left to engine choice (relative cell, negative number, error literal, parenthesized, name of a name, INDEX over an array-bodied name) and match"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -38,13 +38,31 @@ each.
 - New probe case: `t4273-legacy-at-name-body-more`.
 
 ## Acceptance criteria
-- [ ] probes/t4273-legacy-at-name-body-more is filled on excel-graph and every cell passes in `make eval`, with no new
+- [x] probes/t4273-legacy-at-name-body-more is filled on excel-graph and every cell passes in `make eval`, with no new
       F line in eval/baseline/probes.txt and probes/t3856-legacy-at-name-body still passing.
-- [ ] references.md replaces the two "unprobed" clauses above with the probed rule (VERIFIED, cells cited); the redraw
+- [x] references.md replaces the two "unprobed" clauses above with the probed rule (VERIFIED, cells cited); the redraw
       question stays listed as unprobed with its reason.
-- [ ] Unit tests in the engine's legacy-@ tests cover each body kind's FORMULATEXT.
-- [ ] `make check` green; reviewers approve.
+- [x] Unit tests in the engine's legacy-@ tests cover each body kind's FORMULATEXT.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The single-cell INDEX area kinds of T-4212.
 - A name-edit sheet op for the harness (file a harness task if the redraw question is wanted).
+
+## Outcome
+- New probe probes/t4273-legacy-at-name-body-more (excel-graph, 2026-11-06; generator docs/research/t4273/gen_probe.py),
+  155 scored cells: before the fix 136 passed. After it, 155 of 155, with t3856-legacy-at-name-body (261) and
+  t3297-legacy-if-index-arm-name-table (65) still all-pass. The baseline gains only the new case's all-pass `C` line;
+  no `F` line is added.
+- Findings, in references.md "A defined name takes the `@` by its body" (VERIFIED):
+  - A negative-number body (`-3`) or an error literal (`#N/A`) reads as that literal: no `@`. As an INDEX index it
+    keeps the INDEX's `@`.
+  - `(3)` and a body that is another name take the `@` (ours already did). A padded ` 3 ` is trimmed.
+  - A relative one-cell body reads as a cell, its reference relative to A1 (ours already did).
+  - `INDEX(n2d,1,1)` over an array-bodied name is one element (no `@`), while `INDEX(n2d,1)` stays a row.
+- Code: `scalar_body` (name_body.rs) now reads a `-` number as `ScalarBody::Number` and an error literal as `Other`,
+  over a shared `body_tokens` lexer helper. `is_array_body` lets `indexes_one_reference_cell` (if_arm.rs) make a
+  three-argument INDEX over an array-bodied name a scalar shape. Unit test: `defined_names_by_their_body_more`.
+- Not done: whether Excel redraws a legacy formula's `@` when a name's body changes later stays unprobed. It needs a
+  name-edit sheet op in the harness, which this task does not add (out of scope); references.md says so.
+- Not a numeric fit (structural rule, every cell exact).

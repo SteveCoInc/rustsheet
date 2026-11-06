@@ -80,9 +80,12 @@ fn dxf_attribute(name: &str, dxf_id: Option<u32>, dxf_count: usize) -> String {
 }
 
 /// What the totals row holds for a column, as the table part records it: a formula is written as
-/// `totalsRowFunction="custom"` with its `<totalsRowFormula>`, a text cell as `totalsRowLabel`.
-/// Excel refuses a table with a totals row whose cells lack it (xlsx-storage.md "Structured
-/// references in the file"). Any other cell needs nothing.
+/// `totalsRowFunction="custom"` with its `<totalsRowFormula>`, a text cell as `totalsRowLabel`,
+/// and a number, boolean or error constant as `totalsRowFunction="custom"` alone. Excel refuses a
+/// table with a totals row whose cells lack it (xlsx-storage.md "Structured references in the
+/// file"), and refuses a constant written as a label or with a `<totalsRowFormula>`; the bare
+/// `custom` loads with the cell kept a constant (excel-graph uploads, 2026-11-06, T-4005;
+/// xlsx-storage.md "Table parts in the export"). An empty cell needs nothing.
 fn totals_row_metadata(
     cell: Option<&Cell>,
     context: &CellReferenceRC,
@@ -116,6 +119,9 @@ fn totals_row_metadata(
             ),
             None => (String::new(), String::new()),
         },
+        Cell::NumberCell { .. } | Cell::BooleanCell { .. } | Cell::ErrorCell { .. } => {
+            (" totalsRowFunction=\"custom\"".to_string(), String::new())
+        }
         _ => (String::new(), String::new()),
     }
 }
