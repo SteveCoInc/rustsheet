@@ -11,6 +11,7 @@ use super::regional_date_names::{
     AR, DE_AT, DE_LU, EL, ES_419, ES_AR, ES_CL, ES_MX, HE, HI, ID, KK, LT, MK, PT_AO, SK, SL, TG,
     TH, UK, ZH_SG,
 };
+use super::variant_date_names::{FR_029, FR_CM, FR_MA, RU_F419, RU_F819, RU_FC19, RU_MD};
 
 /// The date names and day-half strings of one locale.
 #[derive(PartialEq, Eq, Debug)]
@@ -61,7 +62,7 @@ pub(super) static EN: DateNames = DateNames {
     pm: "PM",
 };
 
-static FR: DateNames = DateNames {
+pub(super) static FR: DateNames = DateNames {
     months_short: [
         "janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.",
         "déc.",
@@ -313,7 +314,7 @@ static ZH_CN: DateNames = DateNames {
     pm: "下午",
 };
 
-static RU: DateNames = DateNames {
+pub(super) static RU: DateNames = DateNames {
     months_short: [
         "янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек",
     ],
@@ -675,7 +676,7 @@ static EN_LOWER_HALVES: DateNames = DateNames {
 
 /// The probed locales: LCID, BCP-47 tag and names. For a fallback by language the first entry
 /// of the language wins, so the order matters: `[$-zh]` and `[$-4]` are Traditional Chinese.
-pub(crate) static LOCALES: [(u16, &str, &DateNames); 61] = [
+pub(crate) static LOCALES: [(u16, &str, &DateNames); 65] = [
     (0x409, "en-US", &EN),
     (0x809, "en-GB", &EN),
     (0x1809, "en-IE", &EN_LOWER_HALVES),
@@ -738,7 +739,17 @@ pub(crate) static LOCALES: [(u16, &str, &DateNames); 61] = [
     (0x461, "ne-NP", &NE),
     (0x849, "ta-LK", &TA_LK),
     (0x861, "ne-IN", &NE_IN),
+    (0x819, "ru-MD", &RU_MD),
+    (0x2C0C, "fr-CM", &FR_CM),
+    (0x380C, "fr-MA", &FR_MA),
+    (0x1C0C, "fr-029", &FR_029),
 ];
+
+/// LCIDs of a high sublanguage (0x3D-0x3F) whose names are not their language's first table:
+/// Russian's three choose the case of the months (probes/t4064-ru-md-names C1:E12; T-4064).
+/// They have no BCP-47 tag, so they stay out of [`LOCALES`].
+pub(crate) static SUBLANGUAGE_VARIANTS: [(u16, &DateNames); 3] =
+    [(0xF419, &RU_F419), (0xF819, &RU_F819), (0xFC19, &RU_FC19)];
 
 /// The names of en-US, the locale of the system tags.
 pub(crate) static EN_US: &DateNames = &EN;
