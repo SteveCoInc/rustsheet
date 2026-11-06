@@ -565,3 +565,44 @@ fn a_moved_unqualified_reference_keeps_its_text() {
         }
     }
 }
+
+/// A `#This Row` formula in the table's own data cells reads its row after a whole-column insert or
+/// delete left of the table moves the table (T-4680; probes/table-edits/
+/// t4274-calc-column-structured-insert-column-a: `=[@Col]*2` reads 2, 4, 8 after `insert_column` A).
+#[test]
+fn a_this_row_formula_in_a_table_a_column_edit_moves_reads_its_row() {
+    type Edit = fn(&mut Model);
+    // Each edit with the table's Calc column after it.
+    let edits: [(&str, Edit, i32); 2] = [
+        ("insert column A", |m| m.insert_columns(0, 1, 1).unwrap(), 5),
+        ("delete column A", |m| m.delete_columns(0, 1, 1).unwrap(), 3),
+    ];
+    for (name, edit, calc) in edits {
+        let mut model = Model::new_empty("book", "en", "UTC", "en").unwrap();
+        // The table T over B1:D4 (a spare column A left of it for the delete).
+        for (column, header) in [(2, "Col"), (3, "Other"), (4, "Calc")] {
+            model
+                .set_user_input(0, 1, column, header.to_string())
+                .unwrap();
+        }
+        for (row, col) in [(2, "1"), (3, "2"), (4, "4")] {
+            model.set_user_input(0, row, 2, col.to_string()).unwrap();
+        }
+        model.add_table(0, "T", (1, 2, 4, 4), false).unwrap();
+        for row in 2..=4 {
+            model
+                .set_user_input(0, row, 4, "=[@Col]*2".to_string())
+                .unwrap();
+        }
+        edit(&mut model);
+        model.evaluate();
+        for (row, expected) in [(2, "2"), (3, "4"), (4, "8")] {
+            assert_eq!(
+                formula(&model, 0, row, calc),
+                "=[@Col]*2",
+                "{name} row {row}"
+            );
+            assert_eq!(value(&model, 0, row, calc), expected, "{name} row {row}");
+        }
+    }
+}

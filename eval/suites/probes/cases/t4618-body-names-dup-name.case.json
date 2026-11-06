@@ -1,0 +1,47 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4618: probes/t4554-api-name-local-name-body Last!D3 (=LD on Last, loaded before LD = =Dup is added through the API scoped to Last, after workbook adds WL = =LocLoc and WD = =Dup; S2 active) is 90, where probes/t4049-sheet-api-name-plain S!A1 is #NAME?. probes/t4049-sheet-api-name-plain (S first and active) with a workbook Dup = =10 and S's file sheet-scoped Dup = =5, and N = =Dup added scoped to S. Does a body naming a name defined at both scopes make =N on S see N?",
+ "names": {
+  "Dup": "=10",
+  "S!Dup": "=5"
+ },
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "B1": "=FORMULATEXT(A1)",
+    "A3": "=Dup"
+   }
+  },
+  {
+   "name": "T",
+   "cells": {
+    "A1": "=S!N",
+    "A2": "=Dup"
+   }
+  }
+ ],
+ "check": [
+  "S!A1",
+  "S!A2",
+  "S!B1",
+  "S!A3",
+  "T!A1",
+  "T!A2"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=Dup",
+   "sheet": "S"
+  }
+ ],
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "expected": {}
+}

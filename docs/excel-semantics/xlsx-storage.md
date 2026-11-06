@@ -596,7 +596,7 @@ insert_row 3 adds inside the data rows gets the column's formula (its Calc cell 
 Ours (T-4274): the row and column insert and delete rewrite the stored text as the first data cell's formula is
 displaced (`Model::displaced_column_formulas`), printed in file form at the new first data cell; a text with a `[`
 (a structured reference) keeps its text, and so does one whose first data cell the edit deletes (unprobed). Moves and
-cell shifts leave the text as it is (unprobed). Ours gives `#ERROR!` in the moved `[@Col]` cells (T-4680). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
+cell shifts leave the text as it is (unprobed). Ours read their rows too since T-4680 (before, the moved `[@Col]` cells were `#ERROR!`). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
 `array="1"` attribute is dropped on import (export writes the plain element): engine choices, what Excel does with
 either is unprobed.
 Evidence: the saved `xl/tables/table1.xml` and `xl/worksheets/sheet1.xml` of probes/t2957-fill-one-totals,
@@ -708,3 +708,14 @@ There is no oracle evidence yet that Excel opens such packages without a repair 
 T-4180 oracle flow is the probe.
 Status: UNVERIFIED (probe pending). Tasks: T-4560, T-4561, T-4180.
 
+## Shared-string index with surrounding whitespace (T-4145)
+A `t="s"` cell whose `<v>` holds its index with surrounding whitespace (`<v>2 </v>`) is read as that
+index. poi/bug69769.xlsx Tabelle1!B2 stores exactly that, with the sst `Konto`, `Name`, `Mustermann`; the
+importer used to read index 0 ("Konto"), the harness snapshot reader read "Mustermann".
+Evidence: the file only (app.xml: Microsoft Excel Online 16.0300); no formula reads B2, so no cached value
+shows how Excel resolves the index. We read it as index 2 on the strength of POI's bug report that Excel opened it.
+Status: UNVERIFIED (probe pending, T-4711). Also unprobed: which characters count as whitespace (the code trims all
+Unicode White_Space, not only XML whitespace) and whether a leading `+` is accepted (the code accepts it).
+Implemented in: `parse_shared_string_index` in crates/rustsheet-xlsx/src/util.rs, shared by the importer
+(`get_cell_from_excel`) and the snapshot reader (`decode_value`). A negative index (`<v>-1</v>`) stays a dangling index in both (empty text); an
+unparseable index still loads as index 0 in the importer and as empty in the snapshot reader (not aligned; predates T-4145).

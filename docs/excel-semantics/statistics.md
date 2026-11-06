@@ -6797,12 +6797,49 @@ classes (A123 is listed separately after them), all where the quantile is at or 
   A128, A138): the midpoint of [0, 1], as at alpha 1E-300 in "BETAINV is #NUM! where its quantile underflows", here
   also for a tiny beta and for p below 1/2.
 - At a huge first shape (5E+161 to 4E+296) with a tiny p (1E-277 to 8E-10), Excel is `#NUM!` where the true quantile rounds to 1 (the
-  math is exactly 1, the engine returns 1 - 2^-53; A180, A181, A187, A188, A190, A191, A192, A193, A194, A196, A197, A198); the shapes of 5E9 to 1E10 in
-  the AS 109 entry converge, so the search fails somewhere above them (boundary unprobed).
+  math is exactly 1; A180, A181, A187, A188, A190, A191, A192, A193, A194, A196, A197, A198). Every one has alpha above
+  sqrt(DBL_MAX): see "BETA.INV is #NUM! once the square of AS 109's first shape overflows (T-3862)" below.
 Evidence: eval/accuracy/tables/BETA.INV/s1 (oracle and 50-digit math sidecars; `rustsheet-eval accuracy`)
-Ours: `#NUM!` in the first three classes, 1 - 2^-53 in the fourth; 27 known failures in eval/accuracy/known-failures.tsv
+Ours: `#NUM!` in the first three classes and, since T-3862, in the fourth
 Status: VERIFIED (excel-graph) for the cells; the reasons (flip, start) UNVERIFIED
 Tasks: T-3578, T-3351 (classes 1 and 2), T-4663 (class 3, after T-2808), T-3862 (class 4)
+
+## BETA.INV is #NUM! once the square of AS 109's first shape overflows (T-3862)
+Rule: BETA.INV and BETAINV are `#NUM!` exactly where fl(pp*pp) overflows a double, pp AS 109's first shape after its
+flip (alpha for p up to 1/2, beta above it), that is pp > sqrt(DBL_MAX) = 1.3407807929942596E+154, whatever p and the
+other shape. The 15-digit literals 1.34078079299425E+154 (a*a = 1.79769313486229E+308, finite) and
+1.34078079299426E+154 (a*a = inf), 7E-15 apart, bracket it: `BETA.INV(1E-10,a,1E-100)` is 0.999999 at the first and
+`#NUM!` at the second, and so are `BETA.INV(0.4,a,0.5)` (0.999999), `BETA.INV(1E-100,a,1E-100)` (0.6321205588285577)
+and the flipped `BETA.INV(0.6,0.5,a)` (1.0000000000287557E-06, then `#NUM!`), while `BETA.INV(0.1,0.5,a)`, where a
+stays the second shape, is a number on both sides (5.85776711227727E-157) and so is accuracy/BETA.INV/s1 A186 at beta
+3.8E+157. On the coarse sweep the change is between 1E+150 and 1E+155 at beta 1E-100 and 0.5.
+- Derivation: the cut is the double's own overflow of a square, to 7E-15 relative; no other quantity of AS 109 has a
+  cut there (an a·b, (a + b)^2 or a ln a cut would move with the other shape or sit elsewhere, and E's huge second
+  shape does not cut). AS 109 as revised (Cran, Martin and Thomas 1977, AS R19) has pp^2 in its accuracy exponent
+  10^(-13 - 2.5/pp^2 - 0.5/p^2), the statrs port as 5/a/a; if Excel's kernel reports an overflowing intermediate
+  as `#NUM!`, as its worksheet arithmetic does, a squared pp is enough. Which expression squares pp is not
+  established.
+- It explains all 12 `#NUM!` cells of the Gate A class "`#NUM!` at a huge alpha" (alpha 5.1E+161 to 4.1E+296) and 12
+  of the 13 BETAINV/s1 cells (A180:A190, A193; alpha 4.2E+154 to 1.1E+303, beta from 2E-266 to 2.7E+221, so also
+  where the true quantile is interior, A188 at about 0.989, or tiny, A187 and A189 near a/(a + b)).
+- Not this rule: with beta above 1 Excel is `#NUM!` far lower. `BETA.INV(1E-10,a,10)` is 0.9999999999999956 at
+  a = 1E+16 and `#NUM!` from 1E+18 (where AS 109's start pp/(pp + qq exp(2w)) rounds to 1), but `BETA.INV(0.1,a,2)` is
+  `#NUM!` from 1E+16, where that start is 0.9999999999999996 and the quantile about 1 - 3.9E-16, so "the start rounds
+  to 1" is refuted as the rule; BETAINV/s1 A179 (alpha 1.55E+145, beta 4.2E+128) is in this class (T-4713).
+- Below the cut, at beta 1E-100 or 0.5, Excel's values are not the crossing: 0.999999 at p = 1E-10 and 0.4, and
+  0.6321205588285577 = 1 - 1/e at p = beta = 1E-100, for every alpha from 1E+110 to 1.34E+154 (likewise
+  accuracy/BETA.INV/s1 A183, 0.999999 at alpha 3.4E+20). 1 - exp(-p/beta) is AS 109's start for a tiny second
+  shape, 1 - exp((ln((1 - p) qq) + ln B)/qq), when ln B rounds to -ln qq, so these look like an unmoved start capped at
+  1 - 1E-6. UNVERIFIED (T-4700).
+Evidence: probes/t3862-beta-inv-sqrt-dbl-max A1:E6 (the bisection), G1:H25 (beta above 1), and
+t3862-beta-inv-huge-alpha A1:D11 (alpha 1E+110 to 1E+160 by 1E+5), excel-graph 2026-11-06; predictions committed
+before each fill (task file). Fills with `BETA.INV(0.1,alpha,1E+100)` at those alphas did not finish (createSession
+retries exhausted).
+Ours: `#NUM!` from the cut since T-3862 (functions/statistical/beta.rs `first_shape_square_overflows`); below it
+1 - 2^-53 where Excel has 0.999999 or 1 - 1/e, and 5.888648679911079E-157 where Excel has 5.85776711227727E-157
+(T-4700); a number where beta is above 1 (T-4713).
+Status: VERIFIED (excel-graph) for the cut; the expression that squares pp UNVERIFIED
+Tasks: T-3862, T-4713, T-4700
 
 ## F.INV.RT saturates at 3.696066238512854E+150/df1 in the far tail (T-2435)
 Rule: for a probability far in the tail and a df2 below 2, Excel's F quantile search stops at a
