@@ -3,7 +3,7 @@ id: T-4391
 title: "A sheet-scoped name added through the API re-binds some unresolved uses on its sheet: SUM(Span) and Rate2 resolve, Rate stays #NAME?"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
