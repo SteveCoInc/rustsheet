@@ -147,6 +147,7 @@ ironcalc-calc/STATISTICAL/BETA_GAMMA.xlsx	1
 ironcalc-calc/STATISTICAL/GAMMA.xlsx	1
 ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	5
 ironcalc-calc/STATISTICAL/NORM_DIST.xlsx	9
+probes/accrint-zero-results.case.json	57
 probes/amordegrc-fraction-state-ai.case.json	1
 probes/fin-cumipmt-gate-edges.case.json	14
 probes/fin-cumipmt-overflow-and-forms.case.json	2
@@ -276,6 +277,10 @@ probes/t4456-beta-t-zero-reach.case.json	29
 probes/t4480-lcid-sublanguage-fallback.case.json	3
 probes/t4492-locale-comma-tag-shapes.case.json	5
 probes/t4543-xlookup-not-found-address-sheet-lift.case.json	2
+probes/t4554-api-name-local-name-body.case.json	5
+probes/t4554-api-name-scoped-name-choice-first.case.json	9
+probes/t4554-api-name-scoped-name-choice-last.case.json	9
+probes/t4554-api-name-scoped-name-choice.case.json	9
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1

@@ -96,14 +96,12 @@ def us_30_360(start: YMD, end: YMD) -> int:
 
 
 def us_30_360_both(start: YMD, end: YMD) -> int:
-    """US 30/360 with both dates modified (ExcelFinancialFunctions' `ModifyBothDates`, the count ODDLPRICE and
-    ODDLYIELD take for their quasi-coupon period lengths on basis 0): the end's day becomes 30 when it is February's
-    last day or a 31st whatever the start's day, the start's day 30 when it is a 31st or February's last day."""
+    """US 30/360 that moves both dates (ExcelFinancialFunctions' `ModifyBothDates`): a 31st or February's last day is
+    day 30 at either end, whatever the other date. ODDLPRICE's and ODDLYIELD's quasi-coupon period lengths on basis 0
+    (defs/odd_bonds.py) and ACCRINT's issue-period length on bases 0 and 2 (defs/accrint.py) count with it."""
     (y1, m1, d1), (y2, m2, d2) = start, end
-    if _feb_last(*end) or d2 == 31:
-        d2 = 30
-    if d1 == 31 or _feb_last(*start):
-        d1 = 30
+    d1 = 30 if d1 == 31 or _feb_last(*start) else d1
+    d2 = 30 if d2 == 31 or _feb_last(*end) else d2
     return 360 * (y2 - y1) + 30 * (m2 - m1) + (d2 - d1)
 
 
@@ -159,6 +157,16 @@ def day_count_parts(start: int, end: int, basis: int) -> tuple[int, Fraction]:
     if basis == 4:
         return eu_30_360(displayed_date(start), displayed_date(end)), Fraction(360)
     return end - start, Fraction(360 if basis == 2 else 365)
+
+
+def basis_days(start: int, end: int, basis: int) -> Fraction:
+    """Days from serial `start` to `end` on the basis: 30/360 on Excel's displayed days (bases 0 and 4), serial days
+    otherwise (the coupon securities' day counts: defs/bonds.py, defs/accrint.py)."""
+    if basis == 0:
+        return Fraction(us_30_360(displayed_date(start), displayed_date(end)))
+    if basis == 4:
+        return Fraction(eu_30_360(displayed_date(start), displayed_date(end)))
+    return Fraction(end - start)
 
 
 def check_basis(basis: int) -> None:

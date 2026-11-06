@@ -4676,6 +4676,10 @@ Oracle sweep (excel-graph), 12 cases, 33-92 cells each. Aliases were paired with
 - CHITEST of a 1x1 range is #N/A (`CHITEST(N1:N1,G1:G1)`). A text cell in the actual range drops that pair but the degrees of freedom still come from the range shape: `CHITEST(F1:F3,G1:G3)` with F = {5,0,"x"} = 0.00012340980408667956 (= CHIDIST(18,2)).
 Evidence: probes-numeric cases `m9-legacy-betadist`, `-betainv`, `-binomdist`, `-chidist`, `-chiinv`, `-chitest`, `-confidence`, `-critbinom`, `-expondist`, `-fdist`, `-finv`, `-ftest`. Oracle: excel-graph, 2026-10-13.
 Status: VERIFIED (excel-graph)
+Gate A tables (T-4104, excel-graph 2026-11-06): accuracy/CHIDIST, CHIINV, BETADIST and BETAINV s1 take their modern
+function's definition, and every Excel value and error there (typical, tail, edge, extreme and log-uniform points) is the
+modern rule. The points outside the envelope are the modern siblings' known behaviours: BETAINV T-3351, T-2808 and
+T-3862; BETADIST T-3577; CHIINV A93 T-3364 (R3 case 3, decision 0318).
 Tasks: T-1047
 
 ## CONFIDENCE.NORM forms 1 - alpha/2 in doubles (T-4101)
@@ -4711,6 +4715,8 @@ Tasks: T-4101
 
 ## Legacy distribution names sweep, second family (T-1048)
 Implemented in: `functions/statistical/hypegeom.rs`, `weibull.rs` (HYPGEOMDIST/HYPGEOM.DIST sample_s above min(number_sample, population_s) is 0 or 1, zero counts valid, TRUE sample_s; WEIBULL density 0 at x = 0, TRUE x)
+Gate A tables (T-4104, excel-graph 2026-11-06): accuracy/GAMMADIST and GAMMAINV s1 take GAMMA.DIST's and GAMMA.INV's
+definitions, and every Excel value and error there is the modern rule; both tables are inside the envelope.
 Tasks: T-2035
 Rule: GAMMADIST, GAMMAINV, HYPGEOMDIST, LOGINV, LOGNORMDIST, NEGBINOMDIST, NORMDIST, NORMINV, NORMSDIST, NORMSINV, POISSON, TINV, WEIBULL return exactly the same value or error as their modern equivalent (GAMMA.DIST, GAMMA.INV, HYPGEOM.DIST with cumulative FALSE, LOGINV = LOGNORM.INV, LOGNORM.DIST cum TRUE, NEGBINOM.DIST cum FALSE, NORM.DIST, NORM.INV, NORM.S.DIST cum TRUE, NORM.S.INV, POISSON.DIST, T.INV.2T, WEIBULL.DIST) on every paired cell, so the aliases need no separate kernel. TDIST with tails 1 is the exception: it differs from T.DIST.RT for negative x (T.DIST.2T agrees with TDIST tails 2). TTEST = T.TEST and ZTEST = Z.TEST on every paired cell too.
 Oracle sweep (excel-graph), 16 cases, 34-102 cells each; every paired cell (column B) is identical except the TDIST row below. Quirks seen:
@@ -7527,6 +7533,8 @@ at Excel's start x0 is below the smallest normal double), Excel returns x0, abou
 relative error above G = 1e-4; there RustSheet returns the math (decision 0188 R3). The branch serves GAMMA.INV,
 GAMMAINV, CHISQ.INV, CHISQ.INV.RT and CHIINV (shape df/2, scale 2), so all five are in this case. The branch's `#NUM!`
 cells and its true-quantile band still match Excel.
+Gate A: accuracy/CHIINV/s1 A93 (`CHIINV(1.44764470787181E-250,2585098457)`, shape 1.29E9) is on the branch too, below the
+3.9E9 lowest shape decision 0289 recorded (T-4104, decision 0318).
 Evidence: probes/t3070-gamma-inv-band A110 (`GAMMA.INV(0.999999,1.5E10,1)` = 15004569623.957905) and the
 closed-form numeric cells of the five functions among A304-A327 (not A315-A317, which are CHISQ.DIST and
 CHISQ.DIST.RT and stay `#NUM!` in Excel; CHIINV
@@ -7816,3 +7824,44 @@ within 15 digits, those two within 1e-9 of the math: inside the Gate A envelope)
 Excel is `#NUM!`: three Gate A known failures). Both are T-4501.
 Status: VERIFIED (excel-graph) for the cells cited; the number_chosen cut UNVERIFIED
 Tasks: T-4106, T-4501
+
+## KURT, SKEW, SKEW.P, GEOMEAN, HARMEAN and TRIMMEAN domain cells of the Gate A tables (T-4091)
+Rule (Excel, over literal numbers; each rule only as far as the cells below show it):
+- KURT of one, two or three numbers is `#DIV/0!` and of four is a number: accuracy/KURT/s1 A67, A70 (one number), A2, A5,
+  A36, A59, A68, A120 (two), A1, A12, A23, A39, A43, A60, A75 (three), and every KURT point of four or more numbers has a
+  value; `KURT(A1:A3)` is `#DIV/0!` and `KURT(A1:A4)` -0.28571428571429003 (probes/stats-evidence-floor-t1623 Q29, Q28).
+  Whether too few numbers are `#DIV/0!` before a sum of the numbers beyond the double range is checked is UNVERIFIED (the
+  Gate A definitions assume the count comes first).
+  SKEW and SKEW.P of one or two numbers are `#DIV/0!` (accuracy/SKEW/s1 A14, A15, A37, A38, A42, A46, A67, A69, A73, A78,
+  A83, A84, A116; accuracy/SKEW.P/s1 A1, A5, A10, A43, A46, A48, A75, A79, A80, A82, A84), as "SKEW.P of two numbers is
+  #DIV/0!" states.
+- Equal numbers are `#DIV/0!` in all three where Excel's double sum of them is exact: four copies of 0.889154832388048 in
+  SKEW (accuracy/SKEW/s1 A75) and of -0.0867711652174799 in SKEW.P (accuracy/SKEW.P/s1 A69), and
+  `KURT({0,0,0},{0,0,0},{0,0,0})` (gen-m9/f34f66fb7f81e673 A391). Equal numbers whose double sum is inexact (three
+  copies of 0.1: the double mean is not 0.1, so the double deviations are not 0) are UNVERIFIED; the Gate A definitions
+  give them no value.
+- GEOMEAN of data holding a negative number or a 0 is `#NUM!`: accuracy/GEOMEAN/s1 A71 (last number -2.07601566614114)
+  and A79 (a leading 0); ironcalc-calc/STATISTICAL/GEOMEAN.xlsx D11 and D16 (-4, 3 and 2, as a range and as cells; Excel-cached and excel-graph); `GEOMEAN(4,)` (coercion.md).
+  HARMEAN of data holding a 0 is `#NUM!` (accuracy/HARMEAN/s1 A71), as `HARMEAN(0)` is, and so is all-negative data
+  (`HARMEAN(-1,-2)`; probes/stats-evidence-floor-t1623 Q51, Q52). Negative and positive numbers with no 0
+  (`HARMEAN(1,-2)`) are UNVERIFIED; the Gate A definition gives them no value.
+- The cubes and fourth powers of the deviations may pass the double range without an error: with deviations up to
+  about 1E+149, S_3 or S_4 formed in doubles overflows, yet Excel gives finite values (accuracy/KURT/s1 A109-A119,
+  accuracy/SKEW/s1 A109-A115 and A117-A119, accuracy/SKEW.P/s1 A68, A70-A72 and A111-A120). Only the squared
+  deviations' overflow is an error ("Overflowing squares (T-2432)"), and only where a square overflows on its own
+  (`{1E+200,1E+200,-1E+200}`); a deviation that itself overflows, and finite squares whose sum overflows, are UNVERIFIED.
+- TRIMMEAN over an array literal with a percent outside [0, 1) is `#NUM!`: 1.5, 2, -1 and 1 (accuracy/TRIMMEAN/s1 A69,
+  A78, A79, A100, A109), as "TRIMMEAN of a typed scalar (T-3781)" shows for one typed number. Every TRIMMEAN point with a
+  percent in [0, 1) is within the Gate A envelope of the exact mean after dropping floor(n * percent / 2) values from each
+  end (Microsoft's rule). Where the double product n * percent and the exact one floor to different counts (n = 10,
+  percent 0.6: the exact product is just below 6, its double 6) Excel's count is UNVERIFIED; the tables draw no such point.
+Unprobed and left without a math value: a sum of the numbers beyond the double range in the three moments, the two
+squared-deviation overflows above, mixed-sign HARMEAN data with no 0, a reciprocal or sum of reciprocals beyond the
+double range in HARMEAN, and a running total beyond it in AVERAGEA (numbers.md's overflow entry lists
+AVERAGE, not AVERAGEA).
+Evidence: accuracy/{KURT,SKEW,SKEW.P,GEOMEAN,HARMEAN,AVERAGEA,TRIMMEAN}/s1 (excel-graph, 2026-11-06, T-4091); the probe
+and fixture cells cited.
+Ours: matches every cell cited (the engine is bit-exact with Excel on 777 of the tables' 840 points, and all 840 are inside
+the Gate A envelope).
+Status: VERIFIED (excel-graph) for the cells cited; the regions marked UNVERIFIED are not probed
+Tasks: T-4091

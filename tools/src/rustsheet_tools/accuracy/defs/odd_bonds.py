@@ -39,14 +39,16 @@ Domains (Excel's `#NUM!`, `DomainError`), each evidenced: a date that does not f
 than 1, 2 or 4, a basis outside 0..4, a negative rate, a negative yld, a pr of 0 or below, a redemption of 0 or below
 ("ODDFPRICE, ODDFYIELD, ODDLPRICE and ODDLYIELD check order"); for ODDF* anything but issue < settlement < first_coupon
 < maturity ("ODDFPRICE and ODDFYIELD need issue < settlement < first_coupon"), a first coupon off the maturity's
-schedule or DFC = E ("ODDFPRICE and ODDFYIELD need the first coupon on the maturity's schedule"); for ODDL* anything but
+schedule or DFC = E on bases 0, 1 and 4 or basis 2 semiannually ("ODDFPRICE and ODDFYIELD need the first coupon on
+the maturity's schedule", and the table's annual cells); for ODDL* anything but
 last_interest < settlement < maturity, and on bases 0 and 1 a quasi-coupon date past 9999-12-31 ("ODDLPRICE and
 ODDLYIELD: a quasi-coupon date past the calendar is #NUM!"); ODDFPRICE's q^(redemption's exponent) past the double
 range ("ODDFPRICE and ODDLPRICE at a huge yield").
 Not drawn and given no math value (`NoValueError`), as no evidence names Excel's result there: a date before 1901-03-01
 (the oddbonds.fs walks read real dates, Excel's 1900 calendar counts a fictitious 29 February; unprobed); a walk past
 9999-12-31 for ODDF*, or on bases 2-4 for ODDL*; ODDFPRICE's power within 1E-9 (in its logarithm) of the double range's
-top; 100·rate, a dirty sum or a price past the double range (unprobed for the odd periods); ODDLYIELD with DSCNL = 0.
+top; 100·rate, a dirty sum or a price past the double range (unprobed for the odd periods); ODDLYIELD with DSCNL = 0;
+DFC = E on basis 2 annually or quarterly or on basis 3 annually; an ODDL* quasi period of 0 days (unreachable).
 """
 
 from __future__ import annotations
@@ -69,7 +71,6 @@ from rustsheet_tools.accuracy.defs.bonds import (
     FREQUENCIES,
     VALUE_EDGES,
     YEAR,
-    basis_days,
     bond_definition,
     coupons,
     date_serial,
@@ -80,6 +81,7 @@ from rustsheet_tools.accuracy.defs.bonds import (
 )
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.defs.yearfrac import (
+    basis_days,
     displayed_date,
     real_date,
     serial_of,
@@ -222,8 +224,15 @@ def odd_first_flows(o: OddArgs) -> Flows:
     e = around.e
     dfc = _days(issue, first, basis)
     if dfc == e:
-        msg = "a first period of exactly one period (DFC = E): #NUM!"
-        raise DomainError(msg)
+        # evidenced on bases 0, 1 and 4 at every frequency (the entry's semiannual and quarterly cells, the table's
+        # annual ones: accuracy/ODDFPRICE/s1 A126, accuracy/ODDFYIELD/s1 A169, A168) and on basis 2 semiannually;
+        # basis 2 annual or quarterly and basis 3 annual (E = 365, the only basis-3 period a whole DFC can equal) are
+        # unprobed
+        if basis in (0, 1, 4) or (basis == 2 and f == 2):
+            msg = "a first period of exactly one period (DFC = E): #NUM!"
+            raise DomainError(msg)
+        msg = "a first period of exactly one period (DFC = E) on an unprobed basis and frequency"
+        raise NoValueError(msg)
     c = 100 * o.rate / f
     if dfc < e:
         n = schedule(real_date(settlement), real_date(maturity), f)[2]
@@ -328,6 +337,9 @@ def odd_last_sums(o: OddArgs) -> OddLast:
             raise NoValueError(msg) from None
         early_s, late_s = date_serial(early), date_serial(late)
         nl = _hack_days(early_s, late_s, basis)
+        if nl == 0:  # a whole period of 0 days: unreachable on a real calendar, and unprobed
+            msg = "a quasi-coupon period of 0 days"
+            raise NoValueError(msg)
         dci = nl if index < nc else _hack_days(early_s, maturity, basis)
         if late_s < settlement:
             a = dci

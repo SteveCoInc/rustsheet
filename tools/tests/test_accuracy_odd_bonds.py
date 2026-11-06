@@ -227,6 +227,33 @@ def test_no_value_where_unevidenced() -> None:
                 )
             ]
         )
+    # DFC = E where it is unprobed: basis 3 annual (365 days) and basis 2 quarterly (90 days)
+    for args in (
+        (
+            serial(2024, 9, 1),
+            serial(2027, 6, 30),
+            serial(2024, 6, 30),
+            serial(2025, 6, 30),
+            0.05,
+            0.06,
+            100,
+            1,
+            3,
+        ),
+        (
+            serial(2024, 5, 1),
+            serial(2025, 6, 30),
+            serial(2024, 4, 1),
+            serial(2024, 6, 30),
+            0.05,
+            0.06,
+            100,
+            4,
+            2,
+        ),
+    ):
+        with pytest.raises(NoValueError):
+            ODDFPRICE.evaluate([mp(a) for a in args])
     # ODDLYIELD with no days from settlement to the maturity (the 30th to the 31st on 30/360)
     with pytest.raises(NoValueError):
         ODDLYIELD.evaluate(

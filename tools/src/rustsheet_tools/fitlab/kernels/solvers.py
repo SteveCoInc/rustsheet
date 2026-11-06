@@ -483,7 +483,8 @@ def days360(start: datetime.date, end: datetime.date, european: bool) -> int:
 
 
 def add_months(d: datetime.date, months: int, eom: bool) -> datetime.date:
-    """`d` moved `months` months, its day clamped to the month, or the month's last day with `eom`."""
+    """`d` moved by `months`, its day clamped to the month, or the month's last day with `eom`; ValueError outside
+    years 1 to 9999."""
     y, m = divmod(d.month - 1 + months, 12)
     year, month = d.year + y, m + 1
     last = calendar.monthrange(year, month)[1]
