@@ -267,7 +267,7 @@ def _covariance(args: Sequence[MathArg], *, sample: bool) -> mpmath.mpf:
     for series in _series(args):
         # called for its NoValueError only: a constant whose double mean is not its value has no evidenced result,
         # while an exact constant needs no special case (its Sxy is 0)
-        _constant_exact(series)
+        constant_exact(series)
     return fraction_to_mpf(m.sxy / (m.n - 1 if sample else m.n))
 
 
