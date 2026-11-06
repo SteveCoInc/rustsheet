@@ -3,7 +3,7 @@ id: T-3386
 title: "T.INV.2T and TINV at a tiny p: Excel is over 1e-4 off the math from p 1.7E-110 down (R3 case, owner ruling in decision 0267)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P1
 size: S
 tier: opus
@@ -41,10 +41,10 @@ returns the math within ε there. Every other point keeps Excel as its target (d
 - [x] A decision record with the owner's ruling: decision 0267 rules the math. The region is the evidenced points
       where Excel is more than G off the math, checked per cell. The decision 0267 analysis (2026-11-04, mpmath at 60
       digits) found 50 of the 59 visibly-off tiny-p T.INV, T.INV.2T and TINV cells of t1531, t3349 and the m9 cases above G.
-- [ ] A `MATH-OVER-EXCEL` entry in statistics.md and the R3 marks in eval/accuracy/math-over-excel.tsv (SPEC-0029)
+- [x] A `MATH-OVER-EXCEL` entry in statistics.md and the R3 marks in eval/accuracy/math-over-excel.tsv (SPEC-0029)
       for every listed cell where Excel is more than G off the math. A cell whose Excel value is within G keeps Excel
       as its target, and this task names it, or blocks it under decision 0056.
-- [ ] df 1 near p = 1 (`T.INV.2T(0.999999999999999,1)`) is outside the ruling and stays Excel's (T-2858).
+- [x] df 1 near p = 1 (`T.INV.2T(0.999999999999999,1)`) is outside the ruling and stays Excel's (T-2858).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -63,10 +63,37 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
   ours 30.228508783079672, about the normal quantile; Tier A, the tiny-p case of decision 0267 item 3)
 
 - [ ] The 3 type cells listed (t1543 A89, A91 and A92: the engine returns `#NUM!` where Excel returns a number for `BETA.INV(1-1E-16,1000,1)`, `BETA.INV(1E-300,0.5,100)` and `BETA.INV(1E-200,0.5,100)`) never pass through an R3 mark while they are an error against a number (decision 0188 R3). The engine returns a number there. That is Excel's number, or the math where a mark applies.
-- [ ] Each R3 mark names one point whose committed 50-digit value (a math.json sidecar, or a Gate A table's math
+- [x] Each R3 mark names one point whose committed 50-digit value (a math.json sidecar, or a Gate A table's math
       column) shows Excel more than G = 1E-4 off. Marks go point by point: "tiny p" is not a band, and the
       decision 0267 analysis numbers do not count as evidence until committed.
 - [ ] Every cell listed above does one of three things: it is an R3-marked cell where the engine returns the math within ε (R1(c) `R3Pass`); it matches Excel within half a unit of the 15th significant digit or has Excel's type and error; or it is left after decision 0056's time-box and accepted (decision 0267).
 
 ## Visible-parity stage
 Every cell in "Decision 0267 cells" either passes as an R3 cell (decision 0188 R3, ruled by decision 0267), or is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text.
+
+## Outcome
+Decision 0311 records the marks (a protected path). 52 cells got their own line in eval/accuracy/math-over-excel.tsv
+under statistics.md "Tiny-p quantiles: Excel is grossly wrong, RustSheet returns the math", whose Rule and new T-3386
+Region name them. Each was checked against its committed math sidecar value: Excel 0.67 to 2.05 relative off (G 1e-4),
+the engine within ε (worst 5.3E-10, t3349 A266). No engine change was needed.
+- t3349-t-inv-2t-sweep: all 42 listed T.INV.2T cells (p 1.38E-300 to 1.73E-110, df 2490 to 9987930597).
+- t1531-t-tiny-p: A73, A74, A97, A98 (T.INV), A82, A106 (T.INV.2T), A83, A107 (TINV).
+- t1543-inverse-cdf-tiny-p: A86 (`BETA.INV(1E-200,1000,1)`, math (1E-200)^(1/1000)).
+- gen-m9/7980ffb6095a340d A160 (`TINV(1E-200,1E+10)`): gen-m9 had no sidecar, so this PR commits that case's sidecar
+  as `rustsheet-accuracy math --suite gen-m9 --function TINV` writes it (only that case's; the run wrote 103).
+
+Not marked:
+- t1531 A84 and A108 (CONFIDENCE.T): no committed math, since CONFIDENCE.T has no Gate A definition (T-4102). Follow-up
+  T-4535.
+- t1543 A89, A91, A92: engine `#NUM!` against Excel numbers, so no mark applies (they take none). The engine does not
+  return a number yet: that criterion and the last one stay open and move to T-4536.
+- t1543 A43 and A79: Excel within G, so Excel stays the target (the engine is on the math, Excel 6.0E-12 and 1.1E-9
+  off). Follow-up T-4536; not attempted here, so decision 0056's time-box has not started for them.
+- The Gate A points T.INV.2T/s1 A98, A99, A103 and TINV/s1 A102 stay unmarked (decision 0301). Gate A's four known
+  failures this task was listed for (T.INV.2T/s1 and TINV/s1 A68, A78: Excel `#NUM!` at p = 2.2E-308, an error
+  mismatch) need a probe of where Excel's cut is, so their known-failures.tsv lines now name follow-up T-4541.
+
+Eval delta: no cell changes verdict and no case's `passed` changes (t1531 75/105, t1543 64/102, t3349 134/300, gen-m9
+7980ffb6095a340d 393/400, before and after); eval/baseline is unchanged. R1(c): the 52 cells move from counted to
+`r3_pass` (probes-numeric counts 1636 → 1585, r3_pass 66 → 117), and the new gen-m9 sidecar moves
+gen-m9/7980ffb6095a340d A84 to Phase 1b. Gate A (`rustsheet-eval accuracy`): 0 failing, 285 known failures, unchanged.
