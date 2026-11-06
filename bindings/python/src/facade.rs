@@ -811,7 +811,7 @@ impl PyTransaction {
         self.push(Op::RowHidden(sheet.to_owned(), row, hidden))
     }
 
-    /// Adds an Excel table (ListObject) named `name` over the A1 range `range`, so structured
+    /// Adds an Excel table (`ListObject`) named `name` over the A1 range `range`, so structured
     /// references such as `Sales[Qty]` work. The first row of the range is the header row (set
     /// the header cells first). With `filtered` the table carries an active filter, so hidden rows
     /// on that sheet count as filtered and SUBTOTAL 1-11 skip them; with `totals_row` the last row
