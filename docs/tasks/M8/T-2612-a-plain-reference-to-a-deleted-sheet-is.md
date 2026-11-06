@@ -52,5 +52,8 @@ as `#REF!` then `(1)`).
   T-2340's `a_sheet_delete_is_a_ref_error_and_restore_brings_the_tables_back` now pins `#REF!` for the plain twin;
   rustsheet-xlsx `deleted_sheet_reference_export` checks the saved `<f>SUM(#REF!C4:C7)+#REF!$A$1</f>`.
 - references.md "A deleted table or sheet" records the probe and replaces the "Known gaps (T-2612)" sentence.
-- Eval delta: probes +1 case (10 cells), all pass.
+- Names (review round 2): probes/table-edits/t2612-delete-sheet-then-add-names (excel-graph): names nm = `S!$C$4`,
+  rng = `S!$C$4:$C$7` stay `#REF!` after delete-then-add, `ISREF(nm)` FALSE; the engine passes 5/5 (the rewrite
+  also runs over workbook names). The export's `#REF!C4:C7` text is inferred from Excel's FORMULATEXT.
+- Eval delta: probes +2 cases (15 cells), all pass.
 - Follow-up: T-4628 (a loaded `#REF!C4:C7` loses its range in the lexer; probe first).

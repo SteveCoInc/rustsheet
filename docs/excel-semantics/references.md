@@ -2929,8 +2929,11 @@ stay `#REF!` (a revived reference would read 0, 0 and 4), FORMULATEXT shows `=SU
 `ISREF(#REF!A1)` (written `ISREF(S!A1)`) is FALSE, while `INDIRECT("S!C4")` reads the new sheet ("|" for a blank).
 The engine rewrites such a reference on the delete (`delete_sheet_in_node`, stringify/sheet_edits.rs) to a wrong
 reference to the internal sheet name `DELETED_SHEET` (`*#REF!`, which no real sheet can take), which the display
-and the xlsx export both print as `#REF!C4:C7`; the undo puts the old text back through `TakenSheet`'s rewritten
-formulas. The `#REF!` display also covers a sheet that never existed (a loaded `Nope!A1`), an engine choice with
+and the xlsx export both print as `#REF!C4:C7` (the file text is inferred from Excel's en-US FORMULATEXT; no
+Excel-saved file was inspected); the undo puts the old text back through `TakenSheet`'s rewritten
+formulas. Workbook names lose the sheet the same way (probes/table-edits/t2612-delete-sheet-then-add-names,
+excel-graph 2026-11-06): with nm = `S!$C$4` and rng = `S!$C$4:$C$7`, `=nm` and `=SUM(rng)` stay `#REF!` after the new S
+is added and `ISREF(nm)` is FALSE; the engine stores such a name as `#REF!$C$4`. The `#REF!` display also covers a sheet that never existed (a loaded `Nope!A1`), an engine choice with
 no evidence; its stored text and export keep the name. The adapter's delete_table clears the whole table range (header, text and Qty columns: COUNTA 0 each)
 and keeps the rows in place: `S!C9` still 99 and `SUM(S!C9:C10)` still 104 with unshifted text
 (T-2341, table-delete-table-cells, excel-graph 2026-10-22).
