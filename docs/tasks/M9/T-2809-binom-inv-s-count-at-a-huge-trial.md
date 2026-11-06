@@ -3,7 +3,7 @@ id: T-2809
 title: "BINOM.INV's count at a huge trial count (Excel 1073741823 at 2^31 - 2 trials)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
