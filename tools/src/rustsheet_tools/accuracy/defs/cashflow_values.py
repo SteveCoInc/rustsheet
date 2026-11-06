@@ -62,7 +62,6 @@ from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
     DomainError,
-    Interval,
     MathArg,
     NoValueError,
     Param,
@@ -475,7 +474,7 @@ def _definition(
 NPV = _definition(
     "NPV",
     (
-        Param("rate", "real", Interval(), source=NPV_RANGE_SOURCE),
+        Param("rate", "real", source=NPV_RANGE_SOURCE),
         Param("value", "array", source=NPV_ARGS_SOURCE),
     ),
     _npv,
@@ -492,7 +491,7 @@ NPV = _definition(
 XNPV = _definition(
     "XNPV",
     (
-        Param("rate", "real", Interval(), source=XNPV_RATE_SOURCE),
+        Param("rate", "real", source=XNPV_RATE_SOURCE),
         Param("values", "array", source=XNPV_ELEMENT_SOURCE),
         Param("dates", "array", source=XNPV_ELEMENT_SOURCE),
     ),
@@ -512,8 +511,8 @@ MIRR = _definition(
     "MIRR",
     (
         Param("values", "array", source=MIRR_ORDER_SOURCE),
-        Param("finance_rate", "real", Interval(), source=MIRR_EDGES_SOURCE),
-        Param("reinvest_rate", "real", Interval(), source=MIRR_EDGES_SOURCE),
+        Param("finance_rate", "real", source=MIRR_EDGES_SOURCE),
+        Param("reinvest_rate", "real", source=MIRR_EDGES_SOURCE),
     ),
     _mirr,
     (_mirr_like, MIRR_EDGES),
@@ -522,7 +521,7 @@ MIRR = _definition(
 FVSCHEDULE = _definition(
     "FVSCHEDULE",
     (
-        Param("principal", "real", Interval(), source=NPV_ARGS_SOURCE),
+        Param("principal", "real", source=NPV_ARGS_SOURCE),
         Param("schedule", "array", source=NPV_ARGS_SOURCE),
     ),
     _fvschedule,
