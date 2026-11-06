@@ -3,7 +3,7 @@ id: T-4563
 title: "XLOOKUP under a lifted lookup_value keeps a range if_not_found as a reference element that INDEX hands back"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -28,15 +28,30 @@ itself, shown as `#VALUE!` in the grid, and INDEX of that element returns the ra
   charge against the nested budgets (CLAUDE.md directive 5); a reference element would need none.
 
 ## Acceptance criteria
-- [ ] probes/t4543-xlookup-not-found-address-sheet-lift W45 and W46 pass.
-- [ ] The consumers above are probed (excel-graph, predictions committed first) and every cell of that probe passes or
+- [ ] probes/t4543-xlookup-not-found-address-sheet-lift W45 and W46 pass. (Moved to T-4570: see the Outcome.)
+- [x] The consumers above are probed (excel-graph, predictions committed first) and every cell of that probe passes or
       has an owner.
-- [ ] `make check` green; reviewers approve.
-
-## Visible-parity stage
-Owner of the visibly-off cells of probes/t4543-xlookup-not-found-address-sheet-lift (W45, W46): Excel's reference
-element read back by INDEX, where ours is `#VALUE!` and a blank.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - An array (not a range) if_not_found under a lifted lookup_value: it takes its first element, and that matches Excel
   (t4543 A33:A41).
+
+## Outcome
+- Probe probes/t4563-xlookup-not-found-ref-element: 29 questions, 245 cells, excel-graph, canary-verified,
+  2026-11-06, tagged M6. The engine's values were committed first (docs/research/t4563/predictions.md). 139 cells
+  pass.
+- Finding (lookup.md, added to "XLOOKUP's if_not_found and ADDRESS's sheet_text over an array"): the missed element
+  is a real reference, not a nested value.
+  - ISREF, TYPE 64 or 1, AREAS, CELL("address") and SUM all treat INDEX of it as a reference.
+  - SUM over the whole result walks it.
+  - A lifted operator reads it as `#VALUE!`, even for one cell.
+  - So SPEC-0018's nested cell, the candidate carrier in Context, would fail ISREF, TYPE, AREAS, CELL and the
+    aggregates. SPEC-0014's `RefGrid` holds no values. Matching Excel needs an array that mixes values and
+    references: an architectural change, which needs a spec first (CLAUDE.md directive 4).
+- Split:
+  - T-4569 writes the spec (a SPEC-0014 amendment).
+  - T-4570, which depends on T-4569, implements it. It owns the case's 106 visibly-off cells and t4543 W45:W46,
+    which move there from this task.
+  - The first acceptance criterion moves with them.
+- Eval delta: +1 case, 245 cells: 139 pass, 106 new-coverage known failures (owner T-4570). Fixed 0, regressions 0.

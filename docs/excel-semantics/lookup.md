@@ -939,12 +939,24 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
   (A57). Under an array lookup_value, every missed element takes the array's first element, whatever its position or
   the lengths (`XLOOKUP({2;9;7},..,{"p";"q"})` is 20, "p", "p"; `{9;2}` is "p", 20; A33:A43). A range if_not_found
   there is kept as a reference element: the grid shows `#VALUE!` (A46), but `INDEX(..,2,1)` returns the range and
-  spills "x", "y" (W45:W46). Ours gives `#VALUE!` for that element (T-4563 owns W45, W46).
+  spills "x", "y" (W45:W46). That element is a real reference, not a copy of its values
+  (probes/t4563-xlookup-not-found-ref-element, excel-graph, 2026-11-06; E1 = 5, F1:F2 = 3, 4; T-4563):
+  - INDEX of it is a reference: ISREF TRUE (A1:A9), TYPE 64 for F1:F2 and 1 for E1 (A37, A41), AREAS 1 (A45),
+    CELL("address") names Data!$F$1 (A49), and SUM 7 (A33). A range on another sheet works too (A21:A22).
+  - A lifted operator reads it as `#VALUE!`, even a one-cell range: `XLOOKUP(..)+0`, `&""` and `*{1;1}` are
+    20, `#VALUE!` (A57:A70).
+  - Over the whole result, SUM walks the reference: `SUM(..F1:F2)` is 23 = 20 + 3 + 4 and `SUM(..E1)` is 25 (A73,
+    A109). COUNT is 1 and COUNTA 2 (A77, A81). ISERROR is FALSE, TRUE and ISTEXT over D1:D2 is FALSE, FALSE (A85,
+    A93). TYPE of the result is 64 and ISREF FALSE (A105, A89).
+  Ours gives `#VALUE!` for the element, so every reader above differs (106 cells). SPEC-0018's nested cell would
+  fail ISREF, TYPE, AREAS, CELL and the aggregates, and SPEC-0014's `RefGrid` holds no values, so matching this
+  needs an array that mixes values and references: spec T-4569, implementation T-4570 (it owns t4543 W45, W46
+  and the t4563 cells).
   ADDRESS's sheet_text lifts like its other arguments: `ADDRESS(1,1,1,TRUE,{"S1";"S2"})` is 2x1 `'S1'!$A$1`,
   `'S2'!$A$1` (a name that reads as a cell reference is quoted), a 1x2 and the range D1:D2 (`x!$A$1`, `y!$A$1`) alike,
   beside a lifted row_num it pairs by position and pads with `#N/A` (`ADDRESS({1;2;3},1,1,TRUE,{"S1";"S2"})` third
   element `#N/A`), an error element is that error, a number element is text (`'5'!$A$1`), and an empty text element
-  gives `!$A$1` (A69:A112). Ours matches every cell of the case but W45:W46.
+  gives `!$A$1` (A69:A112). Ours matches every cell of the t4543 case but W45:W46.
 
 XLOOKUP's match_mode and search_mode both lift (probes/lookup-argument-modes; probes/xlookup-array-lookup-value-args;
 probes/xlookup-array-search-mode-indirect). An error lookup_value does not stop the lift when match_mode is an array: the
