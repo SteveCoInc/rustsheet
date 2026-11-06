@@ -406,6 +406,38 @@ fn spec_grouped_pivot_is_registered_and_laid_out() {
 }
 
 #[test]
+fn spec_defined_pivot_parses_and_is_not_registered() {
+    // A case-builder-v2 pivot (T-4122) carries a `definition` and no row/value; the engine cannot
+    // render it yet (T-4152), so its area stays empty and GETPIVOTDATA finds no pivot.
+    let defined = spec(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{
+            "A1":"Key","B1":"Val","A2":"a","B2":1,"H1":"=ISBLANK(D1)",
+            "H2":"=GETPIVOTDATA(\"Val\",D1)"},
+            "pivot_tables":[{"name":"Pv","source":"A1:B2","location":"D1",
+            "definition":{"rows":["Key"],"data":[{"field":"Val"}]}}]}]}"#,
+    );
+    let evaluated = RustSheetEngine
+        .evaluate_spec(&defined, None)
+        .expect("evaluates");
+    assert_eq!(
+        evaluated.value("S", Addr { row: 1, col: 8 }),
+        Some(Value::Bool(true))
+    );
+    assert!(matches!(
+        evaluated.value("S", Addr { row: 2, col: 8 }),
+        Some(Value::Error(_))
+    ));
+    // Without a definition, `row` and `value` are required.
+    let bare = spec(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{"A1":"Key","B1":"Val"},
+            "pivot_tables":[{"name":"Pv","source":"A1:B2","location":"D1","value":"Val",
+            "rendered":{"D1":"Row Labels"}}]}]}"#,
+    );
+    let err = RustSheetEngine.evaluate_spec(&bare, None).err();
+    assert!(err.is_some_and(|e| e.contains("needs `row` and `value`")));
+}
+
+#[test]
 fn spec_hidden_rows_and_tables_reach_the_engine() {
     let spec = spec(
         r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{

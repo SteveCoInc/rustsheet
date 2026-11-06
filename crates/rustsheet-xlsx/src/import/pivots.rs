@@ -41,7 +41,7 @@ const MAX_PIVOTS_PER_SHEET: usize = 64;
 /// Most pivots in a workbook; the ones past it are dropped. Every accepted pivot allocates a
 /// hidden-items bitset per field sized to its cache, so the per-sheet cap alone leaves the total
 /// to the file (T-2394, web.md "Pivot caches past the import limits are dropped").
-const MAX_PIVOTS: usize = 1_000;
+pub const MAX_PIVOTS: usize = 1_000;
 /// Deepest element nesting read in a pivot part: well-formed ones nest about six deep, and the
 /// open-element stack must not grow with the file.
 const MAX_DEPTH: usize = 32;

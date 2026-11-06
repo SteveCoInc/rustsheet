@@ -1,0 +1,93 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "e601dadfddecb0b5d0184cb55cc650f9ca7ef69daab4c843d241ab6ef7343b4f"
+ },
+ "sheets": {
+  "Sheet1": {
+   "N1": {
+    "t": "n",
+    "v": "1.8",
+    "f": "=INTERCEPT(A1:A6,B1:B6)"
+   },
+   "N16": {
+    "t": "n",
+    "v": "1.8",
+    "f": "=INTERCEPT({2,4,5,4,5,7},{1,2,3,4,5,6})"
+   },
+   "N17": {
+    "t": "e",
+    "why": "#N/A: the arrays differ in length",
+    "f": "=INTERCEPT({2,4,5},{1,2})"
+   },
+   "N19": {
+    "t": "n",
+    "v": "3.0000000008500000003600000001435000000536000000185",
+    "f": "=INTERCEPT(A1:B2,H1:I2)"
+   },
+   "N2": {
+    "t": "e",
+    "why": "#N/A: the arrays differ in length",
+    "f": "=INTERCEPT(A1:A5,B1:B6)"
+   },
+   "N20": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=INTERCEPT(A1:A6,A1:A6)"
+   },
+   "N21": {
+    "t": "n",
+    "v": "9999999999.8666666666666666666666666666666666666667",
+    "f": "=INTERCEPT(I1:I6,B1:B6)"
+   },
+   "N22": {
+    "t": "n",
+    "v": "-7285714283.8857142857142857142857142857142857142857",
+    "f": "=INTERCEPT(A1:A6,I1:I6)"
+   },
+   "N24": {
+    "t": "n",
+    "v": "-1.0",
+    "f": "=INTERCEPT(B1:B6,A1:A6)"
+   },
+   "N28": {
+    "t": "n",
+    "v": "5.0",
+    "f": "=INTERCEPT({1,2;3,4},{4,3;2,1})"
+   },
+   "N3": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant x",
+    "f": "=INTERCEPT(A1:A1,B1:B1)"
+   },
+   "N4": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=INTERCEPT(A1:A2,B1:B2)"
+   },
+   "N5": {
+    "t": "n",
+    "v": "0.66666666666666666666666666666666666666666666666667",
+    "f": "=INTERCEPT(A1:A3,B1:B3)"
+   },
+   "N6": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant x",
+    "f": "=INTERCEPT(A1:A6,G1:G6)"
+   },
+   "N7": {
+    "t": "n",
+    "v": "3.0",
+    "f": "=INTERCEPT(G1:G6,B1:B6)"
+   },
+   "N8": {
+    "t": "n",
+    "v": "7.2",
+    "f": "=INTERCEPT(A1:A6,H1:H6)"
+   }
+  }
+ }
+}

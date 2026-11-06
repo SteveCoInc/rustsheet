@@ -3,7 +3,7 @@ id: T-4386
 title: "Salvage draft PR #3211's IRR near-zero-root fresh sweep and T-4232 task onto main"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -35,3 +35,13 @@ the branch's `eval/accuracy/known-failures.tsv` change: it depends on the code c
 
 ## Out of scope
 - T-4213's IRR change and its R4 guards.
+
+## Outcome
+Copied from draft PR #3211's branch with `git show` (nothing from it was built or run): the fresh sweep
+`probes-numeric/t4213-irr-r4-fresh` (`.case.json`, `.oracle.json`, `.math.json`, `.math.tsv`, as recorded),
+`docs/research/t3411/gen_sweep.py`'s seed and strata for it, task T-4232 (id free on main, so not renumbered), and the
+findings of the T-4213 bullets in financial.md (the near-zero-root noise floor, the refuted relative stops, the measured
+effect of the one-step-past choice, marked as not on main). T-4213 gains a time-box note linking all of it. Not taken:
+the IRR code change, its unit test, `eval/accuracy/known-failures.tsv`. Scored on main the case is 102 of 150 passing;
+its visibly-off cells are owned by T-4232 (`make check-fast` green, `new_case_owners` passes). `probes-numeric` has no
+`eval/baseline/` list, so there is no baseline line to record. #3211 stays a draft; a comment on it links this task's PR.

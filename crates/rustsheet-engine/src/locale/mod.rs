@@ -5,7 +5,9 @@ use std::{collections::HashMap, sync::OnceLock};
 pub(crate) mod calendar_date_names;
 pub mod excel_date_names;
 mod indic_date_names;
+pub(crate) mod lcids;
 mod regional_date_names;
+mod variant_date_names;
 
 use bitcode::{Decode, Encode};
 
