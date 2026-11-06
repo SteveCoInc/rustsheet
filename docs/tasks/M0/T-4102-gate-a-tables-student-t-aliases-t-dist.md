@@ -81,7 +81,7 @@ Every failing table point has an owner.
 - Tables `eval/accuracy/tables/{T.DIST.RT,T.DIST.2T,TDIST,CONFIDENCE.T}/s1`: 120, 120, 200 and 197 points (3 CONFIDENCE.T
   draws had no value). Filled from excel-graph with 0 failures and 0 table defects.
 - `rustsheet-eval accuracy`: 637 new points, 0 failing, 0 table defects. `missing tables` went from 72 to 68 on the
-  branch's base. It is 43 after the latest merge of main, whose own new tables account for the rest.
+  branch's base. It is 39 after the latest merge of main, whose own new tables account for the rest.
   - Inside the envelope: 632. Every T.DIST.RT, T.DIST.2T and TDIST point is inside on both sides (120, 120 and 200)
     since the huge-x rule; CONFIDENCE.T has 162 both, 7 Excel only and 23 math only.
   - The rule moved 40 table cells from a math number to a domain error (17, 8 and 15) with the case files unchanged.
