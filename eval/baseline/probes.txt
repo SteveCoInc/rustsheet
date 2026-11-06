@@ -1329,6 +1329,7 @@ C	probes/t1626-rightb.case.json	29
 C	probes/t1626-searchb.case.json	26
 C	probes/t1683-formulatext-structured-refs.case.json	61
 C	probes/t1738-question-first-decimal.case.json	10
+C	probes/t1856-name-characters.case.json	37
 C	probes/t1883-currency-locale-edges.case.json	63
 C	probes/t1923-calendar-digits.case.json	213
 C	probes/t1924-locale-tag-extended-hex.case.json	60

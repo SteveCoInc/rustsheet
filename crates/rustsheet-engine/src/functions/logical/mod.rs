@@ -11,7 +11,7 @@ mod switch;
 pub(crate) use bycol_byrow::as_lambda;
 pub(crate) use lambda::{Captures, FunctionValue, LambdaCaller, NamedLambdas, SharedLambda};
 pub(crate) use lambda_scope::ScopeResult;
-pub(crate) use r#let::{has_refused_parameters, same_variable};
+pub(crate) use r#let::{has_duplicate_parameter, same_variable};
 
 use crate::cast::calc_result_to_array_node;
 use crate::{

@@ -488,54 +488,68 @@ fn one_cell_trimrange_is_a_reference() {
 }
 
 #[test]
-fn let_and_lambda_names_with_marks_or_symbol_letters_are_refused() {
+fn names_starting_with_a_mark_or_an_uppercase_circled_letter_are_refused() {
     // Excel for the web refuses (createSession 501 FileCorruptTryRepair) a single-cell workbook
-    // whose LET or LAMBDA binds a name holding a combining mark, a circled or squared letter, or
-    // a letter whose lowercase holds a mark (İ is i + U+0307), and loads the other letters
-    // (`rustsheet-oracle recalc -b excel-graph`, 2026-11-06, T-1856; refused inputs cannot be
-    // committed: docs/excel-semantics/references.md "Characters of a LET or LAMBDA name").
+    // whose formula starts a name with a mark or an uppercase circled letter, and loads every
+    // other form below (`rustsheet-oracle recalc -b excel-graph`, 2026-11-06, T-1856, each LET
+    // name written `_xlpm.`; refused inputs cannot be committed: docs/excel-semantics/references.md
+    // "Characters of a name").
     let refused = [
         "=LET(Ⓐ,1,Ⓐ+1)",
-        "=LET(ⓐ,1,ⓐ+1)",
-        "=LET(\u{1F130},1,\u{1F130}+1)",
-        "=LET(aⒶ,1,aⒶ+1)",
-        "=LET(\u{1F130}x,1,1)",
-        "=LET(İ,1,İ+1)",
-        "=LET(xİ,1,xİ+1)",
-        "=LET(İ,1,1)",
-        "=LET(नाम,1,नाम+1)",
-        "=LET(क\u{93E},1,1)",
-        "=LET(a\u{345},1,1)",
-        "=LAMBDA(İ,İ+1)(1)",
+        "=LET(Ⓑ,1,Ⓑ+1)",
+        "=LET(Ⓜ,1,Ⓜ+1)",
+        "=LET(Ⓩ,1,Ⓩ+1)",
+        "=LET(Ⓐx,1,Ⓐx+1)",
         "=LAMBDA(Ⓐ,Ⓐ+1)(1)",
-        "=LET(i\u{307},1,1)",
-        "=LET(x\u{307},1,1)",
-        "=LET(a\u{301},1,1)",
-        "=LET(\u{301}a,1,1)",
-        "=LET(\u{345}a,1,1)",
-        "=LET(\u{93E}a,1,1)",
+        "=LET(\u{345}a,1,\u{345}a+1)",
+        "=LET(\u{93E}a,1,\u{93E}a+1)",
+        "=LET(\u{301}a,1,\u{301}a+1)",
+        "=LET(\u{307}x,1,\u{307}x+1)",
+        "=Ⓑ+1",
     ];
+    // (formula, Excel's value)
     let accepted = [
-        "=LET(ǅ,1,ǅ+1)",
-        "=LET(ʰ,1,ʰ+1)",
-        "=LET(ー,1,ー+1)",
-        "=LET(ª,1,ª+1)",
-        "=LET(Ⅰ,1,Ⅰ+1)",
-        "=LET(ⅰ,1,ⅰ+1)",
-        "=LET(ﬃ,1,ﬃ+1)",
-        "=LET(ŉ,1,ŉ+1)",
-        "=LET(ǰ,1,ǰ+1)",
-        "=LET(ΐ,1,ΐ+1)",
-        "=LET(שם,1,שם+1)",
-        "=LET(اسم,1,اسم+1)",
-        "=LET(a²,1,a²+1)",
-        "=LET(a٣,1,a٣+1)",
-        "=LET(a①,1,a①+1)",
-        "=LET(aⅫ,1,aⅫ+1)",
-        "=LET(x,1,aⒶ)",
+        ("=LET(ⓐ,1,ⓐ+1)", "2"),
+        ("=LET(ⓩ,1,ⓩ+1)", "2"),
+        ("=LET(\u{1F130},1,\u{1F130}+1)", "2"),
+        ("=LET(\u{1F130}x,1,\u{1F130}x+1)", "2"),
+        ("=LET(\u{1F150},1,\u{1F150}+1)", "2"),
+        ("=LET(aⒶ,1,aⒶ+1)", "2"),
+        ("=LET(İ,1,İ+1)", "2"),
+        ("=LET(xİ,1,xİ+1)", "2"),
+        ("=LET(İ,1,i+1)", "#NAME?"),
+        ("=LAMBDA(İ,İ+1)(1)", "2"),
+        ("=LET(नाम,1,नाम+1)", "2"),
+        ("=LET(क\u{93E},1,क\u{93E}+1)", "2"),
+        ("=LET(a\u{345},1,a\u{345}+1)", "2"),
+        ("=LET(a\u{301},1,a\u{301}+1)", "2"),
+        ("=LET(i\u{307},1,i\u{307}+1)", "2"),
+        ("=LET(ǅ,1,ǅ+1)", "2"),
+        ("=LET(ʰ,1,ʰ+1)", "2"),
+        ("=LET(ー,1,ー+1)", "2"),
+        ("=LET(ª,1,ª+1)", "2"),
+        ("=LET(Ⅰ,1,Ⅰ+1)", "2"),
+        ("=LET(ⅰ,1,ⅰ+1)", "2"),
+        ("=LET(ﬃ,1,ﬃ+1)", "2"),
+        ("=LET(ŉ,1,ŉ+1)", "2"),
+        ("=LET(ǰ,1,ǰ+1)", "2"),
+        ("=LET(ΐ,1,ΐ+1)", "2"),
+        ("=LET(שם,1,שם+1)", "2"),
+        ("=LET(اسم,1,اسم+1)", "2"),
+        ("=LET(a²,1,a²+1)", "2"),
+        ("=LET(a٣,1,a٣+1)", "2"),
+        ("=LET(a①,1,a①+1)", "2"),
+        ("=LET(aⅫ,1,aⅫ+1)", "2"),
+        ("=ⓩ+1", "#NAME?"),
+        ("=aⒶ+1", "#NAME?"),
     ];
     let mut model = new_empty_model();
-    for (row, formula) in refused.iter().chain(accepted.iter()).enumerate() {
+    for (row, formula) in refused
+        .iter()
+        .copied()
+        .chain(accepted.iter().map(|(formula, _)| *formula))
+        .enumerate()
+    {
         model._set(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
@@ -546,12 +560,7 @@ fn let_and_lambda_names_with_marks_or_symbol_letters_are_refused() {
             "{formula}"
         );
     }
-    for (row, formula) in accepted.iter().enumerate() {
-        let expected = if formula.ends_with("aⒶ)") {
-            "#NAME?"
-        } else {
-            "2"
-        };
+    for (row, (formula, expected)) in accepted.iter().enumerate() {
         let cell = format!("A{}", refused.len() + row + 1);
         assert_eq!(model._get_text(&cell), *expected, "{formula}");
     }

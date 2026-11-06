@@ -24,22 +24,24 @@ T-1431 (docs/excel-semantics/references.md, T-1387 paragraph) found that Excel f
 -
 
 ## Outcome
-- Probes: 52 single-cell workbooks on excel-graph (2026-11-06; a 53rd, a defined `नाम`, failed on an oracle-side name
-  collision, 409 nameAlreadyExists, and is not counted), recorded in references.md "Characters of a LET or LAMBDA
-  name". A refused workbook has no oracle cells, so they cannot be committed as a case (T-1387's precedent). Rule:
-  Excel refuses a LET or LAMBDA binding a name that holds a mark (`\p{M}`: `नाम`'s vowel sign, U+0345, U+0301) or an
-  other symbol (`\p{So}`: `Ⓐ`, `ⓐ`, U+1F130), or whose lowercase does (`İ` → `i` + U+0307). Other letters (Lt, Lm,
-  Lo, Nl, ligatures, Hebrew, Arabic) and later digits (`a²`, `a①`, `a٣`) load.
-- Engine: `is_refused_variable_name` (functions/logical/let.rs) gives `#ERROR!` for such a LET name and, through
-  `has_refused_parameters` (was `has_duplicate_parameter`), for such a LAMBDA parameter. One fix on the way:
-  `is_name_text` checked the uppercase of a name, so `LET(ǰ,1,ǰ+1)` and `LET(ΐ,1,ΐ+1)` (letters whose uppercase holds
-  combining marks) were `#ERROR!` where Excel gives 2; it now checks the characters as typed. Unit test
-  `let_and_lambda_names_with_marks_or_symbol_letters_are_refused` (19 refused forms, 17 accepted).
-- Defined names follow other rules: a defined `İ` works, and definitions `Ⓐ`/`aⒶ` load but their uses are `#NAME?`;
-  a sheet formula `=Ⓐ+1` is refused at load. Filed as T-4446 with the evidence (the task's "defined name" half: the
-  refusals there are not at the definition).
+- Rule (references.md "Characters of a name"): a name in a formula may not start with a mark or an uppercase circled
+  letter Ⓐ–Ⓩ (U+24B6–U+24CF). Excel refuses the workbook at load, as a LET or LAMBDA name and as an unbound use
+  (`=Ⓑ+1`). After the first character every mark loads. The task's premise was half an artifact: T-1431's `İ` refusal
+  was spec2xlsx writing the bound name without `_xlpm.` (its Python `\w` misses `İ`, `Ⓐ` and marks); with the prefix
+  written by hand, `LET(İ,1,İ+1)` is 2. `Ⓐ` is refused however it is stored. Round 1's fidelity review caught a first
+  version built on unprefixed probes; the rule above comes from prefixed re-probes only.
+- Probes: about 80 single-cell workbooks on excel-graph (2026-11-06). The 37 that load are committed as
+  probes/t1856-name-characters (the forms the engine must accept). The refused ones (`Ⓐ`, `Ⓑ`, `Ⓜ`, `Ⓩ`, `Ⓐx`,
+  `LAMBDA(Ⓐ,..)`, `=Ⓐ+1`, `=Ⓑ+1`, a first U+0345, U+093E, U+0301 or U+0307) have no oracle cells and cannot be
+  committed (T-1387's precedent).
+- Engine: `is_letter_name_start` (expressions/utils/mod.rs) refuses those first characters in `is_name_text` and the
+  lexer's identifier start, so a refused name is a parse error (`#ERROR!`). `is_mark` lets a later character be any
+  mark (`a` + U+0301 and `i` + U+0307 were `#ERROR!`). `is_name_text` checks the characters as typed, not their
+  uppercase, so `ǰ` and `ΐ` (`#ERROR!` before) are names. Unit test
+  `names_starting_with_a_mark_or_an_uppercase_circled_letter_are_refused` (11 refused, 33 accepted).
+- Defined names: Excel's handling of a defined name starting with `Ⓐ` or a mark is unprobed (xlsxwriter drops them),
+  and the engine now refuses them at load by the same rule. Filed as T-4446, with the decomposed use of a defined `İ`.
 - Formula entry vs xlsx load: the oracle only loads xlsx; the engine applies the rule to both, as for T-1387's
   duplicate names.
-- Eval delta: 0 fixed, 0 regressions (no committed case holds a refused or `ǰ`/`ΐ` name; probes/let-name-non-ascii*
-  unchanged).
-
+- Eval delta: probes +1 case (t1856-name-characters, 37/37 pass; without
+  this change its `ǰ`, `ΐ`, `a` + U+0301 and `i` + U+0307 cells are `#ERROR!`). 0 regressions.
