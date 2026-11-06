@@ -3,7 +3,7 @@ id: T-4005
 title: "Export a table totals-row constant (number, boolean, error) in a form Excel loads; today Excel refuses the file"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
