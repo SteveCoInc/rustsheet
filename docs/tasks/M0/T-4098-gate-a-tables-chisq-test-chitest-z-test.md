@@ -3,7 +3,7 @@ id: T-4098
 title: "Gate A tables, CHISQ.TEST, CHITEST, Z.TEST, ZTEST and PROB"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
