@@ -6874,7 +6874,7 @@ QUARTILE*, PERCENTILE* and TRIMMEAN are `#NUM!` (`QUARTILE(Data!E2,3)` with E2 =
 44a8841352dc48e9 A52). This answers T-2344's single-cell question and T-2066's (`QUARTILE` of one text cell).
 Evidence: gen-m9 (excel-graph, 2026-10-23, T-2256); 72 cells in T-2344.
 Ours: since T-2429 a cell holding text or a boolean is no number in QUARTILE*, PERCENTILE* and PERCENTRANK* ("A single cell holding a boolean is no number in the PERCENTILE and QUARTILE data"), and since T-2621 a cell holding nothing, text or a boolean in TRIMMEAN.
-T-2344 probed the same data given as a defined name, INDEX, OFFSET, IF or CHOOSE result (probes/t2344-percentile-name-index-data A1-A30, excel-graph, 2026-10-27): a reference of any of these forms holding one text (also numeric text "1") or boolean cell is no number, `#NUM!` for QUARTILE*/PERCENTILE* and `#N/A` for PERCENTRANK*, after quart's own error (`QUARTILE(INDEX(..),NA())` `#N/A`); ours since T-2344 (`percentile_numbers` reads the argument once in reference context). T-2883 probed the same data given as a defined name, an INDEX result or an IF result, for 14 statistical functions (probes/t2883-stat-name-index-data A1-A168, excel-graph, 2026-11-05): TRIMMEAN and Z.TEST read such a lone text, boolean or numeric-text cell as a plain reference does (TRIMMEAN `#NUM!`, Z.TEST `#N/A`; MODE, MODE.SNGL, CORREL, COVARIANCE.P, SLOPE, FORECAST, CHISQ.TEST, STDEV.S, VAR.P, AVERAGE, LARGE and RANK already did); ours since T-2883 (TRIMMEAN's data and Z.TEST's read the argument once with `evaluate_picked_reference_arg`, as `percentile_numbers`). LET, IFS, SWITCH, LAMBDA and OFFSET/CHOOSE picks of these functions are unprobed, as are a 3-D reference and a union as TRIMMEAN's or Z.TEST's data (ours: a 3-D reference is `#VALUE!` since T-2883, it was `#REF!`; a union `#VALUE!`; Excel accepts both in LARGE and SMALL, T-4309).
+T-2344 probed the same data given as a defined name, INDEX, OFFSET, IF or CHOOSE result (probes/t2344-percentile-name-index-data A1-A30, excel-graph, 2026-10-27): a reference of any of these forms holding one text (also numeric text "1") or boolean cell is no number, `#NUM!` for QUARTILE*/PERCENTILE* and `#N/A` for PERCENTRANK*, after quart's own error (`QUARTILE(INDEX(..),NA())` `#N/A`); ours since T-2344 (`percentile_numbers` reads the argument once in reference context). T-2883 probed the same data given as a defined name, an INDEX result or an IF result, for 14 statistical functions (probes/t2883-stat-name-index-data A1-A168, excel-graph, 2026-11-05): TRIMMEAN and Z.TEST read such a lone text, boolean or numeric-text cell as a plain reference does (TRIMMEAN `#NUM!`, Z.TEST `#N/A`; MODE, MODE.SNGL, CORREL, COVARIANCE.P, SLOPE, FORECAST, CHISQ.TEST, STDEV.S, VAR.P, AVERAGE, LARGE and RANK already did); ours since T-2883 (TRIMMEAN's data and Z.TEST's read the argument once with `evaluate_picked_reference_arg`, as `percentile_numbers`). LET, IFS, SWITCH, LAMBDA and OFFSET/CHOOSE picks of these functions are unprobed, and so is a union. A 3-D reference (`Sheet1:Data!A4:A6`) and a union (`(A1:A2,A4:A6)`) as the data of TRIMMEAN, Z.TEST, PERCENTILE, PERCENTILE.INC/.EXC, QUARTILE, QUARTILE.INC/.EXC and PERCENTRANK, PERCENTRANK.INC/.EXC are accepted, as in LARGE and SMALL: the areas are read as written (a 3-D range reads every sheet of its span, probed; an overlap counting twice, an error cell and text or boolean cells are by analogy with LARGE and SMALL, unprobed for these functions), e.g. `TRIMMEAN(Sheet1:Data!A4:A6,0.2)` 4, `Z.TEST((A1:A2,A4:A6),4,1)` 0.98732634066, `PERCENTILE((A1:A2,A4:A6),0.5)` 3, `PERCENTRANK.EXC(Sheet1:Data!A4:A6,3)` 0.142 (probes/t4309-3d-union-trimmean-percentile H1:H22, excel-graph, 2026-11-06, T-4309). Ours since T-4309 (`RefArg::into_areas_or_single`, `area_numbers`); it was `#VALUE!` after T-2883 (and `#REF!` for a 3-D reference before).
 Status: VERIFIED (excel-graph)
 
 ## COVARIANCE: a boolean scalar is one value (T-2436)
@@ -7487,3 +7487,24 @@ Ours: every cell matches. `ZTEST("3",3)` (b A48) was `#VALUE!` until T-4223: `z_
 text as one value, like a direct boolean.
 Status: VERIFIED (excel-graph)
 Tasks: T-4223
+
+## PERMUTATIONA is binary powering in doubles, and #NUM! at a huge number_chosen (T-4106)
+Rule: `PERMUTATIONA(n, k)` (n floored, k truncated toward zero) is n^k by right-to-left binary powering, every product
+rounded to a double: r = 1, b = n; while k > 0 { if k is odd, r = r * b; b = b * b; k = k / 2 }. That model gives 104 of
+the 105 numeric cells of accuracy/PERMUTATIONA/s1 bit for bit, against 73 for the correctly rounded n^k (`POWER`, the
+engine's `powf`), 74 for the repeated product n * n * ... and 79 for left-to-right powering; so Excel's value is up to
+about 10 ulps from the true power at a large k (`PERMUTATIONA(216798154,29)` is 5.566879467411358E+241, the true value
+5.566879467411368E+241, A86; `PERMUTATIONA(1464,96)` 7.79728422545814E+303 against 7.797284225458146E+303, A58). The one exception is `PERMUTATIONA(10,308)`, which is exactly 1E+308 (A68), where the
+model gives 1.0000000000000006E+308 (unexplained: a power-of-ten path is possible). A result past the double range is
+`#NUM!` (`PERMUTATIONA(2,1024)`, `(10,309)`, A81, A83; `(2,1023)` is 8.98846567431158E+307, A78). A number_chosen of
+2^31 - 1 or more is `#NUM!` whatever the number, even where the power is 0 or 1: `PERMUTATIONA(1,2147483647)`,
+`PERMUTATIONA(1,10000000000)` and `PERMUTATIONA(0,10000000000)` are `#NUM!` (A76, A79, A71), while
+`PERMUTATIONA(0,1000)` is 0 (A72). The cut is UNVERIFIED between 1000 and 2^31 - 1; 2^31 - 1 is PERMUT's number limit
+("Overflowing arguments, PERMUT's limit and argument error order (T-1290)"). A number in (0, 1) floors to 0
+(`PERMUTATIONA(0.25,4)` is 0, A2) and `PERMUTATIONA(2.5,3.9)` is 8 (A82).
+Evidence: accuracy/PERMUTATIONA/s1 (excel-graph, 2026-11-06, T-4106).
+Ours: the engine returns `powf(n, k)`, so 35 of the 105 numeric cells differ from Excel by a few ulps (all but two
+within 15 digits, those two within 1e-9 of the math: inside the Gate A envelope), and n^k for a huge k (1 or 0 where
+Excel is `#NUM!`: three Gate A known failures). Both are T-4501.
+Status: VERIFIED (excel-graph) for the cells cited; the number_chosen cut UNVERIFIED
+Tasks: T-4106, T-4501
