@@ -88,7 +88,8 @@ design depends on:
 
 Unknowns are owned by probe tasks: T-4582, T-4583, T-4584 and T-4586 (above), T-2327 (rendered constants
 under a refreshOnLoad pivot), T-4585 (field names), T-4135 (aggregates over text,
-blank and error), T-4161 (show-values-as),
+blank and error, now evidenced in pivots.md; the summation order of totals is T-4589's), T-4161
+(show-values-as),
 T-4164 (filters and sort), T-4170 (manual and nested groups), T-4505 (calculated fields and items),
 T-4130 (capability matrix 2). An engine task implements a rule only once its probe has landed (directive
 1).
@@ -143,6 +144,9 @@ otherwise as a hypothesis to probe:
 3. **Accumulate:** a result tree keyed by tuples of item indices. Each (row tuple, column tuple, data
    field) holds an accumulator, and so do subtotal and grand-total nodes. Aggregates reuse the
    GETPIVOTDATA folds and `excel_variance` (SPEC-0015), so a cell and GETPIVOTDATA read one accumulator.
+   Mixed values follow pivots.md "Aggregates over text, blanks, booleans and errors" (T-4135). The
+   order in which a total accumulates its records is Excel's own: it is neither record order nor the
+   sum of the children (pivots.md "Summation order...", T-4589).
    Where Excel shows them differently, the difference is a rule on the reading side: an empty
    intersection renders blank but GETPIVOTDATA answers 0 (web.md); a caption substitute renders as text.
 4. **Calculated items** (T-4175, solve order) and **calculated fields** (T-4174). Calculated fields are
