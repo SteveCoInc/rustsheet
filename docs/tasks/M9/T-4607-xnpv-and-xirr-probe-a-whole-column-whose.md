@@ -3,7 +3,7 @@ id: T-4607
 title: "XNPV and XIRR: probe a whole column whose used area holds a cell error or a text date, and XIRR dates strictly between -1 and 0, and match"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -53,3 +53,6 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4607-xnpv-xirr-col
 
 ## Out of scope
 - XIRR's solver (root, guess and stop rules: T-3287, T-4251) and boolean or text guesses (T-3749, T-4415).
+
+## Outcome
+Probe probes/t4607-xnpv-xirr-column-errors-and-day-minus-one (excel-graph, 88 formula cells, 96 checked): cell errors win over the empty-cell #NUM! in whole columns and ranges alike, text dates and numbers are read by XIRR but give XNPV #NUM!, and dates in (-1, 0) are #NUM!. The engine already matched every cell, so no code change. Rules recorded in financial.md; the "Unprobed" sentence is gone.
