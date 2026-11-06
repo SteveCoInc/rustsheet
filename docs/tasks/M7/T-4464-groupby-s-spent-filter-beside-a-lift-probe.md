@@ -70,4 +70,6 @@ that keeps no row, a table `field_relationship` with subtotals, and a lift neste
   value.
 - **Docs:** arrays.md "A lifted GROUPBY's filter serves one element" gains three bullets with the cells, and the
   "UNVERIFIED, and modeled" sentence is replaced.
-- **Eval delta:** +1 probe case, 323/323 passing; no other cell changed.
+- **Prediction script:** t4344's `predict_engine.py` takes a sheet and a cell area (`SHEET`, `AREA`), so this probe reuses
+  it instead of copying it (duplicated lines 2878 to 2876).
+- **Eval delta:** +1 probe case, 323/323 passing (eval/baseline/probes.txt); no other cell changed.
