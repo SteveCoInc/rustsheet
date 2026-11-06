@@ -23,6 +23,12 @@ crates/rustsheet-engine/src/pivot/result.rs) applies the same rule to every aggr
 Open:
 - Var, Varp and Product at a subtotal-by-subtotal or subtotal-by-grand cell with two fields per axis
   (the engine adds the leaf-row partials, as T-4634 T2 and T3 show for Sum and Average);
+- the order of the Varp and StdDevp grand-grand total with one field per axis. The engine takes it
+  from Var by analogy. T-4634's Varp cells (V2, V3, V7 E11; X8, X9 I9) also fit column partials in
+  display order, and cell sums added row by row (R ascending, K in display order);
+- the order of the Product grand-grand total. T-4634's X5 I9 fits about 8 of 54 product readings:
+  the row totals in display order, row-major records with R reversed, and several cell-product
+  orders;
 - Max and Min beside an error field at such cells, and which of two different errors a total shows
   (the engine keeps the first in row-major record order; see also T-4633);
 - a pivot with column fields only (no row field): whether a Sum-only total sums the item cells (T-4634

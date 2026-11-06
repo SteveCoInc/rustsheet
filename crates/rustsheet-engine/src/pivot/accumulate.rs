@@ -116,7 +116,8 @@ impl Accumulator {
 
     /// Folds one partial cell's sums and product into this cell's: how a cell that is a total on
     /// both axes combines the cells of the leaf rows below it (pivots.md "Summation order of Sum,
-    /// Average and Product totals": t4634 T2, T3, V1 to V3, V6, V7, X5 to X9).
+    /// Average and Product totals": t4634 T2, T3, V1, V6, X6, X7; Varp, `StdDevp` and Product
+    /// by analogy, UNVERIFIED, T-4678).
     pub(crate) fn add_folds(&mut self, part: Folds) {
         self.sum += part.sum;
         self.squares += part.squares;
@@ -196,10 +197,12 @@ impl Accumulator {
             // Var is the textbook one-pass formula over the accumulated sums, never the
             // worksheet functions' two-pass switch (`excel_variance`): t4616 V1 to V4 refute it,
             // and the n·Σx² form, for Var and StdDev. Varp is that n·Σx² form,
-            // (n·Σx² − (Σx)²)/n² (bit-identical divided by n twice): of the candidates tried
+            // (n·Σx² − (Σx)²)/(n·n), not divided by n twice (t4634 V2 E7, E8, C11; V7 E8:E10;
+            // X8 G9 refute that; on t4135 the two agree): of the candidates tried
             // (textbook /n, Σx²/n − mean², two-pass, Welford, (Σx² − Σx·mean)/n) it is the only
-            // family that fits t4135 A_stdDevp!N6 and M8 (and t4589 S1 G5:H7). Its totals take
-            // Var's order (t4634 V2, V4, V5, V7, X8).
+            // family that fits t4135 A_stdDevp!N6 and M8 (and t4589 S1 G5:H7). Its row and
+            // column totals take Var's order (t4634 V2, V4, V5, V7, X8); its grand-grand order is
+            // Var's by analogy (UNVERIFIED, T-4678).
             Aggregate::Var => self.sample_variance(),
             Aggregate::VarP => self.population_variance(),
             Aggregate::StdDev => self.sample_variance().sqrt(),

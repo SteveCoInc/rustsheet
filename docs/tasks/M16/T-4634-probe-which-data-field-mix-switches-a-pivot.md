@@ -56,11 +56,13 @@ candidate readings give different doubles. Every claim below is among the candid
   candidate that fits all four).
 - **Mixed 2-D grand-grand total:** adds the row totals' record sums down the rows. It is the only one
   of 56 readings that fits all sixteen cells (X1 to X12 H9, X10 to X12 I9, A1 E8).
-- **Var-family grand-grand total:** Var (textbook) and Varp (n·Σx²) over the rows' partial sums (V1 to
-  V3, V6, V7 E11, X6 to X9 I9). Row-major order, the engine's earlier reading, is refuted: V1 E11
-  is 22664.877200872772, where row-major gives 22664.87720087405. Product's grand-grand total (X5 I9)
-  is the product of the row totals' products.
-- **Varp and StdDevp totals** take Var's order (V2, V3, V7; V4 and V5 over one field).
+- **Var and StdDev grand-grand total:** textbook Var over the rows' partial sums. It is the only
+  candidate that fits V1, V6 E11 and X6, X7 I9. Row-major order, the engine's earlier reading, is
+  refuted: V1 E11 is 22664.877200872772, where row-major gives 22664.87720087405.
+- **Varp, StdDevp and Product grand-grand totals:** the cells fit the same rule, but they also fit
+  other readings. Those orders are taken by analogy (UNVERIFIED, T-4678).
+- **Varp and StdDevp row and column totals** take Var's order, with /(n·n) and not division by n
+  twice (V2, V3, V7; V4 and V5 over one field).
 - **Average** never follows the cells (A1 to A3, X10 to X12, T3).
 - **Count or CountNums beside only Max, Min, Product, Var, Varp or StdDev** is mixed (C1 to C7: East
   subtotal B5 and Grand Total B11 are `#N/A`).
@@ -76,5 +78,9 @@ Engine (asked for by the task owner, though "Out of scope" listed engine changes
 - accumulate.rs adds `Folds`, `clear_folds` and `add_folds`.
 - result/tests.rs, layout/render/tests.rs and layout/lines/tests.rs check all 37 t4634 sheets.
 
-The owner line is in T-4152. Left open, in T-4678: Var, Varp and Product at crossings with two fields
-per axis; Max and Min beside errors; a pivot with column fields only; Values on rows.
+The owner line is in T-4152. Left open, in T-4678:
+- Var, Varp and Product at crossings with two fields per axis;
+- the Varp, StdDevp and Product grand-grand order;
+- Max and Min beside errors;
+- a pivot with column fields only;
+- Values on rows.

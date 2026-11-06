@@ -24,8 +24,8 @@
 //!    V7; t4616-pivot-total-order-3 S2, S3, V1 to V4, P1, P2; t4614 S2, P2; t4589 S1). A cell
 //!    that is a total on both axes (the grand-grand total, a subtotal by a subtotal or by a
 //!    grand total) instead adds the sums and products of the leaf-row cells below it in its
-//!    column, in row display order (`merge_crossings`; t4634 T2, T3, X1 to X12, V1 to V3, V6,
-//!    V7).
+//!    column, in row display order (`merge_crossings`; t4634 T2, T3, X1 to X12, V1, V6; Varp,
+//!    `StdDevp` and Product by analogy, UNVERIFIED, T-4678).
 //!    An axis of one field with `showAll` on (`pivotField@showAll`, on when absent; Excel and the
 //!    case builder write `showAll="0"`) also shows the items it does not hide that no kept
 //!    record holds, in display order, with no accumulator, so their cells are blank
@@ -680,8 +680,9 @@ fn accumulate(
 /// of the leaf rows below it in the same column, in row display order: a grand-grand total, a
 /// subtotal by a subtotal or by a grand total. Each leaf-row cell has its records accumulated
 /// item by item, so such a total adds those partial sums rather than accumulating its records
-/// (t4634 T2 and T3 every cell, X1 to X12 H9, V1 to V3, V6 and V7 E11, X5 to X9 I9; t4616 S2
-/// H9, V1 E11). Every leaf-row cell is folded into each of its row ancestors, so the work is the
+/// (t4634 T2 and T3 every cell, X1 to X12 H9, V1 and V6 E11, X6 and X7 I9; t4616 S2 H9, V1
+/// E11). Varp, `StdDevp` and Product follow it by analogy: their t4634 cells fit it, but also
+/// fit other readings (UNVERIFIED, T-4678). Every leaf-row cell is folded into each of its row ancestors, so the work is the
 /// cells times the row depth.
 fn merge_crossings(result: &mut PivotResult, work: &mut u64) -> Result<(), PivotComputeError> {
     let PivotResult {

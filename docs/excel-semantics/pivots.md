@@ -658,14 +658,22 @@ Rule:
   display order. Each leaf-row cell is accumulated item by item. For Sum and Average that means the
   leaf rows' record sums. For Var, StdDev, Varp and StdDevp the leaf rows' Σx and Σx² are added
   separately, and the formula is applied to the totals. For Product the leaf rows' products are
-  multiplied.
+  multiplied. Sum, Average, Var and StdDev are evidenced. For Varp, StdDevp and Product the engine
+  applies this rule by analogy: their cells fit it, but other readings fit them too (UNVERIFIED,
+  T-4678).
 - **Formulas.** Var is the textbook (Σx² − (Σx)²/n) / (n − 1), and StdDev its square root. Varp is
   (n·Σx² − (Σx)²) / n², and StdDevp its square root. Each total feeds these formulas in the order
   above.
 
-What is open (T-4678): Var, Varp and Product at a subtotal crossing with two fields per axis, where
-the engine applies the leaf-row rule that T2 and T3 show for Sum and Average. Also open: Max and Min
-beside an error field at such cells, a pivot with column fields only, and Values on rows.
+What is open (T-4678):
+- Var, StdDev, Varp, StdDevp and Product at a subtotal crossing with two fields per axis, where the
+  engine applies the leaf-row rule that T2 and T3 show for Sum and Average;
+- the order of the Varp and StdDevp grand-grand total with one field per axis, which the engine takes
+  from Var by analogy;
+- the order of the Product grand-grand total, where one cell fits several readings;
+- Max and Min beside an error field at such cells;
+- a pivot with column fields only;
+- Values on rows.
 
 Evidence (excel-graph, 2026-11-06):
 - probes/t4634-pivot-total-order-4 (T-4634). Python doubles were used to choose the data so that the
@@ -690,6 +698,8 @@ Evidence (excel-graph, 2026-11-06):
     | X8 | Varp | 6 of 6 | 1 of 6 | H6 114117.63999999998 (114117.64) |
     | X9 | StdDevp | 6 of 6 | 1 of 6 | H6 105410.12000000001 (105410.12) |
     | X10 to X12 | Average | 6 of 6 each | 0, 1 and 0 of 6 | X10 H6 70896.70999999999 (70896.71) |
+
+    X10 does not separate display item order from reverse record order: both fit its six totals.
 
     The six totals of each sheet are H6:H8 and B9, D9 and F9. S1, Sum alone over E1, fits the cells in
     display order in all six (E5:E7, B8:D8), with E5 103461.13 against X1 H6 103461.13000000002 over
@@ -730,17 +740,26 @@ Evidence (excel-graph, 2026-11-06):
     | X7 I9 | Var | 6029222.866869232 | 6029222.866869232 | 6029222.866869232 | 6029222.866869231 | 6029222.866869231 |
     | X8 I9 | Varp | 112914562.50268146 | 112914562.50268146 | 112914562.50268148 | 112914562.50268146 | 112914562.50268148 |
 
-    X6 I9 (StdDev, 21611.79840781048) and X9 I9 (StdDevp, 12429.806341554762) fit all of these. Of
-    the candidates, only one fits all nine cells: textbook Var, or n·Σx² Varp, over the rows' sums.
-    Each row's sums are accumulated item by item and then added down the rows in display order.
-  - Var-family row and column totals. V1, V2, V3, V6 and V7 E5:E10 and B11:D11, and X6 to X9 H6:H8
-    and B9, D9, F9, all fit the item-by-item display-order accumulation. Varp and StdDevp take Var's
+    X6 I9 (StdDev, 21611.79840781048) and X9 I9 (StdDevp, 12429.806341554762) fit all of these.
+    - **Var and StdDev** (V1, V6 E11; X6, X7 I9). Of the candidates, only textbook Var over the rows'
+      sums fits all four cells. Each row's sums are accumulated item by item and then added down the
+      rows in display order. X7 I9 refutes column partials, and V1 and V6 E11 refute row-major order.
+    - **Varp and StdDevp** (V2, V3, V7 E11; X8, X9 I9). These cells fit the rows' sums with the n·Σx²
+      form. On their own they also fit at least two other readings: column partials in display order,
+      and cell sums added row by row (R ascending, K in display order). The engine takes the Varp and
+      StdDevp order from Var by analogy (UNVERIFIED, T-4678).
+  - Var-family row and column totals. V1, V2, V3, V6 and V7 E5:E10 and B11:D11, and X6 to X9 I6:I8
+    and C9, E9, G9, all fit the item-by-item display-order accumulation. Varp and StdDevp take Var's
     order. Over one axis field, V4 B10 (Varp, rows R, 22035.2972786272) and V5 B7 (rows K,
     22035.29727862628) each fit only the item-by-item display order with the n·Σx² form.
   - Product (X5, beside Sum). The row and column totals I6:I8, C9, E9 and G9 fit the item-by-item
-    product. The cells' product differs in I6, I8 and C9. The grand-grand I9 is 7.444417258525587e+39,
-    the product of the row totals' products. Row-major order gives 7.444417258525588e+39, the column
-    totals 7.444417258525589e+39, and record order 7.444417258525589e+39.
+    product. The cells' product differs in I6, I8 and C9. The grand-grand I9 is 7.444417258525587e+39.
+    That one cell fits about 8 of the 54 product readings tried. Among them are the product of the row
+    totals' products in display order, the shared leaf-row rule, and row-major records with R
+    reversed. Several cell-product orders also fit. It does not exclude those, so it is consistent
+    with the shared rule but does not settle it (UNVERIFIED, T-4678). Among the readings it does
+    refute are row-major order (7.444417258525588e+39), the column totals (7.444417258525589e+39) and
+    record order (7.444417258525589e+39).
   - Sum alone over one axis field. O1 and O2 are rows R and rows K over F1, and O3 and O4 the same
     over F2. The candidates were the item cells added in display, reverse or ascending order, the
     records item by item in each order, record order, and reverse record order. The item cells in
@@ -748,7 +767,8 @@ Evidence (excel-graph, 2026-11-06):
     O3 B7 22667.72 and O4 B7 22667.72. Item-by-item display order gives 154959.82000000007,
     154959.82000000004, 22667.719999999994 and 22667.719999999994.
   - Average alone over one axis field: A2 B7 5739.252592592595 (rows R) and A3 B7 839.545185185185
-    (rows K) fit only the item-by-item display-order sum divided by 27. The item cells would give
+    (rows K). Together they fit only the item-by-item display-order sum divided by 27. A2 alone also
+    fits reverse item order, and A3 alone ascending item order. The item cells would give
     5739.252592592594 and 839.5451851851852. Among the cells probed, Average never follows the cells:
     A1 E5:E7 and B8:D8 (2-D) fit item by item too.
   - Two fields per axis. H1 has 32 records: rows P (H, E), then Q (t, s); columns U (G, D), then W
@@ -874,7 +894,9 @@ Evidence (excel-graph, 2026-11-06):
     Average rule.
 
 - Varp's formula: probes/t4135-pivot-aggregates A_stdDevp!N6 and M8 (T-4142). Of the candidates
-  tried, only (n·Σx² − (Σx)²)/n² (bit-identical divided by n twice) fits both. The others were
+  tried, only (n·Σx² − (Σx)²)/n² fits both. On those t4135 cells it gives the same bits as dividing
+  by n twice, but t4634 rules that out: dividing by n twice differs from /(n·n) at V2 E7, E8 and
+  C11, at V7 E8, E9 and E10, and at X8 G9, and Excel shows /(n·n). The others were
   textbook /n, Σx²/n − mean², two-pass, Welford and (Σx² − Σx·mean)/n. t4589 S1 G5:H7 fits it too.
 
 Correction: T-4135 first recorded Sum as the sum of the children. T-4614 then recorded item-by-item
@@ -889,12 +911,18 @@ Status: VERIFIED (excel-graph) for these totals:
 - Sum alone over one axis field, and Sum alone with two fields per axis;
 - Average, Var, StdDev, Varp, StdDevp and Product row and column totals, and totals over one axis
   field;
-- grand-grand totals with one field per axis, for Sum, Average, Var, StdDev, Varp, StdDevp and Product;
+- grand-grand totals with one field per axis, for Sum, Average, Var and StdDev;
 - every cell of Sum beside Average, and of Average alone, with two fields per axis.
 
-UNVERIFIED (probe pending: T-4678): Var, Varp, StdDev, StdDevp and Product at crossings with two fields
-per axis, a pivot with column fields only, and Values on rows. The engine applies the leaf-row rule to
-them.
+UNVERIFIED (probe pending: T-4678). These are the same items as "What is open" above:
+- Var, StdDev, Varp, StdDevp and Product at crossings with two fields per axis;
+- the Varp, StdDevp and Product grand-grand order with one field per axis;
+- Max and Min beside an error field at such cells;
+- a pivot with column fields only;
+- Values on rows.
+
+The engine applies the leaf-row rule to the crossings, and to the Varp, StdDevp and Product
+grand-grand totals.
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `merge_crossings`,
 `child_cells`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs
 (`Accumulator::finish`, `Accumulator::add_folds`).
