@@ -221,10 +221,10 @@ before T-3338: minus-paren-, minus-paren2-, plus-paren- and minus-abs-1023-typed
 ours shared were dropped then, because the harness scored a typed input the engine refuses as an engine
 error, not as a blank cell. Since T-3338 (sign cap) and T-3689 (parenthesis and call caps) each is a
 typed formula that does not parse (`TYPED_FORMULA_DOES_NOT_PARSE`) and scores as the blank cell Excel
-leaves (T-3870 added `ISBLANK(A1)` to every restored typed refusal, the t3097-*-66-typed and the t3172 and
-t3266 ones, and refilled them, excel-graph 2026-11-03: TRUE on all 23, so A1 is blank, not text), so T-3689 restored them, one past each accepted neighbour, and re-ran them (excel-graph
+leaves, so T-3689 restored them, one past each accepted neighbour, and re-ran them (excel-graph
 2026-11-02, every one PATCH 400, B1 FALSE): t3266-plus-num-1025-, minus-ref-1024-, minus-true-1024-,
-minus-spaced-1024-, nested-200-825-, nested-50-975- and nested-paren-257-typed. Ours matches all of it since T-3338 (the 2026-11-01 eval had the four typed
+minus-spaced-1024-, nested-200-825-, nested-50-975- and nested-paren-257-typed. T-3870 then added `ISBLANK(A1)` to every restored typed refusal, the t3097-*-66-typed and the t3172 and
+t3266 ones, and refilled them (excel-graph 2026-11-03): TRUE on all 23, so A1 is blank, not text. Ours matches all of it since T-3338 (the 2026-11-01 eval had the four typed
 1,023 cases above failing on S!B1 and nested-paren-128, -200, -255, -256 and nested-200-823, -824
 not running, `EngineError`, stored and typed). In ours a plus directly before a
 number literal folds into it and adds no node. Typed whitespace adds no
