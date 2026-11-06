@@ -3,7 +3,7 @@ id: T-4471
 title: "UNIQUE's merge: an equal right head joins the left head, which stays; no coalescing with the last group out (T-4393's model, 60/60 and hold-out 60/60)"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
