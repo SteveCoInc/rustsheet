@@ -3,7 +3,7 @@ id: T-4595
 title: "A literal right after a number section's decimal point prints after the point (`0.|0` on 1234567.891 is \"1234567.|9\")"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
