@@ -7,7 +7,7 @@ use super::{
     parser::{DatePart, TextToken},
 };
 use crate::locale::{
-    excel_date_names::{DateNames, HIJRI_ARABIC},
+    excel_date_names::{calendar_names, CalendarKey, CalendarNames, DateNames, EN_US},
     Locale,
 };
 
@@ -198,7 +198,7 @@ impl NameTokens {
         } else {
             *self.first.get_or_insert(own)
         };
-        let names = &HIJRI_ARABIC;
+        let names = arabic_hijri_names();
         let name = match (is_day, read) {
             (true, FirstName::Month(m)) => names.days[month_as_weekday(m)],
             (_, FirstName::Weekday(w)) => names.days[w],
@@ -212,6 +212,15 @@ impl NameTokens {
                 .map_or(name, |(end, _)| &name[..end]);
         }
         name
+    }
+}
+
+/// Excel's Arabic Hijri names, which a bare `B2` prints: calendar digit 6's names with no locale
+/// (locale/excel_calendars.tsv).
+fn arabic_hijri_names() -> &'static DateNames {
+    match calendar_names(6, CalendarKey::Lcid(0)) {
+        Some(CalendarNames::Set { names, .. }) => names,
+        _ => EN_US,
     }
 }
 

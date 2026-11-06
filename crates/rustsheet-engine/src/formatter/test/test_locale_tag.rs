@@ -79,10 +79,24 @@ fn tags_resolve_like_excel() {
     assert_eq!(names("E0412"), Some("삼월"));
     assert_eq!(names("120411"), Some("March"));
     assert_eq!(names("6040C"), Some("Rabi' Aoual"));
-    for silent in [
-        "", "zzz", "xx", "FFFF", "40C0", "0", "2000000", "40C,1", "+40C",
-    ] {
+    // A tag Excel cannot read, or an extended-hex reading with no locale and no calendar digit,
+    // changes nothing (`B2[$-zzz]` is a bare `B2`).
+    for silent in ["", "zzz", "xx", "+40C"] {
         assert_eq!(resolve(silent), LocaleTag::Silent, "{silent}");
+    }
+    // A hex LCID with no locale is en-US and Gregorian with `A/P` as written, under any calendar
+    // digit (`[$-40C,1]` is 0x40BC1, Taiwan over LCID 0xBC1; probes/t4061-calendars-without-locale).
+    for no_locale in ["FFFF", "40C0", "0", "2000000", "40C,1"] {
+        match resolve(no_locale) {
+            LocaleTag::Names(n) => {
+                assert_eq!(
+                    (n.names.months[2], n.day_half),
+                    ("March", None),
+                    "{no_locale}"
+                );
+            }
+            other => panic!("{no_locale}: {other:?}"),
+        }
     }
     assert_eq!(resolve("F800"), LocaleTag::SystemDate);
     assert_eq!(resolve("X-SYSTIME"), LocaleTag::SystemTime);
@@ -358,4 +372,26 @@ fn numeral_suffix_tags_print_script_digits() {
     assert_eq!(text(1000.0, "[$-ar-SA,200]0.00E+00"), "١.٠٠E+٠٣");
     assert_eq!(text(12.0, "[$$-ar-SA,200]#,##0.00"), "$١٢.٠٠");
     assert_eq!(text(-12.0, "[$-ar-SA,200]0"), "-١٢");
+}
+
+#[test]
+fn only_lcids_with_a_locale_fall_back_to_their_language() {
+    // probes/t3666-lcid-sublanguage-sweep: 0x2412 and 0x812 have no locale, 0x412, 0xF412 and
+    // 0xF409 have one; 0xC00 is en-US.
+    let v = 45000.75;
+    let f = |tag: &str| text(v, &format!("[$-{tag}]mmmm|ddd|h A/P|h AM/PM"));
+    assert_eq!(f("2412"), "March|Wed|6 P|6 PM");
+    assert_eq!(f("812"), "March|Wed|6 P|6 PM");
+    assert_eq!(f("F412"), "3월|수|6 오후|6 오후");
+    assert_eq!(f("F409"), "March|Wed|6 PM|6 PM");
+    assert_eq!(f("C00"), "March|Wed|6 PM|6 PM");
+    assert_eq!(f("400C"), "March|Wed|6 P|6 PM");
+}
+
+#[test]
+fn a_weekday_written_with_a_has_its_own_code_after_b2() {
+    // probes/t3089-b2-weekday-a-codes.
+    assert_eq!(text(45000.0, "B2[$-40409]aaa|b"), "週三|23");
+    assert_eq!(text(45000.0, "B2[$-40409]AAAA|b"), "星期三|24");
+    assert_eq!(text(45000.0, "B2[$-40409]ddd aaa|b"), "週三 週三|2\u{f}");
 }
