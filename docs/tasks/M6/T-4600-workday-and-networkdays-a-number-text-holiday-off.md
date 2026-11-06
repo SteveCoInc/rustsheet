@@ -3,7 +3,7 @@ id: T-4600
 title: "WORKDAY and NETWORKDAYS: a number-text holiday off the calendar (a \"-1\" cell or literal): probe whether it errs before or after the weekend, and match"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
