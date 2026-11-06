@@ -329,6 +329,17 @@ pub(crate) fn round_shown_place(value: f64, precision: i32, is_scientific: bool)
 /// The returned mantissa is already shifted to one integer digit (it is not the full-scale value).
 pub(crate) fn round_scientific(value: f64, precision: i32) -> (f64, f64) {
     let shown = (i64::from(precision) + 1).clamp(1, SIGNIFICANT_DIGITS);
+    let (digits, exponent) = significant_digits(value, shown);
+    // The mantissa is built unscaled: scaling to the full magnitude first overflows for 1.80E+308
+    // (DBL_MAX rounds up past f64::MAX; probes/dbl-max-text-b, T-2106).
+    let rounded = decimal_to_f64(digits, 1 - shown).unwrap_or(f64::INFINITY);
+    (rounded.copysign(value), exponent as f64)
+}
+
+/// `|value|` rounded half away from zero to `shown` (1 to 15) significant digits: those digits as
+/// an integer and the decimal exponent of the first one. A carry adds a digit place
+/// (9.96 to two digits is 10 and exponent 1).
+fn significant_digits(value: f64, shown: i64) -> (u64, i64) {
     let (mantissa, mut exponent) = significant_15(value.abs(), false);
     let dropped = SIGNIFICANT_DIGITS - shown;
     let (mut digits, round_up) = if dropped == 0 {
@@ -341,10 +352,7 @@ pub(crate) fn round_scientific(value: f64, precision: i32) -> (f64, f64) {
         digits /= 10;
         exponent += 1;
     }
-    // The mantissa is built unscaled: scaling to the full magnitude first overflows for 1.80E+308
-    // (DBL_MAX rounds up past f64::MAX; probes/dbl-max-text-b, T-2106).
-    let rounded = decimal_to_f64(digits, 1 - shown).unwrap_or(f64::INFINITY);
-    (rounded.copysign(value), exponent as f64)
+    (digits, exponent)
 }
 
 /// `value` rounded to the digits an engineering mantissa of `group` integer placeholders and
@@ -356,13 +364,21 @@ pub(crate) fn round_engineering(value: f64, group: f64, precision: i32) -> (f64,
         // At most 15 significant digits (docs/excel-semantics/numbers.md, "Number → text").
         (integer_digits + f64::from(precision)).clamp(1.0, EXCEL_PRECISION as f64) as usize
     };
+    // Halves round away from zero, as everywhere in a shown number (`#,##0E+0` on 12.5 is
+    // "13E+0"; probes/t4062-grouping-in-scientific B1:B11).
+    let round = |v: f64, digits: usize| {
+        let shown = i64::try_from(digits).unwrap_or(SIGNIFICANT_DIGITS);
+        let (digits, exponent) = significant_digits(v, shown);
+        let rounded = decimal_to_f64(digits, exponent + 1 - shown).unwrap_or(f64::INFINITY);
+        rounded.copysign(v)
+    };
     let exponent = exponent_of(value);
-    let rounded = to_precision(value, digits_of(value, exponent));
+    let rounded = round(value, digits_of(value, exponent));
     let carried = exponent_of(rounded);
     if carried == exponent {
         (rounded, exponent)
     } else {
-        (to_precision(value, digits_of(rounded, carried)), carried)
+        (round(value, digits_of(rounded, carried)), carried)
     }
 }
 

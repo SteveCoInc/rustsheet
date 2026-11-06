@@ -611,7 +611,15 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     // rounded down (`##0.0E+0` on 123456.789 is "123.5E+3", on 61 "61.0E+0";
                     // `00.0E+0` on 36.5 "36.5E+0"; eval/suites/gen-m10, T-1730). A zero
                     // exponent carries no minus (`0.00E+00` on 1.5 is "1.50E+00").
-                    let group = f64::from(p.digit_count.max(1));
+                    // A grouping `,` in the mantissa makes the step at least 4 (`0,0E+0` and
+                    // `#,##0E+0` on 1234567.89 are "123E+4", `##,##0E+0` "12E+5";
+                    // probes/t4062-grouping-in-scientific; number-formats.md "Commas in
+                    // scientific formats").
+                    let group = f64::from(if p.use_thousands {
+                        p.digit_count.max(4)
+                    } else {
+                        p.digit_count.max(1)
+                    });
                     let exponent;
                     let mut shifted = false;
                     if group > 1.0 {

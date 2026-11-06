@@ -60,5 +60,6 @@ Sweep cases, whose visibly-off cells (the F tails above the mean at df1 other th
 - probes-numeric/t4017-f-huge-df2-above-mean-1e9.case.json
 - probes-numeric/t4017-f-huge-df2-above-mean-1e10.case.json
 - probes-numeric/t4045-f-dist-rt-zero-cut.case.json: Calc!E3 (`FDIST(1.5,80,1E10)`, 4E-8 relative off; T-4045)
+- probes-numeric/t4045-f-dist-rt-zero-cut.case.json: Calc!A1:A17, B1:B18, C1:C14, E2, E5 (F.DIST.RT and FDIST tails 1E-271 to 1E-291 at df2 1E7 or 1E8, Excel and ours each 1E-14 to 2E-13 off the math, 13th-14th digit apart; residue13, decision 0267; found unowned by the 2026-11-06 gap triage)
 - probes/t4045-f-dist-rt-zero-cut-fresh.case.json: Calc!A1:A8, B1:B9, C1:C9, D1:D8, E1:E8, F1:F9 (F.DIST.RT tails near 1E-285, last digits; T-4045)
 See (docs/excel-semantics/statistics.md, "Incomplete beta at a huge first shape").
