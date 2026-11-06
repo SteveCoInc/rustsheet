@@ -1,5 +1,7 @@
+use super::scoring::graph_hides_subnormal;
 use super::*;
 use crate::case::ORACLE_FORMAT;
+use crate::engine::Evaluated;
 use crate::suite::{oracle_sidecar, SuiteManifest};
 
 /// Engine whose behaviour is chosen by the spec's `description` ("panic", "error", else ok).

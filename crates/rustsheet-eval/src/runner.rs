@@ -11,18 +11,20 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::accuracy::envelope::MathValue;
-use crate::accuracy::math::{math_sidecar, Attached, MathTable};
+use crate::accuracy::math::{math_sidecar, MathTable};
 use crate::argument_coverage::{self, CallSeen};
+use crate::case::OraclePivot;
 use crate::case::{
     canonical_key, cell_key, is_excel_evidence, kept_nonzero_formulas, load_oracle,
     split_qualified, CaseSpec, CASE_FORMAT,
 };
 use crate::case_log;
 use crate::cellref::Addr;
-use crate::deviations::{self, Outcome, Pin};
-use crate::engine::{Engine, Evaluated};
+use crate::deviations::{self, Pin};
+use crate::engine::Engine;
 use crate::formula_calls::calls_add_in;
 use crate::overrides;
+use crate::pivot_scoring::{self, PivotLayout};
 use crate::poi_m8_subset::{self, ReferenceFormCells};
 use crate::spill_extent::SpillExtent;
 use crate::suite::{CaseFile, Suite, SuiteKind};
@@ -217,6 +219,9 @@ pub struct CaseResult {
     /// 2(b), T-0094); empty for other suites. Only the run's own report reads them.
     #[serde(skip)]
     pub reference_forms: ReferenceFormCells,
+    /// The case's pivots whose layout is not Excel's (T-4124; empty without sidecar pivots).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivot_layout: Vec<PivotLayout>,
 }
 
 #[derive(Debug, Clone)]
@@ -255,17 +260,6 @@ struct Expectation {
     from_graph: bool,
 }
 
-/// Whether an excel-graph expectation of 0 hides `actual`. The Graph API reports a subnormal
-/// cell value as 0.0, so its 0 cannot tell a true 0 from a kept subnormal: Excel keeps
-/// `3E-308-2.5E-308` yet Graph reports 0 (probes/subnormal-function-results A69). Only cells
-/// whose companion `(x)=0` is FALSE qualify (`from_graph`), so the evidence is Excel's.
-/// Decision 0042.
-fn graph_hides_subnormal(e: &Expectation, actual: &Value) -> bool {
-    e.from_graph
-        && e.expected == Value::Number(0.0)
-        && matches!(actual, Value::Number(a) if *a != 0.0 && a.abs() < f64::MIN_POSITIVE)
-}
-
 enum Prepared {
     Xlsx { bytes: Vec<u8> },
     Spec { spec: Box<CaseSpec> },
@@ -301,6 +295,7 @@ impl CaseResult {
             defined_names: BTreeMap::new(),
             arguments: Vec::new(),
             reference_forms: ReferenceFormCells::default(),
+            pivot_layout: Vec::new(),
         }
     }
 
@@ -352,6 +347,8 @@ struct PreparedCase {
     text: Vec<TextExpectation>,
     defined_names: BTreeMap<String, String>,
     reference_forms: ReferenceFormCells,
+    /// The sidecar's pivots, whose layout is compared with the engine's (T-4124).
+    pivots: Vec<OraclePivot>,
 }
 
 /// Runs all cases of the given suites in parallel.
@@ -486,8 +483,9 @@ fn run_isolated(
                 result.message = Some(e);
             }
         },
-        Ok(Ok((cells, scored, text, arguments, got))) => {
+        Ok(Ok((cells, scored, text, arguments, got, layout))) => {
             check_values = got;
+            result.pivot_layout = layout;
             result.text = text;
             result.arguments = arguments;
             // Spill-extent cells (after `scored`) all fail but stay out of `checked` (decision 0063).
@@ -564,6 +562,7 @@ type Evaluation = (
     Vec<TextResult>,
     Vec<CallSeen>,
     Vec<Value>,
+    Vec<PivotLayout>,
 );
 
 /// Evaluates a prepared case and scores it (on the worker thread, inside the panic isolation);
@@ -598,7 +597,8 @@ fn evaluate_prepared(
     } else {
         Vec::new()
     };
-    Ok((cells, scored, text, arguments, check_values))
+    let layout = pivot_scoring::compare_layouts(&prepared.pivots, evaluated.as_ref());
+    Ok((cells, scored, text, arguments, check_values, layout))
 }
 
 fn panic_message(p: &(dyn std::any::Any + Send)) -> String {
@@ -606,62 +606,6 @@ fn panic_message(p: &(dyn std::any::Any + Send)) -> String {
         .cloned()
         .or_else(|| p.downcast_ref::<&str>().map(|s| (*s).to_string()))
         .unwrap_or_else(|| "panic with non-string payload".into())
-}
-
-/// Scores every expectation against the evaluated workbook. `listed` marks every cell as listed
-/// in the suite's `deviations` file, as a whole-case pin lists them (decision 0168), so a cell
-/// that matches Excel reads as a stale line.
-fn score(evaluated: &dyn Evaluated, expectations: &[Expectation], listed: bool) -> Vec<CellResult> {
-    expectations
-        .iter()
-        .map(|e| {
-            let mut graph_subnormal = false;
-            let (actual, mut verdict) = match evaluated.value(&e.sheet, e.addr) {
-                Some(actual) if graph_hides_subnormal(e, &actual) => {
-                    graph_subnormal = true;
-                    (actual, Verdict::Pass)
-                }
-                Some(actual) => {
-                    let verdict = compare(&e.expected, &actual);
-                    (actual, verdict)
-                }
-                None => (Value::Error(MISSING_SHEET.into()), Verdict::TypeMismatch),
-            };
-            if let Some(pinned) = &e.pinned {
-                if deviations::classify(pinned, &e.expected, &actual) == Outcome::Deviation {
-                    verdict = Verdict::Deviation;
-                }
-            }
-            CellResult {
-                sheet: e.sheet.clone(),
-                cell: e.addr.to_string(),
-                formula: e.formula.clone(),
-                anchor_formula: e.anchor_formula.clone(),
-                expected: e.expected.clone(),
-                actual,
-                verdict,
-                from_excel: e.from_excel,
-                listed_deviation: listed || e.pinned.is_some(),
-                graph_subnormal,
-                kind: CellKind::Scored,
-                math: None,
-                target: Target::Excel,
-            }
-        })
-        .collect()
-}
-
-/// Attaches each cell's math value from `table` (see [`CellResult::math`]); a value for another
-/// formula, or for a cell with no formula of its own, is dropped.
-fn attach_math(cells: &mut [CellResult], table: &MathTable) {
-    for cell in cells {
-        let Some(addr) = Addr::parse(&cell.cell) else {
-            continue;
-        };
-        if let Attached::Value(m) = table.attach(&cell.sheet, addr, cell.formula.as_deref()) {
-            cell.math = Some(m.value.clone());
-        }
-    }
 }
 
 /// The case ready to run, and the refusal message its whole-case `deviations` line pins, if any.
@@ -790,6 +734,7 @@ fn prepare_xlsx(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String> 
             text: Vec::new(),
             defined_names: BTreeMap::new(),
             reference_forms,
+            pivots: Vec::new(),
         });
     };
     let (scorable, skipped_volatile) =
@@ -837,6 +782,7 @@ fn prepare_xlsx(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String> 
         text: Vec::new(),
         defined_names,
         reference_forms,
+        pivots: Vec::new(),
     })
 }
 
@@ -867,6 +813,22 @@ fn apply_cached_overrides(
     Ok(expectations)
 }
 
+/// Every formula cell of a spec case, as (sheet, cell, formula text).
+fn spec_formulas(spec: &CaseSpec) -> Vec<FormulaCell> {
+    spec.sheets
+        .iter()
+        .flat_map(|sheet| {
+            sheet.cells.iter().filter_map(|(a1, input)| {
+                Some((
+                    sheet.name.clone(),
+                    Addr::parse(a1)?,
+                    input.formula()?.to_string(),
+                ))
+            })
+        })
+        .collect()
+}
+
 fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase, String> {
     let text = std::fs::read_to_string(&case.path).map_err(|e| e.to_string())?;
     let spec: CaseSpec = serde_json::from_str(&text).map_err(|e| e.to_string())?;
@@ -892,7 +854,10 @@ fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase, String> {
     let mut workbook_name = None;
     // Formulas whose excel-graph companion `(x)=0` is FALSE: Excel kept `x` non-zero (decision 0042).
     let mut kept_nonzero = BTreeSet::new();
-    if let Some(o) = load_oracle(case)? {
+    // Sidecar pivot-area cells (T-4124), kept apart from `oracle_cells` (pivot_scoring.rs).
+    let (mut pivots, mut pivot_keys) = (Vec::new(), BTreeSet::new());
+    if let Some(mut o) = load_oracle(case)? {
+        pivots = std::mem::take(&mut o.pivots);
         kept_nonzero = kept_nonzero_formulas(&spec, &o);
         source.clone_from(&o.source.kind);
         workbook_name = o.source.workbook_name;
@@ -906,6 +871,7 @@ fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase, String> {
                 expected.insert(key, v);
             }
         }
+        pivot_keys = pivot_scoring::add_expectations(&pivots, &oracle_cells, &mut expected);
     }
     let formula_of = |sheet: &str, a1: &str| {
         spec.sheets
@@ -914,26 +880,14 @@ fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase, String> {
             .and_then(|s| s.cells.get(a1))
             .and_then(|input| input.formula().map(str::to_string))
     };
-    let formulas: Vec<FormulaCell> = spec
-        .sheets
-        .iter()
-        .flat_map(|sheet| {
-            sheet.cells.iter().filter_map(|(a1, input)| {
-                Some((
-                    sheet.name.clone(),
-                    Addr::parse(a1)?,
-                    input.formula()?.to_string(),
-                ))
-            })
-        })
-        .collect();
+    let formulas = spec_formulas(&spec);
     // Spec workbooks have no METADATA sheet, so the clock is never pinned: NOW/TODAY stay skipped
     // unless the case lists the cell as run-invariant.
     let volatile = spec_volatile_cells(&spec.invariant, &formulas)?;
     let wanted: Vec<String> = if spec.check.is_empty() {
         expected.keys().cloned().collect()
     } else {
-        spec.check.clone()
+        spec.check.iter().chain(&pivot_keys).cloned().collect()
     };
     let mut expectations = Vec::new();
     let mut check = Vec::new();
@@ -969,7 +923,8 @@ fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase, String> {
             formula,
             anchor_formula: None,
             expected: value,
-            from_excel: oracle_is_excel && oracle_cells.contains(&key),
+            from_excel: oracle_is_excel
+                && (oracle_cells.contains(&key) || pivot_keys.contains(&key)),
             pinned: None,
             from_graph,
         });
@@ -981,6 +936,7 @@ fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase, String> {
         text: text_expect::expectations(&spec, case)?,
         defined_names: BTreeMap::new(),
         reference_forms: ReferenceFormCells::default(),
+        pivots,
         input: Prepared::Spec {
             spec: Box::new(spec),
         },
@@ -992,6 +948,9 @@ fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase, String> {
         skipped_add_in,
     })
 }
+
+mod scoring;
+use scoring::{attach_math, score};
 
 #[cfg(test)]
 mod tests;
