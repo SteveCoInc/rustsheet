@@ -3,7 +3,7 @@ id: T-4272
 title: "3-D spans after the sheet edits left unprobed: deleting an end sheet, moving the first of a two-sheet span past the last, a backwards span, and row or column inserts inside the span"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
