@@ -1,0 +1,170 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "INDIRECT's a1 argument as FALSE/TRUE text, booleans, numbers, numeric text, empty text, a blank cell, an error, one-cell ranges and an omitted argument, each with A1 text \"H2\" (B) and R1C1 text \"R2C8\" (C); H2 = 5 (T-4538)",
+  "tags": [
+    "M6",
+    "probe",
+    "indirect"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "H2": 5,
+        "D1": true,
+        "D2": false,
+        "D3": 0,
+        "D4": 1,
+        "D5": -0.5,
+        "D6": 0.5,
+        "D7": "FALSE",
+        "D8": "1",
+        "D9": "=\"\"",
+        "D11": "=NA()",
+        "D12": "TRUE",
+        "D13": "false",
+        "A20": {
+          "t": "s",
+          "v": "\"FALSE\""
+        },
+        "B20": "=INDIRECT(\"H2\",\"FALSE\")",
+        "C20": "=INDIRECT(\"R2C8\",\"FALSE\")",
+        "A21": {
+          "t": "s",
+          "v": "\"false\""
+        },
+        "B21": "=INDIRECT(\"H2\",\"false\")",
+        "C21": "=INDIRECT(\"R2C8\",\"false\")",
+        "A22": {
+          "t": "s",
+          "v": "\"True\""
+        },
+        "B22": "=INDIRECT(\"H2\",\"True\")",
+        "C22": "=INDIRECT(\"R2C8\",\"True\")",
+        "A23": {
+          "t": "s",
+          "v": "\" TRUE\""
+        },
+        "B23": "=INDIRECT(\"H2\",\" TRUE\")",
+        "C23": "=INDIRECT(\"R2C8\",\" TRUE\")",
+        "A24": {
+          "t": "s",
+          "v": "\"TRUE \""
+        },
+        "B24": "=INDIRECT(\"H2\",\"TRUE \")",
+        "C24": "=INDIRECT(\"R2C8\",\"TRUE \")",
+        "A25": {
+          "t": "s",
+          "v": "\"1\""
+        },
+        "B25": "=INDIRECT(\"H2\",\"1\")",
+        "C25": "=INDIRECT(\"R2C8\",\"1\")",
+        "A26": {
+          "t": "s",
+          "v": "D1"
+        },
+        "B26": "=INDIRECT(\"H2\",D1)",
+        "C26": "=INDIRECT(\"R2C8\",D1)",
+        "A27": {
+          "t": "s",
+          "v": "D2"
+        },
+        "B27": "=INDIRECT(\"H2\",D2)",
+        "C27": "=INDIRECT(\"R2C8\",D2)",
+        "A28": {
+          "t": "s",
+          "v": "D3"
+        },
+        "B28": "=INDIRECT(\"H2\",D3)",
+        "C28": "=INDIRECT(\"R2C8\",D3)",
+        "A29": {
+          "t": "s",
+          "v": "D4"
+        },
+        "B29": "=INDIRECT(\"H2\",D4)",
+        "C29": "=INDIRECT(\"R2C8\",D4)",
+        "A30": {
+          "t": "s",
+          "v": "D5"
+        },
+        "B30": "=INDIRECT(\"H2\",D5)",
+        "C30": "=INDIRECT(\"R2C8\",D5)",
+        "A31": {
+          "t": "s",
+          "v": "D6"
+        },
+        "B31": "=INDIRECT(\"H2\",D6)",
+        "C31": "=INDIRECT(\"R2C8\",D6)",
+        "A32": {
+          "t": "s",
+          "v": "D7"
+        },
+        "B32": "=INDIRECT(\"H2\",D7)",
+        "C32": "=INDIRECT(\"R2C8\",D7)",
+        "A33": {
+          "t": "s",
+          "v": "D8"
+        },
+        "B33": "=INDIRECT(\"H2\",D8)",
+        "C33": "=INDIRECT(\"R2C8\",D8)",
+        "A34": {
+          "t": "s",
+          "v": "D9"
+        },
+        "B34": "=INDIRECT(\"H2\",D9)",
+        "C34": "=INDIRECT(\"R2C8\",D9)",
+        "A35": {
+          "t": "s",
+          "v": "D10"
+        },
+        "B35": "=INDIRECT(\"H2\",D10)",
+        "C35": "=INDIRECT(\"R2C8\",D10)",
+        "A36": {
+          "t": "s",
+          "v": "D11"
+        },
+        "B36": "=INDIRECT(\"H2\",D11)",
+        "C36": "=INDIRECT(\"R2C8\",D11)",
+        "A37": {
+          "t": "s",
+          "v": "D12"
+        },
+        "B37": "=INDIRECT(\"H2\",D12)",
+        "C37": "=INDIRECT(\"R2C8\",D12)",
+        "A38": {
+          "t": "s",
+          "v": "D13"
+        },
+        "B38": "=INDIRECT(\"H2\",D13)",
+        "C38": "=INDIRECT(\"R2C8\",D13)",
+        "A39": {
+          "t": "s",
+          "v": "D2:D2"
+        },
+        "B39": "=INDIRECT(\"H2\",D2:D2)",
+        "C39": "=INDIRECT(\"R2C8\",D2:D2)",
+        "A40": {
+          "t": "s",
+          "v": "D1:D1"
+        },
+        "B40": "=INDIRECT(\"H2\",D1:D1)",
+        "C40": "=INDIRECT(\"R2C8\",D1:D1)",
+        "A41": {
+          "t": "s",
+          "v": "D10:D10"
+        },
+        "B41": "=INDIRECT(\"H2\",D10:D10)",
+        "C41": "=INDIRECT(\"R2C8\",D10:D10)",
+        "A42": {
+          "t": "s",
+          "v": "(omitted)"
+        },
+        "B42": "=INDIRECT(\"H2\",)",
+        "C42": "=INDIRECT(\"R2C8\",)",
+        "B43": "=ERROR.TYPE(INDIRECT(\"H2\",D11))",
+        "C43": "=ERROR.TYPE(INDIRECT(\"R2C8\",D11))"
+      }
+    }
+  ],
+  "expected": {}
+}
