@@ -5981,8 +5981,8 @@ so `TREND(..,SORTBY(Data!A1:D12,..))` and `GROWTH(LOOKUP(NA(),..),..,GROUPBY(..)
 Evidence: probes/regression-trend (excel-graph, 2026-10-16, T-1620); gen-m9 (excel-graph, 2026-10-22/23, T-2255, T-2256).
 Ours: matches since T-1726 (`trend_or_growth` in functions/statistical/trend.rs), but for the last-digit differences of the
 shared least-squares solve (T-2006) and A187 above. A single point without a constant term (`TREND(5,2,4,FALSE)`) is a fit
-through the origin (VERIFIED by T-4096's Gate A tables: TREND s1 A116, A118, A131, A136, A140 and GROWTH s1 A123, A125,
-A140; see "LINEST, LOGEST, TREND and GROWTH: Gate A tables"). LINEST and LOGEST of one point are accepted by Excel (linest-modes K141, logest-modes
+through the origin (VERIFIED by T-4096's Gate A tables: TREND s1 A140 and GROWTH s1 A123 and A125, where new_x differs
+from known_x, so only a fit through the origin gives Excel's value; TREND A116, A118, A131 and A136 are consistent; see "LINEST, LOGEST, TREND and GROWTH: Gate A tables"). LINEST and LOGEST of one point are accepted by Excel (linest-modes K141, logest-modes
 K162), and ours since T-1741.
 Status: VERIFIED (excel-graph)
 Tasks: T-1726 (overlaps T-1402, T-1743)

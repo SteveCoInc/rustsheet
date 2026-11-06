@@ -108,8 +108,8 @@ solve is visibly off on an ill-conditioned design (large offsets with a small re
 from 2E-9 to 20 relative off the exact least-squares value, while Excel is within 2E-8 of it on 19 of them (LOGEST
 A82's and A98's near-exact-fit F and ss_resid are 8E-7 and 3E-6 off in Excel too). TREND A193 is the badly scaled
 `#NUM!` described above (data from 1E-45 to 1E+49; Excel and the math -1.3025416638036628E+49). So a solve with
-Excel's conditioning (QR rather than the normal equations, and a singularity test relative to scale) fixes them
-whichever Excel bits it reaches; per the Deferred section above these visibly-off points move the task from
+Excel's conditioning (QR rather than the normal equations, and a singularity test relative to scale) brings the other
+19 inside the envelope whichever Excel bits it reaches (LOGEST A82 and A98 need Excel's own digits to 15 places); per the Deferred section above these visibly-off points move the task from
 `defer: phase-1b` to `campaign: accuracy`. They are lines of eval/accuracy/known-failures.tsv owned by this task:
 - accuracy/LINEST/s1: Calc!A85, A87, A93, A98, A100, A102, A103, A104, A110, A129, A187
 - accuracy/LOGEST/s1: Calc!A81, A82, A86, A98, A103, A110
