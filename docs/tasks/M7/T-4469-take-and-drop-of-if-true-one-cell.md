@@ -3,7 +3,7 @@ id: T-4469
 title: "TAKE and DROP of IF(TRUE,<one-cell ref>) keep the reference: TYPE(TAKE(IF(TRUE,Z1),1)) is 1, ours 64"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
