@@ -625,3 +625,53 @@ fn a_calculated_column_keeps_its_column_formula() {
         Some("T[[#This Row],[Qty]]*2")
     );
 }
+
+/// After a row or column insert or delete, the exported `calculatedColumnFormula` is the text
+/// Excel saves for the same edit: the first data cell's formula as the edit displaced it
+/// (T-4274 probes/table-edits/t4274-calc-column-*, the tables of their cached excel-graph
+/// workbooks). The table is t2957-a1-reference's: T on A1:C4, C2 typed so the column fills.
+#[test]
+fn a_calculated_column_formula_follows_row_and_column_edits() {
+    type Edit = fn(&mut rustsheet_engine::UserModel) -> Result<(), String>;
+    let cases: [(&str, Edit, &str); 5] = [
+        ("=A2*2", |u| u.insert_columns(0, 1, 1), "B2*2"),
+        ("=A2*2", |u| u.delete_columns(0, 2, 1), "A2*2"),
+        ("=A2*2", |u| u.insert_rows(0, 1, 1), "A3*2"),
+        ("=A2*2", |u| u.insert_rows(0, 3, 1), "A2*2"),
+        (
+            "=[@Col]*2",
+            |u| u.insert_columns(0, 1, 1),
+            "T[[#This Row],[Col]]*2",
+        ),
+    ];
+    for (index, (typed, edit, saved)) in cases.into_iter().enumerate() {
+        let mut model = new_empty_model();
+        let cells = [
+            (1, 1, "Col"),
+            (1, 2, "Other"),
+            (1, 3, "Calc"),
+            (2, 1, "1"),
+            (3, 1, "2"),
+        ];
+        for (row, column, input) in cells.into_iter().chain([(4, 1, "4")]) {
+            model
+                .set_user_input(0, row, column, input.to_string())
+                .unwrap();
+        }
+        model.add_table(0, "T", (1, 1, 4, 3), false).unwrap();
+        model
+            .set_typed_user_input(0, 2, 3, typed.to_string())
+            .unwrap();
+        let mut user = rustsheet_engine::UserModel::from_model(model);
+        edit(&mut user).unwrap();
+        let temp_file_name = format!("temp_file_test_calculated_column_edit_{index}.xlsx");
+        save_to_xlsx(user.get_model(), &temp_file_name).unwrap();
+        let table_xml = part_text(&temp_file_name, "xl/tables/table1.xml");
+        fs::remove_file(&temp_file_name).unwrap();
+        let element = format!("<calculatedColumnFormula>{saved}</calculatedColumnFormula>");
+        assert!(
+            table_xml.contains(&element),
+            "{typed} case {index}: {table_xml}"
+        );
+    }
+}

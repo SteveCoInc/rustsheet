@@ -431,9 +431,12 @@ impl Model {
             deleted_columns: &edits.deleted_columns,
             deleted_tables: &edits.deleted_tables,
         };
+        let column_formulas = self.displaced_column_formulas(displacement);
         self.displace_cells(displacement)?;
         self.displace_cf_ranges(sheet, displacement);
-        self.resize_tables(sheet, edits.resized)
+        self.resize_tables(sheet, edits.resized)?;
+        self.set_displaced_column_formulas(column_formulas);
+        Ok(())
     }
 
     /// The first data row of the table on `sheet`, under a header row, whose data rows the row

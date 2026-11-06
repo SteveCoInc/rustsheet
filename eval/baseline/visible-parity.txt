@@ -274,6 +274,9 @@ probes/t4393-unique-merge-holdout.case.json	100
 probes/t4394-api-name-active-last.case.json	5
 probes/t4394-api-name-active-s2.case.json	5
 probes/t4420-pivotby-parent-sets-three-fields.case.json	14
+probes/t4437-beta-t-zero-bracket.case.json	222
+probes/t4437-beta-zero-fresh.case.json	30
+probes/t4437-beta-zero-fresh2.case.json	66
 probes/t4448-lone-blank-reshapers.case.json	1
 probes/t4450-eta-special-forms.case.json	11
 probes/t4456-beta-t-zero-cut.case.json	43
@@ -290,6 +293,7 @@ probes/t4554-api-name-scoped-name-choice-first.case.json	9
 probes/t4554-api-name-scoped-name-choice-last.case.json	9
 probes/t4554-api-name-scoped-name-choice.case.json	9
 probes/t4563-xlookup-not-found-ref-element.case.json	106
+probes/t4569-xlookup-ref-element-max-min.case.json	70
 probes/t4582-pivot-item-edges.case.json	40
 probes/t4583-pivot-row-labels.case.json	165
 probes/t4585-pivot-field-names.case.json	8
@@ -302,6 +306,7 @@ probes/t4616-pivot-total-order-3.case.json	477
 probes/t4622-pivot-count-subtotals.case.json	153
 probes/t4625-gamma-dist-ratio-overflow.case.json	4
 probes/t4627-pivot-field-name-collisions.case.json	87
+probes/table-edits/t4274-calc-column-structured-insert-column-a.case.json	1
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1

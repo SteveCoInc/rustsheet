@@ -342,6 +342,86 @@ pub(crate) fn excel_t_density(t: f64, n: f64) -> Option<f64> {
     density.is_finite().then_some(density)
 }
 
+/// The ratio cut of Loader's own bd0, R nmath `bd0.c` (`fabs(x-np) < 0.1*(x+np)`), copied verbatim:
+/// the accurate form, not Excel's ([`EXCEL_BD0_CUT`]).
+const LOADER_BD0_CUT: f64 = 0.1;
+
+/// Loader's deviance bd0(x, M) = x ln(x / M) + M - x, accurately (R nmath `bd0.c`, Loader 2000):
+/// below the cut the odd series in v = (x - M) / (x + M), which avoids the cancellation of the log
+/// form near x = M, else the log form. M is a double-double, so the rounding of the caller's M
+/// (a product and a quotient of counts) does not reach the result: its low part enters through
+/// the first-order term d bd0 / dM = 1 - x / M, exact to O(lo^2 / M). Not Excel's bd0
+/// ([`excel_bd0`], an x87 model fitted to BETA.DIST and T.DIST cells): this is the math, for the
+/// kernels whose target is the Gate A envelope (HYPGEOM.DIST past its walk, T-4502).
+///
+/// For x > 0 and M > 0; the series has at most [`BD0_MAX_TERMS`] terms.
+pub(crate) fn loader_bd0(x: f64, m: Dd) -> f64 {
+    let correction = (1.0 - x / m.0) * m.1;
+    let d = x - m.0;
+    if d.abs() < LOADER_BD0_CUT * (x + m.0) {
+        let mut v = d / (x + m.0);
+        let mut sum = d * v;
+        if sum.abs() < f64::MIN_POSITIVE {
+            return sum + correction;
+        }
+        let mut ej = 2.0 * x * v;
+        v *= v;
+        for j in 1..BD0_MAX_TERMS {
+            ej *= v;
+            let next = sum + ej / f64::from(2 * j + 1);
+            if next == sum {
+                break;
+            }
+            sum = next;
+        }
+        return sum + correction;
+    }
+    x * (x / m.0).ln() + (m.0 - x) + correction
+}
+
+/// ln of the binomial probability of x successes in n trials, `dbinom_raw(x, n, p, q, log = TRUE)`
+/// of R nmath `dbinom.c` (Loader's saddle point), with the means n p and n q given as
+/// double-doubles: stirlerr(n) - stirlerr(x) - stirlerr(n - x) - bd0(x, n p) - bd0(n - x, n q) less
+/// half of ln(2 pi x (n - x) / n) ([`stirlerr_exact`], [`loader_bd0`]), and R's own forms at x = 0
+/// and x = n. For whole x and n with 0 <= x <= n, and n p, n q >= 0 summing to n; -inf where the
+/// probability is 0. Each piece is within a few ulp of its exact value and none is much larger than
+/// the result (the deviances are non-negative), so the result is within a few units of 2^-52 of its
+/// own magnitude, plus about 1E-15.
+pub(crate) fn loader_ln_binomial(x: f64, n: f64, np: Dd, nq: Dd) -> f64 {
+    if np.0 == 0.0 {
+        return if x == 0.0 { 0.0 } else { f64::NEG_INFINITY };
+    }
+    if nq.0 == 0.0 {
+        return if x == n { 0.0 } else { f64::NEG_INFINITY };
+    }
+    if x == 0.0 {
+        if n == 0.0 {
+            return 0.0;
+        }
+        // R: p < 0.1 ? -bd0(n, n q) - n p : n ln q, with p = n p / n.
+        return if np.0 < 0.1 * n {
+            -loader_bd0(n, nq) - (np.0 + np.1)
+        } else {
+            n * ((nq.0 + nq.1) / n).ln()
+        };
+    }
+    if x == n {
+        return if nq.0 < 0.1 * n {
+            -loader_bd0(n, np) - (nq.0 + nq.1)
+        } else {
+            n * ((np.0 + np.1) / n).ln()
+        };
+    }
+    if !(x > 0.0 && x < n) {
+        return f64::NEG_INFINITY;
+    }
+    let nx = n - x;
+    let stirling = stirlerr_exact(n).0 - stirlerr_exact(x).0 - stirlerr_exact(nx).0;
+    let deviance = loader_bd0(x, np) + loader_bd0(nx, nq);
+    let lf = LN_2PI + x.ln() + (-x / n).ln_1p();
+    stirling - deviance - 0.5 * lf
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(
@@ -350,6 +430,35 @@ mod tests {
     )]
     use super::*;
     use crate::test::util::{ulps, within_fifteen_digits};
+
+    // Loader's binomial log density against exact small binomial probabilities, in each of R's
+    // branches: the saddle point inside (with bd0's series near the mean and its log form away
+    // from it), and x = 0 and x = n with p and q on both sides of 0.1.
+    #[test]
+    fn loader_ln_binomial_is_the_exact_log() {
+        let cases: [(f64, f64, f64, f64); 7] = [
+            (3.0, 10.0, 0.5, 120.0 / 1024.0),
+            (5.0, 10.0, 0.5, 252.0 / 1024.0),
+            (2.0, 5.0, 0.3, 10.0 * 0.09 * 0.343),
+            (0.0, 5.0, 0.3, 0.168_07),
+            (0.0, 20.0, 0.05, 0.95f64.powi(20)),
+            (20.0, 20.0, 0.95, 0.95f64.powi(20)),
+            (5.0, 5.0, 0.3, 0.002_43),
+        ];
+        for (x, n, p, exact) in cases {
+            let ours = loader_ln_binomial(x, n, (n * p, 0.0), (n - n * p, 0.0));
+            assert!(
+                (ours - exact.ln()).abs() < 1E-14,
+                "b({x}; {n}, {p}): {ours} {}",
+                exact.ln()
+            );
+        }
+        // A mean's low part moves bd0 to first order: bd0(x, M + lo) = bd0(x, M) + (1 - x/M) lo.
+        let shifted = loader_bd0(10.0, (9.0, 1E-12));
+        let expected = loader_bd0(10.0, (9.0, 0.0)) + (1.0 - 10.0 / 9.0) * 1E-12;
+        assert_eq!(shifted, expected);
+        assert_eq!(loader_bd0(7.0, (7.0, 0.0)), 0.0);
+    }
 
     #[test]
     fn stirlerr_exact_matches_mpmath() {

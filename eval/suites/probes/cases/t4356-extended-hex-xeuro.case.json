@@ -1,0 +1,57 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Extended-hex tags of the x-euro family: which byte-31 reading decides the digits (T-4356).",
+  "tags": [
+    "M10",
+    "probe",
+    "number-format",
+    "T-4356"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=TEXT(123,\"[$-x-euro]0\")",
+        "B1": "=TEXT(123,\"[$\u20ac-x-euro]0\")",
+        "A2": "=TEXT(123,\"[$-x-euro2]0\")",
+        "B2": "=TEXT(123,\"[$\u20ac-x-euro2]0\")",
+        "A3": "=TEXT(123,\"[$-x-eur]0\")",
+        "B3": "=TEXT(123,\"[$\u20ac-x-eur]0\")",
+        "A4": "=TEXT(123,\"[$-x-eu]0\")",
+        "B4": "=TEXT(123,\"[$\u20ac-x-eu]0\")",
+        "A5": "=TEXT(123,\"[$-x-e]0\")",
+        "B5": "=TEXT(123,\"[$\u20ac-x-e]0\")",
+        "A6": "=TEXT(123,\"[$-x-euros]0\")",
+        "B6": "=TEXT(123,\"[$\u20ac-x-euros]0\")",
+        "A7": "=TEXT(123,\"[$-x-eurp]0\")",
+        "B7": "=TEXT(123,\"[$\u20ac-x-eurp]0\")",
+        "A8": "=TEXT(123,\"[$-x-eurn]0\")",
+        "B8": "=TEXT(123,\"[$\u20ac-x-eurn]0\")",
+        "A9": "=TEXT(123,\"[$-x-ab]0\")",
+        "B9": "=TEXT(123,\"[$\u20ac-x-ab]0\")",
+        "A10": "=TEXT(123,\"[$-x-abc]0\")",
+        "B10": "=TEXT(123,\"[$\u20ac-x-abc]0\")",
+        "A11": "=TEXT(123,\"[$-x-abcd]0\")",
+        "B11": "=TEXT(123,\"[$\u20ac-x-abcd]0\")",
+        "A12": "=TEXT(123,\"[$-y-euro]0\")",
+        "B12": "=TEXT(123,\"[$\u20ac-y-euro]0\")",
+        "A13": "=TEXT(123,\"[$-x-zzzz]0\")",
+        "B13": "=TEXT(123,\"[$\u20ac-x-zzzz]0\")",
+        "A14": "=TEXT(123,\"[$-xeuro]0\")",
+        "B14": "=TEXT(123,\"[$\u20ac-xeuro]0\")",
+        "A15": "=TEXT(123,\"[$-x_euro]0\")",
+        "B15": "=TEXT(123,\"[$\u20ac-x_euro]0\")",
+        "A16": "=TEXT(123,\"[$-x-a]0\")",
+        "B16": "=TEXT(123,\"[$\u20ac-x-a]0\")",
+        "A17": "=TEXT(123,\"[$-x-ar]0\")",
+        "B17": "=TEXT(123,\"[$\u20ac-x-ar]0\")",
+        "A18": "=TEXT(123,\"[$-x-ara]0\")",
+        "B18": "=TEXT(123,\"[$\u20ac-x-ara]0\")",
+        "A19": "=TEXT(123,\"[$-w-euro]0\")",
+        "B19": "=TEXT(123,\"[$\u20ac-w-euro]0\")",
+        "A20": "=TEXT(123,\"[$-x-eurq]0\")",
+        "B20": "=TEXT(123,\"[$\u20ac-x-eurq]0\")"
+      }
+    }
+  ]
+}
