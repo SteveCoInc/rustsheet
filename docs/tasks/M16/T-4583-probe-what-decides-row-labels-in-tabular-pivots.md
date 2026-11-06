@@ -29,11 +29,14 @@ T-4137 (probes/t4137-pivot-captions K5, K6) and T-4123 (probes/t4123-pivot-captu
 probes/t4583-pivot-row-labels (excel-graph, 2026-11-06) holds eight builder-v2 pivots. Recorded in
 docs/excel-semantics/pivots.md:
 - **Row Labels rule (R1–R6):** in a tabular pivot the first row header reads the field's name only
-  when every pivotField is non-compact. Any one field at the default gives `Row Labels`, whatever its
-  role (outer or inner axis, data, unused) or position (first, middle, last). This closes the readings
+  when every pivotField is non-compact. Any one field at the default gives `Row Labels`, in every role
+  probed (outer or inner row field, data, unused) and position (first, middle, last). This closes the readings
   T-4137 left open: "every field" holds, while "non-axis only" and "last field" are refuted by R1, R2,
   R3 and R4.
-- **Compact outer field (R1):** the inner field moves into the outer field's column.
+- **Outer field at the default (R1):** the inner field moves into the outer field's column, and the
+  subtotals move onto the outer item's own line (no `<item> Total` lines).
+- **Left open** (T-4609): column and page fields, `outline` alone on axis fields, and which attribute
+  moves R1's subtotals.
 - **colHeaderCaption (C1, C2):** in compact form it replaces `Column Labels` beside a real column field
   (C1!B3). In tabular form with every field non-compact both headers read the field names, and the
   caption is ignored (C2).
