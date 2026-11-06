@@ -3,7 +3,7 @@ id: T-4534
 title: "Own the cells T-4207 listed that decision 0308 does not except"
 milestone: M9
 lane: functions-math
-status: in-progress
+status: todo
 priority: P3
 size: S
 tier: opus
@@ -68,3 +68,8 @@ open owner (`exit_owners.py --milestone M9` and `--all-off` against a copy of do
 it needs an open M9 owner for those cells and the owner column of the T-4534 lines of eval/milestones/
 exit-exceptions.tsv and phase1-exceptions.tsv moved (a protected path: a decision). J1328 needs a line like J136's
 (decision 0134 mechanism) or an owner the same way.
+
+## Released (2026-11-06)
+An opus run claimed this branch and released it without changes: what remains is an ownership question (a standing
+owner for cells only desktop evidence can settle, and a decision moving the owner column of eval/milestones/), not
+engineering. The branch could not be deleted from that session; it carries no work and can be deleted.
