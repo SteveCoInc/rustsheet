@@ -7,7 +7,7 @@ status: blocked
 priority: P2
 size: S
 tier: sonnet
-depends_on: [T-4172]
+depends_on: [T-4172, T-4509, T-4513, T-4514]
 spec: docs/specs/SPEC-0033-xlsx-round-trip-contract.md
 ---
 
