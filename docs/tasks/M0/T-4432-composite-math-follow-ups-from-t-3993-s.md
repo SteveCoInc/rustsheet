@@ -3,7 +3,7 @@ id: T-4432
 title: "Composite math follow-ups from T-3993's review: decision 0297's R3 caveat, score.py's output outside docs/, one paren scanner for composite.py and sweep.py"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
