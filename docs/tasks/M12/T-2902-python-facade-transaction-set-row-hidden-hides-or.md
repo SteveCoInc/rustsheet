@@ -3,7 +3,7 @@ id: T-2902
 title: "Python facade: Transaction.set_row_hidden hides or shows a row"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
