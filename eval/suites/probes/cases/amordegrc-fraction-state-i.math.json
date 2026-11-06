@@ -6,7 +6,15 @@
   "dps": 80,
   "input_sha256": "8ffba2dcdf52be36adc47215a2b26abe518535153681f7d789db77f73de0c4df"
  },
- "sheets": {},
+ "sheets": {
+  "Sheet1": {
+   "A2": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=EFFECT(1,1)"
+   }
+  }
+ },
  "skipped": {
   "Sheet1": {
    "A1": {

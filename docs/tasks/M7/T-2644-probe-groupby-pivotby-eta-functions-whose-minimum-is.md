@@ -24,6 +24,10 @@ name them. ROW and COLUMN take an optional reference, so Excel
 may pass them the group's values instead. Found by the 2026-10-25 steward spot-audit (architecture
 reviewer on PR #1062).
 
+T-4450 (probes/t4450-eta-special-forms H109:H124, J55:J73) answered GROUPBY for ROW, COLUMN, SHEET, SHEETS,
+RANDARRAY, NOW and PI and PIVOTBY for ROW and PI (arrays.md "GROUPBY and PIVOTBY"), and the engine passes ROW, COLUMN and
+SHEET one argument since then. What is left: PIVOTBY with COLUMN, SHEET, SHEETS and RANDARRAY.
+
 ## Acceptance criteria
 - [ ] An oracle-filled probe (`excel-probe` skill) covers `_xleta.ROW`, `_xleta.COLUMN`, `_xleta.SHEET`,
   `_xleta.SHEETS`, `_xleta.PI` and `_xleta.RANDARRAY` (wrapped so the value is deterministic, e.g. ROWS/ISERROR) in
