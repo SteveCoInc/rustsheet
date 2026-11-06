@@ -2358,7 +2358,9 @@ C	probes/t4423-hyperbolic-overflow-band.case.json	300
 C	probes/t4424-sumx2my2-overflow-order.case.json	84
 C	probes/t4430-legacy-at-name-body-rest.case.json	181
 C	probes/t4447-sort-fractional-keys.case.json	84
+C	probes/t4449-groupby-function-array-edges.case.json	145
 C	probes/t4453-near-integer-text-args.case.json	168
+C	probes/t4464-groupby-spent-filter-shapes.case.json	323
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
