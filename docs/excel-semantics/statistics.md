@@ -737,7 +737,7 @@ What the probes show about the kernel itself (none of it yet reproduces Excel bi
   - CHIDIST, CHISQ.TEST at df 1 and Z.TEST are wrappers too.
   - Z.TEST with a single-value array returns #DIV/0!. A typed TRUE as the array is such a single value:
     `Z.TEST(TRUE,0.5,1)` is #DIV/0! (probes-numeric/t1049-ztest A51; a direct boolean is accepted as one value; whether it is counted as 1 or skipped is not distinguishable here, both give #DIV/0!, T-2049), while typed text is
-    #VALUE! (`Z.TEST("a",4)`, A50) and `Z.TEST(7,4)` #DIV/0! (A41).
+    #VALUE! (`Z.TEST("a",4)`, A50) and `Z.TEST(7,4)` #DIV/0! (A41); direct numeric text is one value, `ZTEST("3",3)` #DIV/0! (T-4223).
   - Odd-df upper chi-square (Q(1.5), Q(2.5)) and the shape-0.5 density use separate generic paths, not this kernel.
 - ERFC kernel for 0.5 < x <= 4 (rounds 7-9): bit-exact.
   - **Form.** The same family as the tail. ERFC = fl53(fl64(E*R)) with R = fl53(fl64(N/D)). N (degree 9) and D
@@ -7399,3 +7399,30 @@ probes/t3185-m9-statistical-argument-kinds-a to -c (excel-graph, 2026-11-04, 335
   (b A62, A86, A91, c A69): TREND's 5.8 is the fit at 6 with `const` TRUE, and LINEST's 0.6 its slope. As
   `stats`, LINEST and LOGEST are `#SPILL!` (b A89, A94): a result taller than one row, where ours spills 1-by-2. The
   shape is unprobed (T-4222). Ours is `#VALUE!` for GROWTH's and TREND's `const` (T-4222).
+
+## M9 statistical argument kinds of an array, aggregate or criteria parameter (T-4223)
+Evidence: probes/t4223-m9-statistical-array-kinds-a and -b (100 cells, excel-graph, 2026-11-06). Each cell is one valid
+base call over `Data!A1:A5` (2, 4, 5, 4, 5) and `Data!B1:B5` (1 to 5), with one argument replaced by the kind. For an
+aggregate (AVEDEV, DEVSQ, HARMEAN, KURT, MEDIAN, MODE*, SKEW*, STDEV*, VAR*, VARPA), the kind is the first argument
+and the data is the second.
+- An aggregate given `""` directly is `#VALUE!` (AVEDEV, DEVSQ, HARMEAN, KURT, MEDIAN, SKEW, SKEW.P, STDEV*, VAR*,
+  VARPA; a A1, A21, A37, A38, b A3, A13:A14, A16:A18, A20, A37:A39, A41, A43), and `#N/A` directly is `#N/A`. The
+  exception is MODE: `MODE("",Data!A1:A5)` and `MODE.SNGL(...)` skip the text and give 4 (b A10, A12).
+  `MODE.MULT("",Data!A1:A5)` is `#SPILL!` in the probe's layout (b A11), so it skips the text too.
+- Array parameters given a scalar:
+  - CHISQ.TEST, CHITEST, T.TEST and TTEST are `#N/A` for `""`, numeric text and `#N/A`, in either array (a A12:A20,
+    b A22:A23, A32:A36).
+  - F.TEST and FTEST are `#DIV/0!` for `""` (a lone value has no variance) and `#N/A` for `#N/A` (a A22:A29).
+  - LINEST, LOGEST, GROWTH and TREND are `#VALUE!` for `""` as `known_y's` and `#REF!` for `""` as `known_x's` (a
+    A30, A32, A39, A41, A43, A45, b A24, A26). As `new_x's`, numeric text, `""` and `TRUE` are `#VALUE!` (a A34:A35,
+    b A28:A30). `#N/A` is `#N/A` everywhere.
+  - Z.TEST and ZTEST: 0 and numeric text are one value and `#DIV/0!` (`ZTEST("3",3)`, b A44, A47, A48), `""` is
+    `#VALUE!` (b A45, A49) and `#N/A` is `#N/A`.
+- Criteria (AVERAGEIF, AVERAGEIFS, MAXIFS, MINIFS): a number, a boolean or an error criterion matches cells holding that
+  value. None of 0, -1, 0.5, TRUE or `#N/A` occurs in the data, so AVERAGEIF(S) is `#DIV/0!` and MAXIFS and MINIFS are
+  0 (a A2:A3, A5:A8, A10:A11, A47:A49, b A1:A2, A4:A6, A8:A9). Numeric text matches the number, so `"3"` against B1:B5
+  picks A3 = 5 (a A9, A50, b A7), and `AVERAGEIF(Data!A1:A5,"3")` is `#DIV/0!`, because the data holds no 3 (a A4).
+Ours: every cell matches. `ZTEST("3",3)` (b A48) was `#VALUE!` until T-4223: `z_test.rs` now reads direct numeric
+text as one value, like a direct boolean.
+Status: VERIFIED (excel-graph)
+Tasks: T-4223
