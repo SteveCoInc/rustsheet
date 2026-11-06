@@ -20,3 +20,10 @@ Eight untouched in-domain families, n = 3 to 7, c in {0.25, 0.5, 0.75, 1} and a0
 ln 2^-970 - 0.525 (row 22). Prediction: a number on rows 1 to 11, 0 on rows 12 to 22.
 Scored: the count of in-domain cells whose 0-or-number class matches Excel, and, on the number
 cells, the Gate A envelope (15 significant digits of Excel, or 1e-9 relative of 50-digit math).
+
+## R4.1 re-split (stated before scoring, review round 2)
+The hold-out guard is scored on the in-domain cells of `t4437-beta-zero-fresh2` (columns A:H), which no step of
+the rule's derivation saw. Split: the fit lab's `is_holdout` (salt `rustsheet-fitlab-holdout/v1`, 300 per mille,
+case id `probes/t4437-beta-zero-fresh2`). Margin: the default 5 points. Candidates: the rule (the engine at the
+frozen code) and the correctly rounded value (50-digit mpmath rounded to a double). Counts: bit-exact, within
+4 ulp, within 15 digits, per side.
