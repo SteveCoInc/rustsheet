@@ -4,10 +4,21 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "3b62ba85ef6a8170fb82ca4b35df9c6446304eb32380a67b7e88e87f3713a623"
+  "input_sha256": "3b62ba85ef6a8170fb82ca4b35df9c6446304eb32380a67b7e88e87f3713a623",
+  "definitions": {
+   "EXP": "9de1fa5084c01ced",
+   "POWER": "9de1fa5084c01ced",
+   "SQRT": "9de1fa5084c01ced"
+  },
+  "arguments_sha256": "919357e0083c112363a73d2224422606dda44b1e9cc4c52898c0f62b07578ea8"
  },
  "sheets": {
   "Calc": {
+   "A182": {
+    "t": "n",
+    "v": "39720546451956559010861215599393363.15305393907109",
+    "f": "=POWER(SQRT(5),99)"
+   },
    "A2": {
     "t": "n",
     "v": "2.2360679774997896964091736687312762354406183596115",

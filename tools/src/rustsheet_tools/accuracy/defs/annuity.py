@@ -21,7 +21,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars
+from rustsheet_tools.accuracy.defs._common import real_args
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
@@ -107,7 +107,7 @@ def rate(nper: int, pmt: mpmath.mpf, pv: mpmath.mpf, fv: mpmath.mpf, due: bool) 
 
 
 def _rate(args: Sequence[MathArg]) -> mpmath.mpf:
-    nper, pmt, pv, fv, kind = scalars(args)
+    nper, pmt, pv, fv, kind = real_args(args)[:5]  # a call's guess (the sixth) does not move a unique root
     return rate(int(nper), pmt, pv, fv, kind != 0)
 
 
@@ -120,7 +120,7 @@ def payment(r: float, nper: int, pv: float, fv: float, due: bool) -> float:
         return float(max(min(value, MAX_LITERAL), -MAX_LITERAL))
 
 
-def _annuity(stratum: str, rng: random.Random) -> tuple[float, int, float, float, float, bool]:
+def draw_annuity(stratum: str, rng: random.Random) -> tuple[float, int, float, float, float, bool]:
     """The base annuity of a whole-point draw, (sign, n, rate, pv, fv, due), at the extreme and log-uniform
     strata's scales; RATE's and NPER's draws then shape their tail and edge strata. The draw order is fixed, so a
     batch's seed reproduces its points."""
@@ -145,7 +145,7 @@ def _annuity(stratum: str, rng: random.Random) -> tuple[float, int, float, float
 
 def _draw(stratum: str, rng: random.Random) -> list[Arg]:
     """One annuity per stratum's shape: [nper, pmt, pv, fv, type]."""
-    sign, nper, r, pv, fv, due = _annuity(stratum, rng)
+    sign, nper, r, pv, fv, due = draw_annuity(stratum, rng)
     same_sign = False
     if stratum == "tail":  # rates near 0, or large
         r = (
@@ -181,6 +181,9 @@ RATE = register(
             Param("fv", "real", _AMOUNT, source=RATE_SOURCE),
             Param("type", "int", Interval(0, 1, lo_open=False, hi_open=False), source=RATE_SOURCE),
         ),
+        # The guess only picks among several roots, and a point here has one (the module doc); a guess Excel
+        # cannot converge from is Excel's error, which Gate A reads as error against number (T-3923).
+        call_params=(Param("guess", "real", _AMOUNT, source=RATE_SOURCE, optional=True),),
         value=_rate,
         draw=_draw,
         solver=True,
@@ -226,7 +229,7 @@ def nper(r: mpmath.mpf, pmt: mpmath.mpf, pv: mpmath.mpf, fv: mpmath.mpf, due: bo
 
 
 def _nper(args: Sequence[MathArg]) -> mpmath.mpf:
-    r, pmt, pv, fv, kind = scalars(args)
+    r, pmt, pv, fv, kind = real_args(args)
     return nper(r, pmt, pv, fv, kind != 0)
 
 
@@ -235,7 +238,7 @@ def _nper_draw(stratum: str, rng: random.Random) -> list[Arg]:
     is the answer. The tail stratum covers R3's tiny positive rates (below 1E-14, where 1 + rate is
     still not 1) and rates near 0 of either sign; the edge stratum rate 0, a rate where 1 + rate is 1
     and a non-positive ratio."""
-    sign, n, r, pv, fv, due = _annuity(stratum, rng)
+    sign, n, r, pv, fv, due = draw_annuity(stratum, rng)
     if stratum == "tail":
         shape = rng.randrange(3)
         if shape == 0:

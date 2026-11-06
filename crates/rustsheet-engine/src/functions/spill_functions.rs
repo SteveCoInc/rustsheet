@@ -1,8 +1,6 @@
-use crate::area_budget::text_units;
 use crate::functions::util::array_node_to_calc_result;
 use crate::functions::util::near_integer::near_integer_whole;
 use std::cmp::Ordering;
-use std::collections::HashMap;
 
 use crate::{
     calc_result::CalcResult,
@@ -15,8 +13,13 @@ use crate::{
     model::Model,
 };
 
-use super::util::collation::{cmp_text_pairwise, collation_key, CollationKey};
+use super::util::collation::stoppable;
+use super::util::collation::CollationKey;
 use super::util::{compare_values_pairwise, sort_indices_pairwise};
+
+mod unique;
+use unique::unique_of;
+pub(crate) use unique::{has_intransitive_text, unique_cell_key, unique_first_lines};
 
 /// Compare two sort keys following Excel's rules:
 ///   Numbers < Strings < Booleans < Errors < Empty cells
@@ -98,116 +101,6 @@ fn unique_flags_are_literals(args: &[Node]) -> bool {
         Some(_) => false,
     };
     literal(args.get(1), true) && literal(args.get(2), false)
-}
-
-/// One UNIQUE call over `data`: its distinct rows (or columns), or those that occur once.
-///
-/// Two texts are one value when Excel's `=` finds them equal ([`cmp_text_pairwise`]): case is
-/// folded, `"ß"` is `"ss"` and `"á"` is `"a"&UNICHAR(769)`, but `"a"` and `"a"` plus 16 U+0302
-/// (equal wrapped accent sums) are two (probes/t3211-collation-sort-cycles G1:J15,
-/// t3181-collation-prefix-arrays B1, B2; docs/excel-semantics/coercion.md "Not a total order").
-/// Lines are bucketed by their [`CellKey`]s, texts by [`collation_key`], which every pair the
-/// rule finds equal shares, and a line joins the first kept line of its bucket the rule finds
-/// equal to it. On an intransitive cycle Excel's grouping follows its sort order instead (G4);
-/// that is unmatched (T-3211 Outcome).
-///
-/// Texts can share a key and still be unequal (`"a"` plus 16, 32, 48 ... U+0302), so a bucket may
-/// hold many kept lines and the walk may compare each line with all of them: every comparison is
-/// charged to the formula's work budget ([`text_units`] of the texts compared, at least one unit),
-/// so a crafted column ends as the budget's `#VALUE!` instead of running quadratically
-/// (directive 5; SPEC-0024).
-fn unique_of(
-    model: &mut Model,
-    data: &[Vec<ArrayNode>],
-    by_col: bool,
-    exactly_once: bool,
-    cell: CellReferenceIndex,
-) -> CalcResult {
-    let num_rows = data.len();
-    let num_cols = data.first().map_or(0, Vec::len);
-    let (count, length) = if by_col {
-        (num_cols, num_rows)
-    } else {
-        (num_rows, num_cols)
-    };
-    let at = |line: usize, k: usize| {
-        if by_col {
-            &data[k][line]
-        } else {
-            &data[line][k]
-        }
-    };
-    let same_texts = |a: usize, b: usize| {
-        (0..length).all(|k| match (at(a, k), at(b, k)) {
-            (ArrayNode::String(x), ArrayNode::String(y)) => {
-                cmp_text_pairwise(x, y) == Ordering::Equal
-            }
-            _ => true,
-        })
-    };
-    let compare_units = |a: usize, b: usize| {
-        (0..length)
-            .map(|k| match (at(a, k), at(b, k)) {
-                (ArrayNode::String(x), ArrayNode::String(y)) => text_units(x.len() + y.len()),
-                _ => 0,
-            })
-            .fold(1, u64::saturating_add)
-    };
-    // The kept lines, in order, with how many lines each stands for.
-    let mut kept: Vec<(usize, usize)> = Vec::new();
-    let mut buckets: HashMap<Vec<CellKey>, Vec<usize>> = HashMap::with_capacity(count);
-    for line in 0..count {
-        let key: Vec<CellKey> = (0..length).map(|k| unique_cell_key(at(line, k))).collect();
-        let bucket = buckets.entry(key).or_default();
-        let mut found = None;
-        for &slot in bucket.iter() {
-            let first = kept[slot].0;
-            if let Err(error) = model.spend_work(compare_units(first, line), cell) {
-                return error;
-            }
-            if same_texts(first, line) {
-                found = Some(slot);
-                break;
-            }
-        }
-        match found {
-            Some(slot) => kept[slot].1 += 1,
-            None => {
-                bucket.push(kept.len());
-                kept.push((line, 1));
-            }
-        }
-    }
-    let lines: Vec<usize> = kept
-        .into_iter()
-        .filter(|&(_, n)| !exactly_once || n == 1)
-        .map(|(line, _)| line)
-        .collect();
-    if lines.is_empty() {
-        let what = if by_col { "columns" } else { "rows" };
-        return CalcResult::new_error(
-            Error::CALC,
-            cell,
-            format!("UNIQUE found no matching {what}"),
-        );
-    }
-    if by_col {
-        CalcResult::Array(
-            data.iter()
-                .map(|row| lines.iter().map(|&c| row[c].clone()).collect())
-                .collect(),
-        )
-    } else {
-        CalcResult::Array(lines.iter().map(|&r| data[r].clone()).collect())
-    }
-}
-
-/// UNIQUE's [`cell_key`]: a text is keyed by its [`collation_key`] (see [`unique_of`]).
-fn unique_cell_key(node: &ArrayNode) -> CellKey {
-    match node {
-        ArrayNode::String(text) => CellKey::Collated(collation_key(text)),
-        other => cell_key(other),
-    }
 }
 
 /// The first of `orderings` that is not `Equal`: the comparison of SORT's and SORTBY's keys,
@@ -295,10 +188,10 @@ pub(crate) fn reject_empty_value(
 /// `array`, an array argument evaluated from `arg`, with an error read through a reference
 /// argument made a 1x1 array holding it, as Excel reads a one-cell range: the other arguments are
 /// checked first and the error survives only as an element of the result. With Data!G9 `#DIV/0!`,
-/// `TOROW(Data!G9,7)` is `#VALUE!`, `TOCOL(Data!G9,3)` `#CALC!`, and `FILTER(Data!G9,Data!B1:B12>-1)`
-/// `#VALUE!` for its shape (gen-m7 arg-pairs, excel-graph, T-3506). A literal error is still the
-/// error: `TOROW(#N/A,-1)` is `#N/A` and `FILTER(#DIV/0!,Data!C1:C12<>0.3)` `#DIV/0!`
-/// (gen-m7/20df23f84a528470 A8907, ee81c689b5fde629 A977).
+/// `TOROW(Data!G9,7)` is `#VALUE!` and `TOCOL(Data!G9,3)` `#CALC!` (gen-m7 arg-pairs,
+/// excel-graph, T-3506). A literal error is still the error: `TOROW(#N/A,-1)` is `#N/A`
+/// (gen-m7/20df23f84a528470 A8907). FILTER reads its arguments as references instead, which
+/// also covers a one-cell reference reached through LET, INDEX or IF (`Model::filter_arg_array`).
 ///
 /// No size check is needed: a `Node::ReferenceKind` is one cell by construction (a range is a
 /// `RangeKind`, which this never wraps). Any error read through it is wrapped, which is how a
@@ -312,23 +205,13 @@ pub(crate) fn one_cell_error_ref_as_array(
     array: Result<Vec<Vec<ArrayNode>>, CalcResult>,
     cell: CellReferenceIndex,
 ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
-    wrap_one_cell_error_ref(arg, array, cell).0
-}
-
-/// [`one_cell_error_ref_as_array`], and whether it wrapped an error (FILTER checks such an
-/// include's shape before its elements).
-pub(crate) fn wrap_one_cell_error_ref(
-    arg: &Node,
-    array: Result<Vec<Vec<ArrayNode>>, CalcResult>,
-    cell: CellReferenceIndex,
-) -> (Result<Vec<Vec<ArrayNode>>, CalcResult>, bool) {
     match array {
         Err(CalcResult::Error { error, .. })
             if matches!(*arg.ungrouped_at(cell.row), Node::ReferenceKind { .. }) =>
         {
-            (Ok(vec![vec![ArrayNode::Error(error)]]), true)
+            Ok(vec![vec![ArrayNode::Error(error)]])
         }
-        array => (array, false),
+        array => array,
     }
 }
 
@@ -371,17 +254,6 @@ impl Model {
         self.result_to_array(result, cell)
     }
 
-    /// [`Model::eval_to_array`] for an argument that must be an array ([`reject_empty_value`]).
-    pub(crate) fn eval_array_arg(
-        &mut self,
-        node: &Node,
-        cell: CellReferenceIndex,
-    ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
-        let result = self.evaluate_node_in_context(node, cell);
-        let result = reject_empty_value(node, result, cell)?;
-        self.result_to_array(result, cell)
-    }
-
     /// [`Model::eval_to_array`] that keeps a lone blank cell blank, as a blank cell of a range is:
     /// `TOROW(Z1,3)` is `#CALC!` and `UNIQUE(Z1)&"x"` is "x" (docs/excel-semantics/arrays.md
     /// "TOROW and UNIQUE of a lone blank cell", T-2409).
@@ -394,8 +266,8 @@ impl Model {
         self.result_to_array_keep_blank(result, cell)
     }
 
-    /// [`Model::eval_array_arg`] that keeps a lone blank cell blank, as
-    /// [`Model::eval_to_array_keep_blank`] does.
+    /// [`Model::eval_to_array_keep_blank`] for an argument that must be an array
+    /// ([`reject_empty_value`]).
     pub(crate) fn eval_array_arg_keep_blank(
         &mut self,
         node: &Node,
@@ -472,7 +344,8 @@ impl Model {
         }
 
         // An error array is each call's result, as the argument errors below are.
-        let data = self.eval_to_array(&args[0], cell);
+        // A lone blank cell stays blank (`SORT(Z1)&"x"` is "x"; probes/t4448-lone-blank-reshapers A1:D2, T-4448).
+        let data = self.eval_to_array_keep_blank(&args[0], cell);
         if data.as_ref().is_ok_and(|d| d.is_empty() || d[0].is_empty()) {
             return CalcResult::Array(vec![]);
         }
@@ -540,9 +413,10 @@ impl Model {
         if sorted.len() < 2 {
             return result;
         }
-        // sort_index truncates, so 2.7 is key 2 too (probes/t2929-sort-lifted-by-col-errors K18).
+        // sort_index reads as `sort_by_keys` reads it, so 2.7 is key 2 too
+        // (probes/t2929-sort-lifted-by-col-errors K18).
         let only_key_two =
-            matches!(raw_index.as_deref(), Ok([index]) if (2.0..3.0).contains(index));
+            matches!(raw_index.as_deref(), Ok([index]) if near_integer_whole(*index) == 2.0);
         sort_lifted_elements(result, &sorted, only_key_two)
     }
 
@@ -573,8 +447,12 @@ impl Model {
             );
         }
         let mut keys: Vec<(usize, bool)> = Vec::with_capacity(raw_index.len());
+        // A fractional sort_index and sort_order read as SORTBY's sort_order does: floored, snapped
+        // up just below an integer (`near_integer_whole`), so -0.5 sorts descending, `1-2^-23` is
+        // key 1, `2-2^-22` is order 2 (`#VALUE!`) and `3-2^-23` is key 3
+        // (probes/t4447-sort-fractional-keys; docs/excel-semantics/arrays.md, T-4447).
         for (k, &index) in raw_index.iter().enumerate() {
-            let index = index as i64;
+            let index = near_integer_whole(index) as i64;
             if index < 1 {
                 return CalcResult::new_error(
                     Error::VALUE,
@@ -587,7 +465,8 @@ impl Model {
                 .or(raw_order.first())
                 .copied()
                 .unwrap_or(1.0);
-            let ascending = match Self::validate_sort_order(order as i32, cell) {
+            let ascending = match Self::validate_sort_order(near_integer_whole(order) as i32, cell)
+            {
                 Ok(a) => a,
                 Err(e) => return e,
             };
@@ -604,20 +483,24 @@ impl Model {
         if !by_col {
             // Sort rows by the key columns.
             let mut row_indices: Vec<usize> = (0..num_rows).collect();
-            sort_indices_pairwise(&mut row_indices, |a, b| {
-                first_unequal(keys.iter().map(|&(key, ascending)| {
-                    sort_key_cmp(&data[a][key], &data[b][key], ascending, cell)
-                }))
+            stoppable(|| {
+                sort_indices_pairwise(&mut row_indices, |a, b| {
+                    first_unequal(keys.iter().map(|&(key, ascending)| {
+                        sort_key_cmp(&data[a][key], &data[b][key], ascending, cell)
+                    }))
+                });
             });
 
             CalcResult::Array(row_indices.iter().map(|&r| data[r].clone()).collect())
         } else {
             // Sort columns by the key rows.
             let mut col_indices: Vec<usize> = (0..num_cols).collect();
-            sort_indices_pairwise(&mut col_indices, |a, b| {
-                first_unequal(keys.iter().map(|&(key, ascending)| {
-                    sort_key_cmp(&data[key][a], &data[key][b], ascending, cell)
-                }))
+            stoppable(|| {
+                sort_indices_pairwise(&mut col_indices, |a, b| {
+                    first_unequal(keys.iter().map(|&(key, ascending)| {
+                        sort_key_cmp(&data[key][a], &data[key][b], ascending, cell)
+                    }))
+                });
             });
 
             CalcResult::Array(
@@ -696,7 +579,9 @@ impl Model {
         // An error array is lifted like any other: every element is that error, in the sort_orders'
         // shape (`ROWS(SORTBY(NA(),C1:C3,{1;-1}))` is 2; probes/sortby-lifted-element-corners F7,
         // excel-graph, T-2349).
-        let data = self.eval_to_array(&args[0], cell);
+        // A lone blank cell stays blank (`SORTBY(Z1,Z1)&"x"` and `SORTBY(Z1,5)&"x"` are "x";
+        // probes/t4448-lone-blank-reshapers A3:D4, T-4448).
+        let data = self.eval_to_array_keep_blank(&args[0], cell);
         if data.as_ref().is_ok_and(|d| d.is_empty() || d[0].is_empty()) {
             return CalcResult::Array(vec![]);
         }
@@ -786,22 +671,22 @@ impl Model {
 
         if by_rows {
             let mut row_indices: Vec<usize> = (0..num_rows).collect();
-            sort_indices_pairwise(&mut row_indices, |a, b| {
-                first_unequal(
-                    sort_keys.iter().map(|(key, ascending)| {
+            stoppable(|| {
+                sort_indices_pairwise(&mut row_indices, |a, b| {
+                    first_unequal(sort_keys.iter().map(|(key, ascending)| {
                         sort_key_cmp(&key[a][0], &key[b][0], *ascending, cell)
-                    }),
-                )
+                    }))
+                });
             });
             CalcResult::Array(row_indices.iter().map(|&r| data[r].clone()).collect())
         } else {
             let mut col_indices: Vec<usize> = (0..num_cols).collect();
-            sort_indices_pairwise(&mut col_indices, |a, b| {
-                first_unequal(
-                    sort_keys.iter().map(|(key, ascending)| {
+            stoppable(|| {
+                sort_indices_pairwise(&mut col_indices, |a, b| {
+                    first_unequal(sort_keys.iter().map(|(key, ascending)| {
                         sort_key_cmp(&key[0][a], &key[0][b], *ascending, cell)
-                    }),
-                )
+                    }))
+                });
             });
             CalcResult::Array(
                 data.iter()

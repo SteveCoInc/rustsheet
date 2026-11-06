@@ -1,0 +1,54 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4049: the workbook holds a workbook-scoped N (=10); a sheet-scoped N on S (=1) is then defined through the API (Graph worksheets('S')/names/add). Does an unqualified =N on S keep the workbook name it was bound to at load, or take the new sheet-scoped one? FORMULATEXT shows how each reference reads after the add.",
+  "tags": [
+    "M8",
+    "syntax",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": "=N",
+        "A2": {
+          "entered": "=N"
+        },
+        "A3": "=S!N",
+        "A4": "=INDIRECT(\"N\")",
+        "B1": "=FORMULATEXT(A1)",
+        "B3": "=FORMULATEXT(A3)"
+      }
+    },
+    {
+      "name": "T",
+      "cells": {
+        "A1": "=N",
+        "A2": "=S!N",
+        "B2": "=FORMULATEXT(A2)"
+      }
+    }
+  ],
+  "names": {
+    "N": "=10"
+  },
+  "expected": {},
+  "check": [
+    "S!A1",
+    "S!A2",
+    "S!A3",
+    "S!A4",
+    "T!A1",
+    "T!A2",
+    "S!B1",
+    "S!B3",
+    "T!B2"
+  ],
+  "api_names": [
+    {
+      "name": "N",
+      "formula": "=1",
+      "sheet": "S"
+    }
+  ]
+}

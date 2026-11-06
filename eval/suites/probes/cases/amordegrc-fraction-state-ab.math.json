@@ -4,7 +4,12 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "4ac9436e74f463dbc33ed481ba4799fd755e4261baccb2983165b3bb42c79f7e"
+  "input_sha256": "4ac9436e74f463dbc33ed481ba4799fd755e4261baccb2983165b3bb42c79f7e",
+  "definitions": {
+   "AMORDEGRC": "46fbe91b5f5b4f82",
+   "SUM": "a929cc013d1216b5"
+  },
+  "arguments_sha256": "a39e730c311288d87bf075809d40a5b2c959fd5eb1ac507428840d2f4662d67c"
  },
  "sheets": {
   "Sheet1": {
@@ -12,6 +17,19 @@
     "t": "n",
     "v": "3.0",
     "f": "=SUM(1,2)"
+   },
+   "A3": {
+    "t": "n",
+    "v": "485.0",
+    "f": "=AMORDEGRC(2400,39679,39813,300,2,0.15,1)"
+   }
+  }
+ },
+ "skipped": {
+  "Sheet1": {
+   "A1": {
+    "f": "=AMORDEGRC(10000,39000,39400,500,0.3,0.3,0)",
+    "why": "no single value"
    }
   }
  }

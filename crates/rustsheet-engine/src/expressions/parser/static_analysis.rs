@@ -4,12 +4,14 @@ use crate::functions::lift::lifting_table_functions;
 use crate::functions::lookup_and_reference::lifts_into_references;
 use crate::functions::Function;
 use broadcast::{broadcast_shapes, static_analysis_operator_chain};
-use if_arm::{returns_range_arm, returns_single_cell_index};
+use if_arm::{indexes_one_reference_cell, returns_range_arm, returns_single_cell_index};
 use legacy::{
     add_argument_intersection, add_array_at, add_in_array_context, is_array_context,
     legacy_array_call_at, legacy_array_context, legacy_call_reads_a_value, let_returns_range,
     mark_legacy_reading,
 };
+use lifted::array_constant_context;
+use name_body::scalar_body;
 pub use redundant::remove_redundant_implicit_intersection;
 use redundant::remove_redundant_legacy_intersection;
 mod aggregate;
@@ -17,6 +19,7 @@ mod broadcast;
 mod if_arm;
 mod legacy;
 mod lifted;
+mod name_body;
 mod operand_array;
 mod redundant;
 mod reference_parameter;
@@ -30,8 +33,8 @@ use signature::{
     args_signature_ifs, args_signature_index, args_signature_lambda, args_signature_let,
     args_signature_lookup, args_signature_map, args_signature_match, args_signature_npv,
     args_signature_offset, args_signature_one_vector, args_signature_pivotby,
-    args_signature_randarray, args_signature_reduce, args_signature_row, args_signature_scalars,
-    args_signature_scan, args_signature_sumif, args_signature_textafter, args_signature_textsplit,
+    args_signature_reduce, args_signature_row, args_signature_scalars, args_signature_scan,
+    args_signature_sumif, args_signature_textafter, args_signature_textsplit,
     args_signature_trimrange, args_signature_xlookup, args_signature_xmatch, Signature,
 };
 
@@ -209,9 +212,10 @@ pub(super) fn add_legacy_intersection(node: &mut Node, add: bool, arrays: bool) 
         // `=ABS(@Z30:Z32)+@swOne`; probes/legacy-at-defined-name-dynamic-funcs A20-V20), and so
         // does a defined-name lambda's call (`=ABS(@Z30:Z32)+@myId(1)`, probes/legacy-at-dynamic-
         // funcs-2 AE; T-2440). The call of a LET-bound one removes every `@`
-        // (`removes_automatic_at`).
+        // (`removes_automatic_at`). A name whose body is one literal or one cell takes none, as
+        // that body would not (`scalar_body`, T-3856).
         Node::DefinedNameKind(_) | Node::NamedFunctionKind { .. } => {
-            if add {
+            if add && scalar_body(node).is_none() {
                 *node = Node::automatic_at(node.clone());
             }
         }
@@ -229,9 +233,11 @@ pub(super) fn add_legacy_intersection(node: &mut Node, add: bool, arrays: bool) 
             for index in 0..args.len() {
                 // Fixed-length signatures (D-functions, SMALL, ...) can be shorter than `args`; an
                 // extra argument is not scalar (indexing it panicked; found by fuzzing, T-0021).
+                let (constant_signature, constant_arrays) =
+                    array_constant_context(kind, signature.get(index), index, args, arrays);
                 let arrays = legacy_array_context(kind, signature.get(index), index, args, arrays);
                 let arg = &mut args[index];
-                add_array_at(kind, signature.get(index), index, arg, arrays);
+                add_array_at(kind, constant_signature, index, arg, constant_arrays);
                 add_argument_intersection(kind, signature.get(index), index, arg, arrays);
             }
             if arrays {
@@ -367,7 +373,9 @@ pub(crate) fn run_static_analysis_on_node(node: &Node) -> StaticResult {
         | Node::OpPowerKind { .. }
         | Node::CompareKind { .. } => static_analysis_operator_chain(node),
 
-        // Defined names: their shape is not tracked.
+        // Defined names: their shape is not tracked, but for a body of one literal or one cell
+        // (`scalar_body`, T-3856).
+        Node::DefinedNameKind(_) if scalar_body(node).is_some() => StaticResult::Scalar,
         Node::DefinedNameKind(_) => StaticResult::Unknown,
         Node::NamedVariableKind { .. } | Node::ImplicitIntersection { .. } => StaticResult::Scalar,
         Node::FunctionKind { kind, args } => static_analysis_on_function(kind, args),
@@ -402,8 +410,9 @@ fn criteria_static_result(args: &[Node], first: usize) -> StaticResult {
     broadcast_static_result(args.iter().skip(first).step_by(2))
 }
 
-/// COUNTIF, COUNTIFS, SUMIF, SUMIFS, AVERAGEIF and MAXIFS also call themselves once per element of
-/// an array of references in a range argument (`Function::per_reference_element`; SPEC-0014 rule 6,
+/// COUNTIF, COUNTIFS, SUMIF, SUMIFS, AVERAGEIF, AVERAGEIFS, MAXIFS and MINIFS also call themselves
+/// once per element of an array of references in a range argument
+/// (`Function::per_reference_element`; SPEC-0014 rule 6,
 /// `COUNTIF(OFFSET(A1,{0;1},0),">0")` spills 1, 1, probes/reference-lift-consumers E57): a range
 /// argument that is a lifted OFFSET or INDIRECT gives the shape, the criteria
 /// (`args[first]`, `args[first + 2]`, ...) only without one. Anything else does not:
@@ -515,7 +524,6 @@ fn fallback_signature(kind: &Function, arg_count: usize) -> Option<Vec<Signature
         Function::Map => args_signature_map(arg_count),
         Function::Reduce => args_signature_reduce(arg_count),
         Function::Scan => args_signature_scan(arg_count),
-        Function::Randarray => args_signature_randarray(arg_count),
         Function::Textsplit => args_signature_textsplit(arg_count),
         Function::Concat => vec![Signature::Vector; arg_count],
         Function::Lower => args_signature_scalars(arg_count, 1, 0),
@@ -738,7 +746,9 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Chooserows => StaticResult::Unknown,
         Function::Hlookup => aggregate::lookup_static_result(args), // T-0270, T-1269
         Function::Hstack => StaticResult::Unknown,
-        // INDEX has two forms, but they are indistinguishable at parse time.
+        // One cell by literal indexes (T-3856); otherwise INDEX has two forms, but they are
+        // indistinguishable at parse time.
+        Function::Index if indexes_one_reference_cell(args) => StaticResult::Scalar,
         Function::Index => StaticResult::Unknown,
         Function::Indirect => reference_result::static_analysis_indirect(args),
         // Spills by lookup_value; the vectors are consumed (T-1241).
@@ -768,7 +778,6 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Getpivotdata => broadcast_static_result(args.iter().skip(3).step_by(2)),
         Function::Map | Function::Reduce => StaticResult::Unknown,
         Function::Scan => StaticResult::Unknown,
-        Function::Randarray => StaticResult::Unknown,
         Function::Textsplit => StaticResult::Unknown,
         Function::Concat => not_implemented(args),
         // UPPER/LOWER broadcast element-wise: an array/range argument yields an array.
@@ -798,14 +807,14 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Averagea => not_implemented(args),
         Function::Avedev => not_implemented(args),
         Function::Averageif => criteria_and_grid_static_result(kind, args, 1),
-        Function::Averageifs => criteria_static_result(args, 2),
+        Function::Averageifs => criteria_and_grid_static_result(kind, args, 2),
         Function::Count => not_implemented(args),
         Function::Counta => not_implemented(args),
         Function::Countblank => reference_parameter::countblank_static_result(args),
         Function::Countif => criteria_and_grid_static_result(kind, args, 1),
         Function::Countifs => criteria_and_grid_static_result(kind, args, 1),
         Function::Maxifs => criteria_and_grid_static_result(kind, args, 2),
-        Function::Minifs => criteria_static_result(args, 2),
+        Function::Minifs => criteria_and_grid_static_result(kind, args, 2),
         Function::Now => not_implemented(args),
         Function::Today => not_implemented(args),
         Function::Subtotal => aggregate::subtotal_static_result(args),

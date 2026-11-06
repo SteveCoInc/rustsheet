@@ -343,8 +343,8 @@ fn legacy_value_arguments_intersect_and_export_unchanged() {
         ),
         (
             "SUM([1]Uses!$A$2:$A$3+0)",
-            "SUM(@'[1]Uses'!$A$2:$A$3+0)",
-            "SUM('[1]Uses'!$A$2:$A$3+0)",
+            "SUM(@[1]Uses!$A$2:$A$3+0)",
+            "SUM([1]Uses!$A$2:$A$3+0)",
         ),
     ]);
 }
@@ -484,6 +484,27 @@ fn lift_arrays_arguments_get_no_at_on_a_bare_range() {
             "SUMPRODUCT(EDATE(A1:A60,1))",
             "SUMPRODUCT(EDATE(A1:A60,1))",
         ),
+    ]);
+}
+
+// An array constant in a `LiftArrays` argument takes the `@` of a scalar argument, with one
+// element or several and under a sign, so the call itself takes none; a bare range still takes
+// none (probes/iseven-isodd-range-derived-arrays Leg!A3, C3, F3:N3, excel-graph, T-4528).
+#[test]
+fn lift_arrays_arguments_intersect_array_constants() {
+    check(&[
+        ("ISEVEN({5})", "ISEVEN(@{5})", "ISEVEN({5})"),
+        ("ISEVEN({2;3})", "ISEVEN(@{2;3})", "ISEVEN({2;3})"),
+        ("ISODD({2,3})", "ISODD(@{2,3})", "ISODD({2,3})"),
+        ("ISEVEN(-{5})", "ISEVEN(-@{5})", "ISEVEN(-{5})"),
+        (
+            "EDATE({45000;45031},1)",
+            "EDATE(@{45000;45031},1)",
+            "EDATE({45000;45031},1)",
+        ),
+        ("BIN2DEC({101})", "BIN2DEC(@{101})", "BIN2DEC({101})"),
+        ("QUOTIENT({7},2)", "QUOTIENT(@{7},2)", "QUOTIENT({7},2)"),
+        ("ISEVEN(A1:A60)", "ISEVEN(A1:A60)", "ISEVEN(A1:A60)"),
     ]);
 }
 

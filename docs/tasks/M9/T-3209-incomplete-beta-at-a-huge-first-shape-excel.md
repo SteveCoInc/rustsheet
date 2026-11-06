@@ -37,6 +37,10 @@ reproducing Excel's own algorithm where Excel is the inaccurate one).
 
 - Gap triage 2026-11-04: the band's Gate B face, gen-m9 7bd219ec0c0c5e22 A349 `FDIST(7,10,1E+8)` (b = 5), is T-4018's,
   on T-4017's sweep over df1 2 to 79. A model T-4018 lands should be checked on this task's 22 cells.
+- probes-numeric/t4080-beta-num-band-edge b = 40 cells A21:B21, A42:B42, B63, A84:B84, A105:B105, A126:B126, B147, A168:B168, A189:B189, A210:B210, A231:B231, A252:B252, A273:B273, A294:B294 (T-4080): ours 1.3E-9 to 4.6E-8 relative off Excel at a = 2E9 to 1E10 (26 cells; A63 and A147 pass within tolerance).
+  Gap triage 2026-11-04 (origin/main b450050f8) moved these cells to T-4214 (decision 0267 Tier A, live). Against
+  60-digit mpmath it is Excel that is 5E-10 to 4.6E-8 off at b = 40, and ours is within 1E-14. b0 = 40 leaves L140 for
+  bfrac, so this task's bgrat is not their path.
 
 ## Acceptance criteria
 - [ ] The 22 cells are within half a unit of the 15th digit of Excel (a model of Excel's bgrat at these points).
@@ -48,10 +52,14 @@ reproducing Excel's own algorithm where Excel is the inaccurate one).
 
 ## Evidence (T-4017)
 Sweep cases, whose visibly-off cells (the F tails above the mean at df1 other than 5, in the same band) this task owns:
-- probes-numeric/t4017-f-huge-df2-above-mean-1e7.case.json
+- probes-numeric/t4017-f-huge-df2-above-mean-1e7.case.json (T-3754 moved 46 of its visibly-off cells into 15 digits by
+  taking L140 bup+bgrat up to a0 = 1E7; docs/research/t3754)
 - probes-numeric/t4017-f-huge-df2-above-mean-3e7.case.json
 - probes-numeric/t4017-f-huge-df2-above-mean-1e8.case.json
 - probes-numeric/t4017-f-huge-df2-above-mean-3e8.case.json
 - probes-numeric/t4017-f-huge-df2-above-mean-1e9.case.json
 - probes-numeric/t4017-f-huge-df2-above-mean-1e10.case.json
+- probes-numeric/t4045-f-dist-rt-zero-cut.case.json: Calc!E3 (`FDIST(1.5,80,1E10)`, 4E-8 relative off; T-4045)
+- probes-numeric/t4045-f-dist-rt-zero-cut.case.json: Calc!A1:A17, B1:B18, C1:C14, E2, E5 (F.DIST.RT and FDIST tails 1E-271 to 1E-291 at df2 1E7 or 1E8, Excel and ours each 1E-14 to 2E-13 off the math, 13th-14th digit apart; residue13, decision 0267; found unowned by the 2026-11-06 gap triage)
+- probes/t4045-f-dist-rt-zero-cut-fresh.case.json: Calc!A1:A8, B1:B9, C1:C9, D1:D8, E1:E8, F1:F9 (F.DIST.RT tails near 1E-285, last digits; T-4045)
 See (docs/excel-semantics/statistics.md, "Incomplete beta at a huge first shape").

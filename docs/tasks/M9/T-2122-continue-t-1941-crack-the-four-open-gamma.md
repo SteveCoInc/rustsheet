@@ -29,6 +29,9 @@ Every other piece of GAMMA, GAMMALN and LN is already bit-exact or reduces exact
   - K3: `w5/p5` / `w5/p4/ss_fc.txt`, 0.33. Ladder probes `kmyst-gam-k3l*` are filling, with an unwrap tool ready.
   - (1.5,2]: W6's chain in `w6/data/`, 42.7% exact on R.
 - Engine shipping of the current best models was T-2123, split into T-2128 (GAMMALN) and T-2129 (GAMMA); `gamma_kernels.rs` holds the coefficient arrays to swap.
+- T-4070 (docs/research/t4070/RESULTS.md): GAMMALN's last digits below 2 are the only cause left of bpser's b0 >= 8
+  shortfall on t2464-r2-bpser-small-shapes (A9491, A9492, GAMMALN(0.186)) and of the 196 T-2505-moved cells the model
+  gets and the engine does not. A GAMMALN fix there moves those BETA.DIST cells too.
 
 ## How to run (restart prompt)
 Paste this to a fresh coordinator session (Opus, auto mode), on the research branch above:

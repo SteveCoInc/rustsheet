@@ -7,9 +7,10 @@ the working precision. Definitions register themselves in `REGISTRY` from `defs/
 
 from __future__ import annotations
 
+import contextlib
 import math
 import random
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import Literal, TypeAlias
 
@@ -17,10 +18,25 @@ import mpmath
 
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 
-Kind = Literal["real", "int", "bool", "array", "matrix"]
-MathArg: TypeAlias = "mpmath.mpf | bool | tuple[mpmath.mpf, ...] | tuple[tuple[mpmath.mpf, ...], ...]"
-"""An argument as the math sees it: the exact double (or integer) of the literal, a logical, an
-array literal's elements, or a matrix literal's rows."""
+Kind = Literal["real", "int", "bool", "array", "matrix", "text"]
+MathArg: TypeAlias = (
+    "mpmath.mpf | mpmath.mpc | bool | str | tuple[mpmath.mpf, ...] | tuple[tuple[mpmath.mpf, ...], ...]"
+)
+"""An argument as the math sees it: the exact double (or integer) of the literal, a logical, a complex
+number text's parsed parts (an `mpc` of the two exact doubles), a fixed-list text itself, an array
+literal's elements, or a matrix literal's rows."""
+
+NON_REAL = (bool, str, tuple, mpmath.mpc)
+"""The `MathArg` members that are not a real (a logical, a text, an array or matrix, a complex number's parts): the one
+`isinstance` tuple that narrows an argument to a real (`defs/_common.is_real` and `real_arg`), so a new `MathArg`
+member is added here only (T-4592)."""
+
+
+class Unfit(str):
+    """Why an eval cell's argument does not fit its parameter (`eval_math.fit_arg`): a reason, told
+    apart from a fitted text argument, which is a plain str (T-4084)."""
+
+    __slots__ = ()
 
 
 class DomainError(ValueError):
@@ -30,6 +46,41 @@ class DomainError(ValueError):
 class NoValueError(ValueError):
     """The point has no single math value to record (an overflow, or several roots with no
     evidenced root choice): the sampler redraws or drops it."""
+
+
+class OverBudgetError(Exception):
+    """A point's math spent more than its work budget (`work_budget`): the generator drops it. The
+    budget counts series terms, not seconds, so the same point is dropped on every machine (T-3680)."""
+
+
+_WORK: dict[str, int | None] = {"spent": 0, "limit": None}
+
+
+@contextlib.contextmanager
+def work_budget(limit: int | None) -> Iterator[None]:
+    """Counts the `spend` calls of the block against `limit` (None: count only)."""
+    saved = dict(_WORK)
+    _WORK.update(spent=0, limit=limit)
+    try:
+        yield
+    finally:
+        _WORK.update(saved)
+
+
+def spend(units: int = 1) -> None:
+    """Spends `units` of the current work budget; OverBudgetError once it is exceeded. A summed
+    expansion calls it once per term, so a slow point stops at the same term everywhere."""
+    spent = (_WORK["spent"] or 0) + units
+    _WORK["spent"] = spent
+    limit = _WORK["limit"]
+    if limit is not None and spent > limit:
+        msg = f"over the work budget of {limit} terms"
+        raise OverBudgetError(msg)
+
+
+def work_spent() -> int:
+    """The units spent so far in the current `work_budget` block."""
+    return _WORK["spent"] or 0
 
 
 @dataclass(frozen=True)
@@ -65,6 +116,15 @@ class Param:
     negative POISSON.DIST mean); unlike a domain bound it claims nothing about Excel, so it gets no
     edge points. An `optional` parameter (trailing ones only) may be left out of a call, as ERF's
     `upper_limit`: a point then has fewer arguments, and only a definition's own `draw` omits one.
+    `truncates` cites the semantics entry showing that Excel truncates a non-integer given to this
+    `int` parameter toward zero (F.DIST's, T.DIST's and CHISQ.INV.RT's df); without one an eval cell that passes a
+    non-integer gets no math value, since whether Excel truncates is per function.
+    A `text` parameter (T-4084) is written as a string literal. With `choices` (distinct, non-empty
+    texts; an empty tuple is refused) it is drawn from that
+    fixed list (CONVERT's unit names, engineering.md "CONVERT unit names") and the math receives the
+    text; without (None), it is a complex number's text `a+bi` / `a-bj` whose two parts are drawn as reals
+    over this parameter's domain and ranges (engineering.md "Leading plus in IM*..."), and the math
+    receives the parsed parts as an `mpc`.
     """
 
     name: str
@@ -76,6 +136,25 @@ class Param:
     source: str = ""
     draw_hi: float | None = None
     optional: bool = False
+    truncates: str = ""
+    choices: tuple[str, ...] | None = None
+
+    def __post_init__(self) -> None:
+        if self.choices is not None and self.kind != "text":
+            msg = f"{self.name}: only a text parameter takes choices"
+            raise ValueError(msg)
+        if self.choices is not None and self.kind == "text":
+            if not self.choices:
+                msg = f"{self.name}: empty choices (leave them out for a complex number)"
+                raise ValueError(msg)
+            if "" in self.choices or len(set(self.choices)) != len(self.choices):
+                msg = f"{self.name}: choices must be distinct, non-empty texts"
+                raise ValueError(msg)
+
+    @property
+    def is_complex(self) -> bool:
+        """Whether this is a complex number's text (a `text` parameter without `choices`)."""
+        return self.kind == "text" and self.choices is None
 
     def finite_bounds(self) -> list[tuple[float, bool, bool]]:
         """The finite domain bounds as (value, open, is_lower)."""
@@ -105,7 +184,14 @@ class Definition:
     the 1900 date system (YEARFRAC's calendar, HOUR's last-date bound): an eval cell in a 1904
     workbook gets no math value (T-3678). With `indexed` the function returns an array and a point
     is one element of it: the last two parameters are INDEX's row and column, and the cell is
-    `=INDEX(FUNC(other args),row,column)` (MINVERSE, MMULT; T-3686)."""
+    `=INDEX(FUNC(other args),row,column)` (MINVERSE, MMULT; T-3686). With `literal_arrays` an eval cell
+    gets a math value only where every array parameter is written as an array literal: the math does not
+    model what a range adds (AGGREGATE's hidden rows and the options that skip them; T-3693).
+    `call_params` are trailing optional parameters an eval cell may pass but the sampler never draws
+    (BETA.DIST's and BETA.INV's bounds, RATE's guess; T-3923): `params_for` accepts them after
+    `params`, and `value` receives them when the call gives them. `rescaled_param` names the parameter
+    they rescale (BETA.DIST's x, which [A, B] moves off [0, 1]): when a call gives call parameters,
+    that parameter's interval is not checked, and `domain` checks it instead."""
 
     function: str
     params: tuple[Param, ...]
@@ -119,8 +205,14 @@ class Definition:
     variadic: bool = False
     serials_1900: bool = False
     indexed: bool = False
+    literal_arrays: bool = False
+    call_params: tuple[Param, ...] = ()
+    rescaled_param: str | None = None
 
     def __post_init__(self) -> None:
+        if self.call_params and self.variadic:
+            msg = f"{self.function}: a variadic definition takes no call parameters"
+            raise ValueError(msg)
         flags = [p.optional for p in self.params]
         if flags != sorted(flags):
             msg = f"{self.function}: an optional parameter is followed by a required one"
@@ -135,21 +227,22 @@ class Definition:
 
     def params_for(self, count: int) -> tuple[Param, ...]:
         """The parameters a call with `count` arguments passes: every required one and the first
-        optional ones, with a variadic definition's last parameter repeated to fill `count`.
-        ValueError when `count` is fewer than the required, or more than all for a definition
-        that is not variadic."""
+        optional ones (then the first `call_params`), with a variadic definition's last parameter
+        repeated to fill `count`. ValueError when `count` is fewer than the required, or more than
+        all for a definition that is not variadic."""
+        every = self.params + self.call_params
         required = sum(1 for p in self.params if not p.optional)
-        if count < required or (count > len(self.params) and not self.variadic):
+        if count < required or (count > len(every) and not self.variadic):
             if self.variadic:
                 takes = f"at least {required}"
-            elif required == len(self.params):
+            elif required == len(every):
                 takes = f"{required}"
             else:
-                takes = f"{required} to {len(self.params)}"
+                takes = f"{required} to {len(every)}"
             msg = f"{self.function} takes {takes} arguments, not {count}"
             raise ValueError(msg)
-        if count <= len(self.params):
-            return self.params[:count]
+        if count <= len(every):
+            return every[:count]
         return self.params + (self.params[-1],) * (count - len(self.params))
 
     def numeric_arity(self) -> int:
@@ -158,12 +251,21 @@ class Definition:
 
     def check_domain(self, args: Sequence[MathArg]) -> None:
         """Raises `DomainError` when `args` are outside the parameters' intervals or `domain`."""
+        rescaled = self.rescaled_param if len(args) > len(self.params) else None
         for p, a in zip(self.params_for(len(args)), args, strict=True):
-            if p.kind in ("bool", "array", "matrix") or isinstance(a, (bool, tuple)):
-                continue  # an array's or a matrix's rules are the definition's `domain`
-            if not p.domain.contains(float(a)):
-                msg = f"{p.name} outside {p.domain.describe()}"
-                raise DomainError(msg)
+            if isinstance(a, mpmath.mpc):  # a complex number's parts each take the parameter's interval
+                parts = [a.real, a.imag]
+            elif (
+                p.kind in ("bool", "array", "matrix", "text") or isinstance(a, NON_REAL) or p.name == rescaled
+            ):
+                # an array's or a matrix's rules, a list text's and a rescaled parameter's are the definition's `domain`
+                continue
+            else:
+                parts = [a]
+            for part in parts:
+                if not p.domain.contains(float(part)):
+                    msg = f"{p.name} outside {p.domain.describe()}"
+                    raise DomainError(msg)
         if self.domain is not None and (why := self.domain(args)) is not None:
             raise DomainError(why)
 
@@ -240,3 +342,34 @@ def solve_log_bracket(f: Callable[[mpmath.mpf], mpmath.mpf], lo: float, hi: floa
     except NoValueError as err:
         msg = f"quantile outside the double range ({err})"
         raise NoValueError(msg) from err
+
+
+def solve_smaller_tail(
+    p: mpmath.mpf,
+    lower_tail: Callable[[mpmath.mpf], mpmath.mpf],
+    upper_tail: Callable[[mpmath.mpf], mpmath.mpf] | None,
+    lo: float,
+    hi: float,
+    *,
+    upper: bool = False,
+) -> mpmath.mpf:
+    """The s in [lo, hi] with tail(e^s) = min(p, 1 - p) for a quantile of probability `p` (0 < p < 1): the smaller
+    tail is solved in log scales, ln tail(e^s) = ln q, so a 1E-300 tail is as well conditioned as the centre.
+    `lower_tail` and `upper_tail` map x = e^s to P(X ≤ x) and P(X > x). With `upper`, `p` is itself an upper-tail
+    probability, Q(x) = p. `upper_tail` may be None for a quantile that only ever solves the lower tail.
+    NoValueError when the root is not in the bracket (see `solve_log_bracket`)."""
+    small = p <= mpmath.mpf(1) / 2
+    lower = small != upper
+    target = mpmath.log(p if small else 1 - p)
+
+    def f(s: mpmath.mpf) -> mpmath.mpf:
+        x = mpmath.exp(s)
+        if lower:
+            return mpmath.log(lower_tail(x)) - target
+        if upper_tail is None:
+            msg = "the upper tail is needed here but no upper_tail function was given"
+            raise ValueError(msg)
+        # the lower tail grows with s and the upper falls: f has opposite signs on the bracket ends
+        return target - mpmath.log(upper_tail(x))
+
+    return solve_log_bracket(f, lo, hi)

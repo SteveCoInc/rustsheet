@@ -283,20 +283,20 @@
     "v": 0.04165509259259259
    },
    "A73": {
-    "t": "e",
-    "v": "#NUM!"
+    "t": "n",
+    "v": 0.7548611111111114
    },
    "A74": {
     "t": "n",
     "v": 0.24444444444444446
    },
    "A75": {
-    "t": "e",
-    "v": "#NUM!"
+    "t": "n",
+    "v": 0.7548611111111114
    },
    "A76": {
-    "t": "e",
-    "v": "#NUM!"
+    "t": "n",
+    "v": 0.7959143518518519
    },
    "A77": {
     "t": "n",
@@ -332,8 +332,8 @@
   "application": "Excel for the web (Graph)",
   "input_sha256": "4cdc6d6c9eb591d6ffae64da1ec9985f0ab50133bb2d36a24a10b9f7df881aa7",
   "kind": "excel-graph",
-  "produced_at": "2026-10-21T19:35:23+00:00",
+  "produced_at": "2026-11-04T02:28:49+00:00",
   "version": null,
-  "workbook_name": "9e81977a98fcde648731b54c2b10f6c26b26eedc1fc530ed120bf4050660b63f.xlsx"
+  "workbook_name": "b3b2545000b4dbdfefd3901f4b56feed0ac81614ef2586cf2141b0ef56d3a2ba.xlsx"
  }
 }

@@ -12,7 +12,7 @@ mod database;
 pub(crate) mod date_and_time;
 mod engineering;
 mod financial;
-mod information;
+pub(crate) mod information;
 pub(crate) mod kinds;
 pub(crate) mod lift;
 pub(crate) mod logical;
@@ -2172,6 +2172,6 @@ impl Model {
             Function::SkewP => Self::fn_skew_p,
             Function::Small => Self::fn_small,
         };
-        self.call_by_reference_elements(kind, args, cell, implementation)
+        self.call_with_order_effects(kind, args, cell, implementation)
     }
 }

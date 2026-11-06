@@ -25,7 +25,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars
+from rustsheet_tools.accuracy.defs._common import real_args, signed, square_overflows
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -36,20 +36,16 @@ SQUARE_BAND = (1.3e154, 1.35e154)  # x*x overflows in here (inferred, unprobed);
 SQUARE_SAFE = SQUARE_BAND[0]
 
 
-def _square_overflows(args: Sequence[MathArg]) -> str | None:
+def _square_overflow(args: Sequence[MathArg]) -> str | None:
     """ASINH and ACOSH: `#NUM!` once x*x overflows a double (the formula's own square)."""
-    (x,) = scalars(args)
-    return "x*x overflows a double" if math.isinf(float(x) * float(x)) else None
+    (x,) = real_args(args)
+    return "x*x overflows a double" if square_overflows(float(x)) else None
 
 
 def _outside_unit(args: Sequence[MathArg]) -> str | None:
     """ACOTH: |x| > 1 (`ACOTH(1)`, `ACOTH(-1)` and |x| < 1 are `#NUM!`)."""
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "ACOTH needs |x| > 1" if abs(x) <= 1 else None
-
-
-def _signed(rng: random.Random, magnitude: float) -> float:
-    return -magnitude if rng.random() < 0.5 else magnitude
 
 
 def _outside_band(x: float) -> float:
@@ -73,7 +69,7 @@ def _asinh_draw(stratum: str, rng: random.Random) -> list[Arg]:
         x = log_uniform(rng, 1e-300, SQUARE_SAFE)
     else:
         x = rng.uniform(0, 10)
-    return [_outside_band(_signed(rng, x))]
+    return [_outside_band(signed(rng, x))]
 
 
 def _acosh_draw(stratum: str, rng: random.Random) -> list[Arg]:
@@ -101,7 +97,7 @@ def _atanh_draw(stratum: str, rng: random.Random) -> list[Arg]:
         x = log_uniform(rng, 1e-300, 0.999999999999999)
     else:
         x = rng.uniform(0, 1)
-    return [_signed(rng, x)]
+    return [signed(rng, x)]
 
 
 def _acoth_draw(stratum: str, rng: random.Random) -> list[Arg]:
@@ -115,7 +111,7 @@ def _acoth_draw(stratum: str, rng: random.Random) -> list[Arg]:
         x = log_uniform(rng, 1.000001, MAX_LITERAL)
     else:
         x = rng.uniform(1.000001, 10)
-    return [_signed(rng, x)]
+    return [signed(rng, x)]
 
 
 def _definition(
@@ -128,7 +124,7 @@ def _definition(
     domain_check: Callable[[Sequence[MathArg]], str | None] | None = None,
 ) -> Definition:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
-        (x,) = scalars(args)
+        (x,) = real_args(args)
         return kernel(x)
 
     return register(
@@ -144,7 +140,7 @@ def _definition(
 
 
 ASINH = _definition(
-    "ASINH", mpmath.asinh, Interval(), _asinh_draw, (FORMULA_SOURCE,), domain_check=_square_overflows
+    "ASINH", mpmath.asinh, Interval(), _asinh_draw, (FORMULA_SOURCE,), domain_check=_square_overflow
 )
 ACOSH = _definition(
     "ACOSH",
@@ -152,7 +148,7 @@ ACOSH = _definition(
     Interval(1, lo_open=False),
     _acosh_draw,
     (DOMAIN_SOURCE, FORMULA_SOURCE),
-    domain_check=_square_overflows,
+    domain_check=_square_overflow,
 )
 ATANH = _definition("ATANH", mpmath.atanh, Interval(-1, 1), _atanh_draw, (DOMAIN_SOURCE,))
 ACOTH = _definition(

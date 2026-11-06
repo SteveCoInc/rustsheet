@@ -172,3 +172,35 @@ fn period_payments_split_the_discounted_payment() {
     // A discount below the normal range is a PPMT of 0 (probes/fin-ppmt-discount-underflow F1).
     assert_eq!(split(7.0, 1.0, 341.0, 1.0, 0.0, false).1, Ok(0.0));
 }
+
+/// IPMT is `#NUM!` where its discounted split has no balance or factor: `A = (pv+fv)/(1-Q)` past
+/// the double range, `1-Q` below the normal range, or a subnormal rate; period 1 of type 1 stays
+/// 0, and a subnormal interest is a true 0 (probes/t4314-ipmt-balance-overflow,
+/// probes-numeric/t3523-ipmt-selector-sweep; financial.md "IPMT is #NUM! where its discounted
+/// balance fails").
+#[test]
+fn interest_errs_where_the_discounted_balance_fails() {
+    let ipmt = |r, per, n, pv, fv, t| period_payments(r, per, n, pv, fv, t).0;
+    let subnormal = 7.245_817e-308 - 6.217_028e-308;
+    assert_eq!(ipmt(0.5, 1.0, 2.0, 9.9e307, 0.0, false), Ok(-4.95e307));
+    assert_eq!(ipmt(0.5, 1.0, 2.0, 1e308, 0.0, false), Err(Error::NUM));
+    assert_eq!(ipmt(0.5, 1.0, 2.0, 0.0, 1e308, false), Err(Error::NUM));
+    assert_eq!(ipmt(0.5, 2.0, 2.0, 1e308, 0.0, true), Err(Error::NUM));
+    assert_eq!(ipmt(0.5, 1.0, 2.0, 1e308, -1e308, false), Ok(-5e307));
+    assert_eq!(
+        ipmt(subnormal, 2.0, 1e9, 1e-10, 0.0, false),
+        Err(Error::NUM)
+    );
+    assert_eq!(
+        ipmt(subnormal, 1.0, 1e9, 1e-10, 0.0, false),
+        Err(Error::NUM)
+    );
+    assert_eq!(ipmt(subnormal, 2.0, 1e9, 1e-10, 0.0, true), Err(Error::NUM));
+    assert_eq!(ipmt(subnormal, 1.0, 1e9, 1e-10, 0.0, true), Ok(0.0));
+    assert_eq!(
+        ipmt(1e-300, 1.0, 1e-10, 1e-300, 0.0, false),
+        Err(Error::NUM)
+    );
+    let tiny = ipmt(2.225_073_858_507_3e-308, 2.0, 1e9, 1e-10, 0.0, false);
+    assert!(tiny.is_ok_and(|v| v == 0.0 && v.is_sign_positive()));
+}

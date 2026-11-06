@@ -250,6 +250,8 @@ fn a_defined_name_span_shrinks_too() {
             name: "Span".to_string(),
             formula: "Jan:Mar!$A$1".to_string(),
             sheet_id: None,
+            hidden: false,
+            comment: None,
         });
     model.model.reset_parsed_structures();
     assert_eq!(calc_a1(&model), text_and_value("=SUM(Span)", "60"));
@@ -260,4 +262,111 @@ fn a_defined_name_span_shrinks_too() {
     model.undo().unwrap();
     assert_eq!(model.get_defined_name_list()[0].2, "Jan:Mar!$A$1");
     assert_eq!(calc_a1(&model), text_and_value("=SUM(Span)", "60"));
+}
+
+// T-4272: a backwards span, sheet deletes and row and column edits inside a span.
+
+#[test]
+fn a_backwards_span_reads_in_tab_order() {
+    // probes/sheet-ops/t4272-3d-span-backwards: Excel shows `Mar:Jan` as `Jan:Mar`.
+    let model = months_model("=SUM(Mar:Jan!A1)");
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Mar!A1)", "60"));
+}
+
+#[test]
+fn a_backwards_span_shrinks_like_a_forward_one() {
+    // probes/sheet-ops/t4272-3d-span-backwards-move-first: moving Mar first gives `Jan:Feb`.
+    let mut model = months_model("=SUM(Mar:Jan!A1)");
+    model.move_sheet(3, 1).unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Feb!A1)", "30"));
+}
+
+#[test]
+fn moving_the_first_sheet_of_a_two_sheet_span_last_leaves_the_other() {
+    // probes/sheet-ops/t4272-3d-span-move-two-sheet-start-last: Excel writes `Feb!A1`.
+    let mut model = months_model("=SUM(Jan:Feb!A1)");
+    model.move_sheet(1, 3).unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Feb!A1)", "20"));
+    model.undo().unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Feb!A1)", "30"));
+}
+
+#[test]
+fn deleting_the_last_sheet_of_a_span_shrinks_it() {
+    // probes/sheet-ops/t4272-3d-span-delete-end: Excel writes `Jan:Feb` (30).
+    let mut model = months_model("=SUM(Jan:Mar!A1)");
+    model.delete_sheet(3).unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Feb!A1)", "30"));
+    model.undo().unwrap();
+    assert_eq!(sheet_names(&model), ["Calc", "Jan", "Feb", "Mar"]);
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Mar!A1)", "60"));
+    model.redo().unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Feb!A1)", "30"));
+}
+
+#[test]
+fn deleting_the_first_sheet_of_a_span_shrinks_it() {
+    // probes/sheet-ops/t4272-3d-span-delete-start: Excel writes `Feb:Mar` (50).
+    let mut model = months_model("=SUM(Jan:Mar!A1)");
+    model.delete_sheet(1).unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Feb:Mar!A1)", "50"));
+    model.undo().unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Mar!A1)", "60"));
+}
+
+#[test]
+fn deleting_a_middle_sheet_keeps_the_span() {
+    // probes/sheet-ops/t4272-3d-span-delete-middle.
+    let mut model = months_model("=SUM(Jan:Mar!A1)");
+    model.delete_sheet(2).unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Mar!A1)", "40"));
+}
+
+#[test]
+fn deleting_an_end_of_a_two_sheet_span_leaves_a_plain_reference() {
+    // probes/sheet-ops/t4272-3d-span-delete-two-sheet-end: Excel writes `Jan!A1`.
+    let mut model = months_model("=SUM(Jan:Feb!A1)");
+    model.delete_sheet(2).unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan!A1)", "10"));
+    model.undo().unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Feb!A1)", "30"));
+}
+
+#[test]
+fn a_defined_name_span_shrinks_on_a_delete() {
+    // probes/sheet-ops/t4272-3d-span-delete-start A3 (`=SUM(Span)`).
+    let mut model = months_model("=SUM(Span)");
+    model
+        .model
+        .workbook
+        .defined_names
+        .push(crate::types::DefinedName {
+            name: "Span".to_string(),
+            formula: "Jan:Mar!$A$1".to_string(),
+            sheet_id: None,
+            hidden: false,
+            comment: None,
+        });
+    model.model.reset_parsed_structures();
+    model.delete_sheet(1).unwrap();
+    assert_eq!(model.get_defined_name_list()[0].2, "Feb:Mar!$A$1");
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Span)", "50"));
+    model.undo().unwrap();
+    assert_eq!(model.get_defined_name_list()[0].2, "Jan:Mar!$A$1");
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Span)", "60"));
+}
+
+#[test]
+fn row_and_column_edits_inside_a_span_do_not_shift_it() {
+    // probes/sheet-ops/t4272-3d-span-jan-insert-row, -jan-delete-row, -feb-insert-column: the
+    // span keeps `A1` and reads what is there now.
+    let mut model = months_model("=SUM(Jan:Mar!A1)");
+    model.insert_rows(1, 1, 1).unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Mar!A1)", "50"));
+    model.undo().unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Mar!A1)", "60"));
+    model.insert_columns(2, 1, 1).unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Mar!A1)", "40"));
+    model.delete_rows(3, 1, 1).unwrap();
+    assert_eq!(calc_a1(&model), text_and_value("=SUM(Jan:Mar!A1)", "10"));
 }

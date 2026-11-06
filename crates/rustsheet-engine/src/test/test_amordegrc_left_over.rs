@@ -12,6 +12,8 @@ const FRACTION: &str = "=AMORDEGRC(10000,39000,39400,500,0.3,0.3,0)";
 const CHARGE_485: &str = "=AMORDEGRC(2400,39679,39813,300,2,0.15,1)";
 /// 776, and it leaves 776.
 const CHARGE_776: &str = "=AMORDEGRC(2400,39679,39813,300,1,0.15,1)";
+/// AMORLINC's 360, and it leaves 132 (its first period's charge, rounded).
+const LINEAR_132: &str = "=AMORLINC(2400,39679,39813,300,1,0.15,1)";
 
 fn evaluated(cells: &[(&str, &str)]) -> Model {
     let mut model = new_empty_model();
@@ -80,6 +82,21 @@ fn what_each_call_leaves() {
 }
 
 #[test]
+fn a_salvage_equal_to_the_cost_leaves_the_value_and_reads_none() {
+    // Both functions, at any period, leave the value as it was, and an AMORDEGRC below period 1
+    // is 0 rather than the value (probes/amor-salvage-equal-cost F1 to F8, T-4504).
+    assert_eq!(above("=AMORDEGRC(2400,39679,39813,2400,1,0.15,1)"), "485");
+    assert_eq!(above("=AMORDEGRC(2400,39679,39813,2400,0,0.15,1)"), "485");
+    assert_eq!(above("=AMORLINC(2400,39679,39813,2400,1,0.15,1)"), "485");
+    assert_eq!(above("=AMORLINC(2400,39679,39813,2400,0,0.15,1)"), "485");
+    let model = evaluated(&[
+        ("A1", "=AMORDEGRC(2400,39679,39813,2400,0.5,0.15,1)"),
+        ("A2", CHARGE_485),
+    ]);
+    assert_eq!(model._get_text("A1"), "0");
+}
+
+#[test]
 fn lifted_over_an_array_it_is_0() {
     // probes/amordegrc-fraction-state-x.
     let model = evaluated(&[
@@ -135,7 +152,8 @@ fn a_lifted_call_reads_what_its_own_earlier_elements_left() {
     assert_eq!(model._get_text("A1"), "776");
 }
 
-/// Our behaviour, not Excel's: an error element inside a lifted call is unprobed (T-3393).
+/// An error element leaves the value as it was, as a scalar error does: `{1,-1,0.5}` is 776,
+/// `#NUM!`, 776 (probes/amordegrc-fraction-state-as, -at; T-3393).
 #[test]
 fn an_error_element_stays_an_error_beside_a_fraction() {
     let model = lifted("{-1,0.5}");
@@ -145,4 +163,78 @@ fn an_error_element_stays_an_error_beside_a_fraction() {
     assert_eq!(model._get_text("A1"), "776");
     assert_eq!(model._get_text("B1"), "#NUM!");
     assert_eq!(model._get_text("C1"), "776");
+}
+
+#[test]
+fn the_calls_excel_lists_empty_the_value_after_reading_their_arguments() {
+    // probes/amordegrc-fraction-state-ag, -an, -az to -cw: each of these calls between the
+    // fraction and the 485 charge empties the value it reads.
+    for below in [
+        "=SEQUENCE(1,2)",
+        "=SEQUENCE(1,1)",
+        "=SUM(SEQUENCE(1,2))",
+        "=MUNIT(1)",
+        "=SORT({2,1})",
+        "=SUM(XLOOKUP(1,{1,2},{3,4}))",
+        "=SUM(VSTACK(1,2))",
+        "=SUM(TAKE({1,2},1))",
+        "=SUM(DROP({1,2},1))",
+        "=SUM(TEXTJOIN(\",\",,{1,2}))",
+        "=SUM(MMULT({1},{1}))",
+        "=SUM(LAMBDA(x,x)(1))",
+        "=SUM(MAP({1,2},LAMBDA(x,x)))",
+    ] {
+        assert_eq!(above(below), "0", "{below}");
+    }
+    // ... and these keep it (-aq, -ax, -ba, -bg, -ca, -ce, -cm to -cp, -cw, and an IF arm that is
+    // not taken, -be).
+    for below in [
+        "={1,2}",
+        "=TRANSPOSE({1;2})",
+        "=ABS({1,2})",
+        "=COLUMN(A1:B1)",
+        "=SUM(MDETERM({1}))",
+        "=SUM(LET(x,1,x))",
+        "=SUM(INDEX({1,2},1,1))",
+        "=SUM(MATCH(1,{1,2},0))",
+        "=SUM(SUMPRODUCT({1,2}))",
+        "=SUM(ROWS({1,2}))",
+        "=IF(FALSE,SEQUENCE(1,2),1)",
+    ] {
+        assert_eq!(above(below), "485", "{below}");
+    }
+    // The call empties the value after its arguments ran: a charge inside it is not read
+    // (-cx, -da).
+    let model = evaluated(&[
+        ("A1", FRACTION),
+        (
+            "A2",
+            "=SUM(SEQUENCE(1,1,AMORDEGRC(2400,39679,39813,300,2,0.15,1)))",
+        ),
+    ]);
+    assert_eq!(model._get_text("A1"), "0");
+}
+
+#[test]
+fn a_dynamic_array_anchor_leaves_its_value_at_its_place_in_the_order() {
+    // probes/amordegrc-fraction-state-ah: the anchor in A2 empties the value and its charge sets
+    // 485 after the AMORLINC in A3 ran, so the fraction reads 485, not the AMORLINC's 132.
+    let below = "=SEQUENCE(1,2)+AMORDEGRC(2400,39679,39813,300,2,0.15,1)";
+    let model = evaluated(&[("A1", FRACTION), ("A2", below), ("A3", LINEAR_132)]);
+    assert_eq!(model._get_text("A1"), "485");
+    // -am: the charge first and SEQUENCE second leaves it empty.
+    let below = "=AMORDEGRC(2400,39679,39813,300,2,0.15,1)+SEQUENCE(1,2)";
+    let model = evaluated(&[("A1", FRACTION), ("A2", below), ("A3", LINEAR_132)]);
+    assert_eq!(model._get_text("A1"), "0");
+    // -ap: an anchor that runs after the 776 charge below it leaves its own 485.
+    let below = "=SEQUENCE(1,2)*0+AMORDEGRC(2400,39679,39813,300,2,0.15,1)";
+    let model = evaluated(&[("A1", FRACTION), ("A2", below), ("A3", CHARGE_776)]);
+    assert_eq!(model._get_text("A1"), "485");
+    // -ao: a SEQUENCE below the charge runs first and empties nothing the fraction reads.
+    let model = evaluated(&[
+        ("A1", FRACTION),
+        ("A2", CHARGE_485),
+        ("A3", "=SEQUENCE(1,2)"),
+    ]);
+    assert_eq!(model._get_text("A1"), "485");
 }

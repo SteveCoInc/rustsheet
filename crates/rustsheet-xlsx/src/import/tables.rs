@@ -1,15 +1,14 @@
+use std::collections::HashMap;
 use std::io::Read;
 
 use super::package::Package;
 
 use super::xml::XmlNode;
-use rustsheet_engine::types::{
-    CustomFilter, FilterColumn, FilterCriterion, Table, TableColumn, TableStyleInfo,
-};
+use rustsheet_engine::types::{FilterColumn, FilterCriterion, Table, TableColumn, TableStyleInfo};
 
 use crate::error::XlsxError;
 
-use super::shared_strings::decode_xlsx_escapes;
+use super::filter_criteria;
 use super::util::{get_bool, get_bool_false};
 
 // <table name="Table" displayName="Table" totalsRowCount ref="A1:D6">
@@ -103,18 +102,13 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
 
     // TODO: Conformant implementations should panic if header_row_dxf_id or data_dxf_id are out of bounds.
 
-    // Note that filters are non dynamic
-    // The only thing important for us is whether or not it has filters
+    // Note that filters are non dynamic: the criteria are kept for the export, and SUBTOTAL only
+    // needs to know whether the table is filtered (`has_filters`, set below once the columns are
+    // read).
     let auto_filter = table
         .descendants()
         .filter(|n| n.has_tag_name("autoFilter"))
         .collect::<Vec<&XmlNode>>();
-
-    let has_filters = if let Some(filter) = auto_filter.first() {
-        filter.children().count() > 0
-    } else {
-        false
-    };
     let filter_columns = auto_filter
         .first()
         .map(|filter| {
@@ -187,6 +181,10 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
         });
     }
 
+    let has_filters = auto_filter
+        .first()
+        .is_some_and(|filter| has_active_criterion(filter, columns.len()));
+
     // tableInfo
     let table_info = table
         .descendants()
@@ -228,45 +226,76 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
     })
 }
 
+/// Whether the table's `<autoFilter>` makes the sheet's hidden rows filtered for SUBTOTAL and
+/// AGGREGATE: Excel does so only for a `<filterColumn>` that holds a criterion element and whose
+/// `colId` is inside the table's `width` columns. A criterion-less `<filterColumn colId="0"/>`,
+/// one with `colId` past the table, or an autoFilter with no filterColumn leaves them manual
+/// hides (excel-graph, T-3081 and T-4003; docs/excel-semantics/numbers.md "SUBTOTAL and
+/// AGGREGATE over hidden and filtered rows").
+fn has_active_criterion(auto_filter: &XmlNode, width: usize) -> bool {
+    auto_filter
+        .children()
+        .filter(|n| n.has_tag_name("filterColumn"))
+        .any(|column| {
+            let inside = column
+                .attribute("colId")
+                .and_then(|id| id.parse::<usize>().ok())
+                .is_some_and(|id| id < width);
+            inside && column.children().next().is_some_and(is_criterion)
+        })
+}
+
+/// Whether a `<filterColumn>`'s first child counts as a criterion for SUBTOTAL: any element but a
+/// `<colorFilter>` with no `dxfId`, which Excel reads as no criterion (excel-graph, T-4404;
+/// docs/excel-semantics/xlsx-storage.md, "Table parts in the export").
+fn is_criterion(child: &XmlNode) -> bool {
+    !(child.has_tag_name("colorFilter") && child.attribute("dxfId").is_none())
+}
+
+/// Re-decides `has_filters` once the workbook's `dxf_count` differential formats are known: a
+/// color filter whose `dxfId` is not one of them counts as no criterion, as the export writes it
+/// (it drops a dangling id, and a `<colorFilter/>` with none is manual hides), so SUBTOTAL over
+/// the table does not change across a save (T-4558; Excel refuses such a source file, so there is
+/// no oracle value for it: docs/excel-semantics/xlsx-storage.md, "Table parts in the export").
+pub(super) fn drop_dangling_color_filters(tables: &mut HashMap<String, Table>, dxf_count: usize) {
+    let dangling = |criterion: &FilterCriterion| {
+        matches!(
+            criterion,
+            FilterCriterion::Color { dxf_id, .. }
+                if dxf_id.is_none_or(|id| usize::try_from(id).map_or(true, |i| i >= dxf_count))
+        )
+    };
+    for table in tables.values_mut().filter(|t| t.has_filters) {
+        if !table.filter_columns.iter().any(|c| dangling(&c.criterion)) {
+            continue;
+        }
+        let width = table.columns.len();
+        // `Other` is also what a criterion-less `<filterColumn/>` and a `<colorFilter/>` without a
+        // `dxfId` import as, and neither is a criterion, so only the rest keeps the table filtered.
+        table.has_filters = table.filter_columns.iter().any(|column| {
+            usize::try_from(column.col_id).is_ok_and(|id| id < width)
+                && !dangling(&column.criterion)
+                && column.criterion != FilterCriterion::Other
+        });
+    }
+}
+
 /// A `<filterColumn>`'s column and criterion; `None` for one without a valid `colId`, which
-/// Excel's schema requires. A values filter with date groups (`<dateGroupItem>`, `calendarType`)
-/// is kept as [`FilterCriterion::Other`], not as a values list that would drop its dates; the
-/// column's `hiddenButton` and `showButton` are not kept. Values are stored decoded from the
-/// file's `_xHHHH_` escapes, as cell text is.
+/// Excel's schema requires. The criterion is its first element, read by
+/// [`filter_criteria::criterion`]; the column's `hiddenButton` and `showButton` are not kept.
 fn filter_column(node: &XmlNode) -> Option<FilterColumn> {
     let col_id = node.attribute("colId")?.parse::<u32>().ok()?;
-    let criterion = if let Some(filters) = node.child("filters").filter(|f| {
-        !f.has_attribute("calendarType") && f.children().all(|n| n.has_tag_name("filter"))
-    }) {
-        FilterCriterion::Values {
-            values: filters
-                .children()
-                .filter(|n| n.has_tag_name("filter"))
-                .filter_map(|n| n.attribute("val").map(decode_xlsx_escapes))
-                .collect(),
-            blank: get_bool_false(filters, "blank"),
-        }
-    } else if let Some(custom) = node.child("customFilters") {
-        FilterCriterion::Custom {
-            and: get_bool_false(custom, "and"),
-            conditions: custom
-                .children()
-                .filter(|n| n.has_tag_name("customFilter"))
-                .map(|n| CustomFilter {
-                    operator: n.attribute("operator").map(str::to_string),
-                    val: decode_xlsx_escapes(n.attribute("val").unwrap_or_default()),
-                })
-                .collect(),
-        }
-    } else {
-        FilterCriterion::Other
-    };
+    let criterion = node
+        .children()
+        .next()
+        .and_then(filter_criteria::criterion)
+        .unwrap_or(FilterCriterion::Other);
     Some(FilterColumn { col_id, criterion })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{filter_column, XmlNode};
+    use super::{drop_dangling_color_filters, filter_column, has_active_criterion, Table, XmlNode};
     use rustsheet_engine::types::FilterCriterion;
 
     fn criterion(xml: &str) -> FilterCriterion {
@@ -274,14 +303,112 @@ mod tests {
         filter_column(&node).unwrap().criterion
     }
 
-    /// A values filter with date groups is not read as a bare values list, which an export would
-    /// write as a filter that shows nothing (T-2838).
+    /// A values filter with date groups keeps them, so the export does not write it as a bare
+    /// values list that shows nothing (T-2838, T-4004); an unknown criterion element is
+    /// [`FilterCriterion::Other`].
     #[test]
-    fn date_grouped_values_filters_are_not_kept_as_values() {
+    fn date_grouped_values_filters_keep_their_groups() {
         let dated = r#"<filterColumn colId="1"><filters><dateGroupItem year="2024" dateTimeGrouping="year"/></filters></filterColumn>"#;
-        assert_eq!(criterion(dated), FilterCriterion::Other);
-        let calendar = r#"<filterColumn colId="1"><filters calendarType="gregorian"><filter val="a"/></filters></filterColumn>"#;
-        assert_eq!(criterion(calendar), FilterCriterion::Other);
+        assert!(matches!(
+            criterion(dated),
+            FilterCriterion::Values { values, date_groups, .. } if values.is_empty() && date_groups.len() == 1
+        ));
+        let unknown = r#"<filterColumn colId="1"><unknownFilter/></filterColumn>"#;
+        assert_eq!(criterion(unknown), FilterCriterion::Other);
+    }
+
+    /// Only a filterColumn with a criterion inside the table makes its hidden rows filtered, as
+    /// Excel reads the T-3081 uploads (probes/t4003-filter-column-criterion).
+    #[test]
+    fn only_a_criterion_inside_the_table_filters() {
+        let active = |xml: &str| has_active_criterion(&XmlNode::parse_str(xml).unwrap(), 2);
+        let values =
+            r#"<filterColumn colId="1"><filters><filter val="a"/></filters></filterColumn>"#;
+        assert!(active(&format!("<autoFilter>{values}</autoFilter>")));
+        let custom = r#"<filterColumn colId="0"><customFilters><customFilter operator="greaterThan" val="3"/></customFilters></filterColumn>"#;
+        assert!(active(&format!("<autoFilter>{custom}</autoFilter>")));
+        let top10 = r#"<filterColumn colId="0"><top10 val="2"/></filterColumn>"#;
+        assert!(active(&format!("<autoFilter>{top10}</autoFilter>")));
+        let bare = r#"<filterColumn colId="0"/>"#;
+        assert!(!active(&format!("<autoFilter>{bare}</autoFilter>")));
+        let past = r#"<filterColumn colId="5"><filters><filter val="a"/></filters></filterColumn>"#;
+        assert!(!active(&format!("<autoFilter>{past}</autoFilter>")));
+        assert!(!active(
+            r#"<autoFilter><filterColumn colId="2"><filters/></filterColumn></autoFilter>"#
+        ));
+        assert!(active(&format!(
+            "<autoFilter>{bare}{past}{values}</autoFilter>"
+        )));
+        assert!(!active("<autoFilter/>"));
+        // T-4404: a color filter with no dxfId is no criterion; with one it is.
+        for color in [r#"<colorFilter/>"#, r#"<colorFilter cellColor="0"/>"#] {
+            let column = format!(
+                r#"<autoFilter><filterColumn colId="1">{color}</filterColumn></autoFilter>"#
+            );
+            assert!(!active(&column), "{color}");
+        }
+        assert!(active(
+            r#"<autoFilter><filterColumn colId="1"><colorFilter dxfId="0"/></filterColumn></autoFilter>"#
+        ));
+    }
+
+    /// T-4558: a color filter's dangling `dxfId` leaves the table unfiltered, as the export writes it.
+    #[test]
+    fn dangling_color_filter_dxf_is_no_criterion() {
+        let table_with = |extra: &str, dxf: &str| {
+            let node = XmlNode::parse_str(&format!(
+                r#"<autoFilter><filterColumn colId="0"><colorFilter dxfId="{dxf}"/></filterColumn>{extra}</autoFilter>"#
+            ))
+            .unwrap();
+            let mut t = Table {
+                name: "T".to_string(),
+                display_name: "T".to_string(),
+                reference: "A1:B2".to_string(),
+                totals_row_count: 0,
+                header_row_count: 1,
+                header_row_dxf_id: None,
+                data_dxf_id: None,
+                totals_row_dxf_id: None,
+                columns: vec![],
+                style_info: rustsheet_engine::types::TableStyleInfo {
+                    name: None,
+                    show_first_column: false,
+                    show_last_column: false,
+                    show_row_stripes: true,
+                    show_column_stripes: false,
+                },
+                has_filters: true,
+                filter_columns: node
+                    .children()
+                    .filter(|n| n.has_tag_name("filterColumn"))
+                    .filter_map(filter_column)
+                    .collect(),
+                sheet_name: "S".to_string(),
+            };
+            t.columns = vec![
+                rustsheet_engine::types::TableColumn {
+                    id: 1,
+                    name: "a".to_string(),
+                    totals_row_label: None,
+                    totals_row_function: None,
+                    data_dxf_id: None,
+                    header_row_dxf_id: None,
+                    totals_row_dxf_id: None,
+                    calculated_column_formula: None,
+                };
+                2
+            ];
+            let mut tables = std::collections::HashMap::from([("T".to_string(), t)]);
+            drop_dangling_color_filters(&mut tables, 1);
+            tables["T"].has_filters
+        };
+        let table = |dxf: &str| table_with("", dxf);
+        assert!(table("0"), "dxf 0 of 1 exists");
+        assert!(
+            !table_with(r#"<filterColumn colId="1"/>"#, "1"),
+            "a dangling dxf and a criterion-less column"
+        );
+        assert!(!table("1"), "dxf 1 of 1 dangles");
     }
 
     /// Filter values are decoded from the file's `_xHHHH_` escapes, so the export's encoding
@@ -294,7 +421,9 @@ mod tests {
             criterion(escaped),
             FilterCriterion::Values {
                 values: vec!["aA".to_string()],
-                blank: false
+                blank: false,
+                calendar_type: None,
+                date_groups: Vec::new(),
             }
         );
         assert!(

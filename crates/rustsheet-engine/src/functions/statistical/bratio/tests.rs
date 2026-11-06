@@ -1,4 +1,7 @@
-use super::{beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement, Branch};
+use super::{
+    beta_dist_l140_zero, beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement,
+    l140_bup_prefactor_underflows, l140_overflows, l140_zero_tails, Branch,
+};
 
 fn branch(a: f64, b: f64, x: f64) -> (Branch, bool) {
     let d = dispatch(a, b, x, 1.0 - x).expect("in domain");
@@ -566,4 +569,67 @@ fn ported_tails_rise_with_x_where_excel_does() {
         );
     }
     assert_eq!(pairs, 425);
+}
+
+// bup+bgrat at a0 < 1 other than 1/2 (T-3665): 20 bup terms plus the accurate bgrat increment.
+// Excel is within 1.7 ulp of the math at these points and the Cephes kernel was 4 to 6 ulp off;
+// both cells are Excel's bits (probes-numeric/t2464-r2-bratio-x29 A1551 and A2327, excel-graph).
+#[test]
+fn bup_bgrat_at_a_shape_below_one_matches_excel() {
+    assert_eq!(branch(0.75, 2.5, 0.2910), (Branch::BupBgrat, false));
+    assert_eq!(cdf(0.2910, 0.75, 2.5), 0.679_493_919_530_290_7);
+    assert_eq!(branch(0.9, 2.5, 0.2916), (Branch::BupBgrat, false));
+    assert_eq!(cdf(0.2916, 0.9, 2.5), 0.617_681_544_291_794);
+}
+
+// L140's bup sum overflows (T-3576): Excel's kernel is #NUM! exactly where the running ratio product
+// passes the largest double, on bup + bpser and bup + bgrat alike and in either orientation.
+// probes/t3576-negbinom-cdf-huge-s A4 (ln 707.81, a value), A5 and A34 (713.72, #NUM!), A66 (bup +
+// bgrat), A88 (swapped); probes/t3576-r2-ratio-overflow-sweep A33, A34 (2.401E+16 at 21.5) and A31
+// (2.261E+16, a value), excel-graph.
+#[test]
+fn l140_bup_sum_overflow_is_excels_num_error() {
+    let p = 0.323_212_154_487_823;
+    let negbinom = |f: f64, s: f64, p: f64| l140_overflows(s, f + 1.0, p, 1.0 - p);
+    assert!(!negbinom(28.0, 3e12, p));
+    assert!(negbinom(28.0, 4e12, p));
+    assert!(negbinom(27.0, 1e13, p));
+    assert!(!negbinom(26.0, 1e13, p));
+    assert!(negbinom(28.0, 1e13, 0.9));
+    assert!(negbinom(1e13, 28.0, p));
+    assert!(!negbinom(40.0, 1e20, p), "bfrac, not L140");
+    let beta = |x: f64, a: f64, b: f64| l140_overflows(a, b, x, 1.0 - x);
+    assert!(beta(0.3, 2.401e16, 21.5));
+    assert!(beta(0.7, 21.5, 2.401e16));
+    assert!(!beta(0.3, 2.261e16, 21.5));
+}
+
+// BETA.DIST's cdf is Excel's exact 0 where L140 bup's prefactor leaves the normal range, as F's
+// tails (T-4045, T-4456): probes/t4456-beta-t-zero-cut C9 (ln ret -708.0) is 2.7722115421194987E-264
+// and C10 (ln ret -709.0) is 0; D9 and D10 (b = 30, c = 1) alike. A9 (a = 2E6, b = 5.5) has ln ret
+// -708.0 too, so the rule does not apply there (Excel's 0 there is the earlier cut T-4437 owns).
+#[test]
+fn l140_prefactor_zero_is_beta_dists_zero() {
+    let zero =
+        |x: f64, a: f64, b: f64| l140_zero_tails(a, b, x, 1.0 - x, l140_bup_prefactor_underflows);
+    assert_eq!(zero(0.999_857_729_248_015, 5e6, 25.5), None);
+    assert_eq!(zero(0.999_857_529_135_952, 5e6, 25.5), Some((0.0, 1.0)));
+    assert_eq!(zero(0.999_857_095_889_413, 5e6, 30.0), None);
+    assert_eq!(zero(0.999_856_895_637_99, 5e6, 30.0), Some((0.0, 1.0)));
+    assert_eq!(zero(0.999_644_361_097_655, 2e6, 5.5), None);
+}
+
+// At n >= 3 bup terms BETA.DIST's cdf is also Excel's exact 0 where bup's sum W is below 2^-970
+// (T-4437): the second fresh sweep, probes/t4437-beta-zero-fresh2, rows 0.05 nats apart around the
+// edge. H11 (4.5E6, 3.5; n = 3) is 1.027452053743555E-292 and H12 is 0; D11 and D12 (7E6, 5;
+// n = 4, c = 1) alike. n = 2 is outside the rule (T-4564): I22 (3E6, 2.5) is a number 0.525 nats
+// below the edge.
+#[test]
+fn l140_sum_flush_is_beta_dists_zero_at_three_terms() {
+    let zero = |x: f64, a: f64, b: f64| l140_zero_tails(a, b, x, 1.0 - x, beta_dist_l140_zero);
+    assert_eq!(zero(0.999_847_242_166_822, 4.5e6, 3.5), None);
+    assert_eq!(zero(0.999_847_231_016_925, 4.5e6, 3.5), Some((0.0, 1.0)));
+    assert_eq!(zero(0.999_900_671_670_924, 7e6, 5.0), None);
+    assert_eq!(zero(0.999_900_664_487_516, 7e6, 5.0), Some((0.0, 1.0)));
+    assert_eq!(zero(0.999_772_564_701_615, 3e6, 2.5), None);
 }

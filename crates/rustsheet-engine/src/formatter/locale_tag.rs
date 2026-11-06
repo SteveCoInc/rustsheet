@@ -7,13 +7,9 @@ use chrono::NaiveDate;
 
 use super::dates::convert_to_serial_number;
 use super::numerals::Numerals;
-use crate::locale::calendar_date_names::{
-    HEBREW_LATIN, HEBREW_LATIN_ADARS, HEBREW_SCRIPT, HEBREW_SCRIPT_ADARS, SAKA, SAKA_HINDI,
-};
 pub use crate::locale::excel_date_names::DateNames;
 use crate::locale::excel_date_names::{
-    ARABIC, ARABIC_LEVANT, BCP47_ONLY, EN_US, HIJRI_ARABIC, HIJRI_ENGLISH, HIJRI_FRENCH,
-    HIJRI_TURKISH, LOCALES, LUNAR_JA, LUNAR_KO, LUNAR_ZH,
+    calendar_names, lcid_names, tag_locale, CalendarKey, CalendarNames, TagLocale, EN_US,
 };
 
 /// The calendar a locale tag selects: what `yy`, `yyyy`, `b`, `e` and `g` print.
@@ -48,9 +44,16 @@ pub enum Calendar {
     Saka,
     /// Calendar digit 8: the Hebrew year, month and day for every date token
     /// (`[$-80409]yyyy-mm-dd|e|b` of 2023-03-15 is "5783-06-22|5783|83";
-    /// `calendar_dates::hebrew_ymd`), with the names of a leap year's months 6 and 7, `None`
-    /// under an LCID with no locale, whose month names go by number.
-    Hebrew(Option<&'static [&'static str; 2]>),
+    /// `calendar_dates::hebrew_ymd`); its month names are [`Localized::leap_months`] and the
+    /// name set's.
+    Hebrew,
+    /// Calendar digit 16: the Persian (solar Hijri) year, month and day for every date token
+    /// (`[$-160409]yyyy-mm-dd|yy|e|b` of 2023-03-15 is "1401-12-24|01|1401|01";
+    /// `table_calendars::persian_ymd`).
+    Persian,
+    /// Calendar digit 17: Um al-Qura, Excel's month table from 1318 AH (1900-04-30) to 1500 AH
+    /// and the [`Calendar::Hijri`] date outside it (`table_calendars::um_al_qura_ymd`).
+    UmAlQura,
 }
 
 /// Which month table a lunar calendar digit uses: F and 11 follow China; E, 12 and 13 one that
@@ -86,6 +89,15 @@ pub struct Localized {
     /// A `B2` before a calendar-1, -3 or -5 tag: the names every name token prints from the
     /// section's first `mmm` on, in place of [`Localized::names`] (`date_names::NameTokens`).
     pub names_after_mmm: Option<&'static DateNames>,
+    /// A calendar read with the names of an LCID with no locale (`excel_date_names::CalendarNames`),
+    /// whose months go by Gregorian number: a Hebrew or lunar month past the twelfth has none (`[$-80000]mmmm` and
+    /// `[$-E0001]mmmm` of a month 13 print nothing; probes/t2779-hebrew-saka-more E1,
+    /// t4061-calendar-names-full A496). With names of its own a lunar month 13 or 14 takes the
+    /// twelfth name (`[$-110409]mmmm` of 2024-01-11 is "十二月"; text-locale-lunar-edges A26).
+    pub months_by_number: bool,
+    /// The 13 month names of a Hebrew leap year under a Hebrew calendar with names of its own
+    /// (`excel_date_names::CalendarNames`); `None` otherwise.
+    pub leap_months: Option<&'static [&'static str; 13]>,
 }
 
 impl Localized {
@@ -103,6 +115,8 @@ impl Localized {
             japanese_lcid,
             year_twice: false,
             names_after_mmm: None,
+            months_by_number: false,
+            leap_months: None,
         }
     }
 }
@@ -117,10 +131,10 @@ pub enum LocaleTag {
     SystemDate,
     /// `[$-F400]` or `[$-x-systime]`: the section is the system long time.
     SystemTime,
-    /// A tag Excel does not resolve (`[$-zzz]`, `[$-]`, `[$-FFFF]`) or one with no table here
-    /// (TODO(T-3666)), or a calendar digit over an LCID with no locale that is not modelled
-    /// (`without_locale`): it prints nothing and changes nothing (`TEXT(0.75,"[$-FFFF]h A/P")`
-    /// keeps "6 P").
+    /// A tag Excel cannot read (`[$-]`, a non-ASCII one), or one read as extended hex with no
+    /// locale and no calendar digit (`[$-zzz]`): it prints nothing and changes nothing
+    /// (`B2[$-zzz]` is a bare `B2`). A hex LCID with no locale is not silent: it is en-US and
+    /// Gregorian with `A/P` as written ([`localize`]).
     Silent,
 }
 
@@ -133,17 +147,15 @@ const SYSTEM_DATE_LCID: u32 = 0xF800;
 /// The tag value of the system long time (`[$-F400]`).
 const SYSTEM_TIME_LCID: u32 = 0xF400;
 
-/// Resolves the text between `[$-` and `]`.
-///
-/// A hex LCID may carry a calendar in the digits above the low four (see `resolve_lcid`). An LCID
-/// with no table falls back to its language (`[$-80C]` is French, `[$-C]` too); 400 and 800, the
-/// user and system defaults, are en-US.
-/// A BCP-47 tag matches case-insensitively, then by its language (`[$-fr-XX]` is French).
-/// Any other tag is read as extended hex ([`extended_hex`], [`resolve_extended`]): `[$-fr_FR]` is
-/// the Saka calendar over an LCID with no locale.
+/// Resolves the text between `[$-` and `]`, in Excel's order: a hex LCID that has a locale
+/// (`[$-40C]`, `[$-C]`; `excel_date_names::lcid_names`), then a BCP-47 tag Excel knows, matched
+/// case-insensitively and then by its language (`[$-fr-FR]`, `[$-fr-XX]`, `[$-de]`, which is not
+/// LCID 0xDE), then the hex value of an LCID with no locale (`[$-2412]`, `[$-80000]`), then any other
+/// tag read as extended hex ([`extended_hex`]: `[$-fr_FR]` is the Saka calendar over an LCID with
+/// no locale). The value's calendar digit then picks the calendar and its names ([`localize`]).
 /// [`resolve_after_hijri_prefix`] resolves a tag that follows a `B2` prefix in its section.
 pub fn resolve(tag: &str) -> LocaleTag {
-    resolve_with(tag, false)
+    resolve_with(tag, false).0
 }
 
 /// [`resolve`] for a tag after a `B2` prefix in its section: a hex or BCP-47 tag in its locale's
@@ -152,66 +164,265 @@ pub fn resolve(tag: &str) -> LocaleTag {
 /// prefix (`B2[$-10409]yyyy` is "2023", `B2[$-110409]yyyy|m` of 2024-01-09 "2023|12"). An
 /// extended-hex tag, and so `[$-zzz]`, is not resolved this way: `B2[$-zzz]` is a bare `B2`
 /// (probes/t2729-hijri-locale-tag A243-A264, t2729-hijri-locale-tag-names A239-A277;
-/// text-locale-lunar-tokens A79). Calendar digits 15 and above are unprobed here.
-/// Under calendars 3, 5 and 7 the `B2` converts every year token once more
-/// ([`Localized::year_twice`]; `B2[$-70409]yyyy|e` of 2023-03-15 is "3109|2566",
-/// `B2[$-50409]yyyy|e` "6689|4356"; probes/t2932-b2-calendar-twice). Under calendar 4 it prints
-/// a garbled Minguo year ("01"; `calendar_dates::taiwan_after_b2`).
-///
-/// Under calendar 1 the names from the first `mmm` on are the ar-SA Gregorian ones, and under
-/// calendars 3 and 5 the en-US ones, whatever the LCID: `B2[$-10411]mmmm|ddd|mmm|mmmm|dddd` of
-/// 2023-03-15 is "3月|水|مارس|مارس|الثلاثاء" and `B2[$-30411]dddd|mmm|mmmm` "水曜日|Mar|March"
-/// ([`Localized::names_after_mmm`]; probes/t3101-b2-calendar-names, t3029-b2-calendar-weekday
-/// A73-A84). The other digits keep the tag's names.
+/// text-locale-lunar-tokens A79). The digit's [`CalendarSpec`] says what else the `B2` does.
 pub fn resolve_after_hijri_prefix(tag: &str) -> LocaleTag {
     match resolve_with(tag, true) {
-        LocaleTag::Names(localized) => LocaleTag::Names(Localized {
-            year_twice: matches!(
-                localized.calendar,
-                Calendar::Japanese { explicit: true }
-                    | Calendar::Korean
-                    | Calendar::Taiwan
-                    | Calendar::Thai
-            ),
-            names_after_mmm: match hex_value(tag).map(calendar_digit) {
-                Some(1) => Some(ARABIC),
-                Some(3 | 5) => Some(EN_US),
-                _ => None,
-            },
+        (LocaleTag::Names(localized), Some(spec)) => LocaleTag::Names(Localized {
+            year_twice: spec.b2_twice,
+            names_after_mmm: spec.b2_names_after_mmm.and_then(lcid_names),
             ..localized
         }),
-        other => other,
+        (other, _) => other,
     }
 }
 
-/// [`resolve`], with digit 0 read as 6 when `hijri_prefix`.
-fn resolve_with(tag: &str, hijri_prefix: bool) -> LocaleTag {
+/// [`resolve`], with digit 0 read as 6 when `hijri_prefix`, and the spec of the calendar digit it
+/// resolved to.
+fn resolve_with(tag: &str, hijri_prefix: bool) -> (LocaleTag, Option<CalendarSpec>) {
+    // Before a `,` only a BCP-47 name is a locale, spaces around it trimmed; a hex LCID there is
+    // none (`[$-409,200]mmmm`, `[$-40C,200]mmmm` are "March", `[$-ja-JP,200]mmmm` "3月",
+    // `[$-ar-SA ,200]mmmm` "مارس"; probes/t4492-comma-suffix-reading,
+    // t4492-locale-comma-tag-shapes; number-formats.md "The `locale,N00` form").
+    if let Some((locale, _)) = numeral_suffix(tag) {
+        return known_tag(locale.trim_matches(' ')).map_or((LocaleTag::Silent, None), |locale| {
+            localize(tag_source(locale), 0, hijri_prefix)
+        });
+    }
     if tag.eq_ignore_ascii_case("x-sysdate") {
-        return LocaleTag::SystemDate;
+        return (LocaleTag::SystemDate, None);
     }
     if tag.eq_ignore_ascii_case("x-systime") {
-        return LocaleTag::SystemTime;
+        return (LocaleTag::SystemTime, None);
     }
-    // A tag that reads as hex is an LCID first, but one with no locale may still be a language
-    // (`[$-de]` is German, not LCID 0xDE; `[$-C]` is French).
     let hex = hex_value(tag);
-    if let Some(value) = hex {
-        if resolve_lcid(value) != LocaleTag::Silent {
-            return resolve_lcid(hijri_default(value, hijri_prefix));
+    let lcid_of = |value: u32| (value & 0xFFFF) as u16;
+    if let Some(value) = hex.filter(|value| lcid_names(lcid_of(*value)).is_some()) {
+        return localize(Source::Lcid(lcid_of(value)), value, hijri_prefix);
+    }
+    if let Some(locale) = known_tag(tag) {
+        return localize(tag_source(locale), 0, hijri_prefix);
+    }
+    match hex {
+        Some(value) => localize(Source::Lcid(lcid_of(value)), value, hijri_prefix),
+        None => extended_hex(tag).map_or((LocaleTag::Silent, None), |value| {
+            silent_if_inert(localize(Source::Lcid(lcid_of(value)), value, false))
+        }),
+    }
+}
+
+/// What a known BCP-47 tag names: its own names and the LCID [MS-LCID] gives it, if any.
+fn tag_source(locale: TagLocale) -> Source {
+    Source::Tag {
+        names: locale.names,
+        lcid: locale.lcid,
+    }
+}
+
+/// The locale of a BCP-47 tag Excel knows (`excel_date_names::tag_locale`). A table tag with no
+/// LCID that Excel reads as extended hex is not one: its reading, in its own calendar, is an LCID
+/// with the same names, and the tag does not spell that LCID's digits (`[$-bgc]` is 0xC0C, fr-CA,
+/// so `[$-bgc-IN]` reads as extended hex too and prints English; `[$-ceb]` spells 0xCEB, which has
+/// no locale, and is Cebuano; probes/t3666-locale-tag-names A89, t4061-calendars-without-locale).
+fn known_tag(tag: &str) -> Option<TagLocale> {
+    tag_locale(tag, |entry, locale| {
+        let Some(value) = extended_hex(entry).filter(|value| value >> 16 == 0) else {
+            return true;
+        };
+        let reads_as_lcid =
+            lcid_names(value as u16).is_some_and(|names| std::ptr::eq(names, locale.names));
+        locale.lcid.is_some() || !reads_as_lcid || format!("{value:x}") == entry
+    })
+}
+
+/// An extended-hex reading with no locale and no calendar digit changes nothing: `B2[$-zzz]` is a
+/// bare `B2` (probes/t2729-hijri-locale-tag-names A239:A263), where a hex LCID with no locale is
+/// en-US and Gregorian (`[$-D001]b` is "23"; probes/t4061-calendars-without-locale A1).
+fn silent_if_inert(
+    resolved: (LocaleTag, Option<CalendarSpec>),
+) -> (LocaleTag, Option<CalendarSpec>) {
+    match resolved {
+        (LocaleTag::Names(localized), None) if localized.day_half.is_none() => {
+            (LocaleTag::Silent, None)
+        }
+        resolved => resolved,
+    }
+}
+
+/// What a tag names: an LCID, which may have no locale, or a BCP-47 tag Excel knows, with its own
+/// names and the LCID [MS-LCID] gives it, if any (which may have no locale: `ar` is LCID 1).
+#[derive(Clone, Copy)]
+enum Source {
+    Lcid(u16),
+    Tag {
+        names: &'static DateNames,
+        lcid: Option<u16>,
+    },
+}
+
+impl Source {
+    /// The locale's own names; `None` for an LCID with no locale.
+    fn own_names(self) -> Option<&'static DateNames> {
+        match self {
+            Source::Lcid(lcid) => lcid_names(lcid),
+            Source::Tag { names, .. } => Some(names),
         }
     }
-    match resolve_bcp47(tag, hijri_prefix) {
-        LocaleTag::Silent => {}
-        bcp47 => return bcp47,
-    }
-    // Hijri over an LCID with no locale has the Arabic names (`B2[$-0]` and `B2[$-FFFF]` print
-    // "شعبان"; probes/t2729-hijri-locale-tag A202, A251).
-    match hex.map(|value| resolve_lcid(hijri_default(value, hijri_prefix))) {
-        Some(LocaleTag::Silent) | None => {
-            extended_hex(tag).map_or(LocaleTag::Silent, resolve_extended)
+
+    /// The LCID whose calendar names a calendar digit reads. A tag reads its LCID's, or when that
+    /// LCID has no locale its language's primary LCID's, or with neither the digit's default names
+    /// (`B2[$-ar]` the Arabic Hijri names, `B2[$-bg]`, `B2[$-qps-ploc]` and `B2[$-pt-AO]` the
+    /// default English ones; probes/t3666-review-followups A1:A5). The fallback to the primary LCID
+    /// can only matter for tags whose [MS-LCID] LCID has no locale (`ar`, `bg`, `qps-*`), all probed.
+    fn calendar_key(self) -> CalendarKey {
+        match self {
+            Source::Lcid(lcid) => CalendarKey::Lcid(lcid),
+            Source::Tag { lcid, .. } => lcid
+                .into_iter()
+                .flat_map(|lcid| [lcid, primary_lcid(lcid)])
+                .find(|lcid| lcid_names(*lcid).is_some())
+                .map_or(CalendarKey::Default, CalendarKey::Lcid),
         }
-        Some(hijri) => hijri,
     }
+
+    /// Whether the locale is Japanese: its own calendar is the Japanese eras.
+    fn japanese(self) -> bool {
+        match self {
+            Source::Lcid(lcid)
+            | Source::Tag {
+                lcid: Some(lcid), ..
+            } => lcid & LANGUAGE_MASK == LANGUAGE_JAPANESE,
+            Source::Tag { lcid: None, .. } => false,
+        }
+    }
+}
+
+/// What a calendar digit (Windows' calendar id) does: its date system and its effect after a `B2`
+/// prefix. Its names are data (`excel_date_names::calendar_names`). Evidence:
+/// probes/t1923-calendar-digits, text-locale-calendars, t2729-hijri-locale-tag, t2779-hebrew-saka-*,
+/// t2932-b2-calendar-twice, t3101-b2-calendar-names, t3666-calendar-top-bit, t4061-*;
+/// number-formats.md "Calendars of a locale tag".
+#[derive(Clone, Copy)]
+pub(super) struct CalendarSpec {
+    calendar: Calendar,
+    /// After a `B2`, every year token converts once more ([`Localized::year_twice`]).
+    b2_twice: bool,
+    /// After a `B2`, the LCID whose names every name token prints from the first `mmm` on
+    /// ([`Localized::names_after_mmm`]).
+    b2_names_after_mmm: Option<u16>,
+}
+
+const fn spec(calendar: Calendar) -> CalendarSpec {
+    CalendarSpec {
+        calendar,
+        b2_twice: false,
+        b2_names_after_mmm: None,
+    }
+}
+
+/// The spec of calendar digit `digit` (Windows' CAL_* ids), `None` for the locale's own calendar
+/// (digit 0, and 0x18-0x7F, which Excel ignores). The Gregorian digits differ only by their names
+/// (`excel_date_names::calendar_names`): 1 Gregorian, 2 en-US, 9 Middle-East French, A-C Arabic
+/// and transliterated, D, 14 (Korean month names) and 15.
+const fn calendar_spec(digit: u32) -> Option<CalendarSpec> {
+    Some(match digit {
+        // `B2[$-10411]mmm|mmmm` prints the ar-SA names from the first `mmm` (t3101).
+        1 => CalendarSpec {
+            b2_names_after_mmm: Some(LCID_AR_SA),
+            ..spec(Calendar::Gregorian)
+        },
+        2 | 9..=0xD | 0x14 | 0x15 => spec(Calendar::Gregorian),
+        3 => CalendarSpec {
+            b2_twice: true,
+            b2_names_after_mmm: Some(LCID_EN_US),
+            ..spec(Calendar::Japanese { explicit: true })
+        },
+        4 => CalendarSpec {
+            b2_twice: true,
+            ..spec(Calendar::Taiwan)
+        },
+        5 => CalendarSpec {
+            b2_twice: true,
+            b2_names_after_mmm: Some(LCID_EN_US),
+            ..spec(Calendar::Korean)
+        },
+        6 => spec(Calendar::Hijri),
+        7 => CalendarSpec {
+            b2_twice: true,
+            ..spec(Calendar::Thai)
+        },
+        8 => spec(Calendar::Hebrew),
+        0xE | 0x12 | 0x13 => spec(Calendar::Lunar(LunarTable::Eastern)),
+        0xF | 0x11 => spec(Calendar::Lunar(LunarTable::Chinese)),
+        0x10 => spec(Calendar::Saka),
+        0x16 => spec(Calendar::Persian),
+        0x17 => spec(Calendar::UmAlQura),
+        _ => return None,
+    })
+}
+
+/// The LCID of ar-SA, whose names a `B2` before calendar 1 prints from the first `mmm`.
+const LCID_AR_SA: u16 = 0x401;
+/// The LCID of en-US, whose names a `B2` before calendars 3 and 5 prints from the first `mmm`.
+const LCID_EN_US: u16 = 0x409;
+/// The primary-language bits of an LCID.
+const LANGUAGE_MASK: u16 = 0x3FF;
+/// The primary language of Japanese.
+const LANGUAGE_JAPANESE: u16 = 0x11;
+
+/// The primary LCID of `lcid`'s language (sublanguage 1: `ar`, LCID 1, has 0x401).
+const fn primary_lcid(lcid: u16) -> u16 {
+    0x400 | (lcid & LANGUAGE_MASK)
+}
+
+/// `value` (an LCID with its calendar byte) under `source`: the system tags, or the locale's own
+/// names and calendar under digit 0, or the calendar of the digit with the names it has for the
+/// LCID ([`calendar_names`]). Day halves always follow the locale, and an LCID with no locale keeps
+/// `A/P` as written (`[$-E08DE]h A/P` is "6 P"; probes/t1924-locale-tag-extended-hex B13). After a
+/// `B2` (`hijri_prefix`) digit 0 is read as 6. The numeral byte (bits 24-31) is [`numerals`]'s
+/// (`[$-1000411]e|mmmm` is "5|3月"; probes/t1925-numeral-digits B2).
+fn localize(source: Source, value: u32, hijri_prefix: bool) -> (LocaleTag, Option<CalendarSpec>) {
+    match value & 0xFF_FFFF {
+        SYSTEM_DATE_LCID => return (LocaleTag::SystemDate, None),
+        SYSTEM_TIME_LCID => return (LocaleTag::SystemTime, None),
+        _ => {}
+    }
+    let own = source.own_names();
+    let japanese = source.japanese();
+    let digit = match calendar_digit(value) {
+        0 if hijri_prefix => 6,
+        digit => digit,
+    };
+    let Some(spec) = calendar_spec(digit) else {
+        // The locale's own calendar: Japanese eras for a Japanese LCID (`[$-411]g` is "R").
+        let calendar = if japanese {
+            Calendar::Japanese { explicit: false }
+        } else {
+            Calendar::Gregorian
+        };
+        // With no locale the names are en-US, the calendar Gregorian (`[$-D001]b` is "23", where a
+        // section with no tag prints the Buddhist year) and `A/P` stays as written
+        // (probes/t4061-calendars-without-locale A1).
+        let names = own.unwrap_or(EN_US);
+        let tag = LocaleTag::Names(Localized::new(names, own, calendar, japanese));
+        return (tag, None);
+    };
+    let Some(names) = calendar_names(digit, source.calendar_key()) else {
+        return (LocaleTag::Silent, None);
+    };
+    let (names, leap_months, no_locale) = match names {
+        CalendarNames::Own => (own.unwrap_or(EN_US), None, false),
+        CalendarNames::Set {
+            names,
+            leap_months,
+            no_locale,
+        } => (names, leap_months, no_locale),
+    };
+    let localized = Localized {
+        months_by_number: no_locale,
+        leap_months: leap_months.filter(|_| !no_locale),
+        ..Localized::new(names, own, spec.calendar, japanese)
+    };
+    (LocaleTag::Names(localized), Some(spec))
 }
 
 /// The numeral system of the text between `[$-` and `]`: byte 24-31 of the value of a hex tag, or
@@ -219,11 +430,43 @@ fn resolve_with(tag: &str, hijri_prefix: bool) -> LocaleTag {
 /// Myanmar digits; probes/t1924-locale-tag-extended-hex A26). It holds whatever the LCID resolves
 /// to (`[$-fr_FR-x]` keeps the workbook's names and `A/P` as written).
 pub fn numerals(tag: &str) -> Numerals {
-    let value = hex_value(tag).or_else(|| match resolve_bcp47(tag, false) {
-        LocaleTag::Silent => extended_hex(tag),
+    if let Some((_, suffix)) = numeral_suffix(tag) {
+        // Every character of the suffix is an extended-hex digit, wrapping at 32 bits: a space
+        // counts -16 and `_` 47, so `, 200` and `,2 00` are Arabic-Indic and Myanmar digits,
+        // `,200 ` byte 0x1F, `,g00` Myanmar and `,100000200` Arabic-Indic
+        // (probes/t4492-comma-suffix-reading, t4492-locale-comma-tag-shapes).
+        return extended_hex(suffix).map_or(Numerals::Ascii, |value| {
+            Numerals::from_byte((value >> 8) & 0xFF)
+        });
+    }
+    if let Some(value) = hex_value(tag) {
+        return Numerals::from_byte(value >> 24);
+    }
+    // A tag opening `x-` (BCP-47 private use, either case) prints ASCII digits whatever numeral
+    // byte its extended-hex value has: `[$-x-euro]0` is "123" although it reads as byte 2, while
+    // `1gdffc8` (the same value) and `y-euro` give Arabic-Indic digits and `x-000000` (byte 13)
+    // stays ASCII (probes/t4356-private-use-prefix, t4356-private-use-value, excel-graph).
+    let private_use = tag.get(..2).is_some_and(|p| p.eq_ignore_ascii_case("x-"));
+    let value = match known_tag(tag) {
+        None if !private_use => extended_hex(tag),
         _ => None,
-    });
+    };
+    // Bytes 32 and up take their digits like a hex tag's (`[$-y-euros]0` is CJK, `[$-xx-euro]0`
+    // fullwidth; probes/t4356-private-use-prefix); the old "ASCII past 31" reading was this
+    // prefix's effect (`x-euro2`, probes/t4107-numeral-2000-suffix).
     value.map_or(Numerals::Ascii, |value| Numerals::from_byte(value >> 24))
+}
+
+/// The locale and numeral parts of a tag written `locale,N00`, the form Excel gives a cell typed
+/// with script digits (`[$-ar-SA,200]0`, `[$-,D00]h:mm`; probes/t3446-script-digits-forms): the
+/// hex after the comma holds the numeral byte of [`Numerals::from_byte`] above its low byte, so
+/// `,200` prints Arabic-Indic digits, `,D00` Thai and `,1200` Khmer, and `,0` ASCII
+/// (probes/t3891-numeral-tag-render A1:A30, excel-graph 2026-11-04). `,2000` prints fullwidth
+/// digits there, as byte 32 does in the LCID form (A28; probes/t4107-numeral-2000-suffix). Before the
+/// comma only a BCP-47 name is a locale (`resolve_with`): `[$-40C,1]` prints English names
+/// (probes/text-locale-date-names A106, t4492-comma-suffix-reading).
+fn numeral_suffix(tag: &str) -> Option<(&str, &str)> {
+    tag.split_once(',')
 }
 
 /// `tag` read as a hex LCID with its calendar digits, if it is one.
@@ -240,10 +483,12 @@ fn hex_value(tag: &str) -> Option<u32> {
 /// So `[$-fr_FR]` is 0x10E00B, the Saka calendar over an LCID with no locale, `[$-g]` is Italian
 /// (0x10), `[$-3gC]` French (0x40C), `[$-0_]` Macedonian (0x2F) and `[$-~]` Lithuanian (0x27)
 /// (probes/t1924-locale-tag-extended-hex, text-locale-calendars A135-A145). Of the other characters
-/// below `a` only `_` is probed; `-` as -3 and the wrap at 32 bits are inferred. Tags longer than
-/// eight characters and non-ASCII tags are unprobed and resolve to nothing.
+/// below `a` only `_` and `-` (-3) are probed. The value wraps at 32 bits, so a longer tag reads
+/// too: `[$-rhg-Rohg-BD]` is 0xEC91FDBD, the Chinese lunar calendar (0x91, 0x11 by [`calendar_digit`])
+/// over an LCID with no locale, and `[$-tok-001]` 0x1E93D001 (probes/t3666-locale-tag-names A842,
+/// A1007). Non-ASCII tags are unprobed and resolve to nothing.
 fn extended_hex(tag: &str) -> Option<u32> {
-    if tag.is_empty() || tag.len() > 8 || !tag.is_ascii() {
+    if tag.is_empty() || !tag.is_ascii() {
         return None;
     }
     Some(tag.bytes().fold(0u32, |value, c| {
@@ -256,220 +501,14 @@ fn extended_hex(tag: &str) -> Option<u32> {
     }))
 }
 
-/// The calendar digits of a tag value (bits 16-23), without its numeral byte.
+/// The calendar of a tag value: its third byte without the top bit, so 0x83 is 3 (Japanese eras;
+/// `[$-myv-RU]`, 0x0183EECE, prints 2023-03-15 as "05-03-15") and 0x93 is 0x13 (lunar;
+/// `[$-tok-001]`) and 0xFF is 0x7F, ignored (`[$-FF040C]` is French in its own calendar). Every tag of
+/// probes/t3666-locale-tag-names with no locale fits this, over 70 distinct bytes, and so do the
+/// LCIDs with a locale of probes/t3666-calendar-top-bit (`[$-83040C]` is Japanese eras,
+/// `[$-91040C]` lunar, `[$-95040C]` en-US names like 0x15).
 fn calendar_digit(value: u32) -> u32 {
-    (value >> 16) & 0xFF
-}
-
-/// `value` with calendar digit 0 read as 6 (Hijri) after a `B2` prefix; the system tags keep
-/// theirs.
-fn hijri_default(value: u32, hijri_prefix: bool) -> u32 {
-    if hijri_prefix
-        && calendar_digit(value) == 0
-        && value != SYSTEM_DATE_LCID
-        && value != SYSTEM_TIME_LCID
-    {
-        value | 0x6_0000
-    } else {
-        value
-    }
-}
-
-/// An LCID with its calendar digits (bits 16-23, hex below). Excel: 0 is the locale's own calendar
-/// (Japanese eras for Japanese), 1 Gregorian, 2 and D Gregorian with en-US names, 3 Japanese eras
-/// (Japanese names only for a Japanese LCID), 4 Taiwan (zh-TW names), 5 Korean (Korean names only
-/// for a Korean LCID), 7 Thai (Thai names), 9 Gregorian with French names, and 15 and above are
-/// ignored (`[$-FF040C]mmmm` is "mars"). E, F, 11, 12 and 13 are lunar: E with lunar month names
-/// and Japanese weekdays (Korean names under a Korean LCID), F and 11 with zh-CN weekdays, 12 and
-/// 13 with en-US names. A is Gregorian with Levant Arabic month names, B and C Gregorian with
-/// the ar-SA names, 14 Gregorian with the Korean native month names (probes/t1923-calendar-digits).
-/// 6 is Hijri, with the LCID's Hijri names ([`hijri_names`]), 8 Hebrew and 10 Saka
-/// ([`hebrew_or_saka`]). Day halves follow the LCID throughout. The numeral byte (bits 24-31) is
-/// [`numerals`]'s and leaves the names and calendar as they are (`[$-1000411]e|mmmm` is "5|3月";
-/// probes/t1925-numeral-digits B2).
-fn resolve_lcid(value: u32) -> LocaleTag {
-    let value = value & 0xFF_FFFF;
-    match value {
-        SYSTEM_DATE_LCID => return LocaleTag::SystemDate,
-        SYSTEM_TIME_LCID => return LocaleTag::SystemTime,
-        _ => {}
-    }
-    let lcid = (value & 0xFFFF) as u16;
-    // LCID 1 has no locale under Hebrew and Saka, though 0xC, 0xD and 0x39 have theirs
-    // (`[$-80001]mmmm` of 2024-03-21 is "July", `[$-8000D]mmmm` "אדר ב"; probes/t2779-hebrew-saka-more
-    // C29:C33, D29:D33). Under the other digits it is unprobed and reads as Arabic.
-    if lcid == 1 && matches!(value >> 16, 8 | 0x10) {
-        return without_locale(value >> 16);
-    }
-    let names = if lcid == 0x400 || lcid == 0x800 {
-        EN_US
-    } else if let Some(names) = table(lcid).or_else(|| by_language(lcid)) {
-        names
-    } else {
-        return without_locale(value >> 16);
-    };
-    let japanese = lcid & 0x3FF == 0x11;
-    let with_names = |calendar_names: &'static DateNames, calendar| {
-        LocaleTag::Names(Localized::new(
-            calendar_names,
-            Some(names),
-            calendar,
-            japanese,
-        ))
-    };
-    match value >> 16 {
-        0 | 0x15.. if japanese => with_names(names, Calendar::Japanese { explicit: false }),
-        0 | 1 | 0x15.. => with_names(names, Calendar::Gregorian),
-        2 | 0xD => with_names(EN_US, Calendar::Gregorian),
-        3 => with_names(
-            if japanese { names } else { EN_US },
-            Calendar::Japanese { explicit: true },
-        ),
-        4 => table(0x404).map_or(LocaleTag::Silent, |n| with_names(n, Calendar::Taiwan)),
-        5 => with_names(
-            if lcid & 0x3FF == 0x12 { names } else { EN_US },
-            Calendar::Korean,
-        ),
-        7 => table(0x41E).map_or(LocaleTag::Silent, |n| with_names(n, Calendar::Thai)),
-        9 => table(0x40C).map_or(LocaleTag::Silent, |n| with_names(n, Calendar::Gregorian)),
-        0xE => with_names(
-            if lcid & 0x3FF == 0x12 {
-                &LUNAR_KO
-            } else {
-                &LUNAR_JA
-            },
-            Calendar::Lunar(LunarTable::Eastern),
-        ),
-        0xF | 0x11 => with_names(&LUNAR_ZH, Calendar::Lunar(LunarTable::Chinese)),
-        0x12 | 0x13 => with_names(EN_US, Calendar::Lunar(LunarTable::Eastern)),
-        0xA => with_names(&ARABIC_LEVANT, Calendar::Gregorian),
-        0xB | 0xC => with_names(ARABIC, Calendar::Gregorian),
-        0x14 => with_names(&LUNAR_KO, Calendar::Gregorian),
-        6 => with_names(hijri_names(lcid), Calendar::Hijri),
-        8 | 0x10 => {
-            let (calendar_names, calendar) = hebrew_or_saka(value >> 16 == 8, lcid);
-            with_names(calendar_names, calendar)
-        }
-    }
-}
-
-/// The names and calendar of digit 8 (`hebrew`) or 10 under `lcid`: Hebrew script for a Hebrew or
-/// Arabic LCID (`[$-8040D]`, `[$-80801]`), Devanagari Saka names for an Arabic or Hindi one
-/// (`[$-100401]`, `[$-100439]`), the Latin transliterations under every other LCID with a locale
-/// (probes/t2779-hebrew-saka-names E1:E25, t2779-hebrew-saka-more C1:D33). bn-IN (0x445) also
-/// prints the Latin Saka names, but it has no table here and so no locale (`without_locale`).
-fn hebrew_or_saka(hebrew: bool, lcid: u16) -> (&'static DateNames, Calendar) {
-    match (hebrew, lcid & 0x3FF) {
-        (true, 0x0D | 0x01) => (&HEBREW_SCRIPT, Calendar::Hebrew(Some(&HEBREW_SCRIPT_ADARS))),
-        (true, _) => (&HEBREW_LATIN, Calendar::Hebrew(Some(&HEBREW_LATIN_ADARS))),
-        (false, 0x01 | 0x39) => (&SAKA_HINDI, Calendar::Saka),
-        (false, _) => (&SAKA, Calendar::Saka),
-    }
-}
-
-/// The Hijri names Excel shows under `lcid` (calendar digit 6): Arabic for an Arabic LCID, French
-/// and Turkish transliterations for those languages, English ones for every other probed LCID
-/// (`[$-60411]` and `[$-60804]` print "Sha'ban"; probes/t2729-hijri-locale-tag A169-A202,
-/// t2729-hijri-locale-tag-names A1-A82).
-fn hijri_names(lcid: u16) -> &'static DateNames {
-    match lcid & 0x3FF {
-        0x01 => &HIJRI_ARABIC,
-        0x0C => &HIJRI_FRENCH,
-        0x1F => &HIJRI_TURKISH,
-        _ => &HIJRI_ENGLISH,
-    }
-}
-
-/// [`resolve_lcid`] for a value read by [`extended_hex`]: an LCID without a table of its own
-/// falls back to its language only when it is neutral (below 0x400: `[$-g]` 0x10 is Italian,
-/// `[$-0_]` 0x2F Macedonian). `[$-x_y]` is 0x2412 and prints English, not Korean
-/// (text-locale-calendars A139), so an LCID with a sublanguage and no table has no locale here.
-fn resolve_extended(value: u32) -> LocaleTag {
-    let value = value & 0xFF_FFFF;
-    let lcid = (value & 0xFFFF) as u16;
-    if lcid > 0x3FF && lcid != 0x400 && lcid != 0x800 && table(lcid).is_none() {
-        return without_locale(value >> 16);
-    }
-    resolve_lcid(value)
-}
-
-/// Calendar digit `calendar` over an LCID with no locale (0 included): the calendar's date with
-/// its own names where it has them (Thai under 7, Arabic under A, B and C) and en-US names
-/// otherwise, the lunar ones included, and `A/P` as written. `[$-E08DE]mmmm|yyyy-mm-dd` of 45000
-/// is "February|2023-02-24", `[$-708DE]` gives "มีนาคม|2566-03-15", `[$-CFDFC]` "مارس", and
-/// `h A/P` is "6 P" under each (probes/t1924-locale-tag-extended-hex A13, A14, B13, B14;
-/// text-locale-calendars A136-A138, A142). Hijri has the Arabic names (`[$-608DE]` and
-/// `[$-60000]` print "شعبان|الأربعاء"; probes/t2729-hijri-locale-tag A201, A260). Hebrew and Saka
-/// name their months by number in en-US (`[$-80000]mmmm` of 2024-03-21 is "July", `[$-fr_FR]`
-/// of 2023-03-15 "December"; probes/t2779-hebrew-saka-names F1:F7, E12, E13). Other digits (3,
-/// 4, 5, 9 and 14 are unprobed here) leave such a tag [`LocaleTag::Silent`].
-fn without_locale(calendar: u32) -> LocaleTag {
-    let (names, calendar) = match calendar {
-        7 => match table(0x41E) {
-            Some(thai) => (thai, Calendar::Thai),
-            None => return LocaleTag::Silent,
-        },
-        0xA => (&ARABIC_LEVANT, Calendar::Gregorian),
-        0xB | 0xC => (ARABIC, Calendar::Gregorian),
-        0xE | 0x12 | 0x13 => (EN_US, Calendar::Lunar(LunarTable::Eastern)),
-        0xF | 0x11 => (EN_US, Calendar::Lunar(LunarTable::Chinese)),
-        6 => (&HIJRI_ARABIC, Calendar::Hijri),
-        8 => (EN_US, Calendar::Hebrew(None)),
-        0x10 => (EN_US, Calendar::Saka),
-        _ => return LocaleTag::Silent,
-    };
-    LocaleTag::Names(Localized::new(names, None, calendar, false))
-}
-
-/// The table of exactly `lcid`.
-fn table(lcid: u16) -> Option<&'static DateNames> {
-    LOCALES
-        .iter()
-        .find(|(id, _, _)| *id == lcid)
-        .map(|(_, _, names)| *names)
-}
-
-/// The first table of `lcid`'s language, for an LCID with no table of its own.
-fn by_language(lcid: u16) -> Option<&'static DateNames> {
-    let language = lcid & 0x3FF;
-    if language == 0 {
-        return None;
-    }
-    LOCALES
-        .iter()
-        .find(|(id, _, _)| id & 0x3FF == language)
-        .map(|(_, _, names)| *names)
-}
-
-/// A BCP-47 tag is the LCID it names, with that locale's own calendar (`[$-ja-JP]g` is "R"), or
-/// Hijri after a `B2` prefix.
-fn resolve_bcp47(tag: &str, hijri_prefix: bool) -> LocaleTag {
-    let resolve_id = |id: u16| resolve_lcid(hijri_default(u32::from(id), hijri_prefix));
-    // A tag with no LCID has no Hijri default, so a `B2` prefix skips it.
-    if !hijri_prefix {
-        if let Some((_, names)) = BCP47_ONLY.iter().find(|(t, _)| t.eq_ignore_ascii_case(tag)) {
-            return LocaleTag::Names(Localized::new(
-                names,
-                Some(names),
-                Calendar::Gregorian,
-                false,
-            ));
-        }
-    }
-    if let Some((id, _, _)) = LOCALES.iter().find(|(_, t, _)| t.eq_ignore_ascii_case(tag)) {
-        return resolve_id(*id);
-    }
-    let Some(language) = tag.split('-').next().filter(|l| !l.is_empty()) else {
-        return LocaleTag::Silent;
-    };
-    LOCALES
-        .iter()
-        .find(|(_, t, _)| {
-            t.split('-')
-                .next()
-                .is_some_and(|l| l.eq_ignore_ascii_case(language))
-        })
-        .map_or(LocaleTag::Silent, |(id, _, _)| resolve_id(*id))
+    (value >> 16) & 0x7F
 }
 
 /// The Japanese eras Excel uses from 1900 on, latest first: the serial of the first day (1900 date
@@ -518,4 +557,37 @@ pub fn japanese_era(
         .map_or(i64::MIN, |date| i64::from(convert_to_serial_number(date)));
     let (first_year, names) = era_of(again);
     (era_year - first_year + 1, names)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::extended_hex;
+
+    /// Excel's extended-hex reading of tags (probes/t1924-locale-tag-extended-hex,
+    /// t3666-locale-tag-names).
+    const EXTENDED_HEX: [(&str, u32); 6] = [
+        ("fr_FR", 0x0010_E00B),
+        ("fr_FR-x", 0x10E0_0AF1),
+        ("bgc", 0x0C0C),
+        ("ceb", 0x0CEB),
+        ("tok-001", 0x1E93_D001),
+        ("rhg-Rohg-BD", 0xEC91_FDBD),
+    ];
+
+    #[test]
+    fn extended_hex_golden() {
+        for (tag, value) in EXTENDED_HEX {
+            assert_eq!(extended_hex(tag), Some(value), "{tag}");
+        }
+    }
+
+    /// A table tag Excel reads as extended hex is not a tag (`[$-bgc]` is fr-CA by 0xC0C, and
+    /// `[$-bgc-IN]` falls back to no language), one that spells its LCID is (`[$-ceb]`).
+    #[test]
+    fn tags_read_as_hex() {
+        assert!(super::known_tag("bgc").is_none());
+        assert!(super::known_tag("bgc-IN").is_none());
+        assert!(super::known_tag("ceb").is_some());
+        assert!(super::known_tag("fr-XX").is_some());
+    }
 }

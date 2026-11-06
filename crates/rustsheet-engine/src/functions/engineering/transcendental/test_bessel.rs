@@ -234,3 +234,56 @@ fn bessel_i_is_nan_past_the_overflow_cut() {
         assert!(bessel_i(n, 709.70001).is_nan(), "n = {n}");
     }
 }
+
+/// At a tiny x each order's recurrence overflow is `#NUM!`, never the 0 that `i0 / inf` would give,
+/// and the cut is the first overflowing x; the values just above it round twice per step (T-4422,
+/// probes/t4422-bessel-tiny-x-bisect and -cuts, excel-graph).
+#[test]
+fn bessel_i_tiny_x_overflow_is_nan() {
+    use super::bessel_excel::excel_bessel_j;
+    for (n, answers, errors) in [
+        (2, 2.04e-24, 2.03e-24),
+        (3, 7.13e-21, 7.12e-21),
+        (4, 1.23e-18, 1.22e-18),
+        (5, 4.26e-17, 4.25e-17),
+        (6, 2.62e-16, 2.61e-16),
+        (7, 1.19e-15, 1.18e-15),
+    ] {
+        assert!(bessel_i(n, answers).is_finite(), "BESSELI({answers},{n})");
+        for x in [errors, -errors, errors / 100.0, 1e-306] {
+            assert!(bessel_i(n, x).is_nan(), "BESSELI({x},{n})");
+        }
+    }
+    for (n, answers, errors) in [(2, 1.36e-39, 1.35e-39), (7, 5.03e-23, 5.02e-23)] {
+        assert!(
+            excel_bessel_j(n, answers).is_finite(),
+            "BESSELJ({answers},{n})"
+        );
+        assert!(excel_bessel_j(n, errors).is_nan(), "BESSELJ({errors},{n})");
+    }
+    // Bit-exact values that plain doubles miss by 1 ulp.
+    for (n, x, excel) in [
+        (7, 1e-6, 1.550_099_206_349_255e-48),
+        (6, 1e-15, 2.170_138_888_888_891_8e-95),
+        (6, 7e-15, 2.553_146_701_388_891e-90),
+    ] {
+        assert_eq!(bessel_i(n, x), excel, "BESSELI({x},{n})");
+    }
+}
+
+#[test]
+fn besselk_is_num_once_half_x_is_subnormal() {
+    // probes/t4459-besselk-tiny-x-ulps: Excel reads its 16-digit literals at 15 digits, so A1:B4 ask
+    // 4.4501477170144E-308 (#NUM! for orders 0 and 1) and A5:B6 ask 4.45014771701441E-308, which
+    // answers 707.8192028722641 and 2.2471164185778914E+307. 2^-1021 lies between them.
+    let below = 4.450_147_717_014_4e-308;
+    let above = 4.450_147_717_014_41e-308;
+    for n in 0..=2 {
+        assert!(
+            bessel_k(n, below).is_nan(),
+            "BESSELK(4.4501477170144E-308,{n})"
+        );
+    }
+    assert_eq!(bessel_k(0, above), 707.819_202_872_264_1);
+    assert_eq!(bessel_k(1, above), 2.247_116_418_577_891_4e307);
+}

@@ -318,6 +318,25 @@ fn fraction_digits_round_into_the_next_day() {
     );
 }
 
+// probes/text-format-aaa-weekday-d (T-2745): a run's last letter before `m/pm` or `/p` is the AM/PM token's.
+#[test]
+fn a_run_before_am_pm_gives_its_last_letter_to_the_token() {
+    let cases = [
+        (1.0, "aaaAAAaaa", "Sunday"),
+        (1.0, "aaaAAAa", "Sundaya"),
+        (0.75, "aaam/pm", "aaPM"),
+        (0.75, "aaaAM/PM", "SatPM"),
+        (0.75, "aaaa/p", "Satp"),
+    ];
+    for (v, format, expected) in cases {
+        assert_eq!(
+            format_in(v, format, DateSystem::Excel1900),
+            expected,
+            "{format}"
+        );
+    }
+}
+
 // probes/text-format-aaa-weekday and -b (T-1880): three or more of one `a` are the weekday.
 #[test]
 fn a_runs_are_the_weekday() {
@@ -341,6 +360,25 @@ fn a_runs_are_the_weekday() {
     for (value, format, expected) in cases {
         assert_eq!(
             format_in(value, format, DateSystem::Excel1900),
+            expected,
+            "{format}"
+        );
+    }
+}
+
+/// Only the last hour before a marker and the last hour of the section take the 12-hour clock
+/// (probes/t3710-ampm-hour-tokens).
+#[test]
+fn am_pm_switches_only_some_hour_tokens() {
+    let cases = [
+        ("h|hh|mm|ss|h:mm:ss.00 AM/PM", "13|13|02|12|1:02:12.48 PM"),
+        ("h h AM/PM h h", "13 1 PM 13 1"),
+        ("h AM/PM|h", "1 PM|1"),
+        ("h:mm|h:mm AM/PM", "13:02|1:02 PM"),
+    ];
+    for (format, expected) in cases {
+        assert_eq!(
+            format_in(45000.5432, format, DateSystem::Excel1900),
             expected,
             "{format}"
         );

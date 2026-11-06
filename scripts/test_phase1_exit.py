@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -45,6 +46,20 @@ def report(**over: Any) -> dict[str, Any]:
     return base
 
 
+def accuracy(holds: bool = True, **check: Any) -> dict[str, Any]:
+    """The accuracy check's JSON (`rustsheet-eval accuracy --json`), Gate A holding by default."""
+    base: dict[str, Any] = {
+        "points": [{"standing": "inside"}, {"standing": "inside"}],
+        "stale_known_failures": [],
+        "bad_marks": [],
+        "bad_exemptions": [],
+        "missing_tables": [],
+        "seconds": 0.1,
+    }
+    base.update(check)
+    return {"passes": True, "holds": holds, "check": base}
+
+
 class Phase1Exit(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -56,6 +71,7 @@ class Phase1Exit(unittest.TestCase):
         (self.catalog / "excel-functions.tsv").write_text(TSV)
         (self.catalog / "functions.yaml").write_text(YAML)
         self.n = 0
+        self.accuracy: dict[str, Any] | None = accuracy()
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
@@ -72,10 +88,17 @@ class Phase1Exit(unittest.TestCase):
     def run_main(self, rep: dict[str, Any]) -> tuple[int, str]:
         path = Path(self.tmp.name) / "report.json"
         path.write_text(json.dumps(rep))
+        acc = Path(self.tmp.name) / "accuracy.json"
+        if self.accuracy is not None:
+            acc.write_text(json.dumps(self.accuracy))
+            # Written after the report, as `make eval` does.
+            mtime = path.stat().st_mtime + 1
+            os.utime(acc, (mtime, mtime))
         out = io.StringIO()
         with redirect_stdout(out):
             code = phase1_exit.main(
                 ["--report", str(path), "--tasks", str(self.tasks), "--catalog", str(self.catalog)]
+                + ["--accuracy", str(acc)]
             )
         return code, out.getvalue()
 
@@ -86,8 +109,45 @@ class Phase1Exit(unittest.TestCase):
         code, text = self.run_main(report())
         self.assertEqual(code, 0, text)
         self.assertIn("catalog\tmet\t3 Excel functions, 2 in scope, 1 out", text)
+        self.assertIn("gate A\tmet\t2 points, 2 inside, 0 known failures, 0 failing", text)
         self.assertEqual(text.count("\tmanual\t"), len(phase1_exit.MANUAL_ITEMS))
         self.assertTrue(self.failing(text).startswith("Phase 1 exit: met"))
+
+    def test_gate_a_not_holding_fails_the_exit_with_its_counts(self) -> None:
+        # Decision 0188 R1(a), decision 0268: missing tables and known failures keep Gate A from
+        # holding even though `make check` passes.
+        self.accuracy = accuracy(
+            holds=False,
+            points=[{"standing": "inside"}, {"standing": "known_failure"}],
+            missing_tables=["ACCRINT", "AMORDEGRC"],
+        )
+        code, text = self.run_main(report())
+        self.assertEqual(code, 1)
+        self.assertIn(
+            "gate A\tnot met\t2 points, 1 inside, 1 known failures, 0 failing, 0 list problems; missing tables 2",
+            text,
+        )
+        self.assertEqual(self.failing(text), "Phase 1 exit: not met: gate A")
+
+    def test_gate_a_absent_or_older_than_the_report_is_not_measured(self) -> None:
+        self.accuracy = None
+        code, text = self.run_main(report())
+        self.assertEqual(code, 1)
+        self.assertIn("gate A\tn/a\tno accuracy.json", text)
+        acc = Path(self.tmp.name) / "accuracy.json"
+        rep = Path(self.tmp.name) / "report.json"
+        acc.write_text(json.dumps(accuracy()))
+        rep.write_text(json.dumps(report()))
+        old = rep.stat().st_mtime - 10
+        os.utime(acc, (old, old))
+        line = phase1_exit.gate_a_line(acc, rep)
+        self.assertEqual((line.verdict, line.detail), ("n/a", "accuracy.json is older than the report: run `make eval`"))
+
+    def test_gate_a_unreadable_is_not_measured(self) -> None:
+        self.accuracy = {"holds": True}
+        code, text = self.run_main(report())
+        self.assertEqual(code, 1)
+        self.assertIn("gate A\tn/a\taccuracy.json unreadable", text)
 
     def test_a_milestone_row_not_met(self) -> None:
         rows = [{"milestone": m, "exit": m != "M7"} for m in phase1_exit.PHASE1_MILESTONES]
@@ -206,7 +266,12 @@ class Phase1Exit(unittest.TestCase):
         path = Path(self.tmp.name) / "report.json"
         path.write_text(json.dumps(report()))
         out = io.StringIO()
+        acc = Path(self.tmp.name) / "accuracy.json"
+        acc.write_text(json.dumps(accuracy()))
+        mtime = path.stat().st_mtime + 1
+        os.utime(acc, (mtime, mtime))
         args = ["--report", str(path), "--tasks", str(self.tasks), "--catalog", str(self.catalog), "--json"]
+        args += ["--accuracy", str(acc)]
         with redirect_stdout(out):
             self.assertEqual(phase1_exit.main(args), 0)
         doc = json.loads(out.getvalue())

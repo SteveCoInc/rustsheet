@@ -353,29 +353,18 @@ mod tests {
                 graph_subnormal: false,
                 kind: crate::runner::CellKind::Scored,
                 math: None,
+                target: crate::runner::Target::Excel,
             })
             .collect();
         CaseResult {
-            id: id.into(),
-            suite: "probes".into(),
-            status,
-            message: None,
-            expected_source: String::new(),
             checked: cells.len(),
             passed: verdicts.iter().filter(|v| **v == Verdict::Pass).count(),
             deviations: verdicts
                 .iter()
                 .filter(|v| **v == Verdict::Deviation)
                 .count(),
-            skipped_volatile: 0,
-            skipped_add_in: 0,
-            millis: 0,
-            tags: Vec::new(),
             cells,
-            text: Vec::new(),
-            defined_names: BTreeMap::new(),
-            arguments: Vec::new(),
-            reference_forms: crate::poi_m8_subset::ReferenceFormCells::default(),
+            ..CaseResult::empty(id, "probes", status)
         }
     }
 

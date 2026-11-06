@@ -16,9 +16,9 @@ use pyo3::types::{PyBool, PyBytes, PyDict, PyInt, PyList};
 use pyo3::{create_exception, IntoPyObjectExt};
 
 use rustsheet::{
-    resolve_sheet_by_name, ChangeSet, Clock, DateSystem, EditError, ErrorKind, Input, LoadOptions,
-    RangeRef, RefError, SaveOptions, SheetChange, SheetId, Txn, Value, Workbook, WorkbookOptions,
-    XlError,
+    parse_cell, parse_range, resolve_sheet_by_name, ChangeSet, Clock, DateSystem, EditError,
+    ErrorKind, Input, Iteration, LoadError, LoadOptions, Password, RangeRef, RefError, SaveOptions,
+    SheetChange, SheetId, Txn, Value, Workbook, WorkbookOptions, XlError,
 };
 
 create_exception!(_rustsheet, RustSheetError, PyException);
@@ -26,6 +26,18 @@ create_exception!(_rustsheet, PyRefError, RustSheetError);
 create_exception!(_rustsheet, PyEditError, RustSheetError);
 create_exception!(_rustsheet, PyLoadError, RustSheetError);
 create_exception!(_rustsheet, PySaveError, RustSheetError);
+create_exception!(_rustsheet, PyPasswordRequiredError, PyLoadError);
+create_exception!(_rustsheet, PyWrongPasswordError, PyLoadError);
+
+/// The Python exception for a load failure: the password errors get their own `LoadError`
+/// subclasses (SPEC-0031 D4). No `LoadError` text contains the password.
+fn load_err(e: &LoadError) -> PyErr {
+    match e {
+        LoadError::PasswordRequired => PyPasswordRequiredError::new_err(e.to_string()),
+        LoadError::WrongPassword => PyWrongPasswordError::new_err(e.to_string()),
+        _ => PyLoadError::new_err(e.to_string()),
+    }
+}
 
 fn ref_err(e: &RefError) -> PyErr {
     PyRefError::new_err(e.to_string())
@@ -291,11 +303,19 @@ fn opt_clock(obj: Option<&Bound<'_, PyAny>>) -> PyResult<Clock> {
     obj.map_or(Ok(Clock::system()), py_to_clock)
 }
 
-fn load_options(recalc: bool, clock: Clock) -> LoadOptions {
+fn load_options(
+    recalc: bool,
+    clock: Clock,
+    name: Option<String>,
+    password: Option<String>,
+) -> LoadOptions {
     LoadOptions {
         recalc,
+        // The extracted `String` moves into the zeroizing `Password`; no other copy is kept.
+        password: password.map(Password::new),
         workbook: WorkbookOptions {
             clock,
+            name,
             ..WorkbookOptions::default()
         },
         ..LoadOptions::default()
@@ -352,9 +372,14 @@ fn sheet_names(wb: &Workbook) -> Vec<(SheetId, String)> {
 #[pymethods]
 impl PyWorkbook {
     /// Creates an empty workbook with one sheet; `date_system` is `"1900"` (default) or `"1904"`.
+    /// `name` is the file name without extension (`"Budget"`), which `CELL` reports as `[Budget.xlsx]`.
     #[new]
-    #[pyo3(signature = (date_system="1900", clock=None))]
-    fn py_new(date_system: &str, clock: Option<&Bound<'_, PyAny>>) -> PyResult<Self> {
+    #[pyo3(signature = (date_system="1900", clock=None, name=None))]
+    fn py_new(
+        date_system: &str,
+        clock: Option<&Bound<'_, PyAny>>,
+        name: Option<String>,
+    ) -> PyResult<Self> {
         let clock = opt_clock(clock)?;
         let date_system = match date_system {
             "1900" => DateSystem::Excel1900,
@@ -368,6 +393,7 @@ impl PyWorkbook {
         let wb = Workbook::new(&WorkbookOptions {
             date_system,
             clock,
+            name,
             ..WorkbookOptions::default()
         })
         .map_err(|e| PyLoadError::new_err(e.to_string()))?;
@@ -398,33 +424,37 @@ impl PyWorkbook {
 
     /// Opens an xlsx file (the GIL is released while loading).
     #[staticmethod]
-    #[pyo3(signature = (path, recalc=true, clock=None))]
+    #[pyo3(signature = (path, recalc=true, clock=None, name=None, password=None))]
     fn open(
         py: Python<'_>,
         path: &str,
         recalc: bool,
         clock: Option<&Bound<'_, PyAny>>,
+        name: Option<String>,
+        password: Option<String>,
     ) -> PyResult<Self> {
-        let options = load_options(recalc, opt_clock(clock)?);
+        let options = load_options(recalc, opt_clock(clock)?, name, password);
         let wb = py
             .detach(|| Workbook::open(path, &options))
-            .map_err(|e| PyLoadError::new_err(e.to_string()))?;
+            .map_err(|e| load_err(&e))?;
         Ok(Self::wrap(wb))
     }
 
     /// Loads a workbook from xlsx bytes (the GIL is released while loading).
     #[staticmethod]
-    #[pyo3(signature = (data, recalc=true, clock=None))]
+    #[pyo3(signature = (data, recalc=true, clock=None, name=None, password=None))]
     fn from_bytes(
         py: Python<'_>,
         data: &[u8],
         recalc: bool,
         clock: Option<&Bound<'_, PyAny>>,
+        name: Option<String>,
+        password: Option<String>,
     ) -> PyResult<Self> {
-        let options = load_options(recalc, opt_clock(clock)?);
+        let options = load_options(recalc, opt_clock(clock)?, name, password);
         let wb = py
             .detach(|| Workbook::from_xlsx_bytes(data, &options))
-            .map_err(|e| PyLoadError::new_err(e.to_string()))?;
+            .map_err(|e| load_err(&e))?;
         Ok(Self::wrap(wb))
     }
 
@@ -443,6 +473,45 @@ impl PyWorkbook {
     /// Recalculates every formula (the GIL is released).
     fn recalculate(&self, py: Python<'_>) {
         py.detach(|| lock(&self.wb).recalculate());
+    }
+
+    /// The iterative-calculation settings as `(max_iterations, max_change)`, `None` when off.
+    #[getter]
+    fn iteration(&self, py: Python<'_>) -> Option<(u32, f64)> {
+        self.read(py, |wb| {
+            wb.iteration().map(|i| (i.max_iterations, i.max_change))
+        })
+    }
+
+    /// Turns iterative calculation on with its count and delta (Excel's defaults 100 and
+    /// 0.001), or off with `enabled=False`. It applies from the next recalculation.
+    #[pyo3(signature = (enabled=true, max_iterations=100, max_change=0.001))]
+    fn set_iteration(
+        &self,
+        py: Python<'_>,
+        enabled: bool,
+        max_iterations: u32,
+        max_change: f64,
+    ) -> PyResult<()> {
+        let wanted = Iteration {
+            max_iterations,
+            max_change,
+        };
+        // The engine owns Excel's range (1 to `MAX_ITERATIONS`, finite non-negative delta): a
+        // setting it would bring back into range is rejected, not silently replaced.
+        let in_range = wanted.within_excel_range();
+        if enabled
+            && (in_range.max_iterations != max_iterations
+                || in_range.max_change.to_bits() != max_change.to_bits())
+        {
+            return Err(PyValueError::new_err(format!(
+                "max_iterations must be 1 to {} and max_change a finite number >= 0",
+                Iteration::MAX_ITERATIONS
+            )));
+        }
+        let setting = enabled.then_some(wanted);
+        py.detach(|| lock(&self.wb).set_iteration(setting));
+        Ok(())
     }
 
     /// Sheet names in tab order.
@@ -534,6 +603,19 @@ impl PyWorkbook {
         .map_err(|e: RefError| ref_err(&e))
     }
 
+    /// Every stored cell of a sheet (values, formulas, spill members) as A1 strings with the
+    /// sheet name, by row and within a row by column. Cheap for a sparse sheet whatever its
+    /// used range.
+    fn stored_cells(&self, py: Python<'_>, sheet: &str) -> PyResult<Vec<String>> {
+        self.read(py, |wb| {
+            let id = wb.sheet_id(sheet)?;
+            let cells = wb.stored_cells(id)?;
+            let name = name_of(&sheet_names(wb), id).cloned().unwrap_or_default();
+            Ok(cells.iter().map(|c| c.to_a1_in(&name)).collect())
+        })
+        .map_err(|e: RefError| ref_err(&e))
+    }
+
     /// Turns the per-edit value diff on or off (off: `changes["values"]` stays empty).
     fn set_track_changes(&self, py: Python<'_>, on: bool) {
         py.detach(|| lock(&self.wb).set_track_changes(on));
@@ -568,7 +650,14 @@ enum Op {
     AddSheet(String),
     RenameSheet(String, String),
     DeleteSheet(String),
+    DefineName(String, String, Option<String>),
     Clock(Clock),
+    NumberFormat(String, String),
+    DataTable(String, Option<String>, Option<String>),
+    /// Sheet name, 0-based row, hidden.
+    RowHidden(String, u32, bool),
+    /// A1 range, table name, filtered, totals row.
+    AddTable(String, String, bool, bool),
 }
 
 /// Buffers edits and applies them as one atomic `Workbook::edit` when the `with` block exits
@@ -594,9 +683,12 @@ impl PyTransaction {
 /// Position of `name` in `sheets`, resolved with the facade's own case-insensitive rule. The
 /// facade's `Workbook::sheet_id` cannot be used because the transaction's ops are not applied
 /// yet, so sheets added or renamed earlier in the same block exist only in this list.
+fn sheet_pairs(sheets: &[(SheetId, String)]) -> Vec<(SheetId, &str)> {
+    sheets.iter().map(|(id, n)| (*id, n.as_str())).collect()
+}
+
 fn find_sheet(sheets: &[(SheetId, String)], name: &str) -> Result<usize, EditError> {
-    let pairs: Vec<(SheetId, &str)> = sheets.iter().map(|(id, n)| (*id, n.as_str())).collect();
-    resolve_sheet_by_name(&pairs, Some(name))
+    resolve_sheet_by_name(&sheet_pairs(sheets), Some(name))
         .and_then(|id| sheets.iter().position(|(i, _)| *i == id))
         .ok_or_else(|| EditError::Ref(RefError::UnknownSheet(name.to_owned())))
 }
@@ -610,6 +702,24 @@ fn apply(
         match op {
             Op::Set(r, input) => txn.set(r.as_str(), input)?,
             Op::Clock(clock) => txn.set_clock(clock)?,
+            Op::NumberFormat(r, format) => txn.set_number_format(r.as_str(), &format)?,
+            Op::DataTable(range, row_input, column_input) => {
+                let pairs = sheet_pairs(&sheets);
+                let by_name = |n: Option<&str>| resolve_sheet_by_name(&pairs, n);
+                let range = parse_range(&range, by_name)?;
+                let row_input = row_input.map(|r| parse_cell(&r, by_name)).transpose()?;
+                let column_input = column_input.map(|r| parse_cell(&r, by_name)).transpose()?;
+                txn.add_data_table(range, row_input, column_input)?;
+            }
+            Op::AddTable(range, name, filtered, totals_row) => {
+                let pairs = sheet_pairs(&sheets);
+                let range = parse_range(&range, |n| resolve_sheet_by_name(&pairs, n))?;
+                txn.add_table_with_totals(range, &name, filtered, totals_row)?;
+            }
+            Op::RowHidden(sheet, row, hidden) => {
+                let i = find_sheet(&sheets, &sheet)?;
+                txn.set_row_hidden(sheets[i].0, row, hidden)?;
+            }
             Op::AddSheet(name) => {
                 let id = txn.add_sheet(&name)?;
                 sheets.push((id, name));
@@ -623,6 +733,11 @@ fn apply(
                 let i = find_sheet(&sheets, &name)?;
                 txn.delete_sheet(sheets[i].0)?;
                 sheets.remove(i);
+            }
+            Op::DefineName(name, formula, None) => txn.define_name(&name, &formula)?,
+            Op::DefineName(name, formula, Some(sheet)) => {
+                let i = find_sheet(&sheets, &sheet)?;
+                txn.define_sheet_name(sheets[i].0, &name, &formula)?;
             }
         }
     }
@@ -670,6 +785,68 @@ impl PyTransaction {
         self.push(Op::Set(r.to_owned(), Input::Clear))
     }
 
+    /// Gives the cell `ref` the number format `format` (e.g. `"0.0%"`), keeping its value and the
+    /// rest of its style; no value changes. A multi-cell target, a target outside the sheet or an
+    /// unknown sheet raises an error when the block exits and rolls the block back.
+    fn set_number_format(&mut self, r: &str, format: &str) -> PyResult<()> {
+        self.push(Op::NumberFormat(r.to_owned(), format.to_owned()))
+    }
+
+    /// Adds a what-if data table whose result cells are `range`; `row_input` and `column_input`
+    /// are the cells the values of the row above and the column left of `range` replace. The
+    /// next evaluation fills the results. Errors surface when the block exits.
+    #[pyo3(signature = (range, row_input=None, column_input=None))]
+    fn add_data_table(
+        &mut self,
+        range: &str,
+        row_input: Option<&str>,
+        column_input: Option<&str>,
+    ) -> PyResult<()> {
+        self.push(Op::DataTable(
+            range.to_owned(),
+            row_input.map(str::to_owned),
+            column_input.map(str::to_owned),
+        ))
+    }
+
+    /// Hides (or, with `hidden=False`, shows) a row of `sheet`. `row` is the **1-based** row number
+    /// Excel shows (1..=1,048,576), so `set_row_hidden("Sheet1", 3)` hides the row of `A3`;
+    /// SUBTOTAL 101-111 and AGGREGATE's ignore-hidden options then skip it. A row outside that range
+    /// raises `EditError` at once (the block rolls back); an unknown sheet raises `RefError` when
+    /// the block exits.
+    #[pyo3(signature = (sheet, row, hidden=true))]
+    fn set_row_hidden(&mut self, sheet: &str, row: i64, hidden: bool) -> PyResult<()> {
+        let row = row
+            .checked_sub(1)
+            .and_then(|r| u32::try_from(r).ok())
+            .filter(|r| *r < 1_048_576)
+            .ok_or_else(|| PyEditError::new_err(format!("row {row} is outside 1..=1048576")))?;
+        self.push(Op::RowHidden(sheet.to_owned(), row, hidden))
+    }
+
+    /// Adds an Excel table (`ListObject`) named `name` over the A1 range `range`, so structured
+    /// references such as `Sales[Qty]` work. The first row of the range is the header row (set
+    /// the header cells first). With `filtered` the table carries an active filter, so hidden rows
+    /// on that sheet count as filtered and SUBTOTAL 1-11 skip them; with `totals_row` the last row
+    /// is `Table[#Totals]`. An invalid or taken name, an overlap with another table, a range with
+    /// no data row, or an empty or repeated header raises `EditError`, and an unknown sheet
+    /// `RefError`, when the block exits. The range may name a sheet added earlier in the block.
+    #[pyo3(signature = (range, name, filtered=false, totals_row=false))]
+    fn add_table(
+        &mut self,
+        range: &str,
+        name: &str,
+        filtered: bool,
+        totals_row: bool,
+    ) -> PyResult<()> {
+        self.push(Op::AddTable(
+            range.to_owned(),
+            name.to_owned(),
+            filtered,
+            totals_row,
+        ))
+    }
+
     /// Adds a sheet at the end.
     fn add_sheet(&mut self, name: &str) -> PyResult<()> {
         self.push(Op::AddSheet(name.to_owned()))
@@ -683,6 +860,19 @@ impl PyTransaction {
     /// Deletes a sheet.
     fn delete_sheet(&mut self, name: &str) -> PyResult<()> {
         self.push(Op::DeleteSheet(name.to_owned()))
+    }
+
+    /// Defines a name for `formula` (a leading `=` is optional): workbook-scoped, or scoped to the
+    /// sheet `sheet` when given (it may be a sheet added earlier in the block). A sheet-scoped name
+    /// shadows a workbook name of the same spelling on its sheet. An invalid or duplicate name, an
+    /// unparsable formula raises `EditError`, and an unknown sheet `RefError`, when the block exits.
+    #[pyo3(signature = (name, formula, sheet=None))]
+    fn define_name(&mut self, name: &str, formula: &str, sheet: Option<&str>) -> PyResult<()> {
+        self.push(Op::DefineName(
+            name.to_owned(),
+            formula.to_owned(),
+            sheet.map(str::to_owned),
+        ))
     }
 }
 
@@ -698,6 +888,11 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("EditError", py.get_type::<PyEditError>())?;
     m.add("LoadError", py.get_type::<PyLoadError>())?;
     m.add("SaveError", py.get_type::<PySaveError>())?;
+    m.add(
+        "PasswordRequiredError",
+        py.get_type::<PyPasswordRequiredError>(),
+    )?;
+    m.add("WrongPasswordError", py.get_type::<PyWrongPasswordError>())?;
     Ok(())
 }
 

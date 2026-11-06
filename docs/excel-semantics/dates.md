@@ -57,7 +57,7 @@ A year can have 54 weeks: `WEEKNUM(DATE(2024,12,31),12)` is 54 (Tuesday week sta
 Evidence: probes/weeknum-modern-boundaries A1-A67 (excel-graph, 2026-10-17).
 
 ### WEEKNUM return_type edge cases and serial 0 (T-1023)
-Rule: return_type 1, 2, 11-17 and 21 are valid (a fraction truncates: 2.9 is 2, 21.5 is 21);
+Rule: return_type 1, 2, 11-17 and 21 are valid (a fraction floors, snapping up within 2^-22 + 2^-33 of the next integer: 2.9 is 2, 21.5 is 21; see "WEEKNUM return_type snap and negative floor" below);
 0, 3-10 and 18-20 are always `#NUM!` (not `#VALUE!`). A return_type of 22 or more, or negative, is
 NOT simply an error: it reads a start-weekday state that other WEEKNUM calls of the same recalc
 leave behind, and is `#NUM!` only when the state is empty (see "WEEKNUM's stale return_type state"
@@ -73,6 +73,21 @@ the first 94-cell version of weeknum-serial-0 (commit 042ad31) reproduces determ
 Status: VERIFIED
 Implemented in: `fn_weeknum`, `iso_week` (crates/rustsheet-engine/src/functions/date_and_time/weeknum.rs), `fn_isoweeknum`.
 
+### WEEKNUM return_type snap and negative floor (T-4470)
+Rule: WEEKNUM reads return_type as a floor that snaps up near the next integer, before choosing the type. Positive side: within
+2^-22 + 2^-33 below an integer (the LEFT count rule; the T-4454 entry below). Negative side: the floor (`-0.5` is -1), and the snap window is HALF the positive one, 2^-23 + 2^-34 (as DATE/TIME,
+`near_integer_whole`): `-2^-30`, `-2^-23` and `-(2^-23+2^-34)` snap up to 0 (`#NUM!`, empty the state), while `-(2^-22+2^-33)` and
+`-(2^-22+9*2^-36)` floor to -1 and read the stale state (probes/t4619-weeknum-negative-snap-window, excel-graph, 2026-11-06,
+T-4619). Cells and what each rules out:
+- `1-2^-23` is type 1 (not 0): sets the Sunday start; `2-2^-23` is type 2 and sets Monday; `18-2^-23` is 18 (`#NUM!`, empties the
+  state; truncation would give 17); `21-2^-23` is 21 (ISO, week 15 for serial 100); `22-2^-23` is 22 and reads the stale state.
+- `-0.5` is -1: it READS the stale state (a floor; truncation would make it type 0, always `#NUM!`). `-1.5` reads it too, but truncation
+  (-1) does the same, so it separates nothing. `-2^-30` is `#NUM!` and empties the state: it snaps up to 0 (a plain floor would give -1
+  and read the state).
+Evidence: probes/t4470-weeknum-return-type-edges (8 layouts, A3 sets the state, A2 the edge type, A1 `WEEKNUM(100,99)` reads it;
+excel-graph, 2026-11-06). Ours: matches all 24 cells (`near_integer_count` on every return_type, T-4470; negatives truncated before).
+Status: VERIFIED (web)
+
 ### WEEKNUM's stale return_type state (T-1484)
 Rule: one start-weekday state, Sunday, Monday or empty, lives for one recalculation. It is
 empty when the recalc starts, the WEEKNUM and ISOWEEKNUM calls Excel runs update it in the order
@@ -87,7 +102,7 @@ it runs them, and a WEEKNUM with a return_type of 22 or more, or negative, reads
 - **Emptying:** a scalar WEEKNUM with return_type 12-16 (Tuesday to Saturday starts are never
   kept), one with an always-#NUM! return_type (0, 3-10, 18-20; probed 0, 3, 10, 18, 20), and any WEEKNUM that lifts over an
   array, valid types included (`SUM(WEEKNUM(100,{2,2}))`, `SUM(WEEKNUM({100,101},2))`).
-- **A dynamic-array formula empties it** (T-2068, gen-m6, excel-graph 2026-10-21): with a
+- **A dynamic-array formula empties it** (T-2068, gen-m6, excel-graph 2026-10-21; refined by T-4289: not every anchor does, see "Which calls empty WEEKNUM's state" below): with a
   dynamic-array formula between a reader and the setter that runs before it in the order, the
   reader is `#NUM!` (OFFSET, TRANSPOSE, TRIMRANGE, CHOOSEROWS or CHOOSECOLS, none of them
   calling WEEKNUM). In the evidence none of them spilled: each is `#SPILL!`, an error or a 1×1
@@ -99,7 +114,7 @@ it runs them, and a WEEKNUM with a return_type of 22 or more, or negative, reads
   c4edd76f46980c5f A307 and fde83d52a9d1fc63 A131 and A359, all `#NUM!`; the four readers with no
   dynamic-array formula in between read the setter (121a7c17092038d9 A238 = 33, 3e51213f35889d06 A74,
   c96ac1ada46179c4 A219 and A295). Whether it is the spill itself or where Excel runs the anchor
-  that empties it is open (T-2070).
+  that empties it is open (T-2070); T-4289 answers it, see "Which calls empty WEEKNUM's state" below.
 - **No effect:** a call whose serial is an error (`WEEKNUM(-1,2)`, `WEEKNUM(-1,0)`,
   `ISOWEEKNUM(-1)`), a `#VALUE!` return_type (`TRUE`, `"x"`), a call IF does not run, and WEEKDAY of
   any return_type.
@@ -149,6 +164,59 @@ lifts over one (we leave the state as it is), where a spilling formula sits
 in the order, WEEKNUM in a defined name, LET or LAMBDA, conditional formatting formulas, and
 a return_type in (-1, 0) (truncates to 0, so presumably empties), and whether a reference to an
 uncalculated cell in an IF branch that is not taken also moves the cell.
+
+### Which calls empty WEEKNUM's state (T-4289, VERIFIED)
+Rule: a dynamic-array formula, spilling or not, does NOT empty WEEKNUM's state as such; some calls do, and they are not
+AMORDEGRC's (financial.md "AMORDEGRC below period 1"). Layout: A1 `=WEEKNUM(100,99)`, A2 the formula, A3
+`=WEEKNUM(100,2)` (Monday); the reader reads 16 when A2 keeps the state, `#NUM!` when it empties it.
+- Keep (16): `=1`, `=SEQUENCE(1,2)`, `=SEQUENCE(2,1)` (`#SPILL!`), `=SUM(SEQUENCE(2))`, `=SORT({3,1})`, `=UNIQUE({1,1})`,
+  `={1,2}`, `=TRANSPOSE({1,2})` (`#SPILL!`), `=LET(x,{1,2},x)`, `=LAMBDA(x,x)(1)` and `({1,2})`, `=XLOOKUP(1,{1,2},{5,6})`,
+  `=MMULT({1,2},{3;4})`, `=INDEX({1,2},1)`, `=MDETERM(..)`: 26 of the 27 sheets of
+  probes/weeknum-stale-between-calls (the exception is `=TEXTJOIN(",",1,1,2)`, which empties). A spill does not empty it.
+- Empty (`#NUM!`) with a range argument C1:D2: `CHOOSEROWS(C1:D2,1)`, `CHOOSECOLS(C1:D2,1)`, `TRIMRANGE(C1:D2)` and
+  `(C1:C2)`, `SORT(C1:D2)`, `UNIQUE(C1:D2)`, `ARRAYTOTEXT(C1:D2)`.
+- Empty with scalar arguments: `TEXTJOIN(",",1,1)`, `TEXTJOIN(",",1,1,2)`, `CONCAT(1,2)`.
+- Keep with a range argument: `TRANSPOSE(C1:D2)`, `TRANSPOSE(C1)`, `OFFSET(C1:D2,0,0,1)`, `OFFSET(C1,0,0)`, `INDEX(C1:D2,1,1)`,
+  `=C1:D2`, `SUM(C1:D2)`, `TEXTJOIN(",",1,C1:D2)`, `CONCAT(C1:D2)`, `SEQUENCE(1,2)+C1`, `OFFSET(C1:D2,2,2,3)` (`#SPILL!`). Also `SUM(TRANSPOSE(C1:D2))`, `SUM(OFFSET(C1:D2,0,0,1))` and `TRANSPOSE(C1:C2)`.
+A spilling anchor runs at its own place, not elsewhere: `CHOOSEROWS(C1:D2,1)` spills 1x2 and empties the state. The gen-m6 `#NUM!` readers are probably explained by another call between reader and setter (e.g. CHOOSEROWS in 9c615d338d990644 A26), not by the OFFSET; cross-sheet versus same-sheet ranges is unprobed.
+So the earlier T-2068 reading (every dynamic anchor empties) is wrong for TRANSPOSE and OFFSET, which keep it here; the
+argument shape matters (SORT/UNIQUE of a constant keep, of a range empty; TEXTJOIN/CONCAT the other way round), and why
+is not known. Evidence: probes/weeknum-stale-between-calls (27 sheets) and -between-ranges (23 sheets), excel-graph
+2026-11-05.
+
+The shape probes (T-4315; probes/weeknum-stale-call-shapes and -call-shapes-2, 30 sheets each, and -call-shapes-3, 24 sheets, excel-graph 2026-11-05,
+same layout) give the rule per function. It is neither a number-to-text conversion (`=1&2`, `TEXT(1,"0")`,
+`FIXED(1)` and `VALUE("1")` keep it; `CONCAT("a","b")` empties it) nor "a range argument" alone:
+- Always empty: CHOOSEROWS, CHOOSECOLS, TOCOL, VSTACK and TAKE with a constant array, one cell and a range
+  (`CHOOSEROWS({1,2;3,4},1)`, `CHOOSEROWS(C1,1)`, `TOCOL({1,2})`, `TAKE(C1,1)`, ...); TRIMRANGE with one cell and
+  ranges (`TRIMRANGE(C1)`, `C1:C2`, `C1:D2`); HSTACK, DROP, TOROW, WRAPROWS and EXPAND with `C1:D2`, a constant array and
+  one cell (T-4330, probes/weeknum-stale-call-shapes-3 S01:S10, excel-graph 2026-11-05); WRAPCOLS with a range, a
+  constant array and one cell (S11:S13); TEXTSPLIT of a constant text and of a cell (S14:S15).
+- SORT and UNIQUE empty it with a multi-cell range (`SORT(C1:C2)`, `UNIQUE(C1:C2)`, `SORT(E1:F2)` of texts,
+  `SORT(C1:D2,1,-1)`); a constant array or one cell keeps it (`SORT({3,1})`, `SORT(C1)`, `UNIQUE(C1)`).
+- SORTBY empties it unless its array is one cell: `SORTBY({1,2},{2,1})` and `SORTBY(C1:C2,{2;1})` empty it,
+  `SORTBY(C1,1)` keeps it.
+- ARRAYTOTEXT empties it only with a range of more than one row and more than one column: `ARRAYTOTEXT(C1:D2)`
+  empties it; `C1:C2`, `C1`, `{1,2}`, `{"a","b"}` and `1` keep it (`ARRAYTOTEXT(C1:D1)`, a one-row range, keeps it: shapes-3 S16).
+- CONCAT and TEXTJOIN empty it unless one of the joined arguments is a reference: `CONCAT("a","b")`, `CONCAT(1)`,
+  `CONCAT({1,2})`, `CONCAT("a",1)`, `CONCAT(C1&"")` and `TEXTJOIN(",",1,{1,2})` empty it; `CONCAT(C1)`,
+  `CONCAT(C1:D2,"x")`, `CONCAT(INDEX(C1:D2,1,1))`, `TEXTJOIN(",",1,C1,"x")`, `TEXTJOIN(",",1,C1:D2,C1)` and
+  `TEXTJOIN(C1,1,C1)` keep it. Probed in T-4330 (shapes-3 S17:S24): `CONCAT(OFFSET(C1,0,0))`,
+  `CONCAT(INDIRECT("C1"))`, `CONCAT(IF(TRUE,C1))`, `CONCAT(CHOOSE(1,C1))`, `CONCAT(LET(x,C1,x))` and `CONCAT(name)`
+  of a defined name for `C1:D2` keep it; `CONCAT(INDEX({1,2},1))` (INDEX of a constant array) empties it, and so
+  does `TEXTJOIN(C1,1,"a")`: only TEXTJOIN's joined arguments count, not its delimiter.
+- Keep: FILTER (`FILTER(C1:D2,{TRUE;FALSE})`, `FILTER(C1:C2,{TRUE;TRUE})`), with the T-4289 list.
+- A nested call empties it as an anchor does (`SUM(CHOOSEROWS(C1:D2,1))`, `COUNT(...)`, `CHOOSEROWS(C1:D2,1)+0`,
+  `SUM(SORT(C1:D2))`); one in an IF branch that does not run does not (`IF(FALSE,CHOOSEROWS(C1:D2,1),1)`).
+Ours (T-4315): `Model::weeknum_effect_of_call` (weeknum.rs), applied after every function call (`call_with_order_effects`), holds this table; an
+Excel-order anchor whose run emptied the state empties it at its place in the order (`AnchorEffects::emptied_weeknum`,
+excel_order.rs), and a dynamic-array formula as such no longer does. T-4330 added WRAPCOLS and TEXTSPLIT, INDEX counting only
+with a reference as its array, and IF, CHOOSE, LET and defined names counting (read from the formula, never evaluated
+again; IF or CHOOSE picking a constant (`CONCAT(IF(TRUE,1,C1))`), LET binding a reference and returning a constant, and a name for a constant are unprobed). Unprobed: the functions not listed
+(GROUPBY, ...), a name or a reference-returning call as SORT's or ARRAYTOTEXT's argument (counted as no
+range), and whether the emptying comes before or after the
+call's own arguments run (we empty after).
+Status: VERIFIED (excel-graph); implemented
 
 ### WEEKNUM readers past the move budget of Excel's order (T-2068)
 Rule (Excel): the chain moves a cell that read an uncalculated formula cell to just after it, as
@@ -249,8 +317,10 @@ timevalue-component-limits and timevalue-ampm-limits (oracle: excel-graph, 2026-
   value-clock-text C14, C34-C37). Only the space character U+0020 counts, for trimming and before
   an AM/PM suffix: a tab, a no-break space (U+00A0) or an ideographic space (U+3000) is #VALUE! in
   all three (`"10:00\t"`, `"10:00\u00a0"`, `"10:00\u00a0AM"`, `"\u300010:00"`, and
-  `VALUE("1/2/2020\u00a0")`; value-clock-text rows 38, 42-45). Unprobed: such characters inside the fraction of `H:M.f:S` text (inferred from this rule) and between
-  the date and the clock of date-clock text.
+  `VALUE("1/2/2020\u00a0")`; value-clock-text rows 38, 42-45). A tab, no-break space or ideographic space before, inside or after the fraction of `H:M.f:S` and
+  `H:M:S.f` text (`"10:11:12"&CHAR(9)&".5"`, `"10:11.5:12"&UNICHAR(160)`) is #VALUE! in VALUE, TIMEVALUE and `0+text`, and so is such a character between
+  the date and the clock (`"1/2/2020"&CHAR(9)&"10:00"`, also DATEVALUE), while two ordinary spaces there parse
+  (43832.416666666664; probes/t4602-clock-text-colon-am-pm-and-spaces A26-A95, T-4602).
 - **VALUE of clock text** is the coercion serial of the trimmed text, unwrapped like coercion
   (`VALUE("25:00")` = 1.0416666666666667, `VALUE("24:00")` = 1, `VALUE("10:11.5")` =
   0.007077546296296296, `VALUE("1/2/2020 6 PM")` = 43832.75, `VALUE("Jan 2, 2020 10:00")` =
@@ -305,7 +375,9 @@ timevalue-component-limits and timevalue-ampm-limits (oracle: excel-graph, 2026-
   416.625, `VALUE("12: ")` is 0.5, `VALUE("12:30:45:")` is 0.5213541666666667 and `VALUE("2024-01-01 12:")` is
   45292.5; `"10000:"`, `"12::"`, `"1.5:"`, `"-12:"`, `":30"`, `"12:PM"` and `"12: PM"` (a bare hour, `:`, then an
   AM/PM suffix) are #VALUE! (probes/t2352-time-text-trailing-colon, excel-graph, 2026-10-22, T-2352;
-  implemented in `parse_clock_text`). Unprobed: `H:M:` before an AM/PM suffix (`"10:30: PM"`; the engine reads it as 10:30 PM).
+  implemented in `parse_clock_text`). `H:M:` before an AM/PM suffix is #VALUE! as well: `"10:30: PM"`, `"10:30:PM"`, `"10:30:  PM"`,
+  `"10:30:45: PM"`, `"10:30: AM"`, `"12:00: AM"`, `"13:30: PM"` and `"1/2/2020 10:30: PM"` through VALUE, TIMEVALUE, `0+text` and
+  DATEVALUE (probes/t4602-clock-text-colon-am-pm-and-spaces A1-A25, excel-graph, 2026-11-06, T-4602).
   Evidence for these bullets: probes/clock-text-oddities, clock-text-oddities2 to -7 (excel-graph, 2026-10-06, T-0153), TIMEVALUE, `0+text` and VALUE agree.
 - **DATEVALUE of a bare clock is the whole days of its serial**, in both date systems: `DATEVALUE("10:00")`,
   `"10 AM"`, `"10 A."`, `"10 P."`, `"10:00:30"`, `"12:00 AM"` and `"0:00"` are 0, and `"25:00"` and `"24:00"` are 1
@@ -1095,6 +1167,57 @@ Ours: matches. `carried_day` (`floor(v + 0.5/86400)`, negatives only floored) se
 MINUTE and SECOND (T-3176; all 223 cells of the probe pass).
 Status: VERIFIED (web)
 
+## Other date functions floor a serial just below midnight; their counts take no near-integer snap but WEEKNUM's return_type
+Rule: unlike YEAR, MONTH, DAY and WEEKDAY (the half-second carry above), every other probed serial argument floors
+plainly: EDATE and EOMONTH start, WORKDAY and WORKDAY.INTL start, NETWORKDAYS and NETWORKDAYS.INTL start and end,
+WEEKNUM, ISOWEEKNUM, DAYS (both), DATEDIF's "D" (both; its other units carry half a second: "DATEDIF's calendar
+units carry half a second" below) and YEARFRAC (basis 1 here; every basis, T-4574). N-0.4 s, `fl(N-0.5/86400)` and even
+N-(2^-22+2^-33) day read as day N-1, and only N itself is day N: `EOMONTH(45017-0.4/86400,0)` is 45016,
+`WEEKNUM(45018-(2^-22+2^-33))` 13 (the Saturday's week), `YEARFRAC(44927,45292-0.4/86400,1)` 0.997260274 (A1:O7).
+DAYS360 alone rounds the serial to the nearest second before flooring. The observed cut: `fl(N-0.5/86400)` is day N
+and one ulp below it (2^-37 at N = 45020) is day N-1 (P1:Q7), for its start and end alike.
+The count arguments, except WEEKNUM's return_type, take no near-integer snap either: they truncate or floor exactly,
+unlike DATE's and TIME's arguments (`near_integer_whole`). EDATE and EOMONTH months truncate toward zero (`EDATE(45000,1-(2^-22+2^-33))` is
+45000, `EDATE(45000,-1+2^-23)` 45000, `-1-2^-23` 44972; the same below 12 and -12: S1:T10, Z1:Z10). WORKDAY and
+WORKDAY.INTL days floor (`WORKDAY(45019,1-(2^-22+2^-33))` is 45019; `-1+2^-23` and `-1E-10` are a day back, 45016;
+`-1-2^-23` two days, 45015: U1:V10). The .INTL weekend number truncates: NETWORKDAYS.INTL's 2 just below is weekend 1
+(Y1:Y4) and WORKDAY.INTL's 7 just below is weekend 6 (`WORKDAY.INTL(45021,1,7-2^-23)` is 45024, AC1:AC4).
+WEEKNUM's return_type snaps like LEFT's count: within 2^-22 + 2^-33 below an integer it is that integer
+(`WEEKNUM(45019,2-2^-23)` is 15, type 2's week; `WEEKNUM(45017,17-(2^-22+2^-33))` is 13, type 17's), and
+2^-22 + 9*2^-36 or 1E-6 below truncates (14, type 1's or 16's; AA1:AB4). W1:X4 sit on a Sunday where every type gives
+14, so they do not tell the models apart. A negative return_type floors with the same snap (T-4470 entry "WEEKNUM return_type snap and negative floor" above).
+Evidence: probes/t4454-near-midnight-date-args A1:AD10 (serials built exactly in formulas; excel-graph, 2026-11-06,
+T-4454).
+Ours: matches, all 197 cells (plain `floor` in month_shift.rs, workday.rs, networkdays.rs, weeknum.rs, yearfrac.rs and
+`datedif_value`/`fn_days`; `days360_serial` rounds to the second; the counts' `trunc`/`floor` and `weekend_mask`;
+WEEKNUM's positive return_type through `near_integer_count`, T-4454).
+Status: VERIFIED (web)
+
+## DATEDIF's calendar units carry half a second; YEARFRAC floors on every basis (around serial 60)
+Rule: DATEDIF's "M", "Y", "MD", "YM" and "YD" read each date as YEAR, MONTH and DAY do, `floor(x + 0.5/86400)`
+(the half-second carry above), while its "D" and its reversed-pair check floor plainly. So a start just below midnight
+of the fictitious 1900-02-29 (serial 60) counts days from 1900-02-28 but months from 1900-02-29:
+`DATEDIF(60-0.4/86400,425,"D")` is 366 (425-59), while its "M" is 11, "Y" 0, "MD" 30, "YM" 11 and "YD" 365, the
+values of start 60 itself (B4:F5; 425 is 1901-02-28). The cut is the same double as YEAR's: `fl(N-0.5/86400)` reads
+day N and one ulp below it (2^-47 here) day N-1, at N = 59, 60 and 61, for the start (A:F) and the end
+(`DATEDIF(31,s,u)`, G:L; `DATEDIF(31,61-0.4/86400,"MD")` is -1, end 61's value, A7:L18).
+Where the two readings disagree, the floors decide `#NUM!` for a reversed pair and the carried dates feed the units
+(A20:F23): `DATEDIF(60-0.4/86400,59.5,"M")` is -1, "Y" -1, "MD" 30, "YM" 11 and "YD" 365 (floors equal, carried
+dates reversed: 1900-02-29 to 1900-02-28), and its "D" 0; `DATEDIF(59.3,59-0.4/86400,u)` is `#NUM!` for every unit
+(floored pair reversed, carried dates equal). The same at 45020. The carried dates must lie in the calendar, for "D"
+too: `DATEDIF(1,2958466-0.4/86400,"D")` and `DATEDIF(2958466-0.4/86400,2958466-0.3/86400,"D")` are `#NUM!`, as are
+the other units (A24:F25; YEAR is `#NUM!` there as well).
+YEARFRAC floors both dates on all five bases, basis 4 included: `YEARFRAC(59-0.4/86400,425,4)` is 361/360 (from
+1900-02-27), not DAYS360's second-rounded 1 (Q1:Q18, V1:V18). DAYS360 itself rounds to the second here too, as at
+N = 45020 above (W1:Z18).
+Evidence: probes/t4574-feb29-near-midnight-date-args A1:Z25 (N = 59, 60, 61 minus 0.4 s, 2^-22+2^-33, 0.6 s,
+`fl(N-0.5/86400)` and one ulp below it, and N; excel-graph, 2026-11-06, T-4574).
+Ours: matches, all 504 cells (`datedif_value` floors for "D" and the order check and reads the calendar units and the
+calendar check through `carried_day`; YEARFRAC basis 4's
+`days360_eu` takes the floored dates, T-4574). Before T-4574 we floored DATEDIF's calendar units and its calendar check (73 cells off) and rounded basis 4 to
+the second (18 cells off).
+Status: VERIFIED (web)
+
 ## HOUR, MINUTE and SECOND round to the nearest second
 Rule: HOUR, MINUTE and SECOND take the time of day rounded to the nearest second, and the carry goes all the way up:
 - `SECOND(TIME(10,59,59)+0.6/86400)` is 0, MINUTE 0 and HOUR 11.
@@ -1349,9 +1472,12 @@ for a negative value the window is half as wide, about 1.2E-7. Measured edges: p
 `1-2.4E-7` does not (same at 5, 30000 and 32768); negative, `-1-(2^-23+1E-12)` and `-(2^-23+1E-12)` count as -1 and 0, while
 `-1-1.2E-7` and `-1.2E-7` floor (same at -5, -30000, -32767). The positive window is the one LEFT, RIGHT, REPLACE and
 INDEX use (`NEAR_INTEGER_TOLERANCE`, 2^-22+2^-33, text.md and lookup.md), which lies inside the measured (2^-22+1E-12, 2.4E-7);
-we take half of it for a negative value, inside (2^-23+1E-12, 1.2E-7). The exact constants inside those brackets are unprobed
-for TIME and DATE. The XMATCH and XLOOKUP modes, read by the same `near_integer_whole`, bracket both constants to a relative
-2^-14 (lookup.md "XMATCH and XLOOKUP floor a fractional mode", T-2656). Then an argument above 32767 is `#NUM!`, before the total is formed and whatever the hour. On
+we take half of it for a negative value, inside (2^-23+1E-12, 1.2E-7). T-4462 narrowed both to a relative 2^-14 (probes/t4462-time-date-near-integer-edge, excel-graph, 2026-11-06, 315 cells, all matched by us).
+TIME's hour (B), minute (C) and second (D) and DATE's year (E), month (F) and day (G) read `b-2^-22*(1+8*2^-14)` (= `NEAR_INTEGER_TOLERANCE`)
+as b for b = 1, 2, 3 and `b-2^-22*(1+9*2^-14)` as b-1 (rows 2-10, 11-19, 20-28). For a negative value `-(b+2^-23*(1+8*2^-14))` reads -b
+and `-(b+2^-23*(1+9*2^-14))` reads -b-1, for b = 1 and 0 (rows 29-37, 38-46); DATE's year below -1 is `#NUM!` either way (E29:E37), so
+its negative edge is measured below 0 only. These are XMATCH's constants (lookup.md "XMATCH and XLOOKUP floor a fractional mode", T-2656).
+An argument above 32767 is `#NUM!`, before the total is formed and whatever the hour. On
 2026-10-21 an argument below -32768 was `#NUM!` too, so a minute of -32768 was legal and one of -32769 was not. Since 2026-11-03 such
 an argument wraps by 65536 instead (see the update below). A negative total is `#NUM!`; otherwise the value is `((h*3600+m*60+s)/86400) % 1` as in "TIME divides by 86400 first".
 Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number; write `-(2^-22)`.
@@ -1386,10 +1512,14 @@ Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number;
   time-argument-window A73, A75 and A76, and time-argument-negative A65 and A66. All eight are numbers now, while
   `TIME(-32768,0,0)`, `TIME(-32767,32767,32767)`, `TIME(32768,0,0)` and `TIME(0,0,32768)` stay `#NUM!` (G9:G12).
   Gate A's TIME/s1 table found the change at A149: `TIME(14120,-33313.544720951,-1389.80591442708)` =
-  0.6936342592592837. The older sidecars still hold the 2026-10-21 values. Unprobed: arguments below -131072. Two fills two weeks apart show the change, but a staged rollout cannot be ruled out, so T-3983 re-probes column G right before the engine change.
-Ours: `time_argument` in `functions/date_and_time.rs` (T-2267). It does not wrap yet: it gives `#NUM!` below
--32768, which T-3983 owns.
-Status: VERIFIED (excel-graph probes above, 2026-10-21; the wrap 2026-11-03).
+  0.6936342592592837. T-3983 refilled time-argument-bound, -window and -negative from excel-graph on 2026-11-04,
+  and they confirm the wrap.
+- Below -131072 (probes/t3983-time-argument-below-131072, excel-graph, 2026-11-04): the wrap holds down to -2^31
+  (`TIME(600,-131073,0)` = 23:59, `TIME(600,-1000000,0)` = 0.2222222222222214, `TIME(-131073,0,0)` is `#NUM!`).
+  A whole value below -2^31 reads as 0 (`TIME(600,-2147483649,0)` = 0, where the wrap would be -1; the same for -2^32,
+  -1E15 and -1E20 in the minute, second and hour), as a clamp to the 32-bit minimum -2^31 would give.
+Ours: matches. `time_argument` in `functions/date_and_time.rs` wraps (T-3983).
+Status: VERIFIED (excel-graph probes above, 2026-10-21; the wrap 2026-11-03 and 2026-11-04).
 Tasks: T-2267, T-3983
 
 ## DATE: a year, month or day just below an integer reads as that integer (T-2268)
@@ -1405,7 +1535,7 @@ bounds: `DATE(9999,12,31+1-1E-7)` is `#NUM!` (1 January 10000) and `DATE(10000-1
 `DATE(2020,32767-1E-7,1)` is `#NUM!` (month 32767), `DATE(2000,-32768-1E-7,1)` is `#NUM!`. gen-m6 cells: `DATE(1983,12,-1E-15)` =
 30650, `DATE(2015,-1E-21,3)` = 41976, `DATE(-4.2E-16,1,23)` = 23, a day of `COS(-0.0001)` (0.999999995) is 1
 (gen-m6/216e3c05f407ca79 Calc!A173, 03333cc38ec06a14 A267, 9843ec1f29523dd2 A265, b54448af3fde07ca A379, 07171fa3f7493f51 A311).
-Evidence: probes/date-argument-window (90 cells, excel-graph, 2026-10-21).
+Evidence: probes/date-argument-window (90 cells, excel-graph, 2026-10-21). The exact edge is the same as TIME's: `2^-22*(1+8*2^-14)` snaps and `(1+9*2^-14)` floors, half that when negative (T-4462, probes/t4462-time-date-near-integer-edge, see the TIME section).
 Ours: `fn_date` reads each argument through the same near-integer floor as TIME (T-2268).
 Status: VERIFIED
 Tasks: T-2268
@@ -1467,7 +1597,7 @@ Rule (excel-graph, gen-m6, 2026-10-21):
   `#N/A` (columns F-L of rows 1, 22, 27-29; Q60:Q64).
   T-1954's question: `WORKDAY.INTL(45000,5,"1111111",NA())` is `#N/A` (row 15 column E), and with the holidays in an array or a
   range the all-weekend `#VALUE!` wins.
-Ours: implemented (T-2270, T-2272): a blank one-cell reference is no holiday; a cell holding number text is a holiday, counted rather than skipped (serial 1 in 1aa50086e42bff9a A67 and 752959b8d3db0285 A393 lies outside every range, so skip-vs-count is UNVERIFIED). Also UNVERIFIED: the scalar branch accepts any text `cast_number` reads (a literal `"45001"`, a formula's number text, date, currency or percent text) as a holiday; the cells only show holidays reached through a reference. Other text is `#VALUE!` as before. The order is `Model::workday_of` and `Model::networkdays_of`, with `HolidaysError::before_weekend` for step (4) (crates/rustsheet-engine/src/functions/date_and_time/). Unprobed: whether single number text off the calendar (a `"-1"` cell) is step (4) or (6); ours (6) (T-2271 probes it).
+Ours: implemented (T-2270, T-2272): a blank one-cell reference is no holiday; a cell holding number text is a holiday that acts as the serial it reads as (probes/t4397-holiday-text-forms, T-4397). A holiday given as text is read the same way in every form: a text literal, a cell holding the text, a one-element array of it, or a range holding it beside a number. Number text (`"45001"`), date text (`"3/16/2023"`, `"March 16, 2023"`), currency text (`"$45,001"`) and percent text (`"4500100%"`) each act as the serial they read as, in WORKDAY, WORKDAY.INTL, NETWORKDAYS and NETWORKDAYS.INTL (probes/t4397-holiday-text-forms rows 3:22 and 24:43, excel-graph; T-4397). A text literal is a scalar holiday for the NETWORKDAYS.INTL weekend rule below: `NETWORKDAYS.INTL(45000,45010,13,"3/18/2023")` drops the Saturday and is 10, as the number 45003 is, while the same text in a cell or `{"3/18/2023"}` is subtracted and gives 9 (G23:G43). Other text is `#VALUE!` as before. The order is `Model::workday_of` and `Model::networkdays_of`, with `HolidaysError::before_weekend` for step (4) (crates/rustsheet-engine/src/functions/date_and_time/). A single holiday that is number text off the calendar (`"-1"`, `"3000000"`, `"-0.5"`; a literal, a cell or a one-element array alike) is step (6), after the weekend: `WORKDAY.INTL(45000,5,"1111111",h)` is `#VALUE!` (the weekend's error wins) while the same holiday with weekend 1 or 99 gives `#NUM!`; ours matches (probes/t4600-holiday-number-text-off-calendar, columns C:E and K:M, excel-graph; T-4600).
 Status: VERIFIED
 Tasks: T-2270, T-2272
 
@@ -1497,8 +1627,18 @@ Rule (excel-graph, gen-m6, 2026-10-21): a start date out of the calendar is `#NU
 `YEARFRAC(SUM(-1,FALSE,<blank>),SUMIFS(D10:D12,A5:B7,"abc")+..,0)` (end `#VALUE!` from the SUMIFS shape mismatch) and
 `YEARFRAC(123456790.12..,NETWORKDAYS.INTL(51358,34485,15,<FALSE cell>)+1E-15,0)` are `#NUM!` (gen-m6/3516b9fbbd60269b Calc!A301,
 d0c30225243fde60 A266). Ours: implemented (T-2266).
-Status: VERIFIED for these two cells; an error start against an error end keeps the start's error (VERIFIED: probes/scalar-lift-open-d W2 `YEARFRAC(NA(),1/0,1)` and W5 `YEARFRAC(1/0,NA(),1)`). An out-of-calendar start against a text or multi-cell-range end (`YEARFRAC(-1,"x")`, now #NUM!) is UNVERIFIED.
-Tasks: T-2266
+Status: VERIFIED for these two cells; an error start against an error end keeps the start's error (VERIFIED: probes/scalar-lift-open-d W2 `YEARFRAC(NA(),1/0,1)` and W5 `YEARFRAC(1/0,NA(),1)`).
+The start is read and range-checked in full before the end is read at all (VERIFIED, excel-graph 2026-11-06,
+probes/t4529-yearfrac-calendar-vs-coercion, 164 cells): a start of `-1`, `2958466` or `1E+15` is `#NUM!` against every
+end form, with basis omitted or 1 (A1:J6): non-numeric text `"x"`, numeric text `"45000"`, TRUE, FALSE, an empty cell,
+a cell holding `"x"`, a formula giving `"x"`, `{"x"}`, and even a two-cell or 2x2 range end, which with an in-calendar
+start is refused whole as `#VALUE!` rather than lifted (`ROWS(YEARFRAC(-1,Z3:Z4))` K1 is `#NUM!`,
+`ROWS(YEARFRAC(45000,Z3:Z4))` K2 is `#VALUE!`). So "coerce both, then range-check" is wrong for YEARFRAC. The reverse
+holds too: a start that is text, a boolean, a cell holding text or a range is `#VALUE!` against an out-of-calendar end
+(A11:J16), and numeric text or an empty start is read as a number and then fails the end's range check (`#NUM!`, B11:B16,
+E11:E16; the controls with end 46000 are A17:J18). Ours: matches every cell (the start check precedes the end's read in
+`yearfrac_of`).
+Tasks: T-2266, T-4529
 
 ## NETWORKDAYS.INTL: the blank weekend's #NUM! before the holidays' error (T-2436)
 Rule: `NETWORKDAYS.INTL(31,4886,<blank>,{1,2;#N/A,""})` is `#NUM!`, the blank weekend cell's error (T-2271) before the holidays'
@@ -1507,14 +1647,17 @@ Ours: implemented (T-2271's weekend read comes before the holidays' error; T-258
 Status: VERIFIED (excel-graph), one cell
 Tasks: T-2583
 
-## gen-m6 arg-pairs batch (T-3495): DAYS error order and NETWORKDAYS.INTL on day 0
-Rule: DAYS: an error-valued argument wins in either position (`DAYS("abc",#NAME?)` is #NAME?, `DAYS("",#NAME?)` is #NAME?);
-the end date's range check comes before the start date's text check (`DAYS(-1,"abc")` and `DAYS(-1,"")` are #NUM!,
-`DAYS(Data!A1:B2,"abc")` is #NUM! at A493). NETWORKDAYS.INTL: every failing cell has a start or end on serial day 0
-(0 <= x < 1, including a blank cell): `NETWORKDAYS.INTL(0.5,54115,3,0.5)` is 38654, `NETWORKDAYS.INTL(39539,0,3,2)` is -28241.
-Evidence: gen-m6 a4a301d00b46acf3 (A79 A82 A85 A88 A241 A244 A307 A310 A493 A499) and the six NETWORKDAYS.INTL cells of T-3537.
-Ours: DAYS matches all ten (T-3536, see "DAYS error order" below); NETWORKDAYS.INTL is one day off in the other direction.
-Status: UNVERIFIED (probe pending; cells are oracle values, the general rule is not probed)
+## gen-m6 arg-pairs batch (T-3495): DAYS error order and NETWORKDAYS.INTL scalar holidays (pointer)
+Rule (VERIFIED): no rule of its own. The ten DAYS cells (gen-m6 a4a301d00b46acf3 A79 A82 A85 A88 A241 A244 A307 A310
+A493 A499) are the "DAYS error order" section below (T-3536). The NETWORKDAYS.INTL cells of the same batch looked like
+a day-0 effect but are not: their cause is that a scalar holiday ignores the weekend argument, stated in "NETWORKDAYS.INTL:
+a scalar holiday ignores the weekend argument" below (T-3537; probes networkdays-intl-early-holidays,
+networkdays-intl-serial-zero-holiday, networkdays-intl-holiday-forms, networkdays-intl-holiday-weekend-masks,
+networkdays-intl-holiday-kinds, networkdays-intl-holiday-kinds-let, networkdays-intl-holiday-unary-fn).
+Evidence: the DAYS cells above, and the NETWORKDAYS.INTL cells in gen-m6 102b2df13f6891d2, 1b4963f7cb42e2fa,
+ade135f51e0b7a36 and b91dcfba0176956e (listed in the T-3537 section).
+Ours: matches; none of those five gen-m6 cases has a known-failure line in eval/baseline/gen-m6.txt.
+Status: VERIFIED (pointer entry)
 Tasks: T-3536, T-3537
 
 ## NETWORKDAYS.INTL: a scalar holiday ignores the weekend argument
@@ -1533,11 +1676,25 @@ not by the day-0 start/end.
 Evidence: probes/networkdays-intl-holiday-forms (22 cells), networkdays-intl-holiday-weekend-masks (45),
 networkdays-intl-holiday-weekend-dedupe (112), networkdays-intl-early-holidays (88), networkdays-intl-serial-zero-holiday (120);
 gen-m6 102b2df13f6891d2 A547, 1b4963f7cb42e2fa A385, ade135f51e0b7a36 A31 and A385, b91dcfba0176956e A493 and A499.
-Ours: implemented (T-3537): `Holidays::scalar`, set from the argument's node (`is_scalar_node`), read by `networkdays_of`.
-UNVERIFIED: a holidays argument that is a function returning a reference (INDEX, OFFSET, INDIRECT, CHOOSE, IF) is treated
-as a reference; only SUM, literals and `+` are probed. A named range is a reference.
-Status: VERIFIED for the probed forms
-Tasks: T-3537
+Which kind an argument is (VERIFIED, excel-graph, 2026-11-04, T-4190): it is a reference exactly when ISREF of it is
+TRUE; the rule follows the evaluated kind, not the syntax. References: `(C1)`, `@C1`, `@(C1)`, `INDEX(C1:C2,1)`, `OFFSET(C1,0,0)`,
+`INDIRECT("C1")`, `INDEX(..):INDEX(..)`, `TRIMRANGE(C1:C1)`, and `IF`, `CHOOSE`, `IFS`, `SWITCH`, `XLOOKUP(1,{1},C1:C1)`,
+`LET(h,C1,h)`, `LAMBDA(x,x)(C1)`, `TAKE`/`DROP` of a range, and a defined name bound to a cell, when what they pick or return is a
+reference. A cell holding the text "45003" is a reference too. Scalars: the same pickers when they give a value (`IF(TRUE,45003)`,
+`CHOOSE(1,45003)`, `XLOOKUP(1,{1},{45003})`, `LET(h,45003,h)`, `LAMBDA(x,x)(45003)`, `LET(h,C1,h+0)`), a name bound to
+`=45003`, text `"45003"`, `--"45003"`, `N(C1)`, `MAX(C1)`, `ABS(C1)`, `DATE(..)`, `C1&""`, `IFERROR(C1,0)` (IFERROR does not
+hand the reference on), and every unary plus: `+C1`, `+(C1)`, `(+C1)`, `+@C1` are scalar. ISREF agrees on each unary form
+(`ISREF(+C1)` FALSE, `ISREF(@C1)` TRUE; see references.md "ISREF: a unary plus makes a value"). WORKDAY.INTL keeps no
+split for any of these forms (its controls are 45012 / 45011 throughout).
+Evidence: probes/networkdays-intl-holiday-kinds A1:H38 (M6), networkdays-intl-holiday-kinds-let A1:F11 (M7),
+networkdays-intl-holiday-kinds-names A1:F7 (M8; names in the case's `names`).
+Ours: implemented (T-3537, T-4190): `Holidays::scalar` is "neither an array nor `Model::is_reference`" of the argument (on the
+arm IF picked), set in `holiday_serials`, read by `networkdays_of`.
+A unary plus over a reference-returning function is scalar too: `+INDEX(C1:C2,n)`, `+OFFSET(Cn,0,0)`,
+`+XLOOKUP(1,{1},Cn:Cn)`, `+IF(TRUE,Cn)` give 87 for the Saturday holiday and 86 for the Tuesday one
+(probes/networkdays-intl-holiday-unary-fn A1:B4, excel-graph 2026-11-05, T-4209).
+Status: VERIFIED
+Tasks: T-3537, T-4190, T-4209
 
 ## DAYS error order
 Rule: DAYS reports an error-valued argument first, then goes through the arguments left to
@@ -1545,6 +1702,7 @@ right: unreadable text is `#VALUE!`, a number off the calendar `#NUM!`. `DAYS(-1
 `#NUM!`; `DAYS("abc",#NAME?)` is `#NAME?`; `DAYS(#DIV/0!,"")` is `#DIV/0!` (A403); `DAYS(A1:B2,"abc")` with a
 negative top-left is `#NUM!`; `DAYS("abc",-1)` and `DAYS("",-1)` are `#VALUE!` (A211, A271).
 Evidence: gen-m6/a4a301d00b46acf3 Calc!A79, A82, A85, A88, A241, A244, A307, A310, A493, A499 (excel-graph; T-3536).
-Ours: implemented (T-3536). Two error arguments at once (which one wins) is not probed; the code returns the leftmost.
-Status: VERIFIED (excel-graph) for the cited cells; UNVERIFIED for two simultaneous errors
-Tasks: T-3536
+Two error arguments at once: the leftmost wins, whether the errors are literals, error-returning calls or one-cell references to error cells (`DAYS(NA(),1/0)` `#N/A`, `DAYS(1/0,NA())` `#DIV/0!`, `DAYS(#REF!,#NAME?)` `#REF!`, `DAYS(#NUM!,#NULL!)` `#NUM!`); and an error beats unreadable text in either position (`DAYS("abc",NA())` `#N/A`). Evidence: probes/t4397-days-two-errors A1:A16, with ERROR.TYPE in B1:B16 (excel-graph; T-4397).
+Ours: implemented (T-3536); T-4397 pins the two-error cases.
+Status: VERIFIED (excel-graph)
+Tasks: T-3536, T-4397

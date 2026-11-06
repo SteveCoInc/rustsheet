@@ -73,6 +73,26 @@ pub(crate) fn excel_expm1(x: f64) -> f64 {
     u_minus_1 * x / excel_ln(u)
 }
 
+/// Below this |x| Excel's 1 - e^x is minus its expm1 ([`excel_one_minus_exp`]). The value is the
+/// cut PMT's, WEIBULL.DIST's and EXPON.DIST's cells put between 0.99 and 1.35 (`annuity.rs`
+/// `PAYMENT_EXPM1_TO`, `weibull.rs` `weibull_cdf`, `exponential.rs` `EXPON_EXPM1_CUT`), copied, not
+/// fitted again; the incomplete beta's a0 = 1 tail takes it too (T-3764).
+const ONE_MINUS_EXP_EXPM1_TO: f64 = 1.0;
+
+/// Excel's 1 - e^x: minus Excel's expm1 ([`excel_expm1`], Kahan's form) for |x| below
+/// [`ONE_MINUS_EXP_EXPM1_TO`], and `1 - EXP(x)` with Excel's EXP from there on. The incomplete
+/// beta's w = 1 - (1 - x0)^b0 at a0 = 1 takes it (`incomplete_beta.rs` `shape_one_tails`, T-3764):
+/// at |x| >= 1 Kahan's product and quotient round w one 2^-53 step off Excel's on 47 BETA.DIST
+/// cells of probes-numeric t3568-r5-bup (statistics.md "Incomplete beta at a shape of 1 outside
+/// the closed forms").
+pub(crate) fn excel_one_minus_exp(x: f64) -> f64 {
+    if x.abs() < ONE_MINUS_EXP_EXPM1_TO {
+        -excel_expm1(x)
+    } else {
+        1.0 - excel_exp(x)
+    }
+}
+
 /// [`excel_exp_extended`] with step 3's RN64(2^f - 1) taken from `two_to_the_minus_one`, so the
 /// tests can run the whole model on the reference series. Generic, not a function pointer, so the
 /// fast path's estimate is a direct (inlinable) call. With `SHORTCUT`, steps 3 and 4 first try

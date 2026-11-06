@@ -3,8 +3,8 @@ id: T-3337
 title: "CHIINV and CHISQ.INV.RT at one degree of freedom land where Excel's search on its double cdf lands (CHIINV(1E-9,1) = 37.324892889999234, ours 37.324893106518715)"
 milestone: M9
 lane: functions-stat
-status: todo
-priority: P2
+status: blocked
+priority: P1
 size: M
 tier: opus
 depends_on: [T-3336]
@@ -45,16 +45,19 @@ visibly-off pair below is within 15 digits of Excel (or the time-box outcome lis
 Cells:
 - probes-numeric/m9-legacy-chiinv.case.json (2): Calc!A1, A2
 - probes-numeric/t3336-chisq-df1-right-tail.case.json (291, T-3336)
+- probes-numeric/t3858-chisq-df1-num-cutoff.case.json (264, T-3858): the df 1 `#NUM!` cutoff, pinned between
+  8.3253E-17 (`#NUM!`) and 8.3254E-17 (a value) and implemented in T-3858 (`ONE_DEGREE_RIGHT_TAIL_P_MIN`), which
+  fixes T-3336's A250-A252; it is in INV.RT's own p check, as `CHISQ.INV(1-p,1)` is a value at every probed p.
 
 ## Acceptance criteria
 - [ ] Visible parity: the 2 cells above are within 15 digits of Excel (`make eval-show
       CASE=probes-numeric/m9-legacy-chiinv.case.json`; probes-numeric is ungated, so they have no baseline line), no new
       known-failure line appears in any eval/baseline file (`make eval-baseline`), and every T-3336 cell is within 15
       digits of Excel or named in a follow-up task.
-- [ ] Or, time-boxed (decision 0056, two attempts): the Outcome and statistics.md list the candidates with their
+- [x] Or, time-boxed (decision 0056, two attempts): the Outcome and statistics.md list the candidates with their
       bit-exact and visible counts on the T-3336 cells.
-- [ ] No df-1 cell that passes today regresses (t1543-inverse-cdf-tiny-p A37-A40, m9-legacy-chiinv A71, A72).
-- [ ] The search stays bounded (a fixed number of cdf evaluations, directive 5).
+- [x] No df-1 cell that passes today regresses (t1543-inverse-cdf-tiny-p A37-A40, m9-legacy-chiinv A71, A72).
+- [x] The search stays bounded (a fixed number of cdf evaluations, directive 5).
 - [ ] `make check` green; reviewers approve.
 
 ## Visible-parity stage
@@ -66,3 +69,86 @@ landing, never a more accurate kernel. Bit-level misses left then go to a `defer
 ## Out of scope
 - df 2 and above (T-3311 deep lower tail, T-3146 p = 0.999, T-3310 far right tail, T-3232 last digits).
 - The `#NUM!` edge between 2^-54 and 1E-16 beyond recording what T-3336 finds.
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 33 probes-numeric cells that no open task listed: 25 first wrong at the 11th significant digit or earlier, 8 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0267 rules the math (decision 0188 R3) on the CHISQ.INV.RT and CHIINV df 1 cells where Excel is more than G = 1e-4 off the 50-digit math. The decision 0267 analysis (mpmath at 60 digits) found 6 listed cells above G: CHISQ.INV.RT and CHIINV at p 1.5E-16, 3E-16 and 5E-16. For example, at `CHISQ.INV.RT(1.5E-16,1)` Excel is 67.39648382445009, the math 68.169874129795366 and ours 68.7632522116684, so Excel is 1.1E-2 off and ours 8.7E-3. The engine is just as wrong there, so those cells need a more accurate df 1 inverse plus R3 marks in eval/accuracy/math-over-excel.tsv. Each mark names one point whose committed 50-digit value (a math.json sidecar) shows Excel more than G off. The analysis numbers above are not evidence until committed, and the marks are not a band. Below G, ours is also up to 1E-5 off the math at p 1E-13 to 2E-13, so the search itself needs work. On the other cells Excel's landing point stays the target.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t3336-chisq-df1-right-tail.case.json (33): Calc!A19-A20, A37-A38, A43-A44, A55-A56, A67-A68, A73-A74, A85-A86, A91-A92, A97-A98, A124-A125, A163-A164, A169-A170, A196-A197, A220-A221, A226-A227, A229-A230, A290
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+- probes-numeric/t3337-chisq-df1-r3-fresh.case.json (T-3337's fresh sweep): Calc!A43:A44, A51:A52 are visibly off
+  with Excel the target (Excel within G of the math); A1:A30 are R3-marked (decision 0313).
+
+## Outcome
+- **R3 cells (decision 0267 item 3, decision 0313).** At df 1 CHISQ.INV.RT and CHIINV return the upper-tail quantile
+  of p (`gamma_quantile(.., p, Tail::Upper)`). They do so where the quantile of the double 1 - p, Excel's own route,
+  is more than G = 1e-4 off it (chisq.rs `one_degree_right_tail_quantile`). Otherwise they keep the quantile of
+  1 - p as before. The rule is skipped from p 1E-12 up, where the rounding cannot reach G. It costs at most two
+  bounded searches.
+- **Marks.** There are 45 lines in eval/accuracy/math-over-excel.tsv, each checked against its committed math
+  sidecar (Excel 3.9E-4 to 1.1E-2 off, engine at most 2.5E-16 off):
+  - t3336 CHISQ.INV.RT A202, A217, A220, A223, A226, A229, A232, A253 and CHIINV A203, A218, A221, A224, A227,
+    A230, A233;
+  - t3337-chisq-df1-r3-fresh A1:A30.
+
+  0267's analysis named only 6 of these, the ones visibly off then. On every evidenced point Excel is more than G
+  off, and the ruling covers "each evidenced point", so the others are marked too.
+- **CHIINV math values.** CHIINV gets a Gate A definition, CHISQ.INV.RT's legacy name with no reference table
+  (tools accuracy/defs/gamma.py). `rustsheet-accuracy math --function CHIINV` rewrote the sidecars of the probes and
+  probes-numeric cases that call it (7 existing sidecars changed). The diff adds only CHIINV entries.
+- **R4 guards (structural rule, no fitted value; G is decision 0188's constant).**
+  - Hold-out: none was split, because no candidate was scored to pick the rule. It applies the ruling's own test to
+    the engine's two quantiles.
+  - Fresh sweep: probes-numeric/t3337-chisq-df1-r3-fresh, 52 cells at p 1.2E-16 to 1.2E-12 not in t3336, filled
+    from excel-graph after the rule was committed (aede4ec4f). The rule fires at A1:A30, and Excel is more than G
+    off at exactly those cells (3.9E-4 to 7.8E-3). It keeps Excel's route at A31:A52, where Excel is within
+    2.8E-5. That is 52 of 52 in agreement.
+    The sweep covers p 1.2E-16 to 1.2E-12, not the full domain (R4.2), because the rule cannot act from p
+    1E-12 up: there the engine returns the same computation as before.
+  - Over t3336 and the fresh sweep (225 numeric cells with a math value), the rule fires at exactly the 45 cells
+    where Excel is more than G off. It also fires at t3336 A250:A252, where Excel is `#NUM!` (T-3858's cut).
+  - Gate A: `rustsheet-eval accuracy` reports 0 failing, 0 bad marks and 0 table defects.
+- **Eval delta (probes-numeric is ungated, so no baseline change).**
+
+  | case | passed before | passed after |
+  |---|---|---|
+  | t3336-chisq-df1-right-tail | 79/291 | 76/291 |
+  | t3337-chisq-df1-r3-fresh (new) | - | 4/52 |
+  | m9-legacy-chiinv | 49/89 | 49/89 |
+  | m9-chisq-inv-rt | 17/49 | 17/49 |
+  | t1543-inverse-cdf-tiny-p | 64/102 | 64/102 |
+
+  Per-cell changes, all in t3336 and all R3 cells:
+  - A217, A218 and A253 passed against Excel and now fail against it.
+  - A202, A203, A223, A224, A232 and A233 were within 15 digits and now fail against Excel.
+  - A220, A221, A226, A227, A229 and A230 failed and still fail, with the engine now on the math instead of
+    8.7E-3 to 3.1E-3 off it.
+  - A250:A252 still fail, now on the math rather than 68.7632522116684, with Excel `#NUM!` (T-3858).
+
+  Every one of these is `r3_pass` under R1(c). t1543 A37:A40 and m9-legacy-chiinv A71, A72 still pass.
+- **Visible parity (Excel the target), time-boxed.** These cells are unchanged: t3336 A19:A20, A37:A38, A43:A44,
+  A55:A56, A67:A68, A73:A74, A85:A86, A91:A92, A97:A98, A124:A125, A163:A164, A169:A170, A196:A197, A290 and
+  m9-legacy-chiinv A1, A2. Candidates were scored on the 110 CHISQ.INV.RT and CHIINV cells of t3336 with p of
+  1E-12 or more, as bit-exact / within 15 digits:
+  - H0, the quantile of fl(1-p), which is the engine: 16 / 87.
+  - H1, the quantile of the double below fl(1-p): 5 / 13.
+  - H2, the quantile of 2*fl((1+q)/2)-1: 13 / 74. It fixes 11 cells and loses 24.
+  - "A last-bit error of Excel's own cdf" is refuted by t3336 A256.
+
+  The details are in statistics.md, "CHISQ.INV.RT and CHIINV quirks". The scratch scripts were mpmath erfinv at 60
+  digits over the oracle and math sidecars. They are not committed.
+- **Merged with T-3858** (main at 0db7e8ac9, #3535): its `#NUM!` cut runs first, then this task's rule. Above the cut
+  Excel's 68.7632522116684 is more than G off, so T-3858's unit-test rows A4 to A6 now expect the math, and T-4555's
+  marks are folded in here: 88 cells of t3858-chisq-df1-num-cutoff (54) and -fresh (34), with CHIINV math added to
+  both sidecars. Those cases pass 210/264 and 46/80 against Excel, all 88 failures R3 cells; `rustsheet-eval
+  accuracy` 0 failing.
+
+## Blocked because: time-boxed (decision 0056)
+Two landing rules (H1, H2 above), plus the refuted cdf-last-bit idea, do not move the Excel-target cells (H0, the
+engine, stays best). Decision 0267 item 4 applies: the cells this task still lists are accepted, and no follow-up is
+filed for them. The R3 part of the task is done (decision 0313). Reopen only on a new hypothesis recorded here
+(decision 0056). Excel's landing sits within a few ulp of the exact quantile of fl(1-p), or about one band from it
+in either direction, or inside a band, so its search does not stop on a fixed band rule.

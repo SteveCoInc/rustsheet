@@ -1,7 +1,7 @@
 //! TREND and GROWTH: the predictions of LINEST's and LOGEST's fit (statistics.md "TREND:
 //! defaults, shapes, single points and error inputs").
 
-use super::linest::{linear_regression, predict, reconstruct_beta};
+use super::linest::{flag_range_value, linear_regression, predict, reconstruct_beta};
 use super::regression::{
     given, known_points, layout, shape_error, Element, Grid, KnownPoints, Layout,
 };
@@ -190,7 +190,8 @@ impl Model {
         // text element of a lifted const (`GROWTH(..,TEXTSPLIT(..))`, 8fec7b207f4dd753 A14), while
         // a text cell waits for them (`TREND(Data!C10:E11,..,Data!$A12)` with A12 = "abc" is
         // `#REF!`, bbab6562e88b70e8 A13). A multi-cell range does not lift
-        // (`TREND(..,OFFSET(Data!B6:C12,-1,3))` is `#VALUE!`, 43c6227e0ff368c7 A165).
+        // (`TREND(..,OFFSET(Data!B6:C12,-1,3))` is `#VALUE!`, 43c6227e0ff368c7 A165): it reads its
+        // top-left cell.
         let typed = !matches!(
             *const_node.resolved_at(cell.row),
             Node::ReferenceKind { .. }
@@ -206,7 +207,9 @@ impl Model {
             };
             data.predictions(const_arg, cell)
         };
+        // A range is its top-left cell, not a lift ([`flag_range_value`]).
         let const_value = self.evaluate_node_in_context(const_node, cell);
+        let const_value = flag_range_value(self, const_value);
         if !matches!(const_value, CalcResult::Array(_)) {
             return kernel(self, const_value);
         }
@@ -227,11 +230,9 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> Result<Grids, CalcResult> {
-        let y = Grid::from_data(self.read_known_y(&args[0], cell)?);
-        let x = match given(args.get(1)) {
-            Some(node) => Some(Grid::from_data(self.read_data(node, cell)?)),
-            None => None,
-        };
+        let (y, x) = self.read_known_y_and_x(args, cell)?;
+        let y = Grid::from_data(y);
+        let x = x.map(Grid::from_data);
         let new_x = match given(args.get(2)) {
             Some(node) => Some(Grid::from_data(self.read_data(node, cell)?)),
             None => None,

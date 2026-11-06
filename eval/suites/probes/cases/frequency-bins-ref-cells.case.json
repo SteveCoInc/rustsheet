@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3046: FREQUENCY with an error cell in a bins range, data error vs bins-range error cell, and a numeric-text bin cell.",
+ "tags": ["M9", "statistical", "probe"],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "B1": 1, "B2": "=NA()", "B3": 3,
+    "C1": 1, "C2": 2, "C3": "3",
+    "D1": 1, "D2": "=1/0", "D3": 3,
+    "A1": "=ROWS(FREQUENCY(0,B1:B3))",
+    "A2": "=INDEX(FREQUENCY(0,B1:B3),1)",
+    "A3": "=INDEX(FREQUENCY({1;#DIV/0!;3},B1:B3),1)",
+    "A4": "=INDEX(FREQUENCY({1;#N/A;3},D1:D3),1)",
+    "A5": "=ROWS(FREQUENCY({1;2;3},C1:C3))",
+    "A6": "=INDEX(FREQUENCY({1;2;3},C1:C3),3)",
+    "A7": "=INDEX(FREQUENCY({1;2;3},C1:C3),2)"
+   }
+  }
+ ]
+}

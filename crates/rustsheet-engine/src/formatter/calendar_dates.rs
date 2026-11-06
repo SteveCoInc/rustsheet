@@ -11,6 +11,7 @@ use super::{
     locale_tag::{japanese_era, Calendar},
     lunar_calendar::{lunar_ymd, LAST_SERIAL},
     parser::{DatePart, TextToken},
+    table_calendars::{persian_ymd, um_al_qura_ymd},
 };
 use crate::{functions::date_and_time::is_leap_year, locale::excel_date_names::DateNames};
 
@@ -43,7 +44,9 @@ pub(crate) fn calendar_ymd(
         Some(Calendar::Hijri) => hijri_ymd(serial_1900),
         Some(Calendar::Lunar(table)) if serial_1900 <= LAST_SERIAL => lunar_ymd(serial_1900, table),
         Some(Calendar::Saka) => saka_ymd(serial_1900),
-        Some(Calendar::Hebrew(_)) => hebrew_ymd(serial_1900),
+        Some(Calendar::Hebrew) => hebrew_ymd(serial_1900),
+        Some(Calendar::Persian) => persian_ymd(serial_1900),
+        Some(Calendar::UmAlQura) => um_al_qura_ymd(serial_1900),
         _ => excel_serial_to_ymd(serial_1900),
     }
 }
@@ -212,37 +215,30 @@ fn hebrew_ymd(serial_1900: i64) -> Option<(i32, u32, u32)> {
     hebrew_date(serial_1900).map(|(year, month, day, _)| (year, month, day))
 }
 
-/// What a month name token prints in the Hebrew calendar for the date of `serial_1900`, with the
-/// leap-year Adars `adars` of the tag's names, or `None` when the token reads `names` by month
-/// number as usual (and for a weekday token). With a locale every month token is the whole name (`[$-80409]mmmmm` of Adar is
-/// "Adar", of a leap year's month 7 "`AdarII`"). With no locale (`adars` `None`) month 13 prints
-/// nothing for `mmm` and `mmmm` and U+0001 for `mmmmm` (`[$-80000]m|mmm|mmmm|mmmmm` of 2024-09-20
-/// is "13|||\u{1}"; probes/t2779-hebrew-saka-more E1, t2779-hebrew-saka-names B8:D21).
+/// The Hebrew month name a month token prints for `serial_1900` when the calendar has month names
+/// of its own: `mmm`, `mmmm` and `mmmmm` all print the whole name, the `leap_months` of the
+/// calendar's name set in a leap year and its 12 `months` otherwise
+/// (`excel_date_names::CalendarNames`; `[$-80409]mmmm` of 2024-02-15, 5784-06-06, is "`AdarI`").
+/// `None` with no such names (the months go by Gregorian number through the ordinary name tokens,
+/// `Localized::months_by_number`) and for a weekday token. Leap or not by the year table, which
+/// past 2238 differs from the arithmetic calendar's (`[$-80409]mmmm` of 4502-03-01, 8262-06-24, is
+/// "`AdarI`"; probes/t2954-hebrew-value-limit F2).
 pub(crate) fn hebrew_month_name(
     token: &TextToken,
     names: &'static DateNames,
-    adars: Option<&'static [&'static str; 2]>,
+    leap_months: Option<&'static [&'static str; 13]>,
     serial_1900: i64,
 ) -> Option<&'static str> {
-    if matches!(token, TextToken::DayName | TextToken::DayNameShort) {
+    if matches!(token, TextToken::DayName(_) | TextToken::DayNameShort(_)) {
         return None;
     }
-    // Leap or not by the year table, which past 2238 differs from the arithmetic calendar's
-    // (`[$-80409]mmmm` of 4502-03-01, 8262-06-24, is "AdarI"; probes/t2954-hebrew-value-limit F2).
     let (_, month, _, length) = hebrew_date(serial_1900)?;
-    let Some(adars) = adars else {
-        return match (month, token) {
-            (13, TextToken::MonthLetter) => Some("\u{1}"),
-            (13, _) => Some(""),
-            _ => None,
-        };
-    };
-    let index = match (length > 380, month) {
-        (true, 6 | 7) => return Some(adars[month as usize - 6]),
-        (true, 8..) => month - 2,
-        _ => month - 1,
-    };
-    names.months.get(index as usize).copied()
+    let index = usize::try_from(month).ok()?.checked_sub(1)?;
+    if length > 380 {
+        leap_months?.get(index).copied()
+    } else {
+        leap_months.and(names.months.get(index).copied())
+    }
 }
 
 /// The Buddhist era counts from 543 BC: serial 100 (1900-04-09) is "43" under `b` and "2443" under
@@ -319,15 +315,17 @@ fn taiwan_after_b2(part: &DatePart, token: &TextToken, year: i32) -> Option<Stri
 /// A8-A74): `d` 13, `dd` 14, `ddd` 15, `dddd` 16, `m` 17, `mm` 18 (also as minutes), `mmm` 19,
 /// `mmmm` 20, `h` 21, `hh` 22, `s` 25, `ss` 26, `y` and `yy` 27, `yyy` and `yyyy` 28, `AM/PM`
 /// and `A/P` 34, `[h]` 48, `[m]` 49, `[s]` 50, `g` 53, `gg` 54, `ggg` 55, `e` 56, `ee` 57,
-/// `mmmmm` 59, `b` (also first itself) 88 ("X"), `bbbb` 89 ("Y"). Literals do not count. `aaa`
-/// is 51 in Excel but lexes as `ddd` here (TODO(T-3089)).
+/// `mmmmm` 59, `b` (also first itself) 88 ("X"), `bbbb` 89 ("Y"). Literals do not count. `aaa` 51,
+/// `aaaa` and longer 52 (probes/t3089-b2-aaa-code A1:A6).
 fn first_token_code(tokens: &[TextToken]) -> u8 {
     let first = tokens.iter().find(|t| !t.is_literal());
     match first {
         Some(TextToken::Day) => 13,
         Some(TextToken::DayPadded) => 14,
-        Some(TextToken::DayNameShort) => 15,
-        Some(TextToken::DayName) => 16,
+        Some(TextToken::DayNameShort(true)) => 51,
+        Some(TextToken::DayName(true)) => 52,
+        Some(TextToken::DayNameShort(false)) => 15,
+        Some(TextToken::DayName(false)) => 16,
         Some(TextToken::Month | TextToken::Minute) => 17,
         Some(TextToken::MonthPadded | TextToken::MinutePadded) => 18,
         Some(TextToken::MonthNameShort) => 19,

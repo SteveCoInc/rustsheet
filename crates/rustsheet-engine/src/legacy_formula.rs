@@ -41,7 +41,8 @@ impl Model {
     /// Writes `formula` (with its leading `=`) into the cell as a legacy formula: parsed and
     /// rewritten as [`Model::legacy_formula_text`] shows it, and stored as that tree, so what
     /// the rewrite records beyond the text (a legacy N or T, SPEC-0012) is kept. Text that is not
-    /// a formula is written as [`Model::set_user_input`] writes it.
+    /// a formula is written as [`Model::set_user_input`] writes it. The text comes from outside
+    /// the engine, so a padded bare column `T[ Col ]` reads as no column (T-4023).
     ///
     /// # Errors
     /// The cell cannot be written (merged, inside an array formula), the sheet does not exist,
@@ -53,8 +54,40 @@ impl Model {
         column: i32,
         formula: &str,
     ) -> Result<(), String> {
+        self.as_external(|model| model.reenter_legacy_formula(sheet, row, column, formula))
+    }
+
+    /// [`Model::set_cell_with_legacy_formula`] for a formula as a file stores it (a plain `<f>`):
+    /// a padded bare column `T[ Col ]` is `#REF!` and a reference to an unknown table or column
+    /// loads as `#REF!`, as [`Model::set_loaded_user_input`] reads a stored dynamic formula
+    /// (T-4221; docs/excel-semantics/syntax.md, padded bare column).
+    ///
+    /// # Errors
+    /// As [`Model::set_cell_with_legacy_formula`].
+    pub fn set_loaded_legacy_formula(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        formula: &str,
+    ) -> Result<(), String> {
+        self.parser.set_loaded(true);
+        let result = self.reenter_legacy_formula(sheet, row, column, formula);
+        self.parser.set_loaded(false);
+        result
+    }
+
+    /// [`Model::set_cell_with_legacy_formula`] for text the engine printed itself, which reads a
+    /// padded bare column `T[ Col ]` as the column (T-4023).
+    fn reenter_legacy_formula(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        formula: &str,
+    ) -> Result<(), String> {
         let Some(body) = formula.strip_prefix('=').filter(|b| !b.is_empty()) else {
-            return self.set_user_input(sheet, row, column, formula.to_string());
+            return self.reenter_printed_input(sheet, row, column, formula.to_string());
         };
         self.prepare_cell_for_user_input(sheet, row, column)?;
         let node = self.legacy_formula_node(sheet, row, column, body)?;
@@ -116,7 +149,7 @@ impl Model {
     /// re-entry relies on the rewrite being idempotent over its own display text (T-1713).
     ///
     /// # Errors
-    /// As [`Model::set_user_input`] and [`Model::set_cell_with_legacy_formula`].
+    /// As [`Model::reenter_printed_input`] and [`Model::set_cell_with_legacy_formula`].
     pub(crate) fn reenter_user_input(
         &mut self,
         sheet: u32,
@@ -126,7 +159,7 @@ impl Model {
         legacy: bool,
     ) -> Result<(), String> {
         if legacy {
-            self.set_cell_with_legacy_formula(sheet, row, column, &input)
+            self.reenter_legacy_formula(sheet, row, column, &input)
         } else {
             self.reenter_printed_input(sheet, row, column, input)
         }

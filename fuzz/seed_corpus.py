@@ -3,7 +3,10 @@
 
 Formula targets get one file per formula shape in eval/suites (without the leading `=`), at most
 MAX_FORMULA_SEEDS of them; `xlsx_import` gets every workbook under crates/rustsheet-xlsx/tests and
-eval/suites; `bitcode_workbook` gets the engine-written workbooks of `seeds/bitcode_seeds.rs`.
+eval/suites; `bitcode_workbook` gets the engine-written workbooks of `seeds/bitcode_seeds.rs`,
+`cfb_container` the OLE containers of `seeds/cfb_seeds.rs`, `pivot_import` the pivot parts of
+`seeds/pivot_seeds.rs`, and `encrypted_package` the encrypted xlsx
+fixtures of crates/rustsheet-xlsx/tests/encrypted.
 Corpora are generated, never committed, so they track the suites as they grow. Seeds are added to
 whatever a corpus directory already holds, so the inputs libFuzzer found on earlier runs are kept.
 
@@ -78,13 +81,15 @@ def write_seed(directory: Path, data: bytes) -> None:
     (directory / hashlib.sha256(data).hexdigest()).write_bytes(data)
 
 
-def bitcode_seeds(directory: Path) -> int:
-    """Adds `Model::to_bytes()` of small engine-written workbooks to `directory`, from the
-    `bitcode_seeds` binary of the fuzz crate (Rust writes them; T-2895). Returns how many."""
+def binary_seeds(binary: str, directory: Path) -> int:
+    """Adds the seeds the fuzz crate's `binary` writes to `directory` (Rust writes them: engine
+    workbooks for `bitcode_seeds`, T-2895; OLE containers for `cfb_seeds`, T-4264; pivot parts
+    for `pivot_seeds`, T-4133). Returns how
+    many."""
     directory.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as written:
         subprocess.run(
-            ["cargo", "run", "--quiet", "--release", "--bin", "bitcode_seeds", "--", written],
+            ["cargo", "run", "--quiet", "--release", "--bin", binary, "--", written],
             cwd=FUZZ,
             check=True,
         )
@@ -117,9 +122,17 @@ def main() -> int:
         if workbook.stat().st_size <= MAX_SEED_BYTES:
             write_seed(directory, workbook.read_bytes())
             kept += 1
-    encoded = bitcode_seeds(corpus / "bitcode_workbook")
+    encoded = binary_seeds("bitcode_seeds", corpus / "bitcode_workbook")
+    containers = binary_seeds("cfb_seeds", corpus / "cfb_container")
+    pivots = binary_seeds("pivot_seeds", corpus / "pivot_import")
+    # The encrypted xlsx fixtures (T-4265): containers that reach the decryption code.
+    directory = corpus / "encrypted_package"
+    directory.mkdir(parents=True, exist_ok=True)
+    encrypted = sorted((ROOT / "crates" / "rustsheet-xlsx" / "tests" / "encrypted").glob("*.xlsx"))
+    for workbook in encrypted:
+        write_seed(directory, workbook.read_bytes())
     print(f"{len(seeds)} formula seeds of {len(formulas)} formulas, {kept} workbook seeds, {encoded} bitcode "
-          f"seeds in {corpus}; dictionary {dictionary}")
+          f"seeds, {containers} container seeds, {pivots} pivot seeds, {len(encrypted)} encrypted seeds in {corpus}; dictionary {dictionary}")
     return 0
 
 

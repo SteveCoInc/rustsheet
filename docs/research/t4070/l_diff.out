@@ -1,0 +1,13 @@
+w_bpser b0>=8 cells: 2868
+  model ex/u4/w15: (1489, 2840, 2861)
+  engine ex/u4/w15: (1484, 2842, 2859)
+  engine == model (bits): 2723 of 2868
+
+| row | a | b | x | Excel | model | engine | model w15 | engine w15 | GL(a0) model - engine (ulp) |
+|---|---|---|---|---|---|---|---|---|---|
+| A9491 | 8.789 | 0.186 | 0.48378 | 9.209874890127491e-05 | 9.209874890127488e-05 | 9.209874890127485e-05 | True | False | -1 |
+| A9492 | 8.789 | 0.186 | 0.00025543 | 9.0411148022803e-34 | 9.041114802280296e-34 | 9.041114802280294e-34 | True | False | -1 |
+
+cells where engine != model: 145; {'GAMMALN(a0) differs': 145}
+distinct a0 among them: 45; a0 in the GAMMALN probe t2464-r2-bpser-small-gl: 45; GL fallback to math.lgamma: 0
+model with the engine's GAMMALN(a0): equal to the engine on 2868 of 2868; ex/u4/w15 (1484, 2842, 2859)

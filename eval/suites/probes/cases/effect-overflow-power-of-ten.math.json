@@ -1,0 +1,88 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "98e13953a4d56beff4278d35c1529e67c22068890b9f7c575222232a20af41b9",
+  "definitions": {
+   "EFFECT": "6be44e87e29a5079",
+   "NOMINAL": "6be44e87e29a5079"
+  },
+  "arguments_sha256": "fe44048c029e616b22de71c399103c2e87186483ed3ea0df47dc05a976b8b03a"
+ },
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "e",
+    "why": "(1 + rate/n)^n past the double range: #NUM!",
+    "f": "=EFFECT(1E300,2)"
+   },
+   "A10": {
+    "t": "e",
+    "why": "(1 + rate/n)^n past the double range: #NUM!",
+    "f": "=EFFECT(1E13,365)"
+   },
+   "A11": {
+    "t": "e",
+    "why": "(1 + rate/n)^n past the double range: #NUM!",
+    "f": "=EFFECT(1E15,1E15)"
+   },
+   "A12": {
+    "t": "e",
+    "why": "(1 + rate/n)^n past the double range: #NUM!",
+    "f": "=EFFECT(123456789.123,365)"
+   },
+   "A13": {
+    "t": "n",
+    "v": "2.0000000000000000525047602552044195595170062169847e+150",
+    "f": "=NOMINAL(1E300,2)"
+   },
+   "A14": {
+    "t": "n",
+    "v": "1.0000000000000000525047602552044202487044685811082e+300",
+    "f": "=NOMINAL(1E300,1)"
+   },
+   "A2": {
+    "t": "e",
+    "why": "(1 + rate/n)^n past the double range: #NUM!",
+    "f": "=EFFECT(1E200,3)"
+   },
+   "A3": {
+    "t": "e",
+    "why": "(1 + rate/n)^n past the double range: #NUM!",
+    "f": "=EFFECT(1E10,100)"
+   },
+   "A4": {
+    "t": "n",
+    "v": "999999999999999999999999999999.0",
+    "f": "=EFFECT(270,30)"
+   },
+   "A5": {
+    "t": "n",
+    "v": "9.0",
+    "f": "=EFFECT(9,1)"
+   },
+   "A6": {
+    "t": "n",
+    "v": "99.0",
+    "f": "=EFFECT(18,2)"
+   },
+   "A7": {
+    "t": "n",
+    "v": "1.2527829399838427440107579247354215251149392000035e+103",
+    "f": "=EFFECT(990,99)"
+   },
+   "A8": {
+    "t": "e",
+    "why": "a rate of 0 or an npery below 1: #NUM!",
+    "f": "=NOMINAL(1E300,0.5)"
+   },
+   "A9": {
+    "t": "e",
+    "why": "(1 + rate/n)^n past the double range: #NUM!",
+    "f": "=EFFECT(1E300,11)"
+   }
+  }
+ }
+}

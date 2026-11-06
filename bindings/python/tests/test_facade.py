@@ -2,6 +2,7 @@
 
 import threading
 import time
+from pathlib import Path
 
 import pytest
 import rustsheet as rs
@@ -196,10 +197,69 @@ def test_formatted_and_number_format(wb):
     assert wb.number_format("A2") is None
 
 
+def test_set_number_format_shows_value_through_format(wb):
+    wb.set("Sheet1!A1", 0.5)
+    with wb.edit() as tx:
+        tx.set_number_format("Sheet1!A1", "0.0%")
+    assert wb.formatted("Sheet1!A1") == "50.0%"
+    assert wb.number_format("Sheet1!A1") == "0.0%"
+    assert wb["Sheet1!A1"] == 0.5
+    # A format-only edit changes no value.
+    assert wb.changes is not None
+    assert wb.changes["values"] == []
+
+
+@pytest.mark.parametrize("target", ["Sheet1!A1:B2", "Nope!A1"])
+def test_set_number_format_bad_target_rolls_back(wb, target):
+    wb.set("Sheet1!A1", 0.5)
+    with wb.edit() as tx:
+        tx.set_number_format("Sheet1!A1", "0.0%")
+    with pytest.raises(rs.RefError):  # EditError::Ref maps to RefError
+        with wb.edit() as tx:
+            tx.set_number_format("Sheet1!A1", "0.00")
+            tx.set_number_format(target, "0.000")
+    assert wb.number_format("Sheet1!A1") == "0.0%"
+    assert wb["Sheet1!A1"] == 0.5
+
+
 def test_used_range(wb):
     assert wb.used_range("Sheet1") is None
     wb.set("B2", 1)
     assert wb.used_range("Sheet1") == "Sheet1!B2"
+
+
+def test_stored_cells_row_order_with_spill(wb):
+    wb.set("C7", 1)
+    wb.set("A1", 2)
+    wb.set("E1", rs.Formula("=SEQUENCE(2)"))
+    assert wb.stored_cells("Sheet1") == [
+        "Sheet1!A1",
+        "Sheet1!E1",
+        "Sheet1!E2",
+        "Sheet1!C7",
+    ]
+
+
+def test_stored_cells_sparse_extremes(wb):
+    wb.set("A1", 1)
+    wb.set("XFD1048576", 2)
+    assert wb.stored_cells("Sheet1") == ["Sheet1!A1", "Sheet1!XFD1048576"]
+
+
+def test_stored_cells_empty_sheet(wb):
+    assert wb.stored_cells("Sheet1") == []
+
+
+def test_stored_cells_quotes_sheet_name(wb):
+    with wb.edit() as tx:
+        tx.add_sheet("My Sheet")
+    wb.set("'My Sheet'!A1", 1)
+    assert wb.stored_cells("My Sheet") == ["'My Sheet'!A1"]
+
+
+def test_stored_cells_unknown_sheet(wb):
+    with pytest.raises(rs.RefError):
+        wb.stored_cells("Nope")
 
 
 def test_transaction_is_single_use(wb):
@@ -397,3 +457,268 @@ def test_lone_surrogate_reads_back_exactly(wb):
     assert wb.values("A1:A3") == [["\ude00"], ["�"], ["x"]]
     assert wb.values("A2") == [["�"]]
     assert wb.value("A2") == "�"
+
+
+def test_iteration_settings_round_trip(wb):
+    assert wb.iteration is None
+    wb.set_iteration()
+    assert wb.iteration == (100, 0.001)
+    wb.set_iteration(max_iterations=5, max_change=0.5)
+    assert wb.iteration == (5, 0.5)
+    wb.set_iteration(False)
+    assert wb.iteration is None
+    with pytest.raises(ValueError):
+        wb.set_iteration(max_iterations=0)
+    with pytest.raises(ValueError):
+        wb.set_iteration(max_iterations=32768)
+    wb.set_iteration(max_iterations=32767)
+    assert wb.iteration == (32767, 0.001)
+    with pytest.raises(ValueError):
+        wb.set_iteration(max_change=float("nan"))
+
+
+def test_iterating_cycle_converges(wb):
+    with wb.edit() as tx:
+        tx["Sheet1!A1"] = rs.Formula("=A1/2+1")
+    assert wb["Sheet1!A1"] == 0.0  # Excel shows 0 for a circular reference
+    wb.set_iteration(max_iterations=100, max_change=1e-9)
+    wb.recalculate()
+    assert wb["Sheet1!A1"] == pytest.approx(2.0, abs=1e-6)
+
+
+def test_column_data_table_fills_results(wb):
+    with wb.edit() as tx:
+        tx["Sheet1!A1"] = 1
+        tx["Sheet1!B1"] = rs.Formula("=A1*10")
+        tx["Sheet1!A2"] = 1
+        tx["Sheet1!A3"] = 2
+        tx["Sheet1!A4"] = 3
+        tx.add_data_table("Sheet1!B2:B4", column_input="Sheet1!A1")
+    assert wb.values("Sheet1!B2:B4") == [[10.0], [20.0], [30.0]]
+
+
+def test_data_table_error_rolls_back(wb):
+    with pytest.raises(rs.EditError):
+        with wb.edit() as tx:
+            tx["Sheet1!C5"] = 7
+            tx.add_data_table("Sheet1!B2:B4")
+    assert wb["Sheet1!C5"] is None
+
+
+def _cell_address_workbook(**kwargs) -> rs.Workbook:
+    wb = rs.Workbook(**kwargs)
+    with wb.edit() as tx:
+        tx.add_sheet("Data")
+        tx["A1"] = rs.Formula('=CELL("address",Data!B2)')
+    return wb
+
+
+def test_workbook_name_reaches_cell_address_at_new_open_and_from_bytes(tmp_path):
+    named = _cell_address_workbook(name="Budget")
+    assert named["A1"] == "[Budget.xlsx]Data!$B$2"
+
+    data = named.to_xlsx_bytes()
+    assert rs.Workbook.from_bytes(data, name="Other")["A1"] == "[Other.xlsx]Data!$B$2"
+    path = str(tmp_path / "book.xlsx")
+    named.save_xlsx(path)
+    assert rs.Workbook.open(path, name="Opened")["A1"] == "[Opened.xlsx]Data!$B$2"
+
+
+def test_unnamed_workbook_cell_address_is_an_error(tmp_path):
+    unnamed = _cell_address_workbook()
+    assert isinstance(unnamed["A1"], rs.XlError)
+    assert isinstance(rs.Workbook.from_bytes(unnamed.to_xlsx_bytes())["A1"], rs.XlError)
+
+
+# Password-protected xlsx (SPEC-0031 D4, T-4266). The encrypted fixtures are T-4265's; their
+# provenance is in crates/rustsheet-xlsx/tests/encrypted_package.rs.
+_REPO = Path(__file__).resolve().parents[3]
+_ENCRYPTED = _REPO / "crates" / "rustsheet-xlsx" / "tests" / "encrypted"
+_AGILE = _ENCRYPTED / "agile_sha512.xlsx"
+_AGILE_PASSWORD = "Pässwörd🔑"
+_STANDARD = _ENCRYPTED / "standard_aes128_passtika.xlsx"
+_XLS = _REPO / "crates" / "rustsheet" / "tests" / "fixtures" / "biff_container.xls"
+
+
+def test_password_opens_encrypted_workbooks():
+    wb = rs.Workbook.open(str(_AGILE), password=_AGILE_PASSWORD)
+    plain = rs.Workbook.open(str(_REPO / "crates" / "rustsheet-xlsx" / "tests" / "basic_text.xlsx"))
+    assert wb.sheet_names == plain.sheet_names
+    assert wb["A1"] == plain["A1"]
+    assert rs.open(str(_STANDARD), password="tika").sheet_names
+    assert rs.Workbook.from_bytes(_STANDARD.read_bytes(), password="tika").sheet_names
+
+
+def test_missing_password_is_password_required_error():
+    with pytest.raises(rs.PasswordRequiredError):
+        rs.Workbook.open(str(_AGILE))
+    with pytest.raises(rs.LoadError):
+        rs.Workbook.from_bytes(_STANDARD.read_bytes())
+
+
+def test_wrong_password_is_wrong_password_error_without_the_password():
+    secret = "not-the-password-x9"
+    for call in (
+        lambda: rs.Workbook.open(str(_AGILE), password=secret),
+        lambda: rs.Workbook.from_bytes(_STANDARD.read_bytes(), password=secret),
+    ):
+        with pytest.raises(rs.WrongPasswordError) as info:
+            call()
+        assert isinstance(info.value, rs.LoadError)
+        assert secret not in str(info.value)
+        assert secret not in repr(info.value)
+
+
+def test_xls_is_load_error_without_the_password():
+    secret = "xls-secret-y7"
+    for password in (None, secret):
+        with pytest.raises(rs.LoadError) as info:
+            rs.Workbook.from_bytes(_XLS.read_bytes(), password=password)
+        assert not isinstance(info.value, (rs.PasswordRequiredError, rs.WrongPasswordError))
+        assert ".xls" in str(info.value)
+        assert secret not in str(info.value)
+
+
+def test_define_name_workbook_scoped(wb):
+    with wb.edit() as tx:
+        tx.add_sheet("Sheet2")
+        tx["Sheet1!B1"] = 5
+        tx.define_name("Rate", "=Sheet1!$B$1")
+        tx["Sheet1!A1"] = rs.Formula("=Rate*2")
+        tx["Sheet2!A1"] = rs.Formula("=Rate*2")
+    assert wb["Sheet1!A1"] == 10.0
+    assert wb["Sheet2!A1"] == 10.0
+
+
+def test_define_name_sheet_scope_shadows(wb):
+    with wb.edit() as tx:
+        tx.add_sheet("Sheet2")
+        tx["Sheet1!B1"] = 5
+        tx["Sheet2!B1"] = 7
+        tx.define_name("Rate", "Sheet1!$B$1")
+        tx.define_name("Rate", "=Sheet2!$B$1", sheet="Sheet2")
+        tx["Sheet1!A1"] = rs.Formula("=Rate")
+        tx["Sheet2!A1"] = rs.Formula("=Rate")
+    assert wb["Sheet1!A1"] == 5.0
+    assert wb["Sheet2!A1"] == 7.0
+
+
+@pytest.mark.parametrize(
+    ("name", "formula", "sheet", "exc"),
+    [
+        ("Dup", "=1", None, rs.EditError),
+        ("1abc", "=1", None, rs.EditError),
+        ("Bad", "=1+", None, rs.EditError),
+        ("N", "=1", "Nope", rs.RefError),
+    ],
+)
+def test_define_name_errors_roll_back(wb, name, formula, sheet, exc):
+    # An unknown sheet is a RefError, as for every other sheet op (RefError is not an EditError).
+    with pytest.raises(exc):
+        with wb.edit() as tx:
+            tx["A1"] = 1
+            tx.define_name("Dup", "=2")
+            tx.define_name(name, formula, sheet=sheet)
+    assert wb["A1"] is None
+
+
+def test_set_row_hidden_feeds_subtotal(wb):
+    wb.set("A1", 1)
+    wb.set("A2", 2)
+    wb.set("A3", 4)
+    wb.set("B1", "=SUBTOTAL(109,A1:A3)")
+    wb.set("B2", "=SUBTOTAL(9,A1:A3)")
+    with wb.edit() as tx:
+        tx.set_row_hidden("Sheet1", 2)
+    assert wb["B1"] == 5
+    assert wb["B2"] == 7
+    with wb.edit() as tx:
+        tx.set_row_hidden("Sheet1", 2, False)
+    assert wb["B1"] == 7
+
+
+@pytest.mark.parametrize("row", [0, -1, 1048577])
+def test_set_row_hidden_bad_row_rolls_back(wb, row):
+    with pytest.raises(rs.EditError):
+        with wb.edit() as tx:
+            tx["A1"] = 1
+            tx.set_row_hidden("Sheet1", row)
+    assert wb["A1"] is None
+
+
+def test_set_row_hidden_unknown_sheet_rolls_back(wb):
+    # An unknown sheet is a RefError, as for every other sheet op.
+    with pytest.raises(rs.RefError):
+        with wb.edit() as tx:
+            tx["A1"] = 1
+            tx.set_row_hidden("Nope", 1)
+    assert wb["A1"] is None
+
+
+def test_set_row_hidden_last_row_accepted(wb):
+    with wb.edit() as tx:
+        tx.set_row_hidden("Sheet1", 1048576)
+
+
+def _sales(wb, rows=3):
+    wb.set("A1", "Name")
+    wb.set("B1", "Qty")
+    for i, q in enumerate([1, 2, 4, 8][:rows]):
+        wb.set(f"A{i + 2}", f"n{i}")
+        wb.set(f"B{i + 2}", q)
+
+
+def test_add_table_structured_reference(wb):
+    _sales(wb)
+    with wb.edit() as tx:
+        tx.add_table("Sheet1!A1:B4", "Sales")
+    wb.set("D1", "=SUM(Sales[Qty])")
+    assert wb["D1"] == 7
+
+
+def test_add_table_totals_row(wb):
+    _sales(wb, rows=3)
+    wb.set("A5", "Total")
+    wb.set("B5", 7)
+    with wb.edit() as tx:
+        tx.add_table("Sheet1!A1:B5", "Sales", totals_row=True)
+    wb.set("D1", "=ROWS(Sales[#All])")
+    wb.set("D2", "=ROWS(Sales[#Data])")
+    wb.set("D3", "=ROWS(Sales[#Totals])")
+    assert (wb["D1"], wb["D2"], wb["D3"]) == (5, 3, 1)
+
+
+@pytest.mark.parametrize("second", [("Sheet1!A1:B4", "Sales"), ("Sheet1!B1:B4", "Other")])
+def test_add_table_duplicate_or_overlap_rolls_back(wb, second):
+    _sales(wb)
+    with wb.edit() as tx:
+        tx.add_table("Sheet1!A1:B4", "Sales")
+    with pytest.raises(rs.EditError):
+        with wb.edit() as tx:
+            tx.set_row_hidden("Sheet1", 2)
+            tx.add_table(*second)
+    # Nothing was left behind: the table list is as before, so the first table can still be used.
+    wb.set("D1", "=SUM(Sales[Qty])")
+    assert wb["D1"] == 7
+
+
+def test_add_table_failed_block_leaves_no_table(wb):
+    _sales(wb)
+    with pytest.raises(rs.EditError):
+        with wb.edit() as tx:
+            tx.add_table("Sheet1!A1:B4", "Sales")
+            tx.add_table("Sheet1!A1:B4", "Sales")
+    with wb.edit() as tx:
+        tx.add_table("Sheet1!A1:B4", "Sales")
+
+
+def test_add_table_on_sheet_added_in_same_block(wb):
+    with wb.edit() as tx:
+        tx.add_sheet("Data")
+        tx["Data!A1"] = "Name"
+        tx["Data!B1"] = "Qty"
+        tx["Data!A2"] = "x"
+        tx["Data!B2"] = 5
+        tx.add_table("Data!A1:B2", "T")
+    wb.set("D1", "=SUM(T[Qty])")
+    assert wb["D1"] == 5

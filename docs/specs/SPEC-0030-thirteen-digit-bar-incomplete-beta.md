@@ -1,0 +1,129 @@
+# SPEC-0030 — The 13-digit bar for the incomplete-beta family
+
+- **Status:** accepted (2026-11-04)
+- **Milestone / lane:** M0 / harness
+- **Tasks:** T-4055 (this spec), T-4056 (implementation), in one PR, as the owner asked (decision 0267)
+
+## Problem
+On probes-numeric at main a262d6b0, 89,170 attributed numbers are visibly off (decision 0083: more than half a unit
+in the 15th significant digit from Excel). 84,932 of them are incomplete-beta family numbers that are within half a
+unit in the 13th digit. In those regions Excel itself is rarely correctly rounded: about 1% of 2,026 sampled cells,
+with a median error of 48 to 330 ulp (decision 0267). So the headline mostly measures how closely we reproduce
+Excel's rounding noise. Decision 0267 moves these functions to a 13-digit bar.
+
+## Goals / non-goals
+- Goal: one definition of visibly off that every report, rate and exit reads, with the family at 13 digits.
+- Goal: the cells this moves are counted and shown every run, in their own bucket, never dropped.
+- Non-goal: changing what is bit-exact, or any baseline file.
+- Non-goal: functions outside the family, such as T.DIST, GAMMA.DIST and the quantiles.
+
+## Excel behavior to match
+None changes. This is a counting rule. The evidence that the family's 14th and 15th digits are Excel noise is
+decision 0267's Context and the docs/excel-semantics/statistics.md entries it cites.
+
+## Design
+- **The family.** `closeness::THIRTEEN_DIGIT_FAMILY` lists BETA.DIST, BETADIST, BINOM.DIST, BINOMDIST, F.DIST,
+  F.DIST.RT, FDIST, NEGBINOM.DIST and NEGBINOMDIST.
+- **Which cells qualify.** A cell's formula qualifies when every function it is blamed on (`closeness::blamed`:
+  every non-glue function it calls) is in the family. An array member is judged by its anchor's formula. These keep
+  the 15-digit bar:
+  - a composite such as `BETA.INV(BETA.DIST(..))` or `F.INV(F.DIST(..))`;
+  - a reference-only formula;
+  - a cell with no formula.
+- **The bucket.** `closeness::bucket`, the one function behind `Closeness::add`, `Visible::of` and `Visible::is_off`,
+  gains `Residue13`. A `NumericClose` or `NumericMismatch` number lands there when three things hold: it is past
+  `within_fifteen_digits`, it is within `within_significant_digits(.., 13)`, and its formula qualifies. That is the
+  same half-unit rule at 13 digits, and `within_fifteen_digits` is now that function at 15.
+- **Counting.** `Closeness` gains `residue13`, with `#[serde(default)]` so older report.json files still parse.
+  - `scored()` includes it and `visible()` does not.
+  - `Tier::of` places a function with residue cells no higher than `rate999`. `ulp4` and `digits15` still mean
+    every cell is within 4 ulp or within 15 digits.
+  - A wrong type, error or text is never residue.
+- **Consumers.** Each one reads the bucket through `Visible` or `Closeness`, so each moves together with no code
+  of its own:
+  - report.json `closeness`, `attributed` and `excel`;
+  - `attributed_off` and `unattributed_off`;
+  - the Phase 1 rate and tiers (`v15_checkpoint`, `attribution`);
+  - the probe rows and R1(c) (`r1c`, `probe_milestones`);
+  - Gate B (`gate_b`) and the milestone exits (`milestone_exit`);
+  - the visible-parity lock (`visible_parity`);
+  - the milestone function-scope rows (`function_scope`) and the poi M8 subset (`poi_m8_subset`), both part of
+    the milestone exits;
+  - scripts/phase1_exit.py, exit_owners.py and new_case_owners.py, which read those report fields.
+- **Gate A stays at 15 digits.** The envelope (`accuracy::envelope`, decision 0188 R2) tests Excel's side with
+  `Visible::is_off_at_fifteen_digits`. It reads the same buckets, with `residue13` counted as off, so it is still one
+  15-digit rule, and decision 0267 does not reach Gate A or the R4 fresh-sweep check. Without this, 106 accuracy
+  points of the family would have moved from `math` to `both`.
+- **Limit.** Family membership reads the formula's own calls (`functions_in`). It does not expand defined names or
+  LAMBDAs the way `function_scope`'s `calls_through_names` does. A family call whose argument is a name wrapping a
+  non-family function therefore gets the 13-digit bar. No case in the probe suites does that today, and a case that
+  needs it should expand the names first.
+- **report.md.** The "Visibly off" table gains a `residue13` column.
+- **Progress dashboard** (tools/src/rustsheet_tools/progress_report):
+  - `model.BUCKETS` gains `residue13`, read as 0 from a report that predates it;
+  - the bucket table, the closeness sentence and the charts show it;
+  - history rows record `off_cells.residue13`, and "Since the last run" has a residue line, read as 0 for older rows.
+- **What does not change.**
+  - The known-failure baselines and `eval-check` regressions are bit-level.
+  - The visible-parity lock still counts visibly-off cells, now at the family's bar. So a family cell that moves
+    from the 15th to the 14th digit does not raise it. A move past the 13th digit still does.
+  - Decision 0267 item 6 says when a bit-level regression of a family cell is allowed.
+
+## Alternatives considered
+- *Filter only in the dashboard.* Rejected: the Phase 1 rate, exits and tiers would disagree with the headline.
+- *A per-function digit table for every function.* Rejected: decision 0267 rules only on this family, and a general
+  table invites per-function loosening without evidence.
+- *Count composites whose every call is in the family or its inverses.* Rejected: an inverse's search adds its own
+  error, so it keeps the 15-digit bar until a decision rules on it.
+
+## Test plan
+- Unit tests (crates/rustsheet-eval/src/closeness.rs):
+  - the 13-digit boundary;
+  - family, `_xlfn.`-prefixed and glue-wrapped formulas;
+  - non-family and mixed formulas;
+  - array members;
+  - type cells.
+- tools tests: a closeness from before the bucket reads its residue as 0, and history rows carry it.
+- `rustsheet-eval run --suite probes-numeric` at a262d6b0: attributed visible numbers 89,170 → 4,238, residue
+  84,932. Type, error and bit-exact counts cannot move, because the bucket only takes numbers already past the
+  15-digit bar.
+
+## Rollout
+One PR, with T-4055 and T-4056 together (decision 0267). After it merges, the steward's next `make progress-report`
+shows the new headline. `--lower-visible-lock` then lowers the visible-parity lines the residue frees.
+
+## R3 math-over-Excel cells (decision 0310, T-4520)
+Decision 0310 adds a second bucket that is counted and shown but not visibly off. It follows the same pattern as
+`residue13`.
+- **Which cells qualify.** A cell qualifies when R1(c)'s R3 pass holds for it. The one test is `r1c::r3_math`:
+  - both values are numbers;
+  - `eval/accuracy/math-over-excel.tsv` marks the cell;
+  - Excel is more than G = 1e-4 off its math value;
+  - the engine is within ε of the math.
+
+  `r1c::mark_r3_math` applies it once per run (`rustsheet-eval run` and `check`), before `RunReport::build`, and
+  stores it as `CellResult::target` = `Target::Math`. `closeness::bucket` reads it. `r1c::classify` calls the same test, so
+  `R1c::R3Pass` and the bucket cannot disagree.
+- **The bucket.** `Closeness` gains `r3_math`, with `#[serde(default)]` so older report.json files still parse.
+  - A `NumericClose` or `NumericMismatch` number lands there when it is past `within_fifteen_digits` and marked `Target::Math`.
+    The test comes before `residue13`; the two cannot both hold, since the engine is then about 1e-4 off Excel.
+  - `scored()` includes it and `visible()` does not.
+  - `Tier::of` places a function with any such cell no higher than `rate999`.
+- **Consumers.** These read the bucket through `Visible` or `Closeness`, so they move together:
+  - report.json `closeness`, `attributed` and `excel`;
+  - `attributed_off` and `unattributed_off`;
+  - the Phase 1 rate and tiers;
+  - the milestone exits, `function_scope` and `poi_m8_subset`;
+  - the frozen lists' visibly-off names;
+  - the visible-parity lock;
+  - report.md's "Visibly off" table, which gains an `r3_math` column;
+  - the dashboard: `model.BUCKETS` and `OPTIONAL_BUCKETS`, the bucket table, the closeness sentence, the charts,
+    history `off_cells.r3_math`, and a "Since the last run" line. Each reads 0 from an older report or row.
+- **R1(c), the probe rows and Gate B.** `r1c::classify` still classifies these cells as `R3Pass`. So the R1(c) line,
+  `r1c_left_out` (scripts/exit_owners.py) and Gate B are unchanged. The probe rows count them in `r3_pass` but no
+  longer in `visibly_off`. `r1c_off`, which the probe-row exits read, does not change.
+- **Gate A.** Gate A is unchanged. `Visible::is_off_at_fifteen_digits` counts `r3_math` as off, the envelope drops
+  Excel's side of an R3 point its own way, and Gate A's points never carry the mark.
+- **Measured** with `rustsheet-eval run --suite probes-numeric` at origin/main e72ae138. Visible numeric went from
+  4,346 to 4,280, and `r3_math` from 0 to 66: all 66 are t3367-nper-tiny-rate cells. Visibly off went from 4,820 to
+  4,754. The bit-exact, type and error counts did not move.

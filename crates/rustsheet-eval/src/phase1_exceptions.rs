@@ -234,23 +234,35 @@ mod tests {
     fn the_committed_file_parses() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let exceptions = Phase1Exceptions::load(&root).unwrap_or_else(|e| panic!("{e}"));
-        let cells: Vec<String> = exceptions
+        let (desktop_only, earlier): (Vec<_>, Vec<_>) = exceptions
             .cells
+            .iter()
+            .partition(|(_, e)| e.decision == "0308" || e.decision == "0315");
+        // Decision 0308: the FORECAST.ETS family (the web's #N/A) and CELL's desktop-only info
+        // types, 555 cells; decision 0315: calipers Mac goldens the web answers as the engine
+        // does, 18 cells. All owned by T-4373.
+        let count = |d: &str| desktop_only.iter().filter(|(_, e)| e.decision == d).count();
+        assert_eq!((count("0308"), count("0315")), (555, 18));
+        assert!(desktop_only.iter().all(|(_, e)| e.task == "T-4373"));
+        let cells: Vec<String> = earlier
             .iter()
             .map(|((case, key), e)| format!("{case}!{key} {} {}", e.decision, e.task))
             .collect();
+        // The earlier rows; their M14 owner T-1075 was dropped (decision 0266), and decision 0324
+        // re-owns them to T-4373 and adds J1328 (Excel 15's #VALUE!, Microsoft 365's 0).
         assert_eq!(
             cells,
             [
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL12 0188 T-1075",
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL26 0188 T-1075",
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!K25 0196 T-1075",
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!N6 0188 T-1075",
-                "ironcalc-calc/FINANCIAL/IRR.xlsx!Two Values!C4 0196 T-1075",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!G936 0134 T-1075",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!H936 0134 T-1075",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!J136 0134 T-1075",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!K936 0134 T-1075",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL12 0188 T-4373",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL26 0188 T-4373",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!K25 0196 T-4373",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!N6 0188 T-4373",
+                "ironcalc-calc/FINANCIAL/IRR.xlsx!Two Values!C4 0196 T-4373",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!G936 0134 T-4373",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!H936 0134 T-4373",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!J1328 0324 T-4373",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!J136 0134 T-4373",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!K936 0134 T-4373",
             ]
         );
     }

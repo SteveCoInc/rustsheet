@@ -72,3 +72,10 @@ pushed since 2026-10-29) found these cells named by no open task. All are within
 1b), so they join this deferred owner of their kernel. CUMIPMT at rate 0.0083 over short ranges, 4 and 8 ulp, on the
 overflow-and-forms probe.
 - probes/fin-cumipmt-overflow-and-forms.case.json (2): Sheet1!A7, A14
+
+## Cells added by gap triage (2026-11-04)
+`make eval` on origin/main 3c8d8c7d3. These principals of ironcalc-calc/FINANCIAL/CUMPRINC_CUMIPMT.xlsx (Mac 16.0300
+cached values) are 1 to 4 ulp off, and no open task lists them. All are within 15 significant digits (Phase 1b). Nine
+are type 1 (rows 2 to 17 and 31). H29 is type 0, `CUMPRINC(0.0083,36,8000,3,10,0)`: Excel -1604.273009770884, ours
+-1604.2730097708848, with the 50-digit math at -1604.27300977088443. Its CUMIPMT partner G29 is T-3413's.
+- ironcalc-calc/FINANCIAL/CUMPRINC_CUMIPMT.xlsx (10): Sheet1!H2, H3, H4, H5, H7, H12, H16, H17, H29, H31

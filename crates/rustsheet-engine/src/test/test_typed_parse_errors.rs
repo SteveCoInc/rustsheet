@@ -2,8 +2,8 @@
 //! its content; it closes a call's missing `)` but not a group's (probes/t3213-typed-parse-errors).
 //! Stored text keeps today's parse-error cell.
 
-use crate::test::util::new_empty_model;
-use crate::typed_input::{open_parenthesis_is_a_call, r1c1_formula_to_a1};
+use crate::test::util::{new_empty_model, typed_r1c1};
+use crate::typed_input::open_parenthesis_is_a_call;
 use crate::TYPED_FORMULA_DOES_NOT_PARSE;
 
 #[test]
@@ -233,22 +233,20 @@ fn typed_tab_or_nbsp_between_tokens_is_refused() {
     assert_eq!(model._get_text("A2"), "3");
     assert_eq!(model._get_text("A3"), "3");
     assert_eq!(model._get_text("A4"), "3");
-    let sheets = ["Sheet1".to_string()];
     assert_eq!(
-        r1c1_formula_to_a1("=Sheet1! R1C4", &sheets, "Sheet1", 1, 1),
-        Some("=Sheet1!$D$1".to_string())
+        typed_r1c1(&mut model, 0, "=Sheet1! R1C4", 10, 1).as_deref(),
+        Some("=Sheet1!$D$1")
     );
-    assert_eq!(
-        r1c1_formula_to_a1("=Sheet1!\tR1C4", &sheets, "Sheet1", 1, 1),
-        None
-    );
+    assert_eq!(typed_r1c1(&mut model, 0, "=Sheet1!\tR1C4", 11, 1), None);
 }
 
 /// Excel's short R1C1 forms typed in R1C1 mode, as probes/t3212-r1c1-bare-offsets shows them
 /// (FORMULATEXT of the typed cell, excel-graph, 2026-11-03, T-3212); `None` is a refusal.
 #[test]
 fn short_r1c1_forms_typed_in_r1c1_mode() {
-    let sheets = vec!["S".to_string(), "T".to_string()];
+    let mut model = new_empty_model();
+    model.rename_sheet("Sheet1", "S").unwrap();
+    model.add_sheet("T").unwrap();
     // (typed text, row, column of the typed cell in S, the A1 text Excel shows)
     let cases: [(&str, i32, i32, Option<&str>); 27] = [
         ("=R[-8]C[-6]", 10, 8, Some("=B2")),
@@ -281,14 +279,48 @@ fn short_r1c1_forms_typed_in_r1c1_mode() {
     ];
     for (typed, row, column, a1) in cases {
         assert_eq!(
-            r1c1_formula_to_a1(typed, &sheets, "S", row, column).as_deref(),
+            typed_r1c1(&mut model, 0, typed, row, column).as_deref(),
             a1,
             "{typed}"
         );
     }
     // Quoted text and bracketed parts are copied as they are.
     assert_eq!(
-        r1c1_formula_to_a1("=\"RC\"&'T'!RC", &sheets, "S", 1, 1).as_deref(),
+        typed_r1c1(&mut model, 0, "=\"RC\"&'T'!RC", 1, 1).as_deref(),
         Some("=\"RC\"&T!A1")
     );
+}
+
+// T-4299: typed, a LET name or a LAMBDA parameter written with the `_xlpm.` prefix is refused in
+// any letter case, and a use of it spelled with the prefix is the undefined name, its prefix
+// written back lowercase (probes/t4299-typed-xlpm-extrapolations A1:A5).
+#[test]
+fn typed_xlpm_declarations_are_refused_in_any_case_and_uses_read_back_lowercase() {
+    let mut model = new_empty_model();
+    for formula in [
+        "=LET(_xlpm.x,1,_xlpm.x+1)",
+        "=LET(_XLPM.x,1,_XLPM.x+1)",
+        "=LAMBDA(_xlpm.x,_xlpm.x*2)(3)",
+    ] {
+        let result = model.set_typed_user_input(0, 1, 1, formula.to_string());
+        let message = result.err().unwrap_or_default();
+        assert!(
+            message.starts_with(TYPED_FORMULA_DOES_NOT_PARSE),
+            "{formula}: {message}"
+        );
+    }
+    for (row, formula) in [
+        (2, "=LET(x,2,_XLPM.x*3)"),
+        (3, "=LAMBDA(x,_xlpm.x*2)(3)"),
+        (4, "=LAMBDA(x,x*2)(3)"),
+    ] {
+        let result = model.set_typed_user_input(0, row, 1, formula.to_string());
+        assert_eq!(result, Ok(()), "{formula}");
+    }
+    model._set("B2", "=FORMULATEXT(A2)");
+    model.evaluate();
+    assert_eq!(model._get_text("A2"), "#NAME?");
+    assert_eq!(model._get_text("B2"), "=LET(x,2,_xlpm.x*3)");
+    assert_eq!(model._get_text("A3"), "#NAME?");
+    assert_eq!(model._get_text("A4"), "6");
 }

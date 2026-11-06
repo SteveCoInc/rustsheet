@@ -7,7 +7,7 @@ use super::{
     parser::{DatePart, TextToken},
 };
 use crate::locale::{
-    excel_date_names::{DateNames, HIJRI_ARABIC},
+    excel_date_names::{calendar_names, CalendarKey, CalendarNames, DateNames, EN_US},
     Locale,
 };
 
@@ -156,12 +156,12 @@ impl NameTokens {
         let m = month as usize - 1;
         let dates = &locale.dates;
         match token {
-            TextToken::DayNameShort => {
+            TextToken::DayNameShort(..) => {
                 text.push_str(
                     names.map_or(&dates.day_names_short[weekday], |n| n.days_short[weekday]),
                 );
             }
-            TextToken::DayName => {
+            TextToken::DayName(..) => {
                 text.push_str(names.map_or(&dates.day_names[weekday], |n| n.days[weekday]));
             }
             TextToken::MonthNameShort => {
@@ -185,7 +185,7 @@ impl NameTokens {
     /// becomes the value read after it (`B2dddd|mmm|dddd` is "الأربعاء|شعبان|السبت");
     /// probes/t2729-hijri-locale-tag A151-A168, t2729-hijri-locale-tag-names A239-A277.
     fn hijri_name(&mut self, token: &TextToken, month: u32, weekday: usize) -> &'static str {
-        let is_day = matches!(token, TextToken::DayName | TextToken::DayNameShort);
+        let is_day = matches!(token, TextToken::DayName(..) | TextToken::DayNameShort(..));
         let own = if is_day {
             FirstName::Weekday(weekday)
         } else {
@@ -198,7 +198,7 @@ impl NameTokens {
         } else {
             *self.first.get_or_insert(own)
         };
-        let names = &HIJRI_ARABIC;
+        let names = arabic_hijri_names();
         let name = match (is_day, read) {
             (true, FirstName::Month(m)) => names.days[month_as_weekday(m)],
             (_, FirstName::Weekday(w)) => names.days[w],
@@ -212,6 +212,15 @@ impl NameTokens {
                 .map_or(name, |(end, _)| &name[..end]);
         }
         name
+    }
+}
+
+/// Excel's Arabic Hijri names, which a bare `B2` prints: calendar digit 6's names with no locale
+/// (`locale/excel_calendars.tsv`).
+fn arabic_hijri_names() -> &'static DateNames {
+    match calendar_names(6, CalendarKey::Lcid(0)) {
+        Some(CalendarNames::Set { names, .. }) => names,
+        _ => EN_US,
     }
 }
 

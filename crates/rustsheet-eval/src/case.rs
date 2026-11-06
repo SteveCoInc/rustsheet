@@ -179,6 +179,10 @@ pub struct TableSpec {
     pub range: String,
     #[serde(default)]
     pub filter: bool,
+    /// How spec2xlsx writes the filter's `<filterColumn>` (T-4003); `None`: a values filter
+    /// under `colId` 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter_column: Option<FilterColumnSpec>,
     /// The last row of `range` is the table's totals row (T-1607; the engine adapter adds it with
     /// `Txn::add_table_with_totals`, T-1671).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -196,6 +200,28 @@ pub struct TableSpec {
     pub calculated: BTreeMap<String, String>,
 }
 
+/// The `<filterColumn>` of a filtered spec table (T-4003): Excel calls the hidden rows filtered
+/// only for a criterion inside the table.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FilterColumnSpec {
+    /// The column's `colId` (0-based in the table); a values filter's must be 0 or past the
+    /// table's last column, since it lists the first column's values.
+    #[serde(default)]
+    pub col_id: u32,
+    /// `false`: the filterColumn holds no criterion.
+    #[serde(default = "crate::suite::default_true")]
+    pub criterion: bool,
+    /// `true`: the filterColumn holds a `<colorFilter/>` with no `dxfId`, which Excel reads as no
+    /// criterion (probes/t4558-color-filter-subtotal, T-4558).
+    #[serde(default)]
+    pub color: bool,
+    /// `false` with `color`: the colorFilter says `cellColor="0"` (a font colour); Excel reads it
+    /// as no criterion too, so the engine adapter does not consult it.
+    #[serde(default = "crate::suite::default_true")]
+    pub cell_color: bool,
+}
+
 /// A what-if data table in a spec sheet: `ref` holds its result cells; `row_input` alone is a
 /// one-variable row table, `column_input` alone a column table, both a two-variable table.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -211,6 +237,9 @@ pub struct DataTableSpec {
 
 /// A pivot table in a spec sheet (T-1705): `row` (and optionally `column`) are text fields of the
 /// `source` range's header row, `value` a number field aggregated by `function` (`sum` when absent).
+/// A pivot with a `definition` (case builder v2, T-4122) has none of those: Excel renders it from the
+/// definition on open, and the engine adapter does not register it until the engine renders pivots
+/// (T-4152 and SPEC-0032).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PivotTableSpec {
@@ -220,12 +249,14 @@ pub struct PivotTableSpec {
     pub source: String,
     /// Top-left cell of the rendered pivot.
     pub location: String,
-    /// The row field (a text column of the source).
+    /// The row field (a text column of the source); empty for a pivot with a `definition`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub row: String,
     /// The column field (another text column), if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub column: Option<String>,
-    /// The data field (a number column).
+    /// The data field (a number column); empty for a pivot with a `definition`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
     /// `sum` (when absent), `count`, `average`, `max` or `min`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -236,6 +267,59 @@ pub struct PivotTableSpec {
     /// box is the pivot's `<location>`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub rendered: BTreeMap<String, CellInput>,
+    /// A numeric range grouping of the row field (T-4228). The builder renders no cells for a
+    /// grouped pivot: the engine adapter has the engine lay it out from `location` (T-4235).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<PivotGroupSpec>,
+    /// Texts the row field's cache keeps as shared items though no record uses them (T-4248); the
+    /// builder leaves `refreshOnLoad` off for such a pivot. The engine adapter appends them to the
+    /// row field's cache items after the records' own (T-4276).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unused_items: Vec<String>,
+    /// The row field's `showAll` (T-4248); false when absent.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub show_all: bool,
+    /// `unused_items` for the column field (T-4311); the adapter appends them to its cache items.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub column_unused_items: Vec<String>,
+    /// The column field's `showAll` (T-4311); false when absent.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub column_show_all: bool,
+    /// The pivot's definition, one-to-one with `pivotTableDefinition`
+    /// (`tools/src/rustsheet_tools/pivot_definition.py`, which validates it). Kept opaque here: only
+    /// spec2xlsx reads it so far; T-4152 types it when the adapter builds the pivot from it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub definition: Option<serde_json::Value>,
+}
+
+/// A pivot row field's range or date grouping (`<fieldGroup>` with `<rangePr>`), as
+/// `tools/src/rustsheet_tools/pivot.py` writes it: `items` are the group labels in order, the first
+/// for values below `start` and the last for values past `end`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PivotGroupSpec {
+    /// `startNum`.
+    pub start: f64,
+    /// `endNum`.
+    pub end: f64,
+    /// `groupInterval`.
+    pub interval: f64,
+    /// The `<groupItems>` items: labels, or numbers written as `<n>` items (T-4316).
+    pub items: Vec<PivotGroupItem>,
+    /// A date group's `groupBy` (`months`, `hours`, ...), whose `start` and `end` are date serials
+    /// (`startDate`, `endDate`; T-4236); absent for a numeric range group.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub by: Option<String>,
+}
+
+/// One `<groupItems>` item of a [`PivotGroupSpec`]: a label (`<s>`) or a number (`<n>`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum PivotGroupItem {
+    /// A text label.
+    Text(String),
+    /// A number item, which matches none of Excel's labels.
+    Number(f64),
 }
 
 /// A workbook's calculation settings (`<calcPr>`), written by spec2xlsx (T-0428). The engine
@@ -402,6 +486,9 @@ impl SheetOp {
 pub struct ApiName {
     pub name: String,
     pub formula: String,
+    /// The sheet the name is scoped to; workbook scope when absent (T-4014).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sheet: Option<String>,
 }
 
 /// A self-contained workbook test case.
@@ -412,6 +499,10 @@ pub struct CaseSpec {
     pub description: String,
     #[serde(default)]
     pub tags: Vec<String>,
+    /// The pivot catalog ids (eval/catalog/pivot-features.tsv) the case's pivot cells evidence
+    /// (T-4126).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivot_features: Vec<String>,
     pub sheets: Vec<SheetSpec>,
     /// The workbook's date system, `1900` (the default) or `1904` (`<workbookPr date1904="1"/>`;
     /// SPEC-0005, T-1268). Any other value is refused when the case is built.
@@ -424,10 +515,16 @@ pub struct CaseSpec {
     /// Cell keys in `expected` and `check` use the sheet names after the edits.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sheet_ops: Vec<SheetOp>,
-    /// Workbook-scoped names defined through the API after the sheet edits, in order (T-3264):
-    /// the oracle replays each with Graph `names/add`, the engine adapter with `Txn::define_name`.
+    /// Names defined through the API after the sheet edits, in order (T-3264): the oracle replays
+    /// each with Graph `names/add` (`worksheets('S')/names/add` for one scoped to a sheet, T-4014),
+    /// the engine adapter with `Txn::define_name` (`Txn::define_sheet_name`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub api_names: Vec<ApiName>,
+    /// The workbook's active sheet (spec2xlsx makes it the active, only selected tab; T-4394): the
+    /// engine adapter sets it before `api_names`, which bind unqualified references to it
+    /// (T-4445). The first sheet when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_sheet: Option<String>,
     /// Workbook-scoped defined names: name → formula (e.g. `"=Sheet1!$A$1:$B$2"`).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub names: BTreeMap<String, String>,
@@ -496,6 +593,21 @@ pub struct OracleFile {
     /// Displayed text of the cells a case lists in `text`: sheet → A1 → text (T-1610).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub text: BTreeMap<String, BTreeMap<String, String>>,
+    /// Every pivot Excel saved, with its layout and the cells of its area (T-4123); scored by
+    /// T-4124.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivots: Vec<OraclePivot>,
+}
+
+/// A pivot of an oracle sidecar: Excel's saved definition (location, layout lines, group labels)
+/// and every cell of its area, a blank one as `empty` (`tools/src/rustsheet_tools/snapshot.py`
+/// `pivot_areas`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OraclePivot {
+    #[serde(flatten)]
+    pub definition: crate::xlsx_snapshot::PivotDef,
+    /// A1 address on the pivot's sheet → Excel's value there.
+    pub cells: BTreeMap<String, Value>,
 }
 
 /// The formulas `x` of `spec` whose companion `=(x)=0` the excel-graph `oracle` answers FALSE:
@@ -589,6 +701,28 @@ pub fn load_oracle(case: &CaseFile) -> Result<Option<OracleFile>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sidecar_pivots_round_trip_and_older_sidecars_have_none() {
+        let json = r#"{"format":"rustsheet-oracle/v1","source":{"kind":"excel-graph"},
+            "sheets":{"P":{}},"pivots":[{"name":"Pv","sheet":"P","location":"A3:B5",
+            "first_header_row":1,"first_data_row":1,"first_data_col":1,"row_page_count":0,
+            "col_page_count":0,"row_items":[{"r":0,"i":0,"x":[0]},{"t":"grand","r":0,"i":0,"x":[0]}],
+            "col_items":[],"cells":{"A3":{"t":"s","v":"Row Labels"},"B5":{"t":"empty"}}}]}"#;
+        let file: OracleFile = serde_json::from_str(json).expect("parses");
+        let pivot = &file.pivots[0];
+        assert_eq!(pivot.definition.location, "A3:B5");
+        assert_eq!(pivot.definition.row_items[1].t.as_deref(), Some("grand"));
+        assert_eq!(pivot.cells.get("B5"), Some(&Value::Empty));
+        let again: OracleFile =
+            serde_json::from_str(&serde_json::to_string(&file).expect("writes")).expect("reads");
+        assert_eq!(again, file);
+        let old: OracleFile = serde_json::from_str(
+            r#"{"format":"rustsheet-oracle/v1","source":{"kind":"hand"},"sheets":{}}"#,
+        )
+        .expect("parses");
+        assert!(old.pivots.is_empty());
+    }
 
     #[test]
     fn deletes_and_column_inserts_move_the_inputs_they_shift() {

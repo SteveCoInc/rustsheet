@@ -3,7 +3,9 @@
 //! and R1(c)'s probe rows (T-3359, T-3380).
 //!
 //! A value is inside when it is within 15 significant digits of Excel's value (the eval's own
-//! visibly-off test, [`Visible::is_off`], never a second 15-digit rule) or within ε = 1e-9
+//! closeness buckets at the 15-digit bar, [`Visible::is_off_at_fifteen_digits`], never a second
+//! 15-digit rule; decision 0267's 13-digit bar for the incomplete-beta family does not reach
+//! Gate A) or within ε = 1e-9
 //! relative of the 50-digit math, with an absolute floor of 1e-300. An error against a number,
 //! either way, is never inside.
 
@@ -141,7 +143,9 @@ pub fn envelope(
     // though the closeness buckets leave it out of the visibly-off count.
     let r3_drops_excel = r3 && matches!(excel_value, Some(Value::Number(_)));
     let excel_side = !r3_drops_excel
-        && excel.is_some_and(|c| c.verdict != Verdict::Unsupported && !Visible::is_off(c));
+        && excel.is_some_and(|c| {
+            c.verdict != Verdict::Unsupported && !Visible::is_off_at_fifteen_digits(c)
+        });
     let math_side = match (math, engine) {
         (MathValue::Number(m), Value::Number(e)) => within_math(*e, *m),
         (MathValue::DomainError(_), Value::Error(code)) => match excel_value {

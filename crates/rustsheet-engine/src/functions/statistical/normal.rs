@@ -9,10 +9,10 @@ use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 use crate::arithmetic::flush_subnormal;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error};
-use crate::functions::statistical::special::{
-    normal_cdf, normal_density_overflows, normal_pdf, standard_normal_pdf,
+use crate::functions::statistical::special::{normal_cdf, normal_density_overflows, normal_pdf};
+use crate::functions::statistical::t_dist::{
+    cauchy_two_tail_quantile, t_upper_quantile, two_tailed_half_underflows, T_DF_MAX,
 };
-use crate::functions::statistical::t_dist::{cauchy_two_tail_quantile, t_upper_quantile, T_DF_MAX};
 use crate::functions::util::poly;
 use crate::functions::Function;
 use crate::{
@@ -206,7 +206,7 @@ impl Model {
         let result = if cumulative {
             normal_cdf(z, 0.0, 1.0)
         } else {
-            standard_normal_pdf(z)
+            normal_pdf(z, 0.0, 1.0)
         };
         if !result.is_finite() {
             return Err(num_error(cell));
@@ -312,6 +312,12 @@ impl Model {
         }
         let df = size - 1.0;
         if df > T_DF_MAX {
+            return Err(num_error(cell));
+        }
+        // An alpha whose half is subnormal is `#NUM!` at every df, even df 1 where T.INV.2T is
+        // `#DIV/0!` (`CONFIDENCE.T(4.4501477170144E-308,1,2)`, probes/t4541-t-inv-2t-tiny-p G4). It is
+        // checked last, so a size below 2 stays `#DIV/0!` (that order is unprobed).
+        if two_tailed_half_underflows(alpha) {
             return Err(num_error(cell));
         }
         let t_crit = if df == 1.0 {

@@ -4,7 +4,7 @@ title: "Student-t quantile: Excel's T.INV is SQRT(df*(1/y-1)) of the rounded bet
 milestone: M9
 lane: functions-stat
 status: todo
-priority: P2
+priority: P1
 size: M
 tier: opus
 campaign: visible
@@ -118,3 +118,18 @@ Where both are off (A1, A17, A50, A62 and others), T-2859's accurate kernel alon
 - The centre (q above 0.45): T-2724.
 - Tiny p where Excel's y is itself off, and df at least 99999 at p of 1E-200 or below: T-1542.
 - The Student t cdf (T-0969) and the inversions of the other beta-family quantiles (T-2511).
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 6 probes-numeric cells that no open task listed: 5 first wrong at the 11th significant digit or earlier, 1 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/m9-t-edges.case.json (1): Calc!A38
+- probes-numeric/m9-t-inv-2t.case.json (2): Calc!A112, A126
+- probes-numeric/m9-t-nonint-df.case.json (2): Calc!A60, A66
+- probes-numeric/t1518-t-df-cut.case.json (1): Calc!A17
+- gen-m9/d8f44d556674c2fd.case.json (1): Calc!A240 (from T-0967, 2026-11-05: `TINV(0.5,(Data!B$4+-0.1))` at df 123456789,
+  Excel 0.6744897431508498, ours 0.6744897634720731; Tier A, the rounded-y back-transform at a huge df, where one ulp
+  of y moves t by millions of ulps)
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).

@@ -3,7 +3,7 @@ id: T-1074
 title: "Bring up and calibrate the excel-desktop oracle backend"
 milestone: M14
 lane: harness
-status: blocked
+status: dropped
 priority: P2
 size: S
 tier: opus
@@ -46,3 +46,7 @@ bring-up and calibration for excel-graph (docs/research/oracle-calibration.md). 
 Phase 4 (decision 0039). It needs the owner's Windows machine with Microsoft 365 Apps; the owner
 does not plan to set it up soon. This is not a "Needs owner" item. Unblock when
 `cd tools && uv run rustsheet-oracle status` shows `excel-desktop OK`.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

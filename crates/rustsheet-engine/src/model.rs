@@ -12,7 +12,7 @@ use crate::{
         parser::{
             move_formula::{move_formula, MoveContext},
             new_parser_english,
-            stringify::{to_english_string, to_localized_string, to_rc_format},
+            stringify::{to_localized_string, to_rc_format},
             ArrayNode, CallNameSpellings, CompletionContext, Node, Parser,
         },
         token::{get_error_by_name, Error},
@@ -32,6 +32,7 @@ use crate::{
 
 use crate::evaluation::{CellKey, Evaluation, FormulaCell, Seen};
 use crate::limits::{spill_past_grid_error, spills_past_grid};
+use crate::number_mark::MarkCarrier;
 use crate::tailed_array::range_corners;
 use crate::{clock::Clock, tz::Tz, variable_stack::VariableStack};
 
@@ -140,7 +141,7 @@ pub struct Model {
     /// borrowed mutably, without copying it.
     pub parsed_formulas: Vec<Vec<crate::formula_cells::ParsedFormula>>,
     /// A list of parsed defined names
-    pub(crate) parsed_defined_names: HashMap<(Option<u32>, String), ParsedDefinedName>,
+    pub(crate) parsed_defined_names: HashMap<crate::name_key::NameKey, ParsedDefinedName>,
     /// An optimization to lookup strings faster
     pub(crate) shared_strings: HashMap<String, usize>,
     /// An instance of the parser
@@ -157,6 +158,8 @@ pub struct Model {
     pub(crate) view_id: u32,
     /// A stack of variables used for LET function evaluation. The key is the variable id, and the value is the variable value.
     pub(crate) variable_stack: VariableStack,
+    /// Which evaluated value carries the ERROR.TYPE/CELL mark (`number_mark.rs`, T-2766).
+    pub(crate) number_mark: crate::number_mark::NumberMark,
     /// Last variable id used. It is incremented every time a new variable is created (for example, when evaluating a LET function).
     pub(crate) last_variable_id: usize,
     /// Lambdas
@@ -257,6 +260,13 @@ impl Model {
         node: &Node,
         cell: CellReferenceIndex,
     ) -> CalcResult {
+        // Bracketed for the ERROR.TYPE/CELL mark: a LET, CHOOSE or LAMBDA call read here never
+        // goes through `evaluate_node_in_context` (`number_mark.rs`).
+        self.marking(node, |model| model.node_with_reference(node, cell))
+    }
+
+    /// [`Self::evaluate_node_with_reference`] without the bracket.
+    fn node_with_reference(&mut self, node: &Node, cell: CellReferenceIndex) -> CalcResult {
         // `ROWS((A1:A3))` is `ROWS(A1:A3)` (SPEC-0007), and a `#This Row` area is its cell or range
         // on the formula's row (SPEC-0016 step 2).
         let node: &Node = &node.ungrouped_at(cell.row);
@@ -341,8 +351,15 @@ impl Model {
                 reference,
                 ..
             } => self.get_sheet_span_reference(*first_index, *last_index, reference, cell),
-            // A variable holds what it was bound to, a reference included.
-            Node::NamedVariableKind { .. } => self.variable_value(node, cell),
+            // A variable holds what it was bound to, a reference included. The read copies the
+            // bound value, so it is charged here as `evaluate_node_in_context` charges it: every
+            // reader of a LET-bound array (XMATCH, LARGE, COUNTIF, TEXTJOIN, INDEX, ...) pays the
+            // cells it copies, and a LAMBDA cannot repeat the read past the formula's work budget
+            // (SPEC-0024 step 3, T-2805).
+            Node::NamedVariableKind { .. } => {
+                let value = self.variable_value(node, cell);
+                self.charged(value, cell)
+            }
             // A defined name that stands for a reference is that reference, to a single cell as
             // well: `MAX(TextCell)` ignores the text in it (upstream MIN_MAX_extras.xlsx A1-A3).
             Node::DefinedNameKind((name, scope, _)) => {
@@ -455,39 +472,6 @@ impl Model {
         node
     }
 
-    /// Translates a formula the user typed (in the active language and locale)
-    /// into the canonical English representation that is stored internally.
-    ///
-    /// The formula is first parsed in the active language/locale. If that fails
-    /// it is parsed as English — this lets internally generated formulas (which
-    /// are already English, e.g. produced by undo/redo or cut & paste) round
-    /// trip unchanged regardless of the active language. Returns an error if the
-    /// formula parses in neither. Any leading `=` is preserved.
-    pub(crate) fn user_formula_to_internal(
-        &mut self,
-        formula: &str,
-        context: &CellReferenceRC,
-    ) -> Result<String, String> {
-        let trimmed = formula.trim();
-        let had_equals = trimmed.starts_with('=');
-        let body = trimmed.strip_prefix('=').unwrap_or(trimmed);
-        let mut node = self.parser.parse(body, context);
-        if let Node::ParseErrorKind { .. } = node {
-            // The user's language could not parse it: it might already be in the
-            // internal English form.
-            node = self.parse_internal_formula(body, context);
-        }
-        if let Node::ParseErrorKind { .. } = node {
-            return Err(format!("Invalid formula: '{formula}'"));
-        }
-        let english = to_english_string(&node, context);
-        Ok(if had_equals {
-            format!("={english}")
-        } else {
-            english
-        })
-    }
-
     /// Returns completion information for a formula being edited in a cell.
     ///
     /// `formula` is the raw cell input (it may start with `=`) and `cursor` is a
@@ -569,6 +553,7 @@ impl Model {
         if let Err(error) = self.spend_node(cell) {
             return error;
         }
+        let outer_call = self.number_mark.begin();
         let result = match node {
             OpSumKind { .. }
             | OpProductKind { .. }
@@ -640,7 +625,9 @@ impl Model {
             | LambdaDefKind { .. }
             | LambdaCallKind { .. } => self.evaluate_cold_node(node, cell),
         };
-        self.charged(result, cell)
+        let result = self.charged(result, cell);
+        self.end_number_mark(node, result.can_carry(), outer_call);
+        result
     }
 
     fn cell_reference_to_string(
@@ -1327,6 +1314,12 @@ impl Model {
     ) -> Result<Model, String> {
         // Before anything is built from it: the indices are untrusted (T-2913).
         crate::workbook_check::check_indices(&workbook)?;
+        // The iteration count and delta are untrusted too: a decoded count of 50 million made one
+        // recalculation of a one-cell cycle sweep for minutes under the fuzzer (T-4048).
+        workbook.settings.iteration = workbook
+            .settings
+            .iteration
+            .map(crate::iteration::Iteration::within_excel_range);
         workbook.rebuild_derived_state();
         let worksheets = &workbook.worksheets;
 
@@ -2018,7 +2011,9 @@ impl Model {
         Ok(())
     }
 
-    /// Sets an array formula in an area (CSE formula)
+    /// Sets an array formula in an area (CSE formula). The text comes from outside the engine,
+    /// so a padded bare column `T[ Col ]` reads as no column, as [`Model::set_user_input`] reads
+    /// it (T-4023).
     pub fn set_user_array_formula(
         &mut self,
         sheet: u32,
@@ -2026,6 +2021,21 @@ impl Model {
         column: i32,
         width: i32,
         height: i32,
+        value: &str,
+    ) -> Result<(), String> {
+        self.as_external(|model| {
+            model.reenter_array_formula(sheet, (row, column), (width, height), value)
+        })
+    }
+
+    /// [`Model::set_user_array_formula`] for text the engine printed itself (a moved array
+    /// formula, or one a row or column insert re-enters), which reads a padded bare column
+    /// `T[ Col ]` as the column, as [`Model::reenter_printed_input`] does (T-4023).
+    pub(crate) fn reenter_array_formula(
+        &mut self,
+        sheet: u32,
+        (row, column): (i32, i32),
+        (width, height): (i32, i32),
         value: &str,
     ) -> Result<(), String> {
         check_block(row, column, width, height)?;
@@ -2286,18 +2296,26 @@ impl Model {
         name: &str,
         scope: Option<u32>,
     ) -> Result<String, String> {
+        Ok(self.find_defined_name(name, scope)?.formula.clone())
+    }
+
+    /// The defined name `name` (case-insensitive) of `scope`, for a caller that needs more than its
+    /// formula (the delete diff keeps `hidden` and `comment`, T-4637).
+    pub(crate) fn find_defined_name(
+        &self,
+        name: &str,
+        scope: Option<u32>,
+    ) -> Result<&crate::types::DefinedName, String> {
         let name_upper = name.to_uppercase();
-        let defined_names = &self.workbook.defined_names;
         let sheet_id = match scope {
             Some(index) => Some(self.workbook.worksheet(index)?.sheet_id),
             None => None,
         };
-        for df in defined_names {
-            if df.name.to_uppercase() == name_upper && df.sheet_id == sheet_id {
-                return Ok(df.formula.clone());
-            }
-        }
-        Err("Defined name not found".to_string())
+        self.workbook
+            .defined_names
+            .iter()
+            .find(|df| df.name.to_uppercase() == name_upper && df.sheet_id == sheet_id)
+            .ok_or_else(|| "Defined name not found".to_string())
     }
 
     /// Returns the list of defined names as `(name, scope, formula)`.

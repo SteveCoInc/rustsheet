@@ -237,11 +237,13 @@ before the tag and `B2` after it change nothing):
   skipped, whatever comes after the `b` and whatever the serial: `d` 13, `dd` 14, `ddd` 15, `dddd` (and longer) 16,
   `m` 17, `mm` 18 (also as minutes, `mm:ss|b`), `mmm` 19, `mmmm` 20, `h` 21, `hh` 22, `s` 25, `ss` 26 (also `ss.00`),
   `y` and `yy` 27, `yyy` to `yyyyy` 28, `AM/PM` and `A/P` (any case) 34, `[h]` and `[hh]` 48, `[m]` and `[mm]` 49,
-  `[s]` and `[ss]` 50, `aaa` 51, `g` 53, `gg` 54, `ggg` 55, `e` 56, `ee` 57, `mmmmm` 59, `b` and `bb` 88 ("X", also when
+  `[s]` and `[ss]` 50, `aaa` 51, `aaaa` and longer 52, `g` 53, `gg` 54, `ggg` 55, `e` 56, `ee` 57, `mmmmm` 59, `b` and `bb` 88 ("X", also when
   the `b` is first itself), `bbbb` 89 ("Y"). So `B2[$-40409]b` of 2023-03-15 is "2X", `yyyy|b` "01|2\u{1c}", `e|b`
   "01|28", `"x"b` "x2X", of 2000-01-01 `b` "\u{f01}X". (A guess, not evidence: the codes look like Excel's internal token codes.) `yyyy|e|b` is
-  the same under zh-TW (`B2[$-40404]`). Status: VERIFIED (excel-graph). The engine gives `aaa` `ddd`'s 15 (T-3089);
-  `aaaa` and other year tokens' effect on non-year tokens (`B2[$-40409]d` of 1911) are unprobed.
+  the same under zh-TW (`B2[$-40404]`). Status: VERIFIED (excel-graph). `aaa` and `aaaa` are 51 and 52 (probes/t3089-b2-aaa-code A1:A6, matched since T-3089);
+  only the section's first weekday token counts: `ddd aaa|b` is 15, `aaa dddd|b` 51, also for `AAA` and longer `a` runs
+  (probes/t3089-b2-weekday-a-codes B1:B12, 24 cells, matched);
+  Other year tokens' effect on non-year tokens (`B2[$-40409]d` of 1911) are unprobed.
 - The same as a cell number format (B1-B5).
 Rule (quirk, T-3029): after a `B2` before a tag whose calendar wins over it (every digit probed: 1, 2, 3, 4, 5, 7, 9, A
 and 11), every weekday token (`ddd`, `dddd`, `aaa`) after a `mmm` prints weekday number min(month, 7), Sunday being 1,
@@ -289,8 +291,8 @@ Evidence: probes/t2729-hijri-locale-tag (278 cells), probes/t2729-hijri-locale-t
 Unprobed: calendar digits 15 and above after `B2` (the engine lets them win like the others); the extended-hex tags that
 resolve to a locale (`B2[$-g]`; the engine leaves them Gregorian); Hijri names of LCIDs with no table here (TODO(T-1875); the engine gives them the Arabic names
 of an LCID with no locale, so Persian `[$-60429]` prints "شعبان").
-Implemented in: `resolve_after_hijri_prefix`, `hijri_names` and `Calendar::Hijri` (formatter/locale_tag.rs), the
-lexer's `hijri_prefix`, `NameTokens` (formatter/date_names.rs), the Hijri tables in locale/excel_date_names.rs;
+Implemented in: `resolve_after_hijri_prefix`, `calendar_spec` and `Calendar::Hijri` (formatter/locale_tag.rs), the
+lexer's `hijri_prefix`, `NameTokens` (formatter/date_names.rs), the Hijri names of locale/excel_calendars.tsv (`calendar_names`);
 the names after `mmm` in `Localized::names_after_mmm`; the twice-converted years in `Localized::year_twice`,
 `japanese_era` (locale_tag.rs) and `year_token_text`
 (formatter/calendar_dates.rs).
@@ -370,23 +372,138 @@ Status: VERIFIED
 Implemented in: `consume_string` (formatter/lexer.rs) ends the literal at every `"`.
 Tasks: T-0935
 
+## Fraction after minutes with no seconds (T-2684, VERIFIED)
+Rule: a `.0`, `.00` or `.000` after a minutes token with no seconds token shows the fraction of the hidden seconds, whatever
+the hours token: for 2:59:59.4, `[h]:mm.0` is "2:59.4", `[h]:mm.00` "2:59.40", `h:mm.0` "2:59.4", `mm.0` "59.4", `[m].0`
+"179.4", `[mm].0` "179.4", `[h].0` and `h.0` "2.4", `[s].0` "10799.4", `d [h]:mm.0` "0 108:59.4", `[h]:mm.0 \h`
+"2:59.4 h". Four digits (`[h]:mm.0000`) and an AM/PM beside it (`[h]:mm.0 AM/PM`) are `#VALUE!`. Engine matches all of it,
+`TEXT(1+0.25/86400,"[h]:mm.0")` "24:00.2" included since T-4323 (see "Fraction digits of a second at a tie").
+Evidence: probes/elapsed-minutes-fraction (21 cells) and probes/elapsed-no-seconds-boundary A32, excel-graph 2026-11-05.
+Status: VERIFIED
+Tasks: T-2684, T-4323
+
+## Fraction digits of a second at a tie (T-4323, T-4332, T-4370)
+Rule: with `.0`, `.00` or `.000` shown, the clock (`h`, `mm`, `ss`), the elapsed counts and the fraction digits are not the serial rounded to
+the shown digit but the half-step register truncated: `y = x + 0.5/(86400*scale)`, then `floor(frac(y)*86400*scale)` in
+plain doubles (`frac(y)*86400` first, then `*scale`), so the float error of `frac(y)` decides a tie, and not in one
+direction: `1+0.25/86400` under `[h]:mm.0` is "24:00.2" (2.99999999997 units), `1+0.55/86400` "24:00.5", but
+`1+0.35/86400` "24:00.4". It is the same step the `General` register
+uses ("`General` in a date section"). It holds for every probed format (`[h]:mm.0`, `h:mm:ss.0`, `[s].0`, `s.00`,
+`[h]:mm:ss.000`, `[m]:ss.00`, `mm:ss.0`, `h:mm:ss.000`) at serials of 1 or more: the tie probe 100 of 100 such cells,
+fresh sweeps 1-3 (each generated after a freeze) 274 of 276; the engine's earlier rounding of the value got 34 and 139.
+Below serial 1, and the counts:
+- Serials below 1 (d = 0), T-4332: the clock and fraction digits are cut from `frac(y)` field by field, not at once:
+  multiply by 24, floor, keep the remainder, then the same with 60, 60 and `scale`, in plain doubles. Excel then
+  rounds `TEXT(0.015/86400,"s.00")` up to "0.02" (the register 1.9999999999999998, the cut 2) and truncates
+  `TEXT(21.2685/86400,"[h]:mm:ss.000")` to "0:00:21.268". The cut gets 134 of the 156 tie cells below 1 and 469 of
+  470 from 1 up in the five t4323 cases (the register 101 and 467; the engine's earlier rounding 114 below 1). On the
+  fresh sweep probes/t4332-fraction-fresh it gets 103 of 120, against 72 for the register and 72 for the earlier
+  rounding (120 cells drawn after the cut was frozen; excel-graph 2026-11-05).
+- The fraction digits are not the cut's last stage (T-4370). They are read on their own from the cut's remainder of a
+  second: `r` in [0, 1), left after the second 60, is rounded to 15 significant digits and the digits are
+  `floor(r15*scale)`, taken modulo `scale`. So a tie whose `r` lies within half a unit of the 15th digit below a
+  shown digit rounds up: `TEXT(0.0005/86400,"[h]:mm:ss.000")` "0:00:00.001", `TEXT(3.55/86400,"[s].0")` "3.6",
+  while `TEXT(20.65/86400,"[s].0")` stays "20.6". The seconds field does not carry with them: when `r15` reaches 1
+  the digits wrap to zeros, so `TEXT(41.95/86400-2*2^-64,"[s].0")` is "41.0" (probes/t4370-ulp-map-2 A417; the
+  same split T-4333's ulp scan saw at `3733.95/86400+1*2^-57` "3733.0"; both are excel-graph only and decided
+  within an ulp, under decision 0188 R4.4's web-vs-desktop floor: they rest on excel-graph alone until excel-desktop is
+  available, M14 Phase 4, decision 0039). The ulp maps probes/t4370-ulp-map and
+  t4370-ulp-map-2 step 70 ties up to 64 ulp around their serial: the flip depends on the serial only, not on the
+  format, and lands within an ulp of the model's. The model scores 743 of the 746 cells of the six t4323/t4332
+  fraction cases (the cut's own digits 706; the three misses are `[s]` counts), 739 of the 802 ulp-map cells (554),
+  and 120 of 120 on probes/t4370-fraction-fresh, generated after it was frozen (the cut's digits 54; excel-graph
+  2026-11-05; docs/research/t4370/model.py). From serial 1 up it prints what the cut prints on every probed cell.
+  Under `.000` only, the serial is cut as if 2^-72 days (1.83E-17 s) were added after the half step (T-4389), so a
+  tie up to about 1.8E-17 s below rounds up: `TEXT(0.0045/86400-36*2^-77,"[h]:mm:ss.000")` is "0:00:00.005", at
+  -40 ulp ".004" (t4370-ulp-map-2 A76, A75). The offset is in the serial, not in the seconds: the 71 cells after whole
+  seconds that tell the two apart all follow the serial (`TEXT(5.0605/86400-2^-67,"[h]:mm:ss.000")` "0:00:05.060",
+  probes/t4389-holdout A272; t4389-confirm A41:A80). It moves the serial only below 2^-18 days (about 0.33 s). From
+  2^-19 days it is exactly half an ulp, which the double addition rounds to even, and Excel follows that in 29 of 40
+  probed cells (t4389-confirm A1:A40); the other 11 (A4, A6, A9, A14:A19, A31, A36) are not explained (T-4419).
+  `.0` and `.00` show no offset (`TEXT(0.005/86400-8*2^-77,"s.00")` ".01", -12 ulp ".00", 0.45 and 0.68 units of the
+  15th digit below). The constant is FITTED: every offset from 1.74E-17 to 1.86E-17 s scores all 538 `.000` cells of
+  the t4323, t4332 and t4370 fraction cases, and 2^-72 days is the power of two inside that window; no operation that
+  would produce it was found (T-4370's refuted list, docs/research/t4370/README.md). Hold-out probes/t4389-holdout
+  368 of 368 (T-4370's model 337, the correctly rounded value 81); after the freeze, probes/t4389-fraction-fresh 120
+  of 120 (42 and 39) and probes/t4389-confirm 69 of 80 (51 and 31); excel-graph 2026-11-05, docs/research/t4389.
+  Implemented in `millisecond_offset` (formatter/elapsed.rs).
+- The elapsed `[h]`/`[m]`/`[s]` counts before the fraction mostly read the same register, `floor(y*86400/unit)`, so a
+  tie just short of a whole minute or hour carries in neither the count nor the clock:
+  `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is "24:59:59.9", `TEXT(2+3599.95/86400,"[h]:mm:ss.0")` "49:59:59.9",
+  `TEXT(3497.95/86400,"[s].0")` "3497.9" (the value rounded to the shown digit gives "25:59:59.9", "48:59:59.9",
+  "3498.9"). That count gets 350 of 358 count cells of the six earlier t4323 cases (the rounded value 346) and 117 of
+  120 of the fresh carry sweep, generated after it was frozen (the rounded value 114). It still misses where Excel's
+  count rounds up while the clock or fraction truncates: `TEXT(45000+0.95/86400,"[s].0")` is "3888000001.9"
+  (y*86400 is 3888000000.9999995), `TEXT(3+5.95/86400,"[s].0")` "259206.9", `TEXT(45000+59.95/86400,"[m]:ss.0")`
+  "64800001:59.9" (ties A90, sweep-2 A1, A24, A41, A84, sweep-3 A7, carry-ties A27, A31, carry-sweep A37, A49, A83).
+  Neither rounding the value nor any operation order of the register tried fits both sets (T-4333).
+  An ulp scan, probes/t4333-count-ulp-scan, steps eight tie serials -3 to +3 ulp from Excel's computed serial
+  (`d+k/86400`). Every cell where the count disagrees with the fraction digit is the double nearest the decimal tie:
+  the count rounded up beside ".9" at D1:D4 (offset 0 is the nearest double there, e.g.
+  `TEXT(45000+0.95/86400,"[s].0")` "3888000001.9"), and `TEXT(3733.95/86400+1*2^-57,"[s].0")` "3733.0" at E6, the
+  fraction carried and the count not (row 6's computed serial is 0.61 ulp below the tie, so its nearest double is
+  +1 ulp). One ulp or more from the nearest double, the count and the fraction always agree
+  (`45000+0.95/86400-1*2^-37` "3888000000.9", `+1*2^-37` "3888000001.0"). The other nearest-double cells (D5, D7, D8)
+  agree too. D7 truncates where the register carries. The fraction digit is the field-by-field cut in all 56 cells.
+  No count model tried beats the register: 573 of 590 count cells; the candidates are in docs/research/t4333.
+- From serial 1 up the field-by-field cut also gives `TEXT(30+39474.05/86400,"mm:ss.0")` "57:54.0" (sweep-3 A2),
+  where the register is exactly 394741 and printed "57:54.1".
+Evidence: probes/t4323-fraction-ties (150 cells), probes/t4323-fraction-sweep (96), t4323-fraction-sweep-2 (160),
+t4323-fraction-sweep-3 (120), t4323-fraction-holdout (100), t4323-carry-ties (32), t4323-carry-sweep (120),
+t4332-fraction-fresh (120), t4333-count-ulp-scan (56), t4370-ulp-map (340), t4370-ulp-map-2 (462),
+t4370-fraction-fresh (120), excel-graph 2026-11-05; scoring scripts in docs/research/t4323, docs/research/t4332,
+docs/research/t4333 and docs/research/t4370.
+Status: VERIFIED for the clock and the fraction digits; PARTIAL for `.000` below 0.06 s (T-4389) and OPEN for the `[s]`
+count (T-4333)
+Implemented in: `field_split`, `fraction_digits`, `half_step_split` (the `General` register) and `FractionalSeconds`
+(formatter/elapsed.rs).
+Tasks: T-4323, T-4332, T-4333, T-4370, T-4389
+
 ## Elapsed-time tokens
 Rule (observed, ElapsedFormatTests, a 1904-date-system workbook):
 - Fractional elapsed seconds work: `[h]:m:s.000` on 3.14159 → "75:23:53.376" (A2), `[m]:s.000` →
   "4523:53.376" (A3), `[s].000` → "271433.376" (A4), `[ss].000` on 0 → "00.000" (A27). The value is
   rounded to the shown digit first and every field is cut from that: `[hh]:mm:ss.0` → "75:23:53.4"
   (A5; .376 rounds up), and an elapsed count before the fraction is the whole part of that rounded
-  total (`[s].000` is 271433 then ".376", A4).
+  total (`[s].000` is 271433 then ".376", A4). At a tie of the shown digit every field reads the
+  half-step register instead (see "Fraction digits of a second at a tie").
 - A plain `h`/`s`/`ss` after `[h]`/`[hh]`/`[s]`/`[ss]` shows the elapsed total too:
   "It was 75 [yes, 75] hours and 23:53" (A10), "271433 [yes, 271433] seconds" (A11), "7384 [yes,
-  7384] seconds" (A21); padding stays (`ss` on 0 is "00", A31). `m` after `[m]` is unprobed; the
-  engine keeps it a clock minute (T-2135).
+  7384] seconds" (A21); padding stays (`ss` on 0 is "00", A31). `m`/`mm` after `[m]`/`[mm]` is a
+  month, never a clock minute, even before seconds: `[m] m` "102 1", `[mm]:mm` "102:01", `[m]:mm:ss`
+  "102:01:18", `[mm] mm:ss.0` "102 01:18.0" on 1h42m18s (serial 0.07, month 1); after `[h]` it is still the
+  clock minute (`[h] m` "1 42", `[h]:mm m` "1:42 1") (VERIFIED, probes/t2135-fractional-second-edges-1900/-1904
+  A34-A38, A41, T-2135).
+- `[s]` before an hour or minute token hands its elapsed count to that token: `[s] m` prints like `s [m]`,
+  the seconds field, then elapsed minutes counted from the date section's register (see "`General` in a date
+  section": the seconds within the minute plus the half-second rounding step, read as days). On 1h42m18s
+  `[s] m`, `[s] mm` and `[s]:m` are "18 26640" (18.5 days of minutes), `[s] h` "18 444" and `[s] m s` "18 26640 18";
+  on 45000.123 (7.2 s into the minute) `[s] m` is "7 11088" (floor(7.7 * 1440)). `[s] d`, `[s] mmm`, `[m] s` and
+  `[h] m` keep their own counts ("6138 0", "6138 Jan", "102 18", "1 42"), and an elapsed token after a month,
+  day or year token counts from the same register whatever the date: `m [h]` is "1 444", `d [h]` "0 444", `yy [h]`
+  on 45000 "23 12" (VERIFIED, probes/t4295-elapsed-with-month A1:N9 and -b A1:D18, excel-graph 2026-11-05,
+  T-4295; t2135-fractional-second-edges-1900/-1904 A39, A40). `[ss]` counts like `[s]` (`[ss] m` "18 26640",
+  `[ss] h` "18 444", with a padded seconds field on 45000.123: "07 11088"). With several targets the count goes to the
+  first hour token even behind a minute token, else to the first minute token: `[s] h m` "18 444 42", `[s] m m`
+  "18 26640 1", but `[s] m h` "18 42 444" (the `m` is then the clock minute). A date token before `[s]` does not stop it
+  (`d [s] m` "0 18 26640", `mmm [s] h` "Jan 18 444"); an elapsed token (`[h] [s] m`, `[m] [s] h`) or a clock `s`
+  (`s [s] m`, `s [s] h`) before it leaves the section `#VALUE!`; `[s].0 m` is "18.0 720" and `[s].0 h` "18.0 12" (the fraction digits
+  split the serial, so the register is the shown fraction, as in "`General` in a date section")
+  (VERIFIED, probes/t4341-elapsed-second-forms A1:N3, excel-graph, 2026-11-06, T-4341). Implemented in `move_elapsed_second`
+  (formatter/elapsed.rs).
 - Past 9999-12-31 a fraction of a second is #VALUE! with or without an elapsed token:
   `TEXT(1234567890,"[mm]:ss.0")` and `TEXT(1234567890,"h:mm:ss.00")` (gen-m10 810fee377a42575b
   T!A16, b4f66526f822ff2c T!A20; fbdab487cb11409e T!A25 on 123456789012345). Four or more zeros
-  (`s.0000`, `h.0000`) are #VALUE! (probes/t3575-fraction-after-elapsed-b A6, A27). Unprobed: where that cutoff sits
-  (the engine uses serial 2958466, also in a 1904 workbook) and whether a date token rolls over
-  with a fraction that rounds past midnight (the engine's does not); T-2135 probes them.
+  (`s.0000`, `h.0000`) are #VALUE! (probes/t3575-fraction-after-elapsed-b A6, A27). The cutoff is on the serial
+  rounded to the shown second or fraction digit, and in a 1904 workbook it sits at the same date: 9999-12-31
+  is 2957003 there, so `TEXT(2957004,"h:mm:ss")` and `TEXT(2957004.5,"h:mm:ss.0")` are #VALUE!, as are
+  `TEXT(2958465.999999,"h:mm:ss")` (rounds to 2958466) and 1904 `TEXT(2957003.999999,"h:mm:ss")`, while
+  `"h:mm:ss.0"` on 2958465.999999 is "23:59:59.9" (VERIFIED, probes/t2135-fractional-second-edges-1900/-1904
+  A18-A33). A date token rolls over with a fraction that rounds past midnight, as the clock does:
+  `TEXT(45001-1E-7,"yyyy-mm-dd hh:mm:ss.0")` is "2023-03-16 00:00:00.0" (".000" "2023-03-15 23:59:59.991"),
+  `ddd mmm d h:mm:ss.00` and `m/d/yy h:mm:ss.0 AM/PM` likewise, and a carry into the next minute or hour shows
+  "00:01:00.0" / "01:00:00.0" (A1-A17; the engine already matched). A fraction of four or more zeros
+  (`s.0000`, `[s].0000`, `ss.00000`, `mm:ss.0000`) is #VALUE! in the 1900 and 1904 systems alike (A42-A50).
 - A negative value prints one leading "-" before any literal text:
   "-It was 2 [yes, 2] hours and 03:04" (A40).
 In the 1900 date system TEXT of a negative under a format that mixes an elapsed token with a date/time token (`[h]:mm`, `[s] yy`, `[s].00`) is #VALUE! instead; a format whose only date/time token is one elapsed token still prints a minus, with any literals (below; dates.md "Negative serials under an explicit negative section", probes/text-negative-serial-elapsed-mixed, probes/negative-date-sections-1900, T-1079/T-1105); the minus above is the 1904-workbook behavior. Two elapsed tokens in one section (`[h]:[mm]`) are #VALUE! in both systems, for positive values too (same evidence).
@@ -527,8 +644,11 @@ Evidence: poi/NumberFormatApproxTests.xlsx A40, A41, A96, A97, A136, A137, A176,
 Ours: `formatter/parser.rs` pushes the `E` as a literal at the format's `E+`/`E-`; `formatter/format.rs`
 prints the sign before the first exponent digit and a `0` for the last `#` integer placeholder of a zero
 mantissa (T-0937).
+- **No exponent digit is `#VALUE!`** (probes/text-scientific-edges, 56 cells, excel-graph, 2026-11-05, T-2230): `E+` or `E-` with no digit after it (`0E+`, `0E-`, `0.00E+`, `0.0E-"x"`) makes `TEXT` return `#VALUE!` for every value (0, 1.5, -123456.789, 1.23E-5).
+- **Lowercase `e+`/`e-`** (`0e+0`, `0.0e-0`, `0.0e+00`) is `#VALUE!` here too, as the CONFLICTING lowercase `e` entry says for Excel for the web (T-1075 keeps the desktop question).
+- **A `?` integer placeholder also prints 0 on a zero mantissa**: `?.?E+0` on 0 is "0. E+0" (the fractional `?` stays a space). `##0.0E+0`, `###.#E+0` and `##E+0` on 0 follow the `#` rule above. Several `?` placeholders are unprobed and are taken to follow the same rule.
 Status: VERIFIED
-Tasks: T-0937 (implemented)
+Tasks: T-0937 (implemented), T-2230
 
 ## `TEXT(x,"General")` uses an 11-character fixed-notation limit
 Rule: General prints fixed notation, with at most 9 decimals ("0." plus 9 decimals is 11
@@ -586,6 +706,70 @@ Status: VERIFIED
 Implemented in: crates/rustsheet-engine/src/formatter/format.rs (group positions count from the format's last digit placeholder; `?` padding separator is a space; a value exactly one unit at the last shown place keeps its sign)
 Tasks: T-0952
 
+## Commas after the decimal point (T-3598)
+Rule: a `,` between two digit placeholders after the format's decimal point neither groups the
+integer part nor scales the value, also when a literal stands between the fraction digits and it:
+the placeholders keep extending the fraction. A grouping `,` before the point still groups, and a
+trailing `,` still scales by 1000.
+- `0.00|#,##0` on 1234567.89 → "1234567.89|0" (the four placeholders after `|` are fraction digits
+  5-8, so `###` prints nothing and the last `0` a zero); `0.0,0` → "1234567.89"; `0.00,0` →
+  "1234567.890"; `0.##,##` → "1234567.89"; `.0,0` → "1234567.89" (A1, A4, A17, A18).
+- `0.00|0,000` on 1234567.891234 → "1234567.89|1234" (A14); `0.00|#,##0.00` → "1234567.89|0.00"
+  (the second `.` is a literal; A16); `0.00%|#,##0` → "123456789.00%|0" (A20).
+- `#,##0.00|#,##0` → "1,234,567.89|0" (the grouping `,` before the point holds; A2, A15);
+  `0.00|#,##0,` → "1234.56|7890" (the trailing `,` scales; A3); `0.0,` → "1234.6" (A5).
+- More forms (probes/t3598-decimal-part-commas, 27 formats x 4 values, and t3666-review-followups A7:A12): after a
+  fraction a comma run neither groups nor scales either (`# ?/?|#,##0` on 1234567.89 is "1234567 8/9|0000"); a run of
+  two (`0.0,,0`) is still fraction digits ("1234567.89"); after a decimal-part literal the `,` prints, also last
+  (`0.00|,0` is "1234567.89|,0", `0.0|,` "1234567.9|,", `0.0 ,0` "1234567.8 ,9"); one right after the point does not
+  print (`0.,0` is "1234567.9").
+- Refined by the T-4515 hold-out and fresh sweep (probes/t4515-fraction-tail-holdout rows 15-21,
+  t4515-fresh-sweep rows 9-18, excel-graph 2026-11-06). A `,` after a placeholder, or right after the point, is inert
+  whenever a placeholder follows *anywhere* later in the section, so a literal may stand between them (`0.00,|0` on
+  1234567.891 is "1234567.89|1"). With no placeholder after it, it scales (`0.,` "1235.", `0.0,0,` scales by 1000).
+  After a decimal-part literal, a `,` run prints a single `,` (`0.0|,,0` "1234567.8|,9", `0.0|,,,0` alike).
+  `0.,|0` is "1234567.|9" (a literal right after the point, not a comma rule; see "A literal right after the decimal
+  point", T-4595).
+Ours: matches (T-4515), in the `Token::Comma` arm of formatter/parser.rs.
+Evidence: probes/t3598-comma-after-decimal-point A1:A20, probes/t1925-numeral-digits C1:C32,
+probes/t3598-decimal-part-commas (108 cells), t3666-review-followups A7:A12 (excel-graph, 2026-11-04).
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/formatter/parser.rs (`Token::Comma`; T-3598, T-4515)
+Tasks: T-3598, T-4515, T-4595
+
+## A literal right after the decimal point (T-4595)
+Rule: in a number section the decimal point prints where it is written, so a literal between the point and the first
+decimal placeholder prints after the point, not ahead of it. Columns are 1234567.891, -0.5, 0:
+- `0.|0` → "1234567.|9", "-0.|5", "0.|0"; `0."x"0` → "1234567.x9", "-0.x5", "0.x0" (rows 1-2).
+- `#.\-#` → "1234567.-9", "-.-5", ".-" (row 3: an unfilled `#` prints nothing, the point and literal still print).
+- `0.|` → "1234568.|", "-1.|", "0.|" (row 4: no decimal placeholder, already right before T-4595).
+- `0.,|0` on 1234567.891, -0.5, 98765.4321, 0 → "1234567.|9", "-0.|5", "98765.|4", "0.|0" (the `,` is inert).
+Ours printed the point just before the first decimal digit ("1234567|.9") until T-4595.
+Evidence: probes/t4595-literal-after-point A1:C4 (predictions committed before filling, all 12 matched),
+probes/t4515-fresh-sweep A15:D15 (excel-graph, 2026-11-06).
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/formatter/format.rs (`TextToken::Period` in `format_number`; T-4595)
+Tasks: T-4595
+
+## Commas in scientific formats (T-4062)
+Rule: in a scientific format, a `,` between exponent placeholders is ignored when the mantissa has a decimal point and
+makes the code `#VALUE!` when it has none; a grouping `,` in the mantissa's integer part makes the exponent step the
+integer placeholder count, but at least 4, and groups the mantissa's digits. Halves of the mantissa round away from
+zero.
+- On 1234567.89: `0.00E+0,0` is "1.23E+06", `0.00E+0,00` "1.23E+006", `0.00E-0,0` "1.23E06", `0.00E+00,` and
+  `0.00E+0,0,` "1.23E+06", `0.00E+0","0` "1.23E+0,6" (a quoted comma splits the exponent digits); `0E+0,0` and
+  `0E+00,0` are `#VALUE!`, `0E+00,` "1E+06" (probes/t4062-comma-in-exponent A1:A16, t4062-grouping-in-scientific row 9).
+- Step at least 4: `0,0E+0`, `0,00E+0`, `00,0E+0`, `#,#E+0` and `#,##0E+0` on 1234567.89 are "123E+4" (`0,00E+0` and
+  `00,0E+0` on 12.5 "013E+0"), `0,0E+0` on 123456789 "01E+8" and on 0.00123 "12E-4"; `##,##0E+0` steps by 5
+  ("12E+5", on 123456789 "1,235E+5"); `0,000E+0` prints the group ("0,123E+4"); `#,##0.0E+0` is "123.5E+4" and
+  `#,##0.00E+00` "123.46E+04" (probes/t4062-grouping-in-scientific A1:D11, t4062-comma-in-exponent A3, A8, A12).
+- Halves round away from zero in the mantissa: `#,##0E+0` on 12.5 is "13E+0" (B1:B11).
+Evidence: probes/t4062-comma-in-exponent, probes/t4062-grouping-in-scientific (excel-graph, 2026-11-06).
+Status: VERIFIED (excel-graph)
+Implemented in: formatter/parser.rs (`Token::Comma`), formatter/format.rs (the engineering step),
+decimal_round.rs (`round_engineering`, `significant_digits`)
+Tasks: T-4062
+
 ## `£`, `¥` and `|` print as literals without quotes
 Rule: these characters need no quotes or backslash in a number format; they print as written,
 and the number's "-" goes in front of everything (also before a quoted prefix). (`€` already works.)
@@ -616,7 +800,8 @@ Tasks: T-0954
 
 ## `mm` after a minute is a month
 Rule: once an `m`/`mm` has been read as a minute, every later `m`/`mm` in the section is a month, whatever time
-token came before it. `h:mm|yyyy-mm-dd` on 0.25 is "6:00|1900-01-00" and on 45000.75 "18:00|2023-03-15"; `hh mm|dd mm`
+token came before it, except an hour token: `h`/`hh` makes the next `m`/`mm` a minute again (`h:mm|h:mm AM/PM` is
+"13:02|1:02 PM"; probes/t3710-ampm-hour-tokens B3, B14; T-3710, see "Hours with AM/PM" below). `h:mm|yyyy-mm-dd` on 0.25 is "6:00|1900-01-00" and on 45000.75 "18:00|2023-03-15"; `hh mm|dd mm`
 is "06 00|00 01"; `mm:ss|yyyy-mm` is "00:00|1900-01". With an hour but no minute yet, `mm` is a minute even after a
 date token: `h|yyyy-mm` is "6|1900-00".
 Evidence: probes/mm-after-time-and-date-token (22 cells, excel-graph 2026-10-30), probes/t2779-hebrew-saka-more E7.
@@ -624,6 +809,20 @@ A minute read only because `.0` follows (`mm.0`) does not set it: `mm.0 h:mm` on
 (probes/t3575-fraction-after-elapsed-b A30, T-3575).
 Status: VERIFIED (excel-graph). Implemented in: `minute_read` (formatter/parser.rs). Unprobed: `h:mm:ss mm`.
 Tasks: T-2961
+
+## Hours with AM/PM: only some hour tokens take the 12-hour clock
+Rule: in a section with `AM/PM` or `A/P`, an hour token (`h`, `hh`) prints 12-hour only if it is the last hour
+token before a marker or the last hour token of the section; every other one stays 24-hour.
+`TEXT(45000.5432,"h|hh|mm|ss|h:mm:ss.00 AM/PM")` is "13|13|02|12|1:02:12.48 PM", `h h AM/PM h h` "13 1 PM 13 1",
+`h AM/PM|h` "1 PM|1", `AM/PM h h` "PM 13 1", `h AM/PM|hh|h` "1 PM|13|1". Also: an hour token makes the next
+`mm` a minute again even after a minute (`h:mm|h:mm AM/PM` is "13:02|1:02 PM", refining "`mm` after a minute is
+a month"). Not about numerals (t3532 row 10 in any digit set).
+More layouts (probes/t3710-ampm-hour-layouts, 36 cells, all matched): `h|h|ss.00 AM/PM` "13|1|12.48 PM",
+`ss.00|h|h AM/PM` "12.48|13|1 PM", `h AM/PM|h AM/PM` "1 PM|1 PM", `h|yyyy|h AM/PM` "13|2023|1 PM", `h|h A/P` "13|1 P".
+An hour, then a date token, then `mm` after a minute is a minute too (`h:mm|h|yyyy-mm` is "18:00|18|2023-00",
+`h:mm|h d mm` "18:00|18 15 00"; probes/t3666-review-followups A13:A15, matched).
+Evidence: probes/t3710-ampm-hour-tokens (26 cells), t3710-ampm-hour-layouts (36 cells), excel-graph, 2026-11-04. Status: VERIFIED (excel-graph).
+Implemented in: `hour_is_twelve_hour` (formatter/format.rs), `minute_read` reset (formatter/parser.rs). T-3710
 
 ## `m`/`mm` directly before `:ss` is minutes, with no hour
 Rule: `m` or `mm` followed by `:` and a plain `s`/`ss` is a minute even when the code has no hour
@@ -745,7 +944,7 @@ Tasks: T-1262, T-1450
 
 ## `aaa` is the weekday (T-1880)
 
-Rule: three or more of one `a`, all lowercase or all uppercase, are the weekday: `aaa` is the short name like `ddd`, `aaaa` and longer runs the full name like `dddd`. `TEXT(1,"aaa")` is "Sun", `"aaaa"` "Sunday", `"aaaaaaaaaa"` "Sunday", `"AAA"` "Sun", `"AAAA"` "Sunday", `TEXT(45000,"aaa")` "Wed", `TEXT(0,"aaa")` "Sat", `TEXT(60,"aaa")` "Wed" (the fictitious 1900-02-29). One or two letters, and any mix of cases, print as literals: `"a"`, `"aa"`, `"a aa"`, `"aAa"`, `"aaA"`, `"Aaa"`, `"AAa"`, `"aaAA"`, `"AAaa"` print as typed. The code is read from the first same-case run of three or more: `"Aaaa"` is "ASun", `"aAAA"` "aSun", `"aaaA"` "SunA", `"AAAa"` "Suna", `"aaaaA"` "SundayA". A run of three or more of the other case right after it joins the code and counts toward its length: `"aaaAAA"` and `"aaaaAAAA"` are "Sunday", not two names. The code is localized like `ddd` (`[$-407]aaa` "So", `[$-407]aaaa` "Sonntag", `[$-411]aaa` "日") and mixes with other tokens (`"h aaa"` at 0.5 "12 Sat", `"aaa d"` "Sun 1", `"ddd aaa"` "Sun Sun", `"[h] aaa"` "24 Sun", `"aaa AM/PM"` at 0.75 "Sat PM", `"aaa\a"` "Suna"). Because it is a date token, it is `#VALUE!` beside `@` (`TEXT("x","@aaa")`, `"aaa@"`, `"@ aaa"`, `"@_""aaa"`, `"@_""xaaa"`, `"@_""AAA"`; but `"@_""Aaa"` is "x Aaa" and `"@""a""aa"` "xaaa") and beside a digit placeholder (`TEXT(1,"0aaa")`, `"0 aaa"`, `TEXT(7,"0_""aaa")`), and a negative value in its section is `#VALUE!` (`TEXT(-1,"0;aaa")`). Quoted or escaped `a`s stay literal (`TEXT(1,"0""a""aa")` is "1aaa"). The other token letters after `@_"` are rejected the same way: `"@_""b"`, `"@_""bb"`, `"@_""bbb"`, `"@_""aab"` (its `b`), `"@_""ddd"`, `"@_""eee"`, `"@_""ggg"`, `"@_""yyy"`, `"@_""nnn"` (A6, A5, A33:A39), while non-token letters print (`"@_""ccc"` "x ccc", `"@_""aax"` "x aax"). Evidence: probes/text-format-aaa-weekday A1:A50, -b A1:A30, -c A1:A10 (excel-graph 2026-10-25). Unprobed: `aaa` directly before `m/pm` (`aaam/pm`), and a third joined run (`aaaAAAaaa`; the engine joins it); T-2745.
+Rule: three or more of one `a`, all lowercase or all uppercase, are the weekday: `aaa` is the short name like `ddd`, `aaaa` and longer runs the full name like `dddd`. `TEXT(1,"aaa")` is "Sun", `"aaaa"` "Sunday", `"aaaaaaaaaa"` "Sunday", `"AAA"` "Sun", `"AAAA"` "Sunday", `TEXT(45000,"aaa")` "Wed", `TEXT(0,"aaa")` "Sat", `TEXT(60,"aaa")` "Wed" (the fictitious 1900-02-29). One or two letters, and any mix of cases, print as literals: `"a"`, `"aa"`, `"a aa"`, `"aAa"`, `"aaA"`, `"Aaa"`, `"AAa"`, `"aaAA"`, `"AAaa"` print as typed. The code is read from the first same-case run of three or more: `"Aaaa"` is "ASun", `"aAAA"` "aSun", `"aaaA"` "SunA", `"AAAa"` "Suna", `"aaaaA"` "SundayA". A run of three or more of the other case right after it joins the code and counts toward its length: `"aaaAAA"` and `"aaaaAAAA"` are "Sunday", not two names. The code is localized like `ddd` (`[$-407]aaa` "So", `[$-407]aaaa` "Sonntag", `[$-411]aaa` "日") and mixes with other tokens (`"h aaa"` at 0.5 "12 Sat", `"aaa d"` "Sun 1", `"ddd aaa"` "Sun Sun", `"[h] aaa"` "24 Sun", `"aaa AM/PM"` at 0.75 "Sat PM", `"aaa\a"` "Suna"). Because it is a date token, it is `#VALUE!` beside `@` (`TEXT("x","@aaa")`, `"aaa@"`, `"@ aaa"`, `"@_""aaa"`, `"@_""xaaa"`, `"@_""AAA"`; but `"@_""Aaa"` is "x Aaa" and `"@""a""aa"` "xaaa") and beside a digit placeholder (`TEXT(1,"0aaa")`, `"0 aaa"`, `TEXT(7,"0_""aaa")`), and a negative value in its section is `#VALUE!` (`TEXT(-1,"0;aaa")`). Quoted or escaped `a`s stay literal (`TEXT(1,"0""a""aa")` is "1aaa"). The other token letters after `@_"` are rejected the same way: `"@_""b"`, `"@_""bb"`, `"@_""bbb"`, `"@_""aab"` (its `b`), `"@_""ddd"`, `"@_""eee"`, `"@_""ggg"`, `"@_""yyy"`, `"@_""nnn"` (A6, A5, A33:A39), while non-token letters print (`"@_""ccc"` "x ccc", `"@_""aax"` "x aax"). Evidence: probes/text-format-aaa-weekday A1:A50, -b A1:A30, -c A1:A10 (excel-graph 2026-10-25). T-2745 (probes/text-format-aaa-weekday-d A1:A7, excel-graph 2026-11-05): further same-code runs keep joining (`TEXT(1,"aaaAAAaaa")`, `"AAAaaaAAA"` and `"aaaAAAaaaa"` are "Sunday"; `"aaaAAAa"` "Sundaya"). **The last letter of a run that ends right before `m/pm` or `/p` is the `A` of that token, not part of the weekday code:** `TEXT(0.75,"aaam/pm")` is "aaPM" (two literal `a`s, then the AM/PM token), `"aaaa/p"` "Satp" (a three-letter code, then `a/p`), while `"aaaAM/PM"` (a different case) stays "SatPM" (A6). Engine: `Lexer::weekday_run`. Unprobed: the same rule inside a joined run (`"aaaAAAA/P"`), with the token in another case (`"aaaM/PM"`, `"aaaa/P"`) and with longer runs (`"aaaam/pm"`); the engine applies it to all of them.
 
 Status: VERIFIED (excel-graph)
 Tasks: T-1880
@@ -775,7 +974,7 @@ T-1714 probed the inferences (probes/text-ap-locale-inferences, 81 cells; probes
 
 ## Locale tags localize date names (T-1716)
 Rule: a `[$-tag]` with no currency symbol prints nothing, but in its own section it sets the language of `mmm`, `mmmm`, `mmmmm`, `ddd`, `dddd` and of the day-half strings, from Excel's locale data rather than CLDR: `[$-407]mmm` of March is "Mrz" (de-CH `[$-807]` "Mär", `ddd` "Mi."), `[$-40A]ddd` "mi.", `[$-405]mmm` Roman ("III"), `[$-411]mmm` "3". `mmmmm` is the first character of the month name (`[$-804]` December "十", `[$-411]` December "1"). Numbers, separators and `yyyy`/`d` are not localized (`[$-40C]0.00` "1234.50", `[$-40C]dd/mm/yyyy` "15/03/2023"). Under a resolved tag `A/P` and `a/p` print the locale's `AM/PM` strings, so `[$-409]h A/P` is "6 PM" and `[$-411]h a/p` "6 午後" (Western European, Italian, Russian, Polish, Nordic Danish/Swedish, Dutch and Portuguese stay "AM"/"PM"; `[$-414]` "a.m."/"p.m.", `[$-40B]` "ap."/"ip.", `[$-405]` "dop."/"odp.", `[$-40E]` "de."/"du.", `[$-41F]` "ÖÖ"/"ÖS", `[$-412]` "오전"/"오후", `[$-804]`/`[$-404]` "上午"/"下午"). An unresolved tag (`[$-zzz]`, `[$-]`, `[$-FFFF]`) keeps the letters.
-- **Resolution.** Hex LCIDs are case-insensitive and may carry a calendar digit above the low four (`[$-1040C]`, `[$-0040C]` are French). An LCID with no locale of its own falls back to its language (inferred; it holds only where the variants share names, so every regional variant that differs has its own table: see "Regional variants" below; T-1858) (`[$-80C]`, `[$-C]` French, `[$-7]` German, `[$-A]` Spanish, `[$-11]` Japanese, `[$-16]` Portuguese) and `[$-4]` is Traditional Chinese. 400 and 800 are en-US (A/P becomes AM/PM); `[$-0]`, `[$-40C0]`, `[$-2000000]`, `[$-FFFF]` and `[$-40C,1]` print English. BCP-47 tags match case-insensitively and fall back to their language: `[$-fr-FR]`, `[$-FR-fr]`, `[$-fr]`, `[$-fr-XX]` are French, `[$-de]` German (not LCID 0xDE), `[$-zh]` Traditional Chinese, `[$-xx]` English. A tag that is neither hex nor BCP-47 is read as hex anyway, every character a digit: a letter counts from 10 in either case (`g` 16, `r` 27, `z` 35), any other character below `a` from `0` (`_` 47, `-` -3), and one above `z` from `a` (`{` 36, `~` 39). Only `_` is probed among the other characters below `a`; `-` as -3 and the sum wrapping at 32 bits are inferred (no probed tag overflows). So `[$-g]` is Italian (0x10), `[$-h]` Japanese, `[$-3gC]` and `[$-2wC]` French (0x40C), `[$-6g40C]` Thai calendar over French (0x7040C), `[$-0_]` and `[$-_]` Macedonian (0x2F: "март|среда", "претпл."), `[$-1_]` Kazakh (0x3F), `[$-~]` Lithuanian, `[$-{]` Slovenian, `[$-x]` Indonesian and `[$-r]` Slovak, while `[$-28]` is Tajik ("март|чоршанбе"), so `_` is not 40. `[$-fr_FR]` (and `fR_fr`, `Fr_Fr`) is 0x10E00B: the Saka calendar over an LCID with no locale, so `mmmm` of 45000 is "December" (Saka month 12 by its en-US name). BCP-47 is tried first: `[$-fr-FR_x]` is French. A value with an LCID that has a sublanguage but no locale prints English: `[$-x_y]` (0x2412) is "March", not Korean; but `[$-_409]` (0xF409) prints "6 PM" for `h A/P`, so where Excel falls back to the language is not settled. Evidence: probes/t1924-locale-tag-extended-hex (excel-graph, 2026-10-26), text-locale-calendars A135-A145. Ours: implemented (`extended_hex`; T-1924), with the language fallback only for neutral LCIDs (below 0x400); the tables of 0x21, 0x24, 0x27, 0x28, 0x2F and 0x3F are probed and implemented since T-3882 (see "Indonesian, Slovenian, Lithuanian, Tajik, Macedonian and Kazakh names"), the Saka cells T-2779's, `[$-fr_FR-x]`'s Myanmar digits (numeral byte 0x10) T-1925's, and 0xF409 is open.
+- **Resolution.** Hex LCIDs are case-insensitive and may carry a calendar digit above the low four (`[$-1040C]`, `[$-0040C]` are French). Every LCID with a locale prints Excel's own names for it, and an LCID with none does not borrow its language's ("Which LCIDs have a locale"; T-4508); for example `[$-80C]` and `[$-C]` print French from their own entries, `[$-7]` German, `[$-A]` Spanish, `[$-11]` Japanese, `[$-16]` Portuguese, and `[$-4]` is Traditional Chinese. 400 and 800 are en-US (A/P becomes AM/PM); `[$-0]`, `[$-40C0]`, `[$-2000000]`, `[$-FFFF]` and `[$-40C,1]` print English. BCP-47 tags match case-insensitively and fall back to their language: `[$-fr-FR]`, `[$-FR-fr]`, `[$-fr]`, `[$-fr-XX]` are French, `[$-de]` German (not LCID 0xDE), `[$-zh]` Traditional Chinese, `[$-xx]` English. A tag that is neither hex nor BCP-47 is read as hex anyway, every character a digit: a letter counts from 10 in either case (`g` 16, `r` 27, `z` 35), any other character below `a` from `0` (`_` 47, `-` -3), and one above `z` from `a` (`{` 36, `~` 39). Only `_` and `-` (-3) are probed among the other characters below `a`; the sum wraps at 32 bits, so a tag of any length reads (`[$-rhg-Rohg-BD]` is 0xEC91FDBD; probes/t3666-locale-tag-names A842). So `[$-g]` is Italian (0x10), `[$-h]` Japanese, `[$-3gC]` and `[$-2wC]` French (0x40C), `[$-6g40C]` Thai calendar over French (0x7040C), `[$-0_]` and `[$-_]` Macedonian (0x2F: "март|среда", "претпл."), `[$-1_]` Kazakh (0x3F), `[$-~]` Lithuanian, `[$-{]` Slovenian, `[$-x]` Indonesian and `[$-r]` Slovak, while `[$-28]` is Tajik ("март|чоршанбе"), so `_` is not 40. `[$-fr_FR]` (and `fR_fr`, `Fr_Fr`) is 0x10E00B: the Saka calendar over an LCID with no locale, so `mmmm` of 45000 is "December" (Saka month 12 by its en-US name). BCP-47 is tried first: `[$-fr-FR_x]` is French. A value with an LCID that has a sublanguage but no locale prints English: `[$-x_y]` (0x2412) is "March", not Korean; but `[$-_409]` (0x2F409: calendar 2 over 0xF409) prints "6 PM" (S!B22) for `h A/P`, so Excel's rule for an undefined sublanguage is under "More regional variants". Evidence: probes/t1924-locale-tag-extended-hex (excel-graph, 2026-10-26), text-locale-calendars A135-A145. Ours: implemented (`extended_hex`; T-1924), with the names of the generated locale tables (T-4508), the Saka cells T-2779's, `[$-fr_FR-x]`'s Myanmar digits (numeral byte 0x10) T-1925's, and 0x2F409 follows English (T-4118; only English reached through extended hex is probed).
 - **Indonesian, Slovenian, Lithuanian, Tajik, Macedonian and Kazakh names** (T-3882). Each language prints the same
   strings under its full LCID and its BCP-47 tag (`[$-421]`/`[$-id-ID]`, `[$-424]`/`[$-sl-SI]`, `[$-427]`/`[$-lt-LT]`,
   `[$-428]`/`[$-tg-Cyrl-TJ]`, `[$-42F]`/`[$-mk-MK]`, `[$-43F]`/`[$-kk-KZ]`). March is `mmm|mmmm` "Mar|Maret",
@@ -787,18 +986,104 @@ Rule: a `[$-tag]` with no currency symbol prints nothing, but in its own section
   "претпл."/"попл." Macedonian. No language declines a month in a day-month context: `d mmmm` of 2023-03-15 is
   "15 kovas", "15 marec", "15 март" (nominative, as `mmmm` alone), and so are `d. mmmm yyyy`, `dd mmm`, `mmmm d`
   and `dddd, d mmmm`. Evidence: probes/text-locale-six-languages (276 cells, excel-graph, 2026-11-03).
-  Ours: matches (`ID`, `SL`, `LT`, `TG`, `MK`, `KK` in locale/regional_date_names.rs).
+  Ours: matches (the generated locale tables ("Which LCIDs have a locale", T-4508)).
+- **Indic names: bn-IN, mr-IN, ta-IN, te-IN, kn-IN, kok-IN, ne-NP** (T-2959). `[$-445]`, `[$-44E]`, `[$-449]`,
+  `[$-44A]`, `[$-44B]`, `[$-457]` and `[$-461]` print their own native-script names (Excel's, not CLDR's): January
+  `mmm|mmmm` is "জানু.|জানুয়ারী", "जाने.|जानेवारी", "ஜனவரி|ஜனவரி", "జన|జనవరి", "ಜನವರಿ|ಜನವರಿ", "जाने|जानेवारी",
+  "जन|जनवरी"; Sunday `ddd|dddd` "রবি.|রবিবার", "रवि.|रविवार", "ஞாயிறு|ஞாயிற்றுக்கிழமை", "ఆది|ఆదివారం", "ಭಾನು.|ಭಾನುವಾರ",
+  "आय.|आयतार", "आइत|आइतवार". `mmmmm` is the first code point ("জ", "ஜ"). The day halves are "AM"/"PM" for bn-IN and
+  te-IN, "म.पू."/"म.नं." for mr-IN and kok-IN, "காலை"/"மாலை" ta-IN, "ಪೂರ್ವಾಹ್ನ"/"ಅಪರಾಹ್ನ" kn-IN, "पूर्वाह्न"/"अपराह्न"
+  ne-NP. Quirk: kn-IN's April `mmmm` doubles its first letter, "ಏಏಪ್ರಿಲ್", while `mmm` is "ಎಪ್ರಿಲ್" (E4). Each of these
+  LCIDs has a locale for the calendar digits: Saka (10) prints the Latin Saka names ("Phalguna|Budhavara"), Hebrew (8)
+  the Latin Hebrew ones ("Adar|Yom Revi'i") and Hijri (6) the English Hijri ones ("Sha'ban|AlArbia'a"), not the
+  no-locale en-US names. Evidence: probes/t2959-indic-lcid-names (112 cells, excel-graph, 2026-11-04).
+  Ours: matches (the generated locale tables ("Which LCIDs have a locale", T-4508)).
+- **Indic regional variants** (T-4201, probes/t4201-indic-regional-variants, 142 cells, excel-graph, 2026-11-05). The
+  language fallback to bn-IN, ta-IN and ne-NP is wrong for 845, 849, 861 (and their neutral/BCP-47 forms) but right for
+  neutral 49 and, bar one cell, 61. `[$-845]` bn-BD, neutral `[$-45]`, `[$-bn]` and `[$-bn-BD]` print March
+  `mmm|mmmm|ddd|dddd|AM/PM` as "মার্চ|মার্চ|বুধ|বুধবার|PM": full month names for `mmm` (bn-IN abbreviates seven: January, February, August to December),
+  undotted short days (bn-IN's always have a dot); the day halves stay Latin "AM"/"PM" and `mmmmm` of January is "জ", as in bn-IN. `[$-849]` ta-LK and `[$-ta-LK]` give "மார்.|மார்ச்|புத.|புதன்|பிற்பகல்" (morning
+  "முற்பகல்"; ta-IN's halves are "காலை"/"மாலை"; most short months and days carry a dot, "மே", "ஜூன்", "ஜூலை" and "சனி" do
+  not). `[$-861]` ne-IN and `[$-ne-IN]` print "मार्च|मार्च|बुध|बुधबार|अपराह्न": ne-IN differs from ne-NP in the month names
+  (January "जनवरी", May "मे|मई", December "डिसे|दिसम्बर") and the weekdays (Wednesday ends "-बार", Sunday "आइतबार"; ne-NP's is
+  "आइतवार"). Neutral `[$-49]` is identical to ta-IN `[$-449]` in all 15 rows, and neutral `[$-61]` equals ne-NP `[$-461]`
+  except under Saka digits, where it prints native names ("फल्गुण|फल्गुण|बुधवार|बुधवार"). Under calendar digits 10 (Saka)
+  and 8 (Hebrew) every other LCID prints the Latin Saka ("Phalguna|Budh|Budhavara") and Hebrew ("Adar|Yom Revi'i")
+  names, except 861, which prints native Saka names too. All 142 cells pass from the generated tables (T-4508; first implemented by hand in T-4292); every Saka name of 861 and 61 is now probed (probes/t4061-calendar-names-all).
 - **System tags.** `[$-F800]` and `[$-x-sysdate]` replace the whole section with the system long date, en-US "dddd, mmmm d, yyyy", whatever else it holds (`TEXT(45000.75,"x[$-F800]0")` is "Wednesday, March 15, 2023", 0.5 "Saturday, January 0, 1900", -1 and 3e6 `#VALUE!`); `[$-F400]`/`[$-x-systime]` likewise give "h:mm:ss AM/PM". Only a first section shows it: `TEXT(-1,"0;[$-F800]")`, `TEXT(0,"0;0;[$-F800]")` and `TEXT("abc","0;0;0;[$-F800]")` are "". With `@` the section is a text section as usual (`[$-F800]@` of 45000.75 is "45000.75").
 - **One tag per section.** A second tag in a section is `#VALUE!`, even the same one or a system tag (`[$-40C]mmmm [$-40C]mmmm`, `[$-40C]mmmm [$€-407]mmmm`, `[$-F800][$-F400]`); tags in different sections are fine.
 - **Regional variants and more languages** (probes/text-locale-regional-lcids, 252 cells, T-1858). The language fallback does not hold across regions: `[$-C07]` de-AT has "Jän"/"Jänner" for January, "Mär" for March, and `ddd` "Mi."/"Do." (de-DE differs in all three); `[$-1004]` zh-SG mixes the two: short months as zh-TW ("一月"), days as zh-CN ("周三"); `[$-C04]` zh-HK equals zh-TW ("週三"); `[$-80A]` es-MX and `[$-2C0A]` es-AR differ from es-ES in `ddd` and the day halves ("a. m."/"p. m."), and es-AR's halves use a non-breaking space where es-MX's use a plain one. Languages that now resolve: `[$-408]` Greek ("Ιαν", "πμ"/"μμ"), `[$-41E]` Thai (Thai names, AM/PM stay Latin), `[$-41B]` Slovak (short months are the numerals "1"…"12", like Japanese), `[$-422]` Ukrainian (AM/PM stay Latin), `[$-401]` Arabic ("ص"/"م"), `[$-40D]` Hebrew (AM/PM stay Latin), `[$-439]` Hindi ("पूर्वाह्न"/"अपराह्न"). Calendar and digit switches of Thai, Arabic and Hebrew are T-1859's.
-- **More regional variants** (probes/text-locale-regional-lcids-2, 294 cells, excel-graph, 2026-10-31, T-1875). The language fallback is wrong for these too: `[$-240A]` es-CO equals es-AR (`ddd` "mié.", halves "a. m."/"p. m." with a no-break space); `[$-340A]` es-CL is es-AR with "sept." for September; `[$-es-419]` is es-AR with plain-space halves "a.m."/"p.m."; `[$-1007]` de-LU and `[$-1407]` de-LI are de-AT with "Jan" and the long name beginning "Jan" for January (so "Mär", `ddd` "Mi."); BCP-47-only `[$-pt-AO]` (no LCID was probed, so `[$-1000]` is unchanged) is pt-PT with `ddd` "quarta"/"sábado"/"domingo" (no truncation) and halves "a.m."/"p.m."; `[$-C09]` en-AU, `[$-1009]` en-CA, `[$-4009]` en-IN and `[$-1404]` zh-MO (as zh-TW) need no table of their own. `[$-de-AT]` and `[$-zh-SG]` match their LCIDs. **Open (follow-up, T-3666):** the plain hex tag `[$-2412]` (Korean language, sublanguage 9 invalid) prints English in Excel ("Jan|January|J", "Wed|Wednesday", and the letters kept for the day halves, "6 AM|6 A|6 a"), but ours resolves it through `by_language` to Korean, so S!M1:M21 fail. `[$-2F409]` (0xF409 with calendar 2) prints English names too, but its day halves resolve to a locale ("6 AM|6 AM|6 AM"). When an LCID with an unknown sublanguage falls back to its language and when to English is not settled (`[$-_409]`, 0xF409, is the same open case).
-- **Not yet modelled:** locales not in the table list print English and keep `A/P` letters, though Excel very likely localizes them. Eras and calendar digits are in "Calendars of a locale tag" below.
+- **More regional variants** (probes/text-locale-regional-lcids-2, 294 cells, excel-graph, 2026-10-31, T-1875). The language fallback is wrong for these too: `[$-240A]` es-CO equals es-AR (`ddd` "mié.", halves "a. m."/"p. m." with a no-break space); `[$-340A]` es-CL is es-AR with "sept." for September; `[$-es-419]` is es-AR with plain-space halves "a.m."/"p.m."; `[$-1007]` de-LU and `[$-1407]` de-LI are de-AT with "Jan" and the long name beginning "Jan" for January (so "Mär", `ddd` "Mi."); BCP-47-only `[$-pt-AO]` (no LCID was probed, so `[$-1000]` is unchanged) is pt-PT with `ddd` "quarta"/"sábado"/"domingo" (no truncation) and halves "a.m."/"p.m."; `[$-C09]` en-AU, `[$-1009]` en-CA, `[$-4009]` en-IN and `[$-1404]` zh-MO (as zh-TW) need no table of their own. `[$-de-AT]` and `[$-zh-SG]` match their LCIDs. **LCIDs with no table of their own (T-3666, T-4480).** Rule: which LCIDs have a locale is Excel's own set, the 845 of probes/t3666-lcid-locale-map ("Which LCIDs have a locale"), each with names of its own. Mostly it is the LCIDs Windows assigns plus the sublanguages 0x3D-0x3F, but not exactly: 19 others have one (0x3D, 0x58, 0x66, 0x69, 0x71, 0x76, 0x79, 0x7F, 0x400, 0x458, 0x459, 0x466, 0x469, 0x479, 0x800, 0x851, 0xC00, 0x3809, 0x7C86) and 5 that [MS-LCID] 2.2 defines have none (0x1, 0x2, 0x501, 0x5FE, 0x9FF). The probed sweeps show the pattern: an LCID Windows assigns has a locale ([MS-LCID] 2.2: `[$-819]` ru-MD, `[$-810]` it-CH, `[$-80C]` fr-BE, `[$-C09]` en-AU) and so does one whose sublanguage (bits 10-15) is 0x3D, 0x3E or 0x3F (`[$-F412]`, `[$-F812]`, `[$-FC12]` are Korean "3월|수|6 오후", `[$-F407]` German, `[$-F411]` Japanese, `[$-F804]` zh-TW names, `[$-F409]` and `[$-_409]` English with "6 PM" for `h A/P`). Every other sublanguage has no locale: an unassigned one below 0x20 (`[$-2412]`, `[$-812]`, `[$-C12]`, `[$-1412]`, `[$-3412]`, `[$-2411]`, `[$-1411]`, `[$-C11]`, `[$-1811]`, `[$-1807]`, `[$-2407]`, `[$-1013]`, `[$-2413]`, `[$-1413]`, `[$-C10]`, `[$-C19]`, `[$-7C09]`, `[$-4012]`) and every one from 0x20 to 0x3C, assigned language or not (`[$-8012]` to `[$-F012]` and `[$-8009]` to `[$-F009]`, all 29 of each probed), print en-US names and keep `A/P` as written: "March|Wed|6 PM|6 P|6 p" for `mmmm|ddd|h AM/PM|h A/P|h a/p` at 45000.75. `[$-F000]` (no language) is the same. Extended-hex tags resolve the same way. Evidence: probes/t4480-lcid-sublanguage-fallback (98 cells; probed under T-3666), probes/text-locale-invalid-sublanguage (96 cells), text-locale-regional-lcids-2 M1:M21 (excel-graph, 2026-11-04). Implemented in: the generated locale tables ("Which LCIDs have a locale", T-4508), which hold Excel's names for every LCID, so no LCID falls back to its language. Russian and French variants (T-4064, T-4065; probes/t4064-ru-md-names, t4065-french-regional-halves, t4065-french-regional-names, excel-graph, 2026-11-06): `[$-819]` and `[$-ru-MD]` have their own names, dotted short months ("янв.", "февр.", "март", "сент.", "нояб."), lowercase months ("январь") and short weekdays ("вс"), ru-RU's long weekdays and "PM"; the Russian high sublanguages differ from ru-RU only in `mmmm`: `[$-F419]` lowercase nominative ("январь"), `[$-F819]` capitalised genitive ("Января"), `[$-FC19]` lowercase genitive ("января"), also in `d mmmm`, while ru-RU's `d mmmm` stays nominative ("15 Январь"). `[$-2C0C]` fr-CM has the fr-FR names and the day halves "mat."/"soir" for every form (`h AM/PM|h A/P|h a/p|AM/PM` is "6 mat.|6 mat.|6 mat.|mat."); `[$-380C]` fr-MA has its own short months ("jan.", "fév.", "mar.", "jui."); `[$-1C0C]` fr-029 capitalises every month ("Janv.", "Mars", "Janvier"); fr-SN, fr-CI, fr-ML, fr-CD, fr-HT, fr-RE, fr-MC, fr-LU, fr-CH, fr-CA and fr-BE print as fr-FR. **Lowercase day halves (implemented, T-4066, now from the generated locale tables of T-4508; the BCP-47 tags `en-IE`, `en-BZ` and `en-HK` print the same, probes/t3666-locale-tag-names):** `[$-1809]` en-IE, `[$-2809]` en-BZ and `[$-3C09]` en-HK print "6 pm|6 pm|6 pm" for `h AM/PM|h A/P|h a/p` (probes/text-locale-invalid-sublanguage S!J3, S!K3, S!L3); their names are en-US's.
+- **Coverage:** an LCID of languages 0x01-0xFF missing from the tables has no locale in Excel either (probes/t3666-lcid-locale-map probes every sublanguage 0-63 of each), so it prints English and keeps `A/P` letters; languages 0x100-0x3FF are unprobed ("Which LCIDs have a locale"). Eras and calendar digits are in "Calendars of a locale tag" below.
 - **A currency tag with a locale** (`[$€-40C]`, `[$€-fr-FR]`) is a symbol plus a locale tag in one: the symbol prints where it is written in a date section (`[$€-40C]d mmmm` "€15 mars", `d [$€-40C]mmmm` "15 €mars", `mmmm[$€-40C]` "mars€", `dddd [$€-40C]` "mercredi €", `[$€-40C]yyyy` "€2023", `[$€-40C]h:mm AM/PM` "€6:00 PM", `[$€]mmmm` "€March") and the locale localizes the section like `[$-40C]`. It counts as the section's one tag (`[$€-40C]mmmm [$-40C]mmmm` is `#VALUE!`; tags in different sections are fine). A system locale drops the symbol (`[$€-F800]` is the system long date). A multi-character symbol with a locale (`[$USD-40C]mmmm` is "USDmars") prints as text, the locale applying as above (implemented in T-2157). An empty or unresolvable locale on a currency tag still counts as the section's one tag: `[$€-]mmmm [$-40C]mmmm` and `[$€-zzz]mmmm [$-40C]mmmm` are `#VALUE!`, as is `[$€-40C]mmmm [$€-40C]mmmm`, while `[$€-]mmmm` and `[$€-zzz]mmmm` alone print "€March" in the default locale (and `[$€-]mmmm;[$-40C]mmmm` is fine: different sections). Format-code length limit (probes/t1883-currency-locale-edges, excel-graph, 2026-10-26): `[$€-40C]` + a quoted run works to 117 characters and fails at 118, + spaces works to 77 and fails at 78; `[$€]` + a quoted run works to 117 and fails at 118 (plain `[$-409]` allows 118 quoted and 78 spaces). The locale part of a currency tag therefore adds nothing: `[$€-40C]` and `[$€]` hit the same limits, on quoted text and on spaces (probes/t2812-currency-tag-cost A23:A28). T-2812 fits the cost (see "TEXT format code complexity limit"). Evidence: probes/text-currency-locale-date (excel-graph, 2026-10-18, T-1865), probes/t1883-currency-locale-edges (T-1883).
 - The cell display path shows the same text (probes/displayed-text-locale-names).
 Evidence: probes/text-locale-date-names (124 cells), probes/text-locale-name-tables (601), probes/text-locale-am-neutral (47), probes/displayed-text-locale-names (5), probes/text-locale-regional-lcids (252), probes/text-locale-regional-lcids-2 (294) (excel-graph, 2026-10-18 and 2026-10-31). Morning strings of locales whose afternoon is "PM" are inferred as "AM" beyond fr, de, de-AT, th, sk, uk and he (probed).
 Implemented in: locale/excel_date_names.rs (tables), formatter/locale_tag.rs (resolution), `Token::Locale` (lexer.rs), `DatePart::names` and `Parser::system_part` (parser.rs), format.rs.
 Status: VERIFIED (excel-graph)
 Tasks: T-1716, T-1858, T-1865, T-1875
+
+
+## Which LCIDs have a locale
+Rule: an LCID's sublanguage either names a locale or it does not, and Excel's set is not "any sublanguage of a known
+language". With none the tag prints English names and keeps `A/P` as written, as an unknown tag does (`[$-2412]`,
+`[$-812]`, `[$-5009]`, `[$-2407]`: "March|Wed|6 P|6 PM" for `mmmm|ddd|h A/P|h AM/PM` of 45000.75). Sublanguages
+0x3D-0x3F name the language's default for nearly every language (`[$-F409]`, `[$-F412]` "3월|수|6 오후"); sublanguage 0
+does for most but not all (`[$-1]` and `[$-2]` have none, `[$-12]` is Korean); 0x400, 0x800 and 0xC00 are en-US and
+0x7F (invariant) English with "PM", while 0x1000 and 0x2000 have none. Apart from those aliases the set is exactly the
+LCIDs [MS-LCID] 2.2 defines (reserved and pseudo-locale entries excepted), less 0x1 and 0x2. Every locale has its own
+names, and regional variants differ often (en-NZ "pm", fr-CM "soir", es-GT "p. m."), so no fallback to a language's
+names is right: Excel's names under all 845 LCIDs that have a locale (the hex of four spells a tag and resolves through it, `[$-CEB]`) are in probes/t3666-locale-names (220 distinct sets). Under its own
+calendar every locale prints the Gregorian year, month and day with ASCII digits (a Japanese LCID's `g` and `e` still
+print its eras), `A/P` prints the locale's day halves and `d mmmm` the plain
+`mmmm` (no genitive forms). One odd value: under 0xF803 (a Catalan alias) `mmmm` of January is all twelve genitive
+names joined by tabs.
+**BCP-47 tags** resolve the same way: Excel resolves 932 of the 1122 tags of [MS-LCID] and CLDR, each with the names of
+its LCID where it has one; a tag whose LCID has no locale still names one (`[$-ar]`, `[$-bg]`, `[$-qps-ploc]`), and so
+does a tag with no LCID (`[$-pt-AO]`, `[$-aa-ET]`). After a `B2` such a tag is Hijri with its LCID's Hijri names
+(Arabic for `ar`, English for the rest) and its own day halves (`B2[$-ar]yyyy|mmmm|ddd|h A/P` is "1444|شعبان|الأربعاء|6 م",
+`B2[$-pt-AO]` "1444|Sha'ban|AlArbia'a|6 p.m.", `B2[$-aa-ET]` "1444|Sha'ban|AlArbia'a|6 carra"; a known language with
+an unknown region reads as its language, `B2[$-fr-XX]` "1444|Chaaban|mer.|6 PM"; probes/t3666-review-followups A1:A6). A tag Excel does not know reads as extended hex, at any length: the
+value wraps at 32 bits (`[$-rhg-Rohg-BD]` is 0xEC91FDBD), and the calendar is the third byte without its top bit
+(0x91 is 0x11, Chinese lunar; 0x83 is 3, Japanese eras, which over an LCID with no locale print en-US names: `[$-myv-RU]`
+prints 2023-03-15 as "05-03-15"), checked against all 196 unknown tags and over LCIDs with a locale
+(probes/t3666-calendar-top-bit). A hex value whose text is also a tag Excel knows (`CA`, `DE`, `FA`) is that tag, and the LCID has no locale: `[$-CA]` is
+Catalan, `[$-100CA]` Saka over no locale ("6 P"), `B2[$-CA]` the Hijri date with the default names and Catalan day
+halves (probes/t4061-review-followups B1:B8).
+Evidence: probes/t3666-lcid-sublanguage-sweep, t3666-lcid-locale-map (every language 0x01-0xFF x sublanguage 0-63),
+t3666-locale-names (853 LCIDs probed, 845 with a locale, x 38 names and 3 day halves), t3666-locale-tag-names (1122 tags), excel-graph 2026-11-04; languages
+0x100-0x3FF are unprobed (no locale here). Implemented in: the tables locale/excel_names.tsv, excel_lcids.tsv and excel_tags.tsv, generated from those probes by
+`rustsheet-excel-locales` (tools/; a test checks they are current), read by `locale::excel_date_names` (`lcid_names`,
+`tag_locale`); `locale_tag::resolve_with`, `known_tag`, `calendar_digit`, `extended_hex`. Every cell of the probes
+above passes.
+Status: VERIFIED (excel-graph). Tasks: T-3666, T-4507, T-4508
+
+## Calendar names per locale
+Rule: a calendar digit's month and weekday names are Windows' names for that calendar under the LCID, not a rule by
+language: under Hijri (6) 32 LCID groups have names of their own (French "Rabi' Aoual|ven.", Turkish "Rebiyülevvel",
+Albanian, Uzbek, Kazakh, Yoruba, Tamazight ...), under Persian (16) 10 (English and French transliterations, Azerbaijani,
+Turkmen, Syriac, Pashto, every other language Persian script), and most LCIDs take the digit's default (English
+transliterations for Hijri, Persian script for Persian, Latin for Hebrew, ...). Digits 2, 7, A-D, 12, 13 and 15 print one
+set under every LCID (for each LCID only September's `mmmm` and Friday's `ddd`/`dddd` are probed, t4061-calendar-names-digest;
+the other names are the set's, t4061-calendar-names-full); digit 1 the LCID's own names. An LCID with no locale has the names of none (Arabic for Hijri and
+Um al-Qura, Gregorian by month number for Hebrew, Saka, Persian and the lunar digits, where a month past the twelfth then
+has no name and `mmmmm` prints U+0001), and so do a few LCIDs whose plain tag reads as a BCP-47 tag (`[$-CEB]` is Cebuano
+by its tag; `[$-0CEB]` and `[$-80CEB]` have no locale and keep `A/P`). A BCP-47 tag reads its LCID's names, or with an
+LCID that has no locale its language's primary LCID's (`B2[$-ar]` Arabic Hijri), or the digit's default (`B2[$-pt-AO]`); `B2[$-az-Cyrl-AZ]`,
+`B2[$-uz-Cyrl-UZ]` and `B2[$-ff-NG]` print what `B2[$-82C]`, `B2[$-843]` and `B2[$-467]` print ("Шабан", "Шаъбон", "yaawa";
+probes/t4508-ms-lcid-tags-after-b2, which also shows the [MS-LCID] tags the tag probe left out, `ff-NG`, `quc-Latn-GT` and
+`en-029`, printing their LCID's names).
+Quirks the data holds: under any calendar digit 1-0x17 the long month names of sublanguage 0x3D LCIDs (0xF4xx) have
+their first character 0x20 code points higher ("ѡептември", and "septembre" becomes U+0093 + "eptembre"), and those of
+0x3E (0xF8xx) are the genitive names 0x20 lower ("Września", "Syyskuuta", "De setembre", "\u{383}επτεμβρίου");
+under calendar 9 every 0xF4xx prints "eptembre"; en-AE (0x4C09) and es-419 (0x5C0A) print Hebrew months shifted by one in
+a common year ("Adar|AdarII|Nisan|...|Av").
+Evidence: probes/t4061-calendar-names-all (every month and weekday name of digits 1, 3-6, 8, 9, E, F, 10, 11, 14, 16, 17
+under all 845 LCIDs and 0xD001), t4061-calendar-names-digest (digits 1-0x17 under every LCID), t4061-calendar-names-full,
+t4061-calendar-names-by-language, t4061-calendars-without-locale, t3666-review-followups (excel-graph 2026-11-04).
+Implemented in: locale/excel_calendars.tsv (generated by `rustsheet-excel-locales`), `excel_date_names::calendar_names`,
+`locale_tag::localize` and `calendar_spec`; formatter/table_calendars.rs (Persian and Um al-Qura, from tables of
+Excel's answers in the same tool's persian_years.txt and um_al_qura_months.txt). Every cell of the probes above passes.
+Status: VERIFIED (excel-graph). Tasks: T-4507, T-4508
 
 ## Calendars of a locale tag (T-1859)
 Rule: a hex locale tag `[$-NNCCLLLL]` holds a numeral system (NN), a calendar (CC) and the LCID (LLLL). The calendar decides what `yy`/`yyyy`, `b`, `e` and `g` print and may override the month and day names. `AM/PM` always follows the LCID. Values below are for serial 45000 (2023-03-15).
@@ -825,7 +1110,11 @@ month and weekday of A, B, C and 14, with day halves under 401 ("6 م") and 412 
 | A | Gregorian, Levant Arabic months (`mmm` the same; two-word names joined by a no-break space: "كانون الثاني"), ar-SA weekdays | "آذار", "الأربعاء" |
 | B, C | Gregorian, ar-SA names (`mmm` the same) | "مارس", "الأربعاء" |
 | 14 | Gregorian, Korean native month names ("정월" … "섣달", `mmm` the same), Korean weekdays | "삼월", "수" |
-| 15 and above | ignored; the LCID's own calendar (probed 15, 1E, 1F, FF) | `[$-FF040C]mmmm` is "mars" |
+| 15 | Gregorian with en-US names (probes/t3666-calendar-top-bit) | `[$-15040C]mmmm` is "March"; ours: matches (T-4508) |
+| 16 | Persian (Windows CAL_PERSIAN): 2023-03-15 is 1401-12-24, 1900-01-01 1278-10-11, 9999-12-31 9378-10-13; months of 31 (1-6), 30 (7-11) and 29/30 days; the leap years follow the equinox (Excel's table of all 8100 years, probes/t4061-persian-new-years: neither the 33- nor the 2820-year rule fits, the new year drifts from 21 March to 17 March by 9999); `yy`/`b` two digits, `e` the year, `g` nothing | `[$-16040C]yyyy-mm-dd` of 45000 is "1401-12-24"; ours: matches (T-4508) |
+| 17 | Um al-Qura (CAL_UMALQURA): Excel's month table from 1 Muharram 1318 (1900-04-30) to the end of 1500 (2077-11-15), the digit-6 date outside it (probes/t4061-umalqura-months, t4061-hijri-variant-dates: a quarter of month starts differ from digit 6 by a day inside the table, none outside, through 9999: 1580 dates of 2101-9991, t4061-review-followups A) | `[$-170409]yyyy-mm-dd` of 1900-04-30 is "1318-01-01"; ours: matches (T-4508) |
+| 18 to 7F | ignored; the LCID's own calendar (probed 18-1F, 20, 3F, 40, 7F over fr-FR and ja-JP) | `[$-7F040C]mmmm` is "mars" |
+| 80 and above | the digit without its top bit (`[$-83040C]` Japanese eras, `[$-91040C]` lunar, `[$-FF040C]` ignored) | `[$-FF040C]mmmm` is "mars"; ours: matches (T-4508) |
 Under A, B, C and 14, `e` and `g` are probed ("2023", ""); `yy`, `b` and `bbbb` are inferred to print as under Gregorian (unprobed).
 
 Under every one of these, `e` stays the Gregorian four-digit year, and so do `b` and `bbbb` except under Thai. Day halves follow the LCID under every calendar digit: `[$-20411]`, `[$-40411]` and `[$-50411]h AM/PM` are "6 午後", and `[$-70412]`/`[$-90412]` give "6 오후".
@@ -861,7 +1150,7 @@ Under every one of these, `e` stays the Gregorian four-digit year, and so do `b`
   (2023-03-22 is "1945-01-01", 2024-03-21 "1946-01-01"), and Chaitra then has 31 days; months 2-6 have 31, 7-12 30.
   `yy`, `b`, `bb` and `y` print two digits ("44"), `e`, `ee`, `yyy`, `yyyyy` and `bbbb` the Saka year. Serial 1 is
   "1821-10-11|Pausa", and so is serial 0; 59 is "1821-12-09". 9999-12-31 is "9921-10-10" with `yy` "21".
-  - Latin names under every LCID with a locale but an Arabic or Hindi one (40D and bn-IN 445 included): months Chaitra,
+  - Latin names under every LCID with a locale but an Arabic or Hindi one (40D and the Indic LCIDs 445, 44E, 449, 44A, 44B, 457 and 461 included): months Chaitra,
     Vaisakha, Jyaistha, Asadha, Sravana, Bhadra, Asvina, Karthika, Agrahayana, Pausa, Magha, Phalguna (`mmm` the same,
     `mmmmm` the first letter); `ddd` Ravi, Som, Mangal, Budh, Guru, Sukra, Sani; `dddd` Ravivara, Somavara, Mangalvara,
     Budhavara, Guruvara, Sukravara, Sanivara.
@@ -902,23 +1191,51 @@ Status: VERIFIED (excel-graph)
 
 Evidence: probes/t1925-numeral-digits (cell row = N + 1; D: `#,##0.00` of 1020304.05 under `[$-N000409]`; A: `yyyy-mm-dd|e|mmmm` of 45000 under `[$-N000409]`, B: the same under `[$-N000411]`, C: `0.00|#,##0` of 1234567.89 under `[$-N000409]`).
 
-- The byte N changes the digits of the probed date fields (`yyyy`, `mm`, `dd`, `e`) and of plain numbers (the grouping `,` and decimal `.` stay ASCII); `mmmm` is untouched, and so is the month number of ja-JP's `3月` (the `3` stays ASCII under every numeral byte in the B column) while `e` in the same cell becomes native. Weekday, time fields and AM/PM are unprobed. With N = 0, 1 or 20-26 the LCID still applies: `[$-1000411]` prints the `5` and `3月` of ja-JP (B column), so a numeral byte must not drop the LCID's names or era. N = 0, 1 and 20-26 print ASCII digits.
+- The byte N changes the digits of the probed date fields (`yyyy`, `mm`, `dd`, `e`) and of plain numbers (the grouping `,` and decimal `.` stay ASCII); `mmmm` is untouched, and so is the month number of ja-JP's `3月` (the `3` stays ASCII under every numeral byte in the B column) while `e` in the same cell becomes native. Weekday, time fields and AM/PM are unprobed. With N = 0, 1 or 20-26 the LCID still applies: `[$-1000411]` prints the `5` and `3月` of ja-JP (B column), so a numeral byte must not drop the LCID's names or era. N = 0, 1 and 20-26 (decimal; the probe rows are N + 1) print ASCII digits. Bytes 32 and up are a different range, see "Bytes 32-39" below.
 - Positional digit sets: 2 Arabic-Indic, 3 Persian, 4 Devanagari, 5 Bengali, 6 Gurmukhi, 7 Gujarati, 8 Odia, 9 Tamil, 10 Telugu, 11 Kannada, 12 Malayalam, 13 Thai, 14 Lao, 15 Tibetan, 16 Myanmar, 17 Ethiopic, 18 Khmer, 19 Mongolian. Tamil (9) and Ethiopic (17) have no zero digit, so a zero stays ASCII `0` (N=9: `௨0௨௩-0௩-௧௫`); column D confirms it in plain numbers (N=9 `௧,0௨0,௩0௪.0௫`, N=17 `፩,0፪0,፫0፬.0፭`).
 - 27-31 are CJK numerals. Date: 27 `二〇二三-〇三-十五` (positional year, day with 十), 28 `弐〇弐参-〇参-壱拾伍`, 29 fullwidth `２０２３-０３-１５`, 30 `二○二三-○三-十五` (N=27 uses 〇 U+3007, N=30 uses ○ U+25CB), 31 `贰零贰叁-零叁-壹拾伍`. Plain numbers are positional (D, N=27 `一,〇二〇,三〇四.〇五`, N=28 `壱,〇弐〇,参〇四.〇伍`, N=31 `壹,零贰零,叁零肆.零伍`; C, 27 `一二三四五六七.八九`, 28 `壱弐参四伍六七.八九`, 31 `壹贰叁肆伍陆柒.捌玖`).
 - Fields, General and the rest (probes/t3532-numeral-digit-fields: numeral bytes 2, 9, 27-31 over date, clock, percent, scientific, fraction, General and literal codes; t3532-numeral-digit-general: General over 20 values and elapsed tokens). Every number placeholder, percent, scientific mantissa and exponent, fraction (integer, numerator, denominator), fractional second and clock field takes the native digits (`[$-2000409]0.0%|0.00E+00` on 0.1234 is "١.٢%|٣.٤٠E-٠١", `# ?/?` on 12.5 "١٢ ١/٢", `h:mm:ss.00 AM/PM` "١:٠٢:١٢.٤٨ PM"). Quoted and escaped literals stay ASCII (`0 "12"|\5` on 12.5 is "٠ 12|5"), and so do a text section (`@ "9"` on "a1" is "a1 9"), names (`ddd|dddd|mmm`) and `AM/PM`. A tag whose LCID has no locale still applies its numeral byte: `[$-fr_FR-x]` is 0x10E00AF1, Myanmar digits with en-US names and `A/P` as written ("၆ P"; probes/t1924-locale-tag-extended-hex A26, B26). The Japanese era year takes them too (`[$-8000411]e|ee|yyyy` is "୫|୦୫|୦୫"; text-locale-calendars A26).
 - **CJK date and clock fields (27, 28, 30, 31).** A field from 10 to 99 (`d`, `dd`, `m`, `mm`, `yy`, `e`, `ee`, `h`, `hh`, minutes, seconds) is written with the tens sign, every other field digit by digit: 27 `dd` of the 5th "〇五", of the 10th "十", 20th "二十", 31st "三十一"; `yy` of 2023 "二十三", of 2010 "十"; `yyyy` "二〇二三"; `h` 13 "十三", `mm` (minute) 2 "〇二", `s` 0 "〇". 28 and 31 write the one before the tens sign ("壱拾", "壹拾"), 30 does not ("十"), though 30's General does ("一十"). 29 (fullwidth) prints fields digit by digit ("１０", "２３").
-- **CJK General and elapsed counts.** `General` spells the integer part in units (十 百 千) and myriads (万 億) and prints the rest digit by digit: 27 `5` "五", `10` "十", `105` "百五", `1010` "千十", `10000` "一万", `100000` "十万", `123456789` "一億二千三百四十五万六千七百八十九", `0.5` "〇.五", `-15` "-十五", `12.05` "十二.〇五", `1E+11` "一E+一一" (the exponent digit by digit). 28 (daiji 壱弐参四伍六七八九, 拾 百 阡, 萬 億) writes every one ("壱拾", "壱百", "壱阡", "壱萬"). 29 uses fullwidth digits with 27's signs ("十１", "２十", "１万２千３百４十５"). 30 (○, 万 亿) and 31 (零壹贰叁肆伍陆柒捌玖, 拾 佰 仟, 万 亿) write every one and one zero digit for a gap ("一百○五", "一千○一十", "壹佰零伍", "壹仟零壹拾"). An elapsed count is spelled the same way (`[h]` of 1.25 under 27 "三十", `[m]` "千八百", `[s]` "十万八千", under 29 "３十"). Unprobed: a zero gap across a myriad under 30 and 31 (we write one zero, "一十万○五"), integers of 10^12 and more (we print them digit by digit), a padded elapsed count under 10 (digit by digit), and `General` beside literals or in a date section (spelled out as alone); to probe in T-3718.
+- **CJK General and elapsed counts.** `General` spells the integer part in units (十 百 千) and myriads (万 億) and prints the rest digit by digit: 27 `5` "五", `10` "十", `105` "百五", `1010` "千十", `10000` "一万", `100000` "十万", `123456789` "一億二千三百四十五万六千七百八十九", `0.5` "〇.五", `-15` "-十五", `12.05` "十二.〇五", `1E+11` "一E+一一" (the exponent digit by digit). 28 (daiji 壱弐参四伍六七八九, 拾 百 阡, 萬 億) writes every one ("壱拾", "壱百", "壱阡", "壱萬"). 29 uses fullwidth digits with 27's signs ("十１", "２十", "１万２千３百４十５"). 30 (○, 万 亿) and 31 (零壹贰叁肆伍陆柒捌玖, 拾 佰 仟, 万 亿) write every one and one zero digit for a gap ("一百○五", "一千○一十", "壹佰零伍", "壹仟零壹拾"). An elapsed count is spelled the same way (`[h]` of 1.25 under 27 "三十", `[m]` "千八百", `[s]` "十万八千", under 29 "３十"). Probed in T-3718 (probes/t3718-cjk-numeral-unprobed, all matched by the existing code): a zero gap across a myriad under 30 and 31 writes one zero (30 `100005` "一十万○五", `100000005` "一亿○五"; 31 "壹拾万零伍", "壹亿零伍"); `General` switches to scientific from 1E+11 (General's 11-character form, not a CJK cut-off), so in `General` integers of 10^12 and more appear only as a digit-by-digit mantissa and exponent (27 `1E12` "一E+一二", `123456789012` "一.二三四五七E+一一"). Elapsed counts never switch to scientific, and they spell 10^12 with 兆 under every byte, the Chinese ones too (rows 16-19: `[s]` of 2958465 under 27 "二千五百五十六億千百三十七万六千"; `[s]` of 1E8 under 27 "八兆六千四百億", 28 "八兆六阡四百億", 29 "８兆６千４百億", 30 "八兆六千四百亿", 31 "捌兆陆仟肆佰亿"; `[s]` of 1E9 "八十六兆四千億"; `[h]` of 1E11 "二兆四千億"). From 10^16 the count of 兆 prints digit by digit before 兆 and the rest is spelled after it (rows 20-25: `[s]` of 1E11, 8.64E15, under 27 "八千六百四十兆"; of 1.2E11, 1.0368E16, "一〇三六八兆"; `[h]` of 1E15 "二四〇〇〇兆"; `[s]` of 1E12 "八六四〇〇兆"; of 1E15, 8.64E19, "八六四〇〇〇〇〇兆", 31 "捌陆肆零零零零零兆"; of 1.2345E11, 1.066608E16, 27 "一〇六六六兆八百億", 30 "一○六六六兆○八百亿", 31 "壹零陆陆陆兆零捌佰亿", so 30 and 31 write one zero for the gap after 兆 and 27 and 28 none); fixed in T-3718 (we printed every such count digit by digit). Probed in T-4245 (probes/t4245-cjk-numeral-past-1e16, all matched by the existing code): the cut is 10^16, not 2^53 (`[s]` of 1.1E11, 9.504E15, is spelled: 27 "九千五百四兆", 30 "九千五百○四兆", 31 "玖仟伍佰零肆兆"); past it the rest below 兆 is spelled after an empty 億 group too, with the one gap zero under 30 and 31 (count 10000兆 + 5万: 27 "一〇〇〇〇兆五万", 30 "一○○○○兆○五万", 31 "壹零零零零兆零伍万"), a count of 兆 ending in zero keeps its zero digit (12340兆 + 5億: 27 "一二三四〇兆五億", 30 "一二三四○兆○五亿"; 12000兆: "一二〇〇〇兆"); below 10^16 a gap inside or after the 兆 group is one zero under 30 and 31 and none under 27 and 28 (1兆 + 8: 27 "一兆八", 28 "壱兆八", 30 "一兆○八", 31 "壹兆零捌"; and a count of 16 or more digits is spelled from its value rounded to 15 significant digits, even below 2^53 where the double holds it exactly (count 1010000000000016, row 6, prints as 1010兆 + 20: 27 "千十兆二十", 30 "一千○一十兆○二十", 31 "壹仟零壹拾兆零贰拾"; ours rounds the same way). Also probed in T-3718: a padded elapsed count under 10 is digit by digit (`[hh]` of 0.2 "〇四", 30 "○四", 31 "零肆"; unpadded `[h]` "四"); `General` beside a literal spells out as alone (27 `General "x"` on 105 "百五 x"; a numeral tag after a leading literal still applies, `"x" [$-1B000409]General` "x 百五"); the zero gap below 億/亿 is one zero under 30 and 31 and none under 27 and 28 (1000000005: 27 "十億五", 28 "壱拾億伍", 30 "一十亿○五", 31 "壹拾亿零伍"); `General` in a date section is the T-3378 value (the seconds within the minute of the half-second-rounded serial, see the entry above) written in the native digits (27 `d General` on 5.5 "五 〇.五", `yyyy General` on 45000 "二〇二三 〇.四九九九九九八〇三"), and with an integer part it is spelled with the tens sign (`d General` on 5+45/86400: 27 "五 四十五.五", 28 "伍 四拾伍.伍", 29 "５ ４十５.５", 31 "伍 肆拾伍.伍"; T-4245). Unprobed (T-4245): counts of 10^20 and more under 28 to 30, and a rest below 兆 from 1000億 to 9999億 past 10^16 (no gap zero, by the code's cut at 1000億).
+- **Bytes 32-39 (T-4107, probes/t4107-numeral-2000-suffix, excel-graph 2026-11-05).** Numeral bytes 32-39 (hex 0x20-0x27) are more systems, and the `,N00` suffix reads the same byte (`[$-,2000]0` = `[$-20000409]0` on 123 is "１２３"; `,2300` = byte 35). Implemented (bytes below are hex): 20 is the Chinese structure (units 十百千, one before a unit, one zero per gap, 万 亿) in fullwidth digits (`General` on 1010 "１千０１十", 105 "１百０５", 10 "１十", 12345 "１万２千３百４十５", 123456789 "１亿２千３百４十５万６千７百８十９", `0` on 1230 "１２３０"); its date and clock fields are digit by digit (`yyyy-mm-dd yy d` of 45000 "２０２３-０３-１５ ２３ １５", `h:mm:ss` "１６:４９:５２") but an elapsed count uses the signs (`[h]:mm` of 1.25 "３十:００", `[s]` of 100000 "８十６亿４千万"). In all of 20-23 a zero between groups is written for a group's leading or inner zeros (General 100050000 "１亿０５万", 1000000005 "１十亿０５") but not for the trailing zeros of the group before (`[s]` of 3600000 days, 311040000000 s, is "３千１百１十亿４千万", not "…十亿０４千万"; probes/t4107-numeral-2000-suffix A133, A150:A200). 21 is byte 30's Chinese structure with the traditional 萬 億 (`General` 12345 "一萬二千三百四十五", `0` on 1230 "一二三○", fields with the tens sign: `yy` "二十三", `d` "十五", `h` "十六"; `[s]` of 100000 "八十六億四千萬"). 22 is the formal structure of byte 31 in traditional characters 零壹貳參肆伍陸柒捌玖, 拾 佰 仟, 萬 億 (`0` on 1234567890 "壹貳參肆伍陸柒捌玖零", `General` 12345 "壹萬貳仟參佰肆拾伍", `d` of the 15th "壹拾伍"). 23 is 20 with 萬 億 (12345 "１萬２千３百４十５"). Unprobed for 21 and 22: fractions and percent; for 20 and 23: 兆 in elapsed counts past 10^12. Bytes 0x24-0x27 (T-4347, probes/t4347-numeral-bytes-24-27, excel-graph 2026-11-05: General, `0`, `#,##0.00`, percent, scientific, fractions, date, clock and elapsed fields, and the `,2400` to `,2700` suffix, which reads the same byte; 140 cells): none writes a gap zero (General 105 "一百五", 100050000 "一億五万", 1000000005 "一十億五"), and every elapsed count past 10^16 prints its 兆 count digit by digit as bytes 27-31 do (`[s]` of 1.2E11 under 24 "一０三六八兆"). 24 is byte 27's structure with a one before every unit and ０ (U+FF10) for zero: General 1010 "一千一十", 10 "一十", 0.05 "０.０五", `0` on 1230 "一二三０", fields with the tens sign and no one (`yyyy-mm-dd yy d` of 45000 "二０二三-０三-十五 二十三 十五", `h:mm:ss` "十六:五十一:五十三"), `[s]` of 100000 "八十六億四千万" (万 with 億). 25 is byte 28's daiji structure (拾 百 阡, 萬 億, a one before every unit and before a field's tens sign) with the digits 零壹貳參四伍六七八九: General 12345 "壹萬貳阡參百四拾伍", `0` on 1230 "壹貳參零", `dd` of the 15th "壹拾伍". 26 prints as byte 29 on every cell (General 105 "百５", 1230 "千２百３十", fields digit by digit "２０２３-０３-１５"). 27 is Korean hangul, 영일이삼사오육칠팔구 with 십 백 천 and 만 억 조 (조, not 兆, for 10^12: `[s]` of 1E8 "팔조육천사백억"), a one before every unit (General 12345 "일만이천삼백사십오", 10 "일십"), fields with the tens sign and no one (`d` of the 15th "십오", `yyyy` "이영이삼"), `0` on 1230 "일이삼영". **Quirk: compatibility ideographs.** Excel writes some characters of 24 and 25 as CJK compatibility ideographs, which look the same but are other code points: 六 is U+F9D1 (not U+516D) under 24 and 25, and 零 U+F9B2, 參 U+F96B and 拾 U+F973 (not U+96F6, U+53C3, U+62FE) under 25; bytes 27-35 use the unified ones. Unprobed for 24-27: `General` from 1E+11 (scientific), a gap after 兆/조 in elapsed counts from 10^12 to 10^16, and a rest of 1000億 to 9999億 past 10^16 (the code reuses the structures of bytes 27-29 there). Implemented (T-4347): `CHINESE_FULLWIDTH_ZERO`, `FORMAL_TRADITIONAL_DAIJI`, `KOREAN` and byte 38 as `FULLWIDTH` (formatter/numerals.rs). Bytes 0x28, 0x3F, 0x40 and 0xFF print ASCII digits.
+- **Extended-hex tags: the `x-` prefix stays ASCII (T-4107, T-4356).** An extended-hex value (`locale_tag::extended_hex`) takes its numeral byte like a hex LCID, bytes 32 and up included (`[$-y-euros]0` on 123 is "一二三", `[$-xx-euro]0` "１２３"; probes/t4356-private-use-prefix). The ASCII `[$€-x-euro2]0` of T-4107 (gen-m10/bfbcd16cee266336 T!A12) was the prefix's effect, not byte 32. A tag opening `x-` (either case; BCP-47 private use) is ASCII at every numeral byte (T-4356): `[$-x-euro]0` (byte 2), `[$-X-euro]`, `[$-x-abcd]`, `[$-x-000000]` (wraps to byte 13) and `[$-x-0000001]` all print "123", while the same values without the prefix keep their numerals (`[$-1gdffc8]0` and `[$-y-euro]0` "١٢٣", `[$-x_euro]0` "١٢٣", `[$-0d0000g0]0` "๑๒๓"). Month names are unaffected (English). Neither the calendar byte nor the low LCID word gates the numeral byte of a hex tag (probes/t4356-numeral-calendar-byte, 29 cells, all Arabic-Indic at byte 2). Evidence: probes/t4356-extended-hex-xeuro, t4356-private-use-prefix, t4356-private-use-value (excel-graph, 2026-11-06). Implemented in `locale_tag::numerals`.
 - **Which sections.** Only the first section's tag sets the digits, and they apply to the whole format: `[$-2000409]0;(0)` on -5 is "(٥)", `[$-2000409]0;General` on -15 "١٥", and a value no section takes falls back to General in them (`[$-2000409][>5]0` on 1 is "١"), while a tag in a later section changes nothing, not even its own section (`0;[$-2000409]0;0` on 0 is "0", on -5 "5"; `0;[$-2000409]0` on 5 "5"). A fixed denominator prints in them too (`[$-2000409]# ?/4` on 12.5 is "١٢ ٢/٤", `[$-1B000409]# ?/16` "一二 八/一六"), and a `B2` before a numeral tag is Hijri with the native digits (`B2[$-2000409]yyyy|mmmm` is "١٤٤٤|Sha'ban"). Evidence: probes/t3532-numeral-digit-sections.
 - Implemented (T-3532): `formatter/numerals.rs` (`Numerals`), from `locale_tag::numerals`; `resolve_lcid` ignores the byte, so the LCID's names and era stay.
+- **The `locale,N00` form (T-3891).** Excel gives typed script-digit text formats like `[$-ar-SA,200]0` and
+  `[$-,D00]h:mm` (coercion.md "Script digits in number text"). The hex after the comma is the numeral byte
+  above a low byte: `,200` Arabic-Indic, `,300` Persian, `,400` Devanagari, `,500` Bengali, `,600` Gurmukhi,
+  `,900` Tamil, `,A00` Telugu, `,D00` Thai, `,E00` Lao, `,F00` Tibetan, `,1000` Myanmar, `,1200` Khmer, and `,0`
+  ASCII; the part before the comma does not matter for the digits (`[$-en-US,200]0` and `[$-,200]0` on 123 are
+  "١٢٣", `[$-ar-SA]0` "123"). Every field takes them: `[$-ar-SA,200]0.00%` on 0.12 is "١٢.٠٠%",
+  `[$-ar-SA,200]0.00E+00` on 1000 "١.٠٠E+٠٣", `[$-,200]mm/dd/yyyy` of 43831 "٠١/٠١/٢٠٢٠", `[$$-ar-SA,200]#,##0.00`
+  on 12 "$١٢.٠٠". **Quirks:** `,2000` (byte 0x20) prints fullwidth `１２３` though byte 32 is ASCII in the LCID
+  form (A28; T-4107 fixed it, see "Bytes 32-39" below), and `[Red]([$$-ar-SA,200]#,##0.00)` on -12 is "($١٢.٠٠)", the symbol after the literal
+  paren, where ours prints "$(" (A6, also for `[$$-409]`; T-4108). Evidence: probes/t3891-numeral-tag-render
+  A1:A30 (excel-graph, 2026-11-04). Status: VERIFIED. Implemented (T-3891): `locale_tag::numerals`
+  (`numeral_suffix`); before the comma only a BCP-47 name is a locale (`[$-40C,1]` is English, A106 of
+  probes/text-locale-date-names; see the next item).
+  - **Suffix shapes and the part before the comma** (probes/t4492-locale-comma-tag-shapes A1:A24, excel-graph,
+    2026-11-04; T-4492). On 45000.75: `,2`, `,20`, `,0`, `,x` and `,200,1` give ASCII, `,201` Arabic-Indic (the low
+    byte is ignored), `[$-409,200]0` and `[$-40C,200]0` Arabic-Indic. Spaces matter in an odd way: `, 200`, `,  200`,
+    `[$-ar-SA ,200]` and `[$-, 200]` are Arabic-Indic, while `,200 ` is "肆伍零零壹" (Chinese financial digits).
+    A hex LCID before the comma is not a locale: `[$-40C,1]mmmm`, `[$-40C,200]mmmm` and `[$-40C, 200]mmmm` are
+    "March", while a BCP-47 name is: `[$-fr-FR,200]mmmm` and `[$-fr-FR,1]mmmm` are "mars", and
+    `[$-ar-SA,200]mmmm|dddd` is "مارس|الأربعاء". `[$-ar-SA,200]h:mm AM/PM` is "٦:٠٠ م" and `[$-,200]h:mm AM/PM`
+    "٦:٠٠ PM". Rule (T-4492; probes/t4492-comma-suffix-reading A1:A29, excel-graph, 2026-11-06):
+    the suffix is read with the extended-hex arithmetic of a tag that is neither hex nor BCP-47, without its
+    length limit and wrapping at 32 bits (a space counts -16, `_` 47, a letter past F from 10: `,g00` and `[$-,G00]`
+    are Myanmar, `,2_0` Devanagari, `,2 00` Myanmar, `,20 0` byte 0x1F, `,100000200` Arabic-Indic, `,FFFFFF00` and
+    `,1FF` ASCII), and byte 8-15 of it is the numeral system. Before the comma only a BCP-47 name counts, spaces
+    trimmed: `[$-409,200]mmmm`, `[$-411,200]mmmm` and `[$-1040C,200]mmmm` are "March", `[$-ja-JP,200]mmmm` "3月".
 
-**Unrelated quirks probes/t3532-numeral-digit-fields found.** (1) Rule: with `AM/PM` at the end, only some hour tokens take the 12-hour clock: `TEXT(45000.5432,"h|hh|mm|ss|h:mm:ss.00 AM/PM")` is "13|13|02|12|1:02:12.48 PM" (row 10, every numeral byte); we print "1|01|..."; which hours switch is unprobed, filed as T-3710. (2) Rule: a `0` after a fraction prints its zero: `TEXT(12.5,"# ?/?|0 ""12""|\5")` is "12 1/2|0 12|5" (row 14); we drop the `0`; filed as T-3711.
+**Unrelated quirks probes/t3532-numeral-digit-fields found.** (1) Rule: with `AM/PM` at the end, only some hour tokens take the 12-hour clock: `TEXT(45000.5432,"h|hh|mm|ss|h:mm:ss.00 AM/PM")` is "13|13|02|12|1:02:12.48 PM" (row 10, every numeral byte); we print "1|01|..."; which hours switch is in the "Hours with AM/PM" entry (T-3710). (2) Rule: a `0` after a fraction prints its zero: `TEXT(12.5,"# ?/?|0 ""12""|\5")` is "12 1/2|0 12|5" (row 14); we drop the `0`; filed as T-3711.
 
-**Unrelated quirk the probe found (column C). Rule:** `TEXT(1234567.89,"[$-409]0.00|#,##0")` is "1234567.89|0": with a `#,##0` run after the decimal point and a literal, the integer part gets no thousands grouping and the trailing run prints just `0`. We print "1,234,567.89|0". This is why C1 fails with no numeral byte (probes/t1925-numeral-digits C1, C2, C21-C27); filed as T-3598.
+**Unrelated quirk the probe found (column C). Rule:** `TEXT(1234567.89,"[$-409]0.00|#,##0")` is "1234567.89|0": with a `#,##0` run after the decimal point and a literal, the integer part gets no thousands grouping and the trailing run prints just `0`. The `,` sits after the decimal point, so it does not group; see "Commas after the decimal point" (T-3598).
 
 Status: VERIFIED (excel-graph)
 Implemented in: formatter/numerals.rs, formatter/locale_tag.rs (`numerals`), formatter/format.rs, formatter/fraction.rs (T-3532)
 
-Tasks: T-1859, T-1613, T-1922, T-1923, T-1924, T-1925, T-2759, T-3532, T-3598, T-3710, T-3711, T-3718
+Tasks: T-1859, T-1613, T-1922, T-1923, T-1924, T-1925, T-2759, T-3532, T-3598, T-3710, T-3711, T-3718, T-3891, T-4107, T-4108
 
 ## Displayed text (`Range.text`) of a formatted cell (T-1610)
 Rule: excel-graph's `Range.text` is the cell's value under its number format, and it does not
@@ -1220,11 +1537,106 @@ denominator kinds over 0, ±0.75, ±1, T-0982):
   `?` integer ("|  3=/=4|", A234) or under a `#` integer before a `?` numerator ("| 3=/=4|", A228), and is dropped
   under a `#` integer otherwise ("|3=/=4|", A225, A231). Literals between integer placeholders always print
   (`|#-#-#\:#/#|` on 0.75 "|--3/4|", A129).
+- **Digit placeholders after the denominator** (T-3711, probes/t3711-fraction-trailing-placeholders, excel-graph): each
+  prints a zero (a space for `?`) and a `.` between them prints, so `# ?/? 0` on 12.5 is "12 1/2 0", `# ?/? #` "12 1/2 0",
+  `# ?/? ?` "12 1/2  ", `# ?/? 00` "12 1/2 00", `# ?/? 0#` "12 1/2 00", `# ?/? 0.0` "12 1/2 0.0" and
+  `# ?/?|0 "12"|\5` "12 1/2|0 12|5". A blank fraction (12, no fractional part) turns everything from the integer's
+  separator up to the last of them into spaces: `# ?/? 0` on 12 is "12" and six spaces, `# ?/?|0 "12"|\5` "12" and
+  seven spaces then "12|5".
+  - **After a fixed denominator** (T-4069; probes/t4069-fixed-denominator-tail A1:A26, t3711-placeholder-after-fraction
+    A13, excel-graph, 2026-11-06): a digit placeholder anywhere after a fixed denominator makes Excel pick the fraction
+    as for placeholders as wide as the denominator, and print the code's own digits cut to the picked denominator's
+    length (padded with spaces under a `?` numerator), as for a fixed denominator past 32768. On 12.5 `# ?/4|0` is
+    "12 1/4|0" (`# ?/4` alone "12 2/4"), `# ?/8|0` "12 1/8|0", `# ?/10|0` and `# ?/16|0` "12 1/1 |0", `?/4|0` "25/4|0",
+    `# ?/4"x"0` "12 1/4x0"; 12.375 `# ?/8|0` is "12 3/8|0", 12.6 `# ?/10|0` "12 3/1 |0". Not modelled (T-4526):
+    `# ?/4|0` on 12.1 is "12 1/4|00" (A4).
+- **A placeholder denominator prints its unused placeholders in place** (T-4204; probes/t3711-fraction-trailing-placeholders
+  rows 5, 9-19 and probes/t4204-fraction-denominator-mixed A1:C14, excel-graph, at 12.5, 0.5, 12.125, 0.123, PI() and 0.3).
+  The whole run bounds the denominator's digits (`# ?/?0` on 0.123 is " 8/65", `# ?/#0` on PI() "3 1/7", `# ?/??0` on
+  0.123 " 23/187"). Leading `#`s never take a digit. When the denominator has fewer digits than the other placeholders,
+  the `0`s are left out first, then the `#`s, then the rightmost `?`s, and each left-out placeholder prints in its place
+  (a `0` a zero, a `?` a space, a `#` nothing):
+  - on 12.5: `# ?/?0` "12 1/20", `# ?/??0` "12 1/2 0", `# ?/?0?` "12 1/20 ", `# ?/?#0` and `# ?/#?0` "12 1/20",
+    `# ?/??#` and `# ?/?#?` "12 1/2 ", `# ?/#0`, `# ?/#?` and `# ?/#?#` "12 1/2", `# ?/0?`, `# ?/0#`, `# ?/0#?` and
+    `# ?/#0#` "12 1/02", `# ?/0??` "12 1/02 ", `# ?/00?` "12 1/002";
+  - on PI() and 0.3: `# ?/?0` "3 1/70" and " 3/10", `# ?/0?` "3 1/07", `# ?/?0?` on 0.3 " 3/100" (the `0` is left
+    out, so the digits 1 and 0 take the two `?`s).
+  Ours: `fill_left` (formatter/fraction.rs). Unprobed: which of several `0`s a short denominator leaves out when it
+  takes some of them (ours: from the left).
 Ours: implemented in formatter/parser.rs (`is_fraction_literal`) and formatter/fraction.rs (T-0982); all 325 cells pass.
-Unprobed engine choices (T-2209): a mixed `0`/`?` denominator puts its zeros left and spaces right; plain spaces or quoted
+Unprobed engine choices (T-2209): plain spaces or quoted
 text around the `/` also make a fraction; a `/` with no denominator after its literals stays a literal.
 Status: VERIFIED (Excel for the web; desktop Mac Excel cached values for the literals between the parts)
-Tasks: T-1611, T-2029, T-2030, T-1740, T-0982, T-2061, T-2072, T-2073, T-2074
+Tasks: T-1611, T-2029, T-2030, T-1740, T-0982, T-2061, T-2072, T-2073, T-2074, T-3711, T-4204
+
+## Placeholders after a fraction
+Rule: digit placeholders after a fraction's denominator get no digit of the value; they print what the denominator hands
+on, by one rule for every fixed denominator (a placeholder denominator follows "A placeholder denominator prints its
+unused placeholders in place" above, which this model does not fit). A `.` among them prints and a `,` prints nothing.
+- **Which fraction.** A fixed denominator is used as written only when it is at most 32768 and no digit placeholder
+  follows it in the section; otherwise Excel picks the fraction as for one past 32768 (see "Fraction formats"): the last
+  convergent with a denominator up to 9999999 (0.0625 is 1/16, 0.3 3/10, 0.123456789 10/81, PI() 3 + 244252/1725033).
+  A literal alone after it changes nothing (`# ?/4"x"` on 0.5 is " 2/4x").
+- **The denominator** of a picked fixed one prints the code's digits C cut to the picked D's length, padded by
+  len(C) - len(D) spaces under a `?` numerator and by nothing otherwise (`# ?/16|0` on 0.5 is " 1/1 |0", `# 0/16|?`
+  "1/1| "). D's digits past the first len(C) print right after it under a `#` or `0` numerator (`# 0/4|0` on 0.3 is
+  "3/40|0") and are *spilled* to the placeholders after it under a `?` one, or dropped when there are none (`?/40000`);
+  a D shorter than C *lacks* that many digits. A placeholder denominator with `?` slots spills and lacks against its
+  slots the same way; any other denominator hands on nothing.
+- **The placeholders after it**, left to right, with the zeros owed and whether a `?` with nothing to print shows a
+  space (at first, and after a `?` that printed something):
+  - a `?` prints the next spilled digit (and owes a zero), else a zero for a lacking digit, else a space if one is due,
+    else a zero (and owes one);
+  - a `0` or `#` prints every spilled digit left, then its own zero and the zeros owed; for a lacking digit instead a
+    `0` prints a zero and a `#` nothing (either way it uses the lacking digit up);
+  - a space is due at first; a `0` or `#` ends that, a `?` that prints a spilled digit or an owed zero starts it again,
+    a `?` that prints a lacking zero leaves it as it was, and a literal after a `?` that printed a space ends it
+    (`# ?/16|?|?` on 0.5 is " 1/1 |0| ", `# ?/100|#|?|?` " 1/1  ||0|0"; t4043-separated-slots A36, A71).
+  A placeholder denominator lacks, against its `?` slots, the digits the picked denominator leaves unfilled, under a `?`
+  numerator; it spills nothing.
+  Examples: `# ?/?|0` on 12.5 is "12 1/2|0", `# ?/? ?` "12 1/2  ", `# ?/?|#,##0` "12 1/2|0000"; `# ?/4|0` on 0.0625
+  " 1/4|60", `# ?/4 ? 0` " 1/4 6 00", `# ?/4 0 0` " 1/4 60 0", `# ?/4|??` on 0.5 " 1/4|  " but `# ?/4|?|?` " 1/4| |0",
+  `# ?/4|#?0#` on 0.5 " 1/4|00000", `# ?/16|#` on 0.5 " 1/1 |", `# ?/100|##` on 0.3 " 3/10 |0", on 0.5 " 1/1  |".
+- **A blank fraction** (a zero numerator, `# ?/?|0` on 12 or on 0) prints as spaces everything after the integer up to
+  the last such placeholder, literals and quoted text included, each placeholder as wide as what it would print with the
+  fraction's denominator (`# ?/?|0 "12"|\5` on 12 is "12       12|5", `# ?/?|0%` on 12.5 "1250      %", `# ?/100|##` on
+  0 "0" and 7 spaces: 1 lacks two digits of `100`, which the two `#` take); what follows prints.
+Evidence (excel-graph 2026-11-04): probes/t4043-separated-slots (24 shapes, each placeholder in a slot
+of its own, under denominators 4, 16 and 100 and six values: 432 cells), t4043-trailing-shapes-holdout (84 cells, shapes
+outside the earlier probes, which shaped the revised model), t4043-frozen-model-holdout (108 cells written after the
+model was frozen: denominators 2-9999, mixed runs split by literals, no integer part, a negative),
+t4043-fixed-denominator-slots, t4043-fixed-denominator-cut,
+t4043-placeholder-denominator-slots, t3711-fixed-denominator-then-placeholder, t3711-placeholders-after-fraction,
+t3532-numeral-digit-fields row 14 (the zeros take the numeral digits). The model matched every cell of those probes in an
+engine that was not merged; its placeholder-denominator part does not fit the mixed denominators of "Fraction formats"
+above (`# ?/#0` on 12.5 is "12 1/2", the model gives "12 1/02"; probes/t4204-fraction-denominator-mixed), so a
+placeholder denominator prints its own text by that entry and hands on only its lacking digits by this one.
+- **A `.` among them** splits them like a number's point (T-4594). Before it the rules above hold, except that the last
+  placeholder before the point, if a `?`, takes every spilled digit left (`# ?/7 ?.0` on 0.0123 is " 123/7 0000.0", not
+  one digit), and zeros are left *pending* for the decimals:
+  - a `?` that prints a space adds one, and a `?` that prints a spilled digit clears them (`# ?/7|??.#|#` on 0.5 is
+    " 1/7|  .0|0": two spaces, two pending zeros; on 0.1 " 1/7|0 .0|": one);
+  - a `0` or `#` leaves one plus one for each placeholder before it, except a `?` that printed a lacking zero or a zero
+    for nothing due (`# ?/7|?0.###` on 0.0123 " 123/7|000000.00", `# ?/3|??0.?0?` on 0.04 " 1/3|5 00.000",
+    `# ?/64|#?#.0##` on 0.07 " 7/64|00000.00", `# ?/100|?0.###` on 0.5 " 1/1  |00.0");
+  - a `?` that then prints a zero for nothing due takes one (`# ?/250|?0?.#0` on 0.0789 " 789/250|00000.00").
+- **After the point** nothing spills and nothing owed is paid. Left to right, each placeholder prints a zero for a lacking
+  digit, leaving the space due as it was. Otherwise it prints, outside a run of blanks, a pending zero (then a space is
+  due). Otherwise, while a space is due, it prints its *blank*: a space for `?`, nothing for `#`, a zero for `0`; the
+  blank leaves one more zero pending and the space stays due. Otherwise it prints a zero (then a space is due). A blank
+  ends the space due, and its run, before a literal or a placeholder of another kind. Examples after a spilled digit
+  (`# ?/7|?.`… on 0.0123, " 123/7|0000." then): `#` prints "", `##` "", `#?` "0", `?#` " 0", `0#` "00", `#0` "0",
+  `#|#` "|0", `##0?` (on 0.55 under `?/128`) "00"; after a `0`: `0.#` "0", `0.0#` "0", `0.#?` "0 ", `0.##0` "00".
+Evidence (excel-graph 2026-11-06): probes/t4594-fraction-tail-point-explore (320 cells) and
+t4594-fraction-tail-point-explore-wide (648 cells, every three-wide decimal shape after `0`, `?0`, `?` and `??`), which
+the model was fitted to with t4515-fresh-sweep rows 1-8 and t4515-fraction-tail-holdout row 6; then five hold-outs, each
+written and predicted (docs/research/t4594) before it was filled: t4594-fraction-tail-point-holdout 192/210,
+-holdout-2 199/252, -holdout-3 271/280, -holdout-4 332/336, each miss refitted, and -holdout-5 392/392 (random integer
+shapes up to 3 wide, decimal shapes up to 4 wide, literals among them, codes 256, 4, 5000 and 75).
+Ours: matches (T-4515, T-4594): `picked_denominator` and `trailing_digits` in formatter/fraction.rs, which pick a fixed
+denominator followed by placeholders up to 9999999, as for one past 32768. Every cell of the probes above passes.
+Not covered: a tail whose integer side has no placeholder (`?/7|.0`), and a second `.`.
+Status: VERIFIED (excel-graph). Tasks: T-3711, T-4507, T-4515, T-4594
 
 ## Fill characters (`*x`) add nothing to the text
 A `*x` fill (repeat) character contributes nothing to the displayed text or to TEXT(): `TEXT(7,"0*""a")` is "7a",
@@ -1238,3 +1650,12 @@ Status: VERIFIED (excel-graph); implemented (T-1735, T-2480).
   code on zero prints every integer placeholder of the mantissa as `0`, `#` included (`##0.0E+0` → "000.0E+0",
   `##0.00E+00` → "000.00E+00", `#E+0` → "0E+0"). A carry out of the mantissa renormalises (`0.0E+00` on 99.5 is
   "1.0E+02"; already correct, pinned by test). "-x1E+15" is the General sign rule (T-2097, T-2850); no gen-m10 scientific cell with an empty text remains. Still open: `#E+0` ties. UNVERIFIED: grouped (`#,##0.0E+0`) and `?` (`??0.0E+0`) codes on zero.
+
+## A number section's currency tag prints where it is written (T-4108)
+
+Rule: a `[$<symbol>]` or `[$<symbol>-<locale>]` tag in a number section prints at its own position, after any
+literal before it and before any digit placeholder after it. It is not moved to the front. `([$$-409]#,##0.00)`
+on 12 is "($12.00)" (-12 "-($12.00)"), `"x"[$€-40C]0` "x€12", `([$$]0)` and `(\$0)` "($12)", `0[$€]` "12€",
+`#,##0[$€-40C]` "12€", `0.0[$€-40C]0` "12.0€0", `"a"[$€]0"b"` "a€12b", `[$€]0%` "€1200%", `[$€]0E+0` "€1E+1",
+`0;([$$-409]#,##0.00)` on -12 "($12.00)". A fraction section is not covered (it keeps its symbol in front,
+see "Currency and leading literals" below). Evidence: probes/t4108-currency-tag-position (excel-graph, 2026-11-05).

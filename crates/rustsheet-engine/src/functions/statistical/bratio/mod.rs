@@ -16,11 +16,15 @@ pub(super) mod ln_beta;
 
 use super::incomplete_beta::{beta_reg_tails, closed_form_tails, half_half_cdf, search_tails};
 use crate::arithmetic::extended_sum;
+use crate::x87_exp::dd_add;
 use basym::basym;
 use bfrac::bfrac;
-use bgrat::bgrat_half;
+use bgrat::{bgrat_half, bgrat_increment};
 use bpser::bpser;
-use bup::{bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, BupSum};
+use bup::{
+    bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, l140_bup_prefactor_underflows,
+    l140_bup_sum_flushed, l140_bup_sum_overflows, BupSum,
+};
 
 /// TOMS 708's `eps` in `bratio`: max(2^-52, 1e-15).
 pub(super) const EPS: f64 = 1e-15;
@@ -159,6 +163,17 @@ pub(crate) fn dispatch(a: f64, b: f64, x: f64, y: f64) -> Option<Dispatch> {
     })
 }
 
+/// Whether Excel's incomplete beta K(a, b, x, y) is `#NUM!` because bratio's L140 bup sum overflows
+/// ([`bup::l140_bup_sum_overflows`]): a huge shape beside one below 40, as in
+/// `NEGBINOM.DIST(28,1E+13,0.323212154487823,TRUE)` and `BETA.DIST(0.323212154487823,1E+13,29,TRUE)`
+/// (T-3576). Only BETA.DIST's and NEGBINOM.DIST's cdfs are probed there and ask it.
+pub(crate) fn l140_overflows(a: f64, b: f64, x: f64, y: f64) -> bool {
+    dispatch(a, b, x, y).is_some_and(|d| {
+        matches!(d.branch, Branch::L140BupBpser | Branch::L140BupBgrat)
+            && l140_bup_sum_overflows(d.a0, d.b0, d.x0, d.y0)
+    })
+}
+
 /// bratio's branch for min(a, b) <= 1 on the oriented point (x0 <= 0.5).
 fn small_shape_branch(a0: f64, b0: f64, x0: f64) -> Branch {
     if b0 < EPS.min(EPS * a0) {
@@ -194,7 +209,8 @@ fn small_shape_branch(a0: f64, b0: f64, x0: f64) -> Branch {
 }
 
 /// BETA.DIST's cdf, w of K(a, b, x, y) with y = fl(1 - x) formed by the caller (SPEC-0025's caller
-/// table): [`kernel_tails`]'s w, plus bratio's bgrat branches at a0 = 1/2 (T-2509's `bgrat_half`),
+/// table): [`kernel_tails`]'s w, plus bratio's bgrat branches at a0 = 1/2 (T-2509's `bgrat_half`)
+/// and bup + bgrat at any other a0 < 1 (T-3665),
 /// and Excel's arcsine form at a = b = 1/2 (`incomplete_beta::half_half_cdf`, T-3192).
 /// Those are a net visible gain for BETA.DIST (T-2510: 30 fewer visibly-off cells, none more), not
 /// for F (see [`t_kernel_tails`]), so F's callers (`fisher.rs`) keep [`kernel_tails`].
@@ -204,6 +220,27 @@ pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
         return half_half_cdf(x, y);
     }
     kernel_tails_with(x, y, a, b, true).0
+}
+
+/// BETA.DIST's worksheet cdf: [`beta_dist_lower_tail`], and Excel's exact 0 where L140 bup+bgrat's
+/// prefactor underflows ([`l140_zero_tails`], T-4045's rule). Column A of probes-numeric
+/// t3568-r5-bup-tune, -hold and -fresh has 47 Excel zeros where the true tail is up to 2E-257
+/// (`BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)`, t3568-r5-bup-fresh A291): the rule gives all 47
+/// (28 before), zeroes none of the column's Excel numbers, and gives the 44 zeros of
+/// probes/t4254-beta-t-l140-zero-cut below `ln(DBL_MIN)` (T-3764). The quantile searches keep
+/// [`beta_dist_lower_tail`]: with the 0 under F.INV's search
+/// `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) leaves Gate A's envelope.
+/// At n >= 3 bup terms it is also 0 where bup's sum W is below 2^-970 ([`l140_bup_sum_flushed`],
+/// T-4437).
+pub(crate) fn beta_dist_cdf(x: f64, y: f64, a: f64, b: f64) -> f64 {
+    l140_zero_tails(a, b, x, y, beta_dist_l140_zero)
+        .map_or_else(|| beta_dist_lower_tail(x, y, a, b), |t| t.0)
+}
+
+/// BETA.DIST's worksheet cdf is Excel's exact 0 on L140 bup+bgrat where bup's prefactor underflows
+/// (T-4045) or, at n >= 3 bup terms, where bup's sum is below 2^-970 (T-4437).
+fn beta_dist_l140_zero(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
+    l140_bup_prefactor_underflows(a0, b0, x0, y0) || l140_bup_sum_flushed(a0, b0, x0, y0)
 }
 
 /// (w, w1) of BETA.DIST's kernel ([`beta_dist_lower_tail`]) where it is closed or ported, the tails
@@ -219,6 +256,9 @@ pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
 /// (T-3867 owns the search there). On L140 bup+bpser the search crosses bup's recurrence, not the
 /// power sum BETA.DIST takes (T-3198): the power sum moves gated H32 (`BETA.INV` at shapes 5 and 5,
 /// 0.555) to 0.5550000000000002.
+///
+/// Branches that are not ported fall back to the bounded Cephes `search_tails`; bup + bgrat at
+/// a0 < 1 is ported (T-3665), so the search runs it too.
 pub(crate) fn beta_search_tails(x: f64, y: f64, a: f64, b: f64) -> (f64, f64) {
     let ported = || {
         let many_terms = dispatch(a, b, x, y)
@@ -267,7 +307,28 @@ pub(crate) fn closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(
 /// incomplete-beta arguments keep r >= 1"). T-2510 kept F off bgrat because of the arguments it
 /// was handed, not the kernel.
 pub(crate) fn f_closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
-    closed_or_ported_with(x, y, a, b, true)
+    l140_zero_tails(a, b, x, y, l140_bup_prefactor_underflows)
+        .or_else(|| closed_or_ported_with(x, y, a, b, true))
+}
+
+/// The tails (lower, upper) of K(a, b, x, y) where L140 bup+bgrat's w is Excel's exact 0 by `zero`,
+/// read at bratio's own (a0, b0, x0, y0): w is 0 and its complement 1, oriented back through
+/// bratio's swap. F's tails take bup's prefactor underflow
+/// ([`bup::l140_bup_prefactor_underflows`], T-4045); BETA.DIST's worksheet cdf
+/// ([`beta_dist_cdf`]) takes [`beta_dist_l140_zero`]; the quantile searches take neither.
+fn l140_zero_tails(
+    a: f64,
+    b: f64,
+    x: f64,
+    y: f64,
+    zero: fn(f64, f64, f64, f64) -> bool,
+) -> Option<(f64, f64)> {
+    let d = dispatch(a, b, x, y)?;
+    (d.branch == Branch::L140BupBgrat && zero(d.a0, d.b0, d.x0, d.y0)).then_some(if d.swapped {
+        (1.0, 0.0)
+    } else {
+        (0.0, 1.0)
+    })
 }
 
 /// (w, w1) of K(a, b, x, y) on the branches ported so far, `None` elsewhere. bratio computes one
@@ -288,8 +349,10 @@ pub(super) fn t_kernel_tails(a: f64, y: f64, z: f64) -> Option<(f64, f64)> {
     ported_tails_with(a, 0.5, y, z, true, BupSum::Powers)
 }
 
-/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2 and L140 bup+bgrat (BETA.DIST's, the
-/// Student t's and F's callers) when `half_bgrat`, and L140 bup+bpser's sum formed as `bup_sum` says.
+/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2, bup + bgrat at other a0 < 1
+/// (BETA.DIST's cdf, F's tails and BETA.INV's search, T-3665) and L140 bup+bgrat (BETA.DIST's,
+/// the Student t's and F's callers) when `half_bgrat`, and L140 bup+bpser's sum formed as
+/// `bup_sum` says.
 fn ported_tails_with(
     a: f64,
     b: f64,
@@ -320,6 +383,14 @@ fn ported_tails_with(
         Branch::BupBgrat if half_bgrat && d.a0 == 0.5 => {
             let up = bup(d.b0, d.a0, d.y0, d.x0, BUP_BGRAT_TERMS)?;
             let w1 = bgrat_half(d.b0 + BUP_BGRAT_TERMS, d.y0, d.x0, up)?;
+            (other(w1), w1)
+        }
+        // Any other a0 < 1: the 20 bup terms plus the accurate bgrat increment (T-3665). Excel is
+        // within 1.7 ulp of the math there, the kernel this replaces 4 to 6 ulp off.
+        Branch::BupBgrat if half_bgrat => {
+            let up = bup(d.b0, d.a0, d.y0, d.x0, BUP_BGRAT_TERMS)?;
+            let increment = bgrat_increment(d.b0 + BUP_BGRAT_TERMS, d.a0, d.y0, d.x0)?;
+            let w1 = dd_add((up, 0.0), increment).0;
             (other(w1), w1)
         }
         // n bup terms, 1 < b0 < 40 (T-3382, T-3561); BETA.DIST's callers only, as at b = 1/2.

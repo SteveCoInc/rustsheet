@@ -25,6 +25,8 @@ fn linked() -> Model {
         name: name.to_string(),
         formula: formula.to_string(),
         sheet_id,
+        hidden: false,
+        comment: None,
     };
     model.workbook.external_books.push(ExternalBook {
         sheet_names: vec!["Uses".to_string(), "Defines".to_string()],
@@ -297,6 +299,8 @@ fn cached_ranges_fixture() -> Model {
             name: "NR_Range".to_string(),
             formula: "='Uses'!$A$1:$B$3".to_string(),
             sheet_id: None,
+            hidden: false,
+            comment: None,
         }],
         cells,
         refresh_error_sheets: Vec::new(),
@@ -547,11 +551,14 @@ fn span_of_cached_sheets_aggregates_over_them() {
 #[test]
 fn span_of_cached_sheets_round_trips() {
     let mut model = cached_span_fixture();
+    // Printed bare, as the fixture holds it and as a span of this workbook is (T-4140); the quoted
+    // spelling reads the same.
     model._set("C1", "=SUM([1]Uses:Defines!$A$1:$B$2)");
-    assert_eq!(
-        model._get_formula("C1"),
-        "=SUM('[1]Uses:Defines'!$A$1:$B$2)"
-    );
+    assert_eq!(model._get_formula("C1"), "=SUM([1]Uses:Defines!$A$1:$B$2)");
+    model._set("C1", "=SUM('[1]Uses:Defines'!$A$1:$B$2)");
+    assert_eq!(model._get_formula("C1"), "=SUM([1]Uses:Defines!$A$1:$B$2)");
+    model.evaluate();
+    assert_eq!(model._get_text("C1"), "157");
 }
 
 // A span over many cached sheets walks the cache once, not once per sheet (CLAUDE.md
@@ -765,4 +772,22 @@ fn whole_column_lookups_share_the_cached_vector() {
     assert_eq!(model._get_text("C5"), "#N/A");
     assert_eq!(model._get_text("C6"), "#N/A");
     assert_eq!(model._get_text("C7"), "1");
+}
+
+// Each cached sheet has its own extent, a sheet without cells is uncached, and a changed cache is
+// read afresh on the next evaluation (T-0473).
+#[test]
+fn cached_extents_are_per_sheet_and_follow_the_cache() {
+    let mut model = linked();
+    assert_eq!(eval(&mut model, "=COUNTA([1]Uses!$A:$A)"), "3");
+    assert_eq!(eval(&mut model, "=SUM([1]Defines!$B:$B)"), "142");
+    model.workbook.external_books[0]
+        .sheet_names
+        .push("Empty".into());
+    assert_eq!(eval(&mut model, "=SUM([1]Empty!$B$2)"), "#BLOCKED!");
+    model.workbook.external_books[0]
+        .cells
+        .insert((1, 5, 2), SpillValue::Number(8.0));
+    model.set_user_input(0, 1, 1, "x".into()).unwrap();
+    assert_eq!(eval(&mut model, "=SUM([1]Defines!$B:$B)"), "150");
 }

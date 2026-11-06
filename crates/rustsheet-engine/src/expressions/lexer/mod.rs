@@ -92,8 +92,12 @@ pub(super) type Result<T> = std::result::Result<T, LexerError>;
 /// The one exception is a bare "R"/"C" immediately followed by '[': that is a
 /// malformed R1C1 reference (e.g. `R[`), not an identifier, so it is rejected.
 /// Genuine R1C1 references (`R[n]C[n]`, `RnCn`) are consumed before this fallback.
+///
+/// A name spelled like an A1 cell (`F1`, `A1`) is no reference here and is accepted in any case,
+/// as Excel takes `LET(F1,5,F1+1)` typed in R1C1 mode (probes/t3897-r1c1-let-cell-names A11,
+/// T-3897); lower case (`f1`) always passed.
 fn is_valid_r1c1_identifier(name: &str, next_char: Option<char>) -> bool {
-    if !utils::is_valid_a1_identifier(name) {
+    if !utils::is_name_text(name) {
         return false;
     }
     // `is_valid_identifier` also refuses the R1C1-shaped names ("R", "C", "RC", "R1C1D").
@@ -422,7 +426,7 @@ impl Lexer {
                         }
                     }
                     _ => {
-                        if char.is_alphabetic()
+                        if utils::is_letter_name_start(char)
                             || char == '_'
                             || char == '\\'
                             || utils::is_typographic_quote(char)
@@ -470,6 +474,15 @@ impl Lexer {
                                 return TokenType::Ident(name);
                             }
                             if self.mode == LexerMode::A1 {
+                                // `A1. B2`, `A1.. B2`: the identifier stops at the whitespace
+                                // after the dots, but to Excel this is the range `A1:B2`, as
+                                // `A1 . B2` is (probes/t4271-lotus-dot-one-side-space-after,
+                                // -space-after-dotdot, excel-graph, T-4271).
+                                if let Some(range) =
+                                    self.dotted_range_after_cell_name(&name_upper, position - 1)
+                                {
+                                    return range;
+                                }
                                 let parsed_reference = utils::parse_reference_a1(&name_upper);
                                 if parsed_reference.is_some()
                                     || (utils::is_valid_column(name_upper.trim_start_matches('$'))
@@ -702,6 +715,7 @@ impl Lexer {
     /// Whether `c` may continue a name.
     fn is_name_char(&self, c: char) -> bool {
         c.is_alphanumeric()
+            || (!c.is_ascii() && utils::is_mark(c))
             || c == '_'
             || c == '.'
             || (c == '\\' && self.backslash_in_names())

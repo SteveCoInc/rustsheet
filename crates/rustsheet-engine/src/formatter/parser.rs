@@ -25,8 +25,10 @@ pub enum TextToken {
     // Dates
     Day,
     DayPadded,
-    DayNameShort,
-    DayName,
+    /// `ddd`; `true` when written `aaa`
+    DayNameShort(bool),
+    /// `dddd`; `true` when written `aaaa`
+    DayName(bool),
     Month,
     MonthPadded,
     MonthNameShort,
@@ -115,6 +117,10 @@ pub struct DatePart {
     pub b2_overridden: bool,
     /// The names from the section's first `mmm` on (`Localized::names_after_mmm`).
     pub names_after_mmm: Option<&'static DateNames>,
+    /// Whether the calendar's months go by Gregorian number (`Localized::months_by_number`).
+    pub months_by_number: bool,
+    /// A Hebrew leap year's month names (`Localized::leap_months`).
+    pub leap_months: Option<&'static [&'static str; 13]>,
     /// The digits of the section's locale tag (`locale_tag::numerals`).
     pub numerals: Numerals,
 }
@@ -309,6 +315,7 @@ impl Parser {
         // comma right after one): a `,` there is a literal or a fraction's scaling comma.
         let mut after_percent = false;
         let mut after_denominator = false;
+        let mut after_comma = false;
         // Just past the last digit placeholder while only literals follow it, which may stand
         // between a numerator and its `/` (`#\:#=/=#`, poi/NumberFormatTests A134).
         let mut after_digits: Option<usize> = None;
@@ -326,6 +333,8 @@ impl Parser {
         let mut is_time = false;
         // Excel: after a minute, later `m`/`mm` are months (number-formats.md "`mm` after a minute").
         let mut minute_read = false;
+        // An `[m]` was seen: every later `m`/`mm` is a month, even one before seconds.
+        let mut elapsed_minute_seen = false;
         let mut hijri = false;
         let mut calendar_prefix = false;
         // Whether the previous token is an unescaped colon, which the next one joins.
@@ -389,6 +398,42 @@ impl Parser {
                         comma += 1;
                     } else if after_percent || (fraction.is_some() && !last_token_is_digit) {
                         tokens.push(TextToken::Literal(','));
+                    } else if last_token_is_digit
+                        && next_token_is_digit
+                        && is_scientific
+                        && !found_decimal_dot
+                    {
+                        // Excel: a `,` between exponent placeholders is #VALUE! when the mantissa
+                        // has no decimal point (`0E+0,0`, `0E+00,0`), and ignored when it has one
+                        // (`0.00E+0,0` is "1.23E+06"; probes/t4062-comma-in-exponent A1, A2, A16;
+                        // number-formats.md "Commas in scientific formats").
+                        return ParsePart::Error(ErrorPart::default());
+                    } else if found_decimal_dot
+                        && matches!(tokens.last(), Some(TextToken::Period | TextToken::Digit(_)))
+                        && (next_token_is_digit
+                            || (!matches!(next_token, Token::Separator | Token::EOF)
+                                && self
+                                    .lexer
+                                    .peek_token_past(|t| !t.is_digit() && *t != Token::Separator)
+                                    .is_digit()))
+                    {
+                        // Excel: number-formats.md "Commas after the decimal point": a `,` after a
+                        // placeholder or the point, with a placeholder anywhere after it, is inert
+                        // (`0.0,,0` and `0.00,|0` on 1234567.89 are "1234567.89", "1234567.89|1";
+                        // t3598-decimal-part-commas A24, t4515-fraction-tail-holdout A20).
+                    } else if found_decimal_dot
+                        && !is_scientific
+                        && !matches!(tokens.last(), Some(TextToken::Digit(_) | TextToken::Period))
+                    {
+                        // After a decimal-part literal a `,` run prints one `,` (`0.0|,,0` is
+                        // "1234567.8|,9", `0.0|,` "1234567.9|,"; t4515-fraction-tail-holdout A18,
+                        // t3666-review-followups A11).
+                        if !after_comma {
+                            tokens.push(TextToken::Literal(','));
+                        }
+                    } else if fraction.is_some() && last_token_is_digit && next_token_is_digit {
+                        // After a fraction a `,` between placeholders does not group (`# ?/?|#,##0`
+                        // on 1234567.89 is "1234567 8/9|0000"; t3598-decimal-part-commas A23).
                     } else if last_token_is_digit && next_token_is_digit {
                         use_thousands = true;
                     } else if digit_count > 0 {
@@ -578,13 +623,13 @@ impl Parser {
                     is_date = true;
                     tokens.push(TextToken::DayPadded);
                 }
-                Token::DayNameShort => {
+                Token::DayNameShort | Token::WeekdayShort => {
                     is_date = true;
-                    tokens.push(TextToken::DayNameShort);
+                    tokens.push(TextToken::DayNameShort(token == Token::WeekdayShort));
                 }
-                Token::DayName => {
+                Token::DayName | Token::WeekdayFull => {
                     is_date = true;
-                    tokens.push(TextToken::DayName);
+                    tokens.push(TextToken::DayName(token == Token::WeekdayFull));
                 }
                 Token::MonthNameShort => {
                     is_date = true;
@@ -597,8 +642,8 @@ impl Parser {
                 Token::Month | Token::MonthPadded => {
                     // A `mm.0` minute leaves `minute_read` ("mm.0 h:mm" is "57.7 2:57"; t3575-b A30).
                     let fraction = self.minute_before_fraction(&next_token);
-                    let clock =
-                        (is_time && !minute_read) || self.minute_before_seconds(&next_token);
+                    let clock = !elapsed_minute_seen
+                        && ((is_time && !minute_read) || self.minute_before_seconds(&next_token));
                     let minute = clock || fraction;
                     minute_read |= clock;
                     is_date |= !minute || fraction;
@@ -656,6 +701,10 @@ impl Parser {
                 Token::Hour => {
                     is_date = true;
                     is_time = true;
+                    // Excel: an hour token makes the next `m`/`mm` a minute again, even after a
+                    // minute (`h:mm|h:mm` of 45000.5432 is "13:02|13:02"; probes/t3710-ampm-hour-tokens
+                    // B3, B14; number-formats.md "`mm` after a minute is a month").
+                    minute_read = false;
                     tokens.push(if elapsed_hour {
                         TextToken::ElapsedHour
                     } else {
@@ -665,6 +714,7 @@ impl Parser {
                 Token::HourPadded => {
                     is_date = true;
                     is_time = true;
+                    minute_read = false;
                     tokens.push(if elapsed_hour {
                         TextToken::ElapsedHourPadded
                     } else {
@@ -747,6 +797,9 @@ impl Parser {
                     is_date = true;
                     bracketed_elapsed += 1;
                     is_time = true;
+                    // Excel: an `m` after `[m]` is a month, not a clock minute
+                    // (`[m] m` is "102 1"; probes/t2135-fractional-second-edges-1900 A34, T-2135).
+                    elapsed_minute_seen = true;
                     tokens.push(TextToken::ElapsedMinute);
                 }
                 Token::ElapsedSecond => {
@@ -767,6 +820,9 @@ impl Parser {
                     is_date = true;
                     bracketed_elapsed += 1;
                     is_time = true;
+                    // Excel: an `m` after `[m]` is a month, not a clock minute
+                    // (`[m] m` is "102 1"; probes/t2135-fractional-second-edges-1900 A34, T-2135).
+                    elapsed_minute_seen = true;
                     tokens.push(TextToken::ElapsedMinutePadded);
                 }
                 Token::ElapsedSecondPadded => {
@@ -784,6 +840,7 @@ impl Parser {
             }
             last_token_is_digit = token_is_digit;
             after_percent = is_percent;
+            after_comma = is_comma;
             after_denominator = ends_denominator || (after_denominator && is_comma);
             after_colon = is_colon;
             token = next_token;
@@ -796,6 +853,7 @@ impl Parser {
         if bare_digit && tokens.iter().any(is_calendar_or_clock) {
             return ParsePart::Error(ErrorPart { whole_code: true });
         }
+        super::elapsed::move_elapsed_second(&mut tokens);
         // Excel: a section with two bracketed elapsed tokens is #VALUE! for any value (`[h]:[mm]`,
         // `[mm]:[ss]`; probes/negative-date-sections-1900 and -1904 A9, A21, A22; dates.md "Negative
         // serials under an explicit negative section"). A bare `h` after `[h]` is not bracketed.
@@ -837,6 +895,11 @@ impl Parser {
             // Excel: `%` beside `General` prints, no scaling (probes/text-format-general-company A3).
             percent = 0;
         }
+        // `E+` or `E-` with no digit after it is invalid: `TEXT(1.5,"0E+")` and `0.0E-"x"` are
+        // #VALUE! (probes/text-scientific-edges, excel-graph 2026-11-05, T-2230).
+        if is_scientific && exponent_digit_count == 0 {
+            return ParsePart::Error(ErrorPart::default());
+        }
         if is_date {
             if is_number {
                 return ParsePart::Error(ErrorPart::default());
@@ -859,9 +922,21 @@ impl Parser {
                 hijri,
                 b2_overridden,
                 names_after_mmm: localized.and_then(|l| l.names_after_mmm),
+                months_by_number: localized.is_some_and(|l| l.months_by_number),
+                leap_months: localized.and_then(|l| l.leap_months),
                 numerals,
             })
         } else {
+            // Excel prints a number section's currency symbol where it is written, after any literal
+            // before it (`([$$-409]#,##0.00)` on 12 is "($12.00)", `0[$€]` "12€", `"x"[$€-40C]0`
+            // "x€12"; probes/t4108-currency-tag-position, excel-graph, T-4108). A fraction keeps its
+            // symbol in front: its token indices are positions into `tokens`.
+            if fraction.is_none() {
+                for (position, symbol) in currency_positions.into_iter().rev() {
+                    tokens.insert(position, TextToken::Literal(symbol));
+                }
+                currency = None;
+            }
             ParsePart::Number(NumberPart {
                 color,
                 condition,

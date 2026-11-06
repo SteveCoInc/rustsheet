@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "de2e7fc6ba831cfc2931c4e713470547ad8024485fd81169c9869465564d77d7",
+  "definitions": {
+   "GEOMEAN": "8061eaadc95c994e"
+  },
+  "arguments_sha256": "6aac374c0a0f355ccb47397e60f0b67a138f457cf4c2e34b6561c4381f4efb9a"
+ },
+ "sheets": {
+  "Sheet1": {
+   "H28": {
+    "t": "n",
+    "v": "5.9160797830996160425673282915616170484155012307943",
+    "f": "=GEOMEAN(5,7)"
+   }
+  }
+ }
+}

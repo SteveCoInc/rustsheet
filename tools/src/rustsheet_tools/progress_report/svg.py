@@ -41,6 +41,7 @@ MAGENTA = ("#d55181", "#d55181")
 RED = ("#e34948", "#e66767")
 DEEP_RED = ("#e34948", "#d03f3f")
 SLATE = ("#4b5563", "#9ca3af")
+TEAL = ("#0e8a9a", "#22a6b8")
 # (light, dark) ink for a value label drawn inside a segment: black in both themes, white in the
 # light theme only, or white in the dark theme only.
 BLACK = ("#000000", "#000000")
@@ -48,10 +49,10 @@ WHITE_LIGHT = ("#ffffff", "#000000")
 WHITE_DARK = ("#000000", "#ffffff")
 
 # The buckets of model.BUCKETS. Each ink pair clears 4.5:1 (WCAG) on its fill in that theme; the
-# worst is black on light blue, 4.76:1.
+# worst is black on light blue, 4.76:1 (black on light teal, `r3_math`, is 5.1:1).
 BUCKET_PALETTE = Palette(
-    dict(zip(BUCKETS, (BLUE, AQUA, YELLOW, VIOLET, RED, SLATE), strict=True)),
-    dict(zip(BUCKETS, (BLACK, BLACK, BLACK, WHITE_LIGHT, BLACK, WHITE_LIGHT), strict=True)),
+    dict(zip(BUCKETS, (BLUE, AQUA, YELLOW, VIOLET, MAGENTA, TEAL, RED, SLATE), strict=True)),
+    dict(zip(BUCKETS, (BLACK, BLACK, BLACK, WHITE_LIGHT, BLACK, BLACK, BLACK, WHITE_LIGHT), strict=True)),
 )
 # The tiers of model.TIERS: validated as a six-hue categorical palette (light: worst adjacent CVD
 # Delta E 15.3, normal-vision 20.8; dark: CVD 10.0), with unscored in the neutral slate of "no

@@ -31,3 +31,7 @@ build-backend = "maturin"
 features = ["pyo3/extension-module"]
 python-source = "python"
 module-name = "rustsheet._rustsheet"
+[tool.pytest.ini_options]
+# The legacy-API tests import the deprecated module on purpose (SPEC-0026, T-2898);
+# test_io.py asserts the warning itself with pytest.warns, which ignores this filter.
+filterwarnings = ["ignore:rustsheet.legacy:DeprecationWarning"]

@@ -250,7 +250,7 @@ def test_functions_come_from_the_catalog_with_the_reports_tiers() -> None:
 def test_tier_table() -> None:
     text = parity.tier_table(data())
     assert "| Exact | every cell bit-exact | 1 | 16.67% | 0 |" in text
-    assert "| &lt; 99% | &lt; 99% of cells within 15 digits | 1 | 16.67% | 1 |" in text
+    assert "| &lt; 99% | &lt; 99% of cells not visibly off | 1 | 16.67% | 1 |" in text
     assert "| Unscored | no scored Excel cell | 1 | 16.67% | 1 |" in text
     assert "| **All** |  | **6** |  | 2 |" in text
     summary = parity.tier_summary(data())
@@ -276,6 +276,10 @@ def test_attributed_cells_by_closeness() -> None:
     assert (cells["visible_numeric"], cells["visible_other"]) == (1, 1)
     assert "| Visibly off: number | 1 | 0.05% |" in parity.closeness_table(p)
     assert parity.closeness_summary(p).startswith("**2,086** attributed Excel cells")
+    # Decision 0310: a report from before `r3_math` shows none, on its own line and in the sentence.
+    assert cells["r3_math"] == 0
+    assert "| Math over Excel by design (decision 0188 R3) | 0 | 0.00% |" in parity.closeness_table(p)
+    assert "0 math over Excel by design (decision 0188 R3)" in parity.closeness_summary(p)
 
 
 def test_phase1_lines_come_from_v15_checkpoint() -> None:

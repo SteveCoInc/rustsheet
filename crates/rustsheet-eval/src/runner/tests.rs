@@ -1,5 +1,7 @@
+use super::scoring::graph_hides_subnormal;
 use super::*;
 use crate::case::ORACLE_FORMAT;
+use crate::engine::Evaluated;
 use crate::suite::{oracle_sidecar, SuiteManifest};
 
 /// Engine whose behaviour is chosen by the spec's `description` ("panic", "error", else ok).
@@ -28,7 +30,12 @@ impl Engine for Scripted {
         _: Option<&str>,
     ) -> Result<Box<dyn Evaluated>, String> {
         match spec.description.as_str() {
-            "panic" => panic!("boom"),
+            // `resume_unwind` unwinds like `panic!` but skips the panic hook. The test harness keeps
+            // the default hook, which captures a backtrace under `RUST_BACKTRACE=1` before the
+            // unwind reaches `catch_unwind`; on a loaded machine that took longer than the case
+            // limit and the case read `Timeout` (T-3713). The CLI installs a silent hook before it
+            // runs cases (`execute`, `cmd_accuracy`), so the hook is skipped there as well.
+            "panic" => std::panic::resume_unwind(Box::new("boom")),
             "error" => Err("cannot materialize".into()),
             _ => Ok(Box::new(NoValues)),
         }

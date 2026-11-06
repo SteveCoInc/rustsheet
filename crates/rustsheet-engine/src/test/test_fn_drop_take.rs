@@ -451,3 +451,39 @@ fn take_drop_of_a_variable_bound_to_one_cell() {
     assert_eq!(model._get_text("B8"), "64");
     assert_eq!(model._get_text("B9"), "64");
 }
+
+/// An IF, CHOOSE, IFS or SWITCH that picks a one-cell reference hands TAKE and DROP that
+/// reference, so the result is a reference, not a 1x1 array
+/// (probes/t4469-take-drop-if-one-cell-reference, probes/t4448-lone-blank-reshapers B9; T-4469).
+#[test]
+fn take_drop_of_a_picker_of_one_cell_keep_the_reference() {
+    let mut model = new_empty_model();
+    model._set("Y1", "5");
+    model._set("Y2", "t");
+    model._set("B1", "=TYPE(TAKE(IF(TRUE,Z1),1))");
+    model._set("B2", "=TYPE(DROP(IF(TRUE,Z1),0))");
+    model._set("B3", "=ISREF(TAKE(IF(TRUE,Y1),1))");
+    model._set("B4", "=TYPE(TAKE(IF(TRUE,IF(TRUE,Z1)),1))");
+    model._set("B5", "=ISREF(TAKE(IFS(TRUE,Z1),1))");
+    model._set("B6", "=ISREF(TAKE(SWITCH(1,1,Z1),1))");
+    model._set("B7", "=TYPE(DROP(IF(TRUE,Y2),0,0))");
+    model._set("B8", "=TAKE(IF(FALSE,0,Y1),1)&\"x\"");
+    model._set("B9", "=ISBLANK(INDEX(TAKE(IF(TRUE,Z1),1),1,1))");
+    model._set("B10", "=TYPE(TAKE(IF(TRUE,5),1))");
+    model._set("B11", "=ISREF(TRIMRANGE(SWITCH(1,1,Y2)))");
+    model._set("B12", "=TYPE(TRIMRANGE(IF(TRUE,Y1)))");
+    model.evaluate();
+    assert_eq!(model._get_text("B1"), "1");
+    assert_eq!(model._get_text("B2"), "1");
+    assert_eq!(model._get_text("B3"), "TRUE");
+    assert_eq!(model._get_text("B4"), "1");
+    assert_eq!(model._get_text("B5"), "TRUE");
+    assert_eq!(model._get_text("B6"), "TRUE");
+    assert_eq!(model._get_text("B7"), "2");
+    assert_eq!(model._get_text("B8"), "5x");
+    assert_eq!(model._get_text("B9"), "TRUE");
+    // A picked value is still a 1x1 array.
+    assert_eq!(model._get_text("B10"), "64");
+    assert_eq!(model._get_text("B11"), "TRUE");
+    assert_eq!(model._get_text("B12"), "1");
+}

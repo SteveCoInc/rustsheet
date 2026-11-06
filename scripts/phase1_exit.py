@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One verdict per Phase 1 exit criterion of docs/milestones.md (decision 0187).
 
-  scripts/phase1_exit.py [--report PATH] [--tasks DIR] [--catalog DIR] [--json]
+  scripts/phase1_exit.py [--report PATH] [--tasks DIR] [--catalog DIR] [--accuracy PATH] [--json]
 
 Reads `eval/runs/latest/report.json` (written by `make eval`) and the task tree, and prints one
 line per criterion, `met`, `not met` or `manual`, with the numbers behind it, then an overall
@@ -9,6 +9,9 @@ line. The criteria and their measures are decision 0187's:
 - `run`: the run skipped no suite and was not dirty (otherwise nothing below can be trusted);
 - `catalog`: eval/catalog/excel-functions.tsv and functions.yaml name the same functions, each
   with a parity scope (T-0040);
+- `gate A`: Gate A holds (decision 0188 R1(a), SPEC-0029 "Gate A holds"), from the accuracy check's
+  JSON (`holds`), which `make eval` writes (decision 0268); `n/a` when the JSON is absent or older than
+  the report;
 - `function rate`: Gate B (decision 0188 R1(b), `v15_checkpoint.gate_b`): `met` or `not met`, or `n/a` with
   the suites the run did not score when it was not measured; with no stale or unchecked exception line;
 - `owners`: `exit_owners.unowned_off` and `exit_owners.unowned` for every Phase 1 milestone list
@@ -36,6 +39,8 @@ import tasks  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CATALOG = ROOT / "eval" / "catalog"
+# Written by `rustsheet-eval accuracy` (accuracy::JSON_PATH), which `make eval` runs (decision 0268).
+ACCURACY = ROOT / "eval" / "runs" / "accuracy.json"
 MET, NOT_MET, MANUAL, NOT_MEASURED = "met", "not met", "manual", "n/a"
 # The Phase 1 milestones whose exit criteria the Phase 1 exit requires (docs/milestones.md).
 PHASE1_MILESTONES = ("M1", "M2", "M5", "M6", "M7", "M8", "M9", "M10", "M11")
@@ -145,6 +150,35 @@ def rate_line(report: dict[str, Any]) -> Line:
     return Line("function rate", MET if met else NOT_MET, detail)
 
 
+def gate_a_line(accuracy: Path, report: Path) -> Line:
+    """Gate A (decision 0188 R1(a)): the accuracy check's `holds`, with its counts. `n/a` when the
+    JSON is absent, unreadable or older than the report, since it would then describe another tree."""
+    if not accuracy.exists():
+        return Line("gate A", NOT_MEASURED, f"no {accuracy.name}: run `make eval` (or `rustsheet-eval accuracy`)")
+    if report.exists() and accuracy.stat().st_mtime < report.stat().st_mtime:
+        return Line("gate A", NOT_MEASURED, f"{accuracy.name} is older than the report: run `make eval`")
+    try:
+        top = json.loads(accuracy.read_text(encoding="utf-8"))
+        check = top["check"]
+        points = list(check["points"])
+        missing = len(check["missing_tables"])
+        problems = sum(len(check[k]) for k in ("stale_known_failures", "bad_marks", "bad_exemptions"))
+        holds = top["holds"]
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        return Line("gate A", NOT_MEASURED, f"{accuracy.name} unreadable: {e}")
+    standing: dict[str, int] = {}
+    for pt in points:
+        key = str(pt.get("standing")) if isinstance(pt, dict) else "?"
+        standing[key] = standing.get(key, 0) + 1
+    inside, known = standing.get("inside", 0), standing.get("known_failure", 0)
+    failing = len(points) - inside - known
+    detail = (
+        f"{len(points)} points, {inside} inside, {known} known failures, {failing} failing, "
+        f"{problems} list problems; missing tables {missing}"
+    )
+    return Line("gate A", MET if holds is True else NOT_MET, detail)
+
+
 def owner_counts(
     report: dict[str, Any], tasks_dir: Path, milestones: list[str]
 ) -> tuple[int, int, dict[str, int]]:
@@ -179,13 +213,16 @@ def milestone_lines(report: dict[str, Any], per: dict[str, int]) -> list[Line]:
     return lines
 
 
-def verdicts(report: dict[str, Any], tasks_dir: Path, catalog_dir: Path) -> list[Line]:
+def verdicts(
+    report: dict[str, Any], tasks_dir: Path, catalog_dir: Path, gate_a: Line | None = None
+) -> list[Line]:
     rows = [str(r.get("milestone")) for r in report.get("milestone_exit") or []]
     milestones = [m for m in PHASE1_MILESTONES if m in rows]
     off, deferred, per = owner_counts(report, tasks_dir, milestones)
     return [
         run_line(report),
         catalog_line(catalog_dir, report),
+        *([gate_a] if gate_a is not None else []),
         rate_line(report),
         owners_line(off, deferred, per),
         *milestone_lines(report, per),
@@ -198,9 +235,11 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--report", type=Path, default=exit_owners.REPORT)
     ap.add_argument("--tasks", type=Path, default=tasks.TASKS)
     ap.add_argument("--catalog", type=Path, default=CATALOG)
+    ap.add_argument("--accuracy", type=Path, default=ACCURACY, help="the accuracy check's JSON (Gate A)")
     ap.add_argument("--json", action="store_true", help="print the lines and the overall verdict as JSON")
     args = ap.parse_args(argv)
-    lines = exit_owners.with_report(args.report, lambda r: verdicts(r, args.tasks, args.catalog))
+    gate_a = gate_a_line(args.accuracy, args.report)
+    lines = exit_owners.with_report(args.report, lambda r: verdicts(r, args.tasks, args.catalog, gate_a))
     if lines is None:
         return 2
     failing = [ln.criterion for ln in lines if ln.verdict in (NOT_MET, NOT_MEASURED)]

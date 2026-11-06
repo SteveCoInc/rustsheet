@@ -133,42 +133,22 @@ fn is_feb29_between_consecutive_years(start: chrono::NaiveDate, end: chrono::Nai
     }
 }
 
-/// One TIME argument: [`near_integer_whole`], then `#NUM!` outside -32768..=32767.
+/// One TIME argument: [`near_integer_whole`], then `#NUM!` above 32767. A whole value below -32768
+/// wraps by 65536 into -32768..=32767 (`TIME(600,-32769,0)` is `TIME(600,32767,0)`), and one below
+/// -2^31 reads as 0, the way a clamp to the 32-bit minimum -2^31 (a multiple of 65536) would.
+/// Excel: dates.md "TIME: an argument past 32767 is `#NUM!`" (probes/t3678-time-argument-far-negative,
+/// probes/t3983-time-argument-below-131072; T-3983).
 fn time_argument(value: f64) -> Result<f64, Error> {
     let whole = near_integer_whole(value);
-    if (-32768.0..=32767.0).contains(&whole) {
-        Ok(whole)
-    } else {
+    if whole > 32767.0 {
         Err(Error::NUM)
-    }
-}
-
-/// The whole day a serial reads as in YEAR, MONTH, DAY, WEEKDAY and the bound of HOUR, MINUTE and
-/// SECOND: `floor(v + 0.5/86400)` in double precision, so a serial within half a second of the
-/// next midnight is the next day, exactly where `time_of_day_parts` rolls to hour 0. A negative
-/// serial is only floored, so it stays `#NUM!` before any carry. Excel: dates.md "YEAR, MONTH and
-/// DAY of a serial just below midnight" (probes/t3137-date-parts-near-midnight; T-3176).
-fn carried_day(v: f64) -> f64 {
-    if v < 0.0 {
-        v.floor()
+    } else if whole < -2_147_483_648.0 {
+        Ok(0.0)
+    } else if whole < -32768.0 {
+        Ok((whole + 32768.0).rem_euclid(65536.0) - 32768.0)
     } else {
-        (v + 0.5 / SECONDS_PER_DAY_F64).floor()
+        Ok(whole)
     }
-}
-
-/// The hour, minute and second of a serial's time of day, as HOUR, MINUTE and SECOND take it
-/// apart. Half a second is added to the serial, then its fraction of a day is split by floors,
-/// through hours (x24) and minutes (x60), each step in double precision. So the time rounds to the
-/// nearest second and carries into the minute, the hour and past midnight (23:59:59.6 is hour 0),
-/// and an exact half goes whichever way the serial's binary noise takes it: `SECOND(0.5+2.5/86400)`
-/// is 2, `SECOND(0.5+3.5/86400)` 4. Excel: docs/excel-semantics/dates.md "HOUR, MINUTE and SECOND
-/// round to the nearest second" (probes/second-rounding, all 40 cells; T-1408).
-fn time_of_day_parts(v: f64) -> [f64; 3] {
-    let hours = (v + 0.5 / SECONDS_PER_DAY_F64).rem_euclid(1.0) * 24.0;
-    let hour = hours.floor();
-    let minutes = (hours - hour) * 60.0;
-    let minute = minutes.floor();
-    [hour, minute, ((minutes - minute) * 60.0).floor()]
 }
 
 use crate::cast::{calc_result_to_string, number_text_too_long};
@@ -178,6 +158,7 @@ use crate::expressions::types::CellReferenceIndex;
 use crate::formatter::date_text::parse_date;
 use crate::formatter::dates::date_month_and_day;
 use crate::formatter::dates::permissive_date_to_serial_number;
+use crate::formatter::dates::{carried_day, time_of_day_parts};
 use crate::functions::lift::{num_error, number_result, value_error};
 use crate::functions::util::near_integer::near_integer_whole;
 use crate::functions::Function;
@@ -663,18 +644,26 @@ impl Model {
         end_serial: f64,
         unit: Result<&str, Error>,
     ) -> Result<f64, Error> {
-        let (start_serial, end_serial) = (start_serial.floor() as i64, end_serial.floor() as i64);
         // A unit error beats a reversed pair and an out-of-calendar date: `DATEDIF(10,5,NA())` and
         // `DATEDIF(3000000,5,NA())` are #N/A (probes/datedif-days360-error-order A1, A16; dates.md
         // "DATEDIF argument errors before date checks").
         let unit = unit?;
-        if end_serial < start_serial {
+        let (start_floor, end_floor) = (start_serial.floor() as i64, end_serial.floor() as i64);
+        if end_floor < start_floor {
             return Err(Error::NUM);
         }
-        let start_1900 = date_system.to_1900_serial(start_serial).ok_or(Error::NUM)?;
+        // "D" and the reversed-pair check above floor the serials, while the calendar units read the
+        // day YEAR, MONTH and DAY see, with its half-second carry: `DATEDIF(60-0.4/86400,425,"M")` is
+        // 11, from the fictitious 1900-02-29, while its "D" is 366, from 1900-02-28. The carried
+        // dates are what must lie in the calendar, for "D" too: `DATEDIF(1,2958466-0.4/86400,"D")` is
+        // #NUM! (probes/t4574-feb29-near-midnight-date-args; dates.md "DATEDIF's calendar units
+        // carry half a second", T-4574).
+        let start_1900 = date_system
+            .to_1900_serial(carried_day(start_serial) as i64)
+            .ok_or(Error::NUM)?;
         let start = excel_serial_to_ymd(start_1900).ok_or(Error::NUM)?;
         let end = date_system
-            .to_1900_serial(end_serial)
+            .to_1900_serial(carried_day(end_serial) as i64)
             .and_then(excel_serial_to_ymd)
             .ok_or(Error::NUM)?;
         // The units are ASCII, so an ASCII case-blind match is the upper-casing it replaces.
@@ -685,7 +674,7 @@ impl Model {
         match unit {
             "Y" => Ok(f64::from(datedif_months(start, end).div_euclid(12))),
             "M" => Ok(f64::from(datedif_months(start, end))),
-            "D" => Ok((end_serial - start_serial) as f64),
+            "D" => Ok((end_floor - start_floor) as f64),
             "YM" => Ok(f64::from(datedif_months(start, end).rem_euclid(12))),
             "YD" => {
                 // The start moved on by the "YM" months in its own year (DATE's day overflow, so

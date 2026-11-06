@@ -4,7 +4,14 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "d115a67bf16ffc0d6def65e04c1b92b947164f80d7e6893259c65e8b1b446b4a"
+  "input_sha256": "d115a67bf16ffc0d6def65e04c1b92b947164f80d7e6893259c65e8b1b446b4a",
+  "definitions": {
+   "SUMPRODUCT": "75e3a541c3378a0e",
+   "SUMX2MY2": "75e3a541c3378a0e",
+   "SUMX2PY2": "75e3a541c3378a0e",
+   "SUMXMY2": "75e3a541c3378a0e"
+  },
+  "arguments_sha256": "38770e0b075755c68b8543c22c55dc05a722e8bf74dfc1227d04687c6d1b7ca0"
  },
  "sheets": {
   "Calc": {
@@ -37,6 +44,11 @@
     "t": "n",
     "v": "-1.0000000000000000125907164643459280340532939441627e-300",
     "f": "=SUMX2MY2(N1:N2,M1:M2)"
+   },
+   "A16": {
+    "t": "n",
+    "v": "-2.77555756156289135105907917022705078125e-17",
+    "f": "=SUMX2MY2({0.1,0.2,0.3},{0,0,0})-0.14"
    },
    "A17": {
     "t": "n",

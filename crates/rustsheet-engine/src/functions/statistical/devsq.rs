@@ -1,4 +1,6 @@
+use crate::arithmetic::flush_subnormal;
 use crate::expressions::types::CellReferenceIndex;
+use crate::functions::statistical::variance::squared_deviations;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
@@ -10,25 +12,12 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         }
 
-        let mut sum = 0.0;
-        let mut sumsq = 0.0;
-        let mut count: u64 = 0;
-
-        // tiny helper so we don't repeat ourselves
-        #[inline]
-        fn accumulate(sum: &mut f64, sumsq: &mut f64, count: &mut u64, value: f64) {
-            *sum += value;
-            *sumsq += value * value;
-            *count += 1;
-        }
-
-        if let Err(error) = self.for_each_value(args, cell, |value| {
-            accumulate(&mut sum, &mut sumsq, &mut count, value);
-        }) {
+        let mut values = Vec::new();
+        if let Err(error) = self.for_each_value(args, cell, |value| values.push(value)) {
             return error;
         }
 
-        if count == 0 {
+        if values.is_empty() {
             // Excel: DEVSQ/AVEDEV of no numbers is #NUM!, not #DIV/0!
             // (docs/excel-semantics/coercion.md, poi EverythingTests!H392).
             return CalcResult::new_error(
@@ -38,13 +27,14 @@ impl Model {
             );
         }
 
-        let n = count as f64;
-        let mut result = sumsq - (sum * sum) / n;
-
-        // Numerical noise can make result slightly negative when it should be 0
-        if result < 0.0 && result > -1e-12 {
-            result = 0.0;
-        }
+        // Excel's DEVSQ is the two-pass sum around the double mean, never the one-pass
+        // Σx² - (Σx)²/n: `DEVSQ(0.1,0.2,0.3)` = 0.019999999999999997, `DEVSQ(1E15,1E15+1)` = 0.5
+        // and `DEVSQ({100000000.1,100000000.2,100000000.3})` = 0.020000000596046563, where the
+        // one-pass form gives 0.019999999999999976, 0 and -4 (probes/stat-order-floor-batch,
+        // gen-m9; docs/excel-semantics/statistics.md "DEVSQ is a two-pass sum (T-1749)").
+        let sum = values.iter().fold(0.0, |total, &x| total + x);
+        let mean = flush_subnormal(sum / values.len() as f64);
+        let result = squared_deviations(&values, mean);
 
         CalcResult::finite_number_or_num(result, cell)
     }

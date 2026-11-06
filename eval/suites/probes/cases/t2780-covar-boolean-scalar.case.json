@@ -1,0 +1,26 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-2780: COVAR with a boolean scalar argument (typed, referenced, computed), against COVARIANCE.P/.S.",
+  "tags": [
+    "M9",
+    "probe"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "B1": 5,
+        "B2": true,
+        "A1": "=COVAR({1,2,3},TRUE)",
+        "A2": "=COVAR(-2.5,FALSE)",
+        "A3": "=COVAR(B1,FALSE)",
+        "A4": "=COVAR({1,2,3},B2)",
+        "A5": "=COVAR(B2,B2)",
+        "A6": "=COVAR({1,2,3},NOT(FALSE))",
+        "A7": "=COVARIANCE.P({1,2,3},TRUE)",
+        "A8": "=COVARIANCE.S(-2.5,FALSE)"
+      }
+    }
+  ]
+}

@@ -13,7 +13,9 @@ mod calculated_column;
 mod diff;
 mod pivot;
 
-pub use self::pivot::{PivotError, PivotFunction, PivotTableInput};
+pub use self::pivot::{
+    PivotDateGroupBy, PivotError, PivotFunction, PivotRangeGroup, PivotTableInput,
+};
 
 use rustsheet_engine::clock::Clock;
 use rustsheet_engine::types::{
@@ -54,6 +56,8 @@ pub enum Input {
     /// table's data rows fills the column when its other data cells are all blank or all hold
     /// one formula (a calculated column, T-2958); the filled cells are part of the edit.
     Parse(String),
+    /// [`Input::Parse`] typed in R1C1 style (`=R[-1]C+1` in A3 is `=A2+1`; T-4288).
+    ParseR1C1(String),
     /// Empties the cell (its style is kept).
     Clear,
 }
@@ -197,11 +201,8 @@ enum Undo {
         sheet_id: u32,
         range: (i32, i32, i32, i32),
     },
-    /// The lengths of the workbook's pivot caches and tables before `add_pivot_table`.
-    Pivot {
-        caches: usize,
-        tables: usize,
-    },
+    /// A pivot added, refreshed or laid out (`edit::pivot`).
+    Pivot(pivot::PivotUndo),
     /// A row's hidden flag as it was before `set_row_hidden`.
     RowHidden {
         sheet_id: u32,
@@ -256,8 +257,9 @@ impl Txn<'_> {
         match &input {
             // `Input::Formula` without `=` is refused in `apply` before it writes anything.
             Input::Formula(text) if !text.starts_with('=') => {}
-            Input::Parse(text) | Input::Formula(text) => {
-                self.log_typed_fill(sheet, key, cell, text)?;
+            Input::Parse(text) | Input::Formula(text) | Input::ParseR1C1(text) => {
+                let r1c1 = matches!(input, Input::ParseR1C1(_));
+                self.log_typed_fill(sheet, key, cell, text, r1c1)?;
             }
             _ => {}
         }
@@ -356,10 +358,9 @@ impl Txn<'_> {
             Input::Parse(text) | Input::Formula(text) => {
                 model.set_typed_user_input(sheet, row, col, text)
             }
+            Input::ParseR1C1(text) => model.set_typed_r1c1_user_input(sheet, row, col, text),
             Input::StoredFormula(text) => model.set_loaded_user_input(sheet, row, col, text),
-            Input::LegacyFormula(text) => {
-                model.set_cell_with_legacy_formula(sheet, row, col, &text)
-            }
+            Input::LegacyFormula(text) => model.set_loaded_legacy_formula(sheet, row, col, &text),
             Input::Value(value) => {
                 // Typed setters skip the spill/array/merge checks that `set_user_input` does.
                 model
@@ -493,10 +494,10 @@ impl Txn<'_> {
         Ok(())
     }
 
-    /// Adds a workbook-scoped defined name. `formula` may be any formula that parses, with or
-    /// without a leading `=` (e.g. `=Sheet1!$A$1:$B$3 Sheet1!$A$2:$B$3`, an intersection). Like a
-    /// sheet-level op it reparses and re-evaluates the workbook, so define names before setting
-    /// many cells. Names are not reported in the [`ChangeSet`]; cells whose value they change are.
+    /// Adds a workbook-scoped defined name: any formula that parses, `=` optional (`=S!$A$1:$B$3
+    /// S!$A$2:$B$3`, an intersection); an unqualified reference binds to [`crate::Workbook::active_sheet`],
+    /// as `names/add` does. Like a sheet-level op it reparses and re-evaluates the workbook, so define
+    /// names before many cells. Names are not reported in the [`ChangeSet`]; changed cells are.
     ///
     /// # Errors
     /// [`EditError::DefinedName`] when the name is not a valid identifier, already exists, or the
@@ -876,10 +877,7 @@ fn roll_back(model: &mut Model, undo: Vec<Undo>, re_evaluate: bool) {
                     .and_then(|scope| model.delete_defined_name(&name, scope));
                 debug_assert!(undone.is_ok(), "undo of define_name failed: {undone:?}");
             }
-            Undo::Pivot { caches, tables } => {
-                model.workbook.pivot_caches.truncate(caches);
-                model.workbook.pivot_tables.truncate(tables);
-            }
+            Undo::Pivot(undo) => undo.roll_back(model),
             Undo::Table(name) => {
                 let undone = model.remove_table(&name);
                 debug_assert!(undone.is_ok(), "undo of add_table failed: {undone:?}");

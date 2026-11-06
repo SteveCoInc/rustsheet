@@ -4,7 +4,12 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "3d2da5095f4967fdcfb485cdf9732449157ed72f539e771fb67936aed6fc18ae"
+  "input_sha256": "3d2da5095f4967fdcfb485cdf9732449157ed72f539e771fb67936aed6fc18ae",
+  "definitions": {
+   "CHISQ.DIST": "01f5d761e8de8277",
+   "CHISQ.INV": "5d12acfc19639d7a"
+  },
+  "arguments_sha256": "79eb970b5c16bc8b2d8bbb259dd4f4390c9b5429a2362cb04106b713b6abb0cc"
  },
  "sheets": {
   "Calc": {
@@ -98,10 +103,20 @@
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.INV(0.5,0)"
    },
+   "A27": {
+    "t": "n",
+    "v": "9999999999.3333333333412345679018114834411235128211",
+    "f": "=CHISQ.INV(0.5,1E10)"
+   },
    "A3": {
     "t": "n",
     "v": "0.21021260262921916566878382019141147037876620249342",
     "f": "=CHISQ.INV(0.001,5)"
+   },
+   "A33": {
+    "t": "n",
+    "v": "4.0000000000000000851806772343400561862317154448987",
+    "f": "=CHISQ.INV(CHISQ.DIST(4,3,TRUE),3)"
    },
    "A4": {
     "t": "n",
@@ -132,14 +147,6 @@
     "t": "n",
     "v": "0.45493642311957275194251664697964939631642110659022",
     "f": "=CHISQ.INV(0.5,1)"
-   }
-  }
- },
- "skipped": {
-  "Calc": {
-   "A27": {
-    "f": "=CHISQ.INV(0.5,1E10)",
-    "why": "no single value"
    }
   }
  }

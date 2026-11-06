@@ -9,7 +9,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    functions::Function,
+    functions::{information::written_reference, Function},
     model::Model,
     reference_operators::Picked,
 };
@@ -42,6 +42,8 @@ impl Model {
             error,
             before_weekend: true,
         };
+        // `Node::ungrouped` sees through a unary plus, so read it off the argument as written.
+        let written_plus = written_reference(arg) == Some(false);
         let (mut arg, mut picked) = (arg, false);
         let value = loop {
             if is_multi_sheet_span(arg) {
@@ -72,8 +74,19 @@ impl Model {
             return Err(early(value.empty_array_as_value_error(cell)));
         }
         let one_value = is_one_value(&value);
-        let scalar = !matches!(value, CalcResult::Array(_) | CalcResult::Range { .. })
-            && is_scalar_node(arg.ungrouped());
+        // A scalar is whatever ISREF would call no reference, read on the arm IF picked (its
+        // condition is not read again): `+C1`, `N(C1)`, `"45003"`, `LET(h,C1,h+0)` and a name
+        // bound to `=45003` are scalar, while `(C1)`, `@C1`, `IF(TRUE,C1)`, `LET(h,C1,h)`,
+        // `XLOOKUP(1,{1},C1:C1)` and a name bound to a cell are references; `IF(TRUE,45003)`
+        // and `XLOOKUP(1,{1},{45003})` are scalar (probes/networkdays-intl-holiday-kinds,
+        // -kinds-let, -kinds-names; T-4190). An array is never scalar.
+        // A unary plus over a function that returns one cell (`+OFFSET(C1,0,0)`, `+IF(TRUE,C1)`)
+        // is a value as well, though the evaluator hands the cell's range on
+        // (probes/networkdays-intl-holiday-unary-fn A1:B4, T-4209).
+        let plus_of_one_cell = written_plus && one_value;
+        let scalar = plus_of_one_cell
+            || (!matches!(value, CalcResult::Array(_) | CalcResult::Range { .. })
+                && !self.is_reference(arg, cell));
         let date_system = self.workbook.settings.date_system;
         let (mut serials, mut out_of_range) = (Vec::new(), false);
         self.collect_serial_numbers(value, cell, |serial| {
@@ -113,30 +126,6 @@ fn is_one_value(value: &CalcResult) -> bool {
         CalcResult::Array(_) => false,
         CalcResult::Range { left, right } => left == right,
         _ => true,
-    }
-}
-
-/// Whether a holidays argument is written as a scalar value: a number, an arithmetic expression or
-/// a function call, and not a reference, a name or an array (a one-cell reference evaluates to
-/// its number too, so the value alone cannot tell). Function calls that hand a reference on
-/// (INDEX, OFFSET, INDIRECT, CHOOSE, IF) count as references, which is UNVERIFIED (dates.md
-/// "NETWORKDAYS.INTL: a scalar holiday ignores the weekend argument"; only SUM is probed).
-fn is_scalar_node(node: &Node) -> bool {
-    match node {
-        Node::NumberKind(_)
-        | Node::OpSumKind { .. }
-        | Node::OpProductKind { .. }
-        | Node::OpPowerKind { .. }
-        | Node::UnaryKind { .. } => true,
-        Node::FunctionKind { kind, .. } => !matches!(
-            kind,
-            Function::Index
-                | Function::Offset
-                | Function::Indirect
-                | Function::Choose
-                | Function::If
-        ),
-        _ => false,
     }
 }
 

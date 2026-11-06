@@ -16,7 +16,7 @@ Read `docs/process/agent-workflow.md` once per session if you have not.
    branch from `origin/main` instead (decision 0055).
 2. Resume first: if an open PR or branch `agent/<lane>/*` exists for this lane (check with the
    GitHub tools) and its task is your tier, continue it (go to step 4/6) instead of starting new
-   work. One task in flight per lane. A task handed off to `opus` (it has a `## Handoff` section)
+   work. One task in flight per lane, three in `engine` (decision 0269). A task handed off to `opus` (it has a `## Handoff` section)
    is resumed by an opus run from its pushed branch, starting from the handoff notes.
 3. **Step 0.3, adopt orphans** (opus runs only, decisions 0248, 0253): before picking a new task,
    look for open PRs that the `steward` skill's "Orphaned agent PRs" rule calls orphans (an
@@ -56,6 +56,9 @@ If the task is bigger than size M, split it (planner) instead of doing it.
 ## 4. Implement (test-first where possible)
 - Add/extend eval spec cases or unit tests that fail first.
 - Implement the smallest change that makes them pass. Keep the diff focused.
+- Parallel subagents (`isolation: worktree`) each build in their own worktree's `target/`: never
+  share a `CARGO_TARGET_DIR` across worktrees, or one runs another's binaries (T-3832;
+  `docs/process/agent-workflow.md`, "Worktrees"). `make build` and `make check-fast` refuse it.
 - `make fmt`, then `make check-fast` and the tests of the code you changed (`cargo test -p
   <crate> <filter>`, or the module's `unittest` for `scripts/`). `make check-fast` runs the gates
   of `make check` your change can break and never the full Rust suite: CI runs every gate on the

@@ -11,13 +11,19 @@
 //!
 //! `poisson.rs` is a second consumer: Excel's POISSON.DIST pmf is this saddle point too, on
 //! [`excel_bd0`] and [`stirlerr_exact`] (T-2055), so retuning either moves POISSON cells as well.
+//! The Student t density is a third ([`excel_t_density`], T-2585).
 
-use crate::arithmetic::{extended_product, extended_quotient, extended_sum};
-use crate::x87_exp::{dd_add, dd_div, dd_div_small, dd_mul, excel_exp_extended, two_sum};
+use crate::arithmetic::{
+    extended_product, extended_quotient, extended_sqrt, extended_sum, flush_subnormal,
+};
+use crate::x87_exp::{
+    dd_add, dd_div, dd_div_small, dd_mul, excel_exp, excel_exp_extended, two_sum,
+};
 use crate::x87_log10::{excel_ln, ln_double_double_pair};
 use crate::x87_register::Register;
 
 use super::gammaln::STIRLING;
+use super::incomplete_beta::FRAC_1_SQRT_2PI;
 
 /// A double-double `hi + lo`.
 type Dd = (f64, f64);
@@ -80,8 +86,10 @@ fn stirling_series(m: Dd) -> Dd {
 
 /// The ratio cut of Excel's bd0: its series runs while |k - M| < 0.2 (k + M) (statistics.md "Beta
 /// density for min(a,b) > 1 ...": 0.25 drops (5.5, 12.5) from 113 to 13 of 120 exact cells; R's
-/// is 0.1).
-/// FITTED(T-2464, 3072 cells, BETA.DIST a 2.5, b 3.5, v 0.130..0.250)
+/// is 0.1). The t density reuses it (T-2585): of 0.1, 0.15, 0.25 and 0.3 on its cells, only 0.25
+/// and 0.3 gain exact cells (18 and 4 of 12,037), each losing within-4-ulp and 15-digit cells, and
+/// none beats it on the fresh batch r4-T-2585 (decision 0299).
+/// FITTED(T-2464, 3072 cells, BETA.DIST a 2.5, b 3.5, v 0.130..0.250; T.DIST density on 12,158 cells, df 3..2.7E297, per decision 0299)
 const EXCEL_BD0_CUT: f64 = 0.2;
 
 /// Excel's bd0(k, M) = k ln(k / M) + M - k, as the double its beta density sums (model M4 of
@@ -95,19 +103,45 @@ const EXCEL_BD0_CUT: f64 = 0.2;
 ///
 /// For k > 0 and M > 0; the series has at most [`BD0_MAX_TERMS`] terms.
 pub(crate) fn excel_bd0(k: f64, m: f64) -> f64 {
+    match bd0_branch(k, m) {
+        Bd0Branch::Series(sum) => sum.store(),
+        Bd0Branch::Log(t) => extended_sum(t, extended_sum(m, -k)),
+    }
+}
+
+/// [`excel_bd0`] as Excel's t density uses it, left in an x87 register: the series sum unstored,
+/// and the log form `t + (M - k)` summed in the register rather than stored (r3-loader-bd0's
+/// `ld = 'e'`; docs/research/t2464/r3-tdensity model LT1). Storing it first moves
+/// `T.DIST(2.2014...,11,FALSE)` (t2513-r3-tdensity-hold2) by 3 ulp off Excel's (T-2585).
+fn excel_bd0_unstored(k: f64, m: f64) -> Register {
+    match bd0_branch(k, m) {
+        Bd0Branch::Series(sum) => sum,
+        Bd0Branch::Log(t) => Register::load(t).add(Register::load(m).add(Register::load(-k))),
+    }
+}
+
+/// Which form [`excel_bd0`] takes, with what both callers share of it.
+enum Bd0Branch {
+    /// The series sum, unstored.
+    Series(Register),
+    /// The log form's t = fl(k LN(fl(k / M))).
+    Log(f64),
+}
+
+/// [`excel_bd0`]'s cut between its series and its log form.
+fn bd0_branch(k: f64, m: f64) -> Bd0Branch {
     let d = extended_sum(k, -m);
     let s = extended_sum(k, m);
     let cut = Register::load(EXCEL_BD0_CUT).mul(Register::load(s));
     if Register::load(d.abs()).add(cut.neg()).is_negative() {
-        return excel_bd0_series(k, d, s);
+        return Bd0Branch::Series(excel_bd0_series(k, d, s));
     }
-    let t = extended_product(k, excel_ln(extended_quotient(k, m)));
-    extended_sum(t, extended_sum(m, -k))
+    Bd0Branch::Log(extended_product(k, excel_ln(extended_quotient(k, m))))
 }
 
 /// [`excel_bd0`]'s series branch: R's loop `s = d v + 2k sum_j v^(2j+1) / (2j + 1)` in x87 registers
-/// with v stored, less the rounding error of fl(2 k v), stored once at the end.
-fn excel_bd0_series(k: f64, d: f64, s: f64) -> f64 {
+/// with v stored, less the rounding error of fl(2 k v), left unstored.
+fn excel_bd0_series(k: f64, d: f64, s: f64) -> Register {
     let v = Register::load(extended_quotient(d, s));
     let mut ej = Register::load(2.0 * k).mul(v);
     let rounding = Register::load(ej.store()).add(ej.neg());
@@ -117,11 +151,11 @@ fn excel_bd0_series(k: f64, d: f64, s: f64) -> f64 {
         ej = ej.mul(v2);
         let next = sum.add(ej.div(Register::load(f64::from(2 * j + 1))));
         if next.same_value(sum) {
-            return next.store();
+            return next;
         }
         sum = next;
     }
-    sum.store()
+    sum
 }
 
 /// ln(2 pi), the double Excel's lf starts from (R's `M_LN_2PI`, correctly rounded:
@@ -194,9 +228,222 @@ pub(crate) fn excel_beta_density(x: f64, a: f64, b: f64) -> Option<f64> {
     density.is_finite().then_some(density)
 }
 
+/// Where Excel's t density leaves Loader's bd0 form for the log form: `xx > T_LOG_BRANCH_CUT * n`
+/// (R 2.x's cut is 0.2). Chosen by scoring the cut on the in-sample probes t2513-r3-tdensity-a1/-a2;
+/// on the verifier's hold-out 1 gives 505 exact cells against 391 for 0.2 and 417 for no log
+/// branch (hold2: 573, 480, 520; statistics.md "Student t density is Loader's dt"). It is applied over
+/// the whole range below, which the hold-outs, the 19,793 T.DIST(.,FALSE) rows of
+/// docs/research/t2464/cells.tsv and the fresh Gate A batch r4-T-2585 measure: outside the fitted
+/// df 3..100, |t| 0.31..4.3 the cut still scores at least as well as 0.2, no log branch and the
+/// accurate density on every count (decision 0299).
+/// Applied for every df >= 3 where t·t is finite; the range below gives the measured extremes.
+/// FITTED(T-2513, 2406 cells, fitted on df 3..100, |t| 0.31..4.3; measured on df 3..2.7E297, |t| up to 1.1E153)
+const T_LOG_BRANCH_CUT: f64 = 1.0;
+
+/// The bound on [`loader_t_constant`]'s series terms; at n = 3 (ratio 1/3) it reaches 1E-33 in
+/// about 70.
+const T_CONSTANT_MAX_TERMS: u32 = 400;
+
+/// The exact shape constant of Loader's t density,
+/// `-bd0(n/2, (n+1)/2) + stirlerr((n+1)/2) - stirlerr(n/2)`, as a double-double. The bd0 part is
+/// `(n/2) ln(1 + 1/n) - 1/2 = sum_{k>=2} (-1)^(k+1) / (2k n^(k-1))`, summed as that series so
+/// that it keeps its digits at large n (it is about -1/(4n)). Excel's own constant is 1-2 units
+/// of 2^-53 off it per df, unidentified (statistics.md "Student t density is Loader's dt", T-2586).
+fn loader_t_constant(n: f64) -> Dd {
+    let z = dd_div((1.0, 0.0), (n, 0.0));
+    let mut power = z;
+    let mut sum = (0.0, 0.0);
+    for k in 2..T_CONSTANT_MAX_TERMS {
+        let term = dd_div_small(power, f64::from(2 * k));
+        sum = if k % 2 == 0 {
+            dd_add(sum, (-term.0, -term.1))
+        } else {
+            dd_add(sum, term)
+        };
+        if term.0.abs() < 1e-36 * sum.0.abs() {
+            break;
+        }
+        power = dd_mul(power, z);
+    }
+    let stirling = dd_add(stirlerr_exact(0.5 * (n + 1.0)), {
+        let half = stirlerr_exact(0.5 * n);
+        (-half.0, -half.1)
+    });
+    dd_add(sum, stirling)
+}
+
+/// Excel's T.DIST(t, n, FALSE) for a truncated df n >= 1 (statistics.md "Student t density is
+/// Loader's dt", T-2513, T-2585), every operation an x87 one stored to a double:
+/// - df 1: `fl(1/fl(pi fl(1 + fl(t t))))`; df 2: `EXP(fl(-1.5 LN(fl(2 + fl(t t)))))`;
+/// - df >= 3, Loader's saddle point: xx = fl(t t), q = fl(xx/n), w = fl(1 + q); when xx > n,
+///   u = fl(fl(LN(w) n)/2) ([`T_LOG_BRANCH_CUT`]), otherwise u = fl(-bd0(fl(n/2), fl(fl(n + xx)/2)) + fl(xx/2)) with
+///   Excel's bd0 held in a register ([`excel_bd0_unstored`]); then E = fl(C - u) with the exact constant C
+///   ([`loader_t_constant`]) held in an x87 register, and
+///   `fl(fl(EXP(E)/fl(sqrt(w))) / sqrt(2 pi))`, `1/sqrt(2 pi)` the correctly rounded double.
+///
+/// On the 19,793 T.DIST(.,FALSE) rows of docs/research/t2464/cells.tsv (the research's 19,776
+/// plus the 17 rows of m9-t-nonint-df, m9-t-edges and t1518-t-df-cut) the engine is within 15 digits on 18,646 of the
+/// 18,714 df >= 3 rows and bit-exact on all 1,079 df 1 and df 2 rows. `None` for a non-finite piece (t t
+/// overflowing), where the caller keeps its other form.
+pub(crate) fn excel_t_density(t: f64, n: f64) -> Option<f64> {
+    if !(n >= 1.0 && t.is_finite() && n.is_finite()) {
+        return None;
+    }
+    let xx = extended_product(t, t);
+    if !xx.is_finite() {
+        return None;
+    }
+    if n == 1.0 {
+        let denominator = extended_product(std::f64::consts::PI, extended_sum(1.0, xx));
+        let density = extended_quotient(1.0, denominator);
+        return density.is_finite().then_some(density);
+    }
+    if n == 2.0 {
+        let exponent = extended_product(-1.5, excel_ln(extended_sum(2.0, xx)));
+        let density = excel_exp(exponent);
+        return density.is_finite().then_some(density);
+    }
+    let q = extended_quotient(xx, n);
+    let w = extended_sum(1.0, q);
+    let u = if xx > T_LOG_BRANCH_CUT * n {
+        extended_quotient(extended_product(excel_ln(w), n), 2.0)
+    } else {
+        let mean = extended_quotient(extended_sum(n, xx), 2.0);
+        excel_bd0_unstored(extended_quotient(n, 2.0), mean)
+            .neg()
+            .add(Register::load(extended_quotient(xx, 2.0)))
+            .store()
+    };
+    if !u.is_finite() {
+        return None;
+    }
+    let exponent = Register::from_double_double(loader_t_constant(n))
+        .add(Register::load(-u))
+        .store();
+    let scaled = extended_quotient(excel_exp(exponent), extended_sqrt(w));
+    // Excel's last multiply flushes a subnormal product to 0, as `*` does (numbers.md "Subnormal
+    // results become 0"; Gate A T.DIST/r4-T-2585 A138: T.DIST(-1.1002374143529E+20,15,FALSE) is 0).
+    let density = flush_subnormal(extended_product(scaled, FRAC_1_SQRT_2PI));
+    density.is_finite().then_some(density)
+}
+
+/// The ratio cut of Loader's own bd0, R nmath `bd0.c` (`fabs(x-np) < 0.1*(x+np)`), copied verbatim:
+/// the accurate form, not Excel's ([`EXCEL_BD0_CUT`]).
+const LOADER_BD0_CUT: f64 = 0.1;
+
+/// Loader's deviance bd0(x, M) = x ln(x / M) + M - x, accurately (R nmath `bd0.c`, Loader 2000):
+/// below the cut the odd series in v = (x - M) / (x + M), which avoids the cancellation of the log
+/// form near x = M, else the log form. M is a double-double, so the rounding of the caller's M
+/// (a product and a quotient of counts) does not reach the result: its low part enters through
+/// the first-order term d bd0 / dM = 1 - x / M, exact to O(lo^2 / M). Not Excel's bd0
+/// ([`excel_bd0`], an x87 model fitted to BETA.DIST and T.DIST cells): this is the math, for the
+/// kernels whose target is the Gate A envelope (HYPGEOM.DIST past its walk, T-4502).
+///
+/// For x > 0 and M > 0; the series has at most [`BD0_MAX_TERMS`] terms.
+pub(crate) fn loader_bd0(x: f64, m: Dd) -> f64 {
+    let correction = (1.0 - x / m.0) * m.1;
+    let d = x - m.0;
+    if d.abs() < LOADER_BD0_CUT * (x + m.0) {
+        let mut v = d / (x + m.0);
+        let mut sum = d * v;
+        if sum.abs() < f64::MIN_POSITIVE {
+            return sum + correction;
+        }
+        let mut ej = 2.0 * x * v;
+        v *= v;
+        for j in 1..BD0_MAX_TERMS {
+            ej *= v;
+            let next = sum + ej / f64::from(2 * j + 1);
+            if next == sum {
+                break;
+            }
+            sum = next;
+        }
+        return sum + correction;
+    }
+    x * (x / m.0).ln() + (m.0 - x) + correction
+}
+
+/// ln of the binomial probability of x successes in n trials, `dbinom_raw(x, n, p, q, log = TRUE)`
+/// of R nmath `dbinom.c` (Loader's saddle point), with the means n p and n q given as
+/// double-doubles: stirlerr(n) - stirlerr(x) - stirlerr(n - x) - bd0(x, n p) - bd0(n - x, n q) less
+/// half of ln(2 pi x (n - x) / n) ([`stirlerr_exact`], [`loader_bd0`]), and R's own forms at x = 0
+/// and x = n. For whole x and n with 0 <= x <= n, and n p, n q >= 0 summing to n; -inf where the
+/// probability is 0. Each piece is within a few ulp of its exact value and none is much larger than
+/// the result (the deviances are non-negative), so the result is within a few units of 2^-52 of its
+/// own magnitude, plus about 1E-15.
+pub(crate) fn loader_ln_binomial(x: f64, n: f64, np: Dd, nq: Dd) -> f64 {
+    if np.0 == 0.0 {
+        return if x == 0.0 { 0.0 } else { f64::NEG_INFINITY };
+    }
+    if nq.0 == 0.0 {
+        return if x == n { 0.0 } else { f64::NEG_INFINITY };
+    }
+    if x == 0.0 {
+        if n == 0.0 {
+            return 0.0;
+        }
+        // R: p < 0.1 ? -bd0(n, n q) - n p : n ln q, with p = n p / n.
+        return if np.0 < 0.1 * n {
+            -loader_bd0(n, nq) - (np.0 + np.1)
+        } else {
+            n * ((nq.0 + nq.1) / n).ln()
+        };
+    }
+    if x == n {
+        return if nq.0 < 0.1 * n {
+            -loader_bd0(n, np) - (nq.0 + nq.1)
+        } else {
+            n * ((np.0 + np.1) / n).ln()
+        };
+    }
+    if !(x > 0.0 && x < n) {
+        return f64::NEG_INFINITY;
+    }
+    let nx = n - x;
+    let stirling = stirlerr_exact(n).0 - stirlerr_exact(x).0 - stirlerr_exact(nx).0;
+    let deviance = loader_bd0(x, np) + loader_bd0(nx, nq);
+    let lf = LN_2PI + x.ln() + (-x / n).ln_1p();
+    stirling - deviance - 0.5 * lf
+}
+
 #[cfg(test)]
 mod tests {
+    #![allow(
+        clippy::unwrap_used,
+        reason = "test: a malformed fixture fails the test"
+    )]
     use super::*;
+    use crate::test::util::{ulps, within_fifteen_digits};
+
+    // Loader's binomial log density against exact small binomial probabilities, in each of R's
+    // branches: the saddle point inside (with bd0's series near the mean and its log form away
+    // from it), and x = 0 and x = n with p and q on both sides of 0.1.
+    #[test]
+    fn loader_ln_binomial_is_the_exact_log() {
+        let cases: [(f64, f64, f64, f64); 7] = [
+            (3.0, 10.0, 0.5, 120.0 / 1024.0),
+            (5.0, 10.0, 0.5, 252.0 / 1024.0),
+            (2.0, 5.0, 0.3, 10.0 * 0.09 * 0.343),
+            (0.0, 5.0, 0.3, 0.168_07),
+            (0.0, 20.0, 0.05, 0.95f64.powi(20)),
+            (20.0, 20.0, 0.95, 0.95f64.powi(20)),
+            (5.0, 5.0, 0.3, 0.002_43),
+        ];
+        for (x, n, p, exact) in cases {
+            let ours = loader_ln_binomial(x, n, (n * p, 0.0), (n - n * p, 0.0));
+            assert!(
+                (ours - exact.ln()).abs() < 1E-14,
+                "b({x}; {n}, {p}): {ours} {}",
+                exact.ln()
+            );
+        }
+        // A mean's low part moves bd0 to first order: bd0(x, M + lo) = bd0(x, M) + (1 - x/M) lo.
+        let shifted = loader_bd0(10.0, (9.0, 1E-12));
+        let expected = loader_bd0(10.0, (9.0, 0.0)) + (1.0 - 10.0 / 9.0) * 1E-12;
+        assert_eq!(shifted, expected);
+        assert_eq!(loader_bd0(7.0, (7.0, 0.0)), 0.0);
+    }
 
     #[test]
     fn stirlerr_exact_matches_mpmath() {
@@ -301,5 +548,61 @@ mod tests {
         assert_eq!(excel_beta_density(1.0, 3.0, 3.0), None);
         assert_eq!(excel_beta_density(5e-324, 1.5, 3.0), None);
         assert_eq!(excel_beta_density(f64::NAN, 3.0, 3.0), None);
+    }
+
+    /// The two hold-outs of `test/fixtures/t_density_hold.fixture`: (t, n, Excel's T.DIST(t,n,FALSE)).
+    fn t_density_holdouts() -> [Vec<(f64, f64, f64)>; 2] {
+        let bits = |field: &str| f64::from_bits(u64::from_str_radix(field, 16).unwrap());
+        let mut parts = [Vec::new(), Vec::new()];
+        let mut part = 0;
+        for line in include_str!("../../test/fixtures/t_density_hold.fixture").lines() {
+            let fields: Vec<&str> = line.split_whitespace().collect();
+            match fields.as_slice() {
+                [] => part = 1,
+                ["#", ..] => {}
+                [t, n, excel] => parts[part].push((bits(t), n.parse().unwrap(), bits(excel))),
+                _ => panic!("malformed fixture line {line:?}"),
+            }
+        }
+        parts
+    }
+
+    // T-2585 acceptance: the research model LT1 with the exact constant scores 573 exact / 960 within
+    // 4 ulp / 960 within 15 digits on t2513-r3-tdensity-hold2 and 505 / 918 / 977 on the verifier's
+    // t2513-verify-r3-tdensity-hold (df 13-50); the correctly rounded density gets 266 / 776 / 839 and
+    // 93 / 555 / 787 (docs/research/t2464/r3-tdensity RESULTS.md, verify-r3-tdensity).
+    #[test]
+    fn t_density_holdouts_score_as_the_loader_model() {
+        let [hold2, verify] = t_density_holdouts();
+        assert_eq!((hold2.len(), verify.len()), (960, 1000));
+        for (rows, min_exact, min_ulps, min_fifteen) in
+            [(hold2, 573, 960, 960), (verify, 505, 918, 977)]
+        {
+            let (mut exact, mut close, mut fifteen) = (0, 0, 0);
+            for (t, n, excel) in rows {
+                let density = excel_t_density(t, n).unwrap_or(f64::NAN);
+                exact += usize::from(density == excel);
+                close += usize::from(ulps(density, excel) <= 4);
+                fifteen += usize::from(within_fifteen_digits(excel, density));
+            }
+            assert!(
+                exact >= min_exact && close >= min_ulps && fifteen >= min_fifteen,
+                "{exact} / {close} / {fifteen}"
+            );
+        }
+    }
+
+    #[test]
+    fn t_density_closed_forms_at_df_one_and_two() {
+        // fl(1/fl(pi fl(1 + t t))) and EXP(fl(-1.5 LN(fl(2 + t t)))); T.DIST(0,1,FALSE) is 1/pi.
+        assert_eq!(excel_t_density(0.0, 1.0), Some(1.0 / std::f64::consts::PI));
+        assert_eq!(
+            excel_t_density(0.0, 2.0),
+            Some(excel_exp(-1.5 * excel_ln(2.0)))
+        );
+        assert_eq!(excel_t_density(1e200, 5.0), None);
+        // Gate A T.DIST/r4-T-2585 A138: the subnormal product is flushed, as Excel's `*` does.
+        assert_eq!(excel_t_density(-1.1002374143529E+20, 15.0), Some(0.0));
+        assert_eq!(excel_t_density(f64::NAN, 5.0), None);
     }
 }

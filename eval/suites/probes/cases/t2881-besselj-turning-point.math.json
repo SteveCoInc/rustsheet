@@ -1,0 +1,352 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "74670306eeb98afef803a6303255862f9d15be0d08ce64d8b0f0e4936a351bff",
+  "definitions": {
+   "BESSELJ": "7b6d52d8d609219a"
+  },
+  "arguments_sha256": "e8e5f48d2f00f85f5906ae50cb3a12538e78aabdb1faca7d886af756c65e4cc1"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "n",
+    "v": "0.044730672947964040880597580568215654573247699099481",
+    "f": "=BESSELJ(1000,1000)"
+   },
+   "A10": {
+    "t": "n",
+    "v": "0.04064330787535862078581319964862101559023671337194",
+    "f": "=BESSELJ(999,1000)"
+   },
+   "A11": {
+    "t": "n",
+    "v": "0.065281818002215058832894525954816659421058123832942",
+    "f": "=BESSELJ(1010,1000)"
+   },
+   "A12": {
+    "t": "n",
+    "v": "0.012361942456230178547495583211533207465246059201434",
+    "f": "=BESSELJ(990,1000)"
+   },
+   "A13": {
+    "t": "n",
+    "v": "-0.032631556608876544188507014328691714881537455500605",
+    "f": "=BESSELJ(1100,1000)"
+   },
+   "A14": {
+    "t": "n",
+    "v": "5.0841100850412997893690915491310970179706658485646e-16",
+    "f": "=BESSELJ(900,1000)"
+   },
+   "A15": {
+    "t": "n",
+    "v": "0.046778033080712406324504378432916283566980497566764",
+    "f": "=BESSELJ(1000.5,1000)"
+   },
+   "A16": {
+    "t": "n",
+    "v": "0.038080655470614815859659606262384207556590066304041",
+    "f": "=BESSELJ(2001,2000)"
+   },
+   "A17": {
+    "t": "n",
+    "v": "0.032923201469274710337956378564639608445606521111818",
+    "f": "=BESSELJ(1999,2000)"
+   },
+   "A18": {
+    "t": "n",
+    "v": "0.053501068119841501532134104649244162067083646809482",
+    "f": "=BESSELJ(2010,2000)"
+   },
+   "A19": {
+    "t": "n",
+    "v": "0.013518834726519358233938632257071481958220351122619",
+    "f": "=BESSELJ(1990,2000)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "0.035502786862234276338270087777134730836053643083343",
+    "f": "=BESSELJ(2000,2000)"
+   },
+   "A20": {
+    "t": "n",
+    "v": "0.01743576905843471022127080234107932151520456135538",
+    "f": "=BESSELJ(2100,2000)"
+   },
+   "A21": {
+    "t": "n",
+    "v": "0.0000000000068030992025913941486837894515076886965178557784279",
+    "f": "=BESSELJ(1900,2000)"
+   },
+   "A22": {
+    "t": "n",
+    "v": "0.036794194319598221036951692287370367330946830194373",
+    "f": "=BESSELJ(2000.5,2000)"
+   },
+   "A23": {
+    "t": "n",
+    "v": "0.02756079748665533812883366150278147446331080682801",
+    "f": "=BESSELJ(5001,5000)"
+   },
+   "A24": {
+    "t": "n",
+    "v": "0.024756202144895744813244329295682528364613738016264",
+    "f": "=BESSELJ(4999,5000)"
+   },
+   "A25": {
+    "t": "n",
+    "v": "0.038005394680635664635439904407186266287411481281918",
+    "f": "=BESSELJ(5010,5000)"
+   },
+   "A26": {
+    "t": "n",
+    "v": "0.013401266176459079397738352287531507197196424532201",
+    "f": "=BESSELJ(4990,5000)"
+   },
+   "A27": {
+    "t": "n",
+    "v": "0.024910198008429135328138135503033616498046523126821",
+    "f": "=BESSELJ(5100,5000)"
+   },
+   "A28": {
+    "t": "n",
+    "v": "0.000000018046959076698602550702923808168889478980763816913",
+    "f": "=BESSELJ(4900,5000)"
+   },
+   "A29": {
+    "t": "n",
+    "v": "0.026860451434583088260743510664780233250746653375701",
+    "f": "=BESSELJ(5000.5,5000)"
+   },
+   "A3": {
+    "t": "n",
+    "v": "0.026158686649287032606616796568312432335408088115113",
+    "f": "=BESSELJ(5000,5000)"
+   },
+   "A65": {
+    "t": "n",
+    "v": "0.10213246435955375374436043843157983759828825270952",
+    "f": "=BESSELJ(84,84)"
+   },
+   "A66": {
+    "t": "n",
+    "v": "0.12330985667804739006328602580239373045437737474044",
+    "f": "=BESSELJ(84,83)"
+   },
+   "A67": {
+    "t": "n",
+    "v": "0.096366673295861559674314024870401848311755419825022",
+    "f": "=BESSELJ(100,100)"
+   },
+   "A9": {
+    "t": "n",
+    "v": "0.048812603750263179940001260597918087903693565950003",
+    "f": "=BESSELJ(1001,1000)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "A30": {
+    "f": "=BESSELJ(10001,10000)",
+    "why": "not converged or too slow"
+   },
+   "A31": {
+    "f": "=BESSELJ(9999,10000)",
+    "why": "not converged or too slow"
+   },
+   "A32": {
+    "f": "=BESSELJ(10010,10000)",
+    "why": "not converged or too slow"
+   },
+   "A33": {
+    "f": "=BESSELJ(9990,10000)",
+    "why": "not converged or too slow"
+   },
+   "A34": {
+    "f": "=BESSELJ(10100,10000)",
+    "why": "not converged or too slow"
+   },
+   "A35": {
+    "f": "=BESSELJ(9900,10000)",
+    "why": "not converged or too slow"
+   },
+   "A36": {
+    "f": "=BESSELJ(10000.5,10000)",
+    "why": "not converged or too slow"
+   },
+   "A37": {
+    "f": "=BESSELJ(20001,20000)",
+    "why": "not converged or too slow"
+   },
+   "A38": {
+    "f": "=BESSELJ(19999,20000)",
+    "why": "not converged or too slow"
+   },
+   "A39": {
+    "f": "=BESSELJ(20010,20000)",
+    "why": "not converged or too slow"
+   },
+   "A4": {
+    "f": "=BESSELJ(10000,10000)",
+    "why": "not converged or too slow"
+   },
+   "A40": {
+    "f": "=BESSELJ(19990,20000)",
+    "why": "not converged or too slow"
+   },
+   "A41": {
+    "f": "=BESSELJ(20100,20000)",
+    "why": "not converged or too slow"
+   },
+   "A42": {
+    "f": "=BESSELJ(19900,20000)",
+    "why": "not converged or too slow"
+   },
+   "A43": {
+    "f": "=BESSELJ(20000.5,20000)",
+    "why": "not converged or too slow"
+   },
+   "A44": {
+    "f": "=BESSELJ(50001,50000)",
+    "why": "not converged or too slow"
+   },
+   "A45": {
+    "f": "=BESSELJ(49999,50000)",
+    "why": "not converged or too slow"
+   },
+   "A46": {
+    "f": "=BESSELJ(50010,50000)",
+    "why": "not converged or too slow"
+   },
+   "A47": {
+    "f": "=BESSELJ(49990,50000)",
+    "why": "not converged or too slow"
+   },
+   "A48": {
+    "f": "=BESSELJ(50100,50000)",
+    "why": "not converged or too slow"
+   },
+   "A49": {
+    "f": "=BESSELJ(49900,50000)",
+    "why": "not converged or too slow"
+   },
+   "A5": {
+    "f": "=BESSELJ(20000,20000)",
+    "why": "not converged or too slow"
+   },
+   "A50": {
+    "f": "=BESSELJ(50000.5,50000)",
+    "why": "not converged or too slow"
+   },
+   "A51": {
+    "f": "=BESSELJ(100000,99999)",
+    "why": "not converged or too slow"
+   },
+   "A52": {
+    "f": "=BESSELJ(99998,99999)",
+    "why": "not converged or too slow"
+   },
+   "A53": {
+    "f": "=BESSELJ(100009,99999)",
+    "why": "not converged or too slow"
+   },
+   "A54": {
+    "f": "=BESSELJ(99989,99999)",
+    "why": "not converged or too slow"
+   },
+   "A55": {
+    "f": "=BESSELJ(100099,99999)",
+    "why": "not converged or too slow"
+   },
+   "A56": {
+    "f": "=BESSELJ(99899,99999)",
+    "why": "not converged or too slow"
+   },
+   "A57": {
+    "f": "=BESSELJ(99999.5,99999)",
+    "why": "not converged or too slow"
+   },
+   "A58": {
+    "f": "=BESSELJ(100001,100000)",
+    "why": "not converged or too slow"
+   },
+   "A59": {
+    "f": "=BESSELJ(99999,100000)",
+    "why": "not converged or too slow"
+   },
+   "A6": {
+    "f": "=BESSELJ(50000,50000)",
+    "why": "not converged or too slow"
+   },
+   "A60": {
+    "f": "=BESSELJ(100010,100000)",
+    "why": "not converged or too slow"
+   },
+   "A61": {
+    "f": "=BESSELJ(99990,100000)",
+    "why": "not converged or too slow"
+   },
+   "A62": {
+    "f": "=BESSELJ(100100,100000)",
+    "why": "not converged or too slow"
+   },
+   "A63": {
+    "f": "=BESSELJ(99900,100000)",
+    "why": "not converged or too slow"
+   },
+   "A64": {
+    "f": "=BESSELJ(100000.5,100000)",
+    "why": "not converged or too slow"
+   },
+   "A68": {
+    "f": "=BESSELJ(49998,50000)",
+    "why": "not converged or too slow"
+   },
+   "A69": {
+    "f": "=BESSELJ(49997,50000)",
+    "why": "not converged or too slow"
+   },
+   "A7": {
+    "f": "=BESSELJ(99999,99999)",
+    "why": "not converged or too slow"
+   },
+   "A70": {
+    "f": "=BESSELJ(49995,50000)",
+    "why": "not converged or too slow"
+   },
+   "A71": {
+    "f": "=BESSELJ(99997,99999)",
+    "why": "not converged or too slow"
+   },
+   "A72": {
+    "f": "=BESSELJ(99996,99999)",
+    "why": "not converged or too slow"
+   },
+   "A73": {
+    "f": "=BESSELJ(99994,99999)",
+    "why": "not converged or too slow"
+   },
+   "A74": {
+    "f": "=BESSELJ(99998,100000)",
+    "why": "not converged or too slow"
+   },
+   "A75": {
+    "f": "=BESSELJ(99997,100000)",
+    "why": "not converged or too slow"
+   },
+   "A76": {
+    "f": "=BESSELJ(99995,100000)",
+    "why": "not converged or too slow"
+   },
+   "A8": {
+    "f": "=BESSELJ(100000,100000)",
+    "why": "not converged or too slow"
+   }
+  }
+ }
+}

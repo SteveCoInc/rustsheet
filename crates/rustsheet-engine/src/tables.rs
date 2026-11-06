@@ -7,7 +7,9 @@ use crate::{
         lexer::LexerMode,
         parser::{
             parse_range,
-            stringify::{to_rc_lowering_at, to_string_lowering, to_string_with_ref_errors},
+            stringify::{
+                to_rc_lowering_at, to_string_lowering, to_string_with_ref_errors, OffRows,
+            },
             Node,
         },
         types::{Area, CellReferenceRC},
@@ -15,7 +17,8 @@ use crate::{
     },
     formula_rewrite::RewrittenFormula,
     model::Model,
-    types::{Cell, Table, TableColumn, TableStyleInfo, Worksheet},
+    table_edits::{bounds, Bounds},
+    types::{Cell, Table, TableColumn, TableExtent, TableStyleInfo, Worksheet},
 };
 
 /// Gives every formula cell of `worksheet` whose shared formula is one of `by_row` (index, parsed
@@ -23,11 +26,14 @@ use crate::{
 /// the cell's own row, a shared formula of its own: a duplicated sheet, which gets no table, then
 /// reads what each cell read before, `#VALUE!` off the data rows (T-1699). Rows whose text is the
 /// same share one formula. Cells on the rows `keep_rows` (inclusive) keep their shared formula.
+/// A reference off the data rows prints as `off_rows` says: detached for a duplicate, `#REF!`
+/// for a convert to range (T-4020).
 pub(crate) fn lower_this_row_cells(
     worksheet: &mut Worksheet,
     by_row: &[(usize, Node)],
     tables: &[String],
     keep_rows: Option<(i32, i32)>,
+    off_rows: OffRows,
 ) {
     if by_row.is_empty() {
         return;
@@ -51,7 +57,7 @@ pub(crate) fn lower_this_row_cells(
         let Some((_, node)) = by_row.iter().find(|(i, _)| *i == index) else {
             continue;
         };
-        let text = to_rc_lowering_at(node, row, tables);
+        let text = to_rc_lowering_at(node, row, tables, off_rows);
         let Ok(next) = i32::try_from(worksheet.shared_formulas.len()) else {
             return;
         };
@@ -196,11 +202,15 @@ impl Model {
         {
             return Err("A table needs a header row and at least one data row".to_string());
         }
+        let new_bounds = Bounds {
+            left,
+            top,
+            right,
+            bottom,
+            data: (top, bottom),
+        };
         let overlaps = self.workbook.tables.values().any(|t| {
-            t.sheet_name == sheet_name
-                && parse_range(&t.reference).is_ok_and(|(c1, r1, c2, r2)| {
-                    c1 <= right && left <= c2 && r1 <= bottom && top <= r2
-                })
+            t.sheet_name == sheet_name && bounds(t).is_some_and(|b| b.overlaps(&new_bounds))
         });
         if overlaps {
             return Err("A table cannot overlap another table".to_string());
@@ -306,7 +316,7 @@ impl Model {
             .workbook
             .tables
             .get(name)
-            .and_then(|table| Some(crate::table_edits::bounds(table)?.data));
+            .and_then(|table| Some(bounds(table)?.data));
         self.lower_this_row_references(&tables, data_rows);
         self.rewrite_table_references(&tables, None, TableRewrite::Lower);
         self.remove_table(name)
@@ -338,6 +348,165 @@ impl Model {
             .filter(|(_, table)| table.is_on_sheet(sheet_name))
             .map(|(name, table)| (name.clone(), table.clone()))
             .collect()
+    }
+
+    /// The extents of the tables on `sheet`, to compare before and after a row delete (T-3634).
+    pub(crate) fn table_extents(&self, sheet: u32) -> Result<Vec<TableExtent>, String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        Ok((self.tables_on_sheet(&sheet_name).into_iter())
+            .map(|(name, table)| TableExtent {
+                name,
+                reference: table.reference,
+                totals_row_count: table.totals_row_count,
+            })
+            .collect())
+    }
+
+    /// Those of `before` (the [`Model::table_extents`] of `sheet` before an edit) that the edit
+    /// changed: what the edit's undo restores.
+    pub(crate) fn changed_table_extents(
+        &self,
+        sheet: u32,
+        before: Vec<TableExtent>,
+    ) -> Result<Vec<TableExtent>, String> {
+        let after = self.table_extents(sheet)?;
+        Ok(before.into_iter().filter(|e| !after.contains(e)).collect())
+    }
+
+    /// Gives the tables of `sheet` named in `extents` those extents back (the undo of a row
+    /// delete that resized them, T-3634), and reparses. The extents can come from a peer's diff
+    /// (directive 5): each must name a table on `sheet` and keep its columns, with room for its
+    /// header and totals rows, or nothing changes.
+    pub(crate) fn restore_table_extents(
+        &mut self,
+        sheet: u32,
+        extents: &[TableExtent],
+    ) -> Result<(), String> {
+        self.check_table_extents(sheet, extents)?;
+        if extents.is_empty() {
+            return Ok(());
+        }
+        for extent in extents {
+            if let Some(table) = self.workbook.tables.get_mut(&extent.name) {
+                table.reference.clone_from(&extent.reference);
+                table.totals_row_count = extent.totals_row_count;
+            }
+        }
+        self.reset_tables();
+        Ok(())
+    }
+
+    /// Checks that [`Model::restore_table_extents`] would accept `extents`, changing nothing, so
+    /// an undo can refuse a bad peer diff before it moves any row (T-4671).
+    pub(crate) fn check_table_extents(
+        &self,
+        sheet: u32,
+        extents: &[TableExtent],
+    ) -> Result<(), String> {
+        if extents.is_empty() {
+            return Ok(());
+        }
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        for extent in extents {
+            let table = (self.workbook.tables.get(&extent.name))
+                .filter(|table| table.is_on_sheet(&sheet_name))
+                .ok_or_else(|| format!("No table '{}' on the sheet", extent.name))?;
+            let restored = Table {
+                reference: extent.reference.clone(),
+                totals_row_count: extent.totals_row_count,
+                ..table.clone()
+            };
+            let fits = bounds(table)
+                .zip(bounds(&restored))
+                .is_some_and(|(now, then)| {
+                    then.left == now.left
+                        && then.right == now.right
+                        && then.top <= then.bottom
+                        && then.data.0 <= then.data.1.saturating_add(1)
+                        && extent.totals_row_count <= 1
+                });
+            if !fits {
+                return Err(format!("Invalid extent for table '{}'", extent.name));
+            }
+        }
+        Ok(())
+    }
+
+    /// Deletes `count` columns of `sheet` from `column` ([`Model::delete_columns`]) and returns
+    /// the tables it changed but kept, as they were before: what its undo restores (T-4652). A
+    /// column delete can drop table columns, with their names, formulas and filters, so the
+    /// whole table is kept, not only its [`TableExtent`].
+    pub(crate) fn delete_columns_keeping_tables(
+        &mut self,
+        sheet: u32,
+        column: i32,
+        count: i32,
+    ) -> Result<Vec<(String, Table)>, String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        let before = self.tables_on_sheet(&sheet_name);
+        self.delete_columns(sheet, column, count)?;
+        let tables = &self.workbook.tables;
+        Ok((before.into_iter())
+            .filter(|(name, table)| tables.get(name).is_some_and(|now| now != table))
+            .collect())
+    }
+
+    /// Checks everything about `tables` that [`Model::restore_tables_of_sheet`] needs except the
+    /// overlap test, changing nothing, so a column-delete undo can refuse a bad peer diff before
+    /// it re-inserts any column (T-4671). The overlap test stays after the insert: the other
+    /// tables' extents only take their final place once the columns are back.
+    pub(crate) fn check_tables_of_sheet(
+        &self,
+        sheet: u32,
+        tables: &[(String, Table)],
+    ) -> Result<(), String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        for (name, then) in tables {
+            let now = (self.workbook.tables.get(name))
+                .filter(|now| now.is_on_sheet(&sheet_name))
+                .ok_or_else(|| format!("No table '{name}' on the sheet"))?;
+            if !table_fits_restore(now, then) {
+                return Err(format!("Invalid table '{name}' to restore"));
+            }
+        }
+        Ok(())
+    }
+
+    /// Gives the tables of `sheet` named in `tables` those tables back (the undo of a column
+    /// delete that changed them, T-4652), and reparses. The tables can come from a peer's diff
+    /// (directive 5): each must replace a table on `sheet` with the same names and rows, have one
+    /// column per column of its reference with distinct non-empty names, filter only those, and
+    /// overlap no other table, or nothing changes.
+    pub(crate) fn restore_tables_of_sheet(
+        &mut self,
+        sheet: u32,
+        tables: &[(String, Table)],
+    ) -> Result<(), String> {
+        if tables.is_empty() {
+            return Ok(());
+        }
+        self.check_tables_of_sheet(sheet, tables)?;
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        let placed: Vec<_> = (tables.iter())
+            .filter_map(|(name, then)| Some((name, bounds(then)?)))
+            .collect();
+        let others: Vec<_> = (self.workbook.tables.iter())
+            .filter(|(name, table)| {
+                table.is_on_sheet(&sheet_name) && !tables.iter().any(|(n, _)| n == *name)
+            })
+            .filter_map(|(name, table)| Some((name, bounds(table)?)))
+            .collect();
+        for (i, (name, b)) in placed.iter().enumerate() {
+            let mut rest = placed.iter().skip(i + 1).chain(&others);
+            if rest.any(|(_, other)| b.overlaps(other)) {
+                return Err(format!("Table '{name}' would overlap another table"));
+            }
+        }
+        for (name, table) in tables {
+            self.workbook.tables.insert(name.clone(), table.clone());
+        }
+        self.reset_tables();
+        Ok(())
     }
 
     /// Puts back tables taken out with their sheet (the undo of a sheet delete), and reparses.
@@ -410,7 +579,7 @@ impl Model {
                     node.has_this_row_to(tables).then_some((index, node))
                 })
                 .collect();
-            lower_this_row_cells(worksheet, &by_row, tables, data_rows);
+            lower_this_row_cells(worksheet, &by_row, tables, data_rows, OffRows::RefError);
         }
         self.parser.set_lexer_mode(LexerMode::A1);
     }
@@ -438,4 +607,26 @@ enum TableRewrite {
     RefError,
     /// The absolute area it resolved to: the table is converted to a range.
     Lower,
+}
+
+/// Whether `then` can replace `now` in a restore: same names and rows, one column per column of
+/// its reference with distinct non-empty names, and filters only on those columns.
+fn table_fits_restore(now: &Table, then: &Table) -> bool {
+    bounds(now).zip(bounds(then)).is_some_and(|(now_b, b)| {
+        let width = usize::try_from(i64::from(b.right) - i64::from(b.left) + 1);
+        let mut names: Vec<String> = then.columns.iter().map(|c| c.name.to_lowercase()).collect();
+        names.sort_unstable();
+        names.dedup();
+        then.name == now.name
+            && then.display_name == now.display_name
+            && then.sheet_name == now.sheet_name
+            && then.header_row_count == now.header_row_count
+            && then.totals_row_count <= 1
+            && (b.top, b.bottom) == (now_b.top, now_b.bottom)
+            && b.data.0 <= b.data.1.saturating_add(1)
+            && width.is_ok_and(|w| w == then.columns.len() && w == names.len())
+            && names.iter().all(|n| !n.is_empty())
+            && (then.filter_columns.iter())
+                .all(|f| usize::try_from(f.col_id).is_ok_and(|id| id < names.len()))
+    })
 }

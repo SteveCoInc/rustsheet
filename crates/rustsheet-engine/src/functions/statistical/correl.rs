@@ -1,4 +1,5 @@
 use crate::expressions::types::CellReferenceIndex;
+use crate::functions::statistical::paired::SecondMark;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
@@ -131,7 +132,8 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> Result<PairedMoments, CalcResult> {
-        let (_, _, known_y, known_x) = self.fn_get_two_matrices(args, cell)?;
+        let (_, _, known_y, known_x) =
+            self.fn_get_two_matrices(args, cell, SecondMark::NoNumber)?;
         Ok(PairedMoments::new(&known_x, &known_y))
     }
 
@@ -196,6 +198,11 @@ impl Model {
         }
         if moments.n < 3.0 || slope.is_err() {
             return div();
+        }
+        // Excel: y's own sum of squares overflowing (x finite) is `#NUM!`, not the `#DIV/0!` of the
+        // infinite variance (probes/t4047-paired-overflow H4). Two points stay unprobed.
+        if !moments.syy.is_finite() {
+            return moment_error(Error::NUM, cell);
         }
         // Excel: Σ(y - ȳ)² less the explained part, sxy * sxy / sxx in that order
         // (probes/regression-pairs-b M column to the bit). An exact fit whose difference rounds

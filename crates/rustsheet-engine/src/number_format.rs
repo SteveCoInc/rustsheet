@@ -1,5 +1,6 @@
 use crate::{
     arithmetic::flush_subnormal,
+    decimal_round::x87_text_to_f64,
     formatter::{
         self,
         format::{FormatContext, Formatted},
@@ -134,6 +135,9 @@ pub fn parse_excel_number(text: &str) -> Option<f64> {
     let mut integer_sig_digits = 0i64;
     let mut fraction_digits = 0i64;
     let mut leading_fraction_digit = None;
+    // The first 15 significant digits as written (trailing zeros included), for the x87
+    // conversion below; later digits are cut, as `out` cuts them.
+    let mut written: u64 = 0;
     for c in mantissa.chars() {
         match c {
             '.' => {
@@ -151,6 +155,10 @@ pub fn parse_excel_number(text: &str) -> Option<f64> {
                 }
                 if sig > 0 || c != '0' {
                     sig += 1;
+                    if sig <= 15 {
+                        // At most 15 digits: below 10^15, so no overflow.
+                        written = written * 10 + (u64::from(c) - u64::from('0'));
+                    }
                 }
                 if sig <= 15 {
                     out.push(c);
@@ -176,6 +184,18 @@ pub fn parse_excel_number(text: &str) -> Option<f64> {
         Some(position) => exponent.saturating_sub(position),
         None => exponent.saturating_add(integer_sig_digits - 1),
     };
+    // Number text converts like Excel's x87 multiply by 10^-n, its first 15 significant digits as
+    // written (later ones cut) times 10^-n, rather than to the nearest double: `=4.91E-06`,
+    // `=0.00000491` and `VALUE("491E-8")` are 4.9100000000000004E-06, and so is a positive
+    // exponent or a longer string, read at its cut digits (docs/excel-semantics/numbers.md
+    // "Decimals reach a double through an x87 multiply by 10^-n"; probes-numeric/t3658-round-scaling
+    // Hits!C and E, -fresh C and D, t4077-long-literal-x87, excel-graph; T-3932, T-4077).
+    let cut = i64::try_from(sig.saturating_sub(15)).unwrap_or(i64::MAX);
+    let number = exponent
+        .checked_sub(fraction_digits)
+        .and_then(|place| place.checked_add(cut))
+        .and_then(|place| x87_text_to_f64(written, place))
+        .map_or(number, |converted| converted.copysign(number));
     (leading >= MIN_LEADING_EXPONENT).then(|| flush_subnormal(number))
 }
 

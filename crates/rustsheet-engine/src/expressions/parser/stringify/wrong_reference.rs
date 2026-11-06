@@ -10,17 +10,29 @@ use crate::expressions::utils::quote_name;
 /// The sheet printed in place of a missing one: none, after a `#REF!` prefix.
 const NO_SHEET: &Option<String> = &None;
 
+/// The sheet name a reference to a deleted sheet is stored under once the delete rewrote it
+/// (`delete_sheet_in_node`, T-2612). `*` is not allowed in a sheet name, so no sheet added later
+/// can take it, and the reference stays `#REF!` as in Excel
+/// (probes/table-edits/t2612-delete-sheet-then-add). Only the stored R1C1 text holds it; the
+/// display and the export print `#REF!` in its place.
+pub(crate) const DELETED_SHEET: &str = "*#REF!";
+
 /// A reference to a sheet that does not exist (a deleted one) is displayed as `#REF!` before the
 /// cell or range, as Excel prints `=SUM(#REF!C4:C7)` for `S!C4:C7` once S is deleted (T-2340,
-/// probes/table-edits/table-delete-sheet); the lexer reads that text back as `#REF!`. The stored
-/// R1C1 text and the export keep the name, so an undo that restores the sheet restores the
-/// reference. An external reference (`[1]Uses!A1`) is not a missing sheet.
+/// probes/table-edits/table-delete-sheet); the lexer reads that text back as `#REF!`. A sheet
+/// delete rewrites its references to [`DELETED_SHEET`], which the export writes as `#REF!` too, as
+/// Excel's file holds `#REF!C4:C7`; other missing sheets (a loaded `Nope!A1`) keep their name in
+/// the stored text and the export. An external reference (`[1]Uses!A1`) is not a missing sheet.
 fn is_missing_sheet(
     sheet_name: Option<&str>,
     context: Option<&CellReferenceRC>,
     export_to_excel: bool,
 ) -> bool {
-    sheet_name.is_some_and(|name| !name.starts_with('[')) && context.is_some() && !export_to_excel
+    match sheet_name {
+        Some(DELETED_SHEET) => context.is_some(),
+        Some(name) => !name.starts_with('[') && context.is_some() && !export_to_excel,
+        None => false,
+    }
 }
 
 /// `#REF!` written for a deleted reference, after the sheet prefix Excel keeps (`S!#REF!`) when

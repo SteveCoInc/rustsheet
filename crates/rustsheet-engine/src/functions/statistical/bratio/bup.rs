@@ -16,11 +16,15 @@ use crate::x87_register::Register;
 /// today's kernel answers.
 const MAX_BUP_TERMS: f64 = 9.0;
 
-/// The largest a0 L140 bup+bgrat takes T-3568's composition for at n >= 2 or c = 1: the range its
-/// probes cover (a0 <= 3000). Excel's W tracks its density's error, which grows with a0, and the
-/// engine's density is not Excel's to the bit there (T-3569): at a0 = 5E9 the port takes
-/// probes-numeric t2528-f-dist-huge-df2 A4 and A16 from within 4 ulp to visibly off.
-const MAX_BUP_A0: f64 = 3000.0;
+/// The largest a0 L140 bup+bgrat takes T-3568's composition for at n >= 2 or c = 1. T-3568's probes
+/// cover a0 <= 3000; past that, up to 1E7, the fallback kernel is what is off: on F's calls at a
+/// small df1 (4 to 20) and df2 of 1E5 to 2E7 it is up to 3.7E-10 relative off the 50-digit math,
+/// and this composition within 8E-15 (T-3754, docs/research/t3754: `F.DIST.RT(1.09080885395379,8,
+/// 5567623)` 0.3658936312385961 against Excel's correctly rounded 0.3658936312909749). Above 1E7
+/// it stops: Excel's W tracks its density's error, which grows with a0, the engine's density is not
+/// Excel's to the bit there (T-3569), and at a0 = 5E9 the port takes probes-numeric
+/// t2528-f-dist-huge-df2 A4 and A16 from within 4 ulp to visibly off.
+const MAX_BUP_A0: f64 = 1e7;
 
 /// bratio's split of L140's b0 into n bup terms and the lowest shape b0' = b0 - n (b0' = 1 and
 /// n - 1 at an integer b0).
@@ -73,6 +77,60 @@ pub(super) fn l140_bup_bpser(a0: f64, b0: f64, x0: f64, y0: f64, sum: BupSum) ->
     Some(up + series)
 }
 
+/// bup's prefactor in L140, ret = x87(P·fl(x0·y0)/c) held in a register, P the Beta(c, a0) density at
+/// y0 ([`l140_bup_bgrat`] multiplies it by S; [`l140_bup_prefactor_underflows`] reads its size).
+fn l140_bup_ret(density: f64, c: f64, x0: f64, y0: f64) -> Register {
+    Register::load(density)
+        .mul(Register::load(x0 * y0))
+        .div(Register::load(c))
+}
+
+/// Whether Excel's L140 bup+bgrat tail w is exactly 0 because bup's prefactor ([`l140_bup_ret`]) is
+/// below the smallest normal double: Excel's ret is then 0, and bgrat's increment, at z > 708 there,
+/// is subnormal and flushed. A density below the normal range gives a smaller ret, so it is 0 too.
+/// It holds at any a0 (it reads only the prefactor, not [`MAX_BUP_A0`]'s port). On probes-numeric
+/// t4045-f-dist-rt-zero-cut, ln(x0^a0·y0^c/B(c, a0)) brackets Excel's last number and first 0 at
+/// (-707.42, -708.42), (-708.38, -709.38) and (-708.28, -709.28) in its three families (df1 30, 20
+/// and 31 at df2 1E8, 1E7 and 1E8), which meet only around `ln(DBL_MIN)` = -708.396:
+/// `F.DIST.RT(47.6,30,1E8)` is a number and `F.DIST.RT(47.6666666667,30,1E8)` is 0 (statistics.md
+/// "Incomplete beta at a huge first shape", T-4045). BETA.DIST's cdf takes the same edge
+/// (probes/t4456-beta-t-zero-cut C and D, a0 = 5E6 at b0 = 25.5 and 30: the first 0 is between
+/// ln ret -708 and -709, T-4456). F's tails and BETA.DIST's worksheet cdf (T-3764) ask it; the
+/// cdf under F.INV's search keeps today's kernel there (`F.INV(1.43795578761177E-262,107702,58)`,
+/// accuracy/F.INV/s1 A146). The t never reaches L140 (its second shape is 1/2).
+pub(super) fn l140_bup_prefactor_underflows(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
+    let (_, c) = bup_split(b0);
+    beta_density_small_shape(y0, c, a0).is_some_and(|density| {
+        !density.is_normal() || !l140_bup_ret(density, c, x0, y0).store().is_normal()
+    })
+}
+
+/// Whether Excel's L140 bup+bgrat tail w is exactly 0 at n >= 3 bup terms because bup's sum
+/// W = ret·S ([`l140_bup_ret`] times [`bup_power_sum`]) is below 2^-970, the smallest normal double
+/// divided by the double epsilon, though W itself is a normal double there. probes/
+/// t4437-beta-t-zero-bracket walks BETA.DIST by 0.5 in ln ret at (a, b) = (5E6, 3.5), (5E6, 4),
+/// (1E6, 3.5) and (5E6, 5.5). Each family's last number has W between 1.10 and 1.60 times 2^-970,
+/// and its first 0 has W between 0.67 and 0.97 times it (`BETA.DIST(0.999862932,5E6,3.5,TRUE)`
+/// row 9 is 1.1078134827430778E-292, row 10 is 0). The domain n >= 3 is part of the rule as frozen
+/// (docs/research/t4437/freeze2.md): the second fresh sweep after it, eight untouched families with
+/// n from 3 to 7 (probes/t4437-beta-zero-fresh2, rows 0.05 nats apart), puts 176 of 176 cells on the
+/// predicted side, every cut within 0.025 nats of 2^-970 (statistics.md "Where the exact 0 starts
+/// (T-4045)"). At n = 2 Excel's cut lies below the edge and moves with a0 (T-4564).
+pub(super) fn l140_bup_sum_flushed(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
+    /// 2^-970: Excel's L140 bup+bgrat tail is 0 below it at n >= 3.
+    const FLUSH: f64 = f64::MIN_POSITIVE / f64::EPSILON;
+    let (n, c) = bup_split(b0);
+    n >= 3.0
+        && beta_density_small_shape(y0, c, a0)
+            .filter(|density| density.is_normal())
+            .is_some_and(|density| {
+                let w = l140_bup_ret(density, c, x0, y0)
+                    .mul(Register::load(bup_power_sum(c, a0, y0, x0, n)))
+                    .store();
+                w < FLUSH
+            })
+}
+
 /// bratio's L140 for x0 > 0.7 and a0 > 15 (b0 < 40): w = bgrat(a0, c, x0, y0, bup(c, a0, y0, x0, n))
 /// with n and c = b0 - n from [`bup_split`], as Excel computes it, RN(W + D) (statistics.md "Incomplete
 /// beta: the integrated model", L140 bup+bgrat at 1 < b < 2 (T-3382) and with n >= 2 bup terms
@@ -99,10 +157,7 @@ pub(super) fn l140_bup_bgrat(a0: f64, b0: f64, x0: f64, y0: f64) -> Option<f64> 
     // A density at or past the subnormal edge has lost the digits W needs (it underflows to 0
     // while W, times S's large powers, is still a normal double): today's kernel keeps those.
     let density = beta_density_small_shape(y0, c, a0).filter(|p| p.is_normal())?;
-    let ret = Register::load(density)
-        .mul(Register::load(x0 * y0))
-        .div(Register::load(c));
-    let up = ret
+    let up = l140_bup_ret(density, c, x0, y0)
         .mul(Register::load(bup_power_sum(c, a0, y0, x0, n)))
         .store();
     let increment = if c == 1.0 {
@@ -112,6 +167,18 @@ pub(super) fn l140_bup_bgrat(a0: f64, b0: f64, x0: f64, y0: f64) -> Option<f64> 
     };
     let w = dd_add((up, 0.0), increment).0;
     w.is_finite().then_some(w)
+}
+
+/// Whether bratio's L140 bup sum overflows at this point (`b0 < 40` after the swap, either side of
+/// x0 = 0.7): S's running product of ratios (apb + l)/(ap1 + l) ([`bup_power_sum`]) passes the
+/// largest double, so S is not finite and Excel's incomplete beta is `#NUM!`. On probes/
+/// t3576-negbinom-cdf-huge-s every L140 cell whose ln of that product is 713.72 or more is `#NUM!`
+/// and every one at 707.81 or less is a value (ln of the largest double is 709.78), bup + bpser
+/// and bup + bgrat alike, and BETA.DIST with the same shapes is `#NUM!` at the same points
+/// (statistics.md "NEGBINOM.DIST's cdf is #NUM! at a huge `number_s`", T-3576).
+pub(super) fn l140_bup_sum_overflows(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
+    let (n, c) = bup_split(b0);
+    n > 1.0 && !bup_power_sum(c, a0, y0, x0, n).is_finite()
 }
 
 /// bup's sum S = 1 + `Σ_{i<n} t_i` of `bup(a, b, x, y, n)` as Excel forms it in L140 bup+bgrat

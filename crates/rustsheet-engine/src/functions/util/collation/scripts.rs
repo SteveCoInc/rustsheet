@@ -2,16 +2,17 @@
 //! (probes/t3276-collation-other-scripts, T-3324; docs/excel-semantics/coercion.md "Other scripts,
 //! their marks and digits, symbols and astral characters").
 
-use super::{
-    digit, other, single, Element, NORMAL_KANA, NO_ACCENT, OTHER_BASE, SYMBOL_BASE, UNASSIGNED,
-};
+use super::{digit, other, single, Element, NORMAL_KANA, NO_ACCENT, OTHER_BASE, SYMBOL_BASE};
 
 /// The groups of [`script_order`], each above the one before.
 const SCRIPTS: u32 = 0x1_0000;
 const SURROGATES: u32 = 0x2_0000;
 const HANGUL: u32 = 0x3_0000;
-pub(super) const IDEOGRAPHS: u32 = 0x4_0000;
+const IDEOGRAPHS: u32 = 0x4_0000;
 const IDEOGRAPH_SURROGATES: u32 = 0x5_0000;
+/// Above every [`script_order`]: the highest is a low surrogate unit, under
+/// `IDEOGRAPH_SURROGATES + 0xE000`.
+pub(super) const ABOVE_SCRIPTS: u32 = IDEOGRAPH_SURROGATES + 0x1_0000;
 
 /// Where a BMP code point or a UTF-16 surrogate unit sorts among the characters after the letters.
 /// Excel's block order is not code-point order. Lowest first: Latin, Greek, Cyrillic, Armenian,
@@ -206,17 +207,6 @@ pub(super) fn script_element(c: char) -> Option<Element> {
         '\u{f20}'..='\u{f29}' => digit_variant(u32::from(c) - 0xf20, TIBETAN_DIGIT),
         '\u{1040}'..='\u{1049}' => digit_variant(u32::from(c) - 0x1040, MYANMAR_DIGIT),
         '\u{17e0}'..='\u{17e9}' => digit_variant(u32::from(c) - 0x17e0, KHMER_DIGIT),
-        // U+0E83, unassigned in the Lao block, is one of T-3584's weightless characters
-        // (docs/research/t3584/weightless-bmp.txt). Skipping it matches Excel alone (above `""`,
-        // below `" "`) and trailing (`"a"&U+0E83 > "a"`; probes/t3895-collation-script-digits
-        // A179:A184, A187), but not leading: Excel finds U+0E83&"a" equal to "a" (A185). T-3904
-        // owns the weightless set and replaces this one-point stand-in.
-        '\u{e83}' => Element::Skipped(UNASSIGNED),
-        // `➿` U+27BF, `ᡸ` U+1878 and `₿` U+20BF, also weightless characters of T-3584, are equal to
-        // each other, above `""` and below `"!"` (probes/t3559-collation-unprobed-blocks ranks A35,
-        // A62, A126 = 1, B35 = 3, G17), as the same stand-in gives. T-3904 replaces it with the
-        // weightless rule for the whole set.
-        '\u{27bf}' | '\u{1878}' | '\u{20bf}' => Element::Skipped(UNASSIGNED),
         // Hebrew `ץ` equals `צ` (G14 = 2, B97 = 2) and sorts at `צ`'s place. The collation's `fold`
         // maps every final-letter pair to one character before this (`lookup_fold::class_first`),
         // so `כ ך`, `מ ם`, `נ ן` and `פ ף` are equal under `=` and `<` too

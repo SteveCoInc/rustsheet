@@ -498,6 +498,51 @@ fn width_and_kana_tiebreaks() {
     assert_eq!(cmp("aー", "Ａb"), Ordering::Less);
 }
 
+/// A long-vowel or iteration mark with no letter before it sorts above every other character,
+/// whatever follows it (probes/t4258-collation-lone-mark-astral; t3465-collation-holdout C313:D313).
+#[test]
+fn lone_mark_sorts_above_every_character() {
+    let cmp = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    for mark in ["ー", "ゝ", "ゞ", "ヽ", "ヾ", "々"] {
+        for other in [
+            "𠀀",
+            "𪜀",
+            "\u{2fa1d}",
+            "𰀀",
+            "가",
+            "一",
+            "\u{9fff}",
+            "㐀",
+            "豈",
+            "\u{e000}",
+            "😀",
+            "\u{fffd}",
+            "\u{f0000}",
+            "\u{10fffd}",
+            "𝐀",
+            "𠀀𠀀",
+        ] {
+            assert_eq!(cmp(mark, other), Ordering::Greater, "{mark:?} > {other:?}");
+            assert_eq!(cmp(other, mark), Ordering::Less, "{other:?} < {mark:?}");
+        }
+    }
+    for text in [
+        "々\u{35f}",
+        "々ヲ",
+        "々一",
+        "々𠀀",
+        "々A",
+        "々ー",
+        "ーヲ",
+        "ー𠀀",
+    ] {
+        assert_eq!(cmp(text, "𠀀"), Ordering::Greater, "{text:?} > 𠀀");
+    }
+    let b313 = "々\u{35f}ヲ\u{32b}\u{350}ゞ";
+    assert_eq!(cmp("𠀀", b313), Ordering::Less);
+    assert_eq!(cmp(b313, "𠀀"), Ordering::Greater);
+}
+
 /// Exact MATCH folds `ー` after a letter to that letter and a leading iteration mark to `ー`
 /// (probes/t3275-collation-width-kana Calc!C127:C129, C136), and does not decompose voicing.
 #[test]
@@ -515,6 +560,95 @@ fn exact_match_fold_of_the_marks() {
     assert_eq!(fold("a々"), "a々");
     assert_ne!(fold("か\u{3099}"), fold("が"));
     assert_eq!(fold_exact_lookup(&[0xD800, 0x30FC]), vec![0xD800, 0x30FC]);
+}
+
+/// A cycle `a<b<c<d<a` with chords `c<a`, `d<b` (probes/t3418-sort-cycle-permutations, the shape of
+/// Data!A3, A4, A6, A7): Excel does not reverse the strictly descending chain `a, c, b, d`; it merges
+/// one-element runs pairwise, `c, a` and `d, b`, then `c, d, a, b` (Calc!A3, T-3418).
+#[test]
+fn the_pairwise_sort_never_reverses_a_descending_chain() {
+    use crate::functions::util::sort_indices_pairwise;
+    use std::cmp::Ordering;
+    // less[x][y]: x < y. a=0, b=1, c=2, d=3.
+    let less = [
+        [false, true, false, false],
+        [false, false, true, false],
+        [true, false, false, true],
+        [true, true, false, false],
+    ];
+    let cmp = |x: usize, y: usize| {
+        if less[x][y] {
+            Ordering::Less
+        } else if less[y][x] {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    };
+    let mut indices = vec![0, 2, 1, 3];
+    sort_indices_pairwise(&mut indices, cmp);
+    assert_eq!(indices, vec![2, 3, 0, 1]);
+}
+
+/// UNIQUE's grouping (`coalesce_equal_lines`) on the cycle `c < a < b = c` of Data!A5, A3, A4 of
+/// probes/t4200-unique-cycle-permutations (a=A3, b=A4, c=A5): equal neighbours become one group
+/// before a merge can put `a` between them, so `{a;c;b}` keeps a and c (row 146) though SORT's
+/// order is c, a, b; `{b;a;c}` keeps all three (row 147); on a total order it is equality (T-4200).
+#[test]
+fn unique_grouping_coalesces_equal_lines_before_merging() {
+    use crate::functions::util::coalesce_equal_lines;
+    use std::cmp::Ordering;
+    // a=0, b=1, c=2: a < b, c < a, b = c.
+    let cmp = |x: usize, y: usize| -> Ordering {
+        match (x, y) {
+            (0, 1) | (2, 0) => Ordering::Less,
+            (1, 0) | (0, 2) => Ordering::Greater,
+            _ => Ordering::Equal,
+        }
+    };
+    let group = |order: &[usize]| {
+        coalesce_equal_lines::<()>(order.len(), |i, j| Ok(cmp(order[i], order[j])))
+            .unwrap_or_default()
+    };
+    assert_eq!(group(&[0, 2, 1]), vec![0, 1, 1]);
+    assert_eq!(group(&[2, 1, 0]), vec![0, 0, 2]);
+    assert_eq!(group(&[1, 0, 2]), vec![0, 1, 2]);
+    assert_eq!(group(&[0, 1, 2]), vec![0, 1, 1]);
+    // A total order: groups by equality, each line pointing at the first of its value.
+    let values = [3, 1, 3, 2, 1, 3];
+    let first = coalesce_equal_lines::<()>(values.len(), |i, j| Ok(values[i].cmp(&values[j])));
+    assert_eq!(first, Ok(vec![0, 1, 0, 3, 1, 0]));
+    // An error from the comparison ends the walk.
+    assert_eq!(coalesce_equal_lines(3, |_, _| Err("budget")), Err("budget"));
+}
+
+/// UNIQUE's merge on two-field rows of A = ab, B = ab&U+00AD, C = U+00AD&ab (A = C, B = C, A < B;
+/// x < y), compared field by field (T-4393, probes/t4380-unique-keep-head-holdout rows 6 and 10):
+/// an equal right head joins the left head, which stays, and nothing out of a merge is compared
+/// with the group out before it. Over Cy Cx Ay Bx Ay the second Ay never meets Cy and is kept.
+#[test]
+fn unique_merge_keeps_the_left_head_and_never_coalesces_its_output() {
+    use crate::functions::util::coalesce_equal_lines;
+    use std::cmp::Ordering;
+    let text = |a: u8, b: u8| -> Ordering {
+        match (a, b) {
+            _ if a == b => Ordering::Equal,
+            (b'A', b'B') => Ordering::Less,
+            (b'B', b'A') => Ordering::Greater,
+            _ => Ordering::Equal,
+        }
+    };
+    let group = |run: &str| {
+        let rows: Vec<&[u8]> = run.split(' ').map(str::as_bytes).collect();
+        coalesce_equal_lines::<()>(rows.len(), |i, j| {
+            Ok(text(rows[i][0], rows[j][0]).then(rows[i][1].cmp(&rows[j][1])))
+        })
+        .unwrap_or_default()
+    };
+    // Kept: Cy, Cx, Bx, Ay (row 3's Ay joins Cy; row 5's stays apart).
+    assert_eq!(group("Cy Cx Ay Bx Ay"), vec![0, 1, 0, 3, 4]);
+    // Kept: Cy, Cx, Bx (the last Cy joins Cy).
+    assert_eq!(group("Cy Cx Ay Bx Cy"), vec![0, 1, 0, 3, 0]);
 }
 
 /// SORT's sort (`sort_indices_pairwise`) under Excel's intransitive text comparison
@@ -620,11 +754,16 @@ fn script_digits_tiebreak_by_block() {
 }
 
 /// T-3917 rule 1: `➿`, `ᡸ` and `₿` are equal to each other, above `""` and below `"!"`
-/// (probes/t3559-collation-unprobed-blocks ranks A35, A62, A126, B35, G17).
+/// (probes/t3559-collation-unprobed-blocks ranks A35, A62, A126, B35, G17). They are weightless
+/// (T-3904): Excel's `<` puts them above `""` by the prefix rule, while the total order and the
+/// key, which weigh them nothing, tie them with it.
 #[test]
 fn t3559_unknown_characters_weigh_alike() {
     for unknown in ["\u{27bf}", "\u{1878}", "\u{20bf}"] {
-        assert_increasing(&["", unknown, "!", "0"]);
+        let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+        assert_eq!(pairwise("", unknown), Ordering::Less);
+        assert_eq!(cmp_text_excel("", unknown), Ordering::Equal);
+        assert_increasing(&[unknown, "!", "0"]);
         assert_eq!(cmp_text_excel(unknown, "\u{27bf}"), Ordering::Equal);
     }
 }
@@ -697,4 +836,177 @@ fn t4013_classes_are_equal_and_astral_case_pairs_apart() {
     let (a, b) = (Text::from("\u{3d1}a"), Text::from("\u{3f4}b"));
     assert_eq!(cmp_text(&a, &b), Ordering::Less);
     assert_eq!(cmp_text(&b, &a), Ordering::Greater);
+}
+
+/// T-3904: weightless characters weigh nothing, except in the tail one text has beyond the
+/// other after a shared start of units below U+007B (coercion.md "Format characters, U+200B and
+/// the C1 controls (T-3662)"; probes/t3662-collation-ignorables, -prefix, -sweep).
+#[test]
+fn t3904_weightless_characters_and_the_prefix_rule() {
+    let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    let same_key =
+        |a: &str, b: &str| collation_key(&Text::from(a)) == collation_key(&Text::from(b));
+    for c in ['\u{ad}', '\u{200d}', '\u{feff}', '\u{524}', '\u{e83}'] {
+        let equal = [
+            (format!("a{c}b"), "ab".to_owned()),
+            (format!("{c}ab"), "ab".to_owned()),
+            (format!("é{c}"), "é".to_owned()),
+            (format!("a~{c}"), "a~".to_owned()),
+            (format!("ab{c}"), format!("ab{c}{c}")),
+            (c.to_string(), "\u{525}".to_owned()),
+        ];
+        for (a, b) in &equal {
+            assert_eq!(pairwise(a, b), Ordering::Equal, "{a:?} = {b:?}");
+            assert!(same_key(a, b), "{a:?} and {b:?} share a key");
+        }
+        // The prefix rule: a shorter fast start is less, case aside, though the keys agree.
+        for (a, b) in [
+            ("ab".to_owned(), format!("ab{c}")),
+            ("AB".to_owned(), format!("ab{c}")),
+            (String::new(), c.to_string()),
+            ("a-".to_owned(), format!("a-{c}")),
+        ] {
+            assert_eq!(pairwise(&a, &b), Ordering::Less, "{a:?} < {b:?}");
+            assert_eq!(pairwise(&b, &a), Ordering::Greater, "{b:?} > {a:?}");
+            assert!(same_key(&a, &b), "{a:?} and {b:?} share a key");
+        }
+        // A difference goes to the collation: "ab"&c < "ac" and < "b" (-sweep F1, F5).
+        assert_eq!(pairwise(&format!("ab{c}"), "ac"), Ordering::Less);
+        assert_eq!(pairwise(&format!("ab{c}"), "b"), Ordering::Less);
+    }
+}
+
+/// T-4039: the Unicode spaces, U+200B and the C1 controls (probes/t4039-collation-space-forms).
+#[test]
+fn t4039_space_forms_zero_width_space_and_c1_controls() {
+    assert_increasing(&[
+        " ", "\u{3000}", "\u{202f}", "\u{a0}", "\t", "\u{2002}", "\u{2003}", "\u{2004}",
+        "\u{200a}", "\u{200b}", "!", "\u{ac}", "\u{2022}", "\u{80}", "\u{81}", "\u{9f}", "0",
+    ]);
+    assert_eq!(cmp_text_excel("\u{205f}", " "), Ordering::Equal);
+    assert_eq!(cmp_text_excel("\u{2000}", "\u{2002}"), Ordering::Equal);
+    assert_eq!(cmp_text_excel("\u{2001}", "\u{2003}"), Ordering::Equal);
+    assert_eq!(cmp_text_excel("a\u{200b}b", "ab"), Ordering::Less);
+}
+
+/// T-4072: U+202F is the space at the first pass, after U+3000; a mark after a weightless
+/// character is a lone mark (probes/t4060-collation-open-choices Calc!B2, K2, B50:B63).
+#[test]
+fn t4072_narrow_nbsp_and_marks_after_weightless_characters() {
+    let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    assert_eq!(pairwise("\u{202f}a", " b"), Ordering::Less);
+    assert_increasing(&[" ", "\u{3000}", "\u{202f}", "\u{a0}"]);
+    for weightless in ['\u{ad}', '\u{524}'] {
+        let marked = format!("a{weightless}\u{301}");
+        assert_eq!(pairwise(&marked, "a"), Ordering::Greater, "{marked:?} > a");
+        assert_eq!(
+            pairwise(&marked, "\u{e1}"),
+            Ordering::Less,
+            "{marked:?} < á"
+        );
+        assert_eq!(pairwise(&format!("{marked}b"), "\u{e1}b"), Ordering::Less);
+        assert_eq!(pairwise(&format!("{marked}b"), "ab"), Ordering::Greater);
+        assert_eq!(
+            pairwise(&format!("{weightless}\u{301}"), "\u{301}"),
+            Ordering::Equal
+        );
+        // Without a mark after it, a weightless character still weighs nothing.
+        assert_eq!(pairwise(&format!("a{weightless}b"), "ab"), Ordering::Equal);
+    }
+}
+
+/// T-4087: U+202F differs from the space at the accent pass; a weightless character keeps a
+/// hyphen's marks; width and superscripts are weighed before small kana, kana type after
+/// (probes/t4086-collation-later-passes).
+#[test]
+fn t4087_later_passes() {
+    let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    // U+202F against an accent, either position.
+    assert_eq!(pairwise("\u{202f}a", " \u{e1}"), Ordering::Greater);
+    assert_eq!(pairwise("a\u{202f}", "\u{e1} "), Ordering::Less);
+    assert_increasing(&[" ", "\u{3000}", "\u{202f}", "\u{a0}"]);
+    // A hyphen or apostrophe keeps its mark across a weightless character.
+    assert_eq!(pairwise("a-\u{ad}\u{301}", "a-\u{301}"), Ordering::Equal);
+    assert_eq!(pairwise("a'\u{ad}\u{301}b", "a'\u{301}b"), Ordering::Equal);
+    assert_eq!(pairwise("a-\u{ad}\u{301}", "a-"), Ordering::Greater);
+    // Width and superscripts before small kana, from either position; kana type after it.
+    assert_eq!(pairwise("\u{ff21}\u{3041}", "A\u{3042}"), Ordering::Greater);
+    assert_eq!(pairwise("\u{3041}\u{ff21}", "\u{3042}A"), Ordering::Greater);
+    assert_eq!(pairwise("\u{b9}\u{3041}", "1\u{3042}"), Ordering::Greater);
+    assert_eq!(pairwise("\u{3041}\u{3000}", "\u{3042} "), Ordering::Greater);
+    assert_eq!(
+        pairwise("\u{30a2}\u{3041}", "\u{3042}\u{3042}"),
+        Ordering::Less
+    );
+}
+
+/// T-4153: U+202F's accent weight is 10: above `" "&U+030D` (5) and two U+030D (8), below three
+/// (11) and `" "&U+0301` (14), equal to the space with 88 U+030D (266 wraps to 10)
+/// (probes/t4153-narrow-nbsp-accent Calc!B1:D2, B30:D31, C34).
+#[test]
+fn t4153_narrow_nbsp_accent_weight() {
+    let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    let marks = |n: usize| format!(" {}", "\u{30d}".repeat(n));
+    assert_eq!(pairwise("\u{202f}", &marks(1)), Ordering::Greater);
+    assert_eq!(pairwise("\u{202f}", &marks(2)), Ordering::Greater);
+    assert_eq!(pairwise("\u{202f}", &marks(3)), Ordering::Less);
+    assert_eq!(pairwise("\u{202f}", " \u{301}"), Ordering::Less);
+    assert_eq!(pairwise("\u{202f}", &marks(88)), Ordering::Equal);
+}
+
+/// T-4234: on all-ASCII texts Excel's pairwise order agrees with the total `cmp_text`, the
+/// invariant behind UNIQUE's hash path (`unique_of` keeps the hash buckets when every text is
+/// ASCII and uses `coalesce_equal_lines` otherwise; T-4200 review).
+pub(crate) fn ascii_texts() -> Vec<Text> {
+    // Prefixes, case, hyphen, apostrophe, space, digits, punctuation and controls.
+    let alphabet = [
+        'a', 'A', 'b', 'B', 'z', '0', '9', '-', '\'', ' ', '_', '.', '~', '\t', '\n', '\u{1}',
+        '\u{7f}',
+    ];
+    let mut texts = vec![String::new()];
+    for a in alphabet {
+        texts.push(a.to_string());
+        for b in alphabet {
+            texts.push(format!("{a}{b}"));
+        }
+    }
+    for prefix in ["ab", "Ab", "co-op", "coop", "it's", "its", "a b", "ab "] {
+        for suffix in ["", "-", "'", "a", "A", " ", "1"] {
+            texts.push(format!("{prefix}{suffix}"));
+        }
+    }
+    texts.iter().map(|s| Text::from(s.as_str())).collect()
+}
+
+#[test]
+fn t4234_ascii_pairwise_agrees_with_total_order() {
+    let texts = ascii_texts();
+    for a in &texts {
+        for b in &texts {
+            assert_eq!(
+                cmp_text_pairwise(a, b),
+                cmp_text(a, b),
+                "{:?} vs {:?}",
+                a.to_string(),
+                b.to_string()
+            );
+        }
+    }
+}
+
+/// T-4270: the 32 C1 controls U+0080 to U+009F are pairwise distinct and sort by code point, after
+/// U+200B, `¬` and `•` and before `0`, alone and between `a` and `b` (probes/t4270-collation-c1-controls
+/// Calc!B1:B36 ranks 3 to 34 in row order, U+200B 0, `¬` 1, `•` 2, `0` 35; C1:C36 and E1:E36 all 1;
+/// N1:N32 the code points of SORT in order).
+#[test]
+fn t4270_c1_controls_in_code_point_order() {
+    let controls: Vec<String> = ('\u{80}'..='\u{9f}').map(String::from).collect();
+    let mut alone = vec!["\u{200b}", "¬", "•"];
+    alone.extend(controls.iter().map(String::as_str));
+    alone.push("0");
+    assert_increasing(&alone);
+    let wrapped: Vec<String> = controls.iter().map(|c| format!("a{c}b")).collect();
+    let mut wrapped: Vec<&str> = wrapped.iter().map(String::as_str).collect();
+    wrapped.push("ab");
+    assert_increasing(&wrapped);
 }

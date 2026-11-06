@@ -1,6 +1,8 @@
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{number_result, value_error, LiftCost, LiftOptions};
+use crate::functions::util::near_integer::near_integer_whole;
+use crate::functions::Function;
 use crate::limits::check_array_size;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
@@ -119,6 +121,35 @@ impl Model {
         }
     }
 
+    /// RANDARRAY's `rows` or `columns` (`name`): 1 when left out or empty, `#CALC!` at 0 and
+    /// `#VALUE!` below. An extent just below an integer reads as it, as SEQUENCE's does
+    /// (`near_integer_whole`; arrays.md "Array-constructor extents just below an integer"; probes/t4465-extent-near-integer-main D1:D63, T-4465).
+    fn randarray_extent(
+        &self,
+        value: Option<&CalcResult>,
+        name: &str,
+        cell: CellReferenceIndex,
+    ) -> Result<usize, CalcResult> {
+        let value = match value {
+            None | Some(CalcResult::EmptyArg) => return Ok(1),
+            Some(value) => value,
+        };
+        let n = near_integer_whole(self.cast_number_ref(value, cell)?) as i64;
+        match n {
+            0 => Err(CalcResult::new_error(
+                Error::CALC,
+                cell,
+                format!("{name} must be >= 1"),
+            )),
+            n if n < 0 => Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                format!("{name} must be >= 1"),
+            )),
+            n => Ok(n as usize),
+        }
+    }
+
     /// `=RANDARRAY([rows], [cols], [min], [max], [whole_number])`
     ///
     /// Returns a 2-D array of random numbers.
@@ -127,117 +158,58 @@ impl Model {
     ///   * min          – minimum value (default 0)
     ///   * max          – maximum value (default 1)
     ///   * `whole_number` – FALSE = decimal, TRUE = integer (default FALSE)
+    ///
+    /// Every argument lifts over an array and a range, one RANDARRAY per element whose value is
+    /// that call's top-left (docs/excel-semantics/arrays.md "RANDARRAY lifts over its arguments";
+    /// probes/t4519-row-column-randarray-over-arrays, probes/t4611-randarray-min-max-whole-arrays; T-4611).
     pub(crate) fn fn_randarray(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         if args.len() > 5 {
             return CalcResult::new_args_number_error(cell);
         }
+        self.lift_call(Function::Randarray, args, cell, &mut |model, values| {
+            model.randarray_kernel(values, cell)
+        })
+    }
 
-        let rows = if !args.is_empty() {
-            let v = self.evaluate_node_in_context(&args[0], cell);
-            if matches!(v, CalcResult::EmptyArg) {
-                1
-            } else {
-                match self.cast_to_number(v, cell) {
-                    Ok(n) => {
-                        let n = n.floor() as i64;
-                        if n == 0 {
-                            return CalcResult::new_error(
-                                Error::CALC,
-                                cell,
-                                "rows must be >= 1".to_string(),
-                            );
-                        }
-                        if n < 0 {
-                            return CalcResult::new_error(
-                                Error::VALUE,
-                                cell,
-                                "rows must be >= 1".to_string(),
-                            );
-                        }
-                        n as usize
-                    }
-                    Err(e) => return e,
-                }
-            }
-        } else {
-            1
+    /// One RANDARRAY call over argument values. A missing or empty argument takes its default.
+    fn randarray_kernel(&self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+        let rows = match self.randarray_extent(values.first(), "rows", cell) {
+            Ok(n) => n,
+            Err(e) => return e,
         };
-
-        let columns = if args.len() >= 2 {
-            let v = self.evaluate_node_in_context(&args[1], cell);
-            if matches!(v, CalcResult::EmptyArg) {
-                1
-            } else {
-                match self.cast_to_number(v, cell) {
-                    Ok(n) => {
-                        let n = n.floor() as i64;
-                        if n == 0 {
-                            return CalcResult::new_error(
-                                Error::CALC,
-                                cell,
-                                "columns must be >= 1".to_string(),
-                            );
-                        }
-                        if n < 0 {
-                            return CalcResult::new_error(
-                                Error::VALUE,
-                                cell,
-                                "columns must be >= 1".to_string(),
-                            );
-                        }
-                        n as usize
-                    }
-                    Err(e) => return e,
-                }
-            }
-        } else {
-            1
+        let columns = match self.randarray_extent(values.get(1), "columns", cell) {
+            Ok(n) => n,
+            Err(e) => return e,
         };
 
         if let Some((error, message)) = check_array_size(rows, columns) {
             return CalcResult::new_error(error, cell, message);
         }
 
-        let min = if args.len() >= 3 {
-            let v = self.evaluate_node_in_context(&args[2], cell);
-            if matches!(v, CalcResult::EmptyArg) {
-                0.0
-            } else {
-                match self.cast_to_number(v, cell) {
-                    Ok(n) => n,
-                    Err(e) => return e,
-                }
-            }
-        } else {
-            0.0
+        let bound = |value: Option<&CalcResult>, default: f64| match value {
+            None | Some(CalcResult::EmptyArg) => Ok(default),
+            Some(value) => self.cast_number_ref(value, cell),
         };
-
-        let max = if args.len() >= 4 {
-            let v = self.evaluate_node_in_context(&args[3], cell);
-            if matches!(v, CalcResult::EmptyArg) {
-                1.0
-            } else {
-                match self.cast_to_number(v, cell) {
-                    Ok(n) => n,
-                    Err(e) => return e,
-                }
-            }
-        } else {
-            1.0
+        let min = match bound(values.get(2), 0.0) {
+            Ok(n) => n,
+            Err(e) => return e,
+        };
+        let max = match bound(values.get(3), 1.0) {
+            Ok(n) => n,
+            Err(e) => return e,
         };
 
         if min > max {
             return CalcResult::new_error(Error::VALUE, cell, "min must be <= max".to_string());
         }
 
-        // get_boolean already maps EmptyArg → false, which is the correct default.
-        let whole_number = if args.len() >= 5 {
-            match self.get_boolean(&args[4], cell) {
+        // An empty whole_number is FALSE, the default.
+        let whole_number = match values.get(4) {
+            None | Some(CalcResult::EmptyArg) => false,
+            Some(value) => match Self::cast_bool_ref(value, cell) {
                 Ok(b) => b,
                 Err(e) => return e,
-            }
-        } else {
-            false
+            },
         };
 
         // Excel: a fractional bound with whole_number TRUE is #VALUE! (RANDARRAY(1,1,1.5,2.5,TRUE)).

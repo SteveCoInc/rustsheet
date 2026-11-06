@@ -4,7 +4,11 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "2681f929c428a80407c706929269995594ea6cf50343dee915090a52d7e7d570"
+  "input_sha256": "2681f929c428a80407c706929269995594ea6cf50343dee915090a52d7e7d570",
+  "definitions": {
+   "F.DIST": "2082d42adde3a9ef"
+  },
+  "arguments_sha256": "26b8b169c0098a153a36552889077fa6f40b77d3b5935f90d6b4bd6da0ee28c3"
  },
  "sheets": {
   "Calc": {
@@ -127,6 +131,16 @@
     "t": "e",
     "why": "deg_freedom2 outside [1, 1e+10]",
     "f": "=F.DIST(1,3,0,TRUE)"
+   },
+   "A32": {
+    "t": "n",
+    "v": "0.55292038653151644052204407653762141527518747550613",
+    "f": "=F.DIST(1,3.9,7.9,TRUE)"
+   },
+   "A33": {
+    "t": "n",
+    "v": "0.64938333717979247343030960674864545968544141813694",
+    "f": "=F.DIST(1,1.5,7,TRUE)"
    },
    "A4": {
     "t": "n",

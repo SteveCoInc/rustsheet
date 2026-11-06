@@ -60,10 +60,6 @@ fn pivot(
         .map(|axis| PivotField::new(axis, 3))
         .collect();
     PivotTable {
-        name: caption.to_string(),
-        sheet_id: 1,
-        location,
-        cache,
         fields,
         row_fields: vec![AxisField::Field(0)],
         column_fields: if column {
@@ -75,7 +71,9 @@ fn pivot(
             caption: caption.to_string(),
             field: 2,
             function,
+            ..DataField::default()
         }],
+        ..PivotTable::new(caption.to_string(), 1, location, cache)
     }
 }
 
@@ -419,7 +417,8 @@ fn two_fields_on_an_axis_answer_only_the_grand_total() {
 #[test]
 fn an_omitted_item_is_the_blank_item() {
     // calipers pv23_041 Liability Summary G5:G7: `GETPIVOTDATA(...,"Remediation Status",)` is
-    // the `(blank)` row. `""`, a blank cell and `"(blank)"` are unprobed, `#REF!`.
+    // the `(blank)` row, and so is `"(blank)"` (probes/t4236-pivot-date-groups Calc B15, J11).
+    // `""` and a blank cell are unprobed, `#REF!`.
     let mut model = model();
     let mut builder = CacheBuilder::new(None, MAX_RECORD_VALUES);
     for name in ["Region", "Product", "Sales"] {
@@ -450,7 +449,7 @@ fn an_omitted_item_is_the_blank_item() {
         .iter()
         .map(|c| model._get_text(c))
         .collect();
-    assert_eq!(texts, ["6", "6", "#REF!", "#REF!", "#REF!", "#REF!"]);
+    assert_eq!(texts, ["6", "6", "#REF!", "#REF!", "#REF!", "6"]);
 }
 
 #[test]

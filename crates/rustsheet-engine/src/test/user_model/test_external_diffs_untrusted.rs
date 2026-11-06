@@ -178,6 +178,7 @@ fn crafted_diffs_are_refused() {
         column,
         new_value: "1".to_string(),
         legacy: false,
+        external: false,
         old_value: Box::new(old),
     };
     let array = |height| Diff::SetArrayValue {
@@ -272,6 +273,7 @@ fn crafted_diffs_are_refused() {
                 row: 2,
                 count: BIG,
                 old_data: vec![],
+                tables: vec![],
             },
         ),
         (
@@ -281,6 +283,7 @@ fn crafted_diffs_are_refused() {
                 column: 1,
                 count: BIG,
                 old_data: vec![],
+                tables: vec![],
             },
         ),
         (
@@ -293,6 +296,7 @@ fn crafted_diffs_are_refused() {
                     row: Some(row(2, 9999)),
                     data: HashMap::new(),
                 }],
+                tables: vec![],
             },
         ),
         (
@@ -305,6 +309,7 @@ fn crafted_diffs_are_refused() {
                     row: None,
                     data: HashMap::from([(BIG, number(0))]),
                 }],
+                tables: vec![],
             },
         ),
         (
@@ -317,6 +322,7 @@ fn crafted_diffs_are_refused() {
                     row: None,
                     data: HashMap::new(),
                 }],
+                tables: vec![],
             },
         ),
         (
@@ -336,6 +342,7 @@ fn crafted_diffs_are_refused() {
                     }),
                     data: HashMap::new(),
                 }],
+                tables: vec![],
             },
         ),
         (
@@ -563,6 +570,7 @@ fn anchors_restored_claiming_more_cells_than_they_bring_are_refused() {
             column,
             new_value: "1".to_string(),
             legacy: false,
+            external: false,
             old_value: Box::new(Some(anchor.clone())),
         })
         .collect();
@@ -609,4 +617,55 @@ fn undoing_the_clear_of_large_dynamic_spills_still_works() {
         model.get_formatted_cell_value(0, 600000, 2).unwrap(),
         "600000"
     );
+}
+
+/// A peer's undo of a row delete that names a table extent the sheet has no table for is refused
+/// before it changes anything, rows included (T-3634).
+#[test]
+fn a_restored_table_extent_naming_no_table_is_refused() {
+    let mut model = model();
+    let restore = Diff::DeleteRows {
+        sheet: 0,
+        row: 2,
+        count: 1,
+        old_data: vec![RowData {
+            row: None,
+            data: HashMap::new(),
+        }],
+        tables: vec![crate::types::TableExtent {
+            name: "Nope".to_string(),
+            reference: "A1:B9".to_string(),
+            totals_row_count: 0,
+        }],
+    };
+    let error = assert_refused(&mut model, &one(DiffType::Undo, restore), "table extent");
+    assert!(error.contains("No table"), "{error}");
+}
+
+/// A peer's undo of a column delete that restores a table the sheet has none of is refused
+/// before it re-inserts any column (T-4671).
+#[test]
+fn a_restored_table_naming_no_table_is_refused_before_columns_return() {
+    let mut model = model();
+    let restore = Diff::DeleteColumns {
+        sheet: 0,
+        column: 2,
+        count: 1,
+        old_data: vec![ColumnData {
+            column: None,
+            data: HashMap::new(),
+        }],
+        tables: vec![(
+            "Nope".to_string(),
+            crate::types::Table::new(
+                "Nope",
+                "Sheet1",
+                "A1:B3",
+                (1, 0),
+                ["a".to_string(), "b".to_string()],
+            ),
+        )],
+    };
+    let error = assert_refused(&mut model, &one(DiffType::Undo, restore), "table restore");
+    assert!(error.contains("No table"), "{error}");
 }

@@ -3,16 +3,18 @@ id: T-3997
 title: "M5 exit owner for probes/t3945-atan-near-midpoint S!C8 and S!C10: they pass once T-3932 reads 0.190581435720431 as Excel does"
 milestone: M5
 lane: engine
-status: todo
-priority: P3
+status: done
+priority: P0
 size: S
 tier: sonnet
-depends_on: [T-3932]
+depends_on: [T-4077]
 ---
 
 ## Goal
 The two M5 exit cells of probes/t3945-atan-near-midpoint have an owner of their milestone (decision 0096), and they
 pass once T-3932 lands; if T-3932 does not fix them, this task finds and fixes the M5 part that is left.
+T-3932 kept the nearest double for digit strings of 1,000,000 or more, so S!C8 and S!C10 still fail; T-4077 now
+owns the 15-digit read, and this task confirms the cells after it.
 
 ## Context
 - Gap triage 2026-11-03 (`make eval` on origin/main b6ab50e5): `make exit-owners MILESTONE=M5` lists two cells, and
@@ -42,3 +44,11 @@ pass once T-3932 lands; if T-3932 does not fix them, this task finds and fixes t
 ## Out of scope
 - The literal and VALUE reader itself (T-3932).
 - The ATAN and ATAN2 cells of the same case (S!B203, S!B204) and the other C cells T-3932 lists.
+
+## Outcome
+T-4077 (merged, #3202) made literals read their first 15 digits through the x87 multiply, which fixed both cells
+with no change here. On origin/main `make eval-show CASE=probes/t3945-atan-near-midpoint.case.json` reports
+`status=Pass checked=214 passed=214`; S!C8 and S!C10 pass and have no `F` line in eval/baseline/probes.txt
+(already absent), so `make eval-baseline` changed nothing. `make exit-owners MILESTONE=M5` reports
+"0 failing M5 exit cells have no open M5 owner". Eval delta: none. The case still has a visible-parity lock line of 2
+in eval/baseline/visible-parity.txt; only the steward lowers it (`make eval-lower-visible-lock`, decision 0093).

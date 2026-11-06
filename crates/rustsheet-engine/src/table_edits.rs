@@ -149,6 +149,16 @@ pub(crate) struct Bounds {
     pub(crate) data: (i32, i32),
 }
 
+impl Bounds {
+    /// Whether the two ranges share a cell.
+    pub(crate) fn overlaps(&self, other: &Bounds) -> bool {
+        self.left <= other.right
+            && other.left <= self.right
+            && self.top <= other.bottom
+            && other.top <= self.bottom
+    }
+}
+
 /// The [`Bounds`] of `table`; `None` when its reference or row counts do not fit (directive 5).
 pub(crate) fn bounds(table: &Table) -> Option<Bounds> {
     let (left, top, right, bottom) = parse_range(&table.reference).ok()?;
@@ -349,6 +359,22 @@ fn edit_filter_columns(filters: &mut Vec<FilterColumn>, edit: ColumnEdit) {
     }
 }
 
+/// Whether a filtered table whose autoFilter criteria came from its file can stay filtered after
+/// a column edit: one of its kept criteria is left inside the table. Excel calls a table's hidden
+/// rows filtered only for a filterColumn with a criterion inside the table (T-4003), and once the
+/// edit deletes the last such column the export writes none, so the table stops being filtered
+/// here too. The caller only ever clears the flag with this: a table the import left unfiltered
+/// (a criterion-less or out-of-range filterColumn) stays so. A criterion-less column counts here,
+/// since [`crate::types::FilterCriterion::Other`] also holds a criterion the import read but could
+/// not check; Excel's own result after deleting the filtered column in the application is unprobed
+/// (T-4371).
+fn kept_filter_inside(table: &Table) -> bool {
+    table
+        .filter_columns
+        .iter()
+        .any(|f| usize::try_from(f.col_id).is_ok_and(|id| id < table.columns.len()))
+}
+
 /// Appends one column to `columns` and returns its name: `name` when no column of the table has
 /// that name (compared ignoring case), else `ColumnN` as [`edit_columns`] names an inserted
 /// column.
@@ -405,9 +431,12 @@ impl Model {
             deleted_columns: &edits.deleted_columns,
             deleted_tables: &edits.deleted_tables,
         };
+        let column_formulas = self.displaced_column_formulas(displacement);
         self.displace_cells(displacement)?;
         self.displace_cf_ranges(sheet, displacement);
-        self.resize_tables(sheet, edits.resized)
+        self.resize_tables(sheet, edits.resized)?;
+        self.set_displaced_column_formulas(column_formulas);
+        Ok(())
     }
 
     /// The first data row of the table on `sheet`, under a header row, whose data rows the row
@@ -542,7 +571,10 @@ impl Model {
                 }
                 if let Some(edit) = resized.columns {
                     edit_columns(&mut table.columns, edit);
-                    edit_filter_columns(&mut table.filter_columns, edit);
+                    if !table.filter_columns.is_empty() {
+                        edit_filter_columns(&mut table.filter_columns, edit);
+                        table.has_filters = table.has_filters && kept_filter_inside(table);
+                    }
                     headers.extend(inserted_headers(table, edit));
                 }
             }

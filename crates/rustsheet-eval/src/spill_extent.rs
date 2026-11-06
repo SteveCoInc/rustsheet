@@ -144,11 +144,25 @@ impl SpillExtent {
     /// A failing [`CellResult`] for every filled cell outside [`Self::known`].
     pub(crate) fn unexpected_cells(&self, evaluated: &dyn Evaluated) -> Vec<CellResult> {
         let mut cells = Vec::new();
+        // A cell inside any pivot's location is the pivot's own, not a stray spill: the engine
+        // lays out a grouped spec pivot itself and gives it that location (T-4235, T-4149),
+        // and another pivot's location is the bounding box of its rendered cells (spec_pivots.rs)
+        // or the file's (an xlsx case), which those cells already fill.
+        let pivots = evaluated.pivot_places();
+        let in_pivot = |sheet: &str, addr: Addr| {
+            let (row, col) = (addr.row.wrapping_sub(1), addr.col.wrapping_sub(1));
+            pivots.iter().any(|p| {
+                p.sheet == sheet
+                    && (p.top..=p.bottom).contains(&row)
+                    && (p.left..=p.right).contains(&col)
+            })
+        };
         for sheet in &self.sheets {
             let stored = evaluated.stored_cells(sheet);
             let stored_set: HashSet<Addr> = stored.iter().copied().collect();
             for addr in stored {
                 if self.known.contains(&cell_key(sheet, addr))
+                    || in_pivot(sheet, addr)
                     || self.in_pending_spill(sheet, addr, &stored_set)
                 {
                     continue;
@@ -194,6 +208,7 @@ fn unexpected(sheet: &str, addr: Addr, actual: Value) -> CellResult {
         graph_subnormal: false,
         kind: CellKind::SpillExtent,
         math: None,
+        target: crate::runner::Target::Excel,
     }
 }
 

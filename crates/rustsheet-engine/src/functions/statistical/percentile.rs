@@ -10,9 +10,25 @@ pub(super) use crate::functions::lift::num_error;
 use crate::functions::lift::LiftCost;
 use crate::functions::Function;
 use crate::nested_array::nested_array_error;
+use crate::reference_operators::Ranges;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
+
+/// A typed boolean or text data argument (one that is not a picked cell) as a one-element
+/// array: a boolean is 0 or 1, text must read as a number, else `#VALUE!`. Shared by PERCENTILE*
+/// and TRIMMEAN (`TRIMMEAN(FALSE,0)` is 0, `TRIMMEAN("2.5",0)` 2.5, probes/t3874-trimmean-typed-
+/// scalar A1, A8, A9; T-3874).
+pub(super) fn typed_scalar_numbers(
+    model: &mut Model,
+    value: CalcResult,
+    cell: CellReferenceIndex,
+) -> Result<Vec<f64>, CalcResult> {
+    match value {
+        CalcResult::Boolean(b) => Ok(vec![f64::from(u8::from(b))]),
+        text => model.cast_number_ref(&text, cell).map(|n| vec![n]),
+    }
+}
 
 /// The numbers of the data argument of PERCENTILE*, QUARTILE* and PERCENTRANK*: a range's
 /// numbers (text, booleans and blanks skipped), an array's, a number, or nothing for an empty
@@ -29,21 +45,47 @@ fn percentile_numbers(
     // in a range, and only a typed value is a one-element array (T-2344).
     match model
         .evaluate_picked_reference_arg(arg, cell)
-        .into_single_sheet_area(cell)
+        .into_areas_or_single(cell)
     {
+        // A union or 3-D range is read area by area (probes/t4309-3d-union-trimmean-percentile).
+        Ok(areas) => area_numbers(model, &areas, cell),
+        Err(value) => percentile_scalar_numbers(model, value, cell),
+    }
+}
+
+/// [`percentile_numbers`] of an argument that is not a union or a 3-D range.
+fn percentile_scalar_numbers(
+    model: &mut Model,
+    value: CalcResult,
+    cell: CellReferenceIndex,
+) -> Result<Vec<f64>, CalcResult> {
+    match value {
         CalcResult::EmptyCell | CalcResult::EmptyArg => Ok(vec![]),
         error @ CalcResult::Error { .. } => Err(error),
         // A typed boolean is a one-element array (`QUARTILE(TRUE,1)` is 1, probes-numeric/t1748-
         // typed-boolean-data A1-A8 for the whole family, probes/stat-order-floor-batch A102, A128),
         // and typed text a number (A11).
-        CalcResult::Boolean(b) => Ok(vec![f64::from(u8::from(b))]),
-        text @ CalcResult::String(_) => model.cast_number_ref(&text, cell).map(|n| vec![n]),
+        scalar @ (CalcResult::Boolean(_) | CalcResult::String(_)) => {
+            typed_scalar_numbers(model, scalar, cell)
+        }
         CalcResult::Array(array) => match nested_array_error(&array, cell) {
             Some(error) => Err(error),
             None => model.numeric_flat_with_element_errors(CalcResult::Array(array), cell),
         },
         value => model.numeric_flat_with_element_errors(value, cell),
     }
+}
+
+/// The numbers of the areas of a union or 3-D range, as written (an overlap counts twice); the
+/// first error cell is the result, text and booleans are skipped.
+pub(super) fn area_numbers(
+    model: &mut Model,
+    areas: &Ranges,
+    cell: CellReferenceIndex,
+) -> Result<Vec<f64>, CalcResult> {
+    model
+        .values_from_areas(areas, cell)
+        .map(|values| values.into_iter().flatten().collect())
 }
 
 /// The data of PERCENTILE*, QUARTILE* and PERCENTRANK*: smallest first, each element O(1) (a

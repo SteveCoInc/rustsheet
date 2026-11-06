@@ -3,7 +3,7 @@ id: T-3775
 title: "Owner ruling: is SIN/COS/IMSIN/IMCOS at the 15-digit neighbour of k·pi/2 (Excel 4.1E-4 off the math) an R3 case?"
 milestone: M9
 lane: research
-status: blocked
+status: done
 priority: P3
 size: S
 tier: opus
@@ -14,8 +14,6 @@ depends_on: []
 Record the owner's ruling on whether Excel's trigonometry at the 15-digit neighbours of k·pi/2 is a decision 0188 R3
 (`MATH-OVER-EXCEL`) case. Until the owner rules, the engine keeps matching Excel.
 
-## Blocked because
-Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward included, adds a case on its own").
 
 ## Context
 SIN, COS and the IM* trigonometry reduce x by the x87 64-bit pi (numbers.md "SIN / COS at multiples of 90°", "Trig of
@@ -30,10 +28,17 @@ The engine matches Excel at all of these points (directive 1). The options for t
 no R3 case; (b) an R3 case over a bounded region (which functions, which |x - k·pi/2|, which k), with a decision record.
 
 ## Acceptance criteria
-- [ ] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the numbers.md
+- [x] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the numbers.md
       and engineering.md entries.
-- [ ] If (b): a follow-up implementation task with its region, and the region's evidence committed first
+- [x] n/a (decision 0300 keeps Excel): If (b): a follow-up implementation task with its region, and the region's evidence committed first
       (decision 0188 R3).
 
 ## Out of scope
 - Changing the engine before the ruling.
+
+## Outcome
+- Owner ruling 2026-11-06, decision 0300: keep matching Excel. This is not an R3 case: no `MATH-OVER-EXCEL`
+  entry, no R3 mark, no engine change (the engine already matches Excel here).
+- numbers.md "SIN / COS at multiples of 90°" and engineering.md "IMSIN and IMCOS reduce the real part by the x87 64-bit
+  pi (T-3726)" now state the ruling.
+- Eval delta: none.

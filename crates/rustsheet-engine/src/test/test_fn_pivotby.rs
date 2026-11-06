@@ -593,8 +593,12 @@ fn an_array_relative_to_is_lifted_per_element() {
 fn two_parameter_lambdas_are_charged_against_the_visit_cap() {
     // DEVIATION (docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY: two-parameter LAMBDAs and
     // the cell-visit cap"): 20000 row groups in one column, each cell given the 20000-record
-    // column, visit 4E8 cells; the built-in PERCENTOF sums each relative set once.
+    // column, visit 4E8 cells; the built-in PERCENTOF sums each relative set once. The work
+    // budgets are lifted: each call's copy of its set is charged to them too (T-2805), and the
+    // visit cap is what this test is about.
     let mut model = new_empty_model();
+    model.area_budget.limit = u64::MAX;
+    model.evaluation.recalc_limits = (u64::MAX, u64::MAX);
     model._set(
         "A1",
         "=PIVOTBY(SEQUENCE(20000),SEQUENCE(20000,,0,0),SEQUENCE(20000),LAMBDA(x,y,ROWS(y)))",
@@ -850,4 +854,49 @@ fn an_early_error_fills_an_array_relative_to() {
     }
     assert_eq!(model._get_text("K1"), "#VALUE!");
     assert_eq!(model._get_text("K2"), "");
+}
+
+/// T-4403: over Ay Ay Bx Cx Cy of q p p q q (A = ab, B = ab&U+00AD, C = U+00AD&ab) the column
+/// leaf (`ab`&U+00AD,y) is reached by no record, so it holds every record and shares its first
+/// row with the reached (`ab`,y). With one function over two value columns the `ab` subtotal
+/// column still shows its moved cell, the reached-class records' second value column: p `12`,
+/// q `11, 14, 15` (probes/t4382-pivotby-intransitive-paths Calc!B2, excel-graph 2026-11-05).
+#[test]
+fn moved_subtotal_cell_beside_a_leaf_no_record_reaches() {
+    let mut model = new_empty_model();
+    let texts = [
+        "\"ab\"",
+        "\"ab\"",
+        "\"ab\"&UNICHAR(173)",
+        "UNICHAR(173)&\"ab\"",
+    ];
+    let rows = [
+        (0, "y", "q"),
+        (1, "y", "p"),
+        (2, "x", "p"),
+        (3, "x", "q"),
+        (3, "y", "q"),
+    ];
+    for (i, &(t, xy, pq)) in rows.iter().enumerate() {
+        let n = i + 1;
+        model._set(&format!("A{n}"), &format!("={}", texts[t]));
+        model._set(&format!("B{n}"), xy);
+        model._set(&format!("D{n}"), &n.to_string());
+        model._set(&format!("E{n}"), &(10 + n).to_string());
+        model._set(&format!("F{n}"), pq);
+    }
+    model._set(
+        "H1",
+        "=ARRAYTOTEXT(PIVOTBY(F1:F5,A1:B5,D1:E5,LAMBDA(v,ARRAYTOTEXT(v)),0,0,,2),1)",
+    );
+    model.evaluate();
+    let (a, b) = ("ab", "ab\u{ad}");
+    let expected = format!(
+        "{{\"\",\"{a}\",\"{a}\",\"{a}\",\"{a}\",\"{b}\",\"{b}\",\"{b}\",\"{b}\",\"{b}\",\"{b}\",\
+         \"Grand Total\",\"Grand Total\";\"\",\"y\",\"y\",\"\",\"\",\"x\",\"x\",\"y\",\"y\",\"\",\
+         \"\",\"\",\"\";\"p\",\"2\",\"12\",\"12\",\"\",\"3\",\"13\",\"2, 3\",\"12, 13\",\"\",\"\",\
+         \"\",\"\";\"q\",\"1, 5\",\"11, 15\",\"11, 14, 15\",\"\",\"\",\"\",\"1, 4, 5\",\
+         \"11, 14, 15\",\"\",\"\",\"\",\"\"}}"
+    );
+    assert_eq!(model._get_text("H1"), expected);
 }

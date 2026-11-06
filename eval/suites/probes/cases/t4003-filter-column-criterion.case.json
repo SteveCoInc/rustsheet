@@ -1,0 +1,236 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Which table autoFilters make a sheet's hidden rows filtered for SUBTOTAL and AGGREGATE (T-4003). Each sheet has a table A1:B7 (Cat a,b,a,c,a,b; Val 1-6) with D1:D4 = SUBTOTAL 3 and 103 over Cat, 9 and 109 over Val, D5 = AGGREGATE(9,1,..) and D6 = AGGREGATE(9,4,..). Values: a values filter on Cat keeping \"a\" (rows 3, 5, 7 hidden). NoCrit: a criterion-less <filterColumn colId=\"0\"/> (rows 3 and 5 hidden). NoCrit1: the same on colId 1. Past: the values filter under colId 5, past the 2-column table (rows 3, 5, 7 hidden). Manual: the table has no filter (rows 3 and 5 hidden by hand, control).",
+  "tags": [
+    "M8",
+    "math",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Values",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "A2": "a",
+        "B2": 1,
+        "A3": "b",
+        "B3": 2,
+        "A4": "a",
+        "B4": 3,
+        "A5": "c",
+        "B5": 4,
+        "A6": "a",
+        "B6": 5,
+        "A7": "b",
+        "B7": 6,
+        "D1": "=SUBTOTAL(3,Sales[Cat])",
+        "D2": "=SUBTOTAL(103,Sales[Cat])",
+        "D3": "=SUBTOTAL(9,Sales[Val])",
+        "D4": "=SUBTOTAL(109,Sales[Val])",
+        "D5": "=AGGREGATE(9,1,Sales[Val])",
+        "D6": "=AGGREGATE(9,4,Sales[Val])"
+      },
+      "hidden_rows": [
+        3,
+        5,
+        7
+      ],
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "A1:B7",
+          "filter": true
+        }
+      ]
+    },
+    {
+      "name": "NoCrit",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "A2": "a",
+        "B2": 1,
+        "A3": "b",
+        "B3": 2,
+        "A4": "a",
+        "B4": 3,
+        "A5": "c",
+        "B5": 4,
+        "A6": "a",
+        "B6": 5,
+        "A7": "b",
+        "B7": 6,
+        "D1": "=SUBTOTAL(3,SalesNC[Cat])",
+        "D2": "=SUBTOTAL(103,SalesNC[Cat])",
+        "D3": "=SUBTOTAL(9,SalesNC[Val])",
+        "D4": "=SUBTOTAL(109,SalesNC[Val])",
+        "D5": "=AGGREGATE(9,1,SalesNC[Val])",
+        "D6": "=AGGREGATE(9,4,SalesNC[Val])"
+      },
+      "hidden_rows": [
+        3,
+        5
+      ],
+      "tables": [
+        {
+          "name": "SalesNC",
+          "ref": "A1:B7",
+          "filter": true,
+          "filter_column": {
+            "criterion": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "NoCrit1",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "A2": "a",
+        "B2": 1,
+        "A3": "b",
+        "B3": 2,
+        "A4": "a",
+        "B4": 3,
+        "A5": "c",
+        "B5": 4,
+        "A6": "a",
+        "B6": 5,
+        "A7": "b",
+        "B7": 6,
+        "D1": "=SUBTOTAL(3,SalesNC1[Cat])",
+        "D2": "=SUBTOTAL(103,SalesNC1[Cat])",
+        "D3": "=SUBTOTAL(9,SalesNC1[Val])",
+        "D4": "=SUBTOTAL(109,SalesNC1[Val])",
+        "D5": "=AGGREGATE(9,1,SalesNC1[Val])",
+        "D6": "=AGGREGATE(9,4,SalesNC1[Val])"
+      },
+      "hidden_rows": [
+        3,
+        5
+      ],
+      "tables": [
+        {
+          "name": "SalesNC1",
+          "ref": "A1:B7",
+          "filter": true,
+          "filter_column": {
+            "col_id": 1,
+            "criterion": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Past",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "A2": "a",
+        "B2": 1,
+        "A3": "b",
+        "B3": 2,
+        "A4": "a",
+        "B4": 3,
+        "A5": "c",
+        "B5": 4,
+        "A6": "a",
+        "B6": 5,
+        "A7": "b",
+        "B7": 6,
+        "D1": "=SUBTOTAL(3,SalesPast[Cat])",
+        "D2": "=SUBTOTAL(103,SalesPast[Cat])",
+        "D3": "=SUBTOTAL(9,SalesPast[Val])",
+        "D4": "=SUBTOTAL(109,SalesPast[Val])",
+        "D5": "=AGGREGATE(9,1,SalesPast[Val])",
+        "D6": "=AGGREGATE(9,4,SalesPast[Val])"
+      },
+      "hidden_rows": [
+        3,
+        5,
+        7
+      ],
+      "tables": [
+        {
+          "name": "SalesPast",
+          "ref": "A1:B7",
+          "filter": true,
+          "filter_column": {
+            "col_id": 5
+          }
+        }
+      ]
+    },
+    {
+      "name": "Manual",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "A2": "a",
+        "B2": 1,
+        "A3": "b",
+        "B3": 2,
+        "A4": "a",
+        "B4": 3,
+        "A5": "c",
+        "B5": 4,
+        "A6": "a",
+        "B6": 5,
+        "A7": "b",
+        "B7": 6,
+        "D1": "=SUBTOTAL(3,SalesM[Cat])",
+        "D2": "=SUBTOTAL(103,SalesM[Cat])",
+        "D3": "=SUBTOTAL(9,SalesM[Val])",
+        "D4": "=SUBTOTAL(109,SalesM[Val])",
+        "D5": "=AGGREGATE(9,1,SalesM[Val])",
+        "D6": "=AGGREGATE(9,4,SalesM[Val])"
+      },
+      "hidden_rows": [
+        3,
+        5
+      ],
+      "tables": [
+        {
+          "name": "SalesM",
+          "ref": "A1:B7",
+          "filter": false
+        }
+      ]
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Values!D1",
+    "Values!D2",
+    "Values!D3",
+    "Values!D4",
+    "Values!D5",
+    "Values!D6",
+    "NoCrit!D1",
+    "NoCrit!D2",
+    "NoCrit!D3",
+    "NoCrit!D4",
+    "NoCrit!D5",
+    "NoCrit!D6",
+    "NoCrit1!D1",
+    "NoCrit1!D2",
+    "NoCrit1!D3",
+    "NoCrit1!D4",
+    "NoCrit1!D5",
+    "NoCrit1!D6",
+    "Past!D1",
+    "Past!D2",
+    "Past!D3",
+    "Past!D4",
+    "Past!D5",
+    "Past!D6",
+    "Manual!D1",
+    "Manual!D2",
+    "Manual!D3",
+    "Manual!D4",
+    "Manual!D5",
+    "Manual!D6"
+  ]
+}

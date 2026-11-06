@@ -19,12 +19,44 @@ then renamed (T-1608, the unscored cells of probes/sheet-ops/sheet-ops-rename-in
 Rule: `INDIRECT("Sales[Column2]")` is the area the same structured reference is in a formula. After two column
 inserts inside `Sales`, `ROWS(INDIRECT("Sales[Column2]"))` is 4; after one insert, where `Column2` does not exist,
 it is `#REF!`. `COUNTA(INDIRECT("Sales[Column1]"))` is 0 (an empty data column). A column the table lacks is `#REF!`.
-Only the plain `Table[Column]` shape is evidenced and implemented; the specifiers (`#All`, `#Headers`, `@`), an
-unqualified column, spacing, a bare table name and `a1` FALSE are unprobed and stay `#REF!` in the engine until
-T-3394 probes them. Case is unprobed too: the engine matches table and column names ignoring case, as the parser
-does, so `INDIRECT("sales[column2]")` probably resolves (T-2911).
+The other shapes are the next entry.
 Evidence: probes/table-edits/table-insert-column-inside-header F!A4, F!A5; table-insert-two-columns-inside-header
 F!A4, F!A5 (excel-graph 2026-10-27).
+
+## INDIRECT of structured-reference text: every qualified shape
+Rule: INDIRECT resolves any structured reference that names its table to the area the same text is in a formula,
+and refuses an unqualified one. With `Sales` on S!A1:D5 (header row 1, data rows 2-4, totals row 5):
+- Specifiers: `Sales[#All]` A1:D5, `Sales[#Headers]` A1:D1, `Sales[#Data]` A2:D4, `Sales[#Totals]` A5:D5,
+  `Sales[[#Headers],[Qty]]` B1, `Sales[[#Totals],[Qty]]` B5, `Sales[[#Headers],[#Data],[Qty]]` B1:B4,
+  `Sales[[#Data],[#Totals],[Qty]]` B2:B5, `Sales[[#All],[Qty]]` B1:B5; column ranges `Sales[[Qty]:[Price]]` and
+  `Sales[[#Data],[Qty]:[Price]]` B2:C4.
+- A bare name: `Sales` and `Sales[]` are the data area A2:D4 (`ISREF(INDIRECT("Sales"))` TRUE).
+- `@` and `#This Row` (`Sales[@Qty]`, `Sales[[#This Row],[Qty]]`, `Sales[#This Row]`, `Sales[@]`, `Sales[@[Qty]]`)
+  are that row of the table at the INDIRECT cell's row number, from the table's sheet or another sheet (P!C3 gives
+  B3); on a row outside the data rows they are `#REF!` (in a formula the same reference is `#VALUE!`).
+  `Sales[@Qty]:Sales[@Price]` (a range of two references) is `#REF!`.
+- Unqualified text is `#REF!` everywhere, also in a cell inside the table: `[Qty]`, `[@Qty]`, `[#Data]`.
+- Names and specifiers match ignoring case (`sales[qty]`, `SALES[QTY]`, `Sales[#all]`, `Sales[#DATA]`).
+- A sheet prefix is ignored: `S!Sales[Qty]`, `'S'!Sales[Qty]`, `S!Sales[#Data]`, `S!Sales` resolve, and so does
+  `P!Sales[Qty]` though sheet P does not hold the table. But the prefix must name a sheet, and unquoted it follows
+  the defined-name rule (letters, digits, `_` and `.` only): `Nope!Sales[Qty]`, `'Nope'!Sales[Qty]`,
+  `'No Sheet'!Sales[Qty]` and `No Sheet!Sales[Qty]` are `#REF!`, and so are `Co A!TabA[Qty]`, `P&L!TabB[Qty]` and
+  `O'B!TabC[Qty]` though the sheet holds the table, while `'Co A'!TabA[Qty]`, `'P&L'!TabB[Qty]`, `'O''B'!TabC[Qty]`
+  and `'Co A'!Sales[Qty]` (another sheet's table) resolve (probes/t4354-indirect-structref-sheet-prefix P!A1:A19,
+  excel-graph 2026-11-05, T-4354).
+- `a1` FALSE changes nothing: `INDIRECT("Sales[Qty]",FALSE)`, `INDIRECT("Sales",FALSE)`, `INDIRECT("Sales[#All]",FALSE)`
+  resolve as with TRUE.
+- Whitespace follows the A1 rule ("INDIRECT reference text: where spaces are allowed"): a leading space is `#REF!`
+  (`" Sales[Qty]"`, `" Sales"`), trailing spaces and a trailing line feed are ignored (`"Sales[Qty] "`,
+  `"Sales[Qty]   "`, `"Sales[Qty]"&CHAR(10)`, `"Sales "`, `"Sales[#Data] "`), a trailing tab is `#REF!`. Inside,
+  spaces are allowed where the formula grammar puts them between items (`Sales[[#Data], [Qty]]`,
+  `Sales[ [#Data],[Qty] ]`) but not between the name and its bracket (`Sales [Qty]`) or around a column name
+  (`Sales[ Qty]`, `Sales[[ Qty ]]`), which are `#REF!`.
+Evidence: probes/t3394-indirect-structref-shapes (S!D2:D4, F3:L3, F8:L8; P!A1:A27, B1:B9, C1:C11; each cell the
+first row, first column, rows and columns of the area; excel-graph 2026-11-05, T-3394).
+Status: VERIFIED (Excel for the web)
+Implemented in: `indirect_structured` (crates/rustsheet-engine/src/functions/lookup_and_reference/indirect_fallbacks.rs), tried after
+the defined-name fallback in A1 and R1C1 mode.
 
 ## INDIRECT resolves a defined name that holds a reference
 Rule: `INDIRECT("<name>")` of a defined name whose body is a cell or range reference is that
@@ -56,12 +88,21 @@ define one, and `"Summary!tn"` is `#REF!` too. The prefix follows formula quotin
 sheet name may hold only letters, digits, `_` and `.`, so `"Co A!tn"`, `"P&L!tn"` and `"O'B!tn"`
 are `#REF!` (also with `a1` FALSE) while `"2024!tn"`, `"Q1!tn"` and `"x.y!tn"` resolve; quoted,
 `''` is one quote (`"'O''B'!tn"` resolves) and any sheet name may be quoted (`"'CoB'!tn"`).
-Verified for ASCII sheet names only; unquoted non-ASCII names (`"Données!tn"`) and letter-after-digit
-names (`"1Q!tn"`) are unprobed (the engine accepts them).
+Unquoted non-ASCII letters count as letters and a digit-then-letter name needs no quotes: `"Données!tn"`,
+`"Ünïcode!tn"`, `"1Q!tn"` and `"1q!tn"` (case-insensitive) resolve like their quoted forms
+(probes/t4545-indirect-sheet-prefix-names rows 1:8, excel-graph 2026-11-06, T-4545).
 Cell text follows the same quoting for `"Co A!B1"`, `"P&L!B1"` and `"O'B!B1"` (`#REF!`), and
 `"Q1!B1"`, `"x.y!B1"` and `"2024!B1"` (an unquoted all-digit sheet, `"y2024"`) resolve; the engine
-quotes a digit-leading prefix for its lexer (T-2678). A typed `=2024!B1`, the R1C1 form `INDIRECT("2024!R1C1",FALSE)` and `"2024!B1:2024!B3"` are unprobed.
-Evidence: probes/indirect-sheet-scoped-name (excel-graph, 2026-10-25, T-2660).
+quotes a digit-leading prefix for its lexer (T-2678). The same holds for cell text on non-ASCII and digit-then-letter
+sheets (`"Données!B1"`, `"données!B1"`, `"Ünïcode!B1"`, `"1Q!B1"`, `"1q!B1"` are 7; probes/t4545-indirect-sheet-prefix-spellings
+rows 1:12) and for R1C1 text with `a1` FALSE (`"2024!R1C2"`, `"'2024'!R1C2"`, `"2024!R[-23]C2"`, `"1Q!R1C2"`,
+`"Données!R1C2"` are 7, `"2024!R1C2:R3C2"` sums to 24; rows 22:29). A range text that names its sheet on both corners
+is `#REF!` (ISREF FALSE, ERROR.TYPE 4), whatever the quoting or sheet: `"2024!B1:2024!B3"`, `"Q1!B1:Q1!B3"`,
+`"'1Q'!B1:'1Q'!B3"`, `"'2024'!B1:'2024'!B3"`, two different sheets `"Q1!B1:x.y!B3"`, the R1C1 `"2024!R1C2:2024!R3C2"`
+and a three-part `"Q1!B1:Q1!B3:Q1!B2"` (rows 13:18, 20, 21, 30); `"2024!B1:B3"` is the 3-cell range (row 19). A typed
+`=2024!B1` is unprobed.
+Evidence: probes/indirect-sheet-scoped-name (excel-graph, 2026-10-25, T-2660); probes/t4545-indirect-sheet-prefix-spellings
+and t4545-indirect-sheet-prefix-names (excel-graph, 2026-11-06, T-4545; predictions in docs/research/t4545).
 Calipers note: `calipers/pv_goldens/pv26_020` and `pv26_2_020` `Summary!C17:...17` are not evidence
 for this rule: the corpus anonymisation renamed the text in `Summary!B17` to `Company0691` but left
 the sheet it names as `ConAgra` (whose `TargetName`, D24, is the cached `Company2277`), so the
@@ -77,8 +118,17 @@ Tasks: T-2660, T-2867
 Rule: `a1` is coerced like a logical argument: a nonzero number is TRUE (`INDIRECT("H2",2)` and
 `INDIRECT("H2",-1)` = 5, `"TRUE"` text = TRUE), `0` is FALSE, so `INDIRECT("H2",0)` reads "H2" as R1C1
 and is `#REF!`, while `INDIRECT("R2C8",0)` = 5. Empty-string text is `#VALUE!` in both styles (B4, B10) and `"x"` is `#VALUE!` in A1 style (B5).
-Not probed: `"FALSE"` text and booleans read from cells.
-Evidence: eval/suites/probes/cases/indirect-text-broadcast.case.json B3:B10 (oracle: excel-graph, 2026-10-05, T-0957).
+The same holds when a1 comes from a cell, a one-cell range or nowhere (T-4538):
+- Text is matched case-insensitively and exactly: `"FALSE"`, `"false"`, a cell holding the text `FALSE` or `false` are FALSE;
+  `"True"` and a cell holding the text `TRUE` are TRUE. Text with a space (`" TRUE"`, `"TRUE "`) and numeric text (`"1"`,
+  as a literal or from a cell) are `#VALUE!`: a1 never converts text to a number.
+- TRUE/FALSE, 0, 1, -0.5 and 0.5 in cells read as in a literal (0.5 and -0.5 are TRUE). An empty-text cell (`=""`) is
+  `#VALUE!`, like the literal `""`.
+- A blank cell, a one-cell range of a blank cell and an omitted a1 (`INDIRECT("H2",)`) are FALSE, so they read the text as
+  R1C1: `INDIRECT("H2",)` is `#REF!` and `INDIRECT("R2C8",)` is 5. Only a1 left out entirely (`INDIRECT("H2")`) is A1.
+- A one-cell range (`D2:D2`) reads as its cell. An error in the a1 cell is returned (`=NA()` gives `#N/A`).
+Evidence: eval/suites/probes/cases/indirect-text-broadcast.case.json B3:B10 (oracle: excel-graph, 2026-10-05, T-0957);
+probes/t4538-indirect-a1-cells B20:C43 (oracle: excel-graph, 2026-11-06, T-4538; rows listed in docs/research/t4538/predictions.md).
 Status: VERIFIED (Excel for the web only; the engine matches all of these)
 
 ## INDIRECT R1C1 relative offsets
@@ -113,15 +163,16 @@ Evidence: probes/t3656-indirect-spaces-reversed Sheet1!F11:I33, F47:I54, F61:I65
 CELL("address") of each text in E; oracle: excel-graph, 2026-11-01, T-3656).
 Status: VERIFIED (Excel for the web)
 Implemented in: `indirect_reference_text` (engine expressions/utils), applied before both parsers; the
-defined-name and structured-reference fallbacks still see the text as written (their spacing is
-unprobed; structured references are T-3394).
+defined-name and structured-reference fallbacks still see the text as written and apply the same
+leading and trailing rule themselves (structured references: "INDIRECT of structured-reference text: every qualified shape", T-3394).
 Also `#REF!` (probes/t3747-indirect-whitespace, T-3747): a carriage return anywhere (leading, trailing,
 `"A1"&CHAR(13)&CHAR(10)`, `"R1C1"&CHAR(13)`), a leading line feed, a Unicode space (`UNICHAR(8195)`) leading or
 trailing, a line feed between two references (`"A1"&CHAR(10)&"B2"`, `"A1:B2"&CHAR(10)&"B1:C2"`), a line feed before the `!` (`"Sheet2"&CHAR(10)&"!A1"`), and spaces inside a reference (`"$A $1"`, `"A 1"`, `"$ A$1"`,
 `"A1 :B 2"`, `"R[ 1]C"`, `"R1 C1"`, `"R[1] C"`, `"R 1C1"`). Trailing space on a whole-column or row ref
 resolves (`"A:A "`, `"1:1 "`). A defined name's text may end in spaces or a line feed (`"MyName "`,
 `"MyName"&CHAR(10)`, `"MyName"&CHAR(10)&CHAR(10)`, `"MyName "&CHAR(10)`, `"MyName"&CHAR(10)&" "`) but not start with a space (probes/t3747-indirect-name-whitespace; the name fallback trims
-the same trailing characters). Not probed: names with a carriage return, structured references (T-3394).
+the same trailing characters). Not probed: names with a carriage return. Structured-reference text: "INDIRECT of structured-reference
+text: every qualified shape" (T-3394).
 Note for probes: text naming a sheet that does not exist is resolved by Excel for the web as an
 external workbook reference (`"' My Sheet'!A1"` gave CELL address `[ My Sheet] My Sheet!$A$1` and SUM
 `#BLOCKED!`), so such cells were dropped from the case (see "INDIRECT to a sheet that does not exist").
@@ -384,8 +435,15 @@ HLOOKUP behaves alike (probes/lookup-argument-edges J10-X2, excel-graph, 2026-10
 HLOOKUP twins (probes/lookup-index-hlookup H1-H6, excel-graph, 2026-10-07, T-0264): `INDEX(E1:E4,1)` (number)
 gives the row, `INDEX(E1:E4,2)` (text) and `INDEX(E1:E4,3)` (error) are `#REF!` found and `#N/A` not found,
 as in VLOOKUP. An INDEX index that itself fails (`INDEX(E1:E4,9)`) is `#REF!` in HLOOKUP and VLOOKUP, found
-or not found (H7-H10): a failing index is not turned into `#N/A` by a failed search. Whether the INDEX error propagates as is or is always
-mapped to `#REF!` is unprobed (an INDEX failing with another error, e.g. `INDEX(E1:E4,"x")`, would tell).
+or not found (H7-H10): a failing index is not turned into `#N/A` by a failed search.
+A failing reference-returning index keeps its own error, never mapped to `#REF!`. It fails like a value index:
+after lookup_value, before the search and before range_lookup, found or not found, in VLOOKUP and HLOOKUP alike.
+`INDEX(E1:E4,"x")`, `INDEX(E1:E4,-1)`, `OFFSET(E1,"x",0)` and `CHOOSE(3,E1,E2)` are `#VALUE!`. `INDEX(E1:E4,NA())` is
+`#N/A` and `INDEX(E1:E4,1/0)` is `#DIV/0!`. `INDEX(E1:E4,0,2)`, `OFFSET(E1,-5,0)`, `INDIRECT("nope")` and
+`INDEX(E1:E4,9)` are `#REF!`. `ERROR.TYPE` of each gives 3, 7, 2 or 4, so these are real errors, not a display.
+`INDEX(E1:E4,1.5)` is E1 (the index truncates), so it looks up column/row 2. `VLOOKUP(NA(),A1:C3,INDEX(E1:E4,"x"))` is
+`#N/A` (lookup_value first), and `VLOOKUP(1,A1:C3,INDEX(E1:E4,"x"),1/0)` is `#VALUE!` (the index beats range_lookup).
+Evidence: probes/lookup-index-failing H1:I52 (excel-graph, 2026-11-04, T-4191).
 A table_array error comes after lookup_value and before the index and range_lookup. `VLOOKUP(NA(),1/0,2)` and
 `VLOOKUP(NA(),#REF!,2)` are `#N/A`. `VLOOKUP(2,1/0,NA())`, `VLOOKUP(2,1/0,2,NA())` and `VLOOKUP(9,1/0,2)` are `#DIV/0!`.
 `VLOOKUP(2,#REF!,"a")` is `#REF!`. A lifted lookup_value spills the table error once per element: `VLOOKUP({2;9},1/0,2)`
@@ -654,8 +712,19 @@ array return_array, including match modes -1/1 (E9-E15); search modes 1 and -1 e
 `#VALUE!` (E8); a column lookup array needs the return's row count and a row lookup array its column count, so a column lookup array with a row return
 (E16), a row lookup array with a column return (E18, E6) or a shorter return (E5, E21) is `#VALUE!`; a column lookup array accepts a wider
 return_array and gives the matched row (E7, E19, E20), a row lookup array a taller one and gives the matched column
-(probes/xlookup-row-column-picks E28). A scalar return_array is `#VALUE!` (same probe, E35, E36). Still unprobed: an error return_array, and
-wildcard match mode with a binary search mode. A 2-D *range* lookup_array is `#VALUE!` as well (probes/xlookup-array-lookup-value-args A15, per element).
+(probes/xlookup-row-column-picks E28). A scalar return_array is `#VALUE!` (same probe, E35, E36).
+Error return_array (probes/t4192-xlookup-error-return-wildcard-binary F1:F27, excel-graph, 2026-11-04, T-4192): an
+error return_array (`1/0`, `NA()`, `#REF!`) is returned whether the value is found or not and whatever `if_not_found`
+says (`XLOOKUP(9,A1:A3,1/0,"nf")` is `#DIV/0!`, F1:F12; also under search modes 2 and -2, F24, F25, and against an
+error `if_not_found`, F27). An error lookup_value beats it (`XLOOKUP(NA(),A1:A3,1/0)` is `#N/A`, F13, F14), and so does
+an error lookup_array (`XLOOKUP(2,1/0,NA())` is `#DIV/0!` and `XLOOKUP(2,NA(),1/0)` `#N/A`, F15, F16). A return range
+or array holding an error gives it only when the match lands on it (F17:F21), and a 1x1 `{#N/A}` over a one-cell
+lookup vector is `#N/A` found and "nf" not found (F22, F23).
+Wildcard match mode with a binary search mode (same probe, G1:G23, I1:J2): match_mode 2 under search_mode 2 or -2 is
+`#VALUE!` whatever the lookup value (a wildcard, `~`, plain text, a number, TRUE, a blank), found or not, with or
+without `if_not_found`, and against a size mismatch; XMATCH is the same (G17:G20). Only an error lookup_value beats it
+(`XLOOKUP(NA(),..,2,2)` is `#N/A`, G23). A lifted search_mode decides per element (`{1;2}` gives 20, `#VALUE!`).
+Search modes 1 and -1 keep the wildcard (G21, G22: 20). The engine matched every cell when probed. A 2-D *range* lookup_array is `#VALUE!` as well (probes/xlookup-array-lookup-value-args A15, per element).
 Tasks: T-0948
 
 ## XMATCH / XLOOKUP binary search over runs of equal values
@@ -726,6 +795,9 @@ one-to-one fold above still keeps the length:
 - It is not ignored by exact MATCH: `"a"&U+0524&"b"` against `"ab"` and `U+0524&U+10C7` against `U+0525` are
   `#N/A` in MATCH, VLOOKUP and HLOOKUP (Calc!E6:H7), while `=`, COUNTIF and XMATCH(..,0) call both pairs equal
   (B6:F7, coercion.md "Weightless characters in `=`, COUNTIF and XMATCH").
+  Exact MATCH keeps this one-for-one rule for the format characters too (U+200C to U+200F, U+2060, U+FEFF, U+FE0F:
+  probes/t3662-collation-ignorables Calc!AK1:AK17 all `#N/A`), and for U+200B and the C1 controls, which have weights;
+  XMATCH(..,0) follows `=`'s prefix rule instead (coercion.md "Format characters, U+200B and the C1 controls (T-3662)").
 - Which characters: every BMP code point unassigned as of Unicode 14 (1422), the characters of later Unicode
   versions that the table lacks (not a version cut: U+0524-U+0525 and U+0528-U+0530 are weightless, but U+0526,
   Samaritan U+0800 and Lisu U+A4D0 have weights; Calc!R6, R9, R165), and 51 characters already assigned by
@@ -857,10 +929,77 @@ or array of indexes is read whole as a list, whatever its orientation (`CHOOSECO
 array literal whole: `LOOKUP(2,{1,2,3},{4,5,6})` = 5, `LOOKUP(2,{1,2,3})` = 2, `XLOOKUP(2,{1,2,3},{4,5,6})` = 5,
 `XMATCH(2,{1,2,3})` = 2, `ROWS({1;2;3})` = 3, `COLUMNS({1,2})` = 2, `CHOOSEROWS({1;2;3},{1;3})` is 2x1,
 `TRANSPOSE({1,2,3})` is 3x1. INDEX of a single value is that value (`INDEX(LOOKUP(2,{1,2,3},{4,5,6}),1,1)` = 5,
-`INDEX(AREAS(A1:B3),1,1)` = 1). UNVERIFIED (not probed): OFFSET's cols, height and width, XLOOKUP/XMATCH search_mode,
-XLOOKUP's if_not_found, ADDRESS's sheet_text, INDIRECT's a1 and TRIMRANGE's trim_cols; which problem wins inside a
+`INDEX(AREAS(A1:B3),1,1)` = 1). Probed since (T-4543 checked each against its oracle cells): OFFSET's cols
+(`OFFSET(A1,0,{0,1})` is 1x2, probes/reference-lift-elements F1:H1, K4), height and width (`OFFSET(A1,0,0,{2;3})`,
+probes/t2065-lift-small E1, reference-lift-consumers-b2 E129, E137, E177, E193; `OFFSET(A1,0,0,1,{2;1})`,
+reference-lift-consumers E201), XLOOKUP/XMATCH search_mode (probes/xlookup-array-search-mode-indirect A11, A12, and the
+T-1958 XMATCH entry), INDIRECT's a1 (`INDIRECT("B1",{1})`, probes/t2577-indirect-ref-array A1:A22), TRIMRANGE's trim_cols
+(`TRIMRANGE(A1:B3,0,{0;1})`, probes/reference-lift-pass-through-b E7, E8), XLOOKUP's if_not_found and ADDRESS's
+sheet_text (probes/t4543-xlookup-not-found-address-sheet-lift; the entry "XLOOKUP's if_not_found and ADDRESS's
+sheet_text over an array" below). UNVERIFIED (not probed): which problem wins inside a
 CHOOSECOLS/CHOOSEROWS index list between uncoercible text and a later error, or between two errors (an error beats an
 out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible text's `#VALUE!` or the first error found at once).
+
+- **XLOOKUP's if_not_found and ADDRESS's sheet_text over an array** (T-4543; probes/t4543-xlookup-not-found-address-sheet-lift,
+  excel-graph, 2026-11-06; Data A1:A3 = 1, 2, 3, B1:B3 = 10, 20, 30, D1:D2 = "x", "y"). XLOOKUP's if_not_found does
+  not lift: with a scalar lookup_value a miss returns it whole (`XLOOKUP(9,A1:A3,B1:B3,{"p";"q"})` is 2x1 "p", "q"; a
+  1x2, a 2x2 and the range D1:D2 alike, A1:A29), a hit ignores it (`XLOOKUP(2,..,{"p";"q"})` is 1x1 20), an error
+  element is kept (`{"p";#N/A}`, A49:A50), and beside a 2-D return_array the miss is still the if_not_found shape
+  (A57). Under an array lookup_value, every missed element takes the array's first element, whatever its position or
+  the lengths (`XLOOKUP({2;9;7},..,{"p";"q"})` is 20, "p", "p"; `{9;2}` is "p", 20; A33:A43). A range if_not_found
+  there is kept as a reference element: the grid shows `#VALUE!` (A46), but `INDEX(..,2,1)` returns the range and
+  spills "x", "y" (W45:W46). That element is a real reference, not a copy of its values
+  (probes/t4563-xlookup-not-found-ref-element, excel-graph, 2026-11-06; E1 = 5, F1:F2 = 3, 4; T-4563):
+  - INDEX of it is a reference: ISREF TRUE (A1:A9), TYPE 64 for F1:F2 and 1 for E1 (A37, A41), AREAS 1 (A45),
+    CELL("address") names Data!$F$1 (A49), and SUM 7 (A33). A range on another sheet works too (A21:A22).
+  - One-argument INDEX is different: `INDEX(XLOOKUP({2;9},..,D1:D2),2)` is 1x1 and shows `#VALUE!` (A25, T25, U25),
+    and `INDEX(that,1,1)` returns the range, which spills "x", "y" (V25:V26), with (2,1) `#REF!` (W25). So the
+    one-argument form keeps the element wrapped in a 1x1 array, while `INDEX(..,2,1)` hands the reference back.
+  - A lifted operator reads it as `#VALUE!`, even a one-cell range: `XLOOKUP(..)+0`, `&""` and `*{1;1}` are
+    20, `#VALUE!` (A57:A70).
+  - Over the whole result, SUM reads the reference element's top-left cell, as SPEC-0014 rule 4 does for an array
+    of references: `SUM(..F1:F2)` is 23 = 20 + F1 (not 20 + 3 + 4, which is 27), and `SUM(..E1)` is 25 (A73, A109).
+    COUNT is 1 and COUNTA 2 (A77, A81). ISERROR is FALSE, TRUE and ISTEXT over D1:D2 is FALSE, FALSE (A85,
+    A93). TYPE of the result is 64 and ISREF FALSE (A105, A89). MAX is 20 (A113), which cannot
+    tell whether MAX walks the reference (F1:F2 = 3, 4 are below 20); T-4569 settles it.
+  - The top-left-reading aggregates read the top-left cell, and an order statistic depends on the sheet (probes/t4569-xlookup-ref-element-max-min,
+    excel-graph, 2026-11-06, T-4569; G1:G2 = 50, 60 above the hit 20, H1:H2 = 1, 2 below it).
+    - Top-left cell: MAX 50, not 60 (A1, A14 with a 0 beside it), MAXA alike (A3), a one-cell range the same (A5).
+      MIN and MINA are 1 (A2, A4, A6, A15), which both readings give over H1:H2 = 1, 2, so they confirm nothing. AVERAGE is 35 = (20 + 50) / 2 (A7). PRODUCT is 20 = 20 x 1 (A8).
+      SUMSQ is 401 = 20^2 + 1 (A11). STDEV.S is 21.2132…, from 20 and 50 (A23). SUM is 70 (A20).
+    - Opaque: COUNT counts the reference element as no number, so 1 (A10). COUNTA counts it, so 2 (A9).
+      SUMPRODUCT reads it as 0, so 20 (A21).
+    - LARGE, SMALL and MEDIAN are `#N/A` here (A12, A13, A22), because the references are on another sheet (Data,
+      read from Calc). An array of references alone does the same. Read from another sheet,
+      `LARGE(OFFSET(G1,{0;1},0),1)`, SMALL, MEDIAN and `LARGE(INDIRECT({"Data!G1";"Data!G2"}),1)` are `#N/A` (A31,
+      A32, A40:A44, Local!E4:E5). The t2065 formulas on their own data sheet are `#VALUE!` (sheet Local, t2065's data,
+      E1:E3), as the entry "MEDIAN, LARGE and SMALL over a lifted OFFSET" records. Both come from the same fill. So
+      that entry's `#VALUE!` holds only for references on the formula's own sheet. The referenced sheet decides, not
+      how the reference is written: on Local, `OFFSET(Local!$A$1,..)`, `OFFSET(Local!A1,..)`, `OFFSET($A$1,..)` and
+      `INDIRECT({"A1";"A2"})` under LARGE or MEDIAN are all `#VALUE!`, `LARGE(OFFSET(Data!G1,{0;1},0),1)` is `#N/A`,
+      and a mixed grid read on its own sheet (`LARGE(XLOOKUP({1;9},A1:A3,B1:B3,A2:A3),1)`, unqualified or
+      `Local!`-qualified) is `#VALUE!` while its `MAX` reads the top-left cell, 100 (Local!F1:F9, round 4). A grid
+      with references on both sheets is unprobed.
+    - A text or TRUE hit beside the reference element is read as an array element: SUM, AVERAGE and COUNT skip it
+      (50, 50, 0), AVERAGEA counts text as 0 and skips TRUE (25, 50), MAXA and MINA skip both (50, 50), and COUNTA
+      is 2 (A50:A63; return C1:C3 or D1:D3 with C2 = "t", D2 = TRUE).
+    - Value view: `MAX(..+0)` is `#VALUE!` (A16). `MAX(INDEX(..,2,1))` reads the whole range, 60 (A17).
+    - Per-element callers lift over both elements. The value element is a non-reference argument: ROW, AREAS,
+      COUNTIF, SUBTOTAL(9), COUNTBLANK and `CELL("row")` are `#VALUE!` there, and N is 20. The reference element
+      is the call on G1:G2: ROW 1, AREAS 1, COUNTIF 2, N 50, SUBTOTAL 110, COUNTBLANK 0, CELL 1 (C24:D34). Each
+      result is 2x1 (B24:B28, B30, B33:B34): it is `#SPILL!` in A, where the next row's formula blocks it, and the last one,
+      `CELL("row",..)`, spills `#VALUE!`, 1 (A34:A35). ISREF of the whole result is FALSE (A29), and
+      ISNUMBER lifts to TRUE, FALSE (C30:D30).
+  Ours gives `#VALUE!` for the element, so every reader above differs (106 cells). SPEC-0018's nested cell would
+  fail ISREF, TYPE, AREAS, CELL and the aggregates, and SPEC-0014's `RefGrid` holds no values, so matching this
+  needs an array that mixes values and references: SPEC-0014's "Mixed grids" amendment (T-4569); implementation
+  T-4570 (it owns t4543 W45, W46, the t4563 cells and the t4569 cells).
+  ADDRESS's sheet_text lifts like its other arguments: `ADDRESS(1,1,1,TRUE,{"S1";"S2"})` is 2x1 `'S1'!$A$1`,
+  `'S2'!$A$1` (a name that reads as a cell reference is quoted), a 1x2 and the range D1:D2 (`x!$A$1`, `y!$A$1`) alike,
+  beside a lifted row_num it pairs by position and pads with `#N/A` (`ADDRESS({1;2;3},1,1,TRUE,{"S1";"S2"})` third
+  element `#N/A`), an error element is that error, a number element is text (`'5'!$A$1`), and an empty text element
+  gives `!$A$1` (A69:A112). Ours matches every cell of the t4543 case but W45:W46.
+
 XLOOKUP's match_mode and search_mode both lift (probes/lookup-argument-modes; probes/xlookup-array-lookup-value-args;
 probes/xlookup-array-search-mode-indirect). An error lookup_value does not stop the lift when match_mode is an array: the
 result is still an array, so a blocked spill is `#SPILL!`. Real oracle cell (gen-m6/fe0972380d030e4a Calc!A224,
@@ -1236,7 +1375,8 @@ call's result), not a value. What the caller sees depends on who reads the eleme
   values), and a lifted count over such a grid is unprobed (T-2212). Full table with cells: SPEC-0014 "Excel behavior to match" (probes/reference-lift-consumers,
   -b1c, -b1d, -b2, excel-graph, 2026-10-19, T-1955). COUNTIFS, AVERAGEIF and MAXIFS lift per element too
   (T-2065 probes; ours since T-2823); see "Statistical aggregates over a lifted OFFSET" below for STDEV.S,
-  VAR.S, SUMSQ, AVERAGEA, MAXA, MINA, VAR.P, STDEV.P, the VARA family, CONCAT, MEDIAN, LARGE and SMALL. AVERAGEIFS and MINIFS are unprobed.
+  VAR.S, SUMSQ, AVERAGEA, MAXA, MINA, VAR.P, STDEV.P, the VARA family, CONCAT, MEDIAN, LARGE and SMALL. AVERAGEIFS and MINIFS
+  lift like SUMIFS and MAXIFS (probes/t4396-lift-*, T-4396; same section below).
 - Per element, the scalar rules hold: an element off the sheet is `#REF!` (`OFFSET(A1,{0;-1},0)`, second element);
   `INDIRECT("R2C1",{TRUE;FALSE})` is `#REF!`, A2; a scalar error argument next to the lifted one is that error in every
   element (`INDEX(OFFSET(A1,{0;1},NA()),1,1)` is `#N/A`).
@@ -1250,14 +1390,14 @@ call's result), not a value. What the caller sees depends on who reads the eleme
   T-2299 owns the difference).
 - XMATCH's search_mode lifts too, as a value (for the array modes only the second element is probed, `INDEX(…,2,1)`): it is 2 in
   `XMATCH(2,A1:A3,0,{1;-1})` and 3 in `XMATCH(2,{1;2;2},0,{2;-2})`; an invalid mode element is `#VALUE!` in its slot
-  (`{1;3}`); a boolean range element counts as its number (TRUE is 1). The first array-mode elements are unprobed, as is an error lookup_value next to a lifted search_mode (`XMATCH(NA(),A1:A3,0,{1;-1})`, implemented as a 2x1 of `#N/A` by analogy with MATCH's match_type, UNVERIFIED). Implemented (T-1958): `fn_xmatch` lifts search_mode with lookup_value and match_mode.
+  (`{1;3}`); a boolean range element counts as its number (TRUE is 1). The first array-mode elements follow the same rule (T-4544, probes/t4544-xmatch-error-modes A136:A169): `XMATCH(2,A1:A3,{9;0})` and `XMATCH(2,A1:A3,0,{3;1})` are `#VALUE!` then 2, `INDEX(…,1,1)` of `XMATCH(2,A1:A3,{0;1})` and `XMATCH(2,A1:A3,0,{1;-1})` is 2. An error lookup_value beats every lifted mode element, valid or not: `XMATCH(NA(),A1:A3,0,{1;-1})` is a 2x1 of `#N/A`, and so are `{9;8}` as match_mode, `{3;5}` as search_mode, both modes as arrays at once and a 2-cell range of modes in place of either array; `1/0` and a cell holding `#N/A` give their own error the same way (t4544-xmatch-error-modes A1:A133, hold-out t4544-xmatch-error-modes-holdout, excel-graph 2026-11-06). Implemented (T-1958): `fn_xmatch` lifts search_mode with lookup_value and match_mode.
 - ERROR.TYPE and ISERROR of an INDEX pick whose multi-cell element cannot spill are the cell's `#SPILL!`, not a code or
   TRUE (`ERROR.TYPE(INDEX(OFFSET(A1,0,0,{1;2}),2,1))`, `ISERROR(INDEX(TRIMRANGE(A1:B5,{0;1}),2,1))`; F11, G11, H11).
 Evidence: probes/reference-lift-elements (excel-graph, 2026-10-19, T-1810); probes/lookup-argument-modes F14:H15,
 F20:H21, F34:H35 (excel-graph, 2026-10-09, T-1238).
 Status: VERIFIED (excel-graph)
 Implemented in: XMATCH's search_mode: xmatch.rs (T-1958). The reference carrier (SPEC-0014, T-1956): `RefGrid` and
-`RefArg::Grid` (reference_operators.rs) with its value view `RefGrid::to_values`; OFFSET as producer
+`RefArg::Grid` (reference_operators/areas.rs) with its value view `RefGrid::to_values`; OFFSET as producer
 (`Model::offset_reference`, lookup_and_reference/offset.rs, lifted by `Model::lift_references` in lift/driver.rs; its
 spill shape from `static_analysis_offset`); INDEX's pick (`Model::index_grid`, index.rs), ROWS/COLUMNS (the value
 view's shape) and ISREF (FALSE). The aggregates (T-2063): SUM, AVERAGE, MIN, MAX and PRODUCT through the
@@ -1432,6 +1572,19 @@ friendly_name (`fn_hyperlink` reads link_location before the lift).
 Status: VERIFIED
 Tasks: T-2277
 
+## HYPERLINK: a blank friendly_name (T-4208)
+Rule: a friendly_name that is a blank cell, or that is left out after the comma (`HYPERLINK("#A1",)`), makes
+HYPERLINK return the number 0, not a computed blank. With B1 empty, `HYPERLINK("#A1",B1)` shows 0, `TYPE` is 1,
+`ISNUMBER` TRUE, `ISBLANK` FALSE, `LEN` 1, `&"x"` "0x", `COUNT` and `COUNTA` 1, `N` 0 and `T` "" (A1:A7, A19:A21,
+A27:A29); the omitted form is the same (A22:A25). Readers see a 0, not an empty value: `LOGEST(HYPERLINK("#A1",B1),
+C1:E3)` is `#REF!` (a 1x1 y against 3 rows) like `LOGEST(B1,..)` and `LOGEST(0,..)`, while the computed blank
+`IFERROR(B1,1)` is `#VALUE!` (A10:A18, A26); over `{1;2}` LOGEST of it is `#NUM!` (log of 0) and LINEST a number
+(A8, A9). That is why gen-m9/fa25422d6f18c157 Calc!A75 (`FORECAST.ETS.CONFINT(LOGEST(HYPERLINK("#Data!A1",Data!D1),
+Data!B10:D12,..),..)`, D1 blank) is `#REF!`.
+Evidence: probes/t4208-hyperlink-blank-friendly-name (excel-graph, 2026-11-04). Status: VERIFIED (excel-graph).
+Unprobed: a blank element of a lifted friendly_name range (the engine gives 0 there too).
+Implemented in: `Model::hyperlink_of` (functions/lookup_and_reference/mod.rs).
+
 ## HYPERLINK: a link_location past 255 characters is #VALUE! (T-2277)
 Rule (excel-graph, 2026-10-22, probes/t2277-hyperlink-location-length A1-A15): a link_location of more than 255 characters is
 `#VALUE!`, with or without friendly_name and over an array friendly_name (one `#VALUE!`, no spill): `HYPERLINK(REPT("a",255),1)` = 1,
@@ -1531,7 +1684,17 @@ Evidence: probes/t2065-lift-* (one formula per workbook, excel-graph 2026-10-26;
 - `STDEV.S(OFFSET(A1,{0;1},0))` is 70.0035713374682, `VAR.S` 4900.5, `SUMSQ` 10001: single-cell elements read as their values (multi-cell elements: top-left cell, T-2816 below).
 - COUNTIFS, AVERAGEIF and MAXIFS lift per element, spilling one value each (1, 1; 1, 50.5; 1, 100). CONCAT is `#VALUE!`.
   The engine implements these three since T-2823 (`Function::per_reference_element`, each element charged as
-  COUNTIF/SUMIFS are, with the same bound DEVIATION); AVERAGEIFS and MINIFS are unprobed and read the value view.
+  COUNTIF/SUMIFS are, with the same bound DEVIATION).
+- AVERAGEIFS and MINIFS lift per element too: the first range and the criteria ranges (probes/t4396-lift-*, one formula
+  per workbook, excel-graph 2026-11-05, E1:E2 each; ours since T-4396, charged per criteria pair like SUMIFS):
+  - both ranges lifted, `AVERAGEIFS(OFFSET(A1,{0;1},0),OFFSET(A1,{0;1},0),">0")` and the MINIFS form spill 1, 100
+    (-averageifs-both, -minifs-both); a height lift `OFFSET(A1,0,0,{1;2})` in both spills 1, 50.5 and 1, 1 (-height);
+  - the first range lifted alone against `A1:A2` spills `#VALUE!`, `#VALUE!` (-first): each one-cell element against
+    the two-cell criteria range is the shape mismatch, not one `#VALUE!` for the call;
+  - a criteria range lifted alone, `AVERAGEIFS(A1,OFFSET(A1,{0;1},0),">0")` and the MINIFS form, spills 1, 1 (-criteria);
+  - a second criteria pair lifted with the first, `AVERAGEIFS(OFFSET(A1,{0;1},0),OFFSET(A1,{0;1},0),">0",OFFSET(B1,{0;1},0),">0")`,
+    spills 1, 100 (-averageifs-pair2). UNVERIFIED: a later criteria range lifted alone, and MINIFS with two pairs; the
+    engine lifts every criteria range, as for SUMIFS and MAXIFS.
   Which arguments lift is inferred from SUMIF/SUMIFS (COUNTIFS every criteria range, AVERAGEIF range and average_range,
   MAXIFS max_range and every criteria range); forms with only some ranges lifted are unprobed (T-2833).
 - T-2816 (probes/t2816-lift-*, E1, excel-graph 2026-10-31, same data; A4 "5", A5 blank, A6 TRUE, A7 7): multi-cell
@@ -1556,9 +1719,12 @@ take `GridReading::TopLeft` (legacy VAR already shared VAR.S's; legacy VARP and 
 (their array rule counts only numbers, so text, blanks and TRUE are skipped); all 61 t3533 probes pass.
 
 ### MEDIAN, LARGE and SMALL over a lifted OFFSET
-Rule: each is `#VALUE!` over a lifted OFFSET (an array of references), like CONCAT and unlike STDEV.S, VAR.S and SUMSQ
-above: `MEDIAN(OFFSET(A1,{0;1;2},0))`, `LARGE(OFFSET(A1,{0;1},0),1)` and `SMALL(OFFSET(A1,0,0,{2;3}),2)` (data as
-probes/reference-lift-consumers-b2) all give `#VALUE!`.
+Rule: each is `#VALUE!` over a lifted OFFSET (an array of references) whose references are on the formula's own
+sheet, like CONCAT and unlike STDEV.S, VAR.S and SUMSQ above. Over references on another sheet each is `#N/A`
+(T-4569; the entry "XLOOKUP's if_not_found and ADDRESS's sheet_text over an array" above). The referenced sheet
+decides, not how the reference is written (probes/t4569-xlookup-ref-element-max-min Local!F1:F6).
+Same-sheet: `MEDIAN(OFFSET(A1,{0;1;2},0))`, `LARGE(OFFSET(A1,{0;1},0),1)` and `SMALL(OFFSET(A1,0,0,{2;3}),2)`
+(data as probes/reference-lift-consumers-b2) all give `#VALUE!`.
 Evidence: probes/t2065-lift-median, -large, -small E1 (excel-graph, 2026-10-29; they failed to open on Excel for the web
 on 2026-10-26 with createSession "retries exhausted", and opened on the 2026-10-29 steward run's fill).
 Status: VERIFIED (excel-graph). Ours matches all three cells. This answers T-1075 item 18.
@@ -1598,5 +1764,14 @@ XMATCH with search_mode = Data!G9 (#DIV/0!): when match_mode converts to a numbe
 (315644f84093cf49 A292:B293, 75b38d80dd3152b2 A388 A448 A544); non-numeric text in match_mode still wins with #VALUE! (315644f84093cf49 A64, 75b38d80dd3152b2 A598).
 Evidence: gen-m6 21db5363d711888d, ad47b47c4e97019d, 315644f84093cf49, 75b38d80dd3152b2 (excel-graph).
 Ours: matches all of these cells (T-3667, a one-cell error reference in arrays.md; T-3542: XMATCH reports an out-of-range numeric match_mode only after search_mode's cast error).
-Status: UNVERIFIED (probe pending; cells are oracle values, the general rule is not probed)
-Tasks: T-3667, T-3542
+Probed for XMATCH by T-4544 (probes/t4544-xmatch-error-modes A172:A364, excel-graph 2026-11-06; a generated hold-out,
+t4544-xmatch-error-modes-holdout, with its predictions frozen in docs/research/t4544 before the fill). The order for a scalar
+search_mode that is an error (a literal `#N/A`, `NA()`, `1/0`, a cell holding `#N/A` or `#DIV/0!`): an error match_mode
+wins first, with its own error (`XMATCH(2,A1:A3,NA(),1/0)` is #N/A, A277; `XMATCH(2,A1:A3,1/0,NA())` is #DIV/0!, A241);
+then a match_mode that does not convert to a number (`"x"`, `""`) gives #VALUE! (A187, A190, A265, A343); otherwise the
+search_mode's error is the result, whether match_mode is valid (0), out of range (9, -2.5, numeric text "12"),
+numeric text "1", TRUE or a blank cell (A172:A184, A193, A196, A250:A274, A328:A352). So search_mode is read before
+match_mode's range check, and match_mode's own cast comes before both. The CHOOSEROWS and CHOOSECOLS rule above rests on
+the gen-m6 cells only.
+Status: VERIFIED (excel-graph)
+Tasks: T-3667, T-3542, T-4544

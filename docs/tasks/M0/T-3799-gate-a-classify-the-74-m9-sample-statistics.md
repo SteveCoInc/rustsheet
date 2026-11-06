@@ -3,7 +3,7 @@ id: T-3799
 title: "Gate A: classify the 74 M9 sample-statistics functions (descriptive, regression, rank, test and criteria aggregates) with no table or exemption, and file their table tasks"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -62,18 +62,27 @@ up in one of two states:
   Create each with `make new-task MILESTONE=M0 LANE=harness`, `tier: opus`, `spec:` SPEC-0029.
 
 ## Acceptance criteria
-- [ ] A decision record (`make new-decision`) classifies each of the 74 functions (or the recounted list) as
+- [x] A decision record (`make new-decision`) classifies each of the 74 functions (or the recounted list) as
       `exact`, `composite` or "needs a table (T-XXXX)", with a cited reason for each exemption, including the
       FORECAST.ETS ruling.
-- [ ] `eval/accuracy/exempt.tsv` gains the exempt lines, sorted. `rustsheet-eval accuracy` reports `missing tables`
+- [x] `eval/accuracy/exempt.tsv` gains the exempt lines, sorted. `rustsheet-eval accuracy` reports `missing tables`
       lower by their number, with no stale or bad exemption.
-- [ ] Every function classified "needs a table" is named in the title or Goal of an open task filed by this PR, which
+- [x] Every function classified "needs a table" is named in the title or Goal of an open task filed by this PR, which
       depends on T-3549, T-3686 or T-3529 where the notes above say so.
-- [ ] `python3 scripts/tasks.py validate` passes.
-- [ ] `make check` green; reviewers approve.
+- [x] `python3 scripts/tasks.py validate` passes.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Building any table, definition or generator change (the filed tasks do that).
 - AGGREGATE (T-3693), SUM and AVERAGE (T-3549), and the M2 and M5 aggregates (decision 0228, T-3550).
 - The other M9 families: financial (T-3797), distributions (T-3798), engineering and database (T-3800).
 - Implementing the FORECAST.ETS family (T-2425).
+
+## Outcome
+- Decision 0271. A recount found all 74 still missing. They are classified as follows:
+  - `exact`, 8: MAXA, MINA, LARGE, SMALL, MODE, MODE.SNGL, MODE.MULT, FREQUENCY;
+  - `composite`, 11: AVERAGEIF, AVERAGEIFS, MAXIFS, MINIFS, RANK, RANK.EQ, RANK.AVG and the four FORECAST.ETS
+    functions. FORECAST.ETS is `composite` because excel-graph never computes it, and T-2425 owns it;
+  - needs a table, 55: ten table tasks, T-4089 to T-4098.
+- `rustsheet-eval accuracy`: `missing tables` 182 to 163 (199 before T-3800), 0 failing, 0 table defects.
+- Eval delta: none.

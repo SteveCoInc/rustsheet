@@ -187,7 +187,7 @@ pub(crate) fn number_text_in(
     date_system: DateSystem,
 ) -> Option<f64> {
     // Script digits are read as numbers by coercion, VALUE and criteria in every form, clock
-    // text included (T-3325, T-3446), not by typed input (TODO(T-3891)).
+    // text included (T-3325, T-3446); typed input maps them in `parse_typed_number` (T-3891).
     let digits = ascii_script_digits(text);
     // A trailing `$` is refused in every form: `1.5$`, `1.5 $`, `-1.5$` are #VALUE! for VALUE,
     // `+0` and NUMBERVALUE and match nothing as a criterion, while a trailing euro sign reads
@@ -278,7 +278,7 @@ impl Model {
     /// Whether the text after a typed leading sign reads as a number, which keeps `-200$` a
     /// number rather than a formula; typed `-200$` is then text (probes/t3980-typed-percent-currency
     /// A6).
-    /// Script digits are not read here, as typed input reads none (TODO(T-3891)).
+    /// The trailing-`$` branch reads ASCII digits only: typed `-١٢$` is unprobed.
     pub(crate) fn typed_sign_text_is_number(&self, s: &str) -> bool {
         let trailing_dollar = ends_with_dollar(s)
             && parse_formatted_number(
@@ -800,15 +800,6 @@ impl Model {
             error @ CalcResult::Error { .. } => Err(error.clone()),
             other => calc_scalar_to_string(other).ok_or_else(|| not_a_scalar(cell)),
         }
-    }
-
-    pub(crate) fn get_boolean(
-        &mut self,
-        node: &Node,
-        cell: CellReferenceIndex,
-    ) -> Result<bool, CalcResult> {
-        let result = self.evaluate_node_in_context(node, cell);
-        self.cast_to_bool(result, cell)
     }
 
     pub(crate) fn cast_to_bool(

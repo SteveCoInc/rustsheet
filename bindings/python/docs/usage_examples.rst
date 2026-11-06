@@ -13,7 +13,7 @@ IronCalc ships two APIs:
 
 * The **user API** (:class:`UserModel`): the same high level API used by the
   IronCalc web application. Every action evaluates the workbook, keeps
-  undo/redo history and produces diffs for collaboration.
+  undo/redo history.
 * The **raw API** (:class:`Model`): a low level API. Nothing is evaluated
   automatically (call :meth:`Model.evaluate` yourself), there is no undo/redo
   and no diffs are produced.
@@ -52,13 +52,4 @@ Importing CSV data
 ^^^^^^^^^^^^^^^^^^
 
 .. literalinclude:: examples/csv_import.py
-   :language: python
-
-Collaboration with diffs
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Two models can be kept in sync by exchanging binary diffs, the same mechanism
-the IronCalc web application uses for real time collaboration.
-
-.. literalinclude:: examples/collaboration.py
    :language: python

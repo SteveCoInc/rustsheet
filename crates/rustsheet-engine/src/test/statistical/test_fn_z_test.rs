@@ -49,6 +49,22 @@ fn overflowing_data_is_an_error() {
     assert_eq!(model._get_text("D1"), *"#NUM!");
 }
 
+/// With sigma given, a z past the double range is `#NUM!` when the mean is above x and 0.5 when
+/// it is below (probes/t4098-tests-prob-domains A48, A49; statistics.md "CHISQ.TEST, Z.TEST and
+/// PROB: Gate A domains (T-4098)").
+#[test]
+fn an_overflowing_z_with_sigma_given() {
+    let mut model = new_empty_model();
+    model._set("A1", "=Z.TEST({1,2,3},-1E+300,1E-300)");
+    model._set("A2", "=Z.TEST({1,2,3},1E+300,1E-300)");
+    model._set("A3", "=ZTEST({1,2,3},-1E+300,1E-300)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model._get_text("A2"), *"0.5");
+    assert_eq!(model._get_text("A3"), *"#NUM!");
+}
+
 /// A data argument that is an error value comes first in every element; an error inside a range
 /// or array comes after `x` (probes/t2428-ztest-error-data).
 #[test]
@@ -109,4 +125,21 @@ fn lone_values_and_cells() {
     ] {
         assert_eq!(model._get_text(cell), *want, "{cell}");
     }
+}
+
+/// Direct numeric text is one data value like a number, so a lone one is `#DIV/0!`; empty and
+/// other text are `#VALUE!` (probes/t4223-m9-statistical-array-kinds-b A47:A49, T-4223).
+#[test]
+fn direct_numeric_text_is_one_value() {
+    let mut model = new_empty_model();
+    model._set("A1", "=ZTEST(\"3\",3)");
+    model._set("A2", "=Z.TEST(\"\",3)");
+    model._set("A3", "=Z.TEST(\"abc\",3)");
+    model._set("A4", "=ZTEST(0,3)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#DIV/0!");
+    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    assert_eq!(model._get_text("A3"), *"#VALUE!");
+    assert_eq!(model._get_text("A4"), *"#DIV/0!");
 }

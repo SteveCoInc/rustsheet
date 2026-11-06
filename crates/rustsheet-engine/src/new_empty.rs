@@ -4,14 +4,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::{
-    constants::{DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH},
     defined_names::{NameReference, ParsedDefinedName},
     expressions::{
         lexer::LexerMode,
         parser::{
             stringify::{
                 move_sheet_in_node, rename_sheet_in_node, to_english_string, to_localized_string,
-                to_rc_format, to_string_lowering,
+                to_rc_format, to_string_lowering, OffRows,
             },
             CallNameSpellings, Node, Parser,
         },
@@ -234,7 +233,7 @@ impl Model {
             };
 
             parsed_defined_names.insert(
-                (local_sheet_index, name.to_lowercase()),
+                crate::name_key::NameKey::new(local_sheet_index, &name),
                 parsed_defined_name_formula,
             );
         }
@@ -445,7 +444,13 @@ impl Model {
             }
         }
         new_worksheet.shared_formulas = shared_formulas;
-        lower_this_row_cells(&mut new_worksheet, &by_row, &source_tables, None);
+        lower_this_row_cells(
+            &mut new_worksheet,
+            &by_row,
+            &source_tables,
+            None,
+            OffRows::Detach,
+        );
         self.parser.set_lexer_mode(LexerMode::A1);
 
         // Insert the copy right after the source sheet.
@@ -510,6 +515,8 @@ impl Model {
                 name: defined_name.name.clone(),
                 formula,
                 sheet_id: Some(new_sheet_id),
+                hidden: defined_name.hidden,
+                comment: defined_name.comment.clone(),
             });
         }
         self.workbook.defined_names.extend(new_defined_names);
@@ -596,6 +603,8 @@ impl Model {
                 name: defined_name.name.clone(),
                 formula,
                 sheet_id: defined_name.sheet_id,
+                hidden: defined_name.hidden,
+                comment: defined_name.comment.clone(),
             });
         }
         self.workbook.defined_names = defined_names;
@@ -759,14 +768,7 @@ impl Model {
         let now = dt.format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
         let mut views = HashMap::new();
-        views.insert(
-            0,
-            WorkbookView {
-                sheet: 0,
-                window_width: DEFAULT_WINDOW_WIDTH,
-                window_height: DEFAULT_WINDOW_HEIGHT,
-            },
-        );
+        views.insert(0, WorkbookView::new(0));
 
         let sheet_name = match language.code.as_str() {
             "en" => "Sheet1".to_string(),
@@ -845,6 +847,7 @@ impl Model {
             clock,
             view_id: 0,
             variable_stack: VariableStack::default(),
+            number_mark: crate::number_mark::NumberMark::default(),
             last_variable_id: 0,
             lambdas: HashMap::new(),
             eta_lambdas: HashMap::new(),

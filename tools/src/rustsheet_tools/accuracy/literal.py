@@ -4,13 +4,16 @@ Every argument is written with at most 15 significant digits (numbers.md, "Formu
 are read at 15 significant digits"), below 1E+308 ("Formula literals of 1E+308 or more are
 invalid") and never as a subnormal ("Subnormal results become 0"): a magnitude is 0 or within
 [`MIN_LITERAL`, `MAX_LITERAL`]. The math is evaluated at the double nearest the written decimal,
-which is the double Excel and the engine read.
+which is the double Excel and the engine read. A text argument is a string literal (`quoted`, a `"`
+inside doubled); a complex number's text writes both parts as such literals (`complex_text`).
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from decimal import ROUND_HALF_EVEN, Decimal
+
+from rustsheet_tools.gen.common import quoted
 
 # The largest 15-digit literal below 1E+308, and the smallest 15-digit literal at or above the
 # smallest normal double (2.2250738585072014E-308).
@@ -20,22 +23,24 @@ MIN_LITERAL = 2.22507385850721e-308
 Scalar = float | int | bool
 Row = tuple[float | int, ...]
 Matrix = tuple[Row, ...]
-Arg = Scalar | Row | Matrix
-"""One drawn argument: a real (float), an integer parameter (int), a logical (bool), an array of
+Arg = Scalar | str | Row | Matrix
+"""One drawn argument: a real (float), an integer parameter (int), a logical (bool), a text (str,
+written as a string literal: a complex number's text, a CONVERT unit name; T-4084), an array of
 numbers (a tuple, written as a one-row array literal: IRR's flows, XIRR's dates) or a matrix (a
 tuple of equally long rows, written as a 2-D array literal: MDETERM's, MINVERSE's and MMULT's
 arguments, T-3686)."""
 
 
-def decimal15(x: float) -> Decimal:
-    """The exact value of the double `x` cut half-even to 15 significant digits, as a decimal
+def decimal15(x: float, rounding: str = ROUND_HALF_EVEN) -> Decimal:
+    """The exact value of the double `x` cut to 15 significant digits (half-even unless `rounding`
+    says otherwise, e.g. `ROUND_DOWN` to truncate), as a decimal
     (a carry gives the next power of ten: 9.9999999999999999 → 10.0000000000000). For a
     15-digit literal this is the written decimal again: the double is within half an ulp of it,
     far less than half a unit of the 15th digit."""
     if x == 0:
         return Decimal(0)
     d = Decimal(x)
-    return d.quantize(Decimal(1).scaleb(d.adjusted() - 14), rounding=ROUND_HALF_EVEN)
+    return d.quantize(Decimal(1).scaleb(d.adjusted() - 14), rounding=rounding)
 
 
 def exponent10(x: float) -> int:
@@ -75,8 +80,11 @@ def neighbour(b: float, up: bool) -> float:
 
 def text(a: Arg) -> str:
     """`a` as formula text: TRUE/FALSE, an integer's digits (15-digit exponent form above 1E15),
-    a real's 15 significant digits in Excel's exponent style (`1.87E-297`), or an array literal of
-    those: one row (`{-1000,300.5,800}`) or a matrix, rows separated by `;` (`{1,2;3,4}`)."""
+    a real's 15 significant digits in Excel's exponent style (`1.87E-297`), a string literal
+    (`"3-4i"`, a `"` inside doubled), or an array literal of numbers: one row (`{-1000,300.5,800}`)
+    or a matrix, rows separated by `;` (`{1,2;3,4}`)."""
+    if isinstance(a, str):
+        return quoted(a)
     if isinstance(a, tuple):
         rows: Sequence[Sequence[Arg]] = a if a and isinstance(a[0], tuple) else (a,)
         return "{" + ";".join(",".join(text(x) for x in row) for row in rows) + "}"
@@ -90,3 +98,20 @@ def text(a: Arg) -> str:
         sign = "-" if exponent.startswith("-") else "+"
         s = f"{mantissa}E{sign}{int(exponent.lstrip('+-')):02d}"
     return s
+
+
+COMPLEX_SUFFIXES = ("i", "j")
+"""The imaginary units IM* text takes. One formula's complex texts share one (mixed suffixes are an
+error: engineering.md "IMSUM and IMPRODUCT take their arguments whole"), so the sampler draws it once
+per point."""
+
+
+def complex_text(re: float, im: float, suffix: str = "i") -> str:
+    """The IM* text of `re + im·suffix` with each part a 15-digit literal (`text`): `1.5-2E-05j`,
+    `-3+0i`. The imaginary part always carries its sign, the one form engineering.md "Leading plus in
+    IM*..." reads without ambiguity (a second sign, `1+-2i`, is #NUM!)."""
+    if suffix not in COMPLEX_SUFFIXES:
+        msg = f"complex suffix {suffix!r} is not i or j"
+        raise ValueError(msg)
+    imaginary = text(im)
+    return f"{text(re)}{'' if imaginary.startswith('-') else '+'}{imaginary}{suffix}"

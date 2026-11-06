@@ -1,0 +1,11 @@
+name = "roundtrip-fixtures"
+description = "Round-trip fidelity (SPEC-0033) of the hand-built fixtures workbooks: load, save, validate the output, score what it kept"
+kind = "roundtrip"
+root = "../../suites/fixtures/cases"
+include = ["**/*.xlsx", "**/*.xlsm"]
+license = "Apache-2.0"
+origin = "eval/suites/fixtures (hand-built inputs)"
+scenarios = ["R0"]
+gate = true
+baseline = "cells"
+milestone = ["M15"]

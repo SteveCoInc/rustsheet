@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use crate::area_budget::NODE_UNITS;
-use crate::arithmetic::{divide, minus, plus, power, times};
+use crate::arithmetic::{divide, minus, operator_power, plus, times};
 use crate::calc_result::CalcResult;
 use crate::defined_names::ParsedDefinedName;
 use crate::expressions::parser::{left_chain, value_operands, Node};
@@ -122,11 +122,9 @@ impl Model {
             // Not bound by LET — look up as a defined-name Lambda.
             // Prefer sheet-local (current sheet) over global (scope = None),
             // matching Excel's name resolution order.
-            let name_lower = name.to_lowercase();
-            let found = self
-                .parsed_defined_names
-                .get(&(Some(cell.sheet), name_lower.clone()))
-                .or_else(|| self.parsed_defined_names.get(&(None, name_lower)))
+            let names = &self.parsed_defined_names;
+            let found = crate::name_key::get_name(names, Some(cell.sheet), name)
+                .or_else(|| crate::name_key::get_name(names, None, name))
                 .cloned();
             match found {
                 Some(ParsedDefinedName::LambdaDefinition(definition)) => {
@@ -329,7 +327,7 @@ impl Model {
                 OpProduct::Times => self.handle_arithmetic(value, right, cell, &times),
                 OpProduct::Divide => self.handle_arithmetic(value, right, cell, &divide),
             },
-            Node::OpPowerKind { .. } => self.handle_arithmetic(value, right, cell, &power),
+            Node::OpPowerKind { .. } => self.handle_arithmetic(value, right, cell, &operator_power),
             Node::OpConcatenateKind { .. } => self.handle_concatenate(value, right, cell),
             Node::CompareKind { kind, .. } => self.handle_comparison(value, right, cell, kind),
             _ => value,

@@ -1,13 +1,8 @@
 use crate::arithmetic::bcast_get;
 use crate::cast::NumberOrArray;
-use crate::defined_names::ParsedDefinedName;
 use crate::expressions::parser::ArrayNode;
-use crate::expressions::token::TableReference;
-use crate::expressions::types::{CellReferenceIndex, CellReferenceRC};
-use crate::expressions::utils::{
-    indirect_reference_text, is_indirect_unquoted_sheet, is_out_of_range_r1c1_name,
-    quote_digit_leading_sheet, unquote_sheet_prefix,
-};
+use crate::expressions::types::CellReferenceIndex;
+use crate::expressions::utils::{indirect_reference_text, quote_digit_leading_sheet};
 use crate::external_reference::{one_external_area, PickedReference};
 use crate::functions::util::array_node_to_calc_result;
 use crate::functions::Function;
@@ -44,6 +39,7 @@ mod grouping;
 mod hstack_vstack;
 mod index;
 mod index_arg;
+mod indirect_fallbacks;
 mod lifted_options;
 mod lookup;
 mod lookup_each;
@@ -85,6 +81,22 @@ impl Model {
     /// evaluated to their values (probes/intersection-function-operands H8, H11, H12, H14;
     /// T-0165). `None` for any other function.
     pub(crate) fn evaluate_reference_form(
+        &mut self,
+        kind: &Function,
+        args: &[Node],
+        cell: CellReferenceIndex,
+    ) -> Option<CalcResult> {
+        let value = self.reference_form_value(kind, args, cell)?;
+        // Evaluated as a reference, XLOOKUP, TAKE and DROP still empty AMORDEGRC's left-over
+        // value (`Function::empties_amor_left_over`; probes/amordegrc-fraction-state-bj, -cz).
+        if kind.empties_amor_left_over() {
+            self.empty_amor_left_over();
+        }
+        Some(value)
+    }
+
+    /// [`Self::evaluate_reference_form`]'s value, before what the call leaves for AMORDEGRC.
+    fn reference_form_value(
         &mut self,
         kind: &Function,
         args: &[Node],
@@ -436,7 +448,12 @@ impl Model {
         };
         // The friendly name is the value displayed in the cell. It can be
         // a string, a number or a boolean.
+        // A blank friendly_name, a blank cell or one left out (`HYPERLINK("#A1",)`), is the number
+        // 0, not a computed blank: ISNUMBER is TRUE, LEN is 1, COUNT and COUNTA are 1 and LOGEST
+        // reads it as 0 (`#NUM!`), not as an empty value (probes/t4208-hyperlink-blank-friendly-name;
+        // docs/excel-semantics/lookup.md "HYPERLINK: a blank friendly_name").
         let display = match friendly_name {
+            Some(CalcResult::EmptyCell | CalcResult::EmptyArg) => CalcResult::Number(0.0),
             Some(value) => value.clone(),
             None => CalcResult::String(location.clone().into()),
         };
@@ -486,15 +503,18 @@ impl Model {
         // `ROW(IF(TRUE,…!B3))` is 3 (probes/external-ref-no-link-ifchoose A25).
         // A value IF, CHOOSE or LET gives here is no reference, an error that error:
         // `ROW(IF(FALSE,…!A1))` is `#VALUE!` (probes/external-ref-no-link-ifchoose-b A4).
-        let not_a_reference = |value: CalcResult| {
-            if value.is_error() {
-                value
-            } else {
-                CalcResult::new_error(Error::VALUE, cell, "Expected a reference".into())
-            }
+        // An array value lifts, element by element in its shape: `LET(x,{1;#N/A},ROW(x))` is
+        // {#VALUE!;#N/A} (probes/t4519-row-column-randarray-over-arrays D1:H1,
+        // t4610-row-column-array-error-element; arrays.md, T-4610).
+        let not_a_reference = |value: CalcResult| match value {
+            CalcResult::Array(rows) => not_a_reference_elements(rows),
+            error @ CalcResult::Error { .. } => error,
+            _ => CalcResult::new_error(Error::VALUE, cell, "Expected a reference".into()),
         };
         let ranges = match self.pick_reference(&args[0], cell) {
-            PickedReference::Node(node) => self.reference_ranges(node, cell),
+            PickedReference::Node(node) => self
+                .reference_ranges_or_array(node, cell)
+                .map_err(not_a_reference),
             PickedReference::Read(read) => read.into_ranges_or_value().map_err(not_a_reference),
             PickedReference::External(areas) => {
                 let area = match one_external_area(areas, cell) {
@@ -620,7 +640,8 @@ impl Model {
             Picked::Value(value) => return RefArg::Value(value),
         };
         if as_reference {
-            return self.evaluate_reference_arg(node, cell);
+            // The argument's ERROR.TYPE/CELL mark is CHOOSE's (`number_mark.rs`).
+            return self.passing_mark(node, |model| model.evaluate_reference_arg(node, cell));
         }
         self.choose_arm_value(node, cell).into()
     }
@@ -628,8 +649,12 @@ impl Model {
     /// The argument an ordinary CHOOSE picked. A reference into another workbook reads as the
     /// cell INDEX picks: `CHOOSE(1,…!A1)` is 0 (probes/external-ref-no-link-ifchoose A2, A12).
     pub(crate) fn choose_arm_value(&mut self, node: &Node, cell: CellReferenceIndex) -> CalcResult {
-        self.external_reference_picked_value(node, cell)
-            .unwrap_or_else(|| self.evaluate_node_with_reference(node, cell))
+        // The argument's ERROR.TYPE/CELL mark is CHOOSE's (`number_mark.rs`).
+        self.passing_mark(node, |model| {
+            model
+                .external_reference_picked_value(node, cell)
+                .unwrap_or_else(|| model.evaluate_node_with_reference(node, cell))
+        })
     }
 
     /// What CHOOSE's index picks: with a scalar index the argument it chooses, unevaluated;
@@ -842,10 +867,12 @@ impl Model {
                 let Range { left, right } = Range::between(left, right);
                 CalcResult::Range { left, right }
             }
-            Err(message) => match self.indirect_defined_name(&ref_text, cell).or_else(|| {
-                a1.then(|| self.indirect_structured(&ref_text, cell))
-                    .flatten()
-            }) {
+            // `a1` FALSE resolves a structured reference too (probes/t3394-indirect-structref-shapes
+            // P!B1:B3).
+            Err(message) => match self
+                .indirect_defined_name(&ref_text, cell)
+                .or_else(|| self.indirect_structured(&ref_text, cell))
+            {
                 Some(found) => found,
                 None => CalcResult::Error {
                     error: Error::REF,
@@ -855,112 +882,23 @@ impl Model {
             },
         }
     }
+}
 
-    /// INDIRECT of the text of a structured reference (`INDIRECT("Sales[Qty]")`): the area the
-    /// parser lowers the reference to, as for the same text in a formula. A table or column the
-    /// workbook lacks stays `#REF!` (docs/excel-semantics/lookup.md "INDIRECT of a structured
-    /// reference text resolves the table area"; probes/table-edits/table-insert-column-inside-header F!A4:A5, T-2911).
-    fn indirect_structured(&mut self, text: &str, cell: CellReferenceIndex) -> Option<CalcResult> {
-        let sheet = self
-            .workbook
-            .worksheets
-            .get(cell.sheet as usize)?
-            .get_name();
-        let context = CellReferenceRC {
-            sheet,
-            row: cell.row,
-            column: cell.column,
-        };
-        // Only the evidenced `Table[Column]` shape: the specifiers, `@`, an unqualified column,
-        // spacing, a bare table name and `a1` FALSE are unprobed and stay `#REF!` (case is
-        // unprobed but matched ignoring case, as the parser does)
-        // (TODO(T-3394): probe them).
-        let Node::StructuredReferenceKind { reference, lowered } =
-            self.parser.parse(text, &context)
-        else {
-            return None;
-        };
-        let plain_column = reference.specifier.is_none()
-            && !reference.bare
-            && !reference.unqualified
-            && matches!(
-                reference.table_reference,
-                Some(TableReference::ColumnReference(_))
-            );
-        if !plain_column {
-            return None;
-        }
-        let (sheet, row1, column1, row2, column2) = match *lowered {
-            Node::ReferenceKind {
-                sheet_index,
-                row,
-                column,
-                ..
-            } => (sheet_index, row, column, row, column),
-            Node::RangeKind {
-                sheet_index,
-                row1,
-                column1,
-                row2,
-                column2,
-                ..
-            } => (sheet_index, row1, column1, row2, column2),
-            _ => return None,
-        };
-        Some(CalcResult::Range {
-            left: CellReferenceIndex {
-                sheet,
-                row: row1,
-                column: column1,
-            },
-            right: CellReferenceIndex {
-                sheet,
-                row: row2,
-                column: column2,
-            },
-        })
-    }
-
-    /// INDIRECT of the text of a defined name that stands for a reference (`INDIRECT("RCR")`,
-    /// `ISREF` TRUE; probes/r1c1-name-use-rcr, excel-graph). A name spelled like an out-of-range
-    /// R1C1 reference is never resolved (T-1657).
-    ///
-    /// Excel: see docs/excel-semantics/lookup.md "INDIRECT resolves a defined name that holds a
-    /// reference": `a1` FALSE still resolves a name, trailing (not leading) spaces are ignored, and
-    /// a `Sheet!name` prefix picks the name scoped to that sheet, else the workbook name
-    /// (probes/indirect-defined-name-text A5, A8, A22; T-1682).
-    ///
-    /// A relative name (`=Jan!A1`) is read from `cell`, the cell of the INDIRECT, as any other use
-    /// of it is; that INDIRECT case is not probed yet (references.md "Relative references in
-    /// defined names").
-    fn indirect_defined_name(&self, text: &str, cell: CellReferenceIndex) -> Option<CalcResult> {
-        let sheet = cell.sheet;
-        let text = text.trim_end_matches([' ', '\n']);
-        if is_out_of_range_r1c1_name(text) {
-            return None;
-        }
-        let scope = match text.rsplit_once('!') {
-            Some((prefix, _)) => {
-                // Unquoted, the sheet name may hold only letters, digits, '_' and '.':
-                // `INDIRECT("Co A!tn")`, `"P&L!tn"` and `"O'B!tn"` are #REF!, while `"2024!tn"`,
-                // `"Q1!tn"`, `"x.y!tn"` and the quoted `"'O''B'!tn"` resolve
-                // (probes/indirect-sheet-scoped-name, docs/excel-semantics/lookup.md).
-                if !prefix.starts_with('\'') && !is_indirect_unquoted_sheet(prefix) {
-                    return None;
-                }
-                self.get_sheet_index_by_name(&unquote_sheet_prefix(prefix)?)?
-            }
-            None => sheet,
-        };
-        let found = self
-            .parsed_defined_name(text, Some(scope))
-            .or_else(|| self.parsed_defined_name(text, None));
-        match found? {
-            ParsedDefinedName::CellReference(reference)
-            | ParsedDefinedName::RangeReference(reference) => Some(reference.range_at(cell)),
-            _ => None,
-        }
-    }
+/// ROW or COLUMN of an array value, element by element in its shape: an error element is that
+/// error, any other `#VALUE!` (probes/t4610-row-column-array-error-element, T-4610).
+fn not_a_reference_elements(rows: Vec<Vec<ArrayNode>>) -> CalcResult {
+    CalcResult::Array(
+        rows.into_iter()
+            .map(|row| {
+                row.into_iter()
+                    .map(|element| match element {
+                        error @ ArrayNode::Error(_) => error,
+                        _ => ArrayNode::Error(Error::VALUE),
+                    })
+                    .collect()
+            })
+            .collect(),
+    )
 }
 
 /// ROW's numbers `first..=last` down a column (`by_row`) or COLUMN's across a row; one number

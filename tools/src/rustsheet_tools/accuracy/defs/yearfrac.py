@@ -13,8 +13,9 @@ dates.md states Excel reads it (excel-graph cells):
   Over 360.
 - Bases 2 and 3 count serial days (the fictitious day included) over 360 and 365.
 - Basis 4 (European 30/360) caps each displayed day at 30 (serial 60 is day 29, serial 0 day 0),
-  over 360. The engine reads basis 4's dates rounded to the nearest second first, as DAYS360 does;
-  that is unprobed for YEARFRAC, so the draws keep every fraction of a day below 0.99.
+  over 360. Its dates floor like the other bases', unlike DAYS360, which rounds to the nearest
+  second first (probes/t4574-feb29-near-midnight-date-args Q1:Q18, V1:V18; T-4574). The draws
+  still keep every fraction of a day below 0.99.
 - Basis 1 (actual/actual) counts serial days over a year length read on the real calendar, where
   serial 0 stands in as 1900-01-01 and serial 60 as 1900-02-28 ("YEARFRAC accepts serial 0":
   `YEARFRAC(0,33752,1)` averages 1900-1992, `YEARFRAC(59,60,1)` is 1/365). Dates more than a year
@@ -34,7 +35,7 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, one_of
+from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, is_real, one_of
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, DomainError, Interval, MathArg, Param, register
@@ -95,6 +96,16 @@ def us_30_360(start: YMD, end: YMD) -> int:
     return 360 * (y2 - y1) + 30 * (m2 - m1) + (d2 - d1)
 
 
+def us_30_360_both(start: YMD, end: YMD) -> int:
+    """US 30/360 that moves both dates (ExcelFinancialFunctions' `ModifyBothDates`): a 31st or February's last day is
+    day 30 at either end, whatever the other date. ODDLPRICE's and ODDLYIELD's quasi-coupon period lengths on basis 0
+    (defs/odd_bonds.py) and ACCRINT's issue-period length on bases 0 and 2 (defs/accrint.py) count with it."""
+    (y1, m1, d1), (y2, m2, d2) = start, end
+    d1 = 30 if d1 == 31 or _feb_last(*start) else d1
+    d2 = 30 if d2 == 31 or _feb_last(*end) else d2
+    return 360 * (y2 - y1) + 30 * (m2 - m1) + (d2 - d1)
+
+
 def eu_30_360(start: YMD, end: YMD) -> int:
     """Basis 4's day count: each day capped at 30."""
     (y1, m1, d1), (y2, m2, d2) = start, end
@@ -128,7 +139,8 @@ def actual_year(start: datetime.date, end: datetime.date) -> Fraction:
     return Fraction(366 if leap else 365)
 
 
-def _serial(x: float) -> int:
+def whole_serial(x: float) -> int:
+    """A date argument floored to a whole serial; DomainError (`#NUM!`) outside 0..2958465."""
     whole = int(x // 1)
     if not 0 <= whole <= LAST_DAY:
         msg = f"date {x} is outside 1900-01-00..9999-12-31"
@@ -136,32 +148,51 @@ def _serial(x: float) -> int:
     return whole
 
 
-def yearfrac_value(start: float, end: float, basis: int = 0) -> Fraction:
-    """YEARFRAC's math (module docstring). DomainError for a date outside the calendar or a basis
-    outside 0..4."""
+def day_count_parts(start: int, end: int, basis: int) -> tuple[int, Fraction]:
+    """The basis day count and year length of whole serials `start` <= `end`, basis 0..4 (module
+    docstring): YEARFRAC is their quotient, and the discount securities read them apart (T-4112)."""
+    if basis == 0:
+        return us_30_360(displayed_date(start), displayed_date(end)), Fraction(360)
+    if basis == 1:
+        return end - start, actual_year(real_date(start), real_date(end))
+    if basis == 4:
+        return eu_30_360(displayed_date(start), displayed_date(end)), Fraction(360)
+    return end - start, Fraction(360 if basis == 2 else 365)
+
+
+def basis_days(start: int, end: int, basis: int) -> Fraction:
+    """Days from serial `start` to `end` on the basis: 30/360 on Excel's displayed days (bases 0 and 4), serial days
+    otherwise (the coupon securities' day counts: defs/bonds.py, defs/accrint.py)."""
+    if basis == 0:
+        return Fraction(us_30_360(displayed_date(start), displayed_date(end)))
+    if basis == 4:
+        return Fraction(eu_30_360(displayed_date(start), displayed_date(end)))
+    return Fraction(end - start)
+
+
+def check_basis(basis: int) -> None:
+    """DomainError (`#NUM!`) for a basis outside 0..4."""
     if not 0 <= basis < 5:
         msg = f"basis {basis} is outside 0..4"
         raise DomainError(msg)
-    s, e = sorted((_serial(start), _serial(end)))
-    days = e - s
-    if basis == 0:
-        return Fraction(us_30_360(displayed_date(s), displayed_date(e)), 360)
-    if basis == 1:
-        return days / actual_year(real_date(s), real_date(e))
-    if basis == 2:
-        return Fraction(days, 360)
-    if basis == 3:
-        return Fraction(days, 365)
-    return Fraction(eu_30_360(displayed_date(s), displayed_date(e)), 360)
+
+
+def yearfrac_value(start: float, end: float, basis: int = 0) -> Fraction:
+    """YEARFRAC's math (module docstring). DomainError for a date outside the calendar or a basis
+    outside 0..4."""
+    check_basis(basis)
+    s, e = sorted((whole_serial(start), whole_serial(end)))
+    days, year = day_count_parts(s, e, basis)
+    return days / year
 
 
 def _value(args: Sequence[MathArg]) -> mpmath.mpf:
     start, end, *rest = args
-    assert not isinstance(start, bool | tuple) and not isinstance(end, bool | tuple)
+    assert is_real(start) and is_real(end)
     basis = 0
     if rest:
         (b,) = rest
-        assert not isinstance(b, bool | tuple)
+        assert is_real(b)
         basis = int(b)
     return fraction_to_mpf(yearfrac_value(float(start), float(end), basis))
 
@@ -184,7 +215,8 @@ def _date(rng: random.Random, lo: int, hi: int, fraction: float = 0.0) -> float:
     return day
 
 
-def _serial_of(year: int, month: int, day: int) -> float:
+def serial_of(year: int, month: int, day: int) -> float:
+    """The serial of a real calendar date from 1900-03-01 on."""
     return float((datetime.date(year, month, day) - EPOCH).days)
 
 
@@ -196,7 +228,7 @@ def _typical(rng: random.Random) -> list[Arg]:
 def _month_end(rng: random.Random, year: int) -> float:
     month = rng.randint(1, 12)
     last = calendar.monthrange(year, month)[1]
-    return _serial_of(year, month, rng.choice((last, last - 1, 30, 1) if last >= 30 else (last, last - 1, 1)))
+    return serial_of(year, month, rng.choice((last, last - 1, 30, 1) if last >= 30 else (last, last - 1, 1)))
 
 
 def _tail(rng: random.Random) -> list[Arg]:
@@ -207,14 +239,14 @@ def _tail(rng: random.Random) -> list[Arg]:
         lambda: _with_basis(rng, _month_end(rng, year), _month_end(rng, year + rng.randint(0, 3))),
         lambda: _with_basis(
             rng,
-            _serial_of(year, 2, calendar.monthrange(year, 2)[1]),
-            _serial_of(year + rng.randint(0, 4), 2, 28) + rng.choice((0.0, 1.0)),
+            serial_of(year, 2, calendar.monthrange(year, 2)[1]),
+            serial_of(year + rng.randint(0, 4), 2, 28) + rng.choice((0.0, 1.0)),
         ),
         lambda: _year_apart(rng, year),
         lambda: _with_basis(
             rng,
-            _serial_of(year, rng.randint(1, 3), rng.randint(1, 28)),
-            _serial_of(year + rng.randint(0, 1), rng.randint(2, 4), rng.randint(1, 28)),
+            serial_of(year, rng.randint(1, 3), rng.randint(1, 28)),
+            serial_of(year + rng.randint(0, 1), rng.randint(2, 4), rng.randint(1, 28)),
         ),
     ]
     return one_of(rng, shapes)

@@ -45,8 +45,8 @@ Excel takes, and noise-floor runs where Excel's value is neither the hold nor th
   - A revert moves A15, A26, A64, A76 and A121 out and loses T-3698's 22 cells.
   - A152 lies within its root's rounding-noise width (7.7e-9 relative, almost 8 times ε). A194 is a real exit: the
     restarted run meets a second flat secant at step 92 with |f| 1.65e-4 and is `#NUM!`.
-  - So the narrow-or-revert criterion moved to **T-3916**, blocked on an owner ruling ("Needs owner" in
-    docs/status.md).
+  - So the narrow-or-revert criterion moved to **T-3916**. The owner ruled on 2026-11-04 (decision 0265): keep the
+    rule. A noise-width point is judged against Excel only, and A194 is accepted.
   - R4.1, firing cells only (the rule and the hold differ; the fit set without the R4 sweeps and t3906): on the train
     side of the hash split the rule is bit-exact on 17 of 40 and the hold on 0. On the test side it is 5 of 14 and 0.
     Out of sample (t3906) it is 48 of 240 (20%) and 12. So the out-of-sample rate is about half the train rate
@@ -70,7 +70,7 @@ Review follow-ups of T-3698 (PR #2858, fidelity and design MINORs, carried here)
       of sample (the T-3698 fresh sweeps hardly ever reach a flat secant). (T-3906: probes/t3906-rate-restart-oos)
 - [x] Moved to T-3916 (it was: narrow T-3698's restart so that no point of probes/t3906-rate-restart-oos leaves the
       Gate A envelope, or revert it under a regression decision record). Neither is possible without a point leaving
-      (docs/research/t3850), so the choice waits on the owner's ruling.
+      (docs/research/t3850). The owner kept the rule (decision 0265, T-3916).
 - [x] A probe that separates late restarts from holds, oracle-filled, and a rule that fits it, or a recorded finding
       that no rule on the run's visible state does. (Finding: probes/t3850-rate-same-state, below.)
 - [x] Any rule is implemented with no RATE cell regressing; R4 hold-out and fresh sweep recorded. (No rule: none
@@ -101,7 +101,7 @@ Review follow-ups of T-3698 (PR #2858, fidelity and design MINORs, carried here)
   flat secant" (A9, A17, A21, A25, -fresh A22).
 - Follow-up: T-3963 (opus) models Excel's residual in the noise floor. It now owns the off cells of
   t3698-rate-flat-restart, -fresh, t3906-rate-restart-oos and t3850-rate-same-state. The narrow-or-revert ruling
-  stays with T-3916 (needs owner).
+  went to T-3916; the owner kept the rule (decision 0265).
 - Eval delta: no fix and no regression. One new probe case (240 cells), of which 55 pass, added to the baseline as
   known failures.
 

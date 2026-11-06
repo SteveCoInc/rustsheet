@@ -1,0 +1,112 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "2d28f09ee39a30bcfc9e8330d6e861231e5b139a8317eb8c7e6c2f39659b245c",
+  "definitions": {
+   "WEIBULL": "90a93c98b90756bc",
+   "WEIBULL.DIST": "90a93c98b90756bc",
+   "XIRR": "b7bd2ac117248389"
+  },
+  "arguments_sha256": "482dc8d85bedb6e4829daa45d0076d932fba1a0dead9f742fe4c6a83a5fea1f8"
+ },
+ "sheets": {
+  "Calc": {
+   "A29": {
+    "t": "e",
+    "why": "flows of one sign: no rate",
+    "f": "=XIRR({-100,-200,-300},P!N1:N3)"
+   },
+   "A31": {
+    "t": "n",
+    "v": "66.805638038994896931956818876565868849869076319628",
+    "f": "=XIRR({-100,200,300},P!AC1:AC3)"
+   },
+   "A32": {
+    "t": "e",
+    "why": "flows of one sign: no rate",
+    "f": "=XIRR({-100,-200,-300},P!AC1:AC3)"
+   },
+   "A48": {
+    "t": "e",
+    "why": "beta^alpha overflows",
+    "f": "=WEIBULL.DIST(0,400,10,FALSE)"
+   },
+   "A49": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=WEIBULL.DIST(0,300,10,FALSE)"
+   },
+   "A50": {
+    "t": "e",
+    "why": "beta^alpha underflows to 0",
+    "f": "=WEIBULL.DIST(0,400,0.1,FALSE)"
+   },
+   "A51": {
+    "t": "e",
+    "why": "beta^alpha overflows",
+    "f": "=WEIBULL.DIST(0,1E+10,1.0001,FALSE)"
+   },
+   "A52": {
+    "t": "e",
+    "why": "beta^alpha overflows",
+    "f": "=WEIBULL.DIST(0,2,1E+200,FALSE)"
+   },
+   "A53": {
+    "t": "e",
+    "why": "beta^alpha overflows",
+    "f": "=WEIBULL.DIST(1,2,1E+200,FALSE)"
+   },
+   "A54": {
+    "t": "e",
+    "why": "beta^alpha overflows",
+    "f": "=WEIBULL.DIST(0,309,10,FALSE)"
+   },
+   "A55": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=WEIBULL.DIST(0,308,10,FALSE)"
+   },
+   "A56": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=WEIBULL.DIST(0,400,10,TRUE)"
+   },
+   "A57": {
+    "t": "e",
+    "why": "beta^alpha overflows",
+    "f": "=WEIBULL(0,400,10,FALSE)"
+   },
+   "A58": {
+    "t": "e",
+    "why": "beta^alpha overflows",
+    "f": "=WEIBULL.DIST(5,400,10,FALSE)"
+   },
+   "A59": {
+    "t": "e",
+    "why": "beta^alpha underflows to 0",
+    "f": "=WEIBULL.DIST(0,1E+10,0.9999,FALSE)"
+   },
+   "A60": {
+    "t": "e",
+    "why": "beta^alpha overflows",
+    "f": "=WEIBULL.DIST(0,1E+300,1E+300,FALSE)"
+   },
+   "A61": {
+    "t": "e",
+    "why": "beta^alpha overflows",
+    "f": "=WEIBULL.DIST(1E-300,400,10,FALSE)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "A20": {
+    "f": "=XIRR({-100,200,300},P!T1:T3)",
+    "why": "no single value"
+   }
+  }
+ }
+}

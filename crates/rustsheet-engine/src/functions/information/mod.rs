@@ -30,6 +30,26 @@ fn joins_a_cell_to_a_sheet_qualified_one(node: &Node) -> bool {
             && matches!(right.ungrouped(), Node::ReferenceKind { sheet_name: Some(_), .. }))
 }
 
+/// Whether the written wrappers of an argument already settle [`Model::is_reference`]: a unary
+/// plus among them makes a value, and the `@` of one cell is that cell. `ISREF(+C1)`,
+/// `ISREF(+(C1))`, `ISREF((+C1))`, `ISREF(+@C1)` and `ISREF(@+C1)` are FALSE, `ISREF(@C1)` is
+/// TRUE (probes/networkdays-intl-holiday-kinds G1:G8, excel-graph; T-4190). `None` leaves the
+/// argument to the full test.
+pub(crate) fn written_reference(node: &Node) -> Option<bool> {
+    let (mut node, mut intersected) = (node, false);
+    loop {
+        match node {
+            Node::UnaryPlus { .. } => return Some(false),
+            Node::Group { child, .. } | Node::Spaced { child, .. } => node = child,
+            Node::ImplicitIntersection { child, .. } if !intersected => {
+                (node, intersected) = (child, true);
+            }
+            Node::ReferenceKind { .. } if intersected => return Some(true),
+            _ => return None,
+        }
+    }
+}
+
 /// Applies `f` to every element of a 2-D array, keeping its shape.
 pub(crate) fn map_elements(
     values: &[Vec<ArrayNode>],
@@ -173,6 +193,9 @@ impl Model {
         // not a reference.
         // So is one a LET whose body may pick it picks: `ISREF(LET(c,TRUE,IF(c,…!A1,D1)))` is
         // TRUE (probes/external-ref-no-link-let-index A6).
+        if let Some(is_reference) = written_reference(node) {
+            return is_reference;
+        }
         let node = match self.unpicked_reference(node, cell) {
             Ok(node) => node,
             Err(is_reference) => return is_reference,
@@ -238,7 +261,8 @@ impl Model {
                     | crate::functions::Function::Choose
                     | crate::functions::Function::Ifs
                     | crate::functions::Function::Switch
-                    | crate::functions::Function::Let,
+                    | crate::functions::Function::Let
+                    | crate::functions::Function::Reduce,
                 ..
             } => matches!(
                 self.evaluate_picked_reference_arg(node, cell),
@@ -308,11 +332,16 @@ impl Model {
                 }
             }
             // A LET variable or LAMBDA parameter is a reference if it was bound to one
-            // (upstream MIN_MAX_extras.xlsx A14-A16).
-            Node::NamedVariableKind { .. } => matches!(
-                self.evaluate_node_with_reference(node, cell),
-                CalcResult::Range { .. }
-            ),
+            // (upstream MIN_MAX_extras.xlsx A14-A16), a union included: REDUCE's `a` bound to
+            // `(A1,A3)` is one (`REDUCE((A1,A3),{1},LAMBDA(a,v,ISREF(a)))` is TRUE,
+            // probes/t4478-reduce-scan-reference-accumulator Calc!H17, T-4494).
+            Node::NamedVariableKind { .. } => {
+                self.is_areas_variable(node)
+                    || matches!(
+                        self.evaluate_node_with_reference(node, cell),
+                        CalcResult::Range { .. }
+                    )
+            }
             _ => false,
         }
     }
@@ -535,7 +564,8 @@ impl Model {
                     };
                 }
             }
-            Node::NamedVariableKind { name, id: _ } => {
+            // A name no LET or LAMBDA binds. A bound one is read as what it is bound to, below.
+            Node::NamedVariableKind { name, id: None } => {
                 return CalcResult::Error {
                     error: Error::NAME,
                     origin: cell,
@@ -561,6 +591,19 @@ impl Model {
                             Error::NA,
                             cell,
                             "SHEET of an array of references".to_string(),
+                        )
+                    }
+                    // A LET variable or LAMBDA parameter is what it is bound to: a reference its
+                    // sheet, text a sheet name, an error itself, and an array (a GROUPBY group,
+                    // `{1,2}`) one #N/A (probes/t4518-sheet-sheets-bound-variable D1:D26,
+                    // t4450-eta-special-forms J53, F121, H121:H124, excel-graph; arrays.md).
+                    RefArg::Value(CalcResult::Array(_))
+                        if matches!(arg, Node::NamedVariableKind { .. }) =>
+                    {
+                        return CalcResult::new_error(
+                            Error::NA,
+                            cell,
+                            "SHEET of an array".to_string(),
                         )
                     }
                     RefArg::Value(_) => {}
@@ -663,6 +706,26 @@ impl Model {
                         if joins_a_cell_to_a_sheet_qualified_one(argument) =>
                     {
                         return error;
+                    }
+                    _ => {}
+                }
+            }
+            // A LET variable or LAMBDA parameter bound to a one-sheet reference is that
+            // reference, one sheet (`MAP(A1:A3,_xleta.SHEETS)` is 1, 1, 1); bound to an array (a
+            // GROUPBY group) it is #N/A (probes/t4518-sheet-sheets-bound-variable D9, D11, D13,
+            // D23, t4450-eta-special-forms J59, excel-graph). Other bound values stay unprobed:
+            // the oracle's canary sheet guard refuses SHEETS of a written parameter.
+            if let Node::NamedVariableKind { id: Some(_), .. } = argument {
+                match self.variable_reference(argument, cell) {
+                    RefArg::Ranges(Ranges::One(area)) if area.left.sheet == area.right.sheet => {
+                        return CalcResult::Number(1.0);
+                    }
+                    RefArg::Value(CalcResult::Array(_)) => {
+                        return CalcResult::new_error(
+                            Error::NA,
+                            cell,
+                            "SHEETS of an array".to_string(),
+                        );
                     }
                     _ => {}
                 }

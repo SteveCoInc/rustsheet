@@ -45,8 +45,9 @@ Work is partitioned into **lanes** so that parallel workers rarely touch the sam
   minutes and 10 tasks per run, then landing its own PRs until minute 110 (decisions 0022, 0025,
   0229). Each walks the `**Critical lane:**` list in `docs/status.md`, then
   `functions` (every `functions-*` lane; allowlist and rules in `routines.md`).
-- One task in flight per lane. `make next-task` enforces it: it skips tasks claimed by a pushed
-  branch and lanes with a branch that moved in the last 2 hours (handoffs, and branches whose task
+- One task in flight per lane, three in `engine` (decision 0269). `make next-task` enforces it: it
+  skips tasks claimed by a pushed branch and lanes whose slots are all taken by branches that moved
+  in the last 2 hours (handoffs, and branches whose task
   is already done on main, excepted).
 - The functions work is split into the nine `functions-*` lanes above so several workers can fix
   functions at once; plain `functions` is retired for open tasks (`scripts/tasks.py validate`).
@@ -58,6 +59,16 @@ Work is partitioned into **lanes** so that parallel workers rarely touch the sam
   step 6.5) top it up with the gap-triager or planner, cutting sonnet-sized tasks by the tier rubric.
 - Add the optional worker only after a week with a revert rate under 5%.
 
+**Worktrees** (T-3832): every worktree, including a subagent's `isolation: worktree` copy, builds
+into its own Cargo target directory, its default `target/` inside the worktree. Never share one
+(a common `CARGO_TARGET_DIR`, a `target` symlink to another tree) to save disk: Cargo fingerprints
+by package, not by source tree, and the Makefile runs `target/release/rustsheet-eval` by path, so a
+shared directory runs binaries built from another worktree's sources. In the 2026-11-02 cleanup
+that made FORECAST.ETS return `#N/IMPL!` from an older engine and once recorded a baseline with the
+wrong one. `make build` (so every eval gate) and `make check-fast` refuse a target directory outside
+the worktree (`make target-dir-guard`, `scripts/target_dir_guard.py`). Short of disk, delete stale
+worktrees' `target/` directories instead.
+
 ## Task lifecycle
 
 ```
@@ -66,8 +77,9 @@ todo ──(worker claims: branch + status in-progress)──▶ in-progress ─
   └──────────── (unblocked) ◀── blocked ◀──(3 failed review/CI rounds, or needs oracle)
 ```
 
-- **Unblocking is an agent's job** (decision 0013). The steward run checks every `blocked` task;
-  a worker whose lane has no ready task checks its lane's. If the blocker is gone (the capability
+- **Unblocking is an agent's job** (decision 0013). The steward run checks every `blocked` task,
+  including one blocked only on a stale draft PR's branch (steward skill "Stale drafts", decision
+  0264); a worker whose lane has no ready task checks its lane's. If the blocker is gone (the capability
   check passes, or the blocking task is `done`): set `status: todo`, delete the "Blocked because"
   section, drop dependencies that stood only for the capability, remove the
   resolved "Needs owner" entry from `docs/status.md`, and note the unblock in the PR (no log line;
@@ -151,7 +163,8 @@ A pending probe is better than a confident wrong implementation.
 | Task turns out to be bigger than M | stop, commit the analysis to the task file, ask the planner to split it |
 | Missing capability (oracle, credentials, network) | mark blocked with the exact need and the command that proves it is available (oracle: `rustsheet-oracle status` shows `excel-graph OK`); record it in `docs/status.md` under "Needs owner". Exception: a need for the excel-desktop oracle (desktop-only or conditional-format evidence) is not a "Needs owner" item and blocks nothing else; move the task to M14 (Phase 4) or add the item to T-1075 (decision 0039) |
 | A blocking capability is now available | unblock it (see "Unblocking" under Task lifecycle); never wait for the owner to edit task files |
-| Nightly fuzz run red (`.github/workflows/fuzz.yml`) | the steward downloads each `fuzz-crash-*` artifact, reproduces it with `cd fuzz && cargo fuzz run --target "$(rustc -vV | sed -n 's/^host: //p')" <target> <file>` (decision 0035), and files one P0 task per distinct crash (same panic site or stack = same crash) in the owning lane with the reproducer's bytes in the task (escaped; never the job environment); the fix adds the reproducer as a unit test (decision 0035) |
+| Nightly eval run red (`.github/workflows/nightly.yml`) | the corpus round-trip gate failed (decision 0323), or the report or the fetch did. Read the failed step: a red `roundtrip --check` names the regressing cases. Reproduce with `rustsheet-eval fetch --suite <suite>` and `rustsheet-eval roundtrip --check --timeout 300 --suite roundtrip-<suite>`, bisect the merges since the last green run, and file one P0 task per cause in the owning lane with the case ids. A fetch that failed three times is a network or upstream problem: re-run the workflow once, and record it under "Needs owner" if it fails again |
+| Nightly fuzz run red (`.github/workflows/fuzz.yml`) | a crash, timeout or out-of-memory. The run's `report` job opens a `fuzz-failure` issue per failed target with the inputs embedded, or comments on the open one (decision 0302); the issue intake works it (issue-intake skill, "Fuzz finding"), and the steward files the task itself only if no issue was opened. Reproduce with `cd fuzz && cargo fuzz run --target "$(rustc -vV | sed -n 's/^host: //p')" <target> <file>` (decision 0035); one P0 task per distinct cause (same panic site or stack = same cause) in the owning lane with the reproducer's bytes in the task (escaped; never the job environment); the fix adds the reproducer as a unit test (decision 0035). Under `cfg(fuzzing)` bitcode accepts trailing bytes, so a `bitcode_workbook` test uses the prefix that decodes in a normal build (T-4048) |
 
 ## Scheduled routines (how the loop runs unattended)
 

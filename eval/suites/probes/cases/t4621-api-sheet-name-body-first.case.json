@@ -1,0 +1,117 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4621: tabs First, S2, Last with First active. Which sheet's definition does a bare name in the body of a SHEET-scoped name added through the API (Graph names/add with a sheet) read: the name's own sheet's, or the first defining sheet by name (First < Last < S2, T-4587)? Row 1: SD scoped to S2, body =Dup; Dup on First (1) and S2 (7). Row 2: LD scoped to Last, body =DupB; DupB on First (2) and Last (90). Row 3: SW scoped to S2, body =DupC; DupC is a workbook name (First!B3, 3) and Last's (Last!B3, 93). Row 4: TW scoped to S2, body =DupD; DupD is a workbook name (First!B4, 4) and S2's (S2!B4, 74), Last's (Last!B4, 94). Row 5: control, workbook name WD body =Dup. Uses on other sheets are qualified (Sheet!Name); the own-sheet bare uses are column E.",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "First",
+ "names": {
+  "First!Dup": "=First!$B$1",
+  "S2!Dup": "=S2!$B$1",
+  "First!DupB": "=First!$B$2",
+  "Last!DupB": "=Last!$B$2",
+  "DupC": "=First!$B$3",
+  "Last!DupC": "=Last!$B$3",
+  "DupD": "=First!$B$4",
+  "S2!DupD": "=S2!$B$4",
+  "Last!DupD": "=Last!$B$4"
+ },
+ "sheets": [
+  {
+   "name": "First",
+   "cells": {
+    "B1": 1,
+    "B2": 2,
+    "B3": 3,
+    "B4": 4,
+    "D1": "=S2!SD",
+    "D2": "=Last!LD",
+    "D3": "=S2!SW",
+    "D4": "=S2!TW",
+    "D5": "=WD"
+   }
+  },
+  {
+   "name": "S2",
+   "cells": {
+    "B1": 7,
+    "B2": 72,
+    "B3": 73,
+    "B4": 74,
+    "D1": "=INDIRECT(\"SD\")",
+    "E1": "=SD",
+    "D2": "=Last!LD",
+    "D3": "=INDIRECT(\"SW\")",
+    "E3": "=SW",
+    "D4": "=INDIRECT(\"TW\")",
+    "E4": "=TW",
+    "D5": "=WD"
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "B1": 9,
+    "B2": 90,
+    "B3": 93,
+    "B4": 94,
+    "D1": "=S2!SD",
+    "D2": "=INDIRECT(\"LD\")",
+    "E2": "=LD",
+    "D3": "=S2!SW",
+    "D4": "=S2!TW",
+    "D5": "=WD"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "First!D1",
+  "First!D2",
+  "First!D3",
+  "First!D4",
+  "First!D5",
+  "Last!D1",
+  "Last!D2",
+  "Last!D3",
+  "Last!D4",
+  "Last!D5",
+  "Last!E2",
+  "S2!D1",
+  "S2!D2",
+  "S2!D3",
+  "S2!D4",
+  "S2!D5",
+  "S2!E1",
+  "S2!E3",
+  "S2!E4"
+ ],
+ "api_names": [
+  {
+   "name": "SD",
+   "formula": "=Dup",
+   "sheet": "S2"
+  },
+  {
+   "name": "LD",
+   "formula": "=DupB",
+   "sheet": "Last"
+  },
+  {
+   "name": "SW",
+   "formula": "=DupC",
+   "sheet": "S2"
+  },
+  {
+   "name": "TW",
+   "formula": "=DupD",
+   "sheet": "S2"
+  },
+  {
+   "name": "WD",
+   "formula": "=Dup"
+  }
+ ]
+}

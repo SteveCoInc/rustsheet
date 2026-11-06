@@ -63,7 +63,10 @@ COUNTIFS, MATCH(..,0), XMATCH(..,2), XLOOKUP(..,2) and DCOUNTA agree on every wi
   `"צ*"` ץx, U+1C91&`"*"` U+1C90&x (both weightless) but not `"ა*"`; `Ɒ`/`ɒ` stay apart (rows 16:28).
 Without a wildcard, COUNTIF, SUMIF, COUNTIFS and XMATCH(..,0) keep the `=` collation instead: a&U+0524&b equals ab
 there (coercion.md "Weightless characters in `=`, COUNTIF and XMATCH"; -criteria Calc!B3:D3, -xmatch Calc!E3), while
-the wildcard and D-function paths do not.
+the wildcard and D-function paths do not. That includes `=`'s prefix rule for a trailing weightless
+character (`ab`&U+00AD is not `ab`, `aé`&U+00AD is `aé`) and the weights of U+200B and the C1 controls
+(coercion.md "Format characters, U+200B and the C1 controls (T-3662)"; probes/t3662-collation-ignorables
+Calc!AD:AJ, AL:AM, -prefix Calc!R:U).
 Status: VERIFIED (excel-graph) for the list and the T-3929 rows above
 Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445), through `folded_units` and
 `WildcardPattern::new`; D-function prefix criteria through `result_starts_with_units` (functions/criteria.rs, T-3929)
@@ -197,8 +200,9 @@ operators compare at 15 digits too".
 Status: VERIFIED
 Implemented in: `result_is_less_than_number` and the other three ordering matchers (functions/criteria.rs), on
 `cmp_excel_precision`, and in the indexed *IFS cache (`number_interval`, functions/statistical/ifs_cache.rs).
-AVERAGEIF(S), MINIFS/MAXIFS and the D-functions share these matchers but have no oracle cell near a rounding
-boundary yet. Tasks: T-3084, T-3103
+AVERAGEIF(S), MINIFS/MAXIFS and DCOUNT/DSUM/DAVERAGE/DMIN/DMAX share these matchers and agree: probes/t4399-criteria-near-equal-others
+(excel-graph, 2026-11-05, 379 cells, all bit-exact with ours) runs the same twelve boundary values with all six criteria
+over one-cell and whole ranges and over a database with one criteria range per criterion (the D-function `=1` control, BF2, is the number 1, not the text, because the sheet cell "=1" is a formula; the four ordering criteria and `<>1` are text). Anchor cells: AVERAGEIF(B6,">1",B6)-1 = 5.107E-15 (G6) against #DIV/0! for the 22-ulp cell (G5); MAXIFS "<=1" over B1:B12 picks the 22-ulp cell (4.885E-15); DCOUNT ">1" = 1 (BD4), "<=1" = 11 (BC4). A criteria cell holding the TEXT `=1` (or `=1.0`) behaves exactly like the number-1 control: DCOUNT = 10, DSUM-1 = 9.000000000000009, DAVERAGE-1 = 0, DMIN-1 = 0, DMAX-1 = 4.885E-15 (probes/t4444-dfunction-text-equal-one, excel-graph, 2026-11-06, 52 cells, all bit-exact with ours; BB = text `=1`, BC = number control, BD = text `=1.0`). Tasks: T-3084, T-3103, T-4399, T-4444
 
 ## Text `<=` / `>=` criteria, and dotted dates are text in en-US
 Rule: `"<=text"` and `">=text"` compare the cell text with the operand, case-insensitively, like
@@ -289,8 +293,12 @@ exactly the scalar criterion's result, in a 1x6 array for COUNTIF, SUMIF, SUMIFS
 (`""` the blank and the `""` cell, `"="` the blank only, `"<>"` all but the blank, and `0`, `"0"`, `"=0"` each the number 0 and the text "0"),
 SUMIF/SUMIFS 3, 1, 14, 12, 12, 12, AVERAGEIFS 1.5, 1, 14/3, 6, 6, 6, MAXIFS 2, 1, 8, 8, 8, 8
 (probes/criteria-tilde-blank-single-cell-edges Arr!D1:K8, excel-graph 2026-10-21, T-2235);
-for SUMIFS and SUMIF an error in the sum range is `#N/A` only at the criteria positions whose rows select it
-(`SUMIFS(E1:E3,A1:A3,{"a","b"})` with E1 = #N/A is #N/A, 5; AVERAGEIFS and MAXIFS probed only at position 1: `#N/A`);
+for SUMIFS, SUMIF, AVERAGEIFS, AVERAGEIF, MAXIFS and MINIFS an error in the sum (value) range is the result only at the criteria
+positions whose selected rows include it (which error wins when one position selects two different errors is unprobed)
+(`SUMIFS(E1:E3,A1:A3,{"a","b"})` with E1 = #N/A is #N/A, 5). With A1:A4 = a, b, a, c and E1:E4 = #N/A, 5, 7, #DIV/0!, all five
+functions (MINIFS too) give `{"a","b","c"}` -> #N/A, 5, #DIV/0!; `{"b";"c"}` -> 5, #DIV/0!; `{"c"}` -> #DIV/0! (ERROR.TYPE 7, 2);
+a second pair `B1:B4,">0"` (B = 1, 1, 0, 1) drops only row 3, so the error rows still select and the row gives #N/A, 5, #DIV/0!
+(probes/t4606-ifs-array-criterion-value-error, excel-graph 2026-11-06, T-4606; ours matches all 86 cells);
 `COUNTIFS(E1:E3,{"a","b"})` ignores it (0 at position 1). A `NA()`/non-range first argument with an array criterion
 (`COUNTIF(NA(),{"a","b"})`, `COUNTIFS(NA(),{"a"})`, `SUMIFS(NA(),...)`) made excel-graph reject the whole workbook as unsupported,
 so those cases are unprobed.
@@ -372,6 +380,18 @@ Evidence: gen-m2/629e6e8b76fab8b9 Calc!A217, 04cfd82f54dbc2b2 Calc!A344 (`=SUMIF
 Status: VERIFIED
 Implemented in: `resize_to` in `crates/rustsheet-engine/src/functions/statistical/if_ifs.rs`
 Tasks: T-0214
+
+### AVERAGEIF's numeric-like criteria pick the same rows under a resized average_range
+Rule: with an average_range, AVERAGEIF matches its range exactly as without one, and averages the matched rows of the
+range resized from average_range's top-left cell. Over A1:A6 = 0, -1, 0.5, text "1", TRUE, 1 with D1:D6 = 10 to 60:
+`0`, `-1` and `0.5` each match their one number (10, 20, 30); the text criterion `"1"` matches the text "1" and the
+number 1 (50); `"0.5"` matches the number 0.5 (30); `TRUE` matches the TRUE cell only, not the number 1 (50); `FALSE`
+does not match the number 0 in A1 (`#DIV/0!` in every column of H7:M7, not 10). A literal and the same value in a criteria cell agree, and D1 and D1:E1 give what D1:D6
+gives (each resized to D1:D6).
+Evidence: probes/t4540-averageif-criteria-average-range H1:M7 (42 cells). Oracle: excel-graph, 2026-11-06 (T-4540).
+Status: VERIFIED
+Implemented in: `resize_to`, `apply_ifs` in `crates/rustsheet-engine/src/functions/statistical/if_ifs.rs`
+Tasks: T-4540
 
 ### SUMIF/AVERAGEIF resize clamps at the sheet edge; single-cell ranges are 1x1
 Rule: when the resized sum_range would run past XFD1048576 Excel clamps it to the sheet edge (no `#REF!`):

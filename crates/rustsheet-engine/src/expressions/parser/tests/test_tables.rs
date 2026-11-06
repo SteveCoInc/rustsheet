@@ -267,11 +267,11 @@ fn bare_table_name_and_empty_brackets_are_the_data_area() {
     assert_eq!(expected, "ROWS(tblIncome[])");
     assert!(matches!(bare.ungrouped(), Node::FunctionKind { .. }));
     // A bare name keeps its text; `tblIncome[]` is read as the bare name (SPEC-0016).
-    assert_eq!(to_rc_format(&bare), "ROWS(tblIncome)");
-    // Names match ignoring case, and keep the case they were typed in.
+    // Names match ignoring case, and print in the table's own spelling
+    // (probes/t1683-formulatext-structured-refs F!B13).
     let t = parser.parse("ROWS(TBLINCOME)", &cell_reference);
-    assert_eq!(to_excel_string(&t, &cell_reference), "ROWS(TBLINCOME[])");
-    assert_eq!(to_rc_format(&t), "ROWS(TBLINCOME)");
+    assert_eq!(to_excel_string(&t, &cell_reference), "ROWS(tblIncome[])");
+    assert_eq!(to_rc_format(&t), "ROWS(tblIncome)");
 }
 
 #[test]
@@ -295,7 +295,7 @@ fn this_row_outside_the_data_rows_is_value_error() {
         );
         assert_eq!(
             to_english_localized_string(&t, &cell_reference),
-            "tblIncome[[#This Row],[Jan]]"
+            "tblIncome[@Jan]"
         );
         // The parsed area does not depend on the row it was parsed at (SPEC-0016 step 2).
         assert!(matches!(
@@ -617,5 +617,37 @@ fn headers_combined_forms_on_a_table_without_a_header_row() {
         "ROWS(T[[#Headers],[#Data],[Jan]])",
     ] {
         assert_eq!(text(formula), formula, "{formula}");
+    }
+}
+
+/// A multi-word column after `@` is read unbracketed and printed in brackets, and an unterminated
+/// structured reference is refused (probes/t1683-formulatext-structured-refs F!D2:E7).
+#[test]
+fn multi_word_this_row_column_and_unterminated_references() {
+    let worksheets = vec!["Sheet One".to_string()];
+    let tables = create_test_table("tblIncome", &["Unit Price", "Feb"], "A1", 3);
+    let mut parser = new_parser(worksheets, vec![], tables);
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet One".to_string(),
+        row: 2,
+        column: 9,
+    };
+    let t = parser.parse("tblIncome[@Unit Price]", &cell_reference);
+    assert_eq!(
+        to_english_localized_string(&t, &cell_reference),
+        "tblIncome[@[Unit Price]]"
+    );
+    for text in [
+        "tblIncome[@Feb",
+        "tblIncome[Feb",
+        "SUM(tblIncome[Feb)",
+        "tblIncome[[#This Row],[Feb]",
+        "tblIncome[@[Feb]",
+    ] {
+        let t = parser.parse(text, &cell_reference);
+        assert!(
+            matches!(t.ungrouped(), Node::ParseErrorKind { .. }),
+            "{text}: {t:?}"
+        );
     }
 }

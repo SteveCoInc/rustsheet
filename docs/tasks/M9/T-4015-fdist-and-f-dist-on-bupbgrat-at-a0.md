@@ -9,6 +9,7 @@ size: S
 tier: opus
 depends_on: []
 campaign: accuracy
+defer: phase-1b
 ---
 
 ## Goal
@@ -66,6 +67,14 @@ Cells this task owns (split with T-3472 and T-2221, which keep only the bit-leve
 - gen-m9/b6593d7dd13f2dac.case.json (1): Calc!A50
 - gen-m9/3a25a03eb94fcfbd.case.json (1): Calc!A181
 
+Correction (gap triage 2026-11-04c, `make eval` on origin/main 9a01e9b25): the two `FDIST(x,1,9)` cells are not
+bit-exact. Both are NumericUlp known-failure lines of eval/baseline/gen-m9.txt, and no open task named them in a form
+`exit_owners.py` reads. They are `FDIST(2,1,9)`: Excel 0.190947117169724, ours 0.19094711716972404, mpmath 50-digit
+I_{9/11}(4.5, 0.5) = 0.19094711716972392844, so Excel is +3.7E-16 and ours +5.8E-16 relative. They are within 15
+digits and are not stage cells. This task owns them as the a0 = 1/2 counter-case its rule must explain:
+- gen-m9/7c20351562a2d71d.case.json (1): Calc!A205
+- gen-m9/c18dbf21f11093f3.case.json (1): Calc!A151
+
 ## Visible-parity stage
 `campaign: accuracy` (decisions 0083, 0114). Excel is 1.3E-16 to 3.9E-16 from the math; ours is 4.9E-16 to 1.8E-15
 off. The stage is met when:
@@ -79,7 +88,8 @@ Bit-level criteria still unmet then go back to T-3472 (`defer: phase-1b`).
       within 15 digits of Excel. The Outcome shows the `make eval-show` output for both and names the branch each
       takes.
 - [ ] No new known-failure line in any eval/baseline/<suite>.txt (`make eval-baseline` refuses regressions). In
-      particular, gen-m9 7c20351562a2d71d A205 and c18dbf21f11093f3 A151 stay bit-exact.
+      particular, gen-m9/7c20351562a2d71d Calc!A205 and gen-m9/c18dbf21f11093f3 Calc!A151 move no further from
+      Excel's value than today's 0.19094711716972404 (they leave the baseline if they become bit-exact).
 - [ ] If the domain of the accurate a0 = 1/2 kernel is chosen by scoring candidates against oracle cells, it is a fit
       (reviewer-excel-fidelity check 7, decision 0188 R4). The Outcome then shows every R4 guard:
       - Hold-out: counts (bit-exact, within 4 ulp, within 15 digits) beside the correctly rounded candidate, on a
@@ -96,3 +106,6 @@ Bit-level criteria still unmet then go back to T-3472 (`defer: phase-1b`).
 - T-3472's six probe cells, and every cell where Excel itself
   is off the math (T-3474, T-3592; Phase 1b).
 - The L140 bup+bpser and BpserLarge gen-m9 cells (T-4016), and FDIST at a huge df2 (T-4018).
+
+## Deferred by decision 0267
+The owner's cut-loss plan (decision 0267, 2026-11-04) parks this task until Phase 1 exits. It is work on the incomplete-beta family whose cells are first wrong only at the 14th or 15th significant digit, or a probe or port that serves only that work. In those regions Excel itself is not correctly rounded (on a sample of 2,026 visibly-off cells, Excel was correctly rounded on 1%, with a median error of 48 to 330 ulp). Matching those digits means reproducing Excel's rounding noise. Decision 0267 accepts those cells. Reopen the task only if a cell it owns is first wrong at the 13th digit or earlier.
