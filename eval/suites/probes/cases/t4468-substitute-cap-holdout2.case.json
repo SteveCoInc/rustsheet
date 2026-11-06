@@ -1,0 +1,47 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4468 second hold-out (seed 44682, committed before its fill): SUBSTITUTE instance_num 2147483647-d with d log-uniform in [3E-6,1.2E-5] (A1:A30), the band where a 15-digit cut (edge 5E-6) and a relative 2^-48 bound (edge about 7.6E-6) disagree.",
+ "tags": [
+  "M5",
+  "probe",
+  "text"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-1.165975E-05)",
+    "A2": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-5.738907E-06)",
+    "A3": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-6.436434E-06)",
+    "A4": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-7.211665E-06)",
+    "A5": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-5.997036E-06)",
+    "A6": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-3.364731E-06)",
+    "A7": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-8.406923E-06)",
+    "A8": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-3.200087E-06)",
+    "A9": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-5.474036E-06)",
+    "A10": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-8.536721E-06)",
+    "A11": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-6.681412E-06)",
+    "A12": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-5.610526E-06)",
+    "A13": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-1.132401E-05)",
+    "A14": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-4.935860E-06)",
+    "A15": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-5.509338E-06)",
+    "A16": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-7.474671E-06)",
+    "A17": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-7.482189E-06)",
+    "A18": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-5.730962E-06)",
+    "A19": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-7.003938E-06)",
+    "A20": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-3.828676E-06)",
+    "A21": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-1.177057E-05)",
+    "A22": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-4.548575E-06)",
+    "A23": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-1.151401E-05)",
+    "A24": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-8.644357E-06)",
+    "A25": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-8.978140E-06)",
+    "A26": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-6.968890E-06)",
+    "A27": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-1.057053E-05)",
+    "A28": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-3.559991E-06)",
+    "A29": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-3.984945E-06)",
+    "A30": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-3.330555E-06)"
+   }
+  }
+ ],
+ "expected": {}
+}

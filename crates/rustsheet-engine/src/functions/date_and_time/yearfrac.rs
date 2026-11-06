@@ -5,7 +5,7 @@ use chrono::Datelike;
 
 use super::{
     super::financial::{day_count_basis, days_30_360_us_ymd},
-    days360_eu, days360_serial, is_feb29_between_consecutive_years, is_leap_year, num_error,
+    days360_eu, is_feb29_between_consecutive_years, is_leap_year, num_error,
 };
 use crate::{
     calc_result::CalcResult,
@@ -93,16 +93,15 @@ impl Model {
         // The dates as the 1900 serials the financial day counts read: 2 * 1462 days on in a 1904
         // workbook (`DateSystem::financial_1900_serial`).
         let date_system = self.workbook.settings.date_system;
-        let start_raw = date_system.financial_1900_serial(start);
-        let end_raw = date_system.financial_1900_serial(end);
-        let (start_serial, end_serial) = (start_raw.floor() as i64, end_raw.floor() as i64);
+        let start_serial = date_system.financial_1900_serial(start).floor() as i64;
+        let end_serial = date_system.financial_1900_serial(end).floor() as i64;
         // Excel swaps reversed dates for every basis, so the asymmetric 30/360 counts read the
         // same pair either way (probes/yearfrac-reversed-bases; dates.md "YEARFRAC swaps
         // reversed dates").
-        let (start_raw, end_raw, start_serial, end_serial) = if start_serial > end_serial {
-            (end_raw, start_raw, end_serial, start_serial)
+        let (start_serial, end_serial) = if start_serial > end_serial {
+            (end_serial, start_serial)
         } else {
-            (start_raw, end_raw, start_serial, end_serial)
+            (start_serial, end_serial)
         };
         // Serial 0 (1900-01-00, so any date in [0, 1)) is a date on every basis
         // (probes/yearfrac-serial-zero; dates.md "YEARFRAC accepts serial 0").
@@ -156,14 +155,11 @@ impl Model {
             }
             2 => (days, 360.0),
             3 => (days, 365.0),
-            // DAYS360(start, end, TRUE) over the same (shifted) dates.
-            4 => (
-                days360_eu(
-                    excel_serial_to_ymd(days360_serial(start_raw))?,
-                    excel_serial_to_ymd(days360_serial(end_raw))?,
-                ),
-                360.0,
-            ),
+            // DAYS360(start, end, TRUE)'s European count over the floored dates: unlike DAYS360,
+            // basis 4 does not round to the second first, so `YEARFRAC(59-0.4/86400,425,4)` reads
+            // 1900-02-27 (probes/t4574-feb29-near-midnight-date-args Q1:Q18; dates.md "Other date
+            // functions floor a serial just below midnight", T-4574).
+            4 => (days360_eu(start_ymd, end_ymd), 360.0),
             // Range-checked by `day_count_basis`.
             _ => return None,
         })

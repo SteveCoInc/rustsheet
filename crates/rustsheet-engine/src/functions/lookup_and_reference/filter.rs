@@ -41,14 +41,16 @@ fn include_keeps(node: &ArrayNode, cell: CellReferenceIndex) -> Result<bool, Cal
 }
 
 /// Whether `include`, a mask for an array of `rows` x `cols`, filters its rows (`Some(true)`) or
-/// its columns (`Some(false)`): a column or a row as long as the rows, else as long as the
-/// columns; `None` when it is neither.
+/// its columns (`Some(false)`): a column or a row as long as the rows, else a row as long as the
+/// columns; `None` when it is neither. A column as tall as the array is wide is `None`, not a
+/// column filter: Excel gives `#VALUE!` for `FILTER(A1:B3,{TRUE;FALSE})`, `{1;0}`, `{1;#N/A}` and
+/// `FILTER(A1:C2,{1;0;1})` (probes/t4517-filter-transposed-include A10:C12, E10:F12; T-4517).
 fn include_axis(include: &[Vec<ArrayNode>], rows: usize, cols: usize) -> Option<bool> {
     let height = include.len();
     let width = include.first().map_or(0, Vec::len);
     if (height == rows && width == 1) || (height == 1 && width == rows) {
         Some(true)
-    } else if (height == 1 && width == cols) || (height == cols && width == 1) {
+    } else if height == 1 && width == cols {
         Some(false)
     } else {
         None

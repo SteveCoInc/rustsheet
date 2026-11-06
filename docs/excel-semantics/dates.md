@@ -57,7 +57,7 @@ A year can have 54 weeks: `WEEKNUM(DATE(2024,12,31),12)` is 54 (Tuesday week sta
 Evidence: probes/weeknum-modern-boundaries A1-A67 (excel-graph, 2026-10-17).
 
 ### WEEKNUM return_type edge cases and serial 0 (T-1023)
-Rule: return_type 1, 2, 11-17 and 21 are valid (a fraction truncates: 2.9 is 2, 21.5 is 21);
+Rule: return_type 1, 2, 11-17 and 21 are valid (a fraction floors, snapping up within 2^-22 + 2^-33 of the next integer: 2.9 is 2, 21.5 is 21; see "WEEKNUM return_type snap and negative floor" below);
 0, 3-10 and 18-20 are always `#NUM!` (not `#VALUE!`). A return_type of 22 or more, or negative, is
 NOT simply an error: it reads a start-weekday state that other WEEKNUM calls of the same recalc
 leave behind, and is `#NUM!` only when the state is empty (see "WEEKNUM's stale return_type state"
@@ -72,6 +72,21 @@ probes/weeknum-stale-return-type (13 cells over five layouts: Up, Down, Mixed, T
 the first 94-cell version of weeknum-serial-0 (commit 042ad31) reproduces deterministically.
 Status: VERIFIED
 Implemented in: `fn_weeknum`, `iso_week` (crates/rustsheet-engine/src/functions/date_and_time/weeknum.rs), `fn_isoweeknum`.
+
+### WEEKNUM return_type snap and negative floor (T-4470)
+Rule: WEEKNUM reads return_type as a floor that snaps up near the next integer, before choosing the type. Positive side: within
+2^-22 + 2^-33 below an integer (the LEFT count rule; the T-4454 entry below). Negative side: the floor (`-0.5` is -1) and the snap at
+`-2^-30` (reads 0) are VERIFIED, but the size of the negative-side snap window is NOT probed: the only negative point inside it is
+`-2^-30`, far below the bound. It may be the full tolerance or half of it, as DATE/TIME use for negatives (`near_integer_floor`);
+the engine uses the full one until probed (follow-up task). Cells and what each rules out:
+- `1-2^-23` is type 1 (not 0): sets the Sunday start; `2-2^-23` is type 2 and sets Monday; `18-2^-23` is 18 (`#NUM!`, empties the
+  state; truncation would give 17); `21-2^-23` is 21 (ISO, week 15 for serial 100); `22-2^-23` is 22 and reads the stale state.
+- `-0.5` is -1: it READS the stale state (a floor; truncation would make it type 0, always `#NUM!`). `-1.5` reads it too, but truncation
+  (-1) does the same, so it separates nothing. `-2^-30` is `#NUM!` and empties the state: it snaps up to 0 (a plain floor would give -1
+  and read the state).
+Evidence: probes/t4470-weeknum-return-type-edges (8 layouts, A3 sets the state, A2 the edge type, A1 `WEEKNUM(100,99)` reads it;
+excel-graph, 2026-11-06). Ours: matches all 24 cells (`near_integer_count` on every return_type, T-4470; negatives truncated before).
+Status: VERIFIED (web) for the cells above; negative snap bound unprobed
 
 ### WEEKNUM's stale return_type state (T-1484)
 Rule: one start-weekday state, Sunday, Monday or empty, lives for one recalculation. It is
@@ -1151,7 +1166,8 @@ Status: VERIFIED (web)
 ## Other date functions floor a serial just below midnight; their counts take no near-integer snap but WEEKNUM's return_type
 Rule: unlike YEAR, MONTH, DAY and WEEKDAY (the half-second carry above), every other probed serial argument floors
 plainly: EDATE and EOMONTH start, WORKDAY and WORKDAY.INTL start, NETWORKDAYS and NETWORKDAYS.INTL start and end,
-WEEKNUM, ISOWEEKNUM, DAYS (both), DATEDIF (both) and YEARFRAC basis 1. N-0.4 s, `fl(N-0.5/86400)` and even
+WEEKNUM, ISOWEEKNUM, DAYS (both), DATEDIF's "D" (both; its other units carry half a second: "DATEDIF's calendar
+units carry half a second" below) and YEARFRAC (basis 1 here; every basis, T-4574). N-0.4 s, `fl(N-0.5/86400)` and even
 N-(2^-22+2^-33) day read as day N-1, and only N itself is day N: `EOMONTH(45017-0.4/86400,0)` is 45016,
 `WEEKNUM(45018-(2^-22+2^-33))` 13 (the Saturday's week), `YEARFRAC(44927,45292-0.4/86400,1)` 0.997260274 (A1:O7).
 DAYS360 alone rounds the serial to the nearest second before flooring. The observed cut: `fl(N-0.5/86400)` is day N
@@ -1165,12 +1181,37 @@ WORKDAY.INTL days floor (`WORKDAY(45019,1-(2^-22+2^-33))` is 45019; `-1+2^-23` a
 WEEKNUM's return_type snaps like LEFT's count: within 2^-22 + 2^-33 below an integer it is that integer
 (`WEEKNUM(45019,2-2^-23)` is 15, type 2's week; `WEEKNUM(45017,17-(2^-22+2^-33))` is 13, type 17's), and
 2^-22 + 9*2^-36 or 1E-6 below truncates (14, type 1's or 16's; AA1:AB4). W1:X4 sit on a Sunday where every type gives
-14, so they do not tell the models apart. A negative return_type's snap is unprobed (it truncates in the engine).
+14, so they do not tell the models apart. A negative return_type floors with the same snap (T-4470 entry "WEEKNUM return_type snap and negative floor" above).
 Evidence: probes/t4454-near-midnight-date-args A1:AD10 (serials built exactly in formulas; excel-graph, 2026-11-06,
 T-4454).
 Ours: matches, all 197 cells (plain `floor` in month_shift.rs, workday.rs, networkdays.rs, weeknum.rs, yearfrac.rs and
 `datedif_value`/`fn_days`; `days360_serial` rounds to the second; the counts' `trunc`/`floor` and `weekend_mask`;
 WEEKNUM's positive return_type through `near_integer_count`, T-4454).
+Status: VERIFIED (web)
+
+## DATEDIF's calendar units carry half a second; YEARFRAC floors on every basis (around serial 60)
+Rule: DATEDIF's "M", "Y", "MD", "YM" and "YD" read each date as YEAR, MONTH and DAY do, `floor(x + 0.5/86400)`
+(the half-second carry above), while its "D" and its reversed-pair check floor plainly. So a start just below midnight
+of the fictitious 1900-02-29 (serial 60) counts days from 1900-02-28 but months from 1900-02-29:
+`DATEDIF(60-0.4/86400,425,"D")` is 366 (425-59), while its "M" is 11, "Y" 0, "MD" 30, "YM" 11 and "YD" 365, the
+values of start 60 itself (B4:F5; 425 is 1901-02-28). The cut is the same double as YEAR's: `fl(N-0.5/86400)` reads
+day N and one ulp below it (2^-47 here) day N-1, at N = 59, 60 and 61, for the start (A:F) and the end
+(`DATEDIF(31,s,u)`, G:L; `DATEDIF(31,61-0.4/86400,"MD")` is -1, end 61's value, A7:L18).
+Where the two readings disagree, the floors decide `#NUM!` for a reversed pair and the carried dates feed the units
+(A20:F23): `DATEDIF(60-0.4/86400,59.5,"M")` is -1, "Y" -1, "MD" 30, "YM" 11 and "YD" 365 (floors equal, carried
+dates reversed: 1900-02-29 to 1900-02-28), and its "D" 0; `DATEDIF(59.3,59-0.4/86400,u)` is `#NUM!` for every unit
+(floored pair reversed, carried dates equal). The same at 45020. The carried dates must lie in the calendar, for "D"
+too: `DATEDIF(1,2958466-0.4/86400,"D")` and `DATEDIF(2958466-0.4/86400,2958466-0.3/86400,"D")` are `#NUM!`, as are
+the other units (A24:F25; YEAR is `#NUM!` there as well).
+YEARFRAC floors both dates on all five bases, basis 4 included: `YEARFRAC(59-0.4/86400,425,4)` is 361/360 (from
+1900-02-27), not DAYS360's second-rounded 1 (Q1:Q18, V1:V18). DAYS360 itself rounds to the second here too, as at
+N = 45020 above (W1:Z18).
+Evidence: probes/t4574-feb29-near-midnight-date-args A1:Z25 (N = 59, 60, 61 minus 0.4 s, 2^-22+2^-33, 0.6 s,
+`fl(N-0.5/86400)` and one ulp below it, and N; excel-graph, 2026-11-06, T-4574).
+Ours: matches, all 504 cells (`datedif_value` floors for "D" and the order check and reads the calendar units and the
+calendar check through `carried_day`; YEARFRAC basis 4's
+`days360_eu` takes the floored dates, T-4574). Before T-4574 we floored DATEDIF's calendar units and its calendar check (73 cells off) and rounded basis 4 to
+the second (18 cells off).
 Status: VERIFIED (web)
 
 ## HOUR, MINUTE and SECOND round to the nearest second

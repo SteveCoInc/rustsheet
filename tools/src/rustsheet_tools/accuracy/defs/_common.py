@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 import random
+import sys
 from collections.abc import Callable, Sequence
 from fractions import Fraction
 
@@ -19,6 +20,7 @@ from rustsheet_tools.accuracy.sampler import log_uniform
 DF_CUT = 1e10  # the cumulative functions' last valid (truncated) df (statistics.md Student-t df limits)
 CONDITION_LIMIT = 1e-10  # an ill-conditioned point (kappa * 2^-52 above this) is redrawn
 EPS = 2.0**-52
+NORMAL_MIN = sys.float_info.min  # 2^-1022, the smallest normal double
 OVERFLOW_POINT = mpmath.mpf(2) ** 1024 * (
     1 - mpmath.mpf(2) ** -54
 )  # the smallest value that rounds past the largest double
@@ -31,6 +33,12 @@ def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
         assert not isinstance(a, (bool, tuple))
         out.append(a)
     return out
+
+
+def scalar(a: MathArg) -> mpmath.mpf:
+    """One numeric argument, where the sampler or the domain has ruled out a logical, a text and an array."""
+    assert not isinstance(a, (bool, str, tuple))
+    return a
 
 
 def finite_double(value: int | mpmath.mpf, what: str) -> mpmath.mpf:
@@ -48,6 +56,22 @@ def ill_conditioned(kappa: float) -> None:
     if kappa * EPS > CONDITION_LIMIT:
         msg = f"ill-conditioned (kappa {kappa:.3g})"
         raise NoValueError(msg)
+
+
+MARGIN_RANGE = (NORMAL_MIN, 1e300)  # an intermediate inside this is a normal double, clear of the overflow
+
+
+def confidence_margin(quantile: mpmath.mpf, sd: mpmath.mpf, n: mpmath.mpf) -> mpmath.mpf:
+    """quantile·sd/√n, the margin CONFIDENCE.NORM, CONFIDENCE and CONFIDENCE.T share (T-4581): each passes its own
+    quantile and size. NoValueError where sd, sd·quantile, sd/√n, quantile/√n or the margin leaves `MARGIN_RANGE`: no
+    cell shows where Excel's products overflow or underflow, so such a point is unprobed. The bounds are compared
+    exactly on the mpf (confidence.py's old check compared `abs(float(x))`, about one ulp looser)."""
+    root = mpmath.sqrt(n)
+    for intermediate in (sd, sd * quantile, sd / root, quantile / root, sd * quantile / root):
+        if not MARGIN_RANGE[0] <= abs(intermediate) <= MARGIN_RANGE[1]:
+            msg = "an intermediate leaves the normal double range (unprobed)"
+            raise NoValueError(msg)
+    return sd * quantile / root
 
 
 def zero_pole(args: Sequence[MathArg]) -> str | None:
@@ -127,6 +151,12 @@ def mpf_to_fraction(v: mpmath.mpf) -> Fraction:
 def trunc(x: mpmath.mpf) -> int:
     """`x` truncated toward zero."""
     return int(mpmath.floor(x)) if x >= 0 else -int(mpmath.floor(-x))
+
+
+def below_normal(*values: float) -> bool:
+    """Whether any of `values` is nonzero and below the normal range (a subnormal: Excel's flush is unprobed in the
+    definitions that call this)."""
+    return any(v != 0 and abs(v) < sys.float_info.min for v in values)
 
 
 def square_overflows(x: float) -> bool:

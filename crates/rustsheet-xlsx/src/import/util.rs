@@ -20,7 +20,7 @@ pub(super) fn get_attribute<'a>(node: &'a XmlNode, attr_name: &str) -> Result<&'
 
 /// Looks up a relationship by id; a missing one is malformed input, so it is a typed error
 /// rather than a map-index panic (T-0118, poi 60825).
-pub(super) fn get_relationship<'a>(
+pub(crate) fn get_relationship<'a>(
     rels: &'a std::collections::HashMap<String, super::Relationship>,
     id: &str,
 ) -> Result<&'a super::Relationship, XlsxError> {

@@ -303,6 +303,10 @@ pub struct RunReport {
     /// suites' origin and milestone tags.
     #[serde(default)]
     pub catalog_coverage: Vec<MilestoneCoverage>,
+    /// One row per pivot catalog id with its measured cells (T-4126); filled by the caller, which
+    /// reads the catalog.
+    #[serde(default)]
+    pub pivot_features: crate::pivot_features::PivotFeatures,
     /// The exit measures of decision 0085 per milestone (T-2177); derived from the rows above.
     #[serde(default)]
     pub milestone_exit: Vec<crate::milestone_exit::ExitRow>,
@@ -748,6 +752,7 @@ impl RunReport {
         crate::pivot_scoring::write_markdown(&self.cases, &mut md);
         self.write_evidence(&mut md);
         catalog_coverage::write_markdown(&self.catalog_coverage, &mut md);
+        crate::pivot_features::write_markdown(&self.pivot_features, &mut md);
         out_of_scope::write_markdown(&self.out_of_scope, &self.suites, &mut md);
         md
     }

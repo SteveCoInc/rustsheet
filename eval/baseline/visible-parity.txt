@@ -243,6 +243,7 @@ probes/t4061-persian-new-years.case.json	81
 probes/t4061-review-followups.case.json	30
 probes/t4061-umalqura-months.case.json	60
 probes/t4069-fixed-denominator-tail.case.json	1
+probes/t4098-tests-prob-domains.case.json	9
 probes/t4123-pivot-capture.case.json	181
 probes/t4128-pivot-spike.case.json	60
 probes/t4134-pivot-items.case.json	54
@@ -286,6 +287,12 @@ probes/t4554-api-name-local-name-body.case.json	5
 probes/t4554-api-name-scoped-name-choice-first.case.json	9
 probes/t4554-api-name-scoped-name-choice-last.case.json	9
 probes/t4554-api-name-scoped-name-choice.case.json	9
+probes/t4563-xlookup-not-found-ref-element.case.json	106
+probes/t4582-pivot-item-edges.case.json	40
+probes/t4583-pivot-row-labels.case.json	165
+probes/t4585-pivot-field-names.case.json	8
+probes/t4589-pivot-total-order.case.json	80
+probes/t4614-pivot-total-order-2.case.json	97
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1

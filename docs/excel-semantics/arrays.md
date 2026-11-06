@@ -164,7 +164,7 @@ Evidence (oracle: excel-graph, 2026-10-05): probes/error-operand-broadcast C2, C
 (`SUM(IFERROR(NA()-{1;2;3},1))` = 3); gen-m2/dd99be1f2454159f Calc!A56 (expected `#SPILL!`).
 The same probe shows ROWS/COLUMNS accept an array expression (`ROWS(NA()-{1;2;3})` = 3, C1/C3/C6–C8/C10);
 ROWS/COLUMNS count an array without reading its elements, so an all-error array still has its size.
-A scalar non-reference argument counts as 1x1 (`ROWS(5)`, `COLUMNS(TRUE)`, `ROWS("a")`, `ROWS(1+1)` = 1) while an error argument passes through (`ROWS(NA())` = `#N/A`); array constants and `SEQUENCE` results count their dimensions (`ROWS({1;2;3})` = 3, `COLUMNS({1,2;3,4})` = 2, `ROWS(SEQUENCE(5))` = 5). Evidence: probes/rows-columns-args C1-C14 (T-0237).
+A scalar non-reference argument counts as 1x1 (`ROWS(5)`, `COLUMNS(TRUE)`, `ROWS("a")`, `ROWS(1+1)` = 1) while an error argument passes through (`ROWS(NA())` = `#N/A`); array constants and `SEQUENCE` results count their dimensions (`ROWS({1;2;3})` = 3, `COLUMNS({1,2;3,4})` = 2, `ROWS(SEQUENCE(5))` = 5). Evidence: probes/rows-columns-args C1-C14 (T-0237). Every scalar kind behaves the same, called directly (T-4539, probes/t4539-rows-columns-scalar-kinds, excel-graph): a literal `""`, `"x"`, `"1"`, 0, -1, 0.5 or TRUE is 1 for ROWS and for COLUMNS (A1:B7), and an error literal or call is that error (`ROWS(#DIV/0!)` and `ROWS(1/0)` `#DIV/0!`, `ROWS(NA())` `#N/A`; ERROR.TYPE 2, 2, 7 in E8:F10). A single-cell reference is counted, never read: a cell holding `=""`, text, numeric text, a number, TRUE, an error constant, `=1/0` or `=NA()`, or a blank cell, is 1 (A11:B21), so ERROR.TYPE of it is `#N/A` (E18:F20).
 The comparison operators (`= <> < > <= >=`) and `&` follow the same rule: `NA()={1;2;3}` is a 3-row array of `#N/A`
 (`SUM(IFERROR(NA()={1;2;3},1))` = 3, also `{1;2;3}<=NA()`, `NA()>A1:A3`, `NA()&{"a";"b"}`, `1/0>={1,2,3,4}` is 4 columns), and per element the
 leftmost error wins: `INDEX({1;#DIV/0!;3}=NA(),2)` is `#DIV/0!`, `INDEX(NA()<>{1;#DIV/0!;3},2)` is `#N/A`,
@@ -2397,6 +2397,10 @@ the rule frozen on it before -holdout (seed 4465) and -fresh (seed 44651, genera
 Main 539/539, hold-out 318/318, fresh 316/316 for the rule; the best single alternative scores 469, 276 and 290. The
 rows that tell the shared rule from 2^-23 added before the floor are 12 of main's and 6 of the hold-out's; the fresh
 sweep has only 1 such row, so it confirms the other constructors' rules more than that choice.
+At the top of the range the bound is the same absolute 2^-22 (probes/t4553-sequence-extent-top, excel-graph, 2026-11-06):
+`ROWS(SEQUENCE(1048576-x))`, `COLUMNS(SEQUENCE(1,1048576-x))` and `ROWS(SEQUENCE(524288-x))` for x = k*2^-30 read 1048576 (524288)
+for k = 96, 128, 160 and 256 (x = 2^-22) and one less for k = 257, 264, 288 and 320. Above the integer nothing snaps:
+`1048576+x` and `524288+x` read the integer, not `#VALUE!`.
 Ours: implemented (T-4465): SEQUENCE and RANDARRAY call `near_integer_whole` (sequence.rs's `EXTENT_EPSILON` is gone);
 TAKE, DROP, EXPAND, WRAPROWS/WRAPCOLS and MAKEARRAY already matched. RANDARRAY's columns argument shares
 `randarray_extent` with its rows but no probe cell reads it.
@@ -2728,7 +2732,7 @@ reference shows up, for TOCOL's and TOROW's array. FILTER reads its array and in
 (`Model::filter_arg_array`, filter.rs, through `evaluate_picked_reference_arg`), which covers a written reference, a LET
 variable, INDEX and the arm IF picks alike, and checks every include's shape before its elements. Only stored cell
 errors are evidenced; other errors read through a reference (a `#REF!` for a sheet index, a circular read) are wrapped
-unprobed. An include one column tall as the array is wide filters its columns (`include_axis`; not probed by T-4477). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
+unprobed. An include that is one column as tall as the array is wide does not filter its columns: `FILTER(A1:B3,{TRUE;FALSE})`, `{1;0}`, `{1;#N/A}`, `FILTER(A1:C2,{1;0;1})` and `FILTER(A1:B3,C1:C2)` (C1 `#DIV/0!`) are all `#VALUE!`, while the row form `{1,0,1}` over A1:C2 filters its columns and the square `FILTER(A1:B2,{1;0})` filters rows (probes/t4517-filter-transposed-include A10:G12, excel-graph 2026-11-06, T-4517; `include_axis`). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
 (spill_functions.rs) so VSTACK/HSTACK also wrap a LET variable or LAMBDA parameter bound to a one-cell error reference.
 Blank-cell variables (T-3887, probes/t3887-stack-blank-variable, excel-graph 2026-11-03): with z bound to a blank cell
 (D!Z1) by LET or as a MAP LAMBDA parameter, `INDEX(VSTACK(z,1),1,1)` and `INDEX(HSTACK(z,1),1,1)` are the same "empty value"

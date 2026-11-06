@@ -18,6 +18,15 @@ use crate::import::rich_errors::{rich_error_name, RICH_VALUE_PART, RICH_VALUE_ST
 
 use super::xml_constants::XML_DECLARATION;
 
+/// The content type and workbook relationship of [`METADATA_PART`], as Excel writes them
+/// (`tests/calc_tests/LOOKUP_AND_REFERENCE/DROP_TAKE.xlsx`).
+///
+/// [`METADATA_PART`]: crate::import::rich_errors::METADATA_PART
+pub(crate) const METADATA_CONTENT_TYPE: &str =
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheetMetadata+xml";
+pub(crate) const METADATA_RELATIONSHIP: &str =
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sheetMetadata";
+
 /// The rich-value types part Excel writes next to the values.
 pub(crate) const RICH_VALUE_TYPES_PART: &str = "xl/richData/rdRichValueTypes.xml";
 
@@ -135,6 +144,23 @@ pub(crate) fn rich_value_parts() -> [(&'static str, &'static str, &'static str, 
             ),
         ),
     ]
+}
+
+/// The metadata parts a package with dynamic arrays (and, with `rich`, rich-value errors) holds:
+/// name, content type, workbook relationship and text, as the export writes them.
+pub(crate) fn metadata_parts(
+    rich: bool,
+) -> Vec<(&'static str, &'static str, &'static str, String)> {
+    let mut parts = vec![(
+        crate::import::rich_errors::METADATA_PART,
+        METADATA_CONTENT_TYPE,
+        METADATA_RELATIONSHIP,
+        get_metadata_xml(rich),
+    )];
+    if rich {
+        parts.extend(rich_value_parts());
+    }
+    parts
 }
 
 #[cfg(test)]
