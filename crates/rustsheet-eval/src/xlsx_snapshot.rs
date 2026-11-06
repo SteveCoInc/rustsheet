@@ -12,7 +12,10 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, XmlVersion};
 use serde::{Deserialize, Serialize};
 
+mod pivots;
 mod tables;
+use pivots::read_sheet_pivots;
+pub use pivots::{PivotCacheField, PivotDef, PivotLine};
 use tables::read_sheet_tables;
 pub use tables::TableDef;
 
@@ -127,6 +130,10 @@ pub struct WorkbookSnapshot {
     /// Tables; absent in snapshots written before T-0434.
     #[serde(default)]
     pub tables: Vec<TableDef>,
+    /// Pivot tables as Excel saved them (location, layout lines, group labels); absent in
+    /// snapshots written before T-4123.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivots: Vec<PivotDef>,
 }
 
 impl WorkbookSnapshot {
@@ -295,6 +302,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         .collect();
     let mut sheets = Vec::new();
     let mut tables = Vec::new();
+    let mut pivot_reader = pivots::PivotReader::new();
     for SheetRef { name, rid, .. } in sheet_list {
         let Some(target) = rels.get(&rid) else {
             continue;
@@ -310,6 +318,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         };
         let cells = parse_sheet(&xml, &path, &shared, &rich_errors, date_system)?;
         read_sheet_tables(&mut zip, &path, &name, &mut tables)?;
+        read_sheet_pivots(&mut zip, &path, &name, &mut pivot_reader)?;
         sheets.push(SheetSnapshot { name, cells });
     }
     Ok(WorkbookSnapshot {
@@ -320,6 +329,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         sheets,
         defined_names,
         tables,
+        pivots: pivot_reader.pivots,
     })
 }
 
