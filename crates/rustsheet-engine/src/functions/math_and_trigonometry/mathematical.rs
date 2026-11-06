@@ -629,7 +629,9 @@ impl Model {
     }
     pub(crate) fn fn_sech(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.number_fn(Function::Sech, args, cell, |f| {
-            Ok(reciprocal_trig(super::hyperbolic::cosh(f)))
+            // Excel: a subnormal SECH result is a true 0, as CSCH's is (SECH(709.5)=0 TRUE,
+            // probes/t4423-hyperbolic-overflow-band; docs/excel-semantics/numbers.md).
+            Ok(flush_subnormal(reciprocal_trig(super::hyperbolic::cosh(f))))
         })
     }
     /// `EXP(number)`: Excel's own x87 evaluation, model V6, which is not the correctly rounded exp

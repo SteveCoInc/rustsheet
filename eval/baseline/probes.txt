@@ -1331,6 +1331,7 @@ C	probes/t1626-rightb.case.json	29
 C	probes/t1626-searchb.case.json	26
 C	probes/t1683-formulatext-structured-refs.case.json	61
 C	probes/t1738-question-first-decimal.case.json	10
+C	probes/t1856-name-characters.case.json	37
 C	probes/t1883-currency-locale-edges.case.json	63
 C	probes/t1923-calendar-digits.case.json	213
 C	probes/t1924-locale-tag-extended-hex.case.json	60
@@ -2352,9 +2353,11 @@ C	probes/t4420-pivotby-parent-sets-three-fields.case.json	528
 C	probes/t4422-bessel-tiny-x-bisect.case.json	432
 C	probes/t4422-bessel-tiny-x-cuts.case.json	2736
 C	probes/t4422-besseli-fresh-sweep.case.json	400
+C	probes/t4423-hyperbolic-overflow-band.case.json	300
 C	probes/t4424-sumx2my2-overflow-order.case.json	84
 C	probes/t4430-legacy-at-name-body-rest.case.json	181
 C	probes/t4447-sort-fractional-keys.case.json	84
+C	probes/t4453-near-integer-text-args.case.json	168
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10

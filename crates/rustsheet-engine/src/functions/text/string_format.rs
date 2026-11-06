@@ -16,7 +16,7 @@ use crate::{
 };
 
 use super::proper_letters::is_proper_letter;
-use crate::functions::util::near_integer::near_integer_count;
+use crate::functions::util::near_integer::{near_integer_count, near_integer_trunc};
 
 /// Formats a non-negative f64 with the given decimal places and optional thousands separator.
 /// Returns the formatted string without sign. The value is cut to 15 significant digits and then
@@ -96,7 +96,8 @@ fn formatted_result(
 }
 
 impl Model {
-    /// The `decimals` argument of DOLLAR and FIXED (default 2): truncated toward zero, and
+    /// The `decimals` argument of DOLLAR and FIXED (default 2): truncated toward zero, except that
+    /// a magnitude just below an integer counts as that integer ([`near_integer_trunc`]), and
     /// `#VALUE!` from 128 up (docs/excel-semantics/text.md#dollar-and-fixed-decimals).
     fn decimals_arg(
         &self,
@@ -104,7 +105,7 @@ impl Model {
         cell: CellReferenceIndex,
     ) -> Result<i32, CalcResult> {
         let Some(value) = arg else { return Ok(2) };
-        let d = self.cast_number_ref(value, cell)?.trunc();
+        let d = near_integer_trunc(self.cast_number_ref(value, cell)?);
         if d >= 128.0 {
             return Err(CalcResult::new_error(
                 Error::VALUE,
