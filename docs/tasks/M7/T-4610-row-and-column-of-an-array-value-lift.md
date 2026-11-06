@@ -3,7 +3,7 @@ id: T-4610
 title: "ROW and COLUMN of an array value lift: an array of #VALUE! in the value's shape, so GROUPBY(..,_xleta.ROW) holds nested #VALUE! arrays"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -31,10 +31,24 @@ ARRAYTOTEXT of the result is `#CALC!`.
 - Split from T-2644 (research: the GROUPBY/PIVOTBY eta probe, which lists the t4450 cells too) and T-4519: this task owns the engine fix for its cells.
 
 ## Acceptance criteria
-- [ ] probes/t4519-row-column-randarray-over-arrays D1:F1, D5:F6, D9:F11 and probes/t4450-eta-special-forms F109, F115, J65 pass;
+- [x] probes/t4519-row-column-randarray-over-arrays D1:F1, D5:F6, D9:F11 and probes/t4450-eta-special-forms F109, F115, J65 pass;
       the baseline lines drop them.
-- [ ] The error-element form is probed and matched, and arrays.md records it.
-- [ ] `make check` green; reviewers approve.
+- [x] The error-element form is probed and matched, and arrays.md records it.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - RANDARRAY (T-4611); SHEET and SHEETS (T-4518).
+
+## Outcome
+- `Model::row_or_column` lifts over an array value: each element is `#VALUE!`, an error element keeps its error, and
+  the value's shape stays. The argument is still read once. `reference_ranges_or_array`
+  (reference_operators/mod.rs) is `reference_ranges` except that it hands back an array a name, IF, CHOOSE or LET
+  gives. The name/IF/CHOOSE/LET arm of `evaluate_areas` became `picks_a_reference` + `bound_areas`, which both
+  share. The picked-value and LET-read paths lift through the same `not_a_reference`.
+- New probe probes/t4610-row-column-array-error-element (excel-graph 2026-11-06, 13 cells, all pass):
+  `LET(x,{1;#N/A},ROW(x))` is {#VALUE!;#N/A}, `LET(x,{#DIV/0!,2},COLUMN(x))` {#DIV/0!,#VALUE!}, a 1x1 `{#N/A}` stays a
+  1x1 array, a 2x2 lifts to 2x2, and text and logical elements are `#VALUE!`. Recorded in arrays.md ("ROW, COLUMN
+  and RANDARRAY over an array value").
+- Eval delta: 21 known failures fixed, 0 regressions. These are t4519 D1:F1, D5:F6, D9:F11 and t4450 F109, F115,
+  J65, plus the other ROW/COLUMN cells of those rows that the baseline listed. The RANDARRAY cells (t4519 rows 2-4,
+  7-8; t4450 J64) stay with T-4611.

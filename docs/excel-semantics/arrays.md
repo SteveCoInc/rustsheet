@@ -1152,7 +1152,7 @@ T-2644): `GROUPBY(A1:A3,B1:B3,_xleta.ROW)` and `..COLUMN` are 4x2 with `#VALUE!`
 and SHEETS `#N/A` in each (H121:H124, J59; ours matches, T-4518), RANDARRAY 4 rows with a value that is not
 an error (J61:J63; ours an array there, T-4519), `PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.ROW)` 5x5 (J69). Yet `ARRAYTOTEXT` of the
 ROW and COLUMN results is `#CALC!` (F109, F115, also `LAMBDA(v,ROW(v))` J65; `ARRAYTOTEXT(INDEX(..,0,1))` is
-"1, 3, 5, Total", J15; ours prints the cells, T-4519). Functions that take none stay a whole-call `#VALUE!`: NOW (J55), PI
+"1, 3, 5, Total", J15; ours matches since T-4610). Functions that take none stay a whole-call `#VALUE!`: NOW (J55), PI
 in GROUPBY and PIVOTBY (J67, J73).
 T-1327 follow-up (PIVOTBY relative_to; probes/groupby-pivotby-functions P!A1-A841 show each cell's set with
 `LAMBDA(x,y,SUM(y))`, and -functions3 P!A61-A181):
@@ -1288,7 +1288,8 @@ Status: VERIFIED (web)
 Tasks: T-1276, T-1328, T-1322, T-1323, T-1326, T-1324, T-1700, T-1325, T-1327, T-3838
 
 ## ROW, COLUMN and RANDARRAY over an array value (GROUPBY's per-group function)
-Rule: ROW and COLUMN of an array value (no reference) give an array of `#VALUE!` in that value's shape, not one `#VALUE!`. RANDARRAY
+Rule: ROW and COLUMN of an array value (no reference) give an array of `#VALUE!` in that value's shape, not one `#VALUE!`; an error
+element keeps its own error (`LET(x,{1;#N/A},ROW(x))` is {#VALUE!;#N/A}). RANDARRAY
 lifts over an array `rows` or `columns`, one call per element, each element a number (that it is the call's top-left is
 assumed, not probed; T-4611). So GROUPBY with `_xleta.ROW`,
 `_xleta.COLUMN` or `LAMBDA(v,ROW(v))` holds a nested array of `#VALUE!` in each value cell: it displays `#VALUE!` (ERROR.TYPE 3,
@@ -1305,7 +1306,12 @@ record: the cell of a one-record group is a 1x1 array, so `ERROR.TYPE(INDEX(..,1
 - Excel for the web refuses a workbook holding ROW or COLUMN of an array constant, a function call or an operator:
   `ROW({1;2})`, `ROW({1,2,3})`, `ROW({7})`, `COLUMN({1,2,3})`, `COLUMN({1;2})`, `ROW(SEQUENCE(2,2))`, `COLUMN(SEQUENCE(1,3))` and `ROW(A1:A3*1)` (FileCorruptTryRepair,
   one single-formula workbook each, T-4519). So an array reaches ROW only as a LET-bound value, a LAMBDA parameter or a pick.
-Ours: ROW and COLUMN of an array value are one `#VALUE!` (T-4610 owns D1:F1, D5:F6, D9:F11 and t4450 F109, F115, J65). RANDARRAY
+- probes/t4610-row-column-array-error-element (excel-graph, 2026-11-06, T-4610): `LET(x,{1;#N/A},ROW(x))` is 2x1, ARRAYTOTEXT
+  "#VALUE!, #N/A", ERROR.TYPE 3 and 7 (A1:A4); `LET(x,{#DIV/0!,2},COLUMN(x))` "#DIV/0!, #VALUE!" (A5:A6); `LET(x,{#N/A},ROW(x))` a
+  1x1 `#N/A` (A7:A8); a 2x2 `{1,2;3,4}` a 2x2 of `#VALUE!` (A9:A10); text and logical elements `#VALUE!` (A11). A LET-bound scalar is
+  one `#VALUE!` and a scalar error that error (A12:A13), as before.
+Ours: ROW and COLUMN lift over an array value as above since T-4610 (`Model::row_or_column`, which reads the argument once through
+`reference_ranges_or_array`). RANDARRAY
 does not lift: `RANDARRAY({2})` is 2x1 and over `{2;4;6}` `#N/IMPL!` (T-4611 owns D2, D3, E3, G3, H3, D4, D7, D8, E8, G8, H8 and t4450 J64).
 Status: VERIFIED (excel-graph)
 Tasks: T-4519, T-4610, T-4611
