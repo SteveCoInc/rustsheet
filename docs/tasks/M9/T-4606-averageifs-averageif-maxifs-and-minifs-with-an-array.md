@@ -3,7 +3,7 @@ id: T-4606
 title: "AVERAGEIFS, AVERAGEIF, MAXIFS and MINIFS with an array criterion over an error in the value range: probe positions past the first, and match"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
