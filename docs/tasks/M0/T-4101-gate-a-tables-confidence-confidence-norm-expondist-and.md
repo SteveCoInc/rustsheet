@@ -3,7 +3,7 @@ id: T-4101
 title: "Gate A tables, CONFIDENCE, CONFIDENCE.NORM, EXPONDIST and WEIBULL"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
