@@ -124,6 +124,63 @@ fn table_parts_and_structured_references_round_trip() {
     assert_eq!(reloaded.get_formatted_cell_value(0, 7, 5).unwrap(), "30");
 }
 
+/// A totals cell holding a number, boolean or error constant is written as
+/// `totalsRowFunction="custom"` with no `<totalsRowFormula>`, the form Excel loads with the cell
+/// kept a constant (xlsx-storage.md "Table parts in the export", T-4005); without it Excel refuses
+/// the file.
+#[test]
+fn totals_row_constants_get_custom_metadata() {
+    let mut model = new_empty_model();
+    let cells = [
+        (1, 1, "Item"),
+        (1, 2, "N"),
+        (1, 3, "B"),
+        (1, 4, "E"),
+        (2, 1, "a"),
+        (2, 2, "1"),
+        (2, 3, "2"),
+        (2, 4, "3"),
+        (3, 1, "Total"),
+        (3, 2, "42"),
+        (3, 3, "TRUE"),
+        (3, 4, "#N/A"),
+    ];
+    for (row, column, input) in cells {
+        model
+            .set_user_input(0, row, column, input.to_string())
+            .unwrap();
+    }
+    model
+        .add_table_with_totals(0, "Sales", (1, 1, 3, 4), false, true)
+        .unwrap();
+    model.evaluate();
+    let temp_file_name = "temp_file_test_totals_constants.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let table_xml = part_text(temp_file_name, "xl/tables/table1.xml");
+    let mut reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+
+    assert!(
+        table_xml.contains(r#"<tableColumn id="1" name="Item" totalsRowLabel="Total">"#),
+        "{table_xml}"
+    );
+    for name in ["N", "B", "E"] {
+        let column = format!(r#"name="{name}" totalsRowFunction="custom"></tableColumn>"#);
+        assert!(table_xml.contains(&column), "{column} in {table_xml}");
+    }
+    assert!(!table_xml.contains("totalsRowFormula"), "{table_xml}");
+
+    assert_eq!(reloaded.workbook.tables, model.workbook.tables);
+    reloaded.evaluate();
+    for (column, value) in [(2, "42"), (3, "TRUE"), (4, "#N/A")] {
+        assert_eq!(reloaded.get_cell_formula(0, 3, column).unwrap(), None);
+        assert_eq!(
+            reloaded.get_formatted_cell_value(0, 3, column).unwrap(),
+            value
+        );
+    }
+}
+
 /// An API-filtered table with no kept criterion is written as a criterion-less filterColumn,
 /// which Excel reads as not filtered (T-4003), and so does our import: the round trip loses the
 /// filter. TODO(T-4363): write a criterion Excel reads as filtered.
