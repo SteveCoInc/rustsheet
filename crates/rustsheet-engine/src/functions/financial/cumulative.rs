@@ -323,10 +323,11 @@ impl Periods {
     /// test, the correctly rounded value 65 and 33), where T-3067's `-(pv·(v^(nper-end)·(1-v^m)))`
     /// was exact on 70 of the 108 type 0 cells of the first two cases and type 1's closed form on
     /// none of their 24 (T-3141). It holds at every leading exponent, not only below
-    /// [`GEOMETRIC_MIN_LEAD`]: on the fresh sweep accuracy/CUMPRINC/r4-T-3141 (200 points drawn
-    /// after this form froze, leading exponents 0.002 to 679, m·L 0.003 to 4.2, both types; T-4059)
-    /// it is to the bit on all 200, where the geometric sum gets 63 of the 148 from 0.3 up, and
-    /// CUMIPMT's r4-T-3141 is to the bit on 199 of 200 with it. `None` for a type 1 range from
+    /// [`GEOMETRIC_MIN_LEAD`]: on the aimed points accuracy/CUMPRINC/e-T-3141 (the fit data for
+    /// dropping that cut) it is to the bit on all 200, where the geometric sum gets 63 of the 148
+    /// from 0.3 up, and on the aimed hold-out e-T-4059, drawn after this form froze (leading
+    /// exponents 0.012 to 695), on 199 of 200 (A119, a result near 1E-285, is T-4710's); CUMIPMT
+    /// is 399 of 400 over both (T-4059). `None` for a type 1 range from
     /// period 1 (that period's principal is the whole payment), where `v^nper` has not
     /// underflowed, where the leading power is not normal (it has lost its digits) or where the
     /// result is not finite.

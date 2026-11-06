@@ -2637,15 +2637,13 @@ T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
   intermediates for Kahan's product and quotient and for the exponent (at most 25 of 36 distinct principals), the
   extended-precision LN in Kahan's divide (25), libm's expm1 (19 to 21), `1 - EXP` throughout (5), and every per-period
   and geometric ordering of the T-3067 notes (at most 21).
-  The core holds at every leading exponent, not only below 0.3: T-4059's sweep accuracy/CUMPRINC/r4-T-3141 (200
-  points drawn after the core froze; rates 1E-4 to 3, leading exponents 0.002 to 679, m·L 0.003 to 4.2, both types,
-  nper up to 1E15) is to the bit on all 200 with it, where the geometric sum gets 63 of the 148 from 0.3 up (the rest
-  1 to 4 ulps off); CUMIPMT's r4-T-3141 is 199 of 200 with it (A41, the last two periods of a type 1 loan at 0.1034,
-  is 4 ulps off whatever the principal's form).
+  The core holds at every leading exponent, not only below 0.3: "CUMPRINC where `v^nper` underflows, at deep leading
+  exponents (T-4059)" has the evidence (accuracy/CUMPRINC/e-T-4059, 199 of 200 to the bit, out to a leading exponent
+  of 695).
   Ours since T-3141: `underflowed_principal` is that core for both types (a type 1 range from period 1 excluded), first
   of all the forms of a short range, at every leading exponent.
-Status: PARTLY VERIFIED (excel-graph; visibly right but for A7 (= G2) near period 1E15, fin-cumprinc-near-1e15 E7 and the
-CUMIPMT cells that amplify our CUMPRINC's last bits (gate-edges A1-A4, A6, A7,
+Status: PARTLY VERIFIED (excel-graph; visibly right but for A7 (= G2) near period 1E15 and the CUMIPMT cells that
+amplify our CUMPRINC's last bits (gate-edges A1-A4, A6, A7,
 E3-E10, H3, gen-m9 A352: T-3413; tiny-rate-structure's other 37: T-3776 (blocked time-boxed after T-3552 and T-3731 found no form); T-3118 moved 7 off the bit, decision 0197: gen-m9 A329,
 `CUMPRINC_CUMIPMT.xlsx` G3, overflow-and-forms A8, A12, A14, gate-edges A1, tiny-rate-structure F2); the short sums'
 last digits in T-1374; the underflowed principal is to the bit since T-3141)

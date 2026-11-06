@@ -366,9 +366,11 @@ fn fitted_payment(rate: f64, rate_nper: f64, pv: f64, fv: f64, period_start: boo
 /// (probes/t3014-pmt-fv-type-alone column C: expm1 through |nper*L| 0.9896, `1-Q` from 1.0648;
 /// CUMPRINC's underflowed `1-v^m` likewise: of the 25 probed principals where the two forms
 /// differ, Kahan's expm1 is Excel's through m·L 0.9783 and `1-Q` at 1.3976, probes/
-/// fin-cumprinc-underflow-fresh I4, I5; fit data, not an R4.2 sweep, T-3141; its own FITTED tag
-/// and lock record wait for T-4059's sweep).
+/// fin-cumprinc-underflow-fresh I4, I5, T-3141; the aimed points accuracy/CUMPRINC/e-T-3141 and
+/// e-T-4059, drawn after this cut froze, are to the bit on all 108 of m·L 0.7 to 4.8, 81 of
+/// them from 1.0 up; decision 0327).
 /// FITTED(T-3014, 63 cells, PMT |nper*L| 0.5..1.6; cut bracketed 0.9896..1.0648)
+/// FITTED(T-3141, 25 cells, CUMPRINC underflowed m*L 0.36..1.40; cut bracketed 0.9783..1.3976)
 const PAYMENT_EXPM1_TO: f64 = 1.0;
 
 /// `1-Q` for `Q = EXP(x)` as Excel's PMT, IPMT and PPMT take it: `-expm1(x)` (Excel's expm1)
