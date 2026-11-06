@@ -3,7 +3,7 @@ id: T-4231
 title: "math --check flags a math sidecar whose values main's code would no longer write"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
