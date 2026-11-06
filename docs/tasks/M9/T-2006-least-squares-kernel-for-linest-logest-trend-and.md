@@ -117,7 +117,7 @@ Excel's conditioning (QR rather than the normal equations, and a singularity tes
 - accuracy/GROWTH/s1: Calc!A97
 
 ## Landing notes
-Opus run 2026-11-06 (13:38–15:28 UTC). The session window closed before a zero-regression kernel was found, so there
+Opus run 2026-11-06 (13:38–15:28 UTC). No zero-regression kernel was found within the session, so there
 is no PR. The branch holds a scoring scaffold in linest.rs (`KERNEL` const, `householder`, `fit_kernel`), not a
 change to merge. These notes are data for whoever resumes the branch, not instructions.
 
@@ -134,7 +134,8 @@ failing cells whose formula names LINEST, LOGEST, TREND or GROWTH, diffed agains
 | 5 | centre x only, Householder on [1, x - xm] (intercept column first), R's diagonal read from the reflected column, b0 = c0 - b·xm | Householder on raw x, R's diagonal -sign·norm | 83 | 19 |
 | 6 | as 5 | Householder, diagonal from the reflected column | 82 | 39 |
 | 7 | as 5 with the -sign·norm diagonal | as 5 | 74 | 19 |
-| 8 (the scaffold's setting) | as 5, but when no x column is kept the intercept is mean(y) | as 5 | 83 | 15 (147 failing cells down to 79) |
+| 8 | as 5, but when no x column is kept the intercept is mean(y) | as 5 | 83 | 15 (147 failing cells down to 79) |
+| **9 (the scaffold's setting, best so far)** | centre x **and** y; Householder on [1, x - xm] (ones column first) against y - ym, with the -sign·norm diagonal; b0 = ym - Σ b_j·xm_j; when no x column is kept, b0 = mean(y) | Householder on raw x, -sign·norm diagonal | **126** | **3** (147 failing cells down to 24) |
 
 Householder here is the textbook v = a - alpha·e1, H = I - 2vv'/v'v, alpha = -sign(a_jj)·‖a_j‖. The LINPACK
 (`dqrdc`) and LAPACK (`dlarfg`, tau) reflectors were also tried, by hand in Python on 10 cells, and were worse.
@@ -165,3 +166,46 @@ means: b0 = ym - Σ b_j·xm_j, and predictions ym + Σ b_j·(x_j - xm_j) or b0 +
 15 regression-trend cells above and on O2 in Python, then run Gate A. Then port the stats rows to R (se from R^-1, ss_resid from the
 residuals of the same solve), turn the scaffold into the fitlab `regression` kernel the acceptance criteria ask
 for, and record the candidate table in statistics.md.
+
+KERNEL 9: the best candidate so far. I found it with a Python grid over 133 single-predictor oracle cells. The cells
+come from linest-modes, logest-modes, growth-modes, regression-trend, stat-argument-modes, t3185-b and
+amordegrc-fraction-state-cc, every cell whose formula is a bare, INDEX- or SUM-wrapped call with literal or range
+arguments. The grid crossed these options:
+- reflector: textbook, LINPACK, LAPACK, or the textbook with R's diagonal read from the reflected column;
+- centring: x, y, both or neither;
+- the ones column: first, last or none;
+- the intercept: from the QR solve or from the means;
+- the prediction: b0 + b·x, ym + b·(x - xm) or c0 + b·(x - xm);
+- the mean: a plain sum/n, or the corrected, fsum or pairwise means;
+- the norm: a plain sqrt of the sum of squares, or dnrm2's scaled form.
+
+The scores, as bit-exact cells out of 133:
+- KERNEL 9's form: 113 bit-exact and 6 more within 4 ulp. The 14 it does not score are the one-point and
+  constant-x cells that the drop path sends to b0 = mean(y), and those pass in the full eval. With const=FALSE it
+  gets 23 of 23.
+- Every other form: 109 or fewer. The normal equations: 37.
+- The corrected, fsum and pairwise means for y: 102. Excel takes y's mean as a plain sum/n.
+- dnrm2's scaled norm: 96. The plain sqrt of the sum of squares stays.
+
+KERNEL 9's 3 newly failing cells, all 1 ulp and all one shape: regression-trend O34, O35 and N35, `TREND(A1:B3,H1:I3)`
+with x = {6, 1E10+1, 5, 1E10+2, 4, 1E10+4}. Excel gives 3.6666666665000003; KERNEL 9 gives 3.6666666665. None of the
+mean or norm variants fixes them. The 6 other single-predictor misses are GROWTH({1,2,4,8},{1,2,3,4},{5,6}) K289,
+K301 and K325 (Excel 15.999999999999996, KERNEL 9 3 ulp below) and these three.
+
+Gate A on KERNEL 9 (`rustsheet-eval accuracy`, 1.4 s):
+- 16 of the 21 T-2006 points are now inside the envelope; they are stale known-failure lines to remove. Still known:
+  LINEST A102 and A103, LOGEST A82, A86 and A98.
+- One new failing point, which the gate refuses: LINEST/s1 A184,
+  `INDEX(LINEST({-8.1E-35,-2.3E+19,2.1E+7,-2.0E-08,1.1E-10},{1.2E-10,8.8E+33,2.1E-17,1.4E+13,1.4E-44},TRUE,FALSE),1,2)`
+  (the intercept, x from 1E-44 to 1E+33).
+
+Remaining work before a PR:
+1. Fix or explain the 3 regression-trend cells and LINEST A184. A KERNEL 9 that keeps them failing cannot merge: the
+   eval and accuracy gates refuse new failures.
+2. Port the stats rows (se, r2, F, ss) to the same decomposition. They still use (D'D)^-1 of the uncentred design.
+   linest-modes K183 is one of these.
+3. Turn the grid (the session's scratch Python is not committed) into the fitlab `regression` kernel. Record the
+   candidate table and the "Excel centres x and y" finding in statistics.md, then do the R4 hold-out and the fresh
+   sweep (this is a structural-model choice, so it owes them but needs no `FITTED` tag).
+4. Replace the `KERNEL` scaffold with the one chosen form. Today it is dead-code variants, and clippy has not been run
+   on it.

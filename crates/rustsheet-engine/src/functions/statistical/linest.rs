@@ -103,7 +103,7 @@ fn invert_matrix(a: &[Vec<f64>]) -> Option<Vec<Vec<f64>>> {
     Some((0..k).map(|i| m[i][k..].to_vec()).collect())
 }
 
-pub(super) const KERNEL: u8 = 8;
+pub(super) const KERNEL: u8 = 9;
 
 fn mean(v: &[f64]) -> f64 {
     v.iter().sum::<f64>() / v.len() as f64
@@ -166,8 +166,23 @@ fn fit_kernel(y: &[f64], x: &[Vec<f64>], p: usize, const_term: bool) -> Option<V
     if !const_term {
         return householder(&cols, y, KERNEL == 6);
     }
-    if KERNEL == 8 && p == 0 {
+    if p == 0 {
         return Some(vec![mean(y)]);
+    }
+    if KERNEL == 9 {
+        let ym = mean(y);
+        let xm: Vec<f64> = cols.iter().map(|c| mean(c)).collect();
+        let yc: Vec<f64> = y.iter().map(|v| v - ym).collect();
+        let mut all = vec![vec![1.0; n]];
+        all.extend(cols.iter().zip(&xm).map(|(c, m)| c.iter().map(|v| v - m).collect::<Vec<f64>>()));
+        let b = householder(&all, &yc, false)?;
+        let mut intercept = ym;
+        for (bj, mj) in b[1..].iter().zip(&xm) {
+            intercept -= bj * mj;
+        }
+        let mut out = vec![intercept];
+        out.extend(&b[1..]);
+        return Some(out);
     }
     let xm: Vec<f64> = cols.iter().map(|c| mean(c)).collect();
     let mut all = vec![vec![1.0; n]];
