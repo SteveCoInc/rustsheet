@@ -65,7 +65,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import Shape, by_stratum_with_edge, scalars, signed
+from rustsheet_tools.accuracy.defs._common import Shape, by_stratum_with_edge, real_args, signed
 from rustsheet_tools.accuracy.defs.annuity import draw_annuity, present_value
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
@@ -140,7 +140,7 @@ def _finite(x: mpmath.mpf, what: str) -> None:
 
 
 def _fv(args: Sequence[MathArg]) -> mpmath.mpf:
-    a = scalars(args)
+    a = real_args(args)
     r, n, pmt = a[0], a[1], a[2]
     pv, due = _amount(a, 3), _type(a, 4)
     _below_minus_one(r)
@@ -162,7 +162,7 @@ def _fv(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _pv(args: Sequence[MathArg]) -> mpmath.mpf:
-    a = scalars(args)
+    a = real_args(args)
     r, n, pmt = a[0], a[1], a[2]
     fv, due = _amount(a, 3), _type(a, 4)
     _below_minus_one(r)
@@ -204,7 +204,7 @@ def _payment(r: mpmath.mpf, n: mpmath.mpf, pv: mpmath.mpf, fv: mpmath.mpf, due: 
 
 
 def _pmt(args: Sequence[MathArg]) -> mpmath.mpf:
-    a = scalars(args)
+    a = real_args(args)
     r, n, pv = a[0], a[1], a[2]
     fv, due = _amount(a, 3), _type(a, 4)
     _below_minus_one(r)
@@ -224,7 +224,7 @@ def _pmt(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def split(args: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf]:
     """(IPMT, PPMT) of IPMT's and PPMT's arguments (rate, per, nper, pv, [fv], [type])."""
-    a = scalars(args)
+    a = real_args(args)
     r, per, n, pv = a[0], a[1], a[2], a[3]
     fv, due = _amount(a, 4), _type(a, 5)
     if per < 1 or per >= n + 1:
@@ -262,7 +262,7 @@ def _ipmt(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _ppmt(args: Sequence[MathArg]) -> mpmath.mpf:
-    a = scalars(args)
+    a = real_args(args)
     if _type(a, 5) and a[1] == 1 and a[0] > -1 and a[0] != 0:
         n = a[2]
         if n >= 1 and _log2_growth(mpmath.log1p(a[0]), n, (LOG2_RECIPROCAL,)) < LOG2_RECIPROCAL:
@@ -272,7 +272,7 @@ def _ppmt(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _ispmt(args: Sequence[MathArg]) -> mpmath.mpf:
-    r, per, n, pv = scalars(args)
+    r, per, n, pv = real_args(args)
     if n == 0:
         msg = "nper 0 (unprobed)"
         raise NoValueError(msg)
@@ -280,7 +280,7 @@ def _ispmt(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _pduration(args: Sequence[MathArg]) -> mpmath.mpf:
-    r, pv, fv = scalars(args)
+    r, pv, fv = real_args(args)
     if r <= 0 or pv <= 0 or fv <= 0:
         msg = "a rate, pv or fv at most 0: #NUM!"
         raise DomainError(msg)

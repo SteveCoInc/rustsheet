@@ -27,7 +27,7 @@ from rustsheet_tools.accuracy.defs._common import (
     Shape,
     any_edge,
     by_stratum_with_edge,
-    scalars,
+    real_args,
     signed,
     trunc,
 )
@@ -52,7 +52,7 @@ def next_power_of_ten(n: int) -> int:
 def _split(args: Sequence[MathArg]) -> tuple[int, mpmath.mpf, int, int]:
     """(i, f, F, D) of a call: the dollar's integer part toward 0 and its fraction, the fraction F and the power of ten
     D at or above it."""
-    x, fraction = scalars(args)
+    x, fraction = real_args(args)
     if fraction < 1:
         msg = "a fraction below 1 (unprobed)"
         raise NoValueError(msg)

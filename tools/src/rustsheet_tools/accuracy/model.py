@@ -26,6 +26,11 @@ MathArg: TypeAlias = (
 number text's parsed parts (an `mpc` of the two exact doubles), a fixed-list text itself, an array
 literal's elements, or a matrix literal's rows."""
 
+NON_REAL = (bool, str, tuple, mpmath.mpc)
+"""The `MathArg` members that are not a real (a logical, a text, an array or matrix, a complex number's parts): the one
+`isinstance` tuple that narrows an argument to a real (`defs/_common.is_real` and `real_arg`), so a new `MathArg`
+member is added here only (T-4592)."""
+
 
 class Unfit(str):
     """Why an eval cell's argument does not fit its parameter (`eval_math.fit_arg`): a reason, told
@@ -251,9 +256,7 @@ class Definition:
             if isinstance(a, mpmath.mpc):  # a complex number's parts each take the parameter's interval
                 parts = [a.real, a.imag]
             elif (
-                p.kind in ("bool", "array", "matrix", "text")
-                or isinstance(a, (bool, str, tuple))
-                or p.name == rescaled
+                p.kind in ("bool", "array", "matrix", "text") or isinstance(a, NON_REAL) or p.name == rescaled
             ):
                 # an array's or a matrix's rules, a list text's and a rescaled parameter's are the definition's `domain`
                 continue

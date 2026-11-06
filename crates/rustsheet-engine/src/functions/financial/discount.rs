@@ -68,8 +68,14 @@ impl Model {
         // A boolean basis is #VALUE!, text "1" is 1, 1.9 truncates to 1, 5 and -1 are #NUM!
         // (fin-later-argument-ranges J1-J11), and it is read before any value is checked (J20).
         let basis = self.day_count_basis_of(rest.get(1), cell)?;
-        if rate <= 0.0 || par <= 0.0 || issue_serial >= settlement_serial {
+        if rate <= 0.0 || par <= 0.0 || issue_serial > settlement_serial {
             return Err(num_error(cell));
+        }
+        // Excel: an issue on the settlement accrues nothing, 0 and not #NUM!, on every basis and
+        // from serial 0 to 9999-12-31 (`ACCRINTM(59,59,0.05,1000,0)`; probes/accrint-zero-results
+        // B1:B40). Equal dates with a rate or par at most 0 are unprobed and stay #NUM! above.
+        if issue_serial == settlement_serial {
+            return Ok(0.0);
         }
         let year_fraction =
             self.get_yearfrac(issue_serial, settlement_serial, f64::from(basis), cell)?;
