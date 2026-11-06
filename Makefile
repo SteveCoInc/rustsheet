@@ -67,18 +67,22 @@ eval: build ## Run all suites; writes eval/runs/latest/report.{md,json}, then Ga
 	rm -f eval/runs/accuracy.json
 	$(EVAL_GUARDED) accuracy > eval/runs/latest/accuracy.txt 2>&1 || true
 	@grep -m 1 '^accuracy:' eval/runs/latest/accuracy.txt || echo 'accuracy: no summary; see eval/runs/latest/accuracy.txt'
+	@# Round-trip fidelity of eval/roundtrip (SPEC-0033, decision 0307): eval/runs/latest/roundtrip.{json,md}.
+	$(EVAL_GUARDED) roundtrip
 
 eval-check: build ## Gate: fail on any regression vs eval/baseline
 	$(EVAL_GUARDED) check
 
-eval-gates: build ## eval-check and evidence-floor from one run of the suites, then Gate A's accuracy check and new-case owners (CI, make check; T-2761, decisions 0193, 0245)
+eval-gates: build ## eval-check and evidence-floor from one run of the suites, then Gate A's accuracy check, the round-trip gate and new-case owners (CI, make check; T-2761, decisions 0193, 0245, 0307)
 	$(EVAL_GUARDED) check --evidence-floor
 	$(EVAL_GUARDED) accuracy
+	$(EVAL_GUARDED) roundtrip --check
 	@# Cases the branch adds or refills: every visibly-off cell needs an open owner (T-3793, decision 0245).
 	$(PY) scripts/new_case_owners.py --eval $(EVAL)
 
 eval-baseline: build ## Ratchet eval/baseline and quality/evidence-floor.json after fixes (refuses regressions); NEW_CASES=<file> lists the only cases new to the visible-parity lock (make catch-up, decision 0217)
 	$(EVAL_GUARDED) update-baseline $(if $(NEW_CASES),--new-cases '$(NEW_CASES)')
+	$(EVAL_GUARDED) roundtrip --update-baseline
 	$(EVAL) evidence-floor --update
 
 eval-lower-visible-lock: build ## Steward only, daily: also lower the cases of eval/baseline/visible-parity.txt (decisions 0093, 0217)

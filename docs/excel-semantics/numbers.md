@@ -870,7 +870,7 @@ of which print as 1) counts for `"<=1"`, `">=1"` and `"=1"` and not for `"<1"` o
 boundary (5E-15 above 1, 5E-16 below), not at a fixed ULP count, so it is neither an exact comparison nor a relative
 tolerance. All four functions agree on all 288 criteria cells; AVERAGEIF(S), MINIFS, MAXIFS and the D-functions agree too
 (probes/t4399-criteria-near-equal-others, 379 cells).
-Evidence: probes/t4399-criteria-near-equal-others (excel-graph, 2026-11-05; same rule for AVERAGEIF(S), MINIFS, MAXIFS, D-functions) and probes/t3072-criteria-near-equal-order (excel-graph, 2026-10-29): rows 1-12 (B = value, D = its text),
+Evidence: probes/t4399-criteria-near-equal-others (excel-graph, 2026-11-05; same rule for AVERAGEIF(S), MINIFS, MAXIFS, D-functions) and probes/t3072-criteria-near-equal-order (excel-graph, 2026-10-29). t3072 layout: rows 1-12 (B = value, D = its text),
 E:J COUNTIF, K:P SUMIF, Q:V COUNTIFS, W:AB SUMIFS in the order `<`, `<=`, `>`, `>=`, `=`, `<>`; e.g. F5
 `COUNTIF(B5,"<=1")` = 1 and G5 `">1"` = 0 for 1+22·2^-52, G6 = 1 for 1+23·2^-52; E10 `"<1"` = 0 for 1-4·2^-53,
 E11 = 1 for 1-5·2^-53.
@@ -1310,7 +1310,7 @@ Probe `probes-numeric/m9-hyperbolic` (268 cells, 255 distinct formulas, oracle: 
   either sign: `ASINH(1.61207503113639E-17)`, `ASINH(±1E-20)` and every argument down to `ASINH(8.48916619031883E-285)`
   are 0, and above the cut `ASINH(6.3701662356807E-14)` is 6.372680161348195E-14 (3.9e-4 relative off). Evidence:
   accuracy/ASINH/s1 Calc!A115, A70, A83, A112, A59 (excel-graph, 2026-11-01, T-3671). The engine's formula gives the same
-  values; Gate A counts these points as R3-eligible but unmarked (decision 0188 R3 needs an owner ruling).
+  values; Gate A counts these points as R3-eligible but unmarked: the owner keeps Excel as the target (decision 0300).
   The same two formulas also give all 33 ASINH and 17 ACOSH cells of ironcalc-calc TRIGONOMETRIC.xlsx sheet
   ASINH_ACOSH_ATANH (gap triage 2026-10-19). Implemented (T-2031): `fn_asinh`/`fn_acosh` evaluate these formulas.
 - Where `x*x` overflows a double (|x| above about 1.3407807929942596E154) ASINH and ACOSH return `#NUM!` (ln of infinity), for
@@ -1382,8 +1382,13 @@ Status: VERIFIED (excel-graph). Implemented in `fn_coth`, `fn_csch`, `fn_sech` (
 
 ### SINH and COSH overflow is `#NUM!` at once; SECH there is 0 (T-2169)
 Rule: SINH and COSH are `#NUM!` once `e^|x|` overflows a double, although the true sinh(710) = 1.117E+308 is finite:
-`SINH(710)`, `SINH(-710)`, `COSH(710)` and `COSH(-710)` are `#NUM!` (SINH(709.78) is a number, above; the cut in
-(709.78, 710) is unprobed). SECH of the same arguments is 0, not an error, as CSCH(710) is: `SECH(710)` = `SECH(-710)` = 0, so
+`SINH(710)`, `SINH(-710)`, `COSH(710)` and `COSH(-710)` are `#NUM!` (SINH(709.78) is a number, above). The cut is
+exactly where `e^|x|` overflows, at ln(DBL_MAX) = 709.782712893384, not at asinh(DBL_MAX) = 710.4758600739439 where
+the true sinh would overflow: SINH, COSH of ±ln(DBL_MAX) and of the double below it are numbers (±8.988465674311366E+307
+and ±8.988465674310344E+307), and from the next double up (709.7827128933841) through 709.79 ... 710.47, asinh(DBL_MAX)
+and its neighbours and 710.48 every SINH and COSH of either sign is `#NUM!` (probes/t4423-hyperbolic-overflow-band,
+excel-graph 2026-11-06, T-4423: rows 2 and 3 bracket the cut by adjacent doubles). So Excel rounds e^x to a double
+before the subtraction and halving, as the engine does. SECH of the same arguments is 0, not an error, as CSCH(710) is: `SECH(710)` = `SECH(-710)` = 0, so
 `(x)^SECH(710)` is `x^0` = 1 (`CEILING(-999999999999999.9,(-2.5)^SECH(710))` is -1E+15). The error is the function's own result
 and survives nesting, as for EXP: `ISERR(COSH(-710))` is TRUE, `ISNUMBER(SINH(134217728))` FALSE, and `ISODD(EXP(2^53+1))`,
 `ATAN(COSH(1E+15))`, `MOD(2^53+1,SINH(1E+9))`, `MOD(ACOT(SINH(1E+15)),<#REF!>)`, `GCD(EXP(1E+15),..)`,
@@ -1398,11 +1403,14 @@ gen-m5/ecd1b828aebad1e8 Calc!A185; the full list of 37 cells is in T-2169. A156 
 Past the smallest normal double the reciprocals read 0 too: `SECH(709.78)`, `SECH(-709.78)`, `CSCH(709.78)` and
 `CSCH(-709.78)` are 0 (accuracy/SECH/s1 Calc!A83, A84; accuracy/CSCH/s1 Calc!A84, A72, A79; excel-graph, 2026-11-01, T-3670),
 where the true values ±1.1156E-308 are subnormal (as are CSCH(-713.44) and CSCH(-717.64), 2.9E-310 and 4.3E-312). Graph
-reports a kept subnormal as 0 as well and those tables hold no `(x)=0` companion, so whether Excel flushes these is not
-told. From about |x| = 745 on (the tables' 803 to 993) the true value is below the smallest subnormal, so 0 is its
+reports a kept subnormal as 0 as well, but the T-4423 companions settle it: Excel flushes a subnormal SECH result to a
+true 0, as it does CSCH's (T-1143). `SECH(x)=0` is TRUE and `ISNUMBER(SECH(x))` TRUE at ±709.5, ±709.7, ±ln(DBL_MAX)
+and the double below it, where 1/cosh is 1.48E-308 to 1.11E-308, and `CSCH(±x)=0` TRUE likewise
+(probes/t4423-hyperbolic-overflow-band columns J to O). The engine flushes SECH with `arithmetic::flush_subnormal`
+(T-4423), as CSCH. From about |x| = 745 on (the tables' 803 to 993) the true value is below the smallest subnormal, so 0 is its
 correctly rounded double and no flush question arises.
-COSH(702.659631014027) and COSH(±709.78) are numbers within 1.2E-16 of the true value (accuracy/COSH/s1, T-3670); the cut in
-(709.78, 710) stays unprobed for COSH and SECH as for SINH. libm's cosh was finite up to 710.47 and ours now overflows just above 709.78, as SINH does.
+COSH(702.659631014027) and COSH(±709.78) are numbers within 1.2E-16 of the true value (accuracy/COSH/s1, T-3670); COSH
+cuts where SINH does, at ln(DBL_MAX) (T-4423, above), and SECH is 0 on both sides of it. libm's cosh was finite up to 710.47 and ours now overflows just above 709.78, as SINH does.
 Status: VERIFIED (excel-graph) for SINH, COSH and EXP. Implemented (T-2169): `hyperbolic::{sinh,cosh}` overflow to infinity and
 `number_fn` maps a non-finite result to `#NUM!`. That mapping applies to every one-number math function through `number_fn`
 (DEGREES, RADIANS, FACT, the reciprocal trig functions, ...); outside SINH, COSH and EXP it is unprobed (hand: Excel has no
@@ -1490,6 +1498,10 @@ hundreds (financial.md "PPMT discounts with an atanh-series log", probes-numeric
 is reachable (n*L above about 36.7). PMT's `1-Q` is this expm1 only for |x| < 1 and `1 - EXP(x)` from 1 on (probes/t3014-pmt-fv-type-alone
 column C, financial.md "PMT is a discounted payment", T-3014); whether that switch belongs to Excel's expm1 itself, and so
 to PPMT's `1-Q` at |x| >= 1 too, is not established.
+The same switch at |x| = 1 is in WEIBULL.DIST's and EXPON.DIST's cdfs and, since T-3764, in the incomplete beta's
+w = 1 - (1 - x0)^b0 at a0 = 1 (statistics.md "Incomplete beta at a shape of 1 outside the closed forms": all 508
+t3568-r5-bup cells at |x| 3.9 to 215, where Kahan's form misses 47). The engine's `x87_exp::excel_one_minus_exp` is that
+1 - e^x; the three older callers keep their own copies of the cut (T-4511 folds them in).
 Status: VERIFIED (excel-graph).
 
 ### SIN/COS/TAN/SEC/CSC/COT near multiples of PI(): oracle sweep (T-1008)
@@ -1599,6 +1611,7 @@ other 1,433 scored cells, 5 differ from libm by a few ulp and the rest are bit-e
 desktop Excel that saved the workbook agree.
 Evidence: poi/47813.xlsx Numbers!C92, B182, C272, B362, C452, B542, C632 (oracle sidecar
 `eval/suites/poi/oracle/47813.oracle.json` and the workbook's cached values). Oracle: excel-graph, 2026-10-04.
+Owner ruling (decision 0300, 2026-11-06, T-3775): at the 15-digit neighbour of k·pi/2, where Excel is 4.1E-4 off the math, Excel stays the target; no R3 case.
 Status: VERIFIED
 Tasks: T-0915
 
@@ -2243,7 +2256,15 @@ Scalar data and error order (probes/t4193-aggregate-scalar-data-error-order, exc
 - A direct error argument beats a range's error wherever it sits: with D1:D11 holding `#DIV/0!`,
   `AGGREGATE(9,k,Data!D1:D11,NA())` and `AGGREGATE(9,k,NA(),Data!D1:D11)` are `#N/A` under every option. Between two
   literal errors the first wins: `AGGREGATE(9,k,1/0,NA())` is `#DIV/0!` and `AGGREGATE(9,k,NA(),1/0)` `#N/A` (Win!A1:D8).
-Still unprobed: an empty-argument data (`AGGREGATE(14,0,,1)`) and a scalar from a name or LET.
+Empty and bound arguments (probes/t4426-aggregate-empty-and-bound-data, excel-graph, 2026-11-06, T-4426):
+an empty (present but omitted) data argument is `#VALUE!` for every function and option, with or without k
+(Calc!A1:C14, E1:E14); an empty k is `#VALUE!` for functions 1/4/9 even under option 0 where the data holds `#DIV/0!` (Calc!D1, D3, D5), and
+a real k of 0 for 14/15/16/19: the data range's error under option 0 (`#DIV/0!`), and under option 6 `#NUM!` for
+LARGE, SMALL and PERCENTILE.EXC (14/15/19, Calc!D8, D10, D14) but 1 for PERCENTILE.INC (16), its minimum at k=0
+(Calc!D12). A number bound by LET or a workbook name behaves as the literal it holds: `#VALUE!` in the reference form, a
+one-value array in the array form; a LET-bound text `"3"` is skipped in the array form and gives `#NUM!`
+(Bound!A30, A36, A42, A48, A54, A60). LET- and name-bound ranges and arrays behave as the range or array (Bound!A1:A60,
+BErr!A1:A60). Our engine already matched every cell.
 Known gaps: k rounding and boolean k in LARGE/SMALL (T-1034).
 The VAR.P last digit (probes/aggregate-grid B31, C31) has passed since T-1037.
 Implemented in: `fn_aggregate` (crates/rustsheet-engine/src/functions/aggregate.rs); the lift reuses

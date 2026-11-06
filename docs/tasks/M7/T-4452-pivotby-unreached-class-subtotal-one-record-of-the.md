@@ -3,7 +3,7 @@ id: T-4452
 title: "PIVOTBY unreached-class subtotal: one record of the rule after T-4388 (T-4401 overlap, column_records parent sets, T-4388 Outcome)"
 milestone: M7
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -41,3 +41,9 @@ longer say that a satisfied task owns it.
 
 ## Out of scope
 - Implementing the parent-set rule itself (T-4428).
+
+## Outcome
+- T-4401 had already merged (#3448) with `Grouping::class_reached` as the only helper (`rg` finds one definition).
+- coercion.md names T-4388's rule and datasets; T-4388's Outcome records the 9 t4382 cells and its box is ticked;
+  T-4428 now depends on T-4388 and cites `class_reached`; `Grid::column_records` says it lacks the rule until T-4428.
+- Docs/comment only; no eval change.

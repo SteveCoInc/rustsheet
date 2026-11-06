@@ -486,3 +486,162 @@ fn one_cell_trimrange_is_a_reference() {
     assert_eq!(model._get_text("B4"), *"5");
     assert_eq!(model._get_text("C4"), *"5");
 }
+
+#[test]
+fn names_starting_with_a_mark_or_an_uppercase_circled_letter_are_refused() {
+    // Excel for the web refuses (createSession 501 FileCorruptTryRepair) a single-cell workbook
+    // whose formula starts a name with a mark or an uppercase circled letter, and loads every
+    // other form below (`rustsheet-oracle recalc -b excel-graph`, 2026-11-06, T-1856, each LET
+    // name written `_xlpm.`; refused inputs cannot be committed: docs/excel-semantics/references.md
+    // "Characters of a name").
+    let refused = [
+        "=LET(Ⓐ,1,Ⓐ+1)",
+        "=LET(Ⓑ,1,Ⓑ+1)",
+        "=LET(Ⓜ,1,Ⓜ+1)",
+        "=LET(Ⓩ,1,Ⓩ+1)",
+        "=LET(Ⓐx,1,Ⓐx+1)",
+        "=LAMBDA(Ⓐ,Ⓐ+1)(1)",
+        "=LET(\u{345}a,1,\u{345}a+1)",
+        "=LET(\u{93E}a,1,\u{93E}a+1)",
+        "=LET(\u{301}a,1,\u{301}a+1)",
+        "=LET(\u{307}x,1,\u{307}x+1)",
+        "=Ⓑ+1",
+    ];
+    // (formula, Excel's value)
+    let accepted = [
+        ("=LET(ⓐ,1,ⓐ+1)", "2"),
+        ("=LET(ⓩ,1,ⓩ+1)", "2"),
+        ("=LET(\u{1F130},1,\u{1F130}+1)", "2"),
+        ("=LET(\u{1F130}x,1,\u{1F130}x+1)", "2"),
+        ("=LET(\u{1F150},1,\u{1F150}+1)", "2"),
+        ("=LET(aⒶ,1,aⒶ+1)", "2"),
+        ("=LET(İ,1,İ+1)", "2"),
+        ("=LET(xİ,1,xİ+1)", "2"),
+        ("=LET(İ,1,i+1)", "#NAME?"),
+        ("=LAMBDA(İ,İ+1)(1)", "2"),
+        ("=LET(नाम,1,नाम+1)", "2"),
+        ("=LET(क\u{93E},1,क\u{93E}+1)", "2"),
+        ("=LET(a\u{345},1,a\u{345}+1)", "2"),
+        ("=LET(a\u{301},1,a\u{301}+1)", "2"),
+        ("=LET(i\u{307},1,i\u{307}+1)", "2"),
+        ("=LET(ǅ,1,ǅ+1)", "2"),
+        ("=LET(ʰ,1,ʰ+1)", "2"),
+        ("=LET(ー,1,ー+1)", "2"),
+        ("=LET(ª,1,ª+1)", "2"),
+        ("=LET(Ⅰ,1,Ⅰ+1)", "2"),
+        ("=LET(ⅰ,1,ⅰ+1)", "2"),
+        ("=LET(ﬃ,1,ﬃ+1)", "2"),
+        ("=LET(ŉ,1,ŉ+1)", "2"),
+        ("=LET(ǰ,1,ǰ+1)", "2"),
+        ("=LET(ΐ,1,ΐ+1)", "2"),
+        ("=LET(שם,1,שם+1)", "2"),
+        ("=LET(اسم,1,اسم+1)", "2"),
+        ("=LET(a²,1,a²+1)", "2"),
+        ("=LET(a٣,1,a٣+1)", "2"),
+        ("=LET(a①,1,a①+1)", "2"),
+        ("=LET(aⅫ,1,aⅫ+1)", "2"),
+        ("=ⓩ+1", "#NAME?"),
+        ("=aⒶ+1", "#NAME?"),
+    ];
+    let mut model = new_empty_model();
+    for (row, formula) in refused
+        .iter()
+        .copied()
+        .chain(accepted.iter().map(|(formula, _)| *formula))
+        .enumerate()
+    {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, formula) in refused.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", row + 1)),
+            *"#ERROR!",
+            "{formula}"
+        );
+    }
+    for (row, (formula, expected)) in accepted.iter().enumerate() {
+        let cell = format!("A{}", refused.len() + row + 1);
+        assert_eq!(model._get_text(&cell), *expected, "{formula}");
+    }
+}
+
+#[test]
+fn a_sheet_name_starting_with_a_refused_name_character_is_quoted() {
+    // The lexer refuses a name starting with Ⓐ-Ⓩ or a mark (T-1856), so a reference to such a
+    // sheet must be written quoted to read back. How Excel writes it is unprobed (T-4446).
+    let mut model = new_empty_model();
+    model.add_sheet("Ⓐ").unwrap();
+    model.add_sheet("ⓑ").unwrap();
+    // `_set` parses its sheet prefix byte by byte, so these go in by sheet index.
+    model.set_user_input(1, 1, 1, "5".to_string()).unwrap();
+    model.set_user_input(2, 1, 1, "7".to_string()).unwrap();
+    model._set("A1", "='Ⓐ'!A1+1");
+    model._set("A2", "=FORMULATEXT(A1)");
+    model._set("A3", "=ⓑ!A1+1");
+    model._set("A4", "=FORMULATEXT(A3)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"6");
+    assert_eq!(model._get_text("A2"), *"='Ⓐ'!A1+1");
+    assert_eq!(model._get_text("A3"), *"8");
+    assert_eq!(model._get_text("A4"), *"=ⓑ!A1+1");
+}
+
+/// Special forms and reference functions passed by name (probes/t4450-eta-special-forms):
+/// LET and LAMBDA are not functions by name (`#NAME?`, a helper's `#VALUE!`), IF and CHOOSE
+/// read a reference value argument as a blank, IFERROR and INDEX keep their values.
+#[test]
+fn special_forms_passed_by_name() {
+    let mut model = new_empty_model();
+    for (cell, value) in [("A1", "1"), ("A2", "3"), ("A3", "5")] {
+        model._set(cell, value);
+    }
+    for (cell, value) in [("B1", "2"), ("B2", "4"), ("B3", "6")] {
+        model._set(cell, value);
+    }
+    model._set("D1", "=ERROR.TYPE(_xleta.LAMBDA)");
+    model._set("D2", "=LET(f,_xleta.LAMBDA,f(1))");
+    model._set("D3", "=ROWS(MAP(A1:A3,_xleta.LAMBDA))");
+    model._set("D4", "=ROWS(BYROW(A1:B3,_xleta.LET))");
+    model._set("D5", "=ISBLANK(LET(f,_xleta.IF,f(TRUE,A1)))");
+    model._set("D6", "=ARRAYTOTEXT(MAP(A1:A3,B1:B3,_xleta.CHOOSE))");
+    model._set("D7", "=ARRAYTOTEXT(MAP(A1:A3,{7;8;9},_xleta.IF))");
+    model._set("D8", "=ARRAYTOTEXT(MAP(A1:A3,B1:B3,_xleta.IFERROR))");
+    model._set("D9", "=ARRAYTOTEXT(MAP(A1:A3,{1;2;1},_xleta.INDEX))");
+    model._set("D10", "=ROWS(LET(f,_xleta.IF,f(TRUE,A1:A3)))");
+    model._set("D11", "=ISBLANK(LET(f,_xleta.IF,f(TRUE,(A1,B1))))");
+    model.evaluate();
+
+    assert_eq!(model._get_text("D1"), *"5");
+    assert_eq!(model._get_text("D2"), *"#NAME?");
+    assert_eq!(model._get_text("D3"), *"#VALUE!");
+    assert_eq!(model._get_text("D4"), *"#VALUE!");
+    assert_eq!(model._get_text("D5"), *"TRUE");
+    assert_eq!(model._get_text("D6"), *", #VALUE!, #VALUE!");
+    assert_eq!(model._get_text("D7"), *"7, 8, 9");
+    assert_eq!(model._get_text("D8"), *"1, 3, 5");
+    assert_eq!(model._get_text("D9"), *"1, #REF!, 5");
+    assert_eq!(model._get_text("D10"), *"#VALUE!");
+    assert_eq!(model._get_text("D11"), *"TRUE");
+}
+
+/// A function passed by name and called through LET with a count it does not take is `#VALUE!`;
+/// one that takes none runs (probes/t4450-eta-special-forms E85:F103, L1:L13).
+#[test]
+fn function_by_name_called_without_arguments() {
+    let mut model = new_empty_model();
+    model._set("A1", "=LET(f,_xleta.SUM,f())");
+    model._set("A2", "=LET(f,_xleta.PI,f())");
+    model._set("A3", "=LET(f,_xleta.ROW,f())");
+    model._set("A4", "=LET(f,_xleta.SUM,f(1,2))");
+    model._set("A5", "=LET(f,_xleta.ABS,f(1,2))");
+    model._set("A6", "=ERROR.TYPE(LET(f,_xleta.IF,f()))");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#VALUE!");
+    assert_eq!(model._get_text("A2"), *"3.141592654");
+    assert_eq!(model._get_text("A3"), *"3");
+    assert_eq!(model._get_text("A4"), *"3");
+    assert_eq!(model._get_text("A5"), *"#VALUE!");
+    assert_eq!(model._get_text("A6"), *"3");
+}

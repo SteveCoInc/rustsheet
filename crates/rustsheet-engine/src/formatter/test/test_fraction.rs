@@ -266,3 +266,21 @@ fn denominator_placeholders_print_in_place() {
     assert_eq!(text(0.123, "# ?/??0"), " 23/187"); // A11
     assert_eq!(text(0.3, "# ?/?0?"), " 3/100"); // C12
 }
+
+// probes/t4069-fixed-denominator-tail (T-4069): a placeholder after a fixed denominator makes
+// Excel pick the fraction and print the code's digits in place of the picked denominator's.
+#[test]
+fn a_placeholder_after_a_fixed_denominator_picks_the_fraction() {
+    for (value, code, expected) in [
+        (12.5, "# ?/4|0", "12 1/4|0"),
+        (12.5, "# ?/4", "12 2/4"),
+        (12.5, "# ?/8|0", "12 1/8|0"),
+        (12.5, "# ?/10|0", "12 1/1 |0"),
+        (12.6, "# ?/10|0", "12 3/1 |0"),
+        (12.375, "# ?/8|0", "12 3/8|0"),
+        (12.5, "?/4|0", "25/4|0"),
+        (12.0, "# ?/4|0", "12      "),
+    ] {
+        assert_eq!(text(value, code), expected, "{code} on {value}");
+    }
+}

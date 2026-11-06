@@ -35,6 +35,9 @@ the mechanism (not one threshold per shape), and the numbers just above each cut
   - At the n = 3 brackets, ln of bgrat's increment D = I_x0(a0, c) is -687 (number) and -697 (0), but D (5E6, 10.5) is
     a number at ln D -697. So neither D alone nor the tail explains the earlier cut. Suspects: bup's terms at small n,
     or bgrat's own prefactor `u` and its error exit.
+- T-3764 applied T-4045's rule to BETA.DIST's and BETADIST's worksheet cdf (`bratio::beta_dist_cdf`, not the quantile
+  searches, so F.INV's A146 stays): t4254-beta-t-l140-zero-cut A12:A22, B12:B22, C12:C22 and D12:D22 are now Excel's 0.
+  Left here: the earlier cut at n = 3 (B1:B11, D1:D11, and t4254-beta-t-zero-wide A30, B30, C30) and the t's zeros.
 - The t never reaches L140: its kernel is K(df/2, 1/2), and b = 1/2 takes `small_shape_branch` (`bratio::dispatch`).
   Its 0 needs its own mechanism: Bgrat or W1Bpser at a0 = 1/2 after the swap.
 - Code: `bratio::f_closed_or_ported_tails` and `l140_prefactor_zero_tails` (F only today); `bup.rs`
@@ -49,8 +52,16 @@ the mechanism (not one threshold per shape), and the numbers just above each cut
       mechanism (decision 0188 R4 guards if anything is chosen by scoring), recorded in statistics.md.
 - [ ] `make check` green; reviewers approve.
 
+- T-4456 applied T-4045's rule to the worksheet BETA.DIST (the rule's cells A12:A22 and C12:C22 above now pass). What
+  is left here is the earlier cut at few bup terms and the t's cut. T-4456's probes add evidence for both
+  (statistics.md "Where the exact 0 starts (T-4045)", "More shapes"). Excel is 0 and ours is a number at:
+  - probes/t4456-beta-t-zero-cut A1:A9, B1:B9 (BETA.DIST at a = 2E6, n = 5), E1:E9 and F1:F9 (T.DIST.RT at df 1E6
+    and 1E8);
+  - probes/t4456-beta-t-zero-reach A21, B1, B2, E21 and F9.
+
 ## Visible-parity stage
-Owner of the visibly-off cells of probes/t4254-beta-t-l140-zero-cut (A12:A22, B1:B22, C12:C22, D1:D22, E1:E11, F1:F11)
+Owner of the visibly-off cells of probes/t4254-beta-t-l140-zero-cut (B1:B11, D1:D11, E1:E11, F1:F11; A12:A22, B12:B22,
+C12:C22 and D12:D22 pass since T-3764)
 and probes/t4254-beta-t-zero-wide (A29:A30, B28:B30, C30, F30): Excel's exact 0, or a 9th-digit difference just above
 it.
 

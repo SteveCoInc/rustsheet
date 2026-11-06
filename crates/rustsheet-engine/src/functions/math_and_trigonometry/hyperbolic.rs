@@ -41,9 +41,10 @@ fn expm1_pair(x: f64) -> (f64, f64) {
     (excel_expm1(x), excel_expm1(-x))
 }
 
-/// Overflows to infinity where `e^|x|` does (just above 709.78; Excel's exact cut is unprobed,
-/// T-1944): SINH/COSH report that as `#NUM!` and SECH/CSCH
-/// as 0 (numbers.md "SINH and COSH overflow is `#NUM!` at once").
+/// Overflows to infinity where `e^|x|` does, just above `ln(DBL_MAX)` = 709.782712893384, which is
+/// Excel's cut to the double (probes/t4423-hyperbolic-overflow-band rows 2 and 3, T-4423):
+/// SINH/COSH report that as `#NUM!` and SECH/CSCH as 0 (numbers.md "SINH and COSH overflow is
+/// `#NUM!` at once").
 pub(super) fn sinh(x: f64) -> f64 {
     if x.abs() < EXPM1_FORM_LIMIT {
         // (a - b)/2 is exact in its halving; a - b is the one rounding.

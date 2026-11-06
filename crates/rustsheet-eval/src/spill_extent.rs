@@ -217,6 +217,7 @@ fn unexpected(sheet: &str, addr: Addr, actual: Value) -> CellResult {
         graph_subnormal: false,
         kind: CellKind::SpillExtent,
         math: None,
+        target: crate::runner::Target::Excel,
     }
 }
 

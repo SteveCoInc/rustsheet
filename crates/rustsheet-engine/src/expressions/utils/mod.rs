@@ -1,3 +1,7 @@
+use std::sync::OnceLock;
+
+use regex_syntax::hir::{Class, ClassUnicodeRange, Hir, HirKind};
+
 use super::types::*;
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 
@@ -356,7 +360,10 @@ pub(crate) fn is_name_text(name: &str) -> bool {
     let upper = name.to_uppercase();
     let len = upper.chars().count();
 
-    let mut chars = upper.chars();
+    // The characters as typed, not their uppercase: `ǰ` and `ΐ` uppercase to a letter and
+    // combining marks, yet Excel loads `LET(ǰ,1,ǰ+1)` and `LET(ΐ,1,ΐ+1)` (2; excel-graph,
+    // 2026-11-06, T-1856).
+    let mut chars = name.chars();
 
     if len > 255 || len == 0 {
         return false;
@@ -370,19 +377,50 @@ pub(crate) fn is_name_text(name: &str) -> bool {
     // A letter of any script: Excel for the web loads `LET(é,1,É+1)` (2) and `LET(Ä,2,ä*10)` (20)
     // (probes/let-name-non-ascii, T-1387). An ASCII-only test rejected `é` but passed `ß`, whose
     // uppercase is `SS`.
-    if !(first.is_alphabetic() || first == '_' || first == '\\') {
+    if !(is_letter_name_start(first) || first == '_' || first == '\\') {
         return false;
     }
     if upper == *"TRUE" || upper == *"FALSE" {
         return false;
     }
     for ch in chars {
-        if !(ch.is_alphanumeric() || ch == '_' || ch == '.' || ch == '\\') {
+        if !(ch.is_alphanumeric() || is_mark(ch) || ch == '_' || ch == '.' || ch == '\\') {
             return false;
         }
     }
 
     true
+}
+
+/// Whether the letter `c` may start a name: `char::is_alphabetic`, except what Excel refuses there
+/// although Unicode calls it alphabetic. Excel for the web refuses (createSession 501
+/// `FileCorruptTryRepair`) a workbook whose formula starts a name with an uppercase circled
+/// letter (`LET(Ⓐ,1,Ⓐ+1)`, `Ⓑ`, `Ⓜ`, `Ⓩ`, `Ⓐx`, `LAMBDA(Ⓐ,Ⓐ+1)(1)`, `=Ⓑ+1`) or a mark (U+0345,
+/// U+093E, and the non-alphabetic U+0301 and U+0307), while `ⓐ`, `ⓩ`, U+1F130, U+1F150 and `aⒶ`
+/// load (`rustsheet-oracle recalc -b excel-graph`, 2026-11-06, T-1856; refused inputs cannot be
+/// committed: docs/excel-semantics/references.md "Characters of a name").
+pub(crate) fn is_letter_name_start(c: char) -> bool {
+    c.is_alphabetic() && (c.is_ascii() || !(matches!(c, '\u{24B6}'..='\u{24CF}') || is_mark(c)))
+}
+
+/// Whether `c` is a mark (`\p{M}`), by regex-syntax's Unicode tables. After a name's first
+/// character Excel loads every mark, alphabetic or not: `LET(a`+U+0301`,1,..)`, `i`+U+0307,
+/// `a`+U+0345 and `क`+U+093E are 2 (probes/t1856-name-characters A11:A14, T-1856).
+pub(crate) fn is_mark(c: char) -> bool {
+    static RANGES: OnceLock<Vec<ClassUnicodeRange>> = OnceLock::new();
+    let ranges = RANGES.get_or_init(|| {
+        // The spelling is fixed and known to regex-syntax; a failure leaves the class empty
+        // (no mark is refused) rather than panicking.
+        match regex_syntax::Parser::new()
+            .parse(r"\p{M}")
+            .map(Hir::into_kind)
+        {
+            Ok(HirKind::Class(Class::Unicode(class))) => class.ranges().to_vec(),
+            _ => Vec::new(),
+        }
+    });
+    let at = ranges.partition_point(|range| range.end() < c);
+    ranges.get(at).is_some_and(|range| range.start() <= c)
 }
 
 /// The typographic quotes U+201C and U+201D, which Excel reads as name characters: a stored
@@ -424,7 +462,9 @@ pub(crate) fn name_needs_quoting(name: &str) -> bool {
         // ADDRESS(…, "") emits a bare "!" prefix; an empty name is never quoted.
         None => return false,
         Some(c) if c.is_ascii_digit() || c == '.' => return true,
-        Some(c) if !(c.is_alphabetic() || c == '_') => return true,
+        // A first character the lexer refuses (`is_letter_name_start`: Ⓐ-Ⓩ, a mark) is quoted, so
+        // `'Ⓐ'!A1` reads back (T-1856).
+        Some(c) if !(is_letter_name_start(c) || c == '_') => return true,
         Some(_) => {}
     }
     if chars.any(|c| !(c.is_alphanumeric() || c == '_' || c == '.')) {

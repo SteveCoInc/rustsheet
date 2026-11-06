@@ -427,15 +427,16 @@ impl Model {
         Ranges::from_list(areas, cell)
     }
 
-    /// The areas of a reference argument: several for a union, one for any other reference.
+    /// The areas of a reference argument: several for a union, one for any other reference. The
+    /// list derefs to `&[Range]`, so a union shared with a LET binding is read without a copy.
     /// `Err` holds the error the argument evaluates to, or `#VALUE!` if it is not a reference
     /// (AGGREGATE's reference form; probes/aggregate-args).
     pub(crate) fn reference_areas(
         &mut self,
         node: &Node,
         cell: CellReferenceIndex,
-    ) -> Result<Vec<Range>, CalcResult> {
-        self.evaluate_areas(node, cell).map(AreaList::into_vec)
+    ) -> Result<AreaList, CalcResult> {
+        self.evaluate_areas(node, cell)
     }
 
     /// The number of areas `(left,right)` stands for, or the result to give instead, exactly

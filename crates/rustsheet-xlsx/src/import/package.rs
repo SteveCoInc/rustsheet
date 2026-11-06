@@ -112,6 +112,19 @@ impl PartNames {
         Ok(PartNames::new(entries.iter().map(AsRef::as_ref)))
     }
 
+    /// The groups of two or more entries that name one part (OPC calls such a package invalid),
+    /// each sorted, in a stable order.
+    pub fn clashes(&self) -> Vec<Vec<String>> {
+        let mut groups: Vec<Vec<String>> = self
+            .entries
+            .values()
+            .filter(|names| names.len() > 1)
+            .cloned()
+            .collect();
+        groups.sort_unstable();
+        groups
+    }
+
     /// The zip entry that holds the part `name` (such as `xl/workbook.xml`), if any. An entry
     /// named exactly `name` wins; among other equivalent entries (a package OPC calls invalid)
     /// the first in byte order is taken, so the choice is deterministic.
@@ -127,7 +140,7 @@ impl PartNames {
 
 /// The part name an entry or a part reference stands for: `/` separators, no leading `/`,
 /// ASCII lowercase.
-pub(super) fn part_key(name: &str) -> String {
+pub fn part_key(name: &str) -> String {
     name.replace('\\', "/")
         .trim_start_matches('/')
         .to_ascii_lowercase()

@@ -18,6 +18,16 @@ pub(crate) fn near_integer_count(x: f64) -> f64 {
     near_integer_floor(x, NEAR_INTEGER_TOLERANCE)
 }
 
+/// [`near_integer_count`] of the magnitude, with the sign kept: a whole number truncated toward
+/// zero, but a magnitude within [`NEAR_INTEGER_TOLERANCE`] of the next integer counts as that
+/// integer, on both sides of zero alike. FIXED's and DOLLAR's `decimals` read this way:
+/// `FIXED(1234.5678,-1+2^-23)` is "1230" and `FIXED(1234.5678,-1E-6)` "1235".
+// Excel: docs/excel-semantics/text.md "LEFT, RIGHT and REPLACE round counts up near an integer"
+// (probes/t4453-near-integer-text-args I1:J21; T-4453).
+pub(crate) fn near_integer_trunc(x: f64) -> f64 {
+    near_integer_count(x.abs()).copysign(x)
+}
+
 /// `x` floored, but a fraction within `tolerance` of the next integer counts as that integer.
 pub(crate) fn near_integer_floor(x: f64, tolerance: f64) -> f64 {
     let whole = x.floor();
@@ -25,8 +35,8 @@ pub(crate) fn near_integer_floor(x: f64, tolerance: f64) -> f64 {
     whole + f64::from(u8::from(x - whole >= 1.0 - tolerance))
 }
 
-/// The whole number DATE, TIME, XMATCH, XLOOKUP and SORTBY's `sort_order` read from an
-/// argument: [`near_integer_floor`] with [`NEAR_INTEGER_TOLERANCE`], half of it for a negative value, so `TIME(1-2^-22,0,0)` is
+/// The whole number DATE, TIME, XMATCH, XLOOKUP, SORTBY's `sort_order` and the SEQUENCE and
+/// RANDARRAY extents read from an argument: [`near_integer_floor`] with [`NEAR_INTEGER_TOLERANCE`], half of it for a negative value, so `TIME(1-2^-22,0,0)` is
 /// 1:00, `TIME(1,0,-1E-7)` 1:00, `DATE(1983,12,-1E-15)` day 0 and an XMATCH mode of
 /// `0.5^1E-15` reads 1, while `-0.4` reads -1.
 // Excel: docs/excel-semantics/dates.md "TIME: an argument past 32767 is `#NUM!`" and "DATE: a
@@ -37,6 +47,7 @@ pub(crate) fn near_integer_floor(x: f64, tolerance: f64) -> f64 {
 // 1 - 2^-22*(1+2^-11) reads 1 and 1 - 2^-22*(1+9*2^-14) reads 0; -2^-23*(1+2^-11) reads 0 and
 // -2^-23*(1+9*2^-14) reads -1, the same below -2 through 3.
 // SORTBY's sort_order: probes/t2370-sortby-mixed-by-array-snap (`-1-2^-23` is -1, `-1-2^-22` is -2; T-2370).
+// SEQUENCE and RANDARRAY extents: probes/t4465-extent-near-integer-main B1:D63 (T-4465).
 pub(crate) fn near_integer_whole(value: f64) -> f64 {
     let tolerance = if value < 0.0 {
         NEAR_INTEGER_TOLERANCE / 2.0
@@ -48,7 +59,7 @@ pub(crate) fn near_integer_whole(value: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::near_integer_count;
+    use super::{near_integer_count, near_integer_trunc};
 
     #[test]
     fn near_integer_count_rounds_up_within_the_tolerance() {
@@ -63,5 +74,19 @@ mod tests {
         assert_eq!(near_integer_count(2.5), 2.0);
         assert_eq!(near_integer_count(1e-300), 0.0);
         assert_eq!(near_integer_count(1e100), 1e100);
+    }
+
+    #[test]
+    fn near_integer_trunc_snaps_the_magnitude_on_both_sides() {
+        // probes/t4453-near-integer-text-args I1, I2, I8, I15, I16.
+        let at = 2f64.powi(-22) + 2f64.powi(-33);
+        let past = 2f64.powi(-22) + 9.0 * 2f64.powi(-36);
+        assert_eq!(near_integer_trunc(-1.0 + at), -1.0);
+        assert_eq!(near_integer_trunc(-1.0 + past), 0.0);
+        assert_eq!(near_integer_trunc(-1e-6), 0.0);
+        assert_eq!(near_integer_trunc(-3.0 + at), -3.0);
+        assert_eq!(near_integer_trunc(-3.0 + past), -2.0);
+        assert_eq!(near_integer_trunc(2.0 - at), 2.0);
+        assert_eq!(near_integer_trunc(2.0 - past), 1.0);
     }
 }

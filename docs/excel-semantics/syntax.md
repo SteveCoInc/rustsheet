@@ -62,6 +62,13 @@ invalid or missing or has an incorrect format", the response to any formula Exce
 length: 255 one-character arguments (`=CONCAT(1,...)`, 518 characters; `=TEXTJOIN("",TRUE,1,...)`, 524) are refused while
 254 (-concat-254-short, -textjoin-254-short) and a 2,548-character CONCAT of 254 arguments (-concat-254-long) are accepted. So CONCAT takes 254 texts, one more than Microsoft's
 documented 253, and TEXTJOIN the documented 252; the engine table holds 254 for both as cited overrides.
+In a file, VAR.S and STDEV.S take at most 254 arguments: an xlsx whose one cell is `_xlfn.VAR.S(1,2,...,255)` does not
+open in Excel for the web (Graph `createSession` 501 `unsupportedWorkbook`, "The workbook contains unsupported features
+or exceeds the size limit"), while `_xlfn.VAR.S(1,2,...,254)` and the legacy `VAR(1,2,...,255)` open and calculate
+(T-4089, excel-graph, 2026-11-06; docs/research/t4089/xlfn-arguments.md holds the inputs). Gate A batches of VAR.S and
+STDEV.S holding 255-argument calls failed to open the same way, and the same batches drawn to 254 filled. UNVERIFIED:
+that every `_xlfn.` function is capped the same way (CONCAT's and TEXTJOIN's 254 above would fit a call spending one
+of 255 slots on its name), and whether VAR.S refuses 255 arguments when typed.
 Status: VERIFIED
 
 ## Unary minus binds tighter than `^`
@@ -298,14 +305,21 @@ an unresolved `=N`; it then shows as `'<file>.xlsx'!N`); how a pinned use is sav
 Excel saves it; a typed `=[0]!Missing` (ours now shows `=Missing`); uses inside other names' bodies, conditional-format
 and data-validation formulas on S, and names called as functions (`N(2)`), which the add leaves alone; and desktop
 Excel's Name Manager.
-**An unqualified reference in an API-defined name binds to the first sheet** (T-4353,
+**An unqualified reference in an API-defined name binds to the active sheet** (T-4353, T-4394;
 probes/t4353-api-name-unqualified-ref, excel-graph 2026-11-05). In a book of First, S2 and Last (B1 = 1, 7, 9; B2 =
 10, 70, 90), Graph `worksheets('S2')/names/add` of `Rate` = `=$B$1` and `Span` = `=$B$1:$B$2`, of `Rate2` = `=$B$1`
 on Last, and `workbook/names/add` of `W` = `=$B$1` all read First's cells: `=S2!Rate` is 1 on S2 and on Last, `=SUM(Span)`
-on S2 is 11, `=Rate2` on Last is 1, `=W` is 1 on every sheet. The name's scope does not qualify the reference; the
-first sheet is also the active one in the probe's workbook, so which of the two it is stays unprobed. `Txn::define_name`
-and `Txn::define_sheet_name` do the same (the engine parses a name body against the first sheet;
-`an_unqualified_name_reference_binds_to_the_first_sheet`, crates/rustsheet/src/edit/tests.rs). The same probe shows
+on S2 is 11, `=Rate2` on Last is 1, `=W` is 1 on every sheet. The name's scope does not qualify the reference. First
+is both the first and the active sheet there; with another sheet active it is the active one (T-4394,
+probes/t4394-api-name-active-s2 and t4394-api-name-active-last, the same book with `<workbookView activeTab>` on S2 or
+Last, spec2xlsx `"active_sheet"`, excel-graph 2026-11-06): every use reads the active sheet's cells, 7 (`=SUM(Span)`
+77) with S2 active and 9 (99) with Last active, `=W` on First included. One typed-before use moves with it too:
+`=Rate` typed on S2 before the add is `#NAME?` with First or S2 active but 9 with Last active (t4394-api-name-active-last
+S2!A1; T-4391's). Ours since T-4445: `Txn::define_name` and `Txn::define_sheet_name` bind to `Workbook::active_sheet` (set with
+`Workbook::set_active_sheet`; an xlsx import takes the sheet marked `tabSelected`, else the first). The engine reads an
+API-added body on the active sheet and stores it qualified (`Model::formula_to_internal_between`;
+`an_unqualified_name_reference_binds_to_the_active_sheet`, crates/rustsheet/src/edit/tests.rs), and the eval adapter sets a
+case's `active_sheet` before its `api_names`. The same probe shows
 an exception to the rule above: of the uses typed before the adds, S2's `=Rate` stays `#NAME?` but S2's `=SUM(Span)`
 and Last's `=Rate2` resolve (T-4391 owns S2!A3 and Last!A1, which the engine leaves `#NAME?`).
 Conditional formats and data validation (T-3263, probes/t3263-*, excel-graph 2026-10-31): a formula

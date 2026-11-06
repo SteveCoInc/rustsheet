@@ -63,8 +63,9 @@ def natural_sort(items, rcmp):
     return runs[0]
 
 
-def unique_kept(rows, rcmp):
-    """UNIQUE's merge (T-4200): equal groups coalesce when they meet; returns kept row indices in input order."""
+def group_runs(rows, rcmp):
+    """UNIQUE's natural runs of groups (T-4200): a row `=` the last group of its run joins it, a lower row starts a
+    run (also docs/research/t4393/model.py)."""
     groups = [[i] for i in range(len(rows))]
     runs, cur = [], [groups[0]]
     for g in groups[1:]:
@@ -77,31 +78,42 @@ def unique_kept(rows, rcmp):
         else:
             cur.append(g)
     runs.append(cur)
-    while len(runs) > 1:
-        nr = []
-        for j in range(0, len(runs) - 1, 2):
-            a, b, o = list(runs[j]), list(runs[j + 1]), []
+    return runs
 
-            def push(g):
-                if o and rcmp(rows[o[-1][0]], rows[g[0]]) == 0:
-                    o[-1] = o[-1] + g
-                else:
-                    o.append(g)
-            while a and b:
-                c = rcmp(rows[b[0][0]], rows[a[0][0]])
-                if c == 0:
-                    push(a.pop(0) + b.pop(0))
-                elif c < 0:
-                    push(b.pop(0))
-                else:
-                    push(a.pop(0))
-            for g in a + b:
-                push(g)
-            nr.append(o)
+
+def bottom_up(runs, merge):
+    """Merge neighbouring runs pairwise, a left-over last run waiting a round, until one is left (also
+    docs/research/t4393/model.py)."""
+    while len(runs) > 1:
+        nr = [merge(runs[j], runs[j + 1]) for j in range(0, len(runs) - 1, 2)]
         if len(runs) % 2:
             nr.append(runs[-1])
         runs = nr
-    return sorted(min(g) for g in runs[0])
+    return runs[0]
+
+
+def unique_kept(rows, rcmp):
+    """UNIQUE's merge (T-4200): equal groups coalesce when they meet; returns kept row indices in input order."""
+    def merge(a, b):
+        a, b, o = list(a), list(b), []
+
+        def push(g):
+            if o and rcmp(rows[o[-1][0]], rows[g[0]]) == 0:
+                o[-1] = o[-1] + g
+            else:
+                o.append(g)
+        while a and b:
+            c = rcmp(rows[b[0][0]], rows[a[0][0]])
+            if c == 0:
+                push(a.pop(0) + b.pop(0))
+            elif c < 0:
+                push(b.pop(0))
+            else:
+                push(a.pop(0))
+        for g in a + b:
+            push(g)
+        return o
+    return sorted(min(g) for g in bottom_up(group_runs(rows, rcmp), merge))
 
 
 def groupby(rows, dirs, inclusive=False, ascending_search=False):
@@ -198,13 +210,21 @@ def sort_dirs(formula, nf):
     return dirs
 
 
-if __name__ == "__main__":
-    for case, col, nf in [("t4195-groupby-intransitive", "C", 2), ("t4195-groupby-intransitive", "E", 3),
-                          ("t4241-groupby-intransitive-runs", "B", 2), ("t4241-groupby-intransitive-runs", "C", 2),
-                          ("t4241-groupby-intransitive-runs", "D", 2), ("t4241-groupby-intransitive-runs", "E", 2)]:
+BLOCKS = [("t4195-groupby-intransitive", "C", 2), ("t4195-groupby-intransitive", "E", 3),
+          ("t4241-groupby-intransitive-runs", "B", 2), ("t4241-groupby-intransitive-runs", "C", 2),
+          ("t4241-groupby-intransitive-runs", "D", 2), ("t4241-groupby-intransitive-runs", "E", 2)]
+
+
+def score(grouping=groupby, cases=BLOCKS):
+    """Print `grouping`'s hits on each (case, column, fields) of `cases` (also docs/research/t4393/model.py)."""
+    for case, col, nf in cases:
         blocks = load(case, col, nf)
-        bad = [(c, rows, want, groupby(rows, sort_dirs(f, nf))) for c, rows, want, f in blocks
-               if groupby(rows, sort_dirs(f, nf)) != want]
+        bad = [(c, rows, want, grouping(rows, sort_dirs(f, nf))) for c, rows, want, f in blocks
+               if grouping(rows, sort_dirs(f, nf)) != want]
         print(case, col, len(blocks) - len(bad), "/", len(blocks))
         for b in bad[:4]:
             print("   ", b)
+
+
+if __name__ == "__main__":
+    score()
