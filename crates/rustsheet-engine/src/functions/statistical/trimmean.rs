@@ -2,7 +2,7 @@
 //! lifts over arrays and ranges (probes/stat-argument-modes H549-H550, probes/stat-whole-lift
 //! W35-W37).
 
-use super::percentile::{num_error, typed_scalar_numbers, value_at};
+use super::percentile::{area_numbers, num_error, typed_scalar_numbers, value_at};
 use super::sorted_data::{DataArg, DataOrder};
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::LiftCost;
@@ -20,8 +20,23 @@ const TRIMMEAN_DATA: DataArg = DataArg {
     // A2-A12, T-2883).
     read: |model, node, cell| match model
         .evaluate_picked_reference_arg(node, cell)
-        .into_single_sheet_area(cell)
+        .into_areas_or_single(cell)
     {
+        // A union or 3-D range is read area by area (probes/t4309-3d-union-trimmean-percentile).
+        Ok(areas) => area_numbers(model, &areas, cell),
+        Err(value) => trimmean_scalar_numbers(model, value, cell),
+    },
+    order: DataOrder::Ascending,
+    cost: LiftCost::Cells,
+};
+
+/// TRIMMEAN's data when it is not a union or a 3-D range.
+fn trimmean_scalar_numbers(
+    model: &mut Model,
+    value: CalcResult,
+    cell: CellReferenceIndex,
+) -> Result<Vec<f64>, CalcResult> {
+    match value {
         // An error value is that error, not `#VALUE!`: `TRIMMEAN(NA(),2)` is `#N/A`, the data's
         // error before the bad `percent` (probes/stat-test-lift P82, T-1982).
         error @ CalcResult::Error { .. } => Err(error),
@@ -32,10 +47,8 @@ const TRIMMEAN_DATA: DataArg = DataArg {
             typed_scalar_numbers(model, scalar, cell)
         }
         value => model.numeric_flat_with_element_errors(value, cell),
-    },
-    order: DataOrder::Ascending,
-    cost: LiftCost::Cells,
-};
+    }
+}
 
 impl Model {
     /// `TRIMMEAN(array, percent)`: the mean of the data after removing `floor(n*percent/2)`

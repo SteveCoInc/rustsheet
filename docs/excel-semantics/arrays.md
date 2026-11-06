@@ -2627,13 +2627,25 @@ of the result. With Data!G9 holding `#DIV/0!`:
 - A literal error is not a reference and is still the error: `TOROW(#N/A,-1)` is `#N/A` (gen-m7/20df23f84a528470
   A8907) and `FILTER(#DIV/0!,(Data!C1:C12<>0.3),-1)` is `#DIV/0!` (gen-m7/ee81c689b5fde629 A977).
 Evidence: gen-m7 arg-pairs batch (excel-graph, 2026-10-31, T-3497); the full cell list is in T-3506.
-Ours: implemented (T-3506): `one_cell_error_ref_as_array` in functions/spill_functions.rs wraps any error read through a
-reference argument (a `ReferenceKind`, one cell by construction) as a 1x1 array, which is how a one-cell error reference
-shows up, for TOCOL's and TOROW's array and FILTER's array and include; FILTER checks the shape of an include it wrapped
-before its elements. Only stored cell errors are evidenced; other errors read through a reference (a `#REF!` for a sheet
-index, a circular read) are wrapped unprobed. Unprobed, so kept as before: a one-cell error include that fits the
-array's shape (a one-row or one-column array) is its error, and a wrongly shaped multi-cell include holding an error
-still returns the error first. T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
+FILTER's include shape and indirect references (T-4477, probes/t4477-filter-include-error-shapes, excel-graph,
+2026-11-06; G9 `#DIV/0!`, G7 and G8 1, G2 0, A1:C3 numbers; each formula read as `ROWS&"x"&COLUMNS`, ARRAYTOTEXT and
+ERROR.TYPE in J:L of rows 11, 15, ..., 71):
+- FILTER checks the include's shape before its elements, for every include. A one-cell error include that fits a one-row
+  or one-column array is its error: `FILTER(A1:C1,G9)`, `FILTER(A1:A3,G9)`, `FILTER(A1:A1,G9)` and `FILTER(A1:C1,G9,"e")`
+  are `#DIV/0!` (J11:L23). A wrongly shaped include holding an error is `#VALUE!`, not the error:
+  `FILTER(A1:A3,{1;#N/A})`, `FILTER(A1:A3,{#N/A,1})`, `FILTER(A1:A3,G8:G9)` and `FILTER(A1:C3,G8:G9,"e")` (J27:L39);
+  a right-shaped one is its error, `FILTER(A1:A3,{1;#N/A;1})` `#N/A` and `FILTER(A1:A3,G7:G9)` `#DIV/0!` (J43:L47).
+- A one-cell error reference reached through LET, INDEX or IF is a 1x1 array too: `FILTER(A1:C3,LET(x,G9,x))`,
+  `FILTER(A1:C3,INDEX(G1:G9,9))` and `FILTER(A1:C3,IF(TRUE,G9))` are `#VALUE!` (J51:L59), `FILTER(LET(x,G9,x),G2)` is
+  `#CALC!` (J67:L67) and `FILTER(INDEX(G1:G9,9),TRUE)` is a 1x1 array holding `#DIV/0!` (`ROWS&"x"&COLUMNS` "1x1", J71).
+  Inside a LAMBDA nothing changes: `MAP(1,LAMBDA(p,FILTER(A1:C3,G9)))` is a 1x1 array holding `#VALUE!` (J63:L63).
+Ours: implemented (T-3506, T-4477). `one_cell_error_ref_as_array` in functions/spill_functions.rs wraps any error read
+through a reference argument (a `ReferenceKind`, one cell by construction) as a 1x1 array, which is how a one-cell error
+reference shows up, for TOCOL's and TOROW's array. FILTER reads its array and include as references
+(`Model::filter_arg_array`, filter.rs, through `evaluate_picked_reference_arg`), which covers a written reference, a LET
+variable, INDEX and the arm IF picks alike, and checks every include's shape before its elements. Only stored cell
+errors are evidenced; other errors read through a reference (a `#REF!` for a sheet index, a circular read) are wrapped
+unprobed. An include one column tall as the array is wide filters its columns (`include_axis`; not probed by T-4477). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
 (spill_functions.rs) so VSTACK/HSTACK also wrap a LET variable or LAMBDA parameter bound to a one-cell error reference.
 Blank-cell variables (T-3887, probes/t3887-stack-blank-variable, excel-graph 2026-11-03): with z bound to a blank cell
 (D!Z1) by LET or as a MAP LAMBDA parameter, `INDEX(VSTACK(z,1),1,1)` and `INDEX(HSTACK(z,1),1,1)` are the same "empty value"
