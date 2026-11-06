@@ -340,15 +340,16 @@ A Values field on rows needs `dataOnRows="1"` on the definition: without it Exce
 the file as corrupt (`FileCorruptTryRepair`). Case builder v2 now writes it. This comes from scratch
 excel-graph runs of T-4138, not committed: G6's package was refused without the attribute and opened
 with it, all else equal.
-Status: VERIFIED (excel-graph) for the table; the refusal is a builder observation
-Also VERIFIED (excel-graph, T-4147): the rule above reproduces the saved `location`, `firstHeaderRow`,
-`firstDataRow`, `firstDataCol`, `rowPageCount` and `colPageCount` of every probe pivot in scope
-(listed under "Layout lines" below): page counts are `pageWrap` fields per column (`rowPageCount`) with
-the default order (t4137 K4: 3 by 1), per row with `pageOverThenDown` (t4138 G8: 2 by 2), and a row
-field shares its column with the next level only with `compact` and `outline` both on (t4583 R1 against
-R2). UNVERIFIED (probe pending: T-4650): `firstHeaderRow` other than 1, and the page grid's other two
-orders (G8's 2 by 2 cannot tell them apart); (T-4609): whether `compact` or `outline` alone decides
-the shared column.
+The engine's layout (T-4147) reproduces the saved `location`, `firstHeaderRow`, `firstDataRow`,
+`firstDataCol`, `rowPageCount` and `colPageCount` of every probe pivot in scope (listed under "Layout
+lines" below). Page fields: with no `pageWrap` and the default order, every page field is in one column
+(t4137 K4: 3 by 1); with `pageWrap` and `pageOverThenDown`, `pageWrap` fields per row (t4138 G8: 2 by
+2). A row field shares its column with the next level with `compact` and `outline` both on (t4583 R1),
+and not with both off (R2).
+Status: VERIFIED (excel-graph) for the table and the T-4147 reproduction above; the refusal is a builder
+observation. UNVERIFIED (probe pending: T-4650): `firstHeaderRow` other than 1, and the page grid's
+other two orders (G8's 2 by 2 cannot tell them apart); (T-4609): whether `compact` or `outline` alone
+decides the shared column.
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`geometry`, `location`; T-4147)
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`geometry`: the saved offsets typed
 in `PivotTable::geometry`, T-4147)
@@ -361,7 +362,7 @@ own last one), and `<x>` lists the rest. An `x` is the item's position in the pi
 or the data field's index at the Values level (`i` repeats it).
 - Every tuple of one item per level is a `t="data"` line.
 - On rows, an item of a field in outline form (`outline` on, which compact form also has) has a line of
-  its own above its children, which carries its subtotal values. An item of a tabular field
+  its own above its children, which carries its subtotal values (with `subtotalTop`, the default). An item of a tabular field
   (`outline="0"`) shares its first child's line, and its subtotal lines follow its children. The form
   is per field: an outer field left at the default inside a tabular pivot is outline form (t4583 R1).
 - On columns every item shares its first child's line, and subtotal lines follow the children.

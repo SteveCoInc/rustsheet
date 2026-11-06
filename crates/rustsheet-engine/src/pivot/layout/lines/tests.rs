@@ -7,7 +7,7 @@
 use serde_json::Value as Json;
 
 use super::*;
-use crate::pivot::probe_cases::{probe_pivot, read, subtotal_named};
+use crate::pivot::probe_cases::{address, probe_pivot, read, subtotal_named};
 use crate::pivot::{
     compute, Aggregate, Axis, CacheBuilder, CacheItem, DataField, PageField, PivotItem,
     RecordValue, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
@@ -52,16 +52,10 @@ fn actual(lines: &[AxisLine]) -> Vec<Expected> {
 
 /// The A1 range of `area`.
 fn range(area: &CellArea) -> String {
-    let cell = |column: u32, row: u32| {
-        let mut letters = String::new();
-        let mut n = column + 1;
-        while n > 0 {
-            letters.insert(0, char::from(b'A' + u8::try_from((n - 1) % 26).unwrap()));
-            n = (n - 1) / 26;
-        }
-        format!("{letters}{}", row + 1)
-    };
-    let (from, to) = (cell(area.left, area.top), cell(area.right, area.bottom));
+    let (from, to) = (
+        address(area.left, area.top),
+        address(area.right, area.bottom),
+    );
     if from == to {
         from
     } else {
@@ -415,6 +409,42 @@ fn a_layout_past_the_cell_cap_fails() {
     assert!(location(&table, &geometry, [1_999, 1_999]).is_ok());
     assert_eq!(
         location(&table, &geometry, [2_000, 1_999]),
+        Err(PivotComputeError::Limit)
+    );
+}
+
+#[test]
+fn the_column_walk_stops_at_the_cap_the_rows_leave() {
+    // Item i on rows and on columns: 2,001 lines each way plus the grand totals, past 2,000 by
+    // 2,000 cells. The columns stop a line past what the rows' height leaves.
+    let mut builder = CacheBuilder::new(None, MAX_RECORD_VALUES);
+    for name in ["R", "C", "V"] {
+        builder.add_field(name.to_string()).unwrap();
+    }
+    for i in 0..2_001 {
+        let n = RecordValue::Inline(CacheItem::Number(f64::from(i)));
+        builder.push_record(vec![n.clone(), n.clone(), n]).unwrap();
+    }
+    let cache = builder.finish();
+    let area = CellArea {
+        top: 0,
+        left: 0,
+        bottom: 0,
+        right: 0,
+    };
+    let mut table = PivotTable::new("D".to_string(), 1, area, 0);
+    let len = |f: usize| cache.fields[f].items.len();
+    table.fields = vec![
+        PivotField::new(Some(Axis::Row), len(0)),
+        PivotField::new(Some(Axis::Column), len(1)),
+        PivotField::new(None, len(2)),
+    ];
+    table.row_fields = vec![AxisField::Field(0)];
+    table.column_fields = vec![AxisField::Field(1)];
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute(&table, &cache, &mut work).unwrap();
+    assert_eq!(
+        lay_out(&table, &cache, &result, &mut work),
         Err(PivotComputeError::Limit)
     );
 }

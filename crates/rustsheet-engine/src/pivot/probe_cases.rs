@@ -7,6 +7,7 @@
 use serde_json::Value as Json;
 
 use crate::expressions::token::get_error_by_english_name;
+use crate::expressions::utils::number_to_column;
 use crate::pivot::{
     read_source, Aggregate, Axis, AxisField, CacheItem, CacheSource, CellArea, DataField,
     PageField, PivotCache, PivotField, PivotItem, PivotTable, SourceArea, SourceCells,
@@ -41,13 +42,7 @@ pub(crate) fn position(address: &str) -> (u32, u32) {
 }
 
 pub(crate) fn address(column: u32, row: u32) -> String {
-    let mut letters = String::new();
-    let mut n = column + 1;
-    while n > 0 {
-        let rem = (n - 1) % 26;
-        letters.insert(0, char::from(b'A' + u8::try_from(rem).unwrap()));
-        n = (n - 1) / 26;
-    }
+    let letters = number_to_column(i32::try_from(column + 1).unwrap()).unwrap();
     format!("{letters}{}", row + 1)
 }
 

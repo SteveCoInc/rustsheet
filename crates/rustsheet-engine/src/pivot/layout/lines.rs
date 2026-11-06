@@ -167,6 +167,8 @@ struct Visit {
 struct Lines<'w> {
     lines: Vec<AxisLine>,
     previous: Vec<u32>,
+    /// Most lines the axis may have before the layout passes [`MAX_PIVOT_CELLS`].
+    cap: usize,
     work: &'w mut u64,
 }
 
@@ -179,7 +181,7 @@ impl Lines<'_> {
         values: bool,
     ) -> Result<(), PivotComputeError> {
         charge(self.work, units(visit.tuple.len()).saturating_add(1))?;
-        if self.lines.len() >= MAX_PIVOT_CELLS {
+        if self.lines.len() >= self.cap {
             return Err(PivotComputeError::Limit);
         }
         let (tuple, grand) = (&visit.tuple, kind == ItemType::Grand);
@@ -315,15 +317,17 @@ impl<'a> AxisPlan<'a> {
             && self.subtotals(level) == [ItemType::Default]
     }
 
-    /// The axis's lines in display order.
+    /// The axis's lines in display order, at most `cap` of them.
     fn lines(
         &self,
         options: &PivotOptions,
+        cap: usize,
         work: &mut u64,
     ) -> Result<Vec<AxisLine>, PivotComputeError> {
         let mut out = Lines {
             lines: Vec::new(),
             previous: Vec::new(),
+            cap,
             work,
         };
         let mut stack = vec![Step::Enter(Visit {
@@ -374,6 +378,12 @@ impl<'a> AxisPlan<'a> {
                 tuple,
             }
         };
+        // Charged before any child is made: the tree counts them without allocating.
+        let count = match inner {
+            Level::Values => self.data_fields as usize,
+            Level::Field { .. } => self.tree.children(visit.node).count(),
+        };
+        charge(work, units(count.saturating_mul(visit.tuple.len() + 1)))?;
         let children: Vec<Visit> = match inner {
             Level::Values => (0..self.data_fields)
                 .map(|d| child(visit.node, Some(d), d))
@@ -391,10 +401,6 @@ impl<'a> AxisPlan<'a> {
                     .collect::<Result<_, _>>()?
             }
         };
-        charge(
-            work,
-            units(children.len().saturating_mul(visit.tuple.len() + 1)),
-        )?;
         Ok(children)
     }
 
@@ -452,9 +458,16 @@ pub fn lay_out(
     let options = &table.options;
     let row_plan = AxisPlan::new(table, cache, rows, true, work)?;
     let column_plan = AxisPlan::new(table, cache, columns, false, work)?;
-    let row_lines = row_plan.lines(options, work)?;
-    let column_lines = column_plan.lines(options, work)?;
     let geometry = geometry(table, &row_plan, &column_plan);
+    // The rows stop once they alone pass the cap at the narrowest width, and the columns once
+    // they pass it at the rows' height, so the cap fails before both axes are built.
+    let cells = MAX_PIVOT_CELLS.saturating_sub(table.page_fields.len().saturating_mul(2));
+    let cap = |offset: u32, span: usize| (cells / span.max(1)).saturating_sub(offset as usize);
+    let row_cap = cap(geometry.first_data_row, geometry.first_data_column as usize);
+    let row_lines = row_plan.lines(options, row_cap.saturating_add(1), work)?;
+    let height = (geometry.first_data_row as usize).saturating_add(row_lines.len());
+    let column_cap = cap(geometry.first_data_column, height);
+    let column_lines = column_plan.lines(options, column_cap.saturating_add(1), work)?;
     let location = location(table, &geometry, [row_lines.len(), column_lines.len()])?;
     Ok(PivotLayout {
         rows: row_lines,
