@@ -65,7 +65,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, scalars, signed
+from rustsheet_tools.accuracy.defs._common import Shape, by_stratum_with_edge, scalars, signed
 from rustsheet_tools.accuracy.defs.annuity import draw_annuity, present_value
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
@@ -295,8 +295,6 @@ def _pduration(args: Sequence[MathArg]) -> mpmath.mpf:
 
 # -- draws -----------------------------------------------------------------------------------------
 
-Shape = Callable[[random.Random], list[Arg]]
-
 
 def _rate(stratum: str, rng: random.Random, r: float) -> float:
     """The tail stratum's rate: near 0 (either sign, |rate| from 1E-12) or large; otherwise `r`."""
@@ -327,8 +325,7 @@ def _strata(
             return make("typical", rng)
         return rng.choice(edges)(rng)
 
-    draws = {s: (lambda rng, s=s: make(s, rng)) for s in ("typical", "tail", "extreme", "log-uniform")}
-    return by_stratum({**draws, "edge": edge}, doc)
+    return by_stratum_with_edge(make, edge, doc)
 
 
 def _fv_like(stratum: str, rng: random.Random) -> list[Arg]:

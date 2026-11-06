@@ -2610,6 +2610,31 @@ Status: DEVIATION (decision 0014)
 Implemented in: functions/lift/kinds/financial.rs (`CUMULATIVE_WEIGHT`, `CUMULATIVE`)
 Tasks: T-1845
 
+## CUMIPMT and CUMPRINC argument domains (T-4110)
+Rule: CUMIPMT and CUMPRINC are `#NUM!` at a rate of 0, for a start period below 1 (before it rounds up), for an end
+period past nper (also below nper + 1, over a fractional nper) and for a start period after the end period. Over a
+valid range CUMPRINC is within ulps of the exact sum with the start rounded up and the end rounded down, type 1's
+period 1 being the whole payment, also over millions of periods ("CUMIPMT and CUMPRINC over many periods"). CUMIPMT
+is `PMT·m - CUMPRINC` in doubles, which cancels at a tiny rate: `CUMIPMT(1.10337465791075E-12,249,107536.505163037,50,88,0)`
+is -3.3637479646131396E-6 against the math's -3.3637426202E-6, 1.6E-6 relative off (CUMIPMT/s1 A108); elsewhere it is
+within ulps of the exact sum too.
+Evidence: the Gate A tables accuracy/CUMIPMT/s1 and accuracy/CUMPRINC/s1 (excel-graph, 2026-11-06, T-4110), 400 points,
+16 of them `#NUM!`: a rate of 0 at CUMIPMT A127 `CUMIPMT(0,156,794172.239738137,76,130,1)`, A138 and CUMPRINC A113,
+A115, A122, A124, A132, A138; a start below 1 at CUMIPMT A118 `CUMIPMT(0.00122690808909371,58,276.366733654612,0.3,53,0)`
+and CUMPRINC A131 (start 0), A136 (0.3); an end past a fractional nper at CUMPRINC A119
+`CUMPRINC(0.0366349037247216,213.5,37308.7701841375,186,214,0)` and A126 (nper 65.5, end 66); a start after the end at
+CUMIPMT A115, A132 and CUMPRINC A125. The gen-m9 cells agree: 9d9ceba257f8001b A382 `CUMIPMT(0,310,54445,6,22,0)`,
+67a4c03afd63f988 A271 `CUMIPMT(0.05,272,417600,7,2,0)`, 0a957119475760c5 A40 (start 0.3). Every other point is a value.
+Unprobed: a negative rate (only -2, gen-m9 d0854366830dcdee A232, and the overflow case of "PMT when (1+rate)^nper
+overflows or underflows" are `#NUM!`), a pv of 0 or below, a type other than 0, 0.5 and 1, and a start and end in order
+whose rounding leaves no whole period (`CUMIPMT(r,n,pv,1.5,1.7,0)`); the Gate A definitions give them no math value.
+Where the principal underflows the double range (a deep discount over millions of periods, CUMPRINC A153, A170) Excel
+gives 0, inside the table's absolute floor.
+Ours: the engine matches every error and is bit-exact on 230 of the 400 points; four tiny-rate CUMIPMT points are
+visibly off Excel through `PMT·m - CUMPRINC` (known failures, T-4390).
+Status: VERIFIED (excel-graph)
+Tasks: T-4110
+
 ## NPV, IRR and MIRR cash-flow work cap
 Rule: RustSheet charges each lifted NPV, IRR or MIRR element for its walks over the cash flows, against SPEC-0011's
 2^27 visit cap. NPV and MIRR elements cost one unit per flow. An IRR element costs 512 units per flow (`IRR_WEIGHT`),
@@ -3069,6 +3094,46 @@ Evidence: probes/effect-overflow-power-of-ten A1-A14 (excel-graph).
 Ours: `rate_power` in functions/financial/rate_conversions.rs calls `arithmetic::power` and maps its overflow to `#NUM!`.
 Status: VERIFIED (excel-graph)
 Tasks: T-2034, T-2241
+
+## EFFECT, NOMINAL and RRI near a rate of 0 are far from the math (T-4110)
+Rule: EFFECT and NOMINAL are `#NUM!` at a rate of 0 and at an npery that floors to 0. At a tiny rate, or a rate small
+against npery, Excel's `(1 + r/n)^n - 1` and `((1 + e)^(1/n) - 1)·n` lose the rate in the double `1 + r/n` or
+`(1 + e)^(1/n)`: where it rounds to 1 the result is 0, and near it the result is off the math by up to 61%. RRI's
+`EXP(LN(fv/pv)*(1/nper))-1` cancels the same way where the growth is near 0. These are Excel's values (decision 0300):
+the engine matches them to the bit.
+Evidence: the Gate A tables accuracy/EFFECT/s1, accuracy/NOMINAL/s1 and accuracy/RRI/s1 (excel-graph, 2026-11-06,
+T-4110):
+- `#NUM!` at a rate of 0 (EFFECT A71 `EFFECT(0,7)`, A72, A76, A81; NOMINAL A69 `NOMINAL(0,275)`, A70, A73-A75, A78, A84)
+  and at npery 0 (EFFECT A67 `EFFECT(0.0270739423891995,0)`, A73, A80, A83, A84; NOMINAL A68, A71, A77, A79, A80, A82),
+  as gen-m9 5422bdbf173fc233 A70 `EFFECT(0,4)` and c0681a8b150ce301 A291 `EFFECT(0.05,0.5)` showed.
+- 0 where the math is not: EFFECT A85 `EFFECT(1.70813547576784E-10,25076364)` (math 1.708E-10), A92, A93, A95, A99,
+  A119; NOMINAL A85 `NOMINAL(2.51964277981808E-13,669472753125)` (math 2.520E-13), A91, A94, A95, A108, A109, A120.
+- Off the math by more than 1E-4 relative: EFFECT A116 `EFFECT(4.71226605712091E-15,3)` 4.6629367034256575E-15
+  (math 4.7123E-15, 1.0%), A87 (2.0%), A102, A104, A110, A113, A120; NOMINAL A119 `NOMINAL(4.04873998338286E-15,4)`
+  3.552713678800501E-15 (math 4.0487E-15, 12%), A97 `NOMINAL(1.04206680307683E-09,7542681)` 1.67481162272054E-09 (math
+  1.0421E-09, 61%), A87, A89, A106, A115; RRI A163 `RRI(144671643887.505,1.37778115802967E+68,1.36433071381757E+68)`
+  -6.783462680459706E-14 (math -6.7811E-14, 3.5E-4).
+- The eval cells agree: gen-m9 1dce4774f5c0e736 A246 `EFFECT(1E-300,8)` and 6376e27be7a05871 A235 `EFFECT(1E-300,1)` are
+  0, and `EFFECT(0.05,1E15)` is 0 (probes/fin-effect-huge-npery A45) and `EFFECT(0.05,1E12)`
+  0.05122908433109119 against the math's 0.0512711 (A37).
+Status: VERIFIED (excel-graph)
+Tasks: T-4110
+
+## DOLLARDE and DOLLARFR scale the fraction by the next power of ten (T-4110)
+Rule: with F the fraction and D the smallest power of ten at or above F, DOLLARDE(x, F) is `i + f·D/F` and
+DOLLARFR(x, F) `i + f·F/D`, where x = i + f splits into its integer part toward 0 and its fraction, so a negative
+dollar is the mirror of the positive one and a power of ten for F returns x. Excel's doubles are within ulps of that
+math on the doubles of the arguments.
+Evidence: the Gate A tables accuracy/DOLLARDE/s1 and accuracy/DOLLARFR/s1 (excel-graph, 2026-11-06, T-4110), 240 points,
+all within 15 digits of the math: `DOLLARDE(-805.1,2)` -805.5000000000001 (A71), `DOLLARDE(20.8308,999)`
+20.83163163163163 (A67, D = 1000), `DOLLARDE(34.7156,1001)` 41.14885114885117 (A79, D = 10000), `DOLLARDE(356.223,100)`
+356.223 (A69), `DOLLARFR(-611.7,2)` -611.14 (A75), `DOLLARFR(415.961,1000000)` 415.961 (A74); and the gen-m9 cells
+(`DOLLARDE(2.5,13)` 5.846153846153847).
+Unprobed: a fraction below 1 (Microsoft documents `#NUM!` below 0 and `#DIV/0!` from 0 to 1), a non-integer fraction,
+and fractions past 1E9, where a double `log10` of 10^k + 1 may round to k.
+Ours: `fn_dollarde` and `fn_dollarfr` (functions/financial/rate_conversions.rs), bit-exact on all 240 points.
+Status: VERIFIED (excel-graph)
+Tasks: T-4110
 
 ## PRICE and ODDFPRICE discount with Excel's `^`
 Rule: PRICE and ODDFPRICE discount each coupon and the redemption by `(1 + yld/frequency)^t` with Excel's `^`

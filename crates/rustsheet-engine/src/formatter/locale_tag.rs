@@ -13,7 +13,7 @@ use crate::locale::calendar_date_names::{
 pub use crate::locale::excel_date_names::DateNames;
 use crate::locale::excel_date_names::{
     ARABIC, ARABIC_LEVANT, BCP47_ONLY, EN_US, HIJRI_ARABIC, HIJRI_ENGLISH, HIJRI_FRENCH,
-    HIJRI_TURKISH, LOCALES, LUNAR_JA, LUNAR_KO, LUNAR_ZH,
+    HIJRI_TURKISH, LOCALES, LUNAR_JA, LUNAR_KO, LUNAR_ZH, SUBLANGUAGE_VARIANTS,
 };
 use crate::locale::lcids;
 
@@ -188,6 +188,13 @@ pub fn resolve_after_hijri_prefix(tag: &str) -> LocaleTag {
 
 /// [`resolve`], with digit 0 read as 6 when `hijri_prefix`.
 fn resolve_with(tag: &str, hijri_prefix: bool) -> LocaleTag {
+    // Excel: before a `,` only a BCP-47 name is a locale, spaces around it trimmed; a hex LCID
+    // there is none (`[$-409,200]mmmm`, `[$-411,200]mmmm`, `[$-40C,200]mmmm` are "March",
+    // `[$-ja-JP,200]mmmm` "3月", `[$-ar-SA ,200]mmmm` "مارس"; probes/t4492-comma-suffix-reading,
+    // t4492-locale-comma-tag-shapes; number-formats.md "The `locale,N00` form").
+    if let Some((locale, _)) = numeral_suffix(tag) {
+        return resolve_bcp47(locale.trim_matches(' '), hijri_prefix);
+    }
     if tag.eq_ignore_ascii_case("x-sysdate") {
         return LocaleTag::SystemDate;
     }
@@ -220,7 +227,9 @@ fn resolve_with(tag: &str, hijri_prefix: bool) -> LocaleTag {
 /// to (`[$-fr_FR-x]` keeps the workbook's names and `A/P` as written).
 pub fn numerals(tag: &str) -> Numerals {
     if let Some((_, suffix)) = numeral_suffix(tag) {
-        return hex_value(suffix).map_or(Numerals::Ascii, |value| Numerals::from_byte(value >> 8));
+        return suffix_value(suffix).map_or(Numerals::Ascii, |value| {
+            Numerals::from_byte((value >> 8) & 0xFF)
+        });
     }
     if let Some(value) = hex_value(tag) {
         return Numerals::from_byte(value >> 24);
@@ -250,6 +259,16 @@ fn numeral_suffix(tag: &str) -> Option<(&str, &str)> {
     tag.split_once(',')
 }
 
+/// The value of the suffix after a tag's comma: every character read as an [`extended_hex`]
+/// digit, with no length limit, wrapping at 32 bits. So a space counts -16 and `_` 47: `, 200`
+/// and `,2 00` are Arabic-Indic and Myanmar digits, `,200 ` byte 0x1F, `,g00` Myanmar, `,2_0`
+/// Devanagari, and `,100000200` wraps to Arabic-Indic (probes/t4492-comma-suffix-reading,
+/// t4492-locale-comma-tag-shapes; number-formats.md "The `locale,N00` form"). A non-ASCII suffix
+/// is unprobed and reads as no value.
+fn suffix_value(suffix: &str) -> Option<u32> {
+    suffix.is_ascii().then(|| extended_hex_digits(suffix))
+}
+
 /// `tag` read as a hex LCID with its calendar digits, if it is one.
 fn hex_value(tag: &str) -> Option<u32> {
     u32::from_str_radix(tag, 16)
@@ -270,14 +289,19 @@ fn extended_hex(tag: &str) -> Option<u32> {
     if tag.is_empty() || tag.len() > 8 || !tag.is_ascii() {
         return None;
     }
-    Some(tag.bytes().fold(0u32, |value, c| {
+    Some(extended_hex_digits(tag))
+}
+
+/// The [`extended_hex`] arithmetic over the bytes of `text`, wrapping at 32 bits.
+fn extended_hex_digits(text: &str) -> u32 {
+    text.bytes().fold(0u32, |value, c| {
         let digit = match c {
             b'a'.. => i32::from(c) - i32::from(b'a') + 10,
             b'A'..=b'Z' => i32::from(c) - i32::from(b'A') + 10,
             _ => i32::from(c) - i32::from(b'0'),
         };
         value.wrapping_mul(16).wrapping_add_signed(digit)
-    }))
+    })
 }
 
 /// The calendar digits of a tag value (bits 16-23), without its numeral byte.
@@ -436,12 +460,18 @@ fn without_locale(calendar: u32) -> LocaleTag {
     LocaleTag::Names(Localized::new(names, None, calendar, false))
 }
 
-/// The table of exactly `lcid`.
+/// The table of exactly `lcid`, a probed locale's or a high-sublanguage variant's.
 fn table(lcid: u16) -> Option<&'static DateNames> {
     LOCALES
         .iter()
         .find(|(id, _, _)| *id == lcid)
         .map(|(_, _, names)| *names)
+        .or_else(|| {
+            SUBLANGUAGE_VARIANTS
+                .iter()
+                .find(|(id, _)| *id == lcid)
+                .map(|(_, names)| *names)
+        })
 }
 
 /// The first table of `lcid`'s language, for an LCID with no table of its own. Excel falls back

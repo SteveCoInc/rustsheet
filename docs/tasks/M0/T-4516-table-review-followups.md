@@ -41,7 +41,8 @@ T-4092 (#3515, order statistics) and T-4106 (#3525, GAMMA/PERMUT tables).
 
 ## Outcome
 - 1a done: `defs/annuity.py`'s `_annuity` is now the public `draw_annuity`; its callers (NPER's and RATE's draws in
-  `annuity.py`, `_base` in `annuity_values.py`) use it. No other module imported it.
+  `annuity.py`, `_base` in `annuity_values.py`, and T-4110's `_make` in `annuity_cumulative.py`, which reached into
+  the private name) use it.
 - 1b skipped (code), documented instead: giving IPMT `NoValueError` at a period strictly between nper and nper + 1 is a
   sidecar removal. `rustsheet-accuracy math --suite probes --function IPMT` then moves
   probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,...)`, period 1 over nper 1E-10) from math values to
