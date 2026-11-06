@@ -168,3 +168,35 @@ fn the_item_and_aggregate_probes_cells_are_excels() {
         ],
     );
 }
+
+#[test]
+fn the_cells_text_is_bounded() {
+    // A long item: every cell that shows it holds a copy, and the copies count.
+    let (mut cache, table) = crate::pivot::probe_cases::diagonal(3, true);
+    let long = "x".repeat(1_000);
+    cache.fields[0].items[0] = CacheItem::Text(long.clone());
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute(&table, &cache, &mut work).unwrap();
+    let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
+    let cells = render(&table, &cache, &result, &layout).unwrap();
+    let bytes: usize = cells
+        .iter()
+        .map(|c| match &c.value {
+            PivotCell::Text(text) => text.len(),
+            _ => 0,
+        })
+        .sum();
+    assert!(cells.contains(&RenderedCell {
+        row: 2,
+        column: 0,
+        value: PivotCell::Text(long)
+    }));
+    assert_eq!(
+        render_within(&table, &cache, &result, &layout, bytes),
+        Ok(cells)
+    );
+    assert_eq!(
+        render_within(&table, &cache, &result, &layout, bytes - 1),
+        Err(PivotComputeError::Limit)
+    );
+}

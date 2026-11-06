@@ -226,8 +226,10 @@ pub(crate) fn probe_pivot(case: &Json, name: &str) -> (PivotCache, PivotTable) {
             None
         };
         let mut pivot_field = PivotField::new(axis, cache_field.items.len());
-        // The builder writes `showAll="0"` on every field (`pivot_definition.py`).
-        pivot_field.show_all = false;
+        // The builder writes `showAll="0"` on every field (`pivot_definition.py`), and refuses
+        // it in `attrs` today; a spec that sets it is read as given.
+        let attrs = &definition["fields"][&cache_field.name]["attrs"];
+        pivot_field.show_all = attrs["showAll"].as_bool().unwrap_or(false);
         let spec = &definition["fields"][&cache_field.name];
         if axis.is_some() {
             // The builder lists the field's `order` first, then the rest in first-seen order.

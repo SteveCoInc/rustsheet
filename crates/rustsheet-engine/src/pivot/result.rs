@@ -24,9 +24,12 @@
 //!    An axis of one field with `showAll` on (`pivotField@showAll`, on when absent; Excel and the
 //!    case builder write `showAll="0"`) also shows the items it does not hide that no kept
 //!    record holds, in display order, with no accumulator, so their cells are blank
-//!    (probes/t4311-pivot-showall-column-and-groups H, read back from Excel's own layout). On an
-//!    axis of several fields `showAll` is not applied, and whether an item the page filter
-//!    leaves without records shows is unprobed (both UNVERIFIED, T-4657).
+//!    (probes/t4311-pivot-showall-column-and-groups H: a grouped row field, read back from
+//!    Excel's own layout in Calc I1:J8). On a column field only GETPIVOTDATA is evidenced
+//!    (t4311 Calc B1, B3, B5 answer 0 on P!A13 with `showAll="1"`, against `#REF!` with it off;
+//!    P!A13's `rendered` cells are the builder's, not Excel's), so the rendered column is
+//!    UNVERIFIED (T-4657). On an axis of several fields `showAll` is not applied, and whether an
+//!    item the page filter leaves without records shows is unprobed (both UNVERIFIED, T-4657).
 //!    The rest is read from the accumulators ([`PivotResult::value_as`]):
 //!    - in a pivot whose data fields are all Sum, a total is the sum of its child cells in
 //!      display order, and the 2-D grand-grand total the sum of the row totals (t4616 S1, S4 to

@@ -14,7 +14,7 @@ mod render;
 pub use lines::{lay_out, AxisLine, PivotLayout, MAX_PIVOT_CELLS};
 pub use render::{
     render, PivotCell, RenderedCell, ALL_ITEMS, BLANK_ITEM, COLUMN_LABELS, GRAND_TOTAL,
-    MULTIPLE_ITEMS, ROW_LABELS, VALUES,
+    MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS, VALUES,
 };
 
 use crate::expressions::token::Error;

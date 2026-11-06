@@ -317,12 +317,14 @@ Rule:
 - The headers follow the lines: each column line labels its levels from `r` on, one header row
   per column level below the location's top row (t4138 G5: `A` in C5, `Web` and `Store` in C6
   and D6, `A Total` in E5); each row line labels its levels from `r` on in its level's label
-  column, compact form putting several levels in one column (G2), the indentation a style.
+  column, compact form putting several levels in one column (G2). The sidecars hold values
+  only, so a label cell's indentation is not evidenced; the engine writes the item's text alone.
 - A single data field with Values on no axis puts its caption at the corner with fields on both
   axes (C!A3), over the data column with no column field (t4138 G1!C4, G8!B8), and as the label
   of the only row with no row field (G7!B6). With Values on an axis, its items are the data
   fields' captions, and its grand-total lines read `Total <data field>` (G6!B11:B12, t4135
-  A_sum!N4:S4).
+  A_sum!N4:S4), with no `grandTotalCaption` set; whether that caption replaces the text there is
+  unprobed (the engine keeps `Total <data field>`; UNVERIFIED, T-4650).
 - Items render as in "Items show in the order the pivot field lists them" (t4134 I2, I4, I5).
 
 Evidence: probes/t4123-pivot-capture, the `pivots` cells of its sidecar (excel-graph, 2026-11-06,
@@ -333,7 +335,8 @@ I2, I4, I5, t4135 all twelve, t4589, t4614, t4616, and t4622 but East's custom C
 values over an error, a result rule of T-4168's, T-4636). Number formats are PV2's (T-4169).
 The engine's own readings, not probed: a number or date item's subtotal label (`number_to_text`
 of the value, then ` Total`); a subtotal label with Values inside its field (`<item> <data
-field>`); the grand-total caption with Values on its axis (always `Total <data field>`); the
+field>`); the grand-total caption with Values on its axis (always `Total <data field>`, even with
+`grandTotalCaption`); the
 header over a Values level in a label column of its own (left empty); `rowHeaderCaption`
 beside the all-`compact="0"` rule (the field name wins, as over `colHeaderCaption` in C2).
 Status: VERIFIED (excel-graph) for the probes listed. UNVERIFIED (probe pending: T-4657): number
@@ -759,6 +762,9 @@ unit per record and stage, per item ordered, per sort step, per node or accumula
 fed to an accumulator. It holds at most 10,000,000 nodes (`MAX_PIVOT_NODES`): axis nodes plus one
 accumulator per (row node, column node, data field) some record reaches. Past either the pivot has no
 result (`PivotComputeError::Limit`), where Excel would render it.
+Its cells (`render`, T-4149) hold at most 134,217,728 bytes of text together
+(`MAX_PIVOT_TEXT_BYTES`, about 32 per cell of the cell cap), since each cell copies its label;
+past it the render fails with `Limit`, where Excel would show the pivot.
 Its layout (`lay_out`, T-4147) draws on the same work units, one per line and `x` made, and has no
 result past 4,000,000 cells (`MAX_PIVOT_CELLS`: the location's rows times columns plus two per page
 field, checked from the line counts before any cell is made) or when the location would pass the
@@ -769,6 +775,7 @@ Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `MAX_PIVOT_NODES`, `charge`,
 `count_nodes`)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`MAX_PIVOT_CELLS`, `location`; T-4147)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`MAX_PIVOT_TEXT_BYTES`; T-4149)
 
 ## Pivots without refreshOnLoad, and source edits
 Rule: unknown. Two things are unprobed: whether Excel for the web re-renders a pivot whose cache lacks

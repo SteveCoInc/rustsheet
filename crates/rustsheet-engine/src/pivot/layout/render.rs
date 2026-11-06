@@ -16,7 +16,8 @@
 //!   label column, or the first row field's name when every pivot field has `compact="0"`; each
 //!   further label column holds the name of the first field in it (t4123 T, T2; t4138 G3, G4).
 //!   Each row line labels its levels from `r` on, each in its label column (compact form puts
-//!   several levels in one column; the indentation is a style).
+//!   several levels in one column; the sidecars hold values only, so indentation is not
+//!   evidenced and a label is the item's text alone).
 //! - **One data field** with Values on no axis: its caption sits at the location's corner when
 //!   both axes have a field (t4123 C), over the data column when the column axis is empty (t4138
 //!   G1, G8), and as the row label when only the row axis is empty (G7).
@@ -31,6 +32,10 @@
 //! - **Page fields** take two cells, the field's name and `(All)`, the selected item or
 //!   `(Multiple Items)` when it hides items (t4137 K4), in the `rowPageCount` rows ending one row
 //!   above the location, three columns per page column (t4138 G8).
+//!
+//! Each cell copies its label, so the cells' text is bounded by [`MAX_PIVOT_TEXT_BYTES`]
+//! (pivots.md "A pivot result is bounded in work and nodes", DEVIATION); their count is bounded
+//! by the layout's cell cap.
 //!
 //! The engine's own readings where no probe shows Excel's (pivots.md "Rendered pivot cells",
 //! UNVERIFIED):
@@ -168,11 +173,23 @@ struct Cells<'a> {
     table: &'a PivotTable,
     cache: &'a PivotCache,
     out: Vec<RenderedCell>,
+    /// The text bytes the cells may still take ([`MAX_PIVOT_TEXT_BYTES`]).
+    text_left: usize,
+    /// A cell's text passed `text_left`: nothing more is kept and the render fails.
+    over: bool,
 }
 
 impl Cells<'_> {
     fn put(&mut self, row: u32, column: u32, value: PivotCell) {
-        self.out.push(RenderedCell { row, column, value });
+        if let PivotCell::Text(text) = &value {
+            match self.text_left.checked_sub(text.len()) {
+                Some(left) if !self.over => self.text_left = left,
+                _ => self.over = true,
+            }
+        }
+        if !self.over {
+            self.out.push(RenderedCell { row, column, value });
+        }
     }
 
     fn text(&mut self, row: u32, column: u32, text: &str) {
@@ -316,18 +333,36 @@ impl Cells<'_> {
     }
 }
 
+/// Most bytes of text one pivot's rendered cells hold together (SPEC-0032 "Untrusted-input
+/// limits"): a label is copied into every cell that shows it, so a long item or caption on many
+/// lines would otherwise cost lines times its length. 128 MiB, about 32 bytes for each of
+/// [`MAX_PIVOT_CELLS`](super::MAX_PIVOT_CELLS) cells.
+pub const MAX_PIVOT_TEXT_BYTES: usize = 1 << 27;
+
 /// The cells of `table`'s pivot over `cache`, from its `result` ([`compute`](super::super::compute))
 /// and `layout` ([`lay_out`](super::lay_out)), in no particular order: every non-empty cell of
 /// the location and of the page area above it (see the module documentation).
 ///
 /// # Errors
 /// [`PivotComputeError::Malformed`] when `result` or `layout` is not over `table` and `cache`
-/// (a line's node or item is not in the result's tree or the cache).
+/// (a line's node or item is not in the result's tree or the cache), and
+/// [`PivotComputeError::Limit`] when the cells' text passes [`MAX_PIVOT_TEXT_BYTES`].
 pub fn render(
     table: &PivotTable,
     cache: &PivotCache,
     result: &PivotResult,
     layout: &PivotLayout,
+) -> Result<Vec<RenderedCell>, PivotComputeError> {
+    render_within(table, cache, result, layout, MAX_PIVOT_TEXT_BYTES)
+}
+
+/// [`render`] with at most `text_bytes` bytes of text.
+fn render_within(
+    table: &PivotTable,
+    cache: &PivotCache,
+    result: &PivotResult,
+    layout: &PivotLayout,
+    text_bytes: usize,
 ) -> Result<Vec<RenderedCell>, PivotComputeError> {
     let options = &table.options;
     let rows = Axis {
@@ -359,6 +394,8 @@ pub fn render(
                 .saturating_add(2)
                 .saturating_mul(layout.columns.len().saturating_add(2)),
         ),
+        text_left: text_bytes,
+        over: false,
     };
     let named = !table.fields.is_empty() && table.fields.iter().all(|f| !f.compact);
     let name = |field: Option<u32>| {
@@ -436,6 +473,9 @@ pub fn render(
         }
     }
     page_area(&mut cells, layout);
+    if cells.over {
+        return Err(PivotComputeError::Limit);
+    }
     Ok(cells.out)
 }
 
