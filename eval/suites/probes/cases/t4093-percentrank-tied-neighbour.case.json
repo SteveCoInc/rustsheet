@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4093: PERCENTRANK, PERCENTRANK.INC and PERCENTRANK.EXC of an x strictly between two values whose lower neighbour is tied (does the interpolation start from the last copy or the first?), at 15 digits; row 7 ties the upper neighbour instead, row 9 is the default significance.",
+ "tags": [
+  "M9",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=PERCENTRANK({1,2,2,2,3},2.5,15)",
+    "A2": "=PERCENTRANK({13,12,11,8,4,3,2,1,1,1},1.5,15)",
+    "A3": "=PERCENTRANK({1,1,1,3},2,15)",
+    "A4": "=PERCENTRANK({1,2,2,3},2.5,15)",
+    "A5": "=PERCENTRANK({1,2,2,3},2.25,15)",
+    "A6": "=PERCENTRANK({3,1,2,2},2.75,15)",
+    "A7": "=PERCENTRANK({1,3,3,3},2,15)",
+    "A8": "=PERCENTRANK({1,1,2,2,5},1.5,15)",
+    "A9": "=PERCENTRANK({1,2,2,2,3},2.5)",
+    "B1": "=PERCENTRANK.INC({1,2,2,2,3},2.5,15)",
+    "B2": "=PERCENTRANK.INC({13,12,11,8,4,3,2,1,1,1},1.5,15)",
+    "B3": "=PERCENTRANK.INC({1,1,1,3},2,15)",
+    "B4": "=PERCENTRANK.INC({1,2,2,3},2.5,15)",
+    "B5": "=PERCENTRANK.INC({1,2,2,3},2.25,15)",
+    "B6": "=PERCENTRANK.INC({3,1,2,2},2.75,15)",
+    "B7": "=PERCENTRANK.INC({1,3,3,3},2,15)",
+    "B8": "=PERCENTRANK.INC({1,1,2,2,5},1.5,15)",
+    "B9": "=PERCENTRANK.INC({1,2,2,2,3},2.5)",
+    "C1": "=PERCENTRANK.EXC({1,2,2,2,3},2.5,15)",
+    "C2": "=PERCENTRANK.EXC({13,12,11,8,4,3,2,1,1,1},1.5,15)",
+    "C3": "=PERCENTRANK.EXC({1,1,1,3},2,15)",
+    "C4": "=PERCENTRANK.EXC({1,2,2,3},2.5,15)",
+    "C5": "=PERCENTRANK.EXC({1,2,2,3},2.25,15)",
+    "C6": "=PERCENTRANK.EXC({3,1,2,2},2.75,15)",
+    "C7": "=PERCENTRANK.EXC({1,3,3,3},2,15)",
+    "C8": "=PERCENTRANK.EXC({1,1,2,2,5},1.5,15)",
+    "C9": "=PERCENTRANK.EXC({1,2,2,2,3},2.5)"
+   }
+  }
+ ],
+ "expected": {}
+}

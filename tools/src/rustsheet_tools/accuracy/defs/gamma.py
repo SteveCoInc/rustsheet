@@ -339,11 +339,13 @@ CHISQ_INV = register(
 # `CHISQ.INV.RT(1E-9,1.5)` equals the df-1 value (df truncation; probes t3336-chisq-df1-right-tail).
 RT_TRUNC_SOURCE = "statistics.md#inverse-cdf-functions-at-a-tiny-or-near-1-probability-t-1543"
 
+
 # CHISQ.INV.RT takes any df (statistics.md, the huge-shape entry). The s1 batches of all three stop at a shape of
 # 1E7 (df 2E7); e-T-3863 draws the huge shapes, with Temme's expansion.
-CHISQ_INV_RT = register(
-    Definition(
-        function="CHISQ.INV.RT",
+def _right_tail(function: str) -> Definition:
+    """CHISQ.INV.RT, or CHIINV, its legacy name with the same rules."""
+    return Definition(
+        function=function,
         params=(
             _probability(CLOSED_SOURCE, lo_open=True, hi_open=False),
             deg_freedom_param(float("inf"), RT_TRUNC_SOURCE),
@@ -351,4 +353,10 @@ CHISQ_INV_RT = register(
         value=_chisq(upper=True),
         sources=(HUGE_SOURCE, CLOSED_SOURCE, "Abramowitz and Stegun 26.4.19"),
     )
-)
+
+
+CHISQ_INV_RT = register(_right_tail("CHISQ.INV.RT"))
+# CHIINV is CHISQ.INV.RT's legacy name: every probed cell of the two agrees (probes-numeric
+# m9-legacy-chiinv, t3336-chisq-df1-right-tail). It has no reference table; the definition gives its
+# eval cells math values, so decision 0267 item 3's df 1 marks can name them (T-3337).
+CHIINV = register(_right_tail("CHIINV"))
