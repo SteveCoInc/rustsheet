@@ -93,8 +93,8 @@ pub(crate) fn compare_layouts(
             });
             let engine_location = place.map(|e| {
                 let corner = |row: u32, col: u32| Addr {
-                    row: row + 1,
-                    col: col + 1,
+                    row: row.saturating_add(1),
+                    col: col.saturating_add(1),
                 };
                 let (first, last) = (corner(e.top, e.left), corner(e.bottom, e.right));
                 if first == last {

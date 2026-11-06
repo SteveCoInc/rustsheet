@@ -35,4 +35,7 @@ Depends on the `pivots` sidecar section. Until the engine renders pivots, these 
   (`pivot_layout` per case) and report.md ("Pivot layout").
 - **Refactor:** the cell scorer moved from runner.rs to runner/scoring.rs to keep runner.rs under the
   file-size limit, and `spec_formulas` was extracted.
-- **Limit:** xlsx cases' sidecar pivots are not scored yet; T-4131 covers them.
+- **Limits:**
+  - xlsx cases' sidecar pivots are not scored yet; T-4131 covers them.
+  - Displayed text of pivot cells is not scored either: sidecars do not capture it yet, which is
+    T-4169's (T-4123 Outcome).

@@ -13,10 +13,9 @@ use serde::{Deserialize, Serialize};
 use crate::accuracy::envelope::MathValue;
 use crate::accuracy::math::{math_sidecar, MathTable};
 use crate::argument_coverage::{self, CallSeen};
-use crate::case::OraclePivot;
 use crate::case::{
     canonical_key, cell_key, is_excel_evidence, kept_nonzero_formulas, load_oracle,
-    split_qualified, CaseSpec, CASE_FORMAT,
+    split_qualified, CaseSpec, OraclePivot, CASE_FORMAT,
 };
 use crate::case_log;
 use crate::cellref::Addr;
@@ -887,7 +886,9 @@ fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase, String> {
     let wanted: Vec<String> = if spec.check.is_empty() {
         expected.keys().cloned().collect()
     } else {
-        spec.check.iter().chain(&pivot_keys).cloned().collect()
+        let listed: BTreeSet<&String> = spec.check.iter().collect();
+        let extra = pivot_keys.iter().filter(|k| !listed.contains(k));
+        spec.check.iter().chain(extra).cloned().collect()
     };
     let mut expectations = Vec::new();
     let mut check = Vec::new();
