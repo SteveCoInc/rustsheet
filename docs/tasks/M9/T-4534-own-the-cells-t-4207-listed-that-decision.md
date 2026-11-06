@@ -3,7 +3,7 @@ id: T-4534
 title: "Own the cells T-4207 listed that decision 0308 does not except"
 milestone: M9
 lane: functions-math
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
