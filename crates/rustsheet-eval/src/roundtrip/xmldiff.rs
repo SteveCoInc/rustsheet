@@ -192,6 +192,12 @@ impl Node {
     fn size(&self) -> usize {
         1 + self.skipped + self.children.iter().map(Node::size).sum::<usize>()
     }
+
+    /// The source items the subtree holds as [`compare`] counts them: each element, its
+    /// attributes, and the semantic-owned elements below it.
+    fn items(&self) -> usize {
+        1 + self.attrs.len() + self.skipped + self.children.iter().map(Node::items).sum::<usize>()
+    }
 }
 
 /// One difference: the item's path, what it is, and its verdict label.
@@ -234,13 +240,13 @@ pub(crate) fn diff(source: &str, output: &str) -> Result<PartDiff, String> {
         let mut local = path.clone();
         compare(&a, &b, &mut path, &mut local, &mut d);
     } else {
-        d.checked = a.size();
+        d.checked = a.items();
         let mut root = element(
             format!("/{}", a.name.label()),
             Verdict::Changed,
             Some(format!("root became {}", b.name.label())),
         );
-        root.weight = a.size();
+        root.weight = a.items();
         push(&mut d, root);
     }
     Ok(d)
@@ -279,12 +285,13 @@ fn push(d: &mut PartDiff, diff: Difference) {
     }
 }
 
-/// The number of elements of a well-formed part, as [`diff`] counts a lost subtree.
+/// The source items of a well-formed part (elements and attributes), as [`diff`] counts a lost
+/// subtree.
 ///
 /// # Errors
 /// As [`diff`]'s parse.
 pub(crate) fn element_count(xml: &str) -> Result<usize, String> {
-    parse(xml).map(|n| n.size())
+    parse(xml).map(|n| n.items())
 }
 
 /// Compares two matched elements at `path` (the item path, with ordinals and keys) and `local`
@@ -341,15 +348,15 @@ fn compare(a: &Node, b: &Node, path: &mut String, local: &mut String, d: &mut Pa
                 compare(node, other, path, local, d);
             } else if d.differences.len() >= MAX_ITEMS {
                 // Past the cap, count the loss without building its path.
-                d.checked += node.size();
+                d.checked += node.items();
                 d.truncated += 1;
-                d.truncated_weight += node.size();
+                d.truncated_weight += node.items();
             } else {
-                d.checked += node.size();
+                d.checked += node.items();
                 let below = node.size() - 1;
                 let detail = (below > 0).then(|| format!("with {below} elements below it"));
                 let mut lost = element(path.clone(), Verdict::Lost, detail);
-                lost.weight = node.size();
+                lost.weight = node.items();
                 push(d, lost);
             }
             path.truncate(path_len);

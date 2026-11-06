@@ -13,7 +13,7 @@ C	roundtrip-poi/45540_classic_Header.xlsx	9305
 C	roundtrip-poi/45540_form_Footer.xlsx	5586
 C	roundtrip-poi/45540_form_Header.xlsx	5586
 C	roundtrip-poi/45544.xlsx	9373
-C	roundtrip-poi/46535.xlsx	117303
+C	roundtrip-poi/46535.xlsx	187513
 C	roundtrip-poi/46536.xlsx	745
 C	roundtrip-poi/47026.xlsm	662
 C	roundtrip-poi/47089.xlsm	1157
@@ -21,7 +21,7 @@ C	roundtrip-poi/47090.xlsx	654
 C	roundtrip-poi/47504.xlsx	714
 C	roundtrip-poi/47668.xlsx	754
 C	roundtrip-poi/47737.xlsx	1725
-C	roundtrip-poi/47804.xlsx	705
+C	roundtrip-poi/47804.xlsx	795
 C	roundtrip-poi/47813.xlsx	21842
 C	roundtrip-poi/47862.xlsx	697
 C	roundtrip-poi/47889.xlsx	0
@@ -35,7 +35,7 @@ C	roundtrip-poi/49156.xlsx	5492
 C	roundtrip-poi/49273.xlsx	5903
 C	roundtrip-poi/49325.xlsx	631
 C	roundtrip-poi/49609.xlsx	30962
-C	roundtrip-poi/49783.xlsx	628
+C	roundtrip-poi/49783.xlsx	720
 C	roundtrip-poi/49872.xlsx	720
 C	roundtrip-poi/49928.xlsx	663
 C	roundtrip-poi/49966.xlsx	684
@@ -59,7 +59,7 @@ C	roundtrip-poi/51963.xlsx	611
 C	roundtrip-poi/51998.xlsx	865
 C	roundtrip-poi/52348.xlsx	1827
 C	roundtrip-poi/52425.xlsx	630
-C	roundtrip-poi/52575_main.xlsx	427
+C	roundtrip-poi/52575_main.xlsx	475
 C	roundtrip-poi/52716.xlsx	2304
 C	roundtrip-poi/53101.xlsx	1730
 C	roundtrip-poi/53105.xlsx	66216
@@ -101,16 +101,16 @@ C	roundtrip-poi/56278.xlsx	0
 C	roundtrip-poi/56295.xlsx	765
 C	roundtrip-poi/56315.xlsx	633
 C	roundtrip-poi/56420.xlsx	723
-C	roundtrip-poi/56502.xlsx	676
+C	roundtrip-poi/56502.xlsx	786
 C	roundtrip-poi/56511.xlsx	745
 C	roundtrip-poi/56514.xlsx	941
 C	roundtrip-poi/56557.xlsx	1597
-C	roundtrip-poi/56574.xlsx	1114
+C	roundtrip-poi/56574.xlsx	1304
 C	roundtrip-poi/56644.xlsx	11102
 C	roundtrip-poi/56688_1.xlsx	695
-C	roundtrip-poi/56688_2.xlsx	619
-C	roundtrip-poi/56688_3.xlsx	620
-C	roundtrip-poi/56688_4.xlsx	629
+C	roundtrip-poi/56688_2.xlsx	705
+C	roundtrip-poi/56688_3.xlsx	706
+C	roundtrip-poi/56688_4.xlsx	718
 C	roundtrip-poi/56702.xlsx	19620
 C	roundtrip-poi/56730.xlsx	748
 C	roundtrip-poi/56737.xlsx	772
@@ -125,7 +125,7 @@ C	roundtrip-poi/57362.xlsx	2032
 C	roundtrip-poi/57423.xlsx	1486
 C	roundtrip-poi/57482-OnlyNumeric.xlsx	753
 C	roundtrip-poi/57523.xlsx	24298
-C	roundtrip-poi/57535.xlsx	751
+C	roundtrip-poi/57535.xlsx	861
 C	roundtrip-poi/57798.xlsx	734
 C	roundtrip-poi/57826.xlsx	990
 C	roundtrip-poi/57828.xlsx	790
@@ -157,14 +157,14 @@ C	roundtrip-poi/60255_extra_drawingparts.xlsx	884
 C	roundtrip-poi/60289.xlsx	620
 C	roundtrip-poi/60384.xlsx	1395
 C	roundtrip-poi/60509.xlsx	1063
-C	roundtrip-poi/60512.xlsm	16294
+C	roundtrip-poi/60512.xlsm	29098
 C	roundtrip-poi/60709.xlsx	684
 C	roundtrip-poi/60825.xlsx	0
 C	roundtrip-poi/61034.xlsx	6001
 C	roundtrip-poi/61060-conditional-number-formatting.xlsx	819
 C	roundtrip-poi/61063.xlsx	703
 C	roundtrip-poi/61281.xlsx	774
-C	roundtrip-poi/61495-test.xlsm	5453
+C	roundtrip-poi/61495-test.xlsm	5644
 C	roundtrip-poi/61605.xlsx	1277
 C	roundtrip-poi/61652.xlsx	2546
 C	roundtrip-poi/61869.xlsx	726
@@ -180,7 +180,7 @@ C	roundtrip-poi/64667.xlsx	3234
 C	roundtrip-poi/64750.xlsx	2451
 C	roundtrip-poi/64759.xlsx	883
 C	roundtrip-poi/65016.xlsx	288053
-C	roundtrip-poi/66365.xlsx	373
+C	roundtrip-poi/66365.xlsx	381
 C	roundtrip-poi/70005-countifs.xlsx	662
 C	roundtrip-poi/AmpersandHeader.xlsx	675
 C	roundtrip-poi/AverageTaxRates.xlsx	6719
@@ -193,12 +193,12 @@ C	roundtrip-poi/CustomXMLMappings-complex-type.xlsx	1624
 C	roundtrip-poi/CustomXMLMappings.xlsx	924
 C	roundtrip-poi/CustomXmlMappings-inverse-order.xlsx	924
 C	roundtrip-poi/DataTableCities.xlsx	3983
-C	roundtrip-poi/DataValidationEvaluations.xlsx	1681
+C	roundtrip-poi/DataValidationEvaluations.xlsx	1826
 C	roundtrip-poi/DataValidationListTooLong.xlsx	113
 C	roundtrip-poi/DataValidations-49244.xlsx	1774
 C	roundtrip-poi/DateFormatNumberTests.xlsx	1294
 C	roundtrip-poi/DateFormatTests.xlsx	2210
-C	roundtrip-poi/ElapsedFormatTests.xlsx	3921
+C	roundtrip-poi/ElapsedFormatTests.xlsx	4262
 C	roundtrip-poi/ExcelPivotTableSample.xlsx	1454
 C	roundtrip-poi/ExcelTables.xlsx	822
 C	roundtrip-poi/ExcelWithAttachments.xlsm	1698
@@ -209,22 +209,22 @@ C	roundtrip-poi/FormatChoiceTests.xlsx	2802
 C	roundtrip-poi/FormatConditionTests.xlsx	3064
 C	roundtrip-poi/FormatKM.xlsx	1157
 C	roundtrip-poi/Formatting.xlsx	902
-C	roundtrip-poi/FormulaEvalTestData_Copy.xlsx	27788
+C	roundtrip-poi/FormulaEvalTestData_Copy.xlsx	30662
 C	roundtrip-poi/FormulaSheetRange.xlsx	985
 C	roundtrip-poi/GeneralFormatTests.xlsx	3499
 C	roundtrip-poi/GroupTest.xlsx	751
 C	roundtrip-poi/HeaderFooterComplexFormats.xlsx	672
-C	roundtrip-poi/HsGetVal.xlsx	761
+C	roundtrip-poi/HsGetVal.xlsx	895
 C	roundtrip-poi/InlineString.xlsx	711
 C	roundtrip-poi/InlineStrings.xlsx	758
-C	roundtrip-poi/Intersection-52111-xssf.xlsx	740
+C	roundtrip-poi/Intersection-52111-xssf.xlsx	799
 C	roundtrip-poi/LIBRE_OFFICE-116306-0.xlsx	2711822
-C	roundtrip-poi/LIBRE_OFFICE-128382-0.xlsx	3723
+C	roundtrip-poi/LIBRE_OFFICE-128382-0.xlsx	5331
 C	roundtrip-poi/MalformedSSTCount.xlsx	497
-C	roundtrip-poi/MatrixFormulaEvalTestData.xlsx	4564
+C	roundtrip-poi/MatrixFormulaEvalTestData.xlsx	5260
 C	roundtrip-poi/NewStyleConditionalFormattings.xlsx	4310
 C	roundtrip-poi/NewlineInFormulas.xlsx	777
-C	roundtrip-poi/NumberFormatApproxTests.xlsx	6287
+C	roundtrip-poi/NumberFormatApproxTests.xlsx	6641
 C	roundtrip-poi/NumberFormatTests.xlsx	8855
 C	roundtrip-poi/RepeatingRowsCols.xlsx	923
 C	roundtrip-poi/SampleSS.strict.xlsx	844
@@ -248,8 +248,8 @@ C	roundtrip-poi/Themes.xlsx	916
 C	roundtrip-poi/Themes2.xlsx	1455
 C	roundtrip-poi/TwoSheetsNoneHidden.xlsx	649
 C	roundtrip-poi/TwoSheetsOneHidden.xlsx	652
-C	roundtrip-poi/VLookupFullColumn.xlsx	4748
-C	roundtrip-poi/ValueFunctionOfBlank.xlsx	699
+C	roundtrip-poi/VLookupFullColumn.xlsx	5452
+C	roundtrip-poi/ValueFunctionOfBlank.xlsx	791
 C	roundtrip-poi/WidthsAndHeights.xlsx	743
 C	roundtrip-poi/WithChart.xlsx	872
 C	roundtrip-poi/WithChartSheet.xlsx	4366
@@ -268,7 +268,7 @@ C	roundtrip-poi/absolute-anchor-over-empty-sheet.xlsx	2429
 C	roundtrip-poi/atp.xlsx	907
 C	roundtrip-poi/bug54803.xlsx	589
 C	roundtrip-poi/bug60848_sumproduct_unary_minus.xlsx	6804
-C	roundtrip-poi/bug60858.xlsx	1684
+C	roundtrip-poi/bug60858.xlsx	1693
 C	roundtrip-poi/bug62181.xlsx	720102
 C	roundtrip-poi/bug63189.xlsx	742
 C	roundtrip-poi/bug64512_embed.xlsx	942
@@ -277,21 +277,21 @@ C	roundtrip-poi/bug65464.xlsx	3563
 C	roundtrip-poi/bug66215.xlsx	1006
 C	roundtrip-poi/bug66675.xlsx	32038
 C	roundtrip-poi/bug66827.xlsx	742
-C	roundtrip-poi/bug67784.xlsx	538
+C	roundtrip-poi/bug67784.xlsx	603
 C	roundtrip-poi/bug69769.xlsx	1203
 C	roundtrip-poi/bug69812.xlsx	763
 C	roundtrip-poi/chartTitle_noTitle.xlsx	1745
 C	roundtrip-poi/chartTitle_withTitle.xlsx	1829
 C	roundtrip-poi/chartTitle_withTitleFormula.xlsx	1918
 C	roundtrip-poi/chart_sheet.xlsx	881
-C	roundtrip-poi/clone_sheet.xlsx	2457
+C	roundtrip-poi/clone_sheet.xlsx	2824
 C	roundtrip-poi/commentTest.xlsx	1365
 C	roundtrip-poi/comments.xlsx	779
-C	roundtrip-poi/conditional_formatting_cell_is.xlsx	17455
+C	roundtrip-poi/conditional_formatting_cell_is.xlsx	38490
 C	roundtrip-poi/conditional_formatting_multiple_ranges.xlsx	761
 C	roundtrip-poi/conditional_formatting_with_formula_on_second_sheet.xlsx	38629
 C	roundtrip-poi/craftonhills.edu_programreview_report.aspx_goalpriorityreport_0011d159-1eeb-4b63-8833-867b0926e5f3.xlsx	1250
-C	roundtrip-poi/customIndexedColors.xlsx	2534
+C	roundtrip-poi/customIndexedColors.xlsx	4832
 C	roundtrip-poi/dataValidationTableRange.xlsx	47510
 C	roundtrip-poi/decimal-format.xlsx	1984
 C	roundtrip-poi/deep-data.xlsx	0
@@ -303,7 +303,7 @@ C	roundtrip-poi/github-321.xlsx	762
 C	roundtrip-poi/headerFooterTest.xlsx	691
 C	roundtrip-poi/invalid_cell_reference.xlsx	0
 C	roundtrip-poi/link-external-workbook-a.xlsx	104
-C	roundtrip-poi/link-external-workbook-b.xlsx	99
+C	roundtrip-poi/link-external-workbook-b.xlsx	110
 C	roundtrip-poi/mv-calculator-final-2-20-2013.xlsm	133640
 C	roundtrip-poi/noSharedStringTable.xlsx	623
 C	roundtrip-poi/no_drawing_patriarch.xlsx	428429
@@ -333,11 +333,11 @@ C	roundtrip-poi/styles.xlsx	1031
 C	roundtrip-poi/table-sample.xlsx	950
 C	roundtrip-poi/tableStyle.xlsx	1215
 C	roundtrip-poi/template.xlsx	615
-C	roundtrip-poi/testNames.xlsm	650
+C	roundtrip-poi/testNames.xlsm	767
 C	roundtrip-poi/testSharedFormulasRangeSetBlankBug.xlsx	2624
 C	roundtrip-poi/testSharedFormulasSetBlank.xlsx	778
 C	roundtrip-poi/test_conditional_formatting.xlsx	964
-C	roundtrip-poi/tile-range-test.xlsx	626
+C	roundtrip-poi/tile-range-test.xlsx	730
 C	roundtrip-poi/unicodeSheetName.xlsx	753
 C	roundtrip-poi/workbookProtection-sheet_password-2013.xlsx	650
 C	roundtrip-poi/workbookProtection-workbook_password-2013.xlsx	611
@@ -353,55 +353,55 @@ C	roundtrip-poi/xlsx-corrupted.xlsx	634
 C	roundtrip-poi/xlsx-jdbc.xlsx	129
 C	roundtrip-poi/xssf-enum.xltx.xlsx	1463
 C	roundtrip-poi/xxe_in_schema.xlsx	776
-F	roundtrip-poi/46535.xlsx	* 70457 b8fec56050926572
+F	roundtrip-poi/46535.xlsx	* 140667 b8fec56050926572
 F	roundtrip-poi/47504.xlsx	* 1 e52c3b44338ea9a9
-F	roundtrip-poi/47804.xlsx	* 200 adaa3c552689ae24
+F	roundtrip-poi/47804.xlsx	* 290 adaa3c552689ae24
 F	roundtrip-poi/47889.xlsx	!EngineError
-F	roundtrip-poi/49783.xlsx	* 192 27c8e2f1d18d2583
-F	roundtrip-poi/52575_main.xlsx	* 176 a15c3ccc6b4155de
+F	roundtrip-poi/49783.xlsx	* 284 27c8e2f1d18d2583
+F	roundtrip-poi/52575_main.xlsx	* 224 a15c3ccc6b4155de
 F	roundtrip-poi/54764-2.xlsx	!EngineError
 F	roundtrip-poi/54764.xlsx	!EngineError
 F	roundtrip-poi/56278.xlsx	!EngineError
-F	roundtrip-poi/56502.xlsx	* 208 d034fbfa25e28a80
-F	roundtrip-poi/56574.xlsx	* 231 76f27a99641c6d0a
-F	roundtrip-poi/56688_2.xlsx	* 184 b58cb6176a56eaf2
-F	roundtrip-poi/56688_3.xlsx	* 184 b58cb6176a56eaf2
-F	roundtrip-poi/56688_4.xlsx	* 186 8d1f2f122fd41818
-F	roundtrip-poi/57535.xlsx	* 198 63ec9216ae40e1ac
+F	roundtrip-poi/56502.xlsx	* 318 d034fbfa25e28a80
+F	roundtrip-poi/56574.xlsx	* 421 76f27a99641c6d0a
+F	roundtrip-poi/56688_2.xlsx	* 270 b58cb6176a56eaf2
+F	roundtrip-poi/56688_3.xlsx	* 270 b58cb6176a56eaf2
+F	roundtrip-poi/56688_4.xlsx	* 275 8d1f2f122fd41818
+F	roundtrip-poi/57535.xlsx	* 308 63ec9216ae40e1ac
 F	roundtrip-poi/58616.xlsx	!InvalidCase
 F	roundtrip-poi/59021.xlsx	!EngineError
-F	roundtrip-poi/60512.xlsm	* 8083 6752ddbe721ccf7a
+F	roundtrip-poi/60512.xlsm	* 20887 6752ddbe721ccf7a
 F	roundtrip-poi/60825.xlsx	!EngineError
-F	roundtrip-poi/61495-test.xlsm	* 786 ebca1b30e6a45076
+F	roundtrip-poi/61495-test.xlsm	* 977 ebca1b30e6a45076
 F	roundtrip-poi/61652.xlsx	* 1 0b1437bdac66f2b1
 F	roundtrip-poi/64508.xlsx	* 1 4104e5ce01c743e5
 F	roundtrip-poi/64667.xlsx	* 1 4104e5ce01c743e5
 F	roundtrip-poi/65016.xlsx	* 1 4104e5ce01c743e5
-F	roundtrip-poi/66365.xlsx	* 149 96da9227c47e70e0
+F	roundtrip-poi/66365.xlsx	* 157 96da9227c47e70e0
 F	roundtrip-poi/ConditionalFormattingSamples.xlsx	* 32 bcbb9de713fbbe9d
-F	roundtrip-poi/DataValidationEvaluations.xlsx	* 146 fba3c0f8412eaa8b
-F	roundtrip-poi/ElapsedFormatTests.xlsx	* 451 88dc39a2e390f064
+F	roundtrip-poi/DataValidationEvaluations.xlsx	* 291 fba3c0f8412eaa8b
+F	roundtrip-poi/ElapsedFormatTests.xlsx	* 792 88dc39a2e390f064
 F	roundtrip-poi/Excel_file_with_trash_item.xlsx	* 1 4104e5ce01c743e5
-F	roundtrip-poi/FormulaEvalTestData_Copy.xlsx	* 1705 529529f3622b8515
-F	roundtrip-poi/HsGetVal.xlsx	* 229 db659ef165cc8541
-F	roundtrip-poi/Intersection-52111-xssf.xlsx	* 119 eeadc0c7c1f086b8
+F	roundtrip-poi/FormulaEvalTestData_Copy.xlsx	* 4579 529529f3622b8515
+F	roundtrip-poi/HsGetVal.xlsx	* 363 db659ef165cc8541
+F	roundtrip-poi/Intersection-52111-xssf.xlsx	* 178 eeadc0c7c1f086b8
 F	roundtrip-poi/LIBRE_OFFICE-116306-0.xlsx	* 1 ac3bcbe7501ca811
-F	roundtrip-poi/LIBRE_OFFICE-128382-0.xlsx	* 2069 07723af706e16f35
-F	roundtrip-poi/MatrixFormulaEvalTestData.xlsx	* 365 b39407dd4652da1d
-F	roundtrip-poi/NumberFormatApproxTests.xlsx	* 465 0a7ab5c5a0b3e943
-F	roundtrip-poi/VLookupFullColumn.xlsx	* 457 c9370732e8b37884
-F	roundtrip-poi/ValueFunctionOfBlank.xlsx	* 156 c0376f56f0980c87
-F	roundtrip-poi/bug60858.xlsx	* 205 f536a311fa3fbb2c
+F	roundtrip-poi/LIBRE_OFFICE-128382-0.xlsx	* 3677 07723af706e16f35
+F	roundtrip-poi/MatrixFormulaEvalTestData.xlsx	* 1061 b39407dd4652da1d
+F	roundtrip-poi/NumberFormatApproxTests.xlsx	* 819 0a7ab5c5a0b3e943
+F	roundtrip-poi/VLookupFullColumn.xlsx	* 1161 c9370732e8b37884
+F	roundtrip-poi/ValueFunctionOfBlank.xlsx	* 248 c0376f56f0980c87
+F	roundtrip-poi/bug60858.xlsx	* 214 f536a311fa3fbb2c
 F	roundtrip-poi/bug62181.xlsx	* 1 4104e5ce01c743e5
 F	roundtrip-poi/bug63189.xlsx	* 2 dcd9dabd025cf0a6
-F	roundtrip-poi/bug67784.xlsx	* 210 7a0a3295c905add7
-F	roundtrip-poi/clone_sheet.xlsx	* 816 c41cb2207646df2d
-F	roundtrip-poi/conditional_formatting_cell_is.xlsx	* 16048 6cf507f1ec3ea8af
-F	roundtrip-poi/customIndexedColors.xlsx	* 1961 26e3ff05a453dcdc
+F	roundtrip-poi/bug67784.xlsx	* 275 7a0a3295c905add7
+F	roundtrip-poi/clone_sheet.xlsx	* 1183 c41cb2207646df2d
+F	roundtrip-poi/conditional_formatting_cell_is.xlsx	* 37083 6cf507f1ec3ea8af
+F	roundtrip-poi/customIndexedColors.xlsx	* 4259 26e3ff05a453dcdc
 F	roundtrip-poi/deep-data.xlsx	!InvalidCase
 F	roundtrip-poi/duplicate-filename-case-insensitive.xlsx	* 1 301f948117dcc5f9
 F	roundtrip-poi/invalid_cell_reference.xlsx	!EngineError
-F	roundtrip-poi/link-external-workbook-b.xlsx	* 36 80f537cc8b4d4561
+F	roundtrip-poi/link-external-workbook-b.xlsx	* 47 80f537cc8b4d4561
 F	roundtrip-poi/picture.xlsx	* 4 56d2f7965d1ba28b
 F	roundtrip-poi/poc-shared-strings.xlsx	!EngineError
 F	roundtrip-poi/poc-xmlbomb-empty.xlsx	!EngineError
@@ -409,7 +409,7 @@ F	roundtrip-poi/poc-xmlbomb.xlsx	!EngineError
 F	roundtrip-poi/protected_passtika.xlsx	!InvalidCase
 F	roundtrip-poi/sample-beta.xlsx	* 10 92bed7d3384ba1ca
 F	roundtrip-poi/style-alternate-content.xlsx	!EngineError
-F	roundtrip-poi/testNames.xlsm	* 176 1a50d3caae3a2530
-F	roundtrip-poi/tile-range-test.xlsx	* 196 bd94ff947b11760e
+F	roundtrip-poi/testNames.xlsm	* 293 1a50d3caae3a2530
+F	roundtrip-poi/tile-range-test.xlsx	* 300 bd94ff947b11760e
 F	roundtrip-poi/xlsx-corrupted.xlsx	* 1 cf0fb6f1a83dde39
 F	roundtrip-poi/xssf-enum.xltx.xlsx	* 1 cf0fb6f1a83dde39

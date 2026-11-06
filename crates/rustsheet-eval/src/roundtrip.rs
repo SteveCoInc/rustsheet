@@ -19,9 +19,9 @@ use std::path::Path;
 use std::time::Duration;
 
 use rayon::prelude::*;
-use sha2::{Digest as _, Sha256};
 use rustsheet::{LoadOptions, SaveOptions, Workbook};
 use serde::Serialize;
+use sha2::{Digest as _, Sha256};
 
 use crate::baseline::{self as ratchet, Baseline};
 use crate::engine::harness_options;
@@ -337,24 +337,32 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
     };
     for (key, part) in &src {
         checked += 1;
-        let Some(out_part) = out.get(key) else {
-            // A lost XML part loses every element in it, which a kept part would have counted.
-            let elements = source
+        // A part lost, retyped or not comparable keeps none of the items a kept part would have
+        // counted: its elements and attributes count, and weigh, with it.
+        let whole = |verdict, detail| {
+            let inside = source
                 .xml
                 .get(*part)
                 .and_then(|xml| xmldiff::element_count(xml).ok())
                 .unwrap_or(0);
-            checked += elements;
-            items.push(Item {
-                weight: 1 + elements,
-                ..item("part", key.clone(), Verdict::Lost, None)
-            });
+            let it = Item {
+                weight: 1 + inside,
+                ..item("part", key.clone(), verdict, detail)
+            };
+            (it, inside)
+        };
+        let Some(out_part) = out.get(key) else {
+            let (it, inside) = whole(Verdict::Lost, None);
+            checked += inside;
+            items.push(it);
             continue;
         };
         let (was, now) = (source.content_type(part), output.content_type(out_part));
         if was != now {
             let detail = Some(format!("content type {was:?} became {now:?}"));
-            items.push(item("part", key.clone(), Verdict::Changed, detail));
+            let (it, inside) = whole(Verdict::Changed, detail);
+            checked += inside;
+            items.push(it);
             continue;
         }
         let (mut verdict, mut detail) = (Verdict::Kept, None);
@@ -387,7 +395,11 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
                     }
                 }
                 Err(why) => {
-                    (verdict, detail) = (Verdict::Changed, Some(format!("not comparable: {why}")));
+                    let (it, inside) =
+                        whole(Verdict::Changed, Some(format!("not comparable: {why}")));
+                    checked += inside;
+                    items.push(it);
+                    continue;
                 }
             },
             _ => {
@@ -405,8 +417,8 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
 }
 
 /// The share of a run's source items that were kept (SPEC-0033 D2): the source items compared,
-/// less those the failing items cover ([`Item::weight`]: a lost subtree counts every element in
-/// it), over the items compared. `added` items and validator failures cover no source item, so
+/// less those the failing items cover ([`Item::weight`]: a lost subtree counts every element and
+/// attribute in it), over the items compared. `added` items and validator failures cover no source item, so
 /// the baseline gates them but they do not lower the rate. A case that did not run compares
 /// nothing, so it is counted in `unscored`, never as kept. M15's goal is stated as this figure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
@@ -500,10 +512,7 @@ fn case_line<'a>(failing: impl Iterator<Item = &'a Item>) -> String {
         hash.update(k.as_bytes());
         hash.update(b"\n");
     }
-    let digest: String = hash.finalize()[..8]
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect();
+    let digest = crate::fetch::hex(&hash.finalize()[..8]);
     format!("{CASE_ITEM} {n} {digest}")
 }
 

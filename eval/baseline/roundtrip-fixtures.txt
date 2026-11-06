@@ -3,31 +3,31 @@
 # known failures. Removing an F line = a fix. Adding an F line to an unchanged case = a regression
 # and requires --allow-regressions plus a justification in the PR (docs/process/quality-gates.md).
 # `TC` and `TF` lines do the same for displayed text (decision 0070).
-C	roundtrip-fixtures/circular-keeps-cached-values.xlsx	638
-C	roundtrip-fixtures/external-link-cached-3d-span.xlsx	761
-C	roundtrip-fixtures/external-link-cached-index-array.xlsx	766
-C	roundtrip-fixtures/external-link-cached-lookups.xlsx	943
-C	roundtrip-fixtures/external-link-cached-ranges.xlsx	1862
-C	roundtrip-fixtures/external-link-cached-text.xlsx	880
-C	roundtrip-fixtures/external-link-uncached-lookups.xlsx	1297
-C	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	947
-C	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	738
+C	roundtrip-fixtures/circular-keeps-cached-values.xlsx	702
+C	roundtrip-fixtures/external-link-cached-3d-span.xlsx	870
+C	roundtrip-fixtures/external-link-cached-index-array.xlsx	875
+C	roundtrip-fixtures/external-link-cached-lookups.xlsx	1052
+C	roundtrip-fixtures/external-link-cached-ranges.xlsx	1971
+C	roundtrip-fixtures/external-link-cached-text.xlsx	991
+C	roundtrip-fixtures/external-link-uncached-lookups.xlsx	1409
+C	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	1051
+C	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	802
 C	roundtrip-fixtures/rich-error-export-formulas.xlsx	976
 C	roundtrip-fixtures/rich-error-export.xlsx	989
-C	roundtrip-fixtures/shared-string-phonetic-runs.xlsx	595
-C	roundtrip-fixtures/strict-date-compatibility-0.xlsx	627
-C	roundtrip-fixtures/t-d-1900-02-29.xlsx	579
-C	roundtrip-fixtures/t-d-1904-1900-01-01.xlsx	588
-C	roundtrip-fixtures/t-d-1904-epoch.xlsx	588
-C	roundtrip-fixtures/t-d-1904-pre-epoch.xlsx	588
-C	roundtrip-fixtures/t-d-1904-time-only.xlsx	588
-C	roundtrip-fixtures/t-d-1904.xlsx	588
-C	roundtrip-fixtures/t-d-fractional-seconds.xlsx	579
-C	roundtrip-fixtures/t-d-iso-date-cells.xlsx	636
-C	roundtrip-fixtures/t-d-pre-1900.xlsx	579
-C	roundtrip-fixtures/t-d-time-only.xlsx	579
-C	roundtrip-fixtures/t-d-z-suffix.xlsx	579
-C	roundtrip-fixtures/workday-intl-legacy-holidays.xlsx	594
+C	roundtrip-fixtures/shared-string-phonetic-runs.xlsx	659
+C	roundtrip-fixtures/strict-date-compatibility-0.xlsx	692
+C	roundtrip-fixtures/t-d-1900-02-29.xlsx	643
+C	roundtrip-fixtures/t-d-1904-1900-01-01.xlsx	651
+C	roundtrip-fixtures/t-d-1904-epoch.xlsx	651
+C	roundtrip-fixtures/t-d-1904-pre-epoch.xlsx	651
+C	roundtrip-fixtures/t-d-1904-time-only.xlsx	651
+C	roundtrip-fixtures/t-d-1904.xlsx	651
+C	roundtrip-fixtures/t-d-fractional-seconds.xlsx	643
+C	roundtrip-fixtures/t-d-iso-date-cells.xlsx	700
+C	roundtrip-fixtures/t-d-pre-1900.xlsx	643
+C	roundtrip-fixtures/t-d-time-only.xlsx	643
+C	roundtrip-fixtures/t-d-z-suffix.xlsx	643
+C	roundtrip-fixtures/workday-intl-legacy-holidays.xlsx	658
 F	roundtrip-fixtures/circular-keeps-cached-values.xlsx	R0 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:satMod[0]@val changed
 F	roundtrip-fixtures/circular-keeps-cached-values.xlsx	R0 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:tint[0]@val changed
 F	roundtrip-fixtures/circular-keeps-cached-values.xlsx	R0 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:satMod[0]@val changed
