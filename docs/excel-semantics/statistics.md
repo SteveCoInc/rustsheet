@@ -5780,8 +5780,9 @@ Tasks: T-2035 (partial), T-2093, T-2095
   F.DIST truncates df (`F.DIST(1,3.9,7.9,TRUE)` = df 3, 7; `fdist`) but `F.DIST(1,1.5,7,TRUE)` = 0.649... is a
   value, not an error (df 1.5 truncating to 1; no df=1 control cell was probed). The right tails and their inverses
   truncate both df too: `F.DIST.RT(1,3.9,7.9)` = 0.4470796134684837 (`fdistrt` A17), `F.INV.RT(0.5,3.9,7.9)` =
-  0.8709442531872849 (`finvrt` A22) and `FINV(0.5,2.9,5.9)` = 0.7987697769322353 (m9-legacy-finv A69) are the
-  integer df's values to the last digit (50-digit math at df (3, 7) and (2, 5); T-4103).
+  0.8709442531872849 (`finvrt` A22) and `FINV(0.5,2.9,5.9)` = 0.7987697769322353 (m9-legacy-finv A69) equal, bit for
+  bit, Excel's own integer-df cells `F.DIST.RT(1,3,7)` (`fdistrt` A5), `F.INV.RT(0.5,3,7)` (`finvrt` A8) and
+  `FINV(0.5,2,5)` (m9-legacy-finv A35) (T-4103).
 - **Coercion:** a blank cell is 0 for every scalar argument (`F.DIST(Z99,3,7,TRUE)` = 0, `PHI(Z99)` =
   0.3989..., a blank cumulative flag is FALSE); TRUE is 1; a numeric text ("2") is accepted and non-numeric
   text is `#VALUE!`. The cumulative flag is any number (nonzero = TRUE, `...,2)` = cumulative), "TRUE" text

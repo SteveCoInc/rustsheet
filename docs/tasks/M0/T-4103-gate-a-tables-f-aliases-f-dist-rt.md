@@ -34,7 +34,7 @@ Every failing table point has an owner.
       each citing its sources, with unit tests against Microsoft's published examples or the semantics entries' values.
 - [x] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
       their number. Every point outside the envelope has a `known-failures.tsv` owner.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other groups of decision 0272.
@@ -46,9 +46,10 @@ Every failing table point has an owner.
   modern ones only in the truncation evidence each cites: no legacy-only domain difference is evidenced (T-1047).
   - Domain: x >= 0, df in [1, 1E10] truncated; the inverses take p in (0, 1] with p = 1 at 0 (T-1049, T-1047, T-1530).
     The right tails add three evidenced rules, each probed on both names: `#DIV/0!` where fl(df1·x) overflows (T-1290),
-    `#NUM!` where fl(df2/fl(df1·x)) does (T-2435; a subnormal x reads as 0), and `#NUM!` where bratio's L140 bup
+    `#NUM!` where fl(df2/fl(df1·x)) does (T-2435; a positive subnormal x reads as 0, from one FDIST cell, t2435 A130), and `#NUM!` where bratio's L140 bup
     running product overflows (`bup_ratio_overflows`, T-4030, T-4044, T-4080). The last is the log-product form the
-    entry gives, without TOMS's early break.
+    entry gives, only on bratio's L140 path (b0 < 40, b0·x0 > 0.7; T-3553's entry, added at review), without
+    TOMS's early break. `quantile` takes `upper` for the right-tail inverses.
   - No unprobed region needed a `NoValueError`.
   - Check over the literal one-call cells of the four functions in eval/suites (235 cases, excel-graph oracle):
     10,098 number/number and 362 error/error cells, 0 where the math is an error and Excel a number or the reverse

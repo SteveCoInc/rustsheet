@@ -35,14 +35,14 @@ def test_right_tail_inverse_matches_the_published_example(function: str) -> None
 
 
 def test_right_tail_values_from_the_semantics_entries() -> None:
-    # Excel's values, correct to the last digit (statistics.md "Legacy distribution names sweep (T-1047)" and
+    # Excel's values, within 15 to 16 digits of the math (statistics.md "Legacy distribution names sweep (T-1047)" and
     # "Thin distribution functions (T-1049)"): FDIST(1,2,5), FINV(0.5,2,5), F.INV.RT(0.5,3,7).
     assert close(REGISTRY["FDIST"].evaluate([mp(1), mp(2), mp(5)]), "0.43120115037169215", 16)
     assert close(REGISTRY["FINV"].evaluate([mp("0.5"), mp(2), mp(5)]), "0.7987697769322353", 15)
     assert close(REGISTRY["F.INV.RT"].evaluate([mp("0.5"), mp(3), mp(7)]), "0.8709442531872849", 15)
     # Excel's F.INV.RT(1E-16,9,3) = 60647458731.09812 (within 2E-15 of the math) needs the right tail solved
     # directly, not as F.INV(1 - p) ("F.INV is a crossing of F.DIST's tails").
-    assert close(fisher.upper_quantile(mp("1e-16"), mp(9), mp(3)) / mp("60647458731.09812"), "1", 13)
+    assert close(fisher.quantile(mp("1e-16"), mp(9), mp(3), upper=True) / mp("60647458731.09812"), "1", 13)
 
 
 def test_the_right_tail_is_the_complement_and_the_inverse_round_trips() -> None:
@@ -110,3 +110,9 @@ def test_the_l140_bup_band_is_an_error_on_both_names() -> None:
     assert not fisher.bup_ratio_overflows(79, 1e10, 0.5)  # below the mean bratio takes no L140
     with pytest.raises(DomainError):
         REGISTRY["FDIST"].evaluate([mp(2), mp(79), mp("5e9")])
+    # L140 needs b0·x0 > 0.7 (statistics.md "NEGBINOM.DIST's cdf is #NUM! at a huge number_s (T-3553)"): at x = 1E10,
+    # (79, 5E9) has x0 = 1/159 and b0·x0 = 0.25, so bratio takes bpser and the band does not apply.
+    assert not fisher.bup_ratio_overflows(79, 5e9, 1e10)
+    domain = REGISTRY["FDIST"].domain
+    assert domain is not None
+    assert domain([mp("1e10"), mp(79), mp("5e9")]) is None
