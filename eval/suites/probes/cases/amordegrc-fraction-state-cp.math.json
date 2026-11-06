@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "65f22ab0aaa288b8070649aad6d27edcc317ce53146fa11a78892aa7dd8c43a2"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A2": {
+    "t": "n",
+    "v": "3.0",
+    "f": "=SUM(SUMPRODUCT({1,2}))"
+   }
+  }
+ }
+}
