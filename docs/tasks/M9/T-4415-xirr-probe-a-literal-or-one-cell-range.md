@@ -3,7 +3,7 @@ id: T-4415
 title: "XIRR: probe a literal or one-cell-range boolean or text value against an error dates argument, and with guess -1"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
