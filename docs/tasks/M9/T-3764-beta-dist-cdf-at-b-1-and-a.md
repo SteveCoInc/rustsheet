@@ -128,3 +128,11 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 - probes-numeric/t3568-r5-bup-tune.case.json (41): Calc!A9, A53, A61, A137, A145, A204, A211, A224, A281, A325, A327, A368, A404, A447, A449, A471, A481, A519, A537, A595, A598, A607, A667, A673, A679, A757, A843, A920, A944, A1383, A1396, A1560, A1599, A1648, B9, B31, B230, B534, B634, B690, B737
 
 - [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Hold-out split (fixed before any candidate was scored)
+- Population: the column-B cells of probes-numeric t3568-r5-bup-tune, -hold and -fresh (1,785 cells). The ones on
+  `shape_one_tails` are those with x > 0.9 (508); the rest are the b0 = 1 closed form.
+- Hold-out: sha256 of `<case id>!<cell>` (for example `t3568-r5-bup-hold!B816`) with a first byte below 77 (77/256,
+  30.1%). Train: the rest.
+- Margin: the chosen model's hold-out bit-exact rate is within 3 percentage points of its train rate, and it beats
+  correctly rounded on the hold-out cells.
