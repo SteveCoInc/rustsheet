@@ -3,7 +3,7 @@ id: T-4449
 title: "GROUPBY and PIVOTBY function arrays: probe and match a ragged HSTACK/VSTACK of functions, several error elements and a parameterless LAMBDA"
 milestone: M7
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -38,16 +38,31 @@ recorded in docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY".
     function, over one and two value columns.
 
 ## Acceptance criteria
-- [ ] probes/t4449-groupby-function-array-edges is committed with oracle values (excel-graph) for every formula above.
-- [ ] Every cell of it passes (`make eval-show CASE=probes/t4449-groupby-function-array-edges`).
-- [ ] The eval gate shows 0 regressions; every probes/groupby-pivotby-functions* and gen-m7 cell that passes on main still passes.
-- [ ] docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY": the three items leave the "Unprobed (T-1325)" sentence and
+- [x] probes/t4449-groupby-function-array-edges is committed with oracle values (excel-graph) for every formula above.
+- [x] Every cell of it passes (`make eval-show CASE=probes/t4449-groupby-function-array-edges`).
+- [x] The eval gate shows 0 regressions; every probes/groupby-pivotby-functions* and gen-m7 cell that passes on main still passes.
+- [x] docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY": the three items leave the "Unprobed (T-1325)" sentence and
       are stated as rules citing the new cells; the `function_grid` doc comment cites them instead of "unprobed".
-- [ ] A unit test pins one ragged function array and one zero-parameter LAMBDA result.
-- [ ] `make check` green; reviewers approve.
+- [x] A unit test pins one ragged function array and one zero-parameter LAMBDA result.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - PIVOTBY subtotal placement and intransitive runs (T-4388, T-4401, T-4414, T-4428): do not change pivot_placement.rs
   or pivotby.rs's subtotal code here.
 - Eta names with zero minimum arguments other than NOW (ROW, COLUMN, SHEET; T-4450)
   and nested GROUPBY cells (T-2609, T-2686).
+
+## Outcome
+- New probe probes/t4449-groupby-function-array-edges (excel-graph, 2026-11-06): 48 formulas, GROUPBY and PIVOTBY
+  over one and two value columns, each read as its shape, ERROR.TYPE and ARRAYTOTEXT (144 cells).
+- Excel's rules:
+  - A ragged function array is `#VALUE!`, not its padding's `#N/A`. The padded stack is a 2-D array of functions.
+  - Of several error elements, the first in reading order wins, and an error beats a plain value on either side.
+  - A zero-parameter LAMBDA is `#VALUE!` alone, in an array and through LET.
+- The engine already matched every cell (145/145 on the first run), so no engine code changed. The padded `#N/A` is
+  an element, not a returned error, so `function_argument`'s 2-D check rejects it. `function_grid` returns the
+  first error it meets.
+- Documentation: arrays.md "GROUPBY and PIVOTBY" states the three rules, citing the cells. The rules leave the
+  "Unprobed (T-1325)" sentence. The `function_grid` and `lambda_arity` doc comments cite them instead of "unprobed".
+- Unit tests in test_groupby_function_array_edges.rs: a ragged array, several errors and zero-parameter LAMBDAs.
+- Eval delta: +145 passing cells (a new case, all passing); no known failures change; 0 regressions.
