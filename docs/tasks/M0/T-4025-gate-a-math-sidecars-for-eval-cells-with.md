@@ -3,7 +3,7 @@ id: T-4025
 title: "Gate A math sidecars for eval cells with matrix arguments (MDETERM, and MINVERSE/MMULT through INDEX)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
