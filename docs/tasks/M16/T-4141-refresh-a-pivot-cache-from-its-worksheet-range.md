@@ -18,6 +18,7 @@ SPEC-0032; evidence from task `p-items`. The CacheBuilder of SPEC-0015 is the on
 
 ## Acceptance criteria
 - [ ] Unit tests and the p-items probes' cache-level expectations pass.
+- [ ] Duplicate source header names: a filled probe (excel-graph) shows Excel's renaming before the engine implements it (no probe covers it yet; SPEC-0032 Refresh).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
