@@ -173,7 +173,7 @@ fn test_sequence_argument_error_beats_zero_extent() {
     model._set("A4", "=SEQUENCE(0)");
     model._set("A5", "=SEQUENCE(0,4,1,2)");
     model._set("A6", "=SEQUENCE(-1,0)");
-    // A negative columns beats a zero rows, but one within 2^-23 of 0 is a zero columns
+    // A negative columns beats a zero rows, but one within 2^-23 + 2^-34 below 0 is a zero columns
     // (gen-m7/c36ff5f42a1a4d47 A359, probes/empty-array-args-sequence A100:A134).
     model._set("A7", "=SEQUENCE(0,-1)");
     model._set("A8", "=SEQUENCE(0,-1E-8)");
@@ -186,4 +186,33 @@ fn test_sequence_argument_error_beats_zero_extent() {
     assert_eq!(model._get_text("A6"), "#VALUE!");
     assert_eq!(model._get_text("A7"), "#VALUE!");
     assert_eq!(model._get_text("A8"), "#CALC!");
+}
+
+// T-4465: SEQUENCE and RANDARRAY read an extent by the shared near-integer rule: within
+// 2^-22 + 2^-33 below an integer it is that integer, half that below 0
+// (probes/t4465-extent-near-integer-main B1:D63).
+#[test]
+fn sequence_and_randarray_extents_snap_near_an_integer() {
+    let mut model = new_empty_model();
+    model._set("C1", "=ROWS(SEQUENCE(1-1.5*2^-23))");
+    model._set("C2", "=ROWS(SEQUENCE(1000-(2^-22+2^-33)))");
+    model._set("C3", "=ROWS(SEQUENCE(1000-(2^-22+2^-32)))");
+    model._set("C4", "=COLUMNS(SEQUENCE(1,2-2^-22))");
+    model._set("C5", "=SEQUENCE(0-2^-23)");
+    model._set("C6", "=SEQUENCE(0-1.5*2^-23)");
+    model._set("C7", "=ROWS(RANDARRAY(2-2^-22))");
+    model._set("C8", "=COLUMNS(RANDARRAY(1,2-(2^-22+2^-32)))");
+    model._set("C9", "=RANDARRAY(0-2^-23)");
+    model._set("C10", "=RANDARRAY(0-1.5*2^-23)");
+    model.evaluate();
+    assert_eq!(model._get_text("C1"), "1");
+    assert_eq!(model._get_text("C2"), "1000");
+    assert_eq!(model._get_text("C3"), "999");
+    assert_eq!(model._get_text("C4"), "2");
+    assert_eq!(model._get_text("C5"), "#CALC!");
+    assert_eq!(model._get_text("C6"), "#VALUE!");
+    assert_eq!(model._get_text("C7"), "2");
+    assert_eq!(model._get_text("C8"), "1");
+    assert_eq!(model._get_text("C9"), "#CALC!");
+    assert_eq!(model._get_text("C10"), "#VALUE!");
 }

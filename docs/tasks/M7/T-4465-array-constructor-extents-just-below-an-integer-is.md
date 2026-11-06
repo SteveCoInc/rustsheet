@@ -3,7 +3,7 @@ id: T-4465
 title: "Array-constructor extents just below an integer: is SEQUENCE's 2^-23 snap the shared near-integer rule, and do RANDARRAY, MAKEARRAY, TAKE, DROP, EXPAND and WRAPROWS snap too"
 milestone: M7
 lane: functions-math
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -40,15 +40,15 @@ Excel actually has (directive 3), instead of the four ad hoc reads it has today.
   rule is frozen).
 
 ## Acceptance criteria
-- [ ] A probe case (excel-probe skill, excel-graph, tag M7) steps the rows or count argument of SEQUENCE (rows and
+- [x] A probe case (excel-probe skill, excel-graph, tag M7) steps the rows or count argument of SEQUENCE (rows and
       columns), RANDARRAY, MAKEARRAY, TAKE, DROP, EXPAND and WRAPROWS by 2^-24, 2^-23, 1.5·2^-23, 2^-22, 2^-22 + 2^-33,
       2^-22 + 2^-32 and 2^-21 below and above 1, 2, 1000 and 100000 (and below 0 for the ones that accept 0), read
       through `ROWS`/`COLUMNS`/`ERROR.TYPE`, with a hold-out set of offsets scored after the rule is frozen.
-- [ ] arrays.md states each constructor's rule (or that it shares `near_integer_whole`'s), citing cells, and drops
+- [x] arrays.md states each constructor's rule (or that it shares `near_integer_whole`'s), citing cells, and drops
       the UNVERIFIED sentence; every probe cell passes, the hold-out included.
-- [ ] A constructor that shares an existing rule calls that helper; `EXTENT_EPSILON` remains only if the probe shows a
+- [x] A constructor that shares an existing rule calls that helper; `EXTENT_EPSILON` remains only if the probe shows a
       rule of its own. No other eval cell regresses.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Extents past the grid (T-2608) and argument kinds other than numbers (T-2873, T-2874).
@@ -60,3 +60,21 @@ columns) and RANDARRAY read `near_integer_whole`; TAKE, DROP, EXPAND, WRAPROWS a
 (F, G, H, I, J); MAKEARRAY is `#VALUE!` for any fractional extent (E). Hold-out: predictions-holdout.tsv (seed 4465),
 split fixed by the generator before any fill; margin: the shared rule must match every hold-out row (a structural
 rule, so no rate tolerance).
+
+## Outcome
+Probed and implemented. SEQUENCE (rows, columns) and RANDARRAY read an extent by the shared `near_integer_whole`
+(sequence.rs's `EXTENT_EPSILON` is removed; RANDARRAY's two copied extent blocks became one `randarray_extent`, and the duplication lock drops 2876 -> 2836). TAKE, DROP, EXPAND, WRAPROWS and
+WRAPCOLS truncate with no snap and MAKEARRAY is `#VALUE!` for any fraction, as ours already did. arrays.md: new entry
+"Array-constructor extents just below an integer (T-4465)"; the SEQUENCE paragraph's UNVERIFIED sentence is dropped.
+- R4 guards (a structural rule chosen from ranked candidates, decision 0188 R4 kind (c); no `FITTED` tag): split fixed
+  by the generator before any fill (main 63 rows; hold-out seed 4465, 36 rows), predictions committed before the main
+  fill (38629e6be froze the rule before the hold-out fill). Cells matched, all columns (`docs/research/t4465/score.py`):
+  | set | frozen rule | shared everywhere | eps | f32 | floor | trunc |
+  |---|---|---|---|---|---|---|
+  | main | 539/539 | 449 | 464 | 435 | 464 | 469 |
+  | hold-out | 318/318 | 273 | 276 | 260 | 268 | 268 |
+  | fresh sweep (seed 44651, generated after the freeze) | 316/316 | 290 | 290 | 254 | 266 | 281 |
+  Margin stated at the freeze: every hold-out row. Gate A envelope: not applicable (the result is a shape, not a
+  number). The WRAPROWS/WRAPCOLS shape predictor was corrected after the hold-out scored (a wrap of 3 or more gives the
+  3-cell vector unpadded, main I29:J29); it does not touch the extent rule.
+- Eval delta: probes +3 cases (main 602, hold-out 354, fresh 352 cells), all pass; 0 regressions in every suite.
