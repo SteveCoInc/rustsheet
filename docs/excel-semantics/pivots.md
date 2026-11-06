@@ -32,31 +32,39 @@ Without items or records Excel refuses the file (`OpenWorkbookBlockedWorkbook`, 
 Evidence: every pivot of probes/t4123-pivot-capture and probes/t4128-pivot-spike except S, the
 `#SPILL!` control (excel-graph, 2026-11-06): compact, tabular, a calculated field with a Top-N filter and a sort, numeric grouping.
 The case builder relies on it (tools/src/rustsheet_tools/pivot_definition.py).
-Status: VERIFIED (excel-graph) for rendering; the refusal of an inconsistent package is UNVERIFIED
-(probe pending: T-4134)
+Status: VERIFIED (excel-graph) for rendering. The refusal of an inconsistent package is a builder
+observation (T-4122 runs). It cannot become a filled probe, because Excel saves nothing for a file it
+refuses.
 
 ## Case-variant text items make Excel for the web call the file corrupt
 Rule: a cache field whose shared items list two texts that differ only in case (`East`, `east`) makes
 Excel for the web refuse the workbook (`FileCorruptTryRepair`). With them merged into one item, the
 records of both casings count under it on refresh: East/A summed the `East` and `east` rows (14 = 10
 + 4) and showed `East`.
-Evidence: T-4122 runs (cases a and a2: corrupt with both items, rendered with one).
-Status: UNVERIFIED (probe pending: T-4134, which also asks which casing wins)
+Evidence: T-4122 runs (cases a and a2: corrupt with both items, rendered with one). The merge on refresh
+is VERIFIED by probes/t4134-pivot-items I1 (next entry).
+Status: the refusal is a builder observation (T-4122 runs), not committable as a probe: Excel saves
+nothing for a file it refuses
 
 ## Item identity: exact for numbers and types, case-insensitive for text
-Rule: on refresh, texts that differ only in case are one item, shown with the casing first seen, and
-their records add up. Numbers are compared exactly, so 0.3 and 0.30000000000000004 are two items. The
+Rule: on refresh, texts that differ only in case are one item, and their records add up. In I1 the item
+shows `east`, which is both the first-seen and the listed casing, so which of those wins is open. Numbers are compared exactly, so 0.3 and 0.30000000000000004 are two items. The
 text `"1"` and the number 1 are two items as well.
 Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 - I1: east, East and EAST count 3 under `east`, and west counts 1.
 - I4: 0.3 counts 2 and 0.30000000000000004 counts 1.
 - I5: the number 1 counts 2 and the text `1` counts 1.
 
-I1 cannot tell "first seen in the source" from "the builder's listed item", both `east`. A probe with
-the variants in another source order, against a cache that lists a different casing, would. Dates with
-and without times are not probed yet.
-Status: VERIFIED (excel-graph) for the identity; UNVERIFIED which casing wins when cache and source
-disagree
+Status: VERIFIED (excel-graph)
+
+## Item casing when cache and source disagree, and date items
+Rule: unknown. Which casing a merged text item shows when the cache lists one casing and the source's
+first row has another, and whether date items with and without a time part are one item. Also open:
+whether new items that only a refresh finds are appended in source order or sorted descending
+(previous entry, I3).
+Evidence: none yet. probes/t4134-pivot-items I1 cannot separate the two casings, because both are
+`east`.
+Status: UNVERIFIED (probe pending: T-4582)
 
 ## Shared-item flags Excel accepts for mixed fields
 Rule: Excel for the web refuses a cache whose `sharedItems` flags contradict its items. The flags that
@@ -69,12 +77,15 @@ open are the ones Excel itself writes:
 
 Evidence: T-4122 runs (bool+text, error+text and number+blank refused with other flags, rendered with
 these); Excel-saved caches in the LibreOffice fixtures (oss-engines.md §5).
-Status: UNVERIFIED (probe pending: T-4134)
+Status: builder observation (T-4122 runs), not committable as a probe: Excel saves nothing for a
+file it refuses. The builder writes these flags (pivot_definition.py `shared_items`), and every
+filled pivot probe opens with them.
 
 ## Items show in the order the pivot field lists them; new items are appended
 Rule: on refresh Excel keeps the order of a pivot field's `<items>`. An item the refresh finds that the
-field does not list yet goes after the listed ones, in the order of first appearance in the source,
-not sorted. How items render:
+field does not list yet goes after the listed ones, not in ascending order. Whether they follow the
+source order or a descending sort is open (T-4582). A listed item that has no records after the
+refresh is not rendered, and the items after it keep their indices. How items render:
 - a number item renders as a number cell;
 - a boolean as the text `TRUE` or `FALSE`;
 - an error item as the text of the error (`#N/A`), not an error value;
@@ -83,7 +94,10 @@ not sorted. How items render:
 Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 - I2: the builder lists a, FALSE, 1, b, TRUE, 2, then #N/A and blank (first seen); Excel shows that
   order in I2!A4:A11, with A6 and A9 numbers, A10 the text `#N/A` and A11 `(blank)`.
-- I3: Zed and Alpha come from formulas the cache records as missing; Excel shows M, Zed, Alpha.
+- I3: Zed and Alpha come from formulas the cache records as missing; Excel shows M, Zed, Alpha. The
+  source order is M, Zed, Alpha, M, which also reads as a descending sort of the new items. The listed
+  `<m/>` item (index 1) holds no record after the refresh and is left out: the saved `rowItems` are
+  x = 0, 2, 3.
 
 The default order of a newly created pivot (ascending, by type) is a UI action and not reachable from a
 file.
