@@ -2439,6 +2439,7 @@ C	probes/t4467-literal-large-exponent-fresh.case.json	170
 C	probes/t4467-literal-large-exponent-sweep.case.json	500
 C	probes/t4467-literal-large-exponent.case.json	312
 C	probes/t4469-take-drop-if-one-cell-reference.case.json	52
+C	probes/t4470-weeknum-return-type-edges.case.json	24
 C	probes/t4473-textsplit-fold-gaps.case.json	117
 C	probes/t4474-textbefore-utf16-bounds.case.json	135
 C	probes/t4477-filter-include-error-shapes.case.json	49

@@ -3,7 +3,7 @@ id: T-4470
 title: "WEEKNUM return_type snap at the type boundaries (1, 18, 21, 22), negative types and the start-weekday state; link the two WEEKNUM return_type entries"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -35,3 +35,9 @@ agree with each other.
 
 ## Out of scope
 - ISOWEEKNUM and WEEKDAY's return_type (file separately if needed).
+
+## Outcome
+Probe probes/t4470-weeknum-return-type-edges (excel-graph) showed the snap holds at the 1, 18, 21, 22 boundaries and the start-weekday state, and that a
+negative return_type FLOORS (with the snap) rather than truncating: `-0.5` reads the stale state, `-2^-30` is 0. The engine now applies
+`near_integer_count` to every return_type. dates.md has a new entry and the old WEEKNUM entries link to it. Eval delta: new probe, 24 cells,
+all pass with the fix (the negative-floor cells TNhalf and TN15 would differ under truncation).
