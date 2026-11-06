@@ -52,3 +52,11 @@ Excel actually has (directive 3), instead of the four ad hoc reads it has today.
 
 ## Out of scope
 - Extents past the grid (T-2608) and argument kinds other than numbers (T-2873, T-2874).
+
+## Rule frozen (before the hold-out fill)
+Main set (probes/t4465-extent-near-integer-main, excel-graph, 63 rows), extent read from SEQUENCE rows (B) and
+RANDARRAY (D): shared 63/63 and 63/63, eps 51/51, f32 48/48, floor 41/41, trunc 38/38. Frozen: SEQUENCE (rows and
+columns) and RANDARRAY read `near_integer_whole`; TAKE, DROP, EXPAND, WRAPROWS and WRAPCOLS truncate with no snap
+(F, G, H, I, J); MAKEARRAY is `#VALUE!` for any fractional extent (E). Hold-out: predictions-holdout.tsv (seed 4465),
+split fixed by the generator before any fill; margin: the shared rule must match every hold-out row (a structural
+rule, so no rate tolerance).
