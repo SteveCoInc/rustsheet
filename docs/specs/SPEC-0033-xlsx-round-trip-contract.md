@@ -334,6 +334,32 @@ milestone = ["M15"]
   `F` line holds a failing item, `<scenario> <kind> <item key> <verdict>`. The ratchet is the usual one. A line may disappear (fixed). A new
   failing item is a regression unless the case is new (new coverage). `update-baseline` refuses regressions.
   `--allow-regressions` needs a decision record, as everywhere.
+  A corpus suite (Calipers, POI, corpus-bench) uses `baseline = "cases"` instead. Its item lines would run to
+  tens of megabytes (about 550,000 on the first run, T-4173). Each failing case is one `F` line,
+  `* <n> <digest>`:
+  - n is the case's failing items, each weighted as the kept rate weighs it and at least 1;
+  - the digest is a hash of the set of their keys.
+
+  `roundtrip::diff` sets the rules:
+  - A line whose n fell is a fix.
+  - A line whose n held or rose is a regression. This includes a loss traded for a fix of the same weight.
+  - A fix that outweighs a new loss passes. The cells-mode fixtures suite still names every item, and
+    `roundtrip.json` lists them for any run.
+- **Round-trip regressions beyond the ratchet**, in both modes:
+  - A case whose checked count fell is a regression. The count includes what the output let the scorer compare, so
+    an unreadable output compares one item.
+  - A case that newly did not run (`!Status`) is a regression, whatever its count.
+  - Updating a `cases` suite refuses to drop a case, because a missing case means the cache was fetched under an
+    older include.
+- **Kept rate.** The CLI line and the report give each suite's kept rate: the source items compared, less those the
+  failing items cover, over the items compared. A failing item covers:
+  - a lost element: its whole subtree;
+  - a lost XML part: all of its elements;
+  - a `<truncated>` item: every difference it hides;
+  - any other change or loss: 1 item;
+  - `added` items and validator failures: no source items. The baseline still gates them.
+
+  A case that did not run is reported as not scored, never as kept. M15's goal is stated as this rate.
 - **Exceptions.** `exceptions.toml` holds narrow, per-case tokens in Calipers' style. Each token names the decision
   or task that owns it and the items it excuses (`volatile`, `candidate-N4`, …). A self-test runs every case with
   its exceptions removed and checks that each exception still excuses something. Stale exceptions fail.
