@@ -3,7 +3,7 @@ id: T-4518
 title: "SHEET and SHEETS of a LAMBDA parameter: BYROW(r,_xleta.SHEET) is 1 per row, GROUPBY's SHEET and SHEETS #N/A per group (today #NAME? and #N/IMPL)"
 milestone: M5
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
