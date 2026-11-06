@@ -53,14 +53,27 @@ def numeric_arg(a: Arg) -> float:
     return a
 
 
+# Decimal exponents past which a literal is 0 or infinite as a double, cut or not (doubles end near
+# 1E+308 and 4.9E-324).
+_CUT_EXPONENT_LIMIT = 400
+
+
 def number_literal(text: str) -> float:
     """A formula's number literal as Excel reads it: cut (not rounded) to 15 significant digits,
     so `6.727499949325611` is 6.72749994932561 (numbers.md, "Formula number literals are read at
-    15 significant digits"; probes/xirr-exact-root-sign, T-2328)."""
-    value = Decimal(text)
-    if value.is_finite() and value != 0:
-        value = value.quantize(Decimal(1).scaleb(value.adjusted() - 14), rounding=ROUND_DOWN)
-    return float(value)
+    15 significant digits"; probes/xirr-exact-root-sign, T-2328). A literal far outside the double
+    range is read whole (it is 0 or infinite either way): cutting it would overflow Decimal's
+    exponent range. A literal Decimal cannot hold at all (an exponent of 19 or more digits) is
+    `UnparsedError`, a ValueError, never the `decimal.InvalidOperation` Decimal raises (directive 5:
+    untrusted text must not crash a run)."""
+    try:
+        value = Decimal(text)
+        if value.is_finite() and value != 0 and abs(value.adjusted()) <= _CUT_EXPONENT_LIMIT:
+            value = value.quantize(Decimal(1).scaleb(value.adjusted() - 14), rounding=ROUND_DOWN)
+        return float(value)
+    except ArithmeticError as err:
+        msg = f"number literal out of reach: {text!r}"
+        raise UnparsedError(msg) from err
 
 
 _UNSIGNED = r"(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?"
@@ -72,20 +85,35 @@ _COMPLEX_TEXT = re.compile(
 )
 
 
-def parse_complex_text(text: str) -> tuple[float, float]:
+def parse_complex_text(text: str, read: Callable[[str], float] = float) -> tuple[float, float]:
     """An IM* function's text result (`1.5-2i`, `-0.5j`, `i`, `3`, `1E+307+1.6E+308i`) as its
     real and imaginary parts; ValueError for anything else. The imaginary part needs its own sign
-    when a real part precedes it, so `1.5i` is 0+1.5i, not 1.5+1i."""
+    when a real part precedes it, so `1.5i` is 0+1.5i, not 1.5+1i. `read` turns each written part
+    into its number: `float` for a result, `number_literal` for an argument as an IM* function reads
+    it (`read_complex_arg`)."""
     m = _COMPLEX_TEXT.fullmatch(text)
     if m is None or (m["re"] is None and m["unit"] is None):
         msg = f"not a complex number: {text!r}"
         raise ValueError(msg)
     if m["unit"] is None:
-        return float(m["re"]), 0.0
+        return read(m["re"]), 0.0
     if m["re"] is not None and not m["sign"]:
-        return 0.0, float(m["re"])  # `1.5i`: the greedy real part took the coefficient
-    im = float(m["im"]) if m["im"] is not None else 1.0
-    return (float(m["re"]) if m["re"] is not None else 0.0), (-im if m["sign"] == "-" else im)
+        return 0.0, read(m["re"])  # `1.5i`: the greedy real part took the coefficient
+    im = read(m["im"]) if m["im"] is not None else 1.0
+    return (read(m["re"]) if m["re"] is not None else 0.0), (-im if m["sign"] == "-" else im)
+
+
+def read_complex_arg(text: str) -> tuple[float, float]:
+    """A complex number text as an IM* function reads its argument: each part cut (not rounded) to
+    15 significant digits, as VALUE reads it, so `1.2345678901234567+2.2345678901234567i` is
+    1.23456789012345+2.23456789012345i (engineering.md "Engineering functions in the gen-m9
+    engineering sweep (T-2258)", probes/eng-inumber-grammar-digits B1:D1). Excel's own IM* cells show
+    it for positive and negative plain-notation parts with an `i` suffix (also
+    probes/t3912-imcsch-band-edges A40 = A42, t3643-imsech-grid Q17 = P16; T-4593); exponent-form
+    parts and `j` texts follow from the VALUE analogy (engineering.md "A part keeps 15 significant
+    digits, as VALUE does"; numbers.md "15-digit literal parsing"), not from an IM* cell. ValueError as `parse_complex_text`, or `UnparsedError` (a ValueError) for a
+    part `number_literal` cannot read."""
+    return parse_complex_text(text, number_literal)
 
 
 _SHEET = r"'(?:[^']|'')+'|[A-Za-z_][\w.]*"
