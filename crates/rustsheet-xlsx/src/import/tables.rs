@@ -258,15 +258,24 @@ fn is_criterion(child: &XmlNode) -> bool {
 /// the table does not change across a save (T-4558; Excel refuses such a source file, so there is
 /// no oracle value for it: docs/excel-semantics/xlsx-storage.md, "Table parts in the export").
 pub(super) fn drop_dangling_color_filters(tables: &mut HashMap<String, Table>, dxf_count: usize) {
+    let dangling = |criterion: &FilterCriterion| {
+        matches!(
+            criterion,
+            FilterCriterion::Color { dxf_id, .. }
+                if dxf_id.is_none_or(|id| usize::try_from(id).map_or(true, |i| i >= dxf_count))
+        )
+    };
     for table in tables.values_mut().filter(|t| t.has_filters) {
+        if !table.filter_columns.iter().any(|c| dangling(&c.criterion)) {
+            continue;
+        }
         let width = table.columns.len();
+        // `Other` is also what a criterion-less `<filterColumn/>` and a `<colorFilter/>` without a
+        // `dxfId` import as, and neither is a criterion, so only the rest keeps the table filtered.
         table.has_filters = table.filter_columns.iter().any(|column| {
             usize::try_from(column.col_id).is_ok_and(|id| id < width)
-                && !matches!(
-                    column.criterion,
-                    FilterCriterion::Color { dxf_id, .. }
-                        if dxf_id.is_none_or(|id| usize::try_from(id).map_or(true, |i| i >= dxf_count))
-                )
+                && !dangling(&column.criterion)
+                && column.criterion != FilterCriterion::Other
         });
     }
 }
@@ -346,9 +355,9 @@ mod tests {
     /// T-4558: a color filter's dangling `dxfId` leaves the table unfiltered, as the export writes it.
     #[test]
     fn dangling_color_filter_dxf_is_no_criterion() {
-        let table = |dxf: &str| {
+        let table_with = |extra: &str, dxf: &str| {
             let node = XmlNode::parse_str(&format!(
-                r#"<autoFilter><filterColumn colId="0"><colorFilter dxfId="{dxf}"/></filterColumn></autoFilter>"#
+                r#"<autoFilter><filterColumn colId="0"><colorFilter dxfId="{dxf}"/></filterColumn>{extra}</autoFilter>"#
             ))
             .unwrap();
             let mut t = Table {
@@ -393,7 +402,12 @@ mod tests {
             drop_dangling_color_filters(&mut tables, 1);
             tables["T"].has_filters
         };
+        let table = |dxf: &str| table_with("", dxf);
         assert!(table("0"), "dxf 0 of 1 exists");
+        assert!(
+            !table_with(r#"<filterColumn colId="1"/>"#, "1"),
+            "a dangling dxf and a criterion-less column"
+        );
         assert!(!table("1"), "dxf 1 of 1 dangles");
     }
 
