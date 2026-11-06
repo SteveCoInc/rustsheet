@@ -430,7 +430,16 @@ Evidence: none. Every rendered probe so far is `refreshOnLoad` (case builder v2)
 Status: UNVERIFIED (probe pending: T-4586)
 
 ## Pivot field names for duplicate and blank source headers
-Rule: unknown. How Excel names the cache fields of a source whose header row repeats a name, leaves a
-cell blank, or has names differing only in case.
-Evidence: none.
-Status: UNVERIFIED (probe pending: T-4585)
+Rule: on refresh Excel names each cache field after its source header, made unique case-insensitively:
+- A header equal to an earlier field's name, ignoring case, gets the next number, starting at 2. It
+  keeps its own casing: `Sales`, `Sales2`, `Sales3`, and `region2` after `Region`.
+- A blank header becomes `Field<n>`, n being the column's 1-based position in the source (the one
+  blank, in column 4, is `Field4`, not `Field1`).
+
+Evidence: probes/t4585-pivot-field-names (excel-graph, 2026-11-06, T-4585). The headers D!A1:F1 are
+Region, Sales, `="Sales"`, `=""`, `="region"` and `="Sales"&""`. The saved cache fields (sidecar
+`pivots` cache_fields) are Region, Sales, Sales2, Field4, region2 and Sales3.
+
+Open (T-4627): what happens when a suffixed or `Field<n>` name collides with a real header (a source
+that already has `Sales2` or `Field4`).
+Status: VERIFIED (excel-graph) for the names above; collisions are UNVERIFIED (probe pending: T-4627)
