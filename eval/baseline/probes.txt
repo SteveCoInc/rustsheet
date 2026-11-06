@@ -2405,6 +2405,7 @@ C	probes/t4447-sort-fractional-keys.case.json	84
 C	probes/t4449-groupby-function-array-edges.case.json	145
 C	probes/t4450-eta-special-forms.case.json	152
 C	probes/t4453-near-integer-text-args.case.json	168
+C	probes/t4455-near-integer-eng-args.case.json	260
 C	probes/t4458-bessely-tiny-x-bisect.case.json	263
 C	probes/t4458-bessely-tiny-x-cuts.case.json	430
 C	probes/t4464-groupby-spent-filter-shapes.case.json	323
