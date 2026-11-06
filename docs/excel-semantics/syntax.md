@@ -361,9 +361,16 @@ S2's only, is 7 and `=Dup` is Last's 90; excel-graph 2026-11-06, T-4554). The na
 `_` before the letters (probes/t4587-api-name-sheet-order-case, excel-graph 2026-11-06: tabs Z, B, a, _u, Z active,
 no workbook names; B + a reads a's, so not ordinal, where `B` < `a`; a + _u and B + _u read _u's, so `_` sorts as
 below the lower-case letters, not after `Z`; Z + a reads a's). Digits, other punctuation, spaces and non-ASCII names
-are unprobed (ours compares lower-cased names by code point). A sheet-scoped name's body follows the same rule:
-Last's `LD` = `=Dup` reads Last's 90 (t4554-api-name-local-name-body; Last is also the first by name there, so a
-sheet-scoped body's own sheet winning is not ruled out, UNVERIFIED). Ours since T-4587: the parser reads a bare
+are unprobed (ours compares lower-cased names by code point). A sheet-scoped name's body follows the same rule, not
+its own sheet first: Last's `LD` = `=Dup` reads Last's 90 (t4554-api-name-local-name-body, where Last is also the first by
+name), and with tabs First, S2, Last, S2's `SD` = `=Dup` (Dup on First and S2) reads First's 1, Last's `LD` = `=DupB` (on
+First and Last) First's 2, S2's `SW` = `=DupC` (workbook and Last; S2 none) Last's 93, not the workbook's, and S2's
+`TW` = `=DupD` (workbook, S2 and Last) Last's 94, not S2's own 74; the same on every sheet and with First, S2 or Last
+active (probes/t4621-api-sheet-name-body, -first, -last D1:D5, excel-graph 2026-11-06, VERIFIED, T-4621). In the same
+books `=INDIRECT("SD")` on the name's own sheet is `#REF!`, for every one of the four sheet-scoped adds and every active
+sheet (ours too). The bare own-sheet uses there, typed before the add (column E), resolve or stay `#NAME?` by the active
+sheet: S2's with First or Last active, Last's with First or S2 active (T-4674 owns the cells; the engine leaves all of
+them `#NAME?`). Ours since T-4587: the parser reads a bare
 defined name of an API-added body (`Parser::set_api_name_body`) as `Sheet!Name` on the first defining sheet by
 lower-cased name (`Parser::api_body_sheet_name`), so the body is stored qualified and a sheet rename rewrites it; a
 name only the workbook defines stays bare; a LET name or LAMBDA parameter of the body is no defined name.

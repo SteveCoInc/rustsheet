@@ -342,7 +342,7 @@ docs/research/xlsx-round-trip-2026-11-04.md.
   protection, sheet properties, rich text, full styles, theme, views.
 - Charts, drawings, pivots and slicers are preserved, not modelled.
 
-**Exit criteria** (measured by a `milestone_exit` M15 row once the suite exists):
+**Exit criteria:** (measured by a `milestone_exit` M15 row once the suite exists)
 1. 100% of outputs pass the package validator and the XSD check, over every corpus and scenario.
 2. R0 over Calipers `roundtrip/` against Excel goldens: 100% of fidelity items S-equal, except
    items owned by an open M14 task.
@@ -380,7 +380,7 @@ pivots read-only and answers GETPIVOTDATA (SPEC-0015).
 Out of scope (decision 0274): OLAP, the Data Model and Power Pivot, external and consolidation sources,
 styles and conditional formats beyond preservation, UI-only commands.
 
-**Exit criteria** (per stage, then for the milestone):
+**Exit criteria:** (per stage, then for the milestone)
 - Every in-scope catalog row has at least 30 oracle cells (its edge pools counted).
 - The `pivots`, `gen-pivot` and fresh `pivot-corpus` cells are not visibly off (decision 0083), apart from
   accepted deviations; rendered layouts match Excel's `rowItems`/`colItems`.

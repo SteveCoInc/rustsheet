@@ -220,7 +220,7 @@ form reproduces both cells (checked during T-0903), so the formulation is open.
 Evidence: `ironcalc-calc/STATISTICAL/HYPERGEOM_DIST.xlsx` Sheet1!F2, F3; probes-numeric/t1048-hypgeomdist,
 t1049-hypgeomdist (excel-graph).
 Ours: the exact value rounded once, from a double-double walk (`discrete.rs` `hypergeometric_walk`, up to 2^12 steps and
-a population of 2^52; statrs' sum beyond): within 15 digits of Excel everywhere except where Excel's own pmf is
+a population of 2^52; past it the log-space forms of "HYPGEOM.DIST of an empty population is 1 ..." below, T-4502): within 15 digits of Excel everywhere except where Excel's own pmf is
 visibly off the exact value (`HYPGEOMDIST(2,2,3,11)` = 0.05454545454545458 against 3/55, gen-m9/f2bd5f380ec002bf A52;
 `HYPGEOMDIST(2,4,3,19)`, gen-m9/ee2497a5e683c5d9 A310; t1049-hypgeomdist A10, A14, A16; gen-m9/60b0b6e69ad35a45 A140),
 T-2481.
@@ -1661,19 +1661,21 @@ exact for small integer arguments" above, T-0977). Both are `Lift` entries over 
 (HYPGEOMDIST is its pmf, no longer a call with a fifth argument node), which reads its arguments in the scalar order,
 a boolean count `#VALUE!` as on main (Excel reads a TRUE as 1: probes-numeric/t1049-hypgeomdist A53, a known failure
 unchanged here), and checks each element alone. Since T-0977 the pmf and cdf are a double-double walk of at most 2^12
-steps (78 us in release) up to a population of 2^52, and past that walk the fallbacks below. The fallback pmf is
-statrs' closed form. The fallback cdf is statrs 0.18's `Hypergeometric::cdf`, which sums the pmf term by term from 0 to
-x, one `exp` of three `ln_binomial`s
-a term: x + 1 terms whatever the distribution, so `HYPGEOM.DIST(25000000,50000000,50000000,100000000,TRUE)` took 4.8 s
+steps (78 us in release) up to a population of 2^52, and past that walk the fallbacks below. The fallback pmf was
+statrs' closed form until T-4502 and is now Loader's log-space form ("HYPGEOM.DIST of an empty population is 1 ..."). The
+fallback cdf was statrs 0.18's `Hypergeometric::cdf`, which sums the pmf term by term from 0 to x, one `exp` of three
+`ln_binomial`s a term: x + 1 terms whatever the distribution, so `HYPGEOM.DIST(25000000,50000000,50000000,100000000,TRUE)` took 4.8 s
 in release and an x near 2^64 would never finish. It is now ported to `statistical/hypegeom.rs` with a per-call cap of
 its own: the port skips the terms that are exactly 0, those below max(0, n + K - N) (`exp(-inf)`) and, at a population
 up to 2^52, those far enough from the mode that the computed exponent is below -750 with a margin for its rounding (a
 bisection on each side of the mode, at most 131 exponents; the true log pmf rises to the mode and falls after it; the
 skip relies on the platform `exp` returning exactly 0 below about -745.13, as glibc's does), and sums the rest in
-statrs' order. Adding +0.0 leaves the sum unchanged, so where at most 2^18 terms are left the value is statrs' double,
-bit for bit (unit tests `the_port_is_statrs_within_the_cap`, `skipping_the_zero_terms_keeps_statrs_double`,
-`the_slowest_call_on_main_keeps_its_double`: 96,259 terms summed there, 0.5000797091291159 as on main; probes,
-probes-numeric, ironcalc-calc and gen-m9 are unchanged cell for cell). The non-zero terms lie within about 39 standard
+statrs' order. Adding +0.0 leaves the sum unchanged, so where at most 2^18 terms are left the value was statrs' double,
+bit for bit (T-1873: 96,259 terms summed for the call above, 0.5000797091291159 as on main). Since T-4502 the skip and
+the cap still read statrs' exponents, so the same calls are capped, but the terms left are summed in log space from the
+largest one (hypegeom.rs `sum_of_terms`): the call above is 0.50007978845548, within 1E-14 of the math, 1/2 + pmf(x)/2 (the
+distribution is symmetric about x), where statrs' sum was 8E-8 low (unit tests
+`the_slowest_call_on_main_is_half_and_half_the_mode`, `skipping_the_zero_terms_keeps_the_full_sum`). The non-zero terms lie within about 39 standard
 deviations of the mode, so the cap keeps every population up to about 1.84E8 whatever the sample and x. The lifting
 table charges HYPGEOM.DIST 2^22 units an element, the bound of the cap: 2^18 + 131 terms at 250 ns, about 66 ms. The
 slowest terms measured in release are where most of the window is subnormal (`exp`'s subnormal path and additions with
@@ -4894,15 +4896,51 @@ within 1E-15 relative / largest relative error:
   - At n = 3 bup terms Excel's 0 starts earlier, between ln ret -680 and -690, at (5E6, 3.5), (5E6, 4) and (1E6, 3.5)
     alike. The last numbers are about 6E-291 and 3.8E-291, and the first 0 has a true tail near 2.8E-295. Neither ln of
     bgrat's increment I_x0(a0, c) (-687 to -697 at that bracket, while (5E6, 10.5) keeps a number at -697) nor the
-    tail explains it. Unmodelled (T-4437).
+    tail explains it. The cut is on bup's sum W (T-4437, below).
   - T.DIST.RT never reaches L140: its kernel is K(df/2, 1/2), and b = 1/2 takes the small-shape branches. Still, Excel
     is 0 once the true tail falls between e^-680 and e^-690 at df 1E7, and between e^-690 and e^-698 at df 1E5
-    (about 3E-300), far above the subnormals. Unmodelled (T-4437).
+    (about 3E-300), far above the subnormals. Bracketed to 0.5 nats below; unmodelled (T-4564).
   - Excel never returns a subnormal or a non-zero value below these cuts in any probed cell. Ours matches every number
     to the last digits, except three cells just above the n = 3 cut that are off in the 9th digit. Since T-3764 it is
     Excel's 0 wherever ln ret is below ln(DBL_MIN) (the rule above); it still keeps a number at the n = 3 zeros above
-    that (t4254-beta-t-l140-zero-cut B1:B11, D1:D11, and t4254-beta-t-zero-wide A30, B30, C30) and the t's (owned by
-    T-4437).
+    that (t4254-beta-t-l140-zero-cut B1:B11, D1:D11, and t4254-beta-t-zero-wide A30, B30, C30) and the t's. Since
+    T-4437 the n >= 3 zeros are exact too (the rule below); the t's and n = 2 are owned by T-4564.
+  - **At n >= 3 bup terms the 0 is on bup's sum W (T-4437)**, probes/t4437-beta-t-zero-bracket (333 cells,
+    excel-graph, 2026-11-06), which walks by 0.5 nats (docs/research/t4437/gen_bracket.py; each cell's ln in
+    `ln_targets.json`). L140 bup+bgrat's BETA.DIST is 0 exactly where W = ret·S is below 2^-970 (the smallest normal
+    double over the double epsilon, 1.0020841800044864E-292), though W is still a normal double there and bgrat's
+    increment D is about e^-18 times W. At (a, b) = (5E6, 3.5), (5E6, 4), (1E6, 3.5) and (5E6, 5.5), the last
+    numbers have W = 1.11, 1.15, 1.10 and 1.60 times 2^-970 (`BETA.DIST(...,5E6,3.5,TRUE)` row 9 is
+    1.1078134827430778E-292), and the first zeros 0.67, 0.70, 0.67 and 0.97 times it. ln ret is 11.7 to 22 nats
+    above ln(DBL_MIN) there, so T-4045's prefactor rule does not reach these cells. The tail and W cannot be told
+    apart here: D adds less than 1E-8 relative.
+    Fresh sweep after the rule froze (probes/t4437-beta-zero-fresh, 102 cells, excel-graph, 2026-11-06;
+    docs/research/t4437/gen_fresh.py): (3E6, 3.5), (5E6, 6.5), (8E6, 4.5), (1E6, 5) and (4E6, 7.5), n from 3 to 7,
+    17 rows 0.25 nats apart around the edge. Scored once: every family's first 0 is on the predicted row (row 10, W
+    0.88 times 2^-970) and its last number on row 9 (1.13 times), 85 of 85 cells on the predicted side. The sweep's
+    sixth family, (2E6, 2.5) at n = 2, is a number at every row, below the edge too, so the rule as frozen (any n)
+    scored 94 of 102. The n >= 3 domain was chosen after that score, so the rule was frozen again with it
+    (docs/research/t4437/freeze2.md, pushed before the next fill) and swept fresh a second time.
+    Second fresh sweep (probes/t4437-beta-zero-fresh2, 220 cells, excel-graph, 2026-11-06;
+    docs/research/t4437/gen_fresh2.py): eight untouched n >= 3 families, (1.5E6, 3.25), (6E6, 3.75), (2.5E6, 4.25),
+    (7E6, 5), (1.2E6, 6.5), (9E6, 7.75), (3.5E6, 7.25) and (4.5E6, 3.5) (n 3 to 7, c 0.25 to 1, a0 1.2E6 to 9E6), 22
+    rows 0.05 nats apart from 0.525 above ln 2^-970 to 0.525 below. Every family is a number through row 11
+    (0.025 above) and 0 from row 12 (0.025 below): 176 of 176 cells on the predicted side, so the edge is 2^-970
+    to within 0.025 nats at every one. Last numbers: 1.0274520...E-292 (H11 `BETA.DIST(0.999847242166822,4500000,
+    3.5,TRUE)` is 1.027452053743555E-292); H12 is 0.
+  - **n = 2 is not settled.** (5E6, 2.5) and (5E6, 3) (t4437-beta-t-zero-bracket D, F) are 0 at every row, all at W
+    0.22 times 2^-970 and below, which agrees with the rule. (2E6, 2.5) (t4437-beta-zero-fresh D) is a number at
+    every row, down to 0.15 times it. In the second sweep (3E6, 2.5) is a number to 0.525 nats below the edge and
+    (7E6, 2.75) to 0.225 below, 0 from 0.275 below (t4437-beta-zero-fresh2 I, J): the n = 2 cut lies below the
+    edge, lower at smaller a0. Every scale-free quantity tried (W, the tail, D, x^a, the density) collides between
+    (2E6, 2.5) numbers and (5E6, 2.5) zeros, so a0 itself enters. Unmodelled (T-4564).
+  - **T.DIST.RT, bracketed** (t4437-beta-t-zero-bracket G:I, ln of the true tail by 0.5): the last number and the
+    first 0 are at -687 / -687.5 at df 1E7, -692 / -692.5 at 1E6 and -696.5 / -697 at 1E5 (numbers down to
+    3.3E-303). At those cuts ln x^a is -683, -688 and -692.5, so it is not x^a reaching DBL_MIN. Unmodelled (T-4564).
+  - Ours: BETA.DIST's worksheet cdf asks `bup.rs` `l140_bup_sum_flushed` at n >= 3 (`bratio::beta_dist_cdf`), as
+    well as T-4045's rule. BETADIST shares that cdf, so it takes the rule too; every cell above is BETA.DIST, and
+    BETADIST's edge rests on the shared kernel (as T-3764's), not on its own probe. F's tails and the quantile searches do not ask it. The numbers within a few nats of the
+    edge differ from Excel in the 8th or 9th digit (owned by T-4564).
   - More shapes (T-4456, probes/t4456-beta-t-zero-cut, 130 cells, and probes/t4456-beta-t-zero-reach, 81 cells,
     excel-graph, 2026-11-06):
     - The rule holds at n = 25 and 29 bup terms. At (5E6, 25.5) and (5E6, 30), ln ret -708.0 is a number
@@ -6553,9 +6591,21 @@ names sweep, second family"). These are the only probed cells with number_pop = 
   108,560 terms) is answered, and so is the pmf `HYPGEOM.DIST(163325,524700,672305386,2147483646,FALSE)` (A168). What
   Excel or the oracle times out on is unpinned. The Gate A table draws no cdf summing 2^17 terms or more (`HYPGEOM_CDF_TERMS` in tools/src/rustsheet_tools/accuracy/defs/discrete.py).
 Evidence: eval/accuracy/tables/HYPGEOM.DIST/s1 and HYPGEOMDIST/s1 (excel-graph, 2026-11-06).
-Ours: `#NUM!` at the empty population, and past the double-double walk (2^12 steps) the pmf is `#NUM!` where statrs'
-closed form C(K, x) C(N - K, n - x) / C(N, n) overflows to inf / inf (66 table points, from populations of about 2E4),
-and the fallback cdf is up to 1.2E-6 relative off (6 points): T-4502, known failures in eval/accuracy/known-failures.tsv.
+Ours (T-4502): 1 at the empty population, and every point of both tables inside the Gate A envelope. Past the
+double-double walk (2^12 steps; "HYPGEOM.DIST is not exact for small integer arguments") the pmf is the math in log space,
+R's `dhyper` (Loader 2000): ln b(x; K, p) + ln b(n - x; N - K, p) - ln b(n; N, p) with p = n / N, each binomial term
+Loader's saddle point stirlerr(m) - stirlerr(k) - stirlerr(m - k) - bd0(k, m p) - bd0(m - k, m q) - ln(2 pi k (m - k)
+/ m) / 2 (loader.rs `loader_ln_binomial`: the exact stirlerr, R's bd0 with its own 0.1 cut, not Excel's fitted bd0, and
+the means m p taken as double-doubles so p's rounding does not reach the result), within about 1E-13 relative of the
+math on the table points (unit test `the_pmf_past_the_walk_is_the_math`). Before, statrs' closed form
+C(K, x) C(N - K, n - x) / C(N, n) overflowed to inf / inf from populations of about 2E4 (66 table points `#NUM!`). The
+cdf past the walk is the largest term of its window in that log form times the sum of the window's terms relative to
+it, each from the last by the exact ratio of consecutive terms in double-double (hypegeom.rs `sum_of_terms`), where
+statrs' sum of ln-binomial terms was up to 1.2E-6 relative off (A164; 6 points). A95 is now the math's 8.1E-186, inside
+the envelope on the math side; Excel's 0 there stays Excel's value (decision 0300) and reproducing it needs Excel's
+formulation (T-2481). The unprobed shapes take the general rules: `HYPGEOM.DIST(0,0,0,0,TRUE)` is 1 (no successes are
+possible), `HYPGEOMDIST(1,0,0,0)` 0 (a sample above min(number_sample, population_s)) and `HYPGEOMDIST(0,0,1,0)` `#NUM!`
+(population_s above number_pop).
 Status: VERIFIED (excel-graph)
 Tasks: T-4105, T-4502
 
@@ -6625,8 +6675,12 @@ too: `BINOM.INV(2147483647,0.5,0.5)` and `CRITBINOM(2147483647,0.5,0.5)` are `#N
 Evidence: probes/t2435-dist-extremes A15:A19 (excel-graph, 2026-10-26); gen-m9 a61e547a1cab994c A127
 (`CRITBINOM(1E+15,0.5,0.001)`) and ee2497a5e683c5d9 A345 (`BINOM.INV(1E+15,5.2E-16,0.5)`).
 Ours: matches since T-2435 (`TRIALS_LIMIT` in functions/statistical/binom.rs now also in
-`binom_inv_of`). The count itself at a huge trial count is ours to fix: `BINOM.INV(2147483646,0.5,
-0.5)` is 1073744668 against Excel's 1073741823 (statrs' binomial cdf; T-2809).
+`binom_inv_of`). The count at 2^31 - 2 trials matches too, since T-3444: statrs' binomial cdf gave
+`BINOM.INV(2147483646,0.5,0.5)` 1073744668 against Excel's 1073741823, and the search now runs on
+BINOM.DIST's own cdf, the bratio port of TOMS 708 on `I_p(k + 1, n - k)` (basym, its asymptotic
+expansion, near the median and bfrac further out; no fitted constant), which crosses alpha at n/2
+(T-2809 confirmed it on A15 and A18; "BINOM.DIST.RANGE and BINOM.INV at a large n sit on BINOM.DIST's
+own cdf").
 Status: VERIFIED (excel-graph)
 Tasks: T-2435, T-2809
 
@@ -6699,10 +6753,23 @@ p = 0.9 and p = 0.99 are exactly 0.5, the midpoint of [A, B] (`BETAINV(0.9,1E-30
 `BETAINV(0.99,1E-300,30)`), so Excel's search stops at its start there.
 Evidence: probes/t2435-dist-extremes A68:A76, A108:A112 (excel-graph, 2026-10-26); gen-m9
 3e98b26cf6713e77 A151 (`BETAINV(1E-20,1E-300,30)`).
-Ours: the search's floor rather than 0 (`BETAINV(1E-20,1E-300,30)` is 3.333333333333333E-302), and
-0.5 is not reproduced; T-2808.
-Status: VERIFIED (excel-graph)
-Tasks: T-2435, T-2808
+Underflow test (T-2808): the quantile of p lies below the smallest normal double DBL_MIN exactly when
+I_x(a, b) at x = DBL_MIN is at least p, and there I_x is its series' leading term x^a/(a B(a, b)) to the double (the
+next term is a (1 - b) x/(a + 1) relative). This is the math, not a fit: it gives `#NUM!` at every `#NUM!` cell above
+with p up to 1/2 and a number at A108, A109 and A112.
+Not established (T-2808): what gives the 0.5. Candidate: in AS 109's orientation (1 - p with the shapes swapped above
+1/2) AS 109's first approximation is 1 there (its branch 1 - exp((ln((1 - a) q) + ln B)/q), the exp underflowing),
+and a start outside (fpu, 1 - eps) is reset to the midpoint, as R's old AS 109 port did; Excel's search would then stop
+at that start. It fits 12 of the 13 such cells on file (A73, A111 and the DBL_MIN class of the Gate A entry below), but
+BETAINV/s1 A125 (`BETAINV(0.826804627471484,2.22507385850721E-308,0.478796631378503)`) is `#NUM!` from the same start
+while A135 (0.692122660100602, DBL_MIN, 0.517627748014771) is 0.5, and AS 109's first Newton step from 0.5 is finite at
+both (ln of its density factor 707.34 and 707.37), so neither "the start is 1" nor "the first step cannot move" separates
+them. Not implemented (owner rule: no fitted values).
+Ours: `#NUM!` where the quantile underflows for p up to 1/2 since T-2808 (functions/statistical/beta.rs
+`lower_quantile_underflows`; before it the search stopped at 3.333333333333333E-302 at alpha 1E-300, where every cdf it
+evaluates rounds to 1); 0.5 is not reproduced (T-4663).
+Status: VERIFIED (excel-graph) for the cells; the 0.5's mechanism UNVERIFIED
+Tasks: T-2435, T-2808, T-4663, T-4676
 
 ## BETA.INV's Gate A table: 1 - 2^-53 near 1, 2^-53 by the flip, 0.5 at a DBL_MIN shape, `#NUM!` at a huge alpha (T-3578)
 Rule: on accuracy/BETA.INV/s1 (199 points, excel-graph 2026-11-02) Excel's BETA.INV differs from the engine in four
@@ -6726,7 +6793,7 @@ classes (A123 is listed separately after them), all where the quantile is at or 
 Evidence: eval/accuracy/tables/BETA.INV/s1 (oracle and 50-digit math sidecars; `rustsheet-eval accuracy`)
 Ours: `#NUM!` in the first three classes, 1 - 2^-53 in the fourth; 27 known failures in eval/accuracy/known-failures.tsv
 Status: VERIFIED (excel-graph) for the cells; the reasons (flip, start) UNVERIFIED
-Tasks: T-3578, T-3351 (classes 1 and 2), T-2808 (class 3), T-3862 (class 4)
+Tasks: T-3578, T-3351 (classes 1 and 2), T-4663 (class 3, after T-2808), T-3862 (class 4)
 
 ## F.INV.RT saturates at 3.696066238512854E+150/df1 in the far tail (T-2435)
 Rule: for a probability far in the tail and a df2 below 2, Excel's F quantile search stops at a
@@ -6738,9 +6805,27 @@ closed form instead (`F.INV.RT(1E-200,1,2)` is 1.0000000000000202E+200), and df2
 Evidence: probes/t2435-dist-extremes A77:A81, A115:A118 (excel-graph, 2026-10-26); gen-m9
 abc2939ebd1e2365 A11 (`CHIDIST(F.INV.RT(1E-200,1,1.999),10)` is 0, so the quantile is finite),
 a612e89321a6df9c A23 and 01523d247594952e A377 (the far tail's last digits).
-Ours: `#NUM!` where the quantile saturates, and 7 ulp off at `F.INV.RT(1E-20,3,9)`; T-2808.
-Status: VERIFIED (excel-graph)
-Tasks: T-2435, T-2808
+`F.INV.RT(1E-200,2,1.999)` is not exactly half the df1 = 1 value: its ratio to 3.696066238512854E+150/2 is
+1.0000010000006678.
+Not established (T-2808): where the constant comes from. It is no simple closed form of the double format: it is
+2^500 times 1.1291247153936121, sqrt(DBL_MAX)/3627.588648, e^346.69503302440125, and none of these factors is a
+known constant. An AS 109 replay (start clamped to [1E-4, 0.9999], acu = 1E-300) on the upper tail's beta
+variable u, I_u(df2/2, df1/2) = p, stops where its Newton correction (about u/b) falls below sqrt(acu) = 1E-150:
+that gives the order (2E150 to 5E150 over df1) and the 1/df1 scaling, but its stop depends on df2 through the
+geometric path down from the start (0.64 to 1.36 times the constant over df2 1.5 to 1.999, returning the last
+iterate or the stepped one), where Excel's value is the same to the last digit. So it is not Excel's search, and the
+constant is not implemented: copying it would be a fitted value (owner rule; reviewer-excel-fidelity check 7).
+Lead (gap triage 2026-11-06). This is arithmetic on the cells above, not new evidence, and is UNVERIFIED. In the
+beta variable of the upper tail, x = df2/(df2 + df1*F) at shape a = df2/2 and b = df1/2, the saturated x is
+proportional to a. x/a is 5.411158434229572E-151 for df2 = 1.5, 1.9 and 1.999 (b = 0.5), and 5.4111530230729346E-151
+at df1 = 2 (b = 1). BETA.INV's own saturation `BETA.INV(1E-300,0.5,100)` = `BETA.INV(1E-200,0.5,100)` =
+2.7050408442680296E-151 (probes-numeric/t1543-inverse-cdf-tiny-p A91, A92) gives 5.41008E-151 at b = 100. So the stop
+looks like "x/a below about 1E-150", the Newton correction near the origin, with a weak dependence on b. Against
+that, accuracy/BETA.INV/s1 A131 (9.192367895421942E-151 at a = 1.12, b = 2.10) gives 8.2E-151. T-4675's sweep tests
+this.
+Ours: `#NUM!` where the quantile saturates, and 7 ulp off at `F.INV.RT(1E-20,3,9)`; T-4662.
+Status: VERIFIED (excel-graph) for the cells; the mechanism UNVERIFIED
+Tasks: T-2435, T-2808, T-4662, T-4675
 
 ## F.INV.RT and FINV at a tiny probability: Excel's own search, far from the math (T-4103)
 Rule: below p of about 1E-130, and at p = 2.22507385850721E-308 (DBL_MIN), Excel's F.INV.RT and FINV are often far
@@ -7152,9 +7237,15 @@ Rule:
   (`{0.5,0.499999999999999}`) and every probed amount down to 0.1 below are `#NUM!`, as are 1E-14 above 1
   (`{0.5,0.50000000000001}`) and every probed amount up to 0.1 above (t4098 A3:A31); 1E-15 above
   (`{0.5,0.500000000000001}`, A2), ten 0.1s (5.6E-17 above, A1) and `{1.2,-0.1,-0.1}` (5.6E-17 below, A33) are
-  numbers. The cells fit "the double sum, rounded to 15 significant digits, is 1" (the unit of the 15th digit is 1E-14
-  above 1 and 1E-15 below), but no cell separates that from other cuts between the probed points: UNVERIFIED as a
-  rule. The table adds sums 7.3E-9 below 1 (accuracy/PROB/s1 A121) and 0.5 or 2 (A112, A116, A119, A123, A134,
+  numbers. The rule is "the double sum, rounded to 15 significant digits, is 1" (the unit of the 15th digit is 1E-14
+  above 1 and 1E-15 below, so the band is about 5E-15 above and 5E-16 below). T-4578's probe
+  (probes/t4578-prob-sum-tolerance A1:A24, excel-graph, 2026-11-06), with its predictions under this rule committed
+  before the fill, matched all 24 cells, among them two pairs that a fixed or ulp-count tolerance cannot split:
+  `{0.5,0.500000000000005}` (double sum 4.88E-15 above 1) is a number but `{1,5E-15}` (5.11E-15 above) `#NUM!` (A17,
+  A5), and `{0.5,0.5}-{0,5E-16}` (4.44E-16 below) is a number but `{1,-5E-16}` (5.55E-16 below) `#NUM!` (A22, A11);
+  sums 2.2E-16 to 4.0E-15 above or 2.2E-16 to 4.4E-16 below are numbers, 6.0E-15 to 1E-14 above or 6.7E-16 to 1E-15
+  below `#NUM!`. UNVERIFIED: an exact tie at the 16th digit (unreachable from a double near 1) and the summation order
+  of three or more probabilities (all probed sums are of two). The table adds sums 7.3E-9 below 1 (accuracy/PROB/s1 A121) and 0.5 or 2 (A112, A116, A119, A123, A134,
   A138), all `#NUM!`. One pair of numbers is the usual check: `PROB({1},{1},1)` and `PROB(1,1,1)` are 1 and
   `PROB({1},{1},2)` 0 (t4098 A36:A38).
 - CHISQ.TEST and CHITEST: a 1x1 array literal is `#N/A` like a one-cell range (`CHISQ.TEST({5},{4})`, `CHITEST({5},{4})`,
@@ -7179,11 +7270,12 @@ arrays of different shapes when one is a table (T-2650). Of 840 table points, 80
 Excel kept as the target (decision 0300): one probe sidecar cell, t4098 A49 `Z.TEST({1,2,3},1E+300,1E-300)`, Excel 0.5
 against the math 1 (Phi(1.7E+600); 50% relative). No table point of these five functions is more than 1E-4 relative off
 the math.
-Evidence: probes/t4098-tests-prob-domains A1:A56 (excel-graph, 2026-11-06); accuracy/CHISQ.TEST, CHITEST, Z.TEST,
-ZTEST and PROB s1 (excel-graph, 2026-11-06).
-Ours: matches the CHISQ.TEST, Z.TEST and PROB cells above but A3:A5, A32, A33, A44, A45, A48 and A49 of the probe and
-accuracy/PROB/s1 A113, A125 (a per-probability check, a 1E-14 sum tolerance, a statistic of +inf read as p 0, z
-overflow), which T-4578 owns.
+Evidence: probes/t4098-tests-prob-domains A1:A56 and probes/t4578-prob-sum-tolerance A1:A24 (excel-graph,
+2026-11-06); accuracy/CHISQ.TEST, CHITEST, Z.TEST, ZTEST and PROB s1 (excel-graph, 2026-11-06).
+Ours: matches the CHISQ.TEST, Z.TEST and PROB cells above, and probes/t4578-prob-sum-tolerance, since T-4578: PROB
+checks only the sum, as `decimal_round::cut_to_15_digits(sum) == 1` (`prob.rs`); an infinite squared difference is
+`#NUM!` (`chisq.rs`; checked per cell in order, so its order against a later zero expected cell's `#DIV/0!` is
+unprobed); with sigma given an infinite z is `#NUM!` when positive and 0.5 when negative (`z_test.rs`).
 Status: VERIFIED (excel-graph) except the noted UNVERIFIED parts
 Tasks: T-4098, T-4578
 
@@ -7345,12 +7437,41 @@ T-2576 probe (probes/t2576-error-type-cell-paired, excel-graph, 2026-10-26; FTES
   first sample is `#NUM!` too (`TTEST(CELL("col",Data!D4),Data!A5:B10,2,2)`, gen-m9 a5342a7e24fd803e A15), after its
   tails/type checks (gen-m9 d5fd9e05e9e6f466 A184 is the tails argument's `#CALC!`). A size mismatch comes first: `#N/A`
   (`COVARIANCE.S(ERROR.TYPE(#REF!),Data!C10:D10)`, gen-m9 abc2939ebd1e2365 A335; `RSQ(ERROR.TYPE(#NAME?),Data!C8:C11)`,
-  b9a32ce9a1fd0d71 A267). UNVERIFIED: the second argument of COVAR, COVARIANCE.S, CORREL, PEARSON, SLOPE, RSQ and STEYX
-  (the engine treats it as COVARIANCE.P's and INTERCEPT's), and a marked first argument against an error element of the
-  second (the engine gives `#NUM!`).
+  b9a32ce9a1fd0d71 A267).
+- T-2766 probe (probes/t2766-mark-positions, excel-graph, 2026-11-06): a marked second argument is cells with no number
+  in COVAR, COVARIANCE.S, CORREL, PEARSON, SLOPE, RSQ and STEYX: `CORREL({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))` is
+  `#DIV/0!` where the unmarked `CORREL({1;2;3},{4;2;3})` would be -0.5 (plain computation, not an oracle cell),
+  `COVAR({1;2},ERROR.TYPE({#REF!;#DIV/0!}))` `#DIV/0!` (A6:A12; so
+  E27's `INTERCEPT(5,ERROR.TYPE(#REF!))`, one point either way, does not tell the number from no number). A marked first
+  argument beats an error element of the second: `COVARIANCE.P(ERROR.TYPE({#REF!;#REF!}),{1;#N/A})` and the CORREL form
+  are `#NUM!` (A13, A14). SUMX2MY2 and SUMX2PY2 react like SUMXMY2, and the mark is `#NUM!` in either argument but after
+  the other argument's error value and the count check: `SUMXMY2(5,ERROR.TYPE(#REF!))` is `#NUM!`,
+  `SUMXMY2(ERROR.TYPE(#REF!),1/0)` `#DIV/0!`, `SUMXMY2(ERROR.TYPE(#REF!),{1;2})` `#N/A` (A15:A19). LOGEST, TREND and GROWTH
+  are `#VALUE!` like LINEST (A20:A22). IFNA and a called LET name keep the mark (`FTEST({1;2;3},IFNA(ERROR.TYPE(#REF!),0))`,
+  `FTEST({1;2;3},LET(f,LAMBDA(x,x),f(ERROR.TYPE(#REF!))))` are `#NUM!`, A23, A28), IFS and SWITCH drop it (`#DIV/0!`, A24,
+  A25), and so does IFERROR of an array (`IFERROR(ERROR.TYPE({#REF!}),0)`, A27); nested IFs, a LET name bound to a LET
+  name and INDEX of one element of a marked array keep it (A26, A29, A30).
+- T-2766 review probe (probes/t2766-mark-positions-2, excel-graph, 2026-11-06; 30 cells, predictions committed before the
+  fill). The wrappers nest in any order: CHOOSE of a LET name or of a LAMBDA call, LET of CHOOSE, INDEX of a LET name,
+  IF of a LET name, a LAMBDA call of CHOOSE, INDEX of CHOOSE and IFERROR of a LET name all keep the mark
+  (`FTEST({1;2;3},CHOOSE(1,LET(x,ERROR.TYPE(#REF!),x)))` is `#NUM!`, A1:A4, A6:A9), and `IRR(CHOOSE(1,LET(x,
+  CELL("row",D2),x)))` is `#VALUE!` (A5). A marked array passes IF, CHOOSE, a LET name, a LAMBDA call and
+  `INDEX(..,0,1)` (`FTEST({1;2;3},IF(TRUE,ERROR.TYPE({#REF!;#N/A})))` is `#NUM!`, A10:A15), while IF over an array
+  condition drops a marked number (`FTEST({1;2;3},IF({TRUE;TRUE},ERROR.TYPE(#REF!)))` is `#DIV/0!`, A16). IFERROR's
+  fallback keeps it (`FTEST({1;2;3},IFERROR(1/0,ERROR.TYPE(#REF!)))` is `#NUM!`, A24) and so does IF's false branch (A25).
+  An array of references as the second argument is cells with no number in CORREL, SLOPE and INTERCEPT
+  (`CORREL({1;2},INDIRECT("B1",{1;1}))`, `INTERCEPT(5,INDIRECT("B1",{1}))` are `#DIV/0!`, A17:A19) and `#NUM!` in SUMXMY2
+  (A20). A marked second argument's error element stays that error: `CORREL({1;2;3},ERROR.TYPE({#REF!;5;#VALUE!}))` is
+  `#N/A` (A23); `SUMXMY2(ERROR.TYPE(#REF!),{#N/A})` is `#NUM!` (A22). LINEST's marked known_y waits for known_x's error
+  value: `LINEST(ERROR.TYPE(#REF!),1/0)` is `#DIV/0!` (A21). CHITEST rejects a marked argument on either side:
+  `CHITEST({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))`, the swapped form and `CHITEST({1;2},INDIRECT("B1",{1;1}))` are
+  `#NUM!` (A26:A28). A recursive LAMBDA whose inner level alone returns ERROR.TYPE is marked only when every outer level
+  hands the value on: `+0` at the outer level drops it (`#DIV/0!`, A29), returning it unchanged keeps it (`#NUM!`, A30).
 - LINEST reacts: `LINEST(ERROR.TYPE(#REF!))` is `#VALUE!` (E34) where `LINEST(2)` is 0 (gen-m9 8d3588d8df0812df A186).
-  CHITEST and the one-list functions are unaffected: SUM, STDEV, VAR.P, KURT, PERCENTILE, LARGE, MEDIAN, DEVSQ, AVEDEV and
-  ZTEST give what 4 gives (E18:E22, E30:E33, E36:E38).
+  The one-list functions are unaffected: SUM, STDEV, VAR.P, KURT, PERCENTILE, LARGE, MEDIAN, DEVSQ, AVEDEV and ZTEST give
+  what 4 gives (E20:E22, E30:E33, E36:E38). `CHITEST({1,2},ERROR.TYPE(#REF!))` gives what `CHITEST({1,2},4)` gives
+  (E18, E19) only because the cell counts differ: with equal counts CHITEST rejects the mark (`#NUM!`,
+  probes/t2766-mark-positions-2 A26:A28).
 The third T-2255 cell, `F.TEST(INDIRECT("Data!B3",TOCOL(2,0,Data!A5)),{-1,0,1})`
 (06b4e8f5de409d5e A261), is `#NUM!` over an INDIRECT that is `#VALUE!` (references.md "INDIRECT: a 1x1 array a1 argument is
 #VALUE!"), as is `COVARIANCE.P(INDIRECT("Data!A1",FILTER(..)),Data!B11:D12)` (f2bd5f380ec002bf A383); T-2577 explained
@@ -7358,9 +7479,19 @@ that `#NUM!`: the INDIRECT is an array of references ("An array of references is
 Evidence: probes/t2436/computed-scalar (excel-graph, 2026-10-24), probes/t2576-error-type-cell-paired (excel-graph,
 2026-10-26); gen-m9 cells in T-2576 and T-2577.
 Ours: since T-2576 the same for the call itself (parentheses aside), in F.TEST/FTEST, the regression family, COVARIANCE
-and T.TEST (`is_marked_number`, functions/util.rs; `evaluate_sample_arg`, functions/statistical/paired.rs); the LET/IF/CHOOSE/IFERROR/LAMBDA/INDEX forms, an array of
-marked numbers, SUMXMY2 and LINEST are T-2766's (still `#DIV/0!` or a value); T-2577.
-Status: VERIFIED (excel-graph) for the listed calls; mechanism UNVERIFIED
+and T.TEST (`evaluate_sample_arg`, functions/statistical/paired.rs); since T-2766 the mark is a flag on the evaluated
+value (crates/rustsheet-engine/src/number_mark.rs: every read of a node is bracketed, and a reader asks whether the last
+bracket to finish, its own, carries it), which LET, IF, CHOOSE, IFERROR and IFNA (of a number, value or fallback),
+INDEX, a LAMBDA called in place and a called name hand on, nested in any order, and a LET name or LAMBDA parameter bound
+to a marked value carries; `ERROR.TYPE({#REF!})` marks its array, which the same wrappers hand on; CHITEST's marked
+second argument is `#NUM!` and the regression family's is cells with no number with its errors kept (`SecondMark`,
+functions/statistical/paired.rs); a marked known_y of LINEST, LOGEST, TREND and GROWTH is `#VALUE!` after known_x's
+error value (`read_known_y_and_x`, functions/statistical/regression.rs). T-2577.
+UNVERIFIED, and ours as said: a marked array as IFERROR's fallback (ours drops it, as IFERROR of an array does); TREND's
+and GROWTH's marked known_y against an error new_x (ours: `#VALUE!` first); an array of references mixing references
+and error elements as the regression family's second argument (ours: the references no number, the errors kept); which
+of CHITEST's `#NUM!` and an error element of the other argument comes first (ours: `#NUM!`).
+Status: VERIFIED (excel-graph) for the listed calls and the wrapper nesting; mechanism UNVERIFIED
 Tasks: T-2576, T-2577, T-2766
 
 ## An array of references is #NUM! in the paired functions (T-2577)
@@ -7383,9 +7514,12 @@ of an element (the cell, `#DIV/0!`); what keeps it: LET (`F.TEST(LET(x,INDIRECT(
 Evidence: probes/t2577-indirect-ref-array (excel-graph, 2026-10-26).
 Ours: since T-2577 for a direct OFFSET or INDIRECT argument in F.TEST, the `fn_get_two_matrices` family (CORREL,
 PEARSON, SLOPE, INTERCEPT, RSQ, STEYX, FORECAST, CHITEST), COVARIANCE and T.TEST (`Model::evaluate_sample_arg`,
-functions/statistical/paired.rs); the LET form, SUMXMY2 and LINEST are T-2766's, STDEV T-2065's. UNVERIFIED, marked by
-analogy with the ERROR.TYPE mark: the first argument of RSQ and STEYX, T.TEST's second sample, and COVARIANCE.S's and
-COVAR's second argument (read as cells with no number); probing them is T-2766's.
+functions/statistical/paired.rs); since T-2766 also through a LET name (a variable bound to an array of references
+holding a reference is marked, `VariableStack::insert_marked`) and as SUMXMY2's first argument; STDEV is T-2065's.
+The positions marked by analogy are confirmed by probes/t2766-mark-positions (excel-graph, 2026-11-06): `#NUM!` as the
+first argument of RSQ and STEYX and as T.TEST's second sample, cells with no number (`#DIV/0!`) as COVARIANCE.S's and
+COVAR's second argument (A1:A5); and by probes/t2766-mark-positions-2 (2026-11-06): cells with no number (`#DIV/0!`) as
+the second argument of CORREL, SLOPE and INTERCEPT, `#NUM!` as SUMXMY2's and CHITEST's (A17:A20, A28).
 Status: VERIFIED (excel-graph) for the listed calls
 Tasks: T-2577, T-2766, T-2065
 
@@ -7810,11 +7944,23 @@ Rule:
   the quantile is a finite double (about 3.2E+22 to 6.9E+38). T.INV accepts p down to 1E-300 (T-1531).
   `CONFIDENCE.T(2.22507385850721E-308,sd,n)`, which is T.INV.2T at df n - 1, is `#NUM!` too, at n 38, 68 and 79 (df 37,
   67 and 78), where the margin is finite (5.5E+8 at `CONFIDENCE.T(2.22507385850721E-308,2.85657486076017,38)`; T-4102).
+  T-4541 pins the cut: the two-tailed quantile is an error exactly when p/2 is below the smallest normal double
+  (p < 2·DBL_MIN = 4.4501477170144028E-308), the half Excel flushes to 0, and it then answers as at p = 0. At df 1
+  T.INV.2T is `#DIV/0!` (the p = 0, df 1 rule in "Student t quantile at p = 0 with df below 2 is #DIV/0!"), from df 2
+  `#NUM!`; CONFIDENCE.T is `#NUM!` at every n, df 1 (n = 2) included. `T.INV.2T(4.4501477170144E-308,df)` (just below
+  2·DBL_MIN) is `#DIV/0!` at df 1 and `#NUM!` at df 2, 9 and 30, and `T.INV.2T(4.45014771701441E-308,df)` (just above)
+  is a number at all four (`T.INV.2T(4.45014771701441E-308,9)` = 3.648002741446659E+34), as are 4.4502E-308 to 1E-300;
+  3E-308 and 4.45E-308 are errors like 2.22507385850721E-308. TINV (df 2, 30) and CONFIDENCE.T (sd 1, n 2, 3, 31) cut at
+  the same p. T.INV at those p is a number (`T.INV(2.22507385850721E-308,2)` = -4.74037595...E+153), so the cut is the
+  halving, not the tail. A computed subnormal p (`2.22507385850721E-308/2`, `1E-300/1E10`, `1E-300*1E-23`) is 0 before
+  it reaches the function (column J), so those rows are the p = 0 errors. A subnormal number literal in a formula makes
+  Excel (excel-graph) reject the whole workbook, so the probe computes them. Evidence: probes/t4541-t-inv-2t-tiny-p
+  (excel-graph, 2026-11-06; A1:L15, M1:M5, written with these predictions before the fill).
 - `F.INV(0,d1,d2)` is 0, the lower end of the support.
 
 - The legacy `FINV(0,2,5)` is `#NUM!` (probes-numeric/m9-legacy-finv A65), so the 0 is F.INV's only.
 
-The exact x where T.DIST's density turns `#NUM!` and the p below which the two-tailed quantile does are not yet probed.
+The exact x where T.DIST's density turns `#NUM!` is not yet probed; the two-tailed quantile's p cut is 2·DBL_MIN (T-4541).
 Evidence: Gate A tables, excel-graph:
 - accuracy/T.DIST/s1 A85, A95, A105 and A110, and accuracy/T.DIST/e-T-3425 A90, A103 and A116 (T-3425);
 - accuracy/T.INV.2T/s1 A68 and A78, and accuracy/TINV/s1 A68 and A78;
@@ -7822,9 +7968,9 @@ Evidence: Gate A tables, excel-graph:
 - accuracy/T.DIST/s1 A94 and A97 (density 0 below the cut);
 - accuracy/T.DIST/r4-T-2585 A236 (density 0), and A266 and A267 (`#NUM!`; T-4580);
 - accuracy/F.INV/s1 A111 (`F.INV(0,38,10)`) and A125 (`F.INV(0,9,50)`), and probes-numeric/t1049-finv A16 (`F.INV(0,3,7)`).
-Status: VERIFIED (excel-graph) for the cited cells; the cut points are UNVERIFIED.
-Ours: T.DIST returns 0, and T.INV.2T, TINV and CONFIDENCE.T return the quantile or margin. These are Gate A known
-failures owned by T-3554 and T-4541 (moved from T-3386).
+Status: VERIFIED (excel-graph) for the cited cells and the two-tailed quantile's p cut (T-4541); T.DIST's x cut points are UNVERIFIED.
+Ours: T.DIST returns 0, a Gate A known failure owned by T-3554. T.INV.2T, TINV and CONFIDENCE.T as Excel since T-4541
+(`two_tailed_half_underflows`: a p whose half `flush_subnormal` makes 0 is p = 0).
 Tasks: T-3554, T-3386, T-3358, T-4541, T-4102, T-4580
 
 ## A text scalar argument is #VALUE! before an error cell as the data (T-3781)

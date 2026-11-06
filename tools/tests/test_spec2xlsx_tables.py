@@ -64,11 +64,16 @@ def test_filter_column_col_id_and_no_criterion() -> None:
     assert '<autoFilter ref="A1:B4"><filterColumn colId="1"/></autoFilter>' in table(
         filter_column={"col_id": 1, "criterion": False}
     )
+    assert (
+        '<autoFilter ref="A1:B4"><filterColumn colId="0"><colorFilter/></filterColumn></autoFilter>'
+        in table(filter_column={"color": True})
+    )
+    assert '<colorFilter cellColor="0"/>' in table(filter_column={"color": True, "cell_color": False})
     with pytest.raises(ValueError, match="past the table's last column"):
         table(filter_column={"col_id": 1})
     with pytest.raises(ValueError, match="whole number"):
         table(filter_column={"col_id": -1})
-    with pytest.raises(ValueError, match="takes only col_id and criterion"):
+    with pytest.raises(ValueError, match="takes only col_id, criterion, color and cell_color"):
         table(filter_column={"colId": 1})
 
 

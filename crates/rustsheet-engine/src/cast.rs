@@ -802,15 +802,6 @@ impl Model {
         }
     }
 
-    pub(crate) fn get_boolean(
-        &mut self,
-        node: &Node,
-        cell: CellReferenceIndex,
-    ) -> Result<bool, CalcResult> {
-        let result = self.evaluate_node_in_context(node, cell);
-        self.cast_to_bool(result, cell)
-    }
-
     pub(crate) fn cast_to_bool(
         &mut self,
         result: CalcResult,

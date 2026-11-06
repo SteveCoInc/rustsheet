@@ -115,12 +115,13 @@ impl Model {
             Picked::Node(node) => node,
             Picked::Value(value) => return RefArg::Value(value),
         };
-        match mode {
-            IfBranchMode::Aggregate => self.evaluate_reference_arg(node, cell),
-            IfBranchMode::SingleSheet => self.evaluate_single_sheet_arg(node, cell).into(),
-            IfBranchMode::Chosen => self.evaluate_chosen_reference(node, cell).into(),
-            IfBranchMode::Value => self.if_branch_value(node, cell).into(),
-        }
+        // The branch's ERROR.TYPE/CELL mark is IF's in every mode (`number_mark.rs`).
+        self.passing_mark(node, |model| match mode {
+            IfBranchMode::Aggregate => model.evaluate_reference_arg(node, cell),
+            IfBranchMode::SingleSheet => model.evaluate_single_sheet_arg(node, cell).into(),
+            IfBranchMode::Chosen => model.evaluate_chosen_reference(node, cell).into(),
+            IfBranchMode::Value => model.if_branch_value(node, cell).into(),
+        })
     }
 
     /// The branch an ordinary IF picked, as a value. A reference into another workbook is read
@@ -128,8 +129,9 @@ impl Model {
     /// where the written `…!A1` is `#BLOCKED!` (probes/external-ref-no-link-index A26,
     /// external-ref-no-link-ifchoose).
     pub(crate) fn if_branch_value(&mut self, node: &Node, cell: CellReferenceIndex) -> CalcResult {
+        // The branch's ERROR.TYPE/CELL mark is IF's (`number_mark.rs`).
         self.external_reference_picked_value(node, cell)
-            .unwrap_or_else(|| self.evaluate_node_in_context(node, cell))
+            .unwrap_or_else(|| self.evaluate_passing_mark(node, cell))
     }
 
     /// The pick step of a function that stands for one of its arguments once its condition,
@@ -353,7 +355,10 @@ impl Model {
             self.evaluate_picked_reference_arg(&args[0], cell)
                 .into_single_area(cell)
         } else {
-            self.evaluate_node_in_context(&args[0], cell)
+            // A number IFERROR or IFNA returns keeps its ERROR.TYPE/CELL mark (`number_mark.rs`;
+            // probes/t2576-error-type-cell-paired D5, t2766-mark-positions A23). An array, whose
+            // errors may be replaced, drops it (A27).
+            self.evaluate_passing_number_mark(&args[0], cell)
         };
         // A name bound to a 3-D span is a reference, not an error, so the fallback is not taken,
         // and its value is `#VALUE!`: `IFERROR(span3,2)` is `#VALUE!` while `ISERROR(span3)` is
@@ -383,8 +388,11 @@ impl Model {
                 // is the empty value too, which STDEV.P counts as 0
                 // (`STDEV.P(A9:A12,IFERROR(1/0,E6),{1,..,10})` with E6 blank;
                 // probes/t2475-stat-subexpressions P!A158).
+                // A number fallback keeps its mark too: `FTEST({1;2;3},IFERROR(1/0,
+                // ERROR.TYPE(#REF!)))` is `#NUM!` (probes/t2766-mark-positions-2 A24; a marked
+                // array fallback is unprobed and drops it: TODO(T-4653)).
                 return self
-                    .evaluate_node_in_context(&args[1], cell)
+                    .evaluate_passing_number_mark(&args[1], cell)
                     .blank_as_empty_value();
             }
             // A blank cell gives its value, not the reference: an empty value that OR reads as

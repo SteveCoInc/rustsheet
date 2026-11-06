@@ -479,6 +479,24 @@ impl Parser {
         self.lexer.is_a1_mode() && self.binds_name(name)
     }
 
+    /// The range between two names an enclosing LET or LAMBDA binds, for text the lexer read
+    /// as a column range (`a:v`). Excel takes the names: `REDUCE(A1,A2:A3,LAMBDA(a,v,a:v))` is
+    /// A1:A3, not columns A:V (probes/t4478-reduce-scan-reference-accumulator Calc!F5, J1,
+    /// excel-graph, T-4494), as `p_a:p_v` is (Calc!F20). Only when both sides are bound: a
+    /// column label against one bound name (`a:C`) is not probed and stays a column range.
+    pub(super) fn bound_names_range(&mut self, text: &str) -> Option<Node> {
+        let (left, right) = text.split_once(':')?;
+        if !self.binds_reference_shaped_name(left) || !self.binds_reference_shaped_name(right) {
+            return None;
+        }
+        let left = self.name_operand(left.to_string());
+        let right = self.name_operand(right.to_string());
+        Some(Node::OpRangeKind {
+            left: Box::new(left),
+            right: Box::new(right),
+        })
+    }
+
     /// `node`, parsed from the argument `text` starting at `token`, where a LET or LAMBDA
     /// expects a name: a name spelled like a Lotus-style range or a relative cell on this sheet
     /// was read as the range or cell while unbound, so it becomes the variable again, and stays

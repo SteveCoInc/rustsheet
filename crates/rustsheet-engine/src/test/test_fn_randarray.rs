@@ -305,3 +305,25 @@ fn test_randbetween_array_elements_and_ranges() {
     assert_eq!(model._get_text("B3"), "#VALUE!");
     assert_eq!(model._get_text("B4"), "TRUE");
 }
+
+/// Every argument lifts over an array, one call per element, each its top-left
+/// (probes/t4519-row-column-randarray-over-arrays D2:E4, probes/t4611-randarray-min-max-whole-arrays A1:A10; T-4611).
+#[test]
+fn test_randarray_lifts_over_arrays() {
+    let mut model = new_empty_model();
+    let cells = [
+        ("A1", "=ROWS(RANDARRAY({2}))", "1"),
+        ("A2", "=ROWS(RANDARRAY({2;3}))", "2"),
+        ("A3", "=COLUMNS(RANDARRAY({2},{3}))", "1"),
+        ("A4", "=ROWS(RANDARRAY(1,1,{0;5}))", "2"),
+        ("A5", "=INDEX(RANDARRAY(1,1,{5;7},{5;7}),2,1)", "7"),
+        ("A6", "=INDEX(RANDARRAY(1,1,5,5,{TRUE;FALSE}),1,1)", "5"),
+    ];
+    for (cell, formula, _) in cells {
+        model._set(cell, formula);
+    }
+    model.evaluate();
+    for (cell, _, expected) in cells {
+        assert_eq!(model._get_text(cell), expected, "{cell}");
+    }
+}

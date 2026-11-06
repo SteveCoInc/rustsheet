@@ -3,7 +3,7 @@ id: T-4627
 title: "Probe pivot field-name collisions, empty header cells and the Field<n> number"
 milestone: M16
 lane: research
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -27,8 +27,26 @@ T-4585 (probes/t4585-pivot-field-names) shows `Sales2`, `Sales3`, `region2` and 
 Use the same formula-header trick: the case builder refuses duplicate or blank headers, so `=""` and `="Sales"` get past it. T-4141 implements the rule.
 
 ## Acceptance criteria
-- [ ] Filled probes for each case; the pivots.md entry's UNVERIFIED part closed.
-- [ ] `make check` green; reviewers approve.
+- [x] Filled probes for each case; the pivots.md entry's UNVERIFIED part closed.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine refresh (T-4141).
+
+## Outcome
+probes/t4627-pivot-field-name-collisions (excel-graph, 2026-11-06) covers all eight cases, one
+builder-v2 pivot per source sheet; pivots.md "Pivot field names for duplicate and blank source
+headers" is rewritten from its sidecar's cache_fields. Excel names text headers first: a taken name
+takes the first free `<header><k>` from 2 (`Sales`, `Sales2`, `="Sales"` → `Sales3`; `Sales`,
+`="Sales"`, `Sales2` → `Sales22`); a blank (empty cell or `=""`) is `Field<n>` by source position
+(Off: `Field4` at sheet column E), named after every text header (`X`, `=""`, `Field4` → `Field42`,
+`Field4`); constant repeats rename like formula ones; whitespace is kept (`" "`, `" 2"`); a
+whole-text `ß` header blocks `SS` though the items stay apart; a `=""` record is a text item apart from `(blank)`.
+`field_names` in pivot/refresh.rs did not match (it gave `Sales2` twice and `Field4` twice), so it
+now checks every taken name, names blanks last and folds names with `name_key`; a unit test pins
+each probed source. The case builder gained `cache_names` (pivot_definition.py, with a pytest) for
+the empty-cell and constant-repeat sources. The case's pivot cells are owned by T-4149 (rendering).
+`field_names` resumes each suffix search at a per-base cursor, so 16,384 equal headers name in
+linear time (unit test). Still open, filed as T-4640: number, boolean and error headers, `ß`
+inside longer names and `=`-collation expansions, other folds (`ẞ`, `ǆ`, `ı`), a blank's name
+meeting a later duplicate's suffix, and two code pointers moved from this task.

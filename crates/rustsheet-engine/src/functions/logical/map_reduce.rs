@@ -6,6 +6,8 @@ use crate::{
     expressions::{parser::ArrayNode, parser::Node, token::Error, types::CellReferenceIndex},
     limits::check_array_cells,
     model::Model,
+    reference_operators::{Ranges, RefArg},
+    variable_stack::Binding,
 };
 
 impl Model {
@@ -112,22 +114,37 @@ impl Model {
     /// The lambda takes `(accumulator, current_value)` and returns the new accumulator.
     /// With 2 arguments the first element of the array seeds the accumulator.
     pub(crate) fn fn_reduce(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        self.reduce_reference(args, cell).into_single_area(cell)
+    }
+
+    /// REDUCE as [`Model::evaluate_picked_reference_arg`] reads it: the accumulator it ends with,
+    /// a union kept as its areas. A union stays one from step to step and as the result, so
+    /// `AREAS(REDUCE(A1,A2:A3,LAMBDA(a,v,(a,v))))` is 3 and `AREAS(REDUCE((A1,A3),{1},
+    /// LAMBDA(a,v,a)))` 2, and a union initial value is a reference to the LAMBDA
+    /// (`REDUCE((A1,A3),{1},LAMBDA(a,v,ISREF(a)))` is TRUE; probes/t4478-reduce-scan-reference-
+    /// accumulator Calc!E7:H7, E16:H17, E22:H22, excel-graph, T-4494). Where one value is needed
+    /// ([`Model::fn_reduce`]) a union is `#VALUE!`, as any several-area reference is.
+    pub(crate) fn reduce_reference(&mut self, args: &[Node], cell: CellReferenceIndex) -> RefArg {
         let (data, caller, has_initial) = match self.fold_operands(args, cell) {
             Ok(operands) => operands,
-            Err(error) => return error,
+            Err(error) => return RefArg::Value(error),
         };
 
         let columns = data.columns();
         let count = data.rows() * columns;
 
         if count == 0 {
-            return CalcResult::new_error(Error::VALUE, cell, "empty array".to_string());
+            return RefArg::Value(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "empty array".to_string(),
+            ));
         }
 
         let (mut accumulator, start) = if has_initial {
-            (self.lambda_initial_value(&args[0], cell), 0)
+            (self.lambda_initial_reference(&args[0], cell), 0)
         } else {
-            (data.at(0, 0), 1)
+            (RefArg::Value(data.at(0, 0)), 1)
         };
 
         // A reference the LAMBDA returns stays one, as the next step's accumulator and as the
@@ -136,14 +153,21 @@ impl Model {
         // Calc!E2:E3, H2, E8, E11, E20:H21). SCAN reads it instead (`fn_scan`, Calc!H13).
         let mut caller = caller.keeping_trimrange_references().keeping_references();
         for index in start..count {
-            accumulator = self.call_lambda_caller(
-                &mut caller,
-                [accumulator, data.at(index / columns, index % columns)],
-                cell,
-            );
+            let accumulated = accumulator_binding(accumulator, cell);
+            let value = Binding::Value(data.at(index / columns, index % columns));
+            accumulator = self.call_lambda_caller_binding(&mut caller, [accumulated, value], cell);
         }
 
         accumulator
+    }
+
+    /// [`Model::lambda_initial_value`] keeping a union as its areas, REDUCE's first accumulator
+    /// ([`Model::reduce_reference`]).
+    fn lambda_initial_reference(&mut self, node: &Node, cell: CellReferenceIndex) -> RefArg {
+        if self.is_multi_area(node) && !matches!(node.ungrouped(), Node::SheetSpanKind { .. }) {
+            return self.evaluate_picked_reference_arg(node, cell);
+        }
+        RefArg::Value(self.lambda_initial_value(node, cell))
     }
 
     /// SCAN's and REDUCE's `initial_value` as the LAMBDA's first accumulator. A cell or range
@@ -154,8 +178,9 @@ impl Model {
     /// A1767, 18b80d3fd292d63a A467; docs/excel-semantics/arrays.md "SCAN and REDUCE keep errors
     /// in the LAMBDA", T-2307). An error goes to the LAMBDA like any value (same entry). A 3-D
     /// span is `#VALUE!` (`REDUCE(Sheet2:Sheet3!A1,{1},LAMBDA(a,v,a))`, and ISREF of it FALSE:
-    /// probes/t4478-reduce-scan-reference-accumulator Calc!G18:H19). A union is read as before,
-    /// though Excel keeps it a reference (Calc!H17; T-4494).
+    /// probes/t4478-reduce-scan-reference-accumulator Calc!G18:H19). A union is read in value
+    /// context here; REDUCE keeps it a reference ([`Model::lambda_initial_reference`], Calc!H17,
+    /// T-4494), and SCAN's union initial value is not probed.
     pub(super) fn lambda_initial_value(
         &mut self,
         node: &Node,
@@ -172,5 +197,14 @@ impl Model {
             return self.evaluate_node_in_context(node, cell);
         }
         self.eval_ref_or_index(node, cell)
+    }
+}
+
+/// REDUCE's accumulator bound for the next call: a union as its areas, anything else as the one
+/// value or reference it is, as [`Model::call_lambda_caller`] hands each step on.
+fn accumulator_binding(accumulator: RefArg, cell: CellReferenceIndex) -> Binding {
+    match accumulator {
+        RefArg::Ranges(Ranges::Areas(areas)) => Binding::Areas(areas),
+        other => Binding::Value(other.into_single_area(cell)),
     }
 }

@@ -22,6 +22,8 @@ pub struct PivotTable {
     pub sheet_id: u32,
     /// `<location ref>`, 0-based.
     pub location: CellArea,
+    /// The rest of `<location>`: the header and data offsets and the page-field grid.
+    pub geometry: PivotGeometry,
     /// An index into [`Workbook::pivot_caches`](crate::types::Workbook::pivot_caches).
     pub cache: u32,
     /// One per cache field.
@@ -49,6 +51,7 @@ impl PivotTable {
             name,
             sheet_id,
             location,
+            geometry: PivotGeometry::default(),
             cache,
             fields: Vec::new(),
             row_fields: Vec::new(),
@@ -59,6 +62,26 @@ impl PivotTable {
             opaque: Vec::new(),
         }
     }
+}
+
+/// The attributes of `<location>` besides `ref`: where the body's header and data start, measured
+/// from the location's top-left cell, and the page fields' grid. `Default` is all zero, what the
+/// importer reads for a missing or malformed attribute (the schema requires the three offsets and
+/// defaults the page counts to 0). Excel's own values per layout are in docs/excel-semantics/
+/// pivots.md "Pivot geometry" (probes/t4138-pivot-geometry); the layout stage computes them
+/// (`pivot::layout::lines`).
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub struct PivotGeometry {
+    /// `firstHeaderRow`: the row of the column fields' header.
+    pub first_header_row: u32,
+    /// `firstDataRow`: the first row of values (and of the row items).
+    pub first_data_row: u32,
+    /// `firstDataCol`: the first column of values (past the row items' columns).
+    pub first_data_column: u32,
+    /// `rowPageCount`: the rows of the page-field grid above the location.
+    pub row_page_count: u32,
+    /// `colPageCount`: the columns of that grid.
+    pub column_page_count: u32,
 }
 
 /// The pivot-wide attributes of `pivotTableDefinition` that change its layout or its text.

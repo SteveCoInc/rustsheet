@@ -70,10 +70,11 @@ fn many_different_formulas() {
     assert_eq!(model._get_text("A8"), "0");
 }
 
-// Deleting a sheet and giving its name to another can leave the same formula
-// twice in the list. The lookup then has fewer entries than the list, which
-// must not make it look out of step: it would be rebuilt for every new
-// formula, and adding many would be quadratic again.
+// Deleting two sheets can leave the same formula twice in the list: each
+// reference to a deleted sheet is rewritten to the same lost sheet (T-2612).
+// The lookup then has fewer entries than the list, which must not make it look
+// out of step: it would be rebuilt for every new formula, and adding many would
+// be quadratic again.
 #[test]
 fn a_formula_twice_in_the_list_does_not_slow_down_adding_formulas() {
     let mut model = new_empty_model();
@@ -82,7 +83,7 @@ fn a_formula_twice_in_the_list_does_not_slow_down_adding_formulas() {
     model._set("A1", "=Sheet2!A1");
     model._set("B2", "=Sheet3!B2");
     model.delete_sheet(1).unwrap();
-    model.rename_sheet_by_index(1, "Sheet2").unwrap();
+    model.delete_sheet(1).unwrap();
     let shared_formulas = &model.workbook.worksheets[0].shared_formulas;
     assert_eq!(shared_formulas.len(), 2);
     assert_eq!(shared_formulas[0], shared_formulas[1]);

@@ -108,6 +108,38 @@ fn a_negative_or_huge_count_is_num() {
 }
 
 #[test]
+fn an_empty_population_and_a_pmf_past_the_walk() {
+    let mut model = new_empty_model();
+    // T-4502, Gate A tables (excel-graph): an empty sample of an empty population is 1
+    // (accuracy/HYPGEOMDIST/s1 A115, accuracy/HYPGEOM.DIST/s1 A138), while counts above an empty
+    // population stay #NUM! ("Legacy distribution names sweep, second family"); past the
+    // double-double walk the pmf is a number (accuracy/HYPGEOMDIST/s1 A199, Excel
+    // 1.1128856930493011E-07), no longer statrs' inf / inf, and so is the cdf (accuracy/
+    // HYPGEOM.DIST/s1 A164, Excel 0.4538325650607541).
+    let cells = [
+        ("=HYPGEOMDIST(0,0,0,0)", "1"),
+        ("=HYPGEOM.DIST(0,0,0,0,FALSE)", "1"),
+        ("=HYPGEOMDIST(1,4,8,0)", "#NUM!"),
+        ("=HYPGEOMDIST(4478,5613,21568,27873)", "1.11289E-07"),
+        (
+            "=HYPGEOM.DIST(43,976865,29261,643257045,TRUE)",
+            "0.453832565",
+        ),
+    ];
+    for (row, (formula, _)) in cells.iter().enumerate() {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, (formula, value)) in cells.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", row + 1)),
+            *value,
+            "{formula}"
+        );
+    }
+}
+
+#[test]
 fn a_sample_below_the_possible_range_is_zero() {
     let mut model = new_empty_model();
     // gen-m9 c468f5046aadfbbc A85 and probes/t2436 35e8168aae2b00f8: the pmf and the cdf are 0

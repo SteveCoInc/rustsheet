@@ -3,10 +3,14 @@
 //! column"; T-2957, T-2958), and one typed just right of a table grows it by a column (T-2968),
 //! as a constant does (T-3218); either typed just below it grows it by a row (T-3273).
 
+use crate::actions::displace_cf_formula_str;
 use crate::constants::{LAST_COLUMN, LAST_ROW};
+use crate::expressions::parser::stringify::{DisplaceData, Displacement};
 use crate::expressions::parser::{stringify::to_excel_string, Node};
 use crate::expressions::types::CellReferenceRC;
 use crate::expressions::utils::number_to_column;
+use crate::language::get_default_language;
+use crate::locale::get_default_locale;
 use crate::model::Model;
 use crate::table_edits::{append_column, bounds, Bounds};
 use crate::types::{Cell, Table};
@@ -451,4 +455,119 @@ pub(crate) struct ColumnFill {
     first_row: i32,
     /// The other data rows of the column, (row, column): the cells the formula fills.
     targets: Vec<(i32, i32)>,
+}
+
+/// A calculated column's stored formula (`TableColumn::calculated_column_formula`) as a row or
+/// column insert or delete displaces it, in user form, before the tables follow the edit
+/// ([`Model::displaced_column_formulas`]).
+pub(crate) struct DisplacedColumnFormula {
+    /// The table's key in `Workbook::tables`.
+    table: String,
+    /// The column's `TableColumn::id`, which stays with the column through the edit.
+    id: u32,
+    /// The displaced formula, without `=`, in the default locale.
+    text: String,
+}
+
+impl Model {
+    /// The stored formula of every calculated column, displaced by the row or column insert or
+    /// delete `displacement` as the formula of the column's first data cell is: Excel saves the
+    /// column formula the edit made of that cell's formula (xlsx-storage.md, "A calculated column
+    /// is saved as `calculatedColumnFormula` plus one formula per row"; T-4274
+    /// t4274-calc-column-*: `A2*2` is `B2*2` after a column insert at A and `A3*2` after a row
+    /// insert at 1, and stays `A2*2` after a row insert inside the data rows or a delete of a
+    /// column it does not read). A formula with a structured reference keeps its text: it names
+    /// columns, not cells (`T[[#This Row],[Col]]*2` stays so through a column insert at A, as in
+    /// Excel), and the displacement would lower its `#This Row` to the cell's area under a column
+    /// edit (T-3739). A `[` outside a structured reference (in a string) keeps the text too. A
+    /// column whose first data cell the edit deletes keeps its text (unprobed), as does every
+    /// column under any other kind of edit.
+    pub(crate) fn displaced_column_formulas(
+        &mut self,
+        displacement: Displacement,
+    ) -> Vec<DisplacedColumnFormula> {
+        let (sheet, row_edit, at, delta) = match *displacement.data {
+            DisplaceData::Row { sheet, row, delta } => (sheet, true, row, delta),
+            DisplaceData::Column {
+                sheet,
+                column,
+                delta,
+            } => (sheet, false, column, delta),
+            _ => return Vec::new(),
+        };
+        let deleted = |index: i32| delta < 0 && (at..at.saturating_sub(delta)).contains(&index);
+        let edited_sheet = self.workbook.worksheet(sheet).map(|w| w.get_name()).ok();
+        let (locale, language) = (self.locale, self.language);
+        self.parser.set_locale(get_default_locale());
+        self.parser.set_language(get_default_language());
+        let mut displaced = Vec::new();
+        for (name, table) in &self.workbook.tables {
+            let Some(b) = bounds(table) else {
+                continue;
+            };
+            let on_edited = edited_sheet
+                .as_deref()
+                .is_some_and(|s| table.is_on_sheet(s));
+            for (column, table_column) in (b.left..).zip(&table.columns) {
+                let Some(formula) = &table_column.calculated_column_formula else {
+                    continue;
+                };
+                if formula.contains('[')
+                    || on_edited && deleted(if row_edit { b.data.0 } else { column })
+                {
+                    continue;
+                }
+                let context = CellReferenceRC {
+                    sheet: table.sheet_name.clone(),
+                    row: b.data.0,
+                    column,
+                };
+                displaced.push(DisplacedColumnFormula {
+                    table: name.clone(),
+                    id: table_column.id,
+                    text: displace_cf_formula_str(
+                        &mut self.parser,
+                        formula,
+                        &context,
+                        displacement,
+                    ),
+                });
+            }
+        }
+        self.parser.set_locale(locale);
+        self.parser.set_language(language);
+        displaced
+    }
+
+    /// Stores `displaced` ([`Model::displaced_column_formulas`]) in file form, read at each
+    /// column's first data cell after the tables followed the edit, as the fill stores it
+    /// (`T[[#This Row],[Col]]*2` stays so, as in Excel).
+    pub(crate) fn set_displaced_column_formulas(&mut self, displaced: Vec<DisplacedColumnFormula>) {
+        let (locale, language) = (self.locale, self.language);
+        self.parser.set_locale(get_default_locale());
+        self.parser.set_language(get_default_language());
+        for DisplacedColumnFormula { table, id, text } in displaced {
+            let Some(table) = self.workbook.tables.get_mut(&table) else {
+                continue;
+            };
+            let Some(b) = bounds(table) else {
+                continue;
+            };
+            let Some((column, table_column)) = (b.left..)
+                .zip(table.columns.iter_mut())
+                .find(|(_, c)| c.id == id)
+            else {
+                continue;
+            };
+            let context = CellReferenceRC {
+                sheet: table.sheet_name.clone(),
+                row: b.data.0,
+                column,
+            };
+            let node = self.parser.parse(&text, &context);
+            table_column.calculated_column_formula = Some(to_excel_string(&node, &context));
+        }
+        self.parser.set_locale(locale);
+        self.parser.set_language(language);
+    }
 }

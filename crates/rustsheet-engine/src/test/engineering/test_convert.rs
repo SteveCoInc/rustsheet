@@ -188,3 +188,37 @@ fn convert_mixed_binary_decimal_prefixes() {
     assert_eq!(n.to_bits(), 5.078_798_827_520_000_7e20_f64.to_bits());
     assert_ne!(n.to_bits(), 5.078_798_827_52e20_f64.to_bits());
 }
+
+#[test]
+fn kelvin_prefix_is_dropped_toward_rank_and_reau() {
+    // Excel (excel-graph): probes/t4615-convert-prefixed-kelvin (T-4615). The prefix on K or kel
+    // is ignored from K to Rank, from K to Reau and from Reau to K, but applies from Rank to K and
+    // against C and F.
+    let cases: [(&str, f64); 8] = [
+        (r#"=CONVERT(1000,"YK","Rank")"#, 1800.0),
+        (r#"=CONVERT(1000,"ykel","Rank")"#, 1800.0),
+        (r#"=CONVERT(1000,"mkel","Reau")"#, 581.48),
+        (r#"=CONVERT(1000,"Reau","YK")"#, 1523.15),
+        (
+            r#"=CONVERT(-56.8944444765809,"ukel","Reau")"#,
+            -264.035_555_581_264_76,
+        ),
+        (r#"=CONVERT(1000,"Rank","YK")"#, 5.555_555_555_555_556e-22),
+        (r#"=CONVERT(1000,"mK","C")"#, -272.15),
+        (r#"=CONVERT(1000,"C","kK")"#, 1.27315),
+    ];
+    let mut model = new_empty_model();
+    for (row, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, (formula, expected)) in cases.iter().enumerate() {
+        let CellValue::Number(n) = model
+            .get_cell_value_by_ref(&format!("Sheet1!A{}", row + 1))
+            .unwrap()
+        else {
+            panic!("{formula} is not a number");
+        };
+        assert_eq!(n.to_bits(), expected.to_bits(), "{formula}");
+    }
+}
