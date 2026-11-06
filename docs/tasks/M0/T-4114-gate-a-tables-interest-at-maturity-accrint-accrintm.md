@@ -71,8 +71,8 @@ Every failing table point has an owner.
   from excel-graph with 0 failures. The first fill showed four table defects (Excel 0 where the definitions said
   `#NUM!`): ACCRINTM with equal dates (A115, A134) and ACCRINT at the calendar's start (A127, A131 of that fill). The
   probe probes/accrint-zero-results (85 cells) settled both; ACCRINT's table was regenerated and refilled.
-- `rustsheet-eval accuracy`: 0 failing, 0 table defects. `missing tables` lower by 5, to 67 after
-  the final merge of origin/main (78 before it). The engine is bit-exact with Excel on 996 of 1,000 points; PRICEMAT A101 is 1 ulp off, inside
+- `rustsheet-eval accuracy`: 0 failing, 0 table defects. `missing tables` lower by 5, to 60 after
+  the final merge of origin/main (78 at the first run, before merges brought other groups' tables). The engine is bit-exact with Excel on 996 of 1,000 points; PRICEMAT A101 is 1 ulp off, inside
   the envelope. Three points are known failures under T-4566 (functions-financial, filed here): ACCRINTM A115 and A134
   (equal dates: Excel 0, the engine `#NUM!`) and ACCRINT A22 (the engine's basis-2 issue period, 9E-4 off Excel).
 - **Excel kept as the target (decision 0300):** no table point and no probe sidecar cell of these functions is more
