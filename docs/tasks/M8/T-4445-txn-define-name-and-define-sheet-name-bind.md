@@ -3,7 +3,7 @@ id: T-4445
 title: "Txn::define_name and define_sheet_name bind an unqualified reference to the active sheet, as Graph names/add does"
 milestone: M8
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
