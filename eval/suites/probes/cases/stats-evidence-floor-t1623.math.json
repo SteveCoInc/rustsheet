@@ -40,12 +40,12 @@
    },
    "Q51": {
     "t": "e",
-    "why": "#NUM!: a number at or below 0",
+    "why": "#NUM!: a 0, or only negative numbers",
     "f": "=HARMEAN(0)"
    },
    "Q52": {
     "t": "e",
-    "why": "#NUM!: a number at or below 0",
+    "why": "#NUM!: a 0, or only negative numbers",
     "f": "=HARMEAN(-1,-2)"
    },
    "Q53": {
