@@ -4735,6 +4735,11 @@ Near a zero price, Excel's doubles decide which side of 0 the price falls on: `T
 `TBILLPRICE(1000,1100,3.6)` are 0 because `3.6*100` is 360 in doubles, though the exact product of the double 3.6 and
 100 is just above 360, a negative price. So the Gate A definitions give no math value within cancellation of a zero
 price (defs/discount.py `_price_share`), and a math value of 0 or `#NUM!` only where the product is exact.
+From 183 days, TBILLEQ's form in "TBILLEQ and TBILLYIELD" (`-t + sqrt(...)`) cancels at a tiny discount, so Excel is
+off the math by about 1E-16/discount relative: `TBILLEQ(53457,53640,5.56066541833896E-10)` is 5.63838975509136E-10
+against 5.637896884071863E-10 (8.7E-5), `TBILLEQ(1438166,1438350,8.54032607528415E-11)` 5.7E-5 off
+(accuracy/TBILLEQ/s1 A110, A175; A81, A87, A88, A100, A106, A108, A109, A163 and A189 are smaller). The engine follows
+Excel's form and is bit-exact on all of them. Below 183 days the plain quotient does not cancel.
 Unprobed: a day count of 0 (30/360 from the 30th to the 31st of one month), where the engine returns `#DIV/0!`.
 Evidence: gen-m9 1dce4774f5c0e736 A227, A276; 31474c20fc1dafd6 A376, A241; 5c6a23c4f6597f1c A113; 30e20ba3302fea8b A49;
 6376e27be7a05871 A152, A8; 79d87fc527927626 A225; bc04c1f478c9896c A216; 01523d247594952e A152, A222, A278, A219, A163;
