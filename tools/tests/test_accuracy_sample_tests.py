@@ -130,6 +130,13 @@ def test_f_test_domain_errors_follow_excel(definition: Definition) -> None:
 def test_unprobed_points_have_no_value() -> None:
     with pytest.raises(NoValueError):  # Welch with one number beside a varying sample
         t_test(T_TEST, B, (5,), 2, 3)
+    # the reversed order of the evidenced cells (each has the special sample second): unprobed
+    with pytest.raises(NoValueError):  # one number before a constant sample (A132 reversed)
+        t_test(T_TEST, (5,), (3, 3, 3, 3), 2, 3)
+    with pytest.raises(NoValueError):  # the overflowing sample first (T-2432 reversed)
+        t_test(T_TEST, (1e200, 1e200, -1e200), B, 1, 2)
+    with pytest.raises(NoValueError):  # the same for F.TEST (gen-m9 3e98b26cf6713e77 A339 reversed)
+        f_test(F_TEST, (1e200, 1e200, -1e200), (100000000.1, 100000000.2, 100000000.3))
     with pytest.raises(NoValueError):  # an overflow in a Welch test
         t_test(T_TEST, B, (1e200, 1e200, -1e200), 2, 3)
     with pytest.raises(NoValueError):  # an overflow in one form only (one pass; the deviations are 0)

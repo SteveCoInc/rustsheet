@@ -2469,12 +2469,16 @@ excel-graph 2026-11-06, one-row array literals, Excel's errors are the rules of 
 `tools/src/rustsheet_tools/accuracy/defs/sample_tests.py`, with the same codes: tails outside {1, 2} or type outside
 {1, 2, 3} `#NUM!`; a paired test of different lengths `#N/A`; one pair, fewer than two numbers on a side (type 2 and
 F.TEST), zero variance of the differences (type 1), of both samples (types 2 and 3) or of either sample (F.TEST)
-`#DIV/0!`; the `{1E+200,1E+200,-1E+200}` sample `#NUM!` beside an ordinary one (type 2 and F.TEST). Every numeric point
+`#DIV/0!`; the `{1E+200,1E+200,-1E+200}` sample `#NUM!` after an ordinary one (type 2 and F.TEST). Every numeric point
 is within 1E-10 of the exact value (Welch's df fractional, not truncated); the largest gaps are T.TEST A65 (4.8E-11, p
 near 0.5 over two nearly equal samples) and TTEST A11 (4.7E-13), and every other point is within 1.6E-13.
-- One more error rule from a gen-m9 cell, stated only for its shape: a Welch test (type 3) of one number beside a
+- One more error rule from a gen-m9 cell, stated only for its shape: a Welch test (type 3) of one number after a
   constant sample is `#DIV/0!` (`T.TEST({3,3,3,3},{5},2,3)`, 607e85cfee83a689 A132). A Welch test of one number beside
   a varying sample is unprobed.
+- Argument order: every evidencing cell has the special sample second (A132's single number; the overflowing
+  `{1E+200,1E+200,-1E+200}` in T-2432's T.TEST, T-2255's F.TEST and gen-m9 3e98b26cf6713e77 A339). The definitions
+  state both rules for that order only; the reversed order (`T.TEST({5},{3,3,3,3},2,3)`, the overflowing sample first)
+  is unprobed and gets no math value. T-4579 probes it.
 - New quirk, one cell (UNVERIFIED as a rule): `TTEST({-497.50530749878,-0.254481178828704},{-515.88030749878,
   -18.6294811788287},1,1)` is `#DIV/0!` (TTEST/s1 A136). The differences are not constant: as doubles they are 18.375
   and 18.374999999999996, so the exact p is 2.3E-17. The one-pass variance of the differences,

@@ -37,7 +37,7 @@ Every failing table point has an owner.
 - [x] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
       their number. Every point outside the envelope has a `known-failures.tsv` owner.
 - [x] `make check` green
-- [ ] reviewers approve.
+- [x] reviewers approve.
 
 ## Out of scope
 - The other sample-statistics groups of decision 0271.
@@ -48,12 +48,14 @@ Every failing table point has an owner.
   `squared_deviations`), the exact differences for a paired test, Welch's fractional df untruncated, then tails x the
   Student t tail (`student_t.lower_tail`) or 2 min of F.DIST's two tails (`fisher.lower_tail`, `fisher.upper_tail`).
   The draws reuse AGGREGATE's `array_of` and paired_regression's `offset_series`, `constant_series` and `constant_exact`
-  (made public for this; no copy).
+  (made public for this; no copy). paired_regression's subnormal test moved to `_common.below_normal`, which both
+  modules import.
   - Domain errors, each from statistics.md: tails or type out of range `#NUM!` (before the size check); a paired test of
     different lengths `#N/A`; one pair, fewer than two numbers on a side (type 2, F.TEST) and zero variance (the
     differences; both samples for types 2 and 3; either sample for F.TEST) `#DIV/0!`; the evidenced
     `{1E+200,1E+200,-1E+200}` overflow `#NUM!` for type 2 and F.TEST only; and, from gen-m9 607e85cfee83a689 A132, a
-    Welch test of one number beside a constant sample `#DIV/0!`.
+    Welch test of one number after a constant sample `#DIV/0!`. Both this and the overflow rule hold only in the
+    evidenced order (the special sample second); the reversed order gets no math value and is in T-4579's probe.
   - No math value where nothing evidences Excel's result: a Welch test of one number beside a varying sample, any other
     overflow shape (paired, Welch, one form only), an inexact constant, a subnormal literal or an intermediate outside
     the normal range.

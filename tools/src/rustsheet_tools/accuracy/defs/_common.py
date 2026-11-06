@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 import random
+import sys
 from collections.abc import Callable, Sequence
 from fractions import Fraction
 
@@ -121,6 +122,12 @@ def fraction_to_mpf(r: Fraction | int) -> mpmath.mpf:
 def trunc(x: mpmath.mpf) -> int:
     """`x` truncated toward zero."""
     return int(mpmath.floor(x)) if x >= 0 else -int(mpmath.floor(-x))
+
+
+def below_normal(*values: float) -> bool:
+    """Whether any of `values` is nonzero and below the normal range (a subnormal: Excel's flush is unprobed in the
+    definitions that call this)."""
+    return any(v != 0 and abs(v) < sys.float_info.min for v in values)
 
 
 def square_overflows(x: float) -> bool:

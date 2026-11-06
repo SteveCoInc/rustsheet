@@ -36,6 +36,11 @@ point of the T.TEST and TTEST tables leaving the envelope; the rule is probed be
 ## Acceptance criteria
 - [ ] A probe (excel-probe skill, excel-graph) separates the hypotheses for A136's `#DIV/0!` (pairs with a negative,
       zero and tiny positive one-pass variance of the differences) and for A101's digits; the finding is in statistics.md.
+      The same probe takes the reversed argument order of two T-4097 rules, both evidenced only with the special sample
+      second: a Welch test of one number before a constant sample (`T.TEST({5},{3,3,3,3},2,3)`, against gen-m9
+      607e85cfee83a689 A132) and the overflowing `{1E+200,1E+200,-1E+200}` sample first for T.TEST type 2 and F.TEST
+      (`T.TEST({1E+200,1E+200,-1E+200},{1,2,4},1,2)`, `F.TEST({1E+200,1E+200,-1E+200},{1,2,4})`). Where Excel's
+      answer is an error, `sample_tests.py`'s rules widen to it.
 - [ ] TTEST/s1 A136 and A101 inside the envelope, their known-failure lines removed; no other T.TEST or TTEST table
       point or eval cell regresses.
 - [ ] `make check` green; reviewers approve.

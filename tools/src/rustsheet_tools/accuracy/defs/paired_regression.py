@@ -61,7 +61,6 @@ from __future__ import annotations
 
 import math
 import random
-import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
@@ -71,6 +70,7 @@ import mpmath
 
 from rustsheet_tools.accuracy.defs._common import (
     StratumDraws,
+    below_normal,
     by_stratum,
     domain_of,
     fraction_to_mpf,
@@ -118,11 +118,6 @@ class Moments:
     ]  # Excel's double sxx, syy and sxy (STEYX's residual decides its #NUM!)
 
 
-def _below_normal(*values: float) -> bool:
-    """Whether any of `values` is nonzero and below the normal range (a subnormal: Excel's flush is unprobed here)."""
-    return any(v != 0 and abs(v) < sys.float_info.min for v in values)
-
-
 def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float, float, float, float]:
     """(sum of x, sum of y, sxx, syy, sxy) in doubles, two passes about the double means, as Excel sums them (the paired
     entry: this order fits Excel's bits; the sums of the values are Excel's left-to-right `running_total`); NoValueError
@@ -133,7 +128,7 @@ def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float
     sxx = syy = sxy = 0.0
     for x, y in zip(xs, ys, strict=True):
         dx, dy = x - mean_x, y - mean_y
-        if _below_normal(dx * dx, dy * dy, dx * dy):
+        if below_normal(dx * dx, dy * dy, dx * dy):
             msg = "a deviation square or product below the normal range (unprobed flush)"
             raise NoValueError(msg)
         sxx += dx * dx
@@ -169,7 +164,7 @@ def moments(args: Sequence[MathArg]) -> Moments:
     if len(ys) != len(xs):
         msg = "#N/A: the arrays differ in length"
         raise DomainError(msg)
-    if _below_normal(*xs, *ys):
+    if below_normal(*xs, *ys):
         msg = "a subnormal literal (Excel reads it as 0; unprobed here)"
         raise NoValueError(msg)
     sum_x, sum_y, sxx_d, syy_d, sxy_d = _double_sums(xs, ys)
@@ -304,7 +299,7 @@ def _steyx(args: Sequence[MathArg]) -> mpmath.mpf:
     if residual < 0:  # also -inf where Sxy^2 overflows (T-4047, near 1E+160)
         msg = "#NUM!: Excel's double Syy - Sxy^2/Sxx is below zero"
         raise DomainError(msg)
-    if _below_normal(square, explained, residual):
+    if below_normal(square, explained, residual):
         msg = "a subnormal intermediate of the residual (unprobed flush)"
         raise NoValueError(msg)
     return mpmath.sqrt(fraction_to_mpf((m.syy - m.sxy * m.sxy / m.sxx) / (m.n - 2)))

@@ -29,18 +29,19 @@ Domain (an Excel error region, never a math value), in Excel's check order, each
   either side (t1049-ftest A15, A16, A29:A31; m9-legacy-ftest A24:A26);
 - zero variance is `#DIV/0!`: of the differences for type 1 (t1049-ttest A32, t1048-ttest A7, A10), of both samples
   for types 2 and 3 (t1049-ttest A45:A47), of either sample for F.TEST (t1049-ftest A17:A19, m9-legacy-ftest A21:A23).
-  Type 3 with one constant sample is a number (A48), and one number beside a constant sample is `#DIV/0!`
-  (`T.TEST({3,3,3,3},{5},2,3)`, gen-m9 607e85cfee83a689 A132). Type 2 with one constant sample has a positive pooled
+  Type 3 with one constant sample is a number (A48), and one number after a constant sample is `#DIV/0!`
+  (`T.TEST({3,3,3,3},{5},2,3)`, gen-m9 607e85cfee83a689 A132; the single number second, as evidenced). Type 2 with one constant sample has a positive pooled
   variance, so the math is a number there (the table's edge stratum draws it);
 - a variance that overflows is `#NUM!` for an equal-variance T.TEST and for F.TEST ("Overflowing squares (T-2432)":
   `T.TEST(Data!B6:D12,{1E+200,1E+200,-1E+200},1,2)`; "F.TEST: an error argument is that error; overflowing squares
   are #NUM!": `F.TEST(Data!A3:A10,{1E+200,1E+200,-1E+200})`; `F.TEST({100000000.1,100000000.2,100000000.3},
   {1E+200,1E+200,-1E+200})`, gen-m9 3e98b26cf6713e77 A339). These cells overflow Excel's sum of squares in either form
-  (one pass, `dispersion.squares_overflow`, and two passes, `dispersion.deviations_overflow`), and the other sample
-  is ordinary; only that shape is a domain rule.
+  (one pass, `dispersion.squares_overflow`, and two passes, `dispersion.deviations_overflow`), the overflowing
+  sample is second and the first is ordinary; only that shape, in that order, is a domain rule.
 Given no math value (`NoValueError`), as no evidence names Excel's result:
-- a Welch test with a sample of one number beside a varying sample or another single number (unprobed);
-- an overflow in one form only, an overflow beside another sample's error, and any overflow of a paired or Welch test;
+- a Welch test with a sample of one number beside a varying sample or another single number, or before a constant
+  sample (the reversed order of A132; unprobed);
+- an overflow in one form only, the overflowing sample first (the reversed order of the evidence), an overflow beside another sample's error, and any overflow of a paired or Welch test;
 - a constant sample (or constant differences) whose double mean is not its value (Excel's deviations are then a
   nonzero constant; paired_regression's `constant_exact`), and differences that are constant in doubles but not
   exactly (Excel's variance is then 0 where the math's is not);
@@ -60,7 +61,6 @@ from __future__ import annotations
 
 import math
 import random
-import sys
 from collections.abc import Callable, Sequence
 from fractions import Fraction
 
@@ -68,7 +68,14 @@ import mpmath
 
 from rustsheet_tools.accuracy import model
 from rustsheet_tools.accuracy.defs import fisher, student_t
-from rustsheet_tools.accuracy.defs._common import StratumDraws, by_stratum, domain_of, one_of, scalars
+from rustsheet_tools.accuracy.defs._common import (
+    StratumDraws,
+    below_normal,
+    by_stratum,
+    domain_of,
+    one_of,
+    scalars,
+)
 from rustsheet_tools.accuracy.defs.aggregate_array import array_of
 from rustsheet_tools.accuracy.defs.dispersion import deviations_overflow, squared_deviations, squares_overflow
 from rustsheet_tools.accuracy.defs.paired_regression import (
@@ -113,11 +120,6 @@ MICROSOFT_F = ((6.0, 7.0, 9.0, 15.0, 21.0), (20.0, 28.0, 31.0, 38.0, 40.0))
 PAIRED, EQUAL, WELCH = 1, 2, 3
 
 
-def _normal(x: float) -> bool:
-    """Whether a double is 0 or a finite normal double."""
-    return x == 0 or (math.isfinite(x) and abs(x) >= sys.float_info.min)
-
-
 def _samples(args: Sequence[MathArg]) -> tuple[list[float], list[float]]:
     """The two arrays' doubles; NoValueError for a subnormal literal."""
     out: list[list[float]] = []
@@ -125,7 +127,7 @@ def _samples(args: Sequence[MathArg]) -> tuple[list[float], list[float]]:
         assert isinstance(a, tuple)
         out.append([float(v) for v in scalars(a)])
     xs, ys = out
-    if not all(_normal(v) for v in xs + ys):
+    if below_normal(*xs, *ys):
         msg = "a subnormal literal (Excel reads it as 0; unprobed here)"
         raise NoValueError(msg)
     return xs, ys
@@ -147,13 +149,15 @@ def _mean(values: Sequence[float]) -> mpmath.mpf:
 
 
 def _overflow_rule(samples: Sequence[Sequence[float]], evidenced: bool) -> None:
-    """`#NUM!` where one sample overflows Excel's sum of squares in both forms, the other is ordinary (two or more
-    numbers, not constant) and the test is an evidenced one; NoValueError for any other overflow."""
+    """`#NUM!` where the second sample overflows Excel's sum of squares in both forms, the first is ordinary (two or
+    more numbers, not constant) and the test is an evidenced one; NoValueError for any other overflow."""
     counts = [_overflows(s) for s in samples]
     if not any(counts):
         return
-    ordinary = [len(s) >= 2 and len(set(s)) > 1 and c == 0 for s, c in zip(samples, counts, strict=True)]
-    if evidenced and sorted(counts) == [0, 2] and ordinary.count(True) == 1:
+    first = samples[0]
+    # Every evidencing cell has the overflowing sample second (T-2432, T-2255, gen-m9 3e98b26cf6713e77 A339); the
+    # reversed order is unprobed.
+    if evidenced and counts == [0, 2] and len(first) >= 2 and len(set(first)) > 1:
         msg = "#NUM!: a sample's sum of squares is beyond the double range"
         raise DomainError(msg)
     msg = "an overflowing sum of squares in an unprobed shape"
@@ -163,7 +167,8 @@ def _overflow_rule(samples: Sequence[Sequence[float]], evidenced: bool) -> None:
 def _check(t2: mpmath.mpf, *intermediates: mpmath.mpf) -> None:
     """NoValueError where Excel's double t^2 or an intermediate leaves the normal range (unprobed)."""
     for value in (t2, *intermediates):
-        if not _normal(float(value)) or (value != 0 and float(value) == 0):
+        double = float(value)
+        if not math.isfinite(double) or below_normal(double) or (value != 0 and double == 0):
             msg = "a double intermediate outside the normal range (unprobed)"
             raise NoValueError(msg)
 
@@ -214,15 +219,13 @@ def _equal_variance(xs: Sequence[float], ys: Sequence[float]) -> tuple[mpmath.mp
 
 def _welch(xs: Sequence[float], ys: Sequence[float]) -> tuple[mpmath.mpf, mpmath.mpf]:
     """(t^2, df) of the Welch test, df fractional."""
-    for one, other in ((xs, ys), (ys, xs)):
-        # `T.TEST({3,3,3,3},{5},2,3)` is #DIV/0! (gen-m9 607e85cfee83a689 A132): one number beside a constant sample
-        if len(one) < 2 and len(other) >= 2 and constant_exact(other):
-            msg = "#DIV/0!: one number beside a constant sample"
-            raise DomainError(msg)
+    # `T.TEST({3,3,3,3},{5},2,3)` is #DIV/0! (gen-m9 607e85cfee83a689 A132): one number after a constant sample. The
+    # reversed order is unprobed (NoValueError below).
+    if len(ys) < 2 and len(xs) >= 2 and constant_exact(xs):
+        msg = "#DIV/0!: one number after a constant sample"
+        raise DomainError(msg)
     if len(xs) < 2 or len(ys) < 2:
-        msg = (
-            "a Welch test with one number in a sample (its variance is 0/0; unprobed beside a varying sample)"
-        )
+        msg = "a Welch test with one number in a sample (its variance is 0/0; unprobed but after a constant sample)"
         raise NoValueError(msg)
     _overflow_rule((xs, ys), evidenced=False)
     if constant_exact(xs) and constant_exact(ys):
