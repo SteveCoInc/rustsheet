@@ -3,7 +3,7 @@ id: T-4148
 title: "xlsx export keeps empty-string cells (t=s to an empty string) instead of writing them blank"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
@@ -31,7 +31,7 @@ rules (M1 literals).
 ## Out of scope
 - Style-only blank cells.
 
-## Handoff
+## Handoff (resumed)
 Sonnet run, 2026-11-06. Not a design I should decide, so escalated (work-loop 5b).
 - The premise is wrong for plain cells. Tests in crates/rustsheet-xlsx/tests/empty_string_cell.rs (committed) show `t="s"` to an
   empty shared string, `t="str"` with no `<v>` or an empty `<v>`, and empty inline strings all load and save as `t="s"` text
