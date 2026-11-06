@@ -3,7 +3,7 @@ id: T-4673
 title: "Salvage duplicate PR #3637's T-4574 near-midnight probes and its T-4624 follow-up onto main"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -38,3 +38,10 @@ blindly). Reconcile the dates.md entry with what landed in #3647.
 
 ## Out of scope
 - Changing #3647's rule beyond what the probes require.
+
+## Outcome
+Copied both T-4574 probes (`t4574-near-midnight-serial-60`, 234 cells; `t4574-near-midnight-calendar-units`, 112 cells,
+with oracle and math sidecars) and T-4624 from the #3637 branch (id still free on `main`). `make eval`: all 346 cells
+pass with `main`'s engine, so no failing cell needs an owner and no baseline change is needed (they were never
+known-failures); 0 regressions. #3637's "rounded to the nearest second" and #3647's half-second carry are the same cut;
+dates.md now says so. "Y"'s reading and the reversed-order/past-calendar cases remain with T-4624.
