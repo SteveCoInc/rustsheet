@@ -3,7 +3,7 @@ id: T-4513
 title: "Round-trip semantic model: cell, sheet, name and feature items with resolved styles and indexes (SPEC-0033 D2, D3)"
 milestone: M15
 lane: harness
-status: blocked
+status: in-progress
 priority: P1
 size: M
 tier: opus
@@ -22,6 +22,21 @@ xlsx parser (CLAUDE.md conventions: tools never re-implement xlsx value parsing)
 harness's existing reader of stored values; extend it rather than add another. A style compares as its resolved
 properties, with tints to 1e-6 relative (T-0419). An empty-string cell is not a blank cell (T-4148).
 
+Which pair a field compares:
+- cell inputs (constant value, or formula text) and resolved styles compare the source as loaded against the output
+  as loaded;
+- cached values compare the recalculated model that was saved against the output as loaded.
+
+So an engine-parity difference is scored by the cell suites, not reported here as an I/O loss.
+
+Carried from the reviews of #3551 and #3529:
+- borrow the local path in `xmldiff::compare` instead of cloning it, and build no item path once `MAX_ITEMS` is
+  reached;
+- add the missing per-row `CT_` comments (`definedName`, `row`, `col`, `sheetView`, `workbookView`,
+  `sheetFormatPr`);
+- separate the `Status:` line from the paragraph under xlsx-storage.md "Round trips";
+- give the snapshot reader's `SheetRef` named fields.
+
 ## Acceptance criteria
 - [ ] Identity holds on the fixtures suite.
 - [ ] Invariance: shuffled shared strings and renumbered style records compare `kept`.
@@ -32,8 +47,3 @@ properties, with tints to 1e-6 relative (T-0419). An empty-string cell is not a 
 
 ## Out of scope
 - Features the model does not hold, which are scored as package items (T-4509).
-
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275, 0306): M15 waits until Phase 1 parity exits, except for the task the
-owner-directed session claims. Unblock when docs/status.md has the line `**Phase 1:** exited <date>`, or by claiming
-it in that session.
