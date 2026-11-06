@@ -3,7 +3,7 @@ id: T-3408
 title: "IRR's long secant runs: Excel finishes runs of up to 200 steps on their own digits"
 milestone: M9
 lane: functions-financial
-status: blocked
+status: in-progress
 priority: P0
 size: M
 tier: opus
@@ -149,7 +149,7 @@ The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, 
   future widening of the range needs its own probe (decision 0320).
 
 ## Blocked because
-Blocked because: review-round limit
+Resumed after the review-round limit (step 5c).
 - PR #3651, HEAD 807951447. CI is green. Security approved at 0a6fa8600 and design at 0a6fa8600 (minors applied since). Excel-fidelity asked for changes in rounds 1 to 3. Rounds 1 and 2 were fixed: the split and the tiered table; the cap is now chosen by train score, 200 being the low end of the plateau 200..216.
 - Round 3's open BLOCKING finding is R4.1 and R4.2. `IRR_LONG_RUN_RANGE` reaches past the train cells that discriminate. Those reach only |c| <= 2.15E+8 (t2927-irr-fallback-sweep A95) and guess >= -0.99933 (t3478-irr-r4-wide A230). The wider band rests on train only through run = retry cells: A278 and t3411-irr-r4-fresh-3 A57. The one train cell there that depends on the cap, A240, is indifferent. 0320 keeps the band because test A206 and fresh-sweep cells t3408-irr-r4-fresh A2 and A48 pass with it, which is tuning on held-out evidence.
 - Next step (work-loop 5c), which the reviewer gave:
