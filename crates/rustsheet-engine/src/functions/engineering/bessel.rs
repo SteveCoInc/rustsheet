@@ -27,14 +27,17 @@ impl Model {
     /// `BESSELI(x, n)`.
     pub(crate) fn fn_besseli(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.lift_call(Function::Besseli, args, cell, &mut |model, values| {
-            model.bessel_of(values, bessel_i, cell)
+            // A subnormal result is 0: `BESSELI(4.4501477170144E-308,1)` (x/2, just below 2^-1022)
+            // and `BESSELI(2^-1022,1)` are 0 (probes/t4552-bessel-tiny-x-cut D2, D8).
+            model.bessel_of(values, |n, x| flush_subnormal(bessel_i(n, x)), cell)
         })
     }
 
     /// `BESSELJ(x, n)`.
     pub(crate) fn fn_besselj(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.lift_call(Function::Besselj, args, cell, &mut |model, values| {
-            model.bessel_of(values, excel_bessel_j, cell)
+            // A subnormal result is 0: `BESSELJ(2^-1022,1)` is 0 (probes/t4552-bessel-tiny-x-cut C8).
+            model.bessel_of(values, |n, x| flush_subnormal(excel_bessel_j(n, x)), cell)
         })
     }
 
