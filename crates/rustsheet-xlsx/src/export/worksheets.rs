@@ -602,9 +602,7 @@ pub(crate) fn cell_xml(
             //   <v>1</v>
             // </c>
             let style = get_cell_style_attribute(*s);
-            let Some((cm, formula)) = plain_formula(*f) else {
-                return None;
-            };
+            let (cm, formula) = plain_formula(*f)?;
             let b = i32::from(*v);
             row_data_str.push(format!(
                 "<c r=\"{cell_name}\" t=\"b\"{style}{cm}>{formula}<v>{b}</v></c>"
@@ -620,9 +618,7 @@ pub(crate) fn cell_xml(
             //   <f>A5+C3</f>
             //   <v>123</v>
             // </c>
-            let Some((cm, formula)) = plain_formula(*f) else {
-                return None;
-            };
+            let (cm, formula) = plain_formula(*f)?;
             let style = get_cell_style_attribute(*s);
             let v = saved_number(*v);
             row_data_str.push(format!(
@@ -638,9 +634,7 @@ pub(crate) fn cell_xml(
             //   <f>CONCATENATE(A1, A2)</f>
             //   <v>Hello world!</v>
             // </c>
-            let Some((cm, formula)) = plain_formula(*f) else {
-                return None;
-            };
+            let (cm, formula) = plain_formula(*f)?;
             let style = get_cell_style_attribute(*s);
             let escaped_v = escape_text(v);
             row_data_str.push(format!(
@@ -656,9 +650,7 @@ pub(crate) fn cell_xml(
             //   <f>A1/A3<f/>
             //   <v>#DIV/0!</v>
             // </c>
-            let Some((cm, formula)) = plain_formula(*f) else {
-                return None;
-            };
+            let (cm, formula) = plain_formula(*f)?;
             let style = get_cell_style_attribute(*s);
             row_data_str.push(format!(
                 "<c r=\"{cell_name}\" t=\"e\"{style}{cm}{vm}>{formula}<v>{ei}</v></c>",
@@ -697,16 +689,10 @@ pub(crate) fn cell_xml(
             //            <f t="array" ref="D1:D5">A1:A5</f>
             //            <v>TRUE</v>
             //          </c>
-            let node = match parsed_formulas.get(*f as usize) {
-                Some(node) => node,
-                None => return None,
-            };
+            let node = parsed_formulas.get(*f as usize)?;
             let formula = formula_attribute(node.written(), to_excel_array_formula_string);
             let style = get_cell_style_attribute(*s);
-            let range = match get_range_str(row_index, column_index, r.0, r.1) {
-                Some(range) => range,
-                None => return None,
-            };
+            let range = get_range_str(row_index, column_index, r.0, r.1)?;
             let b = i32::from(*v);
             let cm = if matches!(kind, ArrayKind::Dynamic) {
                 r#" cm="1""#
@@ -732,16 +718,10 @@ pub(crate) fn cell_xml(
             //            <f t="array" ref="D1:D5">A1:A5</f>
             //            <v>123</v>
             //          </c>
-            let node = match parsed_formulas.get(*f as usize) {
-                Some(node) => node,
-                None => return None,
-            };
+            let node = parsed_formulas.get(*f as usize)?;
             let formula = formula_attribute(node.written(), to_excel_array_formula_string);
             let style = get_cell_style_attribute(*s);
-            let range = match get_range_str(row_index, column_index, r.0, r.1) {
-                Some(range) => range,
-                None => return None,
-            };
+            let range = get_range_str(row_index, column_index, r.0, r.1)?;
             let cm = if matches!(kind, ArrayKind::Dynamic) {
                 r#" cm="1""#
             } else {
@@ -767,16 +747,10 @@ pub(crate) fn cell_xml(
             //            <f t="array" ref="D1:D5">A1:A5</f>
             //            <v>Hello world!</v>
             //          </c>
-            let node = match parsed_formulas.get(*f as usize) {
-                Some(node) => node,
-                None => return None,
-            };
+            let node = parsed_formulas.get(*f as usize)?;
             let formula = formula_attribute(node.written(), to_excel_array_formula_string);
             let style = get_cell_style_attribute(*s);
-            let range = match get_range_str(row_index, column_index, r.0, r.1) {
-                Some(range) => range,
-                None => return None,
-            };
+            let range = get_range_str(row_index, column_index, r.0, r.1)?;
             let escaped_v = escape_text(v);
             let cm = if matches!(kind, ArrayKind::Dynamic) {
                 r#" cm="1""#
@@ -802,16 +776,10 @@ pub(crate) fn cell_xml(
             //            <f t="array" ref="D1:D5">A1:A5</f>
             //            <v>#N/A!</v>
             //          </c>
-            let node = match parsed_formulas.get(*f as usize) {
-                Some(node) => node,
-                None => return None,
-            };
+            let node = parsed_formulas.get(*f as usize)?;
             let formula = formula_attribute(node.written(), to_excel_array_formula_string);
             let style = get_cell_style_attribute(*s);
-            let range = match get_range_str(row_index, column_index, r.0, r.1) {
-                Some(range) => range,
-                None => return None,
-            };
+            let range = get_range_str(row_index, column_index, r.0, r.1)?;
             let cm = if matches!(kind, ArrayKind::Dynamic) {
                 r#" cm="1""#
             } else {

@@ -88,7 +88,8 @@ pub(super) fn patch(model: &Model, pristine: &Model, source: &[u8]) -> Result<Pa
             ));
         };
         let xml = read_entry(&mut archive, &entry)?;
-        let Some(text) = append_strings(&xml, added, live.shared_strings.len()) else {
+        let refs = (shared_refs(live), shared_refs(base));
+        let Some(text) = append_strings(&xml, added, live.shared_strings.len(), refs) else {
             return Ok(Err("the shared-string part has no closing </sst>".into()));
         };
         replaced.insert(entry, text.into_bytes());
@@ -559,13 +560,13 @@ fn splice(
             None => match index.tail {
                 Tail::Before(at) => edits.push((at, 0, text)),
                 Tail::Empty(start, end) => {
-                    edits.push((start, end - start, format!("<sheetData>{text}</sheetData>")))
+                    edits.push((start, end - start, format!("<sheetData>{text}</sheetData>")));
                 }
             },
         }
     }
     // Apply from the end so earlier offsets stay valid; insertions at one offset keep their order.
-    edits.sort_by(|a, b| b.0.cmp(&a.0));
+    edits.sort_by_key(|e| std::cmp::Reverse(e.0));
     let mut out = xml.to_string();
     let mut last = usize::MAX;
     let mut pending: Vec<(usize, usize, String)> = Vec::new();
@@ -592,11 +593,21 @@ fn flush(out: &mut String, pending: &mut Vec<(usize, usize, String)>) {
 }
 
 /// The shared-string part with `added` appended and its counts updated.
-fn append_strings(xml: &str, added: &[String], unique: usize) -> Option<String> {
+fn append_strings(
+    xml: &str,
+    added: &[String],
+    unique: usize,
+    (live_refs, pristine_refs): (usize, usize),
+) -> Option<String> {
     let close = xml.rfind("</sst>")?;
     let mut out = String::with_capacity(xml.len() + added.len() * 16);
-    let head = &xml[..close];
-    out.push_str(&set_count(head, "uniqueCount", unique));
+    let head = set_count(&xml[..close], "uniqueCount", |_| unique);
+    // `count` is the source's own reference count, moved by the change in references: a source
+    // whose count was already off stays off by the same amount rather than being recounted.
+    let head = set_count(&head, "count", |old| {
+        (old + live_refs).saturating_sub(pristine_refs)
+    });
+    out.push_str(&head);
     for s in added {
         let space = if s.starts_with(char::is_whitespace) || s.ends_with(char::is_whitespace) {
             r#" xml:space="preserve""#
@@ -609,8 +620,9 @@ fn append_strings(xml: &str, added: &[String], unique: usize) -> Option<String> 
     Some(out)
 }
 
-/// `head` with the first `name="..."` attribute of `<sst` set to `value`, when present.
-fn set_count(head: &str, name: &str, value: usize) -> String {
+/// `head` with the first `name="..."` attribute of `<sst` set to `value` of its old number,
+/// when present and a number.
+fn set_count(head: &str, name: &str, value: impl Fn(usize) -> usize) -> String {
     let Some(sst) = head.find("<sst") else {
         return head.to_string();
     };
@@ -621,7 +633,10 @@ fn set_count(head: &str, name: &str, value: usize) -> String {
     let Some(len) = head[at..].find('"') else {
         return head.to_string();
     };
-    format!("{}{value}{}", &head[..at], &head[at + len..])
+    let Ok(old) = head[at..at + len].parse::<usize>() else {
+        return head.to_string();
+    };
+    format!("{}{}{}", &head[..at], value(old), &head[at + len..])
 }
 
 fn read_entry<R: Read + Seek>(
@@ -635,6 +650,17 @@ fn read_entry<R: Read + Seek>(
         .take(limit)
         .read_to_string(&mut text)?;
     Ok(text)
+}
+
+/// The number of cells holding a shared string, as the `count` of `sharedStrings.xml` counts
+/// references.
+fn shared_refs(workbook: &rustsheet_engine::types::Workbook) -> usize {
+    workbook
+        .worksheets
+        .iter()
+        .flat_map(|w| w.sheet_data.cells())
+        .filter(|(_, _, c)| matches!(c, Cell::SharedString { .. }))
+        .count()
 }
 
 /// The source package with the `replaced` entries' contents swapped in and every other entry
@@ -721,14 +747,14 @@ mod tests {
     }
 
     #[test]
-    fn new_strings_are_appended_with_the_unique_count() {
+    fn new_strings_are_appended_with_both_counts() {
         let sst =
             r#"<sst xmlns="x" count="3" uniqueCount="2"><si><t>a</t></si><si><t>b</t></si></sst>"#;
         let added = ["c <&>".to_string(), " d".to_string()];
         assert_eq!(
-            append_strings(sst, &added, 4).as_deref(),
+            append_strings(sst, &added, 4, (5, 3)).as_deref(),
             Some(
-                r#"<sst xmlns="x" count="3" uniqueCount="4"><si><t>a</t></si><si><t>b</t></si><si><t>c &lt;&amp;&gt;</t></si><si><t xml:space="preserve"> d</t></si></sst>"#
+                r#"<sst xmlns="x" count="5" uniqueCount="4"><si><t>a</t></si><si><t>b</t></si><si><t>c &lt;&amp;&gt;</t></si><si><t xml:space="preserve"> d</t></si></sst>"#
             )
         );
     }
