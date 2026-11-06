@@ -238,15 +238,25 @@ character. The bound is absolute, identical below 1, 10, 1000 and 30000, and it 
 `MID(t,1,1-1E-15)` is "" and `MID(t,1-1E-15,5)` is `#VALUE!` (start below 1). The negative check sees the
 raw value (`LEFT(t,-1E-300)` is `#VALUE!`); REPLACE's start_num < 1 check comes after the rounding
 (`REPLACE(t,1-2E-7,1,"z")` starts at 1, `1-1E-5` is `#VALUE!`). A computed `TRUE-1E-15` count is 1 for LEFT
-(gen-m2/b4392a6514a36ade Calc!A14). INDEX's row and column indexes share it (lookup.md, T-1407); whether other
-functions (REPT, FIND/SEARCH start_num, CHAR) do is UNVERIFIED. The cutoff is known to 2^-36: 2^-22 + 8·2^-36 (= 2^-22 + 2^-33) rounds up, 2^-22 + 9·2^-36 does not;
+(gen-m2/b4392a6514a36ade Calc!A14). INDEX's row and column indexes share it (lookup.md, T-1407). Among the other
+M5 text arguments (probes/t4453-near-integer-text-args, excel-graph 2026-11-06, T-4453), FIND and SEARCH start_num
+(B1:C14), CHAR (D1:D21), SUBSTITUTE instance_num (F1:F21) and FIXED and DOLLAR decimals (G1:H14) snap with the same
+bound: `FIND("a",t,1-2^-23)` is 1 and `CHAR(1-1E-15)` is U+0001, while 2^-22 + 9·2^-36 below the integer floors
+(`FIND("a",t,1-2^-22-9*2^-36)` and `CHAR(1-1E-6)` are `#VALUE!`). The bound is the full one, not DATE's halved
+negative one, and it holds below 1000 and 255 alike. Negative decimals snap their magnitude and truncate toward zero,
+symmetric with the positive side: `FIXED(1234.5678,-1+2^-23)` is "1230", `-1+2^-22+9*2^-36` "1235", `-1E-6`
+"1235" (not -1), `-3+2^-23` "1000" and `-3+1E-6` "1200" (I1:J21). REPT's number_times and UNICHAR do **not** snap:
+they truncate exactly like MID, so `REPT("a",1-1E-15)` is "" and `UNICHAR(66-2^-23)` is "A" (A1:A14, E1:E14; the
+n-1E-15 cells at 1000 and 66 read n only because that value rounds to n in binary). The cutoff is known to 2^-36: 2^-22 + 8·2^-36 (= 2^-22 + 2^-33) rounds up, 2^-22 + 9·2^-36 does not;
 the engine takes the bound as exactly 2^-22 + 2^-33, inclusive. Unprobed: REPLACE start_num 32767.9999999 (rounds
 up to 32,768, so the engine gives `#VALUE!`).
-Evidence: probes/text-count-argument-bounds A-D, N-S, T-V, X-Y, Z, AA (excel-graph, 2026-10-11, T-0219).
+Evidence: probes/text-count-argument-bounds A-D, N-S, T-V, X-Y, Z, AA (excel-graph, 2026-10-11, T-0219);
+probes/t4453-near-integer-text-args A1:J21 (excel-graph, 2026-11-06, T-4453).
 Status: VERIFIED
-Implemented in: functions/util.rs (`near_integer_count`), used by `left_element`, `right_element`
-(common.rs) and `replace_element` (string_format.rs).
-Tasks: T-0219
+Implemented in: functions/util/near_integer.rs (`near_integer_count`, `near_integer_trunc`), used by `left_element`,
+`right_element` (common.rs), `replace_element` (string_format.rs), `find_element` (position.rs), `fn_char`
+(char_code.rs), `substitute_element` (util.rs) and `decimals_arg` (string_format.rs).
+Tasks: T-0219, T-4453
 
 ## Text function argument modes
 Rule: the M5 text functions take scalar arguments that lift over a range or array (one result per cell, a spill;
@@ -637,7 +647,9 @@ Implemented in: crates/rustsheet-engine/src/functions/text/string_format.rs (`MA
 
 ## DOLLAR and FIXED decimals
 Rule: `decimals` is truncated toward zero, not floored: `DOLLAR(1234.5,-1.5)` is "$1,230" (decimals -1), `FIXED(1234.5,-0.5)`
-is "1,235" (decimals 0), `DOLLAR(1234.5,1.9)` is "$1,234.5". A `decimals` of 128 or more (also 128.5) is `#VALUE!`;
+is "1,235" (decimals 0), `DOLLAR(1234.5,1.9)` is "$1,234.5"; a magnitude within 2^-22 + 2^-33 below an integer counts
+as that integer on either side of zero (`FIXED(1234.5678,-1+2^-23)` "1230"; see "LEFT, RIGHT and REPLACE round counts up
+near an integer", T-4453). A `decimals` of 128 or more (also 128.5) is `#VALUE!`;
 127 is fine and prints 127 fraction digits; large negatives just give "0" (`FIXED(1,-400)`, `DOLLAR(1,-129)`).
 `FIXED(1234,0,"x")` is `#VALUE!`; a numeric no_commas is a boolean (`FIXED(1234,0,2)` = "1234").
 Evidence: probes/dollar-fixed-unichar-edges A1-A29, A46-A50, D69-D75 (excel-graph, T-1281).
