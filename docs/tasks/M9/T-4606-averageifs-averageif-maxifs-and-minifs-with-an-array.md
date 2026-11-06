@@ -3,7 +3,7 @@ id: T-4606
 title: "AVERAGEIFS, AVERAGEIF, MAXIFS and MINIFS with an array criterion over an error in the value range: probe positions past the first, and match"
 milestone: M9
 lane: functions-criteria
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -48,3 +48,9 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4606-ifs-array-cri
 ## Out of scope
 - AVERAGEIF numeric-like criteria with a resized average_range (T-4540).
 - A `NA()` or non-range first argument with an array criterion: excel-graph refuses that workbook (criteria.md).
+
+## Outcome
+Probed excel-graph (probes/t4606-ifs-array-criterion-value-error, 86 cells): AVERAGEIFS, AVERAGEIF, MAXIFS, MINIFS and
+SUMIFS agree at every position of an array criterion over an error in the value range (error only where selected rows
+include it). Ours already matches every cell, so no engine change. criteria.md states the rule. Note the task's second
+pair `B>0` drops row 3 only, not the error rows. Eval delta: +86 passing probe cells, no baseline change.
