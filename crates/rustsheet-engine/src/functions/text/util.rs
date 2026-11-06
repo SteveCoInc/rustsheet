@@ -7,6 +7,7 @@ use crate::{
     cast::{calc_result_to_text, MAX_TEXT_UNITS},
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
     functions::util::near_integer::near_integer_count,
+    number_format::to_excel_precision,
     text::Text,
 };
 
@@ -386,8 +387,12 @@ pub(super) fn substitute_element(
             // Excel accepts 1..=2^31-2 after flooring: 2147483646.9 is fine, 2147483647 and
             // above (1E+15, 1E+300) are #VALUE!, even with no match and before an empty
             // old_text short-circuits (probes/substitute-instance-num-bound, T-2279). A value just
-            // below an integer counts as that integer (probes/t4453-near-integer-text-args F1:F21).
-            let n = near_integer_count(n?);
+            // below an integer counts as that integer (probes/t4453-near-integer-text-args F1:F21),
+            // after a cut to 15 significant digits: `2147483647-4.5E-6` reads 2147483647 and is
+            // #VALUE!, `2147483647-5E-6` reads 2147483646 (probes/t4468-substitute-cap-window,
+            // t4468-substitute-cap-sweep; T-4468). Only the cap shows the cut: at ten integer
+            // digits it reaches 5E-6, far past the 2^-22 snap, and no instance up there exists.
+            let n = near_integer_count(to_excel_precision(n?, 15));
             if !(1.0..=MAX_SUBSTITUTE_INSTANCE).contains(&n) {
                 return Err(Error::VALUE);
             }
