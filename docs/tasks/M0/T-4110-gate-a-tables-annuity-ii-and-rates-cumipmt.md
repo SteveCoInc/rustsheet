@@ -78,7 +78,7 @@ Every failing table point has an owner.
   (0 where it rounds to 1; up to 61%, `NOMINAL(1.04206680307683E-09,7542681)`). RRI A163 (3.5E-4), where
   `EXP(x)-1` cancels near a growth of 0. Seven further CUMPRINC points (A148, A153, A156, A159, A170, A178, A179)
   have a math value below the double range (Excel 0), inside the absolute floor, not listed as off.
-- Math sidecars: `rustsheet-accuracy math --function` over the seven functions for probes and probes-numeric: 24 new
+- Math sidecars: `rustsheet-accuracy math --function` over the seven functions for probes and probes-numeric: 25 new
   sidecars and additions to 10 existing ones, 4,596 cells of these functions (36 math domain errors), no existing
   cell changed. `make eval-math-check` prints "current".
 - Overlap: T-4059 (todo, functions-financial) also asks for CUMPRINC and CUMIPMT `s1` tables; this task delivers them,
