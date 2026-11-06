@@ -3,7 +3,7 @@ id: T-4646
 title: "Point the stale T-1075 references at T-4373 and decision 0324"
 milestone: M9
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
