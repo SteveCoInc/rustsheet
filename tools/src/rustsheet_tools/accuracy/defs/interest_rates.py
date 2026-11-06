@@ -32,11 +32,18 @@ double range's top (Excel's double and the exact one may fall on either side).
 from __future__ import annotations
 
 import random
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, scalars, signed, signed_log_uniform
+from rustsheet_tools.accuracy.defs._common import (
+    Shape,
+    any_edge,
+    by_stratum_with_edge,
+    scalars,
+    signed,
+    signed_log_uniform,
+)
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
@@ -118,16 +125,6 @@ def _rri(args: Sequence[MathArg]) -> mpmath.mpf:
 
 # -- draws -----------------------------------------------------------------------------------------
 
-Shape = Callable[[random.Random], list[Arg]]
-
-
-def _strata(
-    make: Callable[[str, random.Random], list[Arg]], edges: Sequence[Shape], doc: str
-) -> Callable[[str, random.Random], list[Arg]]:
-    """Every stratum but the edge from `make`; the edge one of `edges`."""
-    draws = {s: (lambda rng, s=s: make(s, rng)) for s in ("typical", "tail", "extreme", "log-uniform")}
-    return by_stratum({**draws, "edge": lambda rng: rng.choice(edges)(rng)}, doc)
-
 
 def _periods_per_year(stratum: str, rng: random.Random) -> int:
     if stratum == "extreme":
@@ -203,20 +200,18 @@ RRI_EDGES: tuple[Shape, ...] = (
 )
 
 
-def _param(name: str, kind: str, source: str, truncates: str = "") -> Param:
-    return Param(name, "int" if kind == "int" else "real", source=source, truncates=truncates)
-
-
 EFFECT = register(
     Definition(
         function="EFFECT",
         params=(
-            _param("nominal_rate", "real", EFFECT_SOURCE),
-            _param("npery", "int", EFFECT_SOURCE, truncates=EFFECT_SOURCE),
+            Param("nominal_rate", "real", source=EFFECT_SOURCE),
+            Param("npery", "int", source=EFFECT_SOURCE, truncates=EFFECT_SOURCE),
         ),
         value=_effect,
-        draw=_strata(
-            _conversion, (*CONVERSION_EDGES, _effect_overflow), "EFFECT: [nominal_rate, npery] by stratum."
+        draw=by_stratum_with_edge(
+            _conversion,
+            any_edge((*CONVERSION_EDGES, _effect_overflow)),
+            "EFFECT: [nominal_rate, npery] by stratum.",
         ),
         sources=(EFFECT_SOURCE, NEAR_ZERO_SOURCE),
     )
@@ -226,11 +221,13 @@ NOMINAL = register(
     Definition(
         function="NOMINAL",
         params=(
-            _param("effect_rate", "real", EFFECT_SOURCE),
-            _param("npery", "int", EFFECT_SOURCE, truncates=EFFECT_SOURCE),
+            Param("effect_rate", "real", source=EFFECT_SOURCE),
+            Param("npery", "int", source=EFFECT_SOURCE, truncates=EFFECT_SOURCE),
         ),
         value=_nominal,
-        draw=_strata(_conversion, CONVERSION_EDGES, "NOMINAL: [effect_rate, npery] by stratum."),
+        draw=by_stratum_with_edge(
+            _conversion, any_edge(CONVERSION_EDGES), "NOMINAL: [effect_rate, npery] by stratum."
+        ),
         sources=(EFFECT_SOURCE, NEAR_ZERO_SOURCE),
     )
 )
@@ -239,12 +236,12 @@ RRI = register(
     Definition(
         function="RRI",
         params=(
-            _param("nper", "real", RRI_SOURCE),
-            _param("pv", "real", RRI_SOURCE),
-            _param("fv", "real", RRI_SOURCE),
+            Param("nper", "real", source=RRI_SOURCE),
+            Param("pv", "real", source=RRI_SOURCE),
+            Param("fv", "real", source=RRI_SOURCE),
         ),
         value=_rri,
-        draw=_strata(_rri_draw, RRI_EDGES, "RRI: [nper, pv, fv] by stratum."),
+        draw=by_stratum_with_edge(_rri_draw, any_edge(RRI_EDGES), "RRI: [nper, pv, fv] by stratum."),
         sources=(RRI_SOURCE, RRI_PROBE_SOURCE, NEAR_ZERO_SOURCE),
     )
 )

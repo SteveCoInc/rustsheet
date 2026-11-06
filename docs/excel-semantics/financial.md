@@ -2608,8 +2608,11 @@ Tasks: T-1845
 ## CUMIPMT and CUMPRINC argument domains (T-4110)
 Rule: CUMIPMT and CUMPRINC are `#NUM!` at a rate of 0, for a start period below 1 (before it rounds up), for an end
 period past nper (also below nper + 1, over a fractional nper) and for a start period after the end period. Over a
-valid range they are within ulps of the exact sums with the start rounded up and the end rounded down, type 1's period
-1 being the whole payment, also over millions of periods ("CUMIPMT and CUMPRINC over many periods").
+valid range CUMPRINC is within ulps of the exact sum with the start rounded up and the end rounded down, type 1's
+period 1 being the whole payment, also over millions of periods ("CUMIPMT and CUMPRINC over many periods"). CUMIPMT
+is `PMT·m - CUMPRINC` in doubles, which cancels at a tiny rate: `CUMIPMT(1.10337465791075E-12,249,107536.505163037,50,88,0)`
+is -3.3637479646131396E-6 against the math's -3.3637426202E-6, 1.6E-6 relative off (CUMIPMT/s1 A108); elsewhere it is
+within ulps of the exact sum too.
 Evidence: the Gate A tables accuracy/CUMIPMT/s1 and accuracy/CUMPRINC/s1 (excel-graph, 2026-11-06, T-4110), 400 points,
 16 of them `#NUM!`: a rate of 0 at CUMIPMT A127 `CUMIPMT(0,156,794172.239738137,76,130,1)`, A138 and CUMPRINC A113,
 A115, A122, A124, A132, A138; a start below 1 at CUMIPMT A118 `CUMIPMT(0.00122690808909371,58,276.366733654612,0.3,53,0)`

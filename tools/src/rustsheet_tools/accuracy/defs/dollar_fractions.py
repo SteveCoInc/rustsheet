@@ -23,21 +23,30 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, scalars, signed, trunc
-from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
+from rustsheet_tools.accuracy.defs._common import (
+    Shape,
+    any_edge,
+    by_stratum_with_edge,
+    scalars,
+    signed,
+    trunc,
 )
+from rustsheet_tools.accuracy.literal import Arg
+from rustsheet_tools.accuracy.model import Definition, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import decimal_literal, log_uniform
 
 MODES_SOURCE = "financial.md#financial-function-argument-modes"
 DOLLAR_SOURCE = "financial.md#dollarde-and-dollarfr-scale-the-fraction-by-the-next-power-of-ten-t-4110"
 LIFT_SOURCE = "arrays.md#scalar-arguments-lift-shapes-element-errors-and-the-analysis-toolpak-range-rule"
 FRACTION_TOP = 10**9  # the draws' largest fraction
+
+
+def next_power_of_ten(n: int) -> int:
+    """D: the smallest power of ten at or above `n` (1 for n <= 1)."""
+    power = 1
+    while power < n:
+        power *= 10
+    return power
 
 
 def _split(args: Sequence[MathArg]) -> tuple[int, mpmath.mpf, int, int]:
@@ -48,11 +57,8 @@ def _split(args: Sequence[MathArg]) -> tuple[int, mpmath.mpf, int, int]:
         msg = "a fraction below 1 (unprobed)"
         raise NoValueError(msg)
     whole = int(fraction)
-    digits = 1
-    while digits < whole:
-        digits *= 10
     i = trunc(x)
-    return i, x - i, whole, digits
+    return i, x - i, whole, next_power_of_ten(whole)
 
 
 def _dollarde(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -87,10 +93,7 @@ def _dollar(stratum: str, rng: random.Random, fraction: int, *, decimal_form: bo
         return log_uniform(rng, 1e-300, 1e15)
     whole = rng.randint(0, 10 ** rng.randint(0, 6))
     if decimal_form and stratum == "typical" and rng.random() < 0.6:
-        digits = 1
-        while digits < fraction:
-            digits *= 10
-        return whole + rng.randrange(fraction) / digits
+        return whole + rng.randrange(fraction) / next_power_of_ten(fraction)
     if stratum == "tail":  # a fraction near 0 or near 1
         tiny = log_uniform(rng, 1e-12, 1e-3)
         return whole + (tiny if rng.random() < 0.5 else 1 - tiny)
@@ -105,7 +108,7 @@ def _make(decimal_form: bool) -> Callable[[str, random.Random], list[Arg]]:
     return make
 
 
-EDGES: tuple[Callable[[random.Random], list[Arg]], ...] = (
+EDGES: tuple[Shape, ...] = (
     lambda rng: [
         -(rng.randint(0, 999) + decimal_literal(rng, rng.randint(1, 6), -1, 1.0)),
         rng.choice((2, 8, 16, 32)),
@@ -125,8 +128,6 @@ EDGES: tuple[Callable[[random.Random], list[Arg]], ...] = (
 def _definition(
     function: str, value: Callable[[Sequence[MathArg]], mpmath.mpf], *, decimal_form: bool
 ) -> Definition:
-    make = _make(decimal_form)
-    draws = {s: (lambda rng, s=s: make(s, rng)) for s in ("typical", "tail", "extreme", "log-uniform")}
     return register(
         Definition(
             function=function,
@@ -137,9 +138,8 @@ def _definition(
                 Param("fraction", "int", source=DOLLAR_SOURCE),
             ),
             value=value,
-            draw=by_stratum(
-                {**draws, "edge": lambda rng: rng.choice(EDGES)(rng)},
-                f"{function}: [dollar, fraction] by stratum.",
+            draw=by_stratum_with_edge(
+                _make(decimal_form), any_edge(EDGES), f"{function}: [dollar, fraction] by stratum."
             ),
             sources=(DOLLAR_SOURCE, MODES_SOURCE, LIFT_SOURCE),
         )

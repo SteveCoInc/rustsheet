@@ -58,7 +58,12 @@ Every failing table point has an owner.
     RRI with pv = fv = 0, DOLLARDE/DOLLARFR fractions below 1 (and none drawn past 1E9), powers within a hair of the
     double range's top.
   - Before generating, the definitions ran over the 4,316 literal one-call cells of these functions in eval/suites:
-    no math domain error where Excel has a number, and no math number where Excel has an error.
+    no math domain error where Excel has a number. One cell
+    has a math number where Excel has an error, merged from main after the check:
+    probes/t4314-ipmt-balance-overflow B6 `CUMIPMT(0.5,2,2*5E+307,1,1,0)` (math -5E+307, Excel `#NUM!`), where an
+    intermediate overflows as in that case's PMT, IPMT and PPMT cells (documented in financial.md "IPMT is #NUM! where
+    its discounted balance fails"); its sidecar keeps the math value, as theirs do, and the CUMIPMT definition codes
+    no domain for it.
   - Tests in tools/tests/test_accuracy_annuity_rates.py (Microsoft's examples, the semantics entries' Excel values,
     the evidenced domains, the no-value regions, draws).
 - Tables `eval/accuracy/tables/{CUMIPMT,CUMPRINC,RRI}/s1` (200 points each) and `{EFFECT,NOMINAL,DOLLARDE,DOLLARFR}/s1`

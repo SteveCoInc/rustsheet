@@ -46,18 +46,10 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars
-from rustsheet_tools.accuracy.defs.annuity import _annuity, present_value
+from rustsheet_tools.accuracy.defs import annuity
+from rustsheet_tools.accuracy.defs._common import Shape, any_edge, by_stratum_with_edge, scalars
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    DomainError,
-    Interval,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 MANY_SOURCE = "financial.md#cumipmt-and-cumprinc-over-many-periods"
@@ -89,7 +81,7 @@ def cumulative(args: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf]:
     extra = EXTRA_DIGITS + max(0, int(mpmath.ceil(lost)))
     with mpmath.workdps(mpmath.mp.dps + extra):
         u = mpmath.log1p(r)
-        p = pv / present_value(u, nper, mpmath.mpf(1), mpmath.mpf(0), mpmath.mpf(0), due=due)
+        p = pv / annuity.present_value(u, nper, mpmath.mpf(1), mpmath.mpf(0), mpmath.mpf(0), due=due)
         principal = mpmath.mpf(0)
         if due and a == 1:  # period 1 of type 1: the whole payment is principal
             principal, a = -p, 2
@@ -126,7 +118,7 @@ def _periods(rng: random.Random, nper: int) -> tuple[int, int]:
 def _make(stratum: str, rng: random.Random) -> list[Arg]:
     """[rate, nper, pv, start_period, end_period, type] from RATE's annuity (`_annuity`, defs/annuity.py) with a
     positive pv and rate; the tail stratum's rate is tiny or large, the extreme stratum adds long terms."""
-    _sign, nper, r, pv, _fv, due = _annuity(stratum, rng)
+    _sign, nper, r, pv, _fv, due = annuity._annuity(stratum, rng)
     r, pv = abs(r), abs(pv)
     if stratum == "tail":
         r = log_uniform(rng, 1e-12, 1e-4) if rng.random() < 0.5 else rng.uniform(0.5, 5)
@@ -134,9 +126,6 @@ def _make(stratum: str, rng: random.Random) -> list[Arg]:
         nper = round(log_uniform(rng, 1e4, 1e9))
     start, end = _periods(rng, nper)
     return [r, nper, pv, start, end, 1 if due else 0]
-
-
-Shape = Callable[[random.Random], list[Arg]]
 
 
 def _amount(rng: random.Random) -> float:
@@ -242,30 +231,24 @@ EDGES: tuple[Shape, ...] = (
 )
 
 
-def _draw(stratum: str, rng: random.Random) -> list[Arg]:
-    """[rate, nper, pv, start_period, end_period, type]: the edge stratum one of `EDGES`, the others `_make`'s."""
-    if stratum == "edge":
-        return rng.choice(EDGES)(rng)
-    return _make(stratum, rng)
-
-
 def _definition(function: str, value: Callable[[Sequence[MathArg]], mpmath.mpf]) -> Definition:
-    def param(name: str, kind: str = "real") -> Param:
-        return Param(name, "int" if kind == "int" else "real", Interval(), source=MANY_SOURCE)
-
     return register(
         Definition(
             function=function,
             params=(
-                param("rate"),
-                param("nper"),
-                param("pv"),
-                param("start_period"),
-                param("end_period"),
-                param("type", "int"),
+                Param("rate", "real", source=MANY_SOURCE),
+                Param("nper", "real", source=MANY_SOURCE),
+                Param("pv", "real", source=MANY_SOURCE),
+                Param("start_period", "real", source=MANY_SOURCE),
+                Param("end_period", "real", source=MANY_SOURCE),
+                Param("type", "int", source=MANY_SOURCE),
             ),
             value=value,
-            draw=_draw,
+            draw=by_stratum_with_edge(
+                _make,
+                any_edge(EDGES),
+                f"{function}: [rate, nper, pv, start_period, end_period, type] by stratum.",
+            ),
             sources=(MANY_SOURCE, DOMAIN_SOURCE, ONE_PERIOD_SOURCE, CAP_SOURCE, SWEEP_SOURCE),
         )
     )
