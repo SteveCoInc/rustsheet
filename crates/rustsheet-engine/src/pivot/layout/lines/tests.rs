@@ -7,7 +7,9 @@
 use serde_json::Value as Json;
 
 use super::*;
-use crate::pivot::probe_cases::{address, diagonal, probe_pivot, read, subtotal_named};
+use crate::pivot::probe_cases::{
+    address, diagonal, probe_pivot, read, subtotal_named, T4634_SHEETS,
+};
 use crate::pivot::{
     compute, Aggregate, Axis, CacheBuilder, CacheItem, DataField, PageField, PivotItem,
     RecordValue, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
@@ -139,6 +141,14 @@ fn the_caption_and_row_label_probes_lines_and_locations_are_excels() {
         "t4583-pivot-row-labels",
         &["R1", "R2", "R3", "R4", "R5", "R6", "C1", "C2"],
     );
+    // L3 and L4 split R1: `compact="0"` alone keeps the outer field's own line and top subtotals
+    // but gives the inner field its own column; `outline="0"` alone gives tabular lines and its own
+    // column too. Only both on share the column. L1, L7, L8: column fields; L2, L6: page fields;
+    // L5: rowHeaderCaption.
+    check_all(
+        "t4609-pivot-row-labels-2",
+        &["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8"],
+    );
 }
 
 #[test]
@@ -173,6 +183,7 @@ fn the_item_and_aggregate_probes_lines_and_locations_are_excels() {
             "I3", "I4", "M1", "M2", "M3",
         ],
     );
+    check_all("t4634-pivot-total-order-4", T4634_SHEETS);
 }
 
 /// Region (a, a, b) by Product (x, y, x) on rows, Sum of V, at A3.
@@ -390,7 +401,7 @@ fn past_the_work_or_the_sheet_the_layout_fails() {
     let mut work = MAX_PIVOT_WORK;
     assert_eq!(
         lay_out(&table, &cache, &result, &mut work),
-        Err(PivotComputeError::Limit)
+        Err(PivotComputeError::PastSheet)
     );
     table.location.top = last_row - 6;
     assert_eq!(layout(&table, &cache).location.bottom, last_row);

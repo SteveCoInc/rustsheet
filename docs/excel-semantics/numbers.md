@@ -2020,7 +2020,13 @@ unchanged (`=ROUNDDOWN(Data!E3,123456789.123)` → 0.5; `ROUND(Data!$B3,12345678
 `ROUNDDOWN(0.5, 1000000000000005.8)` → 0.5), yet `ROUND(1000000000000000.0,Data!$D$7)` evaluates to 0
 (it is the divisor in caa981b0753f455c A270, which is `#DIV/0!`; dd99be1f2454159f A159 is similar).
 Evidence: gen-m2/f7e6d351c8538ef5 A35, 893302d6c5b99e2e A136, 7469c3e920e1ade4 A336 (Calc sheet). Oracle: excel-graph, 2026-10-04 (gen-m2 sidecars, T-0203).
-Status: UNVERIFIED (the rule separating the two outcomes needs a probe before implementing; T-0218)
+Status: VERIFIED. The rule separating the two outcomes is "ROUND family: huge num_digits wrap" (probes/round-huge-digits,
+probes/round-huge-digits-wrap; T-0218, T-0268). Branch of each cell: ROUNDDOWN and ROUNDUP take the magnitude capped at 2^32-1
+modulo 65,536, so A35 `ROUNDDOWN(Data!E3,123456789.123)` (digits 52,501) and A336 `ROUNDDOWN(0.5,SUM(..))` (sum about 1E+15, acts
+as 65,535) keep a large positive digit count and return 0.5 unrounded. ROUND saturates to 32 bits and wraps k + e + 1:
+A136 `ROUND(Data!$B3,123456789)` (e = -15, count 123,456,775) stays positive without wrapping and returns 1E-15 unrounded;
+`ROUND(1E+15,1E+15)` (k = 2147483647, e = 15) wraps negative past the top and gives 0 (caa981b0753f455c A270).
+See: "ROUND family: huge num_digits wrap".
 Tasks: T-0218
 
 ## GAMMALN / GAMMALN.PRECISE (T-0926)
@@ -2474,9 +2480,12 @@ gen-m6/9bd0bd18636e5f9b Calc!A4 (`SECH(CHOOSE(SIN(1E+15),..))`), gen-m6/3ee7ffc8
 More: `SIN(-2.5E+15)` and `CSC(1E+15)` are `#NUM!`, and a nested `ASIN(PI())` or `ASIN(100)` stays `#NUM!`
 (`A10<ASIN(PI())`, `CHOOSECOLS(0,ASIN(100))`): gen-m7/9ff3afcacd3bd0fc Calc!A24, gen-m7/f68fafa0ca2eba26 Calc!A37,
 gen-m7/93976dd9a3578ed9 Calc!A13, gen-m7/2bb922eef72e785e Calc!A30 (excel-graph, 2026-10-11, T-1275).
-Ours: COS, SIN, SEC and CSC compute a number; ACOS and ASIN yield a NaN number that `powf(0)` turns into 1 (and that
-comparisons read as FALSE).
-Status: VERIFIED for the observed cells; the exact threshold and TAN are UNVERIFIED.
+Ours: SIN, COS, TAN, COT, SEC and CSC are `#NUM!` for |x| >= 2^27 (`trig_arg` and `EXCEL_TRIG_LIMIT` in
+`functions/math_and_trigonometry/mathematical.rs` and `trig.rs`), so `ISERROR(SIN(1E+15))` is TRUE; out-of-domain
+ACOS and ASIN are `#NUM!` at once, nested too (`ACOS(1E+15)^0` is `#NUM!`, `ISERROR(ACOS(1E+15))` TRUE).
+Status: VERIFIED. The threshold (2^27, TAN included) is settled by "Trig of a huge angle" (probes/trig-huge-argument,
+T-1201); the out-of-domain ACOS/ASIN part by "Out-of-domain ACOS/ASIN/ACOSH/ATANH are `#NUM!` at once, even nested (T-1202)".
+See: "Trig of a huge angle", "Out-of-domain ACOS/ASIN/ACOSH/ATANH are `#NUM!` at once, even nested (T-1202)".
 Tasks: T-1192, T-1201, T-1202
 
 ## ASIN's formulation

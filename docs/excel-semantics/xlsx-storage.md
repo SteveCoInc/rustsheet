@@ -530,8 +530,11 @@ and 5 hidden): the openpyxl file with `ColorFilter(dxfId=7)` on a workbook with 
 directly written `<colorFilter/>` and `<colorFilter cellColor="0"/>` all open without repair and read as the
 criterion-less control: `SUBTOTAL(9,[Val])` 21, `109` 15, `SUBTOTAL(3,[Cat])` 6, `103` 4, manual hides. Our import
 therefore reads a `<colorFilter>` without `dxfId` as criterion-less, in `has_active_criterion` too (before, it kept
-the criterion and called the rows filtered: 15 and 4). A source file with a dangling `dxfId` still imports as filtered
-while its export is criterion-less (T-4558).
+the criterion and called the rows filtered: 15 and 4). Probe case probes/t4558-color-filter-subtotal
+(excel-graph, 2026-11-06, T-4558) pins the three forms (`<colorFilter/>`, `<colorFilter cellColor="0"/>`, no filter):
+all read 6, 4, 21, 15. A source file with a dangling `dxfId` (past the workbook's dxfs) imports as unfiltered, the same
+as its export, which drops the id: SUBTOTAL is equal in memory and after a save. Excel refuses such a source file, so
+this is a choice that keeps the two equal, not an Excel value (T-4558).
 A totals-row cell holding a number, boolean or error constant gets no metadata (T-1607 covered label and formula
 cells only), and Excel refuses that file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
 totals row with the label "Total" and the number 42 is refused, and so is the same file with 42 written as
@@ -582,16 +585,26 @@ A stored `calculatedColumnFormula` does not fill blank cells on load (next entry
 Ours (T-3033): import keeps its text on `TableColumn::calculated_column_formula`; a typed fill stores the first data
 row's formula in the same file form, and export writes the stored text, so an exception in a data row does not change
 it. Whether Excel opens our exported column formula without repair is unprobed.
-The stored text is not rewritten when rows or columns are inserted or deleted (an engine gap: Excel's file form
-follows the edit; unprobed here). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
+Through a row or column insert or delete, Excel saves the column formula that the edit made of the first data cell's
+formula (VERIFIED, excel-graph 2026-11-06, the `xl/tables/table1.xml` of the cached workbooks of
+probes/table-edits/t4274-calc-column-*, T on A1:C4 with C2 typed `=A2*2`): `B2*2` after insert_column A (table
+B1:D4), `A2*2` after delete_column B (a column it does not read; table A1:B4), `A3*2` after insert_row 1 (table
+A2:C5), and `A2*2` after insert_row 3 inside the data rows (table A1:C5; the cells below read `=A4*2`, `=A5*2`).
+A structured column formula keeps its text: `T[[#This Row],[Col]]*2` after insert_column A, with FORMULATEXT
+`=[@Col]*2` in the moved cells and their values 2, 4, 8 (t4274-calc-column-structured-insert-column-a). The row that
+insert_row 3 adds inside the data rows gets the column's formula (its Calc cell is 0, the oracle's S!C3, unscored).
+Ours (T-4274): the row and column insert and delete rewrite the stored text as the first data cell's formula is
+displaced (`Model::displaced_column_formulas`), printed in file form at the new first data cell; a text with a `[`
+(a structured reference) keeps its text, and so does one whose first data cell the edit deletes (unprobed). Moves and
+cell shifts leave the text as it is (unprobed). Ours gives `#ERROR!` in the moved `[@Col]` cells (T-4680). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
 `array="1"` attribute is dropped on import (export writes the plain element): engine choices, what Excel does with
 either is unprobed.
 Evidence: the saved `xl/tables/table1.xml` and `xl/worksheets/sheet1.xml` of probes/t2957-fill-one-totals,
 -refill-second, -constant-exception, -constant-then-refill, -existing-constant, -a1-reference and -expand-right-*
 (the eval/.cache/oracle/excel-graph/<input_sha256>.xlsx of each sidecar).
 Status: VERIFIED (excel-graph)
-Implemented in: crates/rustsheet-xlsx/src/import/tables.rs, crates/rustsheet-xlsx/src/export/tables.rs
-Tasks: T-2957, T-2958, T-2969, T-3033
+Implemented in: crates/rustsheet-xlsx/src/import/tables.rs, crates/rustsheet-xlsx/src/export/tables.rs, crates/rustsheet-engine/src/calculated_columns.rs
+Tasks: T-2957, T-2958, T-2969, T-3033, T-4274, T-4680
 
 ## Excel does not fill a calculated column on load
 Rule: a table part whose `<tableColumn>` holds `<calculatedColumnFormula>` does not make Excel fill the

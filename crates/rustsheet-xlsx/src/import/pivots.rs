@@ -25,7 +25,7 @@ use rustsheet_engine::pivot::{
 use rustsheet_engine::types::DateSystem;
 
 use self::groups::{apply_groups, FieldGroup, RangeGroup};
-use self::table::read_pivot_table;
+use self::table::{flag, read_pivot_table};
 use super::iso_date::pivot_cache_date_serial;
 use super::package::{part_folder_and_rels, part_key, resolve_relative_target, Package};
 use super::xml::{find_start_attribute, start_attribute, XmlNode};
@@ -271,6 +271,7 @@ fn load_cache<R: Read + Seek>(
         records_id,
         groups,
         grouping_fields,
+        refresh_on_load,
     } = read_definition(archive.open(part)?, values_left, &limits, date_system)?;
     let Some(records_id) = records_id else {
         return skip("no records part (saveData=\"0\")");
@@ -293,6 +294,7 @@ fn load_cache<R: Read + Seek>(
         date_system,
     )?;
     let mut cache = builder.finish();
+    cache.refresh_on_load = refresh_on_load;
     apply_groups(&mut cache, &groups, grouping_fields, values_left)?;
     Ok(cache)
 }
@@ -539,6 +541,8 @@ struct Definition {
     groups: Vec<FieldGroup>,
     /// The names of the grouping fields (`databaseField="0"`), which follow the database fields.
     grouping_fields: Vec<String>,
+    /// `refreshOnLoad` (default off).
+    refresh_on_load: bool,
 }
 
 /// A `pivotCacheDefinition` part.
@@ -549,6 +553,7 @@ fn read_definition<B: BufRead>(
     date_system: DateSystem,
 ) -> Result<Definition, Skip> {
     let mut records_id = None;
+    let mut refresh_on_load = false;
     let mut source: Option<Option<CacheSource>> = None;
     let mut builder: Option<CacheBuilder> = None;
     let mut field_count = 0;
@@ -566,6 +571,7 @@ fn read_definition<B: BufRead>(
                 return skip("not a pivotCacheDefinition");
             }
             records_id = relationship_id(element)?;
+            refresh_on_load = flag(element, "refreshOnLoad", false)?;
         } else if at(path, &[DEFINITION]) {
             match name.as_str() {
                 "cacheSource" => {
@@ -682,6 +688,7 @@ fn read_definition<B: BufRead>(
             records_id,
             groups,
             grouping_fields,
+            refresh_on_load,
         }),
         None => skip("no cacheFields"),
     }

@@ -354,7 +354,10 @@ pub(crate) fn parse_clock_text(text: &str) -> Option<f64> {
     let (body, bare_hour) = match body.strip_suffix(':') {
         // `"12:"` is 12:00 (`"25:"` is 25 hours) without an AM/PM suffix; `"12: PM"` is #VALUE!
         // (probes/t2352-time-text-trailing-colon A1-A5, A16).
-        Some(stripped) => (stripped, suffix_is_pm.is_none()),
+        // `H:M:` before an AM/PM suffix is #VALUE! too (`"10:30: PM"`, `"10:30:45: PM"`:
+        // probes/t4602-clock-text-colon-am-pm-and-spaces A1-A25).
+        Some(_) if suffix_is_pm.is_some() => return None,
+        Some(stripped) => (stripped, true),
         None => (body, false),
     };
     let (head, fraction, odd_tail) = match body.split_once('.') {

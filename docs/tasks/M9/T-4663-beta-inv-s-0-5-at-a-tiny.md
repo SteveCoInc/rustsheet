@@ -7,7 +7,7 @@ status: todo
 priority: P3
 size: M
 tier: opus
-depends_on: []
+depends_on: [T-4676]
 defer: phase-1b
 ---
 
@@ -37,9 +37,20 @@ Cells (known failures):
 - eval/accuracy/known-failures.tsv: BETA.INV/s1 A115, A118, A125, A128, A138; BETAINV/s1 A115, A118, A128,
   A135, A138
 
+Needs an oracle sweep (gap triage 2026-11-06): the cached cells cannot settle the mechanism, so this task is not
+attempted blind. It waits for T-4676, which fills `probes-numeric/t4676-beta-inv-tiny-shape-half`
+with predictions committed before the fill. Read that case and its statistics.md table first.
+
 ## Acceptance criteria
 - [ ] The cells above pass from a structural rule evidenced by a discriminating probe, or stay known
       failures with the reason recorded in statistics.md.
+- [ ] R4 guards (reviewer-excel-fidelity check 7, decision 0188), for any rule chosen by scoring candidates against
+      oracle cells: train and hold-out counts side by side (bit-exact, within 4 ulp, within 15 digits) for the chosen
+      rule and the correctly rounded one, on a split of about 30% stated before scoring; a fresh sweep oracle-filled
+      after the rule is frozen, with its result recorded here; the Gate A envelope count on that sweep, listing every
+      point outside it; a `FITTED` tag and its fitted range on any fitted constant (none for a structural model);
+      the reproducibility floor met; no branch that keeps matched cells passing without the rule (no keep-matched
+      branch).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

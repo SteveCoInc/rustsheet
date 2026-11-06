@@ -1,0 +1,120 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "SUBTOTAL over a table whose autoFilter column holds a <colorFilter/> (T-4558, T-4404). Each sheet has a table A1:B7 (Cat a,b,a,c,a,b; Val 1-6), rows 3 and 5 hidden, D1:D4 = SUBTOTAL 3, 103 over Cat and 9, 109 over Val. Color: <colorFilter/>. FontColor: <colorFilter cellColor=\"0\"/>. Manual: no filter (control).",
+  "tags": [
+    "M8",
+    "math",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Color",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "A2": "a",
+        "B2": 1,
+        "A3": "b",
+        "B3": 2,
+        "A4": "a",
+        "B4": 3,
+        "A5": "c",
+        "B5": 4,
+        "A6": "a",
+        "B6": 5,
+        "A7": "b",
+        "B7": 6,
+        "D1": "=SUBTOTAL(3,SalesC[Cat])",
+        "D2": "=SUBTOTAL(103,SalesC[Cat])",
+        "D3": "=SUBTOTAL(9,SalesC[Val])",
+        "D4": "=SUBTOTAL(109,SalesC[Val])"
+      },
+      "hidden_rows": [
+        3,
+        5
+      ],
+      "tables": [
+        {
+          "name": "SalesC",
+          "ref": "A1:B7",
+          "filter": true,
+          "filter_column": {
+            "color": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "FontColor",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "A2": "a",
+        "B2": 1,
+        "A3": "b",
+        "B3": 2,
+        "A4": "a",
+        "B4": 3,
+        "A5": "c",
+        "B5": 4,
+        "A6": "a",
+        "B6": 5,
+        "A7": "b",
+        "B7": 6,
+        "D1": "=SUBTOTAL(3,SalesF[Cat])",
+        "D2": "=SUBTOTAL(103,SalesF[Cat])",
+        "D3": "=SUBTOTAL(9,SalesF[Val])",
+        "D4": "=SUBTOTAL(109,SalesF[Val])"
+      },
+      "hidden_rows": [
+        3,
+        5
+      ],
+      "tables": [
+        {
+          "name": "SalesF",
+          "ref": "A1:B7",
+          "filter": true,
+          "filter_column": {
+            "cell_color": false,
+            "color": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Manual",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "A2": "a",
+        "B2": 1,
+        "A3": "b",
+        "B3": 2,
+        "A4": "a",
+        "B4": 3,
+        "A5": "c",
+        "B5": 4,
+        "A6": "a",
+        "B6": 5,
+        "A7": "b",
+        "B7": 6,
+        "D1": "=SUBTOTAL(3,SalesM[Cat])",
+        "D2": "=SUBTOTAL(103,SalesM[Cat])",
+        "D3": "=SUBTOTAL(9,SalesM[Val])",
+        "D4": "=SUBTOTAL(109,SalesM[Val])"
+      },
+      "hidden_rows": [
+        3,
+        5
+      ],
+      "tables": [
+        {
+          "name": "SalesM",
+          "ref": "A1:B7",
+          "filter": false
+        }
+      ]
+    }
+  ]
+}

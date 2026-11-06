@@ -7,7 +7,7 @@ status: todo
 priority: P3
 size: M
 tier: opus
-depends_on: []
+depends_on: [T-4675]
 defer: phase-1b
 ---
 
@@ -38,10 +38,21 @@ Cells (known failures):
 - probes/t2435-dist-extremes A78, A80, A81 (df2 = 2, df1 = df2 = 1, F.INV at 1 - 1E-16) are numerically close
   but not bit-exact.
 
+Needs an oracle sweep (gap triage 2026-11-06): the cached cells cannot settle the mechanism, so this task is not
+attempted blind. It waits for T-4675, which fills `probes-numeric/t4675-beta-search-saturation`
+with predictions committed before the fill. Read that case and its statistics.md table first.
+
 ## Acceptance criteria
 - [ ] A derivation of the saturation from the search's structure, reproducing both constants exactly, recorded
       in statistics.md; or the cells stay known failures with the negative result recorded.
 - [ ] The cells above pass, or are named with evidence in the statistics.md entry.
+- [ ] R4 guards (reviewer-excel-fidelity check 7, decision 0188), for any rule chosen by scoring candidates against
+      oracle cells: train and hold-out counts side by side (bit-exact, within 4 ulp, within 15 digits) for the chosen
+      rule and the correctly rounded one, on a split of about 30% stated before scoring; a fresh sweep oracle-filled
+      after the rule is frozen, with its result recorded here; the Gate A envelope count on that sweep, listing every
+      point outside it; a `FITTED` tag and its fitted range on any fitted constant (none for a structural model);
+      the reproducibility floor met; no branch that keeps matched cells passing without the rule (no keep-matched
+      branch).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

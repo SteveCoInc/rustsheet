@@ -232,7 +232,7 @@ fn displace_cf_sqref(sqref: &str, data: &DisplaceData, sheet: u32) -> String {
 /// `to_string_displaced_keeping`.
 /// CF formulas are stored in English (see [`Model::user_formula_to_internal`]),
 /// so the caller must have the parser in the default (English) locale/language.
-fn displace_cf_formula_str(
+pub(crate) fn displace_cf_formula_str(
     parser: &mut ExprParser,
     formula: &str,
     context: &CellReferenceRC,
