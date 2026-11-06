@@ -32,16 +32,39 @@ Without items or records Excel refuses the file (`OpenWorkbookBlockedWorkbook`, 
 Evidence: every pivot of probes/t4123-pivot-capture and probes/t4128-pivot-spike except S, the
 `#SPILL!` control (excel-graph, 2026-11-06): compact, tabular, a calculated field with a Top-N filter and a sort, numeric grouping.
 The case builder relies on it (tools/src/rustsheet_tools/pivot_definition.py).
-Status: VERIFIED (excel-graph) for rendering; the refusal of an inconsistent package is UNVERIFIED
-(probe pending: T-4134)
+Status: VERIFIED (excel-graph) for rendering. The refusal of an inconsistent package is a builder
+observation (T-4122 runs). It cannot become a filled probe, because Excel saves nothing for a file it
+refuses.
 
 ## Case-variant text items make Excel for the web call the file corrupt
 Rule: a cache field whose shared items list two texts that differ only in case (`East`, `east`) makes
 Excel for the web refuse the workbook (`FileCorruptTryRepair`). With them merged into one item, the
 records of both casings count under it on refresh: East/A summed the `East` and `east` rows (14 = 10
 + 4) and showed `East`.
-Evidence: T-4122 runs (cases a and a2: corrupt with both items, rendered with one).
-Status: UNVERIFIED (probe pending: T-4134, which also asks which casing wins)
+Evidence: T-4122 runs (cases a and a2: corrupt with both items, rendered with one). The merge on refresh
+is VERIFIED by probes/t4134-pivot-items I1 (next entry).
+Status: the refusal is a builder observation (T-4122 runs), not committable as a probe: Excel saves
+nothing for a file it refuses
+
+## Item identity: exact for numbers and types, case-insensitive for text
+Rule: on refresh, texts that differ only in case are one item, and their records add up. In I1 the item
+shows `east`, which is both the first-seen and the listed casing, so which of those wins is open. Numbers are compared exactly, so 0.3 and 0.30000000000000004 are two items. The
+text `"1"` and the number 1 are two items as well.
+Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
+- I1: east, East and EAST count 3 under `east`, and west counts 1.
+- I4: 0.3 counts 2 and 0.30000000000000004 counts 1.
+- I5: the number 1 counts 2 and the text `1` counts 1.
+
+Status: VERIFIED (excel-graph)
+
+## Item casing when cache and source disagree, and date items
+Rule: unknown. Which casing a merged text item shows when the cache lists one casing and the source's
+first row has another, and whether date items with and without a time part are one item. Also open:
+whether new items that only a refresh finds are appended in source order or sorted descending
+(previous entry, I3).
+Evidence: none yet. probes/t4134-pivot-items I1 cannot separate the two casings, because both are
+`east`.
+Status: UNVERIFIED (probe pending: T-4582)
 
 ## Shared-item flags Excel accepts for mixed fields
 Rule: Excel for the web refuses a cache whose `sharedItems` flags contradict its items. The flags that
@@ -54,14 +77,31 @@ open are the ones Excel itself writes:
 
 Evidence: T-4122 runs (bool+text, error+text and number+blank refused with other flags, rendered with
 these); Excel-saved caches in the LibreOffice fixtures (oss-engines.md §5).
-Status: UNVERIFIED (probe pending: T-4134)
+Status: builder observation (T-4122 runs), not committable as a probe: Excel saves nothing for a
+file it refuses. The builder writes these flags (pivot_definition.py `shared_items`), and every
+filled pivot probe opens with them.
 
-## Items show in the order the pivot field lists them
-Rule: on refresh Excel keeps the order of a pivot field's `<items>` for existing items; it does not
-re-sort them. A field listing `a`, blank, `b` shows `a`, `(blank)`, `b`. Booleans show as `TRUE` and
-`FALSE`, errors as their text (`#N/A`), and blanks as `(blank)`.
-Evidence: T-4122 runs (f_blankstr, f_boolstr, f_err, f_num_blank).
-Status: UNVERIFIED (probe pending: T-4134, together with the default order of a newly created pivot)
+## Items show in the order the pivot field lists them; new items are appended
+Rule: on refresh Excel keeps the order of a pivot field's `<items>`. An item the refresh finds that the
+field does not list yet goes after the listed ones, not in ascending order. Whether they follow the
+source order or a descending sort is open (T-4582). A listed item that has no records after the
+refresh is not rendered, and the items after it keep their indices. How items render:
+- a number item renders as a number cell;
+- a boolean as the text `TRUE` or `FALSE`;
+- an error item as the text of the error (`#N/A`), not an error value;
+- a blank as `(blank)`.
+
+Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
+- I2: the builder lists a, FALSE, 1, b, TRUE, 2, then #N/A and blank (first seen); Excel shows that
+  order in I2!A4:A11, with A6 and A9 numbers, A10 the text `#N/A` and A11 `(blank)`.
+- I3: Zed and Alpha come from formulas the cache records as missing; Excel shows M, Zed, Alpha. The
+  source order is M, Zed, Alpha, M, which also reads as a descending sort of the new items. The listed
+  `<m/>` item (index 1) holds no record after the refresh and is left out: the saved `rowItems` are
+  x = 0, 2, 3.
+
+The default order of a newly created pivot (ascending, by type) is a UI action and not reachable from a
+file.
+Status: VERIFIED (excel-graph)
 
 ## A calculated field applies its formula to the field sums
 Rule: a calculated field `Sales*2+0.1` shows, at every level including subtotals and the grand total,
@@ -96,25 +136,46 @@ Evidence: probes/t4128-pivot-spike S (excel-graph, 2026-11-06, T-4128): the cons
 the layout, and the pivot is saved with location A3, where S!A3 is `#SPILL!`.
 Status: VERIFIED (excel-graph); GETPIVOTDATA against such a pivot is in T-4130
 
-## A tabular pivot's first row header is `Row Labels` unless the data field is not compact
-Rule: in a tabular pivot (`outline="0"`, `compact="0"` on the table and on both row fields), the header
-cell of the first row field reads `Row Labels`. It reads the field's own name (`Region`) when the data
-field's `pivotField` (Sales, which is on no axis) carries `compact="0"`; its `outline` makes no
-difference. The second row field's header is its name (`Product`) in every variant.
-Evidence: probes/t4123-pivot-capture A4 (excel-graph, 2026-11-06, T-4123). The four tabular sheets
-differ only in the Sales field:
-- T (no attributes): `Row Labels`;
-- T2 (`compact="0" outline="0"`): `Region`;
-- T3 (`compact="0"` only): `Region`;
-- T4 (`outline="0"` only): `Row Labels`.
+## A tabular pivot's first row header is the field name only when every pivotField has compact="0"
+Rule: in a tabular pivot, the header cell of the first row field reads the field's own name (`Region`)
+only when every `pivotField` carries `compact="0"`. Otherwise it reads `Row Labels`. One field at the
+default gives `Row Labels` in every role and position probed:
+- roles: the outer row field, the inner row field, the data field, an unused source field and a
+  calculated field;
+- positions in the cache: first (R1), middle (R3, R4) and last (R6, and t4128 K's calculated field).
 
-oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on that field, showed
-`Region` too, which this rule likely explains. Probed with one source field, Sales, behind every data field of T to T4. Observation, cause not
-isolated: probes/t4128-pivot-spike K!A4 is `Row Labels` with Sales `compact="0"` and the calculated
-field Double at the default (T-4128). K also has a Top-N filter and a
-sort, so whether every data field must be non-compact, and the layout without a Values axis, are left
-to T-4137 and T-4138.
-Status: VERIFIED (excel-graph)
+Column and page fields were not probed. For the data field, its `outline` makes no difference (t4123
+T3, T4); for other fields `outline` was not varied apart from `compact`. The second row field's header
+is its name (`Product`) whenever it keeps its own column.
+
+An outer row field left at the default `compact` and `outline` (R1) also changes the layout:
+- the inner field moves into the outer field's column: location A3:B11 against A3:C11, and
+  firstDataCol 1 against 2;
+- there are no `<item> Total` lines; each outer item's subtotal sits on the item's own line (R1!A4
+  `East` with B4 22, R1!A8 `West` with B8 27, and West's products in A9:A10), while the other R sheets
+  have `East Total` at A7 and `West Total` at A10.
+
+Which of the two attributes causes this is not separated.
+Evidence (excel-graph, 2026-11-06):
+- probes/t4583-pivot-row-labels A3 (T-4583). The cache fields are Region, Product, Sales, Units and
+  Risky; every field carries `compact="0" outline="0"` except the one named:
+  - R1 Region (outer axis, first): `Row Labels`;
+  - R2 Product (inner axis): `Row Labels`;
+  - R3 Units (unused, middle): `Row Labels`;
+  - R4 Sales (data, middle): `Row Labels`;
+  - R6 Risky (unused, last): `Row Labels`;
+  - R5 (none left at the default): `Region`.
+- probes/t4123-pivot-capture A4 (T-4123): T and T4, with Sales at the default, give `Row Labels`; T2
+  and T3, with every field non-compact, give `Region`.
+- probes/t4128-pivot-spike K!A4 (T-4128): a calculated field at the default gives `Row Labels`.
+- probes/t4137-pivot-captions K5!A3 and K6!A4 (T-4137): unused fields at the default give `Row Labels`.
+
+oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on the Sales field, showed
+`Region` too.
+Correction: T-4123 first read the rule as "the data field's `compact`". T-4137 narrowed it to the
+non-axis fields, and T-4583's R1 and R2 show that axis fields count too.
+Status: VERIFIED (excel-graph) for the roles and positions probed. UNVERIFIED (probe pending: T-4609):
+column and page fields, `outline` alone on axis fields, and which attribute moves R1's subtotals.
 
 ## Rendered pivot cells: blanks, repeated labels, subtotals and the Values caption
 Rule:
@@ -133,13 +194,161 @@ Evidence: probes/t4123-pivot-capture, the `pivots` cells of its sidecar (excel-g
 T-4123). Scored once T-4124 lands; the engine renders none of these yet.
 Status: VERIFIED (excel-graph)
 
+## Caption attributes, empty and error captions, page captions, custom subtotal labels
+Rule:
+- `rowHeaderCaption` replaces `Row Labels` (K1!A4 `Regions`).
+- `grandTotalCaption` replaces `Grand Total` (K1!A7 `All of it`).
+- `dataCaption` replaces the `Values` caption over the data fields (K1!B3 `Measures`).
+- `colHeaderCaption` replaces `Column Labels` beside a real column field in compact form
+  (probes/t4583-pivot-row-labels C1!B3 `Products`, with rowHeaderCaption C1!A4 `Regions`). In K1,
+  whose column axis holds only Values, it shows nowhere. In tabular form with every field non-compact
+  it shows nowhere either: the column header reads the field's name (C2!B3 `Product`) and the row
+  header reads its name too (C2!A4 `Region`; C2 sets no rowHeaderCaption).
+- With `showMissing` and `missingCaption`, an empty intersection shows the caption (K2!D6 `n/a`).
+- With `showError` and `errorCaption`, under Sum, every value cell whose aggregate is an error shows
+  the caption as text: the cell, its row and column totals and the grand total (K3!C5, E5, C7 and E7 `ERR`; the
+  data hold one `#DIV/0!` at East/B). The empty West/C stays blank (K3!D6).
+- Page fields show `(All)` with no selection, the item with one (`A`), and `(Multiple Items)` when
+  several items stay visible (K4!B2:B4).
+- Custom subtotal functions label each subtotal line `<item> <Function>`: `East Sum`, `East Count`
+  (K5!A7:A8), with Count counting records (4).
+- With a single data field and no column field (tabular, K5) there is no Values row. `Row Labels` is
+  at the location's corner (K5!A3), the inner row field's name beside it (B3 `Product`), and the data
+  field's caption above the data column (C3 `Sum of Sales`). With a column field the corner holds the
+  data caption instead (K2!A3, K3!A3; previous entry).
+
+Evidence: probes/t4137-pivot-captions (excel-graph, 2026-11-06, T-4137). Default data-field names
+(`Sum of`, `Count of`...) are written by the file, not chosen by Excel, so a file cannot probe them;
+creating a pivot in the UI is where Excel picks them (T-2327 keeps that question). For other
+aggregates and `#DIV/0!` under `errorCaption`, see "errorCaption replaces every error value" below.
+Status: VERIFIED (excel-graph)
+
 ## Page fields render above the location
-Rule: page fields render in the rows above the pivot's location, each as `<field name>` beside its
-selected item, or `(All)` when none is selected.
-Evidence: T-4122 runs (sheet Pg: `Region | East`, `Product | (All)`, location A5).
-Status: UNVERIFIED (probe pending: T-4138)
-Capture assumption (T-4123): oracle sidecars capture the page area as the `rowPageCount` rows above
-the location, ending one blank row before it, and `3 * colPageCount - 1` columns wide but at least as
-wide as the location (`snapshot.py` `pivot_area`). Only the one-page, one-column shape is evidenced
-(Calipers officejs/pivot_filter: one page field at A1:B1, body from A3). T-4138 must confirm the
-multi-page offset and the `colPageCount > 1` width, and widen the window if Excel differs.
+Rule: page fields render in the rows above the pivot's `location`, ending one blank row before it. Each
+shows `<field name>` beside its selection: `(All)`, the item, or `(Multiple Items)`. With
+`pageWrap="n"` and `pageOverThenDown`, the fields fill a row n at a time, each field-item pair two
+columns wide with a blank column between pairs. The saved `rowPageCount` and `colPageCount` give the
+grid (here 2 by 2).
+Evidence:
+- probes/t4137-pivot-captions K4 (T-4137): three page fields in A2:B4 above location A6.
+- probes/t4138-pivot-geometry G8 (T-4138): three page fields wrapped two per row, `Region | (All)` in
+  B5:C5, `Product | (All)` in E5:F5 and `Channel | (All)` in B6:C6, row 7 blank, location B8,
+  `rowPageCount=2`, `colPageCount=2`.
+
+Capture window (T-4123, `snapshot.py` `pivot_area`): the `rowPageCount` rows above the location, minus
+one blank row, and `3 * colPageCount - 1` columns wide. Both shapes above are consistent with it. In G8
+the second pair starts at E, three columns after B, and the five-column window ends at F. A capture
+cannot see past its own window, though, so a page cell outside it would go unseen (row 1 of K4,
+rows 1–4 of G8).
+Status: VERIFIED (excel-graph) for the rendering; the window is consistent with both probes, not
+independently confirmed (probe pending: T-4584)
+
+## Pivot geometry: location and header offsets per layout
+Rule: Excel writes the pivot's `location` as the body's bounding box (page fields excluded), with
+`firstHeaderRow`, `firstDataRow` and `firstDataCol` measured from its top left. With the location's top
+left at B4 (probes/t4138-pivot-geometry, T-4138):
+
+| sheet | layout | location | fhr, fdr, fdc | rowItems, colItems |
+|---|---|---|---|---|
+| G1 | compact, 1 row field | B4:C7 | 1, 1, 1 | 3, 1 |
+| G2 | compact, 2 row fields, 1 column field | B4:E13 | 1, 2, 1 | 8, 3 |
+| G3 | outline, 2 row fields, 2 data fields | B4:E13 | 1, 2, 2 | 8, 2 |
+| G4 | tabular, 3 row fields | B4:E18 | 1, 1, 3 | 14, 1 |
+| G5 | compact, 1 row field, 2 column fields | B4:J9 | 1, 3, 1 | 3, 8 |
+| G6 | compact, Values on rows | B4:C12 | 1, 1, 1 | 8, 1 |
+| G7 | 1 column field only | B4:F6 | 1, 2, 1 | 1, 4 |
+| G9 | 3 data fields, no axis field | B4:D6 | 1, 2, 0 | 1, 3 |
+
+In compact form all row fields share one column (fdc 1). Outline and tabular give each row field its own
+column (fdc = number of row fields), but each rests on one probe (G3, G4). With no row field, fdc is 1
+when there is a column field (G7) and 0 when there is no axis field at all (G9, and G8 in the page-field entry above). fdr is 1
+plus the number of `colFields`, and the Values field counts when it is on columns: G3 and G9 (Values
+only) have fdr 2, as does G2 (one column field and one data field), and G5 has 3. With Values on rows,
+each item is followed by one line per data field, and the grand total reads `Total <data field>`
+(G6!B11:B12).
+
+A Values field on rows needs `dataOnRows="1"` on the definition: without it Excel for the web refuses
+the file as corrupt (`FileCorruptTryRepair`). Case builder v2 now writes it. This comes from scratch
+excel-graph runs of T-4138, not committed: G6's package was refused without the attribute and opened
+with it, all else equal.
+Status: VERIFIED (excel-graph) for the table; the refusal is a builder observation
+
+## Aggregates over text, blanks, booleans and errors
+Rule (each aggregate in a value field that also holds other kinds of value):
+- **Skipped values.** Text, blanks and booleans are skipped by Sum, Average, Max, Min, Product, StdDev,
+  StdDevp, Var, Varp and CountNums. A boolean is not a number: `TRUE` is not 1.
+- **Count** counts every non-blank value: numbers, text, booleans and errors.
+- **CountNums** counts numbers only. An error does not poison it.
+- **Errors.** An error poisons every aggregate except Count and CountNums. The aggregate shows the error
+  (`#N/A`) in the cell holding it and in every subtotal and grand total that covers that cell. Cells that
+  do not cover it are unaffected.
+- **One value.** Over a single number, StdDev and Var are `#DIV/0!`, while StdDevp and Varp are 0. This
+  holds wherever the other values in the cell are text, blank or boolean. A data error wins over it:
+  East/A of Err holds one number beside `#N/A` and shows `#N/A` (A_stdDev!L6, A_var!L6).
+- **Empty intersections.** An intersection with no records is blank for every aggregate, Count and
+  CountNums included.
+
+Evidence: probes/t4135-pivot-aggregates (excel-graph, 2026-11-06, T-4135). Each sheet A_<aggregate> has
+rows Region, columns Kind and six value fields. The Data!A2:H5 records are East/B, East/A, East/A and
+West/A, and East/A row 4 holds the odd value: text `abc`, a blank, `TRUE` or `#N/A`.
+- **Skipped values:** A_sum!I6:K6 are 10 for Txt, Blk and Bool, against H6 = 14 for Num. A_average!I6:K6
+  are 10 and A_product!I6:K6 are 10.
+- **Count:** A_count!I6, K6 and L6 are 2 for Txt, Bool and Err; J6 is 1 for Blk.
+- **CountNums:** A_countNums!I6:L6 are 1.
+- **Errors:** column L (Err) of A_sum, A_average, A_max, A_min, A_product, A_stdDev, A_stdDevp, A_var and
+  A_varp is `#N/A` at row 6, at the East total R6 and at the grand totals L8 and R8. West/A (L7) shows
+  its own one-value result: 7 for Sum to Product, `#DIV/0!` for StdDev and Var, and 0 for StdDevp and
+  Varp.
+- **One value:** A_stdDev and A_var are `#DIV/0!` at East/B (B6:G6) and West/A (H7:M7), and at I6
+  (East/A Txt: 10 and `abc`). A_stdDevp and A_varp are 0 there.
+- **Empty intersections:** West/B (B7:G7) is blank on every sheet.
+Status: VERIFIED (excel-graph)
+
+## Summation order of Sum, Average and Product totals
+Rule (on the evidenced cells):
+- **Sum.** A subtotal or grand total of Sum is the sum of its children's sums. It is neither the sum of
+  its records in record order nor the sum in display order.
+- **Average** divides the sum of the records taken in record order.
+- **Product** totals multiply the records in record order, not the children's products.
+
+Evidence: probes/t4135-pivot-aggregates, field Dec. The East records in record order are 0.3 (B), 0.2
+(A) and 0.1 (A), and West's is 0.7. Excel displays Kind as B, then A (A_sum!B4 `B`, H4 `A`).
+- **Sum:** A_sum!S6 (East total) is 0.6000000000000001. That is the sum of the children, M6 + G6 =
+  0.30000000000000004 + 0.3. Record order and display order both give 0.6. A_sum!S8 is 1.3, which is
+  the children's sum on either axis; the records in record order give 1.2999999999999998.
+- **Average:** A_average!S6 is 0.19999999999999998 = 0.6 / 3, not 0.6000000000000001 / 3. A_average!S8
+  is 0.32499999999999996 = 1.2999999999999998 / 4. Display order equals record order here, so the two
+  cannot be told apart for Average.
+- **Product:** A_product!S6 is 0.006, which is 0.3 × 0.2 × 0.1 in record order. The children's product
+  would be 0.006000000000000001. A_product!S8 is 0.0042; the children would give 0.004200000000000001.
+
+StdDev and Var totals are not separated by this data. An accumulation that takes A's records first
+(0.2, 0.1, then 0.3) would also give the Sum cells. The sum of the children is not yet told apart from
+it.
+Status: VERIFIED (excel-graph) for these cells; the general rule is UNVERIFIED (probe pending: T-4589)
+
+## errorCaption replaces every error value
+Rule: with `showError` and `errorCaption`, every error value a pivot cell would show becomes the
+caption, as text. That includes `#DIV/0!` from StdDev and Var over one value, not only errors from the
+data. In probes/t4135-pivot-aggregates EC, with no column field and eleven data fields over Err, the
+caption also fills the Grand Total row of Count and CountNums, which show no error without the caption
+(A_count!R8 is 4). Why is open.
+Evidence: probes/t4135-pivot-aggregates EC (excel-graph, 2026-11-06, T-4135):
+- East (B5:L5) shows `ERR` for every aggregate except Count (3) and CountNums (2).
+- West (B6:L6) shows `ERR` for StdDev and Var, which have one value, and 0 for StdDevp and Varp.
+- The Grand Total row B7:L7 is `ERR` everywhere.
+Status: VERIFIED (excel-graph) for the caption replacing errors; the Count and CountNums grand totals
+are UNVERIFIED (probe pending: T-4589)
+
+## Pivots without refreshOnLoad, and source edits
+Rule: unknown. Two things are unprobed: whether Excel for the web re-renders a pivot whose cache lacks
+`refreshOnLoad` when it opens the file (saved cells or `rowItems` stale or absent), and whether it
+re-renders a pivot after its source is edited with no refresh.
+Evidence: none. Every rendered probe so far is `refreshOnLoad` (case builder v2).
+Status: UNVERIFIED (probe pending: T-4586)
+
+## Pivot field names for duplicate and blank source headers
+Rule: unknown. How Excel names the cache fields of a source whose header row repeats a name, leaves a
+cell blank, or has names differing only in case.
+Evidence: none.
+Status: UNVERIFIED (probe pending: T-4585)

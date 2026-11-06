@@ -336,6 +336,13 @@ def arithmetic(text: str, resolve: Resolve | None = None) -> float:
     return result
 
 
+def string_literal(text: str) -> str | None:
+    """The text of a formula string literal (`"a""b"` is `a"b`), or None when `text` is not one."""
+    if len(text) >= 2 and text[0] == text[-1] == '"' and '"' not in text[1:-1].replace('""', ""):
+        return text[1:-1].replace('""', '"')
+    return None
+
+
 def _literal(text: str) -> float | bool | str | None:
     """A number, TRUE/FALSE or string literal, or None when `text` is none of those."""
     if _NUMBER.fullmatch(text):
@@ -343,9 +350,7 @@ def _literal(text: str) -> float | bool | str | None:
         return number_literal(text) + 0.0
     if text.upper() in ("TRUE", "FALSE"):
         return text.upper() == "TRUE"
-    if len(text) >= 2 and text[0] == text[-1] == '"' and '"' not in text[1:-1].replace('""', ""):
-        return text[1:-1].replace('""', '"')
-    return None
+    return string_literal(text)
 
 
 def _scalar(text: str) -> float | bool | str:

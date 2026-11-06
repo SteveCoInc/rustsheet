@@ -532,16 +532,26 @@ Tasks: T-1412, T-1361
 
 ## TEXTSPLIT match_mode 1 case folding
 Rule: with match_mode 1 TEXTSPLIT compares case-insensitively without changing the length of the text. `İ` (U+0130) matches `i`
-(`TEXTSPLIT("aİbİc","i",,,1)` splits at both İ, and so does the delimiter `İ` against text containing `İ`: {"a","b","c"}; the delimiter `İ` against a plain `i` or `I`, and `I` against `İ`, are UNVERIFIED), unlike SEARCH, where `SEARCH("i","İx")`
+(`TEXTSPLIT("aİbİc","i",,,1)` splits at both İ, and so does the delimiter `İ` against text containing `İ`: {"a","b","c"}; the delimiter `İ` splits "aibIc" at both `i` and `I`, and the delimiter `I` splits "aİbİc" at both `İ`), unlike SEARCH, where `SEARCH("i","İx")`
 is `#VALUE!`. The Kelvin sign U+212A does not match `k` (`TEXTSPLIT("a"&UNICHAR(8490)&"bkc","k",,,1)` is {"aKb","c"}), unlike SEARCH, where
 `SEARCH("k",UNICHAR(8490))` is 1. `ß` and `ẞ` do not match `ss` (`TEXTSPLIT("aßbSSc","ss",,,1)` is {"aßb","c"}), and `Ä` matches `ä`.
-Pieces are cut from the original text, so they keep their case. Final sigma follows SEARCH (`ς` and `Σ` both fold to `σ`), which changed from the pre-T-1794 string-level lowercase; it is UNVERIFIED for TEXTSPLIT.
-Evidence: probes/textsplit-casefold-length A1-A8 (excel-graph, 2026-10-17, T-1794).
-Ours: `fold_for_split` (text/casefold.rs) folds char by char (one char in, one char out) with those two exceptions; positions are mapped back to
+Pieces are cut from the original text, so they keep their case. The Angstrom sign U+212B matches neither `å` nor `Å`, in either
+direction (`TEXTSPLIT("a"&UNICHAR(8491)&"b",UNICHAR(229),,,1)` is the one piece "a"&UNICHAR(8491)&"b"), again unlike SEARCH's fold. `ſ` (U+017F) matches neither `s`
+nor `S`, and `µ` (U+00B5) neither `μ` nor `Μ`, in either direction; each titlecase digraph (`ǅ` U+01C5, `ǈ` U+01C8, `ǲ` U+01F2)
+matches its upper and lower forms both ways (`TEXTSPLIT("aǅb",UNICHAR(452),,,1)` is {"a","b"}). **Sigma folds by position, as in
+TEXTBEFORE and TEXTAFTER, not as in SEARCH:** `TEXTSPLIT("aΣbςcσd","σ",,,1)` is {"a","bςc","d"} (the `Σ` before a letter is `σ`, `ς`
+is only `ς`), the delimiter `ς` gives {"aΣb","cσd"}, the lone delimiter `Σ` is `ς` and gives {"aΣb","cσd"} too, "aΟΣ" split by `ς` is
+{"aΟ",""}, "aΣb" split by `ς` is {"aΣb"}, and `ς` and `σ` never match each other.
+Evidence: probes/textsplit-casefold-length A1-A8 (excel-graph, 2026-10-17, T-1794); probes/t4473-textsplit-fold-gaps A1:A6, A12:A25
+and, in A27:A104, the first two of every three cells (excel-graph, 2026-11-06, T-4473; each TEXTSPLIT is read through ARRAYTOTEXT and
+COLUMNS; match_mode 0 controls in A1:A2, A12:A13, A24:A26).
+Ours: `fold_for_split` (text/casefold.rs) folds char by char (one char in, one char out) with `fold_match_char`'s İ, Kelvin and Angstrom exceptions and `fold_sigma_by_position`'s sigma rule; positions are mapped back to
 byte offsets of the original text. Before T-1794 the code sliced the original at byte offsets found in `to_lowercase()`, which panicked on
-`TEXTSPLIT("İİİ,a",",",,,1)`. The folding of other chars (Å U+212B, ſ, µ, final sigma, titlecase digraphs) is UNVERIFIED and follows SEARCH's.
+`TEXTSPLIT("İİİ,a",",",,,1)`. Before T-4473 TEXTSPLIT folded sigma and U+212B as SEARCH does; both now share `fold_sigma_by_position` and
+`fold_match_char` with TEXTBEFORE. UNVERIFIED for TEXTSPLIT: `ẞ` against the delimiter `ß` (TEXTBEFORE does not match them; TEXTSPLIT
+keeps SEARCH's fold, which does).
 Status: VERIFIED (web) for the listed forms
-Tasks: T-1794
+Tasks: T-1794, T-4473
 
 ## TEXTBEFORE and TEXTAFTER match_mode 1 case folding
 Rule: with match_mode 1 TEXTBEFORE and TEXTAFTER fold case like TEXTSPLIT, never changing the length of the text: `İ` (U+0130) matches `i`
@@ -554,15 +564,20 @@ instance numbers behave the same on `"İİİ,a,b"`. Sigma is positional, unlike 
 other `Σ` (end of text, space, punctuation) is `ς`, and `ς` is only `ς`. So the delimiter `Σ` alone matches a text `ς` but not `σ`, the delimiter `ς` matches a final `Σ`
 ("aΟΣ") but neither `σ` nor a `Σ` followed by a letter, and the delimiter `σ` matches a `Σ` followed by a letter but not `ς`.
 The same holds for the text and a delimiter that are both `Σ` (`TEXTBEFORE("aΣb","Σ",1,1)` is `#N/A`: the text's `Σ` is `σ`, the lone delimiter `Σ` is `ς`), and for TEXTAFTER.
-A `Σ` before a digit is `σ` (`TEXTBEFORE("ΟΔΟΣ1","σ",1,1)` is "ΟΔΟ", delimiter `ς` is `#N/A`); before a space or a comma it is `ς` (`"ΟΔΟΣ ΚΑΙ"` and `"ΟΔΟΣ,Α"` match `ς`, not `σ`).
-Evidence: probes/textbefore-casefold-length A1-A25 (excel-graph, 2026-10-17, T-1796); probes/textbefore-sigma-contexts A1-A18 (excel-graph, 2026-10-19, T-1799).
-Ours: `fold_for_before_after` (text/casefold.rs) folds char by char with `fold_for_split`'s İ/Kelvin exceptions plus the sigma and `ẞ` rules,
+A `Σ` before a digit is `σ` (`TEXTBEFORE("ΟΔΟΣ1","σ",1,1)` is "ΟΔΟ", delimiter `ς` is `#N/A`); before a space or a comma it is `ς` (`"ΟΔΟΣ ΚΑΙ"` and `"ΟΔΟΣ,Α"` match `ς`, not `σ`). A `Σ` before a combining acute (U+0301), `’` (U+2019) or a zero-width space
+(U+200B) is `σ`, as LOWER's rule says (`TEXTBEFORE("ΟΣ"&UNICHAR(769)&"x","σ",1,1)` is "Ο", the delimiter `ς` is `#N/A`; TEXTAFTER the same).
+The delimiter `İ` matches `I` and `i` and the delimiter `I` matches `İ` (`TEXTBEFORE("aIb","İ",1,1)` is "a"). The Angstrom sign, `ſ`, `µ`
+and the titlecase digraphs fold as in TEXTSPLIT (above): U+212B, `ſ` and `µ` match no other form (`#N/A`), a digraph matches its upper
+and lower forms.
+Evidence: probes/textbefore-casefold-length A1-A25 (excel-graph, 2026-10-17, T-1796); probes/textbefore-sigma-contexts A1-A18 (excel-graph, 2026-10-19, T-1799);
+probes/t4473-textsplit-fold-gaps A7:A11, A29, A35, A41, A47, A53, A59, A65, A71, A77, A83, A89, A95, A101 (one direction; the reverse is
+the cell three below each) and A105:A117 (excel-graph, 2026-11-06, T-4473).
+Ours: `fold_for_before_after` (text/casefold.rs) folds char by char with `fold_match_char`'s İ, Kelvin and Angstrom exceptions, `fold_sigma_by_position`'s sigma rule (shared with TEXTSPLIT) and the `ẞ` rule,
 and `match_text` (util.rs) maps the match back to byte offsets of the original with `str::get`. Before T-1796 it searched `to_lowercase()` of the text
-and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. UNVERIFIED: whether a `Σ` before a combining mark, `’` or a zero-width space is `σ` (LOWER's rule, assumed), whether a letter must precede the `Σ` (the code ignores what precedes it), the folding of other chars (Å U+212B, ſ, µ,
-titlecase digraphs, which follow SEARCH's `fold_char`), `ẞ` against the delimiter `ß`'s mirror (text `ß`, delimiter `ẞ`), and whether TEXTSPLIT shares the
-`ẞ` and sigma rules (its probe has no such cell).
+and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. UNVERIFIED: whether a letter must precede the `Σ` (the code ignores what precedes it), `ẞ` against the delimiter `ß`'s mirror (text `ß`,
+delimiter `ẞ`), and whether TEXTSPLIT shares the `ẞ` rule (TEXTSPLIT shares the sigma rule: probes/t4473-textsplit-fold-gaps A14:A23).
 Status: VERIFIED (web) for the listed forms
-Tasks: T-1796
+Tasks: T-1796, T-4473
 
 ## ARRAYTOTEXT number text
 Rule: ARRAYTOTEXT writes a number as General text with 15 significant digits, like VALUETOTEXT and `&`:
@@ -1273,9 +1288,17 @@ less that delimiter's, plus one, counted in UTF-16 units) is `#VALUE!`, whatever
 excepted, see above). `TEXTBEFORE("abcde","xyz",3)` and `-3` are `#N/A`, `4` and `-4` `#VALUE!`; `TEXTBEFORE("abcde",{"xyz","qq"},4)`
 is `#N/A`, `5` `#VALUE!`; `TEXTBEFORE("ab","xyz",1)` is `#VALUE!`; a number delimiter is its text, so `TEXTBEFORE("42ABC",1.005,-2)`,
 also from a cell, is `#VALUE!` (gen-m9 8d3588d8df0812df A313) but `-1` `#N/A`; `TEXTAFTER("😀b","😀😀",2)` is `#VALUE!` (probes/
-t2581-textsplit-textbefore A30-A50, excel-graph, 2026-10-24; T-2581). Unprobed: a delimiter whose case folding changes its UTF-16 length under
-match_mode 1 (ours measures the unfolded delimiter), and a delimiter that fits the text by UTF-8 bytes but not by UTF-16 positions
-(A50 is decided by ours' earlier every-delimiter-longer check). With a one-unit delimiter this is the text's length: `TEXTBEFORE("b","a",-2,1,1)`, `TEXTBEFORE("ab","a",3)` and
+t2581-textsplit-textbefore A30-A50, excel-graph, 2026-10-24; T-2581). Both this bound and the
+every-delimiter-longer check before it (`#VALUE!` with more than two arguments, `#N/A` with two) measure the text and each delimiter
+in UTF-16 units, the delimiter as written (never its case fold), under match_mode 1 too (probes/t4474-textbefore-utf16-bounds,
+excel-graph, 2026-11-06; T-4474). So `TEXTBEFORE("a","é",1)`, `TEXTBEFORE("ab","😀",1)` and `TEXTBEFORE("a",{"é","bb"},1)` are
+`#N/A` (B1, B5, B6; equal lengths), and `TEXTAFTER("a","é",1,0,0,"nf")` is `nf` (A10); `TEXTBEFORE("é","ab")` and
+`TEXTBEFORE("😀","abc")` are `#N/A` with two arguments and `#VALUE!` with three, also with an if_not_found (A2, B2, A3, B3, B10, C10),
+while `TEXTBEFORE("😀","ab",1)` is `#N/A` (B4: two units each). `TEXTBEFORE("éé","x",2)` is `#N/A` and `3` `#VALUE!`;
+`TEXTBEFORE("😀a","x",3)` and `-3` are `#N/A` and `4` `#VALUE!` (A11:A20). Under match_mode 1, `İ` (full
+fold two units) and `ß` (full fold `ss`) count one unit: `TEXTBEFORE("a","ß",1,1)` and `TEXTBEFORE("a","İ",1,1)` are `#N/A`, not the
+too-long `#VALUE!` (A43, A49), and `TEXTBEFORE("ab","ß",2,1)` is `#N/A` and `3` `#VALUE!`, as under match_mode 0 (A35:A42). TEXTSPLIT
+has neither check: `TEXTSPLIT("é","ab")` and `TEXTSPLIT("😀","abc")` are the text (A55:A58). With a one-unit delimiter this is the text's length: `TEXTBEFORE("b","a",-2,1,1)`, `TEXTBEFORE("ab","a",3)` and
 `TEXTBEFORE("ab","a",3,0,0,"nf")` are `#VALUE!`, while `TEXTBEFORE("ab","a",2)` is the usual `#N/A`. `TEXTAFTER("😀","a",2)` is `#N/A`
 and `TEXTAFTER("😀","a",3)` `#VALUE!` (two units), `TEXTAFTER("é","a",2)` `#VALUE!` (one). Gen-m7 shows it on `TEXTBEFORE("x~*","1",
 WORKDAY(..))` (611ce3bbfab27cef A336) and `TEXTBEFORE(..,"-",DATE(2060,10,19),0,0,6)` (b24ce74f08d3f91a A767).
@@ -1284,8 +1307,10 @@ are `#VALUE!` (`TEXTBEFORE("aBc","b",1,2)`; `TEXTBEFORE("abc","",2,123456789.123
 (`#N/A` for a case-different delimiter), 1.5 and TRUE are 1. A number or boolean if_not_found comes back as its text:
 `TEXTBEFORE("b","a",1,0,0,5)` is "5", `-2.5` is "-2.5", TRUE is "TRUE" (also gen-m7 ac67253061bba16a A776, A1345).
 An error `match_end` (5th argument) beats the `#VALUE!` of an out-of-range numeric match_mode: `TEXTAFTER("abc","a",1,-1,#N/A)` is `#N/A`, as are match_mode 2, 7, -2.5, "12" and "2.5" beside an error match_end (gen-m7/9f9357dbf7e17803 A85, A88, A157, A160, A286; gen-m7/b2139ff37d606cb4 A115, A118, A199, A202, A313, A316). A match_mode text that fails to coerce ("x", "abc", the empty string) is still `#VALUE!` beside an error match_end (9f9357dbf7e17803 A343, A346, A412; b2139ff37d606cb4 A373, A376, A439, A442), while a blank match_mode cell coerces to 0 and gives the match_end error (9f9357dbf7e17803 A589, A592). excel-graph 2026-11-04, T-3513. Implemented (T-4037): `around_options` reads match_end before range-checking match_mode.
-Evidence: probes/t2314-textbefore-instance-bound (excel-graph, 2026-10-22) and gen-m7 (excel-graph, 2026-10-21, T-2225).
-Ours: matches (`text_around_element`, `around_options` and `around_not_found` in functions/text/before_after.rs, T-2314). The probe's
+Evidence: probes/t2314-textbefore-instance-bound (excel-graph, 2026-10-22), probes/t4474-textbefore-utf16-bounds (excel-graph,
+2026-11-06, T-4474) and gen-m7 (excel-graph, 2026-10-21, T-2225).
+Ours: matches (`text_around_element`, `around_options` and `around_not_found` in functions/text/before_after.rs, T-2314; both
+length checks use its `units`, T-4474). The probe's
 `TEXTBEFORE("abc","b",1,-0.5)` is "a", not `#VALUE!`: flooring -0.5 would give the invalid -1 (A2), so match_mode is cut toward zero.
 match_end is read the same way: -0.0001 is 0, so `TEXTAFTER(LOWER("'a"),Data!A11:B12,1,1,<-0.0001>)`, where no delimiter is in the text,
 is `#N/A` (with match_end 1 the end of the text would match and give ""): gen-m7/2d9b48c6363e7a16 Calc!A660 (excel-graph, 2026-10-22); 0.5 is 0 too: `TEXTAFTER("1.5","-",-1,1,0.5)` is `#N/A`, gen-m9/b9a32ce9a1fd0d71 Calc!A142.
@@ -1388,6 +1413,14 @@ reference to an error cell (also `B1:B1`) the same. With two errors the first ar
 engine, unprobed beyond that cell). UNPROBED: a multi-cell range of only errors and a 1x1 array (`{#N/A}`) with format 2 (the engine gives `#VALUE!`); a reference to an error cell with an error or text format, such as `ARRAYTOTEXT(B1,NA())` or `ARRAYTOTEXT(B1,"x")` with B1 holding `#N/A` (the engine reads the format first and returns its error).
 
 See also: RIGHT num_chars numeric-text coercion is recorded in criteria.md "Zero and negative SUMIFS criteria; IF error arguments; RIGHT numeric-text num_chars" (T-2980).
+
+## CHAR(128..255) is Windows-1252 on the web; Mac desktop is Mac Roman
+Rule (excel-graph, 2026-11-06, T-4534): `CHAR(n)` for 128 <= n <= 255 maps through Windows-1252 in Excel for the web:
+`CHAR(255)` is ÿ, `CHAR(254)` þ, `CHAR(128)` € (probes/t4534-desktop-golden-web-values A1, A7, A8). Desktop Excel for Mac
+(16.0300) maps through Mac Roman: its cached `CHAR(255)` is ˇ (U+02C7; calipers formulas_text Text Functions!C190).
+Status: VERIFIED (excel-graph); the Mac value is a desktop cached value, out of scope (decision 0266).
+Ours: Windows-1252, as the web. The calipers cell is a Phase 1 rate exception (decision 0315).
+Tasks: T-4534
 
 ## CHAR lifts over ranges and arrays
 

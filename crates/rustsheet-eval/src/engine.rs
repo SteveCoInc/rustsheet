@@ -34,6 +34,11 @@ pub trait Evaluated {
     fn sheet_names(&self) -> Vec<String> {
         Vec::new()
     }
+    /// The workbook's pivot tables and their locations (T-4124); empty when the engine has none
+    /// or cannot list them.
+    fn pivot_places(&self) -> Vec<rustsheet::PivotPlace> {
+        Vec::new()
+    }
 }
 
 pub trait Engine: Sync {
@@ -108,6 +113,10 @@ impl RustSheetEvaluated {
 }
 
 impl Evaluated for RustSheetEvaluated {
+    fn pivot_places(&self) -> Vec<rustsheet::PivotPlace> {
+        self.workbook.pivot_places()
+    }
+
     fn sheet_names(&self) -> Vec<String> {
         self.workbook.sheets().into_iter().map(|s| s.name).collect()
     }

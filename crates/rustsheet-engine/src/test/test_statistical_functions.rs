@@ -268,6 +268,23 @@ fn test_permutationa_basic() {
     assert_eq!(model._get_text("A1"), "9");
 }
 
+#[test]
+fn test_permutationa_number_chosen_cut() {
+    // probes/t4501-permutationa-chosen-cut: a truncated number_chosen of 2^31 - 1 or more is #NUM!.
+    let mut model = new_empty_model();
+    model._set("A1", "=PERMUTATIONA(1, 2147483646.9)");
+    model._set("A2", "=PERMUTATIONA(1, 2147483647)");
+    model._set("A3", "=PERMUTATIONA(0, 2147483647.5)");
+    model._set("A4", "=PERMUTATIONA(0, 1E10)");
+    model._set("A5", "=PERMUTATIONA(0, 2147483646)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "1");
+    assert_eq!(model._get_text("A2"), "#NUM!");
+    assert_eq!(model._get_text("A3"), "#NUM!");
+    assert_eq!(model._get_text("A4"), "#NUM!");
+    assert_eq!(model._get_text("A5"), "0");
+}
+
 // ── PROB ─────────────────────────────────────────────────────────────────────
 
 #[test]

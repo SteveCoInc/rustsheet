@@ -110,6 +110,18 @@ resumes the branch, not instructions. No code is committed.
 - The cap alone leaves the 21 long series (42..150 flows) and the Excel-error cells: the fallback and residual
   scale (A289) still need their own attempt. Decision 0267's time-box counts this as the first of two attempts.
 
+## Cells of T-3347's flat-secant fresh sweep (evidence, 2026-11-06)
+probes-numeric/t3347-irr-r4-fresh is the R4.2 fresh sweep of T-3347's flat-secant `#DIV/0!` cut (decision 0316). It
+uses the same generator as T-3411's sweeps, with long-series strata. These are its cells still off Excel with the cut,
+listed here for an owner (decision 0245). They are not Decision 0267 cells of this task or of T-3347.
+- probes-numeric/t3347-irr-r4-fresh.case.json, Excel a number, ours `#NUM!` (47): Calc!A3, A6, A9, A10, A11, A13, A15, A17, A18, A19, A21, A26, A28, A35, A39, A41, A46, A64, A75, A78, A79, A81, A82, A92, A94, A95, A96, A101, A103, A104, A105, A107, A108, A110, A112, A113, A114, A115, A116, A117, A118, A119, A120, A121, A122, A123, A125
+- probes-numeric/t3347-irr-r4-fresh.case.json, Excel a number, ours `#DIV/0!` from T-3347's cut (5; roots -7% to -11%): Calc!A52, A53, A58, A74, A109
+- probes-numeric/t3347-irr-r4-fresh.case.json, Excel `#DIV/0!`, ours `#NUM!` (7): Calc!A48, A62, A68, A69, A111, A126, A143
+- probes-numeric/t3347-irr-r4-fresh.case.json, Excel `#NUM!`, ours `#DIV/0!` (1): Calc!A132
+
+Since T-3347's cut (decision 0316), six of the t3411 cells above where Excel returns a root are `#DIV/0!` in the
+engine, not `#NUM!`: t3411-irr-r4-fresh A15, A22; t3411-irr-r4-fresh-4 A17, A79, A88, A93.
+
 ## Progress
 2026-11-04, opus run (resumed at 15:25 UTC): attempt 2, the secant step cap, with the R4 guards.
 - Scan, every IRR cell of probes, probes-numeric and gen-m9, cell by cell against main (cap 50): cap 100 fixes 36,

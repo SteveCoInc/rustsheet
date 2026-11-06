@@ -130,6 +130,38 @@ fn reparse_formula_hack(
     Ok(to_english_string(&t, &cell_reference))
 }
 
+/// The parts the importer reads a package's worksheets and shared strings from, in model order:
+/// what the source-preserving export must patch to change them (SPEC-0034 D3). Resolved exactly as
+/// [`load_package`] resolves them, so both name the same parts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PartPaths {
+    /// The part of each model worksheet, in the model's sheet order.
+    pub(crate) worksheets: Vec<String>,
+    /// The shared-strings part the importer reads.
+    pub(crate) shared_strings: &'static str,
+}
+
+/// [`PartPaths`] of the package `bytes`, read under `limits`.
+///
+/// # Errors
+/// When the package does not import as far as its workbook and relationships.
+pub(crate) fn part_paths(bytes: &[u8], limits: &ImportLimits) -> Result<PartPaths, XlsxError> {
+    let mut archive = Package::new(Cursor::new(bytes), *limits)?;
+    let workbook = load_workbook(&mut archive)?;
+    let rels = load_relationships(&mut archive)?;
+    let mut worksheets = Vec::new();
+    for sheet in &workbook.worksheets {
+        let rel = util::get_relationship(&rels, &sheet.id)?;
+        if rel.rel_type.ends_with("worksheet") {
+            worksheets.push(resolve_target("xl", &rel.target));
+        }
+    }
+    Ok(PartPaths {
+        worksheets,
+        shared_strings: shared_strings::SHARED_STRINGS_PART,
+    })
+}
+
 fn load_xlsx_from_reader<R: Read + Seek>(
     name: String,
     reader: R,

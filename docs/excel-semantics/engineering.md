@@ -276,6 +276,49 @@ Status: VERIFIED
 Implemented in: `parse_unit` and `fn_convert` in functions/engineering/convert.rs (T-3817)
 Tasks: T-3817, T-3861
 
+## CONVERT from a micro-prefixed Kelvin to Réaumur drops the prefix (T-4085)
+Rule: with a micro prefix on a Kelvin source and `Reau` as the target, Excel converts the unprefixed number:
+`CONVERT(-56.8944444765809,"ukel","Reau")` is -264.03555558126476 and `CONVERT(-68268277991730.8,"uK","Reau")`
+-54614622393603.16, which are `(v - 273.15)*0.8` of the written v, not of v × 1E-6 (-218.52004551555558 and
+-54614840.91338464). The same table applies a prefix to the other targets it drew: `CONVERT(-101.399620892439,"Ykel","C")`
+is -1.01399620892439E+26 and `CONVERT(-1.19864311078515E-11,"F","hkel")` 2.5537222222221554, as "CONVERT temperature"
+reads them. Only these two cells show the drop; the mechanism (whether any prefix is dropped toward `Reau`, or only
+`u`, and what a prefixed `Reau` side or `Rank` does) is unprobed.
+Evidence: accuracy/CONVERT/s1 Calc!A65, A81 (Excel's values), A2 to A200 for the other temperature cells
+(excel-graph, 2026-11-06, T-4085).
+Ours: scales by the prefix first, so both cells are off by the prefix. Gate A does not fail on them (the engine is
+inside the envelope through the math), but Excel is the target (decision 0300): T-4615 probes the rule and matches it.
+Status: VERIFIED (excel-graph, the two cells; the rule beyond them is unprobed)
+Tasks: T-4085, T-4615
+
+## Gate A tables for IMABS, IMARGUMENT and CONVERT (T-4085)
+Rule: the three functions have Gate A tables (`eval/accuracy/tables/{IMABS,IMARGUMENT,CONVERT}/s1`, decision 0319),
+with definitions in `tools/src/rustsheet_tools/accuracy/defs/complex_modulus.py` and `defs/convert.py`:
+- IMABS is |z| and IMARGUMENT atan2(y, x) on (-π, π] of the text's two parts. `IMARGUMENT("0")` and
+  `IMARGUMENT("0+0i")` are `#DIV/0!` (s1 A75, A80, A81, A84; im-last-digit-sweep C21). A point whose quotient y/x
+  overflows has no value: ATAN2's `#NUM!` there is not probed for IMARGUMENT, so no such point is drawn.
+- CONVERT is the exact conversion with each unit's definition (or Excel's documented double: `sg`, `parsec`, `eV`, `u`
+  (probes/convert-unit-names A145, 1.660538782E-24), `mmHg` (A337, 133.322)), the prefixes as the doubles of "CONVERT constants and evaluation order" and the temperature forms with their
+  constants as doubles. The `flb` factor is ft × lbf, 1.3558179483314003 J (probes/convert-unit-names A481, B481).
+  Units of two classes are `#N/A` (12 table cells: A116, A121, A122, A123, A127, A128, A129, A130, A133, A134, A136,
+  A137). Over the literal one-call cells of eval/suites (gen-m9, probes, probes-numeric), the definitions give 2,746
+  numbers where Excel gives a number, 58 `#N/A` where Excel gives `#N/A`, and 2 `#DIV/0!` for IMARGUMENT; 269 IMABS
+  and 237 IMARGUMENT numbers match Excel's numbers, and no math number meets an Excel error or the reverse. Every
+  skipped unit string (1,966 cells, all `#N/A` or `#VALUE!` in Excel) is outside the list. The list's 1,259
+  strings are 1,257 that oracle cells accept plus the bare `cel` and `fah`, which the unit-names entry names
+  but no oracle cell has yet (no table point draws them).
+- Excel kept as the target (decision 0300): Excel is more than 1E-4 relative off the math at CONVERT s1 A65 and A81,
+  the prefixed-Kelvin-to-Réaumur cells above (21% and a factor of 1E6). No IMABS or IMARGUMENT point, and no eval cell
+  with a math sidecar, is that far off.
+- Last digits: the engine is bit-exact with Excel on 119 of 120 IMABS points (the miss,
+  `IMABS("2.03246951872072E-05-73.6214006894732i")`, Excel 73.62140068947602, is T-2538's), 120 of 120 IMARGUMENT
+  points and 188 of 200 CONVERT points. Ten CONVERT misses are inside the envelope on both sides (T-2046, T-2047): among
+  them Excel's `CONVERT(484.091427716597,"yd","yd")` is 484.0914277165971 (not the identity, so `yd` to `yd` goes through
+  the factor), while ours keeps `ga` to `ga` and `Ega` to `ga` one ulp off Excel.
+Evidence: the three s1 tables (excel-graph, 2026-11-06); `rustsheet-eval accuracy`.
+Status: VERIFIED (excel-graph)
+Tasks: T-4085, T-2538, T-2046, T-2047, T-4615
+
 ## Engineering function argument modes
 Rule: every argument of the M9 engineering functions lifts elementwise over an array literal. All
 `ROWS(F(..{v;v}..))` cells are 2, including the `places`, `suffix`, unit, order and shift arguments.
@@ -921,7 +964,11 @@ Evidence: probes/eng-im-overflow (excel-graph).
   `...915853`).
 - An input part of `1E308` or more is `#NUM!` in every IM* function (`IMREAL("1E308")`,
   `IMSUM("1E308","0")`); ours already matches. `IMSQRT("1E307")` and `IMSQRT("4E307")` are `#NUM!`
-  too (A33, A34). The threshold per part lies between 1.34E154 and 1.35E154, consistent with sqrt(DBL_MAX) = 1.34078E154 (exact boundary unprobed): IMSQRT squares each
+  too (A33, A34). The threshold per part lies between 1.34E154 and 1.35E154, consistent with sqrt(DBL_MAX) = 1.34078E154. The measured bracket: complex text truncates to 15 significant digits (T-3912, above; A13 against A37 shows truncation, not rounding), so `1.3407807929942594E154`, `...596E154` and `...597E154` all reach IMSQRT as `1.34078079299425E154` (identical results in A1, A7, A13: `IMSQRT("1.3407807929942597E154")` is `1.15792089237316E+77`, `"-1.3407807929942597E154"` is `7.09312496098692E+60+1.15792089237316E+77i`), accepted as a real part, an imaginary part, negated, and with a `+1i` or `-1i` other part. `"1.34078079299426E154"` (real, imaginary, negated, with `+1i`) and `"1.3408E154"`, and every larger probe to `1.349E154`, are `#NUM!`. The cut is therefore between 1.34078079299425E154 and 1.34078079299426E154, the finest text can show; the 17-digit doubles around sqrt(DBL_MAX) cannot be told apart (probes/t4461-imsqrt-cut A1:A41, excel-graph, T-4461; ours matches every cell). A number reaches the cut to the double: `IMSQRT(POWER(2,512)-POWER(2,459))`
+  (the largest double whose square is finite) gives a value and `IMSQRT(POWER(2,512))` `#NUM!`, either sign
+  (probes/t4461-imsqrt-cut-numbers A1:D2, excel-graph 2026-11-06). COMPLEX writes 15 rounded digits, so
+  `COMPLEX(POWER(2,512)-POWER(2,459),0)` is already `#NUM!` under IMSQRT (A3:D8; its `IMREAL` is 1.34078079299426E154, B15).
+  `=` calls the two doubles equal (A15 TRUE). Ours matches every cell. IMSQRT squares each
   part, and a part past it is `#NUM!` (`"1.34E154"` is `1.15758369027902E+77`, `"1.35E154"`,
   `"1E160i"`, `"-1E160"`, `"1E154+1.4E154i"` are `#NUM!`). When each square is finite but their
   sum overflows, the result is `0`, not an error: `IMSQRT("1E154+1E154i")`, `"-1E154-1E154i"`,
@@ -1473,9 +1520,16 @@ cut falls between the same adjacent cells as the double model's. Each order's la
 
 Order 1 answers at every normal x probed (down to 3E-308; `BESSELY(3E-308,1)` is -2.1220659066666666E+307, which is
 `-TWO_OVER_PI/x` with NR's 0.636619772). Orders 2 to 7 hold to 4 significant digits; orders 8 to 10 were mapped on
-mantissas 9..1 only. The digits next to a cut follow the model, with one exception: `BESSELY(2.036E-77,4)` is
--1.7783214437962194E+308 in both fills, where the model gives -1.7783214437962202E+308 (4 ulp; T-4467). Its neighbours
-2.035E-77 and 2.037E-77 match.
+mantissas 9..1 only. The digits next to a cut follow the model. `BESSELY(2.036E-77,4)` looked like an exception: it is
+-1.7783214437962194E+308 in all three fills (t4458-bessely-tiny-x-cuts D32 twice, t4467-bessely-d32-refill D3), 4 ulp
+from the model at the nearest double of 2.036E-77. But Excel reads that literal one ulp high, as 2.0360000000000002E-77
+(t4467-bessely-d32-refill E1; numbers.md "Literals past n = 15 multiply by a table of 10^±16q", T-4467), and the model
+at that x is Excel's value. `2036E-80` and `20.36E-78` read and answer the same (D6, D7). So the cell is a literal-read
+quirk, not a BESSELY one.
+Order 1 over the normal band below 3E-308 (t4467-bessely-d32-refill A1:A6, excel-graph, 2026-11-06): 2.5E-308, 2.3E-308,
+2.226E-308 and 2.2250738585073E-308 answer `-TWO_OVER_PI/x` (2.2250738585073E-308 gives -2.8611174841049047E+307).
+`BESSELY(2.2250738585072014E-308,1)` is `#NUM!`: the literal's 15-digit cut, 2.22507385850720E-308, is below DBL_MIN
+and reads as 0.
 Unreliable, so no target (the reproducibility floor): a subnormal x. Excel reads a subnormal literal as 0 ("Subnormal
 flush edges"), and Excel for the web refuses a workbook that holds one (`unsupportedWorkbook`). A subnormal built as a
 difference (`3.06E-308-2.5E-308`) is kept (`(x)*1E300` gives 5.6E-9). Excel's BESSELY of it was inconsistent within

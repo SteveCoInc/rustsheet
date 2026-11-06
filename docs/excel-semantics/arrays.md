@@ -164,7 +164,7 @@ Evidence (oracle: excel-graph, 2026-10-05): probes/error-operand-broadcast C2, C
 (`SUM(IFERROR(NA()-{1;2;3},1))` = 3); gen-m2/dd99be1f2454159f Calc!A56 (expected `#SPILL!`).
 The same probe shows ROWS/COLUMNS accept an array expression (`ROWS(NA()-{1;2;3})` = 3, C1/C3/C6–C8/C10);
 ROWS/COLUMNS count an array without reading its elements, so an all-error array still has its size.
-A scalar non-reference argument counts as 1x1 (`ROWS(5)`, `COLUMNS(TRUE)`, `ROWS("a")`, `ROWS(1+1)` = 1) while an error argument passes through (`ROWS(NA())` = `#N/A`); array constants and `SEQUENCE` results count their dimensions (`ROWS({1;2;3})` = 3, `COLUMNS({1,2;3,4})` = 2, `ROWS(SEQUENCE(5))` = 5). Evidence: probes/rows-columns-args C1-C14 (T-0237).
+A scalar non-reference argument counts as 1x1 (`ROWS(5)`, `COLUMNS(TRUE)`, `ROWS("a")`, `ROWS(1+1)` = 1) while an error argument passes through (`ROWS(NA())` = `#N/A`); array constants and `SEQUENCE` results count their dimensions (`ROWS({1;2;3})` = 3, `COLUMNS({1,2;3,4})` = 2, `ROWS(SEQUENCE(5))` = 5). Evidence: probes/rows-columns-args C1-C14 (T-0237). Every scalar kind behaves the same, called directly (T-4539, probes/t4539-rows-columns-scalar-kinds, excel-graph): a literal `""`, `"x"`, `"1"`, 0, -1, 0.5 or TRUE is 1 for ROWS and for COLUMNS (A1:B7), and an error literal or call is that error (`ROWS(#DIV/0!)` and `ROWS(1/0)` `#DIV/0!`, `ROWS(NA())` `#N/A`; ERROR.TYPE 2, 2, 7 in E8:F10). A single-cell reference is counted, never read: a cell holding `=""`, text, numeric text, a number, TRUE, an error constant, `=1/0` or `=NA()`, or a blank cell, is 1 (A11:B21), so ERROR.TYPE of it is `#N/A` (E18:F20).
 The comparison operators (`= <> < > <= >=`) and `&` follow the same rule: `NA()={1;2;3}` is a 3-row array of `#N/A`
 (`SUM(IFERROR(NA()={1;2;3},1))` = 3, also `{1;2;3}<=NA()`, `NA()>A1:A3`, `NA()&{"a";"b"}`, `1/0>={1,2,3,4}` is 4 columns), and per element the
 leftmost error wins: `INDEX({1;#DIV/0!;3}=NA(),2)` is `#DIV/0!`, `INDEX(NA()<>{1;#DIV/0!;3},2)` is `#N/A`,
@@ -813,6 +813,10 @@ NETWORKDAYS.INTL is the exception: it lifts over a range (`INDEX(WORKDAY.INTL(45
   `=SUMPRODUCT(EDATE(A1:A60,1))` is `#VALUE!`, and `=SUMPRODUCT(EDATE(A1:A60+0,1))` and
   `=SUMPRODUCT(NORM.DIST(E1:E60,0,1,TRUE))` lift. Legacy `=SUM(PMT({0.1;0.2},10,100))` sums both
   elements (-40.12681517653708), like the dynamic formula. Its FORMULATEXT is the written text, with no `@` (`=SUM(PMT({0.1;0.2},10,100))`; probes/scalar-lift-open-a AA1, AB1, T-1777).
+  An array constant in a legacy ATP argument at a value position takes the `@` of a scalar argument,
+  whatever its size and under a sign, and the call none: `=EDATE(@{45000;45031},1)`, `=YEARFRAC(@{45000},46000)`,
+  `=BIN2DEC(@{101})`, `=QUOTIENT(@{7},2)`, `=ISEVEN(-@{5})` (probes/iseven-isodd-range-derived-arrays Leg!G3:N3,
+  G41:N41, excel-graph, T-4528; information.md "ISEVEN/ISODD over a range").
 Evidence: probes/scalar-lift-shapes H1-H50, J1-J8, K1-K8; probes/scalar-lift-shapes-b (each
 question on row 3 and row 70); probes/scalar-lift-shapes-c (legacy formulas and their FORMULATEXT).
 All three: excel-graph, 2026-10-17, T-1767. The per-family argument lists are in statistics.md,
@@ -1145,7 +1149,7 @@ SUBSTITUTE none (`#VALUE!`; probes/groupby-eta-arity G!A1-A141). SLOPE and INTER
 `#N/A` per group in Excel, `#VALUE!` here (G!B21:B25, G!B61:B65): T-1867.
 Minimum-0 functions that take one argument get one (probes/t4450-eta-special-forms, excel-graph, 2026-11-06, T-4450,
 T-2644): `GROUPBY(A1:A3,B1:B3,_xleta.ROW)` and `..COLUMN` are 4x2 with `#VALUE!` in each value cell (H109:H118, J9), SHEET
-and SHEETS `#N/A` in each (H121:H124, J59; ours `#NAME?` and `#N/IMPL`, T-4518), RANDARRAY 4 rows with a value that is not
+and SHEETS `#N/A` in each (H121:H124, J59; ours matches, T-4518), RANDARRAY 4 rows with a value that is not
 an error (J61:J63; ours an array there, T-4519), `PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.ROW)` 5x5 (J69). Yet `ARRAYTOTEXT` of the
 ROW and COLUMN results is `#CALC!` (F109, F115, also `LAMBDA(v,ROW(v))` J65; `ARRAYTOTEXT(INDEX(..,0,1))` is
 "1, 3, 5, Total", J15; ours prints the cells, T-4519). Functions that take none stay a whole-call `#VALUE!`: NOW (J55), PI
@@ -1753,7 +1757,7 @@ T-4450; A1:B3 = 1..6, each result read through ROWS&"x"&COLUMNS in E, ARRAYTOTEX
   `MAP(A1:A3,{1;2;1},_xleta.INDEX)` 1, `#REF!`, 5 (E67), `MAP(A1:A3,{0;1;0},{0;0;1},_xleta.OFFSET)` 1, 5, 6 (J17).
 - The other functions follow the argument counts: `MAKEARRAY(2,2,_xleta.OFFSET)` (two of OFFSET's three) is a whole-call
   `#VALUE!` (E61), `MAKEARRAY(2,2,_xleta.SUBTOTAL)` `#VALUE!` per cell (SUBTOTAL(1,1): E73), `BYROW(A1:B3,_xleta.ROW)` 1, 2, 3
-  and `BYCOL(A1:B3,_xleta.COLUMN)` 1, 2 (E43, E49), `BYROW(A1:B3,_xleta.SHEET)` 1, 1, 1 (J53; ours `#NAME?`, T-4518).
+  and `BYCOL(A1:B3,_xleta.COLUMN)` 1, 2 (E43, E49), `BYROW(A1:B3,_xleta.SHEET)` 1, 1, 1 (J53; ours matches, T-4518).
 - Called through LET with an argument count it does not take, a function by name is `#VALUE!`: too few,
   `LET(f,_xleta.SUM,f())` (E85:G85), `f()` of IF, CHOOSE and IFERROR, `f(1)` of CHOOSE and IFERROR (L5:L13), and too many,
   `LET(f,_xleta.ABS,f(1,2))` (L1:L3); `LET(f,_xleta.SUM,f(1,2,3))` is 6 (L25).
@@ -1802,7 +1806,7 @@ Evidence (T-1850, probes/sort-error-args, excel-graph): errors are reported left
 - SORTBY: by_array1, order1, by_array2... left to right (H77, H89 `C,NA(),B,1/0` is #N/A, H93 is #DIV/0!); an error in a later pair beats an invalid earlier order (H85 `C,0,B,NA()` is #N/A); an error order beats a by_array row-count mismatch (H105).
 - Invalid values: `SORT(arr,0,1)`, `SORT(arr,1,0)`, `SORTBY(arr,key,0)`, a row-count mismatch (a single value is not one on a one-column array: "SORTBY with a single-value by_array or a fractional sort_order") and a two-column by_array (`SORTBY(A1:A3,C1:B3,1)`, H101) are #VALUE!. `SORT(NA(),0,1)` and `SORTBY(NA(),...)` are #N/A.
 - Array sort arguments: `SORT(arr,{1,2},1)` is a multi-key sort (H57), `SORT(arr,{1,2},{1,-1},TRUE)` too (H69), `SORT(arr,1,{1,-1})` is #VALUE! (H61, H65), and `SORTBY(A1:A3,C1:C3,{1;-1;1})` returns {1;0;0} (H97-H99; the rule is "UNIQUE's and SORTBY's lifted elements").
-Ours: errors left to right and the two-column by_array rejected (T-1850). A #VALUE! sort_order is still returned after by_col's error (multi-cell order of c5d278a8662ef4b2 A39 needs it; a real `"a"+1` order against a later error argument is UNVERIFIED for both SORT and SORTBY, which returns it at once). SORT reads array sort_index/sort_order lists since T-1837 (H57:J71 pass; see "Dynamic-array and LAMBDA function argument modes" for the list rules); SORTBY's array sort_order is T-1839.
+Ours: errors left to right and the two-column by_array rejected (T-1850). A multi-cell sort_order's `#VALUE!` is still returned after by_col's error (c5d278a8662ef4b2 A39 needs it), while a computed error order such as `"a"+1` is itself at once in both SORT and SORTBY (probes/t4479-sort-bad-argument-order H1, H14; "SORT and SORTBY: which of several bad arguments wins (T-4479)"). SORT reads array sort_index/sort_order lists since T-1837 (H57:J71 pass; see "Dynamic-array and LAMBDA function argument modes" for the list rules); SORTBY's array sort_order is T-1839.
 Status: VERIFIED (excel-graph)
 Tasks: T-1351, T-1837, T-1850, T-1902
 
@@ -2247,15 +2251,31 @@ Evidence: gen-m7 (excel-graph, 2026-10-22, T-2254 triage).
 Ours (T-2409, T-4448): TOROW, TOCOL, UNIQUE, SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP's value path
 keep a lone blank reference blank (`Model::eval_to_array_keep_blank` and its wrappers); before, it was read as 0;
 TOCOL keeps a lone blank too (gen-m9/8dd2312c96effb1b Calc!A399 `TOCOL(Data!Z1,3,..)` is `#CALC!`; gen-m9/928d08e3e1eecb5f A333 `TOROW(Data!E1,1)`; gen-m9/7980ffb6095a340d A294 `UNIQUE(Data!D$4)`).
-SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP of a value keep it blank too
+SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP of IF's pick keep it blank too
 (probes/t4448-lone-blank-reshapers, excel-graph 2026-11-06, T-4448; Z1, Z2 blank): `SORT(Z1)&"x"`, `SORT(Z1,1,-1)&"x"`,
 `SORTBY(Z1,Z1)&"x"`, `SORTBY(Z1,5)&"x"`, `CHOOSEROWS(Z1,1)&"x"`, `CHOOSECOLS(Z1,1)&"x"`, `CHOOSEROWS(Z1,-1)&"x"` and
-`TAKE(IF(TRUE,Z1),1)&"x"` are "x"; `TOCOL(X,1)` of each is `#CALC!` and `ISBLANK(INDEX(X,1,1))` is TRUE (A1:D4, A9:D9,
-A11:D13). `EXPAND(Z1,2,1,"p")` is a blank and "p" (A15:D15). TAKE, DROP and CHOOSEROWS of the reference itself
-already kept it (A6:D8, A10:D10). `TYPE(TAKE(IF(TRUE,Z1),1))` is 1 (B9): TAKE keeps IF's one-cell reference a
-reference. Ours gives 64 (a 1x1 array); T-4469 owns that cell.
+`TAKE(IF(TRUE,Z1),1)&"x"` are "x" (so is `DROP(IF(TRUE,Z1),0)&"x"`, probes/t4469-take-drop-if-one-cell-reference C1;
+IF's pick is a reference there, not a value); `TOCOL(X,1)` of each is `#CALC!` and `ISBLANK(INDEX(X,1,1))` is TRUE (A1:D4, A9:D9,
+A11:D13). `EXPAND(Z1,2,1,"p")` is a blank and "p" (A15:D15). TAKE and DROP of the reference itself
+already kept it (A6:D8, A10:D10); so did the CHOOSEROWS controls over `Z1:Z2` and `Z1:Z1` (rows 18 and 22).
+`TYPE(TAKE(IF(TRUE,Z1),1))` is 1 (B9): TAKE keeps IF's one-cell reference a reference (see "TAKE and DROP keep the
+one-cell reference a picker hands them" below; T-4469).
 Status: VERIFIED (excel-graph)
 Tasks: T-2409, T-4448
+
+## TAKE and DROP keep the one-cell reference a picker hands them
+Rule: when TAKE's or DROP's array is an IF, CHOOSE, IFS or SWITCH whose pick is a reference (one cell included), a defined name or
+an INDEX, the result is that reference's part, a reference, as TAKE or DROP of the reference itself is: never a 1x1 array.
+- (probes/t4469-take-drop-if-one-cell-reference, excel-graph 2026-11-06, T-4469; Y1 5, Y2 "t", Z1 blank) `TYPE(X)` is 1 (2
+  for Y2), `ISREF(X)` TRUE, `X&"x"` "x" ("5x", "tx") and `ISBLANK(INDEX(X,1,1))` TRUE for Z1 for each X of
+  `DROP(IF(TRUE,Z1),0)`, `TAKE(IF(TRUE,Y1),1)`, `TAKE(IF(FALSE,0,Z1),1)`, `TAKE(IF(TRUE,IF(TRUE,Z1)),1)`,
+  `DROP(IF(TRUE,Y1),0)`, `TAKE(IFS(TRUE,Z1),1)`, `TAKE(SWITCH(1,1,Z1),1)`, `TAKE(IF(TRUE,Y2),1)`, `DROP(IF(TRUE,Y2),0,0)` and
+  `TAKE(IF(TRUE,Y1:Y2),1)` (A1:D10). probes/t4448-lone-blank-reshapers B9: `TYPE(TAKE(IF(TRUE,Z1),1))` is 1.
+- So a blank picked cell stays blank and a picked number is not lifted as an array.
+Ours (T-4469): `Model::take_drop_value_source` in drop_take.rs. Before, IF, IFS and SWITCH read a one-cell arm as its
+value, so TYPE was 64 and ISREF FALSE; CHOOSE already kept it.
+Status: VERIFIED (excel-graph)
+Tasks: T-4469
 
 ## GROUPBY and PIVOTBY lift over an array field_headers or total depth
 Rule: an array (or a multi-cell range) given as GROUPBY's `field_headers` or `total_depth`, or PIVOTBY's `field_headers`,
@@ -2354,6 +2374,10 @@ the rule frozen on it before -holdout (seed 4465) and -fresh (seed 44651, genera
 Main 539/539, hold-out 318/318, fresh 316/316 for the rule; the best single alternative scores 469, 276 and 290. The
 rows that tell the shared rule from 2^-23 added before the floor are 12 of main's and 6 of the hold-out's; the fresh
 sweep has only 1 such row, so it confirms the other constructors' rules more than that choice.
+At the top of the range the bound is the same absolute 2^-22 (probes/t4553-sequence-extent-top, excel-graph, 2026-11-06):
+`ROWS(SEQUENCE(1048576-x))`, `COLUMNS(SEQUENCE(1,1048576-x))` and `ROWS(SEQUENCE(524288-x))` for x = k*2^-30 read 1048576 (524288)
+for k = 96, 128, 160 and 256 (x = 2^-22) and one less for k = 257, 264, 288 and 320. Above the integer nothing snaps:
+`1048576+x` and `524288+x` read the integer, not `#VALUE!`.
 Ours: implemented (T-4465): SEQUENCE and RANDARRAY call `near_integer_whole` (sequence.rs's `EXTENT_EPSILON` is gone);
 TAKE, DROP, EXPAND, WRAPROWS/WRAPCOLS and MAKEARRAY already matched. RANDARRAY's columns argument shares
 `randarray_extent` with its rows but no probe cell reads it.
@@ -2685,7 +2709,7 @@ reference shows up, for TOCOL's and TOROW's array. FILTER reads its array and in
 (`Model::filter_arg_array`, filter.rs, through `evaluate_picked_reference_arg`), which covers a written reference, a LET
 variable, INDEX and the arm IF picks alike, and checks every include's shape before its elements. Only stored cell
 errors are evidenced; other errors read through a reference (a `#REF!` for a sheet index, a circular read) are wrapped
-unprobed. An include one column tall as the array is wide filters its columns (`include_axis`; not probed by T-4477). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
+unprobed. An include that is one column as tall as the array is wide does not filter its columns: `FILTER(A1:B3,{TRUE;FALSE})`, `{1;0}`, `{1;#N/A}`, `FILTER(A1:C2,{1;0;1})` and `FILTER(A1:B3,C1:C2)` (C1 `#DIV/0!`) are all `#VALUE!`, while the row form `{1,0,1}` over A1:C2 filters its columns and the square `FILTER(A1:B2,{1;0})` filters rows (probes/t4517-filter-transposed-include A10:G12, excel-graph 2026-11-06, T-4517; `include_axis`). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
 (spill_functions.rs) so VSTACK/HSTACK also wrap a LET variable or LAMBDA parameter bound to a one-cell error reference.
 Blank-cell variables (T-3887, probes/t3887-stack-blank-variable, excel-graph 2026-11-03): with z bound to a blank cell
 (D!Z1) by LET or as a MAP LAMBDA parameter, `INDEX(VSTACK(z,1),1,1)` and `INDEX(HSTACK(z,1),1,1)` are the same "empty value"
@@ -2748,9 +2772,41 @@ Rule:
     a blank); a value that is not a number (text, FALSE's 0, a 2-D list) fails only in validation, after by_col is read.
 Evidence: gen-m7 arg-pairs batch (excel-graph, 2026-10-31, T-3497); the failing cells are listed in T-3507.
 Ours: as above since T-3507 (`lift_flatten` in tocol_torow.rs; `sort_number_list` and `fn_sort` in spill_functions.rs).
-Status: VERIFIED (excel-graph) for the cells named; implemented (T-3507). The order among more than two bad arguments is
-UNVERIFIED beyond these cells.
-Tasks: T-3507
+Status: VERIFIED (excel-graph) for the cells named; implemented (T-3507). The order among three bad arguments is
+VERIFIED by T-4479's grid ("SORT and SORTBY: which of several bad arguments wins (T-4479)" below).
+Tasks: T-3507, T-4479
+
+## SORT and SORTBY: which of several bad arguments wins (T-4479)
+Rule: both read their arguments left to right, but they stop at different kinds of bad value.
+- SORT stops at an error value (literal or computed: `SORT(A1:A3,1,"a"+1,NA())` is `#VALUE!`) and at a blank sort_index
+  or sort_order (`#VALUE!`). Text, FALSE and an out-of-range number fail only in validation, after by_col is read, so a
+  later error wins: `SORT(A1:A3,1,"a",NA())` is `#N/A`, `SORT(A1:A3,"x",0,NA())` is `#N/A`, `SORT(A1:A3,5,"x",1/0)` is
+  `#DIV/0!`, `SORT(A1:A3,0,5,SQRT(-1))` is `#NUM!`. A blank stops before a later error: `SORT(A1:A3,0,Z1,NA())` and
+  `SORT(A1:A3,"x",Z1,SQRT(-1))` are `#VALUE!`. A numeric text order is its number (`SORT(A1:A3,1,"-1")` sorts
+  descending); a numeric text index does not stop the read (`SORT(A1:A3,"1",1/0)` is `#DIV/0!`), which non-numeric
+  text does not either, so these cells do not show that it reads as its number. With a lifted by_col a text or error order fills by_col's shape
+  (`SORT(A1:A3,1,"a",{TRUE,FALSE})` is 1x2 `#VALUE!`).
+- SORTBY stops at an error and at a non-numeric text sort_order, both at once: `SORTBY(A1:A3,C1:C3,"a",C1:C3,NA())`,
+  `SORTBY(A1:A3,C1:C3,"a",NA(),1)` and `SORTBY(A1:A3,C1:C2,"x",C1:C3,1/0)` are `#VALUE!`; numeric text is its number
+  (`"1"` against a later `NA()` is `#N/A`, `"-1"` sorts descending). A blank or out-of-range number order fails only in
+  validation, after every later pair is read: `SORTBY(A1:A3,C1:C3,Z1,C1:C3,NA())` and `SORTBY(A1:A3,C1:C3,0,NA(),2)` are
+  `#N/A`, and `SORTBY(A1:A3,C1:C3,0,C1:C2,1/0)` is `#DIV/0!`. When every bad argument is a validation error the result is
+  `#VALUE!` whichever wins (`SORTBY(A1:A3,C1:C3,0,C1:C2,2)`), so these cells cannot show their order. TRUE is a valid
+  ascending order (`SORTBY(A1:A3,C1:C3,TRUE)` is 1,2,3; with a later `NA()` the result is `#N/A`), and FALSE alone is
+  `#VALUE!` (0); a FALSE order before a later error is UNVERIFIED (no cell has one).
+- A multi-column by_array (SORTBY's `A1:C3` over a 3x1 array) also fails only in validation, so a later error wins:
+  `SORTBY(A1:A3,A1:C3,...)` with a later `#NAME?` by_array or `#NUM!` order is that error (hold-out H40, H45, H69),
+  while a text order before the later error still stops the read with `#VALUE!` (hold-out H34).
+- So a text sort_order is SORT's validation error but SORTBY's immediate one, and a blank one the reverse: the two
+  functions do not share a reading order.
+Evidence: probes/t4479-sort-bad-argument-order H1:H93 (the task's forms and a grid of text, out-of-range, blank and
+error values, one per argument with its own error) and the hold-out probes/t4479-sort-bad-argument-holdout H1:H70 (a
+seeded sample with other values, `#REF!`, `#NULL!`, `#NAME?`, a 3x3 by_array; predictions frozen before its fill in
+docs/research/t4479/), excel-graph, 2026-11-06. Every cell matched the engine's predictions.
+Ours: as above (`sort_number_list` and `fn_sort`, `sortby_of`, spill_functions.rs; unit test
+`sort_and_sortby_read_a_text_sort_order_apart`).
+Status: VERIFIED (excel-graph)
+Tasks: T-4479
 
 ## SORT's lifted by_col spreads an argument error (T-3497)
 Rule: SORT lifts over a multi-cell `by_col` (T-2319). When it fails on another argument, the error fills `by_col`'s shape.

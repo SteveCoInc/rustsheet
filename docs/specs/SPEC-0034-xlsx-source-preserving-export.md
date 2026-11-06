@@ -29,13 +29,13 @@ Goals:
   survive.
 - **Fallback.** Anything the patcher does not handle (a structural edit, a sheet added or removed, a defined name
   edited) falls back to today's regenerating export. It never writes a half-patched package. The fallback stays
-  exactly as lossy as today, and stage 4 shrinks it.
+  exactly as lossy as today, and stage 5 shrinks it.
 - **Directive 5.** Retention is bounded by the load limits already in force, and the patcher streams with depth and
   size limits.
 
 Non-goals:
 - Structural edits that preserve (row and column insert or delete, sheet moves). They need M4's reference shifting and
-  the ownership matrix of stage 4.
+  the ownership matrix of stage 5.
 - Workbooks created from scratch, which have no source and keep the regenerating export.
 - Byte-identical zip containers. Entry order, compression level and timestamps may differ: SPEC-0033 D4.6 ignores
   them. Part *contents* are what is preserved.
@@ -58,8 +58,9 @@ Non-goals:
   `Arc<[u8]>` beside the model. It also keeps the import options it loaded them with: locale, time zone, language
   and `ImportLimits`, the inputs of `rustsheet_xlsx::import::load_from_xlsx_bytes_with_limits`.
 - `Workbook::new` has neither.
-- A workbook loaded with a password keeps the decrypted package. The save writes it unencrypted, as today
-  (SPEC-0031 non-goal).
+- A workbook loaded with a password keeps the decrypted package, moved into zeroizing storage that is wiped when
+  the workbook is dropped. It is never copied into plain memory, and its `Debug` shows only its length. The save
+  writes it unencrypted, as today (SPEC-0031 non-goal): a verbatim save of an encrypted file is its plaintext.
 
 Layering. The facade owns retention and builds the pristine model. `rustsheet-xlsx` owns the diff and the
 patcher, and never depends on the facade. The entry point is:
@@ -121,8 +122,10 @@ engine change that alters how a feature is modelled cannot make the diff disagre
 - a changed cell with no `<c>` is inserted in column order into its `<row>`, and a missing `<row>` in row order;
 - a cell that became empty, with the default style, is removed.
 
-Row attributes (`spans`, height, style) are kept. `<dimension>` is updated when the used range grew or shrank,
-written as the regenerating export writes it.
+Row attributes (`spans`, height, style) are kept. `<dimension>` is grown to cover a new cell outside it, written as
+the regenerating export writes it. It is never shrunk (T-4560): a range larger than the cells is what Excel keeps for
+formatted rows, and Excel's tolerance of a stale range is UNVERIFIED (docs/excel-semantics/xlsx-storage.md, "A
+patched package keeps the source's hints").
 
 The pass is bounded (directive 5):
 - `ImportLimits`' byte budget, as the importer's read was;
@@ -183,10 +186,10 @@ The drops are:
 This replaces SPEC-0033 D7.1's plan of a coarse report in T-4183's first stage: the report ships with T-4562.
 Until then the round-trip suite scores every missing item `lost`, which is the same score.
 
-### D5. Stage 4: preserving under regeneration
+### D5. Stage 5: preserving under regeneration
 For structural edits, the ownership matrix, closure rule, fragment slots, invalidation table and preservation limits
 of decision 0275 apply. T-4183 was filed to specify them. This spec chose instead to make preservation the default
-through the source and the patcher, which needs none of them, and moved them to stage 4. Its spec is task
+through the source and the patcher, which needs none of them, and moved them to stage 5. Its spec is task
 T-4567, which depends on M4's reference shifting for range-bound content. SPEC-0033 D7's
 `ClosureReachesRegenerated` and the `Drop` policy are defined there.
 
@@ -196,7 +199,7 @@ T-4567, which depends on M4's reference shifting for range-bound content. SPEC-0
   miss a change. Dirty flags can replace it once the diff exists to test them against.
 - **DOM retention (POI, EPPlus).** Rejected in decision 0275: memory, and a typed model fighting a DOM.
 - **Regenerate plus preserved fragments only (GridCraft, Mog).** These still rewrite every byte of every regenerated
-  part, so any attribute nobody thought to capture is lost. They are the stage 4 answer for structural edits, not the
+  part, so any attribute nobody thought to capture is lost. They are the stage 5 answer for structural edits, not the
   default.
 
 ## Test plan
@@ -218,4 +221,4 @@ T-4567, which depends on M4's reference shifting for range-bound content. SPEC-0
 2. **Sheet patcher for changed cached values and inputs** (D3.1, D3.2, D3.4), with the shared-strings append (D3.3).
 3. **The styles append** (D3.3) and the `metadata.xml` and calcChain rules (D3.4, D3.5, E2).
 4. **SaveReport tiers** (D4), wired into the round-trip `dropped` verdict.
-5. **Stage 4** (D5), after M4: T-4567 specifies it, then its own tasks.
+5. **Stage 5** (D5), after M4: T-4567 specifies it, then its own tasks.

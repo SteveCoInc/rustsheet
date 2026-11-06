@@ -228,6 +228,40 @@ def test_used_range(wb):
     assert wb.used_range("Sheet1") == "Sheet1!B2"
 
 
+def test_stored_cells_row_order_with_spill(wb):
+    wb.set("C7", 1)
+    wb.set("A1", 2)
+    wb.set("E1", rs.Formula("=SEQUENCE(2)"))
+    assert wb.stored_cells("Sheet1") == [
+        "Sheet1!A1",
+        "Sheet1!E1",
+        "Sheet1!E2",
+        "Sheet1!C7",
+    ]
+
+
+def test_stored_cells_sparse_extremes(wb):
+    wb.set("A1", 1)
+    wb.set("XFD1048576", 2)
+    assert wb.stored_cells("Sheet1") == ["Sheet1!A1", "Sheet1!XFD1048576"]
+
+
+def test_stored_cells_empty_sheet(wb):
+    assert wb.stored_cells("Sheet1") == []
+
+
+def test_stored_cells_quotes_sheet_name(wb):
+    with wb.edit() as tx:
+        tx.add_sheet("My Sheet")
+    wb.set("'My Sheet'!A1", 1)
+    assert wb.stored_cells("My Sheet") == ["'My Sheet'!A1"]
+
+
+def test_stored_cells_unknown_sheet(wb):
+    with pytest.raises(rs.RefError):
+        wb.stored_cells("Nope")
+
+
 def test_transaction_is_single_use(wb):
     tx = wb.edit()
     with tx:

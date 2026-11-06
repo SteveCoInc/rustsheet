@@ -1,0 +1,343 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "85ded2dacb52b3c16034e62470d96b2a095813963d679372e354cdb69d57992a"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,15)"
+   },
+   "A10": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,1000000)"
+   },
+   "A11": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,1000000000)"
+   },
+   "A12": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,2147483646)"
+   },
+   "A14": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,2147483647)"
+   },
+   "A15": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,2147483648)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,16)"
+   },
+   "A3": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,17)"
+   },
+   "A4": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,20)"
+   },
+   "A5": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,100)"
+   },
+   "A6": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,308)"
+   },
+   "A7": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,309)"
+   },
+   "A8": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,400)"
+   },
+   "A9": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3,4},2.5,1000)"
+   },
+   "B1": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,15)"
+   },
+   "B10": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,1000000)"
+   },
+   "B11": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,1000000000)"
+   },
+   "B12": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,2147483646)"
+   },
+   "B14": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,2147483647)"
+   },
+   "B15": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,2147483648)"
+   },
+   "B2": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,16)"
+   },
+   "B3": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,17)"
+   },
+   "B4": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,20)"
+   },
+   "B5": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,100)"
+   },
+   "B6": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,308)"
+   },
+   "B7": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,309)"
+   },
+   "B8": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,400)"
+   },
+   "B9": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK.EXC({1,2,3,4},2.5,1000)"
+   },
+   "C1": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3},2,15)"
+   },
+   "C10": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3},2,1000000)"
+   },
+   "C11": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3},2,1000000000)"
+   },
+   "C12": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3},2,2147483646)"
+   },
+   "C14": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3},2,2147483647)"
+   },
+   "C15": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3},2,2147483648)"
+   },
+   "C2": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3},2,16)"
+   },
+   "C3": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3},2,17)"
+   },
+   "C4": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3},2,20)"
+   },
+   "C5": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3},2,100)"
+   },
+   "C6": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3},2,308)"
+   },
+   "C7": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3},2,309)"
+   },
+   "C8": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3},2,400)"
+   },
+   "C9": {
+    "t": "e",
+    "why": "10^significance overflows a double (#DIV/0!)",
+    "f": "=PERCENTRANK({1,2,3},2,1000)"
+   },
+   "D1": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.EXC({1E+15,1,-1E+15},0.3)"
+   },
+   "D10": {
+    "t": "n",
+    "v": "0.58",
+    "f": "=PERCENTRANK({0,1},0.58,2)"
+   },
+   "D11": {
+    "t": "n",
+    "v": "0.3",
+    "f": "=PERCENTRANK({0,1},0.1+0.2,1)"
+   },
+   "D12": {
+    "t": "n",
+    "v": "0.3",
+    "f": "=PERCENTRANK({0,1},0.1+0.2,17)"
+   },
+   "D13": {
+    "t": "n",
+    "v": "0.999",
+    "f": "=PERCENTRANK({0,1},0.9999999999999999,3)"
+   },
+   "D14": {
+    "t": "n",
+    "v": "0.999",
+    "f": "=PERCENTRANK({0,1},0.999999999999999,3)"
+   },
+   "D15": {
+    "t": "n",
+    "v": "0.999",
+    "f": "=PERCENTRANK({0,1},0.99999999999999,3)"
+   },
+   "D16": {
+    "t": "n",
+    "v": "0.499",
+    "f": "=PERCENTRANK({0,1},0.4999999999999,3)"
+   },
+   "D17": {
+    "t": "n",
+    "v": "0.499",
+    "f": "=PERCENTRANK({0,1},0.49999999999999,3)"
+   },
+   "D18": {
+    "t": "n",
+    "v": "0.499",
+    "f": "=PERCENTRANK({0,1},0.499999999999999,3)"
+   },
+   "D19": {
+    "t": "n",
+    "v": "0.333333333333333",
+    "f": "=PERCENTRANK({0,3},1,15)"
+   },
+   "D2": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.EXC({1E+15,1,-1E+15},0.3,15)"
+   },
+   "D20": {
+    "t": "n",
+    "v": "0.333333333333333",
+    "f": "=PERCENTRANK({0,3},1,16)"
+   },
+   "D21": {
+    "t": "n",
+    "v": "0.666666666666667",
+    "f": "=PERCENTRANK({0,3},2,15)"
+   },
+   "D22": {
+    "t": "n",
+    "v": "0.666666666666667",
+    "f": "=PERCENTRANK({0,3},2,17)"
+   },
+   "D23": {
+    "t": "n",
+    "v": "0.142857142857143",
+    "f": "=PERCENTRANK({0,7},1,20)"
+   },
+   "D24": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=PERCENTRANK.INC({0,1},-0,3)"
+   },
+   "D3": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.EXC({1E+15,1,-1E+15},0.3,16)"
+   },
+   "D4": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.EXC({1E+15,1,-1E+15},0.3,20)"
+   },
+   "D5": {
+    "t": "n",
+    "v": "0.36",
+    "f": "=PERCENTRANK({0,1},0.36)"
+   },
+   "D6": {
+    "t": "n",
+    "v": "0.36",
+    "f": "=PERCENTRANK({0,1},0.36,2)"
+   },
+   "D7": {
+    "t": "n",
+    "v": "0.29",
+    "f": "=PERCENTRANK({0,1},0.29)"
+   },
+   "D8": {
+    "t": "n",
+    "v": "0.29",
+    "f": "=PERCENTRANK({0,1},0.29,2)"
+   },
+   "D9": {
+    "t": "n",
+    "v": "0.57",
+    "f": "=PERCENTRANK({0,1},0.57,2)"
+   }
+  }
+ }
+}

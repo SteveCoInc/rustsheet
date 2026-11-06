@@ -263,6 +263,251 @@
     "v": "3.5",
     "f": "=PERCENTILE(K1:L6,0.5)"
    },
+   "A181": {
+    "t": "n",
+    "v": "0.428",
+    "f": "=PERCENTRANK(K1:K8,3)"
+   },
+   "A182": {
+    "t": "n",
+    "v": "0.142",
+    "f": "=PERCENTRANK(K1:K8,2)"
+   },
+   "A183": {
+    "t": "n",
+    "v": "0.357",
+    "f": "=PERCENTRANK(K1:K8,2.5)"
+   },
+   "A184": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=PERCENTRANK(K1:K8,1)"
+   },
+   "A185": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=PERCENTRANK(K1:K8,10)"
+   },
+   "A186": {
+    "t": "e",
+    "why": "x outside the data (#N/A)",
+    "f": "=PERCENTRANK(K1:K8,0)"
+   },
+   "A187": {
+    "t": "e",
+    "why": "x outside the data (#N/A)",
+    "f": "=PERCENTRANK(K1:K8,11)"
+   },
+   "A188": {
+    "t": "n",
+    "v": "0.3",
+    "f": "=PERCENTRANK(K1:K8,2.5,1)"
+   },
+   "A189": {
+    "t": "n",
+    "v": "0.35",
+    "f": "=PERCENTRANK(K1:K8,2.5,2)"
+   },
+   "A190": {
+    "t": "n",
+    "v": "0.35714",
+    "f": "=PERCENTRANK(K1:K8,2.5,5)"
+   },
+   "A191": {
+    "t": "e",
+    "why": "significance below 1 (#NUM!)",
+    "f": "=PERCENTRANK(K1:K8,2.5,0)"
+   },
+   "A192": {
+    "t": "e",
+    "why": "significance below 1 (#NUM!)",
+    "f": "=PERCENTRANK(K1:K8,2.5,-1)"
+   },
+   "A200": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK({1,2,3,4},2.5)"
+   },
+   "A201": {
+    "t": "n",
+    "v": "0.75",
+    "f": "=PERCENTRANK(U1:U5,4,15)"
+   },
+   "A202": {
+    "t": "n",
+    "v": "0.75",
+    "f": "=PERCENTRANK(U1:U5,4,16)"
+   },
+   "A203": {
+    "t": "n",
+    "v": "0.166",
+    "f": "=PERCENTRANK(V1:V4,15)"
+   },
+   "A204": {
+    "t": "n",
+    "v": "0.1666666666",
+    "f": "=PERCENTRANK(V1:V4,15,10)"
+   },
+   "A206": {
+    "t": "n",
+    "v": "0.428",
+    "f": "=PERCENTRANK.INC(K1:K8,3)"
+   },
+   "A207": {
+    "t": "n",
+    "v": "0.142",
+    "f": "=PERCENTRANK.INC(K1:K8,2)"
+   },
+   "A208": {
+    "t": "n",
+    "v": "0.357",
+    "f": "=PERCENTRANK.INC(K1:K8,2.5)"
+   },
+   "A209": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=PERCENTRANK.INC(K1:K8,1)"
+   },
+   "A210": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=PERCENTRANK.INC(K1:K8,10)"
+   },
+   "A211": {
+    "t": "e",
+    "why": "x outside the data (#N/A)",
+    "f": "=PERCENTRANK.INC(K1:K8,0)"
+   },
+   "A212": {
+    "t": "e",
+    "why": "x outside the data (#N/A)",
+    "f": "=PERCENTRANK.INC(K1:K8,11)"
+   },
+   "A213": {
+    "t": "n",
+    "v": "0.3",
+    "f": "=PERCENTRANK.INC(K1:K8,2.5,1)"
+   },
+   "A214": {
+    "t": "n",
+    "v": "0.35",
+    "f": "=PERCENTRANK.INC(K1:K8,2.5,2)"
+   },
+   "A215": {
+    "t": "n",
+    "v": "0.35714",
+    "f": "=PERCENTRANK.INC(K1:K8,2.5,5)"
+   },
+   "A216": {
+    "t": "e",
+    "why": "significance below 1 (#NUM!)",
+    "f": "=PERCENTRANK.INC(K1:K8,2.5,0)"
+   },
+   "A217": {
+    "t": "e",
+    "why": "significance below 1 (#NUM!)",
+    "f": "=PERCENTRANK.INC(K1:K8,2.5,-1)"
+   },
+   "A225": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.INC({1,2,3,4},2.5)"
+   },
+   "A226": {
+    "t": "n",
+    "v": "0.75",
+    "f": "=PERCENTRANK.INC(U1:U5,4,15)"
+   },
+   "A227": {
+    "t": "n",
+    "v": "0.75",
+    "f": "=PERCENTRANK.INC(U1:U5,4,16)"
+   },
+   "A228": {
+    "t": "n",
+    "v": "0.166",
+    "f": "=PERCENTRANK.INC(V1:V4,15)"
+   },
+   "A229": {
+    "t": "n",
+    "v": "0.1666666666",
+    "f": "=PERCENTRANK.INC(V1:V4,15,10)"
+   },
+   "A231": {
+    "t": "n",
+    "v": "0.444",
+    "f": "=PERCENTRANK.EXC(K1:K8,3)"
+   },
+   "A232": {
+    "t": "n",
+    "v": "0.222",
+    "f": "=PERCENTRANK.EXC(K1:K8,2)"
+   },
+   "A233": {
+    "t": "n",
+    "v": "0.388",
+    "f": "=PERCENTRANK.EXC(K1:K8,2.5)"
+   },
+   "A234": {
+    "t": "n",
+    "v": "0.111",
+    "f": "=PERCENTRANK.EXC(K1:K8,1)"
+   },
+   "A235": {
+    "t": "n",
+    "v": "0.888",
+    "f": "=PERCENTRANK.EXC(K1:K8,10)"
+   },
+   "A236": {
+    "t": "e",
+    "why": "x outside the data (#N/A)",
+    "f": "=PERCENTRANK.EXC(K1:K8,0)"
+   },
+   "A237": {
+    "t": "e",
+    "why": "x outside the data (#N/A)",
+    "f": "=PERCENTRANK.EXC(K1:K8,11)"
+   },
+   "A238": {
+    "t": "n",
+    "v": "0.722",
+    "f": "=PERCENTRANK.EXC(K1:K8,4.5)"
+   },
+   "A239": {
+    "t": "n",
+    "v": "0.333",
+    "f": "=PERCENTRANK.EXC(U1:U5,2)"
+   },
+   "A240": {
+    "t": "n",
+    "v": "0.3",
+    "f": "=PERCENTRANK.EXC(V1:V4,15)"
+   },
+   "A241": {
+    "t": "n",
+    "v": "0.3",
+    "f": "=PERCENTRANK.EXC(V1:V4,15,6)"
+   },
+   "A242": {
+    "t": "n",
+    "v": "0.3",
+    "f": "=PERCENTRANK.EXC(K1:K8,2.5,1)"
+   },
+   "A243": {
+    "t": "e",
+    "why": "significance below 1 (#NUM!)",
+    "f": "=PERCENTRANK.EXC(K1:K8,2.5,0)"
+   },
+   "A244": {
+    "t": "e",
+    "why": "significance below 1 (#NUM!)",
+    "f": "=PERCENTRANK.EXC(K1:K8,2.5,-1)"
+   },
+   "A249": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTRANK.EXC({1,2,3},2)"
+   },
    "A256": {
     "t": "n",
     "v": "0.0",

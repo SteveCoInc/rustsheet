@@ -68,6 +68,11 @@
     "v": "0.0",
     "f": "=BETA.DIST(C1,2,3,FALSE,C2,C1)"
    },
+   "A9": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=BETADIST(C1,2,3,C2,C1)"
+   },
    "B10": {
     "t": "e",
     "why": "number at or above 2^31-1 (#NUM!)",

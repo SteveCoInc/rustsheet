@@ -6,6 +6,8 @@ extend-exclude = [
   "crates/rustsheet-engine/src/test/",
   "crates/rustsheet-xlsx/tests/",
   "tools/upstream/",
+  # [MS-LCID] locale tags (fo, ba, ...), the input of rustsheet-excel-locales
+  "tools/src/rustsheet_tools/ms_lcid_tags.tsv",
   "eval/baseline/",
   "eval/suites/",
   "docs/research/",

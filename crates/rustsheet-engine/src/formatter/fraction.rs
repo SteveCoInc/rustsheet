@@ -78,11 +78,11 @@ pub(super) fn format_fraction(
     let numerator_kinds =
         placeholder_kinds(&tokens[fraction.numerator_start..fraction.numerator_end]);
     // The parser only builds a fixed denominator from ASCII digits starting with 1-9.
-    // Excel: a digit placeholder after a fixed denominator makes Excel pick the fraction as for
-    // placeholders of the denominator's width and print the code's digits in place of the picked
-    // denominator's (`# ?/4|0` on 12.5 is "12 1/4|0", `# ?/10|0` "12 1/1 |0", on 12.6 "12 3/1 |0";
-    // probes/t4069-fixed-denominator-tail; number-formats.md "Digit placeholders after the
-    // denominator"), as a fixed denominator past 32768 does.
+    // Excel: a digit placeholder after a fixed denominator makes Excel pick the fraction as a
+    // fixed denominator past 32768 does, and print the code's digits in place of the picked
+    // denominator's (`# ?/4|0` on 12.5 is "12 1/4|0", `# ?/10|0` "12 1/1 |0", on 0.123456789
+    // `# ?/4|0` picks 10/81; number-formats.md "Placeholders after a fraction",
+    // probes/t4043-separated-slots, t4043-frozen-model-holdout).
     let tail_placeholders = tokens[fraction.denominator_at..]
         .iter()
         .any(|t| matches!(t, TextToken::Digit(_)));
@@ -116,10 +116,6 @@ pub(super) fn format_fraction(
         ),
         None => {
             let max_denominator = match &fraction.denominator {
-                Denominator::Fixed(digits) if tail_placeholders => {
-                    let width = i32::try_from(digits.len()).unwrap_or(i32::MAX).min(15);
-                    10.0_f64.powi(width) - 1.0
-                }
                 Denominator::Fixed(_) => LARGE_FIXED_MAX_DENOMINATOR,
                 // Past 15 digits 10^n - 1 is no longer exact in a double; no such bound can bind.
                 Denominator::Placeholders(kinds) => {
@@ -178,15 +174,30 @@ pub(super) fn format_fraction(
     // A numeral byte maps every digit the fraction prints (`[$-1B000409]# ?/?` on 12.5 is
     // "一二 一/二", `# ?/16` "一二 八/一六"; probes/t3532-numeral-digit-fields C14,
     // t3532-numeral-digit-sections A8).
-    let denominator_text = match &fraction.denominator {
-        Denominator::Fixed(digits) if fixed.is_some() => digits.clone(),
-        // The code's own digits print, cut to the picked denominator's length: 512/625 under
-        // `?/40000` is "512/400  ", 4095937/5000000 "4095937/40000".
+    let question_numerator = numerator_kinds.last() == Some(&'?');
+    let (denominator_text, handed_on) = match &fraction.denominator {
+        Denominator::Fixed(digits) if fixed.is_some() => (digits.clone(), HandedOn::default()),
         Denominator::Fixed(digits) => {
-            let shown: String = digits.chars().take(denominator_digits.len()).collect();
-            fill_left(&shown, &denominator_kinds)
+            picked_denominator(digits, &denominator_digits, question_numerator)
         }
-        Denominator::Placeholders(_) => fill_left(&denominator_digits, &denominator_kinds),
+        Denominator::Placeholders(kinds) => {
+            // A placeholder denominator lacks, against its `?` slots, the digits the picked one
+            // does not fill (`# ??/??|0` on 0.5 is "  1/2 |0", the `0` printing the lacking
+            // zero alone; probes/t3711-placeholders-after-fraction C14).
+            let slots = kinds.iter().filter(|kind| **kind == '?').count();
+            let lacking = if question_numerator {
+                slots.saturating_sub(denominator_digits.len())
+            } else {
+                0
+            };
+            (
+                fill_left(&denominator_digits, &denominator_kinds),
+                HandedOn {
+                    spilled: Vec::new(),
+                    lacking,
+                },
+            )
+        }
     };
     let denominator_text = part.numerals.digits(&denominator_text);
 
@@ -217,6 +228,11 @@ pub(super) fn format_fraction(
         .iter()
         .rposition(|t| matches!(t, TextToken::Digit(_)))
         .filter(|end| *end >= fraction.denominator_at);
+    let mut trailing = trailing_end
+        .map_or_else(Vec::new, |end| {
+            trailing_digits(&tokens[fraction.denominator_at..=end], handed_on)
+        })
+        .into_iter();
     for (index, token) in tokens.iter().enumerate() {
         if index == fraction.denominator_at {
             push_denominator(&mut text, &denominator_text, blank, blank_spaces);
@@ -246,14 +262,14 @@ pub(super) fn format_fraction(
                 );
             }
             _ if in_trailing && blank && !blank_spaces => {}
+            // A blank fraction's placeholder takes the width of what it would print.
+            TextToken::Digit(_) if in_trailing && blank => {
+                let width = trailing.next().map_or(0, |s| s.chars().count());
+                text.extend(std::iter::repeat_n(' ', width));
+            }
             _ if in_trailing && blank => push_spaces(&mut text, token),
             TextToken::Digit(_) if in_trailing => {
-                let zero = if placeholder_kinds(std::slice::from_ref(token)) == ['?'] {
-                    " ".to_owned()
-                } else {
-                    part.numerals.digits("0")
-                };
-                text.push_str(&zero);
+                text.push_str(&part.numerals.digits(&trailing.next().unwrap_or_default()));
             }
             TextToken::Period if in_trailing => text.push('.'),
             TextToken::Literal(c) => text.push(*c),
@@ -292,6 +308,115 @@ fn separator_kind(
         }
         None => Separator::Dropped,
     }
+}
+
+/// The digits a picked denominator hands on to the placeholders after it: `spilled` ones it
+/// could not print, and the number it `lacking` against the code's digits.
+#[derive(Default)]
+struct HandedOn {
+    spilled: Vec<char>,
+    lacking: usize,
+}
+
+/// The text of a picked denominator `picked` under a fixed one written `code`, and what it hands
+/// on. The code's digits print, cut to the picked one's length and padded by a space per cut
+/// digit under a `?` numerator (which then lack them); the picked one's digits past the code's
+/// length print after it, or under a `?` numerator are spilled to the placeholders after it, or
+/// dropped with none (512/625 under `?/40000` is "512/400  ", 4095937/5000000 "4095937/40000";
+/// `# ?/16|0` on 0.5 " 1/1 |0", `# 0/4|0` on 0.3 "3/40|0", `# ?/4|0` on 0.0625 " 1/4|60";
+/// number-formats.md "Placeholders after a fraction").
+fn picked_denominator(code: &str, picked: &str, question_numerator: bool) -> (String, HandedOn) {
+    let (code_len, picked_len) = (code.chars().count(), picked.chars().count());
+    if picked_len <= code_len {
+        let mut text: String = code.chars().take(picked_len).collect();
+        let lacking = if question_numerator {
+            text.extend(std::iter::repeat_n(' ', code_len - picked_len));
+            code_len - picked_len
+        } else {
+            0
+        };
+        (
+            text,
+            HandedOn {
+                spilled: Vec::new(),
+                lacking,
+            },
+        )
+    } else if question_numerator {
+        let spilled = picked.chars().skip(code_len).collect();
+        (
+            code.to_owned(),
+            HandedOn {
+                spilled,
+                lacking: 0,
+            },
+        )
+    } else {
+        let text = code.chars().chain(picked.chars().skip(code_len)).collect();
+        (text, HandedOn::default())
+    }
+}
+
+/// What each digit placeholder among `tokens` (the denominator's position up to the last
+/// placeholder after it) prints, in order. Left to right, with the zeros owed and whether a `?`
+/// with nothing to print shows a space (at first; a `0` or `#` turns that off, a `?` printing a
+/// digit or an owed zero on, and a literal after a `?` that printed a space off):
+/// - a `?` prints the next spilled digit (and owes a zero), else a zero for a lacking digit, else
+///   a space if one is due, else a zero (and owes one);
+/// - a `0` or `#` prints every spilled digit left, then its own zero and the zeros owed; for a
+///   lacking digit instead a `0` prints a zero and a `#` nothing.
+///
+/// `# ?/4|?|?` on 0.5 is " 1/4| |0", `# ?/4|?|?|#` " 1/4| |0|00", `# ?/16|?|?` " 1/1 |0| ",
+/// `# ?/100|#|?|?` " 1/1  ||0|0", `# ?/4 ? 0` on 0.0625 " 1/4 6 00" (probes/t4043-separated-slots
+/// A12, A24, A36, A71; number-formats.md "Placeholders after a fraction"). Commas print nothing.
+fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
+    let HandedOn {
+        spilled,
+        mut lacking,
+    } = handed_on;
+    let mut spilled = spilled.into_iter();
+    let (mut owed, mut due, mut after_space) = (0_usize, true, false);
+    let mut printed = Vec::new();
+    for token in tokens {
+        let TextToken::Digit(digit) = token else {
+            if after_space {
+                due = false;
+                after_space = false;
+            }
+            continue;
+        };
+        let text = if digit.kind == '?' {
+            let text = if let Some(d) = spilled.next() {
+                owed += 1;
+                due = true;
+                d.to_string()
+            } else if lacking > 0 {
+                lacking -= 1;
+                "0".to_owned()
+            } else if due {
+                " ".to_owned()
+            } else {
+                owed += 1;
+                due = true;
+                "0".to_owned()
+            };
+            after_space = text == " ";
+            text
+        } else {
+            (due, after_space) = (false, false);
+            if lacking > 0 {
+                lacking -= 1;
+                if digit.kind == '0' { "0" } else { "" }.to_owned()
+            } else {
+                let mut text: String = spilled.by_ref().collect();
+                text.extend(std::iter::repeat_n('0', owed + 1));
+                owed = 0;
+                text
+            }
+        };
+        printed.push(text);
+    }
+    printed
 }
 
 /// How the literals between a fraction's integer part and its numerator print.

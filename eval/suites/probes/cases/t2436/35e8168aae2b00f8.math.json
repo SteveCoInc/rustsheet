@@ -13,6 +13,11 @@
     "why": "density at x = 0 with alpha <= 1",
     "f": "=BETA.DIST(0,0.5,1E+5,FALSE)"
    },
+   "A16": {
+    "t": "e",
+    "why": "density at x = 0 with alpha <= 1",
+    "f": "=AVERAGEA(BETA.DIST(0,0.5,1E+5,FALSE))"
+   },
    "A196": {
     "t": "n",
     "v": "0.0",
