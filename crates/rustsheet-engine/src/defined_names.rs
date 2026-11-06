@@ -485,7 +485,9 @@ impl Model {
     /// probes/t4014-sheet-api-name-65 S!A1); with one, the sheet's uses of it move to the new name,
     /// `S!N` included, while other sheets keep the workbook name
     /// (probes/t4049-sheet-api-name-over-book). An unqualified use of a defined workbook name
-    /// needs no rewrite: its text already reads the new sheet-scoped name.
+    /// needs no rewrite: its text already reads the new sheet-scoped name. In most other books
+    /// Excel re-binds the unresolved use instead (probes/t4391-api-rebind-*), and no rule yet
+    /// tells those books apart from T-4049's, so those cells are known failures (T-4617).
     fn bind_added_sheet_name(&mut self, name: &str, sheet: u32) {
         let name_upper = name.to_uppercase();
         let workbook_name_defined = self
