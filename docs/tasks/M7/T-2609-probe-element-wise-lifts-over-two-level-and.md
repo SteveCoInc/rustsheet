@@ -3,7 +3,7 @@ id: T-2609
 title: "Probe element-wise lifts over two-level and reference-body GROUPBY cells (SPEC-0018 rules 4, 7, 8)"
 milestone: M7
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet

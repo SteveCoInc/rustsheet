@@ -3,7 +3,7 @@ id: T-2686
 title: "An operator over a whole GROUPBY result keeps its nested cells (not #VALUE!), so MEDIAN over it is #N/A"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
