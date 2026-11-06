@@ -13,8 +13,9 @@ dates.md states Excel reads it (excel-graph cells):
   Over 360.
 - Bases 2 and 3 count serial days (the fictitious day included) over 360 and 365.
 - Basis 4 (European 30/360) caps each displayed day at 30 (serial 60 is day 29, serial 0 day 0),
-  over 360. The engine reads basis 4's dates rounded to the nearest second first, as DAYS360 does;
-  that is unprobed for YEARFRAC, so the draws keep every fraction of a day below 0.99.
+  over 360. Its dates floor like the other bases', unlike DAYS360, which rounds to the nearest
+  second first (probes/t4574-feb29-near-midnight-date-args Q1:Q18, V1:V18; T-4574). The draws
+  still keep every fraction of a day below 0.99.
 - Basis 1 (actual/actual) counts serial days over a year length read on the real calendar, where
   serial 0 stands in as 1900-01-01 and serial 60 as 1900-02-28 ("YEARFRAC accepts serial 0":
   `YEARFRAC(0,33752,1)` averages 1900-1992, `YEARFRAC(59,60,1)` is 1/365). Dates more than a year

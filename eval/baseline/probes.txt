@@ -2476,6 +2476,7 @@ C	probes/t4554-api-name-local-name-body.case.json	12
 C	probes/t4554-api-name-scoped-name-choice-first.case.json	27
 C	probes/t4554-api-name-scoped-name-choice-last.case.json	27
 C	probes/t4554-api-name-scoped-name-choice.case.json	27
+C	probes/t4574-feb29-near-midnight-date-args.case.json	504
 C	probes/t4582-pivot-item-edges.case.json	45
 C	probes/t4583-pivot-row-labels.case.json	204
 C	probes/t4587-api-name-sheet-order-case.case.json	4
