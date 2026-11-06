@@ -39,6 +39,7 @@ pub mod poi_m8_subset;
 pub mod probe_milestones;
 pub mod r1c;
 pub mod report;
+pub mod roundtrip;
 pub mod run_meta;
 pub mod runner;
 mod spec_pivots;
