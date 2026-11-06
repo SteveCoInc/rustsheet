@@ -3,7 +3,7 @@ id: T-3764
 title: "BETA.DIST cdf at b = 1 and a shape of 136 to 1414: Excel's w on the a0 = 1 complement is one 2^-53 step from ours on 47 t3568 column-B cells (x^a from 7E-17 to 2E-3)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
