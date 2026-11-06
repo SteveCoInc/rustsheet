@@ -61,8 +61,9 @@ has given both 0 and `#NUM!` there, and the engine follows what a fresh fill sho
   fin-coupon-walk-bounds-b, -c, accrint-calendar-start-1900, -1904 and accrint-eom-1900 twice (`fill --force`, oracle
   cache emptied between; 15:08 and 15:10 UTC). The two fills agreed with each other, and 140 cells differed from the
   committed 2026-10-20 to 10-27 sidecars: a walk back reaching a period start before 1900-01-01 is now 0 with
-  calc_method TRUE or FALSE, and basis 1's regular-period cut and most of the 1904 cut are gone. With 0 on 10-17,
-  `#NUM!` on 10-24 to 10-27 and 0 on 11-06, the answer flips over time, so the engine, defs and committed sidecars
+  calc_method TRUE or FALSE, and basis 1's regular-period cut and most of the 1904 cut are gone. The multi-cell
+  answer moved from `#NUM!` (10-20 to 10-27) to 0 (11-06), and fin-coupon-walk-bounds-b A9, the only cell filled on
+  10-17, went 0, `#NUM!`, 0; the answer flips over time, so the engine, defs and committed sidecars
   stay as they were and accrint-zero-results A1:A9, A12, A14, A16:A19 stay known failures (financial.md "ACCRINT at
   the calendar's start", bullet "Re-fill of 2026-11-06"). Follow-up T-4631 re-fills after 2026-11-20 and decides.
 - Unit tests: `fn_accrintm_issue_equals_settlement_is_zero` (replaces the `#NUM!` test for equal dates),

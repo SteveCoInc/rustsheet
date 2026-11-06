@@ -2065,9 +2065,10 @@ Tasks: T-1822, T-1844, T-2124, T-2125
 Rule: ACCRINT reads its dates as Excel 1900 serials too, and is `#NUM!` when a coupon date it accrues over falls before
 1900-01-01 (serial 0): the coupon date before settlement (the regular one, `first_interest` less a period, when
 settlement is not past `first_interest` or calc_method is FALSE) or any period start on the walk back to the issue.
-**Unstable in Excel for the web**: the fills of 2026-10-24 to 10-27 gave the `#NUM!` this rule and the bullets below
-record, the fills of 2026-10-17 and 2026-11-06 gave 0 (and numbers past the basis-1 and 1904 cuts) for most of the same
-cells; see the last bullets. The engine keeps the `#NUM!` rule, and the cells where Excel last gave 0 stay known
+**Unstable in Excel for the web**: the fills of 2026-10-20 to 10-27 gave the `#NUM!` this rule and the bullets below
+record; two fresh fills on 2026-11-06 gave 0 (and numbers past the basis-1 and 1904 cuts) for about 140 of the same
+cells. One cell has flipped twice: fin-coupon-walk-bounds-b A9 was 0 on 2026-10-17 (the only fill that day), `#NUM!` on
+10-24 and 0 again on 11-06; see the last bullets. The engine keeps the `#NUM!` rule, and the cells where Excel last gave 0 stay known
 failures, until fills agree over time (T-4566 decided not to follow either answer).
 - `ACCRINT(DATE(1900,3,1),DATE(1900,6,30),S,0.05,1000,4,0,TRUE)` is `#NUM!` for every settlement S from 1900-05-01 to
   9999-12-31 (the issue's period starts 1899-12-31), with calc_method FALSE, on bases 0, 1, 3 and 4 and with semiannual
@@ -2139,8 +2140,8 @@ failures, until fills agree over time (T-4566 decided not to follow either answe
   - The 1904 cut is gone except for a settlement's own period before 1904-01-01: `ACCRINT(DATE(1904,1,1),DATE(1904,3,31),
     DATE(1950,6,30),0.05,1000,4,0,TRUE)` is 2324.861111111111 and an issue of serial 0 or 1 computes
     (accrint-calendar-start-1904 A1:A16, A20, A25:A40, B1:B10); A17, A18, A21, A22 stay `#NUM!`.
-  The committed sidecars keep the earlier fills: with three answers over three weeks (0 on 10-17, `#NUM!` on 10-24 to
-  10-27, 0 on 11-06) neither is followed, and the cells where the committed oracle already says 0
+  The committed sidecars keep the earlier fills: with the multi-cell answer moving from `#NUM!` (10-20 to 10-27) to 0
+  (11-06), and -b A9 going 0, `#NUM!`, 0 (10-17, 10-24, 11-06), neither is followed, and the cells where the committed oracle already says 0
   (accrint-zero-results A1:A9, A12, A14, A16:A19) stay known failures for that reason.
 - Excel for the web returned 0 for `ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(9990,6,30),0.05,1000,4,0,TRUE)`
   (fin-coupon-walk-bounds-b A9) on 2026-10-17 and `#NUM!` on 2026-10-24, in a re-fill of -b and in
@@ -2148,7 +2149,7 @@ failures, until fills agree over time (T-4566 decided not to follow either answe
 Evidence: probes/fin-accrint-1900-calendar (52 cells), fin-coupon-walk-bounds-c O1-O14, -b A9 (excel-graph, 2026-10-24);
 accrint-calendar-start-1900 (92 cells) (excel-graph, 2026-10-26); accrint-calendar-start-1904 (50 cells, excel-graph,
 2026-10-27, T-2835, landed by T-2337).
-Status: VERIFIED (excel-graph)
+Status: VERIFIED (excel-graph); unstable since 2026-11-06, re-decided by T-4631
 Implemented (T-2124): `compute_accrint` in functions/financial/accrint.rs.
 Tasks: T-2124, T-2562, T-2835, T-2337, T-4114, T-4566
 
@@ -5173,7 +5174,7 @@ Rule: with valid dates and basis:
 ACCRINT counts the issue's period on basis 2 as basis 0 does, US 30/360 moving both dates, not plain US 30/360:
 `ACCRINT(49107,49552,49782,0.1,1000,2,2,FALSE)` (issue 2034-06-12, first_interest 2035-08-31, so the issue's period
 runs from 2034-02-28 to 2034-08-31) is 137.22222222222223, the stub 80/180, where plain 30/360 gives 80/181 and
-137.09944751381215 (the engine). 360/frequency would give the same there, but not when that period runs from 2034-02-28
+137.09944751381215 (the engine before T-4566). 360/frequency would give the same there, but not when that period runs from 2034-02-28
 to 2034-08-28 (first_interest 2035-08-28 or 08-30): Excel's 136.62921348314606 is 80/178, US 30/360 moving both dates.
 With calc_method TRUE, a settlement after first_interest and a coupon date on the walk back before 1900-01-01, Excel
 for the web gave **0** on 2026-11-06: quarterly on bases 0 to 4 (`ACCRINT(61,91,45000,0.05,1000,4,b,TRUE)`, A1:A5),
