@@ -3,7 +3,7 @@ id: T-3556
 title: "SPEC: gate the fetched suites (poi, calipers, corpus-bench) so a regression in them fails a PR, and make eval runs them when they are not fetched"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
