@@ -141,10 +141,23 @@ def test_z_test_domain(data: Sequence[float], scalars: Sequence[float], code: st
 
 
 def test_z_test_unprobed() -> None:
-    with pytest.raises(NoValueError):  # Excel 0.5 (A49), the math 1
-        z_test([1, 2, 3], 1e300, 1e-300)
     with pytest.raises(NoValueError):  # Excel 0 (A50), the math #DIV/0!
         z_test([0.1, 0.1, 0.1], 0)
+    with pytest.raises(NoValueError):  # a z past the range above 0 with sigma omitted
+        z_test([1e-300, 2e-300, 3e-300 * (1 + 1e-15)], -1e300)
+
+
+def test_z_test_overflow_below_zero_is_one() -> None:
+    # t4098 A49: Excel 0.5, kept as the target (decision 0300); the math is Phi(1.7E+600) = 1
+    assert z_test([1, 2, 3], 1e300, 1e-300) == 1
+
+
+def test_prob_num_band_widens_with_more_probabilities() -> None:
+    # two probabilities 1E-15 below 1 are #NUM! (t4098 A3); with more terms the band moves by 2^-53 an addition
+    with pytest.raises(DomainError, match="#NUM!"):
+        prob([1, 2, 3], [0.5, 0.25, 0.25 - 1e-14], 1)
+    with pytest.raises(NoValueError):
+        prob(range(1, 11), [*([0.0625] * 8), 0.25, 0.25 - 1.1e-15], 1)
 
 
 def test_prob_excel_values() -> None:

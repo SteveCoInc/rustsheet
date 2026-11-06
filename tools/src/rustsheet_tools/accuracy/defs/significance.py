@@ -28,7 +28,7 @@ Domain (an Excel error region, never a math value), each from the cited entries 
   t4098 A53); then a sigma of 0 or below `#NUM!` ("Legacy distribution names sweep, second family"; t4098 A56); with
   sigma omitted, constant data `#DIV/0!` ("Thin distribution functions: ... (T-1049)": `Z.TEST(D1:D3,5)`; t4098 A54)
   and a squared deviation past the double range `#NUM!` ("Overflowing squares (T-2432)"; t4098 A51); with sigma given,
-  a z past the double range above 0 (mean above x) `#NUM!` (t4098 A48).
+  a z past the double range above 0 (mean above x) `#NUM!` (t4098 A48, one cell; sigma omitted is unprobed).
 - PROB: different counts `#N/A` ("PROB: an error data argument first ..."); a probability sum off 1 `#NUM!`, evidenced
   from 1 - 1E-15 down and 1 + 1E-14 up (t4098 A3:A31; `SUM_NUM_BELOW`, `SUM_NUM_ABOVE`), while 1 + 1E-15 and the
   ten-0.1 sum are numbers (A1, A2; `SUM_OK_ABOVE`), as is a sum 5.55E-17 below 1 (A33; `SUM_OK_BELOW`).
@@ -40,10 +40,11 @@ Given no math value (`NoValueError`), as no evidence names Excel's result:
   square, a double statistic whose sign is not the exact one; a subnormal literal.
 - Z.TEST: a constant series whose double mean is not its value (`paired_regression.constant_exact`; Excel's
   `Z.TEST({0.1,0.1,0.1},0)` is 0, t4098 A50, where the math is `#DIV/0!`), a sum of the data past the double range,
-  a subnormal literal or sigma, a z past the double range below 0 (Excel's `Z.TEST({1,2,3},1E+300,1E-300)` is 0.5,
-  t4098 A49, where Phi is 1) or with sigma omitted.
-- PROB: a probability sum off 1 between the evidenced bands (below 1 by 5.6E-17 to 1E-15, above 1 by 1.1E-15 to
-  1E-14).
+  a subnormal literal or sigma, and a z past the double range above 0 with sigma omitted.
+Excel kept as the target (decision 0300): a z past the double range below 0 keeps its math value 1, where Excel's
+`Z.TEST({1,2,3},1E+300,1E-300)` is 0.5 (t4098 A49, sigma given, one cell).
+- PROB: a probability sum off 1 between the evidenced bands (for two probabilities, below 1 by 5.6E-17 to 1E-15, above
+  1 by 1.1E-15 to 1E-14; the `#NUM!` bands widen by 2^-53 for each further probability).
 """
 
 from __future__ import annotations
@@ -420,19 +421,24 @@ def _z_test(args: Sequence[MathArg]) -> mpmath.mpf:
         # Phi(-z) is below the envelope's 1E-300 floor here, and Excel's lower tail is 0 (normal.py FLUSH, T-1040); a
         # z of 1E+200 would otherwise leave dps 60 and 80 apart in a value of e^-1E+400.
         return mpmath.mpf(0)
+    if z <= -FLUSH:
+        # 1 - Phi(-37.625) is below 1E-310: Phi(-z) is 1 at every working precision (t4098 A49's z is -1.7E+600)
+        return mpmath.mpf(1)
     return cdf(-z)
 
 
 def _z_overflow(z: mpmath.mpf, difference: float, n: int, spread: mpmath.mpf, sigma_given: bool) -> None:
     """Z.TEST's `#NUM!` where Excel's double z = (mean - x) sqrt(n) / sigma passes the double range above 0 with sigma
-    given (t4098 A48); NoValueError for any other z past the range (below 0 Excel gives 0.5, A49)."""
+    given (t4098 A48, one cell); NoValueError for a z above 0 past the range otherwise (sigma omitted: unprobed). A z
+    below 0 past the range keeps its math value, Phi(-z) = 1, although Excel gives 0.5 there (A49, sigma given; Excel
+    kept as the target, decision 0300)."""
     double_z = difference * math.sqrt(n) / float(spread)
-    if abs(z) <= sys.float_info.max and math.isfinite(double_z):
+    if z < 0 or (abs(z) <= sys.float_info.max and math.isfinite(double_z)):
         return
-    if sigma_given and z > 0 and double_z == math.inf:
+    if sigma_given and double_z == math.inf:
         msg = "#NUM!: z past the double range above 0"
         raise DomainError(msg)
-    msg = "z past the double range (unprobed, or Excel's 0.5 below 0)"
+    msg = "z past the double range above 0 with sigma omitted (unprobed)"
     raise NoValueError(msg)
 
 
@@ -579,7 +585,10 @@ def _prob(args: Sequence[MathArg]) -> mpmath.mpf:
 
 # The probability sum's evidenced bands (probes/t4098 A1:A31, the exact sum of the literals' doubles minus 1): 1E-15
 # below 1 and 1E-14 above are `#NUM!`, 1E-15 above (1.0000000000000010214) and the ten-0.1 sum (5.6E-17 above) are
-# numbers. Each bound keeps a margin of a few ulps of 1 for Excel's double sum against the exact one.
+# numbers. Each bound keeps a margin of a few ulps of 1 for Excel's double sum against the exact one. The `#NUM!` bands
+# are probed on two probabilities only (one addition): for n probabilities each further addition may move Excel's double
+# sum by half an ulp of 1, so `sum_off` widens them by (n - 2) * 2^-53 (no table point is near them: the drawn `#NUM!`
+# sums are off by 4.8E-9 or more). The number bands hold exact sums of the probed shapes (two, three and ten terms).
 SUM_NUM_BELOW = Fraction(-99, 10**17)
 SUM_NUM_ABOVE = Fraction(99, 10**16)
 SUM_OK_ABOVE = Fraction(11, 10**16)
@@ -589,10 +598,12 @@ SUM_OK_BELOW = Fraction(
 
 
 def sum_off(ps: Sequence[float]) -> None:
-    """PROB's `#NUM!` for probabilities whose exact sum is off 1 by an evidenced amount; NoValueError between the bands
-    (an exact sum below 1 by 5.6E-17 to 1E-15, or above by 1.1E-15 to 1E-14)."""
+    """PROB's `#NUM!` for probabilities whose exact sum is off 1 by an evidenced amount (widened by the extra additions of
+    more than two probabilities); NoValueError between the bands (for two probabilities, an exact sum below 1 by 5.6E-17
+    to 1E-15, or above by 1.1E-15 to 1E-14)."""
     off = sum((Fraction(p) for p in ps), Fraction(0)) - 1
-    if off <= SUM_NUM_BELOW or off >= SUM_NUM_ABOVE:
+    margin = Fraction(max(len(ps) - 2, 0), 2**53)
+    if off <= SUM_NUM_BELOW - margin or off >= SUM_NUM_ABOVE + margin:
         msg = "#NUM!: the probabilities do not sum to 1"
         raise DomainError(msg)
     if off < SUM_OK_BELOW or off > SUM_OK_ABOVE:

@@ -13,7 +13,8 @@ depends_on: []
 ## Goal
 PROB, CHISQ.TEST and Z.TEST give Excel's results on the cells T-4098's probe and tables found off: PROB checks only the
 sum of the probabilities, with Excel's tolerance; CHISQ.TEST is `#NUM!` for an overflowing squared difference; Z.TEST
-answers Excel's `#NUM!` and 0.5 where z overflows.
+answers Excel's `#NUM!` and 0.5 where z overflows with sigma given (probe A48, A49, one cell each; with sigma omitted
+it is unprobed and out of scope).
 
 ## Context
 - statistics.md "CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)" states the rules and the evidence.
