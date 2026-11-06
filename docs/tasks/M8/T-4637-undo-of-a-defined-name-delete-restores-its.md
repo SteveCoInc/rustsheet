@@ -3,7 +3,7 @@ id: T-4637
 title: "Undo of a defined-name delete restores its hidden flag and comment"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
