@@ -68,6 +68,10 @@ that the current generator code would no longer write, not only when a candidate
   sidecars), all 989 sidecars were stamped again from main's own values with the same byte check. The 124
   re-stamped ones that no main commit regenerated (104 AMORDEGRC fraction-state cases, other AMOR*/VDB cases, the
   t4437 beta and t4541 T.INV.2T cases) were recomputed with mpmath in full: every value and skip matched.
+- CI (Python 3.12) caught COVAR, COVARIANCE.P and COVARIANCE.S: their `value` is a `functools.partial`, whose
+  `__module__` is `functools`, so the stdlib's source was hashed and differed between Pythons. `_code_modules` now
+  follows a partial to its function and keeps only this package's modules. All 254 definitions then digest the same
+  on 3.11.18 and 3.12.3, and `math --check` is current on both.
 - CI time of `math --check --suite probes --suite probes-numeric` on 4 cores, three runs each: main 15.0 to 15.1 s,
   this branch 16.2 to 16.4 s (+7%, within the 10% bound). The fingerprint costs about 1.3 s of serial work over
   both suites, against about 44 s for parsing the candidates.
