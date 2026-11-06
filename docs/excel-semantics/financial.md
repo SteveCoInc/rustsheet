@@ -4128,6 +4128,53 @@ its check-100 stop is `#NUM!` too is not probed (T-3625).
 Status: VERIFIED
 Tasks: T-2391, T-1592, T-2747
 
+## PRICE, DURATION and MDURATION take DSC as E - A on every basis
+Rule: with more than one coupon left as with one, PRICE, DURATION and MDURATION discount from settlement by
+`DSC/E = (E - A)/E`, where A is COUPDAYBS (30/360 on bases 0 and 4, serial days on bases 1-3) and E is 360/f on bases
+0, 2 and 4, 365/f on basis 3 and COUPNCD - COUPPCD on basis 1; not by COUPDAYSNC. On bases 2 and 3 the actual days to
+the next coupon differ from E - A whenever the coupon period is not exactly 360/f or 365/f days, so the exponents
+`k + DSC/E` are not COUPDAYSNC/COUPDAYS: on the Gate A tables 163 points on bases 2 and 3 have E - A unequal to the actual
+days to the next coupon (55 PRICE, 50 DURATION, 58 MDURATION, 132 of them with more than one coupon left), and Excel is
+within 1.2E-13 relative of the 50-digit math with E - A on every one (PRICE within 5.2E-15). "YIELD with one coupon
+period left is closed form" already stated this for PRICE's single-period form; YIELD's closed form takes the actual
+period instead.
+So DSC is negative when A exceeds E, which bases 2 and 3 allow (a period of more than 360/f days on basis 2, or more
+than 365/f on basis 3): the settlement then discounts back in time. `MDURATION(1064950,1064951,
+0.000128159104484352,0.756789005672321,2,3)` (one day before maturity, A = 183 against E = 182.5, DSC -0.5) is a negative duration,
+-0.000993810560677671 (math -0.00099381056067767515), and `PRICE(2661503,2661504,0.544303320391621,0.00188934538460332,
+6079.97276154982,1,2)` (A = 364 against E = 360, DSC -4) is 6079.49676063253, the linear form with s < 0, matching the
+math to all 15 digits.
+Evidence: accuracy/PRICE/s1 (A163), accuracy/DURATION/s1, accuracy/MDURATION/s1 (A177) (excel-graph, 2026-11-06,
+T-4113): all 600 points inside the envelope, every numeric one within 1E-9 of the math with E - A.
+Ours: matches (`CouponSchedule` in functions/financial/financial_bonds.rs: `dsc_over_e = (e - a) / e`).
+Status: VERIFIED (excel-graph)
+Tasks: T-4113
+
+## YIELD is #NUM! at a price and redemption far from par
+Rule: YIELD (more than one coupon left) can be `#NUM!` where PRICE has a root when the price and the redemption are far
+from 100, although the same bond scaled to par computes: Excel's Newton starts from a start fitted on par bonds ("YIELD
+stops short of PRICE's root", T-1592: `100·rate·T + (100 - pr)` over `100·T - ...`), which is far from the root there,
+and the Newton leaves PRICE's domain ("YIELD's #NUM! cells and its 100-step cap"). On the Gate A table:
+`YIELD(609344,609526,0.0216926180008319,2.08692048857734,1.06986954448637,4,1)` (A216, root 0.0674),
+`YIELD(1511252,1600178,0.693266194144484,0.0113829835620059,0.013387175518858,2,1)` (A225, root 37.04),
+`YIELD(2444317,2445266,0.00262698867298459,6.83327915820922,6.15108985700114,1)` (A231, root 5.7E-6),
+`YIELD(41644,41964,3.95504106162018E-05,1.07913390167583,1.10630172770542,2,0)` (A278, root 0.0322) and
+`YIELD(43934,44400,3.18837697006861E-08,2561.5239125089,2562.67943505766,1,1)` (A284, root 3.5E-4) are `#NUM!`. It is not
+the scale alone: the table's 264 numeric YIELD points include prices from 0.0033 to 8.2E5 and redemptions from 0.014
+to 8.2E5 (a price near its redemption far from 100 often computes). At a redemption near 100 prices of 1E5 and more are
+`#NUM!`, as that entry records: A160 `YIELD(34484,58272,0.00994370100069034,598517.33532802,100,1,0)` (redemption 100)
+and A164 `YIELD(43785,58096,0.14042700948137,394426.617648828,99.049049737235,2,2)` (redemption 99.049049737235). Where the
+cut lies is unprobed (T-4523). Where
+the price is not exact Excel stops short of the root ("YIELD stops short of PRICE's root"): at a root near 0 the
+relative gap is large, `YIELD(46176,47108,0.108576904443112,127.687110632994,100,1)` (A140) is -1.5180348575085436E-15
+against a root of -1.466E-15 and `YIELD(44098,44491,0.0822071318475585,108.860101988015,100,1,4)` (A184)
+-3.1884443225695292E-15 against -3.114E-15 (3.5% and 2.4%); decision 0300 keeps Excel as the target there.
+Evidence: accuracy/YIELD/s1 A140, A160, A164, A184, A216, A225, A231, A278, A284 (excel-graph, 2026-11-06, T-4113).
+Ours: matches on A160, A164, A216, A231, A278 and A284 (`#NUM!`) and on A140 and A184; A225 converges to the root
+(37.03781989946988), owned by T-4523.
+Status: VERIFIED (excel-graph)
+Tasks: T-4113, T-4523
+
 ## T-bill settlement below serial 1
 Rule: TBILLEQ, TBILLPRICE and TBILLYIELD floor both dates to whole days before they count days, so a
 settlement from 0 to below 1 is serial 0 (1900-01-00), a valid date. The one-year limit compares the dates Excel
@@ -5133,9 +5180,11 @@ which beats every later element, T-4375).
   D30), where a range or array element of text is `#NUM!`. A one-cell date of 2958465.5 is read truncated
   (`XNPV(0.1,30,<2958465.5>)` is 30, D9). The same holds through a one-cell range, `OFFSET`, `INDEX` and a defined
   name for one cell, holding an error, numeric text or date text, as values and as dates (T-4375 rows 32-43; the
-  engine reads a cell, a defined name and `INDEX` of a reference this way, `xnpv_one_cell`). Unprobed: a literal text
-  argument (`XNPV(0.1,"30",39448)`), and a defined name for a constant text; the engine keeps its earlier reading
-  of a literal and reads a name as a cell.
+  engine reads a cell, a defined name and `INDEX` of a reference this way, `xnpv_one_cell`). A text literal and a defined
+  name for a constant text read the same: `XNPV(0.1,"30",39448)`, `XNPV(0.1,30,"1/1/2025")`, `XNPV(0.1,"30",
+  "1/1/2025")`, a name `="30"` as values, `="1/1/2025"` or `="39448"` as dates are all 30, and non-numeric text
+  (`"x"`, a name `="x"`) is `#VALUE!` (probes/t4381-xnpv-literal-and-named-text A1:A10, excel-graph, T-4381). Computed
+  text (`"3"&"0"`) is unprobed and keeps its earlier reading.
 - The rate: -1, -2, -0.5, 0 and an empty cell are `#NUM!`; "0.1" and a text cell "0.1" are 0.1, a date-text cell
   its serial (rows 41-48). A values row against a dates column, 2x2 against a column or 2x2, and a 2x2 array
   constant all read in row-major order with the same result (rows 49-54).

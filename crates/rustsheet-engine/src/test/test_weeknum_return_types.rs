@@ -63,3 +63,19 @@ fn test_weeknum_1900_anchors_on_a_sunday_serial_1() {
         );
     }
 }
+
+#[test]
+fn weeknum_return_type_snaps_near_an_integer() {
+    // probes/t4454-near-midnight-date-args AA1:AB4 (T-4454): 2^-22 + 2^-33 below an integer is
+    // that type, 2^-22 + 9*2^-36 below truncates.
+    let mut model = new_empty_model();
+    model._set("A1", "=WEEKNUM(45019,2-(2^-22+2^-33))");
+    model._set("A2", "=WEEKNUM(45019,2-(2^-22+9*2^-36))");
+    model._set("A3", "=WEEKNUM(45017,17-2^-23)");
+    model._set("A4", "=WEEKNUM(45017,17-1E-6)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"15");
+    assert_eq!(model._get_text("A2"), *"14");
+    assert_eq!(model._get_text("A3"), *"13");
+    assert_eq!(model._get_text("A4"), *"14");
+}

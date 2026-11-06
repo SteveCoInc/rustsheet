@@ -82,6 +82,7 @@ const UNORDERED: &[(&str, &str, &[&str])] = &[
     ("/worksheet/dataValidations", "dataValidation", &["sqref"]),
     // CT_ConditionalFormatting, D3.2 CF rules
     ("/worksheet", "conditionalFormatting", &["sqref"]),
+    // CT_DefinedNames, D3.2 defined names
     (
         "/workbook/definedNames",
         "definedName",
@@ -100,14 +101,17 @@ const UNORDERED: &[(&str, &str, &[&str])] = &[
 const DEFAULTS: &[(&str, &str)] = &[
     // CT_Cell
     ("c", "t=n s=0"),
+    // CT_Row
     (
         "row",
         "hidden=false customHeight=false customFormat=false outlineLevel=0 collapsed=false",
     ),
+    // CT_Col
     (
         "col",
         "hidden=false customWidth=false bestFit=false outlineLevel=0 collapsed=false style=0",
     ),
+    // CT_SheetView
     (
         "sheetView",
         "tabSelected=false showGridLines=true rightToLeft=false zoomScale=100 view=normal",
@@ -118,10 +122,12 @@ const DEFAULTS: &[(&str, &str)] = &[
     ("selection", "pane=topLeft activeCellId=0"),
     // CT_Sheet
     ("sheet", "state=visible"),
+    // CT_BookView
     (
         "workbookView",
         "activeTab=0 firstSheet=0 visibility=visible",
     ),
+    // CT_SheetFormatPr
     (
         "sheetFormatPr",
         "customHeight=false zeroHeight=false outlineLevelRow=0 outlineLevelCol=0",
@@ -237,7 +243,7 @@ pub(crate) fn diff(source: &str, output: &str) -> Result<PartDiff, String> {
 }
 
 /// At most 200 characters of `text`, for a detail line.
-fn clip(text: &str) -> String {
+pub(crate) fn clip(text: &str) -> String {
     match text.char_indices().nth(200) {
         Some((at, _)) => format!("{}…", &text[..at]),
         None => text.to_string(),
@@ -287,20 +293,22 @@ fn compare(a: &Node, b: &Node, path: &mut String, local: &mut String, d: &mut Pa
         d.checked += a.skipped;
         return;
     }
-    let local_path = local.clone();
-    let unordered = |child: &Node| {
-        if child.name.local == "ext" && a.name.local == "extLst" {
-            return Some(&["uri"][..]);
-        }
-        UNORDERED
-            .iter()
-            .find(|(parent, name, _)| *parent == local_path && *name == child.name.local)
-            .map(|(_, _, keys)| *keys)
+    let (ka, kb) = {
+        let local_path = local.as_str();
+        let unordered = |child: &Node| {
+            if child.name.local == "ext" && a.name.local == "extLst" {
+                return Some(&["uri"][..]);
+            }
+            UNORDERED
+                .iter()
+                .find(|(parent, name, _)| *parent == local_path && *name == child.name.local)
+                .map(|(_, _, keys)| *keys)
+        };
+        (
+            keyed(&a.children, &unordered),
+            keyed(&b.children, &unordered),
+        )
     };
-    let (ka, kb) = (
-        keyed(&a.children, &unordered),
-        keyed(&b.children, &unordered),
-    );
     for ((name, key), nodes) in &ka {
         let others = kb.get(&(name.clone(), key.clone()));
         for (n, node) in nodes.iter().enumerate() {
@@ -311,6 +319,10 @@ fn compare(a: &Node, b: &Node, path: &mut String, local: &mut String, d: &mut Pa
                 local.push('/');
                 local.push_str(&name.local);
                 compare(node, other, path, local, d);
+            } else if d.differences.len() >= MAX_ITEMS {
+                // Past the cap, count the loss without building its path.
+                d.checked += node.size();
+                d.truncated += 1;
             } else {
                 d.checked += node.size();
                 let below = node.size() - 1;
@@ -324,6 +336,10 @@ fn compare(a: &Node, b: &Node, path: &mut String, local: &mut String, d: &mut Pa
     for ((name, key), nodes) in &kb {
         let have = ka.get(&(name.clone(), key.clone())).map_or(0, Vec::len);
         for n in have..nodes.len() {
+            if d.differences.len() >= MAX_ITEMS {
+                d.truncated += 1;
+                continue;
+            }
             push(
                 d,
                 element(
