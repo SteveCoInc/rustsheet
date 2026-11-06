@@ -9,9 +9,9 @@ use serde_json::Value as Json;
 use crate::expressions::token::get_error_by_english_name;
 use crate::expressions::utils::number_to_column;
 use crate::pivot::{
-    read_source, Aggregate, Axis, AxisField, CacheItem, CacheSource, CellArea, DataField,
-    PageField, PivotCache, PivotField, PivotItem, PivotTable, SourceArea, SourceCells,
-    MAX_RECORD_VALUES,
+    read_source, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea,
+    DataField, PageField, PivotCache, PivotField, PivotItem, PivotTable, RecordValue, SourceArea,
+    SourceCells, MAX_RECORD_VALUES,
 };
 
 pub(crate) fn read(stem: &str, kind: &str) -> Json {
@@ -278,6 +278,46 @@ pub(crate) fn probe_pivot(case: &Json, name: &str) -> (PivotCache, PivotTable) {
         pivot_field.compact = flag(&attrs["compact"], pivot_field.compact);
         pivot_field.outline = flag(&attrs["outline"], pivot_field.outline);
         pivot_field.subtotal_top = flag(&attrs["subtotalTop"], pivot_field.subtotal_top);
+    }
+    (cache, table)
+}
+
+/// A diagonal pivot: record `i` is row item `i` and column item `i`, Sum of its index.
+pub(crate) fn diagonal(n: u32, data: bool) -> (PivotCache, PivotTable) {
+    let mut builder = CacheBuilder::new(None, MAX_RECORD_VALUES);
+    for name in ["R", "C", "V"] {
+        builder.add_field(name.to_string()).unwrap();
+    }
+    for i in 0..n {
+        builder
+            .push_record(vec![
+                RecordValue::Inline(CacheItem::Number(f64::from(i))),
+                RecordValue::Inline(CacheItem::Number(f64::from(i))),
+                RecordValue::Inline(CacheItem::Number(f64::from(i))),
+            ])
+            .unwrap();
+    }
+    let cache = builder.finish();
+    let area = CellArea {
+        top: 0,
+        left: 0,
+        bottom: 0,
+        right: 0,
+    };
+    let mut table = PivotTable::new("D".to_string(), 1, area, 0);
+    let len = |f: usize| cache.fields[f].items.len();
+    table.fields = vec![
+        PivotField::new(Some(Axis::Row), len(0)),
+        PivotField::new(Some(Axis::Column), len(1)),
+        PivotField::new(None, len(2)),
+    ];
+    table.row_fields = vec![AxisField::Field(0)];
+    table.column_fields = vec![AxisField::Field(1)];
+    if data {
+        table.data_fields = vec![DataField {
+            field: 2,
+            ..DataField::default()
+        }];
     }
     (cache, table)
 }

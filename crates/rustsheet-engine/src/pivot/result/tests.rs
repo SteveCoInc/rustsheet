@@ -7,7 +7,7 @@
 use serde_json::Value as Json;
 
 use super::*;
-use crate::pivot::probe_cases::{address, position, probe_pivot, read, subtotal_named};
+use crate::pivot::probe_cases::{address, diagonal, position, probe_pivot, read, subtotal_named};
 use crate::pivot::{
     CacheBuilder, CellArea, DataField, ItemType, PageField, PivotItem, RecordValue,
     MAX_RECORD_VALUES,
@@ -315,46 +315,6 @@ fn a_field_past_the_cache_is_malformed() {
         compute(&table, &cache, &mut work),
         Err(PivotComputeError::Malformed)
     );
-}
-
-/// A diagonal pivot: record `i` is row item `i` and column item `i`, Sum of its index.
-fn diagonal(n: u32, data: bool) -> (PivotCache, PivotTable) {
-    let mut builder = CacheBuilder::new(None, MAX_RECORD_VALUES);
-    for name in ["R", "C", "V"] {
-        builder.add_field(name.to_string()).unwrap();
-    }
-    for i in 0..n {
-        builder
-            .push_record(vec![
-                RecordValue::Inline(CacheItem::Number(f64::from(i))),
-                RecordValue::Inline(CacheItem::Number(f64::from(i))),
-                RecordValue::Inline(CacheItem::Number(f64::from(i))),
-            ])
-            .unwrap();
-    }
-    let cache = builder.finish();
-    let area = CellArea {
-        top: 0,
-        left: 0,
-        bottom: 0,
-        right: 0,
-    };
-    let mut table = PivotTable::new("D".to_string(), 1, area, 0);
-    let len = |f: usize| cache.fields[f].items.len();
-    table.fields = vec![
-        PivotField::new(Some(Axis::Row), len(0)),
-        PivotField::new(Some(Axis::Column), len(1)),
-        PivotField::new(None, len(2)),
-    ];
-    table.row_fields = vec![AxisField::Field(0)];
-    table.column_fields = vec![AxisField::Field(1)];
-    if data {
-        table.data_fields = vec![DataField {
-            field: 2,
-            ..DataField::default()
-        }];
-    }
-    (cache, table)
 }
 
 fn spent(table: &PivotTable, cache: &PivotCache) -> u64 {

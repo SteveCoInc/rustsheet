@@ -7,7 +7,7 @@
 use serde_json::Value as Json;
 
 use super::*;
-use crate::pivot::probe_cases::{address, probe_pivot, read, subtotal_named};
+use crate::pivot::probe_cases::{address, diagonal, probe_pivot, read, subtotal_named};
 use crate::pivot::{
     compute, Aggregate, Axis, CacheBuilder, CacheItem, DataField, PageField, PivotItem,
     RecordValue, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
@@ -417,30 +417,7 @@ fn a_layout_past_the_cell_cap_fails() {
 fn the_column_walk_stops_at_the_cap_the_rows_leave() {
     // Item i on rows and on columns: 2,001 lines each way plus the grand totals, past 2,000 by
     // 2,000 cells. The columns stop a line past what the rows' height leaves.
-    let mut builder = CacheBuilder::new(None, MAX_RECORD_VALUES);
-    for name in ["R", "C", "V"] {
-        builder.add_field(name.to_string()).unwrap();
-    }
-    for i in 0..2_001 {
-        let n = RecordValue::Inline(CacheItem::Number(f64::from(i)));
-        builder.push_record(vec![n.clone(), n.clone(), n]).unwrap();
-    }
-    let cache = builder.finish();
-    let area = CellArea {
-        top: 0,
-        left: 0,
-        bottom: 0,
-        right: 0,
-    };
-    let mut table = PivotTable::new("D".to_string(), 1, area, 0);
-    let len = |f: usize| cache.fields[f].items.len();
-    table.fields = vec![
-        PivotField::new(Some(Axis::Row), len(0)),
-        PivotField::new(Some(Axis::Column), len(1)),
-        PivotField::new(None, len(2)),
-    ];
-    table.row_fields = vec![AxisField::Field(0)];
-    table.column_fields = vec![AxisField::Field(1)];
+    let (cache, table) = diagonal(2_001, true);
     let mut work = MAX_PIVOT_WORK;
     let result = compute(&table, &cache, &mut work).unwrap();
     assert_eq!(
