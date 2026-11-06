@@ -91,8 +91,9 @@ by the case builder (`pivot_tables`, tools/src/rustsheet_tools/pivot.py); excel-
 cell as the builder does (the builder also writes the rendered cells into the sheet). probes/pivot-rendered-cells
 (T-2084) reads every cell of both pivots through `=P!A3` and `ISBLANK`; excel-graph opens the workbook and agrees with
 the layout (caption, `Row Labels`/`Column Labels`, items, aggregates, grand totals, West/C blank: `ISBLANK` true,
-reference 0). UNVERIFIED: whether Excel re-rendered the pivot under `refreshOnLoad` or kept the builder's cells, since
-the probe cannot tell the two apart (T-2327 adds a control with stale rendered cells).
+reference 0). Excel re-renders a `refreshOnLoad` pivot on open rather than keeping the builder's cells: a pivot over a
+source whose cached value is stale shows the source's value (probes/t4128-pivot-spike R!B5 1004, T-4128, which closes
+T-2327; docs/excel-semantics/pivots.md).
 Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081). Not probed: several data fields (the
 `Values` field), two row fields and their subtotals, filters, hidden items, dates and numbers as items, and
 pivots in tabular or outline form.
