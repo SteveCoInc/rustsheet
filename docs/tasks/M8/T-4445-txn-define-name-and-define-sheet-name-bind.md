@@ -26,9 +26,10 @@ Graph `names/add` does, not always to the first sheet.
   Whether xlsx import reads `activeTab` is unchecked.
 - The eval adapter (crates/rustsheet-eval/src/engine.rs `evaluate_spec`) ignores a case's `active_sheet` (spec2xlsx
   writes it, T-4394). It must set the active sheet before `define_api_names` for these cases to be scored on the rule.
-- Visibly-off cells this task owns: probes/t4394-api-name-active-s2 First!A1, Last!A1, Last!A3, Last!A4, S2!A3, S2!A5
-  and S2!A7; probes/t4394-api-name-active-last First!A1, Last!A1, Last!A3, Last!A4, S2!A3, S2!A5 and S2!A7. Ours reads
-  First's 1 or 11 there.
+- Visibly-off cells this task owns, where ours reads First's 1:
+  - probes/t4394-api-name-active-s2 (5): First!A1, S2!A5, S2!A7, Last!A3 and Last!A4.
+  - probes/t4394-api-name-active-last (5): First!A1, S2!A5, S2!A7, Last!A3 and Last!A4.
+  Their typed-before uses (S2!A1, S2!A3 and Last!A1) are `#NAME?` in ours and belong to T-4391.
 - probes/t4394-api-name-active-last S2!A1 (`=Rate` typed on S2 before the add) is 9 in Excel, but `#NAME?` when First
   or S2 is active (T-4353, t4394-api-name-active-s2 S2!A1). That cell is T-4391's (uses typed before the add).
 
