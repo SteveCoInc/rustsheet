@@ -115,3 +115,53 @@ Excel's conditioning (QR rather than the normal equations, and a singularity tes
 - accuracy/LOGEST/s1: Calc!A81, A82, A86, A98, A103, A110
 - accuracy/TREND/s1: Calc!A94, A98, A193
 - accuracy/GROWTH/s1: Calc!A97
+
+## Landing notes
+Opus run 2026-11-06 (13:38–15:28 UTC). The session window closed before a zero-regression kernel was found, so there
+is no PR. The branch holds a scoring scaffold in linest.rs (`KERNEL` const, `householder`, `fit_kernel`), not a
+change to merge. These notes are data for whoever resumes the branch, not instructions.
+
+How the variants were scored: a release build per variant, a full `rustsheet-eval run --out <dir>`, then the
+failing cells whose formula names LINEST, LOGEST, TREND or GROWTH, diffed against origin/main e28570d3. That run has
+147 such failing cells (92 ulp, 45 close, 6 error_mismatch, 3 numeric_mismatch, 1 type_mismatch). Gate A
+(`rustsheet-eval accuracy`) has not been run on any variant yet.
+
+| KERNEL | const=TRUE | const=FALSE | fixed | newly failing |
+|---|---|---|---|---|
+| 0 | normal equations, Gauss-Jordan (main) | same | — | — |
+| 1 | centre x and y, normal equations on the centred cross products, b0 = ym - b·xm | Householder (later: normal equations) | 60 | 3 |
+| 2 | centre x and y, Householder on the centred x only | normal equations | 60 | 4 |
+| 5 | centre x only, Householder on [1, x - xm] (intercept column first), R's diagonal read from the reflected column, b0 = c0 - b·xm | Householder on raw x, R's diagonal -sign·norm | 83 | 19 |
+| 6 | as 5 | Householder, diagonal from the reflected column | 82 | 39 |
+| 7 | as 5 with the -sign·norm diagonal | as 5 | 74 | 19 |
+| 8 (the scaffold's setting) | as 5, but when no x column is kept the intercept is mean(y) | as 5 | 83 | 15 (147 failing cells down to 79) |
+
+Householder here is the textbook v = a - alpha·e1, H = I - 2vv'/v'v, alpha = -sign(a_jj)·‖a_j‖. The LINPACK
+(`dqrdc`) and LAPACK (`dlarfg`, tau) reflectors were also tried, by hand in Python on 10 cells, and were worse.
+
+Python hand checks on Excel cells (all Excel values are oracle cells):
+- KERNEL 5's const=TRUE form matches all 5 cells tried:
+  - linest-modes `LINEST(B2:B9,A2:A9)` slope 1.9976190476190474;
+  - `LINEST(A2:A9,A2:A9)` 1.0000000000000002 and `LINEST(A2:A9,E2:E9)` 0.5000000000000001. Excel's noise on these
+    exact fits rules out every form that centres y, all of which give exactly 1 and 0.5;
+  - regression-trend O2 2.571428571428571;
+  - `SUM(LINEST({1,2,3},{1,2,4}))` 1.1428571428571428.
+- Its const=FALSE form matches all 5 cells tried:
+  - t4222 TREND 7.200000000000001 and slope 1.2000000000000002;
+  - linest-modes K43 2.0039215686274505;
+  - regression-trend N8 and O14.
+- The plain normal equations get 0 of the 5 const=TRUE cells and 3 of the 5 const=FALSE cells.
+
+KERNEL 5's 19 new failures, 15 under KERNEL 8, which fixes the four constant-x cells (`TREND(A1:A6,G1:G6)` O20, O21, N20, N21). These cells pass on main, so they are regressions that the eval gate would refuse:
+- regression-trend: 15 cells where Excel is exact and KERNEL 5 is 1 to 6 ulp off. Excel's values: SUM(TREND(A1:A6)) 27,
+  `TREND(A1:A6,G1:G6)` 4.5 (G constant, so x is dropped), SUM(TREND({2,4,5},{1,2,3})) 11, O34 3.6666666665000003,
+  O44 10000000007.466667 (I is 1E10 plus small offsets). So Excel's intercept, or its prediction, carries no QR noise
+  where the fitted mean is exact. KERNEL 5's c0 for A1:A6 is 4.499999999999999, but Excel's is 4.5.
+- linest-modes K183 (a stats cell; the stats rows still use the old (D'D)^-1 and are not ported yet), K85
+  (collinear: Excel gives 0, KERNEL 5 gives -1.6E-16), and gen-m9 8fec7b207f4dd753 A94.
+
+Next step I would take: keep KERNEL 5's slopes, but take the intercept and the TREND/GROWTH prediction from the exact
+means: b0 = ym - Σ b_j·xm_j, and predictions ym + Σ b_j·(x_j - xm_j) or b0 + Σ b_j·x_j. Score those forms first on the
+15 regression-trend cells above and on O2 in Python, then run Gate A. Then port the stats rows to R (se from R^-1, ss_resid from the
+residuals of the same solve), turn the scaffold into the fitlab `regression` kernel the acceptance criteria ask
+for, and record the candidate table in statistics.md.

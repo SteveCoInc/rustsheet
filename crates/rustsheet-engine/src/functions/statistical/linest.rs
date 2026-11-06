@@ -103,6 +103,85 @@ fn invert_matrix(a: &[Vec<f64>]) -> Option<Vec<Vec<f64>>> {
     Some((0..k).map(|i| m[i][k..].to_vec()).collect())
 }
 
+pub(super) const KERNEL: u8 = 8;
+
+fn mean(v: &[f64]) -> f64 {
+    v.iter().sum::<f64>() / v.len() as f64
+}
+
+/// Householder QR least squares on the columns `cols` (each of length n); `None` when a
+/// diagonal of R is zero. `applied_diag`: R's diagonal is the reflected column's entry rather
+/// than -sign·norm.
+fn householder(cols: &[Vec<f64>], y: &[f64], applied_diag: bool) -> Option<Vec<f64>> {
+    let k = cols.len();
+    let n = y.len();
+    let mut a: Vec<Vec<f64>> = cols.to_vec();
+    let mut b = y.to_vec();
+    let mut diag = vec![0.0; k];
+    for j in 0..k {
+        let norm = (j..n).map(|i| a[j][i] * a[j][i]).sum::<f64>().sqrt();
+        if norm == 0.0 {
+            return None;
+        }
+        let alpha = if a[j][j] >= 0.0 { -norm } else { norm };
+        let mut v = vec![0.0; n];
+        v[j] = a[j][j] - alpha;
+        for i in j + 1..n {
+            v[i] = a[j][i];
+        }
+        let vv: f64 = (j..n).map(|i| v[i] * v[i]).sum();
+        if vv == 0.0 {
+            diag[j] = a[j][j];
+            continue;
+        }
+        for col in a.iter_mut().skip(j) {
+            let f = 2.0 * (j..n).map(|i| v[i] * col[i]).sum::<f64>() / vv;
+            for i in j..n {
+                col[i] -= f * v[i];
+            }
+        }
+        diag[j] = if applied_diag { a[j][j] } else { alpha };
+        let f = 2.0 * (j..n).map(|i| v[i] * b[i]).sum::<f64>() / vv;
+        for i in j..n {
+            b[i] -= f * v[i];
+        }
+    }
+    let mut beta = vec![0.0; k];
+    for j in (0..k).rev() {
+        let mut s = b[j];
+        for c in j + 1..k {
+            s -= a[c][j] * beta[c];
+        }
+        if diag[j] == 0.0 {
+            return None;
+        }
+        beta[j] = s / diag[j];
+    }
+    Some(beta)
+}
+
+fn fit_kernel(y: &[f64], x: &[Vec<f64>], p: usize, const_term: bool) -> Option<Vec<f64>> {
+    let n = y.len();
+    let cols: Vec<Vec<f64>> = (0..p).map(|j| x.iter().map(|r| r[j]).collect()).collect();
+    if !const_term {
+        return householder(&cols, y, KERNEL == 6);
+    }
+    if KERNEL == 8 && p == 0 {
+        return Some(vec![mean(y)]);
+    }
+    let xm: Vec<f64> = cols.iter().map(|c| mean(c)).collect();
+    let mut all = vec![vec![1.0; n]];
+    all.extend(cols.iter().zip(&xm).map(|(c, m)| c.iter().map(|v| v - m).collect::<Vec<f64>>()));
+    let b = householder(&all, y, KERNEL != 7)?;
+    let mut intercept = b[0];
+    for (bj, mj) in b[1..].iter().zip(&xm) {
+        intercept -= bj * mj;
+    }
+    let mut out = vec![intercept];
+    out.extend(&b[1..]);
+    Some(out)
+}
+
 // ─── Regression core ─────────────────────────────────────────────────────────
 
 /// Result of the core linear regression.
@@ -195,7 +274,10 @@ fn regress(
     }
 
     // Solve (D'D) β = D'Y
-    let beta = solve_system(&dtd, &dty)?;
+    let beta = match KERNEL {
+        0 => solve_system(&dtd, &dty)?,
+        _ => fit_kernel(y, x, p, const_term)?,
+    };
     // beta[0] = β_0 (intercept if const), beta[1..] = β_1..β_p
 
     // Excel output order: reverse x coefficients, intercept last.
