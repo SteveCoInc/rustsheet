@@ -65,7 +65,7 @@ PRODUCT and COUNT over the accumulator give Excel's results. The rules are probe
 - BYROW/BYCOL/MAP slices (already references, T-1395, T-1442). PIVOTBY subtotal work (T-4388, T-4401, T-4414,
   T-4428), function arrays (T-4449) and eta names (T-4450) are unrelated.
 
-## Landing notes
+## Landing notes (resumed 2026-11-06 18:05 UTC)
 State at the session's landing window (2026-11-06 07:10 UTC): branch `agent/functions-logic/T-4475-scan-reduce-reference-initial`,
 no PR yet, no engine change yet. The commit after the claim adds probes/t4475-scan-reduce-reference-initial with oracle values
 (excel-graph, 2026-11-06, 64 cells); 33 pass on main, 31 do not. The task's first acceptance criterion is met. What Excel showed
