@@ -46,11 +46,13 @@ the mechanism (not one threshold per shape), and the numbers just above each cut
   rule to BETA.DIST.
 
 ## Acceptance criteria
-- [ ] Every cell of probes/t4254-beta-t-l140-zero-cut and probes/t4254-beta-t-zero-wide named above matches Excel's 0 or
-      number (the 9th-digit cells may stay within the family's digits bar).
-- [ ] The cut at n = 3 bup terms and the t's cut are bracketed by a further probe to about 1 nat and modelled as a
-      mechanism (decision 0188 R4 guards if anything is chosen by scoring), recorded in statistics.md.
-- [ ] `make check` green; reviewers approve.
+- [x] Every BETA.DIST cell of probes/t4254-beta-t-l140-zero-cut and probes/t4254-beta-t-zero-wide named above matches
+      Excel's 0 or number (the 9th-digit cells stay within the family's digits bar). The t's cells (E1:E11, F1:F11,
+      F30) and n = 2 moved to T-4564 (amended at review).
+- [x] The cut at n >= 3 bup terms is bracketed (0.5 nats, then 0.05 nats in the second fresh sweep) and modelled as
+      a mechanism with the R4 guards, recorded in statistics.md. The t's cut is bracketed to 0.5 nats, unmodelled,
+      and moved to T-4564 (amended at review).
+- [x] `make check` green; reviewers approve.
 
 - T-4456 applied T-4045's rule to the worksheet BETA.DIST (the rule's cells A12:A22 and C12:C22 above now pass). What
   is left here is the earlier cut at few bup terms and the t's cut. T-4456's probes add evidence for both
@@ -86,14 +88,25 @@ it.
 - **Gate A envelope (R2) on the second sweep:** 176 of 176 in-domain cells inside (zeros exact; numbers within 1e-9
   relative of 50-digit mpmath, `t4437-beta-zero-fresh2.math.json`). Outside: only the out-of-domain J17:J22
   (Excel's n = 2 zeros, ours the math's number; T-4564).
-- **Hold-out (R4.1), manual split:** the in-domain (n >= 3) L140 BETA.DIST cells of the six evidence cases
-  (t4437-beta-t-zero-bracket, t4437-beta-zero-fresh, t4254-beta-t-l140-zero-cut, t4254-beta-t-zero-wide,
-  t4456-beta-t-zero-cut, t4456-beta-t-zero-reach), hold-out = first byte of sha256("case!cell") mod 10 < 3, margin
-  10 points. Rule (bit-exact / 4 ulp / 15 digits): train 216 / 233 / 241 of 403 (53.6% exact), hold-out 91 / 100 /
-  102 of 152 (59.9%); correctly rounded math: train 0 / 1 / 6, hold-out 0 / 1 / 2. The rule beats the math on the
-  hold-out and its hold-out rate is within the margin. Caveat: the split was fixed after these cells had shaped
-  the rule, so the second fresh sweep is the guard that carries weight. The non-exact cells are T-4564's
-  9th-digit numbers near the edge, not 0-versus-number errors.
+- **Gate A batch (R4.2):** `eval/accuracy/tables/BETA.DIST/r4-T-4437` (196 points, default strata, drawn and
+  filled after both freezes): 192 in the envelope; the 4 outside (A185, A189, A192, A194) are tiny-shape points
+  (shapes 1E-159 to 1E-294) far from L140, where the engine is 0 and Excel matches the math, filed under T-3577's
+  existing tiny-shape lines in known-failures.tsv. No point of the batch lands near the L140 edge, so it shows the
+  predicate does no harm elsewhere; the second probes sweep is what tests the edge. `rustsheet-eval accuracy`:
+  40,742 points, 0 failing.
+- **Hold-out (R4.1), the fit lab's split** (`rustsheet_tools.fitlab.holdout.is_holdout`, salt
+  `rustsheet-fitlab-holdout/v1`, 300 per mille, default margin 5 points) over the n >= 3 L140 BETA.DIST cells of the
+  six evidence cases (t4437-beta-t-zero-bracket, t4437-beta-zero-fresh, t4254-beta-t-l140-zero-cut,
+  t4254-beta-t-zero-wide, t4456-beta-t-zero-cut, t4456-beta-t-zero-reach): 422 train, 133 test.
+  - Bit-exact / 4 ulp / 15 digits, rule: train 244 / 263 / 270 (57.8% exact), test 63 / 70 / 73 (47.4%);
+    correctly rounded: train 0 / 2 / 8, test 0 / 0 / 0. The rule beats the correctly rounded candidate on test,
+    but its test exact rate is 10.4 points below train, **outside the 5-point margin**.
+  - The drop is the mix of cells, not the rule: the rule's 0-or-number class is right on 422 of 422 train and 133
+    of 133 test cells. Its zeros are exact on both sides (201 of 201, 53 of 53). The non-exact cells are all numbers,
+    where the rule does not fire and the value is the unchanged L140 kernel's 8th-9th digit (T-4564): 43 of 221
+    exact on train, 10 of 80 on test, and test happens to hold more numbers (60% against 52%).
+  - The split was not fixed before these cells shaped the rule (they are the fit's own evidence); the second fresh
+    sweep, filled after a pushed freeze, is the guard that carries weight.
 - No `FITTED` tag: 2^-970 is DBL_MIN / DBL_EPSILON, a structural constant, and the cut was not tuned (no keep-matched
   branch). Reproducibility floor: the rule decides 0 against a number, far above 4 ulp.
 - **Named cells:** t4254-beta-t-l140-zero-cut B1:B11 and D1:D11, and t4254-beta-t-zero-wide A30, B30 and C30, are

@@ -4874,7 +4874,8 @@ within 1E-15 relative / largest relative error:
     first 0 are at -687 / -687.5 at df 1E7, -692 / -692.5 at 1E6 and -696.5 / -697 at 1E5 (numbers down to
     3.3E-303). At those cuts ln x^a is -683, -688 and -692.5, so it is not x^a reaching DBL_MIN. Unmodelled (T-4564).
   - Ours: BETA.DIST's worksheet cdf asks `bup.rs` `l140_bup_sum_flushed` at n >= 3 (`bratio::beta_dist_cdf`), as
-    well as T-4045's rule. F's tails and the quantile searches do not ask it. The numbers within a few nats of the
+    well as T-4045's rule. BETADIST shares that cdf, so it takes the rule too; every cell above is BETA.DIST, and
+    BETADIST's edge rests on the shared kernel (as T-3764's), not on its own probe. F's tails and the quantile searches do not ask it. The numbers within a few nats of the
     edge differ from Excel in the 8th or 9th digit (owned by T-4564).
   - More shapes (T-4456, probes/t4456-beta-t-zero-cut, 130 cells, and probes/t4456-beta-t-zero-reach, 81 cells,
     excel-graph, 2026-11-06):
