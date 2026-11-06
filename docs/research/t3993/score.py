@@ -8,7 +8,8 @@ Every composite cell of probes and probes-numeric that the composite reader read
 - (b) the outer node's math at the doubles its inner nodes round to.
 For each, the script counts the cells where Excel's value (the oracle sidecar) and the engine's
 (`rustsheet-eval show --all`) are within 1e-9 relative of it, and both (R1(c)'s Phase 1b evidence),
-over all numeric cells and over the cells task T-3993 names. No candidate is fitted: the counts
+over all numeric cells and over the cells task T-3993 names. The per-cell rows go to
+eval/runs/t3993/cells.tsv (git-ignored), not next to this script. No candidate is fitted: the counts
 decide between two structural definitions, and both are written out in full.
 """
 
@@ -105,7 +106,10 @@ def main() -> None:
     with ProcessPoolExecutor() as pool:
         rows = [r for found in pool.map(score_case, cases()) for r in found]
     rows.sort()
-    with (Path(__file__).parent / "cells.tsv").open("w") as out:
+    # eval/runs/ is git-ignored: the per-cell rows are a run's output, not research to commit (T-4432).
+    out_dir = ROOT / "eval/runs/t3993"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with (out_dir / "cells.tsv").open("w") as out:
         out.write("case\tcell\texcel\tengine\tmath_a\tmath_b\n")
         for row in rows:
             out.write("\t".join(str(v) for v in row) + "\n")
