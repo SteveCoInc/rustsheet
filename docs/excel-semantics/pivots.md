@@ -812,12 +812,32 @@ Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`MAX_PIVOT_CELLS`, `location`; T-4147)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`MAX_PIVOT_TEXT_BYTES`; T-4149)
 
-## Pivots without refreshOnLoad, and source edits
-Rule: unknown. Two things are unprobed: whether Excel for the web re-renders a pivot whose cache lacks
-`refreshOnLoad` when it opens the file (saved cells or `rowItems` stale or absent), and whether it
-re-renders a pivot after its source is edited with no refresh.
-Evidence: none. Every rendered probe so far is `refreshOnLoad` (case builder v2).
-Status: UNVERIFIED (probe pending: T-4586)
+## Pivots without refreshOnLoad keep their saved cells; a source edit does not re-render
+Rule: Excel for the web does not re-render a pivot whose cache lacks `refreshOnLoad` when it opens the
+file. It keeps the cells the file saved in the pivot's area and saves the definition back as it found it
+(`location`, `rowItems`/`colItems`, cache), even when they disagree with the cache or are absent. Nor
+does it re-render a pivot after its source is edited with no refresh: the area keeps the render it had.
+Evidence: probes/t4586-pivot-refresh-on-load (excel-graph, 2026-11-06, T-4586), over Data East `=10`
+(cached as missing), West 20, East 5, so the saved cells (East 99, Grand Total 99, no West), a render from
+the cache (East 5, West 20, total 25) and a refresh (East 15, West 20, total 35; Q!B4 sums the
+source to 35) all differ:
+- (a) sheet A, `refreshOnLoad` off, location A3:B5, saved cells and `rowItems` listing East and the
+  grand total only: A4:B5 stay East 99, Grand Total 99 (Q!A1:D1; A6:B6 stay empty, Q!E1:F1 read 0). The saved
+  `rowItems`, `colItems`, location and the cache's flags (`containsBlank`) come back unchanged.
+- (b) sheet B, the same with no `rowItems` or `colItems`: the same saved cells (Q!A2:F2), and Excel saves
+  the pivot with no row or column lines (the snapshot does not tell an absent `<rowItems>` from an
+  empty one). Absent layout lines do not make it render.
+- (c) sheet C, a `refreshOnLoad` pivot over Src, whose B2 is blank in the file: Excel renders East 5,
+  West 20, Grand Total 25 on open. The oracle then writes Src!B2 = 100 through a Graph range write
+  (`entered`) and runs a FullRebuild calculate, with no pivot refresh: Q!A4 reads 100, and the pivot
+  still shows East 5 and total 25 (Q!A3:F3 and the sidecar's area). A refresh would show 105 and 125.
+
+Consequences: an engine loads such a pivot's area as the plain cells the file holds and builds nothing
+for it until a refresh; a calculate, including a full rebuild, is not a refresh. Not probed: Auto Refresh
+(the x14/x15 refresh-on-change flags, T-4182), a source edit on a pivot without `refreshOnLoad`, and
+desktop Excel (M14). In (c) the range write is the session's first call, so it lands after the load's
+refresh: East 5 shows that refresh read the blank B2.
+Status: VERIFIED (excel-graph)
 
 ## Pivot field names for duplicate and blank source headers
 Rule: on refresh Excel names each cache field after its source header, made unique ignoring case:

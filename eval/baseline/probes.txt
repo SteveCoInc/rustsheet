@@ -2507,6 +2507,7 @@ C	probes/t4578-prob-sum-tolerance.case.json	24
 C	probes/t4582-pivot-item-edges.case.json	45
 C	probes/t4583-pivot-row-labels.case.json	204
 C	probes/t4585-pivot-field-names.case.json	13
+C	probes/t4586-pivot-refresh-on-load.case.json	41
 C	probes/t4587-api-name-sheet-order-case.case.json	4
 C	probes/t4587-sheet-api-name-inactive-sheet.case.json	8
 C	probes/t4587-sheet-api-name-name-body.case.json	4
@@ -2516,6 +2517,7 @@ C	probes/t4589-pivot-total-order.case.json	95
 C	probes/t4595-literal-after-point.case.json	12
 C	probes/t4596-take-drop-picker-name-index-choose.case.json	28
 C	probes/t4600-holiday-number-text-off-calendar.case.json	176
+C	probes/t4602-clock-text-colon-am-pm-and-spaces.case.json	95
 C	probes/t4609-pivot-row-labels-2.case.json	298
 C	probes/t4610-row-column-array-error-element.case.json	13
 C	probes/t4611-randarray-min-max-whole-arrays.case.json	13
@@ -2523,6 +2525,7 @@ C	probes/t4612-pivot-date-items-and-casing.case.json	66
 C	probes/t4614-pivot-total-order-2.case.json	124
 C	probes/t4615-convert-prefixed-kelvin.case.json	346
 C	probes/t4616-pivot-total-order-3.case.json	528
+C	probes/t4619-weeknum-negative-snap-window.case.json	12
 C	probes/t4621-api-sheet-name-body-first.case.json	19
 C	probes/t4621-api-sheet-name-body-last.case.json	19
 C	probes/t4621-api-sheet-name-body.case.json	19
@@ -10296,6 +10299,20 @@ F	probes/t4585-pivot-field-names.case.json	N1!B3
 F	probes/t4585-pivot-field-names.case.json	N1!B4
 F	probes/t4585-pivot-field-names.case.json	N1!B5
 F	probes/t4585-pivot-field-names.case.json	N1!B6
+F	probes/t4586-pivot-refresh-on-load.case.json	C!A3
+F	probes/t4586-pivot-refresh-on-load.case.json	C!A4
+F	probes/t4586-pivot-refresh-on-load.case.json	C!A5
+F	probes/t4586-pivot-refresh-on-load.case.json	C!A6
+F	probes/t4586-pivot-refresh-on-load.case.json	C!B3
+F	probes/t4586-pivot-refresh-on-load.case.json	C!B4
+F	probes/t4586-pivot-refresh-on-load.case.json	C!B5
+F	probes/t4586-pivot-refresh-on-load.case.json	C!B6
+F	probes/t4586-pivot-refresh-on-load.case.json	Q!A3
+F	probes/t4586-pivot-refresh-on-load.case.json	Q!B3
+F	probes/t4586-pivot-refresh-on-load.case.json	Q!C3
+F	probes/t4586-pivot-refresh-on-load.case.json	Q!D3
+F	probes/t4586-pivot-refresh-on-load.case.json	Q!E3
+F	probes/t4586-pivot-refresh-on-load.case.json	Q!F3
 F	probes/t4589-pivot-total-order.case.json	E1!A3
 F	probes/t4589-pivot-total-order.case.json	E1!A4
 F	probes/t4589-pivot-total-order.case.json	E1!A5

@@ -2951,13 +2951,16 @@ The engine rewrites such a reference on the delete (`delete_sheet_in_node`, stri
 reference to the internal sheet name `DELETED_SHEET` (`*#REF!`, which no real sheet can take), which the display
 and the xlsx export both print as `#REF!C4:C7` (the file text is inferred from Excel's en-US FORMULATEXT; no
 Excel-saved file was inspected); the undo puts the old text back through `TakenSheet`'s rewritten
-formulas. Workbook names lose the sheet the same way (probes/table-edits/t2612-delete-sheet-then-add-names,
+formulas. The xlsx loader refuses a workbook whose sheet name contains `*` (`XlsxError::Workbook`, `load_workbook`,
+T-4655): Excel cannot write one, so no Excel file is lost, and a crafted `*#REF!` sheet could otherwise capture
+references stored under `DELETED_SHEET`. Status: DEVIATION (decision 0014, directive 5: Excel's reaction to such a file
+is unknown, and the sentinel must not collide). Workbook names lose the sheet the same way (probes/table-edits/t2612-delete-sheet-then-add-names,
 excel-graph 2026-11-06): with nm = `S!$C$4` and rng = `S!$C$4:$C$7`, `=nm` and `=SUM(rng)` stay `#REF!` after the new S
 is added and `ISREF(nm)` is FALSE; the engine stores such a name as `#REF!$C$4`. The `#REF!` display also covers a sheet that never existed (a loaded `Nope!A1`), an engine choice with
 no evidence; its stored text and export keep the name. The adapter's delete_table clears the whole table range (header, text and Qty columns: COUNTA 0 each)
 and keeps the rows in place: `S!C9` still 99 and `SUM(S!C9:C10)` still 104 with unshifted text
 (T-2341, table-delete-table-cells, excel-graph 2026-10-22).
-Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734, T-3629, T-4020, T-4021, T-2612
+Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734, T-3629, T-4020, T-4021, T-2612, T-4655
 
 ## Calculated columns: a formula typed into a table column
 Rule (excel-graph `entered` cells, typed one at a time in the case's order, 2026-10-27, T-2957; table `T` A1:C4,

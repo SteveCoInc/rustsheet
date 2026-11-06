@@ -88,6 +88,14 @@ pub(super) fn load_workbook<R: Read + std::io::Seek>(
         .collect();
     for sheet in sheet_nodes {
         let name = get_attribute(sheet, "name")?.to_string();
+        // The engine stores a reference to a deleted sheet under the sheet name `*#REF!`
+        // (`DELETED_SHEET`, T-2612). Excel refuses `*` in a sheet name, so no Excel file holds
+        // one; refusing it here keeps a crafted file from capturing those references (T-4655).
+        if name.contains('*') {
+            return Err(XlsxError::Workbook(format!(
+                "sheet name \"{name}\" contains \"*\", which Excel does not allow"
+            )));
+        }
         let sheet_id = get_attribute(sheet, "sheetId")?.to_string();
         let sheet_id = sheet_id.parse::<u32>()?;
         let id = sheet
