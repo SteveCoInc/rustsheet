@@ -4673,6 +4673,36 @@ is `#NUM!`, 21 of them with 42 to 150 flows; a 100-step cap recovers 12 of the 3
 of the 21 long ones (T-3548).
 Tasks: T-3406, T-3411 (the model), T-3407 (`#DIV/0!`), T-3347, T-3548
 
+## IRR on level annuities where the secant fails: the type cut ignores the flows' scale and guesses 0 to 0.3
+Rule (partial; the mechanism is still unknown): on the level annuities `IRR({-P,1,...,1})` where the secant from 0.1
+fails, Excel's number-or-`#NUM!` cut depends on the root and n only. Multiplying every flow by 2, 1000 or 0.001 moves
+no cell's type, and neither does a guess of 0 or 0.3. probes/t4027-irr-annuity-scale-guess (excel-graph, 2026-11-06;
+T-4027):
+- The cuts, refined from t3406's 0.02 grid to 0.01: n = 20 returns down to r = -0.23 (A4) and is `#NUM!` from -0.24
+  (A5, A6). n = 40 returns down to -0.15 (A51) and is `#NUM!` from -0.16 (A52, A53).
+- Scale (A1-A24, A54-A58): the type is the same at x1, x2, x1000 and x0.001. So no absolute tolerance on NPV decides
+  it, unlike the fallback's 1E-4 residual cut ("IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more"), which
+  Excel follows across scales on other series. The digits at x2 are bit-identical to x1. At x1000 and x0.001 some move
+  in the last digits (A14, A16, A19, A20). A16 (x1000, root -0.23) is bit for bit the converged secant from guess -0.2
+  (A40), not the x1 value (A4).
+- Guess (A25-A48, A59-A68): guesses 0 and 0.3 give bit for bit the default guess's value or `#NUM!` on every n = 20
+  cell, and guess 0 does the same at n = 40. This is consistent with a failed run being retried from 0.1 and then
+  handed to a stage that does not see the guess. Guess -0.1 returns at -0.23 and -0.24 (A34, A35), but not at -0.25. Its
+  digits there differ from the default's (A34 -0.22999993443769884, A4 -0.22999993443767364). Guess -0.2 (n = 20) and
+  -0.15 (n = 40) return everywhere: the engine's secant converges there, and its digits match Excel's bit for bit.
+- Refuted on these cells: a secant restart from any one fixed guess. Over the guesses -0.6 to 0.7 in steps of 0.005,
+  the engine's secant never gives Excel's digits on A1, A2, A4 or A49. Also refuted: any cap on the engine's secant
+  from 50 to 100000 steps (t4027 type mismatches 35 to 33, t3406 54 to 48), and any fallback cap of 100 to 100000 with
+  the secant capped at 50 or 200. Uncapping the fallback fixes A1-A4 but also returns the -0.24 and -0.25 cells, where
+  Excel is `#NUM!`, as on t3406.
+Evidence: probes/t4027-irr-annuity-scale-guess (inputs and 50-digit roots in its `.roots.tsv`,
+docs/research/t4027_irr_annuity_probe.py; the engine's predictions before the fill in docs/research/t4027/predictions.md).
+The guess sweep and the caps were run on a scratch build of the engine (not committed).
+Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
+Ours: `#NUM!` on 35 of the 68 cells, all where Excel returns the root (A1-A4, A7-A10, A13-A16, A19-A22, A25-A28, A34,
+A35, A43-A46, A49-A51, A54-A56, A59-A61); every returned value matches.
+Tasks: T-4027
+
 ## IRR's secant runs longer than 50 steps, but no step cap is Excel's rule
 Rule: unknown. Excel's IRR secant (from the guess, then the retry from 0.1) finishes runs longer than the engine's
 50-step cap, but no single cap on the run separates Excel's returns from its errors, so the cap is not the mechanism

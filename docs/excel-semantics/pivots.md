@@ -47,15 +47,37 @@ Status: the refusal is a builder observation (T-4122 runs), not committable as a
 nothing for a file it refuses
 
 ## Which function the countA and count custom subtotals compute
-Rule (hypothesis, ECMA-376's reading): a pivot field's `countASubtotal` (subtotal line `item t="countA"`) counts every
-value (COUNTA, the data-field `count`) and `countSubtotal` (`t="count"`) counts numbers only (Count Numbers, the
-data-field `countNums`).
-Evidence: probes/t4137-pivot-captions K5 writes `countSubtotal="1"` with `<item t="count"/>`, and Excel labels the line
-`East Count` (K5!A8) and counts 4 records; its Sales field holds only numbers, so it cannot tell COUNTA from COUNT,
-and the `Count` label fits either. Probe pending: T-4622.
-Status: UNVERIFIED (probe pending, T-4622)
-Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`SUBTOTAL_FUNCTIONS`; the model only, nothing
-computes a custom subtotal yet)
+Rule: a pivot field's `countASubtotal` (subtotal line `item t="countA"`) is COUNTA: it counts every
+non-blank value, text, booleans and errors included (the data-field `count`; but see Errors below). `countSubtotal` (`t="count"`)
+counts numbers only (Count Numbers, the data-field `countNums`); text and booleans are not numbers. Both
+lines are labelled `<item> Count`, so with both on, two lines read `East Count`; the line's place
+(the `<items>` order, `countA` first in B1) is the only visible tell; the file's `rowItems` carry
+`t="countA"` and `t="count"`. The subtotal function overrides the data field's
+aggregate: under Sum of Val the lines are counts, not sums, and stay numbers while the Sum cells and the
+Grand Total show `#N/A`.
+Errors, as observed (one outer field with the subtotals, one inner row field, one `#N/A`): under a Sum
+data field, the error ends the count within its inner-item cell. In record order, countA counts the error
+and nothing after it, and count counts the numbers before it. Other cells count in full. Under a Count
+data field the error ends nothing. The scope of this rule is open: T-4636.
+Evidence: probes/t4622-pivot-count-subtotals (excel-graph, 2026-11-06, T-4622). Rows Region (custom
+subtotals only) and Product, tabular. East holds five records, A: 10, `abc`; B: a blank, `#N/A`, 5. West
+holds 7 (A) and `x`, TRUE, 3 (B).
+- **countA alone, Sum of Val (CA):** `East Count` 3 (A6, C6), `West Count` 4 (A9, C9).
+- **count alone (CN):** `East Count` 1 (C6), `West Count` 2 (C9).
+- **Both (B1):** C6:C7 are 3 and 1, C10:C11 4 and 2, and A6, A7, A10 and A11 all read `East Count` or
+  `West Count`.
+- **Both, no error (B2, Clean, with the `#N/A` replaced by 2):** East is 4 and 3 (C6:C7), West 4 and 2.
+  This is COUNTA and COUNT exactly: the blank is skipped, and `TRUE` counts for countA only.
+- **Both, Count of Val (B3):** East is 4 and 2 (C6:C7). The error counts for countA and nothing is cut.
+- **Error first (B4, East A: `#N/A`, 10; East B: `abc`, a blank, 5):** East is 3 and 1. A counts the
+  error only, and B counts in full (2 and 1). Record order across the whole item would give 1 and 0.
+- **Error last (B5, East B: a blank, 5, `#N/A`):** East is 4 and 2.
+- probes/t4137-pivot-captions K5 (all numbers): `East Count` counts 4.
+
+Status: VERIFIED (excel-graph) for the functions and the labels. The error rule is as observed
+(UNVERIFIED beyond the shape probed: T-4636).
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`SUBTOTAL_FUNCTIONS`; the model only,
+nothing computes or labels a custom subtotal yet, T-4168)
 
 ## Item identity: exact for numbers and types, case-insensitive for text
 Rule: on refresh, texts that differ only in case are one item, and their records add up. In I1 the item
@@ -252,7 +274,9 @@ Rule:
 - Page fields show `(All)` with no selection, the item with one (`A`), and `(Multiple Items)` when
   several items stay visible (K4!B2:B4).
 - Custom subtotal functions label each subtotal line `<item> <Function>`: `East Sum`, `East Count`
-  (K5!A7:A8), with Count counting records (4).
+  (K5!A7:A8), with Count counting records (4). `countA` is labelled `Count` too
+  (probes/t4622-pivot-count-subtotals CA!A6; see "Which function the countA and count custom
+  subtotals compute").
 - With a single data field and no column field (tabular, K5) there is no Values row. `Row Labels` is
   at the location's corner (K5!A3), the inner row field's name beside it (B3 `Product`), and the data
   field's caption above the data column (C3 `Sum of Sales`). With a column field the corner holds the

@@ -67,8 +67,10 @@ const ROOT_TYPED: [&str; 20] = [
 
 /// The custom subtotal functions by their `ST_ItemType` names: an `<item t>` names its subtotal
 /// line so, and a `<pivotField>` asks for it with `<name>Subtotal="1"`. In the schema's order.
-/// `countA` is COUNTA and `count` Count Numbers, as ECMA-376 reads them; unproven for Excel
-/// (`ItemType::Function`, T-4622).
+/// `countA` is COUNTA and `count` Count Numbers, as ECMA-376 reads them and Excel computes them;
+/// Excel labels both lines `<item> Count` (`ItemType::Function`). Excel: see
+/// docs/excel-semantics/pivots.md "Which function the countA and count custom subtotals compute"
+/// (probes/t4622-pivot-count-subtotals).
 const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = [
     ("sum", Aggregate::Sum),
     ("countA", Aggregate::Count),

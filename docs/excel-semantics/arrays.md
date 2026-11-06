@@ -927,9 +927,8 @@ gen-m9/c2684066d8df263e Calc!A214), while a spilled blank element still displays
 element as 0, as they read a blank cell of a multi-cell range: `TEXTJOIN("|",FALSE,IFERROR(GROUPBY(..),"#"))` shows the blank
 key as "0" (probes/groupby-sort-filter-args G!B15, B55, groupby-sort-filter-args2 G!B10; `if_error_like`, logical/mod.rs).
 IF passes a blank element through as a blank: `TTEST(..,IF(TRUE,PIVOTBY(..)),1,2)` equals the TTEST without the IF
-(probes/pivotby-ttest-array2 P!A41, P!A31). Whether IFERROR reads blanks of other arrays (FILTER, INDEX lifted over blank
-cells, VSTACK) as 0, and what N and arithmetic do with a blank element, is unprobed (T-2999); ours reads every array's
-blank as 0 in IFERROR and IFNA.
+(probes/pivotby-ttest-array2 P!A41, P!A31). Blanks of other arrays (FILTER, INDEX, VSTACK), N and arithmetic: see "IFERROR, IFNA, N and
+arithmetic over blank array elements (T-2999)".
 T-2592 (probes/t2592-nested-groupby-cells, excel-graph, 2026-10-24; `GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v))` is 3x3: keys a, b, Total by
 key, C, D; group a `{1;2}`/`{10;20}`, b `{3;4}`/`{30;40}`, Total 4x1; the shown headers are off). Nested cells in practice:
 - A LAMBDA whose body is a one-cell reference (`LAMBDA(x,D!D2)`) still displays `#VALUE!` in every spilled cell (probes/groupby-lambda-forms
@@ -1500,7 +1499,8 @@ probes/eta-reduced-names E93; probes/t2475-stat-subexpressions (excel-graph, 202
 probes/t2622-take-let-reference-lambda-text Q1-Q10 (excel-graph, 2026-10-29, T-2622).
 Ours: `value_extent` (cast.rs), `is_predicate` and `parity_of` (information/mod.rs), `index_select` (index.rs) since T-1511; `&` of
 one is `#VALUE!` in `handle_concatenate` (arithmetic.rs) since T-2622. CONCATENATE, CONCAT and TEXTJOIN of one are unprobed.
-INDEX of a LAMBDA with an index of 2 is `#REF!` there, as for a scalar, which is unprobed (T-1946).
+INDEX of a LAMBDA with an index of 2 is `#REF!` there, as for a scalar (probes/map-later-array-error-blank A17; see "MAP over
+single values").
 Status: VERIFIED (excel-graph)
 Tasks: T-1511, T-2622
 
@@ -1695,9 +1695,50 @@ arrays and every element counts: `BYCOL(IFERROR(A1:B3,1),LAMBDA(c,COUNTA(c)))` i
 Evidence: probes/lambda-helper-range-slices (excel-graph, 2026-10-12, T-1395).
 Ours: BYROW and BYCOL pass references since T-1395 (`by_slices_source`, bycol_byrow.rs); a range keeps its full size
 (a whole column gives 1,048,576 calls and full-column slices) under the 2^20-cell array bound of "Array results above
-1,048,576 cells". MAP, SCAN and REDUCE pass each cell of a one-sheet range as a one-cell reference too (`lambda_cells`, T-1442); a reference the LAMBDA returns is read when it becomes a MAP or SCAN output cell, while a REDUCE or SCAN accumulator stays as returned (what Excel does with `ISREF(a)` on an accumulator is unprobed); the bare COUNTA of E32 is `#VALUE!` since T-1466 (a bare name read from a file is unknown, and BYROW and BYCOL refuse anything but a LAMBDA; see "Functions passed by name").
+1,048,576 cells". MAP, SCAN and REDUCE pass each cell of a one-sheet range as a one-cell reference too (`lambda_cells`, T-1442); a reference the LAMBDA returns is read when it becomes a MAP or SCAN output cell, and a REDUCE accumulator stays a reference while a SCAN accumulator is read ("REDUCE keeps a returned reference", T-4478); the bare COUNTA of E32 is `#VALUE!` since T-1466 (a bare name read from a file is unknown, and BYROW and BYCOL refuse anything but a LAMBDA; see "Functions passed by name").
 Status: VERIFIED (excel-graph)
 Tasks: T-1395, T-1442
+
+## REDUCE keeps a returned reference; SCAN reads it
+Rule: a reference a REDUCE LAMBDA returns stays a reference. The next step's accumulator `a` is that reference, and
+so is REDUCE's result:
+- `REDUCE(A1,A2:A3,LAMBDA(a,v,IF(ISREF(a),v,"no")))` is 3: step 2's `a` is the A2 step 1 returned (Calc!H2).
+- `ISREF(REDUCE(A1,A2:A3,LAMBDA(a,v,v)))` is TRUE. So is ISREF of `OFFSET(a,1,0)` on the accumulator, of a REDUCE
+  with an empty initial argument (`REDUCE(,A1:A3,...)`), and of `p_a:p_v` built across steps (Calc!E2, E3, E8, E11, E20).
+- `SUM(REDUCE(A1,A2:A3,LAMBDA(p_a,p_v,p_a:p_v)))` is 6 (Calc!H21).
+- A bare `=REDUCE(A1,A2:A3,LAMBDA(p_a,p_v,p_a:p_v))` spills A1:A3's values (Calc!P1:P3).
+
+SCAN reads the reference before the next step, so its accumulator is a value from the second step on:
+- `SCAN(A1,A2:A4,LAMBDA(a,v,IF(ISREF(a),v,0)))` is `{2;0;0}` (Calc!H13).
+- `SCAN(A1,A2:A3,LAMBDA(p_a,p_v,ROWS(p_a:p_v)))` is `{2;#VALUE!}` (Calc!H24).
+- A multi-cell output is `#CALC!`, as in "map-scan-range-result" (Calc!G25, H25).
+
+The initial value is the first step's `a`. A cell or range stays a reference (T-2307), and so does a union
+(`REDUCE((A1,A3),{1},LAMBDA(a,v,ISREF(a)))` is TRUE, Calc!H17). A 3-D span is not: ISREF of it is FALSE, and
+returning it is `#VALUE!` (Calc!H18, G19, H19).
+
+Callers of a REDUCE that ends on a one-cell reference (probes/t4478-reduce-reference-in-callers, excel-graph
+2026-11-06, A3 = 5):
+- BYROW and BYCOL read it as a written reference is read, over an array as over a range:
+  `BYROW({1;2},LAMBDA(r,REDUCE(A1,r,LAMBDA(a,v,A3))))` is `{5;5}` (D1:D3, D5; written-reference control D4). So do
+  MAKEARRAY and MAP (D10, D11).
+- GROUPBY and PIVOTBY refuse it with `#CALC!`, as they refuse a written reference or one INDEX returns (D6, D9; controls
+  D8, D12; a REDUCE ending on a value, D7, aggregates).
+
+Inside the LAMBDA, `a:v` between two parameters is the range between their references, not the column range A:V:
+- `REDUCE(A1,A2:A3,LAMBDA(a,v,a:v))` is A1:A3 (Calc!F5, H5, J1:J3).
+- `(a,v)` is a union, and AREAS of the REDUCE is 3 (Calc!H7, H22).
+Evidence: probes/t4478-reduce-scan-reference-accumulator (excel-graph, 2026-11-06; predictions in docs/research/t4478),
+probes/t4478-reduce-reference-in-callers
+Status: VERIFIED (excel-graph)
+Ours: since T-4478, `fn_reduce` calls its LAMBDA with a reference-keeping caller, and ISREF evaluates a REDUCE in
+reference context. SCAN is unchanged (`lambda_result_value` reads each step). A 3-D initial value is `#VALUE!`. BYROW and BYCOL read a
+one-cell reference result on both their range and array paths (`by_slices_result`).
+Still off, owned by T-4494:
+- the parser reads `a:v` with parameter names as columns A:V (Calc!F5, H5, F6:H6, F9:H9, H14, G15, H15, J1:J3);
+- AREAS of a REDUCE call is `#ERROR!` (Calc!E7:H7, E16:H16, E22:H22);
+- a union initial value is read, not kept (Calc!H17).
+Tasks: T-4478, T-4494
 
 ## BYROW and BYCOL: a LAMBDA result that is an array
 Rule: if the LAMBDA returns a 1x1 array (`{7}`, `SEQUENCE(1)`, a one-element array slice) BYROW and BYCOL use its one
