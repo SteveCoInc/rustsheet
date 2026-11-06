@@ -2672,6 +2672,37 @@ So none of these is Excel's, and A1 and D1 are not evidence for a per-period for
 |nper·L| 1, "PMT is a discounted payment") in CUMPRINC's `1 - v^nper` moves none of the 168 cells and no gated cell
 (see T-3179's Outcome), so the evidence does not place a switch there and the kernel keeps `-expm1`.
 
+## CUMPRINC where `v^nper` underflows, at deep leading exponents (T-4059)
+Rule: where `1 - v^nper` is 1 in doubles, Excel's CUMPRINC over a short range (at most 32 periods) is T-3141's core
+`C = pv·((1-v^m)·v^(nper-end+1))` (type 1 `-C`, type 0 `-(C·(1+rate))`; "CUMIPMT and CUMPRINC over many periods") at
+every leading exponent `(nper-end+1)·L` probed. That is not only below 0.3, where the engine's geometric sum takes
+over (`GEOMETRIC_MIN_LEAD`), but out to 695. The geometric sum is an ulp or more off on 100 of the 170 points
+from 0.3 up.
+Evidence: accuracy/CUMPRINC/e-T-4059 and accuracy/CUMIPMT/e-T-4059. Each has 200 points from the aimed draw
+(`annuity_cumulative._underflowed`), filled from excel-graph on 2026-11-06:
+- rates 1E-4 to 2.9;
+- leading exponents 0.012 to 695;
+- m·L 0.003 to 4.8;
+- nper up to 9.3E14;
+- type 1 from period 2.
+
+T-3141's core at every leading exponent is to the bit on 199 of the 200 CUMPRINC principals and on all 200 CUMIPMT
+interests. Main's forms get 81 and 151. From a leading exponent of 0.3 up, the geometric sum gets 70 of 170
+CUMPRINC principals to the bit. An earlier aimed draw of 400 points, which this PR does not keep, gave the same split:
+the core matched 399, and its only miss is the CUMIPMT entry below.
+
+Open misses:
+- `CUMPRINC(0.273951989085243,2756,134494.948128047,9,9,1)` (e-T-4059 A119; lead 665, result -3.2E-285) is
+  -3.166759757937701E-285 in Excel. The core gives -3.1667597579380603E-285, 962 ulps away, and the math is
+  -3.1667597579377963E-285. Excel is 3.0E-14 off the math relative and the core 8.3E-14, so at a result this
+  deep Excel keeps digits that the core loses. Its form there is open.
+- From the earlier draw: `CUMIPMT(0.103414751928719,17312013078,200894.020467694,17312013077,17312013078,1)` (the
+  last two periods of a type 1 loan at 0.1034) is -5128.51360859488 in Excel. Ours is -5128.513608594883, 4 ulps
+  off with any principal form, so the miss sits in the `PMT·m` half of `PMT·m - CUMPRINC`. It is not kept as a
+  table point.
+Status: PARTLY VERIFIED (excel-graph, Gate A e-T-4059 batches; A119 and the CUMIPMT miss are open, T-4710)
+Tasks: T-4059, T-3141
+
 ## CUMIPMT and CUMPRINC work cap
 Rule: RustSheet charges each lifted CUMIPMT or CUMPRINC element for its kernel's bound, 2^8 units against SPEC-0011's
 2^27 visit cap, so one call lifts at most 524,288 elements: `ROWS(CUMPRINC(SEQUENCE(524289)*0+0.004,1024,1000,1,32,1))`

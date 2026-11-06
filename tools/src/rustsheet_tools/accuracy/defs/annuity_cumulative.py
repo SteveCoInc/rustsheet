@@ -219,8 +219,9 @@ def _large_rate(rng: random.Random) -> list[Arg]:
     return [r, n, _amount(rng), start, rng.randint(start, n), _type(rng)]
 
 
-# The aimed draw (`generate --stratum aimed`, batch r4-T-3141; T-4059): T-3141's core, a short range where
-# `1 - v^nper` is 1 in doubles. s1 does not draw it, so its points stay as committed.
+# The aimed draw (`generate --stratum aimed`, evidence batch e-T-4059; T-4059): T-3141's core, a short range where
+# `1 - v^nper` is 1 in doubles. s1 does not draw it, so its points stay as committed. The engine constants below are
+# copied as they stood when e-T-4059 was drawn: the draw must keep reproducing that batch, even after the engine moves.
 UNDERFLOWED_NPER_LOG = 40.0  # nper·L from which v^nper is below 2^-53 (from about 36.7), so 1 - v^nper is 1
 SHORT_PERIODS = 32  # the engine's CUMULATIVE_LOOP_PERIODS: a range of at most 32 periods is a short one
 GEOMETRIC_MIN_LEAD = 0.3  # the engine's cut between the core and the geometric sum (T-3067, T-3141)

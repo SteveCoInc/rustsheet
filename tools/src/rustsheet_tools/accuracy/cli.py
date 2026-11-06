@@ -3,7 +3,7 @@
   rustsheet-accuracy list                                  functions with a definition
   rustsheet-accuracy generate T.INV [--batch s1]           write a batch's case and math sidecar
   rustsheet-accuracy generate RATE --batch e-T-1234 --count 40 --stratum tail
-  rustsheet-accuracy generate CUMPRINC --batch r4-T-3141 --count 200 --stratum aimed
+  rustsheet-accuracy generate CUMPRINC --batch e-T-4059 --count 200 --stratum aimed
   rustsheet-accuracy verify T.INV                          recompute committed math at dps 80
   rustsheet-accuracy math --suite probes-numeric           math sidecars for an eval suite's cells
   rustsheet-accuracy math --check --suite probes            fail when a suite's sidecars are missing or stale

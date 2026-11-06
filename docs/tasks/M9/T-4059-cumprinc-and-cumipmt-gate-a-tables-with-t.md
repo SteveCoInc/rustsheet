@@ -34,7 +34,7 @@ requires, and T-3141 can land.
 
 ## Acceptance criteria
 - [x] The `r4-T-3141` batches are filled after T-3141's freeze, their failing points are owned, and their envelope
-  result is in T-3141's Outcome.
+  result is in T-3141's Outcome (on its branch, PR #3105, which lands after this PR).
 - [x] probes/fin-cumprinc-underflow-type1 C7:C9 and G7:G9 and fin-cumprinc-underflow-fresh I10 and K10 pass, or the
   sweep shows the geometric sum is Excel's there.
 - [x] `make check` green; reviewers approve.
@@ -43,39 +43,36 @@ requires, and T-3141 can land.
 - Ranges where `v^nper` does not underflow (T-3216, T-3413, T-3776).
 
 ## Outcome
-- **The aimed draw.** `annuity_cumulative.py`'s strata never reach T-3141's region, and a new shape among its edges
-  would move every `s1` point. So a definition can now carry `aimed`, a whole-point draw of one region that only
-  `rustsheet-accuracy generate --stratum aimed` reaches. It is never in the default split, and the sidecar records it
-  as stratum `aimed` (SPEC-0029 "Strata"; `Stratum::Aimed` in rustsheet-eval). CUMIPMT's and CUMPRINC's aimed draw is
-  `_underflowed`:
-  - at most 32 periods;
-  - `1 - v^nper` is 1 in doubles (nper·L above 40);
-  - fractional rates from 1E-4 to 3;
-  - the leading exponent `(nper-end+1)·L` is below 0.3 one time in three, else log-uniform from 0.3 to 700, where
-    the leading power is still normal;
-  - m·L is log-uniform from 0.01 to 5, across PMT's expm1 switch;
-  - type 1 starts from period 2;
-  - nper runs up to 1E15.
-  `s1` regenerates byte-identically for both functions, and `verify` reports 0 differences.
-- **Batches.** `CUMPRINC/r4-T-3141` and `CUMIPMT/r4-T-3141` have 200 points each. They were drawn and filled from
-  excel-graph on 2026-11-06, after T-3141's kernel froze (its branch's last code commit is from 2026-11-04). Below a
-  leading exponent of 0.3 there are 52 CUMPRINC and 44 CUMIPMT points; from 0.3 up to 679 there are 148 and 156.
-- **Envelope.** On main, all 400 points are in the envelope and none fails, so no known-failure line is added. With
-  T-3141's frozen kernel (branch head, scored locally), all 400 are in the envelope too.
-- **Exactness against Excel's doubles**, CUMPRINC (CUMIPMT in brackets):
-
-  | engine | lead < 0.3 | lead ≥ 0.3 |
-  |---|---|---|
-  | main | 23/52 (15/44) | 63/148 (126/156) |
-  | T-3141 frozen (core below 0.3) | 52/52 (43/44) | 63/148 (126/156) |
-  | T-3141's core at any leading exponent (its round-1 form) | 52/52 (43/44) | 148/148 (156/156) |
-
-  The sweep shows that past 0.3 the core, not the geometric sum, is Excel's. The geometric sum is up to 4 ulps off
-  there. The core is exact out to a leading exponent of 679, with m·L from 0.003 to 4.96, for both types.
-  - So T-3141 takes the core at any leading exponent. That fixes fin-cumprinc-underflow-type1 C7:C9 and G7:G9 and
-    fin-cumprinc-underflow-fresh I10 and K10 (T-3141 round 1).
-  - The one CUMIPMT miss is the same in every row, so the principal does not cause it:
-    `CUMIPMT(0.103414751928719,17312013078,200894.020467694,17312013077,17312013078,1)`, A41, is 4 ulps off.
-- **Where the record goes.** The envelope result and these counts go into T-3141's Outcome on its branch (PR #3105),
-  together with the cut change. That keeps this PR off the T-3141 task file, which the branch rewrites.
-- **Eval delta.** Gate A gains 400 points, 0 failing; the eval suites do not change.
+- **The aimed draw.** The strata of `annuity_cumulative.py` never reach T-3141's region. Adding a shape among its
+  edges would move every `s1` point.
+  - A definition can now carry `aimed`, a whole-point draw of one region. Only `rustsheet-accuracy generate --stratum
+    aimed` reaches it, and it is never in the default split.
+  - Sidecars record such points as stratum `aimed`: SPEC-0029 "Strata", `Stratum::Aimed` in rustsheet-eval.
+  - The spec limits aimed points to `e-*` evidence batches. An R4.2 sweep stays a full-domain `r4-*` batch.
+  - CUMIPMT's and CUMPRINC's aimed draw is `_underflowed`. It draws a short range (at most 32 periods) where
+    `1 - v^nper` is 1:
+    - fractional rates from 1E-4 to 3;
+    - the leading exponent below 0.3 one time in three, else log-uniform up to 700;
+    - m·L across PMT's expm1 switch;
+    - type 1 from period 2;
+    - nper up to 1E15.
+  - `s1` regenerates byte-identically for both functions, and `verify` reports 0 differences.
+- **Evidence batches `e-T-4059`.** 200 aimed points each, filled from excel-graph on 2026-11-06. The finding is in
+  financial.md "CUMPRINC where `v^nper` underflows, at deep leading exponents (T-4059)":
+  - T-3141's core holds at every leading exponent probed, out to 695. Matched to the bit: CUMPRINC 199/200 and
+    CUMIPMT 200/200; main gets 81 and 151.
+  - From 0.3 up, the geometric sum gets 70 of 170 CUMPRINC principals to the bit.
+  - T-3141 used these points as fit data to drop its 0.3 cut, together with the probe cells type1 C7:C9 and G7:G9,
+    fresh I10 and K10, and three gen-m9 cells. That form was frozen at T-3141's commit 0a1f01a (2026-11-06 22:20 UTC).
+  - The first aimed draw scored before that freeze is dropped: it was named `r4-T-3141` and is not kept.
+  - Open misses (A119, and a CUMIPMT `PMT·m` case): T-4710.
+- **R4.2 sweep `r4-T-3141`.** 200 points each, drawn and filled after T-3141's freeze. Each is 100% log-uniform over
+  the full domain (`--stratum log-uniform`), as SPEC-0029 asks.
+  - Main and T-3141's frozen form score the same on every point except 4 CUMPRINC principals from a leading exponent
+    of 0.3 up. T-3141 gets all 4 to the bit: 24 of those 39 against main's 20, and it loses none.
+  - Envelope: 28 CUMIPMT points fail on main and on T-3141 alike. All are tiny rates, 1E-10 to 4E-8, where the
+    interest `PMT·m - CUMPRINC` cancels. Those are T-4390's class, so their known-failure lines name T-4390.
+  - Every other point is in the envelope on both.
+- **Eval delta.** Gate A gains 800 points: 772 in the envelope and 28 known failures (T-4390). The eval suites do not
+  change.
+- **Follow-up:** T-4710.
