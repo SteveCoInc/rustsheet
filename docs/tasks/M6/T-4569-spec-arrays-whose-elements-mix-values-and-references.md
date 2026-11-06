@@ -3,7 +3,7 @@ id: T-4569
 title: "Spec: arrays whose elements mix values and references (SPEC-0014 amendment), for XLOOKUP's range if_not_found under a lifted lookup_value"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -42,15 +42,15 @@ and references, and what each reader sees, so that T-4570 can implement Excel's 
 - [x] A spec (docs/specs/) or a SPEC-0014 amendment covers the representation, each reader class above with its
       evidence, the unprobed readers' fallback, and the bounds.
 - [x] T-4570's acceptance criteria name the spec.
-- [ ] Reviewers approve.
+- [x] Reviewers approve.
 
 ## Out of scope
 - The implementation (T-4570).
 
 ## Outcome
-- Probe `probes/t4569-xlookup-ref-element-max-min` (excel-graph, 2026-11-06), the formulas filled in three rounds. The
+- Probe `probes/t4569-xlookup-ref-element-max-min` (excel-graph, 2026-11-06), the formulas filled in four rounds. The
   predictions for each round were written before its fill (docs/research/t4569/predictions.md).
-  - Every aggregate reads the reference element's top-left cell: MAX 50 not 60, SUMSQ 401, AVERAGE 35. This also
+  - Every top-left-reading aggregate reads the reference element's top-left cell: MAX 50 not 60, SUMSQ 401, AVERAGE 35. This also
     corrects lookup.md's T-4563 line: `SUM(..F1:F2)` = 23 is 20 + F1, not 20 + 3 + 4, which is 27. So SPEC-0014
     rule 4 holds unchanged for the reference element.
   - COUNT, COUNTA and SUMPRODUCT follow rule 5.
@@ -60,6 +60,10 @@ and references, and what each reader sees, so that T-4570 can implement Excel's 
   - Text and TRUE hits are read as array elements (`TopLeftElements`).
   - Per-element callers give `#VALUE!` (N: the value) for the value element and the range call for the
     reference element.
+  - Round 4 (review round 2's confound; Local!F1:F9, predictions first): the referenced sheet decides LARGE, SMALL
+    and MEDIAN, not the written qualifier. On Local, qualified or not, absolute or relative, OFFSET or INDIRECT, and a
+    mixed grid read on its own sheet are all `#VALUE!`; a relative reference to Data is `#N/A`. MAX over the own-sheet
+    mixed grid reads the top-left cell (100).
 - Spec: SPEC-0014 amendment "Mixed grids, value elements beside references":
   - Representation: `RefElement::Value(ArrayNode)`, boxed if it breaks the 32-byte assertion.
   - Producer: the driver keeps a scalar value. XLOOKUP gets a reference form only for a lifted lookup_value with a
@@ -68,33 +72,10 @@ and references, and what each reader sees, so that T-4570 can implement Excel's 
   - Bounds: no new budget.
 - lookup.md entry extended. T-4570 now names the spec in its Context and acceptance criteria, and owns the
   t4569 visibly-off cells (Calc A1:A8, A11:A15, A17, A20:A24, A26, A31:A32, A35, A40:A44, A50:A53, A56:A60, A63,
-  B20:B24, B26, B31:B32, B34, C20:C23, C31:C32, D20:D28, D31:D34; Local E4:E5).
-- Eval delta: +1 probe case, 102 cells scored. The 34 that match are the value-view and COUNT/COUNTA cells, and the
-  per-element cells already right, plus the same-sheet t2065 forms (Local E1:E3). The other 68 are new known failures owned by T-4570. No regressions.
-
-## Landing notes
-- PR #3679 (draft), head e57840598. CI was not yet checked on that head (aac8f5e1c was green). Review round 2 on
-  e57840598: security APPROVE, design APPROVE (MINORs below), excel-fidelity REQUEST_CHANGES. Round 3 has not
-  started.
-- Open findings to fix, from fidelity round 2:
-  1. MAJOR: rule 5's "the sheet decides" is confounded. Every `#N/A` cell uses a sheet-qualified absolute reference
-     (`OFFSET(Data!$G$1,..)`, `OFFSET(Local!$A$1,..)`, `INDIRECT({"Data!G1";..})`). Every `#VALUE!` cell (Local!E1:E3)
-     uses an unqualified relative one (`OFFSET(A1,..)`). Next step: add probe cells on sheet Local, with predictions
-     first in docs/research/t4569/predictions.md, then refill this case with `--force`:
-     `=LARGE(OFFSET(Local!$A$1,{0;1},0),1)`, `=LARGE(OFFSET($A$1,{0;1},0),1)`, `=MEDIAN(OFFSET(Local!$A$1,{0;1;2},0))`,
-     `=LARGE(INDIRECT({"A1";"A2"}),1)`, and a mixed grid read on its own sheet (an XLOOKUP on Local over Local data,
-     under LARGE). Then restate rule 5 (spec "Excel behavior to match" 5, the "Order statistics" reader, "What
-     changes") and lookup.md's two entries to match.
-  2. MAJOR: the spec's "Unprobed readers" list names AVERAGEA (probed: t4569 A52, A59) and VAR.S, STDEV.P and the
-     VARA family. Those already go through `GridReading::TopLeft`/`TopLeftElements` (variance.rs,
-     count_and_average.rs), so they take the walker's `Value(v)` arm and not the value view. Move AVERAGEA into
-     rule 3. Mark VAR.S, STDEV.P and VARA as taking the walker arm, unprobed for mixed grids.
-  3. MINOR (fidelity): lookup.md's bullet "Every aggregate reads the top-left cell" should say "the top-left-reading
-     aggregates". Label "keep today's `#VALUE!` otherwise" for a mixed grid on its own sheet as a fallback.
-  4. MINOR (design): wrap lookup.md's long "Same-sheet:" line, and keep lookup.md canonical with the spec pointing
-     to it.
-- After the refill: `make eval-baseline` from this branch, never from origin/main's baseline (origin/main has newer
-  cases). Then update the T-4570 owner list, which must stay one list item with indented continuation lines, or
-  `new_case_owners` cannot read it. Then `make check-fast` and all three reviewers on the new head.
-- Do not repeat: restoring eval/baseline from origin/main (it adds other cases and shows false regressions). Use the
-  merge-base.
+  B20:B24, B26, B31:B32, B34, C20:C23, C31:C32, D20:D28, D31:D34; Local E4:E5, F6, F9).
+- Eval delta: +1 probe case, 111 cells scored, 41 pass (the value-view, COUNT/COUNTA and per-element cells already
+  right, and every same-sheet `#VALUE!`: Local E1:E3, F1:F5, F7:F8). The other 70 are known failures owned by T-4570.
+  No regressions.
+- Review round 2 fixes: spec rule 5 restated with round 4; AVERAGEA moved into rule 3; VAR.S, VAR.P, STDEV.P and the
+  VARA family listed as already on the walker (unprobed for mixed grids); the both-sheets case labelled a fallback;
+  lookup.md says "top-left-reading aggregates" and its long "Same-sheet:" line is wrapped.

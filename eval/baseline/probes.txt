@@ -2491,7 +2491,7 @@ C	probes/t4554-api-name-scoped-name-choice-first.case.json	27
 C	probes/t4554-api-name-scoped-name-choice-last.case.json	27
 C	probes/t4554-api-name-scoped-name-choice.case.json	27
 C	probes/t4563-xlookup-not-found-ref-element.case.json	245
-C	probes/t4569-xlookup-ref-element-max-min.case.json	102
+C	probes/t4569-xlookup-ref-element-max-min.case.json	111
 C	probes/t4574-feb29-near-midnight-date-args.case.json	504
 C	probes/t4582-pivot-item-edges.case.json	45
 C	probes/t4583-pivot-row-labels.case.json	204
@@ -10175,6 +10175,8 @@ F	probes/t4569-xlookup-ref-element-max-min.case.json	Calc!D33
 F	probes/t4569-xlookup-ref-element-max-min.case.json	Calc!D34
 F	probes/t4569-xlookup-ref-element-max-min.case.json	Local!E4
 F	probes/t4569-xlookup-ref-element-max-min.case.json	Local!E5
+F	probes/t4569-xlookup-ref-element-max-min.case.json	Local!F6
+F	probes/t4569-xlookup-ref-element-max-min.case.json	Local!F9
 F	probes/t4582-pivot-item-edges.case.json	J1!A3
 F	probes/t4582-pivot-item-edges.case.json	J1!A4
 F	probes/t4582-pivot-item-edges.case.json	J1!A5

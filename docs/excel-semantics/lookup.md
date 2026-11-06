@@ -962,7 +962,7 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
     COUNT is 1 and COUNTA 2 (A77, A81). ISERROR is FALSE, TRUE and ISTEXT over D1:D2 is FALSE, FALSE (A85,
     A93). TYPE of the result is 64 and ISREF FALSE (A105, A89). MAX is 20 (A113), which cannot
     tell whether MAX walks the reference (F1:F2 = 3, 4 are below 20); T-4569 settles it.
-  - Every aggregate reads the top-left cell, and an order statistic depends on the sheet (probes/t4569-xlookup-ref-element-max-min,
+  - The top-left-reading aggregates read the top-left cell, and an order statistic depends on the sheet (probes/t4569-xlookup-ref-element-max-min,
     excel-graph, 2026-11-06, T-4569; G1:G2 = 50, 60 above the hit 20, H1:H2 = 1, 2 below it).
     - Top-left cell: MAX 50, not 60 (A1, A14 with a 0 beside it), MAXA alike (A3), a one-cell range the same (A5).
       MIN and MINA are 1 (A2, A4, A6, A15), which both readings give over H1:H2 = 1, 2, so they confirm nothing. AVERAGE is 35 = (20 + 50) / 2 (A7). PRODUCT is 20 = 20 x 1 (A8).
@@ -974,8 +974,12 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
       `LARGE(OFFSET(G1,{0;1},0),1)`, SMALL, MEDIAN and `LARGE(INDIRECT({"Data!G1";"Data!G2"}),1)` are `#N/A` (A31,
       A32, A40:A44, Local!E4:E5). The t2065 formulas on their own data sheet are `#VALUE!` (sheet Local, t2065's data,
       E1:E3), as the entry "MEDIAN, LARGE and SMALL over a lifted OFFSET" records. Both come from the same fill. So
-      that entry's `#VALUE!` holds only for references on the formula's own sheet. A grid with references on both
-      sheets is unprobed.
+      that entry's `#VALUE!` holds only for references on the formula's own sheet. The referenced sheet decides, not
+      how the reference is written: on Local, `OFFSET(Local!$A$1,..)`, `OFFSET(Local!A1,..)`, `OFFSET($A$1,..)` and
+      `INDIRECT({"A1";"A2"})` under LARGE or MEDIAN are all `#VALUE!`, `LARGE(OFFSET(Data!G1,{0;1},0),1)` is `#N/A`,
+      and a mixed grid read on its own sheet (`LARGE(XLOOKUP({1;9},A1:A3,B1:B3,A2:A3),1)`, unqualified or
+      `Local!`-qualified) is `#VALUE!` while its `MAX` reads the top-left cell, 100 (Local!F1:F9, round 4). A grid
+      with references on both sheets is unprobed.
     - A text or TRUE hit beside the reference element is read as an array element: SUM, AVERAGE and COUNT skip it
       (50, 50, 0), AVERAGEA counts text as 0 and skips TRUE (25, 50), MAXA and MINA skip both (50, 50), and COUNTA
       is 2 (A50:A63; return C1:C3 or D1:D3 with C2 = "t", D2 = TRUE).
@@ -1717,8 +1721,10 @@ take `GridReading::TopLeft` (legacy VAR already shared VAR.S's; legacy VARP and 
 ### MEDIAN, LARGE and SMALL over a lifted OFFSET
 Rule: each is `#VALUE!` over a lifted OFFSET (an array of references) whose references are on the formula's own
 sheet, like CONCAT and unlike STDEV.S, VAR.S and SUMSQ above. Over references on another sheet each is `#N/A`
-(T-4569; the entry "XLOOKUP's if_not_found and ADDRESS's sheet_text over an array" above). Same-sheet: `MEDIAN(OFFSET(A1,{0;1;2},0))`, `LARGE(OFFSET(A1,{0;1},0),1)` and `SMALL(OFFSET(A1,0,0,{2;3}),2)` (data as
-probes/reference-lift-consumers-b2) all give `#VALUE!`.
+(T-4569; the entry "XLOOKUP's if_not_found and ADDRESS's sheet_text over an array" above). The referenced sheet
+decides, not how the reference is written (probes/t4569-xlookup-ref-element-max-min Local!F1:F6).
+Same-sheet: `MEDIAN(OFFSET(A1,{0;1;2},0))`, `LARGE(OFFSET(A1,{0;1},0),1)` and `SMALL(OFFSET(A1,0,0,{2;3}),2)`
+(data as probes/reference-lift-consumers-b2) all give `#VALUE!`.
 Evidence: probes/t2065-lift-median, -large, -small E1 (excel-graph, 2026-10-29; they failed to open on Excel for the web
 on 2026-10-26 with createSession "retries exhausted", and opened on the 2026-10-29 steward run's fill).
 Status: VERIFIED (excel-graph). Ours matches all three cells. This answers T-1075 item 18.

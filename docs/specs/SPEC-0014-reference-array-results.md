@@ -215,7 +215,7 @@ an array value. In detail:
    `INDEX(X(r),2)` is a 1x1 grid holding the element: it shows `#VALUE!`, and `INDEX(that,1,1)` hands the range back
    (A25, V25:W25). Rule 3's "`INDEX(r,2)` over a column of elements is `#VALUE!`" is this case seen through the value
    view.
-3. **Top-left aggregates** (rule 4, extended). SUM, AVERAGE, MIN, MAX, MINA, MAXA, PRODUCT, SUMSQ and STDEV.S read
+3. **Top-left aggregates** (rule 4, extended). SUM, AVERAGE, AVERAGEA, MIN, MAX, MINA, MAXA, PRODUCT, SUMSQ and STDEV.S read
    the reference element's top-left cell as a range cell and the value element as an array value: SUM 23 = 20 + F1,
    25 = 20 + E1 (A73, A109); over G1:G2 = 50, 60 MAX 50, AVERAGE 35, SUM 70, STDEV.S 21.2132…; over H1:H2 = 1, 2
    PRODUCT 20, SUMSQ 401 (t4569 A1-A15, A20, A23). MIN and MINA there are 1 under either reading, so they confirm
@@ -226,9 +226,14 @@ an array value. In detail:
    the reference element is 0 (A77, A81, t4569 A9, A10, A21).
 5. **Order statistics: the sheet decides.** LARGE, SMALL and MEDIAN over a grid holding a reference element give
    `#N/A` when its references are on another sheet than the formula's. This covers a mixed grid (t4569 A12, A13,
-   A22) and a grid of references alone, from OFFSET or INDIRECT (A31, A32, A40:A44, Local!E4:E5). They give
+   A22) and a grid of references alone, from OFFSET or INDIRECT (A31, A32, A40:A44, Local!E4:E5, Local!F6). They give
    `#VALUE!` when the references are on the formula's own sheet (t2065-lift-*, Local!E1:E3; data and formulas as
-   t2065, same fill). Unprobed: a grid with references on both sheets, and a mixed grid read on its own sheet.
+   t2065, same fill), however the reference is written: sheet-qualified absolute `Local!$A$1`, qualified relative
+   `Local!A1`, unqualified absolute `$A$1`, or INDIRECT of unqualified texts (t4569 Local!F1:F5), and for a mixed grid
+   read on its own sheet, unqualified or qualified (Local!F7:F8). So it is the referenced sheet, not the written
+   qualifier, that decides (round 4, predictions in docs/research/t4569/predictions.md). A mixed grid on its own
+   sheet keeps rule 3 for the top-left aggregates: `MAX` is 100, the reference's top-left cell (Local!F9).
+   Unprobed: a grid with references on both sheets.
 6. **Per-element callers** (rule 6). They lift over every element. A value element is passed as the scalar
    non-reference argument it is: ROW, AREAS, COUNTIF, SUBTOTAL, COUNTBLANK and CELL give `#VALUE!` for it, and N
    gives 20. The reference element is the call on the range: ROW 1, AREAS 1, COUNTIF 2, N 50, SUBTOTAL 110,
@@ -258,17 +263,21 @@ an array value. In detail:
     booleans, AVERAGEA counts text as 0 and skips TRUE, and MAXA and MINA skip both (rule 3, t4569 A50:A63).
     `NotANumber` counts a number value for COUNT and reads it for SUMPRODUCT.
   - Order statistics (rule 5): LARGE, SMALL and MEDIAN given a `RefArg::Grid` with a reference element return
-    `#N/A` if any reference element is on a sheet other than the formula's, and keep today's `#VALUE!` otherwise.
+    `#N/A` if any reference element is on a sheet other than the formula's, and keep today's `#VALUE!` when every
+    one is on the formula's own sheet (probed, rule 5).
     This is one scan of the elements in their argument reader. A grid with references on both sheets is unprobed;
-    the rule above gives it `#N/A`. A probe before T-4570 lands can amend that. An error element comes first, as
+    the rule above gives it `#N/A`, a fallback, not evidence. A probe before T-4570 lands can amend that. An error element comes first, as
     for the other aggregates; this is unprobed and follows rule 4.
   - Per-element callers (`ref_lift.rs`): `Value(v)` calls the scalar function with `v` as a value argument. That is
     `#VALUE!` where a reference is required, and N reads the value. `put_back` keeps the result.
   - ROWS/COLUMNS, ISREF and the pass-throughs (IF, CHOOSE, LET, VSTACK, TAKE, DROP) need no change: they handle
     elements without reading them.
-  - **Unprobed readers** fall back to the value view, as rule 2 makes every reader that does not opt in. This
-    covers VAR.S, STDEV.P, AVERAGEA, MODE, PERCENTILE, QUARTILE, RANK, the IFS family's criteria ranges, and
-    TEXTJOIN. Each is a probe task before it opts in.
+  - **Readers already on the walker, unprobed for mixed grids.** VAR.S, VAR.P, STDEV.P (`GridReading::TopLeft`,
+    variance.rs) and VARA, VARPA, STDEVA, STDEVPA (`TopLeftElements`) take the walker's `Value(v)` arm above with no
+    change of their own, as STDEV.S (probed, rule 3) does. Their mixed-grid cells are unprobed.
+  - **Unprobed readers** off the walker fall back to the value view, as rule 2 makes every reader that does not opt
+    in. This covers MODE, PERCENTILE, QUARTILE, RANK, the IFS family's criteria ranges, and TEXTJOIN. Each is a
+    probe task before it opts in.
 - **Bounds** (directive 5). No new budget. An XLOOKUP grid has the lifted lookup_value's shape, which the lift
   already passes through `check_array_size`. Each element is one `xlookup_one` call charged to
   `MAX_LIFTED_CELL_VISITS`, as today. A miss stores one `Range` (the shared if_not_found) and copies no cells. A
