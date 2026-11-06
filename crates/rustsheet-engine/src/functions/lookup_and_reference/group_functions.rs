@@ -117,8 +117,9 @@ pub(crate) fn is_function_array(arg: &Node) -> bool {
 }
 
 /// How many arguments GROUPBY and PIVOTBY pass to a function passed by name: its minimum argument
-/// count (`eval/catalog/excel-functions.tsv`) when that is 1 or 2, `None` (the whole result
-/// `#VALUE!`) for 0 and for 3 or more. Two arguments, the values and the relative set: PERCENTOF
+/// count (`eval/catalog/excel-functions.tsv`) when that is 1 or 2, one for a function that takes
+/// none or one (ROW), `None` (the whole result `#VALUE!`) for one that takes none only (NOW)
+/// and for 3 or more. Two arguments, the values and the relative set: PERCENTOF
 /// (G!S97), CORREL, PEARSON, RSQ, COVARIANCE.P (`#N/A` per group, as the sizes differ; in the
 /// total, the same array twice: about 1 for CORREL, PEARSON and RSQ, the variance 161.7225 for
 /// COVARIANCE.P, functions2 G!B326), and IF, ROUND, SUMIF (`#VALUE!` per cell: an array result);
@@ -128,6 +129,9 @@ fn eta_arity(kind: &Function) -> Option<usize> {
     let name = kind.to_localized_name(get_default_language());
     let min = arg_counts::min_args(&name);
     match min {
+        // ROW, COLUMN and SHEET take one: each group's value is ROW's or COLUMN's `#VALUE!` or
+        // SHEET's `#N/A` (probes/t4450-eta-special-forms E109:H124).
+        0 if arg_counts::takes_count(&name, 1) => Some(1),
         1 => Some(1),
         2 => Some(2),
         _ => None,

@@ -381,6 +381,19 @@ impl Model {
         Ok(self.lambda_caller(function, provided).snapping_root())
     }
 
+    /// Whether `lambda_result` is IF or CHOOSE passed by name, which read a reference given as a
+    /// value argument (any but the first) as a blank: `MAP(A1:A3,B1:B3,IF)` is three blanks and
+    /// `LET(f,IF,f(TRUE,A1))` is 0 with ISBLANK TRUE, while a reference condition or index reads
+    /// as usual and IFERROR, INDEX and OFFSET return their references' values
+    /// (probes/t4450-eta-special-forms E25:G37, J1:J7, J23, J39:J51).
+    /// Excel: see docs/excel-semantics/arrays.md "Functions passed by name".
+    fn eta_blanks_references(&self, lambda_result: &CalcResult) -> bool {
+        matches!(
+            self.function_value(lambda_result),
+            Some(FunctionValue::Eta(Function::If | Function::Choose))
+        )
+    }
+
     /// What the LAMBDA `lambda_result` is ([`FunctionValue`]); `None` for anything else.
     pub(crate) fn function_value(&self, lambda_result: &CalcResult) -> Option<FunctionValue> {
         let CalcResult::Lambda(id) = lambda_result else {
@@ -514,8 +527,12 @@ impl Model {
             Ok((ids, body)) => {
                 let mark = self.last_lambda_id;
                 let captured = self.bind_captures(&caller.lambda, cell);
+                let blanks_references = self.eta_blanks_references(&caller.lambda);
                 for (i, &(raw_id, once)) in ids.iter().enumerate() {
                     let binding = match bind(self, i) {
+                        binding if blanks_references && i > 0 && binding.is_reference() => {
+                            Binding::Value(CalcResult::EmptyCell)
+                        }
                         Binding::Value(value) if once => Binding::ReadOnce(value),
                         binding => binding,
                     };
@@ -637,6 +654,15 @@ impl Model {
             }
         };
         if let Some(kind) = self.eta_lambdas.get(&id) {
+            // Called with a count it does not take, `LET(f,SUM,f())`, it is `#VALUE!`, not
+            // SUM's own count error (probes/t4450-eta-special-forms E85:G85).
+            if !eta_takes_count(kind, provided) {
+                return Err(CalcResult::new_error(
+                    Error::VALUE,
+                    cell,
+                    format!("Function passed by name does not take {provided} argument(s)"),
+                ));
+            }
             return Ok(eta_definition(kind.clone(), provided));
         }
         let Some(definition) = self.lambdas.get(&id) else {
@@ -652,7 +678,9 @@ impl Model {
     }
 
     /// An unbound name: a function passed by name (eta-reduced, stored `_xleta.SUM`, any case,
-    /// `_xlfn.` allowed after the prefix) is a LAMBDA, `#NAME?` for anything else.
+    /// `_xlfn.` allowed after the prefix) is a LAMBDA, `#NAME?` for anything else, LET and LAMBDA
+    /// too: `ERROR.TYPE(_xleta.LET)` is 5, `LET(f,_xleta.LAMBDA,f(1))` is `#NAME?` and the
+    /// helpers given them are `#VALUE!` (probes/t4450-eta-special-forms E1:G19, J19:J35).
     /// Excel: see docs/excel-semantics/arrays.md "Functions passed by name".
     pub(crate) fn unbound_name(&mut self, name: &str, cell: CellReferenceIndex) -> CalcResult {
         let function = name
@@ -660,7 +688,8 @@ impl Model {
             .filter(|prefix| prefix.eq_ignore_ascii_case(ETA_PREFIX))
             .and_then(|_| name.get(ETA_PREFIX.len()..))
             // Stored formulas use the English function names, whatever the UI language.
-            .and_then(|function| get_default_language().functions.lookup_stored(function));
+            .and_then(|function| get_default_language().functions.lookup_stored(function))
+            .filter(|kind| !matches!(kind, Function::Let | Function::Lambda));
         match function {
             Some(kind) => self.eta_lambda(kind),
             None => CalcResult::new_error(

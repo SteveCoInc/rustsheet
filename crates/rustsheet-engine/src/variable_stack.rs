@@ -59,6 +59,17 @@ impl Binding {
         }
     }
 
+    /// Whether the binding is a reference: a range, a union, a 3-D span or a lifted grid.
+    pub(crate) fn is_reference(&self) -> bool {
+        match self.resolved() {
+            Binding::Value(value) | Binding::ReadOnce(value) => {
+                matches!(value, CalcResult::Range { .. })
+            }
+            Binding::Areas(_) | Binding::Span(_) | Binding::Grid(_) => true,
+            Binding::Omitted | Binding::Shared(_) => false,
+        }
+    }
+
     /// The binding itself, or the one a [`Binding::Shared`] shares.
     pub(crate) fn resolved(&self) -> &Binding {
         let mut binding = self;
