@@ -33,8 +33,8 @@ use signature::{
     args_signature_ifs, args_signature_index, args_signature_lambda, args_signature_let,
     args_signature_lookup, args_signature_map, args_signature_match, args_signature_npv,
     args_signature_offset, args_signature_one_vector, args_signature_pivotby,
-    args_signature_randarray, args_signature_reduce, args_signature_row, args_signature_scalars,
-    args_signature_scan, args_signature_sumif, args_signature_textafter, args_signature_textsplit,
+    args_signature_reduce, args_signature_row, args_signature_scalars, args_signature_scan,
+    args_signature_sumif, args_signature_textafter, args_signature_textsplit,
     args_signature_trimrange, args_signature_xlookup, args_signature_xmatch, Signature,
 };
 
@@ -524,7 +524,6 @@ fn fallback_signature(kind: &Function, arg_count: usize) -> Option<Vec<Signature
         Function::Map => args_signature_map(arg_count),
         Function::Reduce => args_signature_reduce(arg_count),
         Function::Scan => args_signature_scan(arg_count),
-        Function::Randarray => args_signature_randarray(arg_count),
         Function::Textsplit => args_signature_textsplit(arg_count),
         Function::Concat => vec![Signature::Vector; arg_count],
         Function::Lower => args_signature_scalars(arg_count, 1, 0),
@@ -779,7 +778,6 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Getpivotdata => broadcast_static_result(args.iter().skip(3).step_by(2)),
         Function::Map | Function::Reduce => StaticResult::Unknown,
         Function::Scan => StaticResult::Unknown,
-        Function::Randarray => StaticResult::Unknown,
         Function::Textsplit => StaticResult::Unknown,
         Function::Concat => not_implemented(args),
         // UPPER/LOWER broadcast element-wise: an array/range argument yields an array.
