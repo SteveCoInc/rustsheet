@@ -6,6 +6,7 @@
 use crate::{
     constants::COLUMN_WIDTH_FACTOR,
     expressions::utils::check_block,
+    formula_rewrite::RewrittenCell,
     types::{ArrayKind, Cell, Style},
     user_model::history::{ColumnData, RowData},
     workbook_check::{check_cell, check_row_record, check_style},
@@ -172,6 +173,71 @@ impl UserModel {
                 let width = col.width * COLUMN_WIDTH_FACTOR;
                 worksheet.set_column_width_and_style(c, width, col.hidden, col.style)?;
             }
+        }
+        Ok(())
+    }
+}
+
+impl UserModel {
+    /// The formula cells a delete of `count` rows (columns when not `rows`) from `first` on
+    /// `sheet` rewrote, `rewritten` at their places before it, checked before its undo changes
+    /// anything, since a peer's diff is untrusted (CLAUDE.md directive 5, T-4668): each passes
+    /// [`Self::restored_cell`] and holds a formula, and the place the delete moved it to holds a
+    /// formula now.
+    pub(super) fn checked_rewritten_cells(
+        &mut self,
+        rewritten: &[RewrittenCell],
+        (sheet, first, count, rows): (u32, i32, usize, bool),
+    ) -> Result<Vec<RewrittenCell>, String> {
+        let count = restored_count(count)?;
+        let mut checked = Vec::with_capacity(rewritten.len());
+        for entry in rewritten {
+            let (row, column) = (entry.row, entry.column);
+            let moved = |line: i32| match line.checked_sub(count) {
+                _ if entry.sheet != sheet || line < first => Some(line),
+                Some(now) if now >= first => Some(now),
+                _ => None,
+            };
+            let now = if rows {
+                moved(row).map(|r| (r, column))
+            } else {
+                moved(column).map(|c| (row, c))
+            };
+            let worksheet = self.model.workbook.worksheet(entry.sheet)?;
+            let holds = now
+                .and_then(|(r, c)| worksheet.cell(r, c))
+                .is_some_and(Cell::has_formula);
+            if !holds || !entry.cell.has_formula() {
+                return Err(format!("Cell R{row}C{column} holds no formula to restore"));
+            }
+            let cell = self.restored_cell(entry.sheet, row, column, &entry.cell)?;
+            checked.push(RewrittenCell {
+                sheet: entry.sheet,
+                row,
+                column,
+                cell,
+            });
+        }
+        Ok(checked)
+    }
+
+    /// Puts back the cells [`Self::checked_rewritten_cells`] checked, once the undo has inserted
+    /// the rows or columns again, so they are at their places before the delete.
+    pub(super) fn restore_rewritten_cells(
+        &mut self,
+        checked: Vec<RewrittenCell>,
+    ) -> Result<(), String> {
+        for RewrittenCell {
+            sheet,
+            row,
+            column,
+            cell,
+        } in checked
+        {
+            self.model
+                .workbook
+                .worksheet_mut(sheet)?
+                .update_cell(row, column, cell)?;
         }
         Ok(())
     }
