@@ -7,7 +7,7 @@ status: todo
 priority: P1
 size: M
 tier: opus
-depends_on: [T-4139, T-4134]
+depends_on: [T-4139, T-4134, T-4585]
 ---
 
 ## Goal
@@ -18,6 +18,7 @@ SPEC-0032; evidence from task `p-items`. The CacheBuilder of SPEC-0015 is the on
 
 ## Acceptance criteria
 - [ ] Unit tests and the p-items probes' cache-level expectations pass.
+- [ ] Duplicate and blank source header names follow T-4585's probe.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

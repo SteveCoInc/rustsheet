@@ -56,3 +56,10 @@ Work is complete; only a clean review round 3 and the enqueue remain (PR #3605).
   A1:A36 and the t4422 cell count). Reverted both; the engineering.md diff is now the single T-4461 hunk.
 - Next: set `status: done` again, run `make check-fast`, push, re-run reviewer-excel-fidelity on the new head, mark the
   PR ready when CI is green and it approves, then enqueue. Do not use global replaces on engineering.md.
+
+## Addendum (a second run, #3617)
+A parallel run probed the same task in probes/t4461-imsqrt-cut-numbers (64 cells, excel-graph, 2026-11-06), which adds
+number forms that text cannot reach. The cut is exactly where a part's square stops being finite: 2^512 - 2^459 gives a
+value and 2^512 `#NUM!` (A1:D2). COMPLEX rounds to 15 digits (A3:D8, B15), and `=` treats the two doubles as equal (A15).
+Ours matches all 64 cells. engineering.md's entry is extended with these.
+

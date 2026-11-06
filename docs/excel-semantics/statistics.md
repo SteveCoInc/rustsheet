@@ -2361,7 +2361,10 @@ down to 1E-10 / up to 0.9999999999. The values are the targets for T-0969 and T-
   (`T.DIST(2,1E11,FALSE)` = 0.05399096651413289). The cut is exactly 1E10 on the truncated df: `T.INV(0.9,10000000001)` and `T.INV(0.9,1.0000001E10)` are `#NUM!`,
   `T.INV(0.9,10000000000.5)` (truncates to 1E10) is 1.2815518424115688; `CONFIDENCE.T(0.05,1,n)` is a number for
   n = 10000000001 (df 1E10) and `#NUM!` from n = 10000000002 (probes-numeric case `t1518-t-df-cut`, excel-graph,
-  2026-10-14). The pdf `T.DIST(2,1.4E10,FALSE)` stays finite (0.05399096651993693).
+  2026-10-14). The pdf `T.DIST(2,1.4E10,FALSE)` stays finite (0.05399096651993693). T.DIST.RT, T.DIST.2T and the
+  legacy TDIST have the same cut at df 10000000001: accuracy/T.DIST.RT/s1 A73 and A80, T.DIST.2T/s1 A75 and A84, and
+  TDIST/s1 A119 and A132 are `#NUM!`. At df 1E10 all three give numbers (T.DIST.RT/s1 A71 and A78, T.DIST.2T/s1 A73
+  and A82, TDIST/s1 A117 and A130; T-4102).
   Excel's `T.INV(0.9,1E10)` = 1.2815518424115688 is not the exact quantile (1.28155156554...; the
   normal quantile plus the 1/df correction): Excel is off by about 3E-7 there, so the large-df values need a fit
   (T-0967). Ours: from df 2 the rounded-y form of "Student-t quantile is SQRT(df*(1/y-1)) of the rounded beta
@@ -4729,7 +4732,7 @@ definitions, and every Excel value and error there is the modern rule; both tabl
 Tasks: T-2035
 Rule: GAMMADIST, GAMMAINV, HYPGEOMDIST, LOGINV, LOGNORMDIST, NEGBINOMDIST, NORMDIST, NORMINV, NORMSDIST, NORMSINV, POISSON, TINV, WEIBULL return exactly the same value or error as their modern equivalent (GAMMA.DIST, GAMMA.INV, HYPGEOM.DIST with cumulative FALSE, LOGINV = LOGNORM.INV, LOGNORM.DIST cum TRUE, NEGBINOM.DIST cum FALSE, NORM.DIST, NORM.INV, NORM.S.DIST cum TRUE, NORM.S.INV, POISSON.DIST, T.INV.2T, WEIBULL.DIST) on every paired cell, so the aliases need no separate kernel. TDIST with tails 1 is the exception: it differs from T.DIST.RT for negative x (T.DIST.2T agrees with TDIST tails 2). TTEST = T.TEST and ZTEST = Z.TEST on every paired cell too.
 Oracle sweep (excel-graph), 16 cases, 34-102 cells each; every paired cell (column B) is identical except the TDIST row below. Quirks seen:
-- `TDIST(-1,3,1)` and `TDIST(-1,3,2)` are #NUM! (x must be >= 0); `T.DIST.2T(-1,3)` is #NUM! too, but `T.DIST.RT(-1,3)` = 0.8044988905221147. `TDIST(1,0.9,1)` is #NUM! (df truncates to 0); `TDIST(1,1.9,2)` = 0.5000000000000001 (= `T.DIST.2T(1,1.9)`, df truncates to 1); tails truncate (`TDIST(1,3,1.9)` and `TDIST(1,3,TRUE)` = tails 1, `TDIST(1,3,2.1)` = tails 2); tails 0 and 3 are #NUM!, and an omitted tails (`TDIST(1,3,)`) is #NUM!.
+- `TDIST(-1,3,1)` and `TDIST(-1,3,2)` are #NUM! (x must be >= 0, so even x = -2.2250738585072E-308 is #NUM!: accuracy/TDIST/s1 A113, A126 and A139, and T.DIST.2T/s1 A69 and A78, T-4102); `T.DIST.2T(-1,3)` is #NUM! too, but `T.DIST.RT(-1,3)` = 0.8044988905221147. `TDIST(1,0.9,1)` is #NUM! (df truncates to 0); `TDIST(1,1.9,2)` = 0.5000000000000001 (= `T.DIST.2T(1,1.9)`, df truncates to 1); tails truncate (`TDIST(1,3,1.9)` and `TDIST(1,3,TRUE)` = tails 1, `TDIST(1,3,2.1)` = tails 2); tails 0 and 3 are #NUM!, and an omitted tails (`TDIST(1,3,)`) is #NUM!.
 - Boundary p differs by function: `GAMMAINV(0,2,1)` = 0 but `GAMMAINV(1,2,1)` is #NUM!; `LOGINV` and `NORMINV` reject both 0 and 1 (#NUM!); `NORMINV(1e-300,0,1)` = -37.0470962993612.
 - A boolean p is #NUM! (`GAMMAINV(TRUE,2,1)`, `LOGINV(TRUE,0,1)`, `NORMINV(TRUE,0,1)`) because TRUE coerces to 1, while a boolean x coerces to 1 (`NORMDIST(TRUE,0,1,TRUE)`, `GAMMADIST(TRUE,2,1,TRUE)`) and text numbers coerce everywhere; non-numeric text is #VALUE!.
 - The `cumulative` flag of GAMMADIST/NORMDIST takes any nonzero number as TRUE, the text "TRUE", and an omitted (empty) argument as FALSE.
@@ -7160,7 +7163,24 @@ UNVERIFIED. The negative mean follows "POISSON at x 0 with a negative mean", the
 walk renormalizes before a ratio p/q past 2^53 overflows it), and PERMUTATIONA takes PERMUT's limit, a number of 2^31 - 1 or more is `#NUM!` (UNVERIFIED cut).
 Since T-2700 a NEGBINOM.DIST/NEGBINOMDIST number_f in (-1, 0) is `#NUM!` as in Excel (the sign is checked before truncation; bonus cell
 b9a32ce9a1fd0d71 A195, `NEGBINOMDIST(Data!$D$6,7,..)` with D6 = -0.5). The PERMUTATIONA truncation cells are T-2701's. Probe of the cuts: T-2752.
+
+The upper tails (T-4102): Excel brackets the same cut for T.DIST.RT, T.DIST.2T and TDIST, from the Gate A tables, the
+probes and gen-m9 together. Every bracket fits the x² overflow (about 1.34E+154):
+- T.DIST.RT at a positive x is a number up to 1.3E+60 (probes/t4456-beta-t-zero-reach F2, `T.DIST.RT(1.34305338528263e+60,5)`)
+  and `#NUM!` from 2.2E+176 (accuracy/T.DIST.RT/s1 A101, and 5 more table cells up to 2.5E+290). Two probe cells are
+  `#NUM!` too: probes/t2436/fec39efaba9284c3 A1 (`T.DIST.RT(1E+300,7)`) and probes/t4456-beta-t-zero-reach F1
+  (`T.DIST.RT(1.46569174062763e+299,1)`).
+- T.DIST.RT at a negative x is 1 up to |x| 1.4E+123 (A116) and `#NUM!` from 8.0E+165 (A102, and 10 more cells).
+- T.DIST.2T is 0 up to 5.8E+146 (accuracy/T.DIST.2T/s1 A88) and `#NUM!` from 4.2E+161 (A99, and 7 more cells).
+- TDIST is 0 up to 1.8E+150 (accuracy/TDIST/s1 A185) and `#NUM!` from 2.1E+166 (A176, and 14 more cells), at tails 1
+  and 2 alike.
+
+The engine matches each of these cells. The Gate A definitions of the three functions encode each bracket
+(`student_t.HugeXCut`, per sign for T.DIST.RT). From the smallest evidenced `#NUM!` |x| on, x is outside the domain.
+Strictly between the largest evidenced number and that `#NUM!`, the point has no math value, because the cut there is
+unprobed. T.DIST's own definition does not use the rule yet (T-4580).
 Status: VERIFIED (excel-graph), the cuts UNVERIFIED
+Tasks: T-2256, T-2474, T-4102
 
 ## Student t quantile at p = 0 with df below 2 is #DIV/0! (T-2256)
 Rule: TINV, T.INV.2T and T.INV with p = 0 and a df that truncates to 1 are `#DIV/0!`, not `#NUM!`: `TINV(0,1)`
@@ -7543,8 +7563,9 @@ Region (T-3386, decision 0311: the R3-marked eval cells, each with its committed
 
 Not marked, and why (T-3386):
 - t1531 A84 and A108, `CONFIDENCE.T(1E-300,1,100000)` and `CONFIDENCE.T(1E-300,1,100001)` (Excel 0.2502, engine
-  0.11762, which is T.INV.2T's math divided by √n): CONFIDENCE.T has no Gate A definition, so the cells have no
-  committed math value and a mark would not count (R1(c) needs one).
+  0.11762, which is T.INV.2T's math divided by √n): CONFIDENCE.T had no Gate A definition then, so the cells had no
+  committed math value and a mark would not count (R1(c) needs one). T-4102 added the definition and their math
+  sidecar values; they stay unmarked, as Excel stays the target for new points (decision 0300).
 - t1543 A89, A91 and A92 (`BETA.INV(1-1E-16,1000,1)`, `BETA.INV(1E-300,0.5,100)`, `BETA.INV(1E-200,0.5,100)`): the
   engine returns `#NUM!` where Excel returns a number, which no mark excuses; the math sidecar lists them as having no
   single value.
@@ -7560,6 +7581,12 @@ more than G:
 - T.INV.2T and TINV at the Gate A points (T.INV.2T/s1 A98, A99, A103, with A99 at p 4.4E-242; TINV/s1 A102): decision
   0301 limits decision 0267 item 3 to the probes-numeric and m9 cells, so they stay unmarked; the engine is within ε of
   the math there, so they pass Gate A through the math side.
+- CONFIDENCE.T, which is T.INV.2T(alpha, n - 1)·sd/√n, at its Gate A points with alpha from 1.3E-301 to 9.2E-165 and
+  n from 3884 to 7.8E9 (accuracy/CONFIDENCE.T/s1 A139, A147, A154, A178, A180, A182, A183, A187-A191, A197; T-4102).
+  Excel is 0.81 to 1.13 relative off the math there, about twice the true margin: for example,
+  `CONFIDENCE.T(3.00330653159963E-179,2400358.77101737,5887)` is 1930850.749 in Excel and 924965.593 in truth. Excel
+  stays the target (decision 0300) and the points are unmarked. The engine is within ε of the math, so they pass Gate A
+  through the math side. Reproducing Excel's quantile there is T-3363's.
 
 Owner ruling (decision 0267 item 3, 2026-11-04, narrowed by decision 0301): the math also wins on the probes-numeric
 cells T-3386 and T-3337 list where Excel is more than G off the math. Those are T.INV.2T, TINV, T.INV, CONFIDENCE.T and
@@ -7673,6 +7700,8 @@ Rule:
   1.34E+154) of the cumulative t functions (T-2474 entry above). The engine returns 0.
 - `T.INV.2T(2.22507385850721E-308,df)` and `TINV(2.22507385850721E-308,df)` are `#NUM!` at df 8, 9, 12 and 14, although
   the quantile is a finite double (about 3.2E+22 to 6.9E+38). T.INV accepts p down to 1E-300 (T-1531).
+  `CONFIDENCE.T(2.22507385850721E-308,sd,n)`, which is T.INV.2T at df n - 1, is `#NUM!` too, at n 38, 68 and 79 (df 37,
+  67 and 78), where the margin is finite (5.5E+8 at `CONFIDENCE.T(2.22507385850721E-308,2.85657486076017,38)`; T-4102).
 - `F.INV(0,d1,d2)` is 0, the lower end of the support.
 
 - The legacy `FINV(0,2,5)` is `#NUM!` (probes-numeric/m9-legacy-finv A65), so the 0 is F.INV's only.
@@ -7681,12 +7710,13 @@ The exact x where T.DIST's density turns `#NUM!` and the p below which the two-t
 Evidence: Gate A tables, excel-graph:
 - accuracy/T.DIST/s1 A85, A95, A105 and A110, and accuracy/T.DIST/e-T-3425 A90, A103 and A116 (T-3425);
 - accuracy/T.INV.2T/s1 A68 and A78, and accuracy/TINV/s1 A68 and A78;
+- accuracy/CONFIDENCE.T/s1 A112, A123 and A134 (T-4102);
 - accuracy/T.DIST/s1 A94 and A97 (density 0 below the cut);
 - accuracy/F.INV/s1 A111 (`F.INV(0,38,10)`) and A125 (`F.INV(0,9,50)`), and probes-numeric/t1049-finv A16 (`F.INV(0,3,7)`).
 Status: VERIFIED (excel-graph) for the cited cells; the cut points are UNVERIFIED.
-Ours: T.DIST returns 0 and T.INV.2T and TINV return the quantile. These are Gate A known failures owned by T-3554 and
-T-3386.
-Tasks: T-3554, T-3386, T-3358
+Ours: T.DIST returns 0, and T.INV.2T, TINV and CONFIDENCE.T return the quantile or margin. These are Gate A known
+failures owned by T-3554 and T-4541 (moved from T-3386).
+Tasks: T-3554, T-3386, T-3358, T-4541, T-4102
 
 ## A text scalar argument is #VALUE! before an error cell as the data (T-3781)
 Rule: when the data of SMALL, LARGE, PERCENTILE*, QUARTILE*, TRIMMEAN or PERCENTRANK* is a one-cell reference to an error
@@ -7904,14 +7934,18 @@ model gives 1.0000000000000006E+308 (unexplained: a power-of-ten path is possibl
 `#NUM!` (`PERMUTATIONA(2,1024)`, `(10,309)`, A81, A83; `(2,1023)` is 8.98846567431158E+307, A78). A number_chosen of
 2^31 - 1 or more is `#NUM!` whatever the number, even where the power is 0 or 1: `PERMUTATIONA(1,2147483647)`,
 `PERMUTATIONA(1,10000000000)` and `PERMUTATIONA(0,10000000000)` are `#NUM!` (A76, A79, A71), while
-`PERMUTATIONA(0,1000)` is 0 (A72). The cut is UNVERIFIED between 1000 and 2^31 - 1; 2^31 - 1 is PERMUT's number limit
-("Overflowing arguments, PERMUT's limit and argument error order (T-1290)"). A number in (0, 1) floors to 0
+`PERMUTATIONA(0,1000)` is 0 (A72). The cut is exactly 2^31 - 1 on the truncated number_chosen, PERMUT's number limit
+("Overflowing arguments, PERMUT's limit and argument error order (T-1290)"): at numbers 1 and 0, every k from 1000 to
+2147483646 (1001, 1024, 32767, 32768, 65535, 65536, 1E6, 2^24 - 1, 2^24, 1E9) is a number, `PERMUTATIONA(1,2147483646.9)`
+is 1, and 2147483647, 2147483647.5, 2^31, 2^32 and 1E10 are `#NUM!` (probes/t4501-permutationa-chosen-cut, excel-graph,
+2026-11-06). A number in (0, 1) floors to 0
 (`PERMUTATIONA(0.25,4)` is 0, A2) and `PERMUTATIONA(2.5,3.9)` is 8 (A82).
-Evidence: accuracy/PERMUTATIONA/s1 (excel-graph, 2026-11-06, T-4106).
-Ours: the engine returns `powf(n, k)`, so 32 of the 105 numeric cells differ from Excel by a few ulps (all but two
-within 15 digits, those two within 1e-9 of the math: inside the Gate A envelope), and n^k for a huge k (1 or 0 where
-Excel is `#NUM!`: three Gate A known failures). Both are T-4501.
-Status: VERIFIED (excel-graph) for the cells cited; the number_chosen cut UNVERIFIED
+Evidence: accuracy/PERMUTATIONA/s1 (excel-graph, 2026-11-06, T-4106); probes/t4501-permutationa-chosen-cut.
+Ours: `#NUM!` from a truncated number_chosen of 2^31 - 1 (T-4501; `permutationa_of`, permut.rs). The engine still
+returns `powf(n, k)`, so 32 of the 105 numeric cells differ from Excel by a few ulps (all but two within 15 digits,
+those two within 1e-9 of the math: inside the Gate A envelope). Binary powering is a model chosen by scoring candidates
+against these cells, so it owes decision 0188 R4's hold-out and fresh sweep; it is Phase 1b work (T-4557).
+Status: VERIFIED (excel-graph), the number_chosen cut included
 Tasks: T-4106, T-4501
 
 ## KURT, SKEW, SKEW.P, GEOMEAN, HARMEAN and TRIMMEAN domain cells of the Gate A tables (T-4091)
