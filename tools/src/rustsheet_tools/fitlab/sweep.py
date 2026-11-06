@@ -23,7 +23,7 @@ import datetime
 import json
 import math
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
@@ -165,20 +165,30 @@ class Sweep:
     excluded: int = 0  # matched the pattern but the fit's `where` filter left it out
 
 
+def unquoted(text: str, start: int = 0) -> Iterator[tuple[int, str, int]]:
+    """Each character of `text` from `start` that is outside a string literal and is not a quote, with
+    its index and the bracket depth after it: `(` and `{` open a level, `)` and `}` close one, and the
+    depth starts at 0. The one quote and bracket scanner of the formula readers (`split_args`,
+    `composite`)."""
+    depth, quoted = 0, False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if ch == '"':
+            quoted = not quoted
+        elif not quoted:
+            if ch in "({":
+                depth += 1
+            elif ch in ")}":
+                depth -= 1
+            yield i, ch, depth
+
+
 def split_args(text: str) -> list[str]:
     """Splits an argument list at top-level commas (outside parentheses, braces and strings)."""
     parts: list[str] = []
-    depth, start, quoted = 0, 0, False
-    for i, ch in enumerate(text):
-        if ch == '"':
-            quoted = not quoted
-        elif quoted:
-            continue
-        elif ch in "({":
-            depth += 1
-        elif ch in ")}":
-            depth -= 1
-        elif ch == "," and depth == 0:
+    start = 0
+    for i, ch, depth in unquoted(text):
+        if ch == "," and depth == 0:
             parts.append(text[start:i])
             start = i + 1
     parts.append(text[start:])
