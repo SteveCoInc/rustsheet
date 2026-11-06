@@ -3,7 +3,7 @@ id: T-4451
 title: "One shared _parts helper for the spec2xlsx tests instead of five copies"
 milestone: M0
 lane: quality
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -28,3 +28,10 @@ its own `_parts`.
 
 ## Out of scope
 -
+
+## Outcome
+`tools/tests/spec_parts.py` now holds the one `spec_parts(spec, suffixes=(".xml",))` helper. The date-system tests call it
+directly; the pivot tests call it with `(".xml", ".rels")`. The calculation and table tests keep a differently named
+wrapper (`_calc_parts`, `_table_parts`) because each merges a default sheet into the spec first. The oracle-canary
+`_parts(xlsx: bytes)` unzips every member of already-built bytes and takes no spec, so it is renamed `_unzip` rather than
+merged. `rg -n "def _parts" tools/tests` finds nothing; the 258 spec2xlsx and canary tests, ruff and mypy strict pass.
