@@ -28,7 +28,9 @@ committed tables keeps 0 differences under `verify`.
   - Density: `#NUM!` from 4.2E+220 for a positive x (e-T-3425 A116) and at -4.6E+224 (e-T-3425 A103). It is 0 at
     9.9E+137 (s1 A97) and, for a negative x, up to |x| 7.6E+87.
 - The brackets are per sign and per `cumulative`. Re-derive them from every cell; do not assume the x² overflow point.
-- Rewrite the committed math sidecars of accuracy/T.DIST (s1, e-T-3425, r4-T-2585) in place, without redrawing points.
+- The T.DIST batches (s1, e-T-3425, r4-T-2585) are already committed on main, so their math values cannot be
+  rewritten in place: decision 0199 and SPEC-0029 require a changed value to be a new batch plus a decision record.
+  Write that decision record, citing T-4102's brackets, before changing any committed T.DIST math sidecar.
   Only number cells may move to a domain error.
 - The density known failures owned by T-3554 (engine 0, Excel `#NUM!`) stay error mismatches. Their lines stay.
 
@@ -37,6 +39,7 @@ committed tables keeps 0 differences under `verify`.
 - [ ] `rustsheet-accuracy verify T.DIST` reports 0 differences, and `rustsheet-eval accuracy` reports 0 failing and 0
       table defects.
 - [ ] The probe sidecars are regenerated with `--function T.DIST`, and only number cells move.
+- [ ] A decision record (decision 0199) authorizes the changed T.DIST math values, or they go in a new batch.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
