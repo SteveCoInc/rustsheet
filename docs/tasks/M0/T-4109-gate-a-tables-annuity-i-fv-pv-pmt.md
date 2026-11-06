@@ -70,5 +70,7 @@ Every failing table point has an owner.
   the double `1+rate`). The ninth is `FV(2.69376404795075E-12,113,7.25542032231508,-930.933793192857,1)` (A87,
   2.2E-4), where P - 1 on the double `1+rate` cancels ("Annuity evaluation order"). The engine is bit-exact with
   Excel on all nine.
-- Math sidecars: SIDECARS_PLACEHOLDER
+- Math sidecars: `rustsheet-accuracy math --function` (T-4483) over the seven functions, for probes and
+  probes-numeric. That gives 28 new sidecars (7,394 cells, 238 of them math domain errors) and 2,519 cells added to 10
+  existing ones, with no existing cell changed. `make eval-math-check` prints "current".
 - Eval delta: none in the gated suites (tools, tables, sidecars and docs only).
