@@ -265,6 +265,49 @@ fn repeated_and_blank_headers_are_renamed() {
     assert_eq!(fresh.fields[1].records, [0, 1]);
 }
 
+/// probes/t4627-pivot-field-name-collisions: a taken name takes the first free `<header><k>`
+/// from 2 (`P_SufA`, `P_SufB`, `P_Const`), whitespace is a name (`P_Space`), `ß` and `SS` are
+/// one name (`P_Fold`), and a blank is `Field<n>` by source position, named after the text
+/// headers (`P_FldA`, `P_FldB`, `P_Empty`).
+#[test]
+fn field_names_avoid_every_taken_name() {
+    fn all<'a>(headers: &[&'a str]) -> Vec<Option<&'a str>> {
+        headers.iter().map(|h| Some(*h)).collect()
+    }
+    let names = |headers: &[Option<&str>]| {
+        field_names(headers.iter().map(|h| h.map_or(CacheItem::Missing, text))).unwrap()
+    };
+    assert_eq!(
+        names(&all(&["Region", "Sales", "Sales2", "Sales"])),
+        ["Region", "Sales", "Sales2", "Sales3"]
+    );
+    assert_eq!(
+        names(&all(&["Region", "Sales", "Sales", "Sales2"])),
+        ["Region", "Sales", "Sales2", "Sales22"]
+    );
+    assert_eq!(
+        names(&all(&["Region", "Sales", "Sales", "SALES"])),
+        ["Region", "Sales", "Sales2", "SALES3"]
+    );
+    assert_eq!(names(&all(&[" ", " "])), [" ", " 2"]);
+    assert_eq!(
+        names(&all(&["é", "É", "ß", "SS", "ss"])),
+        ["é", "É2", "ß", "SS2", "ss3"]
+    );
+    assert_eq!(
+        names(&all(&["Region", "Sales", "Field4", ""])),
+        ["Region", "Sales", "Field4", "Field42"]
+    );
+    assert_eq!(
+        names(&all(&["Region", "Sales", "X", "", "Field4"])),
+        ["Region", "Sales", "X", "Field42", "Field4"]
+    );
+    assert_eq!(
+        names(&[Some("Region"), Some("Sales"), Some("X"), None, Some("Y")]),
+        ["Region", "Sales", "X", "Field4", "Y"]
+    );
+}
+
 #[test]
 fn a_non_text_header_or_a_missing_source_is_refused() {
     let model = source(&[&plain(&["K", "a"]), &plain(&["7", "1"])]);

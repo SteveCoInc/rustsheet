@@ -615,26 +615,53 @@ Evidence: none. Every rendered probe so far is `refreshOnLoad` (case builder v2)
 Status: UNVERIFIED (probe pending: T-4586)
 
 ## Pivot field names for duplicate and blank source headers
-Rule: on refresh Excel names each cache field after its source header, made unique case-insensitively:
-- A header equal to an earlier field's name, ignoring case, gets the next number, starting at 2. It
-  keeps its own casing: `Sales`, `Sales2`, `Sales3`, and `region2` after `Region`.
-- A header that evaluates to empty text (`=""`) becomes `Field<n>`. In the probe n is 4. The header
-  is the 4th column of a source that starts at column A (D1). So n is either its 1-based position in
-  the source or its worksheet column number, and it is not a count of empty headers (`Field1`).
+Rule: on refresh Excel names each cache field after its source header, made unique ignoring case:
+- Text headers are named first, left to right. A header that no earlier name equals keeps its text,
+  whitespace included (`" "`). Otherwise it takes the first `<header><k>`, k = 2, 3, ..., that no
+  name taken so far equals, in the header's own casing. The suffixed names count as taken, and so
+  does a real header that already ends in a number: `Sales`, `Sales2`, `="Sales"` save as `Sales`,
+  `Sales2`, `Sales3`, but `Sales`, `="Sales"`, `Sales2` save as `Sales`, `Sales2`, `Sales22`.
+- A blank header, an empty cell or empty text (`=""`), is `Field<n>`, n its 1-based position in the
+  source, not its sheet column. It is named after all text headers, later ones too, and made unique
+  the same way: `X`, `=""`, `Field4` save as `X`, `Field42`, `Field4`.
+- A constant header typed twice is renamed like a formula one (`Sales`, `Sales`, `SALES` save as
+  `Sales`, `Sales2`, `SALES3`).
+- The name comparison folds `ß` with `SS`: `é`, `="É"`, `ß`, `="SS"`, `="s"&"s"` save as `é`,
+  `É2`, `ß`, `SS2`, `ss3`. Items do not: in the same source the Region items `ß` and `SS` stay apart,
+  as do `Straße` and `STRASSE`, while `é` and `É` are one item (casing of the first, `é`).
+- A record cell holding `=""` is a text item of its own, apart from an empty cell's `(blank)` item;
+  its row label is an empty cell.
 
-Evidence: probes/t4585-pivot-field-names (excel-graph, 2026-11-06, T-4585). The headers D!A1:F1 are
-Region, Sales, `="Sales"`, `=""`, `="region"` and `="Sales"&""`. The repeats and the empty header all
-come from formula headers, because the case builder refuses duplicates and blanks. The saved cache
-fields (sidecar `pivots` cache_fields) are Region, Sales, Sales2, Field4, region2 and Sales3, numbered
-per name.
+Evidence: probes/t4585-pivot-field-names (excel-graph, 2026-11-06, T-4585): headers D!A1:F1 Region,
+Sales, `="Sales"`, `=""`, `="region"`, `="Sales"&""` save as Region, Sales, Sales2, Field4, region2,
+Sales3. probes/t4627-pivot-field-name-collisions (excel-graph, 2026-11-06, T-4627), sidecar `pivots`
+cache_fields of the pivot on sheet P_<source>:
+- SufA!A1:D1 Region, Sales, Sales2, `="Sales"` → Region, Sales, Sales2, Sales3;
+- SufB!A1:D1 Region, Sales, `="Sales"`, Sales2 → Region, Sales, Sales2, Sales22;
+- FldA!A1:D1 Region, Sales, Field4, `=""` → Region, Sales, Field4, Field42;
+- FldB!A1:E1 Region, Sales, X, `=""`, Field4 → Region, Sales, X, Field42, Field4;
+- Off!B1:G1 Region, Sales, X, `=""` (sheet column E), Y, Z → Region, Sales, X, Field4, Y, Z;
+- Empty!A1:E1 Region, Sales, X, an empty cell, Y → Region, Sales, X, Field4, Y;
+- Const!A1:D1 Region, Sales, Sales, SALES (constants) → Region, Sales, Sales2, SALES3;
+- Space!A1:E1 Region, Sales, `=" "`, `=" "&""`, X → Region, Sales, `" "`, `" 2"`, X;
+- Fold!A1:G1 Region, Sales, é, `="É"`, ß, `="SS"`, `="s"&"s"` → Region, Sales, é, É2, ß, SS2, ss3.
+  Its pivot (rows Region over é, É, ß, SS, ss, Straße, STRASSE with Sales 1, 2, ..., 64) shows
+  P_Fold!A4:B8 é 3, ß 4, Straße 32, SS 24, STRASSE 64;
+- Rec!A2:A6 a, `=""`, empty, `=""`, a with Sales 1, 2, 4, 8, 16: P_Rec!A4:B6 a 17, (blank) 4, an empty
+  label cell 10.
 
-Open (T-4627):
-- whether n is the source position or the sheet column;
-- a truly empty header cell;
-- constant (non-formula) duplicates;
-- collisions with a real header (a source that already has `Sales2` or `Field4`).
+Empty and Const are built with the case builder's `cache_names` (pivot_definition.py), which saves
+placeholder names that Excel replaces on refresh, as it replaces formula headers' text.
 
-Status: VERIFIED (excel-graph) for the names above; the open points are UNVERIFIED (probe pending:
-T-4627)
-Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`field_names`, position-in-source
-reading of n)
+The probed sources cannot tell whether the suffix search restarts at 2 or starts at the count of
+earlier equal headers; both give every name above.
+
+Open (T-4640):
+- number, boolean and error headers;
+- other multi-character case folds in names (`ẞ`, ligatures, `ς`/`σ`);
+- a blank's `Field<n>` meeting a suffixed name from a later duplicate.
+
+Status: VERIFIED (excel-graph) for the rules above; the open points are UNVERIFIED (probe pending:
+T-4640)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141, T-4627) (`field_names`,
+`name_key`)
