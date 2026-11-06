@@ -631,7 +631,9 @@ fn prepare(
         SuiteKind::Xlsx => prepare_xlsx(suite, case),
         SuiteKind::Spec => prepare_spec(case, values),
         // `Suite::load_all` keeps round-trip suites out of every cell run (SPEC-0033 D8).
-        SuiteKind::Roundtrip => Err("a roundtrip suite is run by `rustsheet-eval roundtrip`".into()),
+        SuiteKind::Roundtrip => {
+            Err("a roundtrip suite is run by `rustsheet-eval roundtrip`".into())
+        }
     }?;
     let refusal = pin_deviations(suite, case, &mut prepared.expectations)?;
     Ok((prepared, refusal))

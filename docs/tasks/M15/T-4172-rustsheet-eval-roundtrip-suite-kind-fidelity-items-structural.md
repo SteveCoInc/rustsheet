@@ -3,7 +3,7 @@ id: T-4172
 title: "rustsheet-eval roundtrip suite kind: fidelity items, structural XML differ, package validator, baselines"
 milestone: M15
 lane: harness
-status: in-progress
+status: done
 priority: P1
 size: M
 tier: opus
@@ -41,15 +41,15 @@ Also carry PR #3526's review notes:
 - record the baseline mode the spec's D8 calls `items` as the reused cells mode.
 
 ## Acceptance criteria
-- [ ] The fixtures round-trip suite runs through `rustsheet-eval roundtrip`, through `make eval`, and gates in
+- [x] The fixtures round-trip suite runs through `rustsheet-eval roundtrip`, through `make eval`, and gates in
       `make eval-gates`. Its baseline is committed.
-- [ ] Unit tests: one crafted failing package per validator check V1–V6 and V8; a lost part is found as `lost`; an
+- [x] Unit tests: one crafted failing package per validator check V1–V6 and V8; a lost part is found as `lost`; an
       output-only part is found as `added`; part keys do not depend on part names.
-- [ ] `update-baseline` refuses a new loss in an unchanged case. This is the existing ratchet, tested through the
+- [x] `update-baseline` refuses a new loss in an unchanged case. This is the existing ratchet, tested through the
       round-trip results.
-- [ ] docs/architecture/eval-harness.md documents the kind, and docs/excel-semantics/xlsx-storage.md gains the
+- [x] docs/architecture/eval-harness.md documents the kind, and docs/excel-semantics/xlsx-storage.md gains the
       "Round trips" section SPEC-0033 names.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Element and attribute items (T-4509).
@@ -57,3 +57,25 @@ Also carry PR #3526's review notes:
 - R1 (T-4514).
 - The external corpora (T-4173).
 - XSD (T-4179).
+
+## Outcome
+`rustsheet-eval roundtrip` runs round-trip suites (`kind = "roundtrip"` under `eval/roundtrip/`; SPEC-0033 D8):
+- R0 per case, in an isolated worker with a timeout;
+- the package validator V1–V6 and V8 on the output (`roundtrip/package.rs`);
+- `part` fidelity items keyed through the relationship graph, never by part name: sheets by name, other parts by
+  ordinal in the parent's reference order;
+- the ordinary cells-mode `Baseline` ratchet, with items in the item slot.
+
+Reused rather than redefined:
+- the snapshot reader's bounded `Zip`, `read_part`, `attr` and `relationships` (which gained `external`);
+- `PartNames`, which gained `clashes` and a public `part_key`;
+- `harness_options`, `panic_message` and the suite discovery.
+
+Decision 0307 wires it into `make eval`, `make eval-gates` and `make eval-baseline`. The first suite,
+`roundtrip-fixtures` (25 workbooks of eval/suites/fixtures), has 236 items and 39 known failures:
+- 32 `added` parts (sharedStrings, sheetMetadata, rich-value parts the export always writes);
+- 7 lost `externalLink` parts (T-4143).
+
+No output fails the validator. Docs: eval-harness.md has a "Round-trip suites" section; xlsx-storage.md has a "Round
+trips" section (N1–N12 wait on T-4503); SPEC-0033 D2 and D8 were reworded per PR #3526's review. No cell eval delta.
+

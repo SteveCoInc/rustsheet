@@ -12,9 +12,9 @@ mod tests;
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use std::path::Path;
 use std::io::Read as _;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::path::Path;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
@@ -78,7 +78,13 @@ impl Item {
     /// The item as a baseline line names it: stable across runs, without the detail.
     #[must_use]
     pub fn baseline_key(&self) -> String {
-        let mut key = format!("{} {} {} {}", self.scenario, self.kind, self.key, self.verdict.label());
+        let mut key = format!(
+            "{} {} {} {}",
+            self.scenario,
+            self.kind,
+            self.key,
+            self.verdict.label()
+        );
         // calcChain is the first candidate normalization (SPEC-0033 D4.4, N1): tagged until
         // T-4503's evidence lets the differ normalize it.
         if self.kind == "part" && self.key.ends_with("/calcChain[0]") {
@@ -148,7 +154,10 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
     if let Err(e) = read {
         return CaseResult::new(case, suite, CaseStatus::InvalidCase, Some(e.to_string()));
     }
-    let name = case.path.file_name().map(|n| n.to_string_lossy().into_owned());
+    let name = case
+        .path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned());
     let (tx, rx) = mpsc::channel();
     let start = Instant::now();
     let spawned = std::thread::Builder::new()
@@ -159,15 +168,34 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
             let _ = tx.send(outcome);
         });
     if let Err(e) = spawned {
-        return CaseResult::new(case, suite, CaseStatus::EngineError, Some(format!("could not spawn worker: {e}")));
+        return CaseResult::new(
+            case,
+            suite,
+            CaseStatus::EngineError,
+            Some(format!("could not spawn worker: {e}")),
+        );
     }
     let received = rx.recv_timeout(timeout);
     let millis = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
     let mut result = match received {
-        Err(_) => CaseResult::new(case, suite, CaseStatus::Timeout, Some(format!("exceeded {}s", timeout.as_secs()))),
-        Ok(Err(panic)) => CaseResult::new(case, suite, CaseStatus::Panic, Some(panic_message(panic.as_ref()))),
-        Ok(Ok(Err(R0Error::Source(e)))) => CaseResult::new(case, suite, CaseStatus::InvalidCase, Some(e)),
-        Ok(Ok(Err(R0Error::Engine(e)))) => CaseResult::new(case, suite, CaseStatus::EngineError, Some(e)),
+        Err(_) => CaseResult::new(
+            case,
+            suite,
+            CaseStatus::Timeout,
+            Some(format!("exceeded {}s", timeout.as_secs())),
+        ),
+        Ok(Err(panic)) => CaseResult::new(
+            case,
+            suite,
+            CaseStatus::Panic,
+            Some(panic_message(panic.as_ref())),
+        ),
+        Ok(Ok(Err(R0Error::Source(e)))) => {
+            CaseResult::new(case, suite, CaseStatus::InvalidCase, Some(e))
+        }
+        Ok(Ok(Err(R0Error::Engine(e)))) => {
+            CaseResult::new(case, suite, CaseStatus::EngineError, Some(e))
+        }
         Ok(Ok(Ok(items))) => {
             let status = if items.iter().all(|i| i.verdict.passes()) {
                 CaseStatus::Pass
@@ -200,8 +228,8 @@ fn r0(bytes: &[u8], name: Option<&str>) -> Result<Vec<Item>, R0Error> {
         workbook: harness_options(name).map_err(R0Error::Engine)?,
         ..LoadOptions::default()
     };
-    let mut workbook =
-        Workbook::from_xlsx_bytes(bytes, &opts).map_err(|e| R0Error::Engine(format!("import failed: {e}")))?;
+    let mut workbook = Workbook::from_xlsx_bytes(bytes, &opts)
+        .map_err(|e| R0Error::Engine(format!("import failed: {e}")))?;
     workbook.pin_clock_from_metadata();
     workbook.recalculate();
     let out = workbook
@@ -256,7 +284,10 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> Vec
                 if a == b {
                     (Verdict::Kept, None)
                 } else {
-                    (Verdict::Changed, Some(format!("content type {a:?} became {b:?}")))
+                    (
+                        Verdict::Changed,
+                        Some(format!("content type {a:?} became {b:?}")),
+                    )
                 }
             }
         };
@@ -327,11 +358,20 @@ pub fn report_markdown(results: &[CaseResult]) -> String {
                     *lost.entry(kind).or_default() += 1;
                 }
                 if i.verdict == Verdict::PackageInvalid {
-                    invalid.push(format!("{} {}: {}", c.id, i.key, i.detail.as_deref().unwrap_or("")));
+                    invalid.push(format!(
+                        "{} {}: {}",
+                        c.id,
+                        i.key,
+                        i.detail.as_deref().unwrap_or("")
+                    ));
                 }
             }
         }
-        let _ = writeln!(md, "## {suite}\n\n{} cases: {status:?}\n\nItems by verdict: {verdicts:?}\n", cases.len());
+        let _ = writeln!(
+            md,
+            "## {suite}\n\n{} cases: {status:?}\n\nItems by verdict: {verdicts:?}\n",
+            cases.len()
+        );
         let mut lost: Vec<_> = lost.into_iter().collect();
         lost.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
         if !lost.is_empty() {
@@ -376,12 +416,17 @@ pub fn command(
     mode: Mode,
 ) -> anyhow::Result<bool> {
     if filter.is_some() && mode != Mode::Report {
-        anyhow::bail!("--filter is not allowed for baseline operations (partial runs look like regressions)");
+        anyhow::bail!(
+            "--filter is not allowed for baseline operations (partial runs look like regressions)"
+        );
     }
     let results = run_suites(suites, filter, timeout);
     let out = root.join("eval/runs/latest");
     std::fs::create_dir_all(&out)?;
-    std::fs::write(out.join("roundtrip.json"), serde_json::to_string_pretty(&results)?)?;
+    std::fs::write(
+        out.join("roundtrip.json"),
+        serde_json::to_string_pretty(&results)?,
+    )?;
     std::fs::write(out.join("roundtrip.md"), report_markdown(&results))?;
     let mut ok = true;
     for suite in suites {
@@ -389,7 +434,11 @@ pub fn command(
         let mine: Vec<&CaseResult> = results.iter().filter(|r| &r.suite == name).collect();
         let items: usize = mine.iter().map(|r| r.items.len()).sum();
         let current = baseline(&mine);
-        println!("[{name}] {} cases, {items} items, {} failing", mine.len(), current.failing.len());
+        println!(
+            "[{name}] {} cases, {items} items, {} failing",
+            mine.len(),
+            current.failing.len()
+        );
         if mode == Mode::Report {
             continue;
         }

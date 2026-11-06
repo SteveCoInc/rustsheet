@@ -959,7 +959,11 @@ fn run() -> Result<ExitCode> {
             };
             let timeout = Duration::from_secs(sel.timeout);
             let ok = roundtrip::command(&root, &suites, sel.filter.as_deref(), timeout, mode)?;
-            Ok(if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE })
+            Ok(if ok {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::FAILURE
+            })
         }
         Cmd::Snapshot { .. } | Cmd::Compare { .. } => unreachable!("handled above"),
     }

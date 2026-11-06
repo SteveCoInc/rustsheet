@@ -643,3 +643,18 @@ Ours: `rustsheet_xlsx::compare` pins such a workbook's clock to `dcterms:modifie
 (T-0468, decision 0117); the engine itself reads the system clock unless pinned.
 Status: VERIFIED (desktop, one workbook)
 Tasks: T-0468
+
+## Round trips
+
+What Excel itself rewrites when it saves a workbook. This decides which differences the round-trip suites
+(SPEC-0033) may normalize. A difference is normalized only once a row here shows Excel rewriting it on every save
+(SPEC-0033 D4.4). Until then the candidates N1–N12 are scored as `changed`, `lost` or `added` and tagged, and
+T-4503 probes them.
+
+| Item | Excel's behavior | Evidence |
+|---|---|---|
+| N1–N12 | not yet probed | T-4503 |
+
+A stored formula's leading whitespace is dropped by Excel on import (see "Typed whitespace" above, T-2784, T-2949).
+It is therefore no semantic difference (SPEC-0033 X5).
+

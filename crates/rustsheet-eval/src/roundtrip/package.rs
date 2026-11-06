@@ -5,9 +5,9 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 
 use quick_xml::events::Event;
-use quick_xml::XmlVersion;
 use quick_xml::name::ResolveResult;
 use quick_xml::NsReader;
+use quick_xml::XmlVersion;
 use rustsheet_xlsx::import::part_key;
 
 use crate::xlsx_snapshot::{attr, read_part, relationships, resolve_target, SnapshotError, Zip};
@@ -273,7 +273,6 @@ fn is_xml_part(part: &str) -> bool {
     part.ends_with(".xml")
 }
 
-
 fn xml_error(part: &str, e: impl std::fmt::Display) -> SnapshotError {
     SnapshotError::Xml {
         part: part.to_string(),
@@ -293,11 +292,10 @@ fn relationship_refs(xml: &str) -> Result<Vec<(String, String)>, String> {
                     let a = a.map_err(|e| e.to_string())?;
                     let (ns, local) = reader.resolver().resolve_attribute(a.key);
                     if matches!(ns, ResolveResult::Bound(n) if n.as_ref() == REL_NS) {
-                        let value = a.normalized_value(XmlVersion::Implicit1_0).map_err(|e| e.to_string())?;
-                        out.push((
-                            local.as_ref().to_string(),
-                            value.into_owned(),
-                        ));
+                        let value = a
+                            .normalized_value(XmlVersion::Implicit1_0)
+                            .map_err(|e| e.to_string())?;
+                        out.push((local.as_ref().to_string(), value.into_owned()));
                     }
                 }
             }

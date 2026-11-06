@@ -283,8 +283,14 @@ impl Suite {
             if let Some(s) = suite.manifest.scenarios.iter().find(|s| s.as_str() != "R0") {
                 bail!("{at}: scenario {s} is not implemented yet (SPEC-0033 D1; T-4514 adds R1)");
             }
-            if cell_suites.iter().any(|c| c.manifest.name == suite.manifest.name) {
-                bail!("{at}: the name {} is taken by a suite of eval/suites/", suite.manifest.name);
+            if cell_suites
+                .iter()
+                .any(|c| c.manifest.name == suite.manifest.name)
+            {
+                bail!(
+                    "{at}: the name {} is taken by a suite of eval/suites/",
+                    suite.manifest.name
+                );
             }
             suites.push(suite);
         }
