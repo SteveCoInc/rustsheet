@@ -251,6 +251,10 @@ pub(crate) enum Diff {
         name: String,
         scope: Option<u32>,
         old_value: String,
+        /// The deleted name's `hidden` flag and Name Manager `comment`, which an undo puts back
+        /// (T-4637).
+        hidden: bool,
+        comment: Option<String>,
     },
     UpdateDefinedName {
         name: String,
