@@ -3,7 +3,7 @@ id: T-4110
 title: "Gate A tables, annuity II and rates: CUMIPMT, CUMPRINC, RRI, EFFECT, NOMINAL, DOLLARDE and DOLLARFR"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
