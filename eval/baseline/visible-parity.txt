@@ -147,6 +147,7 @@ ironcalc-calc/STATISTICAL/BETA_GAMMA.xlsx	1
 ironcalc-calc/STATISTICAL/GAMMA.xlsx	1
 ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	5
 ironcalc-calc/STATISTICAL/NORM_DIST.xlsx	9
+probes/accrint-zero-results.case.json	57
 probes/amordegrc-fraction-state-ai.case.json	1
 probes/fin-cumipmt-gate-edges.case.json	14
 probes/fin-cumipmt-overflow-and-forms.case.json	2
