@@ -3,7 +3,7 @@ id: T-3900
 title: "IRR({-1,1E+15}) and the zero-first-flow gen-m9 set are #DIV/0! in Excel where ours is #NUM! (T-2802 remainder)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: blocked
 priority: P2
 size: M
 tier: opus
@@ -62,3 +62,39 @@ engine's secant iterates:
 
 ## Out of scope
 - IRR's returned digits (T-2131).
+
+## Blocked because
+Time-boxed (opus run, 2026-11-06). I found no rule that moves the cells without regressions, and shipping one of the
+candidates below would be an unevidenced fit (decision 0188 R4). The next step is a probe, not more scoring.
+
+## Findings (2026-11-06, scored over the 255 IRR cases with temporary hypothesis switches, nothing shipped)
+- 56 IRR cells are Excel `#DIV/0!` where ours is `#NUM!`. 23 of them are probes/t2657-pv-irr-div0 (another task's)
+  and 7 are the `{-1,1E+15}` and D!A1:D12 cells.
+- Each secant failure reason was turned into `#DIV/0!` (applied to the first run, the retry, or both):
+  - flat secant `f1 == f0`: 26 fixed, 308 new failures;
+  - `d2 > 1`: 27 fixed, 137 new; on the retry only, 22 fixed, 56 new;
+  - non-finite `d2`: 0 fixed;
+  - a root past `IRR_FAR_ROOT_BOUND`: 26 fixed, 42 new. This rule fixes every `{-1,1E+15}` cell, but turns
+    `{-1,X}` `#NUM!` cells to `#DIV/0!` elsewhere;
+  - the step cap: 1 fixed.
+- **Best candidate, F:** after both secant runs fail, the call is `#DIV/0!` when an iterate of the fallback's Newton
+  from v = 0 is v > 0 with NPV not evaluable (`irr_npv` is `None`). It always fires at the first step,
+  v1 = -c0/c1, where x = 1/v1 makes x^i underflow. Over the IRR cases it scores 26 fixed and 17 new failures.
+  - Fixed: every long-series cell this task owns in t3347 (A131, A138), t3406 (A66:A68, A81, A82, A95, A96) and
+    the t3411 sweeps (fresh A83, A85, A91; fresh-2 A1, A6, A19, A82, A92, A98; fresh-3 A24, A78; fresh-4 A4, A68,
+    A86, A89, A94, A103).
+  - New failures (Excel `#NUM!`): t3411 fresh A98, A141; fresh-2 A90, A135; fresh-3 A91; fresh-4 A81, A111;
+    t3478-irr-r4-wide A8, A11, A25, A62, A112, A140, A145, A227; t3406 P!A80, P!A83.
+- **What separates them:**
+  - Every fixed cell's last secant run failed flat (f1 == f0). Three of the new failures (fresh-2 A90, fresh-3 A91,
+    t3406 A83) failed on a non-finite d2, so F restricted to a flat secant loses 14 cells, not 17.
+  - 11 of those 14 have a first flow of 4.6E+17 to 2.1E+82, with v1 = 5E+17 to 4E+73. The fixed cells have v1 from
+    4.6E+4 to 1.7E+13, plus fresh-2 A98 (v1 = 8.0E+18, 142 flows). Fresh-4 A111 has v1 = 9.4E+18 with 24 flows,
+    so v1 alone does not separate them.
+  - The other 3 (fresh A98, fresh-4 A81, t3406 A80) have (n-1)·log10(v1) of 320.3 to 324.1. Every fixed cell is at
+    327.9 or more. That is near, but not at, true double underflow (323.3, where x^(n-1) becomes 0, not
+    subnormal): fresh-4 A81 reaches 0 at the 59th power and is still `#NUM!`.
+- **Next step:** probe along those two axes with fresh cells (excel-graph):
+  - level annuities `{-X,1,...,1}` of 41 and 61 flows, with X swept so that (n-1)·log10(X) crosses 318 to 332;
+  - first-flow scale 1E+13 to 1E+20 at 24 and 142 flows.
+  Fix the R4 hold-out before scoring.
