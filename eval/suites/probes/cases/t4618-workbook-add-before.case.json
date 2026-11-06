@@ -1,0 +1,47 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4618: probes/t4554-api-name-local-name-body Last!D3 (=LD on Last, loaded before LD = =Dup is added through the API scoped to Last, after workbook adds WL = =LocLoc and WD = =Dup; S2 active) is 90, where probes/t4049-sheet-api-name-plain S!A1 is #NAME?. probes/t4049-sheet-api-name-plain (N = =1 scoped to S, S first and active) with a workbook-scoped name W = =2 added through the API before N. Does an earlier workbook add make =N on S see N?",
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "B1": "=FORMULATEXT(A1)",
+    "A3": "=W"
+   }
+  },
+  {
+   "name": "T",
+   "cells": {
+    "A1": "=S!N",
+    "A2": "=W"
+   }
+  }
+ ],
+ "check": [
+  "S!A1",
+  "S!A2",
+  "S!B1",
+  "S!A3",
+  "T!A1",
+  "T!A2"
+ ],
+ "api_names": [
+  {
+   "name": "W",
+   "formula": "=2"
+  },
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "S"
+  }
+ ],
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "expected": {}
+}

@@ -1,0 +1,47 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4618: the T-4618 probes fit a load order that takes the active sheet first: an earlier-loaded =S!N makes S's bare =N, loaded before N = =1 is added through the API scoped to S, read the new name, unless a bare =N loaded before it (probes/t4618-earlier-qualified-only reads 1 with T active, t4618-earlier-qualified-only-active #NAME? with S active). Tabs P, Q, R with Q active (holding no use) and N scoped to P: R holds =P!N, P the bare uses. After the active Q, does the load go on to R before P (P's uses read 1)?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "Q",
+ "sheets": [
+  {
+   "name": "P",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "B1": "=FORMULATEXT(A1)"
+   }
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=1+1"
+   }
+  },
+  {
+   "name": "R",
+   "cells": {
+    "A1": "=P!N"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "P!A1",
+  "P!A2",
+  "P!B1",
+  "Q!A1",
+  "R!A1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "P"
+  }
+ ]
+}

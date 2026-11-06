@@ -6,7 +6,7 @@
 //! added after load"). The engine keeps a formula's binding in its stored text, so the add
 //! rewrites that text before every formula is re-parsed.
 
-use super::bound_variables::{walk_names, NameSite};
+use super::bound_variables::{walk_names, walk_names_in_order, NameSite};
 use super::sheet_edits::for_each_sheet_reference_mut;
 use crate::expressions::parser::Node;
 use crate::expressions::utils::{bare_defined_name, quote_name, OWN_BOOK_NAME_PREFIX};
@@ -48,4 +48,41 @@ pub(crate) fn rebind_workbook_name_to_sheet(
             }
         }
     });
+}
+
+/// How a formula meets an undefined name while Excel loads it, which decides what the name's uses
+/// are bound to (T-4618; docs/excel-semantics/syntax.md "A sheet-scoped name added after load").
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum NameLoadEvent {
+    /// `Sheet!name`, naming the sheet at this index: it makes a place for that sheet's name.
+    Qualified(u32),
+    /// A use bound to the workbook name, `[0]!name` (as an earlier sheet-scoped add pins it).
+    Workbook,
+    /// An unqualified use that no LET or LAMBDA binds.
+    Bare,
+}
+
+/// The [`NameLoadEvent`]s of the undefined name `name` in `node`, in the order the formula
+/// writes them (probes/t4618-same-formula-qualified-first: `=S!N+N*10` reads the added `S!N`
+/// twice). A use of a defined name is none.
+pub(crate) fn name_load_events(node: &mut Node, name: &str) -> Vec<NameLoadEvent> {
+    let name = name.to_lowercase();
+    let mut events = Vec::new();
+    walk_names_in_order(node, &mut |site, used, declared| {
+        let event = match site {
+            NameSite::Use if declared.is_none() && used.to_lowercase() == name => {
+                NameLoadEvent::Bare
+            }
+            NameSite::DefinedName {
+                scope,
+                defined: false,
+            } if bare_defined_name(used).to_lowercase() == name => match scope {
+                Some(sheet) => NameLoadEvent::Qualified(sheet),
+                None => NameLoadEvent::Workbook,
+            },
+            _ => return,
+        };
+        events.push(event);
+    });
+    events
 }

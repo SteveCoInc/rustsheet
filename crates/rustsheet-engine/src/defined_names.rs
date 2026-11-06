@@ -494,9 +494,10 @@ impl Model {
     /// probes/t4014-sheet-api-name-65 S!A1); with one, the sheet's uses of it move to the new name,
     /// `S!N` included, while other sheets keep the workbook name
     /// (probes/t4049-sheet-api-name-over-book). An unqualified use of a defined workbook name
-    /// needs no rewrite: its text already reads the new sheet-scoped name. In most other books
-    /// Excel re-binds the unresolved use instead (probes/t4391-api-rebind-*), and no rule yet
-    /// tells those books apart from T-4049's, so those cells are known failures (T-4617).
+    /// needs no rewrite: its text already reads the new sheet-scoped name. Nor does an
+    /// unqualified use that took the sheet's own place for the name when the workbook was
+    /// loaded: the add fills that place (probes/t4554-api-name-local-name-body Last!D3, T-4618;
+    /// [`Model::loaded_uses_take_sheet_place`]).
     fn bind_added_sheet_name(&mut self, name: &str, sheet: u32) {
         let name_upper = name.to_uppercase();
         let workbook_name_defined = self
@@ -504,6 +505,9 @@ impl Model {
             .defined_names
             .iter()
             .any(|df| df.sheet_id.is_none() && df.name.to_uppercase() == name_upper);
+        if !workbook_name_defined && self.loaded_uses_take_sheet_place(name, sheet) {
+            return;
+        }
         let Ok(sheet_name) = self.workbook.worksheet(sheet).map(|ws| ws.get_name()) else {
             return;
         };

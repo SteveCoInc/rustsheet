@@ -1,6 +1,8 @@
 # SPEC-0018 — Nested arrays: GROUPBY and PIVOTBY cells that hold a LAMBDA's array result
 
-- **Status:** accepted (implemented by T-2593; T-2594 follows)
+- **Status:** accepted (implemented by T-2593 and T-2594). Excel changed some reads of a nested cell between 2026-10-28 and
+  2026-11-06 (T-2609; arrays.md "Operators over nested cells, and Excel's change of 2026-11"): rule 4's lifted top-left and
+  flattening SUM/COUNT describe the October fills, and T-4661 revises them.
 - **Milestone / lane:** M7 / engine (implementation), research (probes)
 - **Tasks:** T-2459 (this spec), T-2592 (probes), T-2602 (revision from the probe), T-2593 (representation, INDEX, TYPE,
   top-left reads), T-2594 (MAP, BYROW, BYCOL, REDUCE, the aggregates and reference cells over a nested result)
@@ -56,8 +58,15 @@ paragraph starting "A LAMBDA array result is shown as `#VALUE!`, but the cell ho
      `SUM(--ISERROR(GROUPBY(..)))` counts no error (P!C1, C9, C17, C25) unless a top-left is one. With `{1;4}`, `{#N/A;3}` and the
      Total `{1;#N/A;3;4}`, P!C33 is 1, so the Total's `#N/A`, which is not its top-left, is not counted. `SUM(--ISERROR(PIVOTBY(..)))`
      is 0 (t2311 P!C12), and REGEXEXTRACT reads a valid return mode (gen-m7/21b4eef18424ce94 A1504).
-   - An operator over the whole result keeps its shape: `&""` gives 3x3 (A13). Whether each cell then holds the top-left
-     or an array is unprobed, so T-2593 keeps today's result there.
+   - An operator over the whole result keeps its shape: `&""` gives 3x3 (A13), and each nested cell becomes `#VALUE!`, whatever
+     its size, kind or depth and whatever the operator (`+ - * / ^ % & =`, unary minus, against a scalar, a constant, a range or
+     another result): probes/t2609-nested-operators-and-lifts A1:A30, -one-cell A1:A26, A28:A30 and -d04 A1:A17 (excel-graph,
+     2026-11-06, T-2609). Ours does that (`own_error`, `array_node_to_number`).
+   - November change (T-2609, T-4661): the 2026-11-06 refills of the October probes read a nested cell as an error in an
+     element-wise lift (t2360-array-lambda-holidays-refill-1106 P!C1, C9, C17, C25, C33, t2311-pivotby-value-columns-error-refill-1106 P!C12),
+     SUM over the result as `#N/A` and COUNT as skipping it (t2592-nested-groupby-cells-refill-1106 A6:A8,
+     t2594-nested-aggregates-refill-1106 A26:A29, t2625-nested-consumers-refill-1106). A lifted INDEX of nested cells gives
+     each one's top-left (t2609-nested-operators-and-lifts A56:A59).
    - An operator on one nested cell taken out by INDEX works on its array: `+0`, `--` and `&""` leave `64|2x1|3` (A16:A18).
    - The aggregates over the result read through the nested cells, flattening them: SUM 220, COUNT 16, COUNTA 19 (the keys
      count, A6:A8). AVERAGE is `#N/A` (A9), ARRAYTOTEXT `#CALC!` (A10), and TEXTJOIN and CONCAT `#VALUE!` (A11, A12). These
@@ -75,7 +84,10 @@ paragraph starting "A LAMBDA array result is shown as `#VALUE!`, but the cell ho
    groupby-lifted-args A153, A161, A169). T-2398 owns that rule; this spec only supplies the nested cell it reads.
 7. **A reference body is a reference cell, not a nested array.** With a one-cell reference body (`LAMBDA(x,D!D2)`), every
    spilled cell displays `#VALUE!` (probes/groupby-lambda-forms G!K193:K198), but INDEX reads the cell as the referenced value
-   (`TYPE` 1, 10; A21). Reads other than INDEX's are unprobed.
+   (`TYPE` 1, 10; A21). An element-wise lift and an operator read it as `#VALUE!` (`SUM(--ISERROR(..))` 6, ISNUMBER 0,
+   REGEXEXTRACT `#VALUE!`, `INDEX(..+0,2,2)` `#VALUE!`), while SUM reads its value (60), COUNT gives 0 and COUNTA 9; INDEX of a
+   body pointing at a blank cell is a true blank and at an `#N/A` cell `#N/A` (probes/t2609-nested-operators-and-lifts A24,
+   A41:A43, A49:A54, 2026-11-06).
 8. **Nested cells nest again.** A LAMBDA that returns a GROUPBY gives a nested cell holding the inner 3x3 result, and that
    result's own cells are nested again (`64|3x3|a`, and the inner `INDEX(..,2,2)` `64|2x1`; A23, A24). Excel puts no limit of
    one level.
@@ -105,9 +117,9 @@ with saturating arithmetic. `new` refuses (returns `None`, and the caller gives 
 They are never recomputed by walking the tree. Elements may themselves be `Nested`, since Excel nests again (rule 8).
 
 **One reader.** `ArrayNode::scalar(&self) -> &ArrayNode` returns, for `Nested`, its top-left element taken recursively
-(the top-left of a nested top-left, a loop of at most `MAX_NESTED_DEPTH` steps; assumed, since no element-wise lift over a
-two-level result is probed, T-2609), and for a `Reference` the error `#VALUE!` (only INDEX reads its value, rule 7; a lifted
-read of one is unprobed, T-2609); otherwise the node itself. Every site that today matches `ArrayNode::Lambda` to
+(the top-left of a nested top-left, a loop of at most `MAX_NESTED_DEPTH` steps; the 2026-11-06 probe reads a two-level cell
+as an error instead, as it now reads every nested cell, T-2609, T-4661), and for a `Reference` the error `#VALUE!` (only INDEX
+reads its value, rule 7; a lift reads `#VALUE!`, probes/t2609-nested-operators-and-lifts A41, A49); otherwise the node itself. Every site that today matches `ArrayNode::Lambda` to
 place a non-scalar, and that rule 4 shows to read the top-left, goes through it: the element-wise lifts (ISERROR,
 REGEXEXTRACT's return_mode). Every other site keeps today's `#VALUE!` until a rule here covers it, for both kinds (a `Reference` cell included, until T-2594). The inventory is those sites (35 matches in 25 files: cast.rs, arithmetic.rs, functions/util.rs,
 aggregate_args.rs, lift/kinds, text_kernel.rs, spill_functions.rs, ...); each gets an explicit `Nested` arm, either
@@ -142,7 +154,8 @@ before adding `scalar()` (CLAUDE.md directive 3). The compiler finds every exhau
   new code (rule 5). Because of the `Arc`, each copy is O(1), so one nested cell can appear in up to 1,048,576 outer cells
   (`VSTACK(r,r,..)`, `CHOOSEROWS(r,SEQUENCE(1048576)^0)`). Copying is cheap; reading the copies is not, and the walk budget
   bounds that.
-- An operator over the whole result keeps today's result until probed (rule 4).
+- An operator over the whole result reads each nested cell as `#VALUE!` (rule 4, T-2609): `own_error` and
+  `array_node_to_number` already do, so no `Nested` arm of their own.
 
 **Bound (directive 5).** Each GROUPBY or PIVOTBY call counts the cells it keeps against `limits::MAX_SIZE` (1,048,576, the
 bound on any array the engine builds): the result's own cells plus each nested element's `cells`, which already includes

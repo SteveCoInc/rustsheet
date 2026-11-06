@@ -1,0 +1,51 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4618: probes/t4618-last-of-three-tabs (tabs First, S2, Last, the earlier two holding only =Last!N) reads 1 from =N on Last after N = =1 is added through the API scoped to Last, where the same book with a bare =N on the earlier tabs too (probes/t4618-last-of-three-first-active, t4618-last-of-three-last-active) and every case with the scoped sheet first leave it #NAME?. Tabs First, S2, Last with S2 active and N scoped to S2: First holds =S2!N, S2 the bare uses, and the later tab Last a bare =N. Does a bare use on a later tab undo S2's binding?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "S2",
+ "sheets": [
+  {
+   "name": "First",
+   "cells": {
+    "A1": "=S2!N"
+   }
+  },
+  {
+   "name": "S2",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "A3": {
+     "entered": "=N"
+    },
+    "B1": "=FORMULATEXT(A1)"
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "A1": "=N"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "First!A1",
+  "S2!A1",
+  "S2!A2",
+  "S2!A3",
+  "S2!B1",
+  "Last!A1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "S2"
+  }
+ ]
+}
