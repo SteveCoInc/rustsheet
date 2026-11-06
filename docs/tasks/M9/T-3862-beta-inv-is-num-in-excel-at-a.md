@@ -3,7 +3,7 @@ id: T-3862
 title: "BETA.INV is #NUM! in Excel at a huge alpha and a tiny p where the engine returns 1-2^-53"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
