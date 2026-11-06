@@ -64,7 +64,8 @@ Every failing table point has an owner.
     probes/t2436/fec39efaba9284c3 A1), the documented x² overflow.
 - Tables `eval/accuracy/tables/{T.DIST.RT,T.DIST.2T,TDIST,CONFIDENCE.T}/s1`: 120, 120, 200 and 197 points (3 CONFIDENCE.T
   draws had no value). Filled from excel-graph with 0 failures and 0 table defects.
-- `rustsheet-eval accuracy`: 637 new points, 0 failing, 0 table defects. `missing tables` went from 72 to 68.
+- `rustsheet-eval accuracy`: 637 new points, 0 failing, 0 table defects. `missing tables` went from 72 to 68 on the
+  branch's base. It is 61 after merging main, whose own new tables account for the rest.
   - Inside the envelope: 632. T.DIST.RT 103 on both sides and 17 through Excel's 15 digits only; T.DIST.2T 112 and 8;
     TDIST 185 and 15; CONFIDENCE.T 162 both, 7 Excel only, 23 math only.
   - 5 known failures added:
@@ -79,11 +80,12 @@ Every failing table point has an owner.
     - The engine is at the math, so these pass through the math side.
   - Probe sidecar cells: probes-numeric/t1531-t-tiny-p A84 and A108, `CONFIDENCE.T(1E-300,1,100000)` and
     `CONFIDENCE.T(1E-300,1,100001)`. Excel gives 0.2502, against math 0.11762 (1.13 relative).
-  - Probe sidecar cells: probes/t4254-beta-t-l140-zero-cut E1:E22 and F1:F22, and t4254-beta-t-zero-wide F30 (45
-    cells).
-    - These are `T.DIST.RT` at x 37 to 38 with df 1E5 and 1E7, where Excel gives 0 against a true tail of 9E-300 to
+  - Probe sidecar cells, 93 in all:
+    - probes/t4254-beta-t-l140-zero-cut E1:E22 and F1:F22, and t4254-beta-t-zero-wide F30;
+    - probes/t4456-beta-t-zero-cut E1:E23 and F1:F23, and t4456-beta-t-zero-reach E21 and F9.
+    - These are `T.DIST.RT` at x 37 to 38.5 with df 1E5 to 1E8, where Excel gives 0 against a true tail of 9E-300 to
       7E-313.
-    - Statistics.md already documents this zero cut in the T-4254 paragraph. T-4437 owns it.
+    - Statistics.md already documents this zero cut in its T-4254 and T-4456 paragraphs. T-4437 owns it.
   - No T.DIST.RT, T.DIST.2T or TDIST table point: their only gaps are underflows to 0, where the math is below the
     smallest double.
 - Semantics (statistics.md), each limited to the cited cells:
@@ -95,5 +97,6 @@ Every failing table point has an owner.
   - "Tiny-p quantiles": the CONFIDENCE.T points above.
   - T-4541's and T-3363's Context name their new points.
 - The probes and probes-numeric math sidecars were regenerated with `--function` for the four functions. The change
-  only adds cells: 12,803 cells in 13 sidecars, and 7 new sidecars. `make eval-math-check` reports "current".
+  only adds cells: 12,881 cells in 15 sidecars, and 7 new sidecars. That count includes the two t4456 cases that came
+  in from main, regenerated after the merge. `make eval-math-check` reports "current".
 - Eval delta: none in the gated suites (tools, tables, sidecars and docs only).
