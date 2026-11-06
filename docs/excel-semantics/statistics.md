@@ -6257,6 +6257,30 @@ before truncation; the impossible sample is 0 for the pmf and the cdf since T-26
 T-2700 confirmed the sign-before-truncation order for the HYPGEOM counts.
 Status: VERIFIED (excel-graph)
 
+## HYPGEOM.DIST of an empty population is 1, and a deep-tail pmf can be 0 (T-4105)
+Rule: an empty sample of an empty population is a number, not `#NUM!`: `HYPGEOMDIST(0,0,0,0)` and
+`HYPGEOM.DIST(0,0,0,0,FALSE)` are 1, the math's value (accuracy/HYPGEOMDIST/s1 A115, A130, A135; accuracy/HYPGEOM.DIST/s1
+A138). So number_pop = 0 is `#NUM!` only where another count exceeds it ("Legacy distribution names sweep, second
+family": `HYPGEOMDIST(1,4,8,0)`). Unprobed: `HYPGEOM.DIST(0,0,0,0,TRUE)`.
+- Excel's pmf is 0 at `HYPGEOM.DIST(41966,46221,65797,74726,FALSE)`, where the exact value is 8.103803254140631E-186
+  (accuracy/HYPGEOM.DIST/s1 A95), while far smaller pmfs are numbers within 1E-13 of the math in the same tables:
+  `HYPGEOM.DIST(14804,15018,24530,25931,FALSE)` 4.017211385733077E-252 (A94), `HYPGEOMDIST(7352,8625,14952,20136)`
+  6.403537788576229E-219 (accuracy/HYPGEOMDIST/s1 A93). So it is no fixed underflow threshold on the result; an
+  intermediate of Excel's (unpinned, "HYPGEOM.DIST is not exact for small integer arguments") underflows there. Excel is
+  kept as the target (decision 0300).
+- Elsewhere Excel's pmf and cdf are within 1E-10 relative of the math on all 400 points of the two tables, populations up
+  to 2147483646 included, and every Excel error in them is a domain error of the Gate A definition (T-4105).
+- Unprobed (an oracle limit, not an Excel value): the excel-graph oracle's calculate request fails on every retry for a
+  workbook holding `HYPGEOM.DIST(153800,1626691102,202463,2147483646,TRUE)` alone, while
+  `HYPGEOM.DIST(163325,524700,672305386,2147483646,TRUE)` and `HYPGEOM.DIST(108560,269566,29690062,73480449,TRUE)` are
+  answered; the Gate A table draws no cdf summing 2^17 terms or more (`HYPGEOM_CDF_TERMS`).
+Evidence: eval/accuracy/tables/HYPGEOM.DIST/s1 and HYPGEOMDIST/s1 (excel-graph, 2026-11-06).
+Ours: `#NUM!` at the empty population, and past the double-double walk (2^12 steps) the pmf is `#NUM!` where statrs'
+closed form C(K, x) C(N - K, n - x) / C(N, n) overflows to inf / inf (66 table points, from populations of about 2E4),
+and the fallback cdf is up to 1.2E-6 relative off (6 points): T-4502, known failures in eval/accuracy/known-failures.tsv.
+Status: VERIFIED (excel-graph)
+Tasks: T-4105, T-4502
+
 ## A single cell holding a boolean is no number in the PERCENTILE and QUARTILE data (T-2429)
 Rule: as a single cell holding text ("A single cell holding text is no number" above), a single cell holding TRUE is no
 number in the data of QUARTILE, QUARTILE.INC/.EXC and PERCENTILE, PERCENTILE.INC/.EXC: the data is empty and the call

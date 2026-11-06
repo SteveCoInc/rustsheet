@@ -109,9 +109,13 @@ def poisson_pmf(x: mpmath.mpf, m: mpmath.mpf) -> mpmath.mpf:
 
 
 def poisson_cdf(x: mpmath.mpf, m: mpmath.mpf) -> mpmath.mpf:
-    """P(X ≤ x): Q(x+1, m)."""
+    """P(X ≤ x): Q(x+1, m). NoValueError past `COUNT_DRAW_HI`: mpmath's upper gamma at an integer order sums x terms
+    (3 s at x = 1E12, hours at the probes' `POISSON(1E16,1E16,TRUE)`), so such an eval cell gets no math value."""
     if m == 0:
         return mpmath.mpf(1)
+    if x > COUNT_DRAW_HI:
+        msg = "count past the math's range"
+        raise NoValueError(msg)
     return mpmath.gammainc(x + 1, m, mpmath.inf, regularized=True)
 
 
@@ -389,11 +393,13 @@ HYPGEOM_SD_CAP = 1000.0
 """The largest standard deviation a cdf point is drawn with: past about 3,400 the engine's cdf sum has more than 2^18
 terms and is `#NUM!` (the per-call cap DEVIATION of statistics.md "HYPGEOM.DIST: per-call cap and lifting (T-1873)"),
 where Excel's value is unprobed (T-1896). A wider point is drawn as a pmf instead."""
-HYPGEOM_CDF_TERMS = 2**18
+HYPGEOM_CDF_TERMS = 2**17
 """The most terms a cdf point is drawn with, counted from the lowest possible sample_s as Excel sums them (statistics.md
 "HYPGEOM.DIST is not exact for small integer arguments": the cdf is the sum of Excel's own pmf terms from the lowest).
-A cap on the draws, not an Excel limit: the excel-graph oracle's calculate request failed on every retry for a table
-whose cdf points summed up to 8E8 terms (T-4105). A longer point is drawn as a pmf instead."""
+A cap on the draws, not an Excel limit: the excel-graph oracle's calculate request fails on every retry for a workbook
+holding `HYPGEOM.DIST(153800,1626691102,202463,2147483646,TRUE)` alone, while
+`HYPGEOM.DIST(163325,524700,672305386,2147483646,TRUE)` is answered (T-4105), so the term count alone is not the cause;
+statistics.md "HYPGEOM.DIST: per-call cap and lifting (T-1873)" records it. A longer point is drawn as a pmf instead."""
 
 
 def _hypgeom_sd(n: int, k: int, pop: int) -> float:

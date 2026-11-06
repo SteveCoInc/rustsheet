@@ -11,7 +11,7 @@ import pytest
 
 from rustsheet_tools.accuracy.defs import discrete
 from rustsheet_tools.accuracy.defs._common import fraction_to_mpf
-from rustsheet_tools.accuracy.model import REGISTRY, DomainError
+from rustsheet_tools.accuracy.model import REGISTRY, DomainError, NoValueError
 from rustsheet_tools.accuracy.sampler import STRATA, math_arg
 
 mp = mpmath.mpf
@@ -140,3 +140,10 @@ def test_legacy_names_reuse_the_modern_definitions() -> None:
     assert value("POISSON", 2, 5, False) == value("POISSON.DIST", 2, 5, False)
     with pytest.raises(DomainError):
         value("POISSON", 1, -1, True)
+
+
+def test_a_poisson_cdf_past_the_count_range_has_no_math_value() -> None:
+    # mpmath's integer upper gamma sums x terms: the probes' POISSON(1E16,1E16,TRUE) would take hours
+    with pytest.raises(NoValueError):
+        value("POISSON", 1e16, 1e16, True)
+    assert value("POISSON", 1e16, 1e16, False) > 0  # the pmf is a closed form

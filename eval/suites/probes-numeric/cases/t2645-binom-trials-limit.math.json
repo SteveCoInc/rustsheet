@@ -78,6 +78,11 @@
     "why": "trials outside [0, 2.14748e+09]",
     "f": "=BINOM.DIST(0,2^32,1E-12,TRUE)"
    },
+   "A23": {
+    "t": "e",
+    "why": "trials outside [0, 2.14748e+09]",
+    "f": "=BINOMDIST(0,2^31-1,1E-12,FALSE)"
+   },
    "A24": {
     "t": "e",
     "why": "trials outside [0, 2.14748e+09]",
@@ -137,6 +142,11 @@
     "t": "n",
     "v": "1.4593175408102484070329014880393158249163796661121e-25769824396",
     "f": "=NEGBINOM.DIST(2^31-1,1,1-1E-12,FALSE)"
+   },
+   "A35": {
+    "t": "e",
+    "why": "trials outside [0, 2.14748e+09]",
+    "f": "=BINOMDIST(0,2^31,1E-12,FALSE)"
    },
    "A36": {
     "t": "e",
