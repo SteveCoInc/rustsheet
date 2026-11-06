@@ -3,7 +3,7 @@ id: T-4596
 title: "TAKE/DROP/TRIMRANGE over a picker: probe a picked defined name, INDEX and CHOOSE one-cell pick, and name TRIMRANGE in arrays.md"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -28,9 +28,15 @@ each probed or dropped from the rule.
   `TAKE(CHOOSE(1,Z1),1)`, `DROP(CHOOSE(1,Y1),0)`, `TRIMRANGE(CHOOSE(1,Y1))`.
 
 ## Acceptance criteria
-- [ ] A probe case covers the forms above; every scored cell passes, or each one that does not has an owner task.
-- [ ] arrays.md's entry names TRIMRANGE with A11:D13, and its rule lists only the evidenced pick forms, with cells.
-- [ ] `make check` green; reviewers approve.
+- [x] A probe case covers the forms above; every scored cell passes, or each one that does not has an owner task.
+- [x] arrays.md's entry names TRIMRANGE with A11:D13, and its rule lists only the evidenced pick forms, with cells.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Pickers other than IF, CHOOSE, IFS and SWITCH; OFFSET's counts.
+
+## Outcome
+Added probes/t4596-take-drop-picker-name-index-choose (28 cells, excel-graph): a picked one-cell defined name, an INDEX
+pick and CHOOSE one-cell picks under TAKE, DROP and TRIMRANGE all stay references in Excel, and the engine already
+matches (28/28 pass, no baseline change, no code change). arrays.md's entry now names TRIMRANGE (A11:D13 of t4469) and
+cites the new cells for each pick form. No off cells, so no owner task.
