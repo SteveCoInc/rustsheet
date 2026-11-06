@@ -57,3 +57,5 @@ PERCENTOF `#DIV/0!` and a two-argument LAMBDA `#VALUE!`.
   them the empty-parent errors on both axes (PERCENTOF `#DIV/0!`, LAMBDA `#VALUE!`). Not a numeric fit: the
   rule is a structural model chosen on T-4382's cells and checked here on fresh runs.
 - coercion.md "PIVOTBY's other paths on intransitive runs (T-4382)" records the hold-out and the implementation.
+- Follow-up: T-4420 (review MINORs: one shared set for unreached column leaves, the empty-set note's scope, a
+  three-field probe).
