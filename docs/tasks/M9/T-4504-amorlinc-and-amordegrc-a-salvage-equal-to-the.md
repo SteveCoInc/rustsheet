@@ -1,0 +1,37 @@
+---
+id: T-4504
+title: "AMORLINC and AMORDEGRC: a salvage equal to the cost is 0, not #NUM! (Gate A T-4111)"
+milestone: M9
+lane: functions-financial
+status: todo
+priority: P2
+size: S
+tier: opus
+depends_on: []
+---
+
+## Goal
+AMORLINC and AMORDEGRC with a salvage equal to the cost return Excel's value (0 at the periods probed) instead of
+`#NUM!`, so the seven Gate A points below pass and their known-failures lines go.
+
+## Context
+- Found by T-4111's Gate A tables (excel-graph): Excel gives 0, the engine `#NUM!`, at
+  accuracy/AMORDEGRC/s1!Calc!A114, A118, A128, A130, A131 (periods 1, 4, 1, 2, 1) and accuracy/AMORLINC/s1!Calc!A124,
+  A125 (periods 5, 2), e.g. `AMORLINC(99977.707698474,42751,42993,99977.707698474,2,0.213533204746625)`.
+- financial.md "AMORLINC and AMORDEGRC check order" records it (T-4111): `#NUM!` is for a salvage *above* the cost
+  (gen-m9 5ded7594e597e31e A182, e8d55ec393460bb7 A176, probes/fin-amordegrc A21). The engine's
+  `amortization_values_valid` (functions/financial/amortization.rs) requires `salvage < cost`; the lift's
+  `ValueWork::Amortization` charge calls the same predicate.
+- For AMORDEGRC the ported walk would charge `rate * remain` at period 1 when the remain equals the salvage, while
+  Excel is 0: the fix is more than relaxing the comparison (an early 0 when nothing is depreciable, or `remain <=
+  salvage` in the walk; probe to tell them apart).
+- Unprobed: period 0 and periods between 0 and 1 with a salvage equal to the cost, and whether the equal case still
+  meets AMORDEGRC's asset-life check. Probe them (excel-probe skill) before choosing the rule.
+
+## Acceptance criteria
+- [ ] The seven points pass Gate A; their lines in eval/accuracy/known-failures.tsv are removed.
+- [ ] A probe of the unprobed cases above, recorded in financial.md.
+- [ ] `make check` green; reviewers approve.
+
+## Out of scope
+- Other AMORLINC and AMORDEGRC argument checks (T-2485).
