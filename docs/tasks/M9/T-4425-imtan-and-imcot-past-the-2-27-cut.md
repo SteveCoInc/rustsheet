@@ -3,7 +3,7 @@ id: T-4425
 title: "IMTAN and IMCOT past the 2^27 cut: probe the |y| where #NUM! turns into ±i (inferred from cosh 2y overflowing near 355.24, bracketed only by y = 20 and 700)"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -57,3 +57,7 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4425-imtan-imcot-s
 ## Out of scope
 - IMSEC, IMCSC, IMSECH and IMCSCH's 709.09 flush point (also inferred; file a follow-up if it is wanted).
 - The real SINH and COSH band (T-4423).
+
+## Outcome
+- probes/t4425-imtan-imcot-switch (excel-graph, 192 cells) brackets the switch at 2y > 709 / 2y < -708 (y = 354.5 `#NUM!`, 354.500000000001 i; -354 `#NUM!`, -354.000000000001 -i), not at cosh 2y's overflow. All 192 cells pass.
+- `tan_saturates` in complex/trig.rs replaces the cosh-finiteness tests in `imtan` and `imcot`; unit test `imtan_imcot_switch_to_i_at_2y_709`. engineering.md updated.

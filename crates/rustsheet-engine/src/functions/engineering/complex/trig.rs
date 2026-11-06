@@ -711,6 +711,21 @@ mod tests {
         assert_eq!(text(imcot, 1e-20, 0.0), "100000000000000000000");
     }
 
+    // probes/t4425-imtan-imcot-switch (excel-graph): past 2^27 IMTAN and IMCOT are `#NUM!` up to
+    // y = 354.5 and down to y = -354, then exactly -/+i.
+    #[test]
+    fn imtan_imcot_switch_to_i_at_2y_709() {
+        let at = |f: fn(ComplexParts, CellReferenceIndex) -> CalcResult, y: f64| text(f, 1e10, y);
+        assert_eq!(at(imtan, 354.5), "#NUM!");
+        assert_eq!(at(imtan, 354.500_000_000_001), "i");
+        assert_eq!(at(imcot, 354.500_000_000_001), "-i");
+        assert_eq!(at(imtan, -354.0), "#NUM!");
+        assert_eq!(at(imtan, -354.000_000_000_001), "-i");
+        assert_eq!(at(imcot, -354.000_000_000_001), "i");
+        // The control: x = 1 is exact i from the same y.
+        assert_eq!(text(imtan, 1.0, 354.5), "i");
+    }
+
     // probes/im-trig-magnitude-grid C234, J13 and probes/im-trig-argument-cut C5 (excel-graph, T-3758):
     // IMTAN's double angle and IMCSCH's y are reduced by the x87 π, past 2^27 for 2x too.
     #[test]
