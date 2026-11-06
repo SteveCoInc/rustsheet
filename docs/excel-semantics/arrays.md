@@ -1131,12 +1131,18 @@ same Data sheet, excel-graph, 2026-10-16; "functions", "functions2", "functions3
 Unprobed (T-1325): a labelled row of several functions with detected headers (the engine does not show them). CORREL, PEARSON and RSQ over arrays of different sizes
 are `#N/A` per group in Excel, `#VALUE!` here, and their total rows differ in the last digit (functions G!B421, functions2
 G!B281, G!B301): a CORREL/PEARSON/RSQ gap, T-1707.
-T-1706: every function passed by name gets its catalog minimum argument count (1 or 2; 0 or 3+ is `#VALUE!` overall):
+T-1706: every function passed by name gets its catalog minimum argument count (1 or 2; 3+ is `#VALUE!` overall, and 0 is one
+argument or `#VALUE!` overall, below):
 COVARIANCE.S, SLOPE, SUMX2MY2, INTERCEPT get two (grouped as usual), RANK, PERCENTILE, MOD two (`#VALUE!` per cell),
 SUBSTITUTE none (`#VALUE!`; probes/groupby-eta-arity G!A1-A141). SLOPE and INTERCEPT over arrays of different sizes are
 `#N/A` per group in Excel, `#VALUE!` here (G!B21:B25, G!B61:B65): T-1867.
-Unprobed (T-1706): minimum-0 functions that take optional arguments (ROW, COLUMN, SHEET, SHEETS, RANDARRAY) are
-extrapolated from NOW (`#VALUE!` overall); only NOW is probed.
+Minimum-0 functions that take one argument get one (probes/t4450-eta-special-forms, excel-graph, 2026-11-06, T-4450,
+T-2644): `GROUPBY(A1:A3,B1:B3,_xleta.ROW)` and `..COLUMN` are 4x2 with `#VALUE!` in each value cell (H109:H118, J9), SHEET
+and SHEETS `#N/A` in each (H121:H124, J59; ours `#NAME?` and `#N/IMPL`, T-4518), RANDARRAY 4 rows with a value that is not
+an error (J61:J63; ours an array there, T-4519), `PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.ROW)` 5x5 (J69). Yet `ARRAYTOTEXT` of the
+ROW and COLUMN results is `#CALC!` (F109, F115, also `LAMBDA(v,ROW(v))` J65; `ARRAYTOTEXT(INDEX(..,0,1))` is
+"1, 3, 5, Total", J15; ours prints the cells, T-4519). Functions that take none stay a whole-call `#VALUE!`: NOW (J55), PI
+in GROUPBY and PIVOTBY (J67, J73).
 T-1327 follow-up (PIVOTBY relative_to; probes/groupby-pivotby-functions P!A1-A841 show each cell's set with
 `LAMBDA(x,y,SUM(y))`, and -functions3 P!A61-A181):
 - A cell's relative set is a row selection crossed with a column selection, each all records, the cell's own row (column)
@@ -1716,14 +1722,40 @@ not an error, whatever it is (TRUE, FALSE, 1, 0, text, a blank cell; so `ISLOGIC
 (`f({1,0})` and `f(A1:B1)` are 1x2 `#VALUE!`, `f({1,#N/A,#DIV/0!})` `#VALUE!`, `#N/A`, `#DIV/0!`), with `f` bound by
 `LET(f,_xleta.IF,..)`. So `MAP({1,0},_xleta.IF)` and `BYROW({1;0},_xleta.IF)` are `#VALUE!` per element, and BYROW and BYCOL
 over two-cell slices are one `#CALC!` (E101 above). With two arguments it is IF (`f(TRUE,5)` 5, `f(FALSE,5)` FALSE);
-with none (`f()`) the error is one excel-graph cannot decode (left pending). Evidence: probes/eta-if-one-argument
+with none (`f()`) the error is one excel-graph cannot decode in the cell (left pending), and `ERROR.TYPE` of it is 3, a
+`#VALUE!` (probes/t4450-eta-special-forms L5, T-4450). Evidence: probes/eta-if-one-argument
 (excel-graph, 2026-10-19, T-1947).
-Unprobed: other errors (`#DIV/0!`, `#REF!`) and an array as BYROW's or BYCOL's function (the engine says `#VALUE!` for
-both), a special form passed by name (`_xleta.LET`, `_xleta.LAMBDA`, `_xleta.SUBTOTAL`, `_xleta.OFFSET`) and a call with too
-few arguments (`LET(f,_xleta.SUM,f())`): the engine gives whatever the function gives for those arguments.
+Other errors and an array as a helper's function are a whole-call `#VALUE!` ("LAMBDA helpers refuse a function they cannot
+call", T-3655). Special forms and reference functions by name (probes/t4450-eta-special-forms, excel-graph, 2026-11-06,
+T-4450; A1:B3 = 1..6, each result read through ROWS&"x"&COLUMNS in E, ARRAYTOTEXT in F, ERROR.TYPE in G; follow-ups in J):
+- LET and LAMBDA are not functions by name: `_xleta.LET` and `_xleta.LAMBDA` are `#NAME?` like an unknown name
+  (`ERROR.TYPE` 5, J31:J35), so `LET(f,_xleta.LAMBDA,f(1))` and `LET(f,_xleta.LET,f(1,2,3))` are `#NAME?` (E19:G19, J29)
+  and `BYROW(A1:B3,_xleta.LET)`, `MAP(A1:A3,_xleta.LAMBDA)`, `MAKEARRAY(2,2,_xleta.LET)`, `MAKEARRAY(2,2,_xleta.LAMBDA)` and
+  `MAP(A1:A3,B1:B3,{1;2;3},_xleta.LET)` a whole-call `#VALUE!` (E1:G13, J19, J21).
+- IF and CHOOSE by name read a reference given as a value argument (any but the first) as a blank: with A1:A3 1, 3, 5 and
+  B1:B3 2, 4, 6, `MAP(A1:A3,B1:B3,_xleta.IF)` is three blanks (J23), `MAP(A1:A3,B1:B3,_xleta.CHOOSE)` a blank, `#VALUE!`,
+  `#VALUE!` (E25:G27; the blank: ISBLANK TRUE, LEN 0, +0 is 0, J1:J7), `MAP({1;1;1},B1:B3,_xleta.IF)` and
+  `MAP({1;2;1},A1:A3,B1:B3,_xleta.CHOOSE)` blanks (J45, J51), and `LET(f,_xleta.IF,f(TRUE,A1))` and
+  `LET(f,_xleta.CHOOSE,f(1,A1))` 0 with ISBLANK TRUE (J39:J43). A union is a blank too (`f(TRUE,(A1,B1))`, ISBLANK TRUE,
+  L19:L21), but a reference to several cells is `#VALUE!` (`LET(f,_xleta.IF,f(TRUE,A1:A3))`,
+  `LET(f,_xleta.CHOOSE,f(2,A1,B1:B3))`, L15:L17, L23). Unprobed: a 3-D span and a lifted OFFSET grid (ours: `#VALUE!`, as
+  several cells). A reference condition or index reads as usual
+  (`MAP(A1:A3,{7;8;9},_xleta.IF)` 7, 8, 9, J47), and values pick as IF and CHOOSE do (`MAP({1;0},{5;6},_xleta.IF)` 5, FALSE;
+  `MAP({1;2},{5;6},{7;8},_xleta.CHOOSE)` 5, 8; `MAP({2;9},..)` 7, `#VALUE!`: E37, J25, J27). IFERROR, INDEX and OFFSET
+  return their references' values: `MAP(A1:A3,B1:B3,_xleta.IFERROR)` 1, 3, 5 (E31, J49),
+  `MAP(A1:A3,{1;2;1},_xleta.INDEX)` 1, `#REF!`, 5 (E67), `MAP(A1:A3,{0;1;0},{0;0;1},_xleta.OFFSET)` 1, 5, 6 (J17).
+- The other functions follow the argument counts: `MAKEARRAY(2,2,_xleta.OFFSET)` (two of OFFSET's three) is a whole-call
+  `#VALUE!` (E61), `MAKEARRAY(2,2,_xleta.SUBTOTAL)` `#VALUE!` per cell (SUBTOTAL(1,1): E73), `BYROW(A1:B3,_xleta.ROW)` 1, 2, 3
+  and `BYCOL(A1:B3,_xleta.COLUMN)` 1, 2 (E43, E49), `BYROW(A1:B3,_xleta.SHEET)` 1, 1, 1 (J53; ours `#NAME?`, T-4518).
+- Called through LET with an argument count it does not take, a function by name is `#VALUE!`: too few,
+  `LET(f,_xleta.SUM,f())` (E85:G85), `f()` of IF, CHOOSE and IFERROR, `f(1)` of CHOOSE and IFERROR (L5:L13), and too many,
+  `LET(f,_xleta.ABS,f(1,2))` (L1:L3); `LET(f,_xleta.SUM,f(1,2,3))` is 6 (L25).
+  One that takes none runs: `LET(f,_xleta.NOW,f())` a number, `LET(f,_xleta.ROW,f())` 97 (the formula's row),
+  `LET(f,_xleta.PI,f())` pi (E91:F103).
 Evidence: probes/eta-reduced-names (30 questions, excel-graph, 2026-10-14, T-1466); probes/m7-argument-modes F28:H51.
 Ours: an unbound `_xleta.` name of a known function evaluates to a LAMBDA whose definition is made per call
-(`Model::unbound_name`, `eta_definition`, lambda.rs); BYROW and BYCOL take only a LAMBDA (`by_slices_lambda`). IF with
+(`Model::unbound_name`, `eta_definition`, lambda.rs; not LET or LAMBDA, a call with a count the function does not take is
+`#VALUE!` in `lambda_definition`, and IF and CHOOSE blank a reference value argument: `eta_blanks_references`, T-4450); BYROW and BYCOL take only a LAMBDA (`by_slices_lambda`). IF with
 only a condition is the one-argument eta IF above (`Model::if_pick`, T-1947; stored only: a typed `=IF(x)` is refused,
 by Excel (Graph PATCH 400) and by ours (T-2568), and a file-stored one is refused by excel-graph, below, T-1990, T-2939); `ISERROR(_xleta.SUM)` is FALSE since T-1511. GROUPBY and PIVOTBY call an eta name through the same path (T-1322, T-1326), with its minimum argument count (two for PERCENTOF and CORREL: "GROUPBY and PIVOTBY", T-1325), and share the "is it a LAMBDA" check with BYROW and BYCOL (`as_lambda`, bycol_byrow.rs).
 A one-argument `IF(x)` stored in a file (`=IF(TRUE)`, `=IF(1)`, `=IF({1,0})`, `=IF(A1:B1)`, each alone in a workbook) is refused by
