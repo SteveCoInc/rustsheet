@@ -1,9 +1,11 @@
 //! A spec sheet's pivot tables in the engine adapter (T-2084, SPEC-0015): the rendered cells are
-//! written as constants, then the pivot is registered over its source.
+//! written as constants, then the pivot is registered over its source. A pivot with a
+//! `definition` (case builder v2) is loaded from the parts the builder writes for it instead, and
+//! rendered by the engine as Excel renders it on open (T-4152).
 
 use rustsheet::{
-    CellRef, EditError, Input, PivotDateGroupBy, PivotFunction, PivotRangeGroup, PivotTableInput,
-    RangeRef, SheetId, Txn,
+    CellRef, EditError, Input, PivotDateGroupBy, PivotError, PivotFunction, PivotParts,
+    PivotRangeGroup, PivotTableInput, RangeRef, SheetId, Txn, Workbook,
 };
 
 use crate::case::{
@@ -48,12 +50,49 @@ pub fn add_pivots(
     id: SheetId,
 ) -> Result<(), EditError> {
     for pivot in &sheet.pivot_tables {
-        // Excel renders a defined pivot on open; the engine cannot yet (T-4152), so its cells stay
-        // empty and the cases scoring them fail as known failures until it can.
+        // A defined pivot is loaded once the cells are in (`load_defined`).
         if pivot.definition.is_some() {
             continue;
         }
         tx.add_pivot_table(&pivot_input(spec, ids, sheet, id, pivot)?)?;
+    }
+    Ok(())
+}
+
+/// Loads every pivot of `spec` with a `definition` into `workbook`, whose cells are all in, from
+/// the parts the case builder writes for it (`pivot_definition`), as the xlsx importer loads the
+/// built file, then recalculates when one loaded: its `refreshOnLoad` cache is due, so the
+/// recalculation refreshes and renders it after calculating, the order Excel opens the file in. A pivot the importer would drop (a calculated field) is dropped here too, its cells left
+/// empty, as a load drops it.
+///
+/// # Errors
+/// A definition the builder would refuse, or the engine refusing a sheet.
+pub fn load_defined(workbook: &mut Workbook, spec: &CaseSpec) -> Result<(), String> {
+    let mut cache_id = 0;
+    let mut loaded = false;
+    for sheet in &spec.sheets {
+        for pivot in &sheet.pivot_tables {
+            let Some(definition) = &pivot.definition else {
+                continue;
+            };
+            cache_id += 1;
+            let built = crate::pivot_definition::parts(spec, sheet, pivot, definition, cache_id)?;
+            let id = workbook.sheet_id(&sheet.name).map_err(|e| e.to_string())?;
+            let parts = PivotParts {
+                cache_definition: built.cache_definition,
+                cache_records: built.cache_records,
+                cache_id,
+                tables: vec![(id, built.table)],
+            };
+            match workbook.load_pivot_parts(&parts) {
+                Ok(()) => loaded = true,
+                Err(EditError::Pivot(PivotError::Parts(_))) => {}
+                Err(error) => return Err(format!("pivot {}: {error}", pivot.name)),
+            }
+        }
+    }
+    if loaded {
+        workbook.recalculate();
     }
     Ok(())
 }

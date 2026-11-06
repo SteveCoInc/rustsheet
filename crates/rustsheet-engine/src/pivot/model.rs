@@ -403,6 +403,46 @@ pub enum Aggregate {
     VarP,
 }
 
+impl Aggregate {
+    /// The function a `dataField@subtotal` (`ST_DataConsolidateFunction`) names.
+    #[must_use]
+    pub fn from_consolidate_name(name: &str) -> Option<Self> {
+        Some(match name {
+            "sum" => Self::Sum,
+            "count" => Self::Count,
+            "average" => Self::Average,
+            "max" => Self::Max,
+            "min" => Self::Min,
+            "product" => Self::Product,
+            "countNums" => Self::CountNums,
+            "stdDev" => Self::StdDev,
+            "stdDevp" => Self::StdDevP,
+            "var" => Self::Var,
+            "varp" => Self::VarP,
+            _ => return None,
+        })
+    }
+
+    /// Excel's word for the function: a new data field's caption starts with it (`Sum of Sales`,
+    /// the case builder's `_AGGREGATE_VERBS`) and a custom subtotal line ends with it, `Count`
+    /// for both `countA` and `count` (probes/t4622-pivot-count-subtotals B1!A6:A7).
+    #[must_use]
+    pub fn word(self) -> &'static str {
+        match self {
+            Self::Sum => "Sum",
+            Self::Count | Self::CountNums => "Count",
+            Self::Average => "Average",
+            Self::Max => "Max",
+            Self::Min => "Min",
+            Self::Product => "Product",
+            Self::StdDev => "StdDev",
+            Self::StdDevP => "StdDevp",
+            Self::Var => "Var",
+            Self::VarP => "Varp",
+        }
+    }
+}
+
 /// `ST_ShowDataAs`: the calculation a data field shows instead of its plain values.
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ShowDataAs {

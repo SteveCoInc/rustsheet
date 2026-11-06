@@ -27,7 +27,9 @@ use rustsheet_engine::types::DateSystem;
 use self::groups::{apply_groups, FieldGroup, RangeGroup};
 use self::table::{flag, read_pivot_table};
 use super::iso_date::pivot_cache_date_serial;
-use super::package::{part_folder_and_rels, part_key, resolve_relative_target, Package};
+use super::package::{
+    part_folder_and_rels, part_key, resolve_relative_target, ImportLimits, Package,
+};
 use super::xml::{find_start_attribute, start_attribute, XmlNode};
 use super::{parse_relationships, Relationship};
 use crate::error::XlsxError;
@@ -265,38 +267,106 @@ fn load_cache<R: Read + Seek>(
     date_system: DateSystem,
 ) -> Result<PivotCache, Skip> {
     let limits = *archive.limits();
-    let Definition {
-        mut builder,
-        field_count,
-        records_id,
-        groups,
-        grouping_fields,
-        refresh_on_load,
-    } = read_definition(archive.open(part)?, values_left, &limits, date_system)?;
-    let Some(records_id) = records_id else {
+    let definition = read_definition(archive.open(part)?, values_left, &limits, date_system)?;
+    let Some(records_id) = definition.records_id.as_deref() else {
         return skip("no records part (saveData=\"0\")");
     };
     let (folder, rels_path) = part_folder_and_rels(part);
     let records = part_relationships(archive, &rels_path)?
         .into_iter()
-        .find(|(id, _)| *id == records_id)
+        .find(|(id, _)| id == records_id)
         .map(|(_, rel)| rel)
         .filter(|rel| !rel.external && rel.rel_type.ends_with("/pivotCacheRecords"))
         .and_then(|rel| resolve_relative_target(folder, &rel.target));
     let Some(records) = records else {
         return skip("no internal pivotCacheRecords relationship");
     };
-    read_records(
-        archive.open(&records)?,
-        &mut builder,
+    let records = archive.open(&records)?;
+    finish_cache(definition, records, values_left, &limits, date_system)
+}
+
+/// The cache of `definition`, its records read from the `records` part.
+fn finish_cache<B: BufRead>(
+    definition: Definition,
+    records: B,
+    values_left: usize,
+    limits: &ImportLimits,
+    date_system: DateSystem,
+) -> Result<PivotCache, Skip> {
+    let Definition {
+        mut builder,
         field_count,
-        &limits,
-        date_system,
-    )?;
+        records_id: _,
+        groups,
+        grouping_fields,
+        refresh_on_load,
+    } = definition;
+    read_records(records, &mut builder, field_count, limits, date_system)?;
     let mut cache = builder.finish();
     cache.refresh_on_load = refresh_on_load;
     apply_groups(&mut cache, &groups, grouping_fields, values_left)?;
     Ok(cache)
+}
+
+/// One pivot cache and its pivot tables as package parts, without the package: what a case
+/// builder writes for them (`tools/src/rustsheet_tools/pivot_definition.py`).
+#[derive(Clone, Copy, Debug)]
+pub struct PivotParts<'a> {
+    /// The `pivotCacheDefinition` part; its records part is `cache_records`, whatever its `r:id`.
+    pub cache_definition: &'a [u8],
+    /// The `pivotCacheRecords` part.
+    pub cache_records: &'a [u8],
+    /// The `cacheId` the tables name the cache by.
+    pub cache_id: u32,
+}
+
+/// Reads `parts` as the importer reads a package's: the cache, then each `pivotTableDefinition`
+/// of `tables` (the `sheetId` it sits on, its part) against it, numbered as cache `cache_index`
+/// of the workbook. `values_left` is the workbook's remaining record-value budget
+/// ([`MAX_RECORD_VALUES`]). Harness support for spec cases (T-4152): their pivots reach the
+/// engine through the importer, the one reader of a pivot definition.
+///
+/// # Errors
+/// [`XlsxError::Workbook`] with the reason the importer would skip the cache or a pivot for.
+pub fn read_pivot_parts(
+    parts: PivotParts<'_>,
+    tables: &[(u32, &[u8])],
+    cache_index: u32,
+    values_left: usize,
+    date_system: DateSystem,
+) -> Result<(PivotCache, Vec<PivotTable>), XlsxError> {
+    let limits = ImportLimits::default();
+    let values_left = values_left.min(MAX_RECORD_VALUES);
+    let cache = read_definition(parts.cache_definition, values_left, &limits, date_system)
+        .and_then(|definition| {
+            if definition.records_id.is_none() {
+                return skip("no records part (saveData=\"0\")");
+            }
+            finish_cache(
+                definition,
+                parts.cache_records,
+                values_left,
+                &limits,
+                date_system,
+            )
+        })
+        .map_err(|Skip(reason)| XlsxError::Workbook(reason))?;
+    let caches = [cache];
+    let ids = HashMap::from([(parts.cache_id, 0)]);
+    let left = Cell::new(
+        usize::try_from(limits.max_uncompressed_bytes)
+            .unwrap_or(usize::MAX)
+            .min(MAX_OPAQUE_BYTES),
+    );
+    let mut pivots = Vec::with_capacity(tables.len());
+    for &(sheet_id, part) in tables.iter().take(MAX_PIVOTS_PER_SHEET) {
+        let mut pivot = read_pivot_table(part, sheet_id, &caches, &ids, &limits, &left)
+            .map_err(|Skip(reason)| XlsxError::Workbook(reason))?;
+        pivot.cache = cache_index;
+        pivots.push(pivot);
+    }
+    let [cache] = caches;
+    Ok((cache, pivots))
 }
 
 /// The relationships of a part in document order; none when the part has no relationships part.
@@ -483,7 +553,7 @@ fn index_attribute(element: &BytesStart, name: &str) -> Result<u32, Skip> {
 /// other element.
 fn cache_item(
     element: &BytesStart,
-    limits: &super::package::ImportLimits,
+    limits: &ImportLimits,
     date_system: DateSystem,
 ) -> Result<Option<CacheItem>, Skip> {
     let tag = local_name(element);
@@ -549,7 +619,7 @@ struct Definition {
 fn read_definition<B: BufRead>(
     part: B,
     values_left: usize,
-    limits: &super::package::ImportLimits,
+    limits: &ImportLimits,
     date_system: DateSystem,
 ) -> Result<Definition, Skip> {
     let mut records_id = None;
@@ -754,7 +824,7 @@ fn read_records<B: BufRead>(
     part: B,
     builder: &mut CacheBuilder,
     field_count: u32,
-    limits: &super::package::ImportLimits,
+    limits: &ImportLimits,
     date_system: DateSystem,
 ) -> Result<(), Skip> {
     let mut record: Vec<RecordValue> = Vec::new();

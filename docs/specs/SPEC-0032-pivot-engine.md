@@ -353,4 +353,6 @@ introducing it adds:
 11. Export and API (T-4176–T-4178, T-4184), then PivotChart data and I/O (T-4186, T-4187) and slicers
     (T-4188).
 
-Until T-4152 lands, spec-case pivots with a `definition` stay unregistered and their cells known failures.
+Since T-4152, a spec-case pivot with a `definition` reaches the engine as the case builder's parts, read by
+the importer (`rustsheet_xlsx::import::read_pivot_parts`, `Workbook::load_pivot_parts`) and rendered by the
+refresh on load; the baked `rendered` path stays for the original builder's pivots.

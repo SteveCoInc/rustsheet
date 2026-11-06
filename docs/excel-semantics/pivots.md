@@ -568,7 +568,8 @@ lines (T-4147):
 
 Not compared, because the engine-side harness cannot rebuild their cache or tree yet: t4128 R, t4134
 I3, t4582 J1, J2 and t4585 N1 have formulas in their sources, which the case file does not evaluate
-(T-4152 runs them through the engine); t4582 J3 and J4 depend on date items against cached numbers
+(the eval adapter runs them through the engine since T-4152: all pass but t4585 N1, whose renamed
+fields the refresh refuses to renumber, T-4694); t4582 J3 and J4 depend on date items against cached numbers
 (T-4612); t4128 G is grouped (T-4171) and t4128 K has a calculated field, a Top-N filter and a
 descending sort (T-4174, T-4165).
 

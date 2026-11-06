@@ -16,6 +16,11 @@ A refreshed pivot builds its groups from the source as Excel does, and PivotResu
 ## Context
 Rescoped 2026-11-06. M6 implemented grouping at import (group labels become cache items) and a compact one-field layout for grouped spec pivots (`pivot/layout.rs`, T-4235/T-4246). What is missing is grouping during a refresh from the source, grouped fields in multi-field and tabular/outline layouts, and manual and multi-level groups. SPEC-0032 decides where the shared group code lives (directive 3). Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
+Owner of these visibly-off pivot cells (decision 0245; moved from T-4152): probes/t4128-pivot-spike
+  G!A3:B7. The case builder saves its own numeric group labels (`group_labels`), which Excel rebuilds on
+  open; the importer refuses the pivot ("item index 6 is past the field's items"), so it is never
+  refreshed or rendered.
+
 ## Acceptance criteria
 - [ ] T-4170 probes pass; the M6 grouping probes keep passing; corpus group pivots re-render.
 - [ ] No duplicated grouping logic (`scripts/check_duplication.py`).

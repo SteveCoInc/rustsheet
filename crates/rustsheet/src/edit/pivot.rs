@@ -225,6 +225,9 @@ pub enum PivotError {
     /// be renumbered under parts of its definition kept verbatim.
     #[error(transparent)]
     Refresh(PivotRefreshError),
+    /// Pivot parts the xlsx importer would skip (`Workbook::load_pivot_parts`), and why.
+    #[error("pivot parts: {0}")]
+    Parts(String),
 }
 
 impl From<PivotRefreshError> for PivotError {
@@ -504,6 +507,10 @@ impl Workbook {
         self.track_changes = track;
     }
 }
+
+mod parts;
+
+pub use parts::PivotParts;
 
 #[cfg(test)]
 mod tests;

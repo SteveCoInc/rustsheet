@@ -113,23 +113,6 @@ fn item_text(item: &CacheItem) -> String {
     }
 }
 
-/// The word a custom subtotal line puts after its item: Excel's name of the function, `Count`
-/// for both `countA` and `count` (probes/t4622-pivot-count-subtotals B1!A6:A7).
-fn function_word(function: Aggregate) -> &'static str {
-    match function {
-        Aggregate::Sum => "Sum",
-        Aggregate::Count | Aggregate::CountNums => "Count",
-        Aggregate::Average => "Average",
-        Aggregate::Max => "Max",
-        Aggregate::Min => "Min",
-        Aggregate::Product => "Product",
-        Aggregate::StdDev => "StdDev",
-        Aggregate::StdDevP => "StdDevp",
-        Aggregate::Var => "Var",
-        Aggregate::VarP => "Varp",
-    }
-}
-
 /// One axis as the renderer reads it.
 struct Axis<'a> {
     tree: &'a AxisTree,
@@ -265,7 +248,7 @@ impl Cells<'_> {
             )),
             ItemType::Default => Some(format!("{} Total", item()?)),
             ItemType::Function(function) => {
-                Some(format!("{} {}", item()?, function_word(function)))
+                Some(format!("{} {}", item()?, Aggregate::word(function)))
             }
             _ => None,
         }
