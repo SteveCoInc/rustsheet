@@ -4688,7 +4688,7 @@ Oracle sweep (excel-graph), 16 cases, 34-102 cells each; every paired cell (colu
 - A boolean p is #NUM! (`GAMMAINV(TRUE,2,1)`, `LOGINV(TRUE,0,1)`, `NORMINV(TRUE,0,1)`) because TRUE coerces to 1, while a boolean x coerces to 1 (`NORMDIST(TRUE,0,1,TRUE)`, `GAMMADIST(TRUE,2,1,TRUE)`) and text numbers coerce everywhere; non-numeric text is #VALUE!.
 - The `cumulative` flag of GAMMADIST/NORMDIST takes any nonzero number as TRUE, the text "TRUE", and an omitted (empty) argument as FALSE.
 - Zero or negative scale is #NUM! (`NORMDIST(0,0,0,TRUE)`, `GAMMADIST(1,2,0,TRUE)`); `GAMMADIST(0,2,1,..)` = 0 for both cum values; `LOGNORMDIST(0,0,1)` is #NUM!; far tails flush to 0 (`NORMSDIST(-38)` = 0, `NORMDIST(-40,0,1,..)` = 0) while `NORMSDIST(-37)` = 5.7255712225239266E-300.
-- NEGBINOMDIST with p = 1 is #NUM! even for zero failures (`NEGBINOMDIST(0,3,1)`), and NEGBINOM.DIST is #NUM! at p = 0 and p = 1 alike (`NEGBINOM.DIST(21,4,0,TRUE)` and `(22,25,0,FALSE)` at p = 0, `NEGBINOM.DIST(20,1,1,FALSE)` and `(13,25,1,TRUE)` at p = 1: accuracy/NEGBINOM.DIST/s1 A117, A127, A119, A139, excel-graph, T-3553), so its probability is open at both ends; successes = 0 is #NUM!. HYPGEOMDIST with sample_s > number_sample is 0, not #NUM! as documented (`HYPGEOMDIST(5,4,8,20)` = 0, `HYPGEOMDIST(1,0,8,20)` = 0); population_s > number_pop is #NUM! (`HYPGEOMDIST(1,4,25,20)`, `HYPGEOMDIST(1,4,8,5)`), and so is number_pop = 0 (`HYPGEOMDIST(1,4,8,0)`, where population_s and number_sample also exceed it); number_sample > number_pop alone is #NUM! for HYPGEOM.DIST (`t1049-hypgeomdist` A40, `(1,25,8,20)`).
+- NEGBINOMDIST with p = 1 is #NUM! even for zero failures (`NEGBINOMDIST(0,3,1)`), and NEGBINOM.DIST is #NUM! at p = 0 and p = 1 alike (`NEGBINOM.DIST(21,4,0,TRUE)` and `(22,25,0,FALSE)` at p = 0, `NEGBINOM.DIST(20,1,1,FALSE)` and `(13,25,1,TRUE)` at p = 1: accuracy/NEGBINOM.DIST/s1 A117, A127, A119, A139, excel-graph, T-3553), so its probability is open at both ends; successes = 0 is #NUM!. HYPGEOMDIST with sample_s > number_sample is 0, not #NUM! as documented (`HYPGEOMDIST(5,4,8,20)` = 0, `HYPGEOMDIST(1,0,8,20)` = 0); population_s > number_pop is #NUM! (`HYPGEOMDIST(1,4,25,20)`, `HYPGEOMDIST(1,4,8,5)`), and so is number_pop = 0 (`HYPGEOMDIST(1,4,8,0)`, where population_s and number_sample also exceed it; an empty sample of an empty population is 1, see "HYPGEOM.DIST of an empty population is 1, and a deep-tail pmf can be 0 (T-4105)"); number_sample > number_pop alone is #NUM! for HYPGEOM.DIST (`t1049-hypgeomdist` A40, `(1,25,8,20)`).
 - TTEST: tails 0/3 and type 0/4 are #NUM!, tails accepts a boolean (`TTEST(..,TRUE,2)`) and text numbers, tails/type truncate, an omitted tails or type is #NUM!; unequal counts with type 1 (paired) is #N/A; type 1 on a pair whose differences have zero variance is #DIV/0!; a one-element range is #DIV/0!; an empty range is #DIV/0!.
 - ZTEST: sigma 0 or negative is #NUM!; a one-element range is #DIV/0! (with or without sigma); an empty range is #N/A; text x "5" and TRUE coerce, non-numeric text is #VALUE!; an omitted sigma (empty argument) is #NUM!, while an omitted x (`ZTEST(D1:D10,)`) returns a value (1.3161580317707342E-09; that it equals x = 0 was not probed); a range as x lifts and spills (see "Statistical function argument modes").
 Evidence: probes-numeric cases `t1048-gammadist`, `-gammainv`, `-hypgeomdist`, `-loginv`, `-lognormdist`, `-negbinomdist`, `-normdist`, `-norminv`, `-normsdist`, `-normsinv`, `-poisson`, `-tdist`, `-tinv`, `-ttest`, `-weibull`, `-ztest`. Oracle: excel-graph, 2026-10-14.
@@ -6298,6 +6298,32 @@ before truncation; the impossible sample is 0 for the pmf and the cdf since T-26
 `hyp_geom_dist_of`; probes/t2429-hypgeom-huge-count A5, A6 and their rows, `HYPGEOMDIST(1,N,3,N)`, are its cells).
 T-2700 confirmed the sign-before-truncation order for the HYPGEOM counts.
 Status: VERIFIED (excel-graph)
+
+## HYPGEOM.DIST of an empty population is 1, and a deep-tail pmf can be 0 (T-4105)
+Rule: an empty sample of an empty population is a number, not `#NUM!`: `HYPGEOMDIST(0,0,0,0)` and
+`HYPGEOM.DIST(0,0,0,0,FALSE)` are 1, the math's value (accuracy/HYPGEOMDIST/s1 A115, A130, A135; accuracy/HYPGEOM.DIST/s1
+A138), where `HYPGEOMDIST(1,4,8,0)`, whose other counts exceed the empty population, is `#NUM!` ("Legacy distribution
+names sweep, second family"). These are the only probed cells with number_pop = 0: other shapes (`HYPGEOMDIST(0,0,1,0)`,
+`HYPGEOMDIST(1,0,0,0)`) and `HYPGEOM.DIST(0,0,0,0,TRUE)` are unprobed.
+- Excel's pmf is 0 at `HYPGEOM.DIST(41966,46221,65797,74726,FALSE)`, where the exact value is 8.103803254140631E-186
+  (accuracy/HYPGEOM.DIST/s1 A95), while far smaller pmfs are numbers within 1E-12 of the math in the same tables:
+  `HYPGEOM.DIST(14804,15018,24530,25931,FALSE)` 4.017211385733077E-252 (A94), `HYPGEOMDIST(7352,8625,14952,20136)`
+  6.403537788576229E-219 (accuracy/HYPGEOMDIST/s1 A93). So it is no fixed underflow threshold on the result; an
+  intermediate of Excel's (unpinned, "HYPGEOM.DIST is not exact for small integer arguments") underflows there. Excel is
+  kept as the target (decision 0300).
+- Elsewhere Excel's pmf and cdf are within 1E-10 relative of the math on all 400 points of the two tables, populations up
+  to 2147483646 included, and every Excel error in them is a domain error of the Gate A definition (T-4105).
+- Unprobed (an oracle limit, not an Excel value): the excel-graph oracle's calculate request fails on every retry for a
+  workbook holding `HYPGEOM.DIST(153800,1626691102,202463,2147483646,TRUE)` alone (found by filling the table in parts;
+  the table holds that point as a pmf, A180), while the cdf `HYPGEOM.DIST(108560,269566,29690062,73480449,TRUE)` (A157,
+  108,560 terms) is answered, and so is the pmf `HYPGEOM.DIST(163325,524700,672305386,2147483646,FALSE)` (A168). What
+  Excel or the oracle times out on is unpinned. The Gate A table draws no cdf summing 2^17 terms or more (`HYPGEOM_CDF_TERMS` in tools/src/rustsheet_tools/accuracy/defs/discrete.py).
+Evidence: eval/accuracy/tables/HYPGEOM.DIST/s1 and HYPGEOMDIST/s1 (excel-graph, 2026-11-06).
+Ours: `#NUM!` at the empty population, and past the double-double walk (2^12 steps) the pmf is `#NUM!` where statrs'
+closed form C(K, x) C(N - K, n - x) / C(N, n) overflows to inf / inf (66 table points, from populations of about 2E4),
+and the fallback cdf is up to 1.2E-6 relative off (6 points): T-4502, known failures in eval/accuracy/known-failures.tsv.
+Status: VERIFIED (excel-graph)
+Tasks: T-4105, T-4502
 
 ## A single cell holding a boolean is no number in the PERCENTILE and QUARTILE data (T-2429)
 Rule: as a single cell holding text ("A single cell holding text is no number" above), a single cell holding TRUE is no

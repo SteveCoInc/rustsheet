@@ -284,6 +284,82 @@ accuracy/GAMMA.INV/e-T-3863!Calc!A194	T-3364	R3 closed-form point: the engine re
 accuracy/GAMMA.INV/e-T-3863!Calc!A196	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A198	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A199	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
+accuracy/HYPGEOM.DIST/s1!Calc!A85	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A95	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel 0 where the math is 8.1E-186
+accuracy/HYPGEOM.DIST/s1!Calc!A97	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A102	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A138	T-4502	Excel 1 for an empty sample of an empty population; the engine #NUM!
+accuracy/HYPGEOM.DIST/s1!Calc!A142	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A145	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A146	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A147	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A148	T-4502	cdf past the double-double walk: the engine (statrs ln-binomial sum) is off the math by 1e-07; Excel matches it
+accuracy/HYPGEOM.DIST/s1!Calc!A149	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A151	T-4502	cdf past the double-double walk: the engine (statrs ln-binomial sum) is off the math by 6e-09; Excel matches it
+accuracy/HYPGEOM.DIST/s1!Calc!A152	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A153	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A157	T-4502	cdf past the double-double walk: the engine (statrs ln-binomial sum) is off the math by 3e-07; Excel matches it
+accuracy/HYPGEOM.DIST/s1!Calc!A158	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A161	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A163	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A164	T-4502	cdf past the double-double walk: the engine (statrs ln-binomial sum) is off the math by 1e-06; Excel matches it
+accuracy/HYPGEOM.DIST/s1!Calc!A166	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A167	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A168	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A169	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A170	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A172	T-4502	cdf past the double-double walk: the engine (statrs ln-binomial sum) is off the math by 7e-08; Excel matches it
+accuracy/HYPGEOM.DIST/s1!Calc!A173	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A174	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A176	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A179	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A180	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A181	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A187	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A188	T-4502	cdf past the double-double walk: the engine (statrs ln-binomial sum) is off the math by 2e-08; Excel matches it
+accuracy/HYPGEOM.DIST/s1!Calc!A193	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A194	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOM.DIST/s1!Calc!A196	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A90	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A93	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A104	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A115	T-4502	Excel 1 for an empty sample of an empty population; the engine #NUM!
+accuracy/HYPGEOMDIST/s1!Calc!A130	T-4502	Excel 1 for an empty sample of an empty population; the engine #NUM!
+accuracy/HYPGEOMDIST/s1!Calc!A135	T-4502	Excel 1 for an empty sample of an empty population; the engine #NUM!
+accuracy/HYPGEOMDIST/s1!Calc!A141	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A142	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A146	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A147	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A148	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A149	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A153	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A154	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A156	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A157	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A160	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A161	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A162	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A163	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A164	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A165	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A166	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A168	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A169	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A170	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A171	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A172	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A175	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A176	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A177	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A178	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A179	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A180	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A182	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A187	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A190	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A194	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A197	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
+accuracy/HYPGEOMDIST/s1!Calc!A199	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
 accuracy/CUMIPMT/s1!Calc!A87	T-4390	tiny rate 1.3E-10, 41 periods: PMT·m - CUMPRINC cancels; ours 1.5E-8 off Excel, 3.3E-8 off the math
 accuracy/CUMIPMT/s1!Calc!A90	T-4390	tiny rate 1.5E-12, 5 periods of type 1: PMT·m - CUMPRINC cancels; ours 2.5E-6 off Excel, which is 2.2E-6 off the math
 accuracy/CUMIPMT/s1!Calc!A92	T-4390	tiny rate 3.1E-11, 42 periods: PMT·m - CUMPRINC cancels; ours 9.1E-8 off Excel, 2.0E-8 off the math
