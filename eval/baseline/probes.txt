@@ -1643,6 +1643,7 @@ C	probes/t2929-sort-lifted-by-col-shapes.case.json	121
 C	probes/t2932-b2-calendar-twice.case.json	80
 C	probes/t2937-own-book-prefix-in-name-body.case.json	12
 C	probes/t2939-typed-if-two-argument-controls.case.json	9
+C	probes/t2946-char-array.case.json	18
 C	probes/t2947-sort-lifted-by-col-corners.case.json	48
 C	probes/t2949-stored-10.case.json	2
 C	probes/t2949-stored-11.case.json	2
