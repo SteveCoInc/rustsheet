@@ -16,11 +16,8 @@ The layout honours custom subtotal functions (several per field), show items wit
 ## Context
 Evidence from cap-layout and the geometry probes; probes added here where missing. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
-Owner of these visibly-off pivot cells (decision 0245; moved from T-4152, whose adapter renders them
-  through the engine): the countA and count custom subtotals over a `#N/A` render `#N/A` where Excel
-  counts up to the error (pivots.md "Which function the countA and count custom subtotals compute";
-  scope T-4636): probes/t4622-pivot-count-subtotals B1!C6:C7, B4!C6:C7, B5!C6:C7, CA!C6:C6,
-  CN!C6:C6.
+The t4622 count-subtotal cells T-4152 handed to this task (decision 0245) now pass through the eval
+adapter, so this task owns no visibly-off cells.
 
 ## Acceptance criteria
 - [x] A custom subtotal line's label is Excel's (`<item> Count` for both `t="countA"` and `t="count"`, probes/t4137-pivot-captions K5!A8 and probes/t4622-pivot-count-subtotals B1!A6:A7), never derived from the model's `Aggregate` name (`countA` is Count, `count` CountNums, T-4622). Under a Sum data field an error ends the count within its inner-item cell (pivots.md; scope open, T-4636).
@@ -49,5 +46,5 @@ Owner of these visibly-off pivot cells (decision 0245; moved from T-4152, whose 
   with T-4657. UNVERIFIED in pivots.md: the cut-count rule with a column field and under
   aggregates other than Sum (T-4636), and the blank-row and collapse readings listed under
   "Layout lines" (T-4699, T-4698).
-- Owner: the new probe case is listed in T-4152 (decision 0245); its `pivots` cells all pass in the engine's unit tests
+- Owner: none needed; the new probe case passes whole through the eval adapter (T-4152), and its `pivots` cells all pass in the engine's unit tests
   (layout/lines/tests.rs, layout/render/tests.rs). The eval adapter that scores them is T-4152's.

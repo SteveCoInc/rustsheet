@@ -2293,6 +2293,7 @@ C	probes/t4138-pivot-geometry.case.json	270
 C	probes/t4146-annuity-twice-fresh.case.json	120
 C	probes/t4146-annuity-twice-rounded.case.json	240
 C	probes/t4153-narrow-nbsp-accent.case.json	106
+C	probes/t4168-pivot-layout-options.case.json	279
 C	probes/t4192-xlookup-error-return-wildcard-binary.case.json	54
 C	probes/t4193-aggregate-scalar-data-error-order.case.json	94
 C	probes/t4194-subtotal-nested-skip.case.json	90
@@ -9327,14 +9328,6 @@ F	probes/t4621-api-sheet-name-body-last.case.json	S2!E1
 F	probes/t4621-api-sheet-name-body-last.case.json	S2!E3
 F	probes/t4621-api-sheet-name-body-last.case.json	S2!E4
 F	probes/t4621-api-sheet-name-body.case.json	Last!E2
-F	probes/t4622-pivot-count-subtotals.case.json	B1!C6
-F	probes/t4622-pivot-count-subtotals.case.json	B1!C7
-F	probes/t4622-pivot-count-subtotals.case.json	B4!C6
-F	probes/t4622-pivot-count-subtotals.case.json	B4!C7
-F	probes/t4622-pivot-count-subtotals.case.json	B5!C6
-F	probes/t4622-pivot-count-subtotals.case.json	B5!C7
-F	probes/t4622-pivot-count-subtotals.case.json	CA!C6
-F	probes/t4622-pivot-count-subtotals.case.json	CN!C6
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B10
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B11
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B9
