@@ -1,5 +1,6 @@
 use super::{
-    beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement, l140_overflows, Branch,
+    beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement, l140_overflows,
+    l140_prefactor_zero_tails, Branch,
 };
 
 fn branch(a: f64, b: f64, x: f64) -> (Branch, bool) {
@@ -601,4 +602,18 @@ fn l140_bup_sum_overflow_is_excels_num_error() {
     assert!(beta(0.3, 2.401e16, 21.5));
     assert!(beta(0.7, 21.5, 2.401e16));
     assert!(!beta(0.3, 2.261e16, 21.5));
+}
+
+// BETA.DIST's cdf is Excel's exact 0 where L140 bup's prefactor leaves the normal range, as F's
+// tails (T-4045, T-4456): probes/t4456-beta-t-zero-cut C9 (ln ret -708.0) is 2.7722115421194987E-264
+// and C10 (ln ret -709.0) is 0; D9 and D10 (b = 30, c = 1) alike. A9 (a = 2E6, b = 5.5) has ln ret
+// -708.0 too, so the rule does not apply there (Excel's 0 there is the earlier cut T-4437 owns).
+#[test]
+fn l140_prefactor_zero_is_beta_dists_zero() {
+    let zero = |x: f64, a: f64, b: f64| l140_prefactor_zero_tails(a, b, x, 1.0 - x);
+    assert_eq!(zero(0.999_857_729_248_015, 5e6, 25.5), None);
+    assert_eq!(zero(0.999_857_529_135_952, 5e6, 25.5), Some((0.0, 1.0)));
+    assert_eq!(zero(0.999_857_095_889_413, 5e6, 30.0), None);
+    assert_eq!(zero(0.999_856_895_637_99, 5e6, 30.0), Some((0.0, 1.0)));
+    assert_eq!(zero(0.999_644_361_097_655, 2e6, 5.5), None);
 }
