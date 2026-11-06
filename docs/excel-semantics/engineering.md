@@ -73,7 +73,7 @@ orders 0-10, both functions) + 24 fractional-order + 32 large-order cells):
 - At x = 10 the sweep equals the Excel-desktop cached values of `ironcalc-calc/ENGINEERING/BESSEL.xlsx`, at the orders the workbook covers (0, 1, 7, 10).
 - The fdlibm fallback used before T-0908 was bit-exact on only 14 of the 364 cells; the asymptotic model above
   is bit-exact on all of them except the order cap (`BESSELJ(10,1000000)`, below).
-- A fractional order truncates: `BESSELJ(8,9.99)` equals `BESSELJ(8,9)`, `BESSELY(30,1.99)` equals `BESSELY(30,1)`.
+- A fractional order truncates: `BESSELJ(8,9.99)` equals `BESSELJ(8,9)`, `BESSELY(30,1.99)` equals `BESSELY(30,1)`. Even an order just below an integer truncates; it does not snap up ("Engineering whole-number arguments truncate exactly", T-4455).
 - Large orders: `BESSELJ(x,n)` is `0` (not an error) for n = 1000, 10000, 100000 and 1000000 (x = 10, 50), and
   `BESSELY(x,n)` is `#NUM!` for those n. The engine matches this up to n = 100000 but gives `#NUM!` for
   `BESSELJ(10,1000000)` (see "BESSEL order cap"). J underflows to 0 at these x, so no cap shows for J here (it shows above 10,000,000, below); Y is `#NUM!` from n = 1000 (the first `#NUM!` order is below).
@@ -829,6 +829,19 @@ Rule: `places` is truncated and must be 1 to 10 (`DEC2BIN(5,0)`, `(5,11)`, `(5,-
 Evidence: probes/base-conv-boundaries A1:A425 (excel-graph, 2026-11-01; A322, A363, A404 left out).
 Status: VERIFIED (excel-graph); implemented (`signed_base_value`, `write_base` and `number_and_places` in number_basis.rs, one path for all twelve).
 Tasks: T-3651
+
+## Engineering whole-number arguments truncate exactly, with no snap near an integer (T-4455)
+Rule: unlike LEFT, INDEX, DATE and the others that share `NEAR_INTEGER_TOLERANCE` (text.md "LEFT, RIGHT and REPLACE round counts up near an integer"), no whole-number argument of an engineering function snaps up to the next integer. A value any distance below an integer reads the integer below, however close: the Bessel order of BESSELJ, BESSELY, BESSELI and BESSELK, the `places` of DEC2BIN, DEC2HEX, HEX2BIN and OCT2BIN, the shift of BITLSHIFT and BITRSHIFT, and the DEC2* number (truncated toward zero, so on both sides of zero alike). The probe tried seven gaps below n, from LEFT's snap edge 2^-22+2^-33 down to 1E-15, and every one truncated:
+- `BESSELJ(5,2-(2^-22+2^-33))` is order 1 and `BESSELK(5,100-1E-10)` order 99 (A1:D14).
+- `DEC2BIN(9,4-1E-15)` and `DEC2HEX(9,1-1E-15)` are `#NUM!`. `DEC2BIN(9,10-1E-15)` is "000001001", 9 digits (E1:H14).
+- `DEC2BIN(2-(2^-22+2^-33))` is "1" (I1:I14).
+- `DEC2BIN(-1+2^-23)` and `DEC2BIN(-1+2^-22)` are "0", not "1111111111". `DEC2BIN(-500+1E-10)` is -499 (J1:J16, L1:L16).
+- `BITLSHIFT(1,2-(2^-22+2^-33))` is 2. `BITLSHIFT(2^47,-2+2^-23)` shifts right by 1 (M1:P16).
+The BIT* number is `#NUM!` at every gap: `BITOR(1-(2^-22+2^-33),0)` and `BITLSHIFT(100-1E-10,0)` (Q1:R14). Without a snap the number keeps its fraction, so this is the existing fraction check (gen-m9/7c7e5bff12d93365 Calc!A145). It makes no difference whether that check sees the raw value or a snapped one.
+The large-base `n-1E-15` cells (row 10 of each column) read n only because `100-1E-15`, `500-1E-15`, `1000-1E-15` and `40-1E-15` already equal n in double precision: 1E-15 is below half an ulp there.
+Evidence: probes/t4455-near-integer-eng-args A1:R16 (excel-graph, 2026-11-06), 260 cells.
+Status: VERIFIED (excel-graph); implemented (plain truncation in bessel.rs, number_basis.rs and bit_operations.rs; no `near_integer` helper applies, and every cell already passed).
+Tasks: T-4455
 
 ## The second argument's error wins in the two-argument base conversions, DELTA and GESTEP
 Rule: DEC2BIN, DEC2HEX, DEC2OCT, BIN2OCT, BIN2HEX, HEX2BIN, HEX2OCT, OCT2BIN, OCT2HEX, DELTA and GESTEP read the second argument (`places`, `number2`, `step`) before the first, scalar or inside one array element. `DEC2BIN("x",NA())` is `#N/A` and `DEC2BIN(NA(),"x")` is `#VALUE!`; the same for all eleven. BESSELJ, BITLSHIFT, CONVERT, COMPLEX, IMPOWER and ERF instead report the first argument's error. In the nine base conversions an invalid places value wins too, not only its error: `DEC2BIN(NA(),0)` is `#NUM!` (gen-m9 sweep, "Base conversions" below; T-2545). Whether DELTA's and GESTEP's second argument also wins by value is unprobed.
