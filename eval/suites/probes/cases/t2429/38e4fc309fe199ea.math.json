@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "542c932036bf3c792be5fa281cb0698b117ad9d82302cc4e64a6f2c9a2980d6a"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "e",
+    "why": "number_pop outside [0, 2.14748e+09]",
+    "f": "=HYPGEOMDIST(2,3,7,2^32)"
+   }
+  }
+ }
+}

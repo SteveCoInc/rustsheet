@@ -8,10 +8,12 @@ use quick_xml::events::Event;
 use quick_xml::name::ResolveResult;
 use quick_xml::NsReader;
 use quick_xml::XmlVersion;
+use rustsheet::LoadOptions;
 use rustsheet_xlsx::import::part_key;
+use sha2::{Digest, Sha256};
 
 use crate::xlsx_snapshot::{
-    attr, parse_workbook, read_part, relationships, resolve_target, xml_err, SheetRef,
+    attr, parse_workbook, read_part_bytes_capped, relationships, resolve_target, xml_err, SheetRef,
     SnapshotError, Zip,
 };
 
@@ -27,6 +29,9 @@ const SHEET_KINDS: &[&str] = &[
     "macrosheet",
     "xlMacrosheet",
 ];
+
+/// The content-types part, as a normalized part name.
+const CONTENT_TYPES: &str = "[content_types].xml";
 
 /// Most parts the harness indexes in one package (directive 5). The importer's own entry limit
 /// is the same order of magnitude (`ImportLimits::max_zip_entries`).
@@ -72,15 +77,20 @@ pub(crate) struct Package {
     pub(crate) keys: BTreeMap<String, String>,
     /// The workbook's `<sheet>` entries, as the snapshot reader reads them.
     pub(crate) sheets: Vec<SheetRef>,
+    /// The text of every content part whose name ends in `.xml` (D4.1 compares it).
+    pub(crate) xml: BTreeMap<String, String>,
+    /// The SHA-256 of every other content part (D4.5 compares bytes).
+    pub(crate) digests: BTreeMap<String, Vec<u8>>,
 }
 
 impl Package {
-    /// Reads `bytes` as a package. Parts are read one at a time through the snapshot reader's
-    /// bounded `read_part`.
+    /// Reads `bytes` as a package, every part once, through the snapshot reader's bounded part
+    /// reader and under one budget for the whole package (`LoadOptions`' default, as the
+    /// importer's).
     ///
     /// # Errors
-    /// When the bytes are not a zip, a part exceeds the reader's size limit, the package lists
-    /// more than [`MAX_PARTS`] parts, or a `.rels` or `[Content_Types].xml` part does not parse.
+    /// When the bytes are not a zip, the package inflates past its budget or lists more than
+    /// [`MAX_PARTS`] parts, or a `.rels` or `[Content_Types].xml` part does not parse.
     pub(crate) fn read(bytes: &[u8]) -> Result<Package, SnapshotError> {
         let mut zip = Zip::new(bytes)?;
         let mut pkg = Package {
@@ -95,45 +105,71 @@ impl Package {
                 "the package lists more than {MAX_PARTS} parts"
             )));
         }
-        if let Some(xml) = read_part(&mut zip, "[Content_Types].xml")? {
-            pkg.read_content_types(&xml)?;
+        // One budget for every byte the package inflates to, as the importer has (directive 5).
+        let mut budget = LoadOptions::default().max_uncompressed_bytes;
+        let mut take = |zip: &mut Zip, name: &str| -> Result<Option<Vec<u8>>, SnapshotError> {
+            let bytes = read_part_bytes_capped(zip, name, budget).map_err(|_| {
+                SnapshotError::Malformed(format!(
+                    "the package inflates past {budget} more bytes at {name}"
+                ))
+            })?;
+            budget = budget.saturating_sub(bytes.as_ref().map_or(0, |b| b.len() as u64));
+            Ok(bytes)
+        };
+        let text = |bytes: Vec<u8>, name: &str| {
+            String::from_utf8(bytes)
+                .map_err(|_| SnapshotError::Malformed(format!("part {name} is not UTF-8")))
+        };
+        if let Some(bytes) = take(&mut zip, "[Content_Types].xml")? {
+            pkg.read_content_types(&text(bytes, "[Content_Types].xml")?)?;
         }
         let names: Vec<String> = pkg.parts.keys().cloned().collect();
-        for name in &names {
+        for name in names.iter().filter(|n| n.as_str() != CONTENT_TYPES) {
+            let Some(bytes) = take(&mut zip, name)? else {
+                continue;
+            };
             if let Some(source) = rels_source(name) {
-                if let Some(xml) = read_part(&mut zip, name)? {
-                    let dir = source.rsplit_once('/').map_or("", |(d, _)| d);
-                    let rels = relationships(&xml, name)?
-                        .into_iter()
-                        .map(|r| Rel {
-                            id: r.id,
-                            kind: short_kind(&r.kind).to_string(),
-                            target: if r.external {
-                                r.target
-                            } else {
-                                part_key(&resolve_target(dir, &r.target))
-                            },
-                            external: r.external,
-                        })
-                        .collect();
-                    pkg.rels.insert(source, rels);
-                }
+                let xml = text(bytes, name)?;
+                let dir = source.rsplit_once('/').map_or("", |(d, _)| d);
+                let rels = relationships(&xml, name)?
+                    .into_iter()
+                    .map(|r| Rel {
+                        id: r.id,
+                        kind: short_kind(&r.kind).to_string(),
+                        target: if r.external {
+                            r.target
+                        } else {
+                            part_key(&resolve_target(dir, &r.target))
+                        },
+                        external: r.external,
+                    })
+                    .collect();
+                pkg.rels.insert(source, rels);
             } else if is_xml_part(name) {
-                if let Some(xml) = read_part(&mut zip, name)? {
-                    match relationship_refs(&xml) {
-                        Ok(refs) => {
-                            pkg.refs.insert(name.clone(), refs);
+                match String::from_utf8(bytes) {
+                    Ok(xml) => {
+                        match relationship_refs(&xml) {
+                            Ok(refs) => {
+                                pkg.refs.insert(name.clone(), refs);
+                            }
+                            Err(e) => {
+                                pkg.unparsable.insert(name.clone(), e);
+                            }
                         }
-                        Err(e) => {
-                            pkg.unparsable.insert(name.clone(), e);
-                        }
+                        pkg.xml.insert(name.clone(), xml);
+                    }
+                    Err(_) => {
+                        pkg.unparsable.insert(name.clone(), "not UTF-8".into());
                     }
                 }
+            } else {
+                pkg.digests
+                    .insert(name.clone(), Sha256::digest(&bytes).to_vec());
             }
         }
         if let Some(workbook) = pkg.main_part() {
-            if let Some(xml) = read_part(&mut zip, &workbook)? {
-                pkg.sheets = parse_workbook(&xml).map(|w| w.sheets).unwrap_or_default();
+            if let Some(xml) = pkg.xml.get(&workbook) {
+                pkg.sheets = parse_workbook(xml).map(|w| w.sheets).unwrap_or_default();
             }
         }
         pkg.assign_keys();
@@ -212,11 +248,12 @@ impl Package {
             let Some(rels) = self.rels.get(&part) else {
                 continue;
             };
-            let refs = self.refs.get(&part);
-            let first_ref = |id: &str| {
-                refs.and_then(|r| r.iter().position(|(_, v)| v == id))
-                    .unwrap_or(usize::MAX)
-            };
+            // Where the parent first references each id: one pass, not one scan per relationship.
+            let mut first: HashMap<&str, usize> = HashMap::new();
+            for (n, (_, id)) in self.refs.get(&part).into_iter().flatten().enumerate() {
+                first.entry(id.as_str()).or_insert(n);
+            }
+            let first_ref = |id: &str| first.get(id).copied().unwrap_or(usize::MAX);
             let mut by_kind: BTreeMap<&str, Vec<&Rel>> = BTreeMap::new();
             for r in rels.iter().filter(|r| !r.external) {
                 by_kind.entry(r.kind.as_str()).or_default().push(r);
@@ -249,7 +286,7 @@ impl Package {
     pub(crate) fn keyed_parts(&self) -> BTreeMap<String, &str> {
         self.parts
             .keys()
-            .filter(|p| rels_source(p).is_none() && p.as_str() != "[content_types].xml")
+            .filter(|p| rels_source(p).is_none() && p.as_str() != CONTENT_TYPES)
             .map(|p| {
                 let key = self
                     .keys
@@ -323,7 +360,7 @@ pub(crate) fn validate(pkg: &Package) -> Vec<Problem> {
     let mut fail = |check, detail: String| out.push(Problem { check, detail });
     // V1: every part has a content type, and no override names a missing part.
     for part in pkg.parts.keys() {
-        if part != "[content_types].xml" && pkg.content_type(part).is_none() {
+        if part != CONTENT_TYPES && pkg.content_type(part).is_none() {
             fail("V1", format!("{part} has no content type"));
         }
     }

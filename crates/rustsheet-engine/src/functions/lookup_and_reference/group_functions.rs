@@ -286,9 +286,12 @@ impl Model {
     /// those functions stack values (a shorter part padded with `#N/A`; the padded grid is 2-D,
     /// so [`Model::function_argument`] makes it `#VALUE!`, not `#N/A`:
     /// probes/t4449-groupby-function-array-edges G!C1, G!C2, G!C25). An error value in it is the
-    /// result (`HSTACK(SUM,NA())` is `#N/A`: G!A781, functions2 G!A701), the first in reading
-    /// order when there are several, also after a value (`HSTACK(1/0,NA())` is `#DIV/0!`,
-    /// `HSTACK(5,NA())` `#N/A`: t4449 G!C3:C8).
+    /// result (`HSTACK(SUM,NA())` is `#N/A`: G!A781, functions2 G!A701), the first in argument
+    /// order (depth first, not reading or column-major order) when there are several, also after
+    /// a value and in a 2-D array, where it beats the `#VALUE!` of the 2-D check
+    /// (`HSTACK(1/0,NA())` is `#DIV/0!`, `HSTACK(5,NA())` `#N/A`: t4449 G!C3:C8;
+    /// `HSTACK(VSTACK(SUM,1/0),VSTACK(NA(),MAX))` `#DIV/0!` and
+    /// `VSTACK(HSTACK(SUM,NA()),HSTACK(1/0,MAX))` `#N/A`: t4485 G!C2, G!C9).
     fn function_grid(
         &mut self,
         node: &Node,
