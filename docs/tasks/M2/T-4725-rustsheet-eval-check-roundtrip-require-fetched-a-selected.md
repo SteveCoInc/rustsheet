@@ -25,9 +25,12 @@ A gate suite that a run selects but has not fetched fails `rustsheet-eval check`
 - [ ] `check --require-fetched` and `roundtrip --check --require-fetched` exit non-zero, naming each selected
       gate suite that is not fetched (or whose cache is stale), and score nothing else differently.
 - [ ] An ungated suite (`gate = false`, e.g. calipers) that is not fetched is still skipped under the flag.
+- [ ] `rustsheet-eval fetch --missing --gates` (SPEC-0035 D3) fetches each gate suite whose cache is missing or
+      stale (`fetch_state()`), skips a current cache and every ungated suite, and exits non-zero naming each suite
+      whose fetch failed. `--missing` and `--gates` also work alone (`--gates` alone fetches every gate suite).
 - [ ] Unit tests cover: unfetched gate suite fails; fetched gate suite passes; unfetched ungated suite skipped;
       the flag conflicts with `--fetch-missing`.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- Wiring the flag into the Makefile or CI (T-4726).
+- Wiring the flags into the Makefile or CI (T-4726).

@@ -92,17 +92,43 @@ Non-goals:
   not fetched then fails the run instead of printing `skipping`. This catches a broken cache path or a renamed suite,
   which the fetch step cannot see.
 - `--fetch-missing` (T-3557) is **not** used in CI. It skips a suite whose fetch fails, which D2 forbids.
+- **Round trips.** `roundtrip-poi` and `roundtrip-corpus-bench` read the same two caches (`cases_of` in their
+  eval/roundtrip suite.toml) and say `gate = true`, so the restored cache gates them too. `roundtrip-calipers` says
+  `gate = false`, so `--require-fetched` does not trip on its missing cache.
 
 ### D3. `make eval` and the local targets
-- **Local fetch.** `make eval`, `make eval-check`, `make eval-gates` and `make eval-baseline` pass `--fetch-missing`
-  (T-3557) to `run`, `check`, `update-baseline` and `roundtrip`.
-  - A developer's first run fetches what is missing (about 25 s) and later runs reuse the cache.
-  - A PR that fixes a poi cell can then record it with `make eval-baseline`, which D1 requires once poi gates in CI.
-  - Offline, a failed fetch still skips the suite with its `skipping` line, and CI then judges it (D2). The
-    skip is visible locally and blocks nothing in CI.
-- **CI's `eval-gates`** adds `--require-fetched` through a Makefile variable, `EVAL_GATE_FLAGS`, which defaults to
-  `--fetch-missing` locally and which ci.yml sets to `--require-fetched`. The fetch then happens in CI's own step
-  (D2), where a failure fails.
+Two Makefile variables carry the per-environment behavior. Every target that runs the harness states its behavior
+in both environments below.
+- **`EVAL_FETCH`**, default `1` locally. ci.yml sets it empty for the whole `eval` job, so no make target fetches
+  in CI. CI's own fetch step (D2) is the only fetch there.
+- **`EVAL_GATE_FLAGS`**, default empty locally. ci.yml sets it to `--require-fetched` (T-4725).
+- **Gate-suite pre-fetch.** With `EVAL_FETCH` set, `eval-check`, `eval-gates` and `eval-baseline` first run
+  `rustsheet-eval fetch --missing --gates` (T-4725).
+  - It fetches only the gate suites (poi and corpus-bench today; never calipers) whose cache is missing or stale.
+  - The Makefile ignores its failure (a `-` prefix). Offline, the gate suites then skip with their `skipping` line
+    as today, and CI judges them (D2).
+  - `run --fetch-missing` and `update-baseline --fetch-missing` would also fetch calipers (they select every suite;
+    `select_from` in main.rs), so the baseline targets do not use them.
+
+| target | locally (`EVAL_FETCH=1`) | in CI (`EVAL_FETCH=`, `EVAL_GATE_FLAGS=--require-fetched`) |
+|---|---|---|
+| `eval-check` | pre-fetch gate suites; `check` | not run by CI |
+| `eval-gates` | pre-fetch gate suites; `check --evidence-floor`, `accuracy`, `roundtrip --check` | no fetch; `check --evidence-floor --require-fetched` and `roundtrip --check --require-fetched`; `accuracy` unchanged |
+| `eval-baseline` | pre-fetch gate suites; `update-baseline`, `roundtrip --update-baseline` | not run by CI |
+| `eval` (report) | `run --fetch-missing` and `roundtrip --fetch-missing`: every suite, calipers included | no fetch; scores poi and corpus-bench from the job's cache and skips calipers, as today |
+
+- **`accuracy`** gets no flag. It reads the reference tables in eval/accuracy only (crates/rustsheet-eval/src/
+  accuracy.rs), never a fetched suite.
+- **Cost of the local report.** `make eval` grows by about 25 s of first fetch and about 8 min of calipers (463 s
+  locally), plus its round trip (about 3 min, decision 0323). That is the price of the goal "`make eval` measures
+  what Phase 1 reads": Gate B counts calipers. `make check` and `make check-fast` never run `make eval`, so the
+  pre-push gate does not pay it.
+- **Cost of CI's report step.** "Full report (informational)" (ci.yml) runs `make eval` on a failure and on each
+  push to main. It gains the poi and corpus-bench cells and round trips, about 40 s on the runner, and no calipers.
+  It is not part of D1's PR budget, because it runs only on a failed gate or on main.
+- **Baselines.** A PR that fixes a poi or corpus-bench cell records it with `make eval-baseline`, which the
+  pre-fetch makes possible and D1 requires once they gate. A developer who never fetched calipers leaves
+  eval/baseline/calipers.txt alone, as today; the steward ratchets it (D4).
 - **`make eval` on the nightly job** runs after the fetch step instead of before, so the nightly report scores every
   suite (T-4728).
 - **`make phase1-exit` and the progress dashboard keep their rule.** A run with any `run.skipped_suites` is
@@ -152,9 +178,11 @@ Neither starts counting fetched suites. Decisions 0062 and 0088 stand:
 ## Test plan
 - T-4725: unit tests in crates/rustsheet-eval. A selected unfetched gate suite fails `check --require-fetched` and
   `roundtrip --check --require-fetched` with a message naming it. An ungated or fetched suite is unaffected.
+  `fetch --missing --gates` fetches a missing or stale gate suite, leaves a current cache and every ungated suite
+  alone, and exits non-zero naming a suite whose fetch failed.
 - T-4727: unit tests. `--regressions-only` exits 0 on an out-of-date baseline with no regression, prints the
   out-of-date line, and exits 1 on any regression.
-- T-4726: the PR's own CI run shows `[poi]` and `[corpus-bench]` lines and no `skipping poi|corpus-bench`. The PR
+- T-4726: locally, `make eval-baseline` on a clean checkout fetches poi and corpus-bench and not calipers. The PR's own CI run shows `[poi]` and `[corpus-bench]` lines and no `skipping poi|corpus-bench`. The PR
   records the job time against D1's budget. A second run shows the cache hit.
 - T-4728: a `workflow_dispatch` run of the nightly on the branch shows the calipers check's summary line.
 - Hand test (each task's Outcome): delete one poi cell from eval/baseline/poi.txt in a scratch branch and confirm the
@@ -165,7 +193,7 @@ Protected paths need a decision record (`make new-decision`, CLAUDE.md directive
 
 | # | task | size / tier | protected paths | decision record |
 |---|---|---|---|---|
-| 1 | T-4725 `check`/`roundtrip --require-fetched` | S / sonnet | none (crates/rustsheet-eval) | none |
+| 1 | T-4725 `check`/`roundtrip --require-fetched`; `fetch --missing --gates` | S / sonnet | none (crates/rustsheet-eval) | none |
 | 2 | T-4727 `check --regressions-only` | S / sonnet | none (crates/rustsheet-eval) | none |
 | 3 | T-4726 CI gates poi and corpus-bench; local targets fetch missing suites | M / opus | `.github/workflows/ci.yml`, `Makefile`, `docs/process/quality-gates.md` | yes: amends 0067's "`make check` and CI do not run" poi |
 | 4 | T-4728 nightly checks calipers cells; `make eval` after the fetch | S / opus | `.github/workflows/nightly.yml`, `docs/process/agent-workflow.md` (the nightly triage row) | yes: amends 0323 |

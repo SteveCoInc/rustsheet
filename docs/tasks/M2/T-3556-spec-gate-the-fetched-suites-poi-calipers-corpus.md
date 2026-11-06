@@ -43,18 +43,18 @@ every `make eval` measures what Phase 1's exit reads.
 ## Acceptance criteria
 - [x] `docs/specs/SPEC-NNNN-fetched-suite-gate.md` (next free number, from the template) exists with status
       `accepted` and decides each of these, with the measured numbers behind each choice:
-  - [ ] which fetched suites gate a PR, and where (the required `eval` job, a separate required job, a
+  - [x] which fetched suites gate a PR, and where (the required `eval` job, a separate required job, a
         path-filtered job, or the merge train's batch run). It states the measured fetch time, eval time and cache
         size of each suite on `ubuntu-24.04`, and the total CI time budget it accepts.
-  - [ ] how the cache is keyed (the pinned `rev`/`sha256` in suite.toml) and what happens when the fetch fails
+  - [x] how the cache is keyed (the pinned `rev`/`sha256` in suite.toml) and what happens when the fetch fails
         (network): the job fails, or it skips with a visible warning. If it can skip, the spec says how a skip is
         kept from hiding a regression.
-  - [ ] what `make eval` does locally when a suite is not fetched: fetch first (T-3557's flag), or skip as today.
+  - [x] what `make eval` does locally when a suite is not fetched: fetch first (T-3557's flag), or skip as today.
         It also says what `make phase1-exit` and the progress dashboard do with a run that skipped a suite.
-  - [ ] whether calipers stays `gate = false` and, if it starts gating, how its baseline (eval/baseline/calipers.txt)
+  - [x] whether calipers stays `gate = false` and, if it starts gating, how its baseline (eval/baseline/calipers.txt)
         and `cached-overrides.tsv` are handled. It also says whether the visible-parity lock and the evidence floor
         start counting fetched suites (decisions 0062, 0088), or why not.
-  - [ ] a rollout of S/M tasks, each naming the protected paths it changes (`.github/`, `Makefile`, `scripts/`,
+  - [x] a rollout of S/M tasks, each naming the protected paths it changes (`.github/`, `Makefile`, `scripts/`,
         `docs/process/`) and the decision record each needs.
 - [x] The rollout's implementation tasks are filed with `make new-task`, depend on this task and link the spec.
 - [x] `nightly.yml`'s stale T-0006 comment is listed as part of a rollout task, not fixed here (protected path).
