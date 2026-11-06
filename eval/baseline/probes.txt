@@ -2261,6 +2261,7 @@ C	probes/t4271-lotus-dot-one-side-space-after-dotdot.case.json	5
 C	probes/t4271-lotus-dot-one-side-space-after.case.json	5
 C	probes/t4271-lotus-dot-one-side-space-before-dotdot.case.json	5
 C	probes/t4271-lotus-dot-one-side-space-before.case.json	5
+C	probes/t4273-legacy-at-name-body-more.case.json	155
 C	probes/t4283-xirr-whole-day-date-bound.case.json	10
 C	probes/t4284-lotus-dot-ws-after-dollar-space-after-dotdot.case.json	5
 C	probes/t4284-lotus-dot-ws-after-dollar-space-after.case.json	5
