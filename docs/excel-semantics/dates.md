@@ -1579,8 +1579,18 @@ Rule (excel-graph, gen-m6, 2026-10-21): a start date out of the calendar is `#NU
 `YEARFRAC(SUM(-1,FALSE,<blank>),SUMIFS(D10:D12,A5:B7,"abc")+..,0)` (end `#VALUE!` from the SUMIFS shape mismatch) and
 `YEARFRAC(123456790.12..,NETWORKDAYS.INTL(51358,34485,15,<FALSE cell>)+1E-15,0)` are `#NUM!` (gen-m6/3516b9fbbd60269b Calc!A301,
 d0c30225243fde60 A266). Ours: implemented (T-2266).
-Status: VERIFIED for these two cells; an error start against an error end keeps the start's error (VERIFIED: probes/scalar-lift-open-d W2 `YEARFRAC(NA(),1/0,1)` and W5 `YEARFRAC(1/0,NA(),1)`). An out-of-calendar start against a text or multi-cell-range end (`YEARFRAC(-1,"x")`, now #NUM!) is UNVERIFIED.
-Tasks: T-2266
+Status: VERIFIED for these two cells; an error start against an error end keeps the start's error (VERIFIED: probes/scalar-lift-open-d W2 `YEARFRAC(NA(),1/0,1)` and W5 `YEARFRAC(1/0,NA(),1)`).
+The start is read and range-checked in full before the end is read at all (VERIFIED, excel-graph 2026-11-06,
+probes/t4529-yearfrac-calendar-vs-coercion, 164 cells): a start of `-1`, `2958466` or `1E+15` is `#NUM!` against every
+end form, with basis omitted or 1 (A1:J6): non-numeric text `"x"`, numeric text `"45000"`, TRUE, FALSE, an empty cell,
+a cell holding `"x"`, a formula giving `"x"`, `{"x"}`, and even a two-cell or 2x2 range end, which with an in-calendar
+start is refused whole as `#VALUE!` rather than lifted (`ROWS(YEARFRAC(-1,Z3:Z4))` K1 is `#NUM!`,
+`ROWS(YEARFRAC(45000,Z3:Z4))` K2 is `#VALUE!`). So "coerce both, then range-check" is wrong for YEARFRAC. The reverse
+holds too: a start that is text, a boolean, a cell holding text or a range is `#VALUE!` against an out-of-calendar end
+(A11:J16), and numeric text or an empty start is read as a number and then fails the end's range check (`#NUM!`, B11:B16,
+E11:E16; the controls with end 46000 are A17:J18). Ours: matches every cell (the start check precedes the end's read in
+`yearfrac_of`).
+Tasks: T-2266, T-4529
 
 ## NETWORKDAYS.INTL: the blank weekend's #NUM! before the holidays' error (T-2436)
 Rule: `NETWORKDAYS.INTL(31,4886,<blank>,{1,2;#N/A,""})` is `#NUM!`, the blank weekend cell's error (T-2271) before the holidays'
