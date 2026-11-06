@@ -3,7 +3,7 @@ id: T-4563
 title: "XLOOKUP under a lifted lookup_value keeps a range if_not_found as a reference element that INDEX hands back"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
