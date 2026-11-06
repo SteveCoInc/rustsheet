@@ -80,6 +80,7 @@ _AGGREGATE_VERBS = [
 AGGREGATES = dict(zip(_AGGREGATE_VERBS[::2], _AGGREGATE_VERBS[1::2], strict=True))
 # A pivotField's custom subtotal functions: the ST_ItemType names its `<item t>` and `<name>Subtotal`
 # attributes use, which differ from ST_DataConsolidateFunction (`countA` is not `count`; T-4622).
+# Keep in step with `SUBTOTAL_FUNCTIONS` in crates/rustsheet-xlsx/src/import/pivots/table.rs.
 SUBTOTALS = ("sum", "countA", "avg", "max", "min", "product", "count", "stdDev", "stdDevP", "var", "varP")
 # ST_ShowDataAs (ECMA-376) plus the Excel 2010 modes Excel writes as x14 `pivotShowAs`; the latter are
 # accepted so probes can ask whether Excel for the web honours them (T-4129).
