@@ -3,7 +3,7 @@ id: T-4692
 title: "A row inserted inside a calculated column's data rows gets the column formula, as Excel fills it (T-4274 review follow-up)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
