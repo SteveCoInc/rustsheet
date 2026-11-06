@@ -1022,7 +1022,7 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
     and is kept: Cy, Cx, Bx, Ay. Over Cy Cx Ay Bx Cy the last Cy > Bx meets Cy and joins it: Cy, Cx, Bx. Chosen on
     the 60 two-field runs of t4379 and t4380 (60 of 60; T-4200's rule 33 misses, `pushkeep` 5; sort-then-group
     models 35 or more, docs/research/t4393/sort_search.py; search-tree models, a sorted vector with lower-bound
-    insertion and red-black or plain BSTs with equal-stop or lower-bound lookups, 34 to 37). Confirmed out of
+    insertion and red-black or plain BSTs with equal-stop or lower-bound lookups, 34 to 42; docs/research/t4393/tree_search.py). Confirmed out of
     sample: 60 fresh runs of lengths 5 to 7 (seed 4393; 36 where it and `pushkeep` keep different rows, 18 where it
     and T-4200's rule do, 6 controls), 60 of 60 UNIQUE predictions committed before the fill. A structural choice
     (decision 0188 R4), not a fit. It leaves docs/research/t4241/model.py's 234 GROUPBY blocks unchanged. GROUPBY

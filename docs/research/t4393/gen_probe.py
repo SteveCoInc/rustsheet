@@ -5,7 +5,7 @@ docs/research/t4393/predictions.tsv (the model's UNIQUE keys, column B, and GROU
 committed before the oracle fill.
 
 T-4393 chose its model (docs/research/t4393/model.py) on the 60 two-field runs of t4379 and t4380. This probe takes
-fresh runs (seed 4393, none of t4379's or t4380's) of lengths 4 to 7 where the model and T-4380's best coalescing
+fresh runs (seed 4393, none of t4379's or t4380's) of lengths 5 to 7 where the model and T-4380's best coalescing
 rule `pushkeep` keep different rows, runs where it and T-4200's rule (the engine's) differ but `pushkeep` agrees,
 and controls where all three agree on three or more kept keys. Texts and layout as t4380: A = ab,
 B = ab&U+00AD, C = U+00AD&ab; each Calc row is one run, through UNIQUE (B) and GROUPBY of the positions (C).

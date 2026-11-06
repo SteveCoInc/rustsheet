@@ -48,173 +48,80 @@ def vec_lb(rows, upper=False, rev=False):
     return sorted(kept)
 
 
-def bst(rows, mode):
-    # unbalanced BST
-    L = {}
-    R = {}
-    root = None
-    kept = []
-    for i in range(len(rows)):
-        if root is None:
-            root = i
-            kept.append(i)
-            L[i] = R[i] = None
-            continue
-        n = root
-        bound = None
-        parent = None
-        dup = False
-        goleft = False
-        while n is not None:
-            c = rc(rows[i], rows[n])
-            if mode == "eqstop":
-                if c == 0:
-                    dup = True
-                    break
-                parent = n
-                goleft = c < 0
-                n = L[n] if c < 0 else R[n]
-            else:  # lower_bound: if node<key right else left
-                parent = n
-                if rc(rows[n], rows[i]) < 0:
-                    goleft = False
-                    n = R[n]
-                else:
-                    bound = n
-                    goleft = True
-                    n = L[n]
-        if mode == "lb" and bound is not None and not rc(rows[i], rows[bound]) < 0:
-            dup = True
-        if dup:
-            continue
-        kept.append(i)
-        L[i] = R[i] = None
-        if goleft:
-            L[parent] = i
-        else:
-            R[parent] = i
-    return sorted(kept)
+def tree(rows, mode, balanced):
+    """A BST of kept rows (children `ch[n]` = [left, right]); red-black (CLRS insertion) when `balanced`."""
+    ch, up, red, root, kept = {}, {}, {}, [None], []
 
-
-# Red-black tree (CLRS insertion) with lower_bound or eqstop search
-def rbt(rows, mode):
-    L = {}
-    R = {}
-    P = {}
-    col = {}
-    root = [None]
-    kept = []
-
-    def rotl(x):
-        y = R[x]
-        R[x] = L[y]
-        if L[y] is not None:
-            P[L[y]] = x
-        P[y] = P[x]
-        if P[x] is None:
-            root[0] = y
-        elif x == L[P[x]]:
-            L[P[x]] = y
-        else:
-            R[P[x]] = y
-        L[y] = x
-        P[x] = y
-
-    def rotr(x):
-        y = L[x]
-        L[x] = R[y]
-        if R[y] is not None:
-            P[R[y]] = x
-        P[y] = P[x]
-        if P[x] is None:
-            root[0] = y
-        elif x == R[P[x]]:
-            R[P[x]] = y
-        else:
-            L[P[x]] = y
-        R[y] = x
-        P[x] = y
-
-    for i in range(len(rows)):
-        n = root[0]
-        bound = None
-        parent = None
-        dup = False
-        goleft = False
+    def lookup(i):
+        """(duplicate?, parent, side) for row i: an equal-stop walk, or a lower-bound walk that checks its bound."""
+        n, parent, side, bound = root[0], None, 0, None
         while n is not None:
             parent = n
             if mode == "eqstop":
                 c = rc(rows[i], rows[n])
                 if c == 0:
-                    dup = True
-                    break
-                goleft = c < 0
-                n = L[n] if c < 0 else R[n]
-            elif mode == "lb":
-                if rc(rows[n], rows[i]) < 0:
-                    goleft = False
-                    n = R[n]
-                else:
+                    return True, n, 0
+                side = int(c > 0)
+            else:
+                side = int(rc(rows[n], rows[i]) < 0)
+                if not side:
                     bound = n
-                    goleft = True
-                    n = L[n]
-        if mode == "lb" and bound is not None and not rc(rows[i], rows[bound]) < 0:
-            dup = True
+            n = ch[n][side]
+        return mode == "lb" and bound is not None and not rc(rows[i], rows[bound]) < 0, parent, side
+
+    def rotate(x, d):
+        """Rotate x down to side d (d = 0: left rotation)."""
+        y = ch[x][1 - d]
+        ch[x][1 - d] = ch[y][d]
+        if ch[y][d] is not None:
+            up[ch[y][d]] = x
+        up[y] = up[x]
+        if up[x] is None:
+            root[0] = y
+        else:
+            ch[up[x]][ch[up[x]].index(x)] = y
+        ch[y][d] = x
+        up[x] = y
+
+    for i in range(len(rows)):
+        dup, parent, side = lookup(i)
         if dup:
             continue
         kept.append(i)
-        L[i] = R[i] = None
-        P[i] = parent
-        col[i] = "r"
+        ch[i], up[i], red[i] = [None, None], parent, True
         if parent is None:
             root[0] = i
-        elif goleft:
-            L[parent] = i
         else:
-            R[parent] = i
+            ch[parent][side] = i
         z = i
-        while P[z] is not None and col[P[z]] == "r":
-            p = P[z]
-            g = P[p]
-            if p == L[g]:
-                y = R[g]
-                if y is not None and col[y] == "r":
-                    col[p] = col[y] = "b"
-                    col[g] = "r"
-                    z = g
-                else:
-                    if z == R[p]:
-                        z = p
-                        rotl(z)
-                        p = P[z]
-                    col[p] = "b"
-                    col[g] = "r"
-                    rotr(g)
-            else:
-                y = L[g]
-                if y is not None and col[y] == "r":
-                    col[p] = col[y] = "b"
-                    col[g] = "r"
-                    z = g
-                else:
-                    if z == L[p]:
-                        z = p
-                        rotr(z)
-                        p = P[z]
-                    col[p] = "b"
-                    col[g] = "r"
-                    rotl(g)
-        col[root[0]] = "b"
+        while balanced and up[z] is not None and red[up[z]]:
+            p = up[z]
+            g = up[p]
+            d = ch[g].index(p)
+            uncle = ch[g][1 - d]
+            if uncle is not None and red[uncle]:
+                red[p] = red[uncle] = False
+                red[g] = True
+                z = g
+                continue
+            if z == ch[p][1 - d]:
+                z = p
+                rotate(z, d)
+                p = up[z]
+            red[p] = False
+            red[g] = True
+            rotate(g, 1 - d)
+        red[root[0]] = False
     return sorted(kept)
 
 
 MODELS = {
     "vec_lb": lambda r: vec_lb(r),
     "vec_ub": lambda r: vec_lb(r, True),
-    "bst_eq": lambda r: bst(r, "eqstop"),
-    "bst_lb": lambda r: bst(r, "lb"),
-    "rb_eq": lambda r: rbt(r, "eqstop"),
-    "rb_lb": lambda r: rbt(r, "lb"),
+    "bst_eq": lambda r: tree(r, "eqstop", False),
+    "bst_lb": lambda r: tree(r, "lb", False),
+    "rb_eq": lambda r: tree(r, "eqstop", True),
+    "rb_lb": lambda r: tree(r, "lb", True),
 }
 
 if __name__ == "__main__":

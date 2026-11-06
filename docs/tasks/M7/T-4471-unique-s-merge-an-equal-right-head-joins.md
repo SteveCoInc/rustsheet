@@ -36,7 +36,8 @@ by T-4393's merge model.
 - [ ] `coalesce_equal_lines` follows T-4393's model; unit tests on Cy Cx Ay Bx Ay (Cy, Cx, Bx, Ay) and Cy Cx Ay Bx Cy
       (Cy, Cx, Bx).
 - [ ] probes/t4393-unique-merge-holdout column B passes; t4379's and t4380's UNIQUE column B passes; no regression.
-- [ ] GROUPBY/PIVOTBY cells that change are recorded; the ones still off stay owned (T-4472).
+- [ ] GROUPBY/PIVOTBY cells that change are recorded. Owned cells still off afterwards pass to T-4472 (GROUPBY's
+      tree): move them into its Owned cells line in this PR.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

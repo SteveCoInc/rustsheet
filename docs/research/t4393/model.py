@@ -37,35 +37,20 @@ _spec.loader.exec_module(candidates)
 
 def unique_kept(rows, rcmp):
     """T-4393's merge: kept row indices in input order (the module docstring's rule)."""
-    groups = [[i] for i in range(len(rows))]
-    runs, cur = [], [groups[0]]
-    for g in groups[1:]:
-        c = rcmp(rows[g[0]], rows[cur[-1][0]])
-        if c == 0:
-            cur[-1] = cur[-1] + g
-        elif c < 0:
-            runs.append(cur)
-            cur = [g]
-        else:
-            cur.append(g)
-    runs.append(cur)
-    while len(runs) > 1:
-        nr = []
-        for j in range(0, len(runs) - 1, 2):
-            a, b, o = list(runs[j]), list(runs[j + 1]), []
-            while a and b:
-                c = rcmp(rows[b[0][0]], rows[a[0][0]])
-                if c == 0:
-                    a[0] = a[0] + b.pop(0)
-                elif c < 0:
-                    o.append(b.pop(0))
-                else:
-                    o.append(a.pop(0))
-            nr.append(o + a + b)
-        if len(runs) % 2:
-            nr.append(runs[-1])
-        runs = nr
-    return sorted(min(g) for g in runs[0])
+
+    def merge(a, b):
+        a, b, o = list(a), list(b), []
+        while a and b:
+            c = rcmp(rows[b[0][0]], rows[a[0][0]])
+            if c == 0:
+                a[0] = a[0] + b.pop(0)
+            elif c < 0:
+                o.append(b.pop(0))
+            else:
+                o.append(a.pop(0))
+        return o + a + b
+
+    return sorted(min(g) for g in model.bottom_up(model.group_runs(rows, rcmp), merge))
 
 
 def unique_keys(run):
@@ -111,18 +96,7 @@ def main() -> None:
     print("UNIQUE t4379 + t4380:", len(cases) - len(miss), "/", len(cases))
     for m in miss:
         print("   ", m)
-    for case, col, nf in [
-        ("t4195-groupby-intransitive", "C", 2),
-        ("t4195-groupby-intransitive", "E", 3),
-        ("t4241-groupby-intransitive-runs", "B", 2),
-        ("t4241-groupby-intransitive-runs", "C", 2),
-        ("t4241-groupby-intransitive-runs", "D", 2),
-        ("t4241-groupby-intransitive-runs", "E", 2),
-        ("t4380-unique-keep-head-holdout", "C", 2),
-    ]:
-        blocks = model.load(case, col, nf)
-        ok = sum(groupby(rows, model.sort_dirs(f, nf)) == want for _, rows, want, f in blocks)
-        print("GROUPBY", case, col, ok, "/", len(blocks))
+    model.score(groupby, [*model.BLOCKS, ("t4380-unique-keep-head-holdout", "C", 2)])
     holdout()
 
 

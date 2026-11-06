@@ -23,7 +23,9 @@ fresh hold-out; or the negatives recorded and the cells parked with their reason
   (Bx Cy Cx Ay Cx: Excel Bx 1, 3, 5; By 2; Ay 4, where the tree's descent leaves rows 1 and 4 in no leaf, so its Ay
   leaf holds every row). (2) Two subtotal-free classes of `=` texts in the other order (Bx By Cx Ay Cx: Excel
   Cx 1, 3, 5; Cy 2, 4; Cx all; Cy all, the model swaps the two `y` classes). Both are GROUPBY's tree, not UNIQUE.
-- Owned cells: probes/t4393-unique-merge-holdout Calc!C1:C60; probes/t4380-unique-keep-head-holdout Calc!C1:C45.
+- Owned cells: probes/t4393-unique-merge-holdout Calc!C1:C60; probes/t4380-unique-keep-head-holdout Calc!C1:C45 (the
+  t4380 column C cells T-4471 also lists until it lands). T-4471 hands over the t4379 and t4358 PIVOTBY cells it
+  takes from T-4393 that its UNIQUE change leaves off.
 
 ## Acceptance criteria
 - [ ] A tree/descent model scored on t4380 and t4393 column C and docs/research/t4241/model.py's 234 blocks, then on
