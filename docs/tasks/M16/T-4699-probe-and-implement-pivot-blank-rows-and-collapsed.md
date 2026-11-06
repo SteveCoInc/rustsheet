@@ -19,6 +19,8 @@ Split from T-4168, which implemented the probed shapes (crates/rustsheet-engine/
 - `insertBlankRow` after a collapsed item (the engine adds the blank line);
 - a collapsed item on a column field (one column line, the item's tuple) and in a field with `subtotalTop="0"` or custom subtotals (the item's line shows its data field's own aggregate);
 - a collapsed item in a middle field of three row fields.
+- a collapsed item of a field with the Values field inside it (several data fields on rows): the engine gives it one line with no data field chosen, so the first data field's values;
+- custom subtotal lines in plain outline form (`outline` on, `compact` off): the engine puts them after the children, as compact form does (t4168 F2).
 Write `probes/t4699-...` with the case builder (`collapsed`, `attrs.insertBlankRow`) and fill it with the excel-graph oracle.
 
 ## Acceptance criteria

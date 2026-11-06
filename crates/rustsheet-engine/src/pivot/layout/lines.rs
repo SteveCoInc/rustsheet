@@ -23,7 +23,8 @@
 //! - a field has subtotal lines only when a field other than Values is inside it: a field whose
 //!   only inner level is Values has none (t4138 G6, t4135 `A_sum`). The lines are one `default`
 //!   line, or one line per custom subtotal function in the field's order (t4137 K5 `sum`, `count`;
-//!   t4168 F1 all eleven), after the children in compact form too (t4168 F2);
+//!   t4168 F1 all eleven), after the children in compact form too (t4168 F2; plain outline form,
+//!   `compact` off, is the engine's reading: UNVERIFIED, T-4699);
 //! - the grand total is one `t="grand"` line `<x/>` per data field when Values is on the axis
 //!   (`i` the data field), one otherwise, and none on an axis with no field but Values (t4138 G6,
 //!   G9; t4135 `A_sum`, `EC`). `rowGrandTotals` gives the row axis's line and `colGrandTotals` the
@@ -33,8 +34,9 @@
 //!   subtotals, with the item's tuple and no values (probes/t4168-pivot-layout-options BR
 //!   tabular, BR2 compact);
 //! - a collapsed item (`item@sd="0"`) has one line, its own tuple, with its values and no
-//!   children or subtotal lines, in compact and tabular form (t4168 SD, SD2). On columns it is
-//!   the engine's reading (UNVERIFIED, T-4699).
+//!   children or subtotal lines, in compact and tabular form (t4168 SD, SD2). On columns, and on
+//!   a field with Values inside it (one line, no data field chosen, so the first data field's
+//!   values), it is the engine's reading (UNVERIFIED, T-4699).
 //!
 //! The engine's own readings where no probe shows Excel's (pivots.md "Layout lines", UNVERIFIED):
 //! subtotals at the bottom (`subtotalTop="0"`), `defaultSubtotal="0"` with no custom subtotal,

@@ -50,9 +50,11 @@ pub(crate) struct Accumulator {
     /// The sum of the child cells' Sums, for a total of a pivot whose data fields are all Sum
     /// ([`Accumulator::set_children_sum`]).
     children: Result<f64, Error>,
-    /// The [`CutCount`]s of the inner-item cells this cell covers, added up: what a custom Count
-    /// or `CountNums` subtotal shows under a Sum data field ([`Accumulator::cut_count`]).
-    cut: CutCount,
+    /// The [`CutCount`] values of the inner-item cells this cell covers, added up: what a custom
+    /// Count subtotal shows under a Sum data field ([`Accumulator::cut_count`]).
+    cut_values: u32,
+    /// The same for the numbers: a custom `CountNums` subtotal.
+    cut_numbers: u32,
 }
 
 /// The counts of one inner-item cell (a row leaf by a column leaf) that stop at its first error
@@ -103,14 +105,15 @@ impl Accumulator {
             min: f64::INFINITY,
             error: None,
             children: Ok(0.0),
-            cut: CutCount::default(),
+            cut_values: 0,
+            cut_numbers: 0,
         }
     }
 
     /// Adds the counts of one inner-item cell this cell covers.
     pub(crate) fn add_cut(&mut self, part: CutCount) {
-        self.cut.values = self.cut.values.saturating_add(part.values);
-        self.cut.numbers = self.cut.numbers.saturating_add(part.numbers);
+        self.cut_values = self.cut_values.saturating_add(part.values);
+        self.cut_numbers = self.cut_numbers.saturating_add(part.numbers);
     }
 
     /// The cell's custom Count (`countA`) or `CountNums` (`count`) subtotal under a Sum data
@@ -119,8 +122,8 @@ impl Accumulator {
     /// `function` is its [`Accumulator::finish`] as a total.
     pub(crate) fn cut_count(&self, function: Aggregate, counts_mixed: bool) -> Result<f64, Error> {
         match function {
-            Aggregate::Count => Ok(f64::from(self.cut.values)),
-            Aggregate::CountNums => Ok(f64::from(self.cut.numbers)),
+            Aggregate::Count => Ok(f64::from(self.cut_values)),
+            Aggregate::CountNums => Ok(f64::from(self.cut_numbers)),
             _ => self.finish(function, true, counts_mixed, None),
         }
     }

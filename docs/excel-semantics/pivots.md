@@ -83,10 +83,14 @@ holds 7 (A) and `x`, TRUE, 3 (B).
 
 Status: VERIFIED (excel-graph) for the functions and the labels. The error rule is as observed
 (UNVERIFIED beyond the shape probed: T-4636).
-The engine's own readings, not probed: with a column field, a subtotal cell adds the cut counts of
-every inner-item cell (row leaf by column leaf) it covers; under a data field other than Sum, Count or
-Count Numbers the custom count keeps the Count total rule ("A Count total over an error field...")
-(both UNVERIFIED, T-4636).
+The engine's own readings, not probed (UNVERIFIED, T-4636):
+- with a column field, a subtotal cell adds the cut counts of every inner-item cell (row leaf by
+  column leaf) it covers;
+- with two or more inner row fields, the count is cut per innermost row leaf;
+- under any data field other than Sum the count is not cut (Count probed in B3; CountNums and the
+  rest UNVERIFIED): the custom count keeps the Count total rule ("A Count total over an error
+  field...");
+- under Sum, the other custom functions (sum, avg, max, ...) over an error still return the error.
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`SUBTOTAL_FUNCTIONS`, the model);
 crates/rustsheet-engine/src/pivot/accumulate.rs (`CutCount`, `Accumulator::cut_count`) and
 result.rs (`PivotResult::value_as`) for the values; layout/render.rs (`function_word`) for the labels
@@ -570,7 +574,8 @@ or the data field's index at the Values level (`i` repeats it).
 - On columns every item shares its first child's line, and subtotal lines follow the children.
 - A field has subtotal lines only when a field other than Values is inside it. They are one
   `t="default"` line, or one line per custom subtotal in the field's order (`t="sum"`, `t="count"`).
-  Custom subtotal lines follow the item's children in compact form too, and the item's own line
+  Custom subtotal lines follow the item's children in compact form too (in plain outline form,
+  `outline` on and `compact` off, it is the engine's reading: UNVERIFIED, T-4699), and the item's own line
   holds no values (t4168 F2: `East` B4 blank, `East Sum` B7 after `A` and `B`).
 - A row field with `insertBlankRow` has a `<i t="blank" r="0"><x v="item"/></i>` line after each
   item, below its subtotal lines, and its cells are all blank: tabular (t4168 BR, A7:C7 and
@@ -623,10 +628,12 @@ Status: VERIFIED (excel-graph) for the probes listed. UNVERIFIED (probe pending:
 placement and grand totals off; (T-4650): the Values field away from the innermost level and
 `outlineData`; the unlisted-item positions are an engine convention for files Excel does not write.
 (T-4699): `insertBlankRow` on the innermost row field or a column field (the engine adds no line) and
-after a collapsed item (it adds one); a collapsed item on columns, in a middle field, or in a field with
+after a collapsed item (it adds one); custom subtotals after the children in plain outline form; a
+collapsed item whose field has Values inside it (several data fields: one line, the first data field's
+values); a collapsed item on columns, in a middle field, or in a field with
 `subtotalTop="0"` or custom subtotals (one line, the data field's own aggregate). (T-4698): repeat item
 labels (`fillDownLabels`, saved in `extLst`), which the model keeps opaque and the renderer ignores.
-Items with no data (`showAll`): docs/excel-semantics/web.md "GETPIVOTDATA on a recordless item" (t4311 H,
+Items with no data (`showAll`): docs/excel-semantics/web.md "GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)" (t4311 H,
 a grouped row field) and crates/rustsheet-engine/src/pivot/result.rs; an axis of several fields, a
 rendered column field and an item the page filter empties are UNVERIFIED (T-4657).
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`lay_out`, `AxisPlan::lines`; T-4147;
