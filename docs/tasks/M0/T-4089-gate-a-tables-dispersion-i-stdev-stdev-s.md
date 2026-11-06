@@ -3,7 +3,7 @@ id: T-4089
 title: "Gate A tables, dispersion I: STDEV, STDEV.S, STDEVA, VAR, VAR.S, VARA and DEVSQ"
 milestone: M0
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -31,12 +31,40 @@ Every failing table point has an owner.
   numeric draws only, since the generator has no text kind (T-4084).
 
 ## Acceptance criteria
-- [ ] One definition per function in `tools/src/rustsheet_tools/accuracy/defs/`, reusing the existing samplers and
+- [x] One definition per function in `tools/src/rustsheet_tools/accuracy/defs/`, reusing the existing samplers and
       kernels, each citing its sources, with unit tests against Microsoft's published examples or the semantics
       entries' values.
-- [ ] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
+- [x] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
       their number. Every point outside the envelope has a `known-failures.tsv` owner.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other sample-statistics groups of decision 0271.
+
+## Outcome
+- **Definitions:** `accuracy/defs/dispersion.py` defines all seven functions over the literals' doubles x[1..n].
+  - DEVSQ is the exact sum of squared deviations from the exact mean.
+  - VAR, VAR.S and VARA are that sum over n - 1. STDEV, STDEV.S and STDEVA are its square root.
+  - STDEVA and VARA over numbers equal STDEV.S and VAR.S, because the sampler draws numbers only.
+  - Domain: VAR and STDEV of one number is `#DIV/0!`, and a one-pass sum of squares beyond the double range is
+    `#NUM!` (statistics.md).
+  - The definitions reuse aggregate.py's `running_total` and `MAX_ARGS` and _common's `scalars` and
+    `signed_log_uniform`.
+- **Draws:** typical, offset data near the one-pass/two-pass switch (relative spread 1E-6 to 0.1), edge shapes, and
+  long mixed-magnitude calls. The edge shapes are an equal pair, two numbers, small integers and the argument limit.
+  - Two first draws were dropped before any table was committed, because each gave a point the math does not model.
+  - Six equal numbers: Excel's double mean of them is inexact, so the engine (and Excel) return about 1E-16 where
+    the math is 0. Only the equal pair stays.
+  - A relative spread below 1E-6: there the mean's rounding moves the variance past 1E-9.
+  - These are draw-range choices, not fits. No digit was scored, and they were made before the oracle saw the
+    tables.
+- **New quirk (syntax.md "The repeating maxima"):** an xlsx with a 255-argument `_xlfn.VAR.S` call does not open in
+  Excel for the web, while 254 arguments, or legacy `VAR` with 255, do. VAR.S and STDEV.S are therefore drawn to
+  254 arguments.
+- **Tables:** `eval/accuracy/tables/{VAR,VAR.S,VARA,STDEV,STDEV.S,STDEVA,DEVSQ}/s1`, 120 points each, filled from
+  excel-graph.
+  - `rustsheet-eval accuracy` puts all 840 points in the envelope, with 0 failing and 0 known failures.
+  - Missing tables went from 135 to 128.
+  - R3 candidates (Excel more than 1E-4 off the math): none. The worst relative difference between Excel and the
+    math is 7.8E-15 (DEVSQ).
+- **Eval delta:** none, because no engine or eval-suite case changed.

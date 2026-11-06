@@ -62,6 +62,13 @@ invalid or missing or has an incorrect format", the response to any formula Exce
 length: 255 one-character arguments (`=CONCAT(1,...)`, 518 characters; `=TEXTJOIN("",TRUE,1,...)`, 524) are refused while
 254 (-concat-254-short, -textjoin-254-short) and a 2,548-character CONCAT of 254 arguments (-concat-254-long) are accepted. So CONCAT takes 254 texts, one more than Microsoft's
 documented 253, and TEXTJOIN the documented 252; the engine table holds 254 for both as cited overrides.
+In a file, a newer function also takes at most 254 arguments: an xlsx whose one cell is `_xlfn.VAR.S(1,...,255)`
+does not open in Excel for the web (Graph `createSession` 501 `unsupportedWorkbook`, "The workbook contains
+unsupported features or exceeds the size limit"), while `_xlfn.VAR.S` with 254 arguments and the legacy `VAR` with 255
+open and calculate (T-4089, scratch recalcs with excel-graph, 2026-11-06; whole Gate A batches of VAR.S and STDEV.S
+holding 255-argument calls failed the same way, and the same batches drawn to 254 filled). This fits CONCAT's and
+TEXTJOIN's 254 above: a call of an `_xlfn.` function seems to spend one of the 255 slots on its name. Whether VAR.S
+also refuses 255 arguments typed was not probed: UNVERIFIED.
 Status: VERIFIED
 
 ## Unary minus binds tighter than `^`
