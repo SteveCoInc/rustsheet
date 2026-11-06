@@ -1301,8 +1301,10 @@ inside GROUPBY `_xleta.RANDARRAY` is one number per group record.
 - (probes/t4611-randarray-min-max-whole-arrays A1:A14, excel-graph 2026-11-06, T-4611; Y1 5, Y2 7) `ROWS(RANDARRAY(1,1,{0;5}))`, `..,0,{1;5})`,
   `..,5,5,{TRUE;FALSE})`, `..,{5;7},{5;7})`, `..,Y1:Y2,Y1:Y2)`, `..,{5;6},{5;6},{TRUE;FALSE})` and `ROWS(RANDARRAY({1;2},1,{5;6},{5;6}))` are
   2; `COLUMNS(RANDARRAY(1,1,{5,7},{5,7}))` is 2. With min = max the elements are the bounds: `{5;7},{5;7}` gives 5 then 7 (A5:A6),
-  `{5,7},{5,7}` 5 then 7 (A9), and whole_number `{TRUE;FALSE}` over 5,5 starts at 5 (A10). Row 2 of `RANDARRAY({1;2},1,{5;6},{5;7})`
-  is a draw in [6,7] (A13), so the arguments pair element by element.
+  `{5,7},{5,7}` 5 then 7 (A9), and whole_number `{TRUE;FALSE}` over 5,5 starts at 5 (A10). The arguments pair element by
+  element (A5:A6, A9); A13, `RANDARRAY({1;2},1,{5;6},{5;7})`, is a draw (6.279) and unscored. An element with min > max is its own `#VALUE!`,
+  not the whole call: `ROWS(RANDARRAY(1,1,{0;5},{9;1}))` is 2 (A14). A range in rows, columns or whole_number is unprobed and lifts by
+  inference (SPEC-0011); only min and max were probed over a range (A7).
 Ours: implemented (T-4611): `Model::fn_randarray` calls `lift_call` with a `RANDARRAY` entry in `lift/kinds/general.rs`, each
 element charged the cells it builds.
 Status: VERIFIED (excel-graph)
@@ -1335,7 +1337,7 @@ Ours: ROW and COLUMN lift over an array value as above since T-4610 (`Model::row
 `reference_ranges_or_array`). It lifts over any array a name, IF, CHOOSE or LET gives; only the LET-bound and LAMBDA-parameter
 forms are probed, and an IF or CHOOSE that returns an array (`ROW(CHOOSE(1,{1;2}))`) or a defined name bound to an array constant
 follows by inference (before T-4610 each was one `#VALUE!`, unevidenced too). RANDARRAY
-lifts since T-4611 (see "RANDARRAY lifts over its arguments" below).
+lifts since T-4611 (see "RANDARRAY lifts over its arguments" above).
 Status: VERIFIED (excel-graph)
 Tasks: T-4519, T-4610, T-4611
 
