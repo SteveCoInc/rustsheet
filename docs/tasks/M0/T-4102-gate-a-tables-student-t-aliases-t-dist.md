@@ -3,7 +3,7 @@ id: T-4102
 title: "Gate A tables, Student t aliases: T.DIST.2T, T.DIST.RT, TDIST and CONFIDENCE.T"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
