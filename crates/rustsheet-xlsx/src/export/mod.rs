@@ -6,6 +6,8 @@ mod data_tables;
 mod doc_props;
 mod dxfs_styles;
 mod escape;
+mod preserving;
+pub use preserving::{save_preserving, SaveTier};
 mod rich_errors;
 mod shared_strings;
 mod styles;
