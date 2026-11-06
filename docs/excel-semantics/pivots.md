@@ -192,8 +192,10 @@ Rule:
   several items stay visible (K4!B2:B4).
 - Custom subtotal functions label each subtotal line `<item> <Function>`: `East Sum`, `East Count`
   (K5!A7:A8), with Count counting records (4).
-- With a single data field there is no Values row: the row header sits at the location's corner and
-  the data field's caption beside it (K5!A3 `Row Labels`, C3 `Sum of Sales`).
+- With a single data field and no column field (tabular, K5) there is no Values row. `Row Labels` is
+  at the location's corner (K5!A3), the inner row field's name beside it (B3 `Product`), and the data
+  field's caption above the data column (C3 `Sum of Sales`). With a column field the corner holds the
+  data caption instead (K2!A3, K3!A3; previous entry).
 
 Evidence: probes/t4137-pivot-captions (excel-graph, 2026-11-06, T-4137). Default data-field names
 (`Sum of`, `Count of`...) are written by the file, not chosen by Excel, so a file cannot probe them;

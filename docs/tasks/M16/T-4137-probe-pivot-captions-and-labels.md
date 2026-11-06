@@ -32,7 +32,7 @@ probes/t4137-pivot-captions (excel-graph, 2026-11-06), six builder-v2 pivots:
 - **Row Labels rule, corrected (K5, K6):** an unused field at the default `compact` also gives
   `Row Labels`, so the rule is not "the data field's compact". Whether every field, every non-axis
   field or the last field decides is open (T-4583).
-- **No Values axis (K5):** with one data field there is no Values row; the header sits at the corner.
+- **No Values axis (K5):** with one data field and no column field there is no Values row; `Row Labels` sits at the corner and the data caption above the data column.
 - **`colHeaderCaption` (K1):** it renders nowhere when the column axis holds only Values; a real
   column field is T-4583's.
 
