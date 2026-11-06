@@ -1,6 +1,9 @@
 use std::collections::BTreeSet;
 
-use super::{append_strings, count_si, index_sheet, patch_value, set_count};
+use rustsheet_engine::expressions::token::Error;
+use rustsheet_engine::types::{Cell, FormulaValue};
+
+use super::{append_strings, count_si, index_sheet, patch_value, rich_value, set_count};
 
 const SHEET: &str = r#"<worksheet><sheetData><row r="1" spans="1:3"><c r="A1"><v>1</v></c><c r="C1" s="2"><f>A1*2</f><v>0</v></c></row><row r="3"><c r="B3" t="s"><v>0</v></c></row></sheetData><extLst><ext uri="{X}"/></extLst></worksheet>"#;
 
@@ -87,22 +90,34 @@ fn only_sheet_data_rows_and_cells_count_and_prefixes_fall_back() {
 }
 
 #[test]
-fn a_single_quoted_attribute_is_requoted_and_a_new_vm_is_refused() {
+fn a_single_quoted_attribute_is_requoted_and_a_rich_error_keeps_only_its_own_kind() {
     let old = r#"<c r='A1' x='a"b'><f>1</f><v>0</v></c>"#;
     let new = r#"<c r="A1"><f>1</f><v>1</v></c>"#;
     assert_eq!(
         patch_value(old, new).as_deref(),
         Some(r#"<c r="A1" x="a&quot;b"><f>1</f><v>1</v></c>"#)
     );
-    // The export's `vm` names its own metadata layout, not the source's (T-4561).
-    let rich = r#"<c r="A1" t="e" vm="2"><f>1</f><v>#CALC!</v></c>"#;
-    assert_eq!(patch_value(old, rich), None);
-    let same = r#"<c r="A1" t="e" vm="1"><f>1</f><v>#SPILL!</v></c>"#;
-    let kept = r#"<c r="A1" t="e" vm="1"><f>1</f><v>#CALC!</v></c>"#;
-    assert_eq!(
-        patch_value(kept, same).as_deref(),
-        Some(r#"<c r="A1" t="e" vm="1"><f>1</f><v>#SPILL!</v></c>"#)
-    );
+    // The source's `vm` is kept as written; the export's number is never copied in.
+    let kept = r#"<c r="A1" t="e" vm="3"><f>1</f><v>#VALUE!</v></c>"#;
+    let export = r#"<c r="A1" t="e" vm="1"><f>1</f><v>#VALUE!</v></c>"#;
+    assert_eq!(patch_value(kept, export).as_deref(), Some(kept));
+    // `vm="1"` in both, but the source's names #CALC! and the export's #SPILL!: a new kind of
+    // rich error falls back (T-4561), as does a rich error the source cell did not have.
+    let formula = |ei| Cell::CellFormula {
+        f: 0,
+        s: 0,
+        v: FormulaValue::Error {
+            ei,
+            o: String::new(),
+            m: String::new(),
+        },
+    };
+    let (calc, spill) = (formula(Error::CALC), formula(Error::SPILL));
+    let source = r#"<c r="A1" t="e" vm="1"><f>1</f><v>#VALUE!</v></c>"#;
+    assert!(rich_value(source, export, &calc, &spill).is_err());
+    assert!(rich_value(source, export, &calc, &calc).is_ok());
+    assert!(rich_value(old, export, &calc, &spill).is_err());
+    assert!(rich_value(old, new, &calc, &spill).is_ok());
 }
 
 #[test]

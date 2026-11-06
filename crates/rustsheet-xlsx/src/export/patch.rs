@@ -23,7 +23,7 @@ use std::io::{Cursor, Read, Seek, Write};
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 use rustsheet_engine::expressions::utils::{number_to_column, parse_reference_a1};
-use rustsheet_engine::types::{Cell, Worksheet};
+use rustsheet_engine::types::{Cell, FormulaValue, Worksheet};
 use rustsheet_engine::Model;
 
 use super::escape::escape_xml;
@@ -417,36 +417,33 @@ fn to_offset(position: u64) -> Result<usize, String> {
     usize::try_from(position).map_err(|_| "a part too large to index".to_string())
 }
 
-/// The `t` and `vm` attributes and the `<v>` element of a cell's XML, as the export wrote them.
-fn value_parts(xml: &str) -> Option<(Option<String>, Option<String>, String)> {
+/// The `t` attribute and the `<v>` element of a cell's XML, as the export wrote them.
+fn value_parts(xml: &str) -> Option<(Option<String>, String)> {
     let mut reader = Reader::from_str(xml);
     let mut t = None;
-    let mut vm = None;
     let mut v = String::new();
     loop {
         let start = usize::try_from(reader.buffer_position()).ok()?;
         match reader.read_event().ok()? {
             Event::Start(e) | Event::Empty(e) if e.local_name().as_ref() == "c" => {
                 t = attr(&e, "t");
-                vm = attr(&e, "vm");
             }
             Event::Start(e) if e.local_name().as_ref() == "v" => {
                 reader.read_to_end(e.name()).ok()?;
                 let end = usize::try_from(reader.buffer_position()).ok()?;
                 v = xml[start..end].to_string();
             }
-            Event::Eof => return Some((t, vm, v)),
+            Event::Eof => return Some((t, v)),
             _ => {}
         }
     }
 }
 
 /// The source cell `old` with its cached value replaced by the one `new` (the export's XML for the
-/// live cell) holds, keeping its `<f>` and every other attribute and child byte for byte. `None`
-/// when the new value needs value metadata (`vm`) other than the source cell's, which only
-/// T-4561 can write into the source's `metadata.xml`.
+/// live cell) holds, keeping its `<f>` and every other attribute, its `vm` included, and child
+/// byte for byte. The caller keeps the source's `vm` only for the same rich error ([`rich_value`]).
 fn patch_value(old: &str, new: &str) -> Option<String> {
-    let (t, vm, v) = value_parts(new)?;
+    let (t, v) = value_parts(new)?;
     let mut reader = Reader::from_str(old);
     let mut out = String::with_capacity(old.len() + v.len());
     let mut had_v = false;
@@ -457,10 +454,7 @@ fn patch_value(old: &str, new: &str) -> Option<String> {
         let end = usize::try_from(reader.buffer_position()).ok()?;
         match event {
             Event::Start(ref e) | Event::Empty(ref e) if e.local_name().as_ref() == "c" => {
-                if attr(e, "vm") != vm {
-                    return None;
-                }
-                out.push_str(&rewrite_start_tag(e, t.as_deref(), vm.as_deref())?);
+                out.push_str(&rewrite_start_tag(e, t.as_deref())?);
                 out.push('>');
                 if matches!(event, Event::Empty(_)) {
                     // `<c .../>` had no value: it becomes a full element.
@@ -492,29 +486,56 @@ fn patch_value(old: &str, new: &str) -> Option<String> {
     Some(out)
 }
 
-/// `<c ...` (without its closing `>`) with `t` and `vm` set to the given values (or removed),
-/// every other attribute kept in its order and spelling. A value is re-quoted with `"`, so one
+/// `<c ...` (without its closing `>`) with `t` set to the given value in its place (or removed,
+/// or added last), every other attribute kept in its order and spelling. A value is re-quoted with `"`, so one
 /// that held a `"` inside `'...'` gets it as `&quot;`. `None` for a malformed attribute.
-fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>, vm: Option<&str>) -> Option<String> {
+fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>) -> Option<String> {
     let mut out = String::from("<c");
+    let mut t = t.map(|t| escape_xml(t).into_owned());
     for a in e.attributes() {
         let a = a.ok()?;
         let key = a.key.as_ref();
-        if key == "t" || key == "vm" {
-            continue;
-        }
-        out.push(' ');
-        out.push_str(key);
-        out.push_str("=\"");
-        out.push_str(&a.value.replace('"', "&quot;"));
-        out.push('"');
+        // `t` is rewritten where the source had it.
+        let value = if key == "t" {
+            match t.take() {
+                Some(value) => value,
+                None => continue,
+            }
+        } else {
+            a.value.replace('"', "&quot;")
+        };
+        out.push_str(&format!(" {key}=\"{value}\""));
     }
-    for (key, value) in [("t", t), ("vm", vm)] {
-        if let Some(value) = value {
-            out.push_str(&format!(" {key}=\"{}\"", escape_xml(value)));
-        }
+    if let Some(t) = t {
+        out.push_str(&format!(" t=\"{t}\""));
     }
     Some(out)
+}
+
+/// Whether a value patch may keep the source cell's `vm`. The source's `vm` indexes its own
+/// `metadata.xml` and the export's indexes the export's layout, so the numbers cannot be compared
+/// (docs/excel-semantics/arrays.md). Only the same error kind keeps its source `vm`; any other rich
+/// value falls back until T-4561 writes metadata.
+fn rich_value(old: &str, new: &str, before: &Cell, after: &Cell) -> Result<(), String> {
+    let (had, needs) = (old.contains(" vm="), new.contains(" vm="));
+    if !had && !needs {
+        return Ok(());
+    }
+    let error = |c: &Cell| match c {
+        Cell::CellFormula {
+            v: FormulaValue::Error { ei, .. },
+            ..
+        }
+        | Cell::ArrayFormula {
+            v: FormulaValue::Error { ei, .. },
+            ..
+        } => Some(ei.clone()),
+        _ => None,
+    };
+    match (had, error(before), error(after)) {
+        (true, Some(a), Some(b)) if a == b => Ok(()),
+        _ => Err("a rich value changed, which needs value metadata (T-4561)".into()),
+    }
 }
 
 /// Whether only the cached value of a formula cell changed: same variant, formula and style.
@@ -577,7 +598,8 @@ fn splice(
                 };
                 let old = &xml[c.start..c.end];
                 let text = if value_only(a, b) {
-                    patch_value(old, &text).ok_or("a cell value needs other value metadata")?
+                    rich_value(old, &text, a, b)?;
+                    patch_value(old, &text).ok_or("a cell value could not be patched")?
                 } else if c.shared {
                     return Err("a changed formula in a shared-formula group".into());
                 } else {

@@ -61,7 +61,7 @@ Bounded per directive 5.
 
   | suite | failing cases | kept |
   |---|---|---|
-  | roundtrip-calipers | 106 → 55 | 92.04% → 99.981% |
+  | roundtrip-calipers | 106 → 53 | 92.04% → 99.986% |
   | roundtrip-poi | 46 → 21 (+14 not scored) | 96.78% → 99.993% |
   | roundtrip-corpus-bench | 162 → 20 | 94.71% → 99.997% |
   | roundtrip-fixtures | 25 → 3 | 78.37% → 95.75% |
@@ -82,6 +82,9 @@ Bounded per directive 5.
   Each of these now falls back, or is written once and in order. A patched sheet must index again, or the save
   regenerates. The cost: four Calipers `roundtrip/` cases, whose new values need rich-error metadata, now
   regenerate (T-4561).
+- Round 2 (excel-fidelity): a value patch never compares `vm` numbers, because the source's and the export's index
+  different `metadata.xml` layouts. It keeps the source's `vm` only when the error kind is unchanged
+  (`rich_value`), and falls back otherwise.
 - Remaining losses:
   - Fixtures: the four external-link fixtures fall back (their cells need `metadata.xml`, T-4561) and lose their
     theme and `externalLink` parts.
