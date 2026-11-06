@@ -25,5 +25,11 @@ Found by T-3666/T-4480 (number-formats.md "LCIDs with no table of their own"). f
 -
 
 ## Outcome
-Done by T-4508: the generated locale tables hold Excel's names and day halves for every LCID, so probes/t4480-lcid-sublanguage-fallback S!A9 pass;
-probes/t3666-locale-names (T-4507) covers every name and day half of the LCID and its neighbours.
+Probed day halves and names under 18 French tags: probes/t4065-french-regional-halves (54 cells)
+and t4065-french-regional-names (48 cells; excel-graph 2026-11-06). fr-CM (`[$-2C0C]`, `[$-fr-CM]`)
+has the fr-FR names with "mat."/"soir" for every day-half form. The probe also found fr-MA
+(`[$-380C]`, own short months) and fr-029 (`[$-1C0C]`, capitalised months), both added
+(locale/variant_date_names.rs); the other regional French LCIDs print as fr-FR.
+probes/t4480-lcid-sublanguage-fallback A9 passes; both new cases pass in full; 0 regressions.
+
+Since T-4508 these names come from the generated locale tables; locale/variant_date_names.rs is gone.

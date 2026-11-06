@@ -241,6 +241,7 @@ probes/t4061-persian-and-hijri-variant.case.json	328
 probes/t4061-persian-new-years.case.json	81
 probes/t4061-review-followups.case.json	30
 probes/t4061-umalqura-months.case.json	60
+probes/t4069-fixed-denominator-tail.case.json	1
 probes/t4254-beta-t-l140-zero-cut.case.json	93
 probes/t4254-beta-t-zero-wide.case.json	15
 probes/t4255-gamma-window-exact-ratio.case.json	1
@@ -265,7 +266,10 @@ probes/t4380-unique-keep-head-holdout.case.json	50
 probes/t4382-pivotby-intransitive-paths.case.json	66
 probes/t4389-confirm.case.json	11
 probes/t4393-unique-merge-holdout.case.json	100
+probes/t4394-api-name-active-last.case.json	5
+probes/t4394-api-name-active-s2.case.json	5
 probes/t4420-pivotby-parent-sets-three-fields.case.json	14
+probes/t4450-eta-special-forms.case.json	11
 probes/t4480-lcid-sublanguage-fallback.case.json	3
 probes/t4492-locale-comma-tag-shapes.case.json	5
 probes/yield-below-par-sweep.case.json	3

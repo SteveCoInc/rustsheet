@@ -25,5 +25,12 @@ Found by T-3666/T-4480 (number-formats.md "LCIDs with no table of their own"). B
 -
 
 ## Outcome
-Done by T-4508: the generated locale tables hold Excel's names and day halves for every LCID, so probes/t4480-lcid-sublanguage-fallback S!A17 and S!A91 pass;
-probes/t3666-locale-names (T-4507) covers every name and day half of the LCID and its neighbours.
+Probed every month and weekday under ru-MD (`[$-819]`, `[$-ru-MD]`), the Russian high sublanguages
+and ru-RU: probes/t4064-ru-md-names (72 cells, excel-graph 2026-11-06). ru-MD gets its own table
+(dotted short months, lowercase months and short weekdays; locale/variant_date_names.rs), and
+`[$-F419]`, `[$-F819]`, `[$-FC19]` get the month-case variants Excel prints (lowercase nominative,
+capitalised genitive, lowercase genitive) through `SUBLANGUAGE_VARIANTS`, which `locale_tag::table`
+reads after `LOCALES`. probes/t4480-lcid-sublanguage-fallback A17 and A91 pass; the new case passes
+in full; 0 regressions.
+
+Since T-4508 these names come from the generated locale tables; locale/variant_date_names.rs is gone.

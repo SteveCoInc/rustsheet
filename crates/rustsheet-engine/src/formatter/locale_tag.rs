@@ -179,6 +179,15 @@ pub fn resolve_after_hijri_prefix(tag: &str) -> LocaleTag {
 /// [`resolve`], with digit 0 read as 6 when `hijri_prefix`, and the spec of the calendar digit it
 /// resolved to.
 fn resolve_with(tag: &str, hijri_prefix: bool) -> (LocaleTag, Option<CalendarSpec>) {
+    // Before a `,` only a BCP-47 name is a locale, spaces around it trimmed; a hex LCID there is
+    // none (`[$-409,200]mmmm`, `[$-40C,200]mmmm` are "March", `[$-ja-JP,200]mmmm` "3月",
+    // `[$-ar-SA ,200]mmmm` "مارس"; probes/t4492-comma-suffix-reading,
+    // t4492-locale-comma-tag-shapes; number-formats.md "The `locale,N00` form").
+    if let Some((locale, _)) = numeral_suffix(tag) {
+        return known_tag(locale.trim_matches(' ')).map_or((LocaleTag::Silent, None), |locale| {
+            localize(tag_source(locale), 0, hijri_prefix)
+        });
+    }
     if tag.eq_ignore_ascii_case("x-sysdate") {
         return (LocaleTag::SystemDate, None);
     }
@@ -191,17 +200,21 @@ fn resolve_with(tag: &str, hijri_prefix: bool) -> (LocaleTag, Option<CalendarSpe
         return localize(Source::Lcid(lcid_of(value)), value, hijri_prefix);
     }
     if let Some(locale) = known_tag(tag) {
-        let source = Source::Tag {
-            names: locale.names,
-            lcid: locale.lcid,
-        };
-        return localize(source, 0, hijri_prefix);
+        return localize(tag_source(locale), 0, hijri_prefix);
     }
     match hex {
         Some(value) => localize(Source::Lcid(lcid_of(value)), value, hijri_prefix),
         None => extended_hex(tag).map_or((LocaleTag::Silent, None), |value| {
             silent_if_inert(localize(Source::Lcid(lcid_of(value)), value, false))
         }),
+    }
+}
+
+/// What a known BCP-47 tag names: its own names and the LCID [MS-LCID] gives it, if any.
+fn tag_source(locale: TagLocale) -> Source {
+    Source::Tag {
+        names: locale.names,
+        lcid: locale.lcid,
     }
 }
 
@@ -418,7 +431,13 @@ fn localize(source: Source, value: u32, hijri_prefix: bool) -> (LocaleTag, Optio
 /// to (`[$-fr_FR-x]` keeps the workbook's names and `A/P` as written).
 pub fn numerals(tag: &str) -> Numerals {
     if let Some((_, suffix)) = numeral_suffix(tag) {
-        return hex_value(suffix).map_or(Numerals::Ascii, |value| Numerals::from_byte(value >> 8));
+        // Every character of the suffix is an extended-hex digit, wrapping at 32 bits: a space
+        // counts -16 and `_` 47, so `, 200` and `,2 00` are Arabic-Indic and Myanmar digits,
+        // `,200 ` byte 0x1F, `,g00` Myanmar and `,100000200` Arabic-Indic
+        // (probes/t4492-comma-suffix-reading, t4492-locale-comma-tag-shapes).
+        return extended_hex(suffix).map_or(Numerals::Ascii, |value| {
+            Numerals::from_byte((value >> 8) & 0xFF)
+        });
     }
     if let Some(value) = hex_value(tag) {
         return Numerals::from_byte(value >> 24);

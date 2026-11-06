@@ -57,7 +57,7 @@ checks the committed files are its output. `locale_tag` resolves a tag in one or
 tag, hex LCID without one, extended hex) and reads the calendar from one table of digits (`calendar_spec`). Gone:
 the hand-written name tables (locale/regional_date_names.rs, indic_date_names.rs, calendar_date_names.rs and the
 tables in excel_date_names.rs), the language fallback (`by_language`, locale/lcids.rs) and the per-calendar special
-cases (`hebrew_or_saka`, `hijri_names`). Eval: probes known failures fall by 7209 cells, 0 regressions in any
+cases (`hebrew_or_saka`, `hijri_names`). Eval: probes known failures fall by 7180 cells, 0 regressions in any
 suite; every t3666-* and t4061-* cell passes except the comma cells of t3666-review-followups (T-4515), and so do
 main's per-language probes (t2959-indic-lcid-names, t4201-indic-regional-variants, t4480-lcid-sublanguage-fallback,
-text-locale-invalid-sublanguage). Also closes T-4064 and T-4065 (their cells come from the tables).
+text-locale-invalid-sublanguage). T-4064 and T-4065, fixed on main by hand in #3538 (locale/variant_date_names.rs) while this was in review, now come from the tables too, so that file is gone as well; #3538's comma-suffix reading (`numeral_suffix`, a BCP-47 locale before the comma) is kept in `resolve_with` and `numerals`.
