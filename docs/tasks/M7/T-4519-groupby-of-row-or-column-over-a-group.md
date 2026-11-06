@@ -3,7 +3,7 @@ id: T-4519
 title: "GROUPBY of ROW or COLUMN over a group's values: ARRAYTOTEXT of the result is #CALC!, and RANDARRAY's group value is a scalar"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -27,10 +27,24 @@ ARRAYTOTEXT and INDEX as Excel's does.
   engine's element is an array and the ERROR.TYPE spills (J64).
 
 ## Acceptance criteria
-- [ ] F109, F115, J64 and J65 of probes/t4450-eta-special-forms pass, with a probe of the guess
+- [ ] (split to T-4610, T-4611) F109, F115, J64 and J65 of probes/t4450-eta-special-forms pass, with a probe of the guess
       (excel-probe skill), recorded in docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY".
-- [ ] The eval gate shows 0 regressions (probes/groupby-*, probes/t4449-*).
-- [ ] `make check` green; reviewers approve.
+- [x] The eval gate shows 0 regressions (probes/groupby-*, probes/t4449-*).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - SHEET and SHEETS of a LAMBDA parameter (T-4518).
+
+## Outcome
+Probed and split. The fixes go to two owner tasks, because they are two separate engine changes.
+- Probe probes/t4519-row-column-randarray-over-arrays (excel-graph, 2026-11-06), 11 forms. The guess holds: ROW and COLUMN of an
+  array value give an array of `#VALUE!` in the value's shape, so a GROUPBY cell is a nested `#VALUE!` array, and ARRAYTOTEXT
+  refuses it with `#CALC!`. RANDARRAY lifts over an array `rows` or `columns` (`RANDARRAY({2})` is 1x1), so GROUPBY's RANDARRAY cell is one
+  number per record. Recorded in arrays.md as "ROW, COLUMN and RANDARRAY over an array value (GROUPBY's per-group function)", next to "GROUPBY and PIVOTBY".
+- Refused forms: Excel for the web refuses a workbook holding ROW or COLUMN of an array constant, of a function call or of an
+  operator: `ROW({1;2})`, `ROW({1,2,3})`, `COLUMN({1,2,3})`, `ROW({7})`, `COLUMN({1;2})`, `ROW(SEQUENCE(2,2))`, `COLUMN(SEQUENCE(1,3))` and
+  `ROW(A1:A3*1)` (FileCorruptTryRepair, bisected with single-formula workbooks). The case reaches ROW through LET instead.
+  F2:F4, F7 and F8 print random numbers and are not scored.
+- Owners: T-4610 (opus) owns ROW and COLUMN: t4519 D1:F1, D5:F6, D9:F11 and t4450 F109, F115, J65. T-4611 (sonnet) owns RANDARRAY's lift:
+  t4519 D7, D8, E8, G8, H8 and t4450 J64.
+- No engine change. Eval delta: probes gain 1 case (38 scored cells: 15 pass, 23 new-coverage failures, all owned); 0 regressions.
