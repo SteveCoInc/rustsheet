@@ -843,6 +843,45 @@ fn a_restored_table_is_checked() {
     assert_eq!(model.workbook.tables["Sales"], good.1);
 }
 
+/// A column-delete undo tests the restored tables where its column insert will have put the
+/// other tables, and before the insert, so a refused diff leaves the columns deleted (T-4671).
+#[test]
+fn the_restored_tables_are_checked_before_the_columns_come_back() {
+    let mut model = three_column_model();
+    model.set_user_input(0, 3, 6, "Other".to_string()).unwrap();
+    model.set_user_input(0, 4, 6, "1".to_string()).unwrap();
+    model.add_table(0, "Other", (3, 6, 4, 6), false).unwrap();
+    let sales = model.workbook.tables["Sales"].clone();
+    // `Sales` as it would be restored with `extra` more columns, ending in the column `last`.
+    let widened = |extra: usize, last: &str| {
+        let mut table = sales.clone();
+        table.reference = format!("B3:{last}7");
+        for i in 0..extra {
+            table.columns.push(crate::types::TableColumn {
+                id: 10 + i as u32,
+                name: format!("More{i}"),
+                ..Default::default()
+            });
+        }
+        vec![("Sales".to_string(), table)]
+    };
+    let before = model.workbook.clone();
+    // F is `Other`'s column: a restore to B:F overlaps it, unless the insert (one column at C)
+    // will have moved `Other` to G first.
+    let to_f = widened(2, "F");
+    assert!(model.check_tables_of_sheet(0, &to_f, None).is_err());
+    assert!(model.check_tables_of_sheet(0, &to_f, Some((3, 1))).is_ok());
+    // B:G meets `Other` at G after the insert.
+    let to_g = widened(3, "G");
+    assert!(model.check_tables_of_sheet(0, &to_g, Some((3, 1))).is_err());
+    // An insert that would push `Other` off the sheet is refused too.
+    let last = crate::constants::LAST_COLUMN;
+    assert!(model
+        .check_tables_of_sheet(0, &to_f, Some((3, last)))
+        .is_err());
+    assert!(model.workbook == before, "a check changes nothing");
+}
+
 /// A delete of every data row that would cut an array formula is refused before anything
 /// changes, so no unrecorded clear is left behind (T-3259).
 #[test]

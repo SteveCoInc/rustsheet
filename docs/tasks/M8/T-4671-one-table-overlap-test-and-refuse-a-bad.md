@@ -3,7 +3,7 @@ id: T-4671
 title: "One table-overlap test and refuse a bad restored table before an undo re-inserts columns (T-4652 review follow-ups)"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -34,3 +34,12 @@ diff before it re-inserts any column.
 
 ## Out of scope
 - Formulas rewritten to `#REF!` by the delete (T-4668).
+
+## Outcome
+`add_table_with_rows` now uses `Bounds::overlaps` (new `Bounds::range`), so the table code has one overlap test.
+`restore_tables_of_sheet` is split into `check_tables_of_sheet` (changes nothing; its structural checks moved into the
+named `restorable` helper) and the apply; the `Diff::DeleteColumns` undo arm runs the check first, with the overlap test
+on the other tables where the column insert will have put them (`Bounds::after_column_insert`, via `column_span`), so a
+refused table leaves the columns deleted. The `Diff::DeleteRows` arm does the same with the new
+`check_table_extents` (no row twin needed). Tests: `the_restored_tables_are_checked_before_the_columns_come_back`
+(model level, incl. the predicted shift) and `a_restored_table_naming_no_table_is_refused` (external diff). No eval change.

@@ -141,6 +141,7 @@ fn column_span((left, right): (i32, i32), at: i32, delta: i32) -> Span {
 
 /// A table's range, `left..=right` by `top..=bottom`, and its data rows `data.0..=data.1` (below
 /// its header row, above its totals row).
+#[derive(Clone, Copy)]
 pub(crate) struct Bounds {
     pub(crate) left: i32,
     pub(crate) top: i32,
@@ -150,6 +151,35 @@ pub(crate) struct Bounds {
 }
 
 impl Bounds {
+    /// The range `left..=right` by `top..=bottom` as a plain block (its data rows are all of it),
+    /// to ask [`Bounds::overlaps`] of a range that is not yet a table.
+    pub(crate) fn range(left: i32, top: i32, right: i32, bottom: i32) -> Bounds {
+        Bounds {
+            left,
+            top,
+            right,
+            bottom,
+            data: (top, bottom),
+        }
+    }
+
+    /// The block after a column insert of `count` columns at `at` (or the block itself when
+    /// `count` is 0); `None` when the insert would push it off the sheet.
+    pub(crate) fn after_column_insert(&self, at: i32, count: i32) -> Option<Bounds> {
+        if count <= 0 {
+            return Some(*self);
+        }
+        match column_span((self.left, self.right), at, count) {
+            Span::Unchanged => Some(*self),
+            Span::Changed(left, right) => Some(Bounds {
+                left,
+                right,
+                ..*self
+            }),
+            Span::DropTotals | Span::Fallback => None,
+        }
+    }
+
     /// Whether the two ranges share a cell.
     pub(crate) fn overlaps(&self, other: &Bounds) -> bool {
         self.left <= other.right

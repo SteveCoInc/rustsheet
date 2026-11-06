@@ -161,6 +161,8 @@ impl UserModel {
                     tables,
                 } => {
                     needs_evaluation = true;
+                    // Refuse a bad extent from a peer's diff before the rows come back (T-4671).
+                    self.model.check_table_extents(*sheet, tables)?;
                     self.undo_delete_rows(*sheet, *row, old_data)?;
                     self.model.restore_table_extents(*sheet, tables)?;
                 }
@@ -180,6 +182,11 @@ impl UserModel {
                     tables,
                 } => {
                     needs_evaluation = true;
+                    // The tables come from a peer's diff: refuse a bad one before the columns
+                    // come back (T-4671); the restore checks again, now on the inserted state.
+                    let count = i32::try_from(old_data.len()).unwrap_or(i32::MAX);
+                    self.model
+                        .check_tables_of_sheet(*sheet, tables, Some((*column, count)))?;
                     self.undo_delete_columns(*sheet, *column, old_data)?;
                     self.model.restore_tables_of_sheet(*sheet, tables)?;
                 }
