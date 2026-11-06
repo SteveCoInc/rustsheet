@@ -2068,6 +2068,10 @@ settlement is not past `first_interest` or calc_method is FALSE) or any period s
   (1900-02-29) is not February's last day (1900 is not a leap year there): `ACCRINT(60,DATE(1900,5,10),DATE(1900,4,1),
   0.05,1000,4,0,TRUE)` is 4.444444444444445 (32 days), while 1900-02-28 is (`ACCRINT(DATE(1900,2,28),DATE(1900,5,31),
   DATE(1900,4,1),...)` 4.305555555555555, 31 days).
+- On 2026-11-06 Excel for the web gave 0, not `#NUM!`, for this shape with calc_method TRUE and a settlement after
+  first_interest, `ACCRINT(61,182,45000,0.05,1000,4,0,TRUE)` included (probes/accrint-zero-results A1:A19; "ACCRINT,
+  ACCRINTM, PRICEMAT and YIELDMAT: amount domains (T-4114)"); with calc_method FALSE or a settlement before
+  first_interest it stayed `#NUM!`. A re-fill of this entry's probes is T-4566's.
 - Excel for the web returned 0 for `ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(9990,6,30),0.05,1000,4,0,TRUE)`
   (fin-coupon-walk-bounds-b A9) on 2026-10-17 and `#NUM!` on 2026-10-24, in a re-fill of -b and in
   fin-accrint-1900-calendar D1; the oracle now records `#NUM!`.
@@ -2076,7 +2080,7 @@ accrint-calendar-start-1900 (92 cells) (excel-graph, 2026-10-26); accrint-calend
 2026-10-27, T-2835, landed by T-2337).
 Status: VERIFIED (excel-graph)
 Implemented (T-2124): `compute_accrint` in functions/financial/accrint.rs.
-Tasks: T-2124, T-2562, T-2835, T-2337
+Tasks: T-2124, T-2562, T-2835, T-2337, T-4114, T-4566
 
 ## COUPNUM in a 1904 workbook
 Rule: in a 1904 workbook COUPNUM is `#NUM!` exactly when the previous coupon date is before 1904-01-01 (a negative
@@ -4891,6 +4895,47 @@ Ours: matches the domains (`discount_days`, `received_of`, `tbill_arguments` in 
 TBILLEQ long-branch digits above are T-4521's.
 Status: VERIFIED (excel-graph)
 Tasks: T-4112, T-4521, T-4522
+
+## ACCRINT, ACCRINTM, PRICEMAT and YIELDMAT: amount domains (T-4114)
+Rule: with valid dates and basis:
+- ACCRINT and ACCRINTM: a rate of 0 or below and a negative par are `#NUM!` (`ACCRINT(56708,56772,59045,0,..)`,
+  `ACCRINT(34667,45535,45351,-0.5,2421,2)`, `ACCRINT(34052,36345,39703,1E+300,-1000,4)`; `ACCRINTM(57642,57652,0,..)`,
+  `ACCRINTM(33676,37345,-0.5,3341)`, `ACCRINTM(33054,47664,0.2,-1000)`). A par of exactly 0 is unprobed.
+- ACCRINTM is **0**, not `#NUM!`, when the issue equals the settlement: `ACCRINTM(d,d,0.05,1000,b)` is 0 for d = 0, 1,
+  59, 60, 61, 366, 45000 and 2958465 on every basis. An issue after the settlement is still `#NUM!`
+  (`ACCRINTM(45100,44968,..)`). PRICEMAT and YIELDMAT stay `#NUM!` for an issue equal to the settlement (probes/
+  matdisc-serial-0-60). Equal ACCRINTM dates with a rate or par at most 0 are unprobed.
+- ACCRINT: a settlement past 9999-12-31 is `#NUM!` (`ACCRINT(2956276,2956456,2958467,0.05,1000,2,b,c)` on every basis,
+  calc_method TRUE or FALSE).
+- PRICEMAT: a negative rate or yld is `#NUM!` (`PRICEMAT(38148,38193,37235,0,-1,0)`, `PRICEMAT(37717,44053,34809,0.1,
+  -1,4)`); a yld of 0 computes, with a rate of 0 too (`PRICEMAT(36890,44902,33776,0.1,0,3)` is 319.5068493150685,
+  `PRICEMAT(42437,42965,42235,0,0,0)` 100).
+- YIELDMAT: a negative rate is `#NUM!` (`YIELDMAT(38011,44323,34864,-0.05,112)`), as is a negative price (the entry
+  above), also with a rate of 0 (`YIELDMAT(45481,45483,45374,0,-1,0)`). A price of exactly 0 is unprobed.
+- TBILLYIELD at a price of 0 or below is unprobed.
+ACCRINT counts the issue's period on basis 2 as basis 0 does, US 30/360 moving both dates, not plain US 30/360:
+`ACCRINT(49107,49552,49782,0.1,1000,2,2,FALSE)` (issue 2034-06-12, first_interest 2035-08-31, so the issue's period
+runs from 2034-02-28 to 2034-08-31) is 137.22222222222223, the stub 80/180, where plain 30/360 gives 80/181 and
+137.09944751381215 (the engine). 360/frequency would give the same there, but not when that period runs from 2034-02-28
+to 2034-08-28 (first_interest 2035-08-28 or 08-30): Excel's 136.62921348314606 is 80/178, US 30/360 moving both dates.
+With calc_method TRUE, a settlement after first_interest and a coupon date on the walk back before 1900-01-01, Excel
+for the web gave **0** on 2026-11-06 for every basis and frequency: `ACCRINT(61,91,45000,0.05,1000,4,b,TRUE)`, issue 61,
+62 or 90, first_interest 90, 91 or 182, settlement 92 to 45000. "ACCRINT at the calendar's start" records `#NUM!` for the
+same shape from earlier fills, so the result there is not stable; the Gate A definition gives those points no math
+value. With calc_method FALSE or a settlement before first_interest they are `#NUM!` (A10, A11).
+Evidence: probes/accrint-zero-results A1:A19 (ACCRINT at the calendar's start), B1:B40 (ACCRINTM with equal dates),
+C1:C26 (the issue's period on bases 0, 2 and 4) (excel-graph, 2026-11-06; columns A and B filled twice the same day,
+with the same values);
+accuracy/ACCRINT/s1 A22 (basis 2), A111, A112, A117, A118, A124, A127, A136, A139 (rate 0), A115, A137, A147, A164
+(next coupon past the calendar); accuracy/ACCRINTM/s1
+A115 and A134 (equal dates), A111, A112, A118, A129, A140 (rate 0); accuracy/PRICEMAT/s1 A118, A122, A134, A135,
+A140; accuracy/YIELDMAT/s1 A123, A124, A130, A137 (excel-graph, 2026-11-06, T-4114); gen-m9 0a957119475760c5 A92,
+1cd3096e3e87c965 A123, A140, 290180acf017709c A147, A177, A312, 67a4c03afd63f988 A179, 9a1fa5366bc50918 A180,
+9d9ceba257f8001b A381, b73c6cc96e093f03 A333; probes/date-system-1900-accrint-settlement-bound A1:A20.
+Ours: the amount domains match. ACCRINTM's equal dates, ACCRINT's basis-2 issue period and its 0 at the calendar's
+start do not (T-4566; accuracy/ACCRINTM/s1 A115, A134 and accuracy/ACCRINT/s1 A22 are known failures).
+Status: VERIFIED (excel-graph)
+Tasks: T-4114, T-4566
 
 ## Booleans in ACCRINT, ACCRINTM, AMORLINC and AMORDEGRC (T-2455)
 Rule: a boolean is `#VALUE!`, typed or from a cell, in ACCRINTM's par (`ACCRINTM(34825,37622,1E-9,TRUE,4)`, A41, A54; text "2"

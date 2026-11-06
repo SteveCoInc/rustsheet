@@ -95,6 +95,15 @@ def us_30_360(start: YMD, end: YMD) -> int:
     return 360 * (y2 - y1) + 30 * (m2 - m1) + (d2 - d1)
 
 
+def us_30_360_both(start: YMD, end: YMD) -> int:
+    """US 30/360 that moves both dates: a 31st or February's last day is day 30 at either end, whatever the other date
+    (ACCRINT's issue-period length on bases 0 and 2, defs/accrint.py)."""
+    (y1, m1, d1), (y2, m2, d2) = start, end
+    d1 = 30 if d1 == 31 or _feb_last(*start) else d1
+    d2 = 30 if d2 == 31 or _feb_last(*end) else d2
+    return 360 * (y2 - y1) + 30 * (m2 - m1) + (d2 - d1)
+
+
 def eu_30_360(start: YMD, end: YMD) -> int:
     """Basis 4's day count: each day capped at 30."""
     (y1, m1, d1), (y2, m2, d2) = start, end

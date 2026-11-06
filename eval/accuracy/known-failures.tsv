@@ -367,3 +367,6 @@ accuracy/CUMIPMT/s1!Calc!A189	T-4390	tiny rate 4.9E-10, 3 periods: PMT·m - CUMP
 accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 0^k
 accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
+accuracy/ACCRINTM/s1!Calc!A115	T-4566	issue equal to settlement: Excel 0, the engine #NUM!
+accuracy/ACCRINTM/s1!Calc!A134	T-4566	issue equal to settlement: Excel 0, the engine #NUM!
+accuracy/ACCRINT/s1!Calc!A22	T-4566	basis 2 issue period: Excel counts US 30/360 moving both dates, the engine plain US 30/360

@@ -1,0 +1,87 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "fe2b058cdbb33d00ed15807df3ddae042fe7e11e2125a290757d830098efc630"
+ },
+ "sheets": {
+  "Sheet1": {
+   "M7": {
+    "t": "e",
+    "why": "issue on or after settlement: #NUM!",
+    "f": "=ACCRINT(39000,40000,0,0.05,1000,2,0)"
+   },
+   "N7": {
+    "t": "e",
+    "why": "issue on or after settlement: #NUM!",
+    "f": "=ACCRINT(39000,40000,0.5,0.05,1000,2,0)"
+   },
+   "O13": {
+    "t": "e",
+    "why": "a coupon date 1899-12-31 before 1900-01-01: #NUM!",
+    "f": "=ACCRINT(DATE(1900,3,1),DATE(1900,3,31),DATE(1900,3,15),0.05,1000,4,0,TRUE)"
+   },
+   "O2": {
+    "t": "e",
+    "why": "a coupon date 1899-12-31 before 1900-01-01: #NUM!",
+    "f": "=ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(1950,6,30),0.05,1000,4,0,FALSE)"
+   },
+   "O3": {
+    "t": "e",
+    "why": "a coupon date 1899-12-31 before 1900-01-01: #NUM!",
+    "f": "=ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(1900,5,1),0.05,1000,4,0,TRUE)"
+   },
+   "O5": {
+    "t": "n",
+    "v": "2512.3611111111112505751686975309490258546753062142",
+    "f": "=ACCRINT(DATE(1900,4,1),DATE(1900,6,30),DATE(1950,6,30),0.05,1000,4,0,TRUE)"
+   }
+  }
+ },
+ "skipped": {
+  "Sheet1": {
+   "M6": {
+    "f": "=ACCRINT(0,40000,40100,0.05,1000,2,0)",
+    "why": "no single value"
+   },
+   "N6": {
+    "f": "=ACCRINT(0.5,40000,40100,0.05,1000,2,0)",
+    "why": "no single value"
+   },
+   "O1": {
+    "f": "=ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(1950,6,30),0.05,1000,4,0,TRUE)",
+    "why": "no single value"
+   },
+   "O10": {
+    "f": "=ACCRINT(1,DATE(1900,7,1),DATE(1950,6,30),0.05,1000,2,0,TRUE)",
+    "why": "no single value"
+   },
+   "O11": {
+    "f": "=ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(1950,6,30),0.05,1000,4,1,TRUE)",
+    "why": "no single value"
+   },
+   "O12": {
+    "f": "=ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(1950,6,30),0.05,1000,4,3,TRUE)",
+    "why": "no single value"
+   },
+   "O4": {
+    "f": "=ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(1900,8,1),0.05,1000,4,0,TRUE)",
+    "why": "no single value"
+   },
+   "O7": {
+    "f": "=ACCRINT(DATE(1900,3,1),DATE(1900,7,15),DATE(1950,6,30),0.05,1000,2,0,TRUE)",
+    "why": "no single value"
+   },
+   "O8": {
+    "f": "=ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(1950,6,30),0.05,1000,2,0,TRUE)",
+    "why": "no single value"
+   },
+   "O9": {
+    "f": "=ACCRINT(1,DATE(1900,6,30),DATE(1950,6,30),0.05,1000,2,0,TRUE)",
+    "why": "no single value"
+   }
+  }
+ }
+}
