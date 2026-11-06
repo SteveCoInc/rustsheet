@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "4afae1234b0f0c79b8752d1c6d9f4c1e87bbade5795df082376f6a186dddf76c"
+ },
+ "sheets": {
+  "Sheet1": {
+   "B6": {
+    "t": "n",
+    "v": "-5.0000000000000000548953181472022770870246154838656e+307",
+    "f": "=CUMIPMT(0.5,2,2*5E+307,1,1,0)"
+   }
+  }
+ }
+}
