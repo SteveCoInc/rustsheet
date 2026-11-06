@@ -73,3 +73,14 @@ below 1E-324) and (b2) (e-T-3425 A116, x 4.2E+220 at df 2.4E+249, is `#NUM!`); t
 | 24 | 2^512 | 1E+15 | N | N | N | n | N |
 
 Row 20 separates (c) (a ln-space density of 3.2E-321 is a number) from a direct (a0) (1/(pi*(1+inf)) is 0, so N).
+
+## Probe result 1 and predictions for probe 2 (committed before its fill)
+probes/t3554-tdist-density-huge-x: every `#NUM!` cell is where `x*x` overflows ((b1): 2^512 and above at df 1, 2, 24,
+1E+10, 1E+15 and 1E+300, both signs), and every cell with a finite `x*x` is a number (0 for an underflowed density),
+except A1, B1, A18 and B18: at df 1 a finite `x*x` with |x| 1E+154 or 2^512's predecessor is `#DIV/0!`, while 2E+153
+is the number 7.96E-308. (a0), (aMIN), (c), (b2) and (b3) each miss cells (rows 3, 16, 22; 19; 20; 4, 13; 11, 14).
+
+Probe 2, probes/t3554-tdist-density-df1-div0, separates two rules for that df-1 `#DIV/0!`:
+- (d1) the denominator fl(pi fl(1 + fl(x x))) overflows: `#DIV/0!` from 7.6E+153 (A9, A10), a number up to 7.55E+153 (A1:A8);
+- (d2) the density falls below DBL_MIN: `#DIV/0!` from 3.8E+153 (A3:A10), a number at 3.7E+153 and 3.75E+153 (A1, A2).
+Both predict the same for B (negated x) and for C1, C2 at df 1.5 (as A5 and A9); C3, C4 follow A-column 1E+154 and A5.
