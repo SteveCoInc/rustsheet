@@ -393,3 +393,16 @@ Evidence (excel-graph, 2026-11-06):
   - A_count, six Count fields and the column field Kind: Err's grand total is 4 (R8).
   - EC, eleven aggregates over Err, no column field: the Count and CountNums grand totals are `ERR`.
 Status: VERIFIED (excel-graph) for these cells; the condition is UNVERIFIED (probe pending: T-4614)
+
+## Pivots without refreshOnLoad, and source edits
+Rule: unknown. Two things are unprobed: whether Excel for the web re-renders a pivot whose cache lacks
+`refreshOnLoad` when it opens the file (saved cells or `rowItems` stale or absent), and whether it
+re-renders a pivot after its source is edited with no refresh.
+Evidence: none. Every rendered probe so far is `refreshOnLoad` (case builder v2).
+Status: UNVERIFIED (probe pending: T-4586)
+
+## Pivot field names for duplicate and blank source headers
+Rule: unknown. How Excel names the cache fields of a source whose header row repeats a name, leaves a
+cell blank, or has names differing only in case.
+Evidence: none.
+Status: UNVERIFIED (probe pending: T-4585)
