@@ -6,8 +6,8 @@
   "dps": 80,
   "input_sha256": "6e649e9143c3b596740cbfef56233f99243d65499b8ce61a57ef6e1429cf8c24",
   "definitions": {
-   "CUMIPMT": "8f3c70a4dbc0fdec",
-   "CUMPRINC": "8f3c70a4dbc0fdec",
+   "CUMIPMT": "d67004e387517e1f",
+   "CUMPRINC": "d67004e387517e1f",
    "PMT": "6deed963023981ca",
    "PPMT": "6deed963023981ca"
   },

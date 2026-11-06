@@ -311,9 +311,23 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   anchor (the location's top-left cell).
 - A pivot's field indices follow its fields by case-folded name. A field new to the source joins
   on no axis. A field the pivot shows (row, column, page or data) that left the source refuses the
-  refresh, and the pivot keeps its cells. So does any renumbering of a pivot that keeps unread
-  parts verbatim, which may hold field indices (every imported pivot keeps some). A data field's
-  base field that left the source falls back to the first field.
+  refresh, and the pivot keeps its cells. So does a renumbering of a pivot that keeps a verbatim
+  part holding a field index: one with an attribute named `field` or `fld` or ending in either
+  (ECMA-376's `pivotArea@field` and `reference@field` in `formats`, `conditionalFormats`,
+  `chartFormats` and `autoSortScope`, `filter@fld`, `@mpFld` and `@iMeasureFld`, `mp@field`, an
+  extension's `sourceField`), or one the scan cannot read to its end (an open quote or tag, an
+  unterminated comment, CDATA section or processing instruction). How Excel remaps those indices,
+  and the worksheet's `pivotSelection/pivotArea@field`, is T-4712's. The other verbatim parts
+  renumber. The root's and the fields' kept attributes hold no field index: of the attributes the
+  schema gives those elements (eval/catalog/pivot-schema-nodes.txt), the ones so named are
+  `pageField@fld` and `dataField@fld`/`@baseField`, which the importer reads itself, and
+  `pivotField@dataField` and `@serverField`, two flags. `pivotTableStyleInfo` holds none, nor do
+  `rowItems`/`colItems` (`x@v` index the items of the axis's n-th field, which moves with it, and
+  `i@i` a data field), though those go stale on any refresh: Excel rewrites them (P_Fold saves
+  `x` 0, 2, 3, 4, 5), the engine renders from its own layout, and export writes them anew
+  (T-4176). A field's own parts (its attributes, its items') follow its new index, and a dropped
+  field's go with it (T-4694). A data field's base field that left the source falls back to the
+  first field.
 - A refresh that cannot be planned (a source that does not resolve, such as a Table or defined
   name until T-4506; a field gone; past the shared budget) leaves the pivot and its cells as they
   were. On load each cache is planned on its own, so a cache that does not plan keeps only its own
@@ -327,9 +341,10 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   before it is read) can exhaust it, and the caches after them then keep their saved cells with
   no sign of it.
 Evidence: none beyond probes/t4128-pivot-spike S (a constant in the body, no page field).
-Status: UNVERIFIED (probe pending: T-4664; T-2327 for constants in a refreshOnLoad pivot's area)
+Status: UNVERIFIED (probe pending: T-4664; T-2327 for constants in a refreshOnLoad pivot's area;
+T-4712 for field indices in verbatim parts under a renumbering)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`owned_areas`, `meets_foreign`,
-`remap`, `PivotBudget`; T-4151)
+`remap`, `PivotBudget`; T-4151) and model.rs (`OpaqueEntry::holds_field_index`; T-4694)
 
 ## A tabular pivot's first row header is the field name only when every pivotField has compact="0"
 Rule: in a tabular pivot, the header cell of the first row field reads the field's own name (`Region`)
@@ -608,8 +623,9 @@ yet: t4128 R, t4134 I3, t4582 J1, J2 and t4585 N1 have formulas in their sources
 file does not evaluate; t4582 J3 and J4 depend on date items against cached numbers (T-4612);
 t4128 G is grouped (T-4171) and t4128 K has a calculated field, a Top-N filter and a descending
 sort (T-4174, T-4165). The eval scores them all through the engine since T-4152: t4128 R, t4134 I3
-and t4582 J1 to J4 pass there; t4585 N1 fails because the refresh refuses to renumber its renamed
-fields (T-4694); t4128 G and K do not load (T-4171, T-4174).
+and t4582 J1 to J4 pass there, as do t4585 N1 and the t4627 P_ pivots since T-4694, whose renamed
+fields renumber (the grid writer's unit tests compare them against their sidecars); t4128 G and K
+do not load (T-4171, T-4174).
 
 The engine's own readings, not probed:
 - `subtotalTop="0"` on an outline row field: the item's own line holds no values and a `default` line
@@ -1143,7 +1159,10 @@ cache_fields of the pivot on sheet P_<source>:
 - Space!A1:E1 Region, Sales, `=" "`, `=" "&""`, X → Region, Sales, `" "`, `" 2"`, X;
 - Fold!A1:G1 Region, Sales, é, `="É"`, ß, `="SS"`, `="s"&"s"` → Region, Sales, é, É2, ß, SS2, ss3.
   Its pivot (rows Region over é, É, ß, SS, ss, Straße, STRASSE with Sales 1, 2, ..., 64) shows
-  P_Fold!A4:B8 é 3, ß 4, Straße 32, SS 24, STRASSE 64;
+  P_Fold!A4:B8 é 3, ß 4, Straße 32, SS 24, STRASSE 64. That order (Straße before SS and STRASSE)
+  comes from the case builder caching formula cells as blank: `="É"`, `="SS"`, `="ss"` and
+  `="STRASSE"` are no items in the saved cache, so the refresh appends SS and STRASSE after the
+  saved é, ß and Straße (the sidecar's row_items `x` 0, 2, 3, 4, 5);
 - Rec!A2:A6 a, `=""`, empty, `=""`, a with Sales 1, 2, 4, 8, 16: the rendered cells P_Rec!A4:B6 are
   a 17, (blank) 4 and an empty label cell 10 (the sidecar holds no shared items, so the rendered
   cells are the evidence).

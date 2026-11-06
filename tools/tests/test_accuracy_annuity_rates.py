@@ -3,6 +3,7 @@ published examples, the semantics entries' Excel values and their domains."""
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Sequence
 
@@ -13,7 +14,7 @@ from rustsheet_tools.accuracy.defs.annuity_cumulative import CUMIPMT, CUMPRINC
 from rustsheet_tools.accuracy.defs.dollar_fractions import DOLLARDE, DOLLARFR
 from rustsheet_tools.accuracy.defs.interest_rates import EFFECT, NOMINAL, RRI
 from rustsheet_tools.accuracy.model import Definition, DomainError, NoValueError
-from rustsheet_tools.accuracy.sampler import STRATA, Sampler, math_arg
+from rustsheet_tools.accuracy.sampler import AIMED, STRATA, Sampler, math_arg
 
 mp = mpmath.mpf
 ALL = (CUMIPMT, CUMPRINC, EFFECT, NOMINAL, RRI, DOLLARDE, DOLLARFR)
@@ -158,3 +159,23 @@ def test_draws_evaluate(definition: Definition) -> None:
                 continue
             values += 1
     assert values > 150
+
+
+def test_the_aimed_draw_reaches_the_underflowed_short_ranges() -> None:
+    # T-4059: `--stratum aimed` draws T-3141's region: at most 32 periods, 1 - v^nper is 1 in doubles, the leading
+    # power v^(nper-end+1) normal, type 1 from period 2, and leading exponents on both sides of the engine's 0.3 cut
+    for definition in (CUMIPMT, CUMPRINC):
+        sampler = Sampler(definition, random.Random(4059))
+        leads = []
+        for i in range(200):
+            r, nper, _pv, start, end, kind = (float(str(a)) for a in sampler.draw(AIMED, i))
+            u = math.log1p(r)
+            leads.append((nper - end + 1) * u)
+            assert end - start < 32 and start >= 1 + kind and end <= nper <= 1e15
+            assert math.exp(-nper * u) < 2.0**-53 and math.exp(-leads[-1]) > 2.2e-308
+        assert min(leads) < 0.3 < max(leads)
+
+
+def test_strata_without_an_aimed_draw_refuse_it() -> None:
+    with pytest.raises(ValueError, match="no aimed draw"):
+        Sampler(EFFECT, random.Random(1)).draw(AIMED, 0)

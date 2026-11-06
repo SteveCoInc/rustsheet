@@ -719,3 +719,13 @@ Unicode White_Space, not only XML whitespace) and whether a leading `+` is accep
 Implemented in: `parse_shared_string_index` in crates/rustsheet-xlsx/src/util.rs, shared by the importer
 (`get_cell_from_excel`) and the snapshot reader (`decode_value`). A negative index (`<v>-1</v>`) stays a dangling index in both (empty text); an
 unparseable index still loads as index 0 in the importer and as empty in the snapshot reader (not aligned; predates T-4145).
+
+## `_xHHHH_` escapes in inline strings (T-4150)
+An inline string (`t="inlineStr"`, `<is><t>`) decodes `_xHHHH_` escapes like a shared string does:
+`<is><t>Rich Text_x000d_` + LF is `Rich Text` CR LF (poi/60289.xlsx TABLE!B2). The importer left them undecoded, so a
+reload showed the literal `_x000d_` and the next save wrote `_x005F_x000d_`.
+Evidence: the file and the harness snapshot reader, which has always decoded them; no Excel-computed value for an inline
+string with an escape. Status: UNVERIFIED (Excel's decoding of escapes inside `<is>` is assumed to match `<si>`; a probe would
+open a file with `<is><t>a_x0041_b</t></is>` and read `=A1`).
+Implemented in: `get_cell_from_excel` (import/worksheets.rs), both the constant and the formula-value inline paths.
+

@@ -536,4 +536,136 @@ impl OpaqueEntry {
         };
         text.saturating_add(std::mem::size_of::<OpaqueEntry>())
     }
+
+    /// Whether the entry may hold a cache field index, which a refresh that renumbers the fields
+    /// cannot remap (T-4694; how Excel remaps them is T-4712's). An element holds one when any
+    /// attribute in it is named like a field index: `field`, `fld` or a name ending in either,
+    /// ignoring case and prefix. ECMA-376's are `pivotArea@field` and `reference@field` (in
+    /// `formats`, `conditionalFormats`, `chartFormats` and a field's `autoSortScope`),
+    /// `filter@fld`, `@mpFld` and `@iMeasureFld`, and `mp@field` (`pivotHierarchies`); an
+    /// unknown attribute so named counts too, and so does anything the scan cannot read to its
+    /// end (an open quote, tag, comment, CDATA section or processing instruction, or a
+    /// declaration). `rowItems` and `colItems` hold none (`x@v` are item indices of the axis's
+    /// n-th field, `i@i` a data field's). Kept attributes hold none either: of the attributes
+    /// the schema gives the typed elements (eval/catalog/pivot-schema-nodes.txt), the ones so
+    /// named are `pageField@fld` and `dataField@fld`/`@baseField`, which the importer types,
+    /// and `pivotField@dataField` and `@serverField`, two flags, allowed on a field's own
+    /// attributes; the name rule still catches one the schema does not have.
+    #[must_use]
+    pub fn holds_field_index(&self) -> bool {
+        match &self.node {
+            OpaqueNode::Element(xml) => names_a_field(xml, false, |_| false),
+            OpaqueNode::Attributes(xml) => {
+                let field = matches!(self.owner, OpaqueOwner::Field(_));
+                names_a_field(xml, true, |name| {
+                    field && matches!(name, "dataField" | "serverField")
+                })
+            }
+        }
+    }
+}
+
+impl OpaqueOwner {
+    /// The pivot field the owner belongs to: a `<pivotField>`, its `<items>` or one of them.
+    #[must_use]
+    pub fn field(self) -> Option<u32> {
+        match self {
+            OpaqueOwner::Field(field)
+            | OpaqueOwner::Items(field)
+            | OpaqueOwner::Item { field, .. } => Some(field),
+            _ => None,
+        }
+    }
+
+    /// The owner moved to pivot field `to`, when it belongs to one ([`OpaqueOwner::field`]).
+    #[must_use]
+    pub fn with_field(self, to: u32) -> Self {
+        match self {
+            OpaqueOwner::Field(_) => OpaqueOwner::Field(to),
+            OpaqueOwner::Items(_) => OpaqueOwner::Items(to),
+            OpaqueOwner::Item { item, .. } => OpaqueOwner::Item { field: to, item },
+            other => other,
+        }
+    }
+}
+
+/// Whether verbatim `xml` has an attribute whose local name is `field` or `fld` or ends in one,
+/// ignoring case, other than one `allowed` names, or cannot be read to its end. `attributes` is
+/// whether the text is a kept attribute list, which starts and ends inside a tag; an element's
+/// text must end outside one. One pass, so linear in the text (directive 5): a value is skipped by
+/// its quotes, a comment, CDATA section or processing instruction to its end, and text between
+/// tags is not read. An unterminated one, an open quote or tag, or a declaration (`<!DOCTYPE`,
+/// which the importer never keeps) is refused (`true`): a scan that fails reads as a field index.
+fn names_a_field(xml: &str, attributes: bool, allowed: impl Fn(&str) -> bool) -> bool {
+    let is_name =
+        |b: u8| b.is_ascii_alphanumeric() || matches!(b, b':' | b'_' | b'-' | b'.') || b >= 0x80;
+    let bytes = xml.as_bytes();
+    let mut in_tag = attributes;
+    let mut quote = None;
+    // The last name read in the tag, as a byte range, and whether the previous byte was in it.
+    let mut name: Option<(usize, usize)> = None;
+    let mut in_name = false;
+    let mut at = 0;
+    while let Some(&b) = bytes.get(at) {
+        at += 1;
+        if let Some(q) = quote {
+            if b == q {
+                quote = None;
+            }
+            continue;
+        }
+        let was_in_name = std::mem::replace(&mut in_name, false);
+        if !in_tag {
+            if b == b'<' {
+                let rest = xml.get(at..).unwrap_or_default();
+                let skipped = [("!--", "-->"), ("![CDATA[", "]]>"), ("?", "?>")]
+                    .into_iter()
+                    .find(|(open, _)| rest.starts_with(open))
+                    .map(|(open, close)| {
+                        let body = rest.get(open.len()..).unwrap_or_default();
+                        body.find(close).map(|end| open.len() + end + close.len())
+                    });
+                match skipped {
+                    Some(Some(len)) => at += len,
+                    // Unterminated.
+                    Some(None) => return true,
+                    None if rest.starts_with('!') => return true,
+                    None => {
+                        in_tag = true;
+                        name = None;
+                    }
+                }
+            }
+            continue;
+        }
+        match b {
+            b'"' | b'\'' => quote = Some(b),
+            b'>' => {
+                in_tag = false;
+                name = None;
+            }
+            b'=' => {
+                let local = name
+                    .and_then(|(start, end)| xml.get(start..end))
+                    .map(|n| n.rsplit(':').next().unwrap_or(n));
+                if let Some(local) = local {
+                    let lower = local.to_ascii_lowercase();
+                    if (lower.ends_with("field") || lower.ends_with("fld")) && !allowed(local) {
+                        return true;
+                    }
+                }
+                name = None;
+            }
+            b if is_name(b) => {
+                in_name = true;
+                name = match name {
+                    Some((start, _)) if was_in_name => Some((start, at)),
+                    _ => Some((at - 1, at)),
+                };
+            }
+            b if b.is_ascii_whitespace() => {}
+            _ => name = None,
+        }
+    }
+    quote.is_some() || in_tag != attributes
 }
