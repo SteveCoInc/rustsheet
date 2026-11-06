@@ -1,6 +1,9 @@
 # 0301 — Owner ruling: T-3544's Gate A T.INV and F.INV points stay on Excel
 
-- **Status:** accepted (2026-11-06, owner ruling; task T-3544).
+- **Status:** accepted (2026-11-06, owner ruling; task T-3544). The owner answered a structured question in the
+  interactive Claude Code session https://claude.ai/code/session_017265sRitBHUeqGLLXeJqDz, choosing the option "Keep
+  Excel as target" over "Extend R3, target the math (Recommended)". Decision 0300's quote left T-3544 open; this settles
+  that item.
 - **Amends:** decision 0267 item 3 (its tiny-p scope narrows; see below). Decision 0188 R3's regions do not change.
 - **Related:** decision 0300 (NPER T-4285 and XIRR T-3484: Excel kept as the target).
 - **Context:**
