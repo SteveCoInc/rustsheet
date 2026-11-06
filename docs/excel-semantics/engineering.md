@@ -1376,7 +1376,13 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   excel-graph, 2026-11-02): `IMREAL("1.2345678901234567+2.2345678901234567i")` is 1.23456789012345 and its IMSUM
   "1.23456789012345+2.23456789012345i", "0.30000000000000004" is 0.3, "123456789012345678" 1.23456789012345E+17 and
   "9007199254740993+9007199254740993i" "9007199254740990+9007199254740990i" (matched since T-3644; the lexer-based
-  reader before it kept the 17-digit double). Unprobed (ours in brackets): a lone sign after spaces ("1+ i", " i") [1, as "i"];
+  reader before it kept the 17-digit double). Negative parts are cut too, in either position (T-4593, from existing
+  excel-graph cells): `IMCSCH("-354.00000000000006+i")` and `IMCSCH("-354.0000000000005+i")` are the same text
+  (probes/t3912-imcsch-band-edges A40, A42), and `IMSECH("-1.000000000000001-1.000000000000001i")` equals
+  `IMSECH("-1-1i")` (probes/t3643-imsech-grid Q17, P16); over the IM*SINH/COSH/SIN/COS/CSCH/SECH cells of the suites
+  whose parts the cut changes, a correctly rounded reference matches Excel on 34 cells only when it reads the cut
+  parts and on none only when it reads the 17-digit doubles. Exponent-form parts and `j` texts past 15 digits have
+  no IM* cell; they are taken to follow VALUE. Unprobed (ours in brackets): a lone sign after spaces ("1+ i", " i") [1, as "i"];
   a tab before the suffix ("2"&tab&"i") [`#NUM!`]; year-less dates in a part ("1/2+2i"; no case keeps one, as its
   value moves with the current year) [read as VALUE reads it].
 - **Large parts in plain notation.** An IM* part is written in plain notation up to a decimal exponent of 20, zero-padded
@@ -1411,7 +1417,7 @@ Evidence: gen-m9 cases of seeds 2258, 22580 and 22581 (excel-graph, 2026-10-22/2
 Excel cell of eval/suites/gen-m9 with its case id in the owning task. The engine-side formulas (SIN, (EXP(4)-EXP(-4))/2,
 COS(ATAN2(-1,0)/2), ln|z|/0.693147180559945) were evaluated in RustSheet's own worksheet functions, which match Excel.
 Status: VERIFIED (excel-graph) for the observed values. The mechanisms (IM trig of a real as SIN/COS/TAN, exp-based sinh/cosh, IMSQRT through COS and ATAN2) are fitted against RustSheet's own kernels and reproduce every cited cell; T-2534, T-2535 and T-2536 re-confirm them on the cells. The IMLOG2 and IMCSC formulations are UNVERIFIED candidates.
-Tasks: T-2258, T-2532 to T-2551, T-2420, T-2421, T-2335, T-2389, T-2044, T-2117, T-1966
+Tasks: T-2258, T-2532 to T-2551, T-2420, T-2421, T-2335, T-2389, T-2044, T-2117, T-1966, T-4593
 
 ## Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2* (T-2420)
 Rule: IM* read one leading `+` like a leading `-`: `IMABS("+i")` 1, `IMABS("+3+4i")` 5, `IMABS("+4i")` 4, `IMSUB("+i","1")` "-1+i", `IMDIV("2i","+i")` "2"; a second sign (`"++i"`, `"+-i"`, `"-+i"`, `"1++i"`) is `#NUM!` (probes/eng-leading-plus-oct-bool A1:A26).

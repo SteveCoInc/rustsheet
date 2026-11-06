@@ -26,7 +26,7 @@ as Excel reads it, cut to 15 digits.
 - [x] A complex text with a part past 15 digits fits a text parameter, and the math receives the cut parts. A test
       uses the probe's cells.
 - [x] Subnormal parts are still skipped unless evidence for them is added.
-- [ ] `make eval-math-check` is current (regenerate the sidecars if any cell gains a value); `make check` green;
+- [x] `make eval-math-check` is current (regenerate the sidecars if any cell gains a value); `make check` green;
       reviewers approve.
 
 ## Out of scope
@@ -44,15 +44,26 @@ as Excel reads it, cut to 15 digits.
   is 1.23456789012345 (a cut; rounding gives ...346). The new test reads all six texts of that probe and checks
   the cut parts against Excel's IMREAL and IMAGINARY (B1:C6). Subnormal parts are still skipped
   (`1.2345678901234567E-310+1i`); no evidence for them was added.
-- `number_literal` reads a literal whose decimal exponent is past ±400 whole: cutting it raised
-  `decimal.InvalidOperation` (not ValueError) on a text such as `1e999999999+1i`, and the value is 0 or infinite
-  either way (directive 5: no crash on untrusted text).
+- `number_literal` reads a literal whose decimal exponent is past ±400 whole (0 or infinite either way; cutting
+  it would leave Decimal's exponent range), and turns any `ArithmeticError` from Decimal (an exponent of 19 or
+  more digits: `1e9999999999999999999`, `1e-9999999999999999999`, `0e9999999999999999999`) into `UnparsedError`,
+  a ValueError, so `fit_text`, `math_arg` and the arithmetic reader skip such text instead of crashing
+  (directive 5). Tests cover both exponent signs, a zero mantissa and both sides of the ±400 guard.
+- Evidence scope: IM* cells show the cut for positive and negative plain-notation parts with an `i` suffix.
+  Besides eng-inumber-grammar-digits, existing excel-graph cells show negative parts cut
+  (probes/t3912-imcsch-band-edges A40 = A42, t3643-imsech-grid Q17 = P16); over the IM* hyperbolic and trig
+  cells whose parts the cut changes, a correctly rounded reference matches Excel on 34 cells only when it reads
+  the cut parts, and on none only when it reads the float parts (76 agree either way, 35 match neither, 83 have no
+  text oracle). That is recorded in engineering.md. Exponent-form parts and `j` texts past 15 digits follow from
+  the VALUE analogy (numbers.md "15-digit literal parsing"); no IM* cell shows them.
+- The fit lab's `im_hyperbolic.correctly_rounded` reads its argument with `read_complex_arg` too (the 34-to-0
+  count above), with a test on t3643-imsech-grid Q17.
 - Sidecars: regenerated for IMABS and IMARGUMENT (the only complex Gate A definitions) in probes and
   probes-numeric. One new file, probes/eng-impower-past-cut.math.json, with two cells (A15, A16); no existing
   sidecar changed. `make eval-math-check`: current.
-- Oracle check of the new cells: 2 cells, 1 equal to Excel's double (A15
-  `IMABS("0.7071067811865476+0.7071067811865476i")`, 0.9999999999999993), 1 far: A16 `IMABS(..)-1` is 0 in Excel
-  against the math's -6.661338147750939e-16 (relative error 1). Excel's root `-` snaps this 3-ulp cancellation to
-  0 (numbers.md "Near-zero snapping in addition and subtraction"); the composite math does not model the snap.
-  Listed here only, no R3 mark (decision 0300).
-- Last criterion: eval-math-check current and `make check-fast` green; reviewers not run in this session.
+- Oracle check of the new cells: 2 cells. 1 equals Excel's double: A15
+  `IMABS("0.7071067811865476+0.7071067811865476i")`, 0.9999999999999993. 1 is far: A16 `IMABS(..)-1` is 0 in
+  Excel against the math's -6.661338147750939e-16 (relative error 1). The left addend 0.9999999999999993 is
+  6 ulp below 1, and Excel's root `-` snaps that cancellation to 0 (numbers.md "Near-zero snapping in
+  addition and subtraction"). Composite math does not model the operator snap (decision 0297), and Excel is
+  kept as the target (decision 0300). Listed here only, with no R3 mark.

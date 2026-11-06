@@ -220,7 +220,26 @@ def test_complex_parts_past_15_digits_are_cut_as_excel_reads_them() -> None:
         parts = (oracle[f"B{row}"]["v"], oracle[f"C{row}"]["v"])
         assert read_complex_arg(text) == parts
         assert math_arg(ZABS.params[0], text) == mpmath.mpc(*parts)
-    assert read_complex_arg("1e999999999+1e-9999999999i") == (math.inf, 0.0)  # no Decimal overflow
+    # past ±400 a part is read whole, not cut (cutting would leave Decimal's exponent range)
+    assert read_complex_arg("1e999999999+1i") == (math.inf, 1.0)  # overflow side
+    assert read_complex_arg("1-1e-9999999999i") == (1.0, -0.0)  # underflow side
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "1e9999999999999999999+1i",
+        "1-1e-9999999999999999999i",
+        "0e9999999999999999999+1i",
+        "1+0e-9999999999999999999j",
+    ],
+)
+def test_exponents_decimal_cannot_hold_are_value_errors(text: str) -> None:
+    # A 19+ digit exponent makes Decimal raise InvalidOperation; it must reach the callers, which
+    # catch ValueError, as one (directive 5).
+    with pytest.raises(ValueError, match="out of reach"):
+        read_complex_arg(text)
+    assert fit_args(ZABS, [text]) == "not a complex number text"
 
 
 def test_eval_cells_read_long_complex_parts_cut(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

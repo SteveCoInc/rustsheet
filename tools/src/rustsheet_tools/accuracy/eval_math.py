@@ -25,8 +25,10 @@ A candidate cell gets no math value when:
   A `text` parameter (T-4084) takes a string literal or a text cell: one of its `choices`, or for a
   complex number a text `parse_complex_text` reads whose parts, cut to 15 significant digits as Excel
   reads them (`read_complex_arg`, T-4593: engineering.md "Engineering functions in the gen-m9
-  engineering sweep (T-2258)", probes/eng-inumber-grammar-digits), are 0 or normal doubles (how Excel
-  reads a subnormal part is not established), and one
+  engineering sweep (T-2258)", probes/eng-inumber-grammar-digits; IM* cells show the cut for
+  positive and negative plain-notation parts with an `i` suffix, while exponent-form parts and `j`
+  texts follow from the VALUE analogy, numbers.md "15-digit literal parsing"), are 0 or normal
+  doubles (how Excel reads a subnormal part is not established), and one
   call's complex texts share one suffix (`i` or `j`).
   A nested call, or arithmetic between call results, makes the cell a composite instead
   (`composite`, T-3993, decision 0297): it gets the outermost node's math at its inner nodes'
