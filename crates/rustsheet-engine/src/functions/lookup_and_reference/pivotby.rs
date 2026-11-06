@@ -883,8 +883,19 @@ impl<'a> Grid<'a> {
             // groups' records while `=` is transitive, but on an intransitive run also those that
             // reached the class and then no leaf, and not the extra records of a leaf no record
             // reached (over Bx Cy Cy Ax By of q q q p p the `ab` subtotal of q is `2, 3`, its one
-            // leaf empty; probes/t4358-pivotby-unreached-column-leaf column D; T-4378).
+            // leaf empty; probes/t4358-pivotby-unreached-column-leaf column D; T-4378). A class no
+            // record reached holds every record of the line, as a leaf no record reaches does
+            // (over CyB BxC CxC AyB BxB of p q q q q the `ab`&U+00AD `y` subtotal of q is `2, 3, 4, 5`;
+            // probes/t4388-pivotby-intransitive-subtotals Calc!D2; T-4388).
             Slot::Subtotal { level, start, .. } => {
+                let prefix = self.cols.prefix(start, level);
+                let reached = level
+                    .checked_sub(1)
+                    .zip(prefix.last())
+                    .is_some_and(|(field, &class)| self.cols.class_reached(field, class));
+                if !reached {
+                    return records;
+                }
                 let mut merged = std::mem::take(&mut self.merged);
                 merged.clear();
                 merged.extend(self.reached_class(level, start, records));

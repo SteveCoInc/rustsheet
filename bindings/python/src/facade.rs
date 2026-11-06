@@ -641,6 +641,10 @@ enum Op {
     Clock(Clock),
     NumberFormat(String, String),
     DataTable(String, Option<String>, Option<String>),
+    /// Sheet name, 0-based row, hidden.
+    RowHidden(String, u32, bool),
+    /// A1 range, table name, filtered, totals row.
+    AddTable(String, String, bool, bool),
 }
 
 /// Buffers edits and applies them as one atomic `Workbook::edit` when the `with` block exits
@@ -693,6 +697,15 @@ fn apply(
                 let row_input = row_input.map(|r| parse_cell(&r, by_name)).transpose()?;
                 let column_input = column_input.map(|r| parse_cell(&r, by_name)).transpose()?;
                 txn.add_data_table(range, row_input, column_input)?;
+            }
+            Op::AddTable(range, name, filtered, totals_row) => {
+                let pairs = sheet_pairs(&sheets);
+                let range = parse_range(&range, |n| resolve_sheet_by_name(&pairs, n))?;
+                txn.add_table_with_totals(range, &name, filtered, totals_row)?;
+            }
+            Op::RowHidden(sheet, row, hidden) => {
+                let i = find_sheet(&sheets, &sheet)?;
+                txn.set_row_hidden(sheets[i].0, row, hidden)?;
             }
             Op::AddSheet(name) => {
                 let id = txn.add_sheet(&name)?;
@@ -780,6 +793,44 @@ impl PyTransaction {
             range.to_owned(),
             row_input.map(str::to_owned),
             column_input.map(str::to_owned),
+        ))
+    }
+
+    /// Hides (or, with `hidden=False`, shows) a row of `sheet`. `row` is the **1-based** row number
+    /// Excel shows (1..=1,048,576), so `set_row_hidden("Sheet1", 3)` hides the row of `A3`;
+    /// SUBTOTAL 101-111 and AGGREGATE's ignore-hidden options then skip it. A row outside that range
+    /// raises `EditError` at once (the block rolls back); an unknown sheet raises `RefError` when
+    /// the block exits.
+    #[pyo3(signature = (sheet, row, hidden=true))]
+    fn set_row_hidden(&mut self, sheet: &str, row: i64, hidden: bool) -> PyResult<()> {
+        let row = row
+            .checked_sub(1)
+            .and_then(|r| u32::try_from(r).ok())
+            .filter(|r| *r < 1_048_576)
+            .ok_or_else(|| PyEditError::new_err(format!("row {row} is outside 1..=1048576")))?;
+        self.push(Op::RowHidden(sheet.to_owned(), row, hidden))
+    }
+
+    /// Adds an Excel table (`ListObject`) named `name` over the A1 range `range`, so structured
+    /// references such as `Sales[Qty]` work. The first row of the range is the header row (set
+    /// the header cells first). With `filtered` the table carries an active filter, so hidden rows
+    /// on that sheet count as filtered and SUBTOTAL 1-11 skip them; with `totals_row` the last row
+    /// is `Table[#Totals]`. An invalid or taken name, an overlap with another table, a range with
+    /// no data row, or an empty or repeated header raises `EditError`, and an unknown sheet
+    /// `RefError`, when the block exits. The range may name a sheet added earlier in the block.
+    #[pyo3(signature = (range, name, filtered=false, totals_row=false))]
+    fn add_table(
+        &mut self,
+        range: &str,
+        name: &str,
+        filtered: bool,
+        totals_row: bool,
+    ) -> PyResult<()> {
+        self.push(Op::AddTable(
+            range.to_owned(),
+            name.to_owned(),
+            filtered,
+            totals_row,
         ))
     }
 
