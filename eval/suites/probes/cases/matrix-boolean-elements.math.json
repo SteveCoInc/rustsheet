@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "b0bf0d083e889a57298f8ef5ff4e78acd573773b1c48cacb575240c99da55ed3"
+ },
+ "sheets": {
+  "Sheet1": {
+   "G14": {
+    "t": "n",
+    "v": "-2.0",
+    "f": "=MDETERM(B1:C2)"
+   }
+  }
+ }
+}

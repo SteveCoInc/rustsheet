@@ -57,12 +57,11 @@ from __future__ import annotations
 
 import math
 import random
-import sys
 from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import ill_conditioned, scalars, signed
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, ill_conditioned, scalars, signed
 from rustsheet_tools.accuracy.defs.exp_log import EXP_BAND
 from rustsheet_tools.accuracy.defs.normal import (
     LEGACY_SOURCE,
@@ -106,7 +105,6 @@ MICROSOFT_SOURCE = (
 FISHER_CANCEL_HI = 1e-6  # FISHER and FISHERINV points with 0 < |x| below this are redrawn (the cancellation)
 EXP_MAX = EXP_BAND[0]  # an EXP argument from here up overflows or is in the unpinned band
 EXP_ZERO = -745.2  # EXP of an argument below this is 0 (gradual underflow ends near -745.13)
-NORMAL_MIN = sys.float_info.min
 NORMAL_RANGE = (1e-300, 1e300)  # an intermediate inside this is a normal double with room to spare
 EXPON_PRODUCT_MAX = 1e300  # lambda*x past this is unprobed
 REDRAWS = 50

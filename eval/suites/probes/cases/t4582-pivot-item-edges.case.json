@@ -1,0 +1,180 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4582: three open item questions, each sheet one builder-v2 pivot (rows K, data Count of V) Excel renders on open. J1: the source's first K is the formula =\"east\" (the builder caches it as missing), then EAST, East and west, so the cache lists EAST while a refresh first sees east: which casing renders. J2: items only a refresh finds (formulas =\"Alpha\", =\"Zed\", =\"Beta\") after the listed M, in non-monotone source order: source order (Alpha, Zed, Beta), ascending (Alpha, Beta, Zed) or descending (Zed, Beta, Alpha). J3: date items 45000, 45000.5, 45000, 45001 formatted m/d/yyyy: is 45000.5 its own item, and how do date items render. J4: the same formatted m/d/yyyy h:mm. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4582",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "D1",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": "=\"east\"",
+    "B2": 1,
+    "A3": "EAST",
+    "B3": 1,
+    "A4": "East",
+    "B4": 1,
+    "A5": "west",
+    "B5": 1
+   }
+  },
+  {
+   "name": "D2",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": "M",
+    "B2": 1,
+    "A3": "=\"Alpha\"",
+    "B3": 1,
+    "A4": "=\"Zed\"",
+    "B4": 1,
+    "A5": "=\"Beta\"",
+    "B5": 1,
+    "A6": "M",
+    "B6": 1
+   }
+  },
+  {
+   "name": "D3",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": 45000,
+    "B2": 1,
+    "A3": 45000.5,
+    "B3": 1,
+    "A4": 45000,
+    "B4": 1,
+    "A5": 45001,
+    "B5": 1
+   },
+   "number_formats": {
+    "A2": "m/d/yyyy",
+    "A3": "m/d/yyyy",
+    "A4": "m/d/yyyy",
+    "A5": "m/d/yyyy"
+   }
+  },
+  {
+   "name": "D4",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": 45000,
+    "B2": 1,
+    "A3": 45000.5,
+    "B3": 1,
+    "A4": 45000,
+    "B4": 1,
+    "A5": 45001,
+    "B5": 1
+   },
+   "number_formats": {
+    "A2": "m/d/yyyy h:mm",
+    "A3": "m/d/yyyy h:mm",
+    "A4": "m/d/yyyy h:mm",
+    "A5": "m/d/yyyy h:mm"
+   }
+  },
+  {
+   "name": "J1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PJ1",
+     "source": "D1!A1:B5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "J2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PJ2",
+     "source": "D2!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "J3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PJ3",
+     "source": "D3!A1:B5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "J4",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PJ4",
+     "source": "D4!A1:B5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(D1!A2:A5)"
+   }
+  }
+ ]
+}

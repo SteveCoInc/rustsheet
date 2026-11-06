@@ -90,6 +90,10 @@ def test_evidenced_numbers_next_to_the_cuts() -> None:
     assert value(GAMMA_DIST, 3e-308, 1, 2, True) < 1e-300
     with pytest.raises(NoValueError):
         GAMMA_DIST.evaluate([mp(1e-300), mp(1e-17), mp(1e100), True])
+    # CHISQ.DIST's cdf gets the same rule at a subnormal x / 2 (T-4395); a normal x / 2 keeps its value
+    with pytest.raises(NoValueError):
+        CHISQ_DIST.evaluate([mp(4e-308), mp(1), True])
+    assert value(CHISQ_DIST, 4.5e-308, 1, True) > 1e-300
 
 
 def test_no_value_regions() -> None:
