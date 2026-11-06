@@ -3,7 +3,7 @@ id: T-4509
 title: "Round-trip package differ: element and attribute items, defaults table, unordered paths, normalization tags (SPEC-0033 D4)"
 milestone: M15
 lane: harness
-status: blocked
+status: in-progress
 priority: P1
 size: M
 tier: opus
@@ -30,6 +30,12 @@ SPEC-0033 D2 and D4. T-4172 lands the suite kind and part-level items; this task
 
 Read parts through the bounded reader T-4172 uses.
 
+Carried from PR #3529's review:
+- give `Package::read` a cumulative inflated-byte budget across parts (security), before T-4173 brings untrusted
+  corpora;
+- use an id→position map instead of `first_ref`'s scan in `assign_keys` (security);
+- add `Status:` and `Tasks:` lines to the "Round trips" section of xlsx-storage.md (fidelity).
+
 ## Acceptance criteria
 - [ ] Identity: `P(src, src)` is empty for every case of the fixtures round-trip suite.
 - [ ] Invariance: a crafted copy with re-prefixed namespaces, reordered unordered collections and default attributes
@@ -42,8 +48,3 @@ Read parts through the bounded reader T-4172 uses.
 ## Out of scope
 - Semantic items (T-4513).
 - R1 (T-4514).
-
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275, 0306): M15 waits until Phase 1 parity exits, except for the task the
-owner-directed session claims. Unblock when docs/status.md has the line `**Phase 1:** exited <date>`, or by claiming
-it in that session.
