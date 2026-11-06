@@ -2166,6 +2166,8 @@ C	probes/t3870-space-256-typed.case.json	3
 C	probes/t3870-space-257-typed.case.json	2
 C	probes/t3874-trimmean-typed-scalar.case.json	9
 C	probes/t3875-snap-groupby-two-arg.case.json	30
+C	probes/t3876-rate-noise-residual-fresh.case.json	126
+C	probes/t3876-rate-noise-residual.case.json	26
 C	probes/t3880-groupby-scalar-filter-edges.case.json	93
 C	probes/t3881-imcsch-band-edge.case.json	80
 C	probes/t3881-imcsch-flip-start-negative.case.json	24
@@ -6563,6 +6565,12 @@ F	probes/t3850-rate-same-state.case.json	Calc!A92
 F	probes/t3850-rate-same-state.case.json	Calc!A94
 F	probes/t3850-rate-same-state.case.json	Calc!A95
 F	probes/t3850-rate-same-state.case.json	Calc!A96
+F	probes/t3876-rate-noise-residual-fresh.case.json	Sheet1!A1
+F	probes/t3876-rate-noise-residual-fresh.case.json	Sheet1!A16
+F	probes/t3876-rate-noise-residual-fresh.case.json	Sheet1!A26
+F	probes/t3876-rate-noise-residual-fresh.case.json	Sheet1!A31
+F	probes/t3876-rate-noise-residual-fresh.case.json	Sheet1!A5
+F	probes/t3876-rate-noise-residual.case.json	Sheet1!A22
 F	probes/t3881-imcsch-flip-start-negative.case.json	Calc!A3
 F	probes/t3883-im-overflow-reciprocal-sweep.case.json	Calc!A101
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A1
