@@ -3,7 +3,7 @@ id: T-3858
 title: "Oracle probe: CHISQ.INV.RT df 1 #NUM! cutoff between 8E-17 and 9E-17, with CHISQ.INV(1-p) at the same p"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
