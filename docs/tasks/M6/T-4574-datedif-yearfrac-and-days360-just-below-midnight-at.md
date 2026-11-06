@@ -3,7 +3,7 @@ id: T-4574
 title: "DATEDIF, YEARFRAC and DAYS360 just below midnight at serials 59, 60 and 61 (the fictitious 1900-02-29): probe and match"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
