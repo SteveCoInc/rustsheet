@@ -234,6 +234,9 @@ probes/t4323-fraction-ties.case.json	1
 probes/t4333-count-ulp-scan.case.json	6
 probes/t4368-poisson-shape-and-edge.case.json	40
 probes/t4389-confirm.case.json	11
+probes/t4437-beta-t-zero-bracket.case.json	222
+probes/t4437-beta-zero-fresh.case.json	30
+probes/t4437-beta-zero-fresh2.case.json	66
 probes/t4456-beta-t-zero-cut.case.json	43
 probes/t4456-beta-t-zero-reach.case.json	29
 probes/t4515-fraction-tail-holdout.case.json	1
@@ -243,6 +246,7 @@ probes/t4563-xlookup-not-found-ref-element.case.json	106
 probes/t4582-pivot-item-edges.case.json	40
 probes/t4583-pivot-row-labels.case.json	165
 probes/t4585-pivot-field-names.case.json	8
+probes/t4586-pivot-refresh-on-load.case.json	14
 probes/t4589-pivot-total-order.case.json	80
 probes/t4609-pivot-row-labels-2.case.json	218
 probes/t4612-pivot-date-items-and-casing.case.json	62

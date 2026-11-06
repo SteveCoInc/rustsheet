@@ -4894,15 +4894,51 @@ within 1E-15 relative / largest relative error:
   - At n = 3 bup terms Excel's 0 starts earlier, between ln ret -680 and -690, at (5E6, 3.5), (5E6, 4) and (1E6, 3.5)
     alike. The last numbers are about 6E-291 and 3.8E-291, and the first 0 has a true tail near 2.8E-295. Neither ln of
     bgrat's increment I_x0(a0, c) (-687 to -697 at that bracket, while (5E6, 10.5) keeps a number at -697) nor the
-    tail explains it. Unmodelled (T-4437).
+    tail explains it. The cut is on bup's sum W (T-4437, below).
   - T.DIST.RT never reaches L140: its kernel is K(df/2, 1/2), and b = 1/2 takes the small-shape branches. Still, Excel
     is 0 once the true tail falls between e^-680 and e^-690 at df 1E7, and between e^-690 and e^-698 at df 1E5
-    (about 3E-300), far above the subnormals. Unmodelled (T-4437).
+    (about 3E-300), far above the subnormals. Bracketed to 0.5 nats below; unmodelled (T-4564).
   - Excel never returns a subnormal or a non-zero value below these cuts in any probed cell. Ours matches every number
     to the last digits, except three cells just above the n = 3 cut that are off in the 9th digit. Since T-3764 it is
     Excel's 0 wherever ln ret is below ln(DBL_MIN) (the rule above); it still keeps a number at the n = 3 zeros above
-    that (t4254-beta-t-l140-zero-cut B1:B11, D1:D11, and t4254-beta-t-zero-wide A30, B30, C30) and the t's (owned by
-    T-4437).
+    that (t4254-beta-t-l140-zero-cut B1:B11, D1:D11, and t4254-beta-t-zero-wide A30, B30, C30) and the t's. Since
+    T-4437 the n >= 3 zeros are exact too (the rule below); the t's and n = 2 are owned by T-4564.
+  - **At n >= 3 bup terms the 0 is on bup's sum W (T-4437)**, probes/t4437-beta-t-zero-bracket (333 cells,
+    excel-graph, 2026-11-06), which walks by 0.5 nats (docs/research/t4437/gen_bracket.py; each cell's ln in
+    `ln_targets.json`). L140 bup+bgrat's BETA.DIST is 0 exactly where W = ret·S is below 2^-970 (the smallest normal
+    double over the double epsilon, 1.0020841800044864E-292), though W is still a normal double there and bgrat's
+    increment D is about e^-18 times W. At (a, b) = (5E6, 3.5), (5E6, 4), (1E6, 3.5) and (5E6, 5.5), the last
+    numbers have W = 1.11, 1.15, 1.10 and 1.60 times 2^-970 (`BETA.DIST(...,5E6,3.5,TRUE)` row 9 is
+    1.1078134827430778E-292), and the first zeros 0.67, 0.70, 0.67 and 0.97 times it. ln ret is 11.7 to 22 nats
+    above ln(DBL_MIN) there, so T-4045's prefactor rule does not reach these cells. The tail and W cannot be told
+    apart here: D adds less than 1E-8 relative.
+    Fresh sweep after the rule froze (probes/t4437-beta-zero-fresh, 102 cells, excel-graph, 2026-11-06;
+    docs/research/t4437/gen_fresh.py): (3E6, 3.5), (5E6, 6.5), (8E6, 4.5), (1E6, 5) and (4E6, 7.5), n from 3 to 7,
+    17 rows 0.25 nats apart around the edge. Scored once: every family's first 0 is on the predicted row (row 10, W
+    0.88 times 2^-970) and its last number on row 9 (1.13 times), 85 of 85 cells on the predicted side. The sweep's
+    sixth family, (2E6, 2.5) at n = 2, is a number at every row, below the edge too, so the rule as frozen (any n)
+    scored 94 of 102. The n >= 3 domain was chosen after that score, so the rule was frozen again with it
+    (docs/research/t4437/freeze2.md, pushed before the next fill) and swept fresh a second time.
+    Second fresh sweep (probes/t4437-beta-zero-fresh2, 220 cells, excel-graph, 2026-11-06;
+    docs/research/t4437/gen_fresh2.py): eight untouched n >= 3 families, (1.5E6, 3.25), (6E6, 3.75), (2.5E6, 4.25),
+    (7E6, 5), (1.2E6, 6.5), (9E6, 7.75), (3.5E6, 7.25) and (4.5E6, 3.5) (n 3 to 7, c 0.25 to 1, a0 1.2E6 to 9E6), 22
+    rows 0.05 nats apart from 0.525 above ln 2^-970 to 0.525 below. Every family is a number through row 11
+    (0.025 above) and 0 from row 12 (0.025 below): 176 of 176 cells on the predicted side, so the edge is 2^-970
+    to within 0.025 nats at every one. Last numbers: 1.0274520...E-292 (H11 `BETA.DIST(0.999847242166822,4500000,
+    3.5,TRUE)` is 1.027452053743555E-292); H12 is 0.
+  - **n = 2 is not settled.** (5E6, 2.5) and (5E6, 3) (t4437-beta-t-zero-bracket D, F) are 0 at every row, all at W
+    0.22 times 2^-970 and below, which agrees with the rule. (2E6, 2.5) (t4437-beta-zero-fresh D) is a number at
+    every row, down to 0.15 times it. In the second sweep (3E6, 2.5) is a number to 0.525 nats below the edge and
+    (7E6, 2.75) to 0.225 below, 0 from 0.275 below (t4437-beta-zero-fresh2 I, J): the n = 2 cut lies below the
+    edge, lower at smaller a0. Every scale-free quantity tried (W, the tail, D, x^a, the density) collides between
+    (2E6, 2.5) numbers and (5E6, 2.5) zeros, so a0 itself enters. Unmodelled (T-4564).
+  - **T.DIST.RT, bracketed** (t4437-beta-t-zero-bracket G:I, ln of the true tail by 0.5): the last number and the
+    first 0 are at -687 / -687.5 at df 1E7, -692 / -692.5 at 1E6 and -696.5 / -697 at 1E5 (numbers down to
+    3.3E-303). At those cuts ln x^a is -683, -688 and -692.5, so it is not x^a reaching DBL_MIN. Unmodelled (T-4564).
+  - Ours: BETA.DIST's worksheet cdf asks `bup.rs` `l140_bup_sum_flushed` at n >= 3 (`bratio::beta_dist_cdf`), as
+    well as T-4045's rule. BETADIST shares that cdf, so it takes the rule too; every cell above is BETA.DIST, and
+    BETADIST's edge rests on the shared kernel (as T-3764's), not on its own probe. F's tails and the quantile searches do not ask it. The numbers within a few nats of the
+    edge differ from Excel in the 8th or 9th digit (owned by T-4564).
   - More shapes (T-4456, probes/t4456-beta-t-zero-cut, 130 cells, and probes/t4456-beta-t-zero-reach, 81 cells,
     excel-graph, 2026-11-06):
     - The rule holds at n = 25 and 29 bup terms. At (5E6, 25.5) and (5E6, 30), ln ret -708.0 is a number
@@ -6625,8 +6661,12 @@ too: `BINOM.INV(2147483647,0.5,0.5)` and `CRITBINOM(2147483647,0.5,0.5)` are `#N
 Evidence: probes/t2435-dist-extremes A15:A19 (excel-graph, 2026-10-26); gen-m9 a61e547a1cab994c A127
 (`CRITBINOM(1E+15,0.5,0.001)`) and ee2497a5e683c5d9 A345 (`BINOM.INV(1E+15,5.2E-16,0.5)`).
 Ours: matches since T-2435 (`TRIALS_LIMIT` in functions/statistical/binom.rs now also in
-`binom_inv_of`). The count itself at a huge trial count is ours to fix: `BINOM.INV(2147483646,0.5,
-0.5)` is 1073744668 against Excel's 1073741823 (statrs' binomial cdf; T-2809).
+`binom_inv_of`). The count at 2^31 - 2 trials matches too, since T-3444: statrs' binomial cdf gave
+`BINOM.INV(2147483646,0.5,0.5)` 1073744668 against Excel's 1073741823, and the search now runs on
+BINOM.DIST's own cdf, the bratio port of TOMS 708 on `I_p(k + 1, n - k)` (basym, its asymptotic
+expansion, near the median and bfrac further out; no fitted constant), which crosses alpha at n/2
+(T-2809 confirmed it on A15 and A18; "BINOM.DIST.RANGE and BINOM.INV at a large n sit on BINOM.DIST's
+own cdf").
 Status: VERIFIED (excel-graph)
 Tasks: T-2435, T-2809
 
@@ -6715,7 +6755,7 @@ Ours: `#NUM!` where the quantile underflows for p up to 1/2 since T-2808 (functi
 `lower_quantile_underflows`; before it the search stopped at 3.333333333333333E-302 at alpha 1E-300, where every cdf it
 evaluates rounds to 1); 0.5 is not reproduced (T-4663).
 Status: VERIFIED (excel-graph) for the cells; the 0.5's mechanism UNVERIFIED
-Tasks: T-2435, T-2808, T-4663
+Tasks: T-2435, T-2808, T-4663, T-4676
 
 ## BETA.INV's Gate A table: 1 - 2^-53 near 1, 2^-53 by the flip, 0.5 at a DBL_MIN shape, `#NUM!` at a huge alpha (T-3578)
 Rule: on accuracy/BETA.INV/s1 (199 points, excel-graph 2026-11-02) Excel's BETA.INV differs from the engine in four
@@ -6761,9 +6801,17 @@ that gives the order (2E150 to 5E150 over df1) and the 1/df1 scaling, but its st
 geometric path down from the start (0.64 to 1.36 times the constant over df2 1.5 to 1.999, returning the last
 iterate or the stepped one), where Excel's value is the same to the last digit. So it is not Excel's search, and the
 constant is not implemented: copying it would be a fitted value (owner rule; reviewer-excel-fidelity check 7).
+Lead (gap triage 2026-11-06). This is arithmetic on the cells above, not new evidence, and is UNVERIFIED. In the
+beta variable of the upper tail, x = df2/(df2 + df1*F) at shape a = df2/2 and b = df1/2, the saturated x is
+proportional to a. x/a is 5.411158434229572E-151 for df2 = 1.5, 1.9 and 1.999 (b = 0.5), and 5.4111530230729346E-151
+at df1 = 2 (b = 1). BETA.INV's own saturation `BETA.INV(1E-300,0.5,100)` = `BETA.INV(1E-200,0.5,100)` =
+2.7050408442680296E-151 (probes-numeric/t1543-inverse-cdf-tiny-p A91, A92) gives 5.41008E-151 at b = 100. So the stop
+looks like "x/a below about 1E-150", the Newton correction near the origin, with a weak dependence on b. Against
+that, accuracy/BETA.INV/s1 A131 (9.192367895421942E-151 at a = 1.12, b = 2.10) gives 8.2E-151. T-4675's sweep tests
+this.
 Ours: `#NUM!` where the quantile saturates, and 7 ulp off at `F.INV.RT(1E-20,3,9)`; T-4662.
 Status: VERIFIED (excel-graph) for the cells; the mechanism UNVERIFIED
-Tasks: T-2435, T-2808, T-4662
+Tasks: T-2435, T-2808, T-4662, T-4675
 
 ## F.INV.RT and FINV at a tiny probability: Excel's own search, far from the math (T-4103)
 Rule: below p of about 1E-130, and at p = 2.22507385850721E-308 (DBL_MIN), Excel's F.INV.RT and FINV are often far
@@ -7882,11 +7930,23 @@ Rule:
   the quantile is a finite double (about 3.2E+22 to 6.9E+38). T.INV accepts p down to 1E-300 (T-1531).
   `CONFIDENCE.T(2.22507385850721E-308,sd,n)`, which is T.INV.2T at df n - 1, is `#NUM!` too, at n 38, 68 and 79 (df 37,
   67 and 78), where the margin is finite (5.5E+8 at `CONFIDENCE.T(2.22507385850721E-308,2.85657486076017,38)`; T-4102).
+  T-4541 pins the cut: the two-tailed quantile is an error exactly when p/2 is below the smallest normal double
+  (p < 2·DBL_MIN = 4.4501477170144028E-308), the half Excel flushes to 0, and it then answers as at p = 0. At df 1
+  T.INV.2T is `#DIV/0!` (the p = 0, df 1 rule in "Student t quantile at p = 0 with df below 2 is #DIV/0!"), from df 2
+  `#NUM!`; CONFIDENCE.T is `#NUM!` at every n, df 1 (n = 2) included. `T.INV.2T(4.4501477170144E-308,df)` (just below
+  2·DBL_MIN) is `#DIV/0!` at df 1 and `#NUM!` at df 2, 9 and 30, and `T.INV.2T(4.45014771701441E-308,df)` (just above)
+  is a number at all four (`T.INV.2T(4.45014771701441E-308,9)` = 3.648002741446659E+34), as are 4.4502E-308 to 1E-300;
+  3E-308 and 4.45E-308 are errors like 2.22507385850721E-308. TINV (df 2, 30) and CONFIDENCE.T (sd 1, n 2, 3, 31) cut at
+  the same p. T.INV at those p is a number (`T.INV(2.22507385850721E-308,2)` = -4.74037595...E+153), so the cut is the
+  halving, not the tail. A computed subnormal p (`2.22507385850721E-308/2`, `1E-300/1E10`, `1E-300*1E-23`) is 0 before
+  it reaches the function (column J), so those rows are the p = 0 errors. A subnormal number literal in a formula makes
+  Excel (excel-graph) reject the whole workbook, so the probe computes them. Evidence: probes/t4541-t-inv-2t-tiny-p
+  (excel-graph, 2026-11-06; A1:L15, M1:M5, written with these predictions before the fill).
 - `F.INV(0,d1,d2)` is 0, the lower end of the support.
 
 - The legacy `FINV(0,2,5)` is `#NUM!` (probes-numeric/m9-legacy-finv A65), so the 0 is F.INV's only.
 
-The exact x where T.DIST's density turns `#NUM!` and the p below which the two-tailed quantile does are not yet probed.
+The exact x where T.DIST's density turns `#NUM!` is not yet probed; the two-tailed quantile's p cut is 2·DBL_MIN (T-4541).
 Evidence: Gate A tables, excel-graph:
 - accuracy/T.DIST/s1 A85, A95, A105 and A110, and accuracy/T.DIST/e-T-3425 A90, A103 and A116 (T-3425);
 - accuracy/T.INV.2T/s1 A68 and A78, and accuracy/TINV/s1 A68 and A78;
@@ -7894,9 +7954,9 @@ Evidence: Gate A tables, excel-graph:
 - accuracy/T.DIST/s1 A94 and A97 (density 0 below the cut);
 - accuracy/T.DIST/r4-T-2585 A236 (density 0), and A266 and A267 (`#NUM!`; T-4580);
 - accuracy/F.INV/s1 A111 (`F.INV(0,38,10)`) and A125 (`F.INV(0,9,50)`), and probes-numeric/t1049-finv A16 (`F.INV(0,3,7)`).
-Status: VERIFIED (excel-graph) for the cited cells; the cut points are UNVERIFIED.
-Ours: T.DIST returns 0, and T.INV.2T, TINV and CONFIDENCE.T return the quantile or margin. These are Gate A known
-failures owned by T-3554 and T-4541 (moved from T-3386).
+Status: VERIFIED (excel-graph) for the cited cells and the two-tailed quantile's p cut (T-4541); T.DIST's x cut points are UNVERIFIED.
+Ours: T.DIST returns 0, a Gate A known failure owned by T-3554. T.INV.2T, TINV and CONFIDENCE.T as Excel since T-4541
+(`two_tailed_half_underflows`: a p whose half `flush_subnormal` makes 0 is p = 0).
 Tasks: T-3554, T-3386, T-3358, T-4541, T-4102, T-4580
 
 ## A text scalar argument is #VALUE! before an error cell as the data (T-3781)

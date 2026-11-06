@@ -537,7 +537,7 @@ fn read_data_field(element: &BytesStart, limits: &ImportLimits) -> Result<DataFi
 
 /// An `xsd:boolean` attribute: `default` when absent or not a boolean, as Excel's own writer never
 /// leaves one malformed (and `showAll` has always read so, T-4276).
-fn flag(element: &BytesStart, name: &str, default: bool) -> Result<bool, Skip> {
+pub(super) fn flag(element: &BytesStart, name: &str, default: bool) -> Result<bool, Skip> {
     Ok(match attribute(element, name)?.as_deref() {
         Some("1" | "true") => true,
         Some("0" | "false") => false,

@@ -21,12 +21,8 @@ accuracy/T.DIST/r4-T-2585!Calc!A271	T-3554	Excel #NUM! for the density at a huge
 accuracy/T.DIST/r4-T-2585!Calc!A277	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.INV/s1!Calc!A75	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/T.INV/s1!Calc!A102	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
-accuracy/T.INV.2T/s1!Calc!A68	T-4541	Excel #NUM! at p = 2.2E-308 where the quantile is finite
 accuracy/T.INV.2T/s1!Calc!A75	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
-accuracy/T.INV.2T/s1!Calc!A78	T-4541	Excel #NUM! at p = 2.2E-308 where the quantile is finite
 accuracy/T.INV.2T/s1!Calc!A91	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
-accuracy/TINV/s1!Calc!A68	T-4541	Excel #NUM! at p = 2.2E-308 where the quantile is finite
-accuracy/TINV/s1!Calc!A78	T-4541	Excel #NUM! at p = 2.2E-308 where the quantile is finite
 accuracy/BETA.DIST/s1!Calc!A184	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
 accuracy/BETA.DIST/s1!Calc!A186	T-3577	cdf at a huge beta: Excel #NUM!, the engine and the math 0
 accuracy/BETA.DIST/s1!Calc!A187	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
@@ -280,13 +276,6 @@ accuracy/GAMMA.INV/e-T-3863!Calc!A194	T-3364	R3 closed-form point: the engine re
 accuracy/GAMMA.INV/e-T-3863!Calc!A196	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A198	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A199	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
-accuracy/AMORDEGRC/s1!Calc!A114	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
-accuracy/AMORDEGRC/s1!Calc!A118	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
-accuracy/AMORDEGRC/s1!Calc!A128	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
-accuracy/AMORDEGRC/s1!Calc!A130	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
-accuracy/AMORDEGRC/s1!Calc!A131	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
-accuracy/AMORLINC/s1!Calc!A124	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
-accuracy/AMORLINC/s1!Calc!A125	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
 accuracy/VDB/s1!Calc!A158	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
 accuracy/VDB/s1!Calc!A183	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
 accuracy/VDB/s1!Calc!A187	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
@@ -385,9 +374,6 @@ accuracy/ODDFYIELD/s1!Calc!A272	T-4551	ODDFYIELD at a root near 0 (8.3E-6): engi
 accuracy/ODDFYIELD/s1!Calc!A289	T-4551	ODDFYIELD with ODDFPRICE's extra quasi period (month-end first coupon 2005-05-31, coup_number nq 1, true 0): engine 2E-13 relative off Excel, both 2E-7 off the math
 accuracy/TTEST/s1!Calc!A136	T-4579	Excel #DIV/0! for a paired test whose one-pass variance of the differences is negative; the engine gives a number
 accuracy/TTEST/s1!Calc!A101	T-4579	Excel keeps the exact differences of offset pairs; the engine's double differences put the deep tail 1.6e-9 off
-accuracy/CONFIDENCE.T/s1!Calc!A112	T-4541	Excel #NUM! at alpha = 2.2E-308 where the margin is finite
-accuracy/CONFIDENCE.T/s1!Calc!A123	T-4541	Excel #NUM! at alpha = 2.2E-308 where the margin is finite
-accuracy/CONFIDENCE.T/s1!Calc!A134	T-4541	Excel #NUM! at alpha = 2.2E-308 where the margin is finite
 accuracy/CONFIDENCE.T/s1!Calc!A155	T-3363	quantile at df 2.3E9: the engine and Excel are both off the math, differently
 accuracy/CONFIDENCE.T/s1!Calc!A163	T-3363	quantile at df 6.2E6: the engine and Excel are both off the math, differently
 accuracy/BETADIST/s1!Calc!A183	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
@@ -448,3 +434,7 @@ accuracy/TREND/s1!Calc!A98	T-2006	the engine's normal-equations solve on an ill-
 accuracy/TREND/s1!Calc!A193	T-2006	the engine's normal-equations solve is #NUM! on data from 1E-45 to 1E+49 (absolute pivot test); Excel matches the math
 accuracy/GROWTH/s1!Calc!A97	T-2006	the engine's normal-equations solve on an ill-conditioned design is 2e-09 relative off the math; Excel is 1e-15 off it
 accuracy/GROWTH/s1!Calc!A104	T-4590	Excel #NUM! where the ln fit's intercept e^1289.95 is past the double range; the engine and the math are 8.1E-18
+accuracy/BETA.DIST/r4-T-4437!Calc!A185	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETA.DIST/r4-T-4437!Calc!A189	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETA.DIST/r4-T-4437!Calc!A192	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETA.DIST/r4-T-4437!Calc!A194	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math

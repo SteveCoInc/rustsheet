@@ -3,7 +3,7 @@ id: T-3994
 title: "Phase 1 exit owners line: decide how a visibly-off cell with no math value, owned only by a deferred last-digit task, counts (61 cells today)"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -51,14 +51,31 @@ rule is applied to the cells of that kind today. Gap triage then stops re-decidi
   test that `phase1_exit.py` can run.
 
 ## Acceptance criteria
-- [ ] A decision record (`make new-decision`) states the rule, with the counts above before and after applying it,
+- [x] A decision record (`make new-decision`) states the rule, with the counts above before and after applying it,
       and how `phase1_exit.py`, `exit_owners.py` and decision 0245's gate agree under it.
-- [ ] If the rule changes a script, the change is in this task's PR, with tests in scripts/test_phase1_exit.py or
+- [x] If the rule changes a script, the change is in this task's PR, with tests in scripts/test_phase1_exit.py or
       scripts/test_exit_owners.py. If it keeps the scripts and needs owners, the owner tasks are filed in the same PR.
-- [ ] .claude/agents/gap-triager.md and the steward skill (.claude/skills/steward/SKILL.md) state the rule where they
+- [x] .claude/agents/gap-triager.md and the steward skill (.claude/skills/steward/SKILL.md) state the rule where they
       describe `defer: phase-1b` (a protected-path change, if so, goes through the decision record above).
-- [ ] `make check` green; reviewers approve (reviewer-excel-fidelity included, since the rule touches R1(c)).
+- [x] `make check` green; reviewers approve (reviewer-excel-fidelity included, since the rule touches R1(c)).
 
 ## Out of scope
 - Writing math values (T-3993, T-3798's table tasks, T-3925) and any engine fit for these cells.
 - Gate B's suites, where every visibly-off cell counts whatever its math (decision 0188 R1(b)).
+
+## Outcome
+- Decision 0325 (option (a), with the owner named): a visibly-off probes or probes-numeric cell that R1(c) counts only
+  for want of a math value needs a non-deferred owner, and that owner is the task that attaches its math (its
+  function's Gate A table task, or a math-sidecar task for its formula shape), never a `visible` or `accuracy` fit
+  task before the math is attached. No gate or script changes; decision 0187 item 4 stands. Decision 0245's gate keeps
+  passing a deferred-only cell at PR time (a lower bar than the exit's), and the record says how the three checks agree.
+- The rule is in .claude/agents/gap-triager.md (next to `defer: phase-1b`) and the steward skill ("Deferred owners on
+  the exit line").
+- Counts: 61 such cells on 2026-11-03 (eda15c023); 0 today (origin/main e200fa21, `make eval` without calipers, poi or
+  corpus-bench). The Gate A table tasks T-4103, T-4104, T-4106 and T-3925 and T-3993's composite sidecars attached
+  their math, which is the rule's owner in practice; so no owner task was needed. `make phase1-exit` lists 2 cells
+  owned only by a deferred task, both gen-m9 (Gate B, out of scope): `01523d247594952e!Calc!A377` (SYD over
+  `F.INV.RT(1E-20,9,3)`) and `abc2939ebd1e2365!Calc!A11` (`CHIDIST(F.INV.RT(1E-200,1,1.999),10)`, Excel 0, ours
+  `#NUM!`), from T-2808's split (PR #3715, still open); under item 4 they need a `campaign:` owner, which that PR's
+  follow-ups or the next triage should give.
+- Not script-changing, so no test in scripts/test_phase1_exit.py. Eval delta: none.

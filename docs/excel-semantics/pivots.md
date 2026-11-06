@@ -18,6 +18,13 @@ whether Excel also overwrites rendered constants already in the area is a separa
 The saved file holds Excel's own cache and definition (`rowItems`, `location`), as oracle-spike.md
 run 1 also showed.
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-xlsx/src/import/pivots.rs (`refreshOnLoad` read onto
+`PivotCache::refresh_on_load`; T-4151)
+Implemented in: crates/rustsheet/src/workbook/calculation.rs (`Workbook::recalculate`: the first
+recalculation of a loaded workbook refreshes the marked caches, then recalculates again) and
+crates/rustsheet/src/edit/pivot.rs (`refresh_pivots_on_load`; T-4151)
+Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`Model::plan_pivot_refresh`,
+`apply_pivot_refresh`; tested on t4128 R in `pivot/grid/tests.rs`; T-4151)
 
 ## Excel for the web renders authored pivot definitions
 Rule: a definition written into the file renders in full on open, with no `rowItems`/`colItems` and a
@@ -255,6 +262,56 @@ Microsoft's 2025 "PivotTable #SPILL!" announcement (excel-docs.md, PSPILL).
 Evidence: probes/t4128-pivot-spike S (excel-graph, 2026-11-06, T-4128): the constant S!C5 lies inside
 the layout, and the pivot is saved with location A3, where S!A3 is `#SPILL!`.
 Status: VERIFIED (excel-graph); GETPIVOTDATA against such a pivot is in T-4130
+Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`Model::place`, `meets_foreign`: the
+anchor gets `#SPILL!`, the location becomes that cell and the geometry zero, as the sidecar saves
+it; tested on t4128 S in `pivot/grid/tests.rs`; T-4151)
+
+## The grid writer's own readings
+Rule (the engine's, not probed): a pivot owns its location and its page area, and nothing else.
+- A refresh empties every cell it owned that the new layout does not write, and writes the new
+  cells as constants. A constant left inside the pivot's own saved area is its own: overwritten
+  or cleared, never foreign. Whether Excel overwrites rendered constants it finds in a
+  `refreshOnLoad` pivot's area is T-2327's.
+- Foreign is a stored value or formula outside the owned area (a cell holding only a style is
+  empty), and, inside or outside it, any part of another pivot's area on the sheet (even a blank
+  intersection, and the new area of a pivot laid out before it in the same refresh), a merged
+  range, a Table (even an empty body) and an array formula's or dynamic spill's cells. The new
+  page area is checked as the location is.
+  Classic Excel instead refuses a refresh that would overlap another pivot, with a dialog
+  (excel-docs.md, "Overlap rules").
+- A merged range inside the pivot's own area, or across its edge, refuses the refresh: the pivot
+  keeps its cells. Excel makes such ranges itself with "Merge and center cells with labels"
+  (`mergeItem`, excel-docs.md), so a `refreshOnLoad` pivot saved with that option keeps its saved
+  cells on open; the cell writers cannot write through a merge (rendering `mergeItem` is T-4677).
+- A layout that would pass the sheet's last row or column collapses to `#SPILL!` too, rather than
+  failing. Microsoft's PivotTable `#SPILL!` announcement lists text, merged cells, tables and the
+  sheet edge as what blocks a pivot (excel-docs.md, PSPILL); that is documented for desktop Excel,
+  and Excel for the web is unprobed for merged cells, Tables and the edge.
+- On a collapse the location becomes the anchor and the geometry, page counts included, becomes
+  zero. That is evidenced only for a pivot with no page field (t4128 S).
+- A refresh reads the cache again and lays out every pivot over that cache, each from its
+  anchor (the location's top-left cell).
+- A pivot's field indices follow its fields by case-folded name. A field new to the source joins
+  on no axis. A field the pivot shows (row, column, page or data) that left the source refuses the
+  refresh, and the pivot keeps its cells. So does any renumbering of a pivot that keeps unread
+  parts verbatim, which may hold field indices (every imported pivot keeps some). A data field's
+  base field that left the source falls back to the first field.
+- A refresh that cannot be planned (a source that does not resolve, such as a Table or defined
+  name until T-4506; a field gone; past the shared budget) leaves the pivot and its cells as they
+  were. On load each cache is planned on its own, so a cache that does not plan keeps only its own
+  pivots' saved cells. The caches are refreshed one after another in workbook order, each planned
+  against the grid the ones before it wrote, so a later cache reads their new cells and meets
+  their new areas. From the first plan that succeeds the writes are one edit, so a write that
+  fails (only possible for a plan that does not match the workbook) rolls back every
+  `refreshOnLoad` pivot.
+- One budget covers every `refreshOnLoad` cache of a load, and what a failed plan spent stays
+  spent. A few caches over whole-column sources (each charged its source's rows times columns
+  before it is read) can exhaust it, and the caches after them then keep their saved cells with
+  no sign of it.
+Evidence: none beyond probes/t4128-pivot-spike S (a constant in the body, no page field).
+Status: UNVERIFIED (probe pending: T-4664; T-2327 for constants in a refreshOnLoad pivot's area)
+Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`owned_areas`, `meets_foreign`,
+`remap`, `PivotBudget`; T-4151)
 
 ## A tabular pivot's first row header is the field name only when every pivotField has compact="0"
 Rule: in a tabular pivot, the header cell of the first row field reads the field's own name (`Region`)
@@ -803,21 +860,48 @@ past it the render fails with `Limit`, where Excel would show the pivot.
 Its layout (`lay_out`, T-4147) draws on the same work units, one per line and `x` made, and has no
 result past 4,000,000 cells (`MAX_PIVOT_CELLS`: the location's rows times columns plus two per page
 field, checked from the line counts before any cell is made) or when the location would pass the
-sheet's last row or column. What Excel does with a pivot that does not fit the sheet is not probed.
-The values stay without a layout, so GETPIVOTDATA still has them.
-Evidence: none for Excel; this is a resource limit (SPEC-0032 "Untrusted-input limits", T-4142).
+sheet's last row or column. The cell cap is the resource limit; the sheet's edge is not one: past
+it the layout fails with `PastSheet`, which the grid writer renders as `#SPILL!` at the anchor
+("The grid writer's own readings", UNVERIFIED). The values stay without a layout, so GETPIVOTDATA
+still has them. A refresh of several pivots (one cache, or every `refreshOnLoad` cache on open)
+spends one budget of `MAX_PIVOT_WORK` work and `MAX_PIVOT_CELLS` cells written, cleared and
+scanned together (`PivotBudget`), not one per pivot.
+Evidence: none for Excel; the work, node, text and cell caps are resource limits (SPEC-0032
+"Untrusted-input limits", T-4142, T-4151).
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `MAX_PIVOT_NODES`, `charge`,
 `count_nodes`)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`MAX_PIVOT_CELLS`, `location`; T-4147)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`MAX_PIVOT_TEXT_BYTES`; T-4149)
+Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`PivotBudget`; T-4151)
 
-## Pivots without refreshOnLoad, and source edits
-Rule: unknown. Two things are unprobed: whether Excel for the web re-renders a pivot whose cache lacks
-`refreshOnLoad` when it opens the file (saved cells or `rowItems` stale or absent), and whether it
-re-renders a pivot after its source is edited with no refresh.
-Evidence: none. Every rendered probe so far is `refreshOnLoad` (case builder v2).
-Status: UNVERIFIED (probe pending: T-4586)
+## Pivots without refreshOnLoad keep their saved cells; a source edit does not re-render
+Rule: Excel for the web does not re-render a pivot whose cache lacks `refreshOnLoad` when it opens the
+file. It keeps the cells the file saved in the pivot's area and saves the definition back as it found it
+(`location`, `rowItems`/`colItems`, cache), even when they disagree with the cache or are absent. Nor
+does it re-render a pivot after its source is edited with no refresh: the area keeps the render it had.
+Evidence: probes/t4586-pivot-refresh-on-load (excel-graph, 2026-11-06, T-4586), over Data East `=10`
+(cached as missing), West 20, East 5, so the saved cells (East 99, Grand Total 99, no West), a render from
+the cache (East 5, West 20, total 25) and a refresh (East 15, West 20, total 35; Q!B4 sums the
+source to 35) all differ:
+- (a) sheet A, `refreshOnLoad` off, location A3:B5, saved cells and `rowItems` listing East and the
+  grand total only: A4:B5 stay East 99, Grand Total 99 (Q!A1:D1; A6:B6 stay empty, Q!E1:F1 read 0). The saved
+  `rowItems`, `colItems`, location and the cache's flags (`containsBlank`) come back unchanged.
+- (b) sheet B, the same with no `rowItems` or `colItems`: the same saved cells (Q!A2:F2), and Excel saves
+  the pivot with no row or column lines (the snapshot does not tell an absent `<rowItems>` from an
+  empty one). Absent layout lines do not make it render.
+- (c) sheet C, a `refreshOnLoad` pivot over Src, whose B2 is blank in the file: Excel renders East 5,
+  West 20, Grand Total 25 on open. The oracle then writes Src!B2 = 100 through a Graph range write
+  (`entered`) and runs a FullRebuild calculate, with no pivot refresh: Q!A4 reads 100, and the pivot
+  still shows East 5 and total 25 (Q!A3:F3 and the sidecar's area). A refresh would show 105 and 125.
+
+Consequences: an engine loads such a pivot's area as the plain cells the file holds and builds nothing
+for it until a refresh; a calculate, including a full rebuild, is not a refresh. Not probed: Auto Refresh
+(the x14/x15 refresh-on-change flags, T-4182), a source edit on a pivot without `refreshOnLoad`, and
+desktop Excel (M14). In (c) the range write is the session's first call, so it lands after the load's
+refresh: East 5 shows that refresh read the blank B2.
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet/src/edit/pivot.rs (`Workbook::refresh_pivots_on_load`, `Txn::refresh_pivot_table`; T-4151)
 
 ## Pivot field names for duplicate and blank source headers
 Rule: on refresh Excel names each cache field after its source header, made unique ignoring case:

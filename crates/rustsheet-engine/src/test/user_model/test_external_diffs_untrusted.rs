@@ -283,6 +283,7 @@ fn crafted_diffs_are_refused() {
                 column: 1,
                 count: BIG,
                 old_data: vec![],
+                tables: vec![],
             },
         ),
         (
@@ -341,6 +342,7 @@ fn crafted_diffs_are_refused() {
                     }),
                     data: HashMap::new(),
                 }],
+                tables: vec![],
             },
         ),
         (

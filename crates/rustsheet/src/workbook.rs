@@ -169,6 +169,8 @@ pub struct Workbook {
     /// The package the workbook was loaded from, kept so a save can write back what did not change
     /// (SPEC-0034 D1). `None` for a workbook created with [`Workbook::new`].
     source: Option<Arc<Source>>,
+    /// Whether the first [`Workbook::recalculate`] refreshes the `refreshOnLoad` pivots.
+    pivots_due: bool,
 }
 
 pub(crate) fn engine_load_error(message: impl std::fmt::Display) -> LoadError {
@@ -273,6 +275,7 @@ impl Workbook {
             max_read_cells,
             track_changes: true,
             source: None,
+            pivots_due: false,
         }
     }
 
@@ -345,15 +348,12 @@ impl Workbook {
         let model = source.import(was_decrypted)?;
         let mut workbook = Self::from_model(model, w.max_read_cells);
         workbook.source = Some(Arc::new(source));
+        let caches = &workbook.model.workbook.pivot_caches;
+        workbook.pivots_due = caches.iter().any(|c| c.refresh_on_load);
         if opts.recalc {
             workbook.recalculate();
         }
         Ok(workbook)
-    }
-
-    /// Recalculates every formula.
-    pub fn recalculate(&mut self) {
-        self.model.evaluate();
     }
 
     /// Pins the workbook clock (`NOW`, `TODAY`) to the timestamp in the workbook's `METADATA`
