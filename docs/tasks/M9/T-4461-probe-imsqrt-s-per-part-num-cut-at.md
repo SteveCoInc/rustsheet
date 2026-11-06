@@ -3,10 +3,10 @@ id: T-4461
 title: "Probe IMSQRT's per-part #NUM! cut at sqrt(DBL_MAX): the doubles either side of 1.3407807929942596E154, real and imaginary"
 milestone: M9
 lane: functions-engineering
-status: done
+status: todo
 priority: P3
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -46,3 +46,13 @@ Probe `probes/t4461-imsqrt-cut` (41 cells, excel-graph). Complex text keeps 15 s
 and above (`1.3408E154` ...) are `#NUM!`. The cut lies between those two 15-digit texts, the finest text can show.
 The engine matches all 41 cells: no engine change, no follow-up. The only baseline change is the new `C` line for
 the case in `eval/baseline/probes.txt`. engineering.md updated. IMSQRT has no Gate A definition, so no sidecar.
+
+## Handoff
+Work is complete; only a clean review round 3 and the enqueue remain (PR #3605).
+- Round 1 (excel-fidelity) REQUEST_CHANGES: my first reading of the 17-digit cells was wrong (complex text truncates to
+  15 digits, so they are one value). Fixed: added A37:A41 (`1.34078079299426E154`, all `#NUM!`), rewrote the
+  engineering.md entry and this Outcome.
+- Round 2 REQUEST_CHANGES: a blanket `sed` of "36 cells" in engineering.md also edited two unrelated lines (T-3912
+  A1:A36 and the t4422 cell count). Reverted both; the engineering.md diff is now the single T-4461 hunk.
+- Next: set `status: done` again, run `make check-fast`, push, re-run reviewer-excel-fidelity on the new head, mark the
+  PR ready when CI is green and it approves, then enqueue. Do not use global replaces on engineering.md.
