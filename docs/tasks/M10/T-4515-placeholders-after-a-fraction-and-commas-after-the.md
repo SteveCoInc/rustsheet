@@ -3,7 +3,7 @@ id: T-4515
 title: "Placeholders after a fraction and commas after the point: one model for the T-4507 probes"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
