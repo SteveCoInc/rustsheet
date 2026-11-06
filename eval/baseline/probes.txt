@@ -2509,6 +2509,7 @@ C	probes/t4589-pivot-total-order.case.json	95
 C	probes/t4595-literal-after-point.case.json	12
 C	probes/t4600-holiday-number-text-off-calendar.case.json	176
 C	probes/t4610-row-column-array-error-element.case.json	13
+C	probes/t4611-randarray-min-max-whole-arrays.case.json	13
 C	probes/t4614-pivot-total-order-2.case.json	124
 C	probes/t4616-pivot-total-order-3.case.json	528
 C	probes/t4622-pivot-count-subtotals.case.json	202
@@ -9840,7 +9841,6 @@ F	probes/t4394-api-name-active-last.case.json	S2!A1
 F	probes/t4394-api-name-active-last.case.json	S2!A3
 F	probes/t4394-api-name-active-s2.case.json	Last!A1
 F	probes/t4394-api-name-active-s2.case.json	S2!A3
-F	probes/t4450-eta-special-forms.case.json	Sheet1!J64
 F	probes/t4456-beta-t-zero-cut.case.json	Calc!A1
 F	probes/t4456-beta-t-zero-cut.case.json	Calc!A2
 F	probes/t4456-beta-t-zero-cut.case.json	Calc!A3
@@ -10014,17 +10014,6 @@ F	probes/t4515-fresh-sweep.case.json	S!F5
 F	probes/t4515-fresh-sweep.case.json	S!G1
 F	probes/t4515-fresh-sweep.case.json	S!G5
 F	probes/t4515-fresh-sweep.case.json	S!G8
-F	probes/t4519-row-column-randarray-over-arrays.case.json	Sheet1!D2
-F	probes/t4519-row-column-randarray-over-arrays.case.json	Sheet1!D3
-F	probes/t4519-row-column-randarray-over-arrays.case.json	Sheet1!D4
-F	probes/t4519-row-column-randarray-over-arrays.case.json	Sheet1!D7
-F	probes/t4519-row-column-randarray-over-arrays.case.json	Sheet1!D8
-F	probes/t4519-row-column-randarray-over-arrays.case.json	Sheet1!E3
-F	probes/t4519-row-column-randarray-over-arrays.case.json	Sheet1!E8
-F	probes/t4519-row-column-randarray-over-arrays.case.json	Sheet1!G3
-F	probes/t4519-row-column-randarray-over-arrays.case.json	Sheet1!G8
-F	probes/t4519-row-column-randarray-over-arrays.case.json	Sheet1!H3
-F	probes/t4519-row-column-randarray-over-arrays.case.json	Sheet1!H8
 F	probes/t4534-bessel-convert-web-values.case.json	Sheet1!B1
 F	probes/t4534-bessel-convert-web-values.case.json	Sheet1!B2
 F	probes/t4534-bessel-convert-web-values.case.json	Sheet1!B3

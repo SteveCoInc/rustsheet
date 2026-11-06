@@ -3,7 +3,7 @@ id: T-4611
 title: "RANDARRAY lifts over an array rows or columns: RANDARRAY({2}) is one number, RANDARRAY({2;3}) a 2x1 of numbers"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -27,9 +27,12 @@ RANDARRAY lifts over an array or multi-cell `rows` or `columns`, one call per el
 - Split from T-2644 (research: the GROUPBY/PIVOTBY eta probe, which lists the t4450 cells too) and T-4519: this task owns the engine fix for its cells.
 
 ## Acceptance criteria
-- [ ] probes/t4519-row-column-randarray-over-arrays D2, D3, E3, G3, H3, D4, D7, D8, E8, G8, H8 and probes/t4450-eta-special-forms J64 pass.
-- [ ] The min, max and whole_number array forms are probed and matched, and arrays.md records the rule.
-- [ ] `make check` green; reviewers approve.
+- [x] probes/t4519-row-column-randarray-over-arrays D2, D3, E3, G3, H3, D4, D7, D8, E8, G8, H8 and probes/t4450-eta-special-forms J64 pass.
+- [x] The min, max and whole_number array forms are probed and matched, and arrays.md records the rule.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - ROW and COLUMN (T-4610).
+
+## Outcome
+RANDARRAY now lifts all five arguments (`fn_randarray` -> `lift_call`, `RANDARRAY` entry in lift/kinds/general.rs, Output weight 1; lift-kinds.json regenerated). New probe probes/t4611-randarray-min-max-whole-arrays (13 scored cells, excel-graph) shows min, max and whole_number lift too. t4519 D2:H4/D7:H8 and t4450 J63:J64 now pass; arrays.md has the rule. `Model::get_boolean` had no caller left and is removed.
