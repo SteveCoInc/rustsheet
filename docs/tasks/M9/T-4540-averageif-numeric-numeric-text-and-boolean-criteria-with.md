@@ -3,7 +3,7 @@ id: T-4540
 title: "AVERAGEIF numeric, numeric-text and boolean criteria with an average_range: probe the 5 unseen argument pairs, the resized average_range included, and match"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
