@@ -385,6 +385,9 @@ accuracy/YIELD/s1!Calc!A230	T-2788	YIELD's last digits short of PRICE's root: en
 accuracy/YIELD/s1!Calc!A252	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/YIELD/s1!Calc!A261	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/MIRR/s1!Calc!A125	T-4537	Excel #DIV/0! for a finance power overflow beside a later negative flow; the engine gives #NUM!
+accuracy/F.INV.RT/s1!Calc!A155	T-1871	deep-tail F quantile (p 4.7E-162, df 3216, 23): the engine is 1.8% off; Excel matches the math
+accuracy/F.INV.RT/s1!Calc!A112	T-4568	Excel 0.9% below the math at p = DBL_MIN (df 29, 57); the engine returns the math
+accuracy/F.INV.RT/s1!Calc!A142	T-4568	Excel #NUM! at p 1.5E-247 (df 9, 51); the engine returns the math
 accuracy/ODDFYIELD/s1!Calc!A272	T-4551	ODDFYIELD at a root near 0 (8.3E-6): engine 1.1E-11 relative off Excel, both stop short of the math (1.8E-6)
 accuracy/ODDFYIELD/s1!Calc!A289	T-4551	ODDFYIELD with ODDFPRICE's extra quasi period (month-end first coupon 2005-05-31, coup_number nq 1, true 0): engine 2E-13 relative off Excel, both 2E-7 off the math
 accuracy/TTEST/s1!Calc!A136	T-4579	Excel #DIV/0! for a paired test whose one-pass variance of the differences is negative; the engine gives a number
