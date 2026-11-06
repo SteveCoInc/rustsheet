@@ -3,7 +3,7 @@ id: T-4314
 title: "IPMT near the double range and at tiny rates: Excel is #NUM! where the engine has a value (319 cells of t3523-ipmt-selector-sweep)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
