@@ -1,0 +1,35 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4534: Excel for the web's values for the desktop-cached cells T-4534 still owns: ironcalc-calc ENGINEERING/BESSEL.xlsx All!D18 and F18 (BESSELJ and BESSELY of 100000 and 5; Mac desktop cache), calipers roundtrip/formulas_engineering Sheet1!D26, D27, J26, J27 (CONVERT of +-255 mi to km and in to cm, inside IFERROR; desktop cache). A literal arguments, D and F the golden's cell-referenced forms.",
+  "tags": [
+    "M9",
+    "probe",
+    "engineering"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=BESSELJ(100000,5)",
+        "A2": "=BESSELY(100000,5)",
+        "A3": "=BESSELI(100000,5)",
+        "A4": "=BESSELK(100000,5)",
+        "B1": "=CONVERT(255,\"mi\",\"km\")",
+        "B2": "=CONVERT(-255,\"mi\",\"km\")",
+        "B3": "=CONVERT(255,\"in\",\"cm\")",
+        "B4": "=CONVERT(-255,\"in\",\"cm\")",
+        "C1": "255",
+        "C2": "-255",
+        "D1": "=IFERROR(CONVERT($C$1,\"mi\",\"km\"),\"N/A\")",
+        "D2": "=IFERROR(CONVERT($C$2,\"mi\",\"km\"),\"N/A\")",
+        "D3": "=IFERROR(CONVERT($C$1,\"in\",\"cm\"),\"N/A\")",
+        "D4": "=IFERROR(CONVERT($C$2,\"in\",\"cm\"),\"N/A\")",
+        "E1": "100000",
+        "E2": "5",
+        "F1": "=BESSELJ(E1,E2)",
+        "F2": "=BESSELY(E1,E2)"
+      }
+    }
+  ]
+}

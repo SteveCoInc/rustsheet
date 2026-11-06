@@ -10,12 +10,16 @@ import random
 import sys
 from collections.abc import Callable, Sequence
 from fractions import Fraction
+from typing import TYPE_CHECKING
 
 import mpmath
 
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import DomainError, Draw, MathArg, NoValueError, spend
+from rustsheet_tools.accuracy.model import NON_REAL, DomainError, Draw, MathArg, NoValueError, spend
 from rustsheet_tools.accuracy.sampler import log_uniform
+
+if TYPE_CHECKING:
+    from typing_extensions import TypeIs  # typing.TypeIs from Python 3.13; mypy bundles typing_extensions
 
 DF_CUT = 1e10  # the cumulative functions' last valid (truncated) df (statistics.md Student-t df limits)
 CONDITION_LIMIT = 1e-10  # an ill-conditioned point (kappa * 2^-52 above this) is redrawn
@@ -26,19 +30,21 @@ OVERFLOW_POINT = mpmath.mpf(2) ** 1024 * (
 )  # the smallest value that rounds past the largest double
 
 
-def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
-    """The numeric arguments of a definition that takes no logical or array (its sampler draws numbers only)."""
-    out: list[mpmath.mpf] = []
-    for a in args:
-        assert not isinstance(a, (bool, tuple))
-        out.append(a)
-    return out
+def is_real(a: MathArg) -> TypeIs[mpmath.mpf]:
+    """Whether `a` is a real (the exact double or integer of a number literal): the predicate form of `real_arg`, for
+    a `domain` that answers a non-real argument instead of asserting."""
+    return not isinstance(a, NON_REAL)
 
 
-def scalar(a: MathArg) -> mpmath.mpf:
-    """One numeric argument, where the sampler or the domain has ruled out a logical, a text and an array."""
-    assert not isinstance(a, (bool, str, tuple))
+def real_arg(a: MathArg) -> mpmath.mpf:
+    """`a` as a real, where the sampler or the domain has ruled out a logical, a text, an array and a complex number."""
+    assert is_real(a)
     return a
+
+
+def real_args(args: Sequence[MathArg]) -> list[mpmath.mpf]:
+    """`real_arg` of each of `args` (a definition, or a slice of its arguments, that takes reals only)."""
+    return [real_arg(a) for a in args]
 
 
 def finite_double(value: int | mpmath.mpf, what: str) -> mpmath.mpf:
@@ -58,9 +64,25 @@ def ill_conditioned(kappa: float) -> None:
         raise NoValueError(msg)
 
 
+MARGIN_RANGE = (NORMAL_MIN, 1e300)  # an intermediate inside this is a normal double, clear of the overflow
+
+
+def confidence_margin(quantile: mpmath.mpf, sd: mpmath.mpf, n: mpmath.mpf) -> mpmath.mpf:
+    """quantile·sd/√n, the margin CONFIDENCE.NORM, CONFIDENCE and CONFIDENCE.T share (T-4581): each passes its own
+    quantile and size. NoValueError where sd, sd·quantile, sd/√n, quantile/√n or the margin leaves `MARGIN_RANGE`: no
+    cell shows where Excel's products overflow or underflow, so such a point is unprobed. The bounds are compared
+    exactly on the mpf (confidence.py's old check compared `abs(float(x))`, about one ulp looser)."""
+    root = mpmath.sqrt(n)
+    for intermediate in (sd, sd * quantile, sd / root, quantile / root, sd * quantile / root):
+        if not MARGIN_RANGE[0] <= abs(intermediate) <= MARGIN_RANGE[1]:
+            msg = "an intermediate leaves the normal double range (unprobed)"
+            raise NoValueError(msg)
+    return sd * quantile / root
+
+
 def zero_pole(args: Sequence[MathArg]) -> str | None:
     """One-argument functions with a pole at 0 (COT, CSC, COTH, CSCH): Excel's `#DIV/0!`."""
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "a pole at 0" if x == 0 else None
 
 
@@ -140,7 +162,7 @@ def trunc(x: mpmath.mpf) -> int:
 def below_normal(*values: float) -> bool:
     """Whether any of `values` is nonzero and below the normal range (a subnormal: Excel's flush is unprobed in the
     definitions that call this)."""
-    return any(v != 0 and abs(v) < sys.float_info.min for v in values)
+    return any(v != 0 and abs(v) < NORMAL_MIN for v in values)
 
 
 def square_overflows(x: float) -> bool:

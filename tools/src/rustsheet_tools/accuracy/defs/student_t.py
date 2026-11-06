@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import DF_CUT
+from rustsheet_tools.accuracy.defs._common import DF_CUT, confidence_margin, is_real, real_args
 from rustsheet_tools.accuracy.model import (
     Definition,
     Interval,
@@ -123,7 +123,7 @@ def quantile(p: mpmath.mpf, df: mpmath.mpf) -> mpmath.mpf:
 
 def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     df = args[1]
-    if isinstance(df, (bool, str, tuple)) or df < 1:
+    if not is_real(df) or df < 1:
         msg = "no tail map below df 1"
         raise ValueError(msg)
     x = lower_quantile(q, mpmath.floor(df))
@@ -132,14 +132,14 @@ def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _t_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df, cumulative = args
-    assert not isinstance(x, (bool, str, tuple)) and not isinstance(df, (bool, str, tuple))
+    assert is_real(x) and is_real(df)
     _t_dist_cut(x, cumulative=bool(cumulative)).check_probed(x)
     return cdf(x, df) if cumulative else density(x, df)
 
 
 def _t_dist_domain(args: Sequence[MathArg]) -> str | None:
     df, cumulative = args[1], args[2]
-    if cumulative and not isinstance(df, (bool, str, tuple)) and df > DF_CUT:
+    if cumulative and is_real(df) and df > DF_CUT:
         return "cumulative df above 1E+10"
     x = _x_of(args)
     return _t_dist_cut(x, cumulative=bool(cumulative)).domain(x)
@@ -147,7 +147,7 @@ def _t_dist_domain(args: Sequence[MathArg]) -> str | None:
 
 def _t_inv(args: Sequence[MathArg]) -> mpmath.mpf:
     p, df = args
-    assert not isinstance(p, bool) and not isinstance(df, bool)
+    assert is_real(p) and is_real(df)
     return quantile(p, df)
 
 
@@ -237,7 +237,7 @@ def two_tailed_quantile(p: mpmath.mpf, df: mpmath.mpf) -> mpmath.mpf:
 
 def _t_inv_2t(args: Sequence[MathArg]) -> mpmath.mpf:
     p, df = args
-    assert not isinstance(p, bool) and not isinstance(df, bool)
+    assert is_real(p) and is_real(df)
     return two_tailed_quantile(p, df)
 
 
@@ -342,7 +342,7 @@ def _rt_cut(x: mpmath.mpf) -> HugeXCut:
 
 def _x_of(args: Sequence[MathArg]) -> mpmath.mpf:
     x = args[0]
-    assert not isinstance(x, (bool, tuple))
+    assert is_real(x)
     return x
 
 
@@ -359,7 +359,7 @@ def _upper_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _t_dist_rt(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(df, (bool, tuple))
+    assert is_real(x) and is_real(df)
     _rt_cut(x).check_probed(x)
     return upper_tail(x, df)
 
@@ -378,8 +378,8 @@ def _tails_upper(
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
         x, df = args[0], args[1]
         tails = args[2] if len(args) > 2 else mpmath.mpf(2)
-        assert not isinstance(x, (bool, tuple)) and not isinstance(df, (bool, tuple))
-        assert not isinstance(tails, (bool, tuple))
+        assert is_real(x) and is_real(df)
+        assert is_real(tails)
         cut.check_probed(x)
         return tails * upper_tail(x, df)
 
@@ -464,30 +464,16 @@ TDIST = register(
 # 0, 1, -0.1 or 1.5 are #NUM! (T-1043), so alpha is in (0, 1), unlike T.INV.2T's (0, 2). The df n - 1 is cut at 1E10:
 # n = 10000000001 is a number and 10000000002 #NUM! (T-1043, `t1518-t-df-cut`). A tiny alpha has a finite margin
 # (`CONFIDENCE.T(1E-300,1,2)` = 4.50158158078553E299; statistics.md T-1531). sd 0 is #NUM! (T-1043), but no cell shows
-# a negative sd, so a negative sd has no value (NoValueError, unprobed) rather than an assumed error.
-CONFIDENCE_RANGE = (2.2250738585072014e-308, 1e300)  # a normal double, clear of the overflow
-
-
-def confidence_margin(alpha: mpmath.mpf, sd: mpmath.mpf, n: mpmath.mpf) -> mpmath.mpf:
-    """T.INV.2T(alpha, n - 1)·sd/√n. NoValueError where sd·t, sd/√n, t/√n or the margin leaves the normal double
-    range: no cell shows where Excel's products overflow or underflow, so such a point is unprobed."""
-    t = two_tailed_quantile(alpha, n - 1)
-    root = mpmath.sqrt(n)
-    for intermediate in (sd * t, sd / root, t / root, sd * t / root):
-        if not CONFIDENCE_RANGE[0] <= abs(intermediate) <= CONFIDENCE_RANGE[1]:
-            msg = "an intermediate leaves the normal double range (unprobed)"
-            raise NoValueError(msg)
-    return sd * t / root
+# a negative sd, so a negative sd has no value (NoValueError, unprobed) rather than an assumed error. The margin and its
+# range check are `_common.confidence_margin`, shared with CONFIDENCE.NORM and CONFIDENCE (T-4581).
 
 
 def _confidence_t(args: Sequence[MathArg]) -> mpmath.mpf:
-    alpha, sd, n = args
-    assert not isinstance(alpha, (bool, str, tuple)) and not isinstance(sd, (bool, str, tuple))
-    assert not isinstance(n, (bool, str, tuple))
+    alpha, sd, n = real_args(args)
     if sd < 0:
         msg = "a negative standard_dev is unprobed"
         raise NoValueError(msg)
-    return confidence_margin(alpha, sd, n)
+    return confidence_margin(two_tailed_quantile(alpha, n - 1), sd, n)
 
 
 def _confidence_t_domain(args: Sequence[MathArg]) -> str | None:

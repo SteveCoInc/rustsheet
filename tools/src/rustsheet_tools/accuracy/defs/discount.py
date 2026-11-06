@@ -69,7 +69,7 @@ from rustsheet_tools.accuracy.defs._common import (
     fraction_to_mpf,
     ill_conditioned,
     one_of,
-    scalars,
+    real_args,
 )
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.defs.yearfrac import (
@@ -125,7 +125,7 @@ def _security(
     positive (the basis is read first: "Discount securities check order"). With `zero_second_unprobed`, a second
     amount of exactly 0 beside a positive first one has no math value (DISC's redemption 0), once the basis and the
     dates are valid."""
-    a = scalars(args)
+    a = real_args(args)
     basis = int(a[4]) if len(a) > 4 else 0
     check_basis(basis)
     s, m = _dates(a[0], a[1])
@@ -221,7 +221,7 @@ def _tbill_days(settlement: mpmath.mpf, maturity: mpmath.mpf) -> int:
 
 def _tbill(args: Sequence[MathArg]) -> tuple[int, mpmath.mpf]:
     """(days, discount) of a T-bill's arguments."""
-    settlement, maturity, rate = scalars(args)
+    settlement, maturity, rate = real_args(args)
     days = _tbill_days(settlement, maturity)
     if rate == 0:
         msg = "a discount of 0 (unprobed)"
@@ -259,7 +259,7 @@ def _tbilleq(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _tbillyield(args: Sequence[MathArg]) -> mpmath.mpf:
-    settlement, maturity, price = scalars(args)
+    settlement, maturity, price = real_args(args)
     days = _tbill_days(settlement, maturity)
     if price <= 0:
         msg = "a price at most 0 (unprobed)"
@@ -275,7 +275,7 @@ def _matured(args: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf, Fraction,
     """(rate, yld or pr, A/B, DIM/B, DSM/B) of PRICEMAT's and YIELDMAT's arguments, B the year of issue to settlement
     ("Discount securities: day count and year length"); the basis, then the dates, are read first ("Discount
     securities check order"). NoValueError where DSM is not positive (a 30/360 count, unprobed)."""
-    a = scalars(args)
+    a = real_args(args)
     basis = int(a[5]) if len(a) > 5 else 0
     check_basis(basis)
     s, m = _dates(a[0], a[1])
@@ -319,7 +319,7 @@ def _accrintm(args: Sequence[MathArg]) -> mpmath.mpf:
     """par·rate·D/B from issue to settlement; ACCRINTM reads issue, settlement, rate, par and basis in that order
     ("Discount securities check order"), a day count D of 0 or below included ("YEARFRAC accepts serial 0":
     `ACCRINTM(59,60,0.1,1000,0)` is -0.2777777777777778)."""
-    a = scalars(args)
+    a = real_args(args)
     issue, settlement = whole_serial(float(a[0])), whole_serial(float(a[1]))
     rate, par = a[2], a[3]
     basis = int(a[4]) if len(a) > 4 else 0

@@ -34,7 +34,7 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, one_of, scalars
+from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, one_of, real_args
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import (
     Definition,
@@ -113,13 +113,13 @@ def clock_parts(serial: float) -> tuple[int, int, int]:
 
 
 def _time(args: Sequence[MathArg]) -> mpmath.mpf:
-    hour, minute, second = scalars(args)
+    hour, minute, second = real_args(args)
     return fraction_to_mpf(time_value(float(hour), float(minute), float(second)))
 
 
 def _part(index: int) -> Callable[[Sequence[MathArg]], mpmath.mpf]:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
-        (serial,) = scalars(args)
+        (serial,) = real_args(args)
         return mpmath.mpf(clock_parts(float(serial))[index])
 
     return value

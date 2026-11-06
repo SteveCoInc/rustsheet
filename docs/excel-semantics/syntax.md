@@ -306,6 +306,29 @@ an unresolved `=N`; it then shows as `'<file>.xlsx'!N`); how a pinned use is sav
 Excel saves it; a typed `=[0]!Missing` (ours now shows `=Missing`); uses inside other names' bodies, conditional-format
 and data-validation formulas on S, and names called as functions (`N(2)`), which the add leaves alone; and desktop
 Excel's Name Manager.
+- **Most books re-bind instead** (T-4391; probes/t4391-api-rebind-*, excel-graph 2026-11-06; the rule is T-4618's "Which
+  place a loaded use took" below).
+  T-4049's "stays `#NAME?`" holds only in some books. In T-4353's book (First, S2, Last) with sheet-scoped adds and
+  every use loaded, Excel re-binds every unresolved use in the following cases:
+  - each of -first, -s2 and -last: ten adds on all three sheets, with First, S2 or Last active;
+  - -first-no-first-add and -first-then-book: adds on S2 and Last only, without or then with a workbook add;
+  - -s2-qualified-use, -last-qualified-use and both -qualified-first-add: a qualified `=S2!Rate` also loaded, `Rate`
+    added second or first;
+  - -first-t4353-unqualified: t4353-api-name-unqualified-ref without its two `=S2!Rate` cells.
+
+  It reads the body as the active sheet's cells and the name on the use's own sheet. Neither the name (function
+  names `Rate`, `N`, `Abs`, `Npv` and `Sln` re-bind like `Qa`), nor the add order, the body (cell, range,
+  constant), the using formula (`=X`, `=X+0`, `=SUM(X)`) or the active sheet makes a difference. The books that
+  keep `#NAME?` repeated it in two or three sessions each:
+  - t4049-sheet-api-name-plain and t4014-sheet-api-name-65 (`=N`);
+  - t4353-api-name-unqualified-ref and t4394-api-name-active-s2 (`=Rate`, while `=SUM(Span)` and `=Rate2` beside it
+    re-bind).
+
+  -s2-qualified-first-add has every feature of the last one tried alone (`Rate` first, a qualified `=S2!Rate`, S2
+  active) and re-binds. The answer also failed to repeat once: -first's first fill (commit 681082d1a) was `#NAME?` in
+  all 13 cells, and three later sessions of the same input re-bound all 13. T-4391 found no rule; T-4618's load-order
+  places explain every cell of these books and of those that keep `#NAME?`, and the engine matches all 60 (T-4617).
+  The non-repeating first fill stays unexplained.
 **An unqualified reference in an API-defined name binds to the active sheet** (T-4353, T-4394;
 probes/t4353-api-name-unqualified-ref, excel-graph 2026-11-05). In a book of First, S2 and Last (B1 = 1, 7, 9; B2 =
 10, 70, 90), Graph `worksheets('S2')/names/add` of `Rate` = `=$B$1` and `Span` = `=$B$1:$B$2`, of `Rate2` = `=$B$1`
@@ -316,7 +339,7 @@ probes/t4394-api-name-active-s2 and t4394-api-name-active-last, the same book wi
 Last, spec2xlsx `"active_sheet"`, excel-graph 2026-11-06): every use reads the active sheet's cells, 7 (`=SUM(Span)`
 77) with S2 active and 9 (99) with Last active, `=W` on First included. One typed-before use moves with it too:
 `=Rate` typed on S2 before the add is `#NAME?` with First or S2 active but 9 with Last active (t4394-api-name-active-last
-S2!A1; T-4391's). Ours since T-4445: `Txn::define_name` and `Txn::define_sheet_name` bind to `Workbook::active_sheet` (set with
+S2!A1; T-4617's). Ours since T-4445: `Txn::define_name` and `Txn::define_sheet_name` bind to `Workbook::active_sheet` (set with
 `Workbook::set_active_sheet`; an xlsx import takes the sheet marked `tabSelected`, else the first). The engine reads an
 API-added body on the active sheet and stores it qualified (`Model::formula_to_internal_between`;
 `an_unqualified_name_reference_binds_to_the_active_sheet`, crates/rustsheet/src/edit/tests/name_binding.rs), and the eval

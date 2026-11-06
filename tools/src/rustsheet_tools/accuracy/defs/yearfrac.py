@@ -35,7 +35,7 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, one_of
+from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, is_real, one_of
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, DomainError, Interval, MathArg, Param, register
@@ -188,11 +188,11 @@ def yearfrac_value(start: float, end: float, basis: int = 0) -> Fraction:
 
 def _value(args: Sequence[MathArg]) -> mpmath.mpf:
     start, end, *rest = args
-    assert not isinstance(start, bool | tuple) and not isinstance(end, bool | tuple)
+    assert is_real(start) and is_real(end)
     basis = 0
     if rest:
         (b,) = rest
-        assert not isinstance(b, bool | tuple)
+        assert is_real(b)
         basis = int(b)
     return fraction_to_mpf(yearfrac_value(float(start), float(end), basis))
 

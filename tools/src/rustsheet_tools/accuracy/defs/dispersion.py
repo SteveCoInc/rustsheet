@@ -43,7 +43,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars, signed_log_uniform
+from rustsheet_tools.accuracy.defs._common import real_args, signed_log_uniform
 from rustsheet_tools.accuracy.defs.aggregate import MAX_ARGS, running_total
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, Param, register
@@ -70,11 +70,11 @@ def squared_deviations(xs: Sequence[mpmath.mpf]) -> mpmath.mpf:
 
 
 def _devsq(args: Sequence[MathArg]) -> mpmath.mpf:
-    return squared_deviations(scalars(args))
+    return squared_deviations(real_args(args))
 
 
 def _var(args: Sequence[MathArg]) -> mpmath.mpf:
-    xs = scalars(args)
+    xs = real_args(args)
     if len(xs) < 2:
         msg = "#DIV/0!: the sample variance of one number"
         raise DomainError(msg)
@@ -86,7 +86,7 @@ def _stdev(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _var_p(args: Sequence[MathArg]) -> mpmath.mpf:
-    xs = scalars(args)
+    xs = real_args(args)
     return squared_deviations(xs) / len(xs)
 
 
@@ -95,7 +95,7 @@ def _stdev_p(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _avedev(args: Sequence[MathArg]) -> mpmath.mpf:
-    xs = scalars(args)
+    xs = real_args(args)
     m = mpmath.fsum(xs) / len(xs)
     return mpmath.fsum(abs(x - m) for x in xs) / len(xs)
 
@@ -103,7 +103,7 @@ def _avedev(args: Sequence[MathArg]) -> mpmath.mpf:
 def squares_overflow(args: Sequence[MathArg]) -> str | None:
     """VAR's and STDEV's `#NUM!`: a square, or the one-pass running sum of squares, beyond the double range
     (statistics.md: `VAR.P` of 1E+200 twice is `#NUM!`)."""
-    squares = [float(x) * float(x) for x in scalars(args)]
+    squares = [float(x) * float(x) for x in real_args(args)]
     if not all(math.isfinite(s) for s in squares):
         return "a square is beyond the double range"
     _, total = running_total(squares)
@@ -113,7 +113,7 @@ def squares_overflow(args: Sequence[MathArg]) -> str | None:
 def _two_pass_overflow(args: Sequence[MathArg], deviation: Callable[[float], float], what: str) -> str | None:
     """A two-pass form's `#NUM!`: the running sum of the numbers, a term (`deviation` of a number minus the double
     mean) or the running sum of the terms beyond the double range."""
-    xs = [float(x) for x in scalars(args)]
+    xs = [float(x) for x in real_args(args)]
     _, total = running_total(xs)
     if not math.isfinite(total):
         return "the sum of the numbers is beyond the double range"

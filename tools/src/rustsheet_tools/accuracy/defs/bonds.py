@@ -65,7 +65,7 @@ from typing import Protocol
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import OVERFLOW_POINT, fraction_to_mpf, scalars
+from rustsheet_tools.accuracy.defs._common import OVERFLOW_POINT, fraction_to_mpf, real_args
 from rustsheet_tools.accuracy.defs.annuity import unique_rate
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.defs.yearfrac import (
@@ -159,7 +159,7 @@ class Bond:
 def bond(args: Sequence[MathArg], *, redemption: bool, price_given: bool) -> Bond:
     """The arguments read and checked in the domain order of "PRICE, YIELD, DURATION and MDURATION check order"
     (the error code is `#NUM!` for every one of these checks)."""
-    a = scalars(args)
+    a = real_args(args)
     if redemption:
         s, m, rate, fourth, red, f = a[:6]
         rest = a[6:]

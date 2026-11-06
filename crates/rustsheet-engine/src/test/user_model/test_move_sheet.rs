@@ -250,6 +250,8 @@ fn a_defined_name_span_shrinks_too() {
             name: "Span".to_string(),
             formula: "Jan:Mar!$A$1".to_string(),
             sheet_id: None,
+            hidden: false,
+            comment: None,
         });
     model.model.reset_parsed_structures();
     assert_eq!(calc_a1(&model), text_and_value("=SUM(Span)", "60"));
@@ -342,6 +344,8 @@ fn a_defined_name_span_shrinks_on_a_delete() {
             name: "Span".to_string(),
             formula: "Jan:Mar!$A$1".to_string(),
             sheet_id: None,
+            hidden: false,
+            comment: None,
         });
     model.model.reset_parsed_structures();
     model.delete_sheet(1).unwrap();

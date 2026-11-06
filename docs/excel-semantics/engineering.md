@@ -205,6 +205,10 @@ The lbf factor is 444822.16152605
 (`CONVERT(1,"lbf","dyn")` is exactly that).
 Open gap: `CONVERT(1,"m","ft")` is 3.2808398950131235 in Excel and one ulp low in ours (probes/scalar-lift-open-a,
 probes/eng-convert-boolean-unit A7; T-2046, T-2047).
+Open gap: `CONVERT(255,"mi","km")` is 410.38272 and `CONVERT(255,"in","cm")` 647.7 in Excel for the web (the desktop
+calipers formulas_engineering golden agrees, D26:J27), and the engine is one ulp off (410.38272000000006,
+647.6999999999999); the negatives mirror them (probes/t4534-bessel-convert-web-values B1:B4, D1:D4, excel-graph,
+2026-11-06; T-4630).
 Overflow: `value * F_from` is not allowed to overflow when the answer is representable:
 `CONVERT(1E290,"m2","m2")` is 1E+290, `CONVERT(1E300,"ha","m2")` 1.0000000000000001E+304,
 `CONVERT(1E302,"J","J")` 1E+302. The engine divides first (`value / F_to * F_from`) when the

@@ -55,6 +55,7 @@ added through the API scoped to Last) to the new name (90), where the rule "A sh
     `chain_operands_in_order_mut`, without recursion over chains.
   - `walk_names` now also visits defined-name nodes as `NameSite::DefinedName`.
 - Tests: three unit tests in test_sheet_name_added_binding.rs.
-- Eval delta: 8 cells newly pass (t4554-api-name-local-name-body Last!D3; t4394-api-name-active-last S2!A1, S2!A3,
-  Last!A1; t4394-api-name-active-s2 S2!A3, Last!A1; t4353-api-name-unqualified-ref S2!A3, Last!A1). 23 cases were
-  added (138 cells), all passing but t4618-order-after-active-backward Q!A1 (T-4642). No regressions.
+- Eval delta: 68 cells newly pass, among them t4554-api-name-local-name-body Last!D3. They include all 60 cells T-4391's
+  ten t4391-api-rebind-* probes left to T-4617, which this PR marks done. The rest: t4394-api-name-active-last S2!A1,
+  S2!A3, Last!A1; t4394-api-name-active-s2 S2!A3, Last!A1; t4353-api-name-unqualified-ref S2!A3, Last!A1. 23 cases
+  were added (138 cells). All pass but t4618-order-after-active-backward Q!A1 (T-4642). No regressions.
