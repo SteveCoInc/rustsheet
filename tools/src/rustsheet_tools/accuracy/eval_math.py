@@ -387,11 +387,24 @@ def _job(entry: dict[str, Any]) -> tuple[dict[str, Any], CaseMath]:
     return entry, case_math(entry["id"], Path(entry["path"]), Path(entry["sidecar"]))
 
 
-def write_suite(suite: str, workers: int | None = None) -> list[CaseMath]:
+def calls_any(case_path: Path, functions: Iterable[str]) -> bool:
+    """Whether the case file's text calls one of `functions` (`NAME(`, not a longer name ending in it)."""
+    text = case_path.read_text(encoding="utf-8").upper()
+    return any(re.search(r"(?<![A-Z0-9._])" + re.escape(name.upper()) + r"\(", text) for name in functions)
+
+
+def write_suite(
+    suite: str, workers: int | None = None, functions: Iterable[str] | None = None
+) -> list[CaseMath]:
     """Writes the math sidecar of every spec case of `suite` that has a math cell, and removes a
     math sidecar this tool wrote for a case that no longer has one. Deterministic: the same case
-    files give the same bytes."""
+    files give the same bytes. With `functions`, only the cases that call one of them are
+    recomputed and rewritten (T-4483): a new definition's cells get their values without touching
+    unrelated sidecars, whose time-limited cells can flip between a value and a skip by machine."""
     entries = _spec_entries(suite)
+    if functions is not None:
+        names = list(functions)
+        entries = [e for e in entries if calls_any(Path(e["path"]), names)]
     results: list[CaseMath] = []
     with _pool(workers) as pool:
         for entry, math in pool.map(_job, entries):
