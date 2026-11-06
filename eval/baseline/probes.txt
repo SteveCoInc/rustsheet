@@ -2433,6 +2433,7 @@ C	probes/t4467-literal-large-exponent-fresh.case.json	170
 C	probes/t4467-literal-large-exponent-sweep.case.json	500
 C	probes/t4467-literal-large-exponent.case.json	312
 C	probes/t4473-textsplit-fold-gaps.case.json	117
+C	probes/t4474-textbefore-utf16-bounds.case.json	135
 C	probes/t4477-filter-include-error-shapes.case.json	49
 C	probes/t4479-sort-bad-argument-holdout.case.json	70
 C	probes/t4479-sort-bad-argument-order.case.json	93
