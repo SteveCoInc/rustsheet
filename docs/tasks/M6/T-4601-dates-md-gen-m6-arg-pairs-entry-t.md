@@ -3,7 +3,7 @@ id: T-4601
 title: "dates.md gen-m6 arg-pairs entry (T-3495): replace the stale NETWORKDAYS.INTL day-0 claim and probe-pending status with T-3537's scalar-holiday finding"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
