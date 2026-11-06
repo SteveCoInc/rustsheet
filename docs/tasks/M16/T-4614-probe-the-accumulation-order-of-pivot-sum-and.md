@@ -17,12 +17,12 @@ pivots.md states:
 
 ## Context
 T-4135 and T-4589 (probes/t4135-pivot-aggregates A_sum, A_average; probes/t4589-pivot-total-order S1, E1-E4) leave these open:
-- Sum totals: reverse record order versus ascending item order.
-- Average: first-seen item order versus descending value.
-- Product: record order on more than t4135's one cell set.
-- Count grand totals: the "mixed aggregates" reading.
+- Sum totals: reverse record order versus ascending item order (column field).
+- Average: confirm first-seen item order, the only reading left (descending value is refuted by t4135 A_average!S8).
+- Product: record order versus first-seen item order.
+- Count grand totals: mixed aggregates versus several data fields with no column field. The separating pair is all-Count with no column field, and mixed aggregates with a column field. Also CountNums without showError.
 
-Use data where the candidates differ. For example, put items in descending alphabetical first-seen order (Z before A) with values where reverse record order, item-ascending, first-seen and value-descending sums are pairwise distinct; search with Python floats before building. For Count: two Count fields over Err and Num (all Count, two source fields); Count beside Average; Count beside CountNums. The engine's accumulator (SPEC-0032 stage 3, T-4142) depends on it.
+Use data where the candidates differ. For example, put items in descending alphabetical first-seen order (Z before A) with values where reverse record order, item-ascending and first-seen sums are pairwise distinct; search with Python floats before building. For Count: two Count fields over Err and Num (all Count, two source fields); Count beside Average; Count beside CountNums. The engine's accumulator (SPEC-0032 stage 3, T-4142) depends on it.
 
 ## Acceptance criteria
 - [ ] Filled probes separate the candidates; the two pivots.md entries' UNVERIFIED parts are closed.
