@@ -58,9 +58,9 @@ Every failing table point has an owner.
     past the double range. No value within 1E-9 (in the logarithm) of the double range's top, for an infinite
     `100·rate` or DURATION weighted sum under a finite dirty sum, at PRICE's linear discount of 0, and for YIELD's
     one-period form from a settlement before 1900-03-01.
-  - Pre-check before generating: the definitions over all 4,288 literal one-call cells of these functions in
-    eval/suites (probes, probes-numeric, gen-m9 and the other spec suites): no math domain error where Excel has a
-    number. PRICE, DURATION and MDURATION are within 1E-9 of Excel on every numeric cell; YIELD's 208 Excel `#NUM!`
+  - Pre-check before generating: the definitions over all 4,310 literal one-call cells of these functions in
+    eval/suites (probes, probes-numeric, gen-m9 and the other spec suites; 980 more are skipped as not literal): no
+    math domain error where Excel has a number. PRICE, DURATION and MDURATION are within 1E-9 of Excel on every numeric cell; YIELD's 208 Excel `#NUM!`
     cells and 140 cells off by more than 1E-9 are its documented Newton (`#NUM!`, 100th iterates, stopping short).
   - Tests in tools/tests/test_accuracy_bonds.py (Microsoft's examples, the semantics entries' Excel values, the
     closed form, the evidenced errors and no-value regions, draws).
