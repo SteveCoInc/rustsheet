@@ -57,7 +57,8 @@ holds Excel's column formula.
   -insert-row-1, -insert-row-3 and -structured-insert-column-a. Excel's saved `calculatedColumnFormula` follows the
   edit as the first data row's formula does: `B2*2`, `A2*2`, `A3*2`, `A2*2`, and `T[[#This Row],[Col]]*2` unchanged
   (quoted in xlsx-storage.md, replacing "unprobed here"). Also found: an insert_row inside the table fills the new
-  row's cell with its own `<f>A3*2</f>` outside the shared formula.
+  row's cell with its own `<f>A3*2</f>` outside the shared formula; ours leaves it empty (scored as
+  insert-row-3 F!A7:A8, known failures owned by T-4695).
 - `Model::displace_column_formulas` (table_edits.rs) rewrites every stored column formula inside `displace_formulas`
   with a new file-form displaced printer, `to_excel_string_displaced` (stringify.rs; `excel_string` now takes the
   rewrite). Undo/redo come from the inverse edit (user-model test).
@@ -68,5 +69,6 @@ holds Excel's column formula.
 - Tests: test_calculated_columns.rs (`the_column_formula_follows_row_and_column_edits`, user model with undo/redo;
   `a_structured_column_survives_a_column_insert`), export test_tables.rs
   (`the_exported_column_formula_follows_row_and_column_edits`).
-- Eval delta: +5 probe cases, 22 cells, all pass (structured-insert-column-a F!A4 was `#ERROR!` before the fix).
-- Follow-up: T-4679 (a delete that removes a cell the column formula reads, and its undo).
+- Eval delta: +5 probe cases, 24 cells, 22 pass and 2 known failures (insert-row-3 F!A7:A8, T-4695) (structured-insert-column-a F!A4 was `#ERROR!` before the fix).
+- Follow-ups: T-4679 (a delete that removes a cell the column formula reads, and its undo); T-4695 (fill the
+  inserted row's calculated cell).

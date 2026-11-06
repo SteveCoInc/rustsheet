@@ -25,6 +25,14 @@
    "A6": {
     "t": "n",
     "v": 4.0
+   },
+   "A7": {
+    "t": "s",
+    "v": "=A3*2"
+   },
+   "A8": {
+    "t": "b",
+    "v": true
    }
   },
   "S": {
@@ -48,10 +56,10 @@
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "9ab295df22f4722e50bf84e1285346c944544749375261b1a22eb7b49ae8ad88",
+  "input_sha256": "ded7da29e76f747aa91fc893ea494be4669bc09fdd8123c509963b90150b439f",
   "kind": "excel-graph",
-  "produced_at": "2026-11-06T19:57:45+00:00",
+  "produced_at": "2026-11-06T20:41:43+00:00",
   "version": null,
-  "workbook_name": "93c04adc7f96a9411e18dc858ce91af664bacbac954016d5a3d5c4ac9d2e5f75.xlsx"
+  "workbook_name": "0f7d753214d0d81061d8d4853ba97537d01a6a7f941418d098f1af9e548507ea.xlsx"
  }
 }

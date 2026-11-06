@@ -22,7 +22,11 @@ their table follows (it moves, shrinks or grows), so the engine's rule for them 
   the plain area it read, and an unmoved cell's where its area changes. See references.md "Structured references
   when the table changes", the T-2845 bullet and the "Implemented in" paragraph.
 - Engine: `Model::row_edit` (it gives deletes no kept tables) and `Model::moved_text` (table_edits.rs,
-  formula_cells.rs), the `Rewrite::Displace` kept-table branch in stringify/structured.rs (row inserts only).
+  formula_cells.rs), the `Rewrite::Displace` kept-table branch in stringify/structured.rs (row and column inserts,
+  `is_insert`). Since T-4274 a column insert the table follows keeps `#This Row` text too (`Model::column_insert_kept`):
+  probed only for calculated-column cells inside the table with the insert left of it
+  (t4274-calc-column-structured-insert-column-a); cells outside the table and an insert inside it are hand, so this
+  probe confirms or overturns that rule. Column deletes keep the old rule.
 - Use the layout of probes/table-edits/table-insert-row-this-row-above-header (Sales on S!B3:C7, F!A2:A8
   `=Sales[@Qty]`, S!E4:E7 beside it, a calculated column) with: delete row 2 (moves up), delete row 5 (shrinks; the
   F!A cell on the deleted row and the ones below), insert a column left of the table and inside it, delete a column

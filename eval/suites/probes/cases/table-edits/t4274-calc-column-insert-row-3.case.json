@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4274: table T on S!A1:C4 (Col 1,2,4; Other 10,20,40), C2 typed =A2*2 so the Calc column is filled; then insert_row 3 (inside the table, between its first and second data rows). The question is the saved calculatedColumnFormula text in xl/tables/table1.xml of the cached recalculated workbook; sheet F scores FORMULATEXT of the shifted Calc cells (F!A1:A3) and their SUM (F!A4).",
+  "description": "T-4274: table T on S!A1:C4 (Col 1,2,4; Other 10,20,40), C2 typed =A2*2 so the Calc column is filled; then insert_row 3 (inside the table, between its first and second data rows). The question is the saved calculatedColumnFormula text in xl/tables/table1.xml of the cached recalculated workbook; sheet F scores FORMULATEXT of the shifted Calc cells (F!A1:A3) and their SUM (F!A4). F!A7:A8 read the inserted row's Calc cell S!C3 through INDIRECT (FORMULATEXT, ISFORMULA): does Excel fill it with the column formula?",
   "tags": [
     "M8",
     "tables",
@@ -38,7 +38,9 @@
         "A3": "=FORMULATEXT(S!C4)",
         "A4": "=SUM(S!C2:C4)",
         "A5": "=FORMULATEXT(S!C5)",
-        "A6": "=ROWS(T)"
+        "A6": "=ROWS(T)",
+        "A7": "=FORMULATEXT(INDIRECT(\"S!C3\"))",
+        "A8": "=ISFORMULA(INDIRECT(\"S!C3\"))"
       }
     }
   ],
@@ -56,6 +58,8 @@
     "F!A3",
     "F!A4",
     "F!A5",
-    "F!A6"
+    "F!A6",
+    "F!A7",
+    "F!A8"
   ]
 }

@@ -189,8 +189,7 @@ pub(super) fn reference_text(
             deleted_columns,
             ..
         }) if kept_tables.contains(&reference.table_name.to_lowercase())
-            && (!matches!(lowered, Node::ThisRowKind { .. })
-                || matches!(data, DisplaceData::Row { delta, .. } | DisplaceData::Column { delta, .. } if *delta > 0)) =>
+            && (!matches!(lowered, Node::ThisRowKind { .. }) || is_insert(data)) =>
         {
             // A column delete inside the table turns a reference to a deleted column into
             // `#REF!` (T-2324 table-delete-column-qty: `=SUM(#REF!)`, -region: `=COUNTA(#REF!)`).
@@ -307,4 +306,13 @@ fn row_may_move(lowered: &Node, context: Option<&CellReferenceRC>, rewrite: &Rew
     moved.row_delta != 0
         && on_the_cut_sheet
         && ref_is_in_area(moved.area.sheet, context.row, context.column, moved.area)
+}
+
+/// Whether `data` is a row or column insert: a `#This Row` reference to a table that follows one
+/// keeps its text (T-3037, T-4274).
+fn is_insert(data: &DisplaceData) -> bool {
+    matches!(
+        data,
+        DisplaceData::Row { delta, .. } | DisplaceData::Column { delta, .. } if *delta > 0
+    )
 }

@@ -591,7 +591,7 @@ probes/table-edits/t4274-calc-column-* download, T on S!A1:C4, C2 typed `=A2*2`)
 `<calculatedColumnFormula>B2*2</calculatedColumnFormula>` (table `B1:D4`, cells `<f t="shared" ref="D2:D4">B2*2</f>`);
 delete_column B (the Other column) saves `A2*2` (table `A1:B4`); insert_row 1 saves `A3*2` (table `A2:C5`); insert_row 3,
 inside the table, saves `A2*2` (table `A1:C5`), and Excel fills the inserted row's cell with the column formula: C3
-holds its own `<f>A3*2</f>`, value 0, outside the shared formula `ref="C2:C5"`, which skips it. The structured twin
+holds its own `<f>A3*2</f>`, value 0, outside the shared formula `ref="C2:C5"`, which skips it. Ours does not fill the inserted row: S!C3 stays empty (an engine gap, T-4695; probes/table-edits/t4274-calc-column-insert-row-3 F!A7:A8, FORMULATEXT `=A3*2` and ISFORMULA TRUE through INDIRECT). The structured twin
 (`=[@Col]*2`, insert_column A) saves `T[[#This Row],[Col]]*2` unchanged. Ours (T-4274): `Model::displace_column_formulas`
 (table_edits.rs) parses the stored text at the column's first data row and prints it displaced in file form
 (`to_excel_string_displaced`), and the undo's inverse edit displaces it back; a text the edit does not change stays as

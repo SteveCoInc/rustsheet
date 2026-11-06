@@ -2540,7 +2540,7 @@ C	probes/table-edits/t3629-save-detached.case.json	6
 C	probes/table-edits/t4274-calc-column-delete-column-b.case.json	4
 C	probes/table-edits/t4274-calc-column-insert-column-a.case.json	4
 C	probes/table-edits/t4274-calc-column-insert-row-1.case.json	4
-C	probes/table-edits/t4274-calc-column-insert-row-3.case.json	6
+C	probes/table-edits/t4274-calc-column-insert-row-3.case.json	8
 C	probes/table-edits/t4274-calc-column-structured-insert-column-a.case.json	4
 C	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	8
 C	probes/table-edits/table-column-range-delete-both-ends.case.json	8
@@ -11476,6 +11476,8 @@ F	probes/t4627-pivot-field-name-collisions.case.json	P_SufB!B3
 F	probes/t4627-pivot-field-name-collisions.case.json	P_SufB!B4
 F	probes/t4627-pivot-field-name-collisions.case.json	P_SufB!B5
 F	probes/t4627-pivot-field-name-collisions.case.json	P_SufB!B6
+F	probes/table-edits/t4274-calc-column-insert-row-3.case.json	F!A7
+F	probes/table-edits/t4274-calc-column-insert-row-3.case.json	F!A8
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10

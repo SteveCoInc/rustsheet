@@ -14,8 +14,6 @@ use crate::expressions::parser::stringify::{
 };
 use crate::expressions::types::{Area, CellReferenceRC};
 use crate::expressions::utils::number_to_column;
-use crate::language::get_default_language;
-use crate::locale::get_default_locale;
 use crate::model::Model;
 use crate::types::{FilterColumn, Table, TableColumn};
 
@@ -437,23 +435,17 @@ impl Model {
     /// T-4274 `t4274-calc-column-*`: `A2*2` reads `B2*2` after an `insert_column` at A, `A3*2`
     /// after an `insert_row` at 1, and stays `A2*2` after an `insert_row` at 3 inside the table
     /// and a `delete_column` of B; `T[[#This Row],[Col]]*2` keeps its text after the column
-    /// insert). Run before the tables
-    /// are resized, so the parse sees the tables the text was written against; a text the edit
-    /// does not change is left as stored, byte for byte.
+    /// insert). Run before the tables are resized, so the parse sees the tables the text was
+    /// written against; a text the edit does not change is left as stored, byte for byte.
     fn displace_column_formulas(&mut self, displacement: Displacement) {
-        // File form is English whatever the model's locale (as for CF formulas,
-        // `displace_cf_ranges`).
-        let (locale, language) = (self.locale, self.language);
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        let mut rewritten = Vec::new();
+        let mut stored = Vec::new();
         for (key, table) in &self.workbook.tables {
             let Some(b) = bounds(table) else { continue };
             for (index, table_column) in table.columns.iter().enumerate() {
-                let Some(text) = &table_column.calculated_column_formula else {
-                    continue;
-                };
-                let Ok(offset) = i32::try_from(index) else {
+                let (Some(text), Ok(offset)) = (
+                    &table_column.calculated_column_formula,
+                    i32::try_from(index),
+                ) else {
                     continue;
                 };
                 let context = CellReferenceRC {
@@ -461,20 +453,20 @@ impl Model {
                     row: b.data.0,
                     column: b.left.saturating_add(offset),
                 };
-                let node = self.parser.parse(text, &context);
-                let displaced = to_excel_string_displaced(&node, &context, displacement);
-                if displaced != to_excel_string(&node, &context) {
-                    rewritten.push((key.clone(), index, displaced));
-                }
+                stored.push((key.clone(), index, text.clone(), context));
             }
         }
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
-        for (key, index, text) in rewritten {
+        for (key, index, text, context) in stored {
+            // File form is English whatever the model's locale.
+            let node = self.parse_internal_formula(&text, &context);
+            let displaced = to_excel_string_displaced(&node, &context, displacement);
+            if displaced == to_excel_string(&node, &context) {
+                continue;
+            }
             if let Some(table_column) =
                 (self.workbook.tables.get_mut(&key)).and_then(|table| table.columns.get_mut(index))
             {
-                table_column.calculated_column_formula = Some(text);
+                table_column.calculated_column_formula = Some(displaced);
             }
         }
     }
@@ -531,8 +523,8 @@ impl Model {
     /// ([`Model::kept_table_holding`]), as a row insert's is ([`Model::row_edit`]), so an
     /// unqualified `[@Col]` in a calculated column still names its table (T-4274
     /// `t4274-calc-column-structured-insert-column-a`: FORMULATEXT `=[@Col]*2` and `SUM` 14
-    /// after an `insert_column` at A; before, the moved cells did not parse). A column delete keeps no tables:
-    /// Excel's rule there is unprobed (T-3739).
+    /// after an `insert_column` at A; before, the moved cells did not parse). A column delete
+    /// keeps no tables: Excel's rule there is unprobed (T-3739).
     pub(crate) fn column_insert_kept(&self, sheet: u32, column: i32, count: i32) -> Vec<String> {
         self.table_edits(&DisplaceData::Column {
             sheet,
