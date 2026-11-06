@@ -80,16 +80,20 @@ The baseline is the ordinary cells-mode file:
 
 The corpus suites (`roundtrip-calipers`, `roundtrip-poi`, `roundtrip-corpus-bench`; T-4173) use `baseline = "cases"`,
 since their item lines would run to tens of megabytes:
-- each failing case is one `F` line, `* <n>`, where n is the number of its failing items;
-- `roundtrip::diff` treats a smaller n as a fix and a larger one as a regression.
+- each failing case is one `F` line, `* <n> <digest>`: n is its failing items, weighted as the kept rate weighs
+  them (at least 1 each), and the digest hashes their set of keys;
+- `roundtrip::diff` treats a smaller n as a fix, and a held or larger n with another digest as a regression. In
+  both modes, a fall in a case's checked count, or a case that newly does not run, is a regression too;
+- updating a `cases` suite refuses to drop a case (a cache fetched under an older include).
 
 Their `root` is the cell suite's fetched cache (`eval/.cache/suites/<suite>`). A suite whose root is absent is
 skipped with a message, so it never records an empty baseline. They are `gate = false`, like the calipers cell suite:
 `rustsheet-eval roundtrip --check --suite <name>` gates one on demand.
 
 `rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. Each suite's line and report section
-give its kept rate: source items compared, minus those scored `changed` or `lost`, over the items compared
-(`KeptRate`, SPEC-0033 D8). `--check` (in `make eval-gates`, gate suites only) fails on a regression or an
+give its kept rate: source items compared, less those the failing items cover (`Item::weight`: a lost element's
+subtree, a lost part's elements, a `<truncated>` item's hidden differences), over the items compared (`KeptRate`,
+SPEC-0033 D8). Cases that did not run are counted as not scored. `--check` (in `make eval-gates`, gate suites only) fails on a regression or an
 out-of-date baseline. `--update-baseline` (in `make eval-baseline`) records fixes and new cases, and refuses
 regressions. `make eval` runs every round-trip suite (decision 0307).
 

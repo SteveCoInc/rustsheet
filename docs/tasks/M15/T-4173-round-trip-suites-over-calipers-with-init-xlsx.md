@@ -31,21 +31,33 @@ follow their gating pattern.
 
 ## Outcome
 - Added `eval/roundtrip/{calipers,poi,corpus-bench}`. Each reads its cell suite's fetched cache and is skipped,
-  with a message, while that cache is absent. The calipers fetch now also takes `roundtrip/**/init.xlsx`, the
-  authored inputs; the cell suite still scores only the goldens.
-- The corpus suites use `baseline = "cases"`: one `* <n>` line per failing case, where n is its failing items, and
-  `roundtrip::diff` lets n only fall. Cells mode would have committed about 550,000 lines.
-- The CLI line and `roundtrip.md` now give each suite's kept rate (`KeptRate`, SPEC-0033 D8). It is the figure
-  M15's goal is stated in.
-- First committed numbers, with main before T-4559 (every save regenerated):
+  with a message, while that cache is absent. A gated suite with no root fails `--check` and `--update-baseline`.
+  The calipers fetch now also takes `roundtrip/**/init.xlsx`, the authored inputs; the cell suite still scores only
+  the goldens.
+- Items now carry a `weight`, the source items they cover that were not kept:
+  - a lost element weighs its subtree;
+  - a lost XML part weighs its elements, which `checked` now counts too;
+  - `<truncated>` weighs the differences it hides.
 
-  | suite | cases | items | kept |
-  |---|---|---|---|
-  | roundtrip-calipers | 541 | 50,833,581 | 99.84% |
-  | roundtrip-poi | 350 | 6,387,847 | 99.34% |
-  | roundtrip-corpus-bench | 912 | 12,637,690 | 99.00% |
-  | roundtrip-fixtures | 25 | 18,796 | 90.27% |
+  Round 1 counted one per item. The excel-fidelity review showed that hid more than 600,000 differences on Calipers.
+- The corpus suites use `baseline = "cases"`: one `* <n> <digest>` line per failing case. Cells mode would have
+  committed about 550,000 lines. `roundtrip::diff`:
+  - lets n only fall;
+  - regresses on a held n with another item set, on a fall in a case's checked count, and on a case that newly
+    does not run;
+  - refuses to drop cases from a `cases` suite.
+- The CLI line and `roundtrip.md` give each suite's kept rate and its unscored cases (`KeptRate`, SPEC-0033 D8). M15's
+  goal is stated in this rate.
+- First committed numbers, on main with T-4559's verbatim save:
 
-- Not done: scoring `roundtrip/` against Excel's golden (D8's `golden` key) still needs the `golden` manifest key.
-  The `init.xlsx` inputs are scored by R0 like any other case.
-- The three corpora add about 3 minutes to `make eval` when fetched.
+  | suite | cases (not scored) | failing cases | items | kept |
+  |---|---|---|---|---|
+  | roundtrip-calipers | 541 (0) | 106 | 54,806,994 | 96.65% |
+  | roundtrip-poi | 350 (14) | 60 | 6,707,968 | 98.44% |
+  | roundtrip-corpus-bench | 912 (0) | 162 | 14,259,502 | 97.45% |
+  | roundtrip-fixtures | 25 (0) | 25 | 19,084 | 85.69% |
+
+- Not done: scoring `roundtrip/` against Excel's golden (D8's `golden` key) needs that manifest key. The
+  `init.xlsx` inputs are scored by R0 like any other case.
+- When fetched, the three corpora add about 3 minutes to `make eval`. They are `gate = false`.
+  `rustsheet-eval roundtrip --check --suite <name>` gates one on demand.
