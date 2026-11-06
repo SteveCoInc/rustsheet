@@ -1,0 +1,23 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "896829c6318b81db29d057d87a030fbeae55aab2c4b6b3724d08bee3ff17c374"
+ },
+ "sheets": {
+  "P": {
+   "A27": {
+    "t": "e",
+    "why": "1 + rate is 0: #DIV/0!",
+    "f": "=NPV(-1,{1,2})"
+   },
+   "A33": {
+    "t": "e",
+    "why": "(1 + rate)^(n - 1) past the double range: #DIV/0!",
+    "f": "=NPV(1E+300,{0,0,-100,50,60})"
+   }
+  }
+ }
+}

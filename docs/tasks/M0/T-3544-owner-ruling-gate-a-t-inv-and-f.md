@@ -3,7 +3,7 @@ id: T-3544
 title: "Owner ruling: Gate A T.INV and F.INV points where Excel is more than G off outside the R3 region"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -47,3 +47,8 @@ a decision record and R3 marks, or keeps Excel as the target. The record says wh
 ## Out of scope
 - The two-tailed points (T-3386).
 - Changing the engine.
+
+## Outcome
+Owner ruling (decision 0301, 2026-11-06): Excel stays the target on all five points (accuracy/T.INV/s1 A91 and A96;
+accuracy/F.INV/s1 A164, A167 and A169), including A167's 3.85E-145. The ruling takes them out of decision 0267 item 3's
+tiny-p scope. T-4489 owns the engine work; until then the points pass Gate A through the math side.

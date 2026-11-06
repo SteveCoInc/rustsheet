@@ -2,7 +2,7 @@
 //! the same Newton with its own slope ([`odd_first_yield`]).
 
 use super::super::dates::{days_30_360_eu_ymd, days_30_360_us_ymd};
-use super::coupon_schedule::next_coupon_date;
+use super::coupon_schedule::coupon_count;
 use super::{days_between_not_neg, discount_growth, OddArgs, OddFirstSchedule};
 use crate::formatter::dates::{date_to_serial_number, excel_serial_to_ymd, from_excel_date};
 use crate::functions::date_and_time::is_leap_year;
@@ -158,50 +158,85 @@ pub(super) fn odd_first_yield(odd: &OddArgs<4>, schedule: &OddFirstSchedule) -> 
     .map(|stop| stop.value)
 }
 
-/// [`OddFirstSchedule::slope_shift`] for a long first period: the basis' days (actual days on bases
-/// 1-3) from the settlement's next quasi-coupon date to the first coupon, over `e` (financial.md
-/// "ODDFYIELD stops short of ODDFPRICE's root", T-3031). 0 with the settlement in the last quasi
-/// period.
-pub(super) fn quasi_shift(
-    settlement: i64,
-    first_coupon: i64,
-    frequency: u32,
-    basis: u32,
-    e: f64,
-) -> Result<f64, String> {
-    let next_quasi = from_excel_date(next_coupon_date(settlement, first_coupon, frequency)?)?;
-    Ok(days_between_not_neg(next_quasi, from_excel_date(first_coupon)?, basis) / e)
+/// The schedule ODDFYIELD's slope ([`OddFirstSchedule::dprice`]) runs on: `quasi` regular coupons
+/// ahead of the lead's index, the coupon at index `i` `i + offset + y` periods away and the
+/// redemption `front_exponent`.
+pub(super) struct SlopeTerms {
+    pub(super) quasi: i64,
+    pub(super) offset: f64,
+    pub(super) y: f64,
+    pub(super) front_exponent: f64,
+}
+
+impl SlopeTerms {
+    /// A short first period: the price's own exponents (`n` coupons, the first `y` periods away),
+    /// no coupon ahead of the lead.
+    pub(super) fn short(n: f64, y: f64) -> Self {
+        SlopeTerms {
+            quasi: 0,
+            offset: -1.0,
+            y,
+            front_exponent: n - 1.0 + y,
+        }
+    }
+
+    /// A long first period with `n` coupons after the first (T-3031, T-3988): `nq` regular coupons
+    /// ahead of the lead, one at each quasi-coupon date strictly after settlement and before the
+    /// first coupon, and the lead `y = DFC'/E` periods away, DFC' the basis' days from settlement
+    /// to the first coupon. So the slope's exponents are not the price's: ODDFPRICE's `nq` and
+    /// `DSC` come from `coupNumber` and the previous quasi-coupon date, which count one quasi period
+    /// more on a month-end schedule (financial.md "ODDFYIELD stops short of ODDFPRICE's root").
+    pub(super) fn long(
+        settlement: i64,
+        first_coupon: i64,
+        frequency: u32,
+        basis: u32,
+        e: f64,
+        n: f64,
+    ) -> Result<Self, String> {
+        // The quasi-coupon dates in (settlement, first coupon], the first coupon's schedule walked
+        // with the end-of-month rule. Cannot fail where ODDFPRICE's walk from the earlier issue
+        // date succeeded.
+        let nq = f64::from(coupon_count(settlement, first_coupon, frequency)?) - 1.0;
+        let dfc = days_between_not_neg(
+            from_excel_date(settlement)?,
+            from_excel_date(first_coupon)?,
+            basis,
+        );
+        let y = dfc / e;
+        Ok(SlopeTerms {
+            quasi: nq as i64,
+            offset: nq,
+            y,
+            front_exponent: y + nq + n,
+        })
+    }
 }
 
 impl OddFirstSchedule {
     /// The slope ODDFYIELD's Newton takes at `yld`: not d/dy of [`Self::price`]. Every coupon in it
-    /// is a regular one (`coupon`, also for the odd first coupon, not `lead`), there is one at each
-    /// quasi-coupon date from the settlement's next one on (`nq` of them before the
-    /// lead), and every exponent is `slope_shift` later than in the price. For a short first period
-    /// (no shift, no extra coupon) this is the bond's slope as if its first period were regular:
-    /// fitted on probes/oddfyield-solver-sweep, where it puts 323 of 324 coupon-bond cells within
-    /// 1e-13 of Excel and the exact slope 15 (T-2007). For a long one the shift and the extra
-    /// coupons take ironcalc-calc `PRICE_YIELD.xlsx` from 339 to 352 of 352 cells and
-    /// probes/oddf-date-order-domain-sweep from 1196 to 1256 of 1260 (a zero coupon there is
-    /// bit-exact only with the shift, 366/365 on basis 1 for a leap-year quasi period), and a
-    /// fresh sweep drawn after the model was frozen passes 157 of 160 (financial.md "ODDFYIELD
-    /// stops short of ODDFPRICE's root", T-3031).
+    /// is a regular one (`coupon`, also for the odd first coupon, not `lead`), on the schedule of
+    /// [`SlopeTerms`]. For a short first period that is the price's own schedule, so this is the
+    /// bond's slope as if its first period were regular: fitted on probes/oddfyield-solver-sweep,
+    /// where it puts 323 of 324 coupon-bond cells within 1e-13 of Excel and the exact slope 15
+    /// (T-2007). For a long one the slope adds a coupon at each quasi-coupon date after settlement
+    /// and puts the lead the basis' days from settlement to the first coupon away, which takes
+    /// ironcalc-calc `PRICE_YIELD.xlsx` from 339 to 352 of 352 cells and
+    /// probes/oddf-date-order-domain-sweep from 1196 to 1256 of 1260 (T-3031); counting those
+    /// quasi dates and days apart from ODDFPRICE's month-end walk takes the month-end fresh sweeps
+    /// from 13 to 119 of 120 and 67 to 118 of 120 (financial.md "ODDFYIELD stops short of
+    /// ODDFPRICE's root", T-3988).
     fn dprice(&self, yld: f64) -> f64 {
         let x = yld / self.m + 1.0;
-        // `nq` regular coupons ahead of the lead for a long first period (`offset` is `nq`).
-        let quasi = if self.first_index == 1 {
-            self.offset as i64
-        } else {
-            0
-        };
+        let terms = &self.slope;
         let mut slope = 0.0;
         // Index `first_index - 1` is the lead's (`lead_exponent` is `offset + y` there, short or
         // long); the `quasi` indexes before it are the quasi-coupon dates after settlement.
-        for index in (self.first_index - 1 - quasi)..=self.last_index {
-            let t = index as f64 + self.offset + self.y + self.slope_shift;
+        for index in (self.first_index - 1 - terms.quasi)..=self.last_index {
+            let t = index as f64 + terms.offset + terms.y;
             slope -= t * self.coupon / discount_growth(x, t + 1.0) / self.m;
         }
-        let t = self.front_exponent + self.slope_shift;
+        let t = terms.front_exponent;
         slope - t * self.redemption / discount_growth(x, t + 1.0) / self.m
     }
 }
@@ -261,21 +296,85 @@ mod tests {
     fn a_long_first_period_shifts_the_slope_by_the_quasi_periods_after_settlement() {
         // probes/oddf-date-order-domain-sweep Y!B22's bond: settlement 2023-03-16, maturity
         // 2030-06-15, issue 2022-12-15, first coupon 2024-06-15, annual, 0%, basis 1. One quasi
-        // period (2023-06-15 to 2024-06-15, 366 days) lies between the settlement's next
-        // quasi-coupon date and the first coupon; E is 365 (T-3031).
+        // coupon date (2023-06-15) lies after settlement, and the first coupon is 457 days away;
+        // E is 365 (T-3031).
         let long = OddFirstSchedule::new(45001, 47649, 44910, 45458, 0.0, 100.0, 1, 1).unwrap();
-        assert_eq!(long.offset, 1.0);
-        assert_eq!(long.slope_shift, 366.0 / 365.0);
-        // A zero coupon's slope is the redemption's alone, at the shifted exponent.
+        assert_eq!(
+            (long.offset, long.slope.offset, long.slope.quasi),
+            (1.0, 1.0, 1)
+        );
+        assert_eq!(long.slope.y, 457.0 / 365.0);
+        // A zero coupon's slope is the redemption's alone, at the slope's exponent.
         let (y, x) = (0.05, 1.05);
-        let t = long.front_exponent + long.slope_shift;
+        let t = long.slope.front_exponent;
         assert_eq!(
             long.dprice(y),
             -(t * 100.0 / discount_growth(x, t + 1.0) / 1.0)
         );
-        // A short first period has neither.
+        // A short first period runs on the price's own exponents.
         let short = sweep_bond(0.05);
-        assert_eq!((short.first_index, short.slope_shift), (2, 0.0));
+        assert_eq!(
+            (short.first_index, short.slope.quasi, short.slope.y),
+            (2, 0, short.y)
+        );
+    }
+
+    #[test]
+    fn a_month_end_long_first_period_slope_counts_its_own_quasi_dates() {
+        // probes-numeric/t3031-r4-oddfyield-long-first S!A61 and S!A70 (T-3988): ODDFPRICE's
+        // walk counts one quasi period more than lies between settlement and a 28 February first
+        // coupon (`offset` 1 and 2), the slope does not (0 and 1), and its lead is 51 30/360 days
+        // (A61) and 452 actual days over 360 (A70, basis 2) away. Excel's values, bit-exact.
+        let cases = [
+            // settlement, maturity, issue, first coupon, rate, price, redemption, freq, basis
+            (
+                40185,
+                50099,
+                40037,
+                40237,
+                0.0085,
+                21.426,
+                100.0,
+                2,
+                0,
+                0.0,
+                51.0 / 180.0,
+            ),
+            (
+                43072,
+                50464,
+                42796,
+                43524,
+                0.0179,
+                23.169,
+                134.68,
+                1,
+                2,
+                1.0,
+                452.0 / 360.0,
+            ),
+        ];
+        let excel = [0.077_480_666_070_228_48, 0.121_925_086_313_786_22];
+        for (case, want) in cases.into_iter().zip(excel) {
+            let (settlement, maturity, issue, first, rate, price, redemption, f, basis, nq, y) =
+                case;
+            let s = OddFirstSchedule::new(
+                settlement, maturity, issue, first, rate, redemption, f, basis,
+            )
+            .unwrap();
+            assert_eq!(s.offset, nq + 1.0);
+            assert_eq!((s.slope.offset, s.slope.y), (nq, y));
+            let term = super::yield_start_term(settlement, maturity, basis).unwrap();
+            let got = super::excel_yield_newton(
+                price,
+                yield_start(rate, price, &term),
+                |v| s.price(v, discount_growth),
+                |v| s.dprice(v),
+            )
+            .unwrap()
+            .value;
+            assert_eq!(got, want);
+        }
     }
 
     #[test]

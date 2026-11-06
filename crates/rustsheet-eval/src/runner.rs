@@ -91,6 +91,33 @@ pub struct CellResult {
     /// formula is stale and never attaches.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub math: Option<MathValue>,
+    /// The value the engine deliberately returns here: Excel's, or the 50-digit math where
+    /// decision 0188 R3 has it follow the math. Set once per run by
+    /// [`crate::r1c::mark_r3_math`], the test behind R1(c)'s [`crate::r1c::R1c::R3Pass`]. The
+    /// closeness buckets read it: a [`Target::Math`] cell is `r3_math`, not visibly off
+    /// (decision 0310).
+    #[serde(default, skip_serializing_if = "Target::is_excel")]
+    pub target: Target,
+}
+
+/// What a [`CellResult`]'s engine value is meant to match (decision 0310).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Target {
+    /// Excel's value: every cell but the ones below.
+    #[default]
+    Excel,
+    /// The 50-digit math, which the engine returns where decision 0188 R3 marks the cell and Excel
+    /// is more than G = 1e-4 off it ([`crate::r1c::r3_math`]).
+    Math,
+}
+
+impl Target {
+    /// Whether the cell is held to Excel's value (the serialized default).
+    #[must_use]
+    pub fn is_excel(&self) -> bool {
+        *self == Self::Excel
+    }
 }
 
 /// Where a [`CellResult`] comes from.
@@ -130,6 +157,7 @@ impl CellResult {
             graph_subnormal: false,
             kind: CellKind::Scored,
             math: None,
+            target: Target::Excel,
         }
     }
 
@@ -170,7 +198,9 @@ pub struct CaseResult {
     /// report reads a case's milestone tag from them (decision 0051).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
-    /// Every scored cell (reports may drop passing cells when serializing).
+    /// Every scored cell (reports may drop passing cells when serializing). Each is written with
+    /// its closeness bucket and family flag ([`crate::closeness::serialize_cells`]).
+    #[serde(serialize_with = "crate::closeness::serialize_cells")]
     pub cells: Vec<CellResult>,
     /// Displayed-text verdicts, beside the values' (T-1610, decision 0068).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -424,45 +454,22 @@ fn run_isolated(
     };
     // Cases without expectations still run: a panic, timeout or load error is a crash we can
     // catch before any oracle value exists (T-0007).
-    let (tx, rx) = mpsc::channel();
     let engine = Arc::clone(engine);
     case_log::record("start", &case.id);
-    let start = Instant::now();
-    let spawned = std::thread::Builder::new()
-        .name(format!("case:{}", case.id))
-        .stack_size(256 * 1024 * 1024) // deep dependency chains recurse in the evaluator
-        .spawn(move || {
-            let outcome = catch_unwind(AssertUnwindSafe(|| {
-                evaluate_prepared(engine.as_ref(), &prepared, listed, values)
-            }));
-            let _ = tx.send(outcome);
-        });
-    let mut check_values = Vec::new();
-    if let Err(e) = spawned {
-        case_log::record("end", &case.id);
-        result.status = CaseStatus::EngineError;
-        result.message = Some(format!("could not spawn worker: {e}"));
-        return CaseValues {
-            result,
-            check,
-            values: check_values,
-        };
-    }
-    let received = rx.recv_timeout(timeout);
+    let (outcome, millis) = run_in_worker(format!("case:{}", case.id), timeout, move || {
+        evaluate_prepared(engine.as_ref(), &prepared, listed, values)
+    });
     // A timed-out worker keeps running, so it is logged as such rather than as ended.
-    let event = if received.is_err() { "timeout" } else { "end" };
-    case_log::record(event, &case.id);
-    result.millis = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
-    match received {
-        Err(_) => {
-            result.status = CaseStatus::Timeout;
-            result.message = Some(format!("exceeded {}s", timeout.as_secs()));
+    let timed_out = matches!(outcome, Err((CaseStatus::Timeout, _)));
+    case_log::record(if timed_out { "timeout" } else { "end" }, &case.id);
+    result.millis = millis;
+    let mut check_values = Vec::new();
+    match outcome {
+        Err((status, message)) => {
+            result.status = status;
+            result.message = Some(message);
         }
-        Ok(Err(panic)) => {
-            result.status = CaseStatus::Panic;
-            result.message = Some(panic_message(panic.as_ref()));
-        }
-        Ok(Ok(Err(e))) => match (refusal, refused_cells) {
+        Ok(Err(e)) => match (refusal, refused_cells) {
             (Some(message), Some(cells)) if e.contains(message.as_str()) => {
                 result.checked = cells.len();
                 result.deviations = cells.len();
@@ -479,7 +486,7 @@ fn run_isolated(
                 result.message = Some(e);
             }
         },
-        Ok(Ok(Ok((cells, scored, text, arguments, got)))) => {
+        Ok(Ok((cells, scored, text, arguments, got))) => {
             check_values = got;
             result.text = text;
             result.arguments = arguments;
@@ -508,6 +515,42 @@ fn run_isolated(
         check,
         values: check_values,
     }
+}
+
+/// Runs `work` on a worker thread named `name`, with the large stack the evaluator's recursion
+/// needs, isolated against panics and stopped waiting after `timeout`: one definition for every
+/// harness that runs untrusted workbooks (the cell runner and the round-trip suites). Returns
+/// the result, or the status and message of a worker that panicked, timed out or could not
+/// start, and the elapsed milliseconds. A timed-out worker keeps running detached.
+pub(crate) fn run_in_worker<T: Send + 'static>(
+    name: String,
+    timeout: Duration,
+    work: impl FnOnce() -> T + Send + 'static,
+) -> (Result<T, (CaseStatus, String)>, u64) {
+    let (tx, rx) = mpsc::channel();
+    let start = Instant::now();
+    let spawned = std::thread::Builder::new()
+        .name(name)
+        .stack_size(256 * 1024 * 1024) // deep dependency chains recurse in the evaluator
+        .spawn(move || {
+            let _ = tx.send(catch_unwind(AssertUnwindSafe(work)));
+        });
+    let outcome = match spawned {
+        Err(e) => Err((
+            CaseStatus::EngineError,
+            format!("could not spawn worker: {e}"),
+        )),
+        Ok(_) => match rx.recv_timeout(timeout) {
+            Err(_) => Err((
+                CaseStatus::Timeout,
+                format!("exceeded {}s", timeout.as_secs()),
+            )),
+            Ok(Err(panic)) => Err((CaseStatus::Panic, panic_message(panic.as_ref()))),
+            Ok(Ok(value)) => Ok(value),
+        },
+    };
+    let millis = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
+    (outcome, millis)
 }
 
 /// The value of a cell on a sheet the evaluated workbook does not have.
@@ -602,6 +645,7 @@ fn score(evaluated: &dyn Evaluated, expectations: &[Expectation], listed: bool) 
                 graph_subnormal,
                 kind: CellKind::Scored,
                 math: None,
+                target: Target::Excel,
             }
         })
         .collect()
@@ -630,6 +674,10 @@ fn prepare(
     let mut prepared = match suite.manifest.kind {
         SuiteKind::Xlsx => prepare_xlsx(suite, case),
         SuiteKind::Spec => prepare_spec(case, values),
+        // `Suite::load_all` keeps round-trip suites out of every cell run (SPEC-0033 D8).
+        SuiteKind::Roundtrip => {
+            Err("a roundtrip suite is run by `rustsheet-eval roundtrip`".into())
+        }
     }?;
     let refusal = pin_deviations(suite, case, &mut prepared.expectations)?;
     Ok((prepared, refusal))
@@ -653,6 +701,7 @@ fn refused(expectations: &[Expectation]) -> Vec<CellResult> {
             graph_subnormal: false,
             kind: CellKind::Scored,
             math: None,
+            target: Target::Excel,
         })
         .collect()
 }
