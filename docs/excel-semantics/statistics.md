@@ -7311,11 +7311,11 @@ whose df is above 1E10 are left out: the cumulative T.DIST is `#NUM!` there for 
   no number above 3.3E+35 at a positive x.
 - Cumulative, x < 0: 0 up to |x| 2.0E+153 (r4-T-2585 A223, `T.DIST(-2.01264664929796E+153,43530,TRUE)`), `#NUM!` from
   5.4E+196 (e-T-3425 A88, `T.DIST(-5.43165733249003E+196,3768,TRUE)`, and 5 more cells).
-- The density's brackets are in "T.DIST's density is #NUM! at a huge x" below.
+- The density's cut (exactly 2^512, T-3554) is in "T.DIST's density is #NUM! at a huge x" below.
 
-The T.DIST definition encodes the four brackets (per `cumulative` and per sign), and decision 0321 moved its 34
-committed table points at or past each `#NUM!` from a math number to a domain error.
-Status: VERIFIED (excel-graph), the cuts UNVERIFIED
+The T.DIST definition encodes the two cumulative brackets (per sign) and the density's exact cut (T-3554), and
+decision 0321 moved its 34 committed table points at or past each `#NUM!` from a math number to a domain error.
+Status: VERIFIED (excel-graph), the cumulative cuts UNVERIFIED
 Tasks: T-2256, T-2474, T-4102, T-4580
 
 ## Student t quantile at p = 0 with df below 2 is #DIV/0! (T-2256)
@@ -7881,7 +7881,24 @@ Rule:
     0 up to |x| 1.1E+153 (`T.DIST(-1.12173766596864E+153,8,FALSE)`, A236) and `#NUM!` from 9.7E+176
     (`T.DIST(-9.72379926420781E+176,5,FALSE)`, A266), so its cut lies between 1.1E+153 and 9.7E+176.
   - Every density cell of the three tables at or past these `#NUM!` points is `#NUM!`: 11 at a positive x and 7 at a
-    negative x. The T.DIST definition encodes both brackets (`student_t.T_DIST_CUTS`, decision 0321).
+    negative x. The T.DIST definition encoded both brackets (`student_t.T_DIST_CUTS`, decision 0321).
+  - T-3554 pins the cut: the density is `#NUM!` exactly when fl(x·x) overflows a double, |x| ≥ 2^512
+    (1.3407807929942597E+154), at every df and either sign; 2^512's predecessor (`2^512*(1-2^-52)`) is a number. This
+    is the first step of Excel's density (xx = fl(t t), "Student t density is Loader's dt"). Probed at df 1, 2, 24,
+    1E+10, 1E+15 and 1E+300 on both sides of 2^512 and at 4 and 8 times it. Rules the probe ruled out, each by cells
+    its predictions (written before the fill, in the task file) got wrong: `#NUM!` where the density underflows to 0
+    (`T.DIST(1E+120,2,FALSE)` and `T.DIST(1E+120,9,FALSE)` are 0) or below DBL_MIN (`T.DIST(2E+153,1,FALSE)` is
+    7.957747154594767E-308 while `T.DIST(3.8E+153,1,FALSE)` is 0); a ln-space density (`T.DIST(1E+160,1,FALSE)`,
+    whose density 3.2E-321 is a nonzero double, is `#NUM!`); where x²/df overflows (`T.DIST(2^512,2,FALSE)` and
+    `T.DIST(1E+200,1E+300,FALSE)` are `#NUM!`); where x·x + df does (`T.DIST(1.339E+154,1E+307,FALSE)` and
+    `T.DIST(2^512*(1-2^-52),1E+300,FALSE)` are 0).
+  - df 1 (a df truncating to 1 too) has a second cut below it: the density fl(1/fl(pi fl(1 + fl(x x)))) is `#DIV/0!`
+    where fl(x x) is finite and the denominator overflows, |x| from about 7.565E+153 to 2^512:
+    `T.DIST(7.6E+153,1,FALSE)`, `T.DIST(1E+154,1,FALSE)`, `T.DIST(2^512*(1-2^-52),1,FALSE)` and `T.DIST(7.6E+153,1.5,FALSE)` are `#DIV/0!`, while
+    `T.DIST(7.55E+153,1,FALSE)` is 0. Below that the quotient is a number, and a subnormal one is 0 (as `/` flushes
+    it, numbers.md "Subnormal results become 0"): `T.DIST(3.75E+153,1,FALSE)` is 2.2635369684180667E-308, the normal
+    double, and `T.DIST(3.8E+153,1,FALSE)` to `T.DIST(7.55E+153,1,FALSE)` are 0. Negative x gives the same.
+    The T.DIST definition encodes both cuts (`student_t.DENSITY_X_SQUARED_CUT`, `_df_one_denominator_overflows`).
 - `T.INV.2T(2.22507385850721E-308,df)` and `TINV(2.22507385850721E-308,df)` are `#NUM!` at df 8, 9, 12 and 14, although
   the quantile is a finite double (about 3.2E+22 to 6.9E+38). T.INV accepts p down to 1E-300 (T-1531).
   `CONFIDENCE.T(2.22507385850721E-308,sd,n)`, which is T.INV.2T at df n - 1, is `#NUM!` too, at n 38, 68 and 79 (df 37,
@@ -7890,17 +7907,19 @@ Rule:
 
 - The legacy `FINV(0,2,5)` is `#NUM!` (probes-numeric/m9-legacy-finv A65), so the 0 is F.INV's only.
 
-The exact x where T.DIST's density turns `#NUM!` and the p below which the two-tailed quantile does are not yet probed.
-Evidence: Gate A tables, excel-graph:
+The p below which the two-tailed quantile turns `#NUM!` is not yet probed; T.DIST's density cut is 2^512 (T-3554).
+Evidence: probes/t3554-tdist-density-huge-x (A1:B24, I1:I6) and probes/t3554-tdist-density-df1-div0 (A1:C4),
+excel-graph, 2026-11-06, each written with its predictions before the fill; Gate A tables, excel-graph:
 - accuracy/T.DIST/s1 A85, A95, A105 and A110, and accuracy/T.DIST/e-T-3425 A90, A103 and A116 (T-3425);
 - accuracy/T.INV.2T/s1 A68 and A78, and accuracy/TINV/s1 A68 and A78;
 - accuracy/CONFIDENCE.T/s1 A112, A123 and A134 (T-4102);
 - accuracy/T.DIST/s1 A94 and A97 (density 0 below the cut);
 - accuracy/T.DIST/r4-T-2585 A236 (density 0), and A266 and A267 (`#NUM!`; T-4580);
 - accuracy/F.INV/s1 A111 (`F.INV(0,38,10)`) and A125 (`F.INV(0,9,50)`), and probes-numeric/t1049-finv A16 (`F.INV(0,3,7)`).
-Status: VERIFIED (excel-graph) for the cited cells; the cut points are UNVERIFIED.
-Ours: T.DIST returns 0, and T.INV.2T, TINV and CONFIDENCE.T return the quantile or margin. These are Gate A known
-failures owned by T-3554 and T-4541 (moved from T-3386).
+Status: VERIFIED (excel-graph) for the cited cells and T.DIST's density cuts (T-3554); the quantile's p cut is
+UNVERIFIED.
+Ours: T.DIST's density as Excel since T-3554 (`t_x_overflows` and `excel_t_density_df_one_overflows` in `t_dist_of`).
+T.INV.2T, TINV and CONFIDENCE.T return the quantile or margin, Gate A known failures owned by T-4541 (from T-3386).
 Tasks: T-3554, T-3386, T-3358, T-4541, T-4102, T-4580
 
 ## A text scalar argument is #VALUE! before an error cell as the data (T-3781)

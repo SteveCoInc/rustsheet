@@ -3,7 +3,7 @@ id: T-3554
 title: "T.DIST density is #NUM! at a huge x in Excel where the engine returns 0"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P1
 size: S
 tier: opus
@@ -26,9 +26,9 @@ depends_on: []
 - Code: `fn_t_dist` and the density in crates/rustsheet-engine/src/functions/statistical/ (t_dist.rs).
 
 ## Acceptance criteria
-- [ ] A probe case (M9, excel-graph) brackets the x where the density turns `#NUM!` at several df, for positive and
+- [x] A probe case (M9, excel-graph) brackets the x where the density turns `#NUM!` at several df, for positive and
       negative x; the rule is in the statistics.md entry.
-- [ ] The engine matches it; the seven known-failure lines of eval/accuracy/known-failures.tsv are removed as stale.
+- [x] The engine matches it; the seven known-failure lines of eval/accuracy/known-failures.tsv are removed as stale.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -84,3 +84,22 @@ Probe 2, probes/t3554-tdist-density-df1-div0, separates two rules for that df-1 
 - (d1) the denominator fl(pi fl(1 + fl(x x))) overflows: `#DIV/0!` from 7.6E+153 (A9, A10), a number up to 7.55E+153 (A1:A8);
 - (d2) the density falls below DBL_MIN: `#DIV/0!` from 3.8E+153 (A3:A10), a number at 3.7E+153 and 3.75E+153 (A1, A2).
 Both predict the same for B (negated x) and for C1, C2 at df 1.5 (as A5 and A9); C3, C4 follow A-column 1E+154 and A5.
+
+## Probe result 2
+probes/t3554-tdist-density-df1-div0 confirms (d1) and refutes (d2): `#DIV/0!` at 7.6E+153 and 8E+153 (A9, A10, B9, B10,
+and C2 at df 1.5), a number at 3.7E+153 to 7.55E+153 (2.3251269991511373E-308 and 2.2635369684180667E-308 at 3.7E+153
+and 3.75E+153, 0 from 3.8E+153 on, where the quotient is subnormal and flushed).
+
+## Outcome
+- Rule (structural, no fit; both probes written with their predictions before the fill): `T.DIST(x,df,FALSE)` is
+  `#NUM!` exactly when fl(x x) overflows (|x| >= 2^512), at every df and either sign; at a df truncating to 1 it is
+  `#DIV/0!` where fl(x x) is finite but fl(pi fl(1 + fl(x x))) overflows (|x| about 7.565E+153 up to 2^512), and a
+  subnormal df-1 quotient is 0. Every cell of both probes (58 + 24) matches the rule.
+- Engine: `t_dist_of` applies `t_x_overflows` to the density too and returns `#DIV/0!` through the new
+  `loader::excel_t_density_df_one_overflows`; `excel_t_density` flushes the df-1 quotient (`flush_subnormal`).
+- Gate A: the 18 T-3554 known failures (T.DIST s1 4, r4-T-2585 11, e-T-3425 3) pass and their lines are removed;
+  `rustsheet-eval accuracy` 0 failing. The T.DIST definition's density brackets become the exact cut
+  (`DENSITY_X_SQUARED_CUT`) plus the df-1 `#DIV/0!` domain; `rustsheet-accuracy verify T.DIST` reports 0 differences
+  (no committed table point changes), and only the two new probes get math sidecars.
+- Eval: +2 probe cases passing (82 cells), no other baseline change.
+- statistics.md "T.DIST's density is #NUM! at a huge x" records both cuts and the refuted hypotheses.
