@@ -438,3 +438,23 @@ fn test_textafter_match_end_is_cut_toward_zero() {
     assert_eq!(model._get_text("A3"), *"");
     assert_eq!(model._get_text("A4"), *"#N/A");
 }
+
+// The every-delimiter-longer check counts UTF-16 units, not UTF-8 bytes: "é" is one unit like
+// "a", so `("a","é",1)` reaches the ordinary not-found `#N/A`, and "é" is shorter than "ab", so
+// the two-argument `("é","ab")` is `#N/A` and the three-argument one `#VALUE!`
+// (probes/t4474-textbefore-utf16-bounds B1, A2, B2, T-4474).
+#[test]
+fn test_textbefore_lengths_are_utf16_units() {
+    let mut model = new_empty_model();
+    model._set("A1", "=TEXTBEFORE(\"a\",\"é\",1)");
+    model._set("A2", "=TEXTBEFORE(\"é\",\"ab\")");
+    model._set("A3", "=TEXTBEFORE(\"é\",\"ab\",1)");
+    model._set("A4", "=TEXTBEFORE(\"😀\",\"abc\",1)");
+    model._set("A5", "=TEXTBEFORE(\"😀\",\"ab\",1)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"#N/A");
+    assert_eq!(model._get_text("A2"), *"#N/A");
+    assert_eq!(model._get_text("A3"), *"#VALUE!");
+    assert_eq!(model._get_text("A4"), *"#VALUE!");
+    assert_eq!(model._get_text("A5"), *"#N/A");
+}

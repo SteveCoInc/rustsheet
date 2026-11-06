@@ -813,6 +813,10 @@ NETWORKDAYS.INTL is the exception: it lifts over a range (`INDEX(WORKDAY.INTL(45
   `=SUMPRODUCT(EDATE(A1:A60,1))` is `#VALUE!`, and `=SUMPRODUCT(EDATE(A1:A60+0,1))` and
   `=SUMPRODUCT(NORM.DIST(E1:E60,0,1,TRUE))` lift. Legacy `=SUM(PMT({0.1;0.2},10,100))` sums both
   elements (-40.12681517653708), like the dynamic formula. Its FORMULATEXT is the written text, with no `@` (`=SUM(PMT({0.1;0.2},10,100))`; probes/scalar-lift-open-a AA1, AB1, T-1777).
+  An array constant in a legacy ATP argument at a value position takes the `@` of a scalar argument,
+  whatever its size and under a sign, and the call none: `=EDATE(@{45000;45031},1)`, `=YEARFRAC(@{45000},46000)`,
+  `=BIN2DEC(@{101})`, `=QUOTIENT(@{7},2)`, `=ISEVEN(-@{5})` (probes/iseven-isodd-range-derived-arrays Leg!G3:N3,
+  G41:N41, excel-graph, T-4528; information.md "ISEVEN/ISODD over a range").
 Evidence: probes/scalar-lift-shapes H1-H50, J1-J8, K1-K8; probes/scalar-lift-shapes-b (each
 question on row 3 and row 70); probes/scalar-lift-shapes-c (legacy formulas and their FORMULATEXT).
 All three: excel-graph, 2026-10-17, T-1767. The per-family argument lists are in statistics.md,
@@ -1145,7 +1149,7 @@ SUBSTITUTE none (`#VALUE!`; probes/groupby-eta-arity G!A1-A141). SLOPE and INTER
 `#N/A` per group in Excel, `#VALUE!` here (G!B21:B25, G!B61:B65): T-1867.
 Minimum-0 functions that take one argument get one (probes/t4450-eta-special-forms, excel-graph, 2026-11-06, T-4450,
 T-2644): `GROUPBY(A1:A3,B1:B3,_xleta.ROW)` and `..COLUMN` are 4x2 with `#VALUE!` in each value cell (H109:H118, J9), SHEET
-and SHEETS `#N/A` in each (H121:H124, J59; ours `#NAME?` and `#N/IMPL`, T-4518), RANDARRAY 4 rows with a value that is not
+and SHEETS `#N/A` in each (H121:H124, J59; ours matches, T-4518), RANDARRAY 4 rows with a value that is not
 an error (J61:J63; ours an array there, T-4519), `PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.ROW)` 5x5 (J69). Yet `ARRAYTOTEXT` of the
 ROW and COLUMN results is `#CALC!` (F109, F115, also `LAMBDA(v,ROW(v))` J65; `ARRAYTOTEXT(INDEX(..,0,1))` is
 "1, 3, 5, Total", J15; ours prints the cells, T-4519). Functions that take none stay a whole-call `#VALUE!`: NOW (J55), PI
@@ -1753,7 +1757,7 @@ T-4450; A1:B3 = 1..6, each result read through ROWS&"x"&COLUMNS in E, ARRAYTOTEX
   `MAP(A1:A3,{1;2;1},_xleta.INDEX)` 1, `#REF!`, 5 (E67), `MAP(A1:A3,{0;1;0},{0;0;1},_xleta.OFFSET)` 1, 5, 6 (J17).
 - The other functions follow the argument counts: `MAKEARRAY(2,2,_xleta.OFFSET)` (two of OFFSET's three) is a whole-call
   `#VALUE!` (E61), `MAKEARRAY(2,2,_xleta.SUBTOTAL)` `#VALUE!` per cell (SUBTOTAL(1,1): E73), `BYROW(A1:B3,_xleta.ROW)` 1, 2, 3
-  and `BYCOL(A1:B3,_xleta.COLUMN)` 1, 2 (E43, E49), `BYROW(A1:B3,_xleta.SHEET)` 1, 1, 1 (J53; ours `#NAME?`, T-4518).
+  and `BYCOL(A1:B3,_xleta.COLUMN)` 1, 2 (E43, E49), `BYROW(A1:B3,_xleta.SHEET)` 1, 1, 1 (J53; ours matches, T-4518).
 - Called through LET with an argument count it does not take, a function by name is `#VALUE!`: too few,
   `LET(f,_xleta.SUM,f())` (E85:G85), `f()` of IF, CHOOSE and IFERROR, `f(1)` of CHOOSE and IFERROR (L5:L13), and too many,
   `LET(f,_xleta.ABS,f(1,2))` (L1:L3); `LET(f,_xleta.SUM,f(1,2,3))` is 6 (L25).

@@ -19,6 +19,7 @@ use crate::arithmetic::{flush_subnormal, TINY_SUBNORMAL_BELOW};
 use crate::constants::EXCEL_PRECISION;
 use crate::number_format::{significant_15, to_precision};
 use crate::x87_register::Register;
+use crate::x87_table_read::x87_table_read;
 
 /// How the final digit is chosen in stage 2.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -231,12 +232,14 @@ pub(crate) fn x87_decimal_to_f64(digits: u64, place: i64) -> Option<f64> {
 /// with positive exponents and past the 15-digit cut: `=0.190581435720431` is
 /// 0.19058143572043101 and `=1.234567891234567E+3` reads its 15 digits at n = 11
 /// (docs/excel-semantics/numbers.md "Decimals reach a double through an x87 multiply by 10^-n";
-/// probes-numeric/t4077-long-literal-x87, 516 cells, excel-graph). `None` outside n = 1..15.
+/// probes-numeric/t4077-long-literal-x87, 516 cells, excel-graph). Past 15 places either way the
+/// power comes from x87 tables ([`x87_table_read`], T-4467). `None` at places -15 to 15 outside
+/// n = 1..15 (the positive places 1 to 15 are unprobed and keep the nearest double).
 pub(crate) fn x87_text_to_f64(digits: u64, place: i64) -> Option<f64> {
     if digits >= X87_TEXT_DIGITS {
         return None;
     }
-    x87_multiply(digits, place)
+    x87_table_read(digits, place).or_else(|| x87_multiply(digits, place))
 }
 
 /// `digits` times 10^`place` through the x87 multiply, for `place` in -15..=-1 and nonzero `digits`.

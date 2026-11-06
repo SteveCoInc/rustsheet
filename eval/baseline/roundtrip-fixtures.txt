@@ -1513,8 +1513,6 @@ F	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	R0 element /officeDocument[0
 F	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	R0 element /officeDocument[0]:/workbook/workbookPr[0] lost
 F	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	R0 part /officeDocument[0]/sheetMetadata[0] added
 F	roundtrip-fixtures/rich-error-export-formulas.xlsx	R0 element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
-F	roundtrip-fixtures/rich-error-export.xlsx	R0 element /core-properties[0]:/coreProperties/dcterms:modified[0] changed candidate-N2
-F	roundtrip-fixtures/rich-error-export.xlsx	R0 element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
 F	roundtrip-fixtures/shared-string-phonetic-runs.xlsx	R0 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:satMod[0]@val changed
 F	roundtrip-fixtures/shared-string-phonetic-runs.xlsx	R0 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:tint[0]@val changed
 F	roundtrip-fixtures/shared-string-phonetic-runs.xlsx	R0 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:satMod[0]@val changed
