@@ -3,7 +3,7 @@ id: T-3408
 title: "IRR's long secant runs: Excel finishes runs of up to 200 steps on their own digits"
 milestone: M9
 lane: functions-financial
-status: done
+status: blocked
 priority: P0
 size: M
 tier: opus
@@ -147,3 +147,15 @@ The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, 
   "IRR on conventional flows near 0 and -10%" updated.
 - Follow-up evidence, not filed: stratum 5 of the sweep suggests Excel also finishes long runs on 55..148 flows; a
   future widening of the range needs its own probe (decision 0320).
+
+## Blocked because
+Blocked because: review-round limit
+- PR #3651, HEAD 807951447. CI is green. Security approved at 0a6fa8600 and design at 0a6fa8600 (minors applied since). Excel-fidelity asked for changes in rounds 1 to 3. Rounds 1 and 2 were fixed: the split and the tiered table; the cap is now chosen by train score, 200 being the low end of the plateau 200..216.
+- Round 3's open BLOCKING finding is R4.1 and R4.2. `IRR_LONG_RUN_RANGE` reaches past the train cells that discriminate. Those reach only |c| <= 2.15E+8 (t2927-irr-fallback-sweep A95) and guess >= -0.99933 (t3478-irr-r4-wide A230). The wider band rests on train only through run = retry cells: A278 and t3411-irr-r4-fresh-3 A57. The one train cell there that depends on the cap, A240, is indifferent. 0320 keeps the band because test A206 and fresh-sweep cells t3408-irr-r4-fresh A2 and A48 pass with it, which is tuning on held-out evidence.
+- Next step (work-loop 5c), which the reviewer gave:
+  - Narrow `IRR_LONG_RUN_RANGE` to the discriminating train range, rounded outward: largest |c| up to about 2.2E+8, guess from about -0.99934. Keep flows 6..54.
+  - Update the FITTED range and cell count, and rerun bounds.py, `make eval-baseline` and every check.
+  - Report the cost in the R4.1 table and in the R4.2 and Gate A sections: test A206, fresh A2 and A48.
+  - Fix 0320's heading "Cap and range from train only".
+  - MINOR: also cite t2927 A97 (step 256, Excel returns the run's value) among the past-200-step train runs.
+  - Do not keep the wider band without an owner ruling in a decision record.
