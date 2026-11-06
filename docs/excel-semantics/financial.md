@@ -480,6 +480,40 @@ Status: VERIFIED (excel-graph)
 Implemented in: `ispmt_of` (functions/financial/annuity.rs)
 Tasks: T-2048
 
+## IPMT and PPMT take a period up to nper + 1
+Rule: IPMT's and PPMT's period is `#NUM!` below 1 and at or past nper + 1, not past nper: a period between nper and
+nper + 1 is a value, the split of "IPMT and PPMT split Excel's discounted payment" at that fractional period.
+`PPMT(0.0798622533510215,139.5,139,-115683.067689867,0,0)` is 8890.724785738455 (the closed form at period 139.5 is
+8890.7247857384561; at period 139 it would be 8555.65), and `PPMT(0.0134753740281655,123.5,123,-394.704261526236,
+60.5849877072275,1)` 5.466510612214358. At nper + 1 it is `#NUM!`: `PPMT(0.0449398904217299,315,314,-3107.59202412783,
+0,1)`, `PPMT(0.0805588428682658,227,226,16.1638393072709,0,0)` and `IPMT(0.0104741966355263,249,248,340880.668375193,0,0)`;
+so is a period of 0.5 (`IPMT(0.00268654404805728,0.5,11,-557.559050130903,0,0)`), 0 or -1.
+Unprobed: IPMT at a period strictly between nper and nper + 1 (the engine takes PPMT's bound for both).
+Evidence: accuracy/PPMT/s1 A112, A118 (values), A128, A137, A139 (`#NUM!`); accuracy/IPMT/s1 A113, A114, A117, A120,
+A123, A139 (`#NUM!`) (excel-graph, 2026-11-06, T-4109); gen-m9 a91bad4e84f49739 A354 `PPMT(1,0.5,323,401723)` and
+c0681a8b150ce301 A375 `PPMT(0.1,9,1.5,404118,62,1)` (`#NUM!`); "Financial edge-pool smoke check" (IPMT 13 of 12).
+Status: VERIFIED (excel-graph) for PPMT; IPMT's band UNVERIFIED
+Implemented in: `period_payments` (`period >= period_count + 1.0`, functions/financial/annuity.rs)
+Tasks: T-4109
+
+## PDURATION's domain
+Rule: `PDURATION(rate, pv, fv)` is `(LN(fv) - LN(pv)) / LN(1+rate)`, with `1+rate` a double. A rate, pv or fv of 0 or
+below is `#NUM!`, and a rate so small that `1+rate` is 1 is `#DIV/0!`. Because the denominator is the logarithm of the
+double `1+rate`, not `log1p(rate)`, a tiny rate puts Excel far off the true period count, by about 1E-16/rate:
+`PDURATION(1E-15,204482.528669153,5714.93905255357)` is -3222234474861891.5 against a true -3577398904732622 (9.9%),
+`PDURATION(4.63349481901791E-16,154.751778919733,2.53388363643895)` -9259556764248234 against -8874660289073923 (4.3%),
+and `PDURATION(1.298060469022E-13,30.5334710958428,16.5767219758772)` is still 6.9E-4 off. Decision 0300 keeps Excel
+as the target there.
+Evidence: accuracy/PDURATION/s1 (excel-graph, 2026-11-06, T-4109): a negative rate (A115, A119, A128, A130, A132, A133,
+A138, A140), pv (A111, A122, A139) or fv (A114, A117, A118, A121) and a pv or fv of 0 (A123, A126, A137) are `#NUM!`;
+rate 1.1E-16 is `#DIV/0!` (A124), 2.3E-16 a value (A135). The double form above is bit-exact on all 181 numeric points,
+the tiny-rate ones included (A82, A85, A89, A107, A112, A116, A120, A135 are 2.2E-4 to 9.9E-2 off the math). Earlier
+cells: gen-m9 31474c20fc1dafd6 A194 `PDURATION(0,7968,32308)` and 9a1fa5366bc50918 A196 `PDURATION(100,0,49370)`
+(`#NUM!`), e168be7f6d3f84c2 A180 `PDURATION(1E-300,4938,46197)` (`#DIV/0!`).
+Status: VERIFIED (excel-graph)
+Implemented in: `pduration_of` (functions/financial/growth.rs)
+Tasks: T-4109
+
 ## IRR, RATE and XIRR stop early, and the guess and flow scaling change the result
 Rule: Excel's iterative solvers (IRR, RATE, XIRR) return an un-converged iterate, not the root
 rounded to double. The digits beyond the stopping tolerance depend on the starting guess (default
