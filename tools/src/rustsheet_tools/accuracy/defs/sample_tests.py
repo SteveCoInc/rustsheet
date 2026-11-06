@@ -66,6 +66,7 @@ from fractions import Fraction
 
 import mpmath
 
+from rustsheet_tools.accuracy import model
 from rustsheet_tools.accuracy.defs import fisher, student_t
 from rustsheet_tools.accuracy.defs._common import StratumDraws, by_stratum, domain_of, one_of, scalars
 from rustsheet_tools.accuracy.defs.aggregate_array import array_of
@@ -80,7 +81,6 @@ from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import (
     Definition,
     DomainError,
-    Interval,
     MathArg,
     NoValueError,
     Param,
@@ -425,14 +425,14 @@ def _t_definition(function: str) -> Definition:
                 Param(
                     "tails",
                     "int",
-                    Interval(1, 2, lo_open=False, hi_open=False),
+                    model.Interval(1, 2, lo_open=False, hi_open=False),
                     source=THIN_SOURCE,
                     truncates=THIN_SOURCE,
                 ),
                 Param(
                     "type",
                     "int",
-                    Interval(1, 3, lo_open=False, hi_open=False),
+                    model.Interval(1, 3, lo_open=False, hi_open=False),
                     source=THIN_SOURCE,
                     truncates=THIN_SOURCE,
                 ),
