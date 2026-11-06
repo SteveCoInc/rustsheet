@@ -23,11 +23,13 @@ use crate::expressions::token::Error;
 use crate::model::Model;
 use crate::types::sheet_names_match;
 
+mod accumulate;
 mod date_groups;
 pub(crate) mod layout;
 mod model;
 mod number_groups;
 mod refresh;
+mod result;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
 pub use layout::{
@@ -43,6 +45,9 @@ pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
 pub use refresh::{
     read_source, refresh, regroup, RangeGrouping, RegroupError, SharedItemsFlags, SourceArea,
     SourceCells,
+};
+pub use result::{
+    compute, AxisNode, AxisTree, PivotComputeError, PivotResult, MAX_PIVOT_NODES, MAX_PIVOT_WORK,
 };
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
