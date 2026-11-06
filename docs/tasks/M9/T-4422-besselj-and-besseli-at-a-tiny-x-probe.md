@@ -87,14 +87,30 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4422-bessel-tiny-x
   `#NUM!`. All 18 Excel brackets equal the engine's own first non-number x. BESSELJ already matched. BESSELI flushed an
   overflow after the step j = n to 0 (`i0 / inf`), a band up to two decades wide below each cut; `in_miller` now returns
   NaN when its last term is not finite. No cut is chosen by scoring, so it is not a fit.
-- BESSELI's values: plain doubles missed 8 cells by 1 ulp (`BESSELI(±1E-6,7)` and six order-6 cells). The model is a
-  structural choice from three ranked candidates (decision 0188 R4, check 7 kind (b)): double rounding at every step and
-  rescale (fixed 3 cells), then also a double-rounded `ans * (i0/bi)` (fixed all 8). An 80-bit `i0/bi` held in a register
-  missed 58. Hold-out: no split was made before scoring. The candidates were scored on both whole cases, so the
-  fresh sweep below is the only held-out evidence.
-  - Fresh sweep, built after the model was frozen: probes-numeric/t4422-besseli-fresh-sweep (400 cells,
-    log-uniform |x| in [1E-15, 700], a third negative, orders 2 to 20, seed 4422, excel-graph). It passes 400/400
-    bit for bit.
+- BESSELI's values: plain doubles missed 8 cells by 1 ulp (`BESSELI(±1E-6,7)` and six order-6 cells). The rounding
+  model is a structural model chosen by scoring ranked candidates against oracle cells (reviewer-excel-fidelity check 7
+  kind (c), decision 0188 R4). The candidates were:
+  - plain doubles;
+  - double rounding at every step and rescale ("step");
+  - "step" plus a double-rounded `ans * (i0/bi)` ("full", chosen);
+  - "step" plus an 80-bit `i0/bi` kept in a register, which missed 58 cells and was dropped.
+
+  Train is the two scored cases. Hold-out is the fresh sweep, built and oracle-filled after the model froze and
+  never used to choose. It is about 11% of the cells, not 30%, because no split was fixed before scoring. Scores are
+  bit-exact against Excel, from release builds of each variant; every miss is 1 ulp, so all are within 4 ulp:
+
+  | candidate | train: cuts (2,736) | train: bisect (432) | hold-out: fresh sweep (400) |
+  |---|---|---|---|
+  | plain doubles | 2,734 | 426 | 396 |
+  | step | 2,736 | 427 | 399 |
+  | full (chosen) | 2,736 | 432 | 400 |
+
+  The margin on the hold-out is 4 cells over plain doubles and 1 over "step". "full" is also the model `jn_miller`
+  already uses for BESSELJ (T-2548): x87 code stored to doubles.
+  - Fresh sweep: probes/t4422-besseli-fresh-sweep (400 cells, log-uniform |x| in [1E-15, 700], a third negative,
+    orders 2 to 20, seed 4422, excel-graph). It lives in probes, not probes-numeric, because of decision 0267's probe
+    freeze. Gate A envelope on it: 400 of 400 inside, since every cell is bit-exact or the same error as Excel (35
+    `#NUM!`); no point lies outside.
   - Gate A (`rustsheet-eval accuracy`): 0 failing, BESSELI/s1 included. No `FITTED` tag: no constant was fitted.
   - Reproducibility floor: not engaged, since every target is bit-exact. Keep-matched branch: none.
 - engineering.md "BESSELJ and BESSELI at a tiny x and a small order" now carries the brackets and the rounding rule. The

@@ -1420,7 +1420,10 @@ and first `#NUM!` x, to 3 significant digits (|x|; the odd orders were also prob
 | 6 | 2.04E-24 / 2.03E-24 | 2.62E-16 / 2.61E-16 |
 | 7 | 5.03E-23 / 5.02E-23 | 1.19E-15 / 1.18E-15 |
 
-Every x below a cut is `#NUM!` down to 1E-306 (the 10^-k grid), and no probed cell is 0. The true values there are
+Every x below a cut is `#NUM!` down to 1E-306 (the 10^-k grid), and no probed cell is 0. The overflow rule is evidenced at
+orders 2 to 7 (the brackets), up to 20 (probes/t4422-besseli-fresh-sweep, e.g. `BESSELI(1.97228755898586E-13,19)` is
+`#NUM!`) and at 100,001 ("BESSEL order cap"); the engine applies it at every order, so orders 21 to 100,000 are
+extrapolated (the 0 the engine gave there before was unevidenced too). The true values there are
 ordinary doubles (I_4(1E-18) is about 2.6E-75), so the error is the algorithm's, not the value's.
 BESSELI's values there round twice at every step, the rescales and the final `ans * (i0/bi)` (x87 code stored to
 doubles, as BESSELJ's, T-2548): plain doubles miss `BESSELI(1E-6,7)` (1.550099206349255E-48), `(7E-15,6)`,
