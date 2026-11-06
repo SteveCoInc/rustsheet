@@ -3,7 +3,7 @@ id: T-4111
 title: "Gate A tables, depreciation: DB, DDB, SLN, SYD, VDB, AMORDEGRC and AMORLINC"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
