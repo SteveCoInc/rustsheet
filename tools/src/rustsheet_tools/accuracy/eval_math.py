@@ -22,6 +22,11 @@ A candidate cell gets no math value when:
   (`A112*A112`, `1/(1+20/(4*A1249))`; T-3924): the fit lab's one evaluator (`arithmetic`) gives its
   double, and the math is the function at that double;
 - an argument is anything else the fit lab's sweep reader leaves unparsed, text, empty or a range.
+  A `text` parameter (T-4084) takes a string literal or a text cell: one of its `choices`, or for a
+  complex number a text `parse_complex_text` reads whose numbers have at most 15 significant digits
+  (how Excel reads a longer IM* part is not probed: engineering.md "Engineering functions in the
+  gen-m9 engineering sweep"), and one
+  call's complex texts share one suffix (`i` or `j`).
   A nested call, or arithmetic between call results, makes the cell a composite instead
   (`composite`, T-3993, decision 0297): it gets the outermost node's math at its inner nodes'
   doubles, unless it calls a function with no definition (`no definition for ...`);
@@ -58,7 +63,7 @@ from typing import Any
 import mpmath
 
 from rustsheet_tools.accuracy import composite, defs, literal
-from rustsheet_tools.accuracy.model import REGISTRY, Definition, NoValueError, Param
+from rustsheet_tools.accuracy.model import REGISTRY, Definition, NoValueError, Param, Unfit
 from rustsheet_tools.accuracy.tables import (
     DIGITS,
     DPS,
@@ -68,7 +73,14 @@ from rustsheet_tools.accuracy.tables import (
     compute,
     math_sidecar_bytes,
 )
-from rustsheet_tools.fitlab.sweep import UnparsedError, Workbook, arithmetic, parse_arg, split_args
+from rustsheet_tools.fitlab.sweep import (
+    UnparsedError,
+    Workbook,
+    arithmetic,
+    parse_arg,
+    parse_complex_text,
+    split_args,
+)
 from rustsheet_tools.snapshot import suite_cases
 
 _ = defs  # importing the package registers the definitions
@@ -84,6 +96,8 @@ _SCALE = re.compile(r"(?P<call>.*\))\s*(?:(?P<op>[*/])\s*2\s*\^\s*(?P<k>[+-]?\d{
 # 2^k is a normal double for these k, so Excel's `^` gives it exactly.
 _SCALE_POWERS = range(-1022, 1024)
 _SMALLEST_NORMAL = 2.0**-1022
+# An unsigned number of a complex text (its mantissa and exponent), for the 15-digit check.
+_TEXT_NUMBER = re.compile(r"(?P<mantissa>\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?")
 
 
 @dataclass(frozen=True)
@@ -213,8 +227,17 @@ def array_elements(value: Any) -> tuple[float, ...] | str:
     return tuple(float(e) for e in flat)
 
 
-def fit_arg(param: Param, value: Any) -> literal.Arg | str:
-    """One argument as the parameter's kind, or why it does not fit."""
+def fit_arg(param: Param, value: Any) -> literal.Arg | Unfit:
+    """One argument as the parameter's kind, or why it does not fit (an `Unfit`: a text argument
+    is a plain str)."""
+    if param.kind == "text":
+        return fit_text(param, value)
+    fitted = _fit_number(param, value)
+    return Unfit(fitted) if isinstance(fitted, str) else fitted
+
+
+def _fit_number(param: Param, value: Any) -> literal.Arg | str:
+    """`fit_arg` for every kind but text: the argument, or why it does not fit (a str)."""
     if param.kind in ("array", "matrix"):
         # a matrix needs its shape, which the sweep reader flattens (TODO(T-4025))
         return array_elements(value) if param.kind == "array" else "a matrix argument"
@@ -228,6 +251,24 @@ def fit_arg(param: Param, value: Any) -> literal.Arg | str:
     if param.kind == "int":
         return fit_int(param, float(value))
     return float(value)
+
+
+def fit_text(param: Param, value: Any) -> str | Unfit:
+    """A text for a `text` parameter as is, or why it does not fit: a non-text (whether each
+    function reads a number as its text is not evidenced), a text outside `choices`, or for a complex
+    number one `parse_complex_text` does not read or with a number past 15 significant digits."""
+    if not isinstance(value, str):
+        return Unfit("non-text for a text parameter")
+    if param.choices:
+        return value if value in param.choices else Unfit("text outside the parameter's list")
+    try:
+        parse_complex_text(value)
+    except ValueError:
+        return Unfit("not a complex number text")
+    for m in _TEXT_NUMBER.finditer(value):
+        if len(m.group("mantissa").replace(".", "").strip("0")) > 15:
+            return Unfit("complex number part past 15 significant digits")
+    return value
 
 
 def fit_int(param: Param, value: float) -> int | str:
@@ -247,12 +288,17 @@ def fit_args(definition: Definition, values: list[Any]) -> list[literal.Arg] | s
     except ValueError:
         return "argument count"
     out: list[literal.Arg] = []
+    suffixes: set[str] = set()
     for param, value in zip(params, values, strict=True):
         arg = fit_arg(param, value)
-        if isinstance(arg, str):
-            return arg
+        if isinstance(arg, Unfit):
+            return str(arg)
+        if param.is_complex and isinstance(arg, str) and arg[-1:] in literal.COMPLEX_SUFFIXES:
+            suffixes.add(arg[-1])
         out.append(arg)
-    return out
+    # mixed suffixes are an error (IMSUM's #VALUE!, IMSUB's and IMDIV's #NUM!; engineering.md "IMSUM and
+    # IMPRODUCT take their arguments whole"), which the math (an `mpc` per text) does not model
+    return "mixed complex suffixes" if len(suffixes) > 1 else out
 
 
 def scored_cells(spec: dict[str, Any], oracle: dict[str, Any] | None) -> Iterable[tuple[str, str]]:

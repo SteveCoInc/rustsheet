@@ -18,10 +18,20 @@ import mpmath
 
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 
-Kind = Literal["real", "int", "bool", "array", "matrix"]
-MathArg: TypeAlias = "mpmath.mpf | bool | tuple[mpmath.mpf, ...] | tuple[tuple[mpmath.mpf, ...], ...]"
-"""An argument as the math sees it: the exact double (or integer) of the literal, a logical, an
-array literal's elements, or a matrix literal's rows."""
+Kind = Literal["real", "int", "bool", "array", "matrix", "text"]
+MathArg: TypeAlias = (
+    "mpmath.mpf | mpmath.mpc | bool | str | tuple[mpmath.mpf, ...] | tuple[tuple[mpmath.mpf, ...], ...]"
+)
+"""An argument as the math sees it: the exact double (or integer) of the literal, a logical, a complex
+number text's parsed parts (an `mpc` of the two exact doubles), a fixed-list text itself, an array
+literal's elements, or a matrix literal's rows."""
+
+
+class Unfit(str):
+    """Why an eval cell's argument does not fit its parameter (`eval_math.fit_arg`): a reason, told
+    apart from a fitted text argument, which is a plain str (T-4084)."""
+
+    __slots__ = ()
 
 
 class DomainError(ValueError):
@@ -104,6 +114,11 @@ class Param:
     `truncates` cites the semantics entry showing that Excel truncates a non-integer given to this
     `int` parameter toward zero (F.DIST's, T.DIST's and CHISQ.INV.RT's df); without one an eval cell that passes a
     non-integer gets no math value, since whether Excel truncates is per function.
+    A `text` parameter (T-4084) is written as a string literal. With `choices` it is drawn from that
+    fixed list (CONVERT's unit names, engineering.md "CONVERT unit names") and the math receives the
+    text; without, it is a complex number's text `a+bi` / `a-bj` whose two parts are drawn as reals
+    over this parameter's domain and ranges (engineering.md "Leading plus in IM*..."), and the math
+    receives the parsed parts as an `mpc`.
     """
 
     name: str
@@ -116,6 +131,17 @@ class Param:
     draw_hi: float | None = None
     optional: bool = False
     truncates: str = ""
+    choices: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.choices and self.kind != "text":
+            msg = f"{self.name}: only a text parameter takes choices"
+            raise ValueError(msg)
+
+    @property
+    def is_complex(self) -> bool:
+        """Whether this is a complex number's text (a `text` parameter without `choices`)."""
+        return self.kind == "text" and not self.choices
 
     def finite_bounds(self) -> list[tuple[float, bool, bool]]:
         """The finite domain bounds as (value, open, is_lower)."""
@@ -214,11 +240,21 @@ class Definition:
         """Raises `DomainError` when `args` are outside the parameters' intervals or `domain`."""
         rescaled = self.rescaled_param if len(args) > len(self.params) else None
         for p, a in zip(self.params_for(len(args)), args, strict=True):
-            if p.kind in ("bool", "array", "matrix") or isinstance(a, (bool, tuple)) or p.name == rescaled:
-                continue  # an array's or a matrix's rules, and a rescaled parameter's, are the definition's `domain`
-            if not p.domain.contains(float(a)):
-                msg = f"{p.name} outside {p.domain.describe()}"
-                raise DomainError(msg)
+            if isinstance(a, mpmath.mpc):  # a complex number's parts each take the parameter's interval
+                parts = [a.real, a.imag]
+            elif (
+                p.kind in ("bool", "array", "matrix", "text")
+                or isinstance(a, (bool, str, tuple))
+                or p.name == rescaled
+            ):
+                # an array's or a matrix's rules, a list text's and a rescaled parameter's are the definition's `domain`
+                continue
+            else:
+                parts = [a]
+            for part in parts:
+                if not p.domain.contains(float(part)):
+                    msg = f"{p.name} outside {p.domain.describe()}"
+                    raise DomainError(msg)
         if self.domain is not None and (why := self.domain(args)) is not None:
             raise DomainError(why)
 
