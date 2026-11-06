@@ -42,6 +42,7 @@ blindly). Reconcile the dates.md entry with what landed in #3647.
 ## Outcome
 Copied both T-4574 probes (`t4574-near-midnight-serial-60`, 234 cells; `t4574-near-midnight-calendar-units`, 112 cells,
 with oracle and math sidecars) and T-4624 from the #3637 branch (id still free on `main`). `make eval`: all 346 cells
-pass with `main`'s engine, so no failing cell needs an owner and no baseline change is needed (they were never
-known-failures); 0 regressions. #3637's "rounded to the nearest second" and #3647's half-second carry are the same cut;
+pass with `main`'s engine, so no failing cell needs an owner; `make eval-baseline` records the two cases (`C` lines
+only, no known failures); the math sidecars were regenerated (`rustsheet-accuracy math --function YEARFRAC`) because
+the branch's predate input fingerprints (T-4231); 0 regressions. #3637's "rounded to the nearest second" and #3647's half-second carry are the same cut;
 dates.md now says so. "Y"'s reading and the reversed-order/past-calendar cases remain with T-4624.
