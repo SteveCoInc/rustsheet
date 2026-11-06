@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4123: the oracle sidecar captures Excel's render of two pivots built by case builder v2 (a `definition`, which Excel lays out on open): a compact pivot (Region rows, Product columns, Sum of Sales) on C and a tabular one (Region and Product rows, Sum, % of grand total and Count of Sales) on T. The sidecar's `pivots` section holds each pivot's location, rowItems/colItems and every cell of its area. T2 repeats T with `compact=\"0\" outline=\"0\"` on the Sales data field too, which turns T's `Row Labels` header into `Region`. The formula on Q only makes the case scored; the pivot cells are scored by T-4124.",
+  "description": "T-4123: the oracle sidecar captures Excel's render of two pivots built by case builder v2 (a `definition`, which Excel lays out on open): a compact pivot (Region rows, Product columns, Sum of Sales) on C and a tabular one (Region and Product rows, Sum, % of grand total and Count of Sales) on T. The sidecar's `pivots` section holds each pivot's location, rowItems/colItems and every cell of its area. T2 repeats T with `compact=\"0\" outline=\"0\"` on the Sales data field too, which turns T's `Row Labels` header into `Region`; T3 sets only `compact=\"0\"` and T4 only `outline=\"0\"` on it, to tell the two apart. The formula on Q only makes the case scored; the pivot cells are scored by T-4124.",
   "tags": [
     "probe",
     "pivot",
@@ -160,6 +160,120 @@
               "Sales": {
                 "attrs": {
                   "compact": false,
+                  "outline": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "T3",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "TabularDataCompactOff",
+          "source": "Data!A1:C7",
+          "location": "A3",
+          "definition": {
+            "table": {
+              "outline": false,
+              "outlineData": false,
+              "compact": false,
+              "compactData": false
+            },
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales"
+              },
+              {
+                "field": "Sales",
+                "showDataAs": "percentOfTotal",
+                "name": "Pct",
+                "numFmtId": 10
+              },
+              {
+                "field": "Sales",
+                "subtotal": "count"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Product": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Sales": {
+                "attrs": {
+                  "compact": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "T4",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "TabularDataOutlineOff",
+          "source": "Data!A1:C7",
+          "location": "A3",
+          "definition": {
+            "table": {
+              "outline": false,
+              "outlineData": false,
+              "compact": false,
+              "compactData": false
+            },
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales"
+              },
+              {
+                "field": "Sales",
+                "showDataAs": "percentOfTotal",
+                "name": "Pct",
+                "numFmtId": 10
+              },
+              {
+                "field": "Sales",
+                "subtotal": "count"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Product": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Sales": {
+                "attrs": {
                   "outline": false
                 }
               }

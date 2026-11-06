@@ -89,12 +89,19 @@ Status: UNVERIFIED (probe pending: T-4128)
 
 ## A tabular pivot's first row header is `Row Labels` unless the data field is not compact
 Rule: in a tabular pivot (`outline="0"`, `compact="0"` on the table and on both row fields), the header
-cell of the first row field reads `Row Labels`. It reads the field's own name (`Region`) only when the
-data field's `pivotField` (Sales, which is on no axis) carries `compact="0"` too. The second row field's
-header is its name (`Product`) either way.
-Evidence: probes/t4123-pivot-capture T!A4 `Row Labels` and T2!A4 `Region` (excel-graph, 2026-11-06,
-T-4123). The two definitions differ only in the Sales field's `compact`/`outline`. This explains why
-oracle-spike.md run 4, whose hand-written XML set it, showed `Region`.
+cell of the first row field reads `Row Labels`. It reads the field's own name (`Region`) when the data
+field's `pivotField` (Sales, which is on no axis) carries `compact="0"`; its `outline` makes no
+difference. The second row field's header is its name (`Product`) in every variant.
+Evidence: probes/t4123-pivot-capture A4 (excel-graph, 2026-11-06, T-4123). The five sheets differ
+only in the Sales field:
+- T (no attributes): `Row Labels`;
+- T2 (`compact="0" outline="0"`): `Region`;
+- T3 (`compact="0"` only): `Region`;
+- T4 (`outline="0"` only): `Row Labels`.
+
+oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on that field, showed
+`Region` too, which this rule likely explains. Probed with one data field on one shape only; whether
+several data fields need all of them non-compact is open.
 Status: VERIFIED (excel-graph)
 
 ## Rendered pivot cells: blanks, repeated labels, subtotals and the Values caption

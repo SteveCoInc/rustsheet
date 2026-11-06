@@ -10,6 +10,8 @@
 //! size-capped reader, the lists stop at the engine's pivot limits, and a pivot whose parts are
 //! missing or malformed is skipped, never an error for the workbook.
 
+use std::collections::HashSet;
+
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use rustsheet_engine::pivot::{MAX_FIELDS, MAX_ITEMS};
@@ -37,6 +39,7 @@ pub struct PivotLine {
 /// A cache field of the pivot's cache, with Excel's group labels when it is grouped.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PivotCacheField {
+    /// The cache field's `name` (the source column's header).
     pub name: String,
     /// `<fieldGroup><groupItems>`, as Excel wrote them; empty for an ungrouped field. A `<d>`
     /// (date) item is kept as its ISO text, not converted to a serial: a scorer comparing date
@@ -54,27 +57,33 @@ pub struct PivotDef {
     pub sheet: String,
     /// `<location ref>`, e.g. `A3:E12`.
     pub location: String,
+    /// `firstHeaderRow`, `firstDataRow` and `firstDataCol`: offsets inside `location`.
     pub first_header_row: u32,
+    /// See `first_header_row`.
     pub first_data_row: u32,
+    /// See `first_header_row`.
     pub first_data_col: u32,
     /// `rowPageCount` and `colPageCount`: the page-field area above `location`.
     #[serde(default)]
     pub row_page_count: u32,
     #[serde(default)]
     pub col_page_count: u32,
+    /// `<rowItems>`, one line per rendered row of the body.
     pub row_items: Vec<PivotLine>,
+    /// `<colItems>`, one line per rendered data column.
     pub col_items: Vec<PivotLine>,
     /// The cache's fields, in cache order; empty when the cache part is missing.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub cache_fields: Vec<PivotCacheField>,
 }
 
-/// Appends the pivots of the sheet part at `sheet_path`, found through its relationships. A
-/// pivot whose part cannot be read or parsed is skipped.
+/// Appends the pivots of the sheet part at `sheet_path`, found through its relationships, except
+/// parts already in `seen`. A pivot whose part cannot be read or parsed is skipped.
 pub(super) fn read_sheet_pivots(
     zip: &mut Zip,
     sheet_path: &str,
     sheet: &str,
+    seen: &mut HashSet<String>,
     out: &mut Vec<PivotDef>,
 ) -> Result<(), SnapshotError> {
     let (dir, file) = sheet_path.rsplit_once('/').unwrap_or(("", sheet_path));
@@ -84,8 +93,8 @@ pub(super) fn read_sheet_pivots(
     let Ok(rels) = relationships(&rels, file) else {
         return Ok(());
     };
-    // A part listed twice is read once: repeated relationships must not multiply the work.
-    let mut seen = std::collections::HashSet::new();
+    // A part listed twice, by one sheet or by several, is read once: repeated relationships must
+    // not multiply the work. `seen` spans the workbook.
     for rel in rels.iter().filter(|r| r.kind.ends_with("/pivotTable")) {
         let path = resolve_target(dir, &rel.target);
         if !seen.insert(path.clone()) {
