@@ -3,7 +3,7 @@ id: T-4668
 title: "Undo of a row or column delete puts back the formulas the delete rewrote to #REF!"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
