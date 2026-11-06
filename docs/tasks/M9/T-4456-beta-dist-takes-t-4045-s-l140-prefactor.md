@@ -35,8 +35,10 @@ below DBL_MIN. F.INV's search keeps today's kernel.
   now `pub(crate)`. Where L140 bup+bgrat's prefactor ret is below DBL_MIN, the cdf is Excel's exact 0. Excel's
   complement is 1, after a swap. `bratio::beta_dist_lower_tail` is unchanged, so F.INV's search
   (`beta_lower_crossing`) and accuracy/F.INV/s1 A146 do not move. Unit test: `l140_prefactor_zero_is_beta_dists_zero`.
-- Cells fixed: probes/t4254-beta-t-l140-zero-cut A12:A22 and C12:C22 (from #3469). probes/t4456-beta-t-zero-cut
-  C10:C17 and D10:D17 (n = 25 and 29 bup terms, past the n <= 9 port).
+- Cells fixed:
+  - probes/t4254-beta-t-l140-zero-cut A12:A22, B12:B22, C12:C22 and D12:D22 (from #3469). The n = 3 families B and D are
+    past ln ret -709 from row 12 on, so the rule covers them there too.
+  - probes/t4456-beta-t-zero-cut C10:C17 and D10:D17 (n = 25 and 29 bup terms, past the n <= 9 port).
 - Probes, salvaged from the parked T-4254 branch (PR #3464, closed as a duplicate of #3469) and renamed:
   probes/t4456-beta-t-zero-cut (130 cells) and probes/t4456-beta-t-zero-reach (81 cells), excel-graph, 2026-11-06.
   statistics.md "Where the exact 0 starts (T-4045)" gains a "More shapes" bullet. It finds:
@@ -45,4 +47,7 @@ below DBL_MIN. F.INV's search keeps today's kernel.
   - Excel's F.INV root at A146 lies in its own cdf's flat 0.
 - Owners: T-4437 (scope narrowed to the earlier cut and the t) owns the visibly-off cells of the salvaged probes;
   T-4442 (filed) owns cut G1 (F.INV). `scripts/new_case_owners.py` passes.
-- Follow-ups: T-4442; T-4457 (sonnet: T-4223's statistics.md wording, the MINORs of PR #3475's fidelity review).
+- Eval delta: 44 known failures fixed (t4254-beta-t-l140-zero-cut), 0 regressions. The 2 new cases add 211 cells: 91
+  pass and 120 are known failures, owned by T-4437 (the earlier zeros), T-4442 (F.INV, cut G1) and T-4463 (30 cells
+  of 13th-digit tail residue). `scripts/new_case_owners.py` passes.
+- Follow-ups: T-4463; T-4442; T-4457 (sonnet: T-4223's statistics.md wording, the MINORs of PR #3475's fidelity review).
