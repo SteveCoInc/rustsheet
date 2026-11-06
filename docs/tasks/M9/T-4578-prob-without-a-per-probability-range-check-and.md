@@ -3,7 +3,7 @@ id: T-4578
 title: "PROB without a per-probability range check and with Excel's sum tolerance; CHISQ.TEST and Z.TEST overflow errors (T-4098 probe)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
