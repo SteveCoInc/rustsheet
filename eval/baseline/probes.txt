@@ -2406,6 +2406,7 @@ C	probes/t4426-aggregate-empty-and-bound-data.case.json	391
 C	probes/t4430-legacy-at-name-body-rest.case.json	181
 C	probes/t4444-dfunction-text-equal-one.case.json	52
 C	probes/t4447-sort-fractional-keys.case.json	84
+C	probes/t4448-lone-blank-reshapers.case.json	135
 C	probes/t4449-groupby-function-array-edges.case.json	145
 C	probes/t4450-eta-special-forms.case.json	152
 C	probes/t4453-near-integer-text-args.case.json	168
@@ -16192,6 +16193,7 @@ F	probes/t4394-api-name-active-last.case.json	S2!A1
 F	probes/t4394-api-name-active-last.case.json	S2!A3
 F	probes/t4394-api-name-active-s2.case.json	Last!A1
 F	probes/t4394-api-name-active-s2.case.json	S2!A3
+F	probes/t4448-lone-blank-reshapers.case.json	Sheet1!B9
 F	probes/t4450-eta-special-forms.case.json	Sheet1!F109
 F	probes/t4450-eta-special-forms.case.json	Sheet1!F115
 F	probes/t4450-eta-special-forms.case.json	Sheet1!F121
