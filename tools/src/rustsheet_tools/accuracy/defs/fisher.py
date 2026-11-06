@@ -185,9 +185,9 @@ def _f_dist_rt_domain(args: Sequence[MathArg]) -> str | None:
     quotient does (`F.DIST.RT(1E-300,6,1E+10)`, `FDIST(1E-300,6,1E+10)`, T-2435). Each is probed on both names."""
     x, d1, d2 = args
     if (
-        isinstance(x, (bool, tuple))
-        or isinstance(d1, (bool, tuple))
-        or isinstance(d2, (bool, tuple))
+        isinstance(x, (bool, str, tuple))
+        or isinstance(d1, (bool, str, tuple))
+        or isinstance(d2, (bool, str, tuple))
         or x <= 0
     ):
         return None

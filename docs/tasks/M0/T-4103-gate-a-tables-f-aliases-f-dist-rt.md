@@ -57,7 +57,7 @@ Every failing table point has an owner.
   - Tests: tools/tests/test_accuracy_f_right_tail.py (Microsoft's examples, Excel's values from the entries, the
     legacy names sharing value and domain, the boundary and overflow rules, the bup band).
 - Tables `eval/accuracy/tables/{F.DIST.RT,FDIST,F.INV.RT,FINV}/s1`: 196, 197, 174 and 174 points, filled from
-  excel-graph with 0 failures. `missing tables` 72 to 68.
+  excel-graph with 0 failures. `missing tables` 72 to 68 at the fill; 17 after merging main (21 there without them).
 - `rustsheet-eval accuracy`: 741 new points, 738 inside the envelope, 3 known failures, 0 failing, 0 table defects.
   Engine == Excel bit for bit: F.DIST.RT 146, FDIST 154, F.INV.RT 25, FINV 29 (354 of 741).
 - Known failures added: accuracy/F.INV.RT/s1 A155 (T-1871: the engine 1.8% off where Excel is the math), A112 and A142
