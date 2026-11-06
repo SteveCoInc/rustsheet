@@ -54,5 +54,8 @@ Every failing table point has an owner.
   36 points are outside the envelope, each the same behaviour its modern sibling already owns, now listed in
   known-failures.tsv: BETAINV 12 (T-3351, quantile rounds to 1), 5 (T-2808, shape 2.2E-308), 13 (T-3862, huge alpha and
   tiny p); BETADIST 5 (T-3577); CHIINV A93 (T-3364, Excel's Wilson-Hilferty start).
-- R3 candidate: CHIINV A93, Excel 2.7E-4 off the math. Excel is kept as the target (decision 0300); not marked.
+- CHIINV A93: Excel's Wilson-Hilferty closed form, 2.66e-4 off the math, is decision 0188 R3 case 3 (statistics.md
+  "GAMMA.INV at a huge shape, closed-form branch", which names CHIINV). Decision 0318 marks it in math-over-excel.tsv on
+  decision 0289's terms; it stays a known failure of T-3364, which moves the branch to the math. New evidence: shape 1.29E9.
+- statistics.md's T-1047 and T-1048 entries record the six tables as Gate A evidence for the alias rule.
 - Math sidecars of the probes and probes-numeric cells that call the six names (`rustsheet-accuracy math --function`).
