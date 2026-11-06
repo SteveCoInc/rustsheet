@@ -3,7 +3,7 @@ id: T-4095
 title: "Gate A tables, covariance: COVAR, COVARIANCE.P, COVARIANCE.S and STEYX"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
