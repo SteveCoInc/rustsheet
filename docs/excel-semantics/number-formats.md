@@ -1610,15 +1610,32 @@ t4043-placeholder-denominator-slots, t3711-fixed-denominator-then-placeholder, t
 t3532-numeral-digit-fields row 14 (the zeros take the numeral digits). The model matched every cell of those probes in an
 engine that was not merged; its placeholder-denominator part does not fit the mixed denominators of "Fraction formats"
 above (`# ?/#0` on 12.5 is "12 1/2", the model gives "12 1/02"; probes/t4204-fraction-denominator-mixed), so a
-placeholder denominator prints its own text by that entry and hands on only its lacking digits by this one. Not
-covered: a tail with a `.` among its placeholders. `# ?/7 ?.?` on 0.0123 is " 123/7 0000. " (the `?` before the point
-takes every spilled digit), and after the point the owed zeros are not paid (`# ?/7 ?.0` " 123/7 0000.0";
-probes/t4515-fraction-tail-holdout E6, t4515-fresh-sweep rows 1-8, excel-graph 2026-11-06; T-4594). A first guess at
-this, "take all before the point and owe one", was falsified by that sweep.
-Ours: matches (T-4515): `picked_denominator` and `trailing_digits` in formatter/fraction.rs, which now pick a fixed
-denominator followed by placeholders up to 9999999, as for one past 32768. Hold-out: probes/t4515-fraction-tail-holdout
-(147 cells, written after the model froze: denominators 8, 32, 3, 50, 1000, 7, 5, `??` and `???`, quoted text and
-commas in the tail, no integer part, blanks, negatives) passes everything except E6, the `.` above.
+placeholder denominator prints its own text by that entry and hands on only its lacking digits by this one.
+- **A `.` among them** splits them like a number's point (T-4594). Before it the rules above hold, except that the last
+  placeholder before the point, if a `?`, takes every spilled digit left (`# ?/7 ?.0` on 0.0123 is " 123/7 0000.0", not
+  one digit), and zeros are left *pending* for the decimals:
+  - a `?` that prints a space adds one, and a `?` that prints a spilled digit clears them (`# ?/7|??.#|#` on 0.5 is
+    " 1/7|  .0|0": two spaces, two pending zeros; on 0.1 " 1/7|0 .0|": one);
+  - a `0` or `#` leaves one plus one for each placeholder before it, except a `?` that printed a lacking zero or a zero
+    for nothing due (`# ?/7|?0.###` on 0.0123 " 123/7|000000.00", `# ?/3|??0.?0?` on 0.04 " 1/3|5 00.000",
+    `# ?/64|#?#.0##` on 0.07 " 7/64|00000.00", `# ?/100|?0.###` on 0.5 " 1/1  |00.0");
+  - a `?` that then prints a zero for nothing due takes one (`# ?/250|?0?.#0` on 0.0789 " 789/250|00000.00").
+- **After the point** nothing spills and nothing owed is paid. Left to right, each placeholder prints a zero for a lacking
+  digit, leaving the space due as it was. Otherwise it prints, outside a run of blanks, a pending zero (then a space is
+  due). Otherwise, while a space is due, it prints its *blank*: a space for `?`, nothing for `#`, a zero for `0`; the
+  blank leaves one more zero pending and the space stays due. Otherwise it prints a zero (then a space is due). A blank
+  ends the space due, and its run, before a literal or a placeholder of another kind. Examples after a spilled digit
+  (`# ?/7|?.`… on 0.0123, " 123/7|0000." then): `#` prints "", `##` "", `#?` "0", `?#` " 0", `0#` "00", `#0` "0",
+  `#|#` "|0", `##0?` (on 0.55 under `?/128`) "00"; after a `0`: `0.#` "0", `0.0#` "0", `0.#?` "0 ", `0.##0` "00".
+Evidence (excel-graph 2026-11-06): probes/t4594-fraction-tail-point-explore (320 cells) and
+t4594-fraction-tail-point-explore-wide (648 cells, every three-wide decimal shape after `0`, `?0`, `?` and `??`), which
+the model was fitted to with t4515-fresh-sweep rows 1-8 and t4515-fraction-tail-holdout row 6; then five hold-outs, each
+written and predicted (docs/research/t4594) before it was filled: t4594-fraction-tail-point-holdout 192/210,
+-holdout-2 199/252, -holdout-3 271/280, -holdout-4 332/336, each miss refitted, and -holdout-5 392/392 (random integer
+shapes up to 3 wide, decimal shapes up to 4 wide, literals among them, codes 256, 4, 5000 and 75).
+Ours: matches (T-4515, T-4594): `picked_denominator` and `trailing_digits` in formatter/fraction.rs, which pick a fixed
+denominator followed by placeholders up to 9999999, as for one past 32768. Every cell of the probes above passes.
+Not covered: a tail whose integer side has no placeholder (`?/7|.0`), and a second `.`.
 Status: VERIFIED (excel-graph). Tasks: T-3711, T-4507, T-4515, T-4594
 
 ## Fill characters (`*x`) add nothing to the text
