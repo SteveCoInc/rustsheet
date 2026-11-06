@@ -681,8 +681,11 @@ Four things it leaves as the source had them, on the assumption that Excel opens
 - **Empty rows.** Clearing every cell of a row leaves its `<row>` element in place. A row without cells is valid
   (§18.3.1.73) and is how Excel stores a row that has only a height or a style.
 - **`calcChain`.** It is copied unchanged while no formula cell is added or removed. When the set of formula cells
-  changes, the patch falls back to regeneration, which drops the chain (SPEC-0034 E2). Excel's repair of a chain
-  that names a non-formula cell ("Removed Records: Formula from /xl/calcChain.xml") is therefore never relied on.
+  changes, the chain is dropped with its relationship and override, as the regenerating export drops it
+  (SPEC-0034 E2, T-4561). Excel rebuilds a missing chain. Its repair of a chain that names a non-formula cell
+  ("Removed Records: Formula from /xl/calcChain.xml") is therefore never relied on.
+- **Metadata.** A source with no `metadata.xml` of its own gets the export's parts once a patched cell needs `vm`
+  or `cm` (T-4561). Those parts are what a regenerated save writes.
 
 There is no oracle evidence yet that Excel opens such packages without a repair prompt. An Excel resave through the
 T-4180 oracle flow is the probe.

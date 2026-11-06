@@ -916,7 +916,7 @@ C	roundtrip-corpus-bench/CF_8276/1_CF_8276_input.xlsx	869
 C	roundtrip-corpus-bench/CF_8830/1_CF_8830_input.xlsx	842
 C	roundtrip-corpus-bench/CF_9945/1_CF_9945_input.xlsx	1395
 F	roundtrip-corpus-bench/132-4/1_132-4_input.xlsx	* 1 c30cd308b9f924ee
-F	roundtrip-corpus-bench/1726/1_1726_input.xlsx	* 594 b36c3a7cf40a41a9
+F	roundtrip-corpus-bench/1726/1_1726_input.xlsx	* 4 ae8bef3e867ec041
 F	roundtrip-corpus-bench/248-48/1_248-48_input.xlsx	* 1 117bc48af363a24c
 F	roundtrip-corpus-bench/33355/1_33355_input.xlsx	* 3 a49b9b9c964ab589
 F	roundtrip-corpus-bench/341-40/1_341-40_input.xlsx	* 1 c30cd308b9f924ee

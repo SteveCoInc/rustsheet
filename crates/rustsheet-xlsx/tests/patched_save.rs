@@ -15,6 +15,8 @@ use rustsheet_xlsx::import::load_from_xlsx_bytes;
 
 const SHEET: &str = "xl/worksheets/sheet1.xml";
 const STRINGS: &str = "xl/sharedStrings.xml";
+const RELS: &str = "xl/_rels/workbook.xml.rels";
+const TYPES: &str = "[Content_Types].xml";
 
 /// A1 = 2, A2 = `=A1*3`, A3 = "x", A4 = 7: saved by the export, with every cached value right.
 fn source() -> Vec<u8> {
@@ -266,15 +268,91 @@ fn inline_strings_the_part_lacks_make_a_new_string_regenerate() {
 }
 
 #[test]
-fn a_calc_chain_keeps_the_patch_only_while_the_formula_cells_stay_the_same() {
+fn a_calc_chain_is_kept_while_the_formula_cells_hold_and_dropped_with_its_links_when_they_change() {
     let chain = r#"<calcChain xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><c r="A2" i="1"/></calcChain>"#;
     let src = with_entry(&source(), "xl/calcChain.xml", chain);
+    let src = rezip(
+        &src,
+        RELS,
+        "</Relationships>",
+        r#"<Relationship Id="rIdCC" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/calcChain" Target="calcChain.xml"/></Relationships>"#,
+    );
+    let src = rezip(
+        &src,
+        TYPES,
+        "</Types>",
+        r#"<Override PartName="/xl/calcChain.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.calcChain+xml"/></Types>"#,
+    );
     let (out, tier) = save_after(&src, |m| m.set_user_input(0, 1, 1, "5".into()).unwrap());
     assert_patched(&tier);
     assert_eq!(part(&out, "xl/calcChain.xml"), chain);
-    // A2's formula replaced by a constant: the chain would name a cell with no formula.
-    let (_, tier) = save_after(&src, |m| m.set_user_input(0, 2, 1, "9".into()).unwrap());
-    assert!(matches!(tier, SaveTier::Regenerated { .. }), "{tier:?}");
+    // A2's formula replaced by a constant: the chain would name a cell with no formula, so it goes
+    // with its relationship and override (SPEC-0034 E2), and nothing else changes.
+    let (out, tier) = save_after(&src, |m| m.set_user_input(0, 2, 1, "9".into()).unwrap());
+    assert_patched(&tier);
+    assert!(!entries(&out).contains_key("xl/calcChain.xml"));
+    assert!(!part(&out, RELS).contains("calcChain"));
+    assert!(!part(&out, TYPES).contains("calcChain"));
+    assert_eq!(value(&out, (2, 1)), "9");
+}
+
+/// `source()` without `xl/metadata.xml`, its relationship and its override, as a workbook from a
+/// writer that never needed one.
+fn source_without_metadata() -> Vec<u8> {
+    let rels = part(&source(), RELS);
+    let link = rels
+        .split("<Relationship ")
+        .find(|r| r.contains("metadata.xml"))
+        .map(|r| format!("<Relationship {}", &r[..=r.find("/>").unwrap() + 1]))
+        .unwrap();
+    let src = rezip(&source(), RELS, &link, "");
+    let src = rezip(
+        &src,
+        TYPES,
+        r#"<Override PartName="/xl/metadata.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheetMetadata+xml"/>"#,
+        "",
+    );
+    let mut all = entries(&src);
+    all.remove("xl/metadata.xml");
+    let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (entry, data) in all {
+        out.start_file(entry, zip::write::SimpleFileOptions::default())
+            .unwrap();
+        out.write_all(&data).unwrap();
+    }
+    out.finish().unwrap().into_inner()
+}
+
+#[test]
+fn a_source_without_metadata_takes_the_exports_for_rich_errors_and_dynamic_arrays() {
+    let src = source_without_metadata();
+    assert!(!entries(&src).contains_key("xl/metadata.xml"));
+    // A spill blocked by A7 (#SPILL!, a rich error: `vm`), and one that spills (`cm`).
+    let (out, tier) = save_after(&src, |m| {
+        m.set_user_input(0, 7, 1, "block".into()).unwrap();
+        m.set_user_input(0, 6, 1, "=SEQUENCE(2)".into()).unwrap();
+        m.set_user_input(0, 9, 2, "=SEQUENCE(2)".into()).unwrap();
+    });
+    assert_patched(&tier);
+    let all = entries(&out);
+    assert!(all.contains_key("xl/metadata.xml"), "{:?}", all.keys());
+    assert!(
+        all.keys().any(|k| k.starts_with("xl/richData/")),
+        "{:?}",
+        all.keys()
+    );
+    let rels = part(&out, RELS);
+    assert!(rels.contains(r#"Target="metadata.xml""#), "{rels}");
+    assert!(part(&out, TYPES).contains(r#"PartName="/xl/metadata.xml""#));
+    assert_eq!(value(&out, (6, 1)), "#SPILL!");
+    assert_eq!(
+        (value(&out, (9, 2)), value(&out, (10, 2))),
+        ("1".into(), "2".into())
+    );
+    // Without any rich value or dynamic array, no part is added.
+    let (out, tier) = save_after(&src, |m| m.set_user_input(0, 1, 1, "5".into()).unwrap());
+    assert_patched(&tier);
+    assert!(!entries(&out).contains_key("xl/metadata.xml"));
 }
 
 #[test]
