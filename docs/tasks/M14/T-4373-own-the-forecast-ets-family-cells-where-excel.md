@@ -27,6 +27,9 @@ hence `defer`.
   arguments (K35, K39:K42). K37 and K38 already match. statistics.md cites this case (K3, K8, K14, K19, K25, K30).
 - probes/forecast-ets-longer-series.case.json (40): Sheet1!K1:K36, Sheet1!K39:K42
 
+Also owns (decision 0308) the desktop-only CELL cells listed in eval/milestones/phase1-exceptions.tsv (calipers goldens,
+info types color, filename, format, parentheses, prefix, protect, width), and every FORECAST.ETS-family line there.
+
 ## Acceptance criteria
 - [ ] If a desktop or web oracle ever returns numbers for the family, refill both cases and compare the cells
       (reprobe I1:I8 and J1:J8; longer-series K1:K42).
