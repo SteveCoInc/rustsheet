@@ -1,4 +1,4 @@
-//! How close a function's scored cells come to Excel: the six buckets of the parity page
+//! How close a function's scored cells come to Excel: the buckets of the parity page
 //! (`tools/src/rustsheet_tools/progress_report/parity.py`, T-2041), counted by the report (T-2036).
 //!
 //! The buckets follow decision 0083's order of parity: a cell is *visibly* right when the 15
@@ -12,13 +12,18 @@
 //! the 15th digit but within half a unit in the 13th is `residue13`, Phase 1b residue that every
 //! report counts and shows but none counts as visibly off. There Excel itself is rarely correctly
 //! rounded (about 1% of 2,026 sampled cells), so those digits measure Excel's rounding noise.
+//!
+//! Decision 0188 R3 has the engine follow the 50-digit math where Excel is more than G = 1e-4 off
+//! it: a number the run marks [`Target::Math`] (R1(c)'s [`crate::r1c::R1c::R3Pass`] test,
+//! [`crate::r1c::r3_math`]) is `r3_math`, math over Excel by design, counted and shown every run
+//! but not visibly off (decision 0310, T-4520).
 
 use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
 use crate::formula_calls::functions_in;
-use crate::runner::CellResult;
+use crate::runner::{CellResult, Target};
 use crate::value::{ulp_distance, Value, Verdict};
 
 /// Scored cells per closeness bucket. `unsupported` cells are not scored and count in none.
@@ -39,8 +44,13 @@ pub struct Closeness {
     /// not visibly off (decision 0267). `default` keeps older report.json files readable.
     #[serde(default)]
     pub residue13: usize,
+    /// Numbers where the engine returns the 50-digit math instead of Excel's value by design
+    /// (decision 0188 R3, [`Target::Math`]): not visibly off (decision 0310). `default`
+    /// keeps older report.json files readable.
+    #[serde(default)]
+    pub r3_math: usize,
     /// Numbers further apart than half a unit in the 15th significant digit, including 0
-    /// against nonzero and non-finite values, and not `residue13`.
+    /// against nonzero and non-finite values, and neither `residue13` nor `r3_math`.
     pub visible_numeric: usize,
     /// A wrong type, error, text or boolean.
     pub visible_other: usize,
@@ -59,6 +69,8 @@ fn bucket(cell: &CellResult) -> Option<Bucket> {
             (Value::Number(e), Value::Number(a)) if within_fifteen_digits(*e, *a) => {
                 Bucket::Digits15
             }
+            // The run marks numbers only, where R1(c) passes an R3 cell (`r1c::mark_r3_math`).
+            (Value::Number(_), Value::Number(_)) if cell.target == Target::Math => Bucket::R3Math,
             (Value::Number(e), Value::Number(a))
                 if within_significant_digits(*e, *a, 13) && in_thirteen_digit_family(cell) =>
             {
@@ -83,6 +95,7 @@ enum Bucket {
     Ulp4,
     Digits15,
     Residue13,
+    R3Math,
     VisibleNumeric,
     VisibleOther,
 }
@@ -97,6 +110,7 @@ impl Closeness {
             Bucket::Ulp4 => &mut self.ulp4,
             Bucket::Digits15 => &mut self.digits15,
             Bucket::Residue13 => &mut self.residue13,
+            Bucket::R3Math => &mut self.r3_math,
             Bucket::VisibleNumeric => &mut self.visible_numeric,
             Bucket::VisibleOther => &mut self.visible_other,
         } += 1;
@@ -105,11 +119,17 @@ impl Closeness {
     /// The scored cells, every bucket summed.
     #[must_use]
     pub fn scored(&self) -> usize {
-        self.pass + self.ulp1 + self.ulp4 + self.digits15 + self.residue13 + self.visible()
+        self.pass
+            + self.ulp1
+            + self.ulp4
+            + self.digits15
+            + self.residue13
+            + self.r3_math
+            + self.visible()
     }
 
     /// The visibly-off cells: `visible_numeric` and `visible_other` (decision 0083). `residue13`
-    /// is not among them (decision 0267).
+    /// (decision 0267) and `r3_math` (decision 0310) are not among them.
     #[must_use]
     pub fn visible(&self) -> usize {
         self.visible_numeric + self.visible_other
@@ -184,21 +204,33 @@ impl Visible {
     }
 
     /// Whether `cell` is visibly off (decision 0083): the one test every report section uses,
-    /// with the incomplete-beta family at 13 digits (decision 0267).
+    /// with the incomplete-beta family at 13 digits (decision 0267) and R3 math-over-Excel cells
+    /// left out (decision 0310).
     #[must_use]
     pub fn is_off(cell: &CellResult) -> bool {
         Visible::of(cell).total() > 0
     }
 
-    /// Whether `cell` is off at the 15-digit bar for every function, `residue13` included: Gate
-    /// A's envelope (decision 0188 R2), which decision 0267 leaves at 15 digits. The same buckets
-    /// as [`Visible::is_off`], so there is still one 15-digit rule.
+    /// Whether `cell` is off at the 15-digit bar for every function, `residue13` and `r3_math`
+    /// included: Gate A's envelope (decision 0188 R2), which decision 0267 leaves at 15 digits and
+    /// which drops Excel's side of an R3 point its own way, so decision 0310 does not reach it.
+    /// The same buckets as [`Visible::is_off`], so there is still one 15-digit rule.
     #[must_use]
     pub fn is_off_at_fifteen_digits(cell: &CellResult) -> bool {
         matches!(
             bucket(cell),
-            Some(Bucket::Residue13 | Bucket::VisibleNumeric | Bucket::VisibleOther)
+            Some(
+                Bucket::Residue13 | Bucket::R3Math | Bucket::VisibleNumeric | Bucket::VisibleOther
+            )
         )
+    }
+
+    /// Whether `cell` is in the `r3_math` bucket: a number the run marked
+    /// [`Target::Math`], past half a unit in the 15th digit of Excel's value (decision
+    /// 0310). R1(c) still classifies it, as [`crate::r1c::R1c::R3Pass`].
+    #[must_use]
+    pub fn is_r3_math(cell: &CellResult) -> bool {
+        bucket(cell) == Some(Bucket::R3Math)
     }
 
     /// Whether `cell` is a known failure (neither bit-exact nor a pinned deviation) that is
@@ -336,6 +368,7 @@ mod tests {
             graph_subnormal: false,
             kind: crate::runner::CellKind::Scored,
             math: None,
+            target: crate::runner::Target::Excel,
         }
     }
 
@@ -364,6 +397,7 @@ mod tests {
             ulp4: 1,
             digits15: 1,
             residue13: 0,
+            r3_math: 0,
             visible_numeric: 2,
             visible_other: 1,
         };
@@ -446,6 +480,47 @@ mod tests {
         let mut c = Closeness::default();
         c.add(&with_formula("=BETA.DIST(1,2,3,TRUE)", e, off15));
         assert_eq!((c.residue13, c.visible(), c.scored()), (1, 0, 1));
+    }
+
+    #[test]
+    fn a_number_the_run_marks_r3_math_is_its_own_bucket() {
+        // Decision 0310: the mark (set by `r1c::mark_r3_math`) moves a number past the 15-digit
+        // bar out of `visible_numeric`; within 15 digits it stays `digits15`.
+        let marked = |c: CellResult| CellResult {
+            target: Target::Math,
+            ..c
+        };
+        let off = marked(cell(
+            Value::Number(1.0),
+            Value::Number(1.001),
+            Verdict::NumericMismatch,
+        ));
+        assert_eq!(bucket(&off), Some(Bucket::R3Math));
+        assert!(!Visible::is_off(&off));
+        assert_eq!(Visible::of(&off), Visible::default());
+        assert!(Visible::is_off_at_fifteen_digits(&off));
+        let close = marked(cell(
+            Value::Number(1.0),
+            Value::Number(1.0 + 1e-15),
+            Verdict::NumericClose,
+        ));
+        assert_eq!(bucket(&close), Some(Bucket::Digits15));
+        // A wrong type keeps its bucket whatever the mark says.
+        let typed = marked(cell(
+            Value::Number(1.0),
+            Value::Error("#NUM!".into()),
+            Verdict::TypeMismatch,
+        ));
+        assert_eq!(bucket(&typed), Some(Bucket::VisibleOther));
+        let mut c = Closeness::default();
+        c.add(&off);
+        assert_eq!((c.r3_math, c.visible(), c.scored()), (1, 0, 1));
+        // A report.json from before the bucket reads it as 0.
+        let old: Closeness = serde_json::from_str(
+            r#"{"pass":1,"ulp1":0,"ulp4":0,"digits15":0,"visible_numeric":2,"visible_other":0}"#,
+        )
+        .unwrap();
+        assert_eq!((old.r3_math, old.residue13, old.visible()), (0, 0, 2));
     }
 
     #[test]

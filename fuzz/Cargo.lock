@@ -639,6 +639,7 @@ dependencies = [
  "rustsheet_engine",
  "rustsheet_xlsx",
  "thiserror",
+ "zeroize",
 ]
 
 [[package]]
@@ -650,6 +651,7 @@ dependencies = [
  "rustsheet",
  "rustsheet_engine",
  "rustsheet_xlsx",
+ "zip",
 ]
 
 [[package]]

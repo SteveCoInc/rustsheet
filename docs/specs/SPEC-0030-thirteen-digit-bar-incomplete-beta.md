@@ -91,3 +91,39 @@ decision 0267's Context and the docs/excel-semantics/statistics.md entries it ci
 ## Rollout
 One PR, with T-4055 and T-4056 together (decision 0267). After it merges, the steward's next `make progress-report`
 shows the new headline. `--lower-visible-lock` then lowers the visible-parity lines the residue frees.
+
+## R3 math-over-Excel cells (decision 0310, T-4520)
+Decision 0310 adds a second bucket that is counted and shown but not visibly off. It follows the same pattern as
+`residue13`.
+- **Which cells qualify.** A cell qualifies when R1(c)'s R3 pass holds for it. The one test is `r1c::r3_math`:
+  - both values are numbers;
+  - `eval/accuracy/math-over-excel.tsv` marks the cell;
+  - Excel is more than G = 1e-4 off its math value;
+  - the engine is within ε of the math.
+
+  `r1c::mark_r3_math` applies it once per run (`rustsheet-eval run` and `check`), before `RunReport::build`, and
+  stores it as `CellResult::target` = `Target::Math`. `closeness::bucket` reads it. `r1c::classify` calls the same test, so
+  `R1c::R3Pass` and the bucket cannot disagree.
+- **The bucket.** `Closeness` gains `r3_math`, with `#[serde(default)]` so older report.json files still parse.
+  - A `NumericClose` or `NumericMismatch` number lands there when it is past `within_fifteen_digits` and marked `Target::Math`.
+    The test comes before `residue13`; the two cannot both hold, since the engine is then about 1e-4 off Excel.
+  - `scored()` includes it and `visible()` does not.
+  - `Tier::of` places a function with any such cell no higher than `rate999`.
+- **Consumers.** These read the bucket through `Visible` or `Closeness`, so they move together:
+  - report.json `closeness`, `attributed` and `excel`;
+  - `attributed_off` and `unattributed_off`;
+  - the Phase 1 rate and tiers;
+  - the milestone exits, `function_scope` and `poi_m8_subset`;
+  - the frozen lists' visibly-off names;
+  - the visible-parity lock;
+  - report.md's "Visibly off" table, which gains an `r3_math` column;
+  - the dashboard: `model.BUCKETS` and `OPTIONAL_BUCKETS`, the bucket table, the closeness sentence, the charts,
+    history `off_cells.r3_math`, and a "Since the last run" line. Each reads 0 from an older report or row.
+- **R1(c), the probe rows and Gate B.** `r1c::classify` still classifies these cells as `R3Pass`. So the R1(c) line,
+  `r1c_left_out` (scripts/exit_owners.py) and Gate B are unchanged. The probe rows count them in `r3_pass` but no
+  longer in `visibly_off`. `r1c_off`, which the probe-row exits read, does not change.
+- **Gate A.** Gate A is unchanged. `Visible::is_off_at_fifteen_digits` counts `r3_math` as off, the envelope drops
+  Excel's side of an R3 point its own way, and Gate A's points never carry the mark.
+- **Measured** with `rustsheet-eval run --suite probes-numeric` at origin/main e72ae138. Visible numeric went from
+  4,346 to 4,280, and `r3_math` from 0 to 66: all 66 are t3367-nper-tiny-rate cells. Visibly off went from 4,820 to
+  4,754. The bit-exact, type and error counts did not move.

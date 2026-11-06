@@ -5567,7 +5567,7 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
     loses three bit-exact cells elsewhere (gen-m9/984cba67bbe6972b A162 `GAMMA.INV(1-1E-16,GAMMALN.PRECISE(3),0.999)`,
     gen-m9/b8ee55934c5b824c A134, probes-numeric/m9-gamma-inv A8 `GAMMA.INV(1e-10,0.5,1000000)`, 1 ulp each). So
     the plain-product rule is not general and is not implemented.
-- Excel's BETA.INV is erratic where the shape is extreme: `BETA.INV(1E-300,0.5,100)` = `BETA.INV(1E-200,0.5,100)` = 2.7050408442680296E-151 (the true quantile underflows to 0, ours 0); `BETA.INV(p,0.01,0.01)` is `#NUM!` for every p; `BETA.INV(1E-200,1000,1)` = 0.2064 and `BETA.INV(1E-20,1000,1)` = `#NUM!`, neither near the true quantile 0.9549925860214368. Ours is 0.9632618940201478 since T-3007 (the crossing of a cdf whose w1 is now the complement of w, "Incomplete beta at a shape of 1 outside the closed forms"). These are not implemented.
+- Excel's BETA.INV is erratic where the shape is extreme: `BETA.INV(1E-300,0.5,100)` = `BETA.INV(1E-200,0.5,100)` = 2.7050408442680296E-151 (the true quantile, about 7.9E-603, underflows to 0; ours is `#NUM!`, checked by T-3386 on 2026-11-06); `BETA.INV(p,0.01,0.01)` is `#NUM!` for every p; `BETA.INV(1E-200,1000,1)` = 0.2064 and `BETA.INV(1E-20,1000,1)` = `#NUM!`. The true quantile of `BETA.INV(1E-200,1000,1)` is (1E-200)^(1/1000) = 0.630957344480193 (the committed math sidecar of probes-numeric/t1543 A86), and ours is 0.6309573444801932 (checked by T-3386), so the cell is R3-marked ("Tiny-p quantiles: Excel is grossly wrong"). Excel's other values here are not implemented.
 - Open (inferred, not probed directly): Excel's `BETAINV(1E-15,1E+8,1)` is not the closed form `p^(1/alpha)`. gen-m9 5ded7594e597e31e A177, `IPMT(BETAINV(1E-15,1E+8,1),1.5,77,75622)`, is -75621.97390807692 in Excel, which implies a quantile of about 1-3.45031E-7 against the closed form's 0.9999996546122957 (1-3.45388E-7), 3.6E-10 relative apart (T-2587). Probe and fix: T-2936.
 - Ours: `statrs`' `Beta::inverse_cdf` panics from p about 1E-200 and does not finish for `BETA.INV(1E-100,1000,1)` or for any shape of 1E8 or more, at any p. Since T-2119, `BETA.INV` uses the capped search only as the start for shapes up to 1E5 and p of 1E-15 or more. It then refines to the crossing of BETA.DIST's own cdf (the T-0970 incomplete beta), and with no start it bisects that cdf. Nine BETADIST_BETAINV.xlsx cells were 1-4 ulp off on it (T-2633); after T-2510, H2 and H67 pass and seven are still 1-4 ulp off (T-3374). A sweep of NORM.INV, NORM.S.INV, LOGNORM.INV, CHISQ.INV, CHISQ.INV.RT, GAMMA.INV and CONFIDENCE.NORM over the same p found no panic or slow case.
 
@@ -7277,9 +7277,34 @@ Tasks: T-4092, T-4068
 Rule: at p < 1e-150, T.INV(p, df), F.INV(p, d1, d2) and BETA.INV(p, alpha, beta) in their left tail and
 CHISQ.INV.RT(p, df) in its right tail (a tiny p is the upper tail there) can be far from the true quantile in Excel;
 where Excel's relative error exceeds G = 1e-4 RustSheet returns the 50-digit math value (decision 0188 R3).
+On the probes-numeric and m9 cells decision 0267 item 3 rules (narrowed by decision 0301; marked by T-3386, decision
+0311), the same holds for T.INV.2T(p, df) and TINV(p, df) from p 1.7E-110 down, and for T.INV and BETA.INV at the
+listed cells, point by point: no band is ruled.
 Region (T-3358, from its R3-marked points; still bounded by p < 1e-150):
 - T.INV: p from 2.4E-259 to 9.0E-222 at df 10068 to 274584, plus the assessment's `T.INV(1.87E-297,3937)`.
 - F.INV: p from 2.2E-308 to 9.0E-245 at (d1, d2) of (17, 50), (39, 3), (1024, 56), (107702, 58) and (215432724, 6).
+
+Region (T-3386, decision 0311: the R3-marked eval cells, each with its committed math sidecar value):
+- probes-numeric/t3349-t-inv-2t-sweep: T.INV.2T at 42 cells (A211, A214-A217, A219, A224, A225, A230, A232,
+  A237-A240, A242, A243, A246, A252, A257, A262-A264, A266, A270, A272-A274, A277, A279-A281, A283-A285, A287-A289,
+  A291, A293, A294, A296, A300), p from 1.38E-300 to 1.73E-110 at df 2490 to 9987930597. Excel is 0.74 to 2.05
+  relative off the math (`T.INV.2T(6.68863396408457E-199,2490)`: Excel 100.837, math 33.0472).
+- probes-numeric/t1531-t-tiny-p: T.INV at A73, A74, A97 and A98 (p 1E-300 and 1E-200, df 99999 and 100000);
+  T.INV.2T at A82 and A106 and TINV at A83 and A107 (p 1E-300, df 99999 and 100000).
+- probes-numeric/t1543-inverse-cdf-tiny-p: `BETA.INV(1E-200,1000,1)` at A86 (Excel 0.2064, math 0.630957, which is
+  (1E-200)^(1/1000)).
+- gen-m9/7980ffb6095a340d: `TINV(1E-200,1E+10)` at A160 (Excel 58.193, math 30.2285087720; the engine is 3.7E-10
+  relative off, inside ε).
+
+Not marked, and why (T-3386):
+- t1531 A84 and A108, `CONFIDENCE.T(1E-300,1,100000)` and `CONFIDENCE.T(1E-300,1,100001)` (Excel 0.2502, engine
+  0.11762, which is T.INV.2T's math divided by √n): CONFIDENCE.T has no Gate A definition, so the cells have no
+  committed math value and a mark would not count (R1(c) needs one).
+- t1543 A89, A91 and A92 (`BETA.INV(1-1E-16,1000,1)`, `BETA.INV(1E-300,0.5,100)`, `BETA.INV(1E-200,0.5,100)`): the
+  engine returns `#NUM!` where Excel returns a number, which no mark excuses; the math sidecar lists them as having no
+  single value.
+- t1543 A43 (`CHISQ.INV.RT(1E-300,50)`, Excel 6.0E-12 off) and A79 (`BETA.INV(1E-300,5,2)`, Excel 1.1E-9 off): Excel is
+  within G of the math, so Excel stays the target.
 
 The assessment's "df ≥ 1e6" does not hold for these points. Tables for BETA.INV and CHISQ.INV.RT are T-3529's and T-3578's (T-3529 landed CHISQ.INV.RT's s1 batch unmarked; T-3578 marks the region), and
 their regions are fixed there. Points of these functions outside the region are not covered, even where Excel is off by
@@ -7287,14 +7312,16 @@ more than G:
 - T.INV and F.INV at p from 1.2E-69 to 8.2E-131 (accuracy/T.INV/s1 A91, A96; F.INV/s1 A164, A169). Owner ruling (decision
   0301, 2026-11-06): Excel stays the target. T-4489 reproduces Excel's values there; until it lands they pass Gate A
   through the math side.
-- T.INV.2T and TINV at any p (T.INV.2T/s1 A98, A99, A103, with A99 at p 4.4E-242; TINV/s1 A102), owned by T-3386.
+- T.INV.2T and TINV at the Gate A points (T.INV.2T/s1 A98, A99, A103, with A99 at p 4.4E-242; TINV/s1 A102): decision
+  0301 limits decision 0267 item 3 to the probes-numeric and m9 cells, so they stay unmarked; the engine is within ε of
+  the math there, so they pass Gate A through the math side.
 
 Owner ruling (decision 0267 item 3, 2026-11-04, narrowed by decision 0301): the math also wins on the probes-numeric
 cells T-3386 and T-3337 list where Excel is more than G off the math. Those are T.INV.2T, TINV, T.INV, CONFIDENCE.T and
 BETA.INV at a tiny p (t3349, t1531, t1543 and the m9 cases), and CHISQ.INV.RT and CHIINV at df 1, p 1.5E-16 to 5E-16
 (t3336). An example is `T.INV.2T(1E-300,100000)`: Excel 79.12,
-math and engine 37.19. That covers 50 of the 59 visibly-off tiny-p T cells, measured with mpmath at 60 digits. T-3386
-and T-3337 add the marks and widen this entry's Rule and Region when they land. df 1 near p = 1 (T-2858) stays Excel's.
+math and engine 37.19. T-3386 marked its cells (the T-3386 region above, 52 cells); T-3337 marks t3336's. df 1 near
+p = 1 (`T.INV.2T(0.999999999999999,1)`, T-2858) is outside the ruling and stays Excel's.
 Decision 0301 keeps Excel as the target at the Gate A points accuracy/T.INV/s1 A91 and A96, which 0267's wording
 had covered.
 
@@ -7316,7 +7343,7 @@ Status: MATH-OVER-EXCEL (decision 0188)
 Ours: the engine returns the math within ε at every marked point (Gate A's R3 check). Such cells stay F
 lines of eval/baseline and count as passing in Gate B and the R1(c) rows (T-3359, T-3427). The math path
 keeps directive 5's caps.
-Tasks: T-3358, T-3359, T-3363
+Tasks: T-3358, T-3359, T-3363, T-3386
 
 ## GAMMA.INV at a huge shape, closed-form branch: Excel is about 2.7e-4 off, RustSheet returns the math (MATH-OVER-EXCEL)
 Rule: on the Wilson-Hilferty closed-form branch of "GAMMA.INV and CHISQ.INV at a huge shape" above (the gamma density

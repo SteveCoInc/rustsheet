@@ -39,7 +39,7 @@ use rustsheet_eval::milestone_exit;
 use rustsheet_eval::milestone_lists::{self, MilestoneList};
 use rustsheet_eval::phase1_exceptions::Phase1Exceptions;
 use rustsheet_eval::probe_milestones::{self, Mapping, Rules};
-use rustsheet_eval::r1c::R1cCells;
+use rustsheet_eval::r1c::{mark_r3_math, R1cCells};
 use rustsheet_eval::report::RunReport;
 use rustsheet_eval::roundtrip;
 use rustsheet_eval::run_meta::RunMeta;
@@ -317,6 +317,14 @@ fn execute(suites: &[Suite], sel: &Selection) -> Vec<CaseResult> {
     run_suites(&engine, suites, &opts)
 }
 
+/// [`execute`], with each cell's [`rustsheet_eval::runner::Target`] set from the R3 marks `r3`
+/// before any report counts the closeness buckets (decision 0310).
+fn execute_marked(suites: &[Suite], sel: &Selection, r3: &R3Marks) -> Vec<CaseResult> {
+    let mut results = execute(suites, sel);
+    mark_r3_math(&mut results, r3);
+    results
+}
+
 /// Fails unless every suite's `deviations` lines name an existing case and cite an accepted
 /// `Status: DEVIATION` semantics entry (decision 0036).
 fn check_deviations(root: &Path, suites: &[Suite]) -> Result<()> {
@@ -335,7 +343,8 @@ struct Milestones {
     exceptions: ExitExceptions,
     phase1_exceptions: Phase1Exceptions,
     /// `eval/accuracy/math-over-excel.tsv`: the R3 cells R1(c) and Gate B count as passing
-    /// where the engine returns the math (decision 0188 R3).
+    /// where the engine returns the math (decision 0188 R3), and the closeness buckets count as
+    /// `r3_math` (decision 0310).
     r3: R3Marks,
 }
 
@@ -584,7 +593,7 @@ fn cmd_check(
     };
     // `plan_run` keeps the gate suites first, unchanged.
     let suites = &run[..gate_len];
-    let mut results = execute(&run, sel);
+    let mut results = execute_marked(&run, sel, &milestones.r3);
     let floor_results = floor.then(|| evidence_floor::floor_results(&run, &results));
     if floor {
         // The baseline gate judges the gate suites' results only, as a plain `check` does.
@@ -881,7 +890,7 @@ fn run() -> Result<ExitCode> {
                     std::mem::take(&mut milestones.phase1_exceptions).load_desktop_owned(&root)?;
             }
             let started = std::time::SystemTime::now();
-            let results = execute(&suites, &sel);
+            let results = execute_marked(&suites, &sel, &milestones.r3);
             let mut report = RunReport::build(
                 RustSheetEngine.name(),
                 &results,
