@@ -7409,8 +7409,6 @@ F	probes/t4027-irr-annuity-scale-guess.case.json	P!A26
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A27
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A28
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A3
-F	probes/t4027-irr-annuity-scale-guess.case.json	P!A34
-F	probes/t4027-irr-annuity-scale-guess.case.json	P!A35
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A4
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A43
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A44

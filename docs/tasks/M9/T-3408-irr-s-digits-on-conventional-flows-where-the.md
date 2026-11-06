@@ -132,7 +132,7 @@ Superseded in round 3: the shipped range is narrower (see the Outcome).
 - **Gate A:** `rustsheet-eval accuracy` 0 failing; 4 T-3548 known-failure lines are now inside the envelope and are
   removed (r4-T-3411 A208, A278; r4-T-3407 A128, A194). Line A286 (T-3408's, a two-flow zero root at the noise floor)
   moves to T-4213.
-- **Eval delta** (full `rustsheet-eval run`, main 73e09221b vs branch; 70 cells fixed, 0 worse):
+- **Eval delta** (full `rustsheet-eval run`, main 73e09221b vs branch; 70 cells fixed, 0 worse; after merging main b004e41be, 2 more):
   - probes/t3347-irr-conventional-num: passed 23 -> 25 of 42 (A10, A11)
   - probes/t3406-irr-num-boundary: 88 -> 90 of 144 (A5, A26)
   - probes-numeric/t3347-irr-conventional-holdout: 110 -> 115 of 144 (A23, A47, A50, A56, A57)
@@ -143,7 +143,8 @@ Superseded in round 3: the shipped range is narrower (see the Outcome).
   - probes-numeric/t4213-irr-r4-fresh: 102 -> 108 of 150
   - probes-numeric/t2927-irr-fallback-sweep: 40 -> 43 of 165 (A22, A23, A96)
   - new probes-numeric/t3408-irr-r4-fresh: 115 of 150
-  - `make eval-baseline` drops t3347-irr-conventional-num A10, A11 and t3406-irr-num-boundary A5, A26 from
+  - probes/t4027-irr-annuity-scale-guess (new on main, T-4027): A34 and A35 (guess -0.1) now pass
+  - `make eval-baseline` drops t3347-irr-conventional-num A10, A11 and t3406-irr-num-boundary A5, A26, and after the merge t4027 A34, A35, from
     eval/baseline/probes.txt.
 - **In-scope cells, per cell:** fixed (20): t3411-irr-r4-fresh A53, A63, A67, A68, A74, A75; fresh-2 A53, A60, A75,
   A147; fresh-3 A53, A58, A62, A66, A73, A106, A134; fresh-4 A58, A75; t3411-irr-residual-scale A10. Left (16), all
