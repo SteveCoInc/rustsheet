@@ -116,7 +116,7 @@ def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float
     return sum_x, sum_y, sxx, syy, sxy
 
 
-def _constant_exact(values: Sequence[float]) -> bool:
+def constant_exact(values: Sequence[float]) -> bool:
     """Whether a series is constant with Excel's double mean equal to its value (else NoValueError for a constant
     series: its double deviations are a nonzero constant, "Inexact constants")."""
     if len(set(values)) > 1:
@@ -165,11 +165,11 @@ def moments(args: Sequence[MathArg]) -> Moments:
 
 
 def _x_constant(args: Sequence[MathArg], m: Moments) -> bool:
-    return m.n < 2 or _constant_exact(_series(args)[1])
+    return m.n < 2 or constant_exact(_series(args)[1])
 
 
 def _y_constant(args: Sequence[MathArg]) -> bool:
-    return _constant_exact(_series(args)[0])
+    return constant_exact(_series(args)[0])
 
 
 def _slope(args: Sequence[MathArg]) -> tuple[Moments, Fraction]:
