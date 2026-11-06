@@ -3,7 +3,7 @@ id: T-3386
 title: "T.INV.2T and TINV at a tiny p: Excel is over 1e-4 off the math from p 1.7E-110 down (R3 case, owner ruling in decision 0267)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
