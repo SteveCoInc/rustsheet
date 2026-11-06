@@ -33,7 +33,8 @@ docs/excel-semantics/pivots.md:
 - **Column and page fields count (L1, L2, L6):** a column or page field at the default gives
   `Row Labels`; the same page field non-compact gives `Region`. With the column field at the default
   its header reads `Column Labels` (L1!C3).
-- **Only `compact` counts for the header (L3, L4, L7, L8):** `outline` at the default with every field
+- **Only `compact` counts for the header, for the roles probed (L3, L4, L7, L8):** on the outer row
+  and column fields, `outline` at the default with every field
   `compact="0"` still gives `Region` (L3 outer row field, L7 column field, whose header then reads
   `Channel`); `outline="0"` with `compact` at the default still gives `Row Labels` (L4, L8).
 - **R1 split (L3, L4):** the outer row field's `outline` alone puts each item on its own line with its
@@ -45,4 +46,5 @@ docs/excel-semantics/pivots.md:
   (crates/rustsheet-engine/src/pivot/layout/lines/tests.rs, render/tests.rs), and the UNVERIFIED
   T-4609 notes in lines.rs, render.rs and pivots.md are closed. The case is in T-4152's owner list.
 - **Left open** (T-4660): the column header of a non-compact column field while another field is at
-  the default, and `outline` alone on page and unused fields.
+  the default, and `outline` varied apart from `compact` on the inner row field and on page, unused
+  and calculated fields.

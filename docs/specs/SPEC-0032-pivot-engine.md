@@ -75,7 +75,7 @@ design depends on:
     total reads `Total <data field>` (t4138 G6);
   - in tabular form the first row header is the field's name only when every pivotField has
     `compact="0"`, and `Row Labels` otherwise, column and page fields included; `outline` does not
-    count, and `rowHeaderCaption` is ignored when the name shows (t4583 R1–R6, t4609 L1–L8). An outer
+    count for the roles probed (pivots.md lists the rest as UNVERIFIED, T-4660), and `rowHeaderCaption` is ignored when the name shows (t4583 R1–R6, t4609 L1–L8). An outer
     row field's `outline` moves its subtotals onto the item line, and with `compact` also on it shares
     its column with the inner field (t4583 R1, t4609 L3, L4). Compact
     pivots left at the default show `Row Labels` (t4123 C, t4128 K, t4138);

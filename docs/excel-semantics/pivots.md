@@ -264,16 +264,20 @@ default gives `Row Labels` in every role and position probed:
   unused source field and a calculated field;
 - positions in the cache: first (R1), middle (R3, R4) and last (R6, and t4128 K's calculated field).
 
-Only `compact` counts; `outline` makes no difference. With every field `compact="0"`, an outer row
-field (t4609 L3), a column field (L7) and the data field (t4123 T3, T4) left at the default `outline`
-still give the field's name. With `compact` at the default, `outline="0"` on the outer row field (L4) or
-the column field (L8) still gives `Row Labels`. The second row field's header is its name (`Product`)
+For the roles where `outline` was varied apart from `compact` (the outer row field, the column field
+and the data field), only `compact` counts and `outline` makes no difference. With every field
+`compact="0"`, an outer row field (t4609 L3), a column field (L7) and the data field (t4123 T3, T4)
+left at the default `outline` still give the field's name. With `compact` at the default, `outline="0"` on the outer row field (L4) or
+the column field (L8) still gives `Row Labels`. `outline` was never varied apart from `compact` on the
+inner row field (Product is `compact="0" outline="0"` in every L sheet), a page field, an unused field
+or a calculated field. The second row field's header is its name (`Product`)
 whenever it keeps its own column.
 
 When the field name wins, `rowHeaderCaption` is ignored: L5, with every field `compact="0"` and
 `rowHeaderCaption="Regions"`, shows `Region` at A3. With a column field, `Row Labels` (or the name)
 sits on the row below the data caption (L1!A4, L7!A4), and the column field's header beside it reads
-`Column Labels` when the column field is at the default (L1!C3, L8!C3) and its name `Channel` when
+`Column Labels` when the column field's `compact` is at the default (L1!C3 with both attributes at
+the default, L8!C3 with `outline="0"`) and its name `Channel` when
 every field is `compact="0"` (L7!C3). Whether a non-compact column field reads its name while another
 field is at the default is not probed.
 
@@ -318,7 +322,8 @@ non-axis fields, and T-4583's R1 and R2 show that axis fields count too. T-4583 
 "`compact` and `outline` both on"; T-4609's L3 and L4 split it as above.
 Status: VERIFIED (excel-graph) for the roles, positions and attributes probed. UNVERIFIED (probe
 pending: T-4660): the column header of a non-compact column field while another field is at the
-default, and `outline` alone on a page or unused field.
+default, and `outline` varied apart from `compact` (either way round) on the inner row field, a page
+field, an unused field or a calculated field.
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (the outer field's own line from its
 `outline`, and in `label_columns` the shared column from `compact` and `outline` both on; T-4147,
 checked against every L sheet by T-4609)

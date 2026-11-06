@@ -141,7 +141,8 @@ fn the_caption_and_row_label_probes_lines_and_locations_are_excels() {
     );
     // L3 and L4 split R1: `compact="0"` alone keeps the outer field's own line and top subtotals
     // but gives the inner field its own column; `outline="0"` alone gives tabular lines and its own
-    // column too. Only both on share the column. L1, L2, L5 to L8: column and page fields.
+    // column too. Only both on share the column. L1, L7, L8: column fields; L2, L6: page fields;
+    // L5: rowHeaderCaption.
     check_all(
         "t4609-pivot-row-labels-2",
         &["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8"],
