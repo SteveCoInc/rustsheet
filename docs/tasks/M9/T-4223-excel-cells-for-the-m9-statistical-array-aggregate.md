@@ -3,7 +3,7 @@ id: T-4223
 title: "Excel cells for the M9 statistical array, aggregate and criteria argument kinds T-3185 left (102 parameter/kind pairs)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
