@@ -3,7 +3,7 @@ id: T-4115
 title: "Gate A tables, odd-period bonds: ODDFPRICE, ODDFYIELD, ODDLPRICE and ODDLYIELD"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
