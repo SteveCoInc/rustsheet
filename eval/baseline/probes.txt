@@ -2330,6 +2330,15 @@ C	probes/t4378-pivotby-subtotal-holdout.case.json	450
 C	probes/t4379-pivotby-repeated-unreached-leaf.case.json	351
 C	probes/t4380-unique-keep-head-holdout.case.json	622
 C	probes/t4382-pivotby-intransitive-paths.case.json	819
+C	probes/t4396-lift-averageifs-both.case.json	2
+C	probes/t4396-lift-averageifs-criteria.case.json	2
+C	probes/t4396-lift-averageifs-first.case.json	2
+C	probes/t4396-lift-averageifs-height.case.json	2
+C	probes/t4396-lift-averageifs-pair2.case.json	2
+C	probes/t4396-lift-minifs-both.case.json	2
+C	probes/t4396-lift-minifs-criteria.case.json	2
+C	probes/t4396-lift-minifs-first.case.json	2
+C	probes/t4396-lift-minifs-height.case.json	2
 C	probes/t4397-days-two-errors.case.json	36
 C	probes/t4397-holiday-text-forms.case.json	516
 C	probes/t4399-criteria-near-equal-others.case.json	379
