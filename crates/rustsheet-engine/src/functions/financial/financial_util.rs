@@ -301,6 +301,36 @@ fn irr_root_residual_applies(values: &[f64]) -> bool {
     values.len() <= most_flows && (smallest..=largest).contains(&peak)
 }
 
+/// The |NPV| above which a secant run that goes flat after a zero step (d1 = d0 and f1 = f0, so the
+/// next step is 0/0) is `#DIV/0!` rather than failed, measured on the largest |NPV| the run evaluated
+/// (financial.md "IRR is #DIV/0! on a flat secant after a far step"; T-3347). On long conventional
+/// series the first step from 0.1 jumps far toward r = -1, where NPV is 1E+200 or more, comes back
+/// and stalls. Over every IRR cell in eval the cut moves 19 cells to Excel's `#DIV/0!` and none away:
+/// the largest `#NUM!` run reaches 1.556E+226 (probes/t3406-irr-num-boundary A65), the smallest
+/// `#DIV/0!` run above it 5.16E+226 (probes-numeric/t3411-irr-r4-fresh-4 A86), and the round value
+/// is placed between them. Frozen before its fresh sweep (probes-numeric/t3347-irr-r4-fresh, decision
+/// 0188 R4.2): 8 more cells move to Excel's `#DIV/0!` and none away. It is a proxy, not Excel's
+/// mechanism: two `#DIV/0!` runs reach only 1.3E+215 and 3.0E+221 (t3411-irr-r4-fresh A85, -3 A24),
+/// and on 12 runs past the cut Excel returns the root (roots -0.04 to -0.11, and t3411-irr-r4-fresh-4
+/// A136 at 1.6E-4): the engine's `#NUM!` there becomes `#DIV/0!`, wrong either way (T-3408, T-3548).
+/// Applied only within [`IRR_FLAT_DIV_ZERO_FLOWS`] (decision 0188 R4.3).
+/// FITTED(T-3347, 37 cells, flat zero-step IRR runs past 1E+200 of 27..147 flows, largest |c| 1.3E+4..6.7E+14, guess 0.1; cut bracketed 1.556E+226..5.16E+226)
+const IRR_FLAT_DIV_ZERO_NPV: f64 = 3e226;
+
+/// The flow sets [`IRR_FLAT_DIV_ZERO_NPV`] is evidenced on: 27 to 147 flows with the largest |flow|
+/// from 1.3E+4 to 6.7E+14 (the 37 flat zero-step runs above 1E+200 in eval).
+const IRR_FLAT_DIV_ZERO_FLOWS: (usize, usize, f64, f64) = (27, 147, 1.3e4, 6.7e14);
+
+/// Whether a secant run that went flat after a zero step, having evaluated an |NPV| as large as
+/// `largest_npv`, is `#DIV/0!` ([`IRR_FLAT_DIV_ZERO_NPV`]).
+fn irr_flat_is_div_zero(values: &[f64], largest_npv: f64) -> bool {
+    let (fewest, most, smallest, largest) = IRR_FLAT_DIV_ZERO_FLOWS;
+    let peak = values.iter().fold(0.0_f64, |m, c| m.max(c.abs()));
+    largest_npv > IRR_FLAT_DIV_ZERO_NPV
+        && (fewest..=most).contains(&values.len())
+        && (smallest..=largest).contains(&peak)
+}
+
 /// The rate 1/v - 1 at a converged discount factor `v`, or `None` past [`IRR_FAR_ROOT_BOUND`].
 fn irr_from_discount(v: f64) -> Option<f64> {
     let x = extended_quotient(1.0, v);
@@ -339,9 +369,16 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     let mut f0 = npv(d0)?;
     let mut d1 = d0 - if f0 > 0.0 { 1e-3 } else { -1e-3 };
     let mut f1 = npv(d1)?;
+    let mut largest_npv = f0.abs().max(f1.abs());
     for _ in 0..MAX_STEPS {
         if f1 == f0 {
-            return Err(SecantStop::Failed);
+            // After a zero step (d1 = d0) the next step is 0/0: `#DIV/0!` where the run went far
+            // (probes-numeric/t3347-irr-conventional-holdout A131 and A138; T-3347).
+            return Err(if d1 == d0 && irr_flat_is_div_zero(values, largest_npv) {
+                SecantStop::DivZero
+            } else {
+                SecantStop::Failed
+            });
         }
         let d2 = d1 - extended_quotient(f1 * (d1 - d0), f1 - f0);
         // An iterate of exactly d = 1 is v = 0, and NPV's 1/v divides by zero: Excel's
@@ -355,6 +392,7 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
             return Err(SecantStop::Failed);
         }
         let f2 = npv(d2)?;
+        largest_npv = largest_npv.max(f2.abs());
         // A zero step also stops when NPV is within 1e-7 of the largest flow: on the 2^-53 grid
         // `IRR({-2500000,-1000000,123456789123000})` cannot get NPV under 1e-7 (1.2E-6 at
         // Excel's 7026.083663633989), yet Excel returns it (probes/t2565-irr-guess-sweeps

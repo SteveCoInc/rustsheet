@@ -1733,7 +1733,7 @@ The call ends there, without the retry from 0.1 and without the fallback.
 - Scored cell by cell over every IRR cell of probes, probes-numeric and gen-m9 (T-3407): 59 cells move to Excel's
   value and none moves away. They are probes/t3406-irr-num-boundary P!A69-A72 and A84-A94 (level annuities of 40 and 60
   flows), 7 of the 9 long-series `#DIV/0!` cells of probes-numeric/t3347-irr-conventional-holdout (P!A123, A126, A130,
-  A132, A134, A135, A143; A131 and A138 stay `#NUM!`), 28 cells of the
+  A132, A134, A135, A143; A131 and A138 are T-3347's "IRR is #DIV/0! on a flat secant after a far step"), 28 cells of the
   t3411-irr-r4-fresh sweeps, t3478-irr-r4-wide A261, A275, A277, A281, A289, A290 and A298 (guesses near -1 or above
   100), probes/irr-guess-edges A27 and gen-m9/bc04c1f478c9896c A56. t3406 P!A83, the same 60-flow annuity with a
   smaller outlay (1.35E+7), stays `#NUM!` in both: its steps stay in range.
@@ -1748,6 +1748,33 @@ Evidence: the cells above (excel-graph, 2026-10-31 to 2026-11-04)
 Status: VERIFIED (excel-graph) for the cells; that the error comes from NPV's evaluation is inferred, not observed
 Implemented in: `irr_secant` (`SecantStop::DivZero`), `irr_npv` (functions/financial/financial_util.rs)
 Tasks: T-3407
+
+## IRR is #DIV/0! on a flat secant after a far step
+Rule (fitted proxy; Excel's mechanism is not known): on long conventional series (one large outlay, then many small
+inflows) IRR's secant from 0.1 takes a first step far toward r = -1 (d = 1 - v of -1E+3 to -3E+11), where NPV is
+1E+200 or more, steps back near d = 0.0919, takes a zero step (d2 = d1) and goes flat (f1 = f0, d1 = d0: the next step
+is 0/0). There Excel is `#DIV/0!` when the run's largest |NPV| was large, and `#NUM!` (or, on other series, the root)
+when it was not. The engine cuts at 3E+226: the largest `#NUM!` run in eval reaches 1.556E+226 (probes/
+t3406-irr-num-boundary A65, a 40-flow annuity of 1 after -48614255.03) and the smallest `#DIV/0!` one above it
+5.16E+226 (probes-numeric/t3411-irr-r4-fresh-4 A86). Every NPV of these runs is a finite double, so this is not
+T-3407's overflow ("IRR is #DIV/0! where its secant cannot evaluate NPV").
+- A flat 0/0 step alone is not the rule: making every one `#DIV/0!` moves A131 and A138 of t3347-irr-conventional-
+  holdout but breaks about 150 cells where Excel is `#NUM!` or returns the root (T-3347, attempt 1).
+- In sample, over every IRR cell in eval, the cut moves 19 cells to Excel's `#DIV/0!` and none away:
+  t3347-irr-conventional-holdout P!A131 and A138; probes/t3406-irr-num-boundary P!A66, A67, A68, A81, A82;
+  t3411-irr-r4-fresh A83, A91; -2 A1, A6, A19, A92; -3 A78; -4 A4, A86, A89, A94, A103.
+- Out of sample (decision 0188 R4.2): probes-numeric/t3347-irr-r4-fresh, 150 long series in six strata
+  (docs/research/t3411/gen_sweep.py, seed "T-3347/r4-fresh"), drawn and filled (excel-graph, 2026-11-06) after the cut
+  was frozen: 8 cells move to Excel's `#DIV/0!` (A37, A49, A54, A61, A84, A131, A144, A148) and none away.
+- Against it: two `#DIV/0!` runs peak below the cut, at 1.3E+215 and 3.0E+221 (t3411-irr-r4-fresh A85, -3 A24), and on
+  12 runs past it Excel returns the root, all from -4% to -11% except A136 (1.6E-4) (t3411-irr-r4-fresh A15, A22; -4 A17, A79,
+  A88, A93, A136; t3347-irr-r4-fresh A52, A53, A58, A74, A109). The engine was `#NUM!` there and is `#DIV/0!` now:
+  wrong either way. Those roots are the "near -10%" returns of T-3347 and T-3408, so Excel's secant does not take
+  the engine's path on them.
+Evidence: the cells above (excel-graph); the cut is scored by an engine run with the rule and without it
+Status: VERIFIED (excel-graph) for the cells; the rule is a FITTED proxy (decision 0188 R4)
+Implemented in: `irr_flat_is_div_zero`, `IRR_FLAT_DIV_ZERO_NPV` (functions/financial/financial_util.rs)
+Tasks: T-3347, T-3408, T-3548
 ## RATE: an empty guess is guess 0, not the default 0.1
 Rule: an empty guess argument (`RATE(48,-200,8000,0,1,)`) or a reference to an empty cell behaves as
 guess 0, not the default 0.1: the result has the same bits as an explicit `0` (0.008052981923885287)
