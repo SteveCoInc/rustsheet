@@ -95,6 +95,10 @@ The steward keeps this line as it is until the owner changes it.
   - T-4196: BESSELI at a large x and order 2 or more, and BESSELJ near a root (filed by T-4083, #3157);
   - T-4392: GAMMA.DIST's density at shape 2 and x of 1E-300 to 1E-200, which Excel's log form underflows to 0 (filed by T-3925). Added 2026-11-06.
   Added 2026-11-04 (19:43 UTC run): these tasks were blocked on the owner but not listed here.
+- **T.INV and F.INV outside the R3 region, T-3544** (2026-11-06). Decision 0300 keeps Excel as the target for nine R3
+  candidates but leaves this one open: decision 0267 item 3 already lets the math win for T.INV at a tiny p, and at
+  T-3544's points (T.INV A91, A96; F.INV A164, A169, A167) the engine returns the math today. Please choose: keep
+  0267's math (and extend it to these points), or match Excel there (an engine change).
 - **Owner ruling on RATE's keep-r0 secant model, T-4239** (2026-11-04). T-3963 found why RATE's same-state flat
   secants split (Excel keeps the older iterate when a step leaves the residual unchanged) and built the model on draft
   PR #3019: +78 bit-exact of 2,400 literal RATE cells, 59 against 9 on a blind fresh probe. But it moves five
@@ -106,7 +110,8 @@ The steward keeps this line as it is until the owner changes it.
 
 Pruned 2026-11-04 at the owner's request: the direct pushes to `main` (none since 2026-10-19), the missed steward runs (both
 daily firings arriving again since 2026-11-03), the steward prompt drift (matches routines.md since 2026-11-02) and
-the RATE flat-secant ruling (T-3916, decided by decision 0265). The direct-push item's recommendation, a ruleset on
+the RATE flat-secant ruling (T-3916, decided by decision 0265). Ruled 2026-11-06 (decision 0300, keep Excel): T-3794, T-3775,
+T-3484 and T-4196, plus T-4277, T-4317, T-4318, T-4392 and T-4285. The direct-push item's recommendation, a ruleset on
 `main` requiring a pull request, remains the owner's to take up or not.
 
 excel-desktop needs are not owner items (decision 0039): T-1016, T-1051 and the other desktop tasks wait in M14 (Phase 4), tracked by T-1074 and T-1075.
