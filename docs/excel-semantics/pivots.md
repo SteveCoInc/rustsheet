@@ -64,7 +64,7 @@ Rule: a calculated field `Sales*2+0.1` shows, at every level including subtotals
 the formula over the sum of Sales, not the sum of the formula over the records. East/A (Sales 10 and
 4) shows 28.1, not 28.2.
 Evidence: oracle-spike.md run 5; T-4122 runs (sheet C).
-Status: UNVERIFIED (probe pending: T-4128, then T-4173 for the edge cases)
+Status: UNVERIFIED (probe pending: T-4128, then T-4505 for the edge cases)
 
 ## A Top-N filter changes the subtotals and grand totals
 Rule: with a `top10 val="2"` count filter on Product by Sum of Sales, the subtotals and grand totals
