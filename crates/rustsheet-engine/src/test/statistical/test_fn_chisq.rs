@@ -193,13 +193,13 @@ fn chisq_inv_rt_one_degree_follows_the_math_where_one_minus_p_rounds_far() {
     let mut model = new_empty_model();
     // (formula, math from the committed sidecar, or Excel's exact double where Excel is within G)
     let math = [
-        ("A1", "=CHISQ.INV.RT(1.5E-16,1)", 68.169_874_129_795_366),
-        ("A2", "=CHIINV(1.5E-16,1)", 68.169_874_129_795_366),
-        ("A3", "=CHISQ.INV.RT(3E-16,1)", 66.803_270_472_991_037),
-        ("A4", "=CHIINV(3E-16,1)", 66.803_270_472_991_037),
-        ("A5", "=CHISQ.INV.RT(5E-16,1)", 65.796_379_466_286_038),
-        ("A6", "=CHISQ.INV.RT(1E-16,1)", 68.969_460_958_516_575),
-        ("A7", "=CHISQ.INV.RT(1.5E-15,1)", 63.631_646_601_411_051),
+        ("A1", "=CHISQ.INV.RT(1.5E-16,1)", 68.169_874_129_795_37),
+        ("A2", "=CHIINV(1.5E-16,1)", 68.169_874_129_795_37),
+        ("A3", "=CHISQ.INV.RT(3E-16,1)", 66.803_270_472_991_04),
+        ("A4", "=CHIINV(3E-16,1)", 66.803_270_472_991_04),
+        ("A5", "=CHISQ.INV.RT(5E-16,1)", 65.796_379_466_286_04),
+        ("A6", "=CHISQ.INV.RT(1E-16,1)", 68.969_460_958_516_58),
+        ("A7", "=CHISQ.INV.RT(1.5E-15,1)", 63.631_646_601_411_05),
     ];
     let kept = [
         ("B1", "=CHISQ.INV.RT(1E-15,1)", "64.43203896936356"),

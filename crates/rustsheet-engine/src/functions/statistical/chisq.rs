@@ -98,16 +98,19 @@ const ONE_DEGREE_EXACT_P_MIN: f64 = 1e-12;
 
 /// CHISQ.INV.RT and CHIINV at one degree of freedom. Excel's value is the lower quantile of
 /// `1 - p` (`CHISQ.INV.RT(1E-10,1)` is `CHISQ.INV(0.9999999999,1)`, 41.82145620298276, T-1543,
-/// T-1634), and `#NUM!` where that has none (1 - p rounds to 1). At a tiny p, rounding `1 - p`
+/// T-1634), or one cdf step from it at some p, which no rule tried reproduces (T-3337,
+/// time-boxed), and `#NUM!` where that has none (1 - p rounds to 1). At a tiny p, rounding `1 - p`
 /// to a double can move the tail it stands for by a large part of p: `CHISQ.INV.RT(1.5E-16,1)`
 /// is Excel's 67.39648382445009 and the quantile of 1 - 2^-53 68.7632522116684, both more than
 /// 8E-3 off the math 68.169874129795366 (probes-numeric/t3336-chisq-df1-right-tail A220 and its
 /// math sidecar). Decision 0267 item 3 rules the math there (decision 0188 R3), so where the
 /// quantile of `1 - p` is more than [`R3_GAP`] off the right-tail quantile of `p` itself (the
 /// accurate upper-tail search, which keeps the digits `1 - p` loses), that one is returned:
-/// every evidenced point where Excel is more than G off has the quantile of `1 - p` more than G
-/// off as well, and no point where it is within G has (docs/excel-semantics/statistics.md,
-/// "CHISQ.INV.RT and CHIINV quirks", T-3337). Two bounded searches at most.
+/// on the 225 numeric df-1 cells of t3336 and of the fresh sweep taken after this rule was frozen
+/// (t3337-chisq-df1-r3-fresh), it fires at exactly the 45 where Excel is more than G off, which are
+/// R3-marked (decision 0313; docs/excel-semantics/statistics.md "Tiny-p quantiles"), at none
+/// where Excel is within G, and at p 6E-17 to 8E-17, where Excel is `#NUM!` (T-3858's cut, not
+/// this rule's). Two bounded searches at most.
 fn one_degree_right_tail_quantile(p: f64) -> f64 {
     let excel = gamma_quantile(0.5, CHI_SQUARED_SCALE, 1.0 - p, Tail::Lower);
     if p >= ONE_DEGREE_EXACT_P_MIN || !excel.is_finite() {
