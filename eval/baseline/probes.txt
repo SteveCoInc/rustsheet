@@ -2437,6 +2437,7 @@ C	probes/t4467-literal-large-exponent-fresh.case.json	170
 C	probes/t4467-literal-large-exponent-sweep.case.json	500
 C	probes/t4467-literal-large-exponent.case.json	312
 C	probes/t4468-near-integer-text-caps.case.json	56
+C	probes/t4468-substitute-cap-holdout2.case.json	30
 C	probes/t4468-substitute-cap-sweep.case.json	60
 C	probes/t4468-substitute-cap-window.case.json	21
 C	probes/t4469-take-drop-if-one-cell-reference.case.json	52

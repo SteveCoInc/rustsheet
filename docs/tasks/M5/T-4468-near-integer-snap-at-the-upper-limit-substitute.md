@@ -71,7 +71,8 @@ between 2^-18 and 5*2^-19, pick a structural model, fix `substitute_element` (ut
   if it scores at least 29/30 (within 1 cell of its 100% train rate) and beats the relative 2^-48 bound. Predicted:
   the 15-digit cut gives `#VALUE!` at A6 A8 A20 A22 A28 A29 A30 and "aaa" elsewhere; the relative bound differs
   at A2 A3 A4 A5 A9 A11 A12 A14 A15 A16 A17 A18 A19 A26 (14 cells);
-  the absolute bound gives "aaa" everywhere. Result: pending the fill.
+  the absolute bound gives "aaa" everywhere. Result (excel-graph, filled in a later commit): 15-digit cut 30/30,
+  relative 2^-48 bound 16/30, absolute bound 23/30, so the cut meets the margin and beats both.
 - Fresh sweep, generated after the freeze (seed 4468): probes/t4468-substitute-cap-sweep, 60 cells (d log-uniform in
   [1E-7,1E-4] at the cap, [1E-8,1E-5] at 3): 60/60 (absolute alone 48/60; the relative bound, already ruled out
   by the hold-out, also 60/60). Scores: scratch script over the case and oracle files, one candidate per model.
@@ -79,5 +80,5 @@ between 2^-18 and 5*2^-19, pick a structural model, fix `substitute_element` (ut
   Gate A envelope: not applicable (the results are text or `#VALUE!`, no numeric point); reproducibility floor: not involved (the edge is 5E-6 wide).
 - Citation nits fixed (char_code.rs "D1:D21, E1:E14"; text.md DOLLAR/FIXED Tasks line). text.md's near-integer
   entry records the caps, the model and the literal-vs-computed split.
-- Eval delta: probes +3 cases (137 cells), all pass; the 7 failing cells the handoff baselined now pass, and the
+- Eval delta: probes +4 cases (167 cells), all pass; the 7 failing cells the handoff baselined now pass, and the
   case's 7-cell visible-parity lock line is gone (re-recorded from main's file by `make eval-baseline`).
