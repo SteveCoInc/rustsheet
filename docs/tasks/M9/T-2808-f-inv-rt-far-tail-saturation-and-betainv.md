@@ -3,7 +3,7 @@ id: T-2808
 title: "F.INV.RT far-tail saturation and BETAINV's underflow and 0.5 quirk (T-2435 split)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
