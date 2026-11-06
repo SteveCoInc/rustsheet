@@ -119,3 +119,15 @@ it.
 - Eval delta: probes fixed 45 (T-4254's 25 named cells and 20 of T-4456's zero cells), 0 regressions, 3 new cases
   (655 cells; 434 new-coverage failures, every one owned by T-4564: the n = 2 and t cells, and 8th to 9th digit
   numbers near the edge).
+
+## Landing notes
+- PR #3587 (ready for review, not enqueued). Reviewers on head 4f0f3f303: security APPROVE, design APPROVE,
+  excel-fidelity APPROVE (round 3). CI on 4f0f3f303 was red only in eval's `eval-math-check`: an earlier
+  `rustsheet-accuracy math --suite probes --function BETA.DIST` run had dropped the T.DIST.RT entries of
+  t4437-beta-t-zero-bracket.math.json. The commit carrying these notes regenerates that sidecar with
+  `--function BETA.DIST --function T.DIST.RT` (it adds only the missing T.DIST.RT entries); `rustsheet-accuracy math
+  --check --suite probes --suite probes-numeric` is current locally. The same run rewrites the unrelated
+  t3576-negbinom-cdf-huge-s.math.json; that was reverted, so do not commit it.
+- Window closed at 15:18 UTC with CI pending on this head. Next step: once CI is green, re-run the reviewers the
+  sidecar change concerns (excel-fidelity), then enqueue (`enable_pr_auto_merge`, SQUASH).
+- Do not repeat: regenerating math sidecars with only `--function BETA.DIST` on cases that also hold T.DIST.RT.
