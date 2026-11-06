@@ -184,3 +184,76 @@ fn the_run_classes_and_the_phase_1b_counts_per_suite() {
     assert!(line.contains("probes 1 counted, 1 Phase 1b evidence, 0 R3 passing, 0 M14-owned"));
     assert_eq!(Phase1bEvidence::default().line(), None);
 }
+
+/// The cell after the run marks it ([`mark_r3_math`]) and its closeness counts.
+fn bucketed(c: CellResult, r3: &R3Marks) -> (CellResult, crate::closeness::Closeness) {
+    let mut case = CaseResult::for_test(CASE, "probes");
+    case.cells = vec![c];
+    mark_r3_math(std::slice::from_mut(&mut case), r3);
+    let c = case.cells.remove(0);
+    let mut counts = crate::closeness::Closeness::default();
+    counts.add(&c);
+    (c, counts)
+}
+
+/// Decision 0310: the run marks an R3 cell where the engine returns the math once, and the
+/// closeness buckets count it as `r3_math`, not visibly off; Gate A's 15-digit test still sees
+/// it as off, and R1(c) still classifies it as an R3 pass.
+#[test]
+fn a_marked_r3_cell_on_the_math_is_r3_math_not_visibly_off() {
+    let marked = marks(&cell_id(CASE, "S!A1"));
+    let none = Phase1Exceptions::default();
+    // Marked, Excel 1e-3 off the math (more than G), the engine on it: r3_math.
+    let (on, counts) = bucketed(cell(n(MATH * 1.001), n(MATH), Some(MATH)), &marked);
+    assert_eq!(on.target, Target::Math);
+    assert_eq!(
+        (counts.r3_math, counts.visible(), counts.scored()),
+        (1, 0, 1)
+    );
+    assert!(!Visible::is_off(&on) && !Visible::is_failing_off(&on));
+    assert!(Visible::is_r3_math(&on));
+    assert!(Visible::is_off_at_fifteen_digits(&on));
+    assert_eq!(classify(CASE, &on, &marked, &none), Some(R1c::R3Pass));
+    // The run's classes keep the R3 pass for the Phase 1b line and `r1c_left_out`.
+    let mut case = CaseResult::for_test(CASE, "probes");
+    case.cells = vec![on];
+    let run = R1cCells::build(&[case], &marked, &none);
+    assert_eq!(run.class(&cell_id(CASE, "S!A1")), R1c::R3Pass);
+    assert_eq!(run.phase1b().suites["probes"].r3_pass, 1);
+}
+
+#[test]
+fn a_marked_cell_off_the_math_stays_visibly_off() {
+    let marked = marks(&cell_id(CASE, "S!A1"));
+    let none = Phase1Exceptions::default();
+    // Marked, but the engine 1e-6 off the math: still visibly off, and R1(c) counts it.
+    let (miss, counts) = bucketed(
+        cell(n(MATH * 1.001), n(MATH * (1.0 + 1e-6)), Some(MATH)),
+        &marked,
+    );
+    assert_eq!(miss.target, Target::Excel);
+    assert_eq!((counts.r3_math, counts.visible_numeric), (0, 1));
+    assert_eq!(classify(CASE, &miss, &marked, &none), Some(R1c::Counts));
+    // Marked, but Excel only 1e-6 off the math (below G): the mark is ignored.
+    let (below_g, counts) = bucketed(cell(n(MATH * (1.0 + 1e-6)), n(MATH), Some(MATH)), &marked);
+    assert_eq!(below_g.target, Target::Excel);
+    assert_eq!((counts.r3_math, counts.visible_numeric), (0, 1));
+}
+
+#[test]
+fn an_unmarked_or_error_cell_keeps_its_bucket() {
+    let marked = marks(&cell_id(CASE, "S!A1"));
+    let none = Phase1Exceptions::default();
+    // Unmarked: unchanged, visibly off.
+    let (plain, counts) = bucketed(cell(n(MATH * 1.001), n(MATH), Some(MATH)), &R3Marks::new());
+    assert_eq!(plain.target, Target::Excel);
+    assert_eq!((counts.r3_math, counts.visible_numeric), (0, 1));
+    // An error, even marked with a math value, never qualifies: R3 never applies to an error.
+    let (error, counts) = bucketed(
+        cell(n(MATH * 1.001), Value::Error("#NUM!".into()), Some(MATH)),
+        &marked,
+    );
+    assert_eq!(error.target, Target::Excel);
+    assert_eq!((counts.r3_math, counts.visible_other), (0, 1));
+    assert_eq!(classify(CASE, &error, &marked, &none), Some(R1c::Counts));
+}
