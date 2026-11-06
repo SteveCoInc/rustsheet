@@ -158,9 +158,11 @@ impl UserModel {
                     row,
                     count: _,
                     old_data,
+                    tables,
                 } => {
                     needs_evaluation = true;
                     self.undo_delete_rows(*sheet, *row, old_data)?;
+                    self.model.restore_table_extents(*sheet, tables)?;
                 }
                 Diff::InsertColumns {
                     sheet,
@@ -691,6 +693,7 @@ impl UserModel {
                     row,
                     count,
                     old_data: _,
+                    tables: _,
                 } => {
                     self.model.delete_rows(*sheet, *row, *count)?;
                     needs_evaluation = true;
