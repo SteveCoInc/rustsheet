@@ -14,6 +14,7 @@ import pytest
 
 from rustsheet_tools.accuracy import composite, eval_math, fingerprint
 from rustsheet_tools.accuracy.defs.cashflow import IRR, XIRR
+from rustsheet_tools.accuracy.defs.paired_regression import COVAR
 from rustsheet_tools.accuracy.defs.student_t import T_DIST, T_INV, cdf
 from rustsheet_tools.accuracy.eval_math import (
     calls_any,
@@ -406,6 +407,14 @@ def test_the_digest_leaves_out_empty_fields() -> None:
     assert isinstance(func, ast.FunctionDef)
     func.type_params = []  # type: ignore[attr-defined,unused-ignore]
     assert fingerprint._tree_digest(tree) == before
+
+
+def test_a_partial_definition_is_hashed_by_its_function_module() -> None:
+    # COVAR's value is a functools.partial: hashing `functools` (the standard library) would make the
+    # digest differ between Pythons; its function's module is what computes it.
+    modules = fingerprint._code_modules(COVAR)
+    assert COVAR.value.func.__module__ in modules  # type: ignore[attr-defined]
+    assert all(m.startswith("rustsheet_tools.") for m in modules)
 
 
 def test_source_digest_ignores_comments_and_docstrings_only() -> None:

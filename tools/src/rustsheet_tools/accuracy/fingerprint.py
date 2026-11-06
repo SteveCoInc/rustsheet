@@ -193,9 +193,20 @@ def _closure(roots: Iterable[str]) -> list[str]:
 
 
 def _code_modules(definition: Definition) -> list[str]:
-    """The modules of the definition's callables (a builtin or C function has no module to hash)."""
+    """The modules of this package that hold the definition's callables. A `functools.partial`
+    (COVAR's `partial(_covariance, sample=False)`) is followed to its function: its own `__module__`
+    is `functools`, whose source is the standard library's and differs between Pythons. A builtin or
+    any other module outside this package has nothing of ours to hash."""
     parts: list[Callable[..., Any] | None] = [definition.value, definition.domain, definition.tail]
-    return [m for p in parts if p is not None and (m := getattr(p, "__module__", None))]
+    out = []
+    for given in parts:
+        part: Any = given
+        while isinstance(part, functools.partial):
+            part = part.func
+        module = getattr(part, "__module__", None) if part is not None else None
+        if isinstance(module, str) and _ours(module):
+            out.append(module)
+    return out
 
 
 def definition_digest(definition: Definition) -> str:
