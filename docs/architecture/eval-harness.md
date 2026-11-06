@@ -52,6 +52,18 @@ Current suites:
   The children of `worksheet/sheetData` and of the shared-string table are left to the semantic items (T-4513).
   Items that fall under a candidate normalization N1–N12 carry a `candidate-N<k>` tag, and are never normalized
   until T-4503's evidence. A part pair reports at most 500 items; the rest are counted in a `<truncated>` item.
+- Semantic items (`roundtrip/semantic.rs`, D2/D3; T-4513) flatten each workbook into keyed facts and compare them
+  key by key:
+  - from the importer's model (`Model`): resolved cell styles, sheet order, state, tab colour, frozen panes and grid
+    lines, merges, hyperlinks, conditional-format rules, defined names and tables;
+  - from the snapshot reader, which reads what the file stores: formula text (leading spaces, TABs and LFs dropped
+    as Excel drops them, SPEC-0033 X5) and constant values;
+  - the cached values of formula and spill cells, comparing the saved, recalculated workbook with the output as
+    loaded, error values by kind.
+
+  Inputs, styles and structure compare the source as loaded with the output as loaded. Validator check V7 flags a
+  shared-string index the model accepts out of range; an out-of-range style index already fails V8, because the
+  importer refuses it.
 - A package is read once, every part under one inflated-byte budget (the importer's default).
 - A case's checked count is the number of source parts, elements and attributes compared. Only failing element and
   attribute items are listed.
@@ -66,9 +78,24 @@ The baseline is the ordinary cells-mode file:
   T-4503's evidence);
 - the ratchet is `baseline::diff`.
 
-`rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. `--check` (in `make eval-gates`, gate
-suites only) fails on a regression or an out-of-date baseline. `--update-baseline` (in `make eval-baseline`) records
-fixes and new cases, and refuses regressions. `make eval` runs every round-trip suite (decision 0307).
+The corpus suites (`roundtrip-calipers`, `roundtrip-poi`, `roundtrip-corpus-bench`; T-4173) use `baseline = "cases"`,
+since their item lines would run to tens of megabytes:
+- each failing case is one `F` line, `* <n> <digest>`: n is its failing items, weighted as the kept rate weighs
+  them (at least 1 each), and the digest hashes their set of keys;
+- `roundtrip::diff` treats a smaller n as a fix, and a held or larger n with another digest as a regression. In
+  both modes, a fall in a case's checked count, or a case that newly does not run, is a regression too;
+- updating a `cases` suite refuses to drop a case (a cache fetched under an older include).
+
+Their `root` is the cell suite's fetched cache (`eval/.cache/suites/<suite>`). A suite whose root is absent is
+skipped with a message, so it never records an empty baseline. They are `gate = false`, like the calipers cell suite:
+`rustsheet-eval roundtrip --check --suite <name>` gates one on demand.
+
+`rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. Each suite's line and report section
+give its kept rate: source items compared, less those the failing items cover (`Item::weight`: a lost element's
+subtree, a lost part's elements, a `<truncated>` item's hidden differences), over the items compared (`KeptRate`,
+SPEC-0033 D8). Cases that did not run are counted as not scored. `--check` (in `make eval-gates`, gate suites only) fails on a regression or an
+out-of-date baseline. `--update-baseline` (in `make eval-baseline`) records fixes and new cases, and refuses
+regressions. `make eval` runs every round-trip suite (decision 0307).
 
 ## Case formats
 **`rustsheet-case/v1`** (`*.case.json`):
@@ -203,7 +230,17 @@ saved, from `rustsheet-eval snapshot`'s `pivots`:
 - `cells`: every cell of the location and of the page-field rows above it, A1 to value, a blank one
   as `{"t":"empty"}` (`snapshot.py` `pivot_areas`; an area over 100,000 cells is not captured).
 
-`OracleFile::pivots` reads it, and T-4124 scores it.
+`OracleFile::pivots` reads it. For a spec case, every one of those cells is a scored Excel cell (T-4124,
+`crates/rustsheet-eval/src/pivot_scoring.rs`): a pivot the engine does not render fails cell by cell, and
+its failures enter the baseline like any other cell's. A cell the sidecar's `sheets` also give keeps that
+value. Each sidecar pivot's layout is also compared with the engine's, matched by sheet and name:
+- `Missing`: no such engine pivot;
+- `LocationDiffers`: another location;
+- `LinesNotEmitted`: Excel's location, but no `rowItems`/`colItems` from the engine yet (T-4147).
+
+Mismatches are listed in report.md's "Pivot layout" section and in report.json's `pivot_layout` per case.
+xlsx cases' sidecars are not read for pivots yet: their pivot cells are cached constants the importer keeps
+(pivot-corpus, T-4131).
 Tools never re-derive case discovery: `rustsheet-eval cases <suite>` prints each case's path,
 sidecar path, formula-cell count and whether the suite trusts its cached values.
 

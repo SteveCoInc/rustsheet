@@ -1,0 +1,72 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4518: SHEET of a LET variable or LAMBDA parameter (written LAMBDA or _xleta.) bound to a reference on each of three sheets, a union, text, a number, an array, an error or a boolean; SHEETS passed by name (_xleta.SHEETS) over ranges, where Excel binds references (SHEETS of a written parameter is refused by the oracle's canary guard). Sheet1!A1:B3 = 1..6, Sheet2!A1:B3 and Sheet3!A1:B3 = 10..60. One question per cell in Sheet1!D1:D26; array results through ARRAYTOTEXT.",
+ "tags": [
+  "M7",
+  "probe",
+  "lambda",
+  "T-4518"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": 1,
+    "B1": 2,
+    "A2": 3,
+    "B2": 4,
+    "A3": 5,
+    "B3": 6,
+    "D1": "=LET(x,A1,SHEET(x))",
+    "D2": "=LET(x,Sheet2!A1,SHEET(x))",
+    "D3": "=LET(x,Sheet3!A1:B2,SHEET(x))",
+    "D4": "=LET(x,\"Sheet2\",SHEET(x))",
+    "D5": "=LET(x,5,SHEET(x))",
+    "D6": "=ARRAYTOTEXT(LET(x,{1,2},SHEET(x)))",
+    "D7": "=LET(x,(Sheet2!A1,Sheet2!B2),SHEET(x))",
+    "D8": "=LET(x,1/0,SHEET(x))",
+    "D9": "=ARRAYTOTEXT(MAP(A1:A3,_xleta.SHEETS))",
+    "D10": "=ARRAYTOTEXT(MAP(Sheet2!A1:A3,LAMBDA(r,SHEET(r))))",
+    "D11": "=ARRAYTOTEXT(BYROW(A1:B3,_xleta.SHEETS))",
+    "D12": "=ARRAYTOTEXT(BYROW(Sheet2!A1:B3,_xleta.SHEET))",
+    "D13": "=ARRAYTOTEXT(MAP(Sheet3!A1:A3,_xleta.SHEETS))",
+    "D14": "=LAMBDA(r,SHEET(r))(Sheet3!A1)",
+    "D15": "=ARRAYTOTEXT(GROUPBY(A1:A3,B1:B3,LAMBDA(v,SHEET(v))))",
+    "D16": "=ARRAYTOTEXT(MAP({1;2},LAMBDA(r,SHEET(r))))",
+    "D17": "=LET(x,\"Sheet9\",SHEET(x))",
+    "D18": "=LET(x,TRUE,SHEET(x))",
+    "D19": "=LET(x,A1,y,x,SHEET(y))",
+    "D20": "=ARRAYTOTEXT(MAP(A1:A3,LAMBDA(r,LET(s,r,SHEET(s)))))",
+    "D21": "=ARRAYTOTEXT(BYCOL(Sheet3!A1:B3,_xleta.SHEET))",
+    "D22": "=LET(x,B1:B3,SHEET(x))",
+    "D23": "=ARRAYTOTEXT(BYCOL(Sheet2!A1:B3,_xleta.SHEETS))",
+    "D24": "=ARRAYTOTEXT(MAP({\"Sheet2\";\"Sheet3\"},LAMBDA(r,SHEET(r))))",
+    "D25": "=ARRAYTOTEXT(MAP({\"Sheet2\";\"Sheet3\"},_xleta.SHEET))",
+    "D26": "=LAMBDA(r,SHEET(r))(\"Sheet3\")"
+   }
+  },
+  {
+   "name": "Sheet2",
+   "cells": {
+    "A1": 10,
+    "B1": 20,
+    "A2": 30,
+    "B2": 40,
+    "A3": 50,
+    "B3": 60
+   }
+  },
+  {
+   "name": "Sheet3",
+   "cells": {
+    "A1": 10,
+    "B1": 20,
+    "A2": 30,
+    "B2": 40,
+    "A3": 50,
+    "B3": 60
+   }
+  }
+ ],
+ "expected": {}
+}

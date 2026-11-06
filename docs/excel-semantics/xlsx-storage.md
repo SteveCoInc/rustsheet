@@ -524,6 +524,14 @@ but calls the hidden rows filtered only for a filterColumn with a criterion insi
   past the table's width (5 on 2 columns: 9 and 21, 3 and 6; ours 9 and 9); and for the `colId="0"` fallback our
   export wrote after the filtered column is deleted (15 and 21, 3 and 6; ours 15 and 15; since T-4003 that delete
   unfilters the table and the export writes no filterColumn).
+A color filter with no usable `dxfId` is no criterion (excel-graph, 2026-11-06, T-4404; `Sales`-shaped table, rows 3
+and 5 hidden): the openpyxl file with `ColorFilter(dxfId=7)` on a workbook with no dxfs is refused (`createSession` 501
+`FileCorruptTryRepair`), which is why the export drops a `dxfId` past the dxfs. Our export of it (`<colorFilter/>`) and a
+directly written `<colorFilter/>` and `<colorFilter cellColor="0"/>` all open without repair and read as the
+criterion-less control: `SUBTOTAL(9,[Val])` 21, `109` 15, `SUBTOTAL(3,[Cat])` 6, `103` 4, manual hides. Our import
+therefore reads a `<colorFilter>` without `dxfId` as criterion-less, in `has_active_criterion` too (before, it kept
+the criterion and called the rows filtered: 15 and 4). A source file with a dangling `dxfId` still imports as filtered
+while its export is criterion-less (T-4558).
 A totals-row cell holding a number, boolean or error constant gets no metadata (T-1607 covered label and formula
 cells only), and Excel refuses that file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
 totals row with the label "Total" and the number 42 is refused, and so is the same file with 42 written as
@@ -555,7 +563,7 @@ Evidence: crates/rustsheet-xlsx/tests/calc_test_tables/tables.xlsx (Excel-author
 Status: VERIFIED (web, T-3081, T-4005): Excel loads every filter form, and a constant totals cell with bare
 `custom` metadata; T-4003 and T-4004 own the filter differences.
 Implemented in: crates/rustsheet-xlsx/src/export/tables.rs
-Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005
+Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005, T-4404
 
 ## A calculated column is saved as `calculatedColumnFormula` plus one formula per row
 Rule (excel-graph downloads of the T-2957 probes, 2026-10-27): a column Excel filled (references.md, "Calculated
@@ -658,6 +666,7 @@ Status: UNVERIFIED (probe pending). Tasks: T-4503, T-4172, T-4509.
 | N1–N12 | not yet probed | T-4503 |
 
 Status: VERIFIED (excel-graph; desktop unprobed for NBSP). Tasks: T-2784, T-2949.
+
 Excel drops a stored formula's leading spaces, TAB or LF on import (T-2784; syntax.md "Remaining whitespace shapes
 (T-2949)"). A leading NBSP is refused by excel-graph instead; desktop Excel is unprobed. Dropping those leading spaces,
 TABs or LFs is therefore no semantic difference (SPEC-0033 X5). A leading NBSP is not covered.

@@ -3,7 +3,7 @@ id: T-4462
 title: "Probe TIME's and DATE's near-integer windows to a relative 2^-14, as XMATCH's: 2^-22+2^-33 below a positive integer and the half window below a negative one"
 milestone: M6
 lane: functions-date
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -42,3 +42,9 @@ already pins XMATCH's: to a relative 2^-14 (an absolute ~2^-36) below 1, 2 and 3
 
 ## Out of scope
 - Other readers of `near_integer_whole` (LEFT, RIGHT, REPLACE, INDEX, XMATCH: text.md and lookup.md).
+
+## Outcome
+Probe `probes/t4462-time-date-near-integer-edge` (315 cells, excel-graph, 2026-11-06) brackets the window for all six
+TIME/DATE argument positions: edge between `2^-22*(1+8*2^-14)` (snaps) and `2^-22*(1+9*2^-14)` (floors) below 1, 2, 3;
+`2^-23*` the same factors below -1 and 0. The engine's `NEAR_INTEGER_TOLERANCE` (and half of it below a negative value)
+already matches every cell: no engine change, no known failures, no follow-up. dates.md updated.

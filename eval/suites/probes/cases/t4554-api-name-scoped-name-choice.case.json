@@ -1,0 +1,148 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4554 follow-up of t4554-api-name-local-name-body (where W = =Dup read Last's scoped Dup, not S2's or the workbook's). Same book, S2 active, B1 = 1, 7, 9 and B2 = 10, 70, 90. Workbook names W_A..W_F added through the API with the bare bodies =DupA..=DupF, no sheet-scoped API adds. DupA: workbook (First!B2) + S2's (S2!B2). DupB: workbook + Last's. DupC: workbook + First's (First!B1) + S2's. DupD: First's + Last's, no workbook name. DupE: Last's only. DupF: First's only. Which definition does each body bind to? DupG: workbook + S2's + Last's. DupH: S2's + Last's. DupI: workbook + First's.",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "S2",
+ "names": {
+  "DupA": "=First!$B$2",
+  "S2!DupA": "=S2!$B$2",
+  "DupB": "=First!$B$2",
+  "Last!DupB": "=Last!$B$2",
+  "DupC": "=First!$B$2",
+  "First!DupC": "=First!$B$1",
+  "S2!DupC": "=S2!$B$2",
+  "First!DupD": "=First!$B$1",
+  "Last!DupD": "=Last!$B$2",
+  "Last!DupE": "=Last!$B$2",
+  "First!DupF": "=First!$B$1",
+  "DupG": "=First!$B$2",
+  "S2!DupG": "=S2!$B$2",
+  "Last!DupG": "=Last!$B$2",
+  "S2!DupH": "=S2!$B$2",
+  "Last!DupH": "=Last!$B$2",
+  "DupI": "=First!$B$2",
+  "First!DupI": "=First!$B$1"
+ },
+ "sheets": [
+  {
+   "name": "First",
+   "cells": {
+    "B1": 1,
+    "B2": 10,
+    "D1": "=W_A",
+    "D2": "=W_B",
+    "D3": "=W_C",
+    "D4": "=W_D",
+    "D5": "=W_E",
+    "D6": "=W_F",
+    "D7": "=W_G",
+    "D8": "=W_H",
+    "D9": "=W_I"
+   }
+  },
+  {
+   "name": "S2",
+   "cells": {
+    "B1": 7,
+    "B2": 70,
+    "D1": "=W_A",
+    "D2": "=W_B",
+    "D3": "=W_C",
+    "D4": "=W_D",
+    "D5": "=W_E",
+    "D6": "=W_F",
+    "D7": "=W_G",
+    "D8": "=W_H",
+    "D9": "=W_I"
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "B1": 9,
+    "B2": 90,
+    "D1": "=W_A",
+    "D2": "=W_B",
+    "D3": "=W_C",
+    "D4": "=W_D",
+    "D5": "=W_E",
+    "D6": "=W_F",
+    "D7": "=W_G",
+    "D8": "=W_H",
+    "D9": "=W_I"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "First!D1",
+  "First!D2",
+  "First!D3",
+  "First!D4",
+  "First!D5",
+  "First!D6",
+  "S2!D1",
+  "S2!D2",
+  "S2!D3",
+  "S2!D4",
+  "S2!D5",
+  "S2!D6",
+  "Last!D1",
+  "Last!D2",
+  "Last!D3",
+  "Last!D4",
+  "Last!D5",
+  "Last!D6",
+  "First!D7",
+  "First!D8",
+  "First!D9",
+  "S2!D7",
+  "S2!D8",
+  "S2!D9",
+  "Last!D7",
+  "Last!D8",
+  "Last!D9"
+ ],
+ "api_names": [
+  {
+   "name": "W_A",
+   "formula": "=DupA"
+  },
+  {
+   "name": "W_B",
+   "formula": "=DupB"
+  },
+  {
+   "name": "W_C",
+   "formula": "=DupC"
+  },
+  {
+   "name": "W_D",
+   "formula": "=DupD"
+  },
+  {
+   "name": "W_E",
+   "formula": "=DupE"
+  },
+  {
+   "name": "W_F",
+   "formula": "=DupF"
+  },
+  {
+   "name": "W_G",
+   "formula": "=DupG"
+  },
+  {
+   "name": "W_H",
+   "formula": "=DupH"
+  },
+  {
+   "name": "W_I",
+   "formula": "=DupI"
+  }
+ ]
+}

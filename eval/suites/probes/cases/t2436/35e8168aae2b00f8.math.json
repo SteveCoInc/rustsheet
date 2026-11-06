@@ -13,10 +13,20 @@
     "why": "density at x = 0 with alpha <= 1",
     "f": "=BETA.DIST(0,0.5,1E+5,FALSE)"
    },
+   "A16": {
+    "t": "e",
+    "why": "density at x = 0 with alpha <= 1",
+    "f": "=AVERAGEA(BETA.DIST(0,0.5,1E+5,FALSE))"
+   },
    "A196": {
     "t": "n",
     "v": "0.0",
     "f": "=HYPGEOM.DIST(1,3,6,7,TRUE)"
+   },
+   "A91": {
+    "t": "e",
+    "why": "a negative salvage: #NUM!",
+    "f": "=SYD(10156,(-439103),25,8)"
    }
   }
  }

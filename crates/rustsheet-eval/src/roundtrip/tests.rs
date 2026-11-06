@@ -233,6 +233,7 @@ fn a_new_loss_in_an_unchanged_case_is_a_regression() {
         verdict,
         detail: None,
         candidate: None,
+        weight: super::xmldiff::unit_weight(verdict),
     };
     let case = |items: Vec<Item>| CaseResult {
         id: "rt/a.xlsx".into(),
@@ -255,13 +256,149 @@ fn a_new_loss_in_an_unchanged_case_is_a_regression() {
         item("/a[0]", Verdict::Kept),
         item("/b[0]", Verdict::Lost),
     ]);
-    let delta = baseline::diff(&baseline(&[&before]), &baseline(&[&after]));
+    let delta = baseline::diff(
+        &baseline(&[&before], BaselineMode::Cells),
+        &baseline(&[&after], BaselineMode::Cells),
+    );
     assert_eq!(
         delta.regressions,
         vec!["rt/a.xlsx\tR0 part /b[0] lost".to_string()]
     );
-    let fixed = baseline::diff(&baseline(&[&after]), &baseline(&[&before]));
+    let fixed = baseline::diff(
+        &baseline(&[&after], BaselineMode::Cells),
+        &baseline(&[&before], BaselineMode::Cells),
+    );
     assert_eq!(fixed.fixed.len(), 1);
+}
+
+/// A failing case of `checked` items with `(key, weight)` items lost.
+fn lossy(checked: usize, lost: &[(&str, usize)]) -> CaseResult {
+    CaseResult {
+        id: "rt/a.xlsx".into(),
+        suite: "rt".into(),
+        status: if lost.is_empty() {
+            CaseStatus::Pass
+        } else {
+            CaseStatus::Fail
+        },
+        message: None,
+        millis: 0,
+        checked,
+        items: lost
+            .iter()
+            .map(|(key, weight)| Item {
+                scenario: "R0",
+                kind: "element",
+                key: (*key).into(),
+                verdict: Verdict::Lost,
+                detail: None,
+                candidate: None,
+                weight: *weight,
+            })
+            .collect(),
+    }
+}
+
+fn cases(c: &CaseResult) -> Baseline {
+    baseline(&[c], BaselineMode::Cases)
+}
+
+#[test]
+fn a_cases_baseline_ratchets_each_cases_weight_and_item_set() {
+    let two = cases(&lossy(100, &[("/a", 1), ("/b", 1)]));
+    let line = two.failing.iter().next().map(|(_, i)| i.clone());
+    assert!(
+        line.as_deref().is_some_and(|l| l.starts_with("* 2 ")),
+        "{line:?}"
+    );
+    // One more loss.
+    let worse = diff(
+        &two,
+        &cases(&lossy(100, &[("/a", 1), ("/b", 1), ("/c", 1)])),
+    );
+    assert_eq!(worse.regressions.len(), 1, "{worse:?}");
+    // One loss fixed: a fix, listed once.
+    let better = diff(&two, &cases(&lossy(100, &[("/a", 1)])));
+    assert!(better.regressions.is_empty(), "{better:?}");
+    assert_eq!(better.fixed.len(), 1, "{better:?}");
+    // A loss traded for a fix: the same n, another set of keys.
+    let swapped = diff(&two, &cases(&lossy(100, &[("/a", 1), ("/c", 1)])));
+    assert_eq!(swapped.regressions.len(), 1, "{swapped:?}");
+    // Thirty changed children, then their parent lost whole: fewer items, more weight.
+    let children: Vec<String> = (0..30).map(|n| format!("/p/c[{n}]")).collect();
+    let changed: Vec<(&str, usize)> = children.iter().map(|k| (k.as_str(), 1)).collect();
+    let collapsed = diff(
+        &cases(&lossy(100, &changed)),
+        &cases(&lossy(100, &[("/p", 31)])),
+    );
+    assert_eq!(collapsed.regressions.len(), 1, "{collapsed:?}");
+    // A passing case that fails, and a failing one that passes.
+    assert_eq!(diff(&cases(&lossy(100, &[])), &two).regressions.len(), 1);
+    let fixed = diff(&two, &cases(&lossy(100, &[])));
+    assert!(fixed.regressions.is_empty() && fixed.fixed.len() == 1);
+}
+
+#[test]
+fn a_round_trip_that_compares_less_or_stops_running_regresses() {
+    let two = cases(&lossy(100, &[("/a", 1), ("/b", 1)]));
+    // The output became unreadable: one V8 item, one item compared.
+    let unreadable = diff(&two, &cases(&lossy(1, &[("V8", 0)])));
+    assert!(
+        unreadable
+            .regressions
+            .iter()
+            .any(|r| r.contains("checked fell from 100 to 1")),
+        "{unreadable:?}"
+    );
+    // The case no longer runs.
+    let errored = CaseResult {
+        status: CaseStatus::EngineError,
+        ..lossy(100, &[])
+    };
+    for mode in [BaselineMode::Cases, BaselineMode::Cells] {
+        let before = baseline(&[&lossy(100, &[("/a", 1)])], mode);
+        let after = baseline(&[&errored], mode);
+        let delta = diff(&before, &after);
+        assert_eq!(
+            delta.regressions,
+            vec!["rt/a.xlsx\t!EngineError".to_string()],
+            "{mode:?}"
+        );
+    }
+}
+
+#[test]
+fn the_kept_rate_weighs_lost_subtrees_and_skips_cases_that_did_not_run() {
+    let mut case = lossy(200, &[("/x", 1), ("/tree", 9)]);
+    case.items.push(Item {
+        verdict: Verdict::Added,
+        weight: 0,
+        ..case.items[0].clone()
+    });
+    let errored = CaseResult {
+        status: CaseStatus::Timeout,
+        ..lossy(0, &[])
+    };
+    let rate = KeptRate::of(&[&case, &errored]);
+    assert_eq!((rate.checked, rate.not_kept, rate.unscored), (200, 10, 1));
+    assert!((rate.percent() - 95.0).abs() < 1e-9);
+    assert!((KeptRate::default().percent() - 100.0).abs() < 1e-9);
+}
+
+#[test]
+fn a_lost_subtree_and_the_truncated_rest_carry_their_weight() {
+    let src = "<r><keep/><gone><a/><b/></gone></r>";
+    let d = super::xmldiff::diff(src, "<r><keep/></r>").unwrap_or_default();
+    let lost: Vec<usize> = d.differences.iter().map(|x| x.weight).collect();
+    assert_eq!(lost, vec![3]);
+    let many = (0..600).fold(String::new(), |mut acc, n| {
+        let _ = write!(acc, "<i n=\"{n}\"/>");
+        acc
+    });
+    let d = super::xmldiff::diff(&format!("<r>{many}</r>"), "<r/>").unwrap_or_default();
+    assert_eq!(d.differences.len() + d.truncated, 600);
+    // Each lost `<i n=".."/>` is an element and an attribute.
+    assert_eq!(d.truncated_weight, 2 * d.truncated);
 }
 
 mod xml {
@@ -455,4 +592,156 @@ fn every_fixture_part_diffs_empty_against_itself() {
         }
     }
     assert!(parts > 100, "{parts} parts");
+}
+
+mod semantic_items {
+    use std::io::{Cursor, Read as _, Write as _};
+
+    use super::super::semantic::{
+        compare, load_model, model_facts, stored_facts, validate_indexes, Facts,
+    };
+    use crate::xlsx_snapshot::read_snapshot;
+
+    /// A1 "hello", A2 "world", A3 `=1+1`, as the export writes them.
+    fn base() -> Vec<u8> {
+        let mut m = rustsheet_engine::Model::new_empty("w", "en", "UTC", "en").expect("model");
+        m.set_user_input(0, 1, 1, "hello".into()).expect("A1");
+        m.set_user_input(0, 2, 1, "world".into()).expect("A2");
+        m.set_user_input(0, 3, 1, "=1+1".into()).expect("A3");
+        m.evaluate();
+        rustsheet_xlsx::export::save_xlsx_to_writer(&m, Cursor::new(Vec::new()))
+            .expect("save")
+            .into_inner()
+    }
+
+    /// `bytes` with each `(part, from, to)` text replacement applied (each must match).
+    fn edit(bytes: &[u8], edits: &[(&str, &str, &str)]) -> Vec<u8> {
+        let mut src = zip::ZipArchive::new(Cursor::new(bytes)).expect("zip");
+        let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        for i in 0..src.len() {
+            let mut f = src.by_index(i).expect("entry");
+            let name = f.name().expect("entry name").to_string();
+            if name.ends_with('/') {
+                continue;
+            }
+            let mut text = String::new();
+            f.read_to_string(&mut text).expect("utf-8");
+            for (part, from, to) in edits.iter().filter(|e| e.0 == name) {
+                assert!(text.contains(from), "{part}: {from}");
+                text = text.replacen(from, to, 1);
+            }
+            out.start_file(name, zip::write::SimpleFileOptions::default())
+                .expect("start");
+            out.write_all(text.as_bytes()).expect("write");
+        }
+        out.finish().expect("finish").into_inner()
+    }
+
+    fn facts(bytes: &[u8]) -> Facts {
+        let mut f = model_facts(&load_model(bytes, "w").expect("loads"));
+        f.extend(stored_facts(&read_snapshot(bytes).expect("snapshot")));
+        f
+    }
+
+    const SST: &str = "xl/sharedStrings.xml";
+    const SHEET: &str = "xl/worksheets/sheet1.xml";
+    const STYLES: &str = "xl/styles.xml";
+    const XF: &str = r#"<xf xfId="0" borderId="0" fillId="0" fontId="0" numFmtId="0"/>"#;
+
+    #[test]
+    fn shuffled_strings_and_renumbered_styles_are_kept() {
+        let a = base();
+        let b = edit(
+            &a,
+            &[
+                (
+                    SST,
+                    "<si><t>hello</t></si><si><t>world</t></si>",
+                    "<si><t>world</t></si><si><t>hello</t></si>",
+                ),
+                (
+                    SHEET,
+                    r#"<c r="A1" t="s"><v>0</v>"#,
+                    r#"<c r="A1" t="s"><v>1</v>"#,
+                ),
+                (
+                    SHEET,
+                    r#"<c r="A2" t="s"><v>1</v>"#,
+                    r#"<c r="A2" t="s"><v>0</v>"#,
+                ),
+                (
+                    STYLES,
+                    &format!(r#"<cellXfs count="1">{XF}"#),
+                    &format!(r#"<cellXfs count="2">{XF}{XF}"#),
+                ),
+                (SHEET, r#"<c r="A3">"#, r#"<c r="A3" s="1">"#),
+            ],
+        );
+        let (diffs, n) = compare(&facts(&a), &facts(&b));
+        assert!(n > 0);
+        assert_eq!(diffs, vec![]);
+    }
+
+    #[test]
+    fn a_changed_value_formula_and_style_are_found() {
+        let a = base();
+        let date = r#"<xf xfId="0" borderId="0" fillId="0" fontId="0" numFmtId="14" applyNumberFormat="1"/>"#;
+        let b = edit(
+            &a,
+            &[
+                (SST, "<t>world</t>", "<t>wor</t>"),
+                (SHEET, "<f>1+1</f>", "<f>1+2</f>"),
+                (
+                    STYLES,
+                    &format!(r#"<cellXfs count="1">{XF}"#),
+                    &format!(r#"<cellXfs count="2">{XF}{date}"#),
+                ),
+                (SHEET, r#"<c r="A1" t="s">"#, r#"<c r="A1" s="1" t="s">"#),
+            ],
+        );
+        let (diffs, _) = compare(&facts(&a), &facts(&b));
+        let keys: Vec<&str> = diffs.iter().map(|d| d.0.as_str()).collect();
+        assert_eq!(
+            keys,
+            vec![
+                "cell Sheet1!A1 style",
+                "cell Sheet1!A2 input",
+                "cell Sheet1!A3 formula"
+            ]
+        );
+    }
+
+    #[test]
+    fn a_needless_xlfn_prefix_is_no_difference_and_a_needed_one_is() {
+        // Also proves the static pattern compiles (its initializer's `unreachable!` cannot fire).
+        let a = base();
+        let prefixed = edit(&a, &[(SHEET, "<f>1+1</f>", "<f>_xlfn.SUM(1,1)</f>")]);
+        let bare = edit(&a, &[(SHEET, "<f>1+1</f>", "<f>SUM(1,1)</f>")]);
+        assert_eq!(compare(&facts(&prefixed), &facts(&bare)).0, vec![]);
+        let needed = edit(&a, &[(SHEET, "<f>1+1</f>", "<f>_xlfn.XLOOKUP(1,1,1)</f>")]);
+        let dropped = edit(&a, &[(SHEET, "<f>1+1</f>", "<f>XLOOKUP(1,1,1)</f>")]);
+        assert_eq!(compare(&facts(&needed), &facts(&dropped)).0.len(), 1);
+    }
+
+    #[test]
+    fn v7_an_out_of_range_shared_string_index() {
+        // An out-of-range style index is refused by the importer itself, so V8 already fails it.
+        let bad_style = edit(
+            &base(),
+            &[(SHEET, r#"<c r="A1" t="s">"#, r#"<c r="A1" s="9" t="s">"#)],
+        );
+        assert!(load_model(&bad_style, "w").is_err());
+        let bad_string = edit(
+            &base(),
+            &[(
+                SHEET,
+                r#"<c r="A1" t="s"><v>0</v>"#,
+                r#"<c r="A1" t="s"><v>9</v>"#,
+            )],
+        );
+        match load_model(&bad_string, "w") {
+            Ok(model) => assert_eq!(validate_indexes(&model).len(), 1, "V7 names the string"),
+            Err(e) => panic!("{e}"),
+        }
+    }
 }

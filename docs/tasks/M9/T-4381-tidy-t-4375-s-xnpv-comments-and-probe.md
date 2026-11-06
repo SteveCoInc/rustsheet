@@ -3,7 +3,7 @@ id: T-4381
 title: "Tidy T-4375's XNPV comments and probe a name for constant text"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -28,10 +28,19 @@ evidence.
   excel-graph) and match Excel.
 
 ## Acceptance criteria
-- [ ] The two comments and the generator are tidied, with no change in behavior.
-- [ ] A probe case holds the constant-text name and the literal text argument, filled on excel-graph and passing;
+- [x] The two comments and the generator are tidied, with no change in behavior.
+- [x] A probe case holds the constant-text name and the literal text argument, filled on excel-graph and passing;
       financial.md states the rule and drops the Unprobed note.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - XIRR (T-3816).
+
+## Outcome
+Tidied the two stale `xnpv_walk_error` comments and dropped the dead placeholder lines of
+docs/research/t4375/gen_case.py (no behavior change). Probed a text literal and a defined name for a constant text
+as XNPV's values and dates (probes/t4381-xnpv-literal-and-named-text, excel-graph): numeric and date text is read
+as its number in both forms, non-numeric text is `#VALUE!`. The name rows already passed (the engine reads a name
+as a cell); a text literal now reads the same way (`reads_text_as_number`, `Node::StringKind`), fixing A1:A3.
+financial.md states the rule and drops the Unprobed note. Computed text (`"3"&"0"`) stays unprobed. Eval: the new
+case 10/10, no regressions.

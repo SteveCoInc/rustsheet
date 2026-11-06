@@ -32,3 +32,5 @@ and ru-RU: probes/t4064-ru-md-names (72 cells, excel-graph 2026-11-06). ru-MD ge
 capitalised genitive, lowercase genitive) through `SUBLANGUAGE_VARIANTS`, which `locale_tag::table`
 reads after `LOCALES`. probes/t4480-lcid-sublanguage-fallback A17 and A91 pass; the new case passes
 in full; 0 regressions.
+
+Since T-4508 these names come from the generated locale tables; locale/variant_date_names.rs is gone.

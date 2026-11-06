@@ -1148,6 +1148,31 @@ Ours: matches. `carried_day` (`floor(v + 0.5/86400)`, negatives only floored) se
 MINUTE and SECOND (T-3176; all 223 cells of the probe pass).
 Status: VERIFIED (web)
 
+## Other date functions floor a serial just below midnight; their counts take no near-integer snap but WEEKNUM's return_type
+Rule: unlike YEAR, MONTH, DAY and WEEKDAY (the half-second carry above), every other probed serial argument floors
+plainly: EDATE and EOMONTH start, WORKDAY and WORKDAY.INTL start, NETWORKDAYS and NETWORKDAYS.INTL start and end,
+WEEKNUM, ISOWEEKNUM, DAYS (both), DATEDIF (both) and YEARFRAC basis 1. N-0.4 s, `fl(N-0.5/86400)` and even
+N-(2^-22+2^-33) day read as day N-1, and only N itself is day N: `EOMONTH(45017-0.4/86400,0)` is 45016,
+`WEEKNUM(45018-(2^-22+2^-33))` 13 (the Saturday's week), `YEARFRAC(44927,45292-0.4/86400,1)` 0.997260274 (A1:O7).
+DAYS360 alone rounds the serial to the nearest second before flooring. The observed cut: `fl(N-0.5/86400)` is day N
+and one ulp below it (2^-37 at N = 45020) is day N-1 (P1:Q7), for its start and end alike.
+The count arguments, except WEEKNUM's return_type, take no near-integer snap either: they truncate or floor exactly,
+unlike DATE's and TIME's arguments (`near_integer_whole`). EDATE and EOMONTH months truncate toward zero (`EDATE(45000,1-(2^-22+2^-33))` is
+45000, `EDATE(45000,-1+2^-23)` 45000, `-1-2^-23` 44972; the same below 12 and -12: S1:T10, Z1:Z10). WORKDAY and
+WORKDAY.INTL days floor (`WORKDAY(45019,1-(2^-22+2^-33))` is 45019; `-1+2^-23` and `-1E-10` are a day back, 45016;
+`-1-2^-23` two days, 45015: U1:V10). The .INTL weekend number truncates: NETWORKDAYS.INTL's 2 just below is weekend 1
+(Y1:Y4) and WORKDAY.INTL's 7 just below is weekend 6 (`WORKDAY.INTL(45021,1,7-2^-23)` is 45024, AC1:AC4).
+WEEKNUM's return_type snaps like LEFT's count: within 2^-22 + 2^-33 below an integer it is that integer
+(`WEEKNUM(45019,2-2^-23)` is 15, type 2's week; `WEEKNUM(45017,17-(2^-22+2^-33))` is 13, type 17's), and
+2^-22 + 9*2^-36 or 1E-6 below truncates (14, type 1's or 16's; AA1:AB4). W1:X4 sit on a Sunday where every type gives
+14, so they do not tell the models apart. A negative return_type's snap is unprobed (it truncates in the engine).
+Evidence: probes/t4454-near-midnight-date-args A1:AD10 (serials built exactly in formulas; excel-graph, 2026-11-06,
+T-4454).
+Ours: matches, all 197 cells (plain `floor` in month_shift.rs, workday.rs, networkdays.rs, weeknum.rs, yearfrac.rs and
+`datedif_value`/`fn_days`; `days360_serial` rounds to the second; the counts' `trunc`/`floor` and `weekend_mask`;
+WEEKNUM's positive return_type through `near_integer_count`, T-4454).
+Status: VERIFIED (web)
+
 ## HOUR, MINUTE and SECOND round to the nearest second
 Rule: HOUR, MINUTE and SECOND take the time of day rounded to the nearest second, and the carry goes all the way up:
 - `SECOND(TIME(10,59,59)+0.6/86400)` is 0, MINUTE 0 and HOUR 11.
@@ -1402,9 +1427,12 @@ for a negative value the window is half as wide, about 1.2E-7. Measured edges: p
 `1-2.4E-7` does not (same at 5, 30000 and 32768); negative, `-1-(2^-23+1E-12)` and `-(2^-23+1E-12)` count as -1 and 0, while
 `-1-1.2E-7` and `-1.2E-7` floor (same at -5, -30000, -32767). The positive window is the one LEFT, RIGHT, REPLACE and
 INDEX use (`NEAR_INTEGER_TOLERANCE`, 2^-22+2^-33, text.md and lookup.md), which lies inside the measured (2^-22+1E-12, 2.4E-7);
-we take half of it for a negative value, inside (2^-23+1E-12, 1.2E-7). The exact constants inside those brackets are unprobed
-for TIME and DATE. The XMATCH and XLOOKUP modes, read by the same `near_integer_whole`, bracket both constants to a relative
-2^-14 (lookup.md "XMATCH and XLOOKUP floor a fractional mode", T-2656). Then an argument above 32767 is `#NUM!`, before the total is formed and whatever the hour. On
+we take half of it for a negative value, inside (2^-23+1E-12, 1.2E-7). T-4462 narrowed both to a relative 2^-14 (probes/t4462-time-date-near-integer-edge, excel-graph, 2026-11-06, 315 cells, all matched by us).
+TIME's hour (B), minute (C) and second (D) and DATE's year (E), month (F) and day (G) read `b-2^-22*(1+8*2^-14)` (= `NEAR_INTEGER_TOLERANCE`)
+as b for b = 1, 2, 3 and `b-2^-22*(1+9*2^-14)` as b-1 (rows 2-10, 11-19, 20-28). For a negative value `-(b+2^-23*(1+8*2^-14))` reads -b
+and `-(b+2^-23*(1+9*2^-14))` reads -b-1, for b = 1 and 0 (rows 29-37, 38-46); DATE's year below -1 is `#NUM!` either way (E29:E37), so
+its negative edge is measured below 0 only. These are XMATCH's constants (lookup.md "XMATCH and XLOOKUP floor a fractional mode", T-2656).
+An argument above 32767 is `#NUM!`, before the total is formed and whatever the hour. On
 2026-10-21 an argument below -32768 was `#NUM!` too, so a minute of -32768 was legal and one of -32769 was not. Since 2026-11-03 such
 an argument wraps by 65536 instead (see the update below). A negative total is `#NUM!`; otherwise the value is `((h*3600+m*60+s)/86400) % 1` as in "TIME divides by 86400 first".
 Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number; write `-(2^-22)`.
@@ -1462,7 +1490,7 @@ bounds: `DATE(9999,12,31+1-1E-7)` is `#NUM!` (1 January 10000) and `DATE(10000-1
 `DATE(2020,32767-1E-7,1)` is `#NUM!` (month 32767), `DATE(2000,-32768-1E-7,1)` is `#NUM!`. gen-m6 cells: `DATE(1983,12,-1E-15)` =
 30650, `DATE(2015,-1E-21,3)` = 41976, `DATE(-4.2E-16,1,23)` = 23, a day of `COS(-0.0001)` (0.999999995) is 1
 (gen-m6/216e3c05f407ca79 Calc!A173, 03333cc38ec06a14 A267, 9843ec1f29523dd2 A265, b54448af3fde07ca A379, 07171fa3f7493f51 A311).
-Evidence: probes/date-argument-window (90 cells, excel-graph, 2026-10-21).
+Evidence: probes/date-argument-window (90 cells, excel-graph, 2026-10-21). The exact edge is the same as TIME's: `2^-22*(1+8*2^-14)` snaps and `(1+9*2^-14)` floors, half that when negative (T-4462, probes/t4462-time-date-near-integer-edge, see the TIME section).
 Ours: `fn_date` reads each argument through the same near-integer floor as TIME (T-2268).
 Status: VERIFIED
 Tasks: T-2268
@@ -1554,8 +1582,18 @@ Rule (excel-graph, gen-m6, 2026-10-21): a start date out of the calendar is `#NU
 `YEARFRAC(SUM(-1,FALSE,<blank>),SUMIFS(D10:D12,A5:B7,"abc")+..,0)` (end `#VALUE!` from the SUMIFS shape mismatch) and
 `YEARFRAC(123456790.12..,NETWORKDAYS.INTL(51358,34485,15,<FALSE cell>)+1E-15,0)` are `#NUM!` (gen-m6/3516b9fbbd60269b Calc!A301,
 d0c30225243fde60 A266). Ours: implemented (T-2266).
-Status: VERIFIED for these two cells; an error start against an error end keeps the start's error (VERIFIED: probes/scalar-lift-open-d W2 `YEARFRAC(NA(),1/0,1)` and W5 `YEARFRAC(1/0,NA(),1)`). An out-of-calendar start against a text or multi-cell-range end (`YEARFRAC(-1,"x")`, now #NUM!) is UNVERIFIED.
-Tasks: T-2266
+Status: VERIFIED for these two cells; an error start against an error end keeps the start's error (VERIFIED: probes/scalar-lift-open-d W2 `YEARFRAC(NA(),1/0,1)` and W5 `YEARFRAC(1/0,NA(),1)`).
+The start is read and range-checked in full before the end is read at all (VERIFIED, excel-graph 2026-11-06,
+probes/t4529-yearfrac-calendar-vs-coercion, 164 cells): a start of `-1`, `2958466` or `1E+15` is `#NUM!` against every
+end form, with basis omitted or 1 (A1:J6): non-numeric text `"x"`, numeric text `"45000"`, TRUE, FALSE, an empty cell,
+a cell holding `"x"`, a formula giving `"x"`, `{"x"}`, and even a two-cell or 2x2 range end, which with an in-calendar
+start is refused whole as `#VALUE!` rather than lifted (`ROWS(YEARFRAC(-1,Z3:Z4))` K1 is `#NUM!`,
+`ROWS(YEARFRAC(45000,Z3:Z4))` K2 is `#VALUE!`). So "coerce both, then range-check" is wrong for YEARFRAC. The reverse
+holds too: a start that is text, a boolean, a cell holding text or a range is `#VALUE!` against an out-of-calendar end
+(A11:J16), and numeric text or an empty start is read as a number and then fails the end's range check (`#NUM!`, B11:B16,
+E11:E16; the controls with end 46000 are A17:J18). Ours: matches every cell (the start check precedes the end's read in
+`yearfrac_of`).
+Tasks: T-2266, T-4529
 
 ## NETWORKDAYS.INTL: the blank weekend's #NUM! before the holidays' error (T-2436)
 Rule: `NETWORKDAYS.INTL(31,4886,<blank>,{1,2;#N/A,""})` is `#NUM!`, the blank weekend cell's error (T-2271) before the holidays'
