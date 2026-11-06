@@ -3,7 +3,7 @@ id: T-4464
 title: "GROUPBY's spent filter beside a lift: probe the three modeled cases (a filter keeping no row, a table relationship with subtotals, a nested lift) and match Excel"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
