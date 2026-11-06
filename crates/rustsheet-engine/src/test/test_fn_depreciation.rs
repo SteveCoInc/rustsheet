@@ -164,10 +164,10 @@ fn fn_amorlinc_first_period() {
 #[test]
 fn fn_amorlinc_errors() {
     let mut model = new_empty_model();
-    // salvage >= cost
+    // salvage > cost (equal is 0: `fn_amor_salvage_equal_to_the_cost`)
     model._set(
         "A1",
-        "=AMORLINC(2400, DATE(2008,8,19), DATE(2008,12,31), 2400, 1, 0.15, 1)",
+        "=AMORLINC(2400, DATE(2008,8,19), DATE(2008,12,31), 2401, 1, 0.15, 1)",
     );
     // basis 2 (Actual/360) is not allowed
     model._set(
@@ -184,6 +184,50 @@ fn fn_amorlinc_errors() {
     assert_eq!(model._get_text("A1"), *"#NUM!");
     assert_eq!(model._get_text("A2"), *"#NUM!");
     assert_eq!(model._get_text("A3"), *"#NUM!");
+}
+
+// A salvage equal to the cost is 0 at every period, fractions and period 0 included, but only
+// after every argument check: the basis's error, a basis of 2 and AMORDEGRC's asset life still
+// win, and a cost of 0 stays #NUM!. The walk keeps comparing `remain < salvage`: a remain equal to
+// a lower salvage still charges (financial.md "AMORLINC and AMORDEGRC check order";
+// probes/amor-salvage-equal-cost, T-4504).
+#[test]
+fn fn_amor_salvage_equal_to_the_cost() {
+    let mut model = new_empty_model();
+    let cases = [
+        ("=AMORDEGRC(2400,39679,39813,2400,0,0.15,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1,0.15,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,5,0.15,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,6,0.15,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1.5,0.15,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1,0.4,1)", "0"),
+        ("=AMORLINC(2400,39679,39813,2400,0,0.15,1)", "0"),
+        ("=AMORLINC(2400,39679,39813,2400,0.5,0.15,1)", "0"),
+        ("=AMORLINC(2400,39679,39813,2400,2,0.15,1)", "0"),
+        ("=AMORLINC(2400,39679,39813,2400,1,2,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1,0.5,1)", "#NUM!"),
+        ("=AMORDEGRC(2400,39679,39813,2400,0.5,0.5,1)", "#NUM!"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1,0.5,NA())", "#N/A"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1,0.15,2)", "#NUM!"),
+        ("=AMORLINC(2400,39679,39813,2400,1,0.15,NA())", "#N/A"),
+        ("=AMORLINC(2400,39679,39813,2400,1,0.15,5)", "#NUM!"),
+        ("=AMORLINC(2400,39813,39679,2400,1,0.15,1)", "#NUM!"),
+        ("=AMORDEGRC(0,39679,39813,0,1,0.15,1)", "#NUM!"),
+        ("=AMORLINC(0,39679,39813,0,0,0.15,1)", "#NUM!"),
+        ("=AMORDEGRC(2400,39679,39813,2070,1,0.15,1)", "776"),
+        ("=AMORDEGRC(2400,39679,39813,1293.75,2,0.15,1)", "485"),
+    ];
+    for (row, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", row + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
 }
 
 #[test]

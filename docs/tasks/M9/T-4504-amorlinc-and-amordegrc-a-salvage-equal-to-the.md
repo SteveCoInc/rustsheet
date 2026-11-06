@@ -3,7 +3,7 @@ id: T-4504
 title: "AMORLINC and AMORDEGRC: a salvage equal to the cost is 0, not #NUM! (Gate A T-4111)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -37,8 +37,8 @@ AMORLINC and AMORDEGRC with a salvage equal to the cost return Excel's value (0 
   the probe leaves a case open.
 
 ## Acceptance criteria
-- [ ] The seven points pass Gate A; their lines in eval/accuracy/known-failures.tsv are removed.
-- [ ] A probe of the unprobed cases above, including the two definition assumptions, recorded in financial.md;
+- [x] The seven points pass Gate A; their lines in eval/accuracy/known-failures.tsv are removed.
+- [x] A probe of the unprobed cases above, including the two definition assumptions, recorded in financial.md;
       the Gate A definition follows the result.
 - [ ] `make check` green; reviewers approve.
 
@@ -60,3 +60,20 @@ unless marked:
   F6: W 485, E 485 or 970.
 - G1: W 0, E 776. G2: 330. G3: 0. G4: 776. G5: W 0, E 485. G6: 0. G7: 360. G8: 0. G9: 0. G10: 360.
 My pick before the fill: W.
+
+## Outcome
+Probe probes/amor-salvage-equal-cost (81 cells, excel-graph, 2026-11-06) chose rule E over my pick W: a salvage equal
+to a positive cost is an early 0 after every argument check (the basis's error, bases 2 and 5 and AMORDEGRC's asset
+life at rates 0.5 to 2 still win), at every period (0, fractions, 1-8, the half and rest periods), it leaves the
+AMORDEGRC-below-period-1 state as it was (AMORLINC included), and an AMORDEGRC fraction there is 0, not the state.
+The walk keeps `remain < salvage` (G1 776, G5 485 with the remain equal to the salvage). Also new: a cost of 0 with a
+salvage of 0 is `#NUM!` (E21-E24), as ours already was.
+- Engine: `amortization_values_valid` allows `salvage <= cost` with `cost > 0` (the lift's charge follows), and
+  `amortization_of` returns 0 with `LeftOver::Keep` after the asset-life check. Unit tests in test_fn_depreciation.rs,
+  test_amordegrc_left_over.rs and the lift's kernel_work.rs (its salvage-equal row became salvage-above and cost 0).
+- Gate A: defs/amortization.py makes `fully_salvaged` a value at every period (no `NoValueError` below 1) and a cost of
+  0 a `DomainError` (tools/tests/test_accuracy_depreciation.py follows); `rustsheet-accuracy verify` AMORLINC and AMORDEGRC: 0 differences; probe math sidecars
+  regenerated for the two functions (only `why` texts changed, plus the new case's).
+- Eval delta: Gate A known failures 446 -> 439 (the seven T-4504 lines removed), `rustsheet-eval accuracy` 0 failing;
+  probes +1 case, 81 cells all bit-exact (baseline: new case, 0 known failures, 0 regressions).
+- financial.md "AMORLINC and AMORDEGRC check order" rewritten with the probe's findings.
