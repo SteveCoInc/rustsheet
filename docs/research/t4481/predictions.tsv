@@ -1,0 +1,52 @@
+# the engine's values (origin/main at this branch's base) for probes/t4481-at-spill-operand-edges, written before the oracle fill (cell, value)
+H2	{"t": "n", "v": 2.0}
+I2	{"t": "s", "v": "=(@rg)"}
+J2	{"t": "e", "v": "#N/A"}
+H3	{"t": "n", "v": 3.0}
+I3	{"t": "s", "v": "=@(D1#)"}
+J3	{"t": "e", "v": "#N/A"}
+H10	{"t": "n", "v": 2.0}
+I10	{"t": "s", "v": "=@(INDEX(F1:F3,2))"}
+J10	{"t": "e", "v": "#N/A"}
+H14	{"t": "n", "v": 2.0}
+I14	{"t": "s", "v": "=@INDEX(F1:F3,2)"}
+J14	{"t": "e", "v": "#N/A"}
+H18	{"t": "e", "v": "#VALUE!"}
+I18	{"t": "s", "v": "=@(D1#)"}
+J18	{"t": "n", "v": 3.0}
+H22	{"t": "e", "v": "#VALUE!"}
+I22	{"t": "s", "v": "=@D1#"}
+J22	{"t": "n", "v": 3.0}
+H26	{"t": "e", "v": "#VALUE!"}
+I26	{"t": "s", "v": "=@(rg)"}
+J26	{"t": "n", "v": 3.0}
+H30	{"t": "e", "v": "#VALUE!"}
+I30	{"t": "s", "v": "=@rg"}
+J30	{"t": "n", "v": 3.0}
+H34	{"t": "n", "v": 2.0}
+I34	{"t": "s", "v": "=@(one)"}
+J34	{"t": "e", "v": "#N/A"}
+H38	{"t": "e", "v": "#VALUE!"}
+I38	{"t": "s", "v": "=(@rg)"}
+J38	{"t": "n", "v": 3.0}
+H42	{"t": "b", "v": true}
+I42	{"t": "s", "v": "=@TRUE"}
+J42	{"t": "e", "v": "#N/A"}
+H46	{"t": "b", "v": true}
+I46	{"t": "s", "v": "=@(TRUE)"}
+J46	{"t": "e", "v": "#N/A"}
+H50	{"t": "n", "v": 1.0}
+I50	{"t": "s", "v": "=@FALSE+1"}
+J50	{"t": "e", "v": "#N/A"}
+H54	{"t": "e", "v": "#NULL!"}
+I54	{"t": "s", "v": "=(@(A1 B1))#"}
+J54	{"t": "n", "v": 1.0}
+H58	{"t": "e", "v": "#REF!"}
+I58	{"t": "s", "v": "=(@(F1:F3 F2))#"}
+J58	{"t": "n", "v": 4.0}
+H62	{"t": "e", "v": "#NULL!"}
+I62	{"t": "s", "v": "=(@(A1 B1)):INDEX(F1:F3,5)"}
+J62	{"t": "n", "v": 1.0}
+H66	{"t": "e", "v": "#REF!"}
+I66	{"t": "s", "v": "=INDEX(F1:F3,5):(@(A1 B1))"}
+J66	{"t": "n", "v": 4.0}
