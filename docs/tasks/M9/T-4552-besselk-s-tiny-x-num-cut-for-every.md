@@ -3,7 +3,7 @@ id: T-4552
 title: "BESSELK at x = 2^-1021 exactly, and whether BESSELJ, BESSELI and BESSELY share the x/2-subnormal #NUM! (T-4459 follow-up)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
