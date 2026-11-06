@@ -29,3 +29,5 @@ T-1502 builds the index lazily on the first union walk of an area over more than
 index once they exceed the cells it holds, so a structural edit that moves every cell costs no more than
 the lazy rebuild. `SheetData` has a manual `Clone` that leaves the index unbuilt, so `delete_sheet`'s undo
 snapshot no longer copies it. Two tests in test_multi_area_arguments.rs cover both. Eval delta: none.
+Review fix: `for_each_indexed_position` rebuilds a dropped index before each re-read, since a write by
+`f` (a spill replacing its cells) can now drop it mid-walk and a missing index reads as no rows.
