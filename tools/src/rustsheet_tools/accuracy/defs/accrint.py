@@ -29,7 +29,8 @@ Domains (`DomainError`, Excel's `#NUM!`), each evidenced:
   ("ACCRINT with calc_method TRUE: a next coupon past the calendar is #NUM!"; bases 2 to 4 are unprobed there).
 No math value (`NoValueError`): a par of 0, a frequency other than 1, 2 or 4 and a basis from 5 (unprobed), a date or
 coupon date before 1900-03-01 that is not before 1900-01-01 (Excel's serials 0 to 60 and the fictitious 1900-02-29,
-which this definition does not model), and a sum that cancels (`ill_conditioned`).
+which this definition does not model), and a sum that cancels (`ill_conditioned`, or exactly 0 from non-zero
+terms).
 """
 
 from __future__ import annotations
@@ -148,6 +149,11 @@ def accrued_periods(dates: tuple[int, int, int], frequency: int, basis: int, *, 
             terms.append(basis_days(issue, end, basis) / _issue_period(begin, end, basis, frequency))
         end = begin
     total = sum(terms, Fraction(0))
+    if total == 0 and any(terms):
+        # Non-zero terms that cancel exactly: Excel's doubles leave a residue
+        # (`ACCRINT(49116,49633,49117,0.00183790807306151,21.6508879408564,2,2)` is -2.2E-18).
+        msg = "period fractions that cancel to 0"
+        raise NoValueError(msg)
     if total != 0:
         ill_conditioned(float(sum(abs(t) for t in terms) / abs(total)))
     return total

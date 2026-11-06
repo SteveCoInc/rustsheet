@@ -2035,6 +2035,10 @@ Tasks: T-1822, T-1844, T-2124, T-2125
 Rule: ACCRINT reads its dates as Excel 1900 serials too, and is `#NUM!` when a coupon date it accrues over falls before
 1900-01-01 (serial 0): the coupon date before settlement (the regular one, `first_interest` less a period, when
 settlement is not past `first_interest` or calc_method is FALSE) or any period start on the walk back to the issue.
+With calc_method TRUE and the settlement after `first_interest` this is no longer stable: those cells were `#NUM!` in
+the fills below, but 0 on 2026-11-06 (probes/accrint-zero-results A1:A9, A12, A14, A16:A19; "ACCRINT, ACCRINTM,
+PRICEMAT and YIELDMAT: amount domains (T-4114)"), pending a re-fill (T-4566). The `#NUM!` stands, re-confirmed that day,
+for calc_method FALSE and for a settlement before `first_interest` (A10, A11).
 - `ACCRINT(DATE(1900,3,1),DATE(1900,6,30),S,0.05,1000,4,0,TRUE)` is `#NUM!` for every settlement S from 1900-05-01 to
   9999-12-31 (the issue's period starts 1899-12-31), with calc_method FALSE, on bases 0, 1, 3 and 4 and with semiannual
   or annual coupons; `ACCRINT(DATE(1900,3,1),DATE(1900,3,31),DATE(1900,3,15),...)` too (the regular period starts
@@ -5050,21 +5054,22 @@ runs from 2034-02-28 to 2034-08-31) is 137.22222222222223, the stub 80/180, wher
 137.09944751381215 (the engine). 360/frequency would give the same there, but not when that period runs from 2034-02-28
 to 2034-08-28 (first_interest 2035-08-28 or 08-30): Excel's 136.62921348314606 is 80/178, US 30/360 moving both dates.
 With calc_method TRUE, a settlement after first_interest and a coupon date on the walk back before 1900-01-01, Excel
-for the web gave **0** on 2026-11-06 for every basis and frequency: `ACCRINT(61,91,45000,0.05,1000,4,b,TRUE)`, issue 61,
+for the web gave **0** on 2026-11-06: quarterly on bases 0 to 4 (`ACCRINT(61,91,45000,0.05,1000,4,b,TRUE)`, A1:A5),
+semiannual on bases 0 and 1 (A6, A7, A17) and annual on basis 0 (A16); other bases at those frequencies are unprobed. Issue 61,
 62 or 90, first_interest 90, 91 or 182, settlement 92 to 45000. "ACCRINT at the calendar's start" records `#NUM!` for the
 same shape from earlier fills, so the result there is not stable; the Gate A definition gives those points no math
 value. With calc_method FALSE or a settlement before first_interest they are `#NUM!` (A10, A11).
 Evidence: probes/accrint-zero-results A1:A19 (ACCRINT at the calendar's start), B1:B40 (ACCRINTM with equal dates),
 C1:C26 (the issue's period on bases 0, 2 and 4) (excel-graph, 2026-11-06; columns A and B filled twice the same day,
 with the same values);
-accuracy/ACCRINT/s1 A22 (basis 2), A111, A112, A117, A118, A124, A127, A136, A139 (rate 0), A115, A137, A147, A164
+accuracy/ACCRINT/s1 A21 (basis 2), A116, A117, A123, A126, A135, A138 (rate 0), A114, A136, A163
 (next coupon past the calendar); accuracy/ACCRINTM/s1
 A115 and A134 (equal dates), A111, A112, A118, A129, A140 (rate 0); accuracy/PRICEMAT/s1 A118, A122, A134, A135,
 A140; accuracy/YIELDMAT/s1 A123, A124, A130, A137 (excel-graph, 2026-11-06, T-4114); gen-m9 0a957119475760c5 A92,
 1cd3096e3e87c965 A123, A140, 290180acf017709c A147, A177, A312, 67a4c03afd63f988 A179, 9a1fa5366bc50918 A180,
 9d9ceba257f8001b A381, b73c6cc96e093f03 A333; probes/date-system-1900-accrint-settlement-bound A1:A20.
 Ours: the amount domains match. ACCRINTM's equal dates, ACCRINT's basis-2 issue period and its 0 at the calendar's
-start do not (T-4566; accuracy/ACCRINTM/s1 A115, A134 and accuracy/ACCRINT/s1 A22 are known failures).
+start do not (T-4566; accuracy/ACCRINTM/s1 A115, A134 and accuracy/ACCRINT/s1 A21 are known failures).
 Status: VERIFIED (excel-graph)
 Tasks: T-4114, T-4566
 

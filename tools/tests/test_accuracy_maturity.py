@@ -120,6 +120,7 @@ def test_unprobed_points_have_no_value() -> None:
         (ACCRINTM, (39083, 39448, 0.1, 0)),  # a par of 0
         (ACCRINT, (39508, 39691, 39569, 0.1, 0, 2, 0)),
         (ACCRINT, (39508, 39691, 39569, 0.1, 1000, 3, 0)),  # frequency 3
+        (ACCRINT, (49116, 49633, 49117, 0.00183790807306151, 21.6508879408564, 2, 2)),  # cancels to exactly 0
         (ACCRINT, (39508, 39691, 39569, 0.1, 1000, 2, 5)),  # basis 5
         (ACCRINT, (33853, 1, 37554, 1, 9888, 2, 1)),  # serials below 61 are not modelled
         (ACCRINT, (2956276, 2956456, 2958283, 0.05, 1000, 2, 2, True)),  # next coupon past 9999, basis 2

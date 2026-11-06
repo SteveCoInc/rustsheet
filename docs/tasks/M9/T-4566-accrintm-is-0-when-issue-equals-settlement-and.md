@@ -26,11 +26,11 @@ has given both 0 and `#NUM!` there, and the engine follows what a fresh fill sho
   eval/accuracy/known-failures.tsv under this task.
 - probes/accrint-zero-results A1:A9, A12, A14, A16:A19: `ACCRINT(61,91,45000,0.05,1000,4,b,TRUE)` and its neighbours
   (issue 1900-03-01 to 1900-03-30, first_interest 1900-03-30, 1900-03-31 or 1900-06-30, settlement after it) are 0 in
-  Excel on 2026-11-06, every basis and frequency; the engine gives `#NUM!`. With calc_method FALSE (A11) or a settlement
+  Excel on 2026-11-06 (quarterly on bases 0-4, semiannual on bases 0 and 1, annual on basis 0); the engine gives `#NUM!`. With calc_method FALSE (A11) or a settlement
   before first_interest (A10) both are `#NUM!`. financial.md "ACCRINT at the calendar's start" records `#NUM!` for the
   same shape from the 2026-10-24 to 10-26 fills (and a 0 on 2026-10-17), so re-fill those probes before changing
   `compute_accrint`.
-- probes/accrint-zero-results C15, C16 and accuracy/ACCRINT/s1 A22 (carried in known-failures.tsv under this task):
+- probes/accrint-zero-results C15, C16 and accuracy/ACCRINT/s1 A21 (carried in known-failures.tsv under this task):
   `ACCRINT(49107,49552,49782,0.1,1000,2,2,FALSE)` is 137.22222222222223 in Excel, the engine 137.09944751381215. Excel's
   basis-2 issue-period length is US 30/360 moving both dates (C3, C4, C9, C10 tell it from 360/frequency); the engine's
   `stub_denominator` (crates/rustsheet-engine/src/functions/financial/accrint.rs) uses plain US 30/360 on basis 2.
@@ -41,7 +41,7 @@ has given both 0 and `#NUM!` there, and the engine follows what a fresh fill sho
 - [ ] ACCRINTM with equal dates and a positive rate and par is 0; probes/accrint-zero-results B1:B40 and
       accuracy/ACCRINTM/s1 A115, A134 pass, and their known-failures.tsv lines are removed.
 - [ ] ACCRINT's basis-2 issue period is US 30/360 moving both dates; probes/accrint-zero-results C15, C16 and
-      accuracy/ACCRINT/s1 A22 pass and A22's known-failures.tsv line is removed.
+      accuracy/ACCRINT/s1 A21 pass and A21's known-failures.tsv line is removed.
 - [ ] A re-fill of probes/accrint-zero-results and of the "ACCRINT at the calendar's start" probes decides ACCRINT's
       result there; financial.md and, if it is stable, the engine and defs/accrint.py follow it.
 - [ ] `make check` green; reviewers approve.
