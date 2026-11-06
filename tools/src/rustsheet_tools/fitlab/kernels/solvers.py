@@ -461,7 +461,8 @@ def rate_secant_candidates() -> list[Candidate]:
 # ----------------------------------------------------------------------------- YIELD
 
 
-def _month_end(d: datetime.date) -> bool:
+def month_end(d: datetime.date) -> bool:
+    """Whether `d` is its month's last day."""
     return d.day == calendar.monthrange(d.year, d.month)[1]
 
 
@@ -471,8 +472,8 @@ def days360(start: datetime.date, end: datetime.date, european: bool) -> int:
     if european:
         d1, d2 = min(d1, 30), min(d2, 30)
     else:
-        feb1 = start.month == 2 and _month_end(start)
-        if feb1 and end.month == 2 and _month_end(end):
+        feb1 = start.month == 2 and month_end(start)
+        if feb1 and end.month == 2 and month_end(end):
             d2 = 30
         if feb1 or d1 == 31:
             d1 = 30
@@ -481,7 +482,8 @@ def days360(start: datetime.date, end: datetime.date, european: bool) -> int:
     return (end.year - start.year) * 360 + (end.month - start.month) * 30 + (d2 - d1)
 
 
-def _add_months(d: datetime.date, months: int, eom: bool) -> datetime.date:
+def add_months(d: datetime.date, months: int, eom: bool) -> datetime.date:
+    """`d` moved `months` months, its day clamped to the month, or the month's last day with `eom`."""
     y, m = divmod(d.month - 1 + months, 12)
     year, month = d.year + y, m + 1
     last = calendar.monthrange(year, month)[1]
@@ -497,11 +499,11 @@ def schedule(
     if freq not in (1, 2, 4):
         msg = f"frequency {freq}"
         raise UnparsedError(msg)
-    eom = _month_end(maturity)
+    eom = month_end(maturity)
     ncd = maturity
     for n in range(4 * 10_000):
         try:
-            pcd = _add_months(maturity, -12 // freq * (n + 1), eom)
+            pcd = add_months(maturity, -12 // freq * (n + 1), eom)
         except ValueError:
             break  # before year 1
         if pcd <= settle:

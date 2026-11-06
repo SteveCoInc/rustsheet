@@ -122,7 +122,7 @@ class Coupons:
         return (self.e - self.a) / self.e
 
 
-def _date_serial(d: datetime.date) -> int:
+def date_serial(d: datetime.date) -> int:
     """A schedule date from 1900-01-01 on as Excel's 1900 serial (the fictitious 1900-02-29 counts from March)."""
     if d < MARCH_1900:
         return (d - datetime.date(1899, 12, 31)).days
@@ -145,7 +145,7 @@ def coupons(settlement: int, maturity: int, frequency: int, basis: int) -> Coupo
     if pcd_date < CALENDAR_START:
         msg = "the previous coupon date is before 1900-01-01: #NUM!"
         raise DomainError(msg)
-    pcd, ncd = _date_serial(pcd_date), _date_serial(ncd_date)
+    pcd, ncd = date_serial(pcd_date), date_serial(ncd_date)
     a = basis_days(pcd, settlement, basis)
     e = {0: Fraction(360, frequency), 1: Fraction(ncd - pcd), 3: Fraction(365, frequency)}.get(
         basis, Fraction(360, frequency)
@@ -194,7 +194,7 @@ def bond(args: Sequence[MathArg], *, redemption: bool, price_given: bool) -> Bon
     return Bond(settlement, maturity, rate, fourth, red, int(f), basis)
 
 
-def _top(ln_x: mpmath.mpf, what: str) -> bool:
+def past_double_top(ln_x: mpmath.mpf, what: str) -> bool:
     """Whether ln x is past ln of the double range's top; NoValueError within `BAND` of it."""
     if abs(ln_x - LN_OVERFLOW) <= BAND * LN_OVERFLOW:
         msg = f"{what} at the double range's top"
@@ -202,7 +202,8 @@ def _top(ln_x: mpmath.mpf, what: str) -> bool:
     return bool(ln_x > LN_OVERFLOW)
 
 
-def _ln(x: mpmath.mpf) -> mpmath.mpf:
+def ln_or_minus_inf(x: mpmath.mpf) -> mpmath.mpf:
+    """ln x, or -inf for x <= 0 (no value to overflow)."""
     return mpmath.log(x) if x > 0 else mpmath.mpf("-inf")
 
 
@@ -217,7 +218,7 @@ def _sums(b: Bond, c: Coupons, cf: mpmath.mpf, weighted: bool) -> tuple[mpmath.m
     s, n = fraction_to_mpf(c.s), c.n
     u = mpmath.log1p(b.fourth / b.frequency)
     big_t = s + n - 1
-    if n > 1 and _top(big_t * u, "(1 + yld/f)^(s+N-1)"):
+    if n > 1 and past_double_top(big_t * u, "(1 + yld/f)^(s+N-1)"):
         msg = "(1 + yld/f)^(s+N-1) past the double range: #NUM!"
         raise DomainError(msg)
     extra = 10 + (2 * int(-mpmath.log10(abs(u))) if u != 0 else 0) + 2 * len(str(n))
@@ -240,13 +241,13 @@ def _dirty(coupon_sum: mpmath.mpf, red_term: mpmath.mpf, rate: mpmath.mpf, n: in
     NoValueError with one (unprobed: PRICE's one-period form is linear, DURATION's s/f); NoValueError for an infinite
     100·rate below it."""
     dirty = coupon_sum + red_term
-    if _top(_ln(dirty), "the dirty sum"):
+    if past_double_top(ln_or_minus_inf(dirty), "the dirty sum"):
         if n == 1:
             msg = "the one-period flows' sum past the double range (unprobed)"
             raise NoValueError(msg)
         msg = "the discounted flows' sum past the double range: #NUM!"
         raise DomainError(msg)
-    if _top(_ln(100 * rate), "100·rate"):
+    if past_double_top(ln_or_minus_inf(100 * rate), "100·rate"):
         msg = "100·rate past the double range (unprobed)"
         raise NoValueError(msg)
     return dirty
@@ -266,7 +267,7 @@ def price_of(b: Bond, c: Coupons) -> mpmath.mpf:
     else:
         coupon_sum, red_term, _ = _sums(b, c, cf, weighted=False)
         value = _dirty(coupon_sum, red_term, b.rate, c.n) - accrued
-    if _top(_ln(abs(value)), "PRICE"):
+    if past_double_top(ln_or_minus_inf(abs(value)), "PRICE"):
         if c.n == 1:  # a near-zero linear discount: unprobed
             msg = "the one-period PRICE past the double range (unprobed)"
             raise NoValueError(msg)
@@ -279,7 +280,7 @@ def duration_of(b: Bond, c: Coupons) -> mpmath.mpf:
     """DURATION (module docstring)."""
     coupon_sum, red_term, weighted = _sums(b, c, _coupon(b), weighted=True)
     dirty = _dirty(coupon_sum, red_term, b.rate, c.n)
-    if _top(_ln(abs(weighted)), "the weighted sum"):
+    if past_double_top(ln_or_minus_inf(abs(weighted)), "the weighted sum"):
         msg = "the weighted sum past the double range while the dirty sum is not (unprobed)"
         raise NoValueError(msg)
     return weighted / dirty / b.frequency
@@ -389,7 +390,7 @@ def _month_end_maturity(rng: random.Random, settlement: int, years: int) -> int:
     month = rng.randint(1, 12)
     last = calendar.monthrange(year, month)[1]
     day = rng.choice((last, min(last, 29), min(last, 30), last - 1))
-    return _date_serial(datetime.date(year, month, day))
+    return date_serial(datetime.date(year, month, day))
 
 
 def _base(stratum: str, rng: random.Random) -> Draft:
@@ -464,7 +465,7 @@ def _edge(rng: random.Random, *, price_given: bool) -> Draft:
     else:  # settlement on a coupon date
         d.settlement = d.maturity - round(rng.randint(1, 40) * YEAR / d.frequency)
         pcd, _, _ = schedule(real_date(d.settlement), real_date(d.maturity), d.frequency)
-        d.settlement = max(1, _date_serial(pcd))
+        d.settlement = max(1, date_serial(pcd))
     return d
 
 

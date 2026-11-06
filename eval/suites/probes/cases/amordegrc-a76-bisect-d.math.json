@@ -83,6 +83,11 @@
     "v": "-1000000000000001.0",
     "f": "=FVSCHEDULE((-1),Data!E10:E10)"
    },
+   "A193": {
+    "t": "e",
+    "why": "a negative rate or yld, a pr or redemption of 0 or below",
+    "f": "=ODDLYIELD(35857,38656,33195,(-0.05),120,100,2)"
+   },
    "A196": {
     "t": "e",
     "why": "the previous coupon date is before 1900-01-01: #NUM!",
@@ -92,6 +97,11 @@
     "t": "n",
     "v": "0.02000000000000000111022302462515654042363166809082",
     "f": "=DOLLARFR(0.1,20)"
+   },
+   "A208": {
+    "t": "e",
+    "why": "frequency 0.0 is not 1, 2 or 4",
+    "f": "=ODDFYIELD(61,44290,34664,36740,(-0.5),117,106,0,0)"
    },
    "A209": {
     "t": "n",
@@ -148,6 +158,11 @@
     "why": "pv 0: #NUM!",
     "f": "=RRI(104,0,20622)"
    },
+   "A242": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=ODDLYIELD(35195,(-1),34754,(-0.0001),97,108,4,3)"
+   },
    "A243": {
     "t": "e",
     "why": "a negative cost or salvage, or a salvage above the cost: #NUM!",
@@ -183,6 +198,16 @@
     "v": "0.058378378378378378378378378378378378378378378378378",
     "f": "=YIELDDISC(37559,43849,50,101,2)"
    },
+   "A290": {
+    "t": "e",
+    "why": "date -2.5 is outside 1900-01-00..9999-12-31",
+    "f": "=ODDLPRICE((-2.5),0.5,33508,SUM((Data!B9+Data!$E1)),0.1,106,4)"
+   },
+   "A291": {
+    "t": "e",
+    "why": "number outside [-1, 1]",
+    "f": "=ODDLYIELD(-ACOS((-1-2^-52)),38793,34924,(-0.5),Data!$D3,108,2,4)"
+   },
    "A298": {
     "t": "n",
     "v": "1.0000000000000000250590918352087596856961468077037e-300",
@@ -197,6 +222,11 @@
     "t": "e",
     "why": "date 1000000000000000.0 is outside 1900-01-00..9999-12-31",
     "f": "=TBILLPRICE(36857,Data!E4,0.05/12)"
+   },
+   "A306": {
+    "t": "e",
+    "why": "not issue < settlement < first_coupon < maturity: #NUM!",
+    "f": "=ODDFYIELD(36438,45898,34242,1.005,0.05,93,104,2)"
    },
    "A308": {
     "t": "e",
@@ -242,6 +272,11 @@
     "t": "e",
     "why": "flows of one sign: no rate",
     "f": "=IRR(Data!B8:B9)"
+   },
+   "A355": {
+    "t": "e",
+    "why": "not issue < settlement < first_coupon < maturity: #NUM!",
+    "f": "=ODDFYIELD(Data!D6,45037,34486,39189,1.005,85,106,2,1)"
    },
    "A356": {
     "t": "n",
