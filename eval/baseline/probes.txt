@@ -2408,6 +2408,9 @@ C	probes/t4453-near-integer-text-args.case.json	168
 C	probes/t4455-near-integer-eng-args.case.json	260
 C	probes/t4458-bessely-tiny-x-bisect.case.json	263
 C	probes/t4458-bessely-tiny-x-cuts.case.json	430
+C	probes/t4459-besselk-tiny-x-bisect.case.json	60
+C	probes/t4459-besselk-tiny-x-cuts.case.json	186
+C	probes/t4459-besselk-tiny-x-ulps.case.json	24
 C	probes/t4464-groupby-spent-filter-shapes.case.json	323
 C	probes/t4465-extent-near-integer-fresh.case.json	352
 C	probes/t4465-extent-near-integer-holdout.case.json	354

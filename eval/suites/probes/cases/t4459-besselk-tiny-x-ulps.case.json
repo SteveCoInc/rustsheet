@@ -1,0 +1,43 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4459: BESSELK of orders 0 and 1 at literals written as 2^-1021 plus 1, 2, 3, 4, 8, 16, 64, 1024, 2^20 and 2^30 ulps, then 4.45014772E-308 and 4.4501478E-308 (rows 1:12). Excel reads a literal at 15 significant digits (numbers.md), so rows 1:4 ask 4.4501477170144E-308 and rows 5:6 ask 4.45014771701441E-308: the two sides of 2^-1021.",
+  "tags": [
+    "M9",
+    "probe",
+    "engineering",
+    "T-4459",
+    "bessel"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=BESSELK(4.450147717014404E-308,0)",
+        "A2": "=BESSELK(4.450147717014405E-308,0)",
+        "A3": "=BESSELK(4.450147717014406E-308,0)",
+        "A4": "=BESSELK(4.450147717014407E-308,0)",
+        "A5": "=BESSELK(4.450147717014411E-308,0)",
+        "A6": "=BESSELK(4.450147717014419E-308,0)",
+        "A7": "=BESSELK(4.450147717014466E-308,0)",
+        "A8": "=BESSELK(4.450147717015415E-308,0)",
+        "A9": "=BESSELK(4.450147718050534E-308,0)",
+        "A10": "=BESSELK(4.450148778012298E-308,0)",
+        "A11": "=BESSELK(4.45014772E-308,0)",
+        "A12": "=BESSELK(4.4501478E-308,0)",
+        "B1": "=BESSELK(4.450147717014404E-308,1)",
+        "B2": "=BESSELK(4.450147717014405E-308,1)",
+        "B3": "=BESSELK(4.450147717014406E-308,1)",
+        "B4": "=BESSELK(4.450147717014407E-308,1)",
+        "B5": "=BESSELK(4.450147717014411E-308,1)",
+        "B6": "=BESSELK(4.450147717014419E-308,1)",
+        "B7": "=BESSELK(4.450147717014466E-308,1)",
+        "B8": "=BESSELK(4.450147717015415E-308,1)",
+        "B9": "=BESSELK(4.450147718050534E-308,1)",
+        "B10": "=BESSELK(4.450148778012298E-308,1)",
+        "B11": "=BESSELK(4.45014772E-308,1)",
+        "B12": "=BESSELK(4.4501478E-308,1)"
+      }
+    }
+  ],
+  "expected": {}
+}
