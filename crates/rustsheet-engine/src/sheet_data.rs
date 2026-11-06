@@ -51,7 +51,7 @@ const CHUNK_MASK: usize = CHUNK_ROWS - 1;
 ///
 /// Rows and columns outside the sheet (below 1, or beyond the last) hold no
 /// cells: writing to them does nothing and reading them finds nothing.
-#[derive(Encode, Decode, Debug, Clone, Default)]
+#[derive(Encode, Decode, Debug, Default)]
 pub struct SheetData {
     /// `chunks[i]` holds rows `i * CHUNK_ROWS ..`, if any of them exists.
     chunks: Vec<Option<Box<Chunk>>>,
@@ -72,6 +72,11 @@ pub struct SheetData {
     /// the cost of filling a sheet). Not serialised, so bytes cannot forge it.
     #[bitcode(skip)]
     column_rows: Option<BTreeSet<(i32, i32)>>,
+    /// How many writes have kept the built column index in step since it was built. Past the
+    /// number of cells it holds the index is dropped: a rewrite of the whole sheet (structural
+    /// edits move every cell) then costs no more than the lazy rebuild (T-1521). Not serialised.
+    #[bitcode(skip)]
+    index_updates: usize,
     /// Counts the writes that add or remove a cell, so a walk that hands cells to code that may
     /// write (a spill) can tell that what it found before is out of date.
     #[bitcode(skip)]
@@ -89,6 +94,25 @@ pub struct SheetData {
     /// Where in its row [`SheetData::cell`] found its last cell (`PositionHint`).
     #[bitcode(skip)]
     hint: PositionHint,
+}
+
+/// A clone has no column index, so that an undo snapshot of a sheet (`delete_sheet` clones the
+/// worksheet) does not copy it: it is derived from the cells and built again when a walk needs
+/// it (T-1521).
+impl Clone for SheetData {
+    fn clone(&self) -> Self {
+        SheetData {
+            chunks: self.chunks.clone(),
+            row_count: self.row_count,
+            column_counts: self.column_counts.clone(),
+            column_rows: None,
+            index_updates: 0,
+            layout_version: self.layout_version,
+            known_last_row: self.known_last_row,
+            reads: self.reads.clone(),
+            hint: self.hint.clone(),
+        }
+    }
 }
 
 #[derive(Encode, Decode, Debug, Clone)]
@@ -349,6 +373,7 @@ impl SheetData {
         if self.column_rows.is_none() {
             // Collected and sorted, then built in one pass: far cheaper than one insert per cell.
             self.column_rows = Some(self.cells().map(|(row, column, _)| (column, row)).collect());
+            self.index_updates = 0;
         }
     }
 
@@ -358,10 +383,27 @@ impl SheetData {
         self.column_rows.is_some()
     }
 
+    /// Drops the column index once more writes than cells have kept it in step: rebuilding it
+    /// (20-32 ms per 1M cells, T-1502) is then cheaper than going on paying a B-tree update for
+    /// every write, as a structural edit that moves every cell does. The next long union walk
+    /// builds it again.
+    fn drop_index_if_stale(&mut self) {
+        if self
+            .column_rows
+            .as_ref()
+            .is_some_and(|index| self.index_updates > index.len())
+        {
+            self.column_rows = None;
+            self.index_updates = 0;
+        }
+    }
+
     fn index_cell(&mut self, row: i32, column: i32) {
         *self.column_counts.entry(column).or_insert(0) += 1;
         if let Some(index) = &mut self.column_rows {
             index.insert((column, row));
+            self.index_updates += 1;
+            self.drop_index_if_stale();
         }
         self.layout_version = self.layout_version.wrapping_add(1);
     }
@@ -375,6 +417,8 @@ impl SheetData {
         }
         if let Some(index) = &mut self.column_rows {
             index.remove(&(column, row));
+            self.index_updates += 1;
+            self.drop_index_if_stale();
         }
         self.layout_version = self.layout_version.wrapping_add(1);
     }
