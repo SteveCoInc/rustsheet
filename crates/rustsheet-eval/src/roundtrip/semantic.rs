@@ -87,7 +87,10 @@ pub(crate) fn model_facts(model: &Model) -> Facts {
             let range = format!(
                 "{}:{}",
                 a1(m.row, m.column),
-                a1(m.row + m.height - 1, m.column + m.width - 1)
+                a1(
+                    m.row.saturating_add(m.height).saturating_sub(1),
+                    m.column.saturating_add(m.width).saturating_sub(1),
+                )
             );
             facts.insert(format!("merge {name}!{range}"), String::new());
         }
