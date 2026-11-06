@@ -21,7 +21,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars
+from rustsheet_tools.accuracy.defs._common import real_args
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
@@ -107,7 +107,7 @@ def rate(nper: int, pmt: mpmath.mpf, pv: mpmath.mpf, fv: mpmath.mpf, due: bool) 
 
 
 def _rate(args: Sequence[MathArg]) -> mpmath.mpf:
-    nper, pmt, pv, fv, kind = scalars(args)[:5]  # a call's guess (the sixth) does not move a unique root
+    nper, pmt, pv, fv, kind = real_args(args)[:5]  # a call's guess (the sixth) does not move a unique root
     return rate(int(nper), pmt, pv, fv, kind != 0)
 
 
@@ -229,7 +229,7 @@ def nper(r: mpmath.mpf, pmt: mpmath.mpf, pv: mpmath.mpf, fv: mpmath.mpf, due: bo
 
 
 def _nper(args: Sequence[MathArg]) -> mpmath.mpf:
-    r, pmt, pv, fv, kind = scalars(args)
+    r, pmt, pv, fv, kind = real_args(args)
     return nper(r, pmt, pv, fv, kind != 0)
 
 

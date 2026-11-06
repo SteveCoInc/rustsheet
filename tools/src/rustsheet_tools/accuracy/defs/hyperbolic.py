@@ -28,7 +28,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars, signed, zero_pole
+from rustsheet_tools.accuracy.defs._common import real_args, signed, zero_pole
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 from rustsheet_tools.accuracy.model import Definition, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -48,7 +48,7 @@ OVERFLOW_LIMIT = UNPROBED[0]  # SINH and COSH magnitudes; the edge stratum still
 
 def _overflow(args: Sequence[MathArg]) -> str | None:
     """SINH and COSH: `#NUM!` once e^|x| overflows a double."""
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "e^|x| overflows a double" if abs(x) > EXP_CUT else None
 
 
@@ -91,7 +91,7 @@ def _definition(
     sources: tuple[str, ...],
 ) -> Definition:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
-        (x,) = scalars(args)
+        (x,) = real_args(args)
         return kernel(x)
 
     return register(

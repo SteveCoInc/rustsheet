@@ -28,7 +28,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import DF_CUT, scalars
+from rustsheet_tools.accuracy.defs._common import DF_CUT, is_real, real_args
 from rustsheet_tools.accuracy.defs.student_t import bounded_df
 from rustsheet_tools.accuracy.model import (
     Definition,
@@ -95,13 +95,13 @@ def _df(name: str, truncates: str = "") -> Param:
 
 def _f_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, d1, d2, cumulative = args
-    assert not isinstance(x, bool) and not isinstance(d1, bool) and not isinstance(d2, bool)
+    assert is_real(x) and is_real(d1) and is_real(d2)
     return lower_tail(x, d1, d2) if cumulative else density(x, d1, d2)
 
 
 def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     d1, d2 = args[1], args[2]
-    if isinstance(d1, bool) or isinstance(d2, bool):
+    if not is_real(d1) or not is_real(d2):
         msg = "no tail map for a logical df"
         raise ValueError(msg)
     return quantile(1 - q if upper else q, mpmath.floor(d1), mpmath.floor(d2))
@@ -109,7 +109,7 @@ def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _f_inv(args: Sequence[MathArg]) -> mpmath.mpf:
     p, d1, d2 = args
-    assert not isinstance(p, bool) and not isinstance(d1, bool) and not isinstance(d2, bool)
+    assert is_real(p) and is_real(d1) and is_real(d2)
     # F.INV(0, d1, d2) is 0 in Excel (accuracy/F.INV/s1 A111 and A125, excel-graph):
     # the quantile of probability 0 is the support's lower end.
     return mpmath.mpf(0) if p == 0 else quantile(p, d1, d2)
@@ -168,7 +168,7 @@ SATURATION_SOURCE = "statistics.md#finvrt-saturates-at-3696066238512854e150df1-i
 
 
 def _f_dist_rt(args: Sequence[MathArg]) -> mpmath.mpf:
-    x, d1, d2 = scalars(args)
+    x, d1, d2 = real_args(args)
     return upper_tail(x, d1, d2)
 
 
@@ -180,7 +180,7 @@ def _f_dist_rt_domain(args: Sequence[MathArg]) -> str | None:
     the smallest normal double reads as 0 (numbers.md "Subnormal results become 0"), shown for F only by
     `FDIST(1E-308,6,1E+8)` = 1 (probes/t2435-dist-extremes A130); a negative subnormal x is unprobed (x < 0 is the
     interval's error, which the math keeps)."""
-    x, d1, d2 = (float(a) for a in scalars(args))
+    x, d1, d2 = (float(a) for a in real_args(args))
     if x < sys.float_info.min:  # x <= 0 is the interval's; a subnormal x reads as 0
         return None
     mx = d1 * x
@@ -228,8 +228,7 @@ def bup_ratio_overflows(df1: float, df2: float, x: float) -> bool:
 
 
 def _f_inv_rt(args: Sequence[MathArg]) -> mpmath.mpf:
-    p, d1, d2 = args
-    assert not isinstance(p, bool) and not isinstance(d1, bool) and not isinstance(d2, bool)
+    p, d1, d2 = real_args(args)
     # p = 1 is 0 on both names (`F.INV.RT(1,3,7)`, `FINV(1,2,5)`): the right tail's support end.
     return mpmath.mpf(0) if p == 1 else quantile(p, d1, d2, upper=True)
 

@@ -75,7 +75,7 @@ from rustsheet_tools.accuracy.defs._common import (
     domain_of,
     fraction_to_mpf,
     one_of,
-    scalars,
+    real_args,
     signed_log_uniform,
 )
 from rustsheet_tools.accuracy.defs.aggregate import running_total
@@ -153,7 +153,7 @@ def _series(args: Sequence[MathArg]) -> tuple[list[float], list[float]]:
     out: list[list[float]] = []
     for a in args[-2:]:
         assert isinstance(a, tuple)
-        out.append([float(v) for v in scalars(a)])
+        out.append([float(v) for v in real_args(a)])
     ys, xs = out
     return ys, xs
 
@@ -223,7 +223,7 @@ def _intercept(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _forecast(args: Sequence[MathArg]) -> mpmath.mpf:
     m, slope = _slope(args)
-    (x,) = scalars(args[:1])
+    (x,) = real_args(args[:1])
     return fraction_to_mpf(m.mean_y + slope * (Fraction(float(x)) - m.mean_x))
 
 
