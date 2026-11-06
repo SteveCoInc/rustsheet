@@ -371,15 +371,20 @@ fn picked_denominator(code: &str, picked: &str, question_numerator: bool) -> (St
 /// A12, A24, A36, A71; number-formats.md "Placeholders after a fraction"). Commas print nothing.
 ///
 /// A `.` among them splits them like a number's point (T-4594). Before it, a `?` that is the last
-/// placeholder takes every spilled digit left (`# ?/7 ?.0` on 0.0123 is " 123/7 0000.0"). After
-/// it nothing spills and nothing owed is paid: each placeholder prints a zero for a lacking digit
-/// (leaving the space due as it was); else a zero for each `?` in a row before the point that
-/// printed a space (`# ?/7|??.#|#` on 0.5 is " 1/7|  .0|0"), and a space becomes due; else, when
-/// a space is due, its blank (a space for `?`,
-/// nothing for `#`, a zero for `0`) and the space stays due; else a zero, and a space becomes
-/// due. A blank ends the space due before anything but a placeholder of its own kind:
-/// `# ?/7|?.##` on 0.0123 is " 123/7|0000.", `.#?` " 123/7|0000.0", `.0#` " 123/7|0000.00",
-/// `# ?/7|0.0#` " 123/7|00000.0" (probes/t4594-fraction-tail-point-explore rows 3, 6, 2, 22).
+/// placeholder takes every spilled digit left (`# ?/7 ?.0` on 0.0123 is " 123/7 0000.0"), and
+/// zeros are left *pending*: a `?` that prints a space adds one and a spilled digit clears them; a
+/// `0` or `#` leaves one plus one per placeholder before it, but for a `?` that printed a lacking
+/// zero
+/// (`# ?/3|??0.?0?` on 0.04 is " 1/3|5 00.000"), and a `?` that then prints a zero for nothing
+/// due takes one of them (`# ?/250|?0?.#0` on 0.0789 " 789/250|00000.00"). After the point
+/// nothing spills and nothing owed is paid: each placeholder prints a zero for a lacking digit
+/// (leaving the space due as it was); else a pending zero, and a space becomes due; else, when a
+/// space is due, its blank (a space for `?`, nothing for `#`, a zero for `0`) and the space stays
+/// due; else a zero, and a space becomes due. A blank ends the space due before anything but a
+/// placeholder of its own kind: `# ?/7|?.##` on 0.0123 is " 123/7|0000.", `.#?`
+/// " 123/7|0000.0", `.0#` " 123/7|0000.00", `# ?/7|0.0#` " 123/7|00000.0"
+/// (probes/t4594-fraction-tail-point-explore rows 3, 6, 2, 22; number-formats.md "Placeholders
+/// after a fraction").
 fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
     let HandedOn {
         spilled,
@@ -393,11 +398,8 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
             .rposition(|t| matches!(t, TextToken::Digit(_)))
     });
     let (mut owed, mut due, mut after_space) = (0_usize, true, false);
-    // How many zeros start the decimals: one per `?` in a row before the point that printed a
-    // space, or after a `0` or `#` one, two when a `?` that printed no lacking zero precedes it.
-    let mut spaces = 0_usize;
-    // Whether the last placeholder was a `?` that printed a spilled digit or a space.
-    let mut after_question = false;
+    // The zeros pending for the decimals, and the placeholders so far that printed no lacking zero.
+    let (mut pending, mut placed) = (0_usize, 0_usize);
     // The kind of the decimal-side placeholder that just printed its blank.
     let mut blank_kind: Option<char> = None;
     let mut printed = Vec::new();
@@ -418,8 +420,8 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
             let text = if lacking > 0 {
                 lacking -= 1;
                 "0"
-            } else if spaces > 0 {
-                spaces -= 1;
+            } else if pending > 0 {
+                pending -= 1;
                 due = true;
                 "0"
             } else if due {
@@ -436,33 +438,9 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
             printed.push(text.to_owned());
             continue;
         }
-        let question = digit.kind == '?';
-        let lacking_before = lacking;
-        let text = if question {
-            let text = if takes_all == Some(index) && spilled.len() > 0 {
-                let rest: String = spilled.by_ref().collect();
-                owed += rest.chars().count();
-                due = true;
-                rest
-            } else if let Some(d) = spilled.next() {
-                owed += 1;
-                due = true;
-                d.to_string()
-            } else if lacking > 0 {
-                lacking -= 1;
-                "0".to_owned()
-            } else if due {
-                " ".to_owned()
-            } else {
-                owed += 1;
-                due = true;
-                "0".to_owned()
-            };
-            after_space = text == " ";
-            spaces = if after_space { spaces + 1 } else { 0 };
-            text
-        } else {
-            spaces = 1 + usize::from(after_question);
+        let text = if digit.kind != '?' {
+            pending = placed + 1;
+            placed += 1;
             (due, after_space) = (false, false);
             if lacking > 0 {
                 lacking -= 1;
@@ -473,8 +451,33 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
                 owed = 0;
                 text
             }
+        } else if lacking > 0 {
+            lacking -= 1;
+            after_space = false;
+            "0".to_owned()
+        } else {
+            placed += 1;
+            let text = if takes_all == Some(index) && spilled.len() > 0 {
+                let rest: String = spilled.by_ref().collect();
+                owed += rest.chars().count();
+                (due, pending) = (true, 0);
+                rest
+            } else if let Some(d) = spilled.next() {
+                owed += 1;
+                (due, pending) = (true, 0);
+                d.to_string()
+            } else if due {
+                pending += 1;
+                " ".to_owned()
+            } else {
+                owed += 1;
+                due = true;
+                pending = pending.saturating_sub(1);
+                "0".to_owned()
+            };
+            after_space = text == " ";
+            text
         };
-        after_question = question && lacking == lacking_before;
         printed.push(text);
     }
     printed
