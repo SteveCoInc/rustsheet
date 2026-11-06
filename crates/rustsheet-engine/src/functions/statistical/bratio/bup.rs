@@ -103,6 +103,32 @@ pub(super) fn l140_bup_prefactor_underflows(a0: f64, b0: f64, x0: f64, y0: f64) 
     })
 }
 
+/// Whether Excel's L140 bup+bgrat tail w is exactly 0 at n >= 3 bup terms because bup's sum
+/// W = ret·S ([`l140_bup_ret`] times [`bup_power_sum`]) is below 2^-970, the smallest normal double
+/// divided by the double epsilon, though W itself is a normal double there. probes/
+/// t4437-beta-t-zero-bracket walks BETA.DIST by 0.5 in ln ret at (a, b) = (5E6, 3.5), (5E6, 4),
+/// (1E6, 3.5) and (5E6, 5.5). Each family's last number has W between 1.10 and 1.60 times 2^-970,
+/// and its first 0 has W between 0.67 and 0.97 times it (`BETA.DIST(0.999862932,5E6,3.5,TRUE)`
+/// row 9 is 1.1078134827430778E-292, row 10 is 0). The fresh sweep after the rule froze, at five
+/// untouched shapes with n from 3 to 7 (probes/t4437-beta-zero-fresh, rows 0.25 nats apart), puts
+/// every family's first 0 on the predicted row (statistics.md "Where the exact 0 starts (T-4045)").
+/// It does not hold at n = 2: (5E6, 2.5) and (5E6, 3) are 0 above it, (2E6, 2.5) a number below it
+/// (T-4564).
+pub(super) fn l140_bup_sum_flushed(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
+    /// 2^-970: Excel's L140 bup+bgrat tail is 0 below it at n >= 3.
+    const FLUSH: f64 = f64::MIN_POSITIVE / f64::EPSILON;
+    let (n, c) = bup_split(b0);
+    n >= 3.0
+        && beta_density_small_shape(y0, c, a0)
+            .filter(|density| density.is_normal())
+            .is_some_and(|density| {
+                let w = l140_bup_ret(density, c, x0, y0)
+                    .mul(Register::load(bup_power_sum(c, a0, y0, x0, n)))
+                    .store();
+                w < FLUSH
+            })
+}
+
 /// bratio's L140 for x0 > 0.7 and a0 > 15 (b0 < 40): w = bgrat(a0, c, x0, y0, bup(c, a0, y0, x0, n))
 /// with n and c = b0 - n from [`bup_split`], as Excel computes it, RN(W + D) (statistics.md "Incomplete
 /// beta: the integrated model", L140 bup+bgrat at 1 < b < 2 (T-3382) and with n >= 2 bup terms

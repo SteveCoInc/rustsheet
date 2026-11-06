@@ -4775,15 +4775,37 @@ within 1E-15 relative / largest relative error:
   - At n = 3 bup terms Excel's 0 starts earlier, between ln ret -680 and -690, at (5E6, 3.5), (5E6, 4) and (1E6, 3.5)
     alike. The last numbers are about 6E-291 and 3.8E-291, and the first 0 has a true tail near 2.8E-295. Neither ln of
     bgrat's increment I_x0(a0, c) (-687 to -697 at that bracket, while (5E6, 10.5) keeps a number at -697) nor the
-    tail explains it. Unmodelled (T-4437).
+    tail explains it. The cut is on bup's sum W (T-4437, below).
   - T.DIST.RT never reaches L140: its kernel is K(df/2, 1/2), and b = 1/2 takes the small-shape branches. Still, Excel
     is 0 once the true tail falls between e^-680 and e^-690 at df 1E7, and between e^-690 and e^-698 at df 1E5
-    (about 3E-300), far above the subnormals. Unmodelled (T-4437).
+    (about 3E-300), far above the subnormals. Bracketed to 0.5 nats below; unmodelled (T-4564).
   - Excel never returns a subnormal or a non-zero value below these cuts in any probed cell. Ours matches every number
     to the last digits, except three cells just above the n = 3 cut that are off in the 9th digit. Since T-3764 it is
     Excel's 0 wherever ln ret is below ln(DBL_MIN) (the rule above); it still keeps a number at the n = 3 zeros above
-    that (t4254-beta-t-l140-zero-cut B1:B11, D1:D11, and t4254-beta-t-zero-wide A30, B30, C30) and the t's (owned by
-    T-4437).
+    that (t4254-beta-t-l140-zero-cut B1:B11, D1:D11, and t4254-beta-t-zero-wide A30, B30, C30) and the t's. Since
+    T-4437 the n >= 3 zeros are exact too (the rule below); the t's and n = 2 are owned by T-4564.
+  - **At n >= 3 bup terms the 0 is on bup's sum W (T-4437)**, probes/t4437-beta-t-zero-bracket (333 cells,
+    excel-graph, 2026-11-06), which walks by 0.5 nats (docs/research/t4437/gen_bracket.py; each cell's ln in
+    `ln_targets.json`). L140 bup+bgrat's BETA.DIST is 0 exactly where W = ret·S is below 2^-970 (the smallest normal
+    double over the double epsilon, 1.0020841800044864E-292), though W is still a normal double there and bgrat's
+    increment D is about e^-18 times W. At (a, b) = (5E6, 3.5), (5E6, 4), (1E6, 3.5) and (5E6, 5.5), the last
+    numbers have W = 1.11, 1.15, 1.10 and 1.60 times 2^-970 (`BETA.DIST(...,5E6,3.5,TRUE)` row 9 is
+    1.1078134827430778E-292), and the first zeros 0.67, 0.70, 0.67 and 0.97 times it. ln ret is 11.7 to 22 nats
+    above ln(DBL_MIN) there, so T-4045's prefactor rule does not reach these cells. The tail and W cannot be told
+    apart here: D adds less than 1E-8 relative.
+    Fresh sweep after the rule froze (probes/t4437-beta-zero-fresh, 102 cells, excel-graph, 2026-11-06;
+    docs/research/t4437/gen_fresh.py): (3E6, 3.5), (5E6, 6.5), (8E6, 4.5), (1E6, 5) and (4E6, 7.5), n from 3 to 7,
+    17 rows 0.25 nats apart around the edge. Scored once: every family's first 0 is on the predicted row (row 10, W
+    0.88 times 2^-970) and its last number on row 9 (1.13 times), 85 of 85 cells on the predicted side.
+  - **n = 2 is not this rule.** (5E6, 2.5) and (5E6, 3) (t4437-beta-t-zero-bracket D, F) are 0 at every row from W
+    0.22 times 2^-970 down. (2E6, 2.5) (t4437-beta-zero-fresh D) is a number at every row, down to 0.15 times it.
+    The density P does not separate them either. Unmodelled (T-4564).
+  - **T.DIST.RT, bracketed** (t4437-beta-t-zero-bracket G:I, ln of the true tail by 0.5): the last number and the
+    first 0 are at -687 / -687.5 at df 1E7, -692 / -692.5 at 1E6 and -696.5 / -697 at 1E5 (numbers down to
+    3.3E-303). At those cuts ln x^a is -683, -688 and -692.5, so it is not x^a reaching DBL_MIN. Unmodelled (T-4564).
+  - Ours: BETA.DIST's worksheet cdf asks `bup.rs` `l140_bup_sum_flushed` at n >= 3 (`bratio::beta_dist_cdf`), as
+    well as T-4045's rule. F's tails and the quantile searches do not ask it. The numbers within a few nats of the
+    edge differ from Excel in the 8th or 9th digit (owned by T-4564).
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism

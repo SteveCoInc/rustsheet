@@ -23,7 +23,7 @@ use bgrat::{bgrat_half, bgrat_increment};
 use bpser::bpser;
 use bup::{
     bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, l140_bup_prefactor_underflows,
-    l140_bup_sum_overflows, BupSum,
+    l140_bup_sum_flushed, l140_bup_sum_overflows, BupSum,
 };
 
 /// TOMS 708's `eps` in `bratio`: max(2^-52, 1e-15).
@@ -230,8 +230,21 @@ pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
 /// probes/t4254-beta-t-l140-zero-cut below `ln(DBL_MIN)` (T-3764). The quantile searches keep
 /// [`beta_dist_lower_tail`]: with the 0 under F.INV's search
 /// `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) leaves Gate A's envelope.
+/// At n >= 3 bup terms it is also 0 where bup's sum W is below 2^-970 ([`l140_bup_sum_flushed`],
+/// T-4437).
 pub(crate) fn beta_dist_cdf(x: f64, y: f64, a: f64, b: f64) -> f64 {
-    l140_prefactor_zero_tails(a, b, x, y).map_or_else(|| beta_dist_lower_tail(x, y, a, b), |t| t.0)
+    l140_prefactor_zero_tails(a, b, x, y)
+        .or_else(|| l140_sum_flushed_tails(a, b, x, y))
+        .map_or_else(|| beta_dist_lower_tail(x, y, a, b), |t| t.0)
+}
+
+/// The tails (lower, upper) of K(a, b, x, y) where L140 bup+bgrat's w is Excel's exact 0 because
+/// bup's sum is below 2^-970 at n >= 3 terms ([`bup::l140_bup_sum_flushed`], T-4437), oriented back
+/// through bratio's swap. BETA.DIST's worksheet cdf only ([`beta_dist_cdf`]).
+fn l140_sum_flushed_tails(a: f64, b: f64, x: f64, y: f64) -> Option<(f64, f64)> {
+    let d = dispatch(a, b, x, y)?;
+    (d.branch == Branch::L140BupBgrat && l140_bup_sum_flushed(d.a0, d.b0, d.x0, d.y0))
+        .then_some(if d.swapped { (1.0, 0.0) } else { (0.0, 1.0) })
 }
 
 /// (w, w1) of BETA.DIST's kernel ([`beta_dist_lower_tail`]) where it is closed or ported, the tails

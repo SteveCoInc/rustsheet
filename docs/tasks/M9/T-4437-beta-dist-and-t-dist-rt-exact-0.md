@@ -3,7 +3,7 @@ id: T-4437
 title: "BETA.DIST and T.DIST.RT exact 0 at a tiny tail: apply T-4045's L140 prefactor rule to BETA.DIST and find the earlier cut at n = 3 bup terms and in the t"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -60,3 +60,23 @@ it.
 
 ## Out of scope
 - F (T-4045); the df1 = 2 closed-form zeros.
+
+## Outcome
+- **Mechanism (n >= 3 bup terms).** probes/t4437-beta-t-zero-bracket walks by 0.5 nats from -680 to -698 and puts
+  the cut on bup's sum W = ret·S. L140 bup+bgrat's BETA.DIST is 0 exactly where W < 2^-970 (DBL_MIN / eps), at
+  (5E6, 3.5), (5E6, 4), (1E6, 3.5) and (5E6, 5.5). The last numbers have W = 1.10 to 1.60 times 2^-970 and the
+  first zeros 0.67 to 0.97 times it. The threshold is a structural constant read off the mechanism's scale, not
+  scored. The fresh sweep after the freeze (probes/t4437-beta-zero-fresh, 5 untouched shapes with n from 3 to 7,
+  steps of 0.25 nats) was scored once: 85 of 85 cells on the predicted side. `bup.rs` `l140_bup_sum_flushed`,
+  asked by `bratio::beta_dist_cdf` only (not F, not the quantile searches); statistics.md records it.
+- **Named cells:** t4254-beta-t-l140-zero-cut B1:B11 and D1:D11, and t4254-beta-t-zero-wide A30, B30 and C30,
+  are now Excel's 0. A29, B28 and B29 stay 9th-digit numbers (the criterion allows it).
+- **Split to T-4564, with evidence (bracketed, unmodelled):**
+  - n = 2 does not follow the rule: (5E6, 2.5) and (5E6, 3) are 0 above 2^-970, while (2E6, 2.5) is a number below it.
+  - The t's cut, bracketed to 0.5 nats at df 1E7, 1E6 and 1E5: neither x^a nor bgrat's prefactor explains it.
+
+  T-4564 owns t4254-beta-t-l140-zero-cut E1:E11, F1:F11 and t4254-beta-t-zero-wide F30, plus the new cases'
+  remaining cells.
+- Follow-up from T-4518's review: T-4565 (SHEET and SHEETS of other bound values), filed here.
+- Eval delta: probes fixed 25, 0 regressions, 2 new cases (435 cells; 302 new-coverage failures, every one owned
+  by T-4564: the n = 2 and t cells, and 8th to 9th digit numbers near the edge).
