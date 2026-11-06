@@ -3,7 +3,7 @@ id: T-4602
 title: "Clock text: probe H:M: before an AM/PM suffix (\"10:30: PM\") and a tab or no-break space inside H:M.f:S or between a date and its clock, and match"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
