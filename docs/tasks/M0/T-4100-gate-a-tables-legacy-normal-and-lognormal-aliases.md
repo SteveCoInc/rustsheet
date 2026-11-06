@@ -64,7 +64,8 @@ Every failing table point has an owner.
 - **Excel kept as the target (decision 0300):** 14 points are more than 1e-4 relative off the math, all Excel's
   lower-tail flush to 0 where the math is a subnormal below the 1e-300 absolute floor (T-1040): `NORMSDIST(-37.625)`
   (A68, A70, A72, A74, A76, A78, A80, A82, A84; math 4.19E-310) and LOGNORMDIST A77, A116, A118, A134, A139 (math
-  4.28E-320 to 4.19E-310).
+  4.28E-320 to 4.19E-310). These are 6 distinct inputs (1 NORMSDIST, 5 LOGNORMDIST): the generator repeats the
+  -37.625 edge.
 - Semantics: statistics.md new entry "STANDARDIZE is the double quotient (x - mean)/standard_dev; standard_dev <= 0 is
   #NUM! (T-4100)" (Excel equals the double quotient on all 185 numeric points; the sd 0 cells), and T-1048's entry
   gains the table evidence (the 44 legacy-table errors and the flush cells).
