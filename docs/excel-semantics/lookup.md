@@ -957,14 +957,43 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
     one-argument form keeps the element wrapped in a 1x1 array, while `INDEX(..,2,1)` hands the reference back.
   - A lifted operator reads it as `#VALUE!`, even a one-cell range: `XLOOKUP(..)+0`, `&""` and `*{1;1}` are
     20, `#VALUE!` (A57:A70).
-  - Over the whole result, SUM walks the reference: `SUM(..F1:F2)` is 23 = 20 + 3 + 4 and `SUM(..E1)` is 25 (A73,
-    A109). COUNT is 1 and COUNTA 2 (A77, A81). ISERROR is FALSE, TRUE and ISTEXT over D1:D2 is FALSE, FALSE (A85,
+  - Over the whole result, SUM reads the reference element's top-left cell, as SPEC-0014 rule 4 does for an array
+    of references: `SUM(..F1:F2)` is 23 = 20 + F1 (not 20 + 3 + 4, which is 27), and `SUM(..E1)` is 25 (A73, A109).
+    COUNT is 1 and COUNTA 2 (A77, A81). ISERROR is FALSE, TRUE and ISTEXT over D1:D2 is FALSE, FALSE (A85,
     A93). TYPE of the result is 64 and ISREF FALSE (A105, A89). MAX is 20 (A113), which cannot
-  tell whether MAX walks the reference (F1:F2 = 3, 4 are below 20).
+    tell whether MAX walks the reference (F1:F2 = 3, 4 are below 20); T-4569 settles it.
+  - The top-left-reading aggregates read the top-left cell, and an order statistic depends on the sheet (probes/t4569-xlookup-ref-element-max-min,
+    excel-graph, 2026-11-06, T-4569; G1:G2 = 50, 60 above the hit 20, H1:H2 = 1, 2 below it).
+    - Top-left cell: MAX 50, not 60 (A1, A14 with a 0 beside it), MAXA alike (A3), a one-cell range the same (A5).
+      MIN and MINA are 1 (A2, A4, A6, A15), which both readings give over H1:H2 = 1, 2, so they confirm nothing. AVERAGE is 35 = (20 + 50) / 2 (A7). PRODUCT is 20 = 20 x 1 (A8).
+      SUMSQ is 401 = 20^2 + 1 (A11). STDEV.S is 21.2132…, from 20 and 50 (A23). SUM is 70 (A20).
+    - Opaque: COUNT counts the reference element as no number, so 1 (A10). COUNTA counts it, so 2 (A9).
+      SUMPRODUCT reads it as 0, so 20 (A21).
+    - LARGE, SMALL and MEDIAN are `#N/A` here (A12, A13, A22), because the references are on another sheet (Data,
+      read from Calc). An array of references alone does the same. Read from another sheet,
+      `LARGE(OFFSET(G1,{0;1},0),1)`, SMALL, MEDIAN and `LARGE(INDIRECT({"Data!G1";"Data!G2"}),1)` are `#N/A` (A31,
+      A32, A40:A44, Local!E4:E5). The t2065 formulas on their own data sheet are `#VALUE!` (sheet Local, t2065's data,
+      E1:E3), as the entry "MEDIAN, LARGE and SMALL over a lifted OFFSET" records. Both come from the same fill. So
+      that entry's `#VALUE!` holds only for references on the formula's own sheet. The referenced sheet decides, not
+      how the reference is written: on Local, `OFFSET(Local!$A$1,..)`, `OFFSET(Local!A1,..)`, `OFFSET($A$1,..)` and
+      `INDIRECT({"A1";"A2"})` under LARGE or MEDIAN are all `#VALUE!`, `LARGE(OFFSET(Data!G1,{0;1},0),1)` is `#N/A`,
+      and a mixed grid read on its own sheet (`LARGE(XLOOKUP({1;9},A1:A3,B1:B3,A2:A3),1)`, unqualified or
+      `Local!`-qualified) is `#VALUE!` while its `MAX` reads the top-left cell, 100 (Local!F1:F9, round 4). A grid
+      with references on both sheets is unprobed.
+    - A text or TRUE hit beside the reference element is read as an array element: SUM, AVERAGE and COUNT skip it
+      (50, 50, 0), AVERAGEA counts text as 0 and skips TRUE (25, 50), MAXA and MINA skip both (50, 50), and COUNTA
+      is 2 (A50:A63; return C1:C3 or D1:D3 with C2 = "t", D2 = TRUE).
+    - Value view: `MAX(..+0)` is `#VALUE!` (A16). `MAX(INDEX(..,2,1))` reads the whole range, 60 (A17).
+    - Per-element callers lift over both elements. The value element is a non-reference argument: ROW, AREAS,
+      COUNTIF, SUBTOTAL(9), COUNTBLANK and `CELL("row")` are `#VALUE!` there, and N is 20. The reference element
+      is the call on G1:G2: ROW 1, AREAS 1, COUNTIF 2, N 50, SUBTOTAL 110, COUNTBLANK 0, CELL 1 (C24:D34). Each
+      result is 2x1 (B24:B28, B30, B33:B34): it is `#SPILL!` in A, where the next row's formula blocks it, and the last one,
+      `CELL("row",..)`, spills `#VALUE!`, 1 (A34:A35). ISREF of the whole result is FALSE (A29), and
+      ISNUMBER lifts to TRUE, FALSE (C30:D30).
   Ours gives `#VALUE!` for the element, so every reader above differs (106 cells). SPEC-0018's nested cell would
   fail ISREF, TYPE, AREAS, CELL and the aggregates, and SPEC-0014's `RefGrid` holds no values, so matching this
-  needs an array that mixes values and references: spec T-4569, implementation T-4570 (it owns t4543 W45, W46
-  and the t4563 cells).
+  needs an array that mixes values and references: SPEC-0014's "Mixed grids" amendment (T-4569); implementation
+  T-4570 (it owns t4543 W45, W46, the t4563 cells and the t4569 cells).
   ADDRESS's sheet_text lifts like its other arguments: `ADDRESS(1,1,1,TRUE,{"S1";"S2"})` is 2x1 `'S1'!$A$1`,
   `'S2'!$A$1` (a name that reads as a cell reference is quoted), a 1x2 and the range D1:D2 (`x!$A$1`, `y!$A$1`) alike,
   beside a lifted row_num it pairs by position and pads with `#N/A` (`ADDRESS({1;2;3},1,1,TRUE,{"S1";"S2"})` third
@@ -1690,9 +1719,12 @@ take `GridReading::TopLeft` (legacy VAR already shared VAR.S's; legacy VARP and 
 (their array rule counts only numbers, so text, blanks and TRUE are skipped); all 61 t3533 probes pass.
 
 ### MEDIAN, LARGE and SMALL over a lifted OFFSET
-Rule: each is `#VALUE!` over a lifted OFFSET (an array of references), like CONCAT and unlike STDEV.S, VAR.S and SUMSQ
-above: `MEDIAN(OFFSET(A1,{0;1;2},0))`, `LARGE(OFFSET(A1,{0;1},0),1)` and `SMALL(OFFSET(A1,0,0,{2;3}),2)` (data as
-probes/reference-lift-consumers-b2) all give `#VALUE!`.
+Rule: each is `#VALUE!` over a lifted OFFSET (an array of references) whose references are on the formula's own
+sheet, like CONCAT and unlike STDEV.S, VAR.S and SUMSQ above. Over references on another sheet each is `#N/A`
+(T-4569; the entry "XLOOKUP's if_not_found and ADDRESS's sheet_text over an array" above). The referenced sheet
+decides, not how the reference is written (probes/t4569-xlookup-ref-element-max-min Local!F1:F6).
+Same-sheet: `MEDIAN(OFFSET(A1,{0;1;2},0))`, `LARGE(OFFSET(A1,{0;1},0),1)` and `SMALL(OFFSET(A1,0,0,{2;3}),2)`
+(data as probes/reference-lift-consumers-b2) all give `#VALUE!`.
 Evidence: probes/t2065-lift-median, -large, -small E1 (excel-graph, 2026-10-29; they failed to open on Excel for the web
 on 2026-10-26 with createSession "retries exhausted", and opened on the 2026-10-29 steward run's fill).
 Status: VERIFIED (excel-graph). Ours matches all three cells. This answers T-1075 item 18.
