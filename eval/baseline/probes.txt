@@ -2403,6 +2403,7 @@ C	probes/t4430-legacy-at-name-body-rest.case.json	181
 C	probes/t4444-dfunction-text-equal-one.case.json	52
 C	probes/t4447-sort-fractional-keys.case.json	84
 C	probes/t4449-groupby-function-array-edges.case.json	145
+C	probes/t4450-eta-special-forms.case.json	152
 C	probes/t4453-near-integer-text-args.case.json	168
 C	probes/t4458-bessely-tiny-x-bisect.case.json	263
 C	probes/t4458-bessely-tiny-x-cuts.case.json	430
@@ -16199,6 +16200,17 @@ F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C3
 F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C4
 F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C7
 F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C8
+F	probes/t4450-eta-special-forms.case.json	Sheet1!F109
+F	probes/t4450-eta-special-forms.case.json	Sheet1!F115
+F	probes/t4450-eta-special-forms.case.json	Sheet1!F121
+F	probes/t4450-eta-special-forms.case.json	Sheet1!H121
+F	probes/t4450-eta-special-forms.case.json	Sheet1!H122
+F	probes/t4450-eta-special-forms.case.json	Sheet1!H123
+F	probes/t4450-eta-special-forms.case.json	Sheet1!H124
+F	probes/t4450-eta-special-forms.case.json	Sheet1!J53
+F	probes/t4450-eta-special-forms.case.json	Sheet1!J59
+F	probes/t4450-eta-special-forms.case.json	Sheet1!J64
+F	probes/t4450-eta-special-forms.case.json	Sheet1!J65
 F	probes/t4458-bessely-tiny-x-cuts.case.json	Calc!D32
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
