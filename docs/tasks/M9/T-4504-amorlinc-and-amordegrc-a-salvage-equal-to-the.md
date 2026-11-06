@@ -44,3 +44,19 @@ AMORLINC and AMORDEGRC with a salvage equal to the cost return Excel's value (0 
 
 ## Out of scope
 - Other AMORLINC and AMORDEGRC argument checks (T-2485).
+
+## Probe predictions (committed before the fill)
+Case probes/amor-salvage-equal-cost (column letters as in its description). Two rules are on the table:
+**W** (the walk compares `remain <= salvage`, everything else as now with `salvage <= cost` allowed) and **E** (an
+early 0 for a salvage equal to the cost once every argument check has run, the walk unchanged). Predicted, by both
+unless marked:
+- A1-A10, B1-B10, C1-C18: 0 (every period, the half and rest periods included; AMORLINC at fractions too).
+- E1-E6: `#NUM!` (the asset-life check also refuses a salvage equal to the cost, at periods 0, 0.5 and 1);
+  E7-E9: 0 (AMORLINC has no asset-life check); E10, E13, E25: `#N/A`; E11, E12, E14, E15: `#NUM!` (the basis is still
+  read and checked); E16-E20: `#NUM!` (purchase after the first period, rate 0, period -1); E21-E24: 0 (cost = salvage
+  = 0).
+- F1, F8: W 970 (the fraction reads the 485), E 485. F7: W 970, E 485. F2: 485 + 0 + (W 0, the call leaves its 0;
+  E 0 or 485). F3: 485 (AMORLINC leaves its clamped first charge, 0). F4: 970 (period 0 keeps the state). F5: 485.
+  F6: W 485, E 485 or 970.
+- G1: W 0, E 776. G2: 330. G3: 0. G4: 776. G5: W 0, E 485. G6: 0. G7: 360. G8: 0. G9: 0. G10: 360.
+My pick before the fill: W.
