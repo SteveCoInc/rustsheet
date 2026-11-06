@@ -2487,6 +2487,7 @@ C	probes/t4587-sheet-api-name-name-body.case.json	4
 C	probes/t4587-sheet-api-name-qualified-use-first.case.json	6
 C	probes/t4587-sheet-api-name-sheet-has-names.case.json	5
 C	probes/t4589-pivot-total-order.case.json	95
+C	probes/t4600-holiday-number-text-off-calendar.case.json	176
 C	probes/t4614-pivot-total-order-2.case.json	124
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
