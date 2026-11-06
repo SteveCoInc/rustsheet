@@ -3,7 +3,7 @@ id: T-4569
 title: "Spec: arrays whose elements mix values and references (SPEC-0014 amendment), for XLOOKUP's range if_not_found under a lifted lookup_value"
 milestone: M6
 lane: functions-lookup
-status: done
+status: in-progress
 priority: P2
 size: M
 tier: opus
@@ -42,7 +42,7 @@ and references, and what each reader sees, so that T-4570 can implement Excel's 
 - [x] A spec (docs/specs/) or a SPEC-0014 amendment covers the representation, each reader class above with its
       evidence, the unprobed readers' fallback, and the bounds.
 - [x] T-4570's acceptance criteria name the spec.
-- [x] Reviewers approve.
+- [ ] Reviewers approve.
 
 ## Out of scope
 - The implementation (T-4570).
@@ -71,3 +71,30 @@ and references, and what each reader sees, so that T-4570 can implement Excel's 
   B20:B24, B26, B31:B32, B34, C20:C23, C31:C32, D20:D28, D31:D34; Local E4:E5).
 - Eval delta: +1 probe case, 102 cells scored. The 34 that match are the value-view and COUNT/COUNTA cells, and the
   per-element cells already right, plus the same-sheet t2065 forms (Local E1:E3). The other 68 are new known failures owned by T-4570. No regressions.
+
+## Landing notes
+- PR #3679 (draft), head e57840598. CI was not yet checked on that head (aac8f5e1c was green). Review round 2 on
+  e57840598: security APPROVE, design APPROVE (MINORs below), excel-fidelity REQUEST_CHANGES. Round 3 has not
+  started.
+- Open findings to fix, from fidelity round 2:
+  1. MAJOR: rule 5's "the sheet decides" is confounded. Every `#N/A` cell uses a sheet-qualified absolute reference
+     (`OFFSET(Data!$G$1,..)`, `OFFSET(Local!$A$1,..)`, `INDIRECT({"Data!G1";..})`). Every `#VALUE!` cell (Local!E1:E3)
+     uses an unqualified relative one (`OFFSET(A1,..)`). Next step: add probe cells on sheet Local, with predictions
+     first in docs/research/t4569/predictions.md, then refill this case with `--force`:
+     `=LARGE(OFFSET(Local!$A$1,{0;1},0),1)`, `=LARGE(OFFSET($A$1,{0;1},0),1)`, `=MEDIAN(OFFSET(Local!$A$1,{0;1;2},0))`,
+     `=LARGE(INDIRECT({"A1";"A2"}),1)`, and a mixed grid read on its own sheet (an XLOOKUP on Local over Local data,
+     under LARGE). Then restate rule 5 (spec "Excel behavior to match" 5, the "Order statistics" reader, "What
+     changes") and lookup.md's two entries to match.
+  2. MAJOR: the spec's "Unprobed readers" list names AVERAGEA (probed: t4569 A52, A59) and VAR.S, STDEV.P and the
+     VARA family. Those already go through `GridReading::TopLeft`/`TopLeftElements` (variance.rs,
+     count_and_average.rs), so they take the walker's `Value(v)` arm and not the value view. Move AVERAGEA into
+     rule 3. Mark VAR.S, STDEV.P and VARA as taking the walker arm, unprobed for mixed grids.
+  3. MINOR (fidelity): lookup.md's bullet "Every aggregate reads the top-left cell" should say "the top-left-reading
+     aggregates". Label "keep today's `#VALUE!` otherwise" for a mixed grid on its own sheet as a fallback.
+  4. MINOR (design): wrap lookup.md's long "Same-sheet:" line, and keep lookup.md canonical with the spec pointing
+     to it.
+- After the refill: `make eval-baseline` from this branch, never from origin/main's baseline (origin/main has newer
+  cases). Then update the T-4570 owner list, which must stay one list item with indented continuation lines, or
+  `new_case_owners` cannot read it. Then `make check-fast` and all three reviewers on the new head.
+- Do not repeat: restoring eval/baseline from origin/main (it adds other cases and shows false regressions). Use the
+  merge-base.
