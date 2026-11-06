@@ -1,0 +1,63 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4391, Last active: -s2-qualified-use with Last active (t4394-api-name-active-last resolved S2's =Rate). T-4353's book (First, S2, Last; B1 = 1, 7, 9; B2 = 10, 70, 90); every cell is loaded from the file before the adds (Graph worksheets('S')/names/add, workbook/names/add for W). Predictions (written before the fill): as t4394-api-name-active-last: every use 9.",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "Last",
+ "sheets": [
+  {
+   "name": "First",
+   "cells": {
+    "B1": 1,
+    "B2": 10
+   }
+  },
+  {
+   "name": "S2",
+   "cells": {
+    "B1": 7,
+    "B2": 70,
+    "A1": "=Qa",
+    "A2": "=Rate",
+    "C1": "=S2!Rate"
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "B1": 9,
+    "B2": 90,
+    "A1": "=Ql",
+    "C1": "=S2!Rate"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "S2!A1",
+  "S2!A2",
+  "S2!C1",
+  "Last!A1",
+  "Last!C1"
+ ],
+ "api_names": [
+  {
+   "name": "Qa",
+   "formula": "=$B$1",
+   "sheet": "S2"
+  },
+  {
+   "name": "Rate",
+   "formula": "=$B$1",
+   "sheet": "S2"
+  },
+  {
+   "name": "Ql",
+   "formula": "=$B$1",
+   "sheet": "Last"
+  }
+ ]
+}

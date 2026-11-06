@@ -260,6 +260,66 @@ fn only_a_union_area_over_more_than_a_chunk_of_rows_builds_the_column_index() {
     assert!(indexed(&model));
 }
 
+/// A model with 3,000 cells in column A and a built column index.
+fn indexed_model() -> Model {
+    let mut model = new_empty_model();
+    for row in 1..=3_000 {
+        model._set(&format!("A{row}"), "1");
+    }
+    model._set("Z1", "=SUM((A:A,A5))");
+    model.evaluate();
+    assert_eq!(model._get_text("Z1"), "3001");
+    model
+}
+
+fn has_index(model: &Model) -> bool {
+    model
+        .workbook
+        .worksheet(0)
+        .unwrap()
+        .sheet_data
+        .has_column_index()
+}
+
+#[test]
+fn the_column_index_is_dropped_after_more_updates_than_cells_and_rebuilt_by_the_next_walk() {
+    // T-1521: a rewrite of the whole sheet costs no more than the lazy rebuild.
+    let mut model = indexed_model();
+    assert!(has_index(&model));
+    // adding cells grows the index along with the updates, so it stands
+    for row in 1..=3_000 {
+        model._set(&format!("B{row}"), "1");
+    }
+    assert!(has_index(&model));
+    // a structural edit moves every cell: a removal and an addition each, more than the cells
+    model.insert_rows(0, 1, 1).unwrap();
+    assert!(!has_index(&model));
+    model._set("Y1", "=SUM((A:B,A5))");
+    model.evaluate();
+    assert_eq!(model._get_text("Y1"), "6001");
+    assert!(has_index(&model));
+}
+
+#[test]
+fn a_cloned_sheet_has_no_column_index_and_walks_the_same() {
+    let model = indexed_model();
+    let mut sheet = model.workbook.worksheet(0).unwrap().sheet_data.clone();
+    assert!(!sheet.has_column_index());
+    assert!(has_index(&model));
+    sheet.build_column_index();
+    let mut a = Vec::new();
+    let mut b = Vec::new();
+    sheet.rows_in_column_between(1, (1, 3_000), usize::MAX, &mut a);
+    model
+        .workbook
+        .worksheet(0)
+        .unwrap()
+        .sheet_data
+        .rows_in_column_between(1, (1, 3_000), usize::MAX, &mut b);
+    assert_eq!(a.len(), 3_000);
+    assert_eq!(a, b);
+}
+
 #[test]
 fn an_indexed_union_walk_meets_cells_in_row_major_order() {
     // The first error in row-major order is the result, as in the dense walk

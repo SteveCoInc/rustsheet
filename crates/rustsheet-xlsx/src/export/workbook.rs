@@ -108,8 +108,19 @@ pub(crate) fn get_workbook_xml(
         let node = parser.parse(formula_body, &parse_context);
         let formula = to_excel_string(&node, &parse_context);
         let formula = escape_xml(&formula);
+        // Saving must not unhide a name or drop its Name Manager comment (T-3301).
+        let comment = defined_name
+            .comment
+            .as_deref()
+            .map(|c| format!(" comment=\"{}\"", escape_xml(c)))
+            .unwrap_or_default();
+        let hidden = if defined_name.hidden {
+            " hidden=\"1\""
+        } else {
+            ""
+        };
         defined_names_str.push(format!(
-            "<definedName name=\"{name}\"{local_sheet_id}>{formula}</definedName>"
+            "<definedName name=\"{name}\"{comment}{hidden}{local_sheet_id}>{formula}</definedName>"
         ));
     }
 

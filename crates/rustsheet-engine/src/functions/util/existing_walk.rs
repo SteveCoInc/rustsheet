@@ -328,6 +328,14 @@ impl Model {
         let mut version = None;
         let mut from = left.row;
         loop {
+            // `f` may have written enough to make the sheet drop its index (T-1521: more writes
+            // than cells); a missing index reads as no rows, so build it again first. A no-op
+            // while it stands.
+            self.workbook
+                .worksheet_mut(sheet)
+                .map_err(sheet_error)?
+                .sheet_data
+                .build_column_index();
             let data = &self
                 .workbook
                 .worksheet(sheet)

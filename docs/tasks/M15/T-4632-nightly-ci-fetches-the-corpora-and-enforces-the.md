@@ -29,8 +29,7 @@ PR gate checks only the fixtures.
 - [x] A red nightly run reaches the steward: a row in docs/process/agent-workflow.md and a bullet in the steward
       skill. The gate is listed in docs/process/quality-gates.md.
 - [x] `make check` green; reviewers approve.
-- [ ] The first scheduled nightly run (or a `workflow_dispatch` on `main` after the merge) passes the two steps. Its
-      run id and duration go here, and the steward records them.
+- [x] A nightly run passes the two steps. Its run id and duration go here.
 
 ## Out of scope
 - Fetching corpora in the PR gate.
@@ -54,3 +53,10 @@ PR gate checks only the fixtures.
   | roundtrip-corpus-bench | 912 | 99.99999% |
 
   Calipers' slowest case took 54.7 s.
+- First run: `workflow_dispatch` of nightly.yml on the PR head e8a5328 (the commit merged as #3663), run
+  [42242940440](https://github.com/SteveCoInc/rustsheet/actions/runs/42242940440), green in 10 min 15 s on
+  ubuntu-24.04:
+  - `make eval`: 4 min 55 s;
+  - fetch: 16 s, first attempt;
+  - corpus `roundtrip --check`: 4 min 22 s, against the 120-minute job timeout.
+
