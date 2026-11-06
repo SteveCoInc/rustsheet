@@ -25,12 +25,18 @@ use crate::types::sheet_names_match;
 
 mod date_groups;
 pub(crate) mod layout;
+mod model;
 mod number_groups;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
 pub use layout::{
     layout_extent, max_layout_rows, row_layout, LayoutCell, BLANK_ITEM, GRAND_TOTAL,
     LAYOUT_COLUMNS, ROW_LABELS,
+};
+pub use model::{
+    Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry, OpaqueNode,
+    OpaqueOwner, PageField, PivotField, PivotItem, PivotOptions, PivotTable, ShowDataAs, SortType,
+    NO_BASE_ITEM,
 };
 pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
 
@@ -96,139 +102,6 @@ pub enum CacheItem {
     Error(Error),
     /// A date (`<d v>`), as a serial number.
     Date(f64),
-}
-
-/// A pivot table on a worksheet.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
-pub struct PivotTable {
-    /// The pivot's name.
-    pub name: String,
-    /// The worksheet's stable `sheet_id`, not its index (api-design.md principle 3).
-    pub sheet_id: u32,
-    /// `<location ref>`, 0-based.
-    pub location: CellArea,
-    /// An index into [`Workbook::pivot_caches`].
-    pub cache: u32,
-    /// One per cache field.
-    pub fields: Vec<PivotField>,
-    /// `<rowFields>`.
-    pub row_fields: Vec<AxisField>,
-    /// `<colFields>`.
-    pub column_fields: Vec<AxisField>,
-    /// `<dataFields>`.
-    pub data_fields: Vec<DataField>,
-}
-
-/// How a pivot shows one cache field.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Default)]
-pub struct PivotField {
-    /// The axis the field is on, if any.
-    pub axis: Option<Axis>,
-    /// A bitset over the cache field's `items`: bit `i` set means item `i` is hidden.
-    pub hidden: Vec<u64>,
-    /// `showAll`: whether the pivot shows the field's items that no record holds. ECMA-376's
-    /// default is on; Excel writes `showAll="0"`. GETPIVOTDATA on such an item of an ungrouped
-    /// field is 0 when on and `#REF!` when off (probes/t4248-getpivotdata-recordless-item).
-    pub show_all: bool,
-}
-
-impl PivotField {
-    /// A field on `axis` with a hidden bitset sized for `item_count` items, none hidden, and
-    /// `showAll` on (ECMA-376's default).
-    #[must_use]
-    pub fn new(axis: Option<Axis>, item_count: usize) -> Self {
-        PivotField {
-            axis,
-            hidden: vec![0; item_count.div_ceil(64)],
-            show_all: true,
-        }
-    }
-
-    /// Hides item `item`; an item past the bitset's size (sized at import) is ignored.
-    pub fn hide(&mut self, item: u32) {
-        if let Some(word) = self.hidden.get_mut(item as usize / 64) {
-            *word |= 1 << (item % 64);
-        }
-    }
-
-    /// Whether item `item` is hidden; an item past the bitset reads as not hidden.
-    #[must_use]
-    pub fn is_hidden(&self, item: u32) -> bool {
-        self.hidden
-            .get(item as usize / 64)
-            .is_some_and(|word| word & (1 << (item % 64)) != 0)
-    }
-}
-
-/// An inclusive, 0-based cell rectangle on one sheet.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
-pub struct CellArea {
-    /// First row.
-    pub top: u32,
-    /// First column.
-    pub left: u32,
-    /// Last row.
-    pub bottom: u32,
-    /// Last column.
-    pub right: u32,
-}
-
-/// A pivot axis.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Axis {
-    /// Rows.
-    Row,
-    /// Columns.
-    Column,
-    /// The report filter (page) area.
-    Page,
-}
-
-/// A `<field x>` of `<rowFields>`/`<colFields>`.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
-pub enum AxisField {
-    /// A cache field, by index.
-    Field(u32),
-    /// `x="-2"`: the Values field.
-    Values,
-}
-
-/// A value field of a pivot.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
-pub struct DataField {
-    /// The caption (`Sum of Sales`).
-    pub caption: String,
-    /// The cache field it summarizes.
-    pub field: u32,
-    /// How it summarizes.
-    pub function: Aggregate,
-}
-
-/// A data field's summary function.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Aggregate {
-    /// `sum`.
-    Sum,
-    /// `count`.
-    Count,
-    /// `average`.
-    Average,
-    /// `max`.
-    Max,
-    /// `min`.
-    Min,
-    /// `product`.
-    Product,
-    /// `countNums`.
-    CountNums,
-    /// `stdDev`.
-    StdDev,
-    /// `stdDevp`.
-    StdDevP,
-    /// `var`.
-    Var,
-    /// `varp`.
-    VarP,
 }
 
 /// Why a cache could not be built. Past a limit the caller drops the whole cache (and every pivot
@@ -744,21 +617,13 @@ mod tests {
     }
 
     fn pivot_on(sheet_id: u32) -> PivotTable {
-        PivotTable {
-            name: format!("P{sheet_id}"),
-            sheet_id,
-            location: CellArea {
-                top: 2,
-                left: 0,
-                bottom: 6,
-                right: 4,
-            },
-            cache: 0,
-            fields: Vec::new(),
-            row_fields: Vec::new(),
-            column_fields: Vec::new(),
-            data_fields: Vec::new(),
-        }
+        let location = CellArea {
+            top: 2,
+            left: 0,
+            bottom: 6,
+            right: 4,
+        };
+        PivotTable::new(format!("P{sheet_id}"), sheet_id, location, 0)
     }
 
     /// A model with sheets Sheet1 and Sheet2 and one pivot on each.
