@@ -1,5 +1,5 @@
 //! SPEC-0034 D1/D2, T-4559: a workbook saved unchanged since its load is its source, byte for
-//! byte; any change regenerates.
+//! byte; any change is patched or regenerated (T-4560).
 
 use std::error::Error;
 use std::io::{Cursor, Read as _, Write as _};
@@ -41,7 +41,7 @@ fn an_unchanged_workbook_saves_as_its_source() -> Res {
 }
 
 #[test]
-fn an_edited_workbook_regenerates() -> Res {
+fn an_edited_workbook_is_not_written_back_verbatim() -> Res {
     let bytes = source()?;
     let mut wb = load(&bytes, true)?;
     wb.edit(|t| t.set("Sheet1!A1", 5.0))?;

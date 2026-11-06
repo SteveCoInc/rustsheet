@@ -57,7 +57,7 @@ A year can have 54 weeks: `WEEKNUM(DATE(2024,12,31),12)` is 54 (Tuesday week sta
 Evidence: probes/weeknum-modern-boundaries A1-A67 (excel-graph, 2026-10-17).
 
 ### WEEKNUM return_type edge cases and serial 0 (T-1023)
-Rule: return_type 1, 2, 11-17 and 21 are valid (a fraction truncates: 2.9 is 2, 21.5 is 21);
+Rule: return_type 1, 2, 11-17 and 21 are valid (a fraction floors, snapping up within 2^-22 + 2^-33 of the next integer: 2.9 is 2, 21.5 is 21; see "WEEKNUM return_type snap and negative floor" below);
 0, 3-10 and 18-20 are always `#NUM!` (not `#VALUE!`). A return_type of 22 or more, or negative, is
 NOT simply an error: it reads a start-weekday state that other WEEKNUM calls of the same recalc
 leave behind, and is `#NUM!` only when the state is empty (see "WEEKNUM's stale return_type state"
@@ -72,6 +72,21 @@ probes/weeknum-stale-return-type (13 cells over five layouts: Up, Down, Mixed, T
 the first 94-cell version of weeknum-serial-0 (commit 042ad31) reproduces deterministically.
 Status: VERIFIED
 Implemented in: `fn_weeknum`, `iso_week` (crates/rustsheet-engine/src/functions/date_and_time/weeknum.rs), `fn_isoweeknum`.
+
+### WEEKNUM return_type snap and negative floor (T-4470)
+Rule: WEEKNUM reads return_type as a floor that snaps up near the next integer, before choosing the type. Positive side: within
+2^-22 + 2^-33 below an integer (the LEFT count rule; the T-4454 entry below). Negative side: the floor (`-0.5` is -1) and the snap at
+`-2^-30` (reads 0) are VERIFIED, but the size of the negative-side snap window is NOT probed: the only negative point inside it is
+`-2^-30`, far below the bound. It may be the full tolerance or half of it, as DATE/TIME use for negatives (`near_integer_floor`);
+the engine uses the full one until probed (follow-up task). Cells and what each rules out:
+- `1-2^-23` is type 1 (not 0): sets the Sunday start; `2-2^-23` is type 2 and sets Monday; `18-2^-23` is 18 (`#NUM!`, empties the
+  state; truncation would give 17); `21-2^-23` is 21 (ISO, week 15 for serial 100); `22-2^-23` is 22 and reads the stale state.
+- `-0.5` is -1: it READS the stale state (a floor; truncation would make it type 0, always `#NUM!`). `-1.5` reads it too, but truncation
+  (-1) does the same, so it separates nothing. `-2^-30` is `#NUM!` and empties the state: it snaps up to 0 (a plain floor would give -1
+  and read the state).
+Evidence: probes/t4470-weeknum-return-type-edges (8 layouts, A3 sets the state, A2 the edge type, A1 `WEEKNUM(100,99)` reads it;
+excel-graph, 2026-11-06). Ours: matches all 24 cells (`near_integer_count` on every return_type, T-4470; negatives truncated before).
+Status: VERIFIED (web) for the cells above; negative snap bound unprobed
 
 ### WEEKNUM's stale return_type state (T-1484)
 Rule: one start-weekday state, Sunday, Monday or empty, lives for one recalculation. It is
@@ -1178,7 +1193,7 @@ WORKDAY.INTL days floor (`WORKDAY(45019,1-(2^-22+2^-33))` is 45019; `-1+2^-23` a
 WEEKNUM's return_type snaps like LEFT's count: within 2^-22 + 2^-33 below an integer it is that integer
 (`WEEKNUM(45019,2-2^-23)` is 15, type 2's week; `WEEKNUM(45017,17-(2^-22+2^-33))` is 13, type 17's), and
 2^-22 + 9*2^-36 or 1E-6 below truncates (14, type 1's or 16's; AA1:AB4). W1:X4 sit on a Sunday where every type gives
-14, so they do not tell the models apart. A negative return_type's snap is unprobed (it truncates in the engine).
+14, so they do not tell the models apart. A negative return_type floors with the same snap (T-4470 entry "WEEKNUM return_type snap and negative floor" above).
 Evidence: probes/t4454-near-midnight-date-args A1:AD10 (serials built exactly in formulas; excel-graph, 2026-11-06,
 T-4454); probes/t4574-near-midnight-calendar-units and t4574-near-midnight-serial-60 (excel-graph, 2026-11-06, T-4574).
 Ours: matches, all 197 cells and the 346 of T-4574 (plain `floor` in month_shift.rs, workday.rs, networkdays.rs,

@@ -463,8 +463,9 @@ Evidence: probes/t2738-gamma-dist-tiny-ratio (excel-graph 2026-10-25): #NUM! at 
 subnormal density is 0 (`(10,1,1E+307*10,FALSE)`, `(1E+300,1,1E+307*10,FALSE)`). Near the bound Excel's density is
 about 1E-14 relative off the exact value: see "GAMMA.DIST's density below shape 3 is a log-space form" (T-2753, T-2852).
 Implemented in: functions/statistical/gamma.rs `gamma_dist_of`; x = 0 keeps its own rule. Unprobed: CHISQ.DIST at x
-below 4.45E-308 (its scale is 2), an x / beta that overflows, and a computed subnormal x with a normal x / beta (a
-typed one reads as 0, numbers.md "Formula literals").
+below 4.45E-308 (its scale is 2) and a computed subnormal x with a normal x / beta (a typed one reads as 0, numbers.md
+"Formula literals"). An x / beta that overflows is `#NUM!` for both forms at shape 1 (probes/incomplete-gamma-cap E6,
+E18; "Incomplete gamma: per-call cap and lifting (T-1872)" below), unprobed at other shapes.
 Status: VERIFIED
 
 ## GAMMA.DIST's density below shape 3 is a log-space form (T-2753, T-2852)
@@ -515,7 +516,8 @@ the exponent about 1E-14 high; no tried order of a LN(y), y and GAMMALN(50) in d
 ratio form, Loader's saddle point or `rcomp`, reproduces it (13 to 435 ulp off).
 Where a*LN(y) is below EXP's underflow the form is 0 though the true density is a normal double: at shape 2,
 `GAMMA.DIST(1E-250,2,1,FALSE)` and `(1E-200,2,1,FALSE)` are 0 against about 1E-250 and 1E-200 (probes/t2753-gamma-density-
-ratio-sweep A14, A15; A13 at 1E-300 too), relative error 1 against the T-3925 math sidecars; an R3 candidate the owner ruled
+ratio-sweep A14, A15; A13 at 1E-300 too; A16 at 1E-150 is a number, so the cut is between: about 1E-162, where
+2*LN(y) passes EXP's underflow near -745, is derived, UNVERIFIED), relative error 1 against the T-3925 math sidecars; an R3 candidate the owner ruled
 to keep Excel's (decision 0300, T-4392), not marked.
 Implemented in: functions/statistical/gamma.rs `log_form_density` (GAMMA.DIST, GAMMADIST, and CHISQ.DIST through
 chisq.rs).
@@ -2465,6 +2467,41 @@ Ours: `student_t.rs` `student_t_tail_at` since T-0969 attempt 5. T.TEST/TTEST vi
 t1048-ttest A3/B3 (6 ulp) and t1049-ttest A48 (5 ulp), all Welch.
 Status: VERIFIED (excel-graph)
 Tasks: T-0969, T-2993
+
+## T.TEST, TTEST, F.TEST and FTEST: Gate A tables (T-4097)
+Rule: on the Gate A tables `accuracy/{T.TEST,TTEST}/s1` (200 points each) and `accuracy/{F.TEST,FTEST}/s1` (120 each),
+excel-graph 2026-11-06, one-row array literals, Excel's errors are the rules of the entries cited by
+`tools/src/rustsheet_tools/accuracy/defs/sample_tests.py`, with the same codes: tails outside {1, 2} or type outside
+{1, 2, 3} `#NUM!`; a paired test of different lengths `#N/A`; one pair, fewer than two numbers on a side (type 2 and
+F.TEST), zero variance of the differences (type 1), of both samples (types 2 and 3) or of either sample (F.TEST)
+`#DIV/0!`; the `{1E+200,1E+200,-1E+200}` sample `#NUM!` after an ordinary one (type 2 and F.TEST). Every numeric point
+is within 1E-10 of the exact value (Welch's df fractional, not truncated); the largest gaps are T.TEST A65 (4.8E-11, p
+near 0.5 over two nearly equal samples) and TTEST A11 (4.7E-13), and every other point is within 1.6E-13.
+- One more error rule from a gen-m9 cell, stated only for its shape: a Welch test (type 3) of one number after a
+  constant sample is `#DIV/0!` (`T.TEST({3,3,3,3},{5},2,3)`, 607e85cfee83a689 A132). A Welch test of one number beside
+  a varying sample is unprobed.
+- Argument order: every evidencing cell has the special sample second (A132's single number; the overflowing
+  `{1E+200,1E+200,-1E+200}` in T-2432's T.TEST, T-2255's F.TEST and gen-m9 3e98b26cf6713e77 A339). The definitions
+  state both rules for that order only; the reversed order (`T.TEST({5},{3,3,3,3},2,3)`, the overflowing sample first)
+  is unprobed and gets no math value. T-4579 probes it.
+- New quirk, one cell (UNVERIFIED as a rule): `TTEST({-497.50530749878,-0.254481178828704},{-515.88030749878,
+  -18.6294811788287},1,1)` is `#DIV/0!` (TTEST/s1 A136). The differences are not constant: as doubles they are 18.375
+  and 18.374999999999996, so the exact p is 2.3E-17. The one-pass variance of the differences,
+  (Σd² - (Σd)²/n)/(n - 1), is -1.1E-13 there, the only negative one among the tables' paired points; every paired
+  point whose one-pass variance is positive is a number, including the ones VAR.S would switch to the two-pass form
+  ("VAR/STDEV switch between a one-pass and a two-pass formula"). Hypothesis: a paired test is `#DIV/0!` when that
+  one-pass variance is 0 or below. T-4579 probes and implements it.
+- The paired offsets keep their digits: TTEST/s1 A101 (ten pairs, x near -108519.3, y near 204025.4, spread about
+  1E-4) is 6.268514994599738E-70 in Excel, 1E-15 from the exact value of the doubles' exact differences, where the
+  double differences x - y put ours 1.6E-9 off. Owned by T-4579.
+- Excel kept as the target (decision 0300): no table point and no probes or probes-numeric cell of these functions
+  (272 cells with a math value) is more than 1E-4 relative off the exact value, so the list is empty.
+Ours: bit-exact with Excel on 214 of the 583 numeric points (T.TEST 54, TTEST 50, F.TEST 55, FTEST 55) and on every
+error point but A136; every point but A136 and A101 is inside the envelope (known failures owned by T-4579). The rest
+of the last-digit gaps are the tail noise of the entries above.
+Evidence: eval/accuracy/tables/{T.TEST,TTEST,F.TEST,FTEST}/s1 (excel-graph, 2026-11-06).
+Status: VERIFIED (excel-graph) for the cited cells; the A136 rule is a one-cell hypothesis.
+Tasks: T-4097, T-4579
 
 ## T.DIST.RT follows the rounded y beyond t = 1 (T-0969)
 Rule: away from the deep tail, T.DIST.RT (and so T.DIST, T.DIST.2T and TDIST) takes the tail at
@@ -6987,7 +7024,8 @@ text too (`PROB({1;"a";3},{0.5;0;0.5},1)` is 0.5, `PROB({1;"a";3},{0.2;0.3;0.5},
 No pair of numbers is `#DIV/0!`: a single text or boolean against a number
 (`PROB(Data!C$4,13,-2.5)` with C4 TRUE, 334f3dc9ca937f10 A82; `PROB(<"#N/A" text cell>,1.2,3.8,1)`, 583ca2baea0bb30a
 A182; a typed boolean `PROB(-5.99,TRANSPOSE(" x "<>Data!A$11),0,3.14159)`, 5cebac1f02bf30f2 A372). A pair of numbers
-then goes through the probability checks (`#NUM!` for a probability outside [0, 1] or a sum other than 1:
+then goes through the probability checks (`#NUM!` for a sum other than 1; a probability outside [0, 1] alone is no error, see
+"CHISQ.TEST, Z.TEST and PROB: Gate A domains" (T-4098):
 `PROB(COLUMNS(Data!C5:E10),0.1,-1,-1)` is `#NUM!`, 0bbab6206b5c9a07 A322; `PROB(Data!B3:E3,Data!E7:E10,1,Data!E7)`, 4
 against 4, 873f30d2bf76f8db A72). The `#DIV/0!` of `PROB((ERF(1E-10)+(-0.5)),EFFECT(10,11),PV((-0.9999999999),161,..))`
 (6e18550e9fc9c1b9 A394) and `PROB(Data!C6:C9,..,PV((-0.9999999999),78,..))` (92d4fa29e5510f1e A70) is then the lower
@@ -7050,6 +7088,51 @@ Ours: the error array value first, per element, since T-2428 (`statistical/z_tes
 a sigma of 0 or below, and a plain single-cell reference holding text, a boolean or nothing is `#N/A`; T-2470. The
 `#DIV/0!` cells 7980ffb6095a340d A294 and a63d1c7d6f96c56d A324 are still untraced.
 Status: VERIFIED (excel-graph)
+
+## CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)
+Rule:
+- PROB checks only the sum of the probabilities, not each one: `PROB({1,2},{1.5,-0.5},1)` is 1.5,
+  `PROB({1,2,3},{1.2,-0.1,-0.1},1)` 1.2 (probes/t4098-tests-prob-domains A32, A33) and `PROB({1,2},{1.5,-0.5},2)` -0.5
+  (accuracy/PROB/s1 A113, A125). The earlier reading "a probability outside [0, 1] is `#NUM!`" (entry above) rested on
+  cells whose sums were not 1.
+- PROB's sum tolerance is narrow and lopsided. Against the exact sum of the literals' doubles: 1E-15 below 1
+  (`{0.5,0.499999999999999}`) and every probed amount down to 0.1 below are `#NUM!`, as are 1E-14 above 1
+  (`{0.5,0.50000000000001}`) and every probed amount up to 0.1 above (t4098 A3:A31); 1E-15 above
+  (`{0.5,0.500000000000001}`, A2), ten 0.1s (5.6E-17 above, A1) and `{1.2,-0.1,-0.1}` (5.6E-17 below, A33) are
+  numbers. The cells fit "the double sum, rounded to 15 significant digits, is 1" (the unit of the 15th digit is 1E-14
+  above 1 and 1E-15 below), but no cell separates that from other cuts between the probed points: UNVERIFIED as a
+  rule. The table adds sums 7.3E-9 below 1 (accuracy/PROB/s1 A121) and 0.5 or 2 (A112, A116, A119, A123, A134,
+  A138), all `#NUM!`. One pair of numbers is the usual check: `PROB({1},{1},1)` and `PROB(1,1,1)` are 1 and
+  `PROB({1},{1},2)` 0 (t4098 A36:A38).
+- CHISQ.TEST and CHITEST: a 1x1 array literal is `#N/A` like a one-cell range (`CHISQ.TEST({5},{4})`, `CHITEST({5},{4})`,
+  t4098 A42, A46; accuracy/CHITEST/s1 A68, A73, A75, A77, A84); an expected 0 is `#DIV/0!` beside an actual 0 too
+  (`CHISQ.TEST({0,1,2},{0,1,3})`, A43); a squared difference past the double range is `#NUM!`
+  (`CHISQ.TEST({1E+200,1,1},{1,1,1})` and `{1E+160,1,1}`, A44, A45). Where the finite squares' quotients overflow is
+  unprobed. A row against a column of the same count takes df = cells - 1 (t1049-chisqtest A30), as either alone does.
+- Z.TEST and ZTEST use two-pass deviations: `Z.TEST({1E+160,1.00000000000001E+160,1.00000000000002E+160},1E+160)` is
+  0.041632258331775196 (A47), Phi(-sqrt 3), although the squares overflow. With sigma given (A48, A49, one cell each),
+  a z past the double range is `#NUM!` when the mean is above x (`Z.TEST({1,2,3},-1E+300,1E-300)`, A48) but 0.5 when it
+  is below (`Z.TEST({1,2,3},1E+300,1E-300)`, A49), where Phi(-z) is 1; with sigma omitted it is unprobed. Constant data whose double mean is not its value is no `#DIV/0!`: `Z.TEST({0.1,0.1,0.1},0)`
+  is 0 (A50; the exact data are constant, Excel's double deviations are not). With sigma given, data whose deviations
+  overflow is a number (`Z.TEST({1E+200,1E+200,-1E+200},0,1)` is 0, A52), and one value is `#DIV/0!` before a sigma
+  check (A53). The table's errors repeat these: one value (accuracy/Z.TEST/s1 A111, A112, A115), sigma 0 or below
+  (A114, A118), constant data without sigma (A123, A138) and overflowing squared deviations (A137, A139; ZTEST/s1 A124,
+  A140).
+Gate A (tools/src/rustsheet_tools/accuracy/defs/significance.py): the definitions code these errors, and give no math
+value to the PROB sums between the probed bands (the `#NUM!` bands, probed on two probabilities, widen by 2^-53 for
+each further probability), to A50, to a z past the range above 0 with sigma omitted, and to equal-count CHISQ.TEST
+arrays of different shapes when one is a table (T-2650). Of 840 table points, 805 are bit-exact in the engine; every Excel number is within
+1.4E-10 relative of the math (or both below the 1E-300 floor).
+Excel kept as the target (decision 0300): one probe sidecar cell, t4098 A49 `Z.TEST({1,2,3},1E+300,1E-300)`, Excel 0.5
+against the math 1 (Phi(1.7E+600); 50% relative). No table point of these five functions is more than 1E-4 relative off
+the math.
+Evidence: probes/t4098-tests-prob-domains A1:A56 (excel-graph, 2026-11-06); accuracy/CHISQ.TEST, CHITEST, Z.TEST,
+ZTEST and PROB s1 (excel-graph, 2026-11-06).
+Ours: matches the CHISQ.TEST, Z.TEST and PROB cells above but A3:A5, A32, A33, A44, A45, A48 and A49 of the probe and
+accuracy/PROB/s1 A113, A125 (a per-probability check, a 1E-14 sum tolerance, a statistic of +inf read as p 0, z
+overflow), which T-4578 owns.
+Status: VERIFIED (excel-graph) except the noted UNVERIFIED parts
+Tasks: T-4098, T-4578
 
 ## MODE: a one-cell range reference to an empty cell is #VALUE! (T-2256)
 Rule: MODE, MODE.SNGL and MODE.MULT are `#VALUE!` for a one-cell range reference to an empty cell (`MODE(Data!C11:C11)`,

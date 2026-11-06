@@ -1,9 +1,8 @@
 //! The source-preserving export (SPEC-0034): a workbook loaded from a package is saved by keeping
 //! that package wherever nothing changed, instead of rebuilding every part from the model.
 //!
-//! This slice (T-4559) has two tiers: `Verbatim` when the live model equals the pristine
-//! re-import of the source, and `Regenerated` otherwise. Patching changed cells (T-4560) fills
-//! in the tier between them.
+//! Three tiers: `Verbatim` when the live model equals the pristine re-import of the source,
+//! `Patched` when only cells changed (`patch`, T-4560), `Regenerated` otherwise.
 
 use std::io::{Seek, Write};
 
@@ -18,6 +17,12 @@ use crate::error::XlsxError;
 pub enum SaveTier {
     /// Every part is the source's, byte for byte.
     Verbatim,
+    /// The source with these sheets' changed cells patched in, and new shared strings appended;
+    /// every other part byte for byte (SPEC-0034 D3).
+    Patched {
+        /// The sheets whose cells were patched.
+        sheets: Vec<String>,
+    },
     /// Rebuilt from the model, for this reason.
     Regenerated {
         /// Why the source could not be kept.
@@ -42,8 +47,13 @@ pub fn save_preserving<W: Write + Seek>(
         writer.write_all(source)?;
         return Ok((writer, SaveTier::Verbatim));
     }
+    let reason = match super::patch::patch(model, pristine, source)? {
+        Ok((bytes, sheets)) => {
+            writer.write_all(&bytes)?;
+            return Ok((writer, SaveTier::Patched { sheets }));
+        }
+        Err(reason) => reason,
+    };
     let writer = save_xlsx_to_writer(model, writer)?;
-    // Patching changed cells into the source is T-4560 (SPEC-0034 D3).
-    let reason = "the workbook changed since it was loaded".to_string();
     Ok((writer, SaveTier::Regenerated { reason }))
 }

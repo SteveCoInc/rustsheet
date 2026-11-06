@@ -73,10 +73,12 @@ design depends on:
   - with the Values field on columns, the `Values` caption sits above the first data column. With one
     data field and no column field there is no Values row (t4137 K5). With Values on rows, the grand
     total reads `Total <data field>` (t4138 G6);
-  - in tabular form the first row header is `Row Labels` while a non-axis field is compact, and which
-    fields decide is open (T-4583). Compact pivots left at the default show `Row Labels` (t4123 C, t4128 K, t4138);
-  - `rowHeaderCaption`, `grandTotalCaption` and `dataCaption` apply (`colHeaderCaption` beside a real
-    column field is T-4583's), and so do `missingCaption` and `errorCaption` (under Sum);
+  - in tabular form the first row header is the field's name only when every pivotField has
+    `compact="0"`, and `Row Labels` otherwise (t4583 R1–R6). Column and page fields are T-4609's. An
+    outer row field left at the default moves its subtotals onto the item line (t4583 R1). Compact
+    pivots left at the default show `Row Labels` (t4123 C, t4128 K, t4138);
+  - `rowHeaderCaption`, `grandTotalCaption` and `dataCaption` apply (`colHeaderCaption` replaces `Column Labels` in compact
+    form, t4583 C1), and so do `missingCaption` and `errorCaption` (under Sum);
   - page fields are laid out with `pageWrap`; the sidecar capture window is confirmed by T-4584.
 - **Values:**
   - a calculated field applies to the sums at every level (t4128 K);
