@@ -996,8 +996,8 @@ cell's), as is; (2) the guess: an error guess, as is, then the guess range (`#VA
 Evidence: probes/t2728-irr-guess-ref-mark (cells A1-A81, "-2" is probes/t2728-irr-guess-ref-mark-2), -3, excel-graph,
 2026-10-26; probes/irr-guess-edges, irr-guess-edges-2 (2026-10-25); gen-m9 5422bdbf173fc233 A63, 5c6a23c4f6597f1c A153.
 Status: VERIFIED (excel-graph)
-Implemented in: `fn_irr` (functions/financial/mod.rs), `is_marked_number` (functions/util.rs); the wrapped forms are
-TODO(T-2766), unscored in the probe until then.
+Implemented in: `fn_irr` (functions/financial/mod.rs) through `Model::evaluate_marked` (number_mark.rs), the wrapped
+forms included since T-2766 (A53-A61 scored again; irr-guess-edges-2 A37 `IRR(LET(x,CELL("row",D2),x))`).
 Tasks: T-2728, T-2766
 
 ## IRR's far-root bound

@@ -7293,8 +7293,13 @@ that `#NUM!`: the INDIRECT is an array of references ("An array of references is
 Evidence: probes/t2436/computed-scalar (excel-graph, 2026-10-24), probes/t2576-error-type-cell-paired (excel-graph,
 2026-10-26); gen-m9 cells in T-2576 and T-2577.
 Ours: since T-2576 the same for the call itself (parentheses aside), in F.TEST/FTEST, the regression family, COVARIANCE
-and T.TEST (`is_marked_number`, functions/util.rs; `evaluate_sample_arg`, functions/statistical/paired.rs); the LET/IF/CHOOSE/IFERROR/LAMBDA/INDEX forms, an array of
-marked numbers, SUMXMY2 and LINEST are T-2766's (still `#DIV/0!` or a value); T-2577.
+and T.TEST (`evaluate_sample_arg`, functions/statistical/paired.rs); since T-2766 the mark is a flag on the evaluated
+value (crates/rustsheet-engine/src/number_mark.rs: the latest `evaluate_node_in_context` call whose value carries it),
+which LET, IF, CHOOSE, IFERROR (of a number), INDEX and a LAMBDA called in place hand on, and a LET name or LAMBDA
+parameter bound to a marked value carries; `ERROR.TYPE({#REF!})` marks its array; SUMXMY2's (and, unprobed, SUMX2MY2's
+and SUMX2PY2's) first argument is `#NUM!` at once, as an error value is there; a marked known_y of LINEST is `#VALUE!` at
+once (LOGEST, TREND and GROWTH share the reader, unprobed). IFNA, IFS, SWITCH and a called LET name drop the mark in ours
+(unprobed). T-2577.
 Status: VERIFIED (excel-graph) for the listed calls; mechanism UNVERIFIED
 Tasks: T-2576, T-2577, T-2766
 
@@ -7318,7 +7323,8 @@ of an element (the cell, `#DIV/0!`); what keeps it: LET (`F.TEST(LET(x,INDIRECT(
 Evidence: probes/t2577-indirect-ref-array (excel-graph, 2026-10-26).
 Ours: since T-2577 for a direct OFFSET or INDIRECT argument in F.TEST, the `fn_get_two_matrices` family (CORREL,
 PEARSON, SLOPE, INTERCEPT, RSQ, STEYX, FORECAST, CHITEST), COVARIANCE and T.TEST (`Model::evaluate_sample_arg`,
-functions/statistical/paired.rs); the LET form, SUMXMY2 and LINEST are T-2766's, STDEV T-2065's. UNVERIFIED, marked by
+functions/statistical/paired.rs); since T-2766 also through a LET name (a variable bound to an array of references
+holding a reference is marked, `VariableStack::is_marked_variable`) and as SUMXMY2's first argument; STDEV is T-2065's. UNVERIFIED, marked by
 analogy with the ERROR.TYPE mark: the first argument of RSQ and STEYX, T.TEST's second sample, and COVARIANCE.S's and
 COVAR's second argument (read as cells with no number); probing them is T-2766's.
 Status: VERIFIED (excel-graph) for the listed calls
