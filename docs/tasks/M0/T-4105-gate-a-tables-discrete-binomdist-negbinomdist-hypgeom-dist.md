@@ -3,7 +3,7 @@ id: T-4105
 title: "Gate A tables, discrete: BINOMDIST, NEGBINOMDIST, HYPGEOM.DIST, HYPGEOMDIST and POISSON"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
