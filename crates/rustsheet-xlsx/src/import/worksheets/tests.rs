@@ -620,7 +620,7 @@ fn shared_string_index_with_surrounding_whitespace_is_that_index() {
     use crate::import::shared_strings::SharedStringTable;
     use crate::import::worksheets::{get_cell_from_excel, CellArrayKind};
     use rustsheet_engine::types::{Cell, DateSystem};
-    for (text, expected) in [("2 ", 2), (" 2", 2), ("2", 2), ("x", 0)] {
+    for (text, expected) in [("2 ", 2), (" 2", 2), ("2", 2), ("-1", -1), ("x", 0)] {
         let cell = get_cell_from_excel(
             Some(text),
             None,

@@ -843,6 +843,7 @@ fn decode_value(
     match (t.unwrap_or("n"), v) {
         ("inlineStr", _) => Value::Text(decode_xlsx_escapes(inline.unwrap_or_default())),
         ("s", Some(v)) => rustsheet_xlsx::util::parse_shared_string_index(v)
+            .and_then(|i| usize::try_from(i).ok())
             .and_then(|i| shared.get(i))
             .map_or(Value::Empty, |s| Value::Text(s.clone())),
         ("str", v) => Value::Text(decode_xlsx_escapes(v.unwrap_or_default())),

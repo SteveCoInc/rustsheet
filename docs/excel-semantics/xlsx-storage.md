@@ -717,5 +717,5 @@ shows how Excel resolves the index. We read it as index 2 on the strength of POI
 Status: UNVERIFIED (probe pending, T-4711). Also unprobed: which characters count as whitespace (the code trims all
 Unicode White_Space, not only XML whitespace) and whether a leading `+` is accepted (the code accepts it).
 Implemented in: `parse_shared_string_index` in crates/rustsheet-xlsx/src/util.rs, shared by the importer
-(`get_cell_from_excel`) and the snapshot reader (`decode_value`). An unparseable index still loads as index 0 in
-the importer and as empty in the snapshot reader (not aligned; predates T-4145).
+(`get_cell_from_excel`) and the snapshot reader (`decode_value`). A negative index (`<v>-1</v>`) stays a dangling index in both (empty text); an
+unparseable index still loads as index 0 in the importer and as empty in the snapshot reader (not aligned; predates T-4145).

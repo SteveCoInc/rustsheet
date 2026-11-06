@@ -4,10 +4,10 @@ use rustsheet_engine::Model;
 
 /// The index in a shared-string cell's `<v>`, read with its surrounding whitespace dropped:
 /// `<v>2 </v>` is index 2 (poi/bug69769.xlsx Tabelle1!B2, which Excel opened as "Mustermann", T-4145).
-/// `None` when the text is not a non-negative integer. The importer and the harness's snapshot
-/// reader share this one parse.
+/// `None` when the text is not an `i32`; a negative index parses (it is a dangling index, as before).
+/// The importer and the harness's snapshot reader share this one parse.
 #[must_use]
-pub fn parse_shared_string_index(text: &str) -> Option<usize> {
+pub fn parse_shared_string_index(text: &str) -> Option<i32> {
     text.trim().parse().ok()
 }
 
