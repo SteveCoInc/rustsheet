@@ -125,38 +125,7 @@ pub(crate) fn source_cache(case: &Json, source: &str) -> PivotCache {
 }
 
 pub(crate) fn aggregate_named(name: &str) -> Aggregate {
-    match name {
-        "sum" => Aggregate::Sum,
-        "count" => Aggregate::Count,
-        "average" => Aggregate::Average,
-        "max" => Aggregate::Max,
-        "min" => Aggregate::Min,
-        "product" => Aggregate::Product,
-        "countNums" => Aggregate::CountNums,
-        "stdDev" => Aggregate::StdDev,
-        "stdDevp" => Aggregate::StdDevP,
-        "var" => Aggregate::Var,
-        "varp" => Aggregate::VarP,
-        _ => panic!("unknown aggregate {name}"),
-    }
-}
-
-/// The verb the builder puts in a data field's default name, `<verb> of <field>`
-/// (`pivot_definition.py` `_AGGREGATE_VERBS`).
-fn default_verb(subtotal: &str) -> &'static str {
-    match subtotal {
-        "sum" => "Sum",
-        "count" | "countNums" => "Count",
-        "average" => "Average",
-        "max" => "Max",
-        "min" => "Min",
-        "product" => "Product",
-        "stdDev" => "StdDev",
-        "stdDevp" => "StdDevp",
-        "var" => "Var",
-        "varp" => "Varp",
-        _ => panic!("unknown aggregate {subtotal}"),
-    }
+    Aggregate::from_consolidate_name(name).unwrap_or_else(|| panic!("unknown aggregate {name}"))
 }
 
 /// A custom subtotal line's function by its `item@t`, as the importer reads it.
@@ -300,7 +269,7 @@ pub(crate) fn probe_pivot_over(
             let subtotal = subtotal.unwrap_or("sum");
             DataField {
                 caption: d["name"].as_str().map_or_else(
-                    || format!("{} of {name}", default_verb(subtotal)),
+                    || format!("{} of {name}", aggregate_named(subtotal).word()),
                     str::to_string,
                 ),
                 field: field(name),

@@ -253,7 +253,15 @@ group items" (T-4225, T-4228, T-4235, T-4236, T-4249, T-4253, T-4287, T-4311, T-
 record placement, Excel's own labels whatever the file lists, whole-number labels `lo-(lo+interval-1)`,
 relabel order, and groupings dropped over blanks or dates. probes/t4128-pivot-spike G (`45000-45100`,
 `45100-45200`, `45300-45400` for fractional data, empty groups hidden) agrees with it.
-Status: VERIFIED (excel-graph; evidence in web.md)
+
+Excel also tolerates group items it does not rebuild. The case builder's numeric labels (`group_labels`,
+`while lo <= end`) write one bin past `endNum`: t4128 G's `<fieldGroup>` lists 7 `groupItems`
+(`<45000`, five bins up to `45400-45500`, `>45400`) where Excel's own grouping of startNum 45000, endNum
+45400, interval 100 has 6 (`<45000`, four bins, `>45400`), and its pivotField lists 7 `<item x>`. Excel
+opens the file (refreshOnLoad), rebuilds the groups and renders its own items without error. The
+xlsx importer instead refuses the pivot (`item index 6 is past the field's items`,
+crates/rustsheet-xlsx/src/import/pivots/table.rs), so it is not rendered (T-4171).
+Status: VERIFIED (excel-graph; evidence in web.md, the tolerance by t4128 G's sidecar)
 
 ## A pivot that would meet a foreign cell collapses to #SPILL!
 Rule: when a pivot's layout would overwrite cells it does not own, Excel for the web renders nothing
@@ -566,11 +574,13 @@ lines (T-4147):
 - the Excel-saved pivot of crates/rustsheet-xlsx/tests/example.xlsx: three compact row fields whose
   `<items>` list the cache items out of order, so `x` is the position in `<items>`, not the cache index.
 
-Not compared, because the engine-side harness cannot rebuild their cache or tree yet: t4128 R, t4134
-I3, t4582 J1, J2 and t4585 N1 have formulas in their sources, which the case file does not evaluate
-(T-4152 runs them through the engine); t4582 J3 and J4 depend on date items against cached numbers
-(T-4612); t4128 G is grouped (T-4171) and t4128 K has a calculated field, a Top-N filter and a
-descending sort (T-4174, T-4165).
+Not compared in these engine unit tests, because their harness cannot rebuild the cache or tree
+yet: t4128 R, t4134 I3, t4582 J1, J2 and t4585 N1 have formulas in their sources, which the case
+file does not evaluate; t4582 J3 and J4 depend on date items against cached numbers (T-4612);
+t4128 G is grouped (T-4171) and t4128 K has a calculated field, a Top-N filter and a descending
+sort (T-4174, T-4165). The eval scores them all through the engine since T-4152: t4128 R, t4134 I3
+and t4582 J1 to J4 pass there; t4585 N1 fails because the refresh refuses to renumber its renamed
+fields (T-4694); t4128 G and K do not load (T-4171, T-4174).
 
 The engine's own readings, not probed:
 - `subtotalTop="0"` on an outline row field: the item's own line holds no values and a `default` line
@@ -1123,6 +1133,8 @@ Open (T-4640):
   GETPIVOTDATA's item `"#N/A"` names an error item (functions/lookup_and_reference/pivot_index.rs).
 
 Status: VERIFIED (excel-graph) for the rules above; the open points are UNVERIFIED (probe pending:
-T-4640)
+T-4640). The empty label cell is evidenced for a row item (P_Rec!A6); that a column item's is
+empty too is the engine's assumption, UNVERIFIED (probe pending: T-4640).
 Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141, T-4627) (`field_names`,
-`name_key`)
+`name_key`); the empty label cell in crates/rustsheet-engine/src/pivot/layout/render.rs
+(`Cells::lines`, T-4152)

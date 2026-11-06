@@ -14,7 +14,7 @@ mod diff;
 mod pivot;
 
 pub use self::pivot::{
-    PivotDateGroupBy, PivotError, PivotFunction, PivotRangeGroup, PivotTableInput,
+    PivotDateGroupBy, PivotError, PivotFunction, PivotParts, PivotRangeGroup, PivotTableInput,
 };
 
 use rustsheet_engine::clock::Clock;

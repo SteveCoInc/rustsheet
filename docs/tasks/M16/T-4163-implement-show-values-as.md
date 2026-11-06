@@ -16,6 +16,11 @@ PivotResult applies all fourteen show-values-as modes as the evidence says (leav
 ## Context
 SPEC-0032; mog's three-pass dispatcher (oss-engines.md §1) is a design idea only. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
+Owner of these visibly-off pivot cells (decision 0245; moved from T-4152, whose adapter loads the
+  case builder's parts through the importer, which skips a pivot with a `showDataAs` data field, "a data
+  field shown as a calculation"): probes/t4123-pivot-capture T!A3:E12, T2!A3:E12, T3!A3:E12,
+  T4!A3:E12.
+
 ## Acceptance criteria
 - [ ] p-showas probes pass.
 - [ ] `make check` green; reviewers approve.

@@ -35,6 +35,7 @@ pub mod milestone_lists;
 pub mod out_of_scope;
 pub mod overrides;
 pub mod phase1_exceptions;
+mod pivot_definition;
 pub mod pivot_features;
 pub mod pivot_scoring;
 pub mod poi_m8_subset;
