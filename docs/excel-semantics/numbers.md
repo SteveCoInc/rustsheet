@@ -2256,7 +2256,15 @@ Scalar data and error order (probes/t4193-aggregate-scalar-data-error-order, exc
 - A direct error argument beats a range's error wherever it sits: with D1:D11 holding `#DIV/0!`,
   `AGGREGATE(9,k,Data!D1:D11,NA())` and `AGGREGATE(9,k,NA(),Data!D1:D11)` are `#N/A` under every option. Between two
   literal errors the first wins: `AGGREGATE(9,k,1/0,NA())` is `#DIV/0!` and `AGGREGATE(9,k,NA(),1/0)` `#N/A` (Win!A1:D8).
-Still unprobed: an empty-argument data (`AGGREGATE(14,0,,1)`) and a scalar from a name or LET.
+Empty and bound arguments (probes/t4426-aggregate-empty-and-bound-data, excel-graph, 2026-11-06, T-4426):
+an empty (present but omitted) data argument is `#VALUE!` for every function and option, with or without k
+(Calc!A1:C14, E1:E14); an empty k is `#VALUE!` for functions 1/4/9 even under option 0 where the data holds `#DIV/0!` (Calc!D1, D3, D5), and
+a real k of 0 for 14/15/16/19: the data range's error under option 0 (`#DIV/0!`), and under option 6 `#NUM!` for
+LARGE, SMALL and PERCENTILE.EXC (14/15/19, Calc!D8, D10, D14) but 1 for PERCENTILE.INC (16), its minimum at k=0
+(Calc!D12). A number bound by LET or a workbook name behaves as the literal it holds: `#VALUE!` in the reference form, a
+one-value array in the array form; a LET-bound text `"3"` is skipped in the array form and gives `#NUM!`
+(Bound!A30, A36, A42, A48, A54, A60). LET- and name-bound ranges and arrays behave as the range or array (Bound!A1:A60,
+BErr!A1:A60). Our engine already matched every cell.
 Known gaps: k rounding and boolean k in LARGE/SMALL (T-1034).
 The VAR.P last digit (probes/aggregate-grid B31, C31) has passed since T-1037.
 Implemented in: `fn_aggregate` (crates/rustsheet-engine/src/functions/aggregate.rs); the lift reuses
