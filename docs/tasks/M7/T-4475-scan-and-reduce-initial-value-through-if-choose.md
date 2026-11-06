@@ -61,3 +61,27 @@ PRODUCT and COUNT over the accumulator give Excel's results. The rules are probe
 - ISOMITTED of an empty initial value (T-2670) and error or multi-cell-range initial values as argument kinds (T-2878).
 - BYROW/BYCOL/MAP slices (already references, T-1395, T-1442). PIVOTBY subtotal work (T-4388, T-4401, T-4414,
   T-4428), function arrays (T-4449) and eta names (T-4450) are unrelated.
+
+## Landing notes
+State at the session's landing window (2026-11-06 07:10 UTC): branch `agent/functions-logic/T-4475-scan-reduce-reference-initial`,
+no PR yet, no engine change yet. The commit after the claim adds probes/t4475-scan-reduce-reference-initial with oracle values
+(excel-graph, 2026-11-06, 64 cells); 33 pass on main, 31 do not. The task's first acceptance criterion is met. What Excel showed
+(data: Sheet1 A1 TRUE, A2 text "1", A3 2.5, B1:B3 x,y,z; Sheet2 A2 text "1"):
+- **Eta COUNT/PRODUCT are useless here:** `REDUCE(A2,A3,COUNT)` and `REDUCE(A1,A1,PRODUCT)` are `#VALUE!` in Excel for every
+  form (the first fill; the task's suggested `REDUCE(X,A3,COUNT)` design is wrong). The committed case uses
+  `LAMBDA(a,v,COUNT(a))` and `LAMBDA(a,v,PRODUCT(a))` in columns D, E, H and I instead: a reference gives 0 and a value gives 1.
+- **References (Excel):** `IF(TRUE,A2)` (D2, E2, F2, G2), `XLOOKUP(...)` (D6, E6, F6, G6), CHOOSE, INDEX, OFFSET and INDIRECT all
+  pass a reference. Ours evaluates IF and XLOOKUP to values. `IFERROR(A2,0)` passes a value (D4, F4), and ours matches.
+- **Union:** `(A2,A3)` is a reference (ISREF TRUE, F9 and G9). COUNT(a) of it is 1 (D9) and PRODUCT of `(A1,A3)` is 2.5 (E9), so
+  the LAMBDA gets the whole multi-area reference. Ours reads it as values: 0 and `#VALUE!`.
+- **3-D span:** `Sheet1:Sheet2!A1` gives `#VALUE!` (E10) where ours gives `#REF!`. ISREF of it is FALSE (F10) and COUNT is 0 (D10).
+- **LET-bound initial value (H, I columns):** a LET variable bound to any reference form (A2, IF, CHOOSE, INDEX, XLOOKUP, OFFSET,
+  INDIRECT) stays a reference: COUNT 0 and PRODUCT 0. Ours passes the variable's value (1). This is the grid-variable/`bind_argument`
+  form the task names. The union variable gives 1 and 2.5 (H9, I9).
+- **Accumulator:** REDUCE keeps a step's returned reference in the next step's `a`: `REDUCE(0,A1:A2,LAMBDA(a,v,IF(ISREF(a),"r",v)))`
+  is "r" (D11) and the COUNT form is 0 (F11). Ours returns "1" and 2.5. **SCAN does not keep it:** the same SCAN is {TRUE;"1";2.5}
+  (E11) and ISREF(a) is FALSE at every step (G11). Ours matches SCAN.
+Next step: make `lambda_initial_value` (map_reduce.rs) share `Model::bind_argument`'s reference producers (let.rs). Add IF/XLOOKUP
+results that are references (check `eval_ref_or_index`'s callers before widening it), pass a union as a multi-area reference, and
+make the 3-D span `#VALUE!`. Then make `fn_reduce` (not `fn_scan`) carry a reference result into the next step. After that,
+docs/excel-semantics/arrays.md and the unit tests. Do not repeat: eta COUNT/PRODUCT probes, which are all `#VALUE!`.
