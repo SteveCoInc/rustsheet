@@ -361,8 +361,7 @@ Evidence: probes/t4123-pivot-capture, the `pivots` cells of its sidecar (excel-g
 T-4123); t4138-pivot-geometry G1 to G9 (T-4138); t4135-pivot-aggregates (T-4135). The engine's
 render reproduces every cell of the probe pivots listed in its tests (t4123 C and T to T4 but
 T's show-values-as column D, t4138 G1 to G9, t4137 K1 to K6, t4583 R1 to R6, C1, C2, t4609 L1 to
-L8, t4134 I1,
-I2, I4, I5, t4135 all twelve, t4589, t4614, t4616, and t4622 but East's custom Count subtotal
+L8, t4134 I1, I2, I4, I5, t4135 all twelve, t4589, t4614, t4616, and t4622 but East's custom Count subtotal
 values over an error, a result rule of T-4168's, T-4636). Number formats are PV2's (T-4169).
 The engine's own readings, not probed: a number or date item's subtotal label (`number_to_text`
 of the value, then ` Total`); a subtotal label with Values inside its field (`<item> <data

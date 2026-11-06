@@ -36,4 +36,4 @@ at the default and `outline="0"`. Case builder v2 with excel-graph.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- Engine rendering (T-4149).
+- Engine rendering and its eval effect (T-4152).
