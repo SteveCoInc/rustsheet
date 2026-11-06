@@ -103,7 +103,7 @@ BESSELI. This is BESSELY's half of the question. BESSELK's half is T-4459.
 
 ## Landing notes
 - PR #3491 (draft). Head before these notes: 5ddc439b0. The session's landing window closed at 05:26 UTC.
-- Missing: the Gate A math sidecars of the two new cases, t4458-bessely-tiny-x-cuts.math.json and
+- Done after the window (05:45 UTC): the Gate A math sidecars are now committed (`math --check`: current). They were missing: of the two new cases, t4458-bessely-tiny-x-cuts.math.json and
   t4458-bessely-tiny-x-bisect.math.json. CI's eval-math-check fails until they are committed. The tool has no
   per-case option, so regenerate with `cd tools && uv run rustsheet-accuracy math --suite probes`. It took over 25 min on 4
   CPUs and did not finish within the window.
