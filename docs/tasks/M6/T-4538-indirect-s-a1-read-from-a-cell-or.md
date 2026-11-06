@@ -3,7 +3,7 @@ id: T-4538
 title: "INDIRECT's a1 read from a cell or omitted: probe FALSE/TRUE text, booleans, numbers, blank and empty-text cells and INDIRECT(ref,), and match"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
