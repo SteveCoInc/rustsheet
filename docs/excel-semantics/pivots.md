@@ -204,13 +204,46 @@ and aggregates under `errorCaption` are not probed.
 Status: VERIFIED (excel-graph)
 
 ## Page fields render above the location
-Rule: page fields render in the rows above the pivot's location, each as `<field name>` beside its
-selected item, or `(All)` when none is selected (`(Multiple Items)` with several: previous entry).
-Evidence: T-4122 runs (sheet Pg: `Region | East`, `Product | (All)`, location A5).
-Status: UNVERIFIED (probe pending: T-4138)
-Capture assumption (T-4123): oracle sidecars capture the page area as the `rowPageCount` rows above
-the location, ending one blank row before it, and `3 * colPageCount - 1` columns wide but at least as
-wide as the location (`snapshot.py` `pivot_area`). probes/t4137-pivot-captions K4 is consistent with it
-(location A6, three page fields in A2:B4, blank row 5; T-4137). A capture cannot confirm its own
-window, though: row 1 was never read. T-4138 must confirm the window and the `colPageCount > 1`
-width.
+Rule: page fields render in the rows above the pivot's `location`, ending one blank row before it. Each
+shows `<field name>` beside its selection: `(All)`, the item, or `(Multiple Items)`. With
+`pageWrap="n"` and `pageOverThenDown`, the fields fill a row n at a time, each field-item pair two
+columns wide with a blank column between pairs. The saved `rowPageCount` and `colPageCount` give the
+grid (here 2 by 2).
+Evidence:
+- probes/t4137-pivot-captions K4 (T-4137): three page fields in A2:B4 above location A6.
+- probes/t4138-pivot-geometry G8 (T-4138): three page fields wrapped two per row, `Region | (All)` in
+  B5:C5, `Product | (All)` in E5:F5 and `Channel | (All)` in B6:C6, row 7 blank, location B8,
+  `rowPageCount=2`, `colPageCount=2`.
+
+Capture window (T-4123, `snapshot.py` `pivot_area`): the `rowPageCount` rows above the location, minus
+one blank row, and `3 * colPageCount - 1` columns wide. Both shapes above are consistent with it. In G8
+the second pair starts at E, three columns after B, and the five-column window ends at F. A capture
+cannot see past its own window, though, so a page cell outside it would go unseen (row 1 of K4,
+rows 1–4 of G8).
+Status: VERIFIED (excel-graph) for the rendering; the window is consistent with both probes, not
+independently confirmed
+
+## Pivot geometry: location and header offsets per layout
+Rule: Excel writes the pivot's `location` as the body's bounding box (page fields excluded), with
+`firstHeaderRow`, `firstDataRow` and `firstDataCol` measured from its top left. With the location's top
+left at B4 (probes/t4138-pivot-geometry, T-4138):
+
+| sheet | layout | location | fhr, fdr, fdc | rowItems, colItems |
+|---|---|---|---|---|
+| G1 | compact, 1 row field | B4:C7 | 1, 1, 1 | 3, 1 |
+| G2 | compact, 2 row fields, 1 column field | B4:E13 | 1, 2, 1 | 8, 3 |
+| G3 | outline, 2 row fields, 2 data fields | B4:E13 | 1, 2, 2 | 8, 2 |
+| G4 | tabular, 3 row fields | B4:E18 | 1, 1, 3 | 14, 1 |
+| G5 | compact, 1 row field, 2 column fields | B4:J9 | 1, 3, 1 | 3, 8 |
+| G6 | compact, Values on rows | B4:C12 | 1, 1, 1 | 8, 1 |
+| G7 | 1 column field only | B4:F6 | 1, 2, 1 | 1, 4 |
+| G9 | 3 data fields, no axis field | B4:D6 | 1, 2, 0 | 1, 3 |
+
+In compact form all row fields share one column (fdc 1); outline and tabular give each row field its
+own column (fdc = number of row fields). Each column field adds a header row (fdr). With Values on rows,
+each item is followed by one line per data field, and the grand total reads `Total <data field>`
+(G6!B11:B12).
+
+A Values field on rows needs `dataOnRows="1"` on the definition: without it Excel for the web refuses
+the file as corrupt (`FileCorruptTryRepair`, T-4138 bisection; case builder v2 now writes it).
+Status: VERIFIED (excel-graph) for the table; the refusal is a builder observation
