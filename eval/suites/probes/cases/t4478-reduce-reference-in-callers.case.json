@@ -1,0 +1,36 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4478 review: a REDUCE that ends on a one-cell reference (A3 = 5) as the body of BYROW/BYCOL over an array (D1:D3) and a range (D5), GROUPBY (D6, D7 control), PIVOTBY (D9), MAKEARRAY (D10) and MAP (D11); written-reference (D4, D8) and INDEX-returned reference (D12, D13) controls. A1:A2 3,4; B1:B2 'k'.",
+ "tags": [
+  "M7",
+  "probe",
+  "lambda",
+  "reduce"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": 3,
+    "A2": 4,
+    "B1": "k",
+    "B2": "k",
+    "A3": 5,
+    "D1": "=ARRAYTOTEXT(BYROW({1;2},LAMBDA(r,REDUCE(A1,r,LAMBDA(a,v,A3)))))",
+    "D2": "=ARRAYTOTEXT(BYCOL({1,2},LAMBDA(c,REDUCE(A1,c,LAMBDA(a,v,A3)))))",
+    "D3": "=ARRAYTOTEXT(BYROW({1;2},LAMBDA(r,REDUCE(0,A1:A2,LAMBDA(a,v,v)))))",
+    "D4": "=ARRAYTOTEXT(BYROW({1;2},LAMBDA(r,A3)))",
+    "D5": "=ARRAYTOTEXT(BYROW(A1:A2,LAMBDA(r,REDUCE(A1,r,LAMBDA(a,v,A3)))))",
+    "D6": "=ARRAYTOTEXT(GROUPBY(B1:B2,A1:A2,LAMBDA(x,REDUCE(A1,x,LAMBDA(a,v,A3)))))",
+    "D7": "=ARRAYTOTEXT(GROUPBY(B1:B2,A1:A2,LAMBDA(x,REDUCE(0,x,LAMBDA(a,v,a+v)))))",
+    "D8": "=ARRAYTOTEXT(GROUPBY(B1:B2,A1:A2,LAMBDA(x,A3)))",
+    "D9": "=ARRAYTOTEXT(PIVOTBY(B1:B2,B1:B2,A1:A2,LAMBDA(x,REDUCE(A1,x,LAMBDA(a,v,A3)))))",
+    "D10": "=ARRAYTOTEXT(MAKEARRAY(2,1,LAMBDA(r,c,REDUCE(A1,{1},LAMBDA(a,v,A3)))))",
+    "D11": "=ARRAYTOTEXT(MAP({1;2},LAMBDA(x,REDUCE(A1,{1},LAMBDA(a,v,A3)))))",
+    "D12": "=ARRAYTOTEXT(GROUPBY(B1:B2,A1:A2,LAMBDA(x,INDEX(A1:A3,3))))",
+    "D13": "=ARRAYTOTEXT(BYROW({1;2},LAMBDA(r,INDEX(A1:A3,3))))"
+   }
+  }
+ ],
+ "expected": {}
+}
