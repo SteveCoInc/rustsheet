@@ -1,0 +1,47 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4618: probes/t4554-api-name-local-name-body Last!D3 (=LD on Last, loaded before LD = =Dup is added through the API scoped to Last, after workbook adds WL = =LocLoc and WD = =Dup; S2 active) is 90, where probes/t4049-sheet-api-name-plain S!A1 is #NAME?. probes/t4049-sheet-api-name-plain in t4554's tab layout: tabs First, S2, Last with S2 active, N = =1 added scoped to Last. Does =N on the last tab, neither first nor active, see N?",
+ "active_sheet": "S2",
+ "sheets": [
+  {
+   "name": "First",
+   "cells": {
+    "A1": "=Last!N"
+   }
+  },
+  {
+   "name": "S2",
+   "cells": {
+    "A1": "=Last!N"
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "B1": "=FORMULATEXT(A1)"
+   }
+  }
+ ],
+ "check": [
+  "First!A1",
+  "S2!A1",
+  "Last!A1",
+  "Last!A2",
+  "Last!B1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "Last"
+  }
+ ],
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "expected": {}
+}

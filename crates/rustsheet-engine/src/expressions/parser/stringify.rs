@@ -1,7 +1,7 @@
 pub(crate) mod bound_variables;
 mod displacement;
 mod literals;
-mod name_binding;
+pub(crate) mod name_binding;
 mod range_shrink;
 mod rename_defined_name;
 pub(crate) mod sheet_edits;

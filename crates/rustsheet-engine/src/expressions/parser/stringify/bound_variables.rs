@@ -1,6 +1,6 @@
 //! The `_xlpm.` form of LAMBDA/LET bound names: Excel's, on export, and the R1C1 storage form's.
 
-use super::super::{for_each_chain_operand_mut, Node};
+use super::super::{chain_operands_in_order_mut, for_each_chain_operand_mut, Node};
 use crate::expressions::parser::XLPM_PREFIX;
 use crate::expressions::types::CellReferenceRC;
 use crate::expressions::utils::{reads_as_r1c1_cell, spelled_like_a1_cell};
@@ -19,6 +19,10 @@ pub(crate) enum NameSite {
     Declaration,
     /// A LAMBDA parameter (bound in the LAMBDA's body).
     Parameter,
+    /// A name the parser resolved as a defined name, its text as written (`Sheet!N`, or bare for
+    /// a sheet's own name or a use pinned to the workbook name), its scope (`None` for the
+    /// workbook) and whether a definition stands behind it. Never bound by a LET or LAMBDA.
+    DefinedName { scope: Option<u32>, defined: bool },
 }
 
 /// Calls `visit` with every name of `node`, where it is and the spelling of the innermost
@@ -29,7 +33,20 @@ pub(crate) fn walk_names<F>(node: &mut Node, bound: &mut Vec<String>, visit: &mu
 where
     F: FnMut(NameSite, &mut String, Option<&str>),
 {
-    walk(node, bound, false, visit);
+    walk(node, bound, Walk::default(), visit);
+}
+
+/// [`walk_names`] visiting the names in the order the formula writes them, which it does not
+/// promise for the operands of a chain of value operators (`=S!N+N`; T-4618).
+pub(crate) fn walk_names_in_order<F>(node: &mut Node, visit: &mut F)
+where
+    F: FnMut(NameSite, &mut String, Option<&str>),
+{
+    let mode = Walk {
+        marked: false,
+        in_order: true,
+    };
+    walk(node, &mut Vec::new(), mode, visit);
 }
 
 /// [`walk_names`] of a file's formula before `call_names::settle_lambda_prefixes`, whose uses may
@@ -41,11 +58,23 @@ pub(crate) fn walk_marked_names<F>(node: &mut Node, bound: &mut Vec<String>, vis
 where
     F: FnMut(NameSite, &mut String, Option<&str>),
 {
-    walk(node, bound, true, visit);
+    let mode = Walk {
+        marked: true,
+        in_order: false,
+    };
+    walk(node, bound, mode, visit);
 }
 
-/// [`walk_names`], reading the `_xlpm.` mark when `marked` ([`walk_marked_names`]).
-fn walk<F>(node: &mut Node, bound: &mut Vec<String>, marked: bool, visit: &mut F)
+/// How [`walk`] reads a formula: whether the `_xlpm.` mark binds ([`walk_marked_names`]) and
+/// whether a chain's operands are visited in written order ([`walk_names_in_order`]).
+#[derive(Clone, Copy, Default)]
+struct Walk {
+    marked: bool,
+    in_order: bool,
+}
+
+/// [`walk_names`] in the given [`Walk`] mode.
+fn walk<F>(node: &mut Node, bound: &mut Vec<String>, mode: Walk, visit: &mut F)
 where
     F: FnMut(NameSite, &mut String, Option<&str>),
 {
@@ -74,7 +103,7 @@ where
     // `_xlpm._xlpm.x`, is bound by its own spelling (probes/t4224-doubled-xlpm-prefix A8, T-4224).
     let declared = |bound: &[String], name: &str| {
         let find = |name: &str| bound.iter().rev().find(|n| same_variable(n, name)).cloned();
-        let unmarked = || name.strip_prefix(XLPM_PREFIX).filter(|_| marked);
+        let unmarked = || name.strip_prefix(XLPM_PREFIX).filter(|_| mode.marked);
         find(name).or_else(|| unmarked().and_then(find))
     };
     match node {
@@ -82,11 +111,18 @@ where
             let d = declared(bound, name);
             visit(NameSite::Use, name, d.as_deref());
         }
+        Node::DefinedNameKind((text, scope, formula)) => {
+            let site = NameSite::DefinedName {
+                scope: *scope,
+                defined: !formula.is_empty(),
+            };
+            visit(site, text, None);
+        }
         Node::NamedFunctionKind { name, args, .. } => {
             let d = declared(bound, name);
             visit(NameSite::Callee, name, d.as_deref());
             for arg in args {
-                walk(arg, bound, marked, visit);
+                walk(arg, bound, mode, visit);
             }
         }
         Node::LambdaDefKind { parameters, body } => {
@@ -96,7 +132,7 @@ where
                 let d = parameter.name.clone();
                 visit(NameSite::Parameter, &mut parameter.name, Some(&d));
             }
-            walk(body, bound, marked, visit);
+            walk(body, bound, mode, visit);
             bound.truncate(depth);
         }
         Node::FunctionKind {
@@ -114,34 +150,40 @@ where
                     let d = name.clone();
                     visit(NameSite::Declaration, name, Some(&d));
                 }
-                walk(&mut args[2 * i + 1], bound, marked, visit);
+                walk(&mut args[2 * i + 1], bound, mode, visit);
             }
-            walk(&mut args[2 * pair_count], bound, marked, visit);
+            walk(&mut args[2 * pair_count], bound, mode, visit);
             bound.truncate(depth);
         }
         Node::FunctionKind { args, .. } => {
             for arg in args {
-                walk(arg, bound, marked, visit);
+                walk(arg, bound, mode, visit);
             }
         }
         Node::LambdaCallKind { lambda, args } => {
-            walk(lambda, bound, marked, visit);
+            walk(lambda, bound, mode, visit);
             for arg in args {
-                walk(arg, bound, marked, visit);
+                walk(arg, bound, mode, visit);
             }
         }
         Node::OpRangeKind { left, right }
         | Node::OpIntersectKind { left, right, .. }
         | Node::OpUnionKind { left, right, .. } => {
-            walk(left, bound, marked, visit);
-            walk(right, bound, marked, visit);
+            walk(left, bound, mode, visit);
+            walk(right, bound, mode, visit);
         }
         Node::OpConcatenateKind { .. }
         | Node::OpSumKind { .. }
         | Node::OpProductKind { .. }
         | Node::OpPowerKind { .. }
         | Node::CompareKind { .. } => {
-            for_each_chain_operand_mut(node, |operand| walk(operand, bound, marked, visit));
+            if mode.in_order {
+                for operand in chain_operands_in_order_mut(node) {
+                    walk(operand, bound, mode, visit);
+                }
+            } else {
+                for_each_chain_operand_mut(node, |operand| walk(operand, bound, mode, visit));
+            }
         }
         // The peel loop above took every wrapper: none reaches this match.
         Node::UnaryKind { .. }
@@ -161,7 +203,6 @@ where
         | Node::WrongReferenceKind { .. }
         | Node::WrongRangeKind { .. }
         | Node::ArrayKind(_)
-        | Node::DefinedNameKind(_)
         | Node::ErrorKind(_)
         | Node::SheetRefErrorKind { .. }
         | Node::ParseErrorKind { .. }
