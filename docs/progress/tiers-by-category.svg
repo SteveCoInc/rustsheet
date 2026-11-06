@@ -32,11 +32,11 @@
 <rect class="b-ulp4" fill="#1baf7a" x="377.9" y="72.0" width="47.3" height="18" rx="3"><title>statistical: 16</title></rect>
 <text x="401.6" y="81.0" class="num in-ulp4" fill="#000000" text-anchor="middle" dominant-baseline="middle">16</text>
 <rect class="b-digits15" fill="#6250d6" x="427.2" y="72.0" width="10.3" height="18" rx="3"><title>statistical: 4</title></rect>
-<rect class="b-rate999" fill="#d55181" x="439.5" y="72.0" width="10.3" height="18" rx="3"><title>statistical: 4</title></rect>
-<rect class="b-rate99" fill="#eda100" x="451.8" y="72.0" width="38.0" height="18" rx="3"><title>statistical: 13</title></rect>
-<text x="470.9" y="81.0" class="num in-rate99" fill="#000000" text-anchor="middle" dominant-baseline="middle">13</text>
-<rect class="b-below99" fill="#e34948" x="491.9" y="72.0" width="117.0" height="18" rx="3"><title>statistical: 38</title></rect>
-<text x="550.4" y="81.0" class="num in-below99" fill="#000000" text-anchor="middle" dominant-baseline="middle">38</text>
+<rect class="b-rate999" fill="#d55181" x="439.5" y="72.0" width="7.2" height="18" rx="3"><title>statistical: 3</title></rect>
+<rect class="b-rate99" fill="#eda100" x="448.8" y="72.0" width="44.2" height="18" rx="3"><title>statistical: 15</title></rect>
+<text x="470.9" y="81.0" class="num in-rate99" fill="#000000" text-anchor="middle" dominant-baseline="middle">15</text>
+<rect class="b-below99" fill="#e34948" x="495.0" y="72.0" width="114.0" height="18" rx="3"><title>statistical: 37</title></rect>
+<text x="551.9" y="81.0" class="num in-below99" fill="#000000" text-anchor="middle" dominant-baseline="middle">37</text>
 <text x="616.9" y="81.0" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">149</text>
 <text x="140.0" y="111.0" class="ink" fill="#1f2328" text-anchor="end" dominant-baseline="middle">math</text>
 <rect class="b-exact" fill="#2a78d6" x="150.0" y="102.0" width="201.3" height="18" rx="3"><title>math: 66</title></rect>
