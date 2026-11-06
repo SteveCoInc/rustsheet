@@ -39,7 +39,9 @@ impl Model {
         // range (T-2415); a 1x1 array is `#VALUE!` too (probes/t2365-wrap-expand-tocol-error-lift
         // G8). An array that is an error is every element's result, as for TOROW:
         // `ROWS(EXPAND(1/0,{3;4}))` and `ROWS(EXPAND(NA(),3,{1;2}))` are 2 (same case G6, G7).
-        let data = self.eval_to_array(&args[0], cell);
+        // A lone blank cell stays blank beside the padding (`EXPAND(Z1,2,1,"p")` is a blank and
+        // "p"; probes/t4448-lone-blank-reshapers A15:D15, T-4448).
+        let data = self.eval_to_array_keep_blank(&args[0], cell);
         let (src_rows, src_cols) = data.as_ref().map_or((1, 1), |data| {
             (data.len(), data.first().map_or(0, Vec::len))
         });

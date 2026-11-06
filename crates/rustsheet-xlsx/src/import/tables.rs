@@ -240,8 +240,15 @@ fn has_active_criterion(auto_filter: &XmlNode, width: usize) -> bool {
                 .attribute("colId")
                 .and_then(|id| id.parse::<usize>().ok())
                 .is_some_and(|id| id < width);
-            inside && column.children().next().is_some()
+            inside && column.children().next().is_some_and(is_criterion)
         })
+}
+
+/// Whether a `<filterColumn>`'s first child counts as a criterion for SUBTOTAL: any element but a
+/// `<colorFilter>` with no `dxfId`, which Excel reads as no criterion (excel-graph, T-4404;
+/// docs/excel-semantics/xlsx-storage.md, "Table parts in the export").
+fn is_criterion(child: &XmlNode) -> bool {
+    !(child.has_tag_name("colorFilter") && child.attribute("dxfId").is_none())
 }
 
 /// A `<filterColumn>`'s column and criterion; `None` for one without a valid `colId`, which
@@ -304,6 +311,16 @@ mod tests {
             "<autoFilter>{bare}{past}{values}</autoFilter>"
         )));
         assert!(!active("<autoFilter/>"));
+        // T-4404: a color filter with no dxfId is no criterion; with one it is.
+        for color in [r#"<colorFilter/>"#, r#"<colorFilter cellColor="0"/>"#] {
+            let column = format!(
+                r#"<autoFilter><filterColumn colId="1">{color}</filterColumn></autoFilter>"#
+            );
+            assert!(!active(&column), "{color}");
+        }
+        assert!(active(
+            r#"<autoFilter><filterColumn colId="1"><colorFilter dxfId="0"/></filterColumn></autoFilter>"#
+        ));
     }
 
     /// Filter values are decoded from the file's `_xHHHH_` escapes, so the export's encoding
