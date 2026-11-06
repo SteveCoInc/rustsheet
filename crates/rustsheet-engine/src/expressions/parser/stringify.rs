@@ -3,7 +3,7 @@ mod literals;
 mod name_binding;
 mod range_shrink;
 mod rename_defined_name;
-mod sheet_edits;
+pub(crate) mod sheet_edits;
 mod structured;
 mod wrapped;
 mod wrong_reference;
@@ -33,8 +33,7 @@ use literals::{format_number_locale, to_string_array_node};
 pub(crate) use name_binding::{pin_unresolved_name, rebind_workbook_name_to_sheet};
 pub(crate) use rename_defined_name::rename_defined_name_in_node;
 pub(crate) use sheet_edits::{
-    delete_sheet_in_node, move_sheet_in_node, qualify_unqualified_references, rename_sheet_in_node,
-    retarget_unqualified_references,
+    delete_sheet_in_node, move_sheet_in_node, rename_sheet_in_node, retarget_unqualified_references,
 };
 pub(crate) use structured::{
     to_localized_string_this_row_lowered, to_rc_lowering_at, to_string_lowering,
