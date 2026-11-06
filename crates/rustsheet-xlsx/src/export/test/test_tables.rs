@@ -289,6 +289,53 @@ fn excel_authored_tables_keep_their_formula_text() {
     assert!(formulas > 100, "{formulas}");
 }
 
+/// T-4157: the Excel-authored tables.xlsx carries `dataDxfId` on table columns and `headerRowDxfId`
+/// alone on Table7; import reads each from its own attribute and the export writes every one back.
+#[test]
+fn excel_authored_table_dxf_ids_round_trip() {
+    let model = load_from_xlsx("tests/calc_test_tables/tables.xlsx", "en", "UTC", "en").unwrap();
+    let table7 = &model.workbook.tables["Table7"];
+    assert_eq!(
+        (table7.header_row_dxf_id, table7.data_dxf_id),
+        (Some(17), None),
+        "the header style is not copied into the data style"
+    );
+    let data_ids: Vec<_> = table7.columns.iter().map(|c| c.data_dxf_id).collect();
+    assert_eq!(
+        data_ids,
+        [13, 11, 9, 7, 5, 3].map(Some),
+        "Table7 column dataDxfId"
+    );
+
+    let temp_file_name = "temp_file_test_excel_table_dxf_ids.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+    for (name, table) in &model.workbook.tables {
+        let back = &reloaded.workbook.tables[name];
+        assert_eq!(
+            (
+                table.header_row_dxf_id,
+                table.data_dxf_id,
+                table.totals_row_dxf_id
+            ),
+            (
+                back.header_row_dxf_id,
+                back.data_dxf_id,
+                back.totals_row_dxf_id
+            ),
+            "{name}"
+        );
+        let ids = |t: &rustsheet_engine::types::Table| {
+            t.columns
+                .iter()
+                .map(|c| (c.header_row_dxf_id, c.data_dxf_id, c.totals_row_dxf_id))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(ids(back), ids(table), "{name} columns");
+    }
+}
+
 /// The filters of the Excel-authored tables.xlsx (a custom filter on Table4, a values filter on
 /// Table16) are written back as the file had them, and read again (T-2838).
 #[test]
