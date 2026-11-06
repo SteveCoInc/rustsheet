@@ -3,7 +3,7 @@ id: T-4423
 title: "SINH, COSH, SECH and CSCH between ln(DBL_MAX) and 710.48: probe whether Excel's #NUM! starts where e^x overflows (the engine's cut) or where sinh itself does"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -54,9 +54,9 @@ excel-probe skill, excel-graph, tag M5. Name the case probes/t4423-hyperbolic-ov
   0042).
 
 ## Acceptance criteria
-- [ ] probes/t4423-hyperbolic-overflow-band is committed with excel-graph oracle values, and the SINH and COSH cuts are
+- [x] probes/t4423-hyperbolic-overflow-band is committed with excel-graph oracle values, and the SINH and COSH cuts are
       bracketed by adjacent cells.
-- [ ] Every cell of the case passes, with no new known failure in eval/baseline/. If Excel answers inside the band, the
+- [x] Every cell of the case passes, with no new known failure in eval/baseline/. If Excel answers inside the band, the
       new kernel's model is stated in the PR as check 7 kind (b) or (c) of reviewer-excel-fidelity. If it is kind (c)
       or a fit, the Outcome shows these decision 0188 R4 guards:
       - hold-out counts;
@@ -65,12 +65,27 @@ excel-probe skill, excel-graph, tag M5. Name the case probes/t4423-hyperbolic-ov
       - a `FITTED(T-4423, n_cells, range)` tag for kind (a);
       - the reproducibility floor;
       - no keep-matched branch.
-- [ ] numbers.md "SINH and COSH overflow is `#NUM!` at once" and its COSH note replace "the cut ... is unprobed" with the
+- [x] numbers.md "SINH and COSH overflow is `#NUM!` at once" and its COSH note replace "the cut ... is unprobed" with the
       bracketing cells. The doc comment of `sinh` drops "Excel's exact cut is unprobed".
-- [ ] `rustsheet-eval accuracy` passes (the COSH, SINH, SECH and CSCH tables); `make check` green; reviewers approve.
+- [x] `rustsheet-eval accuracy` passes (the COSH, SINH, SECH and CSCH tables); `make check` green; reviewers approve.
 
 ## Out of scope
 - EXP's own overflow edge (T-1944 and T-2203, done).
 - IMSINH/IMCOSH past |x| 709 (engineering.md; T-2631).
 - Last-digit residue below the cut: COSH and SINH one ulp off just above 709.7 (T-3727) and COSH at small x (T-2744),
   both `defer: phase-1b`.
+
+## Outcome
+- Probe `probes/t4423-hyperbolic-overflow-band` (20 rows by 14 columns, 300 cells, excel-graph 2026-11-06). Excel's SINH
+  and COSH cut is exactly at ln(DBL_MAX) = 709.782712893384, the engine's own cut. Rows 2 and 3 bracket it by adjacent
+  doubles: both functions give numbers at ln(DBL_MAX) and #NUM! one double above it. Every point from there through
+  asinh(DBL_MAX) and on to 710.48 is #NUM! for both signs. So Excel rounds e^x to a double before it halves, and no
+  kernel change and no fit was needed. The first fill already brackets the cut to one ulp, so the planned bisection fill
+  was not needed.
+- New finding: SECH flushes a subnormal result to a true 0, as CSCH does. `SECH(x)=0` is TRUE at ±709.5, ±709.7 and
+  ±ln(DBL_MAX). The engine kept the subnormal (1.48E-308 to 1.11E-308), so 12 cells failed: F, G and J of rows 1, 2, 6
+  and 7. `fn_sech` now applies `arithmetic::flush_subnormal`, like `fn_csch`.
+- numbers.md: the "SINH and COSH overflow" entry and its COSH note give the bracketing cells, and the open SECH flush
+  question is closed. The `sinh` doc comment drops "unprobed".
+- Eval delta: probes +1 case, 300 cells, all passing. Known failures unchanged; 0 regressions. `rustsheet-eval accuracy`:
+  0 failing, 271 known as before.
