@@ -18,19 +18,24 @@ Sources:
 
 from __future__ import annotations
 
+import math
+import random
 from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars
+from rustsheet_tools.accuracy.defs._common import by_stratum, scalars, sum_away_from_mode
+from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
+    Draw,
     Interval,
     MathArg,
     NoValueError,
     Param,
     register,
 )
+from rustsheet_tools.accuracy.sampler import log_uniform
 
 TRIALS_SOURCE = "statistics.md#binomdist-is-num-from-231---1-trials-t-2464-t-2645"
 P1_SOURCE = "statistics.md#binomdists-pmf-at-k--0-is-num-when-p--1-t-2435"
@@ -60,8 +65,14 @@ _CUMULATIVE = Param("cumulative", "bool", source="catalog")
 
 
 def _reals(args: Sequence[MathArg]) -> list[mpmath.mpf]:
-    """The numeric arguments (every argument but the trailing cumulative flag)."""
-    return scalars(args[:-1])
+    """The numeric arguments: every argument but the cumulative flag, which the legacy pmf-only names (NEGBINOMDIST,
+    HYPGEOMDIST) do not take."""
+    return scalars([a for a in args if not isinstance(a, bool)])
+
+
+def _cumulative(args: Sequence[MathArg]) -> bool:
+    """The trailing cumulative flag, False for a legacy pmf-only call that has none."""
+    return args[-1] is True
 
 
 def binom_pmf(k: mpmath.mpf, n: mpmath.mpf, p: mpmath.mpf) -> mpmath.mpf:
@@ -176,21 +187,21 @@ def _poisson_tail(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath
 
 def _binom_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     k, n, p = _reals(args)
-    return binom_cdf(k, n, p) if args[-1] else binom_pmf(k, n, p)
+    return binom_cdf(k, n, p) if _cumulative(args) else binom_pmf(k, n, p)
 
 
 def _binom_domain(args: Sequence[MathArg]) -> str | None:
     k, n, p = _reals(args)
     if k > n:
         return "number_s above trials"
-    if p == 1 and k == 0 and n >= 1 and not args[-1]:
+    if p == 1 and k == 0 and n >= 1 and not _cumulative(args):
         return "pmf at k = 0 with p = 1 (Excel's LN(1 - p) closed form)"
     return None
 
 
 def _negbinom_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     f, s, p = _reals(args)
-    return negbinom_cdf(f, s, p) if args[-1] else negbinom_pmf(f, s, p)
+    return negbinom_cdf(f, s, p) if _cumulative(args) else negbinom_pmf(f, s, p)
 
 
 def _poisson_dist(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -202,7 +213,7 @@ def _poisson_dist(args: Sequence[MathArg]) -> mpmath.mpf:
             msg = "EXP(-mean) overflows"
             raise NoValueError(msg)
         return value
-    return poisson_cdf(x, m) if args[-1] else poisson_pmf(x, m)
+    return poisson_cdf(x, m) if _cumulative(args) else poisson_pmf(x, m)
 
 
 def _poisson_domain(args: Sequence[MathArg]) -> str | None:
@@ -233,9 +244,11 @@ def _count(
     )
 
 
-BINOM_DIST = register(
-    Definition(
-        function="BINOM.DIST",
+def _binom_definition(function: str) -> Definition:
+    """BINOM.DIST, and BINOMDIST with the same arguments and rules: equal on every paired cell (statistics.md "Legacy
+    distribution names sweep (T-1047)"), and the trial limit and the p = 1 pmf are probed on both names."""
+    return Definition(
+        function=function,
         params=(
             # number_s and trials are drawn apart, so their ranges keep number_s ≤ trials in the typical and extreme
             # strata (number_s > trials is `#NUM!`); the tail stratum sets number_s from trials' own quantile.
@@ -265,27 +278,31 @@ BINOM_DIST = register(
         tail_param="number_s",
         sources=(TRIALS_SOURCE, P1_SOURCE, "Abramowitz and Stegun 26.5.24"),
     )
-)
 
-NEGBINOM_DIST = register(
-    Definition(
-        function="NEGBINOM.DIST",
-        params=(
-            _count("number_f", 0, (0, 30), (1e3, 1e12), "Microsoft documentation"),
-            _count("number_s", 1, (1, 30), (1e3, 1e12), "Microsoft documentation"),
-            _NEGBINOM_PROBABILITY,
-            _CUMULATIVE,
-        ),
+
+def _negbinom_definition(function: str, *, cumulative: bool) -> Definition:
+    """NEGBINOM.DIST, and NEGBINOMDIST without the cumulative flag: it is NEGBINOM.DIST's pmf on every paired cell
+    (statistics.md "Legacy distribution names sweep, second family (T-1048)"), p = 1 included."""
+    params = (
+        _count("number_f", 0, (0, 30), (1e3, 1e12), "Microsoft documentation"),
+        _count("number_s", 1, (1, 30), (1e3, 1e12), "Microsoft documentation"),
+        _NEGBINOM_PROBABILITY,
+    )
+    return Definition(
+        function=function,
+        params=(*params, _CUMULATIVE) if cumulative else params,
         value=_negbinom_dist,
         tail=_negbinom_tail,
         tail_param="number_f",
         sources=(TRIALS_SOURCE, NEGBINOM_P_SOURCE, "Abramowitz and Stegun 26.5.24, 26.5.26"),
     )
-)
 
-POISSON_DIST = register(
-    Definition(
-        function="POISSON.DIST",
+
+def _poisson_definition(function: str) -> Definition:
+    """POISSON.DIST, and POISSON with the same arguments and rules: equal on every paired cell (statistics.md "Legacy
+    distribution names sweep, second family (T-1048)"), and the negative-mean quirk is probed on both names."""
+    return Definition(
+        function=function,
         params=(
             _count("x", 0, (0, 40), (1e3, 1e12), "Microsoft documentation"),
             Param(
@@ -308,4 +325,195 @@ POISSON_DIST = register(
         tail_param="x",
         sources=(NEGATIVE_MEAN_SOURCE, "Abramowitz and Stegun 26.4.21"),
     )
+
+
+BINOM_DIST = register(_binom_definition("BINOM.DIST"))
+BINOMDIST = register(_binom_definition("BINOMDIST"))
+NEGBINOM_DIST = register(_negbinom_definition("NEGBINOM.DIST", cumulative=True))
+NEGBINOMDIST = register(_negbinom_definition("NEGBINOMDIST", cumulative=False))
+POISSON_DIST = register(_poisson_definition("POISSON.DIST"))
+POISSON = register(_poisson_definition("POISSON"))
+
+
+# -- HYPGEOM.DIST and HYPGEOMDIST (T-4105) ---------------------------------------------------------------------------
+
+
+def hypgeom_support(n: mpmath.mpf, k: mpmath.mpf, pop: mpmath.mpf) -> tuple[mpmath.mpf, mpmath.mpf]:
+    """The possible success counts of a sample of n from a population of `pop` holding k successes."""
+    return max(mpmath.mpf(0), n + k - pop), min(n, k)
+
+
+def hypgeom_pmf(x: mpmath.mpf, n: mpmath.mpf, k: mpmath.mpf, pop: mpmath.mpf) -> mpmath.mpf:
+    """P(X = x) = C(k, x) C(pop - k, n - x) / C(pop, n), 0 outside the support."""
+    lo, hi = hypgeom_support(n, k, pop)
+    if x < lo or x > hi:
+        return mpmath.mpf(0)
+    return mpmath.binomial(k, x) * mpmath.binomial(pop - k, n - x) / mpmath.binomial(pop, n)
+
+
+def hypgeom_cdf(x: mpmath.mpf, n: mpmath.mpf, k: mpmath.mpf, pop: mpmath.mpf) -> mpmath.mpf:
+    """P(X ≤ x): below the mode the lower tail summed downward from x, else 1 - P(X ≥ x + 1) summed upward, each
+    away from the mode (`sum_away_from_mode`), so a deep tail keeps its digits and the sum stays short."""
+    lo, hi = hypgeom_support(n, k, pop)
+    if x < lo:
+        return mpmath.mpf(0)
+    if x >= hi:
+        return mpmath.mpf(1)
+    rest = pop - k - n  # pmf(j + 1) / pmf(j) = (k - j)(n - j) / ((j + 1)(rest + j + 1))
+    mode = mpmath.floor((n + 1) * (k + 1) / (pop + 2))
+    if x < mode:
+        return sum_away_from_mode(
+            hypgeom_pmf(x, n, k, pop), x, lo, -1, lambda j: j * (rest + j) / ((k - j + 1) * (n - j + 1))
+        )
+    up = x + 1
+    return 1 - sum_away_from_mode(
+        hypgeom_pmf(up, n, k, pop), up, hi, 1, lambda j: (k - j) * (n - j) / ((j + 1) * (rest + j + 1))
+    )
+
+
+def _hypgeom_dist(args: Sequence[MathArg]) -> mpmath.mpf:
+    x, n, k, pop = _reals(args)
+    return hypgeom_cdf(x, n, k, pop) if _cumulative(args) else hypgeom_pmf(x, n, k, pop)
+
+
+def _hypgeom_domain(args: Sequence[MathArg]) -> str | None:
+    _, n, k, pop = _reals(args)
+    if k > pop:
+        return "population_s above number_pop"
+    if n > pop:
+        return "number_sample above number_pop"
+    return None
+
+
+HYPGEOM_SD_CAP = 1000.0
+"""The largest standard deviation a cdf point is drawn with: past about 3,400 the engine's cdf sum has more than 2^18
+terms and is `#NUM!` (the per-call cap DEVIATION of statistics.md "HYPGEOM.DIST: per-call cap and lifting (T-1873)"),
+where Excel's value is unprobed (T-1896). A wider point is drawn as a pmf instead."""
+
+
+def _hypgeom_sd(n: int, k: int, pop: int) -> float:
+    if pop < 2:
+        return 0.0
+    share = k / pop
+    return math.sqrt(max(0.0, n * share * (1 - share) * (pop - n) / (pop - 1)))  # 0 at an invalid order
+
+
+def _hypgeom_at(n: int, k: int, pop: int, sds: float) -> int:
+    """A success count `sds` standard deviations from the mean, inside the support."""
+    lo, hi = max(0, n + k - pop), min(n, k)
+    x = round(n * k / pop + sds * _hypgeom_sd(n, k, pop)) if pop else 0
+    return min(max(x, lo), hi)
+
+
+def _hypgeom_draw(function: str, *, legacy: bool) -> Draw:
+    """The strata of HYPGEOM.DIST (and HYPGEOMDIST, its pmf: `legacy` leaves out the flag). The four counts are drawn
+    together, so a point is mostly valid (number_sample and population_s at most number_pop, sample_s in the support)
+    and the invalid orders are the edge stratum's. A cdf point wider than `HYPGEOM_SD_CAP` is drawn as a pmf."""
+
+    def point(x: int, n: int, k: int, pop: int, rng: random.Random) -> list[Arg]:
+        cumulative = rng.random() < 0.5 and _hypgeom_sd(n, k, pop) <= HYPGEOM_SD_CAP
+        return [x, n, k, pop] if legacy else [x, n, k, pop, cumulative]
+
+    def some_count(rng: random.Random, pop: int) -> int:
+        """Uniform over [0, pop] or log-uniform, so small counts in a huge population are drawn too."""
+        if rng.random() < 0.5:
+            return rng.randint(0, pop)
+        return min(pop, round(log_uniform(rng, 1, pop + 1)) - 1)
+
+    def near_mean(rng: random.Random, pop: int, spread: float) -> list[Arg]:
+        k, n = some_count(rng, pop), some_count(rng, pop)
+        return point(_hypgeom_at(n, k, pop, rng.uniform(-spread, spread)), n, k, pop, rng)
+
+    def typical(rng: random.Random) -> list[Arg]:
+        pop = rng.randint(1, 100)
+        k, n = rng.randint(0, pop), rng.randint(0, pop)
+        return point(rng.randint(max(0, n + k - pop), min(n, k)), n, k, pop, rng)
+
+    def tail(rng: random.Random) -> list[Arg]:
+        """Deep in one tail: 4 to 40 standard deviations out, at populations up to a million."""
+        pop = round(log_uniform(rng, 20, 1e6))
+        k, n = max(1, some_count(rng, pop)), max(1, some_count(rng, pop))
+        return point(_hypgeom_at(n, k, pop, rng.choice((-1.0, 1.0)) * rng.uniform(4, 40)), n, k, pop, rng)
+
+    def extreme(rng: random.Random) -> list[Arg]:
+        """A population from 1E6 to the count limit, within 8 standard deviations of the mean."""
+        pop = round(log_uniform(rng, 1e6, TRIALS_LIMIT)) if rng.random() < 0.8 else TRIALS_LIMIT
+        return near_mean(rng, pop, 8)
+
+    def whole(rng: random.Random) -> list[Arg]:
+        """A population log-uniform over [1, the count limit], within 12 standard deviations of the mean."""
+        return near_mean(rng, round(log_uniform(rng, 1, TRIALS_LIMIT)), 12)
+
+    def edge(rng: random.Random) -> list[Arg]:
+        """The bounds: empty sample, population and successes, the support's ends and one past them, every count at
+        the limit and one past it, negative counts and the documented #NUM! orders (statistics.md T-1048, T-2255).
+        An empty population (0, 0, 0, 0) is unprobed: the math's pmf is 1 there, and the oracle settles it."""
+        pop = rng.randint(2, 60)
+        k, n = rng.randint(1, pop - 1), rng.randint(1, pop - 1)
+        lo, hi = max(0, n + k - pop), min(n, k)
+        big = TRIALS_LIMIT
+        shapes: list[tuple[int, int, int, int]] = [
+            (0, 0, 0, 0),
+            (0, 0, k, pop),
+            (0, n, 0, pop),
+            (lo, n, k, pop),
+            (hi, n, k, pop),
+            (hi + 1, n, k, pop),
+            (max(lo - 1, 0), n, k, pop),
+            (n, n, pop, pop),
+            (k, pop, k, pop),
+            (_hypgeom_at(n, k, big, rng.uniform(-3, 3)), n, k, big),
+            (1, n, k, big + 1),
+            (big + 1, n, k, pop),
+            (1, big + 1, k, pop),
+            (1, n, big + 1, pop),
+            (lo, n, pop + 1, pop),
+            (lo, pop + 1, k, pop),
+            (-1, n, k, pop),
+            (lo, n, -1, pop),
+        ]
+        return point(*rng.choice(shapes), rng)
+
+    return by_stratum(
+        {"typical": typical, "tail": tail, "edge": edge, "extreme": extreme, "log-uniform": whole},
+        f"{function} draws: small populations, deep tails, populations up to the count limit, and the bounds.",
+    )
+
+
+HYPGEOM_LIMIT_SOURCE = (
+    "statistics.md#hypgeomdist-a-sample-below-the-possible-range-is-0-a-negative-or-huge-count-is-num-t-2255"
 )
+HYPGEOM_EXACT_SOURCE = "statistics.md#hypgeomdist-is-not-exact-for-small-integer-arguments"
+HYPGEOM_CAP_SOURCE = "statistics.md#hypgeomdist-per-call-cap-and-lifting-t-1873"
+_HYPGEOM_COUNT = Interval(0, TRIALS_LIMIT, lo_open=False, hi_open=False)
+
+
+def _hypgeom_definition(function: str, *, cumulative: bool) -> Definition:
+    """HYPGEOM.DIST, and HYPGEOMDIST without the flag: it is HYPGEOM.DIST's pmf on every paired cell (statistics.md
+    "Legacy distribution names sweep, second family (T-1048)"). The count limit, 2^31 - 1 or more is `#NUM!` in any
+    count, is BINOM.DIST's trial limit (statistics.md T-2255), so the two share TRIALS_LIMIT. Above the support the
+    pmf is 0 and the cdf 1, below it both are 0 (T-1048, T-2255): the math's own values, so no domain rule."""
+    params = (
+        Param("sample_s", "int", _HYPGEOM_COUNT, typical=(0, 100), source=HYPGEOM_LIMIT_SOURCE),
+        Param("number_sample", "int", _HYPGEOM_COUNT, typical=(0, 100), source=HYPGEOM_LIMIT_SOURCE),
+        Param("population_s", "int", _HYPGEOM_COUNT, typical=(0, 100), source=HYPGEOM_LIMIT_SOURCE),
+        Param("number_pop", "int", _HYPGEOM_COUNT, typical=(1, 100), source=HYPGEOM_LIMIT_SOURCE),
+    )
+    return Definition(
+        function=function,
+        params=(*params, _CUMULATIVE) if cumulative else params,
+        value=_hypgeom_dist,
+        domain=_hypgeom_domain,
+        draw=_hypgeom_draw(function, legacy=not cumulative),
+        sources=(
+            HYPGEOM_LIMIT_SOURCE,
+            NEGBINOM_P_SOURCE,
+            HYPGEOM_EXACT_SOURCE,
+            HYPGEOM_CAP_SOURCE,
+            "Abramowitz and Stegun 26.1.21",
+        ),
+    )
+
+
+HYPGEOM_DIST = register(_hypgeom_definition("HYPGEOM.DIST", cumulative=True))
+HYPGEOMDIST = register(_hypgeom_definition("HYPGEOMDIST", cumulative=False))
