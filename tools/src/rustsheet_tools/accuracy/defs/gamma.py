@@ -250,13 +250,19 @@ def _gamma_inv(args: Sequence[MathArg]) -> mpmath.mpf:
     return mpmath.mpf(0) if p == 0 else beta * quantile(p, alpha, upper=False)
 
 
+def chi_shape(df: MathArg) -> mpmath.mpf:
+    """The gamma shape of a chi-squared df, truncated: floor(df) / 2 (Abramowitz and Stegun 26.4.19)."""
+    assert not isinstance(df, (bool, tuple))
+    return mpmath.floor(df) / 2
+
+
 def _chisq(upper: bool) -> Callable[[Sequence[MathArg]], mpmath.mpf]:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
         p, df = args
         assert not isinstance(p, (bool, tuple)) and not isinstance(df, (bool, tuple))
         if p == (1 if upper else 0):
             return mpmath.mpf(0)
-        return CHI_SCALE * quantile(p, mpmath.floor(df) / 2, upper=upper)
+        return CHI_SCALE * quantile(p, chi_shape(df), upper=upper)
 
     return value
 
@@ -272,7 +278,7 @@ def _probability(source: str, lo_open: bool, hi_open: bool) -> Param:
     )
 
 
-def _df(hi: float, truncates: str = "") -> Param:
+def deg_freedom_param(hi: float, truncates: str = "") -> Param:
     """df from 1 to `hi` (CHISQ.INV's 1E10, CHISQ.INV.RT's none); the extreme draws reach `hi` or MAX_DRAWN_DF.
     `truncates` cites the entry showing Excel truncates a non-integer df (`Param.truncates`)."""
     return Param(
@@ -318,7 +324,7 @@ GAMMA_INV = register(
 CHISQ_INV = register(
     Definition(
         function="CHISQ.INV",
-        params=(_probability(CLOSED_SOURCE, lo_open=False, hi_open=True), _df(DF_CUT)),
+        params=(_probability(CLOSED_SOURCE, lo_open=False, hi_open=True), deg_freedom_param(DF_CUT)),
         value=_chisq(upper=False),
         sources=(HUGE_SOURCE, CLOSED_SOURCE, "Abramowitz and Stegun 26.4.19"),
     )
@@ -332,7 +338,10 @@ RT_TRUNC_SOURCE = "statistics.md#inverse-cdf-functions-at-a-tiny-or-near-1-proba
 CHISQ_INV_RT = register(
     Definition(
         function="CHISQ.INV.RT",
-        params=(_probability(CLOSED_SOURCE, lo_open=True, hi_open=False), _df(float("inf"), RT_TRUNC_SOURCE)),
+        params=(
+            _probability(CLOSED_SOURCE, lo_open=True, hi_open=False),
+            deg_freedom_param(float("inf"), RT_TRUNC_SOURCE),
+        ),
         value=_chisq(upper=True),
         sources=(HUGE_SOURCE, CLOSED_SOURCE, "Abramowitz and Stegun 26.4.19"),
     )

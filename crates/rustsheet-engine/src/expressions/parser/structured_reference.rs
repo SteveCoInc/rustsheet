@@ -5,8 +5,8 @@ use super::super::lexer::{Lexer, LexerMode};
 use super::super::token::{Error, TableReference, TableSpacing, TableSpecifier, TokenType};
 use super::{get_table_column_by_name, Node, Parser};
 use crate::expressions::types::CellReferenceRC;
-use crate::language::get_language;
-use crate::locale::get_locale;
+use crate::language::get_default_language;
+use crate::locale::get_default_locale;
 use crate::table_types::Table;
 use crate::types::sheet_names_match;
 
@@ -482,10 +482,8 @@ pub fn parse_range(formula: &str) -> Result<(i32, i32, i32, i32), String> {
     let mut lexer = Lexer::new(
         formula,
         LexerMode::A1,
-        #[allow(clippy::expect_used)]
-        get_locale("en").expect(""),
-        #[allow(clippy::expect_used)]
-        get_language("en").expect(""),
+        get_default_locale(),
+        get_default_language(),
     );
     if let TokenType::Range {
         left,

@@ -14,7 +14,7 @@ depends_on: []
 Establish what Excel saves for a negative kept subnormal and a spilled/array kept subnormal, then confirm or revert the spill/array flush (already inferred in T-2211) and extend to negatives if evidenced.
 
 ## Context
-T-2211 flushes only `0 < v < MIN_POSITIVE` on save (evidenced: probes/subnormal-saved-as-zero). Unprobed: `=0-EXP(-745)` beside `=(0-EXP(-745))=0` and `=(0-EXP(-745))*2^1000` (not `-EXP(-745)`, which is +2^-1074: numbers.md "Unary minus of a tiny subnormal"); a spilled / CSE array element (`=EXP({-745,-708})`); desktop Excel's save (decision 0039). Code: crates/rustsheet-xlsx/src/export/worksheets.rs `saved_number`. Use the `excel-probe` skill.
+T-2211 flushes only `0 < v < MIN_POSITIVE` on save (evidenced: probes/subnormal-saved-as-zero). Unprobed: `=0-EXP(-745)` beside `=(0-EXP(-745))=0` and `=(0-EXP(-745))*2^1000` (not `-EXP(-745)`, which is +2^-1074: numbers.md "Unary minus of a tiny subnormal"); a spilled / CSE array element (`=EXP({-745,-708})`); a positive subnormal constant that reaches the file without passing through a load (set through the API, which keeps it; numbers.md "A subnormal cell constant reads as 0"): `saved_number` now saves it as 0, and Excel's save of a typed subnormal constant is unprobed (T-2211 fidelity review); desktop Excel's save (decision 0039). Code: crates/rustsheet-xlsx/src/export/worksheets.rs `saved_number`. Use the `excel-probe` skill.
 
 ## Acceptance criteria
 - [ ] Probe cases committed with oracle values; `saved_number` and numbers.md "Worksheet EXP (T-1931)" updated to the evidence; export tests for each case.

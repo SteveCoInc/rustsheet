@@ -12,7 +12,6 @@ use crate::{
         math_and_trigonometry::SumParts,
         statistical::variance::{variance_result, VarianceKind},
         util::array_node_to_calc_result,
-        Function,
     },
     model::Model,
     reference_operators::{not_a_reference_array, Ranges, RefArg},
@@ -87,26 +86,20 @@ impl Model {
     }
 
     fn cell_is_subtotal(&self, sheet_index: u32, row: i32, column: i32) -> bool {
-        self.cell_formula_is_one_of(
-            sheet_index,
-            row,
-            column,
-            &[Function::Subtotal, Function::Aggregate],
-        )
+        self.cell_formula_calls_subtotal(sheet_index, row, column)
     }
 
-    /// Whether the cell holds a formula that calls one of `kinds` anywhere in its text (SUBTOTAL
-    /// and AGGREGATE skip such cells; probes/subtotal-hidden-filtered Nest sheet, T-1036). The
+    /// Whether the cell holds a formula that calls SUBTOTAL or AGGREGATE anywhere in its text
+    /// (read from the flag cached on the shared formula, T-1195; SUBTOTAL and AGGREGATE skip such cells; probes/subtotal-hidden-filtered Nest sheet, T-1036). The
     /// flag is the formula's syntax, not what it evaluated: an untaken IF branch, an unused LET
     /// binding or an uncalled LAMBDA counts, while a defined name whose body calls SUBTOTAL, an
     /// INDIRECT to such a cell or the name in a string does not. A spilled cell carries its
     /// anchor's flag (probes/t4194-subtotal-nested-skip, excel-graph, T-4194).
-    pub(crate) fn cell_formula_is_one_of(
+    pub(crate) fn cell_formula_calls_subtotal(
         &self,
         sheet_index: u32,
         row: i32,
         column: i32,
-        kinds: &[Function],
     ) -> bool {
         let worksheet = &self.workbook.worksheets[sheet_index as usize];
         let cell = match worksheet.cell(row, column) {
@@ -116,11 +109,8 @@ impl Model {
             }) => worksheet.cell(*anchor_row, *anchor_column),
             cell => cell,
         };
-        cell.and_then(Cell::get_formula).is_some_and(|f| {
-            self.parsed_formulas[sheet_index as usize][f as usize]
-                .evaluated
-                .contains_function(kinds)
-        })
+        cell.and_then(Cell::get_formula)
+            .is_some_and(|f| self.parsed_formulas[sheet_index as usize][f as usize].calls_subtotal)
     }
 
     /// Calls `f` with the value of every cell of `arg` that SUBTOTAL reads: filtered rows,

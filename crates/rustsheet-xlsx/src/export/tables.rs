@@ -19,7 +19,7 @@ use rustsheet_engine::{
         types::CellReferenceRC,
         utils::number_to_column,
     },
-    types::{Cell, FilterColumn, FilterCriterion, Table, Workbook, Worksheet},
+    types::{Cell, DateGroupItem, FilterColumn, FilterCriterion, Table, Workbook, Worksheet},
     ParsedFormula,
 };
 
@@ -80,9 +80,12 @@ fn dxf_attribute(name: &str, dxf_id: Option<u32>, dxf_count: usize) -> String {
 }
 
 /// What the totals row holds for a column, as the table part records it: a formula is written as
-/// `totalsRowFunction="custom"` with its `<totalsRowFormula>`, a text cell as `totalsRowLabel`.
-/// Excel refuses a table with a totals row whose cells lack it (xlsx-storage.md "Structured
-/// references in the file"). Any other cell needs nothing.
+/// `totalsRowFunction="custom"` with its `<totalsRowFormula>`, a text cell as `totalsRowLabel`,
+/// and a number, boolean or error constant as `totalsRowFunction="custom"` alone. Excel refuses a
+/// table with a totals row whose cells lack it (xlsx-storage.md "Structured references in the
+/// file"), and refuses a constant written as a label or with a `<totalsRowFormula>`; the bare
+/// `custom` loads with the cell kept a constant (excel-graph uploads, 2026-11-06, T-4005;
+/// xlsx-storage.md "Table parts in the export"). An empty cell needs nothing.
 fn totals_row_metadata(
     cell: Option<&Cell>,
     context: &CellReferenceRC,
@@ -116,6 +119,9 @@ fn totals_row_metadata(
             ),
             None => (String::new(), String::new()),
         },
+        Cell::NumberCell { .. } | Cell::BooleanCell { .. } | Cell::ErrorCell { .. } => {
+            (" totalsRowFunction=\"custom\"".to_string(), String::new())
+        }
         _ => (String::new(), String::new()),
     }
 }
@@ -126,7 +132,7 @@ fn totals_row_metadata(
 /// of the sheet filtered for SUBTOTAL) is written as a `<filterColumn>` with no criterion:
 /// schema-valid, but how Excel reads it is unprobed (xlsx-storage.md "Table parts in the
 /// export"; T-3081 probes it).
-fn auto_filter(table: &Table, (c1, r1, c2, r2): (i32, i32, i32, i32)) -> String {
+fn auto_filter(table: &Table, (c1, r1, c2, r2): (i32, i32, i32, i32), dxf_count: usize) -> String {
     if table.header_row_count == 0 {
         return String::new();
     }
@@ -139,7 +145,11 @@ fn auto_filter(table: &Table, (c1, r1, c2, r2): (i32, i32, i32, i32)) -> String 
         return String::new();
     };
     let filter = if !table.filter_columns.is_empty() {
-        table.filter_columns.iter().map(filter_column).collect()
+        table
+            .filter_columns
+            .iter()
+            .map(|column| filter_column(column, dxf_count))
+            .collect()
     } else if table.has_filters {
         "<filterColumn colId=\"0\"/>".to_string()
     } else {
@@ -148,47 +158,120 @@ fn auto_filter(table: &Table, (c1, r1, c2, r2): (i32, i32, i32, i32)) -> String 
     format!("<autoFilter ref=\"{left}{r1}:{right}{last_row}\">{filter}</autoFilter>")
 }
 
-/// A `<filterColumn>` as ECMA-376-1:2016 section 18.3.2.7 writes it.
-fn filter_column(column: &FilterColumn) -> String {
+/// A `<filterColumn>` as ECMA-376-1:2016 section 18.3.2.7 writes it, with its kept criterion
+/// (T-2838, T-4004). A color filter's `dxfId` is written only when it is one of the workbook's
+/// `dxf_count` differential formats.
+fn filter_column(column: &FilterColumn, dxf_count: usize) -> String {
     let col_id = column.col_id;
-    let mut xml = format!("<filterColumn colId=\"{col_id}\">");
-    match &column.criterion {
-        FilterCriterion::Values { values, blank } => {
-            xml.push_str(if *blank {
-                "<filters blank=\"1\">"
-            } else {
-                "<filters>"
-            });
+    let criterion = match &column.criterion {
+        FilterCriterion::Values {
+            values,
+            blank,
+            calendar_type,
+            date_groups,
+        } => {
+            let mut xml = String::from("<filters");
+            if *blank {
+                xml.push_str(" blank=\"1\"");
+            }
+            xml.push_str(&optional_attribute(
+                "calendarType",
+                calendar_type.as_deref(),
+            ));
+            xml.push('>');
             for value in values {
-                xml.push_str("<filter val=\"");
-                xml.push_str(&escape_xml(value));
-                xml.push_str("\"/>");
+                xml.push_str(&format!("<filter val=\"{}\"/>", escape_xml(value)));
+            }
+            for group in date_groups {
+                xml.push_str(&date_group_item(group));
             }
             xml.push_str("</filters>");
+            xml
         }
         FilterCriterion::Custom { and, conditions } => {
-            xml.push_str(if *and {
+            let mut xml = String::from(if *and {
                 "<customFilters and=\"1\">"
             } else {
                 "<customFilters>"
             });
             for condition in conditions {
                 xml.push_str("<customFilter");
-                if let Some(operator) = &condition.operator {
-                    xml.push_str(" operator=\"");
-                    xml.push_str(&escape_xml(operator));
-                    xml.push('"');
-                }
-                xml.push_str(" val=\"");
-                xml.push_str(&escape_xml(&condition.val));
-                xml.push_str("\"/>");
+                xml.push_str(&optional_attribute(
+                    "operator",
+                    condition.operator.as_deref(),
+                ));
+                xml.push_str(&format!(" val=\"{}\"/>", escape_xml(&condition.val)));
             }
             xml.push_str("</customFilters>");
+            xml
         }
+        FilterCriterion::Top10 {
+            top,
+            percent,
+            val,
+            filter_val,
+        } => format!(
+            "<top10{}{} val=\"{}\"{}/>",
+            if *top { "" } else { " top=\"0\"" },
+            if *percent { " percent=\"1\"" } else { "" },
+            escape_xml(val),
+            optional_attribute("filterVal", filter_val.as_deref()),
+        ),
+        FilterCriterion::Dynamic {
+            kind,
+            val,
+            max_val,
+            val_iso,
+            max_val_iso,
+        } => format!(
+            "<dynamicFilter type=\"{}\"{}{}{}{}/>",
+            escape_xml(kind),
+            optional_attribute("val", val.as_deref()),
+            optional_attribute("valIso", val_iso.as_deref()),
+            optional_attribute("maxVal", max_val.as_deref()),
+            optional_attribute("maxValIso", max_val_iso.as_deref()),
+        ),
+        FilterCriterion::Color { dxf_id, cell_color } => format!(
+            "<colorFilter{}{}/>",
+            dxf_attribute("dxfId", *dxf_id, dxf_count),
+            if *cell_color { "" } else { " cellColor=\"0\"" },
+        ),
+        FilterCriterion::Icon { icon_set, icon_id } => format!(
+            "<iconFilter iconSet=\"{}\"{}/>",
+            escape_xml(icon_set),
+            icon_id
+                .map(|id| format!(" iconId=\"{id}\""))
+                .unwrap_or_default(),
+        ),
         FilterCriterion::Other => return format!("<filterColumn colId=\"{col_id}\"/>"),
-    }
-    xml.push_str("</filterColumn>");
-    xml
+    };
+    format!("<filterColumn colId=\"{col_id}\">{criterion}</filterColumn>")
+}
+
+/// A `<dateGroupItem>` (ECMA-376-1:2016 section 18.3.2.4).
+fn date_group_item(group: &DateGroupItem) -> String {
+    let field = |name: &str, value: Option<u16>| {
+        value
+            .map(|v| format!(" {name}=\"{v}\""))
+            .unwrap_or_default()
+    };
+    format!(
+        "<dateGroupItem year=\"{}\"{}{}{}{}{} dateTimeGrouping=\"{}\"/>",
+        group.year,
+        field("month", group.month),
+        field("day", group.day),
+        field("hour", group.hour),
+        field("minute", group.minute),
+        field("second", group.second),
+        escape_xml(&group.grouping),
+    )
+}
+
+/// ` name="value"`, escaped, or an empty string when there is no value.
+fn optional_attribute(name: &str, value: Option<&str>) -> String {
+    value
+        .map(|v| format!(" {name}=\"{}\"", escape_xml(v)))
+        .unwrap_or_default()
 }
 
 /// The part `xl/tables/table{id}.xml` of `table`, which is on `worksheet`.
@@ -273,7 +356,7 @@ id=\"{id}\" name=\"{}\" displayName=\"{}\" ref=\"{}\"{header_row_count}{totals_r
         dxf_attribute("headerRowDxfId", table.header_row_dxf_id, dxf_count),
         dxf_attribute("dataDxfId", table.data_dxf_id, dxf_count),
         dxf_attribute("totalsRowDxfId", table.totals_row_dxf_id, dxf_count),
-        auto_filter(table, area),
+        auto_filter(table, area, dxf_count),
         table.columns.len(),
         u8::from(style.show_first_column),
         u8::from(style.show_last_column),
