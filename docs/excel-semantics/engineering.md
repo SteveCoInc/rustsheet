@@ -1494,6 +1494,40 @@ Status: VERIFIED (excel-graph)
 Implemented in: functions/engineering/transcendental/bessel_excel.rs (`excel_bessel_y`)
 Tasks: T-4458, T-4467
 
+## BESSELK at a tiny x (T-4459)
+Rule: BESSELK of every order is `#NUM!` once `x/2` is subnormal (x < 2^-1021 = 4.4501477170144028E-308), although K0
+(about 708) and K1 (about 2.2E+307) are finite there. Above that, orders 0 and 1 answer at every normal x probed, and
+orders 2 to 7 are `#NUM!` exactly from the first x at which the upward recurrence (`bkm + 2j/x * bk` from NR's
+`bessk0`/`bessk1`, in plain doubles) overflows. Excel's cut falls between the same adjacent cells as that double model's.
+Each order's last answering x and first `#NUM!` x:
+
+| order | answers / `#NUM!` |
+|---|---|
+| 0, 1 | 4.45014771701441E-308 / 4.4501477170144E-308 |
+| 2 | 1.055E-154 / 1.054E-154 |
+| 3 | 3.544E-103 / 3.543E-103 |
+| 4 | 2.274E-77 / 2.273E-77 |
+| 5 | 7.344E-62 / 7.343E-62 |
+| 6 | 1.666E-51 / 1.665E-51 |
+| 7 | 4.265E-44 / 4.264E-44 |
+
+- The orders 0 and 1 cut was found with literals written as 2^-1021 plus 1, 2, 3, 4, 8 and more ulps. Excel reads a
+  literal at 15 significant digits (numbers.md "Formula number literals are read at 15 significant digits"), so plus 1
+  to 4 ulps all ask 4.4501477170144E-308 (below 2^-1021, `#NUM!`) and plus 8 and 16 ulps ask 4.45014771701441E-308
+  (above it; K1 = 2.2471164185778914E+307). Read as full doubles, the cells would suggest a cut 5 to 8 ulps above
+  2^-1021.
+- `x/2` going subnormal is the mechanism these cells fit. x = 2^-1021 itself, reachable only as a computed value, is
+  unprobed (T-4552). A subnormal x is not a target: excel-graph refuses a workbook holding a subnormal literal ("BESSELY
+  at a tiny x and a small order").
+- Order 0 from 1E-10 to 1E-307 gives `-ln(x/2) I0(x) + poly` (`BESSELK(1E-307,0)` = 707.009555069732).
+RustSheet matches: `bessel_k` returns `#NUM!` below `2 * f64::MIN_POSITIVE` and otherwise runs the double recurrence.
+Evidence: probes/t4459-besselk-tiny-x-cuts (186 cells: orders 0 and 1 by decade down to 2.2250738585072E-308, orders 2
+to 7 at decade, 1-digit and 4-digit steps around each cut), probes/t4459-besselk-tiny-x-bisect (60 cells, orders 0 to
+2 from 9E-308 to 3.5E-308), probes/t4459-besselk-tiny-x-ulps (24 cells); excel-graph, 2026-11-06.
+Status: VERIFIED (excel-graph)
+Implemented in: functions/engineering/transcendental/bessel_k.rs (`bessel_k`)
+Tasks: T-4459, T-4552
+
 ## BESSELI overflow point (T-2613)
 Evidence: probes/besseli-overflow-cut-sweep (x = 709.50 to 709.78 step 0.01, orders 0 and 1), -fine (709.700 to 709.710 step 0.001, orders 0, 1 and 5), -finest (709.7001 to 709.7009, 709.70001, 709.70005, 709.70009, order 0), excel-graph.
 Rule: BESSELI(x,n) is finite up to x = 709.7 (`BESSELI(709.7,0)` is 2.4788083687166675E+306, `(709.7,1)` 2.4770621409647947E+306, `(709.7,5)` 1.9147648105012915E+306) and `#NUM!` at every probed x above it, to 709.78 and on, at orders 0, 1 and 5. The cut is in (709.7, 709.70001], far below the true overflow of I0 near 713.98 and of `exp` at 709.78, so it is a constant in Excel's code, taken as 709.7.

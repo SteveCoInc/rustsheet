@@ -12,7 +12,7 @@ use crate::{
         parser::{
             move_formula::{move_formula, MoveContext},
             new_parser_english,
-            stringify::{to_english_string, to_localized_string, to_rc_format},
+            stringify::{to_localized_string, to_rc_format},
             ArrayNode, CallNameSpellings, CompletionContext, Node, Parser,
         },
         token::{get_error_by_name, Error},
@@ -460,39 +460,6 @@ impl Model {
         self.parser.set_locale(locale);
         self.parser.set_language(language);
         node
-    }
-
-    /// Translates a formula the user typed (in the active language and locale)
-    /// into the canonical English representation that is stored internally.
-    ///
-    /// The formula is first parsed in the active language/locale. If that fails
-    /// it is parsed as English — this lets internally generated formulas (which
-    /// are already English, e.g. produced by undo/redo or cut & paste) round
-    /// trip unchanged regardless of the active language. Returns an error if the
-    /// formula parses in neither. Any leading `=` is preserved.
-    pub(crate) fn user_formula_to_internal(
-        &mut self,
-        formula: &str,
-        context: &CellReferenceRC,
-    ) -> Result<String, String> {
-        let trimmed = formula.trim();
-        let had_equals = trimmed.starts_with('=');
-        let body = trimmed.strip_prefix('=').unwrap_or(trimmed);
-        let mut node = self.parser.parse(body, context);
-        if let Node::ParseErrorKind { .. } = node {
-            // The user's language could not parse it: it might already be in the
-            // internal English form.
-            node = self.parse_internal_formula(body, context);
-        }
-        if let Node::ParseErrorKind { .. } = node {
-            return Err(format!("Invalid formula: '{formula}'"));
-        }
-        let english = to_english_string(&node, context);
-        Ok(if had_equals {
-            format!("={english}")
-        } else {
-            english
-        })
     }
 
     /// Returns completion information for a formula being edited in a cell.

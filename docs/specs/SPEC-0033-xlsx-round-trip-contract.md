@@ -3,7 +3,7 @@
 - **Status:** draft (ready to implement in T-4172; the normalization list waits on its probe)
 - **Milestone / lane:** M15 / research (the harness lives in crates/rustsheet-eval)
 - **Tasks:** T-4167 (this spec), T-4172 (suite kind, differ, validator), T-4173 (corpus suites), T-4179 (XSD),
-  T-4180 (Excel goldens), T-4183 (preservation spec, which fills `SaveReport`), T-4166 (RQ5 probe),
+  T-4180 (Excel goldens), T-4183 (SPEC-0034, the source-preserving export; T-4562 fills `SaveReport`), T-4166 (RQ5 probe),
   RQ2 probe (filed with this spec)
 
 ## Problem
@@ -33,7 +33,7 @@ Goals:
   that Excel itself rewrites the thing on every save.
 
 Non-goals:
-- How preservation works (ownership matrix, closure rule, fragments, patching). That is T-4183's spec. This spec only
+- How preservation works (ownership matrix, closure rule, fragments, patching). That is SPEC-0034 (T-4183), with stage 4 in T-4567. This spec only
   says how to tell whether preservation worked.
 - XSD validation rules (T-4179) and the oracle round-trip flow (T-4180). They plug into the verdicts defined here.
 - R2 implementation. R2 is defined here so its items have keys, but no R2 run is scored until M4 provides
@@ -95,7 +95,7 @@ the sheet's stored dimension. An edit with no target (for example, no numeric co
 | E5 | E4's row, column B, gets the text `rustsheet-roundtrip-E5`, a string not in the shared-string table |
 | E6 | E4's row, column C, gets the number 0.5 with number format `0.000`, a style the workbook may not have |
 
-E5 and E6 force an append to the shared-string and style tables. That is how index stability (T-4183) gets measured.
+E5 and E6 force an append to the shared-string and style tables. That is how index stability (SPEC-0034 D3.3) gets measured.
 
 ### D2. Fidelity items
 A **fidelity item** is one unit of the source package's content, with a stable key that does not depend on
@@ -139,8 +139,14 @@ D2. S equality is equality of those models, with these rules.
 
 1. **Cells.**
    - A value compares by type and bits. Text compares exactly.
-   - Formula text compares after the importer's parse-and-print, so `SUM( A1 )` against `SUM(A1)` follows the
-     whitespace rules of SPEC-0023, and X5 applies.
+   - Formula text compares as the file stores it, read by the snapshot reader, not after the importer's
+     parse-and-print: printing both sides with the engine's own printer would hide a printer bug (T-4140 was found
+     this way). Two rules make the stored text canonical as Excel stores it:
+     - X5's leading spaces, TABs and LFs are dropped;
+     - an `_xlfn.` or `_xlfn._xlws.` prefix is dropped where the function's stored form has none (T-0172: Excel
+       re-stores such a prefix without it).
+
+     A prefix the function needs, or one the export adds wrongly (T-0417), still compares (T-4513).
    - An empty-string cell is not a blank cell (T-4148).
 2. **Collections the schema leaves unordered** compare as multisets by natural key:
    - merge ranges by ref;
@@ -221,7 +227,7 @@ however lossy R0 is. That makes it measurable today and gives the owner's "only 
 directly. A delta violation always fails, even when the same item is in the R0 baseline.
 
 **Byte stability**, which is M15 exit criterion 8, is the stronger form scored with R1. A part that `Δ(E)` does not
-touch must be byte-identical to the source part. It is measured from T-4172 and gated only once T-4183's verbatim
+touch must be byte-identical to the source part. It is measured from T-4172 and gated only once SPEC-0034's verbatim
 tier lands. Until then it is reported.
 
 ### D6. The package validator
@@ -270,13 +276,13 @@ pub struct Dropped {
 pub enum DropReason {
     /// The workbook carries no preserved copy of it (today: everything the model does not hold).
     NotPreserved,
-    /// The preservation policy never writes it (calcChain, digital signatures; T-4183's `Drop`).
+    /// The preservation policy never writes it (calcChain, digital signatures; the `Drop` policy of T-4567).
     Policy,
     /// A structural edit on this sheet made range-bound content stale (decision 0275 D4).
     StaleAfterStructuralEdit { sheet: String },
     /// Its owner (a sheet, a table) was deleted.
     OwnerDeleted,
-    /// Its relationship closure reaches a part the export regenerates (T-4183's closure rule).
+    /// Its relationship closure reaches a part the export regenerates (the closure rule of T-4567, SPEC-0034 stage 4).
     ClosureReachesRegenerated,
     /// Keeping it would exceed a preservation limit.
     LimitExceeded { limit: String },
@@ -293,7 +299,7 @@ pub enum DropReason {
    - `save_xlsx` and `to_xlsx_bytes` keep their signatures and discard the report.
    - The Python binding returns the report as a list of `(item, reason)` tuples from
      `save_xlsx(..., report=True)`.
-   - Until T-4183's first stage lands, the report is filled coarsely: one `NotPreserved` entry per source part the
+   - Until T-4562 lands, the report is filled coarsely: one `NotPreserved` entry per source part the
      export does not write, which needs the part inventory the importer already builds (`PartNames`). Element-level
      entries come with fragments.
 2. **What a `dropped` verdict accepts.** An item in the report is `dropped` (pass) only for these reasons:
@@ -381,7 +387,7 @@ The differ is tested before it is trusted:
    settle X4.
 4. **T-4179** (V9, XSD) and **T-4180** (Excel goldens, RQ1, `excel-refused`).
 5. **SaveReport.**
-   - The coarse `NotPreserved` report is part of T-4183's first implementation stage. Until then the suite treats
+   - The coarse `NotPreserved` report is part of T-4562 (SPEC-0034 D4), which also adds the save tier. Until then the suite treats
      every missing item as `lost`, which is the same score.
    - Element-level entries follow fragments.
    - R2 scoring follows M4.

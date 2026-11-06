@@ -14,5 +14,13 @@
     "f": "=XIRR(A1:A2,B1:B2)"
    }
   }
+ },
+ "skipped": {
+  "Sheet1": {
+   "E5": {
+    "f": "=XNPV(0.1,A1:A2,B1:B2)",
+    "why": "not converged"
+   }
+  }
  }
 }

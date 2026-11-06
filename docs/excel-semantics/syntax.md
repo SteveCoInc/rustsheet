@@ -315,10 +315,11 @@ probes/t4394-api-name-active-s2 and t4394-api-name-active-last, the same book wi
 Last, spec2xlsx `"active_sheet"`, excel-graph 2026-11-06): every use reads the active sheet's cells, 7 (`=SUM(Span)`
 77) with S2 active and 9 (99) with Last active, `=W` on First included. One typed-before use moves with it too:
 `=Rate` typed on S2 before the add is `#NAME?` with First or S2 active but 9 with Last active (t4394-api-name-active-last
-S2!A1; T-4391's). Ours: `Txn::define_name` and `Txn::define_sheet_name` bind to the first sheet (the engine parses a
-name body against the first sheet; `an_unqualified_name_reference_binds_to_the_first_sheet`,
-crates/rustsheet/src/edit/tests.rs). The `rustsheet` API has no active sheet, and the eval adapter ignores a case's
-`active_sheet`: T-4445. The same probe shows
+S2!A1; T-4391's). Ours since T-4445: `Txn::define_name` and `Txn::define_sheet_name` bind to `Workbook::active_sheet` (set with
+`Workbook::set_active_sheet`; an xlsx import takes the sheet marked `tabSelected`, else the first). The engine reads an
+API-added body on the active sheet and stores it qualified (`Model::formula_to_internal_between`;
+`an_unqualified_name_reference_binds_to_the_active_sheet`, crates/rustsheet/src/edit/tests.rs), and the eval adapter sets a
+case's `active_sheet` before its `api_names`. The same probe shows
 an exception to the rule above: of the uses typed before the adds, S2's `=Rate` stays `#NAME?` but S2's `=SUM(Span)`
 and Last's `=Rate2` resolve (T-4391 owns S2!A3 and Last!A1, which the engine leaves `#NAME?`).
 Conditional formats and data validation (T-3263, probes/t3263-*, excel-graph 2026-10-31): a formula

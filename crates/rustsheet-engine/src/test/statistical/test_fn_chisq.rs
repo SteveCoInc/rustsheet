@@ -183,6 +183,32 @@ fn chisq_inv_rt_num_edge() {
     }
 }
 
+/// T-3858: at one degree of freedom CHISQ.INV.RT and CHIINV are `#NUM!` from 8.3253E-17 down and
+/// a value from 8.3254E-17 up, though 1 - p is 1 - 2^-53 on both sides and CHISQ.INV(1-p,1) is a
+/// value at every such p (probes-numeric/t3858-chisq-df1-num-cutoff, excel-graph).
+#[test]
+fn chisq_inv_rt_one_degree_num_edge() {
+    let mut model = new_empty_model();
+    let cells = [
+        ("A1", "=CHISQ.INV.RT(8E-17,1)", "#NUM!"),
+        ("A2", "=CHISQ.INV.RT(8.3253E-17,1)", "#NUM!"),
+        ("A3", "=CHIINV(8.3253E-17,1)", "#NUM!"),
+        ("A4", "=CHISQ.INV.RT(8.3254E-17,1)", "68.76325221"),
+        ("A5", "=CHIINV(8.3254E-17,1)", "68.76325221"),
+        ("A6", "=CHISQ.INV.RT(3*2^-55-2^-106,1)", "68.76325221"),
+        ("A7", "=CHISQ.INV(1-8E-17,1)", "68.76325221"),
+        ("A8", "=CHISQ.INV.RT(0,1)", "#NUM!"),
+        ("A9", "=CHISQ.INV.RT(8.3253E-17,1.5)", "#NUM!"),
+    ];
+    for (cell, formula, _) in cells {
+        model._set(cell, formula);
+    }
+    model.evaluate();
+    for (cell, formula, expected) in cells {
+        assert_eq!(model._get_text(cell), *expected, "{formula}");
+    }
+}
+
 #[test]
 fn test_booleans() {
     let mut model = new_empty_model();
