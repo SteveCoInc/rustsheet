@@ -49,6 +49,7 @@ BUCKET_LABELS = {
     "ulp4": f"Within 2{EN}4 ulp",
     "digits15": "Within 15 digits",
     "residue13": "Beta family, 14th or 15th digit (residue, decision 0267)",
+    "r3_math": "Math over Excel by design (decision 0188 R3)",
     "visible_numeric": "Visibly off: number",
     "visible_other": "Visibly off: type or text",
 }
@@ -152,8 +153,9 @@ def closeness_summary(p: Parity) -> str:
     off = sum(cells[b] for b in VISIBLE)
     return (
         f"**{n:,}** attributed Excel cells: {pct(cells['pass'], n)} bit-exact, "
-        f"{pct(n - off - cells['residue13'], n)} within 15 digits, {cells['residue13']:,} "
-        f"incomplete-beta residue at the 14th or 15th digit (decision 0267), **{off:,}** ({pct(off, n)}) visibly off."
+        f"{pct(n - off - cells['residue13'] - cells['r3_math'], n)} within 15 digits, {cells['residue13']:,} "
+        f"incomplete-beta residue at the 14th or 15th digit (decision 0267), {cells['r3_math']:,} "
+        f"math over Excel by design (decision 0188 R3), **{off:,}** ({pct(off, n)}) visibly off."
     )
 
 
