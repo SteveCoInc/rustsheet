@@ -35,7 +35,7 @@ engine keeps matching Excel.
 ## Acceptance criteria
 - [x] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
       statistics.md T-2437 entry.
-- [x] If (b): a follow-up implementation task with its region, and the region's evidence committed first
+- [x] n/a (decision 0300 keeps Excel): If (b): a follow-up implementation task with its region, and the region's evidence committed first
       (decision 0188 R3).
 
 ## Out of scope

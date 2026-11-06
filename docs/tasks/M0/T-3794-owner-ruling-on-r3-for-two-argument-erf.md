@@ -34,7 +34,7 @@ decision 0188 R3 (`MATH-OVER-EXCEL`) case. Until the owner rules, the engine kee
 ## Acceptance criteria
 - [x] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
       statistics.md two-argument ERF bullet.
-- [x] If (b): a follow-up implementation task with its region, and the region's evidence committed first
+- [x] n/a (decision 0300 keeps Excel): If (b): a follow-up implementation task with its region, and the region's evidence committed first
       (decision 0188 R3).
 
 ## Out of scope

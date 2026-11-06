@@ -30,7 +30,7 @@ as it does today.
 
 ## Acceptance criteria
 - [x] A decision record carries the owner's ruling (R3 region or not).
-- [x] If R3: the engine converges near zero roots, a `MATH-OVER-EXCEL` entry in financial.md lists the region with
+- [x] n/a (decision 0300 keeps Excel): If R3: the engine converges near zero roots, a `MATH-OVER-EXCEL` entry in financial.md lists the region with
       the cells above as evidence, and every other XIRR cell still matches Excel.
 - [x] `make check` green; reviewers approve.
 

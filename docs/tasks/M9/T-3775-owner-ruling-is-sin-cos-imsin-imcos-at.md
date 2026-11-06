@@ -30,7 +30,7 @@ no R3 case; (b) an R3 case over a bounded region (which functions, which |x - kÂ
 ## Acceptance criteria
 - [x] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the numbers.md
       and engineering.md entries.
-- [x] If (b): a follow-up implementation task with its region, and the region's evidence committed first
+- [x] n/a (decision 0300 keeps Excel): If (b): a follow-up implementation task with its region, and the region's evidence committed first
       (decision 0188 R3).
 
 ## Out of scope

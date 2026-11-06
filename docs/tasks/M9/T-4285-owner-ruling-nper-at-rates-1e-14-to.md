@@ -31,7 +31,7 @@ Excel is still more than G = 1e-4 off the math; the engine then follows the ruli
 
 ## Acceptance criteria
 - [x] The owner's ruling is recorded in a decision record (widen the region to a stated bound, or keep it).
-- [x] If widened: `NPER_MATH_RATE` moves to the ruled bound, the cells in the new region are R3-marked in
+- [x] n/a (decision 0300 keeps Excel): If widened: `NPER_MATH_RATE` moves to the ruled bound, the cells in the new region are R3-marked in
       eval/accuracy/math-over-excel.tsv, and financial.md's "NPER at a tiny positive rate" entry states the new region.
 - [x] `make check` green; reviewers approve.
 
