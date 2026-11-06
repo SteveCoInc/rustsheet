@@ -1311,7 +1311,9 @@ record: the cell of a one-record group is a 1x1 array, so `ERROR.TYPE(INDEX(..,1
   1x1 `#N/A` (A7:A8); a 2x2 `{1,2;3,4}` a 2x2 of `#VALUE!` (A9:A10); text and logical elements `#VALUE!` (A11). A LET-bound scalar is
   one `#VALUE!` and a scalar error that error (A12:A13), as before.
 Ours: ROW and COLUMN lift over an array value as above since T-4610 (`Model::row_or_column`, which reads the argument once through
-`reference_ranges_or_array`). RANDARRAY
+`reference_ranges_or_array`). It lifts over any array a name, IF, CHOOSE or LET gives; only the LET-bound and LAMBDA-parameter
+forms are probed, and an IF or CHOOSE that returns an array (`ROW(CHOOSE(1,{1;2}))`) or a defined name bound to an array constant
+follows by inference (before T-4610 each was one `#VALUE!`, unevidenced too). RANDARRAY
 does not lift: `RANDARRAY({2})` is 2x1 and over `{2;4;6}` `#N/IMPL!` (T-4611 owns D2, D3, E3, G3, H3, D4, D7, D8, E8, G8, H8 and t4450 J64).
 Status: VERIFIED (excel-graph)
 Tasks: T-4519, T-4610, T-4611
