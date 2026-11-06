@@ -2513,6 +2513,8 @@ C	probes/t4558-color-filter-subtotal.case.json	12
 C	probes/t4563-xlookup-not-found-ref-element.case.json	245
 C	probes/t4569-xlookup-ref-element-max-min.case.json	111
 C	probes/t4574-feb29-near-midnight-date-args.case.json	504
+C	probes/t4574-near-midnight-calendar-units.case.json	112
+C	probes/t4574-near-midnight-serial-60.case.json	234
 C	probes/t4578-prob-sum-tolerance.case.json	24
 C	probes/t4582-pivot-item-edges.case.json	45
 C	probes/t4583-pivot-row-labels.case.json	204
