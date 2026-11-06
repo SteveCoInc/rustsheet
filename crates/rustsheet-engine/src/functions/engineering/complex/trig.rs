@@ -715,7 +715,18 @@ mod tests {
     // y = 354.5 and down to y = -354, then exactly -/+i.
     #[test]
     fn imtan_imcot_switch_to_i_at_2y_709() {
-        let at = |f: fn(ComplexParts, CellReferenceIndex) -> CalcResult, y: f64| text(f, 1e10, y);
+        let at = |f: fn(ComplexParts, CellReferenceIndex) -> CalcResult, y: f64| {
+            let cell = CellReferenceIndex {
+                sheet: 0,
+                row: 1,
+                column: 1,
+            };
+            match f((1e10, y, Suffix::I), cell) {
+                CalcResult::String(t) => t.to_string(),
+                CalcResult::Error { error, .. } => error.to_string(),
+                _ => String::from("other"),
+            }
+        };
         assert_eq!(at(imtan, 354.5), "#NUM!");
         assert_eq!(at(imtan, 354.500_000_000_001), "i");
         assert_eq!(at(imcot, 354.500_000_000_001), "-i");
