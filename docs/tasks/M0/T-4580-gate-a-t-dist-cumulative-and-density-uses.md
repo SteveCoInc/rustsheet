@@ -3,7 +3,7 @@ id: T-4580
 title: "Gate A: T.DIST (cumulative and density) uses the evidenced huge-x #NUM! cut rule (HugeXCut)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
