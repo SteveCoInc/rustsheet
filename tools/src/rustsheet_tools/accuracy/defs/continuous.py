@@ -1,4 +1,5 @@
-"""LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER and FISHERINV (Gate A slice 4o, T-3785).
+"""LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER and FISHERINV (Gate A slice 4o, T-3785), and the
+legacy EXPONDIST and WEIBULL (T-4101).
 
 The math, at the double of each written literal and the working precision:
 - LOGNORM.DIST is the normal of ln x: Phi(z) and phi(z)/(x*sd) with z = (ln x - mean)/sd, through normal.py's `cdf`
@@ -6,6 +7,9 @@ The math, at the double of each written literal and the working precision:
 - EXPON.DIST: the cdf -expm1(-lambda*x) and the density lambda*exp(-lambda*x).
 - WEIBULL.DIST: with t = (x/beta)^alpha, the cdf -expm1(-t) and the density alpha/beta*(x/beta)^(alpha-1)*exp(-t).
 - FISHER is atanh(x), FISHERINV tanh(y).
+- EXPONDIST and WEIBULL are EXPON.DIST's and WEIBULL.DIST's definitions under the legacy names (one factory each, so
+  nothing is copied): statistics.md "Legacy distribution names sweep (T-1047)" and "..., second family (T-1048)" find
+  each equal to its modern name on every paired cell, errors included.
 
 Sources:
 - statistics.md, "One incomplete-gamma kernel under ERF, ERFC, NORM, CHISQ, GAMMA.DIST and POISSON (T-1778)":
@@ -90,6 +94,8 @@ WEIBULL_DIVISOR_SOURCE = (
     "statistics.md#weibulls-density-divides-by-lk-div0-when-it-underflows-num-when-it-overflows-t-2239"
 )
 WEIBULL_ZERO_SOURCE = "statistics.md#weibulldists-density-at-x--0-still-computes-betaalpha-t-3312"
+LEGACY_SOURCE = "statistics.md#legacy-distribution-names-sweep-t-1047"
+LEGACY_SECOND_SOURCE = "statistics.md#legacy-distribution-names-sweep-second-family-t-1048"
 MICROSOFT_SOURCE = (
     "Microsoft LOGNORM.DIST / LOGNORM.INV / EXPON.DIST / WEIBULL.DIST / FISHER pages: argument limits"
 )
@@ -476,9 +482,12 @@ LOGNORM_INV = register(
     )
 )
 
-EXPON_DIST = register(
-    Definition(
-        function="EXPON.DIST",
+
+def _expon_definition(function: str) -> Definition:
+    """EXPON.DIST, and EXPONDIST with the same arguments and rules (statistics.md "Legacy distribution names sweep
+    (T-1047)": equal on every paired cell)."""
+    return Definition(
+        function=function,
         params=(
             Param("x", "real", Interval(0, math.inf, lo_open=False), typical=(0, 5), source=MICROSOFT_SOURCE),
             Param("lambda", "real", Interval(0, math.inf), typical=(0.1, 10), source=MICROSOFT_SOURCE),
@@ -486,13 +495,19 @@ EXPON_DIST = register(
         ),
         value=_expon_dist,
         draw=_draw_expon,
-        sources=(OPERATORS_SOURCE, MICROSOFT_SOURCE),
+        sources=(OPERATORS_SOURCE, MICROSOFT_SOURCE, LEGACY_SOURCE),
     )
-)
 
-WEIBULL_DIST = register(
-    Definition(
-        function="WEIBULL.DIST",
+
+EXPON_DIST = register(_expon_definition("EXPON.DIST"))
+EXPONDIST = register(_expon_definition("EXPONDIST"))
+
+
+def _weibull_definition(function: str) -> Definition:
+    """WEIBULL.DIST, and WEIBULL with the same arguments and rules (statistics.md "Legacy distribution names sweep,
+    second family (T-1048)": equal on every paired cell)."""
+    return Definition(
+        function=function,
         params=(
             Param(
                 "x",
@@ -508,9 +523,18 @@ WEIBULL_DIST = register(
         value=_weibull_dist,
         domain=_weibull_domain,
         draw=_draw_weibull,
-        sources=(WEIBULL_SWEEP_SOURCE, WEIBULL_SWITCH_SOURCE, WEIBULL_DIVISOR_SOURCE, WEIBULL_ZERO_SOURCE),
+        sources=(
+            WEIBULL_SWEEP_SOURCE,
+            WEIBULL_SWITCH_SOURCE,
+            WEIBULL_DIVISOR_SOURCE,
+            WEIBULL_ZERO_SOURCE,
+            LEGACY_SECOND_SOURCE,
+        ),
     )
-)
+
+
+WEIBULL_DIST = register(_weibull_definition("WEIBULL.DIST"))
+WEIBULL = register(_weibull_definition("WEIBULL"))
 
 FISHER = register(
     Definition(

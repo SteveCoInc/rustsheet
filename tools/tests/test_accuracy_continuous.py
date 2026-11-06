@@ -1,5 +1,5 @@
-"""Gate A definitions of LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER and FISHERINV (T-3785) against
-Microsoft's published examples, the semantics entries' values, the evidenced error domain and the excluded regions."""
+"""Gate A definitions of LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER and FISHERINV (T-3785), and the
+legacy EXPONDIST and WEIBULL (T-4101), against Microsoft's published examples, the semantics entries' values, the evidenced error domain and the excluded regions."""
 
 from __future__ import annotations
 
@@ -11,10 +11,12 @@ import pytest
 
 from rustsheet_tools.accuracy.defs.continuous import (
     EXPON_DIST,
+    EXPONDIST,
     FISHER,
     FISHERINV,
     LOGNORM_DIST,
     LOGNORM_INV,
+    WEIBULL,
     WEIBULL_DIST,
     fisher_cancels,
 )
@@ -150,3 +152,23 @@ def test_fisher_draws_avoid_the_cancellation_region(definition: Definition) -> N
             (x,) = sampler.draw(stratum, i)
             assert isinstance(x, float)
             assert not fisher_cancels(x)
+
+
+@pytest.mark.parametrize(
+    ("legacy", "modern"),
+    [(EXPONDIST, EXPON_DIST), (WEIBULL, WEIBULL_DIST)],
+)
+def test_legacy_names_share_the_modern_definition(legacy: Definition, modern: Definition) -> None:
+    # statistics.md T-1047 and T-1048: each legacy name equals its modern name on every paired cell
+    assert legacy.function != modern.function
+    assert legacy.params == modern.params
+    assert (legacy.value, legacy.domain, legacy.draw) == (modern.value, modern.domain, modern.draw)
+
+
+def test_legacy_semantics_values() -> None:
+    # probes-numeric/m9-legacy-expondist A13, A47 and t1048-weibull A10 (Excel's values)
+    assert value(EXPONDIST, 1, 1, True) == pytest.approx(0.6321205588285577, rel=1e-15)
+    assert value(EXPONDIST, 0.001, 1000, False) == pytest.approx(367.87944117144235, rel=1e-15)
+    assert value(WEIBULL, 5, 0.5, 2, False) == pytest.approx(0.032530454816681015, rel=1e-15)
+    with pytest.raises(DomainError):
+        WEIBULL.evaluate([mp(100), mp(1e10), mp(0.01), True])  # t overflows: #NUM!
