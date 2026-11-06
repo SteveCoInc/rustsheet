@@ -277,11 +277,12 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   intersection, and the new area of a pivot laid out before it in the same refresh), a merged
   range, a Table (even an empty body) and an array formula's or dynamic spill's cells. The new
   page area is checked as the location is.
+  Classic Excel instead refuses a refresh that would overlap another pivot, with a dialog
+  (excel-docs.md, "Overlap rules").
 - A merged range inside the pivot's own area, or across its edge, refuses the refresh: the pivot
   keeps its cells. Excel makes such ranges itself with "Merge and center cells with labels"
   (`mergeItem`, excel-docs.md), so a `refreshOnLoad` pivot saved with that option keeps its saved
-  cells on open; the cell writers cannot write through a merge. Classic Excel instead refuses a refresh that would
-  overlap another pivot with a dialog (excel-docs.md, "Overlap rules").
+  cells on open; the cell writers cannot write through a merge (rendering `mergeItem` is T-4677).
 - A layout that would pass the sheet's last row or column collapses to `#SPILL!` too, rather than
   failing. Microsoft's PivotTable `#SPILL!` announcement lists text, merged cells, tables and the
   sheet edge as what blocks a pivot (excel-docs.md, PSPILL); that is documented for desktop Excel,
