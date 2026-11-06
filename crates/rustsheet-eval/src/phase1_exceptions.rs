@@ -234,23 +234,30 @@ mod tests {
     fn the_committed_file_parses() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let exceptions = Phase1Exceptions::load(&root).unwrap_or_else(|e| panic!("{e}"));
-        let cells: Vec<String> = exceptions
-            .cells
+        let (desktop_only, earlier): (Vec<_>, Vec<_>) =
+            exceptions.cells.iter().partition(|(_, e)| e.decision == "0308");
+        // Decision 0308: the FORECAST.ETS family (the web's #N/A) and CELL's desktop-only info
+        // types, 555 cells, all owned by T-4373.
+        assert_eq!(desktop_only.len(), 555);
+        assert!(desktop_only.iter().all(|(_, e)| e.task == "T-4373"));
+        let cells: Vec<String> = earlier
             .iter()
             .map(|((case, key), e)| format!("{case}!{key} {} {}", e.decision, e.task))
             .collect();
+        // The earlier rows; their M14 owner T-1075 was dropped (decision 0266), so decision 0308
+        // re-owns them to T-4534.
         assert_eq!(
             cells,
             [
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL12 0188 T-1075",
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL26 0188 T-1075",
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!K25 0196 T-1075",
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!N6 0188 T-1075",
-                "ironcalc-calc/FINANCIAL/IRR.xlsx!Two Values!C4 0196 T-1075",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!G936 0134 T-1075",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!H936 0134 T-1075",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!J136 0134 T-1075",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!K936 0134 T-1075",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL12 0188 T-4534",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL26 0188 T-4534",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!K25 0196 T-4534",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!N6 0188 T-4534",
+                "ironcalc-calc/FINANCIAL/IRR.xlsx!Two Values!C4 0196 T-4534",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!G936 0134 T-4534",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!H936 0134 T-4534",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!J136 0134 T-4534",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!K936 0134 T-4534",
             ]
         );
     }
