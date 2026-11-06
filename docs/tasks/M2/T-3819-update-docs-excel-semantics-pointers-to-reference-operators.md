@@ -28,5 +28,5 @@ Found by the excel-fidelity review of PR #2826 (T-3439). Stale pointers: referen
 ## Outcome
 Repointed every engine-evaluator `reference_operators.rs` pointer in `docs/excel-semantics/` (references.md, lookup.md,
 text.md) to `reference_operators/mod.rs`, or to `reference_operators/areas.rs` for `MAX_AREAS` (the DEVIATION entry),
-`Binding::Areas`, `RefArg::Grid` and `RefGrid`. Also fixed `MAX_HELD_AREAS`/`VariableStack`, which live in
+`RefArg::Grid` and `RefGrid`. Also fixed `Binding::Areas`, `MAX_HELD_AREAS` and `VariableStack`, which live in
 `variable_stack.rs`. Parser-side `expressions/parser/reference_operators.rs` pointers are untouched. Docs-only; no eval delta.

@@ -1147,7 +1147,7 @@ A defined name's union body is capped like a written union, at each use: more th
 needed (SPEC-0004 planned one for stored area lists): names keep only their parsed body, never an area list,
 so memory is bounded by the workbook's formula text and each use by the caps above.
 Status: DEVIATION (decision 0014)
-Implemented in: reference_operators/areas.rs (`MAX_AREAS`, `Model::union_areas`,
+Implemented in: reference_operators/areas.rs (`MAX_AREAS`); reference_operators/mod.rs (`Model::union_areas`,
 `Model::count_union_areas`, `Model::intersect_areas`); area_budget.rs (`MAX_AREA_PAIRS`,
 `MAX_AREA_WALK`, `SLOTS_PER_WALK_STEP`); functions/util.rs (`Model::for_each_position_in_area`, `Model::walk_area`, `Model::for_each_cell_or_error_in_whole_range`); functions/util/existing_walk.rs (`Model::for_each_existing_position`, `Model::for_each_indexed_position`, `Model::walks_sparsely`); sheet_data.rs (`SheetData::rows_in_column_between`, `SheetData::cells_in_columns`); variable_stack.rs (`MAX_HELD_AREAS`, `VariableStack`)
 Tasks: T-0134, T-1062, T-1064, T-1065, T-1162, T-1462, T-1497, T-1502, T-1690, T-2710
@@ -1286,7 +1286,7 @@ STDEVPA since T-1184) walks the areas one after the
 other (`Model::for_each_cell_in_areas`). Since T-1068 LARGE, SMALL, RANK.EQ/RANK.AVG and the data_array of FREQUENCY
 take a union the same way (`Model::values_from_areas`; FREQUENCY's bins_array is unprobed and stays a single reference).
 Since T-1064 a LET variable or LAMBDA parameter bound to a union
-(`Binding::Areas`, reference_operators/areas.rs; `Model::bind_argument`, functions/logical/let.rs), the branch IF or
+(`Binding::Areas`, variable_stack.rs; `Model::bind_argument`, functions/logical/let.rs), the branch IF or
 CHOOSE picks with a scalar condition or index (`Model::if_impl`, `Model::choose_impl`) and LET's body
 (`Model::let_impl`) stay areas in reference context and as intersection operands.
 UNVERIFIED (no probe): an IF or CHOOSE over an array condition keeps its value form.
