@@ -3,7 +3,7 @@ id: T-4581
 title: "Gate A: one CONFIDENCE definition factory and range check shared by CONFIDENCE.T and CONFIDENCE.NORM"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
