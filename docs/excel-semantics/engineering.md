@@ -276,6 +276,49 @@ Status: VERIFIED
 Implemented in: `parse_unit` and `fn_convert` in functions/engineering/convert.rs (T-3817)
 Tasks: T-3817, T-3861
 
+## CONVERT from a micro-prefixed Kelvin to Réaumur drops the prefix (T-4085)
+Rule: with a micro prefix on a Kelvin source and `Reau` as the target, Excel converts the unprefixed number:
+`CONVERT(-56.8944444765809,"ukel","Reau")` is -264.03555558126476 and `CONVERT(-68268277991730.8,"uK","Reau")`
+-54614622393603.16, which are `(v - 273.15)*0.8` of the written v, not of v × 1E-6 (-218.52004551555558 and
+-54614840.91338464). The same table applies a prefix to the other targets it drew: `CONVERT(-101.399620892439,"Ykel","C")`
+is -1.01399620892439E+26 and `CONVERT(-1.19864311078515E-11,"F","hkel")` 2.5537222222221554, as "CONVERT temperature"
+reads them. Only these two cells show the drop; the mechanism (whether any prefix is dropped toward `Reau`, or only
+`u`, and what a prefixed `Reau` side or `Rank` does) is unprobed.
+Evidence: accuracy/CONVERT/s1 Calc!A65, A81 (Excel's values), A2 to A200 for the other temperature cells
+(excel-graph, 2026-11-06, T-4085).
+Ours: scales by the prefix first, so both cells are off by the prefix. Gate A does not fail on them (the engine is
+inside the envelope through the math), but Excel is the target (decision 0300): T-4615 probes the rule and matches it.
+Status: VERIFIED (excel-graph, the two cells; the rule beyond them is unprobed)
+Tasks: T-4085, T-4615
+
+## Gate A tables for IMABS, IMARGUMENT and CONVERT (T-4085)
+Rule: the three functions have Gate A tables (`eval/accuracy/tables/{IMABS,IMARGUMENT,CONVERT}/s1`, decision 0319),
+with definitions in `tools/src/rustsheet_tools/accuracy/defs/complex_modulus.py` and `defs/convert.py`:
+- IMABS is |z| and IMARGUMENT atan2(y, x) on (-π, π] of the text's two parts. `IMARGUMENT("0")` and
+  `IMARGUMENT("0+0i")` are `#DIV/0!` (s1 A75, A80, A81, A84; im-last-digit-sweep C21). A point whose quotient y/x
+  overflows has no value: ATAN2's `#NUM!` there is not probed for IMARGUMENT, so no such point is drawn.
+- CONVERT is the exact conversion with each unit's definition (or Excel's documented double: `sg`, `parsec`, `eV`, `u`
+  (probes/convert-unit-names A145, 1.660538782E-24), `mmHg` (A337, 133.322)), the prefixes as the doubles of "CONVERT constants and evaluation order" and the temperature forms with their
+  constants as doubles. The `flb` factor is ft × lbf, 1.3558179483314003 J (probes/convert-unit-names A481, B481).
+  Units of two classes are `#N/A` (12 table cells: A116, A121, A122, A123, A127, A128, A129, A130, A133, A134, A136,
+  A137). Over the literal one-call cells of eval/suites (gen-m9, probes, probes-numeric), the definitions give 2,746
+  numbers where Excel gives a number, 58 `#N/A` where Excel gives `#N/A`, and 2 `#DIV/0!` for IMARGUMENT; 269 IMABS
+  and 237 IMARGUMENT numbers match Excel's numbers, and no math number meets an Excel error or the reverse. Every
+  skipped unit string (1,966 cells, all `#N/A` or `#VALUE!` in Excel) is outside the list. The list's 1,259
+  strings are 1,257 that oracle cells accept plus the bare `cel` and `fah`, which the unit-names entry names
+  but no oracle cell has yet (no table point draws them).
+- Excel kept as the target (decision 0300): Excel is more than 1E-4 relative off the math at CONVERT s1 A65 and A81,
+  the prefixed-Kelvin-to-Réaumur cells above (21% and a factor of 1E6). No IMABS or IMARGUMENT point, and no eval cell
+  with a math sidecar, is that far off.
+- Last digits: the engine is bit-exact with Excel on 119 of 120 IMABS points (the miss,
+  `IMABS("2.03246951872072E-05-73.6214006894732i")`, Excel 73.62140068947602, is T-2538's), 120 of 120 IMARGUMENT
+  points and 188 of 200 CONVERT points. Ten CONVERT misses are inside the envelope on both sides (T-2046, T-2047): among
+  them Excel's `CONVERT(484.091427716597,"yd","yd")` is 484.0914277165971 (not the identity, so `yd` to `yd` goes through
+  the factor), while ours keeps `ga` to `ga` and `Ega` to `ga` one ulp off Excel.
+Evidence: the three s1 tables (excel-graph, 2026-11-06); `rustsheet-eval accuracy`.
+Status: VERIFIED (excel-graph)
+Tasks: T-4085, T-2538, T-2046, T-2047, T-4615
+
 ## Engineering function argument modes
 Rule: every argument of the M9 engineering functions lifts elementwise over an array literal. All
 `ROWS(F(..{v;v}..))` cells are 2, including the `places`, `suffix`, unit, order and shift arguments.
