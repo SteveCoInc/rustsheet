@@ -9,6 +9,7 @@ import pytest
 
 from rustsheet_tools.oracle import package
 from rustsheet_tools.oracle.package import PackageError, patch_parts
+from rustsheet_tools.spec2xlsx import build_xlsx
 
 
 def _zip() -> bytes:
@@ -42,3 +43,22 @@ def test_too_many_parts_or_bytes_is_refused_before_reading(monkeypatch: pytest.M
     monkeypatch.setattr(package, "MAX_UNCOMPRESSED_BYTES", 4)
     with pytest.raises(PackageError, match="uncompressed"):
         package.read_parts(_zip())
+
+
+def test_pivot_sheets_names_the_sheets_with_a_pivot_relationship() -> None:
+    pivot = {
+        "name": "Pv",
+        "source": "D!A1:B2",
+        "location": "A3",
+        "definition": {"rows": ["K"], "data": [{"field": "V"}]},
+    }
+    spec = {
+        "sheets": [
+            {"name": "D", "cells": {"A1": "K", "B1": "V", "A2": "x", "B2": 1}},
+            {"name": "My P", "cells": {}, "pivot_tables": [pivot]},
+        ]
+    }
+    assert package.pivot_sheets(build_xlsx(spec)) == ["My P"]
+    assert package.pivot_sheets(build_xlsx({"sheets": [{"name": "S", "cells": {"A1": 1}}]})) == []
+    with pytest.raises(PackageError):
+        package.pivot_sheets(b"not a zip")

@@ -2309,6 +2309,7 @@ C	probes/t4146-annuity-twice-fresh.case.json	120
 C	probes/t4146-annuity-twice-rounded.case.json	240
 C	probes/t4153-narrow-nbsp-accent.case.json	106
 C	probes/t4168-pivot-layout-options.case.json	279
+C	probes/t4169-pivot-number-formats.case.json	84
 C	probes/t4192-xlookup-error-return-wildcard-binary.case.json	54
 C	probes/t4193-aggregate-scalar-data-error-order.case.json	94
 C	probes/t4194-subtotal-nested-skip.case.json	90
@@ -9310,4 +9311,5 @@ TC	probes/t2729-hijri-locale-tag.case.json	5
 TC	probes/t2932-b2-calendar-twice.case.json	5
 TC	probes/t3029-b2-calendar-weekday.case.json	3
 TC	probes/t3101-b2-calendar-names.case.json	3
+TC	probes/t4169-pivot-number-formats.case.json	76
 TC	probes/typed-mixed-fraction-number-format.case.json	31

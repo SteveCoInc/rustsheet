@@ -197,6 +197,35 @@ def formula_parts(parts: dict[str, bytes], workbook: str) -> list[str]:
     return list(dict.fromkeys(names))
 
 
+def pivot_sheets(xlsx: bytes) -> list[str]:
+    """The names of the sheets that hold a pivot table, in workbook order: each `<sheet>` of the workbook
+    part whose part has a relationship of type `.../pivotTable` (T-4169). Fails closed, like
+    `formula_parts`: an unreadable package or part is a `PackageError`."""
+    parts = read_parts(xlsx)
+    workbook = workbook_part(parts)
+    base = posixpath.dirname(workbook)
+    targets: dict[str, str] = {}
+    if (rels := parts.get(rels_part(workbook))) is not None:
+        for rel in _relationships(rels_part(workbook), rels):
+            if (
+                rel.get("TargetMode") != "External"
+                and (rid := rel.get("Id"))
+                and (target := rel.get("Target"))
+            ):
+                targets[rid] = _resolve(base, target)
+    names = []
+    for el in parse_part(workbook, parts[workbook]).iter():
+        if _local(el.tag) != "sheet":
+            continue
+        rid = next((v for k, v in el.attrib.items() if _local(k) == "id"), None)
+        sheet_rels = rels_part(targets.get(rid or "", ""))
+        if (data := parts.get(sheet_rels)) is None:
+            continue
+        if any(r.get("Type", "").endswith("/pivotTable") for r in _relationships(sheet_rels, data)):
+            names.append(el.attrib.get("name", ""))
+    return names
+
+
 def patch_workbook(xlsx: bytes, patch: Callable[[str], str]) -> bytes:
     """`xlsx` with the workbook part's text replaced by `patch(text)`; every other part is untouched."""
     parts = read_parts(xlsx)

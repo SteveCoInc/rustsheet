@@ -105,10 +105,15 @@ fn assert_probe(model: &Model, stem: &str, name: &str) {
     );
 }
 
-/// The case's cells in a model holding sheet `name`'s pivot, its cache read by the engine's
-/// refresh from the cells as they are before any recalculation.
+/// The spike's cells in a model holding sheet `name`'s pivot ([`probe_in_model`]).
 fn spike(name: &str) -> Model {
-    let case = read(SPIKE, "case");
+    probe_in_model(SPIKE, name)
+}
+
+/// Probe `stem`'s cells in a model holding sheet `name`'s pivot, its cache read by the engine's
+/// refresh from the cells as they are before any recalculation.
+fn probe_in_model(stem: &str, name: &str) -> Model {
+    let case = read(stem, "case");
     let mut model = probe_model(&case);
     let spec = &sheet(&case, name)["pivot_tables"][0];
     let (sheet_name, range) = spec["source"].as_str().unwrap().split_once('!').unwrap();
@@ -698,5 +703,41 @@ fn a_renamed_field_renders_the_pivot_under_its_unread_parts() {
             let sales = refreshed.data_fields[0].field;
             assert_eq!(refreshed.opaque[1].owner, OpaqueOwner::Field(sales));
         }
+    }
+}
+
+#[test]
+fn value_cells_show_their_data_fields_number_format() {
+    // probes/t4169-pivot-number-formats: every cell of each pivot's area shows Excel's displayed
+    // text (the sidecar's `text`), value cells in their data field's `numFmtId`: currency (7),
+    // percent (10), date (14), the workbook's custom 164, General (0) and none, on item,
+    // subtotal and grand-total lines and the grand-total column.
+    const STEM: &str = "t4169-pivot-number-formats";
+    let oracle = read(STEM, "oracle");
+    for name in ["P1", "P2"] {
+        let mut model = probe_in_model(STEM, name);
+        // Q!B1 carries the case's one custom format, which the builder writes as numFmt 164.
+        let q = sheet_of(&model, "Q");
+        let mut style = model.get_style_for_cell(q, 1, 2).unwrap();
+        style.num_fmt = "0.0 \"kg\"".into();
+        model.set_cell_style(q, 1, 2, &style).unwrap();
+        model.evaluate();
+        refreshed(&mut model);
+        let pivots = oracle["pivots"].as_array().unwrap();
+        let pivot = pivots.iter().find(|p| p["sheet"] == name).unwrap();
+        let sheet = sheet_of(&model, name);
+        let mut wrong = Vec::new();
+        for (at, expected) in pivot["text"].as_object().unwrap() {
+            let (column, row) = position(at);
+            let (row, column) = (
+                i32::try_from(row + 1).unwrap(),
+                i32::try_from(column + 1).unwrap(),
+            );
+            let mine = model.get_formatted_cell_value(sheet, row, column).unwrap();
+            if mine != expected.as_str().unwrap() {
+                wrong.push(format!("{at}: Excel {expected}, engine {mine:?}"));
+            }
+        }
+        assert!(wrong.is_empty(), "{name}:\n{}", wrong.join("\n"));
     }
 }

@@ -19,6 +19,20 @@ Status: VERIFIED
 Implemented in: `format_text` and `format_number` (no sections) in formatter/format.rs, used by `fn_text` (functions/text/common.rs).
 Tasks: T-0933, T-1262
 
+## Built-in id 14 is the short date; custom ids start at 164
+Rule: a cell in built-in `numFmtId` 14 shows the locale's short date, `m/d/yyyy` in en-US
+(`4/18/2024`), not the ECMA-376 table's `mm-dd-yy`. Excel numbers a workbook's own formats from
+164, so the engine gives a format it adds the next free id from 164, as the case builder
+(XlsxWriter) does.
+Evidence: probes/t4169-pivot-number-formats P1!D5:D11 (id 14: `2/15/2024`, `4/18/2024`), P1!E5:E11 and
+Q!B1 (164, `0.0 "kg"`: `984.3 kg`, `1.5 kg`) (excel-graph, 2026-11-06, T-4169); pivots.md "Value cells
+show their data field's number format".
+Unprobed: the other built-ins that may depend on the locale (15-17, 22, and the East Asian 27-36
+and 50-81).
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/number_format.rs (`DEFAULT_NUM_FMTS`, `get_new_num_fmt_index`).
+Tasks: T-4169
+
 ## Bare letters and digits in a number format
 Rule: on a number, unquoted letters that are not format tokens (see "Unquoted ASCII letters in a number format"
 below, T-1450), non-ASCII letters (only `ü` is probed; the engine treats every non-ASCII letter so, inferred) and the digits 1-9 print as literal characters: `TEXT(PI(),"ü")` = "ü",

@@ -1002,6 +1002,34 @@ Evidence: probes/t4135-pivot-aggregates EC (excel-graph, 2026-11-06, T-4135):
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::value`; T-4149)
 
+## Value cells show their data field's number format
+Rule: every value cell of a pivot, on item, subtotal and grand-total lines and in the grand-total
+column, displays its value in its data field's `numFmtId`: a built-in id, or a custom format of the
+workbook's `numFmts` (the first is 164). Excel stores the unrounded value: only the displayed text
+is rounded. A data field with `numFmtId="0"` and one with no `numFmtId` both show General. Labels,
+captions and the header rows keep their own text. Built-in id 14 shows as `m/d/yyyy` in en-US, not
+as the ECMA table's `mm-dd-yy`.
+Evidence: probes/t4169-pivot-number-formats (excel-graph, 2026-11-06, T-4169), from each pivot's
+displayed text (`Range.text`, the sidecar pivots' `text`) beside its values. The source is unformatted.
+- P1, compact, rows Region and Product, six data fields on columns:
+  - Cur (numFmtId 7): `$1,234.50 ` (B6), `($250.25)` (B7), `$0.13 ` for 0.125 (B9), and the Grand
+    Total `$4,027.13 ` (B11), whose stored value is still 4027.125.
+  - Pct (10): `49212.50%` (C5, an East subtotal), `12.50%` (C9).
+  - Latest (14, max of When): `2/15/2024` (D5), `4/18/2024` (D11).
+  - Kg (164, the workbook's `0.0 "kg"`): `984.3 kg` (E5), `-250.3 kg` (E7), `4027.1 kg` (E11).
+  - N (0): `2` (F5). Plain (none): `3042.875` (G8), `4027.125` (G11).
+- P2, rows Region, columns Product, Total Val (4): `1,234.50` (B5), `-250.25` (C5), and the
+  grand-total column `984.25` (D5) and `4,027.13` (D7).
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`RenderedCell::number_format`),
+crates/rustsheet-engine/src/pivot/grid.rs (`Model::set_pivot_number_format`), and
+crates/rustsheet-engine/src/number_format.rs (id 14, and new custom ids from 164; T-4169).
+UNVERIFIED (T-4169, owner T-4717): the engine only sets a value cell's format when its data field has a
+`numFmtId`, and leaves other cells' formats alone. Not probed: whether Excel resets a cell's format
+when it stops being a value cell after a refresh, or when the data field has no `numFmtId` (the
+"preserve cell formatting" option), and whether a showDataAs field or a page, row or column field's
+`numFmtId` changes the text.
+
 ## A Count total over an error field is the error when the pivot mixes aggregates
 Rule: Count and CountNums never show an error in an item's cell. When the pivot's data fields mix
 aggregates (Count or CountNums beside any aggregate other than Count and CountNums: Sum, Average,

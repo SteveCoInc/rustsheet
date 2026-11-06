@@ -15,7 +15,10 @@ use crate::{
 // so that `DEFAULT_NUM_FMTS[id]` is the format code for that built-in id. Ids 23–36 are
 // reserved/undefined by the spec and resolve to "general". A workbook-defined `numFmt` always
 // takes precedence over this table (see `get_num_fmt`), so this is only consulted for a
-// referenced-but-undefined built-in id.
+// referenced-but-undefined built-in id. Id 14 is the one departure from the ECMA table: Excel shows
+// it as the locale's short date, `m/d/yyyy` in en-US (probes/t4169-pivot-number-formats: a value
+// cell in numFmtId 14 reads `4/18/2024`; docs/excel-semantics/pivots.md "Value cells show their
+// data field's number format").
 const DEFAULT_NUM_FMTS: &[&str] = &[
     "general",                                                              // 0
     "0",                                                                    // 1
@@ -31,7 +34,7 @@ const DEFAULT_NUM_FMTS: &[&str] = &[
     "0.00E+00",                                                             // 11
     "# ?/?",                                                                // 12
     "# ??/??",                                                              // 13
-    "mm-dd-yy",                                                             // 14
+    "m/d/yyyy",                                                             // 14
     "d-mmm-yy",                                                             // 15
     "d-mmm",                                                                // 16
     "mmm-yy",                                                               // 17
@@ -93,8 +96,14 @@ pub fn get_num_fmt(num_fmt_id: i32, num_fmts: &[NumFmt]) -> String {
     DEFAULT_NUM_FMTS[0].to_string()
 }
 
+/// The first id of a workbook's own number formats: Excel numbers them from 164, ids below being
+/// built-in or reserved for built-ins (ECMA-376 §18.8.30), so a format the engine adds gets the id
+/// Excel and the case builder (XlsxWriter) give it (probes/t4169-pivot-number-formats: a data
+/// field's `numFmtId="164"` names the workbook's first custom format).
+const FIRST_CUSTOM_NUM_FMT_ID: i32 = 164;
+
 pub fn get_new_num_fmt_index(num_fmts: &[NumFmt]) -> i32 {
-    let mut index = DEFAULT_NUM_FMTS.len() as i32;
+    let mut index = FIRST_CUSTOM_NUM_FMT_ID;
     let mut found = true;
     while found {
         found = false;
