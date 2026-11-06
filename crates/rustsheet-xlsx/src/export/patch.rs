@@ -657,3 +657,79 @@ fn rewrite_zip<R: Read + Seek>(
     }
     Ok(out.finish()?.into_inner())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use super::{append_strings, index_sheet, patch_value};
+
+    const SHEET: &str = r#"<worksheet><sheetData><row r="1" spans="1:3"><c r="A1"><v>1</v></c><c r="C1" s="2"><f>A1*2</f><v>0</v></c></row><row r="3"><c r="B3" t="s"><v>0</v></c></row></sheetData><extLst><ext uri="{X}"/></extLst></worksheet>"#;
+
+    #[test]
+    fn a_new_cached_value_keeps_the_formula_and_every_other_byte() {
+        let index = index_sheet(SHEET).expect("indexes");
+        let c = &index.rows[0].cells[1];
+        let old = &SHEET[c.start..c.end];
+        let new = r#"<c r="C1" s="2"><f>A1*2</f><v>2</v></c>"#;
+        assert_eq!(
+            patch_value(old, new).as_deref(),
+            Some(r#"<c r="C1" s="2"><f>A1*2</f><v>2</v></c>"#)
+        );
+        // The value becomes text: `t` is set, the stored formula text is kept as it was.
+        let stored = r#"<c r="C1" s="2"><f> A1 * 2 </f><v>0</v></c>"#;
+        let text = r#"<c r="C1" t="str" s="2"><f>A1*2</f><v>x</v></c>"#;
+        assert_eq!(
+            patch_value(stored, text).as_deref(),
+            Some(r#"<c r="C1" s="2" t="str"><f> A1 * 2 </f><v>x</v></c>"#)
+        );
+    }
+
+    #[test]
+    fn the_index_refuses_what_it_will_not_guess_at() {
+        for (xml, why) in [
+            (
+                r#"<worksheet><sheetData><row r="2"/><row r="1"/></sheetData></worksheet>"#,
+                "rows out of order",
+            ),
+            (
+                r#"<worksheet><sheetData><row r="1"><c r="B1"/><c r="A1"/></row></sheetData></worksheet>"#,
+                "cells out of order",
+            ),
+            (
+                r#"<worksheet><sheetData><row r="1"><c/></row></sheetData></worksheet>"#,
+                "a cell without r",
+            ),
+        ] {
+            assert_eq!(index_sheet(xml).err().as_deref(), Some(why), "{xml}");
+        }
+        let deep = format!(
+            "<worksheet>{}{}</worksheet>",
+            "<a>".repeat(300),
+            "</a>".repeat(300)
+        );
+        assert!(index_sheet(&deep).is_err());
+    }
+
+    #[test]
+    fn the_index_finds_rows_cells_and_shared_formulas() {
+        let xml = r#"<worksheet><sheetData><row r="1"><c r="A1"><f t="shared" ref="A1:A2" si="0">B1</f><v>1</v></c></row><row r="2"><c r="A2"><f t="shared" si="0"/><v>1</v></c></row></sheetData></worksheet>"#;
+        let index = index_sheet(xml).expect("indexes");
+        let rows: BTreeSet<i32> = index.rows.iter().map(|r| r.r).collect();
+        assert_eq!(rows, BTreeSet::from([1, 2]));
+        assert!(index.rows.iter().all(|r| r.cells.iter().all(|c| c.shared)));
+    }
+
+    #[test]
+    fn new_strings_are_appended_with_the_unique_count() {
+        let sst =
+            r#"<sst xmlns="x" count="3" uniqueCount="2"><si><t>a</t></si><si><t>b</t></si></sst>"#;
+        let added = ["c <&>".to_string(), " d".to_string()];
+        assert_eq!(
+            append_strings(sst, &added, 4).as_deref(),
+            Some(
+                r#"<sst xmlns="x" count="3" uniqueCount="4"><si><t>a</t></si><si><t>b</t></si><si><t>c &lt;&amp;&gt;</t></si><si><t xml:space="preserve"> d</t></si></sst>"#
+            )
+        );
+    }
+}
