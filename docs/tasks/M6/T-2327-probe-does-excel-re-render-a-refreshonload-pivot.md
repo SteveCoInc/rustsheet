@@ -18,7 +18,7 @@ T-2084's probe reads cells the builder itself writes into the sheet, so it canno
 
 ## Acceptance criteria
 - [x] A probe with an excel-graph oracle shows whether stale rendered cells are replaced; the web.md entry loses its UNVERIFIED note either way.
-- [x] Captions of Count, Max and Min pivots are probed.
+- [ ] Captions of Count, Max and Min pivots are probed (moved to T-4137, M16; not done here).
 - [x] `make check` green; reviewers approve.
 
 ## Out of scope

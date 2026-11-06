@@ -17,7 +17,7 @@ Each spike observation in oracle-spike.md is a committed probe with an excel-gra
 oracle-spike.md (2026-11-04) holds the runs; they are observations until committed (directive 1). T-2327 asked the re-render question; mark it done with this task's outcome. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
 ## Acceptance criteria
-- [x] Probe cases under eval/suites/probes/cases/pivot-*.case.json with sidecars.
+- [x] Probe cases under eval/suites/probes/cases/t4128-pivot-spike.case.json with sidecars.
 - [x] docs/excel-semantics/pivots.md created with these rules and their evidence; web.md's T-2327 UNVERIFIED note resolved.
 - [x] `make check` green; reviewers approve.
 
