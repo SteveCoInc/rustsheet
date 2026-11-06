@@ -3,7 +3,7 @@ id: T-2612
 title: "A plain reference to a deleted sheet is stored and exported as #REF!C4:C7, so a same-name sheet does not revive it (T-2340)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
