@@ -4724,8 +4724,9 @@ within 1E-15 relative / largest relative error:
   and still read 0, while `F.DIST.RT(20,60,1E8)` (z 600) keeps 1.164E-211. FDIST is the same function: column D (df1 30,
   df2 1E8, z 716 to 736) is 0 like column A. The df1 = 2 zeros are Excel's closed form (not this path) and stay unexplained.
   Ours (T-4045): F's tails only (`bratio` `f_closed_or_ported_tails` asks `bup.rs` `l140_bup_prefactor_underflows`,
-  at any a0). That makes every 0 of t4045 and t4017 exact. BETA.DIST's cdf keeps today's kernel there: F.INV at a huge df1 searches it, and a 0 there moves
-  `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) 0.6% off the math.
+  at any a0). That makes every 0 of t4045 and t4017 exact. Since T-4456 the worksheet BETA.DIST cdf asks it too (`beta.rs`,
+  `bratio` `l140_prefactor_zero_tails`), but `bratio::beta_dist_lower_tail` keeps today's kernel: F.INV at a huge df1
+  searches it, and a 0 there moves `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) 0.6% off the math.
   BETA.DIST and the t (T-4254, probes/t4254-beta-t-l140-zero-cut, 132 cells, and probes/t4254-beta-t-zero-wide, 180 cells,
   excel-graph, 2026-11-06), walked in ln ret (BETA.DIST on L140 bup+bgrat: a huge, b < 40, x0 > 0.7) or in ln of the
   true tail (T.DIST.RT):
@@ -4742,6 +4743,26 @@ within 1E-15 relative / largest relative error:
   - Excel never returns a subnormal or a non-zero value below these cuts in any probed cell. Ours keeps a number at
     every Excel 0 above (a type-level miss on 0 against a number, owned by T-4437) and matches every number to the last
     digits, except three cells just above the n = 3 cut that are off in the 9th digit.
+  - More shapes (T-4456, probes/t4456-beta-t-zero-cut, 130 cells, and probes/t4456-beta-t-zero-reach, 81 cells,
+    excel-graph, 2026-11-06):
+    - The rule holds at n = 25 and 29 bup terms. At (5E6, 25.5) and (5E6, 30), ln ret -708.0 is a number
+      (`BETA.DIST(0.999857729248015,5e+06,25.5,TRUE)` is 2.7722115421194987E-264) and -709.0 is 0 (cut C9, C10;
+      D9, D10), though the math there is 1.05E-264.
+    - The earlier cut reaches n = 5. `BETA.DIST(x,2E6,5.5|6,TRUE)` is 0 at every ln ret from -700 (cut A1:B17). Walking
+      up at b = 5.5, Excel is the math to 14 digits from 7.8E-209 down to 8.5E-291 (ln ret -690), and 0 at 4.1E-295
+      (reach A1:A21).
+    - At one x (ln ret -690, a = 2E6), b = 2.5 and 3.5 are 0 (the math 1.0E-297 and 2.8E-295), and b = 5.5 to 39.5
+      are numbers from 8.5E-291 up (reach B1:B12).
+    - At ln ret -690, every a from 3000 to 5E7 is a number at b = 5.5 and 25.5 (reach C1:D9).
+    - So at every shape probed, the earlier cut lies in the tail w between 2.8E-295 and 8.5E-291, which brackets
+      DBL_MIN/eps = 2^-970.
+    - The t's cut moves with df. At ln tail -690 (2.17E-300), df 5 to 1E6 are numbers and df 1E8 is 0 (reach F2:F9).
+      At df 1E6, Excel is a number down to 2.1717382813896547E-300 and 0 at 9.9E-305 (reach E20, E21).
+      `T.DIST.RT(1.46569174062763E+299,1)` is `#NUM!` (reach F1, where t² overflows).
+    - F.INV: Excel's F.DIST at (107702, 58) is 0 from x = 0.02 to 0.04, and a number from 0.0425 (cut G2:G14). Both
+      Excel's `F.INV(1.43795578761177E-262,107702,58)` root, 0.02386747293188499 (G1, ln ret -1194), and the math's,
+      0.040061361917045 (G3, ln ret -712.5), lie in that flat 0. So Excel's search returns a point where its own cdf
+      never reaches p (T-4442).
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism

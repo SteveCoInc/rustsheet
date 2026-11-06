@@ -291,8 +291,11 @@ pub(crate) fn f_closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option
 
 /// The tails (lower, upper) of K(a, b, x, y) where L140 bup+bgrat's w is Excel's exact 0 because
 /// bup's prefactor underflows ([`bup::l140_bup_prefactor_underflows`], T-4045): w is 0 and its
-/// complement 1, oriented back through bratio's swap. F's tails only (see there).
-fn l140_prefactor_zero_tails(a: f64, b: f64, x: f64, y: f64) -> Option<(f64, f64)> {
+/// complement 1, oriented back through bratio's swap. F's tails ([`f_closed_or_ported_tails`]) and
+/// the worksheet BETA.DIST cdf (`beta.rs`, T-4456) ask it; [`beta_dist_lower_tail`] does not,
+/// because F.INV's search crosses that cdf (`inverse_beta.rs` `beta_lower_crossing`) and a 0 there
+/// moves `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) off the math.
+pub(crate) fn l140_prefactor_zero_tails(a: f64, b: f64, x: f64, y: f64) -> Option<(f64, f64)> {
     let d = dispatch(a, b, x, y)?;
     (d.branch == Branch::L140BupBgrat && l140_bup_prefactor_underflows(d.a0, d.b0, d.x0, d.y0))
         .then_some(if d.swapped { (1.0, 0.0) } else { (0.0, 1.0) })

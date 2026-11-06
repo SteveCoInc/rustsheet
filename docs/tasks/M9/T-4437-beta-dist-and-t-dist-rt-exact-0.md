@@ -49,6 +49,13 @@ the mechanism (not one threshold per shape), and the numbers just above each cut
       mechanism (decision 0188 R4 guards if anything is chosen by scoring), recorded in statistics.md.
 - [ ] `make check` green; reviewers approve.
 
+- T-4456 applied T-4045's rule to the worksheet BETA.DIST (the rule's cells A12:A22 and C12:C22 above now pass). What
+  is left here is the earlier cut at few bup terms and the t's cut. T-4456's probes add evidence for both
+  (statistics.md "Where the exact 0 starts (T-4045)", "More shapes"). Excel is 0 and ours is a number at:
+  - probes/t4456-beta-t-zero-cut A1:A9, B1:B9 (BETA.DIST at a = 2E6, n = 5), E1:E9 and F1:F9 (T.DIST.RT at df 1E6
+    and 1E8);
+  - probes/t4456-beta-t-zero-reach A21, B1, B2, E21 and F9.
+
 ## Visible-parity stage
 Owner of the visibly-off cells of probes/t4254-beta-t-l140-zero-cut (A12:A22, B1:B22, C12:C22, D1:D22, E1:E11, F1:F11)
 and probes/t4254-beta-t-zero-wide (A29:A30, B28:B30, C30, F30): Excel's exact 0, or a 9th-digit difference just above
