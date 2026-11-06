@@ -1,0 +1,81 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4554: T-4394's book (First, S2, Last; B1 = 1, 7, 9; B2 = 10, 70, 90) with S2 active. Workbook names added through the API (Graph names/add) whose body is a bare name: WL = =LocLoc, where LocLoc is only S2's sheet-scoped name (S2!$B$1, 7); WD = =Dup, where Dup is both a workbook name (First!$B$2, 10) and S2's and Last's sheet-scoped names (S2!$B$2, 70; Last!$B$2, 90); and LD = =Dup scoped to Last. Does the body bind to the active sheet's scoped name, to the workbook name, or to the using sheet's?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "S2",
+ "names": {
+  "S2!LocLoc": "=S2!$B$1",
+  "Dup": "=First!$B$2",
+  "S2!Dup": "=S2!$B$2",
+  "Last!Dup": "=Last!$B$2"
+ },
+ "sheets": [
+  {
+   "name": "First",
+   "cells": {
+    "B1": 1,
+    "B2": 10,
+    "D1": "=WL",
+    "D2": "=WD",
+    "D3": "=Last!LD",
+    "D4": "=Dup"
+   }
+  },
+  {
+   "name": "S2",
+   "cells": {
+    "B1": 7,
+    "B2": 70,
+    "D1": "=WL",
+    "D2": "=WD",
+    "D3": "=Last!LD",
+    "D4": "=Dup"
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "B1": 9,
+    "B2": 90,
+    "D1": "=WL",
+    "D2": "=WD",
+    "D3": "=LD",
+    "D4": "=Dup"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "First!D1",
+  "First!D2",
+  "First!D3",
+  "First!D4",
+  "S2!D1",
+  "S2!D2",
+  "S2!D3",
+  "S2!D4",
+  "Last!D1",
+  "Last!D2",
+  "Last!D3",
+  "Last!D4"
+ ],
+ "api_names": [
+  {
+   "name": "WL",
+   "formula": "=LocLoc"
+  },
+  {
+   "name": "WD",
+   "formula": "=Dup"
+  },
+  {
+   "name": "LD",
+   "formula": "=Dup",
+   "sheet": "Last"
+  }
+ ]
+}

@@ -256,10 +256,6 @@ fn defined_names_apply_and_roll_back() {
         .unwrap();
 }
 
-/// An unqualified reference in an API-defined name binds to the first sheet, not the name's own:
-/// Graph `worksheets('S2')/names/add` of `Rate` = `=$B$1` reads First!B1 from S2 and from Last
-/// (probes/t4353-api-name-unqualified-ref S2!A3, S2!A7, Last!A3; docs/excel-semantics/syntax.md "An
-/// unqualified reference in an API-defined name"; T-4353).
 #[test]
 fn sheet_names_are_local_and_roll_back() {
     let mut wb = book();
