@@ -3,7 +3,7 @@ id: T-4254
 title: "Probe BETA.DIST and T.DIST.RT where L140 bup's prefactor crosses DBL_MIN (T-4045's zero rule, evidenced only on F)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
