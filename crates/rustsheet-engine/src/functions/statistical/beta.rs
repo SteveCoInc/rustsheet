@@ -5,7 +5,8 @@ use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, value_error};
 use crate::functions::statistical::beta_density::beta_density_small_shape;
 use crate::functions::statistical::bratio::{
-    beta_dist_lower_tail, beta_search_tails, dispatch, l140_overflows, Branch,
+    beta_dist_lower_tail, beta_search_tails, dispatch, l140_overflows, l140_prefactor_zero_tails,
+    Branch,
 };
 use crate::functions::statistical::incomplete_beta::beta_density;
 use crate::functions::statistical::inverse_beta::{beta_inverse_cdf, beta_quantile_crossing};
@@ -214,6 +215,13 @@ impl Model {
             // probes/t2737-subnormal-cdf-shapes, TRUE at B1, B4, B5, B8:B10; T-2737).
             if l140_overflows(alpha, beta_param, t, 1.0 - t) {
                 return Err(num_error(cell));
+            }
+            // L140 bup+bgrat is Excel's exact 0 once bup's prefactor is below DBL_MIN, as on F's
+            // tails (T-4045): probes/t4254-beta-t-zero-cut C9 `BETA.DIST(0.999857729248015,5e+06,
+            // 25.5,TRUE)` (ln ret -708.0) is 2.7722115421194987E-264 and C10 (ln ret -709.0) is 0,
+            // with the 1E-264 the math gives; D9:D10 at b = 30 alike (T-4254).
+            if let Some((lower, _)) = l140_prefactor_zero_tails(alpha, beta_param, t, 1.0 - t) {
+                return Ok(lower);
             }
             let cdf = beta_dist_lower_tail(t, 1.0 - t, alpha, beta_param);
             if beta_param == 1.0 {

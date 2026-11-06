@@ -4707,10 +4707,39 @@ within 1E-15 relative / largest relative error:
   bgrat's own increment is subnormal there (z > 708) and Excel flushes it. So the true tail can be as large as 4E-291
   and still read 0, while `F.DIST.RT(20,60,1E8)` (z 600) keeps 1.164E-211. FDIST is the same function: column D (df1 30,
   df2 1E8, z 716 to 736) is 0 like column A. The df1 = 2 zeros are Excel's closed form (not this path) and stay unexplained.
-  Ours (T-4045): F's tails only (`bratio` `f_closed_or_ported_tails` asks `bup.rs` `l140_bup_prefactor_underflows`,
-  at any a0). That makes every 0 of t4045 and t4017 exact. BETA.DIST and the t are unprobed at this edge (T-4254), and
-  BETA.DIST's cdf keeps today's kernel there: F.INV at a huge df1 searches it, and a 0 there moves
-  `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) 0.6% off the math.
+  Ours (T-4045): F's tails (`bratio` `f_closed_or_ported_tails` asks `bup.rs` `l140_bup_prefactor_underflows`,
+  at any a0). That makes every 0 of t4045 and t4017 exact.
+- **BETA.DIST and the t at that edge (T-4254)**, probes/t4254-beta-t-zero-cut (130 cells) and t4254-beta-t-zero-reach
+  (81 cells), excel-graph, 2026-11-06, scored once against the engine before any change (the post-freeze fresh check):
+  - BETA.DIST takes the same rule. `BETA.DIST(x,a,b,TRUE)` with ln ret walked from -700 to -716 by 1 at (a, b) =
+    (5E6, 25.5) and (5E6, 30) (c = 1/2 and 1, n = 25 and 29 bup terms) is a number at ln ret -708.0 (row 9, C9
+    2.7722115421194987E-264, the math's value to 14 digits) and 0 from -709.0 (row 10) on, though the math there is
+    1.05E-264 and 1.2E-259: the edge is in (-709, -708), around ln(DBL_MIN) = -708.396, as the rule predicts. Nothing
+    contradicts it: every BETA.DIST cell with ln ret below -708.4 in both cases is 0.
+  - A second, earlier 0, which the rule does not explain: at a = 2E6 and few bup terms the cdf is 0 above DBL_MIN.
+    `BETA.DIST(x,2E6,5.5|6,TRUE)` (n = 5) is 0 at every ln ret from -700 (the math 4.1E-295 and 2.1E-295, t4254-beta-
+    t-zero-cut A1, B1) down, and at the same x (ln ret -690) b = 2.5 and 3.5 are 0 (the math 1.0E-297, 2.8E-295;
+    t4254-beta-t-zero-reach B1, B2) while b = 5.5 to 39.5 are numbers from 8.5E-291 up (B3:B12). Walking up at b = 5.5
+    (reach A1:A21), Excel is the math to 14 digits from 7.8E-209 down to 8.5E-291 (ln ret -690) and 0 at 4.1E-295
+    (-700). At ln ret -690 every a from 3000 to 5E7 is a number at b = 5.5 and 25.5 (reach C1:D9). So this edge looks
+    like one on the tail itself, between 2.8E-295 and 8.5E-291 (DBL_MIN/eps = 2^-970 = 1.0E-292 is inside); not
+    pinned (T-4441).
+  - The t never takes L140: its kernel call K(n/2, 1/2, y, z) has a shape of 1/2, so bratio's min(a, b) <= 1 branches
+    take it (Bgrat at a0 = 1/2 for a huge df). Its own 0: `T.DIST.RT(t,1E6)` is a number down to 2.1717382813896547E-300
+    (reach E20, ln tail -690) and 0 at ln tail -700 (9.9E-305; reach E21, t4254-beta-t-zero-cut E1), and at df 1E8
+    already 0 at ln tail -690 (reach F9; t4254-beta-t-zero-cut F1:F24 are all 0), while df 5 to 1E6 at that tail are
+    numbers (reach F2:F8). `T.DIST.RT(1.46569174062763E+299,1)` is `#NUM!` (reach F1, t² overflows). Not pinned
+    (T-4441).
+  - F.INV: Excel's F.DIST at (107702, 58) is 0 from x = 0.02 to 0.04 (t4254-beta-t-zero-cut G2:G12; ln ret -1194 at
+    Excel's `F.INV(1.43795578761177E-262,107702,58)` root 0.02386747293188499, G1, and -712.5 at the math's root
+    0.0400613619170450, G3) and a number from 0.0425 (G13). Excel's F.INV root lies inside its own cdf's flat 0, so its
+    search does not cross the cdf at p there; the zero rule does not explain the root, it only shows the cdf gives no
+    crossing (T-4442).
+  Ours (T-4254): the worksheet BETA.DIST cdf asks the same rule (`beta.rs`, `bratio` `l140_prefactor_zero_tails`), which
+  makes t4254-beta-t-zero-cut C10:C17 and D10:D17 exact. `bratio::beta_dist_lower_tail` keeps today's kernel, because
+  F.INV's search crosses it and a 0 there moves `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) 0.6%
+  off the math (T-4045). The earlier 0 (t4254-beta-t-zero-cut A1:B9, E1:F9; reach A21, B1, B2, E21, F9) is still the
+  math's number in ours: T-4441.
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
