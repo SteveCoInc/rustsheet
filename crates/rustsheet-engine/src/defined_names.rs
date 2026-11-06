@@ -2,6 +2,7 @@
 
 use crate::{
     calc_result::{CalcResult, Range},
+    constants::{DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH},
     evaluation_limits::stack_address,
     expressions::{
         parser::{
@@ -19,7 +20,7 @@ use crate::{
     functions::logical::SharedLambda,
     model::Model,
     reference_operators::RefArg,
-    types::DefinedName,
+    types::{DefinedName, WorkbookView},
     utils as common,
 };
 
@@ -519,9 +520,17 @@ impl Model {
     /// An invalid sheet index.
     pub fn set_active_sheet(&mut self, sheet: u32) -> Result<(), String> {
         self.workbook.worksheet(sheet)?;
-        if let Some(view) = self.workbook.views.get_mut(&self.view_id) {
-            view.sheet = sheet;
-        }
+        // A workbook decoded from bytes may have no view for `view_id`; create it rather than
+        // drop the choice, so `active_sheet` returns `sheet` afterwards (T-4554).
+        self.workbook
+            .views
+            .entry(self.view_id)
+            .or_insert(WorkbookView {
+                sheet,
+                window_width: DEFAULT_WINDOW_WIDTH,
+                window_height: DEFAULT_WINDOW_HEIGHT,
+            })
+            .sheet = sheet;
         Ok(())
     }
 
