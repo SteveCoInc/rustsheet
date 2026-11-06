@@ -1643,13 +1643,17 @@ Ours: implemented (T-2271's weekend read comes before the holidays' error; T-258
 Status: VERIFIED (excel-graph), one cell
 Tasks: T-2583
 
-## gen-m6 arg-pairs batch (T-3495): DAYS error order and NETWORKDAYS.INTL on day 0
+## gen-m6 arg-pairs batch (T-3495): DAYS error order and NETWORKDAYS.INTL scalar holidays (pointer)
 Rule (VERIFIED): no rule of its own. The ten DAYS cells (gen-m6 a4a301d00b46acf3 A79 A82 A85 A88 A241 A244 A307 A310
 A493 A499) are the "DAYS error order" section below (T-3536). The NETWORKDAYS.INTL cells of the same batch looked like
 a day-0 effect but are not: their cause is that a scalar holiday ignores the weekend argument, stated in "NETWORKDAYS.INTL:
-a scalar holiday ignores the weekend argument" below (T-3537; probes networkdays-intl-holiday-forms, -weekend-masks,
--kinds, -kinds-let, -unary-fn).
-Ours: matches; gen-m6/a4a301d00b46acf3 has no known-failure line in eval/baseline/gen-m6.txt.
+a scalar holiday ignores the weekend argument" below (T-3537; probes networkdays-intl-early-holidays,
+networkdays-intl-serial-zero-holiday, networkdays-intl-holiday-forms, networkdays-intl-holiday-weekend-masks,
+networkdays-intl-holiday-kinds, networkdays-intl-holiday-kinds-let, networkdays-intl-holiday-unary-fn).
+Evidence: the DAYS cells above, and the NETWORKDAYS.INTL cells in gen-m6 102b2df13f6891d2, 1b4963f7cb42e2fa,
+ade135f51e0b7a36 and b91dcfba0176956e (listed in the T-3537 section).
+Ours: matches; none of those five gen-m6 cases has a known-failure line in eval/baseline/gen-m6.txt.
+Status: VERIFIED (pointer entry)
 Tasks: T-3536, T-3537
 
 ## NETWORKDAYS.INTL: a scalar holiday ignores the weekend argument
