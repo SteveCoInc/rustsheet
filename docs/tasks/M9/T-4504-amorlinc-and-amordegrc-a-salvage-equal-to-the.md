@@ -3,7 +3,7 @@ id: T-4504
 title: "AMORLINC and AMORDEGRC: a salvage equal to the cost is 0, not #NUM! (Gate A T-4111)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
