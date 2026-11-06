@@ -40,7 +40,7 @@ fn rate_residual(
 pub(crate) const RATE_MAX_STEPS: u32 = 200;
 
 /// RATE as Excel computes it: a secant on the residual [`rate_residual`] from r0 = guess and
-/// r1 = r0 - 0.001·sign(f(r0)), each step `r2 = r1 - f1·(r1-r0)/(f1-f0)` with Excel's
+/// r1 = r0 - 0.001 if f(r0) > 0, else r0 + 0.001 (a zero residual steps up, T-3876), each step `r2 = r1 - f1·(r1-r0)/(f1-f0)` with Excel's
 /// twice-rounded `-`, `*` and `/`. It stops at the first iterate with |r2 - r1| < 1e-7 and
 /// |f(r2)| < 1e-7. The iterate of step [`RATE_MAX_STEPS`] is returned unconverged when it passes
 /// a looser test: |r2 - r1|, |f(r2)| and 1 + r2 against 1e-4, all absolute
@@ -131,7 +131,13 @@ fn rate_secant(
     const RATE_RESTART_F_MAX: f64 = 1e-4;
     let residual = |rate: f64| rate_residual(rate, args, period_start).ok_or(Error::NUM);
     let (mut r0, mut f0) = (guess, residual(guess)?);
-    let mut r1 = r0 - OFFSET.copysign(f0);
+    // Only a positive residual steps down: a residual of exactly 0 at the guess steps up, to
+    // guess + 0.001. With every residual rounding noise (nper 1, pv + pmt = 0, fv 0) Excel returns
+    // the guess exactly where f(guess + 0.001) is not 0 (the secant steps back onto the guess) and
+    // is `#NUM!` where it is 0 too (a flat secant on 0), on all 14 such cells of
+    // probes/t3876-rate-noise-residual; stepping down gets 11 (financial.md "RATE steps up from a
+    // zero residual", T-3876).
+    let mut r1 = if f0 > 0.0 { r0 - OFFSET } else { r0 + OFFSET };
     let mut f1 = residual(r1)?;
     for step in 1..=RATE_MAX_STEPS {
         // A flat secant (f1 = f0) has no finite step: 0/0 after a zero-step stall (r1 = r0),

@@ -1,0 +1,46 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Calc": {
+   "C10": {
+    "t": "s",
+    "v": "=SUM(Jan:Mar!B2)"
+   },
+   "C4": {
+    "t": "n",
+    "v": 1911.0
+   },
+   "C5": {
+    "t": "s",
+    "v": "=SUM(Jan:Mar!A1:A3)"
+   },
+   "C6": {
+    "t": "n",
+    "v": 1911.0
+   },
+   "C7": {
+    "t": "n",
+    "v": 7.0
+   },
+   "C8": {
+    "t": "s",
+    "v": "=SUM(Jan!A1:A3)"
+   },
+   "C9": {
+    "t": "n",
+    "v": 819.0
+   }
+  },
+  "Feb": {},
+  "Jan": {},
+  "Mar": {}
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "32767dbf74aa76a666115ec0b98d345e51f34773a14622f85366019d42340c4e",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-06T01:42:02+00:00",
+  "version": null,
+  "workbook_name": "ca1ae750510d3cc3d8aac3ff32b0896383797eff2cf9e430bb76a571f823f013.xlsx"
+ }
+}

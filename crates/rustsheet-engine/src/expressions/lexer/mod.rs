@@ -426,7 +426,7 @@ impl Lexer {
                         }
                     }
                     _ => {
-                        if char.is_alphabetic()
+                        if utils::is_letter_name_start(char)
                             || char == '_'
                             || char == '\\'
                             || utils::is_typographic_quote(char)
@@ -715,6 +715,7 @@ impl Lexer {
     /// Whether `c` may continue a name.
     fn is_name_char(&self, c: char) -> bool {
         c.is_alphanumeric()
+            || (!c.is_ascii() && utils::is_mark(c))
             || c == '_'
             || c == '.'
             || (c == '\\' && self.backslash_in_names())

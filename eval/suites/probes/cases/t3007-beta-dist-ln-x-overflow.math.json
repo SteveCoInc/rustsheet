@@ -97,6 +97,10 @@
  },
  "skipped": {
   "S": {
+   "A10": {
+    "f": "=1-BETA.DIST(0.9,0.5,1E+290,TRUE)",
+    "why": "not converged"
+   },
    "A13": {
     "f": "=BETA.DIST(0.1,6E+153,2,TRUE)",
     "why": "not converged"

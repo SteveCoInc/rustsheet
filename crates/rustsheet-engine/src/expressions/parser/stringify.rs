@@ -33,7 +33,7 @@ use literals::{format_number_locale, to_string_array_node};
 pub(crate) use name_binding::{pin_unresolved_name, rebind_workbook_name_to_sheet};
 pub(crate) use rename_defined_name::rename_defined_name_in_node;
 pub(crate) use sheet_edits::{
-    move_sheet_in_node, rename_sheet_in_node, retarget_unqualified_references,
+    delete_sheet_in_node, move_sheet_in_node, rename_sheet_in_node, retarget_unqualified_references,
 };
 pub(crate) use structured::{
     to_localized_string_this_row_lowered, to_rc_lowering_at, to_string_lowering,
@@ -729,8 +729,8 @@ fn stringify(
             }
             format!("{s1}:{s2}")
         }
-        // Rows and columns inserted or moved on one sheet of the span do not shift the span's
-        // cells (edit semantics are not modelled yet), so no displacement reaches `reference`.
+        // Excel never shifts a span for row or column edits on its sheets (references.md,
+        // probes/sheet-ops/t4272-3d-span-jan-insert-row), so no displacement reaches `reference`.
         SheetSpanKind {
             first_sheet,
             last_sheet,

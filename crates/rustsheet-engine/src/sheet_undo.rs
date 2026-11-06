@@ -1,6 +1,7 @@
 //! Taking a sheet out of a model and putting it back, so a caller can undo a delete.
 
 use crate::{
+    expressions::parser::stringify::{delete_sheet_in_node, to_english_string, to_rc_format},
     formula_rewrite::RewrittenFormula,
     model::Model,
     pivot::PivotTable,
@@ -17,8 +18,9 @@ pub struct TakenSheet {
     tables: Vec<(String, Table)>,
     /// Its pivot tables; [`Model::restore_sheet`] puts them back (SPEC-0015, T-2086).
     pivots: Vec<PivotTable>,
-    /// The other formulas whose references to its tables became `#REF!`; [`Model::restore_sheet`]
-    /// puts their text back (T-2340).
+    /// The other formulas whose references to its tables became `#REF!` (T-2340), then those
+    /// whose 3-D spans lost it as an end (T-4272), in that order; [`Model::restore_sheet`] puts
+    /// their text back.
     rewritten: Vec<RewrittenFormula>,
 }
 
@@ -48,7 +50,17 @@ impl Model {
             return Err("Sheet index too large".to_string());
         }
         let pivots = self.take_pivots_on(sheet_index)?;
-        let (tables, rewritten) = self.take_tables_of_sheet(sheet_index);
+        let (tables, mut rewritten) = self.take_tables_of_sheet(sheet_index);
+        let sheet_names = self.workbook.get_worksheet_names();
+        rewritten.extend(
+            self.rewrite_formulas(Some(sheet_index as usize), |mut node, context| {
+                delete_sheet_in_node(&mut node, sheet_index, &sheet_names);
+                match context {
+                    Some(context) => to_english_string(&node, context),
+                    None => to_rc_format(&node),
+                }
+            }),
+        );
         let worksheet = self.workbook.worksheets.remove(sheet_index as usize);
         self.reset_tables();
         Ok(TakenSheet {
