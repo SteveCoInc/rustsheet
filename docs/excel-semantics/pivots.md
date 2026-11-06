@@ -165,6 +165,8 @@ The default order of a newly created pivot (ascending, by type) is a UI action a
 file.
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader`; the rendering is T-4142's)
+Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`Order`: the display order of a computed
+result)
 
 ## A calculated field applies its formula to the field sums
 Rule: a calculated field `Sales*2+0.1` shows, at every level including subtotals and the grand total,
@@ -371,6 +373,13 @@ West/A, and East/A row 4 holds the odd value: text `abc`, a blank, `TRUE` or `#N
   (East/A Txt: 10 and `abc`). A_stdDevp and A_varp are 0 there.
 - **Empty intersections:** West/B (B7:G7) is blank on every sheet.
 Status: VERIFIED (excel-graph)
+UNVERIFIED (probe pending: T-4633): a cell whose records hold no
+number at all (only text, blanks or booleans) is unprobed; the engine gives it the worksheet
+functions' answers (Sum, Max, Min and Product 0, Average, StdDev and Var `#DIV/0!`, StdDevp and Varp
+`#DIV/0!` with no number). A date in a value field counts as its serial number, also unprobed. When
+a cell or total covers two different errors, the engine shows the first in accumulation order, also
+unprobed (T-4633).
+Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs (`Accumulator::finish`)
 
 ## Summation order of Sum, Average and Product totals
 Rule:
@@ -507,6 +516,16 @@ Status: VERIFIED (excel-graph) for these totals:
 
 UNVERIFIED (probe pending: T-4634): which data-field mixes switch Sum to the records, a Sum-only total
 over one axis field, and the mixed and Var grand-grand totals.
+Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs (`Accumulator::finish`). The engine reads the open points this way, each UNVERIFIED
+(T-4634): Sum uses the child cells only when every data field is a Sum; a Sum-only total over one axis
+field sums the item cells; the mixed 2-D grand-grand Sum and Average sum the row totals' record sums
+(t4616 S2 H9 and I9, S3 E8 fit it); the Var and StdDev grand-grand total is row-major (t4616 V1 E11
+fits it); and a Sum-only cell that is a total on both axes (a subtotal by a subtotal or by a grand
+total, with several fields on an axis) sums its row children first, which is probed only for the
+grand-grand total. Varp and StdDevp use (n·Σx² − (Σx)²)/n² (bit-identical when divided by n twice).
+Of the candidates tried (textbook /n, Σx²/n − mean², two-pass, Welford, (Σx² − Σx·mean)/n) it is the
+only family that fits probes/t4135-pivot-aggregates A_stdDevp!N6 and M8 (t4589 S1 G5:H7 fits it too);
+the order of their totals is assumed to be Var's.
 
 ## errorCaption replaces every error value
 Rule: with `showError` and `errorCaption`, every error value a pivot cell would show becomes the
@@ -554,6 +573,39 @@ Evidence (excel-graph, 2026-11-06):
   - A_count, six Count fields: 4 (R8).
   - EC, eleven mixed aggregates: `ERR`.
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs (`Accumulator::finish`). The engine treats any aggregate other than Count and CountNums as
+mixing; Count beside only Max, Min, Product or the variances is unprobed (UNVERIFIED, T-4634).
+
+## Record filters: page selections and hidden items
+Rule: a page field's selected item keeps only the records holding it, and a hidden item (`item h="1"`)
+of a page field drops its records, before anything is accumulated; the pivot shows only what is kept.
+The engine applies hidden items of row and column fields the same way (unprobed, see Status).
+Evidence: probes/t4137-pivot-captions K4 (excel-graph, 2026-11-06, T-4137): Product selects `A` and the
+page field Units hides 1 and 2, so of A's records (Sales 10, 20, 4 with Units 1, 2, 6) only 4 is left,
+and the pivot shows 4 (K4!A7).
+Two readings are the engine's own, not probed:
+- a `pageField@item` that names no data item of its field (an index past the field's `<items>`, one
+  naming a subtotal or blank line, or a malformed number, which T-4139's import reads as absent) is
+  `(All)`;
+- a hidden item on a field that is on no axis filters nothing.
+
+Status: VERIFIED (excel-graph) for a page field's selection and hidden items (K4) only. UNVERIFIED
+(probe pending: T-4164): hidden items of a row or column field, and the totals over them (SPEC-0032
+stage 5 leaves filters and totals to T-4164). UNVERIFIED (probe pending: T-4633): the two readings
+above.
+Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`filter`)
+
+## A pivot result is bounded in work and nodes
+Rule: computing a pivot's result (its filtered records, axis trees and accumulators) spends at most
+268,435,456 work units (`MAX_PIVOT_WORK`) when run on its own, or what the caller's budget has left: one
+unit per record and stage, per item ordered, per sort step, per node or accumulator made and per value
+fed to an accumulator. It holds at most 10,000,000 nodes (`MAX_PIVOT_NODES`): axis nodes plus one
+accumulator per (row node, column node, data field) some record reaches. Past either the pivot has no
+result (`PivotComputeError::Limit`), where Excel would render it.
+Evidence: none for Excel; this is a resource limit (SPEC-0032 "Untrusted-input limits", T-4142).
+Status: DEVIATION (decision 0014)
+Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `MAX_PIVOT_NODES`, `charge`,
+`count_nodes`)
 
 ## Pivots without refreshOnLoad, and source edits
 Rule: unknown. Two things are unprobed: whether Excel for the web re-renders a pivot whose cache lacks
