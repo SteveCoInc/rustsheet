@@ -3,7 +3,7 @@ id: T-4596
 title: "TAKE/DROP/TRIMRANGE over a picker: probe a picked defined name, INDEX and CHOOSE one-cell pick, and name TRIMRANGE in arrays.md"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
