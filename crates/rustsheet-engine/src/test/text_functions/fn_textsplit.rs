@@ -191,6 +191,28 @@ fn test_textsplit_case_insensitive_matches_excel_folding() {
     assert_eq!(model._get_text("B3"), "c");
 }
 
+// T-4473 (probes/t4473-textsplit-fold-gaps A14:A19, A27, A63): TEXTSPLIT folds sigma by
+// position like TEXTBEFORE (a `Σ` before a letter is `σ`, `ς` is only `ς`), the Angstrom sign
+// does not match `å`, and the titlecase digraph `ǅ` matches `Ǆ`.
+#[test]
+fn test_textsplit_case_insensitive_sigma_angstrom_and_digraph() {
+    let mut model = new_empty_model();
+    model._set("A1", "=TEXTSPLIT(\"aΣbςcσd\",\"σ\",,,1)");
+    model._set("A2", "=TEXTSPLIT(\"aΣbςcσd\",\"Σ\",,,1)");
+    model._set("A3", "=TEXTSPLIT(\"a\u{212B}b\",\"å\",,,1)");
+    model._set("A4", "=TEXTSPLIT(\"aǅb\",\"Ǆ\",,,1)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "a");
+    assert_eq!(model._get_text("B1"), "bςc");
+    assert_eq!(model._get_text("C1"), "d");
+    assert_eq!(model._get_text("A2"), "aΣb");
+    assert_eq!(model._get_text("B2"), "cσd");
+    assert_eq!(model._get_text("A3"), "a\u{212B}b");
+    assert_eq!(model._get_text("B3"), "");
+    assert_eq!(model._get_text("A4"), "a");
+    assert_eq!(model._get_text("B4"), "b");
+}
+
 // T-1272: a lifted element keeps the first value of its array without building it; an empty
 // first row (ignore_empty) is its padding.
 #[test]
