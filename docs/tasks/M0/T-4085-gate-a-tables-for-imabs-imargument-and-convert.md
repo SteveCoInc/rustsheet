@@ -51,7 +51,7 @@ IMABS, IMARGUMENT and CONVERT get Gate A tables, and their `composite` lines lea
 - Tables `eval/accuracy/tables/{IMABS,IMARGUMENT,CONVERT}/s1`: 120, 120 and 200 points (4 and 12 domain errors), filled
   from excel-graph with 0 failures. Decision 0319 removes the three `composite` lines from `exempt.tsv`.
 - `rustsheet-eval accuracy`: 440 new points, all inside the envelope (438 on both sides, 2 through the math only).
-  0 failing, 0 table defects, 0 known failures added. `missing tables` 25 before and after.
+  0 failing, 0 table defects, 0 known failures added. `missing tables` 25 before and after on the base (21 after merging main, which added tables).
 - Engine bit-exact with Excel: IMABS 119/120 (the miss is T-2538's), IMARGUMENT 120/120, CONVERT 188/200 (10 last-digit
   misses inside the envelope on both sides, T-2046/T-2047; 2 are the cells below).
 - **Excel kept as the target (decision 0300):** CONVERT s1 A65 `CONVERT(-56.8944444765809,"ukel","Reau")` (Excel
