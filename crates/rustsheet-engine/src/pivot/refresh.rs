@@ -329,7 +329,8 @@ fn field_names(headers: impl Iterator<Item = CacheItem>) -> Result<Vec<String>, 
 ///   exact-match keys fold case one character to one");
 /// - whether names compare by Excel's `=` collation instead (`æ`/`ae`, `œ`/`oe`, `ĳ`/`ij`,
 ///   `þ`/`th`, `á`/`a`+U+0301, U+00AD ignored; coercion.md), and the other folds (`ǆ`/`Ǆ`,
-///   `ı`/`I`, `ς`/`σ`, ligatures).
+///   `ı`/`I`, `ς`/`σ`, ligatures; `fold_char` already folds `ς` to `σ`, so those two are one
+///   name here).
 fn name_key(name: &str) -> String {
     let mut key = String::with_capacity(name.len());
     for c in name.chars() {
