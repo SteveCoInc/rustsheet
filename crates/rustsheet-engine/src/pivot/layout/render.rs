@@ -272,6 +272,10 @@ impl Cells<'_> {
             }
             for (level, &x) in (line.repeat as usize..).zip(&line.items) {
                 let cell = self.label(axis, line, level, x);
+                // An empty-text item's label cell is left empty (pivots.md "Pivot field names
+                // for duplicate and blank source headers", probes/t4627-pivot-field-name-collisions
+                // P_Rec!A6, a row item; a column item's is taken to match, UNVERIFIED).
+                let cell = cell.filter(|c| !matches!(c, PivotCell::Text(t) if t.is_empty()));
                 if let (Some(cell), Some((row, column))) = (cell, place(i, level)) {
                     self.put(row, column, cell);
                 }

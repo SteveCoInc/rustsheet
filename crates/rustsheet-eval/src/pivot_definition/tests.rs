@@ -3,6 +3,8 @@
 //! probe's pivot were compared with `pivot_definition.py`'s, attribute order aside, when this
 //! module was written (T-4152).
 
+use std::fmt::Write as _;
+
 use super::*;
 use crate::engine::{Engine, RustSheetEngine};
 
@@ -113,4 +115,134 @@ fn an_empty_text_items_label_is_an_empty_cell() {
     assert_eq!(cell("A5"), Some(Value::Text("(blank)".into())));
     assert_eq!(cell("A6"), Some(Value::Empty));
     assert_eq!(cell("B6"), Some(Value::Number(2.0)));
+}
+
+/// `canonical` of `tools/tests/test_pivot_parts_golden.py`: one line per element, depth-indented,
+/// its local name and its attributes by local name, sorted, values unescaped, namespace
+/// declarations left out; non-blank text on its own `#text` line.
+fn canonical(xml: &str) -> String {
+    use quick_xml::events::{BytesStart, Event};
+    use quick_xml::XmlVersion;
+    let local = |name: &str| name.rsplit(':').next().unwrap().to_string();
+    let element_line = |element: &BytesStart<'_>, depth: usize| {
+        let mut attrs: Vec<(String, String)> = (element.attributes())
+            .map(Result::unwrap)
+            .filter(|a| !a.key.into_inner().starts_with("xmlns"))
+            .map(|a| {
+                let value = a.normalized_value(XmlVersion::Implicit1_0).unwrap();
+                (local(a.key.into_inner()), value.into_owned())
+            })
+            .collect();
+        attrs.sort();
+        let attrs = attrs.iter().fold(String::new(), |mut out, (k, v)| {
+            let _ = write!(out, " {k}={v}");
+            out
+        });
+        format!(
+            "{}{}{attrs}",
+            "  ".repeat(depth),
+            local(element.name().into_inner())
+        )
+    };
+    let mut reader = quick_xml::Reader::from_str(xml);
+    let (mut lines, mut depth, mut text) = (Vec::new(), 0_usize, String::new());
+    let flush = |lines: &mut Vec<String>, text: &mut String, depth: usize| {
+        if !text.trim().is_empty() {
+            lines.push(format!("{}#text {}", "  ".repeat(depth), text.trim()));
+        }
+        text.clear();
+    };
+    loop {
+        match reader.read_event().unwrap() {
+            Event::Start(element) => {
+                flush(&mut lines, &mut text, depth);
+                lines.push(element_line(&element, depth));
+                depth += 1;
+            }
+            Event::Empty(element) => {
+                flush(&mut lines, &mut text, depth);
+                lines.push(element_line(&element, depth));
+            }
+            Event::End(_) => {
+                flush(&mut lines, &mut text, depth);
+                depth -= 1;
+            }
+            Event::Text(t) => text.push_str(&t.xml_content(XmlVersion::Implicit1_0)),
+            Event::GeneralRef(r) => text.push_str(&crate::xlsx_snapshot::resolve_entity(&r)),
+            Event::Eof => break,
+            _ => {}
+        }
+    }
+    lines.join("\n")
+}
+
+#[test]
+fn the_parts_are_the_python_builders_golden_parts() {
+    let golden = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tools/tests/pivot_parts_golden"
+    );
+    let mut seen = 0;
+    for entry in std::fs::read_dir(golden).unwrap() {
+        let path = entry.unwrap().path();
+        let file = path.file_stem().unwrap().to_str().unwrap().to_string();
+        let (stem, sheet_name) = file.split_once("__").unwrap();
+        let case = format!(
+            "{}/../../eval/suites/probes/cases/{stem}.case.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let spec: CaseSpec = serde_json::from_str(&std::fs::read_to_string(case).unwrap()).unwrap();
+        let sheet = spec.sheets.iter().find(|s| s.name == sheet_name).unwrap();
+        let pivot = &sheet.pivot_tables[0];
+        let built = parts(&spec, sheet, pivot, pivot.definition.as_ref().unwrap(), 1).unwrap();
+        let mut text = String::new();
+        for (name, xml) in [
+            ("cache_definition", &built.cache_definition),
+            ("cache_records", &built.cache_records),
+            ("table", &built.table),
+        ] {
+            let _ = writeln!(text, "== {name}\n{}", canonical(xml));
+        }
+        assert_eq!(text, std::fs::read_to_string(&path).unwrap(), "{file}");
+        seen += 1;
+    }
+    assert!(seen >= 8, "{seen} golden files");
+}
+
+#[test]
+fn a_group_step_too_small_to_move_is_refused() {
+    let spec = case(r#"{"rows": ["K"], "data": [{"field": "V"}]}"#);
+    let mut definition: Json = serde_json::from_str(
+        r#"{"rows": ["V"], "data": [{"field": "V", "subtotal": "count"}],
+            "fields": {"V": {"group": {"start": 1e20, "end": 1e20, "interval": 2}}}}"#,
+    )
+    .unwrap();
+    let sheet = &spec.sheets[1];
+    let pivot = &sheet.pivot_tables[0];
+    let error = parts(&spec, sheet, pivot, &definition, 1).err().unwrap();
+    assert!(error.contains("10,000 bins"), "{error}");
+    definition["fields"]["V"]["group"] = serde_json::json!({"start": 0, "end": 1e9, "interval": 1});
+    assert!(parts(&spec, sheet, pivot, &definition, 1).is_err());
+}
+
+#[test]
+fn unbounded_sources_and_lists_are_refused() {
+    let mut spec = case(r#"{"rows": ["K"], "data": [{"field": "V"}]}"#);
+    spec.sheets[1].pivot_tables[0].source = "D!A1:XFD1048576".into();
+    let sheet = &spec.sheets[1];
+    let pivot = &sheet.pivot_tables[0];
+    let error = parts(&spec, sheet, pivot, pivot.definition.as_ref().unwrap(), 1)
+        .err()
+        .unwrap();
+    assert!(error.contains("more than"), "{error}");
+    let spec = case(r#"{"rows": ["K"], "data": [{"field": "V"}]}"#);
+    let sheet = &spec.sheets[1];
+    let pivot = &sheet.pivot_tables[0];
+    let many =
+        serde_json::json!({"rows": ["K"], "data": vec![serde_json::json!({"field": "V"}); 300]});
+    assert!(parts(&spec, sheet, pivot, &many, 1).is_err());
+    let bad = serde_json::json!({"rows": ["K"], "data": [{"field": "V"}], "table": {"a\" b": 1}});
+    assert!(parts(&spec, sheet, pivot, &bad, 1).is_err());
+    let show = serde_json::json!({"rows": ["K"], "data": [{"field": "V", "showDataAs": "x\"/>"}]});
+    assert!(parts(&spec, sheet, pivot, &show, 1).is_err());
 }

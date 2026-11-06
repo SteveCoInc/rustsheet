@@ -225,7 +225,9 @@ pub enum PivotError {
     /// be renumbered under parts of its definition kept verbatim.
     #[error(transparent)]
     Refresh(PivotRefreshError),
-    /// Pivot parts the xlsx importer would skip (`Workbook::load_pivot_parts`), and why.
+    /// Pivot parts the xlsx importer would skip, or past the workbook's pivot limits
+    /// (`Workbook::load_pivot_parts`), and why. Harness support: it becomes typed reasons before
+    /// T-4178 makes the pivot API public.
     #[error("pivot parts: {0}")]
     Parts(String),
 }

@@ -59,7 +59,7 @@ fn value(wb: &Workbook, a1: &str) -> Value {
 #[test]
 fn a_refresh_on_load_pivot_renders_at_the_next_recalculation() {
     let (mut wb, parts) = book(true);
-    wb.load_pivot_parts(&parts).unwrap();
+    assert!(wb.load_pivot_parts(&[parts]).unwrap()[0].is_none());
     assert_eq!(value(&wb, "D1"), Value::Empty);
     wb.recalculate();
     for (a1, expected) in [
@@ -80,7 +80,7 @@ fn a_refresh_on_load_pivot_renders_at_the_next_recalculation() {
 #[test]
 fn a_pivot_saved_without_refresh_on_load_keeps_its_cells() {
     let (mut wb, parts) = book(false);
-    wb.load_pivot_parts(&parts).unwrap();
+    assert!(wb.load_pivot_parts(&[parts]).unwrap()[0].is_none());
     wb.recalculate();
     assert_eq!(value(&wb, "D1"), Value::Empty);
     assert_eq!(wb.pivot_places().len(), 1);
@@ -90,12 +90,24 @@ fn a_pivot_saved_without_refresh_on_load_keeps_its_cells() {
 fn parts_the_importer_skips_add_nothing() {
     let (mut wb, mut parts) = book(true);
     parts.cache_id = 2;
-    let error = wb.load_pivot_parts(&parts).unwrap_err();
+    let skipped = wb.load_pivot_parts(&[parts]).unwrap();
     assert!(
-        matches!(&error, EditError::Pivot(PivotError::Parts(reason)) if reason.contains("cacheId")),
-        "{error}"
+        matches!(&skipped[..], [Some(PivotError::Parts(reason))] if reason.contains("cacheId")),
+        "{skipped:?}"
     );
     wb.recalculate();
     assert!(wb.pivot_places().is_empty());
     assert_eq!(value(&wb, "D1"), Value::Empty);
+}
+
+#[test]
+fn parts_past_the_pivot_limit_are_refused_whole() {
+    let (mut wb, parts) = book(true);
+    let many = vec![parts; MAX_PIVOTS + 1];
+    let error = wb.load_pivot_parts(&many).unwrap_err();
+    assert!(
+        matches!(&error, EditError::Pivot(PivotError::Parts(reason)) if reason.contains("more than")),
+        "{error}"
+    );
+    assert!(wb.pivot_places().is_empty());
 }

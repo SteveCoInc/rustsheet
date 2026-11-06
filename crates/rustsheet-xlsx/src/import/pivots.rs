@@ -309,7 +309,9 @@ fn finish_cache<B: BufRead>(
 }
 
 /// One pivot cache and its pivot tables as package parts, without the package: what a case
-/// builder writes for them (`tools/src/rustsheet_tools/pivot_definition.py`).
+/// builder writes for them (`tools/src/rustsheet_tools/pivot_definition.py`). Harness support,
+/// not public API.
+#[doc(hidden)]
 #[derive(Clone, Copy, Debug)]
 pub struct PivotParts<'a> {
     /// The `pivotCacheDefinition` part; its records part is `cache_records`, whatever its `r:id`.
@@ -324,10 +326,14 @@ pub struct PivotParts<'a> {
 /// of `tables` (the `sheetId` it sits on, its part) against it, numbered as cache `cache_index`
 /// of the workbook. `values_left` is the workbook's remaining record-value budget
 /// ([`MAX_RECORD_VALUES`]). Harness support for spec cases (T-4152): their pivots reach the
-/// engine through the importer, the one reader of a pivot definition.
+/// engine through the importer, the one reader of a pivot definition. The parts are held in
+/// memory already, so the package's inflation cap is applied to their total size instead: parts
+/// past [`ImportLimits::max_uncompressed_bytes`] are refused unread.
 ///
 /// # Errors
-/// [`XlsxError::Workbook`] with the reason the importer would skip the cache or a pivot for.
+/// [`XlsxError::Limit`] for parts past the size cap, [`XlsxError::Workbook`] with the reason
+/// the importer would skip the cache or a pivot for.
+#[doc(hidden)]
 pub fn read_pivot_parts(
     parts: PivotParts<'_>,
     tables: &[(u32, &[u8])],
@@ -336,6 +342,15 @@ pub fn read_pivot_parts(
     date_system: DateSystem,
 ) -> Result<(PivotCache, Vec<PivotTable>), XlsxError> {
     let limits = ImportLimits::default();
+    let size = (tables.iter().map(|(_, part)| part.len()))
+        .chain([parts.cache_definition.len(), parts.cache_records.len()])
+        .fold(0_u64, |total, len| total.saturating_add(len as u64));
+    if size > limits.max_uncompressed_bytes {
+        return Err(XlsxError::Limit {
+            limit: crate::error::ImportLimit::UncompressedBytes,
+            max: limits.max_uncompressed_bytes,
+        });
+    }
     let values_left = values_left.min(MAX_RECORD_VALUES);
     let cache = read_definition(parts.cache_definition, values_left, &limits, date_system)
         .and_then(|definition| {

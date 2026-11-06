@@ -173,7 +173,8 @@ Input conventions:
   engine adapter writes the same parts (`crates/rustsheet-eval/src/pivot_definition.rs`, which
   mirrors the builder), loads them through the xlsx importer once the case's cells are in, and
   recalculates, so the engine refreshes and renders the pivot as Excel does on open (T-4152). A
-  pivot the importer drops (a calculated field, a `showDataAs` data field) is dropped there too.
+  pivot the importer drops (a calculated field, a `showDataAs` data field, group items past
+  the rebuilt groups) is dropped there too.
 - Optional `"names": {"rate": "=Sheet1!$B$1"}` declares workbook-scoped defined names (any
   formula Excel accepts as a name body, e.g. an intersection). A key `Sheet1!name` is a name scoped
   to that sheet.

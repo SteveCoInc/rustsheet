@@ -5,14 +5,17 @@
 //!
 //! It mirrors the builder part for part, attribute for attribute: what Excel opened is what the
 //! engine loads. The builder validates a definition (spec2xlsx refuses a bad one, and no case
-//! reaches the oracle without it), so a definition it would refuse is only an error here, with
-//! its checks not repeated. Keep the two in step: a change to the builder's parts is a change here.
+//! reaches the oracle without it), so a definition it would refuse is only an error here. Only
+//! the checks that bound the work or keep the XML well formed are repeated (a spec is untrusted
+//! input, directive 5). Keep the two in step: a change to the builder's parts is a change here.
+//! The golden parts in `tools/tests/pivot_parts_golden/` guard it both ways: this module's tests
+//! and `tools/tests/test_pivot_parts_golden.py` each assert their builder writes them.
 
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
 use quick_xml::escape::escape;
-use rustsheet_engine::pivot::Aggregate;
+use rustsheet_engine::pivot::{Aggregate, MAX_RECORD_VALUES};
 use serde_json::{Map, Value as Json};
 
 use crate::case::{split_qualified, CaseSpec, CellInput, PivotTableSpec, SheetSpec};
@@ -38,7 +41,28 @@ const SLOTS: [&str; 6] = [
     "extLst",
 ];
 /// Most numeric group bins the builder writes (`group_labels`).
-const MAX_BINS: f64 = 10_000.0;
+const MAX_BINS: usize = 10_000;
+/// Most entries of one definition list (`rows`, `columns`, `pages`, `data`, `calculated`,
+/// `fields`, a field's `order`, `hidden`, `collapsed` or `subtotals`): the importer's cap on a
+/// pivot's axis and data fields (SPEC-0015 "Untrusted-input limits"). A spec is untrusted input
+/// too (directive 5), so every list is bounded before it is walked.
+const MAX_LIST: usize = 256;
+/// A field's custom subtotal functions (`SUBTOTALS`, the `<item t>` names).
+const SUBTOTALS: [&str; 11] = [
+    "sum", "countA", "avg", "max", "min", "product", "count", "stdDev", "stdDevP", "var", "varP",
+];
+/// `ST_ShowDataAs` plus the Excel 2010 modes the builder accepts (`SHOW_DATA_AS`).
+const SHOW_DATA_AS: [&str; 9] = [
+    "normal",
+    "difference",
+    "percent",
+    "percentDiff",
+    "runTotal",
+    "percentOfRow",
+    "percentOfCol",
+    "percentOfTotal",
+    "index",
+];
 
 /// The three parts of a defined pivot: its cache definition and records, and its table.
 pub(crate) struct Parts {
@@ -162,6 +186,13 @@ fn attrs(raw: Option<&Json>) -> Result<String, String> {
     let object = raw.as_object().ok_or("attributes are an object")?;
     let mut out = String::new();
     for (name, value) in object {
+        // `_ATTR_NAME`: a letter, then letters and digits, so a name cannot break out of the tag.
+        let mut chars = name.chars();
+        let valid = chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+            && chars.all(|c| c.is_ascii_alphanumeric());
+        if !valid {
+            return Err(format!("attribute name {name:?}"));
+        }
         let _ = write!(out, r#" {name}="{}""#, escape(&attr_value(value)?));
     }
     Ok(out)
@@ -209,17 +240,20 @@ impl<'a> Field<'a> {
 
     /// Puts the items `order` lists first, in that order (`reorder`).
     fn reorder(&mut self, order: &[Json]) -> Result<(), String> {
-        let keys = (order.iter())
+        let keys = (bounded(order, "order")?.iter())
             .map(|raw| cached_json(raw).map(|v| key(v.as_ref())))
             .collect::<Result<Vec<_>, _>>()?;
+        let by_key: HashMap<Key, &Option<Cached>> =
+            self.items.iter().map(|v| (key(v.as_ref()), v)).collect();
         let mut first = Vec::with_capacity(keys.len());
         for k in &keys {
-            let item = (self.items.iter())
-                .find(|v| key(v.as_ref()) == *k)
+            let item = by_key
+                .get(k)
                 .ok_or_else(|| format!("an order item is not in field {:?}", self.name))?;
-            first.push(item.clone());
+            first.push((*item).clone());
         }
-        let rest = (self.items.iter()).filter(|v| !keys.contains(&key(v.as_ref())));
+        let listed: std::collections::HashSet<&Key> = keys.iter().collect();
+        let rest = (self.items.iter()).filter(|v| !listed.contains(&key(v.as_ref())));
         self.items = first.into_iter().chain(rest.cloned()).collect();
         Ok(())
     }
@@ -294,17 +328,29 @@ impl<'a> Field<'a> {
         let group = self.group();
         let get = |name: &str| number(group.and_then(|g| g.get(name)));
         let (start, end, step) = (get("start"), get("end"), get("interval"));
-        if step <= 0.0 || end < start || (end - start) / step > MAX_BINS {
-            return Err(format!(
+        let refused = || {
+            format!(
                 "pivot field {:?} group needs 0 < interval and at most 10,000 bins",
                 self.name
-            ));
+            )
+        };
+        let finite = start.is_finite() && end.is_finite() && step.is_finite();
+        if !finite || step <= 0.0 || end < start {
+            return Err(refused());
         }
+        // The builder's `while lo <= end: lo += step` loop, bounded: a step too small to move
+        // `low` (1e20 + 2) or past the bin cap is refused instead of looping. It writes one bin
+        // past `end` (t4128 G); Excel rebuilds the items on open (pivots.md "Numeric and date
+        // group labels are rewritten by Excel").
         let mut labels = vec![format!("<{}", number_text(start))];
         let mut low = start;
         while low <= end {
-            labels.push(format!("{}-{}", number_text(low), number_text(low + step)));
-            low += step;
+            let high = low + step;
+            if labels.len() > MAX_BINS || high <= low || !high.is_finite() {
+                return Err(refused());
+            }
+            labels.push(format!("{}-{}", number_text(low), number_text(high)));
+            low = high;
         }
         labels.push(format!(">{}", number_text(end)));
         Ok(labels)
@@ -346,12 +392,8 @@ impl<'a> DefinedPivot<'a> {
                 Field::new(h, values, None)
             })
             .collect();
-        for calc in d
-            .get("calculated")
-            .and_then(Json::as_array)
-            .into_iter()
-            .flatten()
-        {
+        let calculated = d.get("calculated").and_then(Json::as_array);
+        for calc in bounded(calculated.map_or(&[], Vec::as_slice), "calculated")? {
             let text = |k: &str| calc.get(k).and_then(Json::as_str).map(str::to_string);
             let (Some(field), Some(formula)) = (text("name"), text("formula")) else {
                 return Err(format!(
@@ -374,12 +416,11 @@ impl<'a> DefinedPivot<'a> {
                 .and_then(Json::as_bool)
                 .unwrap_or(true),
         };
-        for (field, entry) in d
-            .get("fields")
-            .and_then(Json::as_object)
-            .into_iter()
-            .flatten()
-        {
+        let entries = d.get("fields").and_then(Json::as_object);
+        if entries.is_some_and(|e| e.len() > MAX_LIST) {
+            return Err(format!("pivot {name}: more than {MAX_LIST} fields entries"));
+        }
+        for (field, entry) in entries.into_iter().flatten() {
             let index = pivot.index(field)?;
             let target = &mut pivot.fields[index];
             target.spec = entry.as_object();
@@ -406,16 +447,19 @@ impl<'a> DefinedPivot<'a> {
             .ok_or_else(|| format!("pivot {}: no field {name:?}", self.name))
     }
 
-    fn list(&self, key: &str) -> &'a [Json] {
-        self.d
-            .get(key)
-            .and_then(Json::as_array)
-            .map_or(&[], Vec::as_slice)
+    fn list(&self, key: &str) -> Result<&'a [Json], String> {
+        bounded(
+            self.d
+                .get(key)
+                .and_then(Json::as_array)
+                .map_or(&[], Vec::as_slice),
+            key,
+        )
     }
 
     fn axis(&mut self, key: &str, axis: &'static str) -> Result<Vec<i64>, String> {
         let mut out = Vec::new();
-        for name in self.list(key) {
+        for name in self.list(key)? {
             let name = name.as_str().ok_or("an axis lists field names")?;
             if name == VALUES {
                 out.push(VALUES_INDEX);
@@ -429,7 +473,7 @@ impl<'a> DefinedPivot<'a> {
     }
 
     fn read_pages(&mut self) -> Result<(), String> {
-        for page in self.list("pages") {
+        for page in self.list("pages")? {
             let field = page
                 .get("field")
                 .and_then(Json::as_str)
@@ -445,7 +489,7 @@ impl<'a> DefinedPivot<'a> {
     }
 
     fn read_data(&mut self) -> Result<(), String> {
-        for entry in self.list("data") {
+        for entry in self.list("data")? {
             let raw = entry.as_object().ok_or("a data field is an object")?;
             let field = raw
                 .get("field")
@@ -521,14 +565,15 @@ impl<'a> DefinedPivot<'a> {
     fn cache_records(&self) -> String {
         let database: Vec<&Field<'_>> =
             self.fields.iter().filter(|f| f.formula.is_none()).collect();
-        let index: Vec<HashMap<Key, usize>> = (database.iter())
+        // A listed field's records refer to its items by index; the others hold values inline.
+        let index: Vec<Option<HashMap<Key, usize>>> = (database.iter())
             .map(|f| {
                 let keys = f
                     .items
                     .iter()
                     .enumerate()
                     .map(|(k, v)| (key(v.as_ref()), k));
-                keys.collect()
+                f.listed().then(|| keys.collect())
             })
             .collect();
         let mut rows = String::new();
@@ -536,7 +581,7 @@ impl<'a> DefinedPivot<'a> {
             rows.push_str("<r>");
             for (f, at) in database.iter().zip(&index) {
                 let value = f.values.get(r).and_then(Option::as_ref);
-                if let Some(k) = at.get(&key(value)).filter(|_| f.listed()) {
+                if let Some(k) = at.as_ref().and_then(|at| at.get(&key(value))) {
                     let _ = write!(rows, r#"<x v="{k}"/>"#);
                 } else {
                     rows.push_str(&item_xml(value));
@@ -567,6 +612,9 @@ impl<'a> DefinedPivot<'a> {
             .and_then(Json::as_array)
             .map(|s| s.iter().filter_map(Json::as_str).collect());
         if let Some(subtotals) = &subtotals {
+            if subtotals.len() > MAX_LIST || subtotals.iter().any(|s| !SUBTOTALS.contains(s)) {
+                return Err(format!("subtotals of {:?}", f.name));
+            }
             head.push_str(r#" defaultSubtotal="0""#);
             for s in subtotals {
                 let _ = write!(head, r#" {s}Subtotal="1""#);
@@ -591,7 +639,8 @@ impl<'a> DefinedPivot<'a> {
             .collect();
         let mut flags: HashMap<usize, String> = HashMap::new();
         for (kind, attr) in [("hidden", r#" h="1""#), ("collapsed", r#" sd="0""#)] {
-            for raw in f.entry(kind).and_then(Json::as_array).into_iter().flatten() {
+            let listed = f.entry(kind).and_then(Json::as_array);
+            for raw in bounded(listed.map_or(&[], Vec::as_slice), kind)? {
                 let k = keys
                     .get(&key(cached_json(raw)?.as_ref()))
                     .ok_or_else(|| format!("{kind} item {raw} is not in field {:?}", f.name))?;
@@ -631,6 +680,9 @@ impl<'a> DefinedPivot<'a> {
             let _ = write!(attrs, r#" subtotal="{}""#, e.subtotal);
         }
         if let Some(show) = e.raw.get("showDataAs").and_then(Json::as_str) {
+            if !SHOW_DATA_AS.contains(&show) {
+                return Err(format!("showDataAs {show:?}"));
+            }
             let _ = write!(attrs, r#" showDataAs="{show}""#);
         }
         let base = match e.raw.get("baseField") {
@@ -670,8 +722,18 @@ impl<'a> DefinedPivot<'a> {
             row: anchor.row + 1,
             col: anchor.col + 1,
         };
-        let area = (self.d.get("area").and_then(Json::as_str))
-            .map_or_else(|| format!("{anchor}:{corner}"), str::to_string);
+        // `_area`: a range from the anchor, written from its parsed corners.
+        let area = match self.d.get("area").and_then(Json::as_str) {
+            None => format!("{anchor}:{corner}"),
+            Some(area) => {
+                let (from, to) = (area.split_once(':').and_then(|_| parse_range(area)))
+                    .filter(|(from, to)| {
+                        *from == anchor && to.row >= from.row && to.col >= from.col
+                    })
+                    .ok_or_else(|| format!("pivot {}: area {area:?}", self.name))?;
+                format!("{from}:{to}")
+            }
+        };
         let pages = if self.pages.is_empty() {
             String::new()
         } else {
@@ -733,6 +795,14 @@ impl<'a> DefinedPivot<'a> {
     }
 }
 
+/// `list` when it holds at most [`MAX_LIST`] entries.
+fn bounded<'j>(list: &'j [Json], what: &str) -> Result<&'j [Json], String> {
+    if list.len() > MAX_LIST {
+        return Err(format!("more than {MAX_LIST} entries in {what}"));
+    }
+    Ok(list)
+}
+
 /// The parts the case builder writes for `pivot` of `sheet` (its `definition`, `definition`),
 /// with cache id `cache_id` (`pivot.py` `_defined`).
 ///
@@ -758,6 +828,13 @@ pub(crate) fn parts(
     let (from, to) = parse_range(&range)
         .filter(|(from, to)| from.row < to.row && from.col <= to.col)
         .ok_or_else(|| format!("pivot {name}: source {range} has no data rows"))?;
+    // Every cell of the source is read: bound it as a refresh bounds its records.
+    let size = u64::from(to.row - from.row + 1) * u64::from(to.col - from.col + 1);
+    if size > MAX_RECORD_VALUES as u64 {
+        return Err(format!(
+            "pivot {name}: source {range} holds more than {MAX_RECORD_VALUES} values"
+        ));
+    }
     let mut rows = Vec::new();
     let mut header = Vec::new();
     for row in from.row..=to.row {
@@ -778,6 +855,11 @@ pub(crate) fn parts(
         }
     }
     if let Some(names) = d.get("cache_names").and_then(Json::as_array) {
+        if names.len() != header.len() {
+            return Err(format!(
+                "pivot {name}: cache_names needs one name per source column"
+            ));
+        }
         header = (names.iter())
             .map(|n| n.as_str().map(str::to_string))
             .collect::<Option<_>>()

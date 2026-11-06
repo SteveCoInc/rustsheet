@@ -612,13 +612,6 @@ impl Model {
                 let (row, column) = (one_based(cell.row)?, one_based(cell.column)?);
                 self.prepare_cell_for_user_input(sheet, row, column)
                     .and_then(|()| match &cell.value {
-                        // An empty-text item's label is an empty cell (pivots.md "Pivot field
-                        // names for duplicate and blank source headers",
-                        // probes/t4627-pivot-field-name-collisions P_Rec!A6).
-                        PivotCell::Text(text) if text.is_empty() => self
-                            .workbook
-                            .worksheet_mut(sheet)?
-                            .cell_clear_contents(row, column),
                         PivotCell::Text(text) => {
                             self.update_cell_with_text(sheet, row, column, text)
                         }
