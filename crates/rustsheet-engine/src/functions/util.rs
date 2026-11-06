@@ -460,6 +460,12 @@ impl Model {
                 kind: Function::Index,
                 args,
             } => self.index_reference(args, cell),
+            // A lifted XLOOKUP with a range if_not_found is an array of its hits and that range
+            // (SPEC-0014 amendment "Mixed grids"); any other XLOOKUP is its value, as before.
+            Node::FunctionKind {
+                kind: Function::Xlookup,
+                args,
+            } => return self.xlookup_reference(args, cell, false),
             Node::FunctionKind {
                 kind: Function::Hlookup,
                 args,
@@ -543,6 +549,13 @@ impl Model {
                     _ => Edge::Drop,
                 };
                 let value = self.take_drop_reference(args, cell, edge, true);
+                self.empty_amor_left_over();
+                value
+            }
+            // So does a lifted XLOOKUP with a range if_not_found (SPEC-0014 amendment "Mixed
+            // grids"), which also empties AMORDEGRC's left-over value as its reference form does.
+            Function::Xlookup => {
+                let value = self.xlookup_reference(args, cell, true);
                 self.empty_amor_left_over();
                 value
             }
