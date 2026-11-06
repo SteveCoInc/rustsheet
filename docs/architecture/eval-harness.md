@@ -90,6 +90,20 @@ Input conventions:
   (`<cfRule type="expression">`) and custom data validations, their formulas prefixed like cell
   formulas (T-3263). They probe what Excel accepts in those formulas (a refused workbook is the
   answer); the engine adapter ignores both, as neither changes a cell value.
+- Optional per-sheet `"pivot_tables"` places pivots on the sheet (T-1705). The original form names
+  one `row`, an optional `column`, one `value` and a `function`, and the builder renders the cells
+  itself (`tools/src/rustsheet_tools/pivot.py`). A pivot with a `"definition"` (case builder v2,
+  T-4122) maps one-to-one onto `pivotTableDefinition`:
+  - `rows`, `columns` and `pages` name the fields (`"Values"` is the Σ field);
+  - `data` lists the data fields (`subtotal`, `showDataAs`, `baseField`, `baseItem`, `numFmtId`);
+  - `fields` gives per-field `attrs`, `hidden`, `collapsed`, `order`, `subtotals` and a numeric
+    `group`;
+  - `calculated` lists calculated fields; `table` and `cache` hold attributes;
+  - `xml` holds raw `formats`, `filters` and similar children.
+
+  The builder writes only the cache, records and table parts, and Excel renders the pivot on open
+  (`refreshOnLoad`). The full schema is in `tools/src/rustsheet_tools/pivot_definition.py`. The
+  engine adapter does not register a defined pivot until the engine renders pivots (T-4152).
 - Optional `"names": {"rate": "=Sheet1!$B$1"}` declares workbook-scoped defined names (any
   formula Excel accepts as a name body, e.g. an intersection). A key `Sheet1!name` is a name scoped
   to that sheet.
@@ -143,6 +157,17 @@ A sidecar may also hold `text{Sheet:{A1:"shown text"}}`: Excel's displayed text 
 case lists in `"text": ["Sheet!A1", ...]` (T-1610, decision 0068). spec2xlsx records those cells in
 the `rustsheet.text.<n>` custom properties, and the excel-graph backend reads each one's
 `Range.text` after the recalculation, in the same session.
+A sidecar of a workbook with pivots also holds `pivots: [...]` (T-4123), one entry per pivot Excel
+saved, from `rustsheet-eval snapshot`'s `pivots`:
+- `name`, `sheet` and `location` (`<location ref>`);
+- `first_header_row`, `first_data_row` and `first_data_col`;
+- `row_page_count` and `col_page_count`;
+- `row_items` and `col_items`, Excel's layout lines `{t?, r, i, x:[...]}`;
+- `cache_fields` (`{name, group_items?}`);
+- `cells`: every cell of the location and of the page-field rows above it, A1 to value, a blank one
+  as `{"t":"empty"}` (`snapshot.py` `pivot_areas`; an area over 100,000 cells is not captured).
+
+`OracleFile::pivots` reads it, and T-4124 scores it.
 Tools never re-derive case discovery: `rustsheet-eval cases <suite>` prints each case's path,
 sidecar path, formula-cell count and whether the suite trusts its cached values.
 
