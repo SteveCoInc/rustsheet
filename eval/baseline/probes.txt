@@ -2369,6 +2369,7 @@ C	probes/t4444-dfunction-text-equal-one.case.json	52
 C	probes/t4447-sort-fractional-keys.case.json	84
 C	probes/t4449-groupby-function-array-edges.case.json	145
 C	probes/t4453-near-integer-text-args.case.json	168
+C	probes/t4462-time-date-near-integer-edge.case.json	315
 C	probes/t4464-groupby-spent-filter-shapes.case.json	323
 C	probes/t4480-lcid-sublanguage-fallback.case.json	98
 C	probes/t4492-locale-comma-tag-shapes.case.json	24
