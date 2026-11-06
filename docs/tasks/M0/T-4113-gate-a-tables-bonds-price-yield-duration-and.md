@@ -54,10 +54,12 @@ Every failing table point has an owner.
   value).
   - Domain errors, each from a semantics entry: dates off the calendar, a settlement below 1 or not before the
     maturity, frequency not 1, 2 or 4, basis outside 0..4, a negative rate or yld, a price or redemption of 0 or below,
-    a previous coupon before 1900-01-01, and for PRICE, DURATION and MDURATION a power `(1+yld/f)^(s+N-1)` or a dirty sum
-    past the double range. No value within 1E-9 (in the logarithm) of the double range's top, for an infinite
-    `100·rate` or DURATION weighted sum under a finite dirty sum, at PRICE's linear discount of 0, and for YIELD's
-    one-period form from a settlement before 1900-03-01.
+    a previous coupon before 1900-01-01, and for PRICE, DURATION and MDURATION with more than one coupon left a power
+    `(1+yld/f)^(s+N-1)` or a dirty sum past the double range (the evidence's bonds are 10 years long). No value within
+    1E-9 (in the logarithm) of the double range's top, with one coupon left for a dirty sum or a PRICE past the double
+    range (review: unprobed, PRICE is linear and DURATION s/f there), for an infinite `100·rate` or DURATION weighted
+    sum under a finite dirty sum, at PRICE's linear discount of 0, and for YIELD's one-period form from a settlement
+    before 1900-03-01. No committed point changed with the one-coupon rule (`rustsheet-accuracy verify`).
   - Pre-check before generating: the definitions over all 4,310 literal one-call cells of these functions in
     eval/suites (probes, probes-numeric, gen-m9 and the other spec suites; 980 more are skipped as not literal): no
     math domain error where Excel has a number. PRICE, DURATION and MDURATION are within 1E-9 of Excel on every numeric cell; YIELD's 208 Excel `#NUM!`

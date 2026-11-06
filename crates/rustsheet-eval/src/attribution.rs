@@ -151,9 +151,9 @@ impl Tier {
             Tier::Unscored
         } else if cells.pass == scored {
             Tier::Exact
-        } else if visible == 0 && cells.digits15 == 0 && cells.residue13 == 0 {
+        } else if visible == 0 && cells.digits15 == 0 && cells.residue13 + cells.r3_math == 0 {
             Tier::Ulp4
-        } else if visible == 0 && cells.residue13 == 0 {
+        } else if visible == 0 && cells.residue13 + cells.r3_math == 0 {
             Tier::Digits15
         } else if share_at_least(RATE_NUM) {
             Tier::Rate999
@@ -384,6 +384,13 @@ mod tests {
         assert_eq!(Tier::of(&residue(1, 0)), Tier::Rate999);
         assert_eq!(Tier::of(&residue(1, 3)), Tier::Rate999);
         assert_eq!(Tier::of(&residue(0, 3)), Tier::Ulp4);
+        // So are R3 math-over-Excel cells (decision 0310): not visibly off, never within 15 digits.
+        let r3 = Closeness {
+            r3_math: 2,
+            ..buckets(5, 0, 0)
+        };
+        assert_eq!(Tier::of(&r3), Tier::Rate999);
+        assert_eq!(r3.visible(), 0);
         let other = Closeness {
             visible_other: 1,
             ..buckets(1, 0, 0)

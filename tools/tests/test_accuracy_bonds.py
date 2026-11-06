@@ -131,6 +131,13 @@ def test_no_value_where_unevidenced() -> None:
     # YIELD with one period left from a settlement before 1900-03-01
     with pytest.raises(NoValueError):
         YIELD.evaluate([mp(a) for a in (30, 100, 0.05, 99, 100, 4, 1)])
+    # one coupon left: a coupon sum past the double range is unprobed (the evidence's bonds have N > 1)
+    for definition, args in [
+        (PRICE, (47300, 47484, 9.99999999999999e307, 0.05, 100, 2, 0)),
+        (DURATION, (47300, 47484, 9.99999999999999e307, 0.05, 2, 0)),
+    ]:
+        with pytest.raises(NoValueError):
+            definition.evaluate([mp(a) for a in args])
 
 
 def test_draws_are_valid_points() -> None:

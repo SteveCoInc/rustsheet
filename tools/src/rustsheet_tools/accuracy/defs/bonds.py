@@ -27,9 +27,11 @@ The math, exact on the double arguments, with c = 100·rate/f and q = 1 + yld/f:
 - YIELD with N > 1 is the root of PRICE(yld) = pr. PRICE falls strictly with yld when s >= 0 (every flow is at t >= 0
   after the dirty price at t = 0: one sign change, so one root, Descartes' rule, `annuity.unique_rate`), from +∞ at
   yld = -f to -c·A/E + c·[s = 0] <= 0, so a positive price has exactly one root. Excel's Newton from its fitted start
-  converges to it, stopping short by up to about 6e-9 relative ("YIELD stops short of PRICE's root"); where that Newton
-  leaves PRICE's domain or runs 100 steps Excel's value is `#NUM!` or the 100th iterate ("YIELD's #NUM! cells and its
-  100-step cap"), which the draws stay away from (Excel's error there is the target, the math the root).
+  converges to it and stops short of it ("YIELD stops short of PRICE's root"): the stop is an absolute step test, so the
+  relative gap is about 1e-9 at roots of a few percent and larger at small roots (5.4E-6 at accuracy/YIELD/s1 A252, a
+  root of 5.7E-6; 6.8E-8 at A230, 4.2E-8 at A261). Where that Newton leaves PRICE's domain or runs 100 steps Excel's
+  value is `#NUM!` or the 100th iterate ("YIELD's #NUM! cells and its 100-step cap"; "YIELD is #NUM! at a price and
+  redemption far from par"): Excel's error is the target there, and the math the root.
 
 Domains (Excel's `#NUM!`, `DomainError`), each evidenced:
 - a date that does not floor to 0..2958465, a settlement below 1 or not before the maturity, a frequency other than
@@ -38,10 +40,12 @@ Domains (Excel's `#NUM!`, `DomainError`), each evidenced:
   the calendar");
 - a PCD before 1900-01-01 ("Coupon schedules at the calendar's edges": COUPNUM, PRICE, YIELD, DURATION and MDURATION
   are `#NUM!` there);
-- PRICE, DURATION and MDURATION: q^(s+N-1) past the double range with N > 1, and a dirty sum (the discounted flows)
-  past it ("PRICE, DURATION and MDURATION at a huge yield or coupon"; a coupon rate of 1E+306 at a 5% yield).
+- PRICE, DURATION and MDURATION with N > 1: q^(s+N-1) past the double range, and a dirty sum (the discounted flows)
+  past it ("PRICE, DURATION and MDURATION at a huge yield or coupon"; a coupon rate of 1E+306 at a 5% yield, 10-year
+  bonds).
 Not drawn and given no math value (`NoValueError`), as no evidence names Excel's result: a power or a dirty sum within
-1E-9 (relative, in its logarithm) of the double range's top; 100·rate past the double range, or a DURATION weighted sum
+1E-9 (relative, in its logarithm) of the double range's top; with one coupon left, a dirty sum or a PRICE past the
+double range (the evidence covers N > 1 only); 100·rate past the double range, or a DURATION weighted sum
 past it, while the dirty sum is finite (Excel's intermediate is infinite); PRICE's linear discount at 0 (s < 0 on bases
 2 and 3, where A can exceed E); YIELD with N > 1 and s < 0 (a flow before the dirty price: no evidenced root choice);
 YIELD with one period left and a settlement before 1900-03-01 (whether DSR counts the fictitious day is unprobed).
@@ -68,6 +72,7 @@ from rustsheet_tools.accuracy.defs.yearfrac import (
     displayed_date,
     eu_30_360,
     real_date,
+    serial_of,
     us_30_360,
     whole_serial,
 )
@@ -75,7 +80,6 @@ from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 from rustsheet_tools.fitlab.kernels.solvers import schedule
-from rustsheet_tools.fitlab.sweep import EPOCH
 
 ORDER_SOURCE = "financial.md#price-yield-duration-and-mduration-check-order"
 CALENDAR_SOURCE = "financial.md#coupon-settlement-before-the-calendar"
@@ -87,7 +91,7 @@ SUM_SOURCE = "financial.md#price-duration-and-mduration-sum-order-at-a-huge-coup
 HUGE_SOURCE = "financial.md#price-duration-and-mduration-at-a-huge-yield-or-coupon"
 ONE_PERIOD_SOURCE = "financial.md#yield-with-one-coupon-period-left-is-closed-form"
 SHORT_SOURCE = "financial.md#yield-stops-short-of-prices-root"
-NEWTON_SOURCE = "financial.md#yield-s-num-cells-and-its-100-step-cap"
+NEWTON_SOURCE = "financial.md#yields-num-cells-and-its-100-step-cap"
 WORK_SOURCE = "financial.md#yield-and-odd-coupon-work-cap"
 ENGINE_SOURCE = (
     "crates/rustsheet-engine/src/functions/financial/financial_bonds.rs (CouponSchedule, duration_of)"
@@ -122,7 +126,7 @@ def _date_serial(d: datetime.date) -> int:
     """A schedule date from 1900-01-01 on as Excel's 1900 serial (the fictitious 1900-02-29 counts from March)."""
     if d < MARCH_1900:
         return (d - datetime.date(1899, 12, 31)).days
-    return (d - EPOCH).days
+    return int(serial_of(d.year, d.month, d.day))
 
 
 def basis_days(start: int, end: int, basis: int) -> Fraction:
@@ -231,10 +235,15 @@ def _sums(b: Bond, c: Coupons, cf: mpmath.mpf, weighted: bool) -> tuple[mpmath.m
     return +coupon_sum, +red_term, +weighted_sum
 
 
-def _dirty(coupon_sum: mpmath.mpf, red_term: mpmath.mpf, rate: mpmath.mpf) -> mpmath.mpf:
-    """The dirty sum; DomainError past the double range, NoValueError for an infinite 100·rate below it."""
+def _dirty(coupon_sum: mpmath.mpf, red_term: mpmath.mpf, rate: mpmath.mpf, n: int) -> mpmath.mpf:
+    """The dirty sum; past the double range DomainError with more than one coupon left (the evidence's 10-year bonds),
+    NoValueError with one (unprobed: PRICE's one-period form is linear, DURATION's s/f); NoValueError for an infinite
+    100·rate below it."""
     dirty = coupon_sum + red_term
     if _top(_ln(dirty), "the dirty sum"):
+        if n == 1:
+            msg = "the one-period flows' sum past the double range (unprobed)"
+            raise NoValueError(msg)
         msg = "the discounted flows' sum past the double range: #NUM!"
         raise DomainError(msg)
     if _top(_ln(100 * rate), "100·rate"):
@@ -248,7 +257,7 @@ def price_of(b: Bond, c: Coupons) -> mpmath.mpf:
     cf = _coupon(b)
     accrued = cf * fraction_to_mpf(c.a / c.e)
     if c.n == 1:
-        _dirty(cf, b.redemption, b.rate)
+        _dirty(cf, b.redemption, b.rate, 1)
         den = 1 + fraction_to_mpf(c.s) * b.fourth / b.frequency
         if den == 0:
             msg = "the linear discount is 0 (unprobed)"
@@ -256,8 +265,11 @@ def price_of(b: Bond, c: Coupons) -> mpmath.mpf:
         value = (b.redemption + cf) / den - accrued
     else:
         coupon_sum, red_term, _ = _sums(b, c, cf, weighted=False)
-        value = _dirty(coupon_sum, red_term, b.rate) - accrued
+        value = _dirty(coupon_sum, red_term, b.rate, c.n) - accrued
     if _top(_ln(abs(value)), "PRICE"):
+        if c.n == 1:  # a near-zero linear discount: unprobed
+            msg = "the one-period PRICE past the double range (unprobed)"
+            raise NoValueError(msg)
         msg = "PRICE past the double range: #NUM!"
         raise DomainError(msg)
     return value
@@ -266,7 +278,7 @@ def price_of(b: Bond, c: Coupons) -> mpmath.mpf:
 def duration_of(b: Bond, c: Coupons) -> mpmath.mpf:
     """DURATION (module docstring)."""
     coupon_sum, red_term, weighted = _sums(b, c, _coupon(b), weighted=True)
-    dirty = _dirty(coupon_sum, red_term, b.rate)
+    dirty = _dirty(coupon_sum, red_term, b.rate, c.n)
     if _top(_ln(abs(weighted)), "the weighted sum"):
         msg = "the weighted sum past the double range while the dirty sum is not (unprobed)"
         raise NoValueError(msg)
@@ -468,8 +480,10 @@ def _duration_draw(stratum: str, rng: random.Random) -> list[Arg]:
 
 def _yield_draw(stratum: str, rng: random.Random) -> list[Arg]:
     """A bond priced at a drawn yld, the price cut to 15 digits: the math is then the root at that price. The draws
-    keep the price from 1E-3 to 1E4 of par and the coupon rate below 5, where Excel's Newton converges ("YIELD's #NUM!
-    cells and its 100-step cap"), and the tail stratum adds negative yields (a price above the undiscounted flows)."""
+    keep the price from 1E-3 to 1E4 of the redemption and the coupon rate below 5, which still includes regions where
+    Excel's Newton is `#NUM!` (a price of 1E5 and more at a redemption near 100, a price and redemption far from par:
+    "YIELD's #NUM! cells and its 100-step cap", "YIELD is #NUM! at a price and redemption far from par"); the tail
+    stratum adds negative yields (a price above the undiscounted flows)."""
     if stratum == "edge":
         d = _edge(rng, price_given=True)
         if rng.random() < 0.5:

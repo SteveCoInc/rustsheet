@@ -129,8 +129,7 @@ def actual_year(start: datetime.date, end: datetime.date) -> Fraction:
 
 
 def whole_serial(x: float) -> int:
-    """A date argument floored to a whole serial; DomainError (`#NUM!`) outside 0..2958465 (YEARFRAC, and the bond
-    functions' settlement and maturity, T-4113)."""
+    """A date argument floored to a whole serial; DomainError (`#NUM!`) outside 0..2958465."""
     whole = int(x // 1)
     if not 0 <= whole <= LAST_DAY:
         msg = f"date {x} is outside 1900-01-00..9999-12-31"
@@ -138,23 +137,32 @@ def whole_serial(x: float) -> int:
     return whole
 
 
-def yearfrac_value(start: float, end: float, basis: int = 0) -> Fraction:
-    """YEARFRAC's math (module docstring). DomainError for a date outside the calendar or a basis
-    outside 0..4."""
+def day_count_parts(start: int, end: int, basis: int) -> tuple[int, Fraction]:
+    """The basis day count and year length of whole serials `start` <= `end`, basis 0..4 (module
+    docstring): YEARFRAC is their quotient, and the discount securities read them apart (T-4112)."""
+    if basis == 0:
+        return us_30_360(displayed_date(start), displayed_date(end)), Fraction(360)
+    if basis == 1:
+        return end - start, actual_year(real_date(start), real_date(end))
+    if basis == 4:
+        return eu_30_360(displayed_date(start), displayed_date(end)), Fraction(360)
+    return end - start, Fraction(360 if basis == 2 else 365)
+
+
+def check_basis(basis: int) -> None:
+    """DomainError (`#NUM!`) for a basis outside 0..4."""
     if not 0 <= basis < 5:
         msg = f"basis {basis} is outside 0..4"
         raise DomainError(msg)
+
+
+def yearfrac_value(start: float, end: float, basis: int = 0) -> Fraction:
+    """YEARFRAC's math (module docstring). DomainError for a date outside the calendar or a basis
+    outside 0..4."""
+    check_basis(basis)
     s, e = sorted((whole_serial(start), whole_serial(end)))
-    days = e - s
-    if basis == 0:
-        return Fraction(us_30_360(displayed_date(s), displayed_date(e)), 360)
-    if basis == 1:
-        return days / actual_year(real_date(s), real_date(e))
-    if basis == 2:
-        return Fraction(days, 360)
-    if basis == 3:
-        return Fraction(days, 365)
-    return Fraction(eu_30_360(displayed_date(s), displayed_date(e)), 360)
+    days, year = day_count_parts(s, e, basis)
+    return days / year
 
 
 def _value(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -186,7 +194,8 @@ def _date(rng: random.Random, lo: int, hi: int, fraction: float = 0.0) -> float:
     return day
 
 
-def _serial_of(year: int, month: int, day: int) -> float:
+def serial_of(year: int, month: int, day: int) -> float:
+    """The serial of a real calendar date from 1900-03-01 on."""
     return float((datetime.date(year, month, day) - EPOCH).days)
 
 
@@ -198,7 +207,7 @@ def _typical(rng: random.Random) -> list[Arg]:
 def _month_end(rng: random.Random, year: int) -> float:
     month = rng.randint(1, 12)
     last = calendar.monthrange(year, month)[1]
-    return _serial_of(year, month, rng.choice((last, last - 1, 30, 1) if last >= 30 else (last, last - 1, 1)))
+    return serial_of(year, month, rng.choice((last, last - 1, 30, 1) if last >= 30 else (last, last - 1, 1)))
 
 
 def _tail(rng: random.Random) -> list[Arg]:
@@ -209,14 +218,14 @@ def _tail(rng: random.Random) -> list[Arg]:
         lambda: _with_basis(rng, _month_end(rng, year), _month_end(rng, year + rng.randint(0, 3))),
         lambda: _with_basis(
             rng,
-            _serial_of(year, 2, calendar.monthrange(year, 2)[1]),
-            _serial_of(year + rng.randint(0, 4), 2, 28) + rng.choice((0.0, 1.0)),
+            serial_of(year, 2, calendar.monthrange(year, 2)[1]),
+            serial_of(year + rng.randint(0, 4), 2, 28) + rng.choice((0.0, 1.0)),
         ),
         lambda: _year_apart(rng, year),
         lambda: _with_basis(
             rng,
-            _serial_of(year, rng.randint(1, 3), rng.randint(1, 28)),
-            _serial_of(year + rng.randint(0, 1), rng.randint(2, 4), rng.randint(1, 28)),
+            serial_of(year, rng.randint(1, 3), rng.randint(1, 28)),
+            serial_of(year + rng.randint(0, 1), rng.randint(2, 4), rng.randint(1, 28)),
         ),
     ]
     return one_of(rng, shapes)

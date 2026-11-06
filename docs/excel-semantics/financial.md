@@ -2605,6 +2605,31 @@ Status: DEVIATION (decision 0014)
 Implemented in: functions/lift/kinds/financial.rs (`CUMULATIVE_WEIGHT`, `CUMULATIVE`)
 Tasks: T-1845
 
+## CUMIPMT and CUMPRINC argument domains (T-4110)
+Rule: CUMIPMT and CUMPRINC are `#NUM!` at a rate of 0, for a start period below 1 (before it rounds up), for an end
+period past nper (also below nper + 1, over a fractional nper) and for a start period after the end period. Over a
+valid range CUMPRINC is within ulps of the exact sum with the start rounded up and the end rounded down, type 1's
+period 1 being the whole payment, also over millions of periods ("CUMIPMT and CUMPRINC over many periods"). CUMIPMT
+is `PMT·m - CUMPRINC` in doubles, which cancels at a tiny rate: `CUMIPMT(1.10337465791075E-12,249,107536.505163037,50,88,0)`
+is -3.3637479646131396E-6 against the math's -3.3637426202E-6, 1.6E-6 relative off (CUMIPMT/s1 A108); elsewhere it is
+within ulps of the exact sum too.
+Evidence: the Gate A tables accuracy/CUMIPMT/s1 and accuracy/CUMPRINC/s1 (excel-graph, 2026-11-06, T-4110), 400 points,
+16 of them `#NUM!`: a rate of 0 at CUMIPMT A127 `CUMIPMT(0,156,794172.239738137,76,130,1)`, A138 and CUMPRINC A113,
+A115, A122, A124, A132, A138; a start below 1 at CUMIPMT A118 `CUMIPMT(0.00122690808909371,58,276.366733654612,0.3,53,0)`
+and CUMPRINC A131 (start 0), A136 (0.3); an end past a fractional nper at CUMPRINC A119
+`CUMPRINC(0.0366349037247216,213.5,37308.7701841375,186,214,0)` and A126 (nper 65.5, end 66); a start after the end at
+CUMIPMT A115, A132 and CUMPRINC A125. The gen-m9 cells agree: 9d9ceba257f8001b A382 `CUMIPMT(0,310,54445,6,22,0)`,
+67a4c03afd63f988 A271 `CUMIPMT(0.05,272,417600,7,2,0)`, 0a957119475760c5 A40 (start 0.3). Every other point is a value.
+Unprobed: a negative rate (only -2, gen-m9 d0854366830dcdee A232, and the overflow case of "PMT when (1+rate)^nper
+overflows or underflows" are `#NUM!`), a pv of 0 or below, a type other than 0, 0.5 and 1, and a start and end in order
+whose rounding leaves no whole period (`CUMIPMT(r,n,pv,1.5,1.7,0)`); the Gate A definitions give them no math value.
+Where the principal underflows the double range (a deep discount over millions of periods, CUMPRINC A153, A170) Excel
+gives 0, inside the table's absolute floor.
+Ours: the engine matches every error and is bit-exact on 230 of the 400 points; four tiny-rate CUMIPMT points are
+visibly off Excel through `PMT·m - CUMPRINC` (known failures, T-4390).
+Status: VERIFIED (excel-graph)
+Tasks: T-4110
+
 ## NPV, IRR and MIRR cash-flow work cap
 Rule: RustSheet charges each lifted NPV, IRR or MIRR element for its walks over the cash flows, against SPEC-0011's
 2^27 visit cap. NPV and MIRR elements cost one unit per flow. An IRR element costs 512 units per flow (`IRR_WEIGHT`),
@@ -3006,7 +3031,7 @@ Rule: INTRATE, PRICEDISC and YIELDDISC accept settlement serial 0 and compute wi
 0.00044227185222223174), whereas RECEIVED, PRICEMAT and YIELDMAT return #NUM! for settlement 0 (PRICEMAT and
 YIELDMAT possibly because issue > settlement: inferred, the probe cannot tell it from a rejection of settlement 0 itself). All six: basis 5 and -1 are #NUM!, a fractional basis truncates (1.9 is 1) and any negative basis is #NUM! ("Day-count basis: a negative basis is #NUM!"), a text
 basis "1" is coerced, a boolean basis is #VALUE!, text dates are parsed, fractional dates truncate, settlement >= maturity
-is #NUM!, and a zero or negative investment, price or redemption (probed for INTRATE, PRICEDISC and YIELDDISC; RECEIVED's investment) is #NUM!, as is a zero or negative PRICEDISC discount; RECEIVED is #NUM! once 1 - discount*yearfrac = 0 (the "< 0" side is inferred, not probed) (`RECEIVED(...,1000,1)` is #NUM!, `...,0.99` is 99999.99999999991); a negative PRICEMAT/YIELDMAT rate or yield price is #NUM! (PRICEMAT and YIELDMAT accept a
+is #NUM!, and a zero or negative investment, price or redemption (probed for INTRATE, PRICEDISC and YIELDDISC; RECEIVED's investment) is #NUM!, as is a zero or negative PRICEDISC discount; RECEIVED is #NUM! once 1 - discount*yearfrac = 0 and below it (the "< 0" side since gen-m9 01523d247594952e A152, A222 and accuracy/RECEIVED/s1: "Discount securities and T-bills: amount domains (T-4112)") (`RECEIVED(...,1000,1)` is #NUM!, `...,0.99` is 99999.99999999991); a negative PRICEMAT/YIELDMAT rate or yield price is #NUM! (PRICEMAT and YIELDMAT accept a
 zero rate; issue on or after settlement is #NUM!, issue = settlement included: probes/matdisc-serial-0-60 A9, A14, A25, A30). Basis 2 is the only mode whose result differs on a one-year span
 (actual/360); bases 0, 1, 3 and 4 agree there.
 PRICEMAT and YIELDMAT count the settlement-to-maturity days as DSM = YEARFRAC-days(issue,maturity) - days(issue,settlement), not
@@ -3064,6 +3089,46 @@ Evidence: probes/effect-overflow-power-of-ten A1-A14 (excel-graph).
 Ours: `rate_power` in functions/financial/rate_conversions.rs calls `arithmetic::power` and maps its overflow to `#NUM!`.
 Status: VERIFIED (excel-graph)
 Tasks: T-2034, T-2241
+
+## EFFECT, NOMINAL and RRI near a rate of 0 are far from the math (T-4110)
+Rule: EFFECT and NOMINAL are `#NUM!` at a rate of 0 and at an npery that floors to 0. At a tiny rate, or a rate small
+against npery, Excel's `(1 + r/n)^n - 1` and `((1 + e)^(1/n) - 1)·n` lose the rate in the double `1 + r/n` or
+`(1 + e)^(1/n)`: where it rounds to 1 the result is 0, and near it the result is off the math by up to 61%. RRI's
+`EXP(LN(fv/pv)*(1/nper))-1` cancels the same way where the growth is near 0. These are Excel's values (decision 0300):
+the engine matches them to the bit.
+Evidence: the Gate A tables accuracy/EFFECT/s1, accuracy/NOMINAL/s1 and accuracy/RRI/s1 (excel-graph, 2026-11-06,
+T-4110):
+- `#NUM!` at a rate of 0 (EFFECT A71 `EFFECT(0,7)`, A72, A76, A81; NOMINAL A69 `NOMINAL(0,275)`, A70, A73-A75, A78, A84)
+  and at npery 0 (EFFECT A67 `EFFECT(0.0270739423891995,0)`, A73, A80, A83, A84; NOMINAL A68, A71, A77, A79, A80, A82),
+  as gen-m9 5422bdbf173fc233 A70 `EFFECT(0,4)` and c0681a8b150ce301 A291 `EFFECT(0.05,0.5)` showed.
+- 0 where the math is not: EFFECT A85 `EFFECT(1.70813547576784E-10,25076364)` (math 1.708E-10), A92, A93, A95, A99,
+  A119; NOMINAL A85 `NOMINAL(2.51964277981808E-13,669472753125)` (math 2.520E-13), A91, A94, A95, A108, A109, A120.
+- Off the math by more than 1E-4 relative: EFFECT A116 `EFFECT(4.71226605712091E-15,3)` 4.6629367034256575E-15
+  (math 4.7123E-15, 1.0%), A87 (2.0%), A102, A104, A110, A113, A120; NOMINAL A119 `NOMINAL(4.04873998338286E-15,4)`
+  3.552713678800501E-15 (math 4.0487E-15, 12%), A97 `NOMINAL(1.04206680307683E-09,7542681)` 1.67481162272054E-09 (math
+  1.0421E-09, 61%), A87, A89, A106, A115; RRI A163 `RRI(144671643887.505,1.37778115802967E+68,1.36433071381757E+68)`
+  -6.783462680459706E-14 (math -6.7811E-14, 3.5E-4).
+- The eval cells agree: gen-m9 1dce4774f5c0e736 A246 `EFFECT(1E-300,8)` and 6376e27be7a05871 A235 `EFFECT(1E-300,1)` are
+  0, and `EFFECT(0.05,1E15)` is 0 (probes/fin-effect-huge-npery A45) and `EFFECT(0.05,1E12)`
+  0.05122908433109119 against the math's 0.0512711 (A37).
+Status: VERIFIED (excel-graph)
+Tasks: T-4110
+
+## DOLLARDE and DOLLARFR scale the fraction by the next power of ten (T-4110)
+Rule: with F the fraction and D the smallest power of ten at or above F, DOLLARDE(x, F) is `i + f·D/F` and
+DOLLARFR(x, F) `i + f·F/D`, where x = i + f splits into its integer part toward 0 and its fraction, so a negative
+dollar is the mirror of the positive one and a power of ten for F returns x. Excel's doubles are within ulps of that
+math on the doubles of the arguments.
+Evidence: the Gate A tables accuracy/DOLLARDE/s1 and accuracy/DOLLARFR/s1 (excel-graph, 2026-11-06, T-4110), 240 points,
+all within 15 digits of the math: `DOLLARDE(-805.1,2)` -805.5000000000001 (A71), `DOLLARDE(20.8308,999)`
+20.83163163163163 (A67, D = 1000), `DOLLARDE(34.7156,1001)` 41.14885114885117 (A79, D = 10000), `DOLLARDE(356.223,100)`
+356.223 (A69), `DOLLARFR(-611.7,2)` -611.14 (A75), `DOLLARFR(415.961,1000000)` 415.961 (A74); and the gen-m9 cells
+(`DOLLARDE(2.5,13)` 5.846153846153847).
+Unprobed: a fraction below 1 (Microsoft documents `#NUM!` below 0 and `#DIV/0!` from 0 to 1), a non-integer fraction,
+and fractions past 1E9, where a double `log10` of 10^k + 1 may round to k.
+Ours: `fn_dollarde` and `fn_dollarfr` (functions/financial/rate_conversions.rs), bit-exact on all 240 points.
+Status: VERIFIED (excel-graph)
+Tasks: T-4110
 
 ## PRICE and ODDFPRICE discount with Excel's `^`
 Rule: PRICE and ODDFPRICE discount each coupon and the redemption by `(1 + yld/frequency)^t` with Excel's `^`
@@ -3899,39 +3964,64 @@ maturity (321).
   below the root, and none of the iterates one to three steps back meets the coupon rate, 0, 0.1 or YIELD's fitted
   start. So whatever explains the above-root cells (a non-analytic slope, or a price inside ODDFYIELD that differs
   from ODDFPRICE's by about 1e-9 near the root) also has to explain these.
-- Long first period (T-3031): the slope is the regular-coupon slope above with two changes, which only show when the
-  settlement lies before a quasi-coupon date inside the long first period (`nq` >= 1 whole quasi periods between the
-  settlement's next quasi-coupon date Q and the first coupon): (1) a regular coupon at every quasi-coupon date from Q
-  on, so `nq` more coupons ahead of the odd one, and (2) every exponent of the slope, the redemption's too, `s` later
-  than in the price, where `s` is the basis' days from Q to the first coupon over E (`nq` on regular 30/360 schedules,
-  bases 0 and 4, where month-end 30/360 day counts can differ, T-3988; actual days on bases 1 to 3). With the settlement in the last quasi period (`nq` = 0) both vanish, which is why the annual
-  PRICE_YIELD rows fitted before. Found on the zero-coupon row probes/oddf-date-order-domain-sweep Y!A22:O22, where the
-  slope is the redemption's alone: each of the 15 cells is bit-exact only with the redemption's exponent `s` later,
-  and the `s` each needs is 366/365 (basis 1 and 3, annual, Q 2023-06-15 to 2024-06-15), 366/360 (basis 2), 92/91,
-  92/90 and 92/91.25 (quarterly, bases 1-3), 183/182.5 (semiannual, basis 3) and 1 on bases 0 and 4, i.e. the
-  quasi period's days over E. The extra coupons were chosen on the coupon cells of that probe and PRICE_YIELD.xlsx
-  (the shift alone, any choice of which coupon terms carry it, leaves them 1e-12 to 1e-10 off). Scores (engine,
-  Excel's `^`): ironcalc-calc `FINANCIAL/PRICE_YIELD.xlsx` 352 of 352 cells (339 before; K8-K11, K29-K33 and K49-K52
-  now pass), probes/oddf-date-order-domain-sweep 1256 of 1260 (1196 before; the other 4 are 1-ulp cells, two of them
-  ODDFPRICE), probes/oddfyield-solver-sweep unchanged (short first periods only). Fresh sweep after the model was
-  frozen (R4.2): probes-numeric/t3031-r4-oddfyield-long-first, 160 seeded calls with 2 to 5 quasi periods in the first
-  period and `nq` 0 to 4, every frequency and basis, excel-graph 2026-11-03: 157 pass bit-exact or within the harness' ulp
-  tolerance (the model without the extra coupons passes 72). Off: S!A80 (1 ulp) and S!A61, S!A70, both a
-  28 February first coupon and maturity (a month-end schedule), 4e-11 and 7e-11 relative (T-3988).
-  Hold-out (R4.1): the fit lab's split (`is_holdout`), applied after the lab scored to the 73 long-first cells above
+- Long first period (T-3031, T-3988): the slope is the regular-coupon slope above with two changes, which only show
+  when the settlement lies before a quasi-coupon date inside the long first period: (1) a regular coupon at every
+  quasi-coupon date after the settlement, so `nq` more coupons ahead of the odd one, `nq` the quasi-coupon dates in
+  (settlement, first coupon) on the first coupon's schedule walked with the end-of-month rule; (2) the lead `DFC'/E`
+  periods away, `DFC'` the basis' days from the settlement straight to the first coupon, and every later exponent,
+  the redemption's too, whole periods after it. ODDFPRICE's own exponents differ in both on a month-end schedule
+  (T-3988): its `nq` comes from `coupNumber`, which moves the settlement to its month's end when the first coupon is
+  a month end and so counts one quasi period more (`DATE(2010,1,7)` before a 28 February 2010 first coupon: `nq` 1,
+  lead 1.29 periods away, where 0.29 is the truth), and its `DSC` is `E` minus the days from the previous
+  quasi-coupon date, which on 30/360 is not the days to the first coupon. The slope uses neither. With `nq` = 0
+  and a regular schedule both changes vanish, which is why the annual PRICE_YIELD rows fitted before.
+  T-3031 found the shape on the zero-coupon row probes/oddf-date-order-domain-sweep Y!A22:O22, where the slope is
+  the redemption's alone: each of the 15 cells is bit-exact only with the redemption's exponent a quasi period's
+  days over E later than the price's (366/365 on bases 1 and 3, annual, Q 2023-06-15 to 2024-06-15; 366/360 on
+  basis 2; 92/91, 92/90 and 92/91.25 quarterly; 183/182.5 semiannual basis 3; 1 on bases 0 and 4), and wrote it as
+  a shift `s` = the basis' days from the settlement's next quasi-coupon date Q to the first coupon over E, added to
+  the price's exponents. On regular schedules that equals (2). The extra coupons were chosen on the coupon cells of
+  that probe and PRICE_YIELD.xlsx (the shift alone, any choice of which coupon terms carry it, leaves them 1e-12 to
+  1e-10 off). Scores (engine, Excel's `^`): ironcalc-calc `FINANCIAL/PRICE_YIELD.xlsx` 352 of 352 cells (339 before
+  T-3031), probes/oddf-date-order-domain-sweep 1256 of 1260 (1196 before; the other 4 are 1-ulp cells, two of them
+  ODDFPRICE), probes/oddfyield-solver-sweep unchanged (short first periods only), all unchanged by T-3988. T-3031's
+  fresh sweep probes-numeric/t3031-r4-oddfyield-long-first (160 seeded calls, excel-graph 2026-11-03) passed 157,
+  missing S!A61 and S!A70, both a 28 February first coupon: there ODDFPRICE's `nq` is one too many, and the cells
+  are bit-exact only with the slope's coupons and exponents counted from the true `nq` (a scan of the shift in
+  steps of 1/3600 period: one hit each, -2/180 and +5/360 off T-3031's form) and, for A61, the lead 51 30/360 days
+  away (`DFC'`, not DSC 53). T-3988 then drew probes-numeric/t3988-r4-oddfyield-month-end (120 month-end long first
+  periods, excel-graph 2026-11-06): with `DSC/E + s` it passed 116; S!A94
+  (`ODDFYIELD(DATE(2007,9,9),DATE(2014,2,28),DATE(2006,8,29),DATE(2008,8,31),0.019,74.231,111.04,2,0)`) needs the
+  lead 352 30/360 days away, which is `DFC'` (9 September to 31 August), not 170 + 181 split at Q (29 February), and
+  with `DFC'` the case passes 119 (S!A86 is 1 ulp). T-3031's form passes 13 of its 120, and the true `nq` with the
+  price's `DSC` 99.
+  Fresh sweep after this model was frozen: probes-numeric/t3988-r4-oddfyield-fresh-2 (120 calls, half with a
+  month-end first coupon, a quarter on the 29th or 30th, a quarter on days 1-28; excel-graph 2026-11-06): 118 pass
+  (T-3031's form 67). Off: S!A54 (basis 4, a yield near 0, 1.8e-13 relative) and S!A108 (a zero coupon, basis 2,
+  3.5e-15; T-3031's form passed it, the same exponent rounded differently), both T-4551. Keeping the split at Q
+  with the remainder `(DFC' - DSC)/E` passes A108 but leaves t3988-r4-oddfyield-month-end at 117.
+  T-3031's hold-out (R4.1): the fit lab's split (`is_holdout`), applied after the lab scored to the 73 long-first cells above
   that the model was chosen on, gives this slope 45/45/45 of 45 train and 28/28/28 of 28 test (bit-exact / within
   4 ulp / within 15 digits) and ODDFPRICE's root, rounded, 0/0/0 on both; on the fresh sweep, never tuned on (margin
   5 points), the slope is 157/158/158 of 160 (105/106/106 of its 108 cells with `nq` >= 1) and the root 0/1/2
   (0/0/0). Excel is 3e-12 to 3e-8 relative from the root. Gate A for S!A61 and S!A70: the 50-digit mpmath roots of ODDFPRICE(y) = price over the
   engine's schedule are 0.077480666073101446 and 0.12192508630779288; Excel is -3.7e-11 and +4.9e-11 relative of them,
-  ours -9.0e-11 and +1.2e-10, inside the 1e-9 envelope (T-3999 files the ODDFYIELD math model and table).
+  ours -9.0e-11 and +1.2e-10, inside the 1e-9 envelope (T-3999 files the ODDFYIELD math model and table). (Those two now pass, T-3988.) T-3988's
+  guards (a structural model): the fit lab's split applied to the cells it was chosen on gives this slope 116/117/117
+  of 117 train and 43/43/43 of 43 test on t3031-r4-oddfyield-long-first and 87/88/88 of 88 train and 32/32/32 of 32
+  test on t3988-r4-oddfyield-month-end, ODDFPRICE's root rounded 1/1/1, 0/0/1, 0/0/0 and 0/0/0; both test rates are
+  within the default 5-point margin of train. On the fresh t3988-r4-oddfyield-fresh-2 (R4.2, never tuned on, scored
+  whole): 115/115/115 of its 117 numeric cells (the 3 error cells match), the root 0/0/0. Gate A on that sweep: 118 of 120 within 15 digits of Excel, S!A108 5.2e-11 relative
+  of the 50-digit root (inside 1e-9), S!A54 2.4e-8 relative of it (outside; Excel itself is 2.4e-8 off the root
+  there, and T-3031's form was 1.8e-7 off, so T-3988 moves no point out of the envelope).
   T-3031 attempt 1 (same day, without the shift) tried 12 lead-term slopes and five other starts with no long-first
   cell gained, and found the zero-coupon cells off Excel's Newton path, some above the root: the shift explains both.
 Ours: `fn_oddfyield` calls `odd_first_yield` (functions/financial/financial_bonds/yield_solver.rs), which runs
 `excel_yield_newton` with `OddFirstSchedule::dprice`, the slope above; before T-2007 it was a central-difference Newton
 from the coupon rate with a bisection fallback, landing on the root.
-Status: UNVERIFIED (a fitted structural model; the month-end long first periods are not explained); the values are oracle-backed.
-Tasks: T-2007 (the fit), T-3031 (the long first periods), T-1374 (ODDFPRICE's own last digits), T-1592 (YIELD)
+Status: UNVERIFIED (a fitted structural model); the values are oracle-backed.
+Tasks: T-2007 (the fit), T-3031 (the long first periods), T-3988 (month-end long first periods), T-4551 (the fresh
+sweep's two misses), T-1374 (ODDFPRICE's own last digits), T-1592 (YIELD)
 
 ## ODDFYIELD's #NUM! at extreme prices
 Rule: across prices 1, 5, 500, 5000, 1E-3 and 1E-6, frequencies 1, 2 and 4, short and long odd first periods and
@@ -4021,8 +4111,14 @@ days to the next coupon (55 PRICE, 50 DURATION, 58 MDURATION, 132 of them with m
 within 1.2E-13 relative of the 50-digit math with E - A on every one (PRICE within 5.2E-15). "YIELD with one coupon
 period left is closed form" already stated this for PRICE's single-period form; YIELD's closed form takes the actual
 period instead.
-Evidence: accuracy/PRICE/s1, accuracy/DURATION/s1, accuracy/MDURATION/s1 (excel-graph, 2026-11-06, T-4113): all 600
-points inside the envelope, every numeric one within 1E-9 of the math with E - A.
+So DSC is negative when A exceeds E, which bases 2 and 3 allow (a period of more than 360/f days on basis 2, or more
+than 365/f on basis 3): the settlement then discounts back in time. `MDURATION(1064950,1064951,
+0.000128159104484352,0.756789005672321,2,3)` (one day before maturity, A = 183 against E = 182.5, DSC -0.5) is a negative duration,
+-0.000993810560677671 (math -0.00099381056067767515), and `PRICE(2661503,2661504,0.544303320391621,0.00188934538460332,
+6079.97276154982,1,2)` (A = 364 against E = 360, DSC -4) is 6079.49676063253, the linear form with s < 0, matching the
+math to all 15 digits.
+Evidence: accuracy/PRICE/s1 (A163), accuracy/DURATION/s1, accuracy/MDURATION/s1 (A177) (excel-graph, 2026-11-06,
+T-4113): all 600 points inside the envelope, every numeric one within 1E-9 of the math with E - A.
 Ours: matches (`CouponSchedule` in functions/financial/financial_bonds.rs: `dsc_over_e = (e - a) / e`).
 Status: VERIFIED (excel-graph)
 Tasks: T-4113
@@ -4038,8 +4134,9 @@ and the Newton leaves PRICE's domain ("YIELD's #NUM! cells and its 100-step cap"
 `YIELD(41644,41964,3.95504106162018E-05,1.07913390167583,1.10630172770542,2,0)` (A278, root 0.0322) and
 `YIELD(43934,44400,3.18837697006861E-08,2561.5239125089,2562.67943505766,1,1)` (A284, root 3.5E-4) are `#NUM!`. It is not
 the scale alone: the table's 264 numeric YIELD points include prices from 0.0033 to 8.2E5 and redemptions from 0.014
-to 8.2E5 (a price near its redemption far from 100 often computes). At a redemption of 100 prices of 1E5 and more are
-`#NUM!` (A160 `YIELD(34484,58272,0.00994370100069034,598517.33532802,100,1,0)`, A164), as that entry records. Where the
+to 8.2E5 (a price near its redemption far from 100 often computes). At a redemption near 100 prices of 1E5 and more are
+`#NUM!`, as that entry records: A160 `YIELD(34484,58272,0.00994370100069034,598517.33532802,100,1,0)` (redemption 100)
+and A164 `YIELD(43785,58096,0.14042700948137,394426.617648828,99.049049737235,2,2)` (redemption 99.049049737235). Where the
 cut lies is unprobed (T-4523). Where
 the price is not exact Excel stops short of the root ("YIELD stops short of PRICE's root"): at a root near 0 the
 relative gap is large, `YIELD(46176,47108,0.108576904443112,127.687110632994,100,1)` (A140) is -1.5180348575085436E-15
@@ -4109,6 +4206,9 @@ Equal dates: TBILLEQ, TBILLPRICE and TBILLYIELD all give `#NUM!` when settlement
 reaches the division (`TBILLYIELD(45366,45366,98)`, `TBILLEQ(45366,45366,0.05)`, `TBILLPRICE(45366,45366,0.05)`,
 and `TBILLYIELD(45366,45366,100)`, `TBILLEQ(45366,45366,0)`; one day later is a number: probes/tbill-equal-dates,
 excel-graph, 2026-10-14, T-1539).
+The long-branch form is not Excel's to the bit everywhere. On accuracy/TBILLEQ/s1, A39 and A127 are about 30 ulp off
+it, and A39 is matched by a price of `100 - rate*100*DSM/360` (see "Discount securities and T-bills: amount domains
+(T-4112)"; the order is open in T-4521).
 Evidence: ironcalc-calc/FINANCIAL/TBILLs.xlsx D2:D31, R2:R31 and L5:L26 (Excel-cached, Microsoft
 Macintosh Excel; all 273 cells bit-exact, T-1475); the same formulation is bit-exact on the excel-graph
 probes fin-argument-modes H313, date-system-1904-financial A29:A30 and -shift A32.
@@ -4790,6 +4890,49 @@ Ours: matches since T-2484 (`discount_args`, `maturity_args`, `accrintm_of` and 
 functions/financial/discount.rs; `day_count_basis_of` in financial/dates.rs, shared with `bond_args`).
 Status: VERIFIED (excel-graph)
 Tasks: T-2484
+
+## Discount securities and T-bills: amount domains (T-4112)
+Rule: with valid dates and basis, the amounts' domains are:
+- DISC: a price of 0 or below and a negative redemption are `#NUM!` (`DISC(43831,45494,0,104,0)`,
+  `DISC(1,45749,-1,107,2)`, `DISC(38874,46818,99,-1,3)`). A redemption of exactly 0 with a positive price is unprobed.
+- RECEIVED: a discount of 0 or below is `#NUM!` (`RECEIVED(38015,45886,14389,0)`, `RECEIVED(37603,46059,339731,-0.05)`),
+  and so is every `1 - discount*DIM/B` below 0, not only 0 itself ("Discount-security functions: settlement 0, basis and
+  argument modes" had inferred the "< 0" side): `RECEIVED(36767,46418,285642,0.05)` (26 years at 5%),
+  `RECEIVED(51445,51750,6463.56213591132,1.5,2)`.
+- PRICEDISC: a negative discount is `#NUM!` (`PRICEDISC(37716,46874,-0.5,107)`), as zero is in the entry above. A
+  price past the double range is `#NUM!` (`PRICEDISC(37415,44610,1E+10,1E+300)`).
+- TBILLEQ, TBILLPRICE: a negative discount is `#NUM!` even where the price is positive (`TBILLEQ(39427,39448,-0.5)`,
+  `TBILLEQ(45000,45315,-0.05)`). A discount of exactly 0 with valid dates is unprobed: the engine returns `#NUM!`.
+- DISC accepts settlement 0 like INTRATE, PRICEDISC and YIELDDISC (`DISC(0,366,95,100,0)` = 0.04986149584487539,
+  basis 4 0.050000000000000044: probes/discount-serial-zero A1:E2).
+Near a zero price, Excel's doubles decide which side of 0 the price falls on: `TBILLEQ(1000,1100,3.6)` and
+`TBILLPRICE(1000,1100,3.6)` are 0 because `3.6*100` is 360 in doubles, though the exact product of the double 3.6 and
+100 is just above 360, a negative price. So the Gate A definitions give no math value within cancellation of a zero
+price (defs/discount.py `_price_share`), and a math value of 0 or `#NUM!` only where the product is exact.
+From 183 days, TBILLEQ's form in "TBILLEQ and TBILLYIELD" (`-t + sqrt(...)`) cancels at a tiny discount, so Excel is
+off the math by about 1E-16/discount relative: `TBILLEQ(53457,53640,5.56066541833896E-10)` is 5.63838975509136E-10
+against 5.637896884071863E-10 (8.7E-5), `TBILLEQ(1438166,1438350,8.54032607528415E-11)` 5.7E-5 off
+(accuracy/TBILLEQ/s1 A110, A175; A81, A87, A88, A100, A106, A108, A109, A163 and A189 are smaller). The engine is
+bit-exact with Excel on all of these. Below 183 days the plain quotient does not cancel.
+The documented long-branch form is not quite Excel's: two table points are about 30 ulp (15th digit) from Excel, and
+pass Gate A only through the math envelope. accuracy/TBILLEQ/s1 A39 `TBILLEQ(33842,34067,0.213177283226975)` (225
+days) is 0.24375066975421497 in Excel and 0.24375066975421592 in the form above (and the engine). Excel's value comes
+out exactly when the price is computed as `100 - rate*100*DSM/360`. A127 `TBILLEQ(45351,45716,0.178249140751279)` (365
+days, 2024-02-29 to 2025-02-28) is 0.20960730738258349 in Excel and 0.20960730738258393 in the engine, and no price
+variant tried explains it, Y = 366 included. Over the table's 38 long-branch numeric points, `rate*100*DSM/360` matches
+37 and the documented form 36. Excel's exact operation order is open (T-4521).
+Unprobed (T-4522): a day count of 0 (30/360 from the 30th to the 31st of one month), where the engine returns
+`#DIV/0!`; DISC at a redemption of exactly 0; a T-bill discount of exactly 0 (the engine's `#NUM!`).
+Evidence: gen-m9 1dce4774f5c0e736 A227, A276; 31474c20fc1dafd6 A376, A241; 5c6a23c4f6597f1c A113; 30e20ba3302fea8b A49;
+6376e27be7a05871 A152, A8; 79d87fc527927626 A225; bc04c1f478c9896c A216; 01523d247594952e A152, A222, A278, A219, A163;
+probes/discount-serial-zero; accuracy/DISC/s1 A113, A122, A123, A129, A132; accuracy/RECEIVED/s1 A6, A8, A13, A14,
+A15, A22, A24, A30, A38, A67, A79, A112, A116, A118, A120, A131, A144 (1 - discount*DIM/B below 0, and amounts at most
+0); accuracy/PRICEDISC/s1 A112, A120, A125, A131, A132; accuracy/TBILLEQ/s1 A111, A135; accuracy/TBILLPRICE/s1 A128,
+A129 (excel-graph, 2026-11-06, T-4112). All 1,400 table points of the seven functions match these rules.
+Ours: matches the domains (`discount_days`, `received_of`, `tbill_arguments` in functions/financial/discount.rs); the
+TBILLEQ long-branch digits above are T-4521's.
+Status: VERIFIED (excel-graph)
+Tasks: T-4112, T-4521, T-4522
 
 ## Booleans in ACCRINT, ACCRINTM, AMORLINC and AMORDEGRC (T-2455)
 Rule: a boolean is `#VALUE!`, typed or from a cell, in ACCRINTM's par (`ACCRINTM(34825,37622,1E-9,TRUE,4)`, A41, A54; text "2"

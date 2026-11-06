@@ -26,6 +26,13 @@ follow.
   0.01 it starts near the root of a par bond, not of this one. financial.md "YIELD's #NUM! cells and its 100-step cap"
   records Excel's `#NUM!` where its Newton leaves PRICE's domain; which start Excel takes at a redemption far from 100 is
   unprobed.
+- The same far-from-par region holds three more YIELD/s1 points the engine misses (known failures under T-2788, 130
+  to 8,700 ulp off Excel, both short of the root): A230, A252 and A261 (redemptions 0.035, 0.048 and 0.014). Once
+  Excel's start there is known, re-check them, and move their known-failures lines here if this task's change is what
+  fixes them.
+- YIELD/s1 A281 and A282 (redemptions about 1113 and 1081, prices near them) pass through the math only: the engine is
+  within 1E-9 of the root but not within 15 digits of Excel (A282: engine 0.009655449922640958, Excel
+  0.009655449922642055). Re-check them too.
 - Code: `yield_start` and `excel_yield_newton` in
   crates/rustsheet-engine/src/functions/financial/financial_bonds/yield_solver.rs.
 
