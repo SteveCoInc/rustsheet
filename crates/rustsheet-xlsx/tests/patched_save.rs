@@ -81,6 +81,19 @@ fn value(bytes: &[u8], cell: (i32, i32)) -> String {
         .unwrap()
 }
 
+/// `bytes` with one more entry.
+fn with_entry(bytes: &[u8], name: &str, content: &str) -> Vec<u8> {
+    let mut all = entries(bytes);
+    all.insert(name.to_string(), content.as_bytes().to_vec());
+    let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (entry, data) in all {
+        out.start_file(entry, zip::write::SimpleFileOptions::default())
+            .unwrap();
+        out.write_all(&data).unwrap();
+    }
+    out.finish().unwrap().into_inner()
+}
+
 /// `bytes` with one text replacement in `name`.
 fn rezip(bytes: &[u8], name: &str, from: &str, to: &str) -> Vec<u8> {
     let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
@@ -176,7 +189,92 @@ fn a_new_row_with_a_new_string_appends_it_to_the_shared_strings() {
         "{sst}"
     );
     assert_eq!(value(&out, (9, 3)), "new <text>");
-    assert!(part(&out, SHEET).contains(r#"<row r="9""#));
+    let sheet = part(&out, SHEET);
+    assert!(sheet.contains(r#"<row r="9""#));
+    // The dimension grows to cover C9.
+    assert!(sheet.contains(r#"<dimension ref="A1:C9"/>"#), "{sheet}");
+}
+
+#[test]
+fn cells_into_an_empty_row_and_a_new_row_before_it_are_written_once_in_order() {
+    let src = rezip(
+        &source(),
+        SHEET,
+        "</sheetData>",
+        r#"<row r="6" ht="30" customHeight="1"/></sheetData>"#,
+    );
+    let (out, tier) = save_after(&src, |m| {
+        m.set_user_input(0, 5, 1, "1".into()).unwrap();
+        m.set_user_input(0, 6, 2, "2".into()).unwrap();
+        m.set_user_input(0, 6, 3, "3".into()).unwrap();
+    });
+    assert_patched(&tier);
+    let sheet = part(&out, SHEET);
+    assert_eq!(sheet.matches(r#"<row r="6""#).count(), 1, "{sheet}");
+    let (five, six) = (sheet.find(r#"<row r="5""#), sheet.find(r#"<row r="6""#));
+    assert!(five.is_some() && five < six, "{sheet}");
+    assert!(
+        sheet.contains(r#"<row r="6" ht="30" customHeight="1"><c r="B6""#),
+        "{sheet}"
+    );
+    assert_eq!(
+        (value(&out, (6, 2)), value(&out, (6, 3))),
+        ("2".into(), "3".into())
+    );
+}
+
+#[test]
+fn rows_into_an_empty_sheet_data_are_written_in_one_element() {
+    let mut m = Model::new_empty("m", "en", "UTC", "en").unwrap();
+    m.evaluate();
+    let src = save_xlsx_to_writer(&m, Cursor::new(Vec::new()))
+        .unwrap()
+        .into_inner();
+    let (out, tier) = save_after(&src, |m| {
+        m.set_user_input(0, 1, 1, "1".into()).unwrap();
+        m.set_user_input(0, 3, 1, "3".into()).unwrap();
+    });
+    assert!(!matches!(tier, SaveTier::Regenerated { .. }), "{tier:?}");
+    let sheet = part(&out, SHEET);
+    assert_eq!(sheet.matches("<sheetData").count(), 1, "{sheet}");
+    assert_eq!(
+        (value(&out, (1, 1)), value(&out, (3, 1))),
+        ("1".into(), "3".into())
+    );
+}
+
+#[test]
+fn inline_strings_the_part_lacks_make_a_new_string_regenerate() {
+    // The importer interns B3's inline string after the part's `<si>`s.
+    let src = rezip(
+        &source(),
+        SHEET,
+        "</row></sheetData>",
+        r#"</row><row r="8"><c r="B8" t="inlineStr"><is><t>inline</t></is></c></row></sheetData>"#,
+    );
+    let (out, tier) = save_after(&src, |m| {
+        m.set_user_input(0, 9, 3, "fresh".into()).unwrap();
+    });
+    assert!(matches!(tier, SaveTier::Regenerated { .. }), "{tier:?}");
+    assert_eq!(
+        (value(&out, (9, 3)), value(&out, (8, 2))),
+        ("fresh".into(), "inline".into())
+    );
+    // A number needs no string, so it still patches.
+    let (_, tier) = save_after(&src, |m| m.set_user_input(0, 1, 1, "5".into()).unwrap());
+    assert_patched(&tier);
+}
+
+#[test]
+fn a_calc_chain_keeps_the_patch_only_while_the_formula_cells_stay_the_same() {
+    let chain = r#"<calcChain xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><c r="A2" i="1"/></calcChain>"#;
+    let src = with_entry(&source(), "xl/calcChain.xml", chain);
+    let (out, tier) = save_after(&src, |m| m.set_user_input(0, 1, 1, "5".into()).unwrap());
+    assert_patched(&tier);
+    assert_eq!(part(&out, "xl/calcChain.xml"), chain);
+    // A2's formula replaced by a constant: the chain would name a cell with no formula.
+    let (_, tier) = save_after(&src, |m| m.set_user_input(0, 2, 1, "9".into()).unwrap());
+    assert!(matches!(tier, SaveTier::Regenerated { .. }), "{tier:?}");
 }
 
 #[test]

@@ -61,11 +61,27 @@ Bounded per directive 5.
 
   | suite | failing cases | kept |
   |---|---|---|
-  | roundtrip-calipers | 106 → 55 | 92.04% → 99.994% |
-  | roundtrip-poi | 60 → 35 | 96.78% → 99.993% |
-  | roundtrip-corpus-bench | 162 → 21 | 94.71% → 99.995% |
-  | roundtrip-fixtures | 25 → 25 | 78.37% → 95.75% |
+  | roundtrip-calipers | 106 → 55 | 92.04% → 99.981% |
+  | roundtrip-poi | 46 → 21 (+14 not scored) | 96.78% → 99.993% |
+  | roundtrip-corpus-bench | 162 → 20 | 94.71% → 99.997% |
+  | roundtrip-fixtures | 25 → 3 | 78.37% → 95.75% |
 
+- Review round 1 (all three reviewers) found paths that wrote a wrong or invalid package where a fallback was due.
+  Fixed:
+  - inline strings interned past the shared-string part;
+  - several inserts into an empty `<row/>` or `<sheetData/>`;
+  - a new row before an expanded empty row;
+  - `vm`/`cm` in the export's metadata layout;
+  - a calcChain gone stale when formula cells are added or removed;
+  - prefixed worksheets;
+  - single-quoted attributes;
+  - a `count` found outside the `<sst>` tag;
+  - silent truncation past the size limit;
+  - duplicate zip names.
+
+  Each of these now falls back, or is written once and in order. A patched sheet must index again, or the save
+  regenerates. The cost: four Calipers `roundtrip/` cases, whose new values need rich-error metadata, now
+  regenerate (T-4561).
 - Remaining losses:
   - Fixtures: the four external-link fixtures fall back (their cells need `metadata.xml`, T-4561) and lose their
     theme and `externalLink` parts.

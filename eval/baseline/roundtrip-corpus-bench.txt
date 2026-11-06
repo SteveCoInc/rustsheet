@@ -927,7 +927,6 @@ F	roundtrip-corpus-bench/48354/1_48354_input.xlsx	* 3 a49b9b9c964ab589
 F	roundtrip-corpus-bench/49859/1_49859_input.xlsx	* 3 a49b9b9c964ab589
 F	roundtrip-corpus-bench/51090/1_51090_input.xlsx	* 3 a49b9b9c964ab589
 F	roundtrip-corpus-bench/52841/1_52841_input.xlsx	* 3 a49b9b9c964ab589
-F	roundtrip-corpus-bench/53023/1_53023_input.xlsx	* 365 4a42f601e93268c5
 F	roundtrip-corpus-bench/53383/1_53383_input.xlsx	* 3 a49b9b9c964ab589
 F	roundtrip-corpus-bench/55392/1_55392_input.xlsx	* 4 6e240c9397866dd2
 F	roundtrip-corpus-bench/55976/1_55976_input.xlsx	* 3 a49b9b9c964ab589

@@ -589,10 +589,10 @@ F	roundtrip-calipers/roundtrip/formulas_datetime/golden.xlsx	* 25 0299f595ddcf3d
 F	roundtrip-calipers/roundtrip/formulas_datetime/init.xlsx	* 25 0299f595ddcf3ddd
 F	roundtrip-calipers/roundtrip/formulas_dynamic_arrays/golden.xlsx	* 1 48a7b11238f603df
 F	roundtrip-calipers/roundtrip/formulas_dynamic_arrays/init.xlsx	* 1 48a7b11238f603df
-F	roundtrip-calipers/roundtrip/formulas_information/golden.xlsx	* 42 93b5ebc193919b30
-F	roundtrip-calipers/roundtrip/formulas_information/init.xlsx	* 42 93b5ebc193919b30
-F	roundtrip-calipers/roundtrip/formulas_lookup/golden.xlsx	* 18 86574d7957ed4f5b
-F	roundtrip-calipers/roundtrip/formulas_lookup/init.xlsx	* 18 86574d7957ed4f5b
+F	roundtrip-calipers/roundtrip/formulas_information/golden.xlsx	* 2439 7bd4464149ae6f63
+F	roundtrip-calipers/roundtrip/formulas_information/init.xlsx	* 2441 018c7dc72497bb35
+F	roundtrip-calipers/roundtrip/formulas_lookup/golden.xlsx	* 1445 d0d1022c42c62836
+F	roundtrip-calipers/roundtrip/formulas_lookup/init.xlsx	* 1445 5b2607f5fb89cedb
 F	roundtrip-calipers/roundtrip/formulas_math_basic/golden.xlsx	* 25 d77e866f00a9eb97
 F	roundtrip-calipers/roundtrip/formulas_math_basic/init.xlsx	* 25 d77e866f00a9eb97
 F	roundtrip-calipers/roundtrip/i18n_hebrew/golden.xlsx	* 24 97d10bec0d4f7b59

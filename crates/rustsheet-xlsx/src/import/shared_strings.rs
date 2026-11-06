@@ -44,12 +44,12 @@ impl SharedStringTable {
     }
 }
 
-/// Reads the list of shared strings in an Excel workbook
-/// Note than in IronCalc we lose _internal_ styling of a string
-/// See Section 18.4
 /// The shared-strings part the importer reads.
 pub(crate) const SHARED_STRINGS_PART: &str = "xl/sharedStrings.xml";
 
+/// Reads the list of shared strings in an Excel workbook
+/// Note than in IronCalc we lose _internal_ styling of a string
+/// See Section 18.4
 pub(crate) fn read_shared_strings<R: Read + std::io::Seek>(
     archive: &mut Package<R>,
 ) -> Result<SharedStringTable, XlsxError> {

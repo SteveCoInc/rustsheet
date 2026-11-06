@@ -4,17 +4,25 @@
 //!
 //! The patch never guesses. Anything it does not handle exactly is a fallback reason, and the
 //! caller regenerates instead:
-//! - a structural change;
-//! - a style table that changed (T-4561);
-//! - out-of-order rows or cells, or a cell without `r`;
-//! - a changed formula in a shared-formula group;
-//! - a cell needing `metadata.xml` the source lacks.
+//! - a structural change, or a style table that changed (T-4561);
+//! - out-of-order rows or cells, a cell without `r`, or a prefixed worksheet;
+//! - a changed formula, or a cleared cell, in a shared-formula group;
+//! - a cell that needs value or cell metadata (`vm`, `cm`) it did not have (T-4561);
+//! - a formula cell added or removed while the source keeps a `calcChain` (SPEC-0034 E2, T-4561);
+//! - shared strings the model interned from inline cells, which the part does not hold;
+//! - a part over the import's size limit, not UTF-8, or a zip with clashing names;
+//! - a patched sheet that does not index again (rows or cells out of order).
+//!
+//! What the patch leaves as the source had it is listed in docs/excel-semantics/xlsx-storage.md
+//! ("A patched package keeps the source's hints"): row `spans`, a `<dimension>` that only grows,
+//! and a `<row>` emptied by clearing its cells.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{Cursor, Read, Seek, Write};
 
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
+use rustsheet_engine::expressions::utils::{number_to_column, parse_reference_a1};
 use rustsheet_engine::types::{Cell, Worksheet};
 use rustsheet_engine::Model;
 
@@ -26,34 +34,50 @@ use crate::import::{part_paths, ImportLimits, PartNames};
 /// Deepest element nesting the patcher reads in a worksheet (directive 5).
 const MAX_DEPTH: usize = 256;
 
-/// A patched package, or why the source cannot be patched.
+/// The calculation chain, which lists every formula cell (SPEC-0034 E2).
+const CALC_CHAIN_PART: &str = "xl/calcChain.xml";
+
+/// A patched package and the sheets it patched, or why the source cannot be patched.
 pub(super) type Patch = Result<(Vec<u8>, Vec<String>), String>;
 
 /// Patches `source` to hold `model`'s cells. `pristine` is `source` as imported (SPEC-0034 D2).
-/// The inner `Err` is a fallback reason; the outer one an I/O or zip failure.
+/// Every failure, an odd zip included, is a fallback reason: the caller regenerates.
+///
+/// # Errors
+/// None today; the outer `Result` keeps room for a failure that must not fall back.
 pub(super) fn patch(model: &Model, pristine: &Model, source: &[u8]) -> Result<Patch, XlsxError> {
+    Ok(try_patch(model, pristine, source))
+}
+
+fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
     let (live, base) = (&model.workbook, &pristine.workbook);
     if let Some(reason) = structure_differs(model, pristine) {
-        return Ok(Err(reason));
+        return Err(reason);
     }
     if !live.shared_strings.starts_with(&base.shared_strings) {
-        return Ok(Err("the shared-string table was reordered".into()));
+        return Err("the shared-string table was reordered".into());
     }
-    let Ok(paths) = part_paths(source, &ImportLimits::default()) else {
-        return Ok(Err(
-            "the source's parts do not resolve under the default limits".into(),
-        ));
-    };
+    let paths = part_paths(source, &ImportLimits::default())
+        .map_err(|_| "the source's parts do not resolve under the default limits")?;
     if paths.worksheets.len() != live.worksheets.len() {
-        return Ok(Err(
-            "the sheets do not map to worksheet parts one to one".into()
-        ));
+        return Err("the sheets do not map to worksheet parts one to one".into());
     }
-    let mut archive = zip::ZipArchive::new(Cursor::new(source))?;
-    let names = PartNames::from_archive(&archive)?;
-    let has_metadata = names
-        .entry(crate::import::rich_errors::METADATA_PART)
-        .is_some();
+    let zip_err = |e: zip::result::ZipError| format!("the source zip: {e}");
+    let mut archive = zip::ZipArchive::new(Cursor::new(source)).map_err(zip_err)?;
+    let names = PartNames::from_archive(&archive).map_err(|e| e.to_string())?;
+    if !names.clashes().is_empty() {
+        return Err("the source has part names that clash".into());
+    }
+    let has_calc_chain = names.entry(CALC_CHAIN_PART).is_some();
+    let strings_entry = names.entry(paths.shared_strings).map(str::to_string);
+    let source_strings = match &strings_entry {
+        Some(entry) => Some(read_entry(&mut archive, entry)?),
+        None => None,
+    };
+    // The importer also interns inline and constant `str` cells, after the part's own `<si>`s:
+    // indexes past the part then name strings it does not hold.
+    let in_part = source_strings.as_deref().map_or(Ok(0), count_si)?;
+    let strings_line_up = base.shared_strings.len() == in_part;
     let mut replaced: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut patched_sheets = Vec::new();
     for (index, (sheet, before)) in live.worksheets.iter().zip(&base.worksheets).enumerate() {
@@ -61,40 +85,44 @@ pub(super) fn patch(model: &Model, pristine: &Model, source: &[u8]) -> Result<Pa
         if changed.is_empty() {
             continue;
         }
+        let at = |c: &(i32, i32), w: &Worksheet| w.sheet_data.cell(c.0, c.1).cloned();
+        if has_calc_chain
+            && changed.iter().any(|c| {
+                at(c, sheet).is_some_and(|x| x.has_formula())
+                    != at(c, before).is_some_and(|x| x.has_formula())
+            })
+        {
+            return Err("a formula cell was added or removed, and calcChain would go stale".into());
+        }
+        if !strings_line_up
+            && changed
+                .iter()
+                .any(|c| matches!(at(c, sheet), Some(Cell::SharedString { .. })))
+        {
+            return Err("the model's shared strings include inline strings the part lacks".into());
+        }
         let Some(entry) = names.entry(&paths.worksheets[index]).map(str::to_string) else {
-            return Ok(Err(format!("no part for sheet {}", sheet.name)));
+            return Err(format!("no part for sheet {}", sheet.name));
         };
         let xml = read_entry(&mut archive, &entry)?;
         let writer = cell_writer_for(model, index);
-        let patched = match splice(
-            &xml,
-            sheet,
-            before,
-            &changed,
-            &writer.as_ref(),
-            has_metadata,
-        ) {
-            Ok(text) => text,
-            Err(reason) => return Ok(Err(format!("sheet {}: {reason}", sheet.name))),
-        };
+        let patched = splice(&xml, sheet, before, &changed, &writer.as_ref())
+            .map_err(|reason| format!("sheet {}: {reason}", sheet.name))?;
         replaced.insert(entry, patched.into_bytes());
         patched_sheets.push(sheet.name.clone());
     }
     let added = &live.shared_strings[base.shared_strings.len()..];
     if !added.is_empty() {
-        let Some(entry) = names.entry(paths.shared_strings).map(str::to_string) else {
-            return Ok(Err(
-                "new strings need a shared-string part the source lacks".into(),
-            ));
+        let (Some(entry), Some(xml), true) = (strings_entry, source_strings, strings_line_up)
+        else {
+            return Err("new strings need a shared-string part that holds every string".into());
         };
-        let xml = read_entry(&mut archive, &entry)?;
         let refs = (shared_refs(live), shared_refs(base));
-        let Some(text) = append_strings(&xml, added, live.shared_strings.len(), refs) else {
-            return Ok(Err("the shared-string part has no closing </sst>".into()));
-        };
+        let text = append_strings(&xml, added, live.shared_strings.len(), refs)
+            .ok_or("the shared-string part has no closing </sst>")?;
         replaced.insert(entry, text.into_bytes());
     }
-    Ok(Ok((rewrite_zip(&mut archive, &replaced)?, patched_sheets)))
+    Ok((rewrite_zip(&mut archive, &replaced)?, patched_sheets))
 }
 
 /// Why the workbook's structure differs between `model` and `pristine`, if it does: everything
@@ -232,11 +260,13 @@ struct SourceRow {
     cells: Vec<SourceCell>,
 }
 
-/// The rows of a sheet's `sheetData`, and where new rows go (before `</sheetData>`).
+/// The rows of a sheet's `sheetData`, where new rows go, and its `<dimension>`.
 struct SheetIndex {
     rows: Vec<SourceRow>,
     /// Offset before `</sheetData>`, or the range of an empty `<sheetData/>` to replace.
     tail: Tail,
+    /// The `<dimension>` element's byte range and `ref`.
+    dimension: Option<(usize, usize, String)>,
 }
 
 enum Tail {
@@ -252,46 +282,57 @@ fn attr(e: &BytesStart<'_>, key: &str) -> Option<String> {
     })
 }
 
-/// `A1` → (row, column), 1-based.
+/// `A1` → (row, column), 1-based, through the engine's A1 parser.
 fn parse_ref(r: &str) -> Option<(i32, i32)> {
-    let split = r.find(|c: char| c.is_ascii_digit())?;
-    let (letters, digits) = r.split_at(split);
-    let mut column = 0i32;
-    for c in letters.chars() {
-        let d = i32::from(
-            u8::try_from(c.to_ascii_uppercase())
-                .ok()?
-                .checked_sub(b'A')?,
-        ) + 1;
-        column = column.checked_mul(26)?.checked_add(d)?;
-    }
-    Some((digits.parse().ok()?, column))
+    parse_reference_a1(r).map(|p| (p.row, p.column))
 }
 
 /// Indexes the rows and cells of a worksheet's XML, refusing what the patcher will not guess
-/// at: rows or cells out of order, a cell without `r`, nesting past [`MAX_DEPTH`].
+/// at: rows or cells out of order, a cell without `r`, a prefixed `sheetData`, `row` or `c`,
+/// nesting past [`MAX_DEPTH`]. Only a `row` directly under `sheetData`, and a `c` directly under
+/// such a row, count: the same names inside an extension are someone else's.
 fn index_sheet(xml: &str) -> Result<SheetIndex, String> {
     let mut reader = Reader::from_str(xml);
     let mut depth = 0usize;
+    let mut sheet_data: Option<usize> = None;
     let mut rows: Vec<SourceRow> = Vec::new();
     let mut tail = None;
+    let mut dimension = None;
     let mut cell: Option<SourceCell> = None;
     loop {
-        let start = reader.buffer_position() as usize;
+        let start = to_offset(reader.buffer_position())?;
         let event = reader.read_event().map_err(|e| e.to_string())?;
-        let end = reader.buffer_position() as usize;
+        let end = to_offset(reader.buffer_position())?;
         match &event {
             Event::Start(e) | Event::Empty(e) => {
                 let empty = matches!(event, Event::Empty(_));
+                // The element's own level: 1 for the root.
+                let level = depth + 1;
                 if !empty {
-                    depth += 1;
+                    depth = level;
                     if depth > MAX_DEPTH {
                         return Err("nested too deep".into());
                     }
                 }
-                match e.local_name().as_ref() {
-                    "sheetData" if empty => tail = Some(Tail::Empty(start, end)),
-                    "row" => {
+                let local = e.local_name();
+                let local = local.as_ref();
+                let ours = matches!(local, "sheetData" | "row" | "c" | "dimension");
+                if ours && e.name().as_ref() != local {
+                    return Err("a prefixed worksheet".into());
+                }
+                match (local, sheet_data) {
+                    ("dimension", None) if level == 2 => {
+                        let r = attr(e, "ref").ok_or("a dimension without ref")?;
+                        dimension = Some((start, end, r));
+                    }
+                    ("sheetData", None) if level == 2 => {
+                        if empty {
+                            tail = Some(Tail::Empty(start, end));
+                        } else {
+                            sheet_data = Some(level);
+                        }
+                    }
+                    ("row", Some(sd)) if level == sd + 1 => {
                         let r: i32 = attr(e, "r")
                             .and_then(|v| v.parse().ok())
                             .ok_or("a row without r")?;
@@ -306,7 +347,7 @@ fn index_sheet(xml: &str) -> Result<SheetIndex, String> {
                             cells: Vec::new(),
                         });
                     }
-                    "c" => {
+                    ("c", Some(sd)) if level == sd + 2 => {
                         let (row, column) = attr(e, "r")
                             .as_deref()
                             .and_then(parse_ref)
@@ -329,7 +370,7 @@ fn index_sheet(xml: &str) -> Result<SheetIndex, String> {
                             cell = Some(c);
                         }
                     }
-                    "f" => {
+                    ("f", Some(sd)) if level == sd + 3 => {
                         if let Some(c) = cell.as_mut() {
                             c.shared |= attr(e, "t").as_deref() == Some("shared");
                         }
@@ -338,21 +379,25 @@ fn index_sheet(xml: &str) -> Result<SheetIndex, String> {
                 }
             }
             Event::End(e) => {
+                let level = depth;
                 depth = depth.saturating_sub(1);
-                match e.local_name().as_ref() {
-                    "c" => {
+                match (e.local_name().as_ref(), sheet_data) {
+                    ("c", Some(sd)) if level == sd + 2 => {
                         if let (Some(mut c), Some(row)) = (cell.take(), rows.last_mut()) {
                             c.end = end;
                             row.cells.push(c);
                         }
                     }
-                    "row" => {
+                    ("row", Some(sd)) if level == sd + 1 => {
                         if let Some(row) = rows.last_mut() {
                             row.insert_at = Some(start);
                             row.end = end;
                         }
                     }
-                    "sheetData" => tail = Some(Tail::Before(start)),
+                    ("sheetData", Some(sd)) if level == sd => {
+                        tail = Some(Tail::Before(start));
+                        sheet_data = None;
+                    }
                     _ => {}
                 }
             }
@@ -361,7 +406,15 @@ fn index_sheet(xml: &str) -> Result<SheetIndex, String> {
         }
     }
     let tail = tail.ok_or("no sheetData")?;
-    Ok(SheetIndex { rows, tail })
+    Ok(SheetIndex {
+        rows,
+        tail,
+        dimension,
+    })
+}
+
+fn to_offset(position: u64) -> Result<usize, String> {
+    usize::try_from(position).map_err(|_| "a part too large to index".to_string())
 }
 
 /// The `t` and `vm` attributes and the `<v>` element of a cell's XML, as the export wrote them.
@@ -371,7 +424,7 @@ fn value_parts(xml: &str) -> Option<(Option<String>, Option<String>, String)> {
     let mut vm = None;
     let mut v = String::new();
     loop {
-        let start = reader.buffer_position() as usize;
+        let start = usize::try_from(reader.buffer_position()).ok()?;
         match reader.read_event().ok()? {
             Event::Start(e) | Event::Empty(e) if e.local_name().as_ref() == "c" => {
                 t = attr(&e, "t");
@@ -379,7 +432,8 @@ fn value_parts(xml: &str) -> Option<(Option<String>, Option<String>, String)> {
             }
             Event::Start(e) if e.local_name().as_ref() == "v" => {
                 reader.read_to_end(e.name()).ok()?;
-                v = xml[start..reader.buffer_position() as usize].to_string();
+                let end = usize::try_from(reader.buffer_position()).ok()?;
+                v = xml[start..end].to_string();
             }
             Event::Eof => return Some((t, vm, v)),
             _ => {}
@@ -388,7 +442,9 @@ fn value_parts(xml: &str) -> Option<(Option<String>, Option<String>, String)> {
 }
 
 /// The source cell `old` with its cached value replaced by the one `new` (the export's XML for the
-/// live cell) holds, keeping its `<f>` and every other attribute and child byte for byte.
+/// live cell) holds, keeping its `<f>` and every other attribute and child byte for byte. `None`
+/// when the new value needs value metadata (`vm`) other than the source cell's, which only
+/// T-4561 can write into the source's `metadata.xml`.
 fn patch_value(old: &str, new: &str) -> Option<String> {
     let (t, vm, v) = value_parts(new)?;
     let mut reader = Reader::from_str(old);
@@ -396,19 +452,18 @@ fn patch_value(old: &str, new: &str) -> Option<String> {
     let mut had_v = false;
     let mut close_at = None;
     loop {
-        let start = reader.buffer_position() as usize;
+        let start = usize::try_from(reader.buffer_position()).ok()?;
         let event = reader.read_event().ok()?;
-        let end = reader.buffer_position() as usize;
+        let end = usize::try_from(reader.buffer_position()).ok()?;
         match event {
             Event::Start(ref e) | Event::Empty(ref e) if e.local_name().as_ref() == "c" => {
-                out.push_str(&rewrite_start_tag(e, t.as_deref(), vm.as_deref()));
+                if attr(e, "vm") != vm {
+                    return None;
+                }
+                out.push_str(&rewrite_start_tag(e, t.as_deref(), vm.as_deref())?);
+                out.push('>');
                 if matches!(event, Event::Empty(_)) {
                     // `<c .../>` had no value: it becomes a full element.
-                    out.pop();
-                    if out.ends_with('/') {
-                        out.pop();
-                    }
-                    out.push('>');
                     out.push_str(&v);
                     out.push_str("</c>");
                     return Some(out);
@@ -437,11 +492,13 @@ fn patch_value(old: &str, new: &str) -> Option<String> {
     Some(out)
 }
 
-/// `<c ...>` with `t` and `vm` set to the given values (or removed), every other attribute kept in
-/// its order and spelling.
-fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>, vm: Option<&str>) -> String {
+/// `<c ...` (without its closing `>`) with `t` and `vm` set to the given values (or removed),
+/// every other attribute kept in its order and spelling. A value is re-quoted with `"`, so one
+/// that held a `"` inside `'...'` gets it as `&quot;`. `None` for a malformed attribute.
+fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>, vm: Option<&str>) -> Option<String> {
     let mut out = String::from("<c");
-    for a in e.attributes().flatten() {
+    for a in e.attributes() {
+        let a = a.ok()?;
         let key = a.key.as_ref();
         if key == "t" || key == "vm" {
             continue;
@@ -449,7 +506,7 @@ fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>, vm: Option<&str>) -> S
         out.push(' ');
         out.push_str(key);
         out.push_str("=\"");
-        out.push_str(&a.value);
+        out.push_str(&a.value.replace('"', "&quot;"));
         out.push('"');
     }
     for (key, value) in [("t", t), ("vm", vm)] {
@@ -457,8 +514,7 @@ fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>, vm: Option<&str>) -> S
             out.push_str(&format!(" {key}=\"{}\"", escape_xml(value)));
         }
     }
-    out.push('>');
-    out
+    Some(out)
 }
 
 /// Whether only the cached value of a formula cell changed: same variant, formula and style.
@@ -481,115 +537,252 @@ fn value_only(before: &Cell, after: &Cell) -> bool {
     }
 }
 
-/// The sheet's XML with `changed` cells rewritten, inserted or removed.
+/// One splice: remove `remove` bytes at `at` and write `text`. Edits at one offset are written
+/// in `key` (row, column) order, so new rows and cells land in sheet order.
+struct Edit {
+    at: usize,
+    remove: usize,
+    key: (i32, i32),
+    text: String,
+}
+
+/// The sheet's XML with `changed` cells rewritten, inserted or removed, its `<dimension>` grown
+/// to cover new cells.
 fn splice(
     xml: &str,
     sheet: &Worksheet,
     before: &Worksheet,
     changed: &BTreeSet<(i32, i32)>,
     writer: &CellWriter<'_>,
-    has_metadata: bool,
 ) -> Result<String, String> {
     let index = index_sheet(xml)?;
-    // (offset, length to remove, text to insert), applied from the end.
-    let mut edits: Vec<(usize, usize, String)> = Vec::new();
-    let new_xml = |row: i32, column: i32| -> Result<Option<String>, String> {
-        let Some(cell) = sheet.sheet_data.cell(row, column) else {
-            return Ok(None);
-        };
-        let text = cell_xml(writer, row, column, cell).ok_or("a cell the export cannot write")?;
-        if !has_metadata && (text.contains(" cm=") || text.contains(" vm=")) {
-            return Err("a cell needs metadata.xml, which the source lacks".into());
-        }
-        Ok(Some(text))
-    };
-    let mut new_rows: BTreeMap<i32, Vec<String>> = BTreeMap::new();
+    let mut edits: Vec<Edit> = Vec::new();
+    let mut inserts: BTreeMap<i32, Vec<(i32, String)>> = BTreeMap::new();
     for &(row, column) in changed {
-        let source_row = index.rows.iter().find(|r| r.r == row);
-        let source_cell = source_row.and_then(|r| r.cells.iter().find(|c| c.column == column));
-        match (source_cell, new_xml(row, column)?) {
+        let source_row = find_row(&index.rows, row);
+        let source_cell = source_row.and_then(|r| {
+            r.cells
+                .binary_search_by_key(&column, |c| c.column)
+                .ok()
+                .map(|i| &r.cells[i])
+        });
+        let new = new_cell_xml(sheet, writer, row, column)?;
+        match (source_cell, new) {
             (Some(c), Some(text)) => {
-                let old = &xml[c.start..c.end];
                 let (Some(a), Some(b)) = (
                     before.sheet_data.cell(row, column),
                     sheet.sheet_data.cell(row, column),
                 ) else {
                     return Err("a changed cell vanished".into());
                 };
-                let replacement = if value_only(a, b) {
-                    patch_value(old, &text).ok_or("a cell value could not be patched")?
+                let old = &xml[c.start..c.end];
+                let text = if value_only(a, b) {
+                    patch_value(old, &text).ok_or("a cell value needs other value metadata")?
                 } else if c.shared {
                     return Err("a changed formula in a shared-formula group".into());
                 } else {
-                    text
+                    whole_cell(text)?
                 };
-                edits.push((c.start, c.end - c.start, replacement));
+                edits.push(Edit {
+                    at: c.start,
+                    remove: c.end - c.start,
+                    key: (row, column),
+                    text,
+                });
             }
             (Some(c), None) => {
                 if c.shared {
                     return Err("a cleared cell in a shared-formula group".into());
                 }
-                edits.push((c.start, c.end - c.start, String::new()));
+                edits.push(Edit {
+                    at: c.start,
+                    remove: c.end - c.start,
+                    key: (row, column),
+                    text: String::new(),
+                });
             }
-            (None, Some(text)) => match source_row {
-                Some(r) => {
-                    let at = r
-                        .cells
-                        .iter()
-                        .find(|c| c.column > column)
-                        .map(|c| c.start)
-                        .or(r.insert_at);
-                    match at {
-                        Some(at) => edits.push((at, 0, text)),
-                        None => {
-                            // `<row .../>`: write it out as a full row.
-                            let open = xml[r.start..r.end].trim_end_matches("/>").to_string();
-                            edits.push((r.start, r.end - r.start, format!("{open}>{text}</row>")));
-                        }
-                    }
-                }
-                None => new_rows.entry(row).or_default().push(text),
-            },
+            (None, Some(text)) => inserts
+                .entry(row)
+                .or_default()
+                .push((column, whole_cell(text)?)),
             (None, None) => {}
         }
     }
-    for (row, cells) in new_rows {
-        let text = format!(r#"<row r="{row}">{}</row>"#, cells.concat());
-        match index.rows.iter().find(|r| r.r > row) {
-            Some(next) => edits.push((next.start, 0, text)),
-            None => match index.tail {
-                Tail::Before(at) => edits.push((at, 0, text)),
-                Tail::Empty(start, end) => {
-                    edits.push((start, end - start, format!("<sheetData>{text}</sheetData>")));
-                }
-            },
-        }
+    insert_cells(xml, &index, inserts, &mut edits);
+    if let Some(edit) = grown_dimension(&index, sheet) {
+        edits.push(edit);
     }
-    // Apply from the end so earlier offsets stay valid; insertions at one offset keep their order.
-    edits.sort_by_key(|e| std::cmp::Reverse(e.0));
-    let mut out = xml.to_string();
-    let mut last = usize::MAX;
-    let mut pending: Vec<(usize, usize, String)> = Vec::new();
-    for edit in edits {
-        if edit.0 != last {
-            flush(&mut out, &mut pending);
-            last = edit.0;
-        }
-        pending.push(edit);
-    }
-    flush(&mut out, &mut pending);
+    let out = apply(xml, edits);
+    index_sheet(&out).map_err(|e| format!("the patched sheet does not index again: {e}"))?;
     Ok(out)
 }
 
-/// Applies the edits that share one offset, in column order (they were pushed in that order).
-fn flush(out: &mut String, pending: &mut Vec<(usize, usize, String)>) {
-    let Some(&(at, _, _)) = pending.first() else {
-        return;
+fn find_row(rows: &[SourceRow], row: i32) -> Option<&SourceRow> {
+    rows.binary_search_by_key(&row, |r| r.r)
+        .ok()
+        .map(|i| &rows[i])
+}
+
+/// The export's XML for the live cell, if there is one.
+fn new_cell_xml(
+    sheet: &Worksheet,
+    writer: &CellWriter<'_>,
+    row: i32,
+    column: i32,
+) -> Result<Option<String>, String> {
+    let Some(cell) = sheet.sheet_data.cell(row, column) else {
+        return Ok(None);
     };
-    let remove = pending.iter().map(|e| e.1).max().unwrap_or(0);
-    let text: String = pending.iter().map(|e| e.2.as_str()).collect();
-    out.replace_range(at..at + remove, &text);
-    pending.clear();
+    cell_xml(writer, row, column, cell)
+        .map(Some)
+        .ok_or_else(|| "a cell the export cannot write".to_string())
+}
+
+/// A cell written whole by the export, unless it needs value or cell metadata: the export's
+/// `vm`/`cm` index its own `metadata.xml` layout, not the source's (T-4561).
+fn whole_cell(text: String) -> Result<String, String> {
+    if text.contains(" cm=") || text.contains(" vm=") {
+        return Err("a cell needs value or cell metadata (T-4561)".into());
+    }
+    Ok(text)
+}
+
+/// The edits that add new cells, row by row: into an existing row before the next cell or its
+/// `</row>`, an empty `<row/>` written out once with all of them, new rows before the next
+/// source row or at the end of `sheetData`, and an empty `<sheetData/>` written out once.
+fn insert_cells(
+    xml: &str,
+    index: &SheetIndex,
+    inserts: BTreeMap<i32, Vec<(i32, String)>>,
+    edits: &mut Vec<Edit>,
+) {
+    let mut tail_rows = String::new();
+    for (row, cells) in inserts {
+        let at_row = (row, 0);
+        match find_row(&index.rows, row) {
+            Some(r) => match r.insert_at {
+                Some(close) => {
+                    for (column, text) in cells {
+                        let next = r.cells.partition_point(|c| c.column < column);
+                        let at = r.cells.get(next).map_or(close, |c| c.start);
+                        edits.push(Edit {
+                            at,
+                            remove: 0,
+                            key: (row, column),
+                            text,
+                        });
+                    }
+                }
+                None => {
+                    // `<row .../>`: written out once as a full row.
+                    let open = xml[r.start..r.end].trim_end_matches("/>");
+                    let body: String = cells.into_iter().map(|(_, t)| t).collect();
+                    edits.push(Edit {
+                        at: r.start,
+                        remove: r.end - r.start,
+                        key: at_row,
+                        text: format!("{open}>{body}</row>"),
+                    });
+                }
+            },
+            None => {
+                let body: String = cells.into_iter().map(|(_, t)| t).collect();
+                let text = format!(r#"<row r="{row}">{body}</row>"#);
+                let next = index.rows.partition_point(|r| r.r < row);
+                match (index.rows.get(next), &index.tail) {
+                    (Some(next), _) => edits.push(Edit {
+                        at: next.start,
+                        remove: 0,
+                        key: at_row,
+                        text,
+                    }),
+                    (None, Tail::Before(at)) => edits.push(Edit {
+                        at: *at,
+                        remove: 0,
+                        key: at_row,
+                        text,
+                    }),
+                    (None, Tail::Empty(..)) => tail_rows.push_str(&text),
+                }
+            }
+        }
+    }
+    if let (Tail::Empty(start, end), false) = (&index.tail, tail_rows.is_empty()) {
+        edits.push(Edit {
+            at: *start,
+            remove: end - start,
+            key: (0, 0),
+            text: format!("<sheetData>{tail_rows}</sheetData>"),
+        });
+    }
+}
+
+/// The `<dimension>` grown to cover the live sheet's cells, when they reach past it. It is
+/// never shrunk: a range larger than the cells is what Excel itself keeps for formatted rows.
+fn grown_dimension(index: &SheetIndex, sheet: &Worksheet) -> Option<Edit> {
+    let (start, end, old) = index.dimension.as_ref()?;
+    let (first, last) = old.split_once(':').unwrap_or((old, old));
+    let (r1, c1) = parse_ref(first)?;
+    let (r2, c2) = parse_ref(last)?;
+    let (mut top, mut left, mut bottom, mut right) = (r1, c1, r2, c2);
+    for (row, column, _) in sheet.sheet_data.cells() {
+        top = top.min(row);
+        bottom = bottom.max(row);
+        left = left.min(column);
+        right = right.max(column);
+    }
+    if (top, left, bottom, right) == (r1, c1, r2, c2) {
+        return None;
+    }
+    let corner = |row: i32, column: i32| Some(format!("{}{row}", number_to_column(column)?));
+    let range = format!("{}:{}", corner(top, left)?, corner(bottom, right)?);
+    Some(Edit {
+        at: *start,
+        remove: end - start,
+        key: (0, 0),
+        text: format!(r#"<dimension ref="{range}"/>"#),
+    })
+}
+
+/// `xml` with `edits` applied from the end, so earlier offsets stay valid. Edits at one offset
+/// are joined in key order and remove the longest range among them (at most one removes).
+fn apply(xml: &str, mut edits: Vec<Edit>) -> String {
+    edits.sort_by(|a, b| b.at.cmp(&a.at).then(a.key.cmp(&b.key)));
+    let mut out = xml.to_string();
+    let mut i = 0;
+    while i < edits.len() {
+        let at = edits[i].at;
+        let same = edits[i..].iter().take_while(|e| e.at == at).count();
+        let group = &edits[i..i + same];
+        let remove = group.iter().map(|e| e.remove).max().unwrap_or(0);
+        let text: String = group.iter().map(|e| e.text.as_str()).collect();
+        out.replace_range(at..at + remove, &text);
+        i += same;
+    }
+    out
+}
+
+/// The `<si>` elements directly under the shared-string part's root.
+fn count_si(xml: &str) -> Result<usize, String> {
+    let mut reader = Reader::from_str(xml);
+    let (mut depth, mut count) = (0usize, 0usize);
+    loop {
+        match reader.read_event().map_err(|e| e.to_string())? {
+            Event::Start(e) => {
+                depth += 1;
+                if depth > MAX_DEPTH {
+                    return Err("the shared-string part is nested too deep".into());
+                }
+                count += usize::from(depth == 2 && e.local_name().as_ref() == "si");
+            }
+            Event::Empty(e) => {
+                count += usize::from(depth == 1 && e.local_name().as_ref() == "si");
+            }
+            Event::End(_) => depth = depth.saturating_sub(1),
+            Event::Eof => return Ok(count),
+            _ => {}
+        }
+    }
 }
 
 /// The shared-string part with `added` appended and its counts updated.
@@ -620,17 +813,25 @@ fn append_strings(
     Some(out)
 }
 
-/// `head` with the first `name="..."` attribute of `<sst` set to `value` of its old number,
-/// when present and a number.
+/// `head` with the `name="..."` attribute of its `<sst ...>` start tag set to `value` of its old
+/// number, when the tag has it and it is a number. Nothing past the start tag is searched.
 fn set_count(head: &str, name: &str, value: impl Fn(usize) -> usize) -> String {
-    let Some(sst) = head.find("<sst") else {
+    let Some(sst) = head
+        .match_indices("<sst")
+        .map(|(i, _)| i)
+        .find(|&i| head[i + 4..].starts_with(|c: char| c.is_whitespace() || c == '>'))
+    else {
         return head.to_string();
     };
+    let Some(tag_len) = head[sst..].find('>') else {
+        return head.to_string();
+    };
+    let tag = &head[sst..sst + tag_len];
     let needle = format!(" {name}=\"");
-    let Some(at) = head[sst..].find(&needle).map(|i| i + sst + needle.len()) else {
+    let Some(at) = tag.find(&needle).map(|i| sst + i + needle.len()) else {
         return head.to_string();
     };
-    let Some(len) = head[at..].find('"') else {
+    let Some(len) = head[at..sst + tag_len].find('"') else {
         return head.to_string();
     };
     let Ok(old) = head[at..at + len].parse::<usize>() else {
@@ -639,17 +840,24 @@ fn set_count(head: &str, name: &str, value: impl Fn(usize) -> usize) -> String {
     format!("{}{}{}", &head[..at], value(old), &head[at + len..])
 }
 
+/// A part's text, within the import's byte budget: a larger part, a missing one or one that is
+/// not UTF-8 is a fallback reason, never a truncated read.
 fn read_entry<R: Read + Seek>(
     archive: &mut zip::ZipArchive<R>,
     name: &str,
-) -> Result<String, XlsxError> {
+) -> Result<String, String> {
     let limit = ImportLimits::default().max_uncompressed_bytes;
-    let mut text = String::new();
+    let mut bytes = Vec::new();
     archive
-        .by_name(name)?
-        .take(limit)
-        .read_to_string(&mut text)?;
-    Ok(text)
+        .by_name(name)
+        .map_err(|e| format!("{name}: {e}"))?
+        .take(limit.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .map_err(|e| format!("{name}: {e}"))?;
+    if u64::try_from(bytes.len()).map_or(true, |n| n > limit) {
+        return Err(format!("{name} is over the size limit"));
+    }
+    String::from_utf8(bytes).map_err(|_| format!("{name} is not UTF-8"))
 }
 
 /// The number of cells holding a shared string, as the `count` of `sharedStrings.xml` counts
@@ -664,98 +872,33 @@ fn shared_refs(workbook: &rustsheet_engine::types::Workbook) -> usize {
 }
 
 /// The source package with the `replaced` entries' contents swapped in and every other entry
-/// copied raw, so it keeps its exact compressed bytes.
+/// copied raw, so it keeps its exact compressed bytes. A repeated or non-UTF-8 entry name is a
+/// fallback reason.
 fn rewrite_zip<R: Read + Seek>(
     archive: &mut zip::ZipArchive<R>,
     replaced: &BTreeMap<String, Vec<u8>>,
-) -> Result<Vec<u8>, XlsxError> {
+) -> Result<Vec<u8>, String> {
+    let zip_err = |e: zip::result::ZipError| format!("rewriting the zip: {e}");
+    let io_err = |e: std::io::Error| format!("rewriting the zip: {e}");
     let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let mut seen = BTreeSet::new();
     for i in 0..archive.len() {
-        let file = archive.by_index_raw(i)?;
-        let name = file.name()?.to_string();
+        let file = archive.by_index_raw(i).map_err(zip_err)?;
+        let name = file.name().map_err(zip_err)?.to_string();
+        if !seen.insert(name.clone()) {
+            return Err(format!("the zip holds {name} twice"));
+        }
         if let Some(bytes) = replaced.get(&name) {
             drop(file);
-            out.start_file(name, zip::write::SimpleFileOptions::default())?;
-            out.write_all(bytes)?;
+            out.start_file(name, zip::write::SimpleFileOptions::default())
+                .map_err(zip_err)?;
+            out.write_all(bytes).map_err(io_err)?;
         } else {
-            out.raw_copy_file(file)?;
+            out.raw_copy_file(file).map_err(zip_err)?;
         }
     }
-    Ok(out.finish()?.into_inner())
+    Ok(out.finish().map_err(zip_err)?.into_inner())
 }
 
 #[cfg(test)]
-mod tests {
-    use std::collections::BTreeSet;
-
-    use super::{append_strings, index_sheet, patch_value};
-
-    const SHEET: &str = r#"<worksheet><sheetData><row r="1" spans="1:3"><c r="A1"><v>1</v></c><c r="C1" s="2"><f>A1*2</f><v>0</v></c></row><row r="3"><c r="B3" t="s"><v>0</v></c></row></sheetData><extLst><ext uri="{X}"/></extLst></worksheet>"#;
-
-    #[test]
-    fn a_new_cached_value_keeps_the_formula_and_every_other_byte() {
-        let index = index_sheet(SHEET).expect("indexes");
-        let c = &index.rows[0].cells[1];
-        let old = &SHEET[c.start..c.end];
-        let new = r#"<c r="C1" s="2"><f>A1*2</f><v>2</v></c>"#;
-        assert_eq!(
-            patch_value(old, new).as_deref(),
-            Some(r#"<c r="C1" s="2"><f>A1*2</f><v>2</v></c>"#)
-        );
-        // The value becomes text: `t` is set, the stored formula text is kept as it was.
-        let stored = r#"<c r="C1" s="2"><f> A1 * 2 </f><v>0</v></c>"#;
-        let text = r#"<c r="C1" t="str" s="2"><f>A1*2</f><v>x</v></c>"#;
-        assert_eq!(
-            patch_value(stored, text).as_deref(),
-            Some(r#"<c r="C1" s="2" t="str"><f> A1 * 2 </f><v>x</v></c>"#)
-        );
-    }
-
-    #[test]
-    fn the_index_refuses_what_it_will_not_guess_at() {
-        for (xml, why) in [
-            (
-                r#"<worksheet><sheetData><row r="2"/><row r="1"/></sheetData></worksheet>"#,
-                "rows out of order",
-            ),
-            (
-                r#"<worksheet><sheetData><row r="1"><c r="B1"/><c r="A1"/></row></sheetData></worksheet>"#,
-                "cells out of order",
-            ),
-            (
-                r#"<worksheet><sheetData><row r="1"><c/></row></sheetData></worksheet>"#,
-                "a cell without r",
-            ),
-        ] {
-            assert_eq!(index_sheet(xml).err().as_deref(), Some(why), "{xml}");
-        }
-        let deep = format!(
-            "<worksheet>{}{}</worksheet>",
-            "<a>".repeat(300),
-            "</a>".repeat(300)
-        );
-        assert!(index_sheet(&deep).is_err());
-    }
-
-    #[test]
-    fn the_index_finds_rows_cells_and_shared_formulas() {
-        let xml = r#"<worksheet><sheetData><row r="1"><c r="A1"><f t="shared" ref="A1:A2" si="0">B1</f><v>1</v></c></row><row r="2"><c r="A2"><f t="shared" si="0"/><v>1</v></c></row></sheetData></worksheet>"#;
-        let index = index_sheet(xml).expect("indexes");
-        let rows: BTreeSet<i32> = index.rows.iter().map(|r| r.r).collect();
-        assert_eq!(rows, BTreeSet::from([1, 2]));
-        assert!(index.rows.iter().all(|r| r.cells.iter().all(|c| c.shared)));
-    }
-
-    #[test]
-    fn new_strings_are_appended_with_both_counts() {
-        let sst =
-            r#"<sst xmlns="x" count="3" uniqueCount="2"><si><t>a</t></si><si><t>b</t></si></sst>"#;
-        let added = ["c <&>".to_string(), " d".to_string()];
-        assert_eq!(
-            append_strings(sst, &added, 4, (5, 3)).as_deref(),
-            Some(
-                r#"<sst xmlns="x" count="5" uniqueCount="4"><si><t>a</t></si><si><t>b</t></si><si><t>c &lt;&amp;&gt;</t></si><si><t xml:space="preserve"> d</t></si></sst>"#
-            )
-        );
-    }
-}
+mod tests;
