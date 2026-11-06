@@ -3,7 +3,7 @@ id: T-4183
 title: "Spec: package ownership matrix, closure rule, preservation limits and invalidation table for xlsx round trips"
 milestone: M15
 lane: research
-status: in-progress
+status: done
 priority: P1
 size: M
 tier: opus
@@ -37,9 +37,27 @@ Prior art, cited in the plan:
 - Formualizer span patching.
 
 ## Acceptance criteria
-- [ ] A merged spec in docs/specs/.
-- [ ] A task breakdown of stages 1–3 filed from it by the planner.
-- [ ] Reviewers approve.
+- [x] A merged spec in docs/specs/.
+- [x] A task breakdown of stages 1–3 filed from it by the planner.
+- [x] Reviewers approve.
 
 ## Out of scope
 - Implementation.
+
+## Outcome
+The spec is docs/specs/SPEC-0034-xlsx-source-preserving-export.md, the source-preserving export. It chose the
+fastest route to the owner's 99% goal (decision 0275 D3):
+- the facade retains the source bytes;
+- a save-time diff (re-import the source, compare typed models) sorts a save into three tiers:
+  - Unchanged: the source is written verbatim;
+  - Content: a streaming patch of the changed `<c>` elements, with shared strings and styles appended
+    index-stably, a calcChain rule and shared-formula breaking;
+  - Structural: today's regeneration.
+
+The ownership matrix, closure rule and fragment slots of decision 0275 become stage 4, preservation under
+regeneration, after M4.
+
+Implementation tasks: T-4559 (retain the source, verbatim tier), T-4560 (cell patcher, shared-string
+append), T-4561 (styles append, metadata, calcChain), T-4562 (SaveReport tiers). No eval delta (docs
+only).
+
