@@ -122,8 +122,10 @@ engine change that alters how a feature is modelled cannot make the diff disagre
 - a changed cell with no `<c>` is inserted in column order into its `<row>`, and a missing `<row>` in row order;
 - a cell that became empty, with the default style, is removed.
 
-Row attributes (`spans`, height, style) are kept. `<dimension>` is updated when the used range grew or shrank,
-written as the regenerating export writes it.
+Row attributes (`spans`, height, style) are kept. `<dimension>` is grown to cover a new cell outside it, written as
+the regenerating export writes it. It is never shrunk (T-4560): a range larger than the cells is what Excel keeps for
+formatted rows, and Excel's tolerance of a stale range is UNVERIFIED (docs/excel-semantics/xlsx-storage.md, "A
+patched package keeps the source's hints").
 
 The pass is bounded (directive 5):
 - `ImportLimits`' byte budget, as the importer's read was;

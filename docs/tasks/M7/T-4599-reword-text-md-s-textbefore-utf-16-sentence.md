@@ -3,7 +3,7 @@ id: T-4599
 title: "Reword text.md's TEXTBEFORE UTF-16 sentence and give the text functions one UTF-16 length helper (T-4474 review follow-up)"
 milestone: M7
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -33,3 +33,6 @@ shared helper instead of repeating `encode_utf16().count()`.
 
 ## Out of scope
 - Any TEXTBEFORE/TEXTAFTER behaviour change.
+
+## Outcome
+Reworded the text.md sentence, added `utf16_len` to functions/text/util.rs and used it in before_after.rs, concatenate.rs, util.rs and common.rs (only the helper still calls `encode_utf16().count()`), and cited probes/t4474-textbefore-utf16-bounds B6 on the UNVERIFIED comment. No behaviour or eval change.
