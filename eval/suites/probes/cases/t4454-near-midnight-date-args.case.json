@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-4454: date-function arguments just below an integer. A:Q take a serial s just below midnight of N, rows 1-7: N-0.6s, N-0.5s-2^-37 (one ulp below N-0.5s; every N is in [32768,65536)), N-0.5s, N-0.4s, N-(2^-22+2^-33), N-1s, N (1s = 1/86400). A EDATE(s,1) N=45017; B EOMONTH(s,0) 45017; C WORKDAY(s,1) 45019; D WORKDAY.INTL(s,1,1) 45019; E NETWORKDAYS(s,45030) and F NETWORKDAYS(45000,s) 45020; G, H the same for NETWORKDAYS.INTL(..,1); I WEEKNUM(s) 45018; J ISOWEEKNUM(s) 45019; K DAYS(s,45000), L DAYS(46000,s) 45019; M DATEDIF(44000,s,\"D\"), N DATEDIF(s,46000,\"D\") 45019; O YEARFRAC(44927,s,1) 45292; P DAYS360(45000,s), Q DAYS360(s,45100) 45020. S:Z take a count x near n, rows 1-10: n-(2^-22+2^-33), n-(2^-22+9*2^-36), n-2^-23, n-1E-6, -n+2^-23, -n+2^-22, -n+1E-6, -1E-10, -n-2^-23, -n+2^-24 (W, X, Y rows 1-4 only). S EDATE(45000,x) n=1; T EOMONTH(45000,x) 1; U WORKDAY(45019,x) 1; V WORKDAY.INTL(45019,x,1) 1; W WEEKNUM(45018,x) 2; X WEEKNUM(45018,x) 17; Y NETWORKDAYS.INTL(45019,45023,x) weekend 2; Z EDATE(45000,x) 12.",
+ "description": "T-4454: date-function arguments just below an integer. A:Q take a serial s just below midnight of N, rows 1-7: N-0.6s, N-0.5s-2^-37 (one ulp below N-0.5s; every N is in [32768,65536)), N-0.5s, N-0.4s, N-(2^-22+2^-33), N-1s, N (1s = 1/86400). A EDATE(s,1) N=45017; B EOMONTH(s,0) 45017; C WORKDAY(s,1) 45019; D WORKDAY.INTL(s,1,1) 45019; E NETWORKDAYS(s,45030) and F NETWORKDAYS(45000,s) 45020; G, H the same for NETWORKDAYS.INTL(..,1); I WEEKNUM(s) 45018; J ISOWEEKNUM(s) 45019; K DAYS(s,45000), L DAYS(46000,s) 45019; M DATEDIF(44000,s,\"D\"), N DATEDIF(s,46000,\"D\") 45019; O YEARFRAC(44927,s,1) 45292; P DAYS360(45000,s), Q DAYS360(s,45100) 45020. S:Z take a count x near n, rows 1-10: n-(2^-22+2^-33), n-(2^-22+9*2^-36), n-2^-23, n-1E-6, -n+2^-23, -n+2^-22, -n+1E-6, -1E-10, -n-2^-23, -n+2^-24 (W, X, Y, AA:AD rows 1-4 only). S EDATE(45000,x) n=1; T EOMONTH(45000,x) 1; U WORKDAY(45019,x) 1; V WORKDAY.INTL(45019,x,1) 1; W WEEKNUM(45018,x) 2; X WEEKNUM(45018,x) 17 (both 14 for every return_type on that Sunday: they do not separate the models); Y NETWORKDAYS.INTL(45019,45023,x) weekend 2; Z EDATE(45000,x) 12. AA:AD rows 1-4 separate the models: AA WEEKNUM(45019,x) 2 (type 1 is 14, type 2 is 15); AB WEEKNUM(45017,x) 17 (type 16 is 14, type 17 is 13); AC WORKDAY.INTL(45021,1,x) weekend 7 (Fri-Sat; weekend 6 is Thu-Fri); AD NETWORKDAYS.INTL(45021,45024,x) 7.",
  "tags": [
   "M6",
   "probe",
@@ -190,7 +190,23 @@
     "Z7": "=EDATE(45000,-12+1E-6)",
     "Z8": "=EDATE(45000,-1E-10)",
     "Z9": "=EDATE(45000,-12-2^-23)",
-    "Z10": "=EDATE(45000,-12+2^-24)"
+    "Z10": "=EDATE(45000,-12+2^-24)",
+    "AA1": "=WEEKNUM(45019,2-(2^-22+2^-33))",
+    "AA2": "=WEEKNUM(45019,2-(2^-22+9*2^-36))",
+    "AA3": "=WEEKNUM(45019,2-2^-23)",
+    "AA4": "=WEEKNUM(45019,2-1E-6)",
+    "AB1": "=WEEKNUM(45017,17-(2^-22+2^-33))",
+    "AB2": "=WEEKNUM(45017,17-(2^-22+9*2^-36))",
+    "AB3": "=WEEKNUM(45017,17-2^-23)",
+    "AB4": "=WEEKNUM(45017,17-1E-6)",
+    "AC1": "=WORKDAY.INTL(45021,1,7-(2^-22+2^-33))",
+    "AC2": "=WORKDAY.INTL(45021,1,7-(2^-22+9*2^-36))",
+    "AC3": "=WORKDAY.INTL(45021,1,7-2^-23)",
+    "AC4": "=WORKDAY.INTL(45021,1,7-1E-6)",
+    "AD1": "=NETWORKDAYS.INTL(45021,45024,7-(2^-22+2^-33))",
+    "AD2": "=NETWORKDAYS.INTL(45021,45024,7-(2^-22+9*2^-36))",
+    "AD3": "=NETWORKDAYS.INTL(45021,45024,7-2^-23)",
+    "AD4": "=NETWORKDAYS.INTL(45021,45024,7-1E-6)"
    }
   }
  ],

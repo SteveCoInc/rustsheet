@@ -71,22 +71,24 @@ them.
 - COUP*, ACCRINT and other financial date arguments (functions-financial).
 
 ## Outcome
-- Probe `probes/t4454-near-midnight-date-args` (181 cells, excel-graph 2026-11-06, tag M6). Serials are built exactly
+- Probe `probes/t4454-near-midnight-date-args` (197 cells, excel-graph 2026-11-06, tag M6). Serials are built exactly
   in formulas at bases where the day changes the answer.
 - Serial arguments:
   - Every serial argument except DAYS360's floors plainly: EDATE, EOMONTH, WORKDAY(.INTL), NETWORKDAYS(.INTL) start
     and end, WEEKNUM, ISOWEEKNUM, DAYS, DATEDIF and YEARFRAC. Even N-0.4 s and N-(2^-22+2^-33) are day N-1.
   - So neither YEAR's half-second carry nor the near-integer snap applies to these functions.
-  - DAYS360 rounds to the nearest second, with the tie going up: `fl(N-0.5/86400)` is day N and one ulp below it is
-    day N-1, for start and end alike.
-- Count arguments take no snap:
+  - DAYS360 rounds to the second: `fl(N-0.5/86400)` is day N and one ulp below it is day N-1.
+- Count arguments:
   - EDATE/EOMONTH months truncate toward zero.
   - WORKDAY(.INTL) days floor (`-1E-10` is a day back).
-  - WEEKNUM's return_type and NETWORKDAYS.INTL's weekend number truncate.
-- The engine already matched all 181 cells, so this PR has no code change. Every acceptance criterion is met by the
-  existing helpers and `days360_serial`, which now has a cited cell. The t3137 cells are untouched.
-- dates.md: new entry "Other date functions floor a serial just below midnight; their counts take no near-integer
-  snap".
-- Eval delta: probes +1 case, 181/181 bit-exact; the baseline gains the case's line only, with 0 known failures and
-  0 regressions.
+  - The .INTL weekend number truncates.
+  - WEEKNUM's return_type snaps within 2^-22 + 2^-33 like LEFT's count (AA1:AB4, added in review round 1, where the
+    excel-fidelity reviewer found that W1:X4 could not tell the models apart).
+- Engine: WEEKNUM's positive return_type is now read through `near_integer_count` (weeknum.rs); every other argument
+  already matched. The t3137 cells are untouched.
+- dates.md: new entry "Other date functions floor a serial just below midnight; their counts take no near-integer snap
+  but WEEKNUM's return_type".
+- Unit test: `weeknum_return_type_snaps_near_an_integer`.
+- Eval delta: probes +1 case, 197/197 bit-exact (4 cells failed before the WEEKNUM fix); the baseline gains the
+  case's line only, with 0 regressions.
 - Follow-up: T-4468, filed here for T-4453's review MINORs.
