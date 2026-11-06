@@ -4692,6 +4692,14 @@ Oracle sweep (excel-graph), 16 cases, 34-102 cells each; every paired cell (colu
 - TTEST: tails 0/3 and type 0/4 are #NUM!, tails accepts a boolean (`TTEST(..,TRUE,2)`) and text numbers, tails/type truncate, an omitted tails or type is #NUM!; unequal counts with type 1 (paired) is #N/A; type 1 on a pair whose differences have zero variance is #DIV/0!; a one-element range is #DIV/0!; an empty range is #DIV/0!.
 - ZTEST: sigma 0 or negative is #NUM!; a one-element range is #DIV/0! (with or without sigma); an empty range is #N/A; text x "5" and TRUE coerce, non-numeric text is #VALUE!; an omitted sigma (empty argument) is #NUM!, while an omitted x (`ZTEST(D1:D10,)`) returns a value (1.3161580317707342E-09; that it equals x = 0 was not probed); a range as x lifts and spills (see "Statistical function argument modes").
 Evidence: probes-numeric cases `t1048-gammadist`, `-gammainv`, `-hypgeomdist`, `-loginv`, `-lognormdist`, `-negbinomdist`, `-normdist`, `-norminv`, `-normsdist`, `-normsinv`, `-poisson`, `-tdist`, `-tinv`, `-ttest`, `-weibull`, `-ztest`. Oracle: excel-graph, 2026-10-14.
+Gate A tables (T-4100): eval/accuracy/tables/{NORMDIST,NORMINV,NORMSDIST,NORMSINV,LOGNORMDIST,LOGINV}/s1 (987 points,
+excel-graph, 2026-11-06) score the legacy names against their modern Definitions. Every one of their 44 Excel errors
+is a `#NUM!` the modern rules give: standard_dev 0 or -1 (NORMDIST A104, LOGNORMDIST A112, LOGINV A111), LOGNORMDIST's
+x 0 or -1 (A131, A120), LOGINV's p 0 or 1 (A120, A130) and NORMDIST's density whose z squares past the double range
+(T-2435; `NORMDIST(-4.56869522456994,-4.27144857094054,2.22507385850721E-308,FALSE)`, A111, where z is finite but
+z*z overflows; at A105 z itself overflows); and the lower tail
+flushes to 0 the same way (`NORMSDIST(-37.625)` 0, s1 A68; `LOGNORMDIST(0.054038912977357,1.91539479583494,0.126426929791679)`
+0 against the math's 4.28E-320, A77).
 Status: VERIFIED (excel-graph)
 Tasks: T-1048, T-2035
 
@@ -5943,6 +5951,19 @@ Evidence: probes/stats-evidence-floor-t1623 (excel-graph, 2026-10-17).
 Status: VERIFIED (excel-graph).
 Ours: the SKEW.P mismatches (Q16, Q19) were fixed by T-1404, HARMEAN of no numbers (`#N/A`, Q50) by T-1753, and the direct TRUE in STANDARDIZE's x (Q58, and L14 of probes/stat-later-argument-lift) by T-1755; the others above are open.
 Tasks: T-1750, T-1751, T-1752, T-1753, T-1754, T-1755
+
+## STANDARDIZE is the double quotient (x - mean)/standard_dev; standard_dev <= 0 is #NUM! (T-4100)
+Rule: STANDARDIZE(x, mean, standard_dev) is one double subtraction and one division, (x - mean)/standard_dev rounded
+twice: Excel equals that double on all 185 numeric points of the Gate A table (accuracy/STANDARDIZE/s1, 195 points:
+185 numeric plus 10 standard_dev-0 errors; |x| and |mean| from 1.11402381907902E-307, A188, to 3.9704077099887E+285,
+A191, and standard_dev from 2.22507385850721E-308, A119, A124, A127, A132, A135, to 3.21220939752563E+284, A184), so
+within an ulp or so of the math. A standard_dev of 0 is `#NUM!` (s1 A112, A114, A116, A118, A121, A123, A126, A129, A131, A134), as is a negative one
+(`STANDARDIZE(-40,Data!E5,-1)`, "Booleans from a reference or a formula ..." above). A difference or quotient past the
+largest double, or a subnormal quotient, was not probed (the table redraws those points).
+Evidence: eval/accuracy/tables/STANDARDIZE/s1 (195 points, excel-graph, 2026-11-06).
+Ours: `functions/statistical/standardize.rs`, bit-exact with Excel on all 195 points.
+Status: VERIFIED (excel-graph)
+Tasks: T-4100
 
 ## AGGREGATE 14-19: k is read before the array, a referenced error k is `#VALUE!` (T-2281)
 Rule: functions 14-19 read k as a number before they read the array, so a text k is `#VALUE!`
