@@ -421,7 +421,7 @@ mod tests {
         assert!(t > 0.0 && t < 1.0, "{t}");
         assert!(beta_quantile(0.5, above, 0.6).is_nan());
         // E4 `BETA.INV(0.1,0.5,a)` = 5.85776711227727E-157: a huge second shape is not squared.
-        // (Ours is 0.5% off that value: TODO(T-4700).)
+        // (Ours is the math there; Excel is 0.5% below it: TODO(T-4700).)
         let e4 = beta_quantile(0.5, above, 0.1);
         assert!(e4 > 0.0 && e4 < 1e-150, "{e4}");
     }

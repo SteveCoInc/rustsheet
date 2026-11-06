@@ -28,6 +28,10 @@ sqrt(DBL_MAX) cut T-3862 implemented, by a rule derived from Excel's search (own
 - docs/excel-semantics/statistics.md "BETA.INV is #NUM! once the square of AS 109's first shape overflows (T-3862)".
 - Code: functions/statistical/beta.rs `beta_quantile`, inverse_beta.rs `beta_quantile_crossing`.
 
+## Visible-parity stage
+Owner of the visibly-off cells of probes/t3862-beta-inv-huge-alpha D1:D9, probes/t3862-beta-inv-sqrt-dbl-max G5:G25 and
+H4:H25, and Gate A BETAINV/s1 A179: Excel `#NUM!` where ours is a number (an error against a number, `semantics`).
+
 ## Acceptance criteria
 - [ ] The boundary in alpha is bisected at two or more betas above 1 and p values, and the rule (a quantity of
   AS 109 or Excel's cdf that overflows, underflows or cannot move) is derived and recorded in statistics.md; or the
