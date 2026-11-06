@@ -101,3 +101,21 @@ BESSELI. This is BESSELY's half of the question. BESSELK's half is T-4459.
 - Eval delta: probes +2 cases (693 cells, 692 pass), +1 known failure (D32, T-4467), 0 regressions.
 - Follow-up: T-4467.
 
+## Landing notes
+- PR #3491 (draft). Head before these notes: 5ddc439b0. The session's landing window closed at 05:26 UTC.
+- Missing: the Gate A math sidecars of the two new cases, t4458-bessely-tiny-x-cuts.math.json and
+  t4458-bessely-tiny-x-bisect.math.json. CI's eval-math-check fails until they are committed. The tool has no
+  per-case option, so regenerate with `cd tools && uv run rustsheet-accuracy math --suite probes`. It took over 25 min on 4
+  CPUs and did not finish within the window.
+  - Commit only the two t4458 sidecars. Revert the timing-dependent "why" rewrites the same run makes elsewhere
+    (m9-bessel-order-limits, t2546-bessel-past-cap, t2881-besselj-turning-point).
+- Reviews on 69caef47a (round 1):
+  - security APPROVE, MINORs only;
+  - excel-fidelity APPROVE, MINORs (box 1 and box 3 wording, the floor and normal-band notes), all addressed since;
+  - design REQUEST_CHANGES: two BLOCKING findings, the engineering.md Tasks lines and the unticked box 3. Both are
+    fixed in the "review round 1" commit; box 1 and box 3 are amended, not met as written.
+- Next step: commit the sidecars, run `make check-fast`, then re-run the whole panel on the new head (design first),
+  because every verdict names 69caef47a. Then mark the PR ready and enqueue (SQUASH).
+- Do not repeat: putting subnormal x literals, or subnormal x of any form, into the eval case. The first fill
+  (docs/research/t4458/fill1) shows that they make the workbook's other cells unreliable.
+
