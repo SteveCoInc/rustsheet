@@ -79,4 +79,4 @@ Missing: `probes/t4424-sumx2my2-overflow-order.math.json`. `cd tools && uv run r
 - **Math sidecar:** the handoff's blocker was that `rustsheet-accuracy math --suite probes` recomputes every case.
   The resumed run instead wrote this case's sidecar with `eval_math.case_math` on the one case. It has 42 math
   values. `eval_math.check_suite('probes')` reports no problems.
-- **Eval delta:** one new case of 84 cells, all passing. No baseline change, and no regression.
+- **Eval delta:** one new case of 84 cells, all passing. `make eval-baseline` records it as covered (`C`, 84 cells) in eval/baseline/probes.txt. No regression.
