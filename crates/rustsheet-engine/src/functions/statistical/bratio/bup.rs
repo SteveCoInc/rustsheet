@@ -93,9 +93,11 @@ fn l140_bup_ret(density: f64, c: f64, x0: f64, y0: f64) -> Register {
 /// (-707.42, -708.42), (-708.38, -709.38) and (-708.28, -709.28) in its three families (df1 30, 20
 /// and 31 at df2 1E8, 1E7 and 1E8), which meet only around `ln(DBL_MIN)` = -708.396:
 /// `F.DIST.RT(47.6,30,1E8)` is a number and `F.DIST.RT(47.6666666667,30,1E8)` is 0 (statistics.md
-/// "Incomplete beta at a huge first shape", T-4045). Only F's tails ask it: BETA.DIST and the t are
-/// unprobed at this edge (T-4254), and BETA.DIST's cdf under F.INV's search must keep today's
-/// kernel there (`F.INV(1.43795578761177E-262,107702,58)`, accuracy/F.INV/s1 A146).
+/// "Incomplete beta at a huge first shape", T-4045). BETA.DIST's cdf takes the same edge
+/// (probes/t4456-beta-t-zero-cut C and D, a0 = 5E6 at b0 = 25.5 and 30: the first 0 is between
+/// ln ret -708 and -709, T-4456). F's tails and BETA.DIST's worksheet cdf (T-3764) ask it; the
+/// cdf under F.INV's search keeps today's kernel there (`F.INV(1.43795578761177E-262,107702,58)`,
+/// accuracy/F.INV/s1 A146). The t never reaches L140 (its second shape is 1/2).
 pub(super) fn l140_bup_prefactor_underflows(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
     let (_, c) = bup_split(b0);
     beta_density_small_shape(y0, c, a0).is_some_and(|density| {

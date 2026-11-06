@@ -1,0 +1,38 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "decf2f72173c71d0bf6725fc031cba43c83ce81cb144ad817948f7cfdb572ef8"
+ },
+ "sheets": {},
+ "skipped": {
+  "Sheet1": {
+   "A1": {
+    "f": "=AMORDEGRC(1E20,39679,39813,300,1100000,1E-7,1)",
+    "why": "no single value"
+   },
+   "A2": {
+    "f": "=AMORDEGRC(1E20,39679,39813,300,1700000,1E-7,1)",
+    "why": "no single value"
+   },
+   "A3": {
+    "f": "=AMORDEGRC(1E20,39679,39813,300,2400000,1E-7,1)",
+    "why": "no single value"
+   },
+   "A4": {
+    "f": "=AMORDEGRC(3E19,39679,39813,300,1500000,1E-7,1)",
+    "why": "no single value"
+   },
+   "A5": {
+    "f": "=AMORDEGRC(Z1,39679,39813,300,2000000,1E-7,1)",
+    "why": "no single value"
+   },
+   "A6": {
+    "f": "=AMORDEGRC(1E15,39679,39813,1,2000000,1E-7,1)",
+    "why": "no single value"
+   }
+  }
+ }
+}

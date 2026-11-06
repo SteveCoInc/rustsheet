@@ -4806,6 +4806,26 @@ within 1E-15 relative / largest relative error:
   - Ours: BETA.DIST's worksheet cdf asks `bup.rs` `l140_bup_sum_flushed` at n >= 3 (`bratio::beta_dist_cdf`), as
     well as T-4045's rule. F's tails and the quantile searches do not ask it. The numbers within a few nats of the
     edge differ from Excel in the 8th or 9th digit (owned by T-4564).
+  - More shapes (T-4456, probes/t4456-beta-t-zero-cut, 130 cells, and probes/t4456-beta-t-zero-reach, 81 cells,
+    excel-graph, 2026-11-06):
+    - The rule holds at n = 25 and 29 bup terms. At (5E6, 25.5) and (5E6, 30), ln ret -708.0 is a number
+      (`BETA.DIST(0.999857729248015,5e+06,25.5,TRUE)` is 2.7722115421194987E-264) and -709.0 is 0 (cut C9, C10;
+      D9, D10), though the math there is 1.05E-264.
+    - The earlier cut reaches n = 5. `BETA.DIST(x,2E6,5.5|6,TRUE)` is 0 at every ln ret from -700 (cut A1:B17). Walking
+      up at b = 5.5, Excel is the math to 14 digits from 7.8E-209 down to 8.5E-291 (ln ret -690), and 0 at 4.1E-295
+      (reach A1:A21).
+    - At one x (ln ret -690, a = 2E6), b = 2.5 and 3.5 are 0 (the math 1.0E-297 and 2.8E-295), and b = 5.5 to 39.5
+      are numbers from 8.5E-291 up (reach B1:B12).
+    - At ln ret -690, every a from 3000 to 5E7 is a number at b = 5.5 and 25.5 (reach C1:D9).
+    - So at every shape probed, the earlier cut lies in the tail w between 2.8E-295 and 8.5E-291, which brackets
+      DBL_MIN/eps = 2^-970.
+    - The t's cut moves with df. At ln tail -690 (2.17E-300), df 5 to 1E6 are numbers and df 1E8 is 0 (reach F2:F9).
+      At df 1E6, Excel is a number down to 2.1717382813896547E-300 and 0 at 9.9E-305 (reach E20, E21).
+      `T.DIST.RT(1.46569174062763E+299,1)` is `#NUM!` (reach F1, where t² overflows).
+    - F.INV: Excel's F.DIST at (107702, 58) is 0 from x = 0.02 to 0.04, and a number from 0.0425 (cut G2:G14). Both
+      Excel's `F.INV(1.43795578761177E-262,107702,58)` root, 0.02386747293188499 (G1, ln ret -1194), and the math's,
+      0.040061361917045 (G3, ln ret -712.5), lie in that flat 0. So Excel's search returns a point where its own cdf
+      never reaches p (T-4442).
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
@@ -5194,7 +5214,7 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
     `CHISQ.INV.RT(1E-10,1)` = 41.82145620298276 = `CHISQ.INV(0.9999999999,1)` (the true right-tail quantile is
     41.82145636476129), and a p of 2^-54 (about 5.55E-17) or less, where 1 - p rounds to 1, is `#NUM!`
     (`CHISQ.INV.RT(1E-20,1)`); but `#NUM!` also reaches p where 1 - p is 1 - 2^-53, so "1 - p rounds to 1" is not
-    the whole mechanism (the T-3336 sweep below puts the edge between 8E-17 and 9E-17). The rule is exact only to Excel's search
+    the whole mechanism (the T-3858 probe below pins the edge between 8.3253E-17 and 8.3254E-17). The rule is exact only to Excel's search
     on its double-valued lower cdf: `CHIINV(1E-9,1)` (probes-numeric/m9-legacy-chiinv A1, A2) is 37.324892889999234
     in Excel, about 2.2E-7 (one step of the cdf's resolution near 1) below the complement crossing
     37.324893106518715 (ours) and the true quantile 37.32489305136234 (T-2561). At 50 digits (gap triage
@@ -5239,10 +5259,24 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
     plateau offsets, not single steps). CHISQ.INV.RT(1E-9,1.5) equals the df 1 value (df truncation). The `#NUM!`
     edge, probed here: 9E-17 and 2^-53 give 68.7632522116684, while 8E-17, 7E-17, 6E-17 and 2^-54 are `#NUM!`.
     In doubles 1 - 6E-17, 1 - 7E-17, 1 - 8E-17 and 1 - 9E-17 are all 1 - 2^-53, not 1, so the cutoff is not
-    "1 - p rounds to 1" and our engine, which follows that rule, returns 68.7632522116684 at 6E-17 to 8E-17 (A250 to
-    A252). `CHISQ.INV(1-8E-17,1)` is unprobed, so whether the cutoff sits in INV.RT's own p check or in its search is open.
+    "1 - p rounds to 1"; our engine followed that rule and returned 68.7632522116684 at 6E-17 to 8E-17 (A250 to
+    A252) until T-3858 (next item).
     CHISQ.DIST(x,1,TRUE) is 0.9999999989999999 at Excel's 37.324892889999234 and 0.999999999 at ours. Full cells in
     the case's oracle sidecar.
+  - The df 1 `#NUM!` cutoff (T-3858, probes-numeric/t3858-chisq-df1-num-cutoff, excel-graph, 264 cells):
+    `CHISQ.INV.RT(p,1)` and `CHIINV(p,1)` are `#NUM!` for p <= 8.3253E-17 and 68.7632522116684 for p >= 8.3254E-17
+    (every p from 8E-17 to 9E-17 in steps of 1E-18 and from 8.3200E-17 to 8.3270E-17 in steps of 1E-21; also
+    `3*2^-55-2^-106`, `3*2^-55`, `3*2^-55+2^-106`, `2^-53-2^-106`, `2^-53` and `2^-53+2^-105`, all values).
+    `CHISQ.INV(1-p,1)` is 68.7632522116684 at every one of these p, `#NUM!` side included, and 1 - p is the double
+    1 - 2^-53 at all of them, so the cutoff is in the right-tail functions' own check on p, not in the search on
+    1 - p. CHIINV takes the same edge as CHISQ.INV.RT at every p. df 1.5 is unprobed here (df is truncated, so
+    the engine gives it the same edge). The edge is about 0.74988 * 2^-53, close to but below 3 * 2^-55
+    (0.75 * 2^-53, a value), so it is not the double rounding of (0.5 - p) + 0.5 (whose edge would be
+    3 * 2^-55 itself), and it is not the upper tail at a round x (erfc(sqrt(x/2)) = 8.32535E-17 at x about
+    69.33093). No closed form found; the engine takes the midpoint 8.32535E-17 (chisq.rs
+    `ONE_DEGREE_RIGHT_TAIL_P_MIN`), and a fresh sweep after that choice (t3858-chisq-df1-num-cutoff-fresh, 40
+    log-uniform p in [5.6E-17, 1.1E-16], CHISQ.INV.RT and CHIINV) agrees at all 80 cells. Mind the literals: a p literal with more than 15 significant digits is cut to 15
+    (numbers.md), so ulp-level p must be built from powers of two, as here.
   - Excel's search gives up in the far right tail. Below an edge that depends on df, CHISQ.INV.RT and CHIINV are
     `#NUM!`, though the quantile exists and CHISQ.DIST.RT past it is a plain number. With p = 1E-k, the last k that
     is still a value is, for df 3 to 42: 20, 27, 35, 43, 52, 62, 72, 81, 87, 90, 94, 99, 104, 110, 116, 121, 127,

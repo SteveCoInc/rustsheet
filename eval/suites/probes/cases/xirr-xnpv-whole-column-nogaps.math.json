@@ -17,6 +17,19 @@
     "t": "n",
     "v": "0.1",
     "f": "=XIRR({-1000,1100},{45000,45365})"
+   },
+   "A6": {
+    "t": "e",
+    "why": "a date before the first: #NUM!",
+    "f": "=XNPV(0.1,{-1000,1100,-1000},{45000,45365,1100})"
+   }
+  }
+ },
+ "skipped": {
+  "Sheet1": {
+   "A3": {
+    "f": "=XNPV(0.1,Data!A1:A2,Data!B1:B2)",
+    "why": "not converged"
    }
   }
  }
