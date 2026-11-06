@@ -248,15 +248,17 @@ symmetric with the positive side: `FIXED(1234.5678,-1+2^-23)` is "1230", `-1+2^-
 "1235" (not -1), `-3+2^-23` "1000" and `-3+1E-6` "1200" (I1:J21). REPT's number_times and UNICHAR do **not** snap:
 they truncate exactly like MID, so `REPT("a",1-1E-15)` is "" and `UNICHAR(66-2^-23)` is "A" (A1:A14, E1:E14; the
 n-1E-15 cells at 1000 and 66 read n only because that value rounds to n in binary). The cutoff is known to 2^-36: 2^-22 + 8·2^-36 (= 2^-22 + 2^-33) rounds up, 2^-22 + 9·2^-36 does not;
-the engine takes the bound as exactly 2^-22 + 2^-33, inclusive. Unprobed: REPLACE start_num 32767.9999999 (rounds
+the engine takes the bound as exactly 2^-22 + 2^-33, inclusive. At the upper caps (probes/t4468-near-integer-text-caps, excel-graph 2026-11-06, T-4468): `FIXED(1,128-2^-23)`, `DOLLAR(1,128-2^-23)`, `CODE(CHAR(256-2^-23))` and `FIND("","abc",5-2^-23)` snap up to the cap and are `#VALUE!` (B1:E2), while 2^-22 + 9*2^-36 below floors to 127 (digits printed), 255 (CODE 255) and 4 (FIND 4) (B4:E4); cap-1 is accepted (row 6). SUBSTITUTE instance_num at 2^31-1 snaps over a far wider window than 2^-22 + 2^-33: `2147483647-d` is `#VALUE!` for every d up to 2^-18 (3.8E-6; F1:F6, A1:A5) and "aaa" (no such instance) from d = 5*2^-19 (G1:G11) and 2^-16 (F7:F12). The model: instance_num is **cut to 15 significant digits (round to nearest) before** the near-integer floor, so at ten integer digits anything within 5E-6 of 2147483647 reads 2147483647. `2147483647-4.5E-6` is `#VALUE!` and `2147483647-4.9E-6` (the double 2147483646.99999499…) is "aaa" (probes/t4468-substitute-cap-window A1:A14, registered before the fill; 21 of 21 cells). A literal or text instance_num is cut by truncation first ("15-digit literal parsing", numbers.md), so `SUBSTITUTE("aaa","a","b",2147483646.999999)` and `"2147483646.999996"` read 2147483646.99999 and give "aaa" while `2147483647-1E-6`, the same double as that literal's full parse, is `#VALUE!` (B5, C1). A fresh log-uniform sweep frozen after the model (probes/t4468-substitute-cap-sweep, 60 cells, d in [1E-7,1E-4] at the cap and [1E-8,1E-5] at 3) matches 60 of 60; the absolute bound alone matches 48. Below 1E+8 the cut's window (at most 5E-8) is inside the 2^-22 snap, so no other snapping argument can show it; the engine applies it to SUBSTITUTE only.
+Unprobed: REPLACE start_num 32767.9999999 (rounds
 up to 32,768, so the engine gives `#VALUE!`).
 Evidence: probes/text-count-argument-bounds A-D, N-S, T-V, X-Y, Z, AA (excel-graph, 2026-10-11, T-0219);
-probes/t4453-near-integer-text-args A1:J21 (excel-graph, 2026-11-06, T-4453).
+probes/t4453-near-integer-text-args A1:J21 (excel-graph, 2026-11-06, T-4453);
+probes/t4468-near-integer-text-caps, t4468-substitute-cap-window, t4468-substitute-cap-sweep (excel-graph, 2026-11-06, T-4468).
 Status: VERIFIED
 Implemented in: functions/util/near_integer.rs (`near_integer_count`, `near_integer_trunc`), used by `left_element`,
 `right_element` (common.rs), `replace_element` (string_format.rs), `find_element` (position.rs), `fn_char`
 (char_code.rs), `substitute_element` (util.rs) and `decimals_arg` (string_format.rs).
-Tasks: T-0219, T-4453
+Tasks: T-0219, T-4453, T-4468
 
 ## Text function argument modes
 Rule: the M5 text functions take scalar arguments that lift over a range or array (one result per cell, a spill;
@@ -667,9 +669,11 @@ as that integer on either side of zero (`FIXED(1234.5678,-1+2^-23)` "1230"; see 
 near an integer", T-4453). A `decimals` of 128 or more (also 128.5) is `#VALUE!`;
 127 is fine and prints 127 fraction digits; large negatives just give "0" (`FIXED(1,-400)`, `DOLLAR(1,-129)`).
 `FIXED(1234,0,"x")` is `#VALUE!`; a numeric no_commas is a boolean (`FIXED(1234,0,2)` = "1234").
-Evidence: probes/dollar-fixed-unichar-edges A1-A29, A46-A50, D69-D75 (excel-graph, T-1281).
+Evidence: probes/dollar-fixed-unichar-edges A1-A29, A46-A50, D69-D75 (excel-graph, T-1281); probes/t4453-near-integer-text-args
+G1:J21 (excel-graph, 2026-11-06, T-4453); probes/t4468-near-integer-text-caps B1:C6 (`128-2^-23` is `#VALUE!`, T-4468).
 FIXED of a value that rounds to zero drops the sign (`FIXED(-0.004,2)` "0.00", `FIXED(-0.4,0)` "0"; DOLLAR keeps
 parentheses: `DOLLAR(-0.004)` "($0.00)"). Implemented (T-1257), see "FIXED drops the sign of a value that rounds to zero".
+Tasks: T-1281, T-4453
 Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081)
 
 ## FIXED, DOLLAR and BAHTTEXT cut to 15 significant digits first (T-2148, T-2149)
