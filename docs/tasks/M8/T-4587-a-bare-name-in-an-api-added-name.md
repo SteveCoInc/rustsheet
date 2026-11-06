@@ -3,7 +3,7 @@ id: T-4587
 title: "A bare name in an API-added name body binds to its sheet-scoped definition on the alphabetically first sheet, else the workbook name (probes/t4554-api-name-*)"
 milestone: M8
 lane: api
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -42,15 +42,33 @@ and among sheet-scoped definitions the one on the alphabetically first sheet nam
   the cells.
 
 ## Acceptance criteria
-- [ ] These cells pass:
+- [x] These cells pass (all but probes/t4554-api-name-local-name-body Last!D3, which is not a binding cell: see Outcome;
+      T-4618 owns it):
   - probes/t4554-api-name-local-name-body: First!D1:D3, S2!D1:D3, Last!D1:D3.
   - probes/t4554-api-name-scoped-name-choice: First!D1, First!D2, First!D5, First!D7, First!D8, S2!D1, S2!D2, S2!D5, S2!D7, S2!D8, Last!D1, Last!D2, Last!D5, Last!D7, Last!D8.
   - probes/t4554-api-name-scoped-name-choice-first: First!D1, First!D2, First!D5, First!D7, First!D8, S2!D1, S2!D2, S2!D5, S2!D7, S2!D8, Last!D1, Last!D2, Last!D5, Last!D7, Last!D8.
   - probes/t4554-api-name-scoped-name-choice-last: First!D1, First!D2, First!D5, First!D7, First!D8, S2!D1, S2!D2, S2!D5, S2!D7, S2!D8, Last!D1, Last!D2, Last!D5, Last!D7, Last!D8.
-- [ ] The name order is case-insensitive, or a probe shows otherwise (sheets `b` and `A`), and the case is recorded in
+- [x] The name order is case-insensitive, or a probe shows otherwise (sheets `b` and `A`), and the case is recorded in
       syntax.md.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Uses typed before the add (T-4391).
 - Bodies that are a LAMBDA call or a name inside LET (unprobed).
+
+## Outcome
+- The parser reads a bare defined name of an API-added body (`Parser::set_api_name_body`, set by
+  `Model::insert_defined_name` for `NameSource::Api`) as `Sheet!Name` on the first defining sheet by lower-cased
+  name (`Parser::api_body_sheet_name`, crates/rustsheet-engine/src/expressions/parser/defined_names.rs). The body is
+  stored qualified, so a sheet rename rewrites it; a name only the workbook defines stays bare. `bind_bare_name`
+  (operands.rs) now checks the written identifier for a prefix, so a LET name or LAMBDA parameter of such a body
+  still declares the variable. Unit tests: crates/rustsheet-engine/src/test/test_api_name_bare_name_binding.rs.
+- Name order: probes/t4587-api-name-sheet-order-case (excel-graph 2026-11-06; tabs Z, B, a, _u) shows it ignores
+  case (`a` before `B`, which an ordinal compare reverses; this covers the `b`/`A` question, which cannot tell the
+  two apart) and puts `_` before the letters. Recorded in syntax.md.
+- Last!D3 of t4554-api-name-local-name-body (`=LD` on Last, loaded before the Last-scoped add) is not about body
+  binding: it is the T-4049 rule ("A sheet-scoped name added after load" leaves such a use `#NAME?`), which Excel
+  breaks here. Four probes (t4587-sheet-api-name-inactive-sheet, -sheet-has-names, -name-body,
+  -qualified-use-first) keep the rule and do not explain it; recorded in syntax.md, handed to T-4618.
+- Eval delta: probes known failures 6282 -> 6229 (53 cells fixed, 0 regressions); 5 new probe cases (27 cells), all
+  passing.
