@@ -2360,6 +2360,7 @@ C	probes/t4422-besseli-fresh-sweep.case.json	400
 C	probes/t4423-hyperbolic-overflow-band.case.json	300
 C	probes/t4424-sumx2my2-overflow-order.case.json	84
 C	probes/t4430-legacy-at-name-body-rest.case.json	181
+C	probes/t4444-dfunction-text-equal-one.case.json	52
 C	probes/t4447-sort-fractional-keys.case.json	84
 C	probes/t4449-groupby-function-array-edges.case.json	145
 C	probes/t4453-near-integer-text-args.case.json	168

@@ -2,7 +2,7 @@
  "format": "rustsheet-case/v1",
  "description": "Ordering criteria (<, <=, >, >=) vs =/<> in AVERAGEIF(S), MINIFS, MAXIFS and the D-functions on one-cell and whole ranges a few ULP from 1 (T-4399).",
  "tags": [
-  "M2",
+  "M9",
   "numbers",
   "criteria",
   "probe"

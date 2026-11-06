@@ -3,7 +3,7 @@ id: T-4444
 title: "Probe a text =1 criterion in a D-function criteria range near 1; tidy T-4399's tag and numbers.md evidence line"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,3 +31,9 @@ MINOR findings of T-4399's review (PR #3431, all reviewers approved 9bd0129):
 
 ## Out of scope
 -
+
+## Outcome
+Added probes/t4444-dfunction-text-equal-one (52 cells, excel-graph): a criteria cell holding the text `=1` or `=1.0`
+gives the same DCOUNT/DSUM/DAVERAGE/DMIN/DMAX results as the numeric `=1` control; all 52 cells pass, no engine change.
+Re-tagged t4399 M2 -> M9; reworded the numbers.md t3072/t4399 evidence line; recorded the rule in criteria.md.
+Eval delta: +52 passing cells (probes), no regressions.
