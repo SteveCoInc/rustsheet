@@ -136,3 +136,19 @@ fn test_fn_beta_dist_shape_one_complement_past_unit_exponent() {
         assert_eq!(number(cell).to_bits(), excel.to_bits(), "{cell}");
     }
 }
+
+// T-3764: BETA.DIST's cdf is Excel's exact 0 where L140 bup+bgrat's prefactor underflows (T-4045's
+// rule, F's until now), though the true tail is a normal double. Excel values (excel-graph) from
+// probes-numeric t3568-r5-bup-fresh A291 and t3568-r5-bup-hold A20 and A686; BETADIST shares it.
+#[test]
+fn test_fn_beta_dist_l140_prefactor_underflow_is_zero() {
+    let mut model = new_empty_model();
+    model._set("A1", "=BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)");
+    model._set("A2", "=BETA.DIST(0.749267,2496.51,16.8,TRUE)");
+    model._set("A3", "=BETA.DIST(0.74342,2420.0,33.6362,TRUE)");
+    model._set("A4", "=BETADIST(0.74342,2420.0,33.6362)");
+    model.evaluate();
+    for cell in ["A1", "A2", "A3", "A4"] {
+        assert_eq!(round_trip_value(&model, cell), "0.0", "{cell}");
+    }
+}

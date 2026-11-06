@@ -1498,6 +1498,10 @@ hundreds (financial.md "PPMT discounts with an atanh-series log", probes-numeric
 is reachable (n*L above about 36.7). PMT's `1-Q` is this expm1 only for |x| < 1 and `1 - EXP(x)` from 1 on (probes/t3014-pmt-fv-type-alone
 column C, financial.md "PMT is a discounted payment", T-3014); whether that switch belongs to Excel's expm1 itself, and so
 to PPMT's `1-Q` at |x| >= 1 too, is not established.
+The same switch at |x| = 1 is in WEIBULL.DIST's and EXPON.DIST's cdfs and, since T-3764, in the incomplete beta's
+w = 1 - (1 - x0)^b0 at a0 = 1 (statistics.md "Incomplete beta at a shape of 1 outside the closed forms": all 508
+t3568-r5-bup cells at |x| 3.9 to 215, where Kahan's form misses 47). The engine's `x87_exp::excel_one_minus_exp` is that
+1 - e^x; the three older callers keep their own copies of the cut (T-4511 folds them in).
 Status: VERIFIED (excel-graph).
 
 ### SIN/COS/TAN/SEC/CSC/COT near multiples of PI(): oracle sweep (T-1008)
