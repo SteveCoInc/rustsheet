@@ -95,3 +95,19 @@ Cells:
   - ironcalc-calc CONVERT.xlsx and Gate A are unchanged.
   - T-2047's m to ft cells now pass; its area cells (`m2` to `ly2`) are untouched.
 - **Follow-ups:** T-4666 (from #3708's review, T-4475); T-4670 (non-round values near the overflow path).
+
+## Landing notes
+State at the landing window's close (2026-11-06 19:45 UTC). PR #3721 is still a draft and is not enqueued. Its head is
+the commit after dd7fc87f0, which adds only these notes.
+- CI: the full run on f888060c6 was in progress at 19:43 and has been superseded by the docs pushes. The run on 2fb008db9
+  showed `rust (fmt, clippy, test)` red only because the shard run was cancelled by the next push
+  (`RESULT: cancelled`), not because a test failed.
+- Reviewers on f888060c6: design APPROVE, security APPROVE. Excel-fidelity REQUEST_CHANGES (round 2), for one blocking
+  item: the Outcome's angstrom hold-out row said 42/44, a scoring-script error. The engine passes all 160 cells, so the
+  row is 44/44. dd7fc87f0 fixes that row, the parsec wording ("Excel's length", not the IAU parsec) and the 1E-8 m
+  figure, and files T-4670 for the overflow-path minor.
+- Next step: wait for green CI on the head, then re-run the reviewers on it. Fidelity must re-check the corrected R4
+  table; design and security only need to confirm the docs-only delta. Then mark the PR ready and enqueue it.
+- Do not repeat: scoring with the Python model in the session scratchpad; it mis-scored the angstrom hold-out. Use
+  `rustsheet-eval show` or the engine for counts. calipers/formulas_engineering D26, D27, J26, J27 should leave
+  eval/baseline/calipers.txt the next time `make eval-baseline` runs with calipers fetched (never by hand).
