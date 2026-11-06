@@ -120,8 +120,11 @@ pub(super) fn criterion(node: &XmlNode) -> Option<FilterCriterion> {
             val_iso: optional(node.attribute("valIso"), date_time).ok()?,
             max_val_iso: optional(node.attribute("maxValIso"), date_time).ok()?,
         }),
+        // Excel (excel-graph, 2026-11-06, T-4404): a `<colorFilter>` with no `dxfId` is no
+        // criterion, so it is stored as `Other` and `tables::is_criterion` leaves SUBTOTAL's hidden
+        // rows manual. See docs/excel-semantics/xlsx-storage.md, "Table parts in the export".
         "colorFilter" => Some(FilterCriterion::Color {
-            dxf_id: optional(node.attribute("dxfId"), |v| v.parse().ok()).ok()?,
+            dxf_id: Some(node.attribute("dxfId")?.parse().ok()?),
             cell_color: get_bool(node, "cellColor"),
         }),
         "iconFilter" => Some(FilterCriterion::Icon {
@@ -255,6 +258,8 @@ mod tests {
             })
         );
         assert_eq!(read(r#"<colorFilter dxfId="-1"/>"#), None);
+        assert_eq!(read(r"<colorFilter/>"), None);
+        assert_eq!(read(r#"<colorFilter cellColor="0"/>"#), None);
         assert_eq!(
             read(r#"<iconFilter iconSet="3Arrows" iconId="2"/>"#),
             Some(FilterCriterion::Icon {

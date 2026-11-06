@@ -16,6 +16,7 @@ use crate::refs::{
     parse_cell, parse_range, resolve_sheet_by_name, CellRef, RangeRef, SheetId, Target,
 };
 use crate::value::{lone_text, Array, Value};
+mod active_sheet;
 mod calculation;
 #[cfg(feature = "harness_row_insert")]
 mod harness;

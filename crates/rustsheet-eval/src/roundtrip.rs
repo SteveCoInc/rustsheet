@@ -7,8 +7,10 @@
 //! (T-4514) build on the same results.
 
 mod package;
+mod semantic;
 #[cfg(test)]
 mod tests;
+mod xmldiff;
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -24,6 +26,7 @@ use crate::baseline::{self as ratchet, Baseline};
 use crate::engine::harness_options;
 use crate::runner::{run_in_worker, CaseStatus};
 use crate::suite::{CaseFile, Suite};
+use crate::xlsx_snapshot::read_snapshot;
 
 use package::{validate, Package, Problem};
 
@@ -45,7 +48,7 @@ impl Verdict {
         self == Verdict::Kept
     }
 
-    fn label(self) -> &'static str {
+    pub(crate) fn label(self) -> &'static str {
         match self {
             Verdict::Kept => "kept",
             Verdict::Changed => "changed",
@@ -70,6 +73,10 @@ pub struct Item {
     /// baseline line, which must stay stable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<String>,
+    /// The candidate normalization (SPEC-0033 D4.4, `N1`–`N12`) the item would fall under once
+    /// T-4503 evidences it: tagged, never applied.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub candidate: Option<&'static str>,
 }
 
 impl Item {
@@ -83,10 +90,9 @@ impl Item {
             self.key,
             self.verdict.label()
         );
-        // calcChain is the first candidate normalization (SPEC-0033 D4.4, N1): tagged until
-        // T-4503's evidence lets the differ normalize it.
-        if self.kind == "part" && self.key.ends_with("/calcChain[0]") {
-            key.push_str(" candidate-N1");
+        if let Some(n) = self.candidate {
+            key.push_str(" candidate-");
+            key.push_str(n);
         }
         key
     }
@@ -101,6 +107,9 @@ pub struct CaseResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     pub millis: u64,
+    /// Source items compared: parts, elements and attributes (the baseline's checked count).
+    pub checked: usize,
+    /// The part items, and every element, attribute and validator item that did not pass.
     pub items: Vec<Item>,
 }
 
@@ -112,6 +121,7 @@ impl CaseResult {
             status,
             message,
             millis: 0,
+            checked: 0,
             items: Vec::new(),
         }
     }
@@ -131,6 +141,7 @@ pub fn run_suites(suites: &[Suite], filter: Option<&str>, timeout: Duration) -> 
                 status: CaseStatus::InvalidCase,
                 message: Some(e.to_string()),
                 millis: 0,
+                checked: 0,
                 items: Vec::new(),
             }),
         }
@@ -170,13 +181,14 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
         Ok(Err(R0Error::Engine(e))) => {
             CaseResult::new(case, suite, CaseStatus::EngineError, Some(e))
         }
-        Ok(Ok(items)) => {
+        Ok(Ok((items, checked))) => {
             let status = if items.iter().all(|i| i.verdict.passes()) {
                 CaseStatus::Pass
             } else {
                 CaseStatus::Fail
             };
             CaseResult {
+                checked,
                 items,
                 ..CaseResult::new(case, suite, status, None)
             }
@@ -194,8 +206,8 @@ enum R0Error {
 }
 
 /// Scenario R0 (SPEC-0033 D1): load with the harness clock, recalculate, save; then validate the
-/// output and score the source's parts.
-fn r0(bytes: &[u8], name: Option<&str>) -> Result<Vec<Item>, R0Error> {
+/// output and score the source's parts, elements and attributes.
+fn r0(bytes: &[u8], name: Option<&str>) -> Result<(Vec<Item>, usize), R0Error> {
     let source = Package::read(bytes).map_err(|e| R0Error::Source(e.to_string()))?;
     let opts = LoadOptions {
         recalc: false,
@@ -209,11 +221,27 @@ fn r0(bytes: &[u8], name: Option<&str>) -> Result<Vec<Item>, R0Error> {
     let out = workbook
         .to_xlsx_bytes(SaveOptions::default())
         .map_err(|e| R0Error::Engine(format!("save failed: {e}")))?;
-    Ok(score("R0", &source, &out))
+    let sides = Sides {
+        source: &source,
+        source_bytes: bytes,
+        saved: &workbook,
+        name: name.unwrap_or("workbook"),
+    };
+    Ok(score("R0", &sides, &out))
 }
 
-/// The items of one scenario: validator problems of `out`, then the source's parts.
-fn score(scenario: &'static str, source: &Package, out: &[u8]) -> Vec<Item> {
+/// What a scenario's output is compared with: the source package and bytes, and the workbook
+/// that was saved (its recalculated values, D3.1).
+struct Sides<'a> {
+    source: &'a Package,
+    source_bytes: &'a [u8],
+    saved: &'a Workbook,
+    name: &'a str,
+}
+
+/// The items of one scenario and the number of source items compared: validator problems of
+/// `out`, the source's parts with what differs inside them, then the semantic items.
+fn score(scenario: &'static str, sides: &Sides<'_>, out: &[u8]) -> (Vec<Item>, usize) {
     let mut items = Vec::new();
     let problem = |p: Problem| Item {
         scenario,
@@ -221,6 +249,7 @@ fn score(scenario: &'static str, source: &Package, out: &[u8]) -> Vec<Item> {
         key: p.check.to_string(),
         verdict: Verdict::PackageInvalid,
         detail: Some(p.detail),
+        candidate: None,
     };
     let output = match Package::read(out) {
         Ok(pkg) => pkg,
@@ -229,70 +258,136 @@ fn score(scenario: &'static str, source: &Package, out: &[u8]) -> Vec<Item> {
                 check: "V8",
                 detail: format!("the output is not a readable package: {e}"),
             }));
-            return items;
+            return (items, 1);
         }
     };
     items.extend(validate(&output).into_iter().map(problem));
-    // V8: our own importer opens what we wrote.
-    if let Err(e) = Workbook::from_xlsx_bytes(out, &LoadOptions::default()) {
-        items.push(problem(Problem {
-            check: "V8",
-            detail: format!("the output does not load: {e}"),
-        }));
+    let (parts, mut checked) = part_items(scenario, sides.source, &output);
+    items.extend(parts);
+    // V8: our own importer opens what we wrote, as stored (no recalculation).
+    let as_loaded = LoadOptions {
+        recalc: false,
+        ..LoadOptions::default()
+    };
+    let reloaded = match Workbook::from_xlsx_bytes(out, &as_loaded) {
+        Ok(w) => w,
+        Err(e) => {
+            items.push(problem(Problem {
+                check: "V8",
+                detail: format!("the output does not load: {e}"),
+            }));
+            return (items, checked);
+        }
+    };
+    // Semantic items (D2, D3): the source and the output, both as loaded, then the saved and the
+    // reloaded values. A source the model cannot load scores no semantic items.
+    if let (Ok(src), Ok(dst)) = (
+        semantic::load_model(sides.source_bytes, sides.name),
+        semantic::load_model(out, sides.name),
+    ) {
+        items.extend(semantic::validate_indexes(&dst).into_iter().map(problem));
+        let (mut src_facts, mut dst_facts) =
+            (semantic::model_facts(&src), semantic::model_facts(&dst));
+        if let (Ok(a), Ok(b)) = (read_snapshot(sides.source_bytes), read_snapshot(out)) {
+            src_facts.extend(semantic::stored_facts(&a));
+            dst_facts.extend(semantic::stored_facts(&b));
+        }
+        let saved = semantic::value_facts(sides.saved, &src_facts);
+        let back = semantic::value_facts(&reloaded, &dst_facts);
+        for (facts_a, facts_b) in [(&src_facts, &dst_facts), (&saved, &back)] {
+            let (diffs, n) = semantic::compare(facts_a, facts_b);
+            checked += n;
+            items.extend(diffs.into_iter().map(|(key, verdict, detail)| Item {
+                scenario,
+                kind: "semantic",
+                key,
+                verdict,
+                detail,
+                candidate: None,
+            }));
+        }
     }
-    items.extend(part_items(scenario, source, &output));
-    items
+    (items, checked)
 }
 
 /// One `part` item per content part of `source`, then one `added` item per part only `output`
-/// has (D2): parts match by key, never by name.
-fn part_items(scenario: &'static str, source: &Package, output: &Package) -> Vec<Item> {
+/// has (D2): parts match by key, never by name. A kept XML part is diffed for `element` and
+/// `attribute` items (D4.1–D4.4), another part compared by bytes (D4.5). Returns the items and
+/// the number of source items compared.
+fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Vec<Item>, usize) {
     let src = source.keyed_parts();
     let out = output.keyed_parts();
     let mut items = Vec::new();
+    let mut checked = 0;
+    let item = |kind, key: String, verdict, detail| Item {
+        scenario,
+        kind,
+        candidate: xmldiff::candidate(&key),
+        key,
+        verdict,
+        detail,
+    };
     for (key, part) in &src {
-        let (verdict, detail) = match out.get(key) {
-            None => (Verdict::Lost, None),
-            Some(o) => {
-                let (a, b) = (source.content_type(part), output.content_type(o));
-                if a == b {
-                    (Verdict::Kept, None)
-                } else {
-                    (
-                        Verdict::Changed,
-                        Some(format!("content type {a:?} became {b:?}")),
-                    )
+        checked += 1;
+        let Some(out_part) = out.get(key) else {
+            items.push(item("part", key.clone(), Verdict::Lost, None));
+            continue;
+        };
+        let (was, now) = (source.content_type(part), output.content_type(out_part));
+        if was != now {
+            let detail = Some(format!("content type {was:?} became {now:?}"));
+            items.push(item("part", key.clone(), Verdict::Changed, detail));
+            continue;
+        }
+        let (mut verdict, mut detail) = (Verdict::Kept, None);
+        match (source.xml.get(*part), output.xml.get(*out_part)) {
+            (Some(src_xml), Some(out_xml)) => match xmldiff::diff(src_xml, out_xml) {
+                Ok(part_diff) => {
+                    checked += part_diff.checked;
+                    for diff in part_diff.differences {
+                        items.push(item(
+                            diff.kind,
+                            format!("{key}:{}", diff.path),
+                            diff.verdict,
+                            diff.detail,
+                        ));
+                    }
+                    if part_diff.truncated > 0 {
+                        let more = Some(format!("{} more differences", part_diff.truncated));
+                        items.push(item(
+                            "element",
+                            format!("{key}:<truncated>"),
+                            Verdict::Changed,
+                            more,
+                        ));
+                    }
+                }
+                Err(why) => {
+                    (verdict, detail) = (Verdict::Changed, Some(format!("not comparable: {why}")));
+                }
+            },
+            _ => {
+                if source.digests.get(*part) != output.digests.get(*out_part) {
+                    (verdict, detail) = (Verdict::Changed, Some("the bytes differ".to_string()));
                 }
             }
-        };
-        items.push(Item {
-            scenario,
-            kind: "part",
-            key: key.clone(),
-            verdict,
-            detail,
-        });
+        }
+        items.push(item("part", key.clone(), verdict, detail));
     }
     for key in out.keys().filter(|k| !src.contains_key(*k)) {
-        items.push(Item {
-            scenario,
-            kind: "part",
-            key: key.clone(),
-            verdict: Verdict::Added,
-            detail: None,
-        });
+        items.push(item("part", key.clone(), Verdict::Added, None));
     }
-    items
+    (items, checked)
 }
 
-/// The results as a cells-mode baseline (SPEC-0033 D8): a case's checked count is its number of
-/// items, and each failing item is one known failure. A case that did not run is one
-/// `!Status` failure, as in the cell suites.
+/// The results as a cells-mode baseline (SPEC-0033 D8): a case's checked count is the number of
+/// source items it compared, and each failing item is one known failure. A case that did not run
+/// is one `!Status` failure, as in the cell suites.
 #[must_use]
 pub fn baseline(results: &[&CaseResult]) -> Baseline {
     let mut b = Baseline::default();
     for r in results {
-        b.checked.insert(r.id.clone(), r.items.len());
+        b.checked.insert(r.id.clone(), r.checked);
         match r.status {
             CaseStatus::Pass => {}
             CaseStatus::Fail => {
@@ -408,7 +503,7 @@ pub fn command(
     for suite in suites {
         let name = &suite.manifest.name;
         let mine: Vec<&CaseResult> = results.iter().filter(|r| &r.suite == name).collect();
-        let items: usize = mine.iter().map(|r| r.items.len()).sum();
+        let items: usize = mine.iter().map(|r| r.checked).sum();
         let current = baseline(&mine);
         lines.push(format!(
             "[{name}] {} cases, {items} items, {} failing",

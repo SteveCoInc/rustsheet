@@ -12,7 +12,10 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, XmlVersion};
 use serde::{Deserialize, Serialize};
 
+mod pivots;
 mod tables;
+use pivots::read_sheet_pivots;
+pub use pivots::{PivotCacheField, PivotDef, PivotLine};
 use tables::read_sheet_tables;
 pub use tables::TableDef;
 
@@ -127,6 +130,10 @@ pub struct WorkbookSnapshot {
     /// Tables; absent in snapshots written before T-0434.
     #[serde(default)]
     pub tables: Vec<TableDef>,
+    /// Pivot tables as Excel saved them (location, layout lines, group labels); absent in
+    /// snapshots written before T-4123.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivots: Vec<PivotDef>,
 }
 
 impl WorkbookSnapshot {
@@ -212,6 +219,21 @@ fn read_part_capped(
     name: &str,
     limit: u64,
 ) -> Result<Option<String>, SnapshotError> {
+    let Some(bytes) = read_part_bytes_capped(zip, name, limit)? else {
+        return Ok(None);
+    };
+    String::from_utf8(bytes)
+        .map(Some)
+        .map_err(|_| SnapshotError::Malformed(format!("part {name} is not UTF-8")))
+}
+
+/// The bytes of part `name`, read through the same guard as [`read_part`]: at most `limit`
+/// bytes may inflate.
+pub(crate) fn read_part_bytes_capped(
+    zip: &mut Zip,
+    name: &str,
+    limit: u64,
+) -> Result<Option<Vec<u8>>, SnapshotError> {
     let Some(entry) = zip.names.entry(name) else {
         return Ok(None);
     };
@@ -220,14 +242,16 @@ fn read_part_capped(
         Err(zip::result::ZipError::FileNotFound) => return Ok(None),
         Err(e) => return Err(e.into()),
     };
-    let mut s = String::new();
-    (&mut file).take(limit + 1).read_to_string(&mut s)?;
-    if s.len() as u64 > limit {
+    let mut bytes = Vec::new();
+    (&mut file)
+        .take(limit.saturating_add(1))
+        .read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > limit {
         return Err(SnapshotError::Malformed(format!(
             "part {name} exceeds the {limit}-byte decompressed size limit"
         )));
     }
-    Ok(Some(s))
+    Ok(Some(bytes))
 }
 
 pub(crate) fn xml_err(part: &str, e: impl std::fmt::Display) -> SnapshotError {
@@ -267,7 +291,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         names: defined_names,
         file_app_name,
     } = parse_workbook(&workbook)?;
-    let sheet_names: Vec<String> = sheet_list.iter().map(|(n, ..)| n.clone()).collect();
+    let sheet_names: Vec<String> = sheet_list.iter().map(|s| s.name.clone()).collect();
     let defined_names = defined_names
         .into_iter()
         .map(|(name, local, body)| DefinedName {
@@ -278,7 +302,8 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         .collect();
     let mut sheets = Vec::new();
     let mut tables = Vec::new();
-    for (name, rid, _) in sheet_list {
+    let mut pivot_reader = pivots::PivotReader::new();
+    for SheetRef { name, rid, .. } in sheet_list {
         let Some(target) = rels.get(&rid) else {
             continue;
         };
@@ -293,6 +318,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         };
         let cells = parse_sheet(&xml, &path, &shared, &rich_errors, date_system)?;
         read_sheet_tables(&mut zip, &path, &name, &mut tables)?;
+        read_sheet_pivots(&mut zip, &path, &name, &mut pivot_reader)?;
         sheets.push(SheetSnapshot { name, cells });
     }
     Ok(WorkbookSnapshot {
@@ -303,6 +329,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         sheets,
         defined_names,
         tables,
+        pivots: pivot_reader.pivots,
     })
 }
 
@@ -376,7 +403,7 @@ fn read_shared_strings(zip: &mut Zip) -> Result<Vec<String>, SnapshotError> {
     Ok(out)
 }
 
-fn resolve_entity(r: &quick_xml::events::BytesRef<'_>) -> String {
+pub(crate) fn resolve_entity(r: &quick_xml::events::BytesRef<'_>) -> String {
     if let Ok(Some(c)) = r.resolve_char_ref() {
         return c.to_string();
     }
@@ -481,8 +508,14 @@ fn raw_name(e: &BytesStart<'_>) -> Option<RawName> {
     Some((attr(e, "name")?, local, String::new()))
 }
 
-/// `(sheet name, relationship id, sheetId)` per `<sheet>`.
-pub(crate) type SheetRef = (String, String, Option<String>);
+/// One `<sheet>` of `xl/workbook.xml`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SheetRef {
+    pub(crate) name: String,
+    /// Its `r:id`.
+    pub(crate) rid: String,
+    pub(crate) sheet_id: Option<String>,
+}
 
 /// What `parse_workbook` reads from `xl/workbook.xml`.
 pub(crate) struct ParsedWorkbook {
@@ -515,7 +548,11 @@ pub(crate) fn parse_workbook(xml: &str) -> Result<ParsedWorkbook, SnapshotError>
             Event::Start(e) | Event::Empty(e) => match e.local_name().as_ref() {
                 "sheet" => {
                     if let (Some(name), Some(rid)) = (attr(&e, "name"), attr(&e, "id")) {
-                        sheets.push((name, rid, attr(&e, "sheetId")));
+                        sheets.push(SheetRef {
+                            name,
+                            rid,
+                            sheet_id: attr(&e, "sheetId"),
+                        });
                     }
                 }
                 "fileVersion" => file_app_name = attr(&e, "appName"),

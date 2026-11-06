@@ -23,6 +23,14 @@ SPEC-0033 X1 and RQ2: a normalization is allowed only with evidence (directive 1
    Calipers already shows it (`init.xlsx` against `golden.xlsx`).
 3. Diff with the differ of T-4172, or with docs/research/xlsx-round-trip/rtdiff.py until it lands.
 
+Also tag a whole lost element whose every attribute is an N item: for example a lost `fileVersion` should carry
+`candidate-N5`, not only its attributes (T-4509 review). Retagging existing baseline lines reads as a regression to
+the ratchet, so do it in the same PR that turns evidenced items into normalizations.
+
+Also probe whether Excel re-stores a hand-written `_xlfn.` prefix on a classic function without it, for example
+`_xlfn.SUM(1,2)` and `_xlfn.SUMIFS(...)`. SPEC-0033 D3.1 canonicalizes that prefix away on CEILING's evidence alone
+(T-0172; T-4513 review).
+
 Record per item: always rewritten, rewritten only on edit, or kept. Note where Excel for the web differs from
 desktop (RQ1, which T-4180 owns more widely).
 

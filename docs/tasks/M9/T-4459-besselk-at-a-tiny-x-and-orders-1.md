@@ -3,7 +3,7 @@ id: T-4459
 title: "BESSELK at a tiny x and orders 1 to 7: probe where Excel turns #NUM! (K1's 1/x term or the upward recurrence overflowing) and match the cut"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: done
 priority: P3
 size: M
 tier: opus
@@ -44,12 +44,12 @@ BESSELI. This is BESSELK's half of the question. BESSELY's half is T-4458.
   cut is part of that question.
 
 ## Acceptance criteria
-- [ ] A probe case under eval/suites/probes, oracle-filled from excel-graph, brackets the `#NUM!` cut of each order 1
+- [x] A probe case under eval/suites/probes, oracle-filled from excel-graph, brackets the `#NUM!` cut of each order 1
       to 7 between adjacent cells, three significant digits or finer (order 1 across 1/DBL_MAX). It also records
       order 0 down to 5E-324.
-- [ ] engineering.md records the brackets and the mechanism, citing the cells, next to "BESSELJ and BESSELI at a tiny
+- [x] engineering.md records the brackets and the mechanism, citing the cells, next to "BESSELJ and BESSELI at a tiny
       x and a small order" (or in it).
-- [ ] Every cell of the new case passes. No known-failure line is added to any eval/baseline file, and none of the
+- [x] Every cell of the new case passes. No known-failure line is added to any eval/baseline file, and none of the
       existing BESSELK cells (probes/eng-besselk-underflow-bit-shift, probes-numeric/m9-besselk-underflow,
       probes/t2546-bessel-past-cap, ironcalc-calc BESSEL.xlsx, gen-m9) changes verdict.
 - [ ] If the digits next to the cut need a rounding model chosen by scoring (kind (c) of reviewer-excel-fidelity
@@ -66,3 +66,22 @@ BESSELI. This is BESSELK's half of the question. BESSELY's half is T-4458.
 
 ## Out of scope
 - BESSELY (T-4458), BESSELK's subnormal recurrence-term flush at a large x (T-2702), orders past the cap.
+
+## Outcome
+- Probes (excel-graph, 2026-11-06), all under eval/suites/probes:
+  - t4459-besselk-tiny-x-cuts (186 cells): orders 0 and 1 by decade down to 2.2250738585072E-308; orders 2 to 7 at
+    decades, mantissas 9..2 and 4-significant-digit steps around the cut predicted by the engine's double recurrence.
+  - t4459-besselk-tiny-x-bisect (60 cells): orders 0 to 2 from 9E-308 to 3.5E-308.
+  - t4459-besselk-tiny-x-ulps (24 cells): orders 0 and 1 at literals written as 2^-1021 plus 1 to 2^30 ulps.
+- Orders 2 to 7: Excel's `#NUM!` cut fell between exactly the adjacent 4-digit cells the engine's recurrence predicted
+  (an overflow rule, kind (b) of check 7: no fit). Brackets in engineering.md "BESSELK at a tiny x".
+- New quirk, orders 0 and 1 (so every order): `#NUM!` once `x/2` is subnormal, where K0 and K1 are finite. The ulp
+  probe looked like a cut 5 to 8 ulps above 2^-1021 until the 15-digit literal reading (numbers.md) was applied: its
+  cells ask only 4.4501477170144E-308 (`#NUM!`) and 4.45014771701441E-308 (answers), either side of 2^-1021. The
+  engine now returns NaN (`#NUM!`) for `x < 2 * f64::MIN_POSITIVE` in `bessel_k`; unit test
+  `besselk_is_num_once_half_x_is_subnormal`. A rule from the mechanism, not a scored fit, so no `FITTED` tag.
+- Order 1 across 1/DBL_MAX and order 0 down to 5E-324 (acceptance 1) are unreachable: below 2^-1021 every order is
+  `#NUM!`, and excel-graph refuses subnormal literals (T-4458). Recorded in engineering.md instead.
+- Eval delta: probes +3 cases, 270 cells, all passing (`C` lines only); 0 new known failures, 0 regressions. Math
+  sidecars written for the three cases.
+- Follow-up: T-4552 (x = 2^-1021 exactly, and whether BESSELJ/I/Y share the rule).

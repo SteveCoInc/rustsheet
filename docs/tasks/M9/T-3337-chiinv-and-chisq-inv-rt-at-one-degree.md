@@ -45,6 +45,9 @@ visibly-off pair below is within 15 digits of Excel (or the time-box outcome lis
 Cells:
 - probes-numeric/m9-legacy-chiinv.case.json (2): Calc!A1, A2
 - probes-numeric/t3336-chisq-df1-right-tail.case.json (291, T-3336)
+- probes-numeric/t3858-chisq-df1-num-cutoff.case.json (264, T-3858): the df 1 `#NUM!` cutoff, pinned between
+  8.3253E-17 (`#NUM!`) and 8.3254E-17 (a value) and implemented in T-3858 (`ONE_DEGREE_RIGHT_TAIL_P_MIN`), which
+  fixes T-3336's A250-A252; it is in INV.RT's own p check, as `CHISQ.INV(1-p,1)` is a value at every probed p.
 
 ## Acceptance criteria
 - [ ] Visible parity: the 2 cells above are within 15 digits of Excel (`make eval-show
