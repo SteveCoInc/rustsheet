@@ -7941,7 +7941,10 @@ Rule:
   - Every density cell of the three tables at or past these `#NUM!` points is `#NUM!`: 11 at a positive x and 7 at a
     negative x. The T.DIST definition encoded both brackets (`student_t.T_DIST_CUTS`, decision 0321).
   - T-3554 pins the cut: the density is `#NUM!` exactly when fl(x·x) overflows a double, |x| ≥ 2^512
-    (1.3407807929942597E+154), at every df and either sign; 2^512's predecessor (`2^512*(1-2^-52)`) is a number. This
+    (1.3407807929942597E+154), at every df and either sign; `2^512*(1-2^-52)` = 2^512 - 2^460, two doubles below 2^512
+    (the ulp there is 2^459), is not `#NUM!` (a number, or `#DIV/0!` at df 1, below). The probed bracket is
+    [2^512 - 2^460, 2^512]; 2^512's true predecessor 2^512 - 2^459 is unprobed (the rule gives it a number). The probe's
+    `=H1-H2` and `H2<H1` helper cells cannot tell the gap (numbers.md "Near-zero snapping" and "Comparison tolerance"). This
     is the first step of Excel's density (xx = fl(t t), "Student t density is Loader's dt"). Probed at df 1, 2, 24,
     1E+10, 1E+15 and 1E+300 on both sides of 2^512 and at 4 and 8 times it. Rules the probe ruled out, each by cells
     its predictions (written before the fill, in the task file) got wrong: `#NUM!` where the density underflows to 0

@@ -156,7 +156,7 @@ def test_t_dist_domain() -> None:
     assert compute(T_DIST, [2.0, 10**10 + 1, False]).value is not None  # the density stays finite
     assert close(value(T_DIST, [2.0, 10**10, True]), "0.97724986803832", 1e-13)  # Excel 0.977249868038323
     # The density's cut is exact (T-3554, probes/t3554-tdist-density-huge-x): #NUM! from 2^512, where fl(x x)
-    # overflows, at any df and sign; its predecessor is a number, and at df 1 #DIV/0! where pi(1 + x x) overflows
+    # overflows, at any df and sign; 2^512 - 2^460 (two doubles below) is a number, and at df 1 #DIV/0! where pi(1 + x x) overflows
     # (probes/t3554-tdist-density-df1-div0: 7.55E+153 a number, 7.6E+153 #DIV/0!).
     below = 2.0**512 * (1 - 2.0**-52)
     for df in (2, 24, 10**15):

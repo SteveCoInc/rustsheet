@@ -294,7 +294,7 @@ fn t_density_flushes_a_subnormal_result() {
 #[test]
 fn t_density_is_num_where_x_squared_overflows() {
     // Excel's density squares x first: from 2^512, where fl(x x) overflows, it is #NUM! at every df
-    // and either sign, while 2^512's predecessor is a number (0 here: the density underflows)
+    // and either sign, while 2^512 - 2^460 (H2, two doubles below 2^512) is a number (0 here: the density underflows)
     // (probes/t3554-tdist-density-huge-x A2:B13 and A20:B24; statistics.md "T.DIST's density is
     // #NUM! at a huge x").
     let mut model = new_empty_model();

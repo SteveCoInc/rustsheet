@@ -634,10 +634,11 @@ mod tests {
     #[test]
     fn df_one_denominator_overflow_brackets_excel() {
         // probes/t3554-tdist-density-df1-div0 A8:A10 and probes/t3554-tdist-density-huge-x A1, A2.
-        let predecessor = 2f64.powi(512) * (1.0 - f64::EPSILON);
+        // 2^512 - 2^460, two doubles below 2^512 (the probed H2; 2^512's predecessor is unprobed).
+        let two_below = 2f64.powi(512) * (1.0 - f64::EPSILON);
         assert!(!excel_t_density_df_one_overflows(7.55e153));
         assert!(excel_t_density_df_one_overflows(7.6e153));
-        assert!(excel_t_density_df_one_overflows(-predecessor));
+        assert!(excel_t_density_df_one_overflows(-two_below));
         assert!(!excel_t_density_df_one_overflows(2f64.powi(512)));
     }
 }

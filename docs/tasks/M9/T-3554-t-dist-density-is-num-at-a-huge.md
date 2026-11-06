@@ -78,7 +78,12 @@ Row 20 separates (c) (a ln-space density of 3.2E-321 is a number) from a direct 
 probes/t3554-tdist-density-huge-x: every `#NUM!` cell is where `x*x` overflows ((b1): 2^512 and above at df 1, 2, 24,
 1E+10, 1E+15 and 1E+300, both signs), and every cell with a finite `x*x` is a number (0 for an underflowed density),
 except A1, B1, A18 and B18: at df 1 a finite `x*x` with |x| 1E+154 or 2^512's predecessor is `#DIV/0!`, while 2E+153
-is the number 7.96E-308. (a0), (aMIN), (c), (b2) and (b3) each miss cells (rows 3, 16, 22; 19; 20; 4, 13; 11, 14).
+is the number 7.96E-308. (a0), (c), (b2) and (b3) each miss cells (rows 3, 16, 22; 20; 4, 13; 11, 14); (aMIN) misses rows
+3, 5, 9, 11, 16, 22 and 23 (0 where it predicted `#NUM!`) and probe 2's A3:A8 (row 19, 7.96E-308 > DBL_MIN, it got right).
+
+Correction (Excel-fidelity review): "2^512 pred." in the table above and "2^512's predecessor" in the probe cases'
+descriptions mean `2^512*(1-2^-52)` = 2^512 - 2^460, two doubles below 2^512 (the ulp there is 2^459), not 2^512's
+predecessor 2^512 - 2^459, which no cell probes. The committed predictions and case descriptions are left as written.
 
 Probe 2, probes/t3554-tdist-density-df1-div0, separates two rules for that df-1 `#DIV/0!`:
 - (d1) the denominator fl(pi fl(1 + fl(x x))) overflows: `#DIV/0!` from 7.6E+153 (A9, A10), a number up to 7.55E+153 (A1:A8);

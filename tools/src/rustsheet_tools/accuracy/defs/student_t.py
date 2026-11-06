@@ -319,7 +319,8 @@ TDIST_CUT = HugeXCut(  # accuracy/TDIST/s1 A185 (value 0) and A176
 # with |x| above 1E10: only its three Gate A tables have one (no probe or gen-m9 cell does outside a composite). A
 # cumulative cell whose df is above 1E10 is #NUM! for its df whatever x is, so it brackets nothing.
 # The density's cut is exact (T-3554): #NUM! from 2^512, where fl(x x) overflows, at every df and either sign, while
-# 2^512's predecessor is a number (probes/t3554-tdist-density-huge-x). It replaces decision 0321's density brackets
+# 2^512 - 2^460 (`2^512*(1-2^-52)`, two doubles below 2^512) is a number (probes/t3554-tdist-density-huge-x); 2^512's
+# true predecessor is unprobed. It replaces decision 0321's density brackets
 # (s1 A97 and r4-T-2585 A236 numbers, r4-T-2585 A266 and A267 #NUM!), which it lies inside.
 DENSITY_X_SQUARED_CUT = HugeXCut(last_number=2.0**512 * (1 - 2.0**-52), first_error=2.0**512)
 T_DIST_CUTS = {
