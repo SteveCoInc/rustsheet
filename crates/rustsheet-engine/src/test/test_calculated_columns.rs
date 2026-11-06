@@ -724,11 +724,13 @@ fn redo_keeps_where_a_padded_bare_column_came_from() {
 #[test]
 fn the_column_formula_follows_row_and_column_edits() {
     type Edit = fn(&mut crate::UserModel) -> Result<(), String>;
-    let cases: [(&str, Edit, &str); 4] = [
+    let cases: [(&str, Edit, &str); 6] = [
         ("insert_column A", |m| m.insert_columns(0, 1, 1), "B2*2"),
         ("delete_column B", |m| m.delete_columns(0, 2, 1), "A2*2"),
         ("insert_row 1", |m| m.insert_rows(0, 1, 1), "A3*2"),
         ("insert_row 3", |m| m.insert_rows(0, 3, 1), "A2*2"),
+        ("delete_row 2", |m| m.delete_rows(0, 2, 1), "A2*2"),
+        ("insert_row 2", |m| m.insert_rows(0, 2, 1), "A2*2"),
     ];
     // The column formula of `Calc`, the table's last column whichever edit ran.
     let stored = |model: &crate::UserModel| {

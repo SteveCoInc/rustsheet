@@ -24,11 +24,13 @@ read at that row, as Excel fills it; today the cell is left empty.
   the table, T-2321), and the column formula `TableColumn::calculated_column_formula` (file form; parse with
   `Model::parse_internal_formula` at the new row, or copy the neighbour row's formula as a fill would; reuse
   `calculated_columns.rs`'s fill path rather than a new writer).
-- Unprobed: an insert at the first data row or at the totals row (both grow the table), and a column whose cells hold
-  exceptions; probe them in the same PR or record them as hand.
+- An insert at the first data row is probed too: probes/table-edits/t4274-calc-column-insert-row-2 F!A5:A6 (Excel's
+  C2 holds `=A2*2`). Unprobed: an insert at the totals row, and a column whose cells hold exceptions; probe them in the
+  same PR or record them as hand.
 
 ## Acceptance criteria
-- [ ] t4274-calc-column-insert-row-3 F!A7:A8 pass; the F line leaves eval/baseline/probes.txt.
+- [ ] t4274-calc-column-insert-row-3 F!A7:A8 and -insert-row-2 F!A5:A6 pass; their F lines leave
+      eval/baseline/probes.txt.
 - [ ] The inserted cell's formula survives export (an xlsx export test) and the insert's undo removes it.
 - [ ] `make check` green; reviewers approve.
 

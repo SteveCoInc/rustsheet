@@ -585,19 +585,26 @@ A stored `calculatedColumnFormula` does not fill blank cells on load (next entry
 Ours (T-3033): import keeps its text on `TableColumn::calculated_column_formula`; a typed fill stores the first data
 row's formula in the same file form, and export writes the stored text, so an exception in a data row does not change
 it. Whether Excel opens our exported column formula without repair is unprobed.
-A row or column insert or delete rewrites the saved text as it rewrites the first data row's formula: its references
-follow the cells they point at (excel-graph, T-4274, the saved `xl/tables/table1.xml` of each
-probes/table-edits/t4274-calc-column-* download, T on S!A1:C4, C2 typed `=A2*2`): insert_column A saves
-`<calculatedColumnFormula>B2*2</calculatedColumnFormula>` (table `B1:D4`, cells `<f t="shared" ref="D2:D4">B2*2</f>`);
-delete_column B (the Other column) saves `A2*2` (table `A1:B4`); insert_row 1 saves `A3*2` (table `A2:C5`); insert_row 3,
-inside the table, saves `A2*2` (table `A1:C5`), and Excel fills the inserted row's cell with the column formula: C3
-holds its own `<f>A3*2</f>`, value 0, outside the shared formula `ref="C2:C5"`, which skips it. Ours does not fill the inserted row: S!C3 stays empty (an engine gap, T-4695; probes/table-edits/t4274-calc-column-insert-row-3 F!A7:A8, FORMULATEXT `=A3*2` and ISFORMULA TRUE through INDIRECT). The structured twin
-(`=[@Col]*2`, insert_column A) saves `T[[#This Row],[Col]]*2` unchanged. Ours (T-4274): `Model::displace_column_formulas`
-(table_edits.rs) parses the stored text at the column's first data row and prints it displaced in file form
-(`to_excel_string_displaced`), and the undo's inverse edit displaces it back; a text the edit does not change stays as
-stored. A delete of a cell the column formula reads (`#REF!`) and its undo are unprobed (T-4679). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
-`array="1"` attribute is dropped on import (export writes the plain element): engine choices, what Excel does with
-either is unprobed.
+A row or column insert or delete saves the formula of the column's first data row after the edit (excel-graph,
+T-4274, the saved `xl/tables/table1.xml` of each probes/table-edits/t4274-calc-column-* download, T on S!A1:C4, C2
+typed `=A2*2`). Its references follow the cells they point at: insert_column A saves
+`<calculatedColumnFormula>B2*2</calculatedColumnFormula>` (table `B1:D4`, cells
+`<f t="shared" ref="D2:D4">B2*2</f>`); delete_column B (the Other column) saves `A2*2` (table `A1:B4`); insert_row 1
+saves `A3*2` (table `A2:C5`); insert_row 3, inside the table, saves `A2*2` (table `A1:C5`). A delete of the first data
+row saves the next row's formula: delete_row 2 saves `A2*2` (table `A1:C3`, shared `ref="C2:C3"` `A2*2`), not
+`#REF!*2`. An insert at the first data row saves the inserted row's formula: insert_row 2 saves `A2*2` (table `A1:C5`).
+Excel fills an inserted data row's cell with the column formula: after insert_row 3, C3 holds its own `<f>A3*2</f>`,
+value 0, outside the shared formula `ref="C2:C5"`, which skips it; after insert_row 2, C2 holds `=A2*2`
+(FORMULATEXT and ISFORMULA through INDIRECT, -insert-row-3 F!A7:A8 and -insert-row-2 F!A5:A6). Ours does not fill
+the inserted row (an engine gap, T-4695). The structured twin (`=[@Col]*2`, insert_column A) saves
+`T[[#This Row],[Col]]*2` unchanged.
+Ours (T-4274): `Model::displace_column_formulas` (table_edits.rs) reads the stored text at the first old data row the
+edit keeps, prints it displaced in file form (`to_excel_string_displaced`), and copies it to the new first data row
+when that is another row (an insert at the first data row). The undo's inverse edit rewrites it back. A text the edit
+does not change stays as stored, and so does the text of a table whose every data row is deleted (unprobed). A delete
+of a cell the column formula reads (`#REF!`) and its undo are unprobed (T-4679). An empty
+`<calculatedColumnFormula/>` reads as no column formula, and an `array="1"` attribute is dropped on import (export
+writes the plain element): engine choices, what Excel does with either is unprobed.
 Evidence: the saved `xl/tables/table1.xml` and `xl/worksheets/sheet1.xml` of probes/t2957-fill-one-totals,
 -refill-second, -constant-exception, -constant-then-refill, -existing-constant, -a1-reference and -expand-right-*
 (the eval/.cache/oracle/excel-graph/<input_sha256>.xlsx of each sidecar).

@@ -2761,8 +2761,8 @@ the table's old range (before T-3037 that cell did not parse, `#ERROR!`). A colu
 (T-4274, probes/table-edits/t4274-calc-column-structured-insert-column-a, excel-graph 2026-11-06: T on S!A1:C4 with
 the calculated column `=[@Col]*2`, insert_column A: FORMULATEXT of the moved cells is still `=[@Col]*2` and their SUM 14;
 `Model::column_insert_kept`; before T-4274 the moved cells did not parse, `#ERROR!`, and a kept `#This Row` printed its
-area). Only cells inside the table are probed there; a cell outside it keeping its text through a column insert is hand
-(T-3739). Under every other edit a `#This Row` reference keeps the fallback rule (a row delete or a column delete the
+area). Only cells inside the table, with the insert left of it, are probed there; a cell outside it, and an insert inside
+the table (which grows it), keeping the text is hand (T-3739). Under every other edit a `#This Row` reference keeps the fallback rule (a row delete or a column delete the
 table follows is unprobed for it, T-3739).
 FORMULATEXT prints `Sales[@Qty]`, as Excel does (T-1683). An insert at
 the first row of a table without a header row is a fallback too (unprobed, T-3039). An insert that would

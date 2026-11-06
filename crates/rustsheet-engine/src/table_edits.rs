@@ -425,22 +425,61 @@ impl Model {
         };
         self.displace_cells(displacement)?;
         self.displace_cf_ranges(sheet, displacement);
-        self.displace_column_formulas(displacement);
+        self.displace_column_formulas(displacement, &edits.resized);
         self.resize_tables(sheet, edits.resized)
     }
 
     /// Rewrites the stored `calculatedColumnFormula` of every table column for the structural
-    /// edit `displacement`, as its cells' formulas are: the text is file-form A1 read at the
-    /// column's first data row, so its references follow the cells they point at (excel-graph,
-    /// T-4274 `t4274-calc-column-*`: `A2*2` reads `B2*2` after an `insert_column` at A, `A3*2`
-    /// after an `insert_row` at 1, and stays `A2*2` after an `insert_row` at 3 inside the table
-    /// and a `delete_column` of B; `T[[#This Row],[Col]]*2` keeps its text after the column
-    /// insert). Run before the tables are resized, so the parse sees the tables the text was
-    /// written against; a text the edit does not change is left as stored, byte for byte.
-    fn displace_column_formulas(&mut self, displacement: Displacement) {
+    /// edit `displacement`. Excel saves the formula of the column's first data row after the
+    /// edit (excel-graph, T-4274 `t4274-calc-column-*`): its references follow the cells they
+    /// point at (`A2*2` reads `B2*2` after an `insert_column` at A, `A3*2` after an `insert_row`
+    /// at 1, and stays `A2*2` after an `insert_row` at 3 and a `delete_column` of B), a delete
+    /// of the first data row saves the next row's formula (`A2*2` after a `delete_row` of 2, not
+    /// `#REF!*2`), and an insert at the first data row saves the formula the inserted row is
+    /// filled with (`A2*2` after an `insert_row` at 2). `T[[#This Row],[Col]]*2` keeps its text.
+    /// So the text is read at the first old data row the edit keeps, displaced, and then copied
+    /// (relative references shifted) to the table's new first data row if that is another row.
+    /// `resized` gives the new extents. Run before the tables are resized, so the parse sees
+    /// the tables the text was written against; a text the edit does not change is left as
+    /// stored, byte for byte, and so is the text of a table whose every data row is deleted.
+    fn displace_column_formulas(
+        &mut self,
+        displacement: Displacement,
+        resized: &[(String, Resized)],
+    ) {
+        let rows = match *displacement.data {
+            DisplaceData::Row { sheet, row, delta } => Some((sheet, row, delta)),
+            _ => None,
+        };
         let mut stored = Vec::new();
         for (key, table) in &self.workbook.tables {
             let Some(b) = bounds(table) else { continue };
+            let on_edited_sheet = rows.is_some_and(|(sheet, ..)| {
+                (self.workbook.worksheet(sheet).ok())
+                    .is_some_and(|worksheet| table.is_on_sheet(&worksheet.get_name()))
+            });
+            // The first old data row the edit keeps, where it moves, and the new first data row.
+            let (mut kept_row, mut moved_row, mut new_first) = (b.data.0, b.data.0, b.data.0);
+            if let (true, Some((_, at, delta))) = (on_edited_sheet, rows) {
+                if delta < 0 && (at..at.saturating_sub(delta)).contains(&b.data.0) {
+                    kept_row = at.saturating_sub(delta);
+                    if kept_row > b.data.1 {
+                        continue;
+                    }
+                }
+                moved_row = if kept_row >= at {
+                    kept_row.saturating_add(delta)
+                } else {
+                    kept_row
+                };
+                new_first = (resized.iter().find(|(name, _)| name == key))
+                    .and_then(|(_, r)| {
+                        let mut after = table.clone();
+                        after.reference.clone_from(&r.reference);
+                        bounds(&after)
+                    })
+                    .map_or(moved_row, |after| after.data.0);
+            }
             for (index, table_column) in table.columns.iter().enumerate() {
                 let (Some(text), Ok(offset)) = (
                     &table_column.calculated_column_formula,
@@ -448,25 +487,31 @@ impl Model {
                 ) else {
                     continue;
                 };
-                let context = CellReferenceRC {
+                let column = b.left.saturating_add(offset);
+                let at = |row: i32| CellReferenceRC {
                     sheet: table.sheet_name.clone(),
-                    row: b.data.0,
-                    column: b.left.saturating_add(offset),
+                    row,
+                    column,
                 };
-                stored.push((key.clone(), index, text.clone(), context));
+                let rows = (at(b.data.0), at(kept_row), at(moved_row), at(new_first));
+                stored.push((key.clone(), index, text.clone(), rows));
             }
         }
-        for (key, index, text, context) in stored {
+        for (key, index, text, (anchor, kept, moved, first)) in stored {
             // File form is English whatever the model's locale.
-            let node = self.parse_internal_formula(&text, &context);
-            let displaced = to_excel_string_displaced(&node, &context, displacement);
-            if displaced == to_excel_string(&node, &context) {
+            let node = self.parse_internal_formula(&text, &anchor);
+            let mut rewritten = to_excel_string_displaced(&node, &kept, displacement);
+            if moved.row != first.row {
+                let node = self.parse_internal_formula(&rewritten, &moved);
+                rewritten = to_excel_string(&node, &first);
+            }
+            if rewritten == to_excel_string(&node, &anchor) {
                 continue;
             }
             if let Some(table_column) =
                 (self.workbook.tables.get_mut(&key)).and_then(|table| table.columns.get_mut(index))
             {
-                table_column.calculated_column_formula = Some(displaced);
+                table_column.calculated_column_formula = Some(rewritten);
             }
         }
     }

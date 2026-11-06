@@ -633,7 +633,7 @@ fn a_calculated_column_keeps_its_column_formula() {
 #[test]
 fn the_exported_column_formula_follows_row_and_column_edits() {
     type Edit = fn(&mut Model) -> Result<(), String>;
-    let cases: [(&str, &str, Edit, &str); 5] = [
+    let cases: [(&str, &str, Edit, &str); 7] = [
         (
             "insert_column A",
             "=A2*2",
@@ -648,6 +648,8 @@ fn the_exported_column_formula_follows_row_and_column_edits() {
         ),
         ("insert_row 1", "=A2*2", |m| m.insert_rows(0, 1, 1), "A3*2"),
         ("insert_row 3", "=A2*2", |m| m.insert_rows(0, 3, 1), "A2*2"),
+        ("delete_row 2", "=A2*2", |m| m.delete_rows(0, 2, 1), "A2*2"),
+        ("insert_row 2", "=A2*2", |m| m.insert_rows(0, 2, 1), "A2*2"),
         (
             "structured insert_column A",
             "=[@Col]*2",
