@@ -405,3 +405,4 @@ probes-numeric/t3858-chisq-df1-num-cutoff.case.json!Calc!C85	docs/excel-semantic
 probes-numeric/t3858-chisq-df1-num-cutoff.case.json!Calc!C86	docs/excel-semantics/statistics.md#tiny-p-quantiles-excel-is-grossly-wrong-rustsheet-returns-the-math-math-over-excel
 probes-numeric/t3858-chisq-df1-num-cutoff.case.json!Calc!C87	docs/excel-semantics/statistics.md#tiny-p-quantiles-excel-is-grossly-wrong-rustsheet-returns-the-math-math-over-excel
 probes-numeric/t3858-chisq-df1-num-cutoff.case.json!Calc!C88	docs/excel-semantics/statistics.md#tiny-p-quantiles-excel-is-grossly-wrong-rustsheet-returns-the-math-math-over-excel
+accuracy/CHIINV/s1!Calc!A93	docs/excel-semantics/statistics.md#gammainv-at-a-huge-shape-closed-form-branch-excel-is-about-27e-4-off-rustsheet-returns-the-math-math-over-excel
