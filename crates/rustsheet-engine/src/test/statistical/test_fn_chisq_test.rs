@@ -2,6 +2,21 @@
 
 use crate::test::util::new_empty_model;
 
+// A squared difference past the double range is #NUM!, not a p of 0 (probes/t4098-tests-prob-domains
+// A44, A45; statistics.md "CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)").
+#[test]
+fn test_chisq_test_overflowing_square_is_num() {
+    let mut model = new_empty_model();
+    model._set("A1", "=CHISQ.TEST({1E+200,1,1},{1,1,1})");
+    model._set("A2", "=CHISQ.TEST({1E+160,1,1},{1,1,1})");
+    model._set("A3", "=CHITEST({1E+160,1,1},{1,1,1})");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model._get_text("A2"), *"#NUM!");
+    assert_eq!(model._get_text("A3"), *"#NUM!");
+}
+
 #[test]
 fn test_fn_chisq_test_smoke() {
     let mut model = new_empty_model();

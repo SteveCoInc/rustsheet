@@ -7152,9 +7152,15 @@ Rule:
   (`{0.5,0.499999999999999}`) and every probed amount down to 0.1 below are `#NUM!`, as are 1E-14 above 1
   (`{0.5,0.50000000000001}`) and every probed amount up to 0.1 above (t4098 A3:A31); 1E-15 above
   (`{0.5,0.500000000000001}`, A2), ten 0.1s (5.6E-17 above, A1) and `{1.2,-0.1,-0.1}` (5.6E-17 below, A33) are
-  numbers. The cells fit "the double sum, rounded to 15 significant digits, is 1" (the unit of the 15th digit is 1E-14
-  above 1 and 1E-15 below), but no cell separates that from other cuts between the probed points: UNVERIFIED as a
-  rule. The table adds sums 7.3E-9 below 1 (accuracy/PROB/s1 A121) and 0.5 or 2 (A112, A116, A119, A123, A134,
+  numbers. The rule is "the double sum, rounded to 15 significant digits, is 1" (the unit of the 15th digit is 1E-14
+  above 1 and 1E-15 below, so the band is about 5E-15 above and 5E-16 below). T-4578's probe
+  (probes/t4578-prob-sum-tolerance A1:A24, excel-graph, 2026-11-06), with its predictions under this rule committed
+  before the fill, matched all 24 cells, among them two pairs that a fixed or ulp-count tolerance cannot split:
+  `{0.5,0.500000000000005}` (double sum 4.88E-15 above 1) is a number but `{1,5E-15}` (5.11E-15 above) `#NUM!` (A17,
+  A5), and `{0.5,0.5}-{0,5E-16}` (4.44E-16 below) is a number but `{1,-5E-16}` (5.55E-16 below) `#NUM!` (A22, A11);
+  sums 2.2E-16 to 4.0E-15 above or 2.2E-16 to 4.4E-16 below are numbers, 6.0E-15 to 1E-14 above or 6.7E-16 to 1E-15
+  below `#NUM!`. UNVERIFIED: an exact tie at the 16th digit (unreachable from a double near 1) and the summation order
+  of three or more probabilities (all probed sums are of two). The table adds sums 7.3E-9 below 1 (accuracy/PROB/s1 A121) and 0.5 or 2 (A112, A116, A119, A123, A134,
   A138), all `#NUM!`. One pair of numbers is the usual check: `PROB({1},{1},1)` and `PROB(1,1,1)` are 1 and
   `PROB({1},{1},2)` 0 (t4098 A36:A38).
 - CHISQ.TEST and CHITEST: a 1x1 array literal is `#N/A` like a one-cell range (`CHISQ.TEST({5},{4})`, `CHITEST({5},{4})`,
@@ -7179,11 +7185,12 @@ arrays of different shapes when one is a table (T-2650). Of 840 table points, 80
 Excel kept as the target (decision 0300): one probe sidecar cell, t4098 A49 `Z.TEST({1,2,3},1E+300,1E-300)`, Excel 0.5
 against the math 1 (Phi(1.7E+600); 50% relative). No table point of these five functions is more than 1E-4 relative off
 the math.
-Evidence: probes/t4098-tests-prob-domains A1:A56 (excel-graph, 2026-11-06); accuracy/CHISQ.TEST, CHITEST, Z.TEST,
-ZTEST and PROB s1 (excel-graph, 2026-11-06).
-Ours: matches the CHISQ.TEST, Z.TEST and PROB cells above but A3:A5, A32, A33, A44, A45, A48 and A49 of the probe and
-accuracy/PROB/s1 A113, A125 (a per-probability check, a 1E-14 sum tolerance, a statistic of +inf read as p 0, z
-overflow), which T-4578 owns.
+Evidence: probes/t4098-tests-prob-domains A1:A56 and probes/t4578-prob-sum-tolerance A1:A24 (excel-graph,
+2026-11-06); accuracy/CHISQ.TEST, CHITEST, Z.TEST, ZTEST and PROB s1 (excel-graph, 2026-11-06).
+Ours: matches the CHISQ.TEST, Z.TEST and PROB cells above, and probes/t4578-prob-sum-tolerance, since T-4578: PROB
+checks only the sum, as `decimal_round::cut_to_15_digits(sum) == 1` (`prob.rs`); an infinite squared difference is
+`#NUM!` (`chisq.rs`; checked per cell in order, so its order against a later zero expected cell's `#DIV/0!` is
+unprobed); with sigma given an infinite z is `#NUM!` when positive and 0.5 when negative (`z_test.rs`).
 Status: VERIFIED (excel-graph) except the noted UNVERIFIED parts
 Tasks: T-4098, T-4578
 

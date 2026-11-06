@@ -601,7 +601,19 @@ impl Model {
                 );
             }
             let diff = obs - exp;
-            chi2 += (diff * diff) / exp;
+            let square = diff * diff;
+            // A squared difference past the double range is #NUM!, not a p of 0:
+            // `CHISQ.TEST({1E+160,1,1},{1,1,1})` (probes/t4098-tests-prob-domains A44, A45;
+            // statistics.md "CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)"). Where the
+            // finite squares' quotients or sum overflow is unprobed (a p of 0 here).
+            if square.is_infinite() {
+                return CalcResult::new_error(
+                    Error::NUM,
+                    cell,
+                    "CHISQ.TEST squared difference overflows".to_string(),
+                );
+            }
+            chi2 += square / exp;
         }
 
         if chi2 < 0.0 && chi2 > -1e-12 {

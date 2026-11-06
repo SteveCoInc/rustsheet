@@ -2500,6 +2500,7 @@ C	probes/t4554-api-name-scoped-name-choice-last.case.json	27
 C	probes/t4554-api-name-scoped-name-choice.case.json	27
 C	probes/t4563-xlookup-not-found-ref-element.case.json	245
 C	probes/t4574-feb29-near-midnight-date-args.case.json	504
+C	probes/t4578-prob-sum-tolerance.case.json	24
 C	probes/t4582-pivot-item-edges.case.json	45
 C	probes/t4583-pivot-row-labels.case.json	204
 C	probes/t4585-pivot-field-names.case.json	13
@@ -7483,15 +7484,6 @@ F	probes/t4045-f-dist-rt-zero-cut-fresh.case.json	Calc!F6
 F	probes/t4045-f-dist-rt-zero-cut-fresh.case.json	Calc!F7
 F	probes/t4045-f-dist-rt-zero-cut-fresh.case.json	Calc!F8
 F	probes/t4045-f-dist-rt-zero-cut-fresh.case.json	Calc!F9
-F	probes/t4098-tests-prob-domains.case.json	Calc!A3
-F	probes/t4098-tests-prob-domains.case.json	Calc!A32
-F	probes/t4098-tests-prob-domains.case.json	Calc!A33
-F	probes/t4098-tests-prob-domains.case.json	Calc!A4
-F	probes/t4098-tests-prob-domains.case.json	Calc!A44
-F	probes/t4098-tests-prob-domains.case.json	Calc!A45
-F	probes/t4098-tests-prob-domains.case.json	Calc!A48
-F	probes/t4098-tests-prob-domains.case.json	Calc!A49
-F	probes/t4098-tests-prob-domains.case.json	Calc!A5
 F	probes/t4123-pivot-capture.case.json	C!A3
 F	probes/t4123-pivot-capture.case.json	C!A4
 F	probes/t4123-pivot-capture.case.json	C!A5

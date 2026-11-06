@@ -3,6 +3,49 @@
 
 use crate::test::util::new_empty_model;
 
+/// Only the sum of the probabilities is checked, not each one: `PROB({1,2},{1.5,-0.5},1)` is 1.5
+/// (probes/t4098-tests-prob-domains A32, A33; accuracy/PROB/s1 A113, A125).
+#[test]
+fn prob_checks_only_the_sum() {
+    let mut model = new_empty_model();
+    model._set("A1", "=PROB({1,2},{1.5,-0.5},1)");
+    model._set("A2", "=PROB({1,2,3},{1.2,-0.1,-0.1},1)");
+    model._set("A3", "=PROB({1,2},{1.5,-0.5},2)");
+    model._set("A4", "=PROB({1,2},{1.5,-0.4},2)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"1.5");
+    assert_eq!(model._get_text("A2"), *"1.2");
+    assert_eq!(model._get_text("A3"), *"-0.5");
+    assert_eq!(model._get_text("A4"), *"#NUM!");
+}
+
+/// The double sum passes when it is 1 at 15 significant digits: 4.88E-15 above and 4.44E-16 below
+/// pass, 5.11E-15 above and 5.55E-16 below are `#NUM!` (probes/t4578-prob-sum-tolerance A5, A11,
+/// A17, A22; t4098 A1:A5).
+#[test]
+fn prob_sum_is_one_at_fifteen_digits() {
+    let mut model = new_empty_model();
+    for (cell, formula, expected) in [
+        ("A1", "=PROB({1,2},{0.5,0.500000000000005},1)", "0.5"),
+        ("A2", "=PROB({1,2},{1,5E-15},1)", "#NUM!"),
+        ("A3", "=PROB({1,2},{0.5,0.5}-{0,5E-16},1)", "0.5"),
+        ("A4", "=PROB({1,2},{1,-5E-16},1)", "#NUM!"),
+        ("A5", "=PROB({1,2},{0.5,0.500000000000001},1)", "0.5"),
+        ("A6", "=PROB({1,2},{0.5,0.499999999999999},1)", "#NUM!"),
+        ("A7", "=PROB({1,2},{0.5,0.50000000000001},1)", "#NUM!"),
+        (
+            "A8",
+            "=PROB({1,2,3,4,5,6,7,8,9,10},{0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1},1)",
+            "0.1",
+        ),
+    ] {
+        model._set(cell, formula);
+        model.evaluate();
+        assert_eq!(model._get_text(cell), *expected, "{formula}");
+    }
+}
+
 #[test]
 fn prob_checks_data_arguments_before_limits() {
     let mut model = new_empty_model();
