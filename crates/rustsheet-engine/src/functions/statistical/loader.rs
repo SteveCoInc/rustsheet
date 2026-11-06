@@ -13,7 +13,9 @@
 //! [`excel_bd0`] and [`stirlerr_exact`] (T-2055), so retuning either moves POISSON cells as well.
 //! The Student t density is a third ([`excel_t_density`], T-2585).
 
-use crate::arithmetic::{extended_product, extended_quotient, extended_sqrt, extended_sum};
+use crate::arithmetic::{
+    extended_product, extended_quotient, extended_sqrt, extended_sum, flush_subnormal,
+};
 use crate::x87_exp::{
     dd_add, dd_div, dd_div_small, dd_mul, excel_exp, excel_exp_extended, two_sum,
 };
@@ -87,7 +89,7 @@ fn stirling_series(m: Dd) -> Dd {
 /// is 0.1). The t density reuses it (T-2585): of 0.1, 0.15, 0.25 and 0.3 on its cells, only 0.25
 /// and 0.3 gain exact cells (18 and 4 of 12,037), each losing within-4-ulp and 15-digit cells, and
 /// none beats it on the fresh batch r4-T-2585 (decision 0299).
-/// FITTED(T-2464, 3072 cells, BETA.DIST a 2.5, b 3.5, v 0.130..0.250; T.DIST density df 3..2.7E297 per decision 0299)
+/// FITTED(T-2464, 3072 cells, BETA.DIST a 2.5, b 3.5, v 0.130..0.250; T.DIST density on 12,158 cells, df 3..2.7E297, per decision 0299)
 const EXCEL_BD0_CUT: f64 = 0.2;
 
 /// Excel's bd0(k, M) = k ln(k / M) + M - k, as the double its beta density sums (model M4 of
@@ -234,6 +236,7 @@ pub(crate) fn excel_beta_density(x: f64, a: f64, b: f64) -> Option<f64> {
 /// docs/research/t2464/cells.tsv and the fresh Gate A batch r4-T-2585 measure: outside the fitted
 /// df 3..100, |t| 0.31..4.3 the cut still scores at least as well as 0.2, no log branch and the
 /// accurate density on every count (decision 0299).
+/// Applied for every df >= 3 where t·t is finite; the range below gives the measured extremes.
 /// FITTED(T-2513, 2406 cells, fitted on df 3..100, |t| 0.31..4.3; measured on df 3..2.7E297, |t| up to 1.1E153)
 const T_LOG_BRANCH_CUT: f64 = 1.0;
 
@@ -318,7 +321,9 @@ pub(crate) fn excel_t_density(t: f64, n: f64) -> Option<f64> {
         .add(Register::load(-u))
         .store();
     let scaled = extended_quotient(excel_exp(exponent), extended_sqrt(w));
-    let density = extended_product(scaled, FRAC_1_SQRT_2PI);
+    // Excel's last multiply flushes a subnormal product to 0, as `*` does (numbers.md "Subnormal
+    // results become 0"; Gate A T.DIST/r4-T-2585 A138: T.DIST(-1.1002374143529E+20,15,FALSE) is 0).
+    let density = flush_subnormal(extended_product(scaled, FRAC_1_SQRT_2PI));
     density.is_finite().then_some(density)
 }
 
@@ -487,6 +492,8 @@ mod tests {
             Some(excel_exp(-1.5 * excel_ln(2.0)))
         );
         assert_eq!(excel_t_density(1e200, 5.0), None);
+        // Gate A T.DIST/r4-T-2585 A138: the subnormal product is flushed, as Excel's `*` does.
+        assert_eq!(excel_t_density(-1.1002374143529E+20, 15.0), Some(0.0));
         assert_eq!(excel_t_density(f64::NAN, 5.0), None);
     }
 }

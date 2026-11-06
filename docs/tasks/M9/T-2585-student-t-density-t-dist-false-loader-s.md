@@ -3,7 +3,7 @@ id: T-2585
 title: "Student t density T.DIST(.,FALSE): Loader's dt for df >= 3 and the df 1 and df 2 closed forms (T-2513)"
 milestone: M9
 lane: functions-stat
-status: done
+status: blocked
 priority: P1
 size: M
 tier: opus
@@ -67,7 +67,7 @@ Routed by T-2981 (eval of 2026-10-28 at `main` 9586958b): the T.DIST(t,n,FALSE) 
 - [x] df 1 and df 2: bit-exact on all 1,077 cells.tsv cells and on verify-r3-tdensity's 27 + 1,050.
 - [x] The Outcome reports the visible change per suite against today's engine; no gated known-failure line is added.
 - [x] statistics.md's entry gains an "Implemented in" line.
-- [x] `make check` green; reviewers approve.
+- [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The per-df constant's residual and the bd0 series arithmetic (T-2586).
@@ -100,7 +100,8 @@ and T.INV's centre estimate.
   passing exactly, before -> after: t2513-r3-tdensity-a1 8,006 -> 8,059, -a2 9,785 -> 10,080, -hold 9,350 -> 9,625,
   -hold2 1,226 -> 1,533, t2513-verify-r3-tdensity-hold 1,093 -> 1,505. The cells still off are T-2586's (the per-df
   constant's residual and the bd0 series), with `T.DIST(±10,1E6,FALSE)` and `T.DIST(8,50,FALSE)` as named.
-- No gated known-failure line added.
+- No eval/baseline line added; 11 Gate A known-failure lines for the new batch's T-3554 points (Excel #NUM! where
+  t·t overflows, not caused by the fit; decision 0199 allows lines for a batch added in the same diff).
 - cells.tsv rows: 19,793 T.DIST(.,FALSE) rows against the task's 19,776; the 17 extra are probes-numeric
   m9-t-nonint-df (10), m9-t-edges (5) and t1518-t-df-cut (2), which the research's count left out (truncated or edge
   dfs). The engine still meets each threshold on the larger set.
@@ -148,6 +149,7 @@ and T.INV's centre estimate.
     | df > 100 | 296 | 127 / 284 / 294 | 126 / 282 / 292 | 127 / 284 / 294 | 97 / 282 / 289 |
     | abs t < 0.31 | 2,175 | 557 / 2,175 / 2,175 | same | same | 458 / 2,175 / 2,175 |
     | abs t > 4.3 | 4,206 | 2,377 / 3,907 / 4,141 | 2,376 / 3,905 / 4,138 | 1,919 / 3,518 / 3,902 | 805 / 3,678 / 4,019 |
+    | fresh r4-T-2585, inside the fitted range | 42 | 15 / 40 / 42 | 10 / 36 / 38 | 14 / 38 / 40 | 7 / 37 / 40 |
     | fresh r4-T-2585, outside the fitted range | 79 | 47 / 73 / 74 | 47 / 71 / 73 | 20 / 39 / 43 | 17 / 44 / 51 |
     So the tag
     now reads `fitted on df 3..100, |t| 0.31..4.3; measured on df 3..2.7E297, |t| up to 1.1E153` instead of guarding
@@ -158,3 +160,20 @@ and T.INV's centre estimate.
     0.3 (2 fewer on the fresh batch); on the fresh batch's 42 in-range densities 0.2
     gives 15 / 40 / 42 and no variant more. Its tag gains the T.DIST range; the value stays (no refit).
   - Acceptance criterion 1 now names the 19,793 rows measured.
+- Excel-fidelity round 3 (9156e71): REQUEST_CHANGES with one MAJOR, fixed on the next head. At Gate A
+  r4-T-2585 A138, Excel's 0 against our subnormal 2.18E-312 is a real flush, not Graph hiding a kept subnormal (decision
+  0042): scratch excel-graph probes show `(x)=0` TRUE and `x*1E300` 0, and df 3 at t 1E78 and 1E80 is 0 too, while df 2
+  keeps its subnormal. `excel_t_density` now flushes its last product (`flush_subnormal`, as Excel's `*`), with a
+  model test (`t_density_flushes_a_subnormal_result`). A138 now matches Excel exactly. statistics.md "Student t density
+  is Loader's dt" gains the "Subnormal results" bullet. The probes also found df 1's `#DIV/0!` where π·(1 + t·t)
+  overflows (ours 0), filed as T-4427 with the probe case. The round's MINORs are fixed: this Outcome's known-failure
+  wording, the in-range fresh row of the R4.3 table, the measured-extremes wording on `T_LOG_BRANCH_CUT`'s tag, and a
+  cell count on `EXCEL_BD0_CUT`'s T.DIST range. Security and design approved 9156e71.
+
+## Blocked because
+Blocked because: review-round limit
+- Three review rounds are used (1f4e8e1, 79b71dd, 9156e71). Round 3's only MAJOR (A138's subnormal flush) and its
+  MINORs are fixed on the head that carries this section, but none of the three reviewers has seen that head.
+- Next (work-loop step 5c): run the full panel on the current head. Security and design approved 9156e71; since then
+  the diff adds the `flush_subnormal` call, one model test, the statistics.md bullet, tag and Outcome wording, and
+  T-4427.

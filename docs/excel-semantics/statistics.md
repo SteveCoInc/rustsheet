@@ -2739,6 +2739,15 @@ m9-t-dist-pdf; docs/research/t2464/r3-tdensity (`tdlib.py`, `s10_eset.py`, `s11_
 - bd0's result stays in an x87 register into u (its series sum unstored, its log form `t + (M - k)` summed there),
   unlike the beta density's stored bd0: storing it moves `T.DIST(2.20146...,11,FALSE)` (hold2) 3 ulp off Excel and
   hold2 to 572 exact (T-2585).
+- Subnormal results (T-2585): for df >= 3 a subnormal density is 0. `T.DIST(-1.1002374143529E+20,15,FALSE)` is 0
+  (Gate A T.DIST/r4-T-2585 A138, where the math is 2.18E-312), its companion `(x)=0` is TRUE and `x*1E300` is 0, and
+  `T.DIST(1E78,3,FALSE)*1E300` and `T.DIST(1E80,3,FALSE)*1E300` are 0. That is the flush of Excel's `*` (numbers.md
+  "Subnormal results become 0") on the last product. df 2's EXP keeps it: `T.DIST(1E103,2,FALSE)*1E300` is
+  9.99999999999997E-10 and `T.DIST(1E104,2,FALSE)*1E300` 9.999999999984654E-13. df 1 has no subnormal case: where
+  `π·fl(1 + t·t)` overflows, `T.DIST(1E154,1,FALSE)` is `#DIV/0!` (`T.DIST(3E153,1,FALSE)*1E300` is 3.5367765131532296E-8,
+  normal), and `T.DIST(1E155,1,FALSE)`, where t·t itself overflows, is `#NUM!` (T-3554). Ours: the flush on df >= 3
+  and the kept df 2 subnormal are implemented; df 1's `#DIV/0!` is T-4427 (ours 0). Evidence: scratch excel-graph
+  recalcs of 2026-11-06 (A138 is in the committed batch; T-4427 commits the rest as a probe case).
 Implemented in: `loader.rs` `excel_t_density` (with `loader_t_constant` and `excel_bd0_unstored`), called by T.DIST's
 density through `student_t.rs` `t_density`; `student_t_density` stays the fallback and T.INV's centre estimate (T-2585). On cells.tsv the
 engine gets 7,046 exact and 19,725 within 15 digits of 19,793 cells (df >= 3: 18,646 of 18,714; df 1 and 2: all
@@ -2746,7 +2755,7 @@ engine gets 7,046 exact and 19,725 within 15 digits of 19,793 cells (df >= 3: 18
 `test/fixtures/t_density_hold.fixture`).
 Status: PARTIAL (excel-graph): the structure VERIFIED on two hold-outs for df >= 3, df 1 and df 2 VERIFIED; the per-df
 constant UNVERIFIED
-Tasks: T-2585, T-2586, T-0969
+Tasks: T-2585, T-2586, T-0969, T-4427
 
 ## Incomplete beta sweep (T-1044)
 Rule: Excel's incomplete-beta values are not the correctly rounded ones, are not exactly symmetric, and saturate to exactly 1.
