@@ -3,7 +3,7 @@ id: T-4391
 title: "A sheet-scoped name added through the API re-binds some unresolved uses on its sheet: SUM(Span) and Rate2 resolve, Rate stays #NAME?"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -28,9 +28,27 @@ as Excel does, which T-4049's rule (they stay `#NAME?`) does not cover.
   `=Rate` resolves, so the active sheet takes part in the rule. Ours is `#NAME?` at each.
 
 ## Acceptance criteria
-- [ ] The rule is probed and recorded; the owned cells pass, or stay known failures with the reason recorded.
+- [x] The rule is probed and recorded; the owned cells pass, or stay known failures with the reason recorded.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Which sheet an unqualified body binds to (T-4353: the first).
 - Typing cells after the add (T-4348).
+
+## Outcome
+- No clean rule, so the owned cells stay known failures and move to T-4617 with the probes' cells. Ten probe
+  cases (probes/t4391-api-rebind-*, predictions committed before each fill, excel-graph 2026-11-06) vary the
+  name (function names `Rate`, `N`, `Abs`, `Npv`, `Sln` against plain ones), the add order, the body (cell, range,
+  constant), the using formula (`=X`, `=X+0`, `=SUM(X)`), the active sheet (First, S2, Last), qualified `=S2!Rate`
+  uses and a closing workbook add. Every one of those books re-binds every unresolved use; each hypothesis
+  (function name; first add; qualified use; first add with a qualified use) was refuted. T-4049's, T-4014's and
+  T-4353/T-4394-s2's books keep `#NAME?` in every repeat. One input did not repeat: the first fill of
+  t4391-api-rebind-first was `#NAME?` in all 13 cells (commit 681082d1a), and three later sessions re-bound them
+  all; its sidecar is refilled with the repeated answer. Recorded in docs/excel-semantics/syntax.md "A sheet-scoped
+  name added after load" ("Most books re-bind instead; no rule found").
+- Engine unchanged apart from a doc comment on `Model::bind_added_sheet_name`. Re-binding everywhere would break the
+  passing T-4049/T-4014 cells, and a narrower rule would be special-casing without evidence.
+- Eval delta: new coverage 10 cases, 72 checked cells: 12 pass (the qualified `=S2!Rate` and workbook `=W` uses),
+  60 known failures owned by T-4617 (recorded in eval/baseline/probes.txt by `make eval-baseline`); 0 regressions.
+- Follow-up: T-4617 (bisect t4391-api-rebind-s2-qualified-first-add against t4394-api-name-active-s2, with at least
+  three runs per book).
