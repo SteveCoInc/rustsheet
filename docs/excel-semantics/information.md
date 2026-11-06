@@ -400,6 +400,21 @@ Rule (probes/volatile-and-info-rand-true-false-sheet D1-D28, excel-graph, 2026-1
 `SHEET("Nope")`, `SHEET("")`, `SHEET(" T")` and `SHEET("S!A1")` are `#N/A`. A number, a boolean, an error and `ROW(A1)` are
 `#N/A`. A reference returned by OFFSET (1), INDIRECT (2), INDEX (`SHEET(INDEX(T!A1:B2,1,1))` 2), IF (`SHEET(IF(TRUE,U!A1))` 3)
 and a union of two areas on sheet T (`SHEET((T!A1,T!B2))` 2) all resolve to their sheet. Ours matches (T-1631).
+
+## SHEET and SHEETS of a LET variable or LAMBDA parameter
+Rule (probes/t4518-sheet-sheets-bound-variable D1:D26, excel-graph, 2026-11-06, T-4518; sheets Sheet1..Sheet3):
+SHEET of a bound variable is SHEET of what it is bound to. A reference gives its sheet, written or passed in by
+MAP, BYROW, BYCOL or a LAMBDA call (`LET(x,Sheet3!A1:B2,SHEET(x))` 3, `MAP(Sheet2!A1:A3,LAMBDA(r,SHEET(r)))` 2, 2, 2,
+`BYCOL(Sheet3!A1:B3,_xleta.SHEET)` 3, 3), and so does a union (`LET(x,(Sheet2!A1,Sheet2!B2),SHEET(x))` 2) or a
+variable bound to another (`LET(x,A1,y,x,SHEET(y))` 1). Text is a sheet name (`LET(x,"Sheet2",SHEET(x))` 2,
+`MAP({"Sheet2";"Sheet3"},_xleta.SHEET)` 2, 3; `"Sheet9"` `#N/A`). A number or a boolean is `#N/A`. A whole array is
+one `#N/A`, not lifted (`LET(x,{1,2},SHEET(x))`; a GROUPBY group, `GROUPBY(A1:A3,B1:B3,LAMBDA(v,SHEET(v)))` `#N/A`
+in each value cell). A bound error is that error: `LET(x,1/0,SHEET(x))` is `#DIV/0!`, while a written error
+argument is `#N/A` (section above). SHEETS of a parameter bound to a one-sheet reference is 1
+(`MAP(A1:A3,_xleta.SHEETS)` 1, 1, 1, `BYCOL(Sheet2!A1:B3,_xleta.SHEETS)` 1, 1), and of a GROUPBY group `#N/A`
+(probes/t4450-eta-special-forms J59). SHEETS of a parameter bound to anything else is unprobed: the oracle's
+canary sheet guard refuses `SHEETS(<parameter>)`, because a count of sheets would include the canary. Ours matches
+every cell; SHEETS of any other bound value stays `#N/IMPL!`.
 Volatile functions through shape-stable formulas (probes/volatile-now-today-shapes, probes/volatile-and-info-rand-true-false-sheet):
 NOW, TODAY and RAND are numbers (`TYPE` 1, never text or boolean), `NOW()-NOW()` is 0 within one recalculation,
 `INT(NOW())=TODAY()`, `RAND()` is in [0,1) and two calls differ, `TRUE()` and `FALSE()` behave as the literals in
