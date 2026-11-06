@@ -15,7 +15,9 @@ use super::grouping::{
 };
 use super::lifted_options::Bound;
 use super::pivot_placement::{CheckedTotal, Placement, Shown, Slot};
-use super::relative_to::{check_set_entries, Item, ParentSets, RelativeSets, RelativeTo};
+use super::relative_to::{
+    check_set_entries, ColumnRecords, Item, ParentSets, RelativeSets, RelativeTo,
+};
 use crate::{
     calc_result::CalcResult,
     cast::{array_node_to_string, MAX_TEXT_UNITS},
@@ -910,19 +912,22 @@ impl<'a> Grid<'a> {
     }
 
     /// The records of column item `item`'s cell over a row whose records are `records`, by
-    /// [`Grid::cell_rows`]'s rule, without the buckets: the parent cells of [`ParentSets`].
-    fn column_records(&self, item: Item, records: &[usize]) -> Vec<usize> {
+    /// [`Grid::cell_rows`]'s rule, without the buckets: the parent cells of [`ParentSets`]
+    /// (`None` for every record, the Total's and a leaf no record reached; [`ColumnRecords`]).
+    fn column_records(&self, item: Item, records: &[usize]) -> ColumnRecords {
         match item {
-            Some(Line::Group(group)) if self.unreached.contains(&group) => records.to_vec(),
-            Some(Line::Group(group)) => records
-                .iter()
-                .copied()
-                .filter(|&record| self.column_of.get(record) == Some(&group))
-                .collect(),
+            Some(Line::Group(group)) if self.unreached.contains(&group) => None,
+            Some(Line::Group(group)) => Some(
+                records
+                    .iter()
+                    .copied()
+                    .filter(|&record| self.column_of.get(record) == Some(&group))
+                    .collect(),
+            ),
             Some(Line::Subtotal { level, start, .. }) => {
-                self.reached_class(level, start, records).collect()
+                Some(self.reached_class(level, start, records).collect())
             }
-            None => records.to_vec(),
+            None => None,
         }
     }
 
