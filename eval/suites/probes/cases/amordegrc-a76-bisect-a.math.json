@@ -88,6 +88,11 @@
     "v": "-1000000000000001.0",
     "f": "=FVSCHEDULE((-1),Data!E10:E10)"
    },
+   "A196": {
+    "t": "e",
+    "why": "the previous coupon date is before 1900-01-01: #NUM!",
+    "f": "=YIELD(59,44397,1,((Data!D1*42)-(0.2-Data!B11)),102,1)"
+   },
    "A204": {
     "t": "n",
     "v": "0.02000000000000000111022302462515654042363166809082",
@@ -133,6 +138,11 @@
     "v": "2.0",
     "f": "=DOLLARDE(2,25)"
    },
+   "A23": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=MDURATION(39507,44250,(-1),1,4,2)"
+   },
    "A232": {
     "t": "n",
     "v": "1625130.2211302212679944219264797861684701646579646",
@@ -157,6 +167,11 @@
     "t": "e",
     "why": "a negative cost or salvage, or a salvage above the cost: #NUM!",
     "f": "=AMORLINC((-1E+300),36940,39176,(-439103),10,Data!C10,3)"
+   },
+   "A245": {
+    "t": "n",
+    "v": "-0.0067279673561856442622828286093007771699043606858566",
+    "f": "=YIELD(36607,44044,1E-9,117,102,2)"
    },
    "A259": {
     "t": "n",
@@ -217,6 +232,11 @@
     "t": "e",
     "why": "settlement on or after maturity: #NUM!",
     "f": "=TBILLEQ(38769,Data!B$1,0.1)"
+   },
+   "A317": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=MDURATION(38782,44697,(-0.05),100,4,3)"
    },
    "A323": {
     "t": "e",
@@ -292,6 +312,11 @@
     "t": "n",
     "v": "607.49970588235294117646446568184949362201972261948",
     "f": "=SLN(20655,0.01,34)"
+   },
+   "A393": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=DURATION(37118,46179,1,(-0.05),2,1)"
    },
    "A4": {
     "t": "n",
