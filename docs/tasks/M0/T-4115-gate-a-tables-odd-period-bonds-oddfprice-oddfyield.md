@@ -82,7 +82,7 @@ Every failing table point has an owner.
   filled from excel-graph with 0 failures.
 - `rustsheet-eval accuracy`, release build, after merging main:
   - 0 failing, 0 table defects. 898 of the 900 points are inside the envelope.
-  - `missing tables` went 50 to 46 at the branch point; it is 21 after merging main, where other tables landed.
+  - `missing tables` went 50 to 46 at the branch point; it is 17 after merging main, where other tables landed.
   - The engine is bit-exact with Excel on 897 of 900: ODDFPRICE 199, ODDFYIELD 298, ODDLPRICE 200, ODDLYIELD 200.
     ODDFPRICE A162 is 1 ulp off, inside.
   - Two ODDFYIELD points are known failures under T-4551, now in its Context and acceptance criteria. A272 is a
