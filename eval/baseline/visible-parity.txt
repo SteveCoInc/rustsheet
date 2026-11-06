@@ -221,6 +221,7 @@ probes/t4254-beta-t-zero-wide.case.json	15
 probes/t4255-gamma-window-exact-ratio.case.json	1
 probes/t4290-gamma-window-large-pow2.case.json	6
 probes/t4302-poisson-cdf-beside-pmf.case.json	47
+probes/t4314-ipmt-balance-overflow.case.json	7
 probes/t4323-carry-sweep.case.json	3
 probes/t4323-carry-ties.case.json	2
 probes/t4323-fraction-holdout.case.json	1
