@@ -3,7 +3,7 @@ id: T-4499
 title: "TEXTSPLIT match_mode 1: probe whether ẞ matches the delimiter ß (and ß the delimiter ẞ), as TEXTBEFORE's does not"
 milestone: M7
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
