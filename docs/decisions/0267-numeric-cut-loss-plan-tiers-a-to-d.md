@@ -1,6 +1,7 @@
 # 0267 — Numeric cut-loss plan: tiers A to D, a 13-digit bar for the incomplete-beta family, then freeze probes-numeric
 
 - **Status:** accepted (2026-11-04, owner rulings; recorded on branch claude/numeric-accuracy-strategy-ceaedp).
+- **Amended by:** decision 0301 (item 3's tiny-p scope narrows: the T.INV Gate A points A91 and A96 are removed).
 - **Amends:**
   - decision 0083, for the incomplete-beta family only: the bar becomes 13 digits for the headline and the Phase 1
     counts (item 2 below);
