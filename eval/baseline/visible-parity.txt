@@ -293,7 +293,9 @@ probes/t4563-xlookup-not-found-ref-element.case.json	106
 probes/t4582-pivot-item-edges.case.json	40
 probes/t4583-pivot-row-labels.case.json	165
 probes/t4585-pivot-field-names.case.json	8
+probes/t4586-pivot-refresh-on-load.case.json	14
 probes/t4589-pivot-total-order.case.json	80
+probes/t4609-pivot-row-labels-2.case.json	218
 probes/t4612-pivot-date-items-and-casing.case.json	62
 probes/t4614-pivot-total-order-2.case.json	97
 probes/t4616-pivot-total-order-3.case.json	477

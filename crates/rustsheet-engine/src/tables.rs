@@ -414,6 +414,86 @@ impl Model {
         Ok(())
     }
 
+    /// Deletes `count` columns of `sheet` from `column` ([`Model::delete_columns`]) and returns
+    /// the tables it changed but kept, as they were before: what its undo restores (T-4652). A
+    /// column delete can drop table columns, with their names, formulas and filters, so the
+    /// whole table is kept, not only its [`TableExtent`].
+    pub(crate) fn delete_columns_keeping_tables(
+        &mut self,
+        sheet: u32,
+        column: i32,
+        count: i32,
+    ) -> Result<Vec<(String, Table)>, String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        let before = self.tables_on_sheet(&sheet_name);
+        self.delete_columns(sheet, column, count)?;
+        let tables = &self.workbook.tables;
+        Ok((before.into_iter())
+            .filter(|(name, table)| tables.get(name).is_some_and(|now| now != table))
+            .collect())
+    }
+
+    /// Gives the tables of `sheet` named in `tables` those tables back (the undo of a column
+    /// delete that changed them, T-4652), and reparses. The tables can come from a peer's diff
+    /// (directive 5): each must replace a table on `sheet` with the same names and rows, have one
+    /// column per column of its reference with distinct non-empty names, filter only those, and
+    /// overlap no other table, or nothing changes.
+    pub(crate) fn restore_tables_of_sheet(
+        &mut self,
+        sheet: u32,
+        tables: &[(String, Table)],
+    ) -> Result<(), String> {
+        if tables.is_empty() {
+            return Ok(());
+        }
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        let mut placed = Vec::new();
+        for (name, then) in tables {
+            let now = (self.workbook.tables.get(name))
+                .filter(|now| now.is_on_sheet(&sheet_name))
+                .ok_or_else(|| format!("No table '{name}' on the sheet"))?;
+            let fits = bounds(now).zip(bounds(then)).is_some_and(|(now_b, b)| {
+                let width = usize::try_from(i64::from(b.right) - i64::from(b.left) + 1);
+                let mut names: Vec<String> =
+                    then.columns.iter().map(|c| c.name.to_lowercase()).collect();
+                names.sort_unstable();
+                names.dedup();
+                then.name == now.name
+                    && then.display_name == now.display_name
+                    && then.sheet_name == now.sheet_name
+                    && then.header_row_count == now.header_row_count
+                    && then.totals_row_count <= 1
+                    && (b.top, b.bottom) == (now_b.top, now_b.bottom)
+                    && b.data.0 <= b.data.1.saturating_add(1)
+                    && width.is_ok_and(|w| w == then.columns.len() && w == names.len())
+                    && names.iter().all(|n| !n.is_empty())
+                    && (then.filter_columns.iter())
+                        .all(|f| usize::try_from(f.col_id).is_ok_and(|id| id < names.len()))
+            });
+            if !fits {
+                return Err(format!("Invalid table '{name}' to restore"));
+            }
+            placed.extend(bounds(then).map(|b| (name, b)));
+        }
+        let others: Vec<_> = (self.workbook.tables.iter())
+            .filter(|(name, table)| {
+                table.is_on_sheet(&sheet_name) && !tables.iter().any(|(n, _)| n == *name)
+            })
+            .filter_map(|(name, table)| Some((name, bounds(table)?)))
+            .collect();
+        for (i, (name, b)) in placed.iter().enumerate() {
+            let mut rest = placed.iter().skip(i + 1).chain(&others);
+            if rest.any(|(_, other)| b.overlaps(other)) {
+                return Err(format!("Table '{name}' would overlap another table"));
+            }
+        }
+        for (name, table) in tables {
+            self.workbook.tables.insert(name.clone(), table.clone());
+        }
+        self.reset_tables();
+        Ok(())
+    }
+
     /// Puts back tables taken out with their sheet (the undo of a sheet delete), and reparses.
     /// A table added since under the same name keeps its place.
     pub(crate) fn restore_tables(&mut self, tables: Vec<(String, Table)>) {

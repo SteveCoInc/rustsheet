@@ -181,6 +181,9 @@ pub(crate) enum Diff {
         column: i32,
         count: i32,
         old_data: Vec<ColumnData>,
+        /// The tables the delete changed, as they were before it, which the undo puts back
+        /// (T-4652); redo's delete changes them again.
+        tables: Vec<(String, Table)>,
     },
     DeleteSheet {
         sheet: u32,
@@ -251,6 +254,10 @@ pub(crate) enum Diff {
         name: String,
         scope: Option<u32>,
         old_value: String,
+        /// The deleted name's `hidden` flag and Name Manager `comment`, which an undo puts back
+        /// (T-4637).
+        hidden: bool,
+        comment: Option<String>,
     },
     UpdateDefinedName {
         name: String,

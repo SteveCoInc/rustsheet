@@ -132,6 +132,9 @@ fn value_reads_an_hour_with_a_trailing_colon() {
         ("=VALUE(\"12:\")*24", "12"),
         ("=(\"12:\"+0)*24", "12"),
         ("=VALUE(\"12: PM\")", "#VALUE!"),
+        // probes/t4602-clock-text-colon-am-pm-and-spaces A1, A10
+        ("=VALUE(\"10:30: PM\")", "#VALUE!"),
+        ("=VALUE(\"10:30:45: PM\")", "#VALUE!"),
         ("=VALUE(\"1.5:\")", "#VALUE!"),
         ("=VALUE(\"12::\")", "#VALUE!"),
     ];

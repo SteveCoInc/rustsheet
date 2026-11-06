@@ -13,7 +13,8 @@
 //!   Values on columns it holds `Values` (`dataCaption`; t4137 K1, t4138 G9). Each column line
 //!   labels its levels from `r` on, one header row per level below the top row.
 //! - **Row header.** The last header row holds `Row Labels` (`rowHeaderCaption`) over the first
-//!   label column, or the first row field's name when every pivot field has `compact="0"`; each
+//!   label column, or the first row field's name when every pivot field has `compact="0"`, which
+//!   wins over `rowHeaderCaption` too (probes/t4609-pivot-row-labels-2 L5); each
 //!   further label column holds the name of the first field in it (t4123 T, T2; t4138 G3, G4).
 //!   Each row line labels its levels from `r` on, each in its label column (compact form puts
 //!   several levels in one column; the sidecars hold values only, so indentation is not
@@ -43,9 +44,7 @@
 //!   hidden items leave one item, and a selected number, boolean or blank page item (T-4657);
 //! - a subtotal label with Values inside its field (`<item> <data field>`), the grand-total
 //!   caption with Values on its axis, and the header over a Values level in a label column of
-//!   its own (left empty) (T-4650);
-//! - `rowHeaderCaption` beside the all-`compact="0"` rule: the name wins, as it is seen to over
-//!   `colHeaderCaption` (T-4609).
+//!   its own (left empty) (T-4650).
 
 use crate::expressions::token::Error;
 use crate::number_format::number_to_text;

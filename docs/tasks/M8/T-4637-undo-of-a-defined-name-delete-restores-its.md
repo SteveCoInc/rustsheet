@@ -3,7 +3,7 @@ id: T-4637
 title: "Undo of a defined-name delete restores its hidden flag and comment"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -24,9 +24,14 @@ the flags yet. `Diff` is bitcode-encoded and can come from a peer, so the new fi
 same untrusted-input care as the other diffs.
 
 ## Acceptance criteria
-- [ ] Deleting a hidden, commented loaded name and undoing the delete restores both fields. Redo deletes the name again. A unit test covers this.
-- [ ] Names added through the API are unchanged: neither flag set.
-- [ ] `make check` green; reviewers approve.
+- [x] Deleting a hidden, commented loaded name and undoing the delete restores both fields. Redo deletes the name again. A unit test covers this.
+- [x] Names added through the API are unchanged: neither flag set.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - An API that sets or reads the flags (api lane).
+
+## Outcome
+`Diff::DeleteDefinedName` now carries `hidden` and `comment`; `Model::restore_defined_name` puts them back, so undo of a
+delete is a true inverse (unit test `undo_delete_restores_hidden_and_comment`; redo deletes again; API-added names keep
+neither flag). New `Model::find_defined_name` is the single lookup (`get_defined_name_formula` uses it). No eval change.
