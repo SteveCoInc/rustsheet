@@ -99,8 +99,6 @@ fn test_textbefore_textafter_case_insensitive_final_sigma() {
     assert_eq!(model._get_text("A9"), "aΟ");
 }
 
-// A huge negative instance number saturates to i32::MIN in the caller; negating it must not
-// overflow (T-1796 security review). It behaves like the largest representable negative count.
 // T-4473 (probes/t4473-textsplit-fold-gaps A8, A29, A35, A105, A107): the delimiter `İ` matches
 // `I`, the Angstrom sign matches neither `å` nor `Å`, and a `Σ` before a combining mark is `σ`.
 #[test]
@@ -119,6 +117,8 @@ fn test_textbefore_case_insensitive_dotted_i_angstrom_and_sigma_before_mark() {
     assert_eq!(model._get_text("A5"), "#N/A");
 }
 
+// A huge negative instance number saturates to i32::MIN in the caller; negating it must not
+// overflow (T-1796 security review). It behaves like the largest representable negative count.
 #[test]
 fn test_textbefore_textafter_huge_negative_instance_does_not_overflow() {
     let mut model = new_empty_model();
