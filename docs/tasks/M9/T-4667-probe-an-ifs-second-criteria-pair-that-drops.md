@@ -36,4 +36,4 @@ range that holds errors (docs/excel-semantics/criteria.md, from T-4606) has evid
 ## Outcome
 Probe `t4667-ifs-second-pair-and-num-value-error` filled on excel-graph: a second pair that drops an error row removes the
 error at that position (7), and a #NUM! value-range error at "c" stays #NUM! for all five functions (not #DIV/0!). The rule
-in criteria.md stands; the wording fix is made. Eval delta: see the PR.
+in criteria.md stands; the wording fix is made. Eval delta: +1 probe case (76 cells), 0 fixed, 0 regressions, baseline +1 line.
