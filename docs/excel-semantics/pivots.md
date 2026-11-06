@@ -305,7 +305,8 @@ Rule (each aggregate in a value field that also holds other kinds of value):
 - **Count** counts every non-blank value: numbers, text, booleans and errors. Its grand total can still
   be an error (see "A Count total over an error field is the error when the pivot mixes
   aggregates").
-- **CountNums** counts numbers only. An error does not poison it.
+- **CountNums** counts numbers only. An error does not poison its item cells. Its totals can be the
+  error (see "A Count total over an error field is the error when the pivot mixes aggregates").
 - **Errors.** An error poisons every aggregate except Count and CountNums. The aggregate shows the error
   (`#N/A`) in the cell holding it and in every subtotal and grand total that covers that cell. Cells that
   do not cover it are unaffected.
@@ -336,10 +337,17 @@ Rule:
 - **Totals over one axis field.** A Sum, Average or Product total over the items of a pivot's only
   axis field accumulates the records item by item, in the field's display (first-seen) item order,
   and in record order within each item. Average then divides by the count. This is neither record
-  order, nor reverse record order, nor ascending item order, nor the sum of the children.
-- **Sum across a column field.** In t4135, a row's Sum total across the column field Kind equals the
-  sum of the row's cells, and not the item-by-item accumulation, which gives 0.6 there. Average in
-  the same pivot does follow item order. Why the two differ is open (T-4616).
+  order, nor reverse record order, nor ascending item order, nor the sum of the children. For Product
+  only one cell separates the orders (P2 B6), and ascending value order fits it too (T-4616).
+- **Sum across a column field.** In t4135, a row's Sum total across the column field Kind does not
+  follow display-order accumulation, which gives 0.6 there. Three readings fit A_sum!S6 and S8:
+  - the sum of the row's cells;
+  - ascending column-item order;
+  - reverse record order.
+
+  In the same pivot, Average does follow display order: A_sum!S8 is 1.3, while A_average!S8 is
+  0.32499999999999996 = 1.2999999999999998 / 4. Which reading holds, and why Sum and Average
+  differ, is open (T-4616).
 
 Evidence (excel-graph, 2026-11-06):
 - probes/t4614-pivot-total-order-2 (T-4614). D1 holds the records Z 6.5, A 0.1, Z 2.3, A 8.9, Z 2.4,
@@ -379,10 +387,11 @@ Status: VERIFIED (excel-graph)
 
 ## A Count total over an error field is the error when the pivot mixes aggregates
 Rule: Count and CountNums never show an error in an item's cell. When the pivot's data fields mix
-aggregates, though, every Count or CountNums total (subtotal or grand total) that covers a record
-holding an error is that error: `#N/A`, or the errorCaption when one is set. Totals that cover no such
-record stay counts. With one data field, or only Count fields, the totals are counts. A column field
-makes no difference.
+aggregates (Count or CountNums beside Sum or Average), though, every row or column grand total of a
+Count or CountNums that covers a record holding an error is that error: `#N/A`, or the errorCaption
+when one is set. Grand totals that cover no such record stay counts. With one data field, or only
+Count fields, the totals are counts. A column field makes no difference. Two cases are not probed:
+inner-field subtotals, and Count beside CountNums (T-4616).
 Evidence (excel-graph, 2026-11-06):
 - probes/t4614-pivot-total-order-2 (T-4614), over D3 (East A Err 10, East B `#N/A`, West A 7), without
   showError:

@@ -1,6 +1,6 @@
 ---
 id: T-4616
-title: "Probe the accumulation order of a pivot Sum total across a column field"
+title: "Probe the accumulation order of a pivot Sum total across a column field, StdDev/Var totals, and Count subtotals"
 milestone: M16
 lane: research
 status: todo
@@ -18,7 +18,11 @@ Evidence so far: probes/t4135-pivot-aggregates A_sum!S6 and S8; probes/t4614-piv
 - the sum of the row's cells, in display order or in some other order;
 - item-by-item accumulation in another order than display order.
 
-Build a 2-D pivot (rows R, columns K, several records per cell) whose candidate sums all differ (search with Python floats first). Also cover column totals across row items, and the grand-grand total. SPEC-0032 stage 3 (T-4142) depends on it.
+Build a 2-D pivot (rows R, columns K, several records per cell) whose candidate sums all differ (search with Python floats first). Also cover column totals across row items, and the grand-grand total. Ride-alongs:
+- StdDev and Var totals' order;
+- Product with a second separating cell (ascending value versus display order);
+- Count/CountNums at inner-field subtotals;
+- Count beside CountNums in a pivot with an error field (are they "mixed"?). SPEC-0032 stage 3 (T-4142) depends on it.
 
 ## Acceptance criteria
 - [ ] A filled probe separates the candidates; the pivots.md entry's UNVERIFIED part is closed.
