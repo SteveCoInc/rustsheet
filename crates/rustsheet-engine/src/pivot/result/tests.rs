@@ -375,6 +375,19 @@ fn every_t4614_total_order_cell_is_excels() {
 }
 
 #[test]
+fn every_t4616_total_order_cell_is_excels() {
+    // 2-D Sum alone (S1, S4 to S6) and beside Average (S2), Average alone (S3), Var and StdDev
+    // in 2-D and over one field (V1 to V4), Product (P1, P2), Count and CountNums subtotals
+    // (I1 to I4) and Count beside CountNums (M1 to M3).
+    for sheet in [
+        "S1", "S2", "S3", "S4", "S5", "S6", "V1", "V2", "V3", "V4", "P1", "P2", "I1", "I2", "I3",
+        "I4", "M1", "M2", "M3",
+    ] {
+        check("t4616-pivot-total-order-3", sheet);
+    }
+}
+
+#[test]
 fn every_t4137_caption_pivot_value_is_excels() {
     // K4: a page selection and hidden items of a page field; K5: custom Sum and Count subtotals;
     // K3: a #DIV/0! under errorCaption; K2: an empty intersection under missingCaption.
