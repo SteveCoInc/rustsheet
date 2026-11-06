@@ -777,7 +777,8 @@ fn choose_and_stack_read_a_one_cell_error_reference_as_a_one_by_one_array() {
 }
 
 // T-4447: SORT floors a fractional sort_order and sort_index, snapped up just below an integer,
-// as SORTBY's sort_order (probes/t4447-sort-fractional-keys E2, I2, I10, E17).
+// as SORTBY's sort_order (probes/t4447-sort-fractional-keys E2, I2 and E17; B3 is the
+// one-column analogue of I10's `3-2^-23` over two columns).
 #[test]
 fn sort_floors_fractional_keys_with_the_near_integer_snap() {
     let mut model = new_empty_model();

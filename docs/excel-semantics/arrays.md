@@ -1986,8 +1986,10 @@ A1:B3 = (3,c),(1,a),(2,b)): a sort_order of -0.0001, -0.5, -0.9999, `"-0.5"`, `-
 descending; 1.5, 1.9999, `1-2^-22`, `1-2^-23` and `1-2^-24` ascending; 0.0001, 0.5, 0.9999, -1.5, `1-2^-21`, `-1-2^-22` and
 `2-2^-22` (snapped to 2) are `#VALUE!` (E1:E20, the same as a one-element array F1:F20, and per key in a list E21:E22). A
 sort_index of `1-2^-23`, `1-2^-24`, 1.5 reads key 1 and `2-2^-23`, 2.5, `2+2^-22` key 2, while 0.9999, `1-2^-21` and -0.5
-are `#VALUE!` and `3-2^-23` (snapped to 3, past the two columns) is `#VALUE!` too (I1:I11; by_col over the transposed data
-the same, J1:J11). Before T-4447 ours truncated both, so -0.5 and the values just below 1 were `#VALUE!` and `2-2^-22`
+are `#VALUE!` and `3-2^-23` (snapped to 3, past the two columns) is `#VALUE!` too (I1:I11, by_col J1:J11; the key itself
+shows in R1:R10 and by_col S1:S10, over O1:P3 = (3,a),(1,c),(2,b), whose columns sort apart: `1-2^-23` and 1.5 sort by
+column 1, `2-2^-23` and 2.5 by column 2). The lifted by_col path (one SORT per by_col element) reads its single
+sort_index the same way in ours, unprobed there away from 2.7 (t2929 K18). Before T-4447 ours truncated both, so -0.5 and the values just below 1 were `#VALUE!` and `2-2^-22`
 and `3-2^-23` sorted.
 This is why `SORTBY(Data!E1:E12,MAX(..)%,-1)` (gen-m7/18b80d3fd292d63a Calc!A123:A134), `SORTBY(Data!C1:C12,IFNA(TIMEVALUE(..),..),1)`
 (7307132bb8820f17 A966:A977) keep their one-column arrays, `SORTBY(Data!B1:C12,(-1),1)` (0e40208f51c2454c Calc!A2) and the
