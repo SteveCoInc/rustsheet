@@ -348,6 +348,23 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
     pivot.filter(|p| !p.location.is_empty())
 }
 
+/// `<sharedItems>`'s attributes into `flags`, each charged its bytes before it is copied; `None`
+/// on a malformed attribute or when the budget runs out.
+fn shared_flags(
+    e: &quick_xml::events::BytesStart<'_>,
+    flags: &mut BTreeMap<String, String>,
+    budget: &mut usize,
+) -> Option<()> {
+    for a in e.attributes() {
+        let a = a.ok()?;
+        let value = a.normalized_value(XmlVersion::Implicit1_0).ok()?;
+        let key = a.key.local_name();
+        spend(budget, key.as_ref().len() + value.len())?;
+        flags.insert(key.as_ref().to_owned(), value.into_owned());
+    }
+    Some(())
+}
+
 fn parse_cache_fields(xml: &str, budget: &mut usize) -> Option<Vec<PivotCacheField>> {
     let mut reader = Reader::from_str(xml);
     let mut fields: Vec<PivotCacheField> = Vec::new();
@@ -373,17 +390,7 @@ fn parse_cache_fields(xml: &str, budget: &mut usize) -> Option<Vec<PivotCacheFie
                     }
                     "sharedItems" => {
                         in_shared = !empty;
-                        let field = fields.last_mut()?;
-                        for a in e.attributes() {
-                            let a = a.ok()?;
-                            let key = a.key.local_name().as_ref().to_owned();
-                            let value = a
-                                .normalized_value(XmlVersion::Implicit1_0)
-                                .ok()?
-                                .into_owned();
-                            spend(budget, key.len() + value.len())?;
-                            field.shared_flags.insert(key, value);
-                        }
+                        shared_flags(e, &mut fields.last_mut()?.shared_flags, budget)?;
                     }
                     "groupItems" if !empty => in_group = true,
                     tag @ ("s" | "n" | "d" | "b" | "e" | "m") if in_shared => {

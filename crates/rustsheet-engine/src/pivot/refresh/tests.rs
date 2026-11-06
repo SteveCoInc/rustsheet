@@ -107,7 +107,8 @@ fn a_cached_text_item_keeps_its_slot_and_takes_the_source_casing() {
 }
 
 /// t4612 C1 to C3: the first record's casing relabels the listed slot, whatever the listed and
-/// the lowercase casing (C1 shows `EAST`, C2 and C3 `East`; saved rowItems x = 1).
+/// the lowercase casing (C1 shows `EAST`, C2 and C3 `East`; saved rowItems x = 1). The first
+/// record is a formula the old cache holds as `<m/>`; a literal first record is T-4654's.
 #[test]
 fn the_first_records_casing_relabels_the_listed_item() {
     for (column, listed, shown) in [
@@ -523,10 +524,17 @@ fn shared_items_flags_follow_the_items() {
     assert!(!dated.contains_semi_mixed_types && !dated.contains_string);
     assert!(!dated.contains_number && !dated.contains_integer);
     assert_eq!(dated.number_range, None);
-    // t4612 T4: a date beside a text is mixed too, and keeps the string flags.
-    let with_text = SharedItemsFlags::of(&field(vec![CacheItem::Date(45000.0), text("x")]));
+    // t4612 T4: dates beside a text and (stale) numbers are mixed, with the string flags and no
+    // number flags.
+    let with_text = SharedItemsFlags::of(&field(vec![
+        num(45000.0),
+        text("x"),
+        num(45001.0),
+        CacheItem::Date(45000.0),
+        CacheItem::Date(45001.0),
+    ]));
     assert!(with_text.contains_mixed_types && with_text.contains_string);
-    assert!(with_text.contains_semi_mixed_types);
+    assert!(with_text.contains_semi_mixed_types && !with_text.contains_number);
 }
 
 /// A field with a saved date grouping is grouped again by `group_by_dates` over the dates read,

@@ -376,7 +376,10 @@ impl FieldReader {
     /// probes/t4582-pivot-item-edges J1 the cached `EAST` shows `east` (pivots.md "Item casing
     /// when cache and source disagree, and date items"). The first source value's casing is
     /// used, whatever the listed one: probes/t4612-pivot-date-items-and-casing C1 shows `EAST`
-    /// over a listed and lowercase `east`, C2 and C3 `East` over a listed `EAST` or `east`.
+    /// over a listed and lowercase `east`, C2 and C3 `East` over a listed `EAST` or `east`. In
+    /// every probed case that first value is a formula the old cache holds as `<m/>`: whether a
+    /// literal first record, whose value the old cache already holds, relabels the slot the same
+    /// way is UNVERIFIED (probe pending: T-4654).
     fn push(&mut self, value: CacheItem, items: &mut usize) -> Result<(), PivotCacheError> {
         let key = ItemKey::identity(&value);
         let index = if let Some(&index) = self.keys.get(&key) {
@@ -491,17 +494,18 @@ pub fn regroup(
 /// "Shared-item flags Excel accepts for mixed fields"; T-4122 runs). Written by the export
 /// (T-4176). Booleans and errors count as strings. A date counts as neither a string nor a
 /// number, but as a type of its own beside them: with a date, Excel writes `containsMixedTypes`
-/// beside a number or a string and no number flags at all (probes/t4612-pivot-date-items-and-casing
-/// T5 and T4; pivots.md "Shared-item flags Excel accepts for mixed fields"). `containsNonDate`,
-/// `minDate` and `maxDate` are not derived: how Excel counts the stale items left from the old
-/// cache in them is UNVERIFIED (probe pending: T-4654).
+/// beside a number and no number flags at all (probes/t4612-pivot-date-items-and-casing T5;
+/// pivots.md "Shared-item flags Excel accepts for mixed fields"). Whether a date beside a string
+/// and no number is mixed (T4 also held numbers), and `containsNonDate`, `minDate` and `maxDate`
+/// (not derived: how Excel counts the stale items left from the old cache in them) are UNVERIFIED
+/// (probe pending: T-4654).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SharedItemsFlags {
     /// `containsSemiMixedTypes`: false only when the field has no string and no blank.
     pub contains_semi_mixed_types: bool,
     /// `containsString`: a text, boolean or error item.
     pub contains_string: bool,
-    /// `containsMixedTypes`: strings beside numbers.
+    /// `containsMixedTypes`: strings beside numbers, or dates beside numbers (t4612 T5).
     pub contains_mixed_types: bool,
     /// `containsNumber`.
     pub contains_number: bool,
@@ -538,8 +542,8 @@ impl SharedItemsFlags {
             }
         }
         flags.contains_semi_mixed_types = flags.contains_string || flags.contains_blank;
-        flags.contains_mixed_types = flags.contains_string && flags.contains_number
-            || flags.contains_date && (flags.contains_string || flags.contains_number);
+        flags.contains_mixed_types =
+            (flags.contains_string || flags.contains_date) && flags.contains_number;
         if flags.contains_date {
             // t4612 T5: dates beside equal and other numbers, saved without `containsNumber`,
             // `minValue` or `maxValue`.

@@ -96,8 +96,10 @@ Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`ItemKey:
 ## Item casing when cache and source disagree, and date items
 Rule:
 - **Casing.** When texts that differ only in case merge into one item, the item keeps the listed
-  item's slot and takes the casing of the first source record that reaches it. Neither the listed
-  casing nor the lowercase one decides.
+  item's slot and takes the casing of the first source record that reaches it, when that record is
+  a formula the old cache held as `<m/>` (every probed case). Neither the listed casing nor the
+  lowercase one decides. Whether a literal first record, whose value the cache already lists in
+  another casing, relabels the slot the same way is UNVERIFIED (T-4654).
 - **Date items.** A date-formatted source value does not match a cached number item of the same
   value. Its records leave the listed `<n>` items empty, so those are not rendered, and Excel appends
   new items for them, saved as date items (`<d v="2023-03-15T00:00:00"/>`). A date with a time part is
@@ -123,8 +125,9 @@ Evidence: probes/t4582-pivot-item-edges (excel-graph, 2026-11-06, T-4582):
 
 Evidence: probes/t4612-pivot-date-items-and-casing (excel-graph, 2026-11-06, T-4612). The sidecar's
 `cache_fields` carry each saved shared item's type (`shared_items`) and the `<sharedItems>`
-attributes (`shared_flags`). In C1 to C3 the first record is a formula, which the builder caches as
-`<m/>`, so the cache lists the first literal's casing:
+attributes (`shared_flags`). In C1 to C3 the first record is a formula, which the case builder caches
+as `<m/>`, and the "listed" item is the one the builder wrote (pivot_definition.py caches the first
+literal's casing), not one the sidecar records:
 - C1: K is `="EAST"`, `east`; listed `east`. C1!A4 shows `EAST` (count 2, x = 1): the first record's
   casing over the listed, lowercase and last one.
 - C2: K is `="East"`, `EAST`, `east`; listed `EAST`. C2!A4 shows `East` (count 3, x = 1).
@@ -143,7 +146,8 @@ attributes (`shared_flags`). In C1 to C3 the first record is a formula, which th
   x = 0, 1, 2, shown 45000, 45001, 45000, each count 1 (T5!A4:B6): the date is a third item. Shared
   items `<d>` 2023-03-15T00:00:00, `<n>` 45000, `<n>` 45001.
 
-Status: VERIFIED (excel-graph). The saved shared-item order and the stale items' place in it are as
+Status: VERIFIED (excel-graph), the casing rule for a formula (uncached) first record only; a literal
+first record is UNVERIFIED (T-4654). The saved shared-item order and the stale items' place in it are as
 observed; what the export must write is T-4654's.
 Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader::push` relabels the
 reused slot with the first record's casing and appends `CacheItem::Date`; `ItemKey::identity` keeps
@@ -157,15 +161,16 @@ open are the ones Excel itself writes:
 - `containsString="0"` when it has no string;
 - `containsMixedTypes="1"` when strings sit beside numbers;
 - numbers with blanks carry `containsBlank="1"` and no `containsSemiMixedTypes="0"`;
-- a date is a type of its own: `containsDate="1"`, and `containsMixedTypes="1"` beside a number or a
-  string. A field with a date carries no number flags (`containsNumber`, `containsInteger`,
-  `minValue`, `maxValue`), even beside live numbers.
+- a date is a type of its own: `containsDate="1"`, and `containsMixedTypes="1"` beside a number. A
+  field with a date carries no number flags (`containsNumber`, `containsInteger`, `minValue`,
+  `maxValue`), even beside live numbers. Whether a date beside a string and no number is mixed is
+  UNVERIFIED (T-4654): T4's field also held stale numbers.
 
 As observed and still open (T-4654):
 - stale items: in T1 (dates beside stale `<n>` items) Excel wrote `containsNonDate="0"`, so the stale
   numbers did not count there; in C1 (texts beside a stale `<m/>`) it wrote `containsBlank="1"`, so
   the stale blank did. T1's `containsMixedTypes="1"` may come from the stale numbers.
-- `minDate` is the least date, but `maxDate` is below it in every date field: T1 and T4
+- `minDate` is the least date, but `maxDate` is below it in every date field: T1, T4 and T5
   `1900-01-10T12:50:04` beside `minDate` 2023-03-15T00:00:00, T2 `1899-12-31T03:45:03`, T3
   `1899-12-31T00:03:04`.
 
@@ -174,7 +179,8 @@ these); Excel-saved caches in the LibreOffice fixtures (oss-engines.md §5).
 probes/t4612-pivot-date-items-and-casing (excel-graph, 2026-11-06, T-4612), sidecar `cache_fields`
 `shared_flags`:
 - T5 (`<d>`, `<n>`, `<n>`, all holding records): `containsDate="1"`, `containsMixedTypes="1"`,
-  `containsSemiMixedTypes="0"`, `containsString="0"`; no `containsNumber`, `minValue` or `maxValue`.
+  `containsSemiMixedTypes="0"`, `containsString="0"`; no `containsNumber`, `minValue` or `maxValue`;
+  `minDate` 2023-03-15T00:00:00, `maxDate` 1900-01-10T12:50:04.
 - T4 (`<d>`, `x`, `<d>` and two stale `<n>`): `containsDate="1"`, `containsMixedTypes="1"`; the
   string flags at their defaults; no number flags.
 - T1, T2, T3 (`<d>` items and stale `<n>` ones): `containsDate="1"`, `containsMixedTypes="1"`,
@@ -184,8 +190,8 @@ probes/t4612-pivot-date-items-and-casing (excel-graph, 2026-11-06, T-4612), side
 Status: builder observation (T-4122 runs) for the refused files, not committable as a probe: Excel
 saves nothing for a file it refuses. The builder writes these flags (pivot_definition.py
 `shared_items`), and every filled pivot probe opens with them. The date flags are VERIFIED
-(excel-graph) for the fields above; stale items, `containsNonDate` and `minDate`/`maxDate` are
-UNVERIFIED (T-4654).
+(excel-graph) for the fields above; a date beside a string without numbers, stale items,
+`containsNonDate` and `minDate`/`maxDate` are UNVERIFIED (T-4654).
 Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`SharedItemsFlags`, written by the export, T-4176)
 
 ## Items show in the order the pivot field lists them; new items are appended
