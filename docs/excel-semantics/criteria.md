@@ -302,7 +302,7 @@ a second pair `B1:B4,">0"` (B = 1, 1, 0, 1) drops only row 3, so the error rows 
 with B = 0, 1, 1, 1 the pair `B1:B4,">0"` drops the error row 1 that the first criterion selects for "a", so over
 `{"a","b","c","z"}` AVERAGEIFS, MAXIFS, MINIFS and SUMIFS give 7, 5, #DIV/0!, then #DIV/0! (AVERAGEIFS) or 0 (the others) for "z";
 the error is the result only where a selected row still holds it (AVERAGEIF has no second pair, so it is not in this row). With a #NUM! value range N1:N4 = #NUM!, 5, 7, #NUM!
-the same criteria give #NUM!, 5, #NUM!, then #DIV/0! (AVERAGEIFS, AVERAGEIF) or 0 (MAXIFS, MINIFS, SUMIFS) for "z", so the
+the array criterion alone (no second pair) gives #NUM!, 5, #NUM!, then #DIV/0! (AVERAGEIFS, AVERAGEIF) or 0 (MAXIFS, MINIFS, SUMIFS) for "z", so the
 value-range error at "c" is #NUM!, not the no-numeric-match #DIV/0! (ERROR.TYPE 6 against 2)
 (probes/t4667-ifs-second-pair-and-num-value-error, excel-graph 2026-11-06, T-4667);
 `COUNTIFS(E1:E3,{"a","b"})` ignores it (0 at position 1). A `NA()`/non-range first argument with an array criterion
