@@ -3,7 +3,7 @@ id: T-4618
 title: "A use of a sheet-scoped name loaded before its API add resolves in probes/t4554-api-name-local-name-body Last!D3"
 milestone: M8
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
