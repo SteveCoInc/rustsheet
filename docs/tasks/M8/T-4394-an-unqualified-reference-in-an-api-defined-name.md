@@ -3,7 +3,7 @@ id: T-4394
 title: "An unqualified reference in an API-defined name: first sheet or active sheet"
 milestone: M8
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
