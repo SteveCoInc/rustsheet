@@ -3,7 +3,7 @@ id: T-3988
 title: "ODDFYIELD's long first period with a month-end schedule (T-3031 follow-up)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
