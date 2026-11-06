@@ -334,6 +334,13 @@ milestone = ["M15"]
   `F` line holds a failing item, `<scenario> <kind> <item key> <verdict>`. The ratchet is the usual one. A line may disappear (fixed). A new
   failing item is a regression unless the case is new (new coverage). `update-baseline` refuses regressions.
   `--allow-regressions` needs a decision record, as everywhere.
+  A corpus suite (Calipers, POI, corpus-bench) uses `baseline = "cases"` instead. Its item lines would run to
+  tens of megabytes (about 550,000 on the first run, T-4173). Each failing case is one `F` line, `* <n>`, where n
+  counts the case's failing items. n may only fall, so a new loss in a case that already fails is still a
+  regression. Only the item list is lost; `make eval`'s `roundtrip.json` still holds it.
+- **Kept rate.** The CLI line and the report give each suite's kept rate: source items compared, minus those
+  scored `changed` or `lost`, over the items compared. `added` items and validator failures are gated by the
+  baseline but are not source items. M15's goal is stated as this rate.
 - **Exceptions.** `exceptions.toml` holds narrow, per-case tokens in Calipers' style. Each token names the decision
   or task that owns it and the items it excuses (`volatile`, `candidate-N4`, …). A self-test runs every case with
   its exceptions removed and checks that each exception still excuses something. Stale exceptions fail.

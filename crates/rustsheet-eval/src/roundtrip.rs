@@ -25,7 +25,7 @@ use serde::Serialize;
 use crate::baseline::{self as ratchet, Baseline};
 use crate::engine::harness_options;
 use crate::runner::{run_in_worker, CaseStatus};
-use crate::suite::{CaseFile, Suite};
+use crate::suite::{BaselineMode, CaseFile, Suite};
 use crate::xlsx_snapshot::read_snapshot;
 
 use package::{validate, Package, Problem};
@@ -129,12 +129,12 @@ impl CaseResult {
 
 /// Runs every case of `suites` in parallel, each isolated against panics and `timeout`.
 #[must_use]
-pub fn run_suites(suites: &[Suite], filter: Option<&str>, timeout: Duration) -> Vec<CaseResult> {
+pub fn run_suites(suites: &[&Suite], filter: Option<&str>, timeout: Duration) -> Vec<CaseResult> {
     let mut jobs = Vec::new();
     let mut failed = Vec::new();
     for suite in suites {
         match suite.cases() {
-            Ok(cases) => jobs.extend(cases.into_iter().map(|c| (suite, c))),
+            Ok(cases) => jobs.extend(cases.into_iter().map(|c| (*suite, c))),
             Err(e) => failed.push(CaseResult {
                 id: format!("{}/<discovery>", suite.manifest.name),
                 suite: suite.manifest.name.clone(),
@@ -380,19 +380,71 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
     (items, checked)
 }
 
-/// The results as a cells-mode baseline (SPEC-0033 D8): a case's checked count is the number of
-/// source items it compared, and each failing item is one known failure. A case that did not run
-/// is one `!Status` failure, as in the cell suites.
+/// The share of a run's source items that were kept (SPEC-0033 D2): every compared item except
+/// the ones scored `changed` or `lost`. `added` items and validator failures are not source items,
+/// so they count in the baseline but not here. This is the figure M15's goal is stated in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
+pub struct KeptRate {
+    /// Source items compared.
+    pub checked: usize,
+    /// Source items scored `changed` or `lost`.
+    pub not_kept: usize,
+}
+
+impl KeptRate {
+    /// The rate over `results`.
+    #[must_use]
+    pub fn of(results: &[&CaseResult]) -> KeptRate {
+        let mut rate = KeptRate::default();
+        for r in results {
+            rate.checked += r.checked;
+            rate.not_kept += r
+                .items
+                .iter()
+                .filter(|i| matches!(i.verdict, Verdict::Changed | Verdict::Lost))
+                .count();
+        }
+        rate
+    }
+
+    /// The kept share in percent; 100 when nothing was compared.
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)] // item counts stay far below 2^52
+    pub fn percent(self) -> f64 {
+        if self.checked == 0 {
+            return 100.0;
+        }
+        100.0 * (self.checked.saturating_sub(self.not_kept)) as f64 / self.checked as f64
+    }
+}
+
+/// The results as a baseline (SPEC-0033 D8). A case that did not run is one `!Status` failure,
+/// as in the cell suites.
+///
+/// - `cells`: a case's checked count is the number of source items it compared, and each failing
+///   item is one known failure.
+/// - `cases`, for the corpora, whose item lists would make a baseline of tens of megabytes: a
+///   failing case is one line, `* <n>`, with the number of its items that did not pass. That
+///   number may only fall ([`diff`]), so a new loss in a case that already fails still regresses.
 #[must_use]
-pub fn baseline(results: &[&CaseResult]) -> Baseline {
+pub fn baseline(results: &[&CaseResult], mode: BaselineMode) -> Baseline {
     let mut b = Baseline::default();
+    if mode == BaselineMode::None {
+        return b;
+    }
     for r in results {
         b.checked.insert(r.id.clone(), r.checked);
         match r.status {
             CaseStatus::Pass => {}
             CaseStatus::Fail => {
-                for i in r.items.iter().filter(|i| !i.verdict.passes()) {
-                    b.failing.insert((r.id.clone(), i.baseline_key()));
+                let failing = r.items.iter().filter(|i| !i.verdict.passes());
+                if mode == BaselineMode::Cases {
+                    b.failing
+                        .insert((r.id.clone(), format!("{CASE_ITEM} {}", failing.count())));
+                } else {
+                    for i in failing {
+                        b.failing.insert((r.id.clone(), i.baseline_key()));
+                    }
                 }
             }
             other => {
@@ -401,6 +453,32 @@ pub fn baseline(results: &[&CaseResult]) -> Baseline {
         }
     }
     b
+}
+
+/// The item of a failing case in a `cases`-mode round-trip baseline, before its count.
+const CASE_ITEM: &str = "*";
+
+/// The ratchet's delta between two round-trip baselines: the ordinary one, except that in
+/// `cases` mode a failing case whose count of failing items fell is a fix, not a regression.
+#[must_use]
+pub fn diff(old: &Baseline, new: &Baseline) -> ratchet::Delta {
+    let mut delta = ratchet::diff(old, new);
+    let count = |b: &Baseline, case: &str| {
+        b.failing
+            .range((case.to_string(), String::new())..)
+            .take_while(|(c, _)| c == case)
+            .find_map(|(_, item)| item.strip_prefix(CASE_ITEM)?.trim().parse::<usize>().ok())
+    };
+    let (better, worse): (Vec<String>, Vec<String>) =
+        delta.regressions.drain(..).partition(|line| {
+            let Some((case, _)) = line.split_once('\t') else {
+                return false;
+            };
+            matches!((count(old, case), count(new, case)), (Some(a), Some(b)) if b < a)
+        });
+    delta.regressions = worse;
+    delta.fixed.extend(better);
+    delta
 }
 
 /// The Markdown summary of a run: per suite, case statuses, items by verdict, the most often lost
@@ -436,10 +514,14 @@ pub fn report_markdown(results: &[CaseResult]) -> String {
                 }
             }
         }
+        let rate = KeptRate::of(&cases);
         let _ = writeln!(
             md,
-            "## {suite}\n\n{} cases: {status:?}\n\nItems by verdict: {verdicts:?}\n",
-            cases.len()
+            "## {suite}\n\n{} cases: {status:?}\n\nKept {:.2}% of {} source items ({} changed or lost)\n\nItems by verdict: {verdicts:?}\n",
+            cases.len(),
+            rate.percent(),
+            rate.checked,
+            rate.not_kept
         );
         let mut lost: Vec<_> = lost.into_iter().collect();
         lost.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
@@ -490,7 +572,23 @@ pub fn command(
             "--filter is not allowed for baseline operations (partial runs look like regressions)"
         );
     }
-    let results = run_suites(suites, filter, timeout);
+    let mut lines = Vec::new();
+    // A suite over another suite's fetched cache (calipers, poi, corpus-bench) is skipped while
+    // that cache is absent, so a run never records an empty baseline over a real one. A gated
+    // suite's cases must be there.
+    let (suites, missing): (Vec<&Suite>, Vec<&Suite>) =
+        suites.iter().partition(|s| s.root().is_dir());
+    for s in missing {
+        if s.manifest.gate && mode == Mode::Check {
+            anyhow::bail!("{}: no cases at {}", s.manifest.name, s.root().display());
+        }
+        lines.push(format!(
+            "skipping {}: {} is not there (fetch the suite it reads)",
+            s.manifest.name,
+            s.root().display()
+        ));
+    }
+    let results = run_suites(&suites, filter, timeout);
     let out = root.join("eval/runs/latest");
     std::fs::create_dir_all(&out)?;
     std::fs::write(
@@ -499,15 +597,16 @@ pub fn command(
     )?;
     std::fs::write(out.join("roundtrip.md"), report_markdown(&results))?;
     let mut ok = true;
-    let mut lines = Vec::new();
     for suite in suites {
         let name = &suite.manifest.name;
         let mine: Vec<&CaseResult> = results.iter().filter(|r| &r.suite == name).collect();
-        let items: usize = mine.iter().map(|r| r.checked).sum();
-        let current = baseline(&mine);
+        let rate = KeptRate::of(&mine);
+        let current = baseline(&mine, suite.manifest.baseline);
         lines.push(format!(
-            "[{name}] {} cases, {items} items, {} failing",
+            "[{name}] {} cases, {} items, {:.2}% kept, {} failing",
             mine.len(),
+            rate.checked,
+            rate.percent(),
             current.failing.len()
         ));
         if mode == Mode::Report {
@@ -515,7 +614,7 @@ pub fn command(
         }
         let path = root.join("eval/baseline").join(format!("{name}.txt"));
         let old = Baseline::read(&path)?;
-        let delta = ratchet::diff(&old, &current);
+        let delta = diff(&old, &current);
         lines.extend(
             delta
                 .regressions

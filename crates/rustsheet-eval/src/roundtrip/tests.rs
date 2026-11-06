@@ -255,13 +255,90 @@ fn a_new_loss_in_an_unchanged_case_is_a_regression() {
         item("/a[0]", Verdict::Kept),
         item("/b[0]", Verdict::Lost),
     ]);
-    let delta = baseline::diff(&baseline(&[&before]), &baseline(&[&after]));
+    let delta = baseline::diff(
+        &baseline(&[&before], BaselineMode::Cells),
+        &baseline(&[&after], BaselineMode::Cells),
+    );
     assert_eq!(
         delta.regressions,
         vec!["rt/a.xlsx\tR0 part /b[0] lost".to_string()]
     );
-    let fixed = baseline::diff(&baseline(&[&after]), &baseline(&[&before]));
+    let fixed = baseline::diff(
+        &baseline(&[&after], BaselineMode::Cells),
+        &baseline(&[&before], BaselineMode::Cells),
+    );
     assert_eq!(fixed.fixed.len(), 1);
+}
+
+#[test]
+fn a_cases_baseline_ratchets_each_cases_count_of_failing_items() {
+    let item = |key: &str| Item {
+        scenario: "R0",
+        kind: "element",
+        key: key.into(),
+        verdict: Verdict::Lost,
+        detail: None,
+        candidate: None,
+    };
+    let case = |keys: &[&str]| CaseResult {
+        id: "rt/a.xlsx".into(),
+        suite: "rt".into(),
+        status: if keys.is_empty() {
+            CaseStatus::Pass
+        } else {
+            CaseStatus::Fail
+        },
+        message: None,
+        millis: 0,
+        checked: 10,
+        items: keys.iter().map(|k| item(k)).collect(),
+    };
+    let base = |keys: &[&str]| baseline(&[&case(keys)], BaselineMode::Cases);
+    let two = base(&["/a", "/b"]);
+    assert_eq!(
+        two.failing.iter().next().map(|(_, i)| i.as_str()),
+        Some("* 2")
+    );
+    let worse = diff(&two, &base(&["/a", "/b", "/c"]));
+    assert_eq!(worse.regressions, vec!["rt/a.xlsx\t* 3".to_string()]);
+    let better = diff(&two, &base(&["/a"]));
+    assert!(better.regressions.is_empty(), "{better:?}");
+    assert!(better.is_dirty());
+    let fixed = diff(&two, &base(&[]));
+    assert!(fixed.regressions.is_empty() && fixed.fixed.len() == 1);
+    let broke = diff(&base(&[]), &base(&["/a"]));
+    assert_eq!(broke.regressions.len(), 1);
+}
+
+#[test]
+fn the_kept_rate_counts_only_changed_and_lost_source_items() {
+    let item = |verdict| Item {
+        scenario: "R0",
+        kind: "element",
+        key: "/x".into(),
+        verdict,
+        detail: None,
+        candidate: None,
+    };
+    let case = CaseResult {
+        id: "rt/a.xlsx".into(),
+        suite: "rt".into(),
+        status: CaseStatus::Fail,
+        message: None,
+        millis: 0,
+        checked: 200,
+        items: vec![
+            item(Verdict::Kept),
+            item(Verdict::Lost),
+            item(Verdict::Changed),
+            item(Verdict::Added),
+            item(Verdict::PackageInvalid),
+        ],
+    };
+    let rate = KeptRate::of(&[&case]);
+    assert_eq!((rate.checked, rate.not_kept), (200, 2));
+    assert!((rate.percent() - 99.0).abs() < 1e-9);
+    assert!((KeptRate::default().percent() - 100.0).abs() < 1e-9);
 }
 
 mod xml {

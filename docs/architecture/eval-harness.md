@@ -78,9 +78,20 @@ The baseline is the ordinary cells-mode file:
   T-4503's evidence);
 - the ratchet is `baseline::diff`.
 
-`rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. `--check` (in `make eval-gates`, gate
-suites only) fails on a regression or an out-of-date baseline. `--update-baseline` (in `make eval-baseline`) records
-fixes and new cases, and refuses regressions. `make eval` runs every round-trip suite (decision 0307).
+The corpus suites (`roundtrip-calipers`, `roundtrip-poi`, `roundtrip-corpus-bench`; T-4173) use `baseline = "cases"`,
+since their item lines would run to tens of megabytes:
+- each failing case is one `F` line, `* <n>`, where n is the number of its failing items;
+- `roundtrip::diff` treats a smaller n as a fix and a larger one as a regression.
+
+Their `root` is the cell suite's fetched cache (`eval/.cache/suites/<suite>`). A suite whose root is absent is
+skipped with a message, so it never records an empty baseline. They are `gate = false`, like the calipers cell suite:
+`rustsheet-eval roundtrip --check --suite <name>` gates one on demand.
+
+`rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. Each suite's line and report section
+give its kept rate: source items compared, minus those scored `changed` or `lost`, over the items compared
+(`KeptRate`, SPEC-0033 D8). `--check` (in `make eval-gates`, gate suites only) fails on a regression or an
+out-of-date baseline. `--update-baseline` (in `make eval-baseline`) records fixes and new cases, and refuses
+regressions. `make eval` runs every round-trip suite (decision 0307).
 
 ## Case formats
 **`rustsheet-case/v1`** (`*.case.json`):
