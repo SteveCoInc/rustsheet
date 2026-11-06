@@ -377,9 +377,6 @@ accuracy/CUMIPMT/s1!Calc!A87	T-4390	tiny rate 1.3E-10, 41 periods: PMT·m - CUMP
 accuracy/CUMIPMT/s1!Calc!A90	T-4390	tiny rate 1.5E-12, 5 periods of type 1: PMT·m - CUMPRINC cancels; ours 2.5E-6 off Excel, which is 2.2E-6 off the math
 accuracy/CUMIPMT/s1!Calc!A92	T-4390	tiny rate 3.1E-11, 42 periods: PMT·m - CUMPRINC cancels; ours 9.1E-8 off Excel, 2.0E-8 off the math
 accuracy/CUMIPMT/s1!Calc!A189	T-4390	tiny rate 4.9E-10, 3 periods: PMT·m - CUMPRINC cancels; ours 1.1E-9 off Excel, 1.5E-9 off the math
-accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 0^k
-accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
-accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/ACCRINTM/s1!Calc!A115	T-4566	issue equal to settlement: Excel 0, the engine #NUM!
 accuracy/ACCRINTM/s1!Calc!A134	T-4566	issue equal to settlement: Excel 0, the engine #NUM!
 accuracy/ACCRINT/s1!Calc!A21	T-4566	basis 2 issue period: Excel counts US 30/360 moving both dates, the engine plain US 30/360
@@ -390,6 +387,11 @@ accuracy/YIELD/s1!Calc!A261	T-2788	YIELD's last digits short of PRICE's root: en
 accuracy/MIRR/s1!Calc!A125	T-4537	Excel #DIV/0! for a finance power overflow beside a later negative flow; the engine gives #NUM!
 accuracy/ODDFYIELD/s1!Calc!A272	T-4551	ODDFYIELD at a root near 0 (8.3E-6): engine 1.1E-11 relative off Excel, both stop short of the math (1.8E-6)
 accuracy/ODDFYIELD/s1!Calc!A289	T-4551	ODDFYIELD with ODDFPRICE's extra quasi period (month-end first coupon 2005-05-31, coup_number nq 1, true 0): engine 2E-13 relative off Excel, both 2E-7 off the math
+accuracy/CONFIDENCE.T/s1!Calc!A112	T-4541	Excel #NUM! at alpha = 2.2E-308 where the margin is finite
+accuracy/CONFIDENCE.T/s1!Calc!A123	T-4541	Excel #NUM! at alpha = 2.2E-308 where the margin is finite
+accuracy/CONFIDENCE.T/s1!Calc!A134	T-4541	Excel #NUM! at alpha = 2.2E-308 where the margin is finite
+accuracy/CONFIDENCE.T/s1!Calc!A155	T-3363	quantile at df 2.3E9: the engine and Excel are both off the math, differently
+accuracy/CONFIDENCE.T/s1!Calc!A163	T-3363	quantile at df 6.2E6: the engine and Excel are both off the math, differently
 accuracy/BETADIST/s1!Calc!A183	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
 accuracy/BETADIST/s1!Calc!A184	T-3577	BETADIST (as BETA.DIST) cdf at huge shapes (alpha 2.2E114, beta 2.0E66): Excel #NUM!, the engine and the math 0
 accuracy/BETADIST/s1!Calc!A187	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
