@@ -3,7 +3,7 @@ id: T-4574
 title: "DATEDIF, YEARFRAC and DAYS360 just below midnight at serials 59, 60 and 61 (the fictitious 1900-02-29): probe and match"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -36,7 +36,7 @@ DAYS360 at the bases around Excel's fictitious 1900-02-29 (serial 60), and the e
 ## Out of scope
 - Negative WEEKNUM return types (T-4470).
 
-## Handoff
+## Handoff (resumed)
 Probe `probes/t4574-near-midnight-serial-60` (234 cells, excel-graph 2026-11-06, committed with its oracle sidecar) is filled; the engine passes 198 and
 fails 36, so this is beyond a probe-and-match for sonnet. Rows 1-9 are s = 59-0.4s, 59-(2^-22+2^-33), 59, 60-0.4s, 60-(2^-22+2^-33), 60, 61-0.4s,
 61-(2^-22+2^-33), 61. `make eval-show` lists the failing cells; the patterns:
