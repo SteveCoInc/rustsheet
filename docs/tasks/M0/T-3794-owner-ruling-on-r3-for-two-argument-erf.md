@@ -3,7 +3,7 @@ id: T-3794
 title: "Owner ruling on R3 for two-argument ERF where the two values nearly cancel (T-3784 follow-up)"
 milestone: M0
 lane: harness
-status: blocked
+status: done
 priority: P2
 size: S
 tier: opus
@@ -14,8 +14,6 @@ depends_on: []
 Record the owner's ruling on whether Excel's two-argument `ERF(a,b)`, where erf(a) and erf(b) nearly cancel, is a
 decision 0188 R3 (`MATH-OVER-EXCEL`) case. Until the owner rules, the engine keeps matching Excel.
 
-## Blocked because
-Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward included, adds a case on its own").
 
 ## Context
 - `ERF(a,b)` is the exact difference of the two rounded single values (statistics.md, T-1778 entry, two-argument
@@ -34,10 +32,15 @@ Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward inc
   - (b) an R3 case over a bounded region (the cancellation ratio, and which a and b), with a decision record.
 
 ## Acceptance criteria
-- [ ] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
+- [x] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
       statistics.md two-argument ERF bullet.
-- [ ] If (b): a follow-up implementation task with its region, and the region's evidence committed first
+- [x] If (b): a follow-up implementation task with its region, and the region's evidence committed first
       (decision 0188 R3).
 
 ## Out of scope
 - Changing the engine before the ruling.
+
+## Outcome
+- Owner ruling 2026-11-06, decision 0300: keep matching Excel. This is not an R3 case: no `MATH-OVER-EXCEL`
+  entry, no R3 mark, no engine change (the engine already matches Excel here).
+- Eval delta: none.

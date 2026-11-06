@@ -3,7 +3,7 @@ id: T-4285
 title: "Owner ruling: NPER at rates 1E-14 to 1E-13, where Excel is still 7E-4 to 7E-3 off the math (R3 candidates outside the ruled region)"
 milestone: M9
 lane: functions-financial
-status: blocked
+status: done
 priority: P3
 size: S
 tier: opus
@@ -14,8 +14,6 @@ depends_on: []
 The owner rules whether decision 0188 R3's NPER region (0 < rate < 1E-14) extends to the rates up to 1E-13 where
 Excel is still more than G = 1e-4 off the math; the engine then follows the ruling.
 
-## Blocked because
-Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward included, adds a case on its own").
 
 ## Context
 - Found by T-3367 (probes-numeric/t3367-nper-tiny-rate, excel-graph 2026-11-05, 50-digit math sidecar). Excel's
@@ -32,10 +30,15 @@ Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward inc
   must not widen the region on its own.
 
 ## Acceptance criteria
-- [ ] The owner's ruling is recorded in a decision record (widen the region to a stated bound, or keep it).
-- [ ] If widened: `NPER_MATH_RATE` moves to the ruled bound, the cells in the new region are R3-marked in
+- [x] The owner's ruling is recorded in a decision record (widen the region to a stated bound, or keep it).
+- [x] If widened: `NPER_MATH_RATE` moves to the ruled bound, the cells in the new region are R3-marked in
       eval/accuracy/math-over-excel.tsv, and financial.md's "NPER at a tiny positive rate" entry states the new region.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Negative tiny rates (unprobed).
+
+## Outcome
+- Owner ruling 2026-11-06, decision 0300: keep matching Excel. This is not an R3 case: no `MATH-OVER-EXCEL`
+  entry, no R3 mark, no engine change (the engine already matches Excel here).
+- Eval delta: none.

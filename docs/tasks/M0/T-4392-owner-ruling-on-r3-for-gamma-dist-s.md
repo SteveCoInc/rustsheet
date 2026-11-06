@@ -3,7 +3,7 @@ id: T-4392
 title: "Owner ruling on R3 for GAMMA.DIST's tiny-ratio density, which Excel's log form underflows to 0 (T-3925 follow-up)"
 milestone: M0
 lane: harness
-status: blocked
+status: done
 priority: P2
 size: S
 tier: opus
@@ -15,8 +15,6 @@ Record the owner's ruling on whether Excel's `GAMMA.DIST(x,2,1,FALSE)` = 0 at x 
 the math is about x (relative error 1), is a decision 0188 R3 (`MATH-OVER-EXCEL`) case. Until the owner rules, the
 engine keeps matching Excel.
 
-## Blocked because
-Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward included, adds a case on its own").
 
 ## Context
 - statistics.md "GAMMA.DIST's density below shape 3 is a log-space form (T-2753, T-2852)": where y = x / beta is at most
@@ -35,9 +33,14 @@ Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward inc
   for the underflowing log form, with a decision record and an implementation follow-up.
 
 ## Acceptance criteria
-- [ ] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
+- [x] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
       statistics.md T-2753 entry.
-- [ ] If (b): a follow-up implementation task, the region's evidence committed first (decision 0188 R3).
+- [x] If (b): a follow-up implementation task, the region's evidence committed first (decision 0188 R3).
 
 ## Out of scope
 - Shapes other than 2 and the T-3219 shape-50 band.
+
+## Outcome
+- Owner ruling 2026-11-06, decision 0300: keep matching Excel. This is not an R3 case: no `MATH-OVER-EXCEL`
+  entry, no R3 mark, no engine change (the engine already matches Excel here).
+- Eval delta: none.

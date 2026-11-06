@@ -3,7 +3,7 @@ id: T-3484
 title: "XIRR near a zero root: Excel is 1e-4 to 2e-3 off the math (R3 candidate, owner ruling)"
 milestone: M9
 lane: functions-financial
-status: blocked
+status: done
 priority: P3
 size: S
 tier: opus
@@ -15,9 +15,6 @@ The owner rules whether XIRR roots with |root| below about 2e-5 become a decisio
 region, and the engine follows that ruling. Without the ruling, the engine keeps matching Excel's value bit for bit,
 as it does today.
 
-## Blocked because
-Blocked because: owner ruling (decision 0188 R3: a new `MATH-OVER-EXCEL` case needs a decision record carrying an
-owner ruling).
 
 ## Context
 - Found by T-3353's Gate A fresh sweep (probes-numeric/xirr-two-flow-gate-a-sweep, excel-graph, 2026-10-31,
@@ -32,10 +29,15 @@ owner ruling).
   the math. It would also need `math-over-excel.tsv` entries once eval/accuracy has an XIRR table (SPEC-0029).
 
 ## Acceptance criteria
-- [ ] A decision record carries the owner's ruling (R3 region or not).
-- [ ] If R3: the engine converges near zero roots, a `MATH-OVER-EXCEL` entry in financial.md lists the region with
+- [x] A decision record carries the owner's ruling (R3 region or not).
+- [x] If R3: the engine converges near zero roots, a `MATH-OVER-EXCEL` entry in financial.md lists the region with
       the cells above as evidence, and every other XIRR cell still matches Excel.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - XIRR's stop rule away from zero roots (T-3353, T-3287).
+
+## Outcome
+- Owner ruling 2026-11-06, decision 0300: keep matching Excel. This is not an R3 case: no `MATH-OVER-EXCEL`
+  entry, no R3 mark, no engine change (the engine already matches Excel here).
+- Eval delta: none.

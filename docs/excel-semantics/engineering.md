@@ -1384,7 +1384,7 @@ The order 3 case at the overflow cut ("BESSELI overflow point (T-2613)", `(-709.
 instance. Orders 0 and 1 are Excel's polynomial forms, far closer to the math (`BESSELI(709.7,0)` is 1.4E-7 low).
 The engine matches Excel bit for bit on all 120 points (it runs the same recurrence), so Gate A holds through Excel's
 15 digits. These points exceed decision 0188 R3's G = 1e-4, so they are R3 candidates; following the math there needs an
-owner ruling (T-4196), and until then Excel stays the target.
+owner ruling, and the owner ruled to keep Excel as the target (decision 0300, T-4196).
 Also from the BESSELJ table: `BESSELJ(11.0627245753426,4)` is -4.609392711411031E-4 against -4.60294628772423E-4 (0.14%),
 next to a root of J_4, where Excel's ~1E-7 absolute error is large relative to the value (the T-0900 profile).
 Evidence: eval/accuracy/tables/BESSELI/s1 and BESSELJ/s1 with their oracle and math sidecars (T-4083).

@@ -3,7 +3,7 @@ id: T-4317
 title: "Owner ruling on R3 for FISHER and FISHERINV near 0, where Excel's LN and EXP quotients cancel (T-3785 follow-up)"
 milestone: M0
 lane: harness
-status: blocked
+status: done
 priority: P2
 size: S
 tier: opus
@@ -15,8 +15,6 @@ Record the owner's ruling on whether Excel's FISHER(x) and FISHERINV(y) near 0, 
 (EXP(2y)-1)/(EXP(2y)+1) cancel in doubles, is a decision 0188 R3 (`MATH-OVER-EXCEL`) case. Until the owner rules, the
 engine keeps matching Excel.
 
-## Blocked because
-Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward included, adds a case on its own").
 
 ## Context
 - statistics.md "FISHER, FISHERINV, EXPON.DIST and HARMEAN are Excel operators around LN and EXP (T-2437)" and
@@ -35,11 +33,16 @@ Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward inc
   - (b) an R3 case over a bounded region of x, with a decision record.
 
 ## Acceptance criteria
-- [ ] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
+- [x] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
       statistics.md T-2437 entry.
-- [ ] If (b): a follow-up implementation task with its region, and the region's evidence committed first
+- [x] If (b): a follow-up implementation task with its region, and the region's evidence committed first
       (decision 0188 R3).
 
 ## Out of scope
 - Changing the engine before the ruling.
 - GAUSS's cancellation (T-4277) and ERF's two-argument one (T-3794).
+
+## Outcome
+- Owner ruling 2026-11-06, decision 0300: keep matching Excel. This is not an R3 case: no `MATH-OVER-EXCEL`
+  entry, no R3 mark, no engine change (the engine already matches Excel here).
+- Eval delta: none.

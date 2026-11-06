@@ -3,7 +3,7 @@ id: T-4318
 title: "Owner ruling on R3 for WEIBULL.DIST's density at x = 0, which Excel gives as 0 for every shape (T-3785 follow-up)"
 milestone: M0
 lane: harness
-status: blocked
+status: done
 priority: P2
 size: S
 tier: opus
@@ -15,8 +15,6 @@ Record the owner's ruling on whether Excel's `WEIBULL.DIST(0,alpha,beta,FALSE)` 
 1/beta, is a decision 0188 R3 (`MATH-OVER-EXCEL`) case, and what alpha < 1 (an unbounded density, where Excel also
 gives 0) is. Until the owner rules, the engine keeps matching Excel.
 
-## Blocked because
-Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward included, adds a case on its own").
 
 ## Context
 - statistics.md "Density at 0" (T-2035, gap triage 2026-10-19) and "WEIBULL.DIST's density at x = 0 still computes
@@ -34,10 +32,15 @@ Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward inc
     a new error, which R3 does not allow: Excel's errors are still matched).
 
 ## Acceptance criteria
-- [ ] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
+- [x] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
       statistics.md "Density at 0" entry.
-- [ ] If (b): a follow-up implementation task, the region's evidence committed first (decision 0188 R3).
+- [x] If (b): a follow-up implementation task, the region's evidence committed first (decision 0188 R3).
 
 ## Out of scope
 - Changing the engine before the ruling.
 - F.DIST's and CHISQ.DIST's densities at 0 (Excel's `#NUM!` and the df = 2 values agree with the math's limits).
+
+## Outcome
+- Owner ruling 2026-11-06, decision 0300: keep matching Excel. This is not an R3 case: no `MATH-OVER-EXCEL`
+  entry, no R3 mark, no engine change (the engine already matches Excel here).
+- Eval delta: none.
