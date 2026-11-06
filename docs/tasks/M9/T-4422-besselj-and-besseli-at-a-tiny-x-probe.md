@@ -3,7 +3,7 @@ id: T-4422
 title: "BESSELJ and BESSELI at a tiny x: probe where each order 2 to 7 turns #NUM! and match Excel's cut (the engine's cuts and its 0 results are unevidenced)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
