@@ -3,7 +3,7 @@ id: T-4414
 title: "Probe PIVOTBY's column subtotal of a class another row line reaches but this line does not, on intransitive runs"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
