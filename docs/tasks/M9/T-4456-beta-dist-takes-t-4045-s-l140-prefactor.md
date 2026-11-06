@@ -51,3 +51,21 @@ below DBL_MIN. F.INV's search keeps today's kernel.
   pass and 120 are known failures, owned by T-4437 (the earlier zeros), T-4442 (F.INV, cut G1) and T-4463 (30 cells
   of 13th-digit tail residue). `scripts/new_case_owners.py` passes.
 - Follow-ups: T-4463; T-4442; T-4457 (sonnet: T-4223's statistics.md wording, the MINORs of PR #3475's fidelity review).
+
+## Landing notes
+- PR #3480, head c7c8a3931. Every reviewer approved that head: security, design and excel-fidelity.
+- CI is red on one job, eval (Excel-compatibility gate), in its `make eval-math-check` step:
+  https://github.com/SteveCoInc/rustsheet/actions/runs/42162454930/job/127711255693. The two new cases,
+  probes/t4456-beta-t-zero-cut and t4456-beta-t-zero-reach, have no `*.math.json` sidecars ("has no math value and is
+  not listed as skipped"). Every other job is green. `make check-fast` does not run this gate.
+- Next step: `cd tools && uv run rustsheet-accuracy math --suite probes`. The run needs more than 5 minutes; my
+  background run was stopped by its time limit before it reached the t4456 cases. Commit only the two
+  `t4456-beta-t-zero-*.math.json` files.
+  - The full run also rewrites m9-bessel-order-limits, t2546-bessel-past-cap and t2881-besselj-turning-point
+    sidecars, which `--check` does not report as stale. Leave those out.
+  - Then run `cd tools && uv run rustsheet-accuracy math --check --suite probes --suite probes-numeric`, push, and
+    wait for CI. A sidecar is reference data, not behaviour: re-run excel-fidelity only if the math values contradict
+    statistics.md's "the math there is 1.05E-264" (C10). Then enqueue.
+- Still owed after merge: a task-only PR adding #3480's review MINORs to T-4457 (listed in the PR comment of
+  2026-11-06): the salvaged cases' T-4254 description and tags, the decision 0188 R3 mention in T-4463, and the
+  mpmath source of 1.05E-264.
