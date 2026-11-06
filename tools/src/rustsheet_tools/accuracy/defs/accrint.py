@@ -50,10 +50,9 @@ from rustsheet_tools.accuracy.defs._common import (
 )
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.defs.yearfrac import (
+    basis_days,
     displayed_date,
-    eu_30_360,
     serial_of,
-    us_30_360,
     us_30_360_both,
     whole_serial,
 )
@@ -95,25 +94,14 @@ def _serial(date: datetime.date, *, walked: bool) -> int:
     return (date - EPOCH).days
 
 
-def _days(start: int, end: int, basis: int) -> int:
-    """The basis day count from serial `start` to serial `end` (both from 61)."""
-    if basis == 0:
-        return us_30_360(displayed_date(start), displayed_date(end))
-    if basis == 4:
-        return eu_30_360(displayed_date(start), displayed_date(end))
-    return end - start
-
-
 def _issue_period(start: int, end: int, basis: int, frequency: int) -> Fraction:
     """The length of the issue's period from `start` to `end`."""
-    if basis in (
-        0,
-        2,
-    ):  # basis 2 too, not plain US 30/360: probes/accrint-zero-results C3, C4, C9, C10, C15, C16
+    # Basis 2 too, not plain US 30/360: probes/accrint-zero-results C3, C4, C9, C10, C15, C16.
+    if basis in (0, 2):
         return Fraction(us_30_360_both(displayed_date(start), displayed_date(end)))
     if basis == 3:
         return Fraction(365, frequency)
-    return Fraction(_days(start, end, basis))
+    return basis_days(start, end, basis)
 
 
 def _settlement_period(
@@ -149,7 +137,7 @@ def accrued_periods(dates: tuple[int, int, int], frequency: int, basis: int, *, 
         length = Fraction(360 if basis != 3 else 365, frequency)
     start_date = _settlement_period(first_date, settlement, months, eom, basis) if walk_forward else regular
     start = _serial(start_date, walked=walk_forward)
-    terms = [Fraction(_days(max(issue, start), settlement, basis)) / length]
+    terms = [basis_days(max(issue, start), settlement, basis) / length]
     front, end = start_date, start
     while end > issue:
         front = add_months(front, -months, eom)
@@ -157,7 +145,7 @@ def accrued_periods(dates: tuple[int, int, int], frequency: int, basis: int, *, 
         if issue <= begin:
             terms.append(Fraction(int(calc)))
         else:
-            terms.append(Fraction(_days(issue, end, basis)) / _issue_period(begin, end, basis, frequency))
+            terms.append(basis_days(issue, end, basis) / _issue_period(begin, end, basis, frequency))
         end = begin
     total = sum(terms, Fraction(0))
     if total != 0:
@@ -165,9 +153,18 @@ def accrued_periods(dates: tuple[int, int, int], frequency: int, basis: int, *, 
     return total
 
 
-def _accrint(args: Sequence[MathArg]) -> mpmath.mpf:
+def _calc_method(args: Sequence[MathArg]) -> bool:
+    """calc_method, TRUE when the call leaves it out; no math value for anything but a logical (eval_math passes only
+    a logical to a `bool` parameter)."""
     calc = args[7] if len(args) > 7 else True
-    assert isinstance(calc, bool)
+    if isinstance(calc, bool):
+        return calc
+    msg = "calc_method is not a logical"
+    raise NoValueError(msg)
+
+
+def _accrint(args: Sequence[MathArg]) -> mpmath.mpf:
+    calc = _calc_method(args)
     numbers = scalars(args[:7])
     issue, first = whole_serial(float(numbers[0])), whole_serial(float(numbers[1]))
     settlement = whole_serial(float(numbers[2]))

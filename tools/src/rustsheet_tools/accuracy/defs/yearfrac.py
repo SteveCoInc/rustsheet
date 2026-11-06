@@ -158,6 +158,16 @@ def day_count_parts(start: int, end: int, basis: int) -> tuple[int, Fraction]:
     return end - start, Fraction(360 if basis == 2 else 365)
 
 
+def basis_days(start: int, end: int, basis: int) -> Fraction:
+    """Days from serial `start` to `end` on the basis: 30/360 on Excel's displayed days (bases 0 and 4), serial days
+    otherwise (the coupon securities' day counts: defs/bonds.py, defs/accrint.py)."""
+    if basis == 0:
+        return Fraction(us_30_360(displayed_date(start), displayed_date(end)))
+    if basis == 4:
+        return Fraction(eu_30_360(displayed_date(start), displayed_date(end)))
+    return Fraction(end - start)
+
+
 def check_basis(basis: int) -> None:
     """DomainError (`#NUM!`) for a basis outside 0..4."""
     if not 0 <= basis < 5:
