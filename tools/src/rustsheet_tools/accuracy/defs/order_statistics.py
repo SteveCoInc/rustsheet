@@ -12,9 +12,8 @@ The math, on the literals' doubles sorted as a[1] <= ... <= a[n] (ties kept), us
   value); the math keeps it, and the edge stratum draws such a k on purpose.
 - PERCENTILE.EXC: k in (0, 1) and the rank k(n + 1) in [1, n]; the exact interpolation there.
 - QUARTILE and QUARTILE.INC: quart = floor(quart) in 0-4, read as PERCENTILE.INC at quart/4; QUARTILE.EXC: quart
-  in 1-3, read as PERCENTILE.EXC at quart/4. AGGREGATE 17 and 19 points with quart 0.5 above a whole quart are
-  inside Gate A, so the fractional part is dropped; the draws keep quart >= 0, where floor and truncation agree
-  (a negative fractional quart is unprobed).
+  in 1-3, read as PERCENTILE.EXC at quart/4. The fraction is floored, not truncated: probes/stat-order-floor-batch
+  A85, A88 and A89 (excel-graph) give `QUARTILE(K1:K8,0.9)` the minimum, 4.9999 the maximum and -0.5 `#NUM!`.
 
 Domain (an Excel error region, never a math value; statistics.md and probes/aggregate-grid, T-0993): k outside
 those intervals and a quart outside its range are `#NUM!`. The data is a one-row array literal of numbers only,
