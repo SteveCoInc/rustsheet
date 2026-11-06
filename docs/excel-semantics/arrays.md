@@ -2374,6 +2374,10 @@ the rule frozen on it before -holdout (seed 4465) and -fresh (seed 44651, genera
 Main 539/539, hold-out 318/318, fresh 316/316 for the rule; the best single alternative scores 469, 276 and 290. The
 rows that tell the shared rule from 2^-23 added before the floor are 12 of main's and 6 of the hold-out's; the fresh
 sweep has only 1 such row, so it confirms the other constructors' rules more than that choice.
+At the top of the range the bound is the same absolute 2^-22 (probes/t4553-sequence-extent-top, excel-graph, 2026-11-06):
+`ROWS(SEQUENCE(1048576-x))`, `COLUMNS(SEQUENCE(1,1048576-x))` and `ROWS(SEQUENCE(524288-x))` for x = k*2^-30 read 1048576 (524288)
+for k = 96, 128, 160 and 256 (x = 2^-22) and one less for k = 257, 264, 288 and 320. Above the integer nothing snaps:
+`1048576+x` and `524288+x` read the integer, not `#VALUE!`.
 Ours: implemented (T-4465): SEQUENCE and RANDARRAY call `near_integer_whole` (sequence.rs's `EXTENT_EPSILON` is gone);
 TAKE, DROP, EXPAND, WRAPROWS/WRAPCOLS and MAKEARRAY already matched. RANDARRAY's columns argument shares
 `randarray_extent` with its rows but no probe cell reads it.
