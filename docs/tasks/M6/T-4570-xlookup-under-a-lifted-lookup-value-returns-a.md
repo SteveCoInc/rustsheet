@@ -3,7 +3,7 @@ id: T-4570
 title: "XLOOKUP under a lifted lookup_value returns a range if_not_found as a reference element (implement the mixed-array spec)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
