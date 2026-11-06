@@ -175,8 +175,7 @@ pub struct PivotField {
     pub default_subtotal: bool,
     /// The custom subtotals (`sumSubtotal`, `countASubtotal`, ...), each once, in the schema's
     /// attribute order. `countASubtotal` is read as [`Aggregate::Count`] and `countSubtotal` as
-    /// [`Aggregate::CountNums`] (ECMA-376's meanings, unproven for Excel: see
-    /// [`ItemType::Function`]).
+    /// [`Aggregate::CountNums`], what Excel computes (see [`ItemType::Function`]).
     pub custom_subtotals: Vec<Aggregate>,
     /// `sortType` (default manual).
     pub sort_type: SortType,
@@ -273,9 +272,9 @@ pub enum ItemType {
     /// `default`: the automatic subtotal, by each data field's own function.
     Default,
     /// A custom subtotal line (`sum`, `countA`, `avg`, ..., `varP`), by its function. `countA` is
-    /// read as [`Aggregate::Count`] and `count` as [`Aggregate::CountNums`], ECMA-376's meanings;
-    /// that is unproven for Excel, which labels a `count` line `Count` over a numbers-only field
-    /// (probes/t4137-pivot-captions K5!A8; UNVERIFIED in docs/excel-semantics/pivots.md, T-4622).
+    /// [`Aggregate::Count`] (COUNTA) and `count` [`Aggregate::CountNums`], and Excel labels both
+    /// `Count` (probes/t4622-pivot-count-subtotals; docs/excel-semantics/pivots.md "Which function
+    /// the countA and count custom subtotals compute").
     Function(Aggregate),
     /// `grand`.
     Grand,

@@ -12,7 +12,7 @@ use crate::expressions::token::Error;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::aggregate::value_node;
 use crate::functions::lift::{ArgBuf, LiftedArg};
-use crate::functions::util::top_left_of_array;
+use crate::functions::util::{array_node_to_calc_result, top_left_of_array};
 use crate::functions::Function;
 use crate::limits::check_array_size;
 use crate::model::Model;
@@ -113,6 +113,21 @@ pub(crate) fn lifts_into_references(node: &Node) -> bool {
             ..
         }
     )
+}
+
+/// The arguments a per-element consumer reads ahead of its call (SPEC-0014 rule 6): those of
+/// [`lifts_into_references`], and an XLOOKUP with an `if_not_found`, which a lifted `lookup_value`
+/// and a range `if_not_found` make an array of its hits and that range (SPEC-0014 amendment
+/// rule 6; `COUNTIF(XLOOKUP({2;9},A1:A3,B1:B3,G1:G2),">0")` spills `#VALUE!`, 2;
+/// probes/t4569-xlookup-ref-element-max-min A26, C24:D34).
+pub(crate) fn lifts_into_reference_elements(node: &Node) -> bool {
+    match node.ungrouped() {
+        Node::FunctionKind {
+            kind: Function::Xlookup,
+            args,
+        } => args.len() >= 4,
+        node => lifts_into_references(node),
+    }
 }
 
 /// A node that reads again what `read` holds at no more cost than its cells: one range as an
@@ -244,10 +259,18 @@ impl Model {
         let mut resolved = Cow::Borrowed(args);
         let mut grids = Vec::new();
         for (index, arg) in args.iter().enumerate() {
-            if !takes_reference(index) || !lifts_into_references(arg) {
+            if !takes_reference(index) || !lifts_into_reference_elements(arg) {
                 continue;
             }
-            let read = self.evaluate_reference_arg(arg, cell);
+            // An XLOOKUP is read in its reference form, so one that gives no grid is put back
+            // as the reference it picks, as the call reads it (`ROW(XLOOKUP(2,A1:A3,B1:B3,C1))`).
+            let read = match arg.ungrouped() {
+                Node::FunctionKind {
+                    kind: Function::Xlookup,
+                    args,
+                } => self.xlookup_reference(args, cell, true),
+                _ => self.evaluate_reference_arg(arg, cell),
+            };
             if let RefArg::Grid(grid) = read {
                 grids.push((index, grid));
             } else if let Some(slot) = resolved.to_mut().get_mut(index) {
@@ -398,6 +421,11 @@ impl Model {
             *slot = match element {
                 RefElement::Reference(range) => range_node(range),
                 RefElement::Error(error) => Node::ErrorKind(error.clone()),
+                // A value element is the scalar argument it is: ROW of it is `#VALUE!`, N of it
+                // the value (SPEC-0014 amendment rule 6; probes/t4569-xlookup-ref-element-max-min
+                // C24:D34).
+                RefElement::Value(value) => value_node(&array_node_to_calc_result(value, cell))
+                    .unwrap_or(Node::ErrorKind(Error::VALUE)),
             };
         }
         match implementation(self, element_args, cell) {
@@ -462,6 +490,12 @@ impl Model {
                     | Function::Drop),
                 args,
             } => self.reference_producer(kind, args, cell),
+            // SUMPRODUCT reads XLOOKUP's reference element as 0 (SPEC-0014 amendment rule 4;
+            // probes/t4569-xlookup-ref-element-max-min A21).
+            Node::FunctionKind {
+                kind: Function::Xlookup,
+                args,
+            } => self.xlookup_reference(args, cell, false),
             Node::FunctionKind {
                 kind: Function::If,
                 args,

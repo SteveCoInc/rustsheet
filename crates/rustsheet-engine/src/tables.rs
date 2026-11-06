@@ -15,7 +15,7 @@ use crate::{
         types::{Area, CellReferenceRC},
         utils::{is_valid_identifier, number_to_column},
     },
-    formula_rewrite::RewrittenFormula,
+    formula_rewrite::{RewrittenCell, RewrittenFormula},
     model::Model,
     table_edits::{bounds, Bounds},
     types::{Cell, Table, TableColumn, TableExtent, TableStyleInfo, Worksheet},
@@ -115,6 +115,9 @@ impl Table {
         }
     }
 }
+
+/// Tables by name, as they were before an edit changed them: what its undo puts back.
+pub(crate) type KeptTables = Vec<(String, Table)>;
 
 impl Model {
     /// Adds a table on sheet `sheet` over rows `top..=bottom` and columns `left..=right`
@@ -435,20 +438,22 @@ impl Model {
     /// Deletes `count` columns of `sheet` from `column` ([`Model::delete_columns`]) and returns
     /// the tables it changed but kept, as they were before: what its undo restores (T-4652). A
     /// column delete can drop table columns, with their names, formulas and filters, so the
-    /// whole table is kept, not only its [`TableExtent`].
+    /// whole table is kept, not only its [`TableExtent`]. Also returns the formula cells it
+    /// rewrote past what re-inserting the columns undoes (T-4668).
     pub(crate) fn delete_columns_keeping_tables(
         &mut self,
         sheet: u32,
         column: i32,
         count: i32,
-    ) -> Result<Vec<(String, Table)>, String> {
+    ) -> Result<(KeptTables, Vec<RewrittenCell>), String> {
         let sheet_name = self.workbook.worksheet(sheet)?.get_name();
         let before = self.tables_on_sheet(&sheet_name);
-        self.delete_columns(sheet, column, count)?;
+        let rewritten = self.delete_columns_rewriting(sheet, column, count)?;
         let tables = &self.workbook.tables;
-        Ok((before.into_iter())
+        let changed = (before.into_iter())
             .filter(|(name, table)| tables.get(name).is_some_and(|now| now != table))
-            .collect())
+            .collect();
+        Ok((changed, rewritten))
     }
 
     /// Checks everything about `tables` that [`Model::restore_tables_of_sheet`] needs except the

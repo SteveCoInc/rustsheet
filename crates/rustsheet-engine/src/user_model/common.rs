@@ -1153,7 +1153,7 @@ impl UserModel {
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
         let old_tables = self.model.table_extents(sheet)?;
-        self.model.delete_rows(sheet, row, row_count)?;
+        let rewritten = self.model.delete_rows_rewriting(sheet, row, row_count)?;
         let tables = self.model.changed_table_extents(sheet, old_tables)?;
 
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
@@ -1164,17 +1164,14 @@ impl UserModel {
             count: row_count,
             old_data,
             tables,
+            rewritten,
         });
         Ok(diff_list)
     }
 
-    /// Deletes `column_count` columns starting at `column`.
-    ///
-    /// History: pushes one `Diff::DeleteColumn`
-    /// per column, **right → left**, so replaying the list is always safe with
-    /// respect to index shifts.
-    ///
-    /// See also [`Model::delete_columns`].
+    /// Deletes `column_count` columns starting at `column`, as one history step that records the
+    /// columns, the tables it changes (T-4652) and the formula cells it rewrites past what
+    /// re-inserting the columns undoes (T-4668). See also [`Model::delete_columns`].
     pub fn delete_columns(
         &mut self,
         sheet: u32,
@@ -1233,7 +1230,8 @@ impl UserModel {
         })?;
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
-        let tables = (self.model).delete_columns_keeping_tables(sheet, column, column_count)?;
+        let (tables, rewritten) =
+            (self.model).delete_columns_keeping_tables(sheet, column, column_count)?;
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
         diff_list.extend(link_diffs);
         diff_list.push(Diff::DeleteColumns {
@@ -1242,6 +1240,7 @@ impl UserModel {
             count: column_count,
             old_data,
             tables,
+            rewritten,
         });
         self.push_diff_list(diff_list);
         self.evaluate_if_not_paused();

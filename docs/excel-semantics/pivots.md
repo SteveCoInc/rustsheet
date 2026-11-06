@@ -83,8 +83,18 @@ holds 7 (A) and `x`, TRUE, 3 (B).
 
 Status: VERIFIED (excel-graph) for the functions and the labels. The error rule is as observed
 (UNVERIFIED beyond the shape probed: T-4636).
-Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`SUBTOTAL_FUNCTIONS`; the model only,
-nothing computes or labels a custom subtotal yet, T-4168)
+The engine's own readings, not probed (UNVERIFIED, T-4636):
+- with a column field, a subtotal cell adds the cut counts of every inner-item cell (row leaf by
+  column leaf) it covers;
+- with two or more inner row fields, the count is cut per innermost row leaf;
+- under any data field other than Sum the count is not cut (Count probed in B3; CountNums and the
+  rest UNVERIFIED): the custom count keeps the Count total rule ("A Count total over an error
+  field...");
+- under Sum, the other custom functions (sum, avg, max, ...) over an error still return the error.
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`SUBTOTAL_FUNCTIONS`, the model);
+crates/rustsheet-engine/src/pivot/accumulate.rs (`CutCount`, `Accumulator::cut_count`) and
+result.rs (`PivotResult::value_as`) for the values; layout/render.rs (`function_word`) for the labels
+(T-4168)
 
 ## Item identity: exact for numbers and types, case-insensitive for text
 Rule: on refresh, texts that differ only in case are one item, and their records add up. In I1 the item
@@ -426,8 +436,8 @@ Evidence: probes/t4123-pivot-capture, the `pivots` cells of its sidecar (excel-g
 T-4123); t4138-pivot-geometry G1 to G9 (T-4138); t4135-pivot-aggregates (T-4135). The engine's
 render reproduces every cell of the probe pivots listed in its tests (t4123 C and T to T4 but
 T's show-values-as column D, t4138 G1 to G9, t4137 K1 to K6, t4583 R1 to R6, C1, C2, t4609 L1 to
-L8, t4134 I1, I2, I4, I5, t4135 all twelve, t4589, t4614, t4616, and t4622 but East's custom Count subtotal
-values over an error, a result rule of T-4168's, T-4636). Number formats are PV2's (T-4169).
+L8, t4134 I1, I2, I4, I5, t4135 all twelve, t4589, t4614, t4616, and t4622 CA, CN and B1 to B5 (T-4168).
+Number formats are PV2's (T-4169).
 The engine's own readings, not probed: a number or date item's subtotal label (`number_to_text`
 of the value, then ` Total`); a subtotal label with Values inside its field (`<item> <data
 field>`); the grand-total caption with Values on its axis (always `Total <data field>`, even with
@@ -463,6 +473,14 @@ Rule:
   (K5!A7:A8), with Count counting records (4). `countA` is labelled `Count` too
   (probes/t4622-pivot-count-subtotals CA!A6; see "Which function the countA and count custom
   subtotals compute").
+- All eleven custom subtotals on one field (probes/t4168-pivot-layout-options F1, tabular, Sum of
+  Val), in the schema's attribute order, read `East Sum`, `East Count` (countA), `East Average`,
+  `East Max`, `East Min`, `East Product`, `East Count` (count), `East StdDev`, `East StdDevp`,
+  `East Var`, `East Varp` (F1!A6:A16), each computing its own function over the item's records
+  (East 10, 4, 5, 2: C6:C16 are 21, 4, 5.25, 10, 2, 400, 4, 3.4034296427770228,
+  2.947456530637899, 11.583333333333334, 8.6875). Under Count of Val the custom `sum`, `avg` and
+  `max` lines still sum, average and take the maximum (F3!C6:C8 21, 5.25, 10): the subtotal's
+  function wins over the data field's.
 - With a single data field and no column field (tabular, K5) there is no Values row. `Row Labels` is
   at the location's corner (K5!A3), the inner row field's name beside it (B3 `Product`), and the data
   field's caption above the data column (C3 `Sum of Sales`). With a column field the corner holds the
@@ -556,6 +574,15 @@ or the data field's index at the Values level (`i` repeats it).
 - On columns every item shares its first child's line, and subtotal lines follow the children.
 - A field has subtotal lines only when a field other than Values is inside it. They are one
   `t="default"` line, or one line per custom subtotal in the field's order (`t="sum"`, `t="count"`).
+  Custom subtotal lines follow the item's children in compact form too (in plain outline form,
+  `outline` on and `compact` off, it is the engine's reading: UNVERIFIED, T-4699), and the item's own line
+  holds no values (t4168 F2: `East` B4 blank, `East Sum` B7 after `A` and `B`).
+- A row field with `insertBlankRow` has a `<i t="blank" r="0"><x v="item"/></i>` line after each
+  item, below its subtotal lines, and its cells are all blank: tabular (t4168 BR, A7:C7 and
+  A12:C12, before the grand total) and compact (BR2, after the children, whose subtotal is on top).
+- A collapsed item (`item@sd="0"`) has one line, its own tuple, showing the item's total and no
+  children: in compact form `East` 21 on A4:B4 (t4168 SD), in tabular form `East` with the inner
+  field's cell blank and no `East Total` line (SD2 A4:C4, `rowItems` `<x v="0"/>` alone).
 - The grand total is one `t="grand"` line `<x/>` per data field when Values is on the axis, one
   otherwise, and none on an axis whose only level is Values.
 - An axis with no level at all saves one empty line `<i/>`.
@@ -570,6 +597,8 @@ lines (T-4147):
   R1 to R6, C1, C2, t4609-pivot-row-labels-2 L1 to L8, t4134-pivot-items I1, I2, I4, I5,
   t4135-pivot-aggregates (all twelve), t4589-pivot-total-order, t4614-pivot-total-order-2 and
   t4616-pivot-total-order-3 (every sheet);
+- probes/t4168-pivot-layout-options F1 to F3, BR, BR2, SD, SD2 (T-4168: eleven custom subtotals
+  tabular and compact, blank rows, collapsed items);
 - the lines of probes/t4128-pivot-spike S (its #SPILL! location is the grid's, T-4151);
 - the Excel-saved pivot of crates/rustsheet-xlsx/tests/example.xlsx: three compact row fields whose
   `<items>` list the cache items out of order, so `x` is the position in `<items>`, not the cache index.
@@ -584,7 +613,7 @@ fields (T-4694); t4128 G and K do not load (T-4171, T-4174).
 
 The engine's own readings, not probed:
 - `subtotalTop="0"` on an outline row field: the item's own line holds no values and a `default` line
-  follows its children; custom subtotals in outline form follow the children too; with
+  follows its children; with
   `defaultSubtotal="0"` and no custom subtotal there is no subtotal line, and `defaultSubtotal="1"` with
   custom subtotals is the default line alone; `rowGrandTotals="0"` drops the grand line of `rowItems`
   and `colGrandTotals="0"` that of `colItems` (an Excel-saved corpus file shows the latter,
@@ -598,8 +627,17 @@ The engine's own readings, not probed:
 Status: VERIFIED (excel-graph) for the probes listed. UNVERIFIED (probe pending: T-4649): subtotal
 placement and grand totals off; (T-4650): the Values field away from the innermost level and
 `outlineData`; the unlisted-item positions are an engine convention for files Excel does not write.
-Blank rows, items with no data and collapsed items are T-4168's.
-Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`lay_out`, `AxisPlan::lines`; T-4147)
+(T-4699): `insertBlankRow` on the innermost row field or a column field (the engine adds no line) and
+after a collapsed item (it adds one); custom subtotals after the children in plain outline form; a
+collapsed item whose field has Values inside it (several data fields: one line, the first data field's
+values); a collapsed item on columns, in a middle field, or in a field with
+`subtotalTop="0"` or custom subtotals (one line, the data field's own aggregate). (T-4698): repeat item
+labels (`fillDownLabels`, saved in `extLst`), which the model keeps opaque and the renderer ignores.
+Items with no data (`showAll`): docs/excel-semantics/web.md "GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)" (t4311 H,
+a grouped row field) and crates/rustsheet-engine/src/pivot/result.rs; an axis of several fields, a
+rendered column field and an item the page filter empties are UNVERIFIED (T-4657).
+Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`lay_out`, `AxisPlan::lines`; T-4147;
+`blank_line`, `collapsed`, T-4168)
 
 ## Aggregates over text, blanks, booleans and errors
 Rule (each aggregate in a value field that also holds other kinds of value):

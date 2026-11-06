@@ -1,0 +1,2357 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "10",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "East Min"
+    },
+    "A11": {
+     "t": "s",
+     "v": "East Product"
+    },
+    "A12": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A13": {
+     "t": "s",
+     "v": "East StdDev"
+    },
+    "A14": {
+     "t": "s",
+     "v": "East StdDevp"
+    },
+    "A15": {
+     "t": "s",
+     "v": "East Var"
+    },
+    "A16": {
+     "t": "s",
+     "v": "East Varp"
+    },
+    "A17": {
+     "t": "s",
+     "v": "West"
+    },
+    "A18": {
+     "t": "empty"
+    },
+    "A19": {
+     "t": "empty"
+    },
+    "A20": {
+     "t": "s",
+     "v": "West Sum"
+    },
+    "A21": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A22": {
+     "t": "s",
+     "v": "West Average"
+    },
+    "A23": {
+     "t": "s",
+     "v": "West Max"
+    },
+    "A24": {
+     "t": "s",
+     "v": "West Min"
+    },
+    "A25": {
+     "t": "s",
+     "v": "West Product"
+    },
+    "A26": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A27": {
+     "t": "s",
+     "v": "West StdDev"
+    },
+    "A28": {
+     "t": "s",
+     "v": "West StdDevp"
+    },
+    "A29": {
+     "t": "s",
+     "v": "West Var"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Region"
+    },
+    "A30": {
+     "t": "s",
+     "v": "West Varp"
+    },
+    "A31": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "East Sum"
+    },
+    "A7": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A8": {
+     "t": "s",
+     "v": "East Average"
+    },
+    "A9": {
+     "t": "s",
+     "v": "East Max"
+    },
+    "B10": {
+     "t": "empty"
+    },
+    "B11": {
+     "t": "empty"
+    },
+    "B12": {
+     "t": "empty"
+    },
+    "B13": {
+     "t": "empty"
+    },
+    "B14": {
+     "t": "empty"
+    },
+    "B15": {
+     "t": "empty"
+    },
+    "B16": {
+     "t": "empty"
+    },
+    "B17": {
+     "t": "s",
+     "v": "A"
+    },
+    "B18": {
+     "t": "s",
+     "v": "B"
+    },
+    "B19": {
+     "t": "s",
+     "v": "C"
+    },
+    "B20": {
+     "t": "empty"
+    },
+    "B21": {
+     "t": "empty"
+    },
+    "B22": {
+     "t": "empty"
+    },
+    "B23": {
+     "t": "empty"
+    },
+    "B24": {
+     "t": "empty"
+    },
+    "B25": {
+     "t": "empty"
+    },
+    "B26": {
+     "t": "empty"
+    },
+    "B27": {
+     "t": "empty"
+    },
+    "B28": {
+     "t": "empty"
+    },
+    "B29": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "B30": {
+     "t": "empty"
+    },
+    "B31": {
+     "t": "empty"
+    },
+    "B4": {
+     "t": "s",
+     "v": "A"
+    },
+    "B5": {
+     "t": "s",
+     "v": "B"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "B8": {
+     "t": "empty"
+    },
+    "B9": {
+     "t": "empty"
+    },
+    "C10": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C11": {
+     "t": "n",
+     "v": 400.0
+    },
+    "C12": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C13": {
+     "t": "n",
+     "v": 3.4034296427770228
+    },
+    "C14": {
+     "t": "n",
+     "v": 2.947456530637899
+    },
+    "C15": {
+     "t": "n",
+     "v": 11.583333333333334
+    },
+    "C16": {
+     "t": "n",
+     "v": 8.6875
+    },
+    "C17": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C18": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C19": {
+     "t": "n",
+     "v": 6.0
+    },
+    "C20": {
+     "t": "n",
+     "v": 17.0
+    },
+    "C21": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C22": {
+     "t": "n",
+     "v": 4.25
+    },
+    "C23": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C24": {
+     "t": "n",
+     "v": 1.0
+    },
+    "C25": {
+     "t": "n",
+     "v": 126.0
+    },
+    "C26": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C27": {
+     "t": "n",
+     "v": 2.753785273643051
+    },
+    "C28": {
+     "t": "n",
+     "v": 2.384848003542364
+    },
+    "C29": {
+     "t": "n",
+     "v": 7.583333333333333
+    },
+    "C3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "C30": {
+     "t": "n",
+     "v": 5.6875
+    },
+    "C31": {
+     "t": "n",
+     "v": 38.0
+    },
+    "C4": {
+     "t": "n",
+     "v": 14.0
+    },
+    "C5": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 21.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 5.25
+    },
+    "C9": {
+     "t": "n",
+     "v": 10.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C31",
+   "name": "AllTab",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "avg",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "max",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "min",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "product",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "stdDev",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "stdDevP",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "var",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "varP",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "avg",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "max",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "min",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "product",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "stdDev",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "stdDevP",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "var",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "varP",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "F1"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "10",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "East Max"
+    },
+    "A11": {
+     "t": "s",
+     "v": "East Min"
+    },
+    "A12": {
+     "t": "s",
+     "v": "East Product"
+    },
+    "A13": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A14": {
+     "t": "s",
+     "v": "East StdDev"
+    },
+    "A15": {
+     "t": "s",
+     "v": "East StdDevp"
+    },
+    "A16": {
+     "t": "s",
+     "v": "East Var"
+    },
+    "A17": {
+     "t": "s",
+     "v": "East Varp"
+    },
+    "A18": {
+     "t": "s",
+     "v": "West"
+    },
+    "A19": {
+     "t": "s",
+     "v": "A"
+    },
+    "A20": {
+     "t": "s",
+     "v": "B"
+    },
+    "A21": {
+     "t": "s",
+     "v": "C"
+    },
+    "A22": {
+     "t": "s",
+     "v": "West Sum"
+    },
+    "A23": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A24": {
+     "t": "s",
+     "v": "West Average"
+    },
+    "A25": {
+     "t": "s",
+     "v": "West Max"
+    },
+    "A26": {
+     "t": "s",
+     "v": "West Min"
+    },
+    "A27": {
+     "t": "s",
+     "v": "West Product"
+    },
+    "A28": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A29": {
+     "t": "s",
+     "v": "West StdDev"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A30": {
+     "t": "s",
+     "v": "West StdDevp"
+    },
+    "A31": {
+     "t": "s",
+     "v": "West Var"
+    },
+    "A32": {
+     "t": "s",
+     "v": "West Varp"
+    },
+    "A33": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "A"
+    },
+    "A6": {
+     "t": "s",
+     "v": "B"
+    },
+    "A7": {
+     "t": "s",
+     "v": "East Sum"
+    },
+    "A8": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A9": {
+     "t": "s",
+     "v": "East Average"
+    },
+    "B10": {
+     "t": "n",
+     "v": 10.0
+    },
+    "B11": {
+     "t": "n",
+     "v": 2.0
+    },
+    "B12": {
+     "t": "n",
+     "v": 400.0
+    },
+    "B13": {
+     "t": "n",
+     "v": 4.0
+    },
+    "B14": {
+     "t": "n",
+     "v": 3.4034296427770228
+    },
+    "B15": {
+     "t": "n",
+     "v": 2.947456530637899
+    },
+    "B16": {
+     "t": "n",
+     "v": 11.583333333333334
+    },
+    "B17": {
+     "t": "n",
+     "v": 8.6875
+    },
+    "B18": {
+     "t": "empty"
+    },
+    "B19": {
+     "t": "n",
+     "v": 7.0
+    },
+    "B20": {
+     "t": "n",
+     "v": 4.0
+    },
+    "B21": {
+     "t": "n",
+     "v": 6.0
+    },
+    "B22": {
+     "t": "n",
+     "v": 17.0
+    },
+    "B23": {
+     "t": "n",
+     "v": 4.0
+    },
+    "B24": {
+     "t": "n",
+     "v": 4.25
+    },
+    "B25": {
+     "t": "n",
+     "v": 7.0
+    },
+    "B26": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B27": {
+     "t": "n",
+     "v": 126.0
+    },
+    "B28": {
+     "t": "n",
+     "v": 4.0
+    },
+    "B29": {
+     "t": "n",
+     "v": 2.753785273643051
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B30": {
+     "t": "n",
+     "v": 2.384848003542364
+    },
+    "B31": {
+     "t": "n",
+     "v": 7.583333333333333
+    },
+    "B32": {
+     "t": "n",
+     "v": 5.6875
+    },
+    "B33": {
+     "t": "n",
+     "v": 38.0
+    },
+    "B4": {
+     "t": "empty"
+    },
+    "B5": {
+     "t": "n",
+     "v": 14.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 7.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 21.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 4.0
+    },
+    "B9": {
+     "t": "n",
+     "v": 5.25
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B33",
+   "name": "AllCompact",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "avg",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "max",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "min",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "product",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "stdDev",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "stdDevP",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "var",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "varP",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "avg",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "max",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "min",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "product",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "stdDev",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "stdDevP",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "var",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "varP",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "F2"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "10",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "empty"
+    },
+    "A11": {
+     "t": "empty"
+    },
+    "A12": {
+     "t": "s",
+     "v": "West Sum"
+    },
+    "A13": {
+     "t": "s",
+     "v": "West Average"
+    },
+    "A14": {
+     "t": "s",
+     "v": "West Max"
+    },
+    "A15": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Region"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "East Sum"
+    },
+    "A7": {
+     "t": "s",
+     "v": "East Average"
+    },
+    "A8": {
+     "t": "s",
+     "v": "East Max"
+    },
+    "A9": {
+     "t": "s",
+     "v": "West"
+    },
+    "B10": {
+     "t": "s",
+     "v": "B"
+    },
+    "B11": {
+     "t": "s",
+     "v": "C"
+    },
+    "B12": {
+     "t": "empty"
+    },
+    "B13": {
+     "t": "empty"
+    },
+    "B14": {
+     "t": "empty"
+    },
+    "B15": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "B4": {
+     "t": "s",
+     "v": "A"
+    },
+    "B5": {
+     "t": "s",
+     "v": "B"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "B8": {
+     "t": "empty"
+    },
+    "B9": {
+     "t": "s",
+     "v": "A"
+    },
+    "C10": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C11": {
+     "t": "n",
+     "v": 1.0
+    },
+    "C12": {
+     "t": "n",
+     "v": 17.0
+    },
+    "C13": {
+     "t": "n",
+     "v": 4.25
+    },
+    "C14": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C15": {
+     "t": "n",
+     "v": 8.0
+    },
+    "C3": {
+     "t": "s",
+     "v": "Count of Val"
+    },
+    "C4": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C5": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 21.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 5.25
+    },
+    "C8": {
+     "t": "n",
+     "v": 10.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 1.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C15",
+   "name": "CountData",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "avg",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "max",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "avg",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "max",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "F3"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "10",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "empty"
+    },
+    "A11": {
+     "t": "s",
+     "v": "West Total"
+    },
+    "A12": {
+     "t": "empty"
+    },
+    "A13": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Region"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "East Total"
+    },
+    "A7": {
+     "t": "empty"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West"
+    },
+    "A9": {
+     "t": "empty"
+    },
+    "B10": {
+     "t": "s",
+     "v": "C"
+    },
+    "B11": {
+     "t": "empty"
+    },
+    "B12": {
+     "t": "empty"
+    },
+    "B13": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "B4": {
+     "t": "s",
+     "v": "A"
+    },
+    "B5": {
+     "t": "s",
+     "v": "B"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "B8": {
+     "t": "s",
+     "v": "A"
+    },
+    "B9": {
+     "t": "s",
+     "v": "B"
+    },
+    "C10": {
+     "t": "n",
+     "v": 6.0
+    },
+    "C11": {
+     "t": "n",
+     "v": 17.0
+    },
+    "C12": {
+     "t": "empty"
+    },
+    "C13": {
+     "t": "n",
+     "v": 38.0
+    },
+    "C3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "C4": {
+     "t": "n",
+     "v": 14.0
+    },
+    "C5": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 21.0
+    },
+    "C7": {
+     "t": "empty"
+    },
+    "C8": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 4.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C13",
+   "name": "BlankTab",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "blank",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "blank",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "BR"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "10",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "B"
+    },
+    "A11": {
+     "t": "s",
+     "v": "C"
+    },
+    "A12": {
+     "t": "empty"
+    },
+    "A13": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "A"
+    },
+    "A6": {
+     "t": "s",
+     "v": "B"
+    },
+    "A7": {
+     "t": "empty"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West"
+    },
+    "A9": {
+     "t": "s",
+     "v": "A"
+    },
+    "B10": {
+     "t": "n",
+     "v": 4.0
+    },
+    "B11": {
+     "t": "n",
+     "v": 6.0
+    },
+    "B12": {
+     "t": "empty"
+    },
+    "B13": {
+     "t": "n",
+     "v": 38.0
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B4": {
+     "t": "n",
+     "v": 21.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 14.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 7.0
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "B8": {
+     "t": "n",
+     "v": 17.0
+    },
+    "B9": {
+     "t": "n",
+     "v": 7.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B13",
+   "name": "BlankCompact",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "blank",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "blank",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "BR2"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "10",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "A"
+    },
+    "A7": {
+     "t": "s",
+     "v": "B"
+    },
+    "A8": {
+     "t": "s",
+     "v": "C"
+    },
+    "A9": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B4": {
+     "t": "n",
+     "v": 21.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 17.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 7.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 4.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 6.0
+    },
+    "B9": {
+     "t": "n",
+     "v": 38.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B9",
+   "name": "CollapsedCompact",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "SD"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "10",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Region"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "empty"
+    },
+    "A7": {
+     "t": "empty"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West Total"
+    },
+    "A9": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "B4": {
+     "t": "empty"
+    },
+    "B5": {
+     "t": "s",
+     "v": "A"
+    },
+    "B6": {
+     "t": "s",
+     "v": "B"
+    },
+    "B7": {
+     "t": "s",
+     "v": "C"
+    },
+    "B8": {
+     "t": "empty"
+    },
+    "B9": {
+     "t": "empty"
+    },
+    "C3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "C4": {
+     "t": "n",
+     "v": 21.0
+    },
+    "C5": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 6.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 17.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 38.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C9",
+   "name": "CollapsedTab",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "SD2"
+  }
+ ],
+ "sheets": {
+  "BR": {},
+  "BR2": {},
+  "Data": {},
+  "F1": {},
+  "F2": {},
+  "F3": {},
+  "Q": {
+   "A1": {
+    "t": "n",
+    "v": 38.0
+   }
+  },
+  "SD": {},
+  "SD2": {}
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "2eb08aae714b8f1fcd2c0088e412151943a536bba518a2059c3dada0824fea69",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-06T21:35:14+00:00",
+  "version": null,
+  "workbook_name": "0cf46c669c02ac15a38a670319c69780f506605e96cf499a441f933931cc6597.xlsx"
+ }
+}

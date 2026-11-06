@@ -12,6 +12,7 @@ use crate::expressions::parser::parse_range;
 use crate::expressions::parser::stringify::{DataBlock, DisplaceData, Displacement};
 use crate::expressions::types::Area;
 use crate::expressions::utils::number_to_column;
+use crate::formula_rewrite::RewrittenCell;
 use crate::model::Model;
 use crate::types::{FilterColumn, Table, TableColumn};
 
@@ -417,12 +418,13 @@ fn inserted_headers(table: &Table, edit: ColumnEdit) -> Vec<(i32, i32, String)> 
 impl Model {
     /// Rewrites every formula (cells on every sheet, and the conditional formats of `sheet`) for
     /// the structural edit `displace_data` on `sheet`, then moves, grows or shrinks the tables
-    /// that follow it.
+    /// that follow it. Returns the cells a row or column delete rewrote past what re-inserting
+    /// them undoes ([`Model::displace_cells`]).
     pub(crate) fn displace_formulas(
         &mut self,
         sheet: u32,
         displace_data: &DisplaceData,
-    ) -> Result<(), String> {
+    ) -> Result<Vec<RewrittenCell>, String> {
         let edits = self.table_edits(displace_data);
         let displacement = Displacement {
             data: displace_data,
@@ -432,11 +434,11 @@ impl Model {
             deleted_tables: &edits.deleted_tables,
         };
         let column_formulas = self.displaced_column_formulas(displacement);
-        self.displace_cells(displacement)?;
+        let rewritten = self.displace_cells(displacement)?;
         self.displace_cf_ranges(sheet, displacement);
         self.resize_tables(sheet, edits.resized)?;
         self.set_displaced_column_formulas(column_formulas);
-        Ok(())
+        Ok(rewritten)
     }
 
     /// The first data row of the table on `sheet`, under a header row, whose data rows the row
