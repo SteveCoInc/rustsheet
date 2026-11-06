@@ -52,7 +52,6 @@ from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
     DomainError,
-    Interval,
     MathArg,
     NoValueError,
     Param,
@@ -385,13 +384,13 @@ def _amor_definition(
     degressive: bool,
 ) -> Definition:
     params = (
-        Param("cost", "real", Interval(), source=ORDER_SOURCE),
-        Param("date_purchased", "real", Interval(), source=ORDER_SOURCE),
-        Param("first_period", "real", Interval(), source=ORDER_SOURCE),
-        Param("salvage", "real", Interval(), source=ORDER_SOURCE),
-        Param("period", "real", Interval(), source=MANY_SOURCE),
-        Param("rate", "real", Interval(), source=ORDER_SOURCE),
-        Param("basis", "int", Interval(), source=BASIS_SOURCE, optional=True),
+        Param("cost", "real", source=ORDER_SOURCE),
+        Param("date_purchased", "real", source=ORDER_SOURCE),
+        Param("first_period", "real", source=ORDER_SOURCE),
+        Param("salvage", "real", source=ORDER_SOURCE),
+        Param("period", "real", source=MANY_SOURCE),
+        Param("rate", "real", source=ORDER_SOURCE),
+        Param("basis", "int", source=BASIS_SOURCE, optional=True),
     )
     return register(
         Definition(
