@@ -2743,16 +2743,21 @@ Rule: both read their arguments left to right, but they stop at different kinds 
   or sort_order (`#VALUE!`). Text, FALSE and an out-of-range number fail only in validation, after by_col is read, so a
   later error wins: `SORT(A1:A3,1,"a",NA())` is `#N/A`, `SORT(A1:A3,"x",0,NA())` is `#N/A`, `SORT(A1:A3,5,"x",1/0)` is
   `#DIV/0!`, `SORT(A1:A3,0,5,SQRT(-1))` is `#NUM!`. A blank stops before a later error: `SORT(A1:A3,0,Z1,NA())` and
-  `SORT(A1:A3,"x",Z1,SQRT(-1))` are `#VALUE!`. A numeric text index or order is its number (`SORT(A1:A3,"1",1/0)` is
-  `#DIV/0!`, `SORT(A1:A3,1,"-1")` sorts descending). With a lifted by_col a text or error order fills by_col's shape
+  `SORT(A1:A3,"x",Z1,SQRT(-1))` are `#VALUE!`. A numeric text order is its number (`SORT(A1:A3,1,"-1")` sorts
+  descending); a numeric text index does not stop the read (`SORT(A1:A3,"1",1/0)` is `#DIV/0!`), which non-numeric
+  text does not either, so these cells do not show that it reads as its number. With a lifted by_col a text or error order fills by_col's shape
   (`SORT(A1:A3,1,"a",{TRUE,FALSE})` is 1x2 `#VALUE!`).
 - SORTBY stops at an error and at a non-numeric text sort_order, both at once: `SORTBY(A1:A3,C1:C3,"a",C1:C3,NA())`,
   `SORTBY(A1:A3,C1:C3,"a",NA(),1)` and `SORTBY(A1:A3,C1:C2,"x",C1:C3,1/0)` are `#VALUE!`; numeric text is its number
-  (`"1"` against a later `NA()` is `#N/A`, `"-1"` sorts descending). A blank, FALSE, TRUE or out-of-range number order
-  fails only in validation, after every later pair is read: `SORTBY(A1:A3,C1:C3,Z1,C1:C3,NA())` and
-  `SORTBY(A1:A3,C1:C3,0,NA(),2)` are `#N/A`, `SORTBY(A1:A3,C1:C3,0,C1:C2,1/0)` is `#DIV/0!`, while a later by_array size
-  mismatch and a later invalid order lose to it in pair order (`SORTBY(A1:A3,C1:C3,0,C1:C2,2)` is `#VALUE!`). TRUE alone
-  is ascending (`SORTBY(A1:A3,C1:C3,TRUE)` is 1,2,3) and FALSE alone `#VALUE!` (0).
+  (`"1"` against a later `NA()` is `#N/A`, `"-1"` sorts descending). A blank or out-of-range number order fails only in
+  validation, after every later pair is read: `SORTBY(A1:A3,C1:C3,Z1,C1:C3,NA())` and `SORTBY(A1:A3,C1:C3,0,NA(),2)` are
+  `#N/A`, and `SORTBY(A1:A3,C1:C3,0,C1:C2,1/0)` is `#DIV/0!`. When every bad argument is a validation error the result is
+  `#VALUE!` whichever wins (`SORTBY(A1:A3,C1:C3,0,C1:C2,2)`), so these cells cannot show their order. TRUE is a valid
+  ascending order (`SORTBY(A1:A3,C1:C3,TRUE)` is 1,2,3; with a later `NA()` the result is `#N/A`), and FALSE alone is
+  `#VALUE!` (0); a FALSE order before a later error is UNVERIFIED (no cell has one).
+- A multi-column by_array (SORTBY's `A1:C3` over a 3x1 array) also fails only in validation, so a later error wins:
+  `SORTBY(A1:A3,A1:C3,...)` with a later `#NAME?` by_array or `#NUM!` order is that error (hold-out H40, H45, H69),
+  while a text order before the later error still stops the read with `#VALUE!` (hold-out H34).
 - So a text sort_order is SORT's validation error but SORTBY's immediate one, and a blank one the reverse: the two
   functions do not share a reading order.
 Evidence: probes/t4479-sort-bad-argument-order H1:H93 (the task's forms and a grid of text, out-of-range, blank and
