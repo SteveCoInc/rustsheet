@@ -66,9 +66,16 @@ between 2^-18 and 5*2^-19, pick a structural model, fix `substitute_element` (ut
   the engine's existing 15-digit literal truncation; B5 and C1 show a literal 2147483646.999999 reads
   2147483646.99999), absolute 19/21, relative 2^-48 11/21. The edge sits between 4.5E-6 and 4.9E-6 of the double, at
   the decimal 2147483646.999995, which only the 15-digit cut puts there.
+- Second hold-out (review round 2), probes/t4468-substitute-cap-holdout2: 30 cells, seed 44682, d log-uniform in
+  [3E-6,1.2E-5], committed with these predictions before its fill. Margin, stated before scoring: the chosen model passes
+  if it scores at least 29/30 (within 1 cell of its 100% train rate) and beats the relative 2^-48 bound. Predicted:
+  the 15-digit cut gives `#VALUE!` at A6 A8 A20 A22 A28 A29 A30 and "aaa" elsewhere; the relative bound differs
+  at A2 A3 A4 A5 A9 A11 A12 A14 A15 A16 A17 A18 A19 A26 (14 cells);
+  the absolute bound gives "aaa" everywhere. Result: pending the fill.
 - Fresh sweep, generated after the freeze (seed 4468): probes/t4468-substitute-cap-sweep, 60 cells (d log-uniform in
   [1E-7,1E-4] at the cap, [1E-8,1E-5] at 3): 60/60 (absolute alone 48/60; the relative bound, already ruled out
   by the hold-out, also 60/60). Scores: scratch script over the case and oracle files, one candidate per model.
+  The sweeps sit in `probes`, not `probes-numeric`, because their results are text or errors, not numbers.
   Gate A envelope: not applicable (the results are text or `#VALUE!`, no numeric point); reproducibility floor: not involved (the edge is 5E-6 wide).
 - Citation nits fixed (char_code.rs "D1:D21, E1:E14"; text.md DOLLAR/FIXED Tasks line). text.md's near-integer
   entry records the caps, the model and the literal-vs-computed split.

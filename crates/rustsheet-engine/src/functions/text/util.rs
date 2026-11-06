@@ -392,6 +392,8 @@ pub(super) fn substitute_element(
             // #VALUE!, `2147483647-5E-6` reads 2147483646 (probes/t4468-substitute-cap-window,
             // t4468-substitute-cap-sweep; T-4468). Only the cap shows the cut: at ten integer
             // digits it reaches 5E-6, far past the 2^-22 snap, and no instance up there exists.
+            // `to_excel_precision` breaks an exact tie to even, but below 2^31 a double has at
+            // least 22 fraction bits and no tie at the 15th digit can cross an integer.
             let n = near_integer_count(to_excel_precision(n?, 15));
             if !(1.0..=MAX_SUBSTITUTE_INSTANCE).contains(&n) {
                 return Err(Error::VALUE);
