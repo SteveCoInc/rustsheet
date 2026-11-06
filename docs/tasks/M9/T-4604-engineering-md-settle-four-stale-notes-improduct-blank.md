@@ -3,7 +3,7 @@ id: T-4604
 title: "engineering.md: settle four stale notes (IMPRODUCT blank in a range, IMCOSH tiny imaginary part, IMABS near DBL_MAX, OCT2BIN of a blank) from the probes that answered them"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
