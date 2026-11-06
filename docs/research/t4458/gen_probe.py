@@ -1,0 +1,94 @@
+"""T-4458: generate probes/t4458-bessely-tiny-x-cuts.
+
+One column per BESSELY order 1..7, x descending, bracketing the engine's predicted #NUM! cut
+(the first x at which a stored double overflows: 1/x for order 1, the upward recurrence's
+product for orders 2..7) at decade, 1-digit, 3-digit and 4-digit resolution. Order 1 also gets
+the band (3.5E-309, 5.6E-309) where 1/x overflows but -2/(pi x) does not, the doubles around
+1/DBL_MAX, and literal controls showing whether Excel keeps a subnormal literal.
+Usage: python3 gen_probe.py OUT.case.json
+"""
+
+import json
+import math
+import sys
+
+# The engine's cuts (bisected on a double model of excel_bessel_y; 3 significant digits suffice
+# to centre the grid, the probe brackets Excel's own cut).
+CUTS = {1: 5.5627e-309, 2: 8.416e-155, 3: 3.048e-103, 4: 2.030e-77, 5: 6.710e-62,
+        6: 1.545e-51, 7: 3.998e-44}
+COLS = "ABCDEFG"
+
+
+def lit(m: float, e: int) -> str:
+    """A decimal literal m*10^e, shortest form."""
+    s = f"{m:.6f}".rstrip("0").rstrip(".")
+    return f"{s}E{e}"
+
+
+def xs_for(c: float) -> list[str]:
+    e = math.floor(math.log10(c))
+    m = c / 10**e
+    out: dict[str, float] = {}
+
+    def add(mm: float, ee: int) -> None:
+        mm = round(mm, 6)
+        if mm >= 10:
+            mm, ee = round(mm / 10, 6), ee + 1
+        if mm < 1:
+            mm, ee = round(mm * 10, 6), ee - 1
+        if mm <= 0:
+            return
+        out[lit(mm, ee)] = mm * 10.0**ee if ee > -300 else float(lit(mm, ee))
+
+    for k in range(-3, 4):
+        add(1, e + k)
+    for ee in (e - 1, e, e + 1):
+        for d in range(1, 10):
+            add(d, ee)
+    m2 = round(m, 2)
+    for i in range(-10, 11):
+        add(m2 + i * 0.01, e)
+    m3 = round(m, 3)
+    for i in range(-10, 11):
+        add(m3 + i * 0.001, e)
+    return sorted(out, key=lambda s: -float(s))
+
+
+def main() -> None:
+    cells: dict[str, str] = {}
+    desc = []
+    for n, col in zip(range(1, 8), COLS):
+        xs = xs_for(CUTS[n])
+        for row, x in enumerate(xs, 1):
+            cells[f"{col}{row}"] = f"=BESSELY({x},{n})"
+        desc.append(f"{col} order {n}")
+    # Order 1's band and 1/DBL_MAX (5.562684646268003E-309 is the double just above 1/DBL_MAX's
+    # overflow point; neighbours in 1E-21 steps of the mantissa).
+    band = [f"{d / 10:.1f}E-309" for d in range(56, 34, -1)]
+    fine = ["5.56268464627E-309", "5.562684646269E-309", "5.5626846462681E-309",
+            "5.562684646268E-309", "5.5626846462679E-309", "5.562684646267E-309",
+            "5.56268464626E-309"]
+    for row, x in enumerate(band + fine, 1):
+        cells[f"H{row}"] = f"=BESSELY({x},1)"
+        # Whether the literal survives as a nonzero double (a subnormal reads as 0 on Graph,
+        # decision 0042, so scale it up first).
+        cells[f"I{row}"] = f"={x}*1E300"
+        cells[f"J{row}"] = f"=ISNUMBER(BESSELY({x},1))"
+    desc.append("H order 1 across (3.5E-309, 5.6E-309) and 1/DBL_MAX; I the literal times 1E300; "
+                "J ISNUMBER of H")
+    case = {
+        "format": "rustsheet-case/v1",
+        "description": "T-4458: BESSELY at a tiny x, each column brackets one order's #NUM! cut "
+        "(x descending). Columns: " + "; ".join(desc) + ".",
+        "tags": ["M9", "probe", "engineering", "T-4458", "bessel"],
+        "sheets": [{"name": "Calc", "cells": cells}],
+        "expected": {},
+    }
+    with open(sys.argv[1], "w", encoding="utf-8") as f:
+        json.dump(case, f, indent=1)
+        f.write("\n")
+    print(len(cells), "cells")
+
+
+if __name__ == "__main__":
+    main()
