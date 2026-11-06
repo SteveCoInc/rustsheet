@@ -2359,6 +2359,7 @@ C	probes/t4424-sumx2my2-overflow-order.case.json	84
 C	probes/t4430-legacy-at-name-body-rest.case.json	181
 C	probes/t4447-sort-fractional-keys.case.json	84
 C	probes/t4453-near-integer-text-args.case.json	168
+C	probes/t4480-lcid-sublanguage-fallback.case.json	98
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -8292,6 +8293,9 @@ F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C3
 F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C4
 F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C7
 F	probes/t4420-pivotby-parent-sets-three-fields.case.json	Calc!C8
+F	probes/t4480-lcid-sublanguage-fallback.case.json	S!A17
+F	probes/t4480-lcid-sublanguage-fallback.case.json	S!A9
+F	probes/t4480-lcid-sublanguage-fallback.case.json	S!A91
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
