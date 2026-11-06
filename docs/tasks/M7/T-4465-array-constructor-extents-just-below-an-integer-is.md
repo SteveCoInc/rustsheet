@@ -3,7 +3,7 @@ id: T-4465
 title: "Array-constructor extents just below an integer: is SEQUENCE's 2^-23 snap the shared near-integer rule, and do RANDARRAY, MAKEARRAY, TAKE, DROP, EXPAND and WRAPROWS snap too"
 milestone: M7
 lane: functions-math
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
