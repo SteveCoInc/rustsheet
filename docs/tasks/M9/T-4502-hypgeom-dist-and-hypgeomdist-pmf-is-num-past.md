@@ -3,7 +3,7 @@ id: T-4502
 title: "HYPGEOM.DIST and HYPGEOMDIST pmf is #NUM! past the walk where Excel computes it, and at an empty population"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
