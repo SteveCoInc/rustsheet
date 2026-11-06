@@ -3,7 +3,7 @@ id: T-4381
 title: "Tidy T-4375's XNPV comments and probe a name for constant text"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
