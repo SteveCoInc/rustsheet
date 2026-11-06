@@ -23,6 +23,17 @@ use crate::expressions::token::Error;
 use crate::model::Model;
 use crate::types::sheet_names_match;
 
+mod date_groups;
+pub(crate) mod layout;
+mod number_groups;
+
+pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
+pub use layout::{
+    layout_extent, max_layout_rows, row_layout, LayoutCell, BLANK_ITEM, GRAND_TOTAL,
+    LAYOUT_COLUMNS, ROW_LABELS,
+};
+pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
+
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
 pub const MAX_RECORDS: usize = 1_048_576;
 /// Most record values (records x fields) in one cache, and over the whole workbook.
@@ -62,6 +73,12 @@ pub struct CacheField {
     pub items: Vec<CacheItem>,
     /// Per record, an index into `items`.
     pub records: Vec<u32>,
+    /// For a field grouped by numeric ranges, its grouping: `items` are then the group labels
+    /// and GETPIVOTDATA also picks a group by its lower bound (T-4235).
+    pub number_groups: Option<NumberGroups>,
+    /// For a field grouped by dates, its grouping: `items` are then the group labels and
+    /// GETPIVOTDATA also picks a group by its calendar value (T-4246).
+    pub date_groups: Option<DateGroups>,
 }
 
 /// One value of a cache field.
@@ -109,15 +126,21 @@ pub struct PivotField {
     pub axis: Option<Axis>,
     /// A bitset over the cache field's `items`: bit `i` set means item `i` is hidden.
     pub hidden: Vec<u64>,
+    /// `showAll`: whether the pivot shows the field's items that no record holds. ECMA-376's
+    /// default is on; Excel writes `showAll="0"`. GETPIVOTDATA on such an item of an ungrouped
+    /// field is 0 when on and `#REF!` when off (probes/t4248-getpivotdata-recordless-item).
+    pub show_all: bool,
 }
 
 impl PivotField {
-    /// A field on `axis` with a hidden bitset sized for `item_count` items, none hidden.
+    /// A field on `axis` with a hidden bitset sized for `item_count` items, none hidden, and
+    /// `showAll` on (ECMA-376's default).
     #[must_use]
     pub fn new(axis: Option<Axis>, item_count: usize) -> Self {
         PivotField {
             axis,
             hidden: vec![0; item_count.div_ceil(64)],
+            show_all: true,
         }
     }
 

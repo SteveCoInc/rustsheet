@@ -45,18 +45,18 @@ pub(super) enum Shown {
 /// Where Excel puts the column total and subtotal cells of one function over several value
 /// columns (docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY: column totals over several
 /// value columns", T-1700): the column lines laid out with the subtotals after their groups, in
-/// the order of the key sort before any value sort, and each group's first source row, which
-/// names it across the value sort.
+/// the order of the key sort before any value sort, and each group's leaf id
+/// ([`Group::leaf_id`]), which names it across the value sort.
 pub(super) struct Placement {
     lines: Vec<Line>,
-    first_rows: Vec<usize>,
+    leaf_ids: Vec<usize>,
 }
 
 impl Placement {
     pub(super) fn new(cols: &Grouping, levels: usize) -> Self {
         Placement {
             lines: cols.lines(levels, false),
-            first_rows: cols.groups.iter().map(first_row).collect(),
+            leaf_ids: cols.groups.iter().map(Group::leaf_id).collect(),
         }
     }
 
@@ -107,12 +107,12 @@ impl Placement {
             .groups
             .iter()
             .enumerate()
-            .map(|(index, group)| (first_row(group), index))
+            .map(|(index, group)| (group.leaf_id(), index))
             .collect();
         let sorted = |group: usize| {
-            self.first_rows
+            self.leaf_ids
                 .get(group)
-                .and_then(|row| now.get(row))
+                .and_then(|id| now.get(id))
                 .copied()
                 .unwrap_or(group)
         };
@@ -180,7 +180,7 @@ impl Placement {
         laid_out: &'s [Line],
         width: usize,
     ) -> impl Iterator<Item = (usize, Slot)> + 's {
-        let mut group_line = vec![0; self.first_rows.len()];
+        let mut group_line = vec![0; self.leaf_ids.len()];
         let mut subtotals = Vec::new();
         for (index, line) in self.lines.iter().enumerate() {
             match *line {
@@ -224,11 +224,6 @@ impl Placement {
             })
         })
     }
-}
-
-/// A group's first source row, which no other group has.
-fn first_row(group: &Group) -> usize {
-    group.rows.first().copied().unwrap_or(usize::MAX)
 }
 
 /// A Total or subtotal column slot whose cell `Model::check_totals` (pivotby.rs) computes, and the column

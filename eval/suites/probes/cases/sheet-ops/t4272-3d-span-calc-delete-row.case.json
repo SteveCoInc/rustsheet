@@ -1,0 +1,74 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Deleting row 1 on Calc, the formulas' own sheet. (T-4272)",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "C5": "=SUM(Jan:Mar!A1:A3)",
+        "C6": "=FORMULATEXT(C5)",
+        "C7": "=SUM(Span)",
+        "C8": "=SUM(Jan!A1:A3)",
+        "C9": "=FORMULATEXT(C8)",
+        "C10": "=SUM(Jan:Mar!B2)",
+        "C11": "=FORMULATEXT(C10)"
+      }
+    },
+    {
+      "name": "Jan",
+      "cells": {
+        "A1": 1,
+        "A2": 2,
+        "A3": 4,
+        "A4": 8,
+        "B2": 3
+      }
+    },
+    {
+      "name": "Feb",
+      "cells": {
+        "A1": 16,
+        "A2": 32,
+        "A3": 64,
+        "A4": 128,
+        "B2": 48
+      }
+    },
+    {
+      "name": "Mar",
+      "cells": {
+        "A1": 256,
+        "A2": 512,
+        "A3": 1024,
+        "A4": 2048,
+        "B2": 768
+      }
+    }
+  ],
+  "names": {
+    "Span": "=Jan:Mar!$A$1:$A$3"
+  },
+  "expected": {},
+  "sheet_ops": [
+    {
+      "op": "delete_row",
+      "sheet": "Calc",
+      "row": 1
+    }
+  ],
+  "check": [
+    "Calc!C4",
+    "Calc!C5",
+    "Calc!C6",
+    "Calc!C7",
+    "Calc!C8",
+    "Calc!C9",
+    "Calc!C10"
+  ]
+}

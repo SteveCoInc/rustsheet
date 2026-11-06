@@ -40,8 +40,14 @@ impl Model {
         }
         // The density and the cdf at x = 0 are 0 for every shape (t1048-weibull A16, A17;
         // t1049-weibulldist A27, A28; `WEIBULL.DIST(0,1E+8,4.6E-09,TRUE)` is 0 where
-        // beta^-alpha overflows, probes/t2475-stat-subexpressions P!A78).
+        // beta^-alpha overflows, probes/t2475-stat-subexpressions P!A78). The density still
+        // computes its divisor beta^alpha first: `WEIBULL.DIST(0,309,10,FALSE)` is #NUM! and
+        // `WEIBULL.DIST(0,400,0.1,FALSE)` #DIV/0!, while `(0,308,10,FALSE)` is 0
+        // (probes/t3312-xirr-guess-dates-weibull A48-A60; statistics.md, T-3312).
         if x == 0.0 {
+            if !cumulative {
+                weibull_divisor(alpha, beta, cell)?;
+            }
             return Ok(0.0);
         }
         // Excel reports the overflow of (x/beta)^alpha, though the cdf's limit is 1:
@@ -111,6 +117,16 @@ fn weibull_density(
     t: f64,
     cell: CellReferenceIndex,
 ) -> Result<f64, CalcResult> {
+    let divisor = weibull_divisor(alpha, beta, cell)?;
+    let density = alpha / divisor * excel_exp((alpha - 1.0) * excel_ln(x)) * excel_exp(-t);
+    // A subnormal density is 0, as in Excel (`(x)=0` TRUE: probes/t2693-subnormal-weibull A2;
+    // docs/excel-semantics/numbers.md "Distribution densities").
+    Ok(flush_subnormal(density))
+}
+
+/// The density's divisor `beta^alpha` as `EXP(alpha*LN(beta))`: `#DIV/0!` where it underflows to 0
+/// and `#NUM!` where it overflows (see [`weibull_density`]).
+fn weibull_divisor(alpha: f64, beta: f64, cell: CellReferenceIndex) -> Result<f64, CalcResult> {
     let divisor = excel_exp(alpha * excel_ln(beta));
     if divisor == 0.0 {
         return Err(div_error(cell));
@@ -118,8 +134,5 @@ fn weibull_density(
     if !divisor.is_finite() {
         return Err(num_error(cell));
     }
-    let density = alpha / divisor * excel_exp((alpha - 1.0) * excel_ln(x)) * excel_exp(-t);
-    // A subnormal density is 0, as in Excel (`(x)=0` TRUE: probes/t2693-subnormal-weibull A2;
-    // docs/excel-semantics/numbers.md "Distribution densities").
-    Ok(flush_subnormal(density))
+    Ok(divisor)
 }

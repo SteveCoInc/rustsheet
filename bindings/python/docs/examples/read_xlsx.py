@@ -4,12 +4,13 @@ import os
 import tempfile
 
 import rustsheet as ic
+from rustsheet import legacy
 
 # First create a workbook to read (in real life you already have one)
 folder = tempfile.mkdtemp()
 file = os.path.join(folder, "input.xlsx")
 
-writer = ic.UserModel("input")
+writer = legacy.UserModel("input")
 writer.set_user_input(0, 1, 1, "Price")
 writer.set_user_input(0, 1, 2, "120")
 writer.set_user_input(0, 2, 1, "Tax")
@@ -17,7 +18,7 @@ writer.set_user_input(0, 2, 2, "=B1*0.21")
 writer.save_to_xlsx(file)
 
 # Read it back
-model = ic.load_from_xlsx(file)
+model = legacy.load_from_xlsx(file)
 model.evaluate()
 
 # Walk all non-empty cells

@@ -1,9 +1,11 @@
 use statrs::distribution::FisherSnedecor;
 
-use crate::arithmetic::extended_quotient;
+use crate::arithmetic::{extended_quotient, flush_subnormal};
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error};
-use crate::functions::statistical::bratio::{f_closed_or_ported_tails, kernel_tails};
+use crate::functions::statistical::bratio::{
+    f_closed_or_ported_tails, kernel_tails, l140_overflows,
+};
 use crate::functions::statistical::f_density::excel_f_density;
 use crate::functions::statistical::f_test_tail::f_test_bratio_p;
 use crate::functions::statistical::half_integer_beta::half_integer_remainder;
@@ -73,6 +75,18 @@ fn f_kernel_arguments(df1: f64, df2: f64, x: f64) -> (f64, f64) {
 /// Excel: see docs/excel-semantics/statistics.md, "The F cdf is #NUM! where df2/(df1 x) overflows (T-2435)"
 fn f_beta_ratio_overflows(df1: f64, df2: f64, x: f64) -> bool {
     x > 0.0 && !(df2 / (df1 * x)).is_finite()
+}
+
+/// Whether the F cdf at `x` is `#NUM!` because bratio's L140 bup sum overflows on its incomplete
+/// beta ([`l140_overflows`] on [`f_beta_arguments`] and the shapes df1/2, df2/2): a df2 in the
+/// billions beside a df1 below 80, as BETA.DIST is at the same shapes. It is `#NUM!` exactly where
+/// Excel is on every positive-x F.DIST cdf and F.DIST.RT cell of probes-numeric t4017-f-huge-df2-*
+/// and t4030-f-dist-rt-df1-boundary (22 `#NUM!` and 1,385 numbers): `F.DIST.RT(1.5,79,1E+10)` is
+/// `#NUM!` (t4017 ...-1e10 A209), df1 76 and 80 at df2 1E+10 are numbers
+/// (docs/excel-semantics/statistics.md "Incomplete beta at a huge first shape", T-4044).
+fn f_bup_sum_overflows(df1: f64, df2: f64, x: f64) -> bool {
+    let (u, v) = f_beta_arguments(df1, df2, x);
+    l140_overflows(df1 / 2.0, df2 / 2.0, u, v)
 }
 
 /// One F tail (`upper`: P(F > x)): Excel's closed forms (a df of 2) and the bratio port's branches,
@@ -423,7 +437,7 @@ impl Model {
         }
         // A tiny x whose df2/(df1 x) overflows is #NUM! for the cdf, 0 for the density
         // ([`f_beta_ratio_overflows`]).
-        if cumulative && f_beta_ratio_overflows(df1, df2, x) {
+        if cumulative && (f_beta_ratio_overflows(df1, df2, x) || f_bup_sum_overflows(df1, df2, x)) {
             return Err(num_error(cell));
         }
         // The density at 0 is infinite for df1 = 1 and exactly 1 for df1 = 2; higher df1 give
@@ -443,8 +457,13 @@ impl Model {
             }
         }
         FisherSnedecor::new(df1, df2).map_err(|_| num_error(cell))?;
+        // A subnormal cdf is Excel's exact 0: the last number is 3.3E-308 and the first 0 is
+        // 2.0E-308 at (316, 1) and at (40, 1), whose bpser prefactors 1/a differ eightfold, so the
+        // cut is on the result, not inside the kernel (`=(F.DIST(..))=0` is TRUE there; probes/
+        // t4026-f-cdf-subnormal A24, B24, A57, B57).
+        // Excel: see docs/excel-semantics/statistics.md, "F.DIST's cdf flushes a subnormal result to 0 (T-4026)"
         let result = if cumulative {
-            f_cdf(df1, df2, x)
+            flush_subnormal(f_cdf(df1, df2, x))
         } else {
             f_pdf(df1, df2, x)
         };
@@ -485,7 +504,7 @@ impl Model {
         }
         // A tiny x whose df2/(df1 x) overflows is #NUM!, as for F.DIST's cdf
         // ([`f_beta_ratio_overflows`]).
-        if f_beta_ratio_overflows(df1, df2, x) {
+        if f_beta_ratio_overflows(df1, df2, x) || f_bup_sum_overflows(df1, df2, x) {
             return Err(num_error(cell));
         }
         let result = f_sf(df1, df2, x);
@@ -694,7 +713,9 @@ impl Model {
 
 #[cfg(test)]
 mod tests {
-    use super::{f_beta_arguments, f_cdf, f_quantile, f_tail, fisher, fisher_inv};
+    use super::{
+        f_beta_arguments, f_bup_sum_overflows, f_cdf, f_quantile, f_tail, fisher, fisher_inv,
+    };
     use crate::test::util::{ulps, within_fifteen_digits};
 
     // FISHER and FISHERINV round their quotient twice, like Excel's `/` (excel-graph; T-2437).
@@ -764,6 +785,29 @@ mod tests {
         assert!(ulps(0.634_106_368_709_025_1, cdf) <= 1, "{cdf}");
     }
 
+    // bratio's L140 bup sum overflows from df1 77 to 79 at df2 1E+10 (T-4044): Excel is `#NUM!` at
+    // probes-numeric t4017-f-huge-df2-above-mean-1e10 A209 `F.DIST.RT(1.5,79,1E+10)` and A223
+    // `F.DIST.RT(50,79,1E+10)`, and a number at df1 76 and 80 (t4030-f-dist-rt-df1-boundary).
+    #[test]
+    fn bup_sum_overflows_in_excels_df1_band() {
+        assert!(f_bup_sum_overflows(79.0, 1E10, 1.5));
+        assert!(f_bup_sum_overflows(79.0, 1E10, 50.0));
+        assert!(!f_bup_sum_overflows(76.0, 1E10, 1.5));
+        assert!(!f_bup_sum_overflows(80.0, 1E10, 1.5));
+        assert!(!f_bup_sum_overflows(79.0, 1E9, 1.5));
+    }
+
+    // Excel's upper tail is exactly 0 once bup's prefactor in L140 leaves the normal range (T-4045):
+    // probes-numeric t4045-f-dist-rt-zero-cut B18 `F.DIST.RT(71.5,20,1E7)` is 4.320911961488639E-291
+    // and B19 `F.DIST.RT(71.6,20,1E7)` is 0; A17 `F.DIST.RT(47.6,30,1E8)` is a number, A18 0.
+    #[test]
+    fn upper_tail_is_zero_where_bups_prefactor_underflows() {
+        assert!(f_tail(20.0, 1E7, 71.5, true) > 0.0);
+        assert_eq!(f_tail(20.0, 1E7, 71.6, true), 0.0);
+        assert!(f_tail(30.0, 1E8, 47.6, true) > 0.0);
+        assert_eq!(f_tail(30.0, 1E8, 47.666_666_666_7, true), 0.0);
+    }
+
     // A df of 1 takes bgrat at b = 1/2 on those arguments (T-3580): probes-numeric
     // t3567-r5-fdf1-hold A1/B1 `F.DIST.RT(15.586,1,298)` and `F.DIST(15.586,1,298,TRUE)`.
     #[test]
@@ -790,6 +834,30 @@ mod tests {
         );
         // FISHER_FISHERINV.xlsx C38: EXP(2y) overflows to 1.
         assert_eq!(fisher_inv(1000.0), 1.0);
+    }
+
+    /// F tails at a huge df2 that T-3754's L140 bup+bgrat port leaves to the fallback kernel: df1 of
+    /// 20 and more (past `MAX_BUP_TERMS`) and df2 above 2E7 (a0 above its 1E7 cap). The expansion's
+    /// b/a cut used to send these to Cephes' fraction, 1E-11 to 7E-10 off; T-4119 removed it. The
+    /// df1 = 3 rows were already accurate and guard that path.
+    /// References: docs/research/t4017/references.json, at the double arguments Excel sees. The
+    /// bound is T-4119's target, 2.5E-14 relative; the grid's worst point is 2.1E-14.
+    #[test]
+    fn f_tails_past_the_bup_cap_take_the_large_shape_expansion() {
+        for (df1, df2, x, reference) in [
+            (3.0, 1e7, 2.0, 0.11161029807296603),
+            (3.0, 1e7, 5.0, 0.001816657939558678),
+            (3.0, 3e7, 3.0, 0.029290902489543566),
+            (40.0, 3e7, 2.0, 0.0001763055857205162),
+            (60.0, 3e7, 10.0, 4.432803223201799e-90),
+            (79.0, 3e7, 1.5, 0.002685050433156616),
+        ] {
+            let got = f_tail(df1, df2, x, true);
+            assert!(
+                (got / reference - 1.0).abs() < 2.5e-14,
+                "F.DIST.RT({x},{df1},{df2}) = {got} against {reference}"
+            );
+        }
     }
 
     // Excel's F quantile at a huge df is its BETA.INV mapped to F (probes-numeric, excel-graph).

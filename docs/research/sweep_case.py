@@ -22,3 +22,17 @@ def write_case(path, description, task, cells):
         json.dump(case, f, indent=1)
         f.write("\n")
     print(len(cells))
+
+
+def write_checked_case(path, description, tags, cells):
+    """Write a one-sheet ("Calc") probe case that checks every cell in row-major order, with no expected
+    values (T-4290, T-4291)."""
+    case = {
+        "format": "rustsheet-case/v1",
+        "description": description,
+        "tags": tags,
+        "expected": {},
+        "check": [f"Calc!{r}" for r in sorted(cells, key=lambda r: (int(r[1:]), r[0]))],
+        "sheets": [{"name": "Calc", "cells": cells}],
+    }
+    path.write_text(json.dumps(case, indent=1) + "\n")

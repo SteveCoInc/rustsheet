@@ -9,7 +9,7 @@ use crate::{
         lexer::{Lexer, LexerMode},
         token::TokenType,
     },
-    language::get_language,
+    language::get_default_language,
     locale::Locale,
 };
 
@@ -55,8 +55,7 @@ impl ParsedReference {
         locale: &'static Locale,
         get_sheet_index_by_name: F,
     ) -> Result<(ParsedReference, [(bool, bool); 2]), String> {
-        #[allow(clippy::expect_used)]
-        let language = get_language("en").expect("");
+        let language = get_default_language();
         let mut lexer = Lexer::new(reference, LexerMode::A1, locale, language);
 
         let reference_token = lexer.next_token();

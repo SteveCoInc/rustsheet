@@ -1,0 +1,183 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "S": {
+   "A10": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A11": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A12": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A13": {
+    "t": "b",
+    "v": false
+   },
+   "A14": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A15": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A16": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A7": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A8": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A9": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "B1": {
+    "t": "b",
+    "v": true
+   },
+   "B10": {
+    "t": "b",
+    "v": false
+   },
+   "B11": {
+    "t": "b",
+    "v": false
+   },
+   "B12": {
+    "t": "b",
+    "v": false
+   },
+   "B13": {
+    "t": "b",
+    "v": false
+   },
+   "B14": {
+    "t": "b",
+    "v": false
+   },
+   "B15": {
+    "t": "b",
+    "v": false
+   },
+   "B16": {
+    "t": "b",
+    "v": false
+   },
+   "B2": {
+    "t": "b",
+    "v": true
+   },
+   "B3": {
+    "t": "b",
+    "v": true
+   },
+   "B4": {
+    "t": "b",
+    "v": true
+   },
+   "B5": {
+    "t": "b",
+    "v": true
+   },
+   "B6": {
+    "t": "b",
+    "v": true
+   },
+   "B7": {
+    "t": "b",
+    "v": false
+   },
+   "B8": {
+    "t": "b",
+    "v": false
+   },
+   "B9": {
+    "t": "b",
+    "v": false
+   },
+   "C1": {
+    "t": "s",
+    "v": "none"
+   },
+   "C10": {
+    "t": "s",
+    "v": "=SUM('f1',2)"
+   },
+   "C11": {
+    "t": "s",
+    "v": "='f1'(2)"
+   },
+   "C12": {
+    "t": "s",
+    "v": "=LAMBDA(x,x+'f1')(1)"
+   },
+   "C13": {
+    "t": "s",
+    "v": "=ISREF('f1')"
+   },
+   "C14": {
+    "t": "s",
+    "v": "=_xlpm.f1"
+   },
+   "C15": {
+    "t": "s",
+    "v": "=_xlpm.AB12*2"
+   },
+   "C16": {
+    "t": "s",
+    "v": "=SUM(_xlpm.xy1,2)"
+   },
+   "C2": {
+    "t": "s",
+    "v": "none"
+   },
+   "C3": {
+    "t": "s",
+    "v": "none"
+   },
+   "C4": {
+    "t": "s",
+    "v": "none"
+   },
+   "C5": {
+    "t": "s",
+    "v": "none"
+   },
+   "C6": {
+    "t": "s",
+    "v": "none"
+   },
+   "C7": {
+    "t": "s",
+    "v": "='xy1'"
+   },
+   "C8": {
+    "t": "s",
+    "v": "=Xfe1"
+   },
+   "C9": {
+    "t": "s",
+    "v": "='AB12'*2"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "4a56a96fb6781df5f4297ba5ff74c2defd2b598bbc6129efb884466b154fa057",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-04T09:31:05+00:00",
+  "version": null,
+  "workbook_name": "d52d87149500afd365e2528aefe5876bdb41e7de52e2dd4e20af1a517f58594a.xlsx"
+ }
+}

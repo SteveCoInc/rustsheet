@@ -72,13 +72,13 @@ def test_delete_rule(um):
 
 
 def test_cf_survives_xlsx_roundtrip(um, tmp_path):
-    import rustsheet as ic
+    from rustsheet import legacy
 
     um.add_conditional_formatting(0, "A1:A5", CELL_IS_GREATER_THAN_5)
     file = str(tmp_path / "cf.xlsx")
     um.save_to_xlsx(file)
 
-    model = ic.UserModel.from_xlsx(file)
+    model = legacy.UserModel.from_xlsx(file)
     rules = model.get_conditional_formatting_list(0)
     assert len(rules) == 1
     assert rules[0]["cf_rule"]["type"] == "CellIs"

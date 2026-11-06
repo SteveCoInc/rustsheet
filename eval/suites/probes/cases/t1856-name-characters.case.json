@@ -1,0 +1,55 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-1856: LET and LAMBDA names, and unbound names, whose characters Excel loads: lowercase circled and astral squared letters first, an uppercase circled letter later, marks after the first character, letters whose case maps are several characters, and Lt/Lm/Lo/Nl letters. Each bound name is written _xlpm. by hand (spec2xlsx's Python \\w misses some of them). A name starting with an uppercase circled letter or a mark is refused at load, so it is not in this case (docs/excel-semantics/references.md \"Characters of a name\").",
+  "tags": [
+    "M8",
+    "let",
+    "names",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=LET(_xlpm.ⓐ,1,_xlpm.ⓐ+1)",
+        "A2": "=LET(_xlpm.ⓩ,1,_xlpm.ⓩ+1)",
+        "A3": "=LET(_xlpm.🄰,1,_xlpm.🄰+1)",
+        "A4": "=LET(_xlpm.🄰x,1,_xlpm.🄰x+1)",
+        "A5": "=LET(_xlpm.🅐,1,_xlpm.🅐+1)",
+        "A6": "=LET(_xlpm.aⒶ,1,_xlpm.aⒶ+1)",
+        "A7": "=LET(_xlpm.İ,1,_xlpm.İ+1)",
+        "A8": "=LET(_xlpm.xİ,1,_xlpm.xİ+1)",
+        "A9": "=LET(_xlpm.İ,1,_xlpm.i+1)",
+        "A10": "=LET(_xlpm.नाम,1,_xlpm.नाम+1)",
+        "A11": "=LET(_xlpm.का,1,_xlpm.का+1)",
+        "A12": "=LET(_xlpm.aͅ,1,_xlpm.aͅ+1)",
+        "A13": "=LET(_xlpm.á,1,_xlpm.á+1)",
+        "A14": "=LET(_xlpm.i̇,1,_xlpm.i̇+1)",
+        "A15": "=LET(_xlpm.ǅ,1,_xlpm.ǅ+1)",
+        "A16": "=LET(_xlpm.ʰ,1,_xlpm.ʰ+1)",
+        "A17": "=LET(_xlpm.ー,1,_xlpm.ー+1)",
+        "A18": "=LET(_xlpm.ª,1,_xlpm.ª+1)",
+        "A19": "=LET(_xlpm.Ⅰ,1,_xlpm.Ⅰ+1)",
+        "A20": "=LET(_xlpm.ⅰ,1,_xlpm.ⅰ+1)",
+        "A21": "=LET(_xlpm.ﬃ,1,_xlpm.ﬃ+1)",
+        "A22": "=LET(_xlpm.ŉ,1,_xlpm.ŉ+1)",
+        "A23": "=LET(_xlpm.ǰ,1,_xlpm.ǰ+1)",
+        "A24": "=LET(_xlpm.ΐ,1,_xlpm.ΐ+1)",
+        "A25": "=LET(_xlpm.שם,1,_xlpm.שם+1)",
+        "A26": "=LET(_xlpm.اسم,1,_xlpm.اسم+1)",
+        "A27": "=LET(_xlpm.a²,1,_xlpm.a²+1)",
+        "A28": "=LET(_xlpm.a٣,1,_xlpm.a٣+1)",
+        "A29": "=LET(_xlpm.a①,1,_xlpm.a①+1)",
+        "A30": "=LET(_xlpm.aⅫ,1,_xlpm.aⅫ+1)",
+        "A31": "=LAMBDA(_xlpm.İ,_xlpm.İ+1)(1)",
+        "A32": "=LET(_xlpm.x,1,aⒶ)",
+        "A33": "=ⓩ+1",
+        "A34": "=aⒶ+1",
+        "A35": "=ISREF(aⒶ)",
+        "A36": "=İ+1",
+        "A37": "=नाम+1"
+      }
+    }
+  ],
+  "expected": {}
+}

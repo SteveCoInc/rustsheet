@@ -2,10 +2,13 @@
 //! written as constants, then the pivot is registered over its source.
 
 use rustsheet::{
-    CellRef, EditError, Input, PivotFunction, PivotTableInput, RangeRef, SheetId, Txn,
+    CellRef, EditError, Input, PivotDateGroupBy, PivotFunction, PivotRangeGroup, PivotTableInput,
+    RangeRef, SheetId, Txn,
 };
 
-use crate::case::{split_qualified, CaseSpec, CellInput, PivotTableSpec, SheetSpec};
+use crate::case::{
+    split_qualified, CaseSpec, CellInput, PivotGroupItem, PivotGroupSpec, PivotTableSpec, SheetSpec,
+};
 use crate::cellref::Addr;
 use crate::engine::range_ref;
 
@@ -20,6 +23,7 @@ pub fn write_rendered(
     id: SheetId,
     input: impl Fn(&CellInput) -> Option<Input>,
 ) -> Result<(), EditError> {
+    // A grouped pivot has none: the engine lays it out (T-4235).
     for pivot in &sheet.pivot_tables {
         for (a1, cell) in &pivot.rendered {
             let addr = parse_addr(a1)?;
@@ -44,8 +48,7 @@ pub fn add_pivots(
     id: SheetId,
 ) -> Result<(), EditError> {
     for pivot in &sheet.pivot_tables {
-        let input = pivot_input(spec, ids, sheet, id, pivot)?;
-        tx.add_pivot_table(&input)?;
+        tx.add_pivot_table(&pivot_input(spec, ids, sheet, id, pivot)?)?;
     }
     Ok(())
 }
@@ -69,8 +72,13 @@ fn pivot_input(
         })?;
     let source = range_ref(source_id, &range)
         .map_err(|_| EditError::Engine(format!("pivot {}: bad source {range}", pivot.name)))?;
-    // The rendered cells' bounding box is the pivot's `<location>` (it spans its labels).
+    // The rendered cells' bounding box is the pivot's `<location>` (it spans its labels). A
+    // grouped pivot has none: the engine lays it out from its top-left cell, as Excel does on
+    // load (T-4235).
     let mut cells = Vec::new();
+    if pivot.group.is_some() {
+        cells.push(parse_addr(&pivot.location.replace('$', ""))?);
+    }
     for a1 in pivot.rendered.keys() {
         cells.push(parse_addr(a1)?);
     }
@@ -99,6 +107,49 @@ fn pivot_input(
         function,
         // The caption Excel gives a new data field: `Sum of Sales`.
         caption: format!("{} of {}", function.caption_name(), pivot.value),
+        group: pivot.group.as_ref().map(range_group).transpose()?,
+        unused_items: pivot.unused_items.clone(),
+        show_all: pivot.show_all,
+        column_unused_items: pivot.column_unused_items.clone(),
+        column_show_all: pivot.column_show_all,
+    })
+}
+
+/// A spec pivot's grouping as the engine takes it: `by` names a date group (pivot.py
+/// `_DATE_GROUPS`), and its absence a numeric range.
+fn range_group(group: &PivotGroupSpec) -> Result<PivotRangeGroup, EditError> {
+    let by = match group.by.as_deref() {
+        None => None,
+        Some(by) => Some(
+            PivotDateGroupBy::parse(by)
+                .ok_or_else(|| EditError::Engine(format!("pivot group by {by:?}")))?,
+        ),
+    };
+    // A date group's item count is its layout's (`DateGroups::new`), so a number item there
+    // cannot simply be left out; no probe has one.
+    if by.is_some()
+        && group
+            .items
+            .iter()
+            .any(|i| matches!(i, PivotGroupItem::Number(_)))
+    {
+        return Err(EditError::Engine("a date group's items are texts".into()));
+    }
+    Ok(PivotRangeGroup {
+        by,
+        start: group.start,
+        end: group.end,
+        interval: group.interval,
+        // A number item matches none of Excel's labels and takes no place among them, so it is
+        // left out (probes/t4316-pivot-group-number-item; `NumberGroups::new`).
+        items: group
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                PivotGroupItem::Text(text) => Some(text.clone()),
+                PivotGroupItem::Number(_) => None,
+            })
+            .collect(),
     })
 }
 

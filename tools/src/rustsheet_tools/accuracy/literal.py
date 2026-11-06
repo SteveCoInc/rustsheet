@@ -27,15 +27,16 @@ tuple of equally long rows, written as a 2-D array literal: MDETERM's, MINVERSE'
 arguments, T-3686)."""
 
 
-def decimal15(x: float) -> Decimal:
-    """The exact value of the double `x` cut half-even to 15 significant digits, as a decimal
+def decimal15(x: float, rounding: str = ROUND_HALF_EVEN) -> Decimal:
+    """The exact value of the double `x` cut to 15 significant digits (half-even unless `rounding`
+    says otherwise, e.g. `ROUND_DOWN` to truncate), as a decimal
     (a carry gives the next power of ten: 9.9999999999999999 → 10.0000000000000). For a
     15-digit literal this is the written decimal again: the double is within half an ulp of it,
     far less than half a unit of the 15th digit."""
     if x == 0:
         return Decimal(0)
     d = Decimal(x)
-    return d.quantize(Decimal(1).scaleb(d.adjusted() - 14), rounding=ROUND_HALF_EVEN)
+    return d.quantize(Decimal(1).scaleb(d.adjusted() - 14), rounding=rounding)
 
 
 def exponent10(x: float) -> int:

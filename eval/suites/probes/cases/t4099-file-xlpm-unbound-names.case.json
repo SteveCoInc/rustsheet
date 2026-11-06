@@ -1,0 +1,65 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4099: a file's unbound _xlpm. name: one that is no A1 cell (abc, Xfe1), mixed with a cell-shaped one, called, under LET, LAMBDA and ISREF, an upper-case F1 and an R1C1-shaped R1C1 (A1:A9, stored in the file); and _xlpm.f1, _xlpm.abc typed in A1 mode (A10:A11) and in R1C1 mode (A12:A13). Each row: the value, ISBLANK and FORMULATEXT. F1 holds 7.",
+  "tags": [
+    "M2",
+    "syntax",
+    "probe"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "F1": 7,
+        "A1": "=_xlpm.abc",
+        "B1": "=ISBLANK(A1)",
+        "C1": "=IFERROR(FORMULATEXT(A1),\"none\")",
+        "A2": "=_xlpm.Xfe1",
+        "B2": "=ISBLANK(A2)",
+        "C2": "=IFERROR(FORMULATEXT(A2),\"none\")",
+        "A3": "=_xlpm.abc+_xlpm.f1",
+        "B3": "=ISBLANK(A3)",
+        "C3": "=IFERROR(FORMULATEXT(A3),\"none\")",
+        "A4": "=_xlpm.f1(2)",
+        "B4": "=ISBLANK(A4)",
+        "C4": "=IFERROR(FORMULATEXT(A4),\"none\")",
+        "A5": "=LET(x,1,x+_xlpm.f1)",
+        "B5": "=ISBLANK(A5)",
+        "C5": "=IFERROR(FORMULATEXT(A5),\"none\")",
+        "A6": "=LAMBDA(x,x+_xlpm.abc)(1)",
+        "B6": "=ISBLANK(A6)",
+        "C6": "=IFERROR(FORMULATEXT(A6),\"none\")",
+        "A7": "=ISREF(_xlpm.f1)",
+        "B7": "=ISBLANK(A7)",
+        "C7": "=IFERROR(FORMULATEXT(A7),\"none\")",
+        "A8": "=_xlpm.F1",
+        "B8": "=ISBLANK(A8)",
+        "C8": "=IFERROR(FORMULATEXT(A8),\"none\")",
+        "A9": "=_xlpm.R1C1",
+        "B9": "=ISBLANK(A9)",
+        "C9": "=IFERROR(FORMULATEXT(A9),\"none\")",
+        "A10": {
+          "entered": "=_xlpm.f1"
+        },
+        "B10": "=ISBLANK(A10)",
+        "C10": "=IFERROR(FORMULATEXT(A10),\"none\")",
+        "A11": {
+          "entered": "=_xlpm.abc"
+        },
+        "B11": "=ISBLANK(A11)",
+        "C11": "=IFERROR(FORMULATEXT(A11),\"none\")",
+        "A12": {
+          "entered_r1c1": "=_xlpm.f1"
+        },
+        "B12": "=ISBLANK(A12)",
+        "C12": "=IFERROR(FORMULATEXT(A12),\"none\")",
+        "A13": {
+          "entered_r1c1": "=_xlpm.abc"
+        },
+        "B13": "=ISBLANK(A13)",
+        "C13": "=IFERROR(FORMULATEXT(A13),\"none\")"
+      }
+    }
+  ]
+}

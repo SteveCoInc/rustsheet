@@ -10,9 +10,9 @@ from typing import Any
 import mpmath
 import pytest
 
-from rustsheet_tools.accuracy import eval_math
+from rustsheet_tools.accuracy import composite, eval_math
 from rustsheet_tools.accuracy.defs.cashflow import IRR, XIRR
-from rustsheet_tools.accuracy.defs.student_t import T_DIST, cdf
+from rustsheet_tools.accuracy.defs.student_t import T_DIST, T_INV, cdf
 from rustsheet_tools.accuracy.eval_math import (
     case_math,
     check_suite,
@@ -22,7 +22,7 @@ from rustsheet_tools.accuracy.eval_math import (
     write_suite,
 )
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, NoValueError, Param
-from rustsheet_tools.accuracy.tables import DroppedError, compute
+from rustsheet_tools.accuracy.tables import DroppedError, PointTimeoutError, compute
 
 
 def _case(tmp_path: Path, cells: dict[str, Any], oracle: dict[str, Any] | None) -> tuple[Path, Path]:
@@ -48,7 +48,8 @@ def test_single_call_takes_one_whole_call_only() -> None:
 def test_fit_args_follows_the_parameters() -> None:
     assert fit_args(T_DIST, [1.5, 3.0, True]) == [1.5, 3, True]
     assert fit_args(T_DIST, [1.5, 3.0, 1.0]) == "number for a logical"
-    assert fit_args(T_DIST, [1.5, 2.5, True]) == "non-integer for an integer parameter"
+    assert fit_args(T_DIST, [1.5, 2.5, True]) == [1.5, 2, True]  # T.DIST's df truncates (Param.truncates)
+    assert fit_args(T_INV, [0.5, 2.5]) == "non-integer for an integer parameter"  # unevidenced: skipped
     assert fit_args(T_DIST, [1.5, 3.0]) == "argument count"
     assert fit_args(T_DIST, ["1", 3.0, True]) == "non-numeric argument"
     assert fit_args(T_DIST, [True, 3.0, True]) == "logical for a number"
@@ -74,9 +75,9 @@ def test_case_math_writes_values_and_skips_what_it_cannot_read(tmp_path: Path) -
         "A1": "=T.DIST(1.5,3,TRUE)",  # a value
         "A2": "=T.DIST(B1,3,TRUE)",  # a constant cell: read
         "A3": "=T.DIST(A1,3,TRUE)",  # a formula cell: never read
-        "A4": "=T.DIST(1.5,2.5,TRUE)",  # non-integer df: skipped
+        "A4": "=T.INV(0.5,2.5)",  # non-integer df T.INV does not truncate: skipped
         "A5": "=T.INV(0,3)",  # outside the domain: a math domain error
-        "A6": "=NORM.DIST(1,0,1,TRUE)",  # no definition: not a candidate
+        "A6": '=LEN("abcd")',  # no definition (a text function): not a candidate
         "A7": "=T.DIST(1.5,3,TRUE)",  # not scored (no oracle value): not a candidate
         "A8": "=T.DIST(B2,3,TRUE)",  # an arithmetic-over-literals formula cell: read
         "B1": 1.5,
@@ -166,7 +167,7 @@ class _InProcessPool:
 def test_check_names_missing_and_stale_sidecars_and_passes_after_regenerating(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    cells = {"A1": "=T.DIST(1.5,3,TRUE)", "A2": "=T.DIST(2.5,3,TRUE)", "A3": "=T.DIST(1.5,2.5,TRUE)"}
+    cells = {"A1": "=T.DIST(1.5,3,TRUE)", "A2": "=T.DIST(2.5,3,TRUE)", "A3": "=T.INV(0.5,2.5)"}
     case, sidecar = _case(tmp_path, cells, {a: {"t": "n", "v": 0.5} for a in cells})
     entries = [{"id": "t/c", "path": str(case), "sidecar": str(sidecar)}]
     monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)
@@ -193,7 +194,7 @@ def test_check_names_missing_and_stale_sidecars_and_passes_after_regenerating(
     write_suite("t", workers=None)
     data = json.loads(math_path(sidecar).read_text())
     assert set(data["sheets"]["S"]) == {"A1"}
-    assert data["skipped"] == {"S": {"A2": {"f": "=T.DIST(2.5,3,TRUE)", "why": "not converged or too slow"}}}
+    assert data["skipped"] == {"S": {"A2": {"f": "=T.DIST(2.5,3,TRUE)", "why": "not converged"}}}
     assert check_suite("t") == []
 
     # The formula changes after the sidecar was written: its entry is stale.
@@ -211,3 +212,78 @@ def test_check_names_a_sidecar_that_is_not_json(tmp_path: Path) -> None:
     case, sidecar = _case(tmp_path, {"A1": "=T.DIST(1.5,3,TRUE)"}, {"A1": {"t": "n", "v": 0.5}})
     math_path(sidecar).write_text("{not json")
     assert eval_math.check_case("t/c", case, sidecar) == ["t/c: math sidecar c.math.json is not JSON"]
+
+
+def test_a_timeout_fails_the_run_and_keeps_the_sidecar_a_drop_does_not(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # T-3833: a point that is only slow is never written as "not converged". The hang guard's
+    # PointTimeoutError fails `math` and leaves the existing sidecar's value in place; a
+    # deterministic non-convergence still lists the cell under `skipped`.
+    cells = {"A1": "=T.DIST(1.5,3,TRUE)"}
+    case, sidecar = _case(tmp_path, cells, {"A1": {"t": "n", "v": 0.5}})
+    entries = [{"id": "t/c", "path": str(case), "sidecar": str(sidecar)}]
+    monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)
+    monkeypatch.setattr(eval_math, "_pool", _InProcessPool)
+    write_suite("t", workers=None)
+    held = math_path(sidecar).read_bytes()
+    assert set(json.loads(held)["sheets"]["S"]) == {"A1"}
+
+    def times_out(_definition: Definition, _args: list[Any]) -> Any:
+        raise PointTimeoutError("a point took over 600 s")
+
+    monkeypatch.setattr(eval_math, "compute", times_out)
+    with pytest.raises(PointTimeoutError):
+        write_suite("t", workers=None)
+    assert math_path(sidecar).read_bytes() == held
+
+    def does_not_converge(_definition: Definition, _args: list[Any]) -> Any:
+        raise DroppedError("not converged: dps 60 and 80 differ by 1e-30")
+
+    monkeypatch.setattr(eval_math, "compute", does_not_converge)
+    write_suite("t", workers=None)
+    data = json.loads(math_path(sidecar).read_text())
+    assert data["sheets"] == {}
+    assert data["skipped"] == {"S": {"A1": {"f": "=T.DIST(1.5,3,TRUE)", "why": "not converged"}}}
+
+
+def test_composite_cells_take_the_outer_math_at_the_inner_doubles(tmp_path: Path) -> None:
+    """T-3993, decision 0297: a nested call and a difference of calls of defined functions get the
+    outer node's math at the doubles the inner nodes round to; an undefined function is skipped."""
+    cells = {
+        "A1": "=T.INV(T.DIST(1.5,3,TRUE),3)",  # a nested call
+        "A2": "=T.DIST(2,3,TRUE)-T.DIST(1.5,3,TRUE)",  # a difference of two calls
+        "A3": "=T.INV(LEN(1),3)",  # LEN has no definition: skipped with its name
+        "A4": "=-T.DIST(1.5,3,TRUE)*2+(1+1)",  # a sign, a product and a call-free part
+        "A5": '=T.DIST(1.5,3,TRUE)&"x"',  # `&` is not read: not a candidate
+    }
+    oracle = {a: {"t": "n", "v": 0.5} for a in cells}
+    case, sidecar = _case(tmp_path, cells, oracle)
+    math = case_math("t/c.case.json", case, sidecar)
+    got = math.cells["S"]
+    assert set(got) == {"A1", "A2", "A4"}
+    assert math.skipped == {"no definition for LEN": 1}
+    with mpmath.workdps(80):
+        inner = mpmath.mpf(float(cdf(mpmath.mpf(1.5), mpmath.mpf(3))))  # the inner call's double
+        nested = T_INV.evaluate([inner, mpmath.mpf(3)])
+        assert abs(mpmath.mpf(got["A1"]["v"]) - nested) < mpmath.mpf("1e-45") * nested
+        # the inner rounding is part of the reference: not the exact composition 1.5
+        assert abs(mpmath.mpf(got["A1"]["v"]) - mpmath.mpf(1.5)) > mpmath.mpf("1e-30")
+        diff = mpmath.mpf(float(cdf(mpmath.mpf(2), mpmath.mpf(3)))) - inner
+        assert abs(mpmath.mpf(got["A2"]["v"]) - diff) < mpmath.mpf("1e-45") * diff
+        assert abs(mpmath.mpf(got["A4"]["v"]) - (2 - 2 * inner)) < mpmath.mpf("1e-45")
+    assert got["A2"]["f"] == cells["A2"]
+
+
+def test_composite_exact_composition_is_the_unrounded_value() -> None:
+    """Option (a), kept for decision 0297's scoring: no inner rounding."""
+    book = eval_math.LiteralBook(sheets={"S": {}}, oracle={})
+    tree = composite.parse("=T.INV(T.DIST(1.5,3,TRUE),3)", "S", book, eval_math.fit_arg)
+    assert tree is not None and tree.root is not None
+    exact = composite.compute(tree.root, rounded=False)
+    assert exact.value is not None
+    assert abs(mpmath.mpf(exact.value) - mpmath.mpf(1.5)) < mpmath.mpf("1e-45")
+    assert (
+        composite.parse("=T.INV(0.5,3)*T.INV(0.5,3)^2", "S", book, eval_math.fit_arg) is None
+    )  # `^` of a call
+    assert composite.parse("=1+2", "S", book, eval_math.fit_arg) is None  # no call

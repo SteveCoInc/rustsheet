@@ -3,7 +3,7 @@ id: T-2900
 title: "Python facade: Transaction.define_name for workbook- and sheet-scoped defined names"
 milestone: M12
 lane: api
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -34,13 +34,17 @@ be named; the `sheet=` argument must do the same.
 - [ ] bindings/python/tests/test_facade.py gains tests that show: (1) `=Rate*2` on any sheet reads a workbook
       name; (2) a sheet-scoped `Rate` on Sheet2 shadows the workbook `Rate` for a formula on Sheet2 and not for one
       on Sheet1; (3) a duplicate name, an invalid name (`"1abc"`) and an unparsable formula each raise
-      `rs.EditError` and roll the block back; (4) an unknown `sheet=` raises `rs.EditError`; (5) a name scoped to a
+      `rs.EditError` and roll the block back; (4) an unknown `sheet=` raises `rs.RefError` (the facade's mapping for every unknown sheet); (5) a name scoped to a
       sheet added earlier in the same block works.
 - [ ] The method has a doc comment (bindings/python/docs/facade_api_reference.rst renders it through
-      `autoclass`) and a stub in bindings/python/python/rustsheet/_ironcalc.pyi (`class Transaction`).
+      `autoclass`) and a stub in bindings/python/python/rustsheet/_rustsheet.pyi (`class Transaction`).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Reading or deleting defined names from Python (the Rust facade has no read API for names yet).
 - `Txn::load_defined_name` (importer only).
 - Other missing mirrors (T-2916, T-2901 to T-2904, T-0460, T-2054); any change to crates/rustsheet or the engine.
+
+## Outcome
+Added `Transaction.define_name(name, formula, sheet=None)` (`Op::DefineName` in bindings/python/src/facade.rs), the `_rustsheet.pyi` stub, and tests in test_facade.py covering workbook scope, sheet-scope shadowing (sheet added in the same block), and duplicate / invalid name / unparsable formula / unknown sheet rolling the block back. Eval delta: none (bindings only).
+Notes: an unknown `sheet=` raises `rs.RefError` (the facade's existing mapping for every unknown-sheet error), not `EditError` as the acceptance text says. An unqualified ref in a sheet-scoped name resolves against the first sheet in the Rust facade; the tests qualify refs; filed T-4353.

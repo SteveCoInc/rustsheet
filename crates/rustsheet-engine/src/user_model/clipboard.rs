@@ -346,6 +346,7 @@ impl UserModel {
                     column: target_column,
                     new_value: v.clone(),
                     legacy,
+                    external: false,
                     old_value: Box::new(old_value),
                 });
             }
@@ -563,6 +564,7 @@ impl UserModel {
                     column: ext_col,
                     new_value: new_formula,
                     legacy,
+                    external: false,
                     old_value: Box::new(old_cell),
                 });
             }
@@ -767,6 +769,7 @@ impl UserModel {
                     column,
                     new_value: value.to_string(),
                     legacy: false,
+                    external: true,
                     old_value: Box::new(old_value),
                 });
                 // pasted URLs are auto-linked: capture the link and style diffs too

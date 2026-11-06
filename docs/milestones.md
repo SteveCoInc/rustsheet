@@ -17,7 +17,7 @@ whose exit criteria are not met.
 | 1b. Bit parity | the `defer: phase-1b` tasks of every milestone | after Phase 1 exits (decision 0114) |
 | 2. Architecture and performance | M3, M4, M13, M15 | deferred until Phase 1 exits |
 | 3. Release | M12 | after Phase 2 |
-| 4. Desktop oracle | M14 | after Phase 3; not started (decision 0039) |
+| 4. Desktop oracle | M14 | out of scope; tasks dropped (decision 0266) |
 
 **Phase 1 exit (decisions 0114, 0188):** every Excel function is in the catalog with its parity scope
 (T-0040). Every in-scope function has oracle-backed cases covering each parameter mode and edge
@@ -357,6 +357,9 @@ docs/research/xlsx-round-trip-2026-11-04.md.
 8. Untouched parts are byte-identical under R1 on index-stable files.
 
 ## M14 — Desktop-oracle parity (Phase 4)
+
+**Out of scope (decision 0266, 2026-11-04).** Its open tasks are dropped and no new task is filed here;
+the text below is kept as the record of what Phase 4 would have covered.
 
 Added by decision 0039. Planned after Release; not started. It starts when the owner sets up the
 `excel-desktop` backend: a Windows machine with Microsoft 365 Apps and a self-hosted runner, as in

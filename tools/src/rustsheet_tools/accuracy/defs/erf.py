@@ -41,7 +41,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars
+from rustsheet_tools.accuracy.defs._common import scalars, signed
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -60,36 +60,32 @@ ASYMPTOTIC = mpmath.mpf(10) ** 4  # erfc takes the asymptotic series from here o
 SERIES_TERMS = 200  # a cap only: from 1E+4 at dps 80 the series needs under 20 terms
 
 
-def _signed(rng: random.Random, x: float) -> float:
-    return -x if rng.random() < 0.5 else x
-
-
 def _edge(rng: random.Random) -> float:
     """A point at an evidenced break: 0, the kernel split, tiny x, the flush, or the ERF(6) step."""
     shape = rng.randrange(6)
     if shape == 0:
         return 0.0
     if shape == 1:  # the kernel split and its neighbours
-        return _signed(rng, rng.choice((SPLIT, math.nextafter(SPLIT, 0.0), math.nextafter(SPLIT, 1.0))))
+        return signed(rng, rng.choice((SPLIT, math.nextafter(SPLIT, 0.0), math.nextafter(SPLIT, 1.0))))
     if shape == 2:  # tiny x: the leading term 2x/sqrt(pi)
-        return _signed(rng, rng.choice((2.0**-27, 2.0**-53, 2.0**-79, log_uniform(rng, 1e-300, 1e-8))))
+        return signed(rng, rng.choice((2.0**-27, 2.0**-53, 2.0**-79, log_uniform(rng, 1e-300, 1e-8))))
     if shape == 3:  # around the subnormal flush of ERFC
-        return _signed(rng, rng.choice((26.5, 26.5432, FLUSH, rng.uniform(26.0, 27.5))))
+        return signed(rng, rng.choice((26.5, 26.5432, FLUSH, rng.uniform(26.0, 27.5))))
     if shape == 4:  # where ERF reaches 1
-        return _signed(rng, rng.choice((5.9, 6.0, rng.uniform(5.5, 6.5))))
-    return _signed(rng, rng.choice((1.0, 2.0, 4.0, 8.0)))
+        return signed(rng, rng.choice((5.9, 6.0, rng.uniform(5.5, 6.5))))
+    return signed(rng, rng.choice((1.0, 2.0, 4.0, 8.0)))
 
 
 def _one(stratum: str, rng: random.Random) -> float:
     """One argument of `stratum`."""
     if stratum == "tail":  # erf near ±1, erfc deep in its tail up to the flush
-        return _signed(rng, rng.uniform(2.0, 27.5))
+        return signed(rng, rng.uniform(2.0, 27.5))
     if stratum == "edge":
         return _edge(rng)
     if stratum == "extreme":  # erf is ±1, erfc 0 or 2
-        return _signed(rng, log_uniform(rng, 27.5, 1e300))
+        return signed(rng, log_uniform(rng, 27.5, 1e300))
     if stratum == "log-uniform":
-        return _signed(rng, log_uniform(rng, 1e-300, 1e300))
+        return signed(rng, log_uniform(rng, 1e-300, 1e300))
     return rng.uniform(-3.0, 3.0)
 
 
@@ -114,7 +110,7 @@ def _draw_erf(stratum: str, rng: random.Random) -> list[Arg]:
         b = (
             _one(stratum, rng)
             if rng.random() < 0.7
-            else a + _signed(rng, max(abs(a), 1.0) * 10 ** -rng.uniform(1, 8))
+            else a + signed(rng, max(abs(a), 1.0) * 10 ** -rng.uniform(1, 8))
         )
         a, b = (
             float(f"{a:.15g}"),

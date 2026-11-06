@@ -486,3 +486,103 @@ fn one_cell_trimrange_is_a_reference() {
     assert_eq!(model._get_text("B4"), *"5");
     assert_eq!(model._get_text("C4"), *"5");
 }
+
+#[test]
+fn names_starting_with_a_mark_or_an_uppercase_circled_letter_are_refused() {
+    // Excel for the web refuses (createSession 501 FileCorruptTryRepair) a single-cell workbook
+    // whose formula starts a name with a mark or an uppercase circled letter, and loads every
+    // other form below (`rustsheet-oracle recalc -b excel-graph`, 2026-11-06, T-1856, each LET
+    // name written `_xlpm.`; refused inputs cannot be committed: docs/excel-semantics/references.md
+    // "Characters of a name").
+    let refused = [
+        "=LET(Ⓐ,1,Ⓐ+1)",
+        "=LET(Ⓑ,1,Ⓑ+1)",
+        "=LET(Ⓜ,1,Ⓜ+1)",
+        "=LET(Ⓩ,1,Ⓩ+1)",
+        "=LET(Ⓐx,1,Ⓐx+1)",
+        "=LAMBDA(Ⓐ,Ⓐ+1)(1)",
+        "=LET(\u{345}a,1,\u{345}a+1)",
+        "=LET(\u{93E}a,1,\u{93E}a+1)",
+        "=LET(\u{301}a,1,\u{301}a+1)",
+        "=LET(\u{307}x,1,\u{307}x+1)",
+        "=Ⓑ+1",
+    ];
+    // (formula, Excel's value)
+    let accepted = [
+        ("=LET(ⓐ,1,ⓐ+1)", "2"),
+        ("=LET(ⓩ,1,ⓩ+1)", "2"),
+        ("=LET(\u{1F130},1,\u{1F130}+1)", "2"),
+        ("=LET(\u{1F130}x,1,\u{1F130}x+1)", "2"),
+        ("=LET(\u{1F150},1,\u{1F150}+1)", "2"),
+        ("=LET(aⒶ,1,aⒶ+1)", "2"),
+        ("=LET(İ,1,İ+1)", "2"),
+        ("=LET(xİ,1,xİ+1)", "2"),
+        ("=LET(İ,1,i+1)", "#NAME?"),
+        ("=LAMBDA(İ,İ+1)(1)", "2"),
+        ("=LET(नाम,1,नाम+1)", "2"),
+        ("=LET(क\u{93E},1,क\u{93E}+1)", "2"),
+        ("=LET(a\u{345},1,a\u{345}+1)", "2"),
+        ("=LET(a\u{301},1,a\u{301}+1)", "2"),
+        ("=LET(i\u{307},1,i\u{307}+1)", "2"),
+        ("=LET(ǅ,1,ǅ+1)", "2"),
+        ("=LET(ʰ,1,ʰ+1)", "2"),
+        ("=LET(ー,1,ー+1)", "2"),
+        ("=LET(ª,1,ª+1)", "2"),
+        ("=LET(Ⅰ,1,Ⅰ+1)", "2"),
+        ("=LET(ⅰ,1,ⅰ+1)", "2"),
+        ("=LET(ﬃ,1,ﬃ+1)", "2"),
+        ("=LET(ŉ,1,ŉ+1)", "2"),
+        ("=LET(ǰ,1,ǰ+1)", "2"),
+        ("=LET(ΐ,1,ΐ+1)", "2"),
+        ("=LET(שם,1,שם+1)", "2"),
+        ("=LET(اسم,1,اسم+1)", "2"),
+        ("=LET(a²,1,a²+1)", "2"),
+        ("=LET(a٣,1,a٣+1)", "2"),
+        ("=LET(a①,1,a①+1)", "2"),
+        ("=LET(aⅫ,1,aⅫ+1)", "2"),
+        ("=ⓩ+1", "#NAME?"),
+        ("=aⒶ+1", "#NAME?"),
+    ];
+    let mut model = new_empty_model();
+    for (row, formula) in refused
+        .iter()
+        .copied()
+        .chain(accepted.iter().map(|(formula, _)| *formula))
+        .enumerate()
+    {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, formula) in refused.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", row + 1)),
+            *"#ERROR!",
+            "{formula}"
+        );
+    }
+    for (row, (formula, expected)) in accepted.iter().enumerate() {
+        let cell = format!("A{}", refused.len() + row + 1);
+        assert_eq!(model._get_text(&cell), *expected, "{formula}");
+    }
+}
+
+#[test]
+fn a_sheet_name_starting_with_a_refused_name_character_is_quoted() {
+    // The lexer refuses a name starting with Ⓐ-Ⓩ or a mark (T-1856), so a reference to such a
+    // sheet must be written quoted to read back. How Excel writes it is unprobed (T-4446).
+    let mut model = new_empty_model();
+    model.add_sheet("Ⓐ").unwrap();
+    model.add_sheet("ⓑ").unwrap();
+    // `_set` parses its sheet prefix byte by byte, so these go in by sheet index.
+    model.set_user_input(1, 1, 1, "5".to_string()).unwrap();
+    model.set_user_input(2, 1, 1, "7".to_string()).unwrap();
+    model._set("A1", "='Ⓐ'!A1+1");
+    model._set("A2", "=FORMULATEXT(A1)");
+    model._set("A3", "=ⓑ!A1+1");
+    model._set("A4", "=FORMULATEXT(A3)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"6");
+    assert_eq!(model._get_text("A2"), *"='Ⓐ'!A1+1");
+    assert_eq!(model._get_text("A3"), *"8");
+    assert_eq!(model._get_text("A4"), *"=ⓑ!A1+1");
+}

@@ -3,7 +3,7 @@
 use std::fs;
 
 use rustsheet_engine::{
-    types::{CustomFilter, FilterColumn, FilterCriterion},
+    types::{CustomFilter, DateGroupItem, Dxf, FilterColumn, FilterCriterion},
     Model,
 };
 
@@ -124,8 +124,68 @@ fn table_parts_and_structured_references_round_trip() {
     assert_eq!(reloaded.get_formatted_cell_value(0, 7, 5).unwrap(), "30");
 }
 
+/// A totals cell holding a number, boolean or error constant is written as
+/// `totalsRowFunction="custom"` with no `<totalsRowFormula>`, the form Excel loads with the cell
+/// kept a constant (xlsx-storage.md "Table parts in the export", T-4005); without it Excel refuses
+/// the file.
 #[test]
-fn a_filtered_table_keeps_its_filter_flag() {
+fn totals_row_constants_get_custom_metadata() {
+    let mut model = new_empty_model();
+    let cells = [
+        (1, 1, "Item"),
+        (1, 2, "N"),
+        (1, 3, "B"),
+        (1, 4, "E"),
+        (2, 1, "a"),
+        (2, 2, "1"),
+        (2, 3, "2"),
+        (2, 4, "3"),
+        (3, 1, "Total"),
+        (3, 2, "42"),
+        (3, 3, "TRUE"),
+        (3, 4, "#N/A"),
+    ];
+    for (row, column, input) in cells {
+        model
+            .set_user_input(0, row, column, input.to_string())
+            .unwrap();
+    }
+    model
+        .add_table_with_totals(0, "Sales", (1, 1, 3, 4), false, true)
+        .unwrap();
+    model.evaluate();
+    let temp_file_name = "temp_file_test_totals_constants.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let table_xml = part_text(temp_file_name, "xl/tables/table1.xml");
+    let mut reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+
+    assert!(
+        table_xml.contains(r#"<tableColumn id="1" name="Item" totalsRowLabel="Total">"#),
+        "{table_xml}"
+    );
+    for name in ["N", "B", "E"] {
+        let column = format!(r#"name="{name}" totalsRowFunction="custom"></tableColumn>"#);
+        assert!(table_xml.contains(&column), "{column} in {table_xml}");
+    }
+    assert!(!table_xml.contains("totalsRowFormula"), "{table_xml}");
+
+    assert_eq!(reloaded.workbook.tables, model.workbook.tables);
+    reloaded.evaluate();
+    for (column, value) in [(2, "42"), (3, "TRUE"), (4, "#N/A")] {
+        assert_eq!(reloaded.get_cell_formula(0, 3, column).unwrap(), None);
+        assert_eq!(
+            reloaded.get_formatted_cell_value(0, 3, column).unwrap(),
+            value
+        );
+    }
+}
+
+/// An API-filtered table with no kept criterion is written as a criterion-less filterColumn,
+/// which Excel reads as not filtered (T-4003), and so does our import: the round trip loses the
+/// filter. TODO(T-4363): write a criterion Excel reads as filtered.
+#[test]
+fn a_filtered_table_without_a_criterion_exports_unfiltered() {
     let mut model = new_empty_model();
     for (row, input) in [(1, "Qty"), (2, "1"), (3, "2")] {
         model.set_user_input(0, row, 1, input.to_string()).unwrap();
@@ -141,7 +201,8 @@ fn a_filtered_table_keeps_its_filter_flag() {
         table_xml.contains(r#"<autoFilter ref="A1:A3"><filterColumn colId="0"/></autoFilter>"#),
         "{table_xml}"
     );
-    assert!(reloaded.workbook.tables["Sales"].has_filters);
+    assert!(model.workbook.tables["Sales"].has_filters);
+    assert!(!reloaded.workbook.tables["Sales"].has_filters);
 }
 
 #[test]
@@ -291,6 +352,8 @@ fn filter_columns_of_every_kind_survive_an_export() {
             criterion: FilterCriterion::Values {
                 values: vec!["1".to_string(), "a<&\"b".to_string()],
                 blank: true,
+                calendar_type: None,
+                date_groups: Vec::new(),
             },
         },
         FilterColumn {
@@ -325,6 +388,201 @@ fn filter_columns_of_every_kind_survive_an_export() {
     let table = &reloaded.workbook.tables["Sales"];
     assert_eq!(table.filter_columns, filter_columns);
     assert!(table.has_filters);
+}
+
+/// Top 10, dynamic, color, icon and date-group criteria are written back as the file had them, so
+/// Excel still calls the table's hidden rows filtered after a round trip (T-4004; xlsx-storage.md
+/// "Table parts in the export"). A color filter's `dxfId` is written only for an existing dxf.
+#[test]
+fn top10_dynamic_color_icon_and_date_criteria_survive_an_export() {
+    let mut model = new_empty_model();
+    for column in 1..=6 {
+        for (row, input) in [
+            (1, format!("H{column}")),
+            (2, "1".to_string()),
+            (3, "2".to_string()),
+        ] {
+            model.set_user_input(0, row, column, input).unwrap();
+        }
+    }
+    model.add_table(0, "Sales", (1, 1, 3, 6), true).unwrap();
+    model.workbook.styles.dxfs.push(Dxf::default());
+    let filter_columns = vec![
+        FilterColumn {
+            col_id: 0,
+            criterion: FilterCriterion::Top10 {
+                top: false,
+                percent: true,
+                val: "2".to_string(),
+                filter_val: Some("1.5".to_string()),
+            },
+        },
+        FilterColumn {
+            col_id: 1,
+            criterion: FilterCriterion::Dynamic {
+                kind: "today".to_string(),
+                val: Some("45000".to_string()),
+                max_val: Some("45001".to_string()),
+                val_iso: Some("2023-03-15T00:00:00".to_string()),
+                max_val_iso: Some("2023-03-16T00:00:00".to_string()),
+            },
+        },
+        FilterColumn {
+            col_id: 2,
+            criterion: FilterCriterion::Color {
+                dxf_id: Some(0),
+                cell_color: false,
+            },
+        },
+        FilterColumn {
+            col_id: 3,
+            criterion: FilterCriterion::Icon {
+                icon_set: "3Arrows".to_string(),
+                icon_id: Some(1),
+            },
+        },
+        FilterColumn {
+            col_id: 4,
+            criterion: FilterCriterion::Values {
+                values: vec!["x".to_string()],
+                blank: false,
+                calendar_type: Some("gregorian".to_string()),
+                date_groups: vec![DateGroupItem {
+                    grouping: "day".to_string(),
+                    year: 2024,
+                    month: Some(2),
+                    day: Some(29),
+                    hour: None,
+                    minute: None,
+                    second: None,
+                }],
+            },
+        },
+        FilterColumn {
+            col_id: 5,
+            criterion: FilterCriterion::Top10 {
+                top: true,
+                percent: false,
+                val: "1".to_string(),
+                filter_val: None,
+            },
+        },
+    ];
+    if let Some(table) = model.workbook.tables.get_mut("Sales") {
+        table.filter_columns.clone_from(&filter_columns);
+    }
+    let temp_file_name = "temp_file_test_top10_dynamic_color_icon.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let xml = part_text(temp_file_name, "xl/tables/table1.xml");
+    let reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+
+    for part in [
+        r#"<filterColumn colId="0"><top10 top="0" percent="1" val="2" filterVal="1.5"/></filterColumn>"#,
+        r#"<filterColumn colId="1"><dynamicFilter type="today" val="45000" valIso="2023-03-15T00:00:00" maxVal="45001" maxValIso="2023-03-16T00:00:00"/></filterColumn>"#,
+        r#"<filterColumn colId="2"><colorFilter dxfId="0" cellColor="0"/></filterColumn>"#,
+        r#"<filterColumn colId="3"><iconFilter iconSet="3Arrows" iconId="1"/></filterColumn>"#,
+        r#"<filterColumn colId="4"><filters calendarType="gregorian"><filter val="x"/><dateGroupItem year="2024" month="2" day="29" dateTimeGrouping="day"/></filters></filterColumn>"#,
+        r#"<filterColumn colId="5"><top10 val="1"/></filterColumn>"#,
+    ] {
+        assert!(xml.contains(part), "{part} not in {xml}");
+    }
+    let table = &reloaded.workbook.tables["Sales"];
+    assert_eq!(table.filter_columns, filter_columns);
+    assert!(table.has_filters);
+}
+
+/// A color filter whose `dxfId` is not one of the workbook's differential formats is written
+/// without it, as the table's own dxf attributes are: Excel refuses a part pointing past the list.
+#[test]
+fn a_color_filter_past_the_dxfs_drops_its_dxf_id() {
+    let mut model = new_empty_model();
+    for (row, input) in [(1, "Qty"), (2, "1"), (3, "2")] {
+        model.set_user_input(0, row, 1, input.to_string()).unwrap();
+    }
+    model.add_table(0, "Sales", (1, 1, 3, 1), true).unwrap();
+    if let Some(table) = model.workbook.tables.get_mut("Sales") {
+        table.filter_columns = vec![FilterColumn {
+            col_id: 0,
+            criterion: FilterCriterion::Color {
+                dxf_id: Some(7),
+                cell_color: true,
+            },
+        }];
+    }
+    let temp_file_name = "temp_file_test_color_filter_past_dxfs.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let xml = part_text(temp_file_name, "xl/tables/table1.xml");
+    fs::remove_file(temp_file_name).unwrap();
+    assert!(
+        xml.contains(r#"<filterColumn colId="0"><colorFilter/></filterColumn>"#),
+        "{xml}"
+    );
+}
+
+/// A table filtered by a criterion from its file stays filtered while a criterion is left inside
+/// it, and stops being filtered when a column delete takes the last one, as the export then
+/// writes no filterColumn (T-4003).
+#[test]
+fn deleting_the_filtered_column_unfilters_the_table() {
+    let mut model = new_empty_model();
+    for (row, input) in [(1, "Cat"), (2, "a"), (3, "b"), (4, "a")] {
+        model.set_user_input(0, row, 1, input.to_string()).unwrap();
+    }
+    for (row, input) in [(1, "Val"), (2, "1"), (3, "2"), (4, "4")] {
+        model.set_user_input(0, row, 2, input.to_string()).unwrap();
+    }
+    for (row, input) in [(1, "Tag"), (2, "x"), (3, "y"), (4, "x")] {
+        model.set_user_input(0, row, 3, input.to_string()).unwrap();
+    }
+    model.add_table(0, "Sales", (1, 1, 4, 3), true).unwrap();
+    if let Some(table) = model.workbook.tables.get_mut("Sales") {
+        table.filter_columns = vec![FilterColumn {
+            col_id: 0,
+            criterion: FilterCriterion::Values {
+                values: vec!["a".to_string()],
+                blank: false,
+                calendar_type: None,
+                date_groups: Vec::new(),
+            },
+        }];
+    }
+    model.delete_columns(0, 3, 1).unwrap();
+    assert!(model.workbook.tables["Sales"].has_filters);
+    model.delete_columns(0, 1, 1).unwrap();
+    let table = &model.workbook.tables["Sales"];
+    assert!(table.filter_columns.is_empty());
+    assert!(!table.has_filters);
+
+    let temp_file_name = "temp_file_test_deleted_filter_column.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let table_xml = part_text(temp_file_name, "xl/tables/table1.xml");
+    fs::remove_file(temp_file_name).unwrap();
+    assert!(!table_xml.contains("filterColumn"), "{table_xml}");
+}
+
+/// A column edit never makes a table filtered: one whose only filterColumn has no criterion is
+/// not filtered on import (as Excel reads it, T-4003) and stays so after an unrelated delete.
+#[test]
+fn a_column_edit_does_not_filter_a_criterion_less_table() {
+    let mut model = new_empty_model();
+    for (column, header) in [(1, "Cat"), (2, "Val"), (3, "Tag")] {
+        model
+            .set_user_input(0, 1, column, header.to_string())
+            .unwrap();
+        model.set_user_input(0, 2, column, "1".to_string()).unwrap();
+    }
+    model.add_table(0, "Sales", (1, 1, 2, 3), false).unwrap();
+    if let Some(table) = model.workbook.tables.get_mut("Sales") {
+        table.filter_columns = vec![FilterColumn {
+            col_id: 0,
+            criterion: FilterCriterion::Other,
+        }];
+    }
+    model.delete_columns(0, 3, 1).unwrap();
+    let table = &model.workbook.tables["Sales"];
+    assert_eq!(table.filter_columns.len(), 1);
+    assert!(!table.has_filters);
 }
 
 /// A calculated column is written with its `calculatedColumnFormula` in file form and read back

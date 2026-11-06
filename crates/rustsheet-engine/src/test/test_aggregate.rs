@@ -140,3 +140,19 @@ fn subtotal_product_over_no_numbers_is_zero() {
     assert_eq!(model._get_text("B3"), "0");
     assert_eq!(model._get_text("B5"), "12");
 }
+
+/// The SUBTOTAL/AGGREGATE flag is stored on the parsed formula (computed once, T-1195): it is the
+/// formula's syntax, so an untaken IF branch counts and a plain SUM does not.
+#[test]
+fn parsed_formula_flags_nested_subtotal_calls() {
+    let mut model = new_empty_model();
+    model._set("A1", "=SUBTOTAL(9,B1:B2)");
+    model._set("A2", "=IF(FALSE,AGGREGATE(9,4,B1:B2),1)");
+    model._set("A3", "=SUM(B1:B2)");
+    model.evaluate();
+    let flags: Vec<bool> = model.parsed_formulas[0]
+        .iter()
+        .map(|f| f.calls_subtotal)
+        .collect();
+    assert_eq!(flags, [true, true, false]);
+}

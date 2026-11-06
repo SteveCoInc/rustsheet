@@ -24,5 +24,17 @@
     "f": "=EXP(-708)"
    }
   }
+ },
+ "skipped": {
+  "S": {
+   "C1": {
+    "f": "=EXP(-745)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "C2": {
+    "f": "=EXP(-720)*2^1000",
+    "why": "scaled value not exact"
+   }
+  }
  }
 }

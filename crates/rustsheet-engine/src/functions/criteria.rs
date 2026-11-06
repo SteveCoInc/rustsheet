@@ -7,7 +7,7 @@ use crate::{
     cast::value_number_text_with,
     expressions::token::{is_english_error_string, Error},
     formatter::date_text::{parse_date, CurrentYear},
-    functions::util::collation::{cmp_text_pairwise, fold_lookup},
+    functions::util::collation::{cmp_text_pairwise, fold_lookup, note_compared, BYTE_TICKS},
     locale::Locale,
     number_format::{cmp_excel_precision, parse_excel_number, parse_finite_number},
     text::Text,
@@ -604,10 +604,13 @@ fn operand_text(criterion: &Text, prefix: &str) -> Text {
 /// lower-cased).
 pub(crate) fn folded_units(text: &Text) -> Vec<u16> {
     match text {
-        Text::Utf8(s) if s.is_ascii() => s
-            .bytes()
-            .map(|byte| u16::from(byte.to_ascii_lowercase()))
-            .collect(),
+        Text::Utf8(s) if s.is_ascii() => {
+            // The non-ASCII arm notes its bytes in `fold_lookup` (T-4233).
+            note_compared(s.len(), BYTE_TICKS);
+            s.bytes()
+                .map(|byte| u16::from(byte.to_ascii_lowercase()))
+                .collect()
+        }
         _ => text.map_runs(fold_lookup).units().collect(),
     }
 }
@@ -714,6 +717,7 @@ impl WildcardPattern {
         match text {
             // The hot path: ASCII text is its own units, lower-cased byte by byte without a copy.
             Text::Utf8(s) if s.is_ascii() => {
+                note_compared(s.len(), BYTE_TICKS);
                 self.matches_units(s.as_bytes(), |byte| u16::from(byte.to_ascii_lowercase()))
             }
             _ => self.matches_units(&folded_units(text), |unit| unit),

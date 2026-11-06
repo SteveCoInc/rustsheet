@@ -3,7 +3,7 @@ id: T-3972
 title: "Password-protected xlsx (an OLE compound file holding EncryptedPackage): a typed import error and a recorded ruling for poi 58616 and protected_passtika"
 milestone: M11
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -40,23 +40,40 @@ known failures that come from them are an accepted, documented refusal and not a
   with a typed error". It could also be "deferred to M12 with a spec task". Either way, record it.
 
 ## Acceptance criteria
-- [ ] A decision record (`make new-decision`) rules on password-protected workbooks. It says either "out of scope, a
+- [x] A decision record (`make new-decision`) rules on password-protected workbooks. It says either "out of scope, a
       typed refusal" or "supported later", and if later it names the spec task it files. It also says whether the two
       baseline lines stay as `!InvalidCase` or the poi suite excludes the files (an `exclude` entry in
       eval/suites/poi/suite.toml is a gate change and needs this record to approve it; never hand-edit eval/baseline/).
-- [ ] The importer checks the first 8 bytes for the OLE compound-file signature before it opens the zip, and returns
+- [x] The importer checks the first 8 bytes for the OLE compound-file signature before it opens the zip, and returns
       a new typed `XlsxError` variant (thiserror, with a doc comment) whose message says the file is an encrypted or
       legacy binary (OLE) workbook. A unit test in crates/rustsheet-xlsx feeds an 8-byte-signature buffer and asserts
       the variant. A non-zip, non-OLE buffer still gives `XlsxError::Zip`.
-- [ ] `rustsheet-eval show poi/58616.xlsx` and `poi/protected_passtika.xlsx` show the new message (needs
+- [x] `rustsheet-eval show poi/58616.xlsx` and `poi/protected_passtika.xlsx` show the new message (needs
       `rustsheet-eval fetch --suite poi`). `make eval-baseline` reports no regression. Any baseline-line change is the
       one the decision approves.
-- [ ] docs/excel-semantics/xlsx-storage.md has an entry, "Password-protected and non-zip packages", that names the
+- [x] docs/excel-semantics/xlsx-storage.md has an entry, "Password-protected and non-zip packages", that names the
       three files and the ruling. Where Excel behavior is cited, status is DEVIATION or VERIFIED. deep-data.xlsx is
       listed as a corrupt package that stays refused.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Decrypting workbooks or adding a password to the load API (file a spec task if the decision chooses that).
 - The legacy binary `.xls` format (BIFF8), which shares the OLE signature: the new error only names it.
 - Changing what happens to deep-data.xlsx or the other refused poi files (T-0489, decision 0012).
+
+## Outcome
+- Decision 0279 is a scope ruling, not a deviation (decision 0052). Until T-4243's spec closes the gap,
+  password-protected workbooks (and legacy binary `.xls`, the same OLE container) are refused with a typed error. The
+  two poi baseline lines stay `!InvalidCase`, owned by T-4243, and no suite exclude is added.
+- `XlsxError::OleCompoundFile` (thiserror, doc comment) is returned by `Package::new` when the first 8 bytes are the
+  OLE compound-file signature, before the zip is opened. The one signature check is
+  `rustsheet_xlsx::import::is_ole_compound_file`. The eval harness's xlsx snapshot reader also uses it, because it
+  opens the zip before the engine does. Without it the harness would still show the zip error.
+- Test `ole_compound_file_is_a_typed_error` (crates/rustsheet-xlsx/tests/malformed_import.rs) covers the bare
+  signature and a padded header. A short buffer and a near-miss signature still give `XlsxError::Zip`.
+- poi (fetched): 58616.xlsx and protected_passtika.xlsx now report "Encrypted Or Binary Workbook Error: the file is an
+  OLE compound file ...". deep-data.xlsx is unchanged (a zip error, corrupt package, T-0489).
+- docs/excel-semantics/xlsx-storage.md has a new entry, "Password-protected and non-zip packages": a known gap,
+  UNVERIFIED (probe pending) on Excel opening the fixtures with their passwords.
+- Follow-up: T-4243 (spec: password on the load API, ECMA-376 decryption, the `.xls` plan).
+- Eval delta: none (fixed 0, new-coverage 0, regressions 0). The baseline lines are by kind, so they do not change.

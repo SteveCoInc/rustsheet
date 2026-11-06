@@ -38,7 +38,8 @@ each one is either confirmed or filed as a fix task.
 - T-3465 sweep evidence (probes/t3465-collation-holdout, excel-graph 2026-11-03): Excel orders the astral
   ideograph U+20000 below `"々"&UNICHAR(863)&"ヲ"&UNICHAR(811)&UNICHAR(848)&"ゞ"` (a leading `々` followed by
   combining marks and kana); the engine puts it above. Settle how a leading `々` before marks and kana sorts
-  against the ideographs. Owned cells: probes/t3465-collation-holdout C313, D313
+  against the ideographs. Owned cells: probes/t3465-collation-holdout C313, D313. Gap triage 2026-11-04 moved these
+  two M2 exit cells and the lone-mark rule they need to T-4258 (engine, P0). This task keeps the rest of its list.
 
 ## Acceptance criteria
 - [ ] A probe case under eval/suites/probes covers every choice above, with oracle values.

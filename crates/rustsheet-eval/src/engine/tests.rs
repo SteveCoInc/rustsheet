@@ -376,6 +376,36 @@ fn spec_pivot_rendered_cells_reach_the_engine() {
 }
 
 #[test]
+fn spec_grouped_pivot_is_registered_and_laid_out() {
+    // T-4235: a range-grouped pivot has no rendered cells; the engine groups it and lays it out
+    // from its location, as Excel does on load. Four items for a ten-group layout are relabeled.
+    let grouped = spec(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{
+            "A1":"N","B1":"Val","A2":0.3,"B2":1,"A3":0.7,"B3":2,
+            "H1":"=GETPIVOTDATA(\"Val\",D3,\"N\",\"0.3-0.4\")","H2":"=GETPIVOTDATA(\"Val\",D3,\"N\",0.7)"},
+            "pivot_tables":[{"name":"Pv","source":"A1:B3","location":"D3","row":"N","value":"Val",
+            "group":{"start":0,"end":1,"interval":0.1,"items":["<0","0-0.5","0.5-1",">1"]}}]}]}"#,
+    );
+    let evaluated = RustSheetEngine
+        .evaluate_spec(&grouped, None)
+        .expect("evaluates");
+    let at = |row, col| evaluated.value("S", Addr { row, col });
+    assert_eq!(at(1, 8), Some(Value::Number(1.0)));
+    assert_eq!(at(2, 8), Some(Value::Number(2.0)));
+    assert_eq!(at(3, 4), Some(Value::Text("Row Labels".into())));
+    assert_eq!(at(4, 4), Some(Value::Text("0.3-0.4".into())));
+    assert_eq!(at(6, 4), Some(Value::Text("Grand Total".into())));
+    assert_eq!(at(6, 5), Some(Value::Number(3.0)));
+    // A group key the builder does not write is refused when the case is read.
+    let unknown = serde_json::from_str::<CaseSpec>(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{},
+            "pivot_tables":[{"name":"Pv","source":"A1:B3","location":"D3","row":"N","value":"Val",
+            "group":{"start":0,"end":1,"interval":0.1,"items":[],"groupBy":"months"}}]}]}"#,
+    );
+    assert!(unknown.is_err());
+}
+
+#[test]
 fn spec_hidden_rows_and_tables_reach_the_engine() {
     let spec = spec(
         r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{

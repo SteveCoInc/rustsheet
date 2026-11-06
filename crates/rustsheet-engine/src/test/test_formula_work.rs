@@ -5,7 +5,8 @@
 //! (`AreaBudget::last_spent`) or cell reads, never time (T-2282).
 
 use crate::area_budget::{
-    CELL_UNITS, LAMBDA_UNITS, MAX_FORMULA_WORK, NODE_UNITS, TEXT_BYTES_PER_UNIT, TOO_MUCH_WORK,
+    CELL_UNITS, COMPARED_TICKS_PER_UNIT, LAMBDA_UNITS, MAX_FORMULA_WORK, NODE_UNITS,
+    TEXT_BYTES_PER_UNIT, TOO_MUCH_WORK,
 };
 use crate::model::Model;
 use crate::test::util::new_empty_model;
@@ -179,4 +180,249 @@ fn a_lambda_reading_a_bound_array_again_and_again_is_bounded() {
     model.evaluate();
     assert_eq!(model._get_text("A1"), "#VALUE!");
     assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK);
+}
+
+/// The whole-array readers a LAMBDA can repeat over a LET-bound array (SPEC-0024 step 3, T-2805),
+/// each with `s` the bound array. INDEX, ROWS and COLUMNS are on the list too: reading the
+/// variable copies its array whatever the reader then does with it.
+const ARRAY_READERS: [&str; 32] = [
+    "MATCH(-1,s,0)",
+    "XMATCH(-1,s)",
+    "XLOOKUP(-1,s,s,0)",
+    "LOOKUP(-1,s)",
+    "VLOOKUP(-1,s,1,FALSE)",
+    "HLOOKUP(-1,TRANSPOSE(s),1,FALSE)",
+    "ROWS(SORT(s))",
+    "ROWS(SORTBY(s,s))",
+    "ROWS(UNIQUE(s))",
+    "ROWS(FILTER(s,s>0))",
+    r#"LEN(TEXTJOIN(",",TRUE,s))"#,
+    "LEN(CONCAT(s))",
+    "ROWS(TOCOL(s))",
+    "COLUMNS(TOROW(s))",
+    "SUMPRODUCT(s)",
+    "MMULT(TRANSPOSE(s),s)",
+    "COUNTIF(s,1)",
+    "SUMIF(s,1)",
+    "SUMIFS(s,s,1)",
+    "COUNTIFS(s,1)",
+    "AVERAGEIF(s,1)",
+    "MAXIFS(s,s,1)",
+    "LARGE(s,1)",
+    "SMALL(s,1)",
+    "PERCENTILE(s,0.5)",
+    "QUARTILE(s,1)",
+    "PERCENTRANK(s,5)",
+    "NPV(0.1,s)",
+    "AGGREGATE(9,6,s)",
+    "INDEX(s,5)",
+    "ROWS(s)",
+    "COLUMNS(s)",
+];
+
+#[test]
+fn every_whole_array_reader_pays_the_cells_it_reads() {
+    // Growing `s` by 1,000 cells costs at least the 1,000 built and the 1,000 the reader copies.
+    for reader in ARRAY_READERS {
+        let small = units(&format!("=LET(s,SEQUENCE(10),{reader})"));
+        let big = units(&format!("=LET(s,SEQUENCE(1010),{reader})"));
+        assert!(
+            big - small >= 2 * 1000 * CELL_UNITS,
+            "{reader}: {} units for 1,000 more cells",
+            big - small
+        );
+    }
+}
+
+#[test]
+fn a_lambda_repeating_any_whole_array_reader_is_bounded() {
+    // The acceptance shape of T-2805 under a lower limit, so each run stops after a few dozen
+    // calls: at the default limit the same charge stops it after about 900.
+    for reader in ARRAY_READERS {
+        let mut model = model_with_limit(1 << 24);
+        model._set(
+            "A1",
+            &format!("=LET(s,SEQUENCE(100000),REDUCE(0,SEQUENCE(100000),LAMBDA(a,b,a+{reader})))"),
+        );
+        model.evaluate();
+        assert_eq!(model._get_text("A1"), "#VALUE!", "{reader}");
+        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{reader}");
+    }
+}
+
+/// The readers that compare texts (T-4233), each with `s` a bound array of 100 texts of `len`
+/// bytes and `t` a text of the same length that differs from them only in its last byte, so every
+/// comparison reads both texts to the end.
+const TEXT_COMPARERS: [&str; 13] = [
+    "MATCH(t,s,0)",
+    r#"MATCH(t&"*",s,0)"#,
+    "XMATCH(t,s)",
+    "XLOOKUP(t,s,s,0)",
+    "VLOOKUP(t,s,1,FALSE)",
+    "HLOOKUP(t,TRANSPOSE(s),1,FALSE)",
+    "ROWS(UNIQUE(s))",
+    "ROWS(SORT(s))",
+    "ROWS(SORTBY(s,s))",
+    "ROWS(GROUPBY(s,SEQUENCE(ROWS(s)),LAMBDA(x,SUM(x))))",
+    "SUM(--(s=t))",
+    "MATCH(t,s,1)",
+    "LOOKUP(t,s)",
+];
+
+/// `reader` over 100 texts of `len` bytes ([`TEXT_COMPARERS`]).
+fn text_comparer(reader: &str, len: usize) -> String {
+    let short = len - 1;
+    format!(r#"=LET(s,IF(SEQUENCE(100),REPT("a",{len})),t,REPT("a",{short})&"b",{reader})"#)
+}
+
+#[test]
+fn every_text_comparing_reader_pays_the_bytes_it_compares() {
+    // 4,000 more bytes in each of the 100 texts: each is compared, keyed or folded at least once,
+    // at a tick a byte or more, so the reader pays at least 100 * 4,000 ticks more, where the
+    // cells alone cost the same. A binary search (MATCH 1, LOOKUP) compares about log2(100) of
+    // them.
+    for reader in TEXT_COMPARERS {
+        let compared = if reader.starts_with("MATCH(t,s,1)") || reader.starts_with("LOOKUP") {
+            6
+        } else {
+            100
+        };
+        let small = units(&text_comparer(reader, 8));
+        let big = units(&text_comparer(reader, 4008));
+        assert!(
+            big - small >= compared * 4000 / COMPARED_TICKS_PER_UNIT,
+            "{reader}: {} units for 4,000 more bytes a text",
+            big - small
+        );
+    }
+}
+
+#[test]
+fn a_comparison_pays_for_what_it_reads_not_for_the_texts_lengths() {
+    // A first byte that differs ends the comparison, so 32,767-byte texts cost no more to compare
+    // than 8-byte ones: only their making (one REPT each) and the read of `t` grow.
+    let formula = |len: usize| {
+        format!(r#"=LET(s,IF(SEQUENCE(100),REPT("a",{len})),t,REPT("b",{len}),SUM(--(s=t)))"#)
+    };
+    let grown = units(&formula(32767)) - units(&formula(8));
+    assert!(grown <= 3 * 32767 / TEXT_BYTES_PER_UNIT + 3, "{grown}");
+}
+
+#[test]
+fn a_lambda_repeating_a_text_comparing_reader_is_bounded() {
+    // T-4233's acceptance shape, over 100 texts under a lower limit (a MATCH over T-4233's 1E5
+    // texts of 32,767 bytes pays over 8E8 units on its first call, past MAX_FORMULA_WORK). Its
+    // cells and its target cost about 9,000 units a call, so 900 calls fit in the limit with
+    // short texts; the 3.3 MB each call compares do not.
+    for reader in [
+        "MATCH(REPT(\"a\",32766)&\"b\",s,0)",
+        "XMATCH(REPT(\"a\",32766)&\"b\",s)",
+    ] {
+        let mut model = model_with_limit(1 << 24);
+        model._set(
+            "A1",
+            &format!(
+                r#"=LET(s,IF(SEQUENCE(100),REPT("a",32767)),SUM(MAP(SEQUENCE(900),LAMBDA(i,IFNA({reader},1)))))"#
+            ),
+        );
+        model.evaluate();
+        assert_eq!(model._get_text("A1"), "#VALUE!", "{reader}");
+        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{reader}");
+    }
+    // The same calls over 8-byte texts, with an 8-byte target, compute: the bytes compared are
+    // what ran out.
+    let mut model = model_with_limit(1 << 24);
+    model._set(
+        "A1",
+        r#"=LET(s,IF(SEQUENCE(100),REPT("a",8)),SUM(MAP(SEQUENCE(900),LAMBDA(i,IFNA(MATCH(REPT("a",7)&"b",s,0),1)))))"#,
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "900");
+}
+
+#[test]
+fn a_sort_of_texts_with_a_long_shared_prefix_stays_well_inside_the_limit() {
+    // The compare weights are fitted so that a SORT of a million texts sharing a 100-character
+    // prefix, which computes without the charge (about 4 s, release build), still does (T-4233).
+    // A sixteenth of it (65,536 texts) spends less than a twentieth of the limit, which leaves
+    // room for the 16-fold rows and the deeper merge of the full size.
+    let formula = r#"=ROWS(SORT(REPT("a",100)&SEQUENCE(65536)))"#;
+    let spent = units(formula);
+    assert!(spent < MAX_FORMULA_WORK / 20, "{spent}");
+    // And 65,536 equal 30-character texts, which each comparison walks to the end of the second
+    // pass.
+    let spent = units(r#"=ROWS(SORT(IF(SEQUENCE(65536),"Same text, 30 characters long")))"#);
+    assert!(spent < MAX_FORMULA_WORK / 20, "{spent}");
+}
+
+#[test]
+fn a_unique_of_medium_texts_stays_inside_the_limit() {
+    // UNIQUE keys every text ([`collation_key`](crate::functions::util::collation::collation_key)),
+    // the heaviest path a byte, so its weight is fitted so that a UNIQUE of a million 27-byte texts,
+    // which computes without the charge (about 10 s, release build), still does (T-4233). A
+    // sixteenth of it spends less than a sixteenth of the limit.
+    let spent = units(r#"=ROWS(UNIQUE(REPT("a",20)&SEQUENCE(65536)))"#);
+    assert!(spent < MAX_FORMULA_WORK / 16, "{spent}");
+}
+
+#[test]
+fn a_reader_stops_reading_once_its_ticks_pass_what_the_run_has_left() {
+    use crate::functions::util::collation::take_read_ticks;
+    // T-4278: one node whose comparisons alone pass the budget stops there, instead of reading to
+    // its end before the charge. Scaled-down shapes of `=ROWS(UNIQUE(REPT("a",100)&SEQUENCE(1048576)))`
+    // and a UNIQUE of long `é` texts, and SORT's pairwise merge. Unstopped, each reads 100 to
+    // 440 million ticks (65,536 keys of 105 bytes at 64 ticks a byte, 200 of 8,003 bytes, about a
+    // million comparisons of 105 bytes); the limit pays for 16.8 million.
+    const LIMIT: u64 = 1 << 20;
+    let allowance = LIMIT * COMPARED_TICKS_PER_UNIT;
+    for (formula, longest_read) in [
+        (r#"=ROWS(UNIQUE(REPT("a",100)&SEQUENCE(65536)))"#, 105 * 64),
+        (r#"=ROWS(UNIQUE(REPT("é",4000)&SEQUENCE(200)))"#, 8003 * 64),
+        (r#"=ROWS(SORT(REPT("a",100)&SEQUENCE(65536)))"#, 2 * 105),
+    ] {
+        let mut model = model_with_limit(LIMIT);
+        model._set("A1", formula);
+        let _ = take_read_ticks();
+        model.evaluate();
+        let read = take_read_ticks();
+        assert_eq!(model._get_text("A1"), "#VALUE!", "{formula}");
+        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{formula}");
+        // What earlier nodes were charged, then what the node read past its allowance: at most one
+        // more key or comparison.
+        assert!(read <= 2 * allowance + longest_read, "{formula}: {read}");
+    }
+    // Under the limit the same readers compute.
+    let mut model = model_with_limit(LIMIT);
+    model._set("A1", r#"=ROWS(UNIQUE(REPT("a",100)&SEQUENCE(512)))"#);
+    model._set("A2", r#"=ROWS(SORT(REPT("a",100)&SEQUENCE(512)))"#);
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "512");
+    assert_eq!(model._get_text("A2"), "512");
+}
+
+#[test]
+fn a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index() {
+    // The exact-match lookup index and the criteria index are shared by the formulas of a pass,
+    // each under its own budget: a formula that runs out while one is built must not leave keys
+    // it did not read for the others (T-4278 review; the readers stop only in
+    // `collation::stoppable`). Each formula below fits the limit unless it builds the index.
+    let mut model = model_with_limit(10_000);
+    for row in 1..=200 {
+        model._set(&format!("A{row}"), &format!(r#"=REPT("a",100)&{row}"#));
+    }
+    for row in 1..=4 {
+        model._set(&format!("B{row}"), "=XMATCH(A200,A1:A200)");
+        model._set(&format!("C{row}"), "=COUNTIFS(A1:A200,A200)");
+    }
+    model.evaluate();
+    for row in 1..=4 {
+        for column in ["B", "C"] {
+            let text = model._get_text(&format!("{column}{row}"));
+            let message = model._get_error_message(&format!("{column}{row}"));
+            assert!(
+                matches!(text.as_str(), "200" | "1") || message == TOO_MUCH_WORK,
+                "{column}{row}: {text} {message}"
+            );
+        }
+    }
 }

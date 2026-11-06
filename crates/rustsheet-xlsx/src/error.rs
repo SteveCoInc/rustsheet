@@ -15,6 +15,8 @@ pub enum ImportLimit {
     /// Entity references beyond the five predefined ones and character references: xlsx parts
     /// declare no entities, so none is ever expanded (no "billion laughs").
     EntityExpansion,
+    /// Rounds of an encrypted package's password key derivation (`spinCount`, SPEC-0031 D3).
+    SpinCount,
 }
 
 impl std::fmt::Display for ImportLimit {
@@ -24,6 +26,7 @@ impl std::fmt::Display for ImportLimit {
             ImportLimit::UncompressedBytes => "uncompressed bytes",
             ImportLimit::TextLength => "characters in one text",
             ImportLimit::EntityExpansion => "custom entity expansions",
+            ImportLimit::SpinCount => "key derivation rounds",
         })
     }
 }
@@ -47,6 +50,34 @@ pub enum XlsxError {
     /// The workbook exceeds an import resource limit.
     #[error("Limit Error: more than {max} {limit}")]
     Limit { limit: ImportLimit, max: u64 },
+    /// The file is an OLE compound file, not a zip package, and holds neither an encrypted xlsx
+    /// nor a binary workbook, or its container is malformed (decision 0279, SPEC-0031 D1).
+    #[error("OLE Compound File Error: the file is an OLE compound file that holds no workbook RustSheet can read, not an xlsx package")]
+    OleCompoundFile,
+    /// The file is a password-protected xlsx: an OLE compound file holding the ECMA-376
+    /// `EncryptionInfo` and `EncryptedPackage` streams. Decryption is not implemented yet
+    /// (SPEC-0031 D2, T-4265).
+    #[error("Encrypted Workbook Error: the file is a password-protected xlsx, which cannot be opened yet")]
+    EncryptedPackage,
+    /// The file is a legacy binary Excel workbook (`.xls`, BIFF): an OLE compound file with a
+    /// `Workbook` or `Book` stream. RustSheet reads only xlsx (SPEC-0031, "The .xls plan").
+    #[error("Legacy Binary Workbook Error: the file is a binary Excel workbook (.xls); save it as .xlsx to open it")]
+    LegacyBinaryWorkbook,
+    /// The password does not open the encrypted package (SPEC-0031 D2), or is longer than the
+    /// 255 UTF-16 code units a password may have (E3).
+    #[error("Wrong Password Error: the password does not open this workbook")]
+    WrongPassword,
+    /// The package is encrypted in a way RustSheet does not read (SPEC-0031 D2): Extensible
+    /// encryption, RC4, a certificate key encryptor, a cipher other than AES-CBC, or a
+    /// `spinCount` past the format's 10,000,000. The text names the kind, never the password.
+    #[error(
+        "Unsupported Encryption Error: the workbook uses an encryption RustSheet cannot read: {0}"
+    )]
+    UnsupportedEncryption(String),
+    /// The encryption data breaks the format (SPEC-0031 D3), or an Agile package failed its
+    /// integrity check (D5). The text says which, never the password.
+    #[error("Malformed Encryption Error: {0}")]
+    MalformedEncryption(String),
 }
 
 impl From<io::Error> for XlsxError {
@@ -88,9 +119,15 @@ impl From<quick_xml::events::attributes::AttrError> for XlsxError {
 impl XlsxError {
     pub fn user_message(&self) -> String {
         match &self {
-            XlsxError::IO(_) | XlsxError::Workbook(_) | XlsxError::Limit { .. } => {
-                self.to_string()
-            }
+            XlsxError::IO(_)
+            | XlsxError::Workbook(_)
+            | XlsxError::Limit { .. }
+            | XlsxError::OleCompoundFile
+            | XlsxError::EncryptedPackage
+            | XlsxError::LegacyBinaryWorkbook
+            | XlsxError::WrongPassword
+            | XlsxError::UnsupportedEncryption(_)
+            | XlsxError::MalformedEncryption(_) => self.to_string(),
             XlsxError::Zip(_) | XlsxError::Xml(_) => {
                 "IronCalc can only open workbooks created by Microsoft Excel. \
                 Can you open this file with Excel, save it to a new file, \

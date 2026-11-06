@@ -1527,7 +1527,10 @@ is turned into (a range arm of a lifted IF or CHOOSE, or an HSTACK or VSTACK arg
 its used area, then a picked one copied for 3 per cell of the range; T-1564), 3 per cell of each array an aggregate (SUM,
 COUNT, AVERAGE, MIN, MAX, PRODUCT and the other `for_each_value` readers) reads, nested GROUPBY/PIVOTBY cells it
 flattens included (T-2804), one per 4 bytes of each text value a node gives (and of a lifted text call's results and of each text the
-`&` operator makes over an array, T-2806), 512 per LAMBDA value
+`&` operator makes over an array, T-2806), one per 16 ticks of the text comparisons a node makes (ticks weighted by path, below; the collation's passes up to
+their first difference, `=`/`<` between texts, the exact-match fold of MATCH, VLOOKUP and HLOOKUP, wildcard patterns, and the
+bytes of each text a collation key or a lookup fold is built from: MATCH, XMATCH, XLOOKUP, LOOKUP, UNIQUE, SORT, SORTBY,
+GROUPBY and the criteria; T-4233), 512 per LAMBDA value
 made plus 6 per node of each LAMBDA body cloned (the LAMBDA stored, and a call's fresh copy of its body; T-2923), plus the
 per-call caps' own charges: a lifted call's cell visits and kernel units (`MAX_LIFTED_CELL_VISITS`, 1 unit each), GROUPBY/PIVOTBY's
 visits, and a REGEX* or regex XLOOKUP/XMATCH call's compile budget (4 bytes a unit) and search work (32 units a unit), all of
@@ -1550,16 +1553,67 @@ second call's charge fails) and of smaller RATE calls 5.2 s, of lifted YIELD 7.6
 since T-2879, so these are node units). One call at its visit cap (2026-10-27, before T-2923's re-fit, which does not change
 visit units): RATE 2.4 s, ODDLPRICE 1.1 s, CHISQ.DIST and POISSON.DIST 0.4 s, GAMMA.INV and GAMMA.DIST under 0.1 s, COUNTIF
 and SUMIFS over 1,024 cells 0.1 and 0.4 s. The LAMBDAs a formula makes are dropped once its root cell is evaluated, so a
-recalculation of many such formulas does not slow each later one (T-2925). Array cells read by the other whole-array
-readers are not charged yet (T-2805). The calibration figures above were measured before T-2804 charged the aggregates'
+recalculation of many such formulas does not slow each later one (T-2925). A read of a LET variable or LAMBDA parameter
+copies what it is bound to, so it is charged that value (3 per array cell, one per 4 bytes of a text) in reference context
+too, as in value context: every whole-array reader of a bound array pays the cells it copies before it reads them (T-2805).
+The audited readers, each covered by `every_whole_array_reader_pays_the_cells_it_reads` (test_formula_work.rs): MATCH,
+XMATCH, XLOOKUP, LOOKUP, VLOOKUP, HLOOKUP, SORT, SORTBY, UNIQUE, FILTER, TEXTJOIN, CONCAT, TOCOL, TOROW, SUMPRODUCT, MMULT,
+COUNTIF, SUMIF, SUMIFS, COUNTIFS, AVERAGEIF, MAXIFS, LARGE, SMALL, PERCENTILE, QUARTILE, PERCENTRANK, NPV, AGGREGATE,
+and INDEX, ROWS and COLUMNS: these three do O(1) work on the array but the variable read under them copies it, so they
+are charged too. GROUPBY and PIVOTBY hand each call its group as a bound parameter, so `SUM(x)` there pays the copy and
+the aggregate's read. Text elements of an array are not charged by their length at a read: their bytes are shared
+(T-2806), so the copy moves pointers; a reader that compares them pays the characters it reads instead (T-4233).
+This applies to every text comparison a formula makes, not only over bound arrays: a single SORT, SORTBY, UNIQUE,
+lookup, `=` or criteria match over ranges or arrays of long texts with long shared prefixes pays too. Each comparison
+counts what its passes read before they stop (`counted` in collation.rs), and the evaluator charges the
+count after each node (`Model::spend_compared`), so comparing 32,767-byte texts that differ in their first byte costs no
+more than comparing short ones, while a MAP of `MATCH(REPT("a",32766)&"b",s,0)` over `s` bound to 1E5 such texts runs out
+on its first call. The count is in ticks, weighted by path because the paths' cost a character differs a
+hundredfold (collation/compared.rs): 1 a byte for the ASCII first pass, the ASCII folds and wildcard matches of the
+lookups and criteria, and the ASCII second pass (equal or case-only-different texts); 48 a character of
+the full collation (non-ASCII, lone surrogates), read once by its first pass, which keeps the elements for the later passes; 64 a byte of a collation key (UNIQUE, the exact-match lookup index, the *IF(S) cache); 32 a byte of a non-ASCII lookup fold; one unit per 16 ticks (`COMPARED_TICKS_PER_UNIT`). Re-fitted after T-4279 made the
+full collation and the keys 4 to 19 times faster (release build, 2026-11-05, per character of one text: ASCII equal texts
+81 to 3.2 ns, `é` 1,179 to 153, `中` 1,300 to 151, a key of ASCII 203 to 50 and of `é` 488 to 75; the same MAP shapes as below run
+until `#VALUE!` in 4.3 s for `s=REPT("É",16383)` over the `é` texts, 3.1 s for XMATCH over them, 5.2 s for `SUM(--(s=REPT("A",32767)))`,
+7.1 s for the ASCII XMATCH, 5.4 s for SORT, 2.8 s and 3.4 s for the two UNIQUE shapes, 3.2 s for UNIQUE over the `é` texts;
+`ROWS(UNIQUE(REPT("a",20)&SEQUENCE(1048576)))` computes in 5.9 s, and `ROWS(UNIQUE(REPT("a",100)&SEQUENCE(1048576)))`, 13 s at a
+key weight of 32, is refused as before). T-4233's first fit, by time
+(release build, 2026-11-05, 4 cores; each a MAP over 1E5 calls with `s` bound to 1,000 texts of 32,767 bytes, or 16,383
+`é`, run until `#VALUE!`): `XMATCH(REPT("a",32766)&"b",s)` 7.0 s (1.6 ns a tick), MATCH wildcard 4.9 s, `SUM(--(s=REPT("A",32767)))`
+5.7 s, `ROWS(SORT(s))` 5.6 s, XMATCH over the `é` texts 6.2 s, MATCH exact over them 5.1 s; the key path with `s` bound to
+100 texts of 32,767 bytes, `ROWS(UNIQUE(s))` 7.1 s, `ROWS(UNIQUE(s))` over 100 distinct such texts 7.4 s. Measured to compute:
+`ROWS(UNIQUE(REPT("a",20)&SEQUENCE(1048576)))` in 9.8 s (main: 9.95 s), `ROWS(UNIQUE(REPT("a",200)&SEQUENCE(100000)))` 5.1 s, `ROWS(SORT(REPT("a",100)&SEQUENCE(1048576)))`
+in 4.1 s (81M compare units), `ROWS(SORT(IF(SEQUENCE(1048576),"Same text, 30 characters long")))` 2.9 s,
+`ROWS(SORT(REPT("a",300)&SEQUENCE(100000)))` 0.6 s; a one-unit-per-4-bytes weight (the first cut) refused the first of
+these, and a 256-tick key weight (round 2) refused the first UNIQUE. Refused now though they computed before: single
+nodes whose comparisons alone take longer than the limit's worth of time, such as `ROWS(SORT(REPT("a",300)&SEQUENCE(1048576)))`
+(about 9 s) and a UNIQUE whose texts add up to more than about 30 MB of collation keys, such as 1,048,576 texts of
+over about 30 bytes (`ROWS(UNIQUE(REPT("a",100)&SEQUENCE(1048576)))`). The charge lands after the node, but since T-4278 the node's
+UNIQUE's grouping and SORT's and SORTBY's sort stop once the ticks they noted pass what the run has left
+(`compared::out_of_ticks`, inside `compared::stoppable`: the pairwise comparison returns `Equal` and a key is empty,
+without reading, and the run is `#VALUE!` whatever they return). Readers that build an index shared by the pass's
+formulas (the exact-match lookup index, the criteria index) never stop, since a stand-in key would give the later
+formulas, each under its own budget, wrong values. So
+that UNIQUE is `#VALUE!` in 5.3 s instead of about 30 s, and one of 1,000 texts of 16,383 `é` in 1.7 s instead of about
+60 s (release build, 2026-11-05). The total order (GROUPBY's `slice::sort_by`) reads on, since that sort may panic on a
+comparator that is not an order (T-4279 speeds the collation up). `rustsheet-eval check` has no formula past the limit. Covered by
+`every_text_comparing_reader_pays_the_bytes_it_compares` and
+`a_sort_of_texts_with_a_long_shared_prefix_stays_well_inside_the_limit` and
+`a_unique_of_medium_texts_stays_inside_the_limit`, and the stop by
+`a_reader_stops_reading_once_its_ticks_pass_what_the_run_has_left` and
+`a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index`. The criteria functions (COUNTIF,
+SUMIFS, ...) take ranges, not bound arrays, and their comparisons go through the same count. The calibration figures above were measured before T-2804 charged the aggregates'
 reads, so an aggregate-heavy eval formula now spends more (`rustsheet-eval check` still has no formula past the limit).
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/area_budget.rs (`MAX_FORMULA_WORK`, `Model::spend_work`, `Model::with_area_budget`),
 crates/rustsheet-engine/src/model.rs (`evaluate_node_in_context`), crates/rustsheet-engine/src/functions/logical/lambda.rs
 (`call_prepared`, `prepare_lambda`, `fn_lambda`), crates/rustsheet-engine/src/node_frames.rs (`LambdaDefKind`),
 crates/rustsheet-engine/src/arithmetic.rs (`handle_concatenate`), crates/rustsheet-engine/src/functions/util/aggregate_args.rs
-(`walk_array_items`).
-Tasks: T-2712 (SPEC-0024), T-2803, T-2813, T-2923, T-2806, T-2804
+(`walk_array_items`), crates/rustsheet-engine/src/model.rs (`evaluate_node_with_reference`) and
+crates/rustsheet-engine/src/functions/logical/let.rs (`variable_reference`), crates/rustsheet-engine/src/functions/util/collation.rs
+and functions/util/collation/compared.rs (`note_compared`, `cmp_text_in`) and crates/rustsheet-engine/src/area_budget.rs
+(`Model::spend_compared`, `COMPARED_TICKS_PER_UNIT`).
+Tasks: T-2712 (SPEC-0024), T-2803, T-2813, T-2923, T-2806, T-2804, T-2805, T-4233
 
 ## Copies of a text share its bytes
 Rule: Excel has no known limit on the memory one formula's texts take; `IF(SEQUENCE(1024,1024),REPT("a",32767))` copies a
@@ -1926,16 +1980,26 @@ to 0) are `#VALUE!`; `"-1"` is descending and TRUE ascending (H97-H165). The sna
 `1-2^-22`, `1-2^-23`, `1-2^-24` and `1-(2^-22+2^-33)` sort ascending, `1-2^-21`, `1-2^-20` and `1-(2^-22+2^-32)` are `#VALUE!` (floor 0), `2-2^-22` is `#VALUE!`
 (snapped to 2) and `2-2^-21` ascending. Just below -1 it is at least 2^-23 + 2^-34 and under 2^-22 (the half, as DATE and TIME bracket it more tightly, T-2267): `-1-2^-23`, `-1-2^-24` and `-1-(2^-23+2^-34)` sort descending (snapped to -1), but `-1-2^-22`,
 `-1-(2^-22+2^-33)`, `-1-(2^-22+2^-32)` and `-1-2^-21` are `#VALUE!` (floor -2); the cells just above -1 and -2 (`-1+2^-22`, `-2+2^-22`) say nothing of
-the tolerance, their floor is -1 and -2 either way. SORT's own sort_order still truncates (unprobed for fractions).
+the tolerance, their floor is -1 and -2 either way.
+SORT reads its sort_order and sort_index the same way (probes/t4447-sort-fractional-keys, excel-graph, 2026-11-06, T-4447;
+A1:B3 = (3,c),(1,a),(2,b)): a sort_order of -0.0001, -0.5, -0.9999, `"-0.5"`, `-1+2^-21`, `-1-2^-23` and `-1-2^-24` sorts
+descending; 1.5, 1.9999, `1-2^-22`, `1-2^-23` and `1-2^-24` ascending; 0.0001, 0.5, 0.9999, -1.5, `1-2^-21`, `-1-2^-22` and
+`2-2^-22` (snapped to 2) are `#VALUE!` (E1:E20, the same as a one-element array F1:F20, and per key in a list E21:E22). A
+sort_index of `1-2^-23`, `1-2^-24`, 1.5 reads key 1 and `2-2^-23`, 2.5, `2+2^-22` key 2, while 0.9999, `1-2^-21` and -0.5
+are `#VALUE!` and `3-2^-23` (snapped to 3, past the two columns) is `#VALUE!` too (I1:I11, by_col J1:J11; the key itself
+shows in R1:R10 and by_col S1:S10, over O1:P3 = (3,a),(1,c),(2,b), whose columns sort apart: `1-2^-23` and 1.5 sort by
+column 1, `2-2^-23` and 2.5 by column 2). The lifted by_col path (one SORT per by_col element) reads its single
+sort_index the same way in ours, unprobed there away from 2.7 (t2929 K18). Before T-4447 ours truncated both, so -0.5 and the values just below 1 were `#VALUE!` and `2-2^-22`
+and `3-2^-23` sorted.
 This is why `SORTBY(Data!E1:E12,MAX(..)%,-1)` (gen-m7/18b80d3fd292d63a Calc!A123:A134), `SORTBY(Data!C1:C12,IFNA(TIMEVALUE(..),..),1)`
 (7307132bb8820f17 A966:A977) keep their one-column arrays, `SORTBY(Data!B1:C12,(-1),1)` (0e40208f51c2454c Calc!A2) and the
 by_array 0.5 on Data!B1:C12 (7d67c559ce7536fa A1358) are `#VALUE!`, and `SORTBY(Data!B1:E12,Data!E1:E12,-0.0001,..)`
 (07d27aa0add0247f A658) sorts descending. The "Invalid values" list of "SORT and SORTBY argument errors" (`SORTBY(arr,key,0)`
 `#VALUE!`) still holds.
 Evidence: probes/t2310-sortby-single-by-array (42 formulas, excel-graph, 2026-10-22); gen-m7 (excel-graph, 2026-10-21, T-2225).
-Ours: implemented (T-2310): `by_array_axes` and `sortby_of` in functions/spill_functions.rs.
+Ours: implemented (T-2310): `by_array_axes` and `sortby_of` in functions/spill_functions.rs; SORT's in `sort_by_keys` (T-4447).
 Status: VERIFIED (excel-graph)
-Tasks: T-2310
+Tasks: T-2310, T-4447
 
 ## PIVOTBY: an error column total over several value columns is #VALUE! (T-2311)
 Rule (excel-graph, 2026-10-22, probes/t2311-pivotby-value-columns-error P!A1-A42, probes/t2311-pivotby-value-cause): with one
@@ -2403,9 +2467,32 @@ so the later calls meet a filter taller than them.
   depth {1,#N/A} is `#N/A`, {0,""} with {1,#N/A} is `#VALUE!`, and {0,#N/A} with {1,blank} or {1,""} is `#N/A`; position
   1 is -1 in every call, and the no-filter controls give the same cells (probes/t4028-groupby-lifted-spent-filter-blank
   G!A1:B23, T-4028).
+- A filter that keeps no row (`(Data!D1:D12="zz")`; column D holds no text) makes the call `#VALUE!`: the scalar call
+  is `#VALUE!` (probes/t4464-groupby-spent-filter-shapes G!A85), and so is every element of a lifted
+  `field_relationship` {0,1;0,1}, `{"x",0;0,1}` or {2,0;0,1}, `field_headers` {0,1;0,0} or `{"x",0;0,0}`, or total depth
+  {1,2;1,1} or {5,1;1,1} beside it (G!A9:B10, A21:B22, A33:B34, A45:B46, A57:B58, A69:B70, A81:B82), while the same calls
+  without a filter or with `(Data!C1:C12<0.2)` give the elements their values as above (G!A1:B82). Every element meets
+  the same filter, so whether a no-row filter is spent cannot be seen: an element is `#VALUE!` either way. Note that
+  `(Data!C1:C12>99)` is no such filter: it keeps C10 (123456789.123), and text and FALSE compare above every number, so
+  it keeps C1, C3, C5, C10 and C11 and is spent like any dropping filter (123456789.123, `#VALUE!`; `#VALUE!`, `#VALUE!`, G!A89:B90).
+- A table `field_relationship` (1) refuses subtotals after the filter, so its refusal spends it. Over two key columns
+  (Data!B1:C12), {1,0;0,1} with total depth 2 is `#VALUE!`, 0.3; 0.3, `#VALUE!` without a filter but `#VALUE!` in all
+  four beside `(Data!C1:C12<0.2)` (G!A173:B178), and `{"x",1;0,1}` with depth 2 is `#VALUE!` in all four beside it, where
+  position 3 is 0.3 without it (G!A221:B226): the text refuses before the filter and spends nothing, the table after it.
+  {0,1;0,1} with depth 2 is 1, `#VALUE!`; `#VALUE!`, `#VALUE!` (G!A201:B202). With depth 1 or -1 a table element is served
+  like a hierarchy one (G!A165:B170, A181:B186, A213:B218, A229:B234). Over one key column a depth of 2 is `#VALUE!` in
+  every element, with or without the filter (G!A101:B106, A125:B130, A149:B154).
+- A GROUPBY nested in another spends nothing outside itself. An outer `field_relationship` or total depth computed from
+  an inner lifted GROUPBY (`0*IFERROR(GROUPBY(..,(Data!C1:C12<0.2),{0,1;0,1}),0)`) or from a MAP of scalar GROUPBY
+  calls with that filter gives every outer element its value without an outer filter, and is spent by the outer filter
+  only (G!A237:B298). An inner GROUPBY with that filter, scalar or lifted, inside the outer call's function
+  (`LAMBDA(v,ROWS(GROUPBY(..)))`) spends nothing either (G!A301:B314). A MAP of scalar GROUPBY calls with a dropping
+  filter gives each call its value: one call's filter is not spent for the next (G!A321:B322).
 Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840), t3880-groupby-scalar-filter-edges (T-3880) and
 t3964-groupby-filter-lift-errors (T-3964), t3985-groupby-two-lifted-spent-filter (T-3985),
-t4019-groupby-lifted-spent-filter-kinds (T-4019) and t4028-groupby-lifted-spent-filter-blank (T-4028).
+t4019-groupby-lifted-spent-filter-kinds (T-4019), t4028-groupby-lifted-spent-filter-blank (T-4028) and
+t4464-groupby-spent-filter-shapes (T-4464, excel-graph, 2026-11-06; 323 cells, every one as the engine predicted before the
+fill, docs/research/t4464/predictions.tsv).
 Ours: `Model::groupby_args` sets `Model::groupby_filter_spent` when its filter dropped rows (it reads field_relationship
 before the filter and checks the total depth's range after it, Excel's order here) and `Model::lift_by_class` makes
 every later element `#VALUE!`, except an error `field_relationship` element, which stays its error (its `settled`
@@ -2413,10 +2500,9 @@ argument, T-3880), and, since T-3964, a lifted option position whose first error
 no number (`Model::lift_options`; numeric text no longer stops it since T-3985; T-4019 and T-4028 found numbers, booleans
 and a blank pass through as well, and `""` stops it as other text does); a cell read on demand during an element's call
 keeps its own filter to itself. PIVOTBY's lift beside a filter column is unprobed (T-3892).
-Status: VERIFIED (excel-graph) for the cells named; UNVERIFIED, and modeled from the order above: a filter that keeps no
-row (ours: not spent, the call is `#VALUE!` before it filters anything), a table relationship with subtotals (ours: spent,
-that check comes after the filter), and a lift nested inside another lift (ours: the inner lift spends nothing outside it)
-Tasks: T-3840, T-3880, T-3964, T-3985, T-4019, T-4028
+Status: VERIFIED (excel-graph) for the cells named. Whether a filter that keeps no row is spent is not observable (every
+element is `#VALUE!` either way); ours does not spend it.
+Tasks: T-3840, T-3880, T-3964, T-3985, T-4019, T-4028, T-4464
 
 ## Array-value edges in the gen-m9 sweep (T-2436)
 Rule (one gen-m9 cell each, probes/t2436, excel-graph, 2026-10-24; mechanisms probed in probes/t2579-array-value-edges,
@@ -2484,7 +2570,7 @@ for hours and exhaust memory. An external diff from a peer can carry any area (d
 Evidence: none for Excel. This is the no-panic and bounded-work rule (CLAUDE.md directive 5), not an Excel observation.
 Status: DEVIATION (decision 0014). Whether Excel accepts a CSE formula over more than a whole column is UNVERIFIED
 (probe pending, T-3436).
-Implemented in: crates/rustsheet-engine/src/model.rs (`set_user_array_formula`)
+Implemented in: crates/rustsheet-engine/src/model.rs (`reenter_array_formula`, behind `set_user_array_formula`)
 Tasks: T-2896, T-3436
 
 ## A one-cell error reference is a 1x1 array in TOCOL, TOROW and FILTER (T-3497)

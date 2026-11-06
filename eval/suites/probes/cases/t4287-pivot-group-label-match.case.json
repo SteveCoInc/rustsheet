@@ -1,0 +1,275 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4287: does a <groupItems> text match one of Excel's own numeric group labels ignoring spacing or case? Each pivot groups whole-number data 0 to 9 by 3 (Excel's labels <0, 0-2, 3-5, 6-9, >9) or 0 to 3e20 by 1e20; the relabel order (matched file items first, in the file's order, then the rest in layout order) shows which items matched. P lists '6 - 9', '<0', ' 3-5', '0-2', '>9'; Q lists '<0', '0-2', '3-5 ', '6-9', '>9' reversed by spacing on 3-5 only; R lists the 0 to 3e20 labels in lower case (e) in reverse order, S the same in upper case. S values are distinct powers of two. Calc reads the rendered pivots as text, two columns per pivot.",
+  "tags": [
+    "probe",
+    "pivot",
+    "T-4287",
+    "M6"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "NP",
+        "B1": "SP",
+        "A2": -1,
+        "B2": 1,
+        "A3": 0,
+        "B3": 2,
+        "A4": 1,
+        "B4": 4,
+        "A5": 3,
+        "B5": 8,
+        "A6": 4,
+        "B6": 16,
+        "A7": 6,
+        "B7": 32,
+        "A8": 9,
+        "B8": 64,
+        "A9": 10,
+        "B9": 128,
+        "D1": "NQ",
+        "E1": "SQ",
+        "D2": -1,
+        "E2": 1,
+        "D3": 0,
+        "E3": 2,
+        "D4": 1,
+        "E4": 4,
+        "D5": 3,
+        "E5": 8,
+        "D6": 4,
+        "E6": 16,
+        "D7": 6,
+        "E7": 32,
+        "D8": 9,
+        "E8": 64,
+        "D9": 10,
+        "E9": 128,
+        "G1": "NR",
+        "H1": "SR",
+        "G2": -1.5,
+        "H2": 1,
+        "G3": 0.5,
+        "H3": 2,
+        "G4": 1.5e+20,
+        "H4": 4,
+        "G5": 2.5e+20,
+        "H5": 8,
+        "G6": 4e+20,
+        "H6": 16,
+        "J1": "NS",
+        "K1": "SS",
+        "J2": -1.5,
+        "K2": 1,
+        "J3": 0.5,
+        "K3": 2,
+        "J4": 1.5e+20,
+        "K4": 4,
+        "J5": 2.5e+20,
+        "K5": 8,
+        "J6": 4e+20,
+        "K6": 16
+      }
+    },
+    {
+      "name": "P",
+      "cells": {
+        "H1": "T-4287 pivot SpacedInner"
+      },
+      "pivot_tables": [
+        {
+          "name": "SpacedInner",
+          "source": "Data!A1:B9",
+          "location": "A3",
+          "row": "NP",
+          "value": "SP",
+          "group": {
+            "start": 0,
+            "end": 9,
+            "interval": 3,
+            "items": [
+              "6 - 9",
+              "<0",
+              " 3-5",
+              "0-2",
+              ">9"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Q",
+      "cells": {
+        "H1": "T-4287 pivot TrailingSpace"
+      },
+      "pivot_tables": [
+        {
+          "name": "TrailingSpace",
+          "source": "Data!D1:E9",
+          "location": "A3",
+          "row": "NQ",
+          "value": "SQ",
+          "group": {
+            "start": 0,
+            "end": 9,
+            "interval": 3,
+            "items": [
+              ">9",
+              "6-9",
+              "3-5 ",
+              "0-2",
+              "<0"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "R",
+      "cells": {
+        "H1": "T-4287 pivot LowerE"
+      },
+      "pivot_tables": [
+        {
+          "name": "LowerE",
+          "source": "Data!G1:H6",
+          "location": "A3",
+          "row": "NR",
+          "value": "SR",
+          "group": {
+            "start": 0,
+            "end": 3e+20,
+            "interval": 1e+20,
+            "items": [
+              ">3e+20",
+              "2e+20-3e+20",
+              "1e+20-2e+20",
+              "0-1e+20",
+              "<0"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "S",
+      "cells": {
+        "H1": "T-4287 pivot UpperE"
+      },
+      "pivot_tables": [
+        {
+          "name": "UpperE",
+          "source": "Data!J1:K6",
+          "location": "A3",
+          "row": "NS",
+          "value": "SS",
+          "group": {
+            "start": 0,
+            "end": 3e+20,
+            "interval": 1e+20,
+            "items": [
+              ">3E+20",
+              "2E+20-3E+20",
+              "1E+20-2E+20",
+              "0-1E+20",
+              "<0"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=P!A3&\"\"",
+        "B1": "=P!B3&\"\"",
+        "A2": "=P!A4&\"\"",
+        "B2": "=P!B4&\"\"",
+        "A3": "=P!A5&\"\"",
+        "B3": "=P!B5&\"\"",
+        "A4": "=P!A6&\"\"",
+        "B4": "=P!B6&\"\"",
+        "A5": "=P!A7&\"\"",
+        "B5": "=P!B7&\"\"",
+        "A6": "=P!A8&\"\"",
+        "B6": "=P!B8&\"\"",
+        "A7": "=P!A9&\"\"",
+        "B7": "=P!B9&\"\"",
+        "A8": "=P!A10&\"\"",
+        "B8": "=P!B10&\"\"",
+        "A9": "=P!A11&\"\"",
+        "B9": "=P!B11&\"\"",
+        "A10": "=P!A12&\"\"",
+        "B10": "=P!B12&\"\"",
+        "A11": "=P!A13&\"\"",
+        "B11": "=P!B13&\"\"",
+        "A12": "=P!A14&\"\"",
+        "B12": "=P!B14&\"\"",
+        "C1": "=Q!A3&\"\"",
+        "D1": "=Q!B3&\"\"",
+        "C2": "=Q!A4&\"\"",
+        "D2": "=Q!B4&\"\"",
+        "C3": "=Q!A5&\"\"",
+        "D3": "=Q!B5&\"\"",
+        "C4": "=Q!A6&\"\"",
+        "D4": "=Q!B6&\"\"",
+        "C5": "=Q!A7&\"\"",
+        "D5": "=Q!B7&\"\"",
+        "C6": "=Q!A8&\"\"",
+        "D6": "=Q!B8&\"\"",
+        "C7": "=Q!A9&\"\"",
+        "D7": "=Q!B9&\"\"",
+        "C8": "=Q!A10&\"\"",
+        "D8": "=Q!B10&\"\"",
+        "C9": "=Q!A11&\"\"",
+        "D9": "=Q!B11&\"\"",
+        "C10": "=Q!A12&\"\"",
+        "D10": "=Q!B12&\"\"",
+        "C11": "=Q!A13&\"\"",
+        "D11": "=Q!B13&\"\"",
+        "C12": "=Q!A14&\"\"",
+        "D12": "=Q!B14&\"\"",
+        "E1": "=R!A3&\"\"",
+        "F1": "=R!B3&\"\"",
+        "E2": "=R!A4&\"\"",
+        "F2": "=R!B4&\"\"",
+        "E3": "=R!A5&\"\"",
+        "F3": "=R!B5&\"\"",
+        "E4": "=R!A6&\"\"",
+        "F4": "=R!B6&\"\"",
+        "E5": "=R!A7&\"\"",
+        "F5": "=R!B7&\"\"",
+        "E6": "=R!A8&\"\"",
+        "F6": "=R!B8&\"\"",
+        "E7": "=R!A9&\"\"",
+        "F7": "=R!B9&\"\"",
+        "E8": "=R!A10&\"\"",
+        "F8": "=R!B10&\"\"",
+        "E9": "=R!A11&\"\"",
+        "F9": "=R!B11&\"\"",
+        "G1": "=S!A3&\"\"",
+        "H1": "=S!B3&\"\"",
+        "G2": "=S!A4&\"\"",
+        "H2": "=S!B4&\"\"",
+        "G3": "=S!A5&\"\"",
+        "H3": "=S!B5&\"\"",
+        "G4": "=S!A6&\"\"",
+        "H4": "=S!B6&\"\"",
+        "G5": "=S!A7&\"\"",
+        "H5": "=S!B7&\"\"",
+        "G6": "=S!A8&\"\"",
+        "H6": "=S!B8&\"\"",
+        "G7": "=S!A9&\"\"",
+        "H7": "=S!B9&\"\"",
+        "G8": "=S!A10&\"\"",
+        "H8": "=S!B10&\"\"",
+        "G9": "=S!A11&\"\"",
+        "H9": "=S!B11&\"\""
+      }
+    }
+  ]
+}

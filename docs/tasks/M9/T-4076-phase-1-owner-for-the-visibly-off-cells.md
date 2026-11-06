@@ -43,6 +43,45 @@ Cells (from `make unowned-off ALL=1` on 30dd03e3, the deferred-only ones):
 - probes/t3881-imcsch-flip-start-negative.case.json (1; unattributed): Calc!A3
 - probes/t3883-im-overflow-reciprocal-sweep.case.json (1; unattributed): Calc!A101
 
+Added by gap triage 2026-11-04 (`make eval` and `make phase1-exit` on origin/main c3d019be8, after T-4056's 13-digit
+bar). Three more cells have only deferred owners (T-2221, T-3472, T-3952, T-3954, T-4016). Each is a family call with
+a non-family argument function, so it keeps the 15-digit bar (SPEC-0030 "Which cells qualify"). All three are
+first wrong at the 14th or 15th digit (decision 0267 Tier C/D):
+- gen-m9/2801c1c11c21e134.case.json (1; unattributed, F.DIST + REDUCE): Calc!A219, Excel 4.881498042869914e-39, ours ...936e-39
+- gen-m9/285d87cea1aaa73c.case.json (1; unattributed, FDIST + MINUTE): Calc!A34, Excel 6.448979666396885e-18, ours ...879e-18
+- gen-m9/8f2ac25945af87da.case.json (1; unattributed, FDIST + DAYS360): Calc!A92, Excel 4.5060151487344243e-45, ours ...392e-45
+
+Added by gap triage 2026-11-04 (`make eval`, `make exit-owners` and `make unowned-off ALL=1` on origin/main
+b450050f8). Two GAMMA.DIST cells had no open owner and showed in the M9 exit row (`rate:GAMMA.DIST`, `probes`). Both
+sides are within 1e-9 of the math, so they are Phase 1b evidence under decision 0188 R1(c). They are first wrong at
+the 15th (A145) and 14th (A146) digit, decision 0267 Tier C/D. The fix is the deferred T-4216:
+- probes/t2982-gamma-inv-huge-shape.case.json (2; GAMMA.DIST): S!A145, Excel 2.8546421399586357e-07, ours ...6256e-07; S!A146, Excel 2.8561234160188864e-07, ours ...894e-07
+
+Added by gap triage 2026-11-05 (`make eval` and `make unowned-off ALL=1` on origin/main b6cf9465). One more
+F.DIST.RT cell of T-4017's huge-df2 sweep, in the 1e10 case the list above lacks, has only deferred owners; it is first
+wrong at the 13th digit (relative 1.7e-13):
+- probes-numeric/t4017-f-huge-df2-above-mean-1e10.case.json (1; F.DIST.RT): Calc!A203, `F.DIST.RT(10,60,1E10)`, Excel 4.421993244304403e-90, ours 4.421993244303664e-90
+
+Added by gap triage 2026-11-06 (`make eval` on origin/main 39f04d556, every suite fetched). No live task lists these
+34 visibly-off cells. The t4045 fresh cells are listed only by deferred T-3209, A3188 only by deferred T-2122, and the
+zero-cut cells by no task. The live tasks that name their cases do so only in passing: T-4280 (a tidy-up) and T-4254
+(a probe) cite the t4045 cases as evidence, and T-3764 has a copied fill-stability bullet. So `make unowned-off ALL=1`
+counted the cells as owned (T-4436 is the tool fix).
+
+Against 60-digit mpmath at the double arguments, both sides are within 1E-9 of the math on every one of them. On the
+F.DIST.RT tails near 1E-286, Excel is 3E-15 to 2.1E-13 off and ours 7E-15 to 1.9E-12. They are Phase 1b evidence
+(decision 0188 R1(c)) once F.DIST.RT and GAMMALN have math sidecars, which T-4103 and T-4106 add with their Gate A
+tables. Until then they count, because they have no math value.
+
+Ours is the worse side on the df2 1E6 columns (E, F), which are in T-4435's region 1. Move those cells to T-4435 if its
+change brings them within 15 digits of Excel.
+- probes/t4045-f-dist-rt-zero-cut-fresh.case.json (24; F.DIST.RT): Calc!A1, A5, A6, B1, B6, B7, B8, C1, C2, C6, C7, D1, D6, E1, E2, E3, E4, E7, E8, F1, F4, F6, F8, F9
+- probes-numeric/t4045-f-dist-rt-zero-cut.case.json (9; F.DIST.RT): Calc!A3, A15, B8, B9, B15, B18, C1, C2, C3
+- probes-numeric/t2464-r2-bpser-small-gl.case.json (1; GAMMALN): Calc!A3188, `GAMMALN((56921738*2^-25+29850023*2^-51))`, Excel -0.09655332490423914, ours -0.09655332490423907
+
+The 28 BETA.DIST b = 40 cells of probes-numeric/t4080-beta-num-band-edge that only deferred T-3209 owned went to
+T-4214 (decision 0267 Tier A), not here.
+
 ## Acceptance criteria
 - [ ] Each cell above is within half a unit of Excel's 15th significant digit, or moved to an open, non-deferred task
       that owns it, or listed as Phase 1b evidence (both sides within 1e-9 of the 50-digit math; then it is not

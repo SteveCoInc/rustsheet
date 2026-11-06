@@ -26,10 +26,31 @@ bound"). The rest stays `#NUM!` in the engine:
 - probes/irr-guess-edges A27-A29 and gen-m9/bc04c1f478c9896c Calc!A56: IRR over Data!A1:D12 (first flow 0,
   values 1E+15 among them) from guesses 0.05, 0.1, 0.5; `IRR({0,1E+15,2,42,1E+15,-0.0001})` (A34, A35) is `#NUM!`.
 - gen-m9/530c636749a85209 Calc!A338 (`IRR({-1,1E+15},143)` inside HYPGEOM.DIST, `#DIV/0!` in Excel) is the same
-  shape; T-3312 lists it and keeps it.
+  shape; T-3312 traced it to the IRR (Data!C2:D3 reads -1 and 1E+15, BITXOR(235,100) = 143) and moved it here.
 Cells:
 - gen-m9/bc04c1f478c9896c.case.json (1): Calc!A56
+- gen-m9/530c636749a85209.case.json (1): Calc!A338
 - probes/irr-guess-edges-2 A20, A28, A29; probes/irr-guess-edges A27, A28, A29, A38
+
+- T-3407 (2026-11-04): gen-m9/bc04c1f478c9896c Calc!A56 and probes/irr-guess-edges A27 now pass. The secant's step
+  there lands where NPV cannot be evaluated, and the call is `#DIV/0!` (financial.md "IRR is #DIV/0! where its secant
+  cannot evaluate NPV").
+
+## Cells left by T-3407
+Excel is `#DIV/0!` and the engine `#NUM!`, though every NPV the engine's secant evaluates is in range, so T-3407's rule
+does not reach them (`make eval` on T-3407's branch, 2026-11-04). The overflowing step in Excel is not one of the
+engine's secant iterates:
+- probes/t3406-irr-num-boundary.case.json (6): P!A66, A67, A68, A81, A82, A95
+- probes-numeric/t3347-irr-conventional-holdout.case.json (2): P!A131, A138 (T-3407's context: the secant goes flat at
+  step 3 and both Newton runs overflow)
+- probes-numeric/t3411-irr-r4-fresh.case.json (3): Calc!A83, A85, A91
+- probes-numeric/t3411-irr-r4-fresh-2.case.json (6): Calc!A1, A6, A19, A82, A92, A98
+- probes-numeric/t3411-irr-r4-fresh-3.case.json (2): Calc!A24, A78
+- probes-numeric/t3411-irr-r4-fresh-4.case.json (6): Calc!A4, A68, A86, A89, A94, A103
+- Gate A known failures this task owns (moved from T-3407 and, for the new batch, from T-3548): accuracy/IRR/r4-T-3411
+  A213, A232, A233 and accuracy/IRR/r4-T-3407 A237, long series (about 180 to 198 flows) where Excel is `#DIV/0!` and
+  the engine `#NUM!`. accuracy/IRR/s1 A237, A248 and A268 are the same symptom and stay T-3548's (accepted under
+  decision 0267).
 
 ## Acceptance criteria
 - [ ] Probe the d = 1 rule T-2802 implemented from one cell (probes/irr-guess-edges A39), per the T-2802

@@ -7,6 +7,7 @@ from collections.abc import Iterator
 import mpmath
 import pytest
 
+from rustsheet_tools.accuracy import tables
 from rustsheet_tools.accuracy.defs import beta, gamma
 from rustsheet_tools.accuracy.model import REGISTRY, DomainError, NoValueError
 
@@ -52,14 +53,65 @@ def test_gamma_quantile_at_a_large_shape_round_trips() -> None:
     assert close(gamma.upper_tail(y, a) / p, "1", 30)
 
 
-def test_gamma_tails_have_no_value_above_the_shape_cap() -> None:
-    # Above 1E8 the summed expansions would take minutes per evaluation (probes-numeric has shapes from 1E9); the
-    # huge-shape branch is T-3578's, so those cells get no value rather than a slow one.
+def test_temme_coefficients_match_the_published_constants() -> None:
+    # c_0(0) = -1/3, c_0'(0) = 1/12, c_1(0) = -1/540 and c_2(0) = 25/6048 (Temme 1979; DLMF 8.12.11): the recursion's
+    # constants are found by cancelling the pole, so these check them.
+    c = gamma.temme_coefficients(90)
+    assert close(c[0][0], str(mp(-1) / 3), 45)
+    assert close(c[0][1], str(mp(1) / 12), 45)
+    assert close(c[1][0], str(mp(-1) / 540), 45)
+    assert close(c[2][0], str(mp(25) / 6048), 45)
+
+
+def test_temme_expansion_agrees_with_the_series_and_mpmath() -> None:
+    # Where the summed series and continued fraction run (to TEMME_SHAPE_MIN), the expansion matches them to 40 digits,
+    # from z = -37 to 37 standard deviations (tails from about 1E-300); at 1E4 mpmath's gammainc agrees to 48.
+    for a in (mp(10000), mp(1000000)):
+        for z in (-37, -5, 0, mp("0.5"), 3, 37):
+            y = a + z * mpmath.sqrt(a)
+            lower, upper = gamma._temme(y, a)
+            assert close(
+                lower / gamma._series(y, a) if y < a + 1 else lower / (1 - gamma._continued_fraction(y, a)),
+                "1",
+                40,
+            )
+            assert close(
+                upper / (1 - gamma._series(y, a)) if y < a + 1 else upper / gamma._continued_fraction(y, a),
+                "1",
+                40,
+            )
+    a = mp(10000)
+    for y in (a - 20 * mpmath.sqrt(a), a + 3 * mpmath.sqrt(a)):
+        with mpmath.workdps(70):
+            reference = mpmath.gammainc(a, 0, y, regularized=True)
+        assert close(gamma._temme(y, a)[0] / reference, "1", 48)
+
+
+def test_gamma_quantiles_at_a_huge_shape_are_excels_true_quantile() -> None:
+    # Where Excel's search converges it is the true quantile (statistics.md "GAMMA.INV and CHISQ.INV at a huge shape"):
+    # GAMMA.INV(0.5,5E9,1) = 4999999999.666667, GAMMA.INV(1E-30,7E9,1) = 6999040894.354145 and
+    # CHISQ.INV(1E-100,6E9) = 5997669910.951994, now from Temme's expansion.
+    assert close(
+        REGISTRY["GAMMA.INV"].evaluate([mp("0.5"), mp("5e9"), mp(1)]) / mp("4999999999.666667"), "1", 15
+    )
+    assert close(
+        REGISTRY["GAMMA.INV"].evaluate([mp("1e-30"), mp("7e9"), mp(1)]) / mp("6999040894.354145"), "1", 15
+    )
+    assert close(REGISTRY["CHISQ.INV"].evaluate([mp("1e-100"), mp("6e9")]) / mp("5997669910.951994"), "1", 15)
+    # At 1E300 the tails keep their sign: the exponent is summed with log10(a) more digits.
+    a = mp("1e300")
+    assert gamma.lower_tail(a * mp("0.6"), a) > 0
+    assert gamma.upper_tail(a * mp("1.5"), a) > 0
+    # The quantile is a + z sqrt(a) + ...: at 50 digits it is a itself, a relative 1E-149 apart.
+    y = gamma.quantile(mp("1e-300"), a, upper=True)
+    assert close(y / a, "1", 45)
+
+
+def test_temme_tails_have_no_value_far_from_the_shape() -> None:
+    # Past |eta| = 0.5 the coefficient series are not summed; the quantile's bracket never goes there.
     for tail in (gamma.lower_tail, gamma.upper_tail):
         with pytest.raises(NoValueError):
-            tail(mp("1e9"), mp("1e9"))
-    with pytest.raises(NoValueError):
-        REGISTRY["CHISQ.INV.RT"].evaluate([mp("0.5"), mp("1e10")])
+            tail(mp("1e9"), mp("1e8"))
 
 
 def test_beta_matches_the_published_examples() -> None:
@@ -95,3 +147,30 @@ def test_gamma_quantile_keeps_a_value_below_the_smallest_double() -> None:
     # Excel gives 0 there and committed s1 points rely on it (gamma.quantile's docstring); the value is the math.
     value = REGISTRY["CHISQ.INV"].evaluate([mp("1E-300"), mp(1)])
     assert 0 < value < mp("1E-500")
+
+
+def test_beta_cdf_past_mpmaths_hypsum_takes_the_positive_series() -> None:
+    # probes-numeric/t3571-r5-bfrac-fresh A239: mpmath's betainc gives up at these shapes (T-3680).
+    a, b, x = mp(4563.6), mp(2816.5), mp(0.583019617141068)  # the cell's doubles
+    with pytest.raises(ValueError, match="hypsum"):
+        mpmath.betainc(a, b, 0, x, regularized=True)
+    assert close(beta.lower_tail(x, a, b), "3.0490854915703403050837858706446013617166928e-10", 40)
+
+
+def test_beta_tail_series_agrees_with_mpmath_where_it_converges() -> None:
+    # the last two are past the switch point (a + 1) / (a + b + 2): the other side's complement
+    for a, b, x in (
+        (mp("2.5"), mp(7), mp("0.1")),
+        (mp(40), mp("3.5"), mp("0.95")),
+        (mp(200), mp(150), mp("0.6")),
+    ):
+        assert mpmath.almosteq(
+            beta._series(a, b, x), mpmath.betainc(a, b, 0, x, regularized=True), mp(10) ** -45
+        )
+
+
+def test_beta_inv_past_the_switch_point_at_a_skewed_shape_stays_in_budget() -> None:
+    # probes-numeric/t3443-basym-sweep A150: the classic side choice summed ~6E4 terms per call and the
+    # root solve ran out of its work budget; main's mpmath value is 0.0061942141340931975... (T-3680).
+    value = tables.compute(REGISTRY["BETA.INV"], [0.665410001077291, 383.0, 62750.652])
+    assert value.value.startswith("0.0061942141340931975056697909694474336368428487")

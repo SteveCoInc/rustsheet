@@ -60,13 +60,15 @@ def test_raw_column_width_row_height(rm):
     assert rm.get_row_height(0, 1) == 42.0
 
 
-def test_hidden_rows_and_columns(um):
+def test_hidden_rows_and_columns(um, tmp_path):
     um.set_rows_hidden(0, 2, 3, True)
     um.set_columns_hidden(0, 2, 3, True)
     # the user model has no is_hidden getter; check through the raw model
-    import rustsheet as ic
+    from rustsheet import legacy
 
-    raw = ic.load_from_bytes(bytes(um.to_bytes()))
+    file = str(tmp_path / "hidden.xlsx")
+    um.save_to_xlsx(file)
+    raw = legacy.load_from_xlsx(file)
     assert raw.is_row_hidden(0, 2) is True
     assert raw.is_row_hidden(0, 1) is False
     assert raw.is_column_hidden(0, 3) is True

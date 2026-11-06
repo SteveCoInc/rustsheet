@@ -5,6 +5,7 @@ Not a function family: the leading underscore keeps `defs/__init__.py` from impo
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Callable, Sequence
 from fractions import Fraction
@@ -12,8 +13,12 @@ from fractions import Fraction
 import mpmath
 
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import DomainError, Draw, MathArg
+from rustsheet_tools.accuracy.model import DomainError, Draw, MathArg, NoValueError
 from rustsheet_tools.accuracy.sampler import log_uniform
+
+DF_CUT = 1e10  # the cumulative functions' last valid (truncated) df (statistics.md Student-t df limits)
+CONDITION_LIMIT = 1e-10  # an ill-conditioned point (kappa * 2^-52 above this) is redrawn
+EPS = 2.0**-52
 
 
 def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
@@ -23,6 +28,13 @@ def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
         assert not isinstance(a, (bool, tuple))
         out.append(a)
     return out
+
+
+def ill_conditioned(kappa: float) -> None:
+    """NoValueError (redraw) when a relative condition number `kappa` puts one rounding past `CONDITION_LIMIT`."""
+    if kappa * EPS > CONDITION_LIMIT:
+        msg = f"ill-conditioned (kappa {kappa:.3g})"
+        raise NoValueError(msg)
 
 
 def zero_pole(args: Sequence[MathArg]) -> str | None:
@@ -71,6 +83,17 @@ def fraction_to_mpf(r: Fraction | int) -> mpmath.mpf:
 def trunc(x: mpmath.mpf) -> int:
     """`x` truncated toward zero."""
     return int(mpmath.floor(x)) if x >= 0 else -int(mpmath.floor(-x))
+
+
+def square_overflows(x: float) -> bool:
+    """Whether x*x overflows a double (from |x| = 2^512): the `#NUM!` cut of ASINH and ACOSH and of the normal
+    densities (statistics.md T-2435)."""
+    return math.isinf(x * x)
+
+
+def signed(rng: random.Random, x: float) -> float:
+    """`x` or `-x`, each with probability 1/2."""
+    return -x if rng.random() < 0.5 else x
 
 
 def signed_log_uniform(rng: random.Random, lo: float, hi: float, negative: float = 0.3) -> float:

@@ -48,6 +48,20 @@ use super::{
     xml_constants::XML_DECLARATION,
 };
 
+/// The number written to a cell's `<v>`: a positive kept subnormal is saved as 0, as Excel for the web
+/// does (`EXP(-745)` is saved `<v>0</v>` while `(EXP(-745))=0` stays FALSE in memory; numbers.md
+/// "Worksheet EXP (T-1931)", decision 0089, probes/subnormal-saved-as-zero). Only the evidenced domain is
+/// flushed: the spill and array arms follow the formula-cell evidence by inference; a negative kept
+/// subnormal and desktop Excel's save are unprobed (T-4355), and `-0.0` keeps its spelling. A stored positive constant is already 0 once loaded (numbers.md "A subnormal cell constant
+/// reads as 0"), so the constant arm changes nothing observable.
+fn saved_number(v: f64) -> f64 {
+    if v > 0.0 && v < f64::MIN_POSITIVE {
+        0.0
+    } else {
+        v
+    }
+}
+
 /// The literal an error cell is written with. Excel's stored form ([`Error::stored_literal`]),
 /// except the kinds Excel rejects as stored literals, which are saved as `#VALUE!`:
 /// - `#SPILL!`, `#CALC!`, `#CONNECT!`, `#BLOCKED!` and `#FIELD!` (T-0999). Excel keeps the kind in
@@ -345,6 +359,7 @@ pub(crate) fn get_worksheet_xml(
                     //     <v>3</v>
                     // </c>
                     let style = get_cell_style_attribute(*s);
+                    let v = saved_number(*v);
                     row_data_str.push(format!("<c r=\"{cell_name}\"{style}><v>{v}</v></c>"));
                 }
                 Cell::ErrorCell { ei, s }
@@ -415,6 +430,7 @@ pub(crate) fn get_worksheet_xml(
                         continue;
                     };
                     let style = get_cell_style_attribute(*s);
+                    let v = saved_number(*v);
                     row_data_str.push(format!(
                         "<c r=\"{cell_name}\"{style}{cm}>{formula}<v>{v}</v></c>"
                     ));
@@ -537,6 +553,7 @@ pub(crate) fn get_worksheet_xml(
                     } else {
                         ""
                     };
+                    let v = saved_number(*v);
                     row_data_str.push(format!(
                         r#"<c r="{cell_name}"{style}{cm}><f t="array" ref="{range}">{formula}</f><v>{v}</v></c>"#
                     ));
@@ -776,6 +793,15 @@ pub(crate) fn get_worksheet_xml(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Only the evidenced positive domain is flushed (T-2211); the rest is unprobed (T-4355).
+    #[test]
+    fn saved_number_flushes_only_positive_subnormals() {
+        assert_eq!(saved_number(f64::from_bits(1)), 0.0);
+        assert_eq!(saved_number(f64::MIN_POSITIVE), f64::MIN_POSITIVE);
+        assert_eq!(saved_number(-f64::from_bits(1)), -f64::from_bits(1));
+        assert!(saved_number(-0.0).is_sign_negative());
+    }
 
     #[test]
     fn exported_error_literal_falls_back_for_kinds_excel_rejects() {

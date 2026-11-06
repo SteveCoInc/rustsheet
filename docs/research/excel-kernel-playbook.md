@@ -113,6 +113,10 @@ The oracle is the bottleneck, so every cell should answer a question.
 
 ## 4. Traps
 
+- **Probe literals carry 15 significant digits.** Excel cuts a formula literal to 15 significant digits
+  (numbers.md), so a ladder written as `2047.9999999999995` probes 2047.99999999999. Pick ladder points with at most
+  15 digits (dyadic offsets such as x0 + m*2^-k), or pass the input through a cell holding the exact double. T-4290's
+  first ladder lost its sub-1E-11 rungs this way.
 - **Exact-match rate is no objective until you are close.** Any smooth near-miss scores 22-40%. A model 1E-12 off
   scored the same as a random smooth model, and fewer roundings score higher regardless of truth. The rate rewards
   you only in the last few ulps. Use per-x-bin match rates to see where the error lives: a rate that falls with x

@@ -1,0 +1,178 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "ea7ba4ab0942b94326b768f16eb44e541a1803884ae4e6c1fc3b6573580304fb"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "n",
+    "v": "2.4788087273156452336137137847913750728826905532075e+306",
+    "f": "=BESSELI(709.700,0)"
+   },
+   "A10": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.709,0)"
+   },
+   "A11": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.710,0)"
+   },
+   "A12": {
+    "t": "n",
+    "v": "2.4770617334102462409336480115314966552496458930321e+306",
+    "f": "=BESSELI(709.700,1)"
+   },
+   "A13": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.701,1)"
+   },
+   "A14": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.702,1)"
+   },
+   "A15": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.703,1)"
+   },
+   "A16": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.704,1)"
+   },
+   "A17": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.705,1)"
+   },
+   "A18": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.706,1)"
+   },
+   "A19": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.707,1)"
+   },
+   "A2": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.701,0)"
+   },
+   "A20": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.708,1)"
+   },
+   "A21": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.709,1)"
+   },
+   "A22": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.710,1)"
+   },
+   "A23": {
+    "t": "n",
+    "v": "2.4355014321426241643923788841679156903298790219713e+306",
+    "f": "=BESSELI(709.700,5)"
+   },
+   "A24": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.701,5)"
+   },
+   "A25": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.702,5)"
+   },
+   "A26": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.703,5)"
+   },
+   "A27": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.704,5)"
+   },
+   "A28": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.705,5)"
+   },
+   "A29": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.706,5)"
+   },
+   "A3": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.702,0)"
+   },
+   "A30": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.707,5)"
+   },
+   "A31": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.708,5)"
+   },
+   "A32": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.709,5)"
+   },
+   "A33": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.710,5)"
+   },
+   "A4": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.703,0)"
+   },
+   "A5": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.704,0)"
+   },
+   "A6": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.705,0)"
+   },
+   "A7": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.706,0)"
+   },
+   "A8": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.707,0)"
+   },
+   "A9": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=BESSELI(709.708,0)"
+   }
+  }
+ }
+}

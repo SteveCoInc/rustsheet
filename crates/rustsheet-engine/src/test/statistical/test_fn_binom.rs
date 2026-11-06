@@ -282,6 +282,41 @@ fn binom_dist_end_closed_forms_are_excel_bits() {
     }
 }
 
+// The interior pmfs are Loader's kernel, not the exact value (T-2146; statistics.md "BINOM.DIST and
+// NEGBINOM.DIST pmfs take Loader's kernel everywhere"): NEGBINOM.DIST's at f = 0 is
+// EXP(fl(r·LN(p))), kept when tiny, and elsewhere p times the shifted kernel. Excel's bits from
+// gen-m9 (d8f44d556674c2fd A281, 11eb3ab4f4f8104c A374, 9e2225ead8a6a07b A362, 7fd0a98183c6babf
+// A379 and A37, d208bbafc3bc1997 A117, 5cebac1f02bf30f2 A317, bc40d37cb4d8301d A52) and
+// ironcalc-calc BINOM.xlsx (BINOM.DIST!E76: BINOM.DIST(10,20,0.5,FALSE) is 0.17619705200195307,
+// where the exact C(20,10)/2^20 is the double ...312).
+#[test]
+fn binom_and_negbinom_pmfs_take_loader_s_kernel() {
+    let cases: [(&str, f64); 9] = [
+        ("=NEGBINOMDIST(0,1,1E-200)", 9.999_999_999_999_78e-201),
+        ("=NEGBINOMDIST(0,3,0.5)", 0.125_000_000_000_000_03),
+        ("=NEGBINOMDIST(0,10,0.001)", 1.000_000_000_000_002_4e-30),
+        ("=NEGBINOMDIST(5,3,0.05)", 0.002_031_174_960_937_501),
+        ("=NEGBINOMDIST(1,1,0.999999)", 9.999_990_000_287_56e-7),
+        ("=NEGBINOMDIST(6,9,0.975)", 5.837_634_844_330_647e-7),
+        ("=NEGBINOMDIST(9,5,0.95)", 1.080_572_988_891_610_2e-9),
+        ("=BINOM.DIST.RANGE(10,0.025,8)", 6.527_423_858_642_58e-12),
+        ("=BINOM.DIST(10,20,0.5,FALSE)", 0.176_197_052_001_953_07),
+    ];
+    let mut model = new_empty_model();
+    for (row, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, (formula, excel)) in cases.iter().enumerate() {
+        let value = round_trip_value(&model, &format!("A{}", row + 1));
+        assert_eq!(
+            value.parse::<f64>().unwrap().to_bits(),
+            excel.to_bits(),
+            "{formula}"
+        );
+    }
+}
+
 // From 2^31 - 1 trials BINOM.DIST and BINOMDIST are #NUM! for every k and p, and so is
 // BINOM.DIST.RANGE at number_s = 0 (probes-numeric/t2645-binom-trials-limit A7-A45); NEGBINOM.DIST
 // is not (A46).

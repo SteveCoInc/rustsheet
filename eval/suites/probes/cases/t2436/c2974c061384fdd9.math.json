@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "9ef24f3b9cbf77d999548b001f596f6597900cd0a5def3ba643ad53c5a0c9416"
+ },
+ "sheets": {
+  "Calc": {
+   "A91": {
+    "t": "n",
+    "v": "0.0000041584334251739537283258192337610766451014563155082",
+    "f": "=BESSELK(12,4)"
+   }
+  }
+ }
+}

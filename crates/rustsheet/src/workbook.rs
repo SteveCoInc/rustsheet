@@ -8,9 +8,10 @@ use rustsheet_engine::clock::Clock;
 use rustsheet_engine::types::DateSystem;
 use rustsheet_engine::{Model, LAST_COLUMN, LAST_ROW};
 use rustsheet_xlsx::error::XlsxError;
-use rustsheet_xlsx::import::ImportLimits;
+use rustsheet_xlsx::import::{decrypt_ole_package, is_ole_compound_file, ImportLimits};
+use zeroize::Zeroizing;
 
-use crate::error::{LoadError, RefError, SaveError};
+use crate::error::{LoadError, RefError, SaveError, UnsupportedKind};
 use crate::refs::{
     parse_cell, parse_range, resolve_sheet_by_name, CellRef, RangeRef, SheetId, Target,
 };
@@ -60,17 +61,58 @@ impl Default for WorkbookOptions {
     }
 }
 
+/// The password of a password-protected xlsx (SPEC-0031 D4).
+///
+/// Its text is zeroized when it is dropped, and its `Debug` prints `Password(***)`. It implements
+/// neither `Display` nor `Serialize`, so neither it nor a [`LoadOptions`] holding it can print or
+/// store the password.
+#[derive(Clone)]
+pub struct Password(Zeroizing<String>);
+
+impl Password {
+    /// Wraps `password`, taking ownership of its buffer (no other copy is made).
+    #[must_use]
+    pub fn new(password: impl Into<String>) -> Self {
+        Self(Zeroizing::new(password.into()))
+    }
+
+    /// The password text, for the decryption only.
+    pub(crate) fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Debug for Password {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Password(***)")
+    }
+}
+
 /// Options for [`Workbook::open`] and [`Workbook::from_xlsx_bytes`].
 ///
 /// The size limits are enforced on the bytes actually inflated, before any part is parsed.
+///
+/// The struct is not `#[non_exhaustive]`: build it with `..LoadOptions::default()` so a field added
+/// later (as `password` and `max_spin_count` were) does not break the caller.
 #[derive(Clone, Debug)]
 pub struct LoadOptions {
     /// Recalculate once after loading.
     pub recalc: bool,
-    /// Most bytes all zip entries may declare in total.
+    /// Most bytes all zip entries may declare in total. A password-protected xlsx is bounded by it
+    /// both as a file and as the zip it decrypts to.
     pub max_uncompressed_bytes: u64,
     /// Most entries the zip directory may list.
     pub max_zip_entries: u32,
+    /// The password of a password-protected xlsx; `None` (the default) refuses one with
+    /// [`LoadError::PasswordRequired`]. Ignored for a file that is not encrypted. Only this password
+    /// is tried, so a load runs at most one key derivation.
+    pub password: Option<Password>,
+    /// Most key derivation rounds (`spinCount`) a password-protected xlsx may ask for, checked
+    /// before any hashing; a file asking for more is [`LoadError::Options`]. The default,
+    /// 1,000,000, refuses files Excel opens (it allows up to 10,000,000, several seconds of CPU
+    /// any untrusted file could demand): a DEVIATION, docs/excel-semantics/xlsx-storage.md. Raise
+    /// it, up to 10,000,000, only for files you trust.
+    pub max_spin_count: u32,
     /// Options of the loaded workbook (read limit, locale, timezone, language).
     pub workbook: WorkbookOptions,
 }
@@ -82,6 +124,8 @@ impl Default for LoadOptions {
             recalc: true,
             max_uncompressed_bytes: import.max_uncompressed_bytes,
             max_zip_entries: import.max_zip_entries,
+            password: None,
+            max_spin_count: import.max_spin_count,
             workbook: WorkbookOptions::default(),
         }
     }
@@ -124,6 +168,23 @@ pub struct Workbook {
 
 fn engine_load_error(message: impl std::fmt::Display) -> LoadError {
     LoadError::Format(message.to_string())
+}
+
+/// The facade error for an importer error (SPEC-0031 D4). None of them carries the password.
+fn import_load_error(e: XlsxError) -> LoadError {
+    match e {
+        XlsxError::Limit { .. } => LoadError::Options(e.to_string()),
+        XlsxError::EncryptedPackage => LoadError::PasswordRequired,
+        XlsxError::WrongPassword => LoadError::WrongPassword,
+        XlsxError::LegacyBinaryWorkbook => {
+            LoadError::Unsupported(UnsupportedKind::LegacyBinaryWorkbook)
+        }
+        XlsxError::OleCompoundFile => LoadError::Unsupported(UnsupportedKind::OtherOleFile),
+        XlsxError::UnsupportedEncryption(kind) => {
+            LoadError::Unsupported(UnsupportedKind::Encryption(kind))
+        }
+        e => engine_load_error(e),
+    }
 }
 
 /// All sheets of a model in workbook order.
@@ -230,9 +291,18 @@ impl Workbook {
 
     /// Loads an xlsx workbook from memory. Never touches the filesystem.
     ///
+    /// A password-protected xlsx is decrypted with [`LoadOptions::password`] first (ECMA-376 Agile
+    /// and Standard encryption, SPEC-0031); the password is not kept on the workbook.
+    ///
     /// # Errors
-    /// [`LoadError::Options`] when the zip exceeds the limits or the locale is unknown,
-    /// [`LoadError::Format`] when the bytes are not a valid workbook.
+    /// - [`LoadError::Options`] when the zip exceeds the limits (including
+    ///   [`LoadOptions::max_spin_count`]) or the locale is unknown;
+    /// - [`LoadError::PasswordRequired`] / [`LoadError::WrongPassword`] for a password-protected
+    ///   xlsx opened without its password;
+    /// - [`LoadError::Unsupported`] for a legacy `.xls`, another OLE file or an encryption kind
+    ///   not read;
+    /// - [`LoadError::Format`] when the bytes are not a valid workbook (including an encrypted
+    ///   package that is malformed or fails its integrity check).
     pub fn from_xlsx_bytes(bytes: &[u8], opts: &LoadOptions) -> Result<Self, LoadError> {
         let w = &opts.workbook;
         // The importer enforces the same limits on the parts it reads, so a caller raising
@@ -240,18 +310,37 @@ impl Workbook {
         let limits = ImportLimits {
             max_uncompressed_bytes: opts.max_uncompressed_bytes,
             max_zip_entries: opts.max_zip_entries,
+            max_spin_count: opts.max_spin_count,
             ..ImportLimits::default()
         };
+        // With a password, an OLE file is decrypted here (one key derivation, SPEC-0031 D3); one
+        // that is not an encrypted xlsx gets the error the importer would give it. Without one,
+        // the importer refuses it as encrypted, which is `PasswordRequired`.
+        let decrypted = match &opts.password {
+            Some(password) if is_ole_compound_file(bytes) => Some(Zeroizing::new(
+                decrypt_ole_package(bytes, password.expose(), &limits)
+                    .map_err(import_load_error)?,
+            )),
+            _ => None,
+        };
+        let zip = decrypted.as_deref().map_or(bytes, Vec::as_slice);
         let book = rustsheet_xlsx::import::load_from_xlsx_bytes_with_limits(
-            bytes,
+            zip,
             w.name.as_deref().unwrap_or_default(),
             &w.locale,
             &w.timezone,
             &limits,
         )
         .map_err(|e| match e {
-            XlsxError::Limit { .. } => LoadError::Options(e.to_string()),
-            e => engine_load_error(e),
+            // A decrypted package that is itself an OLE file is not a workbook, whatever it holds.
+            XlsxError::EncryptedPackage
+            | XlsxError::LegacyBinaryWorkbook
+            | XlsxError::OleCompoundFile
+                if decrypted.is_some() =>
+            {
+                engine_load_error("the decrypted package is not a zip")
+            }
+            e => import_load_error(e),
         })?;
         let model = Model::from_workbook_with_clock(book, &w.language, w.clock)
             .map_err(LoadError::Format)?;
@@ -286,6 +375,8 @@ impl Workbook {
     }
 
     /// Writes an xlsx file, replacing an existing one.
+    ///
+    /// The file is never encrypted, also for a workbook opened from a password-protected one.
     ///
     /// # Errors
     /// [`SaveError::Io`] if the file cannot be written, otherwise as [`Self::to_xlsx_bytes`].

@@ -3,7 +3,7 @@ id: T-1016
 title: "Desktop probe: typed #BLOCKED!/#GETTING_DATA/#BUSY! cell input (SPEC-0003)"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: sonnet
@@ -28,3 +28,7 @@ SPEC-0003 "Two name tables" chose, without evidence, that typed `#GETTING_DATA` 
 Phase 4 (decision 0039): not a "Needs owner" item, and it blocks no milestone or phase exit. It needs the `excel-desktop` oracle backend, plus a COM step that types into a cell
 (`Range.Value`). The backend is `n/a` in cloud sessions (`cd tools && uv run rustsheet-oracle status`
 shows `excel-desktop  n/a`). Unblock when that line reads OK and T-1074 is done.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

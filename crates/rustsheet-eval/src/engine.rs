@@ -12,7 +12,7 @@ use rustsheet::{
 use rustsheet_engine::text::{lone_escape, Segment};
 use rustsheet_engine::Text;
 
-use crate::case::{split_qualified, ApiName, CaseSpec, CellInput, SheetOp, SheetSpec};
+use crate::case::{split_qualified, ApiName, CaseSpec, CellInput, SheetOp, SheetSpec, TableSpec};
 use crate::cellref::{parse_range, Addr};
 use crate::spec_pivots;
 use crate::value::Value;
@@ -200,7 +200,6 @@ impl Engine for RustSheetEngine {
         let (entered, _) = workbook
             .edit(|tx| {
                 let mut ids = Vec::with_capacity(spec.sheets.len());
-                let sheet_names: Vec<String> = spec.sheets.iter().map(|s| s.name.clone()).collect();
                 for (i, sheet) in spec.sheets.iter().enumerate() {
                     ids.push(if i == 0 {
                         let first = tx.first_sheet()?;
@@ -220,14 +219,23 @@ impl Engine for RustSheetEngine {
                 // for after this edit, the workbook's load ([`type_entries`]).
                 let mut entered = Vec::new();
                 for phase in [Phase::Values, Phase::Stored] {
+                    if phase == Phase::Stored {
+                        // Before the pivots too: a date-formatted source cell is a date to a
+                        // pivot's refresh (probes/t4287-pivot-group-dates-as-numbers). Set again
+                        // below, as a stored formula's own format replaces it.
+                        for (sheet, &id) in spec.sheets.iter().zip(&ids) {
+                            set_number_formats(tx, sheet, id)?;
+                        }
+                    }
                     for (sheet, &id) in spec.sheets.iter().zip(&ids) {
                         if phase == Phase::Stored {
                             spec_pivots::add_pivots(tx, spec, &ids, sheet, id)?;
                             for table in &sheet.tables {
+                                let range = range_ref(id, &table.range)?;
                                 tx.add_table_with_rows(
-                                    range_ref(id, &table.range)?,
+                                    range,
                                     &table.name,
-                                    table.filter,
+                                    filters_hidden_rows(table, range),
                                     (table.header_row, table.totals_row),
                                 )?;
                                 for (letter, formula) in &table.calculated {
@@ -241,8 +249,7 @@ impl Engine for RustSheetEngine {
                             spec_pivots::write_rendered(tx, sheet, id, spec_input)?;
                         }
                         for (addr, a1, input_spec) in row_major(&sheet.cells)? {
-                            let Some((input, input_phase)) =
-                                cell_input(sheet, &sheet_names, addr, a1, input_spec)
+                            let Some((input, input_phase)) = cell_input(sheet, a1, input_spec)
                             else {
                                 continue;
                             };
@@ -278,15 +285,7 @@ impl Engine for RustSheetEngine {
                             input(&table.column_input)?,
                         )?;
                     }
-                    for (a1, format) in &sheet.number_formats {
-                        let addr = Addr::parse(a1).ok_or_else(|| {
-                            rustsheet::EditError::Engine(format!("bad address {a1}"))
-                        })?;
-                        tx.set_number_format(
-                            CellRef::new(id, addr.row - 1, addr.col - 1)?,
-                            format,
-                        )?;
-                    }
+                    set_number_formats(tx, sheet, id)?;
                     for &row in &sheet.hidden_rows {
                         let row = row.checked_sub(1).ok_or(rustsheet::RefError::OutOfBounds)?;
                         tx.set_row_hidden(id, row, true)?;
@@ -540,6 +539,34 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
     )?)
 }
 
+/// Whether the spec table's filter makes its sheet's hidden rows filtered: Excel calls them
+/// filtered only for a filterColumn with a criterion inside the table, not for a criterion-less
+/// one or one whose `colId` is past the table's width (probes/t4003-filter-column-criterion), and
+/// the facade's `filtered` flag is that "filtered" (docs/excel-semantics/numbers.md, "SUBTOTAL and
+/// AGGREGATE over hidden and filtered rows").
+fn filters_hidden_rows(table: &TableSpec, range: RangeRef) -> bool {
+    let width = (u64::from(range.right) + 1).saturating_sub(u64::from(range.left));
+    table.filter
+        && table
+            .filter_column
+            .as_ref()
+            .is_none_or(|c| c.criterion && u64::from(c.col_id) < width)
+}
+
+/// Gives each cell of `sheet` (sheet `id`) its spec number format.
+fn set_number_formats(
+    tx: &mut rustsheet::Txn<'_>,
+    sheet: &SheetSpec,
+    id: SheetId,
+) -> Result<(), rustsheet::EditError> {
+    for (a1, format) in &sheet.number_formats {
+        let addr = Addr::parse(a1)
+            .ok_or_else(|| rustsheet::EditError::Engine(format!("bad address {a1}")))?;
+        tx.set_number_format(CellRef::new(id, addr.row - 1, addr.col - 1)?, format)?;
+    }
+    Ok(())
+}
+
 /// A spec table's calculated column in column `letter` of table range `a1`: its 0-based index in
 /// the table and its formula without `=`. The text is exported as is, so a `[@Col]` shorthand
 /// (not file form) is refused.
@@ -574,19 +601,8 @@ enum Phase {
 
 /// The facade input for spec cell `a1` of `sheet` and the phase it goes in at; `None` leaves the
 /// cell empty.
-fn cell_input(
-    sheet: &SheetSpec,
-    sheet_names: &[String],
-    addr: Addr,
-    a1: &str,
-    input_spec: &CellInput,
-) -> Option<(Input, Phase)> {
-    let mut input = match input_spec {
-        CellInput::EnteredR1c1 { entered_r1c1 } => {
-            r1c1_entry(entered_r1c1, sheet_names, &sheet.name, addr)
-        }
-        _ => spec_input(input_spec),
-    }?;
+fn cell_input(sheet: &SheetSpec, a1: &str, input_spec: &CellInput) -> Option<(Input, Phase)> {
+    let mut input = spec_input(input_spec)?;
     // spec2xlsx writes these as plain `<f>` formulas (T-1077).
     if let Input::StoredFormula(text) = &input {
         if sheet.legacy_formulas.iter().any(|f| f == a1) {
@@ -605,18 +621,10 @@ fn cell_input(
     let phase = match &input {
         Input::StoredFormula(_) | Input::LegacyFormula(_) => Phase::Stored,
         Input::Parse(text) if text.starts_with('=') || typed_entry => Phase::Entered,
+        Input::ParseR1C1(_) => Phase::Entered,
         _ => Phase::Values,
     };
     Some((input, phase))
-}
-
-/// The facade input for `text` typed in R1C1 mode into `addr` of `sheet`: the A1 text it reads as
-/// (`rustsheet_engine::r1c1_formula_to_a1`), typed. `None`, a blank cell, when it does not parse,
-/// as Excel refuses it (decision 0179).
-fn r1c1_entry(text: &str, sheet_names: &[String], sheet: &str, addr: Addr) -> Option<Input> {
-    let row = i32::try_from(addr.row).ok()?;
-    let column = i32::try_from(addr.col).ok()?;
-    rustsheet_engine::r1c1_formula_to_a1(text, sheet_names, sheet, row, column).map(Input::Parse)
 }
 
 /// The facade input for a spec cell; `None` leaves the cell empty.
@@ -645,8 +653,9 @@ fn spec_input(input: &CellInput) -> Option<Input> {
         CellInput::Typed(Value::Error(e)) | CellInput::Entered { entered: e } => {
             Input::Parse(e.clone())
         }
-        // Needs its cell to read relative references: `r1c1_entry`.
-        CellInput::Typed(Value::Empty) | CellInput::EnteredR1c1 { .. } => return None,
+        // Typed in R1C1 mode, read against its cell (`Model::set_typed_r1c1_user_input`).
+        CellInput::EnteredR1c1 { entered_r1c1 } => Input::ParseR1C1(entered_r1c1.clone()),
+        CellInput::Typed(Value::Empty) => return None,
     })
 }
 

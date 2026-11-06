@@ -491,6 +491,10 @@ pub(super) fn is_weightless(c: char) -> bool {
     let Ok(unit) = u16::try_from(u32::from(c)) else {
         return false;
     };
+    // Below the first range nothing is weightless (a fast path for ASCII text, T-4279).
+    if unit < WEIGHTLESS_RANGES[0].0 {
+        return false;
+    }
     let index = WEIGHTLESS_RANGES.partition_point(|&(_, last)| last < unit);
     WEIGHTLESS_RANGES
         .get(index)
@@ -535,6 +539,7 @@ pub(super) fn class_first(c: char) -> Option<char> {
 
 /// [`fold_lookup_char`] over `text`, one character to one.
 pub(crate) fn fold_lookup(text: &str) -> String {
+    super::note_compared(text.len(), super::FOLD_TICKS);
     text.chars().map(fold_lookup_char).collect()
 }
 

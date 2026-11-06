@@ -21,7 +21,10 @@ use basym::basym;
 use bfrac::bfrac;
 use bgrat::{bgrat_half, bgrat_increment};
 use bpser::bpser;
-use bup::{bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, BupSum};
+use bup::{
+    bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, l140_bup_prefactor_underflows,
+    l140_bup_sum_overflows, BupSum,
+};
 
 /// TOMS 708's `eps` in `bratio`: max(2^-52, 1e-15).
 pub(super) const EPS: f64 = 1e-15;
@@ -160,6 +163,17 @@ pub(crate) fn dispatch(a: f64, b: f64, x: f64, y: f64) -> Option<Dispatch> {
     })
 }
 
+/// Whether Excel's incomplete beta K(a, b, x, y) is `#NUM!` because bratio's L140 bup sum overflows
+/// ([`bup::l140_bup_sum_overflows`]): a huge shape beside one below 40, as in
+/// `NEGBINOM.DIST(28,1E+13,0.323212154487823,TRUE)` and `BETA.DIST(0.323212154487823,1E+13,29,TRUE)`
+/// (T-3576). Only BETA.DIST's and NEGBINOM.DIST's cdfs are probed there and ask it.
+pub(crate) fn l140_overflows(a: f64, b: f64, x: f64, y: f64) -> bool {
+    dispatch(a, b, x, y).is_some_and(|d| {
+        matches!(d.branch, Branch::L140BupBpser | Branch::L140BupBgrat)
+            && l140_bup_sum_overflows(d.a0, d.b0, d.x0, d.y0)
+    })
+}
+
 /// bratio's branch for min(a, b) <= 1 on the oriented point (x0 <= 0.5).
 fn small_shape_branch(a0: f64, b0: f64, x0: f64) -> Branch {
     if b0 < EPS.min(EPS * a0) {
@@ -221,6 +235,9 @@ pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
 /// (T-3867 owns the search there). On L140 bup+bpser the search crosses bup's recurrence, not the
 /// power sum BETA.DIST takes (T-3198): the power sum moves gated H32 (`BETA.INV` at shapes 5 and 5,
 /// 0.555) to 0.5550000000000002.
+///
+/// Branches that are not ported fall back to the bounded Cephes `search_tails`; bup + bgrat at
+/// a0 < 1 is ported (T-3665), so the search runs it too.
 pub(crate) fn beta_search_tails(x: f64, y: f64, a: f64, b: f64) -> (f64, f64) {
     let ported = || {
         let many_terms = dispatch(a, b, x, y)
@@ -269,7 +286,16 @@ pub(crate) fn closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(
 /// incomplete-beta arguments keep r >= 1"). T-2510 kept F off bgrat because of the arguments it
 /// was handed, not the kernel.
 pub(crate) fn f_closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
-    closed_or_ported_with(x, y, a, b, true)
+    l140_prefactor_zero_tails(a, b, x, y).or_else(|| closed_or_ported_with(x, y, a, b, true))
+}
+
+/// The tails (lower, upper) of K(a, b, x, y) where L140 bup+bgrat's w is Excel's exact 0 because
+/// bup's prefactor underflows ([`bup::l140_bup_prefactor_underflows`], T-4045): w is 0 and its
+/// complement 1, oriented back through bratio's swap. F's tails only (see there).
+fn l140_prefactor_zero_tails(a: f64, b: f64, x: f64, y: f64) -> Option<(f64, f64)> {
+    let d = dispatch(a, b, x, y)?;
+    (d.branch == Branch::L140BupBgrat && l140_bup_prefactor_underflows(d.a0, d.b0, d.x0, d.y0))
+        .then_some(if d.swapped { (1.0, 0.0) } else { (0.0, 1.0) })
 }
 
 /// (w, w1) of K(a, b, x, y) on the branches ported so far, `None` elsewhere. bratio computes one
@@ -290,8 +316,10 @@ pub(super) fn t_kernel_tails(a: f64, y: f64, z: f64) -> Option<(f64, f64)> {
     ported_tails_with(a, 0.5, y, z, true, BupSum::Powers)
 }
 
-/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2, bup + bgrat at other a0 < 1 and L140 bup+bgrat (BETA.DIST's, the
-/// Student t's and F's callers) when `half_bgrat`, and L140 bup+bpser's sum formed as `bup_sum` says.
+/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2, bup + bgrat at other a0 < 1
+/// (BETA.DIST's cdf, F's tails and BETA.INV's search, T-3665) and L140 bup+bgrat (BETA.DIST's,
+/// the Student t's and F's callers) when `half_bgrat`, and L140 bup+bpser's sum formed as
+/// `bup_sum` says.
 fn ported_tails_with(
     a: f64,
     b: f64,

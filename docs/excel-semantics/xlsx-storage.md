@@ -68,10 +68,77 @@ fewer than scalar values, so this bound is never stricter than Excel's), but wha
 longer string in a file (truncate, repair or refuse) is not probed (T-0004); xlsx parts never
 declare entities, and OPC forbids DTDs in package parts. Entity references in attribute values were
 already rejected.
+A password-protected xlsx (an OLE compound file, SPEC-0031) has bounds of its own. The whole
+container is refused past the byte budget (`max_uncompressed_bytes`, before `cfb` parses it), and a
+container with more than 4,096 directory entries is refused as an unreadable OLE file. Its
+`EncryptedPackage` may declare at most the byte budget, both as a stream and as the plain size in its
+first 8 bytes, and `EncryptionInfo` at most 1 MiB, its Agile XML at most 64 elements nested 8 deep.
+The key derivation may ask for at most `max_spin_count` rounds (`spinCount`), 1,000,000 by default,
+before any hashing: MS-OFFCRYPTO allows 10,000,000 (about 2 to 4 s of SHA-512 that any file could
+demand without knowing the password) and Excel writes 100,000, so a file with 1,000,001 to
+10,000,000 rounds that Excel opens is refused with the `SpinCount` limit until the caller raises the
+limit (SPEC-0031 D3): on the public API that is `LoadOptions::max_spin_count` (default 1,000,000) and
+the refusal is `LoadError::Options`, raised before any hashing (T-4266). A load runs at most one key
+derivation: only the password the caller gives is tried. Past 10,000,000 a file is malformed for the
+format, not a limit.
 Evidence: none for Excel; these are resource limits (CLAUDE.md directive 5), not Excel observations.
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-xlsx/src/import/package.rs (`ImportLimits`, `Package`),
-crates/rustsheet-xlsx/src/import/xml.rs (`reference_of`)
+crates/rustsheet-xlsx/src/import/xml.rs (`reference_of`), crates/rustsheet-xlsx/src/import/ole.rs
+(`classify_ole_compound_file`, `decrypt_ole_package`, `MAX_DIRECTORY_ENTRIES`),
+crates/rustsheet-xlsx/src/import/encryption.rs (`decrypt_package`, `MAX_SPIN_COUNT`)
+
+## Password-protected and non-zip packages
+Rule (Excel): a password-protected xlsx is an OLE compound file (signature `D0 CF 11 E0 A1 B1 1A E1`) holding an
+ECMA-376 `EncryptedPackage`, not a zip. Excel asks for the password and then opens it. UNVERIFIED (probe pending,
+T-4263): no oracle run has opened the two poi fixtures with their passwords (POI's own tests publish passtika's). Excel
+also opens a legacy binary workbook (`.xls`, the same container) without a password.
+Ours: a file that starts with that signature is refused before the zip is opened. Since T-4264 the container is
+parsed (the `cfb` crate, over the bytes in memory, after they are bounded by `max_uncompressed_bytes`) and classified by
+the streams of its root storage (SPEC-0031 D1); no stream is read:
+- `EncryptionInfo` and `EncryptedPackage` (names compare case-insensitively): `XlsxError::EncryptedPackage` ("the file
+  is a password-protected xlsx, which cannot be opened yet"). An `EncryptedPackage` that declares more than
+  `max_uncompressed_bytes` is the uncompressed-bytes limit error instead.
+- `Workbook` (BIFF8) or `Book` (BIFF5): `XlsxError::LegacyBinaryWorkbook` ("save it as .xlsx to open it").
+- Anything else, a container with more than 4,096 directory entries, and a malformed container (a bad header, a sector
+  chain or directory cycle): `XlsxError::OleCompoundFile`.
+A stream whose declared size runs past the sectors it has is not detected here: `cfb` checks a chain against the size
+only when the stream is read, so T-4265, which reads them, must treat a short read as malformed. In a version 3 file a
+stream size is 32 bits (MS-CFB 2.6.3: the high half is ignored).
+That is a known gap, not a deviation (decision 0279). SPEC-0031 (T-4243) plans the close: a password on the load
+API, ECMA-376 Agile and Standard decryption (T-4265 to T-4267) and the `.xls` plan, which waits on an owner ruling
+(T-4268). Any other file that is not a zip stays a zip error.
+Since T-4265 the decryption exists below the load API: `decrypt_ole_package` reads the two streams (a stream that
+ends before its declared size is `MalformedEncryption`, never a shorter package) and `decrypt_package` decrypts
+Agile (4.4: AES-CBC with SHA-1 or SHA-2, its HMAC verified before any plain text is returned) and Standard (2.2,
+3.2, 4.2 with `fCryptoAPI` and `fAES`: AES-ECB, SHA-1) packages. A password that does not open the package, or one
+longer than 255 UTF-16 code units (refused, not truncated; E3 is UNVERIFIED), is `WrongPassword`; Extensible
+encryption, RC4, a certificate-only key encryptor, a cipher other than AES-CBC and a hash other than SHA-1/SHA-2
+are `UnsupportedEncryption`; a broken descriptor or package, and an Agile package whose HMAC does not match, are
+`MalformedEncryption` (SPEC-0031 D5, until T-4263 shows whether Excel opens such a file). With the passwords
+POI's tests use, `protected_passtika.xlsx` (`tika`) and `58616.xlsx` (`VelvetSweatshop`, the default password of
+E2) both decrypt with msoffcrypto-tool 6.1.0, and both are Standard encryption (`EncryptionInfo` 4.2, AES-128).
+Since T-4266 the load API calls it: `LoadOptions::password` (Python `password=`) decrypts the package before the
+zip is opened, and the facade maps the importer errors to `LoadError::PasswordRequired` (no password given),
+`WrongPassword`, `Unsupported(UnsupportedKind::{LegacyBinaryWorkbook, Encryption(kind), OtherOleFile})`, `Options`
+(a limit) and `Format` (malformed or tampered), in Python `PasswordRequiredError` and `WrongPasswordError`
+(subclasses of `LoadError`). No `VelvetSweatshop` retry exists: E2 is unverified (T-4263), so a file encrypted with
+Excel's default password needs that password passed explicitly. A password given for a file that is not encrypted
+is ignored.
+- poi `58616.xlsx` and `protected_passtika.xlsx` (Apache POI's encrypted fixtures, `CDFV2 Encrypted`, version 3
+  containers with the `\x06DataSpaces` storage, `EncryptionInfo` of 248 bytes and `EncryptedPackage`) are refused as
+  `EncryptedPackage`. Their baseline lines stay `!InvalidCase` (now with that message), owned by T-4267.
+- poi `deep-data.xlsx` is a corrupt package (17 local headers with garbled names, no end-of-central-directory record),
+  not an encrypted one: it stays refused as a zip error (T-0489).
+Status: UNVERIFIED (probe pending, T-4263); known gap owned by T-4265 to T-4267 (SPEC-0031).
+Implemented in: `Package::new`, `is_ole_compound_file` (crates/rustsheet-xlsx/src/import/package.rs),
+`classify_ole_compound_file` and `decrypt_ole_package` (import/ole.rs), `decrypt_package` (import/encryption.rs),
+the `XlsxError` variants (error.rs); `Workbook::from_xlsx_bytes` and `import_load_error`
+(crates/rustsheet/src/workbook.rs); the eval snapshot reader (crates/rustsheet-eval/src/xlsx_snapshot.rs). Tests:
+crates/rustsheet-xlsx/tests/ole_container.rs, crates/rustsheet-xlsx/tests/encrypted_package.rs,
+crates/rustsheet/tests/encrypted_load.rs, bindings/python/tests/test_facade.py; fuzz targets
+`cfb_container`, `encrypted_package`.
+Tasks: T-3972, T-4243, T-4263, T-4264, T-4265, T-4266, T-4267, T-4268
 
 ## A workbook whose indices dangle is refused outright
 Rule: `Model::from_workbook`, which every load ends in (xlsx import, `Model::from_bytes`,
@@ -158,8 +225,15 @@ has no Function variant for the last three, so nothing is
 exported for them. GROUPBY and PIVOTBY (not on XlsxWriter's list) have `_xlfn.` arms since T-1322 and T-1326. PERCENTOF has an arm since T-0416. The case builder (which reads these arms) now prefixes it, and a
 sheet's `bare_function_names` list keeps a cell's names as typed, so function-name-forms A1 still
 stores the bare form (refilled 2026-10-13: still `#NAME?`). The gen-m5/m6/m7 cases that call PERCENTOF
-were refilled with the prefixed form. Two existing arms
-add a prefix Excel-authored workbooks omit (`GAMMALN`, `ISO.CEILING`): T-0417.
+were refilled with the prefixed form.
+GAMMALN and ISO.CEILING are stored bare, like CEILING (T-0417): Excel-authored
+rustsheet-xlsx/tests/calc_tests/STATISTICAL/GAMMALN_GAMMALNPRECISE.xlsx (Microsoft Excel 16.0300) stores `GAMMALN(A2)`
+beside `_xlfn.GAMMALN.PRECISE(A2)`, and MATH_AND_TRIGONOMETRY/FLOOR_CEILING.xlsx (Microsoft Excel Online) stores
+`ISO.CEILING($A175,B$2)`; neither is on XlsxWriter 3.2.9's list. The exporter wrote both prefixed until T-0417, and so did
+the case builder: Excel accepts the prefixed forms, since none of the 16,517 GAMMALN and 335 ISO.CEILING cells of the
+eval suites' excel-graph oracle files built that way (for example probes-numeric/t1042-gamma-int-1-90 A91 `GAMMALN(1)` =
+0, probes/t2715-ceiling-floor-subnormal-ratio G1) is `#NAME?`. The arms are gone, so the exporter and the case builder
+write them bare (test `test_export_gammaln_and_iso_ceiling_have_no_xlfn_prefix`).
 Tasks: T-0040, T-0412, T-0416, T-0417, T-1089
 
 ## Written parentheses are stored as written; `@(x)` is `_xlfn.SINGLE((x))`
@@ -364,12 +438,15 @@ days (the OLE epoch). It does not use the 1900-system calendar that a `t="d"` ce
   `Years` groups have `rangePr startDate="1899-12-30T00:00:00"`. Excel labels the first group item `<1/0/1900`, which is
   serial 0.
 So within a pivot cache, `1899-12-30T00:00:00` is 0, a time alone is `1899-12-30T<time>`, and serials 1 to 60 come out
-one day earlier than the cell calendar reads them. The importer reads cache `<d>` items with the cell rule
-(`iso8601_to_date_system_serial`). It rejects these dates and skips the whole cache ("bad date"), and with that rule it
-would also misread serials 1 to 60 by a day. The cutoff at 61 is inferred from where the two calendars agree
-(1900-03-01), not observed. UNVERIFIED: serial 60 (the phantom 1900-02-29) and serials 1 to 60 other
-than this one point; whether `rangePr`/`groupItems` dates follow the same rule; 1904 workbooks. No GETPIVOTDATA cell
-depends on it yet.
+one day earlier than the cell calendar reads them. Since T-3182 the importer reads a cache `<d>` item dated 1899-12-30
+to 1900-02-28 on the OLE epoch in a 1900 workbook (`pivot_cache_date_serial`), and later dates with the cell rule
+(`iso8601_to_date_system_serial`); before, it rejected these dates and skipped the whole cache ("bad date"). The cutoff
+at 61 is inferred from where the two calendars agree (1900-03-01), not observed. UNVERIFIED: serial 60 (the phantom
+1900-02-29; the importer reads a cached `1900-02-29` as 60 and `1900-02-28` as 60 too) and serials 1 to 60 other than
+the one point above; whether `rangePr` dates follow the same rule (since T-4225 the importer reads `startDate` and
+`endDate` with it, so 59932's `1899-12-30T00:00:00` start is serial 0, which matches its `<1/0/1900` label);
+1904 workbooks (a cache date before 1904-01-01 still skips the cache). No GETPIVOTDATA cell depends on it yet.
+Implemented in: crates/rustsheet-xlsx/src/import/iso_date.rs (`pivot_cache_date_serial`), import/pivots.rs (`read_item`)
 Tasks: T-3182
 
 ## Structured references in the file
@@ -410,15 +487,29 @@ name, `[#This Row]` for `@`). Excel itself writes `totalsRowFunction="sum"` (and
 totals cell it built, with the cell formula `SUBTOTAL(109,Table1[Feb])` (calc_test_tables/tables.xlsx
 `xl/tables/table1.xml`); `custom` with that formula is the form the T-1607 uploads showed Excel loads.
 The import keeps a table's `<filterColumn>` criteria (`filter_columns`: values filters with their blank choice,
-custom filters with `and`, values decoded from `_xHHHH_` escapes) and the export writes them back (T-2838), so
-those two kinds survive a round trip with the same meaning (Excel's own tables.xlsx filters come back byte for
-byte; `blank="true"` is written `blank="1"`, `and="0"` is dropped, and a `<filter>` without `val` is dropped); column inserts and deletes inside the table move them with their
-columns. Every other kind (top 10, dynamic, color, icon, and a values filter with date groups or a `calendarType`)
-keeps only its column and is written back as a criterion-less `<filterColumn colId="N"/>`; a `<filterColumn>`
-without a valid `colId` is dropped, and the `hiddenButton`/`showButton` attributes are not kept. `has_filters`
-still makes SUBTOTAL call the sheet's hidden rows filtered. A table filtered through the API with no criterion is
-written as `<filterColumn colId="0"/>`. Both criterion-less forms are schema-valid and our own import reads them
-back as filtered.
+date groups and `calendarType`, custom filters with `and`, values decoded from `_xHHHH_` escapes; T-2838) and, since
+T-4004, top 10 (`top`, `percent`, `val`, `filterVal`), dynamic (`type`, `val`, `valIso`, `maxVal`, `maxValIso`), color
+(`dxfId`, `cellColor`) and icon (`iconSet`, `iconId`) filters, each checked against its schema type (enumerations,
+finite doubles, ISO dates, `unsignedShort` date fields; `filter_criteria.rs`). The export writes them back, so every
+kind survives a round trip with the same meaning (Excel's own tables.xlsx filters come back byte for
+byte; `blank="true"` is written `blank="1"`, `and="0"`, `top="1"`, `percent="0"` and `cellColor="1"` are dropped as
+schema defaults, a `<filter>` without `val` is dropped, and a color filter's `dxfId` past the workbook's dxfs is
+dropped, as the table's own dxf attributes are); column inserts and deletes inside the table move them with their
+columns. A criterion that fails its check (an unknown element such as an `extLst`-only column, an enumeration
+outside the schema, a non-finite number) keeps only its column and is written back as a criterion-less
+`<filterColumn colId="N"/>`; a `<filterColumn>` without a valid `colId` is dropped, and the
+`hiddenButton`/`showButton` attributes are not kept. Only a kept criterion inside the table makes SUBTOTAL call the
+sheet's hidden rows filtered (T-4003). A table filtered through the API with no criterion is written as
+`<filterColumn colId="0"/>`. Both criterion-less forms are schema-valid, and since T-4003 our own import reads them
+back as not filtered, as Excel does (T-4363 tracks the API case).
+Excel keeps the kept criteria's meaning after our round trip (excel-graph, 2026-11-05, T-4004): on `Sales`-shaped
+tables (A1:B7, `Cat` a,b,a,c,a,b and `Val` 1-6, rows hidden as the filter would, no re-application) an
+openpyxl-written file and our import-then-export of it give the same `SUBTOTAL(3,[Cat])`, `SUBTOTAL(103,[Cat])`,
+`SUBTOTAL(9,[Val])` and `SUBTOTAL(109,[Val])`: a top 10 filter (top 2 of `Val`, rows 2-5 hidden) 2, 2, 11, 11; a
+dynamic `aboveAverage` filter (rows 2-4 hidden) 3, 3, 15, 15; a color filter (`dxfId="0"`, rows 3 and 5 hidden) and
+an icon filter (`3Arrows` icon 0, rows 3 and 5 hidden) 4, 4, 15, 15; a values filter holding only a `dateGroupItem`
+(rows 3-7 hidden) 1, 1, 1, 1; and the criterion-less control (rows 3 and 5 hidden) 6, 4, 21, 15 in both. Before
+T-4004 the first five exported criterion-less and read as manual hides.
 Excel (excel-graph uploads of our export, 2026-11-04, T-3081) opens every one of these filter forms without repair,
 but calls the hidden rows filtered only for a filterColumn with a criterion inside the table. On `Sales` (A1:B7,
 `Cat` a,b,a,c,a,b and `Val` 1-6) with rows hidden as the filter would:
@@ -426,29 +517,43 @@ but calls the hidden rows filtered only for a filterColumn with a criterion insi
   `SUBTOTAL(103,Sales[Cat])` and `SUBTOTAL(3,Sales[Cat])` both 3, the same as ours; a custom filter (`Val` > 3, rows
   2-4 hidden) 15, 15, 3, 3, also ours; two filterColumns with the same `colId` 0 behave as the values filter;
 - a criterion-less `<filterColumn colId="0"/>` (rows 3 and 5 hidden): SUBTOTAL 109 15 but SUBTOTAL 9 21, SUBTOTAL 103
-  4 but SUBTOTAL 3 6, as for rows hidden by hand. Ours calls them filtered (9 = 15, 3 = 4; T-4003). The same holds for
+  4 but SUBTOTAL 3 6, as for rows hidden by hand; ours called them filtered (9 = 15, 3 = 4) until T-4003, which reads
+  every form in this list as Excel does (probes/t4003-filter-column-criterion). The same holds for
   a top 10 filter exported criterion-less (rows 2-5 hidden: 11 and 21, 2 and 6; ours 11 and 11, 2 and 2), so the round
-  trip changes Excel's SUBTOTAL 9 from the original filter's 11 to 21 (T-4004); for a values filter whose `colId` is
+  trip changed Excel's SUBTOTAL 9 from the original filter's 11 to 21 until T-4004 kept the criterion; for a values filter whose `colId` is
   past the table's width (5 on 2 columns: 9 and 21, 3 and 6; ours 9 and 9); and for the `colId="0"` fallback our
-  export writes after the filtered column is deleted (15 and 21, 3 and 6; ours 15 and 15).
+  export wrote after the filtered column is deleted (15 and 21, 3 and 6; ours 15 and 15; since T-4003 that delete
+  unfilters the table and the export writes no filterColumn).
 A totals-row cell holding a number, boolean or error constant gets no metadata (T-1607 covered label and formula
 cells only), and Excel refuses that file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
 totals row with the label "Total" and the number 42 is refused, and so is the same file with 42 written as
 `totalsRowLabel="42"` or as a custom `<totalsRowFormula>42</totalsRowFormula>`, while it loads with a SUBTOTAL formula
-in that cell (T-4005).
+in that cell. **The form Excel loads for a constant is `totalsRowFunction="custom"` with no `<totalsRowFormula>`**
+(excel-graph uploads, 2026-11-06, T-4005; `Sales` A1:B8 with `Cat`/`Val` data rows, A8 "Total" as `totalsRowLabel`,
+`=Sales[[#Totals],[Val]]` read in D1): the number 42 loads and reads 42, TRUE (`t="b"`) TRUE and `#N/A` (`t="e"`)
+`#N/A`, the cell kept a constant. Also loading, but changing the cell: the cell written as the formula `=42`
+(`=TRUE`, `=#N/A`) with `<totalsRowFormula>` of the same text reads the same values; the text `"42"` with
+`totalsRowLabel="42"` reads as text. Still refused: the number with `totalsRowLabel="42"`, and the number with
+`custom` and `<totalsRowFormula>42</totalsRowFormula>`. The export writes the bare `custom` for a number, boolean or
+error totals cell (T-4005); an upload of our export of such a table (`Item`, `N`, `B`, `E` with totals "Total", 42,
+TRUE, `#N/A`) loads and `Sales[[#Totals],[N]]`, `[B]`, `[E]` read 42, TRUE, `#N/A`.
 Recipe (throwaway, not kept, as T-1607's): openpyxl writes each table (`Table`, `AutoFilter`, `FilterColumn` with
-`Filters`, `CustomFilters` or `Top10`, hidden rows through `row_dimensions`), the engine imports and exports it
+`Filters`, `CustomFilters` or `Top10`, and for T-4004 `DynamicFilter`, `ColorFilter` with a
+`DifferentialStyle` in `wb._differential_styles`, `IconFilter` and `Filters` of `DateGroupItem`s, hidden rows through
+`row_dimensions`), the engine imports and exports it
 (`rustsheet_xlsx::import::load_from_xlsx`, `Model::delete_columns` for the deleted-column case,
-`rustsheet_xlsx::export::save_to_xlsx`), and `rustsheet-oracle recalc -b excel-graph <file>` uploads the export. A
-table named `T1` reads as a cell reference, not a table (`T1[Val]` is `#VALUE!`); the uploads used `Sales`.
+`rustsheet_xlsx::export::save_to_xlsx`), and `rustsheet-oracle recalc -b excel-graph <file>` uploads the export
+(T-4004 also uploaded the openpyxl file, to compare). A
+table named `T1` reads as a cell reference, not a table (`T1[Val]` is `#VALUE!`); the uploads used `Sales`. T-4005's
+variants set openpyxl's `TableColumn` `totalsRowLabel`, `totalsRowFunction` and `totalsRowFormula` (`TableFormula`), with B8's `<c>` patched in the zip to `t="b"` or `t="e"` for the boolean and error.
 A structured reference that lowers to an
 error because the table's metadata does not fit (an unparsable `ref`, an overflowing row count; directive 5) is
 written as that error.
 Evidence: crates/rustsheet-xlsx/tests/calc_test_tables/tables.xlsx (Excel-authored, 9 tables) now round-trips
 (import, export, import) with the same values (generated test `test_tables_tables`) and the same formula text
 (`excel_authored_tables_keep_their_formula_text`, export/test/test_tables.rs).
-Status: VERIFIED (web, T-3081): Excel loads every filter form and refuses a constant totals cell; T-4003, T-4004
-and T-4005 own the differences.
+Status: VERIFIED (web, T-3081, T-4005): Excel loads every filter form, and a constant totals cell with bare
+`custom` metadata; T-4003 and T-4004 own the filter differences.
 Implemented in: crates/rustsheet-xlsx/src/export/tables.rs
 Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005
 

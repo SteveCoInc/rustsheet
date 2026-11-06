@@ -51,6 +51,22 @@ pub fn new_empty_model() -> Model {
     Model::new_empty_with_clock("model", "en", "UTC", "en", fixed_clock(TEST_CLOCK_MS)).unwrap()
 }
 
+/// `text` typed in R1C1 mode into `row`, `column` of sheet `sheet` of `model`
+/// ([`Model::set_typed_r1c1_user_input`]): the cell's formula as A1 text, `None` when Excel
+/// refuses it (the cell keeps its content).
+pub fn typed_r1c1(
+    model: &mut Model,
+    sheet: u32,
+    text: &str,
+    row: i32,
+    column: i32,
+) -> Option<String> {
+    model
+        .set_typed_r1c1_user_input(sheet, row, column, text.to_string())
+        .ok()?;
+    model.get_cell_formula(sheet, row, column).ok().flatten()
+}
+
 /// A cell's value: a number as Rust's shortest round-trip text (so equal text is equal bits), a
 /// boolean as `TRUE`/`FALSE`, anything else (an error) as the cell's text.
 pub fn round_trip_value(model: &Model, cell: &str) -> String {

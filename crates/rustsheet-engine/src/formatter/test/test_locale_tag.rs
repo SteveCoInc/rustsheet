@@ -24,6 +24,10 @@ fn names_follow_the_tag() {
 #[test]
 fn day_halves_follow_the_tag() {
     assert_eq!(text(0.75, "[$-409]h A/P"), "6 PM");
+    // Extended hex: `_409` is 0x2F409, English (probes/t1924-locale-tag-extended-hex S!B22); `x_y` is
+    // 0x2412 with no locale, so the letters stay.
+    assert_eq!(text(0.75, "[$-_409]h A/P"), "6 PM");
+    assert_eq!(text(0.75, "[$-x_y]h A/P"), "6 P");
     assert_eq!(text(0.25, "[$-40C]h a/p"), "6 AM");
     assert_eq!(text(0.75, "[$-411]h:mm am/pm"), "6:00 午後");
     assert_eq!(text(0.25, "[$-411]AM/PM h"), "午前 6");
@@ -334,4 +338,24 @@ fn empty_text_section_is_empty() {
     assert_eq!(format_text_value("x", "0;0;0;").text, "");
     assert_eq!(format_text_value("abc", "0;;;[Red]").text, "abc");
     assert_eq!(format_text_value("abc", "0;").text, "abc");
+}
+
+#[test]
+fn numeral_suffix_tags_print_script_digits() {
+    // probes/t3891-numeral-tag-render (excel-graph 2026-11-04).
+    use super::text;
+    assert_eq!(text(123.0, "[$-ar-SA,200]0"), "١٢٣");
+    assert_eq!(text(1.25, "[$-ar-SA,200]0.#"), "١.٣");
+    assert_eq!(text(0.12, "[$-ar-SA,200]0.00%"), "١٢.٠٠%");
+    assert_eq!(text(1234.0, "[$-ar-SA,200]#,##0"), "١,٢٣٤");
+    assert_eq!(text(43831.0, "[$-,200]mm/dd/yyyy"), "٠١/٠١/٢٠٢٠");
+    assert_eq!(text(43831.0, "[$-,D00]mm/dd/yyyy"), "๐๑/๐๑/๒๐๒๐");
+    assert_eq!(text(123.0, "[$-ta-IN,900]0"), "௧௨௩");
+    assert_eq!(text(123.0, "[$-km-KH,1200]0"), "១២៣");
+    assert_eq!(text(123.0, "[$-en-US,200]0"), "١٢٣");
+    assert_eq!(text(123.0, "[$-ar-SA,0]0"), "123");
+    assert_eq!(text(123.0, "[$-ar-SA]0"), "123");
+    assert_eq!(text(1000.0, "[$-ar-SA,200]0.00E+00"), "١.٠٠E+٠٣");
+    assert_eq!(text(12.0, "[$$-ar-SA,200]#,##0.00"), "$١٢.٠٠");
+    assert_eq!(text(-12.0, "[$-ar-SA,200]0"), "-١٢");
 }

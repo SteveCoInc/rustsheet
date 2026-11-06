@@ -39,6 +39,12 @@ digits: the Wilson-Hilferty closed form's and the band's true-quantile crossings
   Excel's value).
 - probes-numeric/t3350-r4-chisq-inv-sweep A122, A127, A155 (`CHISQ.INV.RT` at about 1E-230, df 2.4E9 to 7.2E9, the
   same branch; also T-3364).
+- Gap triage 2026-11-04 (`make eval` on origin/main 88c29cd27): probes-numeric/t3409-r4-gamma-inv-search-sweep-wide
+  Calc!A89 `GAMMA.INV(6.41216870994277E-197,87260000000,1)`, Excel 87274358065.09967, ours 87274358065.09961 (4 ulp,
+  just visibly off at the 15th digit; decision 0188 R1(c) Phase 1b evidence, so no exit row counts it). The same
+  closed-form branch at a shape of 8.7E10; it had no open owner. T-4205 owns this case's A63 and A114, not A89.
+- From T-3396 (2026-11-04, closed as T-3409's duplicate): probes/t3396-gamma-inv-band-huge's 33 known failures,
+  `GAMMA.INV` true quantiles at shapes 7E9 to 1.1E10, 1 to 3 ulp off (none visibly off).
 
 ## Acceptance criteria
 - [ ] A371 within half a unit of the 15th digit; the other cells pass or are named with their ulp in the Outcome; no

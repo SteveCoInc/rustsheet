@@ -1,0 +1,13 @@
+diff --git a/crates/rustsheet-engine/src/functions/financial/cumulative.rs b/crates/rustsheet-engine/src/functions/financial/cumulative.rs
+index a6a369db6..29fa3f0ca 100644
+--- a/crates/rustsheet-engine/src/functions/financial/cumulative.rs
++++ b/crates/rustsheet-engine/src/functions/financial/cumulative.rs
+@@ -55,7 +55,7 @@ const GEOMETRIC_MIN_LEAD: f64 = 0.3;
+ /// A11, A30; form-boundaries I1-I8, K1-K11, L1-L11). Between 2.9 and 4.3 the cut is a fit, and
+ /// [`GEOMETRIC_MIN_LEAD`]'s 0.3 here leaves 5 more probe cells off the bit (T-3067).
+ /// FITTED(T-3067, 96 cells, 33..99998 periods, rate 0.005..2; cut a fit in lead 2.9..4.3)
+-const LONG_GEOMETRIC_MIN_LEAD: f64 = 3.6;
++const LONG_GEOMETRIC_MIN_LEAD: f64 = 0.0;
+ 
+ /// Which sum the kernel returns.
+ #[derive(Clone, Copy)]

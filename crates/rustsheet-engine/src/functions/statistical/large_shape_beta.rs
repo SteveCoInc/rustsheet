@@ -11,22 +11,25 @@
 //!
 //! `I_x(a, b) = Gamma(a+b) / (Gamma(a) nu^b) * (Q(b, z) + r * sum_n d_n J_n)`,
 //!
-//! r = z^b e^-z / Gamma(b), the `d_n` and `J_n` bgrat's recurrences from `J_0` = Q(b, z) / r; each
-//! term is about (b/nu)^2 of the one before, so at b/a of [`MAX_SHAPE_RATIO`] or less the sum is
-//! a correction below 1E-12 of Q.
+//! r = z^b e^-z / Gamma(b), the `d_n` and `J_n` bgrat's recurrences from `J_0` = Q(b, z) / r. Each
+//! term is about (b/nu)^2 of the one before. At a of [`MIN_SHAPE`] or more and b below
+//! [`MAX_SECOND_SHAPE`], b/nu is at most 4E-5, so the series converges in a few terms.
+//!
+//! The expansion used to stop at b/a of 1E-6. That cut sent F tails at df2 of 2E6 to 5E7 and df1 of
+//! 40 to 79 to Cephes' fraction, 1E-11 to 7E-10 off the math. Those are the calls T-3754's L140
+//! bup+bgrat port does not take (more than 9 bup terms, or a0 above 1E7).
+//! T-4119's grid (docs/research/t4119: 640 F tails at df1 3 to 79, df2 2.1E6 to 5E7, against 60-digit
+//! mpmath) puts the expansion's worst error over the whole region at 2.1E-14, so the cut is gone
+//! (decision 0267, accuracy).
 
 use super::incomplete_beta::{rlog1, stirling_correction};
 use super::incomplete_gamma::{accurate_gamma_density, gamma_ur};
 use crate::x87_exp::{dd_mul, two_sum};
 use crate::x87_log10::ln_double_double_pair;
 
-/// The largest b/a the expansion is used at: below it the series' first term is under 1E-12 of
-/// the leading Q(b, z), and Cephes' fraction is off by far more (T-2528 sweep against a 60-digit
-/// mpmath `betainc`: 1E-7 relative at a = 5E9, b = 2.5).
-pub(super) const MAX_SHAPE_RATIO: f64 = 1e-6;
-
-/// The smallest first shape the expansion is used at. A tiny b at a moderate a also has b/a below
-/// [`MAX_SHAPE_RATIO`], where the expansion's terms in 1/nu are not small: `BETA.DIST(0.997,3.366,
+/// The smallest first shape the expansion is used at. Cephes' fraction is far worse above it (T-2528
+/// sweep against a 60-digit mpmath `betainc`: 1E-7 relative at a = 5E9, b = 2.5). Below it a tiny b
+/// still has a tiny b/a, but there the expansion's terms in 1/nu are not small: `BETA.DIST(0.997,3.366,
 /// 3.43E-18,TRUE)` is 1.43E-17 in Excel (probes-numeric/t2464-r2-bpser-small-tiny A10) and 4E-13 by
 /// it.
 const MIN_SHAPE: f64 = 1e6;
@@ -40,24 +43,17 @@ const MAX_SECOND_SHAPE: f64 = 40.0;
 const MAX_SERIES_TERMS: usize = 30;
 
 /// The deepest cut of [`legendre_fraction`]: it needs about 10 cbrt(b) partial quotients at its
-/// slowest, z = b + 1 (`incomplete_gamma`'s budget), and b is at most 1E-6 of a finite a here.
+/// slowest, z = b + 1 (`incomplete_gamma`'s budget), and b is below [`MAX_SECOND_SHAPE`] here.
 const MAX_FRACTION_DEPTH: u32 = 1 << 14;
 
 /// The relative size of the last series term at which the series stops.
 const SERIES_TOLERANCE: f64 = 1e-17;
 
 /// `I_x(a, b)` with y = 1 - x given, for a of [`MIN_SHAPE`] or more, b below [`MAX_SECOND_SHAPE`]
-/// and at most [`MAX_SHAPE_RATIO`] of a, and 0 < x, y < 1; `None` elsewhere or where a step is not
-/// finite, and the caller keeps its kernel.
+/// and 0 < x, y < 1; `None` elsewhere or where a step is not finite, and the caller keeps its
+/// kernel.
 pub(super) fn large_shape_lower(a: f64, b: f64, x: f64, y: f64) -> Option<f64> {
-    if !(a >= MIN_SHAPE
-        && a.is_finite()
-        && b > 0.0
-        && b < MAX_SECOND_SHAPE
-        && b <= a * MAX_SHAPE_RATIO
-        && x > 0.0
-        && y > 0.0)
-    {
+    if !(a >= MIN_SHAPE && a.is_finite() && b > 0.0 && b < MAX_SECOND_SHAPE && x > 0.0 && y > 0.0) {
         return None;
     }
     let bm1 = b - 1.0;

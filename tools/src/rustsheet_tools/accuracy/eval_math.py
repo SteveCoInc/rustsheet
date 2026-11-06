@@ -3,27 +3,41 @@
 `rustsheet-accuracy math --suite S` writes `<case>.math.json` (rustsheet-math/v1) next to each spec
 case's oracle sidecar: for every scored cell (a key of the oracle sidecar or of the case's
 `expected`) whose formula is one call `=FUNC(args)` of a function with a Gate A definition, the
-50-digit math value of its arguments with its formula text `f`. The runner attaches a value to
+50-digit math value of its arguments with its formula text `f`. A call followed by an exact scale
+(`=F.DIST(A1020,1,10,FALSE)*2^600`, `/2^k`, `-0`; T-3924) gets the scaled math. The scale is exact
+when `k` is an integer from -1022 to 1023 (so `2^k` is itself a normal double, as Excel's `^` gives
+it) and the call's math value and the scaled value both round to normal doubles or are 0: then
+Excel's `*` or `/` of its call's double by `2^k` is that double times `2^k` without rounding, and
+`-0` leaves it unchanged. A call whose math is subnormal is 0 in Excel (numbers.md, "Subnormal
+results become 0"), so the scaled math is not Excel's operator result and the cell is listed as
+skipped (`INEXACT_SCALE`), as is one whose scaled value leaves the normal range. The runner attaches a value to
 the cell's result only while `f` still matches the cell's formula, and R1(c) counts a visibly-off
 numeric cell inside Gate A's envelope through it.
 
 A candidate cell gets no math value when:
 - an argument reads a formula cell (its value is the engine's or Excel's, not a literal), unless that
   cell's whole formula is arithmetic over number literals (`=(83892212*2^-28+4861903*2^-54)`, an
-  exact-input cell), which is read with Excel's operator model as the fit lab reads it;
-- an argument is anything else the fit lab's sweep reader leaves unparsed (a nested call), text,
-  empty or a range;
+  exact-input cell), which is read with Excel's operator model as the fit lab reads it. An argument
+  may itself be arithmetic over number literals and such cells or constant cells
+  (`A112*A112`, `1/(1+20/(4*A1249))`; T-3924): the fit lab's one evaluator (`arithmetic`) gives its
+  double, and the math is the function at that double;
+- an argument is anything else the fit lab's sweep reader leaves unparsed, text, empty or a range.
+  A nested call, or arithmetic between call results, makes the cell a composite instead
+  (`composite`, T-3993, decision 0297): it gets the outermost node's math at its inner nodes'
+  doubles, unless it calls a function with no definition (`no definition for ...`);
 - an array parameter of a `literal_arrays` definition is not written as an array literal (AGGREGATE over
   a range, whose hidden rows the math does not model);
 - the case is a 1904 workbook and the definition reads date serials in the 1900 system
   (`Definition.serials_1900`: YEARFRAC, HOUR, MINUTE, SECOND);
 - an integer parameter is given a non-integer (the definitions take integers; whether Excel
-  truncates is per function, so the cell is skipped rather than guessed), a logical parameter is
+  truncates is per function, so the cell is skipped rather than guessed) unless the parameter cites
+  the entry showing Excel truncates it (`Param.truncates`: then the truncated integer is the
+  argument, T-3923), a logical parameter is
   given a number (likewise unevidenced per function), or the call has a
   different number of arguments than the definition (an omitted optional argument the definition
   does not mark `optional`, or an extra one);
-- the generator would drop the point (dps 60 and 80 disagree, over the time limit, or a value beyond
-  the double range). Only these skips need mpmath, so the sidecar lists them under `skipped`
+- the generator would drop the point (dps 60 and 80 disagree at the definition's deterministic
+  budget, or a value beyond the double range; never the clock, T-3680). Only these skips need mpmath, so the sidecar lists them under `skipped`
   (sheet → A1 → `f` and `why`) and `math --check` (T-3588) can tell, without mpmath, a cell the
   generator dropped from one nobody ran the generator for.
 xlsx cases are skipped: tools never parse xlsx values.
@@ -32,6 +46,7 @@ xlsx cases are skipped: tools never parse xlsx values.
 from __future__ import annotations
 
 import json
+import math
 import multiprocessing
 import re
 from collections.abc import Iterable
@@ -40,19 +55,35 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from rustsheet_tools.accuracy import defs, literal
+import mpmath
+
+from rustsheet_tools.accuracy import composite, defs, literal
 from rustsheet_tools.accuracy.model import REGISTRY, Definition, NoValueError, Param
-from rustsheet_tools.accuracy.tables import MATH_FORMAT, DroppedError, compute, math_sidecar_bytes
+from rustsheet_tools.accuracy.tables import (
+    DIGITS,
+    DPS,
+    MATH_FORMAT,
+    DroppedError,
+    MathValue,
+    compute,
+    math_sidecar_bytes,
+)
 from rustsheet_tools.fitlab.sweep import UnparsedError, Workbook, arithmetic, parse_arg, split_args
 from rustsheet_tools.snapshot import suite_cases
 
 _ = defs  # importing the package registers the definitions
 
 NO_VALUE = "no single value"
-NOT_CONVERGED = "not converged or too slow"
+NOT_CONVERGED = "not converged"
+INEXACT_SCALE = "scaled value not exact"
 REGENERATE = "cd tools && uv run rustsheet-accuracy math --suite {suite}"
 
 _CALL = re.compile(r"=\s*([A-Za-z][A-Za-z0-9._]*)\((.*)\)\s*", re.DOTALL)
+# A call's exact outer scale: `*2^k`, `/2^k` or `-0` after its closing parenthesis.
+_SCALE = re.compile(r"(?P<call>.*\))\s*(?:(?P<op>[*/])\s*2\s*\^\s*(?P<k>[+-]?\d{1,4})|-\s*0)\s*", re.DOTALL)
+# 2^k is a normal double for these k, so Excel's `^` gives it exactly.
+_SCALE_POWERS = range(-1022, 1024)
+_SMALLEST_NORMAL = 2.0**-1022
 
 
 @dataclass(frozen=True)
@@ -135,6 +166,40 @@ def single_call(text: str) -> tuple[str, str] | None:
     return (m.group(1).upper(), inner) if depth == 0 and not quoted else None
 
 
+def scaled_call(text: str) -> tuple[str, str, int | None] | None:
+    """(function name, argument text, scale) when `text` is one call (`single_call`, scale None)
+    or one call followed by an exact scale (see the module doc): `*2^k` is `k`, `/2^k` is `-k`
+    and `-0` is 0. None for any other formula."""
+    if (call := single_call(text)) is not None:
+        return (*call, None)
+    m = _SCALE.fullmatch(text)
+    if m is None or (call := single_call(m.group("call"))) is None:
+        return None
+    power = 0 if m.group("op") is None else int(m.group("k")) * (1 if m.group("op") == "*" else -1)
+    return (*call, power) if power in _SCALE_POWERS else None
+
+
+def scale_math(value: MathValue, power: int) -> MathValue | None:
+    """The math of a call's `value` times `2^power`, or None when the scale is not exact (the call's
+    or the scaled value rounds to a nonzero double below the normal range, or the scaled value is
+    beyond it). A domain error is the same error scaled (Excel's `#NUM!*2^600` is `#NUM!`)."""
+    if value.value is None:
+        return value
+    with mpmath.workdps(DPS[-1]):
+        unscaled = mpmath.mpf(value.value)
+        scaled = mpmath.ldexp(unscaled, power)
+        if not (_normal_or_zero(unscaled) and _normal_or_zero(scaled)):
+            return None
+        # `-0` and a 0 keep the generator's own text; any other scale is written to DIGITS again
+        return value if power == 0 or unscaled == 0 else MathValue(value=mpmath.nstr(scaled, DIGITS))
+
+
+def _normal_or_zero(value: mpmath.mpf) -> bool:
+    """Whether `value` rounds to a normal double or is 0."""
+    nearest = abs(float(value))
+    return value == 0 or (nearest >= _SMALLEST_NORMAL and math.isfinite(nearest))
+
+
 def array_elements(value: Any) -> tuple[float, ...] | str:
     """A range or array argument's numbers in row-major order, or why it does not fit (a scalar, or
     an element that is not a number: the definitions take dense numeric arrays only)."""
@@ -161,8 +226,18 @@ def fit_arg(param: Param, value: Any) -> literal.Arg | str:
     if isinstance(value, bool):
         return "logical for a number"
     if param.kind == "int":
-        return int(value) if float(value).is_integer() else "non-integer for an integer parameter"
+        return fit_int(param, float(value))
     return float(value)
+
+
+def fit_int(param: Param, value: float) -> int | str:
+    """A number for an `int` parameter: an integer as is, and a non-integer truncated toward zero
+    where `param.truncates` cites the evidence that Excel does so, or why it does not fit."""
+    if not math.isfinite(value):
+        return "non-finite for an integer parameter"
+    if value.is_integer():
+        return int(value)
+    return math.trunc(value) if param.truncates else "non-integer for an integer parameter"
 
 
 def fit_args(definition: Definition, values: list[Any]) -> list[literal.Arg] | str:
@@ -196,13 +271,25 @@ def scored_cells(spec: dict[str, Any], oracle: dict[str, Any] | None) -> Iterabl
 @dataclass(frozen=True)
 class Candidate:
     """A scored one-call cell of a function with a definition: its arguments as the definition
-    reads them, or why it gets no math value without running the generator."""
+    reads them, or why it gets no math value without running the generator. A composite cell
+    (`composite`, T-3993) has no `definition`; its `tree` is the parsed formula."""
 
     sheet: str
     a1: str
     text: str
-    definition: Definition
+    definition: Definition | None
     args: list[literal.Arg] | str
+    scale: int | None = None  # the exact outer scale's power of two (`scaled_call`), else None
+    tree: composite.Node | None = None
+
+    def compute(self) -> MathValue:
+        """The math value of a candidate whose arguments fit (`args` is not a reason)."""
+        if self.tree is not None:
+            return composite.compute(self.tree)
+        if self.definition is None or isinstance(self.args, str):
+            msg = f"{self.sheet}!{self.a1} has no math to compute"
+            raise ValueError(msg)
+        return compute(self.definition, self.args)
 
 
 def candidates(case_path: Path, sidecar: Path) -> list[Candidate]:
@@ -214,24 +301,32 @@ def candidates(case_path: Path, sidecar: Path) -> list[Candidate]:
     out: list[Candidate] = []
     for sheet, a1 in scored_cells(spec, oracle):
         text = sheets.get(sheet, {}).get(a1)
-        if not isinstance(text, str) or (call := single_call(text)) is None:
+        if not isinstance(text, str):
             continue
-        definition = REGISTRY.get(call[0])
+        if (call := scaled_call(text)) is None:
+            if (tree := composite.parse(text, sheet, book, fit_arg)) is not None:
+                out.append(Candidate(sheet, a1, text, None, tree.why or [], tree=tree.root))
+            continue
+        name, inner, scale = call
+        definition = REGISTRY.get(name)
         if definition is None:
             continue
         if definition.serials_1900 and spec.get("date_system") == 1904:
-            out.append(Candidate(sheet, a1, text, definition, "a 1904 workbook"))
+            out.append(Candidate(sheet, a1, text, definition, "a 1904 workbook", scale))
             continue
-        texts = split_args(call[1])
+        texts = split_args(inner)
         if definition.literal_arrays and _range_for_literal(definition, texts):
-            out.append(Candidate(sheet, a1, text, definition, "not an array literal"))
+            out.append(Candidate(sheet, a1, text, definition, "not an array literal", scale))
             continue
         try:
-            values = [parse_arg(a, sheet, book) for a in texts]
+            values = [parse_arg(a, sheet, book, cell_refs=True) for a in texts]
         except (UnparsedError, ValueError) as err:
-            out.append(Candidate(sheet, a1, text, definition, f"unparsed ({type(err).__name__})"))
+            if (tree := composite.parse(text, sheet, book, fit_arg)) is not None:  # a nested call
+                out.append(Candidate(sheet, a1, text, None, tree.why or [], tree=tree.root))
+            else:
+                out.append(Candidate(sheet, a1, text, definition, f"unparsed ({type(err).__name__})", scale))
             continue
-        out.append(Candidate(sheet, a1, text, definition, fit_args(definition, values)))
+        out.append(Candidate(sheet, a1, text, definition, fit_args(definition, values), scale))
     return out
 
 
@@ -254,13 +349,22 @@ def case_math(case_id: str, case_path: Path, sidecar: Path) -> CaseMath:
             out.skip(c.args)
             continue
         try:
-            value = compute(c.definition, c.args)
+            value = c.compute()
+        except composite.CompositeSkipError as err:
+            out.drop(c.sheet, c.a1, c.text, str(err))
+            continue
         except NoValueError:
             out.drop(c.sheet, c.a1, c.text, NO_VALUE)
             continue
         except DroppedError:
             out.drop(c.sheet, c.a1, c.text, NOT_CONVERGED)
             continue
+        if c.scale is not None:
+            scaled = scale_math(value, c.scale)
+            if scaled is None:
+                out.drop(c.sheet, c.a1, c.text, INEXACT_SCALE)
+                continue
+            value = scaled
         out.cells.setdefault(c.sheet, {})[c.a1] = {**value.to_json(), "f": c.text}
     return out
 

@@ -219,11 +219,35 @@ fn resolve_with(tag: &str, hijri_prefix: bool) -> LocaleTag {
 /// Myanmar digits; probes/t1924-locale-tag-extended-hex A26). It holds whatever the LCID resolves
 /// to (`[$-fr_FR-x]` keeps the workbook's names and `A/P` as written).
 pub fn numerals(tag: &str) -> Numerals {
-    let value = hex_value(tag).or_else(|| match resolve_bcp47(tag, false) {
+    if let Some((_, suffix)) = numeral_suffix(tag) {
+        return hex_value(suffix).map_or(Numerals::Ascii, |value| Numerals::from_byte(value >> 8));
+    }
+    if let Some(value) = hex_value(tag) {
+        return Numerals::from_byte(value >> 24);
+    }
+    // An extended-hex value that wraps past byte 31 stays ASCII: `[$€-x-euro2]` prints ASCII digits
+    // (gen-m10/bfbcd16cee266336 T!A12), while a real hex tag takes bytes 32-35
+    // (probes/t4107-numeral-2000-suffix).
+    let value = match resolve_bcp47(tag, false) {
         LocaleTag::Silent => extended_hex(tag),
         _ => None,
-    });
-    value.map_or(Numerals::Ascii, |value| Numerals::from_byte(value >> 24))
+    };
+    value.map_or(Numerals::Ascii, |value| match value >> 24 {
+        byte @ 0..=31 => Numerals::from_byte(byte),
+        _ => Numerals::Ascii,
+    })
+}
+
+/// The locale and numeral parts of a tag written `locale,N00`, the form Excel gives a cell typed
+/// with script digits (`[$-ar-SA,200]0`, `[$-,D00]h:mm`; probes/t3446-script-digits-forms): the
+/// hex after the comma holds the numeral byte of [`Numerals::from_byte`] above its low byte, so
+/// `,200` prints Arabic-Indic digits, `,D00` Thai and `,1200` Khmer, and `,0` ASCII
+/// (probes/t3891-numeral-tag-render A1:A30, excel-graph 2026-11-04). `,2000` prints fullwidth
+/// digits there, as byte 32 does in the LCID form (A28; probes/t4107-numeral-2000-suffix). Only the digits
+/// are read this way: the locale part resolves as the whole tag always has (`[$-40C,1]` prints
+/// English names; probes/text-locale-date-names A106).
+fn numeral_suffix(tag: &str) -> Option<(&str, &str)> {
+    tag.split_once(',')
 }
 
 /// `tag` read as a hex LCID with its calendar digits, if it is one.
@@ -356,13 +380,17 @@ fn resolve_lcid(value: u32) -> LocaleTag {
 /// The names and calendar of digit 8 (`hebrew`) or 10 under `lcid`: Hebrew script for a Hebrew or
 /// Arabic LCID (`[$-8040D]`, `[$-80801]`), Devanagari Saka names for an Arabic or Hindi one
 /// (`[$-100401]`, `[$-100439]`), the Latin transliterations under every other LCID with a locale
-/// (probes/t2779-hebrew-saka-names E1:E25, t2779-hebrew-saka-more C1:D33). bn-IN (0x445) also
-/// prints the Latin Saka names, but it has no table here and so no locale (`without_locale`).
+/// (probes/t2779-hebrew-saka-names E1:E25, t2779-hebrew-saka-more C1:D33), the Indic LCIDs
+/// bn-IN, mr-IN, ta-IN, te-IN, kn-IN, kok-IN and ne-NP included (probes/t2959-indic-lcid-names
+/// rows 14 and 15).
 fn hebrew_or_saka(hebrew: bool, lcid: u16) -> (&'static DateNames, Calendar) {
     match (hebrew, lcid & 0x3FF) {
         (true, 0x0D | 0x01) => (&HEBREW_SCRIPT, Calendar::Hebrew(Some(&HEBREW_SCRIPT_ADARS))),
         (true, _) => (&HEBREW_LATIN, Calendar::Hebrew(Some(&HEBREW_LATIN_ADARS))),
+        // ne-IN 0x861 and neutral 0x61 print native Saka names, ne-NP 0x461 the Latin ones
+        // (probes/t4201-indic-regional-variants C14, F14).
         (false, 0x01 | 0x39) => (&SAKA_HINDI, Calendar::Saka),
+        (false, 0x61) if lcid != 0x461 => (&SAKA_HINDI, Calendar::Saka),
         (false, _) => (&SAKA, Calendar::Saka),
     }
 }
@@ -384,10 +412,19 @@ fn hijri_names(lcid: u16) -> &'static DateNames {
 /// falls back to its language only when it is neutral (below 0x400: `[$-g]` 0x10 is Italian,
 /// `[$-0_]` 0x2F Macedonian). `[$-x_y]` is 0x2412 and prints English, not Korean
 /// (text-locale-calendars A139), so an LCID with a sublanguage and no table has no locale here.
+/// The exception is English: `[$-_409]` is 0x2F409 (calendar 2 over LCID 0xF409) and prints
+/// "6 PM" for `h A/P`, as the plain `[$-F409]` does (probes/t1924-locale-tag-extended-hex S!B22,
+/// probes/text-locale-invalid-sublanguage). Other English sublanguages reached through extended
+/// hex are unprobed.
 fn resolve_extended(value: u32) -> LocaleTag {
     let value = value & 0xFF_FFFF;
     let lcid = (value & 0xFFFF) as u16;
-    if lcid > 0x3FF && lcid != 0x400 && lcid != 0x800 && table(lcid).is_none() {
+    if lcid > 0x3FF
+        && lcid != 0x400
+        && lcid != 0x800
+        && lcid & 0x3FF != 0x09
+        && table(lcid).is_none()
+    {
         return without_locale(value >> 16);
     }
     resolve_lcid(value)

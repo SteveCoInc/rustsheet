@@ -275,3 +275,18 @@ fn t_inv_2t_above_one_is_the_negative_quantile_of_the_mirror() {
     assert_eq!(model._get_text("A12"), *"#NUM!");
     assert_eq!(model._get_text("A13"), *"0");
 }
+
+#[test]
+fn t_density_flushes_a_subnormal_result() {
+    // Excel's df >= 3 density is 0 where its last product is subnormal ((x)=0 is TRUE, x*1E300 is 0;
+    // Gate A T.DIST/r4-T-2585 A138), while df 2's EXP keeps it (statistics.md "Student t density is
+    // Loader's dt", T-2585).
+    let mut model = new_empty_model();
+    model._set("A1", "=T.DIST(-1.1002374143529E+20,15,FALSE)");
+    model._set("A2", "=T.DIST(1E+78,3,FALSE)*1E300");
+    model._set("A3", "=T.DIST(1E+104,2,FALSE)*1E300");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"0");
+    assert_eq!(model._get_text("A2"), *"0");
+    assert_eq!(model._get_text("A3"), *"1E-12");
+}

@@ -4,13 +4,48 @@
 use crate::{
     expressions::{
         lexer::LexerMode,
-        parser::{stringify::to_english_string, Node},
+        parser::{
+            stringify::{to_english_string, to_rc_format},
+            Node,
+        },
         types::CellReferenceRC,
     },
     model::Model,
 };
 
 impl Model {
+    /// Parses every stored formula of sheet `only` (of every sheet when `None`), applies
+    /// `rewrite` to it in place and stores the result. Unlike [`Model::rewrite_formulas`] it
+    /// leaves defined names alone and keeps no undo record: a defined-name rename or add, whose
+    /// own undo re-reads the formulas. The caller re-parses the workbook afterwards
+    /// ([`Model::reset_parsed_structures`]).
+    pub(crate) fn rewrite_shared_formulas(
+        &mut self,
+        only: Option<u32>,
+        mut rewrite: impl FnMut(&mut Node),
+    ) {
+        // All internal formulas are R1C1.
+        self.parser.set_lexer_mode(LexerMode::R1C1);
+        for (index, worksheet) in self.workbook.worksheets.iter_mut().enumerate() {
+            if only.is_some_and(|only| usize::try_from(only).ok() != Some(index)) {
+                continue;
+            }
+            let cell_reference = CellReferenceRC {
+                sheet: worksheet.get_name(),
+                row: 1,
+                column: 1,
+            };
+            let mut formulas = Vec::with_capacity(worksheet.shared_formulas.len());
+            for formula in &worksheet.shared_formulas {
+                let mut t = self.parser.parse(formula, &cell_reference);
+                rewrite(&mut t);
+                formulas.push(to_rc_format(&t));
+            }
+            worksheet.shared_formulas = formulas;
+        }
+        self.parser.set_lexer_mode(LexerMode::A1);
+    }
+
     /// Prints every formula of every sheet but `skip_sheet`, and every defined name, with
     /// `print` (given the parsed formula, and the cell it is read on for a defined name, or no
     /// cell for an R1C1 shared formula), stores the text where it changed and returns what it
@@ -82,13 +117,15 @@ impl Model {
     }
 
     /// Puts back the formulas [`Model::rewrite_formulas`] rewrote, where they still hold the
-    /// rewritten text (the undo of the edit). Does not reparse.
+    /// rewritten text (the undo of the edit). Does not reparse. It goes from the last entry to
+    /// the first, so an edit that rewrote a formula twice (a sheet delete's table references,
+    /// then its 3-D spans) gets its original text back.
     pub(crate) fn restore_rewritten_formulas(&mut self, rewritten: Vec<RewrittenFormula>) {
         for RewrittenFormula {
             place,
             original,
             rewritten,
-        } in rewritten
+        } in rewritten.into_iter().rev()
         {
             let slot = match place {
                 FormulaPlace::Shared { sheet_id, index } => self

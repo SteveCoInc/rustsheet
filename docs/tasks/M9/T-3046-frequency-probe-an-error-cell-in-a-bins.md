@@ -3,7 +3,7 @@ id: T-3046
 title: "FREQUENCY: probe an error cell in a bins range, a referenced numeric-text bin, and re-measure corpus-bench/53062 (T-2636 follow-up)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -28,3 +28,6 @@ not measure because corpus-bench is not fetched in the worker environment (`rust
 -
 
 Note (T-3791): a one-cell reference to an error cell as the bins is skipped as a bin with no number (gen-m9/d56012c9341cd0ff); the multi-cell range case is still open.
+
+## Outcome
+Probed `probes/frequency-bins-ref-cells` (excel-graph): an error cell in a bins range is skipped (3 rows, first 1), a data-array error element wins over it, and a numeric-text bin cell is skipped. Ours returned the bins error; `freq_values_of` now skips error cells of a bins range. Recorded in statistics.md. Eval delta: probes +9 passing cells (new case, 0 known failures). corpus-bench/53062 not measured (corpus-bench fetch did not complete here); filed T-4313.

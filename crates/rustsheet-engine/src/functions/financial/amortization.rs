@@ -87,6 +87,15 @@ impl Model {
         self.amortization_call(Function::Amordegrc, Amortization::Degressive, args, cell)
     }
 
+    /// Empties the value AMORDEGRC below period 1 reads, as a lifted AMORDEGRC or AMORLINC and the
+    /// calls of `Function::empties_amor_left_over` and a called LAMBDA do (financial.md "AMORDEGRC
+    /// below period 1"). It counts as a write, so an anchor that only empties it still empties it
+    /// at its place in Excel's order (`run_excel_order`).
+    pub(crate) fn empty_amor_left_over(&mut self) {
+        self.evaluation.order_state.amor_left_over = 0.0;
+        self.evaluation.anchor_effects.writes += 1;
+    }
+
     /// Lifts `kind` over its arguments and applies what the calls leave for an AMORDEGRC below
     /// period 1, which returns the value the last AMORDEGRC or AMORLINC Excel ran before it left
     /// (`LeftOver`; financial.md "AMORDEGRC below period 1", decision 0131). Such a scalar call
@@ -127,13 +136,16 @@ impl Model {
                     LeftOver::Read => *node = ArrayNode::Number(left),
                 }
             }
-            state.order_state.amor_left_over = 0.0;
+            self.empty_amor_left_over();
             return result;
         }
         for call in calls {
             match call {
                 LeftOver::Keep => {}
-                LeftOver::Set(value) => state.order_state.amor_left_over = value,
+                LeftOver::Set(value) => {
+                    state.order_state.amor_left_over = value;
+                    state.anchor_effects.writes += 1;
+                }
                 LeftOver::Read => {
                     state.order_state_read = true;
                     return CalcResult::Number(state.order_state.amor_left_over);
