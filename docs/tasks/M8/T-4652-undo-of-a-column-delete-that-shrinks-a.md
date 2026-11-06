@@ -3,7 +3,7 @@ id: T-4652
 title: "Undo of a column delete that shrinks a table at its right edge restores the columns but not the table's extent"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
