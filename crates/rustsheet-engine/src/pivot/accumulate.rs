@@ -14,6 +14,16 @@ use crate::expressions::token::Error;
 
 use super::{Aggregate, CacheItem};
 
+/// The sum of `cells` in order from 0, or the first error among them: how a Sum total adds its
+/// children and a grand-grand total its row totals.
+pub(crate) fn sum_in_order(
+    cells: impl IntoIterator<Item = Result<f64, Error>>,
+) -> Result<f64, Error> {
+    cells
+        .into_iter()
+        .try_fold(0.0, |acc, cell| cell.map(|n| acc + n))
+}
+
 /// What the records of one (row node, column node, data field) hold so far.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Accumulator {
@@ -26,7 +36,8 @@ pub(crate) struct Accumulator {
     product: f64,
     max: f64,
     min: f64,
-    /// The first error fed, which poisons every aggregate but the counts.
+    /// The first error fed, which poisons every aggregate but the counts. Of two different
+    /// errors the first in accumulation order wins (UNVERIFIED, T-4633).
     error: Option<Error>,
     /// The sum of the child cells' Sums, for a total of a pivot whose data fields are all Sum
     /// ([`Accumulator::set_children_sum`]).
@@ -57,17 +68,19 @@ impl Accumulator {
             CacheItem::Missing => {}
             CacheItem::Number(n) | CacheItem::Date(n) => {
                 let n = *n;
-                self.values += 1;
-                self.numbers += 1;
+                self.values = self.values.saturating_add(1);
+                self.numbers = self.numbers.saturating_add(1);
                 self.sum += n;
                 self.squares += n * n;
                 self.product *= n;
                 self.max = self.max.max(n);
                 self.min = self.min.min(n);
             }
-            CacheItem::Text(_) | CacheItem::Boolean(_) => self.values += 1,
+            CacheItem::Text(_) | CacheItem::Boolean(_) => {
+                self.values = self.values.saturating_add(1);
+            }
             CacheItem::Error(error) => {
-                self.values += 1;
+                self.values = self.values.saturating_add(1);
                 if self.error.is_none() {
                     self.error = Some(error.clone());
                 }
@@ -93,14 +106,14 @@ impl Accumulator {
     /// Sets the sum of the child cells' Sums, `cells` in display order: the first error among
     /// them, or their sum from 0.
     pub(crate) fn set_children_sum(&mut self, cells: impl IntoIterator<Item = Result<f64, Error>>) {
-        self.children = cells
-            .into_iter()
-            .try_fold(0.0, |acc, cell| cell.map(|n| acc + n));
+        self.children = sum_in_order(cells);
     }
 
     /// The cell's value under `function`.
     /// - `total`: the cell is a subtotal or a grand total on either axis.
-    /// - `counts_mixed`: the pivot has a data field that is neither Count nor `CountNums`.
+    /// - `counts_mixed`: the pivot has a data field that is neither Count nor `CountNums`. The
+    ///   evidence is Count beside Sum or Average, and beside all eleven (t4135 EC); Count beside
+    ///   only Max, Min, Product or the variances is UNVERIFIED (T-4634).
     /// - `sum`: for a total, the Sum it shows when it is not the record sum: the sum of its
     ///   children in a pivot whose data fields are all Sum, or the 2-D grand-grand total's sum of
     ///   row totals ([`super::result`]); also the numerator of that total's Average.
@@ -149,8 +162,10 @@ impl Accumulator {
             // Var is the textbook one-pass formula over the accumulated sums, never the
             // worksheet functions' two-pass switch (`excel_variance`): t4616 V1 to V4 refute it,
             // and the n·Σx² form, for Var and StdDev. Varp is that n·Σx² form,
-            // (n·Σx² − (Σx)²)/n², which alone fits t4135 A_stdDevp!N6 and M8 (and t4589 S1 G5:H7);
-            // the order of its totals is assumed to be Var's (UNVERIFIED, T-4634).
+            // (n·Σx² − (Σx)²)/n² (bit-identical divided by n twice): of the candidates tried
+            // (textbook /n, Σx²/n − mean², two-pass, Welford, (Σx² − Σx·mean)/n) it is the only
+            // family that fits t4135 A_stdDevp!N6 and M8 (and t4589 S1 G5:H7). The order of its
+            // totals is assumed to be Var's (UNVERIFIED, T-4634).
             Aggregate::Var => self.sample_variance(),
             Aggregate::VarP => self.population_variance(),
             Aggregate::StdDev => self.sample_variance().sqrt(),

@@ -513,3 +513,80 @@ fn a_field_past_the_cache_is_malformed() {
         Err(PivotComputeError::Malformed)
     );
 }
+
+/// A diagonal pivot: record `i` is row item `i` and column item `i`, Sum of its index.
+fn diagonal(n: u32, data: bool) -> (PivotCache, PivotTable) {
+    let mut builder = CacheBuilder::new(None, MAX_RECORD_VALUES);
+    for name in ["R", "C", "V"] {
+        builder.add_field(name.to_string()).unwrap();
+    }
+    for i in 0..n {
+        builder
+            .push_record(vec![
+                RecordValue::Inline(CacheItem::Number(f64::from(i))),
+                RecordValue::Inline(CacheItem::Number(f64::from(i))),
+                RecordValue::Inline(CacheItem::Number(f64::from(i))),
+            ])
+            .unwrap();
+    }
+    let cache = builder.finish();
+    let area = CellArea {
+        top: 0,
+        left: 0,
+        bottom: 0,
+        right: 0,
+    };
+    let mut table = PivotTable::new("D".to_string(), 1, area, 0);
+    let len = |f: usize| cache.fields[f].items.len();
+    table.fields = vec![
+        PivotField::new(Some(Axis::Row), len(0)),
+        PivotField::new(Some(Axis::Column), len(1)),
+        PivotField::new(None, len(2)),
+    ];
+    table.row_fields = vec![AxisField::Field(0)];
+    table.column_fields = vec![AxisField::Field(1)];
+    if data {
+        table.data_fields = vec![DataField {
+            field: 2,
+            ..DataField::default()
+        }];
+    }
+    (cache, table)
+}
+
+fn spent(table: &PivotTable, cache: &PivotCache) -> u64 {
+    let mut work = MAX_PIVOT_WORK;
+    compute(table, cache, &mut work).unwrap();
+    MAX_PIVOT_WORK - work
+}
+
+#[test]
+fn a_diagonal_sum_only_pivot_costs_linear_work() {
+    // Each row and column total has one child cell, but the root of each axis has n children:
+    // summing children by walking every axis child per total would be quadratic (2.5e9 lookups
+    // here, minutes; the child index makes it a fraction of a second).
+    let (small_cache, small_table) = diagonal(2_000, true);
+    let (large_cache, large_table) = diagonal(50_000, true);
+    let (small, large) = (
+        spent(&small_table, &small_cache),
+        spent(&large_table, &large_cache),
+    );
+    // 25 times the records: n log n sorts allow a little over 25 times the work, n² 625.
+    assert!(large < small * 50, "{small} then {large}: not linear");
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute(&large_table, &large_cache, &mut work).unwrap();
+    // 0 + 1 + ... + 49,999.
+    assert_eq!(result.value(0, 0, 0), Some(Ok(1_249_975_000.0)));
+}
+
+#[test]
+fn a_pivot_with_no_data_field_still_pays_for_its_cells() {
+    let (cache, table) = diagonal(1_000, false);
+    // Four cells per record (item, both totals, grand-grand), each charged.
+    assert!(spent(&table, &cache) >= 4_000);
+    let mut work = 3_000;
+    assert_eq!(
+        compute(&table, &cache, &mut work),
+        Err(PivotComputeError::Limit)
+    );
+}
