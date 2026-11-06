@@ -20,7 +20,14 @@ from rustsheet_tools.accuracy.eval_math import case_math, fit_args
 from rustsheet_tools.accuracy.model import Definition, NoValueError, Param
 from rustsheet_tools.accuracy.sampler import Sampler, math_arg
 from rustsheet_tools.accuracy.tables import compute, draw_points, formula, parse_formula
-from rustsheet_tools.fitlab.sweep import UnparsedError, Workbook, parse_arg, parse_matrix_arg, parse_rows
+from rustsheet_tools.fitlab.sweep import (
+    UnparsedError,
+    Workbook,
+    is_array_literal,
+    parse_arg,
+    parse_matrix_arg,
+    parse_rows,
+)
 
 
 def value(definition: Definition, args: Sequence[literal.Arg]) -> mpmath.mpf:
@@ -220,6 +227,16 @@ def test_fit_args_reads_a_matrix_by_its_rows() -> None:
     assert fit_args(MDETERM, [True]) == "non-numeric argument"
     assert fit_args(MDETERM, ["5"]) == "non-numeric argument"
     assert fit_args(MINVERSE, [[[2.0]], 1.0, 1.0]) == [((2.0,),), 1, 1]
+    assert fit_args(MDETERM, [[[1.0] * 64] * 64]) != "a matrix larger than 64x64"
+    assert fit_args(MDETERM, [[[1.0] * 65] * 65]) == "a matrix larger than 64x64"
+    assert fit_args(MDETERM, [[[1.0]] * 65]) == "a matrix larger than 64x64"
+
+
+def test_is_array_literal() -> None:
+    assert is_array_literal("{1,2;3,4}")
+    assert not is_array_literal("{")
+    assert not is_array_literal("{1,2}*2")
+    assert not is_array_literal("A1:B2")
 
 
 def test_eval_cells_with_matrix_arguments_get_math(tmp_path: Path) -> None:

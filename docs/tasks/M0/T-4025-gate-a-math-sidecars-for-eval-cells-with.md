@@ -35,7 +35,7 @@ depends_on: [T-3686]
 - [x] The sweep reader keeps the shape of an array literal or range for a `matrix` parameter, with tests.
 - [x] One-call MDETERM cells and INDEX-of-MINVERSE/MMULT cells in probes and probes-numeric have math values.
       Their sidecars are regenerated and `make eval-math-check` is green.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Any engine change.
@@ -44,7 +44,8 @@ depends_on: [T-3686]
 - `fitlab/sweep.py`: `parse_rows` reads an array literal or a reference row by row (a `;` inside a string literal is
   no row break), and `parse_matrix_arg` uses it for a matrix parameter; `parse_arg` still flattens, through the same
   helpers. `eval_math`: `matrix_rows` fits a matrix (a number is a 1x1 matrix, evidenced by `MDETERM(5)` = 5,
-  stats-evidence-floor-t1623 S!Q112; a blank, logical or text element is skipped, Excel's `#VALUE!`), `fit_arg` has
+  stats-evidence-floor-t1623 S!Q112; a blank or logical element is skipped, Excel's `#VALUE!`; a text element is
+  skipped with no math value because it is unprobed, follow-up T-4626; a matrix over 64x64 is skipped), `fit_arg` has
   separate array and matrix branches, `indexed_call` reads `=INDEX(FUNC(args),row,column)` of an indexed definition
   (also under an exact scale), an indexed definition called outside INDEX is skipped, and a `literal_arrays`
   definition's matrix parameter must be an array literal too (LINEST and friends gain nothing, as T-4096 said).

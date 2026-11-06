@@ -14,7 +14,9 @@ on those doubles are part of the definition (arrays.md):
   its singular draws are 2x2 with one row twice the other, whose partial-pivot multiplier is exactly 1/2 and
   whose last pivot is exactly 0. A singular matrix whose elimination leaves a rounding residual
   (`{1,2,3;4,5,6;7,8,9}`) is a number in Excel, the inverse of that residual, with no math value
-  (NoValueError, so an eval cell that reads one gets none, T-4025); it is never drawn.
+  (NoValueError, so an eval cell that reads one gets none, T-4025); it is never drawn. The reverse is not
+  modelled: a matrix that is nonsingular in exact arithmetic but whose elimination in doubles meets an
+  exactly-zero pivot (Excel's `#NUM!`) gets the exact inverse's number.
   An inverse element past the double range makes the whole result `#NUM!`
   (probes/minverse-overflow-computed-pivot), so any exact element past the range is a domain error.
 Not claimed, never drawn (NoValueError): MMULT of non-conformable matrices, an MMULT element or product past the

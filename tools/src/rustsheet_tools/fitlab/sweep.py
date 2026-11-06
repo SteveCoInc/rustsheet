@@ -4,12 +4,13 @@ A sweep is a case plus its oracle sidecar (Excel's values), both JSON, located t
 harness's own discovery (`rustsheet-eval cases`, `snapshot.suite_cases`); no xlsx is parsed.
 Cells are selected by a regex over the formula text whose first group is the argument list.
 Arguments are numeric literals, TRUE/FALSE, string literals, array literals of those (`{1,2;3,4}`,
-row-major; `parse_rows` keeps the rows of an array literal or range for a matrix argument, T-4025),`DATE(y,m,d)` with integer literals (a 1900-system serial), references (`A1`, `$Z$1`,
-`Data!B2`, `D1:D10`) to constant cells of the case or to formula cells with an oracle value, and
-arithmetic over numeric literals (`0.05/12`, `1+26955297717044*2^-52`), which is evaluated with
-Excel's operator model (`arithmetic`; with `parse_arg`'s `cell_refs`, that arithmetic may also read
-single cells holding a number, `A112*A112`, for the math sidecars, T-3924), and a nested call whose text is the whole formula of a cell
-of the fit's `calls` cases (`PMT(0.2,1,10000)` in `RATE(1,PMT(0.2,1,10000),10000)`), which is
+row-major; `parse_rows` keeps the rows of an array literal or range for a matrix argument, T-4025),
+`DATE(y,m,d)` with integer literals (a 1900-system serial), references (`A1`, `$Z$1`, `Data!B2`,
+`D1:D10`) to constant cells of the case or to formula cells with an oracle value, and arithmetic over
+numeric literals (`0.05/12`, `1+26955297717044*2^-52`), which is evaluated with Excel's operator
+model (`arithmetic`; with `parse_arg`'s `cell_refs`, that arithmetic may also read single cells
+holding a number, `A112*A112`, for the math sidecars, T-3924), and a nested call whose text is the
+whole formula of a cell of the fit's `calls` cases (`PMT(0.2,1,10000)` in `RATE(1,PMT(0.2,1,10000),10000)`), which is
 Excel's value of that cell: the outer kernel is then scored on Excel's own bits of the inner call.
 A cell whose arguments are anything else (another function call) is reported as unparsed. A pattern
 with one group is an argument list split at top-level commas; a pattern with several groups gives one
@@ -406,11 +407,16 @@ def serial_date(serial: float) -> datetime.date:
     return EPOCH + datetime.timedelta(days=int(serial))
 
 
+def is_array_literal(text: str) -> bool:
+    """Whether the argument text is an array literal `{...}` (braces at both ends)."""
+    return len(text) >= 2 and text[0] == "{" and text[-1] == "}"
+
+
 def parse_arg(text: str, sheet: str, book: Workbook, *, cell_refs: bool = False) -> Arg:
     """One argument's value (see the module doc for what is supported). With `cell_refs`,
     arithmetic may also read single cells of `book` that hold a number (`cell_number`):
     `A112*A112`, `1/(1+20/(4*A1249))` (T-3924, the math sidecars)."""
-    if len(text) >= 2 and text[0] == "{" and text[-1] == "}":
+    if is_array_literal(text):
         return _array(text)
     if d := _DATE.fullmatch(text):
         return date_serial(int(d.group(1)), int(d.group(2)), int(d.group(3)))
@@ -430,7 +436,7 @@ def parse_rows(text: str, sheet: str, book: Workbook) -> Rows:
     """An array literal or a reference's values row by row, keeping the shape `parse_arg` flattens
     (a matrix argument, T-4025): `{1,2;3,4}` is `[[1, 2], [3, 4]]`, `B1:C2` its two rows of two
     cells and a single cell one row of one. UnparsedError for any other argument text."""
-    if len(text) >= 2 and text[0] == "{" and text[-1] == "}":
+    if is_array_literal(text):
         return _array_rows(text)
     if m := _REF.fullmatch(text):
         return _range_rows(m, text, sheet, book)
@@ -441,7 +447,7 @@ def parse_rows(text: str, sheet: str, book: Workbook) -> Rows:
 def parse_matrix_arg(text: str, sheet: str, book: Workbook) -> Arg | Rows:
     """A matrix parameter's argument: an array literal or a reference row by row (`parse_rows`),
     anything else as `parse_arg` with `cell_refs` reads it (a number literal, arithmetic)."""
-    if (len(text) >= 2 and text[0] == "{" and text[-1] == "}") or _REF.fullmatch(text):
+    if is_array_literal(text) or _REF.fullmatch(text):
         return parse_rows(text, sheet, book)
     return parse_arg(text, sheet, book, cell_refs=True)
 

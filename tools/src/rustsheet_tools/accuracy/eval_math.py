@@ -82,6 +82,7 @@ from rustsheet_tools.fitlab.sweep import (
     UnparsedError,
     Workbook,
     arithmetic,
+    is_array_literal,
     parse_arg,
     parse_complex_text,
     parse_matrix_arg,
@@ -95,6 +96,9 @@ NO_VALUE = "no single value"
 NOT_CONVERGED = "not converged"
 INEXACT_SCALE = "scaled value not exact"
 REGENERATE = "cd tools && uv run rustsheet-accuracy math --suite {suite}"
+# The largest matrix side a matrix argument may have (`matrix_rows`): the rational elimination of the
+# definitions grows fast with the side, and a workbook is untrusted input.
+MAX_MATRIX_SIDE = 64
 
 _CALL = re.compile(r"=\s*([A-Za-z][A-Za-z0-9._]*)\((.*)\)\s*", re.DOTALL)
 # A call's exact outer scale: `*2^k`, `/2^k` or `-0` after its closing parenthesis.
@@ -252,15 +256,21 @@ def matrix_rows(value: Any) -> literal.Matrix | str:
     """A matrix argument (`parse_matrix_arg`: rows of values, or a scalar) as the definitions take
     it, or why it does not fit. A number is a 1x1 matrix: `MDETERM(5)` is 5 (probes/stats-evidence-floor-t1623
     S!Q112), and MDETERM of a single numeric cell is that number (arrays.md "MDETERM / MINVERSE: a blank
-    cell in the matrix is #VALUE!"). A blank, a logical or a text, as the matrix or one of its elements, is
-    `#VALUE!` in Excel (same entry), which the math does not model; a flat list (a range `parse_arg` read
-    without its shape) and ragged rows are refused too."""
+    cell in the matrix is #VALUE!"). A blank or a logical, as the matrix or one of its elements, is `#VALUE!`
+    in Excel (same entry; probes/matrix-boolean-elements G1-G13), which the math does not model. A text is
+    refused with no math value: a direct text argument is `#VALUE!` (`MDETERM("5")`, S!Q113), but a text or
+    text-number element of an array literal or range is unprobed for MDETERM, MINVERSE and MMULT (T-4626).
+    A flat list (a range `parse_arg` read without its shape), ragged rows and a matrix over
+    `MAX_MATRIX_SIDE` rows or columns (the exact rational elimination's cost; no oracle cell is that large)
+    are refused too."""
     if isinstance(value, float):
         return ((value,),)
     if not isinstance(value, list) or not value or not all(isinstance(row, list) for row in value):
         return "a matrix argument without its shape" if isinstance(value, list) else "non-numeric argument"
     if len({len(row) for row in value}) != 1 or not value[0]:
         return "ragged matrix rows"
+    if len(value) > MAX_MATRIX_SIDE or len(value[0]) > MAX_MATRIX_SIDE:
+        return "a matrix larger than 64x64"
     if any(isinstance(e, (bool, str)) or e is None for row in value for e in row):
         return "non-numeric matrix element"
     return tuple(tuple(float(e) for e in row) for row in value)
@@ -443,7 +453,7 @@ def _range_for_literal(definition: Definition, texts: list[str]) -> bool:
     except ValueError:
         return False  # fit_args reports the argument count
     return any(
-        p.kind in ("array", "matrix") and not t.strip().startswith("{")
+        p.kind in ("array", "matrix") and not is_array_literal(t.strip())
         for p, t in zip(params, texts, strict=True)
     )
 
