@@ -20,7 +20,8 @@ def precision() -> object:
 
 
 def value(function: str, *args: float | str) -> mpmath.mpf:
-    math_args: Sequence[MathArg] = [mp(a) for a in args]
+    # each literal as its double, as a table cell reads it (the cut tests sit exactly on evidenced literals)
+    math_args: Sequence[MathArg] = [mp(float(a)) for a in args]
     return REGISTRY[function].evaluate(math_args)
 
 
@@ -67,7 +68,7 @@ def test_the_upper_tail_is_the_lower_tail_reflected() -> None:
 
 
 def test_confidence_t_is_the_two_tailed_quantile_over_root_n() -> None:
-    t = student_t.two_tailed_quantile(mp("0.1"), mp(19))
+    t = student_t.two_tailed_quantile(mp(0.1), mp(19))
     assert value("CONFIDENCE.T", "0.1", 3, 20) == 3 * t / mpmath.sqrt(20)
 
 
@@ -106,3 +107,53 @@ def test_a_confidence_margin_past_the_double_range_has_no_value() -> None:
         value("CONFIDENCE.T", "1e-300", "1e100", 2)
     with pytest.raises(NoValueError):
         value("CONFIDENCE.T", "0.5", "1e-310", 4)
+
+
+@pytest.mark.parametrize(
+    ("function", "args"),
+    [
+        # the smallest evidenced #NUM! |x| of each bracket (statistics.md "Scalar distributions at extreme arguments,
+        # part 2"), and gen-m9's x = 1E+300
+        ("T.DIST.RT", ("2.22973889209998E+176", 2723)),
+        ("T.DIST.RT", ("1E+300", 7)),
+        ("T.DIST.RT", ("-7.96044688386386E+165", 13)),
+        ("T.DIST.2T", ("4.22238650908343E+161", 15)),
+        ("TDIST", ("2.08984434704072E+166", 2, 1)),
+        ("TDIST", ("1E+300", 8, 1)),
+    ],
+)
+def test_a_huge_x_at_or_past_the_evidenced_error_is_outside_the_domain(
+    function: str, args: tuple[str | int, ...]
+) -> None:
+    with pytest.raises(DomainError):
+        value(function, *args)
+
+
+@pytest.mark.parametrize(
+    ("function", "args"),
+    [
+        ("T.DIST.RT", ("1E+100", 5)),
+        ("T.DIST.RT", ("-1E+150", 5)),
+        ("T.DIST.2T", ("1E+150", 5)),
+        ("TDIST", ("1E+160", 5, 2)),
+    ],
+)
+def test_a_huge_x_inside_the_unprobed_bracket_has_no_value(
+    function: str, args: tuple[str | int, ...]
+) -> None:
+    with pytest.raises(NoValueError):
+        value(function, *args)
+
+
+def test_the_largest_evidenced_numbers_keep_their_values() -> None:
+    # probes/t4456-beta-t-zero-reach F2, accuracy/T.DIST.RT/s1 A116, T.DIST.2T/s1 A88 and TDIST/s1 A185
+    assert value("T.DIST.RT", "1.34305338528263E+60", 5) > 0
+    assert value("T.DIST.RT", "-1.35098712206146E+123", 445854763) == 1
+    assert value("T.DIST.2T", "5.76102699358893E+146", 21) >= 0
+    assert value("TDIST", "1.76387937163976E+150", 7, 2) >= 0
+
+
+def test_a_negative_standard_deviation_has_no_value() -> None:
+    # no cell shows CONFIDENCE.T at a negative sd; sd 0 is the evidenced #NUM! (statistics.md T-1043)
+    with pytest.raises(NoValueError):
+        value("CONFIDENCE.T", "0.05", -1, 10)
