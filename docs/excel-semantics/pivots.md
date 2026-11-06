@@ -314,12 +314,20 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   refresh, and the pivot keeps its cells. So does a renumbering of a pivot that keeps a verbatim
   part holding a field index: one with an attribute named `field` or `fld` or ending in either
   (ECMA-376's `pivotArea@field` and `reference@field` in `formats`, `conditionalFormats`,
-  `chartFormats` and `autoSortScope`, `filter@fld`, `mp@field`, an extension's `sourceField`).
-  The other verbatim parts renumber: the root's and the fields' attributes (`pivotField@dataField`
-  is a flag), `pivotTableStyleInfo`, and `rowItems`/`colItems`, whose `x@v` index the items of the
-  axis's n-th field, which moves with it. A field's own parts (its attributes, its items') follow
-  its new index, and a dropped field's go with it (T-4694). A data field's base field that left
-  the source falls back to the first field.
+  `chartFormats` and `autoSortScope`, `filter@fld`, `@mpFld` and `@iMeasureFld`, `mp@field`, an
+  extension's `sourceField`), or one the scan cannot read to its end (an open quote or tag, an
+  unterminated comment, CDATA section or processing instruction). How Excel remaps those indices,
+  and the worksheet's `pivotSelection/pivotArea@field`, is T-4712's. The other verbatim parts
+  renumber. The root's and the fields' kept attributes hold no field index: of the attributes the
+  schema gives those elements (eval/catalog/pivot-schema-nodes.txt), the ones so named are
+  `pageField@fld` and `dataField@fld`/`@baseField`, which the importer reads itself, and
+  `pivotField@dataField` and `@serverField`, two flags. `pivotTableStyleInfo` holds none, nor do
+  `rowItems`/`colItems` (`x@v` index the items of the axis's n-th field, which moves with it, and
+  `i@i` a data field), though those go stale on any refresh: Excel rewrites them (P_Fold saves
+  `x` 0, 2, 3, 4, 5), the engine renders from its own layout, and export writes them anew
+  (T-4176). A field's own parts (its attributes, its items') follow its new index, and a dropped
+  field's go with it (T-4694). A data field's base field that left the source falls back to the
+  first field.
 - A refresh that cannot be planned (a source that does not resolve, such as a Table or defined
   name until T-4506; a field gone; past the shared budget) leaves the pivot and its cells as they
   were. On load each cache is planned on its own, so a cache that does not plan keeps only its own
@@ -333,9 +341,12 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   before it is read) can exhaust it, and the caches after them then keep their saved cells with
   no sign of it.
 Evidence: none beyond probes/t4128-pivot-spike S (a constant in the body, no page field).
-Status: UNVERIFIED (probe pending: T-4664; T-2327 for constants in a refreshOnLoad pivot's area)
+Status: UNVERIFIED (probe pending: T-4664; T-2327 for constants in a refreshOnLoad pivot's area;
+T-4712 for field indices in verbatim parts under a renumbering)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`owned_areas`, `meets_foreign`,
 `remap`, `PivotBudget`; T-4151)
+Implemented in: crates/rustsheet-engine/src/pivot/model.rs (`OpaqueEntry::holds_field_index`;
+T-4694)
 
 ## A tabular pivot's first row header is the field name only when every pivotField has compact="0"
 Rule: in a tabular pivot, the header cell of the first row field reads the field's own name (`Region`)
@@ -1150,7 +1161,10 @@ cache_fields of the pivot on sheet P_<source>:
 - Space!A1:E1 Region, Sales, `=" "`, `=" "&""`, X → Region, Sales, `" "`, `" 2"`, X;
 - Fold!A1:G1 Region, Sales, é, `="É"`, ß, `="SS"`, `="s"&"s"` → Region, Sales, é, É2, ß, SS2, ss3.
   Its pivot (rows Region over é, É, ß, SS, ss, Straße, STRASSE with Sales 1, 2, ..., 64) shows
-  P_Fold!A4:B8 é 3, ß 4, Straße 32, SS 24, STRASSE 64;
+  P_Fold!A4:B8 é 3, ß 4, Straße 32, SS 24, STRASSE 64. That order (Straße before SS and STRASSE)
+  comes from the case builder caching formula cells as blank: `="É"`, `="SS"`, `="ss"` and
+  `="STRASSE"` are no items in the saved cache, so the refresh appends SS and STRASSE after the
+  saved é, ß and Straße (the sidecar's row_items `x` 0, 2, 3, 4, 5);
 - Rec!A2:A6 a, `=""`, empty, `=""`, a with Sales 1, 2, 4, 8, 16: the rendered cells P_Rec!A4:B6 are
   a 17, (blank) 4 and an empty label cell 10 (the sidecar holds no shared items, so the rendered
   cells are the evidence).

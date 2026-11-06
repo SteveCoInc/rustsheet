@@ -343,6 +343,29 @@ fn which_unread_parts_hold_field_indices() {
         definition,
         attributes(r#" fieldPrintTitles="1" disableFieldList="0""#)
     ));
+    assert!(!kept(
+        OpaqueOwner::Field(0),
+        attributes(r#" serverField="1""#)
+    ));
+    // A comment, CDATA section or processing instruction is skipped to its end, so a quote in
+    // it hides nothing after it; one left open, an open quote or tag, or a declaration refuses.
+    let reference = r#"<reference field="1"/>"#;
+    for hider in ["<!-- don't -->", "<![CDATA[ \" ]]>", "<?pi ' ?>"] {
+        assert!(kept(definition, element(&format!("{hider}{reference}"))));
+        assert!(!kept(definition, element(&format!("{hider}{STYLE}"))));
+    }
+    for open in [
+        r#"<filter fld=""#,
+        r#"<filter type="count""#,
+        "<!-- don't",
+        "<![CDATA[ x",
+        "<?pi",
+        "<!DOCTYPE x>",
+    ] {
+        assert!(kept(definition, element(open)), "{open}");
+    }
+    assert!(kept(definition, attributes(r#" name="open"#)));
+    assert!(kept(definition, attributes(r#" a="1">"#)));
 }
 
 #[test]

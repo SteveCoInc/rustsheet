@@ -36,7 +36,9 @@ P_Space (each A3:B6) and P_Fold!A3:B9.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- Remapping field indices inside verbatim `formats`, `filters` or layout lines.
+- Remapping field indices inside verbatim `formats`, `conditionalFormats`, `chartFormats`,
+  `filters`, `autoSortScope` or `pivotHierarchies`, or the worksheet's `pivotSelection`: T-4712
+  probes what Excel does to them.
 
 ## Outcome
 `remap` (crates/rustsheet-engine/src/pivot/grid.rs) now refuses a renumbering with
@@ -44,14 +46,24 @@ P_Space (each A3:B6) and P_Fold!A3:B9.
 model.rs), and otherwise moves each entry a field owns (`OpaqueOwner::Field`, `Items`, `Item`;
 `OpaqueOwner::field`/`with_field`) to its field's new index, dropping a dropped field's entries.
 A part holds a field index when one of its attributes is named `field` or `fld` or ends in either,
-ignoring case and prefix, read by a single linear pass that skips quoted values and text between
-tags. Per ECMA-376 that catches `pivotArea@field` and `reference@field` (`formats`,
-`conditionalFormats`, `chartFormats`, `autoSortScope`), `filter@fld`/`@mpFld`/`@iMeasureFld`,
-`mp@field` (`pivotHierarchies`), and extension names such as `x14:sourceField`; an unknown
-attribute so named refuses too. `rowItems`/`colItems` (`x@v` item indices of the axis's n-th field,
-`i@i` data field indices), `pivotTableStyleInfo`, the root's and fields' attributes
-(`pivotField@dataField` is a flag, the one exception the rule makes, for a field's own attributes)
-hold none. pivots.md "The grid writer's own readings" says so.
+ignoring case and prefix, read by a single linear pass that skips quoted values, text between
+tags, and comments, CDATA sections and processing instructions to their ends. Anything it cannot
+read to its end (an open quote or tag, an unterminated comment, CDATA or PI, a declaration) counts
+as holding one, so the scan fails closed. Per ECMA-376 the rule catches `pivotArea@field` and
+`reference@field` (`formats`, `conditionalFormats`, `chartFormats`, `autoSortScope`),
+`filter@fld`/`@mpFld`/`@iMeasureFld`, `mp@field` (`pivotHierarchies`) and extension names such as
+`x14:sourceField`; an unknown attribute so named refuses too. How Excel remaps them is T-4712's.
+The kept attributes hold none: of the attributes eval/catalog/pivot-schema-nodes.txt lists for the
+typed elements, the ones so named are `pageField@fld` and `dataField@fld`/`@baseField` (read by the
+importer) and `pivotField@dataField` and `@serverField` (flags, which the rule allows on a field's
+own attributes). `pivotTableStyleInfo` holds none, nor do `rowItems`/`colItems` (`x@v` item indices
+of the axis's n-th field, `i@i` data field indices), though those go stale on any refresh: Excel
+rewrites them (P_Fold saves `x` 0, 2, 3, 4, 5), the engine renders from `lay_out`, and T-4176's
+export replaces them. pivots.md "The grid writer's own readings" says so.
+
+A possible follow-up: the importer could set a `holds_field_index` flag on each `OpaqueEntry`
+while it reads the part with quick-xml's real tokenizer, instead of the engine re-scanning the
+verbatim text.
 
 Tests: `which_unread_parts_hold_field_indices` and `field_indices_follow_their_names` pin the
 classification and the owner remap (refusing filters, formats, an `autoSortScope` and a
