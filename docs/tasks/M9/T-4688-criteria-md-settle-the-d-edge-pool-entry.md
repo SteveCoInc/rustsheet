@@ -3,7 +3,7 @@ id: T-4688
 title: "criteria.md: settle the D* edge-pool entry's probe-pending status from T-1390's probes, and mark the conditional-format notes unprobeable (decision 0266)"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
