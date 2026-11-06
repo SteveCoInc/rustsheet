@@ -1,0 +1,48 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4618: probes/t4618-last-of-three-tabs (tabs First, S2, Last, the earlier two holding only =Last!N) reads 1 from =N on Last after N = =1 is added through the API scoped to Last, where the same book with a bare =N on the earlier tabs too (probes/t4618-last-of-three-first-active, t4618-last-of-three-last-active) and every case with the scoped sheet first leave it #NAME?. Tabs S, T (S first and active) with a workbook name Q = =S!N in the file and N scoped to S. Does a file name's body naming S!N make S's bare uses see N?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "names": {
+  "Q": "=S!N"
+ },
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "A3": {
+     "entered": "=N"
+    },
+    "B1": "=FORMULATEXT(A1)"
+   }
+  },
+  {
+   "name": "T",
+   "cells": {
+    "A1": "=Q",
+    "A2": "=S!N"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "S!A1",
+  "S!A2",
+  "S!A3",
+  "S!B1",
+  "T!A1",
+  "T!A2"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "S"
+  }
+ ]
+}

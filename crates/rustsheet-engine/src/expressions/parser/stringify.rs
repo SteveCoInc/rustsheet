@@ -30,7 +30,9 @@ use crate::locale::{get_default_locale, Locale};
 use bound_variables::{called_variable_text, callee_text, prefix_bound_variables, variable_text};
 pub(crate) use literals::argument_separator;
 use literals::{format_number_locale, to_string_array_node};
-pub(crate) use name_binding::{pin_unresolved_name, rebind_workbook_name_to_sheet};
+pub(crate) use name_binding::{
+    name_load_events, pin_unresolved_name, rebind_workbook_name_to_sheet, NameLoadEvent,
+};
 pub(crate) use rename_defined_name::rename_defined_name_in_node;
 pub(crate) use sheet_edits::{
     delete_sheet_in_node, move_sheet_in_node, rename_sheet_in_node, retarget_unqualified_references,

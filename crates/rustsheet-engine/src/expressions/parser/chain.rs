@@ -162,6 +162,27 @@ pub(crate) fn for_each_chain_operand_mut(node: &mut Node, mut f: impl FnMut(&mut
     }
 }
 
+/// The operands of the chain rooted at `node` (see [`left_chain`]) in the order the formula
+/// writes them: the first operand, then each link's right operand, innermost first. For walkers
+/// whose visits depend on that order; found without recursion, so a long chain costs no stack.
+pub(crate) fn chain_operands_in_order_mut(node: &mut Node) -> Vec<&mut Node> {
+    let mut rights = Vec::new();
+    let mut current = node;
+    loop {
+        match value_operands_mut(current) {
+            Ok((left, right)) => {
+                rights.push(right);
+                current = left;
+            }
+            Err(first) => {
+                rights.push(first);
+                rights.reverse();
+                return rights;
+            }
+        }
+    }
+}
+
 /// A copy of value operator `link` over `left` in place of its left operand.
 fn relink(link: &Node, left: Node) -> Node {
     let left = ChainLeft::new(left);

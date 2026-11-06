@@ -74,7 +74,9 @@ mod unparsed;
 
 pub use chain::ChainLeft;
 use chain::ChainLevel;
-pub(crate) use chain::{for_each_chain_operand_mut, left_chain, value_operands};
+pub(crate) use chain::{
+    chain_operands_in_order_mut, for_each_chain_operand_mut, left_chain, value_operands,
+};
 pub(crate) use depth::is_limit_error;
 pub use depth::{
     MAX_FORMULA_DEPTH, MAX_NESTED_CALLS, MAX_PARENTHESES, MAX_SIGNS, MAX_VALUE_OPERATORS,
