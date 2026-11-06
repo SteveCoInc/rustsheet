@@ -86,9 +86,13 @@ since their item lines would run to tens of megabytes:
   both modes, a fall in a case's checked count, or a case that newly does not run, is a regression too;
 - updating a `cases` suite refuses to drop a case (a cache fetched under an older include).
 
-Their `root` is the cell suite's fetched cache (`eval/.cache/suites/<suite>`). A suite whose root is absent is
-skipped with a message, so it never records an empty baseline. They are `gate = false`, like the calipers cell suite:
-`rustsheet-eval roundtrip --check --suite <name>` gates one on demand.
+Each names its cell suite with `cases_of = "<suite>"` and takes that suite's `[fetch]` and cache directory
+(`eval/.cache/suites/<suite>`, T-4629). So it is fetched, skipped with a message while not fetched, and gated exactly
+as that suite is, and it never records an empty baseline:
+- `roundtrip-poi` and `roundtrip-corpus-bench` are `gate = true`, like their cell suites. `make check` holds them
+  wherever the caches are fetched; CI, which fetches no corpus, skips them as it skips the cell suites.
+- `roundtrip-calipers` stays `gate = false`, like the calipers cell suite. `rustsheet-eval roundtrip --check --suite
+  roundtrip-calipers` gates it on demand.
 
 `rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. Each suite's line and report section
 give its kept rate: source items compared, less those the failing items cover (`Item::weight`: a lost element's

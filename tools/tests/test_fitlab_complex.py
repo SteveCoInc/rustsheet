@@ -96,6 +96,14 @@ def test_correctly_rounded_reference_writes_fifteen_digits() -> None:
         im_hyperbolic.correctly_rounded(far)  # past the double range: #NUM!
 
 
+def test_correctly_rounded_reads_long_parts_cut() -> None:
+    # probes/t3643-imsech-grid Q17 (excel-graph): Excel's IMSECH of the 16-digit parts equals its
+    # IMSECH("-1-1i") (P16), as the 15-digit cut reads them; the float reading misses (T-4593).
+    text = "-1.000000000000001-1.000000000000001i"
+    cell = Cell("s/c", "S", "Q17", f'=IMSECH("{text}")', (text,), 0.0, expected_im=0.0)
+    assert im_hyperbolic.correctly_rounded(cell) == complex(0.498337030555187, -0.591083841721045)
+
+
 def test_im_hyperbolic_fits_are_registered() -> None:
     fits = registry()
     assert fits["im-hyperbolic"].complex_text and fits["im-hyperbolic-fresh"].complex_text

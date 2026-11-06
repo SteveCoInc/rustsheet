@@ -116,7 +116,7 @@ def test_case_math_reads_arithmetic_arguments_and_scaled_calls(tmp_path: Path) -
         "C4": "=T.DIST(1/21,3,TRUE)",
         "C5": "=T.DIST(1.5,3,FALSE)*2^600",
         "C6": "=T.DIST(1.5,3,FALSE)",
-        "C7": "=T.DIST(-1E+154,3,FALSE)*2^600",  # the density is subnormal: skipped
+        "C7": "=T.DIST(-1E+100,3,FALSE)*2^600",  # the density is subnormal: skipped (below the huge-x cut, T-4580)
         "C8": "=T.DIST(1.5,3,TRUE)-0",
         "C9": "=T.DIST(C2*2,3,TRUE)",  # a formula cell that is a call: never read
     }

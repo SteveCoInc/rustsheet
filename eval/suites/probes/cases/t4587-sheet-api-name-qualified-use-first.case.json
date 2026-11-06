@@ -1,0 +1,45 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4587: probes/t4049-sheet-api-name-plain (S!A1 =N is #NAME? after a sheet-scoped N is added on S; S is the first tab, T!A1 =S!N the second) with the tabs swapped: T first, holding =S!N, then S with an unqualified =N. probes/t4554-api-name-local-name-body Last!D3 (=LD on the last tab, earlier tabs holding =Last!LD) is 90. Does an earlier tab's qualified use of the undefined S!N make S's unqualified =N bind to S's name once it is added? T!B1 is a qualified use on the same tab order; S!A3 is typed before the add.",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "T",
+   "cells": {
+    "A1": "=S!N",
+    "A2": "=N"
+   }
+  },
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "A3": {
+     "entered": "=N"
+    },
+    "B1": "=FORMULATEXT(A1)"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "T!A1",
+  "T!A2",
+  "S!A1",
+  "S!A2",
+  "S!A3",
+  "S!B1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "S"
+  }
+ ]
+}

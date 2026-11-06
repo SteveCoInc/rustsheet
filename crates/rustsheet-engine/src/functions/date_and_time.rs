@@ -644,18 +644,26 @@ impl Model {
         end_serial: f64,
         unit: Result<&str, Error>,
     ) -> Result<f64, Error> {
-        let (start_serial, end_serial) = (start_serial.floor() as i64, end_serial.floor() as i64);
         // A unit error beats a reversed pair and an out-of-calendar date: `DATEDIF(10,5,NA())` and
         // `DATEDIF(3000000,5,NA())` are #N/A (probes/datedif-days360-error-order A1, A16; dates.md
         // "DATEDIF argument errors before date checks").
         let unit = unit?;
-        if end_serial < start_serial {
+        let (start_floor, end_floor) = (start_serial.floor() as i64, end_serial.floor() as i64);
+        if end_floor < start_floor {
             return Err(Error::NUM);
         }
-        let start_1900 = date_system.to_1900_serial(start_serial).ok_or(Error::NUM)?;
+        // "D" and the reversed-pair check above floor the serials, while the calendar units read the
+        // day YEAR, MONTH and DAY see, with its half-second carry: `DATEDIF(60-0.4/86400,425,"M")` is
+        // 11, from the fictitious 1900-02-29, while its "D" is 366, from 1900-02-28. The carried
+        // dates are what must lie in the calendar, for "D" too: `DATEDIF(1,2958466-0.4/86400,"D")` is
+        // #NUM! (probes/t4574-feb29-near-midnight-date-args; dates.md "DATEDIF's calendar units
+        // carry half a second", T-4574).
+        let start_1900 = date_system
+            .to_1900_serial(carried_day(start_serial) as i64)
+            .ok_or(Error::NUM)?;
         let start = excel_serial_to_ymd(start_1900).ok_or(Error::NUM)?;
         let end = date_system
-            .to_1900_serial(end_serial)
+            .to_1900_serial(carried_day(end_serial) as i64)
             .and_then(excel_serial_to_ymd)
             .ok_or(Error::NUM)?;
         // The units are ASCII, so an ASCII case-blind match is the upper-casing it replaces.
@@ -666,7 +674,7 @@ impl Model {
         match unit {
             "Y" => Ok(f64::from(datedif_months(start, end).div_euclid(12))),
             "M" => Ok(f64::from(datedif_months(start, end))),
-            "D" => Ok((end_serial - start_serial) as f64),
+            "D" => Ok((end_floor - start_floor) as f64),
             "YM" => Ok(f64::from(datedif_months(start, end).rem_euclid(12))),
             "YD" => {
                 // The start moved on by the "YM" months in its own year (DATE's day overflow, so

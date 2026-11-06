@@ -292,9 +292,11 @@ fn select_from(all: Vec<Suite>, sel: &Selection, gate_only: bool) -> Result<Vec<
                         }
                     };
                 }
+                // A round-trip suite over a cell suite's cache is fetched as that suite.
+                let fetch_as = s.manifest.cases_of.as_ref().unwrap_or(&s.manifest.name);
                 eprintln!(
-                    "skipping {}: not fetched (run `rustsheet-eval fetch --suite {}`)",
-                    s.manifest.name, s.manifest.name
+                    "skipping {}: not fetched (run `rustsheet-eval fetch --suite {fetch_as}`)",
+                    s.manifest.name
                 );
                 return false;
             }
