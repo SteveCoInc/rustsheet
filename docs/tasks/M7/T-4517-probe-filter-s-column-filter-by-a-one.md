@@ -3,7 +3,7 @@ id: T-4517
 title: "Probe FILTER's column filter by a one-column include as tall as the array is wide (include_axis), with and without an error element"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
