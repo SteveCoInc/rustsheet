@@ -3,7 +3,7 @@ id: T-4424
 title: "SUMX2MY2 overflow order: probe whether Excel adds x^2 and then -y^2 to its running sum, or keeps an overflowing square in 80 bits, where the pair term is finite"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
