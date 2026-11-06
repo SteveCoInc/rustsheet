@@ -262,9 +262,18 @@ impl UserModel {
                     name,
                     scope,
                     old_value,
+                    hidden,
+                    comment,
                 } => {
-                    // The name existed: an undo puts it back even past the API's call cap (T-4014).
-                    self.model.restore_defined_name(name, *scope, old_value)?;
+                    // The name existed: an undo puts it back even past the API's call cap (T-4014),
+                    // with the flags it was loaded with (T-4637).
+                    self.model.restore_defined_name(
+                        name,
+                        *scope,
+                        old_value,
+                        *hidden,
+                        comment.clone(),
+                    )?;
                 }
                 Diff::UpdateDefinedName {
                     name,
@@ -792,6 +801,8 @@ impl UserModel {
                     name,
                     scope,
                     old_value: _,
+                    hidden: _,
+                    comment: _,
                 } => self.model.delete_defined_name(name, *scope)?,
                 Diff::UpdateDefinedName {
                     name,

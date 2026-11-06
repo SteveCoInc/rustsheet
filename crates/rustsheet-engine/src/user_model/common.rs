@@ -2142,11 +2142,13 @@ impl UserModel {
 
     /// Delete an existing defined name
     pub fn delete_defined_name(&mut self, name: &str, scope: Option<u32>) -> Result<(), String> {
-        let old_value = self.model.get_defined_name_formula(name, scope)?;
+        let old = self.model.find_defined_name(name, scope)?;
         let diff_list = vec![Diff::DeleteDefinedName {
             name: name.to_string(),
             scope,
-            old_value,
+            old_value: old.formula.clone(),
+            hidden: old.hidden,
+            comment: old.comment.clone(),
         }];
         self.push_diff_list(diff_list);
         self.model.delete_defined_name(name, scope)?;
