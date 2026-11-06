@@ -464,8 +464,18 @@ subnormal density is 0 (`(10,1,1E+307*10,FALSE)`, `(1E+300,1,1E+307*10,FALSE)`).
 about 1E-14 relative off the exact value: see "GAMMA.DIST's density below shape 3 is a log-space form" (T-2753, T-2852).
 Implemented in: functions/statistical/gamma.rs `gamma_dist_of`; x = 0 keeps its own rule. Unprobed: CHISQ.DIST at x
 below 4.45E-308 (its scale is 2) and a computed subnormal x with a normal x / beta (a typed one reads as 0, numbers.md
-"Formula literals"). An x / beta that overflows is `#NUM!` for both forms at shape 1 (probes/incomplete-gamma-cap E6,
-E18; "Incomplete gamma: per-call cap and lifting (T-1872)" below), unprobed at other shapes.
+"Formula literals"). An x / beta that overflows is `#NUM!` for both forms, GAMMA.DIST and GAMMADIST, at every probed
+shape from 3.7E-188 to 1E300: shape 1 (probes/incomplete-gamma-cap E6, E18; "Incomplete gamma: per-call cap and lifting
+(T-1872)" below) and `(1E300,a,1E-10,..)` at shapes 0.01, 0.5, 2, 10, 1E5, 1E10 and 1E300, and `(1E300,a,5E-9,..)`
+(x / beta 2E308) at 0.5, 2, 10 and 1E5 (probes/t4625-gamma-dist-ratio-overflow rows 1-8, excel-graph 2026-11-06,
+T-4625), and the Gate A cells `GAMMADIST(7.46338023789761E+198,3.7490322860808E-188,1.40135712946892E-244,TRUE)`
+(eval/accuracy/tables/GAMMADIST/s1 A182), GAMMADIST/s1 A118 (shape 46.4) and GAMMA.DIST/s1 A141 (shape 12.9). Shapes
+below 3.7E-188 and above 1E300 are unprobed.
+Found in T-4625, unexplained: at the finite x / beta = 1E308 (`GAMMA.DIST(1E300,a,1E-8,..)`) both forms are `#NUM!` at
+shapes 1.5 and 2 (same probe B9, F9, B10, B11) and a number (cdf 1, density 0) at shapes 0.5, 1, 2.5, 2.9, 3, 10 and
+1E5; shape 2 is a number at x / beta 1E200, 1E155, 1E154 and 1E150 (F10-I11). Neither y^a overflowing (2.5 is a
+number) nor a * y overflowing (1.5 is `#NUM!`) fits. Ours gives the numbers at all four (T-4635). A typed `1E308`
+literal makes Excel for the web refuse the workbook (as numbers.md notes), so the probe divides 1E300 instead.
 Status: VERIFIED
 
 ## GAMMA.DIST's density below shape 3 is a log-space form (T-2753, T-2852)

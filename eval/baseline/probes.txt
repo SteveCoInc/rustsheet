@@ -2503,6 +2503,7 @@ C	probes/t4587-sheet-api-name-sheet-has-names.case.json	5
 C	probes/t4589-pivot-total-order.case.json	95
 C	probes/t4595-literal-after-point.case.json	12
 C	probes/t4614-pivot-total-order-2.case.json	124
+C	probes/t4625-gamma-dist-ratio-overflow.case.json	62
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -10451,6 +10452,10 @@ F	probes/t4614-pivot-total-order-2.case.json	S3!C4
 F	probes/t4614-pivot-total-order-2.case.json	S3!C5
 F	probes/t4614-pivot-total-order-2.case.json	S3!D4
 F	probes/t4614-pivot-total-order-2.case.json	S3!D5
+F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B10
+F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B11
+F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B9
+F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!F9
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
