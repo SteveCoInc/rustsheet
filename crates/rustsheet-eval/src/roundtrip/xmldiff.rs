@@ -86,46 +86,38 @@ const UNORDERED: &[(&str, &str, &[&str])] = &[
     ("/Types", "Default", &["Extension"]),
 ];
 
-/// Schema defaults (D4.3): `(element local name, attribute, default)`. An absent attribute
+/// Schema defaults (D4.3): `(element local name, "attribute=default ...")`. An absent attribute
 /// equals its default. Each is the `default=` of the attribute in ECMA-376 Part 1's sml.xsd:
 /// CT_Cell (`t`, `s`), CT_Row, CT_Col, CT_SheetView, CT_Pane, CT_Selection, CT_Sheet,
 /// CT_BookView, CT_SheetFormatPr and CT_BooleanProperty (`val`, as in `<b/>`).
-const DEFAULTS: &[(&str, &str, &str)] = &[
-    ("c", "t", "n"),
-    ("c", "s", "0"),
-    ("row", "hidden", "false"),
-    ("row", "customHeight", "false"),
-    ("row", "customFormat", "false"),
-    ("row", "outlineLevel", "0"),
-    ("row", "collapsed", "false"),
-    ("col", "hidden", "false"),
-    ("col", "customWidth", "false"),
-    ("col", "bestFit", "false"),
-    ("col", "outlineLevel", "0"),
-    ("col", "collapsed", "false"),
-    ("col", "style", "0"),
-    ("sheetView", "tabSelected", "false"),
-    ("sheetView", "showGridLines", "true"),
-    ("sheetView", "rightToLeft", "false"),
-    ("sheetView", "zoomScale", "100"),
-    ("sheetView", "view", "normal"),
-    ("pane", "xSplit", "0"),
-    ("pane", "ySplit", "0"),
-    ("pane", "activePane", "topLeft"),
-    ("pane", "state", "split"),
-    ("selection", "pane", "topLeft"),
-    ("selection", "activeCellId", "0"),
-    ("sheet", "state", "visible"),
-    ("workbookView", "activeTab", "0"),
-    ("workbookView", "firstSheet", "0"),
-    ("workbookView", "visibility", "visible"),
-    ("sheetFormatPr", "customHeight", "false"),
-    ("sheetFormatPr", "zeroHeight", "false"),
-    ("sheetFormatPr", "outlineLevelRow", "0"),
-    ("sheetFormatPr", "outlineLevelCol", "0"),
-    ("b", "val", "true"),
-    ("i", "val", "true"),
-    ("strike", "val", "true"),
+const DEFAULTS: &[(&str, &str)] = &[
+    ("c", "t=n s=0"),
+    (
+        "row",
+        "hidden=false customHeight=false customFormat=false outlineLevel=0 collapsed=false",
+    ),
+    (
+        "col",
+        "hidden=false customWidth=false bestFit=false outlineLevel=0 collapsed=false style=0",
+    ),
+    (
+        "sheetView",
+        "tabSelected=false showGridLines=true rightToLeft=false zoomScale=100 view=normal",
+    ),
+    ("pane", "xSplit=0 ySplit=0 activePane=topLeft state=split"),
+    ("selection", "pane=topLeft activeCellId=0"),
+    ("sheet", "state=visible"),
+    (
+        "workbookView",
+        "activeTab=0 firstSheet=0 visibility=visible",
+    ),
+    (
+        "sheetFormatPr",
+        "customHeight=false zeroHeight=false outlineLevelRow=0 outlineLevelCol=0",
+    ),
+    ("b", "val=true"),
+    ("i", "val=true"),
+    ("strike", "val=true"),
 ];
 
 /// Deepest element nesting a part may have (directive 5); deeper parts are reported as unparsable.
@@ -354,10 +346,11 @@ fn default_of(element: &Name, attr: &Name) -> Option<&'static str> {
     if !attr.ns.is_empty() || element.ns != MAIN {
         return None;
     }
-    DEFAULTS
-        .iter()
-        .find(|(e, a, _)| *e == element.local && *a == attr.local)
-        .map(|(_, _, v)| *v)
+    let (_, row) = DEFAULTS.iter().find(|(e, _)| *e == element.local)?;
+    row.split(' ')
+        .filter_map(|pair| pair.split_once('='))
+        .find(|(a, _)| *a == attr.local)
+        .map(|(_, v)| v)
 }
 
 /// Whether two attribute values are equal: `mc:Ignorable` as a set of namespace URIs (already

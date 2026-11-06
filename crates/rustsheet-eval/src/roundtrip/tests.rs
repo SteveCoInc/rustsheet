@@ -346,27 +346,29 @@ mod xml {
 
     #[test]
     fn candidates_are_tagged_by_key() {
-        assert_eq!(candidate("/officeDocument[0]/calcChain[0]"), Some("N1"));
-        assert_eq!(
-            candidate("/officeDocument[0]:/workbook/calcPr[0]@calcId"),
-            Some("N4")
-        );
-        assert_eq!(
-            candidate("/officeDocument[0]/worksheet[S]:/worksheet/sheetData[0]/row[0]@spans"),
-            Some("N8")
-        );
-        assert_eq!(
-            candidate("/core-properties[0]:/coreProperties/dcterms:modified[0]"),
-            Some("N2")
-        );
-        assert_eq!(
-            candidate("/officeDocument[0]/styles[0]:/styleSheet/fonts[0]@count"),
-            Some("N10")
-        );
-        assert_eq!(
-            candidate("/officeDocument[0]/worksheet[S]:/worksheet/sheetPr[0]@codeName"),
-            None
-        );
+        let cases = [
+            ("/officeDocument[0]/calcChain[0]", Some("N1")),
+            ("/officeDocument[0]:/workbook/calcPr[0]@calcId", Some("N4")),
+            (
+                "/officeDocument[0]/worksheet[S]:/worksheet/sheetData[0]/row[0]@spans",
+                Some("N8"),
+            ),
+            (
+                "/core-properties[0]:/coreProperties/dcterms:modified[0]",
+                Some("N2"),
+            ),
+            (
+                "/officeDocument[0]/styles[0]:/styleSheet/fonts[0]@count",
+                Some("N10"),
+            ),
+            (
+                "/officeDocument[0]/worksheet[S]:/worksheet/sheetPr[0]@codeName",
+                None,
+            ),
+        ];
+        for (key, want) in cases {
+            assert_eq!(candidate(key), want, "{key}");
+        }
     }
 }
 
