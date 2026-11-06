@@ -2471,6 +2471,8 @@ C	probes/t4539-rows-columns-scalar-kinds.case.json	58
 C	probes/t4543-xlookup-not-found-address-sheet-lift.case.json	252
 C	probes/t4544-xmatch-error-modes-holdout.case.json	86
 C	probes/t4544-xmatch-error-modes.case.json	175
+C	probes/t4545-indirect-sheet-prefix-names.case.json	32
+C	probes/t4545-indirect-sheet-prefix-spellings.case.json	120
 C	probes/t4553-sequence-extent-top.case.json	56
 C	probes/t4554-api-name-local-name-body.case.json	12
 C	probes/t4554-api-name-scoped-name-choice-first.case.json	27
