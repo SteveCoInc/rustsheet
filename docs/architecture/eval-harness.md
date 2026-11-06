@@ -10,14 +10,14 @@ side by side.
 | key | meaning |
 |---|---|
 | `name`, `description`, `license`, `origin` | identity and provenance (license decides vendor vs fetch) |
-| `kind` | `xlsx` (workbooks) or `spec` (`*.case.json`) |
+| `kind` | `xlsx` (workbooks) or `spec` (`*.case.json`); `roundtrip` only under `eval/roundtrip/` (below) |
 | `root`, `include`, `exclude` | where the cases are (globs relative to `root`) |
 | `use_cached_values` | for xlsx: Excel's cached `<v>` values are the oracle (when no sidecar exists) |
 | `require_excel_authored` | only trust caches written by Microsoft Excel (`docProps/app.xml`; XlsxWriter's fake `12.0000` rejected) |
 | `oracle_dir` | optional, relative path inside the suite directory: sidecars live there, mirroring the case path, instead of next to the case (for fetched suites, whose cases sit in the git-ignored cache; decision 0019) |
 | `cached_overrides` | xlsx: optional file (relative to the manifest) replacing single cached values that are not en-US evidence with cells of committed `excel-graph`/`excel-desktop` sidecars (`overrides.rs`, decision 0032); an excel-graph evidence cell whose probe companion `(x)=0` is FALSE also carries decision 0042's kept-subnormal rule (decision 0090) |
 | `gate` | part of the CI no-regression gate |
-| `baseline` | `cells` (default), `cases` (large corpora) or `none` |
+| `baseline` | `cells` (default), `cases` (large corpora) or `none`; a round-trip suite's `cells` baseline lists fidelity items in the item slot |
 | `milestone` | which milestone(s) the suite measures |
 | `[fetch]` | optional pinned external source: `url` (`https://` or `file://`), exactly one pin (`rev` = 40-hex git commit, or `sha256` of a `.zip`/`.tar*` archive), optional `subdir` and `include` globs |
 
@@ -33,6 +33,29 @@ Current suites:
 - `smoke`: hand-written core semantics.
 - `probes`: Excel-behavior questions awaiting the oracle.
 - `gen-m2`: generator output (30 cases, 12,000 cells), oracle-filled and gated (T-0203).
+
+## Round-trip suites
+`eval/roundtrip/<name>/suite.toml` (SPEC-0033, T-4172) uses the same manifest with `kind = "roundtrip"`:
+- Its cases are the `.xlsx` and `.xlsm` files under `root`, discovered as an xlsx suite's are.
+- `scenarios` lists what each case runs. Only `R0` (load, recalculate with the harness clock, save) exists yet; T-4514
+  adds R1.
+- The output is checked by the package validator, checks V1–V6 and V8 of SPEC-0033 D6.
+- The source's parts are scored as `part` fidelity items, matched by a key built from the relationship graph, never
+  by part name (D2). An item is kept, changed (content type), lost, added, or package-invalid.
+
+Round-trip suites live outside `eval/suites/`, as Gate A's tables do, so no cell report, milestone row or gate counts
+them. `Suite::load_all` refuses a `roundtrip` manifest under `eval/suites/`, and a round-trip suite may not reuse an
+`eval/suites/` name, because both keep their baseline at `eval/baseline/<name>.txt`.
+
+The baseline is the ordinary cells-mode file:
+- `C` gives a case's number of items;
+- each `F` line is a failing item, `<scenario> <kind> <key> <verdict>` (calcChain carries `candidate-N1` until
+  T-4503's evidence);
+- the ratchet is `baseline::diff`.
+
+`rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. `--check` (in `make eval-gates`, gate
+suites only) fails on a regression or an out-of-date baseline. `--update-baseline` (in `make eval-baseline`) records
+fixes and new cases, and refuses regressions. `make eval` runs every round-trip suite (decision 0307).
 
 ## Case formats
 **`rustsheet-case/v1`** (`*.case.json`):

@@ -85,7 +85,10 @@ fn bucket(cell: &CellResult) -> Option<Bucket> {
     })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// A scored cell's closeness bucket, serialized under [`Closeness`]'s field names: the names
+/// report.json gives each listed cell ([`serialize_cells`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 enum Bucket {
     Pass,
     Ulp1,
@@ -131,6 +134,35 @@ impl Closeness {
     pub fn visible(&self) -> usize {
         self.visible_numeric + self.visible_other
     }
+}
+
+/// One listed cell as report.json writes it: the cell, its closeness bucket (none for an
+/// `unsupported` cell) and whether its formula is a [`THIRTEEN_DIGIT_FAMILY`] formula, so
+/// `scripts/family_net.py` reads both rather than re-deriving them (decision 0267 item 6, T-4159).
+#[derive(Serialize)]
+struct ListedCell<'a> {
+    #[serde(flatten)]
+    cell: &'a CellResult,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    closeness: Option<Bucket>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    thirteen_digit_family: bool,
+}
+
+/// Serializes a case's cells with each one's bucket and family flag ([`ListedCell`]). Reading
+/// them back ignores both, so a report.json from before them still loads.
+///
+/// # Errors
+/// When the serializer fails.
+pub fn serialize_cells<S: serde::Serializer>(
+    cells: &[CellResult],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serializer.collect_seq(cells.iter().map(|cell| ListedCell {
+        cell,
+        closeness: bucket(cell),
+        thirteen_digit_family: in_thirteen_digit_family(cell),
+    }))
 }
 
 /// Visibly-off cells blamed on one function ([`blamed`]), split as the buckets split them.
@@ -489,6 +521,36 @@ mod tests {
         )
         .unwrap();
         assert_eq!((old.r3_math, old.residue13, old.visible()), (0, 0, 2));
+    }
+
+    #[test]
+    fn listed_cells_carry_their_bucket_and_family_flag() {
+        let (e, off15) = (1e15, 1e15 + 6.0);
+        let unsupported = cell(
+            Value::Number(e),
+            Value::Error("#NAME?".into()),
+            Verdict::Unsupported,
+        );
+        let cells = vec![
+            with_formula("=BETA.DIST(A1,2,3,TRUE)", e, off15),
+            with_formula("=T.DIST(1,2,TRUE)", e, off15),
+            unsupported,
+        ];
+        let mut json = serde_json::Serializer::new(Vec::new());
+        serialize_cells(&cells, &mut json).unwrap();
+        let out: serde_json::Value = serde_json::from_slice(&json.into_inner()).unwrap();
+        let field = |i: usize, k: &str| out[i].get(k).cloned();
+        assert_eq!(field(0, "closeness"), Some("residue13".into()));
+        assert_eq!(field(0, "thirteen_digit_family"), Some(true.into()));
+        assert_eq!(field(1, "closeness"), Some("visible_numeric".into()));
+        assert_eq!(field(1, "thirteen_digit_family"), None);
+        // An unsupported cell has no bucket; the cell's own fields are all still there.
+        assert_eq!(field(2, "closeness"), None);
+        assert_eq!(field(2, "verdict"), Some("unsupported".into()));
+        // They read back as plain cells.
+        let back: Vec<CellResult> = serde_json::from_value(out).unwrap();
+        assert_eq!(back.len(), 3);
+        assert_eq!(back[0].formula, cells[0].formula);
     }
 
     #[test]
