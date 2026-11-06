@@ -3,7 +3,7 @@ id: T-4687
 title: "numbers.md: settle the stale huge-angle trig and huge num_digits ROUND notes from the entries that answered them"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
