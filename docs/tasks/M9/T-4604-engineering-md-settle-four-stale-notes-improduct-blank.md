@@ -3,7 +3,7 @@ id: T-4604
 title: "engineering.md: settle four stale notes (IMPRODUCT blank in a range, IMCOSH tiny imaginary part, IMABS near DBL_MAX, OCT2BIN of a blank) from the probes that answered them"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -38,15 +38,20 @@ rule.
    text as 0" (VERIFIED, T-1413) states the general rule. The OCT2BIN section is a second definition of it.
 
 ## Acceptance criteria
-- [ ] Notes 1 and 2 cite the eng-im-overflow-edges-2 cells above (or point to the T-2231 section), and their
+- [x] Notes 1 and 2 cite the eng-im-overflow-edges-2 cells above (or point to the T-2231 section), and their
       UNVERIFIED wording is gone.
-- [ ] Note 3 says why the IMABS overflow is unreachable, citing the 1E308 parse rule, and no longer says UNVERIFIED.
-- [ ] "OCT2BIN of a blank cell is 0" is folded into "Base conversions read a blank cell and empty text as 0" (its
+- [x] Note 3 says why the IMABS overflow is unreachable, citing the 1E308 parse rule, and no longer says UNVERIFIED.
+- [x] "OCT2BIN of a blank cell is 0" is folded into "Base conversions read a blank cell and empty text as 0" (its
       gen-m9/d244411dd90f7fbd A15 citation kept) and deleted, so the rule has one definition.
-- [ ] Docs only, unless the optional IMABS probe is added (then its case and sidecar under eval/suites/probes, all
+- [x] Docs only, unless the optional IMABS probe is added (then its case and sidecar under eval/suites/probes, all
       cells passing). `make check` green; reviewers approve.
 
 ## Out of scope
 - The IMSEC/IMCSC/IMSECH/IMCSCH tiny-argument bullet in the same section: T-4603.
 - "Engineering edge-pool smoke check (T-2249)" and the IMLOG2 "UNVERIFIED until T-2044" note: T-3306 items 4 and 5.
 - IMARGUMENT's overflow and subnormal edges: T-2736 probes them next to IMPOWER.
+
+## Outcome
+Docs only. Notes 1-3 now cite the eng-im-overflow-edges-2 cells and the 1E308 parse rule (IMABS overflow
+unreachable); the OCT2BIN-of-a-blank section is folded into "Base conversions read a blank cell and empty text as 0"
+with its gen-m9 A15 citation kept. Optional IMABS probe not added. Eval delta: none.

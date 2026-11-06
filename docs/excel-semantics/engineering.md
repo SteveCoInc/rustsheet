@@ -468,14 +468,6 @@ Status: DEVIATION (decision 0014)
 Implemented in: `fold_complex` in functions/engineering/complex.rs (T-1384)
 Tasks: T-1384
 
-## OCT2BIN of a blank cell is 0
-Rule: `OCT2BIN(E5,2)` with E5 blank is "00": a blank cell is the number 0. The other X2Y conversions of a blank cell,
-and of typed empty text, are unprobed.
-Evidence: gen-m9/d244411dd90f7fbd Calc!A15 (`VLOOKUP(..)&UPPER(OCT2BIN(Data!E5,2))` = "-0.000100", excel-graph, 2026-10-12, T-1289).
-Ours: `#NUM!` for OCT2BIN, OCT2DEC and HEX2BIN of a blank cell; BIN2DEC gives 0 and DEC2BIN "0".
-Status: VERIFIED (web) for OCT2BIN; the rest UNVERIFIED
-Tasks: T-1413
-
 ## Engineering edge cases from a generated sample (T-1385)
 The T-1085 gen-m9 sample suggested seven differences; a one-question probe of each settled them.
 - **A negative base-conversion result ignores `places`.** `HEX2OCT("FFFFFFFFFF",4)` is "7777777777"
@@ -760,8 +752,8 @@ angle"); cosh and sinh are libm's, except IMSECH's and IMCSCH's (IMSINH's `1/u` 
   (T-3032).
 - IMABS: `a·sqrt(1 + (b/a)²)` with a the larger of |x|, |y|: 77 of 78 cells bit for bit (`hypot` 59,
   `sqrt(x²+y²)` 55, scaling by |x| or by |y| always 66); the miss is B33, `956.615+0.00387493i` (Excel
-  956.6150000078482, ours 2 ulps lower). IMPOWER's modulus is still `hypot` (T-1950 evidence). A part near DBL_MAX overflows the scaled
-  form to infinity as `hypot` does (`IMABS("1E308+1E308i")`); that edge is UNVERIFIED.
+  956.6150000078482, ours 2 ulps lower). IMPOWER's modulus is still `hypot` (T-1950 evidence). The scaled form's overflow to infinity near
+  DBL_MAX is unreachable: an input part of `1E308` or more is `#NUM!` in every IM* function (`IMABS("1E308+1E308i")` never reaches the kernel; "IM* results that overflow (T-1827)", probes/eng-complex-overflow), so |z| stays below sqrt(2)·1E308, which is finite (ours: `IMABS("9E307+9E307i")` = 1.2727922061357857E+308).
 - A real argument skips the kernels: IMCSC is `1/sin x`, IMSEC `1/cos x`, IMSECH `1/cosh x` (gen-m9/2f0d384b8ed0d392
   A109 and a7fda34502ed3030 A146, `IMCSC(0.2)` 5.03348954767234, where the IMCSC kernel gives ...235; gen-m9/01810fc89c5ec2c0
   A318, `IMSECH("1.5")` 0.42509603494228; every real row of the sweep agrees).
@@ -863,9 +855,9 @@ Tasks: T-0907, T-1966, T-2760, T-2043, T-2044, T-2774
 
 ## Base conversions read a blank cell and empty text as 0
 Rule: every BIN2*/OCT2*/HEX2* function (with or without `places`) treats a blank cell, `""` and a ref to `=""` as 0: `BIN2DEC("")`, `OCT2DEC(blank)`, `HEX2DEC("")` are 0; the others give "0", or "0000" with `places` 4. None of these is an error.
-Evidence: probes/eng-base-conv-blank (excel-graph, 2026-10-18, T-1413); gen-m9/d244411dd90f7fbd A15.
+Evidence: probes/eng-base-conv-blank (46 cells, excel-graph, 2026-10-18, T-1413); gen-m9/d244411dd90f7fbd Calc!A15 (`VLOOKUP(..)&UPPER(OCT2BIN(Data!E5,2))` = "-0.000100": `OCT2BIN` of a blank is "00", excel-graph, 2026-10-12, T-1289).
 Status: VERIFIED (excel-graph)
-Tasks: T-1413
+Tasks: T-1413, T-1289
 
 ## DEC2BIN, DEC2HEX and DEC2OCT reject empty text
 Rule: unlike BIN2*/OCT2*/HEX2* (above), DEC2BIN, DEC2HEX and DEC2OCT give `#VALUE!` for an empty-text `number`, typed (`DEC2BIN("")`) or a ref to `=""`, with or without `places`. A blank cell is still 0 ("0", or "0000" with `places` 4). An invalid `places` still wins over it, since places is read first (`DEC2BIN("",0)` and `DEC2BIN("",-1)` are `#NUM!`; "The second argument's error wins" below).
@@ -998,7 +990,7 @@ Evidence: probes/eng-complex-overflow A1-A21 (excel-graph, 2026-10-19). Implemen
 
 Edges probed by T-2077 (probes/eng-im-overflow-edges, excel-graph):
 
-- A blank cell argument met earlier in IMPRODUCT (a blank inside a range is UNVERIFIED, T-2231) makes the running product 0, so a later overflow cannot
+- A blank cell argument met earlier in IMPRODUCT (a blank inside a range gives the same `0`: probes/eng-im-overflow-edges-2 A55:A57, `IMPRODUCT(C1:C3)` with C2 blank, `IMPRODUCT(C2:C3)`, `IMPRODUCT(C2)`; see "IMCOSH and IMSINH past |x| = 709 work in log space (T-2231)") makes the running product 0, so a later overflow cannot
   happen: `IMPRODUCT(<blank>,"1E200","1E200")` is `0`; the blank last is `#VALUE!` (the overflow
   came first). Implemented.
 - IMSIN and IMCOS are `#NUM!` for large |imaginary part| (probed at 710.4 and 711, T-2231): for y < 0 already below ln(DBL_MIN) = -708.396 (T-3589), and for y > 0 above the constant 709.7, below exp's overflow at 709.78 (T-3616, "IMSIN and IMCOS positive overflow cut" below),
@@ -1006,7 +998,7 @@ Edges probed by T-2077 (probes/eng-im-overflow-edges, excel-graph):
   finite there. IMCOSH and IMSINH are `#NUM!` for a zero imaginary part when `exp(|x|)` overflows
   (`IMCOSH("710.4+0i")`) but answer text with a nonzero one (`IMCOSH("710.4+1.5i")` is
   `1.17873946358278E+307+1.6621900184285E+308i`); past cosh's own range it is `#NUM!`
-  (`IMCOSH("711+1.5i")`). A tiny nonzero imaginary part with a large real one is UNVERIFIED. Implemented.
+  (`IMCOSH("711+1.5i")`). A tiny nonzero imaginary part with a large real one is kept, not rounded away: `IMCOSH("710.4+1E-300i")` and `IMSINH("710.4+1E-300i")` are `1.66636428328074E+308+166636428.328059i`, the `1E-10i` twins `...+1.66636428328071E+298i`, and `IMSINH("709.5+1E-200i")` `6.77493159657354E+307+6.774931596573E+107i` (probes/eng-im-overflow-edges-2 A9, A10, A21, A22, A113; T-2231). Implemented.
 - IMSEC, IMCSC, IMSECH and IMCSCH answer `0` (both parts) where the denominator overflows and the true result is
   subnormal (`IMSECH("711+1.5i")`, `IMCSCH("710.4+0i")`, `IMSEC("1.5+711i")`); a normal tiny result is kept (IM* last-digit sweep, T-2335); a zero denominator stays
   `#NUM!` (COMPLEXs.xlsx Sheet1 V22:Y22). Implemented (IMCSC of 0 since T-2334, IMCSCH of 0 and `IMCSCH("1E-200+1E-200i")` since T-2540: Excel-verified in gen-m9).
