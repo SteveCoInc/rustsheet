@@ -813,6 +813,10 @@ NETWORKDAYS.INTL is the exception: it lifts over a range (`INDEX(WORKDAY.INTL(45
   `=SUMPRODUCT(EDATE(A1:A60,1))` is `#VALUE!`, and `=SUMPRODUCT(EDATE(A1:A60+0,1))` and
   `=SUMPRODUCT(NORM.DIST(E1:E60,0,1,TRUE))` lift. Legacy `=SUM(PMT({0.1;0.2},10,100))` sums both
   elements (-40.12681517653708), like the dynamic formula. Its FORMULATEXT is the written text, with no `@` (`=SUM(PMT({0.1;0.2},10,100))`; probes/scalar-lift-open-a AA1, AB1, T-1777).
+  An array constant in a legacy ATP argument at a value position takes the `@` of a scalar argument,
+  whatever its size and under a sign, and the call none: `=EDATE(@{45000;45031},1)`, `=YEARFRAC(@{45000},46000)`,
+  `=BIN2DEC(@{101})`, `=QUOTIENT(@{7},2)`, `=ISEVEN(-@{5})` (probes/iseven-isodd-range-derived-arrays Leg!G3:N3,
+  G41:N41, excel-graph, T-4528; information.md "ISEVEN/ISODD over a range").
 Evidence: probes/scalar-lift-shapes H1-H50, J1-J8, K1-K8; probes/scalar-lift-shapes-b (each
 question on row 3 and row 70); probes/scalar-lift-shapes-c (legacy formulas and their FORMULATEXT).
 All three: excel-graph, 2026-10-17, T-1767. The per-family argument lists are in statistics.md,
@@ -2247,15 +2251,31 @@ Evidence: gen-m7 (excel-graph, 2026-10-22, T-2254 triage).
 Ours (T-2409, T-4448): TOROW, TOCOL, UNIQUE, SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP's value path
 keep a lone blank reference blank (`Model::eval_to_array_keep_blank` and its wrappers); before, it was read as 0;
 TOCOL keeps a lone blank too (gen-m9/8dd2312c96effb1b Calc!A399 `TOCOL(Data!Z1,3,..)` is `#CALC!`; gen-m9/928d08e3e1eecb5f A333 `TOROW(Data!E1,1)`; gen-m9/7980ffb6095a340d A294 `UNIQUE(Data!D$4)`).
-SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP of a value keep it blank too
+SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP of IF's pick keep it blank too
 (probes/t4448-lone-blank-reshapers, excel-graph 2026-11-06, T-4448; Z1, Z2 blank): `SORT(Z1)&"x"`, `SORT(Z1,1,-1)&"x"`,
 `SORTBY(Z1,Z1)&"x"`, `SORTBY(Z1,5)&"x"`, `CHOOSEROWS(Z1,1)&"x"`, `CHOOSECOLS(Z1,1)&"x"`, `CHOOSEROWS(Z1,-1)&"x"` and
-`TAKE(IF(TRUE,Z1),1)&"x"` are "x"; `TOCOL(X,1)` of each is `#CALC!` and `ISBLANK(INDEX(X,1,1))` is TRUE (A1:D4, A9:D9,
-A11:D13). `EXPAND(Z1,2,1,"p")` is a blank and "p" (A15:D15). TAKE, DROP and CHOOSEROWS of the reference itself
-already kept it (A6:D8, A10:D10). `TYPE(TAKE(IF(TRUE,Z1),1))` is 1 (B9): TAKE keeps IF's one-cell reference a
-reference. Ours gives 64 (a 1x1 array); T-4469 owns that cell.
+`TAKE(IF(TRUE,Z1),1)&"x"` are "x" (so is `DROP(IF(TRUE,Z1),0)&"x"`, probes/t4469-take-drop-if-one-cell-reference C1;
+IF's pick is a reference there, not a value); `TOCOL(X,1)` of each is `#CALC!` and `ISBLANK(INDEX(X,1,1))` is TRUE (A1:D4, A9:D9,
+A11:D13). `EXPAND(Z1,2,1,"p")` is a blank and "p" (A15:D15). TAKE and DROP of the reference itself
+already kept it (A6:D8, A10:D10); so did the CHOOSEROWS controls over `Z1:Z2` and `Z1:Z1` (rows 18 and 22).
+`TYPE(TAKE(IF(TRUE,Z1),1))` is 1 (B9): TAKE keeps IF's one-cell reference a reference (see "TAKE and DROP keep the
+one-cell reference a picker hands them" below; T-4469).
 Status: VERIFIED (excel-graph)
 Tasks: T-2409, T-4448
+
+## TAKE and DROP keep the one-cell reference a picker hands them
+Rule: when TAKE's or DROP's array is an IF, CHOOSE, IFS or SWITCH whose pick is a reference (one cell included), a defined name or
+an INDEX, the result is that reference's part, a reference, as TAKE or DROP of the reference itself is: never a 1x1 array.
+- (probes/t4469-take-drop-if-one-cell-reference, excel-graph 2026-11-06, T-4469; Y1 5, Y2 "t", Z1 blank) `TYPE(X)` is 1 (2
+  for Y2), `ISREF(X)` TRUE, `X&"x"` "x" ("5x", "tx") and `ISBLANK(INDEX(X,1,1))` TRUE for Z1 for each X of
+  `DROP(IF(TRUE,Z1),0)`, `TAKE(IF(TRUE,Y1),1)`, `TAKE(IF(FALSE,0,Z1),1)`, `TAKE(IF(TRUE,IF(TRUE,Z1)),1)`,
+  `DROP(IF(TRUE,Y1),0)`, `TAKE(IFS(TRUE,Z1),1)`, `TAKE(SWITCH(1,1,Z1),1)`, `TAKE(IF(TRUE,Y2),1)`, `DROP(IF(TRUE,Y2),0,0)` and
+  `TAKE(IF(TRUE,Y1:Y2),1)` (A1:D10). probes/t4448-lone-blank-reshapers B9: `TYPE(TAKE(IF(TRUE,Z1),1))` is 1.
+- So a blank picked cell stays blank and a picked number is not lifted as an array.
+Ours (T-4469): `Model::take_drop_value_source` in drop_take.rs. Before, IF, IFS and SWITCH read a one-cell arm as its
+value, so TYPE was 64 and ISREF FALSE; CHOOSE already kept it.
+Status: VERIFIED (excel-graph)
+Tasks: T-4469
 
 ## GROUPBY and PIVOTBY lift over an array field_headers or total depth
 Rule: an array (or a multi-cell range) given as GROUPBY's `field_headers` or `total_depth`, or PIVOTBY's `field_headers`,

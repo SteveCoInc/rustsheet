@@ -142,6 +142,10 @@
     "f": "=GAMMA.DIST(2,1E+60,1E+10,TRUE)",
     "why": "no single value"
    },
+   "A40": {
+    "f": "=GAMMADIST(2,1.7E+76,1E+10,TRUE)",
+    "why": "no single value"
+   },
    "A41": {
     "f": "=GAMMA.DIST(2,1.85E+76,1E+10,FALSE)",
     "why": "no single value"

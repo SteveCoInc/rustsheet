@@ -10,6 +10,7 @@ use legacy::{
     legacy_array_call_at, legacy_array_context, legacy_call_reads_a_value, let_returns_range,
     mark_legacy_reading,
 };
+use lifted::array_constant_context;
 use name_body::scalar_body;
 pub use redundant::remove_redundant_implicit_intersection;
 use redundant::remove_redundant_legacy_intersection;
@@ -232,9 +233,11 @@ pub(super) fn add_legacy_intersection(node: &mut Node, add: bool, arrays: bool) 
             for index in 0..args.len() {
                 // Fixed-length signatures (D-functions, SMALL, ...) can be shorter than `args`; an
                 // extra argument is not scalar (indexing it panicked; found by fuzzing, T-0021).
+                let (constant_signature, constant_arrays) =
+                    array_constant_context(kind, signature.get(index), index, args, arrays);
                 let arrays = legacy_array_context(kind, signature.get(index), index, args, arrays);
                 let arg = &mut args[index];
-                add_array_at(kind, signature.get(index), index, arg, arrays);
+                add_array_at(kind, constant_signature, index, arg, constant_arrays);
                 add_argument_intersection(kind, signature.get(index), index, arg, arrays);
             }
             if arrays {

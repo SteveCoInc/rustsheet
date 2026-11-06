@@ -24,6 +24,11 @@ definitions leave without a math value (tools/src/rustsheet_tools/accuracy/defs/
   `DISC(43130,43131,95,100,0)`, and INTRATE, YIELDDISC, PRICEDISC and RECEIVED likewise): unprobed. The engine returns
   `#DIV/0!` for DISC, INTRATE and YIELDDISC, and divides by nothing for PRICEDISC and RECEIVED.
 - Sources: financial.md "Discount securities and T-bills: amount domains (T-4112)", "Discount securities check order".
+- T-4114 left these without a math value too (defs/discount.py, defs/accrint.py): TBILLYIELD at a price of 0 or below
+  (`TBILLYIELD(45000,45100,0)`), YIELDMAT at a price of 0, ACCRINTM and ACCRINT at a par of 0, ACCRINTM with equal
+  dates and a rate or par at most 0, ACCRINT at a frequency other than 1, 2 or 4 or a basis from 5, and PRICEMAT and
+  YIELDMAT where the 30/360 count DSM = DIM - A is 0 or below (the engine's `#DIV/0!` for YIELDMAT). Source:
+  financial.md "ACCRINT, ACCRINTM, PRICEMAT and YIELDMAT: amount domains (T-4114)".
 
 ## Acceptance criteria
 - [ ] An excel-graph probe case covering the three points on every function they apply to (bases 0 and 4 for the

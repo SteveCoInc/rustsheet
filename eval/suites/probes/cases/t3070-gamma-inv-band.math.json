@@ -723,6 +723,11 @@
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.DIST.RT(1.5E10,1.5E10)"
    },
+   "A228": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHIDIST(1.5E10,1.5E10)"
+   },
    "A229": {
     "t": "n",
     "v": "20004254991.757343072890023433352693154166001870818",
@@ -803,6 +808,11 @@
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.DIST.RT(2E10,2E10)"
    },
+   "A243": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHIDIST(2E10,2E10)"
+   },
    "A244": {
     "t": "n",
     "v": "40006017342.352494016858662336973441967596132330636",
@@ -877,6 +887,11 @@
     "t": "e",
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.DIST.RT(4E10,4E10)"
+   },
+   "A258": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHIDIST(4E10,4E10)"
    },
    "A259": {
     "t": "n",
@@ -958,6 +973,11 @@
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.DIST.RT(1E11,1E11)"
    },
+   "A273": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHIDIST(1E11,1E11)"
+   },
    "A274": {
     "t": "n",
     "v": "200013454814.431643498665082258803059651995313323",
@@ -1032,6 +1052,11 @@
     "t": "e",
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.DIST.RT(2E11,2E11)"
+   },
+   "A288": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHIDIST(2E11,2E11)"
    },
    "A289": {
     "t": "n",
@@ -1118,6 +1143,11 @@
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.DIST.RT(1E12,1E12)"
    },
+   "A303": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHIDIST(1E12,1E12)"
+   },
    "A304": {
     "t": "n",
     "v": "20000134545434.940991001408937513002984550388594482",
@@ -1192,6 +1222,11 @@
     "t": "e",
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.DIST.RT(2E13,2E13)"
+   },
+   "A318": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHIDIST(2E13,2E13)"
    },
    "A319": {
     "t": "n",
@@ -1272,6 +1307,11 @@
     "t": "e",
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.DIST.RT(1E15,1E15)"
+   },
+   "A333": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHIDIST(1E15,1E15)"
    },
    "A334": {
     "t": "n",
