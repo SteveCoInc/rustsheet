@@ -29,9 +29,15 @@ probes/t4137-pivot-captions (excel-graph, 2026-11-06), six builder-v2 pivots:
   and `errorCaption` all apply.
 - **Page fields (K4):** `(All)`, a single item and `(Multiple Items)`.
 - **Custom subtotals (K5):** labels read `<item> Sum` and `<item> Count`.
-- **Row Labels rule, corrected (K6):** the header is `Row Labels` unless every pivot field is
-  non-compact, unused fields included.
+- **Row Labels rule, corrected (K5, K6):** an unused field at the default `compact` also gives
+  `Row Labels`, so the rule is not "the data field's compact". Whether every field, every non-axis
+  field or the last field decides is open (T-4583).
+- **No Values axis (K5):** with one data field there is no Values row; the header sits at the corner.
+- **`colHeaderCaption` (K1):** it renders nowhere when the column axis holds only Values; a real
+  column field is T-4583's.
 
-Recorded in docs/excel-semantics/pivots.md, and K4 also evidences the multi-page capture window.
+Recorded in docs/excel-semantics/pivots.md. K4 is consistent with the multi-page capture window, but
+cannot confirm it (T-4138).
 Default aggregate names are written by the file, so a file cannot probe them; the `Count of`/`Max
-of`/`Min of` captions T-2327 asked about are not reachable this way, which is noted.
+of`/`Min of` captions T-2327 asked about are not reachable this way, which is noted; T-2327 keeps
+that question.
