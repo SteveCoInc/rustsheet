@@ -3,7 +3,7 @@ id: T-4462
 title: "Probe TIME's and DATE's near-integer windows to a relative 2^-14, as XMATCH's: 2^-22+2^-33 below a positive integer and the half window below a negative one"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
