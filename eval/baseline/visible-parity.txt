@@ -292,6 +292,7 @@ probes/t4583-pivot-row-labels.case.json	165
 probes/t4585-pivot-field-names.case.json	8
 probes/t4589-pivot-total-order.case.json	80
 probes/t4614-pivot-total-order-2.case.json	97
+probes/t4616-pivot-total-order-3.case.json	477
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1
