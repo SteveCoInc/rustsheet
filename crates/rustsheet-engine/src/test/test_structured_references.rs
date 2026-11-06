@@ -771,12 +771,15 @@ fn undo_of_a_column_delete_restores_the_table() {
         let model = user.get_model();
         assert_eq!(model.workbook.tables["Sales"], before, "delete at {column}");
         assert_eq!(column_names(model), names);
-        if column != 3 {
-            // A formula naming a deleted column stays `#REF!` after the undo, as a plain range
-            // does (T-4668); `Sales[Qty]` survives the deletes that keep Qty.
-            assert_eq!(value(model, 1, 1, 1), "15");
-        }
+        // The undo puts back `=SUM(Sales[Qty])` too where the delete made it `#REF!` (T-4668).
+        assert_eq!(value(model, 1, 1, 1), "15");
         assert_eq!(value(model, 1, 2, 1), "3");
+        let formula = model.get_cell_formula(1, 1, 1).unwrap();
+        assert_eq!(
+            formula.as_deref(),
+            Some("=SUM(Sales[Qty])"),
+            "delete at {column}"
+        );
         user.redo().unwrap();
         assert_eq!(user.get_model().workbook.tables["Sales"].reference, shrunk);
         user.undo().unwrap();
