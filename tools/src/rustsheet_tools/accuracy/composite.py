@@ -40,6 +40,7 @@ from rustsheet_tools.fitlab.sweep import (
     arithmetic,
     cell_number,
     parse_arg,
+    parse_matrix_arg,
     split_args,
 )
 from rustsheet_tools.fitlab.sweep import (
@@ -213,13 +214,15 @@ class _Parser:
         except ValueError:
             raise self.fail(f"argument count of {name}") from None
         fitted: list[literal.Arg | Node] = []
-        for param, arg in zip(params, args, strict=True):
+        for param, arg, text in zip(params, args, texts, strict=True):
             if isinstance(arg, Const | Neg | Op | Call):
                 if param.kind not in ("real", "int"):
                     raise self.fail(f"a call result for {name}'s {param.kind} parameter")
                 fitted.append(arg)
                 continue
-            value = self.fit(param, arg)
+            # a matrix keeps its rows, which `parse_arg` flattens (T-4025)
+            shaped = parse_matrix_arg(text, self.sheet, self.book) if param.kind == "matrix" else arg
+            value = self.fit(param, shaped)
             if isinstance(value, Unfit):
                 raise self.fail(f"{name}: {value}")
             fitted.append(value)
