@@ -3,7 +3,7 @@ id: T-2244
 title: "Port ironcalc 4e6db1e6: malformed ZIP input stays a zip error; take zip 9.0.5"
 milestone: M5
 lane: quality
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -25,11 +25,17 @@ itself does not apply; the test and the patch bump do. Our import path goes thro
 error kind. Triaged by the 2026-10-21 steward run.
 
 ## Acceptance criteria
-- [ ] A unit test in `crates/rustsheet-xlsx` loads `b""`, `b"not a ZIP archive"` and `b"PK\x03\x04"`
+- [x] A unit test in `crates/rustsheet-xlsx` loads `b""`, `b"not a ZIP archive"` and `b"PK\x03\x04"`
   through `load_from_xlsx_bytes` and asserts `XlsxError::Zip(_)` for each (adapt to our signature).
-- [ ] `zip` is 9.0.5 or later in all three crates and `Cargo.lock`; `cargo deny` passes.
-- [ ] Commit carries `Ported-From: ironcalc@4e6db1e6`.
-- [ ] `make check` green; reviewers approve.
+- [x] `zip` is 9.0.5 or later in all three crates and `Cargo.lock`; `cargo deny` passes.
+- [x] Commit carries `Ported-From: ironcalc@4e6db1e6`.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Upstream 179d0221 (license files): our fork carries its own licensing.
+
+## Outcome
+- New test `tests/malformed_zip.rs` pins `b""`, `b"not a ZIP archive"` and `b"PK\x03\x04"` to
+  `XlsxError::Zip(_)`.
+- `zip` 9.0.3 → 9.0.5 in the three crates and `Cargo.lock` (pinned with `cargo update --precise`;
+  9.4.1 would also pull typed-path 0.13 and getrandom's wasm deps). No eval change.
