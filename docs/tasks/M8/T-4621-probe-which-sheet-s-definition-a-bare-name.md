@@ -31,5 +31,19 @@ defining sheet by name" (T-4587's rule).
 - [ ] syntax.md's UNVERIFIED note on a sheet-scoped add's body becomes VERIFIED or is corrected.
 - [ ] `make check` green; reviewers approve.
 
+## Predictions (committed before the fill)
+probes/t4621-api-sheet-name-body (S2 active), -first, -last. Rows 1-4 read SD (S2, `=Dup`), LD (Last, `=DupB`), SW (S2,
+`=DupC`), TW (S2, `=DupD`) through `=Sheet!Name` on the other sheets and `=INDIRECT("Name")` on the own sheet (column D);
+row 5 is the workbook control WD = `=Dup`.
+| row | first defining sheet by name (ours, T-4587) | own sheet first |
+|---|---|---|
+| 1 SD | 1 (First) | 7 (S2) |
+| 2 LD | 2 (First) | 90 (Last) |
+| 3 SW (S2 does not define DupC; workbook + Last) | 93 (Last) | 3 (workbook) or 93 |
+| 4 TW (workbook + S2 + Last) | 94 (Last) | 74 (S2) |
+| 5 WD | 1 | 1 |
+Same on every sheet and for every active sheet under either reading. Column E (bare own-sheet uses typed before the add)
+is expected `#NAME?` per "A sheet-scoped name added after load" (T-4618's area).
+
 ## Out of scope
 - probes/t4554-api-name-local-name-body Last!D3 (T-4618).
