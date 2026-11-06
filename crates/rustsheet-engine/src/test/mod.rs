@@ -216,6 +216,7 @@ mod test_format_case;
 mod test_frozen_rows_and_columns;
 mod test_geomean;
 mod test_get_cell_content;
+mod test_groupby_function_array_edges;
 mod test_implicit_intersection;
 mod test_indirect_r1c1;
 mod test_issue_155;

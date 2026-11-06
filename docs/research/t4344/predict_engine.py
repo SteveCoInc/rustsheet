@@ -19,6 +19,10 @@ import sys
 
 CASE = "eval/suites/probes/cases/t4344-groupby-descending-search"
 OUT = "docs/research/t4344/predictions.tsv"
+# The sheet read, and the cells given a placeholder (by default its formula cells). A probe whose calls spill sets
+# AREA to every cell of their spill areas (T-4464), so the empty ones are recorded as well.
+SHEET = "Calc"
+AREA = None
 # The placeholder sidecar's provenance: none of it is Excel's; the file is removed before the script ends.
 PLACEHOLDER = {"application": "placeholder", "input_sha256": "", "kind": "placeholder", "produced_at": "", "version": None, "workbook_name": ""}
 
@@ -38,10 +42,11 @@ def main() -> None:
     if os.path.exists(sidecar):
         raise SystemExit("the case already has a sidecar: predictions are written before the fill")
     with open(CASE + ".case.json") as fh:
-        calc = {s["name"]: s["cells"] for s in json.load(fh)["sheets"]}["Calc"]
-    cells = {c: {"t": "s", "v": ""} for c, f in calc.items() if str(f).startswith("=")}
+        calc = {s["name"]: s["cells"] for s in json.load(fh)["sheets"]}[SHEET]
+    area = AREA(calc) if AREA else [c for c, f in calc.items() if str(f).startswith("=")]
+    cells = {c: {"t": "s", "v": ""} for c in area}
     with open(sidecar, "w") as fh:
-        json.dump({"format": "rustsheet-oracle/v1", "source": PLACEHOLDER, "sheets": {"Calc": cells}}, fh)
+        json.dump({"format": "rustsheet-oracle/v1", "source": PLACEHOLDER, "sheets": {SHEET: cells}}, fh)
     try:
         shown = subprocess.run(
             [
@@ -59,7 +64,7 @@ def main() -> None:
     values: dict[str, str] = {}
     cell = None
     for line in shown.splitlines():
-        m = re.match(r"Calc!([A-Z]+\d+)\s", line)
+        m = re.match(re.escape(SHEET) + r"!([A-Z]+\d+)\s", line)
         if m:
             cell = m.group(1)
         m = re.match(r"\s+actual\s*:\s*(.*)$", line)
