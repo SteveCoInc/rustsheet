@@ -60,3 +60,18 @@ The cells of probes/t4478-reduce-scan-reference-accumulator that T-4478 left fai
 - Eval delta: probes/t4478-reduce-scan-reference-accumulator 90/117 -> 117/117 (27 cells fixed: every cell the task
   names plus the F6:H6 and G9 forms); probes known failures 8312 -> 8285; 0 regressions in any suite.
 - Not probed, left as is: SCAN with a union initial value; `a:C` with one bound name.
+
+## Landing notes
+- PR #3704, head after this commit (merge head 11c21881b). Not enqueued when the 2026-11-06 opus B run's window closed.
+- State: CI never ran on e7b560227 because the PR conflicted with main (`mergeable_state: dirty`). The 18:53 merge of
+  origin/main resolved one conflict in functions/logical/lambda.rs: T-2766 made `call_prepared`'s bind closure
+  return `(Binding, bool)` (the ERROR.TYPE/CELL mark), and `call_lambda_caller_binding` now passes `false`, as
+  main's `call_lambda_caller` did. `cargo test --lib -- reduce lambda` passed (154); `make check-fast` was not re-run
+  after the merge, and CI is pending on the new head.
+- Reviewers: security and excel-fidelity APPROVE on e7b560227, design APPROVE on 68735810e (round 1; round 2
+  changed what security and fidelity asked for). The merge is a conflict resolution only and needs no new review.
+- Next step: once CI is green on the latest head, enqueue (`enable_pr_auto_merge`, SQUASH). If eval-gate fails,
+  check that probes/t4478-reduce-scan-reference-accumulator is still 117/117 after the merge.
+- Do not repeat: putting REDUCE in `Function::may_be_reference` (fidelity BLOCKING: it changes `yields_cells`,
+  the intersection, `:`, call and SUBTOTAL grammar, none of it probed); union copies without a work-budget charge
+  (security BLOCKING: quadratic).
