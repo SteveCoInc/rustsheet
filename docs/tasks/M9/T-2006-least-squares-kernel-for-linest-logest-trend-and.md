@@ -3,7 +3,7 @@ id: T-2006
 title: "Least-squares kernel for LINEST, LOGEST, TREND and GROWTH: fit Excel's evaluation order (about 300 last-digit cells)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
