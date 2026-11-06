@@ -46,9 +46,10 @@ Every failing table point has an owner.
   the exact forms on the double literals with `1 + rate` exact (NPV sum v_i/(1+r)^i; XNPV on whole days over 365;
   MIRR (P/-N)^(1/(n-1)) - 1; FVSCHEDULE principal times prod(1 + s_i)). No solver: none has a root. The flows, schedule
   and XNPV's dates are one-row array literals; the draws reuse IRR's and XIRR's (`_irr_draw`, `_xirr_draw` of
-  defs/cashflow.py) with a rate drawn on its own, and the power cuts reuse T-4109's `_log2_growth`. The "four strata
-  from one maker plus an edge" dispatch moved from annuity_values.py into `_common.edge_strata` (the PMT and ISPMT
-  tables regenerate byte-identical), so no third copy was written.
+  defs/cashflow.py) with a rate drawn on its own, and the power cuts reuse T-4109's `_log2_growth`. The strata come
+  from annuity_values.py's `_strata` (each stratum from one maker, the edge one of the edge shapes or a quarter of the
+  time the typical point), which T-4110 built on `_common.by_stratum_with_edge`, so no new dispatch helper was written;
+  the PMT and ISPMT tables and the four new ones regenerate byte-identical.
   - Domain errors, each from a semantics entry: NPV `#DIV/0!` at rate -1 and where (1+rate)^(n-1) leaves the double
     range; XNPV `#NUM!` for a rate at or below 0, different counts, a date that is negative, 0, past 2958465 (a later
     one checked before truncation) or before the first; MIRR `#DIV/0!` for one flow, no negative flow, a reinvest

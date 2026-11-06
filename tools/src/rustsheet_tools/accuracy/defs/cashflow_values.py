@@ -54,8 +54,14 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import edge_strata, signed
-from rustsheet_tools.accuracy.defs.annuity_values import LOG2_MAX, LOG2_NORMAL, NORMAL_MAX, _log2_growth
+from rustsheet_tools.accuracy.defs._common import Shape, signed
+from rustsheet_tools.accuracy.defs.annuity_values import (
+    LOG2_MAX,
+    LOG2_NORMAL,
+    NORMAL_MAX,
+    _log2_growth,
+    _strata,
+)
 from rustsheet_tools.accuracy.defs.cashflow import DAYS_PER_YEAR, FIRST_DATE, _array, _irr_draw, _xirr_draw
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.literal import Arg
@@ -225,8 +231,6 @@ def _fvschedule(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 # -- draws -----------------------------------------------------------------------------------------
-
-Shape = Callable[[random.Random], list[Arg]]
 
 
 def _max_rate(periods: float) -> float:
@@ -465,7 +469,7 @@ def _definition(
             function=function,
             params=params,
             value=value,
-            draw=edge_strata(make, edges, f"{function}: ({names}) by stratum."),
+            draw=_strata(make, edges, f"{function}: ({names}) by stratum."),
             sources=sources,
         )
     )
