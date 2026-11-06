@@ -121,6 +121,12 @@ fn the_caption_probes_cells_are_excels() {
         "t4583-pivot-row-labels",
         &["R1", "R2", "R3", "R4", "R5", "R6", "C1", "C2"],
     );
+    // Column and page fields at the default (L1, L2), compact versus outline on the outer row
+    // and column fields (L3, L4, L7, L8), and rowHeaderCaption losing to the field name (L5).
+    check_all(
+        "t4609-pivot-row-labels-2",
+        &["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8"],
+    );
     // A custom Count subtotal under a Sum field over an error is a count in Excel and the error
     // in the engine's result (T-4168, T-4636): East's subtotal values are left out, their
     // labels compared.
