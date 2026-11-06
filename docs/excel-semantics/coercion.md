@@ -1010,7 +1010,24 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
     (MSVC's short `stable_sort`) misses 37 to 44. Over Cy Cx Ay Bx Ay (rows 6, 27) Excel's UNIQUE is Cy, Cx, Bx, Ay: the
     second Ay is kept apart from the first, which joined Cy, so two identical rows end in different groups. No
     sort-then-group-neighbours model under the row-by-row field comparison can do that. One-field runs never tell
-    the rules apart (none up to length 7). T-4393 owns the search and these cells.
+    the rules apart (none up to length 7). T-4393 found the rule (next bullet).
+  - **UNIQUE's merge: equal heads join, the output never coalesces** (T-4393, probes/t4393-unique-merge-holdout,
+    excel-graph, 2026-11-06; docs/research/t4393/model.py). UNIQUE is a natural merge sort over groups of rows: a
+    row `=` the last group of its run joins it, a row below it starts a run, and neighbouring runs merge bottom-up.
+    When the two heads are `=`, the right head's group joins the left head's group, which stays the head and meets
+    the next right head too. A group taken out of a merge is not compared with the group taken out before it, so
+    two `=` groups that never meet as heads stay apart. Kept rows are each group's first row, in input order. Over
+    Cy Cx Ay Bx Ay the runs are [Cy] [Cx Ay Bx] [Ay]; the first merge joins Ay (row 3) to Cy and gives Cx Bx Cy,
+    Bx after Cx with no coalescing though Bx = Cx; the second takes Cx, then Ay (row 5) < Bx, so row 5 never meets Cy
+    and is kept: Cy, Cx, Bx, Ay. Over Cy Cx Ay Bx Cy the last Cy > Bx meets Cy and joins it: Cy, Cx, Bx. Chosen on
+    the 60 two-field runs of t4379 and t4380 (60 of 60; T-4200's rule 33 misses, `pushkeep` 5; sort-then-group
+    models 35 or more, docs/research/t4393/sort_search.py; search-tree models, a sorted vector with lower-bound
+    insertion and red-black or plain BSTs with equal-stop or lower-bound lookups, 34 to 42; docs/research/t4393/tree_search.py). Confirmed out of
+    sample: 60 fresh runs of lengths 5 to 7 (seed 4393; 36 where it and `pushkeep` keep different rows, 18 where it
+    and T-4200's rule do, 6 controls), 60 of 60 UNIQUE predictions committed before the fill. A structural choice
+    (decision 0188 R4), not a fit. It leaves docs/research/t4241/model.py's 234 GROUPBY blocks unchanged. GROUPBY
+    on top of it still misses: t4380 column C 38 of 45, the hold-out's column C 32 of 60 (its key tree and descent;
+    T-4472). Not implemented: T-4471.
   - **A value sort's parent counts the rows that reached it but no leaf**: Bx, Ax, Ax, By, Cy by SUM of 1, 2, 4, 8,
     16 orders ascending (B,x) 1, (B,y) 8, (A,x) 6 (D56), B's 9 before A's 22, where 22 counts row 5, (C,y), which
     reaches class A (C = A) and then no y class (D56, E56).
@@ -1098,13 +1115,18 @@ orders by and a subtotal line shows, are `Grouping::class_rows`: the rows that r
 did (T-4359). T-4388 confirmed it out of sample on PIVOTBY's row axis (row subtotals, and a sort by the first value
 column with them) and on GROUPBY's subtotals under `sort_order` -1 and -2: its 120 B, C, F and G cells matched the
 engine's predictions committed before the fill; its D and E column subtotals matched in 45 of 60, the 15 misses all
-the unreached-class rule above (fixed). Not implemented: UNIQUE's drop of Bx after Cx Ay Ax, which removes a
+the unreached-class rule above (fixed). A class that records of another row line reach but no record of this line
+does is not unreached: its column subtotal shows this line nothing (an empty cell), as in transitive data. Over AyB
+CxB BxA AxC AxC of p p p q q, p's records 2 and 3 reach (`ab`&U+00AD, `x`) and q's do not, and that subtotal shows
+`2, 3` for p and nothing for q, ascending and with `col_sort_order` -1 (probes/t4414-pivotby-mixed-column-subtotal
+Calc!B1, C1); all 60 calls of that probe (30 seeded three-field runs, each with such a class in both orders) matched
+the engine's predictions committed before the fill (docs/research/t4414; T-4414). Not implemented: UNIQUE's drop of Bx after Cx Ay Ax, which removes a
 repeated leaf (T-4380) on these runs.
 The T-4195 per-field model this replaces was selected on its own cells without a hold-out; the tree model was
 chosen by T-4241 on seen values and confirmed by T-4342's hold-out (205 of 206 after the search revision, which
 was chosen on the hold-out and checked against all 234 earlier blocks; a structural choice, decision 0188 R4,
 not a fit).
-Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358, t4378, t4359 and t4388 fills, 2026-11-05) for the cells cited.
+Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358, t4378, t4359 and t4388 fills, 2026-11-05; t4414, 2026-11-06) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless

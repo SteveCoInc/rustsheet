@@ -237,6 +237,7 @@ probes/t4379-pivotby-repeated-unreached-leaf.case.json	20
 probes/t4380-unique-keep-head-holdout.case.json	50
 probes/t4382-pivotby-intransitive-paths.case.json	66
 probes/t4389-confirm.case.json	11
+probes/t4393-unique-merge-holdout.case.json	100
 probes/t4420-pivotby-parent-sets-three-fields.case.json	14
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1

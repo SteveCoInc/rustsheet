@@ -1,21 +1,30 @@
-"""STDEV, STDEV.S, STDEVA, VAR, VAR.S, VARA and DEVSQ (Gate A dispersion I, T-4089, decision 0271).
+"""Gate A dispersion I (T-4089: STDEV, STDEV.S, STDEVA, VAR, VAR.S, VARA, DEVSQ) and II (T-4090: STDEV.P, STDEVP,
+STDEVPA, VAR.P, VARP, VARPA, AVEDEV), decision 0271.
 
 The math, on the written literals' doubles x[1..n] with the exact mean m = (x[1] + ... + x[n]) / n:
 - DEVSQ is the exact sum of squared deviations S = sum((x[i] - m)^2) (statistics.md "DEVSQ is a two-pass sum": Excel
   computes it in doubles with two passes; the math is the exact S);
 - VAR, VAR.S and VARA are the exact sample variance S / (n - 1), and STDEV, STDEV.S and STDEVA its square root
   (statistics.md "VAR/STDEV switch between a one-pass and a two-pass formula": Excel's choice of formula moves at most
-  a few last digits, so the math is the exact variance either way).
-STDEVA and VARA over numbers are STDEV.S and VAR.S: they differ only in how text and booleans in a range count
-(statistics.md "VARA family: single-cell reference arguments"), and the sampler draws numbers only.
+  a few last digits, so the math is the exact variance either way);
+- VAR.P, VARP and VARPA are the exact population variance S / n, and STDEV.P, STDEVP and STDEVPA its square root (the
+  same entry: the population forms switch between the same two formulas with d = 0);
+- AVEDEV is the exact mean absolute deviation sum(|x[i] - m|) / n (Microsoft's AVEDEV page; statistics.md
+  "Statistical function argument modes" for what counts). Excel sums in doubles (numbers.md, double rounding), so
+  the math is the exact value.
+STDEVA and VARA over numbers are STDEV.S and VAR.S, and STDEVPA and VARPA are STDEV.P and VAR.P: they differ only in
+how text and booleans in a range count (statistics.md "VARA family: single-cell reference arguments"), and the
+sampler draws numbers only.
 
 Domain (an Excel error region, never a math value):
 - VAR and STDEV of one number is `#DIV/0!` (n - 1 = 0).
-- VAR and STDEV: a one-pass sum of squares beyond the double range is `#NUM!` (statistics.md: "`VAR.P` of 1E+200
-  twice is `#NUM!`").
+- VAR and STDEV, population forms included: a one-pass sum of squares beyond the double range is `#NUM!`
+  (statistics.md: "`VAR.P` of 1E+200 twice is `#NUM!`"). The population forms of one number are 0, not an error.
+- AVEDEV: an overflow of its sum of the numbers, an absolute deviation or their sum is `#NUM!`, inferred from its two
+  sums and not probed. AVEDEV of one number is 0.
 - DEVSQ: an overflow in its two-pass form (the sum of the numbers, a squared deviation or their sum) is `#NUM!`,
   inferred from statistics.md "DEVSQ is a two-pass sum" and not probed.
-The draws keep |x| at or below 1E+150, so no drawn point reaches either overflow; the rules keep an eval cell over
+The draws keep |x| at or below 1E+150, so no drawn point reaches an overflow; the rules keep an eval cell over
 larger literals from getting a value.
 Squares that are subnormal are flushed to 0 by Excel (statistics.md, `STDEV.S({0,2.2E-154})` is 0); the draws keep
 every number at or above 1E-60 in magnitude, so a deviation small enough to flush would need a number within 1E-154
@@ -43,6 +52,7 @@ from rustsheet_tools.accuracy.sampler import log_uniform
 DEVSQ_SOURCE = "statistics.md#devsq-is-a-two-pass-sum-t-1749"
 SWITCH_SOURCE = "statistics.md#varstdev-switch-between-a-one-pass-and-a-two-pass-formula"
 VARA_SOURCE = "statistics.md#vara-family-single-cell-reference-arguments"
+AVEDEV_SOURCE = "statistics.md#statistical-function-argument-modes"
 MAX_MAGNITUDE = 1e150  # every square and the one-pass sum of 255 squares stay inside the double range
 MIN_MAGNITUDE = 1e-60  # every nonzero deviation of a draw stays far above the subnormal squares Excel flushes
 
@@ -69,6 +79,21 @@ def _stdev(args: Sequence[MathArg]) -> mpmath.mpf:
     return mpmath.sqrt(_var(args))
 
 
+def _var_p(args: Sequence[MathArg]) -> mpmath.mpf:
+    xs = scalars(args)
+    return squared_deviations(xs) / len(xs)
+
+
+def _stdev_p(args: Sequence[MathArg]) -> mpmath.mpf:
+    return mpmath.sqrt(_var_p(args))
+
+
+def _avedev(args: Sequence[MathArg]) -> mpmath.mpf:
+    xs = scalars(args)
+    m = mpmath.fsum(xs) / len(xs)
+    return mpmath.fsum(abs(x - m) for x in xs) / len(xs)
+
+
 def squares_overflow(args: Sequence[MathArg]) -> str | None:
     """VAR's and STDEV's `#NUM!`: a square, or the one-pass running sum of squares, beyond the double range
     (statistics.md: `VAR.P` of 1E+200 twice is `#NUM!`)."""
@@ -79,20 +104,31 @@ def squares_overflow(args: Sequence[MathArg]) -> str | None:
     return None if math.isfinite(total) else "the sum of squares is beyond the double range"
 
 
-def deviations_overflow(args: Sequence[MathArg]) -> str | None:
-    """DEVSQ's `#NUM!`, inferred from its two-pass form (statistics.md "DEVSQ is a two-pass sum": the double mean, then
-    the squared deviations summed left to right) and not probed: the running sum of the numbers, a squared deviation
-    or the running sum of squared deviations beyond the double range. The draws never reach it."""
+def _two_pass_overflow(args: Sequence[MathArg], deviation: Callable[[float], float], what: str) -> str | None:
+    """A two-pass form's `#NUM!`: the running sum of the numbers, a term (`deviation` of a number minus the double
+    mean) or the running sum of the terms beyond the double range."""
     xs = [float(x) for x in scalars(args)]
     _, total = running_total(xs)
     if not math.isfinite(total):
         return "the sum of the numbers is beyond the double range"
     mean = total / len(xs)
-    squares = [(x - mean) * (x - mean) for x in xs]
-    if not all(math.isfinite(s) for s in squares):
-        return "a squared deviation is beyond the double range"
-    _, total = running_total(squares)
-    return None if math.isfinite(total) else "the sum of squared deviations is beyond the double range"
+    terms = [deviation(x - mean) for x in xs]
+    if not all(math.isfinite(s) for s in terms):
+        return f"a {what} is beyond the double range"
+    _, total = running_total(terms)
+    return None if math.isfinite(total) else f"the sum of {what}s is beyond the double range"
+
+
+def deviations_overflow(args: Sequence[MathArg]) -> str | None:
+    """DEVSQ's `#NUM!`, inferred from its two-pass form (statistics.md "DEVSQ is a two-pass sum": the double mean, then
+    the squared deviations summed left to right) and not probed. The draws never reach it."""
+    return _two_pass_overflow(args, lambda d: d * d, "squared deviation")
+
+
+def absolute_deviations_overflow(args: Sequence[MathArg]) -> str | None:
+    """AVEDEV's `#NUM!`, inferred from its two sums (the double mean, then the absolute deviations) and not probed.
+    The draws never reach it."""
+    return _two_pass_overflow(args, abs, "absolute deviation")
 
 
 def _var_domain(args: Sequence[MathArg]) -> str | None:
@@ -188,3 +224,10 @@ STDEV = _definition("STDEV", _stdev, _var_domain, (SWITCH_SOURCE,))
 STDEV_S = _definition("STDEV.S", _stdev, _var_domain, (SWITCH_SOURCE,), draw=_draw_xlfn)
 STDEVA = _definition("STDEVA", _stdev, _var_domain, (SWITCH_SOURCE, VARA_SOURCE), param="value")
 DEVSQ = _definition("DEVSQ", _devsq, deviations_overflow, (DEVSQ_SOURCE,))
+VAR_P = _definition("VAR.P", _var_p, squares_overflow, (SWITCH_SOURCE,), draw=_draw_xlfn)
+VARP = _definition("VARP", _var_p, squares_overflow, (SWITCH_SOURCE,))
+VARPA = _definition("VARPA", _var_p, squares_overflow, (SWITCH_SOURCE, VARA_SOURCE), param="value")
+STDEV_P = _definition("STDEV.P", _stdev_p, squares_overflow, (SWITCH_SOURCE,), draw=_draw_xlfn)
+STDEVP = _definition("STDEVP", _stdev_p, squares_overflow, (SWITCH_SOURCE,))
+STDEVPA = _definition("STDEVPA", _stdev_p, squares_overflow, (SWITCH_SOURCE, VARA_SOURCE), param="value")
+AVEDEV = _definition("AVEDEV", _avedev, absolute_deviations_overflow, (AVEDEV_SOURCE,))
