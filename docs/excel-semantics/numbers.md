@@ -416,10 +416,22 @@ double. A positive place of 16 or more (for example `=4E+126`, `=3.7E+47`) reads
   128, binary or 1..15 + 2^k-times-16 tables 77 to 84 of the 100 literals, and one 10^-16q entry with the 10^-256
   split 200. That last one is the model above, frozen before the hold-out was scored.
 - Literal and VALUE agree in every cell (columns A and B).
+- m is the digits as written, so trailing zeros change n = 16q + r and the read. `=2.036E-77`, `=2.0360E-77` and
+  `=2.03600E-77` are 2.0360000000000002E-77, while `=2.036000E-77` (m = 2036000, n = 83) is the nearest double
+  2.036E-77 (t4467-literal-large-exponent-sweep Zeros: 8 bases with 0 to 15-k trailing zeros, 100 literals, each as literal
+  and VALUE; the model fits 100, the nearest double 21).
+- Text longer than 15 digits is cut first, as at n <= 15, and the 15 kept digits go through the tables (sweep Long, 30
+  texts of 16 to 20 digits: the model fits 30, the nearest double of the full text 2; the nearest double of the cut
+  text also fits 30, so these cells confirm the cut, not the tables).
 Evidence: probes/t4467-literal-large-exponent (Train, 100 literals by seeded search, seed 4467001; Hold, 56, seed
 4467002; the split fixed in the case before scoring), excel-graph, 2026-11-06. The model fits Train 200/200 and Hold
 112/112 (nearest 62). Fresh sweep written after the freeze: probes/t4467-literal-large-exponent-fresh (85 literals,
-seed 4467003: 30 at n = 16..271, 25 at n >= 272, 20 with positive exponents, 10 controls), 170/170 (nearest 20).
+seed 4467003: 30 at n = 16..271, 25 at n >= 272, 20 with positive exponents, 10 controls), 170/170 (nearest 20), and
+probes/t4467-literal-large-exponent-sweep (seed 4467004): LogU, 120 literals log-uniform over the double range,
+240/240 (nearest 240 too: at random points the model is mostly the nearest double), plus the Zeros and Long sheets
+above. Fit lab split (decision 0188 R4.1, `fitlab/holdout.py`, applied to Train and Hold together, margin 5 points):
+the model is bit-exact at 225/225 train and 87/87 test cells, the nearest double at 103 and 49. Both are within 4 ulp
+and within 15 digits at every cell.
 Unprobed: a positive place of 1 to 15, which keeps the nearest double. A product past 10^±512 has no table entry
 and keeps the nearest double; no number Excel accepts gets there. Subnormal results are flushed as before.
 Status: VERIFIED (excel-graph) for literals and VALUE

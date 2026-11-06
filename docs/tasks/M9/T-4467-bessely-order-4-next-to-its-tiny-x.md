@@ -63,10 +63,26 @@ losing a cell that passes today.
     the case before any scoring.
   - Candidates scored on Train only (200 cells): nearest 90; m × RN64(10^-n) 140; m / RN64(10^n) 128; binary and
     1..15 + 16·2^k tables at most 84 of the 100 literals; 10^-16q with the 10^-256 cap first 3 misses. The model
-    above scored 200/200 and was frozen (`frozen.py` in the session scratchpad).
-  - Hold: 112/112 (nearest 62).
-  - Fresh sweep after the freeze: probes/t4467-literal-large-exponent-fresh, seed 4467003, 85 literals. 170/170
-    (nearest 20).
+    above scored 200/200 and was frozen (docs/research/t4467/frozen_read.py). Hold: 112/112 (nearest 62).
+  - Fit lab split (R4.1, `tools/src/rustsheet_tools/fitlab/holdout.py`; review round 1). The cell-hash split is
+    applied to Train and Hold together. It was applied after the seed split above had been scored, so its margin (the
+    default 5 points) was stated after scoring, not before:
+
+    | candidate | side | cells | bit-exact | within 4 ulp | within 15 digits |
+    |---|---|---|---|---|---|
+    | the model | train | 225 | 225 | 225 | 225 |
+    | the model | test | 87 | 87 | 87 | 87 |
+    | correctly rounded | train | 225 | 103 | 225 | 225 |
+    | correctly rounded | test | 87 | 49 | 87 | 87 |
+
+    The model's drop from train to test is 0, and it beats correctly rounded on test (87 to 49): accepted.
+  - Fresh sweeps after the freeze. probes/t4467-literal-large-exponent-fresh (seed 4467003, 85 literals where the
+    model leaves the nearest double, and controls) scores 170/170 (nearest 20). The R4.2 sweep, probes/t4467-literal-
+    large-exponent-sweep (seed 4467004, review round 1), scores 500/500:
+    - LogU: 120 literals log-uniform over the double range, 240/240 (nearest also 240);
+    - Zeros: 100 trailing-zero spellings, 200/200 (the nearest double fits 21 of the 100 literals);
+    - Long: 30 texts of 16 to 20 digits, 60/60 (the nearest double of the full text fits 2 literals, that of the
+      15-digit cut all 30).
   - Gate A: these are literal reads, not Gate A functions, so the cases have no math sidecar (the generator writes
     none). The BESSELY refill has 13 math cells.
   - Reproducibility floor: D32 is the same in three fills, and every literal agrees between its literal and VALUE
@@ -74,5 +90,5 @@ losing a cell that passes today.
   - No keep-matched branch: the read applies at every place of 16 or more.
 - **Also probed (engineering.md):** order 1 answers over the normal band down to 2.2250738585073E-308.
   `BESSELY(2.2250738585072014E-308,1)` is `#NUM!`, because the 15-digit cut is below DBL_MIN.
-- **Eval delta:** probes 1 known failure fixed (t4458-bessely-tiny-x-cuts Calc!D32), 0 regressions. The 3 new cases (498 cells)
+- **Eval delta:** probes 1 known failure fixed (t4458-bessely-tiny-x-cuts Calc!D32), 0 regressions. The 4 new cases (998 cells)
   all pass. No other suite moves: lifting the n <= 15 cap changes no other oracle cell.

@@ -80,11 +80,12 @@ fn small_power(r: i64, negative: bool) -> Option<Register> {
 /// `digits * 10^place` as Excel reads it, for `|place| >= 16` and nonzero `digits` below 2^64;
 /// `None` elsewhere (beyond 10^±512, past any number Excel accepts).
 pub(crate) fn x87_table_read(digits: u64, place: i64) -> Option<f64> {
-    if digits == 0 || place.abs() < 16 {
+    if digits == 0 || place.unsigned_abs() < 16 {
         return None;
     }
     let negative = place < 0;
-    let (q, r) = (place.abs() / 16, place.abs() % 16);
+    let magnitude = i64::try_from(place.unsigned_abs()).ok()?;
+    let (q, r) = (magnitude / 16, magnitude % 16);
     let mut value = Register::from_parts(false, u128::from(digits), 0);
     if r != 0 {
         value = value.mul(small_power(r, negative)?);
