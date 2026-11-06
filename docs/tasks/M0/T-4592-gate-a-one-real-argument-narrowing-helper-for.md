@@ -3,7 +3,7 @@ id: T-4592
 title: "Gate A: one real-argument narrowing helper for the definitions"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
