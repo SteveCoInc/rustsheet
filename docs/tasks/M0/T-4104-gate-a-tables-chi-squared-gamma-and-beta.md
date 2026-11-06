@@ -3,7 +3,7 @@ id: T-4104
 title: "Gate A tables, chi-squared, gamma and beta aliases: CHIDIST, CHIINV, GAMMADIST, GAMMAINV, BETADIST and BETAINV"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
