@@ -2458,6 +2458,7 @@ C	probes/t4501-permutationa-chosen-cut.case.json	36
 C	probes/t4508-ms-lcid-tags-after-b2.case.json	27
 C	probes/t4515-fraction-tail-holdout.case.json	147
 C	probes/t4515-fresh-sweep.case.json	96
+C	probes/t4517-filter-transposed-include.case.json	23
 C	probes/t4518-sheet-sheets-bound-variable.case.json	26
 C	probes/t4529-yearfrac-calendar-vs-coercion.case.json	164
 C	probes/t4534-desktop-golden-web-values.case.json	36

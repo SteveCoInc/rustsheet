@@ -2705,7 +2705,7 @@ reference shows up, for TOCOL's and TOROW's array. FILTER reads its array and in
 (`Model::filter_arg_array`, filter.rs, through `evaluate_picked_reference_arg`), which covers a written reference, a LET
 variable, INDEX and the arm IF picks alike, and checks every include's shape before its elements. Only stored cell
 errors are evidenced; other errors read through a reference (a `#REF!` for a sheet index, a circular read) are wrapped
-unprobed. An include one column tall as the array is wide filters its columns (`include_axis`; not probed by T-4477). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
+unprobed. An include that is one column as tall as the array is wide does not filter its columns: `FILTER(A1:B3,{TRUE;FALSE})`, `{1;0}`, `{1;#N/A}`, `FILTER(A1:C2,{1;0;1})` and `FILTER(A1:B3,C1:C2)` (C1 `#DIV/0!`) are all `#VALUE!`, while the row form `{1,0,1}` over A1:C2 filters its columns and the square `FILTER(A1:B2,{1;0})` filters rows (probes/t4517-filter-transposed-include A10:G12, excel-graph 2026-11-06, T-4517; `include_axis`). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
 (spill_functions.rs) so VSTACK/HSTACK also wrap a LET variable or LAMBDA parameter bound to a one-cell error reference.
 Blank-cell variables (T-3887, probes/t3887-stack-blank-variable, excel-graph 2026-11-03): with z bound to a blank cell
 (D!Z1) by LET or as a MAP LAMBDA parameter, `INDEX(VSTACK(z,1),1,1)` and `INDEX(HSTACK(z,1),1,1)` are the same "empty value"
