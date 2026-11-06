@@ -125,8 +125,8 @@ def _standardized(args: Sequence[MathArg]) -> float:
 
 def _norm_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, mean, sd, cumulative = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(mean, (bool, tuple))
-    assert not isinstance(sd, (bool, tuple))
+    assert not isinstance(x, (bool, str, tuple)) and not isinstance(mean, (bool, str, tuple))
+    assert not isinstance(sd, (bool, str, tuple))
     if cumulative and math.isinf(_standardized(args)):
         # (x - mean)/sd past the double range: no Excel cell says what the cdf is there (T-2435 probed the
         # density only), so such a point is redrawn.
@@ -142,7 +142,7 @@ def _norm_dist_domain(args: Sequence[MathArg]) -> str | None:
 
 def _norm_s_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     z, cumulative = args
-    assert not isinstance(z, (bool, tuple))
+    assert not isinstance(z, (bool, str, tuple))
     return cdf(z) if cumulative else density(z)
 
 
@@ -187,7 +187,7 @@ def _standard_tail(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmat
 def _general_tail(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     """NORM.DIST's x whose lower (or upper) tail is q: mean + sd*z."""
     mean, sd = args[1], args[2]
-    if isinstance(mean, (bool, tuple)) or isinstance(sd, (bool, tuple)) or sd <= 0:
+    if isinstance(mean, (bool, str, tuple)) or isinstance(sd, (bool, str, tuple)) or sd <= 0:
         msg = "no tail map without a positive standard deviation"
         raise ValueError(msg)
     return mean + sd * _standard_tail(q, upper, args)

@@ -25,6 +25,8 @@ fn linked() -> Model {
         name: name.to_string(),
         formula: formula.to_string(),
         sheet_id,
+        hidden: false,
+        comment: None,
     };
     model.workbook.external_books.push(ExternalBook {
         sheet_names: vec!["Uses".to_string(), "Defines".to_string()],
@@ -297,6 +299,8 @@ fn cached_ranges_fixture() -> Model {
             name: "NR_Range".to_string(),
             formula: "='Uses'!$A$1:$B$3".to_string(),
             sheet_id: None,
+            hidden: false,
+            comment: None,
         }],
         cells,
         refresh_error_sheets: Vec::new(),

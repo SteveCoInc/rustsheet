@@ -1,0 +1,23 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "90553c7719d7da8fc297551fa91dd1785e377bc5d2c7d6cf7e9276b4513b9bc1"
+ },
+ "sheets": {
+  "Calc": {
+   "A61": {
+    "t": "e",
+    "why": "'F' and 'yd' share no class (#N/A)",
+    "f": "=CONVERT(42,\"F\",\"yd\")"
+   },
+   "A76": {
+    "t": "e",
+    "why": "'F' and 'yd' share no class (#N/A)",
+    "f": "=ODDFPRICE(2958466,46506,33984,39398,Data!C6,CONVERT(42,\"F\",\"yd\"),104,4,2)"
+   }
+  }
+ }
+}

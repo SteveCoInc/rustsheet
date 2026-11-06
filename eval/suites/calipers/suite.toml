@@ -32,4 +32,6 @@ cached_overrides = "cached-overrides.tsv"
 url = "https://github.com/fundamental-research-labs/calipers.git"
 rev = "9e47ea4fc97b292b15ff7bf3c445acab53f6d8e9"
 subdir = "verification/cases"
-include = ["**/golden.xlsx"]
+# `init.xlsx`: the authored inputs of `roundtrip/`, which eval/roundtrip/calipers loads (T-4173). The
+# cell suite still scores only the goldens.
+include = ["**/golden.xlsx", "roundtrip/**/init.xlsx"]

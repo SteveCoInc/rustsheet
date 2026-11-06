@@ -78,9 +78,28 @@ The baseline is the ordinary cells-mode file:
   T-4503's evidence);
 - the ratchet is `baseline::diff`.
 
-`rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. `--check` (in `make eval-gates`, gate
-suites only) fails on a regression or an out-of-date baseline. `--update-baseline` (in `make eval-baseline`) records
-fixes and new cases, and refuses regressions. `make eval` runs every round-trip suite (decision 0307).
+The corpus suites (`roundtrip-calipers`, `roundtrip-poi`, `roundtrip-corpus-bench`; T-4173) use `baseline = "cases"`,
+since their item lines would run to tens of megabytes:
+- each failing case is one `F` line, `* <n> <digest>`: n is its failing items, weighted as the kept rate weighs
+  them (at least 1 each), and the digest hashes their set of keys;
+- `roundtrip::diff` treats a smaller n as a fix, and a held or larger n with another digest as a regression. In
+  both modes, a fall in a case's checked count, or a case that newly does not run, is a regression too;
+- updating a `cases` suite refuses to drop a case (a cache fetched under an older include).
+
+Each names its cell suite with `cases_of = "<suite>"` and takes that suite's `[fetch]` and cache directory
+(`eval/.cache/suites/<suite>`, T-4629). So it is fetched, skipped with a message while not fetched, and gated exactly
+as that suite is, and it never records an empty baseline:
+- `roundtrip-poi` and `roundtrip-corpus-bench` are `gate = true`, like their cell suites. `make check` holds them
+  wherever the caches are fetched; CI, which fetches no corpus, skips them as it skips the cell suites.
+- `roundtrip-calipers` stays `gate = false`, like the calipers cell suite. `rustsheet-eval roundtrip --check --suite
+  roundtrip-calipers` gates it on demand.
+
+`rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. Each suite's line and report section
+give its kept rate: source items compared, less those the failing items cover (`Item::weight`: a lost element's
+subtree, a lost part's elements, a `<truncated>` item's hidden differences), over the items compared (`KeptRate`,
+SPEC-0033 D8). Cases that did not run are counted as not scored. `--check` (in `make eval-gates`, gate suites only) fails on a regression or an
+out-of-date baseline. `--update-baseline` (in `make eval-baseline`) records fixes and new cases, and refuses
+regressions. `make eval` runs every round-trip suite (decision 0307).
 
 ## Case formats
 **`rustsheet-case/v1`** (`*.case.json`):

@@ -13,8 +13,9 @@ dates.md states Excel reads it (excel-graph cells):
   Over 360.
 - Bases 2 and 3 count serial days (the fictitious day included) over 360 and 365.
 - Basis 4 (European 30/360) caps each displayed day at 30 (serial 60 is day 29, serial 0 day 0),
-  over 360. The engine reads basis 4's dates rounded to the nearest second first, as DAYS360 does;
-  that is unprobed for YEARFRAC, so the draws keep every fraction of a day below 0.99.
+  over 360. Its dates floor like the other bases', unlike DAYS360, which rounds to the nearest
+  second first (probes/t4574-feb29-near-midnight-date-args Q1:Q18, V1:V18; T-4574). The draws
+  still keep every fraction of a day below 0.99.
 - Basis 1 (actual/actual) counts serial days over a year length read on the real calendar, where
   serial 0 stands in as 1900-01-01 and serial 60 as 1900-02-28 ("YEARFRAC accepts serial 0":
   `YEARFRAC(0,33752,1)` averages 1900-1992, `YEARFRAC(59,60,1)` is 1/365). Dates more than a year
@@ -95,6 +96,16 @@ def us_30_360(start: YMD, end: YMD) -> int:
     return 360 * (y2 - y1) + 30 * (m2 - m1) + (d2 - d1)
 
 
+def us_30_360_both(start: YMD, end: YMD) -> int:
+    """US 30/360 that moves both dates (ExcelFinancialFunctions' `ModifyBothDates`): a 31st or February's last day is
+    day 30 at either end, whatever the other date. ODDLPRICE's and ODDLYIELD's quasi-coupon period lengths on basis 0
+    (defs/odd_bonds.py) and ACCRINT's issue-period length on bases 0 and 2 (defs/accrint.py) count with it."""
+    (y1, m1, d1), (y2, m2, d2) = start, end
+    d1 = 30 if d1 == 31 or _feb_last(*start) else d1
+    d2 = 30 if d2 == 31 or _feb_last(*end) else d2
+    return 360 * (y2 - y1) + 30 * (m2 - m1) + (d2 - d1)
+
+
 def eu_30_360(start: YMD, end: YMD) -> int:
     """Basis 4's day count: each day capped at 30."""
     (y1, m1, d1), (y2, m2, d2) = start, end
@@ -147,6 +158,16 @@ def day_count_parts(start: int, end: int, basis: int) -> tuple[int, Fraction]:
     if basis == 4:
         return eu_30_360(displayed_date(start), displayed_date(end)), Fraction(360)
     return end - start, Fraction(360 if basis == 2 else 365)
+
+
+def basis_days(start: int, end: int, basis: int) -> Fraction:
+    """Days from serial `start` to `end` on the basis: 30/360 on Excel's displayed days (bases 0 and 4), serial days
+    otherwise (the coupon securities' day counts: defs/bonds.py, defs/accrint.py)."""
+    if basis == 0:
+        return Fraction(us_30_360(displayed_date(start), displayed_date(end)))
+    if basis == 4:
+        return Fraction(eu_30_360(displayed_date(start), displayed_date(end)))
+    return Fraction(end - start)
 
 
 def check_basis(basis: int) -> None:

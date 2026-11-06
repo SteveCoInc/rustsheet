@@ -184,6 +184,10 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   such issue or comment (its `report` job failed), file one P0 task per distinct finding yourself
   (dedupe by panic site/stack against open tasks) per docs/process/agent-workflow.md "When
   something goes wrong".
+- **Nightly eval failures** (`.github/workflows/nightly.yml`, decision 0323): check the latest scheduled run on `main`
+  every day. Its corpus round-trip step is the only gate on Calipers, POI and corpus-bench fidelity, and no issue is
+  opened for it. A red run is handled per docs/process/agent-workflow.md "When something goes wrong" (the "Nightly
+  eval run red" row).
 - **Eval regressions** in CI (`eval-check`): the PR broke previously-passing Excel behavior. Fix
   the code, do not touch the baseline.
 - **Accepted deviations** (decision 0036): a suite's `deviations` file lists cells that differ

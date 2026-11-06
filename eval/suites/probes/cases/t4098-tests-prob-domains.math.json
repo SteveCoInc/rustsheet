@@ -1,0 +1,291 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "83fdfba23b266e1ee6d8fd413536d6814fe41bcfacc95a4e1eb782bdc4691120"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "n",
+    "v": "0.1000000000000000055511151231257827021181583404541",
+    "f": "=PROB({1,2,3,4,5,6,7,8,9,10},{0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1},1)"
+   },
+   "A10": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.50000000001},1)"
+   },
+   "A11": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.49999999999},1)"
+   },
+   "A12": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.5000000001},1)"
+   },
+   "A13": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.4999999999},1)"
+   },
+   "A14": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.500000001},1)"
+   },
+   "A15": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.499999999},1)"
+   },
+   "A16": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.50000001},1)"
+   },
+   "A17": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.49999999},1)"
+   },
+   "A18": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.5000001},1)"
+   },
+   "A19": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.4999999},1)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PROB({1,2},{0.5,0.500000000000001},1)"
+   },
+   "A20": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.500001},1)"
+   },
+   "A21": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.499999},1)"
+   },
+   "A22": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.50001},1)"
+   },
+   "A23": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.49999},1)"
+   },
+   "A24": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.5001},1)"
+   },
+   "A25": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.4999},1)"
+   },
+   "A26": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.501},1)"
+   },
+   "A27": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.499},1)"
+   },
+   "A28": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.51},1)"
+   },
+   "A29": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.49},1)"
+   },
+   "A3": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.499999999999999},1)"
+   },
+   "A30": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.6},1)"
+   },
+   "A31": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.4},1)"
+   },
+   "A32": {
+    "t": "n",
+    "v": "1.5",
+    "f": "=PROB({1,2},{1.5,-0.5},1)"
+   },
+   "A33": {
+    "t": "n",
+    "v": "1.1999999999999999555910790149937383830547332763672",
+    "f": "=PROB({1,2,3},{1.2,-0.1,-0.1},1)"
+   },
+   "A34": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=PROB({1,2},{1,0},1)"
+   },
+   "A35": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=PROB({1,2},{1,0},2)"
+   },
+   "A36": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=PROB({1},{1},1)"
+   },
+   "A38": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=PROB({1},{1},2)"
+   },
+   "A39": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=PROB({1,2},{0.5,0.5},2,1)"
+   },
+   "A4": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.50000000000001},1)"
+   },
+   "A40": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PROB({1,2},{0.5,0.5},1,1)"
+   },
+   "A41": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=PROB({1,2,3},{0.25,0.25,0.5},-1E+300,1E+300)"
+   },
+   "A42": {
+    "t": "e",
+    "why": "#N/A: one cell",
+    "f": "=CHISQ.TEST({5},{4})"
+   },
+   "A43": {
+    "t": "e",
+    "why": "#DIV/0!: an expected cell of 0",
+    "f": "=CHISQ.TEST({0,1,2},{0,1,3})"
+   },
+   "A44": {
+    "t": "e",
+    "why": "#NUM!: a squared difference past the double range",
+    "f": "=CHISQ.TEST({1E+200,1,1},{1,1,1})"
+   },
+   "A45": {
+    "t": "e",
+    "why": "#NUM!: a squared difference past the double range",
+    "f": "=CHISQ.TEST({1E+160,1,1},{1,1,1})"
+   },
+   "A46": {
+    "t": "e",
+    "why": "#N/A: one cell",
+    "f": "=CHITEST({5},{4})"
+   },
+   "A47": {
+    "t": "n",
+    "v": "0.04163225833177520092745966024954681796642052759916",
+    "f": "=Z.TEST({1E+160,1.00000000000001E+160,1.00000000000002E+160},1E+160)"
+   },
+   "A48": {
+    "t": "e",
+    "why": "#NUM!: z past the double range above 0",
+    "f": "=Z.TEST({1,2,3},-1E+300,1E-300)"
+   },
+   "A49": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=Z.TEST({1,2,3},1E+300,1E-300)"
+   },
+   "A5": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.49999999999999},1)"
+   },
+   "A51": {
+    "t": "e",
+    "why": "#NUM!: a squared deviation is beyond the double range",
+    "f": "=Z.TEST({1E+200,1E+200,-1E+200},0)"
+   },
+   "A52": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=Z.TEST({1E+200,1E+200,-1E+200},0,1)"
+   },
+   "A53": {
+    "t": "e",
+    "why": "#DIV/0!: one value",
+    "f": "=Z.TEST({5},4,1)"
+   },
+   "A54": {
+    "t": "e",
+    "why": "#DIV/0!: constant data with sigma omitted",
+    "f": "=Z.TEST({3,3,3},2)"
+   },
+   "A55": {
+    "t": "n",
+    "v": "0.04163225833177520092745966024954681796642052759916",
+    "f": "=Z.TEST({3,3,3},2,1)"
+   },
+   "A56": {
+    "t": "e",
+    "why": "#NUM!: sigma 0 or below",
+    "f": "=ZTEST({1,2,3},2,-1)"
+   },
+   "A6": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.5000000000001},1)"
+   },
+   "A7": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.4999999999999},1)"
+   },
+   "A8": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.500000000001},1)"
+   },
+   "A9": {
+    "t": "e",
+    "why": "#NUM!: the probabilities do not sum to 1",
+    "f": "=PROB({1,2},{0.5,0.499999999999},1)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "A50": {
+    "f": "=Z.TEST({0.1,0.1,0.1},0)",
+    "why": "no single value"
+   }
+  }
+ }
+}

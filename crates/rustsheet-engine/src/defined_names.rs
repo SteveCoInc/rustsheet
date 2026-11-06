@@ -2,6 +2,7 @@
 
 use crate::{
     calc_result::{CalcResult, Range},
+    constants::{DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH},
     evaluation_limits::stack_address,
     expressions::{
         parser::{
@@ -19,7 +20,7 @@ use crate::{
     functions::logical::SharedLambda,
     model::Model,
     reference_operators::RefArg,
-    types::DefinedName,
+    types::{DefinedName, WorkbookView},
     utils as common,
 };
 
@@ -447,7 +448,11 @@ impl Model {
         // resolve, such as a padded bare column `T[ Col ]`, loads as `#REF!`
         // (probes/t3258-name-padded-column-0..2, T-3258).
         self.parser.set_loaded(loading);
+        // A bare name of an API body binds to a sheet-scoped definition by sheet name order,
+        // not to the active sheet's (syntax.md "A bare name in an API-added name's body", T-4587).
+        self.parser.set_api_name_body(source == NameSource::Api);
         let internal_formula = self.formula_to_internal_between(formula, &read_on, &context);
+        self.parser.set_api_name_body(false);
         self.parser.set_loaded(false);
         let internal_formula = internal_formula?;
         // Excel's `names/add` refuses a body nesting more than 65 calls (400 `InvalidArgument`;
@@ -466,6 +471,8 @@ impl Model {
             name: name.to_string(),
             formula: internal_formula,
             sheet_id,
+            hidden: false,
+            comment: None,
         });
         self.reset_parsed_structures();
 
@@ -480,7 +487,9 @@ impl Model {
     /// probes/t4014-sheet-api-name-65 S!A1); with one, the sheet's uses of it move to the new name,
     /// `S!N` included, while other sheets keep the workbook name
     /// (probes/t4049-sheet-api-name-over-book). An unqualified use of a defined workbook name
-    /// needs no rewrite: its text already reads the new sheet-scoped name.
+    /// needs no rewrite: its text already reads the new sheet-scoped name. In most other books
+    /// Excel re-binds the unresolved use instead (probes/t4391-api-rebind-*), and no rule yet
+    /// tells those books apart from T-4049's, so those cells are known failures (T-4617).
     fn bind_added_sheet_name(&mut self, name: &str, sheet: u32) {
         let name_upper = name.to_uppercase();
         let workbook_name_defined = self
@@ -519,9 +528,17 @@ impl Model {
     /// An invalid sheet index.
     pub fn set_active_sheet(&mut self, sheet: u32) -> Result<(), String> {
         self.workbook.worksheet(sheet)?;
-        if let Some(view) = self.workbook.views.get_mut(&self.view_id) {
-            view.sheet = sheet;
-        }
+        // A workbook decoded from bytes may have no view for `view_id`; create it rather than
+        // drop the choice, so `active_sheet` returns `sheet` afterwards (T-4554).
+        self.workbook
+            .views
+            .entry(self.view_id)
+            .or_insert(WorkbookView {
+                sheet,
+                window_width: DEFAULT_WINDOW_WIDTH,
+                window_height: DEFAULT_WINDOW_HEIGHT,
+            })
+            .sheet = sheet;
         Ok(())
     }
 

@@ -8,6 +8,11 @@
  },
  "sheets": {
   "Calc": {
+   "A1": {
+    "t": "e",
+    "why": "settlement on or after maturity: #NUM!",
+    "f": "=TBILLYIELD(45366,45366,98)"
+   },
    "A2": {
     "t": "e",
     "why": "settlement on or after maturity: #NUM!",
@@ -17,6 +22,11 @@
     "t": "e",
     "why": "settlement on or after maturity: #NUM!",
     "f": "=TBILLPRICE(45366,45366,0.05)"
+   },
+   "B1": {
+    "t": "e",
+    "why": "settlement on or after maturity: #NUM!",
+    "f": "=TBILLYIELD(45367,45366,98)"
    },
    "B2": {
     "t": "e",
@@ -28,6 +38,11 @@
     "why": "settlement on or after maturity: #NUM!",
     "f": "=TBILLPRICE(45367,45366,0.05)"
    },
+   "C1": {
+    "t": "n",
+    "v": "7.3469387755102040816326530612244897959183673469388",
+    "f": "=TBILLYIELD(45366,45367,98)"
+   },
    "C2": {
     "t": "n",
     "v": "0.05070148631754410616257601017970962676901905123441",
@@ -37,6 +52,11 @@
     "t": "n",
     "v": "99.986111111111111110340122899565863513594700230492",
     "f": "=TBILLPRICE(45366,45367,0.05)"
+   },
+   "D1": {
+    "t": "e",
+    "why": "settlement on or after maturity: #NUM!",
+    "f": "=TBILLYIELD(45366,45366,100)"
    },
    "D2": {
     "t": "e",

@@ -3,7 +3,7 @@ id: T-4104
 title: "Gate A tables, chi-squared, gamma and beta aliases: CHIDIST, CHIINV, GAMMADIST, GAMMAINV, BETADIST and BETAINV"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -31,11 +31,31 @@ Every failing table point has an owner.
   (T-2435)", "Legacy distribution names sweep (T-1047)", "Legacy distribution names sweep, second family (T-1048)".
 
 ## Acceptance criteria
-- [ ] One definition per function in `tools/src/rustsheet_tools/accuracy/defs/`, reusing the existing definitions,
+- [x] One definition per function in `tools/src/rustsheet_tools/accuracy/defs/`, reusing the existing definitions,
       each citing its sources, with unit tests against Microsoft's published examples or the semantics entries' values.
-- [ ] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
+- [x] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
       their number. Every point outside the envelope has a `known-failures.tsv` owner.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other groups of decision 0272.
+
+## Outcome
+- `defs/legacy_gamma_beta.py` registers CHIDIST, GAMMADIST, GAMMAINV and BETAINV as their modern Definitions
+  (CHISQ.DIST.RT, GAMMA.DIST, GAMMA.INV, BETA.INV); CHIINV's definition landed meanwhile as `gamma.CHIINV` (T-3337,
+  #3563), and its table here verifies against it with 0 differences under the legacy name (`dataclasses.replace`, one
+  definition per concept), citing the T-1047 and T-1048 sweeps. BETADIST is BETA.DIST's cdf without the flag (its value
+  and domain wrap BETA.DIST's with TRUE inserted; the bounds follow). tests/test_accuracy_legacy_gamma_beta.py checks
+  Microsoft's published examples and the paired modern values.
+- `gamma.quantile` (shared with GAMMA.INV and the chi-squared quantiles): at a tiny shape (GAMMAINV's s1 drew 4.8E-266)
+  Q = 1 - P loses all its digits and its log went complex; such a point now has no math value (NoValueError) and is
+  redrawn. `rustsheet-accuracy verify` on GAMMA.INV, CHISQ.INV and CHISQ.INV.RT: 0 differences in every committed batch.
+- Six oracle-filled `s1` tables (excel-graph): `rustsheet-eval accuracy` shows 6 fewer missing tables and 0 failing.
+  36 points are outside the envelope, each the same behaviour its modern sibling already owns, now listed in
+  known-failures.tsv: BETAINV 12 (T-3351, quantile rounds to 1), 5 (T-2808, shape 2.2E-308), 13 (T-3862, huge alpha and
+  tiny p); BETADIST 5 (T-3577); CHIINV A93 (T-3364, Excel's Wilson-Hilferty start).
+- CHIINV A93: Excel's Wilson-Hilferty closed form, 2.66e-4 off the math, is decision 0188 R3 case 3 (statistics.md
+  "GAMMA.INV at a huge shape, closed-form branch", which names CHIINV). Decision 0318 marks it in math-over-excel.tsv on
+  decision 0289's terms; it stays a known failure of T-3364, which moves the branch to the math. New evidence: shape 1.29E9.
+- statistics.md's T-1047 and T-1048 entries record the six tables as Gate A evidence for the alias rule.
+- Math sidecars of the probes and probes-numeric cells that call the six names (`rustsheet-accuracy math --function`).

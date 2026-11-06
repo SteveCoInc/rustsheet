@@ -344,7 +344,7 @@ impl Model {
         }
 
         // An error array is each call's result, as the argument errors below are.
-        // A lone blank cell stays blank (`SORT(Z1)&"x"` is "x"; probes/t4448-lone-blank-reshapers A1:D5, T-4448).
+        // A lone blank cell stays blank (`SORT(Z1)&"x"` is "x"; probes/t4448-lone-blank-reshapers A1:D2, T-4448).
         let data = self.eval_to_array_keep_blank(&args[0], cell);
         if data.as_ref().is_ok_and(|d| d.is_empty() || d[0].is_empty()) {
             return CalcResult::Array(vec![]);
@@ -579,7 +579,8 @@ impl Model {
         // An error array is lifted like any other: every element is that error, in the sort_orders'
         // shape (`ROWS(SORTBY(NA(),C1:C3,{1;-1}))` is 2; probes/sortby-lifted-element-corners F7,
         // excel-graph, T-2349).
-        // A lone blank cell stays blank (`SORT(Z1)&"x"` is "x"; probes/t4448-lone-blank-reshapers A1:D5, T-4448).
+        // A lone blank cell stays blank (`SORTBY(Z1,Z1)&"x"` and `SORTBY(Z1,5)&"x"` are "x";
+        // probes/t4448-lone-blank-reshapers A3:D4, T-4448).
         let data = self.eval_to_array_keep_blank(&args[0], cell);
         if data.as_ref().is_ok_and(|d| d.is_empty() || d[0].is_empty()) {
             return CalcResult::Array(vec![]);

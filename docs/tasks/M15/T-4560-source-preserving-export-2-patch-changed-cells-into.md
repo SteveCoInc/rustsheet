@@ -3,7 +3,7 @@ id: T-4560
 title: "Source-preserving export 2: patch changed cells into the source worksheets, appending shared strings (SPEC-0034 D3.1-D3.4)"
 milestone: M15
 lane: engine
-status: blocked
+status: done
 priority: P1
 size: M
 tier: opus
@@ -26,17 +26,70 @@ SPEC-0034 D3:
 Bounded per directive 5.
 
 ## Acceptance criteria
-- [ ] R1-style unit tests: a changed constant, a changed formula, a new cell in an existing row, a new row, and a
+- [x] R1-style unit tests: a changed constant, a changed formula, a new cell in an existing row, a new row, and a
       cleared cell each patch only those cells, and every other part is byte-identical.
-- [ ] Each fallback trigger regenerates (unit test).
-- [ ] A new string is appended to `sharedStrings.xml`, and `count` and `uniqueCount` are updated.
-- [ ] The round-trip baselines are rerecorded.
-- [ ] `make check` green; reviewers approve.
+- [x] Each fallback trigger regenerates (unit test).
+- [x] A new string is appended to `sharedStrings.xml`, and `count` and `uniqueCount` are updated.
+- [x] The round-trip baselines are rerecorded.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - New styles and `metadata.xml` (T-4561).
 
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275, 0306): M15 waits until Phase 1 parity exits, except for the task the
-owner-directed session claims. Unblock when docs/status.md has the line `**Phase 1:** exited <date>`, or by claiming
-it in that session.
+## Outcome
+- `export/patch.rs` adds the patch tier. When the structure is unchanged, `save_preserving` now tries it before
+  regenerating (`SaveTier::Patched { sheets }`). It works as follows:
+  - Each changed sheet is indexed in one bounded pass: rows and cells in order, `r` required, depth at most 256.
+  - A recalculated value is rewritten in place. The source `<f>`, attributes and formula text stay as stored.
+  - Any other changed cell is written by the export's own cell writer (`CellWriter`/`cell_xml`, extracted from
+    `worksheets.rs`), and new cells and rows are spliced in order.
+  - New strings are appended to `sharedStrings.xml`. `uniqueCount` is set, and `count` moves by the change in
+    references.
+  - Every untouched zip entry is copied raw.
+- Each of these falls back to regeneration, with its reason:
+  - a structural change (`structure_differs` destructures `Worksheet` without `..`);
+  - a style-table change (T-4561);
+  - out-of-order rows or cells, or a cell without `r`;
+  - a changed formula in a shared group;
+  - a cell needing `metadata.xml` that the source lacks.
+- Tests: `crates/rustsheet-xlsx/tests/patched_save.rs`.
+  - Patching: a changed constant, a changed formula, a new cell in an existing row, a cleared cell, and a new row
+    with a new string. Only `sheet1.xml` changes, or `sharedStrings.xml` as well for the new string.
+  - Fallbacks: a new sheet, a new style, rows out of order, a cell without `r`, and a changed shared formula.
+  - The patcher also has 4 unit tests.
+- Round-trip kept rates (weighted, SPEC-0033 D8), before (T-4559's verbatim save) → after:
+
+  | suite | failing cases | kept |
+  |---|---|---|
+  | roundtrip-calipers | 106 → 53 | 92.04% → 99.986% |
+  | roundtrip-poi | 46 → 21 (+14 not scored) | 96.78% → 99.993% |
+  | roundtrip-corpus-bench | 162 → 20 | 94.71% → 99.997% |
+  | roundtrip-fixtures | 25 → 3 | 78.37% → 95.75% |
+
+- Review round 1 (all three reviewers) found paths that wrote a wrong or invalid package where a fallback was due.
+  Fixed:
+  - inline strings interned past the shared-string part;
+  - several inserts into an empty `<row/>` or `<sheetData/>`;
+  - a new row before an expanded empty row;
+  - `vm`/`cm` in the export's metadata layout;
+  - a calcChain gone stale when formula cells are added or removed;
+  - prefixed worksheets;
+  - single-quoted attributes;
+  - a `count` found outside the `<sst>` tag;
+  - silent truncation past the size limit;
+  - duplicate zip names.
+
+  Each of these now falls back, or is written once and in order. A patched sheet must index again, or the save
+  regenerates. The cost: four Calipers `roundtrip/` cases, whose new values need rich-error metadata, now
+  regenerate (T-4561).
+- Round 2 (excel-fidelity): a value patch never compares `vm` numbers, because the source's and the export's index
+  different `metadata.xml` layouts. It keeps the source's `vm` only when the error kind is unchanged
+  (`rich_value`), and falls back otherwise.
+- Remaining losses:
+  - Fixtures: the four external-link fixtures fall back (their cells need `metadata.xml`, T-4561) and lose their
+    theme and `externalLink` parts.
+  - Corpora: `calcChain`, styles and recalculated values.
+- Package-invalid items on the corpora are copied from the sources, not made by the patch. They are V2 on
+  in-document `#` targets in drawing relationships, and V4 on UTF-16 `customXml` parts. Both look like validator
+  false positives (follow-up T-4613).
+

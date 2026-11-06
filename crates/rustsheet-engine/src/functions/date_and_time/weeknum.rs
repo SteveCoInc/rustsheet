@@ -180,11 +180,12 @@ impl Model {
         let return_type = match return_type {
             // A positive return_type just below an integer counts as that integer, as LEFT's count
             // does (`WEEKNUM(45019,2-2^-23)` is type 2's 15; probes/t4454-near-midnight-date-args
-            // AA1:AB4, T-4454); 2^-22 + 9*2^-36 below it truncates. A negative one truncates
-            // (the snap there is unprobed).
+            // AA1:AB4, T-4454); 2^-22 + 9*2^-36 below it truncates. A negative one floors with
+            // the same snap, not truncates: -0.5 reads as -1 (the stale state) and -2^-30 as 0
+            // (`#NUM!`; probes/t4470-weeknum-return-type-edges, T-4470). The negative-side snap window's
+            // size is unprobed (the full tolerance is assumed).
             Some(value) => match self.cast_number_no_bools_ref(value, cell) {
-                Ok(f) if f > 0.0 => near_integer_count(f) as i32,
-                Ok(f) => f as i32,
+                Ok(f) => near_integer_count(f) as i32,
                 Err(s) => return s,
             },
             None => 1,

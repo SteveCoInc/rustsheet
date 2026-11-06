@@ -18,6 +18,7 @@ Pivots are dropped on export today (T-2081). ClosedXML's invariants (oss-engines
 
 ## Acceptance criteria
 - [ ] Unit tests; round-trip suite (task `roundtrip`) passes for the spike and probe pivots.
+- [ ] Type the location geometry (`firstHeaderRow`/`firstDataRow`/`firstDataCol`, `rowPageCount`/`colPageCount`) in `PivotTable` and remove it from the `OpaqueOwner::Location` opaque set, unless T-4147 already did (T-4139 left it verbatim).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

@@ -1,0 +1,44 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4587: probes/t4049-sheet-api-name-plain (S!A1 =N is #NAME? after a sheet-scoped N is added on S) with S already holding a sheet-scoped name from the file (S!Other = 5). probes/t4554-api-name-local-name-body Last!D3 (=LD on Last, LD added scoped to Last, Last holding a file-scoped Dup) is 90. Does a sheet that already has a scoped name see the added one from an unqualified =N?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "names": {
+  "S!Other": "=5"
+ },
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "A3": "=Other",
+    "B1": "=FORMULATEXT(A1)"
+   }
+  },
+  {
+   "name": "T",
+   "cells": {
+    "A1": "=S!N"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "S!A1",
+  "S!A2",
+  "S!A3",
+  "S!B1",
+  "T!A1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "S"
+  }
+ ]
+}

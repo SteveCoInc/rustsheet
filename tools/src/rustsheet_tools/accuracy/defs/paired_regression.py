@@ -61,7 +61,6 @@ from __future__ import annotations
 
 import math
 import random
-import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
@@ -71,6 +70,7 @@ import mpmath
 
 from rustsheet_tools.accuracy.defs._common import (
     StratumDraws,
+    below_normal,
     by_stratum,
     domain_of,
     fraction_to_mpf,
@@ -118,11 +118,6 @@ class Moments:
     ]  # Excel's double sxx, syy and sxy (STEYX's residual decides its #NUM!)
 
 
-def _below_normal(*values: float) -> bool:
-    """Whether any of `values` is nonzero and below the normal range (a subnormal: Excel's flush is unprobed here)."""
-    return any(v != 0 and abs(v) < sys.float_info.min for v in values)
-
-
 def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float, float, float, float]:
     """(sum of x, sum of y, sxx, syy, sxy) in doubles, two passes about the double means, as Excel sums them (the paired
     entry: this order fits Excel's bits; the sums of the values are Excel's left-to-right `running_total`); NoValueError
@@ -133,7 +128,7 @@ def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float
     sxx = syy = sxy = 0.0
     for x, y in zip(xs, ys, strict=True):
         dx, dy = x - mean_x, y - mean_y
-        if _below_normal(dx * dx, dy * dy, dx * dy):
+        if below_normal(dx * dx, dy * dy, dx * dy):
             msg = "a deviation square or product below the normal range (unprobed flush)"
             raise NoValueError(msg)
         sxx += dx * dx
@@ -142,7 +137,7 @@ def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float
     return sum_x, sum_y, sxx, syy, sxy
 
 
-def _constant_exact(values: Sequence[float]) -> bool:
+def constant_exact(values: Sequence[float]) -> bool:
     """Whether a series is constant with Excel's double mean equal to its value (else NoValueError for a constant
     series: its double deviations are a nonzero constant, "Inexact constants")."""
     if len(set(values)) > 1:
@@ -169,7 +164,7 @@ def moments(args: Sequence[MathArg]) -> Moments:
     if len(ys) != len(xs):
         msg = "#N/A: the arrays differ in length"
         raise DomainError(msg)
-    if _below_normal(*xs, *ys):
+    if below_normal(*xs, *ys):
         msg = "a subnormal literal (Excel reads it as 0; unprobed here)"
         raise NoValueError(msg)
     sum_x, sum_y, sxx_d, syy_d, sxy_d = _double_sums(xs, ys)
@@ -193,11 +188,11 @@ def moments(args: Sequence[MathArg]) -> Moments:
 
 
 def _x_constant(args: Sequence[MathArg], m: Moments) -> bool:
-    return m.n < 2 or _constant_exact(_series(args)[1])
+    return m.n < 2 or constant_exact(_series(args)[1])
 
 
 def _y_constant(args: Sequence[MathArg]) -> bool:
-    return _constant_exact(_series(args)[0])
+    return constant_exact(_series(args)[0])
 
 
 def _slope(args: Sequence[MathArg]) -> tuple[Moments, Fraction]:
@@ -267,7 +262,7 @@ def _covariance(args: Sequence[MathArg], *, sample: bool) -> mpmath.mpf:
     for series in _series(args):
         # called for its NoValueError only: a constant whose double mean is not its value has no evidenced result,
         # while an exact constant needs no special case (its Sxy is 0)
-        _constant_exact(series)
+        constant_exact(series)
     return fraction_to_mpf(m.sxy / (m.n - 1 if sample else m.n))
 
 
@@ -304,7 +299,7 @@ def _steyx(args: Sequence[MathArg]) -> mpmath.mpf:
     if residual < 0:  # also -inf where Sxy^2 overflows (T-4047, near 1E+160)
         msg = "#NUM!: Excel's double Syy - Sxy^2/Sxx is below zero"
         raise DomainError(msg)
-    if _below_normal(square, explained, residual):
+    if below_normal(square, explained, residual):
         msg = "a subnormal intermediate of the residual (unprobed flush)"
         raise NoValueError(msg)
     return mpmath.sqrt(fraction_to_mpf((m.syy - m.sxy * m.sxy / m.sxx) / (m.n - 2)))
@@ -333,7 +328,7 @@ def _typical(rng: random.Random, low: int = 2) -> list[Arg]:
     return list(_noisy_line(rng, n, log_uniform(rng, 1e-3, 1.0)))
 
 
-def _offset_series(
+def offset_series(
     rng: random.Random,
     n: int,
     offsets: tuple[float, float] = (1.0, 1e10),
@@ -349,10 +344,10 @@ def _tail(rng: random.Random, noise: float = 1e-12) -> list[Arg]:
     n = rng.randint(3, 12)
     shape = rng.randrange(3)
     if shape == 0:  # both offset
-        return [_offset_series(rng, n), _offset_series(rng, n)]
+        return [offset_series(rng, n), offset_series(rng, n)]
     if shape == 1:  # one offset, against a plain series
         plain = array_of(rng, n, 1e-3, 1e6)
-        return [_offset_series(rng, n), plain] if rng.random() < 0.5 else [plain, _offset_series(rng, n)]
+        return [offset_series(rng, n), plain] if rng.random() < 0.5 else [plain, offset_series(rng, n)]
     return list(_noisy_line(rng, n, log_uniform(rng, noise, 1e-4)))  # near-exact lines: r near +-1
 
 
@@ -364,7 +359,7 @@ def _exact_line(rng: random.Random) -> list[Arg]:
     return [tuple(float(a + b * x) for x in xs), xs]
 
 
-def _constant(rng: random.Random, n: int) -> tuple[float, ...]:
+def constant_series(rng: random.Random, n: int) -> tuple[float, ...]:
     """A constant series with an exact double mean (a small integer or a multiple of 1/8)."""
     return (rng.randint(-160, 160) / 8,) * n
 
@@ -377,8 +372,11 @@ def _edge(rng: random.Random) -> list[Arg]:
             lambda: [MICROSOFT_Y, MICROSOFT_X],  # Microsoft's example
             lambda: _pairs(rng, 1, 1e-3, 1e6),  # one pair: #DIV/0!
             lambda: [array_of(rng, n + 1, 1e-3, 1e6), array_of(rng, n, 1e-3, 1e6)],  # #N/A: lengths differ
-            lambda: [array_of(rng, n, 1e-3, 1e6), _constant(rng, n)],  # x constant: #DIV/0!
-            lambda: [_constant(rng, n), array_of(rng, n, 1e-3, 1e6)],  # y constant: SLOPE 0, CORREL #DIV/0!
+            lambda: [array_of(rng, n, 1e-3, 1e6), constant_series(rng, n)],  # x constant: #DIV/0!
+            lambda: [
+                constant_series(rng, n),
+                array_of(rng, n, 1e-3, 1e6),
+            ],  # y constant: SLOPE 0, CORREL #DIV/0!
             lambda: _exact_line(rng),
             lambda: _pairs(rng, 2, 1e-3, 1e6),  # two pairs: r is +-1
             lambda: [array_of(rng, n, 1e-3, 1e6), array_of(rng, n, 1e199, 1e201)],  # x overflows: #NUM!
@@ -410,7 +408,7 @@ _DRAWS: StratumDraws = {
 }
 
 
-def _forecast_x(rng: random.Random, xs: Sequence[float]) -> float:
+def forecast_x(rng: random.Random, xs: Sequence[float]) -> float:
     """FORECAST's x: inside the x data's range mostly, at a data point or the mean, or extrapolated."""
     lo, hi = min(xs), max(xs)
     width = (hi - lo) or abs(lo) or 1.0
@@ -431,7 +429,7 @@ def _forecast_draws() -> Callable[[str, random.Random], list[Arg]]:
             known_x = args[1]
             assert isinstance(known_x, tuple)
             xs = [v for v in known_x if isinstance(v, (int, float))]
-            return [_forecast_x(rng, xs), *args]
+            return [forecast_x(rng, xs), *args]
 
         return drawn
 
@@ -451,7 +449,7 @@ def _decimal_line(rng: random.Random) -> list[Arg]:
 
 def _near_1e160(rng: random.Random, n: int) -> tuple[float, ...]:
     """Values near 1E+160 a relative 1E-12 to 1E-9 apart: the sums about the means stay finite and Sxy^2 overflows."""
-    return _offset_series(rng, n, (1e159, 1e161), (1e-12, 1e-9))
+    return offset_series(rng, n, (1e159, 1e161), (1e-12, 1e-9))
 
 
 def _steyx_edge(rng: random.Random) -> list[Arg]:

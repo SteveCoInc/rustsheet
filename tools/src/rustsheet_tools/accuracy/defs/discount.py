@@ -1,4 +1,5 @@
-"""DISC, INTRATE, RECEIVED, PRICEDISC, YIELDDISC, TBILLEQ and TBILLPRICE (Gate A, T-4112, decision 0273).
+"""DISC, INTRATE, RECEIVED, PRICEDISC, YIELDDISC, TBILLEQ and TBILLPRICE (Gate A, T-4112, decision 0273); TBILLYIELD,
+PRICEMAT, YIELDMAT and ACCRINTM (T-4114).
 
 The math is exact on the written arguments. Both dates are floored to whole serials (`whole_serial`, defs/yearfrac.py:
 a date that does not floor to 0..2958465 is `#NUM!`). The five discount securities read YEARFRAC's two parts apart
@@ -12,6 +13,13 @@ The T-bills count serial days d = maturity - settlement over a 360-day year:
 - TBILLEQ = 365·r/(360 - r·d) up to 182 days, and from 183 days the root of the semi-annual equivalence:
   with p = 100 - r·d·100/360, t = d/Y (Y = 366 when d is 366, else 365),
   (-t + sqrt(t² - (2t - 1)(1 - 100/p)))/(t - 0.5).
+- TBILLYIELD = (100 - pr)/pr·360/d.
+The securities paying interest at maturity read A = days(issue, settlement), DIM = days(issue, maturity), DSM = DIM - A
+and B the year length of issue to settlement ("Discount securities: day count and year length"); with rate the
+interest rate:
+- PRICEMAT = (100 + DIM/B·rate·100)/(1 + DSM/B·yld) - A/B·rate·100;
+- YIELDMAT = ((1 + DIM/B·rate) - T)/T·B/DSM, T = pr/100 + A/B·rate;
+- ACCRINTM = par·rate·D/B, D and B from issue to settlement (D may be 0 or below on the 30/360 bases).
 Excel's own operation orders (financial.md "Discount securities: day count and year length", "TBILLEQ and
 TBILLYIELD") put it a few ulps off these values; the math is the exact quotient, root or difference.
 
@@ -29,7 +37,17 @@ Domains (Excel's errors, `DomainError`), each evidenced:
   in 9999"); a negative discount is `#NUM!` (`AMOUNTS_SOURCE`); a negative price is `#NUM!` in both, and a zero price
   `#NUM!` in TBILLEQ from 183 days, while TBILLPRICE gives 0 there and TBILLEQ 0 up to 182 days ("TBILLEQ and
   TBILLYIELD").
-Not given a math value (`NoValueError`), as no evidence names Excel's result: DISC at redemption 0, a T-bill discount
+- PRICEMAT, YIELDMAT: dates off the calendar, settlement on or after maturity, an issue on or after settlement and a
+  basis outside 0..4 are `#NUM!` (the entries above; probes/matdisc-serial-0-60), and so is a negative rate or PRICEMAT
+  yld, and a negative YIELDMAT price (`MATURITY_SOURCE`); PRICEMAT's yld and either rate may be 0;
+- ACCRINTM: an issue equal to the settlement is 0 (`MATURITY_SOURCE`); dates off the calendar, an issue after
+  settlement, a basis outside 0..4, a rate at most 0 and a
+  negative par are `#NUM!` ("Discount securities check order", `MATURITY_SOURCE`); its par is required (Excel for the
+  web refuses the call without it, `SYNTAX_SOURCE`), so every point passes it;
+- TBILLYIELD: the T-bills' date rules.
+Not given a math value (`NoValueError`), as no evidence names Excel's result: TBILLYIELD at a price at most 0,
+YIELDMAT at a price of 0, ACCRINTM at a par of 0, PRICEMAT and YIELDMAT where DSM is at most 0 (the engine's `#DIV/0!`
+for YIELDMAT), a value past the double range, DISC at redemption 0, a T-bill discount
 of 0, and a day count D of 0 (30/360 from a 30th to the 31st of the same month), for which the engine's `#DIV/0!` is
 unprobed. A point whose value cancels (the relative condition number past 2^-52·1E-10, `ill_conditioned`) gets none
 either: there Excel's doubles, not the math, decide the digits, and a price within a hair of 0 may be either side of it
@@ -46,6 +64,7 @@ from fractions import Fraction
 import mpmath
 
 from rustsheet_tools.accuracy.defs._common import (
+    OVERFLOW_POINT,
     by_stratum,
     fraction_to_mpf,
     ill_conditioned,
@@ -73,6 +92,11 @@ BELOW_ONE_SOURCE = "financial.md#t-bill-settlement-below-serial-1"
 YEAR_9999_SOURCE = "financial.md#t-bills-settled-in-9999"
 AMOUNTS_SOURCE = "financial.md#discount-securities-and-t-bills-amount-domains-t-4112"
 SECURITY_SOURCES = (PARTS_SOURCE, MODES_SOURCE, ORDER_SOURCE, BASIS_SOURCE, AMOUNTS_SOURCE)
+SERIAL_0_SOURCE = "dates.md#yearfrac-accepts-serial-0"
+MATURITY_SOURCE = "financial.md#accrint-accrintm-pricemat-and-yieldmat-amount-domains-t-4114"
+SYNTAX_SOURCE = (
+    "syntax.md#minimum-argument-counts-a-leading-optional-still-takes-its-position-and-prob-needs-3"
+)
 TBILL_SOURCES = (TBILL_SOURCE, BELOW_ONE_SOURCE, YEAR_9999_SOURCE, ORDER_SOURCE, AMOUNTS_SOURCE)
 
 SETTLEMENT_0 = "settlement 0"
@@ -184,20 +208,27 @@ def _anniversary_ok(settlement: int, maturity: int) -> bool:
     return y2 == y1 or (y2 == y1 + 1 and (m2, d2) <= anniversary)
 
 
-def _tbill(args: Sequence[MathArg]) -> tuple[int, mpmath.mpf]:
-    """(days, discount) of a T-bill's arguments."""
-    settlement, maturity, rate = scalars(args)
+def _tbill_days(settlement: mpmath.mpf, maturity: mpmath.mpf) -> int:
+    """The serial days from a T-bill's settlement to its maturity, both on the calendar, settlement before maturity
+    and maturity at most a year on, settlement not in 9999."""
     s, m = _dates(settlement, maturity)
     if displayed_date(s)[0] >= 9999:
         raise _num("a settlement in 9999")
     if not _anniversary_ok(s, m):
         raise _num("maturity more than a year after settlement")
+    return m - s
+
+
+def _tbill(args: Sequence[MathArg]) -> tuple[int, mpmath.mpf]:
+    """(days, discount) of a T-bill's arguments."""
+    settlement, maturity, rate = scalars(args)
+    days = _tbill_days(settlement, maturity)
     if rate == 0:
         msg = "a discount of 0 (unprobed)"
         raise NoValueError(msg)
     if rate < 0:
         raise _num("a negative discount")
-    return m - s, rate
+    return days, rate
 
 
 def _tbillprice(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -225,6 +256,96 @@ def _tbilleq(args: Sequence[MathArg]) -> mpmath.mpf:
     price = 100 * denominator / 360
     t = mpmath.mpf(days) / (366 if days == 366 else 365)
     return (-t + mpmath.sqrt(t * t - (2 * t - 1) * (1 - 100 / price))) / (t - mpmath.mpf(0.5))
+
+
+def _tbillyield(args: Sequence[MathArg]) -> mpmath.mpf:
+    settlement, maturity, price = scalars(args)
+    days = _tbill_days(settlement, maturity)
+    if price <= 0:
+        msg = "a price at most 0 (unprobed)"
+        raise NoValueError(msg)
+    _cancels(100 - price, mpmath.mpf(100))
+    return (100 - price) / price * 360 / days
+
+
+# -- securities paying interest at maturity ------------------------------------------------------------------------
+
+
+def _matured(args: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf, Fraction, Fraction, Fraction]:
+    """(rate, yld or pr, A/B, DIM/B, DSM/B) of PRICEMAT's and YIELDMAT's arguments, B the year of issue to settlement
+    ("Discount securities: day count and year length"); the basis, then the dates, are read first ("Discount
+    securities check order"). NoValueError where DSM is not positive (a 30/360 count, unprobed)."""
+    a = scalars(args)
+    basis = int(a[5]) if len(a) > 5 else 0
+    check_basis(basis)
+    s, m = _dates(a[0], a[1])
+    issue = whole_serial(float(a[2]))
+    if issue >= s:
+        raise _num("issue on or after settlement")
+    accrued, year = day_count_parts(issue, s, basis)
+    to_maturity, _ = day_count_parts(issue, m, basis)
+    if to_maturity <= accrued:
+        msg = "a day count DSM = DIM - A at most 0 (unprobed)"
+        raise NoValueError(msg)
+    return a[3], a[4], accrued / year, to_maturity / year, (to_maturity - accrued) / year
+
+
+def _pricemat(args: Sequence[MathArg]) -> mpmath.mpf:
+    rate, yld, a, dim, dsm = _matured(args)
+    if rate < 0 or yld < 0:
+        raise _num("a negative rate or yield")
+    face = (100 + fraction_to_mpf(dim) * rate * 100) / (1 + fraction_to_mpf(dsm) * yld)
+    accrued = fraction_to_mpf(a) * rate * 100
+    _cancels(face - accrued, face)
+    return _finite(face - accrued)
+
+
+def _yieldmat(args: Sequence[MathArg]) -> mpmath.mpf:
+    rate, price, a, dim, dsm = _matured(args)
+    if price < 0:
+        raise _num("a negative price")
+    if rate < 0:
+        raise _num("a negative rate")
+    if price == 0:
+        msg = "a price of 0 (unprobed)"
+        raise NoValueError(msg)
+    paid = price / 100 + fraction_to_mpf(a) * rate
+    owed = 1 + fraction_to_mpf(dim) * rate
+    _cancels(owed - paid, owed)
+    return _finite((owed - paid) / paid / fraction_to_mpf(dsm))
+
+
+def _accrintm(args: Sequence[MathArg]) -> mpmath.mpf:
+    """par·rate·D/B from issue to settlement; ACCRINTM reads issue, settlement, rate, par and basis in that order
+    ("Discount securities check order"), a day count D of 0 or below included ("YEARFRAC accepts serial 0":
+    `ACCRINTM(59,60,0.1,1000,0)` is -0.2777777777777778)."""
+    a = scalars(args)
+    issue, settlement = whole_serial(float(a[0])), whole_serial(float(a[1]))
+    rate, par = a[2], a[3]
+    basis = int(a[4]) if len(a) > 4 else 0
+    check_basis(basis)
+    if issue > settlement:
+        raise _num("issue after settlement")
+    if issue == settlement:
+        if rate <= 0 or par <= 0:
+            msg = "equal dates with a rate or par at most 0 (unprobed)"
+            raise NoValueError(msg)
+        return mpmath.mpf(0)  # not #NUM!, on every basis (probes/accrint-zero-results B1:B40)
+    if rate <= 0 or par < 0:
+        raise _num("a rate at most 0 or a negative par")
+    if par == 0:
+        msg = "a par of 0 (unprobed)"
+        raise NoValueError(msg)
+    days, year = day_count_parts(issue, settlement, basis)
+    return _finite(par * rate * fraction_to_mpf(Fraction(days) / year))
+
+
+def _finite(value: mpmath.mpf) -> mpmath.mpf:
+    """NoValueError past the double range, whose Excel result no cell of these functions shows."""
+    if abs(value) >= OVERFLOW_POINT:
+        msg = "a value past the double range (unprobed)"
+        raise NoValueError(msg)
+    return value
 
 
 # -- draws -------------------------------------------------------------------------------------------------------
@@ -315,6 +436,88 @@ def _tbill_draw(stratum: str, rng: random.Random) -> list[Arg]:
     if stratum == "tail" and rng.random() < 0.5:
         m = s + rng.choice((182, 183, 184, 364, 365))
     return [s, m, _rate(rng, stratum)]
+
+
+def _issued(rng: random.Random, stratum: str) -> tuple[float, float, float]:
+    """(settlement, maturity, issue): an issue up to 30 years before the settlement (a few days in the tail, where the
+    30/360 counts turn), each span up to 30 years."""
+    s, m = _dates_for(rng, stratum, 10958)
+    span = rng.randint(1, 31) if stratum == "tail" and rng.random() < 0.5 else _span(rng, stratum, 10958)
+    return s, m, s - span if s - span >= 0 else float(rng.randint(0, int(s) - 1))
+
+
+def _pricemat_draw(stratum: str, rng: random.Random) -> list[Arg]:
+    """(settlement, maturity, issue, rate, yld) of PRICEMAT."""
+    return _with_basis(rng, [*_issued(rng, stratum), _rate(rng, stratum), _rate(rng, stratum)])
+
+
+def _yieldmat_draw(stratum: str, rng: random.Random) -> list[Arg]:
+    """(settlement, maturity, issue, rate, pr) of YIELDMAT, the price near 100 in the tail."""
+    return _with_basis(
+        rng, [*_issued(rng, stratum), _rate(rng, stratum), round15(100 * _ratio(rng, stratum))]
+    )
+
+
+def _accrintm_draw(stratum: str, rng: random.Random) -> list[Arg]:
+    """(issue, settlement, rate, par) of ACCRINTM (par is required: syntax.md), spans up to 30 years."""
+    i, s = _dates_for(rng, stratum, 10958)
+    return _with_basis(rng, [i, s, _rate(rng, stratum), _amount(rng, stratum)])
+
+
+def _matured_edge(amounts: Callable[[random.Random], tuple[float, float]]) -> Shape:
+    """PRICEMAT's and YIELDMAT's edges: the calendar's ends, issues at or after settlement, serials 0 to 60 (as
+    probes/matdisc-serial-0-60), amounts at or below 0 and bases outside 0..4."""
+
+    def edge(rng: random.Random) -> list[Arg]:
+        s, m = _dates_for(rng, "typical", 3650)
+        shapes: list[Callable[[], list[Arg]]] = [
+            lambda: _with_basis(rng, [*_edge_dates(rng), rng.choice((0.0, 1.0, 59.0, 60.0)), *amounts(rng)]),
+            lambda: _with_basis(rng, [s, m, rng.choice((s, s + 1, s + 0.5, -1.0, 2958466.0)), *amounts(rng)]),
+            lambda: _with_basis(
+                rng,
+                [
+                    rng.choice((59.0, 60.0, 61.0, 366.0)),
+                    rng.choice((400.0, 425.0, 45000.0)),
+                    rng.choice((0.0, 1.0, 59.0, 60.0)),
+                    *amounts(rng),
+                ],
+            ),
+            lambda: [s, m, s - rng.randint(1, 3650), *amounts(rng), rng.choice((-1, 5, 6))],
+            lambda: _with_basis(
+                rng, [s, m, s - rng.randint(1, 3650), *(rng.choice((0.0, -1.0, a)) for a in amounts(rng))]
+            ),
+        ]
+        return one_of(rng, shapes)
+
+    return edge
+
+
+def _accrintm_edge(rng: random.Random) -> list[Arg]:
+    """ACCRINTM's edges: serials 0 to 60 and the calendar's ends, reversed or equal dates, a rate of 0, and bases
+    outside 0..4."""
+    rate, par = round15(rng.uniform(0.001, 0.5)), round15(log_uniform(rng, 1, 1e4))
+    i, s = _dates_for(rng, "typical", 3650)
+    shapes: list[Callable[[], list[Arg]]] = [
+        lambda: _with_basis(rng, [*_edge_dates(rng), rate, par]),
+        lambda: [i, s, rate, par, rng.choice((-1, 5, 6))],
+        lambda: _with_basis(rng, [i, s, rng.choice((0.0, rate)), par]),
+        lambda: _with_basis(
+            rng, [rng.choice((0.0, 1.0, 59.0, 60.0)), rng.choice((59.0, 60.0, 61.0, 366.0)), rate, par]
+        ),
+    ]
+    return one_of(rng, shapes)
+
+
+def _tbillyield_draw(stratum: str, rng: random.Random) -> list[Arg]:
+    """(settlement, maturity, pr): the T-bill spans, prices near 100 in the tail."""
+    s, m, _rate_drawn = _tbill_draw(stratum, rng)
+    return [s, m, round15(100 * _ratio(rng, stratum))]
+
+
+def _tbillyield_edge(rng: random.Random) -> list[Arg]:
+    """TBILLYIELD's edges: the T-bills' date edges, a price of 100, and prices far from it."""
+    s, m, _rate_drawn = _tbill_edge(rng)
+    return [s, m, rng.choice((100.0, 98.0, 1e-6, 1e6, 2000.0, round15(log_uniform(rng, 1e-3, 1e3))))]
 
 
 def _edge_dates(rng: random.Random) -> tuple[float, float]:
@@ -423,19 +626,22 @@ def _security_definition(
     )
 
 
-def _tbill_definition(function: str, value: Callable[[Sequence[MathArg]], mpmath.mpf]) -> Definition:
+def _tbill_definition(
+    function: str,
+    value: Callable[[Sequence[MathArg]], mpmath.mpf],
+    third: str = "discount",
+    draws: tuple[Callable[[str, random.Random], list[Arg]], Shape] = (_tbill_draw, _tbill_edge),
+) -> Definition:
     return register(
         Definition(
             function=function,
             params=(
                 Param("settlement", "real", source=BELOW_ONE_SOURCE),
                 Param("maturity", "real", source=BELOW_ONE_SOURCE),
-                Param("discount", "real", source=TBILL_SOURCE),
+                Param(third, "real", source=TBILL_SOURCE),
             ),
             value=value,
-            draw=_strata(
-                _tbill_draw, _tbill_edge, f"{function}: (settlement, maturity, discount) by stratum."
-            ),
+            draw=_strata(*draws, f"{function}: (settlement, maturity, {third}) by stratum."),
             serials_1900=True,
             sources=TBILL_SOURCES,
         )
@@ -490,3 +696,63 @@ RECEIVED = _security_definition(
 )
 TBILLPRICE = _tbill_definition("TBILLPRICE", _tbillprice)
 TBILLEQ = _tbill_definition("TBILLEQ", _tbilleq)
+TBILLYIELD = _tbill_definition("TBILLYIELD", _tbillyield, "pr", (_tbillyield_draw, _tbillyield_edge))
+
+
+def _matured_definition(
+    function: str,
+    last: str,
+    value: Callable[[Sequence[MathArg]], mpmath.mpf],
+    draw: Callable[[str, random.Random], list[Arg]],
+    amounts: Callable[[random.Random], tuple[float, float]],
+) -> Definition:
+    dates = (Param(n, "real", source=MODES_SOURCE) for n in ("settlement", "maturity", "issue"))
+    amount_params = (Param(n, "real", source=PARTS_SOURCE) for n in ("rate", last))
+    return register(
+        Definition(
+            function=function,
+            params=(*dates, *amount_params, Param("basis", "int", source=BASIS_SOURCE, optional=True)),
+            value=value,
+            draw=_strata(
+                draw,
+                _matured_edge(amounts),
+                f"{function}: (settlement, maturity, issue, rate, {last}, [basis]).",
+            ),
+            serials_1900=True,
+            sources=(*SECURITY_SOURCES, MATURITY_SOURCE),
+        )
+    )
+
+
+PRICEMAT = _matured_definition(
+    "PRICEMAT",
+    "yld",
+    _pricemat,
+    _pricemat_draw,
+    lambda rng: (round15(rng.uniform(0, 0.2)), round15(rng.uniform(0.001, 0.2))),
+)
+YIELDMAT = _matured_definition(
+    "YIELDMAT",
+    "pr",
+    _yieldmat,
+    _yieldmat_draw,
+    lambda rng: (round15(rng.uniform(0, 0.2)), round15(rng.uniform(80, 120))),
+)
+ACCRINTM = register(
+    Definition(
+        function="ACCRINTM",
+        params=(
+            Param("issue", "real", source=ORDER_SOURCE),
+            Param("settlement", "real", source=ORDER_SOURCE),
+            Param("rate", "real", source=ORDER_SOURCE),
+            Param("par", "real", source=SYNTAX_SOURCE),
+            Param("basis", "int", source=BASIS_SOURCE, optional=True),
+        ),
+        value=_accrintm,
+        draw=_strata(
+            _accrintm_draw, _accrintm_edge, "ACCRINTM: (issue, settlement, rate, par, [basis]) by stratum."
+        ),
+        serials_1900=True,
+        sources=(*SECURITY_SOURCES, SERIAL_0_SOURCE, SYNTAX_SOURCE, MATURITY_SOURCE),
+    )
+)

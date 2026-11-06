@@ -164,7 +164,7 @@ Evidence (oracle: excel-graph, 2026-10-05): probes/error-operand-broadcast C2, C
 (`SUM(IFERROR(NA()-{1;2;3},1))` = 3); gen-m2/dd99be1f2454159f Calc!A56 (expected `#SPILL!`).
 The same probe shows ROWS/COLUMNS accept an array expression (`ROWS(NA()-{1;2;3})` = 3, C1/C3/C6–C8/C10);
 ROWS/COLUMNS count an array without reading its elements, so an all-error array still has its size.
-A scalar non-reference argument counts as 1x1 (`ROWS(5)`, `COLUMNS(TRUE)`, `ROWS("a")`, `ROWS(1+1)` = 1) while an error argument passes through (`ROWS(NA())` = `#N/A`); array constants and `SEQUENCE` results count their dimensions (`ROWS({1;2;3})` = 3, `COLUMNS({1,2;3,4})` = 2, `ROWS(SEQUENCE(5))` = 5). Evidence: probes/rows-columns-args C1-C14 (T-0237).
+A scalar non-reference argument counts as 1x1 (`ROWS(5)`, `COLUMNS(TRUE)`, `ROWS("a")`, `ROWS(1+1)` = 1) while an error argument passes through (`ROWS(NA())` = `#N/A`); array constants and `SEQUENCE` results count their dimensions (`ROWS({1;2;3})` = 3, `COLUMNS({1,2;3,4})` = 2, `ROWS(SEQUENCE(5))` = 5). Evidence: probes/rows-columns-args C1-C14 (T-0237). Every scalar kind behaves the same, called directly (T-4539, probes/t4539-rows-columns-scalar-kinds, excel-graph): a literal `""`, `"x"`, `"1"`, 0, -1, 0.5 or TRUE is 1 for ROWS and for COLUMNS (A1:B7), and an error literal or call is that error (`ROWS(#DIV/0!)` and `ROWS(1/0)` `#DIV/0!`, `ROWS(NA())` `#N/A`; ERROR.TYPE 2, 2, 7 in E8:F10). A single-cell reference is counted, never read: a cell holding `=""`, text, numeric text, a number, TRUE, an error constant, `=1/0` or `=NA()`, or a blank cell, is 1 (A11:B21), so ERROR.TYPE of it is `#N/A` (E18:F20).
 The comparison operators (`= <> < > <= >=`) and `&` follow the same rule: `NA()={1;2;3}` is a 3-row array of `#N/A`
 (`SUM(IFERROR(NA()={1;2;3},1))` = 3, also `{1;2;3}<=NA()`, `NA()>A1:A3`, `NA()&{"a";"b"}`, `1/0>={1,2,3,4}` is 4 columns), and per element the
 leftmost error wins: `INDEX({1;#DIV/0!;3}=NA(),2)` is `#DIV/0!`, `INDEX(NA()<>{1;#DIV/0!;3},2)` is `#N/A`,
@@ -813,6 +813,10 @@ NETWORKDAYS.INTL is the exception: it lifts over a range (`INDEX(WORKDAY.INTL(45
   `=SUMPRODUCT(EDATE(A1:A60,1))` is `#VALUE!`, and `=SUMPRODUCT(EDATE(A1:A60+0,1))` and
   `=SUMPRODUCT(NORM.DIST(E1:E60,0,1,TRUE))` lift. Legacy `=SUM(PMT({0.1;0.2},10,100))` sums both
   elements (-40.12681517653708), like the dynamic formula. Its FORMULATEXT is the written text, with no `@` (`=SUM(PMT({0.1;0.2},10,100))`; probes/scalar-lift-open-a AA1, AB1, T-1777).
+  An array constant in a legacy ATP argument at a value position takes the `@` of a scalar argument,
+  whatever its size and under a sign, and the call none: `=EDATE(@{45000;45031},1)`, `=YEARFRAC(@{45000},46000)`,
+  `=BIN2DEC(@{101})`, `=QUOTIENT(@{7},2)`, `=ISEVEN(-@{5})` (probes/iseven-isodd-range-derived-arrays Leg!G3:N3,
+  G41:N41, excel-graph, T-4528; information.md "ISEVEN/ISODD over a range").
 Evidence: probes/scalar-lift-shapes H1-H50, J1-J8, K1-K8; probes/scalar-lift-shapes-b (each
 question on row 3 and row 70); probes/scalar-lift-shapes-c (legacy formulas and their FORMULATEXT).
 All three: excel-graph, 2026-10-17, T-1767. The per-family argument lists are in statistics.md,
@@ -1145,7 +1149,7 @@ SUBSTITUTE none (`#VALUE!`; probes/groupby-eta-arity G!A1-A141). SLOPE and INTER
 `#N/A` per group in Excel, `#VALUE!` here (G!B21:B25, G!B61:B65): T-1867.
 Minimum-0 functions that take one argument get one (probes/t4450-eta-special-forms, excel-graph, 2026-11-06, T-4450,
 T-2644): `GROUPBY(A1:A3,B1:B3,_xleta.ROW)` and `..COLUMN` are 4x2 with `#VALUE!` in each value cell (H109:H118, J9), SHEET
-and SHEETS `#N/A` in each (H121:H124, J59; ours `#NAME?` and `#N/IMPL`, T-4518), RANDARRAY 4 rows with a value that is not
+and SHEETS `#N/A` in each (H121:H124, J59; ours matches, T-4518), RANDARRAY 4 rows with a value that is not
 an error (J61:J63; ours an array there, T-4519), `PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.ROW)` 5x5 (J69). Yet `ARRAYTOTEXT` of the
 ROW and COLUMN results is `#CALC!` (F109, F115, also `LAMBDA(v,ROW(v))` J65; `ARRAYTOTEXT(INDEX(..,0,1))` is
 "1, 3, 5, Total", J15; ours prints the cells, T-4519). Functions that take none stay a whole-call `#VALUE!`: NOW (J55), PI
@@ -1794,7 +1798,7 @@ T-4450; A1:B3 = 1..6, each result read through ROWS&"x"&COLUMNS in E, ARRAYTOTEX
   `MAP(A1:A3,{1;2;1},_xleta.INDEX)` 1, `#REF!`, 5 (E67), `MAP(A1:A3,{0;1;0},{0;0;1},_xleta.OFFSET)` 1, 5, 6 (J17).
 - The other functions follow the argument counts: `MAKEARRAY(2,2,_xleta.OFFSET)` (two of OFFSET's three) is a whole-call
   `#VALUE!` (E61), `MAKEARRAY(2,2,_xleta.SUBTOTAL)` `#VALUE!` per cell (SUBTOTAL(1,1): E73), `BYROW(A1:B3,_xleta.ROW)` 1, 2, 3
-  and `BYCOL(A1:B3,_xleta.COLUMN)` 1, 2 (E43, E49), `BYROW(A1:B3,_xleta.SHEET)` 1, 1, 1 (J53; ours `#NAME?`, T-4518).
+  and `BYCOL(A1:B3,_xleta.COLUMN)` 1, 2 (E43, E49), `BYROW(A1:B3,_xleta.SHEET)` 1, 1, 1 (J53; ours matches, T-4518).
 - Called through LET with an argument count it does not take, a function by name is `#VALUE!`: too few,
   `LET(f,_xleta.SUM,f())` (E85:G85), `f()` of IF, CHOOSE and IFERROR, `f(1)` of CHOOSE and IFERROR (L5:L13), and too many,
   `LET(f,_xleta.ABS,f(1,2))` (L1:L3); `LET(f,_xleta.SUM,f(1,2,3))` is 6 (L25).
@@ -2288,15 +2292,31 @@ Evidence: gen-m7 (excel-graph, 2026-10-22, T-2254 triage).
 Ours (T-2409, T-4448): TOROW, TOCOL, UNIQUE, SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP's value path
 keep a lone blank reference blank (`Model::eval_to_array_keep_blank` and its wrappers); before, it was read as 0;
 TOCOL keeps a lone blank too (gen-m9/8dd2312c96effb1b Calc!A399 `TOCOL(Data!Z1,3,..)` is `#CALC!`; gen-m9/928d08e3e1eecb5f A333 `TOROW(Data!E1,1)`; gen-m9/7980ffb6095a340d A294 `UNIQUE(Data!D$4)`).
-SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP of a value keep it blank too
+SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP of IF's pick keep it blank too
 (probes/t4448-lone-blank-reshapers, excel-graph 2026-11-06, T-4448; Z1, Z2 blank): `SORT(Z1)&"x"`, `SORT(Z1,1,-1)&"x"`,
 `SORTBY(Z1,Z1)&"x"`, `SORTBY(Z1,5)&"x"`, `CHOOSEROWS(Z1,1)&"x"`, `CHOOSECOLS(Z1,1)&"x"`, `CHOOSEROWS(Z1,-1)&"x"` and
-`TAKE(IF(TRUE,Z1),1)&"x"` are "x"; `TOCOL(X,1)` of each is `#CALC!` and `ISBLANK(INDEX(X,1,1))` is TRUE (A1:D4, A9:D9,
-A11:D13). `EXPAND(Z1,2,1,"p")` is a blank and "p" (A15:D15). TAKE, DROP and CHOOSEROWS of the reference itself
-already kept it (A6:D8, A10:D10). `TYPE(TAKE(IF(TRUE,Z1),1))` is 1 (B9): TAKE keeps IF's one-cell reference a
-reference. Ours gives 64 (a 1x1 array); T-4469 owns that cell.
+`TAKE(IF(TRUE,Z1),1)&"x"` are "x" (so is `DROP(IF(TRUE,Z1),0)&"x"`, probes/t4469-take-drop-if-one-cell-reference C1;
+IF's pick is a reference there, not a value); `TOCOL(X,1)` of each is `#CALC!` and `ISBLANK(INDEX(X,1,1))` is TRUE (A1:D4, A9:D9,
+A11:D13). `EXPAND(Z1,2,1,"p")` is a blank and "p" (A15:D15). TAKE and DROP of the reference itself
+already kept it (A6:D8, A10:D10); so did the CHOOSEROWS controls over `Z1:Z2` and `Z1:Z1` (rows 18 and 22).
+`TYPE(TAKE(IF(TRUE,Z1),1))` is 1 (B9): TAKE keeps IF's one-cell reference a reference (see "TAKE and DROP keep the
+one-cell reference a picker hands them" below; T-4469).
 Status: VERIFIED (excel-graph)
 Tasks: T-2409, T-4448
+
+## TAKE and DROP keep the one-cell reference a picker hands them
+Rule: when TAKE's or DROP's array is an IF, CHOOSE, IFS or SWITCH whose pick is a reference (one cell included), a defined name or
+an INDEX, the result is that reference's part, a reference, as TAKE or DROP of the reference itself is: never a 1x1 array.
+- (probes/t4469-take-drop-if-one-cell-reference, excel-graph 2026-11-06, T-4469; Y1 5, Y2 "t", Z1 blank) `TYPE(X)` is 1 (2
+  for Y2), `ISREF(X)` TRUE, `X&"x"` "x" ("5x", "tx") and `ISBLANK(INDEX(X,1,1))` TRUE for Z1 for each X of
+  `DROP(IF(TRUE,Z1),0)`, `TAKE(IF(TRUE,Y1),1)`, `TAKE(IF(FALSE,0,Z1),1)`, `TAKE(IF(TRUE,IF(TRUE,Z1)),1)`,
+  `DROP(IF(TRUE,Y1),0)`, `TAKE(IFS(TRUE,Z1),1)`, `TAKE(SWITCH(1,1,Z1),1)`, `TAKE(IF(TRUE,Y2),1)`, `DROP(IF(TRUE,Y2),0,0)` and
+  `TAKE(IF(TRUE,Y1:Y2),1)` (A1:D10). probes/t4448-lone-blank-reshapers B9: `TYPE(TAKE(IF(TRUE,Z1),1))` is 1.
+- So a blank picked cell stays blank and a picked number is not lifted as an array.
+Ours (T-4469): `Model::take_drop_value_source` in drop_take.rs. Before, IF, IFS and SWITCH read a one-cell arm as its
+value, so TYPE was 64 and ISREF FALSE; CHOOSE already kept it.
+Status: VERIFIED (excel-graph)
+Tasks: T-4469
 
 ## GROUPBY and PIVOTBY lift over an array field_headers or total depth
 Rule: an array (or a multi-cell range) given as GROUPBY's `field_headers` or `total_depth`, or PIVOTBY's `field_headers`,
@@ -2395,6 +2415,10 @@ the rule frozen on it before -holdout (seed 4465) and -fresh (seed 44651, genera
 Main 539/539, hold-out 318/318, fresh 316/316 for the rule; the best single alternative scores 469, 276 and 290. The
 rows that tell the shared rule from 2^-23 added before the floor are 12 of main's and 6 of the hold-out's; the fresh
 sweep has only 1 such row, so it confirms the other constructors' rules more than that choice.
+At the top of the range the bound is the same absolute 2^-22 (probes/t4553-sequence-extent-top, excel-graph, 2026-11-06):
+`ROWS(SEQUENCE(1048576-x))`, `COLUMNS(SEQUENCE(1,1048576-x))` and `ROWS(SEQUENCE(524288-x))` for x = k*2^-30 read 1048576 (524288)
+for k = 96, 128, 160 and 256 (x = 2^-22) and one less for k = 257, 264, 288 and 320. Above the integer nothing snaps:
+`1048576+x` and `524288+x` read the integer, not `#VALUE!`.
 Ours: implemented (T-4465): SEQUENCE and RANDARRAY call `near_integer_whole` (sequence.rs's `EXTENT_EPSILON` is gone);
 TAKE, DROP, EXPAND, WRAPROWS/WRAPCOLS and MAKEARRAY already matched. RANDARRAY's columns argument shares
 `randarray_extent` with its rows but no probe cell reads it.
@@ -2726,7 +2750,7 @@ reference shows up, for TOCOL's and TOROW's array. FILTER reads its array and in
 (`Model::filter_arg_array`, filter.rs, through `evaluate_picked_reference_arg`), which covers a written reference, a LET
 variable, INDEX and the arm IF picks alike, and checks every include's shape before its elements. Only stored cell
 errors are evidenced; other errors read through a reference (a `#REF!` for a sheet index, a circular read) are wrapped
-unprobed. An include one column tall as the array is wide filters its columns (`include_axis`; not probed by T-4477). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
+unprobed. An include that is one column as tall as the array is wide does not filter its columns: `FILTER(A1:B3,{TRUE;FALSE})`, `{1;0}`, `{1;#N/A}`, `FILTER(A1:C2,{1;0;1})` and `FILTER(A1:B3,C1:C2)` (C1 `#DIV/0!`) are all `#VALUE!`, while the row form `{1,0,1}` over A1:C2 filters its columns and the square `FILTER(A1:B2,{1;0})` filters rows (probes/t4517-filter-transposed-include A10:G12, excel-graph 2026-11-06, T-4517; `include_axis`). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
 (spill_functions.rs) so VSTACK/HSTACK also wrap a LET variable or LAMBDA parameter bound to a one-cell error reference.
 Blank-cell variables (T-3887, probes/t3887-stack-blank-variable, excel-graph 2026-11-03): with z bound to a blank cell
 (D!Z1) by LET or as a MAP LAMBDA parameter, `INDEX(VSTACK(z,1),1,1)` and `INDEX(HSTACK(z,1),1,1)` are the same "empty value"

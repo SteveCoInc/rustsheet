@@ -4,6 +4,7 @@ pub(crate) mod pass_cache_runs;
 mod test_actions;
 mod test_aggregate_sparse_walk;
 mod test_amordegrc_left_over;
+mod test_api_name_bare_name_binding;
 mod test_arabic_roman;
 mod test_bare_union;
 mod test_binary_search;

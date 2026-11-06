@@ -55,12 +55,19 @@ than 1,048,576 records, 16,384 fields, 1,000,000 shared items over its fields or
 fields), every cache once the workbook's caches together pass 10,000,000 record values (in workbook order), and a pivot
 with more than 256 fields on an axis (rows, columns or page) or 256 data fields, past the 64th pivot of a sheet, or past the 1,000th pivot
 of the workbook (in sheet order; T-2394); the pivots on a dropped cache go with it. GETPIVOTDATA against a dropped pivot is `#REF!` rather than a wrong total.
+A pivot is also dropped when its field lists more `<item>`s than its cache field's items plus 14 (one line of each
+other `ST_ItemType`), or when the parts of its definition the model keeps verbatim (SPEC-0032 "Model", T-4139) would
+pass what is left of the workbook's verbatim budget: 32 MiB (`MAX_OPAQUE_BYTES`), or the package's inflate limit
+(`ImportLimits::max_uncompressed_bytes`) when that is lower, each kept entry charged its text plus its own size. A
+pivot is also skipped for an unknown `axis`, `sortType`, `showDataAs`, data field `subtotal` or `item@t`; a malformed
+boolean, and a malformed number the model only keeps (`dataPosition`, `pageWrap`, `numFmtId`, `baseField`,
+`baseItem`, a page field's `item` or `hier`), reads as the schema's default instead.
 The limits are totals counted while parsing, before anything past them is allocated (CLAUDE.md directive 5).
 Part names that differ only by case or by `\` against `/` are one part, so a pivot or cache reached twice that way is skipped like any other. A
 sheet that loses pivots to a cap logs one line with the count, not one per pivot.
 Evidence: none for Excel; this is a resource limit (SPEC-0015 "Untrusted-input limits").
 Status: DEVIATION (decision 0014)
-Implemented in: crates/rustsheet-engine/src/pivot.rs (`CacheBuilder`, `MAX_*`), crates/rustsheet-xlsx/src/import/pivots.rs
+Implemented in: crates/rustsheet-engine/src/pivot.rs (`CacheBuilder`, `MAX_*`), crates/rustsheet-xlsx/src/import/pivots.rs, crates/rustsheet-xlsx/src/import/pivots/table.rs (`MAX_EXTRA_ITEMS`, `OpaqueEntry::cost`; `MAX_OPAQUE_BYTES` in pivots.rs)
 
 ## GETPIVOTDATA against a pivot table (T-1705)
 Rule: against a compact-form pivot (one row field, an optional column field, one data field), GETPIVOTDATA
