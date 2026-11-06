@@ -625,3 +625,62 @@ fn a_calculated_column_keeps_its_column_formula() {
         Some("T[[#This Row],[Qty]]*2")
     );
 }
+
+/// T-4274: after a row or column insert or delete the exported `calculatedColumnFormula` is the
+/// text Excel saves for the same edit (probes/table-edits/t4274-calc-column-*, the saved
+/// `xl/tables/table1.xml` of each excel-graph download; xlsx-storage.md "A calculated column is
+/// saved as `calculatedColumnFormula` plus one formula per row").
+#[test]
+fn the_exported_column_formula_follows_row_and_column_edits() {
+    type Edit = fn(&mut Model) -> Result<(), String>;
+    let cases: [(&str, &str, Edit, &str); 5] = [
+        (
+            "insert_column A",
+            "=A2*2",
+            |m| m.insert_columns(0, 1, 1),
+            "B2*2",
+        ),
+        (
+            "delete_column B",
+            "=A2*2",
+            |m| m.delete_columns(0, 2, 1),
+            "A2*2",
+        ),
+        ("insert_row 1", "=A2*2", |m| m.insert_rows(0, 1, 1), "A3*2"),
+        ("insert_row 3", "=A2*2", |m| m.insert_rows(0, 3, 1), "A2*2"),
+        (
+            "structured insert_column A",
+            "=[@Col]*2",
+            |m| m.insert_columns(0, 1, 1),
+            "T[[#This Row],[Col]]*2",
+        ),
+    ];
+    for (index, (name, typed, edit, saved)) in cases.into_iter().enumerate() {
+        // T over A1:C4 (Col 1, 2, 4; Other 10, 20, 40), C2 typed so Calc is filled, as in the
+        // probes.
+        let mut model = new_empty_model();
+        for (row, col, other) in [
+            (1, "Col", "Other"),
+            (2, "1", "10"),
+            (3, "2", "20"),
+            (4, "4", "40"),
+        ] {
+            model.set_user_input(0, row, 1, col.to_string()).unwrap();
+            model.set_user_input(0, row, 2, other.to_string()).unwrap();
+        }
+        model.set_user_input(0, 1, 3, "Calc".to_string()).unwrap();
+        model.add_table(0, "T", (1, 1, 4, 3), false).unwrap();
+        model
+            .set_typed_user_input(0, 2, 3, typed.to_string())
+            .unwrap();
+        edit(&mut model).unwrap();
+        model.evaluate();
+
+        let temp_file_name = format!("temp_file_test_calc_column_edit_{index}.xlsx");
+        save_to_xlsx(&model, &temp_file_name).unwrap();
+        let table_xml = part_text(&temp_file_name, "xl/tables/table1.xml");
+        fs::remove_file(&temp_file_name).unwrap();
+        let expected = format!("<calculatedColumnFormula>{saved}</calculatedColumnFormula>");
+        assert!(table_xml.contains(&expected), "{name}: {table_xml}");
+    }
+}

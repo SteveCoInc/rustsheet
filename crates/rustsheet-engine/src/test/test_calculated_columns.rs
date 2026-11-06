@@ -717,3 +717,62 @@ fn redo_keeps_where_a_padded_bare_column_came_from() {
     model.redo().unwrap();
     assert_eq!(model.get_formatted_cell_value(0, 13, 5).unwrap(), "#ERROR!");
 }
+
+/// T-4274 probes/table-edits/t4274-calc-column-*: the stored column formula follows a row or
+/// column insert or delete as Excel saves it, the edit's undo puts it back and its redo
+/// rewrites it again.
+#[test]
+fn the_column_formula_follows_row_and_column_edits() {
+    type Edit = fn(&mut crate::UserModel) -> Result<(), String>;
+    let cases: [(&str, Edit, &str); 4] = [
+        ("insert_column A", |m| m.insert_columns(0, 1, 1), "B2*2"),
+        ("delete_column B", |m| m.delete_columns(0, 2, 1), "A2*2"),
+        ("insert_row 1", |m| m.insert_rows(0, 1, 1), "A3*2"),
+        ("insert_row 3", |m| m.insert_rows(0, 3, 1), "A2*2"),
+    ];
+    // The column formula of `Calc`, the table's last column whichever edit ran.
+    let stored = |model: &crate::UserModel| {
+        let columns = &model.get_model().workbook.tables["T"].columns;
+        columns
+            .last()
+            .and_then(|c| c.calculated_column_formula.clone())
+    };
+    for (name, edit, saved) in cases {
+        let mut model = model(false);
+        typed(&mut model, 2, "=A2*2");
+        let mut model = crate::UserModel::from_model(model);
+        assert_eq!(stored(&model).as_deref(), Some("A2*2"), "{name}");
+        edit(&mut model).unwrap();
+        assert_eq!(stored(&model).as_deref(), Some(saved), "{name}");
+        model.undo().unwrap();
+        assert_eq!(stored(&model).as_deref(), Some("A2*2"), "{name} undone");
+        model.redo().unwrap();
+        assert_eq!(stored(&model).as_deref(), Some(saved), "{name} redone");
+    }
+}
+
+/// T-4274 probes/table-edits/t4274-calc-column-structured-insert-column-a: a column insert
+/// before the table keeps the structured column formula and its cells' text, and the moved
+/// cells still read their table (`SUM` 14; before, they did not parse).
+#[test]
+fn a_structured_column_survives_a_column_insert() {
+    let mut model = model(false);
+    model.new_sheet();
+    model
+        .set_user_input(1, 4, 1, "=SUM(Sheet1!C2:C4)".to_string())
+        .unwrap();
+    typed(&mut model, 2, "=[@Col]*2");
+    model.insert_columns(0, 1, 1).unwrap();
+    model.evaluate();
+    assert_eq!(
+        column_formula(&model).as_deref(),
+        Some("T[[#This Row],[Col]]*2")
+    );
+    for row in 2..=4 {
+        assert_eq!(
+            model.get_cell_formula(0, row, 4).unwrap().as_deref(),
+            Some("=[@Col]*2")
+        );
+    }
+    assert_eq!(model.get_formatted_cell_value(1, 4, 1).unwrap(), "14");
+}

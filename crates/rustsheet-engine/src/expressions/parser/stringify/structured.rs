@@ -179,16 +179,17 @@ pub(super) fn reference_text(
         // Through a row insert a `#This Row` reference keeps its text too, and then reads the
         // cell's row of the edited table: Excel gives `#VALUE!` on a row the insert makes the
         // header row, and 0 on the blank data row it adds (T-2845
-        // table-insert-row-this-row-above-header, -inside-data; T-3037). Under any other edit
-        // it keeps today's rule below: Excel's is unprobed (T-3739).
+        // table-insert-row-this-row-above-header, -inside-data; T-3037). So does a column insert
+        // (T-4274 t4274-calc-column-structured-insert-column-a: a calculated column's
+        // `=[@Col]*2` keeps its text after insert_column A; a cell outside the table is hand,
+        // T-3739). Under a delete it keeps today's rule below: Excel's is unprobed (T-3739).
         Rewrite::Displace(Displacement {
             data,
             kept_tables,
             deleted_columns,
             ..
         }) if kept_tables.contains(&reference.table_name.to_lowercase())
-            && (!matches!(lowered, Node::ThisRowKind { .. })
-                || matches!(data, DisplaceData::Row { delta, .. } if *delta > 0)) =>
+            && (!matches!(lowered, Node::ThisRowKind { .. }) || is_insert(data)) =>
         {
             // A column delete inside the table turns a reference to a deleted column into
             // `#REF!` (T-2324 table-delete-column-qty: `=SUM(#REF!)`, -region: `=COUNTA(#REF!)`).
@@ -305,4 +306,13 @@ fn row_may_move(lowered: &Node, context: Option<&CellReferenceRC>, rewrite: &Rew
     moved.row_delta != 0
         && on_the_cut_sheet
         && ref_is_in_area(moved.area.sheet, context.row, context.column, moved.area)
+}
+
+/// Whether `data` is a row or column insert: a `#This Row` reference to a table that follows one
+/// keeps its text (T-3037, T-4274).
+fn is_insert(data: &DisplaceData) -> bool {
+    matches!(
+        data,
+        DisplaceData::Row { delta, .. } | DisplaceData::Column { delta, .. } if *delta > 0
+    )
 }
