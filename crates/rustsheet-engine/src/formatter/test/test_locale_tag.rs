@@ -396,3 +396,55 @@ fn an_lcid_without_a_table_falls_back_to_its_language_only_when_assigned_or_high
         "March|Wed|6 PM|6 PM|6 PM"
     );
 }
+
+// probes/t4064-ru-md-names and t4065-french-regional-halves, -names (T-4064, T-4065).
+#[test]
+fn russian_and_french_variants_have_their_own_names() {
+    let code = "mmm|mmmm|ddd|d mmmm|h AM/PM";
+    assert_eq!(
+        text(44941.75, &format!("[$-819]{code}")),
+        "янв.|январь|вс|15 январь|6 PM"
+    );
+    assert_eq!(
+        text(44941.75, &format!("[$-ru-MD]{code}")),
+        "янв.|январь|вс|15 январь|6 PM"
+    );
+    assert_eq!(
+        text(44941.75, &format!("[$-F419]{code}")),
+        "янв|январь|Вс|15 январь|6 PM"
+    );
+    assert_eq!(
+        text(44941.75, &format!("[$-F819]{code}")),
+        "янв|Января|Вс|15 Января|6 PM"
+    );
+    assert_eq!(
+        text(44941.75, &format!("[$-FC19]{code}")),
+        "янв|января|Вс|15 января|6 PM"
+    );
+    assert_eq!(
+        text(44941.75, &format!("[$-419]{code}")),
+        "янв|Январь|Вс|15 Январь|6 PM"
+    );
+    assert_eq!(
+        text(0.25, "[$-2C0C]h AM/PM|h A/P|AM/PM"),
+        "6 mat.|6 mat.|mat."
+    );
+    assert_eq!(text(0.75, "[$-fr-CM]h AM/PM"), "6 soir");
+    assert_eq!(text(45000.0, "[$-380C]mmm|mmmm"), "mar.|mars");
+    assert_eq!(text(45000.0, "[$-1C0C]mmm|mmmm|ddd"), "Mars|Mars|mer.");
+}
+
+// probes/t4492-comma-suffix-reading and t4492-locale-comma-tag-shapes (T-4492).
+#[test]
+fn a_comma_tag_reads_its_suffix_as_extended_hex_and_only_a_bcp47_locale() {
+    assert_eq!(text(45000.75, "[$-ar-SA, 200]0"), "٤٥٠٠١");
+    assert_eq!(text(45000.75, "[$-ar-SA,2 00]0"), "၄၅၀၀၁");
+    assert_eq!(text(45000.75, "[$-ar-SA,20 0]0"), "肆伍零零壹");
+    assert_eq!(text(45000.75, "[$-ar-SA,g00]0"), "၄၅၀၀၁");
+    assert_eq!(text(45000.75, "[$-ar-SA,100000200]0"), "٤٥٠٠١");
+    assert_eq!(text(45000.75, "[$-ar-SA,FFFFFF00]0"), "45001");
+    assert_eq!(text(45000.75, "[$-409,200]mmmm"), "March");
+    assert_eq!(text(45000.75, "[$-40C,200]mmmm"), "March");
+    assert_eq!(text(45000.75, "[$-ja-JP,200]mmmm"), "3月");
+    assert_eq!(text(45000.75, "[$-ar-SA ,200]mmmm"), "مارس");
+}

@@ -78,7 +78,16 @@ pub(super) fn format_fraction(
     let numerator_kinds =
         placeholder_kinds(&tokens[fraction.numerator_start..fraction.numerator_end]);
     // The parser only builds a fixed denominator from ASCII digits starting with 1-9.
+    // Excel: a digit placeholder after a fixed denominator makes Excel pick the fraction as for
+    // placeholders of the denominator's width and print the code's digits in place of the picked
+    // denominator's (`# ?/4|0` on 12.5 is "12 1/4|0", `# ?/10|0` "12 1/1 |0", on 12.6 "12 3/1 |0";
+    // probes/t4069-fixed-denominator-tail; number-formats.md "Digit placeholders after the
+    // denominator"), as a fixed denominator past 32768 does.
+    let tail_placeholders = tokens[fraction.denominator_at..]
+        .iter()
+        .any(|t| matches!(t, TextToken::Digit(_)));
     let fixed = match &fraction.denominator {
+        Denominator::Fixed(_) if tail_placeholders => None,
         Denominator::Fixed(digits) => digits
             .parse::<f64>()
             .ok()
@@ -107,6 +116,10 @@ pub(super) fn format_fraction(
         ),
         None => {
             let max_denominator = match &fraction.denominator {
+                Denominator::Fixed(digits) if tail_placeholders => {
+                    let width = i32::try_from(digits.len()).unwrap_or(i32::MAX).min(15);
+                    10.0_f64.powi(width) - 1.0
+                }
                 Denominator::Fixed(_) => LARGE_FIXED_MAX_DENOMINATOR,
                 // Past 15 digits 10^n - 1 is no longer exact in a double; no such bound can bind.
                 Denominator::Placeholders(kinds) => {
