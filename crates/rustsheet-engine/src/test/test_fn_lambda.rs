@@ -565,3 +565,24 @@ fn names_starting_with_a_mark_or_an_uppercase_circled_letter_are_refused() {
         assert_eq!(model._get_text(&cell), *expected, "{formula}");
     }
 }
+
+#[test]
+fn a_sheet_name_starting_with_a_refused_name_character_is_quoted() {
+    // The lexer refuses a name starting with Ⓐ-Ⓩ or a mark (T-1856), so a reference to such a
+    // sheet must be written quoted to read back. How Excel writes it is unprobed (T-4446).
+    let mut model = new_empty_model();
+    model.add_sheet("Ⓐ").unwrap();
+    model.add_sheet("ⓑ").unwrap();
+    // `_set` parses its sheet prefix byte by byte, so these go in by sheet index.
+    model.set_user_input(1, 1, 1, "5".to_string()).unwrap();
+    model.set_user_input(2, 1, 1, "7".to_string()).unwrap();
+    model._set("A1", "='Ⓐ'!A1+1");
+    model._set("A2", "=FORMULATEXT(A1)");
+    model._set("A3", "=ⓑ!A1+1");
+    model._set("A4", "=FORMULATEXT(A3)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"6");
+    assert_eq!(model._get_text("A2"), *"='Ⓐ'!A1+1");
+    assert_eq!(model._get_text("A3"), *"8");
+    assert_eq!(model._get_text("A4"), *"=ⓑ!A1+1");
+}

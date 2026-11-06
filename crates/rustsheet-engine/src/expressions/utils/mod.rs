@@ -462,7 +462,9 @@ pub(crate) fn name_needs_quoting(name: &str) -> bool {
         // ADDRESS(…, "") emits a bare "!" prefix; an empty name is never quoted.
         None => return false,
         Some(c) if c.is_ascii_digit() || c == '.' => return true,
-        Some(c) if !(c.is_alphabetic() || c == '_') => return true,
+        // A first character the lexer refuses (`is_letter_name_start`: Ⓐ-Ⓩ, a mark) is quoted, so
+        // `'Ⓐ'!A1` reads back (T-1856).
+        Some(c) if !(is_letter_name_start(c) || c == '_') => return true,
         Some(_) => {}
     }
     if chars.any(|c| !(c.is_alphanumeric() || c == '_' || c == '.')) {

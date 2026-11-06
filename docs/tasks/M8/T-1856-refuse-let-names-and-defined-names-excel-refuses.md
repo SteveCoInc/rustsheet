@@ -39,8 +39,11 @@ T-1431 (docs/excel-semantics/references.md, T-1387 paragraph) found that Excel f
   mark (`a` + U+0301 and `i` + U+0307 were `#ERROR!`). `is_name_text` checks the characters as typed, not their
   uppercase, so `ǰ` and `ΐ` (`#ERROR!` before) are names. Unit test
   `names_starting_with_a_mark_or_an_uppercase_circled_letter_are_refused` (11 refused, 33 accepted).
+- A sheet name starting with such a character is now quoted in written formulas (`name_needs_quoting`), so `'Ⓐ'!A1`
+  reads back (fidelity round 2: `FORMULATEXT` gave `=Ⓐ!A1+1`, which the lexer now refuses); unit test
+  `a_sheet_name_starting_with_a_refused_name_character_is_quoted`. Excel's own form is unprobed (T-4446).
 - Defined names: Excel's handling of a defined name starting with `Ⓐ` or a mark is unprobed (xlsxwriter drops them),
-  and the engine now refuses them at load by the same rule. Filed as T-4446, with the decomposed use of a defined `İ`.
+  and the engine now refuses them when defined through the API (`is_valid_identifier`), as it does table names. Filed as T-4446, with the decomposed use of a defined `İ`.
 - Formula entry vs xlsx load: the oracle only loads xlsx; the engine applies the rule to both, as for T-1387's
   duplicate names.
 - Eval delta: probes +1 case (t1856-name-characters, 37/37 pass; without

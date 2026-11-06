@@ -606,7 +606,10 @@ Tasks: T-0216, T-0235, T-0940, T-1003, T-1378, T-1387, T-1431, T-1453, T-1856, T
 Rule: a name in a formula (a LET or LAMBDA name, or an unbound use) may not start with a mark (`\p{M}`) or an
 uppercase circled letter Ⓐ–Ⓩ (U+24B6–U+24CF): Excel refuses the workbook at load. Every other alphabetic first
 character loads, lowercase circled and astral squared letters included, and after the first character every mark
-loads, alphabetic or not.
+loads, alphabetic or not. Probed points: Ⓐ, Ⓑ, Ⓜ, Ⓩ and Ⓐx; marks U+0301, U+0307 (Mn), U+0345 (Mn, alphabetic) and
+U+093E (Mc). The rest of Ⓐ–Ⓩ, enclosing marks (Me) and the negative squared letters U+1F170–U+1F189 are inferred, not
+probed. A sheet name starting with such a character is quoted when the engine writes a reference (`'Ⓐ'!A1`), so it
+reads back; how Excel writes or reads one is unprobed (T-4446).
 
 Evidence: single-cell workbooks, `rustsheet-oracle recalc -b excel-graph`, 2026-11-06 (T-1856), each LET or LAMBDA name
 written `_xlpm.` by hand: spec2xlsx's `_IDENT` (Python `[^\W\d][\w.]*`) leaves out names holding `Ⓐ`, a mark or `İ`, and

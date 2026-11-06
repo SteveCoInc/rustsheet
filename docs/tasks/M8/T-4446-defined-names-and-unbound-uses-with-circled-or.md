@@ -24,6 +24,13 @@ From T-1856 (docs/excel-semantics/references.md "Characters of a name"):
 - A defined `İ` works (`=İ+1` 6) and the decomposed use `i` + U+0307 reads it (6, excel-graph 2026-11-06); check what
   the engine's name lookup (`name_key.rs`) does with that use now that the lexer reads U+0307 as a name character.
 - Probe also `aⒶ`, U+1F130 and `नाम` as defined names, and a defined name starting with `ⓐ`.
+- Table names and API-defined names go through `is_valid_identifier` too (tables.rs, defined_names.rs), so they now
+  refuse a first `Ⓐ` or mark without evidence; probe a table name too.
+- Sheet names: the engine quotes a sheet starting with such a character (`name_needs_quoting`); probe how Excel writes
+  `='Ⓐ'!A1` (FORMULATEXT) and whether it loads an xlsx storing `Ⓐ!A1` unquoted.
+- Other name-character checks still take only `is_alphanumeric` after the first character (expressions/utils/mod.rs
+  near `is_name_text`, lexer/ranges.rs's corner and column scans): check whether a mark there should follow `is_mark`.
+- Probe an enclosing mark (Me) first and later, and a negative squared letter (U+1F170) first.
 
 ## Acceptance criteria
 - [ ] A probe case (excel-graph, definitions verified in the xlsx) covers the forms above; each cell passes, or its
