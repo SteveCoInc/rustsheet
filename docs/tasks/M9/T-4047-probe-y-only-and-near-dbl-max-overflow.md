@@ -3,7 +3,7 @@ id: T-4047
 title: "Probe y-only and near-DBL_MAX overflow in STEYX, INTERCEPT, FORECAST and the correlation family"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
