@@ -3,7 +3,7 @@ id: T-4395
 title: "GAMMA.DIST and CHISQ Gate A definitions: tidy the T-3925 review's minor findings"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -30,9 +30,26 @@ Reviewer findings on PR #3412 (all MINOR, none changes a table or sidecar value 
 - Optional: one `_scalar` helper for the repeated `assert not isinstance(..., (bool, tuple))` lines.
 
 ## Acceptance criteria
-- [ ] Each item above is done or noted moot in the Outcome; `make eval-math-check` stays current (regenerate the
+- [x] Each item above is done or noted moot in the Outcome; `make eval-math-check` stays current (regenerate the
       stale cases only if a definition change moves a value).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The R3 ruling itself (T-4392).
+
+## Outcome
+- `NORMAL_MIN` now lives in `defs/_common.py` beside `CONDITION_LIMIT`; gamma_dist.py and continuous.py import it
+  (their `sys` imports are gone).
+- gamma_dist.py's docstring says the "x / beta overflows" rule's evidence (probes/incomplete-gamma-cap E6, E18) is
+  shape 1 only and is applied at every shape, unprobed at the others. statistics.md's T-2738 entry no longer lists an
+  overflowing x / beta as unprobed; it cites E6, E18 at shape 1 and leaves other shapes unprobed.
+- CHISQ.DIST's cdf gets GAMMA.DIST's no-value rule at a positive x whose x / 2 is subnormal (one helper,
+  `_subnormal_ratio_cdf`, used by both), with a unit test either side of the cut. No table or sidecar point is in that
+  region: `verify` gives 0 differences and `make eval-math-check` is current.
+- The shape-2 underflow cut "about 1E-162" is marked derived, UNVERIFIED (A15 at 1E-200 is 0, A16 at 1E-150 a number)
+  in the T-2753 entry and in T-4392's Context. The docstring's "R3 candidates (T-4392)" now cites the ruling (decision
+  0300, Excel kept).
+- Optional item done: `_common.scalar` replaces gamma_dist.py's repeated `assert not isinstance(...)` lines.
+- Verify (0 differences): GAMMA.DIST, GAMMADIST, CHISQ.DIST, CHISQ.DIST.RT, CHIDIST, and every continuous.py function
+  (LOGNORM.DIST, LOGNORMDIST, LOGNORM.INV, LOGINV, EXPON.DIST, EXPONDIST, WEIBULL.DIST, WEIBULL, FISHER, FISHERINV).
+  Eval delta: none.

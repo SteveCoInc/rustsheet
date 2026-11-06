@@ -48,7 +48,9 @@ nothing for a file it refuses
 
 ## Item identity: exact for numbers and types, case-insensitive for text
 Rule: on refresh, texts that differ only in case are one item, and their records add up. In I1 the item
-shows `east`, which is both the first-seen and the listed casing, so which of those wins is open. Numbers are compared exactly, so 0.3 and 0.30000000000000004 are two items. The
+shows `east`; see "Item casing when cache and source disagree, and date items" (T-4582). Numbers are
+compared exactly,
+so 0.3 and 0.30000000000000004 are two items. The
 text `"1"` and the number 1 are two items as well.
 Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 - I1: east, East and EAST count 3 under `east`, and west counts 1.
@@ -58,13 +60,33 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 Status: VERIFIED (excel-graph)
 
 ## Item casing when cache and source disagree, and date items
-Rule: unknown. Which casing a merged text item shows when the cache lists one casing and the source's
-first row has another, and whether date items with and without a time part are one item. Also open:
-whether new items that only a refresh finds are appended in source order or sorted descending
-(previous entry, I3).
-Evidence: none yet. probes/t4134-pivot-items I1 cannot separate the two casings, because both are
-`east`.
-Status: UNVERIFIED (probe pending: T-4582)
+Rule (as observed):
+- **Casing.** When the cache lists one casing (`EAST`) and the source holds several, Excel keeps the
+  listed item's slot but relabels it. In J1 the label became `east`, which is the first source
+  record's casing, and also the all-lowercase and the ordinally greatest one. Which of those decides
+  is open (T-4612). The listed casing does not win.
+- **Date items.** A date-formatted source value does not match a cached number item of the same
+  value. Its records leave the listed `<n>` items empty, so those are not rendered, and Excel appends
+  new items for them. A date with a time part is its own item: 45000 and 45000.5 are two items under
+  both formats probed. The appended items render as their serials, as number cells. Their displayed
+  format is not captured by the sidecar (displayed text, T-4169).
+
+  Plain numbers do reuse the listed slots (probes/t4134-pivot-items I4, `rowItems` x = 0, 1). Whether
+  the appended items are date-typed (`<d>`) is open (T-4612). The engine's refresh (T-4141) must not
+  reuse a number item for a date value.
+
+Evidence: probes/t4582-pivot-item-edges (excel-graph, 2026-11-06, T-4582):
+- J1: the source's K is the formula `="east"`, then `EAST`, `East` and `west`. The builder lists
+  `<m/>`, `EAST`, `west`. The saved `rowItems` are x = 1 (shown `east`, count 3; J1!A4:B4) and x = 2
+  (`west`, 1). So the `EAST` slot is reused and relabeled, and the `<m/>` slot is dropped, as in J2
+  and t4134 I3.
+- J3 (`m/d/yyyy`) and J4 (`m/d/yyyy h:mm`): K is 45000, 45000.5, 45000, 45001. The builder lists
+  `<n>` items 45000, 45000.5 and 45001. The saved `rowItems` are x = 3, 4, 5: three appended items,
+  shown 45000 (count 2), 45000.5 (1) and 45001 (1) as number cells (J3!A4:A6, J4!A4:A6). The listed
+  items 0–2 are not rendered.
+
+Status: VERIFIED (excel-graph) for the cells and items above. The casing rule's deciding property and
+the appended items' type are UNVERIFIED (probe pending: T-4612).
 
 ## Shared-item flags Excel accepts for mixed fields
 Rule: Excel for the web refuses a cache whose `sharedItems` flags contradict its items. The flags that
@@ -83,8 +105,8 @@ filled pivot probe opens with them.
 
 ## Items show in the order the pivot field lists them; new items are appended
 Rule: on refresh Excel keeps the order of a pivot field's `<items>`. An item the refresh finds that the
-field does not list yet goes after the listed ones, not in ascending order. Whether they follow the
-source order or a descending sort is open (T-4582). A listed item that has no records after the
+field does not list yet goes after the listed ones, in source order (first appearance), not sorted.
+A listed item that has no records after the
 refresh is not rendered, and the items after it keep their indices. How items render:
 - a number item renders as a number cell;
 - a boolean as the text `TRUE` or `FALSE`;
@@ -98,6 +120,9 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
   source order is M, Zed, Alpha, M, which also reads as a descending sort of the new items. The listed
   `<m/>` item (index 1) holds no record after the refresh and is left out: the saved `rowItems` are
   x = 0, 2, 3.
+- probes/t4582-pivot-item-edges J2 (T-4582): new items in the non-monotone source order Alpha, Zed,
+  Beta (all formulas the cache records as missing) after the listed M. Excel shows M, Alpha, Zed, Beta
+  (J2!A4:A7), which is source order, not ascending (Alpha, Beta, Zed) and not descending.
 
 The default order of a newly created pivot (ascending, by type) is a UI action and not reachable from a
 file.
