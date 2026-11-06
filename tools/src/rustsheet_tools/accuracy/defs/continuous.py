@@ -94,7 +94,7 @@ WEIBULL_DIVISOR_SOURCE = (
     "statistics.md#weibulls-density-divides-by-lk-div0-when-it-underflows-num-when-it-overflows-t-2239"
 )
 WEIBULL_ZERO_SOURCE = "statistics.md#weibulldists-density-at-x--0-still-computes-betaalpha-t-3312"
-LEGACY_SOURCE = "statistics.md#legacy-distribution-names-sweep-t-1047"
+LEGACY_FIRST_SOURCE = "statistics.md#legacy-distribution-names-sweep-t-1047"
 LEGACY_SECOND_SOURCE = "statistics.md#legacy-distribution-names-sweep-second-family-t-1048"
 MICROSOFT_SOURCE = (
     "Microsoft LOGNORM.DIST / LOGNORM.INV / EXPON.DIST / WEIBULL.DIST / FISHER pages: argument limits"
@@ -495,7 +495,7 @@ def _expon_definition(function: str) -> Definition:
         ),
         value=_expon_dist,
         draw=_draw_expon,
-        sources=(OPERATORS_SOURCE, MICROSOFT_SOURCE, LEGACY_SOURCE),
+        sources=(OPERATORS_SOURCE, MICROSOFT_SOURCE, LEGACY_FIRST_SOURCE),
     )
 
 

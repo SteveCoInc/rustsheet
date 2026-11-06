@@ -12,7 +12,9 @@ Sources:
 - statistics.md, "CONFIDENCE.NORM forms 1 - alpha/2 in doubles (T-4101)": Excel's value is NORM.S.INV of the double
   1 - alpha/2 times sd/sqrt(n), within an ulp or so on every literal cell. Where that double is 1 (alpha <= 2^-53)
   it is `#NUM!`, as `NORM.S.INV(1)` is: `CONFIDENCE(1E-16,..)` and `CONFIDENCE.NORM(1E-100,..)` are `#NUM!` while
-  `CONFIDENCE(1E-15,0.01,9)` is a number. That is the definition's one domain rule beyond the intervals.
+  `CONFIDENCE(1E-15,0.01,9)` is a number. That is the definition's one domain rule beyond the intervals. The cut is
+  pinned from below by `NORM.S.INV(1-1E-16)` = 8.209536151601386 (probes-numeric/t1543-inverse-cdf-tiny-p A11): 1-1E-16
+  is the double 1-2^-53, the largest p below 1, so alpha > 2^-53 is a number; only (1E-16, 2^-53] has no direct cell.
 - statistics.md, "NORM.S.INV is AS 241 PPND16 in the tails; the central region is unfitted (T-1746)": the quantile
   Excel uses is up to 31 ulp off in the centre, far under the gate's tolerance.
 
@@ -36,12 +38,12 @@ from collections.abc import Sequence
 import mpmath
 
 from rustsheet_tools.accuracy.defs._common import CONDITION_LIMIT, scalars
+from rustsheet_tools.accuracy.defs.continuous import LEGACY_FIRST_SOURCE
 from rustsheet_tools.accuracy.defs.normal import INV_SOURCE, density, standard_quantile
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 
-LEGACY_SOURCE = "statistics.md#legacy-distribution-names-sweep-t-1047"
 DOUBLE_P_SOURCE = "statistics.md#confidencenorm-forms-1---alpha2-in-doubles-t-4101"
 MICROSOFT_SOURCE = "Microsoft CONFIDENCE.NORM / CONFIDENCE pages: argument limits"
 
@@ -155,14 +157,14 @@ def _definition(function: str, *, truncates: bool) -> Definition:
                 Interval(1, math.inf, lo_open=False),
                 typical=(1, 100),
                 extreme=(1e3, 1e12),
-                source=LEGACY_SOURCE,
-                truncates=LEGACY_SOURCE if truncates else "",
+                source=LEGACY_FIRST_SOURCE,
+                truncates=LEGACY_FIRST_SOURCE if truncates else "",
             ),
         ),
         value=_confidence,
         domain=_domain,
         draw=_draw,
-        sources=(LEGACY_SOURCE, DOUBLE_P_SOURCE, INV_SOURCE, MICROSOFT_SOURCE),
+        sources=(LEGACY_FIRST_SOURCE, DOUBLE_P_SOURCE, INV_SOURCE, MICROSOFT_SOURCE),
     )
 
 

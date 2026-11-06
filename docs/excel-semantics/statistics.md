@@ -4685,7 +4685,9 @@ rounding of p decides the value at both ends of alpha:
   `CONFIDENCE(1E-16,0.5,6)`, `CONFIDENCE.NORM(1E-16,0.5,6)`, `CONFIDENCE(1E-20,2.5,15)`, `CONFIDENCE.NORM(1E-100,2,5)`,
   `CONFIDENCE(1E-300,99999,9)` are `#NUM!` (accuracy/CONFIDENCE/s1 A131, A138, A112; accuracy/CONFIDENCE.NORM/s1 A113,
   A128; gen-m9/320d51765af9b6b7 A217, gen-m9/f2bd5f380ec002bf A62), while `CONFIDENCE(1E-15,0.01,9)` is a number
-  (gen-m9/8dd2312c96effb1b A251). The cut between 1E-16 and 1E-15 is the double's, not probed point by point.
+  (gen-m9/8dd2312c96effb1b A251). `NORM.S.INV(1-1E-16)` is 8.209536151601386 (probes-numeric/t1543-inverse-cdf-tiny-p
+  A11), and 1-1E-16 is the double 1-2^-53, the largest p below 1: so every alpha above 2^-53 gives a p below 1 and a
+  number, which with `#NUM!` at alpha = 1E-16 pins the cut at alpha <= 2^-53. Only (1E-16, 2^-53] has no direct cell.
 - Near alpha = 0 the tail probability alpha/2 keeps only the digits 1 - alpha/2 holds: `CONFIDENCE(1E-15,0.01,9)` is
   0.026713386495918482 against the math 0.026756196275115137 (1.6E-3 low), and `CONFIDENCE(1E-15,1E-300,2)` is
   5.6667650219163304E-300 against 5.6758463474676471E-300 (gen-m9/c6cfda6bd10cae93 A73). At alpha = 1E-9 and 1E-10

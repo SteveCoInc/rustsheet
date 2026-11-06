@@ -1,5 +1,6 @@
 """Gate A definitions of LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER and FISHERINV (T-3785), and the
-legacy EXPONDIST and WEIBULL (T-4101), against Microsoft's published examples, the semantics entries' values, the evidenced error domain and the excluded regions."""
+legacy EXPONDIST and WEIBULL (T-4101), against Microsoft's published examples, the semantics entries' values, the
+evidenced error domain and the excluded regions."""
 
 from __future__ import annotations
 
