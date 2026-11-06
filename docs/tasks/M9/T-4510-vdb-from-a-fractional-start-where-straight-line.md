@@ -36,12 +36,15 @@ so the six Gate A points below pass and their known-failures lines go.
 
 ## Outcome
 - `vdb_switching_between` (functions/financial/financial_depreciation.rs) returns `(end - start)·sl`, with
-  `sl = (cost - salvage)/life`, when `salvage <= cost` and `sl > cost·factor/life`. This is financial.md's "Straight line
+  `sl = (cost - salvage)/life`, from a fractional start when `salvage <= cost` and `sl > cost·factor/life`. A whole start
+  keeps the schedule, which already charges `sl` from period 0. This is financial.md's "Straight line
   from period 0" rule (T-4111), which until now lived only in the Gate A definition.
 - The operation order is the one the entry already used for whole straight-line periods, one product `n·sl`. It gives
   Excel's value to the bit on all seven table points (A119, A158, A183, A187, A188, A189, A200). It also matches the
   whole-start gen-m9/67a4c03afd63f988 A334 (`VDB(86661,45,37,0,6,0.2)`), where `n·(cost - salvage)/life` was one ulp
   off and showed up as an eval-check regression. No constant was tuned.
 - Unit test `fn_vdb_straight_line_from_period_zero_bits` pins all seven cells to the bit.
+- Follow-up: T-4724 probes the two unevidenced shapes, a whole start with a fractional end and factor 0 from a
+  fractional start (excel-fidelity MINOR).
 - Eval delta: Gate A loses 6 known failures (accuracy/VDB/s1 A158, A183, A187, A188, A189, A200; `eval-gates` 0
   failing points). eval-check has 0 regressions and fixes no other cell.

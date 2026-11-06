@@ -102,7 +102,9 @@ fn vdb_no_switch_between(
 /// 379.8854487417499, one ulp below the period-by-period sum (probes/fin-vdb-schedule A1-A15,
 /// A31-A54; fin-vdb-modes A6, A9, A13). Salvage above cost never switches and keeps the negative
 /// charge: `VDB(2400,3000,10,0,1)` is -600 (fin-vdb-modes A17), and so is
-/// `VDB(2400,3000,10,0.5,1.5)` (fin-vdb-fractional-start-edges A7).
+/// `VDB(2400,3000,10,0.5,1.5)` (fin-vdb-fractional-start-edges A7). From a fractional start where
+/// straight line already wins at period 0, the window is `(end - start)·sl` ("Straight line from
+/// period 0", T-4111, T-4510).
 fn vdb_switching_between(
     cost: f64,
     salvage: f64,
@@ -113,17 +115,19 @@ fn vdb_switching_between(
 ) -> f64 {
     let switches = salvage <= cost;
     let rate = factor / life;
-    let straight_from_zero = (cost - salvage) / life;
-    if switches && straight_from_zero > cost * rate {
-        // Straight line already wins at period 0: every period of the window charges
-        // `(cost - salvage)/life`, a fractional start's share too, with no declining-balance
-        // fraction laid first, and the window is one product `n·sl` like the whole
-        // straight-line periods below (financial.md "VDB charge order"; to the bit on
-        // accuracy/VDB/s1 A119, A158, A183, A187, A188, A189, A200, excel-graph, T-4111).
-        return (end - start) * straight_from_zero;
-    }
     let whole = start.floor();
     let fraction = start - whole;
+    let straight_from_zero = (cost - salvage) / life;
+    if fraction > 0.0 && switches && straight_from_zero > cost * rate {
+        // A fractional start where straight line already wins at period 0: every period of the
+        // window charges `(cost - salvage)/life`, the start's share too, with no declining-balance
+        // fraction laid first, and the window is one product `n·sl` like the whole straight-line
+        // periods below (financial.md "VDB charge order"; to the bit on accuracy/VDB/s1 A158,
+        // A183, A187, A188, A189, A200, excel-graph, T-4111). A whole start keeps the schedule,
+        // which charges the same `sl` from period 0 (A119); the order of a fractional end there,
+        // and factor 0 from a fractional start, are unprobed (T-4724).
+        return (end - start) * straight_from_zero;
+    }
     let mut book = cost;
     if fraction > 0.0 {
         book -= fraction * (cost * rate).min(cost - salvage).max(0.0);
