@@ -74,3 +74,24 @@ holds Excel's column formula.
   F!A5:A6, T-4695; delete-row-2 F!A1, `#ERROR!` for Excel's `#REF!`, T-4698) (structured-insert-column-a F!A4 was `#ERROR!` before the fix).
 - Follow-ups: T-4679 (a delete that removes a cell the column formula reads, and its undo); T-4695 (fill the
   inserted row's calculated cell); T-4698 (FORMULATEXT of a deleted cell's reference is `#ERROR!`).
+
+## Landing notes
+- PR #3739, head 2c0d0541c (before this note): draft, `mergeable_state: dirty`, so no CI ran on that head. CI on the
+  earlier head cfc54ad was green; 0b33fe70 failed only governance (a quality/duplication.json edit, since reverted).
+  Reviewers on 2c0d0541c: security APPROVE, design APPROVE, excel-fidelity APPROVE (round 3, MINORs only).
+- Why it conflicts: T-4274 was also done by a parallel run and merged as #3738 (627db9d95), with the same five
+  t4274-calc-column-* cases (its own oracle fills) and an implementation in calculated_columns.rs. This branch
+  duplicates that work and should not be merged as is.
+- What this branch has that main lacks (the reason to resume it):
+  1. Probes t4274-calc-column-delete-row-2 and -insert-row-2 (excel-graph, filled): after a delete of the first data row
+     Excel saves `A2*2` (the next row's formula moved up, not `#REF!*2`), and after an insert at the first data row it
+     saves `A2*2` (the inserted, filled row's formula). Check main's implementation against both; the fidelity reviewer
+     found a naive displacement saves `#REF!*2` for delete_row 2. The rule here (`displace_column_formulas`, table_edits.rs):
+     read at the first old data row the edit keeps, displace, then copy to the new first data row.
+  2. The `insert_columns` fix for moved `[@Col]` cells (`column_insert_kept`, `is_insert` in stringify/structured.rs):
+     this is main's T-4680; resume that task with this code and the -structured-insert-column-a evidence.
+  3. Follow-ups T-4679 (delete of a read cell, research) and T-4698 (FORMULATEXT of a deleted cell's reference is
+     `#ERROR!`, delete-row-2 F!A1). T-4695 duplicates main's T-4692: drop T-4695 and add -insert-row-2 F!A5:A6 to T-4692.
+- Next step: a new branch from origin/main carrying only items 1 and 3 (and T-4680 separately), re-recorded with
+  `make eval-baseline` from main's baseline; do not merge main into this branch (every t4274 file is an add/add
+  conflict).
