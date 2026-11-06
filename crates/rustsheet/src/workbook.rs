@@ -366,10 +366,8 @@ impl Workbook {
     }
     /// Serializes to xlsx bytes.
     ///
-    /// A workbook loaded from a package keeps it (SPEC-0034): if nothing changed since the load, the
-    /// save is that package, byte for byte, and otherwise it is regenerated. Deciding re-imports the
-    /// package, so a save holds about twice the model in memory, within the load's limits. The save
-    /// is never encrypted, also for a workbook opened from a password-protected file.
+    /// A loaded workbook unchanged since its load saves as its package, byte for byte (SPEC-0034;
+    /// deciding re-imports it, about twice the model in memory). The save is never encrypted.
     ///
     /// # Errors
     /// [`SaveError::Engine`] when the engine cannot export the workbook.
