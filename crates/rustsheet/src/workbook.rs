@@ -15,6 +15,7 @@ use crate::error::{LoadError, RefError, SaveError, UnsupportedKind};
 use crate::refs::{
     parse_cell, parse_range, resolve_sheet_by_name, CellRef, RangeRef, SheetId, Target,
 };
+use crate::source::Source;
 use crate::value::{lone_text, Array, Value};
 mod active_sheet;
 mod calculation;
@@ -165,14 +166,17 @@ pub struct Workbook {
     max_read_cells: u64,
     /// Whether `edit` diffs formula values into [`crate::ChangeSet::values`].
     pub(crate) track_changes: bool,
+    /// The package the workbook was loaded from, kept so a save can write back what did not change
+    /// (SPEC-0034 D1). `None` for a workbook created with [`Workbook::new`].
+    source: Option<Arc<Source>>,
 }
 
-fn engine_load_error(message: impl std::fmt::Display) -> LoadError {
+pub(crate) fn engine_load_error(message: impl std::fmt::Display) -> LoadError {
     LoadError::Format(message.to_string())
 }
 
 /// The facade error for an importer error (SPEC-0031 D4). None of them carries the password.
-fn import_load_error(e: XlsxError) -> LoadError {
+pub(crate) fn import_load_error(e: XlsxError) -> LoadError {
     match e {
         XlsxError::Limit { .. } => LoadError::Options(e.to_string()),
         XlsxError::EncryptedPackage => LoadError::PasswordRequired,
@@ -268,6 +272,7 @@ impl Workbook {
             model,
             max_read_cells,
             track_changes: true,
+            source: None,
         }
     }
 
@@ -324,28 +329,22 @@ impl Workbook {
             )),
             _ => None,
         };
-        let zip = decrypted.as_deref().map_or(bytes, Vec::as_slice);
-        let book = rustsheet_xlsx::import::load_from_xlsx_bytes_with_limits(
-            zip,
-            w.name.as_deref().unwrap_or_default(),
-            &w.locale,
-            &w.timezone,
-            &limits,
-        )
-        .map_err(|e| match e {
-            // A decrypted package that is itself an OLE file is not a workbook, whatever it holds.
-            XlsxError::EncryptedPackage
-            | XlsxError::LegacyBinaryWorkbook
-            | XlsxError::OleCompoundFile
-                if decrypted.is_some() =>
-            {
-                engine_load_error("the decrypted package is not a zip")
-            }
-            e => import_load_error(e),
-        })?;
-        let model = Model::from_workbook_with_clock(book, &w.language, w.clock)
-            .map_err(LoadError::Format)?;
+        let was_decrypted = decrypted.is_some();
+        // The retained package is wiped when dropped: for an encrypted file it is the plaintext
+        // (SPEC-0031), so it is moved in, never copied.
+        let package = decrypted.unwrap_or_else(|| Zeroizing::new(bytes.to_vec()));
+        let source = Source {
+            bytes: package,
+            name: w.name.clone().unwrap_or_default(),
+            locale: w.locale.clone(),
+            timezone: w.timezone.clone(),
+            language: w.language.clone(),
+            clock: w.clock,
+            limits,
+        };
+        let model = source.import(was_decrypted)?;
         let mut workbook = Self::from_model(model, w.max_read_cells);
+        workbook.source = Some(Arc::new(source));
         if opts.recalc {
             workbook.recalculate();
         }
@@ -367,12 +366,35 @@ impl Workbook {
     }
     /// Serializes to xlsx bytes.
     ///
+    /// A loaded workbook unchanged since its load saves as its package, byte for byte (SPEC-0034;
+    /// deciding re-imports it, about twice the model in memory). The save is never encrypted.
+    ///
     /// # Errors
     /// [`SaveError::Engine`] when the engine cannot export the workbook.
     pub fn to_xlsx_bytes(&self, _opts: SaveOptions) -> Result<Vec<u8>, SaveError> {
-        rustsheet_xlsx::export::save_xlsx_to_writer(&self.model, Cursor::new(Vec::new()))
+        let engine = |e: XlsxError| SaveError::Engine(e.to_string());
+        let Some(source) = &self.source else {
+            return rustsheet_xlsx::export::save_xlsx_to_writer(
+                &self.model,
+                Cursor::new(Vec::new()),
+            )
             .map(Cursor::into_inner)
-            .map_err(|e| SaveError::Engine(e.to_string()))
+            .map_err(engine);
+        };
+        // What changed since the load is the difference from the source imported again the same
+        // way (SPEC-0034 D2). The source loaded once, so it loads again; if it somehow does not,
+        // that is an engine error, never a silently different file.
+        let pristine = source
+            .import(false)
+            .map_err(|e| SaveError::Engine(format!("the source no longer loads: {e}")))?;
+        rustsheet_xlsx::export::save_preserving(
+            &self.model,
+            &pristine,
+            &source.bytes,
+            Cursor::new(Vec::new()),
+        )
+        .map(|(w, _tier)| w.into_inner())
+        .map_err(engine)
     }
 
     /// Writes an xlsx file, replacing an existing one.
