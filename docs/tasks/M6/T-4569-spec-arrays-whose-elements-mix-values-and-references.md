@@ -23,14 +23,19 @@ and references, and what each reader sees, so that T-4570 can implement Excel's 
     `#VALUE!`, even for a one-cell range.
   - INDEX hands it back as a reference: ISREF TRUE, TYPE 64 (two cells) or 1 (one cell), AREAS 1, CELL("address")
     names its cell, SUM 7, and it spills.
+  - One-argument INDEX keeps it wrapped: `INDEX(..,2)` is 1x1 `#VALUE!`, and its (1,1) is the range, spilling
+    "x", "y" (t4563 A25, V25:V26). `INDEX(..,2,1)` hands the reference straight back.
   - Aggregates: SUM over the whole result walks it (`SUM(..F1:F2)` 23 = 20 + 3 + 4; `SUM(..E1)` 25). COUNT is 1,
-    COUNTA 2, ISERROR FALSE/TRUE, ISTEXT FALSE/FALSE, TYPE 64, ISREF FALSE.
+    COUNTA 2, MAX 20 (A113, uninformative: F1:F2 are below 20), ISERROR FALSE/TRUE, ISTEXT FALSE/FALSE,
+    TYPE 64, ISREF FALSE.
 - Today: SPEC-0014's `RefGrid` holds only references and errors (`reference_operators/areas.rs`). SPEC-0018's nested
   cell (`nested_array.rs`) shows `#VALUE!` and INDEX returns its array or value, but it is not a reference (ISREF,
   CELL, AREAS) and an aggregate reads only its top-left.
 - Questions the spec must settle:
   - the representation: extend `RefElement` with a value variant, or give `ArrayNode` a reference variant;
   - every reader class above, and how readers not probed fall back;
+  - MAX and MIN over the result: probe them with an if_not_found range holding values above the hits (and below,
+    for MIN) before the spec rules on them, predictions first;
   - the bounds a reference element adds to the walk budgets (CLAUDE.md directive 5).
 
 ## Acceptance criteria

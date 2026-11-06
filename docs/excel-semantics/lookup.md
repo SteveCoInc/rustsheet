@@ -943,11 +943,15 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
   (probes/t4563-xlookup-not-found-ref-element, excel-graph, 2026-11-06; E1 = 5, F1:F2 = 3, 4; T-4563):
   - INDEX of it is a reference: ISREF TRUE (A1:A9), TYPE 64 for F1:F2 and 1 for E1 (A37, A41), AREAS 1 (A45),
     CELL("address") names Data!$F$1 (A49), and SUM 7 (A33). A range on another sheet works too (A21:A22).
+  - One-argument INDEX is different: `INDEX(XLOOKUP({2;9},..,D1:D2),2)` is 1x1 and shows `#VALUE!` (A25, T25, U25),
+    and `INDEX(that,1,1)` returns the range, which spills "x", "y" (V25:V26), with (2,1) `#REF!` (W25). So the
+    one-argument form keeps the element wrapped in a 1x1 array, while `INDEX(..,2,1)` hands the reference back.
   - A lifted operator reads it as `#VALUE!`, even a one-cell range: `XLOOKUP(..)+0`, `&""` and `*{1;1}` are
     20, `#VALUE!` (A57:A70).
   - Over the whole result, SUM walks the reference: `SUM(..F1:F2)` is 23 = 20 + 3 + 4 and `SUM(..E1)` is 25 (A73,
     A109). COUNT is 1 and COUNTA 2 (A77, A81). ISERROR is FALSE, TRUE and ISTEXT over D1:D2 is FALSE, FALSE (A85,
-    A93). TYPE of the result is 64 and ISREF FALSE (A105, A89).
+    A93). TYPE of the result is 64 and ISREF FALSE (A105, A89). MAX is 20 (A113), which cannot
+  tell whether MAX walks the reference (F1:F2 = 3, 4 are below 20).
   Ours gives `#VALUE!` for the element, so every reader above differs (106 cells). SPEC-0018's nested cell would
   fail ISREF, TYPE, AREAS, CELL and the aggregates, and SPEC-0014's `RefGrid` holds no values, so matching this
   needs an array that mixes values and references: spec T-4569, implementation T-4570 (it owns t4543 W45, W46

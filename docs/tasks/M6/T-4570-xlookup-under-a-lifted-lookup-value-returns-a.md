@@ -22,7 +22,7 @@ sees.
 - The representation and each reader's rule come from T-4569's spec. Today
   `xlookup.rs` `xlookup_if_not_found` gives `#VALUE!` for a range under a lifted lookup_value.
 - probes/t4563 A49 and A53 (`CELL("address",..)` of a reference on Data) include Excel's workbook name in brackets,
-  which is the oracle file's hashed name. Check how other CELL("address") cases score that prefix before matching it.
+  which is the oracle file's hashed name. Check how other CELL("address") cases score that prefix before matching it. Never match the hash itself.
 
 ## Acceptance criteria
 - [ ] The visibly-off cells named below pass, with no regression.
