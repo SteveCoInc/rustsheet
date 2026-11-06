@@ -225,6 +225,7 @@ probes/t4332-fraction-fresh.case.json	17
 probes/t4333-count-ulp-scan.case.json	6
 probes/t4344-groupby-descending-search.case.json	2
 probes/t4358-pivotby-unreached-column-leaf.case.json	21
+probes/t4368-poisson-shape-and-edge.case.json	40
 probes/t4370-ulp-map-2.case.json	55
 probes/t4370-ulp-map.case.json	7
 probes/t4379-pivotby-repeated-unreached-leaf.case.json	20

@@ -1054,10 +1054,11 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       T-4402 owns the cells.
     - **The subtotal error gate is the leaf buckets'**: with one function over two value columns, a subtotal
       whose records reached its class while every leaf under it is empty for the row group is not computed (its
-      NA() makes no `#VALUE!`; Calc!B1, B3, B4 and the other `!` targets of B1:B15), as `Grid::has_records`
-      decides. The three B misses (B2, B5, B14) are the
-      moved subtotal cell of that layout showing `""` where Excel shows the reached-class records (`12` and
-      `11, 14, 15` in B2), an engine defect on a tree with a leaf no record reaches (T-4403).
+      NA() makes no `#VALUE!`), as `Grid::has_records` decides. The gate cells are Calc!B1, B3, B4, B6, B8, B9,
+      B12, B13, B14 and B15, whose LAMBDA is NA() on exactly that subtotal's records (the record list after `!` in
+      column A). In B2, B5 and B14 the moved subtotal cell of that layout showed `""` where Excel shows the
+      reached-class records (`12` and `11, 14, 15` in B2): `Placement` named each column group by its first row,
+      which a leaf no record reaches shares with a reached group. Fixed (T-4403): `Group::leaf_id` names it.
 
 Implemented in (T-4342): `Grouping::new` (functions/lookup_and_reference/grouping.rs) takes UNIQUE's kept rows
 (`unique_first_lines`, shared with `unique_of`), sorts them with `Keys::sorted` (`sort_indices_pairwise` on whole
