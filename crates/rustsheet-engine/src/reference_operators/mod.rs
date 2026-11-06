@@ -521,6 +521,10 @@ impl Model {
         if left.len() + right.len() > MAX_AREAS {
             return Err(too_many_areas(cell));
         }
+        // Each area copied is charged like a built cell, so a union that grows by one area a
+        // step (`REDUCE(A1,A2:A70000,LAMBDA(a,v,(a,v)))`, T-4494) is bounded by the formula's
+        // work budget, not by the area cap alone, which would allow quadratic copying.
+        self.spend_cells(left.len() + right.len(), 1, cell)?;
         let mut areas = left.into_vec();
         areas.extend_from_slice(&right);
         Ok(areas)

@@ -218,7 +218,8 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 The default order of a newly created pivot (ascending, by type) is a UI action and not reachable from a
 file.
 Status: VERIFIED (excel-graph)
-Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader`; the rendering is T-4142's)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader`)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`item_cell`: how an item renders; T-4149)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`Order`: the display order of a computed
 result)
 
@@ -259,22 +260,36 @@ Status: VERIFIED (excel-graph); GETPIVOTDATA against such a pivot is in T-4130
 Rule: in a tabular pivot, the header cell of the first row field reads the field's own name (`Region`)
 only when every `pivotField` carries `compact="0"`. Otherwise it reads `Row Labels`. One field at the
 default gives `Row Labels` in every role and position probed:
-- roles: the outer row field, the inner row field, the data field, an unused source field and a
-  calculated field;
+- roles: the outer row field, the inner row field, a column field, a page field, the data field, an
+  unused source field and a calculated field;
 - positions in the cache: first (R1), middle (R3, R4) and last (R6, and t4128 K's calculated field).
 
-Column and page fields were not probed. For the data field, its `outline` makes no difference (t4123
-T3, T4); for other fields `outline` was not varied apart from `compact`. The second row field's header
-is its name (`Product`) whenever it keeps its own column.
+For the roles where `outline` was varied apart from `compact` (the outer row field, the column field
+and the data field), only `compact` counts and `outline` makes no difference. With every field
+`compact="0"`, an outer row field (t4609 L3), a column field (L7) and the data field (t4123 T3, T4)
+left at the default `outline` still give the field's name. With `compact` at the default,
+`outline="0"` on the outer row field (L4) or the column field (L8) still gives `Row Labels`.
+`outline` was never varied apart from `compact` on the inner row field (Product is
+`compact="0" outline="0"` in every L sheet), a page field, an unused field or a calculated field.
+The second row field's header is its name (`Product`) whenever it keeps its own column.
 
-An outer row field left at the default `compact` and `outline` (R1) also changes the layout:
-- the inner field moves into the outer field's column: location A3:B11 against A3:C11, and
-  firstDataCol 1 against 2;
-- there are no `<item> Total` lines; each outer item's subtotal sits on the item's own line (R1!A4
-  `East` with B4 22, R1!A8 `West` with B8 27, and West's products in A9:A10), while the other R sheets
-  have `East Total` at A7 and `West Total` at A10.
+When the field name wins, `rowHeaderCaption` is ignored: L5, with every field `compact="0"` and
+`rowHeaderCaption="Regions"`, shows `Region` at A3. With a column field, `Row Labels` (or the name)
+sits on the row below the data caption (L1!A4, L7!A4), and the column field's header beside it reads
+`Column Labels` when the column field's `compact` is at the default (L1!C3 with both attributes at
+the default, L8!C3 with `outline="0"`) and its name `Channel` when every field is `compact="0"`
+(L7!C3). Whether a non-compact column field reads its name while another field is at the default is
+not probed.
 
-Which of the two attributes causes this is not separated.
+The outer row field's two attributes split the layout of R1 (both at the default) between them:
+- `compact` and `outline` both on put the inner field in the outer field's column: R1's location is
+  A3:B11 and firstDataCol 1. Either off gives the inner field its own column: L3 (`compact="0"`) and
+  L4 (`outline="0"`) are A3:C11 with firstDataCol 2, like R2 to R6;
+- `outline` alone decides the lines and the subtotals. With it on (R1, L3) each outer item has a
+  line of its own carrying its subtotal (L3!A4 `East` with C4 22 and B4 blank, A8 `West` with C8 27)
+  and there are no `<item> Total` lines; with it off (L4) the item shares its first child's line and
+  `East Total` (A7) and `West Total` (A10) follow, as in R2 to R6.
+
 Evidence (excel-graph, 2026-11-06):
 - probes/t4583-pivot-row-labels A3 (T-4583). The cache fields are Region, Product, Sales, Units and
   Risky; every field carries `compact="0" outline="0"` except the one named:
@@ -284,6 +299,18 @@ Evidence (excel-graph, 2026-11-06):
   - R4 Sales (data, middle): `Row Labels`;
   - R6 Risky (unused, last): `Row Labels`;
   - R5 (none left at the default): `Region`.
+- probes/t4609-pivot-row-labels-2 (T-4609). The cache fields are Region, Product, Channel and Sales;
+  every pivot is tabular with rows Region, Product and Sum of Sales, and every field carries
+  `compact="0" outline="0"` except as named:
+  - L1 column field Channel at the default: A4 `Row Labels`, C3 `Column Labels`;
+  - L2 page field Channel at the default (location A4): A4 `Row Labels`; L6, the same page field
+    non-compact: A4 `Region`;
+  - L3 Region `compact="0"`, `outline` at the default: A3 `Region`, outline lines, A3:C11;
+  - L4 Region `outline="0"`, `compact` at the default: A3 `Row Labels`, tabular lines, A3:C11;
+  - L5 none at the default, `rowHeaderCaption="Regions"`: A3 `Region`;
+  - L7 column field Channel `compact="0"`, `outline` at the default: A4 `Region`, C3 `Channel`;
+  - L8 column field Channel `outline="0"`, `compact` at the default: A4 `Row Labels`,
+    C3 `Column Labels`.
 - probes/t4123-pivot-capture A4 (T-4123): T and T4, with Sales at the default, give `Row Labels`; T2
   and T3, with every field non-compact, give `Region`.
 - probes/t4128-pivot-spike K!A4 (T-4128): a calculated field at the default gives `Row Labels`.
@@ -292,11 +319,17 @@ Evidence (excel-graph, 2026-11-06):
 oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on the Sales field, showed
 `Region` too.
 Correction: T-4123 first read the rule as "the data field's `compact`". T-4137 narrowed it to the
-non-axis fields, and T-4583's R1 and R2 show that axis fields count too.
-Status: VERIFIED (excel-graph) for the roles and positions probed. UNVERIFIED (probe pending: T-4609):
-column and page fields, `outline` alone on axis fields, and which attribute moves R1's subtotals.
-Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (R1's lines and `firstDataCol`, read as the
-outer field's outline form with `compact` and `outline` both on; T-4147). The header text is T-4149's.
+non-axis fields, and T-4583's R1 and R2 show that axis fields count too. T-4583 left R1's layout to
+"`compact` and `outline` both on"; T-4609's L3 and L4 split it as above.
+Status: VERIFIED (excel-graph) for the roles, positions and attributes probed. UNVERIFIED (probe
+pending: T-4660): the column header of a non-compact column field while another field is at the
+default, and `outline` varied apart from `compact` (either way round) on the inner row field, a page
+field, an unused field or a calculated field.
+Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (the outer field's own line from
+its `outline`, and in `label_columns` the shared column from `compact` and `outline` both on;
+T-4147, checked against every L sheet by T-4609)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (the header text, every probe
+above reproduced; T-4149)
 
 ## Rendered pivot cells: blanks, repeated labels, subtotals and the Values caption
 Rule:
@@ -311,13 +344,41 @@ Rule:
 - A compact pivot with a column field puts the data field's caption (`Sum of Sales`) at the
   location's corner and `Column Labels` beside it (C!A3, B3), with `Row Labels` below (C!A4).
 
+- The headers follow the lines: each column line labels its levels from `r` on, one header row
+  per column level below the location's top row (t4138 G5: `A` in C5, `Web` and `Store` in C6
+  and D6, `A Total` in E5); each row line labels its levels from `r` on in its level's label
+  column, compact form putting several levels in one column (G2). The sidecars hold values
+  only, so a label cell's indentation is not evidenced; the engine writes the item's text alone.
+- A single data field with Values on no axis puts its caption at the corner with fields on both
+  axes (C!A3), over the data column with no column field (t4138 G1!C4, G8!B8), and as the label
+  of the only row with no row field (G7!B6). With Values on an axis, its items are the data
+  fields' captions, and its grand-total lines read `Total <data field>` (G6!B11:B12, t4135
+  A_sum!N4:S4), with no `grandTotalCaption` set; whether that caption replaces the text there is
+  unprobed (the engine keeps `Total <data field>`; UNVERIFIED, T-4650).
+- Items render as in "Items show in the order the pivot field lists them" (t4134 I2, I4, I5).
+
 Evidence: probes/t4123-pivot-capture, the `pivots` cells of its sidecar (excel-graph, 2026-11-06,
-T-4123). Scored once T-4124 lands; the engine renders none of these yet.
-Status: VERIFIED (excel-graph)
+T-4123); t4138-pivot-geometry G1 to G9 (T-4138); t4135-pivot-aggregates (T-4135). The engine's
+render reproduces every cell of the probe pivots listed in its tests (t4123 C and T to T4 but
+T's show-values-as column D, t4138 G1 to G9, t4137 K1 to K6, t4583 R1 to R6, C1, C2, t4609 L1 to
+L8, t4134 I1, I2, I4, I5, t4135 all twelve, t4589, t4614, t4616, and t4622 but East's custom Count subtotal
+values over an error, a result rule of T-4168's, T-4636). Number formats are PV2's (T-4169).
+The engine's own readings, not probed: a number or date item's subtotal label (`number_to_text`
+of the value, then ` Total`); a subtotal label with Values inside its field (`<item> <data
+field>`); the grand-total caption with Values on its axis (always `Total <data field>`, even with
+`grandTotalCaption`); the
+header over a Values level in a label column of its own (left empty). `rowHeaderCaption` beside
+the all-`compact="0"` rule is settled: the field name wins (t4609 L5!A3 `Region`; Caption
+attributes below).
+Status: VERIFIED (excel-graph) for the probes listed. UNVERIFIED (probe pending: T-4657): number
+and date item subtotal labels; (T-4650): the Values-inside and Values-axis captions and header.
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`render`; T-4149)
 
 ## Caption attributes, empty and error captions, page captions, custom subtotal labels
 Rule:
-- `rowHeaderCaption` replaces `Row Labels` (K1!A4 `Regions`).
+- `rowHeaderCaption` replaces `Row Labels` (K1!A4 `Regions`). In a tabular pivot whose every field
+  is `compact="0"` it is ignored and the field name shows (probes/t4609-pivot-row-labels-2 L5!A3
+  `Region`; see "A tabular pivot's first row header..." above).
 - `grandTotalCaption` replaces `Grand Total` (K1!A7 `All of it`).
 - `dataCaption` replaces the `Values` caption over the data fields (K1!B3 `Measures`).
 - `colHeaderCaption` replaces `Column Labels` beside a real column field in compact form
@@ -330,7 +391,9 @@ Rule:
   the caption as text: the cell, its row and column totals and the grand total (K3!C5, E5, C7 and E7 `ERR`; the
   data hold one `#DIV/0!` at East/B). The empty West/C stays blank (K3!D6).
 - Page fields show `(All)` with no selection, the item with one (`A`), and `(Multiple Items)` when
-  several items stay visible (K4!B2:B4).
+  several items stay visible (K4!B2:B4). What a page field shows when its hidden items leave one
+  item visible, and a selected number, boolean or blank item, are unprobed: the engine shows
+  `(Multiple Items)` and the item as a row label renders it (UNVERIFIED, T-4657).
 - Custom subtotal functions label each subtotal line `<item> <Function>`: `East Sum`, `East Count`
   (K5!A7:A8), with Count counting records (4). `countA` is labelled `Count` too
   (probes/t4622-pivot-count-subtotals CA!A6; see "Which function the countA and count custom
@@ -345,6 +408,7 @@ Evidence: probes/t4137-pivot-captions (excel-graph, 2026-11-06, T-4137). Default
 creating a pivot in the UI is where Excel picks them (T-2327 keeps that question). For other
 aggregates and `#DIV/0!` under `errorCaption`, see "errorCaption replaces every error value" below.
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`render`, `page_area`; T-4149)
 
 ## Page fields render above the location
 Rule: page fields render in the rows above the pivot's `location`, ending one blank row before it. Each
@@ -364,7 +428,10 @@ the second pair starts at E, three columns after B, and the five-column window e
 cannot see past its own window, though, so a page cell outside it would go unseen (row 1 of K4,
 rows 1–4 of G8).
 Status: VERIFIED (excel-graph) for the rendering; the window is consistent with both probes, not
-independently confirmed (probe pending: T-4584)
+independently confirmed (probe pending: T-4584). Page grids filled down with `pageWrap` are
+T-4650's (G8 cannot tell the orders apart).
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`page_area`: `rowPageCount`
+rows ending one row above the location, three columns per page column; T-4149)
 
 ## Pivot geometry: location and header offsets per layout
 Rule: Excel writes the pivot's `location` as the body's bounding box (page fields excluded), with
@@ -398,12 +465,12 @@ The engine's layout (T-4147) reproduces the saved `location`, `firstHeaderRow`, 
 `firstDataCol`, `rowPageCount` and `colPageCount` of every probe pivot in scope (listed under "Layout
 lines" below). Page fields: with no `pageWrap` and the default order, every page field is in one column
 (t4137 K4: 3 by 1); with `pageWrap` and `pageOverThenDown`, `pageWrap` fields per row (t4138 G8: 2 by
-2). A row field shares its column with the next level with `compact` and `outline` both on (t4583 R1),
-and not with both off (R2).
+2). A row field shares its column with the next level only with `compact` and `outline` both on
+(t4583 R1); with both off (R2), `compact="0"` alone (t4609 L3) or `outline="0"` alone (L4) the next
+level has its own column.
 Status: VERIFIED (excel-graph) for the table and the T-4147 reproduction above; the refusal is a builder
 observation. UNVERIFIED (probe pending: T-4650): `firstHeaderRow` other than 1, and the page grid's
-other two orders (G8's 2 by 2 cannot tell them apart); (T-4609): whether `compact` or `outline` alone
-decides the shared column.
+other two orders (G8's 2 by 2 cannot tell them apart).
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`geometry`, `location`; T-4147)
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`geometry`: the saved offsets typed
 in `PivotTable::geometry`, T-4147)
@@ -415,10 +482,12 @@ the Values field (`x="-2"`) as one more level whose items are the data fields; a
 own last one), and `<x>` lists the rest. An `x` is the item's position in the pivot field's `<items>`,
 or the data field's index at the Values level (`i` repeats it).
 - Every tuple of one item per level is a `t="data"` line.
-- On rows, an item of a field in outline form (`outline` on, which compact form also has) has a line of
-  its own above its children, which carries its subtotal values (with `subtotalTop`, the default). An item of a tabular field
-  (`outline="0"`) shares its first child's line, and its subtotal lines follow its children. The form
-  is per field: an outer field left at the default inside a tabular pivot is outline form (t4583 R1).
+- On rows, an item of a field in outline form (`outline` on, which compact form also has) has a line
+  of its own above its children, which carries its subtotal values (with `subtotalTop`, the
+  default). An item of a tabular field (`outline="0"`) shares its first child's line, and its
+  subtotal lines follow its children. The form is per field and follows `outline` alone: an outer
+  field left at the default inside a tabular pivot is outline form (t4583 R1), and so is one with
+  only `compact="0"` (t4609 L3), while one with only `outline="0"` is tabular (L4).
 - On columns every item shares its first child's line, and subtotal lines follow the children.
 - A field has subtotal lines only when a field other than Values is inside it. They are one
   `t="default"` line, or one line per custom subtotal in the field's order (`t="sum"`, `t="count"`).
@@ -433,8 +502,9 @@ lines (T-4147):
   two column fields with `default` lines after their children, G6 Values on rows with two `grand`
   lines, G7 and G9 `<i/>`, G8 page fields only);
 - probes/t4137-pivot-captions K1 to K6 (K5 tabular `sum` and `count` lines), t4583-pivot-row-labels
-  R1 to R6, C1, C2, t4134-pivot-items I1, I2, I4, I5, t4135-pivot-aggregates (all twelve),
-  t4589-pivot-total-order, t4614-pivot-total-order-2 and t4616-pivot-total-order-3 (every sheet);
+  R1 to R6, C1, C2, t4609-pivot-row-labels-2 L1 to L8, t4134-pivot-items I1, I2, I4, I5,
+  t4135-pivot-aggregates (all twelve), t4589-pivot-total-order, t4614-pivot-total-order-2 and
+  t4616-pivot-total-order-3 (every sheet);
 - the lines of probes/t4128-pivot-spike S (its #SPILL! location is the grid's, T-4151);
 - the Excel-saved pivot of crates/rustsheet-xlsx/tests/example.xlsx: three compact row fields whose
   `<items>` list the cache items out of order, so `x` is the position in `<items>`, not the cache index.
@@ -660,6 +730,7 @@ Evidence: probes/t4135-pivot-aggregates EC (excel-graph, 2026-11-06, T-4135):
 - West (B6:L6) shows `ERR` for StdDev and Var, which have one value, and 0 for StdDevp and Varp.
 - The Grand Total row (B7:L7) is `ERR` everywhere; see the next entry for Count and CountNums.
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::value`; T-4149)
 
 ## A Count total over an error field is the error when the pivot mixes aggregates
 Rule: Count and CountNums never show an error in an item's cell. When the pivot's data fields mix
@@ -726,6 +797,9 @@ unit per record and stage, per item ordered, per sort step, per node or accumula
 fed to an accumulator. It holds at most 10,000,000 nodes (`MAX_PIVOT_NODES`): axis nodes plus one
 accumulator per (row node, column node, data field) some record reaches. Past either the pivot has no
 result (`PivotComputeError::Limit`), where Excel would render it.
+Its cells (`render`, T-4149) hold at most 134,217,728 bytes of text together
+(`MAX_PIVOT_TEXT_BYTES`, about 32 per cell of the cell cap), since each cell copies its label;
+past it the render fails with `Limit`, where Excel would show the pivot.
 Its layout (`lay_out`, T-4147) draws on the same work units, one per line and `x` made, and has no
 result past 4,000,000 cells (`MAX_PIVOT_CELLS`: the location's rows times columns plus two per page
 field, checked from the line counts before any cell is made) or when the location would pass the
@@ -736,6 +810,7 @@ Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `MAX_PIVOT_NODES`, `charge`,
 `count_nodes`)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`MAX_PIVOT_CELLS`, `location`; T-4147)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`MAX_PIVOT_TEXT_BYTES`; T-4149)
 
 ## Pivots without refreshOnLoad, and source edits
 Rule: unknown. Two things are unprobed: whether Excel for the web re-renders a pivot whose cache lacks
