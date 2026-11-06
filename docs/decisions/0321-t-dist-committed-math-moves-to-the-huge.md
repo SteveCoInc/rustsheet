@@ -8,6 +8,12 @@
   where Excel's own cell is `#NUM!`. Decision 0199 makes a committed batch immutable; a corrected batch is a new batch
   unless a decision record authorizes the change. A new batch would need a fresh oracle fill of the same formulas, and
   would leave the old batches' math wrong beside it.
+- **Options considered:**
+  - Leave the batches as they are: T.DIST keeps a math number past Excel's evidenced `#NUM!`, so 34 committed points
+    stay wrong and the definition disagrees with T.DIST.RT's rule. Rejected.
+  - Commit a new batch with the corrected math: needs a fresh oracle fill of the same formulas and leaves the old
+    batches' math wrong beside it. Rejected.
+  - Rewrite the 34 changed cells in place under this record (chosen).
 - **Decision:** T.DIST's definition uses `HugeXCut` per `cumulative` and per sign, with each bracket taken from every
   Excel cell of one T.DIST call with |x| above 1E10 (only the three tables have one; a cumulative cell with df above
   1E10 is `#NUM!` for its df and brackets nothing):

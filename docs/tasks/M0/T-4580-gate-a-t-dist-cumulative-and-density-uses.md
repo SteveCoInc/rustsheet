@@ -40,7 +40,7 @@ committed tables keeps 0 differences under `verify`.
       table defects.
 - [x] The probe sidecars are regenerated with `--function T.DIST`, and only number cells move.
 - [x] A decision record (decision 0199) authorizes the changed T.DIST math values, or they go in a new batch.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Matching the engine's density to Excel's `#NUM!` (T-3554).

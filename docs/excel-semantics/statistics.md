@@ -7184,7 +7184,7 @@ T.DIST (T-4580): all three T.DIST tables (s1, e-T-3425, r4-T-2585) together narr
 whose df is above 1E10 are left out: the cumulative T.DIST is `#NUM!` there for its df.
 - Cumulative, x > 0: 1 up to 7.3E+146 (e-T-3425 A92, `T.DIST(7.33561600112214E+146,228757,TRUE)`), `#NUM!` from
   1.9E+159 (r4-T-2585 A217, `T.DIST(1.89648831921934E+159,51740,TRUE)`, and 9 more cells). The s1 table alone had
-  only `#NUM!` cells at a positive x.
+  no number above 3.3E+35 at a positive x.
 - Cumulative, x < 0: 0 up to |x| 2.0E+153 (r4-T-2585 A223, `T.DIST(-2.01264664929796E+153,43530,TRUE)`), `#NUM!` from
   5.4E+196 (e-T-3425 A88, `T.DIST(-5.43165733249003E+196,3768,TRUE)`, and 5 more cells).
 - The density's brackets are in "T.DIST's density is #NUM! at a huge x" below.
