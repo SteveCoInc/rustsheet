@@ -3,7 +3,7 @@ id: T-4092
 title: "Gate A tables, order statistics: MEDIAN, PERCENTILE, PERCENTILE.INC, PERCENTILE.EXC, QUARTILE, QUARTILE.INC and QUARTILE.EXC"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
