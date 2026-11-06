@@ -1,0 +1,500 @@
+//! The pivot table definition model (SPEC-0032 "Model (T-4139)").
+//!
+//! A [`PivotTable`] holds, typed, every `pivotTableDefinition` attribute PV1 reads: the form flags
+//! per pivot and per field, subtotals and their placement, grand totals, the items with `h`, `sd`,
+//! `s` and `t`, page field selections, data field names, aggregates and number formats, and the
+//! captions. Defaults are ECMA-376's (`sml.xsd`) as Excel reads them (MS-OI29500 §18.10.1.45,
+//! .69, .73; docs/research/pivot-tables-2026-11-04/excel-docs.md §7). Everything else in the part
+//! is kept verbatim in [`PivotTable::opaque`] for export (T-4176); the importer counts it toward
+//! its limits.
+
+use bitcode::{Decode, Encode};
+
+/// `dataField@baseItem` when absent: no base item (MS-OI29500 §18.10.1.22, §18.10.1.44).
+pub const NO_BASE_ITEM: u32 = 1_048_832;
+
+/// A pivot table on a worksheet.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+pub struct PivotTable {
+    /// The pivot's name.
+    pub name: String,
+    /// The worksheet's stable `sheet_id`, not its index (api-design.md principle 3).
+    pub sheet_id: u32,
+    /// `<location ref>`, 0-based.
+    pub location: CellArea,
+    /// The rest of `<location>`: the header and data offsets and the page-field grid.
+    pub geometry: PivotGeometry,
+    /// An index into [`Workbook::pivot_caches`](crate::types::Workbook::pivot_caches).
+    pub cache: u32,
+    /// One per cache field.
+    pub fields: Vec<PivotField>,
+    /// `<rowFields>`.
+    pub row_fields: Vec<AxisField>,
+    /// `<colFields>`.
+    pub column_fields: Vec<AxisField>,
+    /// `<pageFields>`, in file order.
+    pub page_fields: Vec<PageField>,
+    /// `<dataFields>`.
+    pub data_fields: Vec<DataField>,
+    /// The pivot-wide layout flags and captions.
+    pub options: PivotOptions,
+    /// The definition's elements and attributes the model does not read, verbatim.
+    pub opaque: Vec<OpaqueEntry>,
+}
+
+impl PivotTable {
+    /// A pivot named `name` at `location` on the sheet `sheet_id`, over the cache at index
+    /// `cache`, with no fields and the schema's options.
+    #[must_use]
+    pub fn new(name: String, sheet_id: u32, location: CellArea, cache: u32) -> Self {
+        PivotTable {
+            name,
+            sheet_id,
+            location,
+            geometry: PivotGeometry::default(),
+            cache,
+            fields: Vec::new(),
+            row_fields: Vec::new(),
+            column_fields: Vec::new(),
+            page_fields: Vec::new(),
+            data_fields: Vec::new(),
+            options: PivotOptions::default(),
+            opaque: Vec::new(),
+        }
+    }
+}
+
+/// The attributes of `<location>` besides `ref`: where the body's header and data start, measured
+/// from the location's top-left cell, and the page fields' grid. `Default` is all zero, what the
+/// importer reads for a missing or malformed attribute (the schema requires the three offsets and
+/// defaults the page counts to 0). Excel's own values per layout are in docs/excel-semantics/
+/// pivots.md "Pivot geometry" (probes/t4138-pivot-geometry); the layout stage computes them
+/// (`pivot::layout::lines`).
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub struct PivotGeometry {
+    /// `firstHeaderRow`: the row of the column fields' header.
+    pub first_header_row: u32,
+    /// `firstDataRow`: the first row of values (and of the row items).
+    pub first_data_row: u32,
+    /// `firstDataCol`: the first column of values (past the row items' columns).
+    pub first_data_column: u32,
+    /// `rowPageCount`: the rows of the page-field grid above the location.
+    pub row_page_count: u32,
+    /// `colPageCount`: the columns of that grid.
+    pub column_page_count: u32,
+}
+
+/// The pivot-wide attributes of `pivotTableDefinition` that change its layout or its text.
+/// `Default` is the schema's.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+pub struct PivotOptions {
+    /// `compact` (default on): row fields share one column.
+    pub compact: bool,
+    /// `outline` (default off).
+    pub outline: bool,
+    /// `outlineData` (default off): the Values field in outline form.
+    pub outline_data: bool,
+    /// `compactData` (default on): the Values field in compact form.
+    pub compact_data: bool,
+    /// `rowGrandTotals` (default on): the grand-total row.
+    pub row_grand_totals: bool,
+    /// `colGrandTotals` (default on): the grand-total column.
+    pub column_grand_totals: bool,
+    /// `dataOnRows` (default off): the Values field is on rows.
+    pub data_on_rows: bool,
+    /// `dataPosition`: the Values field's place among its axis's fields. Absent when the file
+    /// leaves it out; MS-OI29500 §18.10.1.73 reads that as 0.
+    pub data_position: Option<u32>,
+    /// `rowHeaderCaption` (`Row Labels` when absent).
+    pub row_header_caption: Option<String>,
+    /// `colHeaderCaption` (`Column Labels` when absent).
+    pub column_header_caption: Option<String>,
+    /// `grandTotalCaption` (`Grand Total` when absent).
+    pub grand_total_caption: Option<String>,
+    /// `dataCaption`: the Values field's caption (required by the schema; Excel writes
+    /// `Values`).
+    pub data_caption: Option<String>,
+    /// `showMissing` (default on): an empty value cell shows `missingCaption`.
+    pub show_missing: bool,
+    /// `missingCaption`.
+    pub missing_caption: Option<String>,
+    /// `showError` (default off): an error value cell shows `errorCaption`.
+    pub show_error: bool,
+    /// `errorCaption`.
+    pub error_caption: Option<String>,
+    /// `pageWrap` (default 0): page fields per column (or row) before wrapping; 0 never wraps.
+    pub page_wrap: u32,
+    /// `pageOverThenDown` (default off): page fields fill across before down.
+    pub page_over_then_down: bool,
+}
+
+impl Default for PivotOptions {
+    fn default() -> Self {
+        PivotOptions {
+            compact: true,
+            outline: false,
+            outline_data: false,
+            compact_data: true,
+            row_grand_totals: true,
+            column_grand_totals: true,
+            data_on_rows: false,
+            data_position: None,
+            row_header_caption: None,
+            column_header_caption: None,
+            grand_total_caption: None,
+            data_caption: None,
+            show_missing: true,
+            missing_caption: None,
+            show_error: false,
+            error_caption: None,
+            page_wrap: 0,
+            page_over_then_down: false,
+        }
+    }
+}
+
+/// How a pivot shows one cache field.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+pub struct PivotField {
+    /// The axis the field is on, if any.
+    pub axis: Option<Axis>,
+    /// A bitset over the cache field's `items`: bit `i` set means item `i` is hidden. It is the
+    /// one record of `item@h` for an item that names a cache item ([`PivotField::item_hidden`]).
+    pub hidden: Vec<u64>,
+    /// `showAll`: whether the pivot shows the field's items that no record holds. ECMA-376's
+    /// default is on; Excel writes `showAll="0"`. GETPIVOTDATA on such an item of an ungrouped
+    /// field is 0 when on and `#REF!` when off (probes/t4248-getpivotdata-recordless-item).
+    pub show_all: bool,
+    /// `compact` (default on).
+    pub compact: bool,
+    /// `outline` (default on).
+    pub outline: bool,
+    /// `subtotalTop` (default on): subtotals above the items in compact and outline form.
+    pub subtotal_top: bool,
+    /// `defaultSubtotal` (default on): the automatic subtotal, by each data field's function.
+    pub default_subtotal: bool,
+    /// The custom subtotals (`sumSubtotal`, `countASubtotal`, ...), each once, in the schema's
+    /// attribute order. `countASubtotal` is read as [`Aggregate::Count`] and `countSubtotal` as
+    /// [`Aggregate::CountNums`] (ECMA-376's meanings, unproven for Excel: see
+    /// [`ItemType::Function`]).
+    pub custom_subtotals: Vec<Aggregate>,
+    /// `sortType` (default manual).
+    pub sort_type: SortType,
+    /// `insertBlankRow` (default off).
+    pub insert_blank_row: bool,
+    /// `numFmtId` of the item labels; MS-OI29500 §18.10.1.69 reads absent as 0.
+    pub number_format: Option<u32>,
+    /// `<items>`, in file order: the order the field shows its items in.
+    pub items: Vec<PivotItem>,
+}
+
+impl Default for PivotField {
+    fn default() -> Self {
+        PivotField::new(None, 0)
+    }
+}
+
+impl PivotField {
+    /// A field on `axis` with a hidden bitset sized for `item_count` items, none hidden, no
+    /// listed items and the schema's defaults (`showAll` on).
+    #[must_use]
+    pub fn new(axis: Option<Axis>, item_count: usize) -> Self {
+        PivotField {
+            axis,
+            hidden: vec![0; item_count.div_ceil(64)],
+            show_all: true,
+            compact: true,
+            outline: true,
+            subtotal_top: true,
+            default_subtotal: true,
+            custom_subtotals: Vec::new(),
+            sort_type: SortType::Manual,
+            insert_blank_row: false,
+            number_format: None,
+            items: Vec::new(),
+        }
+    }
+
+    /// Hides item `item`; an item past the bitset's size (sized at import) is ignored.
+    pub fn hide(&mut self, item: u32) {
+        if let Some(word) = self.hidden.get_mut(item as usize / 64) {
+            *word |= 1 << (item % 64);
+        }
+    }
+
+    /// Whether item `item` is hidden; an item past the bitset reads as not hidden.
+    #[must_use]
+    pub fn is_hidden(&self, item: u32) -> bool {
+        self.hidden
+            .get(item as usize / 64)
+            .is_some_and(|word| word & (1 << (item % 64)) != 0)
+    }
+
+    /// `item@h` of a listed item: whether the cache item it names is hidden. An item that names
+    /// no cache item (a subtotal or blank line) is never hidden.
+    #[must_use]
+    pub fn item_hidden(&self, item: &PivotItem) -> bool {
+        item.kind == ItemType::Data && item.index.is_some_and(|x| self.is_hidden(x))
+    }
+}
+
+/// One `<item>` of a pivot field's `<items>`.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+pub struct PivotItem {
+    /// `t` (default data): a cache item, or the subtotal, grand-total or blank line.
+    pub kind: ItemType,
+    /// `x`: the cache item, for a data item.
+    pub index: Option<u32>,
+    /// `sd` (default on): the item is expanded (MS-OI29500 §18.10.1.45).
+    pub expanded: bool,
+    /// `s` (default off): a manual filter applies to the item (MS-OI29500 §18.10.1.45 reads it
+    /// so, not as "has a string value").
+    pub filtered: bool,
+}
+
+impl PivotItem {
+    /// A data item for cache item `index`, expanded and not filtered.
+    #[must_use]
+    pub fn data(index: u32) -> Self {
+        PivotItem {
+            kind: ItemType::Data,
+            index: Some(index),
+            expanded: true,
+            filtered: false,
+        }
+    }
+}
+
+/// `ST_ItemType`: what an `<item>` (or an axis line) stands for.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+pub enum ItemType {
+    /// `data`: a cache item.
+    Data,
+    /// `default`: the automatic subtotal, by each data field's own function.
+    Default,
+    /// A custom subtotal line (`sum`, `countA`, `avg`, ..., `varP`), by its function. `countA` is
+    /// read as [`Aggregate::Count`] and `count` as [`Aggregate::CountNums`], ECMA-376's meanings;
+    /// that is unproven for Excel, which labels a `count` line `Count` over a numbers-only field
+    /// (probes/t4137-pivot-captions K5!A8; UNVERIFIED in docs/excel-semantics/pivots.md, T-4622).
+    Function(Aggregate),
+    /// `grand`.
+    Grand,
+    /// `blank`.
+    Blank,
+}
+
+/// `ST_FieldSortType`.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+pub enum SortType {
+    /// `manual`: the items' listed order.
+    Manual,
+    /// `ascending`.
+    Ascending,
+    /// `descending`.
+    Descending,
+}
+
+/// A `<pageField>`: a report filter's selection.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+pub struct PageField {
+    /// `fld`: the pivot field.
+    pub field: u32,
+    /// `item`: the selected item, an index into the field's [`PivotField::items`]; `None` is
+    /// `(All)` (MS-OI29500 §18.10.1.62).
+    pub item: Option<u32>,
+    /// `hier`: the OLAP hierarchy; Excel writes -1 for other sources.
+    pub hierarchy: Option<i32>,
+}
+
+/// An inclusive, 0-based cell rectangle on one sheet.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+pub struct CellArea {
+    /// First row.
+    pub top: u32,
+    /// First column.
+    pub left: u32,
+    /// Last row.
+    pub bottom: u32,
+    /// Last column.
+    pub right: u32,
+}
+
+/// A pivot axis.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Axis {
+    /// Rows.
+    Row,
+    /// Columns.
+    Column,
+    /// The report filter (page) area.
+    Page,
+}
+
+/// A `<field x>` of `<rowFields>`/`<colFields>`.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+pub enum AxisField {
+    /// A cache field, by index.
+    Field(u32),
+    /// `x="-2"`: the Values field.
+    Values,
+}
+
+/// A value field of a pivot. `Default` is the schema's (`subtotal="sum"`, `showDataAs="normal"`,
+/// `baseField="-1"`, `baseItem="1048832"`).
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+pub struct DataField {
+    /// `name`: the caption (`Sum of Sales`).
+    pub caption: String,
+    /// `fld`: the cache field it summarizes.
+    pub field: u32,
+    /// `subtotal`: how it summarizes.
+    pub function: Aggregate,
+    /// `showDataAs`.
+    pub show_data_as: ShowDataAs,
+    /// `baseField`: the field a show-values-as calculation compares against; -1 for none.
+    pub base_field: i32,
+    /// `baseItem`: the item it compares against; [`NO_BASE_ITEM`] for none, 1048828 for
+    /// (previous) and 1048829 for (next) (MS-OI29500 §18.10.1.22).
+    pub base_item: u32,
+    /// `numFmtId` of the values; absent is the application's default (MS-OI29500
+    /// §18.10.1.22 d, as docs/research/pivot-tables-2026-11-04/excel-docs.md §1 quotes it; not
+    /// probed).
+    pub number_format: Option<u32>,
+}
+
+impl Default for DataField {
+    fn default() -> Self {
+        DataField {
+            caption: String::new(),
+            field: 0,
+            function: Aggregate::Sum,
+            show_data_as: ShowDataAs::Normal,
+            base_field: -1,
+            base_item: NO_BASE_ITEM,
+            number_format: None,
+        }
+    }
+}
+
+/// A data field's summary function.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Aggregate {
+    /// `sum`.
+    Sum,
+    /// `count`.
+    Count,
+    /// `average`.
+    Average,
+    /// `max`.
+    Max,
+    /// `min`.
+    Min,
+    /// `product`.
+    Product,
+    /// `countNums`.
+    CountNums,
+    /// `stdDev`.
+    StdDev,
+    /// `stdDevp`.
+    StdDevP,
+    /// `var`.
+    Var,
+    /// `varp`.
+    VarP,
+}
+
+/// `ST_ShowDataAs`: the calculation a data field shows instead of its plain values.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+pub enum ShowDataAs {
+    /// `normal`: the plain values.
+    Normal,
+    /// `difference`.
+    Difference,
+    /// `percent`.
+    Percent,
+    /// `percentDiff`.
+    PercentDiff,
+    /// `runTotal`.
+    RunTotal,
+    /// `percentOfRow`.
+    PercentOfRow,
+    /// `percentOfCol`.
+    PercentOfColumn,
+    /// `percentOfTotal`.
+    PercentOfTotal,
+    /// `index`.
+    Index,
+}
+
+/// Where in the definition an [`OpaqueEntry`] was read: the typed element it belongs to.
+/// Indices count the elements of that kind in file order.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+pub enum OpaqueOwner {
+    /// The `pivotTableDefinition` root.
+    Definition,
+    /// `<location>`.
+    Location,
+    /// `<pivotFields>`.
+    PivotFields,
+    /// The `n`-th `<pivotField>`.
+    Field(u32),
+    /// The `<items>` of the `n`-th `<pivotField>`.
+    Items(u32),
+    /// The `item`-th `<item>` of the `field`-th `<pivotField>`.
+    Item {
+        /// The pivot field.
+        field: u32,
+        /// The item's position in the field's `<items>`.
+        item: u32,
+    },
+    /// `<rowFields>`.
+    RowFields,
+    /// The `n`-th `<field>` of `<rowFields>`.
+    RowField(u32),
+    /// `<colFields>`.
+    ColumnFields,
+    /// The `n`-th `<field>` of `<colFields>`.
+    ColumnField(u32),
+    /// `<pageFields>`.
+    PageFields,
+    /// The `n`-th `<pageField>`.
+    PageField(u32),
+    /// `<dataFields>`.
+    DataFields,
+    /// The `n`-th `<dataField>`.
+    DataField(u32),
+}
+
+/// What an [`OpaqueEntry`] holds, as written in the file.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+pub enum OpaqueNode {
+    /// The owner's attributes the model does not read, each ` name="value"` with its value
+    /// still escaped, in file order. The collections' `count` attributes are not kept: export
+    /// writes them from the lists.
+    Attributes(String),
+    /// A child element of the owner the model does not read (an unknown element, `extLst`,
+    /// `rowItems`, ...), with everything inside it. Its place among the owner's typed children is
+    /// not recorded: `CT_pivotTableDefinition` and its parts are sequences, so export (T-4176)
+    /// writes it where its name falls in the schema's order, the invariant it relies on.
+    Element(String),
+}
+
+/// One unread piece of a pivot definition, kept for round trip (SPEC-0032 "Model").
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+pub struct OpaqueEntry {
+    /// The typed element it belongs to.
+    pub owner: OpaqueOwner,
+    /// The verbatim XML.
+    pub node: OpaqueNode,
+}
+
+impl OpaqueEntry {
+    /// The bytes the entry holds, counted toward the import limits: its text and its own size.
+    #[must_use]
+    pub fn cost(&self) -> usize {
+        let text = match &self.node {
+            OpaqueNode::Attributes(xml) | OpaqueNode::Element(xml) => xml.len(),
+        };
+        text.saturating_add(std::mem::size_of::<OpaqueEntry>())
+    }
+}

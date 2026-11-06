@@ -27,7 +27,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars
+from rustsheet_tools.accuracy.defs._common import real_args
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -41,19 +41,19 @@ RADIANS_SOURCE = "numbers.md#radians-sqrtpi-and-munit"
 
 
 def _one(args: Sequence[MathArg]) -> mpmath.mpf:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return x
 
 
 def _atan2_domain(args: Sequence[MathArg]) -> str | None:
-    x, y = scalars(args)
+    x, y = real_args(args)
     if x == 0:
         return "ATAN2(0,0) is #DIV/0!" if y == 0 else None
     return "the quotient y/x is beyond the double range" if abs(y / x) > DOUBLE_MAX else None
 
 
 def _atan2(args: Sequence[MathArg]) -> mpmath.mpf:
-    x, y = scalars(args)
+    x, y = real_args(args)
     return mpmath.atan2(y, x)
 
 

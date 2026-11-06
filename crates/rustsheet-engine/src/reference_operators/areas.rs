@@ -304,6 +304,15 @@ impl RefGrid {
         &self.elements
     }
 
+    /// Whether any element is a reference, not an error: what makes a lifted OFFSET or
+    /// INDIRECT carry the ERROR.TYPE/CELL mark (`number_mark.rs`; statistics.md "An array of
+    /// references is #NUM! in the paired functions").
+    pub(crate) fn holds_reference(&self) -> bool {
+        self.elements
+            .iter()
+            .any(|element| matches!(element, RefElement::Reference(_)))
+    }
+
     /// Whether `other` is a clone of this grid, holding the same elements in memory.
     pub(crate) fn shares_elements(&self, other: &RefGrid) -> bool {
         Arc::ptr_eq(&self.elements, &other.elements)

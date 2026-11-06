@@ -30,7 +30,7 @@ Cells: probes/forecast-ets-reprobe-2026-11 Sheet1!I1:I8 and Sheet1!J1:J8. Deskto
   arguments (K35, K39:K42). K37 and K38 already match. statistics.md cites this case (K3, K8, K14, K19, K25, K30).
 - probes/forecast-ets-longer-series.case.json (40): Sheet1!K1:K36, Sheet1!K39:K42
 
-Owns only decision 0308's and 0315's cells: the desktop-only CELL cells listed in eval/milestones/phase1-exceptions.tsv (calipers goldens,
+Owns decision 0324's cells (listed below) and decision 0308's and 0315's: the desktop-only CELL cells listed in eval/milestones/phase1-exceptions.tsv (calipers goldens,
 info types color, filename, format, parentheses, prefix, protect, width), and every FORECAST.ETS-family line there.
 
 Cell lists. The ownership check (scripts/exit_owners.py) reads the cells a task names, so they are listed here once.
@@ -110,3 +110,15 @@ Phase 1 rate exceptions under decision 0315 (calipers Mac goldens the web answer
 
 ## Out of scope
 - Implementing or changing the ETS algorithm.
+
+Moved from T-4534 by decision 0324 (desktop-only evidence; owner column of eval/milestones/exit-exceptions.tsv and
+phase1-exceptions.tsv):
+- ironcalc-calc/LOGICAL/IF_ARRAY.xlsx (3): Sheet1!C4, C11, E4 (exit exceptions, decisions 0074, 0085)
+- ironcalc-calc/MATH_AND_TRIGONOMETRY/ATAN2_POWER.xlsx (2): Sheet1!D14, D26 (exit exceptions, decision 0086)
+- ironcalc-calc/ENGINEERING/COMPLEXs.xlsx (4): Sheet1!N6, AL12, AL26 (decision 0188 R6), K25 (decision 0196)
+- ironcalc-calc/FINANCIAL/IRR.xlsx (1): Two Values!C4 (decision 0196)
+- poi/FormulaEvalTestData_Copy.xlsx (5): EverythingTests!J136, G936, H936, K936 (decision 0134), J1328 (decision 0324)
+
+Spill cells of desktop's two-cell `CELL("width")` (T-4644; no exception line: no Phase 1 or exit measure counts them,
+since a spill cell has no formula of its own). A desktop oracle would refill them with the N cells above:
+- calipers/roundtrip/formulas_information/golden.xlsx (21): Sheet1!O140:O160

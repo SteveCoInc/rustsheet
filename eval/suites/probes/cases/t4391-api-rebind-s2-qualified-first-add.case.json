@@ -1,0 +1,63 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4391, S2 active: t4391-api-rebind-s2-qualified-use with Rate added first (Rate, Qa, then Ql): is a name's own first add, with a qualified =S2!Rate loaded, what leaves =Rate #NAME? (t4353, t4394-api-name-active-s2, t4049-sheet-api-name-plain)? T-4353's book (First, S2, Last; B1 = 1, 7, 9; B2 = 10, 70, 90); every cell is loaded from the file before the adds. Predictions (written before the fill): Rate first add with a qualified use loaded: =Rate #NAME?, =S2!Rate 7, Qa 7, Ql 7.",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "S2",
+ "sheets": [
+  {
+   "name": "First",
+   "cells": {
+    "B1": 1,
+    "B2": 10
+   }
+  },
+  {
+   "name": "S2",
+   "cells": {
+    "B1": 7,
+    "B2": 70,
+    "A1": "=Qa",
+    "A2": "=Rate",
+    "C1": "=S2!Rate"
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "B1": 9,
+    "B2": 90,
+    "A1": "=Ql",
+    "C1": "=S2!Rate"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "S2!A1",
+  "S2!A2",
+  "S2!C1",
+  "Last!A1",
+  "Last!C1"
+ ],
+ "api_names": [
+  {
+   "name": "Rate",
+   "formula": "=$B$1",
+   "sheet": "S2"
+  },
+  {
+   "name": "Qa",
+   "formula": "=$B$1",
+   "sheet": "S2"
+  },
+  {
+   "name": "Ql",
+   "formula": "=$B$1",
+   "sheet": "Last"
+  }
+ ]
+}

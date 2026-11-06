@@ -3,7 +3,7 @@ id: T-4558
 title: "Probe case for color-filter tables (T-4404): spec2xlsx writes a colorFilter, with excel-graph oracle sidecar, and a dangling dxfId in memory vs export"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -19,9 +19,16 @@ The engine's SUBTOTAL for color-filter tables is checked against Excel by a comm
 - Open: a workbook with a dangling `dxfId` imports `has_filters = true`, but the export drops the id and writes `<colorFilter/>`, which Excel reads as manual hides, so SUBTOTAL changes across a save. Excel refuses the source file itself.
 
 ## Acceptance criteria
-- [ ] spec2xlsx can write a color filter; the probe case and its oracle sidecar are committed and every cell passes.
-- [ ] A dangling `dxfId` leaves in-memory and exported SUBTOTAL equal; xlsx-storage.md says which way.
-- [ ] `make check` green; reviewers approve.
+- [x] spec2xlsx can write a color filter; the probe case and its oracle sidecar are committed and every cell passes.
+- [x] A dangling `dxfId` leaves in-memory and exported SUBTOTAL equal; xlsx-storage.md says which way.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- spec2xlsx writes a colour filter (`filter_column: {"color": true, "cell_color": false}`); the eval case schema and
+  adapter read it as criterion-less.
+- probes/t4558-color-filter-subtotal (+ excel-graph sidecar): Color, FontColor and Manual all read 6, 4, 21, 15; 12/12 pass.
+- Import: a colour filter whose `dxfId` is past the workbook's dxfs leaves the table unfiltered, equal to the export
+  (unit test `dangling_color_filter_dxf_is_no_criterion`); xlsx-storage.md says which way.

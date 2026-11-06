@@ -343,8 +343,8 @@ fn legacy_value_arguments_intersect_and_export_unchanged() {
         ),
         (
             "SUM([1]Uses!$A$2:$A$3+0)",
-            "SUM(@'[1]Uses'!$A$2:$A$3+0)",
-            "SUM('[1]Uses'!$A$2:$A$3+0)",
+            "SUM(@[1]Uses!$A$2:$A$3+0)",
+            "SUM([1]Uses!$A$2:$A$3+0)",
         ),
     ]);
 }

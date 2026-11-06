@@ -15,7 +15,8 @@ Run: cd tools && uv run python -I ../docs/research/t3411/gen_sweep.py <repo> [ca
 t3411-irr-r4-fresh-3: seed "T-3411/r4-fresh-3", round 3; t3411-irr-r4-fresh-4: seed "T-3411/r4-fresh-4",
 round 4; t3407-irr-r4-fresh: seed "T-3407/r4-fresh", T-3407's overflow rule; t4213-irr-r4-fresh: seed
 "T-4213/r4-fresh", T-4213's near-zero roots, its own six strata, below; t3347-irr-r4-fresh: seed
-"T-3347/r4-fresh", T-3347's flat-secant #DIV/0! cut, its own six strata of long series, below)
+"T-3347/r4-fresh", T-3347's flat-secant #DIV/0! cut, its own six strata of long series, below;
+t3408-irr-r4-fresh: seed "T-3408/r4-fresh", T-3408's 200-step secant cap, its own six strata, below)
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ FROZEN = {
     "t3407-irr-r4-fresh": "T-3407: a non-finite NPV at a secant iterate is #DIV/0!",
     "t4213-irr-r4-fresh": "T-4213: the fallback returns the Newton iterate one step past its stop",
     "t3347-irr-r4-fresh": "T-3347: a secant run flat after a zero step is #DIV/0! once its |NPV| passed 3E+226",
+    "t3408-irr-r4-fresh": "T-3408: a secant run takes up to 200 steps on 6..54 flows, |c| 5.6E-9..9.6E+8",
 }
 # The task a sweep belongs to (its seed, description and tags name it): the case name's tNNNN prefix.
 TASK = "T-" + NAME[1:5]
@@ -60,7 +62,21 @@ FLAT_STRATA = [
     ((27, 147), (-0.6, -0.3), (0.05, 1.0)),
 ]
 FLAT = TASK == "T-3347"
-STRATA = [f"root +-1E-7..0.05, |c| {lo:.0E}..{hi:.0E}" for lo, hi in NEAR_ZERO_SCALES] if NEAR_ZERO else [
+# T-3408's sweep: series whose secant run from the guess is long (the 200-step cap's domain is 6..54 flows,
+# largest |c| 5.6E-9..9.6E+8, guess -0.9997..9.81E+7); (n flows, guess band or None for 0.1, root band, |c| band,
+# spread). Stratum 5 lies outside the domain (55..148 flows), where the cap stays 50.
+LONG_STRATA = [
+    ((6, 54), (-0.9997, -0.99), (1e-4, 0.5), (1e-3, 1e8), (0.05, 1.0)),
+    ((6, 20), (-0.9997, -0.99), (1e-4, 0.5), (1e-3, 1e8), (0.05, 1.0)),
+    ((20, 54), (-0.99, -0.9), (1e-4, 0.3), (1e-3, 1e8), (0.05, 1.0)),
+    ((20, 54), None, (0.01, 0.3), (1.0, 1e8), (0.8, 1.0)),
+    ((6, 54), (1.0, 1e4), (1e-4, 1.0), (1e-3, 1e8), (0.05, 1.0)),
+    ((55, 148), (-0.9997, -0.99), (1e-4, 0.5), (1e-3, 1e8), (0.05, 1.0)),
+]
+LONG = TASK == "T-3408"
+STRATA = [f"n {n[0]}..{n[1]}, guess {g}, root {r[0]}..{r[1]}" for n, g, r, _, _ in LONG_STRATA] if LONG else [
+    f"root +-1E-7..0.05, |c| {lo:.0E}..{hi:.0E}" for lo, hi in NEAR_ZERO_SCALES
+] if NEAR_ZERO else [
     f"n {n[0]}..{n[1]}, root {r[0]}..{r[1]}, spread {w[0]}..{w[1]}" for n, r, w in FLAT_STRATA
 ] if FLAT else [
     "long near-level, root -0.3..-0.01",
@@ -109,7 +125,18 @@ def irr_math(flows: list[float]) -> str | None:
 def point(rng: random.Random, stratum: int) -> tuple[str, str] | None:
     guess = None
     spread = (0.05, 1.0)
-    if NEAR_ZERO:
+    if LONG:
+        (n_lo, n_hi), band, (r_lo, r_hi), (s_lo, s_hi), spread = LONG_STRATA[stratum]
+        n, scale = rng.randint(n_lo, n_hi), log_uniform(rng, s_lo, s_hi)
+        root = log_uniform(rng, r_lo, r_hi)
+        # Near-level series (stratum 3) have negative roots, the slow runs from 0.1; elsewhere 30% are negative.
+        if band is None or rng.random() < 0.3:
+            root = -root
+        if band is not None:
+            lo, hi = band
+            # A guess near -1 is drawn log-uniform in its distance from -1.
+            guess = -1 + log_uniform(rng, 1 + lo, 1 + hi) if lo < 0 else log_uniform(rng, lo, hi)
+    elif NEAR_ZERO:
         n, scale = rng.randint(2, 60), log_uniform(rng, *NEAR_ZERO_SCALES[stratum])
         root = (1 if rng.random() < 0.5 else -1) * log_uniform(rng, 1e-7, 0.05)
     elif FLAT:

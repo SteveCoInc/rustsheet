@@ -44,7 +44,7 @@ array constant as a scalar argument does and the call takes no `@` of its own. E
 probes/iseven-isodd-range-derived-arrays Leg!A2:N3, A40:N41 (excel-graph, 2026-11-06, T-4528). Ours
 put no `@` on the constant (and `@` on the call for a multi-element one) before T-4528, which changed
 only the shown text, as the values agree either way; `array_constant_context` in
-static_analysis/legacy.rs now gives a `LiftArrays` argument the scalar signature for its array
+static_analysis/lifted.rs now gives a `LiftArrays` argument the scalar signature for its array
 constants. The dynamic-array flag Excel writes for the range form is not probed.
 Implemented in: `Model::lifted_parity` and the `ARRAYS_1` entry in functions/lift/kinds/general.rs.
 Status: VERIFIED (excel-graph)
@@ -287,11 +287,19 @@ reference. "width" is `#VALUE!` on the web too (decision 0019: the POI fill saw 
 poi/47804.xlsx caches 10 and 11; no committed sidecar, since the oracle canary now refuses the call), and "filename" is `#VALUE!` (T-2052). Desktop Excel returns values for all seven (the calipers goldens
 formulas_information Sheet1 E140:N160 cache color 0, filename a path, format "G", parentheses 0, prefix "",
 protect 1, width 15 on General cells), so these cells are web-vs-desktop conflicts.
+On desktop, "width" alone is a two-cell row, not a scalar: in that golden each
+`=IFERROR(CELL("width",$C$5),"Error")` in N140 (through `$C$25` in N160) is a dynamic-array formula whose spill range is two cells wide
+(`<f t="array" ref="N140:O140">`, through `N160:O160`), and the spill cell in column O caches the boolean FALSE beside
+the width 15. Every other info type in the same rows (C140:M140) has a one-cell range. The web's `#VALUE!` does not
+spill, so the engine leaves O140:O160 empty (T-4373 owns those 21 cells with the N cells; they count toward no
+Phase 1 or exit measure, T-4644). What the FALSE means is UNVERIFIED: column C, the referenced cells, has
+`customWidth="1"` (15.84375) against the sheet's `defaultColWidth` 11.07421875, so FALSE fits "not the default width",
+but no cell at the default width was cached.
 Evidence: probes/t3011-cell-format-info-types A1:A38 (excel-graph, 2026-11-06).
 Status: VERIFIED (excel-graph); desktop values are out of scope (decision 0266).
 Ours: `cell_info` returns `#VALUE!` for all seven, matching the web. The calipers cells are Phase 1 rate exceptions
 (decision 0308).
-Tasks: T-3011, T-4207
+Tasks: T-3011, T-4207, T-4644
 
 ## CELL("row"/"col"/"address"/"type", range): no intersection; "type" reads the named sheet since 2026-10-28
 Rule (excel-graph, 2026-10-15): a legacy (non-array) `CELL(info_type, range)` gives the same value as its dynamic twin and is never implicitly intersected, whether the formula row or column is inside the range or not. `CELL("row",A1:A5)` is 1 and `CELL("address",A1:A5)` is `$A$1` in rows 3 and 8; `CELL("col",B20:D20)` is 2 in columns C, D (inside) and F, G (outside); `CELL("type",A1:A5)` is "v" (the top-left cell; the probe cannot tell it from an intersected cell, since both are numbers, so no-intersection for "type" rests on the vector signature, UNVERIFIED). `row`, `col` and `address` use the reference's own address (`CELL("row",Data!A2:A5)` is 2, `CELL("col",Data!C20:D20)` is 3). Since 2026-10-28 `"type"` reads the named sheet, like `"contents"` (previous entry, T-3030). The 2026-10-15 fill read the formula's own sheet: `CELL("type",Data!A7)` is "b" when Data!A7 is text but Calc!A7 is blank, `Data!A8` is "l" (Calc!A8 is text, Data!A8 blank) and `Data!A9` is "b" (Data!A9 a number, Calc!A9 blank).

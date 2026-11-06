@@ -57,7 +57,15 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, one_of, signed
+from rustsheet_tools.accuracy.defs._common import (
+    below_normal,
+    by_stratum,
+    domain_of,
+    fraction_to_mpf,
+    is_real,
+    one_of,
+    signed,
+)
 from rustsheet_tools.accuracy.defs.aggregate import running_total
 from rustsheet_tools.accuracy.defs.aggregate_array import array_of
 from rustsheet_tools.accuracy.defs.dispersion import deviations_overflow
@@ -115,7 +123,7 @@ def _floats(a: MathArg) -> list[float]:
         if isinstance(v, tuple):
             out.extend(float(e) for e in v)
         else:
-            assert not isinstance(v, bool)
+            assert is_real(v)
             out.append(float(v))
     return out
 
@@ -129,10 +137,6 @@ def _shape(a: MathArg) -> tuple[int, int]:
 def _vector(a: MathArg) -> bool:
     """One row or one column: df is cells - 1 whichever (t1049-chisqtest A30, a column against a row)."""
     return 1 in _shape(a)
-
-
-def _subnormal(values: Sequence[float]) -> bool:
-    return any(v != 0 and abs(v) < sys.float_info.min for v in values)
 
 
 # -- CHISQ.TEST --------------------------------------------------------------------------------
@@ -191,7 +195,7 @@ def _chisq_test(args: Sequence[MathArg]) -> mpmath.mpf:
     if _shape(actual) != _shape(expected) and not (_vector(actual) and _vector(expected)):
         msg = "equal counts of different shapes, one a table: Excel's df is unprobed (T-2650)"
         raise NoValueError(msg)
-    if _subnormal(xs + es):
+    if below_normal(*(xs + es)):
         msg = "a subnormal literal (Excel reads it as 0; unprobed here)"
         raise NoValueError(msg)
     chi2 = chi_squared(xs, es)
@@ -384,15 +388,15 @@ CHITEST = _chisq_test_definition("CHITEST")
 
 def _z_test(args: Sequence[MathArg]) -> mpmath.mpf:
     data, x = args[0], args[1]
-    assert not isinstance(x, (bool, tuple))
+    assert is_real(x)
     xs = _floats(data)
     sigma = args[2] if len(args) > 2 else None
-    assert not isinstance(sigma, (bool, str, tuple))
+    assert sigma is None or is_real(sigma)
     if len(xs) < 2:
         msg = "#DIV/0!: one value"
         raise DomainError(msg)
     scalars_given = [float(x)] + ([float(sigma)] if sigma is not None else [])
-    if _subnormal(xs + scalars_given):
+    if below_normal(*(xs + scalars_given)):
         msg = "a subnormal literal (unprobed)"
         raise NoValueError(msg)
     if not math.isfinite(running_total(xs)[1]):
@@ -569,11 +573,11 @@ def _prob(args: Sequence[MathArg]) -> mpmath.mpf:
     xs, ps = _floats(args[0]), _floats(args[1])
     lower = args[2]
     upper = args[3] if len(args) > 3 else lower
-    assert not isinstance(lower, (bool, tuple)) and not isinstance(upper, (bool, tuple))
+    assert is_real(lower) and is_real(upper)
     if len(xs) != len(ps):
         msg = "#N/A: x_range and prob_range differ in count"
         raise DomainError(msg)
-    if _subnormal(xs + ps):
+    if below_normal(*(xs + ps)):
         msg = "a subnormal literal (unprobed)"
         raise NoValueError(msg)
     sum_off(ps)

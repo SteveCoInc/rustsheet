@@ -291,7 +291,11 @@ impl Model {
                         return value;
                     }
                 }
-                scalar_as_one_element_array(self.index_source(reference, cell), cell)
+                // The array's ERROR.TYPE/CELL mark is INDEX's (`number_mark.rs`;
+                // probes/t2576-error-type-cell-paired D20).
+                let source =
+                    self.passing_mark(reference, |model| model.index_source(reference, cell));
+                scalar_as_one_element_array(source, cell)
             }
             PickedReference::Read(read) => scalar_as_one_element_array(read, cell),
             PickedReference::Value(value) => {

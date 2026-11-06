@@ -1,0 +1,47 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-2766: positions of the ERROR.TYPE/CELL mark and of an array of references (T-2577) that statistics.md lists as UNVERIFIED or marked by analogy (RSQ/STEYX first, T.TEST second, COVAR/COVARIANCE.S/CORREL/PEARSON/SLOPE/RSQ/STEYX second, a marked first against an error element), SUMX2MY2/SUMX2PY2 and SUMXMY2's order, LOGEST/TREND/GROWTH, and wrappers the engine drops it through (IFNA, IFS, SWITCH, a called LET name, IFERROR of an array). Predictions before the fill (the engine's answers; 'number' = a plain value): A1 #NUM!; A2 #NUM!; A3 #NUM!; A4 #DIV/0!; A5 #DIV/0!; A6 #DIV/0!; A7 #DIV/0!; A8 number; A9 number; A10 number; A11 number; A12 number; A13 #NUM!; A14 #NUM!; A15 #NUM!; A16 #NUM!; A17 #NUM!; A18 #NUM!; A19 1; A20 #VALUE!; A21 #VALUE!; A22 #VALUE!; A23 #DIV/0!; A24 #DIV/0!; A25 #DIV/0!; A26 #NUM!; A27 #DIV/0!; A28 #DIV/0!; A29 #NUM!; A30 #NUM!",
+  "tags": [
+    "M9",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "B1": 5,
+        "A1": "=RSQ(INDIRECT(\"B1\",{1;1}),{1;2})",
+        "A2": "=STEYX(INDIRECT(\"B1\",{1;1;1}),{1;2;3})",
+        "A3": "=T.TEST({1,2,3},INDIRECT(\"B1\",{1,1,1}),2,2)",
+        "A4": "=COVARIANCE.S({1;2},INDIRECT(\"B1\",{1;1}))",
+        "A5": "=COVAR({1;2},INDIRECT(\"B1\",{1;1}))",
+        "A6": "=COVAR({1;2},ERROR.TYPE({#REF!;#DIV/0!}))",
+        "A7": "=COVARIANCE.S({1;2},ERROR.TYPE({#REF!;#DIV/0!}))",
+        "A8": "=CORREL({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))",
+        "A9": "=PEARSON({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))",
+        "A10": "=SLOPE({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))",
+        "A11": "=RSQ({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))",
+        "A12": "=STEYX({1;2;3},ERROR.TYPE({#REF!;#DIV/0!;#VALUE!}))",
+        "A13": "=COVARIANCE.P(ERROR.TYPE({#REF!;#REF!}),{1;#N/A})",
+        "A14": "=CORREL(ERROR.TYPE({#REF!;#REF!;#REF!}),{1;#N/A;3})",
+        "A15": "=SUMX2MY2(ERROR.TYPE(#REF!),5)",
+        "A16": "=SUMX2PY2(ERROR.TYPE(#REF!),5)",
+        "A17": "=SUMXMY2(ERROR.TYPE(#REF!),{1;2})",
+        "A18": "=SUMXMY2(ERROR.TYPE(#REF!),1/0)",
+        "A19": "=SUMXMY2(5,ERROR.TYPE(#REF!))",
+        "A20": "=LOGEST(ERROR.TYPE(#REF!))",
+        "A21": "=TREND(ERROR.TYPE(#REF!))",
+        "A22": "=GROWTH(ERROR.TYPE(#REF!))",
+        "A23": "=FTEST({1;2;3},IFNA(ERROR.TYPE(#REF!),0))",
+        "A24": "=FTEST({1;2;3},IFS(TRUE,ERROR.TYPE(#REF!)))",
+        "A25": "=FTEST({1;2;3},SWITCH(1,1,ERROR.TYPE(#REF!)))",
+        "A26": "=FTEST({1;2;3},LET(x,ERROR.TYPE(#REF!),y,x,y))",
+        "A27": "=FTEST({1;2;3},IFERROR(ERROR.TYPE({#REF!}),0))",
+        "A28": "=FTEST({1;2;3},LET(f,LAMBDA(x,x),f(ERROR.TYPE(#REF!))))",
+        "A29": "=FTEST({1;2;3},IF(TRUE,IF(TRUE,ERROR.TYPE(#REF!))))",
+        "A30": "=FTEST({1;2;3},INDEX(ERROR.TYPE({#REF!,#N/A}),1,1))"
+      }
+    }
+  ],
+  "expected": {}
+}

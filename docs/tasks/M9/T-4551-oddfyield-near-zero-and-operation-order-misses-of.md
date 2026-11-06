@@ -29,6 +29,17 @@ sweep probes-numeric/t3988-r4-oddfyield-fresh-2 passes 118 of 120; two cells are
   (`index + nq + DSC/E + days(Q, first coupon)/E`) passed it, T-3988's single day count (`index + nq + DFC/E`) is
   the same number rounded differently. Keeping the split with the 30/360 remainder (`(DFC - DSC)/E`) passes it but
   loses 2 cells of t3988-r4-oddfyield-month-end (117 against 119; T-3988 Outcome).
+- Gate A (T-4115) adds two table points in eval/accuracy/known-failures.tsv, owned here:
+  - accuracy/ODDFYIELD/s1!Calc!A272
+    `ODDFYIELD(37200,37559,37067,37286,0.823342969465124,2229.12994890926,2148.33635351506,4,3)`, a root near 0:
+    Excel 8.315373539639352E-6, ours 8.315373539729558E-6 (1.1E-11 relative), math 8.315358498122043E-6 (Excel
+    1.8E-6 relative off it, stopping short as at A54).
+  - accuracy/ODDFYIELD/s1!Calc!A289
+    `ODDFYIELD(38416,40421,38266,38503,7.80131174904822E-05,4099.38501938024,4102.62033191599,4)`: not a root near 0
+    but an extra-quasi-period point. The first coupon 38503 (2005-05-31) is a month end, so `coup_number` gives nq 1
+    where the true count is 0 (financial.md "ODDFYIELD off ODDFPRICE's root when ODDFPRICE counts a quasi period too
+    many"). Excel 1.3935526308742874E-4, ours 1.3935526308740098E-4 (2.0E-13 relative), math 1.393552908456996E-4
+    (Excel 2.0E-7 relative off it).
 - Look for an operation order that passes A108 without losing a cell of the three ODDFYIELD sweeps
   (t3031-r4-oddfyield-long-first, t3988-r4-oddfyield-month-end, t3988-r4-oddfyield-fresh-2). Any choice made on
   these cells owes a new fresh sweep (decision 0188 R4.2).
@@ -36,6 +47,9 @@ sweep probes-numeric/t3988-r4-oddfyield-fresh-2 passes 118 of 120; two cells are
 ## Acceptance criteria
 - [ ] probes-numeric/t3988-r4-oddfyield-fresh-2 S!A54 and S!A108 within 15 digits of Excel with no other cell of the
   three sweeps lost, or the task blocked time-boxed with the candidates in financial.md.
+- [ ] accuracy/ODDFYIELD/s1 A272 and A289 within 15 digits of Excel (`rustsheet-eval accuracy` with their
+  known-failures.tsv lines removed), or the task blocked time-boxed with the candidates in financial.md. Any choice
+  made on them owes a new fresh sweep too (decision 0188 R4.2).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

@@ -1,0 +1,114 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4391: which unresolved uses a sheet-scoped name added through the API (Graph worksheets('S')/names/add) re-binds, with First active. T-4353's book (First, S2, Last; B1 = 1, 7, 9; B2 = 10, 70, 90); every cell is loaded from the file before the adds. Names on S2 in add order: Qa =$B$1 (first add, not a function name), Rate =$B$1 (RATE is a function), Qb =$B$1:$B$2, N =$B$1 (N is a function), Qc =5 (constant), Abs =5 (constant, ABS is a function); then on Last: Ql =$B$1, Npv =$B$1 (NPV is a function); then on First: Qf =$B$1, Sln =$B$1 (SLN is a function). Predictions (written before the fill): H-func (a sheet-scoped add re-binds an unresolved use only when the name is not a built-in function's name): Qa 1, Rate #NAME?, SUM(Qb) 11, N #NAME?, Qc 5, Abs #NAME?, SUM(Rate) #NAME?, Qa+0 1, Rate+0 #NAME?, Last Ql 1, Npv #NAME?, First Qf 1, Sln #NAME?. H-order (the first add re-binds nothing): Qa #NAME?, every other use resolves.",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "First",
+ "sheets": [
+  {
+   "name": "First",
+   "cells": {
+    "B1": 1,
+    "B2": 10,
+    "A1": "=Qf",
+    "A2": "=Sln"
+   }
+  },
+  {
+   "name": "S2",
+   "cells": {
+    "B1": 7,
+    "B2": 70,
+    "A1": "=Qa",
+    "A2": "=Rate",
+    "A3": "=SUM(Qb)",
+    "A4": "=N",
+    "A5": "=Qc",
+    "A6": "=Abs",
+    "A7": "=SUM(Rate)",
+    "A8": "=Qa+0",
+    "A9": "=Rate+0"
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "B1": 9,
+    "B2": 90,
+    "A1": "=Ql",
+    "A2": "=Npv"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "First!A1",
+  "First!A2",
+  "S2!A1",
+  "S2!A2",
+  "S2!A3",
+  "S2!A4",
+  "S2!A5",
+  "S2!A6",
+  "S2!A7",
+  "S2!A8",
+  "S2!A9",
+  "Last!A1",
+  "Last!A2"
+ ],
+ "api_names": [
+  {
+   "name": "Qa",
+   "formula": "=$B$1",
+   "sheet": "S2"
+  },
+  {
+   "name": "Rate",
+   "formula": "=$B$1",
+   "sheet": "S2"
+  },
+  {
+   "name": "Qb",
+   "formula": "=$B$1:$B$2",
+   "sheet": "S2"
+  },
+  {
+   "name": "N",
+   "formula": "=$B$1",
+   "sheet": "S2"
+  },
+  {
+   "name": "Qc",
+   "formula": "=5",
+   "sheet": "S2"
+  },
+  {
+   "name": "Abs",
+   "formula": "=5",
+   "sheet": "S2"
+  },
+  {
+   "name": "Ql",
+   "formula": "=$B$1",
+   "sheet": "Last"
+  },
+  {
+   "name": "Npv",
+   "formula": "=$B$1",
+   "sheet": "Last"
+  },
+  {
+   "name": "Qf",
+   "formula": "=$B$1",
+   "sheet": "First"
+  },
+  {
+   "name": "Sln",
+   "formula": "=$B$1",
+   "sheet": "First"
+  }
+ ]
+}

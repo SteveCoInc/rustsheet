@@ -30,16 +30,18 @@ fn accrint_coupon_serial(date: NaiveDate, first: i64) -> Result<i64, String> {
 }
 
 /// The days of a stub period from `start` to `end` in the denominator position of `DaysBetween`:
-/// the US 30/360 count that modifies both dates on basis 0, the US count on basis 2, the
-/// European one on basis 4 and the serial difference on basis 1 (basis 3 is `365/frequency`).
+/// the US 30/360 count that modifies both dates on bases 0 and 2, the European one on basis 4 and
+/// the serial difference on basis 1 (basis 3 is `365/frequency`).
 fn stub_denominator(start: i64, end: i64, basis: u32) -> Result<f64, String> {
     match basis {
-        0 => Ok(days_30_360_us_both_ymd(
+        // Actual/360 counts its numerator in actual days but its denominator as basis 0 does:
+        // `ACCRINT(49107,49552,49782,0.1,1000,2,2,FALSE)`, an issue period from 2034-02-28 to
+        // 2034-08-31, is 80/180 (137.22222222222223), not plain 30/360's 80/181, and to 2034-08-28
+        // 80/178 (probes/accrint-zero-results C3, C9, C15, C16; accuracy/ACCRINT/s1 A21).
+        0 | 2 => Ok(days_30_360_us_both_ymd(
             serial_ymd(start)?,
             serial_ymd(end)?,
         )),
-        // Actual/360 counts its numerator in actual days but its denominator in 30/360 days.
-        2 => serial_basis_days(start, end, 0),
         _ => serial_basis_days(start, end, basis),
     }
 }

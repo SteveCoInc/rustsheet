@@ -6,8 +6,8 @@ use crate::{
     cf_types::CfRule,
     formula_rewrite::RewrittenFormula,
     types::{
-        Cell, Col, Color, Link, MergedCell, Row, SheetState, Style, StyleIncludes, Table, Theme,
-        Worksheet,
+        Cell, Col, Color, Link, MergedCell, Row, SheetState, Style, StyleIncludes, Table,
+        TableExtent, Theme, Worksheet,
     },
 };
 
@@ -167,6 +167,9 @@ pub(crate) enum Diff {
         row: i32,
         count: i32,
         old_data: Vec<RowData>,
+        /// The extents, before the delete, of the tables it resized, which the undo puts back
+        /// (T-3634); redo's delete resizes them again.
+        tables: Vec<TableExtent>,
     },
     InsertColumns {
         sheet: u32,

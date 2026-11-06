@@ -30,7 +30,6 @@ use financial_util::{compute_irr, compute_xirr, compute_xnpv, excel_npv};
 use flows::xnpv_flows;
 
 use crate::functions::lift::{num_error, number_or_error, number_result, LiftCost};
-use crate::functions::util::is_marked_number;
 use crate::functions::Function;
 
 /// The cash flows (or FVSCHEDULE's rates) a lifted NPV, IRR, MIRR, XNPV, XIRR or FVSCHEDULE
@@ -666,12 +665,14 @@ impl Model {
         // (where any other scalar flow is `#NUM!`), comes after it: `IRR(1/0,NA())` is
         // `#DIV/0!`, and so are `IRR({1,"a"}+0,1/0)` and `IRR(CELL("row",D2),1/0)`
         // (financial.md "IRR's error order", probes/t2728-irr-guess-ref-mark, T-2728).
-        let evaluated = self.evaluate_node_in_context(values, cell);
+        // The mark follows LET, IF, CHOOSE, IFERROR, a LAMBDA call and INDEX
+        // (`IRR(IF(TRUE,CELL("row",D2)))` is `#VALUE!`, probes/t2728-irr-guess-ref-mark A53:A61, T-2766).
+        let (evaluated, marked) = self.evaluate_marked(values, cell);
         let flows_error_first = matches!(evaluated, CalcResult::Error { .. })
             && !matches!(*values.ungrouped_at(cell.row), Node::ReferenceKind { .. });
         let flows = if flows_error_first {
             Err(evaluated)
-        } else if is_marked_number(values, &evaluated, cell.row) {
+        } else if marked && matches!(evaluated, CalcResult::Number(_)) {
             Err(CalcResult::new_error(Error::VALUE, cell, String::new()))
         } else {
             self.array_of_numbers_from(evaluated, &cell, true, false, || Ok(None), || Ok(None))

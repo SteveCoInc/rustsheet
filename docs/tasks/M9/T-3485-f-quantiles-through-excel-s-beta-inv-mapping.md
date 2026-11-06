@@ -59,6 +59,10 @@ F.INV.RT 83 of 434, FINV 32 of 277), with no cell newly visibly off.
   may fix some of them; this task owns them:
   - probes-numeric/t4497-f-a1-cut-sweep.case.json (3): Calc!B157, C52, C123
   - probes-numeric/t4497-f-a1-cut-dense.case.json (6): Calc!B9, B41, B58, C9, C27, C44
+- Gap triage 2026-11-06 (report at 37389d18): two more t4497 dense quantile cells are visibly off and no task
+  listed them. The off set moves with engine changes, as T-4497 finding 3 says. Their last-digit neighbours are T-4643's.
+  - probes-numeric/t4497-f-a1-cut-dense.case.json (2): Calc!B21, B34 (`F.INV(0.420180003002338,2,10)` 0.5758536525446335
+    vs ours ...327; `F.INV(0.483291248020393,2,12)` 0.6979764172164359 vs ours ...364)
 
 ## Acceptance criteria
 - [ ] F.INV, F.INV.RT and FINV meet the Phase 1 rate, or the Outcome names every cell still off with an owner.

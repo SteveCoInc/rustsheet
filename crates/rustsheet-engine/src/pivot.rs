@@ -23,16 +23,35 @@ use crate::expressions::token::Error;
 use crate::model::Model;
 use crate::types::sheet_names_match;
 
+mod accumulate;
 mod date_groups;
 pub(crate) mod layout;
+mod model;
 mod number_groups;
+#[cfg(test)]
+mod probe_cases;
+mod refresh;
+mod result;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
 pub use layout::{
-    layout_extent, max_layout_rows, row_layout, LayoutCell, BLANK_ITEM, GRAND_TOTAL,
-    LAYOUT_COLUMNS, ROW_LABELS,
+    lay_out, render, AxisLine, PivotCell, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM,
+    COLUMN_LABELS, GRAND_TOTAL, MAX_PIVOT_CELLS, MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS,
+    VALUES,
+};
+pub use model::{
+    Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry, OpaqueNode,
+    OpaqueOwner, PageField, PivotField, PivotGeometry, PivotItem, PivotOptions, PivotTable,
+    ShowDataAs, SortType, NO_BASE_ITEM,
 };
 pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
+pub use refresh::{
+    read_source, refresh, regroup, RangeGrouping, RegroupError, SharedItemsFlags, SourceArea,
+    SourceCells,
+};
+pub use result::{
+    compute, AxisNode, AxisTree, PivotComputeError, PivotResult, MAX_PIVOT_NODES, MAX_PIVOT_WORK,
+};
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
 pub const MAX_RECORDS: usize = 1_048_576;
@@ -98,139 +117,6 @@ pub enum CacheItem {
     Date(f64),
 }
 
-/// A pivot table on a worksheet.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
-pub struct PivotTable {
-    /// The pivot's name.
-    pub name: String,
-    /// The worksheet's stable `sheet_id`, not its index (api-design.md principle 3).
-    pub sheet_id: u32,
-    /// `<location ref>`, 0-based.
-    pub location: CellArea,
-    /// An index into [`Workbook::pivot_caches`].
-    pub cache: u32,
-    /// One per cache field.
-    pub fields: Vec<PivotField>,
-    /// `<rowFields>`.
-    pub row_fields: Vec<AxisField>,
-    /// `<colFields>`.
-    pub column_fields: Vec<AxisField>,
-    /// `<dataFields>`.
-    pub data_fields: Vec<DataField>,
-}
-
-/// How a pivot shows one cache field.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Default)]
-pub struct PivotField {
-    /// The axis the field is on, if any.
-    pub axis: Option<Axis>,
-    /// A bitset over the cache field's `items`: bit `i` set means item `i` is hidden.
-    pub hidden: Vec<u64>,
-    /// `showAll`: whether the pivot shows the field's items that no record holds. ECMA-376's
-    /// default is on; Excel writes `showAll="0"`. GETPIVOTDATA on such an item of an ungrouped
-    /// field is 0 when on and `#REF!` when off (probes/t4248-getpivotdata-recordless-item).
-    pub show_all: bool,
-}
-
-impl PivotField {
-    /// A field on `axis` with a hidden bitset sized for `item_count` items, none hidden, and
-    /// `showAll` on (ECMA-376's default).
-    #[must_use]
-    pub fn new(axis: Option<Axis>, item_count: usize) -> Self {
-        PivotField {
-            axis,
-            hidden: vec![0; item_count.div_ceil(64)],
-            show_all: true,
-        }
-    }
-
-    /// Hides item `item`; an item past the bitset's size (sized at import) is ignored.
-    pub fn hide(&mut self, item: u32) {
-        if let Some(word) = self.hidden.get_mut(item as usize / 64) {
-            *word |= 1 << (item % 64);
-        }
-    }
-
-    /// Whether item `item` is hidden; an item past the bitset reads as not hidden.
-    #[must_use]
-    pub fn is_hidden(&self, item: u32) -> bool {
-        self.hidden
-            .get(item as usize / 64)
-            .is_some_and(|word| word & (1 << (item % 64)) != 0)
-    }
-}
-
-/// An inclusive, 0-based cell rectangle on one sheet.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
-pub struct CellArea {
-    /// First row.
-    pub top: u32,
-    /// First column.
-    pub left: u32,
-    /// Last row.
-    pub bottom: u32,
-    /// Last column.
-    pub right: u32,
-}
-
-/// A pivot axis.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Axis {
-    /// Rows.
-    Row,
-    /// Columns.
-    Column,
-    /// The report filter (page) area.
-    Page,
-}
-
-/// A `<field x>` of `<rowFields>`/`<colFields>`.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
-pub enum AxisField {
-    /// A cache field, by index.
-    Field(u32),
-    /// `x="-2"`: the Values field.
-    Values,
-}
-
-/// A value field of a pivot.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
-pub struct DataField {
-    /// The caption (`Sum of Sales`).
-    pub caption: String,
-    /// The cache field it summarizes.
-    pub field: u32,
-    /// How it summarizes.
-    pub function: Aggregate,
-}
-
-/// A data field's summary function.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Aggregate {
-    /// `sum`.
-    Sum,
-    /// `count`.
-    Count,
-    /// `average`.
-    Average,
-    /// `max`.
-    Max,
-    /// `min`.
-    Min,
-    /// `product`.
-    Product,
-    /// `countNums`.
-    CountNums,
-    /// `stdDev`.
-    StdDev,
-    /// `stdDevp`.
-    StdDevP,
-    /// `var`.
-    Var,
-    /// `varp`.
-    VarP,
-}
-
 /// Why a cache could not be built. Past a limit the caller drops the whole cache (and every pivot
 /// on it), never a truncated one, so the answer is `#REF!` rather than a wrong total.
 #[derive(ThisError, Debug, PartialEq, Eq, Clone, Copy)]
@@ -250,6 +136,20 @@ pub enum PivotCacheError {
     /// A field index, a shared-item index or a record's length does not match the cache.
     #[error("a pivot cache record does not match its fields")]
     BadRecord,
+    /// A refresh found no source: the cache has none, or it names a sheet or range the workbook
+    /// does not hold (`refresh`; a defined name or a Table is T-4506's).
+    #[error("a pivot cache's source is not a worksheet range of this workbook")]
+    Source,
+    /// A refresh found a source header (0-based `column` within the source) that is a number, a
+    /// boolean or an error: how Excel names such a field is unprobed (`refresh`).
+    #[error("pivot source header {column} is not text")]
+    Header {
+        /// The header's 0-based column within the source.
+        column: u32,
+    },
+    /// A refresh found values a field's saved range grouping cannot group (`refresh`).
+    #[error("a refreshed pivot field no longer fits its grouping")]
+    Group,
 }
 
 /// One value of a record handed to [`CacheBuilder::push_record`].
@@ -281,6 +181,18 @@ impl ItemKey {
             CacheItem::Boolean(b) => ItemKey::Boolean(*b),
             CacheItem::Error(e) => ItemKey::Error(e.to_string()),
             CacheItem::Date(d) => ItemKey::Date(d.to_bits()),
+        }
+    }
+
+    /// The key under which a refresh finds an item (`refresh`): exact for numbers, and for the
+    /// type (the number 1 and the text `1` are two items, a date-formatted value never matches a
+    /// cached number), but text ignoring case (docs/excel-semantics/pivots.md "Item identity:
+    /// exact for numbers and types, case-insensitive for text"; probes/t4134-pivot-items I1, I4,
+    /// I5; t4582-pivot-item-edges J3, J4). Case folds as the text functions fold it.
+    fn identity(item: &CacheItem) -> ItemKey {
+        match item {
+            CacheItem::Text(s) => ItemKey::Text(crate::functions::util::collation::fold_case(s)),
+            other => ItemKey::of(other),
         }
     }
 }
@@ -401,6 +313,12 @@ impl CacheBuilder {
     #[must_use]
     pub fn record_values(&self) -> usize {
         self.cache.record_count as usize * self.cache.fields.len()
+    }
+
+    /// The fields so far, in cache order.
+    #[must_use]
+    pub fn fields(&self) -> &[CacheField] {
+        &self.cache.fields
     }
 
     /// The finished cache.
@@ -744,21 +662,13 @@ mod tests {
     }
 
     fn pivot_on(sheet_id: u32) -> PivotTable {
-        PivotTable {
-            name: format!("P{sheet_id}"),
-            sheet_id,
-            location: CellArea {
-                top: 2,
-                left: 0,
-                bottom: 6,
-                right: 4,
-            },
-            cache: 0,
-            fields: Vec::new(),
-            row_fields: Vec::new(),
-            column_fields: Vec::new(),
-            data_fields: Vec::new(),
-        }
+        let location = CellArea {
+            top: 2,
+            left: 0,
+            bottom: 6,
+            right: 4,
+        };
+        PivotTable::new(format!("P{sheet_id}"), sheet_id, location, 0)
     }
 
     /// A model with sheets Sheet1 and Sheet2 and one pivot on each.

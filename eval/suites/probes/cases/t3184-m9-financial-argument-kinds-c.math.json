@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "fa81d1c8ede12052af4d355f64c6751b1bed107ad176754aa6ec112596ab2f41"
+ },
+ "sheets": {
+  "Calc": {
+   "A120": {
+    "t": "e",
+    "why": "a negative rate or yld, a pr or redemption of 0 or below",
+    "f": "=ODDLPRICE(39485,39614,39370,0.0375,0.0405,-1,2,0)"
+   }
+  }
+ }
+}

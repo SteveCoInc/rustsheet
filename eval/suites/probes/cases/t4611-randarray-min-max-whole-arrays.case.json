@@ -1,0 +1,63 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4611: RANDARRAY min, max and whole_number over an array or range. Rows: 1 ROWS(RANDARRAY(1,1,{0;5})); 2 ROWS(RANDARRAY(1,1,0,{1;5})); 3 ROWS(RANDARRAY(1,1,5,5,{TRUE;FALSE})); 4 ROWS(RANDARRAY(1,1,{5;7},{5;7})); 5 INDEX(RANDARRAY(1,1,{5;7},{5;7}),1,1); 6 INDEX(RANDARRAY(1,1,{5;7},{5;7}),2,1); 7 ROWS(RANDARRAY(1,1,Y1:Y2,Y1:Y2)); 8 COLUMNS(RANDARRAY(1,1,{5,7},{5,7})); 9 INDEX(RANDARRAY(1,1,{5,7},{5,7}),1,2); 10 INDEX(RANDARRAY(1,1,5,5,{TRUE;FALSE}),1,1); 11 ROWS(RANDARRAY(1,1,{5;6},{5;6},{TRUE;FALSE})); 12 ROWS(RANDARRAY({1;2},1,{5;6},{5;6})); 13 INDEX(RANDARRAY({1;2},1,{5;6},{5;7}),2,1); 14 ROWS(RANDARRAY(1,1,{0;5},{9;1})). Y1 is 5, Y2 7. A13 draws a random number and is not scored (not in `check`); the others read only shapes or values fixed by min = max, so they are `invariant` and scored.",
+ "tags": [
+  "M7",
+  "probe",
+  "arrays"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "Y1": 5,
+    "Y2": 7,
+    "A1": "=ROWS(RANDARRAY(1,1,{0;5}))",
+    "A2": "=ROWS(RANDARRAY(1,1,0,{1;5}))",
+    "A3": "=ROWS(RANDARRAY(1,1,5,5,{TRUE;FALSE}))",
+    "A4": "=ROWS(RANDARRAY(1,1,{5;7},{5;7}))",
+    "A5": "=INDEX(RANDARRAY(1,1,{5;7},{5;7}),1,1)",
+    "A6": "=INDEX(RANDARRAY(1,1,{5;7},{5;7}),2,1)",
+    "A7": "=ROWS(RANDARRAY(1,1,Y1:Y2,Y1:Y2))",
+    "A8": "=COLUMNS(RANDARRAY(1,1,{5,7},{5,7}))",
+    "A9": "=INDEX(RANDARRAY(1,1,{5,7},{5,7}),1,2)",
+    "A10": "=INDEX(RANDARRAY(1,1,5,5,{TRUE;FALSE}),1,1)",
+    "A11": "=ROWS(RANDARRAY(1,1,{5;6},{5;6},{TRUE;FALSE}))",
+    "A12": "=ROWS(RANDARRAY({1;2},1,{5;6},{5;6}))",
+    "A13": "=INDEX(RANDARRAY({1;2},1,{5;6},{5;7}),2,1)",
+    "A14": "=ROWS(RANDARRAY(1,1,{0;5},{9;1}))"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "Sheet1!A1",
+  "Sheet1!A2",
+  "Sheet1!A3",
+  "Sheet1!A4",
+  "Sheet1!A5",
+  "Sheet1!A6",
+  "Sheet1!A7",
+  "Sheet1!A8",
+  "Sheet1!A9",
+  "Sheet1!A10",
+  "Sheet1!A11",
+  "Sheet1!A12",
+  "Sheet1!A14"
+ ],
+ "invariant": [
+  "Sheet1!A1",
+  "Sheet1!A2",
+  "Sheet1!A3",
+  "Sheet1!A4",
+  "Sheet1!A5",
+  "Sheet1!A6",
+  "Sheet1!A7",
+  "Sheet1!A8",
+  "Sheet1!A9",
+  "Sheet1!A10",
+  "Sheet1!A11",
+  "Sheet1!A12",
+  "Sheet1!A14"
+ ]
+}

@@ -221,10 +221,10 @@ before T-3338: minus-paren-, minus-paren2-, plus-paren- and minus-abs-1023-typed
 ours shared were dropped then, because the harness scored a typed input the engine refuses as an engine
 error, not as a blank cell. Since T-3338 (sign cap) and T-3689 (parenthesis and call caps) each is a
 typed formula that does not parse (`TYPED_FORMULA_DOES_NOT_PARSE`) and scores as the blank cell Excel
-leaves (T-3870 added `ISBLANK(A1)` to every restored typed refusal, the t3097-*-66-typed and the t3172 and
-t3266 ones, and refilled them, excel-graph 2026-11-03: TRUE on all 23, so A1 is blank, not text), so T-3689 restored them, one past each accepted neighbour, and re-ran them (excel-graph
+leaves, so T-3689 restored them, one past each accepted neighbour, and re-ran them (excel-graph
 2026-11-02, every one PATCH 400, B1 FALSE): t3266-plus-num-1025-, minus-ref-1024-, minus-true-1024-,
-minus-spaced-1024-, nested-200-825-, nested-50-975- and nested-paren-257-typed. Ours matches all of it since T-3338 (the 2026-11-01 eval had the four typed
+minus-spaced-1024-, nested-200-825-, nested-50-975- and nested-paren-257-typed. T-3870 then added `ISBLANK(A1)` to every restored typed refusal, the t3097-*-66-typed and the t3172 and
+t3266 ones, and refilled them (excel-graph 2026-11-03): TRUE on all 23, so A1 is blank, not text. Ours matches all of it since T-3338 (the 2026-11-01 eval had the four typed
 1,023 cases above failing on S!B1 and nested-paren-128, -200, -255, -256 and nested-200-823, -824
 not running, `EngineError`, stored and typed). In ours a plus directly before a
 number literal folds into it and adds no node. Typed whitespace adds no
@@ -305,6 +305,28 @@ an unresolved `=N`; it then shows as `'<file>.xlsx'!N`); how a pinned use is sav
 Excel saves it; a typed `=[0]!Missing` (ours now shows `=Missing`); uses inside other names' bodies, conditional-format
 and data-validation formulas on S, and names called as functions (`N(2)`), which the add leaves alone; and desktop
 Excel's Name Manager.
+- **Most books re-bind instead; no rule found** (T-4391; probes/t4391-api-rebind-*, excel-graph 2026-11-06).
+  T-4049's "stays `#NAME?`" holds only in some books. In T-4353's book (First, S2, Last) with sheet-scoped adds and
+  every use loaded, Excel re-binds every unresolved use in the following cases:
+  - each of -first, -s2 and -last: ten adds on all three sheets, with First, S2 or Last active;
+  - -first-no-first-add and -first-then-book: adds on S2 and Last only, without or then with a workbook add;
+  - -s2-qualified-use, -last-qualified-use and both -qualified-first-add: a qualified `=S2!Rate` also loaded, `Rate`
+    added second or first;
+  - -first-t4353-unqualified: t4353-api-name-unqualified-ref without its two `=S2!Rate` cells.
+
+  It reads the body as the active sheet's cells and the name on the use's own sheet. Neither the name (function
+  names `Rate`, `N`, `Abs`, `Npv` and `Sln` re-bind like `Qa`), nor the add order, the body (cell, range,
+  constant), the using formula (`=X`, `=X+0`, `=SUM(X)`) or the active sheet makes a difference. The books that
+  keep `#NAME?` repeated it in two or three sessions each:
+  - t4049-sheet-api-name-plain and t4014-sheet-api-name-65 (`=N`);
+  - t4353-api-name-unqualified-ref and t4394-api-name-active-s2 (`=Rate`, while `=SUM(Span)` and `=Rate2` beside it
+    re-bind).
+
+  -s2-qualified-first-add has every feature of the last one tried alone (`Rate` first, a qualified `=S2!Rate`, S2
+  active) and re-binds. The answer also failed to repeat once: -first's first fill (commit 681082d1a) was `#NAME?` in
+  all 13 cells, and three later sessions of the same input re-bound all 13. Ours keeps T-4049's rule, since
+  re-binding everywhere would break the T-4049/T-4014 cells, so the re-bound cells are known failures (T-4617 owns
+  them and the bisection between -s2-qualified-first-add and t4394-api-name-active-s2).
 **An unqualified reference in an API-defined name binds to the active sheet** (T-4353, T-4394;
 probes/t4353-api-name-unqualified-ref, excel-graph 2026-11-05). In a book of First, S2 and Last (B1 = 1, 7, 9; B2 =
 10, 70, 90), Graph `worksheets('S2')/names/add` of `Rate` = `=$B$1` and `Span` = `=$B$1:$B$2`, of `Rate2` = `=$B$1`
@@ -315,13 +337,14 @@ probes/t4394-api-name-active-s2 and t4394-api-name-active-last, the same book wi
 Last, spec2xlsx `"active_sheet"`, excel-graph 2026-11-06): every use reads the active sheet's cells, 7 (`=SUM(Span)`
 77) with S2 active and 9 (99) with Last active, `=W` on First included. One typed-before use moves with it too:
 `=Rate` typed on S2 before the add is `#NAME?` with First or S2 active but 9 with Last active (t4394-api-name-active-last
-S2!A1; T-4391's). Ours since T-4445: `Txn::define_name` and `Txn::define_sheet_name` bind to `Workbook::active_sheet` (set with
+S2!A1; T-4617's). Ours since T-4445: `Txn::define_name` and `Txn::define_sheet_name` bind to `Workbook::active_sheet` (set with
 `Workbook::set_active_sheet`; an xlsx import takes the sheet marked `tabSelected`, else the first). The engine reads an
 API-added body on the active sheet and stores it qualified (`Model::formula_to_internal_between`;
 `an_unqualified_name_reference_binds_to_the_active_sheet`, crates/rustsheet/src/edit/tests/name_binding.rs), and the eval
 adapter sets a case's `active_sheet` before its `api_names`. The same probe shows
 an exception to the rule above: of the uses typed before the adds, S2's `=Rate` stays `#NAME?` but S2's `=SUM(Span)`
-and Last's `=Rate2` resolve (T-4391 owns S2!A3 and Last!A1, which the engine leaves `#NAME?`).
+and Last's `=Rate2` resolve; T-4391's probes found no rule that separates them (above, "Most books re-bind
+instead"; T-4617 owns S2!A3 and Last!A1, which the engine leaves `#NAME?`).
 A bare *name* in such a body does not follow the active sheet. A sheet-scoped definition beats the
 workbook-scoped one, and among sheet-scoped definitions Excel takes the one on the alphabetically first sheet
 name. The result is the same on every sheet and with First, S2 or Last active. With `W_x` = `=Dupx`:
@@ -332,9 +355,23 @@ name. The result is the same on every sheet and with First, S2 or Last active. W
 
 First < Last < S2 is alphabetical, not sheet order (First, S2, Last), and not "the active sheet first"
 (probes/t4554-api-name-scoped-name-choice, -first, -last D1:D9; t4554-api-name-local-name-body, where `=LocLoc`,
-S2's only, is 7 and `=Dup` is Last's 90; excel-graph 2026-11-06, T-4554). Whether the name order is case-insensitive
-is unprobed. Ours reads the active sheet's definition, else the workbook one, and stores the name bare, so a name
-only another sheet defines is `#NAME?` (T-4587 owns the cells).
+S2's only, is 7 and `=Dup` is Last's 90; excel-graph 2026-11-06, T-4554). The name order ignores letter case and puts
+`_` before the letters (probes/t4587-api-name-sheet-order-case, excel-graph 2026-11-06: tabs Z, B, a, _u, Z active,
+no workbook names; B + a reads a's, so not ordinal, where `B` < `a`; a + _u and B + _u read _u's, so `_` sorts as
+below the lower-case letters, not after `Z`; Z + a reads a's). Digits, other punctuation, spaces and non-ASCII names
+are unprobed (ours compares lower-cased names by code point). A sheet-scoped name's body follows the same rule:
+Last's `LD` = `=Dup` reads Last's 90 (t4554-api-name-local-name-body; Last is also the first by name there, so a
+sheet-scoped body's own sheet winning is not ruled out, UNVERIFIED). Ours since T-4587: the parser reads a bare
+defined name of an API-added body (`Parser::set_api_name_body`) as `Sheet!Name` on the first defining sheet by
+lower-cased name (`Parser::api_body_sheet_name`), so the body is stored qualified and a sheet rename rewrites it; a
+name only the workbook defines stays bare; a LET name or LAMBDA parameter of the body is no defined name.
+One cell of t4554-api-name-local-name-body stays off: Last!D3, `=LD` on Last loaded before the add of the Last-scoped
+`LD`, is 90 in Excel, where "A sheet-scoped name added after load" above leaves such a use `#NAME?` (ours). Four
+probes keep that rule against the obvious differences (excel-graph 2026-11-06, T-4587, all `#NAME?` on the scoped
+sheet, as t4049-sheet-api-name-plain): the other sheet active (t4587-sheet-api-name-inactive-sheet), the sheet
+already holding a file sheet-scoped name (t4587-sheet-api-name-sheet-has-names), a bare-name body `=Src`
+(t4587-sheet-api-name-name-body), and an earlier tab holding the qualified `=S!N` (t4587-sheet-api-name-qualified-use-first).
+What makes Last!D3 resolve is open (T-4618 owns the cell).
 Our choices that no probe covers yet, all UNVERIFIED:
 - (a) the body is stored qualified, so making another sheet active later does not move an existing name;
 - (b) renaming the bound sheet rewrites the body, and deleting it makes the body `#REF!`. A case cannot yet edit a
