@@ -1,0 +1,36 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4381: XNPV with a literal text argument and a defined name for a constant text as values or dates (T-4375 left both unprobed): rows 1 values \"30\"; 2 dates \"1/1/2025\"; 3 both; 4 values \"x\"; 5 name =\"30\" as values; 6 name =\"1/1/2025\" as dates; 7 both names; 8 name =\"x\" as values; 9 name =\"39448\" as dates; 10 name =30 as values (control).",
+ "tags": [
+  "M9",
+  "financial",
+  "xnpv",
+  "probe",
+  "T-4381"
+ ],
+ "names": {
+  "TextThirty": "=\"30\"",
+  "TextDate": "=\"1/1/2025\"",
+  "TextX": "=\"x\"",
+  "TextSerial": "=\"39448\"",
+  "NumThirty": "=30"
+ },
+ "expected": {},
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=XNPV(0.1,\"30\",39448)",
+    "A2": "=XNPV(0.1,30,\"1/1/2025\")",
+    "A3": "=XNPV(0.1,\"30\",\"1/1/2025\")",
+    "A4": "=XNPV(0.1,\"x\",39448)",
+    "A5": "=XNPV(0.1,TextThirty,39448)",
+    "A6": "=XNPV(0.1,30,TextDate)",
+    "A7": "=XNPV(0.1,TextThirty,TextDate)",
+    "A8": "=XNPV(0.1,TextX,39448)",
+    "A9": "=XNPV(0.1,30,TextSerial)",
+    "A10": "=XNPV(0.1,NumThirty,39448)"
+   }
+  }
+ ]
+}

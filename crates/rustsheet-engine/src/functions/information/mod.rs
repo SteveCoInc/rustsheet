@@ -558,7 +558,8 @@ impl Model {
                     };
                 }
             }
-            Node::NamedVariableKind { name, id: _ } => {
+            // A name no LET or LAMBDA binds. A bound one is read as what it is bound to, below.
+            Node::NamedVariableKind { name, id: None } => {
                 return CalcResult::Error {
                     error: Error::NAME,
                     origin: cell,
@@ -584,6 +585,19 @@ impl Model {
                             Error::NA,
                             cell,
                             "SHEET of an array of references".to_string(),
+                        )
+                    }
+                    // A LET variable or LAMBDA parameter is what it is bound to: a reference its
+                    // sheet, text a sheet name, an error itself, and an array (a GROUPBY group,
+                    // `{1,2}`) one #N/A (probes/t4518-sheet-sheets-bound-variable D1:D26,
+                    // t4450-eta-special-forms J53, F121, H121:H124, excel-graph; arrays.md).
+                    RefArg::Value(CalcResult::Array(_))
+                        if matches!(arg, Node::NamedVariableKind { .. }) =>
+                    {
+                        return CalcResult::new_error(
+                            Error::NA,
+                            cell,
+                            "SHEET of an array".to_string(),
                         )
                     }
                     RefArg::Value(_) => {}
@@ -686,6 +700,26 @@ impl Model {
                         if joins_a_cell_to_a_sheet_qualified_one(argument) =>
                     {
                         return error;
+                    }
+                    _ => {}
+                }
+            }
+            // A LET variable or LAMBDA parameter bound to a one-sheet reference is that
+            // reference, one sheet (`MAP(A1:A3,_xleta.SHEETS)` is 1, 1, 1); bound to an array (a
+            // GROUPBY group) it is #N/A (probes/t4518-sheet-sheets-bound-variable D9, D11, D13,
+            // D23, t4450-eta-special-forms J59, excel-graph). Other bound values stay unprobed:
+            // the oracle's canary sheet guard refuses SHEETS of a written parameter.
+            if let Node::NamedVariableKind { id: Some(_), .. } = argument {
+                match self.variable_reference(argument, cell) {
+                    RefArg::Ranges(Ranges::One(area)) if area.left.sheet == area.right.sheet => {
+                        return CalcResult::Number(1.0);
+                    }
+                    RefArg::Value(CalcResult::Array(_)) => {
+                        return CalcResult::new_error(
+                            Error::NA,
+                            cell,
+                            "SHEETS of an array".to_string(),
+                        );
                     }
                     _ => {}
                 }

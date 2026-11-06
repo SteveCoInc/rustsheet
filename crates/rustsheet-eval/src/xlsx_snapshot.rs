@@ -291,7 +291,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         names: defined_names,
         file_app_name,
     } = parse_workbook(&workbook)?;
-    let sheet_names: Vec<String> = sheet_list.iter().map(|(n, ..)| n.clone()).collect();
+    let sheet_names: Vec<String> = sheet_list.iter().map(|s| s.name.clone()).collect();
     let defined_names = defined_names
         .into_iter()
         .map(|(name, local, body)| DefinedName {
@@ -303,7 +303,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
     let mut sheets = Vec::new();
     let mut tables = Vec::new();
     let mut pivot_reader = pivots::PivotReader::new();
-    for (name, rid, _) in sheet_list {
+    for SheetRef { name, rid, .. } in sheet_list {
         let Some(target) = rels.get(&rid) else {
             continue;
         };
@@ -508,8 +508,14 @@ fn raw_name(e: &BytesStart<'_>) -> Option<RawName> {
     Some((attr(e, "name")?, local, String::new()))
 }
 
-/// `(sheet name, relationship id, sheetId)` per `<sheet>`.
-pub(crate) type SheetRef = (String, String, Option<String>);
+/// One `<sheet>` of `xl/workbook.xml`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SheetRef {
+    pub(crate) name: String,
+    /// Its `r:id`.
+    pub(crate) rid: String,
+    pub(crate) sheet_id: Option<String>,
+}
 
 /// What `parse_workbook` reads from `xl/workbook.xml`.
 pub(crate) struct ParsedWorkbook {
@@ -542,7 +548,11 @@ pub(crate) fn parse_workbook(xml: &str) -> Result<ParsedWorkbook, SnapshotError>
             Event::Start(e) | Event::Empty(e) => match e.local_name().as_ref() {
                 "sheet" => {
                     if let (Some(name), Some(rid)) = (attr(&e, "name"), attr(&e, "id")) {
-                        sheets.push((name, rid, attr(&e, "sheetId")));
+                        sheets.push(SheetRef {
+                            name,
+                            rid,
+                            sheet_id: attr(&e, "sheetId"),
+                        });
                     }
                 }
                 "fileVersion" => file_app_name = attr(&e, "appName"),

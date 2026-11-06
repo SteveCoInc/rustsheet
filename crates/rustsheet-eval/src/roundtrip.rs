@@ -7,6 +7,7 @@
 //! (T-4514) build on the same results.
 
 mod package;
+mod semantic;
 #[cfg(test)]
 mod tests;
 mod xmldiff;
@@ -25,6 +26,7 @@ use crate::baseline::{self as ratchet, Baseline};
 use crate::engine::harness_options;
 use crate::runner::{run_in_worker, CaseStatus};
 use crate::suite::{CaseFile, Suite};
+use crate::xlsx_snapshot::read_snapshot;
 
 use package::{validate, Package, Problem};
 
@@ -219,12 +221,27 @@ fn r0(bytes: &[u8], name: Option<&str>) -> Result<(Vec<Item>, usize), R0Error> {
     let out = workbook
         .to_xlsx_bytes(SaveOptions::default())
         .map_err(|e| R0Error::Engine(format!("save failed: {e}")))?;
-    Ok(score("R0", &source, &out))
+    let sides = Sides {
+        source: &source,
+        source_bytes: bytes,
+        saved: &workbook,
+        name: name.unwrap_or("workbook"),
+    };
+    Ok(score("R0", &sides, &out))
+}
+
+/// What a scenario's output is compared with: the source package and bytes, and the workbook
+/// that was saved (its recalculated values, D3.1).
+struct Sides<'a> {
+    source: &'a Package,
+    source_bytes: &'a [u8],
+    saved: &'a Workbook,
+    name: &'a str,
 }
 
 /// The items of one scenario and the number of source items compared: validator problems of
-/// `out`, then the source's parts with what differs inside them.
-fn score(scenario: &'static str, source: &Package, out: &[u8]) -> (Vec<Item>, usize) {
+/// `out`, the source's parts with what differs inside them, then the semantic items.
+fn score(scenario: &'static str, sides: &Sides<'_>, out: &[u8]) -> (Vec<Item>, usize) {
     let mut items = Vec::new();
     let problem = |p: Problem| Item {
         scenario,
@@ -245,15 +262,51 @@ fn score(scenario: &'static str, source: &Package, out: &[u8]) -> (Vec<Item>, us
         }
     };
     items.extend(validate(&output).into_iter().map(problem));
-    // V8: our own importer opens what we wrote.
-    if let Err(e) = Workbook::from_xlsx_bytes(out, &LoadOptions::default()) {
-        items.push(problem(Problem {
-            check: "V8",
-            detail: format!("the output does not load: {e}"),
-        }));
-    }
-    let (parts, checked) = part_items(scenario, source, &output);
+    let (parts, mut checked) = part_items(scenario, sides.source, &output);
     items.extend(parts);
+    // V8: our own importer opens what we wrote, as stored (no recalculation).
+    let as_loaded = LoadOptions {
+        recalc: false,
+        ..LoadOptions::default()
+    };
+    let reloaded = match Workbook::from_xlsx_bytes(out, &as_loaded) {
+        Ok(w) => w,
+        Err(e) => {
+            items.push(problem(Problem {
+                check: "V8",
+                detail: format!("the output does not load: {e}"),
+            }));
+            return (items, checked);
+        }
+    };
+    // Semantic items (D2, D3): the source and the output, both as loaded, then the saved and the
+    // reloaded values. A source the model cannot load scores no semantic items.
+    if let (Ok(src), Ok(dst)) = (
+        semantic::load_model(sides.source_bytes, sides.name),
+        semantic::load_model(out, sides.name),
+    ) {
+        items.extend(semantic::validate_indexes(&dst).into_iter().map(problem));
+        let (mut src_facts, mut dst_facts) =
+            (semantic::model_facts(&src), semantic::model_facts(&dst));
+        if let (Ok(a), Ok(b)) = (read_snapshot(sides.source_bytes), read_snapshot(out)) {
+            src_facts.extend(semantic::stored_facts(&a));
+            dst_facts.extend(semantic::stored_facts(&b));
+        }
+        let saved = semantic::value_facts(sides.saved, &src_facts);
+        let back = semantic::value_facts(&reloaded, &dst_facts);
+        for (facts_a, facts_b) in [(&src_facts, &dst_facts), (&saved, &back)] {
+            let (diffs, n) = semantic::compare(facts_a, facts_b);
+            checked += n;
+            items.extend(diffs.into_iter().map(|(key, verdict, detail)| Item {
+                scenario,
+                kind: "semantic",
+                key,
+                verdict,
+                detail,
+                candidate: None,
+            }));
+        }
+    }
     (items, checked)
 }
 

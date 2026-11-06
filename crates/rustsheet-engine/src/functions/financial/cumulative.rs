@@ -8,7 +8,7 @@
 //! period count less that principal, as Excel builds it (docs/excel-semantics/financial.md
 //! "CUMIPMT and CUMPRINC over many periods"). Moved out of `financial/mod.rs` (T-1845).
 
-use super::annuity::{compute_payment, growth_log};
+use super::annuity::{compute_payment, discounted_fails, growth_log};
 use super::number_or_error;
 use crate::functions::lift::num_error;
 use crate::x87_exp::{excel_exp, excel_expm1};
@@ -154,6 +154,9 @@ impl Model {
             period_start,
         };
         let sum = match paid {
+            // Excel's CUMIPMT is #NUM! where PMT's discounted balance fails (T-4488, financial.md
+            // "IPMT is #NUM! where its discounted balance fails"); CUMPRINC is unprobed there.
+            Paid::Interest if discounted_fails(rate, nper, pv, 0.0, period_start) => None,
             Paid::Interest => periods.interest(),
             Paid::Principal => periods.principal(),
         };
