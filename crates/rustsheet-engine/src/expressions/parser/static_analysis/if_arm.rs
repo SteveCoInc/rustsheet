@@ -1,7 +1,7 @@
 //! The arms of a legacy IF or IFS that are references, which the formula passes on whole instead of
 //! intersecting (docs/excel-semantics/references.md "Legacy IF passes a range arm whole").
 
-use super::name_body::{is_reference_body, scalar_body, ScalarBody};
+use super::name_body::{is_array_body, is_reference_body, scalar_body, ScalarBody};
 use super::{run_static_analysis_on_node, Node, StaticResult};
 use crate::functions::Function;
 
@@ -132,14 +132,17 @@ fn indexes_one_cell(args: &[Node]) -> bool {
 
 /// Whether `INDEX(args)` picks one cell ([`indexes_one_cell`]) of an area that is certainly a
 /// reference: a range, a union, or a defined name whose body is a cell or a range reference
-/// (`is_reference_body`). Only then is the INDEX a scalar shape (`fallback_shape`): over a name
-/// whose body is a 2-D array constant, `INDEX(n2d,1)` is a row, which a typed formula spills and a
-/// legacy one intersects (`=@INDEX(n2d,1)`); INDEX over an array-bodied name is unprobed.
+/// (`is_reference_body`), or one element of a name whose body is an array constant, given a row
+/// and a column index (`is_array_body`). Only then is the INDEX a scalar shape (`fallback_shape`):
+/// over a name whose body is a 2-D array constant, `=INDEX(n2d,1,1)` shows no `@` while
+/// `INDEX(n2d,1)` is a row, which a typed formula spills and a legacy one intersects
+/// (`=@INDEX(n2d,1)`; probes/t4273-legacy-at-name-body-more row 45, T-4273). One index into a
+/// one-row or one-column array body, and an area number, are unprobed and keep the `@`.
 pub(super) fn indexes_one_reference_cell(args: &[Node]) -> bool {
     indexes_one_cell(args)
         && match &*args[0].ungrouped_static() {
             Node::RangeKind { .. } | Node::OpUnionKind { .. } => true,
-            name => is_reference_body(name),
+            name => is_reference_body(name) || (args.len() == 3 && is_array_body(name)),
         }
 }
 
