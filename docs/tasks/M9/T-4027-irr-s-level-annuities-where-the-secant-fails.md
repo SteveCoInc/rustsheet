@@ -77,7 +77,15 @@ scored t3406 A1-A96 on Excel's digits (the returning cells) and on type.
 - Type, other cut quantities (none is common to all four n): the root (-0.22|-0.24, -0.18|-0.20, -0.14|-0.16,
   -0.12|-0.14), P/n, P/n^1.5, P/n^2, log P/n, P^n (Newton's first iterate from v = 0 is v = P), the far point v (10.1|15.1,
   23.4|43.5, 28.4|62.8, 153|519) and its NPV (refuted in T-3411).
-- For attempt 2: since A8-A10 return in Excel where no secant run converges, Excel has a second stage after the
-  secant fails, and its reach decides the type. Try a stage that brackets: for example, the secant's sign change
-  between d of about 0.0919 (NPV < 0) and the far point (NPV > 0), then regula falsi or bisection in d with a step or
-  NPV-evaluation cap. Score it on type over A1-A96 first, and then over every IRR cell in eval, cell by cell.
+- Bracketing stage, tried in the same run. Every failed run from 0.1 on A5-A68 and A73-A83 leaves a sign change
+  between its last negative point (d of about 0.0919) and its last positive point (the far point). Regula falsi on
+  that bracket does not converge on A6-A68 or A73-A83, even in 100,000 steps. Bisection to a width or |NPV| of 1E-7
+  takes, at each n's cut (last return | first `#NUM!`), 28|29, 29|30, 30|31 and 32|34 steps. That is the closest so
+  far, but no single cap fits all four n, because the bracket width is the far point's |d|: 9.1|14.1, 22.4|42.5,
+  27.4|61.8 and 152|519. Width alone does not separate the four n either: n = 20 is `#NUM!` at 14.1, n = 30 returns
+  at 22.4.
+- For attempt 2: A8-A10 return in Excel although no secant run converges on them. So Excel has a second stage after
+  the secant fails, and how far it reaches decides the type. The four t3406 brackets cannot pin that stage. A probe
+  would help: annuities whose far point and root are moved independently, for example the same P and n with a
+  guess other than 0.1, which moves the far point, or a level annuity with flows of 2. Score candidates on type
+  over A1-A96 first, then over every IRR cell in eval, cell by cell.
