@@ -21,7 +21,7 @@ uses the `owned` rule `--all-off` already uses (decisions 0136, 0138, 0139, 0159
   - T-4365's Context: "An ownership check over every failing cell of report.json";
   - T-4336, T-4337, T-4377, T-4405, T-4406, T-4407 and T-4412: "cells ... no task names";
   - gap triage 2026-11-06, which filed T-4484 for 2,327 t2513 tdensity cells.
-- In the 2026-11-06 run (origin/main d0ba57191, every suite fetched) the hand scan took 70 s.
+- In the 2026-11-06 run (origin/main the T-4453 merge (#3485), every suite fetched) the hand scan took 70 s.
   - It walked every failing cell (verdict not in `PASSING`) and kept those `owned` by no open task, deferred tasks
     included.
   - It found 3,598 items. 1,085 of them were pending cases with no cell (`calipers`, `corpus-bench`, `poi`), which are
@@ -30,7 +30,7 @@ uses the `owned` rule `--all-off` already uses (decisions 0136, 0138, 0139, 0159
     branch, 42 t4045 family-residue cells and 14 poi import-error cases.
 - Code: `scripts/exit_owners.py`. Reuse `failing_cells`, `report_case_names`, `owned`, `open_task_texts` and
   `unowned_off`'s per-case narrowing of task texts. Do not write a second matcher (CLAUDE.md directive 3).
-  `make unowned-off` is in the Makefile (line 180 at d0ba57191).
+  `make unowned-off` is in the Makefile (line 180 at the T-4453 merge (#3485)).
 - T-4436 (todo, opus) changes how `owned` treats a whole-case mention. This task only calls `owned`, so the two do
   not conflict. If T-4436 lands first, the new listing inherits its rule.
 

@@ -17,7 +17,7 @@ identified Excel's per-df Loader constant and its bd0 series. If it cannot, the 
 case and why the rest cannot be derived.
 
 ## Context
-- Gap triage 2026-11-06. `make eval` ran on origin/main d0ba57191 with every suite, calipers, poi and corpus-bench
+- Gap triage 2026-11-06. `make eval` ran on origin/main the T-4453 merge (#3485) with every suite, calipers, poi and corpus-bench
   included. `make unowned-off ALL=1` and `make phase1-exit`'s owners line are clean.
 - An ownership check over every failing cell of report.json leaves these 2,327 cells with no open owner. It used the
   `scripts/exit_owners.py` `owned` rule over every open task, deferred tasks included. Nothing else it found was
