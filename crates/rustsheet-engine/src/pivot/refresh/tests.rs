@@ -106,6 +106,26 @@ fn a_cached_text_item_keeps_its_slot_and_takes_the_source_casing() {
     assert_eq!(records, [1, 1, 1, 2]);
 }
 
+/// t4612 C1 to C3: the first record's casing relabels the listed slot, whatever the listed and
+/// the lowercase casing (C1 shows `EAST`, C2 and C3 `East`; saved rowItems x = 1).
+#[test]
+fn the_first_records_casing_relabels_the_listed_item() {
+    for (column, listed, shown) in [
+        (&["K", "=\"EAST\"", "east"][..], "east", "EAST"),
+        (&["K", "=\"East\"", "EAST", "east"][..], "EAST", "East"),
+        (&["K", "=\"East\"", "east", "EAST"][..], "east", "East"),
+    ] {
+        let model = source(&[&plain(column), &plain(&V4[..column.len()])]);
+        let old = cache(
+            &format!("A1:B{}", column.len()),
+            vec![("K", vec![CacheItem::Missing, text(listed)]), ("V", vec![])],
+        );
+        let (items, records) = refreshed_k(&model, &old);
+        assert_eq!(items, [CacheItem::Missing, text(shown)], "{listed}");
+        assert_eq!(records, vec![1; column.len() - 1], "{listed}");
+    }
+}
+
 /// t4134 I2: the listed order of mixed types is kept (saved rowItems x = 0..=7).
 #[test]
 fn listed_items_keep_their_order_across_types() {
@@ -225,6 +245,79 @@ fn date_values_do_not_match_cached_numbers() {
         assert_eq!(items[3..], dates, "{format}");
         assert_eq!(records, [3, 4, 3, 5], "{format}");
     }
+}
+
+/// t4612 T2 and T3: a time-only `h:mm` and an elapsed `[h]:mm` format read as dates too, so
+/// they are appended `<d>` items beside the cached numbers (saved rowItems x = 2, 3).
+#[test]
+fn time_and_elapsed_formats_read_as_dates() {
+    for (format, values) in [
+        ("h:mm", ["0.25", "0.5", "0.25"]),
+        ("[h]:mm", ["1.5", "2.25", "1.5"]),
+    ] {
+        let k: Vec<Input> = [("K", None)]
+            .into_iter()
+            .chain(values.map(|v| (v, Some(format))))
+            .collect();
+        let model = source(&[&k, &plain(&V4[..4])]);
+        let listed: Vec<CacheItem> = values[..2]
+            .iter()
+            .map(|v| num(v.parse().unwrap()))
+            .collect();
+        let old = cache("A1:B4", vec![("K", listed.clone()), ("V", vec![])]);
+        let (items, records) = refreshed_k(&model, &old);
+        let dates: Vec<CacheItem> = values[..2]
+            .iter()
+            .map(|v| CacheItem::Date(v.parse().unwrap()))
+            .collect();
+        assert_eq!(items[..2], listed[..], "{format}");
+        assert_eq!(items[2..], dates[..], "{format}");
+        assert_eq!(records, [2, 3, 2], "{format}");
+    }
+}
+
+/// t4612 T5 and T4: a date is its own item beside an equal plain number (saved rowItems x = 0,
+/// 1, 2), and beside a text the cached text item is reused (x = 1, 3, 4).
+#[test]
+fn a_date_and_an_equal_number_are_two_items() {
+    let date = Some("m/d/yyyy");
+    let model = source(&[
+        &[
+            ("K", None),
+            ("45000", date),
+            ("45000", None),
+            ("45001", None),
+        ],
+        &plain(&V4[..4]),
+    ]);
+    let old = cache(
+        "A1:B4",
+        vec![("K", vec![num(45000.0), num(45001.0)]), ("V", vec![])],
+    );
+    let (items, records) = refreshed_k(&model, &old);
+    assert_eq!(
+        items,
+        [num(45000.0), num(45001.0), CacheItem::Date(45000.0)]
+    );
+    assert_eq!(records, [2, 0, 1]);
+
+    let model = source(&[
+        &[("K", None), ("45000", date), ("x", None), ("45001", date)],
+        &plain(&V4[..4]),
+    ]);
+    let old = cache(
+        "A1:B4",
+        vec![
+            ("K", vec![num(45000.0), text("x"), num(45001.0)]),
+            ("V", vec![]),
+        ],
+    );
+    let (items, records) = refreshed_k(&model, &old);
+    assert_eq!(
+        items[3..],
+        [CacheItem::Date(45000.0), CacheItem::Date(45001.0)]
+    );
+    assert_eq!(records, [3, 1, 4]);
 }
 
 /// t4585: repeated headers are numbered from 2 per name ignoring case, keeping their casing,
@@ -419,6 +512,21 @@ fn shared_items_flags_follow_the_items() {
     assert!(mixed.contains_string && mixed.contains_mixed_types);
     let errors = SharedItemsFlags::of(&field(vec![CacheItem::Error(Error::NA)]));
     assert!(errors.contains_string && !errors.contains_number);
+    // t4612 T5: a date beside numbers is mixed, without number flags (`containsMixedTypes="1"`,
+    // `containsSemiMixedTypes="0"`, `containsString="0"`, no `containsNumber` or min/maxValue).
+    let dated = SharedItemsFlags::of(&field(vec![
+        CacheItem::Date(45000.0),
+        num(45000.0),
+        num(45001.0),
+    ]));
+    assert!(dated.contains_date && dated.contains_mixed_types);
+    assert!(!dated.contains_semi_mixed_types && !dated.contains_string);
+    assert!(!dated.contains_number && !dated.contains_integer);
+    assert_eq!(dated.number_range, None);
+    // t4612 T4: a date beside a text is mixed too, and keeps the string flags.
+    let with_text = SharedItemsFlags::of(&field(vec![CacheItem::Date(45000.0), text("x")]));
+    assert!(with_text.contains_mixed_types && with_text.contains_string);
+    assert!(with_text.contains_semi_mixed_types);
 }
 
 /// A field with a saved date grouping is grouped again by `group_by_dates` over the dates read,
