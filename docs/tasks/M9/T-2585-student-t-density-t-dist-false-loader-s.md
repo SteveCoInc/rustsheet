@@ -3,7 +3,7 @@ id: T-2585
 title: "Student t density T.DIST(.,FALSE): Loader's dt for df >= 3 and the df 1 and df 2 closed forms (T-2513)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P1
 size: M
 tier: opus
@@ -59,13 +59,14 @@ Routed by T-2981 (eval of 2026-10-28 at `main` 9586958b): the T.DIST(t,n,FALSE) 
 - probes-numeric/t2513-r3-tdensity-hold: T.DIST density 49
 
 ## Acceptance criteria
-- [ ] On cells.tsv's 19,776 T.DIST(.,FALSE) cells the engine is within 15 digits on at least 19,708 (df >= 3 at least
-      18,631 of 18,699, df 1 and 2 all 1,077) and bit-exact on at least 7,033.
-- [ ] On t2513-r3-tdensity-hold2 at least 573/960/960 and on t2513-verify-r3-tdensity-hold at least 505 bit-exact and
+- [x] On cells.tsv's 19,793 T.DIST(.,FALSE) rows (the research's 19,776 plus 17, see the Outcome) the engine is within
+      15 digits on at least 19,725 (df >= 3 at least 18,646 of 18,714, df 1 and 2 all 1,079) and bit-exact on at least
+      7,046.
+- [x] On t2513-r3-tdensity-hold2 at least 573/960/960 and on t2513-verify-r3-tdensity-hold at least 505 bit-exact and
       977 within 15 digits (unit test over a committed fixture).
-- [ ] df 1 and df 2: bit-exact on all 1,077 cells.tsv cells and on verify-r3-tdensity's 27 + 1,050.
-- [ ] The Outcome reports the visible change per suite against today's engine; no gated known-failure line is added.
-- [ ] statistics.md's entry gains an "Implemented in" line.
+- [x] df 1 and df 2: bit-exact on all 1,077 cells.tsv cells and on verify-r3-tdensity's 27 + 1,050.
+- [x] The Outcome reports the visible change per suite against today's engine; no gated known-failure line is added.
+- [x] statistics.md's entry gains an "Implemented in" line.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -77,3 +78,99 @@ Decision 0083: this task is done when every T.DIST(.,FALSE) cell it owns is with
 digit of Excel's value, or the cells still off are named in the Outcome and handed to T-2586. With the exact constant
 the model leaves 68 of cells.tsv's 19,776 visibly off (CR 229) and 23 of the verifier's 1,000. Bit-level criteria
 still unmet then move to a follow-up task without the campaign key.
+
+## Outcome
+T.DIST(t,n,FALSE) is now Excel's structure (`loader.rs` `excel_t_density`, called by T.DIST's density;
+statistics.md "Student t density is Loader's dt" gains an "Implemented in" line): Loader's saddle point in Excel's x87
+pieces for df >= 3 with the exact constant (`loader_t_constant`: the bd0 part as its series in 1/n, so it keeps its
+digits at large n, plus `stirlerr_exact`), and the df 1 and df 2 closed forms. `student_t_density` stays the fallback
+and T.INV's centre estimate.
+
+- One finding on the way: the t density keeps bd0's result in an x87 register (series sum unstored, log form summed
+  there), unlike the beta density's stored bd0. `excel_bd0` now shares its branch cut with `excel_bd0_unstored`;
+  storing it costs hold2 one exact cell (`T.DIST(2.20146...,11,FALSE)`, 3 ulp), which is where the research model
+  LT1 and the first engine port disagreed.
+- cells.tsv (T.DIST(.,FALSE), 19,793 rows read by a scratch test, not committed: decision 0066): 7,046 exact and 19,725
+  within 15 digits; df >= 3 18,646 of 18,714 within 15 digits; df 1 and df 2 all 1,079 exact.
+- Hold-outs, unit test over `test/fixtures/t_density_hold.fixture` (copied from the probe cases): hold2 at least
+  573 / 960 / 960 (exact / 4 ulp / 15 digits), the verifier's hold-out at least 505 exact, 918 within 4 ulp and 977
+  within 15 digits.
+- Visible change per suite: gen-m9 1 known failure fixed (caa1eed48b1883fe A382, the owned cell); ironcalc-calc 4
+  fixed (T_DIST.xlsx D3, D32, D40, D52); probes 0; 0 regressions anywhere. probes-numeric (not cell-gated), cells
+  passing exactly, before -> after: t2513-r3-tdensity-a1 8,006 -> 8,059, -a2 9,785 -> 10,080, -hold 9,350 -> 9,625,
+  -hold2 1,226 -> 1,533, t2513-verify-r3-tdensity-hold 1,093 -> 1,505. The cells still off are T-2586's (the per-df
+  constant's residual and the bd0 series), with `T.DIST(±10,1E6,FALSE)` and `T.DIST(8,50,FALSE)` as named.
+- No eval/baseline line added; 11 Gate A known-failure lines for the new batch's T-3554 points (Excel #NUM! where
+  t·t overflows, not caused by the fit; decision 0199 allows lines for a batch added in the same diff).
+- cells.tsv rows: 19,793 T.DIST(.,FALSE) rows against the task's 19,776; the 17 extra are probes-numeric
+  m9-t-nonint-df (10), m9-t-edges (5) and t1518-t-df-cut (2), which the research's count left out (truncated or edge
+  dfs). The engine still meets each threshold on the larger set.
+- R4 (decision 0188): the structure (LT1: op order, stored/unstored choices, the sw3 denominator) is a model chosen from
+  ranked candidates, and the log-branch cut `xx > n` is a fitted cut-point (now `T_LOG_BRANCH_CUT`, tagged
+  `FITTED(T-2513, 2406 cells, ...)`, quality/fitted.json updated by `check_fitted.py --update`). Both were frozen on the
+  in-sample probes a1 + a2 (2,406 cells) before the hold-outs were scored (r3-tdensity RESULTS.md, `final_insample.out`):
+  | data | LT1 exact / 4 ulp / 15 digits | CR |
+  |---|---|---|
+  | train a1 + a2 (2,406; LT1 with the in-sample per-df constants) | 1,412 / 2,405 / 2,406 (58.7% exact) | 531 / 2,280 / 2,326 |
+  | hold-out hold2 (960, exact constant) | 573 / 960 / 960 (59.7%) | 266 / 776 / 839 |
+  | verifier hold-out (1,000, df 13-50, exact constant) | 505 / 918 / 977 (50.5%) | 93 / 555 / 787 |
+  Margin 10 points (T-4323's): the hold-out exact rates are within it of the train rate (+1.0 and -8.2 points; the
+  train figure carries the fitted per-df constants, which this PR does not use) and 15-digit rates within 2.3 points.
+  Fresh data after the 2026-10-24 freeze: the Gate A tables T.DIST `s1` (2026-10-31, T-3358) and `e-T-3425`
+  (2026-11-01). `make eval-gates` on this head: accuracy passes, 0 failing; of the T.DIST density's 109 points 100 are
+  in the envelope on both measures, 2 on the math measure only, and 7 are known error-vs-number mismatches (T-3554)
+  where t·t overflows, `excel_t_density` returns None and the old fallback runs. The exact constant is plain math, not a
+  fit; no keep-matched branch.
+- R4 after Excel-fidelity round 2 (decision 0299 records the fitted cut and the evidence below):
+  - R4.1, stated plainly: no margin was declared before the hold-outs were scored; the 10 points above were borrowed
+    from T-4323 after the fact. Train and hold-out for the shipped model (LT1 with the exact constant, no per-df fit),
+    exact / 4 ulp / 15 digits, CR being the correctly rounded density from the probes' 50-digit math sidecars:
+    | data | shipped model | CR |
+    |---|---|---|
+    | train a1 + a2 (2,406) | 879 / 2,400 / 2,400 (36.5% exact) | 531 / 2,280 / 2,326 |
+    | hold-out hold2 (960) | 573 / 960 / 960 (59.7%) | 266 / 776 / 839 |
+    | verifier hold-out (1,000) | 505 / 918 / 977 (50.5%) | 93 / 555 / 787 |
+    The hold-out exact rates are above the train rate (a1 and a2 sample the branch transitions on purpose), so no
+    margin can be failed by over-fitting; the model beats CR on every set and count.
+  - R4.2 fresh sweep: Gate A batch `eval/accuracy/tables/T.DIST/r4-T-2585` (300 points, generated and filled on
+    excel-graph on 2026-11-05, after the freeze; 150 densities, df up to 1.6E297). Densities: 135 inside on both
+    measures, 4 inside on the math only, 11 error mismatches (Excel #NUM! where t·t overflows, the engine 0: T-3554's
+    class, listed in eval/accuracy/known-failures.tsv under T-3554; `excel_t_density` returns None there, so the old
+    fallback answers). Cumulative points: 142 both, 7 Excel-15-digits only, 1 math only. `rustsheet-eval accuracy`:
+    0 failing. The four math-only densities: T.DIST(-1.1002374143529E+20,15,FALSE) (the engine 2.18E-312, Excel 0:
+    Excel flushes the subnormal), T.DIST(-25099492.2763168,3,FALSE), T.DIST(-2.87096991276742,30708680,FALSE),
+    T.DIST(-5.29996999045118,492958,FALSE). The two math-only points of the older batches are
+    T.DIST(-5.2826836804213,1E10,FALSE) and T.DIST(5.59272735982579,398688,FALSE).
+  - R4.3 range: the cut is now applied over a measured range, not just its fitted one. Per region of cells.tsv (df >= 3),
+    exact / 4 ulp / 15 digits for cut 1 (shipped), R's 0.2, no log branch, and the accurate `student_t_density`:
+    | region | rows | cut 1 | 0.2 | no log branch | accurate |
+    |---|---|---|---|---|---|
+    | fitted range df 3..100, abs t 0.31..4.3 | 12,037 | 2,906 / 12,032 / 12,036 | 2,804 / 12,000 / 12,020 | 2,743 / 11,926 / 11,977 | 2,439 / 11,960 / 12,007 |
+    | df > 100 | 296 | 127 / 284 / 294 | 126 / 282 / 292 | 127 / 284 / 294 | 97 / 282 / 289 |
+    | abs t < 0.31 | 2,175 | 557 / 2,175 / 2,175 | same | same | 458 / 2,175 / 2,175 |
+    | abs t > 4.3 | 4,206 | 2,377 / 3,907 / 4,141 | 2,376 / 3,905 / 4,138 | 1,919 / 3,518 / 3,902 | 805 / 3,678 / 4,019 |
+    | fresh r4-T-2585, inside the fitted range | 42 | 15 / 40 / 42 | 10 / 36 / 38 | 14 / 38 / 40 | 7 / 37 / 40 |
+    | fresh r4-T-2585, outside the fitted range | 79 | 47 / 73 / 74 | 47 / 71 / 73 | 20 / 39 / 43 | 17 / 44 / 51 |
+    So the tag
+    now reads `fitted on df 3..100, |t| 0.31..4.3; measured on df 3..2.7E297, |t| up to 1.1E153` instead of guarding
+    the path: outside the fitted range the accurate density is worse on every count. The reused `EXCEL_BD0_CUT`
+    (fitted on BETA.DIST) was scored on the same rows: 0.1 2,831 / 12,018 / 12,032, 0.15 2,868 / 12,030 / 12,034,
+    0.2 2,906 / 12,032 / 12,036, 0.25 2,924 / 12,027 / 12,034, 0.3 2,910 / 12,022 / 12,031 on the fitted range, and
+    outside it the variants agree with 0.2 except 0.1 (2 fewer within 4 ulp and within 15 digits at abs t > 4.3) and
+    0.3 (2 fewer on the fresh batch); on the fresh batch's 42 in-range densities 0.2
+    gives 15 / 40 / 42 and no variant more. Its tag gains the T.DIST range; the value stays (no refit).
+  - Acceptance criterion 1 now names the 19,793 rows measured.
+- Excel-fidelity round 3 (9156e71): REQUEST_CHANGES with one MAJOR, fixed on the next head. At Gate A
+  r4-T-2585 A138, Excel's 0 against our subnormal 2.18E-312 is a real flush, not Graph hiding a kept subnormal (decision
+  0042): scratch excel-graph probes show `(x)=0` TRUE and `x*1E300` 0, and df 3 at t 1E78 and 1E80 is 0 too, while df 2
+  keeps its subnormal. `excel_t_density` now flushes its last product (`flush_subnormal`, as Excel's `*`), with a
+  model test (`t_density_flushes_a_subnormal_result`). A138 now matches Excel exactly. statistics.md "Student t density
+  is Loader's dt" gains the "Subnormal results" bullet. The probes also found df 1's `#DIV/0!` where π·(1 + t·t)
+  overflows (ours 0), filed as T-4427 with the probe case. The round's MINORs are fixed: this Outcome's known-failure
+  wording, the in-range fresh row of the R4.3 table, the measured-extremes wording on `T_LOG_BRANCH_CUT`'s tag, and a
+  cell count on `EXCEL_BD0_CUT`'s T.DIST range. Security and design approved 9156e71.
+
+## Review-round limit (resumed)
+Resumed after the review-round limit (step 5c).
+- Three review rounds were used (1f4e8e1, 79b71dd, 9156e71); round 3's MAJOR (A138's subnormal flush) and its MINORs
+  were fixed on ab7cd2f. The step-5c run puts the full panel on the current head from round 1.

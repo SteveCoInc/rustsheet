@@ -7,7 +7,7 @@ status: todo
 priority: P2
 size: M
 tier: opus
-depends_on: [T-3067]
+depends_on: [T-3067, T-4059]
 ---
 
 ## Goal
@@ -31,6 +31,7 @@ Also owned here (gap triage 2026-10-30, each within an ulp, no open task named t
 B10, B12, C1, C9 (type 0, e.g. `CUMPRINC(0.1,1E15,100000,1E15-0,1E15,0)` Excel -9090.909090909092, ours
 -9090.90909090909) and F1, F2, F3, F4, F5, F6, F7, F9, F11, F12 (type 1, e.g. `CUMPRINC(0.01,1E15,100000,1E15-1,1E15,1)`
 Excel -1950.886197334566, ours -1950.8861973345654).
+Also owned here (salvaged from #3105 by T-4385; each CUMIPMT cell amplifies the underflowed principal's last bits): probes/fin-cumprinc-underflow-fresh C1, C2, C6, D1, D2, D6, D8, G1, G2, G3, G4, G6, H1, H2, H3, H4, H8, H9, H10, O7, P7, S2, T2, T9 (e.g. G4 `CUMIPMT(0.0004,3E9,3300000,3E9-6,3E9,0)` Excel -14.766276925198326, ours -14.766276925200145).
 Start with E7, the one visibly-off cell. Also open: the underflow-ends misses in A-D, G, H (each within an ulp), fin-cumipmt-overflow-and-forms A10 and the
 type 1 ranges (column J, fin-cumipmt-period-bound A18), which still take the closed form. The implied L per cell is not
 one biased log (the windows for m = 2 and m = 8 at 0.01 do not overlap), so the error is in the operation order; try

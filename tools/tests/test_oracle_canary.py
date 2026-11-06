@@ -31,7 +31,7 @@ EXCEL = {
 }
 
 
-def _parts(xlsx: bytes) -> dict[str, str]:
+def _unzip(xlsx: bytes) -> dict[str, str]:
     zf = zipfile.ZipFile(io.BytesIO(xlsx))
     return {n: zf.read(n).decode() for n in zf.namelist()}
 
@@ -67,7 +67,7 @@ class ExcelLikeBackend(EchoBackend):
 
     def recalc(self, xlsx: bytes) -> tuple[bytes, OracleInfo]:
         self.calls += 1
-        parts = _parts(xlsx)
+        parts = _unzip(xlsx)
         canary = "xl/worksheets/rustsheet-canary.xml"
         parts[canary] = re.sub(r"<v>([^<]*)</v>", lambda m: f"<v>{EXCEL[m.group(1)]}</v>", parts[canary])
         parts["xl/worksheets/sheet1.xml"] = parts["xl/worksheets/sheet1.xml"].replace("<v>0</v>", "<v>6</v>")
@@ -83,7 +83,7 @@ def _values(xlsx: bytes, tmp_path: Path) -> dict[str, dict[str, Any]]:
 def test_embedding_appends_a_poisoned_sheet_and_keeps_the_case(tmp_path: Path) -> None:
     raw = build_xlsx(SPEC)
     embedded = embed_canary(raw)
-    before, after = _parts(raw), _parts(embedded)
+    before, after = _unzip(raw), _unzip(embedded)
     assert after["xl/worksheets/sheet1.xml"] == before["xl/worksheets/sheet1.xml"]
     sheets = re.findall(r'<sheet name="([^"]+)" sheetId="(\d+)"', after["xl/workbook.xml"])
     assert sheets == [("Sheet1", "1"), (SHEET, "2")]  # last, so sheet indexes don't shift
@@ -229,7 +229,7 @@ def test_sheet_count_functions_are_refused(formula: str, named: str) -> None:
 )
 def test_calls_that_cannot_see_the_canary_are_accepted(formula: str) -> None:
     spec = {"sheets": [{"name": "Sheet1", "cells": {"A1": formula}}]}
-    assert SHEET in _parts(embed_canary(build_xlsx(spec)))["xl/workbook.xml"]
+    assert SHEET in _unzip(embed_canary(build_xlsx(spec)))["xl/workbook.xml"]
 
 
 @pytest.mark.parametrize("formula", ['=CELL("width",A:A )', '=cell( "Width",B1)'])
@@ -244,9 +244,9 @@ def test_cell_with_other_info_types_is_not_refused() -> None:
 
 
 def test_new_sheet_id_follows_the_largest_and_names_cannot_collide() -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     parts["xl/workbook.xml"] = parts["xl/workbook.xml"].replace('sheetId="1"', 'sheetId="7"')
-    assert f'name="{SHEET}" sheetId="8"' in _parts(embed_canary(_repack(parts)))["xl/workbook.xml"]
+    assert f'name="{SHEET}" sheetId="8"' in _unzip(embed_canary(_repack(parts)))["xl/workbook.xml"]
     taken = build_xlsx({"sheets": [{"name": SHEET, "cells": {"A1": 1}}]})
     with pytest.raises(OracleError, match="already has a sheet"):
         embed_canary(taken)
@@ -265,7 +265,7 @@ def _move_sheet(parts: dict[str, str], new: str) -> dict[str, str]:
 
 def test_refusal_scan_follows_the_workbook_rels_to_a_nonstandard_sheet_path() -> None:
     spec = {"sheets": [{"name": "Sheet1", "cells": {"A1": "=SHEETS()"}}]}
-    moved = _move_sheet(_parts(build_xlsx(spec)), "xl/other/data.xml")
+    moved = _move_sheet(_unzip(build_xlsx(spec)), "xl/other/data.xml")
     with pytest.raises(OracleError, match=r"xl/other/data.xml uses (_xlfn\.)?SHEETS\(\)"):
         embed_canary(_repack(moved))
 
@@ -276,7 +276,7 @@ def _rels_path() -> str:
 
 def test_refusal_scan_reads_single_quoted_and_entity_escaped_rels() -> None:
     spec = {"sheets": [{"name": "Sheet1", "cells": {"A1": "=SHEETS()"}}]}
-    parts = _move_sheet(_parts(build_xlsx(spec)), "xl/other/data.xml")
+    parts = _move_sheet(_unzip(build_xlsx(spec)), "xl/other/data.xml")
     rels = parts[_rels_path()]
     parts[_rels_path()] = rels.replace("other/data.xml", "other/dat&#97;.xml").replace('"', "'")
     with pytest.raises(OracleError, match=r"xl/other/data.xml uses (_xlfn\.)?SHEETS\(\)"):
@@ -284,28 +284,28 @@ def test_refusal_scan_reads_single_quoted_and_entity_escaped_rels() -> None:
 
 
 def test_a_relationship_to_a_missing_sheet_part_is_refused() -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     parts[_rels_path()] = parts[_rels_path()].replace("worksheets/sheet1.xml", "worksheets/missing.xml")
     with pytest.raises(OracleError, match="not in the package"):
         embed_canary(_repack(parts))
 
 
 def test_unparseable_workbook_rels_are_refused() -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     parts[_rels_path()] = "<Relationships><Relationship"
     with pytest.raises(OracleError, match=r"unreadable xl/_rels/workbook.xml.rels"):
         embed_canary(_repack(parts))
 
 
 def test_workbook_rels_with_a_dtd_are_refused() -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     parts[_rels_path()] = '<!DOCTYPE r [<!ENTITY a "b">]>' + parts[_rels_path()]
     with pytest.raises(OracleError, match="declares a DTD"):
         embed_canary(_repack(parts))
 
 
 def test_a_sheet_in_the_worksheets_directory_is_scanned_even_without_a_relationship() -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     parts["xl/worksheets/orphan.xml"] = (
         "<worksheet><sheetData><row><c><f>SHEETS()</f></c></row></sheetData></worksheet>"
     )
@@ -314,25 +314,25 @@ def test_a_sheet_in_the_worksheets_directory_is_scanned_even_without_a_relations
 
 
 def test_a_zero_byte_directory_entry_under_worksheets_is_skipped() -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     parts["xl/worksheets/"] = ""
-    assert SHEET in _parts(embed_canary(_repack(parts)))["xl/workbook.xml"]
+    assert SHEET in _unzip(embed_canary(_repack(parts)))["xl/workbook.xml"]
 
 
 def test_a_directory_named_entry_with_data_is_still_refused() -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     parts["xl/worksheets/"] = "not xml"
     with pytest.raises(OracleError, match="xl/worksheets/"):
         embed_canary(_repack(parts))
 
 
 def test_a_clean_sheet_at_a_nonstandard_path_is_embedded() -> None:
-    moved = _move_sheet(_parts(build_xlsx(SPEC)), "xl/other/data.xml")
-    assert SHEET in _parts(embed_canary(_repack(moved)))["xl/workbook.xml"]
+    moved = _move_sheet(_unzip(build_xlsx(SPEC)), "xl/other/data.xml")
+    assert SHEET in _unzip(embed_canary(_repack(moved)))["xl/workbook.xml"]
 
 
 def test_xlm_get_workbook_in_a_defined_name_is_refused() -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     names = '<definedNames><definedName name="Sheets">GET.WORKBOOK(1)</definedName></definedNames>'
     parts["xl/workbook.xml"] = parts["xl/workbook.xml"].replace("</sheets>", f"</sheets>{names}")
     with pytest.raises(OracleError, match=r"GET\.WORKBOOK\(\)"):
@@ -351,7 +351,7 @@ def _with_part(xlsx: bytes, name: str, data: bytes) -> bytes:
 
 def test_a_utf16_rels_part_with_a_dtd_is_refused() -> None:
     raw = build_xlsx(SPEC)
-    rels = _parts(raw)[_rels_path()].split("?>", 1)[1]
+    rels = _unzip(raw)[_rels_path()].split("?>", 1)[1]
     doc = '<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE r [<!ENTITY a "b">]>' + rels
     with pytest.raises(OracleError, match="declares a DTD"):
         embed_canary(_with_part(raw, _rels_path(), doc.encode("utf-16")))
@@ -368,7 +368,7 @@ def test_a_utf16_rels_part_with_a_dtd_is_refused() -> None:
     ],
 )
 def test_refusal_scan_reads_unescaped_text(formula: str) -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     parts["xl/worksheets/sheet1.xml"] = parts["xl/worksheets/sheet1.xml"].replace(
         "</sheetData>", f"<row r='9'><c r='A9'><f>{formula}</f></c></row></sheetData>"
     )
@@ -378,14 +378,14 @@ def test_refusal_scan_reads_unescaped_text(formula: str) -> None:
 
 def test_refusal_scan_reads_a_utf16_sheet() -> None:
     raw = build_xlsx({"sheets": [{"name": "Sheet1", "cells": {"A1": "=SHEETS()"}}]})
-    sheet = _parts(raw)["xl/worksheets/sheet1.xml"].split("?>", 1)[1]
+    sheet = _unzip(raw)["xl/worksheets/sheet1.xml"].split("?>", 1)[1]
     doc = '<?xml version="1.0" encoding="UTF-16"?>' + sheet
     with pytest.raises(OracleError, match=r"SHEETS\(\)"):
         embed_canary(_with_part(raw, "xl/worksheets/sheet1.xml", doc.encode("utf-16")))
 
 
 def test_refusal_scan_covers_formulas_outside_cells() -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     validation = (
         '<dataValidations count="1"><dataValidation type="whole" sqref="B1">'
         "<formula1>SHEETS()</formula1></dataValidation></dataValidations>"
@@ -398,7 +398,7 @@ def test_refusal_scan_covers_formulas_outside_cells() -> None:
 
 
 def test_an_unparseable_sheet_part_is_refused() -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     parts["xl/worksheets/sheet1.xml"] = "<worksheet><sheetData>"
     with pytest.raises(OracleError, match=r"unreadable xl/worksheets/sheet1\.xml"):
         embed_canary(_repack(parts))
@@ -415,15 +415,15 @@ def test_duplicate_part_names_are_refused() -> None:
 
 @pytest.mark.parametrize("has_calc_pr", [False, True])
 def test_force_full_calc_on_load_sets_the_flag_once(has_calc_pr: bool) -> None:
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     if has_calc_pr:
         parts["xl/workbook.xml"] = parts["xl/workbook.xml"].replace(
             "</workbook>", '<calcPr calcId="1"/></workbook>'
         )
-    text = _parts(force_full_calc_on_load(_repack(parts)))["xl/workbook.xml"]
+    text = _unzip(force_full_calc_on_load(_repack(parts)))["xl/workbook.xml"]
     assert text.count('fullCalcOnLoad="1"') == 1
     assert (
-        _parts(force_full_calc_on_load(_repack({**parts, "xl/workbook.xml": text})))["xl/workbook.xml"]
+        _unzip(force_full_calc_on_load(_repack({**parts, "xl/workbook.xml": text})))["xl/workbook.xml"]
         == text
     )
 
@@ -464,7 +464,7 @@ def test_each_wrong_canary_value_is_reported(a1: str, got: Any) -> None:
 
 def test_namespace_prefixed_package_parts(tmp_path: Path) -> None:
     # Some writers (e.g. POI's 58760.xlsx) prefix the relationships namespace; Excel accepts it.
-    parts = _parts(build_xlsx(SPEC))
+    parts = _unzip(build_xlsx(SPEC))
     rels = "xl/_rels/workbook.xml.rels"
     parts[rels] = (
         parts[rels]
@@ -473,5 +473,5 @@ def test_namespace_prefixed_package_parts(tmp_path: Path) -> None:
         .replace("</Relationships>", "</ns0:Relationships>")
     )
     embedded = embed_canary(_repack(parts))
-    assert '<ns0:Relationship Id="rIdRustSheetCanary"' in _parts(embedded)[rels]
+    assert '<ns0:Relationship Id="rIdRustSheetCanary"' in _unzip(embedded)[rels]
     assert len(canary_problems(_values(embedded, tmp_path))) == len(CELLS)

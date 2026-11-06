@@ -7,16 +7,22 @@ its values are that model's committed predictions for every cell, PIVOTBY, table
 
 `rustsheet-eval show` prints values only for a case with a sidecar, so this writes a placeholder sidecar (every
 Calc formula cell the empty text), reads each cell's `actual`, and removes the placeholder again. The values go to
-docs/research/t4344/predictions.tsv as JSON strings (cell, value).
+docs/research/t4344/predictions.tsv as JSON strings (cell, value). Another probe passes its case (without
+`.case.json`) and output path as arguments (T-4388), instead of copying this script.
 """
 
 import json
 import os
 import re
 import subprocess
+import sys
 
 CASE = "eval/suites/probes/cases/t4344-groupby-descending-search"
 OUT = "docs/research/t4344/predictions.tsv"
+# The sheet read, and the cells given a placeholder (by default its formula cells). A probe whose calls spill sets
+# AREA to every cell of their spill areas (T-4464), so the empty ones are recorded as well.
+SHEET = "Calc"
+AREA = None
 # The placeholder sidecar's provenance: none of it is Excel's; the file is removed before the script ends.
 PLACEHOLDER = {"application": "placeholder", "input_sha256": "", "kind": "placeholder", "produced_at": "", "version": None, "workbook_name": ""}
 
@@ -29,14 +35,18 @@ def unescape(debug: str) -> str:
 
 
 def main() -> None:
+    global CASE, OUT
+    if len(sys.argv) == 3:
+        CASE, OUT = sys.argv[1], sys.argv[2]
     sidecar = CASE + ".oracle.json"
     if os.path.exists(sidecar):
         raise SystemExit("the case already has a sidecar: predictions are written before the fill")
     with open(CASE + ".case.json") as fh:
-        calc = {s["name"]: s["cells"] for s in json.load(fh)["sheets"]}["Calc"]
-    cells = {c: {"t": "s", "v": ""} for c, f in calc.items() if str(f).startswith("=")}
+        calc = {s["name"]: s["cells"] for s in json.load(fh)["sheets"]}[SHEET]
+    area = AREA(calc) if AREA else [c for c, f in calc.items() if str(f).startswith("=")]
+    cells = {c: {"t": "s", "v": ""} for c in area}
     with open(sidecar, "w") as fh:
-        json.dump({"format": "rustsheet-oracle/v1", "source": PLACEHOLDER, "sheets": {"Calc": cells}}, fh)
+        json.dump({"format": "rustsheet-oracle/v1", "source": PLACEHOLDER, "sheets": {SHEET: cells}}, fh)
     try:
         shown = subprocess.run(
             [
@@ -54,7 +64,7 @@ def main() -> None:
     values: dict[str, str] = {}
     cell = None
     for line in shown.splitlines():
-        m = re.match(r"Calc!([A-Z]+\d+)\s", line)
+        m = re.match(re.escape(SHEET) + r"!([A-Z]+\d+)\s", line)
         if m:
             cell = m.group(1)
         m = re.match(r"\s+actual\s*:\s*(.*)$", line)
@@ -66,7 +76,7 @@ def main() -> None:
         raise SystemExit(f"no engine value for {missing}")
     with open(OUT, "w") as fh:
         fh.write(
-            "# T-4344: the engine's values (the current model) for probes/t4344-groupby-descending-search, written "
+            f"# the engine's values (the current model) for probes/{os.path.basename(CASE)}, written "
             "before the oracle fill (cell, value as a JSON string)\n"
         )
         for c in sorted(values, key=lambda c: (int(c[1:]), c[0])):

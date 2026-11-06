@@ -4,25 +4,24 @@ import io
 import zipfile
 
 import pytest
+from spec_parts import spec_parts
 
 from rustsheet_tools.spec2xlsx import build_xlsx
 
 
-def _parts(spec: dict[str, object]) -> dict[str, str]:
-    xlsx = build_xlsx({"sheets": [{"name": "S", "cells": {"A1": 1, "B1": 2}}]} | spec)
-    z = zipfile.ZipFile(io.BytesIO(xlsx))
-    return {n: z.read(n).decode() for n in z.namelist() if n.endswith(".xml")}
+def _calc_parts(spec: dict[str, object]) -> dict[str, str]:
+    return spec_parts({"sheets": [{"name": "S", "cells": {"A1": 1, "B1": 2}}]} | spec)
 
 
 def test_calculation_settings_are_written_on_calc_pr() -> None:
-    workbook = _parts({"calculation": {"iterate": True, "iterate_count": 7, "iterate_delta": 0.5}})[
+    workbook = _calc_parts({"calculation": {"iterate": True, "iterate_count": 7, "iterate_delta": 0.5}})[
         "xl/workbook.xml"
     ]
     assert '<calcPr iterate="1" iterateCount="7" iterateDelta="0.5" calcId=' in workbook
 
 
 def test_no_calculation_leaves_calc_pr_alone() -> None:
-    assert "iterate" not in _parts({})["xl/workbook.xml"]
+    assert "iterate" not in _calc_parts({})["xl/workbook.xml"]
 
 
 @pytest.mark.parametrize(
@@ -31,7 +30,7 @@ def test_no_calculation_leaves_calc_pr_alone() -> None:
 )
 def test_bad_calculation_settings_are_refused(calculation: dict[str, object]) -> None:
     with pytest.raises(ValueError, match="calculation"):
-        _parts({"calculation": calculation})
+        _calc_parts({"calculation": calculation})
 
 
 def _sheet(tables: list[dict[str, str]]) -> str:

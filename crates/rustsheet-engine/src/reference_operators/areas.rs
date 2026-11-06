@@ -25,7 +25,7 @@ pub(crate) const TOO_MANY_AREAS: &str = "Too many areas in a reference";
 /// The areas [`Model::evaluate_areas`] finds: one area, held without an allocation (the
 /// common `LET(r,A1:C3,r B2)`), a list built for this expression, or a list shared with the
 /// binding or name it came from, read without a copy.
-pub(super) enum AreaList {
+pub(crate) enum AreaList {
     One(Range),
     Owned(Vec<Range>),
     Shared(Arc<[Range]>),
@@ -210,6 +210,24 @@ impl RefArg {
                 three_d_needs_one_sheet(cell)
             }
             other => other.into_single_area(cell),
+        }
+    }
+
+    /// The argument's areas where it is a union or a 3-D range, else its single-area value as
+    /// [`RefArg::into_single_area`] gives it. A function that takes both reads the areas as
+    /// written, an overlap counting twice and a 3-D range every sheet of its span: Excel accepts
+    /// both as the data of TRIMMEAN, Z.TEST and the PERCENTILE/QUARTILE/PERCENTRANK family
+    /// (probes/t4309-3d-union-trimmean-percentile, T-4309).
+    pub(crate) fn into_areas_or_single(
+        self,
+        cell: CellReferenceIndex,
+    ) -> Result<Ranges, CalcResult> {
+        match self {
+            RefArg::Ranges(areas @ Ranges::Areas(_)) => Ok(areas),
+            RefArg::Ranges(Ranges::One(range)) if range.left.sheet != range.right.sheet => {
+                Ok(Ranges::One(range))
+            }
+            other => Err(other.into_single_area(cell)),
         }
     }
 

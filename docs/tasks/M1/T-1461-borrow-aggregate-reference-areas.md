@@ -3,7 +3,7 @@ id: T-1461
 title: "Borrow AGGREGATE's reference areas instead of copying a LET-bound union"
 milestone: M1
 lane: perf
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -23,3 +23,10 @@ T-1162 performance review: `aggregate_reference_form` (functions/aggregate.rs) c
 
 ## Out of scope
 - The seen-range records of long walks (T-1463).
+
+## Outcome
+`Model::reference_areas` now returns the `AreaList` (made `pub(crate)`; it derefs to `&[Range]`) instead of an
+`into_vec` copy, and `aggregate_reference_form` iterates it by reference, so a LET-bound union's `Arc<[Range]>` is read
+without a copy. `reference_ranges` was not used: its `Ranges::from_list` adds a cross-sheet `#VALUE!` and an
+empty-intersection error that AGGREGATE's reference form does not give today, which would change behavior; borrowing
+`reference_areas` keeps every error as it was. Existing AGGREGATE tests (46) pass unchanged; no eval delta.

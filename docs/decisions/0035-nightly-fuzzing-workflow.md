@@ -36,3 +36,6 @@
   `Model::from_bytes`). Its seeds are `Model::to_bytes()` of engine-written workbooks, written by the fuzz crate's
   `bitcode_seeds` binary (`fuzz/seeds/bitcode_seeds.rs`), which `seed_corpus.py` runs. Corpora are still generated,
   never committed.
+- **Revision (2026-11-06, T-4490):** a failed scheduled run on `main` opens a `fuzz-failure` issue per failed target,
+  or comments on the open one, from a separate `report` job that alone has `issues: write` and `actions: read`; the
+  fuzz jobs keep `contents: read` and no secrets. See decision 0302.

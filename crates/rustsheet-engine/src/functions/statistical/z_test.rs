@@ -4,6 +4,7 @@ use crate::functions::statistical::special::normal_cdf;
 use crate::expressions::token::Error;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::Function;
+use crate::reference_operators::Ranges;
 use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 
 /// Z.TEST's p-value: NORM.S.DIST(-z,TRUE), not 1 - NORM.S.DIST(z,TRUE), with
@@ -31,12 +32,20 @@ struct ZTestData {
 
 impl Model {
     /// Z.TEST's evaluated data: the numbers of a range or an array (text and booleans skipped),
-    /// or a number or boolean; anything else is `#VALUE!`.
+    /// or a number, a boolean or numeric text; anything else is `#VALUE!`.
     fn z_test_data(
         &mut self,
-        data: CalcResult,
+        data: Result<Ranges, CalcResult>,
         cell: CellReferenceIndex,
     ) -> Result<ZTestData, CalcResult> {
+        // A union or 3-D range is read area by area (probes/t4309-3d-union-trimmean-percentile).
+        let data = match data {
+            Ok(areas) => {
+                let values = self.values_from_areas(&areas, cell)?;
+                return self.z_test_stats(values);
+            }
+            Err(value) => value,
+        };
         let values = match data {
             CalcResult::Range { left, right } => self.values_from_range(left, right)?,
             CalcResult::Array(array) => self
@@ -45,9 +54,20 @@ impl Model {
             CalcResult::Number(v) => vec![Some(v)],
             // A direct boolean is one value like a number (probes-numeric/t1049-ztest A51).
             CalcResult::Boolean(b) => vec![Some(f64::from(u8::from(b)))],
+            // So is direct numeric text: `ZTEST("3",3)` is the one-value `#DIV/0!`, while `""` and
+            // `"a"` are `#VALUE!` (probes/t4223-m9-statistical-array-kinds-b A48, A49; T-4223).
+            CalcResult::String(text) => match self.cast_number(&text) {
+                Some(v) => vec![Some(v)],
+                None => return Err(CalcResult::new_error(Error::VALUE, cell, String::new())),
+            },
             error @ CalcResult::Error { .. } => return Err(error),
             _ => return Err(CalcResult::new_error(Error::VALUE, cell, String::new())),
         };
+        self.z_test_stats(values)
+    }
+
+    /// The count, mean and sample standard deviation of `values`' numbers.
+    fn z_test_stats(&self, values: Vec<Option<f64>>) -> Result<ZTestData, CalcResult> {
         let mut sum = 0.0;
         let mut count: u64 = 0;
         for x in values.iter().flatten() {
@@ -89,7 +109,7 @@ impl Model {
             // or IF (probed; OFFSET by analogy) that picks a cell comes back as a range like the cell itself (T-2883).
             Some(node) => self
                 .evaluate_picked_reference_arg(node, cell)
-                .into_single_sheet_area(cell),
+                .into_areas_or_single(cell),
             None => return CalcResult::new_args_number_error(cell),
         };
         // A data argument that is itself an error value comes before `x` and `sigma` in every
@@ -97,7 +117,7 @@ impl Model {
         // `Z.TEST(NA(),"a")` are `#N/A` and `Z.TEST(NA(),{1,2})` spills two, while
         // `Z.TEST(Data!B2:B3,1/0)` and `Z.TEST({1,2,#N/A},1/0)` are `#DIV/0!`
         // (probes/t2428-ztest-error-data).
-        let data_is_error = matches!(data, CalcResult::Error { .. });
+        let data_is_error = matches!(data, Err(CalcResult::Error { .. }));
         // A single cell holding text, a boolean or nothing, however it is picked, reads as a range
         // of one cell: data with no number, `#N/A`, not `#VALUE!` (`ZTEST(Data!B11,Data!C2)` with
         // text in B11, gen-m9/c2684066d8df263e A190; docs/excel-semantics/statistics.md, T-2256

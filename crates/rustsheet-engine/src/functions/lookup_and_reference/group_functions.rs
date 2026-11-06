@@ -137,7 +137,8 @@ fn eta_arity(kind: &Function) -> Option<usize> {
 /// How many arguments a LAMBDA gets: one when it needs at most one (`LAMBDA([x],1)`, and
 /// `LAMBDA(x,[y],ISOMITTED(y))` is TRUE: an optional second parameter is not passed), two when it
 /// needs two; three or more required parameters make the whole result `#VALUE!` (G!A381, G!A401,
-/// functions2 G!A601). A LAMBDA without parameters: unprobed, `#VALUE!`.
+/// functions2 G!A601). A LAMBDA without parameters is `#VALUE!` too, alone, beside an eta function
+/// or through LET (probes/t4449-groupby-function-array-edges G!C9:C12, G!C33:C36).
 fn lambda_arity(required: usize, total: usize) -> Option<usize> {
     match required {
         0 | 1 if total >= 1 => Some(1),
@@ -277,9 +278,12 @@ impl Model {
     }
 
     /// The elements of an array of functions written with HSTACK, VSTACK and TRANSPOSE, stacked as
-    /// those functions stack values (a shorter part padded with `#N/A`, which then is the
-    /// result: unprobed). An error value in it is the result (`HSTACK(SUM,NA())` is `#N/A`: G!A781,
-    /// functions2 G!A701).
+    /// those functions stack values (a shorter part padded with `#N/A`; the padded grid is 2-D,
+    /// so [`Model::function_argument`] makes it `#VALUE!`, not `#N/A`:
+    /// probes/t4449-groupby-function-array-edges G!C1, G!C2, G!C25). An error value in it is the
+    /// result (`HSTACK(SUM,NA())` is `#N/A`: G!A781, functions2 G!A701), the first in reading
+    /// order when there are several, also after a value (`HSTACK(1/0,NA())` is `#DIV/0!`,
+    /// `HSTACK(5,NA())` `#N/A`: t4449 G!C3:C8).
     fn function_grid(
         &mut self,
         node: &Node,

@@ -367,24 +367,46 @@ C 5, D 75, counted on an instrumented build), it changes none of them, and Excel
 finite Excel value lies where the switch runs, and `period_payments` takes the exact balance interest there, with
 no fitted switch.
 
-## IPMT near the double range and at tiny rates: #NUM! where the engine has a value
-Rule: Excel's IPMT is `#NUM!` on inputs where the interest itself is a finite double:
-- pv and fv near the top of the double range at ordinary rates, on 6 of 200 cells drawn with pv and fv from 1E+290 to
-  9.9E+307: `IPMT(0.00282609064045807,30,31,2.17430063151056E+307,0,0)` is `#NUM!` (engine -4.13E+303), and so are
-  C46, C55, C114, C179 and C189; the other 194 have finite values, of the same size too.
-- a subnormal rate, on all 200 cells: `IPMT((7.245817E-308-6.217028E-308),27,305,-1.65145744696278E+26,0,0)` is
-  `#NUM!` (engine 1.55E-282). The rate is a kept-subnormal difference of two literals (arrays.md): a literal below
-  the normal range is refused and `2^-1074` is 0 (numbers.md "Subnormal results become 0").
-- a normal rate from 1E-300 to 1E-12 (either sign, nper up to 1E+9, pv and fv up to 9.9E+307), on 113 of 200 cells:
-  `IPMT(-2.53326609425573E-149,206877,274231,4.05556192485415E+114,4.87005200957666E+285,1)` is `#NUM!`, while
-  `IPMT(1.34415723179135E-62,56,89,7.13200119910222E+72,2.0490326468435E+191,0)` has a value.
-Every cell where the engine's T-2243 split declines (234 of the sweep) is among them; which intermediate of Excel's
-form fails is UNVERIFIED (T-4314).
-Evidence: probes-numeric/t3523-ipmt-selector-sweep columns B, C and D (excel-graph, 2026-11-05, T-3523).
-Status: VERIFIED (excel-graph) for these cells; the rule behind them is UNVERIFIED (T-4314).
-Implemented in: not yet; `period_payments` (crates/rustsheet-engine/src/functions/financial/annuity.rs) returns the
-finite interest.
-Tasks: T-2587, T-2943, T-3523, T-4314
+## IPMT is #NUM! where its discounted balance fails (near the double range and at tiny rates)
+Rule: outside period 1 of type 1, Excel's IPMT at a nonzero rate is `#NUM!` where its discounted split ("IPMT and
+PPMT split Excel's discounted payment") has no balance or no factor, even where the interest itself would be a
+finite double:
+- the discounted balance `A = (pv+fv)/(1-Q(-nper*L))` is past the double range, including `pv+fv` itself:
+  `IPMT(0.5,1,2,9.9E+307)` is -4.95E+307 (A = 1.782E+308) and `IPMT(0.5,1,2,2*5E+307)` `#NUM!` (A = 1.8E+308),
+  though its interest is -5E+307; `IPMT(0.5,1,2,0,2*5E+307)` and `IPMT(0.5,1,2,5E+307,5E+307)` are `#NUM!`, while
+  `IPMT(0.5,1,2,2*5E+307,-2*5E+307)` (pv+fv = 0) is -5E+307;
+- `1-Q(-nper*L)` is below the normal range: `IPMT(1E-300,1,1E-10,1E-300)` is `#NUM!` with A = 1E+10;
+- the rate is subnormal (written as a kept-subnormal difference, arrays.md), so that `d` (the rate for type 0, 0 for
+  type 1, where `1/rate` overflows) is not normal: `IPMT((7.245817E-308-6.217028E-308),2,1E+9,1E-10,0,0)` is `#NUM!`
+  with A = 9.7E+288, for type 1, for a negative rate and for pv = fv = 0 alike. The smallest normal rates have values
+  (`IPMT(2.2250738585073E-308,2,1E+9,1E-10)`).
+
+Period 1 of type 1 stays 0 (`IPMT((7.245817E-308-6.217028E-308),1,1E+9,1E-10,0,1)` is a true 0). A product with `d`
+below the normal range is a true 0, as Excel's `*` is (numbers.md "Subnormal results become 0"):
+`IPMT(2.2250738585073E-308,2,1E+9,1E-10)`, `IPMT(4.4501477170144E-308,...)` and the type 1 one are 0 with `(..)=0`
+TRUE, where the double product is about 2.2E-318.
+
+The same inputs make PMT, PPMT and CUMIPMT `#NUM!` (`PMT(0.5,2,2*5E+307)`, `PPMT(0.5,1,2,2*5E+307)`,
+`CUMIPMT(0.5,2,2*5E+307,1,1,0)`, `PPMT((7.245817E-308-6.217028E-308),2,1E+9,1E-10,0,0)`,
+`PPMT(1E-300,1,1E-10,1E-300)`); the engine does not follow that yet (T-4488).
+
+The boundary is A's own overflow: the largest Excel-finite `|A|` in the sweep is 1.43E+308 (column C) and 1.36E+308
+(column D), and every `#NUM!` cell of columns C and D has A past the double range; of column B (all `#NUM!`), 188
+have A past the range, 11 have `1-Q` subnormal and B127 (`IPMT(-(7.376629E-308-6.401598E-308),183380,192098,
+-12143.8633442825,0,0)`, A = 6.5E+306) only the subnormal rate.
+
+Evidence:
+- probes-numeric/t3523-ipmt-selector-sweep columns B, C and D (excel-graph, 2026-11-05, T-3523): all 200 of B, the 6
+  cells C44, C46, C55, C114, C179, C189 and 113 of D are `#NUM!`, the other 281 of C and D finite;
+- probes/t4314-ipmt-balance-overflow (excel-graph, 2026-11-06, T-4314): A1:A10 across A's overflow, B1:B6 PMT, PPMT
+  and CUMIPMT, C1:C12 subnormal and smallest normal rates, D1:D3 a subnormal `1-Q`, E1:E4 the `(x)=0` companions.
+  `1E+308` cannot be typed (numbers.md), so the probe writes `2*5E+307`.
+
+Status: VERIFIED (excel-graph).
+Implemented in: `period_payments` (crates/rustsheet-engine/src/functions/financial/annuity.rs) errs IPMT where
+`discounted_balance` or `payment_factor` declines; `discounted_split` flushes its interest. PMT, PPMT and CUMIPMT:
+not yet (T-4488).
+Tasks: T-2587, T-2943, T-3523, T-4314, T-4488
 
 ## IPMT and PPMT split Excel's discounted payment
 Rule: IPMT and PPMT split PMT's own discounted payment ("PMT is a discounted payment"). With PMT's `L`, its `1-Q`
@@ -479,6 +501,40 @@ T-2048); ironcalc-calc/FINANCIAL/ISPMT.xlsx Sheet1!E2 (Mac desktop cache).
 Status: VERIFIED (excel-graph)
 Implemented in: `ispmt_of` (functions/financial/annuity.rs)
 Tasks: T-2048
+
+## IPMT and PPMT take a period up to nper + 1
+Rule: IPMT's and PPMT's period is `#NUM!` below 1 and at or past nper + 1, not past nper: a period between nper and
+nper + 1 is a value, the split of "IPMT and PPMT split Excel's discounted payment" at that fractional period.
+`PPMT(0.0798622533510215,139.5,139,-115683.067689867,0,0)` is 8890.724785738455 (the closed form at period 139.5 is
+8890.7247857384561; at period 139 it would be 8555.65), and `PPMT(0.0134753740281655,123.5,123,-394.704261526236,
+60.5849877072275,1)` 5.466510612214358. At nper + 1 it is `#NUM!`: `PPMT(0.0449398904217299,315,314,-3107.59202412783,
+0,1)`, `PPMT(0.0805588428682658,227,226,16.1638393072709,0,0)` and `IPMT(0.0104741966355263,249,248,340880.668375193,0,0)`;
+so is a period of 0.5 (`IPMT(0.00268654404805728,0.5,11,-557.559050130903,0,0)`), 0 or -1.
+Unprobed: IPMT at a period strictly between nper and nper + 1 (the engine takes PPMT's bound for both).
+Evidence: accuracy/PPMT/s1 A112, A118 (values), A128, A137, A139 (`#NUM!`); accuracy/IPMT/s1 A113, A114, A117, A120,
+A123, A139 (`#NUM!`) (excel-graph, 2026-11-06, T-4109); gen-m9 a91bad4e84f49739 A354 `PPMT(1,0.5,323,401723)` and
+c0681a8b150ce301 A375 `PPMT(0.1,9,1.5,404118,62,1)` (`#NUM!`); "Financial edge-pool smoke check" (IPMT 13 of 12).
+Status: VERIFIED (excel-graph) for PPMT; IPMT's band UNVERIFIED
+Implemented in: `period_payments` (`period >= period_count + 1.0`, functions/financial/annuity.rs)
+Tasks: T-4109
+
+## PDURATION's domain
+Rule: `PDURATION(rate, pv, fv)` is `(LN(fv) - LN(pv)) / LN(1+rate)`, with `1+rate` a double. A rate, pv or fv of 0 or
+below is `#NUM!`, and a rate so small that `1+rate` is 1 is `#DIV/0!`. Because the denominator is the logarithm of the
+double `1+rate`, not `log1p(rate)`, a tiny rate puts Excel far off the true period count, by about 1E-16/rate:
+`PDURATION(1E-15,204482.528669153,5714.93905255357)` is -3222234474861891.5 against a true -3577398904732622 (9.9%),
+`PDURATION(4.63349481901791E-16,154.751778919733,2.53388363643895)` -9259556764248234 against -8874660289073923 (4.3%),
+and `PDURATION(1.298060469022E-13,30.5334710958428,16.5767219758772)` is still 6.9E-4 off. Decision 0300 keeps Excel
+as the target there.
+Evidence: accuracy/PDURATION/s1 (excel-graph, 2026-11-06, T-4109): a negative rate (A115, A119, A128, A130, A132, A133,
+A138, A140), pv (A111, A122, A139) or fv (A114, A117, A118, A121) and a pv or fv of 0 (A123, A126, A137) are `#NUM!`;
+rate 1.1E-16 is `#DIV/0!` (A124), 2.3E-16 a value (A135). The double form above is bit-exact on all 181 numeric points,
+the tiny-rate ones included (A82, A85, A89, A107, A112, A116, A120, A135 are 2.2E-4 to 9.9E-2 off the math). Earlier
+cells: gen-m9 31474c20fc1dafd6 A194 `PDURATION(0,7968,32308)` and 9a1fa5366bc50918 A196 `PDURATION(100,0,49370)`
+(`#NUM!`), e168be7f6d3f84c2 A180 `PDURATION(1E-300,4938,46197)` (`#DIV/0!`).
+Status: VERIFIED (excel-graph)
+Implemented in: `pduration_of` (functions/financial/growth.rs)
+Tasks: T-4109
 
 ## IRR, RATE and XIRR stop early, and the guess and flow scaling change the result
 Rule: Excel's iterative solvers (IRR, RATE, XIRR) return an un-converged iterate, not the root
@@ -722,7 +778,7 @@ Evidence (excel-graph, 2026-10-14, T-1525; from `tools/`: `uv run rustsheet-fitl
   that was item 6 of decision 0188's list. Excel's own XIRR is about 1e-8 off the math at a root away from 0, and
   1e-7 to 2.4e-6 off at roots near 1e-3 (row 6: 2.0e-6). That is the step test's absolute 5e-9 term, and below G it
   stays Excel's value. Near a zero root (|root| below about 2e-5) the same term puts Excel 1e-4 to 2.1e-3 off the
-  math (9 sweep cells, rows 94-104): an R3 candidate waiting on an owner ruling (T-3484).
+  math (9 sweep cells, rows 94-104): an R3 candidate the owner ruled to keep Excel's (decision 0300, T-3484).
 Ours: this model (`xirr_bracket`, `compute_xirr`, functions/financial/financial_util.rs,
 T-0916), with T-3268's stop (the XNPV bound on a negative midpoint only, unscaled): 227/227 on the fit set and 80/81 on
 the 81-cell `xirr-oos` (T-1583's span-scaled form before it: 69/81; the Newton code it replaced: 9/22 and 11/22 on the
@@ -1147,8 +1203,8 @@ The cap's return test (T-2689; probes/rate-cap-return-rule, rate-pmt-zero-cap, r
   formulas_financial F142 = rate-pmt-zero-cap A24, -0.9970141220397587), n 25 and up have a step over 1e-4.
 Whether a test is `<` or `<=` and whether the last one is 1 + r or r + 1 are not separated by any cell.
 Not probed, kept from the model: `#NUM!` for a residual whose `^` overflows (a flat secant is probed:
-rate-zero-residual-guess A1, A2); only the iterates r2 are tested against -1 (not r1 = guess - 0.001); a -0
-residual at the guess (the zero's sign picks r1; the probe's residuals are all +0); f(0) is pv + pmt·n + fv in plain doubles (the three
+rate-zero-residual-guess A1, A2); only the iterates r2 are tested against -1 (not r1 = guess ± 0.001); a -0
+residual at the guess (a +0 one steps up, T-3876's entry "RATE steps up from a zero residual"; no probed one is -0); f(0) is pv + pmt·n + fv in plain doubles (the three
 guess-0 cells are bit-exact, but no cell separates the order); the cap probe's guesses were chosen by the model's own
 step count, so the cap's position is measured in model steps (A30's exact unconverged bits confirm it).
 Ours: `compute_rate` (functions/financial/financial_util.rs), this model.
@@ -1325,6 +1381,37 @@ test in the noise floor; the outcome of a flat secant there; a non-integer nper 
 |f1| < 1e-7)
 Tasks: T-3348, T-3389, T-3424, T-3579, T-3698, T-3963, T-4146
 
+## RATE steps up from a zero residual
+Rule: the secant's second point is r1 = guess - 0.001 only when f(guess) > 0; when f(guess) is exactly 0 (and when it is
+negative) r1 = guess + 0.001. The rest of "RATE is a secant on the FV residual" is unchanged.
+Evidence: probes/t3876-rate-noise-residual (T-3876), 26 cells, 25 bit-exact with the rule:
+- Rounding-noise annuities (nper 1 with pv + pmt = 0 at the payment date and fv 0, type 1; or pv 0 and pmt = -fv, type 0):
+  every rate is a root and f is 0 or a few ulp of the flows. In 14 cells f(guess) is exactly 0. Excel returns the guess
+  in exactly the 5 where the model's f(guess + 0.001) is not 0 (A1, A8 `RATE(1,±13501.684222927,∓13501.684222927,0,1,1.74874265618351)`
+  at f ±7.3e-12, A11 `RATE(1,-3,0,3,0,3)`, A17, A26): the secant steps from guess + 0.001 back onto the guess, where
+  f = 0 stops it. In the other 9 (A2:A7, A9, A10, A12; guesses -0.99999999 to 10) f(guess + 0.001) is 0 too, the first
+  secant is flat on 0 and the call is `#NUM!`. Stepping down instead (the model before T-3876) agrees on 11 of the 14:
+  A1, A8 and A11 have f(guess - 0.001) = 0.
+- Every argument 0 (`RATE(1,0,0,0,1,0.3)`, `RATE(2,0,0,0,0,1.74874265618351)`, A18:A21) stays `#NUM!`: the flat secant on 0.
+- Nonzero noise at the guess (A13:A16) runs the secant as before. A13 commits T-3698's first draw,
+  `RATE(1,702.59374702126,-702.59374702126,0,1)` = 0.09577777777777774, which the model gives bit for bit.
+- nper 2 controls (A24, A25, type 1, pmt = -pv) are `#NUM!` in both.
+- The off cell: A22, `RATE(1,0,0,1E-300,0,0.3)`, a constant residual 1E-300, is `#NUM!` in Excel; the model holds at
+  r1 = 0.299 and returns it (flat secant, entry "RATE holds on a flat secant"). T-4431 owns it. A23 (guess -0.9999) is
+  `#NUM!` in both.
+Fresh sweep (R4, drawn after the rule was frozen): probes/t3876-rate-noise-residual-fresh, 126 cells, 121 bit-exact.
+A61:A126 are the 66 of 20,000 random noise-only draws (seed 38762) where f(guess) is exactly 0 and exactly one of
+f(guess ± 0.001) is 0, so the two step directions predict opposite results: the step-up rule matches all 66 (27 return
+the guess, 39 `#NUM!`), stepping down matches none. A1:A60 are plain random draws, 55 bit-exact under either rule; the
+5 off (A1, A16, A26, A31 `#NUM!` in Excel where the model holds a flat secant on nonzero noise at guess - 0.001, and A5
+on another noise path) are T-4431's, with A22 above.
+Not separated: whether a residual of -0 at the guess steps up too. No probed residual at the guess is -0, and the
+engine's rule (step down only when f > 0) sends both zeros up.
+On the existing evidence the change is neutral: rate-zero-residual-guess (guess-0 roots A8:A10, exact roots A3:A6, A12)
+and every other RATE cell in probes, probes-numeric, gen-m9 and ironcalc-calc keep their results.
+Ours: `rate_secant` (functions/financial/financial_util.rs), T-3876.
+Status: VERIFIED (excel-graph, the cells above) / UNVERIFIED (a -0 residual at the guess)
+
 ## RATE restarts once on an early flat secant
 Rule: an amendment to "RATE holds on a flat secant and runs on below -1" above. A flat secant (f1 = f0, f1 ≠ 0)
 restarts the run once, as a fresh run whose guess is the flat step's older iterate r0, when all of these hold:
@@ -1422,12 +1509,11 @@ Evidence (excel-graph, 2026-11-02, T-3698):
 - Misses inside the rule's region (T-3698 review): t3698-rate-flat-restart A9 (|f1| 8.57e-5, step 3; Excel
   0.002094170434467432 matches neither path), and A17, A21, A25 and -fresh A22 (Excel `#NUM!`, both paths a number).
 - Found in passing (T-3698's fresh sweep A201): with nper 1, type 1, fv 0 and pmt = -pv, every residual is rounding
-  noise (pv + pmt = 0 at t = 0). Excel returns the guess, 1.74874265618351, and the model returns `#NUM!`. The
-  zero-residual probe's `RATE(1,0,0,0,0,0.3)` is `#NUM!` in Excel, so a residual that is noise and not exactly 0
-  behaves differently. The restart cannot fire here, because these residuals are far below 1.3e-7. T-3876 owns it.
+  noise (pv + pmt = 0 at t = 0). Excel returns the guess, 1.74874265618351. The model returned `#NUM!` until T-3876
+  found the cause: a zero residual at the guess steps up, not down (entry "RATE steps up from a zero residual").
 Ours: `compute_rate` and `rate_secant` (functions/financial/financial_util.rs), T-3698.
 Status: VERIFIED (excel-graph, on the cells above) / UNVERIFIED (the step bound's position in 16..17; late
-restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1; a noise-only residual)
+restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1)
 Tasks: T-3698, T-3424, T-3876, T-3916, T-3963
 
 ## RATE flat secants: no rule on the model's state separates Excel's restarts from its holds
@@ -2442,6 +2528,34 @@ T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
     the 104 tiny-rate principals. The best geometric sum over all three cases (both types, ranges up to 12 periods) has
     339 of 634 (the task file lists the families). Multi-period values are not the double sum of the probe's own one-period values
     either: they agree up to m = 5 and then drift by 1 to 2 ulps.
+- Where `v^nper` underflows, the principal is one core for both types (T-3141, excel-graph 2026-11-04;
+  probes/fin-cumprinc-underflow-type1, 72 cells, and probes/fin-cumprinc-underflow-fresh, 200 cells). Rule: over a short
+  range with `1 - v^nper` = 1, `C = pv·((1-v^m)·v^(nper-end+1))` in doubles, with `1-v^m` PMT's `1-Q` of `-m·L` (Kahan's
+  expm1 below m·L = 1, `1 - EXP` from 1 on, as PMT's: "PMT is a discounted payment"), `v^(nper-end+1)` Excel's EXP of
+  `-(nper-end+1)·L` and L `growth_log`'s; type 1's CUMPRINC is `-C` and type 0's `-(C·(1+r))`. The `1+r` is a last
+  product: folding it into the power (`v^(nper-end)`, T-3067's balance drop) is what left 38 of 108 type 0 cells an ulp
+  off. Consequences, all in Excel's own values: type 1 is nearly type 0 over `1+r` in doubles (`A/1.01 = F` on all 12
+  near-1e15 pairs and 12 underflow-ends pairs; 34 of 36 pairs of the type1 case, the other two, A8/E8 and C6/G6, are
+  `C·(1+r)/(1+r) ≠ C`; the reciprocal product `A·(1/(1+r))` has 27); the CUMIPMT is `PMT·m - CUMPRINC` as everywhere
+  ("How the interest is built"), so E2-E4 and E7 near 1E15 follow. Past a leading exponent `(nper-end+1)·L` of 0.3 the
+  core is Excel's too on every probed cell where it and the geometric sum differ (type1 C7-C9, G7-G9 at 0.2 ending 2
+  before nper, exponent 0.55; fresh I10, K10; integer rates: gen-m9 `CUMPRINC(10,230,351888,4,21,0)` d0854366830dcdee
+  A98, 67a4c03afd63f988 A208, b73c6cc96e093f03 A111), but no fractional rate is probed deeper than 0.56.
+  How it was found: the 132 principals of near-1e15 and underflow-ends were the fit set and the type1 case the hold-out,
+  split before scoring. Every expression tree over {pv, 1-v^m, v^(nper-end), 1/(1+r)} with optional `r/r` and
+  `(1+r)/(1+r)` pairs (10,343 type 0 and 108,691 type 1 distinct value sets, products and quotients in every
+  association) puts type 1's `pv·((1-v^m)·(v^(nper-end)·(1/(1+r))))` at 24 of 24 and type 0's same core times `1+r` at
+  98 of 108, and the core with the power taken whole as EXP of `-(nper-end+1)·L` is exact on all 132 and on all 72 of
+  the hold-out. Frozen, it was exact on 98 of the fresh sweep's 100 principals (5 rates 0.0004 to 0.15, nper 77777 to
+  2E13, pv 1 to 3.3E6, ranges ending at nper, 1 and 3 before); the 2 misses (I5, J5: 0.15 over 10 periods, m·L 1.40,
+  the largest probed) are `1 - EXP(-m·L)`'s, and Kahan's is right at 0.98 (I4), so the cut sits in 0.98..1.40, which
+  PMT's cut at 1 (T-3014) fits; T-3141's kernel (on its branch) reuses that helper. Taking that cut from the fresh case made it fit data,
+  so it is no R4.2 sweep: that sweep is T-4059's `r4-T-3141` batch of a CUMPRINC Gate A table. With the fit lab's split
+  (decision 0188 R4.1, margin 5 points) over all 304 principals, the core is 216/216 bit-exact on train and 88/88 on
+  test (all within 4 ulps and 15 digits), the correctly rounded value 65/216 and 33/88 (all within 4 ulps). Forms that lost on the fit set: x87-register
+  intermediates for Kahan's product and quotient and for the exponent (at most 25 of 36 distinct principals), the
+  extended-precision LN in Kahan's divide (25), libm's expm1 (19 to 21), `1 - EXP` throughout (5), and every per-period
+  and geometric ordering of the T-3067 notes (at most 21).
 Status: PARTLY VERIFIED (excel-graph; visibly right but for A7 (= G2) and A10 near period 1E15, fin-cumipmt-period-bound
 A18, fin-cumprinc-near-1e15 E7, and the CUMIPMT cells that amplify our CUMPRINC's last bits (gate-edges A1-A4, A6, A7,
 E3-E10, H3, gen-m9 A352: T-3413; tiny-rate-structure's other 37: T-3776 (blocked time-boxed after T-3552 and T-3731 found no form); T-3118 moved 7 off the bit, decision 0197: gen-m9 A329,
@@ -4966,7 +5080,7 @@ Evidence:
 Where Excel's error exceeds G: from the cut up to 1E-13 on the probe. The cells at 1E-14, 1.5E-14, 3E-14 and 1E-13
 (A99 to A125) are 7.0E-4 to 6.9E-3 off. At 3E-13 and 1E-12 the error falls below G (5.8E-5 to 9.1E-5). The error is
 about 1E-16/rate, from the rounding of the doubles 1 + rate and ratio before their logarithms. The approved region
-stops at 1E-14, so the engine keeps Excel's value from 1E-14 up. T-4285 asks the owner whether to widen it.
+stops at 1E-14, so the engine keeps Excel's value from 1E-14 up. The owner ruled not to widen it (decision 0300, T-4285).
 Status: MATH-OVER-EXCEL (decision 0188)
 Ours: below 1E-14, and where 1 + rate is not 1, `nper_of` (functions/financial/annuity.rs, `NPER_MATH_RATE`) returns
 log1p(-(fv+pv)·rate/(pmt·k+pv·rate)) / log1p(rate). That is within 1e-14 of the math on every probe cell. Excel's

@@ -8,6 +8,17 @@ accuracy/T.DIST/s1!Calc!A85	T-3554	Excel #NUM! for the density at a huge x; the 
 accuracy/T.DIST/s1!Calc!A95	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.DIST/s1!Calc!A105	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.DIST/s1!Calc!A110	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A218	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A238	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A245	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A252	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A256	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A258	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A260	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A266	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A267	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A271	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
+accuracy/T.DIST/r4-T-2585!Calc!A277	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.INV/s1!Calc!A75	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/T.INV/s1!Calc!A102	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/T.INV.2T/s1!Calc!A68	T-3386	Excel #NUM! at p = 2.2E-308 where the quantile is finite
@@ -273,3 +284,6 @@ accuracy/GAMMA.INV/e-T-3863!Calc!A194	T-3364	R3 closed-form point: the engine re
 accuracy/GAMMA.INV/e-T-3863!Calc!A196	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A198	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A199	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
+accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 0^k
+accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
+accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k

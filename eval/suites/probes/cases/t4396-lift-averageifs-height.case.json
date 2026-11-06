@@ -1,0 +1,27 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "AVERAGEIFS over a lifted OFFSET (an array of references), alone in its workbook as T-2065 did (T-4396, SPEC-0014).",
+ "tags": [
+  "M9",
+  "probe",
+  "offset"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": 1,
+    "A2": 100,
+    "A3": 10000,
+    "B1": 2,
+    "B2": 200,
+    "B3": 20000,
+    "A4": "5",
+    "A6": true,
+    "A7": 7,
+    "E1": "=AVERAGEIFS(OFFSET(A1,0,0,{1;2}),OFFSET(A1,0,0,{1;2}),\">0\")"
+   }
+  }
+ ],
+ "expected": {}
+}
