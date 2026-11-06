@@ -3,10 +3,10 @@ id: T-4468
 title: "Near-integer snap at the upper limit: SUBSTITUTE instance_num, FIXED/DOLLAR decimals, CHAR and FIND start just below their caps; tidy T-4453's citations"
 milestone: M5
 lane: functions-text
-status: in-progress
+status: todo
 priority: P3
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -40,3 +40,13 @@ nits are fixed in the same PR.
 ## Out of scope
 - Interior bases (T-4453 has them).
 - TEXTBEFORE/TEXTAFTER and REGEX occurrence arguments (M7).
+
+## Handoff
+Done: committed probes/t4468-near-integer-text-caps (oracle filled, excel-graph 2026-11-06), the two citation nits, and the
+text.md result. FIXED/DOLLAR(128-2^-23), CHAR(256-2^-23) and FIND start at the cap already match the engine (all
+bit-exact). Only SUBSTITUTE instance_num at 2^31-1 differs: Excel snaps over a far wider window there (`#VALUE!` for
+d <= 2^-18, "aaa" from 5*2^-19; cells A5, F1:F6 fail, 7 cells), the engine keeps the absolute 2^-22+2^-33 bound.
+Why I stopped: finding the real bound model (absolute vs scale-dependent, and between 2^-18 and 5*2^-19) is numeric fitting
+(work-loop step 4 numeric-fits guards, hold-out and fresh sweep), beyond a sonnet run. Next: one more bisection round
+between 2^-18 and 5*2^-19, pick a structural model, fix `substitute_element` (util.rs) / `near_integer.rs`, then
+`make eval-baseline`, run the reviewers, enqueue. Add the owner line for A5 and F1:F6 in the PR.
