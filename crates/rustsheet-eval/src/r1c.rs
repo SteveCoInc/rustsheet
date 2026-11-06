@@ -24,6 +24,10 @@
 //! candidate, which needs an owner ruling above G); the classifier cannot tell which, so the cell
 //! counts until an R3 mark says otherwise. This is the strictest reading of R1(c): it moves no
 //! cell out of the count that any reading would keep in.
+//!
+//! The R3 test ([`r3_math`]) is also what the closeness buckets read: the run marks each such cell
+//! once ([`mark_r3_math`], [`Target::Math`]), so it is `r3_math` rather than visibly off in
+//! every count (decision 0310). [`classify`] still classifies it, as [`R1c::R3Pass`].
 
 use std::collections::BTreeMap;
 
@@ -34,7 +38,7 @@ use crate::accuracy::lists::R3Marks;
 use crate::closeness::Visible;
 use crate::phase1_exceptions::Phase1Exceptions;
 use crate::probe_milestones;
-use crate::runner::{cell_id, CaseResult, CellResult};
+use crate::runner::{cell_id, CaseResult, CellResult, Target};
 use crate::value::Value;
 
 /// How R1(c) reads one visibly-off cell (see the module doc).
@@ -51,7 +55,38 @@ pub enum R1c {
     M14Owned,
 }
 
-/// Classifies cell `c` of case `case`, a visibly-off cell (`None` for any other cell).
+/// Whether cell `c` of case `case` is a decision 0188 R3 cell where the engine returns the math:
+/// two numbers, `math-over-excel.tsv` marks the cell, Excel is more than G = 1e-4 off its math
+/// value (R3's evidence, checked per cell: below G the mark is ignored and Excel's value stays
+/// the target) and the engine's value is inside Gate A's envelope with Excel's side dropped,
+/// within ε of the math. The one test behind [`R1c::R3Pass`] and [`Target::Math`]. R3
+/// never applies to an error, a text or a wrong type.
+#[must_use]
+pub fn r3_math(case: &str, c: &CellResult, r3: &R3Marks) -> bool {
+    let (Value::Number(_), Value::Number(_), Some(math)) = (&c.expected, &c.actual, &c.math) else {
+        return false;
+    };
+    r3.contains_key(&cell_id(case, &c.key()))
+        && excel_off_math(&c.expected, math)
+        && envelope(Some(c), &c.actual, Some(math), true).is_inside()
+}
+
+/// Sets [`CellResult::target`] on every cell of `results` by [`r3_math`]: once per run, before
+/// the report counts the closeness buckets (decision 0310).
+pub fn mark_r3_math(results: &mut [CaseResult], r3: &R3Marks) {
+    for r in results {
+        for c in &mut r.cells {
+            c.target = if r3_math(&r.id, c, r3) {
+                Target::Math
+            } else {
+                Target::Excel
+            };
+        }
+    }
+}
+
+/// Classifies cell `c` of case `case`, a visibly-off cell or an R3 cell where the engine returns
+/// the math (`None` for any other cell).
 #[must_use]
 pub fn classify(
     case: &str,
@@ -59,7 +94,8 @@ pub fn classify(
     r3: &R3Marks,
     exceptions: &Phase1Exceptions,
 ) -> Option<R1c> {
-    if !Visible::is_failing_off(c) {
+    let r3_pass = r3_math(case, c, r3);
+    if !(Visible::is_failing_off(c) || c.verdict.is_failure() && r3_pass) {
         return None;
     }
     let key = c.key();
@@ -69,20 +105,16 @@ pub fn classify(
     if probe_row && exceptions.desktop_owns(case, &key) {
         return Some(R1c::M14Owned);
     }
+    if r3_pass {
+        return Some(R1c::R3Pass);
+    }
     let (Value::Number(_), Value::Number(_)) = (&c.expected, &c.actual) else {
         return Some(R1c::Counts);
     };
-    // An R3 mark counts only where this cell shows its evidence, Excel more than G off the math
-    // (decision 0188 R3: below G Excel's value stays the target); otherwise it is ignored.
-    let marked = r3.contains_key(&cell_id(case, &key))
-        && c.math
-            .as_ref()
-            .is_some_and(|m| excel_off_math(&c.expected, m));
-    if !envelope(Some(c), &c.actual, c.math.as_ref(), marked).is_inside() {
+    // Not an R3 pass, so a mark (if any) cannot make the envelope drop Excel's side: a marked
+    // cell with Excel more than G off the math whose engine misses the math is outside either way.
+    if !envelope(Some(c), &c.actual, c.math.as_ref(), false).is_inside() {
         return Some(R1c::Counts);
-    }
-    if marked {
-        return Some(R1c::R3Pass);
     }
     // Inside the envelope, so the math is a number; Excel's value must be within ε of it too.
     let excel_on_math = match (&c.expected, &c.math) {
@@ -216,7 +248,7 @@ impl Phase1bEvidence {
             })
             .collect();
         Some(format!(
-            "Visibly-off cells under decision 0188 R1(c): {}. Phase 1b evidence is a number where both the engine and Excel are within 1e-9 of its 50-digit math value; a number with no math value counts.",
+            "Visibly-off cells under decision 0188 R1(c): {}. Phase 1b evidence is a number where both the engine and Excel are within 1e-9 of its 50-digit math value; a number with no math value counts. R3 passing cells are the `r3_math` bucket, not visibly off (decision 0310).",
             parts.join("; ")
         ))
     }

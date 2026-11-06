@@ -60,7 +60,10 @@ def test_the_complete_row_has_every_schema_key() -> None:
         "below99": 1,
         "unscored": 1,
     }
-    assert (r["off_cells"], r["excel_cells"]) == ({"numeric": 1, "other": 1, "residue13": 0}, 2086)
+    assert (r["off_cells"], r["excel_cells"]) == (
+        {"numeric": 1, "other": 1, "residue13": 0, "r3_math": 0},
+        2086,
+    )
     assert r["suites"] == {"s": {"cells": 100, "passed": 90, "visible": 3, "known_failures": None}}
     # Tasks summed over the milestones; open is todo, in progress and blocked.
     assert r["tasks"] == {"todo": 6, "in-progress": 2, "blocked": 4, "done": 15}
@@ -410,3 +413,25 @@ def test_a_closeness_from_before_decision_0267_reads_its_residue_as_zero() -> No
     assert got["visible_numeric"] == 2
     new = {**old, "residue13": 5}
     assert model.closeness({"c": new}, "c", "report.json", "T-4056")["residue13"] == 5
+
+
+def test_a_closeness_from_before_decision_0310_reads_its_r3_math_as_zero() -> None:
+    old = {
+        "pass": 1,
+        "ulp1": 0,
+        "ulp4": 0,
+        "digits15": 0,
+        "residue13": 0,
+        "visible_numeric": 2,
+        "visible_other": 0,
+    }
+    got = model.closeness({"c": old}, "c", "report.json", "T-4520")
+    assert (got["r3_math"], got["visible_numeric"]) == (0, 2)
+    new = {**old, "r3_math": 66}
+    assert model.closeness({"c": new}, "c", "report.json", "T-4520")["r3_math"] == 66
+
+
+def test_the_since_block_reads_a_row_without_r3_math_as_zero() -> None:
+    measure = dict(history.MEASURES)["Math over Excel by design (decision 0188 R3)"]
+    assert measure({"off_cells": {"numeric": 1, "other": 0}}) == 0
+    assert measure({"off_cells": {"numeric": 1, "other": 0, "r3_math": 66}}) == 66

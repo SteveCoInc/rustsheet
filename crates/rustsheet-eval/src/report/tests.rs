@@ -79,6 +79,7 @@ pub(crate) fn cell(formula: &str, verdict: Verdict) -> CellResult {
         graph_subnormal: false,
         kind: crate::runner::CellKind::Scored,
         math: None,
+        target: crate::runner::Target::Excel,
     }
 }
 
@@ -158,6 +159,7 @@ fn function_closeness_buckets_sum_to_the_scored_cells() {
         ulp4: 1,
         digits15: 1,
         residue13: 0,
+        r3_math: 0,
         visible_numeric: 1,
         visible_other: 1,
     };

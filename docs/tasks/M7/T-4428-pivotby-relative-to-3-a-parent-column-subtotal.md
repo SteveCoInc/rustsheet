@@ -3,7 +3,7 @@ id: T-4428
 title: "PIVOTBY relative_to 3: a parent column subtotal no record reached holds every record of the line"
 milestone: M7
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -35,3 +35,8 @@ record of the row line, as that subtotal's own cell does under T-4388's rule (`G
 
 ## Out of scope
 - T-4401's own subtotal cells.
+
+## Outcome
+`Grid::column_records` (pivotby.rs) now gives a column subtotal no record reached every record of the line,
+as `cell_rows` does (T-4388). The 14 cells of probes/t4420-pivotby-parent-sets-three-fields pass (528 of 528);
+`eval/baseline/probes.txt` shrank. coercion.md says the rule is implemented.
