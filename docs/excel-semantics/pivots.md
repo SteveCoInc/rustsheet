@@ -136,29 +136,46 @@ Evidence: probes/t4128-pivot-spike S (excel-graph, 2026-11-06, T-4128): the cons
 the layout, and the pivot is saved with location A3, where S!A3 is `#SPILL!`.
 Status: VERIFIED (excel-graph); GETPIVOTDATA against such a pivot is in T-4130
 
-## A tabular pivot's first row header is `Row Labels` while a non-axis field is compact
-Rule: in a tabular pivot, the header cell of the first row field reads `Row Labels` whenever some
-`pivotField` on no axis (a data-only field, an unused source field or a calculated field) is at the
-default `compact`. In every probe that showed the field's own name (`Region`), every `pivotField`
-carried `compact="0"`. `outline` on the non-axis field makes no difference. The second row field's
-header is its name (`Product`) in every variant probed. Open (T-4583): whether the rule is "every
-field", "every non-axis field" or "the last field". In every probe the default field was also the
-pivot's last field, and no probe left an axis field at the default.
+## A tabular pivot's first row header is the field name only when every pivotField has compact="0"
+Rule: in a tabular pivot, the header cell of the first row field reads the field's own name (`Region`)
+only when every `pivotField` carries `compact="0"`. Otherwise it reads `Row Labels`. One field at the
+default gives `Row Labels` in every role and position probed:
+- roles: the outer row field, the inner row field, the data field, an unused source field and a
+  calculated field;
+- positions in the cache: first (R1), middle (R3, R4) and last (R6, and t4128 K's calculated field).
+
+Column and page fields were not probed. For the data field, its `outline` makes no difference (t4123
+T3, T4); for other fields `outline` was not varied apart from `compact`. The second row field's header
+is its name (`Product`) whenever it keeps its own column.
+
+An outer row field left at the default `compact` and `outline` (R1) also changes the layout:
+- the inner field moves into the outer field's column: location A3:B11 against A3:C11, and
+  firstDataCol 1 against 2;
+- there are no `<item> Total` lines; each outer item's subtotal sits on the item's own line (R1!A4
+  `East` with B4 22, R1!A8 `West` with B8 27, and West's products in A9:A10), while the other R sheets
+  have `East Total` at A7 and `West Total` at A10.
+
+Which of the two attributes causes this is not separated.
 Evidence (excel-graph, 2026-11-06):
-- probes/t4123-pivot-capture A4 (T-4123), whose source has three fields, all on an axis or used as data:
-  - T, with Sales compact by default: `Row Labels`;
-  - T2 and T3, with Sales `compact="0"`, every field non-compact: `Region`;
-  - T4, with Sales outline off only: `Row Labels`.
+- probes/t4583-pivot-row-labels A3 (T-4583). The cache fields are Region, Product, Sales, Units and
+  Risky; every field carries `compact="0" outline="0"` except the one named:
+  - R1 Region (outer axis, first): `Row Labels`;
+  - R2 Product (inner axis): `Row Labels`;
+  - R3 Units (unused, middle): `Row Labels`;
+  - R4 Sales (data, middle): `Row Labels`;
+  - R6 Risky (unused, last): `Row Labels`;
+  - R5 (none left at the default): `Region`.
+- probes/t4123-pivot-capture A4 (T-4123): T and T4, with Sales at the default, give `Row Labels`; T2
+  and T3, with every field non-compact, give `Region`.
 - probes/t4128-pivot-spike K!A4 (T-4128): a calculated field at the default gives `Row Labels`.
-- probes/t4137-pivot-captions K6!A4 (T-4137): every axis and data field non-compact, but the unused
-  source field `Risky` at the default, gives `Row Labels`. K5!A3 (two unused fields at the default)
-  gives `Row Labels` too.
+- probes/t4137-pivot-captions K5!A3 and K6!A4 (T-4137): unused fields at the default give `Row Labels`.
 
 oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on the Sales field, showed
 `Region` too.
-Correction: T-4123 first read the rule as "the data field's `compact`". K5 and K6 show that an unused
-field counts too.
-Status: VERIFIED (excel-graph) as stated; which fields count is UNVERIFIED (probe pending: T-4583)
+Correction: T-4123 first read the rule as "the data field's `compact`". T-4137 narrowed it to the
+non-axis fields, and T-4583's R1 and R2 show that axis fields count too.
+Status: VERIFIED (excel-graph) for the roles and positions probed. UNVERIFIED (probe pending: T-4609):
+column and page fields, `outline` alone on axis fields, and which attribute moves R1's subtotals.
 
 ## Rendered pivot cells: blanks, repeated labels, subtotals and the Values caption
 Rule:
@@ -182,8 +199,11 @@ Rule:
 - `rowHeaderCaption` replaces `Row Labels` (K1!A4 `Regions`).
 - `grandTotalCaption` replaces `Grand Total` (K1!A7 `All of it`).
 - `dataCaption` replaces the `Values` caption over the data fields (K1!B3 `Measures`).
-- `colHeaderCaption` (`Products`) shows nowhere in K1, whose column axis holds only Values; whether it
-  replaces `Column Labels` beside a real column field is open (T-4583).
+- `colHeaderCaption` replaces `Column Labels` beside a real column field in compact form
+  (probes/t4583-pivot-row-labels C1!B3 `Products`, with rowHeaderCaption C1!A4 `Regions`). In K1,
+  whose column axis holds only Values, it shows nowhere. In tabular form with every field non-compact
+  it shows nowhere either: the column header reads the field's name (C2!B3 `Product`) and the row
+  header reads its name too (C2!A4 `Region`; C2 sets no rowHeaderCaption).
 - With `showMissing` and `missingCaption`, an empty intersection shows the caption (K2!D6 `n/a`).
 - With `showError` and `errorCaption`, under Sum, every value cell whose aggregate is an error shows
   the caption as text: the cell, its row and column totals and the grand total (K3!C5, E5, C7 and E7 `ERR`; the
@@ -199,8 +219,8 @@ Rule:
 
 Evidence: probes/t4137-pivot-captions (excel-graph, 2026-11-06, T-4137). Default data-field names
 (`Sum of`, `Count of`...) are written by the file, not chosen by Excel, so a file cannot probe them;
-creating a pivot in the UI is where Excel picks them (T-2327 keeps that question). Other error kinds
-and aggregates under `errorCaption` are not probed.
+creating a pivot in the UI is where Excel picks them (T-2327 keeps that question). For other
+aggregates and `#DIV/0!` under `errorCaption`, see "errorCaption replaces every error value" below.
 Status: VERIFIED (excel-graph)
 
 ## Page fields render above the location
@@ -252,3 +272,83 @@ the file as corrupt (`FileCorruptTryRepair`). Case builder v2 now writes it. Thi
 excel-graph runs of T-4138, not committed: G6's package was refused without the attribute and opened
 with it, all else equal.
 Status: VERIFIED (excel-graph) for the table; the refusal is a builder observation
+
+## Aggregates over text, blanks, booleans and errors
+Rule (each aggregate in a value field that also holds other kinds of value):
+- **Skipped values.** Text, blanks and booleans are skipped by Sum, Average, Max, Min, Product, StdDev,
+  StdDevp, Var, Varp and CountNums. A boolean is not a number: `TRUE` is not 1.
+- **Count** counts every non-blank value: numbers, text, booleans and errors.
+- **CountNums** counts numbers only. An error does not poison it.
+- **Errors.** An error poisons every aggregate except Count and CountNums. The aggregate shows the error
+  (`#N/A`) in the cell holding it and in every subtotal and grand total that covers that cell. Cells that
+  do not cover it are unaffected.
+- **One value.** Over a single number, StdDev and Var are `#DIV/0!`, while StdDevp and Varp are 0. This
+  holds wherever the other values in the cell are text, blank or boolean. A data error wins over it:
+  East/A of Err holds one number beside `#N/A` and shows `#N/A` (A_stdDev!L6, A_var!L6).
+- **Empty intersections.** An intersection with no records is blank for every aggregate, Count and
+  CountNums included.
+
+Evidence: probes/t4135-pivot-aggregates (excel-graph, 2026-11-06, T-4135). Each sheet A_<aggregate> has
+rows Region, columns Kind and six value fields. The Data!A2:H5 records are East/B, East/A, East/A and
+West/A, and East/A row 4 holds the odd value: text `abc`, a blank, `TRUE` or `#N/A`.
+- **Skipped values:** A_sum!I6:K6 are 10 for Txt, Blk and Bool, against H6 = 14 for Num. A_average!I6:K6
+  are 10 and A_product!I6:K6 are 10.
+- **Count:** A_count!I6, K6 and L6 are 2 for Txt, Bool and Err; J6 is 1 for Blk.
+- **CountNums:** A_countNums!I6:L6 are 1.
+- **Errors:** column L (Err) of A_sum, A_average, A_max, A_min, A_product, A_stdDev, A_stdDevp, A_var and
+  A_varp is `#N/A` at row 6, at the East total R6 and at the grand totals L8 and R8. West/A (L7) shows
+  its own one-value result: 7 for Sum to Product, `#DIV/0!` for StdDev and Var, and 0 for StdDevp and
+  Varp.
+- **One value:** A_stdDev and A_var are `#DIV/0!` at East/B (B6:G6) and West/A (H7:M7), and at I6
+  (East/A Txt: 10 and `abc`). A_stdDevp and A_varp are 0 there.
+- **Empty intersections:** West/B (B7:G7) is blank on every sheet.
+Status: VERIFIED (excel-graph)
+
+## Summation order of Sum, Average and Product totals
+Rule (on the evidenced cells):
+- **Sum.** A subtotal or grand total of Sum is the sum of its children's sums. It is neither the sum of
+  its records in record order nor the sum in display order.
+- **Average** divides the sum of the records taken in record order.
+- **Product** totals multiply the records in record order, not the children's products.
+
+Evidence: probes/t4135-pivot-aggregates, field Dec. The East records in record order are 0.3 (B), 0.2
+(A) and 0.1 (A), and West's is 0.7. Excel displays Kind as B, then A (A_sum!B4 `B`, H4 `A`).
+- **Sum:** A_sum!S6 (East total) is 0.6000000000000001. That is the sum of the children, M6 + G6 =
+  0.30000000000000004 + 0.3. Record order and display order both give 0.6. A_sum!S8 is 1.3, which is
+  the children's sum on either axis; the records in record order give 1.2999999999999998.
+- **Average:** A_average!S6 is 0.19999999999999998 = 0.6 / 3, not 0.6000000000000001 / 3. A_average!S8
+  is 0.32499999999999996 = 1.2999999999999998 / 4. Display order equals record order here, so the two
+  cannot be told apart for Average.
+- **Product:** A_product!S6 is 0.006, which is 0.3 × 0.2 × 0.1 in record order. The children's product
+  would be 0.006000000000000001. A_product!S8 is 0.0042; the children would give 0.004200000000000001.
+
+StdDev and Var totals are not separated by this data. An accumulation that takes A's records first
+(0.2, 0.1, then 0.3) would also give the Sum cells. The sum of the children is not yet told apart from
+it.
+Status: VERIFIED (excel-graph) for these cells; the general rule is UNVERIFIED (probe pending: T-4589)
+
+## errorCaption replaces every error value
+Rule: with `showError` and `errorCaption`, every error value a pivot cell would show becomes the
+caption, as text. That includes `#DIV/0!` from StdDev and Var over one value, not only errors from the
+data. In probes/t4135-pivot-aggregates EC, with no column field and eleven data fields over Err, the
+caption also fills the Grand Total row of Count and CountNums, which show no error without the caption
+(A_count!R8 is 4). Why is open.
+Evidence: probes/t4135-pivot-aggregates EC (excel-graph, 2026-11-06, T-4135):
+- East (B5:L5) shows `ERR` for every aggregate except Count (3) and CountNums (2).
+- West (B6:L6) shows `ERR` for StdDev and Var, which have one value, and 0 for StdDevp and Varp.
+- The Grand Total row B7:L7 is `ERR` everywhere.
+Status: VERIFIED (excel-graph) for the caption replacing errors; the Count and CountNums grand totals
+are UNVERIFIED (probe pending: T-4589)
+
+## Pivots without refreshOnLoad, and source edits
+Rule: unknown. Two things are unprobed: whether Excel for the web re-renders a pivot whose cache lacks
+`refreshOnLoad` when it opens the file (saved cells or `rowItems` stale or absent), and whether it
+re-renders a pivot after its source is edited with no refresh.
+Evidence: none. Every rendered probe so far is `refreshOnLoad` (case builder v2).
+Status: UNVERIFIED (probe pending: T-4586)
+
+## Pivot field names for duplicate and blank source headers
+Rule: unknown. How Excel names the cache fields of a source whose header row repeats a name, leaves a
+cell blank, or has names differing only in case.
+Evidence: none.
+Status: UNVERIFIED (probe pending: T-4585)

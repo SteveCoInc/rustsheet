@@ -10,6 +10,12 @@ use crate::{
     text::Text,
 };
 
+/// The length of `s` in UTF-16 code units, the unit every M5 text function counts in (LEN, FIND,
+/// the TEXTBEFORE bounds, CONCAT's cap; probes/text-surrogate-positions A1).
+pub(crate) fn utf16_len(s: &str) -> usize {
+    s.encode_utf16().count()
+}
+
 /// `text` with each UTF-16 code unit as one `char`, so that `char` positions (and a regex `.`)
 /// are the code-unit positions FIND and SEARCH count in (`SEARCH("?b","😀b")` is 2,
 /// probes/text-surrogate-positions A22). A surrogate unit `u` becomes the private-use character
@@ -341,9 +347,7 @@ fn text_sensitive_reverse<S: AsRef<str>>(
             }
             local_index += 1;
             if instances != Instances::Overlapping {
-                skip = text
-                    .get(byte_index..byte_index + len)
-                    .map_or(0, |m| m.encode_utf16().count());
+                skip = text.get(byte_index..byte_index + len).map_or(0, utf16_len);
             }
         }
         let Some(c) = chars.next() else {
