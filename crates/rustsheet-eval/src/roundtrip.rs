@@ -186,8 +186,8 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
                 CaseStatus::Fail
             };
             CaseResult {
-                items,
                 checked,
+                items,
                 ..CaseResult::new(case, suite, status, None)
             }
         }
@@ -276,22 +276,22 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
     };
     for (key, part) in &src {
         checked += 1;
-        let Some(o) = out.get(key) else {
+        let Some(out_part) = out.get(key) else {
             items.push(item("part", key.clone(), Verdict::Lost, None));
             continue;
         };
-        let (a, b) = (source.content_type(part), output.content_type(o));
-        if a != b {
-            let detail = Some(format!("content type {a:?} became {b:?}"));
+        let (was, now) = (source.content_type(part), output.content_type(out_part));
+        if was != now {
+            let detail = Some(format!("content type {was:?} became {now:?}"));
             items.push(item("part", key.clone(), Verdict::Changed, detail));
             continue;
         }
         let (mut verdict, mut detail) = (Verdict::Kept, None);
-        match (source.xml.get(*part), output.xml.get(*o)) {
-            (Some(x), Some(y)) => match xmldiff::diff(x, y) {
-                Ok(d) => {
-                    checked += d.checked;
-                    for diff in d.differences {
+        match (source.xml.get(*part), output.xml.get(*out_part)) {
+            (Some(src_xml), Some(out_xml)) => match xmldiff::diff(src_xml, out_xml) {
+                Ok(part_diff) => {
+                    checked += part_diff.checked;
+                    for diff in part_diff.differences {
                         let verdict = match diff.verdict {
                             "lost" => Verdict::Lost,
                             "added" => Verdict::Added,
@@ -304,8 +304,8 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
                             diff.detail,
                         ));
                     }
-                    if d.truncated > 0 {
-                        let more = Some(format!("{} more differences", d.truncated));
+                    if part_diff.truncated > 0 {
+                        let more = Some(format!("{} more differences", part_diff.truncated));
                         items.push(item(
                             "element",
                             format!("{key}:<truncated>"),
@@ -314,12 +314,12 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
                         ));
                     }
                 }
-                Err(e) => {
-                    (verdict, detail) = (Verdict::Changed, Some(format!("not comparable: {e}")))
+                Err(why) => {
+                    (verdict, detail) = (Verdict::Changed, Some(format!("not comparable: {why}")));
                 }
             },
             _ => {
-                if source.digests.get(*part) != output.digests.get(*o) {
+                if source.digests.get(*part) != output.digests.get(*out_part) {
                     (verdict, detail) = (Verdict::Changed, Some("the bytes differ".to_string()));
                 }
             }

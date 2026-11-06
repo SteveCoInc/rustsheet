@@ -292,9 +292,7 @@ mod xml {
 
     #[test]
     fn prefixes_order_defaults_and_booleans_are_invariant() {
-        let a = format!(
-            r#"<x:worksheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:p="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" mc:Ignorable="p"><x:sheetViews><x:sheetView workbookViewId="0" tabSelected="1"/></x:sheetViews><x:mergeCells><x:mergeCell ref="A1:B1"/><x:mergeCell ref="C1:D1"/></x:mergeCells><x:extLst><x:ext uri="{{A}}"/><x:ext uri="{{B}}"/></x:extLst></x:worksheet>"#
-        );
+        let a = r#"<x:worksheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:p="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" mc:Ignorable="p"><x:sheetViews><x:sheetView workbookViewId="0" tabSelected="1"/></x:sheetViews><x:mergeCells><x:mergeCell ref="A1:B1"/><x:mergeCell ref="C1:D1"/></x:mergeCells><x:extLst><x:ext uri="{A}"/><x:ext uri="{B}"/></x:extLst></x:worksheet>"#.to_string();
         let b = sheet(
             r#"<sheetViews><sheetView workbookViewId="0" tabSelected="true" showGridLines="1" zoomScale="100"/></sheetViews><mergeCells><mergeCell ref="C1:D1"/><mergeCell ref="A1:B1"/></mergeCells><extLst><ext uri="{B}"/><ext uri="{A}"/></extLst>"#,
             r#"xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" mc:Ignorable="x14ac""#,
@@ -308,7 +306,7 @@ mod xml {
             r#"<sheetPr codeName="S1"><tabColor rgb="FFFF0000"/></sheetPr><dataValidations count="1"><dataValidation sqref="A1"/></dataValidations><extLst><ext uri="{NEW}"><future/></ext></extLst>"#,
             "",
         );
-        let b = sheet(r#"<sheetPr/>"#, "");
+        let b = sheet("<sheetPr/>", "");
         assert_eq!(
             found(&a, &b),
             vec![

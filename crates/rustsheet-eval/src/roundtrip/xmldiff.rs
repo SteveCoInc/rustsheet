@@ -68,9 +68,9 @@ const PREFIXES: &[(&str, &str)] = &[
 const SEMANTIC: &[&str] = &["/worksheet/sheetData", "/sst"];
 
 /// Unordered collections (D4.2): `(parent path, child local name, key attributes)`. The schema
-/// gives these children no order meaning (ECMA-376 Part 1 CT_MergeCells, CT_Hyperlinks,
-/// CT_DataValidations, CT_DefinedNames, CT_Cols; Part 2 §10.1.2.2 for content types), so they
-/// match by key. `extLst` children always match by `uri` (CT_ExtensionList).
+/// gives these children no order meaning (ECMA-376 Part 1 `CT_MergeCells`, `CT_Hyperlinks`,
+/// `CT_DataValidations`, `CT_DefinedNames`, `CT_Cols`; Part 2 for content types), so they
+/// match by key. `extLst` children always match by `uri` (`CT_ExtensionList`).
 const UNORDERED: &[(&str, &str, &[&str])] = &[
     ("/worksheet/mergeCells", "mergeCell", &["ref"]),
     ("/worksheet/hyperlinks", "hyperlink", &["ref"]),
@@ -88,8 +88,8 @@ const UNORDERED: &[(&str, &str, &[&str])] = &[
 
 /// Schema defaults (D4.3): `(element local name, "attribute=default ...")`. An absent attribute
 /// equals its default. Each is the `default=` of the attribute in ECMA-376 Part 1's sml.xsd:
-/// CT_Cell (`t`, `s`), CT_Row, CT_Col, CT_SheetView, CT_Pane, CT_Selection, CT_Sheet,
-/// CT_BookView, CT_SheetFormatPr and CT_BooleanProperty (`val`, as in `<b/>`).
+/// `CT_Cell` (`t`, `s`), `CT_Row`, `CT_Col`, `CT_SheetView`, `CT_Pane`, `CT_Selection`, `CT_Sheet`,
+/// `CT_BookView`, `CT_SheetFormatPr` and `CT_BooleanProperty` (`val`, as in `<b/>`).
 const DEFAULTS: &[(&str, &str)] = &[
     ("c", "t=n s=0"),
     (
@@ -265,33 +265,38 @@ fn compare(a: &Node, b: &Node, path: &str, d: &mut PartDiff) {
     for ((name, key), nodes) in &ka {
         let others = kb.get(&(name.clone(), key.clone()));
         for (n, node) in nodes.iter().enumerate() {
-            let label = if key.is_empty() {
-                format!("{}[{n}]", name.label())
+            let child_path = format!("{path}/{}", child_label(name, key, n));
+            if let Some(other) = others.and_then(|o| o.get(n)) {
+                compare(node, other, &child_path, d);
             } else {
-                format!("{}[{key}]", name.label())
-            };
-            let child_path = format!("{path}/{label}");
-            match others.and_then(|o| o.get(n)) {
-                Some(other) => compare(node, other, &child_path, d),
-                None => {
-                    d.checked += node.size();
-                    let below = node.size() - 1;
-                    let detail = (below > 0).then(|| format!("with {below} elements below it"));
-                    push(d, element(child_path, "lost", detail));
-                }
+                d.checked += node.size();
+                let below = node.size() - 1;
+                let detail = (below > 0).then(|| format!("with {below} elements below it"));
+                push(d, element(child_path, "lost", detail));
             }
         }
     }
     for ((name, key), nodes) in &kb {
         let have = ka.get(&(name.clone(), key.clone())).map_or(0, Vec::len);
         for n in have..nodes.len() {
-            let label = if key.is_empty() {
-                format!("{}[{n}]", name.label())
-            } else {
-                format!("{}[{key}]", name.label())
-            };
-            push(d, element(format!("{path}/{label}"), "added", None));
+            push(
+                d,
+                element(
+                    format!("{path}/{}", child_label(name, key, n)),
+                    "added",
+                    None,
+                ),
+            );
         }
+    }
+}
+
+/// A child's path segment: its name, then its key at an unordered path or its ordinal.
+fn child_label(name: &Name, key: &str, n: usize) -> String {
+    if key.is_empty() {
+        format!("{}[{n}]", name.label())
+    } else {
+        format!("{}[{key}]", name.label())
     }
 }
 
@@ -315,22 +320,22 @@ fn keyed<'n>(
     out
 }
 
-fn compare_attrs(a: &Node, b: &Node, path: &str, d: &mut PartDiff) {
-    let names: BTreeSet<&Name> = a.attrs.keys().chain(b.attrs.keys()).collect();
+fn compare_attrs(src: &Node, out: &Node, path: &str, diffs: &mut PartDiff) {
+    let names: BTreeSet<&Name> = src.attrs.keys().chain(out.attrs.keys()).collect();
     for name in names {
-        let default = default_of(&a.name, name);
-        let va = a.attrs.get(name).map(String::as_str).or(default);
-        let vb = b.attrs.get(name).map(String::as_str).or(default);
-        let verdict = match (va, vb) {
-            (Some(x), Some(y)) if same_value(name, x, y) => continue,
+        let default = default_of(&src.name, name);
+        let was = src.attrs.get(name).map(String::as_str).or(default);
+        let now = out.attrs.get(name).map(String::as_str).or(default);
+        let verdict = match (was, now) {
+            (Some(old), Some(new)) if same_value(name, old, new) => continue,
             (Some(_), Some(_)) => "changed",
             (Some(_), None) => "lost",
             (None, Some(_)) => "added",
             (None, None) => continue,
         };
-        let detail = (verdict == "changed").then(|| format!("{va:?} became {vb:?}"));
+        let detail = (verdict == "changed").then(|| format!("{was:?} became {now:?}"));
         push(
-            d,
+            diffs,
             Difference {
                 kind: "attribute",
                 path: format!("{path}@{}", name.label()),
@@ -394,7 +399,7 @@ fn strip_ordinals(path: &str) -> String {
     out
 }
 
-fn resolved(r: ResolveResult<'_>) -> String {
+fn resolved(r: &ResolveResult<'_>) -> String {
     match r {
         ResolveResult::Bound(ns) => ns.as_ref().to_string(),
         _ => String::new(),
@@ -492,7 +497,7 @@ fn start_node(reader: &NsReader<&[u8]>, e: &BytesStart<'_>) -> Node {
         }
         let (ans, alocal) = reader.resolver().resolve_attribute(a.key);
         let name = Name {
-            ns: resolved(ans),
+            ns: resolved(&ans),
             local: alocal.as_ref().to_string(),
         };
         if name.ns == XMLNS {
@@ -508,7 +513,7 @@ fn start_node(reader: &NsReader<&[u8]>, e: &BytesStart<'_>) -> Node {
                 .split_whitespace()
                 .map(|p| {
                     let probe = format!("{p}:x");
-                    resolved(reader.resolver().resolve_element(QName(&probe)).0)
+                    resolved(&reader.resolver().resolve_element(QName(&probe)).0)
                 })
                 .collect::<Vec<_>>()
                 .join(" ");
@@ -517,7 +522,7 @@ fn start_node(reader: &NsReader<&[u8]>, e: &BytesStart<'_>) -> Node {
     }
     Node {
         name: Name {
-            ns: resolved(ns),
+            ns: resolved(&ns),
             local: local.as_ref().to_string(),
         },
         attrs,
