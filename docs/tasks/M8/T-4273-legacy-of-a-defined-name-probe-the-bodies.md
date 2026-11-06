@@ -3,7 +3,7 @@ id: T-4273
 title: "Legacy @ of a defined name: probe the bodies T-3856 left to engine choice (relative cell, negative number, error literal, parenthesized, name of a name, INDEX over an array-bodied name) and match"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
