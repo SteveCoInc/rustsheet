@@ -7422,7 +7422,8 @@ error, so matching those digits means reproducing Excel's op order, not computin
 BETADIST, BINOMDIST and NEGBINOMDIST had no sample of their own. They are in the counted family as the legacy forms of
 BETA.DIST, BINOM.DIST and NEGBINOM.DIST on the same kernel ("Incomplete beta is TOMS 708 `bratio`", above).
 
-Status: MEASURED (excel-graph values, mpmath 1.3 at 50 digits; 2026-11-04). Counted at 13 digits since decision 0267 and
+Status: MEASURED (excel-graph values, mpmath 1.3 at 50 digits; 2026-11-04). The 1% figure covers only cells the engine
+was already visibly off on; it says nothing of cells where both agree. Counted at 13 digits since decision 0267 and
 SPEC-0030 (`closeness::THIRTEEN_DIGIT_FAMILY`, the `residue13` bucket). The branch-level noise entries above (bgrat's
 increment, bup with 10 or more terms, bfrac past 10 terms, the F density) are the mechanisms.
 
