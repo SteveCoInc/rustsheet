@@ -15,9 +15,9 @@ The math, on the literals' doubles a[1] <= ... <= a[n] (sorted, ties kept) and t
   (statistics.md "PERCENTILE and PERCENTILE.INC interpolate from a one-based rank"). Excel computes that rank in
   doubles, so a k below an ulp of the rank is lost there; the math keeps it and the draws keep k at or above 1e-6.
 - 18 (PERCENTILE.EXC): k in (0, 1) and the rank k(n + 1) in [1, n]; the exact interpolation there.
-- 17 (QUARTILE.INC) and 19 (QUARTILE.EXC): quart = floor(k), in 0-4 or 1-3, read as the percentile at quart/4
-  (the engine's `fn_quartile_inc`/`fn_quartile_exc` share the percentile kernels). The draws keep k >= 0, so floor
-  and truncation agree.
+- 17 (QUARTILE.INC) and 19 (QUARTILE.EXC): quart = floor(k), in 0-4 or 1-3, read as the percentile at quart/4.
+  Both rules, PERCENTILE.EXC's domain and the floored quart, are statistics.md "PERCENTILE.EXC's k and rank domain;
+  QUARTILE floors a fractional quart" (T-4092, VERIFIED with this table's cells).
 Excel's own evidence: probes/aggregate-grid H41:H46 (`AGGREGATE(14..19,0,{3,1,4,1,5,9},k)`: 5, 1, 2, 1.5,
 1.2000000000000002 and 1, excel-graph 2026-10-06, T-0993); the math there is 5, 1, 2, 1.5, 1.2 (to the double of
 0.3: 1.19999999999999992...) and 1.
@@ -40,6 +40,7 @@ K_FIRST_SOURCE = (
 )
 LARGE_SMALL_SOURCE = "statistics.md#largesmall-a-fractional-k-rounds-up-for-large-and-down-for-small"
 PERCENTILE_SOURCE = "statistics.md#percentile-and-percentileinc-interpolate-from-a-one-based-rank-1--kn-1-gap-triage-2026-10-25"
+DOMAIN_SOURCE = "statistics.md#percentileexcs-k-and-rank-domain-quartile-floors-a-fractional-quart-t-4092"
 EVIDENCE = "probes/aggregate-grid"
 
 LARGE, SMALL, PERCENTILE_INC, QUARTILE_INC, PERCENTILE_EXC, QUARTILE_EXC = range(14, 20)
@@ -52,8 +53,16 @@ def _point_args(args: Sequence[MathArg]) -> tuple[int, tuple[mpmath.mpf, ...], m
         and not isinstance(function_num, (bool, tuple))
         and not isinstance(k, (bool, tuple))
     )
-    values = tuple(x for x in array if not isinstance(x, tuple))
-    return int(function_num), tuple(sorted(values)), k
+    return int(function_num), sorted_values(array), k
+
+
+def sorted_values(array: MathArg) -> tuple[mpmath.mpf, ...]:
+    """An array argument's numbers sorted ascending, ties kept (the order statistics' a[1] <= ... <= a[n]).
+    TypeError for a scalar, a logical or a matrix: the definitions take a one-row array of numbers only."""
+    if not isinstance(array, tuple) or not all(isinstance(x, mpmath.mpf) for x in array):
+        msg = "an order statistic's data must be a one-row array of numbers"
+        raise TypeError(msg)
+    return tuple(sorted(x for x in array if isinstance(x, mpmath.mpf)))
 
 
 def _interpolate(xs: tuple[mpmath.mpf, ...], rank: mpmath.mpf) -> mpmath.mpf:
@@ -104,8 +113,10 @@ def _value(args: Sequence[MathArg]) -> mpmath.mpf:
         return percentile_exc(xs, k)
     if function_num == QUARTILE_EXC:
         return percentile_exc(xs, quart_k(k, 1, 3))
+    # Unreachable through `evaluate` (the `Interval(14, 19)` check raises first); a direct call outside 14-19 is
+    # Excel's `#VALUE!` region (numbers.md "AGGREGATE"), so it is a domain error too.
     msg = f"function_num {function_num} is not an array form"
-    raise ValueError(msg)
+    raise DomainError(msg)
 
 
 # -- draws -------------------------------------------------------------------------------------
@@ -258,6 +269,7 @@ AGGREGATE = register(
             K_FIRST_SOURCE,
             LARGE_SMALL_SOURCE,
             PERCENTILE_SOURCE,
+            DOMAIN_SOURCE,
             EVIDENCE,
             "decision 0228",
         ),

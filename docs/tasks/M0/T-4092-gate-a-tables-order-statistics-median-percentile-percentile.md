@@ -48,7 +48,10 @@ Every failing table point has an owner.
     floor(quart) in 1-3 as the EXC percentile at quart/4.
   - Domain (Excel's `#NUM!`): k outside [0, 1], or outside (0, 1) with the rank outside [1, n] for EXC, and a quart
     outside its range. All 25 drawn error points are `#NUM!` in Excel too.
-  - The floor of a fractional quart is evidenced: probes/stat-order-floor-batch A85, A88 and A89.
+  - New entry, statistics.md "PERCENTILE.EXC's k and rank domain; QUARTILE floors a fractional quart (T-4092)",
+    added in review round 1. It cites probes/stat-order-floor-batch A85, A88 and A89, AGGREGATE/s1, and this task's
+    QUARTILE.EXC and PERCENTILE.EXC error cells. The QUARTILE*, PERCENTILE.EXC and AGGREGATE definitions cite it.
+  - T-4068 is closed by the same change.
   - MEDIAN's even case where `b - a` overflows is unprobed, so such a point gets no value and is never drawn.
 - **Reuse (directive 3):**
   - From AGGREGATE 16-19 (`defs/aggregate_array.py`, T-3693): the kernels `percentile_inc`, `percentile_exc` and
@@ -59,13 +62,15 @@ Every failing table point has an owner.
   - MEDIAN draws with SUM's variadic `draw_numbers` (T-3549, renamed from `_draw`).
   - Each function adds its own edge shapes: Microsoft's examples, aggregate-grid H43-H46, the exact-double EXC
     bounds, the error neighbours, and a tiny k that Excel's double rank loses.
+  - `sorted_values` is now shared by AGGREGATE and the order statistics. It raises TypeError for data that is not an
+    array of numbers.
   - Tests are in tools/tests/test_accuracy_order_statistics.py.
 - **Tables:** `eval/accuracy/tables/{MEDIAN,PERCENTILE,PERCENTILE.INC,PERCENTILE.EXC,QUARTILE,QUARTILE.INC,QUARTILE.EXC}/s1`,
   120 points each, filled from excel-graph with 0 failures.
   - `rustsheet-eval accuracy`: all 840 points are inside the envelope (834 on both sides, 4 through Excel's 15
     digits only, 2 through the math only). 0 failing, 0 known failures added. `missing tables` went from 128 to 121.
   - The engine is bit-exact with Excel on 830 of 840. The other 10 are even-count MEDIANs, where the engine's
-    `(a + b)/2` is the math and Excel's `a + (b - a)/2` is not (T-3017, open).
+    `(a + b)/2` is the math and Excel's `a + (b - a)/2` is not (T-3017, open; its Context now lists the 10 cells).
 - **Excel more than 1E-4 off the math. Excel kept as the target (decision 0300):**
   - `MEDIAN(87.01,-87.0099999999999)` (MEDIAN A52): Excel 5.684341886080802E-14, math 4.973799150320701E-14 (14%).
   - `MEDIAN(0.9311,-0.931100000000003)` (A53): Excel -1.4432899320127035E-15, math -1.4988010832439613E-15 (3.7%).
@@ -74,7 +79,7 @@ Every failing table point has an owner.
   - PERCENTILE A105 (extreme, k 0.3 over 71 values): Excel 1.05037392982959E-100, math 1.0450240239130319E-100
     (0.5%). Excel's double rank 1 + 0.3*70 is exactly 22.
   - All of these follow existing entries. The two MEDIAN cells and the 48/48 match of `a + (b - a)/2` over the
-    table's even counts are added to statistics.md "MEDIAN of an even count is a + (b - a)/2". No new quirk.
+    table's even counts are added to statistics.md "MEDIAN of an even count is a + (b - a)/2".
 - **Math sidecars:** made with `rustsheet-accuracy math --function` (T-4483) for the seven functions, in probes and
   probes-numeric. There are 82 new math cells in four probes cases: stat-order-floor-batch (66),
   stat-argument-modes (12), t3808-median-geomean-direct-overflow (3, new sidecar) and t2429-quartile-exc-no-number (1,

@@ -13,13 +13,13 @@ The math, on the literals' doubles sorted as a[1] <= ... <= a[n] (ties kept), us
 - PERCENTILE.EXC: k in (0, 1) and the rank k(n + 1) in [1, n]; the exact interpolation there.
 - QUARTILE and QUARTILE.INC: quart = floor(quart) in 0-4, read as PERCENTILE.INC at quart/4; QUARTILE.EXC: quart
   in 1-3, read as PERCENTILE.EXC at quart/4. The fraction is floored, not truncated: probes/stat-order-floor-batch
-  A85, A88 and A89 (excel-graph) give `QUARTILE(K1:K8,0.9)` the minimum, 4.9999 the maximum and -0.5 `#NUM!`.
+  A85, A88 and A89 (excel-graph) give `QUARTILE(K1:K8,0.9)` the minimum, 4.9999 the maximum and -0.5 `#NUM!`
+  (statistics.md "PERCENTILE.EXC's k and rank domain; QUARTILE floors a fractional quart").
 
-Domain (an Excel error region, never a math value; statistics.md and probes/aggregate-grid, T-0993): k outside
-those intervals and a quart outside its range are `#NUM!`. The data is a one-row array literal of numbers only,
-so the data rules of "A single cell holding a boolean is no number in the PERCENTILE and QUARTILE data (T-2429)"
-and "QUARTILE reports quart's error before empty data (T-2455)" never apply to a point (cited for the eval cells'
-data argument, which `array_elements` reads only when every element is a number).
+Domain (an Excel error region, never a math value; statistics.md, the entry above and "PERCENTILE and
+PERCENTILE.INC interpolate from a one-based rank"): k outside those intervals, a PERCENTILE.EXC rank outside [1, n]
+and a quart outside its range are `#NUM!`. The data is a one-row array literal of numbers only, so no data rule
+(text, booleans, empty data, error order) applies to a point.
 MEDIAN's even case when `b - a` overflows a double is unprobed (statistics.md: two 9E+307 values give 9E+307), so
 such a point gets no value; the draws never reach it.
 
@@ -39,6 +39,7 @@ import mpmath
 from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, one_of, scalars
 from rustsheet_tools.accuracy.defs.aggregate import draw_numbers
 from rustsheet_tools.accuracy.defs.aggregate_array import (
+    DOMAIN_SOURCE,
     EVIDENCE,
     PERCENTILE_EXC,
     PERCENTILE_INC,
@@ -51,16 +52,13 @@ from rustsheet_tools.accuracy.defs.aggregate_array import (
     percentile_exc,
     percentile_inc,
     quart_k,
+    sorted_values,
     valid_point,
 )
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, MathArg, NoValueError, Param, register
 
 MEDIAN_SOURCE = "statistics.md#median-of-an-even-count-is-a--b---a2"
-QUARTILE_SOURCE = "statistics.md#quartile-reports-quarts-error-before-empty-data-t-2455"
-DATA_SOURCE = (
-    "statistics.md#a-single-cell-holding-a-boolean-is-no-number-in-the-percentile-and-quartile-data-t-2429"
-)
 
 # Microsoft's examples (support.microsoft.com, each function's page) and probes/aggregate-grid's data.
 GRID = (3.0, 1.0, 4.0, 1.0, 5.0, 9.0)
@@ -84,8 +82,10 @@ def _median(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _data(args: Sequence[MathArg]) -> tuple[tuple[mpmath.mpf, ...], mpmath.mpf]:
     array, k = args
-    assert isinstance(array, tuple) and not isinstance(k, (bool, tuple))
-    return tuple(sorted(x for x in array if not isinstance(x, tuple))), k
+    if not isinstance(k, mpmath.mpf):
+        msg = "k must be a number"
+        raise TypeError(msg)
+    return sorted_values(array), k
 
 
 def _percentile_inc(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -209,7 +209,7 @@ def _order(
             value=value,
             domain=domain_of(value),
             draw=_draw(code, edges),
-            sources=(*sources, DATA_SOURCE, EVIDENCE, "decision 0271"),
+            sources=(*sources, EVIDENCE, "decision 0271"),
         )
     )
 
@@ -246,7 +246,7 @@ PERCENTILE_EXC_DEF = _order(
     PERCENTILE_EXC,
     _percentile_exc_edges,
     k_name="k",
-    sources=(PERCENTILE_SOURCE,),
+    sources=(PERCENTILE_SOURCE, DOMAIN_SOURCE),
 )
 QUARTILE = _order(
     "QUARTILE",
@@ -254,7 +254,7 @@ QUARTILE = _order(
     QUARTILE_INC,
     _quartile_inc_edges,
     k_name="quart",
-    sources=(QUARTILE_SOURCE, PERCENTILE_SOURCE),
+    sources=(DOMAIN_SOURCE, PERCENTILE_SOURCE),
 )
 QUARTILE_INC_DEF = _order(
     "QUARTILE.INC",
@@ -262,7 +262,7 @@ QUARTILE_INC_DEF = _order(
     QUARTILE_INC,
     _quartile_inc_edges,
     k_name="quart",
-    sources=(QUARTILE_SOURCE, PERCENTILE_SOURCE),
+    sources=(DOMAIN_SOURCE, PERCENTILE_SOURCE),
 )
 QUARTILE_EXC_DEF = _order(
     "QUARTILE.EXC",
@@ -270,5 +270,5 @@ QUARTILE_EXC_DEF = _order(
     QUARTILE_EXC,
     _quartile_exc_edges,
     k_name="quart",
-    sources=(QUARTILE_SOURCE, PERCENTILE_SOURCE),
+    sources=(DOMAIN_SOURCE, PERCENTILE_SOURCE),
 )

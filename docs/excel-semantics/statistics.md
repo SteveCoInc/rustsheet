@@ -7175,6 +7175,41 @@ Status: VERIFIED (excel-graph). Implemented by T-1811; QUARTILE and QUARTILE.INC
 Ours: `percentile_inc_impl` (functions/statistical/percentile.rs) uses the one-based rank `1 + k*(n-1)` (T-1811). Known miss: gen-m9/5395b8a427764a3f Calc!A269 (Excel -2.499999999999999, rule -2.4999999999999987) stays in the baseline.
 Tasks: T-1811
 
+## PERCENTILE.EXC's k and rank domain; QUARTILE floors a fractional quart (T-4092)
+Rule:
+- **PERCENTILE.EXC's domain.** PERCENTILE.EXC(data, k) over n numbers is `#NUM!` unless 0 < k < 1 and the rank
+  k(n + 1) lies in [1, n]. Inside the domain it interpolates at that rank, and both ends of the rank interval count
+  as inside.
+- **QUARTILE.EXC** reads quart as PERCENTILE.EXC at quart/4, so the same rank rule applies there. For one value only
+  quart 2 is valid (rank 1). For two values quart 1 and quart 3 are `#NUM!`.
+- **The quart is floored.** QUARTILE, QUARTILE.INC and QUARTILE.EXC take floor() of a fractional quart, not its
+  truncation. 0.9 reads as 0, 4.9999 as 4 and 3.5 as 3, while -0.5 is quart -1 and so `#NUM!`. A quart that floors
+  outside 0-4 (INC) or 1-3 (EXC) is `#NUM!`.
+Cells (excel-graph):
+- probes/stat-order-floor-batch, 2026-10-17, K1:K8 = 1, 2, 2, 3, 3, 4, 5, 10. `QUARTILE(K1:K8,0.9)` is 1, the
+  minimum (A85). `QUARTILE(K1:K8,4.9999)` is 10, the maximum (A88). `QUARTILE(K1:K8,-0.5)` is `#NUM!` (A89), where
+  truncation would give the minimum.
+- eval/accuracy/tables/QUARTILE.EXC/s1, 2026-11-06:
+  - Quart 0.5 over six values is `#NUM!` (A75), because it floors to 0.
+  - Quart 1 over one value is `#NUM!` (A70, A82), and so is quart 1 over {1,2} (A76).
+  - Quart 3.5 over Microsoft's eleven values is 43, the same as quart 3 (A73).
+  - Fractional quarts in QUARTILE/s1 and QUARTILE.INC/s1 match floor(). Examples are QUARTILE A14 (4.5 gives the
+    maximum) and QUARTILE.INC A5 (0.5 gives the minimum).
+- eval/accuracy/tables/PERCENTILE.EXC/s1, 2026-11-06:
+  - Ranks below 1 are `#NUM!`. A70 is k = 1/14 over six values (rank 0.5), A75 is 0.2 over three values (0.8), A79
+    is 0.1 over four values (0.5) and A80 is 0.0625 over seven values (0.5).
+  - Ranks above n are `#NUM!`. A71 is 0.9 over seven values (7.2) and A82 is 0.8 over three values (3.2).
+  - k at 1 or above is `#NUM!`: A67 (1.5), A72 (1.5) and A81 (2, Microsoft's example).
+- eval/accuracy/tables/AGGREGATE/s1 (functions 17 and 19, T-3693):
+  - A122, A124, A129 and A137 are `#NUM!`.
+  - A113, A118, A121 and A126 (n = 1, k = 0.5) return the value.
+  - A158 and A160 (QUARTILE.INC, quart 4.5) return the maximum.
+  - A25, A29, A56 and A177 (QUARTILE.EXC, quart 3.5) are valid.
+Status: VERIFIED (excel-graph)
+Ours: `percentile_exc_impl` (functions/statistical/percentile.rs) checks k and the rank bounds, and `fn_quartile_inc`
+and `fn_quartile_exc` (quartile.rs) floor the quart. Every cell above matches.
+Tasks: T-4092, T-4068
+
 ## Tiny-p quantiles: Excel is grossly wrong, RustSheet returns the math (MATH-OVER-EXCEL)
 Rule: at p < 1e-150, T.INV(p, df), F.INV(p, d1, d2) and BETA.INV(p, alpha, beta) in their left tail and
 CHISQ.INV.RT(p, df) in its right tail (a tiny p is the upper tail there) can be far from the true quantile in Excel;
