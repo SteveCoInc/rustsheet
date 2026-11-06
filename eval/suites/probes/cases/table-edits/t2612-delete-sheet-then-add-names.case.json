@@ -1,0 +1,51 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-2612: workbook names on a deleted sheet. Sheet S holds C4:C7 = 1,2,4,8; names nm = S!$C$4 and rng = S!$C$4:$C$7; sheet F holds A1 =nm, A2 FORMULATEXT(A1), A3 =SUM(rng), A4 FORMULATEXT(A3), A5 =ISREF(nm). Ops: delete_sheet S, then add a new blank S. A revived name reads the new blank S (A1 0, A3 0, A5 TRUE); a lost one is #REF!.",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "names": {
+    "nm": "=S!$C$4",
+    "rng": "=S!$C$4:$C$7"
+  },
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "C4": 1,
+        "C5": 2,
+        "C6": 4,
+        "C7": 8
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=nm",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=SUM(rng)",
+        "A4": "=FORMULATEXT(A3)",
+        "A5": "=ISREF(nm)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_sheet",
+      "sheet": "S"
+    },
+    {
+      "op": "add",
+      "sheet": "S"
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4",
+    "F!A5"
+  ]
+}

@@ -2522,6 +2522,8 @@ C	probes/t4627-pivot-field-name-collisions.case.json	105
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
+C	probes/table-edits/t2612-delete-sheet-then-add-names.case.json	5
+C	probes/table-edits/t2612-delete-sheet-then-add.case.json	10
 C	probes/table-edits/t3629-convert-names.case.json	9
 C	probes/table-edits/t3629-convert-plain.case.json	4
 C	probes/table-edits/t3629-readd-other-area.case.json	6
