@@ -22,8 +22,7 @@ desktop or web oracle computes them; until then the cells are Phase 1 rate excep
 
 ## Context
 T-3641 re-probed excel-graph on 2026-11-05; see statistics.md "FORECAST.ETS family: excel-graph never computes it".
-Cells: probes/forecast-ets-reprobe-2026-11 Sheet1!I1:I8 and Sheet1!J1:J8. Desktop work is out of scope (decision 0266),
-hence `defer`.
+Cells: probes/forecast-ets-reprobe-2026-11 Sheet1!I1:I8 and Sheet1!J1:J8. Desktop work is out of scope (decision 0266).
 - Gap triage 2026-11-05 (main 3b2f779e, clean `make eval`): probes/forecast-ets-longer-series was owned by T-2425,
   dropped by decision 0266, and was left with no owner (`make unowned-off ALL=1` listed its 40 cells, the only unowned
   visibly-off cells of the run). Same root cause: Excel (web) is `#N/A` on every cell; the engine gives numbers

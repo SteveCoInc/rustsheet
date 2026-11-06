@@ -177,8 +177,8 @@ Mac golden and `#VALUE!` on the web (T-2182):
 Decision 0308 (owner request, 2026-11-06) takes option (a): the 402 FORECAST.ETS-family cells that expect the web's
 `#N/A` and the 153 desktop-only CELL cells of the calipers goldens are lines of eval/milestones/phase1-exceptions.tsv,
 owned by T-4373 (now `blocked`: no oracle evidences them), and stay known failures. The rows of phase1-exceptions.tsv
-and exit-exceptions.tsv that named T-1075 now name T-4373. T-3004 is dropped. gen-m9/fa25422d6f18c157 Calc!A75 stays
-with T-4208. `make eval` on bfc30b2a: the Phase 1 rate leaves out 564 cells (CELL 149, FORECAST.ETS.STAT 51,
-.CONFINT 30, .SEASONALITY 31, FORECAST.ETS 34, plus the earlier 9); Gate B 469 of 506; `make phase1-exit` owners met
+and exit-exceptions.tsv that named T-1075 now name T-4534. T-3004 is dropped. gen-m9/fa25422d6f18c157 Calc!A75 stays
+with T-4208. `make eval` on eab4b108: the Phase 1 rate leaves out 564 cells (CELL 149, FORECAST.ETS.STAT 51,
+.CONFINT 30, .SEASONALITY 31, FORECAST.ETS 34, plus the earlier 9); Gate B 462 of 506; `make phase1-exit` owners met
 (0 unowned). T-4207's other named cells (calipers math, text and engineering goldens, ironcalc-calc, poi) are owned by T-4534 and
 stay counted. Not done here: the code criterion (retire or rewrite decision 0143's M14-owned path), split to T-4527.

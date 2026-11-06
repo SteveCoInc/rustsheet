@@ -34,8 +34,8 @@
      this decision, each with its own oracle evidence (the web's `#N/A` or `#VALUE!` sidecar value) in the PR.
 - **Consequences:**
   - FORECAST.ETS, FORECAST.ETS.STAT, FORECAST.ETS.SEASONALITY, FORECAST.ETS.CONFINT and CELL should meet the Phase 1
-    rate. `make eval` on bfc30b2a leaves out 564 cells and puts Gate B at 469 of 506 (456 on c97e0b9c, with other merged
+    rate. `make eval` on eab4b108 leaves out 564 cells and puts Gate B at 462 of 506 (456 on c97e0b9c, with other merged
     work in between); `make phase1-exit` owners met.
   - T-3011 and T-4207 are done (T-4207's code criterion is T-4527). T-4373 owns exactly the listed cells (it is the one open M14 task, so decision 0143's desktop-owned path lists only
-    them); the rows that named the dropped T-1075 now name T-4373. The other cells T-4207 named are T-4534's and stay
+    them); the older rows that named the dropped T-1075 now name T-4534, which lists those cells. The other cells T-4207 named are T-4534's and stay
     counted. T-3004 is dropped.

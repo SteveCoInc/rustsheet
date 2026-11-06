@@ -9,20 +9,20 @@
 # below 16 does not outrank the web (decision 0030 rule 2). J136 AND("1",1) is T-1075 item 7
 # (coercion.md "AND/OR/XOR text arguments"); G936, H936 and K936 MODE are T-1075 item 10
 # (decision 0067).
-poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!J136	0134	T-4373
-poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!G936	0134	T-4373
-poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!H936	0134	T-4373
-poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!K936	0134	T-4373
+poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!J136	0134	T-4534
+poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!G936	0134	T-4534
+poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!H936	0134	T-4534
+poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!K936	0134	T-4534
 # COMPLEXs.xlsx N6 (IMTAN), AL12 and AL26 (IMSQRT): Mac 16.0300 cached digits where Excel for the web, which the
 # engine follows (decision 0188 R6, decision 0039 item 4), differs visibly; only desktop evidence (T-1075 items 16 and
 # 17) can settle them. Added ahead of T-2774 and T-2536: stale until those land; keep them.
-ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!N6	0188	T-4373
-ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL12	0188	T-4373
-ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL26	0188	T-4373
+ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!N6	0188	T-4534
+ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL12	0188	T-4534
+ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL26	0188	T-4534
 # IRR.xlsx Two Values!C4 (IRR at an exact zero root: cached 2^-52, the web 0) and COMPLEXs.xlsx K25 (IMCOS, Mac
 # 16.0300's last digit): the engine follows the web (decision 0196); T-1075 items 23 and 24.
-ironcalc-calc/FINANCIAL/IRR.xlsx!Two Values!C4	0196	T-4373
-ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!K25	0196	T-4373
+ironcalc-calc/FINANCIAL/IRR.xlsx!Two Values!C4	0196	T-4534
+ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!K25	0196	T-4534
 # FORECAST.ETS family (Excel for the web is #N/A on every call) and CELL color/filename/format/parentheses/prefix/
 # protect/width (the web is #VALUE!, as the engine; desktop goldens cache values): decision 0308, T-4207, T-3011.
 calipers/pv_goldens/pv26_001/golden.xlsx!Ticker0001_Validation_Sheet!A2	0308	T-4373
