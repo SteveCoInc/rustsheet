@@ -3,7 +3,7 @@ id: T-4615
 title: "CONVERT from a micro-prefixed K or kel to Reau: probe and match Excel, which drops the prefix"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
