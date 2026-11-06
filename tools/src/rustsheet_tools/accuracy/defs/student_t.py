@@ -455,8 +455,8 @@ def confidence_margin(alpha: mpmath.mpf, sd: mpmath.mpf, n: mpmath.mpf) -> mpmat
 
 def _confidence_t(args: Sequence[MathArg]) -> mpmath.mpf:
     alpha, sd, n = args
-    assert not isinstance(alpha, (bool, tuple)) and not isinstance(sd, (bool, tuple))
-    assert not isinstance(n, (bool, tuple))
+    assert not isinstance(alpha, (bool, str, tuple)) and not isinstance(sd, (bool, str, tuple))
+    assert not isinstance(n, (bool, str, tuple))
     if sd < 0:
         msg = "a negative standard_dev is unprobed"
         raise NoValueError(msg)
