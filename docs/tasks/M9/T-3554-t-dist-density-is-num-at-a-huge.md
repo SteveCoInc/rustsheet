@@ -33,3 +33,43 @@ depends_on: []
 
 ## Out of scope
 - The cumulative T.DIST (unaffected).
+
+## Probe predictions (committed before the fill)
+Case probes/t3554-tdist-density-huge-x (excel-graph). Every hypothesis is even in x, so each row predicts the same for
+A (x > 0) and B (-x). "N" is `#NUM!`, "n" a number (0 included). Hypotheses:
+- (a0) `#NUM!` exactly when the density underflows to 0 in double; (aMIN) when it falls below DBL_MIN 2.2E-308;
+  (c) a ln-space density whose exp underflows: same cells as (a0).
+- (b1) when `x*x` overflows, |x| >= 2^512 (about 1.3408E+154), whatever the df;
+- (b2) when x²/df overflows (|x| > sqrt(df * DBL_MAX)); (b3) when `x*x + df` overflows.
+
+Prior evidence already refutes (a0), (aMIN) and (c) (s1 A97, `T.DIST(9.93E+137,24,FALSE)` is 0 with a density far
+below 1E-324) and (b2) (e-T-3425 A116, x 4.2E+220 at df 2.4E+249, is `#NUM!`); the probe tests them again.
+
+| Row | x | df | a0/c | aMIN | b1 | b2 | b3 |
+|---|---|---|---|---|---|---|---|
+| 1 | 2^512 pred. | 1 | n | N | n | n | n |
+| 2 | 2^512 | 1 | n | N | N | N | N |
+| 3 | 2^512 pred. | 2 | N | N | n | n | n |
+| 4 | 2^512 | 2 | N | N | N | n | N |
+| 5 | 2^512 pred. | 24 | N | N | n | n | n |
+| 6 | 2^512 | 24 | N | N | N | n | N |
+| 7 | 4 * 2^512 | 24 | N | N | N | n | N |
+| 8 | 8 * 2^512 | 24 | N | N | N | N | N |
+| 9 | 2^512 pred. | 1E+10 | N | N | n | n | n |
+| 10 | 2^512 | 1E+10 | N | N | N | n | N |
+| 11 | 2^512 pred. | 1E+300 | N | N | n | n | N |
+| 12 | 2^512 | 1E+300 | N | N | N | n | N |
+| 13 | 1E+200 | 1E+300 | N | N | N | n | N |
+| 14 | 1.339E+154 | 1E+307 | N | N | n | n | N |
+| 15 | 1 | 1E+307 | n | n | n | n | n |
+| 16 | 1E+120 | 2 | N | N | n | n | n |
+| 17 | 1E+100 | 2 | n | n | n | n | n |
+| 18 | 1E+154 | 1 | n | N | n | n | n |
+| 19 | 2E+153 | 1 | n | n | n | n | n |
+| 20 | 1E+160 | 1 | n (c) | N | N | N | N |
+| 21 | 1E+300 | 1 | N | N | N | N | N |
+| 22 | 1E+120 | 9 | N | N | n | n | n |
+| 23 | 2^512 pred. | 1E+15 | N | N | n | n | n |
+| 24 | 2^512 | 1E+15 | N | N | N | n | N |
+
+Row 20 separates (c) (a ln-space density of 3.2E-321 is a number) from a direct (a0) (1/(pi*(1+inf)) is 0, so N).
