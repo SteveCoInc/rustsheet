@@ -31,11 +31,15 @@ double-double walk, the empty population is 1, and the cdf past the walk is with
   envelope, not Excel's last digits.
 
 ## Acceptance criteria
-- [ ] The 76 T-4502 lines are gone from eval/accuracy/known-failures.tsv and `rustsheet-eval accuracy` reports 0 failing.
+- [ ] All 76 T-4502 lines are gone from eval/accuracy/known-failures.tsv, accuracy/HYPGEOM.DIST/s1!Calc!A95 included,
+      and `rustsheet-eval accuracy` reports 0 failing.
+      - At A95 the bug is the engine's `#NUM!`. Once the engine computes the pmf, its 8.1E-186 is within the envelope of
+        the math, so the point passes Gate A on the math side and its line is removed like the others.
+      - Excel's 0 there stays Excel's value (decision 0300).
 - [ ] Unit tests cover the empty population and a pmf past the walk.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- Excel's 0 at `HYPGEOM.DIST(41966,46221,65797,74726,FALSE)` (an intermediate underflow of Excel's, unpinned): matching it
-  needs Excel's formulation (T-2481).
+- Reproducing Excel's 0 at `HYPGEOM.DIST(41966,46221,65797,74726,FALSE)` (an intermediate underflow of Excel's,
+  unpinned): that needs Excel's formulation (T-2481). Removing A95's known-failure line is in scope (see above).
 - The cdf's per-call cap DEVIATION (T-1896).

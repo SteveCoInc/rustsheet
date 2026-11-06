@@ -398,8 +398,10 @@ HYPGEOM_CDF_TERMS = 2**17
 "HYPGEOM.DIST is not exact for small integer arguments": the cdf is the sum of Excel's own pmf terms from the lowest).
 A cap on the draws, not an Excel limit: the excel-graph oracle's calculate request fails on every retry for a workbook
 holding `HYPGEOM.DIST(153800,1626691102,202463,2147483646,TRUE)` alone, while
-`HYPGEOM.DIST(163325,524700,672305386,2147483646,TRUE)` is answered (T-4105), so the term count alone is not the cause;
-statistics.md "HYPGEOM.DIST: per-call cap and lifting (T-1873)" records it. A longer point is drawn as a pmf instead."""
+`HYPGEOM.DIST(108560,269566,29690062,73480449,TRUE)` (108,560 terms) is answered (T-4105); what Excel times out
+on is unpinned.
+statistics.md "HYPGEOM.DIST of an empty population is 1, and a deep-tail pmf can be 0 (T-4105)" records it. A longer
+point is drawn as a pmf instead."""
 
 
 def _hypgeom_sd(n: int, k: int, pop: int) -> float:
