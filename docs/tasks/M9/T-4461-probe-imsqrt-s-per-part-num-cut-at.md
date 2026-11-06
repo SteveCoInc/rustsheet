@@ -3,7 +3,7 @@ id: T-4461
 title: "Probe IMSQRT's per-part #NUM! cut at sqrt(DBL_MAX): the doubles either side of 1.3407807929942596E154, real and imaginary"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
