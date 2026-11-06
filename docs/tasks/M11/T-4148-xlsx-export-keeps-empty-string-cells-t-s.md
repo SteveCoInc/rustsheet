@@ -49,3 +49,21 @@ is not a blank cell"), and the engine keeps these cells.
 - Eval delta: none. The test is the only code change.
 - Follow-ups: T-4723 probes the four shapes in Excel. Not filed: a shared zip-rewrite helper for the xlsx
   integration tests (design MINOR). Several test files already carry the pattern, and this PR adds one more copy.
+
+## Landing notes
+- PR #3776, a draft. The head is the commit after 2474705b9 (these notes); 2474705b9 holds the round-2 fixes. CI is pending on
+  the new head. 4d2e4267f was the review head.
+- Round 1 on 4d2e4267f:
+  - security APPROVE.
+  - design APPROVE, with one MINOR: a shared zip-rewrite test helper. Not filed; the reason is in the Outcome.
+  - excel-fidelity REQUEST_CHANGES: two MAJOR findings and one MINOR.
+    - Finding: the test asserted, as Excel's behaviour, how the four XML shapes are read, with no evidence.
+    - Finding: no xlsx-storage.md entry.
+    - Finding: the Outcome cited our own snapshot as evidence.
+- 2474705b9 fixes all three in docs only: an UNVERIFIED xlsx-storage.md entry "Empty `t=\"str\"` and empty
+  inline-string cells", reworded test comments, a reworded Outcome, and probe task T-4723. `make check-fast` is green
+  on it.
+- Next step: once CI is green, run reviewer-excel-fidelity again on the current head (round 2). design and security
+  need no re-run: the test code is unchanged, only its comments changed. If it approves, mark the PR ready and enqueue
+  it.
+- Do not repeat: do not claim Excel evidence for the four shapes before T-4723 probes them.
