@@ -13,8 +13,8 @@
     `#N/A` (gen-m9 326, probes 76). All four functions are below Gate B's rate only because of these cells.
   - CELL with info_type "color", "filename", "format", "parentheses", "prefix", "protect" or "width": Excel for the
     web returns `#VALUE!` for each (probes/t3011-cell-format-info-types, excel-graph 2026-11-06, 38 of 38 cells
-    `#VALUE!`, every info type except "width", which the oracle's canary refuses because the web does not implement it;
-    `tools/src/rustsheet_tools/oracle/canary.py`). The engine returns `#VALUE!` too, so it matches the oracle of
+    `#VALUE!`, every info type except "width"; "width" is `#VALUE!` on the web per decision 0019's POI fill, 9 cells of poi/47804.xlsx,
+    with no committed sidecar because the oracle canary now refuses the call). The engine returns `#VALUE!` too, so it matches the oracle of
     record. The 153 visibly-off CELL cells (calipers goldens formulas_information and pv_goldens) carry desktop
     Excel's cached values (a width, a format code, a file path), which no web evidence can reach. CELL is below
     Gate B's rate (149 of 489 cells) only because of them.
@@ -36,5 +36,6 @@
   - FORECAST.ETS, FORECAST.ETS.STAT, FORECAST.ETS.SEASONALITY, FORECAST.ETS.CONFINT and CELL should meet the Phase 1
     rate. `make eval` on bfc30b2a leaves out 564 cells and puts Gate B at 469 of 506 (456 on c97e0b9c, with other merged
     work in between); `make phase1-exit` owners met.
-  - T-3011 and T-4207 are done (T-4207's code criterion is T-4527). T-4373 owns the listed cells, and the rows that
-    named the dropped T-1075 now name T-4373. T-3004 is dropped.
+  - T-3011 and T-4207 are done (T-4207's code criterion is T-4527). T-4373 owns exactly the listed cells (it is the one open M14 task, so decision 0143's desktop-owned path lists only
+    them); the rows that named the dropped T-1075 now name T-4373. The other cells T-4207 named are T-4534's and stay
+    counted. T-3004 is dropped.

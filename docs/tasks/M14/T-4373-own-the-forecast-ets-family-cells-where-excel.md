@@ -31,7 +31,7 @@ hence `defer`.
   arguments (K35, K39:K42). K37 and K38 already match. statistics.md cites this case (K3, K8, K14, K19, K25, K30).
 - probes/forecast-ets-longer-series.case.json (40): Sheet1!K1:K36, Sheet1!K39:K42
 
-Also owns (decision 0308) the desktop-only CELL cells listed in eval/milestones/phase1-exceptions.tsv (calipers goldens,
+Owns only decision 0308's cells: the desktop-only CELL cells listed in eval/milestones/phase1-exceptions.tsv (calipers goldens,
 info types color, filename, format, parentheses, prefix, protect, width), and every FORECAST.ETS-family line there.
 
 Cell lists. The ownership check (scripts/exit_owners.py) reads the cells a task names, so they are listed here once.
@@ -100,20 +100,6 @@ Phase 1 rate exceptions under decision 0308 (eval/milestones/phase1-exceptions.t
 - probes/forecast-ets-reprobe-2026-11.case.json (16): Sheet1!I1, I2, I3, I4, I5, I6, I7, I8, J1, J2, J3, J4, J5, J6, J7, J8
 - probes/stat-argument-modes.case.json (8): Sheet1!H266, H267, H270, H271, H274, H275, H277, H278
 
-Cells T-4207 named for the M14 owners decision 0266 dropped, not visibly off or already exit exceptions (ironcalc-calc,
-poi, calipers engineering): kept owned here so no cell loses its owner.
-- probes/forecast-ets-longer-series.case.json (2): Sheet1!K1:K36, K39:K42
-- ironcalc-calc/ENGINEERING/COMPLEXs.xlsx (4): Sheet1!AL12, AL26, K25, N6
-- ironcalc-calc/ENGINEERING/BESSEL.xlsx (2): All!D18, F18
-- ironcalc-calc/LOGICAL/IF_ARRAY.xlsx (3): Sheet1!C4, C11, E4
-- ironcalc-calc/MATH_AND_TRIGONOMETRY/ATAN2_POWER.xlsx (1): Sheet1!D14
-- poi/FormulaEvalTestData_Copy.xlsx (5): EverythingTests!G936, H936, J136, J1328, K936
-- calipers/pv_goldens/pv26_011/golden.xlsx (1): CD market model!B3; UC market model!B3
-- calipers/pv_goldens/pv26_2_011/golden.xlsx (1): CD market model!B3; UC market model!B3
-- calipers/roundtrip/formulas_math_trig/golden.xlsx (33): Sheet1!C23, C25, D22, D24, D70, E19, E22, E23, E24, E25, E46, E48, E60, E71, F22, F24, F68, G19, G23, G25, G69, G72, G75, H19, H20, H22, H23, H24, H25, H26, H71, H74, J72
-- calipers/roundtrip/formulas_text/golden.xlsx (1): Text Functions!C190
-- calipers/roundtrip/formulas_engineering/golden.xlsx (4): Sheet1!D26, D27, J26, J27
-- calipers/roundtrip/formula_stress_test/golden.xlsx (1): Information!B3
 
 ## Acceptance criteria
 - [ ] If a desktop or web oracle ever returns numbers for the family, refill both cases and compare the cells

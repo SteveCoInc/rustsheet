@@ -267,8 +267,8 @@ Tasks: T-1230
 Rule (excel-graph, 2026-11-06, T-3011): Excel for the web returns `#VALUE!` for `CELL(info_type, ref)` with info_type
 "color", "parentheses", "prefix", "protect" or "format", on a blank cell, a number, a text, a cell formatted
 `0.00;[Red]-0.00`, a cell formatted `0;(0)`, a reference on another sheet, a range, in upper or mixed case, and with no
-reference. "width" is not implemented by the web either (the oracle canary refuses it, tools/src/rustsheet_tools/oracle/
-canary.py), and "filename" is `#VALUE!` (T-2052). Desktop Excel returns values for all seven (the calipers goldens
+reference. "width" is `#VALUE!` on the web too (decision 0019: the POI fill saw `#VALUE!` on 9 `CELL("width")` cells where
+poi/47804.xlsx caches 10 and 11; no committed sidecar, since the oracle canary now refuses the call), and "filename" is `#VALUE!` (T-2052). Desktop Excel returns values for all seven (the calipers goldens
 formulas_information Sheet1 E140:N160 cache color 0, filename a path, format "G", parentheses 0, prefix "",
 protect 1, width 15 on General cells), so these cells are web-vs-desktop conflicts.
 Evidence: probes/t3011-cell-format-info-types A1:A38 (excel-graph, 2026-11-06).
