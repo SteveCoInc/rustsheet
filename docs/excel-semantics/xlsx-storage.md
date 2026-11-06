@@ -596,7 +596,7 @@ insert_row 3 adds inside the data rows gets the column's formula (its Calc cell 
 Ours (T-4274): the row and column insert and delete rewrite the stored text as the first data cell's formula is
 displaced (`Model::displaced_column_formulas`), printed in file form at the new first data cell; a text with a `[`
 (a structured reference) keeps its text, and so does one whose first data cell the edit deletes (unprobed). Moves and
-cell shifts leave the text as it is (unprobed). Ours gives `#ERROR!` in the moved `[@Col]` cells (T-4680). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
+cell shifts leave the text as it is (unprobed). Ours read their rows too since T-4680 (before, the moved `[@Col]` cells were `#ERROR!`). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
 `array="1"` attribute is dropped on import (export writes the plain element): engine choices, what Excel does with
 either is unprobed.
 Evidence: the saved `xl/tables/table1.xml` and `xl/worksheets/sheet1.xml` of probes/t2957-fill-one-totals,

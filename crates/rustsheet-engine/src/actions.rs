@@ -659,13 +659,14 @@ impl Model {
         // Merged ranges are remapped at the end; take them out so the cell moves
         // (which go through `set_user_input`) do not trip the covered-cell guard.
         let merged_cells = std::mem::take(&mut self.workbook.worksheet_mut(sheet)?.merged_cells);
+        let kept = self.column_edit_kept(sheet, column, column_count);
         let worksheet = self.workbook.worksheet(sheet)?;
         let all_rows = worksheet.sheet_data.rows();
         for row in all_rows {
             let sorted_columns = self.get_columns_for_row(sheet, row, true)?;
             for col in sorted_columns {
                 if col >= column {
-                    self.move_cell(sheet, (row, col), (row, col + column_count), &[])?;
+                    self.move_cell(sheet, (row, col), (row, col + column_count), &kept)?;
                 } else {
                     // Break because columns are in descending order.
                     break;
@@ -792,6 +793,7 @@ impl Model {
         let column_end = column + column_count - 1;
 
         // Move cells
+        let kept = self.column_edit_kept(sheet, column, -column_count);
         let worksheet = &self.workbook.worksheet(sheet)?;
         let all_rows = worksheet.sheet_data.rows();
         let mut moved = MovedFormulas::new();
@@ -807,7 +809,7 @@ impl Model {
                             (r, col - column_count),
                             &mut moved,
                         )?;
-                        self.move_cell(sheet, (r, col), (r, col - column_count), &[])?;
+                        self.move_cell(sheet, (r, col), (r, col - column_count), &kept)?;
                     } else {
                         self.workbook.worksheet_mut(sheet)?.remove_cell(r, col)?;
                     }

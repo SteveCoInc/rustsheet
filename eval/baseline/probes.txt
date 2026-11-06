@@ -9419,7 +9419,6 @@ F	probes/t4627-pivot-field-name-collisions.case.json	P_SufB!B3
 F	probes/t4627-pivot-field-name-collisions.case.json	P_SufB!B4
 F	probes/t4627-pivot-field-name-collisions.case.json	P_SufB!B5
 F	probes/t4627-pivot-field-name-collisions.case.json	P_SufB!B6
-F	probes/table-edits/t4274-calc-column-structured-insert-column-a.case.json	F!A4
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
