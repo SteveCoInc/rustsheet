@@ -329,9 +329,12 @@ impl Workbook {
             )),
             _ => None,
         };
-        let zip = decrypted.as_deref().map_or(bytes, Vec::as_slice);
+        let was_decrypted = decrypted.is_some();
+        // The retained package is wiped when dropped: for an encrypted file it is the plaintext
+        // (SPEC-0031), so it is moved in, never copied.
+        let package = decrypted.unwrap_or_else(|| Zeroizing::new(bytes.to_vec()));
         let source = Source {
-            bytes: Arc::from(zip),
+            bytes: package,
             name: w.name.clone().unwrap_or_default(),
             locale: w.locale.clone(),
             timezone: w.timezone.clone(),
@@ -339,7 +342,7 @@ impl Workbook {
             clock: w.clock,
             limits,
         };
-        let model = source.import(decrypted.is_some())?;
+        let model = source.import(was_decrypted)?;
         let mut workbook = Self::from_model(model, w.max_read_cells);
         workbook.source = Some(Arc::new(source));
         if opts.recalc {
@@ -362,6 +365,11 @@ impl Workbook {
         rustsheet_xlsx::metadata_clock::pin_clock_from_metadata(&mut self.model)
     }
     /// Serializes to xlsx bytes.
+    ///
+    /// A workbook loaded from a package keeps it (SPEC-0034): if nothing changed since the load, the
+    /// save is that package, byte for byte, and otherwise it is regenerated. Deciding re-imports the
+    /// package, so a save holds about twice the model in memory, within the load's limits. The save
+    /// is never encrypted, also for a workbook opened from a password-protected file.
     ///
     /// # Errors
     /// [`SaveError::Engine`] when the engine cannot export the workbook.
