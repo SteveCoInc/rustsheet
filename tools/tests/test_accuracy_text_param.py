@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import io
 import json
+import math
 import random
 from collections.abc import Sequence
 from pathlib import Path
@@ -17,8 +18,9 @@ from rustsheet_tools.accuracy.eval_math import case_math, fit_args
 from rustsheet_tools.accuracy.model import REGISTRY, Definition, DomainError, Interval, MathArg, Param
 from rustsheet_tools.accuracy.sampler import STRATA, Sampler, math_arg
 from rustsheet_tools.accuracy.tables import batch_files, compute, draw_points, formula, parse_formula
-from rustsheet_tools.fitlab.sweep import parse_complex_text
+from rustsheet_tools.fitlab.sweep import parse_complex_text, read_complex_arg
 
+PROBE = Path(__file__).resolve().parents[2] / "eval/suites/probes/cases/eng-inumber-grammar-digits"
 UNITS = ("m", "km", "mi", "in", 'say "hi"')  # the last one exercises the quote escape
 
 
@@ -166,7 +168,8 @@ def test_fit_args_reads_text_parameters() -> None:
     assert fit_args(ZABS, [3.0]) == "non-text for a text parameter"
     assert fit_args(ZABS, ["++i"]) == "not a complex number text"
     assert fit_args(ZABS, ["1.23456789012345+2i"]) == ["1.23456789012345+2i"]
-    assert fit_args(ZABS, ["1.234567890123456+2i"]) == "complex number part past 15 significant digits"
+    assert fit_args(ZABS, ["1.234567890123456+2i"]) == ["1.234567890123456+2i"]  # cut by the math (T-4593)
+    assert fit_args(ZABS, ["1.2345678901234567E-310+1i"]) == "subnormal complex number part"
     assert fit_args(ZABS, ["1.50000000000000000+2E-300i"]) == ["1.50000000000000000+2E-300i"]
     assert fit_args(ZABS, ["1E-320+1i"]) == "subnormal complex number part"
     assert fit_args(ZABS, ["1-2.2250738585072E-308i"]) == "subnormal complex number part"
@@ -202,3 +205,53 @@ def test_eval_cells_with_string_literals_get_math(tmp_path: Path, monkeypatch: p
     got = {a: c["v"] for a, c in math.cells["S"].items()}
     assert got == {"A1": "5.0", "A2": "10.0", "A3": "8.0", "A6": "40.0", "A7": "5.0"}
     assert math.skipped == {"text outside the parameter's list": 1, "not a complex number text": 1}
+
+
+def test_complex_parts_past_15_digits_are_cut_as_excel_reads_them() -> None:
+    # probes/eng-inumber-grammar-digits (T-3644): column A holds the texts, B and C Excel's IMREAL and
+    # IMAGINARY of them; each part is cut, not rounded, to 15 significant digits (T-4593).
+    cells = json.loads(PROBE.with_suffix(".case.json").read_text())["sheets"][0]["cells"]
+    oracle = json.loads(PROBE.with_suffix(".oracle.json").read_text())["sheets"]["S"]
+    rows = [a1[1:] for a1 in cells if a1.startswith("A")]
+    assert len(rows) == 6
+    for row in rows:
+        text = oracle[f"A{row}"]["v"]
+        assert fit_args(ZABS, [text]) == [text]
+        parts = (oracle[f"B{row}"]["v"], oracle[f"C{row}"]["v"])
+        assert read_complex_arg(text) == parts
+        assert math_arg(ZABS.params[0], text) == mpmath.mpc(*parts)
+    # past ±400 a part is read whole, not cut (cutting would leave Decimal's exponent range)
+    assert read_complex_arg("1e999999999+1i") == (math.inf, 1.0)  # overflow side
+    assert read_complex_arg("1-1e-9999999999i") == (1.0, -0.0)  # underflow side
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "1e9999999999999999999+1i",
+        "1-1e-9999999999999999999i",
+        "0e9999999999999999999+1i",
+        "1+0e-9999999999999999999j",
+    ],
+)
+def test_exponents_decimal_cannot_hold_are_value_errors(text: str) -> None:
+    # A 19+ digit exponent makes Decimal raise InvalidOperation; it must reach the callers, which
+    # catch ValueError, as one (directive 5).
+    with pytest.raises(ValueError, match="out of reach"):
+        read_complex_arg(text)
+    assert fit_args(ZABS, [text]) == "not a complex number text"
+
+
+def test_eval_cells_read_long_complex_parts_cut(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(REGISTRY, ZABS.function, ZABS)
+    cells = {"A1": '=ZABS("3.0000000000000009+4.0000000000000009i")'}
+    case = tmp_path / "c.case.json"
+    case.write_text(
+        json.dumps({"format": "rustsheet-case/v1", "sheets": [{"name": "S", "cells": cells}], "expected": {}})
+    )
+    sidecar = tmp_path / "c.oracle.json"
+    sidecar.write_text(
+        json.dumps({"format": "rustsheet-oracle/v1", "sheets": {"S": {"A1": {"t": "n", "v": 5.0}}}})
+    )
+    math_values = case_math("t/c.case.json", case, sidecar)
+    assert {a: c["v"] for a, c in math_values.cells["S"].items()} == {"A1": "5.0"}

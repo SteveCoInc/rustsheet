@@ -448,7 +448,11 @@ impl Model {
         // resolve, such as a padded bare column `T[ Col ]`, loads as `#REF!`
         // (probes/t3258-name-padded-column-0..2, T-3258).
         self.parser.set_loaded(loading);
+        // A bare name of an API body binds to a sheet-scoped definition by sheet name order,
+        // not to the active sheet's (syntax.md "A bare name in an API-added name's body", T-4587).
+        self.parser.set_api_name_body(source == NameSource::Api);
         let internal_formula = self.formula_to_internal_between(formula, &read_on, &context);
+        self.parser.set_api_name_body(false);
         self.parser.set_loaded(false);
         let internal_formula = internal_formula?;
         // Excel's `names/add` refuses a body nesting more than 65 calls (400 `InvalidArgument`;

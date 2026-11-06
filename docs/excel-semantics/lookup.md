@@ -88,12 +88,21 @@ define one, and `"Summary!tn"` is `#REF!` too. The prefix follows formula quotin
 sheet name may hold only letters, digits, `_` and `.`, so `"Co A!tn"`, `"P&L!tn"` and `"O'B!tn"`
 are `#REF!` (also with `a1` FALSE) while `"2024!tn"`, `"Q1!tn"` and `"x.y!tn"` resolve; quoted,
 `''` is one quote (`"'O''B'!tn"` resolves) and any sheet name may be quoted (`"'CoB'!tn"`).
-Verified for ASCII sheet names only; unquoted non-ASCII names (`"Données!tn"`) and letter-after-digit
-names (`"1Q!tn"`) are unprobed (the engine accepts them).
+Unquoted non-ASCII letters count as letters and a digit-then-letter name needs no quotes: `"Données!tn"`,
+`"Ünïcode!tn"`, `"1Q!tn"` and `"1q!tn"` (case-insensitive) resolve like their quoted forms
+(probes/t4545-indirect-sheet-prefix-names rows 1:8, excel-graph 2026-11-06, T-4545).
 Cell text follows the same quoting for `"Co A!B1"`, `"P&L!B1"` and `"O'B!B1"` (`#REF!`), and
 `"Q1!B1"`, `"x.y!B1"` and `"2024!B1"` (an unquoted all-digit sheet, `"y2024"`) resolve; the engine
-quotes a digit-leading prefix for its lexer (T-2678). A typed `=2024!B1`, the R1C1 form `INDIRECT("2024!R1C1",FALSE)` and `"2024!B1:2024!B3"` are unprobed.
-Evidence: probes/indirect-sheet-scoped-name (excel-graph, 2026-10-25, T-2660).
+quotes a digit-leading prefix for its lexer (T-2678). The same holds for cell text on non-ASCII and digit-then-letter
+sheets (`"Données!B1"`, `"données!B1"`, `"Ünïcode!B1"`, `"1Q!B1"`, `"1q!B1"` are 7; probes/t4545-indirect-sheet-prefix-spellings
+rows 1:12) and for R1C1 text with `a1` FALSE (`"2024!R1C2"`, `"'2024'!R1C2"`, `"2024!R[-23]C2"`, `"1Q!R1C2"`,
+`"Données!R1C2"` are 7, `"2024!R1C2:R3C2"` sums to 24; rows 22:29). A range text that names its sheet on both corners
+is `#REF!` (ISREF FALSE, ERROR.TYPE 4), whatever the quoting or sheet: `"2024!B1:2024!B3"`, `"Q1!B1:Q1!B3"`,
+`"'1Q'!B1:'1Q'!B3"`, `"'2024'!B1:'2024'!B3"`, two different sheets `"Q1!B1:x.y!B3"`, the R1C1 `"2024!R1C2:2024!R3C2"`
+and a three-part `"Q1!B1:Q1!B3:Q1!B2"` (rows 13:18, 20, 21, 30); `"2024!B1:B3"` is the 3-cell range (row 19). A typed
+`=2024!B1` is unprobed.
+Evidence: probes/indirect-sheet-scoped-name (excel-graph, 2026-10-25, T-2660); probes/t4545-indirect-sheet-prefix-spellings
+and t4545-indirect-sheet-prefix-names (excel-graph, 2026-11-06, T-4545; predictions in docs/research/t4545).
 Calipers note: `calipers/pv_goldens/pv26_020` and `pv26_2_020` `Summary!C17:...17` are not evidence
 for this rule: the corpus anonymisation renamed the text in `Summary!B17` to `Company0691` but left
 the sheet it names as `ConAgra` (whose `TargetName`, D24, is the cached `Company2277`), so the
@@ -1336,7 +1345,7 @@ call's result), not a value. What the caller sees depends on who reads the eleme
   T-2299 owns the difference).
 - XMATCH's search_mode lifts too, as a value (for the array modes only the second element is probed, `INDEX(…,2,1)`): it is 2 in
   `XMATCH(2,A1:A3,0,{1;-1})` and 3 in `XMATCH(2,{1;2;2},0,{2;-2})`; an invalid mode element is `#VALUE!` in its slot
-  (`{1;3}`); a boolean range element counts as its number (TRUE is 1). The first array-mode elements are unprobed, as is an error lookup_value next to a lifted search_mode (`XMATCH(NA(),A1:A3,0,{1;-1})`, implemented as a 2x1 of `#N/A` by analogy with MATCH's match_type, UNVERIFIED). Implemented (T-1958): `fn_xmatch` lifts search_mode with lookup_value and match_mode.
+  (`{1;3}`); a boolean range element counts as its number (TRUE is 1). The first array-mode elements follow the same rule (T-4544, probes/t4544-xmatch-error-modes A136:A169): `XMATCH(2,A1:A3,{9;0})` and `XMATCH(2,A1:A3,0,{3;1})` are `#VALUE!` then 2, `INDEX(…,1,1)` of `XMATCH(2,A1:A3,{0;1})` and `XMATCH(2,A1:A3,0,{1;-1})` is 2. An error lookup_value beats every lifted mode element, valid or not: `XMATCH(NA(),A1:A3,0,{1;-1})` is a 2x1 of `#N/A`, and so are `{9;8}` as match_mode, `{3;5}` as search_mode, both modes as arrays at once and a 2-cell range of modes in place of either array; `1/0` and a cell holding `#N/A` give their own error the same way (t4544-xmatch-error-modes A1:A133, hold-out t4544-xmatch-error-modes-holdout, excel-graph 2026-11-06). Implemented (T-1958): `fn_xmatch` lifts search_mode with lookup_value and match_mode.
 - ERROR.TYPE and ISERROR of an INDEX pick whose multi-cell element cannot spill are the cell's `#SPILL!`, not a code or
   TRUE (`ERROR.TYPE(INDEX(OFFSET(A1,0,0,{1;2}),2,1))`, `ISERROR(INDEX(TRIMRANGE(A1:B5,{0;1}),2,1))`; F11, G11, H11).
 Evidence: probes/reference-lift-elements (excel-graph, 2026-10-19, T-1810); probes/lookup-argument-modes F14:H15,
@@ -1707,5 +1716,14 @@ XMATCH with search_mode = Data!G9 (#DIV/0!): when match_mode converts to a numbe
 (315644f84093cf49 A292:B293, 75b38d80dd3152b2 A388 A448 A544); non-numeric text in match_mode still wins with #VALUE! (315644f84093cf49 A64, 75b38d80dd3152b2 A598).
 Evidence: gen-m6 21db5363d711888d, ad47b47c4e97019d, 315644f84093cf49, 75b38d80dd3152b2 (excel-graph).
 Ours: matches all of these cells (T-3667, a one-cell error reference in arrays.md; T-3542: XMATCH reports an out-of-range numeric match_mode only after search_mode's cast error).
-Status: UNVERIFIED (probe pending; cells are oracle values, the general rule is not probed)
-Tasks: T-3667, T-3542
+Probed for XMATCH by T-4544 (probes/t4544-xmatch-error-modes A172:A364, excel-graph 2026-11-06; a generated hold-out,
+t4544-xmatch-error-modes-holdout, with its predictions frozen in docs/research/t4544 before the fill). The order for a scalar
+search_mode that is an error (a literal `#N/A`, `NA()`, `1/0`, a cell holding `#N/A` or `#DIV/0!`): an error match_mode
+wins first, with its own error (`XMATCH(2,A1:A3,NA(),1/0)` is #N/A, A277; `XMATCH(2,A1:A3,1/0,NA())` is #DIV/0!, A241);
+then a match_mode that does not convert to a number (`"x"`, `""`) gives #VALUE! (A187, A190, A265, A343); otherwise the
+search_mode's error is the result, whether match_mode is valid (0), out of range (9, -2.5, numeric text "12"),
+numeric text "1", TRUE or a blank cell (A172:A184, A193, A196, A250:A274, A328:A352). So search_mode is read before
+match_mode's range check, and match_mode's own cast comes before both. The CHOOSEROWS and CHOOSECOLS rule above rests on
+the gen-m6 cells only.
+Status: VERIFIED (excel-graph)
+Tasks: T-3667, T-3542, T-4544

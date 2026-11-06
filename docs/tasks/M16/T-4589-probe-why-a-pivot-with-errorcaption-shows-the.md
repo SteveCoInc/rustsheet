@@ -48,3 +48,5 @@ docs/excel-semantics/pivots.md:
 
 The acceptance criterion's UNVERIFIED parts are closed only in part: the mechanisms named above are
 T-4614's.
+
+Resolved since: T-4614 settles the Sum, Average and Product order of totals over one axis field (display item order) and the Count condition (mixed aggregates). The Sum order across a column field is T-4616's.

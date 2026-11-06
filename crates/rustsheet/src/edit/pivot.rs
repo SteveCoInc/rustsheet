@@ -353,17 +353,15 @@ impl Txn<'_> {
             }
         }
         let fields = pivot_fields(&cache, row, column, [input.show_all, input.column_show_all]);
+        let location = CellArea {
+            top: input.location.top,
+            left: input.location.left,
+            bottom: input.location.bottom,
+            right: input.location.right,
+        };
+        let cache_index =
+            u32::try_from(model.workbook.pivot_caches.len()).map_err(|_| RefError::OutOfBounds)?;
         let table = PivotTable {
-            name: input.name.clone(),
-            sheet_id,
-            location: CellArea {
-                top: input.location.top,
-                left: input.location.left,
-                bottom: input.location.bottom,
-                right: input.location.right,
-            },
-            cache: u32::try_from(model.workbook.pivot_caches.len())
-                .map_err(|_| RefError::OutOfBounds)?,
             fields,
             row_fields: vec![AxisField::Field(row)],
             column_fields: column.map(AxisField::Field).into_iter().collect(),
@@ -371,7 +369,9 @@ impl Txn<'_> {
                 caption: input.caption.clone(),
                 field: value,
                 function: input.function.into(),
+                ..DataField::default()
             }],
+            ..PivotTable::new(input.name.clone(), sheet_id, location, cache_index)
         };
         Ok((cache, table))
     }

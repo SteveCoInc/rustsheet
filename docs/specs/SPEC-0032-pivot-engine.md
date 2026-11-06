@@ -109,8 +109,13 @@ catalog row (T-4125) whose `affects` is not `none`:
   `showAll`, `insertBlankRow`, the items with `h`, `sd`, `s` and `t`, and `numFmtId` (T-4169);
 - per data field: `subtotal`, `showDataAs`, `baseField`/`baseItem`, `numFmtId`.
 
+- page fields: `PageField` (`fld`, `item`, `hier`); items: `PivotItem` (`t` as `ItemType`, whose custom subtotal
+  lines carry their `Aggregate`, `x`, `sd`, `s`; `h` stays in the field's hidden bitset).
+
 Everything else in the parts is kept verbatim (an `Opaque` list of the definition's unread elements and
-attributes) for export (T-4176). The SPEC-0015 limits stay, and the importer fills both forms. A model
+attributes, each `OpaqueEntry` owned by an `OpaqueOwner`: the typed element it was read in) for export (T-4176).
+The SPEC-0015 limits stay, and the importer fills both forms. It also caps a field's items at its cache items
+plus 14 and the workbook's verbatim stores at `MAX_OPAQUE_BYTES` (T-4139, web.md's DEVIATION entry). A model
 change is bitcode-encoded like the rest (no stored format depends on it).
 
 ### Refresh (T-4141, T-4171, T-4506)
