@@ -3,7 +3,7 @@ id: T-4183
 title: "Spec: package ownership matrix, closure rule, preservation limits and invalidation table for xlsx round trips"
 milestone: M15
 lane: research
-status: blocked
+status: in-progress
 priority: P1
 size: M
 tier: opus
@@ -43,7 +43,3 @@ Prior art, cited in the plan:
 
 ## Out of scope
 - Implementation.
-
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275): M15 waits until Phase 1 parity exits. Unblock when
-docs/status.md has the line `**Phase 1:** exited <date>`.
