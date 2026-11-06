@@ -378,10 +378,11 @@ fn picked_denominator(code: &str, picked: &str, question_numerator: bool) -> (St
 /// (`# ?/3|??0.?0?` on 0.04 is " 1/3|5 00.000"), and a `?` that then prints a zero for nothing
 /// due takes one of them (`# ?/250|?0?.#0` on 0.0789 " 789/250|00000.00"). After the point
 /// nothing spills and nothing owed is paid: each placeholder prints a zero for a lacking digit
-/// (leaving the space due as it was); else a pending zero, and a space becomes due; else, when a
-/// space is due, its blank (a space for `?`, nothing for `#`, a zero for `0`) and the space stays
-/// due; else a zero, and a space becomes due. A blank ends the space due before anything but a
-/// placeholder of its own kind: `# ?/7|?.##` on 0.0123 is " 123/7|0000.", `.#?`
+/// (leaving the space due as it was); else, but in a run of blanks, a pending zero, and a space
+/// becomes due; else, when a space is due, its blank (a space for `?`, nothing for `#`, a zero for
+/// `0`), which leaves one more zero pending, and the space stays due; else a zero, and a space
+/// becomes due. A blank ends the space due, and its run, before anything but a placeholder of its
+/// own kind (`# ?/128|?.##0?` on 0.55 is " 11/12 |0.00"): `# ?/7|?.##` on 0.0123 is " 123/7|0000.", `.#?`
 /// " 123/7|0000.0", `.0#` " 123/7|0000.00", `# ?/7|0.0#` " 123/7|00000.0"
 /// (probes/t4594-fraction-tail-point-explore rows 3, 6, 2, 22; number-formats.md "Placeholders
 /// after a fraction").
@@ -413,18 +414,20 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
             continue;
         };
         if point.is_some_and(|p| index > p) {
-            if blank_kind.is_some_and(|kind| kind != digit.kind) {
+            let same_run = blank_kind == Some(digit.kind);
+            if blank_kind.is_some() && !same_run {
                 due = false;
             }
             blank_kind = None;
             let text = if lacking > 0 {
                 lacking -= 1;
                 "0"
-            } else if pending > 0 {
+            } else if pending > 0 && !same_run {
                 pending -= 1;
                 due = true;
                 "0"
             } else if due {
+                pending += 1;
                 blank_kind = Some(digit.kind);
                 match digit.kind {
                     '?' => " ",
