@@ -3,7 +3,7 @@ id: T-4438
 title: "T-4272 review follow-ups: probe deleting the start of a two-sheet 3-D span and a backwards span in a defined name; share the sheet-edit stringify closure"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,10 +31,18 @@ share one stringify helper.
   any), or record that no backend can show it.
 
 ## Acceptance criteria
-- [ ] `t4272-3d-span-delete-two-sheet-start` is filled on excel-graph and passes, and references.md cites it.
-- [ ] A backwards span in a defined name is either evidenced and cited, or references.md says its text is unprobed.
-- [ ] One stringify-by-context helper serves both sheet-edit rewrites; no eval cell changes.
-- [ ] `make check` green; reviewers approve.
+- [x] `t4272-3d-span-delete-two-sheet-start` is filled on excel-graph and passes, and references.md cites it.
+- [x] A backwards span in a defined name is either evidenced and cited, or references.md says its text is unprobed.
+- [x] One stringify-by-context helper serves both sheet-edit rewrites; no eval cell changes.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Other sheet edits (T-4272 settled them).
+
+## Outcome
+- Probe `t4272-3d-span-delete-two-sheet-start` filled on excel-graph: deleting Jan from `Jan:Feb` gives
+  `=SUM(Feb!A1)` (20), `=COUNT(Feb!A1:B1)`, name 22/2. Prediction confirmed; references.md cites it.
+- Backwards span in a defined name was already evidenced by values: the A3/A4 cells of
+  t4272-3d-span-backwards-move-first (33/4). references.md now says so and that no backend reads a name's text.
+- `Model::rewrite_formulas_with` (formula_rewrite.rs) serves `take_sheet` and `move_sheet_rewriting`.
+- Eval delta: one new probe case, no existing cell changes.

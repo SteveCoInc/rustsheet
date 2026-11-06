@@ -46,6 +46,23 @@ impl Model {
         self.parser.set_lexer_mode(LexerMode::A1);
     }
 
+    /// [`Model::rewrite_formulas`] for an edit that changes the parsed formula in place: prints
+    /// the edited formula the way it is stored (English A1 text on a cell, R1C1 for a shared
+    /// formula).
+    pub(crate) fn rewrite_formulas_with(
+        &mut self,
+        skip_sheet: Option<usize>,
+        edit: impl Fn(&mut Node),
+    ) -> Vec<RewrittenFormula> {
+        self.rewrite_formulas(skip_sheet, |mut node, context| {
+            edit(&mut node);
+            match context {
+                Some(context) => to_english_string(&node, context),
+                None => to_rc_format(&node),
+            }
+        })
+    }
+
     /// Prints every formula of every sheet but `skip_sheet`, and every defined name, with
     /// `print` (given the parsed formula, and the cell it is read on for a defined name, or no
     /// cell for an R1C1 shared formula), stores the text where it changed and returns what it
