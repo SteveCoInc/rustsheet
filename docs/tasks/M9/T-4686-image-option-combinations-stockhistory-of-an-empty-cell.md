@@ -3,7 +3,7 @@ id: T-4686
 title: "IMAGE option combinations, STOCKHISTORY of an empty cell and FIELDVALUE's row-axis broadcast that information.md leaves UNVERIFIED: probe and match"
 milestone: M9
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
