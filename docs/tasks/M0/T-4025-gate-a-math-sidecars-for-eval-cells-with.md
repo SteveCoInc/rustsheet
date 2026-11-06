@@ -69,4 +69,16 @@ depends_on: [T-3686]
   1E-300 absolute floor and not counted: minverse-singular-near-singular H5 (math 1E-400, Excel 0) and
   minverse-overflow-computed-pivot P3 (math 5.0E-309, the graph reports 0, decision 0042). Every other new value is
   within 6E-16 relative.
-- Gates: `make eval-math-check` current, `make check-fast` green (duplication 2853, baseline 2876), tools ruff, mypy and pytest (2355) green.
+- After merging main, CHISQ.TEST and CHITEST (T-4098, whose two parameters are matrices) gain too: 56 cells, 37 values
+  and 19 domain errors, in probes stat-argument-modes, t4098-tests-prob-domains and t2576-error-type-cell-paired and
+  probes-numeric m9-legacy-chitest and t1049-chisqtest. Every error is where the oracle shows one (`#N/A`, `#DIV/0!` or
+  `#NUM!`, the same code), and every value is within 6.1E-16 relative of Excel; a number is a 1x1 matrix there too
+  (`CHISQ.TEST(5,5)` `#N/A`, t1049-chisqtest A36, as for one cell).
+- Review minors: a text element has no math value because it is unprobed (`MDETERM("5")` is evidenced only as a direct
+  argument), follow-up T-4626 probes text and text-number elements; a matrix over 64x64 has none either;
+  `is_array_literal` (sweep.py) replaces four spelled-out brace checks (sweep.py twice, tables.py, and eval_math's
+  `_range_for_literal`, where it also needs the closing brace: that changes only a skip reason); matrix.py notes the
+  unmodelled reverse case (nonsingular exactly, an exactly-zero pivot in doubles).
+- Gates: `make eval-math-check` current, `make check-fast` green (duplication 2791 after the merge, baseline 2876),
+  tools ruff, mypy and pytest (2398) green; `verify` gives 0 differences for MDETERM, MINVERSE, MMULT, CHISQ.TEST and
+  CHITEST.
