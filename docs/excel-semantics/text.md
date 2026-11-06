@@ -1290,7 +1290,7 @@ is `#N/A`, `5` `#VALUE!`; `TEXTBEFORE("ab","xyz",1)` is `#VALUE!`; a number deli
 also from a cell, is `#VALUE!` (gen-m9 8d3588d8df0812df A313) but `-1` `#N/A`; `TEXTAFTER("😀b","😀😀",2)` is `#VALUE!` (probes/
 t2581-textsplit-textbefore A30-A50, excel-graph, 2026-10-24; T-2581). Both this bound and the
 every-delimiter-longer check before it (`#VALUE!` with more than two arguments, `#N/A` with two) measure the text and each delimiter
-in UTF-16 units of the delimiter as written, never its case fold, under match_mode 1 too (probes/t4474-textbefore-utf16-bounds,
+in UTF-16 units, the delimiter as written (never its case fold), under match_mode 1 too (probes/t4474-textbefore-utf16-bounds,
 excel-graph, 2026-11-06; T-4474). So `TEXTBEFORE("a","é",1)`, `TEXTBEFORE("ab","😀",1)` and `TEXTBEFORE("a",{"é","bb"},1)` are
 `#N/A` (B1, B5, B6; equal lengths), and `TEXTAFTER("a","é",1,0,0,"nf")` is `nf` (A10); `TEXTBEFORE("é","ab")` and
 `TEXTBEFORE("😀","abc")` are `#N/A` with two arguments and `#VALUE!` with three, also with an if_not_found (A2, B2, A3, B3, B10, C10),
