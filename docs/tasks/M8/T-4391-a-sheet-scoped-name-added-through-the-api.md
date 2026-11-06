@@ -52,3 +52,6 @@ as Excel does, which T-4049's rule (they stay `#NAME?`) does not cover.
   60 known failures owned by T-4617 (recorded in eval/baseline/probes.txt by `make eval-baseline`); 0 regressions.
 - Follow-up: T-4617 (bisect t4391-api-rebind-s2-qualified-first-add against t4394-api-name-active-s2, with at least
   three runs per book).
+
+## Resumed
+Resumed by an opus run (opus prompt step 2: branch idle 2 h, reviews pending) on 2026-11-06.
