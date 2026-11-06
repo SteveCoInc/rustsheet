@@ -3,7 +3,7 @@ id: T-4148
 title: "xlsx export keeps empty-string cells (t=s to an empty string) instead of writing them blank"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
