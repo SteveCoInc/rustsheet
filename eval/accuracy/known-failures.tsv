@@ -284,6 +284,10 @@ accuracy/GAMMA.INV/e-T-3863!Calc!A194	T-3364	R3 closed-form point: the engine re
 accuracy/GAMMA.INV/e-T-3863!Calc!A196	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A198	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A199	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
+accuracy/CUMIPMT/s1!Calc!A87	T-4390	tiny rate 1.3E-10, 41 periods: PMT·m - CUMPRINC cancels; ours 1.5E-8 off Excel, 3.3E-8 off the math
+accuracy/CUMIPMT/s1!Calc!A90	T-4390	tiny rate 1.5E-12, 5 periods of type 1: PMT·m - CUMPRINC cancels; ours 2.5E-6 off Excel, which is 2.2E-6 off the math
+accuracy/CUMIPMT/s1!Calc!A92	T-4390	tiny rate 3.1E-11, 42 periods: PMT·m - CUMPRINC cancels; ours 9.1E-8 off Excel, 2.0E-8 off the math
+accuracy/CUMIPMT/s1!Calc!A189	T-4390	tiny rate 4.9E-10, 3 periods: PMT·m - CUMPRINC cancels; ours 1.1E-9 off Excel, 1.5E-9 off the math
 accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 0^k
 accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
