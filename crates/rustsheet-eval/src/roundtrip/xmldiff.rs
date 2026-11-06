@@ -74,9 +74,13 @@ const SEMANTIC: &[&str] = &["/worksheet/sheetData", "/sst"];
 /// `uri` (`CT_ExtensionList`). Any other collection compares in order, so a writer that reorders
 /// one is seen.
 const UNORDERED: &[(&str, &str, &[&str])] = &[
+    // CT_MergeCells, SPEC-0033 D3.2 merge ranges
     ("/worksheet/mergeCells", "mergeCell", &["ref"]),
+    // CT_Hyperlinks, D3.2 hyperlinks
     ("/worksheet/hyperlinks", "hyperlink", &["ref"]),
+    // CT_DataValidations, D3.2 DV rules
     ("/worksheet/dataValidations", "dataValidation", &["sqref"]),
+    // CT_ConditionalFormatting, D3.2 CF rules
     ("/worksheet", "conditionalFormatting", &["sqref"]),
     (
         "/workbook/definedNames",
@@ -94,6 +98,7 @@ const UNORDERED: &[(&str, &str, &[&str])] = &[
 /// `CT_Cell` (`t`, `s`), `CT_Row`, `CT_Col`, `CT_SheetView`, `CT_Pane`, `CT_Selection`, `CT_Sheet`,
 /// `CT_BookView`, `CT_SheetFormatPr` and `CT_BooleanProperty` (`val`, as in `<b/>`).
 const DEFAULTS: &[(&str, &str)] = &[
+    // CT_Cell
     ("c", "t=n s=0"),
     (
         "row",
@@ -107,8 +112,11 @@ const DEFAULTS: &[(&str, &str)] = &[
         "sheetView",
         "tabSelected=false showGridLines=true rightToLeft=false zoomScale=100 view=normal",
     ),
+    // CT_Pane
     ("pane", "xSplit=0 ySplit=0 activePane=topLeft state=split"),
+    // CT_Selection
     ("selection", "pane=topLeft activeCellId=0"),
+    // CT_Sheet
     ("sheet", "state=visible"),
     (
         "workbookView",
@@ -118,8 +126,11 @@ const DEFAULTS: &[(&str, &str)] = &[
         "sheetFormatPr",
         "customHeight=false zeroHeight=false outlineLevelRow=0 outlineLevelCol=0",
     ),
+    // CT_BooleanProperty
     ("b", "val=true"),
+    // CT_BooleanProperty
     ("i", "val=true"),
+    // CT_BooleanProperty
     ("strike", "val=true"),
 ];
 
@@ -128,6 +139,15 @@ const MAX_DEPTH: usize = 256;
 
 /// Most elements kept per part (directive 5). Subtrees under [`SEMANTIC`] are only counted.
 const MAX_NODES: usize = 1_000_000;
+
+/// Longest element or attribute local name, and longest namespace URI, a part may use (directive
+/// 5): names are copied into every node and path, so their length must be bounded, not only
+/// their count. Excel's longest names are a few dozen bytes.
+const MAX_NAME: usize = 256;
+const MAX_NAMESPACE: usize = 512;
+
+/// Longest element path (`/worksheet/sheetViews/sheetView`, local names) a part may nest to.
+const MAX_PATH: usize = 4096;
 
 /// Most items one part pair reports; the rest are counted in one `truncated` item.
 pub(crate) const MAX_ITEMS: usize = 500;
@@ -199,8 +219,9 @@ pub(crate) fn diff(source: &str, output: &str) -> Result<PartDiff, String> {
     let b = parse(output)?;
     let mut d = PartDiff::default();
     if a.name == b.name {
-        let path = format!("/{}", a.name.local);
-        compare(&a, &b, &path, &mut d);
+        let mut path = format!("/{}", a.name.local);
+        let mut local = path.clone();
+        compare(&a, &b, &mut path, &mut local, &mut d);
     } else {
         d.checked = a.size();
         push(
@@ -240,15 +261,18 @@ fn push(d: &mut PartDiff, diff: Difference) {
     }
 }
 
-/// Compares two matched elements at `path`: attributes, text, then children.
-fn compare(a: &Node, b: &Node, path: &str, d: &mut PartDiff) {
+/// Compares two matched elements at `path` (the item path, with ordinals and keys) and `local`
+/// (the same path with local names only, which the unordered table matches): attributes, text,
+/// then children. Both are buffers each level extends and truncates again, so building them costs
+/// one segment per element, not a whole path (directive 5).
+fn compare(a: &Node, b: &Node, path: &mut String, local: &mut String, d: &mut PartDiff) {
     d.checked += 1 + a.attrs.len();
     compare_attrs(a, b, path, d);
     if a.children.is_empty() && b.children.is_empty() && a.text != b.text {
         push(
             d,
             element(
-                path.to_string(),
+                path.clone(),
                 Verdict::Changed,
                 Some(format!(
                     "text {:?} became {:?}",
@@ -263,7 +287,7 @@ fn compare(a: &Node, b: &Node, path: &str, d: &mut PartDiff) {
         d.checked += a.skipped;
         return;
     }
-    let local_path = strip_ordinals(path);
+    let local_path = local.clone();
     let unordered = |child: &Node| {
         if child.name.local == "ext" && a.name.local == "extLst" {
             return Some(&["uri"][..]);
@@ -280,15 +304,21 @@ fn compare(a: &Node, b: &Node, path: &str, d: &mut PartDiff) {
     for ((name, key), nodes) in &ka {
         let others = kb.get(&(name.clone(), key.clone()));
         for (n, node) in nodes.iter().enumerate() {
-            let child_path = format!("{path}/{}", child_label(name, key, n));
+            let (path_len, local_len) = (path.len(), local.len());
+            path.push('/');
+            path.push_str(&child_label(name, key, n));
             if let Some(other) = others.and_then(|o| o.get(n)) {
-                compare(node, other, &child_path, d);
+                local.push('/');
+                local.push_str(&name.local);
+                compare(node, other, path, local, d);
             } else {
                 d.checked += node.size();
                 let below = node.size() - 1;
                 let detail = (below > 0).then(|| format!("with {below} elements below it"));
-                push(d, element(child_path, Verdict::Lost, detail));
+                push(d, element(path.clone(), Verdict::Lost, detail));
             }
+            path.truncate(path_len);
+            local.truncate(local_len);
         }
     }
     for ((name, key), nodes) in &kb {
@@ -401,24 +431,6 @@ fn local_attr(n: &Node, local: &str) -> Option<String> {
         .map(|(_, v)| v.clone())
 }
 
-/// `/worksheet/mergeCells[0]/mergeCell[A1:B2]` → `/worksheet/mergeCells/mergeCell`. Every
-/// bracketed segment goes, ordinals and keys alike. A key holding `[` or `]` would unbalance the
-/// count, which only the parent-path lookup reads; no key of [`UNORDERED`] can hold one (refs,
-/// sqrefs and names), but an `ext` uri could, so its children's paths may come out wrong.
-fn strip_ordinals(path: &str) -> String {
-    let mut out = String::with_capacity(path.len());
-    let mut depth = 0usize;
-    for c in path.chars() {
-        match c {
-            '[' => depth += 1,
-            ']' => depth = depth.saturating_sub(1),
-            _ if depth == 0 => out.push(c),
-            _ => {}
-        }
-    }
-    out
-}
-
 fn resolved(r: &ResolveResult<'_>) -> String {
     match r {
         ResolveResult::Bound(ns) => ns.as_ref().to_string(),
@@ -431,7 +443,9 @@ fn resolved(r: &ResolveResult<'_>) -> String {
 fn parse(xml: &str) -> Result<Node, String> {
     let mut reader = NsReader::from_str(xml);
     let mut stack: Vec<Node> = Vec::new();
-    let mut path: Vec<String> = Vec::new();
+    // The local-name path of the open elements, extended and truncated in place.
+    let mut path = String::new();
+    let mut lens: Vec<usize> = Vec::new();
     let mut skip_depth = 0usize;
     let mut nodes = 0usize;
     loop {
@@ -454,12 +468,17 @@ fn parse(xml: &str) -> Result<Node, String> {
                         "more than {MAX_NODES} elements or {MAX_DEPTH} levels"
                     ));
                 }
-                let node = start_node(&reader, e);
-                path.push(node.name.local.clone());
-                let semantic = SEMANTIC.contains(&format!("/{}", path.join("/")).as_str());
+                let node = start_node(&reader, e)?;
+                lens.push(path.len());
+                path.push('/');
+                path.push_str(&node.name.local);
+                if path.len() > MAX_PATH {
+                    return Err(format!("an element path longer than {MAX_PATH} bytes"));
+                }
+                let semantic = SEMANTIC.contains(&path.as_str());
                 stack.push(node);
                 if empty {
-                    path.pop();
+                    path.truncate(lens.pop().unwrap_or_default());
                     if stack.len() == 1 {
                         return stack.pop().ok_or_else(|| "no root".to_string());
                     }
@@ -474,7 +493,7 @@ fn parse(xml: &str) -> Result<Node, String> {
                     continue;
                 }
                 skip_depth = 0;
-                path.pop();
+                path.truncate(lens.pop().unwrap_or_default());
                 if stack.len() == 1 {
                     return stack.pop().ok_or_else(|| "no root".to_string());
                 }
@@ -507,19 +526,33 @@ fn parse(xml: &str) -> Result<Node, String> {
 }
 
 /// The node for a start tag: its resolved name and attributes, without namespace declarations.
-fn start_node(reader: &NsReader<&[u8]>, e: &BytesStart<'_>) -> Node {
+///
+/// # Errors
+/// On a malformed or repeated attribute, or a name or namespace past [`MAX_NAME`] or
+/// [`MAX_NAMESPACE`]: such a part is unparsable, never silently half-read.
+fn start_node(reader: &NsReader<&[u8]>, e: &BytesStart<'_>) -> Result<Node, String> {
     let (ns, local) = reader.resolver().resolve_element(e.name());
+    let checked_name = |ns: String, local: &str| {
+        if local.len() > MAX_NAME || ns.len() > MAX_NAMESPACE {
+            return Err(format!(
+                "a name longer than {MAX_NAME} bytes or a namespace longer than {MAX_NAMESPACE}"
+            ));
+        }
+        Ok(Name {
+            ns,
+            local: local.to_string(),
+        })
+    };
+    let element_name = checked_name(resolved(&ns), local.as_ref())?;
     let mut attrs = BTreeMap::new();
-    for a in e.attributes().flatten() {
+    for a in e.attributes() {
+        let a = a.map_err(|e| e.to_string())?;
         let key = a.key.as_ref();
         if key == "xmlns" || key.starts_with("xmlns:") {
             continue;
         }
         let (ans, alocal) = reader.resolver().resolve_attribute(a.key);
-        let name = Name {
-            ns: resolved(&ans),
-            local: alocal.as_ref().to_string(),
-        };
+        let name = checked_name(resolved(&ans), alocal.as_ref())?;
         if name.ns == XMLNS {
             continue;
         }
@@ -540,16 +573,13 @@ fn start_node(reader: &NsReader<&[u8]>, e: &BytesStart<'_>) -> Node {
         }
         attrs.insert(name, value);
     }
-    Node {
-        name: Name {
-            ns: resolved(&ns),
-            local: local.as_ref().to_string(),
-        },
+    Ok(Node {
+        name: element_name,
         attrs,
         children: Vec::new(),
         text: String::new(),
         skipped: 0,
-    }
+    })
 }
 
 /// Pops the finished top node into its parent. Whitespace-only text of an element that has
@@ -594,7 +624,12 @@ pub(crate) fn candidate(key: &str) -> Option<&'static str> {
         "N3"
     } else if path.contains("/calcPr[0]") && attr == Some("calcId") {
         "N4"
-    } else if path.contains("/fileVersion[0]") && attr.is_some() {
+    } else if path.contains("/fileVersion[0]")
+        && matches!(
+            attr,
+            Some("lastEdited" | "lowestEdited" | "rupBuild" | "appName")
+        )
+    {
         "N5"
     } else if path.contains("xr:revisionPtr")
         || attr.is_some_and(|a| a.ends_with(":uid") || a.ends_with("}uid"))

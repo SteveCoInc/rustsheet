@@ -265,6 +265,8 @@ fn a_new_loss_in_an_unchanged_case_is_a_regression() {
 }
 
 mod xml {
+    use std::fmt::Write as _;
+
     use super::super::xmldiff::{candidate, diff};
 
     const NS: &str = r#"xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006""#;
@@ -355,6 +357,36 @@ mod xml {
             "",
         );
         assert_eq!(found(&a, &b).len(), 4);
+    }
+
+    #[test]
+    fn hostile_names_and_wide_trees_stay_bounded() {
+        let long = "n".repeat(300);
+        let bad = format!("<{long}/>");
+        assert!(
+            diff(&bad, &bad).is_err(),
+            "an over-long name makes the part unparsable"
+        );
+        let dup = r#"<worksheet a="1" a="2"/>"#;
+        assert!(
+            diff(dup, dup).is_err(),
+            "a repeated attribute makes the part unparsable"
+        );
+        // Deep, long-named ancestors over many children: linear, not quadratic.
+        let name = "n".repeat(200);
+        let depth = 16;
+        let mut xml = String::new();
+        for _ in 0..depth {
+            let _ = write!(xml, "<{name}>");
+        }
+        xml.push_str(&"<a/>".repeat(200_000));
+        for _ in 0..depth {
+            let _ = write!(xml, "</{name}>");
+        }
+        let start = std::time::Instant::now();
+        let d = diff(&xml, &xml).expect("parses");
+        assert!(d.differences.is_empty());
+        assert!(start.elapsed().as_secs() < 20, "took {:?}", start.elapsed());
     }
 
     #[test]

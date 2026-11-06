@@ -85,13 +85,22 @@ Review round 1:
 - text details are clipped to 200 characters;
 - the defaults-table assumption is documented.
 
-Tagging whole lost `fileVersion` elements N5 (fidelity minor) is left to T-4503: retagging an existing F line in an
+Review round 2:
+- names and namespaces are capped (256 and 512 bytes) and element paths at 4 KB;
+- paths are built in place, one segment per element, not rebuilt per node (security: a crafted part was quadratic);
+- a malformed or repeated attribute makes a part unparsable;
+- N5 is tagged on exactly D4.4's four `fileVersion` attributes;
+- the defaults and unordered rows cite their `CT_` type;
+- `CONTENT_TYPES` is one constant.
+
+Tagging whole lost `fileVersion` elements N5 (fidelity minor) is left to T-4503, which now says so: retagging an existing F line in an
 unchanged case reads as a regression to the ratchet.
 
 Tests:
 - identity on every fixture part;
 - boolean equivalence only for boolean attributes;
 - a `cols` reorder is seen;
+- hostile names and a 200,000-child tree under long-named ancestors (bounded and linear);
 - invariance under re-prefixed namespaces, reordered unordered collections, written-out defaults and boolean
   spellings;
 - sensitivity to a lost `ext`, a lost element and a lost attribute;

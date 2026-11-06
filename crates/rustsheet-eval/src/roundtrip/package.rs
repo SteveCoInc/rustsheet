@@ -30,6 +30,9 @@ const SHEET_KINDS: &[&str] = &[
     "xlMacrosheet",
 ];
 
+/// The content-types part, as a normalized part name.
+const CONTENT_TYPES: &str = "[content_types].xml";
+
 /// Most parts the harness indexes in one package (directive 5). The importer's own entry limit
 /// is the same order of magnitude (`ImportLimits::max_zip_entries`).
 const MAX_PARTS: usize = 10_000;
@@ -121,7 +124,7 @@ impl Package {
             pkg.read_content_types(&text(bytes, "[Content_Types].xml")?)?;
         }
         let names: Vec<String> = pkg.parts.keys().cloned().collect();
-        for name in names.iter().filter(|n| n.as_str() != "[content_types].xml") {
+        for name in names.iter().filter(|n| n.as_str() != CONTENT_TYPES) {
             let Some(bytes) = take(&mut zip, name)? else {
                 continue;
             };
@@ -283,7 +286,7 @@ impl Package {
     pub(crate) fn keyed_parts(&self) -> BTreeMap<String, &str> {
         self.parts
             .keys()
-            .filter(|p| rels_source(p).is_none() && p.as_str() != "[content_types].xml")
+            .filter(|p| rels_source(p).is_none() && p.as_str() != CONTENT_TYPES)
             .map(|p| {
                 let key = self
                     .keys
@@ -357,7 +360,7 @@ pub(crate) fn validate(pkg: &Package) -> Vec<Problem> {
     let mut fail = |check, detail: String| out.push(Problem { check, detail });
     // V1: every part has a content type, and no override names a missing part.
     for part in pkg.parts.keys() {
-        if part != "[content_types].xml" && pkg.content_type(part).is_none() {
+        if part != CONTENT_TYPES && pkg.content_type(part).is_none() {
             fail("V1", format!("{part} has no content type"));
         }
     }
