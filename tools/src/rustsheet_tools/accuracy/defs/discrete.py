@@ -389,6 +389,11 @@ HYPGEOM_SD_CAP = 1000.0
 """The largest standard deviation a cdf point is drawn with: past about 3,400 the engine's cdf sum has more than 2^18
 terms and is `#NUM!` (the per-call cap DEVIATION of statistics.md "HYPGEOM.DIST: per-call cap and lifting (T-1873)"),
 where Excel's value is unprobed (T-1896). A wider point is drawn as a pmf instead."""
+HYPGEOM_CDF_TERMS = 2**18
+"""The most terms a cdf point is drawn with, counted from the lowest possible sample_s as Excel sums them (statistics.md
+"HYPGEOM.DIST is not exact for small integer arguments": the cdf is the sum of Excel's own pmf terms from the lowest).
+A cap on the draws, not an Excel limit: the excel-graph oracle's calculate request failed on every retry for a table
+whose cdf points summed up to 8E8 terms (T-4105). A longer point is drawn as a pmf instead."""
 
 
 def _hypgeom_sd(n: int, k: int, pop: int) -> float:
@@ -408,10 +413,12 @@ def _hypgeom_at(n: int, k: int, pop: int, sds: float) -> int:
 def _hypgeom_draw(function: str, *, legacy: bool) -> Draw:
     """The strata of HYPGEOM.DIST (and HYPGEOMDIST, its pmf: `legacy` leaves out the flag). The four counts are drawn
     together, so a point is mostly valid (number_sample and population_s at most number_pop, sample_s in the support)
-    and the invalid orders are the edge stratum's. A cdf point wider than `HYPGEOM_SD_CAP` is drawn as a pmf."""
+    and the invalid orders are the edge stratum's. A cdf point wider than `HYPGEOM_SD_CAP` or longer than
+    `HYPGEOM_CDF_TERMS` is drawn as a pmf."""
 
     def point(x: int, n: int, k: int, pop: int, rng: random.Random) -> list[Arg]:
-        cumulative = rng.random() < 0.5 and _hypgeom_sd(n, k, pop) <= HYPGEOM_SD_CAP
+        short = _hypgeom_sd(n, k, pop) <= HYPGEOM_SD_CAP and x - max(0, n + k - pop) < HYPGEOM_CDF_TERMS
+        cumulative = rng.random() < 0.5 and short
         return [x, n, k, pop] if legacy else [x, n, k, pop, cumulative]
 
     def some_count(rng: random.Random, pop: int) -> int:

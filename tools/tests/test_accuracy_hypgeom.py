@@ -109,16 +109,17 @@ def test_every_stratum_draws_a_point_the_math_evaluates(function: str) -> None:
             assert 0 <= result <= 1
 
 
-def test_a_wide_cdf_is_drawn_as_a_pmf() -> None:
+def test_a_wide_or_long_cdf_is_drawn_as_a_pmf() -> None:
     definition = REGISTRY["HYPGEOM.DIST"]
     assert definition.draw is not None
     rng = random.Random(11)
     for _ in range(200):
-        _, n, k, pop, cumulative = definition.draw("extreme", rng)
+        x, n, k, pop, cumulative = definition.draw("extreme", rng)
         assert isinstance(n, int) and isinstance(k, int) and isinstance(pop, int)
         if cumulative:
             share = k / pop
             assert (n * share * (1 - share) * (pop - n) / (pop - 1)) ** 0.5 <= discrete.HYPGEOM_SD_CAP
+            assert isinstance(x, int) and x - max(0, n + k - pop) < discrete.HYPGEOM_CDF_TERMS
 
 
 def test_legacy_names_reuse_the_modern_definitions() -> None:
