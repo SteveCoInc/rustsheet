@@ -394,13 +394,20 @@ does the same); a blank does not count as 0. `MDETERM` of a single numeric cell 
 number either: MDETERM, MINVERSE and MMULT give `#VALUE!` for a boolean cell (`MINVERSE(E1)`, E1 = FALSE;
 gen-m7/7c48e2456500644f Calc!A19, T-1275), a boolean value (`MDETERM(TRUE)`, `MINVERSE(FALSE)`), and a boolean
 element of a larger matrix (`MDETERM({TRUE,2;3,4})`, `MMULT(D1:E2,...)` with D1 = TRUE)
-(probes/matrix-boolean-elements G1-G13, excel-graph 2026-10-15, T-1358).
+(probes/matrix-boolean-elements G1-G13, excel-graph 2026-10-15, T-1358). Text is not a number either, a text number
+included: all three give `#VALUE!` for a text element of an array literal (`MDETERM({1,"2";3,4})`, `{1,"a";3,4}`,
+`{"5"}`), a text cell in a matrix range (`MDETERM(B1:C2)` with C1 the text "2"), a one-cell text range (`MDETERM(A1)`,
+A1 the text "5") and a direct text argument (`MINVERSE("5")`, `MMULT("5",1)`), in either MMULT argument
+(probes/t4626-matrix-text-elements M1-M26, excel-graph 2026-11-06, T-4626). The error is one scalar `#VALUE!`, not an
+array with errors at the affected elements: `SUM(IFERROR(MINVERSE(B1:C2),100))` and
+`SUM(IFERROR(MMULT(F1:F2,G1:H1),100))` (a 2x2 product whose text element touches only one column) are 100, not 400
+(M16, M17, M27).
 Evidence: poi/MatrixFormulaEvalTestData.xlsx (Excel-cached, Excel 16) Sheet1!H10 `MDETERM(B10:D12)`
 and H30 `MDETERM(B30:D32)` (all blank / only B30 = 1) are `#VALUE!`; H14:J16 `MINVERSE(B14:D16)` and
 H34:J36 `MINVERSE(B34:D36)` are `#VALUE!` in every cell; H50 `MDETERM(B50)` = 1.
 Implemented in: `coerce_to_f64` (crates/rustsheet-engine/src/functions/math_and_trigonometry/matrix.rs, T-0943)
 Status: VERIFIED (Excel-cached; the boolean rule excel-graph)
-Tasks: T-0943, T-1358
+Tasks: T-0943, T-1358, T-4626
 A single blank cell is a blank matrix too: `MINVERSE(B4)`, `MDETERM(D$1)`, `MMULT(100,C$9)` and `MMULT(1E-15,B11)`
 with the cell blank are `#VALUE!`. Implemented in `Model::eval_matrix_arg` (matrix.rs, T-2164); any blank result, not only a direct reference, stays blank (a blank through INDEX or CHOOSE is unprobed). So does the empty value a lookup gives for a blank result cell: `MMULT(LOOKUP(TRUE,Data!B2:B10,Data!E11:E11),2.5)` is `#VALUE!` (probes/lookup-short-result-vector A20, T-2278; lookup.md "LOOKUP past a short result vector"), as do `MMULT(,2)`, IFERROR of a blank and `IF(TRUE,<blank>)` (probes/lookup-t2278-followups A1-A5). Evidence (excel-graph, 2026-10-20): gen-m5/cf893ec19f53a7fc
 Calc!A204, gen-m5/fc81c2f704bef138 Calc!A381, gen-m5/3e134e52393061b1 Calc!A10, gen-m5/d9fb1e918971111b Calc!A213 (T-2164).
@@ -1151,7 +1158,7 @@ T-2644): `GROUPBY(A1:A3,B1:B3,_xleta.ROW)` and `..COLUMN` are 4x2 with `#VALUE!`
 and SHEETS `#N/A` in each (H121:H124, J59; ours matches, T-4518), RANDARRAY 4 rows with a value that is not
 an error (J61:J63; ours an array there, T-4519), `PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.ROW)` 5x5 (J69). Yet `ARRAYTOTEXT` of the
 ROW and COLUMN results is `#CALC!` (F109, F115, also `LAMBDA(v,ROW(v))` J65; `ARRAYTOTEXT(INDEX(..,0,1))` is
-"1, 3, 5, Total", J15; ours prints the cells, T-4519). Functions that take none stay a whole-call `#VALUE!`: NOW (J55), PI
+"1, 3, 5, Total", J15; ours matches since T-4610). Functions that take none stay a whole-call `#VALUE!`: NOW (J55), PI
 in GROUPBY and PIVOTBY (J67, J73).
 T-1327 follow-up (PIVOTBY relative_to; probes/groupby-pivotby-functions P!A1-A841 show each cell's set with
 `LAMBDA(x,y,SUM(y))`, and -functions3 P!A61-A181):
@@ -1287,7 +1294,8 @@ Status: VERIFIED (web)
 Tasks: T-1276, T-1328, T-1322, T-1323, T-1326, T-1324, T-1700, T-1325, T-1327, T-3838
 
 ## ROW, COLUMN and RANDARRAY over an array value (GROUPBY's per-group function)
-Rule: ROW and COLUMN of an array value (no reference) give an array of `#VALUE!` in that value's shape, not one `#VALUE!`. RANDARRAY
+Rule: ROW and COLUMN of an array value (no reference) give an array of `#VALUE!` in that value's shape, not one `#VALUE!`; an error
+element keeps its own error (`LET(x,{1;#N/A},ROW(x))` is {#VALUE!;#N/A}). RANDARRAY
 lifts over an array `rows` or `columns`, one call per element, each element a number (that it is the call's top-left is
 assumed, not probed; T-4611). So GROUPBY with `_xleta.ROW`,
 `_xleta.COLUMN` or `LAMBDA(v,ROW(v))` holds a nested array of `#VALUE!` in each value cell: it displays `#VALUE!` (ERROR.TYPE 3,
@@ -1304,7 +1312,14 @@ record: the cell of a one-record group is a 1x1 array, so `ERROR.TYPE(INDEX(..,1
 - Excel for the web refuses a workbook holding ROW or COLUMN of an array constant, a function call or an operator:
   `ROW({1;2})`, `ROW({1,2,3})`, `ROW({7})`, `COLUMN({1,2,3})`, `COLUMN({1;2})`, `ROW(SEQUENCE(2,2))`, `COLUMN(SEQUENCE(1,3))` and `ROW(A1:A3*1)` (FileCorruptTryRepair,
   one single-formula workbook each, T-4519). So an array reaches ROW only as a LET-bound value, a LAMBDA parameter or a pick.
-Ours: ROW and COLUMN of an array value are one `#VALUE!` (T-4610 owns D1:F1, D5:F6, D9:F11 and t4450 F109, F115, J65). RANDARRAY
+- probes/t4610-row-column-array-error-element (excel-graph, 2026-11-06, T-4610): `LET(x,{1;#N/A},ROW(x))` is 2x1, ARRAYTOTEXT
+  "#VALUE!, #N/A", ERROR.TYPE 3 and 7 (A1:A4); `LET(x,{#DIV/0!,2},COLUMN(x))` "#DIV/0!, #VALUE!" (A5:A6); `LET(x,{#N/A},ROW(x))` a
+  1x1 `#N/A` (A7:A8); a 2x2 `{1,2;3,4}` a 2x2 of `#VALUE!` (A9:A10); text and logical elements `#VALUE!` (A11). A LET-bound scalar is
+  one `#VALUE!` and a scalar error that error (A12:A13), as before.
+Ours: ROW and COLUMN lift over an array value as above since T-4610 (`Model::row_or_column`, which reads the argument once through
+`reference_ranges_or_array`). It lifts over any array a name, IF, CHOOSE or LET gives; only the LET-bound and LAMBDA-parameter
+forms are probed, and an IF or CHOOSE that returns an array (`ROW(CHOOSE(1,{1;2}))`) or a defined name bound to an array constant
+follows by inference (before T-4610 each was one `#VALUE!`, unevidenced too). RANDARRAY
 does not lift: `RANDARRAY({2})` is 2x1 and over `{2;4;6}` `#N/IMPL!` (T-4611 owns D2, D3, E3, G3, H3, D4, D7, D8, E8, G8, H8 and t4450 J64).
 Status: VERIFIED (excel-graph)
 Tasks: T-4519, T-4610, T-4611

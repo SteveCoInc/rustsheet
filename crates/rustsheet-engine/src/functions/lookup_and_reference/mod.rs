@@ -503,15 +503,18 @@ impl Model {
         // `ROW(IF(TRUE,…!B3))` is 3 (probes/external-ref-no-link-ifchoose A25).
         // A value IF, CHOOSE or LET gives here is no reference, an error that error:
         // `ROW(IF(FALSE,…!A1))` is `#VALUE!` (probes/external-ref-no-link-ifchoose-b A4).
-        let not_a_reference = |value: CalcResult| {
-            if value.is_error() {
-                value
-            } else {
-                CalcResult::new_error(Error::VALUE, cell, "Expected a reference".into())
-            }
+        // An array value lifts, element by element in its shape: `LET(x,{1;#N/A},ROW(x))` is
+        // {#VALUE!;#N/A} (probes/t4519-row-column-randarray-over-arrays D1:H1,
+        // t4610-row-column-array-error-element; arrays.md, T-4610).
+        let not_a_reference = |value: CalcResult| match value {
+            CalcResult::Array(rows) => not_a_reference_elements(rows),
+            error @ CalcResult::Error { .. } => error,
+            _ => CalcResult::new_error(Error::VALUE, cell, "Expected a reference".into()),
         };
         let ranges = match self.pick_reference(&args[0], cell) {
-            PickedReference::Node(node) => self.reference_ranges(node, cell),
+            PickedReference::Node(node) => self
+                .reference_ranges_or_array(node, cell)
+                .map_err(not_a_reference),
             PickedReference::Read(read) => read.into_ranges_or_value().map_err(not_a_reference),
             PickedReference::External(areas) => {
                 let area = match one_external_area(areas, cell) {
@@ -874,6 +877,23 @@ impl Model {
             },
         }
     }
+}
+
+/// ROW or COLUMN of an array value, element by element in its shape: an error element is that
+/// error, any other `#VALUE!` (probes/t4610-row-column-array-error-element, T-4610).
+fn not_a_reference_elements(rows: Vec<Vec<ArrayNode>>) -> CalcResult {
+    CalcResult::Array(
+        rows.into_iter()
+            .map(|row| {
+                row.into_iter()
+                    .map(|element| match element {
+                        error @ ArrayNode::Error(_) => error,
+                        _ => ArrayNode::Error(Error::VALUE),
+                    })
+                    .collect()
+            })
+            .collect(),
+    )
 }
 
 /// ROW's numbers `first..=last` down a column (`by_row`) or COLUMN's across a row; one number

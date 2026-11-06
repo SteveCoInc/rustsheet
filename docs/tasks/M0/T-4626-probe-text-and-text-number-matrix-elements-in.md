@@ -3,7 +3,7 @@ id: T-4626
 title: "Probe text and text-number matrix elements in MDETERM, MINVERSE and MMULT"
 milestone: M0
 lane: research
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -31,13 +31,26 @@ whether written in an array literal or held in a range cell. Each result is reco
 - Use the `excel-probe` skill and add a new probes case for these cells.
 
 ## Acceptance criteria
-- [ ] A probes case with the cells above (each function, literal and range forms, text-number and non-numeric
+- [x] A probes case with the cells above (each function, literal and range forms, text-number and non-numeric
       text) is oracle-filled.
-- [ ] arrays.md records the results with the case and cell ids, and the coercion.md line cites them or is
+- [x] arrays.md records the results with the case and cell ids, and the coercion.md line cites them or is
       corrected.
-- [ ] If Excel reads a text number as a number anywhere, a follow-up task is filed for `eval_math.matrix_rows`
+- [x] If Excel reads a text number as a number anywhere, a follow-up task is filed for `eval_math.matrix_rows`
       and the engine.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine and math-sidecar changes (follow-ups if the probe shows they are needed).
+
+## Outcome
+- New probe probes/t4626-matrix-text-elements (excel-graph 2026-11-06, 28 cells). MDETERM, MINVERSE and MMULT give
+  `#VALUE!` for every text or text-number element: array literals (`{1,"2";3,4}`, `{1,"a";3,4}`, `{"5"}`), text cells
+  in a range, a one-cell text range, a direct text argument, and either MMULT argument (M1-M26).
+- The error is one scalar `#VALUE!`, not per-element errors: `SUM(IFERROR(MINVERSE(B1:C2),100))` is 100, and so is a
+  2x2 MMULT product whose text element touches only one column (M16, M17, M27). M28 is an all-number control (-1).
+- Excel never reads a text number as a number here, so there is no follow-up. `eval_math.matrix_rows` keeps refusing
+  text like blanks and booleans (all are `#VALUE!` in Excel, which the math does not model); only its docstring now
+  cites the evidence.
+- Recorded in arrays.md ("MDETERM / MINVERSE: a blank cell in the matrix is #VALUE!"). The coercion.md line now cites
+  the probe.
+- Eval delta: +28 probe cells, all pass (the engine already matches). No engine change.

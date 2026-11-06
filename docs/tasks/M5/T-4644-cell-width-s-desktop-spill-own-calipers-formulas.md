@@ -3,7 +3,7 @@ id: T-4644
 title: "CELL(\"width\")'s desktop spill: own calipers formulas_information Sheet1 O140:O160 (FALSE, the second element of desktop's {width, FALSE}) under decision 0308 item 4"
 milestone: M5
 lane: functions-logic
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -42,16 +42,39 @@ are known failures (eval/baseline/calipers.txt) that no open task names.
 - Cells: calipers/roundtrip/formulas_information/golden.xlsx Sheet1!O140:O160 (21 cells).
 
 ## Acceptance criteria
-- [ ] The Outcome states whether O140:O160 count toward any Phase 1 or exit measure today (`make phase1-exit`, the
+- [x] The Outcome states whether O140:O160 count toward any Phase 1 or exit measure today (`make phase1-exit`, the
       `v15_checkpoint` rate of CELL, the calipers row), citing the report fields read.
-- [ ] If they count: 21 lines in eval/milestones/phase1-exceptions.tsv under decision 0308 owned by T-4373, and T-4373's
+- [x] If they count: 21 lines in eval/milestones/phase1-exceptions.tsv under decision 0308 owned by T-4373, and T-4373's
       cell list names O140:O160, with the web evidence 0308 item 4 requires cited in the PR (or a decision amendment if
       the refused canary means no sidecar can exist). If they do not count: T-4373's cell list names them anyway, so a
       future desktop oracle refills them with the N cells, and the Outcome says no exception line was needed.
-- [ ] The 21 known-failure lines stay in eval/baseline/calipers.txt (no engine change; the engine matches the web), and
+- [x] The 21 known-failure lines stay in eval/baseline/calipers.txt (no engine change; the engine matches the web), and
       no new line appears there.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Desktop `CELL` values (decision 0266).
 - Making `--all-off` see spill cells (T-4486's question).
+
+## Outcome (2026-11-06)
+O140:O160 count toward no Phase 1 or exit measure today. So they get no exception line; T-4373 lists them so a future
+desktop oracle refills them with the N cells. This was read from `make eval` at 37389d18 (main 4679d912 plus T-4534's
+tsv change, calipers and poi fetched):
+- The case's cells: O140 is `type_mismatch` / `visible_other`, with only an `anchor_formula`
+  (`IFERROR(CELL("width",$C$5),"Error")`) and no `formula`.
+- `attributed_off` (6361) and `unattributed_off` (602) hold none of the 21. `off_excel_cells`
+  (crates/rustsheet-eval/src/attribution.rs) reads `formula` only.
+- `v15_checkpoint` CELL: `rate_cells` 581, `rate_visible` 0, `rate_excepted` 149, `meets_rate` true. `rate_count`
+  (v15_checkpoint.rs) also reads `formula` only, so the spill cells are outside CELL's rate and Gate B.
+- `milestone_exit`: no row lists calipers (M11's required suite is corpus-bench, M8's are gen-m8b and the poi M8
+  subset). No row's visibly-off list names a formulas_information cell.
+- `make phase1-exit`: owners met (0 visibly-off cells with no open owner); M5 met.
+- eval/baseline/visible-parity.txt has no calipers line (the lock covers the in-scope generated cases).
+Changes:
+- T-4373 names O140:O160.
+- information.md: the formula is written out (`$C$5` through `$C$25`), and the entry gives column C's
+  `customWidth="1"` (15.84375, sheet default 11.07421875) as the context for the UNVERIFIED FALSE.
+- The 21 lines stay in eval/baseline/calipers.txt; no engine change.
+If T-4486 makes the measures see spill cells, these cells would need a decision 0308 item 4 line. The canary refuses
+`CELL("width")`, so that line would need a decision amendment for its evidence.
+Eval delta: none.
