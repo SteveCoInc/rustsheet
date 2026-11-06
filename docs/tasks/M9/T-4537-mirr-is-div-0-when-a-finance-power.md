@@ -3,7 +3,7 @@ id: T-4537
 title: "MIRR is #DIV/0! when a finance power overflows under a later negative flow"
 milestone: M9
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
