@@ -450,9 +450,15 @@ one `#N/A`, not lifted (`LET(x,{1,2},SHEET(x))`; a GROUPBY group, `GROUPBY(A1:A3
 in each value cell). A bound error is that error: `LET(x,1/0,SHEET(x))` is `#DIV/0!`, while a written error
 argument is `#N/A` (section above). SHEETS of a parameter bound to a one-sheet reference is 1
 (`MAP(A1:A3,_xleta.SHEETS)` 1, 1, 1, `BYCOL(Sheet2!A1:B3,_xleta.SHEETS)` 1, 1), and of a GROUPBY group `#N/A`
-(probes/t4450-eta-special-forms J59). SHEETS of a parameter bound to anything else is unprobed: the oracle's
-canary sheet guard refuses `SHEETS(<parameter>)`, because a count of sheets would include the canary. Ours matches
-every cell; SHEETS of any other bound value stays `#N/IMPL!`.
+(probes/t4450-eta-special-forms J59). SHEETS of a parameter bound to a number, text or boolean is `#N/A`, and so
+is SHEETS of a LET-bound array (probes/t4565-sheet-sheets-lambda-omitted-array D4:D8, excel-graph, 2026-11-06, T-4565:
+`MAP({1;2},_xleta.SHEETS)`, `MAP({"a";"b"},_xleta.SHEETS)`, `MAP({TRUE;FALSE},_xleta.SHEETS)` and
+`BYROW(LET(a,{1,2;3,4},a),_xleta.SHEETS)` give `#N/A` in each element). SHEET of a variable bound to a LAMBDA is `#N/A`
+(`LET(f,LAMBDA(x,x),SHEET(f))`, also inside a MAP, D1, D13), while SHEET of an omitted parameter is `#VALUE!`
+(`LAMBDA(r,SHEET(r))()`, D2; `LAMBDA(r,ISOMITTED(r))()` is `#VALUE!` too, D3). SHEETS of a written omitted parameter
+(`LAMBDA(r,SHEETS(r))()`) and of a written LAMBDA-bound variable are unprobeable: the oracle's canary sheet guard refuses
+`SHEETS(<parameter>)`, because a count of sheets would include the canary. Ours matches every cell; SHEETS of any
+other bound value stays `#N/IMPL!`.
 Volatile functions through shape-stable formulas (probes/volatile-now-today-shapes, probes/volatile-and-info-rand-true-false-sheet):
 NOW, TODAY and RAND are numbers (`TYPE` 1, never text or boolean), `NOW()-NOW()` is 0 within one recalculation,
 `INT(NOW())=TODAY()`, `RAND()` is in [0,1) and two calls differ, `TRUE()` and `FALSE()` behave as the literals in

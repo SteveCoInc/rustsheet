@@ -1,0 +1,59 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4565: SHEET of a LET variable bound to a LAMBDA and of an omitted LAMBDA parameter; SHEETS of array-bound parameters (constant and LET-bound arrays of numbers, text, booleans) passed through _xleta.SHEETS, the form the oracle's canary guard accepts. Sheet2 and Sheet3 hold 10..60. One question per cell in Sheet1!D1:D13.",
+  "tags": [
+    "M7",
+    "probe",
+    "lambda",
+    "T-4565"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": 1,
+        "B1": 2,
+        "A2": 3,
+        "B2": 4,
+        "A3": 5,
+        "B3": 6,
+        "D1": "=LET(f,LAMBDA(x,x),SHEET(f))",
+        "D2": "=LAMBDA(r,SHEET(r))()",
+        "D3": "=LAMBDA(r,ISOMITTED(r))()",
+        "D4": "=ARRAYTOTEXT(MAP({1;2},_xleta.SHEETS))",
+        "D5": "=ARRAYTOTEXT(MAP({\"a\";\"b\"},_xleta.SHEETS))",
+        "D6": "=ARRAYTOTEXT(MAP({TRUE;FALSE},_xleta.SHEETS))",
+        "D7": "=ARRAYTOTEXT(BYROW({1,2;3,4},_xleta.SHEETS))",
+        "D8": "=ARRAYTOTEXT(BYROW(LET(a,{1,2;3,4},a),_xleta.SHEETS))",
+        "D9": "=ARRAYTOTEXT(MAP(LET(a,{\"Sheet2\";\"Sheet3\"},a),_xleta.SHEET))",
+        "D10": "=ARRAYTOTEXT(MAP({1;2},LAMBDA(r,SHEET(r))))",
+        "D11": "=ARRAYTOTEXT(BYROW({1,2;3,4},_xleta.SHEET))",
+        "D12": "=LET(f,LAMBDA(x,x),ISERROR(SHEET(f)))",
+        "D13": "=ARRAYTOTEXT(MAP(A1:A3,LAMBDA(r,LET(g,LAMBDA(q,q),SHEET(g)))))"
+      }
+    },
+    {
+      "name": "Sheet2",
+      "cells": {
+        "A1": 10,
+        "B1": 20,
+        "A2": 30,
+        "B2": 40,
+        "A3": 50,
+        "B3": 60
+      }
+    },
+    {
+      "name": "Sheet3",
+      "cells": {
+        "A1": 10,
+        "B1": 20,
+        "A2": 30,
+        "B2": 40,
+        "A3": 50,
+        "B3": 60
+      }
+    }
+  ]
+}
