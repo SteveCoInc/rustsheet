@@ -792,7 +792,10 @@ fn amortization_elements_refused_before_the_walk_are_charged_one() {
         (Function::Amordegrc, [2400.0, 300.0, 1.0, -41_788_900.0]),
         (Function::Amordegrc, [-1.0, 300.0, 1.0, 0.15]),
         (Function::Amordegrc, [2400.0, -1.0, 1.0, 0.15]),
-        (Function::Amordegrc, [300.0, 300.0, 1.0, 0.15]),
+        // A salvage above the cost and a cost of 0; a salvage equal to a positive cost is 0
+        // (probes/amor-salvage-equal-cost, T-4504).
+        (Function::Amordegrc, [300.0, 301.0, 1.0, 0.15]),
+        (Function::Amorlinc, [0.0, 0.0, 1.0, 0.15]),
         (Function::Amordegrc, [2400.0, 300.0, -1.0, 0.15]),
         (Function::Amordegrc, [2400.0, 300.0, 1.0, 0.0]),
         // AMORDEGRC's asset life of 2 or less: 1 / 0.5 is 2, 1 / 0.6 about 1.7.

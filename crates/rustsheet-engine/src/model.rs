@@ -2296,18 +2296,26 @@ impl Model {
         name: &str,
         scope: Option<u32>,
     ) -> Result<String, String> {
+        Ok(self.find_defined_name(name, scope)?.formula.clone())
+    }
+
+    /// The defined name `name` (case-insensitive) of `scope`, for a caller that needs more than its
+    /// formula (the delete diff keeps `hidden` and `comment`, T-4637).
+    pub(crate) fn find_defined_name(
+        &self,
+        name: &str,
+        scope: Option<u32>,
+    ) -> Result<&crate::types::DefinedName, String> {
         let name_upper = name.to_uppercase();
-        let defined_names = &self.workbook.defined_names;
         let sheet_id = match scope {
             Some(index) => Some(self.workbook.worksheet(index)?.sheet_id),
             None => None,
         };
-        for df in defined_names {
-            if df.name.to_uppercase() == name_upper && df.sheet_id == sheet_id {
-                return Ok(df.formula.clone());
-            }
-        }
-        Err("Defined name not found".to_string())
+        self.workbook
+            .defined_names
+            .iter()
+            .find(|df| df.name.to_uppercase() == name_upper && df.sheet_id == sheet_id)
+            .ok_or_else(|| "Defined name not found".to_string())
     }
 
     /// Returns the list of defined names as `(name, scope, formula)`.

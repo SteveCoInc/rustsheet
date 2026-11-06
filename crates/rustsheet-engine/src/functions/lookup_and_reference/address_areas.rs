@@ -21,13 +21,6 @@ fn address_sheet_text(s: &str) -> String {
     if s == "TRUE" || s == "FALSE" {
         return format!("'{s}'");
     }
-    if let Some(rest) = s.strip_prefix('[') {
-        if let Some((book, sheet)) = rest.split_once(']') {
-            if !book.contains('[') && quote_name(sheet) == sheet {
-                return s.to_string();
-            }
-        }
-    }
     quote_name(s)
 }
 

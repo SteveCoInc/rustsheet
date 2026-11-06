@@ -1,0 +1,57 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4274: T on S!A1:C4 (Col 1,2,4; Other 10,20,40), C2 typed =A2*2 so the Calc column is filled (t2957-a1-reference's layout), then insert_row 1 (above the table, shifting it to A2:C5). F holds FORMULATEXT of the Calc cells and their SUM, scored; the question is the calculatedColumnFormula text Excel saves in xl/tables/table1.xml of the cached workbook.",
+  "tags": [
+    "M8",
+    "tables",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "tables": [
+        {
+          "name": "T",
+          "ref": "A1:C4"
+        }
+      ],
+      "cells": {
+        "A1": "Col",
+        "B1": "Other",
+        "C1": "Calc",
+        "A2": 1,
+        "B2": 10,
+        "A3": 2,
+        "B3": 20,
+        "A4": 4,
+        "B4": 40,
+        "C2": {
+          "entered": "=A2*2"
+        }
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=FORMULATEXT(S!C2)",
+        "A2": "=FORMULATEXT(S!C3)",
+        "A3": "=FORMULATEXT(S!C4)",
+        "A4": "=SUM(S!C2:C4)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "insert_row",
+      "sheet": "S",
+      "row": 1
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4"
+  ]
+}

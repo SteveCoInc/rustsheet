@@ -562,6 +562,12 @@ impl Parser {
                 self.reference_or_call_operand(sheet, row, column, absolute_column, absolute_row)
             }
             TokenType::Range { sheet, left, right } => {
+                if sheet.is_none() {
+                    let text = self.lexer.source_since(start);
+                    if let Some(node) = self.bound_names_range(&text) {
+                        return self.call_if_parenthesis_follows(node);
+                    }
+                }
                 self.range_or_call_operand(sheet, left, right)
             }
             TokenType::Ident(name) => self.parse_identifier(name),

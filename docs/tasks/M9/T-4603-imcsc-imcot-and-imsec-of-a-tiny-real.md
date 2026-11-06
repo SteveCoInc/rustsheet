@@ -3,7 +3,7 @@ id: T-4603
 title: "IMCSC, IMCOT and IMSEC of a tiny real, and IMCSCH, IMSECH and IMCSC of a tiny imaginary part: probe the reciprocal cells engineering.md leaves UNVERIFIED, and match"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -60,3 +60,6 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4603-im-reciprocal
 ## Out of scope
 - The other notes in the same section (IMPRODUCT's blank in a range, IMCOSH's tiny imaginary part): T-4604.
 - Large |x| or |y| past the overflow edges (T-2631, T-4425).
+
+## Outcome
+Probe `probes/t4603-im-reciprocal-tiny-parts` (78 cells, excel-graph) added; ours already matched every cell, so no engine change. engineering.md "IM* results that overflow" now states the tiny real and tiny imaginary results; both UNVERIFIED claims are gone and the `IMCOT("1E-310")` example cites the parse rule. Eval delta: +78 passing cells in the probes suite, the probes baseline gains only the new case's checked-cell line, no new known failures.

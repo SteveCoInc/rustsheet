@@ -417,6 +417,30 @@ fn test_binom_inv_and_range_at_a_large_n_take_binom_dist_cdf() {
 }
 
 #[test]
+fn test_binom_inv_at_the_largest_trial_count_is_excel_s_median() {
+    // probes/t2435-dist-extremes A15 and A18, t3444-binom-range-inv-large-n Inv A115:B115
+    // (excel-graph): at 2^31 - 2 trials, 2147483646.9 truncated, the count is 1073741823, n/2. The search runs on BINOM.DIST's own cdf (bratio's
+    // basym there), not statrs', which gave 1073744668 (T-2809, fixed by T-3444).
+    let cases = [
+        ("=BINOM.INV(2147483646,0.5,0.5)", "1073741823.0"),
+        ("=BINOM.INV(2147483646.9,0.5,0.5)", "1073741823.0"),
+        ("=CRITBINOM(2147483646,0.5,0.5)", "1073741823.0"),
+    ];
+    let mut model = new_empty_model();
+    for (row, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            round_trip_value(&model, &format!("A{}", row + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
+}
+
+#[test]
 fn test_binom_dist_range_from_0_at_a_large_n_is_a_probability() {
     // A range from 0 at a large n is BINOM.DIST's cdf, or statrs' where the kernel has no branch
     // (T-3444): every result is in [0, 1], and no `lower - 1` is taken at lower = 0.

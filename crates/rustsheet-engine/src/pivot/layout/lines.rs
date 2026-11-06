@@ -14,9 +14,10 @@
 //! - on rows, an item of a field in outline form (`pivotField@outline`, the default; compact form
 //!   is outline form with `compact`) has a line of its own above its children, which carries its
 //!   default subtotal when `subtotalTop` is on (t4138 G2, G3, G6; t4583 R1, where the outer field
-//!   left at the default is outline form inside a tabular pivot). An item of a tabular field
-//!   (`outline="0"`) shares its first child's line, and its subtotal lines follow its children
-//!   (t4138 G4, t4123 T, t4583 R2 to R6);
+//!   left at the default is outline form inside a tabular pivot; t4609 L3, where `compact="0"`
+//!   alone keeps it). An item of a tabular field (`outline="0"`, whatever its `compact`) shares its
+//!   first child's line, and its subtotal lines follow its children (t4138 G4, t4123 T, t4583 R2 to
+//!   R6, t4609 L4);
 //! - on columns, every item shares its first child's line and its subtotal lines follow its
 //!   children (t4138 G5);
 //! - a field has subtotal lines only when a field other than Values is inside it: a field whose
@@ -31,18 +32,18 @@
 //! The engine's own readings where no probe shows Excel's (pivots.md "Layout lines", UNVERIFIED):
 //! subtotals at the bottom (`subtotalTop="0"`), custom subtotals and `defaultSubtotal="0"` in
 //! outline form, and grand totals off (T-4649); the Values field outer or in the middle of an axis,
-//! and its own line with `outlineData` (T-4650); which of `compact` and `outline` puts the next
-//! field in a row field's column (T-4609). Items with no data, blank rows and collapsed items are
-//! T-4168's, and filters, sorting, groups and calculated items reshape the trees first (T-4165,
-//! T-4171, T-4175).
+//! and its own line with `outlineData` (T-4650). Items with no data, blank rows and collapsed
+//! items are T-4168's, and filters, sorting, groups and calculated items reshape the trees first
+//! (T-4165, T-4171, T-4175).
 //!
 //! The geometry (pivots.md "Pivot geometry: location and header offsets per layout"):
 //! `firstHeaderRow` 1, `firstDataRow` 1 plus the column levels, `firstDataCol` the row label
 //! columns (a row field in compact form, `compact` and `outline` both on, shares its column with
-//! the next level; Values with `compactData` and `outlineData`), 1 with no row level but a column
-//! field, 0 with neither; the location is the lines plus those offsets from the anchor. Page
-//! fields fill `pageWrap` per column (`rowPageCount` rows), or per row with `pageOverThenDown`
-//! (t4137 K4, t4138 G8; the other orders are T-4650's).
+//! the next level: t4583 R1; either off gives the next level its own, t4609 L3 and L4; Values with
+//! `compactData` and `outlineData`), 1 with no row level but a column field, 0 with neither; the
+//! location is the lines plus those offsets from the anchor. Page fields fill `pageWrap` per
+//! column (`rowPageCount` rows), or per row with `pageOverThenDown` (t4137 K4, t4138 G8; the other
+//! orders are T-4650's).
 //!
 //! Every line is charged to the work budget as it is made, and a layout past the sheet or past
 //! [`MAX_PIVOT_CELLS`] cells has no result (pivots.md "A pivot result is bounded in work and
@@ -95,7 +96,7 @@ pub struct PivotLayout {
 
 /// One level of an axis: a field of the result's tree, or the Values field.
 #[derive(Debug, Clone, Copy)]
-enum Level<'a> {
+pub(super) enum Level<'a> {
     Values,
     Field {
         /// The field's index among the tree's fields.
@@ -107,7 +108,7 @@ enum Level<'a> {
 
 /// The levels of `axis` (whose fields are the result tree's, in order), the Values field left out
 /// when there is no data field.
-fn levels<'a>(table: &'a PivotTable, axis: &[AxisField]) -> Vec<Level<'a>> {
+pub(super) fn levels<'a>(table: &'a PivotTable, axis: &[AxisField]) -> Vec<Level<'a>> {
     let mut depth = 0;
     axis.iter()
         .filter_map(|level| match level {
@@ -445,9 +446,9 @@ impl<'a> AxisPlan<'a> {
 /// GETPIVOTDATA.
 ///
 /// # Errors
-/// [`PivotComputeError::Limit`] past `work` (`work` is then 0), [`MAX_PIVOT_CELLS`] or the
-/// sheet's last row or column, and [`PivotComputeError::Malformed`] when `result` is not over
-/// `cache`.
+/// [`PivotComputeError::Limit`] past `work` (`work` is then 0) or [`MAX_PIVOT_CELLS`],
+/// [`PivotComputeError::PastSheet`] past the sheet's last row or column, and
+/// [`PivotComputeError::Malformed`] when `result` is not over `cache`.
 pub fn lay_out(
     table: &PivotTable,
     cache: &PivotCache,
@@ -481,13 +482,8 @@ pub fn lay_out(
 fn geometry(table: &PivotTable, rows: &AxisPlan<'_>, columns: &AxisPlan<'_>) -> PivotGeometry {
     let count = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
     let options = &table.options;
-    // A row level in compact form puts the next level in its own column.
-    let shares_column = |level: &Level<'_>| match level {
-        Level::Field { field, .. } => field.is_none_or(|f| f.compact && f.outline),
-        Level::Values => options.compact_data && options.outline_data,
-    };
-    let label_columns = match rows.levels.split_last() {
-        Some((_, outer)) => 1 + outer.iter().filter(|l| !shares_column(l)).count(),
+    let label_columns = match label_columns(&rows.levels, options).last() {
+        Some(&last) => last as usize + 1,
         None => usize::from(!columns.tree.fields().is_empty()),
     };
     let pages = table.page_fields.len();
@@ -508,6 +504,29 @@ fn geometry(table: &PivotTable, rows: &AxisPlan<'_>, columns: &AxisPlan<'_>) -> 
         row_page_count: count(row_pages),
         column_page_count: count(column_pages),
     }
+}
+
+/// Per row level, its label column counted from the location's left: a row level in compact
+/// form (`compact` and `outline` both on; the Values field with `compactData` and
+/// `outlineData`) shares its column with the next level (probes/t4583-pivot-row-labels R1), and
+/// any other level puts the next one in a column of its own: `compact="0"` alone or `outline="0"`
+/// alone is enough (probes/t4609-pivot-row-labels-2 L3, L4).
+pub(super) fn label_columns(levels: &[Level<'_>], options: &PivotOptions) -> Vec<u32> {
+    let shares_column = |level: &Level<'_>| match level {
+        Level::Field { field, .. } => field.is_none_or(|f| f.compact && f.outline),
+        Level::Values => options.compact_data && options.outline_data,
+    };
+    let mut column = 0u32;
+    levels
+        .iter()
+        .map(|level| {
+            let at = column;
+            if !shares_column(level) {
+                column = column.saturating_add(1);
+            }
+            at
+        })
+        .collect()
 }
 
 /// The location of `geometry` with `lines` row and column lines from the definition's anchor;
@@ -546,7 +565,7 @@ fn location(
                 right,
             })
         }
-        _ => Err(PivotComputeError::Limit),
+        _ => Err(PivotComputeError::PastSheet),
     }
 }
 

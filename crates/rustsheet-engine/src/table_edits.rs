@@ -149,6 +149,16 @@ pub(crate) struct Bounds {
     pub(crate) data: (i32, i32),
 }
 
+impl Bounds {
+    /// Whether the two ranges share a cell.
+    pub(crate) fn overlaps(&self, other: &Bounds) -> bool {
+        self.left <= other.right
+            && other.left <= self.right
+            && self.top <= other.bottom
+            && other.top <= self.bottom
+    }
+}
+
 /// The [`Bounds`] of `table`; `None` when its reference or row counts do not fit (directive 5).
 pub(crate) fn bounds(table: &Table) -> Option<Bounds> {
     let (left, top, right, bottom) = parse_range(&table.reference).ok()?;
@@ -421,9 +431,12 @@ impl Model {
             deleted_columns: &edits.deleted_columns,
             deleted_tables: &edits.deleted_tables,
         };
+        let column_formulas = self.displaced_column_formulas(displacement);
         self.displace_cells(displacement)?;
         self.displace_cf_ranges(sheet, displacement);
-        self.resize_tables(sheet, edits.resized)
+        self.resize_tables(sheet, edits.resized)?;
+        self.set_displaced_column_formulas(column_formulas);
+        Ok(())
     }
 
     /// The first data row of the table on `sheet`, under a header row, whose data rows the row
