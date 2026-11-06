@@ -3,7 +3,7 @@ id: T-4625
 title: "Probe GAMMA.DIST's overflowing x / beta at shapes other than 1"
 milestone: M0
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
