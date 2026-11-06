@@ -2304,11 +2304,11 @@ rounding (`ROWS(SEQUENCE(1000-2^-21))` is 999). The other constructors do not sn
   `COLUMNS(WRAPROWS(SEQUENCE(1,3),2-2^-24))` 1, `WRAPCOLS(SEQUENCE(3),1-2^-24)` `#NUM!`).
 A wrap_count past the vector's length gives as many columns (WRAPROWS) or rows (WRAPCOLS) as the vector has elements, not
 wrap_count: `COLUMNS(WRAPROWS(SEQUENCE(1,3),1000))` and `ROWS(WRAPCOLS(SEQUENCE(3),100000))` are 3.
-Probe note: Excel's unary minus binds before `^`, so the probe's `SEQUENCE(-2^-22)` reads +2^-22 (an even power) and is
-`#CALC!` as a positive tiny extent, not a negative one.
+Probe note: the probe's `SEQUENCE(-2^-22)` reads +2^-22, an even power (unary minus binds before `^`, dates.md), and is
+`#CALC!` as a positive tiny extent.
 Evidence: probes/t4465-extent-near-integer (760 cells), -randarray (95), the seeded hold-out cases -holdout (240) and
--holdout-randarray (30), filled after the rule was frozen (docs/research/t4465/frozen-rule.md), and -randarray-cols (76,
-a fresh sweep of RANDARRAY's columns after the freeze); excel-graph, 2026-11-06. Of the candidate rules scored
+-holdout-randarray (30), filled after the rule was frozen (docs/research/t4465/frozen-rule.md), -randarray-cols (76) and the
+fresh sweep -sweep and -sweep-randarray (256, log-uniform extents to 1048576), both written after the freeze; excel-graph, 2026-11-06. Of the candidate rules scored
 (docs/research/t4465/predictions.tsv), the shared rule misses no SEQUENCE or RANDARRAY cell, a 2^-23 epsilon 16 to 22 per column.
 Ours: `near_integer_whole` in sequence.rs and random.rs (RANDARRAY floored before T-4465, SEQUENCE added 2^-23); MAKEARRAY,
 TAKE, DROP, EXPAND, WRAPROWS and WRAPCOLS already matched.

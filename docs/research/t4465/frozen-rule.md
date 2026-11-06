@@ -42,3 +42,10 @@ Margin, fixed here before the fill: the frozen rule passes if it misses no sweep
 discriminates if the best other candidate (eps23, f32, floor, trunc) misses at least 10% of its
 cells. No margin was fixed for the hold-out cases above before they were scored; this sweep is the
 uncontaminated check.
+
+Result (excel-graph, 2026-11-06): the frozen rule misses 0 of 256 sweep cells; eps23 misses 104,
+f32 56 (22%), floor and trunc 127 each. Both margins hold.
+
+Note on the table above: its WRAPROWS and WRAPCOLS rows were scored with the wrap count capped at
+the 3-element vector, as Excel returns it; `predict.py` first left that cap out, and since review
+round 1 applies it, so `predictions.tsv` now reproduces every row.

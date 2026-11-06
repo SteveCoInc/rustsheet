@@ -63,14 +63,29 @@ Excel actually has (directive 3), instead of the four ad hoc reads it has today.
   filled. SEQUENCE and RANDARRAY read `near_integer_whole` (0 misses; a 2^-23 epsilon missed 16 to 21 per column, float32
   17 to 19). MAKEARRAY refuses fractions, and TAKE, DROP, EXPAND, WRAPROWS and WRAPCOLS truncate: the engine already
   matched all of these.
-- Hold-out (decision 0188 R4): -holdout (240) and -holdout-randarray (30), offsets k*2^-30 seeded from
-  random.Random(4465), filled after the freeze: 270/270 under the frozen rule, against 0 to 21 misses per column for
-  the others. A fresh sweep of RANDARRAY's columns (-randarray-cols, 76 cells, written after the freeze): 76/76.
+- Hold-out and fresh sweep (decision 0188 R4). Misses for the changed functions (SEQUENCE rows and columns,
+  RANDARRAY rows and columns), from docs/research/t4465/predictions.tsv:
+
+  | set | cells | shared (chosen) | eps23 | f32 | floor | trunc | engine before |
+  |---|---|---|---|---|---|---|---|
+  | train (fixed cases) | 266 | 0 | 58 | 55 | 83 | 92 | 67 |
+  | hold-out (filled after the freeze) | 84 | 0 | 29 | 22 | 36 | 46 | 32 |
+  | RANDARRAY columns sweep (after the freeze) | 76 | 0 | 16 | 17 | 23 | 26 | n/a |
+  | fresh sweep to 1048576 (after the freeze) | 256 | 0 | 104 | 56 | 127 | 127 | n/a |
+
+  The hold-out (-holdout, -holdout-randarray; offsets k*2^-30 seeded from random.Random(4465)) was generated with the
+  fixed cases, before any scoring, but with no margin fixed in advance, and it is about 24% of the cells. The fresh
+  sweep (-sweep, -sweep-randarray; gen_sweep.py, log-uniform bases to 1048576, random.Random(44652)) was written after
+  the freeze, with its margin fixed in frozen-rule.md before its fill: no miss for the rule, at least 10% for the best
+  other candidate. Result: 0 misses, f32 22%. Gate A envelope: every cell matches, so all are in. The predictions file
+  was edited once after the fixed fill, inside the freeze commit: only the argument values of the base-0 cells written
+  `-2^-k` changed (Excel's unary minus binds before `^`), no rule changed; review round 1 then added the wrap-count
+  cap to its WRAPROWS/WRAPCOLS outcomes.
 - Engine: sequence.rs drops `EXTENT_EPSILON` and calls `near_integer_whole`; random.rs's RANDARRAY rows and columns call
   it too (they floored before). arrays.md: new section "Array-constructor extents near an integer", and the SEQUENCE
   paragraph's UNVERIFIED sentence is dropped. Also recorded there: WRAPROWS/WRAPCOLS give the vector's length, not
   wrap_count, when wrap_count is longer. Probe note: Excel's unary minus binds before `^`, so `-2^-22` is +2^-22.
 - Not a numeric fit in the R4 sense: an existing rule (`near_integer_whole`) was selected from ranked structural
   candidates, so no `FITTED` tag; the hold-out and the fresh sweep are recorded above.
-- Eval delta: probes +5 cases, 1201 cells, all passing (eval/baseline/probes.txt); 0 regressions in any suite.
+- Eval delta: probes +7 cases, 1457 cells, all passing (eval/baseline/probes.txt); 0 regressions in any suite.
   probes/empty-array-args-sequence (117) and t3631-randarray-invariant (45) still pass.

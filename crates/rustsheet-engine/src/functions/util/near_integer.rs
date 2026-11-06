@@ -36,7 +36,8 @@ pub(crate) fn near_integer_floor(x: f64, tolerance: f64) -> f64 {
 }
 
 /// The whole number DATE, TIME, XMATCH, XLOOKUP, SORTBY's `sort_order` and the rows and columns of
-/// SEQUENCE and RANDARRAY read from an argument: [`near_integer_floor`] with [`NEAR_INTEGER_TOLERANCE`], half of it for a negative value, so `TIME(1-2^-22,0,0)` is
+/// SEQUENCE and RANDARRAY read from an argument: [`near_integer_floor`] with
+/// [`NEAR_INTEGER_TOLERANCE`], half of it for a negative value, so `TIME(1-2^-22,0,0)` is
 /// 1:00, `TIME(1,0,-1E-7)` 1:00, `DATE(1983,12,-1E-15)` day 0 and an XMATCH mode of
 /// `0.5^1E-15` reads 1, while `-0.4` reads -1.
 // Excel: docs/excel-semantics/dates.md "TIME: an argument past 32767 is `#NUM!`" and "DATE: a

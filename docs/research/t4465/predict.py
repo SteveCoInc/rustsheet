@@ -46,12 +46,13 @@ N_LONG = 100001
 
 def outcome(kind: str, n: int) -> str:
     """The cell value for a whole count n (integer-argument behavior)."""
-    if kind in ("seq_rows", "seq_cols", "randarray"):
+    if kind in ("seq_rows", "seq_cols", "randarray", "randarray_cols"):
         return str(n) if n >= 1 else ("#CALC!" if n == 0 else "#VALUE!")
     if kind in ("makearray", "expand"):
         return str(n) if n >= 1 else "#VALUE!"
     if kind in ("wraprows", "wrapcols"):
-        return str(n) if n >= 1 else "#NUM!"
+        # A wrap_count past the 3-element vector gives 3 columns (rows), not wrap_count.
+        return str(min(n, 3)) if n >= 1 else "#NUM!"
     if kind == "take":
         return "#CALC!" if n == 0 else str(min(abs(n), N_LONG))
     if kind == "drop":
@@ -68,7 +69,11 @@ def arg_value(text: str) -> float:
 
 
 def engine_values(show: Path) -> dict[str, str]:
-    values, cell = {}, None
+    """The engine's values before T-4465; none for the fresh sweep, written after the change."""
+    values: dict[str, str] = {}
+    cell = None
+    if not show.exists():
+        return values
     for line in show.read_text().splitlines():
         m = re.match(r"^A!(\w+)\s", line)
         if m:
@@ -105,7 +110,7 @@ def main() -> None:
                 depth -= ch == ")"
                 cur += ch
             parts.append(cur)
-            text = {"makearray": 0, "seq_cols": 1}.get(kind, len(parts) - 1 if kind in ("take", "drop", "expand", "wraprows", "wrapcols") else 0)
+            text = {"makearray": 0, "seq_cols": 1, "randarray_cols": 1}.get(kind, len(parts) - 1 if kind in ("take", "drop", "expand", "wraprows", "wrapcols") else 0)
             x = arg_value(parts[text])
             preds = [outcome(kind, int(rule(x))) for rule in RULES.values()]
             print(f"{name}\t{ref}\t{formula}\t{x!r}\t{engine.get(ref, '?')}\t" + "\t".join(preds))

@@ -2377,6 +2377,8 @@ C	probes/t4465-extent-near-integer-holdout.case.json	240
 C	probes/t4465-extent-near-integer-randarray-cols.case.json	76
 C	probes/t4465-extent-near-integer-randarray.case.json	95
 C	probes/t4465-extent-near-integer.case.json	760
+C	probes/t4465-extent-sweep-randarray.case.json	128
+C	probes/t4465-extent-sweep.case.json	128
 C	probes/t4477-filter-include-error-shapes.case.json	49
 C	probes/t4480-lcid-sublanguage-fallback.case.json	98
 C	probes/t4492-locale-comma-tag-shapes.case.json	24
