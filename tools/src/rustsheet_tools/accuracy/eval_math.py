@@ -2,8 +2,10 @@
 
 `rustsheet-accuracy math --suite S` writes `<case>.math.json` (rustsheet-math/v1) next to each spec
 case's oracle sidecar: for every scored cell (a key of the oracle sidecar or of the case's
-`expected`) whose formula is one call `=FUNC(args)` of a function with a Gate A definition, the
-50-digit math value of its arguments with its formula text `f`. A call followed by an exact scale
+`expected`) whose formula is one call `=FUNC(args)` of a function with a Gate A definition (for an
+indexed definition, MINVERSE or MMULT, one element `=INDEX(FUNC(args),row,column)`; T-4025), the
+50-digit math value of its arguments with its formula text `f`. A `matrix` parameter takes an array
+literal or a range with its rows (`parse_rows`), or a number as a 1x1 matrix (`matrix_rows`). A call followed by an exact scale
 (`=F.DIST(A1020,1,10,FALSE)*2^600`, `/2^k`, `-0`; T-3924) gets the scaled math. The scale is exact
 when `k` is an integer from -1022 to 1023 (so `2^k` is itself a normal double, as Excel's `^` gives
 it) and the call's math value and the scaled value both round to normal doubles or are 0: then
@@ -21,7 +23,9 @@ A candidate cell gets no math value when:
   may itself be arithmetic over number literals and such cells or constant cells
   (`A112*A112`, `1/(1+20/(4*A1249))`; T-3924): the fit lab's one evaluator (`arithmetic`) gives its
   double, and the math is the function at that double;
-- an argument is anything else the fit lab's sweep reader leaves unparsed, text, empty or a range.
+- an argument is anything else the fit lab's sweep reader leaves unparsed, text, empty or a range
+  (but for an array or matrix parameter, whose elements must be numbers);
+- an indexed definition is called outside INDEX (`=MINVERSE(A1)`, an array result).
   A `text` parameter (T-4084) takes a string literal or a text cell: one of its `choices`, or for a
   complex number a text `parse_complex_text` reads whose parts, cut to 15 significant digits as Excel
   reads them (`read_complex_arg`, T-4593: engineering.md "Engineering functions in the gen-m9
@@ -33,7 +37,7 @@ A candidate cell gets no math value when:
   A nested call, or arithmetic between call results, makes the cell a composite instead
   (`composite`, T-3993, decision 0297): it gets the outermost node's math at its inner nodes'
   doubles, unless it calls a function with no definition (`no definition for ...`);
-- an array parameter of a `literal_arrays` definition is not written as an array literal (AGGREGATE over
+- an array or matrix parameter of a `literal_arrays` definition is not written as an array literal (AGGREGATE over
   a range, whose hidden rows the math does not model);
 - the case is a 1904 workbook and the definition reads date serials in the 1900 system
   (`Definition.serials_1900`: YEARFRAC, HOUR, MINUTE, SECOND);
@@ -80,7 +84,9 @@ from rustsheet_tools.fitlab.sweep import (
     UnparsedError,
     Workbook,
     arithmetic,
+    is_array_literal,
     parse_arg,
+    parse_matrix_arg,
     read_complex_arg,
     split_args,
 )
@@ -92,6 +98,9 @@ NO_VALUE = "no single value"
 NOT_CONVERGED = "not converged"
 INEXACT_SCALE = "scaled value not exact"
 REGENERATE = "cd tools && uv run rustsheet-accuracy math --suite {suite}"
+# The largest matrix side a matrix argument may have (`matrix_rows`): the rational elimination of the
+# definitions grows fast with the side, and a workbook is untrusted input.
+MAX_MATRIX_SIDE = 64
 
 _CALL = re.compile(r"=\s*([A-Za-z][A-Za-z0-9._]*)\((.*)\)\s*", re.DOTALL)
 # A call's exact outer scale: `*2^k`, `/2^k` or `-0` after its closing parenthesis.
@@ -233,15 +242,42 @@ def fit_arg(param: Param, value: Any) -> literal.Arg | Unfit:
     is a plain str)."""
     if param.kind == "text":
         return fit_text(param, value)
-    fitted = _fit_number(param, value)
+    fitted: literal.Arg | str
+    if param.kind == "array":
+        fitted = array_elements(value)
+    elif param.kind == "matrix":
+        fitted = matrix_rows(value)
+    else:
+        fitted = _fit_number(param, value)
     return Unfit(fitted) if isinstance(fitted, str) else fitted
 
 
+def matrix_rows(value: Any) -> literal.Matrix | str:
+    """A matrix argument (`parse_matrix_arg`: rows of values, or a scalar) as the definitions take
+    it, or why it does not fit. A number is a 1x1 matrix: `MDETERM(5)` is 5 (probes/stats-evidence-floor-t1623
+    S!Q112), and MDETERM of a single numeric cell is that number (arrays.md "MDETERM / MINVERSE: a blank
+    cell in the matrix is #VALUE!"). A blank or a logical, as the matrix or one of its elements, is `#VALUE!`
+    in Excel (same entry; probes/matrix-boolean-elements G1-G13), which the math does not model. A text is
+    refused with no math value: a direct text argument is `#VALUE!` (`MDETERM("5")`, S!Q113), but a text or
+    text-number element of an array literal or range is unprobed for MDETERM, MINVERSE and MMULT (T-4626).
+    A flat list (a range `parse_arg` read without its shape), ragged rows and a matrix over
+    `MAX_MATRIX_SIDE` rows or columns (the exact rational elimination's cost; no oracle cell is that large)
+    are refused too."""
+    if isinstance(value, float):
+        return ((value,),)
+    if not isinstance(value, list) or not value or not all(isinstance(row, list) for row in value):
+        return "a matrix argument without its shape" if isinstance(value, list) else "non-numeric argument"
+    if len({len(row) for row in value}) != 1 or not value[0]:
+        return "ragged matrix rows"
+    if len(value) > MAX_MATRIX_SIDE or len(value[0]) > MAX_MATRIX_SIDE:
+        return "a matrix larger than 64x64"
+    if any(isinstance(e, (bool, str)) or e is None for row in value for e in row):
+        return "non-numeric matrix element"
+    return tuple(tuple(float(e) for e in row) for row in value)
+
+
 def _fit_number(param: Param, value: Any) -> literal.Arg | str:
-    """`fit_arg` for every kind but text: the argument, or why it does not fit (a str)."""
-    if param.kind in ("array", "matrix"):
-        # a matrix needs its shape, which the sweep reader flattens (TODO(T-4025))
-        return array_elements(value) if param.kind == "array" else "a matrix argument"
+    """`fit_arg` for a scalar kind (real, int, bool): the argument, or why it does not fit (a str)."""
     if isinstance(value, list) or value is None or isinstance(value, str):
         return "non-numeric argument"
     if param.kind == "bool":
@@ -356,18 +392,22 @@ def candidates(case_path: Path, sidecar: Path) -> list[Candidate]:
                 out.append(Candidate(sheet, a1, text, None, tree.why or [], tree=tree.root))
             continue
         name, inner, scale = call
+        name, texts = indexed_call(name, inner)
         definition = REGISTRY.get(name)
         if definition is None:
             continue
         if definition.serials_1900 and spec.get("date_system") == 1904:
             out.append(Candidate(sheet, a1, text, definition, "a 1904 workbook", scale))
             continue
-        texts = split_args(inner)
+        if definition.indexed and texts is None:
+            out.append(Candidate(sheet, a1, text, definition, "an array result outside INDEX", scale))
+            continue
+        texts = split_args(inner) if texts is None else texts
         if definition.literal_arrays and _range_for_literal(definition, texts):
             out.append(Candidate(sheet, a1, text, definition, "not an array literal", scale))
             continue
         try:
-            values = [parse_arg(a, sheet, book, cell_refs=True) for a in texts]
+            values = _parse_values(definition, texts, sheet, book)
         except (UnparsedError, ValueError) as err:
             if (tree := composite.parse(text, sheet, book, fit_arg)) is not None:  # a nested call
                 out.append(Candidate(sheet, a1, text, None, tree.why or [], tree=tree.root))
@@ -378,14 +418,39 @@ def candidates(case_path: Path, sidecar: Path) -> list[Candidate]:
     return out
 
 
+def indexed_call(name: str, inner: str) -> tuple[str, list[str] | None]:
+    """For `INDEX(FUNC(args),row,column)` of an indexed definition (`Definition.indexed`, T-4025), FUNC and
+    its arguments followed by the row and the column, as the definition takes them; else `name` and None."""
+    outer = split_args(inner) if name == "INDEX" else []
+    if len(outer) == 3 and (call := single_call(f"={outer[0]}")) is not None:
+        definition = REGISTRY.get(call[0])
+        if definition is not None and definition.indexed:
+            return call[0], [*split_args(call[1]), *outer[1:]]
+    return name, None
+
+
+def _parse_values(definition: Definition, texts: list[str], sheet: str, book: Workbook) -> list[Any]:
+    """The argument texts' values: a matrix parameter's row by row (`parse_matrix_arg`), any other as
+    `parse_arg` reads it."""
+    try:
+        kinds = [p.kind for p in definition.params_for(len(texts))]
+    except ValueError:
+        kinds = ["real"] * len(texts)  # fit_args reports the argument count
+    return [
+        parse_matrix_arg(t, sheet, book) if k == "matrix" else parse_arg(t, sheet, book, cell_refs=True)
+        for t, k in zip(texts, kinds, strict=True)
+    ]
+
+
 def _range_for_literal(definition: Definition, texts: list[str]) -> bool:
-    """Whether an array parameter's argument text is anything but an array literal `{...}`."""
+    """Whether an array or matrix parameter's argument text is anything but an array literal `{...}`."""
     try:
         params = definition.params_for(len(texts))
     except ValueError:
         return False  # fit_args reports the argument count
     return any(
-        p.kind == "array" and not t.strip().startswith("{") for p, t in zip(params, texts, strict=True)
+        p.kind in ("array", "matrix") and not is_array_literal(t.strip())
+        for p, t in zip(params, texts, strict=True)
     )
 
 

@@ -4,12 +4,13 @@ A sweep is a case plus its oracle sidecar (Excel's values), both JSON, located t
 harness's own discovery (`rustsheet-eval cases`, `snapshot.suite_cases`); no xlsx is parsed.
 Cells are selected by a regex over the formula text whose first group is the argument list.
 Arguments are numeric literals, TRUE/FALSE, string literals, array literals of those (`{1,2;3,4}`,
-row-major), `DATE(y,m,d)` with integer literals (a 1900-system serial), references (`A1`, `$Z$1`,
-`Data!B2`, `D1:D10`) to constant cells of the case or to formula cells with an oracle value, and
-arithmetic over numeric literals (`0.05/12`, `1+26955297717044*2^-52`), which is evaluated with
-Excel's operator model (`arithmetic`; with `parse_arg`'s `cell_refs`, that arithmetic may also read
-single cells holding a number, `A112*A112`, for the math sidecars, T-3924), and a nested call whose text is the whole formula of a cell
-of the fit's `calls` cases (`PMT(0.2,1,10000)` in `RATE(1,PMT(0.2,1,10000),10000)`), which is
+row-major; `parse_rows` keeps the rows of an array literal or range for a matrix argument, T-4025),
+`DATE(y,m,d)` with integer literals (a 1900-system serial), references (`A1`, `$Z$1`, `Data!B2`,
+`D1:D10`) to constant cells of the case or to formula cells with an oracle value, and arithmetic over
+numeric literals (`0.05/12`, `1+26955297717044*2^-52`), which is evaluated with Excel's operator
+model (`arithmetic`; with `parse_arg`'s `cell_refs`, that arithmetic may also read single cells
+holding a number, `A112*A112`, for the math sidecars, T-3924), and a nested call whose text is the
+whole formula of a cell of the fit's `calls` cases (`PMT(0.2,1,10000)` in `RATE(1,PMT(0.2,1,10000),10000)`), which is
 Excel's value of that cell: the outer kernel is then scored on Excel's own bits of the inner call.
 A cell whose arguments are anything else (another function call) is reported as unparsed. A pattern
 with one group is an argument list split at top-level commas; a pattern with several groups gives one
@@ -37,6 +38,8 @@ from rustsheet_tools.spec2xlsx import parse_a1
 # What a candidate receives for one argument: a number, a bool, a string, an empty cell (None)
 # or, for a range, the list of those values in row-major order.
 Arg = float | bool | str | None | list[float | bool | str | None]
+# A matrix argument's values row by row (`parse_rows`): the shape `Arg`'s flat list loses.
+Rows = list[list[float | bool | str | None]]
 # A cell reference's text inside arithmetic -> that cell's number (`arithmetic`'s `resolve`).
 Resolve = Callable[[str], float]
 
@@ -392,7 +395,22 @@ def _scalar(text: str) -> float | bool | str:
 
 def _array(text: str) -> list[float | bool | str | None]:
     """`{a,b;c,d}`: the literals in row-major order."""
-    return [_scalar(item) for item in split_args(text[1:-1].replace(";", ","))]
+    return [item for row in _array_rows(text) for item in row]
+
+
+def _array_rows(text: str) -> Rows:
+    """`{a,b;c,d}`: the literals row by row (`[[a, b], [c, d]]`); a `;` inside a string literal
+    is text, not a row break."""
+    inner, start, quoted = text[1:-1], 0, False
+    rows: list[str] = []
+    for i, ch in enumerate(inner):
+        if ch == '"':
+            quoted = not quoted
+        elif ch == ";" and not quoted:
+            rows.append(inner[start:i])
+            start = i + 1
+    rows.append(inner[start:])
+    return [[_scalar(item) for item in split_args(row)] for row in rows]
 
 
 def date_serial(year: int, month: int, day: int) -> float:
@@ -417,30 +435,60 @@ def serial_date(serial: float) -> datetime.date:
     return EPOCH + datetime.timedelta(days=int(serial))
 
 
+def is_array_literal(text: str) -> bool:
+    """Whether the argument text is an array literal `{...}` (braces at both ends)."""
+    return len(text) >= 2 and text[0] == "{" and text[-1] == "}"
+
+
 def parse_arg(text: str, sheet: str, book: Workbook, *, cell_refs: bool = False) -> Arg:
     """One argument's value (see the module doc for what is supported). With `cell_refs`,
     arithmetic may also read single cells of `book` that hold a number (`cell_number`):
     `A112*A112`, `1/(1+20/(4*A1249))` (T-3924, the math sidecars)."""
-    if len(text) >= 2 and text[0] == "{" and text[-1] == "}":
+    if is_array_literal(text):
         return _array(text)
     if d := _DATE.fullmatch(text):
         return date_serial(int(d.group(1)), int(d.group(2)), int(d.group(3)))
     if (literal := _literal(text)) is not None:
         return literal
     if m := _REF.fullmatch(text):
-        name = _sheet_name(m.group("sheet"), sheet)
-        (r1, c1), (r2, c2) = parse_a1(m.group("first")), parse_a1(m.group("last") or m.group("first"))
-        rows, cols = range(min(r1, r2), max(r1, r2) + 1), range(min(c1, c2), max(c1, c2) + 1)
-        if len(rows) * len(cols) > _MAX_RANGE_CELLS:
-            msg = f"range {text} is too large"
-            raise UnparsedError(msg)
-        values = [book.value(name, xl_rowcol_to_cell(r, c)) for r in rows for c in cols]
+        values = [item for row in _range_rows(m, text, sheet, book) for item in row]
         return values if m.group("last") else values[0]
     if (call := book.calls.get(call_key(text))) is not None:
         return call
     value = arithmetic(text, (lambda ref: cell_number(ref, sheet, book)) if cell_refs else None)
     # Excel has no negative zero: `-A1` over a 0 is 0, as the literal `-0` is (`_literal`)
     return value + 0.0 if cell_refs else value
+
+
+def parse_rows(text: str, sheet: str, book: Workbook) -> Rows:
+    """An array literal or a reference's values row by row, keeping the shape `parse_arg` flattens
+    (a matrix argument, T-4025): `{1,2;3,4}` is `[[1, 2], [3, 4]]`, `B1:C2` its two rows of two
+    cells and a single cell one row of one. UnparsedError for any other argument text."""
+    if is_array_literal(text):
+        return _array_rows(text)
+    if m := _REF.fullmatch(text):
+        return _range_rows(m, text, sheet, book)
+    msg = f"{text!r} is neither an array literal nor a reference"
+    raise UnparsedError(msg)
+
+
+def parse_matrix_arg(text: str, sheet: str, book: Workbook) -> Arg | Rows:
+    """A matrix parameter's argument: an array literal or a reference row by row (`parse_rows`),
+    anything else as `parse_arg` with `cell_refs` reads it (a number literal, arithmetic)."""
+    if is_array_literal(text) or _REF.fullmatch(text):
+        return parse_rows(text, sheet, book)
+    return parse_arg(text, sheet, book, cell_refs=True)
+
+
+def _range_rows(m: re.Match[str], text: str, sheet: str, book: Workbook) -> Rows:
+    """The values of the reference `m` matched in `text`, row by row."""
+    name = _sheet_name(m.group("sheet"), sheet)
+    (r1, c1), (r2, c2) = parse_a1(m.group("first")), parse_a1(m.group("last") or m.group("first"))
+    rows, cols = range(min(r1, r2), max(r1, r2) + 1), range(min(c1, c2), max(c1, c2) + 1)
+    if len(rows) * len(cols) > _MAX_RANGE_CELLS:
+        msg = f"range {text} is too large"
+        raise UnparsedError(msg)
+    return [[book.value(name, xl_rowcol_to_cell(r, c)) for c in cols] for r in rows]
 
 
 def cell_number(ref: str, sheet: str, book: Workbook) -> float:
