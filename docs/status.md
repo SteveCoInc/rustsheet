@@ -26,7 +26,7 @@ Hygiene:
 - duplicated lines: 2,876 (baseline 2,878, = last run). It is not lowered here: `quality/` is a protected path, so a task PR records the drop;
 - oversized files: 8 (= last run).
 
-Merged since b2f4a8bd: 76 commits, from #3403 to #3489, #3417 among them. None were reverted. All were committed by GitHub, each with its PR's `(#n)` suffix; 20 of them are task-only `tasks:` PRs. Among them:
+Merged since b2f4a8bd: 76 commits, from #3386 to #3489, #3417 among them. None were reverted. All were committed by GitHub, each with its PR's `(#n)` suffix; 20 of them are task-only `tasks:` PRs. Among them:
 - PIVOTBY's unreached-class column subtotals: T-4378, T-4388 and T-4401 (#3403, #3430, #3448);
 - GROUPBY subtotals over reached classes: T-4359 (#3409);
 - TEXT fraction digits at 15 digits: T-4370 (#3411);
@@ -35,12 +35,12 @@ Merged since b2f4a8bd: 76 commits, from #3403 to #3489, #3417 among them. None w
 - the Python `Transaction.add_table`, `set_row_hidden` and `set_number_format`: T-2903, T-2902 and T-2901 (#3481, #3474, #3421);
 - the salvage of #3105's CUMPRINC probes: T-4385 (#3444).
 
-Blocked: 37 on `main` (35 last run). The two new ones are both owner rulings, T-4392 and T-4400 (see "Needs owner"). No task on `main` is `Blocked because: review-round limit`.
+Blocked: 28 on `main` as merged into this PR (35 last run). The new ones are T-4392 and T-4400, both owner rulings filed this period. Decision 0300 (#3508, merged during this run) then ruled "keep Excel" on nine R3 candidates, and T-3484, T-3775, T-3794, T-4196 and T-4392 closed with it, so their "Needs owner" entry is removed. T-4400 is still open there. No task on `main` is `Blocked because: review-round limit`.
 
 Open PRs: 27 at 06:35 UTC (12 last run), 9 of them drafts.
 - Orphaned-PR check (`agent/*` or `claude/*`, not draft, not queued, idle 4 h; no PR carries `queue-dropped`):
   - #3379 (T-3634, head 2026-11-05 16:42 UTC) is green and approved, and auto-merge has been armed since 21:47 UTC. GitHub reports it `blocked`, and it never entered the queue. A local test merge of `origin/main` is clean, and its check runs are the same set as merged PRs'. The cause is not visible to agents, so it is listed under "Needs owner".
-  - #3440 (T-4389, head 2026-11-05 23:49 UTC) had left the queue with a conflict that was only in the baselines. I adopted it. I disarmed auto-merge, ran `make catch-up PR=3440` (pushed 824da981: probes fixed 62, 11 new-coverage failures owned by T-4419, 0 regressions), and ran the review panel on that head. It is enqueued once CI is green (see this PR's body).
+  - #3440 (T-4389, head 2026-11-05 23:49 UTC) had left the queue with a conflict that was only in the baselines. I adopted it. I disarmed auto-merge, ran `make catch-up PR=3440` (pushed 824da981: probes fixed 62, 11 new-coverage failures owned by T-4419, 0 regressions), and ran the full panel on that head: security, design and excel-fidelity all APPROVE, with MINORs only. Before CI reported, another session pushed two more catch-up merges (14d08099 at 06:38 and 3e020fca at 06:47 UTC). I left it to that live session and did not enqueue it.
   - The other non-draft agent PRs are younger than 4 h.
 - Duplicate check: no two open PRs carry the same task id. The T-4357 pair from last run was resolved when #3387 merged.
 - Stale drafts (head 24 h or more, decision 0264):
@@ -86,25 +86,11 @@ The steward keeps this line as it is until the owner changes it.
 
 ## Needs owner
 
-- **Decision 0188 R3 rulings** (no agent, steward included, adds an R3 / `MATH-OVER-EXCEL` case on its own): four tasks
-  are blocked on an owner ruling. Each one says where Excel is more than 1e-4 off the math, and which way the task
-  would go:
-  - T-3794: two-argument ERF where the two values nearly cancel;
-  - T-3775: SIN, COS, IMSIN and IMCOS at the 15-digit neighbour of k·pi/2;
-  - T-3484: XIRR near a zero root;
-  - T-4196: BESSELI at a large x and order 2 or more, and BESSELJ near a root (filed by T-4083, #3157);
-  - T-4392: GAMMA.DIST's density at shape 2 and x of 1E-300 to 1E-200, which Excel's log form underflows to 0 (filed by T-3925). Added 2026-11-06.
-  Added 2026-11-04 (19:43 UTC run): these tasks were blocked on the owner but not listed here.
-- **T.INV and F.INV outside the R3 region, T-3544** (2026-11-06). Decision 0300 keeps Excel as the target for nine R3
-  candidates but leaves this one open: decision 0267 item 3 already lets the math win for T.INV at a tiny p, and at
-  T-3544's points (T.INV A91, A96; F.INV A164, A169, A167) the engine returns the math today. Please choose: keep
-  0267's math (and extend it to these points), or match Excel there (an engine change).
 - **Owner ruling on RATE's keep-r0 secant model, T-4239** (2026-11-04). T-3963 found why RATE's same-state flat
   secants split (Excel keeps the older iterate when a step leaves the residual unchanged) and built the model on draft
   PR #3019: +78 bit-exact of 2,400 literal RATE cells, 59 against 9 on a blind fresh probe. But it moves five
   error-against-number points out of the Gate A envelope, which decision 0265 does not cover, and regresses 37 gated
   cells. Please choose: adopt it with those points accepted, or keep the merged rule (T-4239 has the details).
-
 - **Owner ruling on CUMPRINC's short-range cut, T-4400** (added 2026-11-06). T-4349 (decision 0296) found no rule that decides between the cut `GEOMETRIC_MIN_LEAD` and the geometric sum. Please choose: (1) keep the cut, so decision 0295 stands as a deviation from decision 0188 R4.3 until T-4390 lands; or (2) remove it, which regresses gated cells under decision 0083 (T-4400 lists them).
 - **#3379 (T-3634) is armed for auto-merge but GitHub reports it `blocked`** (added 2026-11-06). It is green and approved on 7ea21d9 and has no conflict, and disarming and re-arming did not help. No agent can see the ruleset. Please check which branch rule it fails.
 
