@@ -1967,6 +1967,20 @@ Status: VERIFIED (excel-graph)
 Implemented in: `fn_mirr` in functions/financial/mirr.rs (T-1798); replaces the hand-taken limits at rate -1.
 Tasks: T-1798
 
+## MIRR at finance 1E+200 over five flows with a negative flow at index 2 is #DIV/0! (T-4116)
+Rule (one probed point): `MIRR({-3496.38522311601,97.9347197399849,-81.6919783865016,180.891974550287,218.629532704649},1E+200,0.00166838654471219)`
+is `#DIV/0!` (accuracy/MIRR/s1 A125): finance rate 1E+200, five flows with positive ones, and a negative flow at index 2,
+the first index whose finance power (1+fr)^2 = 1E+400 overflows. With a positive flow and the first flow the only
+negative one, a finance overflow is `#NUM!` instead (`MIRR({-100,50,80},1E+200,0.1)` and `-1E+200`, "MIRR error and edge
+cases" A15, A24); with no positive flow it is `#DIV/0!` (A29).
+Hypotheses for T-4537 to probe (neither is settled by A125): (a) any negative flow after the first makes a finance
+overflow `#DIV/0!`; (b) only a negative flow whose own finance power overflows does (a negative flow at index 1 under
+1E+200, whose power is finite, would then stay `#NUM!`).
+Evidence: accuracy/MIRR/s1 A125 (excel-graph, 2026-11-06, T-4116).
+Ours: `#NUM!` (`fn_mirr` takes the finance overflow's error from whether a positive flow exists); T-4537.
+Status: VERIFIED (excel-graph)
+Tasks: T-4116, T-4537
+
 ## Coupon settlement before the calendar
 Rule: PRICE, YIELD, DURATION, MDURATION and ACCRINT are `#NUM!` for a settlement (ACCRINT: an issue, first interest
 date or settlement) below serial 1 in a 1900 workbook; the COUP* functions only for one below serial 0. Probed values:

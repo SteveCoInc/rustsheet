@@ -3,7 +3,7 @@ mod literals;
 mod name_binding;
 mod range_shrink;
 mod rename_defined_name;
-mod sheet_edits;
+pub(crate) mod sheet_edits;
 mod structured;
 mod wrapped;
 mod wrong_reference;
