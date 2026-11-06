@@ -3,7 +3,7 @@ id: T-4680
 title: "A #This Row formula inside a table that a column insert moves evaluates to #ERROR! (Excel keeps reading its row)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
