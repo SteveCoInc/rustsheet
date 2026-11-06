@@ -193,6 +193,11 @@
     "why": "#NUM!: z past the double range above 0",
     "f": "=Z.TEST({1,2,3},-1E+300,1E-300)"
    },
+   "A49": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=Z.TEST({1,2,3},1E+300,1E-300)"
+   },
    "A5": {
     "t": "e",
     "why": "#NUM!: the probabilities do not sum to 1",
@@ -252,10 +257,6 @@
  },
  "skipped": {
   "Calc": {
-   "A49": {
-    "f": "=Z.TEST({1,2,3},1E+300,1E-300)",
-    "why": "no single value"
-   },
    "A50": {
     "f": "=Z.TEST({0.1,0.1,0.1},0)",
     "why": "no single value"

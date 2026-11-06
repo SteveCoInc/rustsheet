@@ -36,7 +36,7 @@ Every failing table point has an owner.
       entries' values.
 - [x] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
       their number. Every point outside the envelope has a `known-failures.tsv` owner.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other sample-statistics groups of decision 0271.
@@ -56,12 +56,13 @@ Every failing table point has an owner.
     `#NUM!` for a negative statistic or an overflowing squared difference; Z.TEST `#DIV/0!` for one value or constant
     data without sigma, `#NUM!` for sigma <= 0, overflowing squared deviations without sigma, or z past the double
     range above 0 with sigma given; PROB `#N/A` for unequal counts and `#NUM!` for a sum 1E-15 below 1 or 1E-14 above
-    or further.
+    or further (bands probed on two probabilities; they widen by 2^-53 for each further probability).
   - No math value where nothing evidences Excel: equal-count CHISQ.TEST arrays of different shapes when one is a table
     (T-2650), PROB sums between the probed bands, Z.TEST's inexact constants (`Z.TEST({0.1,0.1,0.1},0)` is 0 in Excel)
-    and z past the range below 0 (Excel 0.5), overflowing sums, subnormal literals.
+    and z past the range above 0 with sigma omitted, overflowing sums, subnormal literals. A z past the range below 0
+    keeps its math value, 1 (t4098 A49, where Excel is 0.5; see below).
   - Before generating, the definitions ran over all 3,819 one-call cells of the five functions in eval/suites. 172
-    fit them: 109 numbers, 57 domain errors with Excel's codes, 2 with no value (t4098 A49, A50). No math domain error
+    fit them: 110 numbers, 57 domain errors with Excel's codes, 1 with no value (t4098 A50). No math domain error
     where Excel has a number, and no math number where Excel has an error. CHISQ.TEST cells over ranges are skipped
     (a matrix argument, T-4025).
   - Tests in tools/tests/test_accuracy_significance.py: Microsoft's examples, the semantics entries' and the probe's
@@ -75,14 +76,16 @@ Every failing table point has an owner.
   Known failures added: accuracy/PROB/s1 A113 and A125 (`PROB({1,2},{1.5,-0.5},2)`: Excel -0.5, the engine `#NUM!`),
   owned by T-4578, filed here with the probe's nine engine-off cells (PROB's per-probability check and sum tolerance,
   CHISQ.TEST's overflowing square, Z.TEST's z overflow).
-- **Excel kept as the target (decision 0300):** none. Every Excel number on the tables is within 1.4E-10 relative of
-  the math (88 points have both below the 1E-300 floor), and so is every numeric probe sidecar cell of these functions
-  (at most 5.3E-15). Recorded in statistics.md.
+- **Excel kept as the target (decision 0300):** one probe sidecar cell, probes/t4098-tests-prob-domains A49
+  `Z.TEST({1,2,3},1E+300,1E-300)`: Excel 0.5, the math 1 (Phi(1.7E+600); 50% relative). The engine gives 1; T-4578 owns
+  the cell. No table point: every Excel number on the tables is within 1.4E-10 relative of the math (88 points have
+  both below the 1E-300 floor), and every other numeric probe sidecar cell of these functions within 5.3E-15. Recorded
+  in statistics.md.
 - statistics.md: new entry "CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)" (PROB checks only the sum, its
   lopsided tolerance, CHISQ.TEST's 1x1 literal and overflow, Z.TEST's two-pass deviations, z overflow, inexact
   constants); the PROB entry's "a probability outside [0, 1] is `#NUM!`" corrected.
 - Math sidecars: `rustsheet-accuracy math --function` over the five functions, for probes and probes-numeric. That adds
-  probes/t4098-tests-prob-domains (48 cells, 34 domain errors, 2 skipped), probes-numeric/t1048-ztest (74) and
+  probes/t4098-tests-prob-domains (49 cells, 34 domain errors, 1 skipped: A50), probes-numeric/t1048-ztest (74) and
   t1049-ztest (16), and 7 cells added to stat-argument-modes. No existing cell changed. `make eval-math-check` prints
   "current".
 - Eval delta: the new probe case (9 engine-off cells, owned by T-4578); none in the gated suites otherwise.
