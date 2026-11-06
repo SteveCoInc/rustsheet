@@ -86,7 +86,10 @@ fn mirr_of(
             }
             positive_sum += value / reinvest_power;
         } else if value < 0.0 {
-            if finance_power == 0.0 {
+            // A negative flow divided by an overflowed (infinite) finance power is #DIV/0!,
+            // whatever the other flows are (probes/fin-mirr-overflow-negative A3, A4, A7:A10);
+            // a negative flow before the overflow leaves the usual #NUM! (A1, A2, A5, A6, A11).
+            if finance_power == 0.0 || finance_power.is_infinite() {
                 return div_error();
             }
             negative_sum += value / finance_power;

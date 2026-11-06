@@ -2004,11 +2004,12 @@ is `#DIV/0!` (accuracy/MIRR/s1 A125): finance rate 1E+200, five flows with posit
 the first index whose finance power (1+fr)^2 = 1E+400 overflows. With a positive flow and the first flow the only
 negative one, a finance overflow is `#NUM!` instead (`MIRR({-100,50,80},1E+200,0.1)` and `-1E+200`, "MIRR error and edge
 cases" A15, A24); with no positive flow it is `#DIV/0!` (A29).
-Hypotheses for T-4537 to probe (neither is settled by A125): (a) any negative flow after the first makes a finance
-overflow `#DIV/0!`; (b) only a negative flow whose own finance power overflows does (a negative flow at index 1 under
-1E+200, whose power is finite, would then stay `#NUM!`).
-Evidence: accuracy/MIRR/s1 A125 (excel-graph, 2026-11-06, T-4116).
-Ours: `#NUM!` (`fn_mirr` takes the finance overflow's error from whether a positive flow exists); T-4537.
+Settled by probes/fin-mirr-overflow-negative (T-4537, excel-graph, 2026-11-06): hypothesis (b) holds. A finance
+overflow is `#DIV/0!` when a negative flow is divided by an infinite finance power (A3, A4, A7, A8, A10 and A125's
+index 2), and stays `#NUM!` when every negative flow sits before the first overflowing power (a negative flow at
+index 1 under 1E+200 or 1E+300 is `#NUM!`: A2, A5, A6; a final power that overflows only after the last flow, A11).
+Evidence: accuracy/MIRR/s1 A125, probes/fin-mirr-overflow-negative (excel-graph, 2026-11-06).
+Implemented in: `mirr_of` in functions/financial/mirr.rs (T-4537).
 Status: VERIFIED (excel-graph)
 Tasks: T-4116, T-4537
 
