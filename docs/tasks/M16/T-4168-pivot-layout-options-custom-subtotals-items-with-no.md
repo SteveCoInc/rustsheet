@@ -17,7 +17,7 @@ The layout honours custom subtotal functions (several per field), show items wit
 Evidence from cap-layout and the geometry probes; probes added here where missing. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
 ## Acceptance criteria
-- [ ] A custom subtotal line's label is Excel's (`<item> Count` for `t="count"`, probes/t4137-pivot-captions K5!A8), never derived from the model's `Aggregate` name: T-4139 maps `t="count"` to `CountNums` pending T-4622.
+- [ ] A custom subtotal line's label is Excel's (`<item> Count` for both `t="countA"` and `t="count"`, probes/t4137-pivot-captions K5!A8 and probes/t4622-pivot-count-subtotals B1!A6:A7), never derived from the model's `Aggregate` name (`countA` is Count, `count` CountNums, T-4622). Under a Sum data field an error ends the count within its inner-item cell (pivots.md; scope open, T-4636).
 - [ ] Probes for each option pass.
 - [ ] `make check` green; reviewers approve.
 

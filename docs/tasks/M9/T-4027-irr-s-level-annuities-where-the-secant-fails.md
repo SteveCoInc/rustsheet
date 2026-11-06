@@ -3,7 +3,7 @@ id: T-4027
 title: "IRR's level annuities where the secant fails: find Excel's path (t3406 A1-A96; uncapped Newton plus the residual cut breaks 39 of them)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: blocked
 priority: P2
 size: M
 tier: opus
@@ -52,6 +52,9 @@ A138, A139, A142) at Excel's exact value and loses the 39 annuities named in Con
 return a number 11 to 14 digits from Excel's (A5: Excel -0.09999761744847369, Newton -0.09999761744841507), which
 agrees with "most returning annuities are not Newton iterates from v = 0". The `#DIV/0!` cells A66-A95 are T-3407's.
 
+The level annuities of T-4027's own probe (attempt 2), where Excel returns the root and the engine is `#NUM!`:
+- probes/t4027-irr-annuity-scale-guess.case.json (35): P!A1:A4, A7:A10, A13:A16, A19:A22, A25:A28, A34, A35, A43:A46, A49:A51, A54:A56, A59:A61
+
 ## Out of scope
 - The last digits (T-3408) and `#DIV/0!` (T-3407).
 
@@ -89,3 +92,29 @@ scored t3406 A1-A96 on Excel's digits (the returning cells) and on type.
   would help: annuities whose far point and root are moved independently, for example the same P and n with a
   guess other than 0.1, which moves the far point, or a level annuity with flows of 2. Score candidates on type
   over A1-A96 first, then over every IRR cell in eval, cell by cell.
+
+2026-11-06, opus run, attempt 2 of 2 (decision 0056; no engine change). It added a probe that moves the far point and
+the flows' scale independently of the root: probes/t4027-irr-annuity-scale-guess (excel-graph, 68 cells; the engine's
+predictions were committed before the fill, docs/research/t4027/predictions.md). Findings (financial.md "IRR on level
+annuities where the secant fails: the type cut ignores the flows' scale and guesses 0 to 0.3"):
+- The cuts are n = 20: returns through r = -0.23, `#NUM!` from -0.24; n = 40: returns through -0.15, `#NUM!` from -0.16.
+- Scaling every flow by 2, 1000 or 0.001 moves no type, so no absolute NPV tolerance is the cut (unlike the 1E-4
+  residual). Guesses 0 and 0.3 give the default's exact results, so the stage that decides the type does not see the guess.
+  Guess -0.1 returns at -0.23 and -0.24 with digits of its own.
+- Refuted on this run (a scratch engine build, scored on t4027 and t3406): a secant restart from any fixed guess in
+  -0.6..0.7 (step 0.005; no guess gives Excel's digits on A1, A2, A4 or A49); any secant cap from 50 to 100000 (at most
+  3 cells move); a fallback cap of 100, 200, 400 or uncapped, with a secant cap of 50 or 200 (uncapped, it returns at
+  -0.24 and -0.25, where Excel is `#NUM!`).
+
+## Blocked because
+Blocked because: time-boxed (decision 0056)
+- Two attempts found no model of Excel's path that gives the type on t3406 A1:A96. The candidates tried are in the
+  Context's refuted list and in both progress notes: Newton from v = 0, 1/(1 + guess), 1 or the far point, under any
+  cap or C*n^p; secant in d, r or v from fixed guesses, restarted or capped; regula falsi and bisection on the failed
+  run's bracket; cut quantities (root, P/n powers, far point, its NPV); absolute NPV tolerances (refuted by the scale
+  probe).
+- What is known: the type stage runs after the retry from 0.1, ignores the guess and the scale, and its cut moves with
+  n (-0.23|-0.24 at n = 20, -0.15|-0.16 at n = 40). Its digits are neither Newton-converged roots nor iterates of a
+  secant from a fixed guess.
+- The cells stay owned here: t3406's 54 above and t4027's 35.
+

@@ -78,6 +78,10 @@ _AGGREGATE_VERBS = [
     "Varp",
 ]
 AGGREGATES = dict(zip(_AGGREGATE_VERBS[::2], _AGGREGATE_VERBS[1::2], strict=True))
+# A pivotField's custom subtotal functions: the ST_ItemType names its `<item t>` and `<name>Subtotal`
+# attributes use, which differ from ST_DataConsolidateFunction (`countA` is not `count`; T-4622).
+# Keep in step with `SUBTOTAL_FUNCTIONS` in crates/rustsheet-xlsx/src/import/pivots/table.rs.
+SUBTOTALS = ("sum", "countA", "avg", "max", "min", "product", "count", "stdDev", "stdDevP", "var", "varP")
 # ST_ShowDataAs (ECMA-376) plus the Excel 2010 modes Excel writes as x14 `pivotShowAs`; the latter are
 # accepted so probes can ask whether Excel for the web honours them (T-4129).
 SHOW_DATA_AS = {
@@ -106,7 +110,7 @@ _MANAGED_FIELD = {
     "showAll",
     "defaultSubtotal",
     "multipleItemSelectionAllowed",
-    *(f"{a}Subtotal" for a in AGGREGATES),
+    *(f"{a}Subtotal" for a in SUBTOTALS),
 }
 _MANAGED_CACHE = {"refreshOnLoad", "recordCount", "id"}
 # CT_pivotTableDefinition's children after `dataFields`, in schema order: the raw-XML slots.
@@ -468,9 +472,9 @@ class DefinedPivot:
             head += ' dragToRow="0" dragToCol="0" dragToPage="0"'
         subtotals = spec.get("subtotals")
         if subtotals is not None:
-            if not isinstance(subtotals, list) or any(s not in AGGREGATES for s in subtotals):
+            if not isinstance(subtotals, list) or any(s not in SUBTOTALS for s in subtotals):
                 raise ValueError(
-                    f"pivot {self.name}: subtotals of {f.name!r} must be a list of {sorted(AGGREGATES)}"
+                    f"pivot {self.name}: subtotals of {f.name!r} must be a list of {list(SUBTOTALS)}"
                 )
             head += ' defaultSubtotal="0"' + "".join(f' {s}Subtotal="1"' for s in subtotals)
         if len(f.spec.get("hidden", [])) and f.axis == "axisPage":

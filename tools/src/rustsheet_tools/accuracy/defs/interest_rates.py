@@ -40,19 +40,12 @@ from rustsheet_tools.accuracy.defs._common import (
     Shape,
     any_edge,
     by_stratum_with_edge,
-    scalars,
+    real_args,
     signed,
     signed_log_uniform,
 )
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    DomainError,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 EFFECT_SOURCE = "financial.md#effect-and-nominal-raise-to-their-power-with-"
@@ -75,7 +68,7 @@ def _past_double_range(log_power: mpmath.mpf) -> bool:
 def _rate_and_periods(args: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf]:
     """EFFECT's and NOMINAL's (rate, n): DomainError for a rate of 0 or an npery that floors to 0, NoValueError for a
     negative one (unprobed). An eval cell's npery reaches here truncated (`Param.truncates`)."""
-    r, n = scalars(args)
+    r, n = real_args(args)
     if r == 0 or n == 0:
         msg = "a rate of 0 or an npery below 1: #NUM!"
         raise DomainError(msg)
@@ -100,7 +93,7 @@ def _nominal(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _rri(args: Sequence[MathArg]) -> mpmath.mpf:
-    nper, pv, fv = scalars(args)
+    nper, pv, fv = real_args(args)
     if nper <= 0:
         msg = "nper at most 0: #NUM!"
         raise DomainError(msg)

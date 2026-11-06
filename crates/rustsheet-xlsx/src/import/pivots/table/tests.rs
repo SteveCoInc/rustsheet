@@ -185,7 +185,7 @@ fn tabular_form_and_custom_subtotals_are_typed_per_field() {
     assert!(!options.outline && !options.outline_data);
     let region = &pivot.fields[0];
     assert!(!region.compact && !region.outline && !region.default_subtotal);
-    // `countSubtotal` reads as Count Numbers (ECMA-376; unproven for Excel, T-4622).
+    // `countSubtotal` reads as Count Numbers (probes/t4622-pivot-count-subtotals B2!C7).
     assert_eq!(
         region.custom_subtotals,
         [Aggregate::Sum, Aggregate::CountNums]
@@ -204,6 +204,28 @@ fn tabular_form_and_custom_subtotals_are_typed_per_field() {
     assert!(product.subtotal_top && !product.insert_blank_row);
     // A field the file leaves alone keeps the schema's form flags.
     assert!(pivot.fields[3].compact && pivot.fields[3].outline);
+}
+
+#[test]
+fn count_a_subtotal_is_counta_and_count_is_count_numbers() {
+    // probes/t4622-pivot-count-subtotals B2: over 10, abc, a blank, 2 and 5, the countA line is 4
+    // (C6) and the count line 3 (C7).
+    let xml = SUBTOTALS
+        .replacen(r#"sumSubtotal="1""#, r#"countASubtotal="1""#, 1)
+        .replacen(r#"<item t="sum"/>"#, r#"<item t="countA"/>"#, 1);
+    let pivot = read(&xml, &[2, 3, 6, 6, 6]);
+    let region = &pivot.fields[0];
+    assert_eq!(
+        region.custom_subtotals,
+        [Aggregate::Count, Aggregate::CountNums]
+    );
+    assert_eq!(
+        region.items[2..],
+        [
+            line(ItemType::Function(Aggregate::Count)),
+            line(ItemType::Function(Aggregate::CountNums))
+        ]
+    );
 }
 
 #[test]

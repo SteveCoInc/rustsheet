@@ -41,7 +41,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, scalars, trunc
+from rustsheet_tools.accuracy.defs._common import by_stratum, real_args, trunc
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -64,7 +64,7 @@ TINY_X = 1e-6
 
 def _order(args: Sequence[MathArg]) -> tuple[mpmath.mpf, int]:
     """(x, the order truncated toward zero); `#NUM!` for any negative order, checked before truncation (T-1385)."""
-    x, n = scalars(args)
+    x, n = real_args(args)
     if n < 0:
         msg = "a negative order"
         raise DomainError(msg)

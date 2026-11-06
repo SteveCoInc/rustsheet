@@ -730,3 +730,27 @@ fn accrint_check_order() {
     assert_eq!(model._get_text("A4"), *"#NUM!");
     assert_eq!(model._get_text("A5"), *"#VALUE!");
 }
+
+/// On basis 2 the issue's period is as long as US 30/360 moving both dates counts it, as on basis
+/// 0: issue 2034-06-12 in the period 2034-02-28 to 2034-08-31 is 80/180, not plain 30/360's 80/181,
+/// and in 2034-02-28 to 2034-08-28 80/178 (probes/accrint-zero-results C3, C9, C15, C16;
+/// accuracy/ACCRINT/s1 A21; financial.md "ACCRINT, ACCRINTM, PRICEMAT and YIELDMAT: amount
+/// domains (T-4114)").
+#[test]
+fn accrint_basis_2_issue_period_moves_both_dates() {
+    let mut model = new_empty_model();
+    model._set("A1", "=ACCRINT(49107,49552,49782,0.1,1000,2,2,FALSE)");
+    model._set("A2", "=ACCRINT(49107,49552,49782,0.1,1000,2,2,TRUE)");
+    model._set("A3", "=ACCRINT(49107,49549,49782,0.1,1000,2,2,FALSE)");
+    model._set("A4", "=ACCRINT(49107,49551,49782,0.1,1000,2,2,FALSE)");
+    model.evaluate();
+    for (cell, expected) in [
+        ("A1", 137.222_222_222_222_23),
+        ("A2", 185.555_555_555_555_57),
+        ("A3", 136.629_213_483_146_06),
+        ("A4", 136.629_213_483_146_06),
+    ] {
+        let value: f64 = model._get_text(cell).parse().unwrap();
+        assert!((value - expected).abs() < 1e-6, "{cell}: {value}");
+    }
+}
