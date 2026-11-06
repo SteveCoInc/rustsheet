@@ -3,7 +3,7 @@ id: T-3876
 title: "RATE returns the guess when every residual is rounding noise (T-3698 fresh sweep A201)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -30,9 +30,28 @@ for `RATE(1,702.59374702126,-702.59374702126,0,1)`, but no committed oracle file
 draw was discarded). Commit the cell in this task's probe, or cite t3698-rate-r4-fresh A201 for the shape.
 
 ## Acceptance criteria
-- [ ] A probe that separates a noise-only residual from an exactly-zero one, oracle-filled.
-- [ ] t3698-rate-r4-fresh A201 passes and no RATE cell regresses; financial.md updated.
-- [ ] `make check` green; reviewers approve.
+- [x] A probe that separates a noise-only residual from an exactly-zero one, oracle-filled.
+- [x] t3698-rate-r4-fresh A201 passes and no RATE cell regresses; financial.md updated.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The flat-secant restart rule (T-3698).
+
+## Outcome
+- Cause: on A201 the model's f(guess) and f(guess - 0.001) are both exactly 0, so its first secant was flat on 0
+  (`#NUM!`). Excel steps *up* from a zero residual: r1 = guess + 0.001 unless f(guess) > 0. Where f(guess + 0.001)
+  is nonzero noise the secant steps back onto the guess and returns it.
+- Probe probes/t3876-rate-noise-residual (26 cells, excel-graph): the rule matches all 14 cells with f(guess) = 0
+  (stepping down got 11), the every-argument-0 cells stay `#NUM!`, and A13 commits T-3698's discarded first draw
+  (`RATE(1,702.59374702126,-702.59374702126,0,1)` = 0.09577777777777774, bit-exact). 25/26 bit-exact; A22 (a
+  constant 1E-300 residual, Excel `#NUM!`, model 0.299) is a separate flat-secant question owned by T-4431.
+- Structural rule picked from two candidates (step direction), no fitted constant. Fresh sweep after the freeze
+  (probes/t3876-rate-noise-residual-fresh, 126 cells): on the 66 random draws where the two directions predict
+  opposite results the rule is 66/66 and stepping down 0/66; on 60 plain draws both get 55 (the 5 misses are flat
+  holds on nonzero noise, T-4431). The rule is neutral on every other RATE cell (probes, probes-numeric, gen-m9,
+  ironcalc-calc).
+- Eval delta: probes-numeric/t3698-rate-r4-fresh A201 fixed (298 -> 299/300); new probe cases 25/26 and 121/126;
+  regressions 0.
+- financial.md: new entry "RATE steps up from a zero residual"; the T-3698 "Found in passing" bullet and the
+  secant entry's "not probed" list updated.
+- Follow-up: T-4431 (A22 and the fresh case's A1, A5, A16, A26, A31).
