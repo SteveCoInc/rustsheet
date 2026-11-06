@@ -7573,3 +7573,35 @@ within 15 digits, those two within 1e-9 of the math: inside the Gate A envelope)
 Excel is `#NUM!`: three Gate A known failures). Both are T-4501.
 Status: VERIFIED (excel-graph) for the cells cited; the number_chosen cut UNVERIFIED
 Tasks: T-4106, T-4501
+
+## KURT, SKEW, SKEW.P, GEOMEAN, HARMEAN and TRIMMEAN domain cells of the Gate A tables (T-4091)
+Rule (Excel, over literal numbers; each rule only as far as the cells below show it):
+- KURT of one, two or three numbers is `#DIV/0!` and of four is a number: accuracy/KURT/s1 A67, A70 (one number), A2, A5,
+  A36, A59, A68, A120 (two), A1, A12, A23, A39, A43, A60, A75 (three), and every KURT point of four or more numbers has a
+  value; `KURT(A1:A3)` is `#DIV/0!` and `KURT(A1:A4)` -0.28571428571429003 (probes/stats-evidence-floor-t1623 Q29, Q28).
+  SKEW and SKEW.P of one or two numbers are `#DIV/0!` (accuracy/SKEW/s1 A14, A15, A37, A38, A42, A46, A67, A69, A73, A78,
+  A83, A84, A116; accuracy/SKEW.P/s1 A1, A5, A10, A43, A46, A48, A75, A79, A80, A82, A84), as "SKEW.P of two numbers is
+  #DIV/0!" states.
+- Equal numbers are `#DIV/0!` in all three where Excel's double sum of them is exact: four copies of 0.889154832388048 in
+  SKEW (accuracy/SKEW/s1 A75) and of -0.0867711652174799 in SKEW.P (accuracy/SKEW.P/s1 A69), and
+  `KURT({0,0,0},{0,0,0},{0,0,0})` (gen-m9/f34f66fb7f81e673 A391). Equal numbers whose double sum is inexact (three
+  copies of 0.1: the double mean is not 0.1, so the double deviations are not 0) are UNVERIFIED; the Gate A definitions
+  give them no value.
+- GEOMEAN of data holding a negative number or a 0 is `#NUM!`: accuracy/GEOMEAN/s1 A71 (last number -2.07601566614114)
+  and A79 (a leading 0); ironcalc-calc/STATISTICAL/GEOMEAN.xlsx D11 and D16 (-4, 3 and 2, as a range and as cells; Excel-cached and excel-graph); `GEOMEAN(4,)` (coercion.md).
+  HARMEAN of data holding a 0 is `#NUM!` (accuracy/HARMEAN/s1 A71), as `HARMEAN(0)` and `HARMEAN(-1,-2)` are
+  (probes/stats-evidence-floor-t1623 Q51, Q52).
+- TRIMMEAN over an array literal with a percent outside [0, 1) is `#NUM!`: 1.5, 2, -1 and 1 (accuracy/TRIMMEAN/s1 A69,
+  A78, A79, A100, A109), as "TRIMMEAN of a typed scalar (T-3781)" shows for one typed number. Every TRIMMEAN point with a
+  percent in [0, 1) is within the Gate A envelope of the exact mean after dropping floor(n * percent / 2) values from each
+  end (Microsoft's rule). Where the double product n * percent and the exact one floor to different counts (n = 10,
+  percent 0.6: the exact product is just below 6, its double 6) Excel's count is UNVERIFIED; the tables draw no such point.
+Unprobed and left without a math value: a sum of the numbers beyond the double range in the three moments, a reciprocal
+or sum of reciprocals beyond it in HARMEAN, and a running total beyond it in AVERAGEA (numbers.md's overflow entry lists
+AVERAGE, not AVERAGEA).
+Evidence: accuracy/{KURT,SKEW,SKEW.P,GEOMEAN,HARMEAN,AVERAGEA,TRIMMEAN}/s1 (excel-graph, 2026-11-06, T-4091); the probe
+and fixture cells cited.
+Ours: matches every cell cited (the engine is bit-exact with Excel on 777 of the tables' 840 points, and all 840 are inside
+the Gate A envelope).
+Status: VERIFIED (excel-graph) for the cells cited; the two regions marked UNVERIFIED are not probed
+Tasks: T-4091

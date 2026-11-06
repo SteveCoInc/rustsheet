@@ -57,10 +57,16 @@ MAX_MAGNITUDE = 1e150  # every square and the one-pass sum of 255 squares stay i
 MIN_MAGNITUDE = 1e-60  # every nonzero deviation of a draw stays far above the subnormal squares Excel flushes
 
 
+def deviation_power_sum(xs: Sequence[mpmath.mpf], power: int) -> mpmath.mpf:
+    """The exact sum of the deviations from the exact mean raised to `power` (2: DEVSQ's S; 3 and 4: the
+    skewness and kurtosis moments, T-4091)."""
+    m = mpmath.fsum(xs) / len(xs)
+    return mpmath.fsum((x - m) ** power for x in xs)
+
+
 def squared_deviations(xs: Sequence[mpmath.mpf]) -> mpmath.mpf:
     """The exact sum of squared deviations from the exact mean."""
-    m = mpmath.fsum(xs) / len(xs)
-    return mpmath.fsum((x - m) ** 2 for x in xs)
+    return deviation_power_sum(xs, 2)
 
 
 def _devsq(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -171,7 +177,7 @@ def _edge(rng: random.Random, max_args: int) -> list[float]:
     ]
 
 
-def _draws(max_args: int) -> Callable[[str, random.Random], list[Arg]]:
+def variance_draws(max_args: int) -> Callable[[str, random.Random], list[Arg]]:
     """The draw of a function whose calls take at most `max_args` numbers."""
 
     def draw(stratum: str, rng: random.Random) -> list[Arg]:
@@ -189,10 +195,10 @@ def _draws(max_args: int) -> Callable[[str, random.Random], list[Arg]]:
     return draw
 
 
-_draw = _draws(MAX_ARGS)
+_draw = variance_draws(MAX_ARGS)
 # A file holding a newer (`_xlfn.`) function with 255 arguments does not open in Excel; 254 does (syntax.md
 # "The repeating maxima", T-4089), so VAR.S and STDEV.S points take at most 254 numbers.
-_draw_xlfn = _draws(MAX_ARGS - 1)
+_draw_xlfn = variance_draws(MAX_ARGS - 1)
 
 
 def _definition(
