@@ -3,7 +3,7 @@ id: T-4488
 title: "PMT, PPMT and CUMIPMT are #NUM! where IPMT's discounted balance fails (A past the double range, 1-Q subnormal, a subnormal rate)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
