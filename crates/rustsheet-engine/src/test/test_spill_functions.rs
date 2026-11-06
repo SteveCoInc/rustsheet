@@ -775,3 +775,22 @@ fn choose_and_stack_read_a_one_cell_error_reference_as_a_one_by_one_array() {
     assert_eq!(model._get_text("C8"), "4");
     assert_eq!(model._get_text("A10"), "#DIV/0!");
 }
+
+// T-4447: SORT floors a fractional sort_order and sort_index, snapped up just below an integer,
+// as SORTBY's sort_order (probes/t4447-sort-fractional-keys E2, I2, I10, E17).
+#[test]
+fn sort_floors_fractional_keys_with_the_near_integer_snap() {
+    let mut model = new_empty_model();
+    model._set("A1", "3");
+    model._set("A2", "1");
+    model._set("A3", "2");
+    model._set("B1", "=TEXTJOIN(\",\",,SORT(A1:A3,1,-0.5))");
+    model._set("B2", "=TEXTJOIN(\",\",,SORT(A1:A3,1-2^-23,-1))");
+    model._set("B3", "=SORT(A1:A3,2-2^-23)");
+    model._set("B4", "=SORT(A1:A3,1,2-2^-22)");
+    model.evaluate();
+    assert_eq!(model._get_text("B1"), "3,2,1");
+    assert_eq!(model._get_text("B2"), "3,2,1");
+    assert_eq!(model._get_text("B3"), "#VALUE!");
+    assert_eq!(model._get_text("B4"), "#VALUE!");
+}

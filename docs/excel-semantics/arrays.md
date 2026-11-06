@@ -1980,16 +1980,24 @@ to 0) are `#VALUE!`; `"-1"` is descending and TRUE ascending (H97-H165). The sna
 `1-2^-22`, `1-2^-23`, `1-2^-24` and `1-(2^-22+2^-33)` sort ascending, `1-2^-21`, `1-2^-20` and `1-(2^-22+2^-32)` are `#VALUE!` (floor 0), `2-2^-22` is `#VALUE!`
 (snapped to 2) and `2-2^-21` ascending. Just below -1 it is at least 2^-23 + 2^-34 and under 2^-22 (the half, as DATE and TIME bracket it more tightly, T-2267): `-1-2^-23`, `-1-2^-24` and `-1-(2^-23+2^-34)` sort descending (snapped to -1), but `-1-2^-22`,
 `-1-(2^-22+2^-33)`, `-1-(2^-22+2^-32)` and `-1-2^-21` are `#VALUE!` (floor -2); the cells just above -1 and -2 (`-1+2^-22`, `-2+2^-22`) say nothing of
-the tolerance, their floor is -1 and -2 either way. SORT's own sort_order still truncates (unprobed for fractions).
+the tolerance, their floor is -1 and -2 either way.
+SORT reads its sort_order and sort_index the same way (probes/t4447-sort-fractional-keys, excel-graph, 2026-11-06, T-4447;
+A1:B3 = (3,c),(1,a),(2,b)): a sort_order of -0.0001, -0.5, -0.9999, `"-0.5"`, `-1+2^-21`, `-1-2^-23` and `-1-2^-24` sorts
+descending; 1.5, 1.9999, `1-2^-22`, `1-2^-23` and `1-2^-24` ascending; 0.0001, 0.5, 0.9999, -1.5, `1-2^-21`, `-1-2^-22` and
+`2-2^-22` (snapped to 2) are `#VALUE!` (E1:E20, the same as a one-element array F1:F20, and per key in a list E21:E22). A
+sort_index of `1-2^-23`, `1-2^-24`, 1.5 reads key 1 and `2-2^-23`, 2.5, `2+2^-22` key 2, while 0.9999, `1-2^-21` and -0.5
+are `#VALUE!` and `3-2^-23` (snapped to 3, past the two columns) is `#VALUE!` too (I1:I11; by_col over the transposed data
+the same, J1:J11). Before T-4447 ours truncated both, so -0.5 and the values just below 1 were `#VALUE!` and `2-2^-22`
+and `3-2^-23` sorted.
 This is why `SORTBY(Data!E1:E12,MAX(..)%,-1)` (gen-m7/18b80d3fd292d63a Calc!A123:A134), `SORTBY(Data!C1:C12,IFNA(TIMEVALUE(..),..),1)`
 (7307132bb8820f17 A966:A977) keep their one-column arrays, `SORTBY(Data!B1:C12,(-1),1)` (0e40208f51c2454c Calc!A2) and the
 by_array 0.5 on Data!B1:C12 (7d67c559ce7536fa A1358) are `#VALUE!`, and `SORTBY(Data!B1:E12,Data!E1:E12,-0.0001,..)`
 (07d27aa0add0247f A658) sorts descending. The "Invalid values" list of "SORT and SORTBY argument errors" (`SORTBY(arr,key,0)`
 `#VALUE!`) still holds.
 Evidence: probes/t2310-sortby-single-by-array (42 formulas, excel-graph, 2026-10-22); gen-m7 (excel-graph, 2026-10-21, T-2225).
-Ours: implemented (T-2310): `by_array_axes` and `sortby_of` in functions/spill_functions.rs.
+Ours: implemented (T-2310): `by_array_axes` and `sortby_of` in functions/spill_functions.rs; SORT's in `sort_by_keys` (T-4447).
 Status: VERIFIED (excel-graph)
-Tasks: T-2310
+Tasks: T-2310, T-4447
 
 ## PIVOTBY: an error column total over several value columns is #VALUE! (T-2311)
 Rule (excel-graph, 2026-10-22, probes/t2311-pivotby-value-columns-error P!A1-A42, probes/t2311-pivotby-value-cause): with one
