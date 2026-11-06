@@ -3,7 +3,7 @@ id: T-4477
 title: "FILTER include edges left unprobed by T-3506: a one-cell error include that fits a one-row or one-column array, and a wrongly shaped multi-cell include holding an error"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -42,18 +42,33 @@ then implemented in `fn_filter`, and recorded in docs/excel-semantics/arrays.md.
     `FILTER(INDEX(G1:G9,9),TRUE)`.
 
 ## Acceptance criteria
-- [ ] probes/t4477-filter-include-error-shapes is committed with oracle values (excel-graph) for every formula above.
-- [ ] Every cell of it passes (`make eval-show CASE=probes/t4477-filter-include-error-shapes`); any new wrapping reuses
+- [x] probes/t4477-filter-include-error-shapes is committed with oracle values (excel-graph) for every formula above.
+- [x] Every cell of it passes (`make eval-show CASE=probes/t4477-filter-include-error-shapes`); any new wrapping reuses
       `wrap_one_cell_error_ref` / `Model::is_one_cell_variable` (no second copy), commented with the probe cells.
-- [ ] gen-m7 (the T-3506 cells above in particular), probes/t3654-filter-result-types and
+- [x] gen-m7 (the T-3506 cells above in particular), probes/t3654-filter-result-types and
       probes/one-cell-error-ref-array-functions still pass; the eval gate shows 0 regressions in every suite.
-- [ ] docs/excel-semantics/arrays.md: the "Unprobed, so kept as before" sentence of the T-3497 entry is replaced by the
+- [x] docs/excel-semantics/arrays.md: the "Unprobed, so kept as before" sentence of the T-3497 entry is replaced by the
       probed rules with their cells; `filter_wrongly_shaped_range_include_with_an_error_is_the_error` is kept, renamed
       or changed to match the evidence.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - TOCOL, TOROW, SORT and the other array functions' one-cell error references (T-3506, T-3667, done).
 - GROUPBY and PIVOTBY filters (T-4464, T-3892); FILTER's if_empty argument kinds.
 - Errors read through a reference other than a stored cell error (a circular read): no oracle form for it.
 - PIVOTBY subtotal work (T-4388, T-4401, T-4414, T-4428), function arrays (T-4449) and eta names (T-4450) are unrelated.
+
+## Outcome
+Probed (probes/t4477-filter-include-error-shapes, excel-graph, 49 cells) and implemented.
+- Excel checks FILTER's include shape before its elements for every include: a wrongly shaped include holding an error
+  is `#VALUE!` (J27:L39), a fitting one-cell error include is its error (J11:L23), a right-shaped include holding an
+  error is the error (J43:L47).
+- A one-cell error reference reached through LET, INDEX or IF is a 1x1 array, as array and as include (J51:L59,
+  J67:L71). FILTER now reads both arguments as references (`Model::filter_arg_array`, through the existing
+  `evaluate_picked_reference_arg`), which replaces the written-reference-only wrapping; `wrap_one_cell_error_ref`'s
+  `wrapped` flag had no other user and is folded into `one_cell_error_ref_as_array` (TOCOL/TOROW/CHOOSE* unchanged).
+- `filter_wrongly_shaped_range_include_with_an_error_is_the_error` became `..._is_value` (its old A1:B3 against a
+  2-row include was a column filter under `include_axis`, so it now uses A1:A3); a new unit test covers the indirect
+  forms. arrays.md T-3497 entry: the "Unprobed, so kept as before" sentence is replaced by the probed rules.
+- Eval delta: probes +1 case, 49/49 cells pass; 0 regressions in every suite (gen-m7, t3654-filter-result-types and
+  one-cell-error-ref-array-functions included).
