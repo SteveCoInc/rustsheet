@@ -70,9 +70,15 @@ Every failing table point has an owner.
     math is 1.0E-14 (DEVSQ A117).
   - 4 points are within 15 digits of Excel only (accuracy's "Excel 15 digits only" went from 1333 to 1337). The
     engine matches Excel to 15 digits there but is outside the math envelope.
+- **Math sidecars:** registering the definitions made two probe cases' one-call cells math candidates. Their new
+  sidecars hold 207 math cells: probes-numeric/t1749-devsq-fresh (200 DEVSQ cells) and
+  probes/stat-order-floor-batch (7). Both cases had no sidecar before, so no existing entry changed.
+  `make eval-math-check` reports current.
 - **Eval delta:** none, because no engine or eval-suite case changed.
 
-## Landing notes
+## Landing notes (resumed)
+Resumed 2026-11-06 by an opus run: the sidecars are regenerated (Outcome, "Math sidecars").
+
 Session 2026-11-06 (opus worker): the landing window closed with this PR (#3465) not yet enqueued.
 - **State:** the head before these notes is 12bf9ab8a. All three reviewers approved that head in round 2
   (security, design, excel-fidelity); their MINOR findings are filed as T-4439 (#3467).
