@@ -17,6 +17,9 @@ pub enum SuiteKind {
     Xlsx,
     /// `.case.json` spec cases; expectations inline or from a sidecar `.oracle.json`.
     Spec,
+    /// `.xlsx`/`.xlsm` workbooks loaded and saved again, scored for fidelity, not cell values
+    /// (SPEC-0033). Such suites live under `eval/roundtrip/`, never `eval/suites/`.
+    Roundtrip,
 }
 
 /// Granularity of the no-regression baseline.
@@ -83,6 +86,9 @@ pub struct SuiteManifest {
     /// (populated by `rustsheet-eval fetch`) instead of next to the manifest.
     #[serde(default)]
     pub fetch: Option<FetchSpec>,
+    /// Round-trip suites: the scenarios to run (SPEC-0033 D1). Only `R0` exists yet (T-4514 adds R1).
+    #[serde(default = "default_scenarios")]
+    pub scenarios: Vec<String>,
 }
 
 /// Pinned download of a suite too large or not redistributable to vendor.
@@ -172,11 +178,18 @@ pub const ACCURACY_MANIFEST: &str = "eval/accuracy/suite.toml";
 /// `math-over-excel.tsv`) live here.
 pub const ACCURACY_DIR: &str = "eval/accuracy";
 
+/// Where the round-trip suites (SPEC-0033) live, relative to the repository root: outside
+/// `eval/suites/`, so no cell report or milestone measure counts them.
+pub const ROUNDTRIP_DIR: &str = "eval/roundtrip";
+
 /// File inside a fetched suite recording the pin it was fetched at.
 pub const FETCH_MARKER: &str = ".rustsheet-fetched";
 
 fn default_root() -> String {
     "cases".into()
+}
+fn default_scenarios() -> Vec<String> {
+    vec!["R0".into()]
 }
 fn default_include() -> Vec<String> {
     vec!["**/*".into()]
@@ -230,8 +243,50 @@ impl Suite {
         for entry in WalkDir::new(suites_dir).min_depth(2).max_depth(2) {
             let entry = entry?;
             if entry.file_name() == "suite.toml" {
-                suites.push(Self::load_manifest(entry.path(), suites_dir)?);
+                let suite = Self::load_manifest(entry.path(), suites_dir)?;
+                if suite.manifest.kind == SuiteKind::Roundtrip {
+                    bail!(
+                        "{}: a roundtrip suite belongs under {ROUNDTRIP_DIR}/ (SPEC-0033 D8)",
+                        entry.path().display()
+                    );
+                }
+                suites.push(suite);
             }
+        }
+        suites.sort_by(|a, b| a.manifest.name.cmp(&b.manifest.name));
+        Ok(suites)
+    }
+
+    /// Every round-trip suite (`eval/roundtrip/*/suite.toml` under `root`, SPEC-0033 D8). Each
+    /// must be of kind `roundtrip`, run only scenarios that exist, and take a name no suite of
+    /// `eval/suites/` has, since both kinds keep their baseline in `eval/baseline/<name>.txt`.
+    ///
+    /// # Errors
+    /// When a manifest is unreadable or breaks one of those rules.
+    pub fn load_roundtrip(root: &Path) -> Result<Vec<Suite>> {
+        let dir = root.join(ROUNDTRIP_DIR);
+        if !dir.is_dir() {
+            return Ok(Vec::new());
+        }
+        let cell_suites = Self::load_all(&root.join("eval/suites"))?;
+        let mut suites = Vec::new();
+        for entry in WalkDir::new(&dir).min_depth(2).max_depth(2) {
+            let entry = entry?;
+            if entry.file_name() != "suite.toml" {
+                continue;
+            }
+            let suite = Self::load_manifest(entry.path(), &root.join("eval/suites"))?;
+            let at = entry.path().display();
+            if suite.manifest.kind != SuiteKind::Roundtrip {
+                bail!("{at}: suites under {ROUNDTRIP_DIR}/ must be of kind roundtrip");
+            }
+            if let Some(s) = suite.manifest.scenarios.iter().find(|s| s.as_str() != "R0") {
+                bail!("{at}: scenario {s} is not implemented yet (SPEC-0033 D1; T-4514 adds R1)");
+            }
+            if cell_suites.iter().any(|c| c.manifest.name == suite.manifest.name) {
+                bail!("{at}: the name {} is taken by a suite of eval/suites/", suite.manifest.name);
+            }
+            suites.push(suite);
         }
         suites.sort_by(|a, b| a.manifest.name.cmp(&b.manifest.name));
         Ok(suites)
@@ -335,9 +390,11 @@ impl Suite {
         if !root.exists() {
             return Ok(Vec::new()); // fetched suite not downloaded yet
         }
-        let ext = match self.manifest.kind {
-            SuiteKind::Xlsx => ".xlsx",
-            SuiteKind::Spec => ".case.json",
+        let exts: &[&str] = match self.manifest.kind {
+            SuiteKind::Xlsx => &[".xlsx"],
+            SuiteKind::Spec => &[".case.json"],
+            // A macro-enabled workbook is where VBA preservation is measured (decision 0275 D5).
+            SuiteKind::Roundtrip => &[".xlsx", ".xlsm"],
         };
         let mut out = Vec::new();
         for entry in WalkDir::new(&root).sort_by_file_name() {
@@ -351,7 +408,7 @@ impl Suite {
                 .to_string_lossy()
                 .replace('\\', "/");
             let name = entry.file_name().to_string_lossy();
-            if !name.ends_with(ext) || name.starts_with("~$") {
+            if !exts.iter().any(|ext| name.ends_with(ext)) || name.starts_with("~$") {
                 continue;
             }
             if include.is_match(&rel) && !exclude.is_match(&rel) {

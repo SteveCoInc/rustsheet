@@ -41,6 +41,7 @@ use rustsheet_eval::phase1_exceptions::Phase1Exceptions;
 use rustsheet_eval::probe_milestones::{self, Mapping, Rules};
 use rustsheet_eval::r1c::R1cCells;
 use rustsheet_eval::report::RunReport;
+use rustsheet_eval::roundtrip;
 use rustsheet_eval::run_meta::RunMeta;
 use rustsheet_eval::runner::{run_suites, CaseResult, RunOptions};
 use rustsheet_eval::suite::{BaselineMode, FetchState, Suite, SuiteKind, ACCURACY_DIR};
@@ -168,6 +169,18 @@ enum Cmd {
         cached: PathBuf,
         recalculated: PathBuf,
     },
+    /// Round-trip fidelity (SPEC-0033): load and save each workbook of the suites under
+    /// eval/roundtrip, validate the output and score what it kept; writes
+    /// eval/runs/latest/roundtrip.{json,md}. `--check` gates the baselines, `--update-baseline`
+    /// ratchets them (refusing regressions).
+    Roundtrip {
+        #[command(flatten)]
+        sel: Selection,
+        #[arg(long, conflicts_with = "update_baseline")]
+        check: bool,
+        #[arg(long)]
+        update_baseline: bool,
+    },
     /// Gate A (SPEC-0029, decision 0188 R2): fail when a reference-table point of eval/accuracy
     /// is outside the envelope, a known-failure line is stale, an R3 mark lacks evidence or a
     /// table is defective.
@@ -252,7 +265,11 @@ fn find_root(explicit: Option<PathBuf>) -> Result<PathBuf> {
 }
 
 fn select(root: &Path, sel: &Selection, gate_only: bool) -> Result<Vec<Suite>> {
-    let all = Suite::load_all(&root.join("eval/suites"))?;
+    select_from(Suite::load_all(&root.join("eval/suites"))?, sel, gate_only)
+}
+
+/// [`select`] over a given list of suites (the round-trip suites use it too).
+fn select_from(all: Vec<Suite>, sel: &Selection, gate_only: bool) -> Result<Vec<Suite>> {
     let chosen: Vec<Suite> = all
         .into_iter()
         .filter(|s| {
@@ -929,6 +946,21 @@ fn run() -> Result<ExitCode> {
         Cmd::Show { case_id, all } => cmd_show(&root, &case_id, all),
         Cmd::Cases { suite } => cmd_cases(&root, &suite),
         Cmd::Accuracy { json, timeout } => cmd_accuracy(&root, json, timeout),
+        Cmd::Roundtrip {
+            sel,
+            check,
+            update_baseline,
+        } => {
+            let suites = select_from(Suite::load_roundtrip(&root)?, &sel, check)?;
+            let mode = match (check, update_baseline) {
+                (true, _) => roundtrip::Mode::Check,
+                (_, true) => roundtrip::Mode::Update,
+                _ => roundtrip::Mode::Report,
+            };
+            let timeout = Duration::from_secs(sel.timeout);
+            let ok = roundtrip::command(&root, &suites, sel.filter.as_deref(), timeout, mode)?;
+            Ok(if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE })
+        }
         Cmd::Snapshot { .. } | Cmd::Compare { .. } => unreachable!("handled above"),
     }
 }

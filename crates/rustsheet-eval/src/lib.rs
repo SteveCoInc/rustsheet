@@ -40,6 +40,7 @@ pub mod probe_milestones;
 pub mod r1c;
 pub mod report;
 pub mod run_meta;
+pub mod roundtrip;
 pub mod runner;
 mod spec_pivots;
 mod spill_extent;

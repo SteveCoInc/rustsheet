@@ -558,7 +558,7 @@ fn evaluate_prepared(
     Ok((cells, scored, text, arguments, check_values))
 }
 
-fn panic_message(p: &(dyn std::any::Any + Send)) -> String {
+pub(crate) fn panic_message(p: &(dyn std::any::Any + Send)) -> String {
     p.downcast_ref::<String>()
         .cloned()
         .or_else(|| p.downcast_ref::<&str>().map(|s| (*s).to_string()))
@@ -630,6 +630,8 @@ fn prepare(
     let mut prepared = match suite.manifest.kind {
         SuiteKind::Xlsx => prepare_xlsx(suite, case),
         SuiteKind::Spec => prepare_spec(case, values),
+        // `Suite::load_all` keeps round-trip suites out of every cell run (SPEC-0033 D8).
+        SuiteKind::Roundtrip => Err("a roundtrip suite is run by `rustsheet-eval roundtrip`".into()),
     }?;
     let refusal = pin_deviations(suite, case, &mut prepared.expectations)?;
     Ok((prepared, refusal))
