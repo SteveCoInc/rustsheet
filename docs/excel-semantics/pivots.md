@@ -221,7 +221,7 @@ the second pair starts at E, three columns after B, and the five-column window e
 cannot see past its own window, though, so a page cell outside it would go unseen (row 1 of K4,
 rows 1–4 of G8).
 Status: VERIFIED (excel-graph) for the rendering; the window is consistent with both probes, not
-independently confirmed
+independently confirmed (probe pending: T-4584)
 
 ## Pivot geometry: location and header offsets per layout
 Rule: Excel writes the pivot's `location` as the body's bounding box (page fields excluded), with
@@ -239,11 +239,16 @@ left at B4 (probes/t4138-pivot-geometry, T-4138):
 | G7 | 1 column field only | B4:F6 | 1, 2, 1 | 1, 4 |
 | G9 | 3 data fields, no axis field | B4:D6 | 1, 2, 0 | 1, 3 |
 
-In compact form all row fields share one column (fdc 1); outline and tabular give each row field its
-own column (fdc = number of row fields). Each column field adds a header row (fdr). With Values on rows,
+In compact form all row fields share one column (fdc 1). Outline and tabular give each row field its own
+column (fdc = number of row fields), but each rests on one probe (G3, G4). With no row field, fdc is 1
+when there is a column field (G7) and 0 when there is no axis field at all (G9, and G8 below). fdr is 1
+plus the number of `colFields`, and the Values field counts when it is on columns: G3 and G9 (Values
+only) have fdr 2, as does G2 (one column field and one data field), and G5 has 3. With Values on rows,
 each item is followed by one line per data field, and the grand total reads `Total <data field>`
 (G6!B11:B12).
 
 A Values field on rows needs `dataOnRows="1"` on the definition: without it Excel for the web refuses
-the file as corrupt (`FileCorruptTryRepair`, T-4138 bisection; case builder v2 now writes it).
+the file as corrupt (`FileCorruptTryRepair`). Case builder v2 now writes it. This comes from scratch
+excel-graph runs of T-4138, not committed: G6's package was refused without the attribute and opened
+with it, all else equal.
 Status: VERIFIED (excel-graph) for the table; the refusal is a builder observation
