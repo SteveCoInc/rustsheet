@@ -388,13 +388,11 @@ accuracy/YIELD/s1!Calc!A230	T-2788	YIELD's last digits short of PRICE's root: en
 accuracy/YIELD/s1!Calc!A252	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/YIELD/s1!Calc!A261	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/MIRR/s1!Calc!A125	T-4537	Excel #DIV/0! for a finance power overflow beside a later negative flow; the engine gives #NUM!
-<<<<<<< HEAD
 accuracy/CONFIDENCE.T/s1!Calc!A112	T-4541	Excel #NUM! at alpha = 2.2E-308 where the margin is finite
 accuracy/CONFIDENCE.T/s1!Calc!A123	T-4541	Excel #NUM! at alpha = 2.2E-308 where the margin is finite
 accuracy/CONFIDENCE.T/s1!Calc!A134	T-4541	Excel #NUM! at alpha = 2.2E-308 where the margin is finite
 accuracy/CONFIDENCE.T/s1!Calc!A155	T-3363	quantile at df 2.3E9: the engine and Excel are both off the math, differently
 accuracy/CONFIDENCE.T/s1!Calc!A163	T-3363	quantile at df 6.2E6: the engine and Excel are both off the math, differently
-=======
 accuracy/BETADIST/s1!Calc!A183	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
 accuracy/BETADIST/s1!Calc!A184	T-3577	BETADIST (as BETA.DIST) cdf at huge shapes (alpha 2.2E114, beta 2.0E66): Excel #NUM!, the engine and the math 0
 accuracy/BETADIST/s1!Calc!A187	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
@@ -431,4 +429,3 @@ accuracy/BETAINV/s1!Calc!A94	T-3351	BETAINV (as BETA.INV): the quantile rounds t
 accuracy/BETAINV/s1!Calc!A97	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
 accuracy/BETAINV/s1!Calc!A99	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
 accuracy/CHIINV/s1!Calc!A93	T-3364	CHIINV R3 closed-form point (decision 0318): Excel's Wilson-Hilferty value, 2.66e-4 off the math; the engine 1.7e-13 from Excel
->>>>>>> origin/main
