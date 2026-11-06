@@ -3,7 +3,7 @@ id: T-4090
 title: "Gate A tables, dispersion II: STDEV.P, STDEVP, STDEVPA, VAR.P, VARP, VARPA and AVEDEV"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
