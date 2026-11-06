@@ -629,6 +629,35 @@ pub fn report_markdown(results: &[CaseResult]) -> String {
     md
 }
 
+/// The mode flags of `rustsheet-eval roundtrip`.
+#[derive(clap::Args, Debug, Clone, Copy)]
+pub struct Flags {
+    /// Fail when a suite's baseline is out of date or regressed.
+    #[arg(long, conflicts_with = "update")]
+    pub check: bool,
+    /// Rewrite the baselines (ratchet), refusing regressions.
+    #[arg(long = "update-baseline")]
+    pub update: bool,
+    /// With `--update-baseline`: record regressions too. Only under a decision record (CLAUDE.md
+    /// directive 2, SPEC-0033 "Ratchet"; decision 0328).
+    #[arg(long, requires = "update")]
+    pub allow_regressions: bool,
+}
+
+impl Flags {
+    /// The [`Mode`] these flags ask for.
+    #[must_use]
+    pub fn mode(self) -> Mode {
+        match (self.check, self.update) {
+            (true, _) => Mode::Check,
+            (_, true) => Mode::Update {
+                allow_regressions: self.allow_regressions,
+            },
+            _ => Mode::Report,
+        }
+    }
+}
+
 /// What `rustsheet-eval roundtrip` does with a run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
