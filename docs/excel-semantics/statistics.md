@@ -7858,14 +7858,18 @@ model gives 1.0000000000000006E+308 (unexplained: a power-of-ten path is possibl
 `#NUM!` (`PERMUTATIONA(2,1024)`, `(10,309)`, A81, A83; `(2,1023)` is 8.98846567431158E+307, A78). A number_chosen of
 2^31 - 1 or more is `#NUM!` whatever the number, even where the power is 0 or 1: `PERMUTATIONA(1,2147483647)`,
 `PERMUTATIONA(1,10000000000)` and `PERMUTATIONA(0,10000000000)` are `#NUM!` (A76, A79, A71), while
-`PERMUTATIONA(0,1000)` is 0 (A72). The cut is UNVERIFIED between 1000 and 2^31 - 1; 2^31 - 1 is PERMUT's number limit
-("Overflowing arguments, PERMUT's limit and argument error order (T-1290)"). A number in (0, 1) floors to 0
+`PERMUTATIONA(0,1000)` is 0 (A72). The cut is exactly 2^31 - 1 on the truncated number_chosen, PERMUT's number limit
+("Overflowing arguments, PERMUT's limit and argument error order (T-1290)"): at numbers 1 and 0, every k from 1000 to
+2147483646 (1001, 1024, 32767, 32768, 65535, 65536, 1E6, 2^24 - 1, 2^24, 1E9) is a number, `PERMUTATIONA(1,2147483646.9)`
+is 1, and 2147483647, 2147483647.5, 2^31, 2^32 and 1E10 are `#NUM!` (probes/t4501-permutationa-chosen-cut, excel-graph,
+2026-11-06). A number in (0, 1) floors to 0
 (`PERMUTATIONA(0.25,4)` is 0, A2) and `PERMUTATIONA(2.5,3.9)` is 8 (A82).
-Evidence: accuracy/PERMUTATIONA/s1 (excel-graph, 2026-11-06, T-4106).
-Ours: the engine returns `powf(n, k)`, so 32 of the 105 numeric cells differ from Excel by a few ulps (all but two
-within 15 digits, those two within 1e-9 of the math: inside the Gate A envelope), and n^k for a huge k (1 or 0 where
-Excel is `#NUM!`: three Gate A known failures). Both are T-4501.
-Status: VERIFIED (excel-graph) for the cells cited; the number_chosen cut UNVERIFIED
+Evidence: accuracy/PERMUTATIONA/s1 (excel-graph, 2026-11-06, T-4106); probes/t4501-permutationa-chosen-cut.
+Ours: `#NUM!` from a truncated number_chosen of 2^31 - 1 (T-4501; `permutationa_of`, permut.rs). The engine still
+returns `powf(n, k)`, so 32 of the 105 numeric cells differ from Excel by a few ulps (all but two within 15 digits,
+those two within 1e-9 of the math: inside the Gate A envelope). Binary powering is a model chosen by scoring candidates
+against these cells, so it owes decision 0188 R4's hold-out and fresh sweep; it is Phase 1b work (T-4557).
+Status: VERIFIED (excel-graph), the number_chosen cut included
 Tasks: T-4106, T-4501
 
 ## KURT, SKEW, SKEW.P, GEOMEAN, HARMEAN and TRIMMEAN domain cells of the Gate A tables (T-4091)
