@@ -82,9 +82,9 @@ fn a_filled_column_refills_unless_it_holds_an_exception() {
 
 /// The `calculatedColumnFormula` of `T`'s `Calc` column.
 fn column_formula(model: &Model) -> Option<String> {
-    model.workbook.tables["T"].columns[2]
-        .calculated_column_formula
-        .clone()
+    let columns = &model.workbook.tables["T"].columns;
+    let calc = columns.iter().find(|c| c.name == "Calc")?;
+    calc.calculated_column_formula.clone()
 }
 
 /// probes/t2983-identical-stored-refill: identical stored formulas are no calculated column, so a
@@ -716,4 +716,58 @@ fn redo_keeps_where_a_padded_bare_column_came_from() {
     model.undo().unwrap();
     model.redo().unwrap();
     assert_eq!(model.get_formatted_cell_value(0, 13, 5).unwrap(), "#ERROR!");
+}
+
+/// The stored column formula follows a row or column insert or delete as Excel saves it
+/// (probes/table-edits/t4274-calc-column-*), redo makes the same text, and undo of each edit
+/// gives back the text before it (T-4274).
+#[test]
+fn the_column_formula_follows_edits_and_their_undo() {
+    type Edit = fn(&mut crate::UserModel) -> Result<(), String>;
+    let cases: [(&str, Edit, &str, &str); 5] = [
+        ("=A2*2", |u| u.insert_columns(0, 1, 1), "A2*2", "B2*2"),
+        ("=A2*2", |u| u.delete_columns(0, 2, 1), "A2*2", "A2*2"),
+        ("=A2*2", |u| u.insert_rows(0, 1, 1), "A2*2", "A3*2"),
+        ("=A2*2", |u| u.insert_rows(0, 3, 1), "A2*2", "A2*2"),
+        (
+            "=[@Col]*2",
+            |u| u.insert_columns(0, 1, 1),
+            "T[[#This Row],[Col]]*2",
+            "T[[#This Row],[Col]]*2",
+        ),
+    ];
+    for (text, edit, before, after) in cases {
+        let mut model = model(false);
+        typed(&mut model, 2, text);
+        let mut user = crate::UserModel::from_model(model);
+        assert_eq!(column_formula(user.get_model()).as_deref(), Some(before));
+        edit(&mut user).unwrap();
+        assert_eq!(
+            column_formula(user.get_model()).as_deref(),
+            Some(after),
+            "{text}"
+        );
+        user.undo().unwrap();
+        assert_eq!(
+            column_formula(user.get_model()).as_deref(),
+            Some(before),
+            "{text}"
+        );
+        user.redo().unwrap();
+        assert_eq!(
+            column_formula(user.get_model()).as_deref(),
+            Some(after),
+            "{text}"
+        );
+    }
+    // Moving the formula between cells: a column insert at A and its undo, twice, end where
+    // they started.
+    let mut model = model(false);
+    typed(&mut model, 2, "=A2*2");
+    let mut user = crate::UserModel::from_model(model);
+    for _ in 0..2 {
+        user.insert_columns(0, 1, 1).unwrap();
+        user.undo().unwrap();
+    }
+    assert_eq!(column_formula(user.get_model()).as_deref(), Some("A2*2"));
 }
