@@ -237,10 +237,12 @@ mod tests {
         let (desktop_only, earlier): (Vec<_>, Vec<_>) = exceptions
             .cells
             .iter()
-            .partition(|(_, e)| e.decision == "0308");
+            .partition(|(_, e)| e.decision == "0308" || e.decision == "0315");
         // Decision 0308: the FORECAST.ETS family (the web's #N/A) and CELL's desktop-only info
-        // types, 555 cells, all owned by T-4373.
-        assert_eq!(desktop_only.len(), 555);
+        // types, 555 cells; decision 0315: calipers Mac goldens the web answers as the engine
+        // does, 18 cells. All owned by T-4373.
+        let count = |d: &str| desktop_only.iter().filter(|(_, e)| e.decision == d).count();
+        assert_eq!((count("0308"), count("0315")), (555, 18));
         assert!(desktop_only.iter().all(|(_, e)| e.task == "T-4373"));
         let cells: Vec<String> = earlier
             .iter()

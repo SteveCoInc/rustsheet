@@ -6,7 +6,7 @@ lane: functions-engineering
 status: done
 priority: P3
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -31,20 +31,35 @@ for both signs. The engine either matches every new cell or a follow-up task is 
   when it overflows.
 
 ## Acceptance criteria
-- [x] A probe case under eval/suites/probes, oracle-filled from excel-graph, holds the cells above.
-- [x] engineering.md replaces "(exact boundary unprobed)" with the measured bracket, citing the cells.
-- [x] Every new cell passes. If any fails, the PR adds its known-failure lines and files a follow-up task with `make
+- [ ] A probe case under eval/suites/probes, oracle-filled from excel-graph, holds the cells above.
+- [ ] engineering.md replaces "(exact boundary unprobed)" with the measured bracket, citing the cells.
+- [ ] Every new cell passes. If any fails, the PR adds its known-failure lines and files a follow-up task with `make
       new-task` that names them.
-- [x] `make check` green; reviewers approve.
+- [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - IMSQRT's digits away from the cut, and the other IM* overflow edges (T-2631, T-4425).
 
 ## Outcome
-- probes/t4461-imsqrt-cut (64 cells, excel-graph, 2026-11-06). The cut lies exactly where a part's square stops being
-  finite: `IMSQRT(POWER(2,512)-POWER(2,459))` gives a value, and `IMSQRT(POWER(2,512))` is `#NUM!`, either sign
-  (A1:D2).
-- A text inumber keeps 15 significant digits, truncated, so 17-digit text cannot reach the cut: "1.3407807929942597E154"
-  is a value and "1.34078079299426E154" `#NUM!`. COMPLEX writes 15 rounded digits, so every COMPLEX form at the cut is
-  `#NUM!`. engineering.md replaces "(exact boundary unprobed)" with these cells.
-- Eval delta: the new case passes 64/64; the engine already matched. No engine change, no known failures, no follow-up.
+Probe `probes/t4461-imsqrt-cut` (41 cells, excel-graph). Complex text keeps 15 significant digits, so the three
+17-digit doubles around sqrt(DBL_MAX) all read as `1.34078079299425E154` and are accepted; `1.34078079299426E154`
+and above (`1.3408E154` ...) are `#NUM!`. The cut lies between those two 15-digit texts, the finest text can show.
+The engine matches all 41 cells: no engine change, no follow-up. The only baseline change is the new `C` line for
+the case in `eval/baseline/probes.txt`. engineering.md updated. IMSQRT has no Gate A definition, so no sidecar.
+
+## Handoff (resumed)
+Work is complete; only a clean review round 3 and the enqueue remain (PR #3605).
+- Round 1 (excel-fidelity) REQUEST_CHANGES: my first reading of the 17-digit cells was wrong (complex text truncates to
+  15 digits, so they are one value). Fixed: added A37:A41 (`1.34078079299426E154`, all `#NUM!`), rewrote the
+  engineering.md entry and this Outcome.
+- Round 2 REQUEST_CHANGES: a blanket `sed` of "36 cells" in engineering.md also edited two unrelated lines (T-3912
+  A1:A36 and the t4422 cell count). Reverted both; the engineering.md diff is now the single T-4461 hunk.
+- Next: set `status: done` again, run `make check-fast`, push, re-run reviewer-excel-fidelity on the new head, mark the
+  PR ready when CI is green and it approves, then enqueue. Do not use global replaces on engineering.md.
+
+## Addendum (a second run, #3617)
+A parallel run probed the same task in probes/t4461-imsqrt-cut-numbers (64 cells, excel-graph, 2026-11-06), which adds
+number forms that text cannot reach. The cut is exactly where a part's square stops being finite: 2^512 - 2^459 gives a
+value and 2^512 `#NUM!` (A1:D2). COMPLEX rounds to 15 digits (A3:D8, B15), and `=` treats the two doubles as equal (A15).
+Ours matches all 64 cells. engineering.md's entry is extended with these.
+

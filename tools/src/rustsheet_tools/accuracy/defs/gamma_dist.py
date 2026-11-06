@@ -98,7 +98,7 @@ DENSITY_GUARD_DPS = 10  # digits added to the density's exponent, besides the lo
 def _floats(*args: MathArg) -> list[float]:
     out: list[float] = []
     for a in args:
-        assert not isinstance(a, (bool, tuple))
+        assert not isinstance(a, (bool, str, tuple))
         out.append(float(a))
     return out
 
@@ -152,8 +152,8 @@ def _huge_shape_zero(a: float, value: mpmath.mpf) -> None:
 
 def _gamma_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, a, beta, cumulative = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(a, (bool, tuple))
-    assert not isinstance(beta, (bool, tuple))
+    assert not isinstance(x, (bool, str, tuple)) and not isinstance(a, (bool, str, tuple))
+    assert not isinstance(beta, (bool, str, tuple))
     fx, fa, fbeta = _floats(x, a, beta)
     y = x / beta
     if not cumulative and y == 0 and a == 1:
@@ -169,7 +169,7 @@ def _gamma_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _gamma_dist_domain(args: Sequence[MathArg]) -> str | None:
     x, a, beta, cumulative = args
-    if any(isinstance(v, (bool, tuple)) for v in (x, a, beta)):
+    if any(isinstance(v, (bool, str, tuple)) for v in (x, a, beta)):
         return None
     fx, fa, fbeta = _floats(x, a, beta)
     if fx <= 0 or fbeta <= 0:
@@ -196,7 +196,7 @@ def _density_domain(fx: float, fa: float, ratio: float) -> str | None:
 
 def _gamma_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     a, beta = args[1], args[2]
-    if isinstance(a, (bool, tuple)) or isinstance(beta, (bool, tuple)):
+    if isinstance(a, (bool, str, tuple)) or isinstance(beta, (bool, str, tuple)):
         msg = "no tail map for a logical shape or scale"
         raise ValueError(msg)
     return beta * quantile(q, a, upper=upper)
@@ -204,7 +204,7 @@ def _gamma_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath
 
 def _chisq_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df, cumulative = args
-    assert not isinstance(x, (bool, tuple))
+    assert not isinstance(x, (bool, str, tuple))
     a = chi_shape(df)
     y = x / CHI_SCALE
     if cumulative:
@@ -218,7 +218,7 @@ def _chisq_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _chisq_dist_domain(args: Sequence[MathArg]) -> str | None:
     x, df, cumulative = args
-    if isinstance(x, (bool, tuple)) or isinstance(df, (bool, tuple)):
+    if isinstance(x, (bool, str, tuple)) or isinstance(df, (bool, str, tuple)):
         return None
     if not cumulative and x == 0 and chi_shape(df) < 1:
         return "the density at 0 with one degree of freedom is infinite"
@@ -227,13 +227,13 @@ def _chisq_dist_domain(args: Sequence[MathArg]) -> str | None:
 
 def _chisq_dist_rt(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df = args
-    assert not isinstance(x, (bool, tuple))
+    assert not isinstance(x, (bool, str, tuple))
     return _cdf(x / CHI_SCALE, chi_shape(df), upper=True)
 
 
 def _chi_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     df = args[1]
-    if isinstance(df, (bool, tuple)):
+    if isinstance(df, (bool, str, tuple)):
         msg = "no tail map for a logical df"
         raise ValueError(msg)
     return CHI_SCALE * quantile(q, chi_shape(df), upper=upper)

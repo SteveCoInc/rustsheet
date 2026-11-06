@@ -86,7 +86,7 @@ def _sum(args: Sequence[MathArg]) -> mpmath.mpf:
     return sum_value(scalars(args))
 
 
-def _average(args: Sequence[MathArg]) -> mpmath.mpf:
+def average_value(args: Sequence[MathArg]) -> mpmath.mpf:
     xs = scalars(args)
     return sum_value(xs) / len(xs)
 
@@ -167,4 +167,4 @@ def _definition(function: str, value: Callable[[Sequence[MathArg]], mpmath.mpf])
 
 
 SUM = _definition("SUM", _sum)
-AVERAGE = _definition("AVERAGE", _average)
+AVERAGE = _definition("AVERAGE", average_value)

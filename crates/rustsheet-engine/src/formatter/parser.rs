@@ -315,6 +315,7 @@ impl Parser {
         // comma right after one): a `,` there is a literal or a fraction's scaling comma.
         let mut after_percent = false;
         let mut after_denominator = false;
+        let mut after_comma = false;
         // Just past the last digit placeholder while only literals follow it, which may stand
         // between a numerator and its `/` (`#\:#=/=#`, poi/NumberFormatTests A134).
         let mut after_digits: Option<usize> = None;
@@ -407,11 +408,32 @@ impl Parser {
                         // (`0.00E+0,0` is "1.23E+06"; probes/t4062-comma-in-exponent A1, A2, A16;
                         // number-formats.md "Commas in scientific formats").
                         return ParsePart::Error(ErrorPart::default());
-                    } else if last_token_is_digit && next_token_is_digit && found_decimal_dot {
-                        // Excel: a `,` between placeholders after the decimal point neither groups
-                        // nor scales, even after a literal (`0.00|#,##0` on 1234567.89 is
-                        // "1234567.89|0", `0.0,0` is "1234567.89"; probes/t3598-comma-after-
-                        // decimal-point; number-formats.md "Commas after the decimal point").
+                    } else if found_decimal_dot
+                        && matches!(tokens.last(), Some(TextToken::Period | TextToken::Digit(_)))
+                        && (next_token_is_digit
+                            || (!matches!(next_token, Token::Separator | Token::EOF)
+                                && self
+                                    .lexer
+                                    .peek_token_past(|t| !t.is_digit() && *t != Token::Separator)
+                                    .is_digit()))
+                    {
+                        // Excel: number-formats.md "Commas after the decimal point": a `,` after a
+                        // placeholder or the point, with a placeholder anywhere after it, is inert
+                        // (`0.0,,0` and `0.00,|0` on 1234567.89 are "1234567.89", "1234567.89|1";
+                        // t3598-decimal-part-commas A24, t4515-fraction-tail-holdout A20).
+                    } else if found_decimal_dot
+                        && !is_scientific
+                        && !matches!(tokens.last(), Some(TextToken::Digit(_) | TextToken::Period))
+                    {
+                        // After a decimal-part literal a `,` run prints one `,` (`0.0|,,0` is
+                        // "1234567.8|,9", `0.0|,` "1234567.9|,"; t4515-fraction-tail-holdout A18,
+                        // t3666-review-followups A11).
+                        if !after_comma {
+                            tokens.push(TextToken::Literal(','));
+                        }
+                    } else if fraction.is_some() && last_token_is_digit && next_token_is_digit {
+                        // After a fraction a `,` between placeholders does not group (`# ?/?|#,##0`
+                        // on 1234567.89 is "1234567 8/9|0000"; t3598-decimal-part-commas A23).
                     } else if last_token_is_digit && next_token_is_digit {
                         use_thousands = true;
                     } else if digit_count > 0 {
@@ -818,6 +840,7 @@ impl Parser {
             }
             last_token_is_digit = token_is_digit;
             after_percent = is_percent;
+            after_comma = is_comma;
             after_denominator = ends_denominator || (after_denominator && is_comma);
             after_colon = is_colon;
             token = next_token;

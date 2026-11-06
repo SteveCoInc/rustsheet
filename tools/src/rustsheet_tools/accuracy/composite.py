@@ -28,7 +28,7 @@ from typing import Any
 import mpmath
 
 from rustsheet_tools.accuracy import literal
-from rustsheet_tools.accuracy.model import REGISTRY, Definition, DomainError, NoValueError, Param
+from rustsheet_tools.accuracy.model import REGISTRY, Definition, DomainError, NoValueError, Param, Unfit
 from rustsheet_tools.accuracy.sampler import math_arg
 from rustsheet_tools.accuracy.tables import DOUBLE_MAX, MathValue, compute_value
 from rustsheet_tools.fitlab.exact import X87
@@ -90,8 +90,8 @@ class Call:
 
 Node = Const | Neg | Op | Call
 # How a call-free argument is fitted to its parameter (`eval_math.fit_arg`): the argument, or why
-# it does not fit.
-FitArg = Callable[[Param, Any], literal.Arg | str]
+# it does not fit (an `Unfit`; a text argument is a plain str).
+FitArg = Callable[[Param, Any], literal.Arg | Unfit]
 
 
 class _Parser:
@@ -220,7 +220,7 @@ class _Parser:
                 fitted.append(arg)
                 continue
             value = self.fit(param, arg)
-            if isinstance(value, str):
+            if isinstance(value, Unfit):
                 raise self.fail(f"{name}: {value}")
             fitted.append(value)
         return Call(definition, tuple(fitted))
