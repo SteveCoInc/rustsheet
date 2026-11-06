@@ -154,6 +154,7 @@ probes/fin-cumipmt-period-bound.case.json	1
 probes/fin-cumipmt-tiny-rate-structure.case.json	38
 probes/fin-cumprinc-near-1e15.case.json	4
 probes/fin-cumprinc-underflow-ends.case.json	4
+probes/fin-cumprinc-underflow-fresh.case.json	26
 probes/forecast-ets-longer-series.case.json	40
 probes/forecast-ets-optional-settings-shape.case.json	12
 probes/forecast-ets-reprobe-2026-11.case.json	16
