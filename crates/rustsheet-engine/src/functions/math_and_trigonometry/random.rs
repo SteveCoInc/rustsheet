@@ -122,7 +122,7 @@ impl Model {
 
     /// RANDARRAY's `rows` or `columns` (`name`): 1 when left out or empty, `#CALC!` at 0 and
     /// `#VALUE!` below. An extent just below an integer reads as it, as SEQUENCE's does
-    /// (`near_integer_whole`; probes/t4465-extent-near-integer-main D1:D63, T-4465).
+    /// (`near_integer_whole`; arrays.md "Array-constructor extents just below an integer"; probes/t4465-extent-near-integer-main D1:D63, T-4465).
     fn randarray_extent(
         &mut self,
         arg: Option<&Node>,

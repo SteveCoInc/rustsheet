@@ -1,0 +1,225 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4589: two follow-ups of T-4135, each sheet one builder-v2 pivot Excel renders on open. S1: rows Kind over D1, whose records are A 0.2, B 0.7, A 3.3, B 1.1 (A listed and shown first), under Sum, Average, Product, StdDev, Var, StdDevp and Varp: the grand total of Sum separates record order (5.299999999999999), A-first accumulation (5.300000000000001) and the sum of the children (5.3). E1-E4: errorCaption ERR with showError over D2 (East 10 and #N/A, West 7): E1 Count of Err alone; E2 Count and Sum of Err; E3 Count of Err beside Sum of Num (no error); E4 is E2 without showError. Which grand totals show the caption. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4589",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "D1",
+   "cells": {
+    "A1": "Kind",
+    "B1": "V",
+    "A2": "A",
+    "B2": 0.2,
+    "A3": "B",
+    "B3": 0.7,
+    "A4": "A",
+    "B4": 3.3,
+    "A5": "B",
+    "B5": 1.1
+   }
+  },
+  {
+   "name": "D2",
+   "cells": {
+    "A1": "Region",
+    "B1": "Err",
+    "C1": "Num",
+    "A2": "East",
+    "B2": 10,
+    "C2": 10,
+    "A3": "East",
+    "B3": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "C3": 4,
+    "A4": "West",
+    "B4": 7,
+    "C4": 7
+   }
+  },
+  {
+   "name": "S1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PS1",
+     "source": "D1!A1:B5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "sum",
+        "name": "sum V"
+       },
+       {
+        "field": "V",
+        "subtotal": "average",
+        "name": "average V"
+       },
+       {
+        "field": "V",
+        "subtotal": "product",
+        "name": "product V"
+       },
+       {
+        "field": "V",
+        "subtotal": "stdDev",
+        "name": "stdDev V"
+       },
+       {
+        "field": "V",
+        "subtotal": "var",
+        "name": "var V"
+       },
+       {
+        "field": "V",
+        "subtotal": "stdDevp",
+        "name": "stdDevp V"
+       },
+       {
+        "field": "V",
+        "subtotal": "varp",
+        "name": "varp V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "E1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PE1",
+     "source": "D2!A1:C4",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "showError": true,
+       "errorCaption": "ERR"
+      },
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "count",
+        "name": "count Err"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "E2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PE2",
+     "source": "D2!A1:C4",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "showError": true,
+       "errorCaption": "ERR"
+      },
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "count",
+        "name": "count Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "sum",
+        "name": "sum Err"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "E3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PE3",
+     "source": "D2!A1:C4",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "showError": true,
+       "errorCaption": "ERR"
+      },
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "count",
+        "name": "count Err"
+       },
+       {
+        "field": "Num",
+        "subtotal": "sum",
+        "name": "sum Num"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "E4",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PE4",
+     "source": "D2!A1:C4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "count",
+        "name": "count Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "sum",
+        "name": "sum Err"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=SUM(D1!B2:B5)"
+   }
+  }
+ ]
+}

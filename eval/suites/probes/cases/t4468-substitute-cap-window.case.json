@@ -1,0 +1,38 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4468 hold-out: SUBSTITUTE instance_num at the 2^31-1 cap, 2147483647-d for decimal d from 4E-6 to 9E-6 (A1:A14), decimal literals around 2147483646.999995 (B1:B5) and text instance_num (C1:C2). Predictions registered before the fill: a 15-significant-digit cut before the near-integer floor puts the edge at d = 5E-6.",
+ "tags": [
+  "M5",
+  "probe",
+  "text"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-4E-6)",
+    "A2": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-4.5E-6)",
+    "A3": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-4.9E-6)",
+    "A4": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-4.99E-6)",
+    "A5": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-4.999E-6)",
+    "A6": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-5E-6)",
+    "A7": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-5.001E-6)",
+    "A8": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-5.01E-6)",
+    "A9": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-5.1E-6)",
+    "A10": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-5.5E-6)",
+    "A11": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-6E-6)",
+    "A12": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-7E-6)",
+    "A13": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-8E-6)",
+    "A14": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483647-9E-6)",
+    "B1": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483646.9999951)",
+    "B2": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483646.999995)",
+    "B3": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483646.9999949)",
+    "B4": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483646.99999)",
+    "B5": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2147483646.999999)",
+    "C1": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",\"2147483646.999996\")",
+    "C2": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",\"2147483646.999994\")"
+   }
+  }
+ ],
+ "expected": {}
+}
