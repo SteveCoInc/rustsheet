@@ -1123,11 +1123,18 @@ same Data sheet, excel-graph, 2026-10-16; "functions", "functions2", "functions3
 - Function-array edges (probes/t4449-groupby-function-array-edges, excel-graph, 2026-11-06, T-4449; every cell GROUPBY and
   PIVOTBY alike, over one value column and two): a ragged array of functions (`HSTACK(VSTACK(SUM,MAX),MIN)`,
   `VSTACK(HSTACK(SUM,MAX),MIN)`) is `#VALUE!`, not the `#N/A` its padding holds: the stack is a 2-D array of functions (G!C1,
-  G!C2, G!C13, G!C14, G!C25, G!C26). Of several error elements the first in reading order is the result (`HSTACK(NA(),1/0)`
+  G!C2, G!C13, G!C14, G!C25, G!C26). Of several error elements the first in argument order is the result (`HSTACK(NA(),1/0)`
   `#N/A`, `HSTACK(1/0,NA())` `#DIV/0!`, `VSTACK(SUM,NA(),1/0)` `#N/A`, `HSTACK(SUM,#REF!,NA())` `#REF!`: G!C3:C6), and an error
   beats a plain value on either side of it (`HSTACK(NA(),5)` and `HSTACK(5,NA())` are both `#N/A`: G!C7, G!C8). A LAMBDA without
   parameters is `#VALUE!` for the whole result: `LAMBDA(1)`, `LAMBDA(SUM(Data!D2:D3))`, `HSTACK(SUM,LAMBDA(1))` and
   `LET(f,LAMBDA(1),f)` (G!C9:C12, G!C21:C24, G!C33:C36, G!C45:C48).
+  Which error wins in a 2-D array (probes/t4485-groupby-function-array-error-order, excel-graph, 2026-11-06, T-4485; GROUPBY and
+  PIVOTBY alike): an explicit error beats the `#VALUE!` of a 2-D array of functions, and of several errors the first one is the
+  first in argument order, depth first, not in reading order or column-major order. `VSTACK(HSTACK(SUM,1/0),HSTACK(NA(),MAX))`
+  and `HSTACK(VSTACK(SUM,1/0),VSTACK(NA(),MAX))` are `#DIV/0!` (G!C1, G!C2; reading order would give `#N/A` for the second);
+  `VSTACK(HSTACK(NA(),SUM),HSTACK(MAX,1/0))` and `VSTACK(HSTACK(SUM,NA()),HSTACK(1/0,MAX))` are `#N/A` (G!C3, G!C9; column-major
+  order would give `#DIV/0!` for the second); a ragged `HSTACK(VSTACK(SUM,MAX),NA())` is `#N/A`, not `#VALUE!` (G!C4).
+  The whole result is the error (`ROWS&"x"&COLUMNS` is `ERR`, `ERROR.TYPE` 2 or 7). The engine already matches (31 of 31 cells).
 Unprobed (T-1325): a labelled row of several functions with detected headers (the engine does not show them). CORREL, PEARSON and RSQ over arrays of different sizes
 are `#N/A` per group in Excel, `#VALUE!` here, and their total rows differ in the last digit (functions G!B421, functions2
 G!B281, G!B301): a CORREL/PEARSON/RSQ gap, T-1707.
@@ -2312,13 +2319,38 @@ SEQUENCE: rows and columns both reach 1048576, and an extent that is negative or
 `SEQUENCE(0,1048576)` and `SEQUENCE(0.0123,16385)` are `#CALC!`, `SEQUENCE(0,1048577)`, `SEQUENCE(0,-1)` and
 `SEQUENCE(0.0123,123456789.123)` `#VALUE!` (so the oversized columns are the cause, gen-m9 f280df8ba95f96b9 A222); with a
 non-zero rows a columns past the grid's 16384 gives an array (A155:A157: `COLUMNS(SEQUENCE(1,20000))` is 20000, `COLUMNS(SEQUENCE(1,1048576))` 1048576, `ERROR.TYPE(SEQUENCE(1,1048576))`
-`#SPILL!`) up to 1048576, `#VALUE!` above (A158). Ours builds them since T-2600 within the cell bound. An extent is floored after adding 2^-23 (the single-precision epsilon, 1.1920929E-7): `SEQUENCE(4,-1.19E-7)` and
+`#SPILL!`) up to 1048576, `#VALUE!` above (A158). Ours builds them since T-2600 within the cell bound. An extent is read by the shared near-integer rule (`near_integer_whole`, as DATE, TIME, XMATCH's mode and SORTBY's
+sort_order): floored, but within 2^-22 + 2^-33 below an integer it is that integer, and within half that (2^-23 + 2^-34)
+below 0 it is 0. `SEQUENCE(4,-1.19E-7)` and
 `SEQUENCE(0,-1E-8)` are `#CALC!` (a zero extent; gen-m7 c36ff5f42a1a4d47 A359), `SEQUENCE(4,-1.2E-7)` and `SEQUENCE(0,-1)`
-`#VALUE!`, and `SEQUENCE(0.99999999,1)` is 1, `SEQUENCE(0.999999,1)` `#CALC!`. The epsilon is probed near 0, 1 and 1048577 only; for large extents a relative or float32 rounding is UNVERIFIED.
+`#VALUE!`, and `SEQUENCE(0.99999999,1)` is 1, `SEQUENCE(0.999999,1)` `#CALC!`.
 Evidence: probes/empty-array-args-sequence (excel-graph, 2026-10-24), probes/t2436/computed-scalar, probes/t2436/f280df8ba95f96b9.
 Ours: `CalcResult::is_empty_array` in those readers.
 Status: VERIFIED (excel-graph)
 Tasks: T-2580
+
+## Array-constructor extents just below an integer (T-4465)
+Rule: SEQUENCE (rows and columns) and RANDARRAY read an extent by the shared near-integer rule above, the bound
+absolute at 1, 2, 1000 and 100000: `SEQUENCE(1-1.5*2^-23)`, `SEQUENCE(1-(2^-22+2^-33))` and `SEQUENCE(100000-2^-22)` reach
+the integer while `1-(2^-22+2^-32)` reads 0 (`#CALC!`) and `100000-2^-21` 99999; below 0, `-2^-23` reads 0 (`#CALC!`) and
+`-1.5*2^-23` -1 (`#VALUE!`). This tells 2^-23 added before the floor (which reads `1-1.5*2^-23` as 0) and a float32
+rounding of the extent (which reads `1000-2^-21` as 1000) apart from it. The other constructors do not snap: TAKE, DROP,
+EXPAND, WRAPROWS and WRAPCOLS truncate (`TAKE(r,2-2^-24)` is one row, `DROP(r,1-2^-24)` drops none, `EXPAND(x,1-2^-24)`
+and `WRAPROWS(v,1-2^-24)` are `#VALUE!` and `#NUM!` for an extent read as 0, `TAKE(r,-2^-24)` `#CALC!`), and MAKEARRAY is
+`#VALUE!` for any fractional extent, `2+2^-24` too. A wrap of 3 or more over a 3-cell vector gives the vector's 3 cells
+(1x3, not padded to the wrap).
+Evidence: probes/t4465-extent-near-integer-main (63 extents stepping 2^-24 to 2^-21 below and above 1, 2, 1000, 100000
+and below 0; B:J = SEQUENCE rows, SEQUENCE columns, RANDARRAY, MAKEARRAY, TAKE, DROP, EXPAND, WRAPROWS, WRAPCOLS), with
+the rule frozen on it before -holdout (seed 4465) and -fresh (seed 44651, generated after the freeze) were filled
+(excel-graph, 2026-11-06); docs/research/t4465 holds the generator, the candidate rules' predictions and the scorer.
+Main 539/539, hold-out 318/318, fresh 316/316 for the rule; the best single alternative scores 469, 276 and 290. The
+rows that tell the shared rule from 2^-23 added before the floor are 12 of main's and 6 of the hold-out's; the fresh
+sweep has only 1 such row, so it confirms the other constructors' rules more than that choice.
+Ours: implemented (T-4465): SEQUENCE and RANDARRAY call `near_integer_whole` (sequence.rs's `EXTENT_EPSILON` is gone);
+TAKE, DROP, EXPAND, WRAPROWS/WRAPCOLS and MAKEARRAY already matched. RANDARRAY's columns argument shares
+`randarray_extent` with its rows but no probe cell reads it.
+Status: VERIFIED (excel-graph)
+Tasks: T-4465
 
 ## GROUPBY and PIVOTBY in the gen-m9 sweep (T-2436)
 Rule: Excel computes these calls that ours rejected or computes differently: `PIVOTBY(Data!B1:E12,Data!B1:D12,Data!D1:E12,

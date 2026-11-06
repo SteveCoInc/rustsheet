@@ -109,8 +109,17 @@ Tasks: T-2660, T-2867
 Rule: `a1` is coerced like a logical argument: a nonzero number is TRUE (`INDIRECT("H2",2)` and
 `INDIRECT("H2",-1)` = 5, `"TRUE"` text = TRUE), `0` is FALSE, so `INDIRECT("H2",0)` reads "H2" as R1C1
 and is `#REF!`, while `INDIRECT("R2C8",0)` = 5. Empty-string text is `#VALUE!` in both styles (B4, B10) and `"x"` is `#VALUE!` in A1 style (B5).
-Not probed: `"FALSE"` text and booleans read from cells.
-Evidence: eval/suites/probes/cases/indirect-text-broadcast.case.json B3:B10 (oracle: excel-graph, 2026-10-05, T-0957).
+The same holds when a1 comes from a cell, a one-cell range or nowhere (T-4538):
+- Text is matched case-insensitively and exactly: `"FALSE"`, `"false"`, a cell holding the text `FALSE` or `false` are FALSE;
+  `"True"` and a cell holding the text `TRUE` are TRUE. Text with a space (`" TRUE"`, `"TRUE "`) and numeric text (`"1"`,
+  as a literal or from a cell) are `#VALUE!`: a1 never converts text to a number.
+- TRUE/FALSE, 0, 1, -0.5 and 0.5 in cells read as in a literal (0.5 and -0.5 are TRUE). An empty-text cell (`=""`) is
+  `#VALUE!`, like the literal `""`.
+- A blank cell, a one-cell range of a blank cell and an omitted a1 (`INDIRECT("H2",)`) are FALSE, so they read the text as
+  R1C1: `INDIRECT("H2",)` is `#REF!` and `INDIRECT("R2C8",)` is 5. Only a1 left out entirely (`INDIRECT("H2")`) is A1.
+- A one-cell range (`D2:D2`) reads as its cell. An error in the a1 cell is returned (`=NA()` gives `#N/A`).
+Evidence: eval/suites/probes/cases/indirect-text-broadcast.case.json B3:B10 (oracle: excel-graph, 2026-10-05, T-0957);
+probes/t4538-indirect-a1-cells B20:C43 (oracle: excel-graph, 2026-11-06, T-4538; rows listed in docs/research/t4538/predictions.md).
 Status: VERIFIED (Excel for the web only; the engine matches all of these)
 
 ## INDIRECT R1C1 relative offsets

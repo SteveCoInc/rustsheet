@@ -28,7 +28,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, scalars
+from rustsheet_tools.accuracy.defs._common import by_stratum, scalars, sum_away_from_mode
 from rustsheet_tools.accuracy.defs.discrete import TRIALS_LIMIT, TRIALS_SOURCE
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register, spend
@@ -69,22 +69,11 @@ def _mode(n: mpmath.mpf, p: mpmath.mpf) -> mpmath.mpf:
 
 def _sum_from(k: mpmath.mpf, n: mpmath.mpf, p: mpmath.mpf, *, upward: bool) -> mpmath.mpf:
     """P(K >= k) (upward) or P(K <= k), summed term by term from k away from the mode, for 0 < p < 1 and
-    0 <= k <= n. The ratio of successive terms falls monotonically, so once it is below 1 the rest of the sum is
-    at most term * r / (1 - r) (a geometric bound); every term is charged to the work budget."""
-    eps = mpmath.eps * 2**-10
+    0 <= k <= n (`sum_away_from_mode`)."""
     q = 1 - p
-    term = _pmf(k, n, p)
-    total = term
-    j = k
-    while (j < n) if upward else (j > 0):
-        spend()
-        ratio = (n - j) * p / ((j + 1) * q) if upward else j * q / ((n - j + 1) * p)
-        term *= ratio
-        total += term
-        j += 1 if upward else -1
-        if ratio < 1 and term * ratio / (1 - ratio) <= eps * total:
-            break
-    return total
+    if upward:
+        return sum_away_from_mode(_pmf(k, n, p), k, n, 1, lambda j: (n - j) * p / ((j + 1) * q))
+    return sum_away_from_mode(_pmf(k, n, p), k, mpmath.mpf(0), -1, lambda j: j * q / ((n - j + 1) * p))
 
 
 def binom_cdf_summed(k: mpmath.mpf, n: mpmath.mpf, p: mpmath.mpf) -> mpmath.mpf:
