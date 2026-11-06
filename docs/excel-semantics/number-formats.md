@@ -487,7 +487,8 @@ Rule (observed, ElapsedFormatTests, a 1904-date-system workbook):
   first hour token even behind a minute token, else to the first minute token: `[s] h m` "18 444 42", `[s] m m`
   "18 26640 1", but `[s] m h` "18 42 444" (the `m` is then the clock minute). A date token before `[s]` does not stop it
   (`d [s] m` "0 18 26640", `mmm [s] h` "Jan 18 444"); an elapsed token (`[h] [s] m`, `[m] [s] h`) or a clock `s`
-  (`s [s] m`, `s [s] h`) before it leaves the section `#VALUE!`; `[s].0 m` is "18.0 720" and `[s].0 h` "18.0 12"
+  (`s [s] m`, `s [s] h`) before it leaves the section `#VALUE!`; `[s].0 m` is "18.0 720" and `[s].0 h` "18.0 12" (the fraction digits
+  split the serial, so the register is the shown fraction, as in "`General` in a date section")
   (VERIFIED, probes/t4341-elapsed-second-forms A1:N3, excel-graph, 2026-11-06, T-4341). Implemented in `move_elapsed_second`
   (formatter/elapsed.rs).
 - Past 9999-12-31 a fraction of a second is #VALUE! with or without an elapsed token:

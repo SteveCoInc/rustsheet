@@ -217,9 +217,10 @@ pub(super) fn elapsed_after_larger_clock(tokens: &[TextToken]) -> bool {
 /// The rewrite also drops the elapsed flag the parser gave a later `s`. The first hour token takes
 /// the count even behind a minute token (`[s] m h` is "18 42 444"), else the first minute token
 /// does. Evidence: probes/t4295-elapsed-with-month A1:D9, K1:K9 (excel-graph, 2026-11-05, T-4295);
-/// probes/t4341-elapsed-second-forms (excel-graph, 2026-11-06, T-4341). A clock, date or elapsed
-/// token before the `[s]` leaves the section as parsed or the rewrite moves on ([`elapsed_after_larger_clock`]
-/// keeps `s [s] m` and `[h] [s] m` `#VALUE!` like `s [s]`).
+/// probes/t4341-elapsed-second-forms (excel-graph, 2026-11-06, T-4341). A clock token before the
+/// `[s]` stops the rewrite, and [`elapsed_after_larger_clock`] keeps `s [s] m` `#VALUE!` like
+/// `s [s]`; a date token does not stop it (`d [s] m`); `[h] [s] m` and `[m] [s] h` are `#VALUE!`
+/// through the parser's two-bracketed-elapsed rule.
 pub(super) fn move_elapsed_second(tokens: &mut [TextToken]) {
     let Some(start) = tokens
         .iter()
