@@ -3,7 +3,7 @@ id: T-4356
 title: "Number formats: extended-hex tag [x-euro] reads as byte 2 but Excel prints ASCII digits"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
