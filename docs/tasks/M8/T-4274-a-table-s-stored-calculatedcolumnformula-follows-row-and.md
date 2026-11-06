@@ -71,4 +71,4 @@ holds Excel's column formula.
   t4274-calc-column-structured-insert-column-a F!A4 (`=SUM(T[Calc])`, Excel 14, ours `#ERROR!`): the moved `[@Col]`
   cells evaluate to `#ERROR!` (their FORMULATEXT matches), an engine bug outside this task, owned by T-4680. So the
   first criterion's "no new F line" holds for the column-formula text but not for that cell. 0 regressions.
-- Follow-ups filed: T-4680 (that bug); T-4681 and T-4682 (review follow-ups of PR #3727, T-3994).
+- Follow-ups filed: T-4680 (that bug); T-4681 (review follow-up of PR #3727, T-3994). The other #3727 follow-up, owners for its two gen-m9 cells, is T-4675 (filed meanwhile on main), so no task of its own.
