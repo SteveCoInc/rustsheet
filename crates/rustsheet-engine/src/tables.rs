@@ -17,7 +17,8 @@ use crate::{
     },
     formula_rewrite::RewrittenFormula,
     model::Model,
-    types::{Cell, Table, TableColumn, TableStyleInfo, Worksheet},
+    table_edits::bounds,
+    types::{Cell, Table, TableColumn, TableExtent, TableStyleInfo, Worksheet},
 };
 
 /// Gives every formula cell of `worksheet` whose shared formula is one of `by_row` (index, parsed
@@ -311,7 +312,7 @@ impl Model {
             .workbook
             .tables
             .get(name)
-            .and_then(|table| Some(crate::table_edits::bounds(table)?.data));
+            .and_then(|table| Some(bounds(table)?.data));
         self.lower_this_row_references(&tables, data_rows);
         self.rewrite_table_references(&tables, None, TableRewrite::Lower);
         self.remove_table(name)
@@ -343,6 +344,74 @@ impl Model {
             .filter(|(_, table)| table.is_on_sheet(sheet_name))
             .map(|(name, table)| (name.clone(), table.clone()))
             .collect()
+    }
+
+    /// The extents of the tables on `sheet`, to compare before and after a row delete (T-3634).
+    pub(crate) fn table_extents(&self, sheet: u32) -> Result<Vec<TableExtent>, String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        Ok((self.tables_on_sheet(&sheet_name).into_iter())
+            .map(|(name, table)| TableExtent {
+                name,
+                reference: table.reference,
+                totals_row_count: table.totals_row_count,
+            })
+            .collect())
+    }
+
+    /// Those of `before` (the [`Model::table_extents`] of `sheet` before an edit) that the edit
+    /// changed: what the edit's undo restores.
+    pub(crate) fn changed_table_extents(
+        &self,
+        sheet: u32,
+        before: Vec<TableExtent>,
+    ) -> Result<Vec<TableExtent>, String> {
+        let after = self.table_extents(sheet)?;
+        Ok(before.into_iter().filter(|e| !after.contains(e)).collect())
+    }
+
+    /// Gives the tables of `sheet` named in `extents` those extents back (the undo of a row
+    /// delete that resized them, T-3634), and reparses. The extents can come from a peer's diff
+    /// (directive 5): each must name a table on `sheet` and keep its columns, with room for its
+    /// header and totals rows, or nothing changes.
+    pub(crate) fn restore_table_extents(
+        &mut self,
+        sheet: u32,
+        extents: &[TableExtent],
+    ) -> Result<(), String> {
+        if extents.is_empty() {
+            return Ok(());
+        }
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        for extent in extents {
+            let table = (self.workbook.tables.get(&extent.name))
+                .filter(|table| table.is_on_sheet(&sheet_name))
+                .ok_or_else(|| format!("No table '{}' on the sheet", extent.name))?;
+            let restored = Table {
+                reference: extent.reference.clone(),
+                totals_row_count: extent.totals_row_count,
+                ..table.clone()
+            };
+            let fits = bounds(table)
+                .zip(bounds(&restored))
+                .is_some_and(|(now, then)| {
+                    then.left == now.left
+                        && then.right == now.right
+                        && then.top <= then.bottom
+                        && then.data.0 <= then.data.1.saturating_add(1)
+                        && extent.totals_row_count <= 1
+                });
+            if !fits {
+                return Err(format!("Invalid extent for table '{}'", extent.name));
+            }
+        }
+        for extent in extents {
+            if let Some(table) = self.workbook.tables.get_mut(&extent.name) {
+                table.reference.clone_from(&extent.reference);
+                table.totals_row_count = extent.totals_row_count;
+            }
+        }
+        self.reset_tables();
+        Ok(())
     }
 
     /// Puts back tables taken out with their sheet (the undo of a sheet delete), and reparses.

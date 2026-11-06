@@ -684,7 +684,6 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             // `<=`: a value exactly one unit at the last shown place (-1 for `0`, -1 after a `#,,`
             // scaling) keeps its sign (poi/NumberFormatTests.xlsx Tests!A95).
             let is_negative = value <= -(10.0_f64.powf(-(p.precision as f64)));
-            let mut needs_period = false;
             // With no integer placeholder no digit carries the minus, so it leads the literals
             // (`TEXT(-PI(),"x")` = "-x", `TEXT(-5,"2")` = "-2"; probes/text-format-bare-literals A3, A7;
             // `"x"General` on -1.5 is "-x1.5", General then shows |value|: gen-m10 F!D19).
@@ -725,15 +724,12 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                         let general = general_text(lead_abs(general_value, digit_count), locale);
                         text.push_str(&p.numerals.number(&general));
                     }
-                    TextToken::Period => {
-                        if p.precision == 0 {
-                            // No decimal placeholder prints it, so it stands on its own: `0.1`
-                            // on 12.3 is "12.1" (probes/text-format-bare-literals A21, A11).
-                            text = format!("{text}{decimal_separator}");
-                        } else {
-                            needs_period = true;
-                        }
-                    }
+                    // The point prints where it stands, so a literal right after it follows it
+                    // (`0.|0` on 1234567.891 is "1234567.|9", `#.\-#` on 0 ".-";
+                    // probes/t4595-literal-after-point, number-formats.md "A literal right after
+                    // the decimal point"), and with no decimal placeholder it stands on its own
+                    // (`0.1` on 12.3 is "12.1"; probes/text-format-bare-literals A21, A11).
+                    TextToken::Period => text.push_str(&decimal_separator),
                     TextToken::Digit(digit) => {
                         if digit.number.is_integer() {
                             // 1. Integer part
@@ -806,28 +802,15 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                             // 2. After the decimal point
                             let index = digit.index as usize;
                             if index < fract_part.len() {
-                                if needs_period {
-                                    text.push_str(&decimal_separator);
-                                }
                                 text.push(p.numerals.digit(fract_part[index]));
                             } else if digit.kind == '0' {
-                                if needs_period {
-                                    text.push_str(&decimal_separator);
-                                }
                                 text.push(p.numerals.digit('0'));
                             } else if digit.kind == '?' {
-                                // A padding space, after the point when it is the first decimal:
-                                // `?.??` on 1000 is "1000.  " (gen-m10, T-1738).
-                                if needs_period {
-                                    text = format!("{text}{decimal_separator} ");
-                                } else {
-                                    text = format!("{text} ");
-                                }
-                            } else if digit.kind == '#' && needs_period {
-                                // FIXME: This is what Excel does, but it transforms "3" into "3."
-                                text = format!("{text}{decimal_separator}");
+                                // A padding space: `?.??` on 1000 is "1000.  " (gen-m10, T-1738).
+                                text.push(' ');
                             }
-                            needs_period = false;
+                            // An unfilled `#` prints nothing; the point already printed, so `#.#`
+                            // on 3 is "3." as in Excel.
                         } else if digit.number.is_exponent() {
                             // 3. Exponent part
                             let index = digit.index;

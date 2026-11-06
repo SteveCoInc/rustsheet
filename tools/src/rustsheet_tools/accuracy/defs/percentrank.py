@@ -43,18 +43,11 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, one_of, scalars
+from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, one_of, real_args
 from rustsheet_tools.accuracy.defs.aggregate_array import array_of, sorted_values
 from rustsheet_tools.accuracy.defs.ceiling_floor import cut15
 from rustsheet_tools.accuracy.literal import Arg, round15
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    DomainError,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 
 CUT_SOURCE = (
     "statistics.md#percentrank-a-huge-significance-is-div0-truncation-does-not-lose-a-digit-at-a-cut-t-2256"
@@ -144,7 +137,7 @@ def _significance_of(value: mpmath.mpf) -> int:
 
 
 def _rank(args: Sequence[MathArg], exclusive: bool) -> mpmath.mpf:
-    x_arg, *rest = scalars(args[1:])
+    x_arg, *rest = real_args(args[1:])
     values = sorted_values(args[0])
     xs = [_exact(v) for v in values]
     x = _exact(x_arg)

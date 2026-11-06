@@ -1,0 +1,318 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4612: each sheet one builder-v2 pivot (rows K, data Count of V) Excel refreshes on open; the sidecar's `cache_fields` record each saved shared item's type and the `<sharedItems>` flags. Casing of a merged text item (the builder caches a formula as missing, so a refresh sees it first while the cache lists the first literal's casing): C1 records =\"EAST\", east (first EAST; listed, lowercase and last east). C2: =\"East\", EAST, east (first East, listed EAST, lowercase and last east). C3: =\"East\", east, EAST (first East, listed and lowercase east, last EAST). Dates: T1 45000, 45001, 45000 as m/d/yyyy (are the appended items <d>). T2 0.25, 0.5, 0.25 as h:mm and T3 1.5, 2.25, 1.5 as [h]:mm (do time-only and elapsed formats count as dates: appended items or the listed <n> ones). T4 45000 (m/d/yyyy), the text x, 45001 (m/d/yyyy): the flags of date+text. T5 45000 as m/d/yyyy, then 45000 and 45001 General: is a date one item with an equal plain number. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4612",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "DC1",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": "=\"EAST\"",
+    "B2": 1,
+    "A3": "east",
+    "B3": 1
+   }
+  },
+  {
+   "name": "DC2",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": "=\"East\"",
+    "B2": 1,
+    "A3": "EAST",
+    "B3": 1,
+    "A4": "east",
+    "B4": 1
+   }
+  },
+  {
+   "name": "DC3",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": "=\"East\"",
+    "B2": 1,
+    "A3": "east",
+    "B3": 1,
+    "A4": "EAST",
+    "B4": 1
+   }
+  },
+  {
+   "name": "DT1",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": 45000,
+    "B2": 1,
+    "A3": 45001,
+    "B3": 1,
+    "A4": 45000,
+    "B4": 1
+   },
+   "number_formats": {
+    "A2": "m/d/yyyy",
+    "A3": "m/d/yyyy",
+    "A4": "m/d/yyyy"
+   }
+  },
+  {
+   "name": "DT2",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": 0.25,
+    "B2": 1,
+    "A3": 0.5,
+    "B3": 1,
+    "A4": 0.25,
+    "B4": 1
+   },
+   "number_formats": {
+    "A2": "h:mm",
+    "A3": "h:mm",
+    "A4": "h:mm"
+   }
+  },
+  {
+   "name": "DT3",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": 1.5,
+    "B2": 1,
+    "A3": 2.25,
+    "B3": 1,
+    "A4": 1.5,
+    "B4": 1
+   },
+   "number_formats": {
+    "A2": "[h]:mm",
+    "A3": "[h]:mm",
+    "A4": "[h]:mm"
+   }
+  },
+  {
+   "name": "DT4",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": 45000,
+    "B2": 1,
+    "A3": "x",
+    "B3": 1,
+    "A4": 45001,
+    "B4": 1
+   },
+   "number_formats": {
+    "A2": "m/d/yyyy",
+    "A4": "m/d/yyyy"
+   }
+  },
+  {
+   "name": "DT5",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": 45000,
+    "B2": 1,
+    "A3": 45000,
+    "B3": 1,
+    "A4": 45001,
+    "B4": 1
+   },
+   "number_formats": {
+    "A2": "m/d/yyyy"
+   }
+  },
+  {
+   "name": "C1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PC1",
+     "source": "DC1!A1:B3",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "C2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PC2",
+     "source": "DC2!A1:B4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "C3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PC3",
+     "source": "DC3!A1:B4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "T1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PT1",
+     "source": "DT1!A1:B4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "T2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PT2",
+     "source": "DT2!A1:B4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "T3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PT3",
+     "source": "DT3!A1:B4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "T4",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PT4",
+     "source": "DT4!A1:B4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "T5",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PT5",
+     "source": "DT5!A1:B4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(DC1!A2:A3)"
+   }
+  }
+ ]
+}

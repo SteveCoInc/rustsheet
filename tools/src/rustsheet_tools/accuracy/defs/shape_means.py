@@ -71,7 +71,8 @@ from rustsheet_tools.accuracy.defs._common import (
     by_stratum,
     by_stratum_with_edge,
     domain_of,
-    scalars,
+    is_real,
+    real_args,
 )
 from rustsheet_tools.accuracy.defs.aggregate import (
     MAX_ARGS,
@@ -123,7 +124,7 @@ def _moment_domain(least: int) -> Callable[[Sequence[MathArg]], str | None]:
     deviation that overflows on its own (with the numbers' sum and every deviation in range)."""
 
     def domain(args: Sequence[MathArg]) -> str | None:
-        xs = scalars(args)
+        xs = real_args(args)
         if len(xs) < least:
             return f"#DIV/0!: fewer than {least} numbers"
         if overflow(args) is not None:
@@ -166,7 +167,7 @@ def _exact_double_sum(xs: Sequence[mpmath.mpf]) -> bool:
 
 def _moment_inputs(args: Sequence[MathArg]) -> tuple[int, Callable[[int], mpmath.mpf]]:
     """(n, p -> S_p) for a point the domain accepted; NoValueError for the unprobed regions."""
-    xs = scalars(args)
+    xs = real_args(args)
     if overflow(args) is not None:
         msg = "the sum of the numbers is beyond the double range (unprobed for the moments)"
         raise NoValueError(msg)
@@ -220,13 +221,13 @@ def _harmean_positive(xs: Sequence[mpmath.mpf]) -> None:
 
 
 def _geomean(args: Sequence[MathArg]) -> mpmath.mpf:
-    xs = scalars(args)
+    xs = real_args(args)
     _positive(xs)
     return mpmath.exp(mpmath.fsum(mpmath.log(x) for x in xs) / len(xs))
 
 
 def _harmean(args: Sequence[MathArg]) -> mpmath.mpf:
-    xs = scalars(args)
+    xs = real_args(args)
     _harmean_positive(xs)
     reciprocals = [1.0 / float(x) for x in xs]  # inf where it overflows
     if not math.isfinite(running_total(reciprocals)[1]):
@@ -257,7 +258,7 @@ def trim_count(n: int, percent: mpmath.mpf) -> int:
 
 def _trimmean(args: Sequence[MathArg]) -> mpmath.mpf:
     array, percent = args
-    if not isinstance(percent, mpmath.mpf):
+    if not is_real(percent):
         msg = "percent must be a number"
         raise TypeError(msg)
     xs = sorted_values(array)

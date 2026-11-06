@@ -22,7 +22,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, finite_double, one_of, scalars, signed
+from rustsheet_tools.accuracy.defs._common import by_stratum, finite_double, one_of, real_args, signed
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -38,17 +38,17 @@ TINY = 1e-300  # the smallest |x| drawn: 1/x of a smaller one approaches the dou
 
 def gamma_domain(args: Sequence[MathArg]) -> str | None:
     """GAMMA's poles: 0 and the negative integers are `#NUM!` (SWEEP_SOURCE)."""
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "a pole at 0 or a negative integer (#NUM!)" if x <= 0 and x == mpmath.floor(x) else None
 
 
 def _gamma(args: Sequence[MathArg]) -> mpmath.mpf:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return finite_double(mpmath.gamma(x), "GAMMA")
 
 
 def _gammaln(args: Sequence[MathArg]) -> mpmath.mpf:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return mpmath.loggamma(x)
 
 

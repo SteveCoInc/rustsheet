@@ -1,9 +1,9 @@
 ---
 id: T-4561
-title: "Source-preserving export 3: append new styles, metadata and the calcChain rule to patched packages (SPEC-0034 D3.3-D3.5)"
+title: "Source-preserving export 3: metadata for rich values and dynamic arrays, and the calcChain rule, in patched packages (SPEC-0034 D3.4, D3.5, E2)"
 milestone: M15
 lane: engine
-status: blocked
+status: in-progress
 priority: P1
 size: M
 tier: opus
@@ -12,29 +12,62 @@ spec: docs/specs/SPEC-0034-xlsx-source-preserving-export.md
 ---
 
 ## Goal
-A patched package can hold cells with styles the source did not have, dynamic-array anchors, and added or removed
-formula cells:
-- new style records are appended to `styles.xml`;
-- `metadata.xml` follows the export's rules;
-- calcChain is dropped with its relationship and content-type override when the set of formula cells changed.
+A patched package can hold dynamic-array anchors and rich-value errors, and can add or remove formula cells:
+- a source with no `metadata.xml` of its own takes the export's metadata parts;
+- calcChain is dropped, with its relationship and content-type override, when the set of formula cells changed.
 
-This covers SPEC-0034 D3.3 (styles), D3.4 (dynamic arrays), D3.5 and E2.
+This covers SPEC-0034 D3.4, D3.5 and E2. The styles half (D3.3) is T-4623.
 
 ## Context
-SPEC-0034. The style table must be a prefix-stable extension of the source's, or the patch falls back.
+SPEC-0034; T-4560 left these as fallbacks. The three external-link fixtures fall back because a recalculated cell
+becomes a rich error, and those sources have no `metadata.xml`.
 
 ## Acceptance criteria
-- [ ] A cell given a new number format patches to an appended `xf` (and `numFmt`), and the other style records are
-      unchanged (unit test).
-- [ ] Check SPEC-0034 D3.3's assumption that the importer keeps the source's `cellXfs` order (`import/styles.rs`),
-      and test that a style table which is not a prefix-stable extension falls back to regeneration.
-- [ ] Adding a formula cell drops calcChain consistently, and changing only values keeps it (unit tests).
-- [ ] `make check` green; reviewers approve.
+- [x] A source without metadata parts takes the export's (`xl/metadata.xml`, and `xl/richData/*` for rich errors),
+      with a relationship and content-type override for each. Its cells use the export's `vm`/`cm` (integration
+      test).
+- [x] A source with its own metadata keeps the T-4560 rules: same-kind rich errors keep the source `vm`, and
+      anything else falls back.
+- [x] Adding or removing a formula cell drops calcChain, with its relationship and override, and changing only
+      values keeps it (integration tests).
+- [x] The round-trip baselines are rerecorded.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
+- New styles (T-4623).
 - Structural edits.
 
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275, 0306): M15 waits until Phase 1 parity exits, except for the task the
-owner-directed session claims. Unblock when docs/status.md has the line `**Phase 1:** exited <date>`, or by claiming
-it in that session.
+## Outcome
+- `export/patch/package.rs`:
+  - `add_parts` adds a relationship (fresh `rIdP<n>` ids) and an override per new part;
+  - `remove_part` cuts calcChain's `<Relationship>` and `<Override>`;
+  - `rewrite_zip` drops removed entries and appends added ones.
+- `export/patch/strings.rs` holds the shared-string helpers, which keeps patch.rs at 900 lines.
+- `try_patch`:
+  - A source with none of `xl/metadata.xml` and the two rich-value parts is on the export's layout. Its whole-cell
+    rewrites and value patches carry the export's `vm`/`cm`.
+  - When any patched sheet then holds `vm` or `cm`, the export's `metadata.xml` (plus the rich-value parts when a
+    rich error exists) is added.
+  - A changed set of formula cells drops calcChain instead of falling back.
+- Round-trip kept rates (weighted, SPEC-0033 D8), with T-4560 → with T-4561:
+
+  | suite | failing cases | kept |
+  |---|---|---|
+  | roundtrip-calipers | 53 → 53 | 99.986% → 99.986% |
+  | roundtrip-poi | 21 → 21 (+14 not scored) | 99.993% → 99.997% |
+  | roundtrip-corpus-bench | 20 → 20 | 99.997% → 99.99999% |
+  | roundtrip-fixtures | 3 → 3 | 95.75% → 100.00% |
+
+- The fixtures' three failing cases now hold only `added` parts: the metadata parts their new rich errors need. No
+  source item is lost.
+- Review round 1:
+  - Fidelity: a source with no metadata whose cells already hold a dangling `vm` falls back, because the added
+    metadata would make them name rich errors. Stale overrides or links for an added part also fall back.
+    SPEC-0034 D3.1 and D3.4 now say what the patch does.
+  - Security: the rels and content-types edits are rebuilt on one parser scan. That scan requires the right root,
+    refuses long-form children, inserts before the real closing tag (never a substring match) and cuts in one
+    linear pass. calcChain relationships are matched by type suffix and must target the part.
+  - Design: the metadata content type and relationship, `metadata_parts`, `WORKBOOK_RELS_PART` and
+    `CONTENT_TYPES_PART` each have one definition, shared by the export and the patcher. `Vm` replaces the nested
+    `Option`.
+

@@ -33,6 +33,18 @@ impl Table {
     }
 }
 
+/// The rows a table spans: its reference and its totals row count, which a row delete changes and
+/// the delete's undo puts back (T-3634). The insert that undoes a delete of a table's bottom rows
+/// is just below the table's data, where an insert does not grow a table
+/// (probes/table-edits/table-insert-row-below), so the rows alone cannot restore the extent.
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+pub struct TableExtent {
+    /// The table's key in `Workbook::tables`.
+    pub name: String,
+    pub reference: String,
+    pub totals_row_count: u32,
+}
+
 /// One column of a table (ECMA-376-1:2016 section 18.5.1.3).
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
 pub struct TableColumn {

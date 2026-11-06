@@ -27,10 +27,12 @@ A candidate cell gets no math value when:
   (but for an array or matrix parameter, whose elements must be numbers);
 - an indexed definition is called outside INDEX (`=MINVERSE(A1)`, an array result).
   A `text` parameter (T-4084) takes a string literal or a text cell: one of its `choices`, or for a
-  complex number a text `parse_complex_text` reads whose numbers have at most 15 significant digits
-  (Excel cuts a longer IM* part to 15 digits, not modelled yet: engineering.md "Engineering functions
-  in the gen-m9 engineering sweep (T-2258)", probes/eng-inumber-grammar-digits) and whose parts are 0
-  or normal doubles (how Excel reads a subnormal part is not established), and one
+  complex number a text `parse_complex_text` reads whose parts, cut to 15 significant digits as Excel
+  reads them (`read_complex_arg`, T-4593: engineering.md "Engineering functions in the gen-m9
+  engineering sweep (T-2258)", probes/eng-inumber-grammar-digits; IM* cells show the cut for
+  positive and negative plain-notation parts with an `i` suffix, while exponent-form parts and `j`
+  texts follow from the VALUE analogy, numbers.md "15-digit literal parsing"), are 0 or normal
+  doubles (how Excel reads a subnormal part is not established), and one
   call's complex texts share one suffix (`i` or `j`).
   A nested call, or arithmetic between call results, makes the cell a composite instead
   (`composite`, T-3993, decision 0297): it gets the outermost node's math at its inner nodes'
@@ -84,8 +86,8 @@ from rustsheet_tools.fitlab.sweep import (
     arithmetic,
     is_array_literal,
     parse_arg,
-    parse_complex_text,
     parse_matrix_arg,
+    read_complex_arg,
     split_args,
 )
 from rustsheet_tools.snapshot import suite_cases
@@ -106,8 +108,6 @@ _SCALE = re.compile(r"(?P<call>.*\))\s*(?:(?P<op>[*/])\s*2\s*\^\s*(?P<k>[+-]?\d{
 # 2^k is a normal double for these k, so Excel's `^` gives it exactly.
 _SCALE_POWERS = range(-1022, 1024)
 _SMALLEST_NORMAL = 2.0**-1022
-# An unsigned number of a complex text (its mantissa and exponent), for the 15-digit check.
-_TEXT_NUMBER = re.compile(r"(?P<mantissa>\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?")
 
 
 @dataclass(frozen=True)
@@ -257,9 +257,9 @@ def matrix_rows(value: Any) -> literal.Matrix | str:
     it, or why it does not fit. A number is a 1x1 matrix: `MDETERM(5)` is 5 (probes/stats-evidence-floor-t1623
     S!Q112), and MDETERM of a single numeric cell is that number (arrays.md "MDETERM / MINVERSE: a blank
     cell in the matrix is #VALUE!"). A blank or a logical, as the matrix or one of its elements, is `#VALUE!`
-    in Excel (same entry; probes/matrix-boolean-elements G1-G13), which the math does not model. A text is
-    refused with no math value: a direct text argument is `#VALUE!` (`MDETERM("5")`, S!Q113), but a text or
-    text-number element of an array literal or range is unprobed for MDETERM, MINVERSE and MMULT (T-4626).
+    in Excel (same entry; probes/matrix-boolean-elements G1-G13), which the math does not model. So is a text,
+    a text number included, as a direct argument (`MDETERM("5")`, S!Q113) or as an element of an array literal
+    or range, in MDETERM, MINVERSE and MMULT (probes/t4626-matrix-text-elements M1-M27, T-4626).
     A flat list (a range `parse_arg` read without its shape), ragged rows and a matrix over
     `MAX_MATRIX_SIDE` rows or columns (the exact rational elimination's cost; no oracle cell is that large)
     are refused too."""
@@ -293,21 +293,17 @@ def _fit_number(param: Param, value: Any) -> literal.Arg | str:
 def fit_text(param: Param, value: Any) -> str | Unfit:
     """A text for a `text` parameter as is, or why it does not fit: a non-text (whether each
     function reads a number as its text is not evidenced), a text outside `choices`, or for a complex
-    number one `parse_complex_text` does not read, with a number past 15 significant digits (Excel cuts
-    it to 15 digits, not modelled yet: engineering.md "Engineering functions in the gen-m9 engineering
-    sweep (T-2258)", probes/eng-inumber-grammar-digits), or with a subnormal part (how Excel reads one is
-    not established)."""
+    number one `parse_complex_text` does not read, or with a subnormal part (how Excel reads one is not
+    established). A part past 15 significant digits fits: the math reads it cut to 15 digits, as Excel
+    does (`read_complex_arg`, T-4593)."""
     if not isinstance(value, str):
         return Unfit("non-text for a text parameter")
     if param.choices:
         return value if value in param.choices else Unfit("text outside the parameter's list")
     try:
-        parts = parse_complex_text(value)
+        parts = read_complex_arg(value)
     except ValueError:
         return Unfit("not a complex number text")
-    for m in _TEXT_NUMBER.finditer(value):
-        if len(m.group("mantissa").replace(".", "").strip("0")) > 15:
-            return Unfit("complex number part past 15 significant digits")
     if not all(_normal_or_zero(mpmath.mpf(part)) for part in parts):
         return Unfit("subnormal complex number part")
     return value

@@ -477,11 +477,25 @@ impl Model {
                     return CalcResult::new_error(Error::ERROR, cell, String::new());
                 }
             };
+            // Excel: a prefix on the Kelvin side is dropped from K to Rank, from K to Reau and from
+            // Reau to K, but kept from Rank to K and against C and F: `CONVERT(1000,"mK","Rank")`
+            // is 1800 and `CONVERT(1000,"Reau","YK")` 1523.15, while `CONVERT(1000,"Rank","YK")` is
+            // 5.555555555555556E-22 (probes/t4615-convert-prefixed-kelvin, every decimal prefix;
+            // docs/excel-semantics/engineering.md "CONVERT drops a Kelvin prefix toward Rank and
+            // Reau").
+            let from_scale = match (&from_temperature, &to_temperature) {
+                (Temperature::Kelvin, Temperature::Rankine | Temperature::Reaumur) => 1.0,
+                _ => from.scale(),
+            };
+            let to_scale = match (&from_temperature, &to_temperature) {
+                (Temperature::Reaumur, Temperature::Kelvin) => 1.0,
+                _ => to.scale(),
+            };
             let t = convert_temperature(
-                value * (from.scale() * from_unit_factor),
+                value * (from_scale * from_unit_factor),
                 from_temperature,
                 to_temperature,
-            ) / (to.scale() * to_unit_factor);
+            ) / (to_scale * to_unit_factor);
             return CalcResult::Number(t);
         }
         // Excel: the value is multiplied by the from-factor, divided by the to-factor, and only then

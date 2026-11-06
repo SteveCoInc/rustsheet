@@ -26,7 +26,7 @@ from fractions import Fraction
 import mpmath
 
 from rustsheet_tools.accuracy import model
-from rustsheet_tools.accuracy.defs._common import by_stratum, fraction_to_mpf, one_of, scalars
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, by_stratum, fraction_to_mpf, one_of, real_args
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, MIN_LITERAL, Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import decimal_literal, log_uniform, random_sign
@@ -38,7 +38,6 @@ MOD_SUBNORMAL_SOURCE = "numbers.md#mod-near-the-smallest-normal-t-2714"
 QUOTIENT_SOURCE = "numbers.md#quotient-truncates-the-double-quotient-t-3675"
 DECISION = "decision 0228"
 MOD_QUOTIENT_LIMIT = 1.1259e12  # MOD is #NUM! from this |n/d| up (the decimal, not a power of two)
-SMALLEST_NORMAL = 2.0**-1022
 
 
 def quotient_value(numerator: float, denominator: float) -> int:
@@ -67,7 +66,7 @@ def mod_value(n: float, d: float) -> Fraction:
         return Fraction(0)
 
     def subnormal(x: float) -> bool:
-        return abs(x) < SMALLEST_NORMAL
+        return abs(x) < NORMAL_MIN
 
     if (f < 0) == (d < 0):
         if subnormal(f):
@@ -75,7 +74,7 @@ def mod_value(n: float, d: float) -> Fraction:
             raise model.DomainError(msg)
         return Fraction(f)
     shifted = f + d  # the double sum decides the subnormal and back-to-d rules
-    if subnormal(f) and subnormal(shifted) and abs(d) == SMALLEST_NORMAL:
+    if subnormal(f) and subnormal(shifted) and abs(d) == NORMAL_MIN:
         return Fraction(d) - Fraction(f)
     if subnormal(f) or subnormal(shifted):
         msg = "a subnormal remainder or shift (#NUM!)"
@@ -86,12 +85,12 @@ def mod_value(n: float, d: float) -> Fraction:
 
 
 def _quotient(args: Sequence[MathArg]) -> mpmath.mpf:
-    n, d = (float(a) for a in scalars(args))
+    n, d = (float(a) for a in real_args(args))
     return mpmath.mpf(quotient_value(n, d))
 
 
 def _mod(args: Sequence[MathArg]) -> mpmath.mpf:
-    n, d = (float(a) for a in scalars(args))
+    n, d = (float(a) for a in real_args(args))
     return fraction_to_mpf(mod_value(n, d))
 
 

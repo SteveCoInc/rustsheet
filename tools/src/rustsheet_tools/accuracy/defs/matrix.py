@@ -35,6 +35,7 @@ from rustsheet_tools.accuracy.defs._common import (
     by_stratum,
     domain_of,
     fraction_to_mpf,
+    is_real,
     one_of,
     signed_log_uniform,
 )
@@ -74,7 +75,7 @@ def exact(a: MathArg) -> Exact:
 def index_of(args: Sequence[MathArg]) -> tuple[int, int]:
     """INDEX's row and column, the last two arguments of an indexed definition (shared by the array regression)."""
     row, column = args[-2], args[-1]
-    if isinstance(row, (bool, str, tuple)) or isinstance(column, (bool, str, tuple)):
+    if not is_real(row) or not is_real(column):
         msg = "INDEX's row and column are not numbers"
         raise TypeError(msg)
     return int(row), int(column)

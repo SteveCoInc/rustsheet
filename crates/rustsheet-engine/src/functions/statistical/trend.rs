@@ -230,11 +230,9 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> Result<Grids, CalcResult> {
-        let y = Grid::from_data(self.read_known_y(&args[0], cell)?);
-        let x = match given(args.get(1)) {
-            Some(node) => Some(Grid::from_data(self.read_data(node, cell)?)),
-            None => None,
-        };
+        let (y, x) = self.read_known_y_and_x(args, cell)?;
+        let y = Grid::from_data(y);
+        let x = x.map(Grid::from_data);
         let new_x = match given(args.get(2)) {
             Some(node) => Some(Grid::from_data(self.read_data(node, cell)?)),
             None => None,

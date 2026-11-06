@@ -41,7 +41,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars, signed
+from rustsheet_tools.accuracy.defs._common import real_args, signed
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -150,7 +150,7 @@ def _definition(
     sources: tuple[str, ...],
 ) -> Definition:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
-        (x,) = scalars(args)
+        (x,) = real_args(args)
         return kernel(x)
 
     return register(
@@ -165,7 +165,7 @@ def _definition(
 
 
 def _erf_value(args: Sequence[MathArg]) -> mpmath.mpf:
-    values = scalars(args)
+    values = real_args(args)
     if len(values) == 1:
         return _erf(values[0])
     lower, upper = values

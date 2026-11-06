@@ -67,7 +67,11 @@ fn get_content_types_xml(workbook: &Workbook, rich: bool, table_parts: usize) ->
     content.extend([
         r#"<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>"#.to_string(),
         r#"<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>"#.to_string(),
-        r#"<Override PartName="/xl/metadata.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheetMetadata+xml"/>"#.to_string(),
+        format!(
+            r#"<Override PartName="/{}" ContentType="{}"/>"#,
+            crate::import::rich_errors::METADATA_PART,
+            rich_errors::METADATA_CONTENT_TYPE
+        ),
     ]);
     if rich {
         for (part, content_type, _, _) in rich_errors::rich_value_parts() {
@@ -120,7 +124,7 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
     let options = zip::write::SimpleFileOptions::default();
 
     // root folder
-    zip.start_file("[Content_Types].xml", options)?;
+    zip.start_file(crate::import::CONTENT_TYPES_PART, options)?;
     zip.write_all(get_content_types_xml(workbook, rich, next_part - 1).as_bytes())?;
 
     zip.add_directory("docProps", options)?;
@@ -157,7 +161,7 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
     zip.write_all(theme::get_theme_xml(&workbook.theme).as_bytes())?;
 
     zip.add_directory("xl/_rels", options)?;
-    zip.start_file("xl/_rels/workbook.xml.rels", options)?;
+    zip.start_file(crate::import::WORKBOOK_RELS_PART, options)?;
     zip.write_all(workbook_xml_rels::get_workbook_xml_rels(workbook, rich).as_bytes())?;
 
     zip.add_directory("xl/worksheets", options)?;

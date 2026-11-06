@@ -3,7 +3,7 @@ id: T-4545
 title: "INDIRECT sheet prefixes lookup.md leaves unprobed: unquoted non-ASCII and digit-then-letter sheet names, an R1C1 text on an all-digit sheet, and a two-sided 2024!B1:2024!B3 range: probe and match"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -46,13 +46,13 @@ the cells for each.
   order and unprobed forms").
 
 ## Acceptance criteria
-- [ ] probes/t4545-indirect-sheet-prefix-spellings (excel-graph, canary-verified) covers every form in Context, or
+- [x] probes/t4545-indirect-sheet-prefix-spellings (excel-graph, canary-verified) covers every form in Context, or
       the PR records which ones Excel for the web refused to load. Its predictions were committed before the fill.
-- [ ] Every cell of the case passes. Any cell that does not is recorded in lookup.md and owned by a task filed with
+- [x] Every cell of the case passes. Any cell that does not is recorded in lookup.md and owned by a task filed with
       `make new-task` (`campaign: semantics` with a `## Visible-parity stage` section) and named in the Outcome.
-- [ ] lookup.md: the two "unprobed" sentences quoted in Context are replaced by the evidenced rule, with the cells
+- [x] lookup.md: the two "unprobed" sentences quoted in Context are replaced by the evidenced rule, with the cells
       cited. The typed `=2024!B1` stays listed as unprobed unless the case covers it.
-- [ ] The cells of probes/indirect-sheet-scoped-name and t2577-indirect-ref-array keep their current verdicts. No new
+- [x] The cells of probes/indirect-sheet-scoped-name and t2577-indirect-ref-array keep their current verdicts. No new
       known failures in any baseline; `make check` green; reviewers approve.
 
 ## Out of scope
@@ -60,3 +60,19 @@ the cells for each.
 - INDIRECT's a1 lift and 1x1 array arguments (probes/t2577-indirect-ref-array; T-2347) and its a1 read from a cell
   (T-4538).
 - Structured-reference text in INDIRECT.
+
+## Outcome
+Probe only: the engine already matched every probed cell, so no code changed.
+- probes/t4545-indirect-sheet-prefix-spellings (M6, 30 texts × ISREF/SUM/ERROR.TYPE/ROWS = 120 cells) covers the cell,
+  R1C1 and two-corner range texts of Context on sheets `Données`, `1Q`, `2024`, `Ünïcode`, `Q1` and `x.y`. The `tn` forms
+  are in their own case, probes/t4545-indirect-sheet-prefix-names (8 texts, 32 cells). It is tagged M8 like
+  probes/indirect-sheet-scoped-name, because sheet-scoped defined names are M8 (excel-probe skill). Excel for the web
+  loaded every sheet name, so no form is a desktop question. The relative R1C1 form is `"2024!R[-23]C2"`, not
+  `R[0]C[1]`: the latter would point at the probe's own cells and make a circular reference.
+- Both cases were filled on excel-graph on 2026-11-06, after the engine's predictions were committed
+  (docs/research/t4545/predictions-spellings.md and predictions-names.md). 152 of 152 cells pass, and every prediction
+  held. In particular, Excel also refuses `"2024!B1:2024!B3"` and every other two-corner range text (`#REF!`), as the
+  engine does.
+- lookup.md: the two "unprobed" sentences are replaced by the evidenced rule, with the rows cited. The typed `=2024!B1`
+  stays unprobed. The prefix rule already has a single reader in the engine and is unchanged.
+- Eval delta: +152 passing cells (two new probe cases). No baseline regressions and no new known failures.

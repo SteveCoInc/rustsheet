@@ -530,8 +530,11 @@ and 5 hidden): the openpyxl file with `ColorFilter(dxfId=7)` on a workbook with 
 directly written `<colorFilter/>` and `<colorFilter cellColor="0"/>` all open without repair and read as the
 criterion-less control: `SUBTOTAL(9,[Val])` 21, `109` 15, `SUBTOTAL(3,[Cat])` 6, `103` 4, manual hides. Our import
 therefore reads a `<colorFilter>` without `dxfId` as criterion-less, in `has_active_criterion` too (before, it kept
-the criterion and called the rows filtered: 15 and 4). A source file with a dangling `dxfId` still imports as filtered
-while its export is criterion-less (T-4558).
+the criterion and called the rows filtered: 15 and 4). Probe case probes/t4558-color-filter-subtotal
+(excel-graph, 2026-11-06, T-4558) pins the three forms (`<colorFilter/>`, `<colorFilter cellColor="0"/>`, no filter):
+all read 6, 4, 21, 15. A source file with a dangling `dxfId` (past the workbook's dxfs) imports as unfiltered, the same
+as its export, which drops the id: SUBTOTAL is equal in memory and after a save. Excel refuses such a source file, so
+this is a choice that keeps the two equal, not an Excel value (T-4558).
 A totals-row cell holding a number, boolean or error constant gets no metadata (T-1607 covered label and formula
 cells only), and Excel refuses that file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
 totals row with the label "Total" and the number 42 is refused, and so is the same file with 42 written as
@@ -672,8 +675,9 @@ Excel drops a stored formula's leading spaces, TAB or LF on import (T-2784; synt
 TABs or LFs is therefore no semantic difference (SPEC-0033 X5). A leading NBSP is not covered.
 
 ## A patched package keeps the source's hints
-The patch tier of the source-preserving export (SPEC-0034 D3, T-4560) rewrites only the changed `<c>` elements.
-Four things it leaves as the source had them, on the assumption that Excel opens the result without a repair:
+The patch tier of the source-preserving export (SPEC-0034 D3, T-4560, T-4561) rewrites only the changed `<c>`
+elements. The rest of the package is kept as the source had it, apart from the edits below. Each assumes that Excel
+opens the result without a repair:
 - **Row `spans`.** ECMA-376 Part 1 §18.3.1.73 calls them an optimization hint. A new cell outside a row's span
   leaves the span stale.
 - **`<dimension>`.** It grows to cover new cells but never shrinks. Readers that trust it, such as openpyxl's
@@ -681,10 +685,16 @@ Four things it leaves as the source had them, on the assumption that Excel opens
 - **Empty rows.** Clearing every cell of a row leaves its `<row>` element in place. A row without cells is valid
   (§18.3.1.73) and is how Excel stores a row that has only a height or a style.
 - **`calcChain`.** It is copied unchanged while no formula cell is added or removed. When the set of formula cells
-  changes, the patch falls back to regeneration, which drops the chain (SPEC-0034 E2). Excel's repair of a chain
-  that names a non-formula cell ("Removed Records: Formula from /xl/calcChain.xml") is therefore never relied on.
+  changes, the chain is dropped with its relationship and override, as the regenerating export drops it
+  (SPEC-0034 E2, T-4561). The regenerating export never writes a chain, and that Excel opens such packages
+  without one is equally unprobed. Excel's repair of a chain that names a non-formula cell ("Removed Records:
+  Formula from /xl/calcChain.xml") is never relied on.
+- **Added metadata.** A source with no `metadata.xml` of its own gets the export's parts once a patched cell needs
+  `vm` or `cm`, with one relationship and one override each (T-4561). Their names, content types and relationship
+  types match Excel's own (`tests/calc_tests/LOOKUP_AND_REFERENCE/DROP_TAKE.xlsx`), and the parts are what a
+  regenerated save writes.
 
 There is no oracle evidence yet that Excel opens such packages without a repair prompt. An Excel resave through the
 T-4180 oracle flow is the probe.
-Status: UNVERIFIED (probe pending). Tasks: T-4560, T-4180.
+Status: UNVERIFIED (probe pending). Tasks: T-4560, T-4561, T-4180.
 
