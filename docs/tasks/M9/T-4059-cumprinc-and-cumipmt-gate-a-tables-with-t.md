@@ -3,7 +3,7 @@ id: T-4059
 title: "CUMPRINC and CUMIPMT Gate A r4-T-3141 batches: T-3141's sweep of the underflowed principal"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
