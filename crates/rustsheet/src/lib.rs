@@ -8,6 +8,7 @@
 mod edit;
 mod error;
 mod refs;
+mod source;
 mod value;
 mod workbook;
 

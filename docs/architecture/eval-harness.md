@@ -52,6 +52,18 @@ Current suites:
   The children of `worksheet/sheetData` and of the shared-string table are left to the semantic items (T-4513).
   Items that fall under a candidate normalization N1–N12 carry a `candidate-N<k>` tag, and are never normalized
   until T-4503's evidence. A part pair reports at most 500 items; the rest are counted in a `<truncated>` item.
+- Semantic items (`roundtrip/semantic.rs`, D2/D3; T-4513) flatten each workbook into keyed facts and compare them
+  key by key:
+  - from the importer's model (`Model`): resolved cell styles, sheet order, state, tab colour, frozen panes and grid
+    lines, merges, hyperlinks, conditional-format rules, defined names and tables;
+  - from the snapshot reader, which reads what the file stores: formula text (leading spaces, TABs and LFs dropped
+    as Excel drops them, SPEC-0033 X5) and constant values;
+  - the cached values of formula and spill cells, comparing the saved, recalculated workbook with the output as
+    loaded, error values by kind.
+
+  Inputs, styles and structure compare the source as loaded with the output as loaded. Validator check V7 flags a
+  shared-string index the model accepts out of range; an out-of-range style index already fails V8, because the
+  importer refuses it.
 - A package is read once, every part under one inflated-byte budget (the importer's default).
 - A case's checked count is the number of source parts, elements and attributes compared. Only failing element and
   attribute items are listed.

@@ -830,3 +830,36 @@ fn sort_floors_fractional_keys_with_the_near_integer_snap() {
     assert_eq!(model._get_text("B3"), "#VALUE!");
     assert_eq!(model._get_text("B4"), "#VALUE!");
 }
+
+// T-4479: SORT and SORTBY read a text sort_order apart, and Excel does too
+// (probes/t4479-sort-bad-argument-order; docs/excel-semantics/arrays.md "SORT and SORTBY: which
+// of several bad arguments wins"). SORT's text order fails only after by_col is read, while a
+// computed error order is itself at once; SORTBY's text order is `#VALUE!` at once, before a
+// later pair's error, while its blank or FALSE order fails only in validation.
+#[test]
+fn sort_and_sortby_read_a_text_sort_order_apart() {
+    let mut model = new_empty_model();
+    model._set("A1", "3");
+    model._set("A2", "1");
+    model._set("A3", "2");
+    model._set("C1", "c");
+    model._set("C2", "a");
+    model._set("C3", "b");
+    model._set("E1", "=SORT(A1:A3,1,\"a\",NA())");
+    model._set("E2", "=SORT(A1:A3,1,\"a\"+1,NA())");
+    model._set("E3", "=SORT(A1:A3,\"x\",Z1,SQRT(-1))");
+    model._set("E4", "=SORTBY(A1:A3,C1:C3,\"a\",C1:C3,NA())");
+    model._set("E5", "=SORTBY(A1:A3,C1:C3,\"a\",NA(),1)");
+    model._set("E6", "=SORTBY(A1:A3,C1:C3,Z1,C1:C3,NA())");
+    model._set("E7", "=SORTBY(A1:A3,C1:C3,TRUE,C1:C3,NA())");
+    model._set("E8", "=SORTBY(A1:A3,C1:C3,0,C1:C2,1/0)");
+    model.evaluate();
+    assert_eq!(model._get_text("E1"), "#N/A");
+    assert_eq!(model._get_text("E2"), "#VALUE!");
+    assert_eq!(model._get_text("E3"), "#VALUE!");
+    assert_eq!(model._get_text("E4"), "#VALUE!");
+    assert_eq!(model._get_text("E5"), "#VALUE!");
+    assert_eq!(model._get_text("E6"), "#N/A");
+    assert_eq!(model._get_text("E7"), "#N/A");
+    assert_eq!(model._get_text("E8"), "#DIV/0!");
+}

@@ -15,6 +15,7 @@ use crate::error::{LoadError, RefError, SaveError, UnsupportedKind};
 use crate::refs::{
     parse_cell, parse_range, resolve_sheet_by_name, CellRef, RangeRef, SheetId, Target,
 };
+use crate::source::Source;
 use crate::value::{lone_text, Array, Value};
 mod active_sheet;
 mod calculation;
@@ -170,12 +171,12 @@ pub struct Workbook {
     source: Option<Arc<Source>>,
 }
 
-fn engine_load_error(message: impl std::fmt::Display) -> LoadError {
+pub(crate) fn engine_load_error(message: impl std::fmt::Display) -> LoadError {
     LoadError::Format(message.to_string())
 }
 
 /// The facade error for an importer error (SPEC-0031 D4). None of them carries the password.
-fn import_load_error(e: XlsxError) -> LoadError {
+pub(crate) fn import_load_error(e: XlsxError) -> LoadError {
     match e {
         XlsxError::Limit { .. } => LoadError::Options(e.to_string()),
         XlsxError::EncryptedPackage => LoadError::PasswordRequired,
@@ -989,46 +990,5 @@ mod tests {
             ..WorkbookOptions::default()
         };
         assert!(matches!(Workbook::new(&opts), Err(LoadError::Options(_))));
-    }
-}
-
-/// A loaded workbook's source package and the options it was imported with (SPEC-0034 D1).
-#[derive(Debug)]
-struct Source {
-    /// The package, after decryption for a password-protected file. Bounded by the load's
-    /// `max_uncompressed_bytes`.
-    bytes: Arc<[u8]>,
-    name: String,
-    locale: String,
-    timezone: String,
-    language: String,
-    clock: Clock,
-    limits: ImportLimits,
-}
-
-impl Source {
-    /// Imports the package into a model, as [`Workbook::from_xlsx_bytes`] does (one definition
-    /// for the load and the save's pristine copy). `decrypted` says the bytes came out of an
-    /// encrypted file, whose payload must not itself be an OLE file.
-    fn import(&self, decrypted: bool) -> Result<Model, LoadError> {
-        let book = rustsheet_xlsx::import::load_from_xlsx_bytes_with_limits(
-            &self.bytes,
-            &self.name,
-            &self.locale,
-            &self.timezone,
-            &self.limits,
-        )
-        .map_err(|e| match e {
-            // A decrypted package that is itself an OLE file is not a workbook, whatever it holds.
-            XlsxError::EncryptedPackage
-            | XlsxError::LegacyBinaryWorkbook
-            | XlsxError::OleCompoundFile
-                if decrypted =>
-            {
-                engine_load_error("the decrypted package is not a zip")
-            }
-            e => import_load_error(e),
-        })?;
-        Model::from_workbook_with_clock(book, &self.language, self.clock).map_err(LoadError::Format)
     }
 }
