@@ -1,10 +1,10 @@
 //! [`Txn::add_pivot_table`]: test support that registers a pivot over a source range (SPEC-0015).
 
 use rustsheet_engine::pivot::{
-    layout_extent, read_source, regroup, row_layout, Aggregate, Axis, AxisField, CacheField,
-    CacheItem, CacheSource, CellArea, DataField, DateGroupError, LayoutCell, NumberGroupError,
-    PivotCache, PivotCacheError, PivotField, PivotTable, RangeGrouping, RegroupError,
-    MAX_RECORD_VALUES,
+    compute, lay_out, read_source, regroup, render, Aggregate, Axis, AxisField, CacheField,
+    CacheItem, CacheSource, CellArea, DataField, DateGroupError, NumberGroupError, PivotCache,
+    PivotCacheError, PivotCell, PivotComputeError, PivotField, PivotTable, RangeGrouping,
+    RegroupError, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::Model;
 
@@ -210,6 +210,10 @@ pub enum PivotError {
     /// Unused items on a grouped row field: their place among the group items is unprobed.
     #[error("a grouped pivot has no unused items")]
     GroupedWithUnusedItems,
+    /// The grouped pivot could not be computed or laid out (past a work or size limit, or a
+    /// definition that does not match its cache).
+    #[error(transparent)]
+    Compute(#[from] PivotComputeError),
 }
 
 impl Txn<'_> {
@@ -349,10 +353,12 @@ impl Txn<'_> {
         Ok((cache, table))
     }
 
-    /// Writes the compact-form layout of grouped pivot `table` from `input.location`'s top-left
-    /// cell ([`row_layout`]: the captions, each group that holds a record with its value, every
-    /// group under the row field's `showAll`, and the grand total) and returns the area it covers. Excel lays out a grouped pivot itself on
-    /// load (probes/t4228-pivot-range-groups reads it back), and the case builder renders none
+    /// Writes the cells of grouped pivot `table` over `cache` and returns the area they cover:
+    /// its result, layout lines and cells come from the engine's one pivot pipeline
+    /// (`compute`, `lay_out`, `render`; T-4149), so a compact pivot of one row field shows the
+    /// captions, each group that holds a record with its value, every group under the row
+    /// field's `showAll`, and the grand total. Excel lays out a grouped pivot itself on load
+    /// (probes/t4228-pivot-range-groups reads it back), and the case builder renders none
     /// (SPEC-0015 "Spec cases in the eval adapter", T-4235).
     fn lay_out_grouped(
         &mut self,
@@ -360,46 +366,21 @@ impl Txn<'_> {
         cache: &PivotCache,
         table: &PivotTable,
     ) -> Result<CellArea, EditError> {
-        let bad = || PivotError::Cache(PivotCacheError::BadRecord);
-        let (Some(AxisField::Field(row)), Some(data)) =
-            (table.row_fields.first(), table.data_fields.first())
-        else {
-            return Err(bad().into());
-        };
-        let show_all = table.fields.get(*row as usize).is_some_and(|f| f.show_all);
-        let rows = row_layout(
-            cache,
-            [*row, data.field],
-            data.function,
-            &data.caption,
-            show_all,
-        )
-        .ok_or_else(bad)?;
-        let (sheet, top, left) = (
-            input.location.sheet,
-            input.location.top,
-            input.location.left,
-        );
-        let (bottom, right) =
-            layout_extent(top, left, u32::try_from(rows.len()).unwrap_or(u32::MAX));
-        for (r, cells) in (top..).zip(rows) {
-            for (c, cell) in (left..).zip(cells) {
-                // Typed values: a label such as `1-1.1` is text, never parsed as a date.
-                let value = match cell {
-                    LayoutCell::Text(text) => Value::Text(text.into()),
-                    LayoutCell::Number(n) => Value::Number(n),
-                    LayoutCell::Error(error) => Value::Error(ErrorKind::from_engine(&error).into()),
-                    LayoutCell::Blank => continue,
-                };
-                self.set(crate::refs::CellRef::new(sheet, r, c)?, Input::Value(value))?;
-            }
+        let mut work = MAX_PIVOT_WORK;
+        let result = compute(table, cache, &mut work).map_err(PivotError::from)?;
+        let layout = lay_out(table, cache, &result, &mut work).map_err(PivotError::from)?;
+        let cells = render(table, cache, &result, &layout).map_err(PivotError::from)?;
+        for cell in cells {
+            // Typed values: a label such as `1-1.1` is text, never parsed as a date.
+            let value = match cell.value {
+                PivotCell::Text(text) => Value::Text(text.into()),
+                PivotCell::Number(n) => Value::Number(n),
+                PivotCell::Error(error) => Value::Error(ErrorKind::from_engine(&error).into()),
+            };
+            let at = crate::refs::CellRef::new(input.location.sheet, cell.row, cell.column)?;
+            self.set(at, Input::Value(value))?;
         }
-        Ok(CellArea {
-            top,
-            left,
-            bottom,
-            right,
-        })
+        Ok(layout.location)
     }
 }
 

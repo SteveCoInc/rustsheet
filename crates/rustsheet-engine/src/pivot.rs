@@ -35,8 +35,8 @@ mod result;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
 pub use layout::{
-    lay_out, layout_extent, max_layout_rows, row_layout, AxisLine, LayoutCell, PivotLayout,
-    BLANK_ITEM, GRAND_TOTAL, LAYOUT_COLUMNS, MAX_PIVOT_CELLS, ROW_LABELS,
+    lay_out, render, AxisLine, PivotCell, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM,
+    COLUMN_LABELS, GRAND_TOTAL, MAX_PIVOT_CELLS, MULTIPLE_ITEMS, ROW_LABELS, VALUES,
 };
 pub use model::{
     Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry, OpaqueNode,
