@@ -74,6 +74,21 @@ const RIGHT_TAIL_P_MIN: [f64; 40] = [
     1e-273, 1e-282, 1e-291,
 ];
 
+/// Below this p Excel's CHISQ.INV.RT and CHIINV at one degree of freedom (df 1 to 1.99) are
+/// `#NUM!`: 8.3253E-17 is `#NUM!` and 8.3254E-17 a value (68.7632522116684), with every probed p
+/// from 8E-17 to 8.3253E-17 `#NUM!` and from 8.3254E-17 to 9E-17, 3*2^-55 - 2^-106 and 2^-53 a
+/// value (probes-numeric/t3858-chisq-df1-num-cutoff, excel-graph). 1 - p is 1 - 2^-53 on both
+/// sides and `CHISQ.INV(1-p,1)` is a value at every such p, so the edge is in the right-tail
+/// functions' own p check, not in "1 - p rounds to 1" (docs/excel-semantics/statistics.md
+/// "CHISQ.INV.RT and CHIINV quirks", T-3858). The edge is about 0.74988 * 2^-53 and has no closed
+/// form found; any threshold in (8.3253E-17, 8.3254E-17] scores the same, and the midpoint keeps
+/// an ulp of literal parsing on either side from moving a probed cell. The 180 cells are the A
+/// and C columns of that case and T-3336's A249:A252 (2^-54, 6E-17 to 8E-17, `#NUM!`). Below
+/// 5.6E-17 the cut agrees with "1 - p rounds to 1", which T-1543 and T-3336 show as `#NUM!`. A
+/// fresh sweep after the freeze (t3858-chisq-df1-num-cutoff-fresh, 80 cells) matches at all 80.
+/// FITTED(T-3858, 180 cells, df 1, p 5.5E-17..1.12E-16)
+const ONE_DEGREE_RIGHT_TAIL_P_MIN: f64 = 8.32535e-17;
+
 /// Whether Excel's right-tail quantile of `p` at `df` (truncated) degrees of freedom is `#NUM!`
 /// below its search's edge ([`RIGHT_TAIL_P_MIN`]).
 fn right_tail_beyond_edge(df: f64, p: f64) -> bool {
@@ -252,8 +267,12 @@ impl Model {
         }
         // At one degree of freedom Excel's right-tail quantile is the left one of 1 - p:
         // `CHISQ.INV.RT(1E-10,1)` is `CHISQ.INV(0.9999999999,1)`, 41.82145620298276, and below
-        // 1.1E-16 (1 - p rounds to 1) it is `#NUM!` (T-1543 probe, T-1634).
+        // [`ONE_DEGREE_RIGHT_TAIL_P_MIN`] (about 0.75 * 2^-53) it is `#NUM!` (T-1543 probe, T-1634,
+        // T-3858).
         if is_one_degree(&dist) {
+            if p < ONE_DEGREE_RIGHT_TAIL_P_MIN {
+                return Err(num_error(cell));
+            }
             return non_negative(
                 gamma_quantile(dist.shape(), CHI_SQUARED_SCALE, 1.0 - p, Tail::Lower),
                 cell,

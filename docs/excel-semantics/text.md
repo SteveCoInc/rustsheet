@@ -532,16 +532,26 @@ Tasks: T-1412, T-1361
 
 ## TEXTSPLIT match_mode 1 case folding
 Rule: with match_mode 1 TEXTSPLIT compares case-insensitively without changing the length of the text. `İ` (U+0130) matches `i`
-(`TEXTSPLIT("aİbİc","i",,,1)` splits at both İ, and so does the delimiter `İ` against text containing `İ`: {"a","b","c"}; the delimiter `İ` against a plain `i` or `I`, and `I` against `İ`, are UNVERIFIED), unlike SEARCH, where `SEARCH("i","İx")`
+(`TEXTSPLIT("aİbİc","i",,,1)` splits at both İ, and so does the delimiter `İ` against text containing `İ`: {"a","b","c"}; the delimiter `İ` splits "aibIc" at both `i` and `I`, and the delimiter `I` splits "aİbİc" at both `İ`), unlike SEARCH, where `SEARCH("i","İx")`
 is `#VALUE!`. The Kelvin sign U+212A does not match `k` (`TEXTSPLIT("a"&UNICHAR(8490)&"bkc","k",,,1)` is {"aKb","c"}), unlike SEARCH, where
 `SEARCH("k",UNICHAR(8490))` is 1. `ß` and `ẞ` do not match `ss` (`TEXTSPLIT("aßbSSc","ss",,,1)` is {"aßb","c"}), and `Ä` matches `ä`.
-Pieces are cut from the original text, so they keep their case. Final sigma follows SEARCH (`ς` and `Σ` both fold to `σ`), which changed from the pre-T-1794 string-level lowercase; it is UNVERIFIED for TEXTSPLIT.
-Evidence: probes/textsplit-casefold-length A1-A8 (excel-graph, 2026-10-17, T-1794).
-Ours: `fold_for_split` (text/casefold.rs) folds char by char (one char in, one char out) with those two exceptions; positions are mapped back to
+Pieces are cut from the original text, so they keep their case. The Angstrom sign U+212B matches neither `å` nor `Å`, in either
+direction (`TEXTSPLIT("a"&UNICHAR(8491)&"b",UNICHAR(229),,,1)` is the one piece "a"&UNICHAR(8491)&"b"), again unlike SEARCH's fold. `ſ` (U+017F) matches neither `s`
+nor `S`, and `µ` (U+00B5) neither `μ` nor `Μ`, in either direction; each titlecase digraph (`ǅ` U+01C5, `ǈ` U+01C8, `ǲ` U+01F2)
+matches its upper and lower forms both ways (`TEXTSPLIT("aǅb",UNICHAR(452),,,1)` is {"a","b"}). **Sigma folds by position, as in
+TEXTBEFORE and TEXTAFTER, not as in SEARCH:** `TEXTSPLIT("aΣbςcσd","σ",,,1)` is {"a","bςc","d"} (the `Σ` before a letter is `σ`, `ς`
+is only `ς`), the delimiter `ς` gives {"aΣb","cσd"}, the lone delimiter `Σ` is `ς` and gives {"aΣb","cσd"} too, "aΟΣ" split by `ς` is
+{"aΟ",""}, "aΣb" split by `ς` is {"aΣb"}, and `ς` and `σ` never match each other.
+Evidence: probes/textsplit-casefold-length A1-A8 (excel-graph, 2026-10-17, T-1794); probes/t4473-textsplit-fold-gaps A1:A6, A12:A25
+and, in A27:A104, the first two of every three cells (excel-graph, 2026-11-06, T-4473; each TEXTSPLIT is read through ARRAYTOTEXT and
+COLUMNS; match_mode 0 controls in A1:A2, A12:A13, A24:A26).
+Ours: `fold_for_split` (text/casefold.rs) folds char by char (one char in, one char out) with `fold_match_char`'s İ, Kelvin and Angstrom exceptions and `fold_sigma_by_position`'s sigma rule; positions are mapped back to
 byte offsets of the original text. Before T-1794 the code sliced the original at byte offsets found in `to_lowercase()`, which panicked on
-`TEXTSPLIT("İİİ,a",",",,,1)`. The folding of other chars (Å U+212B, ſ, µ, final sigma, titlecase digraphs) is UNVERIFIED and follows SEARCH's.
+`TEXTSPLIT("İİİ,a",",",,,1)`. Before T-4473 TEXTSPLIT folded sigma and U+212B as SEARCH does; both now share `fold_sigma_by_position` and
+`fold_match_char` with TEXTBEFORE. UNVERIFIED for TEXTSPLIT: `ẞ` against the delimiter `ß` (TEXTBEFORE does not match them; TEXTSPLIT
+keeps SEARCH's fold, which does).
 Status: VERIFIED (web) for the listed forms
-Tasks: T-1794
+Tasks: T-1794, T-4473
 
 ## TEXTBEFORE and TEXTAFTER match_mode 1 case folding
 Rule: with match_mode 1 TEXTBEFORE and TEXTAFTER fold case like TEXTSPLIT, never changing the length of the text: `İ` (U+0130) matches `i`
@@ -554,15 +564,20 @@ instance numbers behave the same on `"İİİ,a,b"`. Sigma is positional, unlike 
 other `Σ` (end of text, space, punctuation) is `ς`, and `ς` is only `ς`. So the delimiter `Σ` alone matches a text `ς` but not `σ`, the delimiter `ς` matches a final `Σ`
 ("aΟΣ") but neither `σ` nor a `Σ` followed by a letter, and the delimiter `σ` matches a `Σ` followed by a letter but not `ς`.
 The same holds for the text and a delimiter that are both `Σ` (`TEXTBEFORE("aΣb","Σ",1,1)` is `#N/A`: the text's `Σ` is `σ`, the lone delimiter `Σ` is `ς`), and for TEXTAFTER.
-A `Σ` before a digit is `σ` (`TEXTBEFORE("ΟΔΟΣ1","σ",1,1)` is "ΟΔΟ", delimiter `ς` is `#N/A`); before a space or a comma it is `ς` (`"ΟΔΟΣ ΚΑΙ"` and `"ΟΔΟΣ,Α"` match `ς`, not `σ`).
-Evidence: probes/textbefore-casefold-length A1-A25 (excel-graph, 2026-10-17, T-1796); probes/textbefore-sigma-contexts A1-A18 (excel-graph, 2026-10-19, T-1799).
-Ours: `fold_for_before_after` (text/casefold.rs) folds char by char with `fold_for_split`'s İ/Kelvin exceptions plus the sigma and `ẞ` rules,
+A `Σ` before a digit is `σ` (`TEXTBEFORE("ΟΔΟΣ1","σ",1,1)` is "ΟΔΟ", delimiter `ς` is `#N/A`); before a space or a comma it is `ς` (`"ΟΔΟΣ ΚΑΙ"` and `"ΟΔΟΣ,Α"` match `ς`, not `σ`). A `Σ` before a combining acute (U+0301), `’` (U+2019) or a zero-width space
+(U+200B) is `σ`, as LOWER's rule says (`TEXTBEFORE("ΟΣ"&UNICHAR(769)&"x","σ",1,1)` is "Ο", the delimiter `ς` is `#N/A`; TEXTAFTER the same).
+The delimiter `İ` matches `I` and `i` and the delimiter `I` matches `İ` (`TEXTBEFORE("aIb","İ",1,1)` is "a"). The Angstrom sign, `ſ`, `µ`
+and the titlecase digraphs fold as in TEXTSPLIT (above): U+212B, `ſ` and `µ` match no other form (`#N/A`), a digraph matches its upper
+and lower forms.
+Evidence: probes/textbefore-casefold-length A1-A25 (excel-graph, 2026-10-17, T-1796); probes/textbefore-sigma-contexts A1-A18 (excel-graph, 2026-10-19, T-1799);
+probes/t4473-textsplit-fold-gaps A7:A11, A29, A35, A41, A47, A53, A59, A65, A71, A77, A83, A89, A95, A101 (one direction; the reverse is
+the cell three below each) and A105:A117 (excel-graph, 2026-11-06, T-4473).
+Ours: `fold_for_before_after` (text/casefold.rs) folds char by char with `fold_match_char`'s İ, Kelvin and Angstrom exceptions, `fold_sigma_by_position`'s sigma rule (shared with TEXTSPLIT) and the `ẞ` rule,
 and `match_text` (util.rs) maps the match back to byte offsets of the original with `str::get`. Before T-1796 it searched `to_lowercase()` of the text
-and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. UNVERIFIED: whether a `Σ` before a combining mark, `’` or a zero-width space is `σ` (LOWER's rule, assumed), whether a letter must precede the `Σ` (the code ignores what precedes it), the folding of other chars (Å U+212B, ſ, µ,
-titlecase digraphs, which follow SEARCH's `fold_char`), `ẞ` against the delimiter `ß`'s mirror (text `ß`, delimiter `ẞ`), and whether TEXTSPLIT shares the
-`ẞ` and sigma rules (its probe has no such cell).
+and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. UNVERIFIED: whether a letter must precede the `Σ` (the code ignores what precedes it), `ẞ` against the delimiter `ß`'s mirror (text `ß`,
+delimiter `ẞ`), and whether TEXTSPLIT shares the `ẞ` rule (TEXTSPLIT shares the sigma rule: probes/t4473-textsplit-fold-gaps A14:A23).
 Status: VERIFIED (web) for the listed forms
-Tasks: T-1796
+Tasks: T-1796, T-4473
 
 ## ARRAYTOTEXT number text
 Rule: ARRAYTOTEXT writes a number as General text with 15 significant digits, like VALUETOTEXT and `&`:

@@ -3,31 +3,31 @@
 # known failures. Removing an F line = a fix. Adding an F line to an unchanged case = a regression
 # and requires --allow-regressions plus a justification in the PR (docs/process/quality-gates.md).
 # `TC` and `TF` lines do the same for displayed text (decision 0070).
-C	roundtrip-fixtures/circular-keeps-cached-values.xlsx	589
-C	roundtrip-fixtures/external-link-cached-3d-span.xlsx	640
-C	roundtrip-fixtures/external-link-cached-index-array.xlsx	642
-C	roundtrip-fixtures/external-link-cached-lookups.xlsx	738
-C	roundtrip-fixtures/external-link-cached-ranges.xlsx	1228
-C	roundtrip-fixtures/external-link-cached-text.xlsx	703
-C	roundtrip-fixtures/external-link-uncached-lookups.xlsx	927
-C	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	731
-C	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	625
-C	roundtrip-fixtures/rich-error-export-formulas.xlsx	904
-C	roundtrip-fixtures/rich-error-export.xlsx	914
-C	roundtrip-fixtures/shared-string-phonetic-runs.xlsx	576
-C	roundtrip-fixtures/strict-date-compatibility-0.xlsx	588
-C	roundtrip-fixtures/t-d-1900-02-29.xlsx	564
-C	roundtrip-fixtures/t-d-1904-1900-01-01.xlsx	569
-C	roundtrip-fixtures/t-d-1904-epoch.xlsx	569
-C	roundtrip-fixtures/t-d-1904-pre-epoch.xlsx	569
-C	roundtrip-fixtures/t-d-1904-time-only.xlsx	569
-C	roundtrip-fixtures/t-d-1904.xlsx	569
-C	roundtrip-fixtures/t-d-fractional-seconds.xlsx	564
-C	roundtrip-fixtures/t-d-iso-date-cells.xlsx	591
-C	roundtrip-fixtures/t-d-pre-1900.xlsx	564
-C	roundtrip-fixtures/t-d-time-only.xlsx	564
-C	roundtrip-fixtures/t-d-z-suffix.xlsx	564
-C	roundtrip-fixtures/workday-intl-legacy-holidays.xlsx	555
+C	roundtrip-fixtures/circular-keeps-cached-values.xlsx	638
+C	roundtrip-fixtures/external-link-cached-3d-span.xlsx	723
+C	roundtrip-fixtures/external-link-cached-index-array.xlsx	728
+C	roundtrip-fixtures/external-link-cached-lookups.xlsx	905
+C	roundtrip-fixtures/external-link-cached-ranges.xlsx	1824
+C	roundtrip-fixtures/external-link-cached-text.xlsx	840
+C	roundtrip-fixtures/external-link-uncached-lookups.xlsx	1256
+C	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	892
+C	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	738
+C	roundtrip-fixtures/rich-error-export-formulas.xlsx	976
+C	roundtrip-fixtures/rich-error-export.xlsx	989
+C	roundtrip-fixtures/shared-string-phonetic-runs.xlsx	595
+C	roundtrip-fixtures/strict-date-compatibility-0.xlsx	627
+C	roundtrip-fixtures/t-d-1900-02-29.xlsx	579
+C	roundtrip-fixtures/t-d-1904-1900-01-01.xlsx	588
+C	roundtrip-fixtures/t-d-1904-epoch.xlsx	588
+C	roundtrip-fixtures/t-d-1904-pre-epoch.xlsx	588
+C	roundtrip-fixtures/t-d-1904-time-only.xlsx	588
+C	roundtrip-fixtures/t-d-1904.xlsx	588
+C	roundtrip-fixtures/t-d-fractional-seconds.xlsx	579
+C	roundtrip-fixtures/t-d-iso-date-cells.xlsx	636
+C	roundtrip-fixtures/t-d-pre-1900.xlsx	579
+C	roundtrip-fixtures/t-d-time-only.xlsx	579
+C	roundtrip-fixtures/t-d-z-suffix.xlsx	579
+C	roundtrip-fixtures/workday-intl-legacy-holidays.xlsx	594
 F	roundtrip-fixtures/circular-keeps-cached-values.xlsx	R0 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:satMod[0]@val changed
 F	roundtrip-fixtures/circular-keeps-cached-values.xlsx	R0 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:tint[0]@val changed
 F	roundtrip-fixtures/circular-keeps-cached-values.xlsx	R0 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:satMod[0]@val changed
@@ -305,6 +305,16 @@ F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 element /officeDocumen
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 element /officeDocument[0]:/workbook/workbookPr[0] lost
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 part /officeDocument[0]/externalLink[0] lost
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 part /officeDocument[0]/sheetMetadata[0] added
+F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 semantic cell Refs!B1 formula changed
+F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 semantic cell Refs!B10 formula changed
+F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 semantic cell Refs!B2 formula changed
+F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 semantic cell Refs!B3 formula changed
+F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 semantic cell Refs!B4 formula changed
+F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 semantic cell Refs!B5 formula changed
+F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 semantic cell Refs!B6 formula changed
+F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 semantic cell Refs!B7 formula changed
+F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 semantic cell Refs!B8 formula changed
+F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R0 semantic cell Refs!B9 formula changed
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@count changed candidate-N10
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@uniqueCount changed candidate-N10
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 attribute /officeDocument[0]/styles[0]:/styleSheet/fonts[0]@x14ac:knownFonts lost
@@ -447,6 +457,16 @@ F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 element /officeDoc
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 element /officeDocument[0]:/workbook/workbookPr[0] lost
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 part /officeDocument[0]/externalLink[0] lost
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 part /officeDocument[0]/sheetMetadata[0] added
+F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 semantic cell Refs!B1 formula changed
+F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 semantic cell Refs!B10 formula changed
+F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 semantic cell Refs!B2 formula changed
+F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 semantic cell Refs!B3 formula changed
+F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 semantic cell Refs!B4 formula changed
+F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 semantic cell Refs!B5 formula changed
+F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 semantic cell Refs!B6 formula changed
+F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 semantic cell Refs!B7 formula changed
+F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 semantic cell Refs!B8 formula changed
+F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R0 semantic cell Refs!B9 formula changed
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@count changed candidate-N10
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@uniqueCount changed candidate-N10
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 attribute /officeDocument[0]/styles[0]:/styleSheet/fonts[0]@x14ac:knownFonts lost
@@ -592,6 +612,23 @@ F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 part /officeDocument[0
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 part /officeDocument[0]/rdRichValueTypes[0] added
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 part /officeDocument[0]/rdRichValue[0] added
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 part /officeDocument[0]/sheetMetadata[0] added
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B1 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B10 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B11 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B13 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B14 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B16 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B2 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B20 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B21 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B24 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B3 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B4 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B5 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B6 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B7 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B8 formula changed
+F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 semantic cell Refs!B9 formula changed
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@count changed candidate-N10
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@uniqueCount changed candidate-N10
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 attribute /officeDocument[0]/styles[0]:/styleSheet/fonts[0]@x14ac:knownFonts lost
@@ -737,6 +774,89 @@ F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 part /officeDocument[0]
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 part /officeDocument[0]/rdRichValueTypes[0] added
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 part /officeDocument[0]/rdRichValue[0] added
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 part /officeDocument[0]/sheetMetadata[0] added
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B1 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B10 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B11 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B12 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B13 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B14 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B15 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B16 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B17 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B18 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B19 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B2 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B20 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B21 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B22 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B23 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B24 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B25 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B26 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B27 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B28 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B29 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B3 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B30 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B34 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B35 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B36 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B37 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B38 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B39 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B4 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B40 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B41 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B42 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B43 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B44 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B45 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B46 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B47 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B48 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B49 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B5 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B53 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B54 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B55 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B56 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B57 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B58 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B59 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B6 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B60 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B61 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B62 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B63 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B64 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B65 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B66 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B67 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B68 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B69 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B7 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B70 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B71 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B72 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B73 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B74 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B75 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B76 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B77 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B8 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B81 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B82 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B83 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B84 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B85 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B86 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B87 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B88 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B89 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B9 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B90 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B91 formula changed
+F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R0 semantic cell Refs!B92 formula changed
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@count changed candidate-N10
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@uniqueCount changed candidate-N10
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 attribute /officeDocument[0]/styles[0]:/styleSheet/fonts[0]@x14ac:knownFonts lost
@@ -879,6 +999,25 @@ F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 element /officeDocument[0
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 element /officeDocument[0]:/workbook/workbookPr[0] lost
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 part /officeDocument[0]/externalLink[0] lost
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 part /officeDocument[0]/sheetMetadata[0] added
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B1 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B10 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B11 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B12 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B13 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B14 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B15 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B16 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B17 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B18 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B19 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B2 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B3 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B4 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B5 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B6 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B7 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B8 formula changed
+F	roundtrip-fixtures/external-link-cached-text.xlsx	R0 semantic cell Refs!B9 formula changed
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@count changed candidate-N10
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@uniqueCount changed candidate-N10
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 attribute /officeDocument[0]/styles[0]:/styleSheet/fonts[0]@x14ac:knownFonts lost
@@ -1024,6 +1163,54 @@ F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 part /officeDocument
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 part /officeDocument[0]/rdRichValueTypes[0] added
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 part /officeDocument[0]/rdRichValue[0] added
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 part /officeDocument[0]/sheetMetadata[0] added
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B1 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B10 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B11 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B12 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B13 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B14 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B15 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B16 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B17 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B18 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B19 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B2 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B20 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B21 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B22 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B23 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B24 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B25 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B26 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B27 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B28 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B29 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B3 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B30 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B31 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B34 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B35 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B36 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B37 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B39 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B4 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B40 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B41 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B42 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B43 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B44 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B45 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B46 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B47 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B48 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B49 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B5 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B50 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B51 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B6 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B7 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B8 formula changed
+F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R0 semantic cell Refs!B9 formula changed
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@count changed candidate-N10
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@uniqueCount changed candidate-N10
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 attribute /officeDocument[0]/styles[0]:/styleSheet/fonts[0]@x14ac:knownFonts lost
@@ -1166,6 +1353,29 @@ F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 element /offi
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 element /officeDocument[0]:/workbook/workbookPr[0] lost
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 part /officeDocument[0]/externalLink[0] lost
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 part /officeDocument[0]/sheetMetadata[0] added
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B1 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B10 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B11 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B12 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B13 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B14 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B15 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B16 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B17 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B18 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B19 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B2 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B20 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B21 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B22 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B23 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B3 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B4 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B5 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B6 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B7 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B8 formula changed
+F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R0 semantic cell Refs!B9 formula changed
 F	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	R0 attribute /officeDocument[0]/sharedStrings[0]:/sst@count changed candidate-N10
 F	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	R0 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:satMod[0]@val changed
 F	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	R0 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:tint[0]@val changed

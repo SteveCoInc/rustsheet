@@ -284,6 +284,19 @@ accuracy/GAMMA.INV/e-T-3863!Calc!A194	T-3364	R3 closed-form point: the engine re
 accuracy/GAMMA.INV/e-T-3863!Calc!A196	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A198	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
 accuracy/GAMMA.INV/e-T-3863!Calc!A199	T-3364	R3 closed-form point: the engine returns Excel's Wilson-Hilferty start, about 2.7e-4 off the math
+accuracy/AMORDEGRC/s1!Calc!A114	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
+accuracy/AMORDEGRC/s1!Calc!A118	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
+accuracy/AMORDEGRC/s1!Calc!A128	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
+accuracy/AMORDEGRC/s1!Calc!A130	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
+accuracy/AMORDEGRC/s1!Calc!A131	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
+accuracy/AMORLINC/s1!Calc!A124	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
+accuracy/AMORLINC/s1!Calc!A125	T-4504	a salvage equal to the cost: Excel and the math 0, the engine #NUM!
+accuracy/VDB/s1!Calc!A158	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
+accuracy/VDB/s1!Calc!A183	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
+accuracy/VDB/s1!Calc!A187	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
+accuracy/VDB/s1!Calc!A188	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
+accuracy/VDB/s1!Calc!A189	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
+accuracy/VDB/s1!Calc!A200	T-4510	fractional start where straight line wins at period 0: Excel and the math (cost-salvage)/life a period, the engine a declining fraction first
 accuracy/HYPGEOM.DIST/s1!Calc!A85	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
 accuracy/HYPGEOM.DIST/s1!Calc!A95	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel 0 where the math is 8.1E-186
 accuracy/HYPGEOM.DIST/s1!Calc!A97	T-4502	pmf past the double-double walk: the engine #NUM! (statrs closed form overflows); Excel matches the math
@@ -367,4 +380,8 @@ accuracy/CUMIPMT/s1!Calc!A189	T-4390	tiny rate 4.9E-10, 3 periods: PMT·m - CUMP
 accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 0^k
 accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
+accuracy/YIELD/s1!Calc!A225	T-4523	Excel #NUM! (its Newton leaves PRICE's domain at a price and redemption near 0.01); the engine converges to the root
+accuracy/YIELD/s1!Calc!A230	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
+accuracy/YIELD/s1!Calc!A252	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
+accuracy/YIELD/s1!Calc!A261	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/MIRR/s1!Calc!A125	T-4537	Excel #DIV/0! for a finance power overflow beside a later negative flow; the engine gives #NUM!

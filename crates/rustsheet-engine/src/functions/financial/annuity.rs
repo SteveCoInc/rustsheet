@@ -405,6 +405,13 @@ fn discounted_balance(rate: f64, nper: f64, pv: f64, fv: f64) -> Option<(f64, f6
     balance.is_finite().then_some((balance, log))
 }
 
+/// Whether PMT's discounted balance or factor has no value ([`discounted_balance`] or
+/// [`payment_factor`] declines), where Excel's PMT, IPMT, PPMT and CUMIPMT are `#NUM!`
+/// (financial.md "IPMT is #NUM! where its discounted balance fails", T-4488).
+pub(super) fn discounted_fails(rate: f64, nper: f64, pv: f64, fv: f64, period_start: bool) -> bool {
+    discounted_balance(rate, nper, pv, fv).is_none() || payment_factor(rate, period_start).is_none()
+}
+
 /// Excel's PMT (docs/excel-semantics/financial.md "PMT is a discounted payment"): with
 /// [`discounted_balance`]'s `A` and [`payment_factor`]'s `d`, PMT is `-((A - fv) * d)` in
 /// doubles. Bit-exact on the 308 PMT cells of probes-numeric/m9-fin-pmt, the 371 of
@@ -472,6 +479,9 @@ pub(super) fn compute_payment(
     let (payment, _) = payment_pair(rate, nper, pv, fv, period_start)?;
     if rate == 0.0 {
         return Ok(payment);
+    }
+    if discounted_fails(rate, nper, pv, fv, period_start) {
+        return Err(Error::NUM);
     }
     Ok(discounted_payment(rate, nper, pv, fv, period_start).unwrap_or(payment))
 }
@@ -612,11 +622,15 @@ fn period_payments(
         // Excel's IPMT is #NUM! where the split has no balance `A` or factor `d`: `A` past the
         // double range, `1-Q` below the normal range, a subnormal rate (all 319 such cells of
         // probes-numeric/t3523-ipmt-selector-sweep and probes/t4314-ipmt-balance-overflow;
-        // financial.md "IPMT is #NUM! where its discounted balance fails", T-4314). PPMT keeps
-        // the forms below (TODO(T-4488)).
-        interest_fails = discounted_balance(rate, period_count, present_value, future_value)
-            .is_none()
-            || payment_factor(rate, period_start).is_none();
+        // financial.md "IPMT is #NUM! where its discounted balance fails", T-4314); PPMT is too
+        // (T-4488, probes/t4314-ipmt-balance-overflow B2, B5, C7, D3).
+        interest_fails = discounted_fails(
+            rate,
+            period_count,
+            present_value,
+            future_value,
+            period_start,
+        );
         let e = if period_start {
             period - 2.0
         } else {
@@ -657,7 +671,7 @@ fn period_payments(
         }
     };
     if interest_fails {
-        (Err(Error::NUM), principal)
+        (Err(Error::NUM), Err(Error::NUM))
     } else {
         (interest, principal)
     }

@@ -266,8 +266,8 @@ impl Package {
                     .then(|| {
                         self.sheets
                             .iter()
-                            .find(|s| s.1 == r.id)
-                            .map(|s| s.0.clone())
+                            .find(|s| s.rid == r.id)
+                            .map(|s| s.name.clone())
                     })
                     .flatten()
                     .unwrap_or_else(|| n.to_string());
@@ -422,8 +422,13 @@ fn validate_sheets(pkg: &Package, fail: &mut impl FnMut(&'static str, String)) {
     let rels = pkg.rels.get(&main);
     let mut ids = BTreeSet::new();
     let mut names = BTreeSet::new();
-    for (name, rid, id) in &pkg.sheets {
-        let id = id.as_deref().unwrap_or_default();
+    for SheetRef {
+        name,
+        rid,
+        sheet_id,
+    } in &pkg.sheets
+    {
+        let id = sheet_id.as_deref().unwrap_or_default();
         if !ids.insert(id) {
             fail("V6", format!("sheetId {id:?} repeats"));
         }
