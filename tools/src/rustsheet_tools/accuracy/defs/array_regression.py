@@ -61,10 +61,11 @@ from rustsheet_tools.accuracy.defs._common import (
     by_stratum,
     domain_of,
     fraction_to_mpf,
+    mpf_to_fraction,
     signed_log_uniform,
 )
 from rustsheet_tools.accuracy.defs.aggregate_array import array_of
-from rustsheet_tools.accuracy.defs.matrix import index_of, inverse, row_column
+from rustsheet_tools.accuracy.defs.matrix import Exact, exact, index_of, inverse, row_column
 from rustsheet_tools.accuracy.defs.paired_regression import forecast_x, offset_series
 from rustsheet_tools.accuracy.literal import Arg, Matrix, Row, round15
 from rustsheet_tools.accuracy.model import (
@@ -99,31 +100,12 @@ COLLINEAR = Fraction(1, 10**14)  # (1E-7)^2: a column's squared relative distanc
 LOG_GUARD_DPS = 60  # extra digits of ln y before the exact solve
 MAX_CELLS = 120  # known_x literals per point, as the paired draws' pairs
 
-Exact = list[list[Fraction]]
-
-
-def to_fraction(v: mpmath.mpf) -> Fraction:
-    """An mpf's exact binary value as a rational."""
-    sign, man, exp, _ = v._mpf_  # `man_exp` drops the sign
-    return (-1 if sign else 1) * Fraction(int(man)) * Fraction(2) ** int(exp)
-
 
 def _row(a: MathArg) -> list[Fraction]:
     if not isinstance(a, tuple) or not all(isinstance(v, mpmath.mpf) for v in a):
         msg = "known_y is not a one-row array"
         raise TypeError(msg)
     return [Fraction(float(v)) for v in a if isinstance(v, mpmath.mpf)]
-
-
-def _matrix(a: MathArg) -> Exact:
-    if not isinstance(a, tuple) or not all(isinstance(row, tuple) for row in a):
-        msg = "a matrix argument is not a matrix"
-        raise TypeError(msg)
-    rows = [[Fraction(float(v)) for v in row] for row in a if isinstance(row, tuple)]
-    if not rows or len({len(r) for r in rows}) != 1:
-        msg = "the matrix rows differ in length"
-        raise NoValueError(msg)
-    return rows
 
 
 def variables(n: int, x: Exact) -> Exact:
@@ -211,13 +193,13 @@ def _log_ys(ys: Sequence[Fraction]) -> list[Fraction]:
         msg = "#NUM!: a known_y at or below 0"
         raise DomainError(msg)
     with mpmath.workdps(mpmath.mp.dps + LOG_GUARD_DPS):
-        return [to_fraction(mpmath.log(fraction_to_mpf(y))) for y in ys]
+        return [mpf_to_fraction(mpmath.log(fraction_to_mpf(y))) for y in ys]
 
 
 def _data(args: Sequence[MathArg], log: bool) -> tuple[list[Fraction], Exact]:
     """(y, the x variables), shapes checked, y in ln for LOGEST and GROWTH."""
     ys = _row(args[0])
-    columns = variables(len(ys), _matrix(args[1]))
+    columns = variables(len(ys), exact(args[1]))
     return (_log_ys(ys) if log else ys), columns
 
 
@@ -302,7 +284,7 @@ def _predict(args: Sequence[MathArg], log: bool) -> mpmath.mpf:
     const = _flag(args[3])
     row, column = index_of(args)
     ys, columns = _data(args, log)
-    point = _new_points(_matrix(args[2]), len(columns), row, column)
+    point = _new_points(exact(args[2]), len(columns), row, column)
     value = fraction_to_mpf(fit(ys, columns, const).predict(point))
     return mpmath.exp(value) if log else value
 

@@ -53,7 +53,7 @@ DOUBLE_MAX = Fraction(1.7976931348623157e308)
 Exact = list[list[Fraction]]
 
 
-def _exact(a: MathArg) -> Exact:
+def exact(a: MathArg) -> Exact:
     """A matrix argument's doubles as exact rationals (the literal's double is exact at any working precision)."""
     if not isinstance(a, tuple) or not all(isinstance(row, tuple) for row in a):
         msg = "a matrix argument is not a matrix"
@@ -143,7 +143,7 @@ def product(a: Exact, b: Exact) -> Exact:
 
 
 def _mdeterm(args: Sequence[MathArg]) -> mpmath.mpf:
-    det = determinant(_exact(args[0]))
+    det = determinant(exact(args[0]))
     if abs(det) > DOUBLE_MAX:
         msg = "the pivot product is beyond the double range"
         raise DomainError(msg)
@@ -151,7 +151,7 @@ def _mdeterm(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _minverse(args: Sequence[MathArg]) -> mpmath.mpf:
-    inv = inverse(_exact(args[0]))
+    inv = inverse(exact(args[0]))
     if any(abs(x) > DOUBLE_MAX for row in inv for x in row):
         msg = "an inverse element is beyond the double range"
         raise DomainError(msg)
@@ -159,7 +159,7 @@ def _minverse(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _mmult(args: Sequence[MathArg]) -> mpmath.mpf:
-    prod = product(_exact(args[0]), _exact(args[1]))
+    prod = product(exact(args[0]), exact(args[1]))
     if any(abs(x) > DOUBLE_MAX for row in prod for x in row):
         msg = "a product element is beyond the double range (not claimed)"
         raise NoValueError(msg)
