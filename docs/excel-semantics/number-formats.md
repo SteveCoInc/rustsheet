@@ -728,14 +728,28 @@ trailing `,` still scales by 1000.
   whenever a placeholder follows *anywhere* later in the section, so a literal may stand between them (`0.00,|0` on
   1234567.891 is "1234567.89|1"). With no placeholder after it, it scales (`0.,` "1235.", `0.0,0,` scales by 1000).
   After a decimal-part literal, a `,` run prints a single `,` (`0.0|,,0` "1234567.8|,9", `0.0|,,,0` alike).
-  `0.,|0` is "1234567.|9", where ours prints "1234567|.9", as it already does for `0.|0` (a literal right after the
-  point, not a comma rule; T-4595).
+  `0.,|0` is "1234567.|9" (a literal right after the point, not a comma rule; see "A literal right after the decimal
+  point", T-4595).
 Ours: matches (T-4515), in the `Token::Comma` arm of formatter/parser.rs.
 Evidence: probes/t3598-comma-after-decimal-point A1:A20, probes/t1925-numeral-digits C1:C32,
 probes/t3598-decimal-part-commas (108 cells), t3666-review-followups A7:A12 (excel-graph, 2026-11-04).
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/formatter/parser.rs (`Token::Comma`; T-3598, T-4515)
 Tasks: T-3598, T-4515, T-4595
+
+## A literal right after the decimal point (T-4595)
+Rule: in a number section the decimal point prints where it is written, so a literal between the point and the first
+decimal placeholder prints after the point, not ahead of it. Columns are 1234567.891, -0.5, 0:
+- `0.|0` → "1234567.|9", "-0.|5", "0.|0"; `0."x"0` → "1234567.x9", "-0.x5", "0.x0" (rows 1-2).
+- `#.\-#` → "1234567.-9", "-.-5", ".-" (row 3: an unfilled `#` prints nothing, the point and literal still print).
+- `0.|` → "1234568.|", "-1.|", "0.|" (row 4: no decimal placeholder, already right before T-4595).
+- `0.,|0` on 1234567.891, -0.5, 98765.4321, 0 → "1234567.|9", "-0.|5", "98765.|4", "0.|0" (the `,` is inert).
+Ours printed the point just before the first decimal digit ("1234567|.9") until T-4595.
+Evidence: probes/t4595-literal-after-point A1:C4 (predictions committed before filling, all 12 matched),
+probes/t4515-fresh-sweep A15:D15 (excel-graph, 2026-11-06).
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/formatter/format.rs (`TextToken::Period` in `format_number`; T-4595)
+Tasks: T-4595
 
 ## Commas in scientific formats (T-4062)
 Rule: in a scientific format, a `,` between exponent placeholders is ignored when the mantissa has a decimal point and

@@ -286,8 +286,10 @@ probes/t4554-api-name-local-name-body.case.json	5
 probes/t4554-api-name-scoped-name-choice-first.case.json	9
 probes/t4554-api-name-scoped-name-choice-last.case.json	9
 probes/t4554-api-name-scoped-name-choice.case.json	9
+probes/t4563-xlookup-not-found-ref-element.case.json	106
 probes/t4582-pivot-item-edges.case.json	40
 probes/t4583-pivot-row-labels.case.json	165
+probes/t4585-pivot-field-names.case.json	8
 probes/t4589-pivot-total-order.case.json	80
 probes/t4614-pivot-total-order-2.case.json	97
 probes/yield-below-par-sweep.case.json	3

@@ -9,7 +9,8 @@ use rustsheet_engine::types::{DateSystem, DefinedName, Iteration, SheetState};
 use crate::error::XlsxError;
 use crate::util::name_from_xlsx;
 
-use super::util::get_attribute;
+use super::shared_strings::decode_xlsx_escapes;
+use super::util::{get_attribute, parse_bool_with_default};
 
 pub(crate) struct Sheet {
     pub(crate) name: String,
@@ -133,10 +134,16 @@ pub(super) fn load_workbook<R: Read + std::io::Seek>(
             }
             None => None,
         };
+        // Excel still evaluates a hidden name; only its Name Manager hides it (T-3301). The
+        // comment is an `ST_Xstring`, so `_xHHHH_` escapes decode, as `escape_xml` wrote them.
+        let hidden = parse_bool_with_default(node.attribute("hidden"), false);
+        let comment = node.attribute("comment").map(decode_xlsx_escapes);
         defined_names.push(DefinedName {
             name,
             formula,
             sheet_id,
+            hidden,
+            comment,
         });
     }
     let external_references = doc

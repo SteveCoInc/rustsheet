@@ -516,6 +516,8 @@ impl Model {
                 name: defined_name.name.clone(),
                 formula,
                 sheet_id: Some(new_sheet_id),
+                hidden: defined_name.hidden,
+                comment: defined_name.comment.clone(),
             });
         }
         self.workbook.defined_names.extend(new_defined_names);
@@ -602,6 +604,8 @@ impl Model {
                 name: defined_name.name.clone(),
                 formula,
                 sheet_id: defined_name.sheet_id,
+                hidden: defined_name.hidden,
+                comment: defined_name.comment.clone(),
             });
         }
         self.workbook.defined_names = defined_names;

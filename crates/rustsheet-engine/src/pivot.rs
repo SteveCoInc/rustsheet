@@ -27,6 +27,7 @@ mod date_groups;
 pub(crate) mod layout;
 mod model;
 mod number_groups;
+mod refresh;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
 pub use layout::{
@@ -39,6 +40,10 @@ pub use model::{
     NO_BASE_ITEM,
 };
 pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
+pub use refresh::{
+    read_source, refresh, regroup, RangeGrouping, RegroupError, SharedItemsFlags, SourceArea,
+    SourceCells,
+};
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
 pub const MAX_RECORDS: usize = 1_048_576;
@@ -123,6 +128,20 @@ pub enum PivotCacheError {
     /// A field index, a shared-item index or a record's length does not match the cache.
     #[error("a pivot cache record does not match its fields")]
     BadRecord,
+    /// A refresh found no source: the cache has none, or it names a sheet or range the workbook
+    /// does not hold (`refresh`; a defined name or a Table is T-4506's).
+    #[error("a pivot cache's source is not a worksheet range of this workbook")]
+    Source,
+    /// A refresh found a source header (0-based `column` within the source) that is a number, a
+    /// boolean or an error: how Excel names such a field is unprobed (`refresh`).
+    #[error("pivot source header {column} is not text")]
+    Header {
+        /// The header's 0-based column within the source.
+        column: u32,
+    },
+    /// A refresh found values a field's saved range grouping cannot group (`refresh`).
+    #[error("a refreshed pivot field no longer fits its grouping")]
+    Group,
 }
 
 /// One value of a record handed to [`CacheBuilder::push_record`].
@@ -154,6 +173,18 @@ impl ItemKey {
             CacheItem::Boolean(b) => ItemKey::Boolean(*b),
             CacheItem::Error(e) => ItemKey::Error(e.to_string()),
             CacheItem::Date(d) => ItemKey::Date(d.to_bits()),
+        }
+    }
+
+    /// The key under which a refresh finds an item (`refresh`): exact for numbers, and for the
+    /// type (the number 1 and the text `1` are two items, a date-formatted value never matches a
+    /// cached number), but text ignoring case (docs/excel-semantics/pivots.md "Item identity:
+    /// exact for numbers and types, case-insensitive for text"; probes/t4134-pivot-items I1, I4,
+    /// I5; t4582-pivot-item-edges J3, J4). Case folds as the text functions fold it.
+    fn identity(item: &CacheItem) -> ItemKey {
+        match item {
+            CacheItem::Text(s) => ItemKey::Text(crate::functions::util::collation::fold_case(s)),
+            other => ItemKey::of(other),
         }
     }
 }
@@ -274,6 +305,12 @@ impl CacheBuilder {
     #[must_use]
     pub fn record_values(&self) -> usize {
         self.cache.record_count as usize * self.cache.fields.len()
+    }
+
+    /// The fields so far, in cache order.
+    #[must_use]
+    pub fn fields(&self) -> &[CacheField] {
+        &self.cache.fields
     }
 
     /// The finished cache.

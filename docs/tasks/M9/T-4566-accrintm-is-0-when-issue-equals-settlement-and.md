@@ -3,7 +3,7 @@ id: T-4566
 title: "ACCRINTM is 0 when issue equals settlement; ACCRINT's basis-2 issue period and its 0 at the calendar's start"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -48,3 +48,25 @@ has given both 0 and `#NUM!` there, and the engine follows what a fresh fill sho
 
 ## Out of scope
 - ACCRINT's unprobed points (T-4522).
+
+## Outcome
+2026-11-06.
+- **ACCRINTM** (`accrintm_of`, functions/financial/discount.rs): an issue equal to the settlement is 0 once the rate and
+  par are positive; a reversed pair stays `#NUM!`. probes/accrint-zero-results B1:B40 and accuracy/ACCRINTM/s1 A115,
+  A134 pass.
+- **ACCRINT basis 2** (`stub_denominator`, functions/financial/accrint.rs): the issue's period length is US 30/360
+  moving both dates (the existing `days_30_360_us_both_ymd`, as on basis 0). probes/accrint-zero-results C15, C16 and
+  accuracy/ACCRINT/s1 A21 pass. defs/accrint.py already did this; its docstring no longer says the engine departs.
+- **ACCRINT at the calendar's start: not changed.** Re-filled probes/accrint-zero-results, fin-accrint-1900-calendar,
+  fin-coupon-walk-bounds-b, -c, accrint-calendar-start-1900, -1904 and accrint-eom-1900 twice (`fill --force`, oracle
+  cache emptied between; 15:08 and 15:10 UTC). The two fills agreed with each other, and 140 cells differed from the
+  committed 2026-10-20 to 10-27 sidecars: a walk back reaching a period start before 1900-01-01 is now 0 with
+  calc_method TRUE or FALSE, and basis 1's regular-period cut and most of the 1904 cut are gone. The multi-cell
+  answer moved from `#NUM!` (10-20 to 10-27) to 0 (11-06), and fin-coupon-walk-bounds-b A9, the only cell filled on
+  10-17, went 0, `#NUM!`, 0; the answer flips over time, so the engine, defs and committed sidecars
+  stay as they were and accrint-zero-results A1:A9, A12, A14, A16:A19 stay known failures (financial.md "ACCRINT at
+  the calendar's start", bullet "Re-fill of 2026-11-06"). Follow-up T-4631 re-fills after 2026-11-20 and decides.
+- Unit tests: `fn_accrintm_issue_equals_settlement_is_zero` (replaces the `#NUM!` test for equal dates),
+  `accrint_basis_2_issue_period_moves_both_dates`.
+- **Eval delta:** probes known failures 7525 -> 7483 (fixed 42: accrint-zero-results B1:B40, C15, C16), no
+  regressions; Gate A 0 failing, its three T-4566 lines removed from eval/accuracy/known-failures.tsv.

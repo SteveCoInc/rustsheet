@@ -69,6 +69,7 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 - I5: the number 1 counts 2 and the text `1` counts 1.
 
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`ItemKey::identity`)
 
 ## Item casing when cache and source disagree, and date items
 Rule (as observed):
@@ -98,6 +99,8 @@ Evidence: probes/t4582-pivot-item-edges (excel-graph, 2026-11-06, T-4582):
 
 Status: VERIFIED (excel-graph) for the cells and items above. The casing rule's deciding property and
 the appended items' type are UNVERIFIED (probe pending: T-4612).
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader::push` relabels the reused
+slot; `ItemKey::identity` keeps date items apart from cached numbers)
 
 ## Shared-item flags Excel accepts for mixed fields
 Rule: Excel for the web refuses a cache whose `sharedItems` flags contradict its items. The flags that
@@ -113,6 +116,7 @@ these); Excel-saved caches in the LibreOffice fixtures (oss-engines.md §5).
 Status: builder observation (T-4122 runs), not committable as a probe: Excel saves nothing for a
 file it refuses. The builder writes these flags (pivot_definition.py `shared_items`), and every
 filled pivot probe opens with them.
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`SharedItemsFlags`, written by the export, T-4176)
 
 ## Items show in the order the pivot field lists them; new items are appended
 Rule: on refresh Excel keeps the order of a pivot field's `<items>`. An item the refresh finds that the
@@ -138,6 +142,7 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 The default order of a newly created pivot (ascending, by type) is a UI action and not reachable from a
 file.
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader`; the rendering is T-4142's)
 
 ## A calculated field applies its formula to the field sums
 Rule: a calculated field `Sales*2+0.1` shows, at every level including subtotals and the grand total,
@@ -430,7 +435,26 @@ Evidence: none. Every rendered probe so far is `refreshOnLoad` (case builder v2)
 Status: UNVERIFIED (probe pending: T-4586)
 
 ## Pivot field names for duplicate and blank source headers
-Rule: unknown. How Excel names the cache fields of a source whose header row repeats a name, leaves a
-cell blank, or has names differing only in case.
-Evidence: none.
-Status: UNVERIFIED (probe pending: T-4585)
+Rule: on refresh Excel names each cache field after its source header, made unique case-insensitively:
+- A header equal to an earlier field's name, ignoring case, gets the next number, starting at 2. It
+  keeps its own casing: `Sales`, `Sales2`, `Sales3`, and `region2` after `Region`.
+- A header that evaluates to empty text (`=""`) becomes `Field<n>`. In the probe n is 4. The header
+  is the 4th column of a source that starts at column A (D1). So n is either its 1-based position in
+  the source or its worksheet column number, and it is not a count of empty headers (`Field1`).
+
+Evidence: probes/t4585-pivot-field-names (excel-graph, 2026-11-06, T-4585). The headers D!A1:F1 are
+Region, Sales, `="Sales"`, `=""`, `="region"` and `="Sales"&""`. The repeats and the empty header all
+come from formula headers, because the case builder refuses duplicates and blanks. The saved cache
+fields (sidecar `pivots` cache_fields) are Region, Sales, Sales2, Field4, region2 and Sales3, numbered
+per name.
+
+Open (T-4627):
+- whether n is the source position or the sheet column;
+- a truly empty header cell;
+- constant (non-formula) duplicates;
+- collisions with a real header (a source that already has `Sales2` or `Field4`).
+
+Status: VERIFIED (excel-graph) for the names above; the open points are UNVERIFIED (probe pending:
+T-4627)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`field_names`, position-in-source
+reading of n)

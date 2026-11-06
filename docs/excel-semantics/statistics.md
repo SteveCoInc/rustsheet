@@ -1854,7 +1854,8 @@ between arguments: T.DIST.2T and TDIST read every argument before they check x o
 1E308 is not written into a formula, and a text "1e308" cell is `#VALUE!` in these functions.
 Also `TDIST(-1,5,NA())` is `#N/A` (an error in tails wins over x < 0), the BETA.DIST pdf at x = A with B - A
 overflowing is `#DIV/0!`, and with x = 8E307 and deg_freedom1 = 2 (df1*x = 1.6E308, finite) F.DIST is 1 (cdf) and 0
-(pdf), F.DIST.RT and FDIST 0 (stat-overflow-arguments-b A1-A9).
+(pdf), F.DIST.RT and FDIST 0 (stat-overflow-arguments-b A1-A9). At a large df1 the product overflows from a smaller
+x: `F.DIST.RT(4.03265495400173E+307,9006,14680)` is `#DIV/0!` (accuracy/F.DIST.RT/s1 A195, T-4103).
 Evidence: probes/stat-overflow-arguments and -b (excel-graph, 2026-10-18, T-1290).
 Ours: matches (T-1290). Before, the overflowing F.DIST and BETA.DIST calls panicked in statrs' incomplete beta
 (an unwrapped NaN), the F pdf of a huge x was `#NUM!` (statrs' direct form overflows to inf/inf), PERMUT gave numbers
@@ -5817,7 +5818,11 @@ Tasks: T-2035 (partial), T-2093, T-2095
   = `(1,4,8,20)`, and `(0.9,...)` = `(0,...)`; `hypgeomdist`), and a negative fraction (-0.5) is
   `#NUM!`. T.TEST truncates `tails` and `type` (`T.TEST(...,1.9,2.9)` = tails 1, type 2; `ttest`).
   F.DIST truncates df (`F.DIST(1,3.9,7.9,TRUE)` = df 3, 7; `fdist`) but `F.DIST(1,1.5,7,TRUE)` = 0.649... is a
-  value, not an error (df 1.5 truncating to 1; no df=1 control cell was probed).
+  value, not an error (df 1.5 truncating to 1; no df=1 control cell was probed). The right tails and their inverses
+  truncate both df too: `F.DIST.RT(1,3.9,7.9)` = 0.4470796134684837 (`fdistrt` A17), `F.INV.RT(0.5,3.9,7.9)` =
+  0.8709442531872849 (`finvrt` A22) and `FINV(0.5,2.9,5.9)` = 0.7987697769322353 (m9-legacy-finv A69) equal, bit for
+  bit, Excel's own integer-df cells `F.DIST.RT(1,3,7)` (`fdistrt` A5), `F.INV.RT(0.5,3,7)` (`finvrt` A8) and
+  `FINV(0.5,2,5)` (m9-legacy-finv A35) (T-4103).
 - **Coercion:** a blank cell is 0 for every scalar argument (`F.DIST(Z99,3,7,TRUE)` = 0, `PHI(Z99)` =
   0.3989..., a blank cumulative flag is FALSE); TRUE is 1; a numeric text ("2") is accepted and non-numeric
   text is `#VALUE!`. The cumulative flag is any number (nonzero = TRUE, `...,2)` = cumulative), "TRUE" text
@@ -6712,6 +6717,30 @@ a612e89321a6df9c A23 and 01523d247594952e A377 (the far tail's last digits).
 Ours: `#NUM!` where the quantile saturates, and 7 ulp off at `F.INV.RT(1E-20,3,9)`; T-2808.
 Status: VERIFIED (excel-graph)
 Tasks: T-2435, T-2808
+
+## F.INV.RT and FINV at a tiny probability: Excel's own search, far from the math (T-4103)
+Rule: below p of about 1E-130, and at p = 2.22507385850721E-308 (DBL_MIN), Excel's F.INV.RT and FINV are often far
+from the true quantile, with both names alike; Excel is the target there (decision 0300).
+On the Gate A tables (excel-graph, 2026-11-06; 50-digit mpmath) 19 of 348 points are more than 1E-4 relative off:
+- A large df2 (36,191 to 78,611,816, and 668 at FINV/s1 A168), p from 1.2E-131 to 7.2E-298: Excel is above the
+  math by 12% to a factor of 31,800. For example `F.INV.RT(1.9170293168771E-270,8,78611816)` is 5075979.720393896
+  against 159.6608295092222 (F.INV.RT/s1 A170), and `FINV(4.67532075651571E-137,6,860631)` 94132.27031453923
+  against 108.30436114897702 (FINV/s1 A174). Cells: F.INV.RT/s1 A144, A147, A162, A166, A167, A170, A174; FINV/s1
+  A149, A151, A154, A168, A172, A174.
+- A small df2: `FINV(1.21859163444956E-258,36,3)` is 8.106773760401629E+191 against 1.1024293887816629E+172 (FINV/s1
+  A152), and in gen-m9 `F.INV.RT(1E-300,3,3)` is 1.375702780976156E+244 against 1.42309066607E+200
+  (0a9226016e8f5f33 A321). Both have df2 = 3, outside the df2 < 2 saturation above.
+- p = DBL_MIN: Excel is 0.9% to 6.4% below the math: F.INV.RT/s1 A112 (`F.INV.RT(2.22507385850721E-308,29,57)`,
+  285298388679.62225 against 287879096822.68036) and A128 (27, 35), FINV/s1 A112 (7, 9) and A128 (51, 19).
+- `F.INV.RT(1.53687678555259E-247,9,51)` is `#NUM!` (F.INV.RT/s1 A142), where the quantile is 38774983971.6707; it is the
+  only point of either table with p > 0 and both df in [1, 1E10] that Excel rejects, so no domain rule is drawn from it.
+Not established: why Excel's search stops where it does (T-2555's BETA.INV stop and T-0974's crossing are the
+candidates). The other numeric points (154 of F.INV.RT's, 155 of FINV's) are within 1E-4 of the math.
+Evidence: eval/accuracy/tables/F.INV.RT/s1 and FINV/s1 (oracle and math sidecars; `rustsheet-eval accuracy`).
+Ours: Excel's value at every point above but F.INV.RT/s1 A112 and A142 (the math; T-4568); A155
+(`F.INV.RT(4.6950979439918E-162,3216,23)`, where Excel is the math) is 1.8% off (T-1871).
+Status: VERIFIED (excel-graph) for the cells; the mechanism UNVERIFIED
+Tasks: T-4103, T-4568, T-1871
 
 ## GAMMA.INV and CHISQ.INV at a huge shape: the true quantile, `#NUM!`, or a Wilson-Hilferty closed form (T-2982, T-3070)
 Rule: from a shape of 1E9 (the step limit from 1E5 too: T-3409) Excel's GAMMA.INV (and GAMMAINV, CHISQ.INV,
