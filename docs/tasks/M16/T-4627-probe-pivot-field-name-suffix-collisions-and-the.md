@@ -1,6 +1,6 @@
 ---
 id: T-4627
-title: "Probe pivot field-name suffix collisions"
+title: "Probe pivot field-name collisions, empty header cells and the Field<n> number"
 milestone: M16
 lane: research
 status: todo
@@ -16,12 +16,15 @@ pivots.md settles the open point of "Pivot field names for duplicate and blank s
 ## Context
 T-4585 (probes/t4585-pivot-field-names) shows `Sales2`, `Sales3`, `region2` and `Field4`. Cases:
 - a source with `Sales`, `Sales2` and a second `Sales`;
-- a blank header in column 4 beside a real `Field4` header.
+- an empty-text header beside a real `Field4` header;
+- a source starting at column B (B1:G3) with the empty-text header in its 4th column, sheet column E. `Field4` or `Field5` decides between position and sheet column;
+- a truly empty header cell. The case builder refuses absent headers (pivot_definition.py), so this needs a builder option or a raw xlsx case;
+- a constant duplicate header (`Sales` typed twice), also refused by the builder today.
 
 Use the same formula-header trick: the case builder refuses duplicate or blank headers, so `=""` and `="Sales"` get past it. T-4141 implements the rule.
 
 ## Acceptance criteria
-- [ ] Filled probe for both cases; the pivots.md entry's UNVERIFIED part closed.
+- [ ] Filled probes for each case; the pivots.md entry's UNVERIFIED part closed.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

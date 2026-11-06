@@ -28,6 +28,10 @@ probes/t4585-pivot-field-names (excel-graph, 2026-11-06) holds one builder-v2 pi
 Region, Sales, `="Sales"`, `=""`, `="region"` and `="Sales"&""`. Excel saves the cache fields as Region,
 Sales, Sales2, Field4, region2 and Sales3:
 - a repeated name, compared case-insensitively, gets the next number from 2 and keeps its own casing;
-- a blank header becomes `Field<column>`.
+- an empty-text header (`=""`) becomes `Field4` in column 4 of a source starting at column A.
 
-Recorded in docs/excel-semantics/pivots.md. T-4627 owns name collisions.
+Recorded in docs/excel-semantics/pivots.md. T-4627 owns the rest:
+- source position versus sheet column;
+- a truly empty cell;
+- constant duplicates;
+- collisions.
