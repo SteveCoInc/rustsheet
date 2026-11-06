@@ -241,7 +241,7 @@ left at B4 (probes/t4138-pivot-geometry, T-4138):
 
 In compact form all row fields share one column (fdc 1). Outline and tabular give each row field its own
 column (fdc = number of row fields), but each rests on one probe (G3, G4). With no row field, fdc is 1
-when there is a column field (G7) and 0 when there is no axis field at all (G9, and G8 below). fdr is 1
+when there is a column field (G7) and 0 when there is no axis field at all (G9, and G8 in the page-field entry above). fdr is 1
 plus the number of `colFields`, and the Values field counts when it is on columns: G3 and G9 (Values
 only) have fdr 2, as does G2 (one column field and one data field), and G5 has 3. With Values on rows,
 each item is followed by one line per data field, and the grand total reads `Total <data field>`

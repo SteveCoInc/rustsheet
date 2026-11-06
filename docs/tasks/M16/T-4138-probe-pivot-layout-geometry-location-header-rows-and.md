@@ -31,6 +31,6 @@ probes/t4138-pivot-geometry (excel-graph, 2026-11-06), nine builder-v2 pivots:
 - **Page area:** G8 shows wrapped page fields (pageWrap 2). They are consistent with the sidecar's
   page-area capture window, including the `colPageCount > 1` width (pairs at B and E of a five-column
   window). A capture cannot see past its own window, so this is consistency, not an independent
-  confirmation; T-4584 confirms it.
+  confirmation; T-4584 owns the confirmation.
 - **Builder fix:** a Values field on rows makes Excel refuse the file unless the definition has
   `dataOnRows="1"`. Builder v2 now writes it, with a unit test.
