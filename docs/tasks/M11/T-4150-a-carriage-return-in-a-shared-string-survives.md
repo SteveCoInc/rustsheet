@@ -3,7 +3,7 @@ id: T-4150
 title: "A carriage return in a shared string survives load and save instead of becoming literal _x000d_"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
