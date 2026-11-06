@@ -1,0 +1,703 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4135: the eleven pivot aggregates over a value field holding text, blanks, booleans or errors, each sheet one builder-v2 pivot Excel renders on open. Data!A1:H5 has Region, Kind and six value fields, each with East/A holding the odd value in row 4: Num (numbers only), Txt (text \"abc\"), Blk (a blank), Bool (TRUE), Err (#N/A), and Dec (0.3, 0.2, 0.1 in record order, for summation order: record order gives 0.6, display order A-then-B 0.6000000000000001). A_<aggregate>: rows Region, columns Kind, the six fields under that aggregate; West/B is an empty intersection, and West/A and East/B single records (StdDev/Var of one value). EC: errorCaption ERR with showError over Err under all eleven aggregates (which aggregates an error poisons, and whether the caption replaces it). Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4135",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Kind",
+    "C1": "Num",
+    "D1": "Txt",
+    "E1": "Blk",
+    "F1": "Bool",
+    "G1": "Err",
+    "H1": "Dec",
+    "A2": "East",
+    "B2": "B",
+    "C2": 5,
+    "D2": 4,
+    "E2": 4,
+    "F2": 4,
+    "G2": 4,
+    "H2": 0.3,
+    "A3": "East",
+    "B3": "A",
+    "C3": 10,
+    "D3": 10,
+    "E3": 10,
+    "F3": 10,
+    "G3": 10,
+    "H3": 0.2,
+    "A4": "East",
+    "B4": "A",
+    "C4": 4,
+    "D4": "abc",
+    "F4": true,
+    "G4": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "H4": 0.1,
+    "A5": "West",
+    "B5": "A",
+    "C5": 7,
+    "D5": 7,
+    "E5": 7,
+    "F5": 7,
+    "G5": 7,
+    "H5": 0.7
+   }
+  },
+  {
+   "name": "A_sum",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_sum",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Num",
+        "subtotal": "sum",
+        "name": "sum Num"
+       },
+       {
+        "field": "Txt",
+        "subtotal": "sum",
+        "name": "sum Txt"
+       },
+       {
+        "field": "Blk",
+        "subtotal": "sum",
+        "name": "sum Blk"
+       },
+       {
+        "field": "Bool",
+        "subtotal": "sum",
+        "name": "sum Bool"
+       },
+       {
+        "field": "Err",
+        "subtotal": "sum",
+        "name": "sum Err"
+       },
+       {
+        "field": "Dec",
+        "subtotal": "sum",
+        "name": "sum Dec"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "A_count",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_count",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Num",
+        "subtotal": "count",
+        "name": "count Num"
+       },
+       {
+        "field": "Txt",
+        "subtotal": "count",
+        "name": "count Txt"
+       },
+       {
+        "field": "Blk",
+        "subtotal": "count",
+        "name": "count Blk"
+       },
+       {
+        "field": "Bool",
+        "subtotal": "count",
+        "name": "count Bool"
+       },
+       {
+        "field": "Err",
+        "subtotal": "count",
+        "name": "count Err"
+       },
+       {
+        "field": "Dec",
+        "subtotal": "count",
+        "name": "count Dec"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "A_average",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_average",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Num",
+        "subtotal": "average",
+        "name": "average Num"
+       },
+       {
+        "field": "Txt",
+        "subtotal": "average",
+        "name": "average Txt"
+       },
+       {
+        "field": "Blk",
+        "subtotal": "average",
+        "name": "average Blk"
+       },
+       {
+        "field": "Bool",
+        "subtotal": "average",
+        "name": "average Bool"
+       },
+       {
+        "field": "Err",
+        "subtotal": "average",
+        "name": "average Err"
+       },
+       {
+        "field": "Dec",
+        "subtotal": "average",
+        "name": "average Dec"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "A_max",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_max",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Num",
+        "subtotal": "max",
+        "name": "max Num"
+       },
+       {
+        "field": "Txt",
+        "subtotal": "max",
+        "name": "max Txt"
+       },
+       {
+        "field": "Blk",
+        "subtotal": "max",
+        "name": "max Blk"
+       },
+       {
+        "field": "Bool",
+        "subtotal": "max",
+        "name": "max Bool"
+       },
+       {
+        "field": "Err",
+        "subtotal": "max",
+        "name": "max Err"
+       },
+       {
+        "field": "Dec",
+        "subtotal": "max",
+        "name": "max Dec"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "A_min",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_min",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Num",
+        "subtotal": "min",
+        "name": "min Num"
+       },
+       {
+        "field": "Txt",
+        "subtotal": "min",
+        "name": "min Txt"
+       },
+       {
+        "field": "Blk",
+        "subtotal": "min",
+        "name": "min Blk"
+       },
+       {
+        "field": "Bool",
+        "subtotal": "min",
+        "name": "min Bool"
+       },
+       {
+        "field": "Err",
+        "subtotal": "min",
+        "name": "min Err"
+       },
+       {
+        "field": "Dec",
+        "subtotal": "min",
+        "name": "min Dec"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "A_product",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_product",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Num",
+        "subtotal": "product",
+        "name": "product Num"
+       },
+       {
+        "field": "Txt",
+        "subtotal": "product",
+        "name": "product Txt"
+       },
+       {
+        "field": "Blk",
+        "subtotal": "product",
+        "name": "product Blk"
+       },
+       {
+        "field": "Bool",
+        "subtotal": "product",
+        "name": "product Bool"
+       },
+       {
+        "field": "Err",
+        "subtotal": "product",
+        "name": "product Err"
+       },
+       {
+        "field": "Dec",
+        "subtotal": "product",
+        "name": "product Dec"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "A_countNums",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_countNums",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Num",
+        "subtotal": "countNums",
+        "name": "countNums Num"
+       },
+       {
+        "field": "Txt",
+        "subtotal": "countNums",
+        "name": "countNums Txt"
+       },
+       {
+        "field": "Blk",
+        "subtotal": "countNums",
+        "name": "countNums Blk"
+       },
+       {
+        "field": "Bool",
+        "subtotal": "countNums",
+        "name": "countNums Bool"
+       },
+       {
+        "field": "Err",
+        "subtotal": "countNums",
+        "name": "countNums Err"
+       },
+       {
+        "field": "Dec",
+        "subtotal": "countNums",
+        "name": "countNums Dec"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "A_stdDev",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_stdDev",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Num",
+        "subtotal": "stdDev",
+        "name": "stdDev Num"
+       },
+       {
+        "field": "Txt",
+        "subtotal": "stdDev",
+        "name": "stdDev Txt"
+       },
+       {
+        "field": "Blk",
+        "subtotal": "stdDev",
+        "name": "stdDev Blk"
+       },
+       {
+        "field": "Bool",
+        "subtotal": "stdDev",
+        "name": "stdDev Bool"
+       },
+       {
+        "field": "Err",
+        "subtotal": "stdDev",
+        "name": "stdDev Err"
+       },
+       {
+        "field": "Dec",
+        "subtotal": "stdDev",
+        "name": "stdDev Dec"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "A_stdDevp",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_stdDevp",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Num",
+        "subtotal": "stdDevp",
+        "name": "stdDevp Num"
+       },
+       {
+        "field": "Txt",
+        "subtotal": "stdDevp",
+        "name": "stdDevp Txt"
+       },
+       {
+        "field": "Blk",
+        "subtotal": "stdDevp",
+        "name": "stdDevp Blk"
+       },
+       {
+        "field": "Bool",
+        "subtotal": "stdDevp",
+        "name": "stdDevp Bool"
+       },
+       {
+        "field": "Err",
+        "subtotal": "stdDevp",
+        "name": "stdDevp Err"
+       },
+       {
+        "field": "Dec",
+        "subtotal": "stdDevp",
+        "name": "stdDevp Dec"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "A_var",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_var",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Num",
+        "subtotal": "var",
+        "name": "var Num"
+       },
+       {
+        "field": "Txt",
+        "subtotal": "var",
+        "name": "var Txt"
+       },
+       {
+        "field": "Blk",
+        "subtotal": "var",
+        "name": "var Blk"
+       },
+       {
+        "field": "Bool",
+        "subtotal": "var",
+        "name": "var Bool"
+       },
+       {
+        "field": "Err",
+        "subtotal": "var",
+        "name": "var Err"
+       },
+       {
+        "field": "Dec",
+        "subtotal": "var",
+        "name": "var Dec"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "A_varp",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_varp",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Num",
+        "subtotal": "varp",
+        "name": "varp Num"
+       },
+       {
+        "field": "Txt",
+        "subtotal": "varp",
+        "name": "varp Txt"
+       },
+       {
+        "field": "Blk",
+        "subtotal": "varp",
+        "name": "varp Blk"
+       },
+       {
+        "field": "Bool",
+        "subtotal": "varp",
+        "name": "varp Bool"
+       },
+       {
+        "field": "Err",
+        "subtotal": "varp",
+        "name": "varp Err"
+       },
+       {
+        "field": "Dec",
+        "subtotal": "varp",
+        "name": "varp Dec"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "EC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_errcap",
+     "source": "Data!A1:H5",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "showError": true,
+       "errorCaption": "ERR"
+      },
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "sum",
+        "name": "sum Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "count",
+        "name": "count Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "average",
+        "name": "average Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "max",
+        "name": "max Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "min",
+        "name": "min Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "product",
+        "name": "product Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "countNums",
+        "name": "countNums Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "stdDev",
+        "name": "stdDev Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "stdDevp",
+        "name": "stdDevp Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "var",
+        "name": "var Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "varp",
+        "name": "varp Err"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A5)"
+   }
+  }
+ ]
+}

@@ -252,3 +252,62 @@ the file as corrupt (`FileCorruptTryRepair`). Case builder v2 now writes it. Thi
 excel-graph runs of T-4138, not committed: G6's package was refused without the attribute and opened
 with it, all else equal.
 Status: VERIFIED (excel-graph) for the table; the refusal is a builder observation
+
+## Aggregates over text, blanks, booleans and errors
+Rule (each aggregate in a value field that also holds other kinds of value):
+- **Skipped values.** Text, blanks and booleans are skipped by Sum, Average, Max, Min, Product, StdDev,
+  StdDevp, Var, Varp and CountNums. A boolean is not a number: `TRUE` is not 1.
+- **Count** counts every non-blank value: numbers, text, booleans and errors.
+- **CountNums** counts numbers only. An error does not poison it.
+- **Errors.** An error poisons every aggregate except Count and CountNums. The aggregate shows the error
+  (`#N/A`) in the cell holding it and in every subtotal and grand total that covers that cell. Cells that
+  do not cover it are unaffected.
+- **One value.** Over a single number, StdDev and Var are `#DIV/0!`, while StdDevp and Varp are 0. This
+  holds wherever the other values in the cell are text, blank or boolean.
+- **Empty intersections.** An intersection with no records is blank for every aggregate, Count and
+  CountNums included.
+
+Evidence: probes/t4135-pivot-aggregates (excel-graph, 2026-11-06, T-4135). Each sheet A_<aggregate> has
+rows Region, columns Kind and six value fields. The Data!A2:H5 records are East/B, East/A, East/A and
+West/A, and East/A row 4 holds the odd value: text `abc`, a blank, `TRUE` or `#N/A`.
+- **Skipped values:** A_sum!I6:K6 are 10 for Txt, Blk and Bool, against H6 = 14 for Num. A_average!I6:K6
+  are 10 and A_product!I6:K6 are 10.
+- **Count:** A_count!I6, K6 and L6 are 2 for Txt, Bool and Err; J6 is 1 for Blk.
+- **CountNums:** A_countNums!I6:L6 are 1.
+- **Errors:** column L (Err) of A_sum, A_average, A_max, A_min, A_product, A_stdDev, A_stdDevp, A_var and
+  A_varp is `#N/A` at row 6, at the East total R6 and at the grand totals L8 and R8. West/A (L7) shows
+  its own one-value result: 7 for Sum to Product, `#DIV/0!` for StdDev and Var, and 0 for StdDevp and
+  Varp.
+- **One value:** A_stdDev and A_var are `#DIV/0!` at East/B (B6:G6) and West/A (H7:M7), and at I6
+  (East/A Txt: 10 and `abc`). A_stdDevp and A_varp are 0 there.
+- **Empty intersections:** West/B (B7:G7) is blank on every sheet.
+Status: VERIFIED (excel-graph)
+
+## Summation order of Sum and Average totals
+Rule: a Sum subtotal or grand total is not the record-order sum of its records. It equals the sum in
+item (display) order, which is the same as adding the children's sums. An Average total, though,
+divides the record-order sum.
+Evidence: probes/t4135-pivot-aggregates field Dec, East records in record order 0.3 (B), 0.2 (A), 0.1
+(A), and West 0.7:
+- A_sum!S6 (East total) is 0.6000000000000001. That is (0.2 + 0.1) + 0.3; record order gives 0.6.
+- A_sum!S8 (grand total) is 1.3. Record order gives 1.2999999999999998.
+- A_average!S6 is 0.19999999999999998 = 0.6 / 3, and A_average!S8 is 0.32499999999999996 =
+  1.2999999999999998 / 4. Both use the record-order sum.
+
+Item order and "sum of the children" agree on this data, and other aggregates' totals are not
+separated.
+Status: VERIFIED (excel-graph) for these cells; the general accumulation order is UNVERIFIED (probe
+pending: T-4589)
+
+## errorCaption replaces every error value
+Rule: with `showError` and `errorCaption`, every error value a pivot cell would show becomes the
+caption, as text. That includes `#DIV/0!` from StdDev and Var over one value, not only errors from the
+data. In probes/t4135-pivot-aggregates EC, with no column field and eleven data fields over Err, the
+caption also fills the Grand Total row of Count and CountNums, which show no error without the caption
+(A_count!R8 is 4). Why is open.
+Evidence: probes/t4135-pivot-aggregates EC (excel-graph, 2026-11-06, T-4135):
+- East (B5:L5) shows `ERR` for every aggregate except Count (3) and CountNums (2).
+- West (B6:L6) shows `ERR` for StdDev and Var, which have one value, and 0 for StdDevp and Varp.
+- The Grand Total row B7:L7 is `ERR` everywhere.
+Status: VERIFIED (excel-graph) for the caption replacing errors; the Count and CountNums grand totals
+are UNVERIFIED (probe pending: T-4589)
