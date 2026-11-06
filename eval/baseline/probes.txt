@@ -2525,6 +2525,7 @@ C	probes/t4612-pivot-date-items-and-casing.case.json	66
 C	probes/t4614-pivot-total-order-2.case.json	124
 C	probes/t4615-convert-prefixed-kelvin.case.json	346
 C	probes/t4616-pivot-total-order-3.case.json	528
+C	probes/t4619-weeknum-negative-snap-window.case.json	12
 C	probes/t4622-pivot-count-subtotals.case.json	202
 C	probes/t4625-gamma-dist-ratio-overflow.case.json	62
 C	probes/t4626-matrix-text-elements.case.json	28

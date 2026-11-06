@@ -75,10 +75,10 @@ Implemented in: `fn_weeknum`, `iso_week` (crates/rustsheet-engine/src/functions/
 
 ### WEEKNUM return_type snap and negative floor (T-4470)
 Rule: WEEKNUM reads return_type as a floor that snaps up near the next integer, before choosing the type. Positive side: within
-2^-22 + 2^-33 below an integer (the LEFT count rule; the T-4454 entry below). Negative side: the floor (`-0.5` is -1) and the snap at
-`-2^-30` (reads 0) are VERIFIED, but the size of the negative-side snap window is NOT probed: the only negative point inside it is
-`-2^-30`, far below the bound. It may be the full tolerance or half of it, as DATE/TIME use for negatives (`near_integer_floor`);
-the engine uses the full one until probed (follow-up task). Cells and what each rules out:
+2^-22 + 2^-33 below an integer (the LEFT count rule; the T-4454 entry below). Negative side: the floor (`-0.5` is -1), and the snap window is HALF the positive one, 2^-23 + 2^-34 (as DATE/TIME,
+`near_integer_whole`): `-2^-30`, `-2^-23` and `-(2^-23+2^-34)` snap up to 0 (`#NUM!`, empty the state), while `-(2^-22+2^-33)` and
+`-(2^-22+9*2^-36)` floor to -1 and read the stale state (probes/t4619-weeknum-negative-snap-window, excel-graph, 2026-11-06,
+T-4619). Cells and what each rules out:
 - `1-2^-23` is type 1 (not 0): sets the Sunday start; `2-2^-23` is type 2 and sets Monday; `18-2^-23` is 18 (`#NUM!`, empties the
   state; truncation would give 17); `21-2^-23` is 21 (ISO, week 15 for serial 100); `22-2^-23` is 22 and reads the stale state.
 - `-0.5` is -1: it READS the stale state (a floor; truncation would make it type 0, always `#NUM!`). `-1.5` reads it too, but truncation
@@ -86,7 +86,7 @@ the engine uses the full one until probed (follow-up task). Cells and what each 
   and read the state).
 Evidence: probes/t4470-weeknum-return-type-edges (8 layouts, A3 sets the state, A2 the edge type, A1 `WEEKNUM(100,99)` reads it;
 excel-graph, 2026-11-06). Ours: matches all 24 cells (`near_integer_count` on every return_type, T-4470; negatives truncated before).
-Status: VERIFIED (web) for the cells above; negative snap bound unprobed
+Status: VERIFIED (web)
 
 ### WEEKNUM's stale return_type state (T-1484)
 Rule: one start-weekday state, Sunday, Monday or empty, lives for one recalculation. It is
