@@ -27,7 +27,7 @@ is split by cause into the open tasks that own the cells still off (see Outcome)
 - Removing the baked path.
 
 ## Outcome
-The probes suite's defined pivots (17 cases, 121 pivots; there is no separate `pivots` suite) now
+The probes suite's defined pivots (18 cases, 158 pivots; there is no separate `pivots` suite) now
 reach the engine as the parts the case builder writes and are rendered by the engine's refresh on
 load. Design:
 - `crates/rustsheet-eval/src/pivot_definition.rs` writes a definition's `pivotCacheDefinition`,
@@ -51,10 +51,12 @@ load. Design:
 - The renderer leaves an empty-text item's label cell empty (t4627 P_Rec!A6, pivots.md), which
   rendering through the engine would otherwise have regressed.
 
-Eval (`make eval-baseline`, REGRESSIONS 0): probes known failures 8616 -> 6052 (fixed 2564); every
-other suite unchanged (gen-m5 3, gen-m9 1767, ironcalc-calc 266, the rest 0). Twelve of the 17
-cases now pass whole (t4134, t4135, t4137, t4138, t4582, t4583, t4586, t4589, t4609, t4612, t4614,
-t4616). The 292 cells still off, by cause and owner:
+Eval (`make eval-baseline` on main after T-4634, REGRESSIONS 0): probes known failures 10484 ->
+6544 (fixed 3940); every other suite unchanged (gen-m5 3, gen-m9 1767, ironcalc-calc 266, the
+rest 0). Thirteen of the 18 defined-pivot cases now pass whole (t4134, t4135, t4137, t4138,
+t4582, t4583, t4586, t4589, t4609, t4612, t4614, t4616 and T-4634's
+probes/t4634-pivot-total-order-4, whose 1376 cells all pass).
+The 292 cells still off, by cause and owner:
 - `showDataAs` data fields, skipped by the importer: t4123 T to T4 (160) -> T-4163;
 - a calculated field, skipped by the importer: t4128 K (28) -> T-4174 (then T-4165);
 - the builder's group labels, one bin past `endNum`, refused by the importer: t4128 G (10) ->
