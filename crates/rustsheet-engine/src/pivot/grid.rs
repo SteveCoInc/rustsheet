@@ -11,6 +11,8 @@
 //!   probes/t4128-pivot-spike S). So does one that would meet another pivot's area, a merged
 //!   range, a Table, an array formula's cells or the sheet's edge (UNVERIFIED, probe pending:
 //!   T-4664; Microsoft documents the merged cells, Tables and the edge, excel-docs.md PSPILL);
+//!   one in the plan's earlier pivots' new areas collapses too. A merged range in the pivot's own
+//!   area refuses the refresh instead ([`PivotRefreshError::MergedArea`]);
 //! - a refresh rebuilds the cache from the source ([`refresh`]) and lays out again every pivot
 //!   over it (UNVERIFIED that Excel refreshes the other pivots of a shared cache, T-4664); a
 //!   pivot's field indices follow its fields by name ([`field_map`]);
@@ -38,7 +40,7 @@ use super::{
 use crate::expressions::parser::parse_range;
 use crate::expressions::token::Error;
 use crate::model::Model;
-use crate::types::Cell;
+use crate::types::{sheet_names_match, Cell};
 
 /// Why a pivot could not be refreshed or laid out; the grid and the pivot are then as they were.
 #[derive(ThisError, Debug, PartialEq, Eq)]
@@ -64,6 +66,11 @@ pub enum PivotRefreshError {
     /// A planned cell is outside the sheet: the plan is not over this workbook.
     #[error("a pivot cell outside the sheet")]
     OutsideSheet,
+    /// A merged range lies in the pivot's own area (Excel's "Merge and center cells with labels",
+    /// `mergeItem`, makes such ranges) or crosses its edge: the cell writers cannot write through
+    /// it, so the refresh is refused and the pivot keeps its cells (UNVERIFIED, T-4664).
+    #[error("a merged range lies in the pivot's own area")]
+    MergedArea,
     /// The engine refused to write a planned cell (a plan applied to a workbook it was not made
     /// for); the cells may be partly written.
     #[error("the engine refused a pivot cell: {0}")]
@@ -73,7 +80,8 @@ pub enum PivotRefreshError {
 /// What one plan, or every plan of a load, may spend together (SPEC-0032 "Untrusted-input
 /// limits"): `work` units, as [`compute`] and [`lay_out`] charge them, plus one per source cell
 /// read and per cell or merged range scanned; and `cells` written or cleared. A plan past it fails
-/// with [`PivotComputeError::Limit`], and its pivots keep their cells. The default is
+/// with [`PivotComputeError::Limit`], and its pivots keep their cells; what the failed plan spent
+/// stays spent, so a later plan drawing on the same budget has only what is left. The default is
 /// [`MAX_PIVOT_WORK`] and [`MAX_PIVOT_CELLS`], one pivot's own limits (DEVIATION, pivots.md "A
 /// pivot result is bounded in work and nodes").
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -169,6 +177,32 @@ pub struct PivotSwap {
     cache_index: u32,
     cache: Option<PivotCache>,
     tables: Vec<(usize, PivotTable)>,
+}
+
+/// What the pivots of one plan meet besides cells: the Tables of the workbook, read once, and
+/// the areas the plan's pivots already take.
+struct Blockers {
+    /// Each Table's sheet name and 0-based area.
+    tables: Vec<(String, CellArea)>,
+    /// Each placed pivot's sheet id and new areas.
+    placed: Vec<(u32, [Option<CellArea>; 2])>,
+}
+
+impl Blockers {
+    fn new(model: &Model, budget: &mut PivotBudget) -> Result<Self, PivotRefreshError> {
+        let tables = &model.workbook.tables;
+        budget.charge_work(tables.len())?;
+        let tables = (tables.values())
+            .filter_map(|t| {
+                let (c1, r1, c2, r2) = parse_range(&t.reference).ok()?;
+                Some((t.sheet_name.clone(), zero_based_area(r1, c1, r2, c2)?))
+            })
+            .collect();
+        Ok(Blockers {
+            tables,
+            placed: Vec::new(),
+        })
+    }
 }
 
 /// The cells a pivot owns: its location and its page area (pivots.md "Page fields render above
@@ -316,11 +350,12 @@ impl Model {
             .map(|(_, c)| (c.record_count as usize).saturating_mul(c.fields.len()))
             .fold(0, usize::saturating_add);
         let new = refresh(old, self, MAX_RECORD_VALUES.saturating_sub(others))?;
+        let mut blockers = Blockers::new(self, budget)?;
         let mut placements = Vec::new();
         for (table, pivot) in self.workbook.pivot_tables.iter().enumerate() {
             if pivot.cache == cache_index {
                 let remapped = remap(pivot, old, &new)?;
-                placements.push(self.place(table, remapped, &new, budget)?);
+                placements.push(self.place(table, remapped, &new, budget, &mut blockers)?);
             }
         }
         Ok(PivotRefresh {
@@ -350,10 +385,12 @@ impl Model {
             .pivot_caches
             .get(pivot.cache as usize)
             .ok_or(PivotRefreshError::Missing)?;
+        let mut blockers = Blockers::new(self, budget)?;
+        let placement = self.place(table, pivot.clone(), cache, budget, &mut blockers)?;
         Ok(PivotRefresh {
             cache_index: pivot.cache,
             cache: None,
-            placements: vec![self.place(table, pivot.clone(), cache, budget)?],
+            placements: vec![placement],
         })
     }
 
@@ -366,6 +403,7 @@ impl Model {
         mut pivot: PivotTable,
         cache: &PivotCache,
         budget: &mut PivotBudget,
+        blockers: &mut Blockers,
     ) -> Result<PivotPlacement, PivotRefreshError> {
         let sheet = self
             .workbook
@@ -386,7 +424,8 @@ impl Model {
             let cells = render(&pivot, cache, &result, &layout)?;
             budget.charge_cells(cells.len())?;
             let new = owned_areas(layout.location, &layout.geometry);
-            if !self.meets_foreign(sheet, table, &pivot, [&owned, &new], budget)? {
+            let areas = [&owned, &new];
+            if !self.meets_foreign(sheet, table, &pivot, areas, budget, blockers)? {
                 fits = Some((layout, cells));
             }
         }
@@ -423,6 +462,8 @@ impl Model {
             }
         }
         budget.charge_cells(cleared.len())?;
+        let taken = owned_areas(pivot.location, &pivot.geometry);
+        blockers.placed.push((pivot.sheet_id, taken));
         Ok(PivotPlacement {
             table,
             sheet,
@@ -435,7 +476,12 @@ impl Model {
 
     /// Whether the areas `new` of the pivot at index `table` meet what it does not own: a stored
     /// value or formula outside `owned`, an array formula's cell anywhere in them, another
-    /// pivot's area on the sheet, a merged range or a Table.
+    /// pivot's saved area on the sheet or the new area of one placed earlier in the plan, a
+    /// merged range or a Table.
+    ///
+    /// # Errors
+    /// [`PivotRefreshError::MergedArea`] for a merged range in or across `owned`, and the
+    /// budget's.
     fn meets_foreign(
         &self,
         sheet: u32,
@@ -443,6 +489,7 @@ impl Model {
         pivot: &PivotTable,
         [owned, new]: [&[Option<CellArea>; 2]; 2],
         budget: &mut PivotBudget,
+        blockers: &Blockers,
     ) -> Result<bool, PivotRefreshError> {
         let worksheet = self
             .workbook
@@ -450,25 +497,33 @@ impl Model {
             .map_err(|_| PivotRefreshError::Missing)?;
         let meets = |area: &CellArea| new.iter().flatten().any(|n| overlaps(n, area));
         let pivots = &self.workbook.pivot_tables;
-        budget.charge_work(pivots.len())?;
+        budget.charge_work(pivots.len().saturating_add(blockers.placed.len()))?;
         let other_pivot = (pivots.iter().enumerate())
             .filter(|&(i, other)| i != table && other.sheet_id == pivot.sheet_id)
             .flat_map(|(_, other)| owned_areas(other.location, &other.geometry))
+            .chain(
+                (blockers.placed.iter())
+                    .filter(|(id, _)| *id == pivot.sheet_id)
+                    .flat_map(|(_, areas)| *areas),
+            )
             .flatten()
             .any(|area| meets(&area));
         budget.charge_work(worksheet.merged_cells.len())?;
-        let merged = worksheet.merged_cells.iter().any(|m| {
-            zero_based_area(m.row, m.column, m.last_row(), m.last_column())
-                .is_some_and(|a| meets(&a))
-        });
-        let tables = &self.workbook.tables;
-        budget.charge_work(tables.len())?;
+        let mut merged = false;
+        for m in &worksheet.merged_cells {
+            let Some(area) = zero_based_area(m.row, m.column, m.last_row(), m.last_column()) else {
+                continue;
+            };
+            if owned.iter().flatten().any(|o| overlaps(o, &area)) {
+                // The pivot's own merge (`mergeItem`), or one across its edge: not writable.
+                return Err(PivotRefreshError::MergedArea);
+            }
+            merged |= meets(&area);
+        }
         let name = worksheet.get_name();
-        let table_met = (tables.values())
-            .filter(|t| t.is_on_sheet(&name))
-            .filter_map(|t| parse_range(&t.reference).ok())
-            .filter_map(|(c1, r1, c2, r2)| zero_based_area(r1, c1, r2, c2))
-            .any(|area| meets(&area));
+        let table_met = (blockers.tables.iter())
+            .filter(|(sheet_name, _)| sheet_names_match(sheet_name, &name))
+            .any(|(_, area)| meets(area));
         if other_pivot || merged || table_met {
             return Ok(true);
         }

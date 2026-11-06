@@ -48,3 +48,7 @@ oracle-spike.md runs 1 and 3; SPEC-0032; formulas reading pivot cells need no ne
   PSPILL, T-4664 g to j); `apply_pivot_refresh` returns `PivotRefreshError` (`Write`,
   `OutsideSheet`); only the swapped pivots' GETPIVOTDATA indices are dropped. workbook.rs split
   is T-4669.
+- Review round 2 fixes: the open path plans each `refreshOnLoad` cache after the writes of the
+  ones before it (the cheap early return kept); a plan checks each pivot against the new areas of
+  the pivots placed before it; a merged range in a pivot's own area refuses its refresh
+  (`MergedArea`; UNVERIFIED, T-4664 k); Tables are parsed once per plan.

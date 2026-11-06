@@ -274,8 +274,13 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   `refreshOnLoad` pivot's area is T-2327's.
 - Foreign is a stored value or formula outside the owned area (a cell holding only a style is
   empty), and, inside or outside it, any part of another pivot's area on the sheet (even a blank
-  intersection), a merged range, a Table (even an empty body) and an array formula's cells. The new
-  page area is checked as the location is. Classic Excel instead refuses a refresh that would
+  intersection, and the new area of a pivot laid out before it in the same refresh), a merged
+  range, a Table (even an empty body) and an array formula's or dynamic spill's cells. The new
+  page area is checked as the location is.
+- A merged range inside the pivot's own area, or across its edge, refuses the refresh: the pivot
+  keeps its cells. Excel makes such ranges itself with "Merge and center cells with labels"
+  (`mergeItem`, excel-docs.md), so a `refreshOnLoad` pivot saved with that option keeps its saved
+  cells on open; the cell writers cannot write through a merge. Classic Excel instead refuses a refresh that would
   overlap another pivot with a dialog (excel-docs.md, "Overlap rules").
 - A layout that would pass the sheet's last row or column collapses to `#SPILL!` too, rather than
   failing. Microsoft's PivotTable `#SPILL!` announcement lists text, merged cells, tables and the
@@ -293,8 +298,15 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
 - A refresh that cannot be planned (a source that does not resolve, such as a Table or defined
   name until T-4506; a field gone; past the shared budget) leaves the pivot and its cells as they
   were. On load each cache is planned on its own, so a cache that does not plan keeps only its own
-  pivots' saved cells; the plans that do are written in one edit, so a write that fails (only
-  possible for a plan that does not match the workbook) rolls back every `refreshOnLoad` pivot.
+  pivots' saved cells. The caches are refreshed one after another in workbook order, each planned
+  against the grid the ones before it wrote, so a later cache reads their new cells and meets
+  their new areas. From the first plan that succeeds the writes are one edit, so a write that
+  fails (only possible for a plan that does not match the workbook) rolls back every
+  `refreshOnLoad` pivot.
+- One budget covers every `refreshOnLoad` cache of a load, and what a failed plan spent stays
+  spent. A few caches over whole-column sources (each charged its source's rows times columns
+  before it is read) can exhaust it, and the caches after them then keep their saved cells with
+  no sign of it.
 Evidence: none beyond probes/t4128-pivot-spike S (a constant in the body, no page field).
 Status: UNVERIFIED (probe pending: T-4664; T-2327 for constants in a refreshOnLoad pivot's area)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`owned_areas`, `meets_foreign`,

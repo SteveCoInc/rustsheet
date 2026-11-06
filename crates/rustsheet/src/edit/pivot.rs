@@ -466,27 +466,40 @@ impl Txn<'_> {
 }
 
 impl Workbook {
-    /// Refreshes the `refreshOnLoad` pivots of a loaded workbook (`Workbook::recalculate`). Every
-    /// cache is planned first, within one [`PivotBudget`] for them all; a cache whose plan fails
-    /// (a Table or named source, T-4506; a limit; a field gone) keeps its pivots' saved cells.
-    /// The plans that succeed are then written as one edit with no value diff, which
-    /// recalculates once more, and only when there is one.
+    /// Refreshes the `refreshOnLoad` pivots of a loaded workbook (`Workbook::recalculate`), one
+    /// cache after another in workbook order, within one [`PivotBudget`] for them all. Each cache
+    /// is planned against the grid as the caches before it left it, so its source reads their
+    /// pivots' new cells and its pivots meet their new areas. A cache whose plan fails (a Table
+    /// or named source, T-4506; a limit; a field gone) keeps its pivots' saved cells. Until a
+    /// plan succeeds nothing is edited; from the first one on, the writes are one edit with no
+    /// value diff, which recalculates once more.
     pub(crate) fn refresh_pivots_on_load(&mut self) {
         let mut budget = PivotBudget::default();
         let caches = (self.model.workbook.pivot_caches.iter()).zip(0u32..);
-        let plans: Vec<PivotRefresh> = caches
-            .filter(|(c, _)| c.refresh_on_load)
-            .filter_map(|(_, i)| self.model.plan_pivot_refresh(i, &mut budget).ok())
+        let due: Vec<u32> = (caches.filter(|(c, _)| c.refresh_on_load))
+            .map(|(_, i)| i)
             .collect();
-        if plans.is_empty() {
+        let mut rest = due.into_iter();
+        let Some(first) = rest
+            .by_ref()
+            .find_map(|i| self.model.plan_pivot_refresh(i, &mut budget).ok())
+        else {
             return;
-        }
+        };
         let track = std::mem::replace(&mut self.track_changes, false);
         // A plan's areas hold no merged range, Table or array formula, so a write fails only for
         // a plan that does not match the workbook, which nothing here can cause. Should one fail
         // all the same, the edit rolls back and every pivot keeps its saved cells: a load does not
         // fail for a pivot, so the error is dropped on purpose.
-        let written = self.edit(|tx| plans.into_iter().try_for_each(|plan| tx.write_pivots(plan)));
+        let written = self.edit(|tx| {
+            tx.write_pivots(first)?;
+            for cache in rest {
+                if let Ok(plan) = tx.model.plan_pivot_refresh(cache, &mut budget) {
+                    tx.write_pivots(plan)?;
+                }
+            }
+            Ok(())
+        });
         drop(written);
         self.track_changes = track;
     }

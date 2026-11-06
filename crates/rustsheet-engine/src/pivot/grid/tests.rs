@@ -12,7 +12,9 @@ use super::*;
 use crate::pivot::probe_cases::{
     address, position, probe_model, probe_pivot, probe_pivot_over, read, sheet,
 };
-use crate::pivot::{CacheField, CacheItem, CacheSource, OpaqueEntry, OpaqueNode, OpaqueOwner};
+use crate::pivot::{
+    Axis, CacheField, CacheItem, CacheSource, OpaqueEntry, OpaqueNode, OpaqueOwner,
+};
 
 const SPIKE: &str = "t4128-pivot-spike";
 
@@ -358,6 +360,8 @@ fn every_pivot_of_a_plan_shares_one_budget() {
         with_copies(9, &mut three),
         Err(PivotRefreshError::Compute(PivotComputeError::Limit))
     );
+    // What the failed plan spent stays spent.
+    assert!(three.work == 0 || three.cells == 0, "{three:?}");
     // The cells written count too, apart from the work.
     let mut few_cells = PivotBudget {
         work: full.work,
@@ -450,4 +454,72 @@ fn a_cleared_area_skips_array_formula_cells() {
     let placement = &plan.placements[0];
     assert!(!placement.spilled);
     assert!(!placement.cleared.contains(&(8, 0)) && !placement.cleared.contains(&(8, 1)));
+}
+
+/// Pivot `index` of `model` with Product alone on `axis` (rows or columns) at `anchor`.
+fn product_on(model: &mut Model, index: usize, axis: Axis, anchor: &str) {
+    let mut pivot = model.workbook.pivot_tables[0].clone();
+    pivot.location = area(anchor);
+    pivot.geometry = PivotGeometry::default();
+    pivot.fields[0].axis = None;
+    pivot.fields[1].axis = Some(axis);
+    (pivot.row_fields, pivot.column_fields) = match axis {
+        Axis::Row => (vec![AxisField::Field(1)], Vec::new()),
+        _ => (Vec::new(), vec![AxisField::Field(1)]),
+    };
+    pivot.name = format!("P{index}");
+    if index < model.workbook.pivot_tables.len() {
+        model.workbook.pivot_tables[index] = pivot;
+    } else {
+        model.workbook.pivot_tables.push(pivot);
+    }
+}
+
+#[test]
+fn pivots_of_one_plan_that_grow_into_each_other_collapse() {
+    let mut model = spike("R");
+    model.evaluate();
+    // Product on columns from A3 (three rows, five columns) and on rows from B1 (five rows, two
+    // columns): neither anchor is in the other's layout, but the layouts cross at B3:C5.
+    product_on(&mut model, 0, Axis::Column, "A3");
+    product_on(&mut model, 1, Axis::Row, "B1");
+    for (index, expected) in [(0, "A3:E5"), (1, "B1:C5")] {
+        let alone = model
+            .plan_pivot_render(index, &mut PivotBudget::default())
+            .unwrap();
+        assert_eq!(alone.placements[0].pivot.location, area(expected));
+    }
+    let plan = model
+        .plan_pivot_refresh(0, &mut PivotBudget::default())
+        .unwrap();
+    let [first, second] = &plan.placements[..] else {
+        panic!("two placements");
+    };
+    assert!(!first.spilled);
+    assert!(second.spilled);
+    assert_eq!(second.cells.len(), 1);
+}
+
+#[test]
+fn a_merged_range_in_the_pivots_own_area_refuses_the_refresh() {
+    let mut model = spike("R");
+    model.evaluate();
+    refreshed(&mut model);
+    let r = sheet_of(&model, "R");
+    // A merge of A5:A6, inside the rendered area, as `mergeItem` makes for labels.
+    model
+        .workbook
+        .worksheet_mut(r)
+        .unwrap()
+        .merged_cells
+        .push(crate::types::MergedCell {
+            row: 5,
+            column: 1,
+            width: 1,
+            height: 2,
+        });
+    assert_eq!(
+        model.plan_pivot_refresh(0, &mut PivotBudget::default()),
+        Err(PivotRefreshError::MergedArea)
+    );
 }

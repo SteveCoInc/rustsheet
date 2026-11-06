@@ -25,9 +25,11 @@ T-4151's grid writer (crates/rustsheet-engine/src/pivot/grid.rs) follows probes/
 - (h) an Excel Table whose body is empty inside the layout: `#SPILL!` (PSPILL documents tables);
 - (i) a layout that would pass the sheet's last row or column (an anchor a few rows above row 1,048,576): `#SPILL!` (PSPILL documents the sheet edge);
 - (j) a collapse of a pivot with page fields: the saved `rowPageCount`/`colPageCount` and whether the page cells above the anchor stay (the engine zeroes the counts and clears the page area).
+- (k) a `refreshOnLoad` pivot saved with `mergeItem="1"` ("Merge and center cells with labels") and merged label cells, then refreshed with a source that changes its labels: the engine refuses the refresh and keeps the saved cells, since it cannot write through its own merges;
+- (l) an array formula and a dynamic-array spill whose cells fall inside the new layout, and inside the pivot's own saved area: the engine collapses to `#SPILL!` and never clears those cells.
 
 ## Acceptance criteria
-- [ ] Filled probes for (a) to (j); a pivots.md entry for each, replacing the UNVERIFIED readings, and an engine follow-up task where Excel differs.
+- [ ] Filled probes for (a) to (l); a pivots.md entry for each, replacing the UNVERIFIED readings, and an engine follow-up task where Excel differs.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

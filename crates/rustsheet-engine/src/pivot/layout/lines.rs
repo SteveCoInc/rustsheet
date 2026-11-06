@@ -447,8 +447,8 @@ impl<'a> AxisPlan<'a> {
 ///
 /// # Errors
 /// [`PivotComputeError::Limit`] past `work` (`work` is then 0) or [`MAX_PIVOT_CELLS`],
-/// [`PivotComputeError::PastSheet`] past the sheet's last row or column, and [`PivotComputeError::Malformed`] when `result` is not over
-/// `cache`.
+/// [`PivotComputeError::PastSheet`] past the sheet's last row or column, and
+/// [`PivotComputeError::Malformed`] when `result` is not over `cache`.
 pub fn lay_out(
     table: &PivotTable,
     cache: &PivotCache,
