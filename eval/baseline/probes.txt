@@ -2309,6 +2309,7 @@ C	probes/t4380-unique-keep-head-holdout.case.json	622
 C	probes/t4382-pivotby-intransitive-paths.case.json	819
 C	probes/t4397-days-two-errors.case.json	36
 C	probes/t4397-holiday-text-forms.case.json	516
+C	probes/t4401-pivotby-level-subtotal-holdout.case.json	730
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -7523,19 +7524,10 @@ F	probes/t4380-unique-keep-head-holdout.case.json	Calc!C8
 F	probes/t4380-unique-keep-head-holdout.case.json	Calc!C9
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B14
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B2
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B31
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B32
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B33
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B35
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B39
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B41
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B5
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C12
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C14
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C2
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C31
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C33
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C39
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C4
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C5
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C7

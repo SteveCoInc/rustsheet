@@ -3,7 +3,7 @@ id: T-4401
 title: "PIVOTBY column subtotals on intransitive runs: a class no record reached holds every record of the line"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -37,3 +37,20 @@ gives the reached classes).
 
 ## Out of scope
 -
+
+## Outcome
+- Rule: a PIVOTBY column subtotal whose class no record reached holds every record of the row line, as a column
+  leaf no record reaches does. `Grouping::subtotal_reached` (grouping.rs) reads it from `reached_by`, the same
+  per-class record of the descent that `Grouping::class_rows` uses for GROUPBY's subtotal lines (T-4359), through a
+  shared `subtotal_class` that `subtotal_rows` now uses too; `Grid::cell_rows`' `Slot::Subtotal` arm returns the
+  line's records for such a subtotal and keeps T-4378's reached-class filter otherwise. The error gate
+  (`Grid::has_records`) is unchanged: the leaves under such a subtotal are unreached too and hold the records.
+- Chosen-on cells: probes/t4382-pivotby-intransitive-paths Calc!B31, B32, B33, B35, B39, B41, C31, C33, C39 now
+  pass (777 -> 786 of 819; the rest are T-4402's and T-4403's).
+- Hold-out (decision 0188 R4, a structural choice): probes/t4401-pivotby-level-subtotal-holdout (new, seed
+  "T-4401", 16 runs with three column fields and 14 with four, `col_total_depth` 3 and 4, ascending and
+  `col_sort_order` -1; 60 formulas). The engine's predictions were committed before the fill (docs/research/t4401,
+  commit 89c6e5d); 21 of the 60 differ from main's engine. Filled from excel-graph: 60 of 60 predictions match
+  (730 of 730 cells).
+- coercion.md: the T-4382 entry's level-2 bullet records the hold-out.
+- Eval delta: probes fixed 9, known failures 4914 -> 4905, 0 regressions; the new case passes all its cells.
