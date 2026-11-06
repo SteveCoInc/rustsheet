@@ -59,6 +59,10 @@ fn datedif_calendar_units_carry_half_a_second_and_yearfrac_floors() {
     // The cut is fl(N-0.5/86400): one ulp below it is still day N-1.
     model._set("A6", "=DATEDIF(59-0.5/86400,425,\"MD\")");
     model._set("A7", "=DATEDIF(59-0.5/86400-2^-47,425,\"MD\")");
+    // The floors decide a reversed pair; the carried dates must lie in the calendar, for "D" too.
+    model._set("A8", "=DATEDIF(60-0.4/86400,59.5,\"M\")");
+    model._set("A9", "=DATEDIF(59.3,59-0.4/86400,\"M\")");
+    model._set("A10", "=DATEDIF(1,2958466-0.4/86400,\"D\")");
     model._set("B1", "=YEARFRAC(59-0.4/86400,425,4)");
     model._set("B2", "=YEARFRAC(31,61-0.4/86400,4)");
     model.evaluate();
@@ -70,6 +74,9 @@ fn datedif_calendar_units_carry_half_a_second_and_yearfrac_floors() {
     assert_eq!(model._get_text("A5"), *"-1");
     assert_eq!(model._get_text("A6"), *"0");
     assert_eq!(model._get_text("A7"), *"1");
+    assert_eq!(model._get_text("A8"), *"-1");
+    assert_eq!(model._get_text("A9"), *"#NUM!");
+    assert_eq!(model._get_text("A10"), *"#NUM!");
     model._set("C1", "=361/360");
     model._set("C2", "=29/360");
     model.evaluate();

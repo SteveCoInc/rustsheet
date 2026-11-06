@@ -2467,7 +2467,7 @@ C	probes/t4554-api-name-local-name-body.case.json	12
 C	probes/t4554-api-name-scoped-name-choice-first.case.json	27
 C	probes/t4554-api-name-scoped-name-choice-last.case.json	27
 C	probes/t4554-api-name-scoped-name-choice.case.json	27
-C	probes/t4574-feb29-near-midnight-date-args.case.json	468
+C	probes/t4574-feb29-near-midnight-date-args.case.json	504
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10

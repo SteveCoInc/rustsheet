@@ -37,15 +37,18 @@ DAYS360 at the bases around Excel's fictitious 1900-02-29 (serial 60), and the e
 - Negative WEEKNUM return types (T-4470).
 
 ## Outcome
-- Probe `probes/t4574-feb29-near-midnight-date-args` (468 cells, excel-graph): DATEDIF (all six units, start and
+- Probe `probes/t4574-feb29-near-midnight-date-args` (504 cells, excel-graph): DATEDIF (all six units, start and
   end), YEARFRAC (bases 0-4, start and end) and DAYS360 (both methods, start and end) at N = 59, 60, 61 minus 0.4 s,
   2^-22+2^-33, 0.6 s, `fl(N-0.5/86400)` and one ulp below it, against the integer controls.
 - Found: DATEDIF's "M", "Y", "MD", "YM" and "YD" read each date with YEAR's half-second carry, while "D" floors
   (`DATEDIF(60-0.4/86400,425,"M")` is 11, from 1900-02-29; its "D" 366, from 1900-02-28). YEARFRAC basis 4 floors
   like the other bases (it does not round to the second as DAYS360 does). DAYS360 already matched.
+- Review round 1 (excel-fidelity) added A20:F25: where floor and carry disagree, the floors decide a reversed pair's
+  `#NUM!` and the carried dates feed the units; a date that carries past 9999-12-31 is `#NUM!` for every unit, "D"
+  included.
 - Engine: `datedif_value` reads the calendar units through `carried_day`; `year_fraction_parts`'s basis 4 takes the
   floored dates (the discount securities share it; no eval cell moved there). dates.md has the new entry
   "DATEDIF's calendar units carry half a second; YEARFRAC floors on every basis (around serial 60)" and the
   T-4454 entry is narrowed to DATEDIF's "D". The YEARFRAC Gate A docstring no longer says basis 4 rounds.
-- Eval delta: +468 passing probe cells (69 of them off before the fix: 51 DATEDIF, 18 YEARFRAC basis 4); no other
+- Eval delta: +504 passing probe cells (91 of them off on main: 73 DATEDIF, 18 YEARFRAC basis 4); no other
   suite moved (`make eval-baseline`: 0 regressions, 0 fixed elsewhere).

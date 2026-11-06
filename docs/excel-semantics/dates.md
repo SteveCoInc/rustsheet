@@ -1182,14 +1182,21 @@ of the fictitious 1900-02-29 (serial 60) counts days from 1900-02-28 but months 
 values of start 60 itself (B4:F5; 425 is 1901-02-28). The cut is the same double as YEAR's: `fl(N-0.5/86400)` reads
 day N and one ulp below it (2^-47 here) day N-1, at N = 59, 60 and 61, for the start (A:F) and the end
 (`DATEDIF(31,s,u)`, G:L; `DATEDIF(31,61-0.4/86400,"MD")` is -1, end 61's value, A7:L18).
+Where the two readings disagree, the floors decide `#NUM!` for a reversed pair and the carried dates feed the units
+(A20:F23): `DATEDIF(60-0.4/86400,59.5,"M")` is -1, "Y" -1, "MD" 30, "YM" 11 and "YD" 365 (floors equal, carried
+dates reversed: 1900-02-29 to 1900-02-28), and its "D" 0; `DATEDIF(59.3,59-0.4/86400,u)` is `#NUM!` for every unit
+(floored pair reversed, carried dates equal). The same at 45020. The carried dates must lie in the calendar, for "D"
+too: `DATEDIF(1,2958466-0.4/86400,"D")` and `DATEDIF(2958466-0.4/86400,2958466-0.3/86400,"D")` are `#NUM!`, as are
+the other units (A24:F25; YEAR is `#NUM!` there as well).
 YEARFRAC floors both dates on all five bases, basis 4 included: `YEARFRAC(59-0.4/86400,425,4)` is 361/360 (from
 1900-02-27), not DAYS360's second-rounded 1 (Q1:Q18, V1:V18). DAYS360 itself rounds to the second here too, as at
 N = 45020 above (W1:Z18).
-Evidence: probes/t4574-feb29-near-midnight-date-args A1:Z18 (N = 59, 60, 61 minus 0.4 s, 2^-22+2^-33, 0.6 s,
+Evidence: probes/t4574-feb29-near-midnight-date-args A1:Z25 (N = 59, 60, 61 minus 0.4 s, 2^-22+2^-33, 0.6 s,
 `fl(N-0.5/86400)` and one ulp below it, and N; excel-graph, 2026-11-06, T-4574).
-Ours: matches, all 468 cells (`datedif_value` reads the calendar units through `carried_day`; YEARFRAC basis 4's
-`days360_eu` takes the floored dates, T-4574). Before T-4574 we floored DATEDIF's calendar units (51 cells off) and
-rounded basis 4 to the second (18 cells off).
+Ours: matches, all 504 cells (`datedif_value` floors for "D" and the order check and reads the calendar units and the
+calendar check through `carried_day`; YEARFRAC basis 4's
+`days360_eu` takes the floored dates, T-4574). Before T-4574 we floored DATEDIF's calendar units and its calendar check (73 cells off) and rounded basis 4 to
+the second (18 cells off).
 Status: VERIFIED (web)
 
 ## HOUR, MINUTE and SECOND round to the nearest second
