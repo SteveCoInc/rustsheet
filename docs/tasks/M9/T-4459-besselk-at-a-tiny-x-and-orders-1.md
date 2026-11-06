@@ -3,7 +3,7 @@ id: T-4459
 title: "BESSELK at a tiny x and orders 1 to 7: probe where Excel turns #NUM! (K1's 1/x term or the upward recurrence overflowing) and match the cut"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
