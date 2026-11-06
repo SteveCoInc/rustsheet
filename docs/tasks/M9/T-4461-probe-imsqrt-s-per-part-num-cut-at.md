@@ -3,7 +3,7 @@ id: T-4461
 title: "Probe IMSQRT's per-part #NUM! cut at sqrt(DBL_MAX): the doubles either side of 1.3407807929942596E154, real and imaginary"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,11 +31,20 @@ for both signs. The engine either matches every new cell or a follow-up task is 
   when it overflows.
 
 ## Acceptance criteria
-- [ ] A probe case under eval/suites/probes, oracle-filled from excel-graph, holds the cells above.
-- [ ] engineering.md replaces "(exact boundary unprobed)" with the measured bracket, citing the cells.
-- [ ] Every new cell passes. If any fails, the PR adds its known-failure lines and files a follow-up task with `make
+- [x] A probe case under eval/suites/probes, oracle-filled from excel-graph, holds the cells above.
+- [x] engineering.md replaces "(exact boundary unprobed)" with the measured bracket, citing the cells.
+- [x] Every new cell passes. If any fails, the PR adds its known-failure lines and files a follow-up task with `make
       new-task` that names them.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - IMSQRT's digits away from the cut, and the other IM* overflow edges (T-2631, T-4425).
+
+## Outcome
+- probes/t4461-imsqrt-cut (64 cells, excel-graph, 2026-11-06). The cut lies exactly where a part's square stops being
+  finite: `IMSQRT(POWER(2,512)-POWER(2,459))` gives a value, and `IMSQRT(POWER(2,512))` is `#NUM!`, either sign
+  (A1:D2).
+- A text inumber keeps 15 significant digits, truncated, so 17-digit text cannot reach the cut: "1.3407807929942597E154"
+  is a value and "1.34078079299426E154" `#NUM!`. COMPLEX writes 15 rounded digits, so every COMPLEX form at the cut is
+  `#NUM!`. engineering.md replaces "(exact boundary unprobed)" with these cells.
+- Eval delta: the new case passes 64/64; the engine already matched. No engine change, no known failures, no follow-up.

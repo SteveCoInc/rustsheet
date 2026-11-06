@@ -921,7 +921,13 @@ Evidence: probes/eng-im-overflow (excel-graph).
   `...915853`).
 - An input part of `1E308` or more is `#NUM!` in every IM* function (`IMREAL("1E308")`,
   `IMSUM("1E308","0")`); ours already matches. `IMSQRT("1E307")` and `IMSQRT("4E307")` are `#NUM!`
-  too (A33, A34). The threshold per part lies between 1.34E154 and 1.35E154, consistent with sqrt(DBL_MAX) = 1.34078E154 (exact boundary unprobed): IMSQRT squares each
+  too (A33, A34). The threshold per part lies between 1.34E154 and 1.35E154, and to the double it is where a part's square stops being finite: 2^512 - 2^459 (the largest double whose square
+  is finite) gives a value and 2^512 `#NUM!`, as a number of either sign (probes/t4461-imsqrt-cut A1:D2, excel-graph
+  2026-11-06, T-4461). Only a number reaches that cut, so it is shown for a real part only; an imaginary part, which
+  needs text or COMPLEX, is bracketed at 15 digits (A10, D10). `=` calls the two doubles equal (A15 TRUE). A text inumber keeps 15 significant digits,
+  truncated, so `"1.3407807929942597E154"` (2^512 written in 17 digits) is a value and `"1.34078079299426E154"` `#NUM!`
+  (A9:E14). COMPLEX writes 15 rounded digits, so `COMPLEX(2^512 - 2^459, 0)` is already `#NUM!` under IMSQRT (A3:D8;
+  `IMREAL` of it is 1.34078079299426E154, B15). Ours matches every cell: IMSQRT squares each
   part, and a part past it is `#NUM!` (`"1.34E154"` is `1.15758369027902E+77`, `"1.35E154"`,
   `"1E160i"`, `"-1E160"`, `"1E154+1.4E154i"` are `#NUM!`). When each square is finite but their
   sum overflows, the result is `0`, not an error: `IMSQRT("1E154+1E154i")`, `"-1E154-1E154i"`,
