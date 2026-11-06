@@ -17,7 +17,7 @@ import re
 import signal
 import sys
 import threading
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -98,13 +98,19 @@ def compute(definition: Definition, args: Sequence[literal.Arg]) -> MathValue:
     (redraw) when the value overflows the double range or has no single value. PointTimeoutError,
     which nothing catches, past `HANG_LIMIT`: the clock never decides what a sidecar holds."""
     math_args = [math_arg(p, a) for p, a in zip(definition.params_for(len(args)), args, strict=True)]
+    return compute_value(lambda: definition.evaluate(math_args))
+
+
+def compute_value(evaluate: Callable[[], mpmath.mpf]) -> MathValue:
+    """`compute` for any math `evaluate` runs at the current mpmath precision (a definition's, or a
+    composite's, T-3993): its value at dps 80 checked against dps 60, with the same drops."""
     results: list[mpmath.mpf | DomainError] = []
     try:
         with time_limit(HANG_LIMIT):
             for dps in DPS:
                 with mpmath.workdps(dps), work_budget(WORK_BUDGET):
                     try:
-                        results.append(+definition.evaluate(math_args))
+                        results.append(+evaluate())
                     except DomainError as err:
                         results.append(err)
     except OverBudgetError as err:

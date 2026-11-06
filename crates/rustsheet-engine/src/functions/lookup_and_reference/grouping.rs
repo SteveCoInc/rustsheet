@@ -85,7 +85,8 @@ pub(crate) enum SetId {
     All,
     /// Set `n` of PIVOTBY's relative sets (`RelativeSets`).
     Pivot(usize),
-    /// Set `n` of PIVOTBY's parent sets, `relative_to` 3 and 4 (`ParentSets`).
+    /// Set `n` of PIVOTBY's parent sets, `relative_to` 3 and 4 (`ParentSets`): unique within
+    /// one PIVOTBY call only, which is all a set id needs (the sets of one call are compared).
     ParentCell(usize),
     /// Parent `group` at sort level `level` of `axis` ([`Grouping::sort_by_aggregate`]).
     Parent {
