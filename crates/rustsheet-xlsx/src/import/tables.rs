@@ -32,9 +32,13 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
 ) -> Result<Table, XlsxError> {
     let file = archive.open(path)?;
     let document = XmlNode::parse(file)?;
+    parse_table(&document, sheet_name)
+}
 
+/// Builds a [`Table`] from the parsed `<table>` part.
+fn parse_table(document: &XmlNode, sheet_name: &str) -> Result<Table, XlsxError> {
     // table
-    let table = &document;
+    let table = document;
 
     // Name and display name are normally the same and are unique in a workbook
     // They also need to be different from any defined name
@@ -80,8 +84,8 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
         None
     };
 
-    // style index of the header row of the table
-    let data_dxf_id = if let Some(index_str) = table.attribute("headerRowDxfId") {
+    // style index of the data area of the table
+    let data_dxf_id = if let Some(index_str) = table.attribute("dataDxfId") {
         index_str.parse::<u32>().ok()
     } else {
         None
@@ -144,8 +148,8 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
             None
         };
 
-        // style index of the header row of the table column
-        let data_dxf_id = if let Some(index_str) = table_column.attribute("headerRowDxfId") {
+        // style index of the data area of the table column
+        let data_dxf_id = if let Some(index_str) = table_column.attribute("dataDxfId") {
             index_str.parse::<u32>().ok()
         } else {
             None
@@ -295,8 +299,45 @@ fn filter_column(node: &XmlNode) -> Option<FilterColumn> {
 
 #[cfg(test)]
 mod tests {
-    use super::{drop_dangling_color_filters, filter_column, has_active_criterion, Table, XmlNode};
+    use super::{
+        drop_dangling_color_filters, filter_column, has_active_criterion, parse_table, Table,
+        XmlNode,
+    };
     use rustsheet_engine::types::FilterCriterion;
+
+    /// T-4157: a table and its columns read the data-area style from `dataDxfId`, not from
+    /// `headerRowDxfId` (a copy-paste slip inherited from IronCalc).
+    #[test]
+    fn data_dxf_id_is_read_from_data_dxf_id() {
+        let node = XmlNode::parse_str(
+            r#"<table name="T" displayName="T" ref="A1:B3" headerRowDxfId="1" dataDxfId="2" totalsRowDxfId="3"><tableColumns count="2"><tableColumn id="1" name="a" headerRowDxfId="4" dataDxfId="5"/><tableColumn id="2" name="b" headerRowDxfId="6"/></tableColumns></table>"#,
+        )
+        .unwrap();
+        let table = parse_table(&node, "S").unwrap();
+        assert_eq!(
+            (
+                table.header_row_dxf_id,
+                table.data_dxf_id,
+                table.totals_row_dxf_id
+            ),
+            (Some(1), Some(2), Some(3))
+        );
+        assert_eq!(
+            (
+                table.columns[0].header_row_dxf_id,
+                table.columns[0].data_dxf_id
+            ),
+            (Some(4), Some(5))
+        );
+        assert_eq!(
+            (
+                table.columns[1].header_row_dxf_id,
+                table.columns[1].data_dxf_id
+            ),
+            (Some(6), None),
+            "no dataDxfId is no data style, not the header's"
+        );
+    }
 
     fn criterion(xml: &str) -> FilterCriterion {
         let node = XmlNode::parse_str(xml).unwrap();
