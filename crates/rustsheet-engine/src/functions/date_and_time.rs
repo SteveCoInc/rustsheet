@@ -659,13 +659,25 @@ impl Model {
         if end_serial < start_serial {
             return Err(Error::NUM);
         }
-        // Both readings must be on the calendar (the floored one for "D"'s range check).
+        // The floored dates must be on the calendar for every unit, as before T-4574.
         for serial in [start_serial, end_serial] {
             date_system
                 .to_1900_serial(serial)
                 .and_then(excel_serial_to_ymd)
                 .ok_or(Error::NUM)?;
         }
+        // The units are ASCII, so an ASCII case-blind match is the upper-casing it replaces.
+        let unit = ["Y", "M", "D", "YM", "YD", "MD"]
+            .into_iter()
+            .find(|known| known.eq_ignore_ascii_case(unit))
+            .unwrap_or("");
+        // "D" counts the floored serials and never reads the rounded dates, so a rounded date
+        // past the calendar (`DATEDIF(1,2958465.99999999,"D")`) keeps its floored count.
+        if unit == "D" {
+            return Ok((end_serial - start_serial) as f64);
+        }
+        // The calendar units read the rounded dates; one rounded past the calendar is #NUM!
+        // (unprobed, T-4624).
         let start_1900 = date_system
             .to_1900_serial(start_calendar)
             .ok_or(Error::NUM)?;
@@ -674,15 +686,9 @@ impl Model {
             .to_1900_serial(end_calendar)
             .and_then(excel_serial_to_ymd)
             .ok_or(Error::NUM)?;
-        // The units are ASCII, so an ASCII case-blind match is the upper-casing it replaces.
-        let unit = ["Y", "M", "D", "YM", "YD", "MD"]
-            .into_iter()
-            .find(|known| known.eq_ignore_ascii_case(unit))
-            .unwrap_or("");
         match unit {
             "Y" => Ok(f64::from(datedif_months(start, end).div_euclid(12))),
             "M" => Ok(f64::from(datedif_months(start, end))),
-            "D" => Ok((end_serial - start_serial) as f64),
             "YM" => Ok(f64::from(datedif_months(start, end).rem_euclid(12))),
             "YD" => {
                 // The start moved on by the "YM" months in its own year (DATE's day overflow, so

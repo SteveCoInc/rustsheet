@@ -1158,14 +1158,17 @@ DAYS360 alone rounds the serial to the nearest second before flooring. The obser
 and one ulp below it (2^-37 at N = 45020) is day N-1 (P1:Q7), for its start and end alike.
 DATEDIF splits by unit (T-4574): "D" floors, but the calendar units "M", "YM", "MD" and "YD" read each date rounded to
 the nearest second, with DAYS360's cut: `DATEDIF(44927,45017-0.5/86400,"m")` is 3 (2023-04-01), one ulp lower and
-N-0.6 s are 2, and N-0.4 s and N-(2^-22+2^-33) are 3 (probes/t4574-near-midnight-calendar-units A1:H8). "Y" agrees
-with either reading on every probed cell (I1:J8). YEARFRAC floors on bases 0 and 4 as on 1 (K1:N8): basis 4 does not
+N-0.6 s are 2, and N-0.4 s and N-(2^-22+2^-33) are 3 (probes/t4574-near-midnight-calendar-units A1:H8). "Y"'s
+reading is unprobed: every probed cell gives the same value either way (I1:J8); the engine reads it rounded, like "M"
+(T-4624 separates them). YEARFRAC floors on bases 0 and 4 as on 1 (K1:N8): basis 4 does not
 round like DAYS360(...,TRUE), so `YEARFRAC(44927,45017-0.4/86400,4)` is 89/360.
 Around the fictitious 1900-02-29 the same split holds (probes/t4574-near-midnight-serial-60, rows 59, 60 and 61 minus
 0.4 s and minus 2^-22+2^-33, against the integer controls): `DATEDIF(1,61-0.4/86400,"m")` is 2 (1900-03-01) while
 "d" is 59; `DATEDIF(60-0.4/86400,45000,"md")` is 14 (it reads 1900-02-29) and from 59-0.4 s 15 (1900-02-28);
 `YEARFRAC(59-0.4/86400,45000,4)` is 123.05, the value for serial 58; DAYS360 rounds and all YEARFRAC bases floor
-(A1:Z9). Which reading DATEDIF orders its arguments by, when the floored and rounded orders differ, is unprobed.
+(A1:Z9). Which reading DATEDIF orders its arguments by, when the floored and rounded orders differ, and what a
+calendar unit gives when the rounded date passes 9999-12-31, are unprobed (T-4624; the engine orders and range-checks on
+the floored dates, and a calendar unit is then #NUM! past the calendar while "D" keeps its floored count).
 The count arguments, except WEEKNUM's return_type, take no near-integer snap either: they truncate or floor exactly,
 unlike DATE's and TIME's arguments (`near_integer_whole`). EDATE and EOMONTH months truncate toward zero (`EDATE(45000,1-(2^-22+2^-33))` is
 45000, `EDATE(45000,-1+2^-23)` 45000, `-1-2^-23` 44972; the same below 12 and -12: S1:T10, Z1:Z10). WORKDAY and

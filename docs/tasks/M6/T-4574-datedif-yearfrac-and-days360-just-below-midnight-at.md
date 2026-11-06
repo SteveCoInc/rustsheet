@@ -42,7 +42,7 @@ DAYS360 at the bases around Excel's fictitious 1900-02-29 (serial 60), and the e
   unit: "D" floors, while "M", "YM", "MD" and "YD" read each date rounded to the nearest second with DAYS360's cut
   (`fl(N-0.5s)` is N, one ulp lower N-1). YEARFRAC floors on bases 0, 1 and 4 (basis 4 had rounded like DAYS360).
   DAYS360 already matched.
-- Engine: `datedif_value` computes the calendar units from `days360_serial` readings (order and range checks stay on
+- Engine: `datedif_value` computes the calendar units from `days360_serial` readings, and "D" returns before reading them (order and range checks stay on
   the floored ones, as before); YEARFRAC basis 4 uses the floored dates. Unit test
   `datedif_calendar_units_round_to_the_second_while_d_and_yearfrac_floor`.
 - dates.md "Other date functions floor a serial just below midnight" records the split with cells.

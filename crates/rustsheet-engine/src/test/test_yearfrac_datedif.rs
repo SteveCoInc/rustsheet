@@ -57,6 +57,8 @@ fn datedif_calendar_units_round_to_the_second_while_d_and_yearfrac_floor() {
     model._set("A4", "=DATEDIF(1,61-0.4/86400,\"m\")");
     model._set("A5", "=DATEDIF(1,61-0.4/86400,\"d\")");
     model._set("A6", "=YEARFRAC(44927,45017-0.4/86400,4)*360");
+    // "D" never reads the rounded dates, so a rounding past 9999-12-31 keeps its count.
+    model._set("A7", "=DATEDIF(1,2958465.99999999,\"d\")");
     model.evaluate();
     assert_eq!(model._get_text("A1"), *"3");
     assert_eq!(model._get_text("A2"), *"2");
@@ -64,4 +66,5 @@ fn datedif_calendar_units_round_to_the_second_while_d_and_yearfrac_floor() {
     assert_eq!(model._get_text("A4"), *"2");
     assert_eq!(model._get_text("A5"), *"59");
     assert_eq!(model._get_text("A6"), *"89");
+    assert_eq!(model._get_text("A7"), *"2958464");
 }
