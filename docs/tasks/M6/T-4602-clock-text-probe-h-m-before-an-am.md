@@ -3,7 +3,7 @@ id: T-4602
 title: "Clock text: probe H:M: before an AM/PM suffix (\"10:30: PM\") and a tab or no-break space inside H:M.f:S or between a date and its clock, and match"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -55,3 +55,11 @@ non-ASCII characters with CHAR/UNICHAR (`"10:11.5"&UNICHAR(160)&":12"`), so the 
 
 ## Out of scope
 - Typed cell input of these forms (number formats on entry), and locales other than en-US.
+
+## Outcome
+- probes/t4602-clock-text-colon-am-pm-and-spaces (95 cells, excel-graph 2026-11-06): `H:M:` before an AM/PM suffix is
+  #VALUE! in Excel (ours read it as a time): fixed in `parse_clock_text`, unit test pinned in
+  `value_reads_an_hour_with_a_trailing_colon`. Tab/NBSP/ideographic space in `H:M.f:S` fractions and between date and
+  clock are #VALUE! (already matched); two spaces parse. dates.md "Time text" updated; both "Unprobed" notes removed.
+- Eval delta: new case 95/95 cells pass; t2352 (26/26) and value-clock-text (135/135) still pass. No baseline change.
+  No Gate A cells, so no math sidecar is needed (`rustsheet-accuracy math --check` current).
