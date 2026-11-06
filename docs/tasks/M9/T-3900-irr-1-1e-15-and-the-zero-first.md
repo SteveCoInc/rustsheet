@@ -3,7 +3,7 @@ id: T-3900
 title: "IRR({-1,1E+15}) and the zero-first-flow gen-m9 set are #DIV/0! in Excel where ours is #NUM! (T-2802 remainder)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
