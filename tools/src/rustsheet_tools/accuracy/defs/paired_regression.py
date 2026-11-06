@@ -116,7 +116,7 @@ def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float
     return sum_x, sum_y, sxx, syy, sxy
 
 
-def _constant_exact(values: Sequence[float]) -> bool:
+def constant_exact(values: Sequence[float]) -> bool:
     """Whether a series is constant with Excel's double mean equal to its value (else NoValueError for a constant
     series: its double deviations are a nonzero constant, "Inexact constants")."""
     if len(set(values)) > 1:
@@ -165,11 +165,11 @@ def moments(args: Sequence[MathArg]) -> Moments:
 
 
 def _x_constant(args: Sequence[MathArg], m: Moments) -> bool:
-    return m.n < 2 or _constant_exact(_series(args)[1])
+    return m.n < 2 or constant_exact(_series(args)[1])
 
 
 def _y_constant(args: Sequence[MathArg]) -> bool:
-    return _constant_exact(_series(args)[0])
+    return constant_exact(_series(args)[0])
 
 
 def _slope(args: Sequence[MathArg]) -> tuple[Moments, Fraction]:
@@ -250,7 +250,7 @@ def _typical(rng: random.Random) -> list[Arg]:
     return list(_noisy_line(rng, n, log_uniform(rng, 1e-3, 1.0)))
 
 
-def _offset_series(rng: random.Random, n: int) -> tuple[float, ...]:
+def offset_series(rng: random.Random, n: int) -> tuple[float, ...]:
     """A large offset plus a small spread, written to 15 digits (the paired entry's I1:I6, 10000000001..)."""
     offset = signed_log_uniform(rng, 1.0, 1e10, 0.5)
     spread = abs(offset) * log_uniform(rng, 1e-9, 1e-1)
@@ -261,10 +261,10 @@ def _tail(rng: random.Random) -> list[Arg]:
     n = rng.randint(3, 12)
     shape = rng.randrange(3)
     if shape == 0:  # both offset
-        return [_offset_series(rng, n), _offset_series(rng, n)]
+        return [offset_series(rng, n), offset_series(rng, n)]
     if shape == 1:  # one offset, against a plain series
         plain = array_of(rng, n, 1e-3, 1e6)
-        return [_offset_series(rng, n), plain] if rng.random() < 0.5 else [plain, _offset_series(rng, n)]
+        return [offset_series(rng, n), plain] if rng.random() < 0.5 else [plain, offset_series(rng, n)]
     return list(_noisy_line(rng, n, log_uniform(rng, 1e-12, 1e-4)))  # near-exact lines: r near +-1
 
 
@@ -276,7 +276,7 @@ def _exact_line(rng: random.Random) -> list[Arg]:
     return [tuple(float(a + b * x) for x in xs), xs]
 
 
-def _constant(rng: random.Random, n: int) -> tuple[float, ...]:
+def constant_series(rng: random.Random, n: int) -> tuple[float, ...]:
     """A constant series with an exact double mean (a small integer or a multiple of 1/8)."""
     return (rng.randint(-160, 160) / 8,) * n
 
@@ -289,8 +289,11 @@ def _edge(rng: random.Random) -> list[Arg]:
             lambda: [MICROSOFT_Y, MICROSOFT_X],  # Microsoft's example
             lambda: _pairs(rng, 1, 1e-3, 1e6),  # one pair: #DIV/0!
             lambda: [array_of(rng, n + 1, 1e-3, 1e6), array_of(rng, n, 1e-3, 1e6)],  # #N/A: lengths differ
-            lambda: [array_of(rng, n, 1e-3, 1e6), _constant(rng, n)],  # x constant: #DIV/0!
-            lambda: [_constant(rng, n), array_of(rng, n, 1e-3, 1e6)],  # y constant: SLOPE 0, CORREL #DIV/0!
+            lambda: [array_of(rng, n, 1e-3, 1e6), constant_series(rng, n)],  # x constant: #DIV/0!
+            lambda: [
+                constant_series(rng, n),
+                array_of(rng, n, 1e-3, 1e6),
+            ],  # y constant: SLOPE 0, CORREL #DIV/0!
             lambda: _exact_line(rng),
             lambda: _pairs(rng, 2, 1e-3, 1e6),  # two pairs: r is +-1
             lambda: [array_of(rng, n, 1e-3, 1e6), array_of(rng, n, 1e199, 1e201)],  # x overflows: #NUM!

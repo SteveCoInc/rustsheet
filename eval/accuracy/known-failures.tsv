@@ -381,3 +381,5 @@ accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-
 accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/MIRR/s1!Calc!A125	T-4537	Excel #DIV/0! for a finance power overflow beside a later negative flow; the engine gives #NUM!
+accuracy/TTEST/s1!Calc!A136	T-4579	Excel #DIV/0! for a paired test whose one-pass variance of the differences is negative; the engine gives a number
+accuracy/TTEST/s1!Calc!A101	T-4579	Excel keeps the exact differences of offset pairs; the engine's double differences put the deep tail 1.6e-9 off
