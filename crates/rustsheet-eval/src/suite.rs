@@ -182,6 +182,9 @@ pub const ACCURACY_DIR: &str = "eval/accuracy";
 /// `eval/suites/`, so no cell report or milestone measure counts them.
 pub const ROUNDTRIP_DIR: &str = "eval/roundtrip";
 
+/// The round-trip scenarios the harness implements (SPEC-0033 D1); T-4514 adds R1.
+pub const ROUNDTRIP_SCENARIOS: &[&str] = &["R0"];
+
 /// File inside a fetched suite recording the pin it was fetched at.
 pub const FETCH_MARKER: &str = ".rustsheet-fetched";
 
@@ -189,7 +192,10 @@ fn default_root() -> String {
     "cases".into()
 }
 fn default_scenarios() -> Vec<String> {
-    vec!["R0".into()]
+    ROUNDTRIP_SCENARIOS
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect()
 }
 fn default_include() -> Vec<String> {
     vec!["**/*".into()]
@@ -280,7 +286,8 @@ impl Suite {
             if suite.manifest.kind != SuiteKind::Roundtrip {
                 bail!("{at}: suites under {ROUNDTRIP_DIR}/ must be of kind roundtrip");
             }
-            if let Some(s) = suite.manifest.scenarios.iter().find(|s| s.as_str() != "R0") {
+            let unknown = |s: &&String| !ROUNDTRIP_SCENARIOS.contains(&s.as_str());
+            if let Some(s) = suite.manifest.scenarios.iter().find(unknown) {
                 bail!("{at}: scenario {s} is not implemented yet (SPEC-0033 D1; T-4514 adds R1)");
             }
             if cell_suites

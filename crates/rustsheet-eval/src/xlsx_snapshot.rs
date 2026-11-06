@@ -230,7 +230,7 @@ fn read_part_capped(
     Ok(Some(s))
 }
 
-fn xml_err(part: &str, e: impl std::fmt::Display) -> SnapshotError {
+pub(crate) fn xml_err(part: &str, e: impl std::fmt::Display) -> SnapshotError {
     SnapshotError::Xml {
         part: part.to_string(),
         message: e.to_string(),
@@ -267,7 +267,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         names: defined_names,
         file_app_name,
     } = parse_workbook(&workbook)?;
-    let sheet_names: Vec<String> = sheet_list.iter().map(|(n, _)| n.clone()).collect();
+    let sheet_names: Vec<String> = sheet_list.iter().map(|(n, ..)| n.clone()).collect();
     let defined_names = defined_names
         .into_iter()
         .map(|(name, local, body)| DefinedName {
@@ -278,7 +278,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         .collect();
     let mut sheets = Vec::new();
     let mut tables = Vec::new();
-    for (name, rid) in sheet_list {
+    for (name, rid, _) in sheet_list {
         let Some(target) = rels.get(&rid) else {
             continue;
         };
@@ -481,18 +481,18 @@ fn raw_name(e: &BytesStart<'_>) -> Option<RawName> {
     Some((attr(e, "name")?, local, String::new()))
 }
 
-/// `(sheet name, relationship id)` per `<sheet>`.
-type SheetRef = (String, String);
+/// `(sheet name, relationship id, sheetId)` per `<sheet>`.
+pub(crate) type SheetRef = (String, String, Option<String>);
 
 /// What `parse_workbook` reads from `xl/workbook.xml`.
-struct ParsedWorkbook {
-    sheets: Vec<SheetRef>,
+pub(crate) struct ParsedWorkbook {
+    pub(crate) sheets: Vec<SheetRef>,
     date1904: bool,
     names: Vec<RawName>,
     file_app_name: Option<String>,
 }
 
-fn parse_workbook(xml: &str) -> Result<ParsedWorkbook, SnapshotError> {
+pub(crate) fn parse_workbook(xml: &str) -> Result<ParsedWorkbook, SnapshotError> {
     let mut reader = Reader::from_str(xml);
     let mut sheets = Vec::new();
     let mut names: Vec<RawName> = Vec::new();
@@ -515,7 +515,7 @@ fn parse_workbook(xml: &str) -> Result<ParsedWorkbook, SnapshotError> {
             Event::Start(e) | Event::Empty(e) => match e.local_name().as_ref() {
                 "sheet" => {
                     if let (Some(name), Some(rid)) = (attr(&e, "name"), attr(&e, "id")) {
-                        sheets.push((name, rid));
+                        sheets.push((name, rid, attr(&e, "sheetId")));
                     }
                 }
                 "fileVersion" => file_app_name = attr(&e, "appName"),

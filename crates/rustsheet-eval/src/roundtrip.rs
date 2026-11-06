@@ -13,10 +13,8 @@ mod tests;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::io::Read as _;
-use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
-use std::sync::mpsc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use rayon::prelude::*;
 use rustsheet::{LoadOptions, SaveOptions, Workbook};
@@ -24,7 +22,7 @@ use serde::Serialize;
 
 use crate::baseline::{self as ratchet, Baseline};
 use crate::engine::harness_options;
-use crate::runner::{panic_message, CaseStatus};
+use crate::runner::{run_in_worker, CaseStatus};
 use crate::suite::{CaseFile, Suite};
 
 use package::{validate, Package, Problem};
@@ -148,7 +146,7 @@ pub fn run_suites(suites: &[Suite], filter: Option<&str>, timeout: Duration) -> 
     results
 }
 
-/// Runs one case: R0 in a worker thread, so a panic or a hang is a verdict, not a crash.
+/// Runs one case: R0 in an isolated worker, so a panic or a hang is a verdict, not a crash.
 fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
     let limit = LoadOptions::default().max_uncompressed_bytes;
     let mut bytes = Vec::new();
@@ -161,45 +159,18 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
         .path
         .file_name()
         .map(|n| n.to_string_lossy().into_owned());
-    let (tx, rx) = mpsc::channel();
-    let start = Instant::now();
-    let spawned = std::thread::Builder::new()
-        .name(format!("roundtrip:{}", case.id))
-        .stack_size(256 * 1024 * 1024) // the evaluator recurses on deep dependency chains
-        .spawn(move || {
-            let outcome = catch_unwind(AssertUnwindSafe(|| r0(&bytes, name.as_deref())));
-            let _ = tx.send(outcome);
-        });
-    if let Err(e) = spawned {
-        return CaseResult::new(
-            case,
-            suite,
-            CaseStatus::EngineError,
-            Some(format!("could not spawn worker: {e}")),
-        );
-    }
-    let received = rx.recv_timeout(timeout);
-    let millis = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
-    let mut result = match received {
-        Err(_) => CaseResult::new(
-            case,
-            suite,
-            CaseStatus::Timeout,
-            Some(format!("exceeded {}s", timeout.as_secs())),
-        ),
-        Ok(Err(panic)) => CaseResult::new(
-            case,
-            suite,
-            CaseStatus::Panic,
-            Some(panic_message(panic.as_ref())),
-        ),
-        Ok(Ok(Err(R0Error::Source(e)))) => {
+    let (outcome, millis) = run_in_worker(format!("roundtrip:{}", case.id), timeout, move || {
+        r0(&bytes, name.as_deref())
+    });
+    let mut result = match outcome {
+        Err((status, message)) => CaseResult::new(case, suite, status, Some(message)),
+        Ok(Err(R0Error::Source(e))) => {
             CaseResult::new(case, suite, CaseStatus::InvalidCase, Some(e))
         }
-        Ok(Ok(Err(R0Error::Engine(e)))) => {
+        Ok(Err(R0Error::Engine(e))) => {
             CaseResult::new(case, suite, CaseStatus::EngineError, Some(e))
         }
-        Ok(Ok(Ok(items))) => {
+        Ok(Ok(items)) => {
             let status = if items.iter().all(|i| i.verdict.passes()) {
                 CaseStatus::Pass
             } else {

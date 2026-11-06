@@ -10,7 +10,10 @@ use quick_xml::NsReader;
 use quick_xml::XmlVersion;
 use rustsheet_xlsx::import::part_key;
 
-use crate::xlsx_snapshot::{attr, read_part, relationships, resolve_target, SnapshotError, Zip};
+use crate::xlsx_snapshot::{
+    attr, parse_workbook, read_part, relationships, resolve_target, xml_err, SheetRef,
+    SnapshotError, Zip,
+};
 
 /// The namespace of `r:id`, `r:embed` and the other relationship-reference attributes.
 const REL_NS: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -28,6 +31,12 @@ const SHEET_KINDS: &[&str] = &[
 /// Most parts the harness indexes in one package (directive 5). The importer's own entry limit
 /// is the same order of magnitude (`ImportLimits::max_zip_entries`).
 const MAX_PARTS: usize = 10_000;
+
+/// Most relationship hops a part key spans (directive 5): keys nest one level per hop, so a
+/// chained package must not build ever longer keys. Excel's deepest chains (workbook, sheet,
+/// drawing, chart, chart style) are five hops; `GridCraft` caps its closure walk at 16. A part
+/// deeper than this is keyed `orphan:` like an unreached one.
+const MAX_KEY_DEPTH: usize = 16;
 
 /// One relationship, its target resolved to a normalized part name.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -61,8 +70,8 @@ pub(crate) struct Package {
     pub(crate) unparsable: BTreeMap<String, String>,
     /// Normalized part name → its key (D2), for every part reached from the package root.
     pub(crate) keys: BTreeMap<String, String>,
-    /// The workbook's `<sheet>` entries: name, sheetId, relationship id.
-    pub(crate) sheets: Vec<(String, String, String)>,
+    /// The workbook's `<sheet>` entries, as the snapshot reader reads them.
+    pub(crate) sheets: Vec<SheetRef>,
 }
 
 impl Package {
@@ -124,7 +133,7 @@ impl Package {
         }
         if let Some(workbook) = pkg.main_part() {
             if let Some(xml) = read_part(&mut zip, &workbook)? {
-                pkg.sheets = workbook_sheets(&xml).unwrap_or_default();
+                pkg.sheets = parse_workbook(&xml).map(|w| w.sheets).unwrap_or_default();
             }
         }
         pkg.assign_keys();
@@ -136,7 +145,7 @@ impl Package {
         loop {
             match reader
                 .read_event()
-                .map_err(|e| xml_error("[Content_Types].xml", e))?
+                .map_err(|e| xml_err("[Content_Types].xml", e))?
             {
                 Event::Start(e) | Event::Empty(e) => {
                     let ct = attr(&e, "ContentType");
@@ -194,9 +203,12 @@ impl Package {
     /// part's name, so a writer that renames parts keeps every key (SPEC-0033 D2).
     fn assign_keys(&mut self) {
         let main = self.main_part();
-        let mut queue = VecDeque::from([(String::new(), String::new())]);
+        let mut queue = VecDeque::from([(String::new(), String::new(), 0)]);
         let mut seen = BTreeSet::new();
-        while let Some((part, key)) = queue.pop_front() {
+        while let Some((part, key, depth)) = queue.pop_front() {
+            if depth == MAX_KEY_DEPTH {
+                continue;
+            }
             let Some(rels) = self.rels.get(&part) else {
                 continue;
             };
@@ -217,7 +229,7 @@ impl Package {
                     .then(|| {
                         self.sheets
                             .iter()
-                            .find(|s| s.2 == r.id)
+                            .find(|s| s.1 == r.id)
                             .map(|s| s.0.clone())
                     })
                     .flatten()
@@ -225,7 +237,7 @@ impl Package {
                     if seen.insert(r.target.clone()) {
                         let child = format!("{key}/{kind}[{label}]");
                         self.keys.insert(r.target.clone(), child.clone());
-                        queue.push_back((r.target.clone(), child));
+                        queue.push_back((r.target.clone(), child, depth + 1));
                     }
                 }
             }
@@ -272,13 +284,6 @@ fn is_xml_part(part: &str) -> bool {
         .is_some_and(|e| e.eq_ignore_ascii_case("xml"))
 }
 
-fn xml_error(part: &str, e: impl std::fmt::Display) -> SnapshotError {
-    SnapshotError::Xml {
-        part: part.to_string(),
-        message: e.to_string(),
-    }
-}
-
 /// Every attribute in the relationships namespace (`r:id`, `r:embed`, ...), in document order,
 /// as `(local name, value)`.
 fn relationship_refs(xml: &str) -> Result<Vec<(String, String)>, String> {
@@ -297,37 +302,6 @@ fn relationship_refs(xml: &str) -> Result<Vec<(String, String)>, String> {
                         out.push((local.as_ref().to_string(), value.into_owned()));
                     }
                 }
-            }
-            Event::Eof => return Ok(out),
-            _ => {}
-        }
-    }
-}
-
-/// `(name, sheetId, r:id)` of each `<sheet>` of `workbook.xml`.
-fn workbook_sheets(xml: &str) -> Result<Vec<(String, String, String)>, String> {
-    let mut reader = NsReader::from_str(xml);
-    let mut out = Vec::new();
-    loop {
-        match reader.read_event().map_err(|e| e.to_string())? {
-            Event::Start(e) | Event::Empty(e) if e.local_name().as_ref() == "sheet" => {
-                let mut rid = String::new();
-                for a in e.attributes().flatten() {
-                    let (ns, local) = reader.resolver().resolve_attribute(a.key);
-                    if matches!(ns, ResolveResult::Bound(n) if n.as_ref() == REL_NS)
-                        && local.as_ref() == "id"
-                    {
-                        rid = a
-                            .normalized_value(XmlVersion::Implicit1_0)
-                            .map(std::borrow::Cow::into_owned)
-                            .unwrap_or_default();
-                    }
-                }
-                out.push((
-                    attr(&e, "name").unwrap_or_default(),
-                    attr(&e, "sheetId").unwrap_or_default(),
-                    rid,
-                ));
             }
             Event::Eof => return Ok(out),
             _ => {}
@@ -411,9 +385,10 @@ fn validate_sheets(pkg: &Package, fail: &mut impl FnMut(&'static str, String)) {
     let rels = pkg.rels.get(&main);
     let mut ids = BTreeSet::new();
     let mut names = BTreeSet::new();
-    for (name, id, rid) in &pkg.sheets {
-        if !ids.insert(id.as_str()) {
-            fail("V6", format!("sheetId {id} repeats"));
+    for (name, rid, id) in &pkg.sheets {
+        let id = id.as_deref().unwrap_or_default();
+        if !ids.insert(id) {
+            fail("V6", format!("sheetId {id:?} repeats"));
         }
         if !names.insert(name.to_lowercase()) {
             fail("V6", format!("sheet name {name:?} repeats"));

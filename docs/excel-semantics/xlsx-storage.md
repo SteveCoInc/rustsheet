@@ -655,6 +655,7 @@ T-4503 probes them.
 |---|---|---|
 | N1–N12 | not yet probed | T-4503 |
 
-A stored formula's leading whitespace is dropped by Excel on import (see "Typed whitespace" above, T-2784, T-2949).
-It is therefore no semantic difference (SPEC-0033 X5).
+Excel drops a stored formula's leading spaces, TAB or LF on import (T-2784; syntax.md "Remaining whitespace shapes
+(T-2949)"). A leading NBSP is refused by excel-graph instead; desktop Excel is unprobed. Dropping those leading spaces,
+TABs or LFs is therefore no semantic difference (SPEC-0033 X5). A leading NBSP is not covered.
 
