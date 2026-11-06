@@ -25,7 +25,7 @@ pub(crate) const TOO_MANY_AREAS: &str = "Too many areas in a reference";
 /// The areas [`Model::evaluate_areas`] finds: one area, held without an allocation (the
 /// common `LET(r,A1:C3,r B2)`), a list built for this expression, or a list shared with the
 /// binding or name it came from, read without a copy.
-pub(super) enum AreaList {
+pub(crate) enum AreaList {
     One(Range),
     Owned(Vec<Range>),
     Shared(Arc<[Range]>),
