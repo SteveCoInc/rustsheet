@@ -3,7 +3,7 @@ id: T-2609
 title: "Probe element-wise lifts over two-level and reference-body GROUPBY cells (SPEC-0018 rules 4, 7, 8)"
 milestone: M7
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -33,8 +33,25 @@ Record the answers in arrays.md (the T-2592 paragraph) and update SPEC-0018's "O
 what T-2593 or T-2594 must build, update those task bodies too.
 
 ## Acceptance criteria
-- [ ] A probe case with oracle values for the formulas above, cited in arrays.md and SPEC-0018.
+- [x] A probe case with oracle values for the formulas above, cited in arrays.md and SPEC-0018.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine changes (T-2593, T-2594).
+
+## Outcome
+Landed with T-2686 (one PR). Three probe cases, predictions in column B committed before each fill (excel-graph, 2026-11-06):
+probes/t2609-nested-operators-and-lifts (49 cells: operators over the whole result, two-level, reference-body and lifted-INDEX
+reads), -one-cell (30 cells: the same operators over 1x1 nested cells) and -d04 (17 cells: per-cell TYPE and shape through MAP of
+the gen-m9/17c110a53924beb8 GROUPBY, and t2475 P!A62, A63 again). Findings (arrays.md "Operators over nested cells, and Excel's
+change of 2026-11", SPEC-0018 rules 4 and 7):
+- An operator over the whole result makes every nested cell `#VALUE!` (any size, kind, depth, operator): ours already does.
+- Excel changed some nested-cell reads between 2026-10-28 and 2026-11-06. Byte-identical copies of the t2592, t2594, t2625, t2360
+  and t2311 probes, refilled today (`<case>-refill-1106`, two identical fills for t2592 and t2594), differ from their October
+  fills only where an element-wise lift reads a nested cell (now an error, not the top-left) and where SUM (now `#N/A`), COUNT
+  (now skips) and COUNTA (one per cell) read the result. Uncommitted refills of t2475-stat-subexpressions (same input sha256) and
+  of gen-m9/17c110a53924beb8 change only P!A62:A64 and Calc!A300, to ours.
+- A two-level cell is an error to a lift (not its inner top-left, the SPEC-0018 assumption); a reference-body cell is `#VALUE!`
+  to a lift and an operator, its value to SUM (60), 0 to COUNT; a lifted INDEX of nested cells gives each one's top-left.
+T-2593 and T-2594 are done; the revision of their rules, and the cells it owes, are T-4661 (filed here). Eval: 8 new probe cases,
+28 new-coverage failures (all owned by T-4661), no regression.

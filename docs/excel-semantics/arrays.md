@@ -968,12 +968,40 @@ Ours since T-2593 (SPEC-0018): the nested cells of rules 1, 3 and 8 (A16:A18, A2
 as its value (A21), and BYROW's row and BYCOL's column holding nested cells (A106, A107). Since T-2594: MAP and REDUCE hand
 the LAMBDA each nested cell as its array (A100:A105, A109, A15), and t2311 P!D12 is `#CALC!`; ARRAYTOTEXT over a result
 holding one is `#CALC!` (A10); and the aggregates follow "Aggregates over nested GROUPBY and PIVOTBY cells" below. An element-wise lift
-of a two-level cell reads the inner top-left (assumed, T-2609), of a reference cell `#VALUE!` (unprobed, T-2609); a lifted INDEX
-element and an operator over the whole result read a nested cell as `#VALUE!` (unprobed, T-2609). Excel's operator does not read it as `#VALUE!`:
-`MEDIAN({1;2;"";4},GROUPBY(..,LAMBDA(z,z))-x,..)` is `#N/A`, as MEDIAN over nested cells, where ours is `#VALUE!`, and TEXTJOIN over
-`IFERROR((GROUPBY(..)-x)&"",..)` fails as over nested cells (probes/t2475-stat-subexpressions P!A62, A63; T-2623, fix T-2686).
+of a two-level cell reads the inner top-left, of a reference cell `#VALUE!`; a lifted INDEX element reads a nested cell as `#VALUE!`
+(T-2609 below has Excel's answers, which differ for the two-level cell and the lifted INDEX).
+Operators over nested cells, and Excel's change of 2026-11 (T-2609; probes/t2609-nested-operators-and-lifts, -one-cell and -d04,
+excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is `DROP(G,,1)`):
+- An operator over the whole result makes every nested cell `#VALUE!`, whatever its size and whatever the operator: `V+0` is 3x2 of
+  `#VALUE!` (A1), `SUM(V+0)`, `SUM(--V)`, `SUMPRODUCT(V+0)` and `MEDIAN(V+0)` are `#VALUE!` (A2, A18, A26:A28), and `INDEX(G op x,2,2)` is
+  `#VALUE!` for `+0`, `*10`, `1-G`, unary `-`, `&"x"`, `=3`, `G+G`, a 3x3 constant, a range, a one-cell reference, `/0`, `%` and `^2`
+  (A5:A17, A20). A one-record group's 1x1 cell is no exception (probes/t2609-nested-operators-one-cell A1:A12, A17, A22, A29, A30, a computed
+  `LAMBDA(v,{7})` A18, a text or an `#N/A` cell A20, A21, A24), nor a two-level cell (and-lifts A21:A23), nor a reference-body cell
+  (`INDEX(GROUPBY(..,LAMBDA(x,D!D2))+0,2,2)` is `#VALUE!`, A24). COUNT of such a result is 0 and COUNTA counts the errors (A29, A30).
+  Ours matches all of these (`own_error` and `array_node_to_number` in arithmetic.rs and cast.rs read a nested cell as `#VALUE!`).
+- So `MEDIAN({1;2;"";4},GROUPBY(..,LAMBDA(z,z))-x,..)` is `#VALUE!` in today's Excel, as ours: the gen-m9/17c110a53924beb8 Data sheet
+  (and-d04 A1:A17, whose MAP of `TYPE` shows each nested cell 16 after `-0` and 64 before) and byte-identical copies refilled on
+  2026-11-06 and not committed give `#VALUE!` for P!A62, our 13x3 listing for P!A63 and a full listing for P!A64 of
+  probes/t2475-stat-subexpressions (input sha256 4e41b349…, every other cell as on 2026-10-28), and `#VALUE!` for gen-m9/17c110a53924beb8
+  Calc!A300 (a copy in the probes suite, every other cell as on 2026-10-23). The October fills had `#N/A`, `?`, `?` and `#N/A`
+  there: Excel's earlier behavior.
+- Excel changed what reads a nested cell between 2026-10-28 and 2026-11-06. Byte-identical copies of the T-2592, T-2594, T-2625, T-2360
+  and T-2311 probes refilled on 2026-11-06 (`<case>-refill-1106`, twice for the first two, identical) agree with their October fills
+  except: SUM over a nested result is `#N/A` and COUNT skips its nested cells (t2592-refill-1106 A6, A7: `#N/A`, 0; A8 COUNTA 9, one per
+  cell; t2594-refill-1106 A26:A29; t2625-refill-1106 A13, A17, A26, and COUNT over an INDEXed row or column of nested cells A20, A25,
+  while `&""` over such a row makes each nested cell `#VALUE!`, A32); and an element-wise lift reads a nested cell as an
+  error, not as its top-left (`SUM(--ISERROR(GROUPBY(..)))` counts every nested cell: t2360-refill-1106 P!C1, C9, C17, C25, C33,
+  t2311-refill-1106 P!C12). INDEX, TYPE, MAP, BYROW, BYCOL, REDUCE, the shape functions and the other aggregates did not change.
+  Consistent with it, an element-wise lift reads a two-level cell as an error that is not `#N/A`, even when the inner top-left is `#N/A`
+  (`SUM(--ISERROR(G2))` 6, `ISTEXT` 3, `ISNA` over the `#N/A` form 0, `ISERROR` 3; and-lifts A44:A47; one-cell A27), and a reference-body
+  cell as `#VALUE!` (`SUM(--ISERROR(..))` 6, `ISNUMBER` 0, REGEXEXTRACT `#VALUE!` per cell; A41, A42, A49).
+- A lifted INDEX of nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4, no error (and-lifts A56:A59; ours `#VALUE!`).
+- A reference-body result: SUM reads each cell as its value (`SUM(GROUPBY(..,LAMBDA(x,D!D2)))` 60, A50), COUNT is 0 and COUNTA 9 (A51,
+  A52); INDEX of a cell whose body points at a blank cell is a true blank (TYPE 1, `&""` "", A53) and at an `#N/A` cell `#N/A` (A54).
+- The engine follows Excel's October reads (SPEC-0018), so the refilled cells above are known failures; which fill is the target, and
+  the revision of SPEC-0018 rules 4 and 7, are T-4661's.
 Aggregates over nested GROUPBY and PIVOTBY cells (probes/t2594-nested-aggregates, excel-graph, 2026-10-24, T-2594, over the T-2592
-data): SUM, COUNT and COUNTA flatten a nested cell (SUM 220, COUNT 16, COUNTA 19 over GROUPBY; over PIVOTBY SUM 220, COUNT 16,
+data): (October fills; by 2026-11-06 SUM is `#N/A` and COUNT skips nested cells, see the T-2609 list above) SUM, COUNT and COUNTA flatten a nested cell (SUM 220, COUNT 16, COUNTA 19 over GROUPBY; over PIVOTBY SUM 220, COUNT 16,
 COUNTA 32; `SUM(1,GROUPBY(..),2)` 223; A26:A29). Every other aggregate tried is `#N/A`: MIN, MAX, MINA, MAXA, AVERAGEA, PRODUCT,
 SUMSQ, MEDIAN, STDEV.S, VAR.P, HARMEAN, GEOMEAN, DEVSQ, AVEDEV, MODE.SNGL, KURT, SKEW, LARGE, SMALL, PERCENTILE.INC (A1:A21),
 `AVERAGE(1,GROUPBY(..))` (A25), AVERAGE and MIN/MAX over PIVOTBY (A30:A32); gen-m9 MAX, HARMEAN and AVERAGE over a
