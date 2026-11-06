@@ -113,3 +113,26 @@ fn test_fn_beta_inv_shape_one_closed_form() {
     assert_eq!(number("A3").to_bits(), 0.25_f64.to_bits());
     assert_ne!(number("A4").to_bits(), 1e-300_f64.to_bits());
 }
+
+// T-3764: at b = 1 and x > 0.9 (bratio's a0 = 1 with y0 > 0.9) Excel's w = 1 - x^a is minus its
+// expm1 below |a·ln x| = 1 and 1 - EXP(a·ln x) from there on; Kahan's expm1 at |z| >= 1 put these
+// one 2^-53 step of w off. Excel values (excel-graph) from probes-numeric t3568-r5-bup-tune B856,
+// t3568-r5-bup-hold B816 and B1610, and t3568-r5-bup-fresh B744 (x^a below 2^-53).
+#[test]
+fn test_fn_beta_dist_shape_one_complement_past_unit_exponent() {
+    let mut model = new_empty_model();
+    model._set("A1", "=BETA.DIST(0.9094554,241.0,1.0,TRUE)");
+    model._set("A2", "=BETA.DIST(0.912187876,136.0,1.0,TRUE)");
+    model._set("A3", "=BETA.DIST(0.9965,1414.0,1.0,TRUE)");
+    model._set("A4", "=BETA.DIST(0.95591070645675,826.0,1.0,TRUE)");
+    model.evaluate();
+    let number = |cell: &str| round_trip_value(&model, cell).parse::<f64>().unwrap();
+    for (cell, excel) in [
+        ("A1", 1.164_981_444_645_718_5e-10_f64),
+        ("A2", 3.727_899_646_532_861_8e-6),
+        ("A3", 0.007_029_209_602_111_175),
+        ("A4", 1.110_223_024_625_156_5e-16),
+    ] {
+        assert_eq!(number(cell).to_bits(), excel.to_bits(), "{cell}");
+    }
+}
