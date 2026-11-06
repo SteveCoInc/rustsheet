@@ -201,6 +201,7 @@ fn sequence_and_randarray_extents_snap_near_an_integer() {
     model._set("C5", "=SEQUENCE(0-2^-23)");
     model._set("C6", "=SEQUENCE(0-1.5*2^-23)");
     model._set("C7", "=ROWS(RANDARRAY(2-2^-22))");
+    // No probe cell reads RANDARRAY's columns; it shares `randarray_extent` with rows (hand-written).
     model._set("C8", "=COLUMNS(RANDARRAY(1,2-(2^-22+2^-32)))");
     model._set("C9", "=RANDARRAY(0-2^-23)");
     model._set("C10", "=RANDARRAY(0-1.5*2^-23)");

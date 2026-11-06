@@ -55,7 +55,7 @@ Excel actually has (directive 3), instead of the four ad hoc reads it has today.
 
 ## Rule frozen (before the hold-out fill)
 Main set (probes/t4465-extent-near-integer-main, excel-graph, 63 rows), extent read from SEQUENCE rows (B) and
-RANDARRAY (D): shared 63/63 and 63/63, eps 51/51, f32 48/48, floor 41/41, trunc 38/38. Frozen: SEQUENCE (rows and
+RANDARRAY (D): rows matched out of 63 for B and D alike: shared 63, eps 51, f32 48, floor 41, trunc 38. Frozen: SEQUENCE (rows and
 columns) and RANDARRAY read `near_integer_whole`; TAKE, DROP, EXPAND, WRAPROWS and WRAPCOLS truncate with no snap
 (F, G, H, I, J); MAKEARRAY is `#VALUE!` for any fractional extent (E). Hold-out: predictions-holdout.tsv (seed 4465),
 split fixed by the generator before any fill; margin: the shared rule must match every hold-out row (a structural
@@ -63,7 +63,7 @@ rule, so no rate tolerance).
 
 ## Outcome
 Probed and implemented. SEQUENCE (rows, columns) and RANDARRAY read an extent by the shared `near_integer_whole`
-(sequence.rs's `EXTENT_EPSILON` is removed; RANDARRAY's two copied extent blocks became one `randarray_extent`, and the duplication lock drops 2876 -> 2836). TAKE, DROP, EXPAND, WRAPROWS and
+(sequence.rs's `EXTENT_EPSILON` is removed; RANDARRAY's two copied extent blocks became one `randarray_extent`). TAKE, DROP, EXPAND, WRAPROWS and
 WRAPCOLS truncate with no snap and MAKEARRAY is `#VALUE!` for any fraction, as ours already did. arrays.md: new entry
 "Array-constructor extents just below an integer (T-4465)"; the SEQUENCE paragraph's UNVERIFIED sentence is dropped.
 - R4 guards (a structural rule chosen from ranked candidates, decision 0188 R4 kind (c); no `FITTED` tag): split fixed
@@ -77,4 +77,8 @@ WRAPCOLS truncate with no snap and MAKEARRAY is `#VALUE!` for any fraction, as o
   Margin stated at the freeze: every hold-out row. Gate A envelope: not applicable (the result is a shape, not a
   number). The WRAPROWS/WRAPCOLS shape predictor was corrected after the hold-out scored (a wrap of 3 or more gives the
   3-cell vector unpadded, main I29:J29); it does not touch the extent rule.
+- The fresh sweep has 1 row that tells shared from eps (main 12, hold-out 6), so its 316/316 bears on the other
+  constructors' rules more than on that choice (fidelity review MINOR).
+- `quality/duplication.json` is not lowered here (a protected path needs a decision record); the count drops to
+  2836 under the 2876 lock, for the steward's next ratchet.
 - Eval delta: probes +3 cases (main 602, hold-out 354, fresh 352 cells), all pass; 0 regressions in every suite.
