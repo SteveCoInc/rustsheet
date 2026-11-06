@@ -78,7 +78,7 @@ fn mirr_of(
     let mut positive_sum = 0.0;
     let mut negative_sum = 0.0;
     let mut reinvest_power = 1.0;
-    let mut finance_power = 1.0;
+    let mut finance_power: f64 = 1.0;
     for &value in values {
         if value > 0.0 {
             if reinvest_power == 0.0 {
