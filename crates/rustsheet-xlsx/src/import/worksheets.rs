@@ -404,7 +404,10 @@ pub(super) fn get_cell_from_excel(
                 }
             }
             "s" => Cell::SharedString {
-                si: cell_value.unwrap_or("0").parse::<i32>().unwrap_or(0),
+                si: cell_value
+                    .and_then(crate::util::parse_shared_string_index)
+                    .and_then(|index| i32::try_from(index).ok())
+                    .unwrap_or(0),
                 s: cell_style,
             },
             "str" => {

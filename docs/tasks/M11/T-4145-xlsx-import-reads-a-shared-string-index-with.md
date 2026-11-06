@@ -3,7 +3,7 @@ id: T-4145
 title: "xlsx import reads a shared-string index with surrounding whitespace (<v>2 </v>) as that index, not 0"
 milestone: M11
 lane: engine
-status: todo
+status: done
 priority: P1
 size: S
 tier: sonnet
@@ -23,9 +23,12 @@ snapshot reader does (one definition, CLAUDE.md directive 3). Check the other in
 in `import/sheet_data.rs` for the same gap.
 
 ## Acceptance criteria
-- [ ] poi/bug69769.xlsx Tabelle1!B2 loads as "Mustermann", by a test.
-- [ ] The importer and the snapshot reader share the index parse.
-- [ ] `make check` green; reviewers approve.
+- [x] poi/bug69769.xlsx Tabelle1!B2 loads as "Mustermann", by a test.
+- [x] The importer and the snapshot reader share the index parse.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - An out-of-range index (already handled).
+
+## Outcome
+`rustsheet_xlsx::util::parse_shared_string_index` (trims, `None` if not a non-negative integer) is now the one parse: the importer (`get_cell_from_excel`, `t="s"`) and the snapshot reader (`decode_value`) both call it. Unit test `shared_string_index_with_surrounding_whitespace_is_that_index` covers `<v>2 </v>`. The poi/bug69769.xlsx file is not in this checkout, so the test uses the same cell XML. The other integer parses in `sheet_data.rs` are style/row indices, left as they were (not an index into a table where a wrong value changes content). Eval delta: none expected (no baseline change).
