@@ -37,5 +37,5 @@ repair and still counts its hidden rows as filtered for SUBTOTAL.
 ## Outcome
 excel-graph (2026-11-06): the dangling `dxfId=7` file is refused; the export (`<colorFilter/>`), a direct `<colorFilter/>`
 and `<colorFilter cellColor="0"/>` open and read as manual hides (SUBTOTAL 9/109/3/103 = 21/15/6/4). Import now reads a
-`<colorFilter>` without `dxfId` as criterion-less (unit test in filter_criteria.rs). Recorded in xlsx-storage.md.
+`<colorFilter>` without `dxfId` as criterion-less, for SUBTOTAL too (unit tests in filter_criteria.rs and tables.rs). Probe case and dangling-dxfId consistency: T-4558. Recorded in xlsx-storage.md.
 No eval delta.

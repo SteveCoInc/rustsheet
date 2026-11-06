@@ -529,8 +529,9 @@ and 5 hidden): the openpyxl file with `ColorFilter(dxfId=7)` on a workbook with 
 `FileCorruptTryRepair`), which is why the export drops a `dxfId` past the dxfs. Our export of it (`<colorFilter/>`) and a
 directly written `<colorFilter/>` and `<colorFilter cellColor="0"/>` all open without repair and read as the
 criterion-less control: `SUBTOTAL(9,[Val])` 21, `109` 15, `SUBTOTAL(3,[Cat])` 6, `103` 4, manual hides. Our import
-therefore reads a `<colorFilter>` without `dxfId` as criterion-less (before, it kept the criterion and called the rows
-filtered: 15 and 4).
+therefore reads a `<colorFilter>` without `dxfId` as criterion-less, in `has_active_criterion` too (before, it kept
+the criterion and called the rows filtered: 15 and 4). A source file with a dangling `dxfId` still imports as filtered
+while its export is criterion-less (T-4558).
 A totals-row cell holding a number, boolean or error constant gets no metadata (T-1607 covered label and formula
 cells only), and Excel refuses that file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
 totals row with the label "Total" and the number 42 is refused, and so is the same file with 42 written as
