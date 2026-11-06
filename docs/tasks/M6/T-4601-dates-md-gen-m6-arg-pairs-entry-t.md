@@ -3,7 +3,7 @@ id: T-4601
 title: "dates.md gen-m6 arg-pairs entry (T-3495): replace the stale NETWORKDAYS.INTL day-0 claim and probe-pending status with T-3537's scalar-holiday finding"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -39,3 +39,8 @@ another dates.md section already states.
 
 ## Out of scope
 - dates.md "WEEKDAY of serial 0 and return_type 0" and its T-1254 status: T-3306 item 6 owns it.
+
+## Outcome
+dates.md "gen-m6 arg-pairs batch (T-3495)" no longer claims a day-0 cause, an off-by-one or a pending probe. It
+points to "DAYS error order" (T-3536) and "NETWORKDAYS.INTL: a scalar holiday ignores the weekend argument"
+(T-3537, probes cited), and reads VERIFIED. Docs only; no eval delta.
