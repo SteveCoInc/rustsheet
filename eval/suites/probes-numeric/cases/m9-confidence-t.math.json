@@ -215,7 +215,7 @@
    },
    "A47": {
     "t": "e",
-    "why": "standard_dev outside (0, inf)",
+    "why": "standard_dev 0 is #NUM!",
     "f": "=CONFIDENCE.T(0.05,0,10)"
    },
    "A48": {

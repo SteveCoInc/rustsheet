@@ -7033,20 +7033,26 @@ T.DIST.2T, TDIST) are `#NUM!` where `x²` overflows (|x| past about 1.34E+154). 
 per sign: for a negative x the cumulative T.DIST is 0 at x = -4.0E+136 and -2.1E+119 (accuracy/T.DIST/s1 A90, A96) and
 `#NUM!` at x = -2.1E+217 and -4.1E+259 (A103, A91), so a negative x is `#NUM!` too, with its cut in (4.0E+136,
 2.1E+217); for a positive x the table has only `#NUM!`, at 5.4E+186 and 4.4E+221 (A86, A98). The exact cuts are
-UNVERIFIED. T-4102's tables bracket the same cut in Excel for the upper tails. Every bracket fits the x² overflow
-(about 1.34E+154):
-- T.DIST.RT at a positive x is `#NUM!` from 2.2E+176 (accuracy/T.DIST.RT/s1 A101, and 5 more cells up to 2.5E+290), and
-  probes/t2436/fec39efaba9284c3 A1 (`T.DIST.RT(1E+300,7)`) is `#NUM!` too. Its largest number is at 4.0E+40 (A58).
+UNVERIFIED. The negative mean follows "POISSON at x 0 with a negative mean", the tiny-p NEGBINOM is 0 (the binomial
+walk renormalizes before a ratio p/q past 2^53 overflows it), and PERMUTATIONA takes PERMUT's limit, a number of 2^31 - 1 or more is `#NUM!` (UNVERIFIED cut).
+Since T-2700 a NEGBINOM.DIST/NEGBINOMDIST number_f in (-1, 0) is `#NUM!` as in Excel (the sign is checked before truncation; bonus cell
+b9a32ce9a1fd0d71 A195, `NEGBINOMDIST(Data!$D$6,7,..)` with D6 = -0.5). The PERMUTATIONA truncation cells are T-2701's. Probe of the cuts: T-2752.
+
+The upper tails (T-4102): Excel brackets the same cut for T.DIST.RT, T.DIST.2T and TDIST, from the Gate A tables, the
+probes and gen-m9 together. Every bracket fits the x² overflow (about 1.34E+154):
+- T.DIST.RT at a positive x is a number up to 1.3E+60 (probes/t4456-beta-t-zero-reach F2, `T.DIST.RT(1.34305338528263e+60,5)`)
+  and `#NUM!` from 2.2E+176 (accuracy/T.DIST.RT/s1 A101, and 5 more table cells up to 2.5E+290). Two probe cells are
+  `#NUM!` too: probes/t2436/fec39efaba9284c3 A1 (`T.DIST.RT(1E+300,7)`) and probes/t4456-beta-t-zero-reach F1
+  (`T.DIST.RT(1.46569174062763e+299,1)`).
 - T.DIST.RT at a negative x is 1 up to |x| 1.4E+123 (A116) and `#NUM!` from 8.0E+165 (A102, and 10 more cells).
 - T.DIST.2T is 0 up to 5.8E+146 (accuracy/T.DIST.2T/s1 A88) and `#NUM!` from 4.2E+161 (A99, and 7 more cells).
 - TDIST is 0 up to 1.8E+150 (accuracy/TDIST/s1 A185) and `#NUM!` from 2.1E+166 (A176, and 14 more cells), at tails 1
   and 2 alike.
 
-The engine matches each of these cells. The Gate A definitions give the math value there, and the scoring holds the
-engine to Excel's error code. The negative mean follows "POISSON at x 0 with a negative mean", the tiny-p NEGBINOM is 0 (the binomial
-walk renormalizes before a ratio p/q past 2^53 overflows it), and PERMUTATIONA takes PERMUT's limit, a number of 2^31 - 1 or more is `#NUM!` (UNVERIFIED cut).
-Since T-2700 a NEGBINOM.DIST/NEGBINOMDIST number_f in (-1, 0) is `#NUM!` as in Excel (the sign is checked before truncation; bonus cell
-b9a32ce9a1fd0d71 A195, `NEGBINOMDIST(Data!$D$6,7,..)` with D6 = -0.5). The PERMUTATIONA truncation cells are T-2701's. Probe of the cuts: T-2752.
+The engine matches each of these cells. The Gate A definitions of the three functions encode each bracket
+(`student_t.HugeXCut`, per sign for T.DIST.RT). From the smallest evidenced `#NUM!` |x| on, x is outside the domain.
+Strictly between the largest evidenced number and that `#NUM!`, the point has no math value, because the cut there is
+unprobed. T.DIST's own definition does not use the rule yet (T-4580).
 Status: VERIFIED (excel-graph), the cuts UNVERIFIED
 Tasks: T-2256, T-2474, T-4102
 
