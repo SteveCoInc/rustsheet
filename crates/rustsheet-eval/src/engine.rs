@@ -66,7 +66,7 @@ const HARNESS_CLOCK_MS: i64 = 1_667_906_008_578;
 
 /// Default workbook options on the harness clock, named as the oracle named the workbook: its
 /// file name without the extension the engine adds back (T-2042).
-fn harness_options(name: Option<&str>) -> Result<WorkbookOptions, String> {
+pub(crate) fn harness_options(name: Option<&str>) -> Result<WorkbookOptions, String> {
     Ok(WorkbookOptions {
         clock: Clock::fixed_unix_millis(HARNESS_CLOCK_MS).map_err(|e| e.to_string())?,
         name: name.map(|n| n.strip_suffix(".xlsx").unwrap_or(n).to_string()),

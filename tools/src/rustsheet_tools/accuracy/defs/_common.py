@@ -19,6 +19,9 @@ from rustsheet_tools.accuracy.sampler import log_uniform
 DF_CUT = 1e10  # the cumulative functions' last valid (truncated) df (statistics.md Student-t df limits)
 CONDITION_LIMIT = 1e-10  # an ill-conditioned point (kappa * 2^-52 above this) is redrawn
 EPS = 2.0**-52
+OVERFLOW_POINT = mpmath.mpf(2) ** 1024 * (
+    1 - mpmath.mpf(2) ** -54
+)  # the smallest value that rounds past the largest double
 
 
 def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
@@ -28,6 +31,16 @@ def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
         assert not isinstance(a, (bool, tuple))
         out.append(a)
     return out
+
+
+def finite_double(value: int | mpmath.mpf, what: str) -> mpmath.mpf:
+    """`value` as an mpf; DomainError (`#NUM!`) where it rounds past the largest double (FACT, COMBIN, GAMMA,
+    PERMUT)."""
+    result = mpmath.mpf(value)
+    if abs(result) >= OVERFLOW_POINT:
+        msg = f"{what} overflows a double (#NUM!)"
+        raise DomainError(msg)
+    return result
 
 
 def ill_conditioned(kappa: float) -> None:
@@ -44,6 +57,8 @@ def zero_pole(args: Sequence[MathArg]) -> str | None:
 
 
 StratumDraws = dict[str, Callable[[random.Random], list[Arg]]]
+Shape = Callable[[random.Random], list[Arg]]
+"""One edge shape (or any one-stratum draw): rng → a whole point."""
 
 
 def domain_of(value: Callable[[Sequence[MathArg]], mpmath.mpf]) -> Callable[[Sequence[MathArg]], str | None]:
@@ -67,6 +82,29 @@ def by_stratum(draws: StratumDraws, doc: str) -> Draw:
 
     draw.__doc__ = doc
     return draw
+
+
+def by_stratum_with_edge(make: Draw, edge: Shape, doc: str) -> Draw:
+    """A `draw` taking the edge stratum from `edge` and every other stratum from `make(stratum, rng)` (an unknown
+    stratum is `make`'s log-uniform, as in `by_stratum`)."""
+
+    def one(stratum: str) -> Shape:
+        def draw(rng: random.Random) -> list[Arg]:
+            return make(stratum, rng)
+
+        return draw
+
+    draws: StratumDraws = {s: one(s) for s in ("typical", "tail", "extreme", "log-uniform")}
+    return by_stratum({**draws, "edge": edge}, doc)
+
+
+def any_edge(edges: Sequence[Shape]) -> Shape:
+    """An edge draw picking one of `edges` uniformly, then drawing it."""
+
+    def edge(rng: random.Random) -> list[Arg]:
+        return rng.choice(edges)(rng)
+
+    return edge
 
 
 def one_of(rng: random.Random, shapes: Sequence[Callable[[], list[Arg]]]) -> list[Arg]:

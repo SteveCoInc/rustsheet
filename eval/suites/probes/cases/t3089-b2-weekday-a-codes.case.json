@@ -1,0 +1,42 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3089: The character b reads past a short Minguo year after B2[$-40409] when the first token is a weekday written with a (aaa, aaaa, uppercase, longer runs). Column A the text, B the code of its last character.",
+ "tags": [
+  "probe",
+  "number-format",
+  "M10",
+  "T-3089"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=TEXT(45000,\"B2[$-40409]aaa|b\")",
+    "B1": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]aaa|b\"),1))",
+    "A2": "=TEXT(45000,\"B2[$-40409]aaaa|b\")",
+    "B2": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]aaaa|b\"),1))",
+    "A3": "=TEXT(45000,\"B2[$-40409]AAA|b\")",
+    "B3": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]AAA|b\"),1))",
+    "A4": "=TEXT(45000,\"B2[$-40409]AAAA|b\")",
+    "B4": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]AAAA|b\"),1))",
+    "A5": "=TEXT(45000,\"B2[$-40409]aaaaa|b\")",
+    "B5": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]aaaaa|b\"),1))",
+    "A6": "=TEXT(45000,\"B2[$-40409]aaaaaa|b\")",
+    "B6": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]aaaaaa|b\"),1))",
+    "A7": "=TEXT(45000,\"B2[$-40409]aaaAAA|b\")",
+    "B7": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]aaaAAA|b\"),1))",
+    "A8": "=TEXT(45000,\"B2[$-40409]AAAaaaa|b\")",
+    "B8": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]AAAaaaa|b\"),1))",
+    "A9": "=TEXT(45000,\"B2[$-40409]\"\"x\"\"aaa|b\")",
+    "B9": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]\"\"x\"\"aaa|b\"),1))",
+    "A10": "=TEXT(45000,\"B2[$-40409]aaa dddd|b\")",
+    "B10": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]aaa dddd|b\"),1))",
+    "A11": "=TEXT(45000,\"B2[$-40409]ddd aaa|b\")",
+    "B11": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]ddd aaa|b\"),1))",
+    "A12": "=TEXT(45000,\"B2[$-40409]aaaa ddd|b\")",
+    "B12": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]aaaa ddd|b\"),1))"
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -1542,3 +1542,27 @@ fn an_early_input_error_fills_an_array_field_relationship() {
         ["#VALUE!", "#VALUE!"]
     );
 }
+
+/// A function passed by name that takes none or one argument gets one, NOW and PI none
+/// (probes/t4450-eta-special-forms H109:H118, J55, J67).
+#[test]
+fn groupby_passes_row_one_argument() {
+    let mut model = new_empty_model();
+    for (cell, value) in [("A1", "1"), ("A2", "3"), ("A3", "5")] {
+        model._set(cell, value);
+    }
+    for (cell, value) in [("B1", "2"), ("B2", "4"), ("B3", "6")] {
+        model._set(cell, value);
+    }
+    model._set("D1", "=ROWS(GROUPBY(A1:A3,B1:B3,_xleta.ROW))");
+    model._set(
+        "D2",
+        "=ERROR.TYPE(INDEX(GROUPBY(A1:A3,B1:B3,_xleta.COLUMN),1,2))",
+    );
+    model._set("D3", "=ROWS(GROUPBY(A1:A3,B1:B3,_xleta.PI))");
+    model.evaluate();
+
+    assert_eq!(model._get_text("D1"), *"4");
+    assert_eq!(model._get_text("D2"), *"3");
+    assert_eq!(model._get_text("D3"), *"#VALUE!");
+}

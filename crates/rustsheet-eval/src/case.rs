@@ -229,6 +229,9 @@ pub struct DataTableSpec {
 
 /// A pivot table in a spec sheet (T-1705): `row` (and optionally `column`) are text fields of the
 /// `source` range's header row, `value` a number field aggregated by `function` (`sum` when absent).
+/// A pivot with a `definition` (case builder v2, T-4122) has none of those: Excel renders it from the
+/// definition on open, and the engine adapter does not register it until the engine renders pivots
+/// (T-4152 and SPEC-0032).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PivotTableSpec {
@@ -238,12 +241,14 @@ pub struct PivotTableSpec {
     pub source: String,
     /// Top-left cell of the rendered pivot.
     pub location: String,
-    /// The row field (a text column of the source).
+    /// The row field (a text column of the source); empty for a pivot with a `definition`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub row: String,
     /// The column field (another text column), if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub column: Option<String>,
-    /// The data field (a number column).
+    /// The data field (a number column); empty for a pivot with a `definition`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
     /// `sum` (when absent), `count`, `average`, `max` or `min`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -272,6 +277,11 @@ pub struct PivotTableSpec {
     /// The column field's `showAll` (T-4311); false when absent.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub column_show_all: bool,
+    /// The pivot's definition, one-to-one with `pivotTableDefinition`
+    /// (`tools/src/rustsheet_tools/pivot_definition.py`, which validates it). Kept opaque here: only
+    /// spec2xlsx reads it so far; T-4152 types it when the adapter builds the pivot from it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub definition: Option<serde_json::Value>,
 }
 
 /// A pivot row field's range or date grouping (`<fieldGroup>` with `<rangePr>`), as

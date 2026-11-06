@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "64577f1fd9a60c5f9536836f250a28d1dc70f05d18f19220c3fdacdb9f1b4446"
+ },
+ "sheets": {
+  "Calc": {
+   "A2": {
+    "t": "n",
+    "v": "1408628608586248056.0",
+    "f": "=(GAMMALN(1000000000000000.0)*Data!A$11)"
+   }
+  }
+ }
+}

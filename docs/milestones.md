@@ -13,7 +13,7 @@ whose exit criteria are not met.
 
 | Phase | Milestones, in order | Status |
 |---|---|---|
-| 1. Parity (fifteen digits) | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11 | active |
+| 1. Parity (fifteen digits) | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11, M16 | active |
 | 1b. Bit parity | the `defer: phase-1b` tasks of every milestone | after Phase 1 exits (decision 0114) |
 | 2. Architecture and performance | M3, M4, M13, M15 | deferred until Phase 1 exits |
 | 3. Release | M12 | after Phase 2 |
@@ -355,6 +355,38 @@ docs/research/xlsx-round-trip-2026-11-04.md.
 6. The features in scope are modelled and shift correctly under R2.
 7. The hostile set never panics and stays within bounded memory.
 8. Untouched parts are byte-identical under R1 on index-stable files.
+
+## M16 — Pivot tables (Phase 1)
+
+Added by decision 0274 (owner request, 2026-11-04). Research and plan:
+docs/research/pivot-tables-2026-11-04/plan.md. Design: SPEC-0032 (a task of PV0). Today the engine only imports
+pivots read-only and answers GETPIVOTDATA (SPEC-0015).
+
+**Scope:** every in-scope row of the pivot feature catalog `eval/catalog/pivot-features.tsv`, staged:
+- **PV0 Foundations:** the feature catalog (schema-driven), SPEC-0032, case builder v2 (pivot definitions
+  one-to-one with OOXML), sidecar capture and scoring of rendered pivot areas and `rowItems`/`colItems`, the
+  oracle capability matrix, the `pivots`, `gen-pivot` and `pivot-corpus` suites.
+- **PV1 Refresh and core render:** refresh from ranges and Tables with Excel's item rules; the eleven aggregates;
+  compact, outline and tabular forms; subtotals, grand totals, several data fields, page fields, hidden items,
+  label sort, captions; grid ownership and the `#SPILL!` collapse; GETPIVOTDATA over every shape.
+- **PV2 Analysis:** show-values-as (all modes), label/value/date filters, Top-N, sort by value, layout options,
+  data-field number formats.
+- **PV3 Grouping and calculation:** numeric, date and manual groups; calculated fields and items.
+- **PV4 Lifecycle and I/O:** xlsx export validated by an Excel round trip, the create/edit/refresh API and
+  Python binding, shared caches and named sources, drill-down, Auto Refresh as evidenced.
+- **PV5 PivotCharts, slicers, timelines:** PivotChart data (series and categories) and chart-part round trip
+  (no drawing); slicer and timeline state as filters.
+
+Out of scope (decision 0274): OLAP, the Data Model and Power Pivot, external and consolidation sources,
+styles and conditional formats beyond preservation, UI-only commands.
+
+**Exit criteria** (per stage, then for the milestone):
+- Every in-scope catalog row has at least 30 oracle cells (its edge pools counted).
+- The `pivots`, `gen-pivot` and fresh `pivot-corpus` cells are not visibly off (decision 0083), apart from
+  accepted deviations; rendered layouts match Excel's `rowItems`/`colItems`.
+- Every remaining catalog row has a filed task or an out-of-scope ruling; rows Excel for the web cannot
+  render are M14 tasks and do not block (decision 0039).
+- Measured by report.json's `milestone_exit` M16 row; until that row exists M16 counts as not met.
 
 ## M14 — Desktop-oracle parity (Phase 4)
 
