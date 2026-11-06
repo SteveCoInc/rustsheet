@@ -62,4 +62,4 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4603-im-reciprocal
 - Large |x| or |y| past the overflow edges (T-2631, T-4425).
 
 ## Outcome
-Probe `probes/t4603-im-reciprocal-tiny-parts` (78 cells, excel-graph) added; ours already matched every cell, so no engine change. engineering.md "IM* results that overflow" now states the tiny real and tiny imaginary results; both UNVERIFIED claims are gone and the `IMCOT("1E-310")` example cites the parse rule. Eval delta: +78 passing cells in the probes suite, no baseline change, no new known failures.
+Probe `probes/t4603-im-reciprocal-tiny-parts` (78 cells, excel-graph) added; ours already matched every cell, so no engine change. engineering.md "IM* results that overflow" now states the tiny real and tiny imaginary results; both UNVERIFIED claims are gone and the `IMCOT("1E-310")` example cites the parse rule. Eval delta: +78 passing cells in the probes suite, the probes baseline gains only the new case's checked-cell line, no new known failures.
