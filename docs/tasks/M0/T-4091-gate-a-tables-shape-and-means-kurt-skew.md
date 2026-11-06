@@ -3,7 +3,7 @@ id: T-4091
 title: "Gate A tables, shape and means: KURT, SKEW, SKEW.P, GEOMEAN, HARMEAN, AVERAGEA and TRIMMEAN"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
