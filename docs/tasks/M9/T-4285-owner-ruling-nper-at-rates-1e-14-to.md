@@ -3,7 +3,7 @@ id: T-4285
 title: "Owner ruling: NPER at rates 1E-14 to 1E-13, where Excel is still 7E-4 to 7E-3 off the math (R3 candidates outside the ruled region)"
 milestone: M9
 lane: functions-financial
-status: blocked
+status: done
 priority: P3
 size: S
 tier: opus
@@ -13,9 +13,6 @@ depends_on: []
 ## Goal
 The owner rules whether decision 0188 R3's NPER region (0 < rate < 1E-14) extends to the rates up to 1E-13 where
 Excel is still more than G = 1e-4 off the math; the engine then follows the ruling.
-
-## Blocked because
-Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward included, adds a case on its own").
 
 ## Context
 - Found by T-3367 (probes-numeric/t3367-nper-tiny-rate, excel-graph 2026-11-05, 50-digit math sidecar). Excel's
@@ -39,3 +36,8 @@ Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward inc
 
 ## Out of scope
 - Negative tiny rates (unprobed).
+
+## Outcome
+Owner ruling (decision 0301, 2026-11-06): keep the region. NPER's R3 region stays 0 < rate < 1E-14, and from 1E-14
+up the engine keeps matching Excel. It is bit-exact on the 24 cells today. `NPER_MATH_RATE`, the marks and financial.md
+are unchanged.

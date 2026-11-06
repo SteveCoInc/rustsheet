@@ -3,7 +3,7 @@ id: T-3484
 title: "XIRR near a zero root: Excel is 1e-4 to 2e-3 off the math (R3 candidate, owner ruling)"
 milestone: M9
 lane: functions-financial
-status: blocked
+status: done
 priority: P3
 size: S
 tier: opus
@@ -14,10 +14,6 @@ depends_on: []
 The owner rules whether XIRR roots with |root| below about 2e-5 become a decision 0188 R3 (`MATH-OVER-EXCEL`)
 region, and the engine follows that ruling. Without the ruling, the engine keeps matching Excel's value bit for bit,
 as it does today.
-
-## Blocked because
-Blocked because: owner ruling (decision 0188 R3: a new `MATH-OVER-EXCEL` case needs a decision record carrying an
-owner ruling).
 
 ## Context
 - Found by T-3353's Gate A fresh sweep (probes-numeric/xirr-two-flow-gate-a-sweep, excel-graph, 2026-10-31,
@@ -39,3 +35,7 @@ owner ruling).
 
 ## Out of scope
 - XIRR's stop rule away from zero roots (T-3353, T-3287).
+
+## Outcome
+Owner ruling (decision 0301, 2026-11-06): XIRR gets no R3 region. The engine keeps matching Excel's bisection result,
+bit-exact on the 15 near-zero cells today. No engine change.
