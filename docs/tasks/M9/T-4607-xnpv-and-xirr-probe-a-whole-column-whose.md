@@ -3,7 +3,7 @@ id: T-4607
 title: "XNPV and XIRR: probe a whole column whose used area holds a cell error or a text date, and XIRR dates strictly between -1 and 0, and match"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
