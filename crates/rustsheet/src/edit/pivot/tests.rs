@@ -543,3 +543,32 @@ fn a_date_grouping_over_a_blank_is_dropped() {
     assert_eq!(wb.value("F3").unwrap(), 4.0.into());
     assert!(matches!(wb.value("F4").unwrap(), Value::Error(_)));
 }
+
+/// The cache is read as the engine's refresh reads a source: a repeated header is numbered
+/// (probes/t4585-pivot-field-names; `rustsheet_engine::pivot::read_source`).
+#[test]
+fn a_repeated_header_is_numbered() {
+    let (mut wb, input) = book();
+    wb.edit(|tx| {
+        tx.set("C1", Input::from("region"))?;
+        tx.set("C2", Input::from("x"))
+    })
+    .unwrap();
+    let input = PivotTableInput {
+        source: wb.range_ref("A1:C4").unwrap(),
+        row: "region2".into(),
+        ..input
+    };
+    wb.edit(|tx| tx.add_pivot_table(&input)).unwrap();
+    let cache = &wb.model.workbook.pivot_caches[0];
+    let names: Vec<&str> = cache.fields.iter().map(|f| f.name.as_str()).collect();
+    assert_eq!(names, ["Region", "Sales", "region2"]);
+    assert_eq!(
+        cache.fields[2].items,
+        [CacheItem::Text("x".into()), CacheItem::Missing]
+    );
+    assert_eq!(
+        wb.model.workbook.pivot_tables[0].row_fields,
+        [AxisField::Field(2)]
+    );
+}

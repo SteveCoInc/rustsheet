@@ -69,6 +69,7 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 - I5: the number 1 counts 2 and the text `1` counts 1.
 
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`ItemKey::identity`)
 
 ## Item casing when cache and source disagree, and date items
 Rule (as observed):
@@ -113,6 +114,7 @@ these); Excel-saved caches in the LibreOffice fixtures (oss-engines.md §5).
 Status: builder observation (T-4122 runs), not committable as a probe: Excel saves nothing for a
 file it refuses. The builder writes these flags (pivot_definition.py `shared_items`), and every
 filled pivot probe opens with them.
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`SharedItemsFlags`, written by the export, T-4176)
 
 ## Items show in the order the pivot field lists them; new items are appended
 Rule: on refresh Excel keeps the order of a pivot field's `<items>`. An item the refresh finds that the
@@ -138,6 +140,7 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 The default order of a newly created pivot (ascending, by type) is a UI action and not reachable from a
 file.
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader`; the rendering is T-4142's)
 
 ## A calculated field applies its formula to the field sums
 Rule: a calculated field `Sales*2+0.1` shows, at every level including subtotals and the grand total,
