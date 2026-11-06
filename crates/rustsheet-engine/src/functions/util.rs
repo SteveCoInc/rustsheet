@@ -948,7 +948,6 @@ impl Function {
                 | Function::Switch
                 | Function::Ifs
                 | Function::Let
-                | Function::Reduce
         ) || self.picks_reference()
     }
 }

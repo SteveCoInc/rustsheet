@@ -1750,11 +1750,13 @@ Ours: since T-4478, `fn_reduce` calls its LAMBDA with a reference-keeping caller
 reference context. SCAN is unchanged (`lambda_result_value` reads each step). A 3-D initial value is `#VALUE!`. BYROW and BYCOL read a
 one-cell reference result on both their range and array paths (`by_slices_result`).
 Since T-4494 the parser reads `a:v` as the range between two names an enclosing LET or LAMBDA binds
-(`Parser::bound_names_range`; a column label against one bound name, `a:C`, is not probed and stays a column
-range). REDUCE counts as a call that may return a reference (`Function::may_be_reference`), so AREAS and SUBTOTAL
-take it, and in reference context it is `Model::reduce_reference`, which keeps a union accumulator's areas from
-step to step and a union initial value as its areas; ISREF of a parameter bound to a union is TRUE. SCAN's union
-initial value is not probed and is still read.
+(`Parser::bound_names_range`). Only LAMBDA parameters are probed; the LET form (`LET(a,A1,v,A3,SUM(a:v))`) and a
+column label against one bound name (`a:C`, which stays a column range) are UNVERIFIED (inferred). AREAS takes a
+REDUCE argument (`Parser::function_call`); REDUCE is not otherwise a reference operand, so as an intersection,
+range or SUBTOTAL operand it is refused as before (not probed). In reference context REDUCE is
+`Model::reduce_reference`, which keeps a union accumulator's areas from step to step and a union initial value as
+its areas; ISREF of a parameter bound to a union is TRUE. SCAN's union initial value is not probed and is still read
+(`SCAN((A1,A3),{1},LAMBDA(a,v,ISREF(a)))` is FALSE in ours).
 Tasks: T-4478, T-4494
 
 ## BYROW and BYCOL: a LAMBDA result that is an array

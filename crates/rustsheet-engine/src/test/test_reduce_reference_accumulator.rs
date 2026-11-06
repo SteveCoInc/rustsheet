@@ -104,3 +104,11 @@ fn a_range_between_parameters_keeps_its_text() {
     assert_eq!(model._get_formula("E2"), "=LAMBDA(a,COLUMNS(A:C))(A1)");
     assert_eq!(model._get_text("E2"), "3");
 }
+
+#[test]
+fn a_growing_union_accumulator_is_bounded_by_the_work_budget() {
+    // Each step copies the union so far: the copies are charged to the formula's work budget
+    // (SPEC-0024), so the cell ends in `#VALUE!` well before the 65,536-area cap would stop it.
+    let actual = results(&["=AREAS(REDUCE(A1,A2:A70000,LAMBDA(a,v,(a,v))))"]);
+    assert_eq!(actual, ["#VALUE!"]);
+}

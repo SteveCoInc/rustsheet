@@ -44,11 +44,18 @@ The cells of probes/t4478-reduce-scan-reference-accumulator that T-4478 left fai
 - The parser reads `a:v`, text the lexer took for a column range, as the range between two names an enclosing LET
   or LAMBDA binds (`Parser::bound_names_range`). Only when both sides are bound; `a:C` stays a column range (not
   probed, pinned by a unit test).
-- REDUCE is in `Function::may_be_reference`, so AREAS and SUBTOTAL accept it as a reference operand. In reference
+- AREAS accepts a REDUCE argument (`Parser::function_call`). REDUCE is not added to `Function::may_be_reference`:
+  that would also make it an intersection, range and SUBTOTAL operand and change `yields_cells` (SUBTOTAL over TAKE
+  of a value REDUCE would stop spilling), none of it probed (review round 1). In reference
   context it is `Model::reduce_reference`, which keeps a union accumulator as its areas from step to step and a
   union initial value as its areas (`lambda_initial_reference`); `fn_reduce` is its single-area view.
   `call_lambda_caller_binding` is the one step call both share.
 - ISREF of a parameter bound to a union is TRUE (`Model::is_areas_variable`).
+- `union_areas` charges each area it copies to the formula's work budget (`spend_cells`), so a union accumulator
+  that grows a step at a time is bounded (`AREAS(REDUCE(A1,A2:A70000,LAMBDA(a,v,(a,v))))` is a fast `#VALUE!`,
+  review round 1, security).
+- Follow-up: T-4656 probes REDUCE as an intersection, range, call and SUBTOTAL operand, `a:v` between LET names and
+  SCAN's union initial value.
 - arrays.md "REDUCE keeps a returned reference" and the `lambda_initial_value` comment are updated.
 - Eval delta: probes/t4478-reduce-scan-reference-accumulator 90/117 -> 117/117 (27 cells fixed: every cell the task
   names plus the F6:H6 and G9 forms); probes known failures 8312 -> 8285; 0 regressions in any suite.
