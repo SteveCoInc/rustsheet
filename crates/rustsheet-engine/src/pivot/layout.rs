@@ -1,5 +1,7 @@
 //! The compact-form layout of a pivot with one row field and one data field, and the aggregation
-//! it and GETPIVOTDATA share (T-4235).
+//! it and GETPIVOTDATA share (T-4235); and, in [`lines`], every pivot's layout lines and location
+//! (SPEC-0032 stage 7, T-4147), which the cell renderer (T-4149) turns into cells, this module's
+//! one-field layout becoming its first case.
 //!
 //! A grouped spec pivot has no rendered cells (the case builder cannot know Excel's groups), so the
 //! engine lays it out as Excel does on load. The layout is the case builder's
@@ -7,6 +9,10 @@
 //! `Row Labels` and the data field's caption, one row per shown item, `Grand Total`. Oracle reads
 //! of Excel's own layout hold it in step (probes/t4228-pivot-range-groups,
 //! probes/t4235-pivot-range-rounding).
+
+mod lines;
+
+pub use lines::{lay_out, AxisLine, PivotLayout, MAX_PIVOT_CELLS};
 
 use crate::expressions::token::Error;
 use crate::functions::statistical::variance::{excel_variance, VarianceKind};
@@ -144,7 +150,10 @@ pub(crate) fn record_numbers(field: &CacheField, records: &[u32]) -> Result<Vec<
 /// nothing is 0 (probes/getpivotdata-real-pivot H13, probes/getpivotdata-empty-intersection);
 /// any other aggregate with no defined value is `#REF!` (SPEC-0015 unknown 2), and a non-finite
 /// result `#NUM!` (unknown 16). Var and `StdDev` reuse the worksheet functions' algorithm
-/// (`excel_variance`); that the pivot computes them alike is UNVERIFIED (unknown 15).
+/// (`excel_variance`); that the pivot computes them alike is UNVERIFIED (unknown 15). The pivot
+/// result (`pivot::result`, T-4142) uses the textbook one-pass formula instead
+/// (probes/t4616-pivot-total-order-3), so until T-4154 moves GETPIVOTDATA onto the
+/// `PivotResult` the two may differ in the last bits for Var and `StdDev`.
 pub(crate) fn aggregate(function: Aggregate, values: &[f64]) -> Result<f64, Error> {
     let n = values.len();
     let minimum = match function {

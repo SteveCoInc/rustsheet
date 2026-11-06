@@ -1,0 +1,15 @@
+name = "roundtrip-poi"
+description = "Round-trip fidelity (SPEC-0033) of the Apache POI test workbooks, read from the poi suite's fetched cache"
+kind = "roundtrip"
+# The poi cell suite's fetched cache: fetched, skipped while not fetched, and gated as that suite is (T-4629).
+cases_of = "poi"
+include = ["**/*.xlsx", "**/*.xlsm"]
+# Fuzzer corpus files are deliberately corrupt zips, as in the poi cell suite.
+exclude = ["**/clusterfuzz-*", "**/crash-*"]
+license = "Apache-2.0"
+origin = "https://github.com/apache/poi/tree/trunk/test-data/spreadsheet"
+scenarios = ["R0"]
+# Gated like the cell suite: `make check` holds it wherever its cache is fetched (T-4629).
+gate = true
+baseline = "cases"
+milestone = ["M15"]

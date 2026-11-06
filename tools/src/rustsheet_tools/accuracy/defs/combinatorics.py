@@ -1,4 +1,5 @@
-"""FACT, FACTDOUBLE, COMBIN, COMBINA and MULTINOMIAL (Gate A slice 4h, T-3675, decision 0228).
+"""FACT, FACTDOUBLE, COMBIN, COMBINA and MULTINOMIAL (Gate A slice 4h, T-3675, decision 0228), PERMUT and
+PERMUTATIONA (T-4106, below their own sources).
 
 The math is the exact combinatorial value of the integer arguments Excel reads. Excel's product
 and log-sum orders make large results inexact (numbers.md "COMBIN is inexact", "MULTINOMIAL is
@@ -31,7 +32,7 @@ from collections.abc import Sequence
 import mpmath
 
 from rustsheet_tools.accuracy import model
-from rustsheet_tools.accuracy.defs._common import by_stratum, one_of, scalars, trunc
+from rustsheet_tools.accuracy.defs._common import by_stratum, finite_double, one_of, real_args, trunc
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, Draw, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -45,16 +46,6 @@ MULTINOMIAL_HUGE_SOURCE = "numbers.md#multinomial-of-a-huge-argument"
 DECISION = "decision 0228"
 COUNT_LIMIT = 2**31 - 1  # COMBIN's n and COMBINA's n+k-1 are #NUM! from here up
 MULTINOMIAL_SUM_LIMIT = 170  # the largest sum whose factorial is finite
-_DOUBLE_MAX_EXACT = mpmath.mpf(2) ** 1024 * (1 - mpmath.mpf(2) ** -54)  # the overflow rounding point
-
-
-def _finite(value: int, what: str) -> mpmath.mpf:
-    """`value` as an mpf; DomainError (`#NUM!`) where it rounds past the largest double."""
-    result = mpmath.mpf(value)
-    if result >= _DOUBLE_MAX_EXACT:
-        msg = f"{what} overflows a double (#NUM!)"
-        raise model.DomainError(msg)
-    return result
 
 
 def double_factorial(n: int) -> int:
@@ -66,29 +57,29 @@ def double_factorial(n: int) -> int:
 
 
 def fact_domain(args: Sequence[MathArg]) -> str | None:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "a negative number (#NUM!)" if mpmath.floor(x) < 0 else None
 
 
 def factdouble_domain(args: Sequence[MathArg]) -> str | None:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "a number below -1 (#NUM!)" if mpmath.floor(x) < -1 else None
 
 
 def _fact(args: Sequence[MathArg]) -> mpmath.mpf:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     n = int(mpmath.floor(x))
     if n > 170:  # n! is past the largest double from 171 on; no big-int product of a huge n
-        return _finite(math.factorial(171), "n!")
-    return _finite(math.factorial(n), "n!")
+        return finite_double(math.factorial(171), "n!")
+    return finite_double(math.factorial(n), "n!")
 
 
 def _factdouble(args: Sequence[MathArg]) -> mpmath.mpf:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     n = int(mpmath.floor(x))
     if n > 301:  # n!! is past the largest double from 301 on
-        return _finite(double_factorial(301), "n!!")
-    return _finite(double_factorial(n), "n!!")
+        return finite_double(double_factorial(301), "n!!")
+    return finite_double(double_factorial(n), "n!!")
 
 
 def combin_value(n: int, k: int) -> mpmath.mpf:
@@ -99,11 +90,11 @@ def combin_value(n: int, k: int) -> mpmath.mpf:
     if mpmath.loggamma(n + 1) - mpmath.loggamma(j + 1) - mpmath.loggamma(n - j + 1) > 711:
         msg = "the coefficient overflows a double (#NUM!)"
         raise model.DomainError(msg)
-    return _finite(math.comb(n, j), "the coefficient")
+    return finite_double(math.comb(n, j), "the coefficient")
 
 
 def combin_domain(args: Sequence[MathArg]) -> str | None:
-    n, k = (int(mpmath.floor(a)) for a in scalars(args))
+    n, k = (int(mpmath.floor(a)) for a in real_args(args))
     if n < 0 or k < 0:
         return "a negative argument (#NUM!)"
     if k > n:
@@ -114,14 +105,14 @@ def combin_domain(args: Sequence[MathArg]) -> str | None:
 
 
 def _combin(args: Sequence[MathArg]) -> mpmath.mpf:
-    n, k = (int(mpmath.floor(a)) for a in scalars(args))
+    n, k = (int(mpmath.floor(a)) for a in real_args(args))
     return combin_value(n, k)
 
 
 def _combina_args(args: Sequence[MathArg]) -> tuple[int, int]:
     """(n, k) as COMBINA reads them: `number` truncated, `number_chosen` floored, or truncated
     when `number` is 0."""
-    x, y = scalars(args)
+    x, y = real_args(args)
     n = trunc(x)
     k = trunc(y) if n == 0 else int(mpmath.floor(y))
     return n, k
@@ -146,7 +137,7 @@ def _combina(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def multinomial_domain(args: Sequence[MathArg]) -> str | None:
-    values = scalars(args)
+    values = real_args(args)
     if any(v < 0 for v in values):
         return "a negative argument (#NUM!)"
     if sum(int(mpmath.floor(v)) for v in values) > MULTINOMIAL_SUM_LIMIT:
@@ -155,7 +146,7 @@ def multinomial_domain(args: Sequence[MathArg]) -> str | None:
 
 
 def _multinomial(args: Sequence[MathArg]) -> mpmath.mpf:
-    parts = [int(mpmath.floor(v)) for v in scalars(args)]
+    parts = [int(mpmath.floor(v)) for v in real_args(args)]
     denominator = math.prod(math.factorial(p) for p in parts)
     return mpmath.mpf(math.factorial(sum(parts))) / denominator
 
@@ -363,5 +354,195 @@ MULTINOMIAL = register(
         draw=_multinomial_draw,
         variadic=True,
         sources=(DECISION, MULTINOMIAL_SOURCE, MULTINOMIAL_HUGE_SOURCE),
+    )
+)
+
+
+# PERMUT and PERMUTATIONA (T-4106). statistics.md "Overflowing arguments, PERMUT's limit and argument error order
+# (T-1290)": PERMUT's number is floored (`PERMUT(2147483646.5,1)` is `PERMUT(2147483646,1)`), `#NUM!` from 2^31-1 on even
+# with number_chosen 0 (`PERMUT(2147483647,1)`, `PERMUT(1E30,0)`), and a product past the double range is `#NUM!`
+# (`PERMUT(171,171)`; `PERMUT(170,170)` is 7.257415615307994E+306). PERMUTATIONA (statistics.md "Scalar distributions at
+# extreme arguments, part 2 (T-2256)", "Statistical argument-domain errors and extreme values (T-2621)"): number_chosen
+# truncates toward zero before its sign check (`PERMUTATIONA(10,-0.75)`, `PERMUTATIONA(<blank>,-0.0001)` are 1, so
+# 0^0 is 1), and a number of about 1E+15 is `#NUM!` (`PERMUTATIONA(1000000000000000,0)`) while 123456789.123 is not; the
+# cut is UNVERIFIED (no s1 point is drawn there), and PERMUT's 2^31-1 is taken, as the engine does (T-2474). The s1
+# tables add (PERMUTATIONA_HUGE_SOURCE): k > n (`PERMUT(0,2)`) and a negative k (`PERMUT(6,-1)`) are `#NUM!`, so is an
+# n^k past the double range (`PERMUTATIONA(2,1024)`), and a PERMUTATIONA number_chosen of 2^31-1 or more (cut
+# UNVERIFIED above 1000). A negative or fractional-negative number is unprobed and the math's (floored, as COMBIN's).
+PERMUT_SOURCE = "statistics.md#overflowing-arguments-permuts-limit-and-argument-error-order-t-1290"
+PERMUTATIONA_SOURCE = "statistics.md#scalar-distributions-at-extreme-arguments-part-2-t-2256"
+PERMUTATIONA_HUGE_SOURCE = (
+    "statistics.md#permutationa-is-binary-powering-in-doubles-and-num-at-a-huge-number_chosen-t-4106"
+)
+PERMUT_FACTORS_MAX = (
+    170  # 171 distinct factors of at least 1 multiply to at least 171!, past the largest double
+)
+LN_DOUBLE_MAX = (
+    709.78  # ln of the largest double, rounded down: a log bound only, the exact check is finite_double
+)
+
+
+def permut_domain(args: Sequence[MathArg]) -> str | None:
+    n, k = (int(mpmath.floor(a)) for a in real_args(args))
+    if n < 0 or k < 0:
+        return "a negative argument (#NUM!)"
+    if k > n:
+        return "number_chosen above number (#NUM!)"
+    if n >= COUNT_LIMIT:
+        return "number at or above 2^31-1 (#NUM!)"
+    return None
+
+
+def _permut(args: Sequence[MathArg]) -> mpmath.mpf:
+    n, k = (int(mpmath.floor(a)) for a in real_args(args))
+    if k > PERMUT_FACTORS_MAX:  # no big-int product of a huge k: it overflows
+        return finite_double(math.factorial(PERMUT_FACTORS_MAX + 1), "the product")
+    return finite_double(math.perm(n, k), "the product")
+
+
+def _permutationa_args(args: Sequence[MathArg]) -> tuple[int, int]:
+    """(n, k) as PERMUTATIONA reads them: `number` floored, `number_chosen` truncated."""
+    x, y = real_args(args)
+    return int(mpmath.floor(x)), trunc(y)
+
+
+def permutationa_domain(args: Sequence[MathArg]) -> str | None:
+    n, k = _permutationa_args(args)
+    if n < 0 or k < 0:
+        return "a negative argument (#NUM!)"
+    if n >= COUNT_LIMIT:
+        return "number at or above 2^31-1 (#NUM!)"
+    if k >= COUNT_LIMIT:
+        # PERMUTATIONA_HUGE_SOURCE: even 1^k and 0^k
+        # (accuracy/PERMUTATIONA/s1 A71, A76, A79; k = 1000 is a number, A72). The exact cut is UNVERIFIED (T-4501).
+        return "number_chosen at or above 2^31-1 (#NUM!)"
+    return None
+
+
+def _permutationa(args: Sequence[MathArg]) -> mpmath.mpf:
+    n, k = _permutationa_args(args)
+    if n >= 2 and k * math.log(n) > LN_DOUBLE_MAX + 1:  # no big-int power of a huge k: it overflows
+        return finite_double(2**1025, "number^number_chosen")
+    return finite_double(n**k, "number^number_chosen")
+
+
+def _largest_finite_k(n: int, product: bool) -> int:
+    """About the largest k whose PERMUT(n, k) (`product`) or n^k is finite, n >= 2, from a log bound."""
+    if not product:
+        return int(LN_DOUBLE_MAX / math.log(n))
+    top = min(n, PERMUT_FACTORS_MAX)
+    return max(k for k in range(top + 1) if math.lgamma(n + 1) - math.lgamma(n - k + 1) < LN_DOUBLE_MAX)
+
+
+def _near_overflow(rng: random.Random, product: bool) -> list[Arg]:
+    """A count up to 1E+6 and a k within a few of its overflow (PERMUT's k at most n)."""
+    if product:
+        n = rng.randint(150, 400) if rng.random() < 0.5 else round(log_uniform(rng, 170.0, 1e6))
+    else:
+        n = round(log_uniform(rng, 2.0, 1e6))
+    k = max(0, _largest_finite_k(n, product) + rng.randint(-3, 2))
+    return [float(n), float(min(k, n) if product else k)]
+
+
+def _permut_typical(rng: random.Random) -> list[Arg]:
+    n = rng.randint(0, 40)
+    return [_fraction(rng, n), _fraction(rng, rng.randint(0, n))]
+
+
+def _permut_edge(rng: random.Random) -> list[Arg]:
+    n = rng.randint(1, 200)
+    return one_of(
+        rng,
+        (
+            lambda: [float(n), float(rng.choice((0, 1, n - 1, n, n + 1)))],
+            lambda: [rng.choice((170.0, 171.0, 170.9)), rng.choice((169.0, 170.0, 171.0))],
+            lambda: [
+                rng.choice((float(COUNT_LIMIT - 1), COUNT_LIMIT - 0.5, float(COUNT_LIMIT), 1e10)),
+                float(rng.choice((0, 1, 2))),
+            ],
+            lambda: [rng.choice((-1.0, -0.5, 0.0, 6.0)), rng.choice((-1.0, -0.5, 0.0, 2.0))],
+            lambda: [rng.choice((10.5, 25.9, 123456789.123)), rng.choice((3.7, 10.0, 0.999))],
+        ),
+    )
+
+
+def _permut_log_uniform(rng: random.Random) -> list[Arg]:
+    n = round(log_uniform(rng, 1.0, COUNT_LIMIT - 1))
+    return [float(n), float(rng.randint(0, min(n, 40)))]
+
+
+_permut_draw = by_stratum(
+    {
+        "typical": _permut_typical,
+        "tail": lambda rng: _near_overflow(rng, product=True),
+        "edge": _permut_edge,
+        "extreme": lambda rng: [float(rng.randint(10**6, COUNT_LIMIT - 1)), float(rng.randint(0, 24))],
+        "log-uniform": _permut_log_uniform,
+    },
+    "[number, number_chosen]: typical n up to 40, tails within a few of the overflowing k for n 150 to 1E+6, edges "
+    "(k 0, 1, n-1, n, n+1, 170 and 171, the 2^31-1 cut, negatives, zeros, fractions), extreme n 1E+6 to 2^31-2 with k up "
+    "to 24, and log-uniform n 1 to 2^31-2 with k up to 40",
+)
+
+_POWER_EDGES = ((2.0, 1023.0), (2.0, 1024.0), (10.0, 308.0), (10.0, 309.0))
+
+
+def _permutationa_edge(rng: random.Random) -> list[Arg]:
+    return one_of(
+        rng,
+        (
+            lambda: [rng.choice((0.0, 1.0, 2.0)), rng.choice((0.0, 1.0, 2.0, -0.0001, -0.75))],
+            lambda: [rng.choice((10.0, 7.0)), rng.choice((-0.75, -0.1, -1.0))],
+            lambda: [
+                rng.choice((float(COUNT_LIMIT - 1), COUNT_LIMIT - 0.5, float(COUNT_LIMIT), 1e10, 1e15)),
+                float(rng.choice((0, 1, 2))),
+            ],
+            lambda: list(rng.choice(_POWER_EDGES)),
+            lambda: [rng.choice((1.0, 0.0)), rng.choice((1e3, float(COUNT_LIMIT), 1e10))],
+            lambda: [rng.choice((-1.0, -0.5, 123456789.123, 2.5)), rng.choice((1.0, 2.0, 3.9))],
+        ),
+    )
+
+
+_permutationa_draw = by_stratum(
+    {
+        "typical": lambda rng: [_fraction(rng, rng.randint(0, 40)), _fraction(rng, rng.randint(0, 12))],
+        "tail": lambda rng: _near_overflow(rng, product=False),
+        "edge": _permutationa_edge,
+        "extreme": lambda rng: [float(rng.randint(10**6, COUNT_LIMIT - 1)), float(rng.randint(0, 34))],
+        "log-uniform": lambda rng: [
+            float(round(log_uniform(rng, 1.0, COUNT_LIMIT - 1))),
+            float(rng.randint(0, 40)),
+        ],
+    },
+    "[number, number_chosen]: typical n up to 40 and k up to 12, tails within a few of the overflowing k for n 2 to "
+    "1E+6, edges (0^0, k in (-1, 0), the 2^31-1 cut, 1E+15, 2^1024 and 10^309, a huge k with n 0 and 1, negatives and "
+    "fractions), extreme n 1E+6 to 2^31-2 with k up to 34, and log-uniform n 1 to 2^31-2 with k up to 40",
+)
+
+PERMUT = register(
+    Definition(
+        function="PERMUT",
+        params=(_number("number", PERMUT_SOURCE), _number("number_chosen", PERMUT_SOURCE)),
+        value=_permut,
+        domain=permut_domain,
+        draw=_permut_draw,
+        sources=(PERMUT_SOURCE, "decision 0272"),
+    )
+)
+PERMUTATIONA = register(
+    Definition(
+        function="PERMUTATIONA",
+        params=(_number("number", PERMUTATIONA_SOURCE), _number("number_chosen", PERMUTATIONA_SOURCE)),
+        value=_permutationa,
+        domain=permutationa_domain,
+        draw=_permutationa_draw,
+        sources=(
+            PERMUT_SOURCE,
+            PERMUTATIONA_SOURCE,
+            PERMUTATIONA_HUGE_SOURCE,
+            COMBINA_FRACTION_SOURCE,
+            "decision 0272",
+        ),
     )
 )

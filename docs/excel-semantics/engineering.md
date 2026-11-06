@@ -73,7 +73,7 @@ orders 0-10, both functions) + 24 fractional-order + 32 large-order cells):
 - At x = 10 the sweep equals the Excel-desktop cached values of `ironcalc-calc/ENGINEERING/BESSEL.xlsx`, at the orders the workbook covers (0, 1, 7, 10).
 - The fdlibm fallback used before T-0908 was bit-exact on only 14 of the 364 cells; the asymptotic model above
   is bit-exact on all of them except the order cap (`BESSELJ(10,1000000)`, below).
-- A fractional order truncates: `BESSELJ(8,9.99)` equals `BESSELJ(8,9)`, `BESSELY(30,1.99)` equals `BESSELY(30,1)`.
+- A fractional order truncates: `BESSELJ(8,9.99)` equals `BESSELJ(8,9)`, `BESSELY(30,1.99)` equals `BESSELY(30,1)`. Even an order just below an integer truncates; it does not snap up ("Engineering whole-number arguments truncate exactly", T-4455).
 - Large orders: `BESSELJ(x,n)` is `0` (not an error) for n = 1000, 10000, 100000 and 1000000 (x = 10, 50), and
   `BESSELY(x,n)` is `#NUM!` for those n. The engine matches this up to n = 100000 but gives `#NUM!` for
   `BESSELJ(10,1000000)` (see "BESSEL order cap"). J underflows to 0 at these x, so no cap shows for J here (it shows above 10,000,000, below); Y is `#NUM!` from n = 1000 (the first `#NUM!` order is below).
@@ -205,6 +205,10 @@ The lbf factor is 444822.16152605
 (`CONVERT(1,"lbf","dyn")` is exactly that).
 Open gap: `CONVERT(1,"m","ft")` is 3.2808398950131235 in Excel and one ulp low in ours (probes/scalar-lift-open-a,
 probes/eng-convert-boolean-unit A7; T-2046, T-2047).
+Open gap: `CONVERT(255,"mi","km")` is 410.38272 and `CONVERT(255,"in","cm")` 647.7 in Excel for the web (the desktop
+calipers formulas_engineering golden agrees, D26:J27), and the engine is one ulp off (410.38272000000006,
+647.6999999999999); the negatives mirror them (probes/t4534-bessel-convert-web-values B1:B4, D1:D4, excel-graph,
+2026-11-06; T-4630).
 Overflow: `value * F_from` is not allowed to overflow when the answer is representable:
 `CONVERT(1E290,"m2","m2")` is 1E+290, `CONVERT(1E300,"ha","m2")` 1.0000000000000001E+304,
 `CONVERT(1E302,"J","J")` 1E+302. The engine divides first (`value / F_to * F_from`) when the
@@ -275,6 +279,54 @@ Backend: excel-graph.
 Status: VERIFIED
 Implemented in: `parse_unit` and `fn_convert` in functions/engineering/convert.rs (T-3817)
 Tasks: T-3817, T-3861
+
+## CONVERT drops a Kelvin prefix toward Rank and Reau (T-4085, T-4615)
+Rule: of the temperature units only `K` and `kel` take a decimal prefix, and Excel ignores that prefix in three
+directions: from a prefixed Kelvin to `Rank` or `Reau`, and from `Reau` to a prefixed Kelvin. The written number is
+converted as if the unit were plain `K`. From `Rank` to a prefixed Kelvin, and between a prefixed Kelvin and `C` or `F`
+in either direction, the prefix applies as "CONVERT temperature" reads it (the value is scaled by the source prefix
+before the formula and the result divided by the target prefix after it).
+Examples: `CONVERT(1000,"YK","Rank")` and `CONVERT(1000,"yK","Rank")` are both 1800, `CONVERT(1000,"mkel","Reau")`
+581.48, `CONVERT(1000,"Reau","YK")` 1523.15, but `CONVERT(1000,"Rank","YK")` is 5.555555555555556E-22 and
+`CONVERT(1000,"mK","C")` -272.15. The asymmetry between Rank to K (kept) and K to Rank (dropped) holds for every one of
+the 21 decimal prefixes, on `K` and `kel` alike. T-4085's Gate A cells are this rule:
+`CONVERT(-56.8944444765809,"ukel","Reau")` is -264.03555558126476 and `CONVERT(-68268277991730.8,"uK","Reau")`
+-54614622393603.16, `(v - 273.15)*0.8` of the written v. The math, which scales by the prefix, differs; Excel is the
+target (decision 0300).
+Evidence: probes/t4615-convert-prefixed-kelvin (346 cells: the 21 decimal prefixes on `K` and `kel` against `C`, `F`,
+`Rank` and `Reau` in both directions at 1000, plus S!A23:J23 at other values), excel-graph 2026-11-06;
+accuracy/CONVERT/s1 Calc!A65, A81 (T-4085).
+Ours: follows it (`convert_of`'s temperature branch, T-4615).
+Status: VERIFIED (excel-graph)
+Tasks: T-4085, T-4615
+
+## Gate A tables for IMABS, IMARGUMENT and CONVERT (T-4085)
+Rule: the three functions have Gate A tables (`eval/accuracy/tables/{IMABS,IMARGUMENT,CONVERT}/s1`, decision 0319),
+with definitions in `tools/src/rustsheet_tools/accuracy/defs/complex_modulus.py` and `defs/convert.py`:
+- IMABS is |z| and IMARGUMENT atan2(y, x) on (-π, π] of the text's two parts. `IMARGUMENT("0")` and
+  `IMARGUMENT("0+0i")` are `#DIV/0!` (s1 A75, A80, A81, A84; im-last-digit-sweep C21). A point whose quotient y/x
+  overflows has no value: ATAN2's `#NUM!` there is not probed for IMARGUMENT, so no such point is drawn.
+- CONVERT is the exact conversion with each unit's definition (or Excel's documented double: `sg`, `parsec`, `eV`, `u`
+  (probes/convert-unit-names A145, 1.660538782E-24), `mmHg` (A337, 133.322)), the prefixes as the doubles of "CONVERT constants and evaluation order" and the temperature forms with their
+  constants as doubles. The `flb` factor is ft × lbf, 1.3558179483314003 J (probes/convert-unit-names A481, B481).
+  Units of two classes are `#N/A` (12 table cells: A116, A121, A122, A123, A127, A128, A129, A130, A133, A134, A136,
+  A137). Over the literal one-call cells of eval/suites (gen-m9, probes, probes-numeric), the definitions give 2,746
+  numbers where Excel gives a number, 58 `#N/A` where Excel gives `#N/A`, and 2 `#DIV/0!` for IMARGUMENT; 269 IMABS
+  and 237 IMARGUMENT numbers match Excel's numbers, and no math number meets an Excel error or the reverse. Every
+  skipped unit string (1,966 cells, all `#N/A` or `#VALUE!` in Excel) is outside the list. The list's 1,259
+  strings are 1,257 that oracle cells accept plus the bare `cel` and `fah`, which the unit-names entry names
+  but no oracle cell has yet (no table point draws them).
+- Excel kept as the target (decision 0300): Excel is more than 1E-4 relative off the math at CONVERT s1 A65 and A81,
+  the prefixed-Kelvin-to-Réaumur cells above (21% and a factor of 1E6). No IMABS or IMARGUMENT point, and no eval cell
+  with a math sidecar, is that far off.
+- Last digits: the engine is bit-exact with Excel on 119 of 120 IMABS points (the miss,
+  `IMABS("2.03246951872072E-05-73.6214006894732i")`, Excel 73.62140068947602, is T-2538's), 120 of 120 IMARGUMENT
+  points and 188 of 200 CONVERT points. Ten CONVERT misses are inside the envelope on both sides (T-2046, T-2047): among
+  them Excel's `CONVERT(484.091427716597,"yd","yd")` is 484.0914277165971 (not the identity, so `yd` to `yd` goes through
+  the factor), while ours keeps `ga` to `ga` and `Ega` to `ga` one ulp off Excel.
+Evidence: the three s1 tables (excel-graph, 2026-11-06); `rustsheet-eval accuracy`.
+Status: VERIFIED (excel-graph)
+Tasks: T-4085, T-2538, T-2046, T-2047, T-4615
 
 ## Engineering function argument modes
 Rule: every argument of the M9 engineering functions lifts elementwise over an array literal. All
@@ -830,6 +882,19 @@ Evidence: probes/base-conv-boundaries A1:A425 (excel-graph, 2026-11-01; A322, A3
 Status: VERIFIED (excel-graph); implemented (`signed_base_value`, `write_base` and `number_and_places` in number_basis.rs, one path for all twelve).
 Tasks: T-3651
 
+## Engineering whole-number arguments truncate exactly, with no snap near an integer (T-4455)
+Rule: unlike LEFT, INDEX, DATE and the others that share `NEAR_INTEGER_TOLERANCE` (text.md "LEFT, RIGHT and REPLACE round counts up near an integer"), no whole-number argument of an engineering function snaps up to the next integer. A value any distance below an integer reads the integer below, however close: the Bessel order of BESSELJ, BESSELY, BESSELI and BESSELK, the `places` of DEC2BIN, DEC2HEX, HEX2BIN and OCT2BIN, the shift of BITLSHIFT and BITRSHIFT, and the DEC2* number (truncated toward zero, so on both sides of zero alike). The probe tried seven gaps below n, from LEFT's snap edge 2^-22+2^-33 down to 1E-15, and every one truncated:
+- `BESSELJ(5,2-(2^-22+2^-33))` is order 1 and `BESSELK(5,100-1E-10)` order 99 (A1:D14).
+- `DEC2BIN(9,4-1E-15)` and `DEC2HEX(9,1-1E-15)` are `#NUM!`. `DEC2BIN(9,10-1E-15)` is "000001001", 9 digits (E1:H14).
+- `DEC2BIN(2-(2^-22+2^-33))` is "1" (I1:I14).
+- `DEC2BIN(-1+2^-23)` and `DEC2BIN(-1+2^-22)` are "0", not "1111111111". `DEC2BIN(-500+1E-10)` is -499 (J1:J16, L1:L16).
+- `BITLSHIFT(1,2-(2^-22+2^-33))` is 2. `BITLSHIFT(2^47,-2+2^-23)` shifts right by 1 (M1:P16).
+The BIT* number is `#NUM!` at every gap: `BITOR(1-(2^-22+2^-33),0)` and `BITLSHIFT(100-1E-10,0)` (Q1:R14). Without a snap the number keeps its fraction, so this is the existing fraction check (gen-m9/7c7e5bff12d93365 Calc!A145). It makes no difference whether that check sees the raw value or a snapped one.
+The large-base `n-1E-15` cells (row 10 of each column) read n only because `100-1E-15`, `500-1E-15`, `1000-1E-15` and `40-1E-15` already equal n in double precision: 1E-15 is below half an ulp there.
+Evidence: probes/t4455-near-integer-eng-args A1:R16 (excel-graph, 2026-11-06), 260 cells.
+Status: VERIFIED (excel-graph); implemented (plain truncation in bessel.rs, number_basis.rs and bit_operations.rs; no `near_integer` helper applies, and every cell already passed).
+Tasks: T-4455
+
 ## The second argument's error wins in the two-argument base conversions, DELTA and GESTEP
 Rule: DEC2BIN, DEC2HEX, DEC2OCT, BIN2OCT, BIN2HEX, HEX2BIN, HEX2OCT, OCT2BIN, OCT2HEX, DELTA and GESTEP read the second argument (`places`, `number2`, `step`) before the first, scalar or inside one array element. `DEC2BIN("x",NA())` is `#N/A` and `DEC2BIN(NA(),"x")` is `#VALUE!`; the same for all eleven. BESSELJ, BITLSHIFT, CONVERT, COMPLEX, IMPOWER and ERF instead report the first argument's error. In the nine base conversions an invalid places value wins too, not only its error: `DEC2BIN(NA(),0)` is `#NUM!` (gen-m9 sweep, "Base conversions" below; T-2545). Whether DELTA's and GESTEP's second argument also wins by value is unprobed.
 Evidence: probes/eng-first-vs-second-error A1:D11 (excel-graph, 2026-10-19); probes/eng-later-argument-lift M2, M8.
@@ -908,7 +973,11 @@ Evidence: probes/eng-im-overflow (excel-graph).
   `...915853`).
 - An input part of `1E308` or more is `#NUM!` in every IM* function (`IMREAL("1E308")`,
   `IMSUM("1E308","0")`); ours already matches. `IMSQRT("1E307")` and `IMSQRT("4E307")` are `#NUM!`
-  too (A33, A34). The threshold per part lies between 1.34E154 and 1.35E154, consistent with sqrt(DBL_MAX) = 1.34078E154 (exact boundary unprobed): IMSQRT squares each
+  too (A33, A34). The threshold per part lies between 1.34E154 and 1.35E154, consistent with sqrt(DBL_MAX) = 1.34078E154. The measured bracket: complex text truncates to 15 significant digits (T-3912, above; A13 against A37 shows truncation, not rounding), so `1.3407807929942594E154`, `...596E154` and `...597E154` all reach IMSQRT as `1.34078079299425E154` (identical results in A1, A7, A13: `IMSQRT("1.3407807929942597E154")` is `1.15792089237316E+77`, `"-1.3407807929942597E154"` is `7.09312496098692E+60+1.15792089237316E+77i`), accepted as a real part, an imaginary part, negated, and with a `+1i` or `-1i` other part. `"1.34078079299426E154"` (real, imaginary, negated, with `+1i`) and `"1.3408E154"`, and every larger probe to `1.349E154`, are `#NUM!`. The cut is therefore between 1.34078079299425E154 and 1.34078079299426E154, the finest text can show; the 17-digit doubles around sqrt(DBL_MAX) cannot be told apart (probes/t4461-imsqrt-cut A1:A41, excel-graph, T-4461; ours matches every cell). A number reaches the cut to the double: `IMSQRT(POWER(2,512)-POWER(2,459))`
+  (the largest double whose square is finite) gives a value and `IMSQRT(POWER(2,512))` `#NUM!`, either sign
+  (probes/t4461-imsqrt-cut-numbers A1:D2, excel-graph 2026-11-06). COMPLEX writes 15 rounded digits, so
+  `COMPLEX(POWER(2,512)-POWER(2,459),0)` is already `#NUM!` under IMSQRT (A3:D8; its `IMREAL` is 1.34078079299426E154, B15).
+  `=` calls the two doubles equal (A15 TRUE). Ours matches every cell. IMSQRT squares each
   part, and a part past it is `#NUM!` (`"1.34E154"` is `1.15758369027902E+77`, `"1.35E154"`,
   `"1E160i"`, `"-1E160"`, `"1E154+1.4E154i"` are `#NUM!`). When each square is finite but their
   sum overflows, the result is `0`, not an error: `IMSQRT("1E154+1E154i")`, `"-1E154-1E154i"`,
@@ -1316,7 +1385,13 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   excel-graph, 2026-11-02): `IMREAL("1.2345678901234567+2.2345678901234567i")` is 1.23456789012345 and its IMSUM
   "1.23456789012345+2.23456789012345i", "0.30000000000000004" is 0.3, "123456789012345678" 1.23456789012345E+17 and
   "9007199254740993+9007199254740993i" "9007199254740990+9007199254740990i" (matched since T-3644; the lexer-based
-  reader before it kept the 17-digit double). Unprobed (ours in brackets): a lone sign after spaces ("1+ i", " i") [1, as "i"];
+  reader before it kept the 17-digit double). Negative parts are cut too, in either position (T-4593, from existing
+  excel-graph cells): `IMCSCH("-354.00000000000006+i")` and `IMCSCH("-354.0000000000005+i")` are the same text
+  (probes/t3912-imcsch-band-edges A40, A42), and `IMSECH("-1.000000000000001-1.000000000000001i")` equals
+  `IMSECH("-1-1i")` (probes/t3643-imsech-grid Q17, P16); over the IM*SINH/COSH/SIN/COS/CSCH/SECH cells of the suites
+  whose parts the cut changes, a correctly rounded reference matches Excel on 34 cells only when it reads the cut
+  parts and on none only when it reads the 17-digit doubles. Exponent-form parts and `j` texts past 15 digits have
+  no IM* cell; they are taken to follow VALUE. Unprobed (ours in brackets): a lone sign after spaces ("1+ i", " i") [1, as "i"];
   a tab before the suffix ("2"&tab&"i") [`#NUM!`]; year-less dates in a part ("1/2+2i"; no case keeps one, as its
   value moves with the current year) [read as VALUE reads it].
 - **Large parts in plain notation.** An IM* part is written in plain notation up to a decimal exponent of 20, zero-padded
@@ -1351,7 +1426,7 @@ Evidence: gen-m9 cases of seeds 2258, 22580 and 22581 (excel-graph, 2026-10-22/2
 Excel cell of eval/suites/gen-m9 with its case id in the owning task. The engine-side formulas (SIN, (EXP(4)-EXP(-4))/2,
 COS(ATAN2(-1,0)/2), ln|z|/0.693147180559945) were evaluated in RustSheet's own worksheet functions, which match Excel.
 Status: VERIFIED (excel-graph) for the observed values. The mechanisms (IM trig of a real as SIN/COS/TAN, exp-based sinh/cosh, IMSQRT through COS and ATAN2) are fitted against RustSheet's own kernels and reproduce every cited cell; T-2534, T-2535 and T-2536 re-confirm them on the cells. The IMLOG2 and IMCSC formulations are UNVERIFIED candidates.
-Tasks: T-2258, T-2532 to T-2551, T-2420, T-2421, T-2335, T-2389, T-2044, T-2117, T-1966
+Tasks: T-2258, T-2532 to T-2551, T-2420, T-2421, T-2335, T-2389, T-2044, T-2117, T-1966, T-4593
 
 ## Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2* (T-2420)
 Rule: IM* read one leading `+` like a leading `-`: `IMABS("+i")` 1, `IMABS("+3+4i")` 5, `IMABS("+4i")` 4, `IMSUB("+i","1")` "-1+i", `IMDIV("2i","+i")` "2"; a second sign (`"++i"`, `"+-i"`, `"-+i"`, `"1++i"`) is `#NUM!` (probes/eng-leading-plus-oct-bool A1:A26).
@@ -1439,6 +1514,105 @@ probes/t4422-bessel-tiny-x-bisect (432 cells, the 3-digit brackets above, excel-
 Status: VERIFIED (excel-graph)
 Implemented in: functions/engineering/transcendental/bessel_excel.rs (`jn_miller`), bessel_i.rs (`in_miller`)
 Tasks: T-4083, T-4422
+
+## BESSELY at a tiny x and a small order (T-4458)
+Rule: at a tiny x, BESSELY of orders 2 to 10 is `#NUM!` exactly from the first x at which the upward recurrence
+(`b * (2j * (1/x)) - a` from NR's `y0`/`y1`, each product and difference stored as a double; T-2548) overflows a
+double. Below the cut every probed x is `#NUM!` down to the 10^-k grid's last decade, and no probed cell is 0. Excel's
+cut falls between the same adjacent cells as the double model's. Each order's last answering x and first `#NUM!` x:
+
+| order | answers / `#NUM!` | the model's cut |
+|---|---|---|
+| 2 | 8.416E-155 / 8.415E-155 | 8.41584E-155 |
+| 3 | 3.049E-103 / 3.048E-103 | 3.04849E-103 |
+| 4 | 2.031E-77 / 2.030E-77 | 2.03049E-77 |
+| 5 | 6.710E-62 / 6.709E-62 | 6.70964E-62 |
+| 6 | 1.545E-51 / 1.544E-51 | 1.54496E-51 |
+| 7 | 3.998E-44 / 3.997E-44 | 3.99771E-44 |
+| 8 | 2E-38 / 1E-38 | 1.47860E-38 |
+| 9 | 4E-34 / 3E-34 | 3.21360E-34 |
+| 10 | 1E-30 / 9E-31 | 9.59003E-31 |
+
+Order 1 answers at every normal x probed (down to 3E-308; `BESSELY(3E-308,1)` is -2.1220659066666666E+307, which is
+`-TWO_OVER_PI/x` with NR's 0.636619772). Orders 2 to 7 hold to 4 significant digits; orders 8 to 10 were mapped on
+mantissas 9..1 only. The digits next to a cut follow the model. `BESSELY(2.036E-77,4)` looked like an exception: it is
+-1.7783214437962194E+308 in all three fills (t4458-bessely-tiny-x-cuts D32 twice, t4467-bessely-d32-refill D3), 4 ulp
+from the model at the nearest double of 2.036E-77. But Excel reads that literal one ulp high, as 2.0360000000000002E-77
+(t4467-bessely-d32-refill E1; numbers.md "Literals past n = 15 multiply by a table of 10^±16q", T-4467), and the model
+at that x is Excel's value. `2036E-80` and `20.36E-78` read and answer the same (D6, D7). So the cell is a literal-read
+quirk, not a BESSELY one.
+Order 1 over the normal band below 3E-308 (t4467-bessely-d32-refill A1:A6, excel-graph, 2026-11-06): 2.5E-308, 2.3E-308,
+2.226E-308 and 2.2250738585073E-308 answer `-TWO_OVER_PI/x` (2.2250738585073E-308 gives -2.8611174841049047E+307).
+`BESSELY(2.2250738585072014E-308,1)` is `#NUM!`: the literal's 15-digit cut, 2.22507385850720E-308, is below DBL_MIN
+and reads as 0.
+Unreliable, so no target (the reproducibility floor): a subnormal x. Excel reads a subnormal literal as 0 ("Subnormal
+flush edges"), and Excel for the web refuses a workbook that holds one (`unsupportedWorkbook`). A subnormal built as a
+difference (`3.06E-308-2.5E-308`) is kept (`(x)*1E300` gives 5.6E-9). Excel's BESSELY of it was inconsistent within
+one workbook:
+- `BESSELY(x,1)` was `#NUM!` in one cell and 0 in another for the same x;
+- `ISNUMBER` of the same formula disagreed with both;
+- the same workbook's order-7 cells turned `#NUM!` a decade early (`BESSELY(3E-43,7)` `#NUM!`).
+The bisection fill gives that cell its model value, -1.3413552397695476E+302, and so does the refill without subnormal
+arguments. Whatever Excel does at a subnormal x leaks into later cells, so the cut of order 1 across 1/DBL_MAX
+(5.5627E-309) is unprobed. The first fill is kept as research data (docs/research/t4458/fill1), not as an eval case.
+Ours: `excel_bessel_y`'s non-finite result is `#NUM!` at the formula layer, so its cut is the model's.
+Evidence: probes/t4458-bessely-tiny-x-cuts (430 cells, orders 1 to 7 at decade, 1-digit, 3-digit and 4-digit
+resolution around each cut) and probes/t4458-bessely-tiny-x-bisect (263 cells: order 7 from 4E-43 to 3E-43, orders 8
+to 10), both from excel-graph, 2026-11-06. Generator: docs/research/t4458/gen_probe.py.
+Status: VERIFIED (excel-graph)
+Implemented in: functions/engineering/transcendental/bessel_excel.rs (`excel_bessel_y`)
+Tasks: T-4458, T-4467
+
+## BESSELK at a tiny x (T-4459)
+Rule: BESSELK of every order is `#NUM!` once `x/2` is subnormal (x < 2^-1021 = 4.4501477170144028E-308), although K0
+(about 708) and K1 (about 2.2E+307) are finite there. Above that, orders 0 and 1 answer at every normal x probed, and
+orders 2 to 7 are `#NUM!` exactly from the first x at which the upward recurrence (`bkm + 2j/x * bk` from NR's
+`bessk0`/`bessk1`, in plain doubles) overflows. Excel's cut falls between the same adjacent cells as that double model's.
+Each order's last answering x and first `#NUM!` x:
+
+| order | answers / `#NUM!` |
+|---|---|
+| 0, 1 | 4.45014771701441E-308 / 4.4501477170144E-308 |
+| 2 | 1.055E-154 / 1.054E-154 |
+| 3 | 3.544E-103 / 3.543E-103 |
+| 4 | 2.274E-77 / 2.273E-77 |
+| 5 | 7.344E-62 / 7.343E-62 |
+| 6 | 1.666E-51 / 1.665E-51 |
+| 7 | 4.265E-44 / 4.264E-44 |
+
+- The orders 0 and 1 cut was found with literals written as 2^-1021 plus 1, 2, 3, 4, 8 and more ulps. Excel reads a
+  literal at 15 significant digits (numbers.md "Formula number literals are read at 15 significant digits"), so plus 1
+  to 4 ulps all ask 4.4501477170144E-308 (below 2^-1021, `#NUM!`) and plus 8 and 16 ulps ask 4.45014771701441E-308
+  (above it; K1 = 2.2471164185778914E+307). Read as full doubles, the cells would suggest a cut 5 to 8 ulps above
+  2^-1021.
+- `x/2` going subnormal is the mechanism these cells fit, and x = 2^-1021 itself answers: `BESSELK(2^-1021,0)` is
+  707.8192028722641 and order 1 2.247116418577895E+307, built as `2^-1021` or `2^-1000/2^21` (both exactly 2^-1021:
+  `2^-1021*2^1021` is 1). So the test is `x < 2^-1021` (probes/t4552-bessel-tiny-x-cut A1:A5, B1:B4, T-4552). A
+  subnormal x is not a target: excel-graph refuses a workbook holding a subnormal literal ("BESSELY
+  at a tiny x and a small order").
+- Order 0 from 1E-10 to 1E-307 gives `-ln(x/2) I0(x) + poly` (`BESSELK(1E-307,0)` = 707.009555069732).
+RustSheet matches: `bessel_k` returns `#NUM!` below `2 * f64::MIN_POSITIVE` and otherwise runs the double recurrence.
+Evidence: probes/t4459-besselk-tiny-x-cuts (186 cells: orders 0 and 1 by decade down to 2.2250738585072E-308, orders 2
+to 7 at decade, 1-digit and 4-digit steps around each cut), probes/t4459-besselk-tiny-x-bisect (60 cells, orders 0 to
+2 from 9E-308 to 3.5E-308), probes/t4459-besselk-tiny-x-ulps (24 cells); excel-graph, 2026-11-06.
+Status: VERIFIED (excel-graph)
+Implemented in: functions/engineering/transcendental/bessel_k.rs (`bessel_k`)
+Tasks: T-4459, T-4552
+
+## BESSELJ, BESSELI and BESSELY at the bottom of the normal range (T-4552)
+Rule: BESSELJ, BESSELI and BESSELY of orders 0 and 1 are never `#NUM!` at a tiny normal x (unlike BESSELK, whose cut is
+`x < 2^-1021`), but BESSELJ and BESSELI return 0 for a subnormal result. Order 1 is about x/2 there, so it is 0 once
+x/2 drops below 2^-1022: `BESSELI(4.4501477170144E-308,1)` (x/2 = 2.2250738585072E-308, just below 2^-1022) is 0, but
+`BESSELI(4.45014771701441E-308,1)` is 2.225073858507205E-308 and `BESSELI(2^-1021,1)` exactly 2^-1022;
+`BESSELJ(2^-1022,1)` and `BESSELI(2^-1022,1)` are 0. BESSELJ's order 1 stays a little above x/2 (`BESSELJ(4.4501477170144E-308,1)`
+is 2.225073858845438E-308, NR's rational form), so it keeps its value at 4.4501477170144E-308. Order 0 is
+1.00000000283141 (J) and 1 (I) throughout; BESSELY order 0 is -450.6117008295493 at 2^-1021 and -451.0529720308492 at
+2^-1022, order 1 -1.430558742052516E+307 and -2.861117484105032E+307.
+Evidence: probes/t4552-bessel-tiny-x-cut C1:E8 (excel-graph, 2026-11-06).
+Status: VERIFIED (excel-graph)
+Implemented in: functions/engineering/bessel.rs (`fn_besselj` and `fn_besseli` flush a subnormal result with
+`flush_subnormal`, as BESSELK and ERFC do; ours returned the subnormal before T-4552).
+Tasks: T-4552
 
 ## BESSELI overflow point (T-2613)
 Evidence: probes/besseli-overflow-cut-sweep (x = 709.50 to 709.78 step 0.01, orders 0 and 1), -fine (709.700 to 709.710 step 0.001, orders 0, 1 and 5), -finest (709.7001 to 709.7009, 709.70001, 709.70005, 709.70009, order 0), excel-graph.

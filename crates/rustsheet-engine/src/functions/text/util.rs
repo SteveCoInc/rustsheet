@@ -1,14 +1,21 @@
 use std::borrow::Cow;
 
-use super::casefold::{char_offsets, fold_for_before_after};
+use super::casefold::{char_offsets, fold_for_match};
 
 use crate::{
     calc_result::CalcResult,
     cast::{calc_result_to_text, MAX_TEXT_UNITS},
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
     functions::util::near_integer::near_integer_count,
+    number_format::to_excel_precision,
     text::Text,
 };
+
+/// The length of `s` in UTF-16 code units, the unit every M5 text function counts in (LEN, FIND,
+/// the TEXTBEFORE bounds, CONCAT's cap; probes/text-surrogate-positions A1).
+pub(crate) fn utf16_len(s: &str) -> usize {
+    s.encode_utf16().count()
+}
 
 /// `text` with each UTF-16 code unit as one `char`, so that `char` positions (and a regex `.`)
 /// are the code-unit positions FIND and SEARCH count in (`SEARCH("?b","😀b")` is 2,
@@ -89,12 +96,12 @@ pub(crate) struct Delimiters {
 }
 
 impl Delimiters {
-    /// TEXTBEFORE and TEXTAFTER's list, folded by [`fold_for_before_after`].
+    /// TEXTBEFORE and TEXTAFTER's list, folded by [`fold_for_match`].
     pub(crate) fn new(exact: Vec<String>) -> Self {
-        Self::folded_with(exact, fold_for_before_after)
+        Self::folded_with(exact, fold_for_match)
     }
 
-    /// A list folded by `fold` (TEXTSPLIT's is `fold_for_split`).
+    /// A list folded by `fold` (TEXTSPLIT's is `fold_for_match`).
     pub(crate) fn folded_with(exact: Vec<String>, fold: fn(&str) -> String) -> Self {
         let folded = exact.iter().map(|d| fold(d)).collect();
         Delimiters { exact, folded }
@@ -253,7 +260,7 @@ fn match_text<S: AsRef<str>>(
             // Fold char by char (one char in, one char out) and map the match back to byte
             // offsets of the original; offsets found in a lowercased copy are not valid there
             // (T-1796, probes/textbefore-casefold-length).
-            let folded_text = fold_for_before_after(text);
+            let folded_text = fold_for_match(text);
             let (left, right) = if instance_num > 0 {
                 text_sensitive(&folded_text, delimiters, instance_num, instances)
             } else {
@@ -341,9 +348,7 @@ fn text_sensitive_reverse<S: AsRef<str>>(
             }
             local_index += 1;
             if instances != Instances::Overlapping {
-                skip = text
-                    .get(byte_index..byte_index + len)
-                    .map_or(0, |m| m.encode_utf16().count());
+                skip = text.get(byte_index..byte_index + len).map_or(0, utf16_len);
             }
         }
         let Some(c) = chars.next() else {
@@ -386,8 +391,14 @@ pub(super) fn substitute_element(
             // Excel accepts 1..=2^31-2 after flooring: 2147483646.9 is fine, 2147483647 and
             // above (1E+15, 1E+300) are #VALUE!, even with no match and before an empty
             // old_text short-circuits (probes/substitute-instance-num-bound, T-2279). A value just
-            // below an integer counts as that integer (probes/t4453-near-integer-text-args F1:F21).
-            let n = near_integer_count(n?);
+            // below an integer counts as that integer (probes/t4453-near-integer-text-args F1:F21),
+            // after a cut to 15 significant digits: `2147483647-4.5E-6` reads 2147483647 and is
+            // #VALUE!, `2147483647-5E-6` reads 2147483646 (probes/t4468-substitute-cap-window,
+            // t4468-substitute-cap-sweep; T-4468). Only the cap shows the cut: at ten integer
+            // digits it reaches 5E-6, far past the 2^-22 snap, and no instance up there exists.
+            // `to_excel_precision` breaks an exact tie to even, but below 2^31 a double has at
+            // least 22 fraction bits and no tie at the 15th digit can cross an integer.
+            let n = near_integer_count(to_excel_precision(n?, 15));
             if !(1.0..=MAX_SUBSTITUTE_INSTANCE).contains(&n) {
                 return Err(Error::VALUE);
             }

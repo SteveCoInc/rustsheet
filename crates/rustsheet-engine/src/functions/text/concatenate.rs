@@ -1,3 +1,4 @@
+use super::util::utf16_len;
 use crate::arithmetic::lambda_text_error;
 use crate::calc_result::Range;
 use crate::functions::util::{array_node_to_calc_result, RangeItem};
@@ -38,10 +39,7 @@ struct JoinSize {
 impl JoinSize {
     fn new(delimiters: &[String]) -> Self {
         JoinSize {
-            delimiter_units: delimiters
-                .iter()
-                .map(|d| d.encode_utf16().count())
-                .collect(),
+            delimiter_units: delimiters.iter().map(|d| utf16_len(d)).collect(),
             counted: 0,
             units: 0,
         }
@@ -58,9 +56,7 @@ impl JoinSize {
     fn exceeds(&mut self, values: &[String]) -> bool {
         for value in values.get(self.counted..).unwrap_or_default() {
             let separator = self.separator();
-            self.units = self
-                .units
-                .saturating_add(separator + value.encode_utf16().count());
+            self.units = self.units.saturating_add(separator + utf16_len(value));
             self.counted += 1;
         }
         self.units > MAX_TEXT_UNITS
@@ -146,7 +142,7 @@ struct ConcatText {
 
 impl ConcatText {
     fn push(&mut self, piece: &str) {
-        self.units = self.units.saturating_add(piece.encode_utf16().count());
+        self.units = self.units.saturating_add(utf16_len(piece));
         if self.units <= MAX_TEXT_UNITS {
             self.text.push_str(piece);
         }

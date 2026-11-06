@@ -586,3 +586,109 @@ fn a_sheet_name_starting_with_a_refused_name_character_is_quoted() {
     assert_eq!(model._get_text("A3"), *"8");
     assert_eq!(model._get_text("A4"), *"=ⓑ!A1+1");
 }
+
+/// Special forms and reference functions passed by name (probes/t4450-eta-special-forms):
+/// LET and LAMBDA are not functions by name (`#NAME?`, a helper's `#VALUE!`), IF and CHOOSE
+/// read a reference value argument as a blank, IFERROR and INDEX keep their values.
+#[test]
+fn special_forms_passed_by_name() {
+    let mut model = new_empty_model();
+    for (cell, value) in [("A1", "1"), ("A2", "3"), ("A3", "5")] {
+        model._set(cell, value);
+    }
+    for (cell, value) in [("B1", "2"), ("B2", "4"), ("B3", "6")] {
+        model._set(cell, value);
+    }
+    model._set("D1", "=ERROR.TYPE(_xleta.LAMBDA)");
+    model._set("D2", "=LET(f,_xleta.LAMBDA,f(1))");
+    model._set("D3", "=ROWS(MAP(A1:A3,_xleta.LAMBDA))");
+    model._set("D4", "=ROWS(BYROW(A1:B3,_xleta.LET))");
+    model._set("D5", "=ISBLANK(LET(f,_xleta.IF,f(TRUE,A1)))");
+    model._set("D6", "=ARRAYTOTEXT(MAP(A1:A3,B1:B3,_xleta.CHOOSE))");
+    model._set("D7", "=ARRAYTOTEXT(MAP(A1:A3,{7;8;9},_xleta.IF))");
+    model._set("D8", "=ARRAYTOTEXT(MAP(A1:A3,B1:B3,_xleta.IFERROR))");
+    model._set("D9", "=ARRAYTOTEXT(MAP(A1:A3,{1;2;1},_xleta.INDEX))");
+    model._set("D10", "=ROWS(LET(f,_xleta.IF,f(TRUE,A1:A3)))");
+    model._set("D11", "=ISBLANK(LET(f,_xleta.IF,f(TRUE,(A1,B1))))");
+    model.evaluate();
+
+    assert_eq!(model._get_text("D1"), *"5");
+    assert_eq!(model._get_text("D2"), *"#NAME?");
+    assert_eq!(model._get_text("D3"), *"#VALUE!");
+    assert_eq!(model._get_text("D4"), *"#VALUE!");
+    assert_eq!(model._get_text("D5"), *"TRUE");
+    assert_eq!(model._get_text("D6"), *", #VALUE!, #VALUE!");
+    assert_eq!(model._get_text("D7"), *"7, 8, 9");
+    assert_eq!(model._get_text("D8"), *"1, 3, 5");
+    assert_eq!(model._get_text("D9"), *"1, #REF!, 5");
+    assert_eq!(model._get_text("D10"), *"#VALUE!");
+    assert_eq!(model._get_text("D11"), *"TRUE");
+}
+
+/// A function passed by name and called through LET with a count it does not take is `#VALUE!`;
+/// one that takes none runs (probes/t4450-eta-special-forms E85:F103, L1:L13).
+#[test]
+fn function_by_name_called_without_arguments() {
+    let mut model = new_empty_model();
+    model._set("A1", "=LET(f,_xleta.SUM,f())");
+    model._set("A2", "=LET(f,_xleta.PI,f())");
+    model._set("A3", "=LET(f,_xleta.ROW,f())");
+    model._set("A4", "=LET(f,_xleta.SUM,f(1,2))");
+    model._set("A5", "=LET(f,_xleta.ABS,f(1,2))");
+    model._set("A6", "=ERROR.TYPE(LET(f,_xleta.IF,f()))");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#VALUE!");
+    assert_eq!(model._get_text("A2"), *"3.141592654");
+    assert_eq!(model._get_text("A3"), *"3");
+    assert_eq!(model._get_text("A4"), *"3");
+    assert_eq!(model._get_text("A5"), *"#VALUE!");
+    assert_eq!(model._get_text("A6"), *"3");
+}
+
+/// A wrong argument count at any link of a chained call is `#VALUE!`, ahead of an error argument;
+/// an optional parameter at a later link may be omitted, but a link with no arguments is still
+/// too few (probes/t4482-chained-call-arity A1:E10, -optional A1:E3; T-4482).
+#[test]
+fn a_chained_call_with_a_wrong_count_at_a_link_is_value_error() {
+    let mut model = new_empty_model();
+    model
+        .new_defined_name("MYFN", None, "=LAMBDA(x,LAMBDA(y,x*y))")
+        .unwrap();
+    let cases = [
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1)()", "#VALUE!"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1)(2,3)", "#VALUE!"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1,2)(3)", "#VALUE!"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))()(3)", "#VALUE!"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1/0)()", "#VALUE!"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1)(NA(),2)", "#VALUE!"),
+        ("=LET(f,LAMBDA(x,LAMBDA(y,x*y)),f(3)())", "#VALUE!"),
+        ("=MYFN(3)(4,5)", "#VALUE!"),
+        ("=MYFN(3)()", "#VALUE!"),
+        ("=IFERROR(LAMBDA(x,LAMBDA(y,x+y))(1)(),\"e\")", "e"),
+        ("=LAMBDA(x,LAMBDA(y,x+y))(1)(2)", "3"),
+        (
+            "=LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(2)",
+            "3",
+        ),
+        (
+            "=LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)()",
+            "#VALUE!",
+        ),
+        (
+            "=LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(2,3)",
+            "6",
+        ),
+    ];
+    for (i, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("A{}", i + 1), formula);
+    }
+    model.evaluate();
+    for (i, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", i + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
+}

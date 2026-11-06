@@ -18,6 +18,11 @@
     "v": "1.0000000000000000254531336860572858823090496609493e-318",
     "f": "=GAMMA.DIST(1E-10,1,1E+307*10,TRUE)"
    },
+   "A11": {
+    "t": "e",
+    "why": "the density at a subnormal x / beta",
+    "f": "=GAMMADIST(1E-10,1,1E+300,FALSE)"
+   },
    "A12": {
     "t": "e",
     "why": "the density at a subnormal x / beta",

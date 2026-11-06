@@ -303,6 +303,10 @@ pub struct RunReport {
     /// suites' origin and milestone tags.
     #[serde(default)]
     pub catalog_coverage: Vec<MilestoneCoverage>,
+    /// One row per pivot catalog id with its measured cells (T-4126); filled by the caller, which
+    /// reads the catalog.
+    #[serde(default)]
+    pub pivot_features: crate::pivot_features::PivotFeatures,
     /// The exit measures of decision 0085 per milestone (T-2177); derived from the rows above.
     #[serde(default)]
     pub milestone_exit: Vec<crate::milestone_exit::ExitRow>,
@@ -316,6 +320,10 @@ pub struct RunReport {
     /// [`REAL_WORLD_SUITES`], whose formula cells `functions[].real_world_calls` counts (T-0079).
     #[serde(default)]
     pub real_world_suites: Vec<String>,
+    /// [`crate::closeness::THIRTEEN_DIGIT_FAMILY`], the functions whose `functions[].closeness`
+    /// `scripts/family_net.py` sums for decision 0267 item 6 (c) (T-4159).
+    #[serde(default)]
+    pub thirteen_digit_family: Vec<String>,
     /// Argument classes per in-scope function and catalog parameter (T-0077).
     #[serde(default)]
     pub argument_coverage: Vec<FunctionArguments>,
@@ -491,6 +499,10 @@ impl RunReport {
             poi_m8_subset: poi_m8_subset::summarize(results),
             argument_coverage: argument_coverage::summarize(catalog, results),
             real_world_suites: REAL_WORLD_SUITES.iter().map(ToString::to_string).collect(),
+            thirteen_digit_family: crate::closeness::THIRTEEN_DIGIT_FAMILY
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
             unattributed_off: attribution::unattributed_off(catalog, results),
             attributed_off: attribution::attributed_off(catalog, results),
             // The caller fills the milestone sections, the checkpoint and `run`.
@@ -737,8 +749,10 @@ impl RunReport {
             }
             let _ = writeln!(md);
         }
+        crate::pivot_scoring::write_markdown(&self.cases, &mut md);
         self.write_evidence(&mut md);
         catalog_coverage::write_markdown(&self.catalog_coverage, &mut md);
+        crate::pivot_features::write_markdown(&self.pivot_features, &mut md);
         out_of_scope::write_markdown(&self.out_of_scope, &self.suites, &mut md);
         md
     }

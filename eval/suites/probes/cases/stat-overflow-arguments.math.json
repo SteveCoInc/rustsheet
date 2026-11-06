@@ -18,15 +18,60 @@
     "v": "0.6875",
     "f": "=BETA.DIST(0,2,3,TRUE,C2,C1)"
    },
+   "A11": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(C4,0)"
+   },
+   "A12": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(C4,1)"
+   },
+   "A13": {
+    "t": "e",
+    "why": "the product overflows a double (#NUM!)",
+    "f": "=PERMUT(200,180)"
+   },
+   "A14": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(1E15,1E15)"
+   },
+   "A15": {
+    "t": "e",
+    "why": "the product overflows a double (#NUM!)",
+    "f": "=PERMUT(171,171)"
+   },
+   "A16": {
+    "t": "n",
+    "v": "7.2574156153079989673967282111292631147169916812965e+306",
+    "f": "=PERMUT(170,170)"
+   },
    "A2": {
     "t": "n",
     "v": "2.7556759606310752848350902993240598122297443245908e-770",
     "f": "=F.DIST(C1,2,3,FALSE)"
    },
+   "A3": {
+    "t": "e",
+    "why": "df1·x overflows the double range (#DIV/0!)",
+    "f": "=F.DIST.RT(C1,2,3)"
+   },
+   "A4": {
+    "t": "e",
+    "why": "df1·x overflows the double range (#DIV/0!)",
+    "f": "=FDIST(C1,2,3)"
+   },
    "A5": {
     "t": "n",
     "v": "1.0",
     "f": "=F.DIST(C3,2,3,TRUE)"
+   },
+   "A6": {
+    "t": "n",
+    "v": "1.83711730708738342896185740206468177022278880168e-450",
+    "f": "=F.DIST.RT(C3,2,3)"
    },
    "A7": {
     "t": "n",
@@ -38,10 +83,100 @@
     "v": "0.0",
     "f": "=BETA.DIST(C1,2,3,FALSE,C2,C1)"
    },
+   "A9": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=BETADIST(C1,2,3,C2,C1)"
+   },
+   "B10": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(4294967296,1)"
+   },
+   "B11": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(9007199254740992,1)"
+   },
    "B12": {
     "t": "n",
     "v": "1.0",
     "f": "=F.DIST(C1,1,3,TRUE)"
+   },
+   "B13": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.DIST.RT(C3,2,3)+F.DIST(C1,0.5,3,TRUE)"
+   },
+   "B6": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(1E15,1)"
+   },
+   "B7": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(1E16,1)"
+   },
+   "B8": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(2147483647,1)"
+   },
+   "B9": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(2147483648,1)"
+   },
+   "D1": {
+    "t": "n",
+    "v": "1000000.0",
+    "f": "=PERMUT(1000000,1)"
+   },
+   "D2": {
+    "t": "n",
+    "v": "100000000.0",
+    "f": "=PERMUT(100000000,1)"
+   },
+   "D3": {
+    "t": "n",
+    "v": "1000000000.0",
+    "f": "=PERMUT(1000000000,1)"
+   },
+   "D4": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(1E10,1)"
+   },
+   "D5": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(1E12,1)"
+   },
+   "D6": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(1E14,1)"
+   },
+   "D7": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(999999999999999,1)"
+   },
+   "D8": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(1E15,0)"
+   },
+   "D9": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=PERMUT(1E10,2)"
+   },
+   "E1": {
+    "t": "n",
+    "v": "1073741823.0",
+    "f": "=PERMUT(1073741823,1)"
    },
    "E10": {
     "t": "n",
@@ -52,6 +187,41 @@
     "t": "n",
     "v": "3.3079733725307522062718336361031558396094957287313e-770",
     "f": "=F.DIST(C1,1,3,FALSE)"
+   },
+   "E2": {
+    "t": "n",
+    "v": "1073741824.0",
+    "f": "=PERMUT(1073741824,1)"
+   },
+   "E3": {
+    "t": "n",
+    "v": "1500000000.0",
+    "f": "=PERMUT(1500000000,1)"
+   },
+   "E4": {
+    "t": "n",
+    "v": "2000000000.0",
+    "f": "=PERMUT(2000000000,1)"
+   },
+   "E5": {
+    "t": "n",
+    "v": "2147483646.0",
+    "f": "=PERMUT(2147483646,1)"
+   },
+   "E6": {
+    "t": "n",
+    "v": "2147483646.0",
+    "f": "=PERMUT(2147483646.5,1)"
+   },
+   "E7": {
+    "t": "e",
+    "why": "number_chosen above number (#NUM!)",
+    "f": "=PERMUT(5,2147483647)"
+   },
+   "E8": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=PERMUT(2147483646,0)"
    },
    "E9": {
     "t": "n",

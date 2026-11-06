@@ -22,17 +22,33 @@ reference is an ordinary value.
 Evidence: probes/is-functions-array-lift (Calc!A15, B15, D15, E15, J2, K2, L3, M30:N30, M32:N32;
 excel-graph oracle sidecar, 2026-10-06). Desktop Excel was not checked.
 Also covered by M34:P34 (`{4.5,-7,"3",TRUE}` -> TRUE, FALSE, FALSE, #VALUE!: parity of the truncated
-absolute value, text cast, boolean #VALUE!). UNVERIFIED sub-rules (no probe yet): an array
-expression derived from a range (`ISEVEN(Data!C1:C5+0)`), and the
-dynamic-array flag Excel writes for the range form. Magnitude >= 2^63 is settled below (T-2165).
-Legacy (pre-dynamic-array) formulas, UNVERIFIED for ISEVEN/ISODD (T-1774 moved them onto the
-SPEC-0011 `LiftArrays` table entry, so they follow the Analysis ToolPak rule probed for EDATE and
-YEARFRAC, probes/scalar-lift-shapes-c E, F, H, Q): a bare range gets no `@` and is `#VALUE!`, a
-value operation over a range (`ISEVEN(C1:C5+0)`) gets `@`, and `{5}` gets no `@`. Before T-1774 the
-hand-written arm gave the argument a scalar signature (`@` on the range and on `{5}`).
+absolute value, text cast, boolean #VALUE!). Magnitude >= 2^63 is settled below (T-2165).
+The refusal is of a reference, not of anything range-derived: a value operation over a range is an
+array and lifts, while every form that still yields a reference is refused like the bare range.
+Over Data!E1:E7 = 2, 3, "x", TRUE, #N/A, empty, -7.5, a dynamic `=ISEVEN(Data!E1:E7+0)` spills
+TRUE, FALSE, #VALUE!, FALSE, #N/A, TRUE, FALSE (the text is `#VALUE!`, TRUE is 1, the empty cell 0, the
+error passes through), and so do `-Data!E1:E7` and the 2-D `Data!E1:F7*1` (7x2); ISODD is the
+complement on the numbers. `IF(TRUE,Data!E1:E7)`, `INDEX(Data!E1:E7,0,1)`, `TAKE(Data!E1:E7,3)`,
+`(Data!E1:E7)`, a defined name for the range and `LET(x,Data!E1:E7,ISEVEN(x))` are each one `#VALUE!`
+with no spill. Each holds on a row inside the range's rows (row 2) and outside it (row 40): there is
+no implicit intersection in a dynamic formula. Evidence: probes/iseven-isodd-range-derived-arrays
+Calc!A2:V8, A40:V46 (excel-graph, 2026-11-06, T-4528).
+Legacy (pre-dynamic-array) formulas follow the Analysis ToolPak (`LiftArrays`) rule: a bare range
+gets no `@` and is `#VALUE!` on and off its rows (`=ISEVEN(Data!E1:E7)`), and a value operation over a
+range gets `@` (`=ISEVEN(@Data!E1:E7+0)`, FALSE on row 2, which reads E2 = 3, and `#VALUE!` on row 40).
+An array constant gets `@` as in a scalar argument, with one element or several and under a sign:
+`=ISEVEN(@{5})`, `=ISEVEN(@{2;3})` (TRUE, its first element), `=ISODD(@{2,3})`, `=ISEVEN(-@{5})`. This
+is not ISEVEN's own: `=EDATE(@{45000},1)`, `=EDATE(@{45000;45031},1)`, `=YEARFRAC(@{45000},46000)`,
+`=BIN2DEC(@{101})` and `=QUOTIENT(@{7},2)` show the same, so every `LiftArrays` argument reads an
+array constant as a scalar argument does and the call takes no `@` of its own. Evidence:
+probes/iseven-isodd-range-derived-arrays Leg!A2:N3, A40:N41 (excel-graph, 2026-11-06, T-4528). Ours
+put no `@` on the constant (and `@` on the call for a multi-element one) before T-4528, which changed
+only the shown text, as the values agree either way; `array_constant_context` in
+static_analysis/lifted.rs now gives a `LiftArrays` argument the scalar signature for its array
+constants. The dynamic-array flag Excel writes for the range form is not probed.
 Implemented in: `Model::lifted_parity` and the `ARRAYS_1` entry in functions/lift/kinds/general.rs.
 Status: VERIFIED (excel-graph)
-Tasks: T-0247, T-0248
+Tasks: T-0247, T-0248, T-4528
 
 ## IS* and TYPE over every scalar value kind
 Only a truly empty cell is blank: `ISBLANK` is FALSE for a formula returning `""`, a single space,
@@ -263,6 +279,28 @@ Ours: matches since T-3030 (`cell_info` reads the top-left cell on the reference
 Also: `CELL({1,"row"},B2)` is `#VALUE!` (a non-string element) and `CELL({"row",1},B2)` spills 2, `#VALUE!`; `N(range)` with an error top-left cell is that error (Calc!J1, K1); the info_type array lifts per element.
 Tasks: T-1230
 
+## CELL("color"|"parentheses"|"prefix"|"protect"|"format"|"filename"|"width") is #VALUE! on Excel for the web
+Rule (excel-graph, 2026-11-06, T-3011): Excel for the web returns `#VALUE!` for `CELL(info_type, ref)` with info_type
+"color", "parentheses", "prefix", "protect" or "format", on a blank cell, a number, a text, a cell formatted
+`0.00;[Red]-0.00`, a cell formatted `0;(0)`, a reference on another sheet, a range, in upper or mixed case, and with no
+reference. "width" is `#VALUE!` on the web too (decision 0019: the POI fill saw `#VALUE!` on 9 `CELL("width")` cells where
+poi/47804.xlsx caches 10 and 11; no committed sidecar, since the oracle canary now refuses the call), and "filename" is `#VALUE!` (T-2052). Desktop Excel returns values for all seven (the calipers goldens
+formulas_information Sheet1 E140:N160 cache color 0, filename a path, format "G", parentheses 0, prefix "",
+protect 1, width 15 on General cells), so these cells are web-vs-desktop conflicts.
+On desktop, "width" alone is a two-cell row, not a scalar: in that golden each
+`=IFERROR(CELL("width",$C$5),"Error")` in N140 (through `$C$25` in N160) is a dynamic-array formula whose spill range is two cells wide
+(`<f t="array" ref="N140:O140">`, through `N160:O160`), and the spill cell in column O caches the boolean FALSE beside
+the width 15. Every other info type in the same rows (C140:M140) has a one-cell range. The web's `#VALUE!` does not
+spill, so the engine leaves O140:O160 empty (T-4373 owns those 21 cells with the N cells; they count toward no
+Phase 1 or exit measure, T-4644). What the FALSE means is UNVERIFIED: column C, the referenced cells, has
+`customWidth="1"` (15.84375) against the sheet's `defaultColWidth` 11.07421875, so FALSE fits "not the default width",
+but no cell at the default width was cached.
+Evidence: probes/t3011-cell-format-info-types A1:A38 (excel-graph, 2026-11-06).
+Status: VERIFIED (excel-graph); desktop values are out of scope (decision 0266).
+Ours: `cell_info` returns `#VALUE!` for all seven, matching the web. The calipers cells are Phase 1 rate exceptions
+(decision 0308).
+Tasks: T-3011, T-4207, T-4644
+
 ## CELL("row"/"col"/"address"/"type", range): no intersection; "type" reads the named sheet since 2026-10-28
 Rule (excel-graph, 2026-10-15): a legacy (non-array) `CELL(info_type, range)` gives the same value as its dynamic twin and is never implicitly intersected, whether the formula row or column is inside the range or not. `CELL("row",A1:A5)` is 1 and `CELL("address",A1:A5)` is `$A$1` in rows 3 and 8; `CELL("col",B20:D20)` is 2 in columns C, D (inside) and F, G (outside); `CELL("type",A1:A5)` is "v" (the top-left cell; the probe cannot tell it from an intersected cell, since both are numbers, so no-intersection for "type" rests on the vector signature, UNVERIFIED). `row`, `col` and `address` use the reference's own address (`CELL("row",Data!A2:A5)` is 2, `CELL("col",Data!C20:D20)` is 3). Since 2026-10-28 `"type"` reads the named sheet, like `"contents"` (previous entry, T-3030). The 2026-10-15 fill read the formula's own sheet: `CELL("type",Data!A7)` is "b" when Data!A7 is text but Calc!A7 is blank, `Data!A8` is "l" (Calc!A8 is text, Data!A8 blank) and `Data!A9` is "b" (Data!A9 a number, Calc!A9 blank).
 Cross-sheet `CELL("address",Data!A2)` was observed as `[<file>.xlsx]Data!$A$2` with the oracle's temporary file name in the T-1433 oracle run (scored since T-2042 in its own case, next entry but one).
@@ -400,6 +438,21 @@ Rule (probes/volatile-and-info-rand-true-false-sheet D1-D28, excel-graph, 2026-1
 `SHEET("Nope")`, `SHEET("")`, `SHEET(" T")` and `SHEET("S!A1")` are `#N/A`. A number, a boolean, an error and `ROW(A1)` are
 `#N/A`. A reference returned by OFFSET (1), INDIRECT (2), INDEX (`SHEET(INDEX(T!A1:B2,1,1))` 2), IF (`SHEET(IF(TRUE,U!A1))` 3)
 and a union of two areas on sheet T (`SHEET((T!A1,T!B2))` 2) all resolve to their sheet. Ours matches (T-1631).
+
+## SHEET and SHEETS of a LET variable or LAMBDA parameter
+Rule (probes/t4518-sheet-sheets-bound-variable D1:D26, excel-graph, 2026-11-06, T-4518; sheets Sheet1..Sheet3):
+SHEET of a bound variable is SHEET of what it is bound to. A reference gives its sheet, written or passed in by
+MAP, BYROW, BYCOL or a LAMBDA call (`LET(x,Sheet3!A1:B2,SHEET(x))` 3, `MAP(Sheet2!A1:A3,LAMBDA(r,SHEET(r)))` 2, 2, 2,
+`BYCOL(Sheet3!A1:B3,_xleta.SHEET)` 3, 3), and so does a union (`LET(x,(Sheet2!A1,Sheet2!B2),SHEET(x))` 2) or a
+variable bound to another (`LET(x,A1,y,x,SHEET(y))` 1). Text is a sheet name (`LET(x,"Sheet2",SHEET(x))` 2,
+`MAP({"Sheet2";"Sheet3"},_xleta.SHEET)` 2, 3; `"Sheet9"` `#N/A`). A number or a boolean is `#N/A`. A whole array is
+one `#N/A`, not lifted (`LET(x,{1,2},SHEET(x))`; a GROUPBY group, `GROUPBY(A1:A3,B1:B3,LAMBDA(v,SHEET(v)))` `#N/A`
+in each value cell). A bound error is that error: `LET(x,1/0,SHEET(x))` is `#DIV/0!`, while a written error
+argument is `#N/A` (section above). SHEETS of a parameter bound to a one-sheet reference is 1
+(`MAP(A1:A3,_xleta.SHEETS)` 1, 1, 1, `BYCOL(Sheet2!A1:B3,_xleta.SHEETS)` 1, 1), and of a GROUPBY group `#N/A`
+(probes/t4450-eta-special-forms J59). SHEETS of a parameter bound to anything else is unprobed: the oracle's
+canary sheet guard refuses `SHEETS(<parameter>)`, because a count of sheets would include the canary. Ours matches
+every cell; SHEETS of any other bound value stays `#N/IMPL!`.
 Volatile functions through shape-stable formulas (probes/volatile-now-today-shapes, probes/volatile-and-info-rand-true-false-sheet):
 NOW, TODAY and RAND are numbers (`TYPE` 1, never text or boolean), `NOW()-NOW()` is 0 within one recalculation,
 `INT(NOW())=TODAY()`, `RAND()` is in [0,1) and two calls differ, `TRUE()` and `FALSE()` behave as the literals in
@@ -482,3 +535,6 @@ Phases 1-3 (decision 0039): the engine follows it in T-2190, which is expected t
 non-literal INFO, T-2113), and `INFO("numfile")` (canary-dependent). The engine also returns `#VALUE!` for `"numfile"` and its
 engine-only `"timezone"`/`"timezones"` (T-2190), unprobed and awaiting oracle confirmation (T-2182).
 Evidence: probes/info-sheets-info-types Alpha!D25:D49 (excel-graph, 2026-10-20, T-2115).
+Desktop Excel for Mac (16.0300) caches "16.0" for `INFO("release")` (calipers formula_stress_test Information!B3); the
+web is `#VALUE!` there too (probes/t4534-desktop-golden-web-values A2, A9). That cell is a Phase 1 rate exception
+(decision 0315).

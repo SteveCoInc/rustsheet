@@ -408,7 +408,9 @@ pub(crate) fn excel_bessel_y(n: i32, x: f64) -> f64 {
         return y0(x);
     }
     // `b * (2j * (1/x))` is the association that reproduces Excel bit-for-bit (BESSEL.xlsx
-    // BESSELY F12/E13/F13); `(2j / x) * b` is 1 ulp off.
+    // BESSELY F12/E13/F13); `(2j / x) * b` is 1 ulp off. An overflow anywhere is `#NUM!`, and that
+    // is Excel's tiny-x cut at orders 2 to 10 (probes/t4458-bessely-tiny-x-cuts; engineering.md
+    // "BESSELY at a tiny x and a small order", T-4458).
     let inv_x = 1.0 / x;
     let (mut a, mut b) = (y0(x), y1(x));
     for j in 1..n {

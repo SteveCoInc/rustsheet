@@ -1,0 +1,47 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Leg": {
+   "A1": {
+    "t": "n",
+    "v": 45031.0
+   },
+   "A2": {
+    "t": "s",
+    "v": "=SUM(EDATE({45000},1))"
+   },
+   "A3": {
+    "t": "n",
+    "v": 90092.0
+   },
+   "A4": {
+    "t": "s",
+    "v": "=SUM(EDATE({45000;45031},1))"
+   },
+   "A5": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A6": {
+    "t": "s",
+    "v": "=SUMPRODUCT(ISEVEN({5}))"
+   },
+   "A7": {
+    "t": "n",
+    "v": 3.0
+   },
+   "A8": {
+    "t": "s",
+    "v": "=ABS(QUOTIENT(@{7},2))"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "09b12cdd9985732cc7a6b65e5c14190534d8466b3f4120020d6697be50670975",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-06T12:29:06+00:00",
+  "version": null,
+  "workbook_name": "e4b3b0fdc9a3050af36963085067ff53a941937988039e8c2c4f620c929c5161.xlsx"
+ }
+}

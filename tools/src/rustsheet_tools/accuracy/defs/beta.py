@@ -28,6 +28,7 @@ from collections.abc import Sequence
 
 import mpmath
 
+from rustsheet_tools.accuracy.defs._common import is_real
 from rustsheet_tools.accuracy.model import (
     LOG_SMALLEST_DOUBLE,
     Definition,
@@ -205,15 +206,15 @@ def quantile(p: mpmath.mpf, a: mpmath.mpf, b: mpmath.mpf) -> mpmath.mpf:
 def _bounds(given: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf]:
     """The [A, B] a call gives (A and B default to 0 and 1, as in Excel)."""
     lo, hi = (list(given) + [mpmath.mpf(0), mpmath.mpf(1)][len(given) :])[:2]
-    assert not isinstance(lo, (bool, tuple)) and not isinstance(hi, (bool, tuple))
+    assert is_real(lo) and is_real(hi)
     return mpmath.mpf(lo), mpmath.mpf(hi)
 
 
 def _beta_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, a, b, cumulative = args[:4]
-    assert not isinstance(x, (bool, tuple))
-    assert not isinstance(a, (bool, tuple))
-    assert not isinstance(b, (bool, tuple))
+    assert is_real(x)
+    assert is_real(a)
+    assert is_real(b)
     lo, hi = _bounds(args[4:])
     t = (x - lo) / (hi - lo)
     if cumulative:
@@ -226,7 +227,7 @@ def _beta_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _beta_dist_domain(args: Sequence[MathArg]) -> str | None:
     x, a, b, cumulative = args[:4]
-    if len(args) > 4 and not isinstance(x, (bool, tuple)):
+    if len(args) > 4 and is_real(x):
         lo, hi = _bounds(args[4:])
         if lo == hi or not lo <= x <= hi:
             return "x outside [A, B], or A = B"
@@ -234,12 +235,7 @@ def _beta_dist_domain(args: Sequence[MathArg]) -> str | None:
         # unprobed, so `_beta_dist` gives no math value there.
         if not cumulative and x in (0, 1) and x in (lo, hi):
             return None
-    if (
-        cumulative
-        or isinstance(x, (bool, tuple))
-        or isinstance(a, (bool, tuple))
-        or isinstance(b, (bool, tuple))
-    ):
+    if cumulative or not is_real(x) or not is_real(a) or not is_real(b):
         return None
     if x == 0 and a <= 1:
         return "density at x = 0 with alpha <= 1"
@@ -250,7 +246,7 @@ def _beta_dist_domain(args: Sequence[MathArg]) -> str | None:
 
 def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     a, b = args[1], args[2]
-    if isinstance(a, (bool, tuple)) or isinstance(b, (bool, tuple)):
+    if not is_real(a) or not is_real(b):
         msg = "no tail map for a logical shape"
         raise ValueError(msg)
     return quantile(1 - q if upper else q, a, b)
@@ -258,11 +254,7 @@ def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _beta_inv(args: Sequence[MathArg]) -> mpmath.mpf:
     p, a, b = args[:3]
-    assert (
-        not isinstance(p, (bool, tuple))
-        and not isinstance(a, (bool, tuple))
-        and not isinstance(b, (bool, tuple))
-    )
+    assert is_real(p) and is_real(a) and is_real(b)
     lo, hi = _bounds(args[3:])
     if lo == hi:
         msg = "A = B: no evidence of Excel's answer"

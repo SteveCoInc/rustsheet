@@ -266,3 +266,53 @@ fn denominator_placeholders_print_in_place() {
     assert_eq!(text(0.123, "# ?/??0"), " 23/187"); // A11
     assert_eq!(text(0.3, "# ?/?0?"), " 3/100"); // C12
 }
+
+// probes/t4069-fixed-denominator-tail (T-4069): a placeholder after a fixed denominator makes
+// Excel pick the fraction and print the code's digits in place of the picked denominator's.
+#[test]
+fn a_placeholder_after_a_fixed_denominator_picks_the_fraction() {
+    for (value, code, expected) in [
+        (12.5, "# ?/4|0", "12 1/4|0"),
+        (12.5, "# ?/4", "12 2/4"),
+        (12.5, "# ?/8|0", "12 1/8|0"),
+        (12.5, "# ?/10|0", "12 1/1 |0"),
+        (12.6, "# ?/10|0", "12 3/1 |0"),
+        (12.375, "# ?/8|0", "12 3/8|0"),
+        (12.5, "?/4|0", "25/4|0"),
+        (12.0, "# ?/4|0", "12      "),
+    ] {
+        assert_eq!(text(value, code), expected, "{code} on {value}");
+    }
+}
+
+// Placeholders after a fraction print what the denominator hands on: spilled and lacking digits,
+// owed zeros and a due space (number-formats.md "Placeholders after a fraction"; excel-graph
+// probes/t4043-separated-slots A12, A24, A36, A71, t4043-fixed-denominator-slots, T-4515).
+#[test]
+fn placeholders_after_a_fraction_take_what_the_denominator_hands_on() {
+    assert_eq!(text(0.5, "# ?/4|?|?"), " 1/4| |0");
+    assert_eq!(text(0.5, "# ?/4|?|?|#"), " 1/4| |0|00");
+    assert_eq!(text(0.5, "# ?/16|?|?"), " 1/1 |0| ");
+    assert_eq!(text(0.5, "# ?/100|#|?|?"), " 1/1  ||0|0");
+    assert_eq!(text(0.0625, "# ?/4 ? 0"), " 1/4 6 00");
+    assert_eq!(text(0.3, "# 0/4|0"), "3/40|0");
+    assert_eq!(text(0.5, "# ?/16|#"), " 1/1 |");
+    assert_eq!(text(0.3, "# ?/100|##"), " 3/10 |0");
+    // A blank fraction's placeholder is as wide as what it would print.
+    assert_eq!(text(0.0, "# ?/100|##"), "0       ");
+}
+
+// A `,` after the decimal point with a placeholder anywhere after it is inert; after a literal a
+// run prints one `,`; after a fraction a `,` does not group (probes/t3598-decimal-part-commas A23,
+// A24, A26, t3666-review-followups A7, A10, t4515-fraction-tail-holdout A18, A19, A20, T-4515).
+#[test]
+fn commas_after_the_point_or_a_fraction() {
+    assert_eq!(text(1234567.89, "0.0,,0"), "1234567.89");
+    assert_eq!(text(1234567.89, "0.,0"), "1234567.9");
+    assert_eq!(text(1234567.89, "0.,"), "1235.");
+    assert_eq!(text(1234567.89, "0.00|,0"), "1234567.89|,0");
+    assert_eq!(text(1234567.891, "0.0|,,0"), "1234567.8|,9");
+    assert_eq!(text(1234567.891, "0.00,|0"), "1234567.89|1");
+    assert_eq!(text(1234567.891, "0.0,0,"), "1234.57");
+    assert_eq!(text(1234567.89, "# ?/?|#,##0"), "1234567 8/9|0000");
+}

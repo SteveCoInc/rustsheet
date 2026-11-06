@@ -35,7 +35,7 @@ import mpmath
 from rustsheet_tools.fitlab.fit import Fit
 from rustsheet_tools.fitlab.holdout import REFERENCE
 from rustsheet_tools.fitlab.score import Candidate, ExcelError
-from rustsheet_tools.fitlab.sweep import Cell, parse_complex_text
+from rustsheet_tools.fitlab.sweep import Cell, read_complex_arg
 
 _FUNCTION = re.compile(r"^=(IMSINH|IMCOSH|IMSIN|IMCOS|IMCSCH|IMSECH)\(")
 _KERNELS = {
@@ -72,7 +72,7 @@ def correctly_rounded(cell: Cell) -> complex:
     if m is None or not isinstance(arg, str):
         msg = f"not a one-argument IM* call: {cell.formula}"
         raise TypeError(msg)
-    x, y = parse_complex_text(arg)
+    x, y = read_complex_arg(arg)  # each part cut to 15 digits, as Excel reads it (T-4593)
     with mpmath.workdps(50):
         z = _KERNELS[m[1]](mpmath.mpc(x, y))
         return complex(_part(z.real), _part(z.imag))

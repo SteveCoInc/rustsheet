@@ -435,7 +435,8 @@ the web keeps the cache on upload):
   ROWS `#VALUE!`, as for a span of this workbook ("3-D references outside the aggregates"), while
   without a link `SUM('[other.xlsx]S1:S2'!A1)` is `#BLOCKED!` (T-1381). Engine (T-1654): the lexer
   reads the unquoted `[n]First:Last!` prefix as the quoted `'[n]First:Last'!` (the formula text
-  keeps the quoted form, as for `'[1]Uses'!`), and `Model::cached_span_cells` gives the cells the
+  prints it bare, as a span of this workbook is: "A formula's reference to another workbook is
+  written `[1]Sheet!A1`", T-4140), and `Model::cached_span_cells` gives the cells the
   cache holds in the written area on the sheets between the two ends in `sheetNames` order, in
   sheet, row and column order, in one walk of the cache, which the aggregates and COUNTA read
   (blanks skipped); it is `#REF!` as a value and `#VALUE!` where one sheet is needed. Unprobed, so
@@ -777,7 +778,7 @@ call's own error passes through (`DROP(A1:B3,5)` and `TAKE(A1:B3,0)` are `#CALC!
 and a not-found XLOOKUP with a range `if_not_found` is that reference (`=C1:C3 XLOOKUP(9,A1:A3,B1:B3,C1)` is
 C1, and ISREF of it TRUE) (probes/intersection-lookup-operand-errors, excel-graph 2026-10-07).
 - FORMULATEXT of an `@` operand of `:` or `@` keeps the written parentheses: `=A1:(@B1)` stays `=A1:(@B1)` (spills `1, 2` across H10:I10), `=(@(A1 B1)):C3` stays `=(@(A1 B1)):C3` and `=@(@(A1 B1))` stays `=@(@(A1 B1))` (both `#NULL!`). The engine drops the inner parentheses on the last two (probes/at-operand-formulatext, T-1104; T-1116).
-- `=ANCHORARRAY(D1)` prints `=D1#` and `=ANCHORARRAY(INDEX(D1:D2,1))` prints `=INDEX(D1:D2,1)#`, `ANCHORARRAY(D1)` and `D1#` are the same stored file text (`_xlfn.ANCHORARRAY(D1)`), so this is how Excel prints that stored form; how a typed `ANCHORARRAY(D1)` prints is not probed. Engine requirement for T-1109: xlsx import must not print the automatic `@` it adds inside `#`. Stored as `_xlfn.ANCHORARRAY((@A1:B2))`, `=(@A1:B2)#` loads, prints as `=(@A1:B2)#` and is `#VALUE!` from D20 (no intersecting cell) (probes/anchorarray-at-operand, T-1111; the engine matches since T-1115). UNVERIFIED: the engine passes any `@` error through `#` (`=(@(A1 B1))#` gives `#NULL!`), and gives the left error when both operands of `:` are errors; only the `#VALUE!` and right-operand cases are probed. `=ANCHORARRAY(1)` is refused: Excel for the web will not open a workbook holding it (`FileCorruptTryRepair`, T-1111); the engine reads it as a syntax error since T-1117. `=@D1#` prints as `=@D1#` and evaluates to `#VALUE!` (probes/at-operand-formulatext, T-1104). Value operands of `:` and `#` that T-1111 did not probe (T-1216): see the entry "FORMULATEXT keeps the parentheses of an `@` operand" below.
+- `=ANCHORARRAY(D1)` prints `=D1#` and `=ANCHORARRAY(INDEX(D1:D2,1))` prints `=INDEX(D1:D2,1)#`, `ANCHORARRAY(D1)` and `D1#` are the same stored file text (`_xlfn.ANCHORARRAY(D1)`), so this is how Excel prints that stored form; how a typed `ANCHORARRAY(D1)` prints is not probed. Engine requirement for T-1109: xlsx import must not print the automatic `@` it adds inside `#`. Stored as `_xlfn.ANCHORARRAY((@A1:B2))`, `=(@A1:B2)#` loads, prints as `=(@A1:B2)#` and is `#VALUE!` from D20 (no intersecting cell) (probes/anchorarray-at-operand, T-1111; the engine matches since T-1115). An `@` error passes through `#`: `=(@(A1 B1))#` is `#NULL!`, and `=(@(F1:F3 F2))#` is `#REF!` (the `@` keeps F2, which is not a spill anchor). When both operands of `:` are errors the left one is the result: `=(@(A1 B1)):INDEX(F1:F3,5)` is `#NULL!` and `=INDEX(F1:F3,5):(@(A1 B1))` is `#REF!` (probes/t4481-at-spill-operand-edges H54:H66, excel-graph, T-4481; the engine matches). `=ANCHORARRAY(1)` is refused: Excel for the web will not open a workbook holding it (`FileCorruptTryRepair`, T-1111); the engine reads it as a syntax error since T-1117. `=@D1#` prints as `=@D1#` and evaluates to `#VALUE!` (probes/at-operand-formulatext, T-1104). Value operands of `:` and `#` that T-1111 did not probe (T-1216): see the entry "FORMULATEXT keeps the parentheses of an `@` operand" below.
 Tasks: T-0138, T-0148, T-0149, T-0042, T-0161, T-0165, T-1094, T-1098, T-1103, T-1104, T-1109, T-1111, T-1115, T-1117, T-1216, T-3308
 
 ## Calling a parenthesized operand
@@ -864,13 +865,13 @@ Excel for the web refuses a workbook holding `=SUM(1)(2)`, `=ABS(1)(2)`, `=IFERR
 `=IFNA(LAMBDA(x,x*2),0)(3)` (FileCorruptTryRepair, one single-formula workbook each, T-2038, T-2405), so IFERROR, though it
 passes a LAMBDA through, is not callable; the engine reads these as syntax errors. With a space,
 `=LAMBDA(a,LAMBDA(b,a*b))(3) (4)` is refused the same way (no intersection), and the engine reads it as a syntax error too.
-`LAMBDA(x,LAMBDA(y,x+y))(1)()` gives an error the oracle could not decode (unprobed). An unknown name's call chained,
+A wrong argument count at any link of a chain is `#VALUE!` (ERROR.TYPE 3, an ordinary error: IFERROR and ISERROR catch it, and so does ERROR.TYPE inside a MAP LAMBDA). That holds for a later link with none, `LAMBDA(x,LAMBDA(y,x+y))(1)()`, or too many, `(1)(2,3)`, and for an outer link with too many, `(1,2)(3)`, or none, `()(3)`. It also holds through a LET name, `LET(f,LAMBDA(x,LAMBDA(y,x*y)),f(3)())`, and a defined name, `MYFN(3)(4,5)`, `MYFN(3)()`. The count wins over an error argument: `(1/0)()` and `(1)(NA(),2)` are `#VALUE!`, not `#DIV/0!` or `#N/A` (probes/t4482-chained-call-arity A1:E9; row 10, `(1)(2)`, is 3). An optional parameter at the later link can be omitted but not left with no arguments: `LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(2)` is 3, `(1)(2,3)` 6 and `(1)()` `#VALUE!` (probes/t4482-chained-call-arity-optional A1:E3). Excel for the web loaded both workbooks, so no form was refused. The bare cells (column E) decode as `#VALUE!` (excel-graph, 2026-11-06, T-4482). An unknown name's call chained,
 `=FOO(1)(2)`, is `#NAME?`, and a parenthesized value a function returned, `=(IF(TRUE,1))(2)`, is called like a LET-bound
 value, `#NAME?`. These are exactly the built-ins an intersection accepts (`is_reference_operand`). A defined-name LAMBDA's call chains
 like a LET name's: with `MYFN` = `=LAMBDA(x,LAMBDA(y,x*y))`, `=MYFN(3)(4)` is 12, and with `MYFN` = `=LAMBDA(x,x)`,
 `=MYFN(1)(2)` calls the returned number, which is `#NAME?` as for a LET-bound value (T-2501).
 Evidence: probes/lambda-escaping-closures H3, H8, H10; probes/chained-calls-lambda B1:B10; probes/chained-calls-ref-1..4, -6
-(oracle: excel-graph, 2026-10-22, T-2038); probes/chained-calls-builtin-* (excel-graph, 2026-10-23, T-2405); probes/chained-calls-name-curried, -value (excel-graph, 2026-10-25, T-2501); the refused
+(oracle: excel-graph, 2026-10-22, T-2038); probes/chained-calls-builtin-* (excel-graph, 2026-10-23, T-2405); probes/chained-calls-name-curried, -value (excel-graph, 2026-10-25, T-2501); probes/t4482-chained-call-arity, -optional (excel-graph, 2026-11-06, T-4482); the refused
 forms were single-formula workbooks, not kept as cases (a refused workbook gives no values).
 Status: VERIFIED (Excel for the web)
 Implemented in: expressions/parser/lambda.rs (`Parser::chain_calls`, after a call and a name call), parser/operands.rs
@@ -1617,8 +1618,27 @@ quoted (`'Me lo invente'!$C$2`, `'A Wird One$'!$A$1`) and `"Sheet2"` is not.
 Evidence: poi/FormulaEvalTestData_Copy.xlsx (Excel-cached, Excel 15) EverythingTests!F128;
 ironcalc-calc LOOKUP_AND_REFERENCE/ADDRESS.xlsx (Excel-cached) Sheet1!E2, B33, B38.
 Status: VERIFIED (Excel-cached). Open (unprobed): `[Book1]My Sheet`, brackets elsewhere in the name, an empty book (`[]Sheet1`), a book part with spaces or dots, an empty sheet part (`[Book1]`) and a cell-reference-like sheet part (`[Book1]A1`); the implementation decides on the part after `]` only.
-Implemented in: `address_sheet_text` in functions/lookup_and_reference/address_areas.rs
-Tasks: T-0984
+Implemented in: `address_sheet_text` in functions/lookup_and_reference/address_areas.rs, through
+`quote_name` (expressions/utils/mod.rs), which formulas share since T-4140 ("A formula's reference to
+another workbook is written `[1]Sheet!A1`")
+Tasks: T-0984, T-4140
+
+## A formula's reference to another workbook is written `[1]Sheet!A1`
+Rule: in the formula text Excel saves, the `[n]` book index of a reference to another workbook is
+outside any quotes, and the quotes, when the sheet name needs them, go around the whole `[n]Sheet`
+token: `VLOOKUP(C2,[1]Sort!$B:$C,2,FALSE)`, `COUNTIFS('[1]XA Data Pull'!$J:$J,…)`. `'[1]Sort'!A1`
+would name a sheet of this workbook called `[1]Sort`. The sheet part is quoted exactly as a sheet of
+this workbook would be (`'[1]56737'!$B$2`, a leading digit), the same rule as ADDRESS's (above).
+Evidence: corpus-bench 59932 (Excel-saved, 16,998 cells of `[1]Sort!`) and 52450 (1,830 COUNTIFS over
+`'[1]XA Data Pull'!`), and poi ref-56737 (Excel-saved, `[1]Uses!`, `[1]!NR_Range`); round-trip census
+docs/research/xlsx-round-trip-2026-11-04.md §2.2.
+Status: VERIFIED (Excel-saved files) for single sheets. UNVERIFIED: a 3-D span of the other workbook's
+sheets is printed bare unless either end needs quotes (`[1]Uses:Defines!$B$2`), as a span of this
+workbook is; fixtures/external-link-cached-3d-span holds that form and Excel for the web opened it, but
+Excel's own saved form for it is unprobed.
+Implemented in: `quote_name` (expressions/utils/mod.rs), used by the display, FORMULATEXT, the stored
+R1C1 text and the xlsx export alike.
+Tasks: T-4140
 
 ## T of a multi-cell range is not intersected
 Rule: T, like N, reads a multi-cell range as its top-left cell, in legacy and dynamic formulas
@@ -1643,7 +1663,9 @@ Tasks: T-0985, T-1728
 
 ## FORMULATEXT keeps the parentheses of an `@` operand; ANCHORARRAY is `#`; `:` passes an error operand on
 Rule: Excel keeps the parentheses the user wrote around the operand of `@`, for every operand form
-probed (intersection, range, single cell, nested `@`; `@(INDEX(…))`, `@(D1#)` and `@(name)` are not probed):
+probed (intersection, range, single cell, nested `@`, and since T-4481 `@(INDEX(…))`, `@(D1#)` and `@(name)`:
+`=@(INDEX(F1:F3,2))`, `=@(D1#)`, `=@(rg)`, `=@(one)` and `=(@rg)` print as written, while `=@INDEX(F1:F3,2)` and `=@rg`
+stay bare; probes/t4481-at-spill-operand-edges I2:I38):
 `=(@(A1 B1)):C3` prints `=(@(A1 B1)):C3`, `=@(@(A1 B1))` prints `=@(@(A1 B1))`, and `=@((A1 B1))`,
 `=@(A1:B1)` and `=@(A1)` print as written (values `#NULL!`, `#VALUE!` from row 31, and 1), while a
 bare `@A1:A3 A2:B2` stays bare. Typed `ANCHORARRAY(D1)` and `ANCHORARRAY(INDEX(D1:D2,1))` evaluate
@@ -1667,9 +1689,14 @@ as a syntax error, so the four refused forms are no longer evaluated (they used 
 printed as `=A1:1/0`, which does not re-parse to the same formula). T-1216 (excel-graph, 2026-10-09; one scratch workbook per formula, a control `=SUM(A1:B1)` in the same shape loaded) verified the inferred refusals: Excel refuses (`FileCorruptTryRepair`)
 `=A1:"a"`, `=A1:#N/A`, `=#N/A:A1`, `=A1:SUM(B1)`, `=A1:IFERROR(B1:B2,0)`, `=ANCHORARRAY(SEQUENCE(3))`, `=ANCHORARRAY(A1+0)` and the negated
 references `=(-A1):B1`, `=A1:(-B1)` and `=(-A1)#` (unlike the union, which accepts `(-A1,B1)`). It loads, as `#VALUE!`, `=A1:LAMBDA(x,x)`, `=A1:(@1)` and
-`=ANCHORARRAY(@1)` (printed `=@1#`) (probes/colon-hash-value-operands). The engine matches all of these (`=ANCHORARRAY(@1)` evaluates to `#VALUE!` and prints bare as `=@1#`; T-1226). Resolved by T-1240 (below): the print follows the written parentheses. Since T-1246 the engine prints the parentheses that were written around the `@` and no others (since T-1343 they are a `Node::Group` around it). The `#VALUE!` for the `@` of a non-number value is probed for `@"a"` and `@SUM(A1)` (T-1240); `@TRUE` is still inferred. The printed `=@1#` re-parses as `@(1#)`, which the engine refuses; move and paste print `(@1)#`, which round-trips. So the intersection's reference operands are not the whole rule: `@1` (the `@` of a value) is also accepted, by `:` and by `#` (`@TRUE` is inferred). Still UNVERIFIED: a value operand of a typed `#` (`(1/0)#`).
+`=ANCHORARRAY(@1)` (printed `=@1#`) (probes/colon-hash-value-operands). The engine matches all of these (`=ANCHORARRAY(@1)` evaluates to `#VALUE!` and prints bare as `=@1#`; T-1226). Resolved by T-1240 (below): the print follows the written parentheses. Since T-1246 the engine prints the parentheses that were written around the `@` and no others (since T-1343 they are a `Node::Group` around it). The `#VALUE!` for the `@` of a non-number value is probed for `@"a"` and `@SUM(A1)` (T-1240). A boolean is not one of
+them at top level: `=@TRUE` and `=@(TRUE)` are TRUE and `=@FALSE+1` is 1 (probes/t4481-at-spill-operand-edges H42, H46,
+H50, T-4481). The printed `=@1#` re-parses as `@(1#)`, which the engine refuses; move and paste print `(@1)#`, which round-trips. So the intersection's reference operands are not the whole rule: `@1` (the `@` of a value) is also accepted, by `:` and by `#` (`@TRUE` is inferred). A value operand of a typed `#` is refused: Excel for the web will not open a workbook holding `=(1/0)#` or `=(NA())#`
+(stored `_xlfn.ANCHORARRAY((1/0))` and `_xlfn.ANCHORARRAY((NA()))`; `FileCorruptTryRepair`, one scratch workbook each,
+with `=ANCHORARRAY((A1:A2))` loading in the same shape; excel-graph, 2026-11-06, T-4481). The parser refuses both
+(`range_and_anchorarray_refuse_value_operands`).
 Stored `ANCHORARRAY` of an `@` operand (probes/anchorarray-at-operand-kinds, excel-graph, T-1240): FORMULATEXT follows the **written parentheses**, not the operand kind. Written without parentheses, every operand prints bare: `=@A1:B2#`, `=@"a"#`, `=@SUM(A1)#`, `=@INDEX(D1:D2,1)#`, `=@LAMBDA(x,x)#`, `=@-1#`; `ANCHORARRAY((@1))` prints `=(@1)#`. Values: `@A1:B2`, `@1`-in-parentheses, `@"a"`, `@SUM(A1)`, `@LAMBDA(x,x)` and `@-1` are `#VALUE!`; `ANCHORARRAY(@INDEX(D1:D2,1))` spills the spill range of D1 (the `@` of a reference keeps the reference). `ANCHORARRAY(@1/0)` is refused by Excel for the web (`FileCorruptTryRepair`, one scratch workbook). The engine matches the prints since T-1246 (`spill_operand`, parser/reference_operators.rs); move and paste still print `(@1)#`, which round-trips (the bare `@1#` re-parses as `@(1#)`). The engine matches the values of `@-1` (parsed as the `@` of a negation, a value) and `@INDEX(..)` (kept as the reference) since T-1247. UNVERIFIED (T-1285): the signed operand now also parses at top level (`=@-1`, previously a parse error); the engine takes the sign, a bare union/intersection and `%` inside the `@` but not `^` (`@-2^2` is `(@-2)^2`), and `@-B1:B3` off-row gives the top-left element of the negated array. UNVERIFIED (extends the written-parentheses rule): an `@` of a space intersection (`ANCHORARRAY(@(A1:B2 B1))` prints `=@A1:B2 B1#`) and more than one written level (`ANCHORARRAY(((@1)))` prints `=((@1))#`).
-Tasks: T-1109, T-1111, T-1115, T-1116, T-1117, T-1216, T-1226, T-1240, T-1246, T-1247
+Tasks: T-1109, T-1111, T-1115, T-1116, T-1117, T-1216, T-1226, T-1240, T-1246, T-1247, T-4481
 
 ## `:` joins multi-cell operands and names into their bounding box
 Rule: the operands of `:` may be multi-cell references or defined names (a parenthesized body
@@ -2917,15 +2944,23 @@ description says why). table-convert-cross-sheet-this-row holds only data-row ce
 (T-2340): `delete_table` and `take_sheet` rewrite the stored text of every structured reference to the
 removed tables (bare `Sales` included) to `#REF!` (`Model::rewrite_table_references`, tables.rs), and an
 undo of the sheet delete (`restore_sheet`, `UserModel` undo) puts the old text back; a reference to a
-missing sheet is displayed with `#REF!` for its sheet (`is_missing_sheet`, stringify/wrong_reference.rs)
-while its stored text keeps the name, and the lexer reads `#REF!C4:C7` back as `#REF!` (engine choice: whether
-Excel accepts that text typed in is unprobed). Known gaps (T-2612): because the stored text keeps the name, a
-sheet added later under the old name revives a plain reference (Excel's formula has lost the sheet), and the
-xlsx export writes `S!C4:C7` where Excel stores `#REF!C4:C7`. The `#REF!` display also covers a sheet that never
-existed (a loaded `Nope!A1`), an engine choice with no evidence. The adapter's delete_table clears the whole table range (header, text and Qty columns: COUNTA 0 each)
+missing sheet is displayed with `#REF!` for its sheet (`is_missing_sheet`, stringify/wrong_reference.rs),
+and the lexer reads `#REF!C4:C7` back as `#REF!` (engine choice: whether Excel accepts that text typed in is
+unprobed). A plain reference loses the deleted sheet for good (T-2612, probes/table-edits/t2612-delete-sheet-then-add,
+excel-graph 2026-11-06): after deleting S and adding a new blank S, `SUM(S!C4:C7)`, `S!C4` and `COUNTBLANK(S!C4:C7)`
+stay `#REF!` (a revived reference would read 0, 0 and 4), FORMULATEXT shows `=SUM(#REF!C4:C7)`, `=#REF!C4`, and
+`ISREF(#REF!A1)` (written `ISREF(S!A1)`) is FALSE, while `INDIRECT("S!C4")` reads the new sheet ("|" for a blank).
+The engine rewrites such a reference on the delete (`delete_sheet_in_node`, stringify/sheet_edits.rs) to a wrong
+reference to the internal sheet name `DELETED_SHEET` (`*#REF!`, which no real sheet can take), which the display
+and the xlsx export both print as `#REF!C4:C7` (the file text is inferred from Excel's en-US FORMULATEXT; no
+Excel-saved file was inspected); the undo puts the old text back through `TakenSheet`'s rewritten
+formulas. Workbook names lose the sheet the same way (probes/table-edits/t2612-delete-sheet-then-add-names,
+excel-graph 2026-11-06): with nm = `S!$C$4` and rng = `S!$C$4:$C$7`, `=nm` and `=SUM(rng)` stay `#REF!` after the new S
+is added and `ISREF(nm)` is FALSE; the engine stores such a name as `#REF!$C$4`. The `#REF!` display also covers a sheet that never existed (a loaded `Nope!A1`), an engine choice with
+no evidence; its stored text and export keep the name. The adapter's delete_table clears the whole table range (header, text and Qty columns: COUNTA 0 each)
 and keeps the rows in place: `S!C9` still 99 and `SUM(S!C9:C10)` still 104 with unshifted text
 (T-2341, table-delete-table-cells, excel-graph 2026-10-22).
-Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734, T-3629, T-4020, T-4021
+Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734, T-3629, T-4020, T-4021, T-2612
 
 ## Calculated columns: a formula typed into a table column
 Rule (excel-graph `entered` cells, typed one at a time in the case's order, 2026-10-27, T-2957; table `T` A1:C4,

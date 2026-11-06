@@ -17,7 +17,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import DF_CUT
+from rustsheet_tools.accuracy.defs._common import DF_CUT, is_real
 from rustsheet_tools.accuracy.model import (
     Definition,
     Interval,
@@ -235,31 +235,33 @@ def quantile(p: mpmath.mpf, a: mpmath.mpf, upper: bool) -> mpmath.mpf:
     lo, hi = -1500.0, 710.0
     if a > TEMME_SHAPE_MIN:
         lo, hi = (float(mpmath.log(a * bound)) for bound in TEMME_BRACKET)
+    # At a tiny shape (about 1E-266, drawn for GAMMAINV's s1, T-4104) P(a, y) rounds to 1 at every y of the bracket,
+    # so Q = 1 - P loses all its digits and its log is not real: no math value, as for any root the bracket misses.
+    q_lo = upper_tail(mpmath.exp(lo), a)
+    if isinstance(q_lo, mpmath.mpc) or q_lo <= 0:
+        msg = f"Q(a, e^{lo}) has no digits at shape {mpmath.nstr(a, 3)}"
+        raise NoValueError(msg)
     s = solve_smaller_tail(p, lambda y: lower_tail(y, a), lambda y: upper_tail(y, a), lo, hi, upper=upper)
     return mpmath.exp(s)
 
 
 def _gamma_inv(args: Sequence[MathArg]) -> mpmath.mpf:
     p, alpha, beta = args
-    assert (
-        not isinstance(p, (bool, tuple))
-        and not isinstance(alpha, (bool, tuple))
-        and not isinstance(beta, (bool, tuple))
-    )
+    assert is_real(p) and is_real(alpha) and is_real(beta)
     # The quantile of probability 0 is the support's lower end.
     return mpmath.mpf(0) if p == 0 else beta * quantile(p, alpha, upper=False)
 
 
 def chi_shape(df: MathArg) -> mpmath.mpf:
     """The gamma shape of a chi-squared df, truncated: floor(df) / 2 (Abramowitz and Stegun 26.4.19)."""
-    assert not isinstance(df, (bool, tuple))
+    assert is_real(df)
     return mpmath.floor(df) / 2
 
 
 def _chisq(upper: bool) -> Callable[[Sequence[MathArg]], mpmath.mpf]:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
         p, df = args
-        assert not isinstance(p, (bool, tuple)) and not isinstance(df, (bool, tuple))
+        assert is_real(p) and is_real(df)
         if p == (1 if upper else 0):
             return mpmath.mpf(0)
         return CHI_SCALE * quantile(p, chi_shape(df), upper=upper)
@@ -333,11 +335,13 @@ CHISQ_INV = register(
 # `CHISQ.INV.RT(1E-9,1.5)` equals the df-1 value (df truncation; probes t3336-chisq-df1-right-tail).
 RT_TRUNC_SOURCE = "statistics.md#inverse-cdf-functions-at-a-tiny-or-near-1-probability-t-1543"
 
+
 # CHISQ.INV.RT takes any df (statistics.md, the huge-shape entry). The s1 batches of all three stop at a shape of
 # 1E7 (df 2E7); e-T-3863 draws the huge shapes, with Temme's expansion.
-CHISQ_INV_RT = register(
-    Definition(
-        function="CHISQ.INV.RT",
+def _right_tail(function: str) -> Definition:
+    """CHISQ.INV.RT, or CHIINV, its legacy name with the same rules."""
+    return Definition(
+        function=function,
         params=(
             _probability(CLOSED_SOURCE, lo_open=True, hi_open=False),
             deg_freedom_param(float("inf"), RT_TRUNC_SOURCE),
@@ -345,4 +349,10 @@ CHISQ_INV_RT = register(
         value=_chisq(upper=True),
         sources=(HUGE_SOURCE, CLOSED_SOURCE, "Abramowitz and Stegun 26.4.19"),
     )
-)
+
+
+CHISQ_INV_RT = register(_right_tail("CHISQ.INV.RT"))
+# CHIINV is CHISQ.INV.RT's legacy name: every probed cell of the two agrees (probes-numeric
+# m9-legacy-chiinv, t3336-chisq-df1-right-tail). It has no reference table; the definition gives its
+# eval cells math values, so decision 0267 item 3's df 1 marks can name them (T-3337).
+CHIINV = register(_right_tail("CHIINV"))

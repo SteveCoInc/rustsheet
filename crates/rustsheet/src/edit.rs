@@ -497,10 +497,10 @@ impl Txn<'_> {
         Ok(())
     }
 
-    /// Adds a workbook-scoped defined name. `formula` may be any formula that parses, with or
-    /// without a leading `=` (e.g. `=Sheet1!$A$1:$B$3 Sheet1!$A$2:$B$3`, an intersection). Like a
-    /// sheet-level op it reparses and re-evaluates the workbook, so define names before setting
-    /// many cells. Names are not reported in the [`ChangeSet`]; cells whose value they change are.
+    /// Adds a workbook-scoped defined name: any formula that parses, `=` optional (`=S!$A$1:$B$3
+    /// S!$A$2:$B$3`, an intersection); an unqualified reference binds to [`crate::Workbook::active_sheet`],
+    /// as `names/add` does. Like a sheet-level op it reparses and re-evaluates the workbook, so define
+    /// names before many cells. Names are not reported in the [`ChangeSet`]; changed cells are.
     ///
     /// # Errors
     /// [`EditError::DefinedName`] when the name is not a valid identifier, already exists, or the

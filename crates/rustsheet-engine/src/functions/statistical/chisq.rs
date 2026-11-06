@@ -1,4 +1,5 @@
 use crate::calc_result::Range;
+use crate::functions::statistical::paired::SecondMark;
 use crate::nested_array::nested_array_error;
 use crate::reference_operators::{Ranges, RefArg};
 use statrs::distribution::{Continuous, Gamma};
@@ -74,6 +75,21 @@ const RIGHT_TAIL_P_MIN: [f64; 40] = [
     1e-273, 1e-282, 1e-291,
 ];
 
+/// Below this p Excel's CHISQ.INV.RT and CHIINV at one degree of freedom (df 1 to 1.99) are
+/// `#NUM!`: 8.3253E-17 is `#NUM!` and 8.3254E-17 a value (68.7632522116684), with every probed p
+/// from 8E-17 to 8.3253E-17 `#NUM!` and from 8.3254E-17 to 9E-17, 3*2^-55 - 2^-106 and 2^-53 a
+/// value (probes-numeric/t3858-chisq-df1-num-cutoff, excel-graph). 1 - p is 1 - 2^-53 on both
+/// sides and `CHISQ.INV(1-p,1)` is a value at every such p, so the edge is in the right-tail
+/// functions' own p check, not in "1 - p rounds to 1" (docs/excel-semantics/statistics.md
+/// "CHISQ.INV.RT and CHIINV quirks", T-3858). The edge is about 0.74988 * 2^-53 and has no closed
+/// form found; any threshold in (8.3253E-17, 8.3254E-17] scores the same, and the midpoint keeps
+/// an ulp of literal parsing on either side from moving a probed cell. The 180 cells are the A
+/// and C columns of that case and T-3336's A249:A252 (2^-54, 6E-17 to 8E-17, `#NUM!`). Below
+/// 5.6E-17 the cut agrees with "1 - p rounds to 1", which T-1543 and T-3336 show as `#NUM!`. A
+/// fresh sweep after the freeze (t3858-chisq-df1-num-cutoff-fresh, 80 cells) matches at all 80.
+/// FITTED(T-3858, 180 cells, df 1, p 5.5E-17..1.12E-16)
+const ONE_DEGREE_RIGHT_TAIL_P_MIN: f64 = 8.32535e-17;
+
 /// Whether Excel's right-tail quantile of `p` at `df` (truncated) degrees of freedom is `#NUM!`
 /// below its search's edge ([`RIGHT_TAIL_P_MIN`]).
 fn right_tail_beyond_edge(df: f64, p: f64) -> bool {
@@ -84,6 +100,44 @@ fn right_tail_beyond_edge(df: f64, p: f64) -> bool {
     RIGHT_TAIL_P_MIN
         .get(df as usize - 3)
         .is_some_and(|&p_min| p < p_min)
+}
+
+/// Decision 0188 R3's G: where Excel is more than this relative distance off the 50-digit math,
+/// decision 0267 item 3 rules the math the target for CHISQ.INV.RT and CHIINV at df 1.
+const R3_GAP: f64 = 1e-4;
+
+/// From this p up, rounding `1 - p` to a double moves the df-1 quantile by at most about
+/// 2^-54 / p * 2 / x, under 3E-6 relative (x > 50 at p 1E-12), so the quantile of `1 - p` is
+/// always within [`R3_GAP`] of the math and the second search is skipped. Not a fit: no result
+/// depends on where between 1E-12 and the first point above G (about 1.5E-15) the bound sits.
+const ONE_DEGREE_EXACT_P_MIN: f64 = 1e-12;
+
+/// CHISQ.INV.RT and CHIINV at one degree of freedom. Excel's value is the lower quantile of
+/// `1 - p` (`CHISQ.INV.RT(1E-10,1)` is `CHISQ.INV(0.9999999999,1)`, 41.82145620298276, T-1543,
+/// T-1634), or one cdf step from it at some p, which no rule tried reproduces (T-3337,
+/// time-boxed), and `#NUM!` where that has none (1 - p rounds to 1). At a tiny p, rounding `1 - p`
+/// to a double can move the tail it stands for by a large part of p: `CHISQ.INV.RT(1.5E-16,1)`
+/// is Excel's 67.39648382445009 and the quantile of 1 - 2^-53 68.7632522116684, both more than
+/// 8E-3 off the math 68.169874129795366 (probes-numeric/t3336-chisq-df1-right-tail A220 and its
+/// math sidecar). Decision 0267 item 3 rules the math there (decision 0188 R3), so where the
+/// quantile of `1 - p` is more than [`R3_GAP`] off the right-tail quantile of `p` itself (the
+/// accurate upper-tail search, which keeps the digits `1 - p` loses), that one is returned:
+/// on the 225 numeric df-1 cells of t3336 and of the fresh sweep taken after this rule was frozen
+/// (t3337-chisq-df1-r3-fresh), it fires at exactly the 45 where Excel is more than G off, which are
+/// R3-marked (decision 0313; docs/excel-semantics/statistics.md "Tiny-p quantiles"), at none
+/// where Excel is within G, and at p 6E-17 to 8E-17, where Excel is `#NUM!` (T-3858's cut, not
+/// this rule's). Two bounded searches at most.
+fn one_degree_right_tail_quantile(p: f64) -> f64 {
+    let excel = gamma_quantile(0.5, CHI_SQUARED_SCALE, 1.0 - p, Tail::Lower);
+    if p >= ONE_DEGREE_EXACT_P_MIN || !excel.is_finite() {
+        return excel;
+    }
+    let math = gamma_quantile(0.5, CHI_SQUARED_SCALE, p, Tail::Upper);
+    if math.is_finite() && (excel - math).abs() > R3_GAP * math {
+        math
+    } else {
+        excel
+    }
 }
 
 /// A distribution value as a cell value: `#NUM!` unless finite and not negative.
@@ -252,12 +306,13 @@ impl Model {
         }
         // At one degree of freedom Excel's right-tail quantile is the left one of 1 - p:
         // `CHISQ.INV.RT(1E-10,1)` is `CHISQ.INV(0.9999999999,1)`, 41.82145620298276, and below
-        // 1.1E-16 (1 - p rounds to 1) it is `#NUM!` (T-1543 probe, T-1634).
+        // [`ONE_DEGREE_RIGHT_TAIL_P_MIN`] (about 0.75 * 2^-53) it is `#NUM!` (T-1543 probe, T-1634,
+        // T-3858).
         if is_one_degree(&dist) {
-            return non_negative(
-                gamma_quantile(dist.shape(), CHI_SQUARED_SCALE, 1.0 - p, Tail::Lower),
-                cell,
-            );
+            if p < ONE_DEGREE_RIGHT_TAIL_P_MIN {
+                return Err(num_error(cell));
+            }
+            return non_negative(one_degree_right_tail_quantile(p), cell);
         }
         if right_tail_beyond_edge(dist.shape() * 2.0, p) {
             return Err(num_error(cell));
@@ -496,11 +551,11 @@ impl Model {
 
     // CHISQ.TEST(actual_range, expected_range)
     pub(crate) fn fn_chisq_test(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let (width, height, values_left, values_right) = match self.fn_get_two_matrices(args, cell)
-        {
-            Ok(v) => v,
-            Err(r) => return r,
-        };
+        let (width, height, values_left, values_right) =
+            match self.fn_get_two_matrices(args, cell, SecondMark::NumError) {
+                Ok(v) => v,
+                Err(r) => return r,
+            };
 
         // A pair with a non-number on either side adds nothing; the degrees of freedom still come
         // from the first range's shape (statistics.md, CHITEST text rule; for two different shapes
@@ -547,7 +602,19 @@ impl Model {
                 );
             }
             let diff = obs - exp;
-            chi2 += (diff * diff) / exp;
+            let square = diff * diff;
+            // A squared difference past the double range is #NUM!, not a p of 0:
+            // `CHISQ.TEST({1E+160,1,1},{1,1,1})` (probes/t4098-tests-prob-domains A44, A45;
+            // statistics.md "CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)"). Where the
+            // finite squares' quotients or sum overflow is unprobed (a p of 0 here).
+            if square.is_infinite() {
+                return CalcResult::new_error(
+                    Error::NUM,
+                    cell,
+                    "CHISQ.TEST squared difference overflows".to_string(),
+                );
+            }
+            chi2 += square / exp;
         }
 
         if chi2 < 0.0 && chi2 > -1e-12 {

@@ -190,6 +190,9 @@ impl Model {
                 .items;
             let mut map = HashMap::new();
             for (item, i) in items.iter().zip(0u32..) {
+                // Why only text: an error source cell is an error item (`CacheItem::Error`, as
+                // `pivot::read_source` reads it), so a `"#N/A"` text argument does not name it;
+                // whether Excel's GETPIVOTDATA matches it is UNVERIFIED (probe pending: T-4640).
                 if let CacheItem::Text(text) = item {
                     map.entry(text.to_lowercase())
                         .and_modify(|m| *m = ItemMatch::Several)

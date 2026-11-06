@@ -1,6 +1,6 @@
 //! The LET variables and LAMBDA parameters in scope, and what each is bound to.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::{
@@ -110,6 +110,9 @@ pub(crate) struct VariableStack {
     /// it is bound, so that every LAMBDA capturing it, and every call binding it again
     /// (`Model::bind_captures`), shares that one copy.
     shared: HashMap<usize, Arc<Binding>>,
+    /// The ids bound to a number or array carrying the ERROR.TYPE/CELL mark
+    /// (`crate::number_mark`), set by [`VariableStack::insert_marked`].
+    marked: HashSet<usize>,
 }
 
 impl VariableStack {
@@ -205,6 +208,22 @@ impl VariableStack {
     /// Binds `id`; a union that would pass [`MAX_HELD_AREAS`], or a grid that would pass
     /// [`MAX_HELD_GRID_ELEMENTS`], is bound to `#VALUE!` instead.
     pub(crate) fn insert(&mut self, id: usize, binding: Binding, cell: CellReferenceIndex) {
+        self.insert_marked(id, binding, false, cell);
+    }
+
+    /// [`VariableStack::insert`] of a binding whose value `marked` says carries the
+    /// ERROR.TYPE/CELL mark (`crate::number_mark`). A binding to an array of references holding
+    /// a reference is marked too, as the OFFSET or INDIRECT itself is (`F.TEST(LET(x,
+    /// INDIRECT("B1",{1}),x),{-1,0,1})` is `#NUM!`; statistics.md "An array of references is
+    /// #NUM! in the paired functions", probes/t2577-indirect-ref-array A64). Both are settled
+    /// here, once, so a read asks only [`VariableStack::is_marked`].
+    pub(crate) fn insert_marked(
+        &mut self,
+        id: usize,
+        binding: Binding,
+        marked: bool,
+        cell: CellReferenceIndex,
+    ) {
         let held = self.held_areas + binding.held_areas();
         let new_elements = binding
             .grid()
@@ -224,17 +243,32 @@ impl VariableStack {
             self.held_grid_elements = held_elements;
             binding
         };
+        let marked = marked || binding.grid().is_some_and(RefGrid::holds_reference);
         if let Some(old) = self.bindings.insert(id, binding) {
             self.release(&old);
         }
         if !self.shared.is_empty() {
             self.shared.remove(&id);
         }
+        if marked {
+            self.marked.insert(id);
+        } else if !self.marked.is_empty() {
+            self.marked.remove(&id);
+        }
+    }
+
+    /// Whether variable `id` holds a value carrying the ERROR.TYPE/CELL mark
+    /// ([`VariableStack::insert_marked`]).
+    pub(crate) fn is_marked(&self, id: usize) -> bool {
+        !self.marked.is_empty() && self.marked.contains(&id)
     }
 
     pub(crate) fn remove(&mut self, id: usize) {
         if !self.shared.is_empty() {
             self.shared.remove(&id);
+        }
+        if !self.marked.is_empty() {
+            self.marked.remove(&id);
         }
         if let Some(old) = self.bindings.remove(&id) {
             self.release(&old);
@@ -245,6 +279,7 @@ impl VariableStack {
         self.bindings.clear();
         self.held_areas = 0;
         self.shared.clear();
+        self.marked.clear();
         self.held_grid_elements = 0;
     }
 

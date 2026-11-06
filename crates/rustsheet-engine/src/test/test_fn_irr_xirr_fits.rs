@@ -146,6 +146,19 @@ fn irr_is_div_zero_where_its_secant_cannot_evaluate_npv() {
 }
 
 #[test]
+fn irr_is_div_zero_on_a_flat_secant_after_a_far_step() {
+    // T-3347: the secant from 0.1 jumps far toward r = -1 (|NPV| past 3E+226), comes back, takes
+    // a zero step and goes flat (0/0): Excel is #DIV/0! (probes-numeric/
+    // t3347-irr-conventional-holdout P!A138; probes/t3406-irr-num-boundary P!A66). P!A65, the
+    // same 40-flow annuity whose run peaks at 1.6E+226, stays #NUM! in Excel and here.
+    assert_errors(&[
+        ("=IRR({-11890081760.62,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03})", "#DIV/0!"),
+        ("=IRR({-157216647.9,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1})", "#DIV/0!"),
+        ("=IRR({-48614255.03,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1})", "#NUM!"),
+    ]);
+}
+
+#[test]
 fn xirr_with_a_zero_first_value_and_a_negative_guess_is_num() {
     // probes/xirr-zero-first-bracket A6, A7, A11 (A6 has a root on the downward chain)
     assert_num_errors(&[
@@ -307,6 +320,20 @@ fn irr_rejects_a_number_straight_from_cell_or_error_type() {
 }
 
 #[test]
+fn irr_rejects_a_marked_number_through_its_wrappers() {
+    // probes/t2728-irr-guess-ref-mark A53, A55, A57, A59, A61; probes/irr-guess-edges-2 A37 (T-2766)
+    assert_errors(&[
+        ("=IRR(IF(TRUE,CELL(\"row\",D2)))", "#VALUE!"),
+        ("=IRR(CHOOSE(1,CELL(\"row\",D2)))", "#VALUE!"),
+        ("=IRR(INDEX(CELL(\"row\",D2),1))", "#VALUE!"),
+        ("=IRR(IFERROR(CELL(\"row\",D2),0))", "#VALUE!"),
+        ("=IRR(LAMBDA(x,x)(CELL(\"row\",D2)))", "#VALUE!"),
+        ("=IRR(LET(x,CELL(\"row\",D2),x))", "#VALUE!"),
+        ("=IRR(LET(x,CELL(\"row\",D2),x*1))", "#NUM!"),
+    ]);
+}
+
+#[test]
 fn irr_reads_the_guess_between_a_flows_error_and_an_element_error() {
     // probes/t2728-irr-guess-ref-mark A1, A39, A41 and -2 A1, A3, A5 (T-2728)
     assert_errors(&[
@@ -333,4 +360,24 @@ fn xnpv_keeps_a_flow_whose_power_overflows_as_zero() {
     // Unprobed: unchanged from the `powf` days (value/inf = 0), not Excel evidence.
     let got = results(&["=XNPV(1E+300,{-100,100},{39448,40000})"]);
     assert_eq!(got, [(-100.0_f64).to_bits()]);
+}
+
+#[test]
+fn irr_secant_runs_up_to_200_steps_on_the_evidenced_flows() {
+    // T-3408: Excel returns a secant run's own digits after more than 50 steps.
+    // probes-numeric/t3411-irr-r4-fresh A53 stops at its 90th step, t3411-irr-r4-fresh-3 A53 at its
+    // 200th; with a 50-step cap both fell to the retry from 0.1, 9 and 11 digits from Excel.
+    // t3411-irr-r4-fresh-4 A70's run from its guess would stop at its 208th step: Excel returns the
+    // retry's digits there, so the run is cut before it.
+    let got = results(&[
+        "=IRR({-5170.93099296084,288.865145373819,570.218662187279,565.457499144911,610.517931952135,231.187511687411,527.73694495784,523.592480523921,396.954768103593,30.931160753107,302.758564145744,296.839518608567,335.470634439476,485.006931605991},-0.991141596755925)",
+        "=IRR({-5419.4566980255,541.157630544974,453.161192371308,501.313367619903,179.560456356541,219.651507558475,748.165593608538,475.983383783222,453.532531891375,415.276123775752,204.050971572924,587.376200777869,269.367533912702,676.494160107977,468.392546259015,221.821037515441,174.308048353656,341.477410565068,688.641976177886,685.57480555384,743.851200755666,473.330527831559,552.574820085196},-0.998251375322924)",
+        "=IRR({-1.41053204859511,0.0734811591985414,0.0876809772190229,0.0412299828542401,0.093324708773603,0.0773116289158734,0.0218076354237776,0.00731120902409104,0.0648079334193454,0.0443983631322261,0.082530036288092,0.0765035879197722,0.0682983617375568,0.0596183385481602,0.0365402052878083,0.0759080563699283,0.037306440759054,0.09764840318161,0.00640354609700719,0.0675777796671609,0.0317312445994466,0.0138573845664404,0.0526333999410834,0.0957794340181701,0.0263417663149393,0.0575019039921351,0.0193894786196443},-0.996502177548583)",
+    ]);
+    let expected = [
+        -0.000_160_231_940_793_065_24_f64,
+        0.059_134_610_468_991_6,
+        0.000_363_049_032_130_691_2,
+    ];
+    assert_eq!(got, expected.map(f64::to_bits));
 }

@@ -125,12 +125,18 @@ impl Model {
             return CalcResult::new_error(Error::VALUE, cell, "empty array".to_string());
         }
 
-        let mut caller = caller.keeping_trimrange_references();
+        // A reference the LAMBDA returns stays one, as the next step's accumulator and as the
+        // result: `REDUCE(A1,A2:A3,LAMBDA(a,v,IF(ISREF(a),v,"no")))` is A3 (3), and ISREF of a
+        // REDUCE that ends on a reference is TRUE (probes/t4478-reduce-scan-reference-accumulator
+        // Calc!E2:E3, H2, E8, E11, E20:H21). SCAN reads it instead (`fn_scan`, Calc!H13).
+        let mut caller = caller.keeping_trimrange_references().keeping_references();
+        // The first call takes `initial_value` bound as a LAMBDA argument
+        // (`Model::lambda_initial_value`).
         let mut accumulator = if has_initial {
             let initial = self.lambda_initial_value(&args[0], cell);
             self.call_lambda_caller_bound(
                 &mut caller,
-                [initial, Binding::Value(data.at(0, 0))],
+                [initial, (Binding::Value(data.at(0, 0)), false)],
                 cell,
             )
         } else {
@@ -156,16 +162,20 @@ impl Model {
     /// D2:I9; gen-m7/2c5ea078f25443a2 A1767, T-2307). A 3-D span is `#VALUE!`, not a reference
     /// (D10:I10: COUNT(a) 0, PRODUCT(a) `#VALUE!`, ISREF(a) FALSE). An empty `initial_value`
     /// is read as before, not as an omitted parameter (T-2670). docs/excel-semantics/arrays.md
-    /// "SCAN and REDUCE keep errors in the LAMBDA".
+    /// "SCAN and REDUCE keep errors in the LAMBDA" (probes/t4478-reduce-scan-reference-accumulator
+    /// Calc!G17:H19 agree).
     pub(super) fn lambda_initial_value(
         &mut self,
         node: &Node,
         cell: CellReferenceIndex,
-    ) -> Binding {
+    ) -> (Binding, bool) {
         match self.bind_argument(node, cell) {
-            Binding::Omitted => Binding::Value(self.evaluate_node_in_context(node, cell)),
-            span @ Binding::Span(_) => Binding::Value(span.value(cell)),
-            binding => binding,
+            (Binding::Omitted, _) => (
+                Binding::Value(self.evaluate_node_in_context(node, cell)),
+                false,
+            ),
+            (span @ Binding::Span(_), marked) => (Binding::Value(span.value(cell)), marked),
+            bound => bound,
         }
     }
 }

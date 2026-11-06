@@ -1089,8 +1089,8 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       reached under a level-2 subtotal no record reached: **such a parent subtotal holds every record of the
       line**, as its own cell does (T-4401's rule), so the leaf's parent set is every record. Over BxC AyB BxC
       BxB CyB (p p q p p) the (`ab`&U+00AD,y,`ab`&U+00AD) cell of p is `1, 2, 4, 5 / 1, 2, 4, 5` (C3), where the
-      engine reads the subtotal's reached-class records (none) and gives `#VALUE!`. T-4428 owns them (it waits on
-      T-4401); with T-4401 merged and that rule in `Grid::column_records`, a scratch run gives 528 of 528.
+      engine reads the subtotal's reached-class records (none) and gives `#VALUE!`. Implemented
+      (T-4428): `Grid::column_records` gives such a subtotal every record; the probe is 528 of 528.
     - **The subtotal error gate is the leaf buckets'**: with one function over two value columns, a subtotal
       whose records reached its class while every leaf under it is empty for the row group is not computed (its
       NA() makes no `#VALUE!`), as `Grid::has_records` decides. The gate cells are Calc!B1, B3, B4, B6, B8, B9,
@@ -1469,7 +1469,8 @@ no-number array with a scalar gives the scalar (`PRODUCT({"a"},3)` = `PRODUCT(3,
 ranks like a referenced-cell error, as in SUM: a direct scalar error beats it either way (`PRODUCT({1,#N/A},#NUM!,#DIV/0!)` = #NUM!,
 `PRODUCT(#NUM!,{1,#N/A})` = #NUM!), and against a referenced error or another array the leftmost wins (`PRODUCT({1,#N/A},C1)` with C1=#NUM! is #N/A,
 `PRODUCT(C1,{1,#N/A})` #NUM!, `PRODUCT({#N/A},{#DIV/0!})` #N/A) (probes/product-array-2d-and-scalar, excel-graph 2026-10-14, T-1287).
-MDETERM, MINVERSE and MMULT are `#VALUE!` for a text cell in a matrix (arrays.md has blanks).
+MDETERM, MINVERSE and MMULT are `#VALUE!` for a text cell or text element in a matrix, a text number included
+(probes/t4626-matrix-text-elements M1-M27, T-4626; arrays.md "MDETERM / MINVERSE: a blank cell in the matrix is #VALUE!").
 These decide the generator's argument modes (eval/catalog/functions.yaml `array`, T-1082); the
 SUMX2MY2 family's `array` mode rests on "SUMX2MY2 / SUMX2PY2 / SUMXMY2 pairing" above, and
 PERCENTOF's `aggregate` on Microsoft's page and on probes/percentof-snap-overflow-union (T-0416): direct text `"1"` and TRUE count as numbers (`PERCENTOF("1",2)` and `PERCENTOF(TRUE,2)` = 0.5), as in SUM.

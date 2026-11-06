@@ -188,10 +188,10 @@ pub(crate) fn reject_empty_value(
 /// `array`, an array argument evaluated from `arg`, with an error read through a reference
 /// argument made a 1x1 array holding it, as Excel reads a one-cell range: the other arguments are
 /// checked first and the error survives only as an element of the result. With Data!G9 `#DIV/0!`,
-/// `TOROW(Data!G9,7)` is `#VALUE!`, `TOCOL(Data!G9,3)` `#CALC!`, and `FILTER(Data!G9,Data!B1:B12>-1)`
-/// `#VALUE!` for its shape (gen-m7 arg-pairs, excel-graph, T-3506). A literal error is still the
-/// error: `TOROW(#N/A,-1)` is `#N/A` and `FILTER(#DIV/0!,Data!C1:C12<>0.3)` `#DIV/0!`
-/// (gen-m7/20df23f84a528470 A8907, ee81c689b5fde629 A977).
+/// `TOROW(Data!G9,7)` is `#VALUE!` and `TOCOL(Data!G9,3)` `#CALC!` (gen-m7 arg-pairs,
+/// excel-graph, T-3506). A literal error is still the error: `TOROW(#N/A,-1)` is `#N/A`
+/// (gen-m7/20df23f84a528470 A8907). FILTER reads its arguments as references instead, which
+/// also covers a one-cell reference reached through LET, INDEX or IF (`Model::filter_arg_array`).
 ///
 /// No size check is needed: a `Node::ReferenceKind` is one cell by construction (a range is a
 /// `RangeKind`, which this never wraps). Any error read through it is wrapped, which is how a
@@ -205,23 +205,13 @@ pub(crate) fn one_cell_error_ref_as_array(
     array: Result<Vec<Vec<ArrayNode>>, CalcResult>,
     cell: CellReferenceIndex,
 ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
-    wrap_one_cell_error_ref(arg, array, cell).0
-}
-
-/// [`one_cell_error_ref_as_array`], and whether it wrapped an error (FILTER checks such an
-/// include's shape before its elements).
-pub(crate) fn wrap_one_cell_error_ref(
-    arg: &Node,
-    array: Result<Vec<Vec<ArrayNode>>, CalcResult>,
-    cell: CellReferenceIndex,
-) -> (Result<Vec<Vec<ArrayNode>>, CalcResult>, bool) {
     match array {
         Err(CalcResult::Error { error, .. })
             if matches!(*arg.ungrouped_at(cell.row), Node::ReferenceKind { .. }) =>
         {
-            (Ok(vec![vec![ArrayNode::Error(error)]]), true)
+            Ok(vec![vec![ArrayNode::Error(error)]])
         }
-        array => (array, false),
+        array => array,
     }
 }
 
@@ -264,17 +254,6 @@ impl Model {
         self.result_to_array(result, cell)
     }
 
-    /// [`Model::eval_to_array`] for an argument that must be an array ([`reject_empty_value`]).
-    pub(crate) fn eval_array_arg(
-        &mut self,
-        node: &Node,
-        cell: CellReferenceIndex,
-    ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
-        let result = self.evaluate_node_in_context(node, cell);
-        let result = reject_empty_value(node, result, cell)?;
-        self.result_to_array(result, cell)
-    }
-
     /// [`Model::eval_to_array`] that keeps a lone blank cell blank, as a blank cell of a range is:
     /// `TOROW(Z1,3)` is `#CALC!` and `UNIQUE(Z1)&"x"` is "x" (docs/excel-semantics/arrays.md
     /// "TOROW and UNIQUE of a lone blank cell", T-2409).
@@ -287,8 +266,8 @@ impl Model {
         self.result_to_array_keep_blank(result, cell)
     }
 
-    /// [`Model::eval_array_arg`] that keeps a lone blank cell blank, as
-    /// [`Model::eval_to_array_keep_blank`] does.
+    /// [`Model::eval_to_array_keep_blank`] for an argument that must be an array
+    /// ([`reject_empty_value`]).
     pub(crate) fn eval_array_arg_keep_blank(
         &mut self,
         node: &Node,
@@ -365,7 +344,8 @@ impl Model {
         }
 
         // An error array is each call's result, as the argument errors below are.
-        let data = self.eval_to_array(&args[0], cell);
+        // A lone blank cell stays blank (`SORT(Z1)&"x"` is "x"; probes/t4448-lone-blank-reshapers A1:D2, T-4448).
+        let data = self.eval_to_array_keep_blank(&args[0], cell);
         if data.as_ref().is_ok_and(|d| d.is_empty() || d[0].is_empty()) {
             return CalcResult::Array(vec![]);
         }
@@ -599,7 +579,9 @@ impl Model {
         // An error array is lifted like any other: every element is that error, in the sort_orders'
         // shape (`ROWS(SORTBY(NA(),C1:C3,{1;-1}))` is 2; probes/sortby-lifted-element-corners F7,
         // excel-graph, T-2349).
-        let data = self.eval_to_array(&args[0], cell);
+        // A lone blank cell stays blank (`SORTBY(Z1,Z1)&"x"` and `SORTBY(Z1,5)&"x"` are "x";
+        // probes/t4448-lone-blank-reshapers A3:D4, T-4448).
+        let data = self.eval_to_array_keep_blank(&args[0], cell);
         if data.as_ref().is_ok_and(|d| d.is_empty() || d[0].is_empty()) {
             return CalcResult::Array(vec![]);
         }

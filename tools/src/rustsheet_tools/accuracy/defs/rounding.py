@@ -46,6 +46,7 @@ from decimal import ROUND_DOWN, ROUND_HALF_UP, ROUND_UP, Context, Decimal
 
 import mpmath
 
+from rustsheet_tools.accuracy.defs._common import is_real
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, MIN_LITERAL, Arg, decimal15, exponent10
 from rustsheet_tools.accuracy.model import (
     Definition,
@@ -111,7 +112,7 @@ def decimal_round(function: str, number: float, num_digits: int) -> Decimal:
 def _value(function: str) -> Callable[[Sequence[MathArg]], mpmath.mpf]:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
         number, digits = args
-        assert not isinstance(number, bool | tuple) and not isinstance(digits, bool | tuple)
+        assert is_real(number) and is_real(digits)
         return mpmath.mpf(str(decimal_round(function, float(number), int(digits))))
 
     return value

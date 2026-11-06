@@ -7,7 +7,8 @@ import random
 import mpmath
 import pytest
 
-from rustsheet_tools.accuracy.defs.aggregate import AVERAGE, MAX_ARGS, SUM, _draw, running_total
+from rustsheet_tools.accuracy.defs.aggregate import AVERAGE, MAX_ARGS, SUM, running_total
+from rustsheet_tools.accuracy.defs.aggregate import draw_numbers as _draw
 from rustsheet_tools.accuracy.defs.student_t import T_DIST
 from rustsheet_tools.accuracy.eval_math import fit_args
 from rustsheet_tools.accuracy.model import DomainError

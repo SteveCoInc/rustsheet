@@ -1,4 +1,5 @@
-"""NORM.DIST, NORM.S.DIST, NORM.INV, NORM.S.INV, PHI and GAUSS (Gate A slice 4m, T-3783).
+"""NORM.DIST, NORM.S.DIST, NORM.INV, NORM.S.INV, PHI and GAUSS (Gate A slice 4m, T-3783); the legacy NORMDIST,
+NORMSDIST, NORMINV and NORMSINV, and STANDARDIZE (T-4100).
 
 The math: Phi(z) = erfc(-z/sqrt 2)/2 and phi(z) = exp(-z^2/2)/sqrt(2 pi) at the working precision (mpmath `ncdf`
 and `npdf` are the same functions; erfc keeps the lower tail's digits down to the double range), with
@@ -19,6 +20,14 @@ Sources:
   |z| = 1E-15, and from about 4E-15 it is the cancelled Phi(z) - 0.5 in doubles.
 - A standard deviation of 0 or below is `#NUM!` (Microsoft's NORM.DIST and NORM.INV pages; the engine's
   `special` checks).
+- statistics.md, "Legacy distribution names sweep, second family (T-1048)": NORMDIST = NORM.DIST, NORMINV = NORM.INV,
+  NORMSDIST = NORM.S.DIST with cumulative TRUE and NORMSINV = NORM.S.INV, value and error, on every paired cell; so
+  each legacy name shares its modern Definition (NORMSDIST passes cumulative TRUE), and no error differs.
+- STANDARDIZE is (x - mean)/sd. statistics.md "SKEW, SKEW.P, KURT, HARMEAN, STANDARDIZE, SUMX* and MDETERM edge pools
+  (T-1623)": `STANDARDIZE(5,3,1E-300)` is 1.9999999999999998E+300, the quotient of the doubles; "Booleans from a
+  reference or a formula are numbers ... (T-2255)" and "Sub-expression probe ... (T-2436)": standard_dev -1 and 0 are
+  `#NUM!` (`STANDARDIZE(-40,Data!E5,-1)`, `STANDARDIZE(3,-1,<FALSE>)`). A difference or quotient past the double
+  range, or a subnormal quotient, is unprobed: redrawn.
 
 The cancellation regions (decision 0188 R3). Two places where Excel subtracts rounded doubles are left out of the
 tables, as ERF's two-argument region is (erf.py), so the gate does not depend on an owner ruling (T-3794's kind):
@@ -39,7 +48,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars, signed, square_overflows
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, is_real, real_args, signed, square_overflows
 from rustsheet_tools.accuracy.defs.erf import erfc
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
@@ -60,6 +69,12 @@ OVERFLOW_SOURCE = "statistics.md#normal-densities-are-num-once-the-square-overfl
 INV_SOURCE = "statistics.md#norms-inv-is-as-241-ppnd16-in-the-tails-the-central-region-is-unfitted-t-1746"
 GAUSS_SOURCE = "statistics.md#gauss-of-a-tiny-argument-is-x-times-phi0-t-2255"
 SD_SOURCE = "Microsoft NORM.DIST / NORM.INV: standard_dev <= 0 is #NUM!"
+LEGACY_SOURCE = "statistics.md#legacy-distribution-names-sweep-second-family-t-1048"
+STANDARDIZE_SOURCE = "statistics.md#skew-skewp-kurt-harmean-standardize-sumx-and-mdeterm-edge-pools-t-1623"
+STANDARDIZE_SD_SOURCE = (
+    "statistics.md#booleans-from-a-reference-or-a-formula-are-numbers-in-the-f-beta-chi-squared-and-hypergeometric-"
+    "functions-t-2255"
+)
 FLUSH = 37.625  # the lower tail and the density are 0 from z = -37.625 down (T-1040, T-1041)
 GAUSS_LEADING = 1e-15  # GAUSS keeps x*phi(0) up to here (T-2255)
 GAUSS_CANCEL_HI = (
@@ -104,14 +119,14 @@ def _density_domain(z: float, cumulative: MathArg) -> str | None:
 
 def _standardized(args: Sequence[MathArg]) -> float:
     """NORM.DIST's z = (x - mean)/sd as Excel forms it in doubles (only its overflow is read; an inf or nan stays one)."""
-    x, mean, sd = (float(a) for a in scalars(args[:3]))
+    x, mean, sd = (float(a) for a in real_args(args[:3]))
     return (x - mean) / sd
 
 
 def _norm_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, mean, sd, cumulative = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(mean, (bool, tuple))
-    assert not isinstance(sd, (bool, tuple))
+    assert is_real(x) and is_real(mean)
+    assert is_real(sd)
     if cumulative and math.isinf(_standardized(args)):
         # (x - mean)/sd past the double range: no Excel cell says what the cdf is there (T-2435 probed the
         # density only), so such a point is redrawn.
@@ -127,25 +142,25 @@ def _norm_dist_domain(args: Sequence[MathArg]) -> str | None:
 
 def _norm_s_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     z, cumulative = args
-    assert not isinstance(z, (bool, tuple))
+    assert is_real(z)
     return cdf(z) if cumulative else density(z)
 
 
 def _norm_s_dist_domain(args: Sequence[MathArg]) -> str | None:
-    return _density_domain(float(scalars(args[:1])[0]), args[1])
+    return _density_domain(float(real_args(args[:1])[0]), args[1])
 
 
 def _phi(args: Sequence[MathArg]) -> mpmath.mpf:
-    (z,) = scalars(args)
+    (z,) = real_args(args)
     return density(z)
 
 
 def _phi_domain(args: Sequence[MathArg]) -> str | None:
-    return _density_domain(float(scalars(args)[0]), False)
+    return _density_domain(float(real_args(args)[0]), False)
 
 
 def _gauss(args: Sequence[MathArg]) -> mpmath.mpf:
-    (z,) = scalars(args)
+    (z,) = real_args(args)
     if abs(z) < 1:
         # Phi(z) - 1/2 cancels every digit at a tiny z (GAUSS(1E-300) is 3.99E-301); erf keeps them.
         return mpmath.erf(z / mpmath.sqrt(2)) / 2
@@ -153,12 +168,12 @@ def _gauss(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _norm_s_inv(args: Sequence[MathArg]) -> mpmath.mpf:
-    (p,) = scalars(args)
+    (p,) = real_args(args)
     return standard_quantile(p)
 
 
 def _norm_inv(args: Sequence[MathArg]) -> mpmath.mpf:
-    p, mean, sd = scalars(args)
+    p, mean, sd = real_args(args)
     return mean + sd * standard_quantile(p)
 
 
@@ -172,7 +187,7 @@ def _standard_tail(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmat
 def _general_tail(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     """NORM.DIST's x whose lower (or upper) tail is q: mean + sd*z."""
     mean, sd = args[1], args[2]
-    if isinstance(mean, (bool, tuple)) or isinstance(sd, (bool, tuple)) or sd <= 0:
+    if not is_real(mean) or not is_real(sd) or sd <= 0:
         msg = "no tail map without a positive standard deviation"
         raise ValueError(msg)
     return mean + sd * _standard_tail(q, upper, args)
@@ -293,9 +308,12 @@ _SD = Param(
     source=SD_SOURCE,
 )
 
-NORM_DIST = register(
-    Definition(
-        function="NORM.DIST",
+
+def _norm_dist_definition(function: str) -> Definition:
+    """NORM.DIST and its legacy name NORMDIST, which statistics.md T-1048 and T-2435 show have the same values and
+    errors (one Definition, directive 3)."""
+    return Definition(
+        function=function,
         params=(
             Param("x", "real", typical=(-10, 10), extreme=(1e2, 1e100), edges=(0.0,), source=SWEEP_SOURCE),
             Param("mean", "real", typical=(-10, 10), extreme=(1e2, 1e100), source=SWEEP_SOURCE),
@@ -306,9 +324,12 @@ NORM_DIST = register(
         domain=_norm_dist_domain,
         tail=_general_tail,
         tail_param="x",
-        sources=(SWEEP_SOURCE, CDF_SOURCE, DENSITY_SOURCE, OVERFLOW_SOURCE, SD_SOURCE),
+        sources=(SWEEP_SOURCE, CDF_SOURCE, DENSITY_SOURCE, OVERFLOW_SOURCE, SD_SOURCE, LEGACY_SOURCE),
     )
-)
+
+
+NORM_DIST = register(_norm_dist_definition("NORM.DIST"))
+NORMDIST = register(_norm_dist_definition("NORMDIST"))
 
 NORM_S_DIST = register(
     Definition(
@@ -361,19 +382,42 @@ GAUSS = register(
     )
 )
 
-NORM_S_INV = register(
+# NORMSDIST is NORM.S.DIST with cumulative TRUE (statistics.md T-1048): the cdf only, so no density domain.
+NORMSDIST = register(
     Definition(
-        function="NORM.S.INV",
-        params=(_PROBABILITY,),
-        value=_norm_s_inv,
-        draw=_draw_norm_s_inv,
-        sources=(INV_SOURCE, SWEEP_SOURCE),
+        function="NORMSDIST",
+        params=(
+            Param(
+                "z", "real", typical=(-6, 6), extreme=(40, 1e300), edges=(0.0, -FLUSH), source=SWEEP_SOURCE
+            ),
+        ),
+        value=lambda args: _norm_s_dist([*args, True]),
+        tail=_standard_tail,
+        tail_param="z",
+        sources=(SWEEP_SOURCE, CDF_SOURCE, LEGACY_SOURCE),
     )
 )
 
-NORM_INV = register(
-    Definition(
-        function="NORM.INV",
+
+def _norm_s_inv_definition(function: str) -> Definition:
+    """NORM.S.INV and its legacy name NORMSINV (statistics.md T-1048, numbers.md T-1006)."""
+    return Definition(
+        function=function,
+        params=(_PROBABILITY,),
+        value=_norm_s_inv,
+        draw=_draw_norm_s_inv,
+        sources=(INV_SOURCE, SWEEP_SOURCE, LEGACY_SOURCE),
+    )
+
+
+NORM_S_INV = register(_norm_s_inv_definition("NORM.S.INV"))
+NORMSINV = register(_norm_s_inv_definition("NORMSINV"))
+
+
+def _norm_inv_definition(function: str) -> Definition:
+    """NORM.INV and its legacy name NORMINV (statistics.md T-1048: both reject p = 0 and 1)."""
+    return Definition(
+        function=function,
         params=(
             _PROBABILITY,
             Param("mean", "real", typical=(-100, 100), extreme=(1e-100, 1e100), source=INV_SOURCE),
@@ -381,6 +425,52 @@ NORM_INV = register(
         ),
         value=lambda args: _no_overflow(_norm_inv(args)),
         draw=_draw_norm_inv,
-        sources=(INV_SOURCE, SD_SOURCE),
+        sources=(INV_SOURCE, SD_SOURCE, LEGACY_SOURCE),
+    )
+
+
+NORM_INV = register(_norm_inv_definition("NORM.INV"))
+NORMINV = register(_norm_inv_definition("NORMINV"))
+
+
+def _standardize(args: Sequence[MathArg]) -> mpmath.mpf:
+    """(x - mean)/sd. Excel's one double subtraction and one division are within an ulp or so of it; a quotient (or
+    a difference) past the largest double, or below the smallest normal one, is unprobed and redrawn."""
+    x, mean, sd = real_args(args)
+    difference = float(x) - float(mean)
+    value = (x - mean) / sd
+    if math.isinf(difference) or abs(value) > sys.float_info.max:
+        msg = "x - mean or the quotient overflows a double (unprobed)"
+        raise NoValueError(msg)
+    if value != 0 and abs(value) < NORMAL_MIN:
+        msg = "a subnormal quotient (unprobed)"
+        raise NoValueError(msg)
+    return value
+
+
+STANDARDIZE = register(
+    Definition(
+        function="STANDARDIZE",
+        params=(
+            Param(
+                "x",
+                "real",
+                typical=(-100, 100),
+                extreme=(1e2, 1e100),
+                edges=(0.0,),
+                source=STANDARDIZE_SOURCE,
+            ),
+            Param("mean", "real", typical=(-100, 100), extreme=(1e2, 1e100), source=STANDARDIZE_SOURCE),
+            Param(
+                "standard_dev",
+                "real",
+                Interval(0, float("inf")),
+                typical=(0.1, 100),
+                extreme=(1e-100, 1e100),
+                source=STANDARDIZE_SD_SOURCE,
+            ),
+        ),
+        value=_standardize,
+        sources=(STANDARDIZE_SOURCE, STANDARDIZE_SD_SOURCE),
     )
 )

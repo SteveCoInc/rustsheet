@@ -1,0 +1,1534 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product"
+    },
+    {
+     "name": "Val"
+    },
+    {
+     "name": "Clean"
+    },
+    {
+     "name": "ErrFirst"
+    },
+    {
+     "name": "ErrLast"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A7": {
+     "t": "s",
+     "v": "West"
+    },
+    "A8": {
+     "t": "empty"
+    },
+    "A9": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "B10": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "B4": {
+     "t": "s",
+     "v": "A"
+    },
+    "B5": {
+     "t": "s",
+     "v": "B"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "s",
+     "v": "A"
+    },
+    "B8": {
+     "t": "s",
+     "v": "B"
+    },
+    "B9": {
+     "t": "empty"
+    },
+    "C10": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "C3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "C4": {
+     "t": "n",
+     "v": 10.0
+    },
+    "C5": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "C6": {
+     "t": "n",
+     "v": 3.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 3.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 4.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C10",
+   "name": "CountA",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "CA"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product"
+    },
+    {
+     "name": "Val"
+    },
+    {
+     "name": "Clean"
+    },
+    {
+     "name": "ErrFirst"
+    },
+    {
+     "name": "ErrLast"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A7": {
+     "t": "s",
+     "v": "West"
+    },
+    "A8": {
+     "t": "empty"
+    },
+    "A9": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "B10": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "B4": {
+     "t": "s",
+     "v": "A"
+    },
+    "B5": {
+     "t": "s",
+     "v": "B"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "s",
+     "v": "A"
+    },
+    "B8": {
+     "t": "s",
+     "v": "B"
+    },
+    "B9": {
+     "t": "empty"
+    },
+    "C10": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "C3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "C4": {
+     "t": "n",
+     "v": 10.0
+    },
+    "C5": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "C6": {
+     "t": "n",
+     "v": 1.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 3.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 2.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C10",
+   "name": "Count",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "CN"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product"
+    },
+    {
+     "name": "Val"
+    },
+    {
+     "name": "Clean"
+    },
+    {
+     "name": "ErrFirst"
+    },
+    {
+     "name": "ErrLast"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A11": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A12": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A7": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West"
+    },
+    "A9": {
+     "t": "empty"
+    },
+    "B10": {
+     "t": "empty"
+    },
+    "B11": {
+     "t": "empty"
+    },
+    "B12": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "B4": {
+     "t": "s",
+     "v": "A"
+    },
+    "B5": {
+     "t": "s",
+     "v": "B"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "B8": {
+     "t": "s",
+     "v": "A"
+    },
+    "B9": {
+     "t": "s",
+     "v": "B"
+    },
+    "C10": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C11": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C12": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "C3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "C4": {
+     "t": "n",
+     "v": 10.0
+    },
+    "C5": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "C6": {
+     "t": "n",
+     "v": 3.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 1.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C12",
+   "name": "Both",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "B1"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product"
+    },
+    {
+     "name": "Val"
+    },
+    {
+     "name": "Clean"
+    },
+    {
+     "name": "ErrFirst"
+    },
+    {
+     "name": "ErrLast"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A11": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A12": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A7": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West"
+    },
+    "A9": {
+     "t": "empty"
+    },
+    "B10": {
+     "t": "empty"
+    },
+    "B11": {
+     "t": "empty"
+    },
+    "B12": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "B4": {
+     "t": "s",
+     "v": "A"
+    },
+    "B5": {
+     "t": "s",
+     "v": "B"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "B8": {
+     "t": "s",
+     "v": "A"
+    },
+    "B9": {
+     "t": "s",
+     "v": "B"
+    },
+    "C10": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C11": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C12": {
+     "t": "n",
+     "v": 27.0
+    },
+    "C3": {
+     "t": "s",
+     "v": "Sum of Clean"
+    },
+    "C4": {
+     "t": "n",
+     "v": 10.0
+    },
+    "C5": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 3.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C12",
+   "name": "BothClean",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "B2"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product"
+    },
+    {
+     "name": "Val"
+    },
+    {
+     "name": "Clean"
+    },
+    {
+     "name": "ErrFirst"
+    },
+    {
+     "name": "ErrLast"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A11": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A12": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A7": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West"
+    },
+    "A9": {
+     "t": "empty"
+    },
+    "B10": {
+     "t": "empty"
+    },
+    "B11": {
+     "t": "empty"
+    },
+    "B12": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "B4": {
+     "t": "s",
+     "v": "A"
+    },
+    "B5": {
+     "t": "s",
+     "v": "B"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "B8": {
+     "t": "s",
+     "v": "A"
+    },
+    "B9": {
+     "t": "s",
+     "v": "B"
+    },
+    "C10": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C11": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C12": {
+     "t": "n",
+     "v": 8.0
+    },
+    "C3": {
+     "t": "s",
+     "v": "Count of Val"
+    },
+    "C4": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C5": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 1.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C12",
+   "name": "BothOverCount",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "B3"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product"
+    },
+    {
+     "name": "Val"
+    },
+    {
+     "name": "Clean"
+    },
+    {
+     "name": "ErrFirst"
+    },
+    {
+     "name": "ErrLast"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A11": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A12": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A7": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West"
+    },
+    "A9": {
+     "t": "empty"
+    },
+    "B10": {
+     "t": "empty"
+    },
+    "B11": {
+     "t": "empty"
+    },
+    "B12": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "B4": {
+     "t": "s",
+     "v": "A"
+    },
+    "B5": {
+     "t": "s",
+     "v": "B"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "B8": {
+     "t": "s",
+     "v": "A"
+    },
+    "B9": {
+     "t": "s",
+     "v": "B"
+    },
+    "C10": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C11": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C12": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "C3": {
+     "t": "s",
+     "v": "Sum of ErrFirst"
+    },
+    "C4": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "C5": {
+     "t": "n",
+     "v": 5.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 3.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 1.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C12",
+   "name": "BothErrFirst",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "B4"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product"
+    },
+    {
+     "name": "Val"
+    },
+    {
+     "name": "Clean"
+    },
+    {
+     "name": "ErrFirst"
+    },
+    {
+     "name": "ErrLast"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A11": {
+     "t": "s",
+     "v": "West Count"
+    },
+    "A12": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A7": {
+     "t": "s",
+     "v": "East Count"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West"
+    },
+    "A9": {
+     "t": "empty"
+    },
+    "B10": {
+     "t": "empty"
+    },
+    "B11": {
+     "t": "empty"
+    },
+    "B12": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "B4": {
+     "t": "s",
+     "v": "A"
+    },
+    "B5": {
+     "t": "s",
+     "v": "B"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "B8": {
+     "t": "s",
+     "v": "A"
+    },
+    "B9": {
+     "t": "s",
+     "v": "B"
+    },
+    "C10": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C11": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C12": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "C3": {
+     "t": "s",
+     "v": "Sum of ErrLast"
+    },
+    "C4": {
+     "t": "n",
+     "v": 10.0
+    },
+    "C5": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "C6": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 2.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C12",
+   "name": "BothErrLast",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "countA",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "count",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "B5"
+  }
+ ],
+ "sheets": {
+  "B1": {},
+  "B2": {},
+  "B3": {},
+  "B4": {},
+  "B5": {},
+  "CA": {},
+  "CN": {},
+  "Data": {
+   "C5": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "E2": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "F6": {
+    "t": "e",
+    "v": "#N/A"
+   }
+  },
+  "Q": {
+   "A1": {
+    "t": "n",
+    "v": 4.0
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "26dfdcdaf4d8395e5cc692a4ac4edf5f5b9cad29b2e51c92ceed37b03fd5b35c",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-06T15:41:59+00:00",
+  "version": null,
+  "workbook_name": "90a712795da1679747d20b1ccbb9a10b883580bd89ae465fc92ff50abfb73685.xlsx"
+ }
+}

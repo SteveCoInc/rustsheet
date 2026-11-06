@@ -80,10 +80,12 @@ Done 2026-11-06 (resumed from the landing notes below).
   its `#VALUE!` and keeps an empty slot as before (T-2670). A new `call_lambda_caller_bound` (lambda.rs), which
   `call_lambda_caller` now wraps, hands that binding to REDUCE's and SCAN's first call. ISREF of a variable bound to a
   union is TRUE (`Model::is_union_variable`, let.rs; information/mod.rs).
-- **Eval delta:** the new case has 62/64 cells (it had 33 on main). D11 and F11 are REDUCE's returned-reference
-  accumulator, which is out of scope here: they are in eval/baseline/probes.txt and named in T-4478. `make eval-gates`
-  shows 0 regressions in every suite (gen-m7, lambda-helper-range-slices and scan-over-groupby are unchanged). The
-  visible-parity lock adds the new case's 2.
+- **Eval delta:** the new case passes 64/64 (main before this change: 33). D11 and F11, REDUCE keeping a returned
+  reference, pass through T-4478, which merged while this PR was in review; the merge of `origin/main` combines the two
+  (REDUCE's reference-keeping caller with the bound first call, and T-2766's ERROR.TYPE mark carried with the binding).
+  The union initial value also fixes probes/t4478-reduce-scan-reference-accumulator Calc!H17, which arrays.md had
+  listed for T-4494. `make eval-check` shows 0 regressions in every suite (gen-m7, lambda-helper-range-slices and
+  scan-over-groupby unchanged).
 - **Tests:** `scan_reduce_initial_value_forms_bind_as_lambda_arguments` (test_fn_map_reduce.rs) pins
   `REDUCE(IF(TRUE,A2),A3,LAMBDA(a,v,COUNT(a)))` at 0, plus the IFERROR, XLOOKUP, LET/OFFSET, union and span forms.
   The test uses the LAMBDA form the probe evidences.

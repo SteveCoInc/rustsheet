@@ -47,7 +47,8 @@ pub use encryption::{
 };
 pub use iso_date::{iso8601_to_date_system_serial, iso8601_to_serial};
 pub use ole::{classify_ole_compound_file, decrypt_ole_package};
-pub use package::{is_ole_compound_file, ImportLimits, PartNames};
+pub use package::{is_ole_compound_file, part_key, ImportLimits, PartNames};
+pub use pivots::MAX_PIVOTS;
 pub use shared_strings::decode_xlsx_escapes;
 use shared_strings::read_shared_strings;
 pub use workbook::date_system_from_attribute;
@@ -62,6 +63,11 @@ use util::get_attribute;
 use workbook::load_workbook;
 use worksheets::load_sheets;
 
+/// The workbook's relationships part, which the importer reads and the export writes.
+pub(crate) const WORKBOOK_RELS_PART: &str = "xl/_rels/workbook.xml.rels";
+/// The package's content types.
+pub(crate) const CONTENT_TYPES_PART: &str = "[Content_Types].xml";
+
 /// A `<Relationship>` of a relationships part.
 pub(crate) struct Relationship {
     pub(crate) target: String,
@@ -73,7 +79,7 @@ pub(crate) struct Relationship {
 fn load_relationships<R: Read + Seek>(
     archive: &mut Package<R>,
 ) -> Result<HashMap<String, Relationship>, XlsxError> {
-    let file = archive.open("xl/_rels/workbook.xml.rels")?;
+    let file = archive.open(WORKBOOK_RELS_PART)?;
     Ok(parse_relationships(&XmlNode::parse(file)?)?
         .into_iter()
         .collect())
@@ -127,6 +133,38 @@ fn reparse_formula_hack(
     refuse_too_many_calls(&parser, &format!("definedName {name} body"))?;
 
     Ok(to_english_string(&t, &cell_reference))
+}
+
+/// The parts the importer reads a package's worksheets and shared strings from, in model order:
+/// what the source-preserving export must patch to change them (SPEC-0034 D3). Resolved exactly as
+/// [`load_package`] resolves them, so both name the same parts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PartPaths {
+    /// The part of each model worksheet, in the model's sheet order.
+    pub(crate) worksheets: Vec<String>,
+    /// The shared-strings part the importer reads.
+    pub(crate) shared_strings: &'static str,
+}
+
+/// [`PartPaths`] of the package `bytes`, read under `limits`.
+///
+/// # Errors
+/// When the package does not import as far as its workbook and relationships.
+pub(crate) fn part_paths(bytes: &[u8], limits: &ImportLimits) -> Result<PartPaths, XlsxError> {
+    let mut archive = Package::new(Cursor::new(bytes), *limits)?;
+    let workbook = load_workbook(&mut archive)?;
+    let rels = load_relationships(&mut archive)?;
+    let mut worksheets = Vec::new();
+    for sheet in &workbook.worksheets {
+        let rel = util::get_relationship(&rels, &sheet.id)?;
+        if rel.rel_type.ends_with("worksheet") {
+            worksheets.push(resolve_target("xl", &rel.target));
+        }
+    }
+    Ok(PartPaths {
+        worksheets,
+        shared_strings: shared_strings::SHARED_STRINGS_PART,
+    })
 }
 
 fn load_xlsx_from_reader<R: Read + Seek>(

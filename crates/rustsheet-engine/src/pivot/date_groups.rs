@@ -127,6 +127,13 @@ impl DateGroups {
         })
     }
 
+    /// What the grouping groups by and its `startDate` and `endDate` serials, to build it again
+    /// over refreshed values ([`crate::pivot::regroup`]).
+    #[must_use]
+    pub fn bounds(&self) -> (DateGroupBy, f64, f64) {
+        (self.by, self.start, self.end)
+    }
+
     /// The group item `value` falls in: 0 below the range, `count - 1` above it, and otherwise
     /// the calendar part counted from 1. A date is compared to `start` and `end` rounded to the
     /// second, as it is grouped: Excel's cache holds 2018-12-31 23:59:59.5 as 2019-01-01, so it

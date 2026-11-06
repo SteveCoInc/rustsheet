@@ -35,7 +35,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars, signed
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, real_args, signed
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -50,7 +50,7 @@ POWER_RANGE_SOURCE = "numbers.md#integer-exponents-beyond-360-subnormal-results-
 POWER_HUGE_SOURCE = "numbers.md#power-when-yln-x-overflows-t-2661"
 
 LN_MAX = math.log(sys.float_info.max)  # 709.782712893384
-LN_MIN = math.log(sys.float_info.min)  # -708.3964185322641, the smallest normal double
+LN_MIN = math.log(NORMAL_MIN)  # -708.3964185322641, the smallest normal double
 EXP_BAND = (709.78, 709.79)  # EXP's overflow cut lies in here; the draws keep out
 SQRTPI_CUT = sys.float_info.max / math.pi  # 5.72E+307: x·π overflows above it
 SQRTPI_BAND = (SQRTPI_CUT * (1 - 1e-3), SQRTPI_CUT * (1 + 1e-3))  # Excel's product rounding decides inside
@@ -60,17 +60,17 @@ EDGE_MARGIN = 1e-6  # relative distance of ln|x|^|y| from the range edges that a
 
 
 def _exp_domain(args: Sequence[MathArg]) -> str | None:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "EXP overflows" if x > LN_MAX else None
 
 
 def _log_domain(args: Sequence[MathArg]) -> str | None:
-    _, base = scalars(args)
+    _, base = real_args(args)
     return "base 1 is #DIV/0!" if base == 1 else None
 
 
 def _sqrtpi_domain(args: Sequence[MathArg]) -> str | None:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "x·π overflows" if x > SQRTPI_CUT else None
 
 
@@ -113,13 +113,13 @@ def _out_of_range(x: float, y: float) -> str | None:
 
 
 def _power_domain(args: Sequence[MathArg]) -> str | None:
-    xm, ym = scalars(args)
+    xm, ym = real_args(args)
     x, y = float(xm), float(ym)
     return _zero_or_negative_base(x, y) or _out_of_range(x, y)
 
 
 def _power(args: Sequence[MathArg]) -> mpmath.mpf:
-    xm, ym = scalars(args)
+    xm, ym = real_args(args)
     x, y = float(xm), float(ym)
     if x == 0:
         return mpmath.mpf(0)
@@ -254,7 +254,7 @@ def _one(
     check: Callable[[Sequence[MathArg]], str | None] | None = None,
 ) -> Definition:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
-        (x,) = scalars(args)
+        (x,) = real_args(args)
         return kernel(x)
 
     return register(
@@ -287,7 +287,7 @@ SQRTPI = _one(
 
 
 def _log(args: Sequence[MathArg]) -> mpmath.mpf:
-    number, base = scalars(args)
+    number, base = real_args(args)
     return mpmath.log(number) / mpmath.log(base)
 
 

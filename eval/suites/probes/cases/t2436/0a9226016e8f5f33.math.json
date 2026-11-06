@@ -1,0 +1,28 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "489a41ee208c8677df19f6e9964330eac95afe33f10958abc9b951c6de18f934"
+ },
+ "sheets": {
+  "Calc": {
+   "A106": {
+    "t": "n",
+    "v": "0.99997907303520630688554299124570933857101072987416",
+    "f": "=CHIDIST(TIME(11,HYPGEOMDIST(2,5,9,11),1),9)"
+   },
+   "A76": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=HYPGEOMDIST(2,5,9,11)"
+   },
+   "A91": {
+    "t": "n",
+    "v": "0.45834490740740740740740740740740740740740740740741",
+    "f": "=TIME(11,HYPGEOMDIST(2,5,9,11),1)"
+   }
+  }
+ }
+}

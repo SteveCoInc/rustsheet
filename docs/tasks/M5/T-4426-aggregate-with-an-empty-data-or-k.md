@@ -3,7 +3,7 @@ id: T-4426
 title: "AGGREGATE with an empty data or k argument, or data from a LET or defined name: probe Excel (numbers.md 'Still unprobed')"
 milestone: M5
 lane: functions-math
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -61,3 +61,7 @@ excel-probe skill, excel-graph, tag M5. Name the case probes/t4426-aggregate-emp
 - k rounding and a boolean k in LARGE/SMALL (T-1034).
 - AGGREGATE over a LET-bound union's areas (T-1461, a performance task).
 - SUBTOTAL and AGGREGATE inside a CSE array formula (T-4226).
+
+## Outcome
+Probe t4426-aggregate-empty-and-bound-data added with excel-graph values (391 cells); all pass with no engine
+change. Findings recorded in numbers.md (AGGREGATE entry). No follow-ups.

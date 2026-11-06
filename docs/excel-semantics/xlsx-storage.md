@@ -524,6 +524,14 @@ but calls the hidden rows filtered only for a filterColumn with a criterion insi
   past the table's width (5 on 2 columns: 9 and 21, 3 and 6; ours 9 and 9); and for the `colId="0"` fallback our
   export wrote after the filtered column is deleted (15 and 21, 3 and 6; ours 15 and 15; since T-4003 that delete
   unfilters the table and the export writes no filterColumn).
+A color filter with no usable `dxfId` is no criterion (excel-graph, 2026-11-06, T-4404; `Sales`-shaped table, rows 3
+and 5 hidden): the openpyxl file with `ColorFilter(dxfId=7)` on a workbook with no dxfs is refused (`createSession` 501
+`FileCorruptTryRepair`), which is why the export drops a `dxfId` past the dxfs. Our export of it (`<colorFilter/>`) and a
+directly written `<colorFilter/>` and `<colorFilter cellColor="0"/>` all open without repair and read as the
+criterion-less control: `SUBTOTAL(9,[Val])` 21, `109` 15, `SUBTOTAL(3,[Cat])` 6, `103` 4, manual hides. Our import
+therefore reads a `<colorFilter>` without `dxfId` as criterion-less, in `has_active_criterion` too (before, it kept
+the criterion and called the rows filtered: 15 and 4). A source file with a dangling `dxfId` still imports as filtered
+while its export is criterion-less (T-4558).
 A totals-row cell holding a number, boolean or error constant gets no metadata (T-1607 covered label and formula
 cells only), and Excel refuses that file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
 totals row with the label "Total" and the number 42 is refused, and so is the same file with 42 written as
@@ -555,7 +563,7 @@ Evidence: crates/rustsheet-xlsx/tests/calc_test_tables/tables.xlsx (Excel-author
 Status: VERIFIED (web, T-3081, T-4005): Excel loads every filter form, and a constant totals cell with bare
 `custom` metadata; T-4003 and T-4004 own the filter differences.
 Implemented in: crates/rustsheet-xlsx/src/export/tables.rs
-Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005
+Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005, T-4404
 
 ## A calculated column is saved as `calculatedColumnFormula` plus one formula per row
 Rule (excel-graph downloads of the T-2957 probes, 2026-10-27): a column Excel filled (references.md, "Calculated
@@ -643,3 +651,47 @@ Ours: `rustsheet_xlsx::compare` pins such a workbook's clock to `dcterms:modifie
 (T-0468, decision 0117); the engine itself reads the system clock unless pinned.
 Status: VERIFIED (desktop, one workbook)
 Tasks: T-0468
+
+## Round trips
+
+What Excel itself rewrites when it saves a workbook. This decides which differences the round-trip suites
+(SPEC-0033) may normalize. A difference is normalized only once a row here shows Excel rewriting it on every save
+(SPEC-0033 D4.4). Until then the candidates N1–N12 are scored as `changed`, `lost` or `added` and tagged, and
+T-4503 probes them.
+
+Status: UNVERIFIED (probe pending). Tasks: T-4503, T-4172, T-4509.
+
+| Item | Excel's behavior | Evidence |
+|---|---|---|
+| N1–N12 | not yet probed | T-4503 |
+
+Status: VERIFIED (excel-graph; desktop unprobed for NBSP). Tasks: T-2784, T-2949.
+
+Excel drops a stored formula's leading spaces, TAB or LF on import (T-2784; syntax.md "Remaining whitespace shapes
+(T-2949)"). A leading NBSP is refused by excel-graph instead; desktop Excel is unprobed. Dropping those leading spaces,
+TABs or LFs is therefore no semantic difference (SPEC-0033 X5). A leading NBSP is not covered.
+
+## A patched package keeps the source's hints
+The patch tier of the source-preserving export (SPEC-0034 D3, T-4560, T-4561) rewrites only the changed `<c>`
+elements. The rest of the package is kept as the source had it, apart from the edits below. Each assumes that Excel
+opens the result without a repair:
+- **Row `spans`.** ECMA-376 Part 1 §18.3.1.73 calls them an optimization hint. A new cell outside a row's span
+  leaves the span stale.
+- **`<dimension>`.** It grows to cover new cells but never shrinks. Readers that trust it, such as openpyxl's
+  read-only mode, then see a range larger than the cells.
+- **Empty rows.** Clearing every cell of a row leaves its `<row>` element in place. A row without cells is valid
+  (§18.3.1.73) and is how Excel stores a row that has only a height or a style.
+- **`calcChain`.** It is copied unchanged while no formula cell is added or removed. When the set of formula cells
+  changes, the chain is dropped with its relationship and override, as the regenerating export drops it
+  (SPEC-0034 E2, T-4561). The regenerating export never writes a chain, and that Excel opens such packages
+  without one is equally unprobed. Excel's repair of a chain that names a non-formula cell ("Removed Records:
+  Formula from /xl/calcChain.xml") is never relied on.
+- **Added metadata.** A source with no `metadata.xml` of its own gets the export's parts once a patched cell needs
+  `vm` or `cm`, with one relationship and one override each (T-4561). Their names, content types and relationship
+  types match Excel's own (`tests/calc_tests/LOOKUP_AND_REFERENCE/DROP_TAKE.xlsx`), and the parts are what a
+  regenerated save writes.
+
+There is no oracle evidence yet that Excel opens such packages without a repair prompt. An Excel resave through the
+T-4180 oracle flow is the probe.
+Status: UNVERIFIED (probe pending). Tasks: T-4560, T-4561, T-4180.
+

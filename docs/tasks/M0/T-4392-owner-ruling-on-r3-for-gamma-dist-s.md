@@ -18,8 +18,8 @@ engine keeps matching Excel.
 
 ## Context
 - statistics.md "GAMMA.DIST's density below shape 3 is a log-space form (T-2753, T-2852)": where y = x / beta is at most
-  about 1E-15, Excel's density is EXP(a*LN(y)-y)/GAMMA(a)/x. At shape 2 and y below about 1E-162, EXP(2*LN(y))
-  underflows to 0, so the density is 0 though the true value, y e^-y, is a normal double.
+  about 1E-15, Excel's density is EXP(a*LN(y)-y)/GAMMA(a)/x. At shape 2 and y below about 1E-162 (derived, UNVERIFIED: the sweep has
+  0 at 1E-200, A15, and a number at 1E-150, A16), EXP(2*LN(y)) underflows to 0, so the density is 0 though the true value, y e^-y, is a normal double.
 - Evidence (excel-graph; math from T-3925's regenerated sidecars): probes/t2753-gamma-density-ratio-sweep A13
   (`GAMMA.DIST(1E-300,2,1,FALSE)`, math 1.0E-300, at the envelope's floor), A14 (`(1E-250,2,1,FALSE)`, math 1.0E-250) and
   A15 (`(1E-200,2,1,FALSE)`, math 1.0E-200): Excel 0, relative error 1 (past R3's 1e-4).

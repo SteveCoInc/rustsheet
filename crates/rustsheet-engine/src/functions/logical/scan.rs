@@ -30,7 +30,7 @@ impl Model {
         let mut accumulator = if has_initial {
             self.lambda_initial_value(&args[0], cell)
         } else {
-            Binding::Value(data.at(0, 0))
+            (Binding::Value(data.at(0, 0)), false)
         };
 
         let mut result = vec![vec![ArrayNode::Empty; num_cols]; num_rows];
@@ -52,14 +52,14 @@ impl Model {
             for (j, slot) in result_row.iter_mut().enumerate().skip(col_start) {
                 let step = self.call_lambda_caller_bound(
                     &mut caller,
-                    [accumulator, Binding::Value(data.at(i, j))],
+                    [accumulator, (Binding::Value(data.at(i, j)), false)],
                     cell,
                 );
                 let value = match self.lambda_result_value(step.clone(), cell) {
                     Ok(value) => value,
                     Err(error) => return error,
                 };
-                accumulator = Binding::Value(step);
+                accumulator = (Binding::Value(step), false);
                 *slot = calc_result_to_element(value);
             }
         }

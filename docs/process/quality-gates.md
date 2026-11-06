@@ -16,6 +16,7 @@ On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygien
 | Lint debt | `scripts/check_lint_debt.py` | per-crate `LINT-DEBT` allow-lists (inherited from the fork) may only shrink; locked in `quality/lint-debt.json` |
 | Rust tests | `make test` (CI: `test-shard-1`, `-2` and `-3`, decisions 0122 and 0232) | all pass |
 | **Excel compatibility** | `make eval-check` (CI and `make check`: `make eval-gates`, decision 0125) | no regressions against `eval/baseline/*.txt` (known failures); baseline must be up to date |
+| Round-trip fidelity | `rustsheet-eval roundtrip --check` (CI and `make check`: `make eval-gates`, decision 0307; nightly: decision 0323) | no fidelity item of a gated round-trip suite (`eval/roundtrip/`, SPEC-0033) regresses against `eval/baseline/roundtrip-*.txt`; a case may not compare less or stop running. CI's PR gate checks only `roundtrip-fixtures`, because it fetches no corpus. `make check` also holds `roundtrip-poi` and `roundtrip-corpus-bench` wherever their caches are fetched (T-4629). The nightly job fetches all three corpora and checks Calipers, POI and corpus-bench (T-4632). Reproduce with `rustsheet-eval fetch --suite <suite>` and `rustsheet-eval roundtrip --check --timeout 300 --suite roundtrip-<suite>` |
 | Visible parity | `make eval-check` (CI and `make check`: `make eval-gates`) | no case of the vendored gated suites may have more in-scope cells visibly off from Excel than its line allows; `eval/baseline/visible-parity.txt` (decisions 0088, 0093, 0219) |
 | Evidence floor | `make evidence-floor` | in-scope, oracle-evaluable functions with fewer than 20 Excel-evidence cells may not increase; `quality/evidence-floor.json` (decision 0062). CI and `make check` run it with `make eval-check` as `make eval-gates`, one run of the suites (decision 0125) |
 | New-case owners | `scripts/new_case_owners.py` (CI and `make check`: `make eval-gates`) | every visibly-off Excel cell (decision 0188 R1(c)) of an eval case the branch adds or refills (its case file or `.oracle.json` sidecar added or changed against the merge base with `origin/main`) is owned by an open task by `scripts/exit_owners.py`'s rule; a `defer:` owner counts (T-3793, decision 0245) |
@@ -72,7 +73,8 @@ On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygien
   `rustsheet-eval check` also counts, per case, the in-scope cells of the vendored gated suites
   that are visibly off from Excel (further than half a unit in the 15th significant digit, or a
   wrong type, error or text; decision 0083; the 13th digit for the incomplete-beta family, decision
-  0267 and SPEC-0030). The lock has one `case<TAB>count` line per case with
+  0267 and SPEC-0030; a decision 0188 R3 cell where the engine returns the math is `r3_math`, not
+  visibly off, decision 0310). The lock has one `case<TAB>count` line per case with
   any such cell, and fails each case above its line; a case with no line allows none. `make
   eval-baseline` records the line of a case new to its suite's baseline, so a PR that adds cases
   commits their lines. It never lowers a line, so fix PRs leave the file alone, and the steward

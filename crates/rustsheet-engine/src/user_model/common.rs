@@ -1084,13 +1084,8 @@ impl UserModel {
         Ok(())
     }
 
-    /// Deletes `row_count` rows starting at `row`.
-    ///
-    /// History: a `Diff::DeleteRow` is created for
-    /// each row, ordered **bottom → top**.  Undo therefore recreates rows from
-    /// top → bottom and redo removes them bottom → top, avoiding index drift.
-    ///
-    /// See also [`Model::delete_rows`].
+    /// Deletes `row_count` rows starting at `row`, as one history step that records the rows, and
+    /// the extents of the tables it resizes (T-3634). See also [`Model::delete_rows`].
     pub fn delete_rows(&mut self, sheet: u32, row: i32, row_count: i32) -> Result<(), String> {
         // Refuse before any change: the table branch clears a row and then deletes, so a refusal of
         // the delete would otherwise leave an unrecorded clear (T-3259).
@@ -1157,7 +1152,9 @@ impl UserModel {
         })?;
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
+        let old_tables = self.model.table_extents(sheet)?;
         self.model.delete_rows(sheet, row, row_count)?;
+        let tables = self.model.changed_table_extents(sheet, old_tables)?;
 
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
         diff_list.extend(link_diffs);
@@ -1166,6 +1163,7 @@ impl UserModel {
             row,
             count: row_count,
             old_data,
+            tables,
         });
         Ok(diff_list)
     }
