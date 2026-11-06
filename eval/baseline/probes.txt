@@ -2423,6 +2423,7 @@ C	probes/t4464-groupby-spent-filter-shapes.case.json	323
 C	probes/t4465-extent-near-integer-fresh.case.json	352
 C	probes/t4465-extent-near-integer-holdout.case.json	354
 C	probes/t4465-extent-near-integer-main.case.json	602
+C	probes/t4473-textsplit-fold-gaps.case.json	117
 C	probes/t4477-filter-include-error-shapes.case.json	49
 C	probes/t4479-sort-bad-argument-holdout.case.json	70
 C	probes/t4479-sort-bad-argument-order.case.json	93
