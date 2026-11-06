@@ -3,7 +3,7 @@ id: T-4478
 title: "REDUCE and SCAN accumulators that are references: probe ISREF, ROWS and a:v ranges built across steps, and the spill of a returned reference, and match"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
