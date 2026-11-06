@@ -127,7 +127,7 @@ def _constant_exact(values: Sequence[float]) -> bool:
     return True
 
 
-def series(args: Sequence[MathArg]) -> tuple[list[float], list[float]]:
+def _series(args: Sequence[MathArg]) -> tuple[list[float], list[float]]:
     """(y, x): the last two arguments' doubles (known_y's then known_x's; CORREL's array1 then array2)."""
     out: list[list[float]] = []
     for a in args[-2:]:
@@ -139,7 +139,7 @@ def series(args: Sequence[MathArg]) -> tuple[list[float], list[float]]:
 
 def moments(args: Sequence[MathArg]) -> Moments:
     """The pairs' exact moments (y is the first array, x the second); DomainError (`#N/A`) for unequal lengths."""
-    ys, xs = series(args)
+    ys, xs = _series(args)
     if len(ys) != len(xs):
         msg = "#N/A: the arrays differ in length"
         raise DomainError(msg)
@@ -165,15 +165,15 @@ def moments(args: Sequence[MathArg]) -> Moments:
 
 
 def _x_constant(args: Sequence[MathArg], m: Moments) -> bool:
-    return m.n < 2 or _constant_exact(series(args)[1])
+    return m.n < 2 or _constant_exact(_series(args)[1])
 
 
 def _y_constant(args: Sequence[MathArg]) -> bool:
-    return _constant_exact(series(args)[0])
+    return _constant_exact(_series(args)[0])
 
 
-def _slope(args: Sequence[MathArg]) -> Fraction:
-    """The exact slope, with SLOPE's, INTERCEPT's and FORECAST's errors."""
+def _slope(args: Sequence[MathArg]) -> tuple[Moments, Fraction]:
+    """The pairs' moments and the exact slope, with SLOPE's, INTERCEPT's and FORECAST's errors."""
     m = moments(args)
     if m.x_overflows:
         msg = "#NUM!: the sum about x's mean is beyond the double range"
@@ -185,23 +185,21 @@ def _slope(args: Sequence[MathArg]) -> Fraction:
         msg = "the sum of y or of the deviation products beyond the double range (unprobed)"
         raise NoValueError(msg)
     if _y_constant(args):
-        return Fraction(0)
-    return m.sxy / m.sxx
+        return m, Fraction(0)
+    return m, m.sxy / m.sxx
 
 
 def _slope_value(args: Sequence[MathArg]) -> mpmath.mpf:
-    return fraction_to_mpf(_slope(args))
+    return fraction_to_mpf(_slope(args)[1])
 
 
 def _intercept(args: Sequence[MathArg]) -> mpmath.mpf:
-    slope = _slope(args)
-    m = moments(args)
+    m, slope = _slope(args)
     return fraction_to_mpf(m.mean_y - slope * m.mean_x)
 
 
 def _forecast(args: Sequence[MathArg]) -> mpmath.mpf:
-    slope = _slope(args)
-    m = moments(args)
+    m, slope = _slope(args)
     (x,) = scalars(args[:1])
     return fraction_to_mpf(m.mean_y + slope * (Fraction(float(x)) - m.mean_x))
 

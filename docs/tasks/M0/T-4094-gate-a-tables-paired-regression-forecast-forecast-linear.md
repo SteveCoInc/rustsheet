@@ -35,7 +35,7 @@ Every failing table point has an owner.
       entries' values.
 - [x] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
       their number. Every point outside the envelope has a `known-failures.tsv` owner.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve (design, security and Excel fidelity approve).
 
 ## Out of scope
 - The other sample-statistics groups of decision 0271.
@@ -70,10 +70,13 @@ Every failing table point has an owner.
   A110, A112, A116, A117, A119, A120, FORECAST A192 and FORECAST.LINEAR A184. All are log-uniform draws over 1E-150 to
   1E+150, where Excel's ȳ - SLOPE·x̄ and a + b·x cancel. For example, INTERCEPT A109 is 0 against an exact 3.70E+67, and
   FORECAST.LINEAR A184 is -4.21E+65 against -7.85E-40. The engine is bit-exact with Excel on all nine. CORREL, PEARSON,
-  RSQ and SLOPE are within 1e-9 of the math on every numeric point. Also recorded in statistics.md.
+  RSQ and SLOPE are within 1e-9 of the math on every numeric table point. Also recorded in statistics.md.
+  Five eval cells are kept the same way: probes/t4047-paired-overflow J1 and J7 (CORREL, PEARSON, 1.1e-4), J6 (RSQ,
+  2.3e-4), and J3 and J5 (INTERCEPT, FORECAST, 6.7e-4). Their data are a few ulps apart near 1E+160, where Excel's
+  double mean decides. The engine matches Excel on all five.
 - Math sidecars: `rustsheet-accuracy math --function` over the seven functions, for probes and probes-numeric. That gives
   5 new probes sidecars (204 cells, 104 of them math domain errors) and 14 cells added to stat-argument-modes. No cell
   of probes-numeric fits, and no existing cell changed. `make eval-math-check` prints "current". The new sidecars give
-  probes/t4047-paired-overflow J1:J3 and J5:J7 math values 1.4E-5 to 6.7E-4 relative off Excel: data a few ulps apart near 1E+160,
-  where Excel's double mean decides. The engine matches Excel there.
+  probes/t4047-paired-overflow J1:J3 and J5:J7 math values 1.4E-5 to 6.7E-4 relative off Excel (J2, SLOPE, is 1.4E-5;
+  the other five are listed above).
 - Eval delta: none in the gated suites (tools, tables, sidecars and docs only).
