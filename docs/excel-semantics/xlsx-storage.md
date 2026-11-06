@@ -585,16 +585,26 @@ A stored `calculatedColumnFormula` does not fill blank cells on load (next entry
 Ours (T-3033): import keeps its text on `TableColumn::calculated_column_formula`; a typed fill stores the first data
 row's formula in the same file form, and export writes the stored text, so an exception in a data row does not change
 it. Whether Excel opens our exported column formula without repair is unprobed.
-The stored text is not rewritten when rows or columns are inserted or deleted (an engine gap: Excel's file form
-follows the edit; unprobed here). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
+A row or column insert or delete rewrites the saved text as it rewrites the first data row's formula: its references
+follow the cells they point at (excel-graph, T-4274, the saved `xl/tables/table1.xml` of each
+probes/table-edits/t4274-calc-column-* download, T on S!A1:C4, C2 typed `=A2*2`): insert_column A saves
+`<calculatedColumnFormula>B2*2</calculatedColumnFormula>` (table `B1:D4`, cells `<f t="shared" ref="D2:D4">B2*2</f>`);
+delete_column B (the Other column) saves `A2*2` (table `A1:B4`); insert_row 1 saves `A3*2` (table `A2:C5`); insert_row 3,
+inside the table, saves `A2*2` (table `A1:C5`), and Excel fills the inserted row's cell with the column formula: C3
+holds its own `<f>A3*2</f>`, value 0, outside the shared formula `ref="C2:C5"`, which skips it. The structured twin
+(`=[@Col]*2`, insert_column A) saves `T[[#This Row],[Col]]*2` unchanged. Ours (T-4274): `Model::displace_column_formulas`
+(table_edits.rs) parses the stored text at the column's first data row and prints it displaced in file form
+(`to_excel_string_displaced`), and the undo's inverse edit displaces it back; a text the edit does not change stays as
+stored. A delete of a cell the column formula reads (`#REF!`) and its undo are unprobed (T-4679). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
 `array="1"` attribute is dropped on import (export writes the plain element): engine choices, what Excel does with
 either is unprobed.
 Evidence: the saved `xl/tables/table1.xml` and `xl/worksheets/sheet1.xml` of probes/t2957-fill-one-totals,
 -refill-second, -constant-exception, -constant-then-refill, -existing-constant, -a1-reference and -expand-right-*
 (the eval/.cache/oracle/excel-graph/<input_sha256>.xlsx of each sidecar).
 Status: VERIFIED (excel-graph)
-Implemented in: crates/rustsheet-xlsx/src/import/tables.rs, crates/rustsheet-xlsx/src/export/tables.rs
-Tasks: T-2957, T-2958, T-2969, T-3033
+Implemented in: crates/rustsheet-xlsx/src/import/tables.rs, crates/rustsheet-xlsx/src/export/tables.rs,
+crates/rustsheet-engine/src/table_edits.rs (`Model::displace_column_formulas`)
+Tasks: T-2957, T-2958, T-2969, T-3033, T-4274
 
 ## Excel does not fill a calculated column on load
 Rule: a table part whose `<tableColumn>` holds `<calculatedColumnFormula>` does not make Excel fill the
