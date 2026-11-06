@@ -4688,7 +4688,7 @@ Oracle sweep (excel-graph), 16 cases, 34-102 cells each; every paired cell (colu
 - A boolean p is #NUM! (`GAMMAINV(TRUE,2,1)`, `LOGINV(TRUE,0,1)`, `NORMINV(TRUE,0,1)`) because TRUE coerces to 1, while a boolean x coerces to 1 (`NORMDIST(TRUE,0,1,TRUE)`, `GAMMADIST(TRUE,2,1,TRUE)`) and text numbers coerce everywhere; non-numeric text is #VALUE!.
 - The `cumulative` flag of GAMMADIST/NORMDIST takes any nonzero number as TRUE, the text "TRUE", and an omitted (empty) argument as FALSE.
 - Zero or negative scale is #NUM! (`NORMDIST(0,0,0,TRUE)`, `GAMMADIST(1,2,0,TRUE)`); `GAMMADIST(0,2,1,..)` = 0 for both cum values; `LOGNORMDIST(0,0,1)` is #NUM!; far tails flush to 0 (`NORMSDIST(-38)` = 0, `NORMDIST(-40,0,1,..)` = 0) while `NORMSDIST(-37)` = 5.7255712225239266E-300.
-- NEGBINOMDIST with p = 1 is #NUM! even for zero failures (`NEGBINOMDIST(0,3,1)`), and NEGBINOM.DIST is #NUM! at p = 0 and p = 1 alike (`NEGBINOM.DIST(21,4,0,TRUE)` and `(22,25,0,FALSE)` at p = 0, `NEGBINOM.DIST(20,1,1,FALSE)` and `(13,25,1,TRUE)` at p = 1: accuracy/NEGBINOM.DIST/s1 A117, A127, A119, A139, excel-graph, T-3553), so its probability is open at both ends; successes = 0 is #NUM!. HYPGEOMDIST with sample_s > number_sample is 0, not #NUM! as documented (`HYPGEOMDIST(5,4,8,20)` = 0, `HYPGEOMDIST(1,0,8,20)` = 0); population_s > number_pop is #NUM! (`HYPGEOMDIST(1,4,25,20)`, `HYPGEOMDIST(1,4,8,5)`), and so is number_pop = 0 (`HYPGEOMDIST(1,4,8,0)`, where population_s and number_sample also exceed it); number_sample > number_pop alone is #NUM! for HYPGEOM.DIST (`t1049-hypgeomdist` A40, `(1,25,8,20)`).
+- NEGBINOMDIST with p = 1 is #NUM! even for zero failures (`NEGBINOMDIST(0,3,1)`), and NEGBINOM.DIST is #NUM! at p = 0 and p = 1 alike (`NEGBINOM.DIST(21,4,0,TRUE)` and `(22,25,0,FALSE)` at p = 0, `NEGBINOM.DIST(20,1,1,FALSE)` and `(13,25,1,TRUE)` at p = 1: accuracy/NEGBINOM.DIST/s1 A117, A127, A119, A139, excel-graph, T-3553), so its probability is open at both ends; successes = 0 is #NUM!. HYPGEOMDIST with sample_s > number_sample is 0, not #NUM! as documented (`HYPGEOMDIST(5,4,8,20)` = 0, `HYPGEOMDIST(1,0,8,20)` = 0); population_s > number_pop is #NUM! (`HYPGEOMDIST(1,4,25,20)`, `HYPGEOMDIST(1,4,8,5)`), and so is number_pop = 0 (`HYPGEOMDIST(1,4,8,0)`, where population_s and number_sample also exceed it; an empty sample of an empty population is 1, see "HYPGEOM.DIST of an empty population is 1, and a deep-tail pmf can be 0 (T-4105)"); number_sample > number_pop alone is #NUM! for HYPGEOM.DIST (`t1049-hypgeomdist` A40, `(1,25,8,20)`).
 - TTEST: tails 0/3 and type 0/4 are #NUM!, tails accepts a boolean (`TTEST(..,TRUE,2)`) and text numbers, tails/type truncate, an omitted tails or type is #NUM!; unequal counts with type 1 (paired) is #N/A; type 1 on a pair whose differences have zero variance is #DIV/0!; a one-element range is #DIV/0!; an empty range is #DIV/0!.
 - ZTEST: sigma 0 or negative is #NUM!; a one-element range is #DIV/0! (with or without sigma); an empty range is #N/A; text x "5" and TRUE coerce, non-numeric text is #VALUE!; an omitted sigma (empty argument) is #NUM!, while an omitted x (`ZTEST(D1:D10,)`) returns a value (1.3161580317707342E-09; that it equals x = 0 was not probed); a range as x lifts and spills (see "Statistical function argument modes").
 Evidence: probes-numeric cases `t1048-gammadist`, `-gammainv`, `-hypgeomdist`, `-loginv`, `-lognormdist`, `-negbinomdist`, `-normdist`, `-norminv`, `-normsdist`, `-normsinv`, `-poisson`, `-tdist`, `-tinv`, `-ttest`, `-weibull`, `-ztest`. Oracle: excel-graph, 2026-10-14.
@@ -5795,11 +5795,30 @@ Unequal sizes and single points follow "Array arguments given a scalar, a single
   0.6423163656267105, SLOPE 1.0213333333333334, INTERCEPT and FORECAST -2.1333333333333018E158 are finite and only STEYX is
   `#NUM!` (its variance subtracts sxy*sxy/sxx, which overflows). Ours gave STEYX `#DIV/0!` for the y-only case until T-4047.
   Unprobed: y's overflow alone for STEYX with two or three points (ours is `#DIV/0!` for two).
+- Gate A tables (T-4094; accuracy/{FORECAST,FORECAST.LINEAR,INTERCEPT,SLOPE,RSQ,PEARSON,CORREL}/s1, excel-graph
+  2026-11-06, one-row array literals): every error cell is one of the rules above (unequal lengths `#N/A`, one pair or a
+  constant x `#DIV/0!`, a constant y `#DIV/0!` for the correlations only, a sum about the mean past the double range
+  `#NUM!`), and a constant y gives SLOPE 0 and INTERCEPT and FORECAST its mean.
+  - Last digits: the sums of the values are x87-accumulated and the slope Sxy/Sxx is rounded to a 64-bit significand and
+    then to a double (the sums about the means and a + b*x stay plain doubles). That model fits all 597 numeric points of
+    the FORECAST, FORECAST.LINEAR, SLOPE and INTERCEPT tables. Plain doubles fit 595 and miss
+    FORECAST A67 (`FORECAST(0.838499859843194,{-0.109514844082525,-3.34908202370414},{0.838499859843194,50.1841931039674})`
+    is -0.1095148440825254, plain doubles -0.10951484408252497: the division's double rounding, amplified by the
+    cancelling line) and A79 (568833.0148482913, the x87 sum). Ours is plain doubles: T-4550.
+  - Cancellation: INTERCEPT is ȳ - SLOPE*x̄ and FORECAST INTERCEPT + SLOPE*x in doubles. Over data spanning 1E-150 to
+    1E+150 these cancel far from the exact value. Examples: `INTERCEPT({3.6982834462689E+67,1.76799207788302E+128},
+    {-7.50118897397527E-141,7.65430059879691E+81})` is 0, where the exact value is 3.70E+67 (INTERCEPT A109), and
+    FORECAST.LINEAR A184 is -4.21E+65 where it is exactly -7.85E-40. Nine points are more than 1E-4 relative off the
+    exact value: INTERCEPT A109, A110, A112, A116, A117, A119, A120; FORECAST A192; FORECAST.LINEAR A184. Ours computes
+    in the same order and matches Excel to the bit on all nine. CORREL, PEARSON, RSQ and SLOPE are within 1E-9 of the
+    exact value on every table point. The probe data a few ulps apart near 1E+160 is the exception, as Excel's double
+    mean decides there: probes/t4047-paired-overflow J1 and J7 (CORREL, PEARSON) are 1.1E-4 off the exact value, J6
+    (RSQ) 2.3E-4, and J3 and J5 (INTERCEPT, FORECAST) 6.7E-4; ours matches Excel on all five.
 Evidence: probes/regression-pairs-a, regression-pairs-b, regression-forecast (excel-graph, 2026-10-16, T-1620); the
 error cells in these cases are `#DIV/0!`, so whether a range error propagates or is replaced is unprobed.
 Ours: the unequal-size `#N/A` matches since T-1292, single points since T-1401; CORREL, PEARSON, RSQ, SLOPE, INTERCEPT, STEYX and FORECAST compute from the sums about the means in Excel's order, a typed text or boolean argument is one value with no number, and STEYX of a negative difference is `#NUM!` (T-1723). COVAR with text, blank or boolean cells (`#N/A` in ours) is still open.
 Status: VERIFIED (web)
-Tasks: T-1723, T-1724, T-1725, T-2080, T-4047 (overlaps T-1292, T-1707, T-1401, T-1290)
+Tasks: T-1723, T-1724, T-1725, T-2080, T-4047, T-4094, T-4550 (overlaps T-1292, T-1707, T-1401, T-1290)
 
 ## TREND: defaults, shapes, single points and error inputs
 Rule: TREND treats an empty known_x or new_x argument as the default (`TREND(A1:A6,B1:B6,,FALSE)` fits the known x's: 6 rows,
@@ -6298,6 +6317,32 @@ before truncation; the impossible sample is 0 for the pmf and the cdf since T-26
 `hyp_geom_dist_of`; probes/t2429-hypgeom-huge-count A5, A6 and their rows, `HYPGEOMDIST(1,N,3,N)`, are its cells).
 T-2700 confirmed the sign-before-truncation order for the HYPGEOM counts.
 Status: VERIFIED (excel-graph)
+
+## HYPGEOM.DIST of an empty population is 1, and a deep-tail pmf can be 0 (T-4105)
+Rule: an empty sample of an empty population is a number, not `#NUM!`: `HYPGEOMDIST(0,0,0,0)` and
+`HYPGEOM.DIST(0,0,0,0,FALSE)` are 1, the math's value (accuracy/HYPGEOMDIST/s1 A115, A130, A135; accuracy/HYPGEOM.DIST/s1
+A138), where `HYPGEOMDIST(1,4,8,0)`, whose other counts exceed the empty population, is `#NUM!` ("Legacy distribution
+names sweep, second family"). These are the only probed cells with number_pop = 0: other shapes (`HYPGEOMDIST(0,0,1,0)`,
+`HYPGEOMDIST(1,0,0,0)`) and `HYPGEOM.DIST(0,0,0,0,TRUE)` are unprobed.
+- Excel's pmf is 0 at `HYPGEOM.DIST(41966,46221,65797,74726,FALSE)`, where the exact value is 8.103803254140631E-186
+  (accuracy/HYPGEOM.DIST/s1 A95), while far smaller pmfs are numbers within 1E-12 of the math in the same tables:
+  `HYPGEOM.DIST(14804,15018,24530,25931,FALSE)` 4.017211385733077E-252 (A94), `HYPGEOMDIST(7352,8625,14952,20136)`
+  6.403537788576229E-219 (accuracy/HYPGEOMDIST/s1 A93). So it is no fixed underflow threshold on the result; an
+  intermediate of Excel's (unpinned, "HYPGEOM.DIST is not exact for small integer arguments") underflows there. Excel is
+  kept as the target (decision 0300).
+- Elsewhere Excel's pmf and cdf are within 1E-10 relative of the math on all 400 points of the two tables, populations up
+  to 2147483646 included, and every Excel error in them is a domain error of the Gate A definition (T-4105).
+- Unprobed (an oracle limit, not an Excel value): the excel-graph oracle's calculate request fails on every retry for a
+  workbook holding `HYPGEOM.DIST(153800,1626691102,202463,2147483646,TRUE)` alone (found by filling the table in parts;
+  the table holds that point as a pmf, A180), while the cdf `HYPGEOM.DIST(108560,269566,29690062,73480449,TRUE)` (A157,
+  108,560 terms) is answered, and so is the pmf `HYPGEOM.DIST(163325,524700,672305386,2147483646,FALSE)` (A168). What
+  Excel or the oracle times out on is unpinned. The Gate A table draws no cdf summing 2^17 terms or more (`HYPGEOM_CDF_TERMS` in tools/src/rustsheet_tools/accuracy/defs/discrete.py).
+Evidence: eval/accuracy/tables/HYPGEOM.DIST/s1 and HYPGEOMDIST/s1 (excel-graph, 2026-11-06).
+Ours: `#NUM!` at the empty population, and past the double-double walk (2^12 steps) the pmf is `#NUM!` where statrs'
+closed form C(K, x) C(N - K, n - x) / C(N, n) overflows to inf / inf (66 table points, from populations of about 2E4),
+and the fallback cdf is up to 1.2E-6 relative off (6 points): T-4502, known failures in eval/accuracy/known-failures.tsv.
+Status: VERIFIED (excel-graph)
+Tasks: T-4105, T-4502
 
 ## A single cell holding a boolean is no number in the PERCENTILE and QUARTILE data (T-2429)
 Rule: as a single cell holding text ("A single cell holding text is no number" above), a single cell holding TRUE is no
@@ -7237,9 +7282,10 @@ Cells (excel-graph):
     is 0.1 over four values (0.5) and A80 is 0.0625 over seven values (0.5).
   - Ranks above n are `#NUM!`. A71 is 0.9 over seven values (7.2) and A82 is 0.8 over three values (3.2).
   - k at 1 or above is `#NUM!`: A67 (1.5), A72 (1.5) and A81 (2, Microsoft's example).
-- eval/accuracy/tables/AGGREGATE/s1 (functions 17 and 19, T-3693):
-  - A122, A124, A129 and A137 are `#NUM!`.
-  - A113, A118, A121 and A126 (n = 1, k = 0.5) return the value.
+  - A rank of exactly 1 = n is inside: k = 0.5 over one value returns that value (A68, A84).
+- eval/accuracy/tables/AGGREGATE/s1 (functions 17 QUARTILE.INC, 18 PERCENTILE.EXC and 19 QUARTILE.EXC, T-3693):
+  - Function 18: A122, A124, A129 and A137 are `#NUM!`.
+  - Function 18: A113, A118, A121 and A126 (n = 1, k = 0.5) return the value.
   - A158 and A160 (QUARTILE.INC, quart 4.5) return the maximum.
   - A25, A29, A56 and A177 (QUARTILE.EXC, quart 3.5) are valid.
 Status: VERIFIED (excel-graph)
@@ -7568,7 +7614,7 @@ model gives 1.0000000000000006E+308 (unexplained: a power-of-ten path is possibl
 ("Overflowing arguments, PERMUT's limit and argument error order (T-1290)"). A number in (0, 1) floors to 0
 (`PERMUTATIONA(0.25,4)` is 0, A2) and `PERMUTATIONA(2.5,3.9)` is 8 (A82).
 Evidence: accuracy/PERMUTATIONA/s1 (excel-graph, 2026-11-06, T-4106).
-Ours: the engine returns `powf(n, k)`, so 35 of the 105 numeric cells differ from Excel by a few ulps (all but two
+Ours: the engine returns `powf(n, k)`, so 32 of the 105 numeric cells differ from Excel by a few ulps (all but two
 within 15 digits, those two within 1e-9 of the math: inside the Gate A envelope), and n^k for a huge k (1 or 0 where
 Excel is `#NUM!`: three Gate A known failures). Both are T-4501.
 Status: VERIFIED (excel-graph) for the cells cited; the number_chosen cut UNVERIFIED

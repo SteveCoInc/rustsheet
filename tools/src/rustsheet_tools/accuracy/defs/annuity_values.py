@@ -40,18 +40,19 @@ Domains (Excel's errors, `DomainError`), each evidenced:
   `IPMT(0.5,12,0,347880)`, 5c6a23c4f6597f1c A8 `IPMT(1E+300,0.2,161,210756,227)`, a91bad4e84f49739 A354
   `PPMT(1,0.5,323,401723)`, c0681a8b150ce301 A375 `PPMT(0.1,9,1.5,404118,62,1)`), while a period between nper and
   nper + 1 is the closed form at that period (financial.md "IPMT and PPMT take a period up to nper + 1": accuracy/PPMT/s1
-  A112 and A118 are values, A128 and A139 at nper + 1 `#NUM!`); a P whose reciprocal overflows is `#NUM!` but for IPMT in
-  period 1 of type 1, which is 0 (`IPMT(-0.5,1,2000,1)`, `PPMT(-0.5,1,2000,1)`; "PMT when (1+rate)^nper overflows or
-  underflows").
+  A112 and A118 are values, A128 and A139 at nper + 1 `#NUM!`; IPMT's band is unprobed but keeps the closed form,
+  T-4516); a P whose reciprocal overflows is `#NUM!` but for IPMT in period 1 of type 1, which is 0
+  (`IPMT(-0.5,1,2000,1)`, `PPMT(-0.5,1,2000,1)`; "PMT when (1+rate)^nper overflows or underflows").
 - PDURATION: a rate, pv or fv of 0 is `#NUM!` (gen-m9 31474c20fc1dafd6 A194 `PDURATION(0,7968,32308)`,
   9a1fa5366bc50918 A196 `PDURATION(100,0,49370)`; fv: financial.md "M9 financial argument kinds", a blank fv), and a
   rate so small that 1 + rate is 1 is `#DIV/0!` (gen-m9 e168be7f6d3f84c2 A180 `PDURATION(1E-300,4938,46197)`). A
   negative rate, pv or fv is a domain error here as the logarithms' domain; unprobed before this table, whose edge
   stratum draws them (the Outcome of T-4109 and financial.md "PDURATION's domain" record what Excel gave).
 Not drawn and given no math value (`NoValueError`), as no evidence names Excel's result: a rate below -1; nper 0 for
-PMT, IPMT, PPMT and ISPMT; nper at most 0 at rate -1; IPMT and PPMT at rate -1; P within a hair of the normal range's
-bottom or the double range's top (Excel's double P and the exact one may fall on either side); a subnormal P whose
-reciprocal is finite for IPMT and PPMT; an FV or PV term past the double range under a finite P. IPMT is `#NUM!` on
+PMT, IPMT, PPMT and ISPMT; nper at most 0 at rate -1; PDURATION where 1 + rate is 1 and fv equals pv (0/0, T-4516);
+IPMT and PPMT at rate -1; P within a hair of the normal range's bottom or the double range's top (Excel's double P and
+the exact one may fall on either side); a subnormal P whose reciprocal is finite for IPMT and PPMT; an FV or PV term
+past the double range under a finite P. IPMT is `#NUM!` on
 some points at |rate| from 1E-300 to 1E-12 and near pv or fv of 1E+290 ("IPMT near the double range and at tiny rates",
 T-4314); the draws stay at |rate| >= 1E-12 and amounts below 1E+15, and such eval cells keep their math value.
 """
@@ -65,7 +66,7 @@ from collections.abc import Callable, Sequence
 import mpmath
 
 from rustsheet_tools.accuracy.defs._common import Shape, by_stratum_with_edge, scalars, signed
-from rustsheet_tools.accuracy.defs.annuity import _annuity, present_value
+from rustsheet_tools.accuracy.defs.annuity import draw_annuity, present_value
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
@@ -186,7 +187,16 @@ def _pv(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _payment(r: mpmath.mpf, n: mpmath.mpf, pv: mpmath.mpf, fv: mpmath.mpf, due: bool) -> mpmath.mpf:
-    """PMT at a rate above -1 other than 0, P inside the normal range or past the top."""
+    """PMT at a rate above -1 other than 0, P inside the normal range or past the top.
+
+    The payment is the quotient of two present values at u = ln(1 + rate): the flows' value with no payment over
+    the value of a unit payment, -PV(pv, fv)/PV(1). That is PMT = -(fv + pv·P)·rate/(k·(P - 1)) divided through by P,
+    which stays finite where P is past the double range (RANGE_SOURCE: PMT is a value there, the quotient divided
+    through by P). The math is the exact payment on the double arguments with `1 + rate` exact (EXACT_SOURCE), not
+    any one operation order: T-1528 found that Excel's PMT is not the accurate value (ORDER_SOURCE: the expm1 form
+    `-(pv*P+fv)/((P-1)/r*k)` fixes 30 Excel-cached cells and regresses 22), and Excel's discounted form
+    (DISCOUNT_SOURCE) is a few ulps from this value, which the envelope absorbs.
+    """
     u = mpmath.log1p(r)
     return -present_value(u, n, mpmath.mpf(0), pv, fv, due=due) / present_value(
         u, n, mpmath.mpf(1), mpmath.mpf(0), mpmath.mpf(0), due=due
@@ -245,6 +255,9 @@ def split(args: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf]:
 
 
 def _ipmt(args: Sequence[MathArg]) -> mpmath.mpf:
+    # IPMT at a period strictly between nper and nper + 1 is unprobed (PERIOD_SOURCE) but keeps the closed form, as
+    # PPMT's evidenced band does: a NoValueError there would drop the math of probes/t4314-ipmt-balance-overflow
+    # D1:D2 (per 1, nper 1E-10, Excel #NUM! for T-4314's reason). T-4516's Outcome records why.
     return split(args)[0]
 
 
@@ -272,6 +285,9 @@ def _pduration(args: Sequence[MathArg]) -> mpmath.mpf:
         msg = "a rate, pv or fv at most 0: #NUM!"
         raise DomainError(msg)
     if 1.0 + float(r) == 1.0:
+        if fv == pv:  # (LN fv - LN pv) / LN(1) is 0/0; only fv != pv is evidenced (PDURATION_SOURCE)
+            msg = "1 + rate is 1 with fv equal to pv (unprobed)"
+            raise NoValueError(msg)
         msg = "1 + rate is 1: #DIV/0!"
         raise DomainError(msg)
     return (mpmath.log(fv) - mpmath.log(pv)) / mpmath.log1p(r)
@@ -288,9 +304,9 @@ def _rate(stratum: str, rng: random.Random, r: float) -> float:
 
 
 def _base(stratum: str, rng: random.Random) -> tuple[float, int, float, float, float, int]:
-    """(rate, nper, pmt, pv, fv, type) of a stratum: RATE's and NPER's annuity (`_annuity`), with a payment drawn
+    """(rate, nper, pmt, pv, fv, type) of a stratum: RATE's and NPER's annuity (`draw_annuity`), with a payment drawn
     on its own (not the one that zeroes the flows, which would make FV and PV cancel)."""
-    sign, n, r, pv, fv, due = _annuity(stratum, rng)
+    sign, n, r, pv, fv, due = draw_annuity(stratum, rng)
     pmt = -sign * abs(pv) * log_uniform(rng, 1e-4, 0.5)
     return _rate(stratum, rng, r), n, pmt, pv, fv, 1 if due else 0
 

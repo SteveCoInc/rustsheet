@@ -48,6 +48,7 @@ pub use encryption::{
 pub use iso_date::{iso8601_to_date_system_serial, iso8601_to_serial};
 pub use ole::{classify_ole_compound_file, decrypt_ole_package};
 pub use package::{is_ole_compound_file, part_key, ImportLimits, PartNames};
+pub use pivots::MAX_PIVOTS;
 pub use shared_strings::decode_xlsx_escapes;
 use shared_strings::read_shared_strings;
 pub use workbook::date_system_from_attribute;

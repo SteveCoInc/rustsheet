@@ -651,10 +651,13 @@ What Excel itself rewrites when it saves a workbook. This decides which differen
 (SPEC-0033 D4.4). Until then the candidates N1–N12 are scored as `changed`, `lost` or `added` and tagged, and
 T-4503 probes them.
 
+Status: UNVERIFIED (probe pending). Tasks: T-4503, T-4172, T-4509.
+
 | Item | Excel's behavior | Evidence |
 |---|---|---|
 | N1–N12 | not yet probed | T-4503 |
 
+Status: VERIFIED (excel-graph; desktop unprobed for NBSP). Tasks: T-2784, T-2949.
 Excel drops a stored formula's leading spaces, TAB or LF on import (T-2784; syntax.md "Remaining whitespace shapes
 (T-2949)"). A leading NBSP is refused by excel-graph instead; desktop Excel is unprobed. Dropping those leading spaces,
 TABs or LFs is therefore no semantic difference (SPEC-0033 X5). A leading NBSP is not covered.
