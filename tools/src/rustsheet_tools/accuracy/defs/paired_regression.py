@@ -65,6 +65,7 @@ import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
+from functools import partial
 
 import mpmath
 
@@ -117,6 +118,11 @@ class Moments:
     ]  # Excel's double sxx, syy and sxy (STEYX's residual decides its #NUM!)
 
 
+def _below_normal(*values: float) -> bool:
+    """Whether any of `values` is nonzero and below the normal range (a subnormal: Excel's flush is unprobed here)."""
+    return any(v != 0 and abs(v) < sys.float_info.min for v in values)
+
+
 def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float, float, float, float]:
     """(sum of x, sum of y, sxx, syy, sxy) in doubles, two passes about the double means, as Excel sums them (the paired
     entry: this order fits Excel's bits; the sums of the values are Excel's left-to-right `running_total`); NoValueError
@@ -127,10 +133,9 @@ def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float
     sxx = syy = sxy = 0.0
     for x, y in zip(xs, ys, strict=True):
         dx, dy = x - mean_x, y - mean_y
-        for d in (dx * dx, dy * dy, dx * dy):
-            if d != 0 and abs(d) < sys.float_info.min:
-                msg = "a deviation square or product below the normal range (unprobed flush)"
-                raise NoValueError(msg)
+        if _below_normal(dx * dx, dy * dy, dx * dy):
+            msg = "a deviation square or product below the normal range (unprobed flush)"
+            raise NoValueError(msg)
         sxx += dx * dx
         syy += dy * dy
         sxy += dx * dy
@@ -164,7 +169,7 @@ def moments(args: Sequence[MathArg]) -> Moments:
     if len(ys) != len(xs):
         msg = "#N/A: the arrays differ in length"
         raise DomainError(msg)
-    if any(v != 0 and abs(v) < sys.float_info.min for v in xs + ys):
+    if _below_normal(*xs, *ys):
         msg = "a subnormal literal (Excel reads it as 0; unprobed here)"
         raise NoValueError(msg)
     sum_x, sum_y, sxx_d, syy_d, sxy_d = _double_sums(xs, ys)
@@ -260,20 +265,10 @@ def _covariance(args: Sequence[MathArg], *, sample: bool) -> mpmath.mpf:
         msg = "#DIV/0!: COVARIANCE.S of one pair"
         raise DomainError(msg)
     for series in _series(args):
-        _constant_exact(series)  # NoValueError for a constant whose double mean is not its value
+        # called for its NoValueError only: a constant whose double mean is not its value has no evidenced result,
+        # while an exact constant needs no special case (its Sxy is 0)
+        _constant_exact(series)
     return fraction_to_mpf(m.sxy / (m.n - 1 if sample else m.n))
-
-
-def _population_covariance(args: Sequence[MathArg]) -> mpmath.mpf:
-    return _covariance(args, sample=False)
-
-
-def _sample_covariance(args: Sequence[MathArg]) -> mpmath.mpf:
-    return _covariance(args, sample=True)
-
-
-def _below_normal(*values: float) -> bool:
-    return any(v != 0 and abs(v) < sys.float_info.min for v in values)
 
 
 def _steyx(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -521,10 +516,14 @@ INTERCEPT = _definition("INTERCEPT", KNOWN, _intercept)
 FORECAST = _definition("FORECAST", KNOWN, _forecast, forecast=True)
 FORECAST_LINEAR = _definition("FORECAST.LINEAR", KNOWN, _forecast, forecast=True)
 RSQ = _definition("RSQ", KNOWN, _rsq)
-ARRAYS = ("array1", "array2")
-CORREL = _definition("CORREL", ARRAYS, _correl)
-PEARSON = _definition("PEARSON", ARRAYS, _correl)
-COVAR = _definition("COVAR", ARRAYS, _population_covariance, sources=(COVARIANCE_SOURCE,))
-COVARIANCE_P = _definition("COVARIANCE.P", ARRAYS, _population_covariance, sources=(COVARIANCE_SOURCE,))
-COVARIANCE_S = _definition("COVARIANCE.S", ARRAYS, _sample_covariance, sources=(COVARIANCE_SOURCE,))
+_ARRAYS = ("array1", "array2")  # CORREL's, PEARSON's and the covariances' parameter names
+CORREL = _definition("CORREL", _ARRAYS, _correl)
+PEARSON = _definition("PEARSON", _ARRAYS, _correl)
+COVAR = _definition("COVAR", _ARRAYS, partial(_covariance, sample=False), sources=(COVARIANCE_SOURCE,))
+COVARIANCE_P = _definition(
+    "COVARIANCE.P", _ARRAYS, partial(_covariance, sample=False), sources=(COVARIANCE_SOURCE,)
+)
+COVARIANCE_S = _definition(
+    "COVARIANCE.S", _ARRAYS, partial(_covariance, sample=True), sources=(COVARIANCE_SOURCE,)
+)
 STEYX = _definition("STEYX", KNOWN, _steyx, draw=_STEYX_DRAW)

@@ -33,7 +33,7 @@ Every failing table point has an owner.
       entries' values.
 - [x] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
       their number. Every point outside the envelope has a `known-failures.tsv` owner.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other sample-statistics groups of decision 0271.
@@ -59,8 +59,8 @@ Every failing table point has an owner.
 - Tables `eval/accuracy/tables/{COVAR,COVARIANCE.P,COVARIANCE.S,STEYX}/s1`, 120 points each (480), filled from
   excel-graph with 0 failures. Excel gives an error on 33 points (COVARIANCE.P 4, COVARIANCE.S 7, STEYX 22) and the
   math a domain error on the same 33, with the same codes.
-- `rustsheet-eval accuracy`: all 480 points inside the envelope (470 on both sides, 10 STEYX tail points through
-  Excel's 15 digits only), 0 failing, 0 table defects, 0 known failures added. `missing tables` 76 to 72. The engine is
+- `rustsheet-eval accuracy`: all 480 points inside the envelope (470 on both sides; through Excel's 15 digits only, STEYX's
+  8 tail (A49, A50, A52, A55, A59, A60, A62, A66) and 2 edge (A79, A84)), 0 failing, 0 table defects, 0 known failures added. `missing tables` 76 to 72. The engine is
   bit-exact with Excel on all 480.
 - New domain rule recorded (statistics.md "Paired regression functions", T-4095 paragraph): STEYX's residual-below-zero
   `#NUM!` is not only an exact-fit effect. Over 1E-150 to 1E+150 data, 7 of 12 log-uniform points are `#NUM!` where

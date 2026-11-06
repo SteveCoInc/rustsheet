@@ -5846,6 +5846,8 @@ Unequal sizes and single points follow "Array arguments given a scalar, a single
     that is only rounding, and 7 of the 12 log-uniform points are `#NUM!` (A109, A110, A113, A114, A115, A116, A118)
     where the exact value is a number. The two-pass double sums (x87 sums of the values, as above) predict all 16
     `#NUM!` cells and every number to the bit.
+    STEYX's tail stratum keeps its line noise at 1E-6 or more on purpose (nearer, the residual is only Excel's
+    rounding); the edge stratum's exact decimal lines and probes/steyx-exact-fit cover the near-exact lines.
   - Excel kept as the target (decision 0300): Excel is more than 1E-4 relative off the exact value at STEYX A79
     (`STEYX({1.2,0.7,...,-2.3},{1,...,8})`, 0 against 7.2E-17) and A84 (`STEYX({-0.8,-0.7,...,-0.2},{1,...,7})`,
     3.332000937312528E-09 against 3.2E-17), both exact decimal lines whose residual is rounding. Among the eval cells
