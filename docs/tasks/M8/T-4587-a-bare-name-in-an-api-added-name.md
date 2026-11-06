@@ -3,7 +3,7 @@ id: T-4587
 title: "A bare name in an API-added name body binds to its sheet-scoped definition on the alphabetically first sheet, else the workbook name (probes/t4554-api-name-*)"
 milestone: M8
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
