@@ -3,7 +3,7 @@ id: T-4569
 title: "Spec: arrays whose elements mix values and references (SPEC-0014 amendment), for XLOOKUP's range if_not_found under a lifted lookup_value"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -39,10 +39,43 @@ and references, and what each reader sees, so that T-4570 can implement Excel's 
   - the bounds a reference element adds to the walk budgets (CLAUDE.md directive 5).
 
 ## Acceptance criteria
-- [ ] A spec (docs/specs/) or a SPEC-0014 amendment covers the representation, each reader class above with its
+- [x] A spec (docs/specs/) or a SPEC-0014 amendment covers the representation, each reader class above with its
       evidence, the unprobed readers' fallback, and the bounds.
-- [ ] T-4570's acceptance criteria name the spec.
-- [ ] Reviewers approve.
+- [x] T-4570's acceptance criteria name the spec.
+- [x] Reviewers approve.
 
 ## Out of scope
 - The implementation (T-4570).
+
+## Outcome
+- Probe `probes/t4569-xlookup-ref-element-max-min` (excel-graph, 2026-11-06), the formulas filled in four rounds. The
+  predictions for each round were written before its fill (docs/research/t4569/predictions.md).
+  - Every top-left-reading aggregate reads the reference element's top-left cell: MAX 50 not 60, SUMSQ 401, AVERAGE 35. This also
+    corrects lookup.md's T-4563 line: `SUM(..F1:F2)` = 23 is 20 + F1, not 20 + 3 + 4, which is 27. So SPEC-0014
+    rule 4 holds unchanged for the reference element.
+  - COUNT, COUNTA and SUMPRODUCT follow rule 5.
+  - LARGE, SMALL and MEDIAN are `#N/A` over references on another sheet, and `#VALUE!` over references on the
+    formula's own sheet. Round 3 reproduced t2065's VERIFIED `#VALUE!` on its own sheet in the same fill. This was
+    found in review round 1, and the spec keeps today's same-sheet behaviour.
+  - Text and TRUE hits are read as array elements (`TopLeftElements`).
+  - Per-element callers give `#VALUE!` (N: the value) for the value element and the range call for the
+    reference element.
+  - Round 4 (review round 2's confound; Local!F1:F9, predictions first): the referenced sheet decides LARGE, SMALL
+    and MEDIAN, not the written qualifier. On Local, qualified or not, absolute or relative, OFFSET or INDIRECT, and a
+    mixed grid read on its own sheet are all `#VALUE!`; a relative reference to Data is `#N/A`. MAX over the own-sheet
+    mixed grid reads the top-left cell (100).
+- Spec: SPEC-0014 amendment "Mixed grids, value elements beside references":
+  - Representation: `RefElement::Value(ArrayNode)`, boxed if it breaks the 32-byte assertion.
+  - Producer: the driver keeps a scalar value. XLOOKUP gets a reference form only for a lifted lookup_value with a
+    range if_not_found. A grid always holds at least one reference.
+  - Readers: one arm in each reader class. Unprobed readers fall back to the value view.
+  - Bounds: no new budget.
+- lookup.md entry extended. T-4570 now names the spec in its Context and acceptance criteria, and owns the
+  t4569 visibly-off cells (Calc A1:A8, A11:A15, A17, A20:A24, A26, A31:A32, A35, A40:A44, A50:A53, A56:A60, A63,
+  B20:B24, B26, B31:B32, B34, C20:C23, C31:C32, D20:D28, D31:D34; Local E4:E5, F6, F9).
+- Eval delta: +1 probe case, 111 cells scored, 41 pass (the value-view, COUNT/COUNTA and per-element cells already
+  right, and every same-sheet `#VALUE!`: Local E1:E3, F1:F5, F7:F8). The other 70 are known failures owned by T-4570.
+  No regressions.
+- Review round 2 fixes: spec rule 5 restated with round 4; AVERAGEA moved into rule 3; VAR.S, VAR.P, STDEV.P and the
+  VARA family listed as already on the walker (unprobed for mixed grids); the both-sheets case labelled a fallback;
+  lookup.md says "top-left-reading aggregates" and its long "Same-sheet:" line is wrapped.

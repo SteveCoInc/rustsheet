@@ -1,0 +1,44 @@
+== cache_definition
+pivotCacheDefinition createdVersion=6 id=rId1 minRefreshableVersion=3 recordCount=3 refreshedVersion=6
+  cacheSource type=worksheet
+    worksheetSource ref=A1:B4 sheet=Data
+  cacheFields count=2
+    cacheField name=Region numFmtId=0
+      sharedItems count=2
+        s v=East
+        s v=West
+    cacheField name=Sales numFmtId=0
+      sharedItems containsBlank=1 containsInteger=1 containsNumber=1 containsString=0 maxValue=20 minValue=5
+== cache_records
+pivotCacheRecords count=3
+  r
+    x v=0
+    m
+  r
+    x v=1
+    n v=20
+  r
+    x v=0
+    n v=5
+== table
+pivotTableDefinition applyAlignmentFormats=0 applyBorderFormats=0 applyFontFormats=0 applyNumberFormats=0 applyPatternFormats=0 applyWidthHeightFormats=1 cacheId=1 createdVersion=6 dataCaption=Values indent=0 itemPrintTitles=1 minRefreshableVersion=3 name=Saved outline=1 outlineData=1 updatedVersion=6 useAutoFormatting=1
+  location firstDataCol=1 firstDataRow=1 firstHeaderRow=1 ref=A3:B5
+  pivotFields count=2
+    pivotField axis=axisRow showAll=0
+      items count=3
+        item x=0
+        item x=1
+        item t=default
+    pivotField dataField=1 showAll=0
+  rowFields count=1
+    field x=0
+  rowItems count=2
+    i
+      x
+    i t=grand
+      x
+  colItems count=1
+    i
+  dataFields count=1
+    dataField baseField=0 baseItem=0 fld=1 name=Sum of Sales
+  pivotTableStyleInfo name=PivotStyleLight16 showColHeaders=1 showColStripes=0 showLastColumn=1 showRowHeaders=1 showRowStripes=0

@@ -160,6 +160,7 @@ impl UserModel {
                     old_data,
                     tables,
                 } => {
+                    self.model.check_table_extents(*sheet, tables)?;
                     needs_evaluation = true;
                     self.undo_delete_rows(*sheet, *row, old_data)?;
                     self.model.restore_table_extents(*sheet, tables)?;
@@ -179,6 +180,7 @@ impl UserModel {
                     old_data,
                     tables,
                 } => {
+                    self.model.check_tables_of_sheet(*sheet, tables)?;
                     needs_evaluation = true;
                     self.undo_delete_columns(*sheet, *column, old_data)?;
                     self.model.restore_tables_of_sheet(*sheet, tables)?;

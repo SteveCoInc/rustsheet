@@ -220,7 +220,7 @@ form reproduces both cells (checked during T-0903), so the formulation is open.
 Evidence: `ironcalc-calc/STATISTICAL/HYPERGEOM_DIST.xlsx` Sheet1!F2, F3; probes-numeric/t1048-hypgeomdist,
 t1049-hypgeomdist (excel-graph).
 Ours: the exact value rounded once, from a double-double walk (`discrete.rs` `hypergeometric_walk`, up to 2^12 steps and
-a population of 2^52; statrs' sum beyond): within 15 digits of Excel everywhere except where Excel's own pmf is
+a population of 2^52; past it the log-space forms of "HYPGEOM.DIST of an empty population is 1 ..." below, T-4502): within 15 digits of Excel everywhere except where Excel's own pmf is
 visibly off the exact value (`HYPGEOMDIST(2,2,3,11)` = 0.05454545454545458 against 3/55, gen-m9/f2bd5f380ec002bf A52;
 `HYPGEOMDIST(2,4,3,19)`, gen-m9/ee2497a5e683c5d9 A310; t1049-hypgeomdist A10, A14, A16; gen-m9/60b0b6e69ad35a45 A140),
 T-2481.
@@ -1661,19 +1661,21 @@ exact for small integer arguments" above, T-0977). Both are `Lift` entries over 
 (HYPGEOMDIST is its pmf, no longer a call with a fifth argument node), which reads its arguments in the scalar order,
 a boolean count `#VALUE!` as on main (Excel reads a TRUE as 1: probes-numeric/t1049-hypgeomdist A53, a known failure
 unchanged here), and checks each element alone. Since T-0977 the pmf and cdf are a double-double walk of at most 2^12
-steps (78 us in release) up to a population of 2^52, and past that walk the fallbacks below. The fallback pmf is
-statrs' closed form. The fallback cdf is statrs 0.18's `Hypergeometric::cdf`, which sums the pmf term by term from 0 to
-x, one `exp` of three `ln_binomial`s
-a term: x + 1 terms whatever the distribution, so `HYPGEOM.DIST(25000000,50000000,50000000,100000000,TRUE)` took 4.8 s
+steps (78 us in release) up to a population of 2^52, and past that walk the fallbacks below. The fallback pmf was
+statrs' closed form until T-4502 and is now Loader's log-space form ("HYPGEOM.DIST of an empty population is 1 ..."). The
+fallback cdf was statrs 0.18's `Hypergeometric::cdf`, which sums the pmf term by term from 0 to x, one `exp` of three
+`ln_binomial`s a term: x + 1 terms whatever the distribution, so `HYPGEOM.DIST(25000000,50000000,50000000,100000000,TRUE)` took 4.8 s
 in release and an x near 2^64 would never finish. It is now ported to `statistical/hypegeom.rs` with a per-call cap of
 its own: the port skips the terms that are exactly 0, those below max(0, n + K - N) (`exp(-inf)`) and, at a population
 up to 2^52, those far enough from the mode that the computed exponent is below -750 with a margin for its rounding (a
 bisection on each side of the mode, at most 131 exponents; the true log pmf rises to the mode and falls after it; the
 skip relies on the platform `exp` returning exactly 0 below about -745.13, as glibc's does), and sums the rest in
-statrs' order. Adding +0.0 leaves the sum unchanged, so where at most 2^18 terms are left the value is statrs' double,
-bit for bit (unit tests `the_port_is_statrs_within_the_cap`, `skipping_the_zero_terms_keeps_statrs_double`,
-`the_slowest_call_on_main_keeps_its_double`: 96,259 terms summed there, 0.5000797091291159 as on main; probes,
-probes-numeric, ironcalc-calc and gen-m9 are unchanged cell for cell). The non-zero terms lie within about 39 standard
+statrs' order. Adding +0.0 leaves the sum unchanged, so where at most 2^18 terms are left the value was statrs' double,
+bit for bit (T-1873: 96,259 terms summed for the call above, 0.5000797091291159 as on main). Since T-4502 the skip and
+the cap still read statrs' exponents, so the same calls are capped, but the terms left are summed in log space from the
+largest one (hypegeom.rs `sum_of_terms`): the call above is 0.50007978845548, within 1E-14 of the math, 1/2 + pmf(x)/2 (the
+distribution is symmetric about x), where statrs' sum was 8E-8 low (unit tests
+`the_slowest_call_on_main_is_half_and_half_the_mode`, `skipping_the_zero_terms_keeps_the_full_sum`). The non-zero terms lie within about 39 standard
 deviations of the mode, so the cap keeps every population up to about 1.84E8 whatever the sample and x. The lifting
 table charges HYPGEOM.DIST 2^22 units an element, the bound of the cap: 2^18 + 131 terms at 250 ns, about 66 ms. The
 slowest terms measured in release are where most of the window is subnormal (`exp`'s subnormal path and additions with
@@ -6589,9 +6591,21 @@ names sweep, second family"). These are the only probed cells with number_pop = 
   108,560 terms) is answered, and so is the pmf `HYPGEOM.DIST(163325,524700,672305386,2147483646,FALSE)` (A168). What
   Excel or the oracle times out on is unpinned. The Gate A table draws no cdf summing 2^17 terms or more (`HYPGEOM_CDF_TERMS` in tools/src/rustsheet_tools/accuracy/defs/discrete.py).
 Evidence: eval/accuracy/tables/HYPGEOM.DIST/s1 and HYPGEOMDIST/s1 (excel-graph, 2026-11-06).
-Ours: `#NUM!` at the empty population, and past the double-double walk (2^12 steps) the pmf is `#NUM!` where statrs'
-closed form C(K, x) C(N - K, n - x) / C(N, n) overflows to inf / inf (66 table points, from populations of about 2E4),
-and the fallback cdf is up to 1.2E-6 relative off (6 points): T-4502, known failures in eval/accuracy/known-failures.tsv.
+Ours (T-4502): 1 at the empty population, and every point of both tables inside the Gate A envelope. Past the
+double-double walk (2^12 steps; "HYPGEOM.DIST is not exact for small integer arguments") the pmf is the math in log space,
+R's `dhyper` (Loader 2000): ln b(x; K, p) + ln b(n - x; N - K, p) - ln b(n; N, p) with p = n / N, each binomial term
+Loader's saddle point stirlerr(m) - stirlerr(k) - stirlerr(m - k) - bd0(k, m p) - bd0(m - k, m q) - ln(2 pi k (m - k)
+/ m) / 2 (loader.rs `loader_ln_binomial`: the exact stirlerr, R's bd0 with its own 0.1 cut, not Excel's fitted bd0, and
+the means m p taken as double-doubles so p's rounding does not reach the result), within about 1E-13 relative of the
+math on the table points (unit test `the_pmf_past_the_walk_is_the_math`). Before, statrs' closed form
+C(K, x) C(N - K, n - x) / C(N, n) overflowed to inf / inf from populations of about 2E4 (66 table points `#NUM!`). The
+cdf past the walk is the largest term of its window in that log form times the sum of the window's terms relative to
+it, each from the last by the exact ratio of consecutive terms in double-double (hypegeom.rs `sum_of_terms`), where
+statrs' sum of ln-binomial terms was up to 1.2E-6 relative off (A164; 6 points). A95 is now the math's 8.1E-186, inside
+the envelope on the math side; Excel's 0 there stays Excel's value (decision 0300) and reproducing it needs Excel's
+formulation (T-2481). The unprobed shapes take the general rules: `HYPGEOM.DIST(0,0,0,0,TRUE)` is 1 (no successes are
+possible), `HYPGEOMDIST(1,0,0,0)` 0 (a sample above min(number_sample, population_s)) and `HYPGEOMDIST(0,0,1,0)` `#NUM!`
+(population_s above number_pop).
 Status: VERIFIED (excel-graph)
 Tasks: T-4105, T-4502
 

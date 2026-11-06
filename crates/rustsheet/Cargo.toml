@@ -16,7 +16,7 @@ zeroize = { version = "=1.8.2", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 cfb = "=0.16.0"
-zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zip = { version = "9.0.5", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 [features]
 # Lets the eval harness pin the workbook clock to IronCalc's METADATA `NOW` convention

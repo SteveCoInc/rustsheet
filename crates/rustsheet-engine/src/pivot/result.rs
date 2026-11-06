@@ -18,9 +18,14 @@
 //!    accumulator that covers them in one order: by row leaf, then column leaf, in display
 //!    order, and in record order within a leaf. So an item cell accumulates in record order, and
 //!    a total accumulates item by item in the display order of the field it totals, in record
-//!    order within an item: Excel's order for Average, Var, `StdDev` and Product, and for Sum
-//!    beside another aggregate (pivots.md "Summation order of Sum, Average and Product totals":
-//!    probes/t4616-pivot-total-order-3 S2, S3, V1 to V4, P1, P2; t4614 S2, P2; t4589 S1).
+//!    order within an item: Excel's order for Average, Var, `StdDev`, Varp, `StdDevp` and
+//!    Product, and for Sum beside any other aggregate (pivots.md "Summation order of Sum,
+//!    Average and Product totals": probes/t4634-pivot-total-order-4 X1 to X12, A1 to A3, V1 to
+//!    V7; t4616-pivot-total-order-3 S2, S3, V1 to V4, P1, P2; t4614 S2, P2; t4589 S1). A cell
+//!    that is a total on both axes (the grand-grand total, a subtotal by a subtotal or by a
+//!    grand total) instead adds the sums and products of the leaf-row cells below it in its
+//!    column, in row display order (`merge_crossings`; t4634 T2, T3, X1 to X12, V1, V6; Varp,
+//!    `StdDevp` and Product by analogy, UNVERIFIED, T-4678).
 //!    An axis of one field with `showAll` on (`pivotField@showAll`, on when absent; Excel and the
 //!    case builder write `showAll="0"`) also shows the items it does not hide that no kept
 //!    record holds, in display order, with no accumulator, so their cells are blank
@@ -31,17 +36,11 @@
 //!    UNVERIFIED (T-4657). On an axis of several fields `showAll` is not applied, and whether an
 //!    item the page filter leaves without records shows is unprobed (both UNVERIFIED, T-4657).
 //!    The rest is read from the accumulators ([`PivotResult::value_as`]):
-//!    - in a pivot whose data fields are all Sum, a total is the sum of its child cells in
-//!      display order, and the 2-D grand-grand total the sum of the row totals (t4616 S1, S4 to
-//!      S6; t4135 `A_sum!S6`, S8). Which mixes switch Sum to the records, whether a Sum-only
-//!      total over one axis field sums cells or records, and a cell that is a total on both
-//!      axes other than the grand-grand total (a subtotal by a subtotal or a grand total, with
-//!      several fields on an axis), where row children are summed first, are UNVERIFIED
-//!      (T-4634);
-//!    - the 2-D grand-grand total of a Sum or Average beside other aggregates is the sum of the
-//!      row totals' record sums (t4616 S2 H9 and I9 fit it, and so does S3 E8; UNVERIFIED,
-//!      T-4634); the Var and `StdDev` one is row-major, which fits t4616 V1 E11 and V2 E11 among
-//!      other readings (UNVERIFIED, T-4634).
+//!    - in a pivot whose data fields are all Sum, a total is the sum of leaf cells in display
+//!      order, never of the subtotals between: a cell of a non-leaf row sums the leaf-row cells
+//!      below it in its column, and a total in a leaf row sums that row's leaf-column cells
+//!      below its column (t4634 T1, O1 to O4, S1; t4616 S1, S4 to S6; t4135 `A_sum!S6`, S8).
+//!      Any other aggregate beside Sum switches Sum to the records as above (t4634 X1 to X12).
 //!
 //! Stage 7, the layout lines and location, is `pivot::layout::lay_out`, a separate call on the
 //! result, so that a pivot too large to lay out still has its values (T-4147).
@@ -228,31 +227,9 @@ impl PivotResult {
         let base = *self.cells.get(&(row, column))? as usize;
         let accumulator = self.accumulators.get(base + data_field)?;
         let total = !self.rows.is_leaf(row) || !self.columns.is_leaf(column);
-        let grand_grand = row == 0
-            && column == 0
-            && !self.rows.fields.is_empty()
-            && !self.columns.fields.is_empty();
-        let sum = match function {
-            Aggregate::Sum if total && self.sum_only => Some(accumulator.children_sum()),
-            Aggregate::Sum | Aggregate::Average if grand_grand => {
-                Some(self.row_totals_sum(data_field))
-            }
-            _ => None,
-        };
+        let sum = (function == Aggregate::Sum && total && self.sum_only)
+            .then(|| accumulator.children_sum());
         Some(accumulator.finish(function, total, self.counts_mixed, sum))
-    }
-
-    /// The record sums of the row grand totals (the Grand Total column), down the rows in
-    /// display order: the first error among them, or their sum.
-    /// Linear in the row items, so a caller must not call it per cell (T-4149: one
-    /// grand-grand cell per data field).
-    fn row_totals_sum(&self, data_field: usize) -> Result<f64, Error> {
-        sum_in_order(self.rows.children(0).filter_map(|row| {
-            let base = *self.cells.get(&(row, 0))? as usize;
-            self.accumulators
-                .get(base + data_field)
-                .map(Accumulator::record_sum)
-        }))
     }
 }
 
@@ -625,6 +602,7 @@ pub fn compute(
         accumulators: Vec::new(),
     };
     accumulate(&mut result, &placed, &data, work, &mut nodes)?;
+    merge_crossings(&mut result, work)?;
     if result.sum_only {
         sum_children(&mut result, work)?;
     }
@@ -698,27 +676,102 @@ fn accumulate(
     Ok(())
 }
 
+/// Rebuilds the order-dependent folds of every cell that is a total on both axes from the cells
+/// of the leaf rows below it in the same column, in row display order: a grand-grand total, a
+/// subtotal by a subtotal or by a grand total. Each leaf-row cell has its records accumulated
+/// item by item, so such a total adds those partial sums rather than accumulating its records
+/// (t4634 T2 and T3 every cell, X1 to X12 H9, V1 and V6 E11, X6 and X7 I9; t4616 S2 H9, V1
+/// E11). Varp, `StdDevp` and Product follow it by analogy: their t4634 cells fit it, but also
+/// fit other readings (UNVERIFIED, T-4678). Every leaf-row cell is folded into each of its row
+/// ancestors, so the work is the cells times the row depth.
+fn merge_crossings(result: &mut PivotResult, work: &mut u64) -> Result<(), PivotComputeError> {
+    let PivotResult {
+        rows,
+        columns,
+        functions,
+        cells,
+        accumulators,
+        ..
+    } = result;
+    let mut parts: Vec<(u32, u32)> = cells
+        .keys()
+        .filter(|&&(row, column)| rows.is_leaf(row) && !columns.is_leaf(column))
+        .copied()
+        .collect();
+    if parts.is_empty() {
+        return Ok(());
+    }
+    charge(work, sort_units(parts.len()))?;
+    parts.sort_unstable();
+    let depth = rows.fields.len().saturating_add(1);
+    charge(
+        work,
+        units(
+            cells
+                .len()
+                .saturating_add(parts.len().saturating_mul(depth))
+                .saturating_mul(functions.len()),
+        ),
+    )?;
+    for (&(row, column), &base) in cells.iter() {
+        if !rows.is_leaf(row) && !columns.is_leaf(column) {
+            for d in 0..functions.len() {
+                if let Some(acc) = accumulators.get_mut(base as usize + d) {
+                    acc.clear_folds();
+                }
+            }
+        }
+    }
+    for (row, column) in parts {
+        let Some(&part) = cells.get(&(row, column)) else {
+            continue;
+        };
+        for up in rows.ancestors(row).skip(1) {
+            let Some(&total) = cells.get(&(up, column)) else {
+                continue;
+            };
+            for d in 0..functions.len() {
+                let folds = accumulators.get(part as usize + d).map(Accumulator::folds);
+                if let (Some(folds), Some(acc)) = (folds, accumulators.get_mut(total as usize + d))
+                {
+                    acc.add_folds(folds);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 /// The child cells of every Sum total: `(parent, display key, child)` accumulator bases, sorted
-/// by parent and then display order. A cell of a non-leaf row sums its row children in the same
-/// column, and a cell of a leaf row its column children (so the grand-grand total sums the row
-/// totals, t4616 S1 E8). Each cell is the child of at most two cells, its row parent's and, in a
-/// leaf row, its column parent's, so the index has at most twice as many entries as cells.
+/// by parent and then display order. A cell of a non-leaf row sums the cells of the leaf rows
+/// below it in the same column, and a cell of a leaf row the leaf-column cells below its column:
+/// leaf cells, never the subtotals between (t4634 T1 every cell; so the grand-grand total sums
+/// the row totals, t4616 S1 E8). Each cell is the child of at most one cell per row ancestor
+/// and, in a leaf row, per column ancestor, so the index has at most the cells times the axis
+/// depths entries.
 fn child_cells(
     rows: &AxisTree,
     columns: &AxisTree,
     cells: &HashMap<(u32, u32), u32>,
     work: &mut u64,
 ) -> Result<Vec<(u32, u32, u32)>, PivotComputeError> {
-    let parent = |tree: &AxisTree, node: u32| tree.nodes.get(node as usize).and_then(|n| n.parent);
-    charge(work, units(cells.len().saturating_mul(2)))?;
+    let depths = rows.fields.len().saturating_add(columns.fields.len());
+    charge(work, units(cells.len().saturating_mul(depths.max(1))))?;
     let mut edges = Vec::new();
     for (&(row, column), &child) in cells {
-        if let Some(up) = parent(rows, row).and_then(|r| cells.get(&(r, column))) {
-            edges.push((*up, row, child));
+        if !rows.is_leaf(row) {
+            continue;
         }
-        if rows.is_leaf(row) {
-            if let Some(up) = parent(columns, column).and_then(|c| cells.get(&(row, c))) {
-                edges.push((*up, column, child));
+        for up in rows.ancestors(row).skip(1) {
+            if let Some(&parent) = cells.get(&(up, column)) {
+                edges.push((parent, row, child));
+            }
+        }
+        if columns.is_leaf(column) {
+            for up in columns.ancestors(column).skip(1) {
+                if let Some(&parent) = cells.get(&(row, up)) {
+                    edges.push((parent, column, child));
+                }
             }
         }
     }
@@ -729,8 +782,9 @@ fn child_cells(
 
 /// For a pivot whose data fields are all Sum: sets each cell's children sum
 /// ([`Accumulator::set_children_sum`]), children before parents ([`child_cells`]); an item
-/// cell's is its record sum. The work is linear in the cells (the index is), whatever the axes'
-/// shapes: a diagonal pivot of n row and n column items costs O(n), not O(n²).
+/// cell's is its record sum. The work is linear in the cells times the axis depths (the index
+/// is), whatever the axes' shapes: a diagonal pivot of n row and n column items costs O(n), not
+/// O(n²).
 fn sum_children(result: &mut PivotResult, work: &mut u64) -> Result<(), PivotComputeError> {
     let PivotResult {
         rows,
@@ -754,7 +808,7 @@ fn sum_children(result: &mut PivotResult, work: &mut u64) -> Result<(), PivotCom
         .collect();
     charge(work, sort_units(order.len()))?;
     order.sort_unstable();
-    // Each cell is set once and read at most twice as a child, per data field.
+    // Each cell is set once and read once per edge, per data field.
     charge(
         work,
         units(

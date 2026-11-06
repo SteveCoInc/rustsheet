@@ -47,13 +47,13 @@
 <rect class="b-below99" fill="#e34948" x="402.6" y="102.0" width="3.1" height="18" rx="3"><title>math: 1</title></rect>
 <text x="413.6" y="111.0" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">83</text>
 <text x="140.0" y="141.0" class="ink" fill="#1f2328" text-anchor="end" dominant-baseline="middle">financial</text>
-<rect class="b-exact" fill="#2a78d6" x="150.0" y="132.0" width="102.7" height="18" rx="3"><title>financial: 34</title></rect>
-<text x="201.4" y="141.0" class="num in-exact" fill="#000000" text-anchor="middle" dominant-baseline="middle">34</text>
-<rect class="b-ulp4" fill="#1baf7a" x="254.7" y="132.0" width="22.6" height="18" rx="3"><title>financial: 8</title></rect>
-<rect class="b-digits15" fill="#6250d6" x="279.4" y="132.0" width="1.5" height="18" rx="3"><title>financial: 1</title></rect>
-<rect class="b-rate999" fill="#d55181" x="282.4" y="132.0" width="4.2" height="18" rx="3"><title>financial: 2</title></rect>
-<rect class="b-rate99" fill="#eda100" x="288.6" y="132.0" width="13.4" height="18" rx="3"><title>financial: 5</title></rect>
-<rect class="b-below99" fill="#e34948" x="304.0" y="132.0" width="15.4" height="18" rx="3"><title>financial: 5</title></rect>
+<rect class="b-exact" fill="#2a78d6" x="150.0" y="132.0" width="99.6" height="18" rx="3"><title>financial: 33</title></rect>
+<text x="199.8" y="141.0" class="num in-exact" fill="#000000" text-anchor="middle" dominant-baseline="middle">33</text>
+<rect class="b-ulp4" fill="#1baf7a" x="251.6" y="132.0" width="22.6" height="18" rx="3"><title>financial: 8</title></rect>
+<rect class="b-digits15" fill="#6250d6" x="276.3" y="132.0" width="1.5" height="18" rx="3"><title>financial: 1</title></rect>
+<rect class="b-rate999" fill="#d55181" x="279.4" y="132.0" width="10.3" height="18" rx="3"><title>financial: 4</title></rect>
+<rect class="b-rate99" fill="#eda100" x="291.7" y="132.0" width="13.4" height="18" rx="3"><title>financial: 5</title></rect>
+<rect class="b-below99" fill="#e34948" x="307.1" y="132.0" width="12.3" height="18" rx="3"><title>financial: 4</title></rect>
 <text x="327.4" y="141.0" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">55</text>
 <text x="140.0" y="171.0" class="ink" fill="#1f2328" text-anchor="end" dominant-baseline="middle">engineering</text>
 <rect class="b-exact" fill="#2a78d6" x="150.0" y="162.0" width="139.7" height="18" rx="3"><title>engineering: 46</title></rect>
@@ -65,10 +65,13 @@
 <text x="140.0" y="201.0" class="ink" fill="#1f2328" text-anchor="end" dominant-baseline="middle">text</text>
 <rect class="b-exact" fill="#2a78d6" x="150.0" y="192.0" width="139.7" height="18" rx="3"><title>text: 46</title></rect>
 <text x="219.8" y="201.0" class="num in-exact" fill="#000000" text-anchor="middle" dominant-baseline="middle">46</text>
-<rect class="b-rate99" fill="#eda100" x="291.7" y="192.0" width="6.2" height="18" rx="3"><title>text: 2</title></rect>
+<rect class="b-rate999" fill="#d55181" x="291.7" y="192.0" width="1.5" height="18" rx="3"><title>text: 1</title></rect>
+<rect class="b-rate99" fill="#eda100" x="294.8" y="192.0" width="3.1" height="18" rx="3"><title>text: 1</title></rect>
 <text x="305.8" y="201.0" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">48</text>
 <text x="140.0" y="231.0" class="ink" fill="#1f2328" text-anchor="end" dominant-baseline="middle">lookup</text>
-<rect class="b-exact" fill="#2a78d6" x="150.0" y="222.0" width="117.0" height="18" rx="3"><title>lookup: 38</title></rect>
+<rect class="b-exact" fill="#2a78d6" x="150.0" y="222.0" width="112.0" height="18" rx="3"><title>lookup: 37</title></rect>
+<text x="206.0" y="231.0" class="num in-exact" fill="#000000" text-anchor="middle" dominant-baseline="middle">37</text>
+<rect class="b-below99" fill="#e34948" x="264.0" y="222.0" width="3.1" height="18" rx="3"><title>lookup: 1</title></rect>
 <text x="275.0" y="231.0" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">38</text>
 <text x="140.0" y="261.0" class="ink" fill="#1f2328" text-anchor="end" dominant-baseline="middle">date</text>
 <rect class="b-exact" fill="#2a78d6" x="150.0" y="252.0" width="77.0" height="18" rx="3"><title>date: 25</title></rect>

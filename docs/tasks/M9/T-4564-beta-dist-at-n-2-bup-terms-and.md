@@ -32,7 +32,7 @@ BETA.DIST at n = 2 bup terms and T.DIST.RT give Excel's exact 0 wherever Excel d
   docs/research/t4437). Ours is a number in every row.
 - Owner of the visibly-off cells of probes/t4254-beta-t-l140-zero-cut E1:E11, F1:F11; t4254-beta-t-zero-wide F30;
   t4437-beta-t-zero-bracket D1:D37, F1:F37, G16:G37, H35:H37, I26:I37; t4456-beta-t-zero-cut E1:E9, F1:F9;
-  t4456-beta-t-zero-reach E21 and F9 (the t's zeros T-4437 named; T-4577 owns F3:F5 there). Also owner of the numbers near the edge
+  t4456-beta-t-zero-reach B1, E21 and F9 (the t's zeros T-4437 named; T-4577 owns F3:F5 there). Also owner of the numbers near the edge
   that differ from Excel in the 8th or 9th digit: t4437-beta-t-zero-bracket, t4437-beta-zero-fresh and
   t4437-beta-zero-fresh2, every NumericMismatch cell (and t4437-beta-zero-fresh2 J17:J22, Excel's n = 2
   zeros), and t4254-beta-t-zero-wide A29, B28, B29.

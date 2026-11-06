@@ -15,6 +15,16 @@ use crate::pivot::{
     SourceCells, MAX_RECORD_VALUES,
 };
 
+/// The pivot sheets of probes/t4634-pivot-total-order-4 that the result, line and render tests
+/// check: Sum beside each other aggregate (X1 to X12) and alone (S1, O1 to O4), Average alone (A1
+/// to A3), Var, Varp and `StdDevp` totals (V1 to V7), two fields per axis (T1 to T3), and Count or
+/// `CountNums` beside only Max, Min, Product or a variance (C1 to C7).
+pub(crate) const T4634_SHEETS: &[&str] = &[
+    "S1", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12", "A1", "A2",
+    "A3", "O1", "O2", "O3", "O4", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "T1", "T2", "T3", "C1",
+    "C2", "C3", "C4", "C5", "C6", "C7",
+];
+
 pub(crate) fn read(stem: &str, kind: &str) -> Json {
     let path = format!(
         "{}/../../eval/suites/probes/cases/{stem}.{kind}.json",
@@ -115,38 +125,7 @@ pub(crate) fn source_cache(case: &Json, source: &str) -> PivotCache {
 }
 
 pub(crate) fn aggregate_named(name: &str) -> Aggregate {
-    match name {
-        "sum" => Aggregate::Sum,
-        "count" => Aggregate::Count,
-        "average" => Aggregate::Average,
-        "max" => Aggregate::Max,
-        "min" => Aggregate::Min,
-        "product" => Aggregate::Product,
-        "countNums" => Aggregate::CountNums,
-        "stdDev" => Aggregate::StdDev,
-        "stdDevp" => Aggregate::StdDevP,
-        "var" => Aggregate::Var,
-        "varp" => Aggregate::VarP,
-        _ => panic!("unknown aggregate {name}"),
-    }
-}
-
-/// The verb the builder puts in a data field's default name, `<verb> of <field>`
-/// (`pivot_definition.py` `_AGGREGATE_VERBS`).
-fn default_verb(subtotal: &str) -> &'static str {
-    match subtotal {
-        "sum" => "Sum",
-        "count" | "countNums" => "Count",
-        "average" => "Average",
-        "max" => "Max",
-        "min" => "Min",
-        "product" => "Product",
-        "stdDev" => "StdDev",
-        "stdDevp" => "StdDevp",
-        "var" => "Var",
-        "varp" => "Varp",
-        _ => panic!("unknown aggregate {subtotal}"),
-    }
+    Aggregate::from_consolidate_name(name).unwrap_or_else(|| panic!("unknown aggregate {name}"))
 }
 
 /// A custom subtotal line's function by its `item@t`, as the importer reads it.
@@ -290,7 +269,7 @@ pub(crate) fn probe_pivot_over(
             let subtotal = subtotal.unwrap_or("sum");
             DataField {
                 caption: d["name"].as_str().map_or_else(
-                    || format!("{} of {name}", default_verb(subtotal)),
+                    || format!("{} of {name}", aggregate_named(subtotal).word()),
                     str::to_string,
                 ),
                 field: field(name),
