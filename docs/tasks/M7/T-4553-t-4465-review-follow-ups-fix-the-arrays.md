@@ -3,7 +3,7 @@ id: T-4553
 title: "T-4465 review follow-ups: fix the arrays.md section title cited in sequence.rs, the eps23 miss range, and probe SEQUENCE extents near 1048576 with the near-integer offsets"
 milestone: M7
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
