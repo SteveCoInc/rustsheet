@@ -3,7 +3,7 @@ id: T-4697
 title: "Probe LARGE/SMALL/MEDIAN over a reference grid with references on both the formula's sheet and another; tidy SPEC-0014 mixed-grid wording"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
