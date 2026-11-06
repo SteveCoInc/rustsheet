@@ -216,7 +216,8 @@ an array value. In detail:
    (A25, V25:W25). Rule 3's "`INDEX(r,2)` over a column of elements is `#VALUE!`" is this case seen through the value
    view.
 3. **Top-left aggregates** (rule 4, extended). SUM, AVERAGE, AVERAGEA, MIN, MAX, MINA, MAXA, PRODUCT, SUMSQ and STDEV.S read
-   the reference element's top-left cell as a range cell and the value element as an array value: SUM 23 = 20 + F1,
+   the reference element's top-left cell as the reader's `GridReading` reads a top-left cell, and the value element
+   as an array value: SUM 23 = 20 + F1,
    25 = 20 + E1 (A73, A109); over G1:G2 = 50, 60 MAX 50, AVERAGE 35, SUM 70, STDEV.S 21.2132…; over H1:H2 = 1, 2
    PRODUCT 20, SUMSQ 401 (t4569 A1-A15, A20, A23). MIN and MINA there are 1 under either reading, so they confirm
    nothing. A text or TRUE value element is read as `TopLeftElements` reads a top-left cell, that is as an array
@@ -231,9 +232,12 @@ an array value. In detail:
    t2065, same fill), however the reference is written: sheet-qualified absolute `Local!$A$1`, qualified relative
    `Local!A1`, unqualified absolute `$A$1`, or INDIRECT of unqualified texts (t4569 Local!F1:F5), and for a mixed grid
    read on its own sheet, unqualified or qualified (Local!F7:F8). So it is the referenced sheet, not the written
-   qualifier, that decides (round 4, predictions in docs/research/t4569/predictions.md). A mixed grid on its own
+   qualifier, that decides (t4569 Local!F1:F9, predictions in docs/research/t4569/predictions.md). A mixed grid on
+   its own
    sheet keeps rule 3 for the top-left aggregates: `MAX` is 100, the reference's top-left cell (Local!F9).
-   Unprobed: a grid with references on both sheets.
+   A grid with references on both sheets: the sheet of its first element decides, `#VALUE!` when that is the
+   formula's own sheet, `#N/A` when it is another (t4697 Local!H1:H9; `{"A1";"Data!G1"}` is `#VALUE!`,
+   `{"Data!G1";"A1"}` is `#N/A`). A mixed XLOOKUP grid has one reference element, so its sheet decides (H14, H15).
 6. **Per-element callers** (rule 6). They lift over every element. A value element is passed as the scalar
    non-reference argument it is: ROW, AREAS, COUNTIF, SUBTOTAL, COUNTBLANK and CELL give `#VALUE!` for it, and N
    gives 20. The reference element is the call on the range: ROW 1, AREAS 1, COUNTIF 2, N 50, SUBTOTAL 110,

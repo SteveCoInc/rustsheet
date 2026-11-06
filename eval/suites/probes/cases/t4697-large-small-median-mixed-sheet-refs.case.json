@@ -1,0 +1,50 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4697: LARGE/SMALL/MEDIAN over an array of references when some are on the formula's own sheet (Local) and some on another (Data). Local!A1 = 1, A2 = 100; Data!G1 = 50, G2 = 60. T-4569 showed the referenced sheet decides: #VALUE! all own-sheet, #N/A all other-sheet. H1:H6 mixed INDIRECT grids in both orders; H7:H8 same-sheet and other-sheet controls; H9 three references; H10 CHOOSE; H11:H12 MAX controls; H13 OFFSET control; H14:H15 mixed XLOOKUP grids (value hit, reference miss).",
+  "tags": [
+    "M6",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "G1": 50,
+        "G2": 60,
+        "A1": 1,
+        "A2": 2,
+        "A3": 3,
+        "B1": 10,
+        "B2": 20,
+        "B3": 30
+      }
+    },
+    {
+      "name": "Local",
+      "cells": {
+        "A1": 1,
+        "A2": 100,
+        "A3": 10000,
+        "B1": 2,
+        "B2": 200,
+        "B3": 20000,
+        "H1": "=LARGE(INDIRECT({\"A1\";\"Data!G1\"}),1)",
+        "H2": "=LARGE(INDIRECT({\"Data!G1\";\"A1\"}),1)",
+        "H3": "=SMALL(INDIRECT({\"A1\";\"Data!G1\"}),1)",
+        "H4": "=SMALL(INDIRECT({\"Data!G1\";\"A1\"}),1)",
+        "H5": "=MEDIAN(INDIRECT({\"A1\";\"Data!G1\"}))",
+        "H6": "=MEDIAN(INDIRECT({\"Data!G1\";\"A1\"}))",
+        "H7": "=LARGE(INDIRECT({\"A1\";\"A2\"}),1)",
+        "H8": "=LARGE(INDIRECT({\"Data!G1\";\"Data!G2\"}),1)",
+        "H9": "=LARGE(INDIRECT({\"A1\";\"Data!G1\";\"A2\"}),1)",
+        "H10": "=LARGE(CHOOSE({1;2},A1,Data!G1),1)",
+        "H11": "=MAX(INDIRECT({\"A1\";\"Data!G1\"}))",
+        "H12": "=MAX(INDIRECT({\"Data!G1\";\"A1\"}))",
+        "H13": "=LARGE(OFFSET(A1,{0;1},0),1)",
+        "H14": "=LARGE(XLOOKUP({1;9},Data!A1:A3,Data!B1:B3,A2:A3),1)",
+        "H15": "=LARGE(XLOOKUP({1;9},A1:A3,B1:B3,Data!G1:G2),1)"
+      }
+    }
+  ],
+  "expected": {}
+}

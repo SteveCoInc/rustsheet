@@ -965,7 +965,8 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
   - The top-left-reading aggregates read the top-left cell, and an order statistic depends on the sheet (probes/t4569-xlookup-ref-element-max-min,
     excel-graph, 2026-11-06, T-4569; G1:G2 = 50, 60 above the hit 20, H1:H2 = 1, 2 below it).
     - Top-left cell: MAX 50, not 60 (A1, A14 with a 0 beside it), MAXA alike (A3), a one-cell range the same (A5).
-      MIN and MINA are 1 (A2, A4, A6, A15), which both readings give over H1:H2 = 1, 2, so they confirm nothing. AVERAGE is 35 = (20 + 50) / 2 (A7). PRODUCT is 20 = 20 x 1 (A8).
+      MIN and MINA are 1 (A2, A4, A6, A15), which both readings give over H1:H2 = 1, 2, so they confirm
+      nothing. AVERAGE is 35 = (20 + 50) / 2 (A7). PRODUCT is 20 = 20 x 1 (A8).
       SUMSQ is 401 = 20^2 + 1 (A11). STDEV.S is 21.2132…, from 20 and 50 (A23). SUM is 70 (A20).
     - Opaque: COUNT counts the reference element as no number, so 1 (A10). COUNTA counts it, so 2 (A9).
       SUMPRODUCT reads it as 0, so 20 (A21).
@@ -978,8 +979,15 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
       how the reference is written: on Local, `OFFSET(Local!$A$1,..)`, `OFFSET(Local!A1,..)`, `OFFSET($A$1,..)` and
       `INDIRECT({"A1";"A2"})` under LARGE or MEDIAN are all `#VALUE!`, `LARGE(OFFSET(Data!G1,{0;1},0),1)` is `#N/A`,
       and a mixed grid read on its own sheet (`LARGE(XLOOKUP({1;9},A1:A3,B1:B3,A2:A3),1)`, unqualified or
-      `Local!`-qualified) is `#VALUE!` while its `MAX` reads the top-left cell, 100 (Local!F1:F9, round 4). A grid
-      with references on both sheets is unprobed.
+      `Local!`-qualified) is `#VALUE!` while its `MAX` reads the top-left cell, 100 (Local!F1:F9, round 4).
+    - A grid with references on both sheets: the sheet of the FIRST element decides (probes/t4697-large-small-median-
+      mixed-sheet-refs, excel-graph, 2026-11-06, T-4697; Local formulas, Local!A1 = 1, Data!G1 = 50). With
+      `{"A1";"Data!G1"}` (own sheet first) LARGE, SMALL and MEDIAN are `#VALUE!` (H1, H3, H5); with
+      `{"Data!G1";"A1"}` (other sheet first) they are `#N/A` (H2, H4, H6). Three references `{"A1";"Data!G1";"A2"}`
+      are `#VALUE!` (H9), so it is not the last element and not "any element on another sheet". Controls: all own
+      sheet `#VALUE!` (H7, H13), all Data `#N/A` (H8). `MAX` is 50 either order (H11, H12). A mixed XLOOKUP grid has
+      a value hit, so only its reference element has a sheet: a reference on the formula's sheet is `#VALUE!` (H14)
+      and one on Data `#N/A` (H15). `LARGE(CHOOSE({1;2},A1,Data!G1),1)` makes values, not references: 50 (H10).
     - A text or TRUE hit beside the reference element is read as an array element: SUM, AVERAGE and COUNT skip it
       (50, 50, 0), AVERAGEA counts text as 0 and skips TRUE (25, 50), MAXA and MINA skip both (50, 50), and COUNTA
       is 2 (A50:A63; return C1:C3 or D1:D3 with C2 = "t", D2 = TRUE).
