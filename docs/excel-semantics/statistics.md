@@ -7263,9 +7263,10 @@ Cells (excel-graph):
     is 0.1 over four values (0.5) and A80 is 0.0625 over seven values (0.5).
   - Ranks above n are `#NUM!`. A71 is 0.9 over seven values (7.2) and A82 is 0.8 over three values (3.2).
   - k at 1 or above is `#NUM!`: A67 (1.5), A72 (1.5) and A81 (2, Microsoft's example).
-- eval/accuracy/tables/AGGREGATE/s1 (functions 17 and 19, T-3693):
-  - A122, A124, A129 and A137 are `#NUM!`.
-  - A113, A118, A121 and A126 (n = 1, k = 0.5) return the value.
+  - A rank of exactly 1 = n is inside: k = 0.5 over one value returns that value (A68, A84).
+- eval/accuracy/tables/AGGREGATE/s1 (functions 17 QUARTILE.INC, 18 PERCENTILE.EXC and 19 QUARTILE.EXC, T-3693):
+  - Function 18: A122, A124, A129 and A137 are `#NUM!`.
+  - Function 18: A113, A118, A121 and A126 (n = 1, k = 0.5) return the value.
   - A158 and A160 (QUARTILE.INC, quart 4.5) return the maximum.
   - A25, A29, A56 and A177 (QUARTILE.EXC, quart 3.5) are valid.
 Status: VERIFIED (excel-graph)
@@ -7594,7 +7595,7 @@ model gives 1.0000000000000006E+308 (unexplained: a power-of-ten path is possibl
 ("Overflowing arguments, PERMUT's limit and argument error order (T-1290)"). A number in (0, 1) floors to 0
 (`PERMUTATIONA(0.25,4)` is 0, A2) and `PERMUTATIONA(2.5,3.9)` is 8 (A82).
 Evidence: accuracy/PERMUTATIONA/s1 (excel-graph, 2026-11-06, T-4106).
-Ours: the engine returns `powf(n, k)`, so 35 of the 105 numeric cells differ from Excel by a few ulps (all but two
+Ours: the engine returns `powf(n, k)`, so 32 of the 105 numeric cells differ from Excel by a few ulps (all but two
 within 15 digits, those two within 1e-9 of the math: inside the Gate A envelope), and n^k for a huge k (1 or 0 where
 Excel is `#NUM!`: three Gate A known failures). Both are T-4501.
 Status: VERIFIED (excel-graph) for the cells cited; the number_chosen cut UNVERIFIED
