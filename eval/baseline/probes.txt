@@ -2481,6 +2481,7 @@ C	probes/t4554-api-name-scoped-name-choice.case.json	27
 C	probes/t4574-feb29-near-midnight-date-args.case.json	504
 C	probes/t4582-pivot-item-edges.case.json	45
 C	probes/t4583-pivot-row-labels.case.json	204
+C	probes/t4585-pivot-field-names.case.json	13
 C	probes/t4587-api-name-sheet-order-case.case.json	4
 C	probes/t4587-sheet-api-name-inactive-sheet.case.json	8
 C	probes/t4587-sheet-api-name-name-body.case.json	4
@@ -10123,6 +10124,14 @@ F	probes/t4583-pivot-row-labels.case.json	R6!C6
 F	probes/t4583-pivot-row-labels.case.json	R6!C7
 F	probes/t4583-pivot-row-labels.case.json	R6!C8
 F	probes/t4583-pivot-row-labels.case.json	R6!C9
+F	probes/t4585-pivot-field-names.case.json	N1!A3
+F	probes/t4585-pivot-field-names.case.json	N1!A4
+F	probes/t4585-pivot-field-names.case.json	N1!A5
+F	probes/t4585-pivot-field-names.case.json	N1!A6
+F	probes/t4585-pivot-field-names.case.json	N1!B3
+F	probes/t4585-pivot-field-names.case.json	N1!B4
+F	probes/t4585-pivot-field-names.case.json	N1!B5
+F	probes/t4585-pivot-field-names.case.json	N1!B6
 F	probes/t4589-pivot-total-order.case.json	E1!A3
 F	probes/t4589-pivot-total-order.case.json	E1!A4
 F	probes/t4589-pivot-total-order.case.json	E1!A5
