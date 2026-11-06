@@ -13,8 +13,8 @@ date from the one before it, its day clamped to the month, or the month's last d
 The days are the basis day counts of defs/yearfrac.py on Excel's serials (US 30/360 for basis 0, European for basis 4,
 serial days otherwise). The math is that sum, exact, times the exact doubles of rate and par. Sources: the engine's
 `compute_accrint` (crates/rustsheet-engine/src/functions/financial/accrint.rs), the port this definition checks
-against Excel, and the financial.md entries cited below for the schedule's ends. It departs from the engine in
-basis 2's issue-period length, which Excel counts as basis 0 does (`AMOUNTS_SOURCE`; T-4566 owns the engine).
+against Excel, and the financial.md entries cited below for the schedule's ends; basis 2's issue-period length is
+counted as basis 0 counts it (`AMOUNTS_SOURCE`; the engine since T-4566).
 
 Domains (`DomainError`, Excel's `#NUM!`), each evidenced:
 - a date that does not floor to 0..2958465 ("ACCRINT check order: calc_method first, dates as read"; a settlement past
