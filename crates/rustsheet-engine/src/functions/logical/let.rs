@@ -147,7 +147,7 @@ impl Model {
             if as_reference {
                 model.evaluate_reference_arg(body, cell)
             } else {
-                RefArg::Value(model.evaluate_node_in_context(body, cell))
+                RefArg::Value(model.evaluate_passing_mark(body, cell))
             }
         })
         .unwrap_or_else(RefArg::Value)
@@ -240,7 +240,11 @@ impl Model {
             // CalcResult::Range stores only bounds (no cell data), so range bindings are
             // effectively lazy — values are only read when a consuming function iterates the range.
             let binding = self.bind_argument(&cloned[2 * i + 1], cell);
+            let marked = self.take_bound_mark();
             self.variable_stack.insert(raw_id, binding, cell);
+            if marked {
+                self.variable_stack.mark(raw_id);
+            }
         }
 
         // Evaluate the body with all bindings in scope.
@@ -261,8 +265,17 @@ impl Model {
     /// called `LET(f,INDEX(A1:A3,2),f(2))` is `#REF!`, let-name-call-refs H5). An argument that
     /// may stand for several areas is read in reference context, so a union stays its areas
     /// wherever it comes from: written out, another variable, IF, CHOOSE or LET
-    /// (probes/multiarea-let H1, multiarea-letbind H1:H3 and H7).
+    /// (probes/multiarea-let H1, multiarea-letbind H1:H3 and H7). Whether the value carries the
+    /// ERROR.TYPE/CELL mark is left for the binder ([`Model::take_bound_mark`]).
     pub(crate) fn bind_argument(&mut self, node: &Node, cell: CellReferenceIndex) -> Binding {
+        let since = self.number_mark.next_serial();
+        let binding = self.bind_argument_value(node, cell);
+        self.record_bound_mark(since, node, &binding);
+        binding
+    }
+
+    /// [`Self::bind_argument`] without the mark.
+    fn bind_argument_value(&mut self, node: &Node, cell: CellReferenceIndex) -> Binding {
         let node = node.ungrouped();
         // An empty slot, `(1,)` or `(,2)`, is omitted like a missing argument (arrays.md
         // ISOMITTED, A24-A25 and A34), and a variable bound to an omitted parameter hands the

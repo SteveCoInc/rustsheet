@@ -128,8 +128,9 @@ impl Model {
     /// where the written `…!A1` is `#BLOCKED!` (probes/external-ref-no-link-index A26,
     /// external-ref-no-link-ifchoose).
     pub(crate) fn if_branch_value(&mut self, node: &Node, cell: CellReferenceIndex) -> CalcResult {
+        // The branch's ERROR.TYPE/CELL mark is IF's (`number_mark.rs`).
         self.external_reference_picked_value(node, cell)
-            .unwrap_or_else(|| self.evaluate_node_in_context(node, cell))
+            .unwrap_or_else(|| self.evaluate_passing_mark(node, cell))
     }
 
     /// The pick step of a function that stands for one of its arguments once its condition,
@@ -353,7 +354,15 @@ impl Model {
             self.evaluate_picked_reference_arg(&args[0], cell)
                 .into_single_area(cell)
         } else {
-            self.evaluate_node_in_context(&args[0], cell)
+            let since = self.number_mark.next_serial();
+            let value = self.evaluate_node_in_context(&args[0], cell);
+            // A number IFERROR returns keeps its ERROR.TYPE/CELL mark (`number_mark.rs`;
+            // probes/t2576-error-type-cell-paired D5). An array, whose errors may be replaced, is
+            // unprobed and drops it.
+            if matches!(value, CalcResult::Number(_)) {
+                self.pass_number_mark(since, &args[0]);
+            }
+            value
         };
         // A name bound to a 3-D span is a reference, not an error, so the fallback is not taken,
         // and its value is `#VALUE!`: `IFERROR(span3,2)` is `#VALUE!` while `ISERROR(span3)` is

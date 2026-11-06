@@ -53,7 +53,17 @@ impl Model {
         if args.len() != 2 {
             return CalcResult::new_args_number_error(cell);
         }
-        let first = match self.sumx_arg(&args[0], cell) {
+        // A marked first argument (a number from ERROR.TYPE or CELL, an array of references) is
+        // `#NUM!`, as an error value would be, at once: `SUMXMY2(ERROR.TYPE(#REF!),5)` and
+        // `SUMXMY2(INDIRECT("B1",{1}),4)` (probes/t2576-error-type-cell-paired E16,
+        // t2577-indirect-ref-array A148). Its place against the count check and the second
+        // argument's errors, and SUMX2MY2 and SUMX2PY2, are unprobed (statistics.md "ERROR.TYPE and
+        // CELL results are #NUM! in the paired functions").
+        let (first_value, first_marked) = self.evaluate_sample_arg(&args[0], cell);
+        if first_marked {
+            return marked_number_error(cell);
+        }
+        let first = match self.sumx_arg_value(first_value, cell) {
             Ok(arg) => arg,
             Err(e) => return e,
         };
@@ -100,7 +110,17 @@ impl Model {
     // a blank one-cell reference or an omitted argument; errors inside a longer range or an array
     // wait for the count check.
     fn sumx_arg(&mut self, arg: &Node, cell: CellReferenceIndex) -> Result<PairedArg, CalcResult> {
-        let value = match self.evaluate_node_in_context(arg, cell) {
+        let value = self.evaluate_node_in_context(arg, cell);
+        self.sumx_arg_value(value, cell)
+    }
+
+    /// [`Self::sumx_arg`] of an argument evaluated already.
+    fn sumx_arg_value(
+        &mut self,
+        value: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Result<PairedArg, CalcResult> {
+        let value = match value {
             CalcResult::Range { left, right } if left == right => self.evaluate_cell(left),
             value => value,
         };

@@ -528,6 +528,8 @@ impl Model {
                 let captured = self.bind_captures(&caller.lambda, cell);
                 let blanks_references = self.eta_blanks_references(&caller.lambda);
                 for (i, &(raw_id, once)) in ids.iter().enumerate() {
+                    // Only `bind_argument` sets the mark; a helper's bind reads no node.
+                    self.take_bound_mark();
                     let binding = match bind(self, i) {
                         binding if blanks_references && i > 0 => {
                             picked_reference_read(binding, cell)
@@ -535,7 +537,11 @@ impl Model {
                         Binding::Value(value) if once => Binding::ReadOnce(value),
                         binding => binding,
                     };
+                    let marked = self.take_bound_mark();
                     self.variable_stack.insert(raw_id, binding, cell);
+                    if marked {
+                        self.variable_stack.mark(raw_id);
+                    }
                 }
                 // A body that picks a reference with XLOOKUP, TAKE or DROP, also as
                 // the arm an IF, CHOOSE, IFS or SWITCH picks or a LET body, is that reference:
@@ -554,7 +560,7 @@ impl Model {
                         kind: Function::Trimrange,
                         args,
                     } if caller.trimrange_references => self.trimrange_reference(args, cell, true),
-                    _ => RefArg::Value(self.evaluate_node_in_context(body, cell)),
+                    _ => RefArg::Value(self.evaluate_passing_mark(body, cell)),
                 };
                 // A LAMBDA the body made may read the parameters and the captures bound here.
                 // Most calls make no LAMBDA, and they list no ids (a plain call allocates nothing).

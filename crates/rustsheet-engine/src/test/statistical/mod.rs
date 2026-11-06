@@ -37,6 +37,7 @@ mod test_fn_weibull;
 mod test_fn_z_test;
 mod test_hypgeom_lift;
 mod test_ifs_cache;
+mod test_number_mark;
 mod test_incomplete_gamma_lift;
 mod test_quantile_lift;
 mod test_range_number_walk;

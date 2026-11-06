@@ -320,6 +320,20 @@ fn irr_rejects_a_number_straight_from_cell_or_error_type() {
 }
 
 #[test]
+fn irr_rejects_a_marked_number_through_its_wrappers() {
+    // probes/t2728-irr-guess-ref-mark A53, A55, A57, A59, A61; probes/irr-guess-edges-2 A37 (T-2766)
+    assert_errors(&[
+        ("=IRR(IF(TRUE,CELL(\"row\",D2)))", "#VALUE!"),
+        ("=IRR(CHOOSE(1,CELL(\"row\",D2)))", "#VALUE!"),
+        ("=IRR(INDEX(CELL(\"row\",D2),1))", "#VALUE!"),
+        ("=IRR(IFERROR(CELL(\"row\",D2),0))", "#VALUE!"),
+        ("=IRR(LAMBDA(x,x)(CELL(\"row\",D2)))", "#VALUE!"),
+        ("=IRR(LET(x,CELL(\"row\",D2),x))", "#VALUE!"),
+        ("=IRR(LET(x,CELL(\"row\",D2),x*1))", "#NUM!"),
+    ]);
+}
+
+#[test]
 fn irr_reads_the_guess_between_a_flows_error_and_an_element_error() {
     // probes/t2728-irr-guess-ref-mark A1, A39, A41 and -2 A1, A3, A5 (T-2728)
     assert_errors(&[

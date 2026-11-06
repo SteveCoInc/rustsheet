@@ -1,0 +1,80 @@
+#![allow(clippy::unwrap_used)]
+
+//! The ERROR.TYPE/CELL "mark" (statistics.md "ERROR.TYPE and CELL results are #NUM! in the
+//! paired functions") kept through LET, IF, CHOOSE, IFERROR, a LAMBDA call and INDEX, and
+//! dropped by everything else (probes/t2576-error-type-cell-paired, T-2766).
+
+use crate::test::util::new_empty_model;
+
+/// Sets each formula in column A (from A1), evaluates, and checks each cell's text.
+fn assert_texts(cases: &[(&str, &str)]) {
+    let mut model = new_empty_model();
+    model._set("B1", "5");
+    model._set("Z1", "=ERROR.TYPE(#REF!)");
+    for (row, (formula, _)) in (1..).zip(cases) {
+        model._set(&format!("A{row}"), formula);
+    }
+    model.evaluate();
+    for (row, (formula, want)) in (1..).zip(cases) {
+        assert_eq!(model._get_text(&format!("A{row}")), *want, "A{row}: {formula}");
+    }
+}
+
+#[test]
+fn the_mark_passes_through_let_if_choose_iferror_lambda_and_index() {
+    // probes/t2576-error-type-cell-paired Calc!D1, D2, D3, D5, D19, D20, D24
+    assert_texts(&[
+        ("=FTEST({1;2;3},LET(x,ERROR.TYPE(#REF!),x))", "#NUM!"),
+        ("=FTEST({1;2;3},IF(TRUE,ERROR.TYPE(#REF!)))", "#NUM!"),
+        ("=FTEST({1;2;3},CHOOSE(1,ERROR.TYPE(#REF!)))", "#NUM!"),
+        ("=FTEST({1;2;3},IFERROR(ERROR.TYPE(#REF!),0))", "#NUM!"),
+        ("=FTEST({1;2;3},LAMBDA(x,x)(ERROR.TYPE(#REF!)))", "#NUM!"),
+        ("=FTEST({1;2;3},INDEX(ERROR.TYPE(#REF!),1))", "#NUM!"),
+        ("=FTEST({1;2;3},ERROR.TYPE({#REF!}))", "#NUM!"),
+        ("=FTEST({1;2;3},(LET(x,(CELL(\"col\",B1)),(x))))", "#NUM!"),
+        ("=FTEST({1;2;3},IF(TRUE,LET(x,ERROR.TYPE(#REF!),y,x,y)))", "#NUM!"),
+    ]);
+}
+
+#[test]
+fn anything_else_drops_the_mark() {
+    // probes/t2576-error-type-cell-paired Calc!D9, D17, D18, D21, D25, D28; probes/t2436
+    assert_texts(&[
+        ("=FTEST({1;2;3},ERROR.TYPE(#REF!)*1)", "#DIV/0!"),
+        ("=FTEST({1;2;3},-ERROR.TYPE(#REF!))", "#DIV/0!"),
+        ("=FTEST({1;2;3},MAX(ERROR.TYPE(#REF!)))", "#DIV/0!"),
+        ("=FTEST({1;2;3},@ERROR.TYPE(#REF!))", "#DIV/0!"),
+        ("=FTEST({1;2;3},Z1)", "#DIV/0!"),
+        ("=FTEST({1;2;3},LET(x,ERROR.TYPE(#REF!),x+0))", "#DIV/0!"),
+        ("=FTEST({1;2;3},LET(x,ERROR.TYPE(#REF!),y,5,y))", "#DIV/0!"),
+        ("=FTEST({1;2;3},IF(TRUE,ERROR.TYPE(#REF!)+0))", "#DIV/0!"),
+        ("=FTEST({1;2;3},IF(FALSE,ERROR.TYPE(#REF!),4))", "#DIV/0!"),
+        ("=FTEST({1;2;3},IFERROR(ERROR.TYPE(1),4))", "#DIV/0!"),
+        ("=FTEST({1;2;3},SUM(LET(x,ERROR.TYPE(#REF!),x)))", "#DIV/0!"),
+        ("=FTEST({1;2;3},LAMBDA(x,x+0)(ERROR.TYPE(#REF!)))", "#DIV/0!"),
+        ("=FTEST({1;2;3},INDEX({4,5},1))", "#DIV/0!"),
+    ]);
+}
+
+#[test]
+fn a_let_bound_array_of_references_keeps_its_mark() {
+    // probes/t2577-indirect-ref-array Calc!A64; statistics.md "An array of references is #NUM!
+    // in the paired functions"
+    assert_texts(&[
+        ("=F.TEST(LET(x,INDIRECT(\"B1\",{1}),x),{-1,0,1})", "#NUM!"),
+        ("=F.TEST(INDEX(INDIRECT(\"B1\",{1}),1),{-1,0,1})", "#DIV/0!"),
+    ]);
+}
+
+#[test]
+fn sumxmy2_and_linest_reject_a_marked_first_argument() {
+    // probes/t2576-error-type-cell-paired Calc!E16, E34; probes/t2577-indirect-ref-array A148
+    assert_texts(&[
+        ("=SUMXMY2(ERROR.TYPE(#REF!),5)", "#NUM!"),
+        ("=SUMXMY2(INDIRECT(\"B1\",{1}),4)", "#NUM!"),
+        ("=SUMXMY2(ERROR.TYPE(#REF!)+0,5)", "1"),
+        ("=SUMXMY2(5,ERROR.TYPE(#REF!))", "1"),
+        ("=LINEST(ERROR.TYPE(#REF!))", "#VALUE!"),
+        ("=LINEST(2)", "0"),
+    ]);
+}

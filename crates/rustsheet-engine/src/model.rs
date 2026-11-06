@@ -157,6 +157,8 @@ pub struct Model {
     pub(crate) view_id: u32,
     /// A stack of variables used for LET function evaluation. The key is the variable id, and the value is the variable value.
     pub(crate) variable_stack: VariableStack,
+    /// Which evaluated value carries the ERROR.TYPE/CELL mark (`number_mark.rs`, T-2766).
+    pub(crate) number_mark: crate::number_mark::NumberMark,
     /// Last variable id used. It is incremented every time a new variable is created (for example, when evaluating a LET function).
     pub(crate) last_variable_id: usize,
     /// Lambdas
@@ -543,6 +545,7 @@ impl Model {
         if let Err(error) = self.spend_node(cell) {
             return error;
         }
+        let outer_call = self.number_mark.begin(node);
         let result = match node {
             OpSumKind { .. }
             | OpProductKind { .. }
@@ -614,7 +617,9 @@ impl Model {
             | LambdaDefKind { .. }
             | LambdaCallKind { .. } => self.evaluate_cold_node(node, cell),
         };
-        self.charged(result, cell)
+        let result = self.charged(result, cell);
+        self.end_number_mark(node, &result, outer_call);
+        result
     }
 
     fn cell_reference_to_string(

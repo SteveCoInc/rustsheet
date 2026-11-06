@@ -851,6 +851,7 @@ impl Model {
             clock,
             view_id: 0,
             variable_stack: VariableStack::default(),
+            number_mark: crate::number_mark::NumberMark::default(),
             last_variable_id: 0,
             lambdas: HashMap::new(),
             eta_lambdas: HashMap::new(),

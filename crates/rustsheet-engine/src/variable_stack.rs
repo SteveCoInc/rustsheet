@@ -1,11 +1,11 @@
 //! The LET variables and LAMBDA parameters in scope, and what each is bound to.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::{
     calc_result::{CalcResult, Range},
-    expressions::{token::Error, types::CellReferenceIndex},
+    expressions::{parser::Node, token::Error, types::CellReferenceIndex},
     limits::MAX_SIZE,
     reference_operators::{
         several_areas, three_d_needs_one_sheet, too_many_areas, Areas, RefGrid, MAX_AREAS,
@@ -110,6 +110,9 @@ pub(crate) struct VariableStack {
     /// it is bound, so that every LAMBDA capturing it, and every call binding it again
     /// (`Model::bind_captures`), shares that one copy.
     shared: HashMap<usize, Arc<Binding>>,
+    /// The ids bound to a number or array carrying the ERROR.TYPE/CELL mark
+    /// (crate::number_mark), set by [`VariableStack::mark`] after [`VariableStack::insert`].
+    marked: HashSet<usize>,
 }
 
 impl VariableStack {
@@ -230,11 +233,40 @@ impl VariableStack {
         if !self.shared.is_empty() {
             self.shared.remove(&id);
         }
+        if !self.marked.is_empty() {
+            self.marked.remove(&id);
+        }
+    }
+
+    /// Marks `id`, just bound, as holding a value with the ERROR.TYPE/CELL mark
+    /// (crate::number_mark); [`VariableStack::insert`] and [`VariableStack::remove`] clear it.
+    pub(crate) fn mark(&mut self, id: usize) {
+        self.marked.insert(id);
+    }
+
+    /// Whether `node` is a variable whose value read carries the ERROR.TYPE/CELL mark: one
+    /// [`VariableStack::mark`]ed, or one bound to an array of references holding a reference,
+    /// which is marked as the OFFSET or INDIRECT itself is (`F.TEST(LET(x,INDIRECT("B1",{1}),x),
+    /// {-1,0,1})` is `#NUM!`; statistics.md "An array of references is #NUM! in the paired
+    /// functions", probes/t2577-indirect-ref-array A64).
+    pub(crate) fn is_marked_variable(&self, node: &Node) -> bool {
+        let Node::NamedVariableKind { id: Some(id), .. } = node else {
+            return false;
+        };
+        let id = *id as usize;
+        self.marked.contains(&id)
+            || self
+                .get(id)
+                .and_then(Binding::grid)
+                .is_some_and(RefGrid::holds_reference)
     }
 
     pub(crate) fn remove(&mut self, id: usize) {
         if !self.shared.is_empty() {
             self.shared.remove(&id);
+        }
+        if !self.marked.is_empty() {
+            self.marked.remove(&id);
         }
         if let Some(old) = self.bindings.remove(&id) {
             self.release(&old);
@@ -245,6 +277,7 @@ impl VariableStack {
         self.bindings.clear();
         self.held_areas = 0;
         self.shared.clear();
+        self.marked.clear();
         self.held_grid_elements = 0;
     }
 

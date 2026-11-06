@@ -33,12 +33,24 @@ impl Model {
     /// `LINEST(IFERROR(B10,1),{1;2},NA())` with B10 blank are `#VALUE!`, while the blank reference
     /// itself and a computed text or boolean y wait (`LINEST(B10,1/0)`, `LINEST("abc",1/0)` and
     /// `LINEST(IF(TRUE,"abc"),1/0)` are `#DIV/0!`; probes/t2455-transpose-single-value A62:A84).
+    /// A y carrying the ERROR.TYPE/CELL mark is `#VALUE!` at once too: `LINEST(ERROR.TYPE(#REF!))`
+    /// where `LINEST(2)` is 0 (probes/t2576-error-type-cell-paired E34; LOGEST, TREND and GROWTH,
+    /// which read y here, are unprobed; statistics.md "ERROR.TYPE and CELL results are #NUM! in the
+    /// paired functions").
     pub(super) fn read_known_y(
         &mut self,
         y_arg: &Node,
         cell: CellReferenceIndex,
     ) -> Result<DataRead, CalcResult> {
-        let y = self.read_data(y_arg, cell)?;
+        let (value, marked) = self.evaluate_marked(y_arg, cell);
+        if marked {
+            return Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "Regression: known_y from ERROR.TYPE or CELL".to_string(),
+            ));
+        }
+        let y = self.data_read(value, cell)?;
         if matches!(y, DataRead::Scalar(Element::Blank))
             && !matches!(*y_arg.resolved_at(cell.row), Node::ReferenceKind { .. })
         {
@@ -58,7 +70,13 @@ impl Model {
         arg: &Node,
         cell: CellReferenceIndex,
     ) -> Result<DataRead, CalcResult> {
-        Ok(match self.evaluate_node_in_context(arg, cell) {
+        let value = self.evaluate_node_in_context(arg, cell);
+        self.data_read(value, cell)
+    }
+
+    /// [`Self::read_data`] of an argument evaluated already.
+    fn data_read(&mut self, value: CalcResult, cell: CellReferenceIndex) -> Result<DataRead, CalcResult> {
+        Ok(match value {
             CalcResult::Range { left, right } => {
                 let n_rows = (right.row - left.row + 1) as usize;
                 let n_cols = (right.column - left.column + 1) as usize;
