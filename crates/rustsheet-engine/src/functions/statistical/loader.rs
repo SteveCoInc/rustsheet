@@ -84,8 +84,10 @@ fn stirling_series(m: Dd) -> Dd {
 
 /// The ratio cut of Excel's bd0: its series runs while |k - M| < 0.2 (k + M) (statistics.md "Beta
 /// density for min(a,b) > 1 ...": 0.25 drops (5.5, 12.5) from 113 to 13 of 120 exact cells; R's
-/// is 0.1).
-/// FITTED(T-2464, 3072 cells, BETA.DIST a 2.5, b 3.5, v 0.130..0.250)
+/// is 0.1). The t density reuses it (T-2585): of 0.1, 0.15, 0.25 and 0.3 on its cells, only 0.25
+/// and 0.3 gain exact cells (18 and 4 of 12,037), each losing within-4-ulp and 15-digit cells, and
+/// none beats it on the fresh batch r4-T-2585 (decision 0299).
+/// FITTED(T-2464, 3072 cells, BETA.DIST a 2.5, b 3.5, v 0.130..0.250; T.DIST density df 3..2.7E297 per decision 0299)
 const EXCEL_BD0_CUT: f64 = 0.2;
 
 /// Excel's bd0(k, M) = k ln(k / M) + M - k, as the double its beta density sums (model M4 of
@@ -227,8 +229,12 @@ pub(crate) fn excel_beta_density(x: f64, a: f64, b: f64) -> Option<f64> {
 /// Where Excel's t density leaves Loader's bd0 form for the log form: `xx > T_LOG_BRANCH_CUT * n`
 /// (R 2.x's cut is 0.2). Chosen by scoring the cut on the in-sample probes t2513-r3-tdensity-a1/-a2;
 /// on the verifier's hold-out 1 gives 505 exact cells against 391 for 0.2 and 417 for no log
-/// branch (hold2: 573, 480, 520; statistics.md "Student t density is Loader's dt").
-/// FITTED(T-2513, 2406 cells, df 3..100, t 0.31..4.3)
+/// branch (hold2: 573, 480, 520; statistics.md "Student t density is Loader's dt"). It is applied over
+/// the whole range below, which the hold-outs, the 19,793 T.DIST(.,FALSE) rows of
+/// docs/research/t2464/cells.tsv and the fresh Gate A batch r4-T-2585 measure: outside the fitted
+/// df 3..100, |t| 0.31..4.3 the cut still scores at least as well as 0.2, no log branch and the
+/// accurate density on every count (decision 0299).
+/// FITTED(T-2513, 2406 cells, fitted on df 3..100, |t| 0.31..4.3; measured on df 3..2.7E297, |t| up to 1.1E153)
 const T_LOG_BRANCH_CUT: f64 = 1.0;
 
 /// The bound on [`loader_t_constant`]'s series terms; at n = 3 (ratio 1/3) it reaches 1E-33 in
