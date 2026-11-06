@@ -3,7 +3,7 @@ id: T-2904
 title: "Python facade: Workbook.stored_cells lists a sheet's stored cells as A1 strings"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
