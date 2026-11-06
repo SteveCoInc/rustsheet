@@ -1010,7 +1010,24 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
     (MSVC's short `stable_sort`) misses 37 to 44. Over Cy Cx Ay Bx Ay (rows 6, 27) Excel's UNIQUE is Cy, Cx, Bx, Ay: the
     second Ay is kept apart from the first, which joined Cy, so two identical rows end in different groups. No
     sort-then-group-neighbours model under the row-by-row field comparison can do that. One-field runs never tell
-    the rules apart (none up to length 7). T-4393 owns the search and these cells.
+    the rules apart (none up to length 7). T-4393 found the rule (next bullet).
+  - **UNIQUE's merge: equal heads join, the output never coalesces** (T-4393, probes/t4393-unique-merge-holdout,
+    excel-graph, 2026-11-06; docs/research/t4393/model.py). UNIQUE is a natural merge sort over groups of rows: a
+    row `=` the last group of its run joins it, a row below it starts a run, and neighbouring runs merge bottom-up.
+    When the two heads are `=`, the right head's group joins the left head's group, which stays the head and meets
+    the next right head too. A group taken out of a merge is not compared with the group taken out before it, so
+    two `=` groups that never meet as heads stay apart. Kept rows are each group's first row, in input order. Over
+    Cy Cx Ay Bx Ay the runs are [Cy] [Cx Ay Bx] [Ay]; the first merge joins Ay (row 3) to Cy and gives Cx Bx Cy,
+    Bx after Cx with no coalescing though Bx = Cx; the second takes Cx, then Ay (row 5) < Bx, so row 5 never meets Cy
+    and is kept: Cy, Cx, Bx, Ay. Over Cy Cx Ay Bx Cy the last Cy > Bx meets Cy and joins it: Cy, Cx, Bx. Chosen on
+    the 60 two-field runs of t4379 and t4380 (60 of 60; T-4200's rule 33 misses, `pushkeep` 5; sort-then-group
+    models 35 or more, docs/research/t4393/sort_search.py; search-tree models, a sorted vector with lower-bound
+    insertion and red-black or plain BSTs with equal-stop or lower-bound lookups, 34 to 37). Confirmed out of
+    sample: 60 fresh runs of lengths 5 to 7 (seed 4393; 36 where it and `pushkeep` keep different rows, 18 where it
+    and T-4200's rule do, 6 controls), 60 of 60 UNIQUE predictions committed before the fill. A structural choice
+    (decision 0188 R4), not a fit. It leaves docs/research/t4241/model.py's 234 GROUPBY blocks unchanged. GROUPBY
+    on top of it still misses: t4380 column C 38 of 45, the hold-out's column C 32 of 60 (its key tree and descent;
+    T-4472). Not implemented: T-4471.
   - **A value sort's parent counts the rows that reached it but no leaf**: Bx, Ax, Ax, By, Cy by SUM of 1, 2, 4, 8,
     16 orders ascending (B,x) 1, (B,y) 8, (A,x) 6 (D56), B's 9 before A's 22, where 22 counts row 5, (C,y), which
     reaches class A (C = A) and then no y class (D56, E56).

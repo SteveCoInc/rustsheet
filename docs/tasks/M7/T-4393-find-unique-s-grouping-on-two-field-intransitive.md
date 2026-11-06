@@ -3,7 +3,7 @@ id: T-4393
 title: "Find UNIQUE's grouping on two-field intransitive runs: the t4379 and t4380 probes no coalescing merge fits"
 milestone: M7
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -46,3 +46,25 @@ or the negatives recorded and the cells parked with their reason.
 
 ## Out of scope
 - Changing the engine (the implementing task does that).
+
+## Outcome
+- Model found and confirmed (docs/research/t4393/model.py `unique_kept`; coercion.md "UNIQUE's merge: equal heads
+  join, the output never coalesces"): a natural merge sort over groups where a row `=` the last group of its run
+  joins it, an equal right head joins the left head's group (which stays the head), and a group taken out of a
+  merge is never compared with the last group out. The missing piece against T-4380's `keep` rule was the output
+  coalescing: without it, `keep` fits.
+- Chosen on t4379 and t4380 column B: 60 of 60 runs (T-4200's rule 33 misses, `pushkeep` 5). Search-tree models
+  (docs/research/t4393/tree_search.py: sorted vector with lower/upper-bound insertion, plain and red-black BSTs
+  with equal-stop or lower-bound lookups) miss 34 to 42; sort-then-group models 35 or more (sort_search.py).
+  docs/research/t4241/model.py's 234 GROUPBY blocks stay 234 of 234 on the new UNIQUE.
+- Hold-out (decision 0188 R4, a structural choice, no `FITTED` tag): probes/t4393-unique-merge-holdout, 60 fresh
+  runs of lengths 5 to 7 (seed 4393, none of t4379's or t4380's): 36 where the model and `pushkeep` keep different
+  rows, 18 where it and T-4200's rule do, 6 controls. Predictions committed before the fill (commit 87124b3,
+  docs/research/t4393/predictions.tsv); excel-graph fill 2026-11-06: UNIQUE 60 of 60. GROUPBY (column C) on
+  docs/research/t4241's tree: 32 of 60, and t4380's column C 38 of 45 (T-4200's UNIQUE 23): GROUPBY's key tree and
+  descent, not UNIQUE (T-4472).
+- Filed: T-4471 (engine: implement the merge in `coalesce_equal_lines`; takes this task's owned cells and the
+  hold-out's Calc!B1:B60), T-4472 (research: GROUPBY's tree on the new UNIQUE; owns the hold-out's Calc!C1:C60 and
+  t4380's Calc!C1:C45).
+- Eval delta: 1 new probe case (884 cells; the engine passes 784, every off cell owned by T-4471 or T-4472); no
+  engine change.

@@ -15,16 +15,19 @@ Over Cy Cx Ay Bx Ay (t4380 row 6) Excel's UNIQUE is Cy, Cx, Bx, Ay: runs [Cy] [C
 joins Ay (row 3) to Cy and gives Cx Bx Cy (Bx follows Cx with no coalescing, though Bx = Cx); the second merge
 takes Cx, then Ay (row 5) < Bx, so it never meets Cy and stays its own group.
 
-Scores (2026-11-06): 60 of 60 UNIQUE runs of t4379 and t4380 (candidates.py's rules: T-4200's `old` 33 misses,
+Scores (2026-11-06; `main` prints them): 60 of 60 UNIQUE runs of t4379 and t4380 (candidates.py's rules: T-4200's `old` 33 misses,
 `keep` 12, `pushkeep` 5); GROUPBY t4380 column C through docs/research/t4241/model.py's tree 38 of 45 (T-4200's
 UNIQUE 23); docs/research/t4241/model.py's 234 blocks of t4195 and t4241 unchanged (234 of 234 under both).
+Hold-out (probes/t4393-unique-merge-holdout, predictions committed before the fill): UNIQUE 60 of 60, GROUPBY 32 of 60
+(T-4472).
 """
 
 import importlib.util
+import json
 import sys
 
 sys.path.insert(0, "docs/research/t4241")
-import model  # noqa: E402
+import model
 
 _spec = importlib.util.spec_from_file_location("t4380_candidates", "docs/research/t4380/candidates.py")
 assert _spec and _spec.loader
@@ -81,6 +84,27 @@ def groupby(rows, dirs):
         model.unique_kept = old
 
 
+def holdout() -> None:
+    """Score docs/research/t4393/predictions.tsv against probes/t4393-unique-merge-holdout's fill."""
+    names = {"\u00adab": "C", "ab\u00ad": "B", "ab": "A"}
+    with open("eval/suites/probes/cases/t4393-unique-merge-holdout.oracle.json", encoding="utf-8") as f:
+        oracle = json.load(f)["sheets"]["Calc"]
+    with open("docs/research/t4393/predictions.tsv", encoding="utf-8") as f:
+        lines = [line for line in f if not line.startswith("#")]
+    hits = {"B": [0, 0], "C": [0, 0]}
+    for line in lines:
+        cell, _run, want = line.rstrip("\n").split("\t")
+        raw = oracle[cell]["v"]
+        if cell[0] == "B":
+            parts = [p.split(",") for p in raw.strip("{}").split(";")]
+            got = " ".join(names[t.strip('"')] + f.strip('"') for t, f in parts)
+        else:
+            got = " ".join("".join(k) + ":" + ",".join(map(str, p)) for k, p in model.parse(raw, 2))
+        hits[cell[0]][0] += got == want
+        hits[cell[0]][1] += 1
+    print("hold-out UNIQUE (B):", *hits["B"], "GROUPBY (C):", *hits["C"])
+
+
 def main() -> None:
     cases = candidates.cases()
     miss = [(nm, i, run, ex, unique_keys(run)) for nm, i, run, ex in cases if unique_keys(run) != ex]
@@ -99,6 +123,7 @@ def main() -> None:
         blocks = model.load(case, col, nf)
         ok = sum(groupby(rows, model.sort_dirs(f, nf)) == want for _, rows, want, f in blocks)
         print("GROUPBY", case, col, ok, "/", len(blocks))
+    holdout()
 
 
 if __name__ == "__main__":

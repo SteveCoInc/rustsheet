@@ -61,8 +61,10 @@ def main() -> None:
     data: dict[str, object] = {}
     calc: dict[str, str] = {}
     lines = [
-        "# T-4393: the model's predictions for probes/t4393-unique-merge-holdout, written before the oracle fill"
-        " (cell, run, UNIQUE keys or GROUPBY groups as key:positions)"
+        (
+            "# T-4393: the model's predictions for probes/t4393-unique-merge-holdout, written before the oracle fill"
+            " (cell, run, UNIQUE keys or GROUPBY groups as key:positions)"
+        )
     ]
     row = 1
     agg = "LAMBDA(v,ARRAYTOTEXT(v))"
