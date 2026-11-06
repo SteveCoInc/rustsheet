@@ -3,7 +3,7 @@ id: T-4529
 title: "YEARFRAC with an out-of-calendar start against a text, boolean, empty or multi-cell-range end (and the reverse): probe which check wins and match"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
