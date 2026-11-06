@@ -98,3 +98,15 @@ output cell are a reference or a value exactly as in Excel, evidenced on excel-g
   written reference.
 - **Eval delta:** 2 new cases: t4478-reduce-scan-reference-accumulator (90 of 117 cells pass; the 27 others are new
   known failures owned by T-4494) and t4478-reduce-reference-in-callers (13 of 13). 0 regressions.
+
+## Landing notes
+- PR #3524, head 9433aba (before this note). CI was green on 9433aba. On 28bbbe2, every reviewer approved
+  (security, design, excel-fidelity), and 9433aba is only a `make catch-up` merge of main on top of it.
+- The PR is not enqueued. Auto-merge was armed at 11:30 UTC, but the PR never entered the queue: `main` moved and
+  `eval/baseline/probes.txt` conflicts again (local test merge at 11:49 UTC). Auto-merge is now disarmed so the next
+  push is safe.
+- Next step: `make catch-up PR=3524` (baseline-only conflict, so no new review is needed), wait for CI, then
+  `enable_pr_auto_merge` (SQUASH). This landing-notes commit is docs-only and needs no re-review either.
+- Review MINORs still open, for T-4494 (do not push them here): SCAN with a 3-D initial value, and `a` inside a
+  LAMBDA whose body does not return it (`REDUCE(Sheet2:Sheet3!A1,{1},LAMBDA(a,v,ISERROR(a)))`), are unprobed;
+  arrays.md could also cite control D13 of probes/t4478-reduce-reference-in-callers.
