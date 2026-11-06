@@ -8,6 +8,7 @@ priority: P2
 size: M
 tier: opus
 depends_on: [T-4167]
+spec: docs/specs/SPEC-0033-xlsx-round-trip-contract.md
 ---
 
 ## Goal
