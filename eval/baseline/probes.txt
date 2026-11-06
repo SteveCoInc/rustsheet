@@ -2472,6 +2472,7 @@ C	probes/t4554-api-name-scoped-name-choice-last.case.json	27
 C	probes/t4554-api-name-scoped-name-choice.case.json	27
 C	probes/t4582-pivot-item-edges.case.json	45
 C	probes/t4583-pivot-row-labels.case.json	204
+C	probes/t4606-ifs-array-criterion-value-error.case.json	86
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
