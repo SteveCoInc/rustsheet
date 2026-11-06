@@ -1,7 +1,8 @@
 # 0267 — Numeric cut-loss plan: tiers A to D, a 13-digit bar for the incomplete-beta family, then freeze probes-numeric
 
 - **Status:** accepted (2026-11-04, owner rulings; recorded on branch claude/numeric-accuracy-strategy-ceaedp).
-- **Amended by:** decision 0301 (item 3's tiny-p scope narrows: the T.INV Gate A points A91 and A96 are removed).
+- **Amended by:** decision 0301 (item 3's tiny-p scope narrows: the T.INV Gate A points A91 and A96 are removed);
+  decision 0309 (item 6 (d) names the script that checks (a) to (c)).
 - **Amends:**
   - decision 0083, for the incomplete-beta family only: the bar becomes 13 digits for the headline and the Phase 1
     counts (item 2 below);
@@ -115,7 +116,9 @@
        (`pass + ulp1 + ulp4 + digits15` of the family functions in report.json `functions[].closeness`) rise
        against main, and the family's visibly-off numbers (`visible_numeric`) do not rise;
      - (d) the PR body gives the before and after counts of (c) and lists the regressed cells, and the Excel-fidelity
-       reviewer checks them.
+       reviewer checks them. `python3 scripts/family_net.py MAIN_REPORT BRANCH_REPORT` checks (a) to (c) from main's
+       and the branch's report.json over the same suites and prints those counts and cells (decision 0309). It exits
+       0 only when all three hold.
 
      Anything else still needs its own decision record (CLAUDE.md prime directive 2).
 - **Consequences:**

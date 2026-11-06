@@ -31,7 +31,7 @@ use super::half_integer_beta::{half_integer_remainder, is_half_integer_shape};
 use super::large_shape_beta::large_shape_lower;
 use super::special::ln_gamma;
 use crate::x87_exp::{dd_add, dd_mul, fast_two_sum, two_sum};
-use crate::x87_exp::{excel_exp, excel_expm1};
+use crate::x87_exp::{excel_exp, excel_one_minus_exp};
 use crate::x87_log10::{excel_ln, ln_double_double_pair};
 use crate::x87_log1p::excel_ln_one_minus;
 
@@ -194,8 +194,13 @@ pub(crate) fn half_half_cdf(x: f64, y: f64) -> f64 {
 /// 0 < x, y < 1: bratio's oriented a0 = 1 with y0 > 0.9 (x0 below about 0.1). Like bratio, Excel
 /// computes w and forms w1 as (0.5 - w) + 0.5 (statistics.md "Incomplete beta at a shape of 1
 /// outside the closed forms", T-3007):
-/// - w = -expm1(b0 ln1p(-x0)) with Excel's own expm1 (Kahan's form) and log1p (the stored atanh
-///   series): `F.DIST.RT(10,6,2)` = 0.09368601255412709 (gen-m9/146b46e74f2dac3b A329) and
+/// - w = 1 - e^z at z = b0·ln1p(-x0), with Excel's own log1p (the stored atanh series) and
+///   1 - e^z as Excel forms it ([`excel_one_minus_exp`]): minus its expm1 (Kahan's form) below
+///   |z| = 1, `1 - EXP(z)` from there on. Kahan's form at |z| >= 1 put w one 2^-53 step off Excel's
+///   on 47 of the 508 such BETA.DIST cells of probes-numeric t3568-r5-bup-tune, -hold and -fresh
+///   (`BETA.DIST(0.9094554,241.0,1.0,TRUE)` is 1.1649814446457185E-10, t3568-r5-bup-tune B856;
+///   T-3764), where the switch matches all 508. Below |z| = 1, `F.DIST.RT(10,6,2)` =
+///   0.09368601255412709 (gen-m9/146b46e74f2dac3b A329) and
 ///   `FDIST(40,8,2)` (gen-m9/abc2939ebd1e2365 A318) are then bit-exact; libm's expm1 and log1p miss
 ///   71 eval cells this form gets, and get 6 it misses (T-3170). `BETA.DIST(1.9999999998999996E-10,
 ///   1,0.5,TRUE)` is 9.999999999999999E-11 (probes-numeric/t1745-beta-inv-roundtrip G35), which
@@ -203,15 +208,16 @@ pub(crate) fn half_half_cdf(x: f64, y: f64) -> f64 {
 /// - w1 from w: `F.DIST(5,20,2,TRUE)` = 0.8203482998751552 (probes-numeric/t2220-f-dist-sweep-cdf
 ///   A718), which y0^b0 puts 3 ulp low.
 ///
-/// `None` for other shapes and points. A w1 below 2^-53, which the complement rounds to 0, has no
-/// evidence (TODO(T-3150)).
+/// `None` for other shapes and points. A w1 below 2^-53 is 0 or 2^-53 by the complement, as
+/// Excel's is on the four such t3568-r5-bup cells (`BETA.DIST(0.95591070645675,826.0,1.0,TRUE)`
+/// is 2^-53, t3568-r5-bup-fresh B744); the rest of that region has no evidence (TODO(T-3150)).
 fn shape_one_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
     let swap = x > 0.5;
     let (a0, b0, x0, y0) = if swap { (b, a, y, x) } else { (a, b, x, y) };
     if a0 != 1.0 || b0 == 1.0 || y0 <= A1_CLOSED_FORM_MAX_Y {
         return None;
     }
-    let w = -excel_expm1(b0 * excel_ln_one_minus(x0));
+    let w = excel_one_minus_exp(b0 * excel_ln_one_minus(x0));
     let w1 = (0.5 - w) + 0.5;
     Some(if swap { (w1, w) } else { (w, w1) })
 }

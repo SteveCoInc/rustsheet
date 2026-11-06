@@ -84,6 +84,9 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     formats (`<cfRule type="expression">`) and `"data_validations": [{"ref": "A1", "formula": "=A1>0"}]`
     custom data validations, their formulas prefixed like cell formulas (T-3263). The engine adapter
     ignores both.
+  * `"active_sheet": "S2"` at the top level makes that sheet the workbook's active (and only selected)
+    sheet, `<workbookView activeTab>`; the first sheet otherwise (T-4394). Excel binds an unqualified
+    reference in an API-defined name to it. The engine adapter ignores it.
 """
 
 from __future__ import annotations
@@ -108,7 +111,7 @@ from rustsheet_tools.custom_properties import json_properties, set_json_property
 from rustsheet_tools.oracle.package import patch_parts, read_parts
 from rustsheet_tools.pivot import PivotParts, pivot_tables, relationships_xml
 from rustsheet_tools.sheetop import column_number, sheet_op
-from rustsheet_tools.spec_sheet_extras import add_range_formulas, set_column_widths
+from rustsheet_tools.spec_sheet_extras import activate_sheet, add_range_formulas, set_column_widths
 from rustsheet_tools.spec_tables import auto_filter, has_header_row
 
 # XlsxWriter stamps docProps/core.xml with the wall clock; a fixed instant keeps identical specs
@@ -420,6 +423,7 @@ def build_xlsx(spec: dict[str, Any]) -> bytes:
             (number, _add_data_table(ws, sheet, t)) for t in sheet.get("data_tables", ())
         )
 
+    activate_sheet(spec, worksheets)
     patches.pivots = pivot_tables(spec, _pivot_cell_writer(worksheets, patches, tables))
     for name, formula in spec.get("names", {}).items():
         wb.define_name(name, _formula_text(formula, tables))
