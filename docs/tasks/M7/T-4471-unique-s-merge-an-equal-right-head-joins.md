@@ -3,7 +3,7 @@ id: T-4471
 title: "UNIQUE's merge: an equal right head joins the left head, which stays; no coalescing with the last group out (T-4393's model, 60/60 and hold-out 60/60)"
 milestone: M7
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -42,3 +42,20 @@ by T-4393's merge model.
 
 ## Out of scope
 - GROUPBY's tree and descent (T-4472).
+
+## Outcome
+- `coalesce_equal_lines` (pairwise_order.rs) follows T-4393's merge. At equal heads the right head's group joins the
+  left head, which stays and meets the next right head. Merge output is no longer coalesced with the group out
+  before it. Run building is unchanged.
+- New unit test `unique_merge_keeps_the_left_head_and_never_coalesces_its_output` (test_collation.rs) covers
+  Cy Cx Ay Bx Ay (kept Cy, Cx, Bx, Ay) and Cy Cx Ay Bx Cy (kept Cy, Cx, Bx). T-4200's cycle test still passes, as
+  does equality grouping on a total order.
+- Eval delta: probes known failures 5693 -> 5521 (fixed 172, 0 regressions). Every cell owned here now passes,
+  including the GROUPBY and PIVOTBY columns:
+  - probes/t4393-unique-merge-holdout: 100 cells (884 of 884)
+  - probes/t4380-unique-keep-head-holdout: 50 (622 of 622)
+  - probes/t4379-pivotby-repeated-unreached-leaf: 20 (351 of 351)
+  - probes/t4358-pivotby-unreached-column-leaf: 2 (475 of 475)
+- The engine's GROUPBY tree on the new UNIQUE passes the GROUPBY columns that docs/research/t4241/model.py's Python
+  tree missed. T-4472 is therefore dropped: nothing is left for it to own.
+- coercion.md: the T-4393 entry records the implementation, and the T-4379 bullet no longer names T-4393 as owner.
