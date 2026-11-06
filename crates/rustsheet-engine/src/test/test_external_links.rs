@@ -551,11 +551,14 @@ fn span_of_cached_sheets_aggregates_over_them() {
 #[test]
 fn span_of_cached_sheets_round_trips() {
     let mut model = cached_span_fixture();
+    // Printed bare, as the fixture holds it and as a span of this workbook is (T-4140); the quoted
+    // spelling reads the same.
     model._set("C1", "=SUM([1]Uses:Defines!$A$1:$B$2)");
-    assert_eq!(
-        model._get_formula("C1"),
-        "=SUM('[1]Uses:Defines'!$A$1:$B$2)"
-    );
+    assert_eq!(model._get_formula("C1"), "=SUM([1]Uses:Defines!$A$1:$B$2)");
+    model._set("C1", "=SUM('[1]Uses:Defines'!$A$1:$B$2)");
+    assert_eq!(model._get_formula("C1"), "=SUM([1]Uses:Defines!$A$1:$B$2)");
+    model.evaluate();
+    assert_eq!(model._get_text("C1"), "157");
 }
 
 // A span over many cached sheets walks the cache once, not once per sheet (CLAUDE.md

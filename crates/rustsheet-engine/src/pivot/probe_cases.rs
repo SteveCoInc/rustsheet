@@ -130,6 +130,24 @@ pub(crate) fn aggregate_named(name: &str) -> Aggregate {
     }
 }
 
+/// The verb the builder puts in a data field's default name, `<verb> of <field>`
+/// (`pivot_definition.py` `_AGGREGATE_VERBS`).
+fn default_verb(subtotal: &str) -> &'static str {
+    match subtotal {
+        "sum" => "Sum",
+        "count" | "countNums" => "Count",
+        "average" => "Average",
+        "max" => "Max",
+        "min" => "Min",
+        "product" => "Product",
+        "stdDev" => "StdDev",
+        "stdDevp" => "StdDevp",
+        "var" => "Var",
+        "varp" => "Varp",
+        _ => panic!("unknown aggregate {subtotal}"),
+    }
+}
+
 /// A custom subtotal line's function by its `item@t`, as the importer reads it.
 pub(crate) fn subtotal_named(name: &str) -> Aggregate {
     match name {
@@ -208,6 +226,10 @@ pub(crate) fn probe_pivot(case: &Json, name: &str) -> (PivotCache, PivotTable) {
             None
         };
         let mut pivot_field = PivotField::new(axis, cache_field.items.len());
+        // The builder writes `showAll="0"` on every field (`pivot_definition.py`), and refuses
+        // it in `attrs` today; a spec that sets it is read as given.
+        let attrs = &definition["fields"][&cache_field.name]["attrs"];
+        pivot_field.show_all = attrs["showAll"].as_bool().unwrap_or(false);
         let spec = &definition["fields"][&cache_field.name];
         if axis.is_some() {
             // The builder lists the field's `order` first, then the rest in first-seen order.
@@ -248,21 +270,35 @@ pub(crate) fn probe_pivot(case: &Json, name: &str) -> (PivotCache, PivotTable) {
     }
     table.data_fields = data
         .iter()
-        .map(|d| DataField {
-            caption: d["name"].as_str().unwrap_or_default().to_string(),
-            field: field(d["field"].as_str().unwrap()),
-            function: aggregate_named(d["subtotal"].as_str().unwrap_or("sum")),
-            ..DataField::default()
+        .map(|d| {
+            let (name, subtotal) = (d["field"].as_str().unwrap(), d["subtotal"].as_str());
+            let subtotal = subtotal.unwrap_or("sum");
+            DataField {
+                caption: d["name"].as_str().map_or_else(
+                    || format!("{} of {name}", default_verb(subtotal)),
+                    str::to_string,
+                ),
+                field: field(name),
+                function: aggregate_named(subtotal),
+                ..DataField::default()
+            }
         })
         .collect();
     let options = &definition["table"];
+    let text = |key: &str| options[key].as_str().map(str::to_string);
     table.options.show_error = options["showError"].as_bool().unwrap_or(false);
-    table.options.error_caption = options["errorCaption"].as_str().map(str::to_string);
-    table.options.missing_caption = options["missingCaption"].as_str().map(str::to_string);
+    table.options.error_caption = text("errorCaption");
+    table.options.missing_caption = text("missingCaption");
+    table.options.row_header_caption = text("rowHeaderCaption");
+    table.options.column_header_caption = text("colHeaderCaption");
+    table.options.grand_total_caption = text("grandTotalCaption");
+    // `dataCaption="Values"` unless `table` sets it (`_TABLE_DEFAULTS`).
+    table.options.data_caption = text("dataCaption").or_else(|| Some("Values".to_string()));
     // The form flags as the builder writes them: `outline` and `outlineData` on unless `table`
     // sets them (`_TABLE_DEFAULTS`), the rest at the schema's default unless set.
     let flag = |value: &Json, default: bool| value.as_bool().unwrap_or(default);
     let o = &mut table.options;
+    o.show_missing = flag(&options["showMissing"], o.show_missing);
     o.compact = flag(&options["compact"], o.compact);
     o.outline = flag(&options["outline"], true);
     o.compact_data = flag(&options["compactData"], o.compact_data);

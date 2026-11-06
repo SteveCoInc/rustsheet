@@ -154,7 +154,7 @@ excel-graph, 2026-11-05, T-4311):
 Engine (T-4276): the importer keeps every `<sharedItems>` entry, used or not, and each `<pivotField>`'s `showAll` (on
 when absent, ECMA-376's default; Excel writes `showAll="0"`). GETPIVOTDATA on an ungrouped field's item that no record
 holds is `#REF!` when its field's `showAll` is off and 0 when on (`shown_group`, pivot_index.rs), on the row and the
-column axis and on a grouped field alike (T-4311), and `row_layout` shows a grouped field's empty groups with a blank
+column axis and on a grouped field alike (T-4311), and the engine's render (`pivot::compute` under `showAll`, `pivot::render`; T-4149) shows a grouped field's empty groups with a blank
 value under `showAll`. The eval adapter
 appends a spec's `unused_items` to the row field's items after the records' own and takes its `show_all`.
 
@@ -283,7 +283,7 @@ Status: VERIFIED (excel-graph). Engine (T-4235, T-4253, T-4249): `NumberGroups`
 groups by the rule, picks a number item by the truncation rule, and always writes its own labels in the relabel order
 above (`NumberGroups::new`, `labels`, `lower_bound_index`). T-4287: whole labels need a whole `endNum`
 (`NumberGroups::new`), the label match folds case (`fold_case`), and `Txn::add_pivot_table` leaves the field ungrouped
-over a blank or any date cell (`grouped`, `holds_dates`; `row_layout` writes a number item as its value);
+over a blank or any date cell (`grouped`, `holds_dates`; `render` writes a number item as its value);
 the importer keeps a saved grouping, as for dates. T-4316: a repeated label takes its last place and a number item
 is skipped (`NumberGroups::new`), and any date cell, not only dates among numbers, drops the grouping. A group with no record
 is `#REF!` while its field's `showAll` is off and 0 while it is on (T-4311). The importer and
@@ -349,13 +349,13 @@ Status: VERIFIED (excel-graph). Engine: `split_serial` (pivot/date_groups.rs), s
 `ungroup_dates`, the importer and the `startDate` and `endDate` comparisons.
 Engine (T-4260): `Txn::add_pivot_table` drops a date grouping over a blank as the refresh does (`ungroup_dates`:
 second-rounded `Date` items in record order, by the same `split_serial` rule as the groups), the layout writes a date
-label as its serial and the blank as `(blank)` (`row_layout`), and GETPIVOTDATA picks an ungrouped date item by an
+label as its serial and the blank as `(blank)` (`item_cell`, pivot/layout/render.rs), and GETPIVOTDATA picks an ungrouped date item by an
 equal serial and the blank by `"(blank)"` (`pivot_number_item`, `pivot_blank_text`). A serial within the second of
 an item but not equal to it, `"(BLANK)"` in another case, and a field that also holds the text `(blank)` are
 UNVERIFIED. The importer keeps a saved grouping (59932).
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`),
 crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`, `group_by_numbers`), pivot/date_groups.rs
-(`DateGroups`, `group_by_dates`), pivot/layout.rs (`row_layout`),
+(`DateGroups`, `group_by_dates`), pivot/layout/render.rs (`item_cell`, T-4149),
 functions/lookup_and_reference/pivot_index.rs (`pivot_number_item`, `shown_group`, `pivot_blank_text`).
 Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253, T-4260, T-4261, T-4287, T-4316
 

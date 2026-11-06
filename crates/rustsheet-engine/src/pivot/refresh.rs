@@ -112,9 +112,9 @@ impl SourceCells for Model {
 impl Model {
     /// Whether the cell style at `index` shows numbers as dates (`is_likely_date_number_format`),
     /// which Excel caches as dates: probes/t4582-pivot-item-edges J3 and J4 (`m/d/yyyy`,
-    /// `m/d/yyyy h:mm`) do not match the cached number items. Those two are the evidence: that a
-    /// time-only or elapsed format (`h:mm`, `[h]:mm`), which this also counts as a date, caches
-    /// as a date too is UNVERIFIED (probe pending: T-4612).
+    /// `m/d/yyyy h:mm`) do not match the cached number items, and a time-only `h:mm` and an
+    /// elapsed `[h]:mm` format cache as `<d>` items too (probes/t4612-pivot-date-items-and-casing
+    /// T2, T3).
     fn is_date_style(&self, index: i32) -> bool {
         let styles = &self.workbook.styles;
         usize::try_from(index)
@@ -375,8 +375,11 @@ impl FieldReader {
     /// An old text item a source value finds keeps its slot but takes that value's casing: in
     /// probes/t4582-pivot-item-edges J1 the cached `EAST` shows `east` (pivots.md "Item casing
     /// when cache and source disagree, and date items"). The first source value's casing is
-    /// used; J1's `east` is also the lowercase and the ordinally greatest casing, so which of
-    /// those decides is UNVERIFIED (probe pending: T-4612).
+    /// used, whatever the listed one: probes/t4612-pivot-date-items-and-casing C1 shows `EAST`
+    /// over a listed and lowercase `east`, C2 and C3 `East` over a listed `EAST` or `east`. In
+    /// every probed case that first value is a formula the old cache holds as `<m/>`: whether a
+    /// literal first record, whose value the old cache already holds, relabels the slot the same
+    /// way is UNVERIFIED (probe pending: T-4654).
     fn push(&mut self, value: CacheItem, items: &mut usize) -> Result<(), PivotCacheError> {
         let key = ItemKey::identity(&value);
         let index = if let Some(&index) = self.keys.get(&key) {
@@ -397,9 +400,9 @@ impl FieldReader {
             // At most MAX_ITEMS items, so the index fits a u32.
             let index =
                 u32::try_from(self.items.len()).map_err(|_| PivotCacheError::TooManyItems)?;
-            // A date item appended for a value no cached number matched: whether Excel saves it
-            // as a `<d>` item is UNVERIFIED (probe pending: T-4612); it renders as its serial
-            // either way (t4582 J3, J4).
+            // A date item appended for a value no cached number matched: Excel saves it as a
+            // `<d>` item (probes/t4612-pivot-date-items-and-casing T1 to T5) and renders it as
+            // its serial (t4582 J3, J4).
             self.items.push(value);
             self.keys.insert(key, index);
             *items += 1;
@@ -490,15 +493,19 @@ pub fn regroup(
 /// them: Excel for the web refuses a cache whose flags contradict its items (pivots.md
 /// "Shared-item flags Excel accepts for mixed fields"; T-4122 runs). Written by the export
 /// (T-4176). Booleans and errors count as strings. A date counts as neither a string nor a
-/// number: how Excel flags dates (`containsDate`, `containsNonDate`, `minDate`) is UNVERIFIED
-/// (probe pending: T-4612).
+/// number, but as a type of its own beside them: with a date, Excel writes `containsMixedTypes`
+/// beside a number and no number flags at all (probes/t4612-pivot-date-items-and-casing T5;
+/// pivots.md "Shared-item flags Excel accepts for mixed fields"). Whether a date beside a string
+/// and no number is mixed (T4 also held numbers), and `containsNonDate`, `minDate` and `maxDate`
+/// (not derived: how Excel counts the stale items left from the old cache in them) are UNVERIFIED
+/// (probe pending: T-4654).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SharedItemsFlags {
     /// `containsSemiMixedTypes`: false only when the field has no string and no blank.
     pub contains_semi_mixed_types: bool,
     /// `containsString`: a text, boolean or error item.
     pub contains_string: bool,
-    /// `containsMixedTypes`: strings beside numbers.
+    /// `containsMixedTypes`: strings beside numbers, or dates beside numbers (t4612 T5).
     pub contains_mixed_types: bool,
     /// `containsNumber`.
     pub contains_number: bool,
@@ -535,7 +542,14 @@ impl SharedItemsFlags {
             }
         }
         flags.contains_semi_mixed_types = flags.contains_string || flags.contains_blank;
-        flags.contains_mixed_types = flags.contains_string && flags.contains_number;
+        flags.contains_mixed_types =
+            (flags.contains_string || flags.contains_date) && flags.contains_number;
+        if flags.contains_date {
+            // t4612 T5: dates beside equal and other numbers, saved without `containsNumber`,
+            // `minValue` or `maxValue`.
+            flags.contains_number = false;
+            flags.number_range = None;
+        }
         flags.contains_integer = flags.contains_number && whole;
         flags
     }

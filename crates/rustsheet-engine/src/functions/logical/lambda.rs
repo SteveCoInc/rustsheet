@@ -420,15 +420,25 @@ impl Model {
         values: impl IntoIterator<Item = CalcResult>,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        // `call_prepared` binds the parameters in order, so the i-th call takes the i-th value.
-        let mut values = values.into_iter();
+        let values = values.into_iter().map(Binding::Value);
+        self.call_lambda_caller_binding(caller, values, cell)
+            .into_single_area(cell)
+    }
+
+    /// [`Self::call_lambda_caller`] with each parameter's binding given, and the areas of a
+    /// union a reference-keeping `caller` returns kept: REDUCE's step
+    /// ([`Model::reduce_reference`]).
+    pub(crate) fn call_lambda_caller_binding(
+        &mut self,
+        caller: &mut LambdaCaller,
+        bindings: impl IntoIterator<Item = Binding>,
+        cell: CellReferenceIndex,
+    ) -> RefArg {
+        // `call_prepared` binds the parameters in order, so the i-th call takes the i-th binding.
+        let mut bindings = bindings.into_iter();
         self.call_prepared(caller, cell, |_, _| {
-            (
-                values.next().map_or(Binding::Omitted, Binding::Value),
-                false,
-            )
+            (bindings.next().unwrap_or(Binding::Omitted), false)
         })
-        .into_single_area(cell)
     }
 
     /// One call of `caller` with argument nodes evaluated in the calling cell, as `call_lambda`

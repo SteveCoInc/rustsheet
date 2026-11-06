@@ -1299,6 +1299,23 @@ to one cell, as `{FALSE}` is in followup G!A921).
 Status: VERIFIED (web)
 Tasks: T-1276, T-1328, T-1322, T-1323, T-1326, T-1324, T-1700, T-1325, T-1327, T-3838
 
+## RANDARRAY lifts over its arguments
+Rule: all five arguments of RANDARRAY (rows, columns, min, max, whole_number) lift over an array and a range, one call per
+element, each element that call's top-left number: `RANDARRAY({2})` is 1x1, `RANDARRAY({2;3})` 2x1, `RANDARRAY({2},{3})` 1x1, and
+inside GROUPBY `_xleta.RANDARRAY` is one number per group record.
+- (probes/t4519-row-column-randarray-over-arrays D2:H4, D7:H8, excel-graph 2026-11-06, T-4519) the shapes above.
+- (probes/t4611-randarray-min-max-whole-arrays A1:A14, excel-graph 2026-11-06, T-4611; Y1 5, Y2 7) `ROWS(RANDARRAY(1,1,{0;5}))`, `..,0,{1;5})`,
+  `..,5,5,{TRUE;FALSE})`, `..,{5;7},{5;7})`, `..,Y1:Y2,Y1:Y2)`, `..,{5;6},{5;6},{TRUE;FALSE})` and `ROWS(RANDARRAY({1;2},1,{5;6},{5;6}))` are
+  2; `COLUMNS(RANDARRAY(1,1,{5,7},{5,7}))` is 2. With min = max the elements are the bounds: `{5;7},{5;7}` gives 5 then 7 (A5:A6),
+  `{5,7},{5,7}` 5 then 7 (A9), and whole_number `{TRUE;FALSE}` over 5,5 starts at 5 (A10). The arguments pair element by
+  element (A5:A6, A9); A13, `RANDARRAY({1;2},1,{5;6},{5;7})`, is a draw (6.279) and unscored. An element with min > max is its own `#VALUE!`,
+  not the whole call: `ROWS(RANDARRAY(1,1,{0;5},{9;1}))` is 2 (A14). A range in rows, columns or whole_number is unprobed and lifts by
+  inference (SPEC-0011); only min and max were probed over a range (A7).
+Ours: implemented (T-4611): `Model::fn_randarray` calls `lift_call` with a `RANDARRAY` entry in `lift/kinds/general.rs`, each
+element charged the cells it builds.
+Status: VERIFIED (excel-graph)
+Tasks: T-4611
+
 ## ROW, COLUMN and RANDARRAY over an array value (GROUPBY's per-group function)
 Rule: ROW and COLUMN of an array value (no reference) give an array of `#VALUE!` in that value's shape, not one `#VALUE!`; an error
 element keeps its own error (`LET(x,{1;#N/A},ROW(x))` is {#VALUE!;#N/A}). RANDARRAY
@@ -1326,7 +1343,7 @@ Ours: ROW and COLUMN lift over an array value as above since T-4610 (`Model::row
 `reference_ranges_or_array`). It lifts over any array a name, IF, CHOOSE or LET gives; only the LET-bound and LAMBDA-parameter
 forms are probed, and an IF or CHOOSE that returns an array (`ROW(CHOOSE(1,{1;2}))`) or a defined name bound to an array constant
 follows by inference (before T-4610 each was one `#VALUE!`, unevidenced too). RANDARRAY
-does not lift: `RANDARRAY({2})` is 2x1 and over `{2;4;6}` `#N/IMPL!` (T-4611 owns D2, D3, E3, G3, H3, D4, D7, D8, E8, G8, H8 and t4450 J64).
+lifts since T-4611 (see "RANDARRAY lifts over its arguments" above).
 Status: VERIFIED (excel-graph)
 Tasks: T-4519, T-4610, T-4611
 
@@ -1755,10 +1772,14 @@ Status: VERIFIED (excel-graph)
 Ours: since T-4478, `fn_reduce` calls its LAMBDA with a reference-keeping caller, and ISREF evaluates a REDUCE in
 reference context. SCAN is unchanged (`lambda_result_value` reads each step). A 3-D initial value is `#VALUE!`. BYROW and BYCOL read a
 one-cell reference result on both their range and array paths (`by_slices_result`).
-Still off, owned by T-4494:
-- the parser reads `a:v` with parameter names as columns A:V (Calc!F5, H5, F6:H6, F9:H9, H14, G15, H15, J1:J3);
-- AREAS of a REDUCE call is `#ERROR!` (Calc!E7:H7, E16:H16, E22:H22);
-- a union initial value is read, not kept (Calc!H17).
+Since T-4494 the parser reads `a:v` as the range between two names an enclosing LET or LAMBDA binds
+(`Parser::bound_names_range`). Only LAMBDA parameters are probed; the LET form (`LET(a,A1,v,A3,SUM(a:v))`) and a
+column label against one bound name (`a:C`, which stays a column range) are UNVERIFIED (inferred). AREAS takes a
+REDUCE argument (`Parser::function_call`); REDUCE is not otherwise a reference operand, so as an intersection,
+range or SUBTOTAL operand it is refused as before (not probed). In reference context REDUCE is
+`Model::reduce_reference`, which keeps a union accumulator's areas from step to step and a union initial value as
+its areas; ISREF of a parameter bound to a union is TRUE. SCAN's union initial value is not probed and is still read
+(`SCAN((A1,A3),{1},LAMBDA(a,v,ISREF(a)))` is FALSE in ours).
 Tasks: T-4478, T-4494
 
 ## BYROW and BYCOL: a LAMBDA result that is an array
