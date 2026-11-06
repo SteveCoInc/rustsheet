@@ -181,6 +181,10 @@ enum Cmd {
         check: bool,
         #[arg(long = "update-baseline")]
         update: bool,
+        /// With `--update-baseline`: record regressions too. Only under a decision record
+        /// (CLAUDE.md directive 2, SPEC-0033).
+        #[arg(long, requires = "update")]
+        allow_regressions: bool,
     },
     /// Gate A (SPEC-0029, decision 0188 R2): fail when a reference-table point of eval/accuracy
     /// is outside the envelope, a known-failure line is stale, an R3 mark lacks evidence or a
@@ -945,7 +949,12 @@ fn run() -> Result<ExitCode> {
         Cmd::Show { case_id, all } => cmd_show(&root, &case_id, all),
         Cmd::Cases { suite } => cmd_cases(&root, &suite),
         Cmd::Accuracy { json, timeout } => cmd_accuracy(&root, json, timeout),
-        Cmd::Roundtrip { sel, check, update } => cmd_roundtrip(&root, &sel, check, update),
+        Cmd::Roundtrip {
+            sel,
+            check,
+            update,
+            allow_regressions,
+        } => cmd_roundtrip(&root, &sel, check, update.then_some(allow_regressions)),
         Cmd::Snapshot { .. } | Cmd::Compare { .. } => unreachable!("handled above"),
     }
 }
@@ -969,11 +978,17 @@ fn cmd_suites(root: &Path) -> Result<ExitCode> {
 }
 
 /// `rustsheet-eval roundtrip` (SPEC-0033): the gate suites with `--check`, else the selection.
-fn cmd_roundtrip(root: &Path, sel: &Selection, check: bool, update: bool) -> Result<ExitCode> {
+/// `update` is `Some(allow_regressions)` for `--update-baseline`.
+fn cmd_roundtrip(
+    root: &Path,
+    sel: &Selection,
+    check: bool,
+    update: Option<bool>,
+) -> Result<ExitCode> {
     let suites = select_from(Suite::load_roundtrip(root)?, sel, check)?;
     let mode = match (check, update) {
         (true, _) => roundtrip::Mode::Check,
-        (_, true) => roundtrip::Mode::Update,
+        (_, Some(allow_regressions)) => roundtrip::Mode::Update { allow_regressions },
         _ => roundtrip::Mode::Report,
     };
     let timeout = Duration::from_secs(sel.timeout);

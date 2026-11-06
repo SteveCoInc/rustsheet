@@ -55,6 +55,34 @@ Evidence: none for Excel; input hardening (CLAUDE.md directive 5), ported from i
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-xlsx/src/import/util.rs (`parse_cell_number`)
 
+## A cell that stores no value is blank
+Rule: a constant (formula-less) cell that stores no value reads as blank in Excel whatever its `t`:
+`<c t="str"/>`, `<c t="s"/>`, `<c t="s"><v></v></c>`, `<c t="inlineStr"/>` (no `<is>`), `<c t="n"/>`,
+`<c t="b"/>` and `<c t="e"/>` all give ISBLANK TRUE, ISTEXT FALSE, COUNTA 0 and TYPE 1. A cell that
+stores the empty string is text: `t="s"` to an empty shared string, `<c t="str"><v></v></c>` (an empty
+`<v>`, unlike a missing one) and `<is><t></t></is>` give ISBLANK FALSE, ISTEXT TRUE, COUNTA 1, LEN 0
+and TYPE 2. So a missing `<v>` and an empty `<v>` differ for `t="str"` but not for `t="s"` (an empty
+index names no string; it is not shared string 0).
+Evidence: fixtures/valueless-cell-forms (excel-graph, 2026-11-06, T-4148).
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-xlsx/src/import/worksheets.rs (`is_valueless_constant`). A spill
+member's cached value and `t="d"` keep their own rules.
+
+## A merged range keeps the values of its covered cells
+Rule: Excel keeps a value or formula stored in a covered (non-anchor) cell of a `<mergeCell>`
+range and calculates with it: with A1:D1 merged over A1 "anchor", B1 "x", C1 7 and D1 the empty
+shared string, `=B1` is "x", `=C1` 7, `=ISBLANK(B1)` FALSE, `=ISTEXT(D1)` TRUE, `=COUNTA(A1:D1)` 4,
+`=SUM(A1:D1)` 7, `=COUNTBLANK(A1:D1)` 1, `=LEN(B1)` 1; a covered `<c t="str"/>` (no value) is blank
+(`=ISBLANK(B2)` TRUE, `=COUNTA(A2:B2)` 1). A covered formula `=A1+1` in B1 of A1:B1 is recalculated
+(2), `=B1` is 2, ISFORMULA TRUE and `=COUNT(A1:B1)` 2. This is the file-level form of the
+"merge with Format Painter keeps the hidden values" behaviour.
+Ours: the importer empties every covered cell (`clear_covered_cells`) because covered cells holding
+no content is an engine invariant (merge, autofill and clipboard rely on it), so these cells are
+visibly off and poi/bug66675.xlsx and other census files lose covered values on a round trip.
+Evidence: fixtures/merged-covered-values, fixtures/merged-covered-formula (excel-graph, 2026-11-06, T-4148).
+Status: VERIFIED (excel-graph); not implemented (owner task in the fixtures' baseline entries).
+What Excel's UI merge then does with such a range (unmerge, edit, autofill) is UNVERIFIED.
+
 ## Import resource limits reject a workbook outright
 Rule: the importer rejects a workbook with `XlsxError::Limit` when its zip lists more than 5,000
 entries, when the parts it reads inflate past 256 MiB in total (bytes actually inflated, not the

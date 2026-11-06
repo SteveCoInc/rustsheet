@@ -1,6 +1,7 @@
 //! A cell holding the empty string (`t="s"` to an empty shared string) survives load and save as
-//! a text cell, not a blank one (T-4148; ISBLANK is FALSE and COUNTA counts it in Excel). These
-//! shapes already round-trip; poi/bug66675's loss is merged-range cover (see the task's Handoff).
+//! a text cell, not a blank one, while a constant cell that stores no value loads blank, as Excel
+//! reads them (T-4148, fixtures/valueless-cell-forms; docs/excel-semantics/xlsx-storage.md "A cell
+//! that stores no value is blank").
 
 use std::error::Error;
 use std::io::{Cursor, Read, Write};
@@ -68,13 +69,11 @@ fn empty_shared_string_cell_stays_a_text_cell() -> TestResult {
     Ok(())
 }
 
-/// The shapes poi/bug66675.xlsx stores its empty strings in (`WGT-D01 By Production Day` B9 and
-/// E9): `t="str"` with no `<v>`, and an empty inline string.
+/// The other forms of a stored empty string: `t="str"` with an empty `<v>`, and an empty inline
+/// string (fixtures/valueless-cell-forms A3 and A4: ISBLANK FALSE, ISTEXT TRUE).
 #[test]
 fn empty_str_and_inline_string_cells_stay_text_cells() -> TestResult {
     for cell in [
-        r#"<c r="A1" s="1" t="str"></c>"#,
-        r#"<c s="1" t="str" r="A1"></c>"#,
         r#"<c r="A1" s="1" t="str"><v></v></c>"#,
         r#"<c r="A1" s="1" t="inlineStr"><is><t xml:space="preserve"></t></is></c>"#,
         r#"<c r="A1" s="1" t="inlineStr"><is><t/></is></c>"#,
@@ -86,6 +85,28 @@ fn empty_str_and_inline_string_cells_stay_text_cells() -> TestResult {
             "{cell}: {a1}"
         );
         assert_eq!(isblank, "FALSE", "{cell}: {a1}");
+    }
+    Ok(())
+}
+
+/// A constant cell with no `<v>` (or no `<is>`), or a shared-string cell with an empty `<v>`, is
+/// blank in Excel whatever its `t` (fixtures/valueless-cell-forms rows 2, 5, 6 and 9 to 12), so it
+/// loads, and saves, as a blank cell, not as the empty string or shared string 0 ("Bold" here).
+#[test]
+fn valueless_constant_cells_load_blank() -> TestResult {
+    for cell in [
+        r#"<c r="A1" s="1" t="str"></c>"#,
+        r#"<c s="1" t="str" r="A1"/>"#,
+        r#"<c r="A1" s="1" t="s"/>"#,
+        r#"<c r="A1" s="1" t="s"><v></v></c>"#,
+        r#"<c r="A1" s="1" t="inlineStr"/>"#,
+        r#"<c r="A1" s="1" t="n"/>"#,
+        r#"<c r="A1" s="1" t="b"/>"#,
+        r#"<c r="A1" s="1" t="e"/>"#,
+    ] {
+        let (a1, isblank) = a1_after_round_trip("<si><t>Bold</t></si>", Some(cell))?;
+        assert!(a1.is_none_or(|a1| !a1.contains("<v>")), "{cell}");
+        assert_eq!(isblank, "TRUE", "{cell}");
     }
     Ok(())
 }

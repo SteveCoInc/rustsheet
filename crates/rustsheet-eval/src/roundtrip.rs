@@ -636,8 +636,12 @@ pub enum Mode {
     Report,
     /// Also fail when a suite's baseline is out of date or regressed.
     Check,
-    /// Also rewrite the baselines, refusing regressions.
-    Update,
+    /// Also rewrite the baselines, refusing regressions unless `allow_regressions` (only under a
+    /// decision record, SPEC-0033 "Ratchet").
+    Update {
+        /// Record the run even when the delta has regressions (`--allow-regressions`).
+        allow_regressions: bool,
+    },
 }
 
 /// Runs `suites`, writes `eval/runs/latest/roundtrip.{json,md}` under `root`, and in `Check` or
@@ -717,13 +721,15 @@ pub fn command(
                     lines.push("  baseline is out of date: run `make eval-baseline` and commit eval/baseline/".into());
                 }
             }
-            Mode::Update if !delta.regressions.is_empty() => {
+            Mode::Update {
+                allow_regressions: false,
+            } if !delta.regressions.is_empty() => {
                 ok = false;
                 lines.push("  refusing to record regressions".into());
             }
             // A case gone from a corpus (the `cases` suites) is a cache fetched under an older include, not a
             // fix: refetch the suite (`rustsheet-eval fetch --suite <cell suite>`).
-            Mode::Update
+            Mode::Update { .. }
                 if suite.manifest.baseline == BaselineMode::Cases
                     && !delta.removed_cases.is_empty() =>
             {
@@ -737,7 +743,7 @@ pub fn command(
                 );
                 lines.push("  refusing to drop cases: refetch the suite they come from".into());
             }
-            Mode::Update => current.write(&path)?,
+            Mode::Update { .. } => current.write(&path)?,
             _ => {}
         }
     }
