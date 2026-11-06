@@ -3,7 +3,7 @@ id: T-4356
 title: "Number formats: extended-hex tag [x-euro] reads as byte 2 but Excel prints ASCII digits"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -22,3 +22,6 @@ T-4107 probed `[$-x-euro]0` on 123: Excel prints "123" while `locale_tag::extend
 
 ## Out of scope
 -
+
+## Outcome
+Rule found by probe: a tag opening `x-` (either case) prints ASCII digits at every extended-hex numeral byte; the same values without the prefix keep their numerals. `locale_tag::numerals` now skips the extended-hex reading for `x-` tags. Probes: t4356-extended-hex-xeuro, t4356-private-use-prefix, t4356-private-use-value. Documented in docs/excel-semantics/number-formats.md. Eval delta: see PR.
