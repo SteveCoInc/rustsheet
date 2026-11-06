@@ -1,8 +1,7 @@
 # 0297 — Composite cells' math is the outer node at the inner doubles
 
-- **Status:** proposed (2026-11-05, T-3993). It amends SPEC-0029 "Math references for eval cells" on which cells get a
-  math value. It becomes accepted once the per-option counts below are filled in from `docs/research/t3993/score.py`
-  and reviewers approve.
+- **Status:** accepted (2026-11-06, T-3993). It amends SPEC-0029 "Math references for eval cells" on which cells get a
+  math value.
 - **Context:**
   - SPEC-0029 gives a 50-digit math value only to a cell that is one call `=FUNC(args)` over literal or exact-input
     arguments. A nested call (`F.INV(F.DIST(x,d1,d2,TRUE),d1,d2)`) or arithmetic between calls
@@ -21,8 +20,21 @@
     one ulp of its probability to many ulps of x, so even a pipeline that rounds every step correctly is far from
     (a). Under (b) the inner rounding is part of the reference, which is what R1(c) asks: is the outer function
     accurate on the input it was actually given?
-  - Scores (`docs/research/t3993/score.py`; Excel within 1e-9 relative / engine within 1e-9 / both): TODO(T-3993):
-    fill in from the score run.
+  - Scores (`docs/research/t3993/score.py` on the T-3993 branch, origin/main 2625c255 merged in; a cell counts when
+    its value is within 1e-9 relative of the option's math):
+
+    | cells | option | has a value | Excel within | engine within | both |
+    |---|---|---|---|---|---|
+    | all 8,121 composite cells with Excel and engine numbers | (a) | 7,617 | 6,792 | 6,792 | 6,792 |
+    | | (b) | 8,019 | 7,086 | 7,087 | 7,086 |
+    | the 1,072 cells of the cases T-3993 names | (a) | 969 | 944 | 944 | 944 |
+    | | (b) | 971 | 962 | 962 | 962 |
+
+    (b) gives a value to 402 more cells (option (a)'s dps-60/80 check drops them) and puts more of both Excel's and
+    the engine's values within 1e-9 of it. Of the 933 cells with a (b) value where Excel or the engine is outside
+    1e-9, 921 are not visibly off (Excel and the engine agree to 15 digits): mostly a final subtraction that Excel's
+    operator model snaps to 0 or flushes below the normal range (t1916-erfc-tail, t1916-erf-wrappers), which (b)'s
+    exact outermost node does not do. R1(c) counts only visibly-off cells, so those do not move it.
 - **Decision:** a composite cell whose functions all have a Gate A definition gets option (b) as its math value
   (`tools/src/rustsheet_tools/accuracy/composite.py`). A composite that calls a function without a definition gets
   none and is counted as skipped (`no definition for ...`). `^` with a call result as an operand is not read
