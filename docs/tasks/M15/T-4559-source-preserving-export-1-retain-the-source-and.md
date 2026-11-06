@@ -3,7 +3,7 @@ id: T-4559
 title: "Source-preserving export 1: retain the source and write it back verbatim when nothing changed (SPEC-0034 D1, D2)"
 milestone: M15
 lane: engine
-status: in-progress
+status: done
 priority: P1
 size: M
 tier: opus
@@ -25,11 +25,33 @@ R0 recalculates. A workbook whose recalculation reproduces every cached value is
 `roundtrip-fixtures` such cases become fully kept. That is the first big step towards the owner's 99% goal.
 
 ## Acceptance criteria
-- [ ] Load then save, with no edit, of a workbook whose recalculation changes no cached value gives the source's
+- [x] Load then save, with no edit, of a workbook whose recalculation changes no cached value gives the source's
       parts, every part byte-identical (unit test).
-- [ ] One edited cell, or one changed cached value, falls back to regeneration (unit test).
-- [ ] The round-trip baselines are rerecorded. Their kept-item rate rises, reported in the Outcome.
-- [ ] `make check` green; reviewers approve.
+- [x] One edited cell, or one changed cached value, falls back to regeneration (unit test).
+- [x] The round-trip baselines are rerecorded. Their kept-item rate rises, reported in the Outcome.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Patching (T-4560).
+
+## Outcome
+`rustsheet::Workbook` keeps its source package and the import options (`Source`, one `import` path shared by the
+load and the save's pristine copy). `to_xlsx_bytes` calls `rustsheet_xlsx::export::save_preserving`:
+- when the live model's `Workbook` equals the pristine re-import, the source is written back byte for byte
+  (`SaveTier::Verbatim`);
+- otherwise it regenerates as before (`Regenerated`).
+
+The tier is returned for T-4562. Tests (`crates/rustsheet/tests/verbatim_save.rs`):
+- an unchanged workbook, with or without recalculation, is its source byte for byte;
+- an edit regenerates;
+- a stale cached value regenerates when recalculated, and is kept when not.
+
+Measured with this change:
+- `roundtrip-fixtures` 3,377 → 3,375 known failures: `rich-error-export` is now verbatim. The other fixtures carry
+  placeholder caches that recalculation changes, which T-4560's patcher handles.
+- Ad hoc runs (uncommitted suites, T-4173 commits them), with the parts, elements and attributes of SPEC-0033:
+  - the 83 Calipers `roundtrip/` Excel goldens keep 99.68% of 554,447 items;
+  - POI keeps 99.84% of 3.83M items, with 292 of 336 loadable workbooks verbatim.
+
+No cell eval delta.
+
