@@ -1,6 +1,6 @@
 use statrs::distribution::{Continuous, ContinuousCDF, StudentsT};
 
-use crate::arithmetic::extended_quotient;
+use crate::arithmetic::{extended_quotient, flush_subnormal};
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, LiftCost};
 use crate::functions::math_and_trigonometry::excel_tan;
@@ -293,6 +293,16 @@ fn t_test_p(
 /// quantile search does not finish for a huge df (fuzz hang on `T.INV(0.9,5E10)`).
 /// Excel: see docs/excel-semantics/statistics.md#student-t-sweep-df-truncation-df-limits-tinv2t-above-1-t-1043
 pub(crate) const T_DF_MAX: f64 = 1e10;
+
+/// Whether the half `p / 2` of a positive two-tailed probability falls below the smallest normal
+/// double, which Excel flushes to 0 (p below 2·DBL_MIN): T.INV.2T and TINV then answer as at p = 0
+/// (`#DIV/0!` at df 1, `#NUM!` from df 2) and CONFIDENCE.T is `#NUM!`, although T.INV at p itself is
+/// a number. The cut is df independent: `T.INV.2T(4.4501477170144E-308,df)` is an error and
+/// `T.INV.2T(4.45014771701441E-308,df)` a number at df 1, 2, 9 and 30 (probes/t4541-t-inv-2t-tiny-p;
+/// statistics.md "T.DIST's density is #NUM! at a huge x, and T.INV.2T and TINV at p = 2.2E-308").
+pub(crate) fn two_tailed_half_underflows(p: f64) -> bool {
+    p > 0.0 && flush_subnormal(p / 2.0) == 0.0
+}
 
 /// T.INV (`two_tailed` false, p in (0, 1)) and T.INV.2T / TINV (p in (0, 2)) at one degree of
 /// freedom: Excel's closed form (T-2858) through [`cauchy_two_tail_quantile`]. T.INV(0.5) is 0,
@@ -648,8 +658,11 @@ impl Model {
         let [p, df] = values else {
             return Err(CalcResult::new_args_number_error(cell));
         };
-        let p = self.cast_number_ref(p, cell)?;
+        let mut p = self.cast_number_ref(p, cell)?;
         let df = self.cast_number_ref(df, cell)?.trunc();
+        if two_tailed && two_tailed_half_underflows(p) {
+            p = 0.0;
+        }
         // p = 0 with a df that truncates to 1 is `#DIV/0!`, from df 2 up `#NUM!` (`TINV(0,1)`,
         // `T.INV(0,1.999)`, `T.INV.2T(FALSE,1.005)` against `T.INV(0,2)`; statistics.md "Student t
         // quantile at p = 0 with df below 2 is #DIV/0!", probes/t2475-stat-subexpressions P!A124).

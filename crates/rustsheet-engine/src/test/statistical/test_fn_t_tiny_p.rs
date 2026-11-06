@@ -13,3 +13,35 @@ fn formulas_near_the_limits_do_not_panic() {
     assert_ne!(model._get_text("A2"), *"#NUM!");
     assert_ne!(model._get_text("A3"), *"#NUM!");
 }
+
+/// A two-tailed p whose half is below the smallest normal double is p = 0: T.INV.2T and TINV
+/// are `#DIV/0!` at df 1 and `#NUM!` from df 2, CONFIDENCE.T `#NUM!` at every df; just above
+/// 2·DBL_MIN, and T.INV at the same p, are numbers (probes/t4541-t-inv-2t-tiny-p rows 1-5;
+/// statistics.md "T.DIST's density is #NUM! at a huge x, and T.INV.2T and TINV at p = 2.2E-308").
+#[test]
+fn two_tailed_p_with_a_subnormal_half_is_zero() {
+    let mut model = new_empty_model();
+    let below = "4.4501477170144E-308";
+    let above = "4.45014771701441E-308";
+    model._set("A1", &format!("=T.INV.2T({below},1)"));
+    model._set("A2", &format!("=T.INV.2T({below},2)"));
+    model._set("A3", &format!("=TINV({below},30)"));
+    model._set("A4", &format!("=CONFIDENCE.T({below},1,2)"));
+    model._set("A5", &format!("=CONFIDENCE.T({below},1,31)"));
+    model._set("A6", "=T.INV.2T(2.22507385850721E-308,9)");
+    model._set("B1", &format!("=T.INV.2T({above},1)"));
+    model._set("B2", &format!("=T.INV.2T({above},2)"));
+    model._set("B3", &format!("=TINV({above},30)"));
+    model._set("B4", &format!("=CONFIDENCE.T({above},1,2)"));
+    model._set("B5", &format!("=CONFIDENCE.T({above},1,31)"));
+    model._set("B6", "=T.INV(2.22507385850721E-308,9)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"#DIV/0!");
+    for cell in ["A2", "A3", "A4", "A5", "A6"] {
+        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
+    }
+    for cell in ["B1", "B2", "B3", "B4", "B5", "B6"] {
+        let value: f64 = model._get_text(cell).parse().unwrap_or(f64::NAN);
+        assert!(value.is_finite(), "{cell}: {}", model._get_text(cell));
+    }
+}
