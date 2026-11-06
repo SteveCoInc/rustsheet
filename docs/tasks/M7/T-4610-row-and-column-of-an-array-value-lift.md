@@ -3,7 +3,7 @@ id: T-4610
 title: "ROW and COLUMN of an array value lift: an array of #VALUE! in the value's shape, so GROUPBY(..,_xleta.ROW) holds nested #VALUE! arrays"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
