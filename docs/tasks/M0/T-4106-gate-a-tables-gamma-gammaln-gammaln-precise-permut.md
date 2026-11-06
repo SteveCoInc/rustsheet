@@ -3,7 +3,7 @@ id: T-4106
 title: "Gate A tables, GAMMA, GAMMALN, GAMMALN.PRECISE, PERMUT and PERMUTATIONA"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
