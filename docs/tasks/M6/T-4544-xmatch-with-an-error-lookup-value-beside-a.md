@@ -3,7 +3,7 @@ id: T-4544
 title: "XMATCH with an error lookup_value beside a lifted match_mode or search_mode, and an error-cell search_mode against each bad match_mode: probe and match"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
