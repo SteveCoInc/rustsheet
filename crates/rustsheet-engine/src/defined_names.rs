@@ -471,6 +471,8 @@ impl Model {
             name: name.to_string(),
             formula: internal_formula,
             sheet_id,
+            hidden: false,
+            comment: None,
         });
         self.reset_parsed_structures();
 
