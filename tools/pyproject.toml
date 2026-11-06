@@ -28,6 +28,7 @@ rustsheet-catalog-lift = "rustsheet_tools.catalog_lift:main"
 rustsheet-fitlab = "rustsheet_tools.fitlab.cli:main"
 rustsheet-accuracy = "rustsheet_tools.accuracy.cli:main"
 rustsheet-progress-report = "rustsheet_tools.progress_report:main"
+rustsheet-excel-locales = "rustsheet_tools.excel_locales:main"
 
 [build-system]
 requires = ["hatchling"]

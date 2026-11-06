@@ -1,0 +1,45 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4508: the [MS-LCID] tags whose LCID the first tag list left out, after `B2` (column A) beside their LCID (column B), and alone (column C): a tag after `B2` reads its LCID's Hijri names. 2023-03-15 18:00.",
+ "tags": [
+  "probe",
+  "number-format",
+  "M10",
+  "T-4508"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=TEXT(45000.75,\"B2[$-so]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "B1": "=TEXT(45000.75,\"B2[$-77]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "C1": "=TEXT(45000.75,\"[$-so]mmmm|ddd|h A/P\")",
+    "A2": "=TEXT(45000.75,\"B2[$-ff-NG]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "B2": "=TEXT(45000.75,\"B2[$-467]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "C2": "=TEXT(45000.75,\"[$-ff-NG]mmmm|ddd|h A/P\")",
+    "A3": "=TEXT(45000.75,\"B2[$-ff-Latn-NG]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "B3": "=TEXT(45000.75,\"B2[$-467]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "C3": "=TEXT(45000.75,\"[$-ff-Latn-NG]mmmm|ddd|h A/P\")",
+    "A4": "=TEXT(45000.75,\"B2[$-quc-Latn-GT]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "B4": "=TEXT(45000.75,\"B2[$-486]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "C4": "=TEXT(45000.75,\"[$-quc-Latn-GT]mmmm|ddd|h A/P\")",
+    "A5": "=TEXT(45000.75,\"B2[$-az-Cyrl-AZ]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "B5": "=TEXT(45000.75,\"B2[$-82C]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "C5": "=TEXT(45000.75,\"[$-az-Cyrl-AZ]mmmm|ddd|h A/P\")",
+    "A6": "=TEXT(45000.75,\"B2[$-uz-Cyrl-UZ]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "B6": "=TEXT(45000.75,\"B2[$-843]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "C6": "=TEXT(45000.75,\"[$-uz-Cyrl-UZ]mmmm|ddd|h A/P\")",
+    "A7": "=TEXT(45000.75,\"B2[$-mn-Mong-CN]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "B7": "=TEXT(45000.75,\"B2[$-850]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "C7": "=TEXT(45000.75,\"[$-mn-Mong-CN]mmmm|ddd|h A/P\")",
+    "A8": "=TEXT(45000.75,\"B2[$-en-029]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "B8": "=TEXT(45000.75,\"B2[$-2409]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "C8": "=TEXT(45000.75,\"[$-en-029]mmmm|ddd|h A/P\")",
+    "A9": "=TEXT(45000.75,\"B2[$-es-419]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "B9": "=TEXT(45000.75,\"B2[$-580A]yyyy|mmmm|mmm|dddd|ddd|h A/P\")",
+    "C9": "=TEXT(45000.75,\"[$-es-419]mmmm|ddd|h A/P\")"
+   }
+  }
+ ],
+ "expected": {}
+}

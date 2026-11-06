@@ -242,6 +242,8 @@ probes/t4061-persian-new-years.case.json	81
 probes/t4061-review-followups.case.json	30
 probes/t4061-umalqura-months.case.json	60
 probes/t4069-fixed-denominator-tail.case.json	1
+probes/t4123-pivot-capture.case.json	181
+probes/t4128-pivot-spike.case.json	60
 probes/t4254-beta-t-l140-zero-cut.case.json	93
 probes/t4254-beta-t-zero-wide.case.json	15
 probes/t4255-gamma-window-exact-ratio.case.json	1

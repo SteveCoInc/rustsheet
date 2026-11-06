@@ -603,6 +603,19 @@ impl PyWorkbook {
         .map_err(|e: RefError| ref_err(&e))
     }
 
+    /// Every stored cell of a sheet (values, formulas, spill members) as A1 strings with the
+    /// sheet name, by row and within a row by column. Cheap for a sparse sheet whatever its
+    /// used range.
+    fn stored_cells(&self, py: Python<'_>, sheet: &str) -> PyResult<Vec<String>> {
+        self.read(py, |wb| {
+            let id = wb.sheet_id(sheet)?;
+            let cells = wb.stored_cells(id)?;
+            let name = name_of(&sheet_names(wb), id).cloned().unwrap_or_default();
+            Ok(cells.iter().map(|c| c.to_a1_in(&name)).collect())
+        })
+        .map_err(|e: RefError| ref_err(&e))
+    }
+
     /// Turns the per-edit value diff on or off (off: `changes["values"]` stays empty).
     fn set_track_changes(&self, py: Python<'_>, on: bool) {
         py.detach(|| lock(&self.wb).set_track_changes(on));

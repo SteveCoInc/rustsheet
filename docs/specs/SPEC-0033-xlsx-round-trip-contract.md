@@ -139,8 +139,14 @@ D2. S equality is equality of those models, with these rules.
 
 1. **Cells.**
    - A value compares by type and bits. Text compares exactly.
-   - Formula text compares after the importer's parse-and-print, so `SUM( A1 )` against `SUM(A1)` follows the
-     whitespace rules of SPEC-0023, and X5 applies.
+   - Formula text compares as the file stores it, read by the snapshot reader, not after the importer's
+     parse-and-print: printing both sides with the engine's own printer would hide a printer bug (T-4140 was found
+     this way). Two rules make the stored text canonical as Excel stores it:
+     - X5's leading spaces, TABs and LFs are dropped;
+     - an `_xlfn.` or `_xlfn._xlws.` prefix is dropped where the function's stored form has none (T-0172: Excel
+       re-stores such a prefix without it).
+
+     A prefix the function needs, or one the export adds wrongly (T-0417), still compares (T-4513).
    - An empty-string cell is not a blank cell (T-4148).
 2. **Collections the schema leaves unordered** compare as multisets by natural key:
    - merge ranges by ref;
