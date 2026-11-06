@@ -61,3 +61,20 @@ A53 Excel -0.00016023194079306524, engine -0.00016023193850578377). Lifting the 
 
 ## Decision 0267
 The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, worked first: its cells have the wrong type or error, or are first wrong at the 11th digit or earlier. Decision 0056's time-box applies. If two attempts do not move the cells, block the task as time-boxed, and decision 0267 accepts the cells that are left.
+
+## R4 plan (frozen 2026-11-06, before the fresh sweep)
+- Diagnosis (engine replay of every IRR literal cell with an oracle value, 3,233 cells of eval/suites and Gate A):
+  21 of the in-scope digit cells are runs from the guess that reach the residual stop after their 50th step, and
+  Excel's value is that run's stop iterate bit for bit; the engine's 50-step cap sent them to the retry from 0.1.
+  Over all cells, the 83 runs that stop by the residual at their 51st..200th step are Excel's value bit for bit;
+  from the 208th step Excel has the retry's digits (t3411-irr-r4-fresh-4 A70). The 6 runs that stop on a stalled zero
+  step after step 50 (irr-guess-edges-2 A25-A27, t3478-irr-r4-wide A227, Gate A r4-T-3411 A215, A228) are all
+  `#NUM!` in Excel: they are the counterexamples that refuted a cap in T-3548 and T-3806.
+- Model, frozen here: a secant run takes up to 200 steps (`IRR_LONG_RUN_STEPS`, bracket 200..207) on 6..54 flows
+  with the largest |c| in 5.6E-9..9.6E+8 and a guess in -0.9997..9.81E+7 (R4.3, the 83 runs' range), 50 elsewhere;
+  a stalled zero step stops a run only within its first 50 steps.
+- R4.1: the fit lab split (`holdout.is_holdout`, case id and Sheet!A1) over the IRR literal cells of eval/suites,
+  margin 5 points, fixed now. Accept: no cell worse on either side and the test rate within the margin of train.
+- R4.2: a fresh sweep drawn after this commit (docs/research/t3411/gen_sweep.py, seed "T-3408/r4-fresh"), scored
+  once against main; it may not move any cell away from Excel.
+
