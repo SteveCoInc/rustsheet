@@ -3,7 +3,7 @@ id: T-4096
 title: "Gate A tables, array regression: LINEST, LOGEST, TREND and GROWTH"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
