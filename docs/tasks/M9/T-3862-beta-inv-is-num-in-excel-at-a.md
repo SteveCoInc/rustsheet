@@ -31,3 +31,12 @@ BETA.INV returns `#NUM!` where Excel does at a huge alpha (above about 1E+160) a
 
 ## Out of scope
 - BETA.INV near 1 at a tiny second shape (T-3351) and the 0.5 at a DBL_MIN shape (T-2808).
+
+## Probe predictions (committed before the fill)
+Case probes/t3862-beta-inv-huge-alpha (row r: alpha = 1E+(109+r), r = 1..51, alpha 1E+110..1E+160). Hypotheses:
+- P1 (a threshold in alpha alone): every BETA.INV column (A-F, J, K) turns from a number to `#NUM!` at the same row,
+  with alpha between 1E+115 and 1E+145 (the Gate A cells bracket it at 5.18E+114 / 1.55E+145), whatever p and beta.
+- P2 (the search's cdf fails): BETA.DIST's cdf at x = 0.5 (H, I) is `#NUM!` from the same row as BETA.INV.
+- P3 (AS 109's flip): G, `BETA.INV(0.9,1E-100,alpha)`, is 1 minus column J's mirror and errors where the
+  unflipped call does.
+A refutation of P1 (a row that depends on p or beta) means the rule is not in alpha alone.
