@@ -197,6 +197,11 @@ impl Model {
         if moments.n < 3.0 || slope.is_err() {
             return div();
         }
+        // Excel: y's own sum of squares overflowing (x finite) is `#NUM!`, not the `#DIV/0!` of the
+        // infinite variance (probes/t4047-paired-overflow H4). Two points stay unprobed.
+        if !moments.syy.is_finite() {
+            return moment_error(Error::NUM, cell);
+        }
         // Excel: Σ(y - ȳ)² less the explained part, sxy * sxy / sxx in that order
         // (probes/regression-pairs-b M column to the bit). An exact fit whose difference rounds
         // below zero is #NUM!, the square root of a negative, not 0 (probes/steyx-exact-fit A8).
