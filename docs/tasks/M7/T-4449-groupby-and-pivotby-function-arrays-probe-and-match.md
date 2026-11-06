@@ -3,7 +3,7 @@ id: T-4449
 title: "GROUPBY and PIVOTBY function arrays: probe and match a ragged HSTACK/VSTACK of functions, several error elements and a parameterless LAMBDA"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
