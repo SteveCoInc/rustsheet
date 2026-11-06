@@ -498,7 +498,9 @@ impl Txn<'_> {
     }
 
     /// Adds a workbook-scoped defined name. `formula` may be any formula that parses, with or
-    /// without a leading `=` (e.g. `=Sheet1!$A$1:$B$3 Sheet1!$A$2:$B$3`, an intersection). Like a
+    /// without a leading `=` (e.g. `=Sheet1!$A$1:$B$3 Sheet1!$A$2:$B$3`, an intersection). An
+    /// unqualified reference in it binds to the workbook's active sheet
+    /// ([`Workbook::active_sheet`](crate::Workbook::active_sheet)), as Excel's `names/add` does. Like a
     /// sheet-level op it reparses and re-evaluates the workbook, so define names before setting
     /// many cells. Names are not reported in the [`ChangeSet`]; cells whose value they change are.
     ///

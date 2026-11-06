@@ -12,7 +12,10 @@ use crate::{
         parser::{
             move_formula::{move_formula, MoveContext},
             new_parser_english,
-            stringify::{to_english_string, to_localized_string, to_rc_format},
+            stringify::{
+                qualify_unqualified_references, to_english_string, to_localized_string,
+                to_rc_format,
+            },
             ArrayNode, CallNameSpellings, CompletionContext, Node, Parser,
         },
         token::{get_error_by_name, Error},
@@ -475,6 +478,18 @@ impl Model {
         formula: &str,
         context: &CellReferenceRC,
     ) -> Result<String, String> {
+        self.formula_to_internal_between(formula, context, context)
+    }
+
+    /// As [`Model::user_formula_to_internal`], but read in `read_on` and written as seen from
+    /// `write_from`: an unqualified reference read on another sheet comes out qualified.
+    pub(crate) fn formula_to_internal_between(
+        &mut self,
+        formula: &str,
+        read_on: &CellReferenceRC,
+        write_from: &CellReferenceRC,
+    ) -> Result<String, String> {
+        let context = read_on;
         let trimmed = formula.trim();
         let had_equals = trimmed.starts_with('=');
         let body = trimmed.strip_prefix('=').unwrap_or(trimmed);
@@ -487,7 +502,10 @@ impl Model {
         if let Node::ParseErrorKind { .. } = node {
             return Err(format!("Invalid formula: '{formula}'"));
         }
-        let english = to_english_string(&node, context);
+        if read_on.sheet != write_from.sheet {
+            qualify_unqualified_references(&mut node, &read_on.sheet);
+        }
+        let english = to_english_string(&node, write_from);
         Ok(if had_equals {
             format!("={english}")
         } else {
