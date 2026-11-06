@@ -14,6 +14,7 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::name::{QName, ResolveResult};
 use quick_xml::{NsReader, XmlVersion};
 
+use super::Verdict;
 use crate::xlsx_snapshot::resolve_entity;
 
 /// The SpreadsheetML main namespace, written without a prefix in item keys.
@@ -67,26 +68,28 @@ const PREFIXES: &[(&str, &str)] = &[
 /// SPEC-0033 D3 scores (T-4513): the diff checks the element itself, not its children.
 const SEMANTIC: &[&str] = &["/worksheet/sheetData", "/sst"];
 
-/// Unordered collections (D4.2): `(parent path, child local name, key attributes)`. The schema
-/// gives these children no order meaning (ECMA-376 Part 1 `CT_MergeCells`, `CT_Hyperlinks`,
-/// `CT_DataValidations`, `CT_DefinedNames`, `CT_Cols`; Part 2 for content types), so they
-/// match by key. `extLst` children always match by `uri` (`CT_ExtensionList`).
+/// Unordered collections (D4.2): `(parent path, child local name, key attributes)`. Exactly
+/// SPEC-0033 D3.2's collections: merge ranges, hyperlinks, data-validation and conditional-format
+/// rules, and defined names, which match by their natural key. `extLst` children always match by
+/// `uri` (`CT_ExtensionList`). Any other collection compares in order, so a writer that reorders
+/// one is seen.
 const UNORDERED: &[(&str, &str, &[&str])] = &[
     ("/worksheet/mergeCells", "mergeCell", &["ref"]),
     ("/worksheet/hyperlinks", "hyperlink", &["ref"]),
     ("/worksheet/dataValidations", "dataValidation", &["sqref"]),
     ("/worksheet", "conditionalFormatting", &["sqref"]),
-    ("/worksheet/cols", "col", &["min"]),
     (
         "/workbook/definedNames",
         "definedName",
         &["name", "localSheetId"],
     ),
-    ("/Types", "Override", &["PartName"]),
-    ("/Types", "Default", &["Extension"]),
 ];
 
-/// Schema defaults (D4.3): `(element local name, "attribute=default ...")`. An absent attribute
+/// Schema defaults (D4.3): `(element local name, "attribute=default ...")`. Rows are keyed by local
+/// name in the SpreadsheetML main namespace only. Each row was checked to mean the same type
+/// wherever that name occurs in a part the differ reads; a row whose name has a second meaning
+/// (`sheetView` is also `CT_ChartsheetView`, `i` is also the pivot `CT_I`) must stay correct for
+/// both, or key on the parent path. An absent attribute
 /// equals its default. Each is the `default=` of the attribute in ECMA-376 Part 1's sml.xsd:
 /// `CT_Cell` (`t`, `s`), `CT_Row`, `CT_Col`, `CT_SheetView`, `CT_Pane`, `CT_Selection`, `CT_Sheet`,
 /// `CT_BookView`, `CT_SheetFormatPr` and `CT_BooleanProperty` (`val`, as in `<b/>`).
@@ -172,8 +175,8 @@ pub(crate) struct Difference {
     pub(crate) kind: &'static str,
     /// The element path (`/worksheet/sheetViews/sheetView[0]`), with `@attr` for an attribute.
     pub(crate) path: String,
-    /// `lost`, `added` or `changed`.
-    pub(crate) verdict: &'static str,
+    /// `Lost`, `Added` or `Changed`.
+    pub(crate) verdict: Verdict,
     pub(crate) detail: Option<String>,
 }
 
@@ -204,7 +207,7 @@ pub(crate) fn diff(source: &str, output: &str) -> Result<PartDiff, String> {
             &mut d,
             element(
                 format!("/{}", a.name.label()),
-                "changed",
+                Verdict::Changed,
                 Some(format!("root became {}", b.name.label())),
             ),
         );
@@ -212,7 +215,15 @@ pub(crate) fn diff(source: &str, output: &str) -> Result<PartDiff, String> {
     Ok(d)
 }
 
-fn element(path: String, verdict: &'static str, detail: Option<String>) -> Difference {
+/// At most 200 characters of `text`, for a detail line.
+fn clip(text: &str) -> String {
+    match text.char_indices().nth(200) {
+        Some((at, _)) => format!("{}…", &text[..at]),
+        None => text.to_string(),
+    }
+}
+
+fn element(path: String, verdict: Verdict, detail: Option<String>) -> Difference {
     Difference {
         kind: "element",
         path,
@@ -238,8 +249,12 @@ fn compare(a: &Node, b: &Node, path: &str, d: &mut PartDiff) {
             d,
             element(
                 path.to_string(),
-                "changed",
-                Some(format!("text {:?} became {:?}", a.text, b.text)),
+                Verdict::Changed,
+                Some(format!(
+                    "text {:?} became {:?}",
+                    clip(&a.text),
+                    clip(&b.text)
+                )),
             ),
         );
     }
@@ -272,7 +287,7 @@ fn compare(a: &Node, b: &Node, path: &str, d: &mut PartDiff) {
                 d.checked += node.size();
                 let below = node.size() - 1;
                 let detail = (below > 0).then(|| format!("with {below} elements below it"));
-                push(d, element(child_path, "lost", detail));
+                push(d, element(child_path, Verdict::Lost, detail));
             }
         }
     }
@@ -283,7 +298,7 @@ fn compare(a: &Node, b: &Node, path: &str, d: &mut PartDiff) {
                 d,
                 element(
                     format!("{path}/{}", child_label(name, key, n)),
-                    "added",
+                    Verdict::Added,
                     None,
                 ),
             );
@@ -327,13 +342,13 @@ fn compare_attrs(src: &Node, out: &Node, path: &str, diffs: &mut PartDiff) {
         let was = src.attrs.get(name).map(String::as_str).or(default);
         let now = out.attrs.get(name).map(String::as_str).or(default);
         let verdict = match (was, now) {
-            (Some(old), Some(new)) if same_value(name, old, new) => continue,
-            (Some(_), Some(_)) => "changed",
-            (Some(_), None) => "lost",
-            (None, Some(_)) => "added",
+            (Some(old), Some(new)) if same_value(name, default, old, new) => continue,
+            (Some(_), Some(_)) => Verdict::Changed,
+            (Some(_), None) => Verdict::Lost,
+            (None, Some(_)) => Verdict::Added,
             (None, None) => continue,
         };
-        let detail = (verdict == "changed").then(|| format!("{was:?} became {now:?}"));
+        let detail = (verdict == Verdict::Changed).then(|| format!("{was:?} became {now:?}"));
         push(
             diffs,
             Difference {
@@ -359,8 +374,9 @@ fn default_of(element: &Name, attr: &Name) -> Option<&'static str> {
 }
 
 /// Whether two attribute values are equal: `mc:Ignorable` as a set of namespace URIs (already
-/// resolved at parse time), xsd:boolean spellings as booleans, anything else as text.
-fn same_value(name: &Name, a: &str, b: &str) -> bool {
+/// resolved at parse time), an attribute whose schema default is a boolean as an xsd:boolean
+/// (`1` equals `true`), anything else as text.
+fn same_value(name: &Name, default: Option<&str>, a: &str, b: &str) -> bool {
     if name.ns == MC && name.local == "Ignorable" {
         let set = |v: &str| {
             v.split_whitespace()
@@ -374,7 +390,8 @@ fn same_value(name: &Name, a: &str, b: &str) -> bool {
         "0" | "false" => Some(false),
         _ => None,
     };
-    a == b || matches!((boolean(a), boolean(b)), (Some(x), Some(y)) if x == y)
+    let is_boolean = default.is_some_and(|d| d == "true" || d == "false");
+    a == b || (is_boolean && matches!((boolean(a), boolean(b)), (Some(x), Some(y)) if x == y))
 }
 
 fn local_attr(n: &Node, local: &str) -> Option<String> {
@@ -384,7 +401,10 @@ fn local_attr(n: &Node, local: &str) -> Option<String> {
         .map(|(_, v)| v.clone())
 }
 
-/// `/worksheet/cols[0]/col[3]` → `/worksheet/cols/col`.
+/// `/worksheet/mergeCells[0]/mergeCell[A1:B2]` → `/worksheet/mergeCells/mergeCell`. Every
+/// bracketed segment goes, ordinals and keys alike. A key holding `[` or `]` would unbalance the
+/// count, which only the parent-path lookup reads; no key of [`UNORDERED`] can hold one (refs,
+/// sqrefs and names), but an `ext` uri could, so its children's paths may come out wrong.
 fn strip_ordinals(path: &str) -> String {
     let mut out = String::with_capacity(path.len());
     let mut depth = 0usize;

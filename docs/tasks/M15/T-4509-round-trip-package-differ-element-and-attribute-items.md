@@ -52,8 +52,9 @@ Carried from PR #3529's review:
 ## Outcome
 `roundtrip/xmldiff.rs` diffs every kept XML part pair as SPEC-0033 D4 says:
 - namespace-URI names (D4.1);
-- ordered children, except the cited unordered paths and `extLst`'s `ext[uri]` (D4.2);
-- a schema-defaults table with CT_ citations, plus xsd:boolean equivalence (D4.3);
+- ordered children, except exactly D3.2's collections and `extLst`'s `ext[uri]` (D4.2);
+- a schema-defaults table with CT_ citations, plus xsd:boolean equivalence for attributes whose default is a boolean
+  (D4.3);
 - `mc:Ignorable` as a set of resolved URIs;
 - whitespace per D4.7;
 - `candidate-N1`…`N12` tags, never applied (D4.4);
@@ -77,8 +78,20 @@ failures. The new losses include:
 - docProps rewritten (N2, N3);
 - window geometry lost (N11).
 
+Review round 1:
+- `cols` and the content types were dropped from the unordered paths (outside D4.2);
+- boolean equivalence was limited to boolean attributes;
+- verdicts became the `Verdict` enum;
+- text details are clipped to 200 characters;
+- the defaults-table assumption is documented.
+
+Tagging whole lost `fileVersion` elements N5 (fidelity minor) is left to T-4503: retagging an existing F line in an
+unchanged case reads as a regression to the ratchet.
+
 Tests:
 - identity on every fixture part;
+- boolean equivalence only for boolean attributes;
+- a `cols` reorder is seen;
 - invariance under re-prefixed namespaces, reordered unordered collections, written-out defaults and boolean
   spellings;
 - sensitivity to a lost `ext`, a lost element and a lost attribute;

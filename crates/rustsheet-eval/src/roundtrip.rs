@@ -46,7 +46,7 @@ impl Verdict {
         self == Verdict::Kept
     }
 
-    fn label(self) -> &'static str {
+    pub(crate) fn label(self) -> &'static str {
         match self {
             Verdict::Kept => "kept",
             Verdict::Changed => "changed",
@@ -292,15 +292,10 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
                 Ok(part_diff) => {
                     checked += part_diff.checked;
                     for diff in part_diff.differences {
-                        let verdict = match diff.verdict {
-                            "lost" => Verdict::Lost,
-                            "added" => Verdict::Added,
-                            _ => Verdict::Changed,
-                        };
                         items.push(item(
                             diff.kind,
                             format!("{key}:{}", diff.path),
-                            verdict,
+                            diff.verdict,
                             diff.detail,
                         ));
                     }
@@ -333,8 +328,8 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
 }
 
 /// The results as a cells-mode baseline (SPEC-0033 D8): a case's checked count is the number of
-/// source items it compared, and each failing item is one known failure. A case that did not run is one
-/// `!Status` failure, as in the cell suites.
+/// source items it compared, and each failing item is one known failure. A case that did not run
+/// is one `!Status` failure, as in the cell suites.
 #[must_use]
 pub fn baseline(results: &[&CaseResult]) -> Baseline {
     let mut b = Baseline::default();

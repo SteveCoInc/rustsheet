@@ -277,7 +277,7 @@ mod xml {
         let d = diff(a, b).expect("both parse");
         d.differences
             .into_iter()
-            .map(|x| (x.path, x.verdict))
+            .map(|x| (x.path, x.verdict.label()))
             .collect()
     }
 
@@ -325,6 +325,36 @@ mod xml {
             found(&lost_ext, &kept),
             vec![("/worksheet/extLst[0]/ext[{NEW}]".to_string(), "lost")]
         );
+    }
+
+    #[test]
+    fn booleans_only_where_the_schema_says_and_cols_keep_their_order() {
+        // `name` is a string: "1" and "true" differ. `tabSelected` is a boolean: they do not.
+        let a = sheet(
+            r#"<sheetViews><sheetView workbookViewId="0" tabSelected="1"/></sheetViews><customSheetViews><customSheetView name="1"/></customSheetViews>"#,
+            "",
+        );
+        let b = sheet(
+            r#"<sheetViews><sheetView workbookViewId="0" tabSelected="true"/></sheetViews><customSheetViews><customSheetView name="true"/></customSheetViews>"#,
+            "",
+        );
+        assert_eq!(
+            found(&a, &b),
+            vec![(
+                "/worksheet/customSheetViews[0]/customSheetView[0]@name".to_string(),
+                "changed"
+            )]
+        );
+        // `<col>` order is not proven irrelevant (SPEC-0033 D4.2), so a reorder is seen.
+        let a = sheet(
+            r#"<cols><col min="1" max="1"/><col min="2" max="2"/></cols>"#,
+            "",
+        );
+        let b = sheet(
+            r#"<cols><col min="2" max="2"/><col min="1" max="1"/></cols>"#,
+            "",
+        );
+        assert_eq!(found(&a, &b).len(), 4);
     }
 
     #[test]
