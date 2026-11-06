@@ -1677,7 +1677,7 @@ Rule: a reference a REDUCE LAMBDA returns stays a reference. The next step's acc
 so is REDUCE's result:
 - `REDUCE(A1,A2:A3,LAMBDA(a,v,IF(ISREF(a),v,"no")))` is 3: step 2's `a` is the A2 step 1 returned (Calc!H2).
 - `ISREF(REDUCE(A1,A2:A3,LAMBDA(a,v,v)))` is TRUE. So is ISREF of `OFFSET(a,1,0)` on the accumulator, of a REDUCE
-  with no initial value, and of `p_a:p_v` built across steps (Calc!E2, E3, E8, E11, E20).
+  with an empty initial argument (`REDUCE(,A1:A3,...)`), and of `p_a:p_v` built across steps (Calc!E2, E3, E8, E11, E20).
 - `SUM(REDUCE(A1,A2:A3,LAMBDA(p_a,p_v,p_a:p_v)))` is 6 (Calc!H21).
 - A bare `=REDUCE(A1,A2:A3,LAMBDA(p_a,p_v,p_a:p_v))` spills A1:A3's values (Calc!P1:P3).
 
@@ -1690,13 +1690,23 @@ The initial value is the first step's `a`. A cell or range stays a reference (T-
 (`REDUCE((A1,A3),{1},LAMBDA(a,v,ISREF(a)))` is TRUE, Calc!H17). A 3-D span is not: ISREF of it is FALSE, and
 returning it is `#VALUE!` (Calc!H18, G19, H19).
 
+Callers of a REDUCE that ends on a one-cell reference (probes/t4478-reduce-reference-in-callers, excel-graph
+2026-11-06, A3 = 5):
+- BYROW and BYCOL read it as a written reference is read, over an array as over a range:
+  `BYROW({1;2},LAMBDA(r,REDUCE(A1,r,LAMBDA(a,v,A3))))` is `{5;5}` (D1:D3, D5; written-reference control D4). So do
+  MAKEARRAY and MAP (D10, D11).
+- GROUPBY and PIVOTBY refuse it with `#CALC!`, as they refuse a written reference or one INDEX returns (D6, D9; controls
+  D8, D12; a REDUCE ending on a value, D7, aggregates).
+
 Inside the LAMBDA, `a:v` between two parameters is the range between their references, not the column range A:V:
 - `REDUCE(A1,A2:A3,LAMBDA(a,v,a:v))` is A1:A3 (Calc!F5, H5, J1:J3).
 - `(a,v)` is a union, and AREAS of the REDUCE is 3 (Calc!H7, H22).
-Evidence: probes/t4478-reduce-scan-reference-accumulator (excel-graph, 2026-11-06; predictions in docs/research/t4478)
+Evidence: probes/t4478-reduce-scan-reference-accumulator (excel-graph, 2026-11-06; predictions in docs/research/t4478),
+probes/t4478-reduce-reference-in-callers
 Status: VERIFIED (excel-graph)
 Ours: since T-4478, `fn_reduce` calls its LAMBDA with a reference-keeping caller, and ISREF evaluates a REDUCE in
-reference context. SCAN is unchanged (`lambda_result_value` reads each step). A 3-D initial value is `#VALUE!`.
+reference context. SCAN is unchanged (`lambda_result_value` reads each step). A 3-D initial value is `#VALUE!`. BYROW and BYCOL read a
+one-cell reference result on both their range and array paths (`by_slices_result`).
 Still off, owned by T-4494:
 - the parser reads `a:v` with parameter names as columns A:V (Calc!F5, H5, F6:H6, F9:H9, H14, G15, H15, J1:J3);
 - AREAS of a REDUCE call is `#ERROR!` (Calc!E7:H7, E16:H16, E22:H22);

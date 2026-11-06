@@ -80,16 +80,21 @@ output cell are a reference or a value exactly as in Excel, evidenced on excel-g
   - `lambda_initial_value` makes a 3-D span `#VALUE!`.
   - SCAN is unchanged: it already reads each step.
   - BYROW and BYCOL now read a one-cell reference that a function in their LAMBDA returns
-    (`call_lambda_on_slice`). Without that, gen-m7/611ce3bbfab27cef A1421:B1421
+    on both their range and array paths (`by_slices_result`; the array path from the review of d734d44:
+    `BYROW({1;2},LAMBDA(r,REDUCE(A1,r,LAMBDA(a,v,A3))))` was `#VALUE!`, Excel `{5;5}`,
+    probes/t4478-reduce-reference-in-callers D1:D3). Without that, gen-m7/611ce3bbfab27cef A1421:B1421
     (`BYCOL(..,LAMBDA(y,REDUCE(y,y,LAMBDA(acc,v,Data!D1))))`) regressed to `#VALUE!` once REDUCE returned the
     reference.
-- **Score:** the engine before the change predicted 81 of 117 cells; it now passes 88. A first try that also made
+- **Score:** the engine before the change predicted 81 of 117 cells; it now passes 90. A first try that also made
   SCAN keep references lost Calc!H13, which is how the SCAN half of the rule was found.
-- **Left failing (29 cells), recorded in arrays.md "REDUCE keeps a returned reference; SCAN reads it" and owned by
+- **Left failing (27 cells), recorded in arrays.md "REDUCE keeps a returned reference; SCAN reads it" and owned by
   T-4494:**
   - `a:v` between two parameters parses as columns A:V;
   - AREAS of a REDUCE call is `#ERROR!`;
   - a union initial value is read, not kept.
 - Unit tests are in test_reduce_reference_accumulator.rs.
-- **Eval delta:** 1 new case (88 of 117 cells pass; the 29 others are new known failures owned by T-4494).
-  0 regressions.
+- **Callers probe:** probes/t4478-reduce-reference-in-callers (excel-graph, 13 cells, all pass): BYROW/BYCOL over an
+  array, MAKEARRAY and MAP read a REDUCE's one-cell reference; GROUPBY and PIVOTBY give `#CALC!` for it, as for a
+  written reference.
+- **Eval delta:** 2 new cases: t4478-reduce-scan-reference-accumulator (90 of 117 cells pass; the 27 others are new
+  known failures owned by T-4494) and t4478-reduce-reference-in-callers (13 of 13). 0 regressions.

@@ -2423,6 +2423,7 @@ C	probes/t4465-extent-near-integer-fresh.case.json	352
 C	probes/t4465-extent-near-integer-holdout.case.json	354
 C	probes/t4465-extent-near-integer-main.case.json	602
 C	probes/t4477-filter-include-error-shapes.case.json	49
+C	probes/t4478-reduce-reference-in-callers.case.json	13
 C	probes/t4478-reduce-scan-reference-accumulator.case.json	117
 C	probes/t4480-lcid-sublanguage-fallback.case.json	98
 C	probes/t4485-groupby-function-array-error-order.case.json	31
