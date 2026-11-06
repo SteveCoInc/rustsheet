@@ -3,7 +3,7 @@ id: T-4420
 title: "PIVOTBY relative_to 3 and 4: share one set for unreached column leaves, scope the empty-set #VALUE! note, probe three fields"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -31,10 +31,28 @@ against Excel.
   the fill.
 
 ## Acceptance criteria
-- [ ] Column leaves no record reached share one parent set; no eval cell changes.
-- [ ] The empty-set note is scoped to its evidence.
-- [ ] A three-field relative_to 3 and 4 probe is filled; its off cells pass or are recorded in coercion.md and owned.
-- [ ] `make check` green; reviewers approve.
+- [x] Column leaves no record reached share one parent set; no eval cell changes.
+- [x] The empty-set note is scoped to its evidence.
+- [x] A three-field relative_to 3 and 4 probe is filled; its off cells pass or are recorded in coercion.md and owned.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- `ParentSets` (relative_to.rs): the column items whose cell holds every record of the line (the Total and the
+  leaves no record reached) now share one set per parent. `Grid::column_records` (pivotby.rs) returns `None` for
+  them (`ColumnRecords`), and `ParentEntry::build` merges the two axis branches, sharing sets by a `Share` key (the
+  parent class for 3, the item for 4, or every record). Before this, the row branch copied the parent's records once
+  per such leaf. `check_set_entries` returns `()`; `RelativeSets::new` uses the private `set_levels`. Notes added:
+  `SetId::ParentCell` ids are unique within one call; the empty-set `#VALUE!` arm in `Model::aggregate_result` and
+  coercion.md are scoped to their `relative_to` 3 and 4 evidence. Unit test `every_record_items_share_one_set`.
+- New probe probes/t4420-pivotby-parent-sets-three-fields (excel-graph, 2026-11-06; generator and predictions in
+  docs/research/t4420, predictions committed before the fill): 24 runs, three key fields with subtotals at levels
+  1 and 2, `relative_to` 3 and 4. 514 of 528 cells match; every `relative_to` 4 cell does. The 14 off cells (B3, B4,
+  B7, B8, B10, B11, B12, C3, C4, C7, C8, C10, C11, C12) are a new finding: a parent subtotal no record reached holds
+  every record of the line (T-4401's rule, applied to the parent cell). Recorded in coercion.md and owned by T-4428
+  (depends on T-4401). A scratch merge of T-4401's branch plus that rule in `Grid::column_records` gives 528 of 528,
+  with the t4382, t4402 and t4401 probes all passing.
+- Eval: no existing cell changes; the new case is 514/528 (its 14 known failures are in the baseline).
+- Not a numeric fit: a probe of a structural rule, its predictions committed before the fill.
