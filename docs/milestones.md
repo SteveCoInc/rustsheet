@@ -13,7 +13,7 @@ whose exit criteria are not met.
 
 | Phase | Milestones, in order | Status |
 |---|---|---|
-| 1. Parity (fifteen digits) | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11, M15 | active |
+| 1. Parity (fifteen digits) | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11, M16 | active |
 | 1b. Bit parity | the `defer: phase-1b` tasks of every milestone | after Phase 1 exits (decision 0114) |
 | 2. Architecture and performance | M3, M4, M13 | deferred until Phase 1 exits |
 | 3. Release | M12 | after Phase 2 |
@@ -326,7 +326,7 @@ Split out of M11 by decision 0027.
 
 **Exit criteria:** full recalc faster than Excel desktop on the benchmark suite.
 
-## M15 — Pivot tables (Phase 1)
+## M16 — Pivot tables (Phase 1)
 
 Added by decision 0274 (owner request, 2026-11-04). Research and plan:
 docs/research/pivot-tables-2026-11-04/plan.md. Design: SPEC-0032 (a task of PV0). Today the engine only imports
@@ -356,7 +356,7 @@ styles and conditional formats beyond preservation, UI-only commands.
   accepted deviations; rendered layouts match Excel's `rowItems`/`colItems`.
 - Every remaining catalog row has a filed task or an out-of-scope ruling; rows Excel for the web cannot
   render are M14 tasks and do not block (decision 0039).
-- Measured by report.json's `milestone_exit` M15 row; until that row exists M15 counts as not met.
+- Measured by report.json's `milestone_exit` M16 row; until that row exists M16 counts as not met.
 
 ## M14 — Desktop-oracle parity (Phase 4)
 

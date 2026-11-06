@@ -1,4 +1,4 @@
-# Pivot tables (M15)
+# Pivot tables (M16)
 
 Rules for rendering, refreshing and authoring pivot tables. GETPIVOTDATA rules and the import limits
 stay in web.md (SPEC-0015). Program: docs/research/pivot-tables-2026-11-04/plan.md, decision 0274.
