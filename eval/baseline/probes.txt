@@ -2123,6 +2123,7 @@ C	probes/t3698-rate-flat-restart-fresh.case.json	51
 C	probes/t3698-rate-flat-restart.case.json	54
 C	probes/t3710-ampm-hour-tokens.case.json	26
 C	probes/t3711-fraction-trailing-placeholders.case.json	57
+C	probes/t3711-placeholder-after-fraction.case.json	22
 C	probes/t3718-cjk-numeral-unprobed.case.json	125
 C	probes/t3742-value-percent-currency.case.json	40
 C	probes/t3746-numbervalue-nbsp-separator.case.json	12
@@ -2182,6 +2183,7 @@ C	probes/t3887-stack-blank-variable.case.json	18
 C	probes/t3889-pivotby-option-order.case.json	52
 C	probes/t3890-pivotby-scalar-filter.case.json	59
 C	probes/t3891-numeral-tag-render.case.json	30
+C	probes/t3891-script-digits-typed-shapes.case.json	172
 C	probes/t3891-typed-script-digit-shapes.case.json	172
 C	probes/t3893-pivotby-error-sort-header.case.json	377
 C	probes/t3893-pivotby-error-tie-order.case.json	710
@@ -6575,6 +6577,7 @@ F	probes/t3698-rate-flat-restart.case.json	Sheet1!A51
 F	probes/t3698-rate-flat-restart.case.json	Sheet1!A53
 F	probes/t3698-rate-flat-restart.case.json	Sheet1!A54
 F	probes/t3698-rate-flat-restart.case.json	Sheet1!A9
+F	probes/t3711-placeholder-after-fraction.case.json	S!A13
 F	probes/t3808-median-geomean-direct-overflow.case.json	Calc!A6
 F	probes/t3850-rate-same-state.case.json	Calc!A1
 F	probes/t3850-rate-same-state.case.json	Calc!A10
@@ -6765,6 +6768,7 @@ F	probes/t3876-rate-noise-residual-fresh.case.json	Sheet1!A5
 F	probes/t3876-rate-noise-residual.case.json	Sheet1!A22
 F	probes/t3881-imcsch-flip-start-negative.case.json	Calc!A3
 F	probes/t3883-im-overflow-reciprocal-sweep.case.json	Calc!A101
+F	probes/t3891-script-digits-typed-shapes.case.json	Sheet1!F16
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A1
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A10
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A100
