@@ -3,7 +3,7 @@ id: T-4393
 title: "Find UNIQUE's grouping on two-field intransitive runs: the t4379 and t4380 probes no coalescing merge fits"
 milestone: M7
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
