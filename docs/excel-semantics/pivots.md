@@ -18,6 +18,13 @@ whether Excel also overwrites rendered constants already in the area is a separa
 The saved file holds Excel's own cache and definition (`rowItems`, `location`), as oracle-spike.md
 run 1 also showed.
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-xlsx/src/import/pivots.rs (`refreshOnLoad` read onto
+`PivotCache::refresh_on_load`; T-4151)
+Implemented in: crates/rustsheet/src/workbook/calculation.rs (`Workbook::recalculate`: the first
+recalculation of a loaded workbook refreshes the marked caches, then recalculates again) and
+crates/rustsheet/src/edit/pivot.rs (`refresh_pivots_on_load`; T-4151)
+Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`Model::plan_pivot_refresh`,
+`apply_pivot_refresh`; tested on t4128 R in `pivot/grid/tests.rs`; T-4151)
 
 ## Excel for the web renders authored pivot definitions
 Rule: a definition written into the file renders in full on open, with no `rowItems`/`colItems` and a
@@ -255,6 +262,32 @@ Microsoft's 2025 "PivotTable #SPILL!" announcement (excel-docs.md, PSPILL).
 Evidence: probes/t4128-pivot-spike S (excel-graph, 2026-11-06, T-4128): the constant S!C5 lies inside
 the layout, and the pivot is saved with location A3, where S!A3 is `#SPILL!`.
 Status: VERIFIED (excel-graph); GETPIVOTDATA against such a pivot is in T-4130
+Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`Model::place`, `meets_foreign`: the
+anchor gets `#SPILL!`, the location becomes that cell and the geometry zero, as the sidecar saves
+it; tested on t4128 S in `pivot/grid/tests.rs`; T-4151)
+
+## The grid writer's own readings
+Rule (the engine's, not probed): a pivot owns its location and its page area, and nothing else.
+- A refresh empties every cell it owned that the new layout does not write, and writes the new
+  cells as constants. A constant left inside the pivot's own saved area is its own: overwritten
+  or cleared, never foreign. Whether Excel overwrites rendered constants it finds in a
+  `refreshOnLoad` pivot's area is T-2327's.
+- Foreign is a stored value or formula outside the owned area (a cell holding only a style is
+  empty), and any part of another pivot's area on the sheet, even a blank intersection. The new
+  page area is checked as the location is.
+- A refresh reads the cache again and lays out every pivot over that cache, each from its
+  anchor (the location's top-left cell).
+- A pivot's field indices follow its fields by case-folded name. A field new to the source joins
+  on no axis. A field the pivot shows (row, column, page or data) that left the source refuses the
+  refresh, and the pivot keeps its cells. So does any renumbering of a pivot that keeps unread
+  parts verbatim, which may hold field indices (every imported pivot keeps some).
+- A refresh that cannot complete (a source that does not resolve, such as a Table or defined name
+  until T-4506; a limit) leaves the pivot and its cells as they were. On load, that pivot keeps
+  its saved cells.
+Evidence: none beyond probes/t4128-pivot-spike S (a constant in the body).
+Status: UNVERIFIED (probe pending: T-4664; T-2327 for constants in a refreshOnLoad pivot's area)
+Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`owned_areas`, `meets_foreign`,
+`remap`; T-4151)
 
 ## A tabular pivot's first row header is the field name only when every pivotField has compact="0"
 Rule: in a tabular pivot, the header cell of the first row field reads the field's own name (`Region`)
@@ -838,6 +871,7 @@ for it until a refresh; a calculate, including a full rebuild, is not a refresh.
 desktop Excel (M14). In (c) the range write is the session's first call, so it lands after the load's
 refresh: East 5 shows that refresh read the blank B2.
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet/src/edit/pivot.rs (`Workbook::refresh_pivots_on_load`, `Txn::refresh_pivot_table`; T-4151)
 
 ## Pivot field names for duplicate and blank source headers
 Rule: on refresh Excel names each cache field after its source header, made unique ignoring case:

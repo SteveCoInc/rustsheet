@@ -2,7 +2,7 @@
 //! Tests of `Txn::add_pivot_table` (edit/pivot.rs).
 
 use super::*;
-use crate::{Input, Workbook, WorkbookOptions};
+use crate::{Input, Value, Workbook, WorkbookOptions};
 
 /// Region/Sales over A1:B4 and a pivot rendered at D1:E4.
 fn book() -> (Workbook, PivotTableInput) {

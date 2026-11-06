@@ -380,6 +380,7 @@ mod tests {
                 date_groups: None,
             }],
             record_count: 4,
+            refresh_on_load: false,
         }
     }
 
