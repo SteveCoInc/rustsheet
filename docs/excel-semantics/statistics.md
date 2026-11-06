@@ -7442,3 +7442,24 @@ Ours: every cell matches. `ZTEST("3",3)` (b A48) was `#VALUE!` until T-4223: `z_
 text as one value, like a direct boolean.
 Status: VERIFIED (excel-graph)
 Tasks: T-4223
+
+## PERMUTATIONA is binary powering in doubles, and #NUM! at a huge number_chosen (T-4106)
+Rule: `PERMUTATIONA(n, k)` (n floored, k truncated toward zero) is n^k by right-to-left binary powering, every product
+rounded to a double: r = 1, b = n; while k > 0 { if k is odd, r = r * b; b = b * b; k = k / 2 }. That model gives 104 of
+the 105 numeric cells of accuracy/PERMUTATIONA/s1 bit for bit, against 73 for the correctly rounded n^k (`POWER`, the
+engine's `powf`), 74 for the repeated product n * n * ... and 79 for left-to-right powering; so Excel's value is up to
+about 10 ulps from the true power at a large k (`PERMUTATIONA(216798154,29)` is 5.566879467411358E+241, the true value
+5.566879467411368E+241, A86; `PERMUTATIONA(1464,96)` 7.79728422545814E+303 against 7.797284225458146E+303, A58). The one exception is `PERMUTATIONA(10,308)`, which is exactly 1E+308 (A68), where the
+model gives 1.0000000000000006E+308 (unexplained: a power-of-ten path is possible). A result past the double range is
+`#NUM!` (`PERMUTATIONA(2,1024)`, `(10,309)`, A81, A83; `(2,1023)` is 8.98846567431158E+307, A78). A number_chosen of
+2^31 - 1 or more is `#NUM!` whatever the number, even where the power is 0 or 1: `PERMUTATIONA(1,2147483647)`,
+`PERMUTATIONA(1,10000000000)` and `PERMUTATIONA(0,10000000000)` are `#NUM!` (A76, A79, A71), while
+`PERMUTATIONA(0,1000)` is 0 (A72). The cut is UNVERIFIED between 1000 and 2^31 - 1; 2^31 - 1 is PERMUT's number limit
+("Overflowing arguments, PERMUT's limit and argument error order (T-1290)"). A number in (0, 1) floors to 0
+(`PERMUTATIONA(0.25,4)` is 0, A2) and `PERMUTATIONA(2.5,3.9)` is 8 (A82).
+Evidence: accuracy/PERMUTATIONA/s1 (excel-graph, 2026-11-06, T-4106).
+Ours: the engine returns `powf(n, k)`, so 35 of the 105 numeric cells differ from Excel by a few ulps (all but two
+within 15 digits, those two within 1e-9 of the math: inside the Gate A envelope), and n^k for a huge k (1 or 0 where
+Excel is `#NUM!`: three Gate A known failures). Both are T-4501.
+Status: VERIFIED (excel-graph) for the cells cited; the number_chosen cut UNVERIFIED
+Tasks: T-4106, T-4501
