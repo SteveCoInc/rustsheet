@@ -3,7 +3,7 @@ id: T-4159
 title: "Script decision 0267 item 6's net-improvement check for family regressions (counts before/after from two report.json files)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
