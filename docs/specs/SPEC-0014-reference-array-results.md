@@ -290,6 +290,29 @@ an array value. In detail:
   a grid whose references are on another sheet (`#N/A` replaces today's `#VALUE!`). Their same-sheet `#VALUE!` (the
   t2065 cells, which pass today) stays. Nothing else.
 
+### As implemented (T-4570)
+Where the implementation departs from the text above, or settles what it left open:
+- **Representation.** `RefElement::Value(ArrayNode)` unboxed: `RefElement` stays within 32 bytes
+  (`test_xlookup_ref_element.rs`). `RefElement::as_node` is the one element-to-array conversion
+  (`to_array`, `to_values` and INDEX's one-index form read it).
+- **Producer.** `lift_references_costed` charges `cells` visits per element, so XLOOKUP's grid costs what its value
+  lift does (`LiftCost::Cells` of the lookup vector's scanned cells). The reference form is
+  `Model::xlookup_reference(args, cell, as_reference)`; it is read by `reference_arg_read` (INDEX, LARGE, SMALL),
+  `picked_reference_arg_read` (the aggregates), `value_or_grid` (SUMPRODUCT) and the per-element read-ahead.
+- **Keyed lookups.** An XLOOKUP whose `if_not_found` is a reference is not a keyed lookup (SPEC-0020 Amendment 2,
+  `tailed_array.rs keyed_lookup`): its misses are references, which the head-and-tail reading cannot hold, so a
+  whole-column key builds its grid in full.
+- **INDEX, one index.** One index into a one-column grid is a 1x1 array of the element's value view, not a 1x1
+  sub-grid: its own cells match (t4563 A25, T25:U25, W25:Z25), but `INDEX(INDEX(X(r),2),1,1)` gives `#VALUE!`, not
+  the range (V25:V26). T-4701 keeps the reference. One index into a grid of several columns stays `#VALUE!`.
+- **Per-element callers.** `lifts_into_reference_elements` adds an XLOOKUP with an `if_not_found` to OFFSET and
+  INDIRECT as the argument read ahead; one that gives no grid is put back as its reference form's result. The
+  static analysis gives such a call the lookup_value's shape, so `COUNTIF(X(r),">0")` spills (t4569 A26). VSTACK's
+  reference form keeps OFFSET and INDIRECT only.
+- **Order statistics.** `RefGrid::order_statistic_error` is the one scan: the first error element, else `#N/A`, when
+  any reference element is on another sheet. LARGE and SMALL read it in their data reader (`numbers_from_ranked_arg`;
+  the RANK family keeps the value view), MEDIAN through `GridReading::OrderStatistic`.
+
 ### Test plan and rollout
 T-4570 implements it: the t4543 W45:W46, t4563 and t4569 cells it owns leave eval/baseline. Unit tests: a mixed
 grid never reaches storage; the size assertion holds; an all-hit lift builds no grid. Metamorphic tests:

@@ -5,8 +5,8 @@ use super::drop_take::Edge;
 use crate::arithmetic::bcast_get;
 use crate::cast::{calc_result_to_array_node, scalar_as_array, NumberOrArray};
 use crate::external_reference::{ExternalArea, PickedReference};
-use crate::functions::util::array_element_value;
 use crate::functions::util::near_integer::{near_integer_count, NEAR_INTEGER_TOLERANCE};
+use crate::functions::util::{array_element_value, array_node_to_calc_result};
 use crate::functions::Function;
 use crate::limits::check_array_size;
 use crate::nested_array::NestedBudget;
@@ -635,6 +635,18 @@ impl Model {
         // (probes/t2577-indirect-ref-array A100).
         let numbers = if two_arg && (rows, columns) == (1, 1) && numbers.row == 1 {
             IndexNumbers { col: 1, ..numbers }
+        } else if two_arg && columns == 1 && (1..=rows).contains(&numbers.row) {
+            // One index into a column of elements is that element as a one-element array, shown
+            // by its value view: `INDEX(XLOOKUP({2;9},A1:A3,B1:B3,D1:D2),2)` is `#VALUE!`, ROWS
+            // of it 1 and INDEX of it at (2,1) `#REF!` (probes/t4563-xlookup-not-found-ref-element
+            // A25, T25:Z25). Excel keeps the reference in it (V25:V26 spill D1:D2), which this
+            // value does not (TODO(T-4701)).
+            let element = grid
+                .get(numbers.row - 1, 0)
+                .map_or(ArrayNode::Error(Error::REF), |element| {
+                    element.as_node(&ArrayNode::Error(Error::VALUE))
+                });
+            return CalcResult::Array(vec![vec![element]]);
         } else if two_arg {
             return CalcResult::new_error(
                 Error::VALUE,
@@ -670,6 +682,9 @@ impl Model {
             Some(RefElement::Error(error)) => {
                 CalcResult::new_error(error.clone(), cell, "Error element".into())
             }
+            // A value element is that value, not a reference: `INDEX(XLOOKUP({2;9},A1:A3,B1:B3,
+            // F1:F2),1,1)` is 20 (probes/t4563-xlookup-not-found-ref-element A29).
+            Some(RefElement::Value(value)) => array_node_to_calc_result(value, cell),
             None => wrong_reference(cell),
         }
     }

@@ -702,13 +702,24 @@ impl Model {
 
     /// The lift of a call whose result is a reference (SPEC-0014 "Producers"): `kernel` runs
     /// once per element of the broadcast of `lifted`, as [`Self::lift_grids`] runs it, and each
-    /// result is kept as a [`RefElement`]: its reference, or its error (any other value is
-    /// `#VALUE!`). The shape and the work (one visit per element) are checked before any element
-    /// runs. A 1x1 grid gives one element too: `TAKE(A1:B3,{2})` is one element, A1:B2
+    /// result is kept as a [`RefElement`]: its reference, its error, or its scalar value. The
+    /// shape and the work (`cells` visits per element) are checked before any element runs. A 1x1 grid gives one element too: `TAKE(A1:B3,{2})` is one element, A1:B2
     /// (probes/m7-lift-take-drop-sortby Sheet1 F13, I13:K13; T-2298).
     pub(crate) fn lift_references(
         &mut self,
         lifted: Vec<LiftedArg>,
+        cell: CellReferenceIndex,
+        kernel: &mut Kernel<'_>,
+    ) -> RefArg {
+        self.lift_references_costed(lifted, 1, cell, kernel)
+    }
+
+    /// [`Self::lift_references`] for a kernel whose every element visits `cells` cells, as
+    /// [`LiftCost::Cells`] charges a value lift: XLOOKUP's search of its lookup vector.
+    pub(crate) fn lift_references_costed(
+        &mut self,
+        lifted: Vec<LiftedArg>,
+        cells: u64,
         cell: CellReferenceIndex,
         kernel: &mut Kernel<'_>,
     ) -> RefArg {
@@ -724,7 +735,10 @@ impl Model {
             })
             .collect();
         let elements = rows.saturating_mul(columns);
-        if let Some(error) = self.spend_visits(u64::try_from(elements).unwrap_or(u64::MAX), cell) {
+        let visits = u64::try_from(elements)
+            .unwrap_or(u64::MAX)
+            .saturating_mul(cells.max(1));
+        if let Some(error) = self.spend_visits(visits, cell) {
             return RefArg::Value(error);
         }
         let mut output = Vec::with_capacity(elements);
@@ -739,8 +753,12 @@ impl Model {
                     CalcResult::Range { left, right } => {
                         RefElement::Reference(Range { left, right })
                     }
-                    CalcResult::Error { error, .. } => RefElement::Error(error),
-                    _ => RefElement::Error(Error::VALUE),
+                    // A scalar value is kept beside the references (SPEC-0014 amendment "Mixed
+                    // grids"): XLOOKUP's hits. A LAMBDA or a nested cell is `#VALUE!`.
+                    value => match calc_result_to_array_node(value) {
+                        ArrayNode::Error(error) => RefElement::Error(error),
+                        node => RefElement::Value(node),
+                    },
                 });
             }
         }
