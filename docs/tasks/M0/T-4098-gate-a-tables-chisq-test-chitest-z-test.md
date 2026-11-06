@@ -70,7 +70,7 @@ Every failing table point has an owner.
   in all), filled from excel-graph with 0 failures. Excel gives an error on 49 points and the math a domain error on the
   same 49, with the same codes.
 - `rustsheet-eval accuracy`: all 840 points inside the envelope or known, 0 failing, 0 table defects. `missing tables`
-  58 to 53. The engine is bit-exact with Excel on 805 of 840 (Z.TEST and ZTEST 400 of 400, PROB 198 of 200, CHISQ.TEST
+  58 to 53 (43 to 38 after merging the current main). The engine is bit-exact with Excel on 805 of 840 (Z.TEST and ZTEST 400 of 400, PROB 198 of 200, CHISQ.TEST
   100 of 120, CHITEST 107 of 120; the 33 CHISQ.TEST/CHITEST points differ in the last digits, within the envelope).
   Known failures added: accuracy/PROB/s1 A113 and A125 (`PROB({1,2},{1.5,-0.5},2)`: Excel -0.5, the engine `#NUM!`),
   owned by T-4578, filed here with the probe's nine engine-off cells (PROB's per-probability check and sum tolerance,
