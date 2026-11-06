@@ -709,11 +709,11 @@ impl Model {
                 }
             })
             .collect();
-        if super::has_duplicate_parameter(&parameters) {
+        if super::has_refused_parameters(&parameters) {
             return CalcResult::new_error(
                 Error::ERROR,
                 cell,
-                "LAMBDA parameter names must be distinct".to_string(),
+                "LAMBDA parameter names must be distinct names Excel accepts".to_string(),
             );
         }
 

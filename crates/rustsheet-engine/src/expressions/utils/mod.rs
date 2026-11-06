@@ -356,7 +356,10 @@ pub(crate) fn is_name_text(name: &str) -> bool {
     let upper = name.to_uppercase();
     let len = upper.chars().count();
 
-    let mut chars = upper.chars();
+    // The characters as typed, not their uppercase: `ǰ` and `ΐ` uppercase to a letter and
+    // combining marks, yet Excel loads `LET(ǰ,1,ǰ+1)` and `LET(ΐ,1,ΐ+1)` (2; excel-graph,
+    // 2026-11-06, T-1856).
+    let mut chars = name.chars();
 
     if len > 255 || len == 0 {
         return false;

@@ -1,3 +1,7 @@
+use std::sync::OnceLock;
+
+use regex_syntax::hir::{Class, ClassUnicodeRange, Hir, HirKind};
+
 use crate::{
     calc_result::CalcResult,
     expressions::{
@@ -26,14 +30,51 @@ pub(crate) fn same_variable(a: &str, b: &str) -> bool {
         .eq(b.chars().flat_map(char::to_lowercase))
 }
 
-/// Whether two LAMBDA parameters are the same variable ([`same_variable`]): Excel refuses
-/// `LAMBDA(x,x,x)(1,2)`, `LAMBDA(x,X,x+X)(1,2)` and `LAMBDA(ä,Ä,ä+Ä)(1,2)` as corrupt files
-/// (docs/excel-semantics/references.md, T-1387).
-pub(crate) fn has_duplicate_parameter(parameters: &[NamedVariable]) -> bool {
+/// Whether Excel refuses `name` as a LET variable or LAMBDA parameter for its characters: Excel for
+/// the web refuses (createSession 501 `FileCorruptTryRepair`) a workbook binding a name that holds
+/// a mark (`नाम`, whose vowel sign is Mc; `a` + U+0345) or a circled or squared letter (`Ⓐ`, `ⓐ`,
+/// `aⒶ`, U+1F130), which the lexer's `char::is_alphanumeric` takes through `Other_Alphabetic`, or whose
+/// lowercase holds one (`İ` lowercases to `i` + U+0307: `LET(İ,1,1)`, `LET(xİ,1,xİ+1)` and
+/// `LAMBDA(İ,İ+1)(1)` are refused, while a defined name `İ` loads and works). Other letters,
+/// letter numbers and later digits load (`ǅ`, `ʰ`, `ª`, `Ⅰ`, `ﬃ`, `ǰ`, `ΐ`, `a²`, `a①`, `a٣`;
+/// `rustsheet-oracle recalc -b excel-graph`, 2026-11-06, T-1856; docs/excel-semantics/references.md
+/// "Characters of a LET or LAMBDA name").
+pub(crate) fn is_refused_variable_name(name: &str) -> bool {
+    !name.is_ascii()
+        && name
+            .chars()
+            .chain(name.chars().flat_map(char::to_lowercase))
+            .any(is_mark_or_other_symbol)
+}
+
+/// Whether `c` is a mark (`\p{M}`) or an other symbol (`\p{So}`), by regex-syntax's Unicode tables.
+fn is_mark_or_other_symbol(c: char) -> bool {
+    static RANGES: OnceLock<Vec<ClassUnicodeRange>> = OnceLock::new();
+    let ranges = RANGES.get_or_init(|| {
+        // The spelling is fixed and known to regex-syntax; a failure leaves the class empty
+        // (no name is refused for its characters) rather than panicking.
+        match regex_syntax::Parser::new()
+            .parse(r"[\p{M}\p{So}]")
+            .map(Hir::into_kind)
+        {
+            Ok(HirKind::Class(Class::Unicode(class))) => class.ranges().to_vec(),
+            _ => Vec::new(),
+        }
+    });
+    let at = ranges.partition_point(|range| range.end() < c);
+    ranges.get(at).is_some_and(|range| range.start() <= c)
+}
+
+/// Whether Excel refuses the LAMBDA's `parameters`: two are the same variable
+/// ([`same_variable`]; Excel refuses `LAMBDA(x,x,x)(1,2)`, `LAMBDA(x,X,x+X)(1,2)` and
+/// `LAMBDA(ä,Ä,ä+Ä)(1,2)` as corrupt files, docs/excel-semantics/references.md, T-1387), or one
+/// has characters Excel refuses ([`is_refused_variable_name`], T-1856).
+pub(crate) fn has_refused_parameters(parameters: &[NamedVariable]) -> bool {
     parameters.iter().enumerate().any(|(i, p)| {
-        parameters[..i]
-            .iter()
-            .any(|q| same_variable(&q.name, &p.name))
+        is_refused_variable_name(&p.name)
+            || parameters[..i]
+                .iter()
+                .any(|q| same_variable(&q.name, &p.name))
     })
 }
 
@@ -181,6 +222,13 @@ impl Model {
         for i in 0..pair_count {
             // Extract the variable name from the declaration node.
             let name = match &cloned[2 * i] {
+                Node::NamedVariableKind { name, .. } if is_refused_variable_name(name) => {
+                    Err(CalcResult::new_error(
+                        Error::ERROR,
+                        cell,
+                        format!("LET: Excel refuses the variable name '{name}'"),
+                    ))
+                }
                 Node::NamedVariableKind { name, .. }
                     if !seen_names.iter().any(|seen| same_variable(seen, name)) =>
                 {

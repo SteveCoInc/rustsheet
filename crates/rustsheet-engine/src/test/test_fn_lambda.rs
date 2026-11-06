@@ -486,3 +486,73 @@ fn one_cell_trimrange_is_a_reference() {
     assert_eq!(model._get_text("B4"), *"5");
     assert_eq!(model._get_text("C4"), *"5");
 }
+
+#[test]
+fn let_and_lambda_names_with_marks_or_symbol_letters_are_refused() {
+    // Excel for the web refuses (createSession 501 FileCorruptTryRepair) a single-cell workbook
+    // whose LET or LAMBDA binds a name holding a combining mark, a circled or squared letter, or
+    // a letter whose lowercase holds a mark (İ is i + U+0307), and loads the other letters
+    // (`rustsheet-oracle recalc -b excel-graph`, 2026-11-06, T-1856; refused inputs cannot be
+    // committed: docs/excel-semantics/references.md "Characters of a LET or LAMBDA name").
+    let refused = [
+        "=LET(Ⓐ,1,Ⓐ+1)",
+        "=LET(ⓐ,1,ⓐ+1)",
+        "=LET(\u{1F130},1,\u{1F130}+1)",
+        "=LET(aⒶ,1,aⒶ+1)",
+        "=LET(\u{1F130}x,1,1)",
+        "=LET(İ,1,İ+1)",
+        "=LET(xİ,1,xİ+1)",
+        "=LET(İ,1,1)",
+        "=LET(नाम,1,नाम+1)",
+        "=LET(क\u{93E},1,1)",
+        "=LET(a\u{345},1,1)",
+        "=LAMBDA(İ,İ+1)(1)",
+        "=LAMBDA(Ⓐ,Ⓐ+1)(1)",
+        "=LET(i\u{307},1,1)",
+        "=LET(x\u{307},1,1)",
+        "=LET(a\u{301},1,1)",
+        "=LET(\u{301}a,1,1)",
+        "=LET(\u{345}a,1,1)",
+        "=LET(\u{93E}a,1,1)",
+    ];
+    let accepted = [
+        "=LET(ǅ,1,ǅ+1)",
+        "=LET(ʰ,1,ʰ+1)",
+        "=LET(ー,1,ー+1)",
+        "=LET(ª,1,ª+1)",
+        "=LET(Ⅰ,1,Ⅰ+1)",
+        "=LET(ⅰ,1,ⅰ+1)",
+        "=LET(ﬃ,1,ﬃ+1)",
+        "=LET(ŉ,1,ŉ+1)",
+        "=LET(ǰ,1,ǰ+1)",
+        "=LET(ΐ,1,ΐ+1)",
+        "=LET(שם,1,שם+1)",
+        "=LET(اسم,1,اسم+1)",
+        "=LET(a²,1,a²+1)",
+        "=LET(a٣,1,a٣+1)",
+        "=LET(a①,1,a①+1)",
+        "=LET(aⅫ,1,aⅫ+1)",
+        "=LET(x,1,aⒶ)",
+    ];
+    let mut model = new_empty_model();
+    for (row, formula) in refused.iter().chain(accepted.iter()).enumerate() {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, formula) in refused.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", row + 1)),
+            *"#ERROR!",
+            "{formula}"
+        );
+    }
+    for (row, formula) in accepted.iter().enumerate() {
+        let expected = if formula.ends_with("aⒶ)") {
+            "#NAME?"
+        } else {
+            "2"
+        };
+        let cell = format!("A{}", refused.len() + row + 1);
+        assert_eq!(model._get_text(&cell), *expected, "{formula}");
+    }
+}
