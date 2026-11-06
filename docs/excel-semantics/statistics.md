@@ -4905,6 +4905,15 @@ within 1E-15 relative / largest relative error:
     Excel's 0 wherever ln ret is below ln(DBL_MIN) (the rule above); it still keeps a number at the n = 3 zeros above
     that (t4254-beta-t-l140-zero-cut B1:B11, D1:D11, and t4254-beta-t-zero-wide A30, B30, C30) and the t's. Since
     T-4437 the n >= 3 zeros are exact too (the rule below); the t's and n = 2 are owned by T-4564.
+  - Excel's numbers at about 10 bup terms are not the math to 15 digits (gap triage 2026-11-06, T-4707). At
+    (2E6, 10.5) and (2E6, 10), Excel is 9E-15 to 1.4E-13 off the 50-digit value of the double arguments (mpmath
+    `betainc`, 60 digits). Ours is mostly within 1E-15 of it: t4254-beta-t-l140-zero-cut A2
+    `BETA.DIST(0.999648862690922,2000000,10.5,TRUE)` is 8.827616059802568E-285 in Excel, and the math is
+    8.8276160598037375E-285. Ours and Excel first differ at the 13th digit on five cells (A2, A7, A9, C6, C11). At n = 3
+    ((5E6, 3.5), (5E6, 4), (1E6, 3.5); t4254-beta-t-zero-wide) Excel and ours agree to an ulp on most cells, both
+    up to 1.4E-13 off the math. T.DIST.RT at df 1E5 (zero-wide E27:E30) is about 3E-12 off the exact-t math in Excel
+    and in ours alike. That is the size that rounding x = df/(df+t^2) to a double gives (the tail goes as x^(df/2)).
+    The two values are 4E-14 to 1.4E-13 apart.
   - **At n >= 3 bup terms the 0 is on bup's sum W (T-4437)**, probes/t4437-beta-t-zero-bracket (333 cells,
     excel-graph, 2026-11-06), which walks by 0.5 nats (docs/research/t4437/gen_bracket.py; each cell's ln in
     `ln_targets.json`). L140 bup+bgrat's BETA.DIST is 0 exactly where W = ret·S is below 2^-970 (the smallest normal
