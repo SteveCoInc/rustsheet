@@ -23,3 +23,9 @@
   `t4594-fraction-tail-point-holdout-3`, written before that probe was filled: 40 triples drawn with
   `random.seed(45943)` over codes 64, 5, 2000 and 12, seventeen integer shapes (twelve of them new, with
   literals among them) and seven new values.
+- The third hold-out matched 271 of 280 cells. Its misses (`#?#` and `? ?0`) led to the third refit: a `?`
+  that prints a zero for nothing due is not counted toward a later `0` or `#`. That refit matches all 280.
+- It then froze, and `holdout-4-predictions.json` holds the engine's output for every cell of
+  `t4594-fraction-tail-point-holdout-4`, written before that probe was filled: 48 triples drawn with
+  `random.seed(45944)` over codes 128, 6, 4000 and 25, every 1-3 wide integer shape and 1-4 wide decimal
+  shape (plus some with literals), and seven new values.

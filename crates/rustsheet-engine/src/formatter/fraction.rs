@@ -374,7 +374,7 @@ fn picked_denominator(code: &str, picked: &str, question_numerator: bool) -> (St
 /// placeholder takes every spilled digit left (`# ?/7 ?.0` on 0.0123 is " 123/7 0000.0"), and
 /// zeros are left *pending*: a `?` that prints a space adds one and a spilled digit clears them; a
 /// `0` or `#` leaves one plus one per placeholder before it, but for a `?` that printed a lacking
-/// zero
+/// zero or a zero for nothing due
 /// (`# ?/3|??0.?0?` on 0.04 is " 1/3|5 00.000"), and a `?` that then prints a zero for nothing
 /// due takes one of them (`# ?/250|?0?.#0` on 0.0789 " 789/250|00000.00"). After the point
 /// nothing spills and nothing owed is paid: each placeholder prints a zero for a lacking digit
@@ -456,7 +456,8 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
             after_space = false;
             "0".to_owned()
         } else {
-            placed += 1;
+            // A zero for nothing due takes a pending zero and is not counted as placed.
+            let mut counted = true;
             let text = if takes_all == Some(index) && spilled.len() > 0 {
                 let rest: String = spilled.by_ref().collect();
                 owed += rest.chars().count();
@@ -473,8 +474,10 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
                 owed += 1;
                 due = true;
                 pending = pending.saturating_sub(1);
+                counted = false;
                 "0".to_owned()
             };
+            placed += usize::from(counted);
             after_space = text == " ";
             text
         };
