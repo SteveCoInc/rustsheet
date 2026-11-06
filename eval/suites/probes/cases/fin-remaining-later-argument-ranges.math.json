@@ -27,6 +27,10 @@
  },
  "skipped": {
   "Sheet1": {
+   "K10": {
+    "f": "=ACCRINT(1,2958400,2958465,0.05,1000,4,0,TRUE)",
+    "why": "no single value"
+   },
    "K4": {
     "f": "=AMORLINC(2400,39679,39813,300,1E9,0.15,1)",
     "why": "no single value"
