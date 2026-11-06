@@ -1,4 +1,5 @@
-"""LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER and FISHERINV (Gate A slice 4o, T-3785).
+"""LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER and FISHERINV (Gate A slice 4o, T-3785); the legacy
+LOGNORMDIST and LOGINV (T-4100).
 
 The math, at the double of each written literal and the working precision:
 - LOGNORM.DIST is the normal of ln x: Phi(z) and phi(z)/(x*sd) with z = (ln x - mean)/sd, through normal.py's `cdf`
@@ -11,6 +12,9 @@ Sources:
 - statistics.md, "One incomplete-gamma kernel under ERF, ERFC, NORM, CHISQ, GAMMA.DIST and POISSON (T-1778)":
   `LOGNORM.DIST(x,m,s,TRUE)` = `NORM.DIST(LN(x),m,s,TRUE)` on 60 of 60 cells; "Normal CDF and ERFC sweep (T-1040)":
   its deep lower tail is up to about 2E-13 relative off, far under decision 0188 R3's 1e-4.
+- statistics.md, "Legacy distribution names sweep, second family (T-1048)": LOGNORMDIST = LOGNORM.DIST with cumulative
+  TRUE and LOGINV = LOGNORM.INV, value and error, on every paired cell (`LOGNORMDIST(0,0,1)` is `#NUM!`, LOGINV
+  rejects p = 0 and 1): each shares its modern Definition.
 - statistics.md, "LOGNORM.INV is EXP of NORM.INV's quantile (T-0925)": p in (0, 1), and Microsoft's pages for both:
   x <= 0 and standard_dev <= 0 are `#NUM!`.
 - statistics.md, "FISHER, FISHERINV, EXPON.DIST and HARMEAN are Excel operators around LN and EXP (T-2437)" and
@@ -58,6 +62,7 @@ import mpmath
 from rustsheet_tools.accuracy.defs._common import ill_conditioned, scalars, signed
 from rustsheet_tools.accuracy.defs.exp_log import EXP_BAND
 from rustsheet_tools.accuracy.defs.normal import (
+    LEGACY_SOURCE,
     OVERFLOW_SOURCE,
     SWEEP_SOURCE,
     cdf,
@@ -446,25 +451,35 @@ def _fisherinv(args: Sequence[MathArg]) -> mpmath.mpf:
 
 _SD = Param("standard_dev", "real", Interval(0, math.inf), typical=(0.1, 3), source=MICROSOFT_SOURCE)
 _CUMULATIVE = Param("cumulative", "bool", source="catalog")
+_LOGNORM_X = Param("x", "real", Interval(0, math.inf), typical=(0.01, 100), source=MICROSOFT_SOURCE)
+_LOGNORM_MEAN = Param("mean", "real", typical=(-3, 3), source=KERNEL_SOURCE)
 
 LOGNORM_DIST = register(
     Definition(
         function="LOGNORM.DIST",
-        params=(
-            Param("x", "real", Interval(0, math.inf), typical=(0.01, 100), source=MICROSOFT_SOURCE),
-            Param("mean", "real", typical=(-3, 3), source=KERNEL_SOURCE),
-            _SD,
-            _CUMULATIVE,
-        ),
+        params=(_LOGNORM_X, _LOGNORM_MEAN, _SD, _CUMULATIVE),
         value=_lognorm_dist,
         draw=_draw_lognorm_dist,
         sources=(KERNEL_SOURCE, SWEEP_SOURCE, OVERFLOW_SOURCE, MICROSOFT_SOURCE),
     )
 )
 
-LOGNORM_INV = register(
+# LOGNORMDIST is LOGNORM.DIST with cumulative TRUE (statistics.md T-1048): the same value and draws, the flag dropped.
+LOGNORMDIST = register(
     Definition(
-        function="LOGNORM.INV",
+        function="LOGNORMDIST",
+        params=(_LOGNORM_X, _LOGNORM_MEAN, _SD),
+        value=lambda args: _lognorm_dist([*args, True]),
+        draw=lambda stratum, rng: _draw_lognorm_dist(stratum, rng)[:3],
+        sources=(KERNEL_SOURCE, SWEEP_SOURCE, LEGACY_SOURCE, MICROSOFT_SOURCE),
+    )
+)
+
+
+def _lognorm_inv_definition(function: str) -> Definition:
+    """LOGNORM.INV and its legacy name LOGINV (statistics.md T-1048: both reject p = 0 and 1)."""
+    return Definition(
+        function=function,
         params=(
             Param("probability", "real", Interval(0, 1), typical=(0.001, 0.999), source=LOGNORM_INV_SOURCE),
             Param("mean", "real", typical=(-3, 3), source=LOGNORM_INV_SOURCE),
@@ -472,9 +487,12 @@ LOGNORM_INV = register(
         ),
         value=_lognorm_inv,
         draw=_draw_lognorm_inv,
-        sources=(LOGNORM_INV_SOURCE, MICROSOFT_SOURCE),
+        sources=(LOGNORM_INV_SOURCE, MICROSOFT_SOURCE, LEGACY_SOURCE),
     )
-)
+
+
+LOGNORM_INV = register(_lognorm_inv_definition("LOGNORM.INV"))
+LOGINV = register(_lognorm_inv_definition("LOGINV"))
 
 EXPON_DIST = register(
     Definition(

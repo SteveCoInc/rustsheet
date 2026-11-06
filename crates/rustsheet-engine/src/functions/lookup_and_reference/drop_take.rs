@@ -172,7 +172,8 @@ impl Model {
             },
             Edge::Drop => source,
         };
-        let data = match self.result_to_array(source, cell) {
+        // A lone blank value stays blank (`TAKE(IF(TRUE,Z1),1)&"x"` is "x"; probes/t4448-lone-blank-reshapers A9:D9, T-4448).
+        let data = match self.result_to_array_keep_blank(source, cell) {
             Ok(d) => d,
             Err(e) => return RefArg::Value(e),
         };

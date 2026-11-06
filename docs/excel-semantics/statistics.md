@@ -4692,6 +4692,14 @@ Oracle sweep (excel-graph), 16 cases, 34-102 cells each; every paired cell (colu
 - TTEST: tails 0/3 and type 0/4 are #NUM!, tails accepts a boolean (`TTEST(..,TRUE,2)`) and text numbers, tails/type truncate, an omitted tails or type is #NUM!; unequal counts with type 1 (paired) is #N/A; type 1 on a pair whose differences have zero variance is #DIV/0!; a one-element range is #DIV/0!; an empty range is #DIV/0!.
 - ZTEST: sigma 0 or negative is #NUM!; a one-element range is #DIV/0! (with or without sigma); an empty range is #N/A; text x "5" and TRUE coerce, non-numeric text is #VALUE!; an omitted sigma (empty argument) is #NUM!, while an omitted x (`ZTEST(D1:D10,)`) returns a value (1.3161580317707342E-09; that it equals x = 0 was not probed); a range as x lifts and spills (see "Statistical function argument modes").
 Evidence: probes-numeric cases `t1048-gammadist`, `-gammainv`, `-hypgeomdist`, `-loginv`, `-lognormdist`, `-negbinomdist`, `-normdist`, `-norminv`, `-normsdist`, `-normsinv`, `-poisson`, `-tdist`, `-tinv`, `-ttest`, `-weibull`, `-ztest`. Oracle: excel-graph, 2026-10-14.
+Gate A tables (T-4100): eval/accuracy/tables/{NORMDIST,NORMINV,NORMSDIST,NORMSINV,LOGNORMDIST,LOGINV}/s1 (987 points,
+excel-graph, 2026-11-06) score the legacy names against their modern Definitions. Every one of their 44 Excel errors
+is a `#NUM!` the modern rules give: standard_dev 0 or -1 (NORMDIST A104, LOGNORMDIST A112, LOGINV A111), LOGNORMDIST's
+x 0 or -1 (A131, A120), LOGINV's p 0 or 1 (A120, A130) and NORMDIST's density whose z squares past the double range
+(T-2435; `NORMDIST(-4.56869522456994,-4.27144857094054,2.22507385850721E-308,FALSE)`, A111, where z is finite but
+z*z overflows; at A105 z itself overflows); and the lower tail
+flushes to 0 the same way (`NORMSDIST(-37.625)` 0, s1 A68; `LOGNORMDIST(0.054038912977357,1.91539479583494,0.126426929791679)`
+0 against the math's 4.28E-320, A77).
 Status: VERIFIED (excel-graph)
 Tasks: T-1048, T-2035
 
@@ -4784,6 +4792,26 @@ within 1E-15 relative / largest relative error:
     Excel's 0 wherever ln ret is below ln(DBL_MIN) (the rule above); it still keeps a number at the n = 3 zeros above
     that (t4254-beta-t-l140-zero-cut B1:B11, D1:D11, and t4254-beta-t-zero-wide A30, B30, C30) and the t's (owned by
     T-4437).
+  - More shapes (T-4456, probes/t4456-beta-t-zero-cut, 130 cells, and probes/t4456-beta-t-zero-reach, 81 cells,
+    excel-graph, 2026-11-06):
+    - The rule holds at n = 25 and 29 bup terms. At (5E6, 25.5) and (5E6, 30), ln ret -708.0 is a number
+      (`BETA.DIST(0.999857729248015,5e+06,25.5,TRUE)` is 2.7722115421194987E-264) and -709.0 is 0 (cut C9, C10;
+      D9, D10), though the math there is 1.05E-264.
+    - The earlier cut reaches n = 5. `BETA.DIST(x,2E6,5.5|6,TRUE)` is 0 at every ln ret from -700 (cut A1:B17). Walking
+      up at b = 5.5, Excel is the math to 14 digits from 7.8E-209 down to 8.5E-291 (ln ret -690), and 0 at 4.1E-295
+      (reach A1:A21).
+    - At one x (ln ret -690, a = 2E6), b = 2.5 and 3.5 are 0 (the math 1.0E-297 and 2.8E-295), and b = 5.5 to 39.5
+      are numbers from 8.5E-291 up (reach B1:B12).
+    - At ln ret -690, every a from 3000 to 5E7 is a number at b = 5.5 and 25.5 (reach C1:D9).
+    - So at every shape probed, the earlier cut lies in the tail w between 2.8E-295 and 8.5E-291, which brackets
+      DBL_MIN/eps = 2^-970.
+    - The t's cut moves with df. At ln tail -690 (2.17E-300), df 5 to 1E6 are numbers and df 1E8 is 0 (reach F2:F9).
+      At df 1E6, Excel is a number down to 2.1717382813896547E-300 and 0 at 9.9E-305 (reach E20, E21).
+      `T.DIST.RT(1.46569174062763E+299,1)` is `#NUM!` (reach F1, where t² overflows).
+    - F.INV: Excel's F.DIST at (107702, 58) is 0 from x = 0.02 to 0.04, and a number from 0.0425 (cut G2:G14). Both
+      Excel's `F.INV(1.43795578761177E-262,107702,58)` root, 0.02386747293188499 (G1, ln ret -1194), and the math's,
+      0.040061361917045 (G3, ln ret -712.5), lie in that flat 0. So Excel's search returns a point where its own cdf
+      never reaches p (T-4442).
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
@@ -5828,11 +5856,38 @@ Unequal sizes and single points follow "Array arguments given a scalar, a single
     exact value on every table point. The probe data a few ulps apart near 1E+160 is the exception, as Excel's double
     mean decides there: probes/t4047-paired-overflow J1 and J7 (CORREL, PEARSON) are 1.1E-4 off the exact value, J6
     (RSQ) 2.3E-4, and J3 and J5 (INTERCEPT, FORECAST) 6.7E-4; ours matches Excel on all five.
+- Gate A tables (T-4095; accuracy/{COVAR,COVARIANCE.P,COVARIANCE.S,STEYX}/s1, excel-graph 2026-11-06, one-row array
+  literals, 120 points each): every error cell is one of the rules above or below, and ours matches Excel to the bit on
+  all 480 points.
+  - Covariance: COVAR and COVARIANCE.P are Sxy/n, COVARIANCE.S Sxy/(n - 1). Unequal lengths are `#N/A` (COVARIANCE.P
+    A69, A76, A77, A82; COVARIANCE.S A71, A78). One pair is 0 for COVAR and COVARIANCE.P and `#DIV/0!` for COVARIANCE.S
+    (COVARIANCE.S A68, A70, A74, A76, A79; as `COVARIANCE.P(4,5)` 0 and `COVARIANCE.S(4,5)` `#DIV/0!`,
+    probes/t2436/computed-scalar A29, A30). A sum about one mean past the double range does not matter: with one
+    argument of 1E+199 to 1E+201 scale, whose Σ(x-x̄)² overflows, all three are finite (COVAR A69, A71, A77, A79, A80,
+    A81, A83; COVARIANCE.P A70, A79, A83; COVARIANCE.S A67, A69, A84). Unprobed: a sum of the values, or Sxy itself,
+    past the double range.
+  - STEYX needs three pairs: two are `#DIV/0!` (A67, A73, A74, A75), as is a constant x (A78); x's overflow is `#NUM!`
+    first, also with two pairs (A80, Σx near 2E+308). The residual Syy - Sxy*Sxy/Sxx is Excel's double: below zero it is
+    `#NUM!`. That happens for exact decimal lines (A71 `STEYX({1,0.6,0.2},{1,2,3})`, A82), where Sxy*Sxy overflows
+    with finite sums about the means (data near 1E+160 a relative 1E-12 to 1E-9 apart: A68, A70, A72, A76, A77, A81),
+    and also far from any line: over data spanning 1E-150 to 1E+150, one pair dominating both sums leaves a residual
+    that is only rounding, and 7 of the 12 log-uniform points are `#NUM!` (A109, A110, A113, A114, A115, A116, A118)
+    where the exact value is a number. The two-pass double sums (x87 sums of the values, as above) predict all 16
+    `#NUM!` cells and every number to the bit.
+    STEYX's tail stratum keeps its line noise at 1E-6 or more on purpose (nearer, the residual is only Excel's
+    rounding); the edge stratum's exact decimal lines and probes/steyx-exact-fit cover the near-exact lines.
+  - Excel kept as the target (decision 0300): Excel is more than 1E-4 relative off the exact value at STEYX A79
+    (`STEYX({1.2,0.7,...,-2.3},{1,...,8})`, 0 against 7.2E-17) and A84 (`STEYX({-0.8,-0.7,...,-0.2},{1,...,7})`,
+    3.332000937312528E-09 against 3.2E-17), both exact decimal lines whose residual is rounding. Among the eval cells
+    with math sidecars, the same holds for probes/steyx-exact-fit A1, A2, A3, A4, A5, A7, A10, A11, A12 and A14 and for
+    probes/correl-inexact-constant-overflow Z79 (Excel 0 or a tiny number against an exact value below 1E-14). Ours
+    matches Excel on all of them. COVAR, COVARIANCE.P and COVARIANCE.S are within 1E-9 of the exact value on every
+    table point.
 Evidence: probes/regression-pairs-a, regression-pairs-b, regression-forecast (excel-graph, 2026-10-16, T-1620); the
 error cells in these cases are `#DIV/0!`, so whether a range error propagates or is replaced is unprobed.
 Ours: the unequal-size `#N/A` matches since T-1292, single points since T-1401; CORREL, PEARSON, RSQ, SLOPE, INTERCEPT, STEYX and FORECAST compute from the sums about the means in Excel's order, a typed text or boolean argument is one value with no number, and STEYX of a negative difference is `#NUM!` (T-1723). COVAR with text, blank or boolean cells (`#N/A` in ours) is still open.
 Status: VERIFIED (web)
-Tasks: T-1723, T-1724, T-1725, T-2080, T-4047, T-4094, T-4550 (overlaps T-1292, T-1707, T-1401, T-1290)
+Tasks: T-1723, T-1724, T-1725, T-2080, T-4047, T-4094, T-4095, T-4550 (overlaps T-1292, T-1707, T-1401, T-1290)
 
 ## TREND: defaults, shapes, single points and error inputs
 Rule: TREND treats an empty known_x or new_x argument as the default (`TREND(A1:A6,B1:B6,,FALSE)` fits the known x's: 6 rows,
@@ -5923,6 +5978,19 @@ Evidence: probes/stats-evidence-floor-t1623 (excel-graph, 2026-10-17).
 Status: VERIFIED (excel-graph).
 Ours: the SKEW.P mismatches (Q16, Q19) were fixed by T-1404, HARMEAN of no numbers (`#N/A`, Q50) by T-1753, and the direct TRUE in STANDARDIZE's x (Q58, and L14 of probes/stat-later-argument-lift) by T-1755; the others above are open.
 Tasks: T-1750, T-1751, T-1752, T-1753, T-1754, T-1755
+
+## STANDARDIZE is the double quotient (x - mean)/standard_dev; standard_dev <= 0 is #NUM! (T-4100)
+Rule: STANDARDIZE(x, mean, standard_dev) is one double subtraction and one division, (x - mean)/standard_dev rounded
+twice: Excel equals that double on all 185 numeric points of the Gate A table (accuracy/STANDARDIZE/s1, 195 points:
+185 numeric plus 10 standard_dev-0 errors; |x| and |mean| from 1.11402381907902E-307, A188, to 3.9704077099887E+285,
+A191, and standard_dev from 2.22507385850721E-308, A119, A124, A127, A132, A135, to 3.21220939752563E+284, A184), so
+within an ulp or so of the math. A standard_dev of 0 is `#NUM!` (s1 A112, A114, A116, A118, A121, A123, A126, A129, A131, A134), as is a negative one
+(`STANDARDIZE(-40,Data!E5,-1)`, "Booleans from a reference or a formula ..." above). A difference or quotient past the
+largest double, or a subnormal quotient, was not probed (the table redraws those points).
+Evidence: eval/accuracy/tables/STANDARDIZE/s1 (195 points, excel-graph, 2026-11-06).
+Ours: `functions/statistical/standardize.rs`, bit-exact with Excel on all 195 points.
+Status: VERIFIED (excel-graph)
+Tasks: T-4100
 
 ## AGGREGATE 14-19: k is read before the array, a referenced error k is `#VALUE!` (T-2281)
 Rule: functions 14-19 read k as a number before they read the array, so a text k is `#VALUE!`
