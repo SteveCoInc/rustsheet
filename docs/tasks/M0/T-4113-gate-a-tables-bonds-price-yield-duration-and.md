@@ -3,7 +3,7 @@ id: T-4113
 title: "Gate A tables, bonds: PRICE, YIELD, DURATION and MDURATION"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
