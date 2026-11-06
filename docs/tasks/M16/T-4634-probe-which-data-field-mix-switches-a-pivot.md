@@ -18,12 +18,14 @@ accumulation when Sum sits beside Average. Settle what switches it, and the open
 ## Context
 Evidence: probes/t4616-pivot-total-order-3 (T-4616): S1 E7 871.3100000000001 (cells) against S2 H8
 871.3099999999998 (records, Sum beside Average); S2 H9 25408.25. Open questions:
-- which mixes switch Sum to records: Sum beside Count, CountNums, Max, Min, Product, StdDev or Var,
-  and Sum beside another Sum of a different field (t4135 A_sum, six Sum fields, follows the cells);
+- which mixes switch Sum to records: Sum beside Count, CountNums, Max, Min, Product, StdDev or Var.
+  Sum beside another Sum of a different field is known: t4135 A_sum (six Sum fields) follows the
+  cells, which the Sum-only rule covers;
 - whether a Sum-only pivot over one axis field sums its item cells or accumulates records (the T-4614
   S3 data cannot tell them apart);
-- the grand-grand total of a mixed 2-D pivot: S2 H9 fits the sum of the row totals and reverse-order
-  row-item accumulation, but not record order or row-major accumulation in display order; one data
+- the grand-grand total of a mixed 2-D pivot: S2 H9 fits, among others, the row totals added in
+  any order, reverse-order row-item accumulation and several cell and record orders, but not record
+  order or row-major accumulation in display order; one data
   point only;
 - the grand-grand total of a 2-D Var pivot: V1 E11 fits textbook Var over row-major (R, then K)
   display-order accumulation and textbook Var over per-row or per-column partial sums, among others;

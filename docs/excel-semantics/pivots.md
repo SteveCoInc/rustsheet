@@ -360,7 +360,7 @@ Rule:
   not used. So the same data can give a different Sum total once an Average field is added.
 - **Average (alone or beside Sum, 2-D).** A row or column total divides the same item-by-item
   accumulation by the count.
-- **Var and StdDev (alone, 1-D and 2-D).** Every Var cell and total is the textbook formula
+- **Var and StdDev, alone or together.** Every Var cell and total is the textbook formula
   (Σx² − (Σx)²/n) / (n − 1). Its two sums accumulate the records item by item in display item order,
   in record order within each item. StdDev is the square root of that Var.
 - **Product (alone, one axis field).** The total multiplies the records item by item in display
@@ -406,13 +406,19 @@ Evidence (excel-graph, 2026-11-06):
   - S5 (Sum alone over D2, 18 records) and S6 (Sum alone over D4, 36 records, six R items): cells in
     display order is the only candidate that fits every row total (S5 E5:E7, S6 E5:E10) and every
     column total in S6 (B11:D11). In S5's column totals, two other candidates also fit.
-  - Grand-grand total, Sum alone. S1 E8 is 25408.25, the sum of E5:E7 in display order. The sum of the
-    column totals would be 25408.249999999993, and the cells added row by row 25408.249999999996.
-    Record order would be 25408.250000000015, and row-major record accumulation 25408.25000000001.
-    S4 E8 is 25408.249999999993, the sum of S4's own row totals E5:E7. S5 E8 (14276.83) and S6 E11
-    (32198.6) also equal their sum of row totals.
-  - Grand-grand total, mixed. S2 H9 is 25408.25. That equals the sum of H6:H8 and reverse-row-item
-    record accumulation. It is not record order (25408.250000000015) or row-major accumulation in display
+  - Grand-grand total, Sum alone. S1 E8 is 25408.25, the sum of E5:E7 in display order. On its own,
+    S1 E8 fits many readings, among them the row totals added in any order and several cell and record
+    orders. It refutes the sum of the column totals (25408.249999999993), the cells added row by row
+    (25408.249999999996), record order (25408.250000000015) and row-major record accumulation
+    (25408.25000000001).
+  - S4 E8 is 25408.249999999993, the sum of S4's own row totals E5:E7 in display order. Of the
+    12 readings S1 E8 leaves standing, only that one gives 25408.249999999993 in S4. The others give
+    25408.25000000001, 25408.250000000007 or 25408.249999999996. S5 E8 (14276.83) and
+    S6 E11 (32198.6) also equal the sum of their row totals in display order. Of the candidates, only
+    "row totals in display order" fits all four pivots.
+  - Grand-grand total, mixed. S2 H9 is 25408.25. Among the readings that fit it are the sum of
+    H6:H8 (in any order), reverse-row-item record accumulation, and several cell and record orders.
+    It is not record order (25408.250000000015) or row-major accumulation in display
     order (25408.25000000001). Average's I9 is 941.0462962962963 = 25408.25 / 27 (S3 E8 too).
   - Cells: X/Z of D1 (three records) is 123.67999999999999 in S1 C6, S2 D7 and S4 B6, the record-order
     sum. Reverse order would give 123.68.
@@ -421,9 +427,11 @@ Evidence (excel-graph, 2026-11-06):
     reverse or ascending item order or in record or reverse record order, are refuted. Every V1 cell
     (B5:D10, two records each) fits the textbook formula.
   - Var's grand-grand total (V1 E11, 4337674.527019682) fits textbook Var over row-major (R, then K)
-    display-order accumulation, and a few other readings. Column-major display order gives
+    display-order accumulation. About 38 other readings also fit: textbook, n·Σx², two-pass and
+    Welford's update over many orders, and textbook over per-row or per-column partial sums.
+    Column-major display order gives
     4337674.5270196805.
-  - Var over one axis field: V3 (rows K) B8 is 4337674.52701968 and V4 (rows R) B8 is
+  - Var over one axis field: V3 (rows K) B8 is 4337674.52701968 and V4 (rows R) B11 is
     4337674.527019681. Each equals textbook Var accumulated item by item in its own field's display
     order. For V3 that is the only fitting candidate. The item cells V3 B5:B7 and V4 B5:B10 are
     textbook Var in record order. So the same 36 records give three different Var grand totals in V1,
@@ -447,9 +455,13 @@ Evidence (excel-graph, 2026-11-06):
     item order 29.599999999999998, and display item order 29.6.
   - S3 (Sum alone, K on columns): Grand Total 29.6 (D5). The sum of the item cells,
     11.200000000000001 + 18.4, is also 29.6, so S3 does not separate cells from records.
-  - P2 (D2, Product alone): Grand Total 15743.706264 (B6), display item order.
+  - P2 (D2, Product alone): Grand Total 15743.706264 (B6), display item order. Record order gives
+    15743.706264000002.
 - probes/t4589-pivot-total-order S1 (T-4589): seven aggregates over records A 0.2, B 0.7, A 3.3, B 1.1.
-  The Sum Grand Total is 5.300000000000001 (B7), display item order. The item cells would give 5.3.
+  - The Sum Grand Total is 5.300000000000001 (B7), display item order. The item cells would give 5.3,
+    and record order 5.299999999999999.
+  - The Var Grand Total is 1.8691666666666658 (F7), textbook Var in display item order. Record order
+    gives 1.8691666666666673, and two-pass 1.8691666666666664. StdDev (E7) is 1.3671747023210552.
 - probes/t4135-pivot-aggregates (T-4135). On the A_sum sheet every data field is a Sum. East's records
   in Dec are 0.3 (B), 0.2 (A) and 0.1 (A), with Kind on columns shown B, then A.
   - A_sum!S6 is 0.6000000000000001, the sum of East's cells (0.3 + 0.30000000000000004). Display item
