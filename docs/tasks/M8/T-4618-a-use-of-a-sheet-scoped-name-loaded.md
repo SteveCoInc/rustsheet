@@ -59,3 +59,14 @@ added through the API scoped to Last) to the new name (90), where the rule "A sh
   ten t4391-api-rebind-* probes left to T-4617, which this PR marks done. The rest: t4394-api-name-active-last S2!A1,
   S2!A3, Last!A1; t4394-api-name-active-s2 S2!A3, Last!A1; t4353-api-name-unqualified-ref S2!A3, Last!A1. 23 cases
   were added (138 cells). All pass but t4618-order-after-active-backward Q!A1 (T-4642). No regressions.
+
+## Landing notes
+- PR #3687, ready for review and not enqueued. Head: the commit that adds these notes, on top of 8cfdeb296 (`make
+  catch-up PR=3687`: merged main 78b6cd844 and re-recorded the baseline lists). CI was pending on 8cfdeb296 when the
+  session window closed (17:30 UTC); this push restarts it.
+- Reviewers: security and design APPROVE on 071e9fe; excel-fidelity APPROVE on 28720d3, re-run after the T-4391
+  merge. Every later commit is a merge of main or a baseline catch-up, plus these notes, so no reviewer needs to run
+  again. MINORs are in the PR's review table, noted there rather than pushed.
+- Next step: once CI is green on the head, `enable_pr_auto_merge` (SQUASH). If main has moved and the baseline lists
+  conflict again (they have three times today), run `make catch-up PR=3687` first, then wait for green and enqueue.
+- Do not "fix" t4618-order-after-active-backward Q!A1 here; it is a known failure owned by T-4642.
