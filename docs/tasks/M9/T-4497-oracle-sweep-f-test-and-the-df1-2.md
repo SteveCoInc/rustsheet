@@ -3,7 +3,7 @@ id: T-4497
 title: "Oracle sweep: F.TEST and the df1 = 2 F quantiles where their unswapped a = 1 tail has x between 4E-4 and 0.1, to place A1_EXPM1_MAX_X"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
