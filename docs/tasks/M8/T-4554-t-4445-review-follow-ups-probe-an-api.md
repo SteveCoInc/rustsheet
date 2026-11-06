@@ -3,7 +3,7 @@ id: T-4554
 title: "T-4445 review follow-ups: probe an API name body that uses a sheet-local name with a non-first sheet active; list the unprobed active-sheet choices in syntax.md; fix the stranded test comment and path"
 milestone: M8
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
