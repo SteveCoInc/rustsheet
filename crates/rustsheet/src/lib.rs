@@ -9,6 +9,7 @@ mod edit;
 mod error;
 mod pivot_read;
 mod refs;
+mod source;
 mod value;
 mod workbook;
 

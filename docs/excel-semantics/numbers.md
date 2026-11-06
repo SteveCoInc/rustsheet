@@ -399,6 +399,46 @@ Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the
 Implemented in: `x87_decimal_to_f64` in crates/rustsheet-engine/src/decimal_round.rs for ROUND and ROUNDDOWN (T-3931; kept digits below 1,000,000 and n = 1..15 only, the nearest double elsewhere; the number formats and INT keep the nearest double). Literals and number text: `parse_excel_number` in crates/rustsheet-engine/src/number_format.rs through `x87_text_to_f64` (T-3932, T-4077; the first 15 significant digits as written, any exponent, n = 1..15, the nearest double elsewhere). UNVERIFIED (no probe yet, T-4074): the readers that share `parse_excel_number` and were not probed for this conversion take it too: typed cell input (`parse_formatted.rs`, including percent text, where `4.91%` becomes the x87 read of 4.91 divided by 100), `"text"+0`, criteria operands, NUMBERVALUE (its `%` divisions too), AVERAGE's text arguments and DATEDIF's number text. A formula's number literal prints back (formulas are reparsed from their text) as text that reads to the same double: `=4910E-9` prints `4910e-9` and `=14550E-15` prints `14550e-15`, where the 15-digit text `4.91e-6` and `1.455e-11` would read one ulp off (`literal_text` in stringify/literals.rs); FORMULATEXT and xlsx export show that text, and how Excel prints such a literal is UNVERIFIED (T-4074).
 Tasks: T-3555, T-3658, T-3931, T-3932, T-3945, T-4077
 
+## Literals past n = 15 multiply by a table of 10^±16q (T-4467)
+Rule: number text and literals whose n (fraction digits less the exponent, after the 15-digit cut) is 16 or more read
+through two x87 power tables rather than as the nearest double. Write n = 16q + r with 0 <= r <= 15. Excel takes
+v = RN64(m × RN64(10^-r)), the n <= 15 model above. Then, if q <= 16, v = RN64(v × RN64(10^-16q)), one table entry.
+Past that (n >= 272), v = RN64(v × RN64(10^-16(q-16))) and then RN64(v × RN64(10^-256)). The result is stored to a
+double. A positive place of 16 or more (for example `=4E+126`, `=3.7E+47`) reads the same way with the positive powers
+10^r and 10^16q. Every table entry is 10^k rounded once to a 64-bit significand.
+- `=2.036E-77`, `=2036E-80` and `=20.36E-78` are all 2.0360000000000002E-77, one ulp above the nearest double
+  (probes/t4467-bessely-d32-refill E1:E3). So `BESSELY(2.036E-77,4)` is -1.7783214437962194E+308, the double model's
+  value at that x (t4458-bessely-tiny-x-cuts D32; engineering.md "BESSELY at a tiny x and a small order").
+- `=4E+126` is one ulp above 4E+126, and `=3.7E+47` one ulp below (Train A16, A67).
+- At n >= 272 the order matters: 10^-256 first misses 3 of Train's 17 cells there, and multiplying by the product of
+  the two entries misses 3 too.
+- Candidates ranked on Train only. Out of 200 cells, the nearest double gets 90, m × RN64(10^-n) 140, m / RN64(10^n)
+  128, binary or 1..15 + 2^k-times-16 tables 77 to 84 of the 100 literals, and one 10^-16q entry with the 10^-256
+  split 200. That last one is the model above, frozen before the hold-out was scored.
+- Literal and VALUE agree in every cell (columns A and B).
+- m is the digits as written, so trailing zeros change n = 16q + r and the read. `=2.036E-77`, `=2.0360E-77` and
+  `=2.03600E-77` are 2.0360000000000002E-77, while `=2.036000E-77` (m = 2036000, n = 83) is the nearest double
+  2.036E-77 (t4467-literal-large-exponent-sweep Zeros: 8 bases with 0 to 15-k trailing zeros, 100 literals, each as literal
+  and VALUE; the model fits 100, the nearest double 21).
+- Text longer than 15 digits is cut first, as at n <= 15, and the 15 kept digits go through the tables (sweep Long, 30
+  texts of 16 to 20 digits: the model fits 30, the nearest double of the full text 2; the nearest double of the cut
+  text also fits 30, so these cells confirm the cut, not the tables).
+Evidence: probes/t4467-literal-large-exponent (Train, 100 literals by seeded search, seed 4467001; Hold, 56, seed
+4467002; the split fixed in the case before scoring), excel-graph, 2026-11-06. The model fits Train 200/200 and Hold
+112/112 (nearest 62). Fresh sweep written after the freeze: probes/t4467-literal-large-exponent-fresh (85 literals,
+seed 4467003: 30 at n = 16..271, 25 at n >= 272, 20 with positive exponents, 10 controls), 170/170 (nearest 20), and
+probes/t4467-literal-large-exponent-sweep (seed 4467004): LogU, 120 literals log-uniform over the double range,
+240/240 (nearest 240 too: at random points the model is mostly the nearest double), plus the Zeros and Long sheets
+above. Fit lab split (decision 0188 R4.1, `fitlab/holdout.py`, applied to Train and Hold together, margin 5 points):
+the model is bit-exact at 225/225 train and 87/87 test cells, the nearest double at 103 and 49. Both are within 4 ulp
+and within 15 digits at every cell.
+Unprobed: a positive place of 1 to 15, which keeps the nearest double. A product past 10^±512 has no table entry
+and keeps the nearest double; no number Excel accepts gets there. Subnormal results are flushed as before.
+Status: VERIFIED (excel-graph) for literals and VALUE
+Implemented in: `x87_table_read` in crates/rustsheet-engine/src/x87_table_read.rs, through `x87_text_to_f64`
+(decimal_round.rs), so every reader of `parse_excel_number` takes it (numbers.md above lists them).
+Tasks: T-4467
+
 ## MOD is #NUM! for a huge quotient
 Rule: `MOD(n,d)` is `#NUM!` when `|n/d| >= 1.1259E+12` (exactly that decimal, not a power of two):
 `MOD(1125899999999,1)` = 0, `MOD(1125900000000,1)` = `#NUM!`. It depends only on the quotient, not on

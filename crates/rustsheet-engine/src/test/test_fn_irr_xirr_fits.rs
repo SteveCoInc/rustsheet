@@ -146,6 +146,19 @@ fn irr_is_div_zero_where_its_secant_cannot_evaluate_npv() {
 }
 
 #[test]
+fn irr_is_div_zero_on_a_flat_secant_after_a_far_step() {
+    // T-3347: the secant from 0.1 jumps far toward r = -1 (|NPV| past 3E+226), comes back, takes
+    // a zero step and goes flat (0/0): Excel is #DIV/0! (probes-numeric/
+    // t3347-irr-conventional-holdout P!A138; probes/t3406-irr-num-boundary P!A66). P!A65, the
+    // same 40-flow annuity whose run peaks at 1.6E+226, stays #NUM! in Excel and here.
+    assert_errors(&[
+        ("=IRR({-11890081760.62,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03,13.03})", "#DIV/0!"),
+        ("=IRR({-157216647.9,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1})", "#DIV/0!"),
+        ("=IRR({-48614255.03,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1})", "#NUM!"),
+    ]);
+}
+
+#[test]
 fn xirr_with_a_zero_first_value_and_a_negative_guess_is_num() {
     // probes/xirr-zero-first-bracket A6, A7, A11 (A6 has a root on the downward chain)
     assert_num_errors(&[

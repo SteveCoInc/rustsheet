@@ -26,6 +26,8 @@ SPEC-0034. The style table must be a prefix-stable extension of the source's, or
 ## Acceptance criteria
 - [ ] A cell given a new number format patches to an appended `xf` (and `numFmt`), and the other style records are
       unchanged (unit test).
+- [ ] Check SPEC-0034 D3.3's assumption that the importer keeps the source's `cellXfs` order (`import/styles.rs`),
+      and test that a style table which is not a prefix-stable extension falls back to regeneration.
 - [ ] Adding a formula cell drops calcChain consistently, and changing only values keeps it (unit tests).
 - [ ] `make check` green; reviewers approve.
 

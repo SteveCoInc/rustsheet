@@ -1288,9 +1288,17 @@ less that delimiter's, plus one, counted in UTF-16 units) is `#VALUE!`, whatever
 excepted, see above). `TEXTBEFORE("abcde","xyz",3)` and `-3` are `#N/A`, `4` and `-4` `#VALUE!`; `TEXTBEFORE("abcde",{"xyz","qq"},4)`
 is `#N/A`, `5` `#VALUE!`; `TEXTBEFORE("ab","xyz",1)` is `#VALUE!`; a number delimiter is its text, so `TEXTBEFORE("42ABC",1.005,-2)`,
 also from a cell, is `#VALUE!` (gen-m9 8d3588d8df0812df A313) but `-1` `#N/A`; `TEXTAFTER("😀b","😀😀",2)` is `#VALUE!` (probes/
-t2581-textsplit-textbefore A30-A50, excel-graph, 2026-10-24; T-2581). Unprobed: a delimiter whose case folding changes its UTF-16 length under
-match_mode 1 (ours measures the unfolded delimiter), and a delimiter that fits the text by UTF-8 bytes but not by UTF-16 positions
-(A50 is decided by ours' earlier every-delimiter-longer check). With a one-unit delimiter this is the text's length: `TEXTBEFORE("b","a",-2,1,1)`, `TEXTBEFORE("ab","a",3)` and
+t2581-textsplit-textbefore A30-A50, excel-graph, 2026-10-24; T-2581). Both this bound and the
+every-delimiter-longer check before it (`#VALUE!` with more than two arguments, `#N/A` with two) measure the text and each delimiter
+in UTF-16 units of the delimiter as written, never its case fold, under match_mode 1 too (probes/t4474-textbefore-utf16-bounds,
+excel-graph, 2026-11-06; T-4474). So `TEXTBEFORE("a","é",1)`, `TEXTBEFORE("ab","😀",1)` and `TEXTBEFORE("a",{"é","bb"},1)` are
+`#N/A` (B1, B5, B6; equal lengths), and `TEXTAFTER("a","é",1,0,0,"nf")` is `nf` (A10); `TEXTBEFORE("é","ab")` and
+`TEXTBEFORE("😀","abc")` are `#N/A` with two arguments and `#VALUE!` with three, also with an if_not_found (A2, B2, A3, B3, B10, C10),
+while `TEXTBEFORE("😀","ab",1)` is `#N/A` (B4: two units each). `TEXTBEFORE("éé","x",2)` is `#N/A` and `3` `#VALUE!`;
+`TEXTBEFORE("😀a","x",3)` and `-3` are `#N/A` and `4` `#VALUE!` (A11:A20). Under match_mode 1, `İ` (full
+fold two units) and `ß` (full fold `ss`) count one unit: `TEXTBEFORE("a","ß",1,1)` and `TEXTBEFORE("a","İ",1,1)` are `#N/A`, not the
+too-long `#VALUE!` (A43, A49), and `TEXTBEFORE("ab","ß",2,1)` is `#N/A` and `3` `#VALUE!`, as under match_mode 0 (A35:A42). TEXTSPLIT
+has neither check: `TEXTSPLIT("é","ab")` and `TEXTSPLIT("😀","abc")` are the text (A55:A58). With a one-unit delimiter this is the text's length: `TEXTBEFORE("b","a",-2,1,1)`, `TEXTBEFORE("ab","a",3)` and
 `TEXTBEFORE("ab","a",3,0,0,"nf")` are `#VALUE!`, while `TEXTBEFORE("ab","a",2)` is the usual `#N/A`. `TEXTAFTER("😀","a",2)` is `#N/A`
 and `TEXTAFTER("😀","a",3)` `#VALUE!` (two units), `TEXTAFTER("é","a",2)` `#VALUE!` (one). Gen-m7 shows it on `TEXTBEFORE("x~*","1",
 WORKDAY(..))` (611ce3bbfab27cef A336) and `TEXTBEFORE(..,"-",DATE(2060,10,19),0,0,6)` (b24ce74f08d3f91a A767).
@@ -1299,8 +1307,10 @@ are `#VALUE!` (`TEXTBEFORE("aBc","b",1,2)`; `TEXTBEFORE("abc","",2,123456789.123
 (`#N/A` for a case-different delimiter), 1.5 and TRUE are 1. A number or boolean if_not_found comes back as its text:
 `TEXTBEFORE("b","a",1,0,0,5)` is "5", `-2.5` is "-2.5", TRUE is "TRUE" (also gen-m7 ac67253061bba16a A776, A1345).
 An error `match_end` (5th argument) beats the `#VALUE!` of an out-of-range numeric match_mode: `TEXTAFTER("abc","a",1,-1,#N/A)` is `#N/A`, as are match_mode 2, 7, -2.5, "12" and "2.5" beside an error match_end (gen-m7/9f9357dbf7e17803 A85, A88, A157, A160, A286; gen-m7/b2139ff37d606cb4 A115, A118, A199, A202, A313, A316). A match_mode text that fails to coerce ("x", "abc", the empty string) is still `#VALUE!` beside an error match_end (9f9357dbf7e17803 A343, A346, A412; b2139ff37d606cb4 A373, A376, A439, A442), while a blank match_mode cell coerces to 0 and gives the match_end error (9f9357dbf7e17803 A589, A592). excel-graph 2026-11-04, T-3513. Implemented (T-4037): `around_options` reads match_end before range-checking match_mode.
-Evidence: probes/t2314-textbefore-instance-bound (excel-graph, 2026-10-22) and gen-m7 (excel-graph, 2026-10-21, T-2225).
-Ours: matches (`text_around_element`, `around_options` and `around_not_found` in functions/text/before_after.rs, T-2314). The probe's
+Evidence: probes/t2314-textbefore-instance-bound (excel-graph, 2026-10-22), probes/t4474-textbefore-utf16-bounds (excel-graph,
+2026-11-06, T-4474) and gen-m7 (excel-graph, 2026-10-21, T-2225).
+Ours: matches (`text_around_element`, `around_options` and `around_not_found` in functions/text/before_after.rs, T-2314; both
+length checks use its `units`, T-4474). The probe's
 `TEXTBEFORE("abc","b",1,-0.5)` is "a", not `#VALUE!`: flooring -0.5 would give the invalid -1 (A2), so match_mode is cut toward zero.
 match_end is read the same way: -0.0001 is 0, so `TEXTAFTER(LOWER("'a"),Data!A11:B12,1,1,<-0.0001>)`, where no delimiter is in the text,
 is `#N/A` (with match_end 1 the end of the text would match and give ""): gen-m7/2d9b48c6363e7a16 Calc!A660 (excel-graph, 2026-10-22); 0.5 is 0 too: `TEXTAFTER("1.5","-",-1,1,0.5)` is `#N/A`, gen-m9/b9a32ce9a1fd0d71 Calc!A142.

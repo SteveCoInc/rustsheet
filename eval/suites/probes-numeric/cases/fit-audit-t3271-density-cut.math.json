@@ -223,6 +223,11 @@
     "why": "the density where shape / x overflows",
     "f": "=GAMMA.DIST(1E-300,1E+9,1E-6,FALSE)"
    },
+   "A49": {
+    "t": "e",
+    "why": "the density where shape / x overflows",
+    "f": "=GAMMADIST(1E-300,1E+9,3,FALSE)"
+   },
    "A5": {
     "t": "n",
     "v": "0.0",
