@@ -90,7 +90,8 @@ LIMITS_SOURCE = "financial.md#annuity-and-db-argument-domains-at-their-limits"
 ISPMT_SOURCE = "financial.md#ispmts-operation-order"
 PDURATION_SOURCE = "financial.md#pdurations-domain"
 KINDS_SOURCE = "financial.md#m9-financial-argument-kinds-t-3184"
-EDGE_POOL_SOURCE = "financial.md#financial-edge-pool-smoke-check-t-2248"  # any non-zero type is the period's start
+# any non-zero type is the period's start
+EDGE_POOL_SOURCE = "financial.md#financial-edge-pool-smoke-check-t-2248"
 PERIOD_SOURCE = "financial.md#ipmt-and-ppmt-take-a-period-up-to-nper--1"
 
 LOG2_MAX = 1024.0  # P at or past 2^1024 is past the double range
@@ -403,11 +404,7 @@ def _annuity_definition(  # noqa: PLR0917 (the definition's parts, each named at
     """A definition whose last two parameters are the optional amount and type."""
     params = [Param(name, "real", Interval(), source=sources[0]) for name in names[:-2]]
     params.append(Param(names[-2], "real", Interval(), source=sources[0], optional=True))
-    params.append(
-        Param(
-            names[-1], "int", Interval(), source=EDGE_POOL_SOURCE, optional=True
-        )
-    )
+    params.append(Param(names[-1], "int", Interval(), source=EDGE_POOL_SOURCE, optional=True))
     return register(
         Definition(
             function=function,
