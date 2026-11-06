@@ -973,6 +973,7 @@ C	probes/near-zero-snap-name-bodies.case.json	7
 C	probes/near-zero-sum-forms.case.json	17
 C	probes/negative-date-sections-1900.case.json	23
 C	probes/negative-date-sections-1904.case.json	23
+C	probes/nested-legacy-atp-array-constant.case.json	8
 C	probes/networkdays-intl-early-holidays.case.json	88
 C	probes/networkdays-intl-holiday-forms.case.json	22
 C	probes/networkdays-intl-holiday-kinds-let.case.json	21
