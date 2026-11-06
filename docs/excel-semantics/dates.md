@@ -1402,9 +1402,9 @@ for a negative value the window is half as wide, about 1.2E-7. Measured edges: p
 `1-2.4E-7` does not (same at 5, 30000 and 32768); negative, `-1-(2^-23+1E-12)` and `-(2^-23+1E-12)` count as -1 and 0, while
 `-1-1.2E-7` and `-1.2E-7` floor (same at -5, -30000, -32767). The positive window is the one LEFT, RIGHT, REPLACE and
 INDEX use (`NEAR_INTEGER_TOLERANCE`, 2^-22+2^-33, text.md and lookup.md), which lies inside the measured (2^-22+1E-12, 2.4E-7);
-we take half of it for a negative value, inside (2^-23+1E-12, 1.2E-7). The exact constants inside those brackets are unprobed
-for TIME and DATE. The XMATCH and XLOOKUP modes, read by the same `near_integer_whole`, bracket both constants to a relative
-2^-14 (lookup.md "XMATCH and XLOOKUP floor a fractional mode", T-2656). Then an argument above 32767 is `#NUM!`, before the total is formed and whatever the hour. On
+we take half of it for a negative value, inside (2^-23+1E-12, 1.2E-7). T-4462 narrowed both to a relative 2^-14 (probes/t4462-time-date-near-integer-edge, excel-graph, 2026-11-06, 315 cells, every one matched by us): 
+TIME's hour (B), minute (C) and second (D) and DATE's year (E), month (F) and day (G) read `b-2^-22*(1+8*2^-14)` (= `NEAR_INTEGER_TOLERANCE`) as b for b = 1, 2, 3 and `b-2^-22*(1+9*2^-14)` as b-1 (rows 2-10, 11-19, 20-28);
+for a negative value `-(b+2^-23*(1+8*2^-14))` reads -b and `-(b+2^-23*(1+9*2^-14))` reads -b-1, for b = 1 and 0 (rows 29-37, 38-46). So the constants are the same as XMATCH's (lookup.md "XMATCH and XLOOKUP floor a fractional mode", T-2656), in every argument position. Then an argument above 32767 is `#NUM!`, before the total is formed and whatever the hour. On
 2026-10-21 an argument below -32768 was `#NUM!` too, so a minute of -32768 was legal and one of -32769 was not. Since 2026-11-03 such
 an argument wraps by 65536 instead (see the update below). A negative total is `#NUM!`; otherwise the value is `((h*3600+m*60+s)/86400) % 1` as in "TIME divides by 86400 first".
 Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number; write `-(2^-22)`.
