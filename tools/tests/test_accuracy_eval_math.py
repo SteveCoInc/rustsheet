@@ -14,6 +14,7 @@ from rustsheet_tools.accuracy import composite, eval_math
 from rustsheet_tools.accuracy.defs.cashflow import IRR, XIRR
 from rustsheet_tools.accuracy.defs.student_t import T_DIST, T_INV, cdf
 from rustsheet_tools.accuracy.eval_math import (
+    calls_any,
     case_math,
     check_suite,
     fit_args,
@@ -129,6 +130,38 @@ def test_write_suite_is_deterministic_and_removes_only_its_own_stale_sidecars(
     assert set(data["sheets"]["S"]) == {"A1"} and "s" not in data["sheets"]["S"]["A1"]
     assert not math_path(b_sidecar).exists()  # ours and now empty: removed
     assert math_path(c_sidecar).exists()  # not ours: kept
+
+
+def test_write_suite_with_functions_rewrites_only_the_cases_that_call_them(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # T-4483: a T.INV-only run leaves the T.DIST case's sidecar as it was, even a stale one.
+    t_dist = tmp_path / "a"
+    t_inv = tmp_path / "b"
+    for d in (t_dist, t_inv):
+        d.mkdir()
+    a_case, a_sidecar = _case(t_dist, {"A1": "=T.DIST(1.5,3,TRUE)"}, {"A1": {"t": "n", "v": 0.9}})
+    b_case, b_sidecar = _case(t_inv, {"A1": "=T.INV(0.9,3)"}, {"A1": {"t": "n", "v": 1.6}})
+    stale = b'{"format": "rustsheet-math/v1", "source": {"generator": "rustsheet-accuracy"}, "sheets": {}}'
+    math_path(a_sidecar).write_bytes(stale)
+    entries = [
+        {"id": f"t/{p.parent.name}", "path": str(p), "sidecar": str(s)}
+        for p, s in ((a_case, a_sidecar), (b_case, b_sidecar))
+    ]
+    monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)
+    results = write_suite("t", workers=1, functions=["T.INV"])
+    assert [m.case for m in results] == ["t/b"]
+    assert math_path(a_sidecar).read_bytes() == stale  # not selected: untouched
+    assert set(json.loads(math_path(b_sidecar).read_bytes())["sheets"]["S"]) == {"A1"}
+
+
+def test_calls_any_matches_whole_function_names(tmp_path: Path) -> None:
+    case = tmp_path / "c.case.json"
+    case.write_text('{"x": "=T.INV.2T(0.1,3)+NORM.S.INV(0.2)"}')
+    assert calls_any(case, ["T.INV.2T"])
+    assert calls_any(case, ["norm.s.inv"])  # case-insensitive, as Excel names are
+    assert not calls_any(case, ["T.INV"])  # a prefix of T.INV.2T, not a call of T.INV
+    assert not calls_any(case, ["S.INV"])  # the tail of NORM.S.INV
 
 
 def test_an_mpmath_value_error_drops_the_point_but_a_domain_error_does_not() -> None:
