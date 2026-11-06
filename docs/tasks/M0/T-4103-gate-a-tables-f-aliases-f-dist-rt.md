@@ -3,7 +3,7 @@ id: T-4103
 title: "Gate A tables, F aliases: F.DIST.RT, F.INV.RT, FDIST and FINV"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
