@@ -3,7 +3,7 @@ id: T-4621
 title: "Probe which sheet's definition a bare name binds to in a sheet-scoped API-added name's body: its own sheet or the first sheet by name"
 milestone: M8
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
