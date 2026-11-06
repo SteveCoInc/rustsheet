@@ -270,8 +270,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         .collect();
     let mut sheets = Vec::new();
     let mut tables = Vec::new();
-    let mut pivots = Vec::new();
-    let mut pivot_parts = std::collections::HashSet::new();
+    let mut pivot_reader = pivots::PivotReader::new();
     for (name, rid) in sheet_list {
         let Some(target) = rels.get(&rid) else {
             continue;
@@ -287,7 +286,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         };
         let cells = parse_sheet(&xml, &path, &shared, &rich_errors, date_system)?;
         read_sheet_tables(&mut zip, &path, &name, &mut tables)?;
-        read_sheet_pivots(&mut zip, &path, &name, &mut pivot_parts, &mut pivots)?;
+        read_sheet_pivots(&mut zip, &path, &name, &mut pivot_reader)?;
         sheets.push(SheetSnapshot { name, cells });
     }
     Ok(WorkbookSnapshot {
@@ -298,7 +297,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         sheets,
         defined_names,
         tables,
-        pivots,
+        pivots: pivot_reader.pivots,
     })
 }
 

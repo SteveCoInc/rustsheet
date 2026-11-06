@@ -151,11 +151,15 @@ def pivot_areas(snap: dict[str, Any]) -> list[dict[str, Any]]:
     """Every pivot Excel saved in `snap` (`rustsheet-eval snapshot`'s `pivots`, T-4123) with `cells`:
     sheet cell A1 -> value for each cell of its area (`pivot_area`), `{"t": "empty"}` for a blank
     one, so an oracle sidecar records Excel's whole render. A pivot whose area passes
-    `MAX_PIVOT_AREA_CELLS` is left out."""
+    `MAX_PIVOT_AREA_CELLS`, or whose location does not parse, is left out."""
     by_sheet = {s["name"]: s["cells"] for s in snap["sheets"]}
     out = []
     for pivot in snap.get("pivots", []):
-        top, left, bottom, right = pivot_area(pivot)
+        try:
+            top, left, bottom, right = pivot_area(pivot)
+        except ValueError as e:  # an untrusted location: skip this pivot, not the fill
+            print(f"PIVOT {pivot.get('sheet')}!{pivot.get('name')}: {e}, not captured", file=sys.stderr)
+            continue
         if (bottom - top + 1) * (right - left + 1) > MAX_PIVOT_AREA_CELLS:
             print(f"PIVOT {pivot['sheet']}!{pivot['name']}: area too large, not captured", file=sys.stderr)
             continue

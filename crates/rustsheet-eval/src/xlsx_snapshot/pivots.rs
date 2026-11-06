@@ -7,14 +7,17 @@
 //! themselves are ordinary sheet cells, already in the snapshot.
 //!
 //! Like the rest of the snapshot this reads untrusted packages: every part goes through the
-//! size-capped reader, the lists stop at the engine's pivot limits, and a pivot whose parts are
-//! missing or malformed is skipped, never an error for the workbook.
+//! size-capped reader; pivot and cache parts are read once each; the workbook's pivots stop at the
+//! importer's `MAX_PIVOTS`, and their layout lines, indices and group items share one budget of the
+//! engine's `MAX_RECORD_VALUES`. A pivot whose parts are missing, malformed or past the budget is
+//! skipped, never an error for the workbook.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
-use rustsheet_engine::pivot::{MAX_FIELDS, MAX_ITEMS};
+use rustsheet_engine::pivot::{MAX_FIELDS, MAX_RECORD_VALUES};
+use rustsheet_xlsx::import::MAX_PIVOTS;
 use serde::{Deserialize, Serialize};
 
 use super::{attr, read_part, relationships, resolve_target, SnapshotError, Zip};
@@ -77,14 +80,49 @@ pub struct PivotDef {
     pub cache_fields: Vec<PivotCacheField>,
 }
 
-/// Appends the pivots of the sheet part at `sheet_path`, found through its relationships, except
-/// parts already in `seen`. A pivot whose part cannot be read or parsed is skipped.
+/// What reading a workbook's pivots has used so far: one budget for the whole workbook, so a
+/// crafted file cannot multiply the work by repeating parts or pivots (directive 5).
+pub(super) struct PivotReader {
+    /// Pivot parts already read, by resolved path.
+    seen: HashSet<String>,
+    /// Cache parts already parsed, by resolved path (`None`: missing, malformed or over budget).
+    caches: HashMap<String, Option<Vec<PivotCacheField>>>,
+    /// Layout lines, item indices and group items still allowed, over every pivot and copy.
+    values_left: usize,
+    /// The pivots read, at most `MAX_PIVOTS`, the importer's own workbook cap.
+    pub(super) pivots: Vec<PivotDef>,
+}
+
+impl PivotReader {
+    pub(super) fn new() -> Self {
+        Self {
+            seen: HashSet::new(),
+            caches: HashMap::new(),
+            values_left: MAX_RECORD_VALUES,
+            pivots: Vec::new(),
+        }
+    }
+}
+
+/// Takes `n` from `budget`, or `None` (leaving it at 0) when it has fewer.
+fn spend(budget: &mut usize, n: usize) -> Option<()> {
+    if let Some(left) = budget.checked_sub(n) {
+        *budget = left;
+        Some(())
+    } else {
+        *budget = 0;
+        None
+    }
+}
+
+/// Reads the pivots of the sheet part at `sheet_path`, found through its relationships, into
+/// `reader`. A part already read, a pivot whose parts cannot be read or parsed, and anything past
+/// the workbook budget are skipped.
 pub(super) fn read_sheet_pivots(
     zip: &mut Zip,
     sheet_path: &str,
     sheet: &str,
-    seen: &mut HashSet<String>,
-    out: &mut Vec<PivotDef>,
+    reader: &mut PivotReader,
 ) -> Result<(), SnapshotError> {
     let (dir, file) = sheet_path.rsplit_once('/').unwrap_or(("", sheet_path));
     let Some(rels) = read_part(zip, &format!("{dir}/_rels/{file}.rels"))? else {
@@ -93,25 +131,63 @@ pub(super) fn read_sheet_pivots(
     let Ok(rels) = relationships(&rels, file) else {
         return Ok(());
     };
-    // A part listed twice, by one sheet or by several, is read once: repeated relationships must
-    // not multiply the work. `seen` spans the workbook.
     for rel in rels.iter().filter(|r| r.kind.ends_with("/pivotTable")) {
+        if reader.pivots.len() >= MAX_PIVOTS {
+            break;
+        }
         let path = resolve_target(dir, &rel.target);
-        if !seen.insert(path.clone()) {
+        if !reader.seen.insert(path.clone()) {
             continue;
         }
         let Ok(Some(xml)) = read_part(zip, &path) else {
             continue;
         };
-        let Some(mut pivot) = parse_pivot(&xml, sheet) else {
+        let Some(mut pivot) = parse_pivot(&xml, sheet, &mut reader.values_left) else {
             continue;
         };
-        pivot.cache_fields = read_cache_fields(zip, &path).unwrap_or_default();
-        out.push(pivot);
+        let fields = cache_fields(zip, &path, reader);
+        let copies: usize = fields.iter().map(|f| f.group_items.len() + 1).sum();
+        if spend(&mut reader.values_left, copies).is_none() {
+            continue;
+        }
+        pivot.cache_fields = fields;
+        reader.pivots.push(pivot);
     }
     Ok(())
 }
 
+/// The fields of the cache the pivot part at `pivot_path` uses, parsed once per cache part.
+fn cache_fields(zip: &mut Zip, pivot_path: &str, reader: &mut PivotReader) -> Vec<PivotCacheField> {
+    let Some(path) = cache_path(zip, pivot_path) else {
+        return Vec::new();
+    };
+    if !reader.caches.contains_key(&path) {
+        let parsed = read_part(zip, &path)
+            .ok()
+            .flatten()
+            .and_then(|xml| parse_cache_fields(&xml, &mut reader.values_left));
+        reader.caches.insert(path.clone(), parsed);
+    }
+    reader
+        .caches
+        .get(&path)
+        .cloned()
+        .flatten()
+        .unwrap_or_default()
+}
+
+/// The resolved path of the cache definition the pivot part at `pivot_path` relates to.
+fn cache_path(zip: &mut Zip, pivot_path: &str) -> Option<String> {
+    let (dir, file) = pivot_path.rsplit_once('/').unwrap_or(("", pivot_path));
+    let rels = read_part(zip, &format!("{dir}/_rels/{file}.rels")).ok()??;
+    let rel = relationships(&rels, file)
+        .ok()?
+        .into_iter()
+        .find(|r| r.kind.ends_with("/pivotCacheDefinition"))?;
+    Some(resolve_target(dir, &rel.target))
+}
+
+/// An attribute as a `u32`, 0 when absent or not a number.
 fn number(e: &quick_xml::events::BytesStart<'_>, key: &str) -> u32 {
     attr(e, key).and_then(|v| v.parse().ok()).unwrap_or(0)
 }
@@ -135,11 +211,10 @@ fn lines_mut(pivot: &mut PivotDef, within: In) -> &mut Vec<PivotLine> {
 
 /// The pivot definition, or `None` when the part is malformed, has no `<location>`, or lists more
 /// lines or indices than the engine's limits allow.
-fn parse_pivot(xml: &str, sheet: &str) -> Option<PivotDef> {
+fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
     let mut reader = Reader::from_str(xml);
     let mut pivot: Option<PivotDef> = None;
     let mut within = In::Other;
-    let mut indices = 0usize;
     loop {
         let event = reader.read_event().ok()?;
         match &event {
@@ -174,9 +249,7 @@ fn parse_pivot(xml: &str, sheet: &str) -> Option<PivotDef> {
                     "colItems" if !empty => within = In::Cols,
                     "i" if within != In::Other => {
                         let lines = lines_mut(pivot.as_mut()?, within);
-                        if lines.len() >= MAX_ITEMS {
-                            return None;
-                        }
+                        spend(budget, 1)?;
                         lines.push(PivotLine {
                             t: attr(e, "t"),
                             r: number(e, "r"),
@@ -186,10 +259,7 @@ fn parse_pivot(xml: &str, sheet: &str) -> Option<PivotDef> {
                     }
                     "x" if within != In::Other => {
                         let lines = lines_mut(pivot.as_mut()?, within);
-                        indices += 1;
-                        if indices > MAX_ITEMS * 4 {
-                            return None;
-                        }
+                        spend(budget, 1)?;
                         lines.last_mut()?.x.push(number(e, "v"));
                     }
                     _ => {}
@@ -205,24 +275,10 @@ fn parse_pivot(xml: &str, sheet: &str) -> Option<PivotDef> {
     pivot.filter(|p| !p.location.is_empty())
 }
 
-/// The fields of the cache the pivot part at `pivot_path` uses, through its relationships; `None`
-/// when the cache part is missing or malformed.
-fn read_cache_fields(zip: &mut Zip, pivot_path: &str) -> Option<Vec<PivotCacheField>> {
-    let (dir, file) = pivot_path.rsplit_once('/').unwrap_or(("", pivot_path));
-    let rels = read_part(zip, &format!("{dir}/_rels/{file}.rels")).ok()??;
-    let rel = relationships(&rels, file)
-        .ok()?
-        .into_iter()
-        .find(|r| r.kind.ends_with("/pivotCacheDefinition"))?;
-    let xml = read_part(zip, &resolve_target(dir, &rel.target)).ok()??;
-    parse_cache_fields(&xml)
-}
-
-fn parse_cache_fields(xml: &str) -> Option<Vec<PivotCacheField>> {
+fn parse_cache_fields(xml: &str, budget: &mut usize) -> Option<Vec<PivotCacheField>> {
     let mut reader = Reader::from_str(xml);
     let mut fields: Vec<PivotCacheField> = Vec::new();
     let mut in_group = false;
-    let mut items = 0usize;
     loop {
         let event = reader.read_event().ok()?;
         match &event {
@@ -240,10 +296,7 @@ fn parse_cache_fields(xml: &str) -> Option<Vec<PivotCacheField>> {
                     }
                     "groupItems" if !empty => in_group = true,
                     tag if in_group => {
-                        items += 1;
-                        if items > MAX_ITEMS {
-                            return None;
-                        }
+                        spend(budget, 1)?;
                         let v = attr(e, "v");
                         let value = match tag {
                             "s" | "d" => Value::Text(v.unwrap_or_default()),
@@ -251,7 +304,7 @@ fn parse_cache_fields(xml: &str) -> Option<Vec<PivotCacheField>> {
                                 v.and_then(|s| s.parse::<f64>().ok())
                                     .filter(|f| f.is_finite())?,
                             ),
-                            "b" => Value::Bool(v.as_deref() == Some("1")),
+                            "b" => Value::Bool(matches!(v.as_deref(), Some("1" | "true"))),
                             "e" => Value::Error(v.unwrap_or_default()),
                             "m" => Value::Empty,
                             _ => continue,
@@ -282,7 +335,7 @@ mod tests {
               <i t="default"><x/></i><i t="grand"><x/></i></rowItems>
             <colItems count="2"><i><x/></i><i i="1"><x v="1"/></i></colItems>
             </pivotTableDefinition>"#;
-        let p = parse_pivot(xml, "P").expect("parses");
+        let p = parse_pivot(xml, "P", &mut usize::MAX.clone()).expect("parses");
         assert_eq!(p.location, "A3:E12");
         assert_eq!((p.first_data_row, p.first_data_col), (2, 2));
         assert_eq!(p.row_items.len(), 4);
@@ -295,9 +348,15 @@ mod tests {
 
     #[test]
     fn malformed_or_location_less_pivots_are_skipped() {
-        assert!(parse_pivot("<pivotTableDefinition name='x'><rowItems>", "P").is_none());
-        assert!(parse_pivot("<pivotTableDefinition name='x'/>", "P").is_none());
-        assert!(parse_pivot("<<<", "P").is_none());
+        let mut budget = usize::MAX;
+        assert!(parse_pivot(
+            "<pivotTableDefinition name='x'><rowItems>",
+            "P",
+            &mut budget
+        )
+        .is_none());
+        assert!(parse_pivot("<pivotTableDefinition name='x'/>", "P", &mut budget).is_none());
+        assert!(parse_pivot("<<<", "P", &mut budget).is_none());
     }
 
     #[test]
@@ -311,9 +370,9 @@ mod tests {
               <groupItems count="1"><n v="inf"/></groupItems>
             </fieldGroup></cacheField></cacheFields></pivotCacheDefinition>"#;
         // A non-finite number item makes the cache unreadable (the snapshot is JSON).
-        assert!(parse_cache_fields(xml).is_none());
+        assert!(parse_cache_fields(xml, &mut usize::MAX.clone()).is_none());
         let finite = xml.replace(r#"<n v="inf"/>"#, r#"<n v="1"/>"#);
-        let fields = parse_cache_fields(&finite).expect("parses");
+        let fields = parse_cache_fields(&finite, &mut usize::MAX.clone()).expect("parses");
         assert_eq!(fields.len(), 3);
         assert!(fields[0].group_items.is_empty());
         assert_eq!(
@@ -323,6 +382,76 @@ mod tests {
                 Value::Text("45000-45100".into()),
                 Value::Number(3.0)
             ]
+        );
+    }
+
+    #[test]
+    fn the_workbook_budget_stops_lines_indices_and_group_items() {
+        let xml = r#"<pivotTableDefinition name="p"><location ref="A1:B3"/>
+            <rowItems><i><x/></i><i><x v="1"/></i></rowItems></pivotTableDefinition>"#;
+        // Two lines and two indices cost four.
+        let mut budget = 4;
+        assert!(parse_pivot(xml, "P", &mut budget).is_some());
+        assert_eq!(budget, 0);
+        let mut short = 3;
+        assert!(parse_pivot(xml, "P", &mut short).is_none());
+        assert_eq!(short, 0);
+        let cache = r#"<pivotCacheDefinition><cacheField name="n"><fieldGroup><groupItems>
+            <s v="a"/><s v="b"/></groupItems></fieldGroup></cacheField></pivotCacheDefinition>"#;
+        assert!(parse_cache_fields(cache, &mut 1).is_none());
+        assert!(parse_cache_fields(cache, &mut 2).is_some());
+    }
+
+    #[test]
+    fn many_pivots_sharing_one_cache_read_it_once_and_stop_at_max_pivots() {
+        use std::fmt::Write as _;
+        use std::io::{Cursor, Write as _};
+        let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let opts = zip::write::SimpleFileOptions::default();
+        let mut add = |name: &str, body: &str| {
+            w.start_file(name, opts).expect("start");
+            w.write_all(body.as_bytes()).expect("write");
+        };
+        let n = MAX_PIVOTS + 5;
+        let mut rels = String::from("<Relationships>");
+        for k in 0..n {
+            write!(
+                rels,
+                r#"<Relationship Id="r{k}" Type="x/pivotTable" Target="../pivotTables/p{k}.xml"/>"#
+            )
+            .expect("formats");
+        }
+        // One part listed twice too.
+        rels.push_str(
+            r#"<Relationship Id="dup" Type="x/pivotTable" Target="../pivotTables/p0.xml"/>"#,
+        );
+        rels.push_str("</Relationships>");
+        add("xl/worksheets/_rels/sheet1.xml.rels", &rels);
+        for k in 0..n {
+            add(
+                &format!("xl/pivotTables/p{k}.xml"),
+                &format!(
+                    r#"<pivotTableDefinition name="p{k}"><location ref="A1:B2"/></pivotTableDefinition>"#
+                ),
+            );
+            add(
+                &format!("xl/pivotTables/_rels/p{k}.xml.rels"),
+                r#"<Relationships><Relationship Id="c" Type="x/pivotCacheDefinition" Target="../pivotCache/c.xml"/></Relationships>"#,
+            );
+        }
+        add(
+            "xl/pivotCache/c.xml",
+            r#"<pivotCacheDefinition><cacheField name="Day"><fieldGroup><groupItems><s v="g"/></groupItems></fieldGroup></cacheField></pivotCacheDefinition>"#,
+        );
+        let bytes = w.finish().expect("finish").into_inner();
+        let mut zip = Zip::new(&bytes).expect("zip");
+        let mut reader = PivotReader::new();
+        read_sheet_pivots(&mut zip, "xl/worksheets/sheet1.xml", "S", &mut reader).expect("reads");
+        assert_eq!(reader.pivots.len(), MAX_PIVOTS);
+        assert_eq!(reader.caches.len(), 1);
+        assert_eq!(
+            reader.pivots[7].cache_fields[0].group_items,
+            vec![Value::Text("g".into())]
         );
     }
 }

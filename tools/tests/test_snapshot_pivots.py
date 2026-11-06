@@ -60,5 +60,11 @@ def test_areas_hold_every_cell_with_blanks_marked_empty() -> None:
 def test_no_pivots_and_oversized_areas_capture_nothing() -> None:
     assert pivot_areas({"sheets": []}) == []
     side = int(MAX_PIVOT_AREA_CELLS**0.5) + 2
-    huge = _pivot(f"A1:{chr(ord('A') + 0)}{side * side}")
+    huge = _pivot(f"A1:A{side * side}")
     assert pivot_areas({"sheets": [{"name": "P", "cells": {}}], "pivots": [huge]}) == []
+
+
+def test_a_malformed_location_skips_that_pivot_only() -> None:
+    snap = {"sheets": [{"name": "P", "cells": {}}], "pivots": [_pivot("nonsense"), _pivot("A1:A1")]}
+    (kept,) = pivot_areas(snap)
+    assert kept["location"] == "A1:A1"

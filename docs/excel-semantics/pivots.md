@@ -92,8 +92,8 @@ Rule: in a tabular pivot (`outline="0"`, `compact="0"` on the table and on both 
 cell of the first row field reads `Row Labels`. It reads the field's own name (`Region`) when the data
 field's `pivotField` (Sales, which is on no axis) carries `compact="0"`; its `outline` makes no
 difference. The second row field's header is its name (`Product`) in every variant.
-Evidence: probes/t4123-pivot-capture A4 (excel-graph, 2026-11-06, T-4123). The five sheets differ
-only in the Sales field:
+Evidence: probes/t4123-pivot-capture A4 (excel-graph, 2026-11-06, T-4123). The four tabular sheets
+differ only in the Sales field:
 - T (no attributes): `Row Labels`;
 - T2 (`compact="0" outline="0"`): `Region`;
 - T3 (`compact="0"` only): `Region`;
