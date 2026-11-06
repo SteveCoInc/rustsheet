@@ -941,14 +941,15 @@ Tasks: T-3410
 Rule: Excel's caps on its IRR secant, XIRR's bracket walk and XIRR's bisection are unknown: no probe
 reaches them. The engine bounds each loop itself, so an untrusted workbook cannot make one cell iterate
 without end (CLAUDE.md directive 5). XIRR walks at most 100 points per chain and bisects at most 200
-steps. IRR's secant takes at most 50 steps per run, with one retry from 0.1, and then the fallback's Newton search
+steps. IRR's secant takes at most 50 steps per run (200 on the flows where Excel's longer runs are evidenced, T-3408:
+"IRR's secant runs longer than 50 steps"), with one retry from 0.1, and then the fallback's Newton search
 at most 50 steps ("IRR's fallback when the secant fails"; Excel's own cap there lies between 29 and 119). A run that reaches its
 cap gives `#NUM!` (or, for IRR, moves on to the next stage). Every oracle cell of the fit sets finishes
 well inside the caps.
 Evidence: none for Excel; this is a resource limit, not an Excel observation. Probing Excel's caps, the
 fallback path and overflowing trial rates is T-1686.
 Status: DEVIATION (decision 0014)
-Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`MAX_STEPS`),
+Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`irr_secant_steps`),
 `irr_fallback` (`IRR_FALLBACK_STEPS`) (functions/financial/financial_util.rs)
 Tasks: T-0916, T-1686
 
@@ -4637,7 +4638,8 @@ secant's one-ulp-of-v resolution.
 Evidence: the two cases above (salvaged from draft #2529); docs/research/t3347_irr_conventional_sweep.py builds them
 and the roots; docs/research/t3347_irr_holdout_score.py scores the hold-out.
 Ours (2026-11-04): `#NUM!` against Excel's number on the 19 probe cells and 23 of the 25 sweep cells listed in T-3347;
-sweep A33 and A82 return a number off from about the 10th to 12th significant digit.
+sweep A33 and A82 return a number off from about the 10th to 12th significant digit. Since T-3408's 200-step secant
+cap, probe A10 and A11 and sweep A38 and A88 return Excel's value (their runs from 0.1 stop at steps 86 to 196).
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED
 Tasks: T-3347, T-3406, T-3408
 
@@ -4699,14 +4701,55 @@ Evidence: probes/t4027-irr-annuity-scale-guess (inputs and 50-digit roots in its
 docs/research/t4027_irr_annuity_probe.py; the engine's predictions before the fill in docs/research/t4027/predictions.md).
 The guess sweep and the caps were run on a scratch build of the engine (not committed).
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
-Ours: `#NUM!` on 35 of the 68 cells, all where Excel returns the root (A1-A4, A7-A10, A13-A16, A19-A22, A25-A28, A34,
-A35, A43-A46, A49-A51, A54-A56, A59-A61); every returned value matches.
+Ours: `#NUM!` on 33 of the 68 cells, all where Excel returns the root (A1-A4, A7-A10, A13-A16, A19-A22, A25-A28,
+A43-A46, A49-A51, A54-A56, A59-A61); every returned value matches. A34 and A35 (guess -0.1) match Excel's digits since
+T-3408's longer secant run ("IRR's secant runs longer than 50 steps" below).
 Tasks: T-4027
 
-## IRR's secant runs longer than 50 steps, but no step cap is Excel's rule
-Rule: unknown. Excel's IRR secant (from the guess, then the retry from 0.1) finishes runs longer than the engine's
-50-step cap, but no single cap on the run separates Excel's returns from its errors, so the cap is not the mechanism
-(or not the only one).
+## IRR's secant runs longer than 50 steps: up to 200 always finish, and past that the step count does not decide
+Rule (T-3408, 2026-11-06): an IRR secant run in Excel (from the guess, then the retry from 0.1) returns its own stop
+iterate after 51 to 200 steps. Past 200 steps, Excel's outcome is not a clean function of the step count, so no cap is
+Excel's rule. A run that reaches its stop only by a stalled zero step (d2 = d1 with |NPV| above 1e-7, the stop T-3120
+fitted on short runs) returns up to its 41st step and is `#NUM!` from its 70th. That stall evidence is shown only on
+flow sets outside the cap's range below.
+- Evidence files: an engine replay of every IRR literal cell with an oracle value (3,233 cells of eval/suites and
+  Gate A), each cell with its fit lab side, in docs/research/t3408/:
+  - long_runs.tsv: runs of 51..300 steps, with whether run and retry give the same bits;
+  - cap_runs.tsv: the engine's result at each candidate cap;
+  - stalls.tsv: every stalled stop.
+
+  `python3 -I docs/research/t3408/bounds.py docs/research/t3408` prints all of the counts below.
+- All 83 runs that reach the residual stop at their 51st..200th step are Excel's value bit for bit. Examples:
+  t3411-irr-r4-fresh A53 at the 90th step, and t3411-irr-r4-fresh-3 A53 and t3478-irr-r4-wide A221 at the 200th.
+- Past 200 steps the outcomes interleave:
+  - Excel returns the run's own value after 241, 256, 281 and 291 steps (t3411-irr-r4-fresh A2,
+    t2927-irr-fallback-sweep A97, t3411-irr-r4-fresh-4 A63, t3411-irr-r4-fresh A70);
+  - it returns the retry's value after 208 to 287 steps (t3411-irr-r4-fresh-4 A70 at 208, t3411-irr-r4-fresh A55 at
+    215, t3411-irr-r4-fresh-2 A63 at 217, up to t3411-irr-r4-fresh-2 A57 at 287).
+- The engine's cap of 200 is chosen by score, not taken from Excel. Over the 87 train cells whose result depends on
+  the cap, it matches Excel on 64 for any cap from 200 to 216, 62 at 241 and 61 at 291. 200 is the low end of that
+  plateau.
+- Stalled stops: Excel returns them up to the 41st step (t3478-irr-r4-wide A260). It is `#NUM!` on all 6 from the 70th
+  to the 189th step:
+  - probes/irr-guess-edges-2 A25, A26, A27 (70th, 74th, 125th step; 3 and 4 flows, |c| 1E+28 to 1E+45);
+  - Gate A r4-T-3411 A228 (129th; 63 flows) and A215 (132nd; 164 flows);
+  - t3478-irr-r4-wide A227 (189th; |c| 4.6E+17).
+
+  These include the cells that refuted a plain cap below. All six lie outside the range the engine gives the 200-step
+  cap (6..54 flows, |c| up to 2.2E+8).
+- Fresh sweep (decision 0188 R4.2), drawn after the model was frozen: probes-numeric/t3408-irr-r4-fresh (150 series
+  of long runs, seed "T-3408/r4-fresh" of docs/research/t3411/gen_sweep.py, excel-graph 2026-11-06).
+  - With the 200-step cap 115 of 150 cells pass, against 76 with 50, and none moves away.
+  - Its 31 cells outside the Gate A envelope are `#NUM!` where Excel returns a root (T-3548's class).
+  - A2, A13, A31 and A48 keep main's retry digits: their guesses or flows lie outside the narrowed range (decision
+    0320).
+  - 11 of those 31 are on 55..148 flows, outside the range the engine applies the cap on, so Excel may finish long
+    runs on longer series too.
+- Not shown:
+  - what decides Excel's outcome past 200 steps;
+  - what Excel does at a stalled stop past the 41st step on flows inside the cap's range (no cell has one);
+  - where in 42..70 its stall bound is.
+The earlier, partial picture (kept for its evidence):
 - Runs of 51 to 136 steps return Excel's digits bit for bit in an engine-faithful replica (the engine's twice-rounded
   operators): probes-numeric/t3347-irr-conventional-holdout A23, A57, A50, A47 and A56 (51 to 75 steps) and
   probes/t3406-irr-num-boundary A26 and A5 (118, 136); the level annuity `IRR({-72.25,1,...,1})` (20 flows of 1) is
@@ -4742,9 +4785,13 @@ Evidence: probes-numeric/t3411-irr-r4-fresh and t3411-irr-r4-fresh-2 (excel-grap
 50-digit roots in their `.math.tsv`, docs/research/t3411/gen_sweep.py), plus the cells named above. The replica behind
 the step counts was scratch code and is not committed.
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
-Ours: `irr_secant` keeps its 50-step cap ("The IRR and XIRR solver caps"); a 213-step cap was tried (T-3806) and dropped
-because it loses A227.
-Tasks: T-3411, T-3806 (dropped)
+Ours: `irr_secant` takes up to 200 steps (`IRR_LONG_RUN_STEPS`, FITTED, decision 0320) on 6..54 flows with the largest
+|c| in 5.6E-9..2.2E+8 and a guess in -0.99934..9.81E+7 (`IRR_LONG_RUN_RANGE`, the range of the returning train runs
+whose run and retry differ; the cap is a train-score plateau point, not Excel's), 50
+elsewhere; a stalled zero step stops a run only within its first 50 steps (the old cap, inside the 41..69 bracket, not
+fitted; T-3408). Earlier, a 213-step cap without the stall limit was tried
+(T-3806) and dropped because it loses A227, and a 185-step one (T-3548) because it loses Gate A A228.
+Tasks: T-3411, T-3806 (dropped), T-3548, T-3408
 
 ## IRR's returns where the secant fails are Newton iterates on P(v) from v = 0, past the 1e-7 stop
 Rule (partial): where both runs of the engine's secant fail and Excel returns a number, Excel's double is often

@@ -5096,8 +5096,6 @@ F	probes/t3252-gamma-prefactor-window.case.json	Calc!A92
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A93
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A94
 F	probes/t3312-xirr-xnpv-inner-calls.case.json	Calc!A30
-F	probes/t3347-irr-conventional-num.case.json	P!A10
-F	probes/t3347-irr-conventional-num.case.json	P!A11
 F	probes/t3347-irr-conventional-num.case.json	P!A12
 F	probes/t3347-irr-conventional-num.case.json	P!A13
 F	probes/t3347-irr-conventional-num.case.json	P!A14
@@ -6018,7 +6016,6 @@ F	probes/t3406-irr-num-boundary.case.json	P!A141
 F	probes/t3406-irr-num-boundary.case.json	P!A142
 F	probes/t3406-irr-num-boundary.case.json	P!A143
 F	probes/t3406-irr-num-boundary.case.json	P!A144
-F	probes/t3406-irr-num-boundary.case.json	P!A26
 F	probes/t3406-irr-num-boundary.case.json	P!A27
 F	probes/t3406-irr-num-boundary.case.json	P!A28
 F	probes/t3406-irr-num-boundary.case.json	P!A29
@@ -6027,7 +6024,6 @@ F	probes/t3406-irr-num-boundary.case.json	P!A31
 F	probes/t3406-irr-num-boundary.case.json	P!A32
 F	probes/t3406-irr-num-boundary.case.json	P!A33
 F	probes/t3406-irr-num-boundary.case.json	P!A49
-F	probes/t3406-irr-num-boundary.case.json	P!A5
 F	probes/t3406-irr-num-boundary.case.json	P!A50
 F	probes/t3406-irr-num-boundary.case.json	P!A51
 F	probes/t3406-irr-num-boundary.case.json	P!A52
@@ -7400,8 +7396,6 @@ F	probes/t4027-irr-annuity-scale-guess.case.json	P!A26
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A27
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A28
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A3
-F	probes/t4027-irr-annuity-scale-guess.case.json	P!A34
-F	probes/t4027-irr-annuity-scale-guess.case.json	P!A35
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A4
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A43
 F	probes/t4027-irr-annuity-scale-guess.case.json	P!A44

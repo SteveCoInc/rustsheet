@@ -1,0 +1,78 @@
+cell	side	run	step	excel	flows	largest_c	guess	abs_npv_at_stop
+probes/irr-fallback-roots!P!A35	train	guess	3	#NUM!	2	1e+12	0.1	2.212172012150404e-5
+probes/irr-fallback-roots!P!A40	train	guess	2	#NUM!	2	1e+08	100000000.0	5.024759275329416e-9
+probes/irr-fallback-roots!P!A44	test	guess	3	run's value	2	10000	0.1	0e0
+probes/irr-fallback-roots!P!A46	test	guess	3	run's value	2	1e+06	0.1	0e0
+probes/irr-fallback-roots!P!A47	test	guess	3	run's value	2	1e+08	0.1	0e0
+probes/irr-guess-edges-2!P!A15	train	guess	3	#NUM!	2	1e+13	0.1	3.109451872660429e-4
+probes/irr-guess-edges-2!P!A16	train	guess	3	#NUM!	2	1e+14	0.1	7.992778373591136e-4
+probes/irr-guess-edges-2!P!A17	train	guess	3	#NUM!	2	2e+14	0.1	7.992778373591136e-4
+probes/irr-guess-edges-2!P!A18	train	guess	3	#NUM!	2	5e+14	0.1	7.992778373591136e-4
+probes/irr-guess-edges-2!P!A19	train	guess	3	#NUM!	2	9e+14	0.1	7.992778373591136e-4
+probes/irr-guess-edges-2!P!A20	test	guess	3	#DIV/0!	2	1e+15	0.1	7.992778373591136e-4
+probes/irr-guess-edges-2!P!A21	train	guess	3	#NUM!	2	2e+15	0.1	1.1022302462515654e-1
+probes/irr-guess-edges-2!P!A22	test	guess	3	#NUM!	2	1e+16	0.1	1.1022302462515654e-1
+probes/irr-guess-edges-2!P!A23	train	guess	2	#NUM!	2	1e+14	100000000000000.0	7.992778373591136e-4
+probes/irr-guess-edges-2!P!A24	train	guess	2	#NUM!	2	5e+14	500000000000000.0	7.992778373591136e-4
+probes/irr-guess-edges-2!P!A25	train	guess	70	#NUM!	3	1e+28	0.1	1.5979168296570423e-3
+probes/irr-guess-edges-2!P!A26	train	guess	74	#NUM!	3	1e+30	0.1	1.5979168296568202e-3
+probes/irr-guess-edges-2!P!A27	train	guess	125	#NUM!	4	1e+45	0.1	2.3959174875081146e-3
+probes/irr-guess-edges-2!P!A28	train	guess	2	#DIV/0!	2	1e+15	1000000000000000.0	7.992778373591136e-4
+probes/irr-guess-edges-2!P!A29	test	guess	2	#DIV/0!	2	1e+15	500000000000000.0	7.992778373591136e-4
+probes/irr-guess-edges-2!P!A33	test	guess	3	#NUM!	2	1e+14	0.05	7.992778373591136e-4
+probes/irr-guess-edges-2!P!A34	test	guess	2	#NUM!	2	1e+16	1000000000000000.0	1.1022302462515654e-1
+probes/irr-guess-edges!P!A38	train	guess	3	#DIV/0!	2	1e+15	0.05	7.992778373591136e-4
+probes/t2565-irr-guess-sweeps!P!A107	test	guess	25	run's value	3	1.23457e+14	0.1	1.1576339602470398e-6
+probes/t3410-irr-zero-root-imcos!Calc!C8	train	guess	2	run's value	2	4	-0.5	0e0
+probes-numeric/m9-fin-irr-rate!Calc!A40	test	guess	2	run's value	3	230	0.1	0e0
+probes-numeric/m9-fin-irr-rate!Calc!A151	train	guess	2	run's value	3	100	0.0	0e0
+probes-numeric/t2927-irr-fallback-sweep!P!A101	train	guess	1122	#NUM!	6	4.96e+08	0.1	1.7881393432617188e-7
+probes-numeric/t2927-irr-fallback-sweep!P!B101	train	retry	1122	#NUM!	6	4.96e+08	0.5	1.7881393432617188e-7
+probes-numeric/t2927-irr-fallback-sweep!P!A103	train	guess	2457	#NUM!	6	6.56e+08	0.1	2.384185791015625e-7
+probes-numeric/t3347-irr-conventional-holdout!P!A98	test	guess	11	run's value	5	1.54392e+10	0.1	9.5367431640625e-7
+probes-numeric/t3411-irr-r4-fresh-2!Calc!A77	train	guess	23	run's value	22	3.76092e+09	0.1	4.075467586517334e-6
+probes-numeric/t3411-irr-r4-fresh-2!Calc!A119	train	guess	13	other number	30	1.13009e+09	0.036160443796925	9.98377799987793e-7
+probes-numeric/t3411-irr-r4-fresh-2!Calc!A132	test	guess	9	#NUM!	5	7.17835e+14	0.1	1.953125e-2
+probes-numeric/t3411-irr-r4-fresh-2!Calc!A138	test	retry	10	other number	14	1.89683e+09	46.8743397434183	4.0140002965927124e-7
+probes-numeric/t3411-irr-r4-fresh-4!Calc!A53	train	guess	636	run's value	70	4.15546e+08	-0.99825309759274	4.9639493227005e-7
+probes-numeric/t3411-irr-r4-fresh-4!Calc!A54	train	guess	400	#DIV/0!	63	2.60813e+15	-0.991281614764174	5.3125e-1
+probes-numeric/t3478-irr-r4-wide!Calc!A60	test	guess	9	#NUM!	6	1.33039e+13	-0.00544660896467915	1.617431640625e-3
+probes-numeric/t3478-irr-r4-wide!Calc!A63	train	guess	11	run's value	26	5.96661e+10	0.1	4.0211016312241554e-6
+probes-numeric/t3478-irr-r4-wide!Calc!A68	test	guess	10	#NUM!	10	4.7535e+12	0.1	2.6702880859375e-4
+probes-numeric/t3478-irr-r4-wide!Calc!A75	test	guess	3	run's value	29	1.70359e-09	0.0857253337577707	1.6949654079589277e-9
+probes-numeric/t3478-irr-r4-wide!Calc!A149	train	guess	17	run's value	3	8.63117e+08	0.1	1.1920928955078125e-7
+probes-numeric/t3478-irr-r4-wide!Calc!A207	test	retry	11	run's value	35	4.86268e+08	383157.090912051	2.6775524020195007e-7
+probes-numeric/t3478-irr-r4-wide!Calc!A227	train	guess	189	#NUM!	37	4.64118e+17	-0.990669502541584	6.4e1
+probes-numeric/t3478-irr-r4-wide!Calc!A237	test	guess	31	run's value	5	1.89819e+09	6701.99755377564	1.1920928955078125e-7
+probes-numeric/t3478-irr-r4-wide!Calc!A260	train	guess	41	run's value	5	2.08304e+10	-0.998044833910006	1.9073486328125e-6
+probes-numeric/t3478-irr-r4-wide!Calc!A267	test	guess	33	run's value	5	1.39069e+10	-0.990816923761926	5.886928203663322e-7
+probes-numeric/t3478-irr-r4-wide!Calc!A284	test	guess	397	run's value	49	4.03355e+12	-0.996428632497598	5.8044362576778566e-5
+probes-numeric/t3478-irr-r4-wide!Calc!A287	train	guess	3	run's value	59	6.36564e-12	122.113124064474	6.364800678419378e-12
+probes-numeric/t3478-irr-r4-wide!Calc!A295	test	guess	5	run's value	3	4.81663e+10	1383.63277434993	9.977957233786583e-7
+accuracy/IRR/r4-T-3407!Calc!A215	train	guess	7	#NUM!	52	1.1024e+14	0.1	1.17950439453125e-2
+accuracy/IRR/r4-T-3407!Calc!A242	train	guess	14	run's value	64	4.60223e+12	0.1	8.392333984375e-5
+accuracy/IRR/r4-T-3407!Calc!A247	train	guess	6	run's value	81	4.10618e+12	0.1	1.1593103408813477e-5
+accuracy/IRR/r4-T-3407!Calc!A257	train	guess	11	#NUM!	161	2.75671e+11	0.1	1.1595705519096278e-4
+accuracy/IRR/r4-T-3407!Calc!A259	test	guess	9	run's value	145	3.72184e+11	0.1	4.1957711800932884e-5
+accuracy/IRR/r4-T-3407!Calc!A263	test	guess	12	#NUM!	151	3.57375e+12	0.1	7.412760331031457e-4
+accuracy/IRR/r4-T-3411!Calc!A193	train	guess	2	run's value	2	401017	0.1	0e0
+accuracy/IRR/r4-T-3411!Calc!A212	train	guess	8	#NUM!	81	5.62241e+14	0.1	2.1055221557617188e-1
+accuracy/IRR/r4-T-3411!Calc!A214	test	guess	9	#NUM!	171	1.29154e+12	0.1	2.914865157777058e-4
+accuracy/IRR/r4-T-3411!Calc!A215	train	guess	132	#NUM!	164	9.86583e+13	0.1	2.080535888671875e-2
+accuracy/IRR/r4-T-3411!Calc!A228	test	guess	129	#NUM!	63	2.0447e+13	0.1	7.62939453125e-3
+accuracy/IRR/r4-T-3411!Calc!A230	train	guess	12	#NUM!	137	4.2205e+14	0.1	1.944914184608848e-3
+accuracy/IRR/r4-T-3411!Calc!A241	train	guess	10	run's value	129	1.4727e+11	0.1	1.0547655612480611e-5
+accuracy/IRR/r4-T-3411!Calc!A260	train	guess	12	run's value	179	2.13525e+11	0.1	2.0647605027340955e-5
+accuracy/IRR/r4-T-3411!Calc!A265	train	guess	10	#NUM!	84	6.88494e+12	0.1	2.4758577346801758e-3
+accuracy/IRR/r4-T-3411!Calc!A267	train	guess	11	#NUM!	194	4.93597e+14	0.1	1.3630780233629583e-2
+accuracy/IRR/s1!Calc!A192	test	guess	2	run's value	2	980.067	0.1	0e0
+accuracy/IRR/s1!Calc!A216	test	guess	12	#NUM!	90	3.35727e+13	0.1	1.350884473822589e-3
+accuracy/IRR/s1!Calc!A221	train	guess	9	#NUM!	90	8.4153e+14	0.1	1.8671218305826187e-2
+accuracy/IRR/s1!Calc!A233	train	guess	11	#NUM!	102	2.34744e+11	0.1	1.5116151189431548e-4
+accuracy/IRR/s1!Calc!A234	train	guess	9	run's value	198	7.48304e+10	0.1	8.679997416272123e-6
+accuracy/IRR/s1!Calc!A238	train	guess	11	#NUM!	164	5.07778e+12	0.1	5.8538708835840225e-3
+accuracy/IRR/s1!Calc!A240	train	guess	15	#NUM!	51	6.72396e+11	0.1	1.0714530944824219e-3
+accuracy/IRR/s1!Calc!A242	train	guess	11	#NUM!	161	1.22407e+14	0.1	1.948779697302153e-3
+accuracy/IRR/s1!Calc!A258	train	guess	16	#NUM!	90	7.52306e+12	0.1	3.0384063720703125e-3
+accuracy/IRR/s1!Calc!A269	train	guess	9	run's value	157	4.4768e+10	0.1	1.8808581254501164e-6
+accuracy/IRR/s1!Calc!A270	train	guess	7	#NUM!	91	1.66964e+12	0.1	1.4943629503250122e-4

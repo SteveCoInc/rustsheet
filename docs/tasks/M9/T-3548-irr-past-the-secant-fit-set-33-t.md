@@ -122,6 +122,17 @@ listed here for an owner (decision 0245). They are not Decision 0267 cells of th
 Since T-3347's cut (decision 0316), six of the t3411 cells above where Excel returns a root are `#DIV/0!` in the
 engine, not `#NUM!`: t3411-irr-r4-fresh A15, A22; t3411-irr-r4-fresh-4 A17, A79, A88, A93.
 
+## Cells of T-3408's long-run fresh sweep (evidence, 2026-11-06)
+probes-numeric/t3408-irr-r4-fresh is the R4.2 fresh sweep of T-3408's 200-step secant cap (decision 0320), from the
+same generator with long-run strata. These are its cells still off Excel with the cap, listed here for an owner
+(decision 0245). They are not Decision 0267 cells of this task or of T-3408. Stratum 5 (A126..A150) is on 55..148
+flows, outside the cap's range.
+- probes-numeric/t3408-irr-r4-fresh.case.json, Excel a number, ours `#NUM!` (31): Calc!A8, A11, A58, A70, A74, A76, A77, A79, A81, A83, A88, A89, A92, A93, A99, A100, A105, A107, A108, A115, A126, A130, A134, A135, A136, A144, A146, A147, A148, A149, A150
+- probes-numeric/t3408-irr-r4-fresh.case.json, Excel a number, ours main's retry digits (outside T-3408's narrowed range; 4): Calc!A2, A13, A31, A48
+
+T-3408's cap (decision 0320) fixes these cells listed above: t3478-irr-r4-wide A18, A27, A234; Gate A
+r4-T-3411 A208, A278 and r4-T-3407 A128, A194 (their known-failure lines are removed).
+
 ## Progress
 2026-11-04, opus run (resumed at 15:25 UTC): attempt 2, the secant step cap, with the R4 guards.
 - Scan, every IRR cell of probes, probes-numeric and gen-m9, cell by cell against main (cap 50): cap 100 fixes 36,

@@ -53,7 +53,7 @@ return a number 11 to 14 digits from Excel's (A5: Excel -0.09999761744847369, Ne
 agrees with "most returning annuities are not Newton iterates from v = 0". The `#DIV/0!` cells A66-A95 are T-3407's.
 
 The level annuities of T-4027's own probe (attempt 2), where Excel returns the root and the engine is `#NUM!`:
-- probes/t4027-irr-annuity-scale-guess.case.json (35): P!A1:A4, A7:A10, A13:A16, A19:A22, A25:A28, A34, A35, A43:A46, A49:A51, A54:A56, A59:A61
+- probes/t4027-irr-annuity-scale-guess.case.json (33): P!A1:A4, A7:A10, A13:A16, A19:A22, A25:A28, A43:A46, A49:A51, A54:A56, A59:A61 (A34 and A35 pass since T-3408's longer secant run)
 
 ## Out of scope
 - The last digits (T-3408) and `#DIV/0!` (T-3407).

@@ -85,7 +85,6 @@ accuracy/IRR/s1!Calc!A248	T-3548	long conventional series: Excel #DIV/0!, the en
 accuracy/IRR/s1!Calc!A268	T-3548	long conventional series: Excel #DIV/0!, the engine #NUM!, the math a root
 accuracy/IRR/r4-T-3411!Calc!A168	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A195	T-3548	conventional series: the engine is #NUM! where Excel returns the root
-accuracy/IRR/r4-T-3411!Calc!A208	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A212	T-3548	conventional series: Excel is #NUM! where the engine returns the root
 accuracy/IRR/r4-T-3411!Calc!A213	T-3900	Excel #DIV/0! on a long conventional series; the engine is #NUM!
 accuracy/IRR/r4-T-3411!Calc!A214	T-3548	conventional series: Excel is #NUM! where the engine returns the root
@@ -107,17 +106,14 @@ accuracy/IRR/r4-T-3411!Calc!A267	T-3548	conventional series: Excel is #NUM! wher
 accuracy/IRR/r4-T-3411!Calc!A271	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A273	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A277	T-3548	conventional series: the engine is #NUM! where Excel returns the root
-accuracy/IRR/r4-T-3411!Calc!A278	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A281	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A285	T-3548	conventional series: the engine is #NUM! where Excel returns the root
-accuracy/IRR/r4-T-3411!Calc!A286	T-3408	two flows within 5E-10 of a zero root: the engine and Excel are 3E-7 and 2E-7 off the math, on different sides
+accuracy/IRR/r4-T-3411!Calc!A286	T-4213	two flows within 5E-10 of a zero root: the engine and Excel are 3E-7 and 2E-7 off the math, on different sides
 accuracy/IRR/r4-T-3411!Calc!A288	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A298	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A300	T-3548	conventional series: the engine is #NUM! where Excel returns the root
-accuracy/IRR/r4-T-3407!Calc!A128	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3407!Calc!A167	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3407!Calc!A175	T-3548	conventional series: the engine is #NUM! where Excel returns the root
-accuracy/IRR/r4-T-3407!Calc!A194	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3407!Calc!A199	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3407!Calc!A206	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3407!Calc!A217	T-3548	conventional series: the engine is #NUM! where Excel returns the root
