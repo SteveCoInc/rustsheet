@@ -57,12 +57,33 @@ Cells:
   | 1E-7 m | 154 |
   | `value*((F_from/F_to)*P)` (order change) | 8 more fixed but 16 other CONVERT cells lost; rejected |
 
-  - Hold-out by cell hash (30%, SHA-256 of case and cell): 42/44, against 39/44 for metres. It is not blind: the
-    split was computed after the candidates were scored on all 160 cells.
+  - Hold-out by cell hash (30%, SHA-256 of case and cell). The split was computed after the candidates were scored on
+    all 160 cells, so it is not blind; the fresh sweep is the blind test. Margin declared now: hold-out exact within
+    5 points of train.
+
+    | candidate | train (116) exact / 4 ulp / 15 digits | hold-out (44) exact / 4 ulp / 15 digits |
+    |---|---|---|
+    | angstrom base | 116 / 116 / 116 | 42 / 44 / 44 |
+    | metre base | 104 / 116 / 115 | 39 / 44 / 44 |
+    | correctly rounded | 107 / 116 / 115 | 42 / 44 / 44 |
+
+    The angstrom base's hold-out (95.5%) is within the margin of its train (100%). It ties the correctly rounded
+    value on the hold-out and leads it on train.
   - Fresh sweep after the factors were frozen: probes-numeric/t4630-convert-distance-sweep (seed 4630, 150 calls
-    between distance units, with decimal prefixes on neither, one or both units), excel-graph 2026-11-06. Angstrom
-    base 150/150 bit-exact; metre base 133/150.
+    between distance units, with decimal prefixes on neither, one or both units), excel-graph 2026-11-06. 100 of the
+    calls are `#N/A` (a prefix on a unit that takes none), and every candidate gets those right; 50 are numeric.
+
+    | candidate | numeric cells exact (of 50) |
+    |---|---|
+    | angstrom base | 50 |
+    | metre base | 33 |
+    | correctly rounded (the .math.json) | 33 |
+
+    All 50 are inside Gate A's envelope (within 1E-9 relative of the math).
   - No numeric constant was fitted: each factor is an exact length (no `FITTED` tag).
+  - Open, unevidenced (fidelity review): with factors 1E10 larger, `value * F_from` overflows from about 1.8E298 for
+    m to m, which then takes the divide-first path. The probed round values (1E290, 1E300) pass; a non-round value
+    there may be 1 ulp off, as already holds for area in square angstroms.
 - **Eval delta:**
   - The task's 8 probe cells (t4534 B1:B4, D1:D4) are fixed. The 4 calipers cells are the same formulas; calipers was
     not fetched here.

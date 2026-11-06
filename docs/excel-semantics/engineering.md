@@ -211,11 +211,13 @@ in the last digit of a conversion between two non-base units or to a prefixed un
 convert-web-values B1:B4, D1:D4, the calipers formulas_engineering golden D26:J27 agrees), `CONVERT(1,"m","ft")`
 3.2808398950131235 (probes/scalar-lift-open-a Z8:Z10, convert-unit-names B33), and the light-year and parsec cells of
 the T-3861 sweeps. Of the 160 literal distance cells with oracle values in probes and probes-numeric, the metre base
-fits 143 and the angstrom base 160 (the best other powers of ten: 1E-8 m, 157, and 1E-7 m, 154). Hold-out by cell hash
-(30%, SHA-256 of case and cell, scored after the choice, so not blind): 42 of 44 against 39 for the metre base, train
-116 of 116 against 104. Fresh sweep after the factors were frozen (probes-numeric/t4630-convert-distance-sweep, 150
-seeded calls between distance units with decimal prefixes on neither, one or both units): 150 of 150 bit-exact, against
-133 for the metre base. ironcalc-calc ENGINEERING/CONVERT.xlsx is unchanged.
+fits 143, the correctly rounded value 149 and the angstrom base 160 (the best other powers of ten: 1E-8 m, 157, and
+1E-7 m, 154). Hold-out by cell hash (30%, SHA-256 of case and cell, scored after the choice, so not blind): 42 of 44
+exact, all 44 within 4 ulp, against 39 for the metre base and 42 correctly rounded; train 116 of 116 against 104 and 107.
+Fresh sweep after the factors were frozen (probes-numeric/t4630-convert-distance-sweep, 150 seeded calls between
+distance units with decimal prefixes on neither, one or both units; 100 are `#N/A`, a prefix on a unit that takes none):
+the angstrom base is exact on all 50 numeric cells, against 33 for both the metre base and the correctly rounded value;
+all 50 are inside Gate A's envelope. ironcalc-calc ENGINEERING/CONVERT.xlsx is unchanged.
 Overflow: `value * F_from` is not allowed to overflow when the answer is representable:
 `CONVERT(1E290,"m2","m2")` is 1E+290, `CONVERT(1E300,"ha","m2")` 1.0000000000000001E+304,
 `CONVERT(1E302,"J","J")` 1E+302. The engine divides first (`value / F_to * F_from`) when the
