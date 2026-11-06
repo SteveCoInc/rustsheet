@@ -3,7 +3,7 @@ id: T-4599
 title: "Reword text.md's TEXTBEFORE UTF-16 sentence and give the text functions one UTF-16 length helper (T-4474 review follow-up)"
 milestone: M7
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
