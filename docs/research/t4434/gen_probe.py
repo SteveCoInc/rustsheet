@@ -15,13 +15,13 @@ Seed 4434 (random.Random). The points are fixed by the seed alone, before any va
 
 The degrees of freedom are integers, so Excel's truncation of them is moot. Every x is rounded to 12 significant
 digits: Excel reads a formula literal at 15 significant digits (numbers.md), so a literal of at most 15 digits is
-read as exactly the double Python parses from it. The literal is `repr` of that double, which round-trips (and so
-does its 17-digit form).
+read as exactly the double Python parses from it. The literal is `sweep_case.lit`'s 15-digit form, which for these
+values is the shortest form that round-trips (`lit` here asserts that, and that the 17-digit form does too). The
+case is written by `sweep_case.write_checked_case`.
 """
 
 from __future__ import annotations
 
-import json
 import math
 import random
 import sys
@@ -32,7 +32,9 @@ import mpmath as mp
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent))
 import mathref  # noqa: E402
+import sweep_case  # noqa: E402
 
 STEM = "t4434-huge-shape-outside-large-shape-beta"
 SEED = 4434
@@ -45,12 +47,9 @@ def round_sig(v: float, digits: int) -> float:
 
 
 def lit(v: float) -> str:
-    """The shortest literal that round-trips to v, at most 15 significant digits."""
-    s = repr(v)
-    if s.endswith(".0"):
-        s = s[:-2]
-    s = s.replace("e+", "E").replace("e-", "E-")
-    assert float(s) == v and float(f"{float(s):.17g}") == v
+    """`sweep_case.lit`, checked to name exactly v (a 15-digit literal is read as written)."""
+    s = sweep_case.lit(v)
+    assert float(s) == v and float(f"{float(s):.17g}") == v, (v, s)
     return s
 
 
@@ -116,25 +115,17 @@ def formulas(pts: dict[str, list[tuple]]) -> dict[str, str]:
 
 
 def main() -> None:
-    pts = points()
-    cells = formulas(pts)
-    order = sorted(cells, key=lambda ref: (int(ref[1:]), ref[0]))
-    case = {
-        "format": "rustsheet-case/v1",
-        "description": (
-            "T-4434: the incomplete beta at one huge shape outside large_shape_beta's bounds, written by "
-            f"docs/research/t4434/gen_probe.py with seed {SEED}. A1:A300 F.DIST.RT region 1 (df1 3..79, df2 1E4..2E6, "
-            "tail log-uniform in 1E-200..0.5); B1:B300 F.DIST.RT region 2 (df1 80..400, df2 1E5..1E10, x 0.7 to 3 "
-            "times the mean); C1:C150 F.DIST(..,TRUE) at B's points; D1:D150 BETA.DIST(..,TRUE) at a 20..200, "
-            "b 5E4..5E9, x 0.7 to 1.5 times a/b. Evidence for T-4435 (decision 0267 item 5 exception, decision 0334)."
-        ),
-        "tags": ["M9", "probe", "statistics", "T-4434"],
-        "expected": {},
-        "check": [f"Calc!{ref}" for ref in order],
-        "sheets": [{"name": "Calc", "cells": {ref: cells[ref] for ref in order}}],
-    }
+    cells = formulas(points())
+    description = (
+        "T-4434: the incomplete beta at one huge shape outside large_shape_beta's bounds, written by "
+        f"docs/research/t4434/gen_probe.py with seed {SEED}. A1:A300 F.DIST.RT region 1 (df1 3..79, df2 1E4..2E6, "
+        "tail log-uniform in 1E-200..0.5); B1:B300 F.DIST.RT region 2 (df1 80..400, df2 1E5..1E10, x 0.7 to 3 "
+        "times the mean); C1:C150 F.DIST(..,TRUE) at B's points; D1:D150 BETA.DIST(..,TRUE) at a 20..200, "
+        "b 5E4..5E9, x 0.7 to 1.5 times a/b. Evidence for T-4435 (decision 0267 item 5 exception, decision 0334)."
+    )
     out = ROOT / "eval/suites/probes-numeric/cases" / f"{STEM}.case.json"
-    out.write_text(json.dumps(case, indent=2) + "\n")
+    order = sorted(cells, key=lambda ref: (int(ref[1:]), ref[0]))
+    sweep_case.write_checked_case(out, description, ["M9", "probe", "statistics", "T-4434"], {r: cells[r] for r in order})
     print(f"wrote {out.relative_to(ROOT)}: {len(cells)} cells")
 
 

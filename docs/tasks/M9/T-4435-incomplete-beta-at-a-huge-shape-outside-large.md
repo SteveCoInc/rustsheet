@@ -67,7 +67,7 @@ As a result, the cells of T-4434's sweep where Excel is near correctly rounded p
 
 | region | huge shape | cells | Excel <=1E-15/1E-14/1E-12, worst | engine <=1E-15/1E-14/1E-12, worst |
 |---|---|---:|---|---|
-| region 1 F.DIST.RT | 5E3 to 1E4 | 35 | 3/ 17/ 35 of 35, worst 9.1e-14 | 2/ 14/ 35 of 35, worst 9.1e-14 |
+| region 1 F.DIST.RT | 1E3 to 1E4 | 35 | 3/ 17/ 35 of 35, worst 9.1e-14 | 2/ 14/ 35 of 35, worst 9.1e-14 |
 | region 1 F.DIST.RT | 1E4 to 1E5 | 150 | 4/ 53/150 of 150, worst 1.3e-13 | 4/ 41/150 of 150, worst 6.2e-13 |
 | region 1 F.DIST.RT | 1E5 to 1E6 | 115 | 1/ 29/115 of 115, worst 1.2e-13 | 0/ 20/103 of 115, worst 1.4e-11 |
 | region 1 F.DIST.RT | **all** | 300 | 8/ 99/300 of 300, worst 1.3e-13 | 6/ 75/288 of 300, worst 1.4e-11 |
@@ -95,13 +95,13 @@ As a result, the cells of T-4434's sweep where Excel is near correctly rounded p
 
 Per region, is Excel near correctly rounded (the `accuracy` stage's premise)?
 - **Region 1 (F.DIST.RT at a0 = df2/2 of 5E3 to 1E6, b0 = df1/2 below 40; L140 bup+bgrat): yes, as near as double
-  arithmetic allows.** Excel is at most 1.3E-13 relative off, with a median of 109 ulp. In units of |ln tail|·2^-53
+  arithmetic allows.** Excel is at most 1.3E-13 relative off, with a median of 121 ulp (117 against the math at the double ratio). In units of |ln tail|·2^-53
   (a double kernel ends in exp(-L), L = |ln tail| up to 460, and an ulp of L is L ulp of the tail) its median is 0.9
   and its worst 9.5, flat over the three decades. Rounding the F ratio does not explain it: against the math at the
   double ratio Excel's median is still 117 ulp. Ours reaches 7,870 units, 1.4E-11 relative (Cephes' fraction where the
-  L140 port stops at 9 bup terms, df1 of 20 and up). The correctly rounded math is within 15 digits of Excel on only
-  22 of the 300 cells. At df1 below 20 (170 cells) ours is T-3754's L140 port in Excel's arithmetic and matches Excel
-  on 158 (worst 5.2 units): those must stay on the port. At df1 of 20 and up (130 cells) ours matches none and the
+  L140 port stops at 9 bup terms, df1 of 21 and up). The correctly rounded math is within 15 digits of Excel on only
+  22 of the 300 cells. At df1 of 20 or less (170 cells) ours is T-3754's L140 port in Excel's arithmetic and matches Excel
+  on 158 (worst 5.2 units): those must stay on the port. At df1 of 21 and up (130 cells) ours matches none and the
   math 8. So an accurate kernel there brings 8 cells to Excel and moves the rest to the math; what is left is Excel's
   own bgrat digits (T-3209).
 - **Region 2 above the mean (F.DIST.RT and F.DIST at df1 80 to 400, df2 1E5 to 1E10; bfrac, b0 >= 40, swapped so the

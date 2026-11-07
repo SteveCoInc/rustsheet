@@ -1,6 +1,6 @@
 """T-4434: score Excel and the engine against 60-digit math on probes-numeric/t4434-huge-shape-outside-large-shape-beta.
 
-Run from the repository root with the tools venv, after a release build:
+Run from the repository root (paths are relative to it) with the tools venv, after a release build:
 
     target/release/rustsheet-eval show --all probes-numeric/t4434-huge-shape-outside-large-shape-beta.case.json > show.txt
     tools/.venv/bin/python -I docs/research/t4434/score.py show.txt [--refresh]
@@ -136,7 +136,12 @@ def b0_at_least_40(call: tuple[str, float, float, float]) -> bool:
 def owner(call: tuple[str, float, float, float], excel: float | str, m: mp.mpf) -> str:
     """Who owns a cell where the engine is not within 15 digits of Excel: T-4435 where the math, correctly rounded, is
     (an accurate kernel then matches Excel); else Excel is the side off the math, T-4214 at b0 >= 40 (its bfrac
-    arithmetic) and T-3209 below (its bgrat digits)."""
+    arithmetic) and T-3209 below (its bgrat digits).
+
+    This amends T-4434's criterion, which moved a cell away from T-4435 only where Excel is more than 1E-13 off the
+    math. T-4435 is the `accuracy` stage: it can bring a cell within 15 digits of Excel only where the math is. A cell
+    where Excel is 1E-15 to 1E-13 off and the math is not within 15 digits of Excel is Excel's own digits, which only
+    a model of Excel's arithmetic reaches (T-4214, T-3209). main() prints how far off Excel is per owner."""
     if not isinstance(excel, str) and within15(excel, float(m)):
         return "T-4435"
     return "T-4214" if b0_at_least_40(call) else "T-3209"
@@ -155,7 +160,8 @@ def spans(cells: list[str]) -> str:
     return ", ".join(out)
 
 
-def huge_shape(ref: str, call: tuple[str, float, float, float]) -> float:
+def huge_shape(call: tuple[str, float, float, float]) -> float:
+    """The huge shape: df2/2 for the F calls, b for BETA.DIST."""
     return call[3] / 2 if call[0] != "BETA.DIST" else call[3]
 
 
@@ -171,7 +177,7 @@ def main() -> None:
     cs, xl, en = calls(), excel_values(), engine_values(show)
     groups: dict[tuple[str, int], list[str]] = {}
     for ref, call in cs.items():
-        decade = math.floor(math.log10(huge_shape(ref, call)))
+        decade = math.floor(math.log10(huge_shape(call)))
         groups.setdefault((ref[0], decade), []).append(ref)
 
     print(
@@ -233,6 +239,13 @@ def main() -> None:
             owned.setdefault(owner(cs[ref], xl[ref], refs[ref]), []).append(ref)
     for task, cells in sorted(owned.items()):
         print(f"- {task} ({len(cells)}): Calc!{spans(cells)}")
+    print("\nHow far Excel is off the math on each owner's cells (relative)")
+    for task, cells in sorted(owned.items()):
+        errs = [rel(xl[r], refs[r]) for r in cells]
+        print(
+            f"- {task}: {sum(e > 1e-13 for e in errs)} more than 1E-13 off, {sum(1e-14 < e <= 1e-13 for e in errs)} "
+            f"from 1E-14 to 1E-13, {sum(e <= 1e-14 for e in errs)} within 1E-14; worst {max(errs):.2g}"
+        )
 
 
 if __name__ == "__main__":

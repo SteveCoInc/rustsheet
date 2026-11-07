@@ -11,6 +11,11 @@ geometrically. With q z near p (the regions of T-4434, both F and BETA.DIST) tha
 terms. The complementary tail is 1 minus the sum; it loses as many digits as it is small, so the working precision is
 raised by -log10 of the tail and the value is kept only when two precisions agree to 60 digits.
 
+It supersedes docs/research/t4017/reference.py `upper_tail` (and the F references of t2528 and t3311) for new work.
+Those sum the alternating 2F1(a, 1 - b; a + 1; u) for the lower tail and take 1 minus it, so the working precision
+has to grow with d1 x and two precisions are compared to catch a wrong digit. Here every term is positive, and only
+the subtraction for the upper tail loses digits, as many as the tail is small, which the precision covers.
+
 Run with the tools venv (mpmath 1.3); imported by gen_probe.py, score.py and docs/research/t4435/.
 """
 
