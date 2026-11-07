@@ -5,6 +5,7 @@ use super::linest::{flag_range_value, linear_regression, predict, reconstruct_be
 use super::regression::{
     given, known_points, layout, shape_error, Element, Grid, KnownPoints, Layout,
 };
+use crate::arithmetic::flush_subnormal;
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{LiftCost, LiftOptions};
@@ -123,8 +124,10 @@ impl TrendData {
                 if point.iter().any(|v| v.is_nan()) {
                     return ArrayNode::Error(Error::VALUE);
                 }
-                let fitted = predict(&beta, &point, const_term);
-                ArrayNode::Number(if self.growth { fitted.exp() } else { fitted })
+                if !self.growth {
+                    return ArrayNode::Number(predict(&beta, &point, const_term));
+                }
+                growth_prediction(&beta, &point, const_term)
             })
             .collect();
         CalcResult::Array(
@@ -249,4 +252,28 @@ impl Model {
     pub(crate) fn fn_growth(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.trend_or_growth(args, true, cell)
     }
+}
+
+/// GROWTH's prediction e^(intercept + Σ m_j x_j), with the two edges of LOGEST's factors
+/// b = e^intercept and e^(Σ m_j x_j) that Excel shows (statistics.md "GROWTH is #NUM! once LOGEST's b
+/// overflows"; probes/t4590-growth-overflow):
+/// - `#NUM!` where b overflows, though the prediction may be finite (Int A8:A15, accuracy/GROWTH/s1
+///   A104); a slopes' factor past the double range is not an error (Slope A4:A8);
+/// - 0 where the slopes' factor is subnormal or 0, though the prediction may be about 1 (Int A2:A7).
+///
+/// Elsewhere the value is the one exponential of the sum: the product of the two factors is an ulp off
+/// Excel on ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the single exponential is exact.
+fn growth_prediction(beta: &[f64], point: &[f64], const_term: bool) -> ArrayNode {
+    if const_term && beta[0].exp().is_infinite() {
+        return ArrayNode::Error(Error::NUM);
+    }
+    let slope_sum = beta
+        .iter()
+        .skip(usize::from(const_term))
+        .zip(point)
+        .fold(0.0, |sum, (m, x)| sum + m * x);
+    if flush_subnormal(slope_sum.exp()) == 0.0 {
+        return ArrayNode::Number(0.0);
+    }
+    ArrayNode::Number(predict(beta, point, const_term).exp())
 }

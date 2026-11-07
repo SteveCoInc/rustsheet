@@ -7200,8 +7200,8 @@ accuracy/defs/array_regression.py) solves the normal equations in rational arith
   FALSE, match the exact value, so Excel does not multiply by an underflowed multiplier.
 - GROWTH s1 A104 is `#NUM!` where the prediction is 8.13890815167933E-18: two variables (x1 near 7.3E+7, x2 near
   77.9407 with a spread of 2E-4), whose ln fit's intercept is 1289.95, so b = e^1289.95 is past the double range. It
-  is the only table point with an intercept past ln(max double); unexplained, the intercept's overflow is the lead
-  (T-4590). Ours is 8.138904702791959E-18.
+  is the only table point with an intercept past ln(max double). The cause is that overflow: see "GROWTH is #NUM! once
+  LOGEST's b overflows" below (T-4590).
 - Excel off the exact value: LINEST s1 A197 (`INDEX(LINEST(<4 points from 1E-48 to 6E+20>,<2 variables>,FALSE,TRUE),5,1)`,
   ss_reg) is 0 where the exact value is 1.19E-52, the cancellation of ss_tot (3.9E+41) and ss_resid: more than 1E-4
   off, kept as the target under decision 0300; ours is 0 too. LINEST A184 (an intercept over data from 1E-44 to
@@ -7211,9 +7211,37 @@ accuracy/defs/array_regression.py) solves the normal equations in rational arith
   spread, mixed magnitudes) it is from 2E-9 to 20 relative off where Excel is within 2E-8, and TREND A193 (data from
   1E-45 to 1E+49) is `#NUM!` where Excel and the math are -1.3025416638036628E+49 (T-2006, known failures).
 Evidence: eval/accuracy/tables/{LINEST,LOGEST,TREND,GROWTH}/s1 (excel-graph, 2026-11-06, T-4096).
-Ours: as described; T-2006 (the solve), T-4590 (A104).
-Status: VERIFIED (excel-graph) for the table points; A104's cause UNVERIFIED
+Ours: as described; T-2006 (the solve). A104 passes since T-4590.
+Status: VERIFIED (excel-graph) for the table points and A104's cause (T-4590)
 Tasks: T-4096, T-2006, T-4590, T-2569
+
+## GROWTH is #NUM! once LOGEST's b overflows, and 0 once its slopes' factor underflows (T-4590)
+Rule: GROWTH treats LOGEST's two factors, b = e^intercept and the slopes' factor e^(Σ m_j x_j), as doubles at their
+edges, while its value elsewhere is the single exponential of the fit.
+- GROWTH with const TRUE is `#NUM!` exactly when b overflows: the intercept is past ln(DBL_MAX) = 709.7827. This holds
+  even when the prediction itself is finite.
+  - Example: y = e^(c - c/2·x) at x = 1, 2, 3 predicts about 1 at x = 2. It is a number for c up to 709.7827 and
+    `#NUM!` from 709.7828 to 1290.
+  - LOGEST's own b, `INDEX(LOGEST(..),1,2)`, is `#NUM!` from the same cut.
+- A slopes' factor past the double range is not an error. With const FALSE, y = e^(m·x) at x = 0.3, 0.4, 0.5 gives
+  GROWTH a number for every m up to 1400, though LOGEST's m = e^slope is `#NUM!` from 709.79.
+- Where the slopes' factor is subnormal or 0, GROWTH is 0, though the prediction is about 1. At c = 709 to 709.7827
+  the factor is e^(-709) or below at x = 2, and Excel gives 0. At c = 700 the factor is e^(-700), a normal double, and
+  Excel gives 1.
+  - This fits Excel forming the two factors as doubles, with a subnormal product flushed to 0, before it multiplies
+    them.
+  - But the product of the two factors is one ulp off Excel on ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where
+    `e^(intercept + Σ m_j x_j)` is exact. So the engine keeps the single exponential away from the two edges, and
+    how Excel combines the factors in between is not identified.
+- The Gate A point GROWTH s1 A104 (intercept 1289.95) is `#NUM!` by this rule.
+Evidence: probes/t4590-growth-overflow (excel-graph, 2026-11-07; Int 15 rows and Slope 8 rows). The predictions in
+docs/research/t4590 were committed before the fill.
+  - H1 (`#NUM!` only when b overflows) holds on 23 of 23 GROWTH cells.
+  - H2 (when b or a slopes' factor overflows) fails on the 5 Slope rows past 709.79.
+  - The zero results at c = 709 to 709.7827 were not predicted.
+Status: VERIFIED (excel-graph). The probe's least-squares digits (14 cells, 1E-13 to 1E-12 off) are T-4763's.
+Ours (T-4590): `growth_prediction` in functions/statistical/trend.rs.
+Tasks: T-4590, T-4763
 
 ## TRIMMEAN: an error percent before data with no number (T-1742)
 Rule: TRIMMEAN returns an error-valued percent before it reports data with no number: `TRIMMEAN(Data!E11:E11,<#N/A>)`
