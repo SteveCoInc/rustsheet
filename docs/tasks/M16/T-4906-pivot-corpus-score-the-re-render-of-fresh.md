@@ -29,6 +29,9 @@ Excel's saved cells and `rowItems`/`colItems`, and check (c), a full refresh fro
   freshness test that does not depend on the renderer under test: for example, the classification at the
   time a pivot first passes, recorded and ratcheted, or a check of the cache records against the source.
 - docs/research/pivot-tables-2026-11-04/plan.md, "Excel-saved corpora"; SPEC-0032 "Corpora".
+- The M16 exit row waits on this task: its `pivot.corpus_render_met` (T-4127,
+  crates/rustsheet-eval/src/milestone_exit/pivot.rs) stays not measured, so M16 is not met, until fresh
+  corpus pivots are scored with a renderer-independent freshness test.
 - The nightly workflow fetches calipers, poi and corpus-bench only; the two pivot-corpus suites need the same
   to be measured outside a local run.
 

@@ -207,6 +207,26 @@ pub(crate) fn excel_dbinom_exponent(k: f64, n: f64, nk: f64, p: f64, q: f64) -> 
     (exponent.0.is_finite() && exponent.1.is_finite()).then_some(exponent)
 }
 
+/// The binomial counts of [`excel_beta_density`]'s `dbinom_raw(k, n, ..)`: k = fl(a - 1),
+/// n = fl(fl(a + b) - 2) and nk = fl(n - k), x87 stored operations, as Excel rounds them.
+fn beta_density_counts(a: f64, b: f64) -> (f64, f64, f64) {
+    let k = extended_sum(a, -1.0);
+    let n = extended_sum(extended_sum(a, b), -2.0);
+    (k, n, extended_sum(n, -k))
+}
+
+/// Whether Excel's Loader beta density (both shapes above 1) is `#NUM!` at every x because its
+/// count nk = n - k of [`beta_density_counts`] is not positive, so that its LN(nk) has no value:
+/// above 2^53 fl(a - 1) and fl(fl(a + b) - 2) round onto the same double (nk = 0) or past each
+/// other (nk = -4 at `BETA.INV(0.4,2.23872113856835E+16,1.5)`). `BETA.DIST(1-2^-51,a,2,FALSE)` is
+/// `#NUM!` at exactly the 30 of 41 alphas from 7.9E+15 to 2E+16 where nk = 0, and a number (one
+/// with nk = 2 instead of 1) at the other 11 (probes/t4713-beta-inv-cut-pieces H1:H41;
+/// docs/excel-semantics/statistics.md "BETA.INV and BETA.DIST's density are #NUM! where Loader's
+/// n - k is not positive (T-4713)").
+pub(crate) fn beta_density_counts_vanish(a: f64, b: f64) -> bool {
+    a > 1.0 && b > 1.0 && beta_density_counts(a, b).2 <= 0.0
+}
+
 /// Excel's BETA.DIST(x, a, b, FALSE) for min(a, b) > 1 and 0 < x < 1: R dbeta's
 /// `(a + b - 1) dbinom_raw(a - 1, a + b - 2, x, fl(1 - x))` (Loader 2000) in Excel's arithmetic,
 /// EXP(LN(n + 1) + E) with E [`excel_dbinom_exponent`]'s, the sum held in an x87 register into
@@ -218,9 +238,7 @@ pub(crate) fn excel_beta_density(x: f64, a: f64, b: f64) -> Option<f64> {
     if !(a > 1.0 && b > 1.0 && x > 0.0 && x < 1.0 && a.is_finite() && b.is_finite()) {
         return None;
     }
-    let k = extended_sum(a, -1.0);
-    let n = extended_sum(extended_sum(a, b), -2.0);
-    let nk = extended_sum(n, -k);
+    let (k, n, nk) = beta_density_counts(a, b);
     let q = extended_sum(1.0, -x);
     let exponent = excel_dbinom_exponent(k, n, nk, x, q)?;
     let ln_scale = excel_ln(extended_sum(n, 1.0));
@@ -434,6 +452,18 @@ mod tests {
     )]
     use super::*;
     use crate::test::util::{ulps, within_fifteen_digits};
+
+    // Loader's count n - k at alpha 7.9E+15 to 2E+16, beta 2: BETA.DIST(1-2^-51,a,2,FALSE) is
+    // #NUM! exactly where it is 0 (probes/t4713-beta-inv-cut-pieces H7, H11 #NUM!; H9, H37 numbers).
+    #[test]
+    fn beta_density_counts_vanish_where_excel_density_is_num() {
+        assert!(beta_density_counts_vanish(9.120_108_393_559_12e15, 2.0));
+        assert!(beta_density_counts_vanish(1e16, 2.0));
+        assert!(!beta_density_counts_vanish(9.549_925_860_214_37e15, 2.0));
+        assert!(!beta_density_counts_vanish(1.819_700_858_609_99e16, 2.0));
+        assert!(!beta_density_counts_vanish(1e15, 2.0));
+        assert!(!beta_density_counts_vanish(2.0, 1e16));
+    }
 
     // Loader's binomial log density against exact small binomial probabilities, in each of R's
     // branches: the saddle point inside (with bd0's series near the mean and its log form away

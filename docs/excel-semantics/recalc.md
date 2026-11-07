@@ -174,6 +174,24 @@ Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/iteration.rs (`Model::sweep`)
 Tasks: T-0428, T-0401, T-0429, T-0447
 
+## A converged cycle's value depends on the values it started from
+Rule: with iteration on, a recalculation resumes each cycle from its previous values ("How excel-graph calculates a
+probe workbook" above) and stops at the first sweep whose largest change is below iterateDelta ("iterateDelta stops
+the iterations" above). So two workbooks with the same formulas and inputs can hold different values for a converging
+cycle, each within the delta of the fixed point, if they reached those inputs by different paths. An edited workbook
+evaluated after each edit is not guaranteed to match the same workbook loaded fresh with the same edits and evaluated
+once. Nothing here is a separate quirk: it follows from the two VERIFIED rules above, which the engine implements.
+Evidence: those two rules' probes. The engine shows the effect on calipers pv_goldens/pv23_019 (T-0495), with 25
+edits, each multiplying a numeric constant by 1.5 and adding 1, and one `evaluate()` per edit. At edit 10 the
+`Company1153 3-Statement` cycle through H64 (`=H$121`) and H121 (`=H119+H120`) stops in a different place in the two
+models: in the fresh load H64 trails H121 by about 3E-10, after the edits the two are equal. Then H123 (`=H121-H64`) is exactly 0 after the edits ("$ -" in the accounting format) and 2.9E-10 in the fresh
+load ("$ 0"). With iterateDelta 0 (and the count at its maximum) both models reach the fixed point and all 25 edits
+agree. The unit test `a_converged_cycle_depends_on_the_previous_values` (test_iteration.rs) reproduces it on a
+one-cell cycle. Excel's own values for such an edit sequence are unprobed: the oracle does not replay cell edits
+between calculations.
+Status: follows from VERIFIED rules (excel-graph); the engine matches them.
+Tasks: T-0495
+
 ## Iteration settings outside Excel's range fall back to its defaults
 Rule: Excel's Options dialog takes a Maximum Iterations of 1 to 32,767 and a non-negative Maximum
 Change; what Excel does with an xlsx whose `calcPr@iterateCount` or `iterateDelta` is outside

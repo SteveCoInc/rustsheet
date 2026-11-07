@@ -4,12 +4,14 @@
 //!
 //! [`compute`] is a pure function of the definition and the cache:
 //! 1. **Record filter.** A page field's selected item keeps only its records, and a hidden item
-//!    (`item@h`, [`PivotField::is_hidden`]) of a field on an axis drops its records. Only a page
+//!    (`item@h`, [`PivotField::is_hidden`](super::PivotField::is_hidden)) of a field on an axis drops its records. Only a page
 //!    field's selection and hidden items are evidenced (probes/t4137-pivot-captions K4); hidden
 //!    items of a row or column field, and the totals over them, are UNVERIFIED (T-4164). A page
 //!    `item` that names no data item reads as `(All)`, as T-4139's import does, and a hidden item
 //!    on a field off every axis is ignored (both UNVERIFIED, T-4633; docs/excel-semantics/
-//!    pivots.md "Record filters").
+//!    pivots.md "Record filters"). A slicer's selection replaces its field's hidden items, on an
+//!    axis or not, and a timeline keeps only the records whose day its selection spans
+//!    (`pivot::slicer`, T-4188; probes/t4767-pivot-slicers, probes/t4767-pivot-timelines).
 //!
 //!    Then the pivot's `<filters>` and `AutoShow` (`pivot::filter`, T-4165): caption and date
 //!    filters, then value filters and Top-N per parent, each keeping the records of the items it
@@ -64,6 +66,7 @@
 
 mod calculate;
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use thiserror::Error as ThisError;
@@ -73,9 +76,10 @@ use crate::expressions::token::Error;
 use super::accumulate::{sum_in_order, Accumulator, CutCount};
 use super::calculated::Plan;
 use super::filter::{apply as apply_filters, FilterContext};
+use super::model::bit;
 use super::show_as::{show_values_as, Shown};
 use super::sort::value_sorts;
-use super::{Aggregate, Axis, CacheItem, ItemType, PageField, PivotCache, PivotField, PivotTable};
+use super::{Aggregate, Axis, CacheItem, ItemType, PageField, PivotCache, PivotTable};
 use calculate::calculate;
 
 mod axis;
@@ -378,8 +382,15 @@ fn filter(
     cache: &PivotCache,
     work: &mut u64,
 ) -> Result<Vec<u32>, PivotComputeError> {
-    // (the field's records, the one item it keeps or None, its hidden items)
-    let mut tests: Vec<(&[u32], Option<u32>, Option<&PivotField>)> = Vec::new();
+    /// What one field asks of a record's item.
+    enum Test<'a> {
+        /// The page field's one selected item.
+        Page(u32),
+        /// No item of this bitset over the field's cache items: the slicer's selection or the
+        /// hidden items (borrowed), or the items a timeline's span leaves out (built once).
+        Out(Cow<'a, [u64]>),
+    }
+    let mut tests: Vec<(&[u32], Test<'_>)> = Vec::new();
     let column = |field: u32| {
         cache
             .fields
@@ -389,9 +400,8 @@ fn filter(
     };
     for page in &table.page_fields {
         let records = column(page.field)?;
-        let selected = page_selection(table, page);
-        if selected.is_some() {
-            tests.push((records, selected, None));
+        if let Some(selected) = page_selection(table, page) {
+            tests.push((records, Test::Page(selected)));
         }
     }
     for (field, pivot_field) in (0u32..).zip(&table.fields) {
@@ -399,19 +409,43 @@ fn filter(
             pivot_field.axis,
             Some(Axis::Row | Axis::Column | Axis::Page)
         );
-        if on_axis && pivot_field.hidden.iter().any(|word| *word != 0) {
-            tests.push((column(field)?, None, Some(pivot_field)));
+        // A slicer filters its field whether or not the field is on an axis (UNVERIFIED,
+        // T-4962: only a row field is probed), hidden items only a field on one.
+        let slicer = pivot_field.slicer.is_some();
+        if (slicer || on_axis) && pivot_field.excludes_any() {
+            let words = Cow::Borrowed(pivot_field.excluded_words());
+            tests.push((column(field)?, Test::Out(words)));
+        }
+        if let Some(span) = pivot_field.timeline {
+            let items = cache
+                .fields
+                .get(field as usize)
+                .map(|f| f.items.as_slice())
+                .ok_or(PivotComputeError::Malformed)?;
+            // Each cache item tested once, not each record.
+            charge(work, units(items.len()))?;
+            let mut out = vec![0_u64; items.len().div_ceil(64)];
+            for (index, item) in items.iter().enumerate() {
+                if let (false, Some(word)) = (span.keeps(item), out.get_mut(index / 64)) {
+                    *word |= 1 << (index % 64);
+                }
+            }
+            tests.push((column(field)?, Test::Out(Cow::Owned(out))));
         }
     }
     let count = cache.record_count as usize;
     charge(work, units(count.saturating_mul(tests.len().max(1))))?;
     let mut kept = Vec::with_capacity(count);
     'records: for record in 0..cache.record_count {
-        for (records, selected, hidden) in &tests {
+        for (records, test) in &tests {
             let item = *records
                 .get(record as usize)
                 .ok_or(PivotComputeError::Malformed)?;
-            if selected.is_some_and(|s| s != item) || hidden.is_some_and(|f| f.is_hidden(item)) {
+            let keeps = match test {
+                Test::Page(selected) => *selected == item,
+                Test::Out(words) => !bit(words, item),
+            };
+            if !keeps {
                 continue 'records;
             }
         }

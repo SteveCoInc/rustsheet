@@ -893,5 +893,6 @@ mod groups;
 mod item_order;
 mod pivot_field;
 mod raw_cache;
+pub(crate) mod slicers;
 #[cfg(test)]
 mod tests;

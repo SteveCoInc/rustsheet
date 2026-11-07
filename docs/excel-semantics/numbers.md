@@ -2376,29 +2376,40 @@ engine matches both. **A delete that leaves another criterion shows only the row
 (T-4755, probes/t4755-two-criteria-filtered-table-*): with a values filter on `Cat` keeping "a" and "c" (rows 3, 7)
 and one on `Ext` rejecting 40 (row 5), the control gives 3 = 103 = 3 and 9 = 109 = 9; deleting column A gives
 3 = 103 = 5 and 9 = 109 = 17: rows 3 and 7 are visible again, row 5 stays hidden and still filtered
-(`SUBTOTAL(3,..)` of it is 0). The engine matches (T-4803): after a column delete that takes a criterion and leaves
-another inside the table, it shows each hidden data row that every kept criterion keeps, by the text the row's cell
-displays in that criterion's column (`rows_kept_by_criteria`, crates/rustsheet-engine/src/table_edits.rs), for a table read
-from a file and for one given its criteria with `Txn::filter_table_column` (the eval adapter's spec `"criteria"`). Rule
-(ours, T-4803): only a values filter without date groups is evaluated (blank rows by `blank`, other rows by their text
-among `values`, ignoring case); a row with any other kept criterion stays hidden. **Excel re-applies the kept criteria
-to every data row** (T-4895, excel-graph 2026-11-07; predictions committed before each fill in docs/research/t4895/):
+(`SUBTOTAL(3,..)` of it is 0). **Excel re-applies the kept criteria to every data row** (T-4895, T-4939, excel-graph
+2026-11-07; predictions committed before each fill in docs/research/t4895/ and docs/research/t4939/): a row every
+kept criterion keeps is visible afterwards and a row one rejects is hidden, whatever its state before, matched by the
+text the row's cell displays in that criterion's column, ignoring case:
 - A row hidden in the file that both criteria keep is shown by the delete too (probes/t4895-two-criteria-hand-hidden-*:
   row 4, "a" and 30, also written hidden; the control gives `SUBTOTAL(3,S!B4)` = 0, the delete 1 and 3 = 103 = 5,
-  9 = 109 = 17, as the engine). One earlier fill of the delete case without its `COLUMNS(Sales)` reader returned the
+  9 = 109 = 17). One earlier fill of the delete case without its `COLUMNS(Sales)` reader returned the
   control's values; two later fills with the reader (`COLUMNS` = 2, so the delete ran) reproduced the result above,
   (the 13:36 fill is kept in docs/research/t4895/second-fill/, the 13:37 one is the case's sidecar), and the first
   fill's sidecars are kept in docs/research/t4895/first-fill/.
-- The kept criterion is matched against the text each row displays, and visible rows it rejects are hidden
+- Visible rows the kept criterion rejects are hidden, and the match is by displayed text
   (probes/t4895-two-criteria-number-format-*): with `Ext` formatted `0.00` (10.00 .. 60.00) and its kept values
   filter listing the General text 10, 20, 30, 50, 60, the control reads the file's hidden rows (3 = 103 = 3) but the
   delete of `Cat` hides **every** data row, rows 2, 4 and 6 that were visible included (3 = 103 = 9 = 109 = 0; two
-  fills). The engine leaves rows 2-4, 6 and 7 visible: a gap owned by T-4939.
+  fills). The positive control (docs/research/t4939/control.py, its uploads and predictions beside it) lists the
+  displayed text 10.00, 20.00, 30.00, 50.00, 60.00 instead: the control still reads rows 3, 5 and 7 hidden, and the
+  delete shows rows 2-4, 6 and 7 and hides row 5 (3 = 103 = 5, 9 = 109 = 17), so the displayed text matches and the
+  General text does not.
 - Uploads of patched spec2xlsx workbooks (Cat keeps a and c, Ext rejects 40, delete_column C; sha256 of each in
-  docs/research/t4895/predictions-uploads.tsv, the recalculated values in docs/research/t4895/uploads/): kept values "A" and "C" over cells a and c keep them (case is
-  ignored); a visible row whose kept cell is blank stays visible under `blank="1"` and is hidden without it; a kept
-  custom filter (equals a, or equals c) shows row 5, which only the deleted criterion hid. The engine matches the
-  first two and differs on the last two (it leaves the blank row visible and keeps row 5 hidden; T-4939).
+  docs/research/t4895/predictions-uploads.tsv, the recalculated values in docs/research/t4895/uploads/): kept values
+  "A" and "C" over cells a and c keep them (case is ignored); a visible row whose kept cell is blank stays visible
+  under `blank="1"` and is hidden without it; a kept custom filter (equals a, or equals c) shows row 5, which only the
+  deleted criterion hid.
+
+The engine follows this (T-4803, T-4939): after a column delete that takes a criterion and leaves another inside the
+table, `rows_decided_by_criteria` (crates/rustsheet-engine/src/table_edits.rs) re-applies the kept criteria to each
+data row, rows without a row record included, by `FilterCriterion::keeps_text` (table_types.rs), for a table read from
+a file and for one given its criteria with `Txn::filter_table_column`. The eval adapter's spec `"criteria"` lists the
+kept rows' General text, as spec2xlsx writes it (`add_table` in crates/rustsheet-eval/src/engine.rs runs before the
+number formats are set). Rule (ours where unprobed): a values filter without date groups is evaluated (blank rows by
+`blank`, other rows by their text among `values`), and a custom filter whose conditions all have the `equal` operator
+(or none) and a text operand without a wildcard (`*`, `?`, `~`), combined by `and`. A row whose verdict hangs on any
+other kept criterion (a custom filter with another operator or a numeric operand, top 10, dynamic, date groups, color)
+keeps its state, unless an evaluated criterion rejects it. The undo puts back every row the delete showed or hid.
 Kept top10, dynamic, date-group and color criteria are unprobed.
 A manual hide made in the application inside a filtered table, and hidden rows outside the table (the engine keeps
 them hidden), are unprobed. A worksheet autoFilter (no table) and an autoFilter holding only a

@@ -160,7 +160,7 @@ fn an_empty_text_items_label_is_an_empty_cell() {
 /// `canonical` of `tools/tests/test_pivot_parts_golden.py`: one line per element, depth-indented,
 /// its local name and its attributes by local name, sorted, values unescaped, namespace
 /// declarations left out; non-blank text on its own `#text` line.
-fn canonical(xml: &str) -> String {
+pub(super) fn canonical(xml: &str) -> String {
     use quick_xml::events::{BytesStart, Event};
     use quick_xml::XmlVersion;
     let local = |name: &str| name.rsplit(':').next().unwrap().to_string();

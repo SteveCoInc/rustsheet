@@ -18,7 +18,7 @@ use super::super::package::ImportLimits;
 use super::super::{parse_relationships, xml::XmlNode};
 use super::*;
 
-const REL: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+pub(super) const REL: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
 fn rels(entries: &[(&str, &str, &str)]) -> String {
     let mut body = String::new();
@@ -55,7 +55,7 @@ fn table(body: &str) -> String {
 const TABLE_BODY: &str = r#"<location ref="A3:E7" firstHeaderRow="1"/><pivotFields count="3"><pivotField axis="axisRow"><items><item x="0"/><item x="1" h="1"/><item t="default"/></items></pivotField><pivotField axis="axisCol"/><pivotField dataField="1"/></pivotFields><rowFields><field x="0"/></rowFields><colFields><field x="1"/><field x="-2"/></colFields><dataFields><dataField name="Sum of Sales" fld="2" baseField="0" baseItem="0"/></dataFields>"#;
 
 /// The parts of a workbook with one cache (cacheId 1) and one pivot on sheet1.
-fn parts() -> Vec<(String, String)> {
+pub(super) fn parts() -> Vec<(String, String)> {
     vec![
         (
             "xl/_rels/workbook.xml.rels".into(),
@@ -83,7 +83,11 @@ fn parts() -> Vec<(String, String)> {
 }
 
 /// `parts` with the part `name` replaced (or added) by `content`.
-fn with(mut parts: Vec<(String, String)>, name: &str, content: String) -> Vec<(String, String)> {
+pub(super) fn with(
+    mut parts: Vec<(String, String)>,
+    name: &str,
+    content: String,
+) -> Vec<(String, String)> {
     parts.retain(|(n, _)| n != name);
     parts.push((name.to_string(), content));
     parts
@@ -94,7 +98,7 @@ fn without(mut parts: Vec<(String, String)>, name: &str) -> Vec<(String, String)
     parts
 }
 
-fn package(parts: &[(String, String)]) -> Package<Cursor<Vec<u8>>> {
+pub(super) fn package(parts: &[(String, String)]) -> Package<Cursor<Vec<u8>>> {
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
     for (name, content) in parts {
         zip.start_file(name.as_str(), zip::write::SimpleFileOptions::default())
@@ -105,7 +109,7 @@ fn package(parts: &[(String, String)]) -> Package<Cursor<Vec<u8>>> {
     Package::new(Cursor::new(bytes), ImportLimits::default()).unwrap()
 }
 
-fn workbook_rels(parts: &[(String, String)]) -> HashMap<String, Relationship> {
+pub(super) fn workbook_rels(parts: &[(String, String)]) -> HashMap<String, Relationship> {
     let (_, xml) = parts
         .iter()
         .find(|(n, _)| n == "xl/_rels/workbook.xml.rels")
@@ -116,7 +120,7 @@ fn workbook_rels(parts: &[(String, String)]) -> HashMap<String, Relationship> {
         .collect()
 }
 
-fn caches(list: &[(&str, &str)]) -> Vec<(Option<String>, Option<String>)> {
+pub(super) fn caches(list: &[(&str, &str)]) -> Vec<(Option<String>, Option<String>)> {
     list.iter()
         .map(|(id, rel)| (Some((*id).to_string()), Some((*rel).to_string())))
         .collect()
@@ -142,6 +146,7 @@ fn load_in(
         &mut package(parts),
         &workbook_rels(parts),
         &caches(list),
+        &[],
         &sheets,
         date_system,
     )
@@ -593,6 +598,7 @@ fn pivots_past_the_workbook_cap_are_dropped() {
         &mut package(&many),
         &workbook_rels(&many),
         &caches(&[("1", "rIdC1")]),
+        &[],
         &sheets,
         DateSystem::Excel1900,
     );
