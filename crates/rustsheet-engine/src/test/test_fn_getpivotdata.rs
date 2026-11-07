@@ -658,12 +658,12 @@ fn several_data_fields_pick_by_source_name_caption_and_the_values_pair() {
     ];
     let mut model = two_data_field_model();
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("H{}", 40 + i), formula);
+        model.set_a1(&format!("H{}", 40 + i), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("H{}", 40 + i)),
+            model.get_text_a1(&format!("H{}", 40 + i)),
             *expected,
             "{formula}"
         );
