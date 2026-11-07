@@ -255,3 +255,20 @@ Measured on this branch's own baseline (cut before main's newer probes; merge `o
   hold-out and the fresh sweep, and replacing the `KERNEL` scaffold with one form (clippy has not been run on it).
 
 Resumed 2026-11-07 06:02 UTC by an opus run (worker step 2, branch idle 5 h).
+
+## Landing notes (2026-11-07 06:10 UTC, third opus run)
+Short resume (the session's start-new-work limit was near): no code change. Data for the next scoring step, from
+probes/linest-modes (oracle, excel-graph), for the multi-predictor exact-fit regressions L85, M85 and L106:
+- Data: A2:A9 = 1..8, B = {2.1,3.9,6.2,7.8,10.1,12.2,13.8,16.1}, C = {2,1,4,3,6,5,8,7}, D = {3,5.5,9,16,27,50,88,160},
+  E = 2·A exactly. y is B in both formulas, so y is itself an x column.
+- K85 `LINEST(B2:B9,A2:C9,TRUE,TRUE)`: Excel is exact everywhere: C 0, B 1, A 0, intercept 0; row 86 se all 0; r2 1,
+  se_y 0, F `#NUM!`, df 4 (no column dropped), ss_reg 167.79500000000004, ss_res 0.
+- K106 `LINEST(B2:B9,A2:E9,TRUE,TRUE)`: E 1.4342828472961902E-16, D exactly 0, C 5.0756899759395145E-18, B
+  0.9999999999999999, A exactly 0 with se exactly 0 (O107) and df 3: Excel drops A, the earlier of the collinear pair
+  A, E, and keeps E. The other se (row 107) are 5.4E-19..8.5E-17, r2 1, se_y 3.67E-17, F 3.1E+34, ss_res 4.0E-33.
+- Reasoning so far (not scored): when y equals an x column and that column is reflected last, every earlier
+  reflector acts on y and the column with the same bits, so back substitution gives exactly 1 and 0. That explains
+  K85 only if B is reflected after A and C (neither the natural nor the reversed order does that), and K106's noise on
+  B and E says B is not last there. So a column order alone does not explain both: score pivoted QR (largest residual
+  norm first, LINPACK dqrdc) and the drop of A rather than E (which column the collinearity test removes) next, with
+  a replica in Python of `householder` (same summation order) on these two formulas before touching linest.rs.
