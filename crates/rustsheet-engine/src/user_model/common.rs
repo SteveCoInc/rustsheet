@@ -1239,7 +1239,7 @@ impl UserModel {
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
         let old_data_tables = self.model.data_tables_of(sheet)?;
         let snapshot = self.rewrite_snapshot(sheet)?;
-        let (tables, rewritten, shown) =
+        let (tables, rewritten, toggled) =
             (self.model).delete_columns_keeping_tables(sheet, column, column_count)?;
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
         diff_list.extend(self.data_tables_snapshot_diffs(sheet, old_data_tables)?);
@@ -1253,7 +1253,8 @@ impl UserModel {
             tables,
             rewritten,
         });
-        diff_list.extend(shown.into_iter().map(|row| Diff::row_shown(sheet, row)));
+        diff_list
+            .extend((toggled.into_iter()).map(|(row, h)| Diff::row_hidden_toggled(sheet, row, h)));
         self.push_diff_list(diff_list);
         self.evaluate_if_not_paused();
         Ok(())
