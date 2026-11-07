@@ -63,6 +63,10 @@ pub(crate) fn family(name: &str) -> Option<Family> {
     })
 }
 
+/// A further scenario's failing items and the source items it compared, or `None` when it did
+/// not apply to the case (`n/a`).
+type Scored = Option<(Vec<Item>, usize)>;
+
 /// Why a case could not run R0.
 pub(super) enum R0Error {
     /// The source package itself cannot be read: the case is unusable.
@@ -132,11 +136,7 @@ pub(super) fn run_scenarios(
 }
 
 /// Idempotence (D8): our own R0 output, saved again, keeps every item.
-fn again(
-    out: &[u8],
-    name: Option<&str>,
-    label: &'static str,
-) -> Result<Option<(Vec<Item>, usize)>, R0Error> {
+fn again(out: &[u8], name: Option<&str>, label: &'static str) -> Result<Scored, R0Error> {
     let source = Package::read(out).map_err(|e| R0Error::Engine(e.to_string()))?;
     let (found, checked, _) = r0(&source, out, name)?;
     let failing = found
@@ -200,7 +200,7 @@ fn run_r1(
     label: &'static str,
     edits: &[Edit],
     plain: &[Item],
-) -> Result<(Option<(Vec<Item>, usize)>, r1::Outcome), R0Error> {
+) -> Result<(Scored, r1::Outcome), R0Error> {
     let mut workbook = load(bytes, name)?;
     let (delta, outcome) = r1::apply(&mut workbook, edits).map_err(R0Error::Engine)?;
     let Some(delta) = delta else {
