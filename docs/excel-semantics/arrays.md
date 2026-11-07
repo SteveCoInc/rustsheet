@@ -990,18 +990,23 @@ excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is
   fill confirms it yet, decision 0039). Byte-identical copies of the T-2592, T-2594, T-2625, T-2360
   and T-2311 probes refilled on 2026-11-06 (`<case>-refill-1106`, twice for the first two, identical) agree with their October fills
   except: SUM over a nested result is `#N/A` and COUNT skips its nested cells (t2592-refill-1106 A6, A7: `#N/A`, 0; A8 COUNTA 9, one per
-  cell; t2594-refill-1106 A26:A29; t2625-refill-1106 A13, A17, A26, and COUNT over an INDEXed row or column of nested cells A20, A25,
-  while `&""` over such a row makes each nested cell `#VALUE!`, A32); and an element-wise lift reads a nested cell as an
-  error, not as its top-left (`SUM(--ISERROR(GROUPBY(..)))` counts every nested cell: t2360-refill-1106 P!C1, C9, C17, C25, C33,
-  t2311-refill-1106 P!C12). INDEX, TYPE, MAP, BYROW, BYCOL, REDUCE, the shape functions and the other aggregates did not change.
+  cell; t2594-refill-1106 A26:A29; t2625-refill-1106 A13, A17, A26, and COUNT over an INDEXed row or column of nested cells A20, A25);
+  and an element-wise lift reads a nested cell as an error, not as its top-left (`SUM(--ISERROR(GROUPBY(..)))` counts every nested
+  cell: t2360-refill-1106 P!C1, C9, C17, C25, C33, t2311-refill-1106 P!C12). The error is `#VALUE!`: the lifted fallback of
+  `IFERROR(G&"","#"&ERROR.TYPE(G))` gives "#3" at every nested cell, 1x1 and multi-cell (t2475-stat-subexpressions-refill-1106 P!A64
+  over a raw GROUPBY, t2625-refill-1106 A32 over an INDEXed PIVOTBY row), where in October it read the non-error top-left and gave `#N/A`
+  (t2625 A32 one `#N/A`, t2475 A64 a `?` listing). INDEX, TYPE, MAP, BYROW, BYCOL, REDUCE, the shape functions and the other aggregates did not change.
   Consistent with it, an element-wise lift reads a two-level cell as an error that is not `#N/A`, even when the inner top-left is `#N/A`
   (`SUM(--ISERROR(G2))` 6, `ISTEXT` 3, `ISNA` over the `#N/A` form 0, `ISERROR` 3; and-lifts A44:A47; one-cell A27), and a reference-body
   cell as `#VALUE!` (`SUM(--ISERROR(..))` 6, `ISNUMBER` 0, REGEXEXTRACT `#VALUE!` per cell; A41, A42, A49).
 - A lifted INDEX of nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4, no error (and-lifts A56:A59; ours `#VALUE!`).
 - A reference-body result: SUM reads each cell as its value (`SUM(GROUPBY(..,LAMBDA(x,D!D2)))` 60, A50), COUNT is 0 and COUNTA 9 (A51,
   A52); INDEX of a cell whose body points at a blank cell is a true blank (TYPE 1, `&""` "", A53) and at an `#N/A` cell `#N/A` (A54).
-- The engine follows Excel's October reads (SPEC-0018), so the refilled cells above are known failures; which fill is the target, and
-  the revision of SPEC-0018 rules 4 and 7, are T-4661's.
+- The November reads are the target (decision 0329: a behavior change, reproduced on byte-identical copies). SPEC-0018 rule 4 states them
+  (T-4661). The engine still follows the October reads, so the refilled cells above are known failures until T-4736 (SUM, COUNT,
+  COUNTA, and SUM over a reference body), T-4737 (lifts read an error; `&""` over an INDEXed row) and T-4738 (the lifted INDEX top-left)
+  land. Each of them turns its share of the October cells (t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26, A32, t2360
+  P!C1, C9, C17, C25, C33, t2311 P!C12, t2475 P!A64; and October-only cells such as gen-m9/e85daedce5c2675e Calc!A35, once a refill confirms each, decision 0329 item 3) into superseded known failures, with the October sidecars kept (decision 0329 item 3).
 Aggregates over nested GROUPBY and PIVOTBY cells (probes/t2594-nested-aggregates, excel-graph, 2026-10-24, T-2594, over the T-2592
 data): (October fills; by 2026-11-06 SUM is `#N/A` and COUNT skips nested cells, see the T-2609 list above) SUM, COUNT and COUNTA flatten a nested cell (SUM 220, COUNT 16, COUNTA 19 over GROUPBY; over PIVOTBY SUM 220, COUNT 16,
 COUNTA 32; `SUM(1,GROUPBY(..),2)` 223; A26:A29). Every other aggregate tried is `#N/A`: MIN, MAX, MINA, MAXA, AVERAGEA, PRODUCT,
