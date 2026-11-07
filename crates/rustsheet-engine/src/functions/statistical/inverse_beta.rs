@@ -372,34 +372,19 @@ pub(crate) fn newton_least_residual(
     density: impl Fn(f64) -> f64,
     max_steps: u32,
 ) -> f64 {
-    let ln_p = p.ln();
-    let mut x = start;
-    let mut best = (x, f64::INFINITY);
-    let mut previous: Option<f64> = None;
-    for _ in 0..max_steps {
-        let residual = cdf(x) - p;
-        if !residual.is_finite() {
-            break;
-        }
-        if residual.abs() < best.1 {
-            best = (x, residual.abs());
-        }
-        let relative = residual / p;
-        let settled = previous.is_some_and(|r| ln_p + relative == ln_p || r * relative < 0.0);
-        if settled || residual.abs() < f64::MIN_POSITIVE {
-            break;
-        }
-        previous = Some(relative);
-        let step = residual / density(x);
-        if !step.is_finite() || step * step == 0.0 {
-            break;
-        }
-        x -= step;
-        if !(x > 0.0 && x < 1.0) {
-            break;
-        }
-    }
-    best.0
+    as109::newton_search(
+        As109Profile::SmallBetaTail,
+        as109::NewtonStart {
+            seed: start,
+            target: p,
+            accuracy: 0.0,
+            max_steps,
+        },
+        &|x: f64, _: f64| cdf(x),
+        &|x: f64, _: f64| density(x),
+    )
+    .value(true)
+    .unwrap_or(start)
 }
 
 /// statrs' `StudentsT::inverse_cdf` (location 0, scale 1) with [`inv_beta_reg`]'s caps, at most

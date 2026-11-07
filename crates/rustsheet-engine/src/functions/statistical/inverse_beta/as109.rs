@@ -51,9 +51,15 @@ const MAX_CONTRACTIONS: u32 = 645;
 /// and the stop; the cdf and density are the caller's.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum As109Profile {
-    /// BETA.INV and BETAINV, and the beta iterate behind F.INV (T-4975 section A): the accuracy
-    /// test of either the step or the residual stops the search.
+    /// BETA.INV and BETAINV, and the beta iterate behind F.INV (T-4975 sections A and C): AS 109's
+    /// step contractions, and its accuracy test on the step or the previous step stops the search
+    /// (the iterate before the step).
     BetaInv,
+    /// The Student-t inverse's power-law tail (T-3363, `inverse_beta::beta_small_quantile`): plain
+    /// Newton steps, stopping where ln p no longer moves with the relative residual, where that
+    /// residual changes sign, where the squared step underflows, where the residual is below the
+    /// smallest normal double or where an iterate leaves (0, 1); always settled, never exhausted.
+    SmallBetaTail,
 }
 
 /// How [`as109_search`] ended.
@@ -136,6 +142,7 @@ fn first_estimate(pp: f64, qq: f64, target: f64, ln_beta: f64) -> f64 {
 /// stops the search).
 fn accuracy(profile: As109Profile, pp: f64, qq: f64, target: f64) -> f64 {
     match profile {
+        As109Profile::SmallBetaTail => 0.0,
         As109Profile::BetaInv => {
             let m = pp.min(qq);
             10f64.powf(-5.0 / m / m - 1.0 / target.powf(0.2) - 13.0)
@@ -143,8 +150,9 @@ fn accuracy(profile: As109Profile, pp: f64, qq: f64, target: f64) -> f64 {
     }
 }
 
-/// Excel's AS 109 search on `problem` (see the module documentation), at most
-/// [`MAX_NEWTON_STEPS`] cdf and density evaluations.
+/// Excel's AS 109 search on `problem` (see the module documentation): AS 109's first estimate,
+/// then [`newton_search`] under the problem's profile, at most [`MAX_NEWTON_STEPS`] cdf and
+/// density evaluations.
 pub(crate) fn as109_search<C, D>(problem: &As109Problem<C, D>) -> As109Outcome
 where
     C: Fn(f64, f64) -> f64,
@@ -165,31 +173,102 @@ where
     if !(seed > 0.0 && seed < 1.0) {
         return As109Outcome::Exhausted;
     }
+    let accuracy = accuracy(profile, pp, qq, target);
+    newton_search(
+        profile,
+        NewtonStart {
+            seed,
+            target,
+            accuracy,
+            max_steps: MAX_NEWTON_STEPS,
+        },
+        &problem.cdf,
+        &problem.density,
+    )
+}
+
+/// Where [`newton_search`] starts and what it solves for.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct NewtonStart {
+    /// The first iterate.
+    pub seed: f64,
+    /// The probability solved for.
+    pub target: f64,
+    /// The profile's absolute accuracy (AS 109's acu; unused by [`As109Profile::SmallBetaTail`]).
+    pub accuracy: f64,
+    /// The most cdf evaluations.
+    pub max_steps: u32,
+}
+
+/// The one bounded Newton loop behind Excel's inverse beta searches: from `start.seed`, solve
+/// `cdf(x, 1 - x) = start.target` with the slope `density(x, 1 - x)`, stopping by `profile`'s
+/// rules (see [`As109Profile`]), keeping the first iterate of least absolute residual.
+pub(crate) fn newton_search<C, D>(
+    profile: As109Profile,
+    start: NewtonStart,
+    cdf: &C,
+    density: &D,
+) -> As109Outcome
+where
+    C: Fn(f64, f64) -> f64,
+    D: Fn(f64, f64) -> f64,
+{
+    let NewtonStart {
+        seed,
+        target,
+        accuracy,
+        max_steps,
+    } = start;
     let end_seed = seed == ENDPOINT_SEED || seed == 1.0 - ENDPOINT_SEED;
+    let acu_sq = accuracy * accuracy;
+    let ln_target = target.ln();
     let mut value = seed;
-    let acu = accuracy(profile, pp, qq, target);
-    let acu_sq = acu * acu;
     let mut yprev = 0.0;
     let mut sq: f64 = 1.0;
     let mut prev = 1.0;
     let mut contractions = 0u32;
     let mut best = (f64::INFINITY, value);
     let (mut below, mut above) = (false, false);
-    for step in 0..MAX_NEWTON_STEPS {
+    let mut previous_relative: Option<f64> = None;
+    for step in 0..max_steps {
         let (x, y_complement) = (value, 1.0 - value);
-        let residual = (problem.cdf)(x, y_complement) - target;
-        if residual.is_nan() {
+        let residual = cdf(x, y_complement) - target;
+        if profile == As109Profile::SmallBetaTail {
+            if !residual.is_finite() {
+                break;
+            }
+        } else if residual.is_nan() {
             return As109Outcome::Exhausted;
         }
         if residual.abs() < best.0 {
             best = (residual.abs(), value);
+        }
+        if profile == As109Profile::SmallBetaTail {
+            // T-3363's stops: ln p no longer moves with the relative residual, the residual
+            // changes sign, or it is below the smallest normal double.
+            let relative = residual / target;
+            let settled = previous_relative
+                .is_some_and(|r| ln_target + relative == ln_target || r * relative < 0.0);
+            if settled || residual.abs() < f64::MIN_POSITIVE {
+                break;
+            }
+            previous_relative = Some(relative);
+            let y = residual / density(x, y_complement);
+            if !y.is_finite() || y * y == 0.0 {
+                break;
+            }
+            value -= y;
+            if !(value > 0.0 && value < 1.0) {
+                break;
+            }
+            continue;
         }
         below |= residual < 0.0;
         above |= residual > 0.0;
         if residual == 0.0 {
             return As109Outcome::Stopped(value);
         }
-        let y = residual / (problem.density)(x, y_complement);
+        let y = residual / density(x, y_complement);
         if !y.is_finite() {
             // No step to take: an end seed is the caller's to keep or not (Excel keeps it at
             // t3862 A1, 0.999999, and not at accuracy/BETA.INV/s1 A182, 0.5).
@@ -233,7 +312,7 @@ where
         value = tx;
         yprev = y;
     }
-    if below && above {
+    if profile == As109Profile::SmallBetaTail || (below && above) {
         As109Outcome::Settled(best.1)
     } else {
         As109Outcome::Exhausted
