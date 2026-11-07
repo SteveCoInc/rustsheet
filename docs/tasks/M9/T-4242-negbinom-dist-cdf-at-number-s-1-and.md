@@ -27,7 +27,7 @@ accuracy/NEGBINOM.DIST/r4-T-3576!Calc!A125 passes and its known-failures line go
 ## Acceptance criteria
 - [x] A125 passes Gate A; its line in eval/accuracy/known-failures.tsv is removed.
 - [x] No closed-form cell that matches Excel today moves (eval-check: 0 regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - NEGBINOM.DIST at a huge number_s (T-3576, T-4238).
