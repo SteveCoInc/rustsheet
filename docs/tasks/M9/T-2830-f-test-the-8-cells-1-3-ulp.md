@@ -3,7 +3,7 @@ id: T-2830
 title: "F.TEST: the 8 cells 1-3 ulp off after bratio's port and its unported branches (T-2681)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
