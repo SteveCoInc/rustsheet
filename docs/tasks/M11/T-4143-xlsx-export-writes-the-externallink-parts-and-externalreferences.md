@@ -49,7 +49,8 @@ Done. A load and save keeps a workbook's links to other workbooks:
   and the pivot caches follow (`first_external_link_id` and `first_pivot_cache_id` in workbook_xml_rels.rs).
 - **Unread links.** A link the import could not read as a workbook (DDE, OLE, missing part) is written as an empty
   `<externalLink/>`, so the books after it keep their `[n]`.
-- **Engine model.** `ExternalBook` gains:
+- **Engine model.** `ExternalBook` gains the two fields below. The `NIGHT_TWO` bitcode fuzz reproducer, which holds three
+  linked books, was re-encoded to the new layout; it decodes to the same workbook with both fields empty:
   - `target`, read from the externalLink part's own relationships;
   - `data_sheets`, the sheets the cache had a `sheetData` for, since Excel writes none for some sheets
     (fixtures/external-link-uncached-lookups).
@@ -72,4 +73,5 @@ Done. A load and save keeps a workbook's links to other workbooks:
 
   roundtrip-calipers was not re-recorded. Its two pv26 goldens hit the 60 s per-case timeout here with main's binary
   too, and pass at `--timeout 300`; they hold no external link.
-- **Follow-up.** T-4932 (from PR #3863's review): probe the lifts not yet probed over nested cells.
+- **Follow-ups.** T-4932 (from PR #3863's review): probe the lifts not yet probed over nested cells. T-4937 (from this
+  PR's review): probe the empty `<externalLink/>` part and the `_xHHHH_` decoding of externalLink text and attributes.

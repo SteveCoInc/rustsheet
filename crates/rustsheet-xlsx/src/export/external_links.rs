@@ -38,9 +38,10 @@ pub(super) fn external_link_rels_part(index: usize) -> String {
     format!("xl/externalLinks/_rels/externalLink{}.xml.rels", index + 1)
 }
 
-/// Whether `book` is written as an `<externalBook>`. A book with no target and nothing cached is
-/// a link the import could not read as a workbook (DDE, OLE, a missing part): it is written as an
-/// empty `<externalLink/>`, which the schema allows, so the books after it keep their `[n]`.
+/// Whether `book` is written as an `<externalBook>`. A book equal to the default holds nothing to
+/// write: it is a link the import could not read as a workbook (DDE, OLE, a missing part). It is
+/// written as an empty `<externalLink/>` so the books after it keep their `[n]`; whether Excel
+/// opens such a part without a repair is unprobed (xlsx-storage.md, T-4143 entry; T-4937).
 fn writes_book(book: &ExternalBook) -> bool {
     *book != ExternalBook::default()
 }

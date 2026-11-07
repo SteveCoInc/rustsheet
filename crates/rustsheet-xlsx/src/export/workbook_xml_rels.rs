@@ -6,7 +6,8 @@ use super::xml_constants::{XML_DECLARATION, XML_WORKSHEET};
 
 /// The relationship id of the first externalLink part: they come right after the sheets, as
 /// Excel numbers them (eval/suites/fixtures/cases/external-link-cached-text.xlsx: sheets rId1–rId3,
-/// externalLink rId4), and the pivot caches after them (T-4143).
+/// externalLink rId4). The pivot caches follow them: no evidenced file has both, so that order is
+/// RustSheet's choice; relationship ids carry no meaning (T-4143).
 pub(crate) fn first_external_link_id(workbook: &Workbook) -> usize {
     workbook.worksheets.len() + 1
 }

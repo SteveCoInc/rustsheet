@@ -835,12 +835,16 @@ A workbook that links to other workbooks holds one `xl/externalLinks/externalLin
 writes, from the fixtures and the corpora:
 - **Relationship order.** Excel numbers the workbook's relationship to each externalLink part right after the sheets'
   (eval/suites/fixtures/cases/external-link-cached-text.xlsx: sheets `rId1`–`rId3`, externalLink `rId4`, then theme, styles,
-  sharedStrings). The part's own relationship is `externalLinkPath`, `TargetMode="External"`, with the target as the source
+  sharedStrings). The export does the same and numbers the pivot caches after them; no evidenced file holds both, so
+  that part of the order is RustSheet's choice. The part's own relationship is `externalLinkPath`, `TargetMode="External"`, with the target as the source
   wrote it: a bare file name (`56737.xlsx`, poi/ref-56737.xlsx) or a `file:///` UNC URL with `%20` escapes
   (corpus-bench/59932).
 - **Sparse `sheetData`.** The cache does not hold a `<sheetData>` for every cached sheet: fixtures/external-link-uncached-lookups
   names 5 sheets and writes `sheetData` for sheets 0, 1, 2 (`refreshError="1"`) and an empty one for 4, none for 3. The
   import keeps which sheets had one (`ExternalBook::data_sheets`) and the export writes the same elements back.
+- **Unread links.** A link the import could not read as a workbook (DDE, OLE, a missing part) is written as an empty
+  `<externalLink/>`, so later books keep their `[n]`. Status: UNVERIFIED (whether Excel opens it without a repair is
+  unprobed; T-4937).
 - **Cached text.** A `t="str"` cache cell's `_xHHHH_` escapes are decoded as a shared string's are. Status: UNVERIFIED (no
   Excel-written cache with an escape was seen; the ST_Xstring rule is assumed to apply, as for inline strings above).
 Evidence: the files named above (Excel-written); the round trip of every fixtures `external-link-*` case, poi/ref-56737 and
