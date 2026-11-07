@@ -4057,6 +4057,8 @@ factors were the same in both (928 factors compared, the 16 that differ are on o
   4 left fail the same way under both orders: A194 and A239 are `#NUM!` in Excel (T-4523), A252 and A267 stop short
   of the root outside Excel's 15 digits (T-4758).
 - In the eval it fixes those three cells and coup-calendar-edges S!J12, with no regression in any suite.
+- The evidence for PRICE itself is indirect: no PRICE probe cell yet sits where `fl(fl(DSC/E + n) - 1)` and
+  `fl((n - 1) + DSC/E)` differ and changes its value (T-4758 asks for one).
 Evidence: the probes above (excel-graph), the r4-T-2788 batch. DURATION's own cash-flow sum (`add_cash_flow`) still
 takes `DSC/E + n - 1`; no cell has shown it to differ.
 Ours: since T-1592 the fitted start and stop on the `^`-priced PRICE with an analytic slope (`excel_yield_newton`), with

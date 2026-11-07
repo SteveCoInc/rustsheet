@@ -29,10 +29,16 @@ coup-calendar-edges S!J12 (financial.md "YIELD stops short of PRICE's root", T-2
   digits): accuracy/YIELD/s1 A230, A252, A261 and accuracy/YIELD/r4-T-2788 A252, A267 (eval/accuracy/known-failures.tsv).
   Their prices and redemptions are far from 100, the region of T-4523: re-check them after it.
 
+- T-2788 review notes: PRICE's redemption order rests on YIELD cells only. A PRICE probe at inputs where
+  `fl(fl(DSC/E + n) - 1)` and `fl((n - 1) + DSC/E)` differ would evidence it directly. `discount_overflows`
+  (financial_bonds.rs) and DURATION's `add_cash_flow` still take `DSC/E + n - 1`; check whether they should follow.
+
 ## Acceptance criteria
 - [ ] The deep-discount and P!B13 cells leave eval/baseline/probes.txt, or the task records the PRICE kernels, `^`
       variants and stops tried with their lab bit-exact counts (decision 0056).
 - [ ] The five Gate A lines owned by this task leave eval/accuracy/known-failures.tsv, or the Outcome records why each stays.
+- [ ] A PRICE probe settles the redemption order directly (cells where the two orders differ), and
+      `discount_overflows` follows whichever order it shows.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

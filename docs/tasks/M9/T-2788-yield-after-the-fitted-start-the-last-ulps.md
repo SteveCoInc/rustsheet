@@ -99,9 +99,11 @@ The `^` factors were identical (928 compared) and the accrued order made no diff
   0188 R4 class (c): an operation order; no `FITTED` tag).
 - Eval delta: probes 6744 -> 6740 known failures (fixed yield-start-one-input S!B67, yield-start-term-basis S!A52 and
   S!B50, coup-calendar-edges S!J12), 0 regressions in every suite.
-- Hold-out (R4.1, the fit lab's fixed split, 127 of 370 `yield-caret` cells by hash): `(n - 1) + DSC/E` train 242/243
-  bit-exact, test 127/127 (all within 4 ulps and 15 digits); `(DSC/E + n) - 1` train 241/243, test 127/127. YIELD
-  has no correctly rounded candidate, so the lab's verdict column refuses every row on that ground alone.
+- Hold-out (R4.1, `uv run rustsheet-fitlab yield-caret`, the lab's fixed split: 127 of 370 cells held out by hash),
+  train / test, each bit-exact, within 4 ulps, within 15 digits:
+  `(n - 1) + DSC/E` 242/243/243 and 127/127/127, verdict accept; `(DSC/E + n) - 1` (candidate "redemption at
+  (DSC/E + n) - 1") 241/242/242 and 127/127/127; "correctly rounded" (PRICE's exact root at 50 digits, rounded once;
+  `yield_caret.correctly_rounded_yield`) 2/15/25 and 1/4/10. Over all 370: 369, 368 and 3 bit-exact.
 - Fresh sweep (R4.2): accuracy/YIELD/r4-T-2788, 300 points generated and filled (excel-graph) after the change was
   fixed. 288 bit-exact against 284 under the old order.
 - Gate A envelope: 296 of 300 inside (old order 295; A237 comes inside). Outside, the same under both orders and now
