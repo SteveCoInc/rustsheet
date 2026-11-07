@@ -3,7 +3,7 @@ id: T-4863
 title: "Probe criteria calls over an XLOOKUP lifted only by match_mode or search_mode, and settle the COUNTIF-over-a-computed-array wording"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
