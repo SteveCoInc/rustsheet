@@ -9,7 +9,9 @@
 
 use statrs::distribution::{Binomial, Discrete, DiscreteCDF, NegativeBinomial};
 
-use super::bratio::{closed_or_ported_tails, dispatch, l140_overflows, ported_tails, Branch};
+use super::bratio::{
+    bfrac_shapes_absorbed, closed_or_ported_tails, dispatch, l140_overflows, ported_tails, Branch,
+};
 use super::discrete::{binomial_cdf, binomial_pmf, binomial_range, odds, times_ratio};
 use super::incomplete_beta::{closed_form_tails, closed_or_shape_one_tails};
 use super::loader::excel_dbinom_exponent;
@@ -326,7 +328,8 @@ impl Model {
                 return Ok(lower);
             }
             // Excel's kernel is `#NUM!` where bratio's L140 bup sum overflows (T-3576).
-            if l140_overflows(a, b, x, y) {
+            // ... and on bfrac where the sum of the shapes absorbs the failures' shape (T-4238).
+            if l140_overflows(a, b, x, y) || bfrac_shapes_absorbed(a, b, x, y) {
                 return Err(num_error(cell));
             }
             // bfrac's points take the double-double walk below first, and bfrac only past its

@@ -3,7 +3,7 @@ id: T-4238
 title: "NEGBINOM.DIST's cdf is #NUM! on bfrac at number_s 1E+20"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -29,10 +29,23 @@ a rule backed by a probe, recorded in statistics.md.
   work reaches it.
 
 ## Acceptance criteria
-- [ ] A probe brackets the number_s cut between 1E+15 and 1E+20 on bfrac (and BETA.DIST at the same shapes), and
+- [x] A probe brackets the number_s cut between 1E+15 and 1E+20 on bfrac (and BETA.DIST at the same shapes), and
       statistics.md records the rule or the bracket.
-- [ ] The engine matches probes/t3576-negbinom-cdf-huge-s A50:A52.
-- [ ] `make check` green; reviewers approve.
+- [x] The engine matches probes/t3576-negbinom-cdf-huge-s A50:A52.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - L140's overflow (T-3576, done).
+
+## Outcome
+- Rule (structural, no constant): on bratio's bfrac branch Excel's cdf is `#NUM!` exactly where fl(a0 + b0) equals a0
+  or b0 (the smaller shape is absorbed). Predictions (H_absorb) were committed in `docs/research/t4238/` before the
+  excel-graph fill of probes/t4238-negbinom-bfrac-huge-s: 126/126 cells matched (NEGBINOM.DIST, BETA.DIST cdf and
+  density at number_s 1E+15 to 1E+20, failures 40, 100, 1000; cuts at 5E+17/6E+17, 1E+18/2E+18, 9E+18/1E+19).
+- BETA.DIST's density is `#NUM!` at the same absorbed shapes on its Loader branch (both shapes above 1), which also
+  fixes t3007 A20; the first draft applied it to every density and regressed t3007 A6 (`(0.1,1E+290,0.5,FALSE)` = 0,
+  beta below 1), so the rule is scoped to the branch Excel's density takes there.
+- Code: `bratio::shapes_absorb`, `bratio::bfrac_shapes_absorbed`; called from BETA.DIST's cdf and density and
+  NEGBINOM.DIST's cdf. statistics.md "NEGBINOM.DIST's cdf is #NUM! at a huge number_s" no longer has a "Still open".
+- Eval: probes/t3576-negbinom-cdf-huge-s A50:A52 now pass (88/89; A75, 1 ulp on bfrac, stays Tier B); t4238 new
+  case 126/126; t3007 A20 fixed; no regressions.

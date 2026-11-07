@@ -3496,8 +3496,15 @@ without that check (see "Incomplete beta L140 and bfrac: the prefactor is Excel'
 Implemented for BETA.DIST's and NEGBINOM.DIST's cdfs (`bratio::l140_overflows`, T-3576); the other callers of the
 kernel (BINOM.DIST's family, F, T, BETA.INV) are unprobed at such shapes.
 
-Still open: bfrac at number_s 1E+20 (40, 100 and 1000 failures, probes/t3576-negbinom-cdf-huge-s A50:A52) is `#NUM!`
-while bfrac at 1E+15 and below is 0. UNVERIFIED which quantity fails there.
+On bfrac the cut is the shapes' sum, not a size (T-4238): the cdf is `#NUM!` exactly where fl(a0 + b0) equals a0 or
+b0, so the smaller shape is absorbed (`NEGBINOM.DIST(40,6E+17,0.323212154487823,TRUE)`, b = 41, is `#NUM!`;
+`(40,5E+17,..)` is 0; 100 failures (b = 101) cut between 1E+18 and 2E+18, 1000 failures between 9E+18 and 1E+19). BETA.DIST's density is
+`#NUM!` at the same points when both shapes exceed 1 (Excel's Loader density): `BETA.DIST(0.323212154487823,6E+17,41,FALSE)`
+and `BETA.DIST(0.1,1E+200,2,FALSE)` (t3007 A20) are `#NUM!`, while `BETA.DIST(0.1,1E+290,0.5,FALSE)` (t3007 A6), with a
+shape below 1, is 0. The cdf's absorption rule applies on bfrac only: L140 cells keep their own rule (R above). Evidence: probes/t4238-negbinom-bfrac-huge-s (126 cells: number_s 1E+15 to 1E+20 and the cut rows,
+failures 40, 100, 1000, each through NEGBINOM.DIST, BETA.DIST's cdf and its density; predictions in
+`docs/research/t4238/predictions.tsv` committed before the excel-graph fill; all 126 matched H_absorb).
+Implemented as `bratio::bfrac_shapes_absorbed` (cdf) and `bratio::shapes_absorb` (density, both shapes above 1).
 
 The p dependence: p 0.001 (bpser) is 0. p 0.9, 0.99 and 0.999999 are `#NUM!` at both 1E+13 and 999999999999999.
 p 1 - 1E-13 and 1 - 1E-14 at 1E+13 are 1, through bfrac on the swapped call. At 999999999999999, p 1 - 1E-13 is
@@ -3508,8 +3515,9 @@ A fill, where `NEGBINOM.DIST(28,999999999999999,0.323212154487823,TRUE)` was `#N
 `(14,999999999999999,0.0712044717475044,TRUE)` and `(6,1E+15,0.847418271232675,TRUE)`. probes/t3576-negbinom-cdf-huge-s
 A1:A89 (excel-graph, 2026-11-04). `docs/research/t3576/bup_partial_sum.py` prints the branch, ln R and the partial-sum log of each of its
 cells. probes/t3576-r2-ratio-overflow-sweep A1:A54 (excel-graph, 2026-11-04).
-Ours: `#NUM!` at every L140 cell above (T-3576); a value at the three bfrac cells at 1E+20.
-Status: VERIFIED (excel-graph) for the probed cells and the L140 rule (fresh sweep); the bfrac cut at 1E+20 UNVERIFIED
+Ours: `#NUM!` at every L140 cell above (T-3576) and at every absorbed bfrac cell (T-4238).
+Status: VERIFIED (excel-graph) for the probed cells, the L140 rule (fresh sweep) and the bfrac absorption rule (T-4238's
+predicted probe)
 Tasks: T-3576
 
 ## BETA.DIST and F.DIST at basym points; BETA.INV takes the nearest end there (T-3443)
