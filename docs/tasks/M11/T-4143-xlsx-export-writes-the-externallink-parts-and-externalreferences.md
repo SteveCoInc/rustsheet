@@ -3,7 +3,7 @@ id: T-4143
 title: "xlsx export writes the externalLink parts and externalReferences that [n] references need"
 milestone: M11
 lane: engine
-status: in-progress
+status: done
 priority: P1
 size: M
 tier: opus
@@ -25,13 +25,41 @@ writes no part (`crates/rustsheet-xlsx/src/export/mod.rs`). This task models the
 generic preservation of unmodelled parts is M15 (decision 0275).
 
 ## Acceptance criteria
-- [ ] Load, then save, then load again of every fixtures `external-link-*` case, poi ref-56737 and corpus-bench 59932
+- [x] Load, then save, then load again of every fixtures `external-link-*` case, poi ref-56737 and corpus-bench 59932
       gives the same external books (target, sheet names, defined names, cached values), and the same values for
       cells that read them.
-- [ ] The saved package has one externalLink part per book, with an External-mode relationship to the original
+- [x] The saved package has one externalLink part per book, with an External-mode relationship to the original
       target, a content-type override, and `<externalReferences>` in source order.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Formula text (T-4140).
 - Refreshing links (no I/O, directive 5).
+
+## Outcome
+The export writes one `xl/externalLinks/externalLinkN.xml` per external book, in `[n]` order
+(`crates/rustsheet-xlsx/src/export/external_links.rs`). Each part has its `externalLinkPath` relationship
+(`TargetMode="External"`) to the book's original target, a content-type override, a workbook relationship and an
+`<externalReference>`, placed between `<sheets>` and `<definedNames>`. To save the target, `ExternalBook` gains
+`target`, read from the part's own relationships. It also gains `cached_sheets`, the sheets the cache had a
+`sheetData` for: Excel leaves some sheets out (external-link-uncached-lookups has none for sheet 3), and the
+round-trip gate flagged an export that wrote one per sheet name. Neither field changes evaluation.
+
+Tests: `crates/rustsheet-xlsx/tests/external_link_export.rs` covers the seven fixtures `external-link-*`: a reload
+gives the same books (target, sheet names, names, cells) and the same value in every cell, and a second save writes
+the same part. A second test checks the package wiring (target `56737.xlsx`, override, rId, element order), and a
+third checks that a workbook with no links writes no part. Unit tests in `export/external_links.rs` cover the part
+XML.
+
+Eval delta: the formula suites are unchanged (no F line moves). Round trip (`make eval-baseline`):
+- roundtrip-fixtures: 28 failing items fixed (5776 -> 5748), R1 kept 93.65% -> 94.57%.
+- roundtrip-corpus-bench: 8 files' failing items 6200 -> 4082.
+- roundtrip-poi: 63934 and link-external-workbook-b 337 -> 289.
+
+roundtrip-calipers is unchanged at nightly's `--timeout 300`. Under the default 60 s, pv26_002 and pv26_2_002 time
+out on this 4-CPU box (155 s each), and no external link is involved.
+
+The acceptance cases poi ref-56737 (1 book, `56737.xlsx`) and corpus-bench 59932 (2 books, `file:///\\NAS...`
+UNC targets) were checked locally: a reload gives equal books and the same value in every cell. Both are fetched,
+not vendored, so the committed test reads only the fixtures. Both are already clean in the round-trip baselines
+(`C` lines with no `F`), before and after this change.
