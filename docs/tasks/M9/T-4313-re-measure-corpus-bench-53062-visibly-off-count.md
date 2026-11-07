@@ -3,7 +3,7 @@ id: T-4313
 title: "Re-measure corpus-bench/53062 visibly-off count after T-3046 (needs corpus-bench fetched)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
