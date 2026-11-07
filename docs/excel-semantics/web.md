@@ -137,12 +137,13 @@ hidden items, a filter or AutoShow (`pivot_index.rs` `supported`, T-4165; UNVERI
 from the unfiltered records, so a pair naming an item the filter shows was a number and is now `#REF!`), a pair on a pivot with two fields on one axis, a reference meeting two pivots, `""` or an omitted
 data_field, a number, date or
 boolean as an item (or an item that matches two cache items differing only in case), the same field twice with the same
-item, an error in a field/item pair, an empty intersection of any aggregate but Sum, a picked record whose data-field value
+item, an error as an item (an error as a field passes through, T-4006 section, T-4823), an empty intersection of any aggregate but Sum, a picked record whose data-field value
 is not a number, a number or boolean data_field, and an array data_field, pivot_table or field name (an array of items
-lifts). An error in a single-cell pivot_table propagates even inside a pivot, and an overflowing aggregate is `#NUM!`
-(both unprobed, SPEC-0015 unknowns 13 and 16). Count pivots of an all-numeric field match
+lifts). It propagates an error in a single-cell pivot_table even inside a pivot, where Excel picks the pivot like
+any of its cells (probes/t2085-getpivotdata-items Q!E20:E23; T-4805), and answers `#NUM!` for an overflowing aggregate,
+as Excel does (the T-2085 section's "Overflow" paragraph). Count pivots of an all-numeric field match
 Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674; they cannot tell COUNT from COUNTA).
-Max, Min, Product, Var and StdDev pivots are unprobed (UNVERIFIED: the worksheet functions' algorithms over the picked numbers).
+Max, Min, Product, Var and StdDev pivots: see the T-2085 section's "Aggregates over one record or none" paragraph.
 Structural edits: see "Pivot tables and structural edits" below. xlsx export writes pivots (T-4176; pivots.md "Excel for the web opens engine-exported pivot parts"), except a grouped cache, dropped with its pivots (T-4734).
 
 ## GETPIVOTDATA on other pivot shapes (T-2085)
