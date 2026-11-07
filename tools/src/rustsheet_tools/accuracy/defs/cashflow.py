@@ -33,7 +33,6 @@ from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
     DomainError,
-    Interval,
     MathArg,
     NoValueError,
     Param,
@@ -152,13 +151,12 @@ IRR = register(
     Definition(
         function="IRR",
         params=(Param("values", "array", source=STOP_EARLY_SOURCE),),
-        # The guess only picks among several roots, and a point here has one (the module doc), as RATE's
-        # (annuity.py); `_irr` ignores it (T-4778).
-        call_params=(Param("guess", "real", Interval(), source=STOP_EARLY_SOURCE, optional=True),),
         value=_irr,
         draw=_irr_draw,
         solver=True,
         sources=(STOP_EARLY_SOURCE, "decision 0188 item 2"),
+        # A call's guess only picks among several roots and a point here has one, so `_irr` ignores it (T-4778).
+        call_params=(Param("guess", "real", source=STOP_EARLY_SOURCE, optional=True),),
     )
 )
 
