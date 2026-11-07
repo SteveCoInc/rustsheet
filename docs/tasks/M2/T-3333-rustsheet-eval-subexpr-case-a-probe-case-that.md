@@ -98,3 +98,15 @@ all of its children match Excel.
 - Eval delta: +1 probe case (6 cells, 5 pass); 1 new known failure (Subexpr!A6, owned by T-3219); no regressions.
 - Follow-ups: none. Stages 2-5 of §11 (ddmin, hoisting, literal shrinking) not filed: wait to see whether stage 1
   is used.
+
+## Landing notes
+- PR #3856, head f772541c7 (this note's parent). Reviewers approved 933abca89 (security, design, excel-fidelity; design's
+  round-1 MAJOR, the duplicate milestone-tag parser, fixed there). CI on 933abca89 failed only `eval-math-check`: the
+  probe case copied all ~400 of the source case's formula cells, which need math sidecars
+  (run 42342406404, job 128312977924).
+- f772541c7 fixes it: `drop_unread_formulas` (subexpr_case.rs) keeps the source's constant cells and only the formula
+  cells the formula reads; the case was regenerated, refilled on excel-graph (Subexpr!A1:A6 values unchanged) and given
+  its math sidecar (`rustsheet-accuracy math --suite probes --function CHISQ.DIST.RT --function CHISQ.DIST`). Local
+  `make eval-baseline` (no baseline change) and `make check-fast` pass.
+- Next: wait for CI on the new head, re-run the three reviewers on the delta 933abca89..HEAD (behavior change in what
+  the probe case copies, plus the new math sidecar and the eval-harness.md wording), then enqueue.
