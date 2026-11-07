@@ -5,52 +5,52 @@ use crate::test::util::new_empty_model;
 fn fn_besseli() {
     let mut model = new_empty_model();
 
-    model._set("B1", "=BESSELI()");
-    model._set("B2", "=BESSELI(1,2, 1)");
+    model.set_a1("B1", "=BESSELI()");
+    model.set_a1("B2", "=BESSELI(1,2, 1)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("B1"), *"#ERROR!");
-    assert_eq!(model._get_text("B2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B2"), *"#ERROR!");
 }
 
 #[test]
 fn fn_besselj() {
     let mut model = new_empty_model();
 
-    model._set("B1", "=BESSELJ()");
-    model._set("B2", "=BESSELJ(1,2, 1)");
+    model.set_a1("B1", "=BESSELJ()");
+    model.set_a1("B2", "=BESSELJ(1,2, 1)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("B1"), *"#ERROR!");
-    assert_eq!(model._get_text("B2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B2"), *"#ERROR!");
 }
 
 #[test]
 fn fn_besselk() {
     let mut model = new_empty_model();
 
-    model._set("B1", "=BESSELK()");
-    model._set("B2", "=BESSELK(1,2, 1)");
+    model.set_a1("B1", "=BESSELK()");
+    model.set_a1("B2", "=BESSELK(1,2, 1)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("B1"), *"#ERROR!");
-    assert_eq!(model._get_text("B2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B2"), *"#ERROR!");
 }
 
 #[test]
 fn fn_bessely() {
     let mut model = new_empty_model();
 
-    model._set("B1", "=BESSELY()");
-    model._set("B2", "=BESSELY(1,2, 1)");
+    model.set_a1("B1", "=BESSELY()");
+    model.set_a1("B2", "=BESSELY(1,2, 1)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("B1"), *"#ERROR!");
-    assert_eq!(model._get_text("B2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B2"), *"#ERROR!");
 }
 
 /// Excel: any negative order is `#NUM!`, checked before truncation
@@ -58,16 +58,16 @@ fn fn_bessely() {
 #[test]
 fn negative_fractional_order_is_num_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=BESSELK(5,-0.0001)");
-    model._set("A2", "=BESSELJ(5,-0.9999)");
-    model._set("A3", "=BESSELY(5,-1E-300)");
-    model._set("A4", "=BESSELI(5,-0.5)");
-    model._set("A5", "=BESSELK(5,0.9999)=BESSELK(5,0)");
+    model.set_a1("A1", "=BESSELK(5,-0.0001)");
+    model.set_a1("A2", "=BESSELJ(5,-0.9999)");
+    model.set_a1("A3", "=BESSELY(5,-1E-300)");
+    model.set_a1("A4", "=BESSELI(5,-0.5)");
+    model.set_a1("A5", "=BESSELK(5,0.9999)=BESSELK(5,0)");
     model.evaluate();
     for cell in ["A1", "A2", "A3", "A4"] {
-        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#NUM!", "{cell}");
     }
-    assert_eq!(model._get_text("A5"), *"TRUE");
+    assert_eq!(model.get_text_a1("A5"), *"TRUE");
 }
 
 /// Excel: past the phase 134217727 the asymptotic form's sine and cosine do not answer, so
@@ -76,19 +76,19 @@ fn negative_fractional_order_is_num_error() {
 #[test]
 fn asymptotic_phase_past_the_inner_trig_cut_is_num_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=BESSELJ(134217727.785398,0)");
-    model._set("A2", "=BESSELJ(134217727.786398,0)");
-    model._set("A3", "=BESSELY(134217727.786398,0)");
-    model._set("A4", "=BESSELJ(134217728.5,1)");
-    model._set("A5", "=BESSELJ(134217728.5,2)");
-    model._set("A6", "=BESSELY(134217728.5,4)");
-    model._set("A7", "=BESSELJ(-134217728,0)");
-    model._set("A8", "=BESSELJ(-134217728,1)");
-    model._set("A9", "=BESSELY(1E+15,1)");
-    model._set("A10", "=BESSELY(134217727.785398,0)");
+    model.set_a1("A1", "=BESSELJ(134217727.785398,0)");
+    model.set_a1("A2", "=BESSELJ(134217727.786398,0)");
+    model.set_a1("A3", "=BESSELY(134217727.786398,0)");
+    model.set_a1("A4", "=BESSELJ(134217728.5,1)");
+    model.set_a1("A5", "=BESSELJ(134217728.5,2)");
+    model.set_a1("A6", "=BESSELY(134217728.5,4)");
+    model.set_a1("A7", "=BESSELJ(-134217728,0)");
+    model.set_a1("A8", "=BESSELJ(-134217728,1)");
+    model.set_a1("A9", "=BESSELY(1E+15,1)");
+    model.set_a1("A10", "=BESSELY(134217727.785398,0)");
     model.evaluate();
     for cell in ["A2", "A3", "A5", "A6", "A7", "A9"] {
-        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#NUM!", "{cell}");
     }
     let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
         Ok(CellValue::Number(n)) => n.to_bits(),
@@ -105,14 +105,14 @@ fn asymptotic_phase_past_the_inner_trig_cut_is_num_error() {
 #[test]
 fn besselk_recurrence_flushes_a_subnormal_term() {
     let mut model = new_empty_model();
-    model._set("A1", "=BESSELK(700,2)=BESSELK(700,0)");
-    model._set("A2", "=BESSELK(702,4)=BESSELK(702,0)");
-    model._set("A3", "=BESSELK(705,5)=BESSELK(705,1)");
-    model._set("A4", "=BESSELK(700,3)");
-    model._set("A5", "=BESSELK(702,4)");
+    model.set_a1("A1", "=BESSELK(700,2)=BESSELK(700,0)");
+    model.set_a1("A2", "=BESSELK(702,4)=BESSELK(702,0)");
+    model.set_a1("A3", "=BESSELK(705,5)=BESSELK(705,1)");
+    model.set_a1("A4", "=BESSELK(700,3)");
+    model.set_a1("A5", "=BESSELK(702,4)");
     model.evaluate();
     for cell in ["A1", "A2", "A3"] {
-        assert_eq!(model._get_text(cell), *"TRUE", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"TRUE", "{cell}");
     }
     let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
         Ok(CellValue::Number(n)) => n.to_bits(),
@@ -128,19 +128,19 @@ fn besselk_recurrence_flushes_a_subnormal_term() {
 #[test]
 fn bessel_results_at_the_bottom_of_the_normal_range() {
     let mut model = new_empty_model();
-    model._set("A1", "=BESSELJ(2^-1022,1)");
-    model._set("A2", "=BESSELI(4.4501477170144E-308,1)");
-    model._set("A3", "=BESSELI(2^-1022,1)");
-    model._set("A4", "=BESSELI(2^-1021,1)=2^-1022");
-    model._set("A5", "=BESSELJ(2^-1021,1)>0");
-    model._set("A6", "=BESSELK(2^-1021,0)");
-    model._set("A7", "=BESSELY(2^-1022,0)");
+    model.set_a1("A1", "=BESSELJ(2^-1022,1)");
+    model.set_a1("A2", "=BESSELI(4.4501477170144E-308,1)");
+    model.set_a1("A3", "=BESSELI(2^-1022,1)");
+    model.set_a1("A4", "=BESSELI(2^-1021,1)=2^-1022");
+    model.set_a1("A5", "=BESSELJ(2^-1021,1)>0");
+    model.set_a1("A6", "=BESSELK(2^-1021,0)");
+    model.set_a1("A7", "=BESSELY(2^-1022,0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0");
-    assert_eq!(model._get_text("A2"), *"0");
-    assert_eq!(model._get_text("A3"), *"0");
-    assert_eq!(model._get_text("A4"), *"TRUE");
-    assert_eq!(model._get_text("A5"), *"TRUE");
-    assert_eq!(model._get_text("A6"), *"707.8192029");
-    assert_eq!(model._get_text("A7"), *"-451.052972");
+    assert_eq!(model.get_text_a1("A1"), *"0");
+    assert_eq!(model.get_text_a1("A2"), *"0");
+    assert_eq!(model.get_text_a1("A3"), *"0");
+    assert_eq!(model.get_text_a1("A4"), *"TRUE");
+    assert_eq!(model.get_text_a1("A5"), *"TRUE");
+    assert_eq!(model.get_text_a1("A6"), *"707.8192029");
+    assert_eq!(model.get_text_a1("A7"), *"-451.052972");
 }

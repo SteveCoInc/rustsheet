@@ -81,8 +81,10 @@ fn the_package_holds_one_external_link_part_per_book() {
         let references = workbook
             .split_once("<externalReferences>")
             .and_then(|(_, rest)| rest.split_once("</externalReferences>"))
-            .map(|(inner, _)| inner)
-            .unwrap_or_else(|| panic!("{case}: no externalReferences"));
+            .map_or_else(
+                || panic!("{case}: no externalReferences"),
+                |(inner, _)| inner,
+            );
         // `<externalReferences>` sits between `<sheets>` and `<definedNames>` (CT_Workbook).
         let at = |tag: &str| workbook.find(tag).unwrap();
         assert!(at("</sheets>") < at("<externalReferences>"), "{case}");

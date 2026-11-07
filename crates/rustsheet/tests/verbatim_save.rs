@@ -7,7 +7,7 @@ use std::error::Error;
 
 use support::rezip;
 
-use rustsheet::{LoadOptions, SaveOptions, Value, Workbook, WorkbookOptions};
+use rustsheet::{LoadOptions, SaveOptions, SaveTier, Value, Workbook, WorkbookOptions};
 
 type Res = Result<(), Box<dyn Error>>;
 
@@ -71,5 +71,30 @@ fn a_changed_cached_value_is_not_written_back_verbatim() -> Res {
         load(&stale, false)?.to_xlsx_bytes(SaveOptions::default())?,
         stale
     );
+    Ok(())
+}
+
+/// SPEC-0033 D7, SPEC-0034 D4 (T-4562): the report names the tier and what was left out.
+#[test]
+fn the_save_report_names_the_tier() -> Res {
+    let bytes = source()?;
+    let (saved, report) = load(&bytes, true)?.to_xlsx_bytes_with_report(SaveOptions::default())?;
+    assert_eq!(saved, bytes);
+    assert_eq!(report.tier, SaveTier::Verbatim);
+    assert!(report.dropped.is_empty());
+    let mut wb = load(&bytes, true)?;
+    wb.edit(|t| t.set("Sheet1!A1", 5.0))?;
+    let (_, report) = wb.to_xlsx_bytes_with_report(SaveOptions::default())?;
+    assert!(
+        matches!(report.tier, SaveTier::Patched { .. }),
+        "{report:?}"
+    );
+    let fresh = Workbook::new(&WorkbookOptions::default())?;
+    let (_, report) = fresh.to_xlsx_bytes_with_report(SaveOptions::default())?;
+    assert!(
+        matches!(report.tier, SaveTier::Regenerated { .. }),
+        "{report:?}"
+    );
+    assert!(report.dropped.is_empty());
     Ok(())
 }

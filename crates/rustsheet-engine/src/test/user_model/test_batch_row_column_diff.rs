@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
@@ -563,7 +566,7 @@ fn bulk_delete_with_styles() {
     // Set up data with various styles
     for r in 5..10 {
         model.set_user_input(0, r, 1, &format!("Row{r}")).unwrap();
-        model.set_rows_height(0, r, r, (r * 10) as f64).unwrap();
+        model.set_rows_height(0, r, r, f64::from(r * 10)).unwrap();
     }
 
     // Delete and verify style preservation
@@ -576,7 +579,7 @@ fn bulk_delete_with_styles() {
             model.get_formatted_cell_value(0, r, 1).unwrap(),
             format!("Row{r}")
         );
-        assert_eq!(model.get_row_height(0, r).unwrap(), (r * 10) as f64);
+        assert_eq!(model.get_row_height(0, r).unwrap(), f64::from(r * 10));
     }
 }
 

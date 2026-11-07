@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 // Property test for the evaluation algorithm.
@@ -104,7 +107,7 @@ fn shuffled(cells: &[(String, String)], seed: u64) -> Vec<(String, String)> {
 pub(super) fn build(cells: &[(String, String)]) -> Model {
     let mut model = new_empty_model();
     for (reference, content) in cells {
-        model._set(reference, content);
+        model.set_a1(reference, content);
     }
     model
 }
@@ -116,19 +119,21 @@ pub(super) fn snapshot(model: &Model) -> Vec<String> {
     let worksheet = model.workbook.worksheet(0).unwrap();
     for row in 1..=(ROWS + 6) {
         for column in 1..=(COLS + 6) {
-            if let Some(Cell::CellFormula {
-                v: FormulaValue::Unevaluated,
-                ..
-            })
-            | Some(Cell::ArrayFormula {
-                v: FormulaValue::Unevaluated,
-                ..
-            }) = worksheet.cell(row, column)
+            if let Some(
+                Cell::CellFormula {
+                    v: FormulaValue::Unevaluated,
+                    ..
+                }
+                | Cell::ArrayFormula {
+                    v: FormulaValue::Unevaluated,
+                    ..
+                },
+            ) = worksheet.cell(row, column)
             {
                 lines.push(format!("{}: UNEVALUATED", cell_name(row, column)));
                 continue;
             }
-            let text = model._get_text_at(0, row, column);
+            let text = model.get_text_by_index(0, row, column);
             if !text.is_empty() {
                 lines.push(format!("{}: {text}", cell_name(row, column)));
             }

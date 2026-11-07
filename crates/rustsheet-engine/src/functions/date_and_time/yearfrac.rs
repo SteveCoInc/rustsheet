@@ -1,5 +1,8 @@
 //! YEARFRAC: the year fraction between two dates under a day-count basis, read the way the
 //! financial functions read dates (`DateSystem::financial_1900_serial`).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// LINT-DEBT-END
 
 use chrono::Datelike;
 
@@ -143,15 +146,7 @@ impl Model {
                 let within_a_year =
                     y1 == y2 || (y2 == y1 + 1 && (m1 > m2 || (m1 == m2 && d1 >= d2)));
 
-                let days_in_year = if !within_a_year {
-                    // Dates more than a year apart: average the calendar-year
-                    // lengths spanned, inclusive of both end years. Counted in
-                    // closed form, so the kernel is O(1) (SPEC-0011 `KernelWork`).
-                    let years = i64::from(y2 - y1 + 1);
-                    let tot_days =
-                        365 * years + leap_years_through(y2) - leap_years_through(y1 - 1);
-                    tot_days as f64 / years as f64
-                } else {
+                let days_in_year = if within_a_year {
                     // considerAsBisestile
                     let consider = (y1 == y2 && is_leap_year(y1))
                         || (m2 == 2 && d2 == 29)
@@ -161,6 +156,14 @@ impl Model {
                     } else {
                         365.0
                     }
+                } else {
+                    // Dates more than a year apart: average the calendar-year
+                    // lengths spanned, inclusive of both end years. Counted in
+                    // closed form, so the kernel is O(1) (SPEC-0011 `KernelWork`).
+                    let years = i64::from(y2 - y1 + 1);
+                    let tot_days =
+                        365 * years + leap_years_through(y2) - leap_years_through(y1 - 1);
+                    tot_days as f64 / years as f64
                 };
                 (days, days_in_year)
             }

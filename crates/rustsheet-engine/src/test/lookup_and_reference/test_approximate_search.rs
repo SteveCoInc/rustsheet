@@ -11,15 +11,15 @@ fn eval_over(column: char, values: &[&str], formulas: &[&str]) -> Vec<String> {
     let mut model = new_empty_model();
     for (row, value) in values.iter().enumerate() {
         if !value.is_empty() {
-            model._set(&format!("{column}{}", row + 1), value);
+            model.set_a1(&format!("{column}{}", row + 1), value);
         }
     }
     for (row, formula) in formulas.iter().enumerate() {
-        model._set(&format!("Z{}", row + 1), formula);
+        model.set_a1(&format!("Z{}", row + 1), formula);
     }
     model.evaluate();
     (1..=formulas.len())
-        .map(|row| model._get_text(&format!("Z{row}")))
+        .map(|row| model.get_text_a1(&format!("Z{row}")))
         .collect()
 }
 
@@ -52,13 +52,13 @@ fn no_cross_type_match() {
 fn skips_upwards_past_other_types() {
     // gen-m2/fa437879253827be A146: top row {1,"ü",blank,-2.5} has -2.5 at 4.
     let mut model = new_empty_model();
-    model._set("B3", "1");
-    model._set("C3", "ü");
-    model._set("E3", "-2.5");
-    model._set("E4", "found");
-    model._set("A1", "=HLOOKUP(-2.5,B3:E4,2)");
+    model.set_a1("B3", "1");
+    model.set_a1("C3", "ü");
+    model.set_a1("E3", "-2.5");
+    model.set_a1("E4", "found");
+    model.set_a1("A1", "=HLOOKUP(-2.5,B3:E4,2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "found");
+    assert_eq!(model.get_text_a1("A1"), "found");
 }
 
 #[test]

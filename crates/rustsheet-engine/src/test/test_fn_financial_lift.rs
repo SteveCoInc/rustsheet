@@ -14,16 +14,16 @@ use crate::test::util::new_empty_model;
 fn model_with(cells: &[(&str, &str)]) -> Model {
     let mut model = new_empty_model();
     for row in 1..=4 {
-        model._set(&format!("C{row}"), "0.1");
-        model._set(&format!("D{row}"), "10");
-        model._set(&format!("B{row}"), "45000");
-        model._set(&format!("M{row}"), "4");
+        model.set_a1(&format!("C{row}"), "0.1");
+        model.set_a1(&format!("D{row}"), "10");
+        model.set_a1(&format!("B{row}"), "45000");
+        model.set_a1(&format!("M{row}"), "4");
     }
-    model._set("F1", "0.1");
-    model._set("F3", "x");
-    model._set("F4", "=1/0");
+    model.set_a1("F1", "0.1");
+    model.set_a1("F3", "x");
+    model.set_a1("F4", "=1/0");
     for (cell, formula) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     model
@@ -33,7 +33,7 @@ fn check(cells: &[(&str, &str, &str)]) {
     let input: Vec<(&str, &str)> = cells.iter().map(|(c, f, _)| (*c, *f)).collect();
     let model = model_with(&input);
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), *expected, "{cell}: {formula}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell}: {formula}");
     }
 }
 
@@ -127,17 +127,17 @@ fn a_3d_range_in_a_core_argument_is_ref_in_every_element() {
     // probes/scalar-lift-open-b W2, W9 and -d W17, W18.
     let mut model = new_empty_model();
     model.add_sheet("Sheet2").unwrap();
-    model._set("C1", "100");
-    model._set("C2", "100");
-    model._set("H1", "=ROWS(PMT({0.1;0.2},10,Sheet1:Sheet2!C1:C2))");
-    model._set("H2", "=INDEX(PMT({0.1;0.2},10,Sheet1:Sheet2!C1:C2),1)");
-    model._set("H3", "=INDEX(PMT({0.1;0.2},10,Sheet1:Sheet2!C1:C2),2)");
-    model._set("H4", "=ROWS(PMT(Sheet1:Sheet2!C1:C2,10,100))");
+    model.set_a1("C1", "100");
+    model.set_a1("C2", "100");
+    model.set_a1("H1", "=ROWS(PMT({0.1;0.2},10,Sheet1:Sheet2!C1:C2))");
+    model.set_a1("H2", "=INDEX(PMT({0.1;0.2},10,Sheet1:Sheet2!C1:C2),1)");
+    model.set_a1("H3", "=INDEX(PMT({0.1;0.2},10,Sheet1:Sheet2!C1:C2),2)");
+    model.set_a1("H4", "=ROWS(PMT(Sheet1:Sheet2!C1:C2,10,100))");
     model.evaluate();
-    assert_eq!(model._get_text("H1"), "2");
-    assert_eq!(model._get_text("H2"), "#REF!");
-    assert_eq!(model._get_text("H3"), "#REF!");
-    assert_eq!(model._get_text("H4"), "#REF!");
+    assert_eq!(model.get_text_a1("H1"), "2");
+    assert_eq!(model.get_text_a1("H2"), "#REF!");
+    assert_eq!(model.get_text_a1("H3"), "#REF!");
+    assert_eq!(model.get_text_a1("H4"), "#REF!");
 }
 
 // ------------------------------------------------------------------ Analysis ToolPak functions
@@ -405,15 +405,15 @@ fn a_lift_over_long_cash_flows_is_refused_by_the_work_bound() {
         ("C5", "=ROWS(NPV(SEQUENCE(100),A1:A300000))"),
         ("C6", "=ROWS(MIRR(A1:A300000,SEQUENCE(500),0.1))"),
     ] {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "#ERROR!");
-    assert_eq!(model._get_text("C2"), "#NUM!");
-    assert_eq!(model._get_text("C3"), "2");
-    assert_eq!(model._get_text("C4"), "#ERROR!");
-    assert_eq!(model._get_text("C5"), "100");
-    assert_eq!(model._get_text("C6"), "#ERROR!");
+    assert_eq!(model.get_text_a1("C1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("C2"), "#NUM!");
+    assert_eq!(model.get_text_a1("C3"), "2");
+    assert_eq!(model.get_text_a1("C4"), "#ERROR!");
+    assert_eq!(model.get_text_a1("C5"), "100");
+    assert_eq!(model.get_text_a1("C6"), "#ERROR!");
 }
 
 /// The cash flows of probes/fin-argument-modes: values in K1:K5, dates in J1:J5.
@@ -527,15 +527,15 @@ fn a_lifted_xirr_over_long_flows_is_refused_by_the_work_bound() {
             "=SUM(--ISERROR(XIRR(A1:A2,B1:B300000,SEQUENCE(100000))))",
         ),
     ] {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "#ERROR!");
-    assert_eq!(model._get_text("C2"), "2");
-    assert_eq!(model._get_text("C3"), "#ERROR!");
-    assert_eq!(model._get_text("C4"), "#ERROR!");
-    assert_eq!(model._get_text("C5"), "100000");
-    assert_eq!(model._get_text("C6"), "100000");
+    assert_eq!(model.get_text_a1("C1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("C2"), "2");
+    assert_eq!(model.get_text_a1("C3"), "#ERROR!");
+    assert_eq!(model.get_text_a1("C4"), "#ERROR!");
+    assert_eq!(model.get_text_a1("C5"), "100000");
+    assert_eq!(model.get_text_a1("C6"), "100000");
 }
 
 // ------------------------------------------- XIRR, XNPV and FVSCHEDULE argument checks (T-2428)
@@ -544,20 +544,20 @@ fn a_lifted_xirr_over_long_flows_is_refused_by_the_work_bound() {
 /// G1:G5 dates, K1:K2 "ü" and 0.3, then `cells`.
 fn checks_model(cells: &[(&str, &str)]) -> Model {
     let mut model = new_empty_model();
-    model._set("H1", "x");
-    model._set("H2", "TRUE");
-    model._set("H3", "FALSE");
-    model._set("H4", "'1.5");
+    model.set_a1("H1", "x");
+    model.set_a1("H2", "TRUE");
+    model.set_a1("H3", "FALSE");
+    model.set_a1("H4", "'1.5");
     for (row, date) in ["39448", "39508", "39859", "39904", "40000"]
         .iter()
         .enumerate()
     {
-        model._set(&format!("G{}", row + 1), date);
+        model.set_a1(&format!("G{}", row + 1), date);
     }
-    model._set("K1", "ü");
-    model._set("K2", "0.3");
+    model.set_a1("K1", "ü");
+    model.set_a1("K2", "0.3");
     for (cell, formula) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     model
@@ -567,7 +567,7 @@ fn check_args(cells: &[(&str, &str, &str)]) {
     let input: Vec<(&str, &str)> = cells.iter().map(|(c, f, _)| (*c, *f)).collect();
     let model = checks_model(&input);
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), *expected, "{cell}: {formula}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell}: {formula}");
     }
 }
 

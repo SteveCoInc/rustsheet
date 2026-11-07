@@ -6,25 +6,25 @@ use crate::test::util::new_empty_model;
 #[test]
 fn arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "=COMBIN(5,2)");
-    model._set("A2", "=COMBINA(5,2)");
-    model._set("A3", "=COMBIN()");
-    model._set("A4", "=COMBINA()");
-    model._set("A5", "=COMBIN(2)");
-    model._set("A6", "=COMBINA(2)");
-    model._set("A7", "=COMBIN(1, 2, 3)");
-    model._set("A8", "=COMBINA(1, 2, 3)");
+    model.set_a1("A1", "=COMBIN(5,2)");
+    model.set_a1("A2", "=COMBINA(5,2)");
+    model.set_a1("A3", "=COMBIN()");
+    model.set_a1("A4", "=COMBINA()");
+    model.set_a1("A5", "=COMBIN(2)");
+    model.set_a1("A6", "=COMBINA(2)");
+    model.set_a1("A7", "=COMBIN(1, 2, 3)");
+    model.set_a1("A8", "=COMBINA(1, 2, 3)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"10");
-    assert_eq!(model._get_text("A2"), *"15");
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
-    assert_eq!(model._get_text("A5"), *"#ERROR!");
-    assert_eq!(model._get_text("A6"), *"#ERROR!");
-    assert_eq!(model._get_text("A7"), *"#ERROR!");
-    assert_eq!(model._get_text("A8"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"10");
+    assert_eq!(model.get_text_a1("A2"), *"15");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A6"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A7"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A8"), *"#ERROR!");
 }
 
 #[test]
@@ -33,25 +33,25 @@ fn combin_overflow_is_bounded() {
     // at once instead of looping `k` times (directive 5). COMBIN(1030,515) is #NUM! in Excel
     // (probes/combin-algorithm-sweep).
     let mut model = new_empty_model();
-    model._set("A1", "=COMBIN(1030,515)");
-    model._set("A2", "=COMBIN(1E+15,5E+14)");
-    model._set("A3", "=COMBIN(1E+300,1E+299)");
+    model.set_a1("A1", "=COMBIN(1030,515)");
+    model.set_a1("A2", "=COMBIN(1E+15,5E+14)");
+    model.set_a1("A3", "=COMBIN(1E+300,1E+299)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
-    assert_eq!(model._get_text("A3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"#NUM!");
 }
 
 #[test]
 fn combin_rounds_like_excel() {
     // probes/combin-algorithm-sweep (T-1598): the exact binomial is 84, 210, 455 and 252.
     let mut model = new_empty_model();
-    model._set("A1", "=COMBIN(9,3)");
-    model._set("A2", "=COMBIN(10,6)");
-    model._set("A3", "=COMBIN(15,3)");
-    model._set("A4", "=COMBIN(10,5)");
+    model.set_a1("A1", "=COMBIN(9,3)");
+    model.set_a1("A2", "=COMBIN(10,6)");
+    model.set_a1("A3", "=COMBIN(15,3)");
+    model.set_a1("A4", "=COMBIN(10,5)");
     model.evaluate();
     let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
         Ok(CellValue::Number(n)) => n.to_bits(),
@@ -68,12 +68,12 @@ fn combina_is_combin_of_n_plus_k_minus_one() {
     // ironcalc-calc COMBIN_COMBINA.xlsx D4, D5, D16 (Excel-cached): Excel's COMBIN rounding
     // applied to COMBIN(n+k-1, k) (numbers.md "COMBINA is COMBIN(n+k-1, k)").
     let mut model = new_empty_model();
-    model._set("A1", "=COMBINA(10,10)");
-    model._set("A2", "=COMBINA(20,19)");
-    model._set("A3", "=COMBINA(1000,200)");
-    model._set("A4", "=COMBINA(0,0)");
-    model._set("A5", "=COMBINA(1,1E+10)");
-    model._set("A6", "=COMBINA(1E+300,1E+300)");
+    model.set_a1("A1", "=COMBINA(10,10)");
+    model.set_a1("A2", "=COMBINA(20,19)");
+    model.set_a1("A3", "=COMBINA(1000,200)");
+    model.set_a1("A4", "=COMBINA(0,0)");
+    model.set_a1("A5", "=COMBINA(1,1E+10)");
+    model.set_a1("A6", "=COMBINA(1E+300,1E+300)");
     model.evaluate();
     let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
         Ok(CellValue::Number(n)) => n.to_bits(),
@@ -84,8 +84,8 @@ fn combina_is_combin_of_n_plus_k_minus_one() {
     assert_eq!(bits("A3"), 1.667_683_306_781_367_8e233_f64.to_bits());
     assert_eq!(bits("A4"), 1.0_f64.to_bits());
     // n + k - 1 = 1E10 is past the 2^31-1 bound (T-2162), so a huge k answers at once.
-    assert_eq!(model._get_text("A5"), *"#NUM!");
-    assert_eq!(model._get_text("A6"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A5"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A6"), *"#NUM!");
 }
 
 #[test]
@@ -109,12 +109,12 @@ fn combin_and_combina_are_num_from_two_to_the_31_minus_one() {
         ("=COMBINA(FACT(13),10)", "#NUM!"),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", i + 1)),
+            model.get_text_a1(&format!("A{}", i + 1)),
             *expected,
             "{formula}"
         );
@@ -125,16 +125,16 @@ fn combin_and_combina_are_num_from_two_to_the_31_minus_one() {
 fn combin_lifts_over_arrays_and_ranges() {
     // probes/t2579-array-value-edges B60-B68 (excel-graph, T-2579): COMBIN lifts as COMBINA does.
     let mut model = new_empty_model();
-    model._set("A1", "2");
-    model._set("A2", "4");
-    model._set("A3", "6");
-    model._set("C1", "=INDEX(COMBIN(18,{1,2;3,4}),2,2)");
-    model._set("C2", "=SUM(COMBIN(A1:A3,1))");
-    model._set("C3", "=INDEX(COMBIN({5;6},{2,3}),2,2)");
-    model._set("C4", r#"=SUM(COMBIN(18,{1,"x",TRUE}))"#);
+    model.set_a1("A1", "2");
+    model.set_a1("A2", "4");
+    model.set_a1("A3", "6");
+    model.set_a1("C1", "=INDEX(COMBIN(18,{1,2;3,4}),2,2)");
+    model.set_a1("C2", "=SUM(COMBIN(A1:A3,1))");
+    model.set_a1("C3", "=INDEX(COMBIN({5;6},{2,3}),2,2)");
+    model.set_a1("C4", r#"=SUM(COMBIN(18,{1,"x",TRUE}))"#);
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "3060");
-    assert_eq!(model._get_text("C2"), "12");
-    assert_eq!(model._get_text("C3"), "20");
-    assert_eq!(model._get_text("C4"), "#VALUE!");
+    assert_eq!(model.get_text_a1("C1"), "3060");
+    assert_eq!(model.get_text_a1("C2"), "12");
+    assert_eq!(model.get_text_a1("C3"), "20");
+    assert_eq!(model.get_text_a1("C4"), "#VALUE!");
 }

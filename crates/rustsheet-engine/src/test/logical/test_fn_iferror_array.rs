@@ -10,28 +10,28 @@ use crate::test::util::new_empty_model;
 #[test]
 fn iferror_scalar_non_error_passes_through() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IFERROR(42, "fallback")"#);
+    model.set_a1("A1", r#"=IFERROR(42, "fallback")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "42");
+    assert_eq!(model.get_text_a1("A1"), "42");
 }
 
 #[test]
 fn iferror_scalar_error_uses_fallback() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IFERROR(1/0, "fallback")"#);
+    model.set_a1("A1", r#"=IFERROR(1/0, "fallback")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "fallback");
+    assert_eq!(model.get_text_a1("A1"), "fallback");
 }
 
 #[test]
 fn iferror_scalar_error_fallback_array_spills() {
     // A scalar error with an array fallback spills the fallback.
     let mut model = new_empty_model();
-    model._set("A1", "=IFERROR(1/0, {1,2,3})");
+    model.set_a1("A1", "=IFERROR(1/0, {1,2,3})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "2");
-    assert_eq!(model._get_text("C1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "2");
+    assert_eq!(model.get_text_a1("C1"), "3");
 }
 
 // ── Array value, scalar fallback ──────────────────────────────────────────────
@@ -42,31 +42,31 @@ fn iferror_scalar_error_fallback_array_spills() {
 #[test]
 fn iferror_array_value_scalar_fallback_horizontal() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IFERROR({1,#DIV/0!,3}, "x")"#);
+    model.set_a1("A1", r#"=IFERROR({1,#DIV/0!,3}, "x")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "x");
-    assert_eq!(model._get_text("C1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "x");
+    assert_eq!(model.get_text_a1("C1"), "3");
 }
 
 #[test]
 fn iferror_array_value_no_errors_passes_through() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IFERROR({1,2,3}, "x")"#);
+    model.set_a1("A1", r#"=IFERROR({1,2,3}, "x")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "2");
-    assert_eq!(model._get_text("C1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "2");
+    assert_eq!(model.get_text_a1("C1"), "3");
 }
 
 #[test]
 fn iferror_array_value_all_errors() {
     let mut model = new_empty_model();
-    model._set("A1", "=IFERROR({#N/A,#DIV/0!,#VALUE!}, 0)");
+    model.set_a1("A1", "=IFERROR({#N/A,#DIV/0!,#VALUE!}, 0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "0");
-    assert_eq!(model._get_text("B1"), "0");
-    assert_eq!(model._get_text("C1"), "0");
+    assert_eq!(model.get_text_a1("A1"), "0");
+    assert_eq!(model.get_text_a1("B1"), "0");
+    assert_eq!(model.get_text_a1("C1"), "0");
 }
 
 // ── Range value, scalar fallback ──────────────────────────────────────────────
@@ -76,14 +76,14 @@ fn iferror_array_value_all_errors() {
 #[test]
 fn iferror_range_value_vertical() {
     let mut model = new_empty_model();
-    model._set("B1", "10");
-    model._set("B2", "=1/0");
-    model._set("B3", "30");
-    model._set("A1", r#"=IFERROR(B1:B3, "err")"#);
+    model.set_a1("B1", "10");
+    model.set_a1("B2", "=1/0");
+    model.set_a1("B3", "30");
+    model.set_a1("A1", r#"=IFERROR(B1:B3, "err")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "10");
-    assert_eq!(model._get_text("A2"), "err");
-    assert_eq!(model._get_text("A3"), "30");
+    assert_eq!(model.get_text_a1("A1"), "10");
+    assert_eq!(model.get_text_a1("A2"), "err");
+    assert_eq!(model.get_text_a1("A3"), "30");
 }
 
 // ── Array value, array fallback (same size) ───────────────────────────────────
@@ -94,11 +94,11 @@ fn iferror_range_value_vertical() {
 #[test]
 fn iferror_array_value_array_fallback_same_size() {
     let mut model = new_empty_model();
-    model._set("A1", "=IFERROR({1,#DIV/0!,3}, {10,20,30})");
+    model.set_a1("A1", "=IFERROR({1,#DIV/0!,3}, {10,20,30})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "20");
-    assert_eq!(model._get_text("C1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "20");
+    assert_eq!(model.get_text_a1("C1"), "3");
 }
 
 // ── Array value smaller than fallback ─────────────────────────────────────────
@@ -113,11 +113,11 @@ fn iferror_array_value_array_fallback_same_size() {
 #[test]
 fn iferror_value_smaller_than_fallback() {
     let mut model = new_empty_model();
-    model._set("A1", "=IFERROR({1,#DIV/0!}, {10,20,30})");
+    model.set_a1("A1", "=IFERROR({1,#DIV/0!}, {10,20,30})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "20");
-    assert_eq!(model._get_text("C1"), "30");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "20");
+    assert_eq!(model.get_text_a1("C1"), "30");
 }
 
 // ── Array value larger than fallback ──────────────────────────────────────────
@@ -132,11 +132,11 @@ fn iferror_value_smaller_than_fallback() {
 #[test]
 fn iferror_fallback_smaller_than_value() {
     let mut model = new_empty_model();
-    model._set("A1", "=IFERROR({#DIV/0!,#DIV/0!,#DIV/0!}, {10,20})");
+    model.set_a1("A1", "=IFERROR({#DIV/0!,#DIV/0!,#DIV/0!}, {10,20})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "10");
-    assert_eq!(model._get_text("B1"), "20");
-    assert_eq!(model._get_text("C1"), "#N/A");
+    assert_eq!(model.get_text_a1("A1"), "10");
+    assert_eq!(model.get_text_a1("B1"), "20");
+    assert_eq!(model.get_text_a1("C1"), "#N/A");
 }
 
 // ── 2-D array value ───────────────────────────────────────────────────────────
@@ -148,12 +148,12 @@ fn iferror_fallback_smaller_than_value() {
 #[test]
 fn iferror_2d_array_value() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IFERROR({1,#DIV/0!;#N/A,4}, {"A","B";"C","D"})"#);
+    model.set_a1("A1", r#"=IFERROR({1,#DIV/0!;#N/A,4}, {"A","B";"C","D"})"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "B");
-    assert_eq!(model._get_text("A2"), "C");
-    assert_eq!(model._get_text("B2"), "4");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "B");
+    assert_eq!(model.get_text_a1("A2"), "C");
+    assert_eq!(model.get_text_a1("B2"), "4");
 }
 
 // ── Errors arising from computations inside a range ───────────────────────────
@@ -163,17 +163,17 @@ fn iferror_2d_array_value() {
 #[test]
 fn iferror_cleans_up_division_column() {
     let mut model = new_empty_model();
-    model._set("A1", "10");
-    model._set("A2", "20");
-    model._set("A3", "30");
-    model._set("B1", "2");
-    model._set("B2", "0");
-    model._set("B3", "5");
-    model._set("C1", r#"=IFERROR(A1:A3/B1:B3, "n/a")"#);
+    model.set_a1("A1", "10");
+    model.set_a1("A2", "20");
+    model.set_a1("A3", "30");
+    model.set_a1("B1", "2");
+    model.set_a1("B2", "0");
+    model.set_a1("B3", "5");
+    model.set_a1("C1", r#"=IFERROR(A1:A3/B1:B3, "n/a")"#);
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "5");
-    assert_eq!(model._get_text("C2"), "n/a");
-    assert_eq!(model._get_text("C3"), "6");
+    assert_eq!(model.get_text_a1("C1"), "5");
+    assert_eq!(model.get_text_a1("C2"), "n/a");
+    assert_eq!(model.get_text_a1("C3"), "6");
 }
 
 // ── Wrong number of arguments ─────────────────────────────────────────────────
@@ -181,11 +181,11 @@ fn iferror_cleans_up_division_column() {
 #[test]
 fn iferror_wrong_number_of_args() {
     let mut model = new_empty_model();
-    model._set("A1", "=IFERROR(1)");
-    model._set("A2", "=IFERROR(1,2,3)");
+    model.set_a1("A1", "=IFERROR(1)");
+    model.set_a1("A2", "=IFERROR(1,2,3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("A2"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), "#ERROR!");
 }
 
 // ── Size-1 broadcasting (row × column outer product) ─────────────────────────
@@ -200,14 +200,14 @@ fn iferror_wrong_number_of_args() {
 #[test]
 fn iferror_broadcasts_column_value_and_row_fallback() {
     let mut model = new_empty_model();
-    model._set("A1", "=IFERROR({1;0;2}/{0;0;0}, {7,8})");
+    model.set_a1("A1", "=IFERROR({1;0;2}/{0;0;0}, {7,8})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "7");
-    assert_eq!(model._get_text("B1"), "8");
-    assert_eq!(model._get_text("A2"), "7");
-    assert_eq!(model._get_text("B2"), "8");
-    assert_eq!(model._get_text("A3"), "7");
-    assert_eq!(model._get_text("B3"), "8");
+    assert_eq!(model.get_text_a1("A1"), "7");
+    assert_eq!(model.get_text_a1("B1"), "8");
+    assert_eq!(model.get_text_a1("A2"), "7");
+    assert_eq!(model.get_text_a1("B2"), "8");
+    assert_eq!(model.get_text_a1("A3"), "7");
+    assert_eq!(model.get_text_a1("B3"), "8");
 }
 
 // Same shapes, but only some value cells are errors. Non-error cells pass
@@ -220,14 +220,14 @@ fn iferror_broadcasts_column_value_and_row_fallback() {
 #[test]
 fn iferror_broadcast_passes_non_error_cells_through() {
     let mut model = new_empty_model();
-    model._set("A1", "=IFERROR({1;0;2}/{0;1;0}, {7,8})");
+    model.set_a1("A1", "=IFERROR({1;0;2}/{0;1;0}, {7,8})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "7");
-    assert_eq!(model._get_text("B1"), "8");
-    assert_eq!(model._get_text("A2"), "0");
-    assert_eq!(model._get_text("B2"), "0");
-    assert_eq!(model._get_text("A3"), "7");
-    assert_eq!(model._get_text("B3"), "8");
+    assert_eq!(model.get_text_a1("A1"), "7");
+    assert_eq!(model.get_text_a1("B1"), "8");
+    assert_eq!(model.get_text_a1("A2"), "0");
+    assert_eq!(model.get_text_a1("B2"), "0");
+    assert_eq!(model.get_text_a1("A3"), "7");
+    assert_eq!(model.get_text_a1("B3"), "8");
 }
 
 // ── IFNA shares the same path, but only handles #N/A ──────────────────────────
@@ -235,92 +235,92 @@ fn iferror_broadcast_passes_non_error_cells_through() {
 #[test]
 fn ifna_scalar_na_uses_fallback() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IFNA(#N/A, "fallback")"#);
+    model.set_a1("A1", r#"=IFNA(#N/A, "fallback")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "fallback");
+    assert_eq!(model.get_text_a1("A1"), "fallback");
 }
 
 #[test]
 fn ifna_scalar_non_na_error_passes_through() {
     // A non-#N/A error is NOT handled by IFNA: it passes through unchanged.
     let mut model = new_empty_model();
-    model._set("A1", r#"=IFNA(1/0, "fallback")"#);
+    model.set_a1("A1", r#"=IFNA(1/0, "fallback")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A1"), "#DIV/0!");
 }
 
 #[test]
 fn ifna_scalar_non_error_passes_through() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IFNA(42, "fallback")"#);
+    model.set_a1("A1", r#"=IFNA(42, "fallback")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "42");
+    assert_eq!(model.get_text_a1("A1"), "42");
 }
 
 #[test]
 fn ifna_scalar_na_fallback_array_spills() {
     let mut model = new_empty_model();
-    model._set("A1", "=IFNA(#N/A, {1,2,3})");
+    model.set_a1("A1", "=IFNA(#N/A, {1,2,3})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "2");
-    assert_eq!(model._get_text("C1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "2");
+    assert_eq!(model.get_text_a1("C1"), "3");
 }
 
 #[test]
 fn ifna_array_only_replaces_na() {
     // Array path: #N/A is replaced, but #DIV/0! survives untouched.
     let mut model = new_empty_model();
-    model._set("A1", r#"=IFNA({1,#N/A,#DIV/0!,4}, "x")"#);
+    model.set_a1("A1", r#"=IFNA({1,#N/A,#DIV/0!,4}, "x")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "x");
-    assert_eq!(model._get_text("C1"), "#DIV/0!");
-    assert_eq!(model._get_text("D1"), "4");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "x");
+    assert_eq!(model.get_text_a1("C1"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("D1"), "4");
 }
 
 #[test]
 fn ifna_array_value_array_fallback() {
     let mut model = new_empty_model();
-    model._set("A1", "=IFNA({1,#N/A,3}, {10,20,30})");
+    model.set_a1("A1", "=IFNA({1,#N/A,3}, {10,20,30})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "20");
-    assert_eq!(model._get_text("C1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "20");
+    assert_eq!(model.get_text_a1("C1"), "3");
 }
 
 #[test]
 fn ifna_value_smaller_than_fallback() {
     // Out-of-bounds positions in value are treated as #N/A → take fallback.
     let mut model = new_empty_model();
-    model._set("A1", "=IFNA({1,#N/A}, {10,20,30})");
+    model.set_a1("A1", "=IFNA({1,#N/A}, {10,20,30})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "20");
-    assert_eq!(model._get_text("C1"), "30");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "20");
+    assert_eq!(model.get_text_a1("C1"), "30");
 }
 
 #[test]
 fn ifna_range_value_vertical() {
     let mut model = new_empty_model();
-    model._set("B1", "10");
-    model._set("B2", "=NA()");
-    model._set("B3", "30");
-    model._set("A1", r#"=IFNA(B1:B3, "missing")"#);
+    model.set_a1("B1", "10");
+    model.set_a1("B2", "=NA()");
+    model.set_a1("B3", "30");
+    model.set_a1("A1", r#"=IFNA(B1:B3, "missing")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "10");
-    assert_eq!(model._get_text("A2"), "missing");
-    assert_eq!(model._get_text("A3"), "30");
+    assert_eq!(model.get_text_a1("A1"), "10");
+    assert_eq!(model.get_text_a1("A2"), "missing");
+    assert_eq!(model.get_text_a1("A3"), "30");
 }
 
 #[test]
 fn ifna_wrong_number_of_args() {
     let mut model = new_empty_model();
-    model._set("A1", "=IFNA(1)");
-    model._set("A2", "=IFNA(1,2,3)");
+    model.set_a1("A1", "=IFNA(1)");
+    model.set_a1("A2", "=IFNA(1,2,3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("A2"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), "#ERROR!");
 }
 
 #[test]
@@ -328,41 +328,41 @@ fn iferror_of_a_blank_cell_is_an_empty_value() {
     // T-0291 (excel-graph): OR reads it as FALSE (gen-m2 7469c3e920e1ade4 A351), a lookup as 0 (the rule
     // behind ef5c55a81783b7d5 A291) and `&` as "" (dd99be1f2454159f A110); IFNA is probes/iferror-blank-value D11, D12.
     let mut model = new_empty_model();
-    model._set("C1", "-1");
-    model._set("C2", "1");
-    model._set("A1", "=OR(IFERROR(B1,1))");
-    model._set("A2", "=IFNA(B1,1)&\"x\"");
-    model._set("A3", "=VLOOKUP(IFERROR(B1,1),C1:C2,1,TRUE)");
-    model._set("A4", "=OR(IFNA(B1,1))");
+    model.set_a1("C1", "-1");
+    model.set_a1("C2", "1");
+    model.set_a1("A1", "=OR(IFERROR(B1,1))");
+    model.set_a1("A2", "=IFNA(B1,1)&\"x\"");
+    model.set_a1("A3", "=VLOOKUP(IFERROR(B1,1),C1:C2,1,TRUE)");
+    model.set_a1("A4", "=OR(IFNA(B1,1))");
     // probes/iferror-blank-value D2, D3, D5, D7, D9: it compares as a blank and COUNT counts it.
-    model._set("A5", "=IFERROR(B1,1)=0");
-    model._set("A6", "=IFERROR(B1,1)=\"\"");
-    model._set("A7", "=SWITCH(IFERROR(B1,1),0,\"zero\",\"other\")");
-    model._set("A8", "=COUNT(IFERROR(B1,1))");
-    model._set("A9", "=AND(IFERROR(B1,1))");
+    model.set_a1("A5", "=IFERROR(B1,1)=0");
+    model.set_a1("A6", "=IFERROR(B1,1)=\"\"");
+    model.set_a1("A7", "=SWITCH(IFERROR(B1,1),0,\"zero\",\"other\")");
+    model.set_a1("A8", "=COUNT(IFERROR(B1,1))");
+    model.set_a1("A9", "=AND(IFERROR(B1,1))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "FALSE");
-    assert_eq!(model._get_text("A2"), "x");
-    assert_eq!(model._get_text("A3"), "-1");
-    assert_eq!(model._get_text("A4"), "FALSE");
-    assert_eq!(model._get_text("A5"), "TRUE");
-    assert_eq!(model._get_text("A6"), "TRUE");
-    assert_eq!(model._get_text("A7"), "zero");
-    assert_eq!(model._get_text("A8"), "1");
-    assert_eq!(model._get_text("A9"), "FALSE");
+    assert_eq!(model.get_text_a1("A1"), "FALSE");
+    assert_eq!(model.get_text_a1("A2"), "x");
+    assert_eq!(model.get_text_a1("A3"), "-1");
+    assert_eq!(model.get_text_a1("A4"), "FALSE");
+    assert_eq!(model.get_text_a1("A5"), "TRUE");
+    assert_eq!(model.get_text_a1("A6"), "TRUE");
+    assert_eq!(model.get_text_a1("A7"), "zero");
+    assert_eq!(model.get_text_a1("A8"), "1");
+    assert_eq!(model.get_text_a1("A9"), "FALSE");
 }
 
 #[test]
 fn an_omitted_argument_compares_as_a_blank_cell() {
     // probes/omitted-arg-compare D1, D3, D6 (excel-graph, T-0291).
     let mut model = new_empty_model();
-    model._set("A1", "=SWITCH(0,,\"a\",\"b\")");
-    model._set("A2", "=CHOOSE(1,)=0");
-    model._set("A3", "=IF(TRUE,)=\"\"");
+    model.set_a1("A1", "=SWITCH(0,,\"a\",\"b\")");
+    model.set_a1("A2", "=CHOOSE(1,)=0");
+    model.set_a1("A3", "=IF(TRUE,)=\"\"");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("A2"), "TRUE");
-    assert_eq!(model._get_text("A3"), "TRUE");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("A2"), "TRUE");
+    assert_eq!(model.get_text_a1("A3"), "TRUE");
 }
 
 #[test]
@@ -370,20 +370,20 @@ fn iferror_range_reads_a_blank_cell_as_zero() {
     // probes/t2579-array-value-edges B70-B84 (excel-graph, T-2579): over 1, blank, TRUE, "x", 5,
     // 1/0 the blank is 0, so COUNT is 4 and AVERAGE (1 + 0 + 5 - 1) / 4.
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A3", "TRUE");
-    model._set("A4", "x");
-    model._set("A5", "5");
-    model._set("A6", "=1/0");
-    model._set("C1", "=COUNT(IFERROR(A1:A6,-1))");
-    model._set("C2", "=AVERAGE(IFERROR(A1:A6,-1))");
-    model._set("C3", "=AVEDEV(IFERROR(A1:A6,-1))");
-    model._set("C4", r#"=INDEX(IFERROR(A1:A6,-1),2)&"|""#);
+    model.set_a1("A1", "1");
+    model.set_a1("A3", "TRUE");
+    model.set_a1("A4", "x");
+    model.set_a1("A5", "5");
+    model.set_a1("A6", "=1/0");
+    model.set_a1("C1", "=COUNT(IFERROR(A1:A6,-1))");
+    model.set_a1("C2", "=AVERAGE(IFERROR(A1:A6,-1))");
+    model.set_a1("C3", "=AVEDEV(IFERROR(A1:A6,-1))");
+    model.set_a1("C4", r#"=INDEX(IFERROR(A1:A6,-1),2)&"|""#);
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "4");
-    assert_eq!(model._get_text("C2"), "1.25");
-    assert_eq!(model._get_text("C3"), "1.875");
-    assert_eq!(model._get_text("C4"), "0|");
+    assert_eq!(model.get_text_a1("C1"), "4");
+    assert_eq!(model.get_text_a1("C2"), "1.25");
+    assert_eq!(model.get_text_a1("C3"), "1.875");
+    assert_eq!(model.get_text_a1("C4"), "0|");
 }
 
 #[test]
@@ -398,7 +398,7 @@ fn iferror_reads_trimrange_and_one_cell_ranges_as_excel() {
         ("A5", "5"),
         ("A6", "=1/0"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (cell, value) in [
         ("B1", "2"),
@@ -407,14 +407,14 @@ fn iferror_reads_trimrange_and_one_cell_ranges_as_excel() {
         ("B4", "8"),
         ("B5", "10"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("B6", "12");
-    model._set("C1", "=AVEDEV(IFERROR(TRIMRANGE(A1:B6),-1))");
-    model._set("C2", "=ISBLANK(IFERROR(A2:A2,1))");
-    model._set("C3", r#"=IFERROR(A2:A2,1)&"|""#);
+    model.set_a1("B6", "12");
+    model.set_a1("C1", "=AVEDEV(IFERROR(TRIMRANGE(A1:B6),-1))");
+    model.set_a1("C2", "=ISBLANK(IFERROR(A2:A2,1))");
+    model.set_a1("C3", r#"=IFERROR(A2:A2,1)&"|""#);
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "3.5");
-    assert_eq!(model._get_text("C2"), "TRUE");
-    assert_eq!(model._get_text("C3"), "|");
+    assert_eq!(model.get_text_a1("C1"), "3.5");
+    assert_eq!(model.get_text_a1("C2"), "TRUE");
+    assert_eq!(model.get_text_a1("C3"), "|");
 }

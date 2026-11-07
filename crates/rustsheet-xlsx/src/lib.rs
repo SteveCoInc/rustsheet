@@ -1,16 +1,8 @@
-//! # IronCalc - Core API documentation
+//! RustSheet xlsx import and export for the calculation engine.
 //!
-//! This technical API documentation is aimed at developers.
-//! It is used to build language bindings (like python, javascript or nodejs) or to build full fledged applications like `TironCalc` in the terminal or IronCalc, the Web application.
-//!
-//! ## Basic usage
-//!
-//! Add the dependency in `Cargo.toml`:
-//!
-//! ```toml
-//! [dependencies]
-//! ironcalc = { git = "https://github.com/ironcalc/IronCalc", tag = "v0.8.3" }
-//! ```
+//! This crate is internal. Its API is inherited from the IronCalc fork; applications open and
+//! save workbooks through the `rustsheet` crate (`rustsheet::Workbook::open`, `save_xlsx`),
+//! which applies the load limits and typed errors this crate does not.
 //!
 //! A simple example with some numbers, a new sheet and a formula:
 //!

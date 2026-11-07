@@ -42,6 +42,9 @@
 //! - `@` in the same section as a number or date token ([`conflicts_with_text`]): `"x@y"`, `"0@"`,
 //!   `"x@%"`, `"x@[>5]"`, `"x@y;0;0;@"`. `AM/PM` and `A/P` do not conflict (`"x@AM/PM"` is "xabcAM").
 //!
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_excessive_bools, clippy::too_many_lines)]
+// LINT-DEBT-END
 
 use super::lexer::{Lexer, Token};
 

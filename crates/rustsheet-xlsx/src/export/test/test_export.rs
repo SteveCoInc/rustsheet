@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::cast_sign_loss))]
+// LINT-DEBT-END
 use std::fs;
 
 use rustsheet_engine::types::{DefinedName, StyleIncludes};

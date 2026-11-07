@@ -1,5 +1,8 @@
 //! Standard-normal kernels, bisection helpers and ln-gamma shared by NORM*, LOGNORM*, GAUSS, PHI,
 //! Z.TEST and GAMMALN. The error functions are Excel's own kernels in [`super::erf`].
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use std::f64::consts::FRAC_1_SQRT_2;
 

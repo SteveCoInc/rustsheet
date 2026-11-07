@@ -381,17 +381,16 @@ impl Model {
         let index = indexed
             .as_ref()
             .and_then(|_| self.value_index(rect, values));
-        let bits: Arc<[u64]> = match (indexed, index) {
-            (Some(indexed), Some(index)) => index.matches(&indexed, values, matches),
-            _ => {
-                let mut bits = vec![0u64; values.len().div_ceil(64)];
-                for (position, value) in values.iter().enumerate() {
-                    if matches(value) {
-                        set_bit(&mut bits, position);
-                    }
+        let bits: Arc<[u64]> = if let (Some(indexed), Some(index)) = (indexed, index) {
+            index.matches(&indexed, values, matches)
+        } else {
+            let mut bits = vec![0u64; values.len().div_ceil(64)];
+            for (position, value) in values.iter().enumerate() {
+                if matches(value) {
+                    set_bit(&mut bits, position);
                 }
-                bits
             }
+            bits
         }
         .into();
         let cache = &mut self.evaluation.ifs_cache;

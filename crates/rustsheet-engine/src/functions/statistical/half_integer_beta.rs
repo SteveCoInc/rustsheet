@@ -2,6 +2,9 @@
 //! `B(a, b)` by its exact recurrence and the remainder series `I_x(a,b)/(x^a (1-x)^b)`, shared by
 //! F.TEST's tail (`fisher.rs`), the accurate F tails (`incomplete_beta.rs`, T-2219) and bratio's
 //! accurate ln B (`bratio/ln_beta.rs`).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use crate::x87_exp::{dd_add, dd_div, dd_div_small, dd_mul};
 

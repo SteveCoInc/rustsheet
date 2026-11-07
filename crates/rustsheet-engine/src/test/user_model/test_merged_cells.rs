@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::unnecessary_wraps)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use bitcode::decode;
@@ -64,11 +67,11 @@ fn merge_moves_content_to_the_anchor_and_undo_restores_it() {
         model.get_formatted_cell_value(0, 2, 2),
         Ok("hello".to_string())
     );
-    assert_eq!(model.get_formatted_cell_value(0, 3, 3), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 3, 3), Ok(String::new()));
 
     model.undo().unwrap();
     assert!(model.get_merged_cells(0).unwrap().is_empty());
-    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok(String::new()));
     assert_eq!(
         model.get_formatted_cell_value(0, 3, 3),
         Ok("hello".to_string())
@@ -80,12 +83,12 @@ fn merge_moves_content_to_the_anchor_and_undo_restores_it() {
         model.get_formatted_cell_value(0, 2, 2),
         Ok("hello".to_string())
     );
-    assert_eq!(model.get_formatted_cell_value(0, 3, 3), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 3, 3), Ok(String::new()));
 
     // undo again after the redo
     model.undo().unwrap();
     assert!(model.get_merged_cells(0).unwrap().is_empty());
-    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok(String::new()));
     assert_eq!(
         model.get_formatted_cell_value(0, 3, 3),
         Ok("hello".to_string())
@@ -215,7 +218,7 @@ fn external_diffs_replay() {
         model2.get_merged_cells(0).unwrap(),
         vec![merged(2, 2, 2, 2)]
     );
-    assert_eq!(model2.get_formatted_cell_value(0, 3, 3), Ok("".to_string()));
+    assert_eq!(model2.get_formatted_cell_value(0, 3, 3), Ok(String::new()));
     assert_eq!(
         model2.get_formatted_cell_value(0, 2, 2),
         Ok("hello".to_string())
@@ -227,7 +230,7 @@ fn external_diffs_replay() {
         .apply_external_diffs(&model1.flush_send_queue())
         .unwrap();
     assert!(model2.get_merged_cells(0).unwrap().is_empty());
-    assert_eq!(model2.get_formatted_cell_value(0, 2, 2), Ok("".to_string()));
+    assert_eq!(model2.get_formatted_cell_value(0, 2, 2), Ok(String::new()));
     assert_eq!(
         model2.get_formatted_cell_value(0, 3, 3),
         Ok("hello".to_string())
@@ -410,22 +413,22 @@ fn merge_stamps_the_anchor_style_and_undo_restores_the_old_ones() {
 // Asserts that a full "#color" outline wraps the merged range B2:C3 as a
 // whole: each cell shows only the sides of its corner of the perimeter.
 fn assert_outline_wraps_b2_c3(model: &UserModel, color: &str) {
-    let b2 = model._get_cell_border("B2");
+    let b2 = model.get_cell_border_a1("B2");
     assert_eq!(b2.left, thin(color));
     assert_eq!(b2.top, thin(color));
     assert_eq!(b2.right, None);
     assert_eq!(b2.bottom, None);
-    let c2 = model._get_cell_border("C2");
+    let c2 = model.get_cell_border_a1("C2");
     assert_eq!(c2.top, thin(color));
     assert_eq!(c2.right, thin(color));
     assert_eq!(c2.left, None);
     assert_eq!(c2.bottom, None);
-    let b3 = model._get_cell_border("B3");
+    let b3 = model.get_cell_border_a1("B3");
     assert_eq!(b3.left, thin(color));
     assert_eq!(b3.bottom, thin(color));
     assert_eq!(b3.top, None);
     assert_eq!(b3.right, None);
-    let c3 = model._get_cell_border("C3");
+    let c3 = model.get_cell_border_a1("C3");
     assert_eq!(c3.right, thin(color));
     assert_eq!(c3.bottom, thin(color));
     assert_eq!(c3.left, None);
@@ -436,8 +439,8 @@ fn assert_outline_wraps_b2_c3(model: &UserModel, color: &str) {
 fn merge_moves_the_anchor_borders_to_the_perimeter_and_undo_restores_them() {
     let mut model = new_empty_user_model();
     // full outline on the anchor B2, another border on covered C3; no content
-    model._set_cell_border("B2", "#111111");
-    model._set_cell_border("C3", "#999999");
+    model.set_cell_border_a1("B2", "#111111");
+    model.set_cell_border_a1("C3", "#999999");
 
     // merge B2:C3: the empty range takes the anchor's style, so its outline
     // wraps the whole merged cell and the C3 outline is dropped
@@ -446,7 +449,7 @@ fn merge_moves_the_anchor_borders_to_the_perimeter_and_undo_restores_them() {
 
     // undo restores the two original outlines
     model.undo().unwrap();
-    let b2 = model._get_cell_border("B2");
+    let b2 = model.get_cell_border_a1("B2");
     assert_eq!(
         [b2.left, b2.right, b2.top, b2.bottom],
         [
@@ -456,7 +459,7 @@ fn merge_moves_the_anchor_borders_to_the_perimeter_and_undo_restores_them() {
             thin("#111111")
         ]
     );
-    let c3 = model._get_cell_border("C3");
+    let c3 = model.get_cell_border_a1("C3");
     assert_eq!(
         [c3.left, c3.right, c3.top, c3.bottom],
         [
@@ -473,7 +476,7 @@ fn merge_moves_the_content_cell_borders_to_the_perimeter_and_undo_restores_them(
     let mut model = new_empty_user_model();
     // C3 is the bottom-right corner of B2:C3 and the only cell with content
     model.set_user_input(0, 3, 3, "x").unwrap();
-    model._set_cell_border("C3", "#999999");
+    model.set_cell_border_a1("C3", "#999999");
 
     model.merge_cells(&area(0, 2, 2, 2, 2)).unwrap();
 
@@ -483,7 +486,7 @@ fn merge_moves_the_content_cell_borders_to_the_perimeter_and_undo_restores_them(
 
     // undo restores the original outline on C3 alone
     model.undo().unwrap();
-    let c3 = model._get_cell_border("C3");
+    let c3 = model.get_cell_border_a1("C3");
     assert_eq!(
         [c3.left, c3.right, c3.top, c3.bottom],
         [
@@ -493,7 +496,7 @@ fn merge_moves_the_content_cell_borders_to_the_perimeter_and_undo_restores_them(
             thin("#999999")
         ]
     );
-    let b2 = model._get_cell_border("B2");
+    let b2 = model.get_cell_border_a1("B2");
     assert_eq!(
         [b2.left, b2.right, b2.top, b2.bottom],
         [None, None, None, None]
@@ -524,7 +527,7 @@ fn merge_stamps_the_content_cell_style_and_undo_restores_the_old_ones() {
 
     // undo brings the old styles and content back
     model.undo().unwrap();
-    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok(String::new()));
     assert_eq!(model.get_formatted_cell_value(0, 3, 3), Ok("7".to_string()));
     assert_eq!(
         model.get_cell_style(0, 2, 2).unwrap().fill.color,
@@ -569,7 +572,7 @@ fn copy_paste_keeps_the_perimeter_borders_of_a_merged_cell() {
     // C3, the bottom-right corner of B2:C3, has content and an outline: after
     // merging, the surviving bottom/right borders live on non-anchor cells
     model.set_user_input(0, 3, 3, "x").unwrap();
-    model._set_cell_border("C3", "#111111");
+    model.set_cell_border_a1("C3", "#111111");
     model.merge_cells(&area(0, 2, 2, 2, 2)).unwrap();
 
     model.set_selected_cell(2, 2).unwrap();
@@ -585,19 +588,19 @@ fn copy_paste_keeps_the_perimeter_borders_of_a_merged_cell() {
         model.get_formatted_cell_value(0, 10, 10),
         Ok("x".to_string())
     );
-    let j10 = model._get_cell_border("J10");
+    let j10 = model.get_cell_border_a1("J10");
     assert_eq!(j10.left, thin("#111111"));
     assert_eq!(j10.top, thin("#111111"));
     assert_eq!([j10.right, j10.bottom], [None, None]);
-    let k10 = model._get_cell_border("K10");
+    let k10 = model.get_cell_border_a1("K10");
     assert_eq!(k10.top, thin("#111111"));
     assert_eq!(k10.right, thin("#111111"));
     assert_eq!([k10.left, k10.bottom], [None, None]);
-    let j11 = model._get_cell_border("J11");
+    let j11 = model.get_cell_border_a1("J11");
     assert_eq!(j11.left, thin("#111111"));
     assert_eq!(j11.bottom, thin("#111111"));
     assert_eq!([j11.right, j11.top], [None, None]);
-    let k11 = model._get_cell_border("K11");
+    let k11 = model.get_cell_border_a1("K11");
     assert_eq!(k11.right, thin("#111111"));
     assert_eq!(k11.bottom, thin("#111111"));
     assert_eq!([k11.left, k11.top], [None, None]);
@@ -796,10 +799,7 @@ fn copy_paste_recreates_the_merge_at_the_target() {
 
     model.undo().unwrap();
     assert_eq!(model.get_merged_cells(0).unwrap(), vec![merged(2, 2, 2, 2)]);
-    assert_eq!(
-        model.get_formatted_cell_value(0, 10, 10),
-        Ok("".to_string())
-    );
+    assert_eq!(model.get_formatted_cell_value(0, 10, 10), Ok(String::new()));
 
     model.redo().unwrap();
     assert_eq!(
@@ -857,16 +857,13 @@ fn cut_paste_moves_the_merge_to_the_target() {
         model.get_formatted_cell_value(0, 10, 10),
         Ok("5".to_string())
     );
-    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok(String::new()));
 
     // undo moves the merge and its content back to the source
     model.undo().unwrap();
     assert_eq!(model.get_merged_cells(0).unwrap(), vec![merged(2, 2, 2, 2)]);
     assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok("5".to_string()));
-    assert_eq!(
-        model.get_formatted_cell_value(0, 10, 10),
-        Ok("".to_string())
-    );
+    assert_eq!(model.get_formatted_cell_value(0, 10, 10), Ok(String::new()));
 
     model.redo().unwrap();
     assert_eq!(
@@ -990,7 +987,7 @@ fn merge_across_undo_redo_is_a_single_step() {
         model.get_formatted_cell_value(0, 2, 2),
         Ok("top".to_string())
     );
-    assert_eq!(model.get_formatted_cell_value(0, 2, 3), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3), Ok(String::new()));
     assert_eq!(
         model.get_formatted_cell_value(0, 4, 2),
         Ok("bottom".to_string())
@@ -1006,7 +1003,7 @@ fn merge_across_undo_redo_is_a_single_step() {
         model.get_formatted_cell_value(0, 2, 3),
         Ok("top".to_string())
     );
-    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok(String::new()));
 
     model.redo().unwrap();
     assert_eq!(
@@ -1082,7 +1079,7 @@ fn merge_down_undo_redo_is_a_single_step() {
         model.get_formatted_cell_value(0, 3, 2),
         Ok("left".to_string())
     );
-    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok(String::new()));
 
     model.redo().unwrap();
     assert_eq!(
@@ -1141,7 +1138,7 @@ fn merge_across_replays_on_external_models() {
         model2.get_formatted_cell_value(0, 2, 2),
         Ok("hello".to_string())
     );
-    assert_eq!(model2.get_formatted_cell_value(0, 2, 3), Ok("".to_string()));
+    assert_eq!(model2.get_formatted_cell_value(0, 2, 3), Ok(String::new()));
 
     // the single-step undo also replays
     model1.undo().unwrap();
@@ -1182,4 +1179,66 @@ fn merge_down_selects_the_whole_merged_area() {
     let view = model.get_selected_view();
     assert_eq!((view.row, view.column), (2, 2));
     assert_eq!(view.range, [2, 2, 4, 3]);
+}
+
+/// A merged B2:C2 whose covered C2 holds 7, as an imported workbook leaves it (SPEC-0036 I1; the
+/// raw cell API writes covered cells, `set_user_input` refuses them).
+fn merged_with_covered_value() -> UserModel {
+    let mut model = new_empty_user_model();
+    model.set_user_input(0, 2, 2, "5").unwrap();
+    model.merge_cells(&area(0, 2, 2, 2, 1)).unwrap();
+    model.model.update_cell_with_number(0, 2, 3, 7.0).unwrap();
+    model.set_user_input(0, 5, 1, "=C2+1").unwrap();
+    model.evaluate();
+    model
+}
+
+#[test]
+fn covered_value_is_read_by_formulas_and_shows_after_unmerge() {
+    let mut model = merged_with_covered_value();
+    assert_eq!(model.get_formatted_cell_value(0, 5, 1).unwrap(), "8");
+
+    model.unmerge_cells(&area(0, 2, 2, 2, 1)).unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "7");
+
+    model.undo().unwrap();
+    assert_eq!(model.get_merged_cells(0).unwrap(), vec![merged(2, 2, 2, 1)]);
+    assert_eq!(model.get_formatted_cell_value(0, 5, 1).unwrap(), "8");
+    model.redo().unwrap();
+    assert!(model.get_merged_cells(0).unwrap().is_empty());
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "7");
+}
+
+#[test]
+fn range_clear_of_a_merged_range_clears_the_covered_value() {
+    let mut model = merged_with_covered_value();
+    model.range_clear_contents(&area(0, 2, 2, 2, 1)).unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "");
+    assert_eq!(model.get_formatted_cell_value(0, 5, 1).unwrap(), "1");
+
+    model.undo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "7");
+    assert_eq!(model.get_formatted_cell_value(0, 5, 1).unwrap(), "8");
+    model.redo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "");
+}
+
+#[test]
+fn deleting_the_anchor_row_makes_the_covered_cell_the_anchor_with_its_value() {
+    let mut model = new_empty_user_model();
+    model.set_user_input(0, 2, 2, "5").unwrap();
+    model.merge_cells(&area(0, 2, 2, 1, 2)).unwrap();
+    model.model.update_cell_with_number(0, 3, 2, 7.0).unwrap();
+    model.evaluate();
+
+    model.delete_rows(0, 2, 1).unwrap();
+    // the merge shrinks to a single cell whose anchor is the old covered B3, now B2
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2).unwrap(), "7");
+
+    model.undo().unwrap();
+    assert_eq!(model.get_merged_cells(0).unwrap(), vec![merged(2, 2, 1, 2)]);
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2).unwrap(), "5");
+    assert_eq!(model.get_formatted_cell_value(0, 3, 2).unwrap(), "7");
+    model.redo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2).unwrap(), "7");
 }

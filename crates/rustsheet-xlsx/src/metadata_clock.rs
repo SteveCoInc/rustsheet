@@ -1,5 +1,8 @@
 //! The IronCalc `METADATA`/`NOW` convention: Excel-authored test workbooks carry the time they
 //! were computed at, which the harness pins the workbook clock to (SPEC-0008).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use rustsheet_engine::{cell::CellValue, clock::Clock, Model};
 

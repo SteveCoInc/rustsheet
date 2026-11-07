@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::manual_let_else)]
+// LINT-DEBT-END
 use chrono::DateTime;
 use rustsheet_engine::{
     new_empty::{APPLICATION, APP_VERSION, IRONCALC_USER},

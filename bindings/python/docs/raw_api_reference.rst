@@ -1,7 +1,9 @@
 Raw API Reference
 -----------------
 
-The raw API (:class:`Model`) is a low level API. Nothing is evaluated
+The raw API (:class:`Model`) is part of the deprecated ``rustsheet.legacy``
+module (``from rustsheet import legacy``), which is removed at the API v1 freeze; use
+:class:`rustsheet.Workbook` for new code. It is a low level API. Nothing is evaluated
 automatically: call :meth:`Model.evaluate` after making changes, otherwise the
 workbook may be in an inconsistent state. There is no undo/redo history and no
 diffs are produced. It is faster and more flexible than the user API, but

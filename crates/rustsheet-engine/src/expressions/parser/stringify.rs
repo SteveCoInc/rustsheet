@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::manual_let_else,
+    clippy::too_many_lines,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 pub(crate) mod bound_variables;
 mod displacement;
 mod literals;
@@ -266,190 +273,187 @@ pub(crate) fn stringify_reference(
     let absolute_column = reference.absolute_column;
     let row = reference.row;
     let column = reference.column;
-    match context {
-        Some(context) => {
-            let mut row = if absolute_row { row } else { row + context.row };
-            let mut column = if absolute_column {
-                column
-            } else {
-                column + context.column
-            };
-            match displace_data {
-                DisplaceData::Row {
-                    sheet,
-                    row: displace_row,
-                    delta,
-                } => {
-                    if sheet_index == *sheet && !full_row {
-                        if *delta < 0 {
-                            if &row >= displace_row {
-                                if row < displace_row - *delta {
-                                    return "#REF!".to_string();
-                                }
-                                row += *delta;
+    if let Some(context) = context {
+        let mut row = if absolute_row { row } else { row + context.row };
+        let mut column = if absolute_column {
+            column
+        } else {
+            column + context.column
+        };
+        match displace_data {
+            DisplaceData::Row {
+                sheet,
+                row: displace_row,
+                delta,
+            } => {
+                if sheet_index == *sheet && !full_row {
+                    if *delta < 0 {
+                        if &row >= displace_row {
+                            if row < displace_row - *delta {
+                                return "#REF!".to_string();
                             }
-                        } else if &row >= displace_row {
                             row += *delta;
                         }
+                    } else if &row >= displace_row {
+                        row += *delta;
                     }
                 }
-                DisplaceData::Column {
-                    sheet,
-                    column: displace_column,
-                    delta,
-                } => {
-                    if sheet_index == *sheet && !full_column {
-                        if *delta < 0 {
-                            if &column >= displace_column {
-                                if column < displace_column - *delta {
-                                    return "#REF!".to_string();
-                                }
-                                column += *delta;
+            }
+            DisplaceData::Column {
+                sheet,
+                column: displace_column,
+                delta,
+            } => {
+                if sheet_index == *sheet && !full_column {
+                    if *delta < 0 {
+                        if &column >= displace_column {
+                            if column < displace_column - *delta {
+                                return "#REF!".to_string();
                             }
-                        } else if &column >= displace_column {
                             column += *delta;
                         }
+                    } else if &column >= displace_column {
+                        column += *delta;
                     }
                 }
-                DisplaceData::CellHorizontal {
-                    sheet,
-                    row: displace_row,
-                    column: displace_column,
-                    delta,
-                } => {
-                    if sheet_index == *sheet && displace_row == &row {
-                        if *delta < 0 {
-                            if &column >= displace_column {
-                                if column < displace_column - *delta {
-                                    return "#REF!".to_string();
-                                }
-                                column += *delta;
+            }
+            DisplaceData::CellHorizontal {
+                sheet,
+                row: displace_row,
+                column: displace_column,
+                delta,
+            } => {
+                if sheet_index == *sheet && displace_row == &row {
+                    if *delta < 0 {
+                        if &column >= displace_column {
+                            if column < displace_column - *delta {
+                                return "#REF!".to_string();
                             }
-                        } else if &column >= displace_column {
                             column += *delta;
                         }
+                    } else if &column >= displace_column {
+                        column += *delta;
                     }
                 }
-                DisplaceData::CellVertical {
-                    sheet,
-                    row: displace_row,
-                    column: displace_column,
-                    delta,
-                } => {
-                    if sheet_index == *sheet && displace_column == &column {
-                        if *delta < 0 {
-                            if &row >= displace_row {
-                                if row < displace_row - *delta {
-                                    return "#REF!".to_string();
-                                }
-                                row += *delta;
+            }
+            DisplaceData::CellVertical {
+                sheet,
+                row: displace_row,
+                column: displace_column,
+                delta,
+            } => {
+                if sheet_index == *sheet && displace_column == &column {
+                    if *delta < 0 {
+                        if &row >= displace_row {
+                            if row < displace_row - *delta {
+                                return "#REF!".to_string();
                             }
-                        } else if &row >= displace_row {
                             row += *delta;
                         }
+                    } else if &row >= displace_row {
+                        row += *delta;
                     }
                 }
-                DisplaceData::RowMove {
-                    sheet,
-                    row: move_row,
-                    delta,
-                } => {
-                    if sheet_index == *sheet {
-                        if row == *move_row {
-                            row += *delta;
-                        } else if *delta > 0 {
-                            // Moving the row downwards
-                            if row > *move_row && row <= *move_row + *delta {
-                                // Intermediate rows move up by one position
-                                row -= 1;
-                            }
-                        } else if *delta < 0 {
-                            // Moving the row upwards
-                            if row < *move_row && row >= *move_row + *delta {
-                                // Intermediate rows move down by one position
-                                row += 1;
-                            }
+            }
+            DisplaceData::RowMove {
+                sheet,
+                row: move_row,
+                delta,
+            } => {
+                if sheet_index == *sheet {
+                    if row == *move_row {
+                        row += *delta;
+                    } else if *delta > 0 {
+                        // Moving the row downwards
+                        if row > *move_row && row <= *move_row + *delta {
+                            // Intermediate rows move up by one position
+                            row -= 1;
+                        }
+                    } else if *delta < 0 {
+                        // Moving the row upwards
+                        if row < *move_row && row >= *move_row + *delta {
+                            // Intermediate rows move down by one position
+                            row += 1;
                         }
                     }
                 }
-                DisplaceData::ColumnMove {
-                    sheet,
-                    column: move_column,
-                    delta,
-                } => {
-                    if sheet_index == *sheet {
-                        if column == *move_column {
-                            column += *delta;
-                        } else if *delta > 0 {
-                            // Moving the column to the right
-                            if column > *move_column && column <= *move_column + *delta {
-                                // Intermediate columns move left by one position
-                                column -= 1;
-                            }
-                        } else if *delta < 0 {
-                            // Moving the column to the left
-                            if column < *move_column && column >= *move_column + *delta {
-                                // Intermediate columns move right by one position
-                                column += 1;
-                            }
+            }
+            DisplaceData::ColumnMove {
+                sheet,
+                column: move_column,
+                delta,
+            } => {
+                if sheet_index == *sheet {
+                    if column == *move_column {
+                        column += *delta;
+                    } else if *delta > 0 {
+                        // Moving the column to the right
+                        if column > *move_column && column <= *move_column + *delta {
+                            // Intermediate columns move left by one position
+                            column -= 1;
+                        }
+                    } else if *delta < 0 {
+                        // Moving the column to the left
+                        if column < *move_column && column >= *move_column + *delta {
+                            // Intermediate columns move right by one position
+                            column += 1;
                         }
                     }
                 }
-                DisplaceData::None => {}
             }
-            if row < 1 {
-                return "#REF!".to_string();
+            DisplaceData::None => {}
+        }
+        if row < 1 {
+            return "#REF!".to_string();
+        }
+        let mut row_abs = if absolute_row {
+            format!("${row}")
+        } else {
+            format!("{row}")
+        };
+        let column = match crate::expressions::utils::number_to_column(column) {
+            Some(s) => s,
+            None => return "#REF!".to_string(),
+        };
+        let mut col_abs = if absolute_column {
+            format!("${column}")
+        } else {
+            column
+        };
+        if full_row {
+            row_abs = String::new();
+        }
+        if full_column {
+            col_abs = String::new();
+        }
+        match &sheet_name {
+            Some(name) => {
+                format!("{}!{}{}", quote_name(name), col_abs, row_abs)
             }
-            let mut row_abs = if absolute_row {
-                format!("${row}")
-            } else {
-                format!("{row}")
-            };
-            let column = match crate::expressions::utils::number_to_column(column) {
-                Some(s) => s,
-                None => return "#REF!".to_string(),
-            };
-            let mut col_abs = if absolute_column {
-                format!("${column}")
-            } else {
-                column
-            };
-            if full_row {
-                row_abs = "".to_string();
-            }
-            if full_column {
-                col_abs = "".to_string();
-            }
-            match &sheet_name {
-                Some(name) => {
-                    format!("{}!{}{}", quote_name(name), col_abs, row_abs)
-                }
-                None => {
-                    format!("{col_abs}{row_abs}")
-                }
+            None => {
+                format!("{col_abs}{row_abs}")
             }
         }
-        None => {
-            // Written into one buffer: the R1C1 text of every reference of every loaded formula
-            // is printed here (T-0499).
-            let mut text = String::with_capacity(24);
-            if let Some(name) = sheet_name {
-                text.push_str(&quote_name(name));
-                text.push('!');
-            }
-            // Writing to a `String` cannot fail.
-            let _ = if absolute_row {
-                write!(text, "R{row}")
-            } else {
-                write!(text, "R[{row}]")
-            };
-            let _ = if absolute_column {
-                write!(text, "C{column}")
-            } else {
-                write!(text, "C[{column}]")
-            };
-            text
+    } else {
+        // Written into one buffer: the R1C1 text of every reference of every loaded formula
+        // is printed here (T-0499).
+        let mut text = String::with_capacity(24);
+        if let Some(name) = sheet_name {
+            text.push_str(&quote_name(name));
+            text.push('!');
         }
+        // Writing to a `String` cannot fail.
+        let _ = if absolute_row {
+            write!(text, "R{row}")
+        } else {
+            write!(text, "R[{row}]")
+        };
+        let _ = if absolute_column {
+            write!(text, "C{column}")
+        } else {
+            write!(text, "C[{column}]")
+        };
+        text
     }
 }
 
@@ -518,7 +522,15 @@ fn stringify(
     locale: &Locale,
     language: &Language,
 ) -> String {
-    use self::Node::*;
+    use self::Node::{
+        ArrayKind, BooleanKind, CompareKind, DefinedNameKind, EmptyArgKind, ErrorKind,
+        FunctionKind, Group, ImplicitIntersection, LambdaCallKind, LambdaDefKind,
+        NamedFunctionKind, NamedVariableKind, NumberKind, OpConcatenateKind, OpIntersectKind,
+        OpPowerKind, OpProductKind, OpRangeKind, OpSumKind, OpUnionKind, ParseErrorKind, RangeKind,
+        ReferenceKind, SheetRefErrorKind, SheetSpanKind, Spaced, SpillRangeOperator, StringKind,
+        StructuredReferenceKind, ThisRowKind, UnaryKind, UnaryPlus, WrongRangeKind,
+        WrongReferenceKind,
+    };
     let displace_data = match rewrite {
         Rewrite::Displace(displacement) => displacement.data,
         Rewrite::Move(move_context) => {
@@ -535,9 +547,9 @@ fn stringify(
     match node {
         BooleanKind(value) => {
             if *value {
-                language.booleans.r#true.to_string()
+                language.booleans.r#true.clone()
             } else {
-                language.booleans.r#false.to_string()
+                language.booleans.r#false.clone()
             }
         }
         NumberKind(number) => format_number_locale(*number, locale),
@@ -715,18 +727,18 @@ fn stringify(
             let col_separator = if row_separator == ';' { ',' } else { ';' };
 
             for row in args {
-                if !first_row {
-                    matrix_string.push(row_separator);
-                } else {
+                if first_row {
                     first_row = false;
+                } else {
+                    matrix_string.push(row_separator);
                 }
                 let mut first_column = true;
                 let mut row_string = String::new();
                 for el in row {
-                    if !first_column {
-                        row_string.push(col_separator);
-                    } else {
+                    if first_column {
                         first_column = false;
+                    } else {
+                        row_string.push(col_separator);
                     }
                     row_string.push_str(&to_string_array_node(el, locale, language));
                 }
@@ -759,8 +771,8 @@ fn stringify(
         {
             "#REF!".to_string()
         }
-        ParseErrorKind { formula, .. } => formula.to_string(),
-        EmptyArgKind => "".to_string(),
+        ParseErrorKind { formula, .. } => formula.clone(),
+        EmptyArgKind => String::new(),
         ThisRowKind { .. } => structured::this_row_text(node, context, rewrite, sub),
         StructuredReferenceKind { reference, lowered } => structured::reference_text(
             reference,
@@ -773,7 +785,7 @@ fn stringify(
         SpillRangeOperator { child } => {
             if export_to_excel {
                 return format!("_xlfn.ANCHORARRAY({})", sub(child));
-            };
+            }
             format!("{}#", spill_operand(sub(child), child))
         }
         LambdaDefKind { parameters, body } => {
@@ -889,7 +901,7 @@ fn wrap(text: String, parens: bool) -> String {
 /// prints as written: `=SUM(A1)^2`, `=2^-A1`, `=A1^2^3` (probes/operand-wrap-text,
 /// probes/power-chain-text). One link of the loop that prints a chain (T-0128).
 fn operator_text(node: &Node, left_text: String, sub: &dyn Fn(&Node) -> String) -> String {
-    use self::Node::*;
+    use self::Node::{CompareKind, OpConcatenateKind, OpPowerKind, OpProductKind, OpSumKind};
     let Some((left, right)) = value_operands(node) else {
         return left_text;
     };

@@ -1,5 +1,8 @@
 //! The gamma density, on the prefactor P and Q share ([`gamma_prefactor`]), and Excel's own form
 //! of it above the mode below shape 20 (T-3147).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use super::super::loader::stirlerr_exact;
 use super::{

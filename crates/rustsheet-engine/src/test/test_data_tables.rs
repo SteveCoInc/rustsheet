@@ -51,7 +51,7 @@ fn tables_substitute_their_inputs_and_readers_see_the_results() {
         ("H11", "=FORMULATEXT(B4)"),
         ("H12", "=FORMULATEXT(C12)"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
         .add_data_table(0, table((4, 2, 6, 2), None, Some((1, 1))))
@@ -67,7 +67,12 @@ fn tables_substitute_their_inputs_and_readers_see_the_results() {
         .unwrap();
     model.evaluate();
 
-    let texts = |cells: &[&str]| cells.iter().map(|c| model._get_text(c)).collect::<Vec<_>>();
+    let texts = |cells: &[&str]| {
+        cells
+            .iter()
+            .map(|c| model.get_text_a1(c))
+            .collect::<Vec<_>>()
+    };
     assert_eq!(texts(&["B4", "B5", "B6"]), ["12", "22", "32"]);
     assert_eq!(texts(&["D8", "E8", "F8"]), ["12", "22", "32"]);
     assert_eq!(
@@ -83,31 +88,31 @@ fn tables_substitute_their_inputs_and_readers_see_the_results() {
         texts(&["H10", "H11", "H12"]),
         ["TRUE", "{=TABLE(,A1)}", "{=TABLE(B1,A1)}"]
     );
-    assert_eq!(model._get_text("A1"), "1", "the input keeps its value");
+    assert_eq!(model.get_text_a1("A1"), "1", "the input keeps its value");
 }
 
 /// A result recomputes when the model changes, and text and error values substitute too.
 #[test]
 fn results_follow_edits_and_carry_any_value_type() {
     let mut model = new_empty_model();
-    model._set("A1", "x");
-    model._set("C1", "=LEN(A1)&\"/\"&ISERROR(A1)");
-    model._set("B2", "abc");
-    model._set("B3", "=1/0");
+    model.set_a1("A1", "x");
+    model.set_a1("C1", "=LEN(A1)&\"/\"&ISERROR(A1)");
+    model.set_a1("B2", "abc");
+    model.set_a1("B3", "=1/0");
     model
         .add_data_table(0, table((2, 3, 3, 3), None, Some((1, 1))))
         .unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("C2"), "3/FALSE");
+    assert_eq!(model.get_text_a1("C2"), "3/FALSE");
     assert_eq!(
-        model._get_text("C3"),
+        model.get_text_a1("C3"),
         "#DIV/0!",
         "an error input propagates"
     );
-    model._set("C1", "=A1&\"!\"");
+    model.set_a1("C1", "=A1&\"!\"");
     model.evaluate();
-    assert_eq!(model._get_text("C2"), "abc!");
-    assert_eq!(model._get_text("C3"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("C2"), "abc!");
+    assert_eq!(model.get_text_a1("C3"), "#DIV/0!");
 }
 
 /// A deleted input cell (`del1`) makes every result `#REF!`; a table needs an input, a row above
@@ -115,7 +120,7 @@ fn results_follow_edits_and_carry_any_value_type() {
 #[test]
 fn invalid_tables_are_refused_and_a_deleted_input_is_ref() {
     let mut model = new_empty_model();
-    model._set("B1", "=1");
+    model.set_a1("B1", "=1");
     let deleted = DataTable {
         range: (2, 2, 2, 2),
         row_input: None,
@@ -123,7 +128,7 @@ fn invalid_tables_are_refused_and_a_deleted_input_is_ref() {
     };
     model.add_data_table(0, deleted).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("B2"), "#REF!");
+    assert_eq!(model.get_text_a1("B2"), "#REF!");
     assert!(model
         .add_data_table(0, table((1, 2, 2, 2), None, Some((1, 1))))
         .is_err());
@@ -189,7 +194,7 @@ fn edit_model() -> crate::model::Model {
         ("H2", "=FORMULATEXT(B5)"),
         ("H3", "=B5"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
         .add_data_table(0, table((4, 2, 6, 2), None, Some((1, 4))))
@@ -209,8 +214,8 @@ fn inserts_around_a_data_table_move_it() {
         model.workbook.worksheets[0].data_tables[0],
         table((5, 2, 7, 2), None, Some((2, 4)))
     );
-    assert_eq!(model._get_text("H2"), "66");
-    assert_eq!(model._get_text("H3"), "{=TABLE(,D2)}");
+    assert_eq!(model.get_text_a1("H2"), "66");
+    assert_eq!(model.get_text_a1("H3"), "{=TABLE(,D2)}");
     let mut model = edit_model();
     model.insert_rows(0, 3, 1).unwrap();
     model.evaluate();
@@ -218,8 +223,8 @@ fn inserts_around_a_data_table_move_it() {
         model.workbook.worksheets[0].data_tables[0],
         table((5, 2, 7, 2), None, Some((1, 4)))
     );
-    assert_eq!(model._get_text("H1"), "66");
-    assert_eq!(model._get_text("H4"), "22");
+    assert_eq!(model.get_text_a1("H1"), "66");
+    assert_eq!(model.get_text_a1("H4"), "22");
     let mut model = edit_model();
     model.insert_columns(0, 1, 1).unwrap();
     model.evaluate();
@@ -227,8 +232,8 @@ fn inserts_around_a_data_table_move_it() {
         model.workbook.worksheets[0].data_tables[0],
         table((4, 3, 6, 3), None, Some((1, 5)))
     );
-    assert_eq!(model._get_text("I1"), "66");
-    assert_eq!(model._get_text("I2"), "{=TABLE(,E1)}");
+    assert_eq!(model.get_text_a1("I1"), "66");
+    assert_eq!(model.get_text_a1("I2"), "{=TABLE(,E1)}");
     let mut model = edit_model();
     model.insert_columns(0, 3, 1).unwrap();
     model.evaluate();
@@ -236,7 +241,7 @@ fn inserts_around_a_data_table_move_it() {
         model.workbook.worksheets[0].data_tables[0],
         table((4, 2, 6, 2), None, Some((1, 5)))
     );
-    assert_eq!(model._get_text("I3"), "22");
+    assert_eq!(model.get_text_a1("I3"), "22");
 }
 
 /// Excel refuses an insert or delete of rows or columns that cuts through a data table's region
@@ -264,8 +269,8 @@ fn edits_through_a_data_table_are_refused() {
         model.workbook.worksheets[0].data_tables[0],
         table((4, 2, 6, 2), None, Some((1, 4)))
     );
-    assert_eq!(model._get_text("H1"), "66");
-    assert_eq!(model._get_text("A5"), "2");
+    assert_eq!(model.get_text_a1("H1"), "66");
+    assert_eq!(model.get_text_a1("A5"), "2");
 }
 
 /// Deleting the input's row or column makes the input `#REF!` and every result `#REF!`; deleting
@@ -281,23 +286,23 @@ fn deletes_around_a_data_table_shrink_or_delete_it() {
         column_input: Some(DataTableInput::Deleted),
     };
     assert_eq!(model.workbook.worksheets[0].data_tables[0], deleted);
-    assert_eq!(model._get_text("B4"), "#REF!");
-    assert_eq!(model._get_text("H1"), "{=TABLE(,#REF!)}");
+    assert_eq!(model.get_text_a1("B4"), "#REF!");
+    assert_eq!(model.get_text_a1("H1"), "{=TABLE(,#REF!)}");
     let mut model = edit_model();
     model.delete_columns(0, 4, 1).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("B5"), "#REF!");
-    assert_eq!(model._get_text("G2"), "{=TABLE(,#REF!)}");
+    assert_eq!(model.get_text_a1("B5"), "#REF!");
+    assert_eq!(model.get_text_a1("G2"), "{=TABLE(,#REF!)}");
     let mut model = edit_model();
     model.delete_rows(0, 2, 6).unwrap();
     model.evaluate();
     assert!(model.workbook.worksheets[0].data_tables.is_empty());
-    assert_eq!(model._get_text("H1"), "#REF!");
+    assert_eq!(model.get_text_a1("H1"), "#REF!");
     let mut model = edit_model();
     model.delete_columns(0, 1, 2).unwrap();
     model.evaluate();
     assert!(model.workbook.worksheets[0].data_tables.is_empty());
-    assert_eq!(model._get_text("F1"), "#REF!");
+    assert_eq!(model.get_text_a1("F1"), "#REF!");
 }
 
 fn area(row: i32, column: i32, width: i32, height: i32) -> crate::expressions::types::Area {
@@ -320,13 +325,13 @@ fn a_clear_over_every_result_deletes_the_table_and_over_some_is_refused() {
     assert_eq!(model.range_clear_contents(&area(5, 2, 2, 1)), refused);
     assert_eq!(model.range_clear_all(&area(4, 2, 1, 2)), refused);
     model.evaluate();
-    assert_eq!(model._get_text("H1"), "66");
+    assert_eq!(model.get_text_a1("H1"), "66");
     for clear in [area(4, 2, 1, 3), area(3, 1, 2, 4), area(1, 1, 8, 9)] {
         let mut model = edit_model();
         model.range_clear_contents(&clear).unwrap();
         model.evaluate();
         assert!(model.workbook.worksheets[0].data_tables.is_empty());
-        assert_eq!(model._get_text("B5"), "");
+        assert_eq!(model.get_text_a1("B5"), "");
         let mut model = edit_model();
         model.range_clear_all(&clear).unwrap();
         assert!(model.workbook.worksheets[0].data_tables.is_empty());

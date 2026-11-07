@@ -14,6 +14,9 @@
 //! BINOM.DIST(0,n,p) cells (probes-numeric t2464-r2-log1p-pilot, -runs, -grid, -hold); every
 //! miss is exactly 1 ulp off, a near-tie of r + s that Excel rounds the other way. A correctly
 //! rounded log1p gets 10,821.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use crate::arithmetic::{extended_product, extended_quotient, extended_sum};
 use crate::x87_log10::excel_ln;

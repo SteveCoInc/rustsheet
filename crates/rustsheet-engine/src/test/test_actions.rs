@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::constants::{DEFAULT_ROW_HEIGHT, LAST_COLUMN, LAST_ROW};
@@ -9,17 +12,17 @@ use crate::types::Col;
 fn test_insert_columns() {
     let mut model = new_empty_model();
     // We populate cells A1 to C1
-    model._set("A1", "1");
-    model._set("B1", "2");
-    model._set("C1", "=B1*2");
+    model.set_a1("A1", "1");
+    model.set_a1("B1", "2");
+    model.set_a1("C1", "=B1*2");
 
-    model._set("F1", "=B1");
+    model.set_a1("F1", "=B1");
 
-    model._set("L11", "300");
-    model._set("M11", "=L11*5");
+    model.set_a1("L11", "300");
+    model.set_a1("M11", "=L11*5");
 
     model.evaluate();
-    assert_eq!(model._get_text("C1"), *"4");
+    assert_eq!(model.get_text_a1("C1"), *"4");
 
     // Let's insert 5 columns in column F (6)
     let r = model.insert_columns(0, 6, 5);
@@ -30,14 +33,14 @@ fn test_insert_columns() {
     assert!(model.is_empty_cell(0, 1, 6).unwrap());
 
     // The old F1 is K1
-    assert_eq!(model._get_formula("K1"), *"=B1");
+    assert_eq!(model.get_formula_a1("K1"), *"=B1");
 
     // L11 and M11 are Q11 and R11
-    assert_eq!(model._get_text("Q11"), *"300");
-    assert_eq!(model._get_formula("R11"), *"=Q11*5");
+    assert_eq!(model.get_text_a1("Q11"), *"300");
+    assert_eq!(model.get_formula_a1("R11"), *"=Q11*5");
 
-    assert_eq!(model._get_formula("C1"), "=B1*2");
-    assert_eq!(model._get_text("A1"), "1");
+    assert_eq!(model.get_formula_a1("C1"), "=B1*2");
+    assert_eq!(model.get_text_a1("A1"), "1");
 
     // inserting a negative number of columns fails:
     let r = model.insert_columns(0, 6, -5);
@@ -46,7 +49,7 @@ fn test_insert_columns() {
     assert!(r.is_err());
 
     // If you have data at the very ebd it fails
-    model._set("XFC12", "300");
+    model.set_a1("XFC12", "300");
     let r = model.insert_columns(0, 6, 5);
     assert!(r.is_err());
 }
@@ -55,13 +58,13 @@ fn test_insert_columns() {
 fn test_insert_rows() {
     let mut model = new_empty_model();
 
-    model._set("C4", "3");
-    model._set("C5", "7");
-    model._set("C6", "=C5");
+    model.set_a1("C4", "3");
+    model.set_a1("C5", "7");
+    model.set_a1("C6", "=C5");
 
-    model._set("H11", "=C4");
+    model.set_a1("H11", "=C4");
 
-    model._set("R10", "=C6");
+    model.set_a1("R10", "=C6");
 
     model.evaluate();
 
@@ -74,12 +77,12 @@ fn test_insert_rows() {
     assert!(model.is_empty_cell(0, 6, 3).unwrap());
 
     // Old C6 is now C11
-    assert_eq!(model._get_formula("C11"), *"=C5");
-    assert_eq!(model._get_formula("H16"), *"=C4");
+    assert_eq!(model.get_formula_a1("C11"), *"=C5");
+    assert_eq!(model.get_formula_a1("H16"), *"=C4");
 
-    assert_eq!(model._get_formula("R15"), *"=C11");
-    assert_eq!(model._get_text("C4"), *"3");
-    assert_eq!(model._get_text("C5"), *"7");
+    assert_eq!(model.get_formula_a1("R15"), *"=C11");
+    assert_eq!(model.get_text_a1("C4"), *"3");
+    assert_eq!(model.get_text_a1("C5"), *"7");
 }
 
 #[test]
@@ -156,21 +159,21 @@ fn test_delete_rows_styles() {
 fn test_delete_columns() {
     let mut model = new_empty_model();
 
-    model._set("C4", "3");
-    model._set("D4", "7");
-    model._set("E4", "=D4");
-    model._set("F4", "=C4");
+    model.set_a1("C4", "3");
+    model.set_a1("D4", "7");
+    model.set_a1("E4", "=D4");
+    model.set_a1("F4", "=C4");
 
-    model._set("H11", "=D4");
+    model.set_a1("H11", "=D4");
 
-    model._set("R10", "=C6");
+    model.set_a1("R10", "=C6");
 
-    model._set("M5", "300");
-    model._set("N5", "=M5*6");
+    model.set_a1("M5", "300");
+    model.set_a1("N5", "=M5*6");
 
-    model._set("A1", "=SUM(M5:N5)");
-    model._set("A2", "=SUM(C4:M4)");
-    model._set("A3", "=SUM(E4:M4)");
+    model.set_a1("A1", "=SUM(M5:N5)");
+    model.set_a1("A2", "=SUM(C4:M4)");
+    model.set_a1("A3", "=SUM(E4:M4)");
 
     model.evaluate();
 
@@ -180,25 +183,25 @@ fn test_delete_columns() {
     model.evaluate();
 
     // Old H11 will be F11 and contain =#REF!
-    assert_eq!(model._get_formula("F11"), *"=#REF!");
+    assert_eq!(model.get_formula_a1("F11"), *"=#REF!");
 
     // Old F4 will be D4 now
-    assert_eq!(model._get_formula("D4"), *"=C4");
+    assert_eq!(model.get_formula_a1("D4"), *"=C4");
 
     // Old N5 will be L5
-    assert_eq!(model._get_formula("L5"), *"=K5*6");
+    assert_eq!(model.get_formula_a1("L5"), *"=K5*6");
 
     // Range in A1 is displaced correctly
-    assert_eq!(model._get_formula("A1"), *"=SUM(K5:L5)");
+    assert_eq!(model.get_formula_a1("A1"), *"=SUM(K5:L5)");
 
     // Note that range in A2 would contain some of the deleted cells
     // A long as the borders of the range are not included that's ok.
-    assert_eq!(model._get_formula("A2"), *"=SUM(C4:K4)");
+    assert_eq!(model.get_formula_a1("A2"), *"=SUM(C4:K4)");
 
     // A range whose first column a delete takes shrinks to the columns left, as Excel does for one
     // column (probes/table-edits table-column-range-delete-start, T-3978) and for rows (plain-range-
     // delete-rows-across-edge, T-3019); a wider delete across the edge is assumed alike (T-2851).
-    assert_eq!(model._get_formula("A3"), *"=SUM(D4:K4)");
+    assert_eq!(model.get_formula_a1("A3"), *"=SUM(D4:K4)");
 }
 
 #[test]
@@ -464,12 +467,12 @@ fn test_delete_columns_error() {
 fn test_delete_rows() {
     let mut model = new_empty_model();
 
-    model._set("C4", "4");
-    model._set("C5", "5");
-    model._set("C6", "6");
-    model._set("C7", "=C6*2");
+    model.set_a1("C4", "4");
+    model.set_a1("C5", "5");
+    model.set_a1("C6", "6");
+    model.set_a1("C7", "=C6*2");
 
-    model._set("C72", "=C1*3");
+    model.set_a1("C72", "=C1*3");
 
     model.evaluate();
 
@@ -478,8 +481,8 @@ fn test_delete_rows() {
     assert!(r.is_ok());
     model.evaluate();
 
-    assert_eq!(model._get_formula("C5"), *"=#REF!*2");
-    assert_eq!(model._get_formula("C70"), *"=C1*3");
+    assert_eq!(model.get_formula_a1("C5"), *"=#REF!*2");
+    assert_eq!(model.get_formula_a1("C70"), *"=C1*3");
 }
 
 // E	F	G	H	I	J	K
@@ -487,31 +490,31 @@ fn test_delete_rows() {
 // 			4	2	5	8
 // 			-2	3	6	7
 fn populate_table(model: &mut Model) {
-    model._set("G1", "3");
-    model._set("H1", "1");
-    model._set("I1", "1");
-    model._set("J1", "2");
+    model.set_a1("G1", "3");
+    model.set_a1("H1", "1");
+    model.set_a1("I1", "1");
+    model.set_a1("J1", "2");
 
-    model._set("G2", "4");
-    model._set("H2", "2");
-    model._set("I2", "5");
-    model._set("J2", "8");
+    model.set_a1("G2", "4");
+    model.set_a1("H2", "2");
+    model.set_a1("I2", "5");
+    model.set_a1("J2", "8");
 
-    model._set("G3", "-2");
-    model._set("H3", "3");
-    model._set("I3", "6");
-    model._set("J3", "7");
+    model.set_a1("G3", "-2");
+    model.set_a1("H3", "3");
+    model.set_a1("I3", "6");
+    model.set_a1("J3", "7");
 }
 
 #[test]
 fn test_move_column_right() {
     let mut model = new_empty_model();
     populate_table(&mut model);
-    model._set("E3", "=G3");
-    model._set("E4", "=H3");
-    model._set("E5", "=SUM(G3:J7)");
-    model._set("E6", "=SUM(G3:G7)");
-    model._set("E7", "=SUM(H3:H7)");
+    model.set_a1("E3", "=G3");
+    model.set_a1("E4", "=H3");
+    model.set_a1("E5", "=SUM(G3:J7)");
+    model.set_a1("E6", "=SUM(G3:G7)");
+    model.set_a1("E7", "=SUM(H3:H7)");
     model.evaluate();
 
     // Wee swap column G with column H
@@ -519,15 +522,15 @@ fn test_move_column_right() {
     assert!(result.is_ok());
     model.evaluate();
 
-    assert_eq!(model._get_formula("E3"), "=H3");
-    assert_eq!(model._get_formula("E4"), "=G3");
-    assert_eq!(model._get_formula("E5"), "=SUM(H3:J7)");
-    assert_eq!(model._get_formula("E6"), "=SUM(H3:H7)");
-    assert_eq!(model._get_formula("E7"), "=SUM(G3:G7)");
+    assert_eq!(model.get_formula_a1("E3"), "=H3");
+    assert_eq!(model.get_formula_a1("E4"), "=G3");
+    assert_eq!(model.get_formula_a1("E5"), "=SUM(H3:J7)");
+    assert_eq!(model.get_formula_a1("E6"), "=SUM(H3:H7)");
+    assert_eq!(model.get_formula_a1("E7"), "=SUM(G3:G7)");
 
     // Data moved as well
-    assert_eq!(model._get_text("G1"), "1");
-    assert_eq!(model._get_text("H1"), "3");
+    assert_eq!(model.get_text_a1("G1"), "1");
+    assert_eq!(model.get_text_a1("H1"), "3");
 }
 
 #[test]
@@ -557,11 +560,11 @@ fn test_move_row_down() {
     let mut model = new_empty_model();
     populate_table(&mut model);
     // Formulas referencing rows 3 and 4
-    model._set("E3", "=G3");
-    model._set("E4", "=G4");
-    model._set("E5", "=SUM(G3:J3)");
-    model._set("E6", "=SUM(G3:G3)");
-    model._set("E7", "=SUM(G4:G4)");
+    model.set_a1("E3", "=G3");
+    model.set_a1("E4", "=G4");
+    model.set_a1("E5", "=SUM(G3:J3)");
+    model.set_a1("E6", "=SUM(G3:G3)");
+    model.set_a1("E7", "=SUM(G4:G4)");
     model.evaluate();
 
     // Move row 3 down by one position
@@ -569,15 +572,15 @@ fn test_move_row_down() {
     assert!(result.is_ok());
     model.evaluate();
 
-    assert_eq!(model._get_formula("E3"), "=G3");
-    assert_eq!(model._get_formula("E4"), "=G4");
-    assert_eq!(model._get_formula("E5"), "=SUM(G4:J4)");
-    assert_eq!(model._get_formula("E6"), "=SUM(G4:G4)");
-    assert_eq!(model._get_formula("E7"), "=SUM(G3:G3)");
+    assert_eq!(model.get_formula_a1("E3"), "=G3");
+    assert_eq!(model.get_formula_a1("E4"), "=G4");
+    assert_eq!(model.get_formula_a1("E5"), "=SUM(G4:J4)");
+    assert_eq!(model.get_formula_a1("E6"), "=SUM(G4:G4)");
+    assert_eq!(model.get_formula_a1("E7"), "=SUM(G3:G3)");
 
     // Data moved as well
-    assert_eq!(model._get_text("G4"), "-2");
-    assert_eq!(model._get_text("G3"), "");
+    assert_eq!(model.get_text_a1("G4"), "-2");
+    assert_eq!(model.get_text_a1("G3"), "");
 }
 
 #[test]
@@ -585,11 +588,11 @@ fn test_move_row_up() {
     let mut model = new_empty_model();
     populate_table(&mut model);
     // Formulas referencing rows 4 and 5
-    model._set("E4", "=G4");
-    model._set("E5", "=G5");
-    model._set("E6", "=SUM(G4:J4)");
-    model._set("E7", "=SUM(G4:G4)");
-    model._set("E8", "=SUM(G5:G5)");
+    model.set_a1("E4", "=G4");
+    model.set_a1("E5", "=G5");
+    model.set_a1("E6", "=SUM(G4:J4)");
+    model.set_a1("E7", "=SUM(G4:G4)");
+    model.set_a1("E8", "=SUM(G5:G5)");
     model.evaluate();
 
     // Move row 5 up by one position
@@ -597,15 +600,15 @@ fn test_move_row_up() {
     assert!(result.is_ok());
     model.evaluate();
 
-    assert_eq!(model._get_formula("E4"), "=G4");
-    assert_eq!(model._get_formula("E5"), "=G5");
-    assert_eq!(model._get_formula("E6"), "=SUM(G5:J5)");
-    assert_eq!(model._get_formula("E7"), "=SUM(G5:G5)");
-    assert_eq!(model._get_formula("E8"), "=SUM(G4:G4)");
+    assert_eq!(model.get_formula_a1("E4"), "=G4");
+    assert_eq!(model.get_formula_a1("E5"), "=G5");
+    assert_eq!(model.get_formula_a1("E6"), "=SUM(G5:J5)");
+    assert_eq!(model.get_formula_a1("E7"), "=SUM(G5:G5)");
+    assert_eq!(model.get_formula_a1("E8"), "=SUM(G4:G4)");
 
     // Data moved as well
-    assert_eq!(model._get_text("G4"), "");
-    assert_eq!(model._get_text("G5"), "");
+    assert_eq!(model.get_text_a1("G4"), "");
+    assert_eq!(model.get_text_a1("G5"), "");
 }
 
 #[test]
@@ -635,21 +638,21 @@ fn test_move_row_down_absolute_refs() {
     let mut model = new_empty_model();
     populate_table(&mut model);
     // Absolute references
-    model._set("E3", "=$G$3");
-    model._set("E4", "=$G$4");
-    model._set("E5", "=SUM($G$3:$J$3)");
-    model._set("E6", "=SUM($G$3:$G$3)");
-    model._set("E7", "=SUM($G$4:$G$4)");
+    model.set_a1("E3", "=$G$3");
+    model.set_a1("E4", "=$G$4");
+    model.set_a1("E5", "=SUM($G$3:$J$3)");
+    model.set_a1("E6", "=SUM($G$3:$G$3)");
+    model.set_a1("E7", "=SUM($G$4:$G$4)");
     model.evaluate();
 
     assert!(model.move_rows_action(0, 3, 1, 1).is_ok());
     model.evaluate();
 
-    assert_eq!(model._get_formula("E3"), "=$G$3");
-    assert_eq!(model._get_formula("E4"), "=$G$4");
-    assert_eq!(model._get_formula("E5"), "=SUM($G$4:$J$4)");
-    assert_eq!(model._get_formula("E6"), "=SUM($G$4:$G$4)");
-    assert_eq!(model._get_formula("E7"), "=SUM($G$3:$G$3)");
+    assert_eq!(model.get_formula_a1("E3"), "=$G$3");
+    assert_eq!(model.get_formula_a1("E4"), "=$G$4");
+    assert_eq!(model.get_formula_a1("E5"), "=SUM($G$4:$J$4)");
+    assert_eq!(model.get_formula_a1("E6"), "=SUM($G$4:$G$4)");
+    assert_eq!(model.get_formula_a1("E7"), "=SUM($G$3:$G$3)");
 }
 
 #[test]
@@ -657,71 +660,71 @@ fn test_move_column_right_absolute_refs() {
     let mut model = new_empty_model();
     populate_table(&mut model);
     // Absolute references
-    model._set("E3", "=$G$3");
-    model._set("E4", "=$H$3");
-    model._set("E5", "=SUM($G$3:$J$7)");
-    model._set("E6", "=SUM($G$3:$G$7)");
-    model._set("E7", "=SUM($H$3:$H$7)");
+    model.set_a1("E3", "=$G$3");
+    model.set_a1("E4", "=$H$3");
+    model.set_a1("E5", "=SUM($G$3:$J$7)");
+    model.set_a1("E6", "=SUM($G$3:$G$7)");
+    model.set_a1("E7", "=SUM($H$3:$H$7)");
     model.evaluate();
 
     assert!(model.move_columns_action(0, 7, 1, 1).is_ok());
     model.evaluate();
 
-    assert_eq!(model._get_formula("E3"), "=$H$3");
-    assert_eq!(model._get_formula("E4"), "=$G$3");
-    assert_eq!(model._get_formula("E5"), "=SUM($H$3:$J$7)");
-    assert_eq!(model._get_formula("E6"), "=SUM($H$3:$H$7)");
-    assert_eq!(model._get_formula("E7"), "=SUM($G$3:$G$7)");
+    assert_eq!(model.get_formula_a1("E3"), "=$H$3");
+    assert_eq!(model.get_formula_a1("E4"), "=$G$3");
+    assert_eq!(model.get_formula_a1("E5"), "=SUM($H$3:$J$7)");
+    assert_eq!(model.get_formula_a1("E6"), "=SUM($H$3:$H$7)");
+    assert_eq!(model.get_formula_a1("E7"), "=SUM($G$3:$G$7)");
 }
 
 #[test]
 fn test_move_row_down_mixed_refs() {
     let mut model = new_empty_model();
     populate_table(&mut model);
-    model._set("E3", "=$G3"); // absolute col, relative row
-    model._set("E4", "=$G4");
-    model._set("E5", "=SUM($G3:$J3)");
-    model._set("E6", "=SUM($G3:$G3)");
-    model._set("E7", "=SUM($G4:$G4)");
-    model._set("F3", "=H$3"); // relative col, absolute row
-    model._set("F4", "=G$3");
+    model.set_a1("E3", "=$G3"); // absolute col, relative row
+    model.set_a1("E4", "=$G4");
+    model.set_a1("E5", "=SUM($G3:$J3)");
+    model.set_a1("E6", "=SUM($G3:$G3)");
+    model.set_a1("E7", "=SUM($G4:$G4)");
+    model.set_a1("F3", "=H$3"); // relative col, absolute row
+    model.set_a1("F4", "=G$3");
     model.evaluate();
 
     assert!(model.move_rows_action(0, 3, 1, 1).is_ok());
     model.evaluate();
 
-    assert_eq!(model._get_formula("E3"), "=$G3");
-    assert_eq!(model._get_formula("E4"), "=$G4");
-    assert_eq!(model._get_formula("E5"), "=SUM($G4:$J4)");
-    assert_eq!(model._get_formula("E6"), "=SUM($G4:$G4)");
-    assert_eq!(model._get_formula("E7"), "=SUM($G3:$G3)");
-    assert_eq!(model._get_formula("F3"), "=G$4");
-    assert_eq!(model._get_formula("F4"), "=H$4");
+    assert_eq!(model.get_formula_a1("E3"), "=$G3");
+    assert_eq!(model.get_formula_a1("E4"), "=$G4");
+    assert_eq!(model.get_formula_a1("E5"), "=SUM($G4:$J4)");
+    assert_eq!(model.get_formula_a1("E6"), "=SUM($G4:$G4)");
+    assert_eq!(model.get_formula_a1("E7"), "=SUM($G3:$G3)");
+    assert_eq!(model.get_formula_a1("F3"), "=G$4");
+    assert_eq!(model.get_formula_a1("F4"), "=H$4");
 }
 
 #[test]
 fn test_move_column_right_mixed_refs() {
     let mut model = new_empty_model();
     populate_table(&mut model);
-    model._set("E3", "=$G3");
-    model._set("E4", "=$H3");
-    model._set("E5", "=SUM($G3:$J7)");
-    model._set("E6", "=SUM($G3:$G7)");
-    model._set("E7", "=SUM($H3:$H7)");
-    model._set("F3", "=H$3");
-    model._set("F4", "=H$3");
+    model.set_a1("E3", "=$G3");
+    model.set_a1("E4", "=$H3");
+    model.set_a1("E5", "=SUM($G3:$J7)");
+    model.set_a1("E6", "=SUM($G3:$G7)");
+    model.set_a1("E7", "=SUM($H3:$H7)");
+    model.set_a1("F3", "=H$3");
+    model.set_a1("F4", "=H$3");
     model.evaluate();
 
     assert!(model.move_columns_action(0, 7, 1, 1).is_ok());
     model.evaluate();
 
-    assert_eq!(model._get_formula("E3"), "=$H3");
-    assert_eq!(model._get_formula("E4"), "=$G3");
-    assert_eq!(model._get_formula("E5"), "=SUM($H3:$J7)");
-    assert_eq!(model._get_formula("E6"), "=SUM($H3:$H7)");
-    assert_eq!(model._get_formula("E7"), "=SUM($G3:$G7)");
-    assert_eq!(model._get_formula("F3"), "=G$3");
-    assert_eq!(model._get_formula("F4"), "=G$3");
+    assert_eq!(model.get_formula_a1("E3"), "=$H3");
+    assert_eq!(model.get_formula_a1("E4"), "=$G3");
+    assert_eq!(model.get_formula_a1("E5"), "=SUM($H3:$J7)");
+    assert_eq!(model.get_formula_a1("E6"), "=SUM($H3:$H7)");
+    assert_eq!(model.get_formula_a1("E7"), "=SUM($G3:$G7)");
+    assert_eq!(model.get_formula_a1("F3"), "=G$3");
+    assert_eq!(model.get_formula_a1("F4"), "=G$3");
 }
 
 #[test]
@@ -758,9 +761,9 @@ fn test_row_move_down_two_updates_intermediate_refs_by_one() {
     let mut model = new_empty_model();
     populate_table(&mut model);
     // Set up formulas to verify intermediate rows shift by 1 (not full delta).
-    model._set("E3", "=G3"); // target row
-    model._set("E4", "=G4"); // intermediate row
-    model._set("E5", "=SUM(G3:J3)");
+    model.set_a1("E3", "=G3"); // target row
+    model.set_a1("E4", "=G4"); // intermediate row
+    model.set_a1("E5", "=SUM(G3:J3)");
     model.evaluate();
 
     // Move row 3 down by two positions (row 3 -> row 5)
@@ -768,9 +771,9 @@ fn test_row_move_down_two_updates_intermediate_refs_by_one() {
     model.evaluate();
 
     // Assert that references for the moved row and intermediate row are correct.
-    assert_eq!(model._get_formula("E3"), "=G3");
-    assert_eq!(model._get_formula("E5"), "=G5");
-    assert_eq!(model._get_formula("E4"), "=SUM(G5:J5)");
+    assert_eq!(model.get_formula_a1("E3"), "=G3");
+    assert_eq!(model.get_formula_a1("E5"), "=G5");
+    assert_eq!(model.get_formula_a1("E4"), "=SUM(G5:J5)");
 }
 
 /// Moving a column right by two positions should shift formulas on
@@ -781,9 +784,9 @@ fn test_column_move_right_two_updates_intermediate_refs_by_one() {
     let mut model = new_empty_model();
     populate_table(&mut model);
     // Set up formulas to verify intermediate columns shift by 1 (not full delta).
-    model._set("E3", "=$G3"); // target column
-    model._set("E4", "=$H3"); // intermediate column
-    model._set("E5", "=SUM($G3:$J7)");
+    model.set_a1("E3", "=$G3"); // target column
+    model.set_a1("E4", "=$H3"); // intermediate column
+    model.set_a1("E5", "=SUM($G3:$J7)");
     model.evaluate();
 
     // Move column G (7) right by two positions (G -> I)
@@ -791,9 +794,9 @@ fn test_column_move_right_two_updates_intermediate_refs_by_one() {
     model.evaluate();
 
     // Assert that references for moved and intermediate columns are correct.
-    assert_eq!(model._get_formula("E3"), "=$I3");
-    assert_eq!(model._get_formula("E4"), "=$G3");
-    assert_eq!(model._get_formula("E5"), "=SUM($I3:$J7)");
+    assert_eq!(model.get_formula_a1("E3"), "=$I3");
+    assert_eq!(model.get_formula_a1("E4"), "=$G3");
+    assert_eq!(model.get_formula_a1("E5"), "=SUM($I3:$J7)");
 }
 
 // A  B  C  D  E  F  G   H  I  J   K   L   M   N   O   P   Q   R

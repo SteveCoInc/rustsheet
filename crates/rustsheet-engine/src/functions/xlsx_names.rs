@@ -2,6 +2,9 @@
 //! `_xlfn._xlws.`) prefixes. Split out of `functions/mod.rs` to keep that file under its
 //! size ratchet. `tools/src/rustsheet_tools/spec2xlsx.py` reads the prefixed arms of this file with a
 //! regex, so keep each prefixed name on its own match arm.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::too_many_lines)]
+// LINT-DEBT-END
 
 use super::Function;
 use crate::language::{get_default_language, Functions};

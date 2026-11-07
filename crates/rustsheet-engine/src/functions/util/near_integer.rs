@@ -1,5 +1,8 @@
 //! Whole numbers read from fractional arguments the way Excel reads them: floored, but a value
 //! just below an integer counts as that integer.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 /// How far below the next integer a whole-number argument may fall and still count as that
 /// integer: 2^-22 + 2^-33, the same at 1, 500, 1000, 30000 and 100000 (an absolute bound, not

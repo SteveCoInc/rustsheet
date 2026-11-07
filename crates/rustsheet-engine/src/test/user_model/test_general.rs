@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::constants::{LAST_COLUMN, LAST_ROW};
@@ -67,7 +70,7 @@ fn insert_remove_rows() {
     // Row 5 has now the normal height
     assert_eq!(model.get_row_height(0, 5), Ok(height));
     // There is no value in A5
-    assert_eq!(model.get_formatted_cell_value(0, 5, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 5, 1), Ok(String::new()));
     // Setting a value will not format it
     assert!(model.set_user_input(0, 5, 1, "125").is_ok());
     assert_eq!(
@@ -104,7 +107,7 @@ fn insert_remove_columns() {
     // Column 5 has now the normal width
     assert_eq!(model.get_column_width(0, 5), Ok(column_width));
     // There is no value in E5
-    assert_eq!(model.get_formatted_cell_value(0, 1, 5), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 5), Ok(String::new()));
     // Setting a value will not format it
     assert!(model.set_user_input(0, 1, 5, "125").is_ok());
     assert_eq!(

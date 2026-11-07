@@ -57,12 +57,11 @@ impl TrendData {
         };
         let y = &grids.y;
         let counting;
-        let x = match &grids.x {
-            Some(x) => x,
-            None => {
-                counting = Grid::counting(y.rows, y.cols);
-                &counting
-            }
+        let x = if let Some(x) = &grids.x {
+            x
+        } else {
+            counting = Grid::counting(y.rows, y.cols);
+            &counting
         };
         let layout = match layout(y, x, cell) {
             Ok(layout) => layout,

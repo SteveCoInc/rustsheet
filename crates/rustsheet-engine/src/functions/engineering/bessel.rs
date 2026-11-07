@@ -3,6 +3,9 @@
 //! probes/eng-argument-modes E1:E4, E19:E22, probes/scalar-lift-shapes H8,
 //! probes/eng-later-argument-lift H1:H3, H19). The kernels build their own errors with empty
 //! messages.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use crate::arithmetic::flush_subnormal;
 use crate::functions::statistical::erf::{erf, erfc};

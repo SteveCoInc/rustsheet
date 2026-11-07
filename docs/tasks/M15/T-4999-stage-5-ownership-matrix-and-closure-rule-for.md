@@ -31,6 +31,11 @@ The package plumbing already exists: `PartNames`, `parse_relationships` and `res
 - [ ] Each source part of a Regenerated save with a source gets a decision: kept, or dropped with a SPEC-0033 D7 reason.
       The drops appear in the SaveReport (T-4562).
 - [ ] Limits are applied in source part-name order, so the result is deterministic.
+- [ ] A `Modelled` part the regenerating export did not write is reported `NotPreserved`, found by comparing the output's
+      own inventory, not assumed written. T-4562 leaves these unreported: a pivot cache `PivotPlan` drops (calipers
+      pv23_045), rich values that are not rich errors, and a table (poi SingleCellTable).
+- [ ] The duplicated zip and `.rels` helpers of `export/report.rs` (`entry_names`, `rels_owner_folder`, `is_rels`) move
+      next to `PartNames` in `import/package.rs` and are shared with the matrix.
 - [ ] Unit tests cover:
   - each policy, and the unknown defaults both ways;
   - a closure that reaches a `Modelled` part, and a chart holding `c:pivotSource`;

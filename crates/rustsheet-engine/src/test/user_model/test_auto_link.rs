@@ -145,7 +145,7 @@ fn undo_removes_the_auto_created_link_and_style() {
         .unwrap();
 
     model.undo().unwrap();
-    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok(String::new()));
     assert_eq!(model.get_cell_link(0, 1, 1), Ok(None));
     let style = model.get_cell_style(0, 1, 1).unwrap();
     assert!(!style.font.u);

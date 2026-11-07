@@ -5,14 +5,14 @@ use crate::test::util::new_empty_model;
 #[test]
 fn test_sheet_markup() {
     let mut model = new_empty_model();
-    model._set("A1", "Item");
-    model._set("B1", "Cost");
-    model._set("A2", "Rent");
-    model._set("B2", "$600");
-    model._set("A3", "Electricity");
-    model._set("B3", "$200");
-    model._set("A4", "Total");
-    model._set("B4", "=SUM(B2:B3)");
+    model.set_a1("A1", "Item");
+    model.set_a1("B1", "Cost");
+    model.set_a1("A2", "Rent");
+    model.set_a1("B2", "$600");
+    model.set_a1("A3", "Electricity");
+    model.set_a1("B3", "$200");
+    model.set_a1("A4", "Total");
+    model.set_a1("B4", "=SUM(B2:B3)");
 
     let mut style = model.get_style_for_cell(0, 1, 1).unwrap();
     style.font.b = true;
