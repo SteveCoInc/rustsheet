@@ -80,6 +80,7 @@ Fresh sweeps (drawn after the freeze, filled from excel-graph 2026-11-07):
   r4-T-3407 A249 or fresh-2 A39. Patch kept out of the repo.
 
 ## Landing notes (2026-11-07 03:05 UTC, opus run, landing window closing)
+Resumed 2026-11-07 05:20 UTC by an opus run (worker step 2, branch idle 2 h).
 - Branch agent/functions-financial/T-4232-irr-near-zero-root; draft PR #3825, head 820a8a987 plus this notes commit (CI expected red until the gaps below are closed). Not enqueued, no
   reviewer has run.
 - Not done yet: the hold-out table (fit lab split, `tools/src/rustsheet_tools/fitlab/holdout.py`, margin 5 points)
