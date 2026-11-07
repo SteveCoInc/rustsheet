@@ -41,3 +41,12 @@ H4:H25, and Gate A BETAINV/s1 A179: Excel `#NUM!` where ours is a number (an err
 
 ## Out of scope
 - The sqrt(DBL_MAX) cut (T-3862) and the values below it at a tiny beta (T-4700).
+
+## Probe 1 (predictions, committed before the fill)
+probes/t4713-beta-inv-beta-above-1-cut: alpha bisected at 40 points a decade in columns A to D (four (p, beta) pairs,
+each spanning a quantile 1 - x of about 4E-15 to 4E-16), E the flipped p = 0.9, F beta = 1.
+- Hypothesis Q (the quantile): A to D are `#NUM!` exactly where the true 1 - x falls below one threshold T, the same
+  T in every column, somewhere in (3.9E-16, 4.5E-15). AS 109's start is within 15% of the quantile in 1 - x here, so a
+  start rule would put each column's cut at nearly the same 1 - x; telling them apart needs the cut row to differ.
+- E: flipped (pp = beta = 2, qq = alpha): numbers in every row if the cut belongs to the unflipped first shape.
+- F: beta = 1 is a closed form (x = p^(1/alpha)), predicted a number in every row.
