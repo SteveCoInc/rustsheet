@@ -3,7 +3,7 @@ id: T-4567
 title: "Spec: preservation under structural edits - ownership matrix, closure rule, fragment slots, invalidation table and limits (SPEC-0034 stage 5)"
 milestone: M15
 lane: research
-status: blocked
+status: in-progress
 priority: P2
 size: M
 tier: opus
@@ -33,7 +33,3 @@ range-bound content. SPEC-0033 D7's `ClosureReachesRegenerated` and `Policy` dro
 
 ## Out of scope
 - Implementation.
-
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275, 0306), and it depends on M4's structural edits (reference shifting).
-Unblock when docs/status.md has the line `**Phase 1:** exited <date>` and M4's structural-edit API exists.
