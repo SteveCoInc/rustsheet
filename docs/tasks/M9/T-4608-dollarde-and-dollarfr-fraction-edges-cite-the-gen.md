@@ -57,8 +57,10 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4608-dollarde-doll
 - Argument-kind pairs (T-3780) and the empty-text or error kinds (T-3126).
 
 ## Outcome
-Probed with excel-graph (2026-11-07): `probes/t4608-dollarde-dollarfr-fraction-edges`, 162 cells (DOLLARDE and DOLLARFR of
-1.5, -1.5, 0.3 against 12 small fractions and 10^k-1, 10^k, 10^k+1 for k = 9, 10, 12, 15, 2^53-1, 2^53, 1E300). Ours
+Probed with excel-graph (2026-11-07): `probes/t4608-dollarde-dollarfr-fraction-edges`, 192 cells (DOLLARDE and DOLLARFR of
+1.5, -1.5, 0.3 against 12 small fractions and 10^k-1, 10^k, 10^k+1 for k = 9, 10, 12, 15, 2^53-1, 2^53, 1E300, plus computed 1E15+1, 2^53±1, 10^16+1). Ours
 matches every cell, so no engine change. financial.md now states the rule (truncate toward 0; below 0 `#NUM!`; 0 to
-under 1 `#DIV/0!`; exact decimal power cut up to 10^15) and its "Unprobed" sentence is gone. Eval delta: probes +162
+under 1 `#DIV/0!`; exact decimal power cut up to 10^12; D = 10^15 at 10^15+1) and its "Unprobed" sentence is gone. Eval delta: probes +192
 cells, all passing, no baseline change.
+
+Follow-up: T-4880 (the Gate A math definition differs from Excel at 10^15+1 and 1E300).
