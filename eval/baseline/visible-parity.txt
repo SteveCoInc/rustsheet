@@ -266,6 +266,7 @@ probes/t4515-fresh-sweep.case.json	25
 probes/t4543-xlookup-not-found-address-sheet-lift.case.json	2
 probes/t4563-xlookup-not-found-ref-element.case.json	106
 probes/t4569-xlookup-ref-element-max-min.case.json	70
+probes/t4579-ttest-paired.case.json	48
 probes/t4582-pivot-item-edges.case.json	40
 probes/t4583-pivot-row-labels.case.json	165
 probes/t4585-pivot-field-names.case.json	8

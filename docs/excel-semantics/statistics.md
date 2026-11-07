@@ -2503,18 +2503,59 @@ near 0.5 over two nearly equal samples) and TTEST A11 (4.7E-13), and every other
   (Σd² - (Σd)²/n)/(n - 1), is -1.1E-13 there, the only negative one among the tables' paired points; every paired
   point whose one-pass variance is positive is a number, including the ones VAR.S would switch to the two-pass form
   ("VAR/STDEV switch between a one-pass and a two-pass formula"). Hypothesis: a paired test is `#DIV/0!` when that
-  one-pass variance is 0 or below. T-4579 probes and implements it.
+  one-pass variance is 0 or below. REFUTED by T-4579's probe ("Paired T.TEST is erratic ..." below): positive
+  one-pass variances there are `#DIV/0!` too.
 - The paired offsets keep their digits: TTEST/s1 A101 (ten pairs, x near -108519.3, y near 204025.4, spread about
   1E-4) is 6.268514994599738E-70 in Excel, 1E-15 from the exact value of the doubles' exact differences, where the
   double differences x - y put ours 1.6E-9 off. Owned by T-4579.
 - Excel kept as the target (decision 0300): no table point and no probes or probes-numeric cell of these functions
-  (272 cells with a math value) is more than 1E-4 relative off the exact value, so the list is empty.
+  (272 cells with a math value) is more than 1E-4 relative off the exact value. probes/t4579-ttest-paired (T-4579)
+  adds such cells: see "Paired T.TEST is erratic ...".
 Ours: bit-exact with Excel on 214 of the 583 numeric points (T.TEST 54, TTEST 50, F.TEST 55, FTEST 55) and on every
 error point but A136; every point but A136 and A101 is inside the envelope (known failures owned by T-4579). The rest
 of the last-digit gaps are the tail noise of the entries above.
 Evidence: eval/accuracy/tables/{T.TEST,TTEST,F.TEST,FTEST}/s1 (excel-graph, 2026-11-06).
-Status: VERIFIED (excel-graph) for the cited cells; the A136 rule is a one-cell hypothesis.
+Status: VERIFIED (excel-graph) for the cited cells; the A136 hypothesis is refuted (T-4579, "Paired T.TEST is erratic ...").
 Tasks: T-4097, T-4579
+
+## Paired T.TEST is erratic where the differences are near-constant or the samples offset (T-4579)
+Rule: none of the simple forms reproduces Excel's paired T.TEST (type 1). Where the differences are near-constant
+or both samples sit on large offsets, Excel is often `#DIV/0!` or far from the math.
+- **Near-constant differences** (2 to 4 pairs; probes/t4579-ttest-paired Div, 27 rows). The predictions were
+  committed before the excel-graph fill, 2026-11-07. Excel is `#DIV/0!` on 22 of the 27 rows and a number on 5 (A8,
+  A12, A14, A17, A18).
+  - The rows are classified by the one-pass variance `(Σd² - (Σd)²/n)/(n-1)` of the double differences. All 8 rows
+    where it is positive (7.1E-15 to 4.5E-13) are `#DIV/0!`, the opposite of the hypothesis behind TTEST/s1 A136.
+    Of the 16 rows where it is 0 or negative, 11 are `#DIV/0!` and 5 are numbers (1 negative, A17; 4 zero, A8, A12,
+    A14, A18).
+  - The 3 rows whose double differences are exactly constant are `#DIV/0!`.
+  - That hypothesis (`#DIV/0!` exactly when the one-pass variance is <= 0) holds on 14 of 27 rows. The two-pass rule
+    the engine uses holds on 8.
+  - The 5 numbers are themselves far off the math. A8 is 3.88E-8 in Excel against the math's 6.3E-15. A18 is 8.3E-21
+    against 5.1E-42.
+- **Offset samples** (Off, 24 rows: offsets 1E3 to 1E6, a shared spread, and a paired effect of 1E-9 to 1E-6).
+  - 11 rows are `#DIV/0!` where the math is a number.
+  - The other 13 are off the math by between 2.3E-4 and 5.4E11 relative. For example, A9 is 9.57E-91 against the
+    math's 1.78E-102, and A14 is 5.2E-65 against 2.4E-74.
+  - Excel is far less accurate here than double differences. Neither exact differences nor per-sample deviations
+    `(x - m_x) - (y - m_y)` match. The offset point TTEST/s1 A101 is within 1E-15 of the math in Excel, but these rows
+    show that this is not Excel's general behavior.
+- **Forms tried and rejected** on all 51 rows:
+  - one-pass over the differences, as `(Σd² - (Σd)²/n)/(n-1)` and as `(nΣd² - (Σd)²)/(n(n-1))`;
+  - raw sums, `Σx² - 2Σxy + Σy² - (Σx - Σy)²/n`;
+  - centred covariance terms.
+
+  None is within 1E-9 on any cell where Excel gives a number. On the error-or-number outcome they agree with Excel on
+  25 or 26 of the 51 cells.
+- **Reversed argument orders** (Rev): `T.TEST({5},{3,3,3,3},2,3)` is `#DIV/0!`, and
+  `T.TEST({1E+200,1E+200,-1E+200},{1,2,4},1,2)` and `F.TEST({1E+200,1E+200,-1E+200},{1,2,4})` are `#NUM!`. These are
+  the T-4097 rules with the special sample second, and the engine already gives all three.
+- Excel stays the target (decision 0300) on the cells here that are more than 1E-4 off the math: the 13 Off numbers
+  and the 5 Div numbers. No owner ruling is needed.
+Evidence: probes/t4579-ttest-paired (excel-graph, 2026-11-07), docs/research/t4579.
+Status: VERIFIED (excel-graph) as observations. Excel's algorithm is not identified, and the engine keeps the
+two-pass double differences.
+Tasks: T-4579
 
 ## T.DIST.RT follows the rounded y beyond t = 1 (T-0969)
 Rule: away from the deep tail, T.DIST.RT (and so T.DIST, T.DIST.2T and TDIST) takes the tail at
