@@ -129,10 +129,14 @@ const NEWTON_STEPS: u32 = 50;
 ///
 /// T-3311 applied the steps only at shapes 1.5 to 7.5, p from 1E-200, and where the root's cdf was
 /// within 1E-6 of p, after T-2561's root (taken where our pair at it was within 5E-14 of p). T-3403
-/// drops those gates: over the 805 literal-argument quantile cells of eval/ at shapes 1 to 20 and
-/// lower tails up to [`NEWTON_P_MAX`], the steps alone are bit-exact at 543 and over 16 ulp off at
-/// 3, against 412 and 113 for the gated rule; on T-3311's own fresh sweeps (t3311-fresh-sweep,
-/// -sweep-2), 414 of 511 bit-exact and 16 over 4 ulp off, against 272 and 170.
+/// drops those gates: over the 716 literal-argument quantile cells of eval/ at shapes 1 to 20 and
+/// lower tails up to [`NEWTON_P_MAX`], the steps alone are bit-exact at 491 and over 16 ulp off at
+/// 3, against 352 and 116 for the gated rule, better in every band of shape and p; on T-3311's
+/// own fresh sweeps (t3311-fresh-sweep, -sweep-2, 511 cells at p up to 1E-10) 414 bit-exact and 16
+/// over 4 ulp off, against 272 and 170; on T-3403's fresh sweep (probes-numeric/t3403-fresh-sweep,
+/// 180 cells, filled after the freeze) 132 bit-exact and 1 over 16 ulp off, against 77 and 21. Above
+/// [`NEWTON_P_MAX`] the search stays; keeping the root first where its cdf is within 5E-14 of p
+/// (T-2561) puts 43 cells over 64 ulp off, as the steps then stop where Excel goes on.
 ///
 /// `None` outside those shapes and probabilities, where the root is not normal or not below 1,
 /// where a cdf or density fails, and where the steps do not converge ([`NEWTON_CONVERGED`]): the

@@ -5914,6 +5914,21 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
   0210; T-3403). Bit-exact now: A212, A301, A338, gen-m9 4e55500bb8ad3cd8 A111, 58e3253bbd3a7a82 A287,
   a7bf0d8d81d33ba6 A216; within 15 digits: A128 and A98 (2 ulp), A169 (4 ulp). Still visibly off: A355
   (`CHISQ.INV(1E-20,10)`, 2.2E-4 off at the root, where the steps are no better than the search).
+  Ours (T-3403, superseding both rules above): the nearest-F Newton steps from the root alone, at every shape from 1
+  to 20 and p up to 1.0000000827E-10, without T-2561's root-first check or T-3311's 1E-6 start cut, returned where
+  the nearest level is within 1E-12 of p (a convergence check: the steps settle within 1E-13 of p at every probed
+  point, and the one cell that leaves the form's domain first, `CHISQ.INV(6.29E-19,39)`, is 0.59 off and goes to
+  the search). The root is the steps' iterate 0, so T-2561's root cells keep it where no step comes nearer. Over the
+  716 literal-argument quantile cells of eval/ in that region (docs/research/t3412 harness, Excel's own arguments):
+  491 bit-exact and 3 over 16 ulp off, against 352 and 116 for the gated rules, better in every band of shape and p.
+  Out of sample: T-3311's fresh sweeps 414 of 511 bit-exact and 16 over 4 ulp (gated rules 272 and 170), and T-3403's
+  own sweep (probes-numeric/t3403-fresh-sweep, 180 cells, docs/research/t3403/fresh_sweep.py, filled after the
+  freeze) 132 bit-exact and 1 over 16 ulp (77 and 21). Keeping the root first is worse (43 cells over 64 ulp): where
+  the staircase is flat over hundreds of ulps of x the root's cdf is near p while Excel keeps stepping. From 1E-10 to
+  1E-3 the steps are bit-exact more often than the search but put 4 probe cells 5 to 16 ulp off where the search is
+  within 4 (`GAMMA.INV(1E-8,1.5,1)` 11 against 4), so the search stays there. Which iterate Excel returns once the
+  steps cycle is still not known: the fixed step counts 0 to 120, step thresholds 1E-16 to 1E-8 of x and residual
+  thresholds 1E-16 to 1E-12 of p all score below nearest-F (best 258, 368 and 396 of 865 against 537).
 
 - `1-1E-16` is a different double from 1 (`NORM.INV(1-1E-16,0,1)` = 8.209536151601386), but `1-1E-17` is 1 and gives `#NUM!`.
 - Excel's CHISQ.INV and GAMMA.INV are exact in the lower tail (`CHISQ.INV(1E-100,1)` = 1.5707963267948966E-200, `GAMMA.INV(1E-300,1,1)` = 1E-300, `CHISQ.INV(1E-300,1)` = 0) and CHISQ.INV.RT is `#NUM!` for p below about 1E-15 with df = 1 but finite for df = 50 (`CHISQ.INV.RT(1E-300,50)` = 1592.68...). Before T-1634 ours gave `#NUM!` for CHISQ.INV(p<=1E-200,1), GAMMA.INV(p<=1E-20,1,1) and CHISQ.INV.RT(p<=1E-20,df) (Excel: values), and wrong digits elsewhere in the tails (`CHISQ.INV(1E-300,50)` 0.0033 vs 2.04E-11; `CHISQ.INV(1-1E-16,50)` 179.80 vs 180.68; `GAMMA.INV(1E-300,100,1)` 1.0165 vs 0.0380) (fixed by T-1634, below).
