@@ -41,3 +41,14 @@ S!G20, H20, date-system-1900-coupon-bound S!M1), so it stays as is.
 - T-2972's cells.
 
 `defer: phase-1b`: the cells this task owns are already within 15 significant digits of Excel, so it waits until Phase 1 exits.
+
+## Cells added by gap triage (2026-11-07)
+`make eval` on origin/main b9ae5216, every suite fetched. No open task lists these bond cells. Each is 1 or 2 ulp off
+Excel, within 15 digits (Phase 1b). Whether T-2733's sum order is their cause is not checked. Score them with the six
+above, and move any that another kernel explains to that kernel's owner.
+- probes/fin-coupon-walk-bounds-c.case.json (4): Sheet1!I13, K13 (`DURATION(61,36585,0.05,0.06,4)` Excel
+  16.91311178460704, ours 16.913111784607043; `DURATION(61,36950,...)`), I14, K14 (the MDURATION twins)
+- gen-m9/9a1fa5366bc50918.case.json (1): Calc!A231 `YIELD(39148,45562,Data!D3,81,104,1)` Excel 3.4746998470918595, ours
+  3.474699847091859
+- gen-m9/bc04c1f478c9896c.case.json (1): Calc!A23 `YIELD(38063,45986,BITLSHIFT(908,-8),102,109,2)` Excel
+  2.56744131580262, ours 2.5674413158026197

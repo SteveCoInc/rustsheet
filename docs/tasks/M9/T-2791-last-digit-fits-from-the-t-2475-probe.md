@@ -42,3 +42,11 @@ of Excel's value, or has Excel's type, error and text. Bit-level criteria still 
 filed with `defer: phase-1b`.
 
 Phase 1 triage (T-0090, eval of 2026-10-27 at `main` 7f6b373a, task ownership as of `main` e5bc60c4): this task owns the 1 visibly-off SKEW cell. Fixing them lifts SKEW to the Phase 1 rate (≥ 99.9% of attributed cells within 15 digits); no other open task owns enough of those cells.
+
+## Cells added by gap triage (2026-11-07)
+`make eval` on origin/main b9ae5216. `make exit-owners MILESTONE=M9` lists these two cells as having no open M9 owner.
+probes/t2475-stat-subexpressions-refill-1106 is the 2026-11-06 refill of the same bytes as this task's probe (T-4661
+owns only its P!A64). Excel gives the same values as on 2026-10-24, so these are this task's P!A417 and P!A520 again:
+- probes/t2475-stat-subexpressions-refill-1106.case.json (2): P!A417 (`NEGBINOMDIST(7,9,1E-10)`: Excel
+  6.434999995495541e-87, ours 6.434999995495497e-87), A520 (`SKEW(D41!D11:D12,D41!D10)`: Excel 2.4980018054066022e-15,
+  ours 2.9976021664879227e-15)
