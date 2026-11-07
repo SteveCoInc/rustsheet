@@ -20,8 +20,9 @@ pub(crate) const DELETED_SHEET: &str = "*#REF!";
 /// A reference to a sheet that does not exist (a deleted one) is displayed as `#REF!` before the
 /// cell or range, as Excel prints `=SUM(#REF!C4:C7)` for `S!C4:C7` once S is deleted (T-2340,
 /// probes/table-edits/table-delete-sheet); Excel refuses that text typed in, and so does the lexer
-/// (T-4628). A sheet delete rewrites its references to [`DELETED_SHEET`], which the export writes
-/// as the bare `#REF!` ([`is_exported_deleted_sheet`]); other missing sheets (a loaded `Nope!A1`) keep their name in
+/// outside the engine's own text (T-4628). A sheet delete rewrites its references to
+/// [`DELETED_SHEET`], which the export writes as the bare `#REF!` ([`is_exported_deleted_sheet`]);
+/// other missing sheets (a loaded `Nope!A1`) keep their name in
 /// the stored text and the export. An external reference (`[1]Uses!A1`) is not a missing sheet.
 fn is_missing_sheet(
     sheet_name: Option<&str>,

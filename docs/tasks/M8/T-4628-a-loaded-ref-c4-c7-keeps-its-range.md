@@ -37,11 +37,16 @@ FORMULATEXT of the loaded file is unprobed: it may keep `=SUM(#REF!C4:C7)`.
   (blank cell, FORMULATEXT `#N/A`), while the bare `=SUM(#REF!)`, stored or typed, is `#REF!` with FORMULATEXT
   `=SUM(#REF!)`, and `ISREF(#REF!)` is FALSE. Stored in a file (hand-built workbooks, dynamic-array and legacy `<f>`),
   every `#REF!<ref>` form makes Excel for the web refuse the workbook (createSession 501), so they cannot be committed.
-- Engine: the lexer no longer swallows the cell or range after `#REF!` (`consume_deleted_sheet_reference` removed), so
-  that text is a parse error, refused when typed, as in Excel. The xlsx export writes a reference to a deleted sheet as
+- Engine: in typed, external and loaded text the lexer no longer swallows the cell or range after `#REF!`, so that text
+  is a parse error, refused when typed, as in Excel; the engine's own text (a fill or paste re-entering the display)
+  still reads it as `#REF!` (`consume_deleted_sheet_reference`, gated on `engine_text`; review round 1 found autofill
+  giving `#ERROR!` without the gate; test `fill_and_paste_of_a_deleted_sheet_reference_stay_ref`). The xlsx export writes a reference to a deleted sheet as
   the bare `#REF!` (`is_exported_deleted_sheet`, wrong_reference.rs) instead of `#REF!C4:C7`, which Excel for the web
   refused to load; the display still prints `#REF!C4:C7` as Excel's FORMULATEXT does. Tests updated
-  (`a_displayed_deleted_sheet_reference_does_not_parse`, deleted_sheet_reference_export.rs). A defined name over the
+  (`a_displayed_deleted_sheet_reference_does_not_parse`, deleted_sheet_reference_export.rs). The refused workbooks
+  were built with spec2xlsx from one-cell specs (`=SUM(#REF!C4:C7)`, `=#REF!$A$1`, `=ISREF(#REF!A1)`, `=SUM(#REF!A:A)`,
+  `=SUM(#REF!1:2)`, `=#REF!A1`, each with `=FORMULATEXT(A1)` in A2; and `legacy_formulas: ["A1"]` for the legacy form)
+  and `rustsheet-oracle recalc -b excel-graph`. A defined name over the
   deleted sheet is now stored as the bare `#REF!` (`delete_sheet_in_name_node`), since its A1 text is parsed again.
 - references.md "A deleted table or sheet" records it; desktop Excel's own file form is an M14 question.
 - Follow-up filed: T-4757 (T-4446 review MINOR: sheet names with a later mark, INDIRECT and Mc).

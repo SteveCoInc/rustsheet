@@ -2988,8 +2988,12 @@ and that text does not read back: Excel refuses `=SUM(#REF!C4:C7)`, `=#REF!$A$1`
 `=SUM(#REF!A:A)` typed in (the cell stays blank, FORMULATEXT `#N/A`) and refuses a workbook storing any of them, or
 `#REF!A1`, `#REF!1:2`, in a dynamic-array or a legacy `<f>`; the bare `=SUM(#REF!)` loads and types in (`#REF!`,
 FORMULATEXT `=SUM(#REF!)`), and `ISREF(#REF!)` is FALSE (probes/t4628-deleted-sheet-reference-text, excel-graph,
-2026-11-07; the stored forms by hand-built workbooks, `rustsheet-oracle recalc`). The lexer reads `#REF!` alone, so
-the cell or range after it is a parse error (T-4628; before, it swallowed the range into `#REF!`). A plain reference loses the deleted sheet for good (T-2612, probes/table-edits/t2612-delete-sheet-then-add,
+2026-11-07; the stored forms by hand-built workbooks, `rustsheet-oracle recalc`). In typed, external and loaded text
+the lexer reads `#REF!` alone, so the cell or range after it is a parse error (T-4628): a typed one is refused, and a
+loaded file storing it gets a parse-error cell where Excel for the web refuses the whole workbook (an engine choice;
+desktop Excel is unprobed). The engine's own re-entry of its display text (a fill or a paste of such a cell, which
+re-enter `=SUM(#REF!C4:C7)`) still reads the range as `#REF!` (`consume_deleted_sheet_reference`, engine text only);
+what Excel's fill or paste of such a cell writes is unprobed. A plain reference loses the deleted sheet for good (T-2612, probes/table-edits/t2612-delete-sheet-then-add,
 excel-graph 2026-11-06): after deleting S and adding a new blank S, `SUM(S!C4:C7)`, `S!C4` and `COUNTBLANK(S!C4:C7)`
 stay `#REF!` (a revived reference would read 0, 0 and 4), FORMULATEXT shows `=SUM(#REF!C4:C7)`, `=#REF!C4`, and
 `ISREF(#REF!A1)` (written `ISREF(S!A1)`) is FALSE, while `INDIRECT("S!C4")` reads the new sheet ("|" for a blank).

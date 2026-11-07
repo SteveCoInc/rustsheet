@@ -371,11 +371,13 @@ impl Lexer {
                             TokenType::Compare(OpCompare::GreaterThan)
                         }
                     }
-                    // `#REF!C4:C7`, Excel's display of a reference to a deleted sheet, is not
-                    // read back: Excel refuses it typed in and stored (probes/t4628-deleted-sheet-
-                    // reference-text, T-4628), so the cell or range after `#REF!` is left to the
-                    // parser, which refuses it.
-                    '#' => self.consume_error(),
+                    '#' => {
+                        let error = self.consume_error();
+                        if error == TokenType::Error(Error::REF) && self.engine_text {
+                            self.consume_deleted_sheet_reference();
+                        }
+                        error
+                    }
                     '"' => match self.consume_string() {
                         Ok(s) => TokenType::String(s),
                         Err(error) => TokenType::Illegal(error),
@@ -885,6 +887,23 @@ impl Lexer {
             return TokenType::Illegal(self.set_error("Expected '!'", self.position));
         }
         self.consume_range(Some(sheet_name))
+    }
+
+    /// Skips the cell or range after a `#REF!` in A1 (`#REF!C4:C7`) in the engine's own text
+    /// only: the display of a reference to a deleted sheet (T-2340), which a fill or paste
+    /// re-enters, reads back as the #REF! error. Excel refuses that text typed in or stored in a
+    /// file (probes/t4628-deleted-sheet-reference-text, T-4628), so typed, external and loaded
+    /// text leave the cell or range to the parser, which refuses it.
+    fn consume_deleted_sheet_reference(&mut self) {
+        if self.mode != LexerMode::A1
+            || !matches!(self.peek_char(), Some(c) if c.is_ascii_alphabetic() || c == '$')
+        {
+            return;
+        }
+        let start = self.position;
+        if self.consume_range_a1().is_err() {
+            self.position = start;
+        }
     }
 
     fn consume_range(&mut self, sheet: Option<String>) -> TokenType {

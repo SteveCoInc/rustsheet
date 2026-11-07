@@ -185,7 +185,7 @@ pub(crate) fn move_sheet_in_node(node: &mut Node, from: u32, to: u32, sheet_name
 /// Deleting a middle sheet keeps the ends.
 ///
 /// A plain reference to the deleted sheet loses its sheet for good: it becomes a wrong reference
-/// to [`DELETED_SHEET`], displayed and exported as `#REF!C4:C7`, so a sheet added later under the
+/// to [`DELETED_SHEET`], displayed as `#REF!C4:C7` and exported as `#REF!`, so a sheet added later under the
 /// old name does not revive it (probes/table-edits/t2612-delete-sheet-then-add, T-2612).
 pub(crate) fn delete_sheet_in_node(node: &mut Node, deleted: u32, sheet_names: &[String]) {
     shrink_spans(node, sheet_names, |low, high| {
