@@ -3,7 +3,7 @@ id: T-4155
 title: "Metamorphic pivot properties in CI"
 milestone: M16
 lane: quality
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
