@@ -19,6 +19,8 @@ IRR's secant goes on past the pole (an iterate at d > 1) as Excel's does, instea
 - Scratch evidence (T-4844 session): the run-on secant gives Excel's bits on 65 cells of
   probes-numeric/t2927-irr-fallback-sweep and probes/irr-fallback-roots, where the T-2928 fallback is 15 to 35 ulp off.
 - Code: `irr_secant` (crates/rustsheet-engine/src/functions/financial/financial_util.rs) failed at d > 1.
+- Split from T-2131 and T-4778: two cells they list, gen-m9/a91bad4e84f49739 Calc!A369 (T-2131) and
+  probes/t2565-irr-guess-sweeps P!C157 (T-4778), pass with this change; the rest of those tasks stays theirs.
 
 ## Acceptance criteria
 - [x] A fresh sweep with predictions generated from its seed before the fill (probes/t4838-irr-pole-runon): the run-on secant is
