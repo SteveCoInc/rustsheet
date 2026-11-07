@@ -3,7 +3,7 @@ id: T-4903
 title: "Probe QUOTIENT's array lift with an empty argument and SERIESSUM's empty coefficients against an x/n/m error"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
