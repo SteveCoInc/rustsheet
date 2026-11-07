@@ -4933,6 +4933,34 @@ Status: UNVERIFIED (a scored fit to the addendum's mechanism; probe groups G21 a
 Implemented in: functions/statistical/inverse_beta/as109.rs `as109_search`, functions/statistical/beta.rs
 `beta_quantile_as109`.
 
+## F.INV, F.INV.RT and FINV map BETA.INV's AS 109 stopping point back (T-4975)
+Rule: Excel's F quantiles are its inverse beta's stopping point (see "BETA.INV returns bounded AS 109 Newton stopping
+points (T-4975)") mapped to F. The search solves `I_x(df1/2, df2/2) = p` on the lower tail, or for a lower-tail
+probability above 1/2 the flipped `I_s(df2/2, df1/2) = q` with q the upper tail itself (F.INV.RT's p, or 1 - p for
+F.INV), so a tiny upper tail keeps its digits. The back-transform is the compensated four-log ratio
+`EXP(LN(x) - LN(1-x) + LN(df2) - LN(df1))` (x and 1 - x trading places when flipped), with Excel's log1p for `LN(1-x)`
+(not `LN(fl(1-x))`), the numerator logs summed first in double-double and the EXP split as `EXP(hi)·(1 + lo)`.
+Kept on the converged crossing:
+- below a tail probability of 1E-15, a stop more than 1E-4 relative off the converged crossing (decision 0188 R3):
+  the five R3-marked points accuracy/F.INV/s1 A112, A126, A146, A160 and A171 follow the math;
+- from a df of 1E5, a stop more than 1E-9 relative off T-1538's mapped crossing: there the stop is up to 1.5E-6 off
+  both Excel and the math (`FINV(2.19035396820536E-152,1266816833,2)`, accuracy/FINV/s1 A143; F.INV/s1 A133, A148,
+  FINV/s1 A150, A160), while within it the stop is Excel's at 108 more literal cells than the crossing.
+Evidence: probes-numeric/t1538-f-quantile-switchover A1 `F.INV(1E-12,99999,5)` = 0.07661785226487351, A8
+`F.INV(1-1E-12,5,99999)` = 13.051797727478313 and A14 `F.INV.RT(1E-12,5,99999)` = 13.05178845973034, each off before
+and bit-exact now. On the 2,076 literal-argument F.INV/F.INV.RT/FINV cells of eval/: bit-exact 619 to 1,571, visibly
+off 476 to 184; Gate A 0 failing, 2 stale exemptions removed (F.INV/s1 A154, F.INV.RT/s1 A112).
+Not reproduced (the addendum's inverse-specific pieces):
+- the inverse-F bpser storage (stored normalization, split EXP argument on every bpser point): taken on its own it
+  scores worse (1,566 bit-exact against 1,571), so the search keeps BETA.DIST's lower tail;
+- the ordered inverse log-beta with stored GAMMALN differences: 1 more F cell bit-exact, 4 more BETA.INV cells
+  visibly off; not taken. `F.INV(1-1E-16,9,5)` stays 4311298.62058159 against Excel's 4311298.620581582;
+- the half-half seed (`F.INV(1E-200,1,1)` = 2.705579217114786E-151, the engine 0) and accuracy/F.INV/s1 A167
+  (`F.INV(4.36982683607437E-189,1,1698856)` = 3.8539086753642276E-145, the engine 0, inside Gate A through the
+  math's 1E-300 floor).
+Status: UNVERIFIED (a scored fit to the addendum's mechanism)
+Implemented in: functions/statistical/fisher.rs `f_quantile`, `f_quantile_as109`.
+
 ## BETA.INV at a shape of 1 is the closed form to 15 digits for p of 1E-15 or more (T-3664)
 Rule: with alpha = 1 or beta = 1 and 1E-15 <= p < 1, Excel's BETA.INV(p,alpha,beta) (and BETAINV) is within half a
 unit of the 15th significant digit of the closed form p (both 1), -expm1(log1p(-p)/beta) (alpha = 1) or

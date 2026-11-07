@@ -28,6 +28,7 @@
 //! search is never reported as a root: the caller falls back to its endpoint-aware crossing.
 
 use super::super::normal::standard_normal_quantile_value;
+use super::super::special::ln_gamma;
 use super::MAX_NEWTON_STEPS;
 
 /// The floor of the squared step AS 109 compares new steps with (its FPU), 1E-300 in Excel's
@@ -317,4 +318,12 @@ where
     } else {
         As109Outcome::Exhausted
     }
+}
+
+/// ln B(pp, qq) for AS 109's first estimate, the one form BETA.INV's and F.INV's callers hand
+/// [`As109Problem::ln_beta`]: correctly rounded GAMMALNs summed in argument order. The ordered
+/// form with stored GAMMALN differences (`bratio::bpser`'s) moves 4 more of the 2,384 literal
+/// BETA.INV cells visibly off and fixes 1 of the 2,076 F.INV ones (T-4975), so it is not taken.
+pub(crate) fn inverse_ln_beta(pp: f64, qq: f64) -> f64 {
+    ln_gamma(pp) + ln_gamma(qq) - ln_gamma(pp + qq)
 }

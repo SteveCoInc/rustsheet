@@ -48,7 +48,7 @@ use super::special::{ln_gamma, nearest_crossing};
 use crate::x87_exp::excel_exp;
 
 mod as109;
-pub(crate) use as109::{as109_search, As109Problem, As109Profile};
+pub(crate) use as109::{as109_search, inverse_ln_beta, As109Problem, As109Profile};
 
 /// The most Newton steps one inversion for BETA.INV or F.INV takes. The steps grow with -log10 of
 /// the probability, about 2.3 a decade, and stop at 377 where `x * x` underflows (p near 1E-162,

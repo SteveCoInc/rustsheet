@@ -15,10 +15,9 @@ use crate::functions::statistical::incomplete_beta::{
     beta_reg_tails, search_tails, A1_EXPM1_MAX_X,
 };
 use crate::functions::statistical::inverse_beta::{
-    as109_search, beta_lower_crossing, f_inverse_cdf, As109Problem, As109Profile,
+    as109_search, beta_lower_crossing, f_inverse_cdf, inverse_ln_beta, As109Problem, As109Profile,
 };
 use crate::functions::statistical::paired::marked_number_error;
-use crate::functions::statistical::special::ln_gamma;
 use crate::functions::statistical::special::refine_increasing;
 use crate::functions::statistical::t_dist::sample_var;
 use crate::functions::Function;
@@ -319,7 +318,7 @@ fn f_quantile_as109(df1: f64, df2: f64, p: f64, right_tail: bool) -> Option<f64>
         pp,
         qq,
         target,
-        ln_beta: ln_gamma(pp) + ln_gamma(qq) - ln_gamma(pp + qq),
+        ln_beta: inverse_ln_beta(pp, qq),
         cdf: |x: f64, y: f64| beta_dist_lower_tail(x, y, pp, qq),
         density: |x: f64, _: f64| beta_dist_density(x, pp, qq, &dist),
     };
@@ -802,6 +801,24 @@ mod tests {
         f_beta_arguments, f_bup_sum_overflows, f_cdf, f_quantile, f_tail, fisher, fisher_inv,
     };
     use crate::test::util::{ulps, within_fifteen_digits};
+
+    // F.INV maps Excel's AS 109 stopping point back by the four-log ratio (T-4975, addendum C):
+    // probes-numeric/t1538-f-quantile-switchover A1, A8 and A14, each off before, bit for bit.
+    #[test]
+    fn f_quantile_is_the_mapped_beta_stopping_point() {
+        for (df1, df2, p, right_tail, excel) in [
+            (99_999.0, 5.0, 1e-12, false, 0.076_617_852_264_873_51_f64),
+            (5.0, 99_999.0, 1.0 - 1e-12, false, 13.051_797_727_478_313),
+            (5.0, 99_999.0, 1e-12, true, 13.051_788_459_730_34),
+        ] {
+            let ours = f_quantile(df1, df2, p, right_tail);
+            assert_eq!(
+                ours.to_bits(),
+                excel.to_bits(),
+                "F({df1},{df2}) at {p}: {ours}"
+            );
+        }
+    }
 
     // FISHER and FISHERINV round their quotient twice, like Excel's `/` (excel-graph; T-2437).
     #[test]

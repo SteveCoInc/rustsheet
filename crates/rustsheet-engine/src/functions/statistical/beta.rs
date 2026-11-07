@@ -10,7 +10,8 @@ use crate::functions::statistical::bratio::{
 };
 use crate::functions::statistical::incomplete_beta::beta_density;
 use crate::functions::statistical::inverse_beta::{
-    as109_search, beta_inverse_cdf, beta_quantile_crossing, As109Problem, As109Profile,
+    as109_search, beta_inverse_cdf, beta_quantile_crossing, inverse_ln_beta, As109Problem,
+    As109Profile,
 };
 use crate::functions::statistical::loader::{beta_density_counts_vanish, excel_beta_density};
 use crate::functions::statistical::special::{ln_gamma, nearest_crossing_from, refine_increasing};
@@ -126,7 +127,7 @@ fn beta_quantile_as109(alpha: f64, beta: f64, p: f64) -> Option<f64> {
         pp,
         qq,
         target,
-        ln_beta: ln_gamma(pp) + ln_gamma(qq) - ln_gamma(pp + qq),
+        ln_beta: inverse_ln_beta(pp, qq),
         cdf: |x: f64, y: f64| beta_dist_lower_tail(x, y, pp, qq),
         density: |x: f64, _: f64| beta_dist_density(x, pp, qq, &dist),
     };
