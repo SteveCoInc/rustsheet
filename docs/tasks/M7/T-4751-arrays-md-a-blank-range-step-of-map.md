@@ -3,7 +3,7 @@ id: T-4751
 title: "arrays.md: a blank range step of MAP, SCAN and REDUCE keeps blank elements (ARRAYTOTEXT shows them empty), not 0"
 milestone: M7
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
