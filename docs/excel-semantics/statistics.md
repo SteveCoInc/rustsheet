@@ -8392,3 +8392,18 @@ Ours: matches every cell cited (the engine is bit-exact with Excel on 777 of the
 the Gate A envelope).
 Status: VERIFIED (excel-graph) for the cells cited; the regions marked UNVERIFIED are not probed
 Tasks: T-4091
+
+## RANK, LARGE, SMALL and the regression functions: a cell picked by a name, INDEX, IF, CHOOSE or parentheses is the cell (T-4310)
+Rule: a one-cell argument reached through a defined name, `INDEX(range,k)`, `IF(TRUE,ref)`, `CHOOSE(1,ref)` or
+parentheses behaves exactly like the plain reference. With Data!A1 = 5, A2 = TRUE, A3 = "7" and A4 blank:
+- RANK, RANK.EQ and RANK.AVG of 5 over the cell are 1 for A1 and `#N/A` for A2, A3 and A4 in all six forms (a cell
+  holding a boolean or numeric text is no number, not `#NUM!`).
+- LARGE and SMALL of it with k = 1 are 5 for A1 and `#NUM!` for A2, A3 and A4 in all six forms.
+- LINEST, LOGEST, TREND and GROWTH with the blank A4 as `known_y` and `1/0` as `known_x` are `#DIV/0!` in all six forms
+  (the blank reference waits for x's error), and LINEST and TREND of it alone `#VALUE!`; only a computed blank such as
+  `IFERROR(B10,1)` is `#VALUE!` at once (the T-2455 entry).
+Evidence: probes/t4310-rank-regression-picked-cells A1:A156 (excel-graph, 2026-11-07).
+Ours: matches all 156 cells since T-4310 (the name, INDEX, IF and parenthesized blank y of the regression functions were
+`#VALUE!` before, 16 cells).
+Status: VERIFIED (excel-graph)
+Tasks: T-4310
