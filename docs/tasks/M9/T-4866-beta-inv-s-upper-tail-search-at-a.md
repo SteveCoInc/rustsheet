@@ -3,7 +3,7 @@ id: T-4866
 title: "BETA.INV's upper-tail search at a tiny alpha and a large beta lands far off the root"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
