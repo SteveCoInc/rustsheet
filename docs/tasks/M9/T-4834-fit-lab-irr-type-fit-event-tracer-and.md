@@ -3,7 +3,7 @@ id: T-4834
 title: "Fit lab: irr-type fit, event tracer and path-invariant transforms for IRR"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
