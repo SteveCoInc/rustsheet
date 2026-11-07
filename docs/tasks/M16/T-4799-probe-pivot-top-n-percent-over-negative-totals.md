@@ -45,7 +45,19 @@ Evidence that settles the pivot filter and sort questions T-4164 left UNVERIFIED
   share reading -20, 10 and 30); an unknown filter `type`, a floored count N and AutoShow's schema defaults; the dynamic
   types other than the known ones; and the importer's new skips (a `filter@fld` past the cache, an unknown
   `customFilter@operator` or `dateTimeGrouping`).
-- Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274. The engine is T-4165's.
+- T-4827 (the value sorts): its own readings, listed in pivots.md "Value sorts: ties, blanks and errors":
+  - a blank tied with a real 0 by the cache order;
+  - several errors in cache order both ways;
+  - inner-field ties by the cache order;
+  - `reference@x` read as an index into the field's `<items>`, not the cache (a shape that separates them is a
+    column field whose `<items>` are written out of cache order), and only its first `x` read;
+  - a reference to a field on no axis or on the sorted field's own axis ignored;
+  - a scope with no data reference, or one past the data fields or the items, sorting nothing, and likewise one under
+    `sortType="manual"`;
+  - a `showAll` item with no record sorting as 0;
+  - a value sort on a column field;
+  - Count and Average items with no number in the scope.
+- Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274. The engine is T-4165's and T-4827's.
 
 ## Acceptance criteria
 - [ ] Probe cases with sidecars that discriminate each reading above; pivots.md entries updated.

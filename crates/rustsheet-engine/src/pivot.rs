@@ -37,6 +37,7 @@ mod probe_cases;
 mod refresh;
 mod result;
 mod show_as;
+mod sort;
 
 pub use added_groups::{group_by_discrete, AddedGroup};
 pub use calculated::{
@@ -68,6 +69,7 @@ pub use result::{
     compute, compute_on, AxisNode, AxisTree, PivotComputeError, PivotResult, MAX_PIVOT_NODES,
     MAX_PIVOT_WORK,
 };
+pub use sort::{AutoSortScope, SortReference, DATA_FIELD_REFERENCE};
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
 pub const MAX_RECORDS: usize = 1_048_576;
