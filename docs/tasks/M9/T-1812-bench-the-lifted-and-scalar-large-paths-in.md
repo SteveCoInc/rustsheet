@@ -3,7 +3,7 @@ id: T-1812
 title: "Bench the lifted and scalar LARGE paths in benches/lift.rs"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -23,3 +23,10 @@ T-1772's performance review (follow-up, not a blocker): `functions/statistical/s
 
 ## Out of scope
 - Changing the kernels.
+
+## Outcome
+Two cases added to `crates/rustsheet/benches/lift.rs` (`large_cases`), column A filled (no blank shortcut). Release
+numbers (11 runs, min / median), identical on main since the kernels are unchanged:
+- `=SUM(LARGE(A1:A1000000,SEQUENCE(200)))`, 1,000,000 rows: 208 ms / 221 ms (C1 = 19800).
+- `=LARGE(A1:A100000,2)`, 100,000 rows: 10.2 ms / 10.6 ms (C1 = 9).
+A smoke baseline, no budget. Eval: no change.
