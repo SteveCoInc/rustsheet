@@ -3,7 +3,7 @@ id: T-4847
 title: "XLOOKUP/XMATCH binary search orders text through the shared collation, not upper-cased code points"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
