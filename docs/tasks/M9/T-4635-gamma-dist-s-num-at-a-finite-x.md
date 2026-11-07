@@ -97,7 +97,7 @@ oracle evidence brackets, and the Gate A definition gives those points a value o
     `_huge_ratio_point`: y log-uniform within 10% of rule R's cut on either side at shapes 1.01 to 1.1 and 1.11 to 4,
     and shapes 0.3 to 1 and 4 to 10 from y 1E300 up; beta 1E-100 to 1E-8, so x stays below 1E301). Drawn and committed
     after the freeze, filled on excel-graph 2026-11-07: 120 of 120 as predicted (48 `#NUM!`, 72 numbers);
-    `rustsheet-eval accuracy`: ENVELOPE_PLACEHOLDER. The chi-squared functions get no batch: their x = 2y would be a
+    `rustsheet-eval accuracy`: its 120 points are in the envelope (the gate: 44,843 points, 0 failing). The chi-squared functions get no batch: their x = 2y would be a
     literal of 1E307 or more, which Excel for the web refuses (first fill), and they share GAMMA.DIST's kernel at
     y = x / 2 (the chisq-huge-x probe writes x as a product instead).
   - The earlier probe ladder stays: the first fill (320 cells), the gen3 sweep after the freeze (104/104: 84 cells at
