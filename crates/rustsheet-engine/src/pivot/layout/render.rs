@@ -39,7 +39,8 @@
 //! - **Items** render as in pivots.md: a number as a number, a boolean as `TRUE`/`FALSE`, an
 //!   error as its text and a blank as `(blank)` (t4134 I2); a Values level item is the data
 //!   field's caption. A date item is its serial, in `m/d/yyyy` (with ` h:mm` for a time part)
-//!   whatever the source's format (`date_item_format`, t2085 D, t4164).
+//!   whatever the source's format (`item_format`; t2085 D, t4164; a date group item too,
+//!   probes/t4767-pivot-group-items GD!A6, GDA!A6).
 //! - **Values.** An intersection no record reaches is blank, or `missingCaption` with
 //!   `showMissing` (t4137 K2); an error is `errorCaption` with `showError` (K3, t4135 EC).
 //!   Every value cell, subtotals' and grand totals' too, carries its data field's `numFmtId`
@@ -72,7 +73,9 @@ use crate::expressions::token::Error;
 use crate::number_format::number_to_text;
 
 use super::super::result::{page_selection, AxisTree, PivotComputeError, PivotResult};
-use super::super::{Aggregate, CacheItem, ItemType, PivotCache, PivotTable};
+use super::super::{
+    Aggregate, CacheField, CacheItem, ItemType, PivotCache, PivotField, PivotTable,
+};
 use super::lines::{label_columns, levels, AxisLine, Level, PivotLayout};
 
 /// The caption above a pivot's row labels (`rowHeaderCaption` replaces it).
@@ -115,7 +118,7 @@ pub struct RenderedCell {
     pub value: PivotCell,
     /// The number format the cell shows its value in: a value cell's data field's
     /// ([`DataField::number_format`](super::super::DataField::number_format)) or a date item's
-    /// ([`date_item_format`]); `None` for any other label, a caption, and a value cell whose data
+    /// ([`item_format`]); `None` for any other label, a caption, and a value cell whose data
     /// field has none, whose cell format is left as it is.
     pub number_format: Option<CellFormat>,
 }
@@ -152,6 +155,22 @@ fn item_cell(item: &CacheItem) -> PivotCell {
         CacheItem::Boolean(b) => PivotCell::Text(if *b { "TRUE" } else { "FALSE" }.to_string()),
         CacheItem::Error(error) => PivotCell::Text(error.to_string()),
         CacheItem::Missing => PivotCell::Text(BLANK_ITEM.to_string()),
+    }
+}
+
+/// The built-in `numFmtId` of m/d/yyyy, the format a date group item's label shows in.
+const DATE_GROUP_ITEM_FORMAT: u32 = 14;
+
+/// The number format an item's label cell shows it in: a date group item (`<groupItems><d>` of a
+/// grouped field, [`CacheField::is_grouped`]) shows as m/d/yyyy whatever its source field holds
+/// (pivots.md "Capability matrix 3", probes/t4767-pivot-group-items GD!A6, GDA!A6 `1/1/2020`
+/// over 43831); any other date item as [`date_item_format`]. Any other label keeps its cell's
+/// format.
+fn item_format(field: &CacheField, item: &CacheItem) -> Option<CellFormat> {
+    match item {
+        CacheItem::Date(_) if field.is_grouped() => Some(CellFormat::Id(DATE_GROUP_ITEM_FORMAT)),
+        CacheItem::Date(serial) => Some(date_item_format(*serial)),
+        _ => None,
     }
 }
 
@@ -265,7 +284,8 @@ impl Cells<'_> {
         Some(field.caption.as_str())
     }
 
-    /// The label of `line`'s level `level` (its `x` is `x`) on `axis`, and its number format.
+    /// The label of `line`'s level `level` (its `x` is `x`) on `axis`, and the number format its
+    /// cell shows it in ([`item_format`]).
     fn label(
         &self,
         axis: &Axis<'_>,
@@ -277,12 +297,9 @@ impl Cells<'_> {
             Level::Values => Some((PivotCell::Text(self.data_caption(x)?.to_string()), None)),
             Level::Field { depth, .. } => {
                 let (field, item) = axis.item(line.node, *depth)?;
-                let item = self.cache_item(field, item)?;
-                let format = match item {
-                    CacheItem::Date(serial) => Some(date_item_format(*serial)),
-                    _ => None,
-                };
-                Some((item_cell(item), format))
+                let cache_field = self.cache.fields.get(field as usize)?;
+                let item = cache_field.items.get(item as usize)?;
+                Some((item_cell(item), item_format(cache_field, item)))
             }
         }
     }
@@ -706,7 +723,7 @@ fn page_area(cells: &mut Cells<'_>, layout: &PivotLayout) {
         let hides = table
             .fields
             .get(page.field as usize)
-            .is_some_and(|f| f.hidden.iter().any(|word| *word != 0));
+            .is_some_and(PivotField::excludes_any);
         let selection = match page_selection(table, page) {
             Some(item) => cells.cache_item(page.field, item).map(item_cell),
             None if hides => Some(PivotCell::Text(MULTIPLE_ITEMS.to_string())),

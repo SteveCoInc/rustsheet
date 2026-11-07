@@ -41,7 +41,8 @@ use crate::functions::util::collation::{
 use crate::text::Text;
 
 use super::layout::item_text;
-use super::result::{charge, units, Order, PivotComputeError};
+use super::result::{axis_fields, charge, units, PivotComputeError};
+use super::sort::display_order;
 use super::{AxisField, CacheItem, PivotCache, PivotTable};
 
 mod model;
@@ -51,7 +52,8 @@ pub use model::{
     AutoShow, DateGroupItem, DynamicDate, FilterCondition, FilterCriteria, FilterOperator,
     PivotFilter, PivotFilterKind, RelativeUnit,
 };
-use rank::{Ranking, ValueStep};
+use rank::Ranking;
+pub(super) use rank::ValueStep;
 
 /// What [`apply`] keeps.
 pub(super) struct Kept {
@@ -99,8 +101,14 @@ pub(super) fn apply(
         work,
         units(table.filters.len().saturating_add(table.fields.len())),
     )?;
+    // A timeline on a field replaces the pivot's own filters on it (probes/t4767-pivot-timelines
+    // TX: its dateBetween filter; UNVERIFIED, T-4962, for the other kinds); `result::filter`
+    // applies the timeline.
+    let filters: Vec<&PivotFilter> = (table.filters.iter())
+        .filter(|f| (table.fields.get(f.field as usize)).is_none_or(|p| p.timeline.is_none()))
+        .collect();
     let mut by_field: HashMap<u32, Vec<&PivotFilter>> = HashMap::new();
-    for filter in &table.filters {
+    for &filter in &filters {
         by_field.entry(filter.field).or_default().push(filter);
     }
     if by_field.is_empty() && table.fields.iter().all(|f| f.auto_show.is_none()) {
@@ -115,7 +123,7 @@ pub(super) fn apply(
         }
     }
     // 1. Item filters, in `<filters>` order (they commute).
-    for filter in &table.filters {
+    for &filter in &filters {
         let on = on_axis.get(filter.field as usize).copied().unwrap_or(false);
         if filter.kind.on_items() && on {
             item_filter(filter, cache, context, &mut kept, work)?;
@@ -125,13 +133,7 @@ pub(super) fn apply(
     for (index, axis) in axes.iter().enumerate() {
         let across = (axes.iter().enumerate())
             .any(|(other, a)| other != index && a.iter().any(|f| matches!(f, AxisField::Field(_))));
-        let fields: Vec<u32> = axis
-            .iter()
-            .filter_map(|f| match f {
-                AxisField::Field(index) => Some(*index),
-                AxisField::Values => None,
-            })
-            .collect();
+        let fields = axis_fields(axis);
         for (depth, &field) in fields.iter().enumerate() {
             let filters = by_field.get(&field).map_or(&[][..], Vec::as_slice);
             let auto_show = table.fields.get(field as usize).and_then(|f| f.auto_show);
@@ -145,18 +147,13 @@ pub(super) fn apply(
             if kept.records.is_empty() {
                 return Ok(kept);
             }
-            // The field's display order, once for all its value filters, charged as the axis
-            // charges it (`AxisColumns::new`).
-            let pivot_field = table.fields.get(field as usize);
-            let item_count = cache
+            // The field's display order (a label sort's included), once for all its value
+            // filters, as the axis makes it (`AxisColumns::new`): it breaks a Top-N's ties.
+            let cache_field = cache
                 .fields
                 .get(field as usize)
-                .ok_or(PivotComputeError::Malformed)?
-                .items
-                .len();
-            let listed = pivot_field.map_or(0, |f| f.items.len());
-            charge(work, units(item_count.saturating_add(listed)))?;
-            let order = Order::of(pivot_field, item_count);
+                .ok_or(PivotComputeError::Malformed)?;
+            let order = display_order(table, cache_field, field, work)?;
             let parents = fields.get(..depth).unwrap_or_default();
             for (rank, measure) in ranks {
                 let step = ValueStep {
@@ -168,6 +165,7 @@ pub(super) fn apply(
                     measure,
                     // An item of an outer field, or across the other axis's items, is a total.
                     total: depth + 1 < fields.len() || across,
+                    within: &[],
                 };
                 step.run(&rank, &mut kept, work)?;
             }

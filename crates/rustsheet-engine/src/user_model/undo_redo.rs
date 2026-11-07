@@ -551,6 +551,14 @@ impl UserModel {
                     check_merged_cells(old_value)?;
                     self.model.workbook.worksheet_mut(*sheet)?.merged_cells = old_value.clone();
                 }
+                Diff::SetDataTables {
+                    sheet,
+                    old_value,
+                    new_value: _,
+                } => {
+                    needs_evaluation = true;
+                    self.model.restore_data_tables(*sheet, old_value)?;
+                }
             }
         }
         self.restored_spills.check()?;
@@ -1016,6 +1024,14 @@ impl UserModel {
                     needs_evaluation = true;
                     check_merged_cells(new_value)?;
                     self.model.workbook.worksheet_mut(*sheet)?.merged_cells = new_value.clone();
+                }
+                Diff::SetDataTables {
+                    sheet,
+                    old_value: _,
+                    new_value,
+                } => {
+                    needs_evaluation = true;
+                    self.model.restore_data_tables(*sheet, new_value)?;
                 }
             }
         }

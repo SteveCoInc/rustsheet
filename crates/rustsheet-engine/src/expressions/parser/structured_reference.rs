@@ -95,6 +95,13 @@ pub(crate) fn is_unresolved_structured_reference(message: &str) -> bool {
         .any(|prefix| message.starts_with(prefix))
 }
 
+/// Whether `table_name` names a table of a linked workbook, `[1]!Table3` or `[1]Sheet!Table3`,
+/// as the lexer keeps the external-link prefix in the name (T-0482). No table of this workbook
+/// has a name starting with `[`, so the prefix alone tells.
+pub(crate) fn is_external_table_name(table_name: &str) -> bool {
+    table_name.starts_with('[')
+}
+
 /// Excel's name of an item specifier, in its own case.
 fn specifier_text(specifier: &TableSpecifier) -> &'static str {
     match specifier {

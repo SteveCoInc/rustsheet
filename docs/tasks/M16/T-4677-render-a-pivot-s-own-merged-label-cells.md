@@ -16,6 +16,9 @@ A pivot saved with "Merge and center cells with labels" (`mergeItem="1"`) refres
 ## Context
 T-4151's grid writer (crates/rustsheet-engine/src/pivot/grid.rs) refuses a refresh with `PivotRefreshError::MergedArea` when a merged range lies in the pivot's own area, because the cell writers cannot write through a merge (docs/excel-semantics/pivots.md "The grid writer's own readings", UNVERIFIED). Excel creates those merges itself (excel-docs.md, `mergeItem`). Needs T-4664 case (k) evidence for how Excel re-merges on refresh. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
+Also owner of these pivot-corpus render cells (T-4906, Excel-saved files: docs/excel-semantics/pivots.md "What the Excel-saved pivot corpus shows (T-4906)"), 59 render cells of 1 fresh pivot, which the engine refuses to lay out (`a merged range lies in the pivot's own area`), so every saved cell is scored against nothing; its `refreshOnLoad` refresh fails the same way (check (c)):
+- pivot-corpus-closedxml/Other/PivotTableReferenceFiles/PivotSubtotalsSource/input.xlsx Pivot1!B3:H14
+
 ## Acceptance criteria
 - [ ] A `mergeItem` pivot refreshed on load or by `Txn::refresh_pivot_table` matches the T-4664 (k) sidecar, merges included.
 - [ ] `make check` green; reviewers approve.

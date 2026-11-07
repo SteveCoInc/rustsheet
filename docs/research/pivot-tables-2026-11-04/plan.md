@@ -199,6 +199,11 @@ cells pass".
    - (b) re-render from the saved cache must equal Excel's saved cells and `rowItems`/`colItems`, but only
      when the file is fresh, meaning its records reproduce its cells; stale files are reported, not scored;
    - (c) a full refresh from the source range, when `refreshOnLoad` is set.
+
+   T-4906 implements (b) and (c): a pivot is fresh when its saved records give every value Excel saved at the
+   cells its own `rowItems`/`colItems` place them, so freshness does not depend on the renderer; a fresh pivot's
+   saved area is scored cell by cell and its engine `rowItems`/`colItems` compared; (c) is compared where the
+   saved cells are a render of the records the source still holds (eval-harness.md "Pivot freshness").
 4. **Round trip through Excel.**
    - An engine-created or engine-edited pivot is exported, and the oracle opens it. A refusal
      (`OpenWorkbookBlockedWorkbook`) or a repair is a failure.
@@ -220,6 +225,10 @@ exits when:
 - the `pivots`, `gen-pivot` and fresh-corpus cells are 100% not visibly off (decision 0083's rule), apart
   from listed deviations;
 - every remaining row has a task, or an `out` scope with its decision.
+
+The M16 exit row (report.json `milestone_exit`, T-4127) measures these. The fresh-corpus cells are its
+`corpus_render_met`, read from `fresh_pivot_render` (T-4906, T-4971), and the owners are its `owners_met`,
+read from the catalog's `owner` column (T-4952).
 
 The eval report gains a "Pivot features" table with one row per catalog row (cells, pass rate, evidence
 depth), as the function catalog has.

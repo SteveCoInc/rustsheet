@@ -116,16 +116,17 @@ pub(crate) fn lifts_into_references(node: &Node) -> bool {
 }
 
 /// The arguments a per-element consumer reads ahead of its call (SPEC-0014 rule 6): those of
-/// [`lifts_into_references`], and an XLOOKUP with an `if_not_found`, which a lifted `lookup_value`
-/// and a range `if_not_found` make an array of its hits and that range (SPEC-0014 amendment
+/// [`lifts_into_references`], and an XLOOKUP, which a lifted `lookup_value` makes an array of
+/// its elements, a range `if_not_found` the reference element of each miss (SPEC-0014 amendment
 /// rule 6; `COUNTIF(XLOOKUP({2;9},A1:A3,B1:B3,G1:G2),">0")` spills `#VALUE!`, 2;
-/// probes/t4569-xlookup-ref-element-max-min A26, C24:D34).
+/// probes/t4569-xlookup-ref-element-max-min A26, C24:D34), any other element a value or an
+/// error ([`Model::xlookup_reference_elements`]).
 pub(crate) fn lifts_into_reference_elements(node: &Node) -> bool {
     match node.ungrouped() {
         Node::FunctionKind {
             kind: Function::Xlookup,
-            args,
-        } => args.len() >= 4,
+            ..
+        } => true,
         node => lifts_into_references(node),
     }
 }
@@ -268,7 +269,7 @@ impl Model {
                 Node::FunctionKind {
                     kind: Function::Xlookup,
                     args,
-                } => self.xlookup_reference(args, cell, true),
+                } => self.xlookup_reference_elements(args, cell),
                 _ => self.evaluate_reference_arg(arg, cell),
             };
             if let RefArg::Grid(grid) = read {
