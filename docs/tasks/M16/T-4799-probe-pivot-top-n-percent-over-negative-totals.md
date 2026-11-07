@@ -57,7 +57,13 @@ Evidence that settles the pivot filter and sort questions T-4164 left UNVERIFIED
   - a `showAll` item with no record sorting as 0;
   - a value sort on a column field;
   - Count and Average items with no number in the scope.
-- Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274. The engine is T-4165's and T-4827's.
+- T-4768 (the label sorts): its own readings, listed in pivots.md "Label sorts: the engine's own readings": the order
+  of mixed item types (numbers, custom-list names, texts, booleans, errors, the blank last), collation ties and errors
+  in cache order, a custom-list name matched ignoring case and placed before the other texts, the abbreviated and full
+  month lists and the full day list (only the abbreviated day names are evidenced, CL1), range groups sorted in
+  their own order, a scope that sorts nothing keeping the `<items>` order, Top-N ties broken by the label order, and a
+  label sort on a column field.
+- Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274. The engine is T-4165's, T-4827's and T-4768's.
 
 ## Acceptance criteria
 - [ ] Probe cases with sidecars that discriminate each reading above; pivots.md entries updated.

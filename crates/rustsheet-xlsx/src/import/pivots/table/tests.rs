@@ -533,6 +533,26 @@ fn auto_show_is_read_from_the_kept_field_attributes() {
     );
 }
 
+#[test]
+fn custom_list_sort_is_read_from_the_kept_definition_attributes() {
+    // probes/t4130-pivot-sort CL0 writes `customListSort="0"` on the definition; absent is on.
+    assert!(read(CALC_TOP_SORT, &[2, 3, 6, 6]).options.custom_list_sort);
+    let off = CALC_TOP_SORT.replacen(
+        r#"name="CalcTopSort""#,
+        r#"name="CalcTopSort" customListSort="0""#,
+        1,
+    );
+    let pivot = read(&off, &[2, 3, 6, 6]);
+    assert!(!pivot.options.custom_list_sort);
+    // Kept verbatim, for export.
+    assert_eq!(
+        kept(&pivot, OpaqueOwner::Definition)
+            .matches(r#" customListSort="0""#)
+            .count(),
+        1
+    );
+}
+
 /// The fixture with `scope` as its sorted field's (field 1's) last child, read.
 fn with_scope(scope: &str) -> Result<PivotTable, String> {
     let field = CALC_TOP_SORT.find(r#"sortType="descending""#).unwrap();

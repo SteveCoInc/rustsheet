@@ -41,7 +41,8 @@ use crate::functions::util::collation::{
 use crate::text::Text;
 
 use super::layout::item_text;
-use super::result::{axis_fields, charge, units, Order, PivotComputeError};
+use super::result::{axis_fields, charge, units, PivotComputeError};
+use super::sort::display_order;
 use super::{AxisField, CacheItem, PivotCache, PivotTable};
 
 mod model;
@@ -140,18 +141,13 @@ pub(super) fn apply(
             if kept.records.is_empty() {
                 return Ok(kept);
             }
-            // The field's display order, once for all its value filters, charged as the axis
-            // charges it (`AxisColumns::new`).
-            let pivot_field = table.fields.get(field as usize);
-            let item_count = cache
+            // The field's display order (a label sort's included), once for all its value
+            // filters, as the axis makes it (`AxisColumns::new`): it breaks a Top-N's ties.
+            let cache_field = cache
                 .fields
                 .get(field as usize)
-                .ok_or(PivotComputeError::Malformed)?
-                .items
-                .len();
-            let listed = pivot_field.map_or(0, |f| f.items.len());
-            charge(work, units(item_count.saturating_add(listed)))?;
-            let order = Order::of(pivot_field, item_count);
+                .ok_or(PivotComputeError::Malformed)?;
+            let order = display_order(table, cache_field, field, work)?;
             let parents = fields.get(..depth).unwrap_or_default();
             for (rank, measure) in ranks {
                 let step = ValueStep {

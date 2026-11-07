@@ -36,7 +36,9 @@
 //! `sortType="manual"`; an item that `showAll` shows with no record, which sorts as 0; a value
 //! sort on a column field, read as on a row field with the row items as its scope; and a Count or
 //! Average item with no number in the scope, which sorts as its cell shows it (0, or `#DIV/0!`
-//! last). Label sorts (`sortType` with no `autoSortScope`) are T-4768's.
+//! last). Label sorts (`sortType` with no `autoSortScope`) are [`labels`]'s (T-4768): they give
+//! the display orders a value sort's parents group by, and a field with a scope is never
+//! label-sorted, whether or not its scope sorts anything.
 //!
 //! Every pass charges its work before doing it (CLAUDE.md directive 5).
 
@@ -47,6 +49,10 @@ use crate::expressions::token::Error;
 use super::filter::{Kept, ValueStep};
 use super::result::{axis_fields, charge, sort_units, units, Order, PivotComputeError};
 use super::{ItemType, PivotCache, PivotField, PivotTable, SortType};
+
+mod labels;
+
+pub(super) use labels::display_order;
 
 /// `reference@field` for the data fields (`-2` as an unsigned int): its `x` names a data field.
 pub const DATA_FIELD_REFERENCE: u32 = 4_294_967_294;

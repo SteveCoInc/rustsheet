@@ -374,6 +374,7 @@ pub(crate) fn probe_pivot_over(
     o.column_grand_totals = flag(&options["colGrandTotals"], o.column_grand_totals);
     o.page_over_then_down = flag(&options["pageOverThenDown"], o.page_over_then_down);
     o.grid_drop_zones = flag(&options["gridDropZones"], o.grid_drop_zones);
+    o.custom_list_sort = flag(&options["customListSort"], o.custom_list_sort);
     if let Some(wrap) = options["pageWrap"].as_u64() {
         o.page_wrap = u32::try_from(wrap).unwrap();
     }
