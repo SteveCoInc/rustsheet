@@ -3,7 +3,7 @@ id: T-4642
 title: "A qualified use of a provisional name place reads #NAME? in probes/t4618-order-after-active-backward Q!A1"
 milestone: M8
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
