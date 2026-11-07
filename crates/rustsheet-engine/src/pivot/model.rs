@@ -463,8 +463,9 @@ impl Default for DataField {
     }
 }
 
-/// A data field's summary function.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+/// A data field's summary function, in `ST_DataConsolidateFunction`'s order: the order Excel
+/// shows custom subtotal lines in (`Ord`; layout/lines.rs `AxisPlan::subtotals`, t4699 CU, CR).
+#[derive(Encode, Decode, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Aggregate {
     /// `sum`.
     Sum,
