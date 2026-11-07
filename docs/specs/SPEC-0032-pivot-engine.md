@@ -239,7 +239,8 @@ lays the pivot out (a render or refresh drops them), then the engine's when its 
 geometry the pivot holds. A cache is held to the import limits, and one with case-variant texts in a field is
 dropped (Excel for the web calls it corrupt). An axis field with no `<items>` gets one per cache
 item plus its subtotal lines (ClosedXML's invariant), a data field's pivot field `dataField="1"`. A grouped cache is
-dropped with its pivots until T-4734; a cache definition's unread rest is T-4735's. The source-preserving tiers
+written with its `<fieldGroup>`s in the shapes Excel saves, from each range-grouped field's kept own values
+(`CacheField::ungrouped`), and dropped with its pivots for any other shape (T-4734); a cache definition's unread rest is T-4735's. The source-preserving tiers
 (SPEC-0034) still keep an unchanged pivot's own parts byte for byte.
 
 ### PivotChart data (T-4186)
