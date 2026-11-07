@@ -3,7 +3,7 @@ id: T-4741
 title: "LARGE, SMALL and MEDIAN over a mixed XLOOKUP grid: the first element decides between an error and #N/A (probes/t4704 A49:C49, A58:C58)"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -18,8 +18,11 @@ LARGE, SMALL and MEDIAN over a mixed XLOOKUP grid that holds an error element an
 - Fix: the first element decides (the reference element yields `#N/A` before the later error is reached); T-4714 (todo) changes the same function to the first off-sheet reference; do them in order.
 
 ## Acceptance criteria
-- [ ] Calc A49:C49 and A58:C58 of probes/t4704 pass, with the `{2;9}` order still passing. SMALL and MAX in the reference-first order are not probed; add them to the probe in this task.
-- [ ] `make check` green; reviewers approve.
+- [x] Calc A49:C49 and A58:C58 of probes/t4704 pass, with the `{2;9}` order still passing. SMALL and MAX in the reference-first order are not probed; add them to the probe in this task.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other readers of a mixed XLOOKUP grid (T-4704).
+
+## Outcome
+`RefGrid::order_statistic_error` returns `#N/A` as soon as the first element is an off-sheet reference, before it looks for an error element; a value or error first element keeps the old rule. Probe extended (refilled on excel-graph, 2026-11-07; the 103 earlier cells unchanged): SMALL over the reference-first grid `{9;2}` is `#N/A` (Calc A88:C88) and MAX `#DIV/0!` (A91:C91), so MAX takes the error in either order while the order statistics stop at the reference. Recorded in lookup.md and SPEC-0014; unit test added. Eval delta: `probes/t4704-mixed-xlookup-grid-readers` 103 -> 109 passing; six known failures (Calc A49:C49, A58:C58) removed from the baseline, the six new cells pass.

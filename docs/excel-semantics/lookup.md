@@ -1756,7 +1756,8 @@ Mixed XLOOKUP grids (probes/t4704-mixed-xlookup-grid-readers, excel-graph, 2026-
 `XLOOKUP({2;9},Data!A1:A3,Data!B1:B3,Data!G1:G2)`: element 1 the hit 20, element 2 the reference G1:G2): the first
 element decides between an error and an off-sheet reference. With a `#DIV/0!` hit and the reference second,
 LARGE, SMALL, MEDIAN and MAX give `#DIV/0!` (A46, A52, A55, A61 with the grid `{2;9}`); with the reference first
-LARGE and MEDIAN give `#N/A` (A49, A58). SMALL and MAX with the reference first are not probed (they share the reader). Ours puts the error first (T-4741). A grid with references on both the
+LARGE, SMALL and MEDIAN give `#N/A` (A49, A58, A88) while MAX still gives `#DIV/0!` (A91): MAX takes the error
+wherever it is, the order statistics stop at the off-sheet reference. Matched since T-4741. A grid with references on both the
 formula's sheet and another cannot be built from XLOOKUP (every miss is the one if_not_found reference); see
 probes/t4697 for the INDIRECT form.
 Per-element readers of a mixed grid: FORMULATEXT gives `#VALUE!` then `#N/A` (A1:A2), INDIRECT `#REF!` then
