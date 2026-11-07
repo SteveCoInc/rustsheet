@@ -55,7 +55,9 @@ against Excel opening it. A case is a `<name>.export.json`:
 sends that file to Excel. The case scores as an xlsx case of that package: its formula cells against the sidecar's
 values, and every cell of the sidecar's pivot areas as well, as a spec case scores them. The engine's own
 `rowItems`/`colItems`, read back from its save of the evaluated workbook, are compared with Excel's in the "Pivot
-layout" section (`LinesDiffer`); they are reported, not ratcheted. A sidecar with `refused` (Excel's error text,
+layout" section (`LinesDiffer`), and every pivot of the case whose layout is not Excel's (any verdict) is a
+baseline item, `LF<TAB>case<TAB>Sheet!Pivot` beside the case's `LC` count of compared pivots (T-4944, decision
+0070's consequences); a new one is a regression, and its owner is read by `scripts/new_case_owners.py`. A sidecar with `refused` (Excel's error text,
 which the fill writes when Excel for the web will not open the file: `OracleRefusedError`) makes the case
 `excel_refused`, SPEC-0033's verdict, which always fails. The case is rebuilt from the current engine on every
 run, so when the sidecar's `input_sha256` is not the package's the result notes that the export changed since the

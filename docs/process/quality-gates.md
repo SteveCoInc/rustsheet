@@ -45,7 +45,9 @@ On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygien
     re-run shows the old expectation was wrong.
   - Displayed text (a sidecar's `text` map, decision 0068) is gated the same way on its own lines,
     `TC` (a case's scored text cells) and `TF` (a known text failure), in every gated suite
-    (decision 0070).
+    (decision 0070). So is the layout of a pivot a case compares in full (an engine-export
+    case's): `LC` (its compared pivots) and `LF` (a pivot whose location or saved
+    `rowItems`/`colItems` are not Excel's, `Sheet!Pivot`; T-4944).
 - **Accepted deviations** (`eval/suites/<suite>/deviations`, decision 0036): cells that differ
   from Excel by design (a `Status: DEVIATION` entry, decision 0014), each with RustSheet's pinned
   by-design value.

@@ -224,6 +224,7 @@ probes/t3347-irr-conventional-num.case.json	17
 probes/t3348-rate-fv-nonzero.case.json	3
 probes/t3349-t-inv-2t-near-one.case.json	1
 probes/t3350-chisq-inv-huge-df.case.json	9
+probes/t3351-beta-inv-p-near-1.case.json	22
 probes/t3352-binom-negbinom-large-n.case.json	17
 probes/t3354-f-dist-tiny-x-huge-d2.case.json	2
 probes/t3406-irr-num-boundary.case.json	54
@@ -285,5 +286,6 @@ probes/t4844-irr-guess-ladder.case.json	269
 probes/t4844-irr-pad-ladder.case.json	31
 probes/t4844-irr-stage-invariance.case.json	56
 probes/t4857-f-kinds.case.json	10
+probes/t4863-xlookup-mode-lift-criteria.case.json	12
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1

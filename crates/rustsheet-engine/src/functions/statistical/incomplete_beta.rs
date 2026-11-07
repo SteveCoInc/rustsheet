@@ -410,12 +410,15 @@ fn large_prefactor(a: f64, b: f64, x: f64, y: f64) -> f64 {
         // x/x0 = 1 - lambda/a and y/y0 = 1 + lambda/b around the mean x0 = a/(a+b), so
         // a ln(x/x0) + b ln(y/y0) = -(a rlog1(-lambda/a) + b rlog1(lambda/b)) without the
         // cancellation of a ln x + b ln y against ln B.
-        let lambda = if a > b {
-            (a + b) * y - b
+        let (lambda, x0, y0) = if a > b {
+            let h = b / a;
+            ((a + b) * y - b, 1.0 / (1.0 + h), h / (1.0 + h))
         } else {
-            a - (a + b) * x
+            let h = a / b;
+            (a - (a + b) * x, h / (1.0 + h), 1.0 / (1.0 + h))
         };
-        let exponent = a * rlog1(-lambda / a) + b * rlog1(lambda / b);
+        let exponent =
+            a * brcomp_log_term(-lambda / a, x, x0) + b * brcomp_log_term(lambda / b, y, y0);
         let correction =
             stirling_correction(a) + stirling_correction(b) - stirling_correction(a + b);
         return FRAC_1_SQRT_2PI * (a * b / (a + b)).sqrt() * (-(exponent + correction)).exp();
@@ -424,6 +427,24 @@ fn large_prefactor(a: f64, b: f64, x: f64, y: f64) -> f64 {
     let (small, large) = if a < b { (a, b) } else { (b, a) };
     let ln_beta = ln_gamma(small) - gamma_ln_shift(small, large);
     (a * ln_near_one(x, y) + b * ln_near_one(y, x) - ln_beta).exp()
+}
+
+/// One term of [`large_prefactor`]'s exponent, `e - ln(v/v0)` for `e = v/v0 - 1`: `rlog1(e)`, but
+/// from e < -0.6 on `e - ln(v/v0)` from `v` itself, TOMS 708 `brcomp`'s far branch (its labels 111
+/// and 121). Far below the mean `e` is -1 plus a tiny `v/v0`, which `1 + e` keeps only to about
+/// 2^-53/(v/v0) relative: `F.INV(4.56622854140627E-172,29,7719)` (x near 2.5E-15 at shapes 14.5
+/// and 3859.5) crossed a tail 8.4E-5 off with `rlog1(e)` (accuracy/F.INV/s1 A154;
+/// accuracy/F.INV.RT/s1 A155, 1.8% off, likewise; T-1871). TOMS takes the branch for e > 0.6 too,
+/// where nothing cancels; there `rlog1(e)` is kept, since the branch only re-rounds the term and
+/// moved `BETADIST(0.925987407725148,691.377340906423,16.7922142692129)` and
+/// `F.DIST.RT(4.6348085950674,51,1254)` further from Excel and the math (BETADIST/s1 A171,
+/// F.DIST.RT/s1 A148, 19 and 33 ulp; T-1871 review).
+fn brcomp_log_term(e: f64, v: f64, v0: f64) -> f64 {
+    if e < -0.6 {
+        e - (v / v0).ln()
+    } else {
+        rlog1(e)
+    }
 }
 
 /// ln x for x in (0, 1) with its complement y = 1 - x: ln(1 - y) from y above x = 1/2, as TOMS 708
@@ -787,6 +808,37 @@ mod tests {
         }
         // 1e-8 - ln(1 + 1e-8) = 5e-17 - 3.3e-25 + ...
         assert!((rlog1(1e-8) / 5e-17 - 1.0).abs() < 1e-7);
+    }
+
+    // T-1871: far below the mean, 1 + e = 1 - lambda/a keeps only about 2^-53/(x/x0) of its digits;
+    // brcomp's e - ln(x/x0) branch keeps them. References: 50-digit mpmath I_x(a, b) at the same
+    // doubles, the F tails at Excel's F.INV(4.56622854140627E-172,29,7719) (accuracy/F.INV/s1
+    // A154; 8.4E-5 off before) and F.INV.RT(4.6950979439918E-162,3216,23) (F.INV.RT/s1 A155).
+    #[test]
+    fn large_prefactor_far_from_the_mean_keeps_its_digits() {
+        let lower = search_tails(
+            2.460_052_255_605_808_7e-15,
+            0.999_999_999_999_997_6,
+            14.5,
+            3859.5,
+        )
+        .0;
+        assert!(
+            (lower / 4.566_228_541_406_59e-172 - 1.0).abs() < 1e-13,
+            "{lower:e}"
+        );
+        let upper = search_tails(2.959_676_998_391_32e-17, 1.0, 11.5, 1608.0).0;
+        assert!(
+            (upper / 4.695_097_943_991_835e-162 - 1.0).abs() < 1e-13,
+            "{upper:e}"
+        );
+    }
+
+    // x = 0 reaches the far branch as ln 0 = -inf: an infinite exponent, a zero prefactor, no NaN.
+    #[test]
+    fn large_prefactor_at_zero_is_zero() {
+        assert_eq!(brcomp_log_term(-1.0, 0.0, 0.5), f64::INFINITY);
+        assert_eq!(large_prefactor(14.5, 3859.5, 0.0, 1.0), 0.0);
     }
 
     #[test]

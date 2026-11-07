@@ -1817,7 +1817,11 @@ miss's `#N/A` (A13:A14) and `{2;3}` `#VALUE!` twice (A10:A11), all hits with a r
 reference it picks: `COUNTIF(XLOOKUP(2,..,"x"),">0")` is 1 (A25). An array criterion beside the grid broadcasts,
 2x2 for `{">0",">5"}` (A40:C40; ours a 2x1, T-4826). A workbook with COUNTIF over `SEQUENCE(2)`, `A1:A2+0` or
 `SORT(A1:A2)` as its range failed to open on Excel for the web (createSession 501 unsupportedWorkbook), so those
-forms are not probed: COUNTIF takes no computed array as a range. TAKE and DROP keep the shape
+forms are not probed and no cell says what COUNTIF gives for a computed array as its range (desktop question, M14
+Phase 4). A COUNTIF or SUMIF over an XLOOKUP lifted only by match_mode or search_mode gives the same array of
+`#VALUE!` as a lookup_value lift (probes/t4863-xlookup-mode-lift-criteria, excel-graph, 2026-11-07, T-4863):
+`COUNTIF(XLOOKUP(2,A1:A3,B1:B3,"x",{0;1}),">0")` is a 2x1 of `#VALUE!`, `{0,1}` a 1x2, `{0}` a scalar `#VALUE!`;
+a range if_not_found does not lift (`COUNTIF(XLOOKUP(9,..,G1:G2),">0")` 2). Ours is a scalar for the mode-only lifts (T-5037). TAKE and DROP keep the shape
 and match (A13:C22).
 RANK, RANK.EQ and RANK.AVG over a lifted OFFSET or INDIRECT `ref` (probes/t4801-rank-lifted-offset-indirect, excel-graph,
 2026-11-07, T-4801; Data A1:A3 = 5,8,2, B1:B3 = 9,5,1; 27 probes on the references' own sheet and the same 27 off-sheet,
