@@ -3,7 +3,7 @@ id: T-3821
 title: "Busy lanes per tier: an in-flight sonnet branch no longer hides the lane's ready opus tasks, and the reverse"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
