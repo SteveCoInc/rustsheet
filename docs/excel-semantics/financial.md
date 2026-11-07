@@ -3270,7 +3270,8 @@ all within 15 digits of the math: `DOLLARDE(-805.1,2)` -805.5000000000001 (A71),
 356.223 (A69), `DOLLARFR(-611.7,2)` -611.14 (A75), `DOLLARFR(415.961,1000000)` 415.961 (A74); and the gen-m9 cells
 (`DOLLARDE(2.5,13)` 5.846153846153847).
 Fraction edges (probes/t4608-dollarde-dollarfr-fraction-edges, excel-graph, 2026-11-07, 192 cells, T-4608; dollars 1.5,
--1.5 and 0.3): the fraction is truncated toward 0 first, and the checks run on the original value. A fraction below 0
+-1.5 and 0.3): the checks (below 0 `#NUM!`, below 1
+`#DIV/0!`) run on the untruncated fraction, and a fraction of 1 or more is then truncated toward 0. A fraction below 0
 (-1, -0.5) is `#NUM!` (A2:B3); one from 0 up to but not including 1 (0, 0.3, 0.5, 0.999) is `#DIV/0!` (A1:B1, A4:B6),
 so 0.999 is not rounded up. 1, 1.005 and 1.5 truncate to 1 and return the dollar unchanged (A7:B9); 2.5 truncates to 2
 (`DOLLARDE(1.5,2.5)` 3.5, `DOLLARFR` 1.1), 15.9 to 15 (4.333333333333334, 1.075) and 16.1 to 16 (4.125, 1.08; A10:B12).
@@ -3280,8 +3281,8 @@ puts 10^k + 1 in the lower cut there. At 10^15 - 1 the cells are the correctly r
 1.4999999999999996 (A22:B22), not ulps off it.
 A formula literal is read at 15 significant digits (numbers.md), so the literals 1000000000000001 (A24:B24) and
 9007199254740991 and 9007199254740992 (A25:B26, both read as 9007199254740990) do not probe 10^15 + 1 or 2^53 ± 1.
-The computed arguments do (A82:B96): at `1E15+1` (equally `10^15+1`) Excel's D is 10^15, the lower cut, a double
-`log10` of 10^15 + 1 rounding to 15: `DOLLARDE(1.5,1E15+1)` 1.4999999999999996 and `DOLLARFR` 1.5000000000000004; at
+The computed arguments do (A82:B96): at `1E15+1` (equally `10^15+1`) Excel's D is 10^15, the lower cut, as a double
+`log10` of 10^15 + 1 rounding to 15 would give: `DOLLARDE(1.5,1E15+1)` 1.4999999999999996 and `DOLLARFR` 1.5000000000000004; at
 `10^16+1` (the double 10^16, as 10^16 + 1 is not representable) D is 10^16 and both are 1.5. `2^53-1` and `2^53` give
 the same cells for the 1.5 dollar, 1.5551115123125783 and 1.4503599627370496, the correctly rounded math with D = 10^16
 (A83:B84). For the 0.3 dollar they differ (A93 0.333066907387547, A94 0.33306690738754696; B93 0.2702159776422297, B94

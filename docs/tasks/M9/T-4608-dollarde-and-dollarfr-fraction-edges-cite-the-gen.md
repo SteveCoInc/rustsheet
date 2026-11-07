@@ -3,7 +3,7 @@ id: T-4608
 title: "DOLLARDE and DOLLARFR fraction edges: probe fractions below 1, non-integer fractions and fractions from 1E9 up (10^k-1, 10^k, 10^k+1), and match"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -49,6 +49,7 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4608-dollarde-doll
 - [x] financial.md states the error rule for fractions below 1, the truncation (or not) of a non-integer fraction, and
       the 10^k cut, with the cells. Its "Unprobed" sentence is gone.
 - [x] If the engine changes, a unit test pins one changed cell (test_fn_financial.rs `fn_dollarde` is the place).
+      n/a: the engine did not change.
 - [x] No new known-failure line in eval/baseline/probes.txt, and accuracy/DOLLARDE and accuracy/DOLLARFR still pass
       (`rustsheet-eval accuracy`).
 - [x] `make check` green; reviewers approve.
@@ -61,14 +62,8 @@ Probed with excel-graph (2026-11-07): `probes/t4608-dollarde-dollarfr-fraction-e
 1.5, -1.5, 0.3 against 12 small fractions and 10^k-1, 10^k, 10^k+1 for k = 9, 10, 12, 15, 2^53-1, 2^53, 1E300, plus computed 1E15+1, 2^53±1, 10^16+1). Ours
 matches every cell, so no engine change. financial.md now states the rule (truncate toward 0; below 0 `#NUM!`; 0 to
 under 1 `#DIV/0!`; exact decimal power cut up to 10^12; D = 10^15 at 10^15+1) and its "Unprobed" sentence is gone. Eval delta: probes +192
-cells, all passing, no baseline change.
+cells, all passing; eval/baseline/probes.txt gains only its case-count line, no known-failure line.
 
 Follow-up: T-4880 (the Gate A math definition differs from Excel at 10^15+1 and 1E300).
 
-## Blocked because
-Resumed after the review-round limit (step 5c).
-Three reviewer-excel-fidelity rounds each requested changes to the same financial.md "Fraction edges" paragraph; every round
-found the prose enumeration of cells that are not correctly rounded incomplete (round 3: A80 wrongly listed; B92, B95, A11,
-A25:B26 and their mirrors missing). The data is right: 192/192 cells pass, the oracle and math sidecars are current, and the
-design reviewer approved. The last push replaced the enumeration with a general statement and three examples; it has not
-been re-reviewed. Next step: run the fidelity reviewer once on the current head, then mark the PR ready and enqueue it.
+Resumed after the review-round limit (step 5c); the full panel approved on re-review.
