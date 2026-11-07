@@ -3,7 +3,7 @@ id: T-4939
 title: "A column delete that leaves a filter criterion re-applies the kept criteria to every data row: hide visible rows they reject, evaluate custom filters"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
