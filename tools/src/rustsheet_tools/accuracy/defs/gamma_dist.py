@@ -55,6 +55,8 @@ What has no math value (the sampler redraws; the Excel cells stay in the eval su
 from __future__ import annotations
 
 import math
+import random
+import sys
 from collections.abc import Sequence
 
 import mpmath
@@ -69,7 +71,9 @@ from rustsheet_tools.accuracy.defs.gamma import (
     quantile,
     upper_tail,
 )
+from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, NoValueError, Param, register
+from rustsheet_tools.accuracy.sampler import log_uniform
 
 KERNEL_SOURCE = (
     "statistics.md#one-incomplete-gamma-kernel-under-erf-erfc-norm-chisq-gammadist-and-poisson-t-1778"
@@ -222,6 +226,41 @@ def _huge_ratio_domain(fa: float, y: float) -> str | None:
     return None
 
 
+# The aimed draw of T-4635's fresh sweep (`generate GAMMA.DIST --batch r4-T-4635 --stratum aimed`): y within 10% of
+# rule R's cut, x below 1E301 (Excel for the web refuses a workbook holding an x literal of 1E307 or more, T-4635's
+# first fill), so beta is 1E-8 or smaller.
+HUGE_RATIO_AIMED_SPREAD = 1.1
+HUGE_RATIO_AIMED_BETA = (1e-100, 1e-8)
+
+
+def _huge_ratio_cut(a: float) -> float:
+    """The smallest y rule R makes #NUM! at shape `a` in (1, 4): y / a * 4 overflows, or (to 1.1) y^a does."""
+    cut = sys.float_info.max / 4 * a
+    if a <= HUGE_RATIO_POWER_SHAPE_MAX:
+        cut = min(cut, sys.float_info.max ** (1 / a))
+    return cut
+
+
+def _huge_ratio_point(rng: random.Random) -> list[Arg]:
+    """GAMMA.DIST near rule R's cut (T-4635), drawn after the rule froze: shapes 1.01 to 1.1 (the power branch) one
+    time in four, 1.11 to 4 (the quotient) one in two, y log-uniform within 10% of the cut, either side; shapes 0.3
+    to 1 and 4 to 10 (never #NUM!) one in eight each, y log-uniform from 1E300 to the largest double."""
+    pick = rng.random()
+    largest = sys.float_info.max
+    if pick < 0.125:
+        a, y = rng.uniform(0.3, 1.0), log_uniform(rng, 1e300, largest)
+    elif pick < 0.25:
+        a, y = rng.uniform(4.0, 10.0), log_uniform(rng, 1e300, largest)
+    else:
+        a = rng.uniform(HUGE_RATIO_QUOTIENT_SHAPE_MIN, HUGE_RATIO_POWER_SHAPE_MAX) if pick < 0.5 else rng.uniform(
+            HUGE_RATIO_POWER_NUMBER_SHAPE, 4.0
+        )
+        cut = _huge_ratio_cut(a)
+        y = min(largest, log_uniform(rng, cut / HUGE_RATIO_AIMED_SPREAD, cut * HUGE_RATIO_AIMED_SPREAD))
+    beta = log_uniform(rng, *HUGE_RATIO_AIMED_BETA)
+    return [y * beta, a, beta, rng.random() < 0.5]
+
+
 def _density_domain(fx: float, fa: float, ratio: float) -> str | None:
     """GAMMA.DIST's density-only error rules at a positive x (T-2738, T-3316 rule 1, T-4308)."""
     if ratio < NORMAL_MIN:
@@ -334,6 +373,7 @@ GAMMA_DIST = register(
         ),
         value=_gamma_dist,
         domain=_gamma_dist_domain,
+        aimed=_huge_ratio_point,
         tail=_gamma_tail_x,
         tail_param="x",
         sources=(
