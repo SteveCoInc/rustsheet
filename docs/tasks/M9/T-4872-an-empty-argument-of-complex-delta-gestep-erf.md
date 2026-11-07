@@ -3,7 +3,7 @@ id: T-4872
 title: "An empty argument of COMPLEX, DELTA, GESTEP, ERF, ERFC, the BESSEL functions, CONVERT and the base conversions follows Excel (probe the Analysis ToolPak #N/A rule)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
