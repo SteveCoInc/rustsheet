@@ -3,7 +3,7 @@ id: T-4310
 title: "Move chisq.rs, regression.rs and aggregate_args.rs from a hand-rolled Node::ReferenceKind check to evaluate_picked_reference_arg (T-2883 follow-up)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
@@ -24,7 +24,7 @@ T-2883 moved TRIMMEAN and Z.TEST. `rg 'Node::ReferenceKind' crates/rustsheet-eng
 ## Out of scope
 -
 
-## Handoff
+## Handoff (resumed)
 Claimed 2026-11-07 by an opus run with too little session budget left to finish, so it was handed off before any code
 change. No code is on this branch. What the three sites do on origin/main (read before changing them):
 - statistical/chisq.rs `numbers_from_ranked_arg` (the RANK/LARGE/SMALL data reader, not CHISQ.TEST): `by_reference`
