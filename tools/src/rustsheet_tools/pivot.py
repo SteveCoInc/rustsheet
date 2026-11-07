@@ -50,14 +50,21 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 from typing import Any
 from xml.sax.saxutils import quoteattr
 
 import xlsxwriter.utility
 
 from rustsheet_tools.pivot_definition import DefinedPivot
-from rustsheet_tools.pivot_xml import MAIN_NS, PACKAGE_REL_NS, REL_NS, number_text
+from rustsheet_tools.pivot_xml import (
+    DATE_GROUPS,
+    MAIN_NS,
+    PACKAGE_REL_NS,
+    REL_NS,
+    date_shared_items,
+    iso_date,
+    number_text,
+)
 
 _CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.{}+xml"
 _FUNCTIONS: dict[str, tuple[str, Callable[[list[float]], float]]] = {
@@ -83,10 +90,6 @@ _KEYS = {
     "column_show_all",
 }
 _GROUP_KEYS = {"start", "end", "interval", "items"}
-_DATE_GROUPS = {"seconds", "minutes", "hours", "days", "months", "quarters", "years"}
-# Pivot caches write a date before March 1900 on the OLE epoch (1899-12-30 is 0), so the same
-# epoch serves every serial the builder writes (crates/rustsheet-xlsx `pivot_cache_date_serial`).
-_OLE_EPOCH = datetime(1899, 12, 30)
 
 Cell = str | float
 
@@ -336,10 +339,7 @@ class _Pivot:
                 numbers = [float(r[i]) for r in self.records if r[i] is not None]
                 blank = ' containsBlank="1"' if len(numbers) < len(self.records) else ""
                 if self._dates(i):
-                    shared = (
-                        '<sharedItems containsSemiMixedTypes="0" containsNonDate="0" containsDate="1"'
-                        f' containsString="0"{blank} minDate="{_iso(min(numbers))}" maxDate="{_iso(max(numbers))}"/>'
-                    )
+                    shared = date_shared_items(numbers, blank=len(numbers) < len(self.records))
                 else:
                     integer = ' containsInteger="1"' if all(n.is_integer() for n in numbers) else ""
                     shared = (
@@ -366,7 +366,7 @@ class _Pivot:
                 if isinstance(v, str)
                 else "<m/>"
                 if v is None
-                else f'<d v="{_iso(float(v))}"/>'
+                else f'<d v="{iso_date(float(v))}"/>'
                 if self._dates(i)
                 else f'<n v="{number_text(float(v))}"/>'
                 for i, v in enumerate(record)
@@ -453,20 +453,11 @@ class _Group:
                 f' groupInterval="{number_text(self.interval)}"'
             )
         else:
-            bounds = f'groupBy="{self.by}" startDate="{_iso(self.start)}" endDate="{_iso(self.end)}"'
+            bounds = f'groupBy="{self.by}" startDate="{iso_date(self.start)}" endDate="{iso_date(self.end)}"'
         return (
             f'<fieldGroup base="{base}"><rangePr autoStart="0" autoEnd="0" {bounds}/>'
             f'<groupItems count="{len(self.items)}">{items}</groupItems></fieldGroup>'
         )
-
-
-def _iso(serial: float) -> str:
-    """A date serial as a pivot cache writes it, to the whole second (truncated; the cache is
-    refreshed on load, so it only has to parse)."""
-    if not 0 <= serial < 2958466:
-        msg = f"a pivot date serial must be 0 to 9999-12-31: {serial!r}"
-        raise ValueError(msg)
-    return (_OLE_EPOCH + timedelta(seconds=int(serial * 86400))).strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def _group(raw: Any) -> _Group | None:
@@ -476,8 +467,8 @@ def _group(raw: Any) -> _Group | None:
         msg = f"a pivot group has exactly the keys {sorted(_GROUP_KEYS)} (and optionally by): {raw!r}"
         raise ValueError(msg)
     by = raw.get("by")
-    if by is not None and (by not in _DATE_GROUPS or raw["interval"] != 1):
-        msg = f"a date group's by is one of {sorted(_DATE_GROUPS)} with interval 1: {raw!r}"
+    if by is not None and (by not in DATE_GROUPS or raw["interval"] != 1):
+        msg = f"a date group's by is one of {sorted(DATE_GROUPS)} with interval 1: {raw!r}"
         raise ValueError(msg)
     bounds = [raw["start"], raw["end"], raw["interval"]]
     if any(isinstance(b, bool) or not isinstance(b, int | float) for b in bounds):
@@ -499,7 +490,7 @@ def _group(raw: Any) -> _Group | None:
         raise ValueError(msg)
     if by is not None:
         for bound in (start, end):
-            _iso(bound)  # refuses a serial off the calendar
+            iso_date(bound)  # refuses a serial off the calendar
     return _Group(start, end, interval, items, by)
 
 
