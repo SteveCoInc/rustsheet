@@ -7,6 +7,7 @@ use rustsheet_xlsx::base::expressions::utils::number_to_column;
 use rustsheet_xlsx::base::types::MergedCell;
 use rustsheet_xlsx::base::Model;
 use rustsheet_xlsx::error::{ImportLimit, XlsxError};
+use rustsheet_xlsx::export::save_xlsx_to_writer;
 use rustsheet_xlsx::import::{
     load_from_xlsx_bytes, load_from_xlsx_bytes_with_limits, ImportLimits,
 };
@@ -842,12 +843,13 @@ fn many_merged_ranges_import_quickly_and_keep_the_first_of_intersecting_ones() -
     Ok(())
 }
 
-/// Whole-column merged ranges, a thousand of them: clearing their covered cells walks the cells
-/// stored, not the 2^30 cells the ranges name, and still empties the ones covered (T-3442). It
-/// takes about 0.1 s; the bound of 10 s leaves room for a slow runner, while the old walk, about
-/// 10^9 lookups, took minutes.
+/// Whole-column merged ranges, a thousand of them: the import never walks the 2^30 cells the ranges
+/// name (T-3442; a walk of their area, about 10^9 lookups, took minutes) and keeps what their
+/// covered cells hold, as Excel does (T-4722; docs/excel-semantics/xlsx-storage.md "A merged range
+/// keeps the values of its covered cells"). It takes about 0.1 s; the bound of 10 s leaves room for
+/// a slow runner.
 #[test]
-fn many_whole_column_merges_import_quickly_and_clear_covered_cells() -> TestResult {
+fn many_whole_column_merges_import_quickly_and_keep_covered_cells() -> TestResult {
     let refs: Vec<String> = (1..=1000)
         .map(|column| {
             let name = number_to_column(column).unwrap_or_default();
@@ -865,7 +867,89 @@ fn many_whole_column_merges_import_quickly_and_clear_covered_cells() -> TestResu
     );
     let model = Model::from_workbook(workbook, "en")?;
     assert_eq!(model.get_formatted_cell_value(0, 1, 1)?, "1");
-    assert_eq!(model.get_formatted_cell_value(0, 500_000, 1)?, "");
-    assert_eq!(model.get_formatted_cell_value(0, 500_000, 2)?, "");
+    assert_eq!(model.get_formatted_cell_value(0, 500_000, 1)?, "2");
+    assert_eq!(model.get_formatted_cell_value(0, 500_000, 2)?, "3");
     Ok(())
+}
+
+/// The covered cells of a sheet's merged ranges as fixtures/merged-covered-values has them: A1:D1
+/// merged over A1 "anchor", B1 "x", C1 7 and D1 an empty string, and A2:B2 over a value-less
+/// `t="str"` covered B2; plus the shapes the old clearing sweep had to get right (G1:G2 next to a
+/// range with a smaller first column, F4:G5 starting further down). Import keeps every covered
+/// value and style, and formulas read them with Excel's values (xlsx-storage.md "A merged range
+/// keeps the values of its covered cells", excel-graph, T-4148).
+#[test]
+fn covered_cells_keep_their_values_and_styles_on_import() -> TestResult {
+    let rows = concat!(
+        r#"<row r="1"><c r="A1" t="inlineStr"><is><t>anchor</t></is></c>"#,
+        r#"<c r="B1" s="13" t="inlineStr"><is><t>x</t></is></c><c r="C1" s="13"><v>7</v></c>"#,
+        r#"<c r="D1" t="inlineStr"><is><t></t></is></c><c r="G1"><v>4</v></c></row>"#,
+        r#"<row r="2"><c r="A2"><v>1</v></c><c r="B2" t="str"/><c r="G2"><v>5</v></c></row>"#,
+        r#"<row r="4"><c r="F4"><v>6</v></c><c r="G4"><v>8</v></c></row>"#,
+        r#"<row r="5"><c r="F5"><v>9</v></c></row>"#,
+        r#"<row r="7"><c r="A7"><f>B1</f></c><c r="B7"><f>C1</f></c>"#,
+        r#"<c r="C7"><f>ISBLANK(B1)</f></c><c r="D7"><f>ISTEXT(D1)</f></c>"#,
+        r#"<c r="E7"><f>COUNTA(A1:D1)</f></c><c r="F7"><f>SUM(A1:D1)</f></c>"#,
+        r#"<c r="G7"><f>COUNTBLANK(A1:D1)</f></c><c r="H7"><f>LEN(B1)</f></c>"#,
+        r#"<c r="I7"><f>ISBLANK(B2)</f></c><c r="J7"><f>COUNTA(A2:B2)</f></c>"#,
+        r#"<c r="K7"><f>SUM(F4:G5)</f></c></row>"#,
+    );
+    let refs = ["A1:D1", "A2:B2", "G1:G2", "F4:G5"].map(String::from);
+    let workbook =
+        load_from_xlsx_bytes(&with_first_sheet_merges(rows, &refs)?, "case", "en", "UTC")?;
+    let mut model = Model::from_workbook(workbook, "en")?;
+    model.evaluate();
+    let shown = |row, column| model.get_formatted_cell_value(0, row, column);
+    for (column, expected) in [(2, "x"), (3, "7"), (4, ""), (7, "4")] {
+        assert_eq!(shown(1, column)?, expected, "row 1, column {column}");
+    }
+    for ((row, column), expected) in [((2, 7), "5"), ((4, 7), "8"), ((5, 6), "9")] {
+        assert_eq!(shown(row, column)?, expected, "row {row}, column {column}");
+    }
+    let expected = [
+        "x", "7", "FALSE", "TRUE", "4", "7", "1", "1", "TRUE", "1", "23",
+    ];
+    for (column, expected) in (1..).zip(expected) {
+        assert_eq!(shown(7, column)?, expected, "row 7, column {column}");
+    }
+    let centered = model.get_style_for_cell(0, 1, 2)?;
+    assert_eq!(centered, model.get_style_for_cell(0, 1, 3)?);
+    assert_ne!(centered, model.get_style_for_cell(0, 1, 1)?);
+    Ok(())
+}
+
+/// fixtures/merged-covered-formula's shape: a formula `=A1+1` in the covered B1 of A1:B1 is
+/// recalculated (2), `=B1` reads it, ISFORMULA is TRUE and `=COUNT(A1:B1)` is 2 (excel-graph,
+/// T-4148). Saving writes the covered formula and the covered text back, and the reloaded
+/// workbook calculates the same.
+#[test]
+fn covered_cells_calculate_and_survive_a_round_trip() -> TestResult {
+    let rows = concat!(
+        r#"<row r="1"><c r="A1"><v>1</v></c><c r="B1"><f>A1+1</f><v>0</v></c></row>"#,
+        r#"<row r="2"><c r="A2" t="inlineStr"><is><t>a</t></is></c>"#,
+        r#"<c r="B2" t="inlineStr"><is><t>kept</t></is></c></row>"#,
+        r#"<row r="3"><c r="A3"><f>B1</f></c><c r="B3"><f>ISFORMULA(B1)</f></c>"#,
+        r#"<c r="C3"><f>COUNT(A1:B1)</f></c><c r="D3"><f>B2</f></c></row>"#,
+    );
+    let refs = ["A1:B1", "A2:B2"].map(String::from);
+    let workbook =
+        load_from_xlsx_bytes(&with_first_sheet_merges(rows, &refs)?, "case", "en", "UTC")?;
+    let mut model = Model::from_workbook(workbook, "en")?;
+    model.evaluate();
+    let check = |model: &Model| -> TestResult {
+        assert_eq!(model.get_cell_formula(0, 1, 2)?.as_deref(), Some("=A1+1"));
+        let shown: Vec<String> = [(1, 2), (3, 1), (3, 2), (3, 3), (3, 4)]
+            .into_iter()
+            .map(|(row, column)| model.get_formatted_cell_value(0, row, column))
+            .collect::<Result<_, _>>()?;
+        assert_eq!(shown, ["2", "2", "TRUE", "2", "kept"]);
+        Ok(())
+    };
+    check(&model)?;
+    let bytes = save_xlsx_to_writer(&model, Cursor::new(Vec::new()))?.into_inner();
+    let workbook = load_from_xlsx_bytes(&bytes, "case", "en", "UTC")?;
+    let mut reloaded = Model::from_workbook(workbook, "en")?;
+    assert_eq!(reloaded.workbook.worksheets[0].merged_cells.len(), 2);
+    reloaded.evaluate();
+    check(&reloaded)
 }
