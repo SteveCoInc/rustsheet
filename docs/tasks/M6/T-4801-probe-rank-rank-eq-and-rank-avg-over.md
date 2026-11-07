@@ -3,7 +3,7 @@ id: T-4801
 title: "Probe RANK, RANK.EQ and RANK.AVG over a lifted OFFSET or INDIRECT ref (T-4740 follow-up)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
