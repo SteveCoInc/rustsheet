@@ -3,7 +3,7 @@ id: T-4902
 title: "let.rs reuses Model::is_empty_argument for its own empty-or-omitted check (T-4873 follow-up)"
 milestone: M5
 lane: functions-math
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -22,9 +22,15 @@ instead of spelling out the same test, so the test has one definition (directive
 - `mmult.rs` tests only the literal `EmptyArgKind`, which is a different test. Leave it.
 
 ## Acceptance criteria
-- [ ] let.rs calls `self.is_empty_argument(node)` at that check; no behaviour change (engine lib tests and
+- [x] let.rs calls `self.is_empty_argument(node)` at that check; no behaviour change (engine lib tests and
       `make check-fast` pass, eval delta 0).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Other empty-argument checks that test something else (mmult.rs).
+
+## Outcome
+- Done in T-4870's PR (#3925). Merging main there made `Model::is_empty_argument` the one definition, and let.rs's
+  `bind_argument_value` now calls it. Both it and `empty_arguments` moved to functions/util/empty_args.rs, so they are
+  not LET internals. No behaviour change: engine lib tests and `make check-fast` pass, eval delta 0 outside T-4870's
+  own cases.

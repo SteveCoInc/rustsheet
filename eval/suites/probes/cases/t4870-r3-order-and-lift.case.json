@@ -1,0 +1,41 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4870 round 3: the written-empty #N/A of the ToolPak date functions among other argument errors and over a lifted array. Predictions in docs/research/t4870/predictions-r3.tsv committed before the excel-graph fill: H_order (each function's read order, the #N/A at the empty argument's position, one result per element) against H_first (the #N/A first, one scalar).",
+  "tags": [
+    "M6",
+    "dates",
+    "probe"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=EDATE(1/0,)",
+        "A2": "=EDATE(\"x\",)",
+        "A3": "=EDATE(,1/0)",
+        "A4": "=EDATE(,\"x\")",
+        "A5": "=EOMONTH(-1,)",
+        "A6": "=WORKDAY(1/0,)",
+        "A7": "=WORKDAY(,1/0)",
+        "A8": "=WORKDAY(1,,1/0)",
+        "A9": "=NETWORKDAYS(1/0,)",
+        "A10": "=NETWORKDAYS(-1,)",
+        "A11": "=NETWORKDAYS.INTL(1,,99)",
+        "A12": "=YEARFRAC(1/0,)",
+        "A13": "=YEARFRAC(,1,9)",
+        "A14": "=YEARFRAC(1,,9)",
+        "A15": "=LAMBDA(a,b,EDATE(a,b))(1/0,)",
+        "A16": "=ROWS(EDATE({1;2},))",
+        "A17": "=INDEX(EDATE({1;2},),2)",
+        "A18": "=INDEX(EDATE({1;\"x\"},),2)",
+        "A19": "=ROWS(EOMONTH(,{1;2}))",
+        "A20": "=ROWS(WEEKNUM(,{1;2}))",
+        "A21": "=ROWS(YEARFRAC({1;2},))",
+        "A22": "=INDEX(YEARFRAC({1;2},),1)",
+        "A23": "=ROWS(WORKDAY({1;2},))",
+        "A24": "=ROWS(NETWORKDAYS(,{1;2}))"
+      }
+    }
+  ]
+}

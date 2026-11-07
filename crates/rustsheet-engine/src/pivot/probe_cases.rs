@@ -13,9 +13,9 @@ use crate::expressions::utils::number_to_column;
 use crate::model::Model;
 use crate::pivot::{compute_on, lay_out, render, PivotCell, MAX_PIVOT_WORK};
 use crate::pivot::{
-    read_source, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea,
-    DataField, PageField, PivotCache, PivotField, PivotItem, PivotTable, RecordValue, ShowDataAs,
-    SourceArea, SourceCells, MAX_RECORD_VALUES,
+    read_source, Aggregate, Axis, AxisField, CacheBuilder, CacheField, CacheItem, CacheSource,
+    CellArea, DataField, PageField, PivotCache, PivotField, PivotItem, PivotTable, RecordValue,
+    ShowDataAs, SourceArea, SourceCells, MAX_RECORD_VALUES,
 };
 
 /// The pivot sheets of probes/t4634-pivot-total-order-4 that the result, line and render tests
@@ -207,6 +207,17 @@ pub(crate) fn probe_pivot_over(
 ) -> (PivotCache, PivotTable) {
     let spec = &sheet(case, name)["pivot_tables"][0];
     let definition = &spec["definition"];
+    // The builder writes each calculated field after the source fields, with its formula and
+    // `databaseField="0"` (`pivot_definition.py` `cache_definition`).
+    let mut cache = cache;
+    for calculated in definition["calculated"].as_array().into_iter().flatten() {
+        cache.fields.push(CacheField {
+            name: calculated["name"].as_str().unwrap().to_string(),
+            formula: Some(calculated["formula"].as_str().unwrap().to_string()),
+            ..CacheField::default()
+        });
+    }
+    let cache = cache;
     let field = |name: &str| {
         u32::try_from(cache.fields.iter().position(|f| f.name == name).unwrap()).unwrap()
     };

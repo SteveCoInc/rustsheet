@@ -66,7 +66,8 @@ committed; recalc input_sha256 3eed9bc4…, 00144ae5… and c81db4c1…, in the 
   does is open (T-4177).
 Not checked, all UNVERIFIED (T-4654): the exported shared-item order is the engine's (a cache's old items first,
 new ones appended), not the order Excel was seen to save (source order first, stale items after; "Item casing when
-cache and source disagree, and date items", t4612); `containsNonDate` and `minDate`/`maxDate` are never written.
+cache and source disagree, and date items", t4612); `containsNonDate` and `minDate`/`maxDate` are never written, except on a field grouped in place by dates (T-4734;
+next entry).
 The cache definition's unread attributes and elements are not kept: the export writes `numFmtId="0"`, the builder's
 version attributes and no refresh metadata or `extLst` (T-4735).
 Status: UNVERIFIED (probe pending: T-4177). The three runs above are scratch observations; T-4177's suite commits
@@ -77,6 +78,50 @@ drops them, `OpaqueEntry::is_layout_lines`), then the engine's; and it drops, wi
 holds two texts that differ only in case (next entry). A render that collapses to `#SPILL!` drops the saved lines
 too, and the export then writes the definition with no `rowItems`/`colItems`; what Excel saves for a collapsed
 pivot is UNVERIFIED (probe pending: T-4177).
+
+## Excel for the web opens engine-exported grouped pivot caches
+Rule: Excel for the web opens, without repair, and renders a refreshOnLoad pivot whose grouped cache the engine's
+export wrote (T-4734) in the case builder's shapes (`tools/src/rustsheet_tools/pivot_groups.py`, read off
+Excel-authored caches; its golden parts are the builder's output, not files Excel saved):
+- a field grouped in place by a range lists its own values as shared items (`<x v>` records), then
+  `<fieldGroup [par] base>` (`base` itself) with `<rangePr autoStart="0" autoEnd="0" ...>` (`startNum`, `endNum`,
+  `groupInterval`, or `groupBy`, `startDate`, `endDate`) and its group items as `<groupItems>`;
+- a date level Excel adds (`Quarters`, `Years`) is a `databaseField="0"` cacheField with no shared items and
+  `<fieldGroup base>`, its `rangePr` and `groupItems`; the in-place field's `par` names the last level;
+- a manual group is a `databaseField="0"` cacheField with `<fieldGroup base>`, a `<discretePr>` entry per base
+  shared item and `<groupItems>`; the base field has only `<fieldGroup par/>`.
+A field grouped in place by dates needs `containsNonDate="0"` (the schema's default is on) and `minDate`/`maxDate`
+on its `sharedItems`: without them Excel's refresh on open dropped the date grouping and listed each date (DC
+showed `44016`, `44211` where the months belong; every GETPIVOTDATA on a month or level was `#REF!`). The export
+writes them for such a field whose values are all dates, `minDate` and `maxDate` its first and last date. What Excel
+saved for the same field is in the sidecar eval/suites/probes/cases/t4170-pivot-date-levels.oracle.json
+(`pivots[0].cache_fields[0].shared_flags`: `containsNonDate="0"`, `minDate` 2018-12-15, its first date, and
+`maxDate` 2021-01-16, a day past its last date 2021-01-15). Whether the last-plus-one-day `maxDate` matters is
+T-4654's.
+Evidence: T-4734 oracle runs (excel-graph, 2026-11-07, `rustsheet-oracle` `_recalc_cached` of engine exports, not
+committed): the probe workbooks built from their case specs, loaded by the importer and saved by the regenerating
+export (`save_xlsx_to_writer`), each compared with the probe's sidecar:
+- t4170-pivot-manual-groups (input sha256 df3fc476…): 7 pivots, all 196 pivot cells and 19 GETPIVOTDATA cells
+  equal the sidecar;
+- t4170-pivot-date-levels: first run (no `containsNonDate`, 0c8366fd…) 402 of 410 pivot cells and 14 of 21 formula
+  cells differ, the months dropped; with `containsNonDate="0"`, `minDate`, `maxDate` (e0579e72…) all 410 pivot
+  cells and 21 formula cells equal;
+- t4236-pivot-date-groups-no-blank (f3b660b2…): all 349 formula cells equal (179 differed before the flags);
+- t4228-pivot-range-groups (2b8ff5a0…): all 168 formula cells equal; t4128-pivot-spike (2371c560…, G a numeric
+  range group): its 3 exported pivots' cells and both formula cells equal (pivot K is not imported, so not exported);
+- an API-built cache (Amount grouped by tens, Date by months with Quarters and Years added, Product2 a manual group;
+  a2befb89…): GETPIVOTDATA on Years `2019`, `2020`, `<1/1/2019` and the grand total gave 15, 16, 32 and 63, the
+  engine's answers.
+Status: UNVERIFIED (probe pending: T-4177, which commits engine-export re-render cases; the runs above are scratch
+observations). Not checked: a group renamed through its item's `n`, groups over blanks, a 1904 workbook (the
+import refuses its date groups, so the export drops them), and whether `autoStart`/`autoEnd` on (the model keeps
+no such flag; the export writes them off, which keeps the bounds the engine groups by) would change Excel's refresh.
+Implemented in: crates/rustsheet-xlsx/src/export/pivots/groups.rs (`check`, `write_field_group`,
+`write_date_flags`; T-4734). The model keeps a field's own values beside its range grouping
+(`CacheField::ungrouped`, kept by `group_by_numbers` and `group_by_dates`), and the export writes a grouping only
+when grouping those values again by the import's rule gives the field it holds; any other shape (a numeric level or
+a manual group beside a range grouping, two manual groups of one field, an added field before a database field)
+drops the cache and its pivots with a log line. The export's cache limits count the kept values too.
 
 ## Case-variant text items make Excel for the web call the file corrupt
 Rule: a cache field whose shared items list two texts that differ only in case (`East`, `east`) makes
@@ -295,6 +340,7 @@ the formula over the sum of Sales, not the sum of the formula over the records. 
 Evidence: probes/t4128-pivot-spike K!D6 28.1, K!D7 38.1 (East Total, 19*2+0.1) and K!D11 92.1 (Grand
 Total, 46*2+0.1) (excel-graph, 2026-11-06, T-4128).
 Status: VERIFIED (excel-graph); the edge cases are the next entry's (T-4505)
+Implemented in: crates/rustsheet-engine/src/pivot/calculated.rs (T-4174)
 
 ## Calculated fields as Excel for the web renders them
 Rule, per shape (each its own pivot at A3, Sum data fields unless said; Data has Region, Product, Units, Price,
@@ -302,6 +348,9 @@ Zero, Unit Cost and Bob's, six records, the sums in the case description):
 - **Every level computes the formula over that cell's sums**, row and column totals included. Rev = Units*Price
   shows East Total 210 = 6×35 (not the rows' 150+5, nor the records' 85), West Total 207 = 9×23 and Grand Total
   870 = 15×58 (LV). With Region on columns, the Grand Total column of A is 360 = 9×40, not 150+40 (LC).
+- **An intersection no record reaches shows 0, not a blank**: in LC Product C has no East record, and C/East
+  (B7) is 0 = 0×0 like C/West (C7, Units 0). Whether that is the formula over sums of 0 (`Price/Units` would be
+  #DIV/0!) or always 0 is UNVERIFIED (probe pending: T-4897); the engine evaluates the formula over sums of 0.
 - **Operands need not be data fields**: LC shows only Sum of Rev, NV's Ut = Units*2 shows A 18 with no Units data
   field.
 - **The summary function of a data field over a calculated field is ignored**: Count, Average, Max and Min of Rev
@@ -339,9 +388,20 @@ probes/t4505-pivot-calc-field-functions FX, FR, FL, FK, FM, FN, FV, ET, EC, ES, 
 2026-11-07, T-4505); the sidecars' `pivots` sections hold every cell.
 Status: VERIFIED (excel-graph) for these shapes: rows Product, or Region and Product, LC with columns Region, Sum
 data fields but in CNT. The two saved-formula observations rest only on the oracle's cached downloads (input sha256
-1ad2d4d1… and d8291cc3…), not committed files, so they are UNVERIFIED; they matter only to what the engine's export
-writes, which is T-4174's (no probe can commit them: a sidecar holds cells, not the saved parts). Not probed: a calculated field with a number format, under show-values-as, on a
-grouped field, with a filter or Top-N by it, or referenced by GETPIVOTDATA. Implemented in: nothing yet (T-4174).
+1ad2d4d1… and d8291cc3…), not committed files, so they are UNVERIFIED; the engine's export writes each formula as it
+was read (a cycle stays `Ca = Cb+1`, not `#NAME?+1`), which no probe can check (a sidecar holds cells, not the saved
+parts). Not probed (UNVERIFIED, probe pending: T-4897, each the engine's choice): a calculated field with a number
+format, under show-values-as (the engine applies the mode to the formula's values), on a grouped field (the importer
+skips a cache with both), with a filter or Top-N by it (the engine has no result), beside a custom subtotal (it shows
+the formula's value), a field named in another case (matched ignoring case), an
+operand holding an error (the error enters the formula), a field that only names a cycle member (`#NAME?`), a
+formula whose value is an array (`#VALUE!`), empty (0) or a bare boolean (`Units>3`: 1 or 0), and the refusals the engine adds to the web's (web.md's
+skip list).
+Implemented in: crates/rustsheet-engine/src/pivot/calculated.rs (`check_calculated_fields`, `Plan`: the formula is
+read by the engine's parser, with `Parser::set_quoted_names` for `'Unit Cost'`, checked, and evaluated per cell with
+each field replaced by the cell's Sum, in an empty sandbox workbook on a fixed clock, drawing on the pivot's work
+budget), crates/rustsheet-engine/src/pivot/result.rs (`calculate`), crates/rustsheet-xlsx/src/import/pivots.rs and
+crates/rustsheet-xlsx/src/export/pivots/cache.rs (T-4174).
 
 ## A Top-N filter changes the subtotals and grand totals
 Rule: with a `top10 val="2"` count filter on Product by Sum of Sales, each region shows only its two
@@ -1340,14 +1400,22 @@ it the layout fails with `PastSheet`, which the grid writer renders as `#SPILL!`
 still has them. A refresh of several pivots (one cache, or every `refreshOnLoad` cache on open)
 spends one budget of `MAX_PIVOT_WORK` work and `MAX_PIVOT_CELLS` cells written, cleared and
 scanned together (`PivotBudget`), not one per pivot.
-Evidence: none for Excel; the work, node, text and cell caps are resource limits (SPEC-0032
-"Untrusted-input limits", T-4142, T-4151).
+A calculated field's formula (T-4174) is at most 8,192 characters (`MAX_CALCULATED_FORMULA_CHARS`, Excel's cell
+formula limit) and a cache holds at most 256 calculated fields (`MAX_CALCULATED_FIELDS`); past either the importer
+skips the cache and `compute` has no result. Each formula is evaluated once per cell and once for the empty
+intersections, its node clone and its evaluator work charged to the pivot's budget (the same units), and the
+fields' dependencies are ordered without recursion (Kahn's algorithm), so a chain of 255 calculated fields costs no
+stack.
+Evidence: none for Excel; the work, node, text, cell and calculated-field caps are resource limits (SPEC-0032
+"Untrusted-input limits", T-4142, T-4151, T-4174).
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `MAX_PIVOT_NODES`, `charge`,
 `count_nodes`)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`MAX_PIVOT_CELLS`, `location`; T-4147)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`MAX_PIVOT_TEXT_BYTES`; T-4149)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`PivotBudget`; T-4151)
+Implemented in: crates/rustsheet-engine/src/pivot/calculated.rs (`MAX_CALCULATED_FORMULA_CHARS`,
+`MAX_CALCULATED_FIELDS`, `Sandbox::evaluate`; T-4174)
 Implemented in: crates/rustsheet/src/edit/pivot.rs (`PivotError::Limit`: a pivot the API creates, sets
 or refreshes past a limit is not added or changed, and nothing is written; T-4178)
 
@@ -2197,3 +2265,19 @@ parent; totals never count what a filter removes").
 Status: UNVERIFIED (probe pending: T-4879) for the Show Details sheet; the record set is checked as above.
 Implemented in: crates/rustsheet-engine/src/pivot/layout/records.rs (`records_behind`, T-4184);
 crates/rustsheet/src/pivot_view.rs (`Workbook::pivot_cell_records`, T-4184).
+
+## A non-English Excel saves its own UI language's default captions
+Rule: the default captions (`Row Labels`, `Column Labels`, `(Multiple Items)`) are not stored in
+the pivot definition: the saved cells hold them in the saving Excel's UI language, with no
+`rowHeaderCaption` or `colHeaderCaption`. The `Values` caption is stored, in that language, as
+`dataCaption`. The en-US engine renders the English captions, so the pivot-corpus classifies such a pivot stale
+(T-4131). That an en-US Excel refresh of such a file writes the English captions is an inference from
+the captions not being stored, not observed (UNVERIFIED).
+Evidence (Excel-saved desktop files, cached cells and pivotTable parts): pivot-corpus-lo
+`xlsx/pivot-table/shared-numgroup.xlsx` (Hungarian, A3 `Sorcímkék`, `dataCaption="Értékek"`),
+`xlsx/pivottable_invalid_formats.xlsx` (German, B3 `Spaltenbeschriftungen`, `dataCaption="Werte"`),
+`xlsx/tdf122471.xlsx` (Hungarian, B3 `Oszlopcímkék`), poi `ExcelPivotTableSample.xlsx` (German, B3
+`Spaltenbeschriftungen`, and its page field's multiple-items caption in German at B1).
+These are non-en-US desktop workbooks, so they are no evidence for what en-US Excel writes
+(decision 0030): the English captions stay the ones the en-US probes give ("Caption attributes...").
+Status: VERIFIED (Excel-saved files) as a storage fact; no rule for the engine follows from it.

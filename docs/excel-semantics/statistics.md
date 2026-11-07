@@ -843,9 +843,8 @@ Engine (T-1929): the wrappers compute through the same compositions, so each ide
   (m9-gamma-dist-a1 A21 from 1 to 4 ulp off, m9-gamma-dist-a9 A21 closer, t1048-gammadist A11/B11 from 19 to 27 ulp
   off). Against an exact P(a, x/b) the twice-rounded x/b gives Excel's value at shapes 1 and 2 (A21), so the
   remaining error is the generic kernel's, not the scaling's. An x/b that underflows to 0 or overflows keeps
-  the port's branches (`GAMMA.DIST(1E300,1,1E-10,TRUE)` stays #NUM!, probes/incomplete-gamma-cap E6). Unprobed
-  (T-1942): a subnormal x/b is kept, not flushed like a worksheet `/` result, so `GAMMA.DIST(2E-300,0.5,1E8,TRUE)`
-  is about 1.6E-154 (0 before); and the tiny-x lower tail at shape 0.5 moved with the identity
+  the port's branches (`GAMMA.DIST(1E300,1,1E-10,TRUE)` stays #NUM!, probes/incomplete-gamma-cap E6). Probed (T-1942, probes/t1942-ztest-numeric-edges A6:A7, excel-graph): a subnormal x/b is flushed to 0 like a
+  worksheet `/` result, so `GAMMA.DIST(2E-300,0.5,1E8,TRUE)` and `GAMMA.DIST(1E-300,0.5,1E10,TRUE)` are 0; and the tiny-x lower tail at shape 0.5 moved with the identity
   (`GAMMA.DIST(3E-308,0.5,1,TRUE)` and `CHISQ.DIST(3E-308,1,TRUE)` about 1.4E-154 to 2E-154, 0 before; T-1891).
 - Z.TEST is `NORM.S.DIST(-z,TRUE)`, not `1-NORM.S.DIST(z,TRUE)`: 120 of 120 cells of
   probes-numeric/t1916-erf-wrappers column I (`Z.TEST(HSTACK(a,a),0,SQRT(2))`) against 19, and column J likewise.
@@ -854,9 +853,9 @@ Engine (T-1929): the wrappers compute through the same compositions, so each ide
   (mean - x)/(sigma/sqrt(n)) matches 240 of 240 in columns I and J (there sigma/sqrt(n) is exactly 1) but only 24 of
   the 30, and the plain-double (mean - x)*sqrt(n)/sigma 30 of 30 but only 141 of 240. The mean and the sample
   standard deviation are not separated by these probes (plain and twice-rounded forms both match). One value is
-  #DIV/0! with sigma given too and sigma < 0 is #NUM! (the T-1048/T-1049 rules below). Unprobed: a plain-double
-  sigma/sqrt(n) that underflows stays #DIV/0! (the fork's guard) and a non-finite p is #NUM!, including an
-  omitted sigma that overflows to infinity (T-1942). No held-out cell separates the three z formulas at the p level.
+  #DIV/0! with sigma given too and sigma < 0 is #NUM! (the T-1048/T-1049 rules below). Probed (T-1942): a sigma/sqrt(n) that
+  underflows and a non-finite p are #NUM!, including an omitted sigma that overflows to infinity (probes/t1942-ztest-
+  numeric-edges A1:A5, A8:A11; "Z.TEST numeric edges (T-1942)" below). No held-out cell separates the three z formulas at the p level.
 - `T.DIST(x,n,TRUE)` for x < 0 = `T.DIST.2T(-x,n)/2` is NOT routed. The engine's T.DIST.2T is statrs' 2*(1 - cdf(x)),
   which cancels to 0 for a large x, so the routed T.DIST(-1E6,10,TRUE) was 0 (Excel 1.230468749943611E-56) and the
   T.INV of it #NUM! (ironcalc-calc T_DIST.xlsx "T.DIST T.INV T.DIST.RT" D19, E19). Taking T.DIST.2T from the lower
@@ -1082,8 +1081,15 @@ computes it (2^27 units, `limits::MAX_LIFTED_CELL_VISITS`, over 2^18 and 2^17 an
 `ROWS(BETA.INV(SEQUENCE(513)/514,2,3))`, unit test `quantile_kernels_are_charged_their_weight`). At the bound of the caps,
 512 BETA.INV elements take about 1.7 s and 1,024 T.INV elements about 1.6 s, the 2 s budget of the Bessel entries
 (engineering.md "BESSEL order cap"). Showing that a slow cdf and a long search never coincide would allow larger lifts.
+Since T-2607, a BETA.INV or BETAINV element is charged by value (`ValueWork::BetaQuantile`). An element that reaches
+the search still costs 2^18. An element `Model::beta_inv_of` refuses before it is charged 1: an error in any argument,
+a probability outside (0, 1), an alpha or beta of 0 or less, or B <= A, where a logical reads as 1 or 0 and a blank as
+0. A text is charged as searched, since it may read as any number. So a lift of refused elements runs past 512.
+`BETAINV(1+2^-52,-1,..,MAKEARRAY(4,51638,..),..)` is `#SPILL!` as in Excel (gen-m9/4250f880ab640c49 A237; unit test
+`beta_inv_refused_elements_are_charged_one`). The cap on real searches is unchanged. F.INV and the T quantiles keep the
+flat charge.
 Status: VERIFIED (excel-graph)
-Tasks: T-1848, T-1849, T-1871
+Tasks: T-1848, T-1849, T-1871, T-2607
 
 ## Incomplete gamma: per-call cap and lifting (T-1872)
 Rule: CHISQ.DIST, CHISQ.DIST.RT, CHIDIST, CHISQ.INV, CHISQ.INV.RT, CHIINV, GAMMA.DIST, GAMMADIST, GAMMA.INV, GAMMAINV,
@@ -8557,3 +8563,13 @@ keeps the df; all-numeric: 0.997224951291803). 3x3 ranges with a blank, text or 
 give 0.8616386653047765 (all-numeric 0.8444645822929768); different shapes are `#N/A` (`A21:C23` with `E21:F23`, with
 `E21:G24`). The engine matches 23 of 24 cells; F!A1 is 1 ulp off (a numeric ulp, baselined). The unit test
 `chisq_test_over_whole_columns_counts_every_cell` is consistent with the 1-D and 2-D whole-column cells.
+
+### Z.TEST numeric edges (T-1942)
+
+probes/t1942-ztest-numeric-edges (excel-graph, 2026-11-07): `Z.TEST({1,2},1,2^-1074)` and `Z.TEST({1,2},1,2024*2^-1074)`
+(subnormal sigma, built by arithmetic because a subnormal literal makes Excel refuse the workbook), `Z.TEST({1,2},0,1E-308)`
+(z overflows), an omitted sigma with a data sum that overflows (9E307, 9E307, 1) and one that overflows to infinity (9E307,
+8E307 against x = -9E307) are all `#NUM!`. So is a sigma of 2^-1074 whose quotient by sqrt(n) underflows to 0 in plain
+doubles (n = 4, 5, 9; A8:A10), as is the 2024*2^-1074 control at n = 4: Excel has no `#DIV/0!` for an underflowing
+sigma/sqrt(n), and the engine's fork guard for it was removed. 36 held-out cells (random data, n not a perfect square, sigma
+given and omitted, x zero and not) match the z formula of "Engine (T-1929)" at the p level; in plain doubles `fl(mean-x)*sqrt(n)/sigma` and `(mean-x)/(sigma/sqrt(n))` differ in z on 15 of the 36.

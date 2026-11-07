@@ -197,6 +197,20 @@ enum MaskedRead {
 }
 
 impl Factors {
+    /// A bound on the magnitude of its elements: the largest one, or a masked block's `bound`.
+    fn largest(&self) -> f64 {
+        let largest = |values: &mut dyn Iterator<Item = f64>| {
+            values.fold(0.0f64, |largest, value| largest.max(value.abs()))
+        };
+        match self {
+            Factors::Grid(grid) => largest(&mut grid.iter().flatten().copied()),
+            Factors::Tailed { head, tail, .. } => {
+                largest(&mut head.iter().copied()).max(tail.abs())
+            }
+            Factors::Masked(block) => block.bound,
+        }
+    }
+
     /// (rows, columns).
     fn shape(&self) -> (usize, usize) {
         match self {
@@ -308,9 +322,38 @@ impl Model {
             })
             .try_fold(0, |longest, head| head.map(|head| longest.max(head)));
         let walked = heads.unwrap_or(rows).min(rows);
+        // A masked argument's element is a zero where one of its masks is FALSE, and so is the
+        // product there, which leaves the total as it is (below), unless the factors before it
+        // overflow: inf times the zero is NaN, `#NUM!` (numbers.md "Overflow in `+ - * /` is
+        // #NUM! where it happens"). So when the product of every factor's largest magnitude is
+        // below `MaskedBlock::BOUND`, no product overflows, and only the rows and columns that
+        // every masked argument has on are walked, in the same order (T-3732). Calipers
+        // `pv26_002`'s 1,575 masked calls each keep one column of 41 and a few rows of 1,440.
+        let bound = factors
+            .iter()
+            .fold(1.0f64, |bound, factor| bound * factor.largest());
+        let masked: Vec<&MaskedBlock> = if bound < MaskedBlock::BOUND {
+            factors
+                .iter()
+                .filter_map(|factor| match factor {
+                    Factors::Masked(block) => Some(block),
+                    Factors::Grid(_) | Factors::Tailed { .. } => None,
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let on = |flags: fn(&MaskedBlock) -> &[bool], index: usize| {
+            masked
+                .iter()
+                .all(|block| flags(block).get(index).copied().unwrap_or(false))
+        };
+        let columns: Vec<usize> = (0..cols)
+            .filter(|&j| on(|block| &block.column_on, j))
+            .collect();
         let mut total = 0.0f64;
-        for i in 0..walked {
-            for j in 0..cols {
+        for i in (0..walked).filter(|&i| on(|block| &block.row_on, i)) {
+            for &j in &columns {
                 // Excel rounds each addition of the running total twice, as SUM does (numbers.md
                 // "double rounding", probes-numeric/double-rounding-avedev-deviations, T-1665).
                 total = extended_sum(total, product(i, j));
