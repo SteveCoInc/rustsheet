@@ -2726,6 +2726,7 @@ C	probes/t4844-irr-stage-invariance.case.json	60
 C	probes/t4857-f-kinds.case.json	669
 C	probes/t4860-fraction-tail-no-pre-point-lacking.case.json	24
 C	probes/t4861-indirect-r1c1-shaped-sheet-prefix.case.json	42
+C	probes/t4863-xlookup-mode-lift-criteria.case.json	129
 C	probes/t4870-empty-date-args.case.json	31
 C	probes/t4870-r2-empty-optional.case.json	14
 C	probes/t4870-r3-order-and-lift.case.json	24
@@ -10103,6 +10104,18 @@ F	probes/t4857-f-kinds.case.json	Calc!A659
 F	probes/t4857-f-kinds.case.json	Calc!A660
 F	probes/t4857-f-kinds.case.json	Calc!A661
 F	probes/t4857-f-kinds.case.json	Calc!A662
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A11
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A15
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A19
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A27
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A31
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A35
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A43
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A47
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A51
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!B90
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!B94
+F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!B98
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
