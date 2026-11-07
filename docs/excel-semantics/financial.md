@@ -3287,10 +3287,11 @@ the same cells for the 1.5 dollar, 1.5551115123125783 and 1.4503599627370496, th
 (A83:B84). For the 0.3 dollar they differ (A93 0.333066907387547, A94 0.33306690738754696; B93 0.2702159776422297, B94
 0.27021597764222977) and A93 is not the correctly rounded value, which is 0.33306690738754696. At `1E300` Excel returns
 the dollar unchanged (A27:B27), so its D is 10^300; the Gate A math definition takes D = 10^301 there from the double
-above 10^300, which its sidecar shows (T-4880). The errors, truncation and D rules hold for the negative dollar, whose
-cells are the exact mirror (A28:B54, A55:B96 for the 0.3 dollar), but the 0.3 dollar's last digits are not always the
-correctly rounded math: A76 `DOLLARDE(0.3,999999999999999)` is 0.3000000000000003 (correctly rounded 0.30000000000000027),
-and A69, B69, A73, A75 and A80 are an ulp off it too. Ours matches every cell.
+above 10^300, which its sidecar shows (T-4880). The errors, truncation and D rules hold for all three dollars, and the negative dollar's cells are the exact mirror of
+the positive one's (A28:B54 of A1:B27, A87:B91 of A82:B86). The last digits are not always the correctly rounded math
+for any dollar: for example `DOLLARDE(1.5,15.9)` is 4.333333333333334 (A11; correctly rounded 4.333333333333333),
+`DOLLARDE(0.3,999999999999999)` 0.3000000000000003 (A76; correctly rounded 0.30000000000000027) and `DOLLARFR(0.3,1E15+1)`
+0.3000000000000003 (B92); the cells are data for the operation order, not for the math. Ours matches every cell.
 Ours: `fn_dollarde` and `fn_dollarfr` (functions/financial/rate_conversions.rs), bit-exact on all 240 points and the 192 fraction-edge cells.
 Status: VERIFIED (excel-graph)
 Tasks: T-4110, T-4608

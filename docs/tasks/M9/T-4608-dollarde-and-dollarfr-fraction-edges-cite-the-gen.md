@@ -3,7 +3,7 @@ id: T-4608
 title: "DOLLARDE and DOLLARFR fraction edges: probe fractions below 1, non-integer fractions and fractions from 1E9 up (10^k-1, 10^k, 10^k+1), and match"
 milestone: M9
 lane: functions-financial
-status: done
+status: blocked
 priority: P3
 size: S
 tier: sonnet
@@ -64,3 +64,11 @@ under 1 `#DIV/0!`; exact decimal power cut up to 10^12; D = 10^15 at 10^15+1) an
 cells, all passing, no baseline change.
 
 Follow-up: T-4880 (the Gate A math definition differs from Excel at 10^15+1 and 1E300).
+
+## Blocked because
+Blocked because: review-round limit
+Three reviewer-excel-fidelity rounds each requested changes to the same financial.md "Fraction edges" paragraph; every round
+found the prose enumeration of cells that are not correctly rounded incomplete (round 3: A80 wrongly listed; B92, B95, A11,
+A25:B26 and their mirrors missing). The data is right: 192/192 cells pass, the oracle and math sidecars are current, and the
+design reviewer approved. The last push replaced the enumeration with a general statement and three examples; it has not
+been re-reviewed. Next step: run the fidelity reviewer once on the current head, then mark the PR ready and enqueue it.
