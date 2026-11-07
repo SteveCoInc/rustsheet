@@ -167,7 +167,14 @@ fn a_new_base_item_is_its_own_group_and_a_gone_base_drops_the_field() {
 /// Years added (`<fieldGroup base="0">`), all from 2019-01-01 to 2020-12-31.
 fn date_cache(case: &Json, oracle: &Json) -> PivotCache {
     let mut cache = source_cache(case, "Data!A1:B10");
-    let date = cache.fields[0].clone();
+    // The source's Date column is date-formatted, so its values are date items (`<d>`), as a
+    // refresh of the probe model (which applies the case's `number_formats`) reads them.
+    let mut date = cache.fields[0].clone();
+    for item in &mut date.items {
+        if let CacheItem::Number(n) = *item {
+            *item = CacheItem::Date(n);
+        }
+    }
     let level = |by, name: &str| {
         let labels = group_items(oracle, name);
         let groups = DateGroups::new(by, 43466.0, 44196.0, labels.len()).unwrap();

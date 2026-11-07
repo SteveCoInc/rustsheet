@@ -502,7 +502,8 @@ patched on (the `-refresh` cases) Excel rebuilds the cache from the cells and wr
 `containsNonDate="0"`, `minDate` the first date and `maxDate` a day past the last (`1900-03-03T00:00:00`,
 `1908-01-03T00:00:00`). So serial 60 is `1900-02-28T00:00:00` in a cache, and serial 59 is `1900-02-27T00:00:00`, not
 the cell calendar's 1900-02-28. Excel shows the refreshed items as dates (`2/29/1900` for 60; serial 0 of the 1904
-workbook as `12:00:00 AM`), the engine as serials (T-4943).
+workbook as `12:00:00 AM`); the engine shows them as `m/d/yyyy` dates (T-4807), and serial 0 of the 1904 workbook as
+`1/1/1904` (T-4943).
 Tasks: T-3182, T-4176, T-4177
 
 ## Structured references in the file

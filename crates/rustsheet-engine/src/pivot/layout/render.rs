@@ -38,8 +38,9 @@
 //!   (probes/t4698-pivot-repeat-labels; pivots.md "Repeat item labels").
 //! - **Items** render as in pivots.md: a number as a number, a boolean as `TRUE`/`FALSE`, an
 //!   error as its text and a blank as `(blank)` (t4134 I2); a Values level item is the data
-//!   field's caption. A date group item is its serial in m/d/yyyy (probes/t4767-pivot-group-items
-//!   GD!A6, GDA!A6).
+//!   field's caption. A date item is its serial, in `m/d/yyyy` (with ` h:mm` for a time part)
+//!   whatever the source's format (`item_format`; t2085 D, t4164; a date group item too,
+//!   probes/t4767-pivot-group-items GD!A6, GDA!A6).
 //! - **Values.** An intersection no record reaches is blank, or `missingCaption` with
 //!   `showMissing` (t4137 K2); an error is `errorCaption` with `showError` (K3, t4135 EC).
 //!   Every value cell, subtotals' and grand totals' too, carries its data field's `numFmtId`
@@ -118,11 +119,35 @@ pub struct RenderedCell {
     pub column: u32,
     /// The cell's value.
     pub value: PivotCell,
-    /// The `numFmtId` the cell shows its value in: a value cell's data field's
-    /// ([`DataField::number_format`](super::super::DataField::number_format)), or m/d/yyyy for a
-    /// date group item's label ([`item_format`]); `None` for any other label, a caption, and a
-    /// value cell whose data field has none, whose cell format is left as it is.
-    pub number_format: Option<u32>,
+    /// The number format the cell shows its value in: a value cell's data field's
+    /// ([`DataField::number_format`](super::super::DataField::number_format)) or a date item's
+    /// ([`item_format`]); `None` for any other label, a caption, and a value cell whose data
+    /// field has none, whose cell format is left as it is.
+    pub number_format: Option<CellFormat>,
+}
+
+/// The number format a rendered cell is given.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CellFormat {
+    /// A `numFmtId`, as the workbook's styles resolve it: a data field's format.
+    Id(u32),
+    /// A format code: a date item's label.
+    Code(&'static str),
+}
+
+/// The format of a date item's label (pivots.md "Item casing when cache and source disagree, and
+/// date items"): Excel shows it as `m/d/yyyy`, with ` h:mm` when it has a time part, whatever the
+/// source cells' format. probes/t2085-getpivotdata-items D!A4:A6 and t4130-pivot-date-filters
+/// (source `m/d/yyyy`) read `1/1/2024`; t4164-pivot-date-times (source `m/d/yyyy h:mm`) reads
+/// `4/17/2024` for midnight and `4/17/2024 8:00` for 8 a.m. Not covered yet: an item below 1, which
+/// Excel shows as a time (a 1904 workbook's serial 0 is `12:00:00 AM`, t4177-cache-dates-1904-refresh
+/// P!A4; T-4943).
+fn date_item_format(serial: f64) -> CellFormat {
+    CellFormat::Code(if serial.fract() == 0.0 {
+        "m/d/yyyy"
+    } else {
+        "m/d/yyyy h:mm"
+    })
 }
 
 /// How an item renders as a label (pivots.md "Items show in the order the pivot field lists
@@ -141,13 +166,17 @@ fn item_cell(item: &CacheItem) -> PivotCell {
 /// The built-in `numFmtId` of m/d/yyyy, the format a date group item's label shows in.
 const DATE_GROUP_ITEM_FORMAT: u32 = 14;
 
-/// The `numFmtId` an item's label cell shows it in: a date group item (`<groupItems><d>` of a
+/// The number format an item's label cell shows it in: a date group item (`<groupItems><d>` of a
 /// grouped field, [`CacheField::is_grouped`]) shows as m/d/yyyy whatever its source field holds
 /// (pivots.md "Capability matrix 3", probes/t4767-pivot-group-items GD!A6, GDA!A6 `1/1/2020`
-/// over 43831). Any other label keeps its cell's format; an ungrouped date field's items are
-/// T-4807's (the source cells' format).
-fn item_format(field: &CacheField, item: &CacheItem) -> Option<u32> {
-    (field.is_grouped() && matches!(item, CacheItem::Date(_))).then_some(DATE_GROUP_ITEM_FORMAT)
+/// over 43831); any other date item as [`date_item_format`]. Any other label keeps its cell's
+/// format.
+fn item_format(field: &CacheField, item: &CacheItem) -> Option<CellFormat> {
+    match item {
+        CacheItem::Date(_) if field.is_grouped() => Some(CellFormat::Id(DATE_GROUP_ITEM_FORMAT)),
+        CacheItem::Date(serial) => Some(date_item_format(*serial)),
+        _ => None,
+    }
 }
 
 /// An item's label as text, for a subtotal's `<item> Total` and a caption filter
@@ -218,7 +247,7 @@ impl Cells<'_> {
         row: u32,
         column: u32,
         value: PivotCell,
-        number_format: Option<u32>,
+        number_format: Option<CellFormat>,
     ) {
         if let PivotCell::Text(text) = &value {
             match self.text_left.checked_sub(text.len()) {
@@ -260,7 +289,7 @@ impl Cells<'_> {
         Some(field.caption.as_str())
     }
 
-    /// The label of `line`'s level `level` (its `x` is `x`) on `axis`, and the `numFmtId` its
+    /// The label of `line`'s level `level` (its `x` is `x`) on `axis`, and the number format its
     /// cell shows it in ([`item_format`]).
     fn label(
         &self,
@@ -268,7 +297,7 @@ impl Cells<'_> {
         line: &AxisLine,
         level: usize,
         x: u32,
-    ) -> Option<(PivotCell, Option<u32>)> {
+    ) -> Option<(PivotCell, Option<CellFormat>)> {
         match axis.levels.get(level)? {
             Level::Values => Some((PivotCell::Text(self.data_caption(x)?.to_string()), None)),
             Level::Field { depth, .. } => {
@@ -452,7 +481,7 @@ impl Cells<'_> {
         [rows, columns]: [&Axis<'_>; 2],
         row: &AxisLine,
         column: &AxisLine,
-    ) -> Option<(PivotCell, Option<u32>)> {
+    ) -> Option<(PivotCell, Option<CellFormat>)> {
         let options = &self.table.options;
         let data = if rows.has_values() {
             row.data_field
@@ -478,7 +507,7 @@ impl Cells<'_> {
                 _ => PivotCell::Error(error),
             }),
         };
-        cell.map(|cell| (cell, field.number_format))
+        cell.map(|cell| (cell, field.number_format.map(CellFormat::Id)))
     }
 }
 

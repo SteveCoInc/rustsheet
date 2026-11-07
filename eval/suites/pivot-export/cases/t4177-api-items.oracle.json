@@ -268,7 +268,7 @@
     "A5": "West",
     "A6": "(blank)",
     "A7": "TRUE",
-    "A8": "43831",
+    "A8": "1/1/2020",
     "A9": "7",
     "B10": "64",
     "B11": "256",
@@ -324,10 +324,10 @@
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "278b0042add73dccfc74c43d3f03b6713b4a0d320e1de7978be8fbff504d91e0",
+  "input_sha256": "fe1e7ca4dfcc5acae8c3694ff67a87a081ae493be96ae4d708f271e89a735b78",
   "kind": "excel-graph",
-  "produced_at": "2026-11-07T13:33:21+00:00",
+  "produced_at": "2026-11-07T21:36:52+00:00",
   "version": null,
-  "workbook_name": "d3ee1702f316faf9af5556bea8aecb4136150d41ca48e6744a43759d68d89b17.xlsx"
+  "workbook_name": "26450c776c205ebf796078ecd8b844fba49cd8fa8324db6b3949f729662bd095.xlsx"
  }
 }

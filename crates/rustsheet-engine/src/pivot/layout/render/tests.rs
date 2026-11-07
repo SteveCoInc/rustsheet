@@ -310,7 +310,10 @@ fn a_date_group_item_shows_as_a_date() {
         let label = (cells.iter())
             .find(|c| c.column == 0 && c.value == PivotCell::Number(serial))
             .unwrap();
-        let id = i32::try_from(label.number_format.unwrap()).unwrap();
+        let Some(CellFormat::Id(id)) = label.number_format else {
+            panic!("{sheet}: a date group item's label has a numFmtId");
+        };
+        let id = i32::try_from(id).unwrap();
         let text = format_number(serial, &get_num_fmt(id, &[]), "en").text;
         assert_eq!(text, pivot["text"]["A6"].as_str().unwrap(), "{sheet}");
         // Every other label is text, and keeps its cell's format.
@@ -320,8 +323,8 @@ fn a_date_group_item_shows_as_a_date() {
     }
 }
 
-/// An ungrouped field's date item keeps its cell's format: which format Excel shows it in is the
-/// source cells' (T-4807), not a group item's.
+/// An ungrouped field's date item takes a short-date format code (T-4807: m/d/yyyy whatever the
+/// source cells' format), not a group item's `numFmtId`.
 #[test]
 fn an_ungrouped_date_item_takes_no_group_item_format() {
     let (mut cache, table) = crate::pivot::probe_cases::diagonal(3, true);
@@ -333,5 +336,5 @@ fn an_ungrouped_date_item_takes_no_group_item_format() {
     let label = (cells.iter())
         .find(|c| c.value == PivotCell::Number(43831.0))
         .unwrap();
-    assert_eq!(label.number_format, None);
+    assert_eq!(label.number_format, Some(CellFormat::Code("m/d/yyyy")));
 }

@@ -55,9 +55,10 @@ pub use filter::{
 };
 pub use grid::{PivotBudget, PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};
 pub use layout::{
-    chart_data, lay_out, records_behind, render, AxisLine, ChartCategory, ChartSeries, PivotCell,
-    PivotChartData, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM, COLUMN_LABELS, GRAND_TOTAL,
-    MAX_PIVOT_CELLS, MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS, TOTAL_SERIES, VALUES,
+    chart_data, lay_out, records_behind, render, AxisLine, CellFormat, ChartCategory, ChartSeries,
+    PivotCell, PivotChartData, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM, COLUMN_LABELS,
+    GRAND_TOTAL, MAX_PIVOT_CELLS, MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS, TOTAL_SERIES,
+    VALUES,
 };
 pub use model::{
     element_name, Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry,
