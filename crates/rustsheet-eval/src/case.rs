@@ -147,10 +147,11 @@ pub struct SheetSpec {
     /// engine adapter loads each one's cache part with its pivot (T-4188).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub timelines: Vec<serde_json::Value>,
-    /// A1 address → number format code (`"[h]:mm"`), applied to that cell whatever it holds
-    /// (T-1268). spec2xlsx writes it as the cell's `numFmt`.
+    /// A1 address → number format code (`"[h]:mm"`) or built-in id (`27`), applied to that cell
+    /// whatever it holds (T-1268, T-4731). spec2xlsx writes a code as the cell's `numFmt` and an
+    /// id as its bare `numFmtId`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub number_formats: BTreeMap<String, String>,
+    pub number_formats: BTreeMap<String, NumberFormatSpec>,
     /// Column letter → width in characters, written by spec2xlsx (T-1610). The engine adapter
     /// ignores it: excel-graph's displayed text does not depend on the width
     /// (probes/displayed-text-formats B1:B3; docs/excel-semantics/number-formats.md).
@@ -336,6 +337,18 @@ pub struct PivotGroupSpec {
     /// (`startDate`, `endDate`; T-4236); absent for a numeric range group.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub by: Option<String>,
+}
+
+/// A spec cell's number format (`SheetSpec::number_formats`): a format code, or a built-in
+/// `numFmtId` below 164 that the file carries with no `numFmt` entry (T-4731).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum NumberFormatSpec {
+    /// An Excel format code (`"[h]:mm"`).
+    Code(String),
+    /// A built-in id, which the engine adapter resolves through the engine's built-in table as
+    /// it does an id read from a file.
+    BuiltIn(i32),
 }
 
 /// One `<groupItems>` item of a [`PivotGroupSpec`]: a label (`<s>`) or a number (`<n>`).

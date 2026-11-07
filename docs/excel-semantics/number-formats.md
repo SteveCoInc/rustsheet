@@ -24,27 +24,72 @@ Rule: a cell in built-in `numFmtId` 14 shows the locale's short date, `m/d/yyyy`
 (`4/18/2024`), not the ECMA-376 table's `mm-dd-yy`.
 Evidence: probes/t4169-pivot-number-formats P1!D5:D11 (pivot value cells in id 14: `2/15/2024`,
 `4/18/2024`; excel-graph, 2026-11-06, T-4169); pivots.md "Value cells show their data field's number
-format".
-Unprobed (owner T-4731): a plain, non-pivot cell in id 14, and the other built-ins that may depend on
-the locale (15-17, 22, and the East Asian 27-36 and 50-81).
+format". On a plain cell (probes/t4731-builtin-num-fmt-ids B!B1:D1, excel-graph, 2026-11-07, T-4731):
+43831.75 is `1/1/2020`, 1.25 `1/1/1900`, and -1234.5 255 `#` (see "Displayed text (`Range.text`) of a
+formatted cell"). The other locale-dependent built-ins are in "Built-in ids Excel en-US maps to other
+built-ins" below.
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/number_format.rs (`DEFAULT_NUM_FMTS`).
-Tasks: T-4169
+Tasks: T-4169, T-4731
 
-## Custom number format ids start at 164 (convention)
-Rule: the engine gives a number format it adds the next free id from 164. This is a convention, not
-Excel evidence: ECMA-376 §18.8.30 lists the built-in ids below 164, and the case builder (XlsxWriter)
-numbers custom formats from 164, so a spec workbook's first custom format has the same id in the
-engine as in the file Excel opens.
-Evidence: none from Excel. probes/t4169-pivot-number-formats P1!E5:E11 and Q!B1 (`0.0 "kg"`, numFmt
-164 as the builder wrote it: `984.3 kg`, `1.5 kg`) show only that Excel reads id 164 from the file's
-`numFmts`.
-UNVERIFIED (owner T-4731): which ids Excel gives new custom formats when it saves. UNVERIFIED
-(eval-harness, owner T-4730): with two or more custom formats, the builder's and the spec adapter's
-numberings can differ (pivots.md "Value cells show their data field's number format").
-Status: UNVERIFIED (probe pending: T-4731; eval-harness: T-4730)
+## Built-in ids Excel en-US maps to other built-ins (T-4731)
+Rule: in en-US, Excel shows the ids that depend on the locale as these codes, and when it saves the
+workbook it rewrites each East Asian id (27-36, 50-81) to the en-US built-in id it shows, writing no
+`numFmt` entry for it:
+- 15 `d-mmm-yy` (`1-Jan-20`), 16 `d-mmm` (`1-Jan`), 17 `mmm-yy` (`Jan-20`), as the ECMA table has them.
+- **22 is `m/d/yyyy h:mm`, a four-digit year** (`1/1/2020 18:00`, `1/1/1900 6:00`), not the ECMA table's
+  `m/d/yy h:mm`.
+- 27-31, 36, 50-58, 71 and 72 are 14 (`m/d/yyyy`); 32-35 and 77 are 21 (`h:mm:ss`: `18:00:00`,
+  `6:00:00`); 59-62 are 1-4 (`0`, `0.00`, `#,##0`, `#,##0.00`); 63-66 are 5-8 (the `$` formats, red
+  negatives included: `$43,832 `, `($1,235)`); 67, 68 are 9, 10 (`0%`, `0.00%`); 69, 70 are 12, 13 (`# ?/?`,
+  `# ??/??`: `43831 3/4`, `43831  3/4 `); 73-75 are 15-17; 76 is 20 (`h:mm`); 78 is 22; 79-81 are 45-47.
+- **47 is `mm:ss.0`, with a colon** (43831.75 and 1.25 in id 81, saved as 47, show `00:00.0`; typed
+  `1/2/2020 10:00:30.5`, whose format the API reports as `mm:ss.0`, is saved as 47), not the ECMA table's
+  `mmss.0`.
+- In the saved file Excel also writes `numFmt` entries for the built-ins 5-8 it uses, with the symbol
+  quoted: `"$"#,##0_);\("$"#,##0\)`, and so on for 6-8 (the same display as the engine's
+  `$#,##0_);($#,##0)`).
+Evidence: probes/t4731-builtin-num-fmt-ids B!B1:D47 (rows 1-47 are ids 14, 15, 16, 17, 22, 27-36, 50-81,
+on 43831.75, 1.25 and -1234.5 in a bare `numFmtId`; excel-graph `text`, 2026-11-07); the saved ids are in
+its committed download eval/roundtrip/excel-saved/cases/t4731-builtin-num-fmt-ids.xlsx (decision 0342).
+Range.text does not show the red of 64 and 66; the saved ids 6 and 8 do.
+Unprobed (owner T-5043): the reserved ids 23-26 and the ids 82-163; the engine shows them as General.
+UNVERIFIED (owner T-5043): that Excel saves a typed value in `m/d/yyyy h:mm` as id 22. The engine's
+`get_default_num_fmt_id` now gives 22 for that code, since it is 22's code here; no typed cell probed it.
+Ours: display matches (all 147 cells). Save does not: the engine keeps the file's id when it saves (an East
+Asian id such as 27 is written as 27, `cell_xf_xml` in crates/rustsheet-xlsx/src/export/styles.rs) and writes
+no `numFmt` entries for the built-ins 5-8 (owner T-5056).
+Status: VERIFIED (excel-graph, committed file)
+Implemented in: display only, crates/rustsheet-engine/src/number_format.rs (`DEFAULT_NUM_FMTS` for 22 and 47;
+`get_num_fmt` shows each East Asian id as the en-US id Excel saves it as, through `en_us_builtin_id`,
+T-4731). A file's own `numFmt` for an id still wins. The save side is not implemented (T-5056).
+Tasks: T-4731, T-5043, T-5056
+
+## Custom number format ids on save (T-4731)
+Rule: when Excel saves a workbook it keeps the file's custom number format ids and gives each format it
+adds the next id after them: a file with custom 164 (`0.0 "kg"`) and 165 (`0.000`) is saved with those
+two unchanged, and the two formats typed entries added get 166 and 167, in entry order. The engine gives a
+number format it adds the first free id from 164 (`get_new_num_fmt_index`), which agrees here; 164 is also
+the builder's (XlsxWriter's) first custom id and ECMA-376 §18.8.30's first non-built-in one.
+- Typed Arabic-Indic `١.٢٥` and `١٢.٥%` make Excel add custom formats; the API reports them as
+  `[$-ar-SA,200]0.##` and `[$-ar-SA,200]0.00%`, but the file stores them in the LCID form
+  `[$-2000401]0.##` and `[$-2000401]0.00%` (numeral byte 0x02, LCID 0x0401).
+- Typed `$1.50` (`$#,##0.00_);[Red]($#,##0.00)`) and `1/2/2020 10:00:30.5` (`mm:ss.0`) are saved as the
+  built-ins 8 and 47, with no custom id.
+Evidence: probes/t4731-builtin-num-fmt-ids sheet N (A1:A2 the builder's 164 and 165, B1:B4 typed;
+excel-graph, 2026-11-07) and its committed download
+eval/roundtrip/excel-saved/cases/t4731-builtin-num-fmt-ids.xlsx (`numFmts`: 5-8, 164-167). The formats the
+API reports for the same typed texts are in earlier runs' ENTERED logs:
+docs/research/t3891-typed-script-digit-shapes-2026-11-04.md lines 12 and 14 (`١.٢٥`, `١٢.٥%`),
+docs/research/typed-currency-percent-input-2026-10-11.md line 8 (`$1.50`) and
+docs/research/typed-clock-shapes-2026-10-19.md line 17 (`1/2/2020 10:00:30.5`).
+UNVERIFIED (probe pending, owner T-5042): which id Excel gives when the file's custom ids have a gap
+(164 and 170: first free 165, or 171?) or start above 164, and whether it ever renumbers the file's own
+ids. UNVERIFIED (eval-harness, owner T-4730): with two or more custom formats, the builder's and the
+spec adapter's numberings can differ (pivots.md "Value cells show their data field's number format").
+Status: VERIFIED (excel-graph, committed file) for consecutive ids from 164; UNVERIFIED for gaps (T-5042)
 Implemented in: crates/rustsheet-engine/src/number_format.rs (`get_new_num_fmt_index`).
-Tasks: T-4169
+Tasks: T-4169, T-4731, T-5042
 
 ## Bare letters and digits in a number format
 Rule: on a number, unquoted letters that are not format tokens (see "Unquoted ASCII letters in a number format"

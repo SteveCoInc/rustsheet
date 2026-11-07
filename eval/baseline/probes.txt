@@ -2702,6 +2702,7 @@ C	probes/t4719-text-unverified-residue.case.json	44
 C	probes/t4720-fixed-sign-and-exponent-digits.case.json	37
 C	probes/t4721-im-overflow-residue.case.json	25
 C	probes/t4724-vdb-straight-from-zero.case.json	50
+C	probes/t4731-builtin-num-fmt-ids.case.json	1
 C	probes/t4737-nested-cell-lift-error-type.case.json	15
 C	probes/t4742-countif-array-range-arg.case.json	40
 C	probes/t4745-pivot-classic-subtotal-caption.case.json	254
@@ -10212,6 +10213,7 @@ TC	probes/t4505-pivot-calc-fields.case.json	274
 TC	probes/t4584-pivot-page-window.case.json	80
 TC	probes/t4698-pivot-repeat-labels.case.json	510
 TC	probes/t4699-pivot-blank-collapsed.case.json	449
+TC	probes/t4731-builtin-num-fmt-ids.case.json	147
 TC	probes/t4745-pivot-classic-subtotal-caption.case.json	187
 TC	probes/t4767-pivot-group-items.case.json	170
 TC	probes/t4767-pivot-record-tuples.case.json	40

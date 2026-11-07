@@ -354,6 +354,27 @@ fn spec_date_system_and_number_formats_build() {
 }
 
 #[test]
+fn spec_built_in_number_format_ids_resolve_through_the_engine_table() {
+    // T-4731: an integer is a built-in numFmtId, shown as the engine shows that id read from a file.
+    let ok = spec(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S",
+            "cells":{"A1":43831.5,"B1":43831.5},
+            "number_formats":{"A1":14,"B1":"m/d/yyyy"}}]}"#,
+    );
+    let evaluated = RustSheetEngine.evaluate_spec(&ok, None).expect("evaluates");
+    let text = |col| evaluated.text("S", Addr { row: 1, col });
+    assert_eq!(text(1).as_deref(), Some("1/1/2020"));
+    assert_eq!(text(1), text(2));
+    for id in ["-1", "164"] {
+        let bad = spec(&format!(
+            r#"{{"format":"rustsheet-case/v1","sheets":[{{"name":"S","cells":{{}},
+                "number_formats":{{"A1":{id}}}}}]}}"#
+        ));
+        assert!(RustSheetEngine.evaluate_spec(&bad, None).is_err(), "{id}");
+    }
+}
+
+#[test]
 fn spec_pivot_rendered_cells_reach_the_engine() {
     let pivot = |rendered: &str| {
         spec(&format!(

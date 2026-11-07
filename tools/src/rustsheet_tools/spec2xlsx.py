@@ -57,8 +57,8 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     form: a bare table name as `Sales[]`, `@` as `#This Row` (`table_refs_to_file_form`).
   * `"date_system": 1904` at the top level writes `<workbookPr date1904="1"/>` (1900, the default,
     writes nothing), and a sheet's `"number_formats": {"A1": "[h]:mm"}` gives those cells that number
-    format, blank cells included; an `entered` cell cannot have one (T-1268). The engine adapter
-    applies both.
+    format, blank cells included; an `entered` cell cannot have one (T-1268); an integer below 164 is a
+    bare built-in `numFmtId` (T-4731). The engine adapter applies both.
   * `"calculation": {"iterate": true, "iterate_count": 100, "iterate_delta": 0.001}` at the top level
     writes those attributes on `<calcPr>` (iterative calculation; counts and deltas default to
     Excel's 100 and 0.001). A sheet's `"data_tables": [{"ref": "B4:B6", "column_input": "A1"}]`
@@ -510,13 +510,13 @@ def _date_1904(spec: dict[str, Any]) -> bool:
 
 
 def _number_formats(wb: Any, sheet: dict[str, Any]) -> dict[str, Any]:
-    """The sheet's `number_formats` (A1 → format code) as XlsxWriter formats, one per code."""
-    by_code: dict[str, Any] = {}
+    """The sheet's `number_formats` (A1 → code, or a bare built-in id < 164, T-4731) as XlsxWriter formats."""
+    by_code: dict[str | int, Any] = {}
     formats: dict[str, Any] = {}
     for a1, code in sheet.get("number_formats", {}).items():
         parse_a1(a1)
-        if not isinstance(code, str) or not code:
-            msg = f"number format of {a1} must be a non-empty string: {code!r}"
+        if not (type(code) is int and 0 <= code < 164) and (not isinstance(code, str) or not code):
+            msg = f"number format of {a1} must be a non-empty string or a built-in id 0..163: {code!r}"
             raise ValueError(msg)
         if code not in by_code:
             by_code[code] = wb.add_format({"num_format": code})

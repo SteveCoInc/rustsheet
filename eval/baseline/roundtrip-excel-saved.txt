@@ -10,6 +10,13 @@ C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R1/E4	3696
 C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R1/E5	3696
 C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R1/E6	3696
 C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R1/all	3696
+C	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R0	2906
+C	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R0/again	2906
+C	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E1	2906
+C	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E4	2906
+C	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	2906
+C	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E6	2906
+C	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	2906
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 attribute /officeDocument[0]/pivotCacheDefinition[0]/pivotCacheRecords[0]:/pivotCacheRecords@mc:Ignorable lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 attribute /officeDocument[0]/pivotCacheDefinition[0]:/pivotCacheDefinition/cacheFields[0]/cacheField[2]/sharedItems[0]@count added candidate-N10
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 attribute /officeDocument[0]/pivotCacheDefinition[0]:/pivotCacheDefinition@mc:Ignorable lost
@@ -359,3 +366,307 @@ F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[1]/customXmlProps[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[2] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[2]/customXmlProps[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/styles[0]:/styleSheet@mc:Ignorable lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:clrScheme[0]@name changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:tint[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:shade[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:tint[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]@pos changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:shade[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:effectLst[0]/a:outerShdw[0]/a:srgbClr[0]/a:alpha[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:effectLst[0]/a:outerShdw[0]@algn added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:effectLst[0]/a:outerShdw[0]@blurRad changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:effectLst[0]/a:outerShdw[0]@dist changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:tint[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:tint[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]@pos changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:tint[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:lin[0]@ang changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:lin[0]@scaled changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:shade[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[1]@pos changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:shade[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:lin[0]@ang changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[0]@w changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[1]@w changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[2]@w changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]@name changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[0]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[2]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:latin[0]@panose added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:latin[0]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[0]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[2]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:latin[0]@panose added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:latin[0]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]@name changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/theme[0]:/theme@name changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/worksheet[B]:/worksheet@mc:Ignorable lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/worksheet[B]:/worksheet@xr:uid lost candidate-N6
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/worksheet[N]:/worksheet@mc:Ignorable lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/worksheet[N]:/worksheet@xr:uid lost candidate-N6
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet/sheetViews[0]/sheetView[0]@zoomScaleNormal lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet/sheetViews[0]/sheetView[0]@zoomScaleSheetLayoutView lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet@mc:Ignorable lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet@xr:uid lost candidate-N6
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]:/workbook/bookViews[0]/workbookView[0]@windowHeight lost candidate-N11
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]:/workbook/bookViews[0]/workbookView[0]@windowWidth lost candidate-N11
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]:/workbook/bookViews[0]/workbookView[0]@xWindow lost candidate-N11
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]:/workbook/bookViews[0]/workbookView[0]@yWindow lost candidate-N11
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]:/workbook/bookViews[0]/workbookView[0]@{http://schemas.microsoft.com/office/spreadsheetml/2015/revision2}uid lost candidate-N6
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]:/workbook/calcPr[0]@calcId lost candidate-N4
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 attribute /officeDocument[0]:/workbook@mc:Ignorable lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /core-properties[0]:/coreProperties/cp:lastModifiedBy[0] changed candidate-N2
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /core-properties[0]:/coreProperties/dc:creator[0] changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /core-properties[0]:/coreProperties/dcterms:modified[0] changed candidate-N2
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /extended-properties[0]:/Properties/ep:Company[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /extended-properties[0]:/Properties/ep:HyperlinkBase[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /extended-properties[0]:/Properties/ep:Manager[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/styles[0]:/styleSheet/extLst[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/styles[0]:/styleSheet/tableStyles[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:extLst[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:objectDefaults[0]/a:lnDef[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:shade[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:lin[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:path[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[1] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:solidFill[1] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[0]/a:effectLst[0]/a:outerShdw[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[1]/a:effectLst[0]/a:outerShdw[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:scene3d[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:sp3d[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:shade[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:tint[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[0]/a:miter[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[0]/a:solidFill[0]/a:schemeClr[0]/a:satMod[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[0]/a:solidFill[0]/a:schemeClr[0]/a:shade[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[1]/a:miter[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[2]/a:miter[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[30] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[31] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[32] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[33] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[34] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[35] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[36] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[37] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[38] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[39] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[40] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[41] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[42] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[43] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[44] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[45] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[46] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[30] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[31] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[32] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[33] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[34] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[35] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[36] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[37] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[38] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[39] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[40] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[41] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[42] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[43] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[44] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[45] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[46] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/worksheet[B]:/worksheet/pageMargins[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/worksheet[B]:/worksheet/sheetFormatPr[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/worksheet[B]:/worksheet/sheetViews[0]/sheetView[0]/selection[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/worksheet[N]:/worksheet/pageMargins[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/worksheet[N]:/worksheet/sheetFormatPr[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/worksheet[N]:/worksheet/sheetViews[0]/sheetView[0]/selection[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet/pageMargins[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet/sheetFormatPr[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet/sheetViews[0]/sheetView[0]/selection[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]:/workbook/definedNames[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]:/workbook/extLst[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]:/workbook/fileVersion[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]:/workbook/workbookPr[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 element /officeDocument[0]:/workbook/xr:revisionPtr[0] lost candidate-N6
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 part /custom-properties[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 part /officeDocument[0]/calcChain[0] lost candidate-N1
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 part /officeDocument[0]/customXml[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 part /officeDocument[0]/customXml[0]/customXmlProps[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 part /officeDocument[0]/customXml[1] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 part /officeDocument[0]/customXml[1]/customXmlProps[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 part /officeDocument[0]/customXml[2] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 part /officeDocument[0]/customXml[2]/customXmlProps[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/E5	R1/E5 part /officeDocument[0]/sharedStrings[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/styles[0]:/styleSheet@mc:Ignorable lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:clrScheme[0]@name changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:tint[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:shade[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:tint[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]@pos changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:shade[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:effectLst[0]/a:outerShdw[0]/a:srgbClr[0]/a:alpha[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:effectLst[0]/a:outerShdw[0]@algn added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:effectLst[0]/a:outerShdw[0]@blurRad changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:effectLst[0]/a:outerShdw[0]@dist changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:tint[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:tint[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]@pos changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:tint[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:lin[0]@ang changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:lin[0]@scaled changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:shade[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[1]@pos changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:satMod[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:shade[0]@val changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:lin[0]@ang changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[0]@w changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[1]@w changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[2]@w changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]@name changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[0]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[2]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:latin[0]@panose added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:latin[0]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[0]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[2]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:latin[0]@panose added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:latin[0]@typeface changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]@name changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/theme[0]:/theme@name changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/worksheet[B]:/worksheet@mc:Ignorable lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/worksheet[B]:/worksheet@xr:uid lost candidate-N6
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/worksheet[N]:/worksheet@mc:Ignorable lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/worksheet[N]:/worksheet@xr:uid lost candidate-N6
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet/sheetViews[0]/sheetView[0]@zoomScaleNormal lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet/sheetViews[0]/sheetView[0]@zoomScaleSheetLayoutView lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet@mc:Ignorable lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet@xr:uid lost candidate-N6
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]:/workbook/bookViews[0]/workbookView[0]@windowHeight lost candidate-N11
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]:/workbook/bookViews[0]/workbookView[0]@windowWidth lost candidate-N11
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]:/workbook/bookViews[0]/workbookView[0]@xWindow lost candidate-N11
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]:/workbook/bookViews[0]/workbookView[0]@yWindow lost candidate-N11
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]:/workbook/bookViews[0]/workbookView[0]@{http://schemas.microsoft.com/office/spreadsheetml/2015/revision2}uid lost candidate-N6
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]:/workbook/calcPr[0]@calcId lost candidate-N4
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all attribute /officeDocument[0]:/workbook@mc:Ignorable lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /core-properties[0]:/coreProperties/cp:lastModifiedBy[0] changed candidate-N2
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /core-properties[0]:/coreProperties/dc:creator[0] changed
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /core-properties[0]:/coreProperties/dcterms:modified[0] changed candidate-N2
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /extended-properties[0]:/Properties/ep:Company[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /extended-properties[0]:/Properties/ep:HyperlinkBase[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /extended-properties[0]:/Properties/ep:Manager[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/styles[0]:/styleSheet/extLst[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/styles[0]:/styleSheet/tableStyles[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:extLst[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:objectDefaults[0]/a:lnDef[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:shade[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:lin[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[0]/a:path[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:gradFill[1] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:bgFillStyleLst[0]/a:solidFill[1] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[0]/a:effectLst[0]/a:outerShdw[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[1]/a:effectLst[0]/a:outerShdw[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:scene3d[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:effectStyleLst[0]/a:effectStyle[2]/a:sp3d[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[0]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:shade[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[0]/a:schemeClr[0]/a:tint[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[1]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:fillStyleLst[0]/a:gradFill[1]/a:gsLst[0]/a:gs[2]/a:schemeClr[0]/a:lumMod[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[0]/a:miter[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[0]/a:solidFill[0]/a:schemeClr[0]/a:satMod[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[0]/a:solidFill[0]/a:schemeClr[0]/a:shade[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[1]/a:miter[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fmtScheme[0]/a:lnStyleLst[0]/a:ln[2]/a:miter[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[30] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[31] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[32] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[33] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[34] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[35] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[36] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[37] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[38] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[39] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[40] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[41] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[42] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[43] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[44] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[45] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:majorFont[0]/a:font[46] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[30] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[31] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[32] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[33] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[34] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[35] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[36] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[37] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[38] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[39] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[40] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[41] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[42] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[43] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[44] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[45] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[46] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/worksheet[B]:/worksheet/pageMargins[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/worksheet[B]:/worksheet/sheetFormatPr[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/worksheet[B]:/worksheet/sheetViews[0]/sheetView[0]/selection[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/worksheet[N]:/worksheet/pageMargins[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/worksheet[N]:/worksheet/sheetFormatPr[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/worksheet[N]:/worksheet/sheetViews[0]/sheetView[0]/selection[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet/pageMargins[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet/sheetFormatPr[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]/worksheet[RustSheetCanary]:/worksheet/sheetViews[0]/sheetView[0]/selection[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]:/workbook/definedNames[0] added
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]:/workbook/extLst[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]:/workbook/fileVersion[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]:/workbook/workbookPr[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all element /officeDocument[0]:/workbook/xr:revisionPtr[0] lost candidate-N6
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all part /custom-properties[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all part /officeDocument[0]/calcChain[0] lost candidate-N1
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all part /officeDocument[0]/customXml[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all part /officeDocument[0]/customXml[0]/customXmlProps[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all part /officeDocument[0]/customXml[1] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all part /officeDocument[0]/customXml[1]/customXmlProps[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all part /officeDocument[0]/customXml[2] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all part /officeDocument[0]/customXml[2]/customXmlProps[0] lost
+F	roundtrip-excel-saved/t4731-builtin-num-fmt-ids.xlsx#R1/all	R1/all part /officeDocument[0]/sharedStrings[0] added

@@ -11,14 +11,18 @@ use crate::{
     types::NumFmt,
 };
 
-// The standard built-in number formats defined by ECMA-376 (§18.8.30), indexed by `numFmtId`
-// so that `DEFAULT_NUM_FMTS[id]` is the format code for that built-in id. Ids 23–36 are
-// reserved/undefined by the spec and resolve to "general". A workbook-defined `numFmt` always
-// takes precedence over this table (see `get_num_fmt`), so this is only consulted for a
-// referenced-but-undefined built-in id. Id 14 is the one departure from the ECMA table: Excel shows
-// it as the locale's short date, `m/d/yyyy` in en-US (probes/t4169-pivot-number-formats: a value
-// cell in numFmtId 14 reads `4/18/2024`; docs/excel-semantics/pivots.md "Value cells show their
-// data field's number format").
+// The built-in number formats, indexed by `numFmtId` so that `DEFAULT_NUM_FMTS[id]` is the format
+// code for that built-in id: the ECMA-376 (§18.8.30) codes as Excel en-US shows them. A
+// workbook-defined `numFmt` always takes precedence over this table (see `get_num_fmt`), so this
+// is only consulted for a referenced-but-undefined built-in id. Departures from the ECMA table,
+// all from Excel evidence (docs/excel-semantics/number-formats.md "Built-in id 14 is the short
+// date" and "Built-in ids Excel en-US maps to other built-ins"):
+// - id 14 is the locale's short date, `m/d/yyyy` in en-US (probes/t4169-pivot-number-formats, and
+//   probes/t4731-builtin-num-fmt-ids B1:C1 on a plain cell);
+// - id 22 shows a four-digit year (`1/1/2020 18:00`, probes/t4731-builtin-num-fmt-ids B5) and id 47
+//   a colon (`00:00.0`; id 81, which Excel saves as 47, B47);
+// - the East Asian ids 27-36 and 50-81 are en-US built-ins (`en_us_builtin_id`).
+// Ids 23-26 (reserved, unprobed) and every id past 81 resolve to "general".
 const DEFAULT_NUM_FMTS: &[&str] = &[
     "general",                                                              // 0
     "0",                                                                    // 1
@@ -42,21 +46,21 @@ const DEFAULT_NUM_FMTS: &[&str] = &[
     "h:mm:ss AM/PM",                                                        // 19
     "h:mm",                                                                 // 20
     "h:mm:ss",                                                              // 21
-    "m/d/yy h:mm",                                                          // 22
+    "m/d/yyyy h:mm",                                                        // 22
     "general",                                                              // 23 (reserved)
     "general",                                                              // 24 (reserved)
     "general",                                                              // 25 (reserved)
     "general",                                                              // 26 (reserved)
-    "general",                                                              // 27 (reserved)
-    "general",                                                              // 28 (reserved)
-    "general",                                                              // 29 (reserved)
-    "general",                                                              // 30 (reserved)
-    "general",                                                              // 31 (reserved)
-    "general",                                                              // 32 (reserved)
-    "general",                                                              // 33 (reserved)
-    "general",                                                              // 34 (reserved)
-    "general",                                                              // 35 (reserved)
-    "general",                                                              // 36 (reserved)
+    "general",                                                              // 27 (East Asian)
+    "general",                                                              // 28 (East Asian)
+    "general",                                                              // 29 (East Asian)
+    "general",                                                              // 30 (East Asian)
+    "general",                                                              // 31 (East Asian)
+    "general",                                                              // 32 (East Asian)
+    "general",                                                              // 33 (East Asian)
+    "general",                                                              // 34 (East Asian)
+    "general",                                                              // 35 (East Asian)
+    "general",                                                              // 36 (East Asian)
     "#,##0_);(#,##0)",                                                      // 37
     "#,##0_);[Red](#,##0)",                                                 // 38
     "#,##0.00_);(#,##0.00)",                                                // 39
@@ -67,7 +71,7 @@ const DEFAULT_NUM_FMTS: &[&str] = &[
     "_(\"$\"* #,##0.00_);_(\"$\"* \\(#,##0.00\\);_(\"$\"* \"-\"??_);_(@_)", // 44
     "mm:ss",                                                                // 45
     "[h]:mm:ss",                                                            // 46
-    "mmss.0",                                                               // 47
+    "mm:ss.0",                                                              // 47
     "##0.0E+0",                                                             // 48
     "@",                                                                    // 49
 ];
@@ -81,6 +85,24 @@ pub fn get_default_num_fmt_id(num_fmt: &str) -> Option<i32> {
     None
 }
 
+/// The en-US built-in id Excel shows and saves an East Asian built-in id (27-36, 50-81) as; any
+/// other id is itself. Excel en-US displays each one as that built-in and rewrites the id to it on
+/// save, with no `numFmt` entry (probes/t4731-builtin-num-fmt-ids sheet B, excel-graph 2026-11-07;
+/// eval/roundtrip/excel-saved/cases/t4731-builtin-num-fmt-ids.xlsx; number-formats.md "Built-in ids
+/// Excel en-US maps to other built-ins").
+fn en_us_builtin_id(id: i32) -> i32 {
+    match id {
+        27..=31 | 36 | 50..=58 | 71 | 72 => 14,
+        32..=35 | 77 => 21,
+        59..=68 | 73..=75 => id - 58, // 1-4 `0`..`#,##0.00`, 5-8 `$`, 9-10 `%`; 15-17 dates
+        69 | 70 => id - 57,           // 12, 13 fractions
+        76 => 20,
+        78 => 22,
+        79..=81 => id - 34, // 45-47 `mm:ss`, `[h]:mm:ss`, `mm:ss.0`
+        _ => id,
+    }
+}
+
 pub fn get_num_fmt(num_fmt_id: i32, num_fmts: &[NumFmt]) -> String {
     // Check if it defined
     for num_fmt in num_fmts {
@@ -88,21 +110,23 @@ pub fn get_num_fmt(num_fmt_id: i32, num_fmts: &[NumFmt]) -> String {
             return num_fmt.format_code.clone();
         }
     }
-    // Return one of the default ones
-    if num_fmt_id < DEFAULT_NUM_FMTS.len() as i32 {
-        return DEFAULT_NUM_FMTS[num_fmt_id as usize].to_string();
-    }
-    // Return general
-    DEFAULT_NUM_FMTS[0].to_string()
+    // Return one of the default ones, or general for any other id (a negative one included: the
+    // workbook check refuses those, but this does not rely on it).
+    usize::try_from(en_us_builtin_id(num_fmt_id))
+        .ok()
+        .and_then(|i| DEFAULT_NUM_FMTS.get(i))
+        .copied()
+        .unwrap_or("general")
+        .to_string()
 }
 
-/// The first id of a workbook's own number formats, by convention: ids below 164 are built-in or
-/// reserved for built-ins (ECMA-376 §18.8.30), and the case builder (XlsxWriter) numbers custom
-/// formats from 164, so a spec workbook's first custom format has the same id here as in the file
-/// Excel opens. Which ids Excel itself gives on save is UNVERIFIED (T-4731), and so is the match
-/// with several custom formats (T-4730; number-formats.md "Custom number format ids start at
-/// 164").
-const FIRST_CUSTOM_NUM_FMT_ID: i32 = 164;
+/// The first id of a workbook's own number formats: ids below 164 are built-in or reserved for
+/// built-ins (ECMA-376 §18.8.30), and the case builder (XlsxWriter) numbers custom formats from 164.
+/// Excel keeps a file's custom ids 164, 165 on save and gives the formats it adds 166, 167, as the
+/// first free id from here does (probes/t4731-builtin-num-fmt-ids; number-formats.md "Custom number
+/// format ids on save"). Files whose custom ids have a gap are UNVERIFIED (T-5042), and so is the
+/// spec adapter's match with several custom formats (T-4730).
+pub const FIRST_CUSTOM_NUM_FMT_ID: i32 = 164;
 
 pub fn get_new_num_fmt_index(num_fmts: &[NumFmt]) -> i32 {
     let mut index = FIRST_CUSTOM_NUM_FMT_ID;
@@ -686,10 +710,37 @@ mod tests {
             "_(\"$\"* #,##0.00_);_(\"$\"* \\(#,##0.00\\);_(\"$\"* \"-\"??_);_(@_)"
         );
         assert_eq!(get_num_fmt(49, &[]), "@");
-        // Reserved ids 23–36 resolve to "general".
+        // Reserved ids 23–26 resolve to "general" (27-36 are East Asian, T-4731).
         assert_eq!(get_num_fmt(25, &[]), "general");
         // Out-of-range falls back to "general" too.
         assert_eq!(get_num_fmt(500, &[]), "general");
+    }
+
+    // Excel en-US shows each East Asian built-in id as the en-US built-in it saves it as
+    // (probes/t4731-builtin-num-fmt-ids sheet B, excel-graph 2026-11-07; the saved ids are in
+    // eval/roundtrip/excel-saved/cases/t4731-builtin-num-fmt-ids.xlsx; number-formats.md
+    // "Built-in ids Excel en-US maps to other built-ins").
+    #[test]
+    fn east_asian_builtin_ids_are_their_en_us_builtins() {
+        // Each probed id (sheet B rows 6-47) and the id Excel saved it as.
+        let probed: [i32; 42] = [
+            27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
+            62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81,
+        ];
+        let saved_as: [i32; 42] = [
+            14, 14, 14, 14, 14, 21, 21, 21, 21, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 1, 2, 3, 4,
+            5, 6, 7, 8, 9, 10, 12, 13, 14, 14, 15, 16, 17, 20, 21, 22, 45, 46, 47,
+        ];
+        for (id, en_us) in probed.into_iter().zip(saved_as) {
+            assert_eq!(get_num_fmt(id, &[]), get_num_fmt(en_us, &[]), "id {id}");
+        }
+        // 1/1/2020 18:00 (B5), and 00:00.0 for 43831.75 in id 81, which Excel saves as 47 (B47).
+        assert_eq!(get_num_fmt(22, &[]), "m/d/yyyy h:mm");
+        assert_eq!(get_num_fmt(47, &[]), "mm:ss.0");
+        assert_eq!(get_num_fmt(82, &[]), "general");
+        // A negative id (untrusted file) is General, not an out-of-bounds index.
+        assert_eq!(get_num_fmt(-1, &[]), "general");
+        assert_eq!(get_num_fmt(i32::MIN, &[]), "general");
     }
 
     // A workbook-defined `numFmt` still wins over the default table.
@@ -704,17 +755,13 @@ mod tests {
 
     // Every corrected built-in code must actually be formattable by IronCalc's own formatter
     // (a valid number must NOT come back as an error). This is what was broken: the old garbage
-    // codes (e.g. "t0.00") made the formatter fail on valid numbers.
-    //
-    // Exception: id 47 (`mmss.0`, elapsed minutes:seconds.tenths) is the correct ECMA-376 code
-    // but IronCalc's *formatter* does not yet parse that pattern — a separate formatter gap, not
-    // a table bug (the old code at id 47 didn't render either). Kept correct in the table so a
-    // future formatter fix makes it work; excluded from this render smoke-check.
+    // codes (e.g. "t0.00") made the formatter fail on valid numbers. Id 47 joined once its code
+    // became Excel's `mm:ss.0` (T-4731; the ECMA `mmss.0` did not parse).
     #[test]
     fn corrected_builtins_format_without_error() {
         let mut failures = Vec::new();
         for id in [
-            5, 6, 7, 8, 11, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 48, 49,
+            5, 6, 7, 8, 11, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
         ] {
             let code = get_num_fmt(id, &[]);
             let out = format_number(1234.5, &code, "en");

@@ -936,8 +936,10 @@ included (`TEXT(-1.5,"[h]:mm;-[h]:mm")`), and so is `TEXT(B1,"[h]:mm")` for a ce
 Quirk: a format whose only token is one elapsed token (`[h]`, `[hh]`, `[m]`, `[mm]`, `[s]`, `[ss]`; probes/elapsed-tiny-negatives-1900, T-1338) prints negatives in the 1900 system too: `TEXT(-1.5,"[s]")` =
 "-129600" and `TEXT(-1E-10,"[s]")` = "-0" (the minus stays on a magnitude that rounds or truncates to 0; see number-formats.md "Elapsed-time tokens") in both systems, while
 `[s] yy` is `#VALUE!` (probes/text-negative-serial-elapsed-mixed A6).
-Not probeable through excel-graph: cell display (`#####` or text) of a negative under a date format; the oracle
-reads cached values, not displayed text.
+Cell display of a negative under a date format: in the 1900 system it is 255 `#` on excel-graph (its
+`Range.text`; number-formats.md "Displayed text (`Range.text`) of a formatted cell", and the date cells of
+probes/t4731-builtin-num-fmt-ids, B!D1:D24 and D37:D47, T-4731). UNVERIFIED (probe pending, owner T-5043): the
+1904 system's cell display, where negatives are valid serials.
 Evidence: probes/date-system-1900-negatives and probes/date-system-1904-negatives (same 18 questions, excel-graph,
 2026-10-11, T-1268).
 Ours: both cases pass 18 of 18. The formatter reads the date system since T-1105. Since T-1330 (SPEC-0005 step 4),

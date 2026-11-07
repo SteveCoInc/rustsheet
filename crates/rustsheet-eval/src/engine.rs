@@ -9,10 +9,13 @@ use rustsheet::{
     Value as ApiValue, Workbook, WorkbookOptions, XlError,
 };
 
+use rustsheet_engine::number_format::{get_num_fmt, FIRST_CUSTOM_NUM_FMT_ID};
 use rustsheet_engine::text::{lone_escape, Segment};
 use rustsheet_engine::Text;
 
-use crate::case::{split_qualified, ApiName, CaseSpec, CellInput, SheetOp, SheetSpec, TableSpec};
+use crate::case::{
+    split_qualified, ApiName, CaseSpec, CellInput, NumberFormatSpec, SheetOp, SheetSpec, TableSpec,
+};
 use crate::cellref::{parse_range, Addr};
 use crate::spec_pivots;
 use crate::value::Value;
@@ -635,7 +638,9 @@ fn filters_hidden_rows(table: &TableSpec, range: RangeRef, hidden_rows: &[u32]) 
         })
 }
 
-/// Gives each cell of `sheet` (sheet `id`) its spec number format.
+/// Gives each cell of `sheet` (sheet `id`) its spec number format. A built-in id takes the code
+/// the engine's own table gives it (`get_num_fmt` with no workbook formats), as when the engine
+/// reads that bare `numFmtId` from the file spec2xlsx writes (T-4731).
 fn set_number_formats(
     tx: &mut rustsheet::Txn<'_>,
     sheet: &SheetSpec,
@@ -644,7 +649,18 @@ fn set_number_formats(
     for (a1, format) in &sheet.number_formats {
         let addr = Addr::parse(a1)
             .ok_or_else(|| rustsheet::EditError::Engine(format!("bad address {a1}")))?;
-        tx.set_number_format(CellRef::new(id, addr.row - 1, addr.col - 1)?, format)?;
+        let code = match format {
+            NumberFormatSpec::Code(code) => code.clone(),
+            NumberFormatSpec::BuiltIn(n) if (0..FIRST_CUSTOM_NUM_FMT_ID).contains(n) => {
+                get_num_fmt(*n, &[])
+            }
+            NumberFormatSpec::BuiltIn(n) => {
+                return Err(rustsheet::EditError::Engine(format!(
+                    "number format of {a1}: {n} is not a built-in id"
+                )))
+            }
+        };
+        tx.set_number_format(CellRef::new(id, addr.row - 1, addr.col - 1)?, &code)?;
     }
     Ok(())
 }

@@ -46,3 +46,22 @@ def test_an_entered_cell_cannot_have_a_number_format() -> None:
     sheet = {"name": "S", "cells": {"A1": {"entered": "(1)"}}, "number_formats": {"A1": "0"}}
     with pytest.raises(ValueError, match="entered"):
         build_xlsx({"sheets": [sheet]})
+
+
+def test_an_integer_number_format_writes_that_built_in_id() -> None:
+    # T-4731: a built-in id (below 164) is the cell's `numFmtId` as is, with no `numFmt` entry, so
+    # Excel shows its own built-in for it (ids 27-36 and 50-81 have no code in the file).
+    parts = spec_parts(
+        {"sheets": [{"name": "S", "cells": {"A1": 1.25, "B1": 2}, "number_formats": {"A1": 27, "B1": 14}}]}
+    )
+    styles = parts["xl/styles.xml"]
+    assert "<numFmts" not in styles
+    assert '<xf numFmtId="27"' in styles
+    assert '<xf numFmtId="14"' in styles
+
+
+@pytest.mark.parametrize("fmt", [-1, 164, True, 1.5])
+def test_a_number_format_id_must_be_a_built_in_id(fmt: object) -> None:
+    sheet = {"name": "S", "cells": {"A1": 1}, "number_formats": {"A1": fmt}}
+    with pytest.raises(ValueError, match="built-in id"):
+        build_xlsx({"sheets": [sheet]})
