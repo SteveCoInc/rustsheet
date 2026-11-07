@@ -1,10 +1,11 @@
 //! The patch tier of the source-preserving export (SPEC-0034 D3): a workbook whose structure is
 //! unchanged since its load is written as its source, with only the changed `<c>` elements
-//! rewritten and new shared strings appended. Every other byte, part and relationship is copied.
+//! rewritten and new shared strings and style records appended. Every other byte, part and
+//! relationship is copied.
 //!
 //! The patch never guesses. Anything it does not handle exactly is a fallback reason, and the
 //! caller regenerates instead:
-//! - a structural change, or a style table that changed (T-4623);
+//! - a structural change, or a style table that changed other than by appending records;
 //! - out-of-order rows or cells, a cell without `r`, or a prefixed worksheet;
 //! - a changed formula, or a cleared cell, in a shared-formula group;
 //! - a rich value or dynamic array that needs value or cell metadata (`vm`, `cm`) in a source that
@@ -41,11 +42,15 @@ use strings::{append_strings, count_si, shared_refs};
 
 mod package;
 mod strings;
+mod styles;
 #[cfg(test)]
 mod tests;
 
 /// Deepest element nesting the patcher reads in a worksheet (directive 5).
 const MAX_DEPTH: usize = 256;
+
+/// The styles part, as the importer reads it.
+const STYLES_PART: &str = "xl/styles.xml";
 
 /// The calculation chain, which lists every formula cell (SPEC-0034 E2).
 const CALC_CHAIN_PART: &str = "xl/calcChain.xml";
@@ -149,6 +154,17 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
             .ok_or("the shared-string part has no closing </sst>")?;
         replaced.insert(entry, text.into_bytes());
     }
+    if live.styles != base.styles {
+        let added = styles::appended(&base.styles, &live.styles)
+            .ok_or("the style table changed other than by appending")?;
+        let entry = names
+            .entry(STYLES_PART)
+            .ok_or("new styles need a styles part the source lacks")?
+            .to_string();
+        let xml = read_entry(&mut archive, &entry)?;
+        let text = styles::patch(&xml, &base.styles, &added)?;
+        replaced.insert(entry, text.into_bytes());
+    }
     // Only a source with no metadata of its own takes the export's; one that has its own keeps
     // it, and its cells' `vm`/`cm` were checked against it while splicing.
     let mut needs_metadata = false;
@@ -241,7 +257,8 @@ fn structure_differs(model: &Model, pristine: &Model) -> Option<String> {
     let (a, b) = (&model.workbook, &pristine.workbook);
     let workbook_fields = [
         ("defined names", a.defined_names == b.defined_names),
-        ("styles", a.styles == b.styles),
+        // A table that only appended records keeps every `s=` index; `styles::patch` writes it.
+        ("styles", styles::appended(&b.styles, &a.styles).is_some()),
         ("settings", a.settings == b.settings),
         ("metadata", a.metadata == b.metadata),
         ("tables", a.tables == b.tables),

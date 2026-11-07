@@ -134,3 +134,58 @@ fn counts_are_set_in_the_sst_tag_only() {
         Ok(3)
     );
 }
+
+mod styles {
+    use rustsheet_engine::types::{NumFmt, Styles};
+
+    use super::super::styles::{appended, patch};
+
+    #[test]
+    fn only_a_prefix_stable_table_is_patched() {
+        let pristine = Styles::default();
+        let mut live = pristine.clone();
+        live.num_fmts.push(NumFmt {
+            num_fmt_id: 164,
+            format_code: "0.000".into(),
+        });
+        live.cell_xfs.push(live.cell_xfs[0].clone());
+        assert!(appended(&pristine, &live).is_some());
+        // A record the source had, changed in place: every `s=` naming it would change meaning.
+        let mut moved = live.clone();
+        moved.cell_xfs[0].num_fmt_id = 164;
+        assert!(appended(&pristine, &moved).is_none());
+        // A dxf, a cell style or a named style the patch does not write.
+        let mut dxf = live.clone();
+        dxf.cell_styles.clear();
+        assert!(appended(&pristine, &dxf).is_none());
+    }
+
+    #[test]
+    fn records_are_appended_with_their_counts_and_a_missing_num_fmts_is_created() {
+        let mut pristine = Styles::default();
+        pristine.num_fmts.clear();
+        let mut live = pristine.clone();
+        live.num_fmts.push(NumFmt {
+            num_fmt_id: 164,
+            format_code: "0.000".into(),
+        });
+        live.cell_xfs.push(live.cell_xfs[0].clone());
+        let xfs = pristine.cell_xfs.len();
+        let fonts = pristine.fonts.len();
+        let source = format!(
+            r#"<styleSheet xmlns="m"><fonts count="{fonts}">{}</fonts><fills count="0"/><borders count="0"/><cellXfs count="{xfs}">{}</cellXfs></styleSheet>"#,
+            "<font/>".repeat(fonts),
+            "<xf/>".repeat(xfs)
+        );
+        let added = appended(&pristine, &live).expect("prefix-stable");
+        let out = patch(&source, &pristine, &added).expect("patches");
+        assert!(out.starts_with(r#"<styleSheet xmlns="m"><numFmts count="1"><numFmt numFmtId="164" formatCode="0.000"/></numFmts>"#), "{out}");
+        assert!(
+            out.contains(&format!(r#"<cellXfs count="{}">"#, xfs + 1)),
+            "{out}"
+        );
+        // A section that holds other than what the importer read is refused.
+        let short = source.replacen("<xf/>", "", 1);
+        assert!(patch(&short, &pristine, &added).is_err());
+    }
+}

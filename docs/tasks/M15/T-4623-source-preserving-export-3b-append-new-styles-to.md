@@ -3,12 +3,11 @@ id: T-4623
 title: "Source-preserving export 3b: append new styles to a patched package's styles.xml (SPEC-0034 D3.3)"
 milestone: M15
 lane: engine
-status: blocked
+status: in-progress
 priority: P2
 size: S
 tier: opus
 depends_on: [T-4561]
----
 spec: docs/specs/SPEC-0034-xlsx-source-preserving-export.md
 ---
 
@@ -37,8 +36,3 @@ Split out of T-4561 (which covers metadata and calcChain).
 
 ## Out of scope
 - Cell styles (`cellStyleXfs`, named styles) and dxfs added by conditional-formatting edits.
-
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275, 0306): M15 waits until Phase 1 parity exits, except for the task the
-owner-directed session claims. Unblock when docs/status.md has the line `**Phase 1:** exited <date>`, or by claiming
-it in that session.

@@ -14,6 +14,7 @@ use rustsheet_xlsx::export::{save_preserving, save_xlsx_to_writer, SaveTier};
 use rustsheet_xlsx::import::load_from_xlsx_bytes;
 
 const SHEET: &str = "xl/worksheets/sheet1.xml";
+const STYLES: &str = "xl/styles.xml";
 const STRINGS: &str = "xl/sharedStrings.xml";
 const RELS: &str = "xl/_rels/workbook.xml.rels";
 const TYPES: &str = "[Content_Types].xml";
@@ -390,17 +391,6 @@ fn what_the_patcher_will_not_do_exactly_regenerates() {
         },
         "a new sheet",
     );
-    // A new style: the style table changed (T-4561).
-    regenerated(
-        &src,
-        |m| {
-            m.set_user_input(0, 1, 1, "5".into()).unwrap();
-            let mut style = m.get_style_for_cell(0, 1, 1).unwrap();
-            style.font.b = true;
-            m.set_cell_style(0, 1, 1, &style).unwrap();
-        },
-        "a new style",
-    );
     // Rows the source stores out of order.
     let sheet = part(&src, SHEET);
     let (row1, row2) = (row(&sheet, 1), row(&sheet, 2));
@@ -447,4 +437,61 @@ fn a_changed_formula_in_a_shared_group_regenerates() {
     let (out, tier) = save_after(&shared, |m| m.set_user_input(0, 1, 1, "5".into()).unwrap());
     assert_patched(&tier);
     assert!(part(&out, SHEET).contains(r#"<f t="shared" ref="A2:A2" si="0">A1*3</f><v>15</v>"#));
+}
+
+/// The `count` of the `<name>` section of a styles part, and how many `<record` elements it holds.
+fn section(styles: &str, name: &str, record: &str) -> (usize, usize) {
+    let start = styles.find(&format!("<{name} ")).unwrap();
+    let end = styles[start..].find(&format!("</{name}>")).unwrap() + start;
+    let body = &styles[start..end];
+    let count = body
+        .split("count=\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap();
+    let records =
+        body.matches(&format!("<{record}>")).count() + body.matches(&format!("<{record} ")).count();
+    (count.parse().unwrap(), records)
+}
+
+#[test]
+fn a_new_number_format_and_a_new_font_are_appended_to_the_source_styles() {
+    let src = source();
+    let before = part(&src, STYLES);
+    let (xfs, _) = section(&before, "cellXfs", "xf");
+    let (fonts, _) = section(&before, "fonts", "font");
+    let (out, tier) = save_after(&src, |m| {
+        m.set_user_input(0, 4, 1, "0.5".into()).unwrap();
+        let mut style = m.get_style_for_cell(0, 4, 1).unwrap();
+        style.num_fmt = "0.000".into();
+        m.set_cell_style(0, 4, 1, &style).unwrap();
+        let mut bold = m.get_style_for_cell(0, 1, 1).unwrap();
+        bold.font.b = true;
+        m.set_cell_style(0, 1, 1, &bold).unwrap();
+    });
+    assert_patched(&tier);
+    assert_eq!(
+        changed(&src, &out),
+        BTreeSet::from([SHEET.into(), STYLES.into()])
+    );
+    let after = part(&out, STYLES);
+    // Every source byte up to the first appended record is kept: the source's records keep
+    // their indexes, so every `s=` in the package still names its style.
+    assert_eq!(
+        section(&after, "cellXfs", "xf"),
+        (xfs + 2, xfs + 2),
+        "{after}"
+    );
+    assert_eq!(
+        section(&after, "fonts", "font"),
+        (fonts + 1, fonts + 1),
+        "{after}"
+    );
+    assert!(after.contains(r#"formatCode="0.000""#), "{after}");
+    assert_eq!(value(&out, (4, 1)), "0.500");
+    let reloaded = load(&out);
+    assert!(reloaded.get_style_for_cell(0, 1, 1).unwrap().font.b);
+    assert_eq!(value(&out, (3, 1)), "x");
 }
