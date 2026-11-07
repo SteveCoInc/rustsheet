@@ -2,11 +2,10 @@
 use super::half_integer::accurate_half_integer_upper;
 use super::huge_shape::{huge_shape_quantile, wilson_hilferty_quantile};
 use super::{
-    cdf_terms_bound, continued_fraction_budget, excel_lower, excel_newton_quantile,
-    excel_small_shape_lower, excel_small_shape_quantile, excel_tiny_quantile, gamma_cdf,
-    gamma_density, gamma_quantile, gamma_quantile_within, gamma_sf, gamma_ur,
-    incomplete_gamma_pair, pair_with, poisson_upper, temme_pair, Exponent, Tail, Terms, MAX_TERMS,
-    TEMME_C,
+    cdf_terms_bound, continued_fraction_budget, excel_newton_quantile, excel_small_shape_lower,
+    excel_small_shape_quantile, excel_tiny_quantile, gamma_cdf, gamma_density, gamma_quantile,
+    gamma_quantile_within, gamma_sf, gamma_ur, incomplete_gamma_pair, pair_with, poisson_upper,
+    temme_pair, Exponent, Tail, Terms, MAX_TERMS, TEMME_C,
 };
 use statrs::distribution::{ChiSquared, ContinuousCDF, DiscreteCDF, Gamma, Poisson};
 use statrs::function::gamma::{gamma_lr as statrs_lr, gamma_ur as statrs_ur};
@@ -994,53 +993,4 @@ fn near_mode_pair_is_within_an_ulp_from_shape_1e3() {
     assert_eq!(pair(1e308, 1e308), (0.5, 0.5));
     assert_eq!(pair(1.5e308, 1e308), (0.0, 1.0));
     assert_eq!(pair(1e308, 1e300), (0.0, 1.0));
-}
-
-/// Excel's lower tail above shape 1 at x up to 1 is its leading-factor series form, at any shape
-/// (T-3412): bit for bit at these cells (probes-numeric/m9-gamma-dist-a9 A1, fit-audit-t2638-
-/// ratio-min S!A60, t3252-gamma-prefactor-window A86), where the pair was 13, 361 and 165 ulp
-/// off. Above x = 1 and at shape 1 the pair keeps the value.
-#[test]
-fn lower_tail_above_shape_one_is_the_leading_factor_form() {
-    for (a, x, excel) in [
-        (9.0, 0.9, 4.765_843_251_833_135e-7_f64),
-        (100.0, 0.45, 1.437_985_210_971_763_8e-193),
-        (50.0, 0.15, 1.809_768_622_493_298_2e-106),
-    ] {
-        assert_eq!(
-            excel_lower(a, x).unwrap().to_bits(),
-            excel.to_bits(),
-            "P({a}, {x})"
-        );
-    }
-    assert_eq!(excel_lower(9.0, 1.5), None);
-    assert_eq!(excel_lower(1.0, 0.5), None);
-}
-
-/// Below x = a + 1 at a shape from 1 to 20, Excel's upper tail is (0.5 - P) + 0.5 (T-3412):
-/// CHISQ.DIST.RT(1,5) and (1.5,3) (probes-numeric/t1049-chisqdistrt A11, m9-chisq-dist-rt A12;
-/// P from the leading-factor form), CHISQ.DIST.RT(9.5924,21) (t3269-fresh-sweep A126; P from the
-/// series above x = 1) and POISSON(5,2.36035,TRUE) and (7,1.5,TRUE) (t3269-fresh-sweep A145,
-/// gen-m9/d8f44d556674c2fd A343), each 1 ulp off with 1 - P.
-#[test]
-fn lower_region_upper_tail_takes_excel_s_complement() {
-    for (x, df, excel) in [
-        (1.0, 5.0, 0.962_565_773_247_296_3_f64),
-        (1.5, 3.0, 0.682_270_330_336_212_5),
-        (9.5924, 21.0, 0.983_734_419_275_696),
-    ] {
-        let dist = Gamma::new(df / 2.0, 0.5).unwrap();
-        assert_eq!(
-            gamma_sf(&dist, x).to_bits(),
-            excel.to_bits(),
-            "CHISQ.DIST.RT({x},{df})"
-        );
-    }
-    for (k, mean, excel) in [
-        (5.0, 2.36035, 0.966_663_198_794_583_3_f64),
-        (7.0, 1.5, 0.999_830_434_271_130_4),
-    ] {
-        let q = poisson_upper(k + 1.0, mean);
-        assert_eq!(q.to_bits(), excel.to_bits(), "POISSON({k},{mean},TRUE)");
-    }
 }

@@ -1085,6 +1085,45 @@ computes it (2^27 units, `limits::MAX_LIFTED_CELL_VISITS`, over 2^18 and 2^17 an
 Status: VERIFIED (excel-graph)
 Tasks: T-1848, T-1849, T-1871
 
+## Lower region at a shape above 1 (T-3412)
+
+Three forms Excel takes in the incomplete gamma's lower region, measured on cells with Excel's own arguments
+(literals, or column-A quantiles of probes-numeric/t3311-gamma-inv-lower-tail-cdf substituted from the oracle; cells
+that take the engine's own quantile as input carry the quantile's miss, T-3403), with a 30% hash hold-out fixed
+before scoring and three fresh sweeps filled after each freeze (docs/research/t3412/fresh_sweep.py):
+- **The cdf up to x/scale = 1 is the leading-factor series form at every shape above 1:**
+  `EXP(a*LN(y))/EXP(GAMMALN(a+1))*EXP(-y)` times the series, with a·LN(y) rounded to a double (T-3060's form below
+  shape 1, which needs a·LN(x) <= -16 there; above 1 there is no such gate). GAMMA.DIST, GAMMADIST and CHISQ.DIST.
+  Below shape 20: train 123 / 251 bit-exact, test 60 / 124, within 4 ulp at all 370 normal results, against 20, 10
+  and 134 cells over 16 ulp for the accurate pair (`GAMMA.DIST(0.9,9,1,TRUE)` 13 ulp to 0, `CHISQ.DIST(1,20,TRUE)` 14
+  to 1). Shapes 40 to 100: within 7 ulp at all 18 cells (the ratio and `rcomp` prefactors 6 to 552 off). Fresh sweep
+  t3412-fresh-sweep: GAMMA.DIST 90 of 90 within 4 ulp (42 bit-exact; the pair 1, and 56 over 16 ulp), CHISQ.DIST 50 of
+  50 (27; the pair 2). Fresh sweep 2 at shapes 20 to 170: 82 of 90 within 4 ulp, all within 16, none farther (the
+  pair: 61 over 16). Variants tried and rejected: the series in x87 registers (108 of 375 bit-exact against 183), the
+  products in registers (182), seven other orders of the four factors (151 to 185, no hold-out gain), GAMMA(a+1) for
+  EXP(GAMMALN(a+1)) (57 of 169 at y below 1E-5), a·LN(x) kept in a register (20 of 169). The form's own residue is 1 ulp at
+  about half its cells. Past x/scale = 1 it is not Excel's (6 of 51 bit-exact, the pair 10), and neither is the pair:
+  `GAMMA.DIST(1.07551,13.41,1,TRUE)` is 30 ulp off either way (T-4959).
+- **The upper tail below x = a + 1 at shapes 1 to 20 is (0.5 - P) + 0.5, not 1 - P**, with P the form above up to
+  x = 1 and the series above it. CHISQ.DIST.RT, CHIDIST and the POISSON cdf. Up to x = 1: 51 / 51 train and 32 / 33 test
+  bit-exact against 43 and 27 for 1 - P; above it 69 / 98 and 20 / 31 against 58 and 16. Fresh sweep: CHISQ.DIST.RT 53
+  of 60 bit-exact (1 - P: 47), POISSON 43 of 50 (38). The two differ only for P below 1/4. From shape 20 it is not
+  Excel's (POISSON 45 of 86 bit-exact against 71 for the existing kernels), which stay.
+- **The density up to x/scale = 1 is the same leading factor times e^-y times a / x**, at every shape above 1:
+  train 70 / 128, test 32 / 53 bit-exact below shape 20 and never over 4 ulp off, against 29, 14 and 54 cells over 4
+  ulp for the log forms (T-2753, T-2852); from shape 20, 128 of 158 against 96. Orders tried: the factor times a / x
+  last, (e^-y a) / x, y and the scale in place of x (47 to 56 of 128). Fresh sweep t3412-density-sweep (shapes 1 to 160):
+  77 of 120 bit-exact, all within 4 ulp, against 33 and 67 over 4 ulp. Excel's density is 0 where the leading factor is
+  subnormal, though a / x would bring the product back into range: `GAMMA.DIST(4.57398E-12,24.55,2,FALSE)` = 0
+  (factor 3E-311, density 2.5E-298 unflushed; one cell, T-4960).
+- On the eval against the T-3469 head (a9735e10), per cell: gated 34 fixed, 16 closer, 8 visibly fixed, 3 lost by
+  1 ulp (decision 0343: `CHISQ.DIST(1.5,DURATION(..),TRUE)`, `CHIDIST(0.3989…,3)`, `POISSON.DIST(6,2.5,TRUE)`); Gate B
+  465 to 469 of 506. The tip came from an external contributor's note (the log-space leading factor for x <= 1, and
+  the (0.5 - P) + 0.5 complement, "exact on 75/75 lower-region CHISQ.DIST.RT cells vs 63/75"): both reproduce here.
+
+Status: VERIFIED (excel-graph)
+Tasks: T-3060, T-3311, T-3412, T-4959, T-4960, T-4989
+
 ## Incomplete gamma: per-call cap and lifting (T-1872)
 Rule: CHISQ.DIST, CHISQ.DIST.RT, CHIDIST, CHISQ.INV, CHISQ.INV.RT, CHIINV, GAMMA.DIST, GAMMADIST, GAMMA.INV, GAMMAINV,
 POISSON and POISSON.DIST lift every argument over an array and over a two-cell range on the formula's own rows, each
