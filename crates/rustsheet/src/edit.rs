@@ -12,6 +12,7 @@
 mod calculated_column;
 mod diff;
 mod pivot;
+mod table_filter;
 
 pub use self::pivot::{
     PivotDateGroupBy, PivotError, PivotFunction, PivotParts, PivotRangeGroup, PivotTableInput,

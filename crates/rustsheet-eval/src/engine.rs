@@ -240,18 +240,7 @@ impl Engine for RustSheetEngine {
                         if phase == Phase::Stored {
                             spec_pivots::add_pivots(tx, spec, &ids, sheet, id)?;
                             for table in &sheet.tables {
-                                let range = range_ref(id, &table.range)?;
-                                tx.add_table_with_rows(
-                                    range,
-                                    &table.name,
-                                    filters_hidden_rows(table, range, &sheet.hidden_rows),
-                                    (table.header_row, table.totals_row),
-                                )?;
-                                for (letter, formula) in &table.calculated {
-                                    let (column, text) =
-                                        calculated_column(&table.range, letter, formula)?;
-                                    tx.set_table_column_formula(&table.name, column, text)?;
-                                }
+                                add_table(tx, id, table, &sheet.hidden_rows)?;
                             }
                         }
                         if phase == Phase::Values {
@@ -557,6 +546,38 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
         last.row - 1,
         last.col - 1,
     )?)
+}
+
+/// Adds the spec table `table` on sheet `id`: its range and rows, each of its `criteria` as the
+/// values filter spec2xlsx writes for it (so a column delete that takes one keeps the rows the
+/// others reject, T-4803), and its calculated columns. `hidden_rows` are its sheet's (one-based).
+fn add_table(
+    tx: &mut rustsheet::Txn<'_>,
+    id: SheetId,
+    table: &TableSpec,
+    hidden_rows: &[u32],
+) -> Result<(), rustsheet::EditError> {
+    let range = range_ref(id, &table.range)?;
+    tx.add_table_with_rows(
+        range,
+        &table.name,
+        filters_hidden_rows(table, range, hidden_rows),
+        (table.header_row, table.totals_row),
+    )?;
+    for criterion in &table.criteria {
+        let rejected: Vec<u32> = criterion
+            .hides
+            .iter()
+            .map(|r| r.saturating_sub(1))
+            .collect();
+        let column = usize::try_from(criterion.column).unwrap_or(usize::MAX);
+        tx.filter_table_column(&table.name, column, &rejected)?;
+    }
+    for (letter, formula) in &table.calculated {
+        let (column, text) = calculated_column(&table.range, letter, formula)?;
+        tx.set_table_column_formula(&table.name, column, text)?;
+    }
+    Ok(())
 }
 
 /// Whether the spec table's filter makes its sheet's hidden rows filtered: Excel calls them
