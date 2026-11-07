@@ -6,6 +6,7 @@
 //! same content type. Element and attribute items (T-4509), semantic items (T-4513) and R1
 //! (T-4514) build on the same results.
 
+mod by_scenario;
 mod exceptions;
 mod package;
 mod package_diff;
@@ -815,7 +816,10 @@ pub fn command(
         let name = &suite.manifest.name;
         let mine: Vec<&CaseResult> = results.iter().filter(|r| &r.suite == name).collect();
         let rate = KeptRate::of(&mine);
-        let current = baseline(&mine, suite.manifest.baseline);
+        // Written and judged per case and scenario (T-4961). A committed baseline still in the
+        // per-case form is judged per case once, so the re-record that migrates it accepts no
+        // regression the old rule refused.
+        let current = by_scenario::baseline(&mine, suite.manifest.baseline);
         lines.push(format!(
             "[{name}] {} cases ({} not scored), {} items, {}, {} failing",
             mine.len(),
@@ -829,7 +833,11 @@ pub fn command(
         }
         let path = root.join("eval/baseline").join(format!("{name}.txt"));
         let old = Baseline::read(&path)?;
-        let delta = diff(&old, &current);
+        let delta = if by_scenario::is_legacy(&old) {
+            diff(&old, &baseline(&mine, suite.manifest.baseline))
+        } else {
+            diff(&old, &current)
+        };
         lines.extend(
             delta
                 .regressions

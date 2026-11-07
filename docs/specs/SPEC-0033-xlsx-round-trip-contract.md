@@ -351,9 +351,11 @@ milestone = ["M15"]
 
 - **Discovery and fetch.** These reuse the `xlsx` kind's machinery (`include`, `exclude`, `[fetch]`, licence and
   origin keys). There is one case discoverer, not two (directive 3).
-- **Baseline.** `eval/baseline/<suite>.txt` is the ordinary cells-mode file: `C` gives a case's item count, and each
-  `F` line holds a failing item, `<scenario> <kind> <item key> <verdict>`. The ratchet is the usual one. A line may disappear (fixed). A new
-  failing item is a regression unless the case is new (new coverage). `update-baseline` refuses regressions.
+- **Baseline.** `eval/baseline/<suite>.txt` is the ordinary cells-mode file, keyed by case and scenario,
+  `<case>#<scenario>` (decision 0345, T-4961): `C` gives the item count of a case's scenario, and each
+  `F` line holds a failing item of it, `<scenario> <kind> <item key> <verdict>`. The ratchet is the usual one, per key, so a new scenario
+  is a new key and cannot turn an existing scenario's loss into new coverage. A line may disappear (fixed). A new
+  failing item is a regression unless the key is new (new coverage). `update-baseline` refuses regressions.
   `--allow-regressions` needs a decision record, as everywhere.
   A corpus suite (Calipers, POI, corpus-bench) uses `baseline = "cases"` instead. Its item lines would run to
   tens of megabytes (about 550,000 on the first run, T-4173). Each failing case is one `F` line,
