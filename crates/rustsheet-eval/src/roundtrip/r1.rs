@@ -44,6 +44,11 @@ pub(super) struct Delta {
     pub(super) written: BTreeSet<String>,
     /// The cells whose cached value the edits changed: only their value may change.
     pub(super) changed: BTreeSet<String>,
+    /// The written cells that were empty before: their style fact is new, as every stored cell
+    /// has one.
+    pub(super) created: BTreeSet<String>,
+    /// E6's cells, whose style E6 changes.
+    pub(super) restyled: BTreeSet<String>,
     /// The edited sheet, whose `dimension` the edits may extend (N9).
     pub(super) sheet: String,
     /// Whether E5 ran: only it appends shared strings.
@@ -119,17 +124,27 @@ pub(super) fn apply(
         });
         d.strings |= *edit == Edit::E5;
         d.styles |= *edit == Edit::E6;
-        record(&changes, &names, d);
+        record(&changes, &names, *edit == Edit::E6, d);
     }
     Ok((delta, outcome))
 }
 
-/// Adds a change set's written and value-changed cells to `delta`.
-fn record(changes: &ChangeSet, names: &HashMap<SheetId, String>, delta: &mut Delta) {
+/// Adds a change set's written, created and value-changed cells to `delta`, and with `restyle`
+/// (E6) its written cells to the restyled ones.
+fn record(changes: &ChangeSet, names: &HashMap<SheetId, String>, restyle: bool, delta: &mut Delta) {
     let at = |cell: &CellRef| names.get(&cell.sheet).map(|name| format!("{name}!{cell}"));
-    delta
-        .written
-        .extend(changes.inputs.iter().filter_map(|c| at(&c.cell)));
+    for input in &changes.inputs {
+        let Some(cell) = at(&input.cell) else {
+            continue;
+        };
+        if input.before.is_none() {
+            delta.created.insert(cell.clone());
+        }
+        if restyle {
+            delta.restyled.insert(cell.clone());
+        }
+        delta.written.insert(cell);
+    }
     delta
         .changed
         .extend(changes.values.iter().filter_map(|c| at(&c.cell)));
@@ -277,14 +292,15 @@ pub(super) fn violations(
 }
 
 /// Whether `Δ(E)` explains `item` (D5). Each kind of change has the one edit that can cause it:
-/// - a written cell's input, formula, computed flag and value, and its style only under E6;
+/// - a written cell's input, formula, computed flag and value; its style when the edit created
+///   the cell or E6 restyled it;
 /// - a value-changed cell's value, and nothing else about it;
 /// - a number format or cell format appended under E6, with the style counts (N10);
 /// - the shared-string counts under E5 (N10);
 /// - the edited sheet's `dimension@ref` (N9).
 fn explained(item: &Item, delta: &Delta) -> bool {
     match item.kind {
-        "semantic" => fact_explained(&item.key, delta),
+        "semantic" => fact_explained(&item.key, item.verdict, delta),
         "element" | "attribute" => {
             let Some((part, path)) = item.key.split_once(':') else {
                 return false;
@@ -313,8 +329,9 @@ const STYLE_COUNTS: &[&str] = &[
 const SST_COUNTS: &[&str] = &["/sst@count", "/sst@uniqueCount"];
 
 /// Whether `delta` explains a semantic fact: `cell <at> input|formula|computed|style` or
-/// `value <at>`. A link is never explained: no edit writes one.
-fn fact_explained(key: &str, delta: &Delta) -> bool {
+/// `value <at>`. A style fact is explained when the edit created the cell (its new style fact is
+/// `added`) or E6 restyled it. A link is never explained: no edit writes one.
+fn fact_explained(key: &str, verdict: Verdict, delta: &Delta) -> bool {
     if let Some(at) = key.strip_prefix("value ") {
         return delta.written.contains(at) || delta.changed.contains(at);
     }
@@ -326,8 +343,9 @@ fn fact_explained(key: &str, delta: &Delta) -> bool {
             return delta.written.contains(at);
         }
     }
-    rest.strip_suffix(" style")
-        .is_some_and(|at| delta.styles && delta.written.contains(at))
+    rest.strip_suffix(" style").is_some_and(|at| {
+        delta.restyled.contains(at) || (verdict == Verdict::Added && delta.created.contains(at))
+    })
 }
 
 /// An appended number format or cell format (E6), or the `numFmts` list E6 creates.

@@ -4,15 +4,16 @@ use rustsheet_engine::types::Cell;
 
 use crate::error::RefError;
 use crate::refs::CellRef;
-use crate::workbook::{sheet_index, Workbook};
+use crate::workbook::{engine_rc, sheet_index, Workbook};
 
 impl Workbook {
-    /// Whether `cell` is a member of a dynamic-array spill or a CSE array other than its anchor:
-    /// it shows a value the anchor's formula computed, not an input of its own. Writing to it
-    /// blocks the spill (`#SPILL!`) or is refused for an array.
+    /// Whether `cell` is a member of a spill range other than its anchor (the engine stores it as a
+    /// spill cell): it shows a value the anchor's formula computed, not an input of its own, and
+    /// writing to it blocks the spill (`#SPILL!`).
     ///
     /// # Errors
-    /// [`RefError::UnknownSheet`] when the cell's sheet does not exist.
+    /// [`RefError::UnknownSheet`] when the cell's sheet does not exist, [`RefError::OutOfBounds`]
+    /// for a cell past the grid.
     pub fn in_spill(&self, cell: CellRef) -> Result<bool, RefError> {
         let index = sheet_index(&self.model, cell.sheet)?;
         let ws = self
@@ -20,10 +21,7 @@ impl Workbook {
             .workbook
             .worksheet(index)
             .map_err(|_| RefError::UnknownSheet(cell.sheet.get().to_string()))?;
-        let (row, col) = (
-            i32::try_from(cell.row).map_err(|_| RefError::OutOfBounds)? + 1,
-            i32::try_from(cell.col).map_err(|_| RefError::OutOfBounds)? + 1,
-        );
+        let (row, col) = engine_rc(cell.row, cell.col).ok_or(RefError::OutOfBounds)?;
         Ok(matches!(ws.cell(row, col), Some(Cell::SpillCell { .. })))
     }
 }

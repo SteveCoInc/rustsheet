@@ -798,8 +798,14 @@ mod r1_rule {
 
     fn delta(styles: bool) -> Delta {
         Delta {
-            written: ["Sheet1!A1".to_string()].into(),
+            written: ["Sheet1!A1".to_string(), "Sheet1!A9".to_string()].into(),
             changed: ["Sheet1!B2".to_string()].into(),
+            created: ["Sheet1!A9".to_string()].into(),
+            restyled: if styles {
+                ["Sheet1!A1".to_string()].into()
+            } else {
+                std::collections::BTreeSet::default()
+            },
             sheet: "Sheet1".into(),
             strings: false,
             styles,
@@ -819,6 +825,8 @@ mod r1_rule {
             // The written cell's input, and a dependent's new cached value.
             item("semantic", "cell Sheet1!A1 input", Verdict::Changed),
             item("semantic", "value Sheet1!B2", Verdict::Changed),
+            // A cell the edit created gets a style fact of its own.
+            item("semantic", "cell Sheet1!A9 style", Verdict::Added),
             // The edited sheet's dimension (N9).
             item(
                 "attribute",
@@ -840,6 +848,8 @@ mod r1_rule {
                 "/officeDocument[0]/styles[0]:/styleSheet/cellXfs[0]/xf[9]",
                 Verdict::Added,
             ),
+            // A created cell's style changed, not added, is not the edit's doing.
+            item("semantic", "cell Sheet1!A9 style", Verdict::Changed),
             // A count that is not N10's.
             item(
                 "attribute",
@@ -857,13 +867,14 @@ mod r1_rule {
                 "cell Sheet1!B2 formula",
                 "cell Sheet1!A1 style",
                 "/officeDocument[0]/styles[0]:/styleSheet/cellXfs[0]/xf[9]",
+                "cell Sheet1!A9 style",
                 "/officeDocument[0]/worksheet[Sheet1]:/worksheet/mergeCells[0]@count",
             ]
         );
         assert!(found.iter().all(|i| i.scenario == "R1/E1"));
-        // Under E6 the written cell's style and the appended cell format are explained.
+        // Under E6 the restyled cell's style and the appended cell format are explained.
         let with_e6 = violations("R1/E6", &plain, edited, &delta(true));
-        assert_eq!(with_e6.len(), 4, "{with_e6:?}");
+        assert_eq!(with_e6.len(), 5, "{with_e6:?}");
     }
 
     #[test]

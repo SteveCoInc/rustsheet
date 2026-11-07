@@ -24,7 +24,8 @@ each naming its decision or task, and a self-test fails on an exception that exc
 
 ## Acceptance criteria
 - [x] The fixtures suite runs R0 and R1/E1–E6 and R1/all.
-- [x] A crafted export that also drops an unrelated element is caught as a delta violation.
+- [x] A crafted export that also drops an unrelated element is caught as a delta violation (shown at the delta
+      rule's level, `r1_rule` in roundtrip/tests.rs; no end-to-end crafted package).
 - [x] The idempotence check runs on every case.
 - [x] The exception self-test fails on a stale exception.
 - [x] The baseline is updated.
@@ -37,7 +38,8 @@ each naming its decision or task, and a self-test fails on an exception that exc
 ## Outcome
 - `roundtrip/r1.rs` adds the standard edit set E1–E6 through the facade's `edit`. `Δ(E)` comes from the edits' change
   sets and keeps two cell sets:
-  - written cells explain their input, formula, computed flag and value, and their style only under E6;
+  - written cells explain their input, formula, computed flag and value. Their style is explained when the edit
+    created the cell (a new `style added` fact) or E6 restyled it;
   - value-changed cells explain their value only.
 
   Appended number and cell formats and the style counts are explained only under E6. The shared-string counts are
