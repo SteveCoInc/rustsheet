@@ -923,8 +923,8 @@ IMCONJUGATE, IMREAL and IMAGINARY of `"9.99999999999999E307-9.99999999999999E307
 IMCONJUGATE with the imaginary sign flipped (`9.99999999999999E+307+9.99999999999999E+307i`, 9.99999999999999E+307,
 -9.99999999999999E+307; B7:B9).
 Status: VERIFIED (excel-graph); implemented for the five (IMEXP with a nonzero imaginary part: T-2002, T-2060).
-Tasks: T-1827, T-1996, and the follow-ups T-2001 to T-2003.
-Evidence: probes/eng-im-overflow (excel-graph).
+Tasks: T-1827, T-1996, T-4721, and the follow-ups T-2001 to T-2003.
+Evidence: probes/eng-im-overflow, probes/t4721-im-overflow-residue (excel-graph).
 
 - Examples: `IMPRODUCT("1E200","1E200")`, `IMSUM("9E307","9E307")` and
   `IMPRODUCT("1E200","1E200","0")` are `#VALUE!` (A5-A7, A25, A30, A36-A38); `IMEXP("710")`,
@@ -990,8 +990,7 @@ Evidence: probes/eng-im-overflow (excel-graph).
 - `IMDIV("1","1E-308")` is `#NUM!` (A20) although results near 1E+308 are text (A46). Placing the cut
   (probes/t4721-im-overflow-residue B10:E10, excel-graph, T-4721): `IMDIV("1","1E-308")` and `IMDIV("1E-300","1E-308")`
   are `#NUM!`; `IMDIV("1","2.3E-308")` is `4.34782608695652E+307` and `IMDIV("1","1E-307")` `1E+307`. The cut lies
-  between 1E-308 (a subnormal divisor) and 2.3E-308 (above DBL_MIN, 2.2250738585072014E-308); its exact place and cause
-  stay unprobed (E10's result, 1E+8, is small, so the size of the result is not the trigger; the divisor is), and ours matches all four.
+  between 1E-308 (a subnormal divisor) and 2.3E-308 (above DBL_MIN, 2.2250738585072014E-308); its exact place stays unprobed, and the cause is probably the parse that reads a subnormal literal as 0 (the entries on subnormal COMPLEX text and on IMCSCH("1E-308")), not a result overflow (E10's result, 1E+8, is small, so the size of the result is not the trigger; the divisor is), and ours matches all four.
 - IMSIN, IMCOS, IMSINH and IMCOSH: a result part that overflows or is NaN is `#NUM!` (`IMCOSH("1000")`,
   `IMSINH("1000")`, `IMSIN("1+1000i")`, `IMCOS("1+1000i")`), as IMEXP of a real number (T-2003).
 - IMSUB: a part that overflows is 0 and the other part stays, no error: `IMSUB("9E307","-9E307")` and the `j` form are "0",
@@ -1442,7 +1441,7 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
 Evidence: gen-m9 cases of seeds 2258, 22580 and 22581 (excel-graph, 2026-10-22/23, T-2258); every value above is an
 Excel cell of eval/suites/gen-m9 with its case id in the owning task. The engine-side formulas (SIN, (EXP(4)-EXP(-4))/2,
 COS(ATAN2(-1,0)/2), ln|z|/0.693147180559945) were evaluated in RustSheet's own worksheet functions, which match Excel.
-Status: VERIFIED (excel-graph) for the observed values. The mechanisms (IM trig of a real as SIN/COS/TAN, exp-based sinh/cosh, IMSQRT through COS and ATAN2) are fitted against RustSheet's own kernels and reproduce every cited cell; T-2534, T-2535 and T-2536 re-confirm them on the cells. The IMLOG2 and IMCSC formulations are UNVERIFIED candidates.
+Status: VERIFIED (excel-graph) for the observed values. The mechanisms (IM trig of a real as SIN/COS/TAN, exp-based sinh/cosh, IMSQRT through COS and ATAN2) are fitted against RustSheet's own kernels and reproduce every cited cell; T-2534, T-2535 and T-2536 re-confirm them on the cells. The IMLOG2 and IMCSC candidate formulations were superseded by the fitted IMCSC kernel (T-2044, "IM* reciprocal kernels, IMABS and IMARGUMENT") and the IMLOG2 entry (T-2231, T-3643); the `ln|z|/0.693147180559945` above is a rejected candidate.
 Tasks: T-2258, T-2532 to T-2551, T-2420, T-2421, T-2335, T-2389, T-2044, T-2117, T-1966, T-4593
 
 ## Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2* (T-2420)
