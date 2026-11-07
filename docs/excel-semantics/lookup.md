@@ -1267,6 +1267,22 @@ Tasks: T-1352
 Status: VERIFIED (excel-graph; excel-desktop unprobed)
 Tasks: T-1394
 
+## XLOOKUP and XMATCH read a written-empty mode as omitted (T-4871)
+Rule: a written-empty `match_mode` or `search_mode` of XLOOKUP or XMATCH, or a LET variable bound to nothing in that
+place, takes the argument's default (match_mode 0, search_mode 1). It is not read as 0, which as a search_mode is
+`#VALUE!`. With A1:A3 = 1..3, B1:B3 = 10..30 and C1:C3 = 3..1:
+- `XLOOKUP(2,A1:A3,B1:B3,,,)` is 20, `XLOOKUP(5,A1:A3,B1:B3,,,)` `#N/A`, `XLOOKUP(2,A1:A3,B1:B3,"nf",0,)` 20.
+- `XLOOKUP(2.5,A1:A3,B1:B3,,-1,)` is 20 and `(..,,1,)` 30; `XLOOKUP(2.5,A1:A3,B1:B3,"nf",,-1)` is "nf".
+- `XMATCH(2,A1:A3,0,)` is 2, `XMATCH(2.5,A1:A3,-1,)` 2, `XMATCH(2.5,C1:C3,1,)` 1, `XMATCH(2,C1:C3,,)` 2, and
+  `LET(e,,XMATCH(2,A1:A3,0,e))` 2.
+An empty `if_not_found` is the default too (`XLOOKUP(5,A1:A3,B1:B3,)` is `#N/A`), and an empty match_mode was already
+the default because the default is 0. The legacy lookups are unprobed here (T-4871 out of scope).
+Evidence: probes/t4871-empty-mode-args E1:E20 (excel-graph, 2026-11-07; predictions in
+`docs/research/t4871/predictions.tsv` committed before the fill: H_omitted 31/31, H_zero, the empty argument as 0, 9/31).
+Ours: `mode_or_default` (functions/lookup_and_reference/xmatch.rs), used by `fn_xmatch` and `xlookup_read`.
+Status: VERIFIED (excel-graph)
+Tasks: T-4871
+
 ## CHOOSE over an index array broadcasts its value arguments
 Rule: with an array (or range) index, CHOOSE lifts like IF over an array condition. Every value argument is
 read as a scalar or an array (a range as its values). The result spans the largest extent of the index and of
@@ -1781,16 +1797,26 @@ Mixed XLOOKUP grids (probes/t4704-mixed-xlookup-grid-readers, excel-graph, 2026-
 `XLOOKUP({2;9},Data!A1:A3,Data!B1:B3,Data!G1:G2)`: element 1 the hit 20, element 2 the reference G1:G2): the first
 element decides between an error and an off-sheet reference. With a `#DIV/0!` hit and the reference second,
 LARGE, SMALL, MEDIAN and MAX give `#DIV/0!` (A46, A52, A55, A61 with the grid `{2;9}`); with the reference first
-LARGE and MEDIAN give `#N/A` (A49, A58). SMALL and MAX with the reference first are not probed (they share the reader). Ours puts the error first (T-4741). A grid with references on both the
+LARGE, SMALL and MEDIAN give `#N/A` (A49, A58, A88) while MAX still gives `#DIV/0!` (A91): MAX takes the error
+wherever it is, the order statistics stop at the off-sheet reference. Matched since T-4741. A grid with references on both the
 formula's sheet and another cannot be built from XLOOKUP (every miss is the one if_not_found reference); see
 probes/t4697 for the INDIRECT form.
 Per-element readers of a mixed grid: FORMULATEXT gives `#VALUE!` then `#N/A` (A1:A2), INDIRECT `#REF!` then
 `#VALUE!` (A10:A11), OFFSET a 2x1 of `#VALUE!` (A4:A5, A7:A8; matched since T-4739), RANK, RANK.EQ and RANK.AVG
 `#VALUE!` for the hit and the rank in G1:G2 for the miss (`RANK(60,X)` 1, `RANK(20,X)` `#N/A`, `RANK(50,X)` 2;
 A25:A38; matched since T-4740). COUNTIF and SUMIF over an XLOOKUP with a text if_not_found spill a
-2x1 of `#VALUE!` whether the lookup misses or hits (A64:A74; ours a scalar, T-4742). TAKE and DROP keep the shape
+2x1 of `#VALUE!` whether the lookup misses or hits (A64:A74; matched since T-4742). A lifted XLOOKUP is a grid
+of its elements in every criteria call's range argument, whatever its if_not_found (probes/t4742-countif-array-
+range-arg, excel-graph, 2026-11-07): with no if_not_found `COUNTIF(XLOOKUP({2;9},..),">0")` is `#VALUE!` then the
+miss's `#N/A` (A13:A14) and `{2;3}` `#VALUE!` twice (A10:A11), all hits with a range if_not_found `#VALUE!` twice
+(A16:A17), all misses with "x" too (A19:A20), a 1x1 `{2}` a 1x1 `#VALUE!` (A22:C22), a 1x2 `{2,3}` a 1x2 result
+(A28:C28), and SUMIF's sum_range, COUNTIFS and AVERAGEIF lift the same way (A31:A38). A scalar lookup is the
+reference it picks: `COUNTIF(XLOOKUP(2,..,"x"),">0")` is 1 (A25). An array criterion beside the grid broadcasts,
+2x2 for `{">0",">5"}` (A40:C40; ours a 2x1, T-4826). A workbook with COUNTIF over `SEQUENCE(2)`, `A1:A2+0` or
+`SORT(A1:A2)` as its range failed to open on Excel for the web (createSession 501 unsupportedWorkbook), so those
+forms are not probed: COUNTIF takes no computed array as a range. TAKE and DROP keep the shape
 and match (A13:C22).
-Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742
+Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742, T-4826
 
 ## MATCH match_type that is a reference to an error cell is #REF! (excel-graph)
 Rule: `MATCH(30,A1:A5,M2)` with M2 `=NA()` gives `#REF!` (ERROR.TYPE 4) in Excel for the web, not the #N/A the

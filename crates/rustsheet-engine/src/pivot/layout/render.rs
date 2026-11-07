@@ -132,8 +132,9 @@ fn item_cell(item: &CacheItem) -> PivotCell {
     }
 }
 
-/// An item's label as text, for a subtotal's `<item> Total`.
-fn item_text(item: &CacheItem) -> String {
+/// An item's label as text, for a subtotal's `<item> Total` and a caption filter
+/// (`pivot::filter`).
+pub(crate) fn item_text(item: &CacheItem) -> String {
     match item_cell(item) {
         PivotCell::Text(text) => text,
         PivotCell::Number(n) => number_to_text(n),
@@ -499,11 +500,7 @@ fn render_within(
     check_lines(&rows)?;
     check_lines(&columns)?;
     let (top, left) = (layout.location.top, layout.location.left);
-    let geometry = &layout.geometry;
-    let (data_row, data_column) = (
-        top.saturating_add(geometry.first_data_row),
-        left.saturating_add(geometry.first_data_column),
-    );
+    let (data_row, data_column) = layout.data_origin();
     let header_row = data_row.saturating_sub(1).max(top);
     let mut cells = Cells {
         table,

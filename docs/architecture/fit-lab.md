@@ -86,6 +86,12 @@ other than a number, misses that cell and is counted under `err`. It does not st
 - **Iterate traces:** a candidate may expose `trace` (its iterates on a cell, in order). The report then
   lists, per candidate, on how many cells Excel's value is one of the iterates and at which index
   (`iterate_hits` in the JSON).
+- **Terminal events:** a candidate may also expose `event`, how its computation ended on a cell (a solver's
+  event and step, such as `converged@7` or `flat@3 then converged@5` for a run and its retry). The JSON lists it
+  per cell (`events`).
+- **Outcome types:** every score counts `typed`, the cells whose outcome type is Excel's: a number where Excel
+  has a number, Excel's error code where it has an error. On a fit that scores errors (`Fit.errors`) this is the
+  type score, beside the bit-exact count.
 - **Cell selection:** a regex over the formula text. Group 1 is the argument list, for example
   `^=GAMMA\.DIST\((.*)\)$`. The arguments are split at top-level commas. The reader handles
   numeric literals, TRUE/FALSE, string literals, array literals of those (`{1,2;3,4}`, a row-major
@@ -204,6 +210,7 @@ Candidates that model Excel's rounding use `Fraction`s:
 | `norm-s-inv` | 1,024 (m9-norm-s-inv, t1048-normsinv, t1048-norminv, t1746-norm-s-inv-central; nested p is Excel's own NORM.S.DIST(k)) | AS 241 PPND16 and PPND7 per evaluation order (Horner, FMA Horner, power sum) and upper-tail log, Newton and Halley steps on two CDF forms, Newton solves from four starts under two stop rules, AS 111's centre alone and with 1 or 3 Newton steps on Cody or glibc (T-1759), statrs and a PPND16-tails/statrs-centre hybrid, Acklam, Moro, correctly rounded (T-1746) |
 | `norm-s-dist` | 1,773 (t1040-norm-s-dist-cdf-a/b, m9-normpdf-norm-s-dist, t1048-normsdist, m9-norm-s-inv, t1746-norm-s-inv-central, t1759-norm-s-inv-roundtrip) | glibc erfc as `0.5*erfc(-x*sqrt(0.5))` and `0.5*erfc(-x/sqrt(2))`, Cody's rational approximations (T-1759; exact / ≤4 ulp: 1,103 / 1,524, 869 / 1,477, 991 / 1,562, engine 879 / 1,473) |
 | `irr-fallback` | 212 (t2927-irr-fallback-sweep, irr-fallback-roots; error cells scored) | Newton on P(v) from v = 0 (the engine's fallback) with its stop test, returned iterate, start, residual test and summation order varied; Newton in r and x = 1 + r; the fitted secant with a 1000-step cap; none beats the engine's 72 bit-exact (T-2928 attempt 1) |
+| `irr-type` | every IRR cell of the 26 IRR probe cases whose flows and guess are numbers (error cells scored; docs/research/irr-2026-11-07/plan.md section 6) | the secant in d on the twice-rounded running-product NPV with the retry from 0.1: the base replica (caps 50 and 200), Microsoft.VisualBasic's flat nudge and r-half or d-half pole clamps, RATE's hold on flat, run on past d = 1 and capped return; each traced, with its terminal event per cell (T-4834) |
 | `rate` | 782 (m9-fin-irr-rate, solver-iteration-traces, rate-empty-arguments, fin-argument-modes, rate-zero-residual-guess, rate-excel-pmt-bits; error cells scored; a nested PMT is Excel's own value of that call in m9-fin-pmt, the fit's `calls`) | the T-2005 secant on the FV residual with the residual's operators rounded once or twice and four orders of its sum, traced; Newton and IRR's secant in r; the twice-rounded residual in FV's order is 782/782 (T-2527) |
 | `mirr` | 467 (m9-fin-mirr, m9-fin-irr-rate) | four ratio shapes (Microsoft's NPV form, direct FV/PV, period-0 sums compounded to (1+rr)^(n-1) or as (1+rr)^n/(1+rr)) x three roots (libm pow, exp ln, Excel's `^`); the last shape with Excel's `^` is 467/467 (T-1687) |
 | `fisher`, `fisherinv`, `expon-cdf`, `harmean` | 155, 143, 132, 122 (every JSON case of eval/ the function appears in, with probes/t2437-fit-separators) | FISHER and FISHERINV with the quotient plain or rounded twice under libm or Excel's LN/EXP, and with the sums rounded twice too, atanh, tanh; EXPON.DIST's cdf as libm expm1, Kahan expm1, 1-EXP and Kahan below a cut; HARMEAN as n/sum(1/x) or 1/AVERAGE(1/x) with + and / plain or twice rounded (T-2437) |

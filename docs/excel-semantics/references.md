@@ -345,6 +345,33 @@ numbers as for a sheet reference, UNVERIFIED).
 Status: VERIFIED (Excel for the web; error name inferred from errorType 10 and ERROR.TYPE 11)
 Tasks: T-0124, T-1381, T-1382, T-1454, T-1487, T-1535, T-1537, T-1546, T-1554
 
+## An Analysis ToolPak argument refuses a multi-cell reference into another workbook
+Rule: a `LiftArrays` argument (EDATE, the IM* functions, COMPLEX, ISEVEN and the other functions
+that lift over an array and refuse a multi-cell range) reads a reference into another workbook
+with no cached data as the reference it is, not as its `#BLOCKED!` cells:
+- **Several cells** are refused like a written range of this workbook. `EDATE(…!A1:B2,1)`,
+  `IMAGINARY(…!A1:B2)`, `IMABS`, `COMPLEX(…,1)` and `ISEVEN` are `#VALUE!` (ERROR.TYPE 3, ROWS
+  `#VALUE!`), with the quoted and the unquoted prefix alike. The bare `…!A1:B2` and `…!A1:B2*1`
+  spill four `#BLOCKED!` instead ("External reference with no cached data", above).
+- **One cell** reads empty, as the cell INDEX picks does: `EDATE(…!A1,1)` is 31,
+  `IMAGINARY(…!A1)` 0, `ISEVEN(…!A1)` TRUE, `COMPLEX(…!A1,1)` "i", and ERROR.TYPE of them `#N/A`.
+  The bare `…!A1` is `#BLOCKED!`.
+- **Picked by IF, CHOOSE, INDEX or LET**, the reference reads the same: `EDATE(IF(TRUE,…!A1:B2),1)`,
+  `CHOOSE(1,…!A1:B2)`, `INDEX(…!A1:B2,0,0)` and `LET(a,1,…!A1:B2)` are `#VALUE!` (ERROR.TYPE 3,
+  ROWS `#VALUE!`), and `INDEX(…!A1:B2,1,1)`, `IF(TRUE,…!A1)`, `CHOOSE(1,…!A1)` and `LET(a,1,…!A1)`
+  are 31 (ERROR.TYPE `#N/A`, ROWS 1); IMAGINARY likewise, with 0 for one cell.
+
+Evidence: probes/external-ref-no-link-lift-arrays Calc!A1:A16, D1:D13 (excel-graph, 2026-11-07,
+T-4859), with local-range controls D8:D9; probes/external-ref-no-link-lift-picked Calc!A1:E46
+(excel-graph, 2026-11-07, T-4878): column A the call, D ROWS of it, E ERROR.TYPE of it.
+Ours: matches. A reference into a linked workbook whose cache the workbook holds reads the same
+way: one cell is its cached value (`COMPLEX([1]Defines!$B$2,0)` is "142"), several are refused.
+That case is not probed.
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/functions/lift/call.rs (`evaluate_as_reference`,
+through `pick_reference` for the picked forms)
+Tasks: T-4859, T-4878
+
 ## Cached values of a linked workbook (`[n]Sheet!A1`, `[n]!Name`, `[0]!Name`)
 Rule: in xlsx, Excel writes a reference into another workbook with the 1-based index of its
 `externalReference` in `workbook.xml`: `[1]Sheet!$A$1`, a workbook-scoped defined name of that book
@@ -2630,6 +2657,7 @@ identifier such as `A1.B2`, unless an enclosing LET or LAMBDA binds it: `bind_na
 The unknown call `A1.INDEX(...)` keeps its spelling (spelling rule in "Unknown function call names", T-1719).
 Status: VERIFIED (excel-graph)
 Tasks: T-1652, T-1659
+- INDIRECT of an unquoted sheet prefix that is an in-range R1C1 reference followed by more text is `#REF!` (VERIFIED, probes/t4861-indirect-r1c1-shaped-sheet-prefix rows 1-16, excel-graph, 2026-11-07, T-4861): `C1D`, `R1_`, `R1C1D`, `R1CD`, `R1C0D`, `RC1D`, `R1D`, `C1R1`, `R1048576D`, `C16384D` and `C1`+U+0301 (probes/t4757-later-mark-sheet-names A19) all refuse, the exact `is_r1c1_shaped` set minus the bare references. A bare reference or an out-of-range one with a tail still names its sheet: `R`, `C`, `RC`, `R1`, `C1`, `R1C1`, `R0`, `RC1`, `R1C`, `R0D`, `C16385D`, `RC16385D` read their B1. Every quoted form reads (`is_indirect_r1c1_tail_sheet`). Unprobed: a sheet-scoped defined name behind such a prefix (`C1D!Name`).
 
 ## LET and LAMBDA names spelled like a cell
 Rule: a LET name or LAMBDA parameter spelled like a relative A1 cell (`f1`, `add5`, `c1`, `A1`),
@@ -3297,3 +3325,12 @@ and under ABS, for every area kind: a union (`INDEX((B1:B6,C1:C6),3,1)`, `,3,1,2
 range with row and column, and a name whose body is a range or a cell (`INDEX(Rng,3)`, `INDEX(One,1)`). Values equal the typed
 twins' (3, 30, 3, 3, 3, 3). `INDEX(B1:C6,3)` (row only, two columns) is `#REF!` in all three forms. Evidence:
 probes/t4212-legacy-index-root-area-kinds (excel-graph); the engine matches all 42 cells.
+
+## FORMULATEXT of a reference a delete removed is `#REF!`
+
+`=FORMULATEXT(S!C2)` after a delete removes S!C2 is `#REF!` in Excel (probes/table-edits/t4274-calc-column-delete-row-2
+F!A1, excel-graph, T-4274; S!C2 is a table cell). UNVERIFIED: that a plain cell, same sheet or cross sheet, behaves the
+same (the engine unit tests assume it), and the rewritten formula text `=FORMULATEXT(#REF!)` (the oracle stores values
+only). The engine gave `#ERROR!` ("not a reference"); `fn_formulatext` now returns an evaluated `#REF!` argument
+unchanged (T-4770). That is wider than the evidence: an expression valued `#REF!` (`FORMULATEXT(A1+1)`, A1 `#REF!`)
+also gives `#REF!` and is unprobed. Other literal errors (`FORMULATEXT(#N/A)`) are unevidenced and stay `#ERROR!`.

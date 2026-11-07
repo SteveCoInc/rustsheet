@@ -1,0 +1,30 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "SQRTPI and FACTDOUBLE of a LET value or LAMBDA parameter bound to nothing (T-4923), with lifted forms and the variadic ToolPak controls (Z1 blank). Predictions in docs/research/t4923/predictions.tsv committed before the excel-graph fill: H_na (#N/A for the rule rows) against H_zero (the omission read as 0).",
+  "tags": [
+    "M5",
+    "math",
+    "probe"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=LET(e,,SQRTPI(e))",
+        "A2": "=LAMBDA(a,b,SQRTPI(b))(1,)",
+        "A3": "=LET(e,,FACTDOUBLE(e))",
+        "A4": "=LAMBDA(a,b,FACTDOUBLE(b))(1,)",
+        "A5": "=ROWS(LET(e,,SQRTPI(IF({1;1},e))))",
+        "A6": "=LET(e,,SQRTPI(e+0))",
+        "A7": "=LET(e,,FACTDOUBLE(e+0))",
+        "A8": "=LET(e,,GCD(e,4))",
+        "A9": "=LET(e,,GCD(4,e))",
+        "A10": "=LAMBDA(a,b,LCM(a,b))(4,)",
+        "A11": "=LET(e,,MULTINOMIAL(e,4))",
+        "A12": "=SQRTPI(Z1)",
+        "A13": "=FACTDOUBLE(Z1)"
+      }
+    }
+  ]
+}

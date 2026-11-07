@@ -43,11 +43,19 @@ probes/getpivotdata-real-pivot, excel-graph 2026-10-16; cell ids are sheet P):
 | `pivot_table` is any cell of the pivot or a range covering it; a cell outside every pivot (the source too) is `#REF!` | H11, H16, H12, H20 |
 | an array of items lifts and spills | L1, L5 |
 
-Errors in `pivot_table` or `data_field` propagate before any lookup (web.md "without a pivot
-table"; kept as implemented by T-1703).
+A typed error in `pivot_table` or `data_field` propagates before any lookup (web.md "without a pivot
+table"; kept as implemented by T-1703); a `data_field` error read from a cell is `#REF!` (web.md "GETPIVOTDATA
+error arguments (T-4006)"). A reference to an error cell inside a pivot does not: it picks the pivot
+like any of its cells (web.md "GETPIVOTDATA on other pivot shapes (T-2085)", probes/t2085-getpivotdata-items
+Q!E20:E23; T-4805).
 
-Unknowns. Each is probed by T-2085, and until then T-2083 answers `#REF!` for it (or keeps today's
-T-1703 behavior where one exists), never a guessed value:
+Unknowns. T-2085 probed them (docs/excel-semantics/web.md "GETPIVOTDATA on other pivot shapes (T-2085)"; probes
+t2085-getpivotdata-data-fields, -items and -layouts). Not probed are an array `pivot_table` (in 7), case-variant cache
+items (in 14: Excel for the web refuses the file), calculated items (refused too) and a cache saved without records
+(in 12: the case builder cannot write one). Which pivot a reference overlapping two pivots picks (in 9) is not established: one committed fill
+answered from the top-left pivot and an uncommitted later one from the other, so the engine keeps `#REF!`. Until T-4804, T-4805 and T-4806
+implement the evidence, T-2083 answers `#REF!` for each (or keeps today's T-1703 behavior where one exists), never a
+guessed value:
 1. several data fields: the `"Values"` field, what a blank `data_field` picks, and a source name
    shared by two data fields (Sum and Count of Sales);
 2. an empty intersection of CountNums, Product, Var, VarP, StdDev and StdDevP (Sum, Count, Average, Max and Min are 0, T-2404);

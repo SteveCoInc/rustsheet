@@ -94,6 +94,11 @@ pub struct SuiteManifest {
     /// while not fetched, and gated exactly as that suite is (T-4629).
     #[serde(default)]
     pub cases_of: Option<String>,
+    /// Round-trip suites: a TOML file of per-case exceptions, relative to the manifest (SPEC-0033
+    /// D8, T-4514). Each names a case, one baseline item it excuses and the task or decision
+    /// that owns it. An exception that excuses nothing fails the run.
+    #[serde(default)]
+    pub exceptions: Option<String>,
 }
 
 /// Pinned download of a suite too large or not redistributable to vendor.
@@ -114,6 +119,12 @@ pub struct FetchSpec {
     /// Globs (relative to `subdir`) of the files to keep; default everything.
     #[serde(default = "default_include")]
     pub include: Vec<String>,
+    /// git sources only: non-cone `git sparse-checkout` patterns, relative to the repository
+    /// root. When given, the fetch is blob-less (`--filter=blob:none`) and only the blobs of
+    /// matching paths are downloaded, so a repository as large as LibreOffice core costs its
+    /// trees and the matched files only (T-4131). Empty: the whole revision is checked out.
+    #[serde(default)]
+    pub sparse: Vec<String>,
 }
 
 impl FetchSpec {
@@ -157,6 +168,20 @@ impl FetchSpec {
                 bail!("fetch.subdir must be a relative path without `..`");
             }
         }
+        if !self.sparse.is_empty() && self.rev.is_none() {
+            bail!("fetch.sparse needs a git source (`rev`)");
+        }
+        for p in &self.sparse {
+            // The patterns reach `git sparse-checkout set` as arguments: nothing option-like,
+            // nothing anchored outside the repository and no way out of it.
+            let escapes = p.split(['/', '\\']).any(|c| c == "..");
+            if p.trim().is_empty() || p.starts_with('-') || p.starts_with('/') || escapes {
+                bail!(
+                    "fetch.sparse pattern {p:?} must be a non-empty relative path pattern \
+                     without `..` or a leading `-`"
+                );
+            }
+        }
         Ok(())
     }
 }
@@ -187,20 +212,15 @@ pub const ACCURACY_DIR: &str = "eval/accuracy";
 /// `eval/suites/`, so no cell report or milestone measure counts them.
 pub const ROUNDTRIP_DIR: &str = "eval/roundtrip";
 
-/// The round-trip scenarios the harness implements (SPEC-0033 D1); T-4514 adds R1.
-pub const ROUNDTRIP_SCENARIOS: &[&str] = &["R0"];
-
 /// File inside a fetched suite recording the pin it was fetched at.
 pub const FETCH_MARKER: &str = ".rustsheet-fetched";
 
 fn default_root() -> String {
     "cases".into()
 }
+/// A round-trip suite runs R0 unless it lists more: each further scenario reruns every case.
 fn default_scenarios() -> Vec<String> {
-    ROUNDTRIP_SCENARIOS
-        .iter()
-        .map(|s| (*s).to_string())
-        .collect()
+    vec!["R0".into()]
 }
 fn default_include() -> Vec<String> {
     vec!["**/*".into()]
@@ -304,9 +324,9 @@ impl Suite {
                 suite.manifest.fetch = Some(fetch);
                 suite.cache_dir.clone_from(&cells.cache_dir);
             }
-            let unknown = |s: &&String| !ROUNDTRIP_SCENARIOS.contains(&s.as_str());
+            let unknown = |s: &&String| crate::roundtrip::scenarios::find(s).is_none();
             if let Some(s) = suite.manifest.scenarios.iter().find(unknown) {
-                bail!("{at}: scenario {s} is not implemented yet (SPEC-0033 D1; T-4514 adds R1)");
+                bail!("{at}: scenario {s} is not implemented (SPEC-0033 D1; R2 is M4)");
             }
             if cell_suites
                 .iter()
@@ -529,11 +549,57 @@ mod tests {
             sha256: None,
             subdir: Some(sub.into()),
             include: default_include(),
+            sparse: Vec::new(),
         };
         assert!(spec("http://x.org/a", "ok").validate().is_err());
         assert!(spec("-oProxy=x", "ok").validate().is_err());
         assert!(spec("https://x.org/a", "../up").validate().is_err());
         assert!(spec("https://x.org/a", "/abs").validate().is_err());
+    }
+
+    #[test]
+    fn fetch_sparse_parses_and_needs_a_git_source() {
+        let m = manifest(&format!(
+            "[fetch]\nurl = \"https://x.org/a\"\nrev = \"{REV}\"\nsparse = [\"sc/qa/**/*.xlsx\"]\n"
+        ));
+        let f = m.fetch.expect("fetch table");
+        assert_eq!(f.sparse, vec!["sc/qa/**/*.xlsx".to_string()]);
+        assert!(f.validate().is_ok());
+        let archive = manifest(&format!(
+            "[fetch]\nurl = \"https://x.org/a.zip\"\nsha256 = \"{}\"\nsparse = [\"a/*\"]\n",
+            "a".repeat(64)
+        ));
+        assert!(archive.fetch.expect("fetch table").validate().is_err());
+        // Absent means a full checkout.
+        let full = manifest(&format!(
+            "[fetch]\nurl = \"https://x.org/a\"\nrev = \"{REV}\"\n"
+        ));
+        assert!(full.fetch.expect("fetch table").sparse.is_empty());
+    }
+
+    #[test]
+    fn fetch_rejects_unsafe_sparse_patterns() {
+        let spec = |pattern: &str| FetchSpec {
+            url: "https://x.org/a".into(),
+            rev: Some(REV.into()),
+            sha256: None,
+            subdir: None,
+            include: default_include(),
+            sparse: vec!["ok/*.xlsx".into(), pattern.into()],
+        };
+        assert!(spec("a/b/**/*.xlsx").validate().is_ok());
+        for bad in [
+            "",
+            "  ",
+            "../up/*.xlsx",
+            "a/../../b",
+            "a\\..\\b",
+            "/abs/*.xlsx",
+            "-c",
+            "--cone",
+        ] {
+            assert!(spec(bad).validate().is_err(), "{bad:?} accepted");
+        }
     }
 
     #[test]

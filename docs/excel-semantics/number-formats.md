@@ -1652,6 +1652,12 @@ placeholder denominator prints its own text by that entry and hands on only its 
   " 123/7 0000.0", on 123.456 "123 57/7 25.0", on 0.1 " 1/7 0.0" (the denominator 10 spills its `0`), `# ?/7|.0` on
   0.0123 " 123/7|0000.0", `# ?/7 ..0` " 123/7 0000..0"; with nothing spilled (0.5, 1.75) nothing prints there. The
   decimals follow "After the point" unchanged.
+  A picked denominator that *lacks* digits against the code leaves nothing to print before that point either (T-4860):
+  `# ?/16 .0` on 0.5 and 0.25 is " 1/1  .0", on 0.3 " 3/16 .0", on 1.75 "1 3/1  .0"; `# ?/100 .0?` on 0.5 " 1/1   .00",
+  on 0.3 " 3/10  .0 "; `# ?/16|.0` on 0.5 " 1/1 |.0"; `# ?/100 .##` on 0.5 " 1/1   .00", on 0.3 " 3/10  .0". The cut
+  denominator keeps its padding spaces and the lacking zeros are paid after the point as "After the point" says, never
+  before it. Evidence (excel-graph 2026-11-07): probes/t4860-fraction-tail-no-pre-point-lacking (24 cells; the engine
+  already matched all of them).
 - **A second point** adds nothing: the second `.` is a literal and the placeholders after it follow "After the point"
   (`# ?/7 ?.?.?` on 0.0123 " 123/7 0000. .0", `# ?/7 0.0.0` " 123/7 00000.0.0", `# ?/7 #.#.#` " 123/7 00000.0.",
   `# ?/7 ?..?` " 123/7 0000.. ", on 0.5 `# ?/7 ?.?.?` " 1/7  .0. "); the engine already matched all 30 such cells.

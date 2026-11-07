@@ -544,8 +544,34 @@ a,b,a,c,a,b and `Val` 1-6, added with `filtered: true` and rows 3 and 5 hidden, 
 `<filters><filter val="a"/><filter val="b"/></filters>`, "b" also on hidden row 3): `SUBTOTAL(9,Sales[Val])` and
 `109` both 15, `SUBTOTAL(3,Sales[Cat])` and `103` both 4, the engine's values before the export, and our re-import
 keeps the table filtered (`a_filtered_table_without_a_criterion_exports_its_visible_values`). Excel does not
-re-apply the filter on load, so a text on a visible and a hidden row changes nothing there. A table with every data
-row hidden gets an empty `<filters/>`, which our import reads as a criterion (unprobed in Excel).
+re-apply the filter on load, so a text on a visible and a hidden row changes nothing there. Excel also reads the
+`blank="1"` forms as filtered and an empty values filter as not (excel-graph uploads of our export, 2026-11-07, T-4749;
+same `Sales` shape, `filtered: true`, SUBTOTAL 9, 109, 3, 103, 2, 102 read from Excel, every file opened without
+repair):
+- `Cat` a,b,(blank),c,a,b with rows 3 and 6 hidden, exported as `<filters blank="1"><filter val="a"/><filter val="b"/>
+  <filter val="c"/></filters>` (input sha256 `dcb798ae88f44239595fe305cf9e909602faa77685bd247a170d6bcba82615d8`):
+  14, 14, 3, 3, 4, 4, filtered, as ours;
+- `Cat` (blank),b,(blank),c,(blank),b with rows 3, 5 and 7 hidden (only blanks visible), exported as
+  `<filters blank="1"></filters>` (`a2018a38db40b36725a4470a1537b1a4ba9c631c97f48bb25f9c9c71da52eb4b`): 9, 9, 0, 0, 3,
+  3, filtered, as ours;
+- every data row hidden, exported before T-4749 as `<filters></filters>`
+  (`7ae67c477d0072ee5bd4c6b131a7439e2d311a0e84944eaca4919b107787022a`): 21, 0, 6, 0, 6, 0, **not filtered**, where the
+  engine and our import then gave 0 throughout. The same file with `<filters/>`
+  (`4a21a4b32ca9f8110d72df3cef6000f0582cd83f10fca33619197341e4975efb`) or `<filters blank="0"></filters>`
+  (`3584008b4af9e3a00c162bd3a1d8c4d11ca02174f527ccf598698f0ed25a9654`) reads the same, not filtered; with
+  `<filters><filter val=""/></filters>` (`cd63953b7eda56d22bdf6c76b014b6308fb5cfcf89c2d13778db50438bee78ab`) Excel
+  refuses the file (`FileCorruptTryRepair`); with a values filter listing the hidden rows' text
+  (`be41612037aa55ecd2ef1353dcb69e616f7cdc6bc3819bb44f0573db0e9d1fbd`) or with `<customFilters and="1"><customFilter
+  val="a"/><customFilter operator="notEqual" val="a"/></customFilters>`
+  (`a2838913b0e16de165c1f47ea5878614e996b0edda29bca43205d3c99414e5ea`) it reads 0 throughout, filtered.
+The same holds for a spec2xlsx table with every data row hidden (probes/t4749-empty-values-filter, 12 cells,
+excel-graph, 2026-11-07: SUBTOTAL 3 6, 103 0, 9 21, 109 0, as the unfiltered control).
+Rule (ours, T-4749): the import reads a `<filters>` with no element inside and no true `blank` as no criterion
+(`is_criterion`; probed only as `<filters/>`, `<filters></filters>` and `<filters blank="0">`, so other attribute-only
+forms such as one with just `calendarType` follow the rule unprobed), a column edit does not count such a filter as a
+kept criterion (`FilterCriterion::is_empty_values`), the eval adapter does not count a spec values filter with no
+visible data row, and the export writes an API-filtered table with no visible data row as that custom filter, which keeps
+no row if re-applied (a values filter of the hidden rows' text would show them again).
 Excel keeps the kept criteria's meaning after our round trip (excel-graph, 2026-11-05, T-4004): on `Sales`-shaped
 tables (A1:B7, `Cat` a,b,a,c,a,b and `Val` 1-6, rows hidden as the filter would, no re-application) an
 openpyxl-written file and our import-then-export of it give the same `SUBTOTAL(3,[Cat])`, `SUBTOTAL(103,[Cat])`,
@@ -777,9 +803,74 @@ opens the result without a repair:
   types match Excel's own (`tests/calc_tests/LOOKUP_AND_REFERENCE/DROP_TAKE.xlsx`), and the parts are what a
   regenerated save writes.
 
-There is no oracle evidence yet that Excel opens such packages without a repair prompt. An Excel resave through the
-T-4180 oracle flow is the probe.
-Status: UNVERIFIED (probe pending). Tasks: T-4560, T-4561, T-4180.
+Evidence: oracle excel-graph, 2026-11-07, T-4890 (docs/research/xlsx-round-trip/excel-resave-probe-2026-11-07.md).
+Excel for the web opened and saved all 104 patched saves of the fixtures and of 23 of the 24 sampled corpus cases (the
+24th, an `.xlsm`, Graph cannot open even as the source): R0, R1/E6 and R1/all. Among them:
+- 79 rewrote a worksheet;
+- 38 changed (grew) a `<dimension>`;
+- 2 hold a cell outside its row's `spans`;
+- 15 copied a calcChain;
+- 6 added the metadata parts;
+- 52 appended style records;
+- 23 appended shared strings.
+
+51 of the 52 R0 saves come back from Excel's save the same as the source does after Excel's save, apart from the
+ids, dates and customXml every SharePoint save writes. The 52nd has a calcChain too large to compare.
+Status: VERIFIED (excel-graph; desktop not observed) for the spans, the dimension, a copied calcChain, the added
+metadata parts, and appended styles and strings. UNVERIFIED (not exercised by the standard edits): a dropped calcChain and
+rows emptied by clearing. Tasks: T-4560, T-4561, T-4623, T-4890, T-4180.
+
+## An empty `dcterms:created` makes Excel refuse the package
+Rule: Excel for the web refuses to open a package whose `docProps/core.xml` holds an empty
+`<dcterms:created xsi:type="dcterms:W3CDTF"></dcterms:created>`. Graph reports createSession 501
+`FileCorruptTryRepair`. The same package without that one element opens.
+Evidence: oracle excel-graph, 2026-11-07, T-4890 (docs/research/xlsx-round-trip/excel-resave-probe-2026-11-07.md §3).
+- The fixtures valueless-cell-forms R1/E5 save (sha256 788ba5e3c8c07445a3803a461175c6dfda052a56a564dbf7d2958b346625b0a9)
+  is refused.
+- Removing only that element (0120e27f60475870c510a84d458730052173d6aa1c3d59a75800ccdd8c984a74) makes it open.
+- Removing core.xml (ff7146f3fc2236882167360b238ddbe76c875bb77d73fd7409374a849e94c24a) makes it open.
+- Each of these one-part changes leaves it refused:
+  - metadata.xml removed;
+  - theme removed;
+  - the source's workbook.xml;
+  - the source's styles.xml;
+  - `<t></t>` written as `<t/>`.
+
+An empty `modified`, or another malformed W3CDTF value, is not probed.
+Ours: the regenerating export writes the empty element whenever the source records no creation date
+(`export/doc_props.rs` `get_core_xml`).
+Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4909).
+
+## An empty `cellStyles` makes Excel refuse the package
+Rule: Excel for the web refuses to open a package whose `xl/styles.xml` holds `<cellStyles count="0"></cellStyles>`,
+an empty CT_CellStyles. Graph reports `FileCorruptTryRepair`. The same package opens when the element is removed,
+and also when it holds the Normal style (`<cellStyle name="Normal" xfId="0" builtinId="0"/>`).
+Evidence: oracle excel-graph, 2026-11-07, T-4890.
+- The poi link-external-workbook-a R1/all save (814c986a989f7227691ef5feae2077925ec1886d55c1dcc7ea2eb29044af4cb6) is
+  refused. Its core.xml has a real `created` date, and it has no `[n]` references.
+- With the element removed (5d941486ce51b2b3b71561c55f7615141666e81748e116d8885e1f7c41ab1310), it opens.
+- With the Normal style added (73e6065fe084b0a5d3b3e189dcfb2bf4de950cf2509a5edc10af9ce3a61fdb0a), it opens.
+
+Ours: the regenerating export writes the element with the table's count, even when the count is 0
+(`export/styles.rs`, the `cellStyles` section).
+Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4909).
+
+## A [n] reference without its externalLink part makes Excel refuse the package
+Rule: Excel for the web refuses to open a package whose formulas use `[1]Sheet!A1` while the package has no
+`xl/externalLinks/externalLink1.xml` and no `<externalReferences>`. Graph reports `FileCorruptTryRepair`.
+Evidence: oracle excel-graph, 2026-11-07, T-4890. Both directions were isolated on packages that do not have the empty
+`created` element:
+- **The part removed.** external-link-cached-text R1/E5 without that element
+  (9b892ce5f3c370a5689191d44a07bcd4db327e375424caee63d4f425760f0d65) is refused. The same package with the source's
+  externalLink part, its relationship, its override and `<externalReferences>` added back
+  (299381fbc90f67fc3aace3ec4b50dc6f440e77cda96e6bb6dee3a5e4b861f5e5) opens.
+- **The reference added.** valueless-cell-forms R1/E5 without the empty `created` opens. The same package with one
+  `[1]Uses!$A$1` formula added (dbeb46a9ad85d763e6930dc0b2eff226684dcacc8943805549ff9ded3d46c6c7) is refused.
+
+The R1/all refusals of the other six fixtures external-link-* also carry the empty `created` element, so they confirm
+neither rule on their own.
+Ours: the regenerating export drops the parts and keeps the formulas.
+Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4143).
 
 ## Shared-string index with surrounding whitespace (T-4145)
 A `t="s"` cell whose `<v>` holds its index with surrounding whitespace (`<v>2 </v>`) is read as that
@@ -802,3 +893,25 @@ string with an escape. Status: UNVERIFIED (Excel's decoding of escapes inside `<
 open a file with `<is><t>a_x0041_b</t></is>` and read `=A1`).
 Implemented in: `get_cell_from_excel` (import/worksheets.rs), both the constant and the formula-value inline paths.
 
+
+## externalLink parts: relationship order, sparse `sheetData`, cached text escapes (T-4143)
+A workbook that links to other workbooks holds one `xl/externalLinks/externalLinkN.xml` part per link, the `N`th
+`<externalReference>` of workbook.xml (between `<sheets>` and `<definedNames>`), so `[N]` in a formula names it. What Excel
+writes, from the fixtures and the corpora:
+- **Relationship order.** Excel numbers the workbook's relationship to each externalLink part right after the sheets'
+  (eval/suites/fixtures/cases/external-link-cached-text.xlsx: sheets `rId1`–`rId3`, externalLink `rId4`, then theme, styles,
+  sharedStrings). The export does the same and numbers the pivot caches after them; no evidenced file holds both, so
+  that part of the order is RustSheet's choice. The part's own relationship is `externalLinkPath`, `TargetMode="External"`, with the target as the source
+  wrote it: a bare file name (`56737.xlsx`, poi/ref-56737.xlsx) or a `file:///` UNC URL with `%20` escapes
+  (corpus-bench/59932).
+- **Sparse `sheetData`.** The cache does not hold a `<sheetData>` for every cached sheet: fixtures/external-link-uncached-lookups
+  names 5 sheets and writes `sheetData` for sheets 0, 1, 2 (`refreshError="1"`) and an empty one for 4, none for 3. The
+  import keeps which sheets had one (`ExternalBook::data_sheets`) and the export writes the same elements back.
+- **Unread links.** A link the import could not read as a workbook (DDE, OLE, a missing part) is written as an empty
+  `<externalLink/>`, so later books keep their `[n]`. Status: UNVERIFIED (whether Excel opens it without a repair is
+  unprobed; T-4937).
+- **Cached text.** A `t="str"` cache cell's `_xHHHH_` escapes are decoded as a shared string's are. Status: UNVERIFIED (no
+  Excel-written cache with an escape was seen; the ST_Xstring rule is assumed to apply, as for inline strings above).
+Evidence: the files named above (Excel-written); the round trip of every fixtures `external-link-*` case, poi/ref-56737 and
+corpus-bench/59932 keeps the books and every cell value (crates/rustsheet-xlsx/tests/external_link_export.rs).
+Implemented in: `export/external_links.rs`, `import/external_links.rs`, `export/workbook_xml_rels.rs`.

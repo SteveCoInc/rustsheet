@@ -29,6 +29,7 @@ fn linked() -> Model {
         comment: None,
     };
     model.workbook.external_books.push(ExternalBook {
+        target: "other.xlsx".to_string(),
         sheet_names: vec!["Uses".to_string(), "Defines".to_string()],
         defined_names: vec![
             name("NR_Global_B2", "='Defines'!$B$2", None),
@@ -37,6 +38,7 @@ fn linked() -> Model {
         ],
         cells,
         refresh_error_sheets: Vec::new(),
+        data_sheets: Vec::new(),
     });
     model
 }
@@ -294,6 +296,7 @@ fn cached_ranges_fixture() -> Model {
         ((0, 3, 1), SpillValue::Boolean(true)),
     ]);
     model.workbook.external_books.push(ExternalBook {
+        target: "other.xlsx".to_string(),
         sheet_names: vec!["Uses".to_string()],
         defined_names: vec![DefinedName {
             name: "NR_Range".to_string(),
@@ -304,6 +307,7 @@ fn cached_ranges_fixture() -> Model {
         }],
         cells,
         refresh_error_sheets: Vec::new(),
+        data_sheets: Vec::new(),
     });
     model
 }
@@ -790,4 +794,100 @@ fn cached_extents_are_per_sheet_and_follow_the_cache() {
         .insert((1, 5, 2), SpillValue::Number(8.0));
     model.set_user_input(0, 1, 1, "x".into()).unwrap();
     assert_eq!(eval(&mut model, "=SUM([1]Defines!$B:$B)"), "150");
+}
+
+/// A `LiftArrays` argument (the Analysis `ToolPak` functions: EDATE, the IM* functions, COMPLEX,
+/// ISEVEN) reads a reference into another workbook as a reference: several cells are refused like
+/// a written range (`#VALUE!`), one cell is the value INDEX would pick, empty without a cache
+/// (`EDATE(…!A1,1)` is 31). Before T-4859 a multi-cell one was lifted over its `#BLOCKED!` cells
+/// into an array the cell's static shape had not allowed for, a debug-build panic the nightly
+/// `formula_eval` fuzz run found on 2026-11-05 (run 42019157715):
+/// `IMAGINARY('[thoerANCRRAY(1'!A1:B2)`. Excel: probes/external-ref-no-link-lift-arrays.
+#[test]
+fn lift_arrays_arguments_read_an_external_reference_as_a_reference() {
+    let mut model = new_empty_model();
+    // The fuzz model: a spill next to the formula's cell, C3.
+    model._set("B2", "=SEQUENCE(2,2)");
+    model._set("C3", "=IMAGINARY('[thoerANCRRAY(1'!A1:B2)");
+    model.evaluate();
+    assert_eq!(model._get_text("C3"), "#VALUE!");
+
+    let x = "'[other.xlsx]Sheet1'!A1:B2";
+    let one = "'[other.xlsx]Sheet1'!A1";
+    for (formula, expected) in [
+        (format!("=EDATE({x},1)"), "#VALUE!"),
+        (format!("=IMAGINARY({x})"), "#VALUE!"),
+        (format!("=IMABS({x})"), "#VALUE!"),
+        (format!("=COMPLEX({x},1)"), "#VALUE!"),
+        (format!("=ISEVEN({x})"), "#VALUE!"),
+        (
+            "=IMAGINARY([other.xlsx]Sheet1!A1:B2)".to_string(),
+            "#VALUE!",
+        ),
+        (format!("=ROWS(EDATE({x},1))"), "#VALUE!"),
+        (format!("=ERROR.TYPE(EDATE({x},1))"), "3"),
+        (format!("=ERROR.TYPE(INDEX(EDATE({x},1),2,2))"), "3"),
+        (format!("=ERROR.TYPE(EDATE({one},1))"), "#N/A"),
+        (format!("=EDATE({one},1)"), "31"),
+        (format!("=IMAGINARY({one})"), "0"),
+        (format!("=ISEVEN({one})"), "TRUE"),
+        (format!("=COMPLEX({one},1)"), "i"),
+    ] {
+        assert_eq!(eval(&mut model, &formula), expected, "{formula}");
+    }
+
+    // A cached linked workbook still reads its cache: one cell its value, several refused.
+    let mut model = linked();
+    assert_eq!(eval(&mut model, "=COMPLEX([1]Defines!$B$2,0)"), "142");
+    assert_eq!(eval(&mut model, "=EDATE([1]Uses!$A$1:$A$3,1)"), "#VALUE!");
+}
+
+/// IF, CHOOSE, INDEX and LET picking a reference into another workbook as a `LiftArrays`
+/// argument read it as the written one does: several cells `#VALUE!`, one cell empty without a
+/// cache. Before T-4878, `IMAGINARY(CHOOSE(1,…!A1:B2))` tripped the scalar-context debug assert
+/// next to a spill, and IF, `INDEX(…,0,0)` and LET lifted over `#BLOCKED!` cells.
+/// Excel: probes/external-ref-no-link-lift-picked.
+#[test]
+fn lift_arrays_arguments_read_a_picked_external_reference_as_a_reference() {
+    let mut model = new_empty_model();
+    // The fuzz model: a spill next to the formula's cell, C3.
+    model._set("B2", "=SEQUENCE(2,2)");
+    model._set("C3", "=IMAGINARY(CHOOSE(1,'[other.xlsx]Sheet1'!A1:B2))");
+    model.evaluate();
+    assert_eq!(model._get_text("C3"), "#VALUE!");
+
+    let x = "'[other.xlsx]Sheet1'!A1:B2";
+    let one = "'[other.xlsx]Sheet1'!A1";
+    for f in ["EDATE", "IMAGINARY"] {
+        let call = |arg: &str| {
+            if f == "EDATE" {
+                format!("EDATE({arg},1)")
+            } else {
+                format!("IMAGINARY({arg})")
+            }
+        };
+        let one_value = if f == "EDATE" { "31" } else { "0" };
+        for (arg, value, error_type) in [
+            (format!("IF(TRUE,{x})"), "#VALUE!", "3"),
+            (format!("CHOOSE(1,{x})"), "#VALUE!", "3"),
+            (format!("INDEX({x},0,0)"), "#VALUE!", "3"),
+            (format!("LET(a,1,{x})"), "#VALUE!", "3"),
+            (format!("INDEX({x},1,1)"), one_value, "#N/A"),
+            (format!("IF(TRUE,{one})"), one_value, "#N/A"),
+            (format!("CHOOSE(1,{one})"), one_value, "#N/A"),
+            (format!("LET(a,1,{one})"), one_value, "#N/A"),
+        ] {
+            let formula = format!("={}", call(&arg));
+            assert_eq!(eval(&mut model, &formula), value, "{formula}");
+            let formula = format!("=ERROR.TYPE({})", call(&arg));
+            assert_eq!(eval(&mut model, &formula), error_type, "{formula}");
+            let rows = if value.starts_with('#') {
+                "#VALUE!"
+            } else {
+                "1"
+            };
+            let formula = format!("=ROWS({})", call(&arg));
+            assert_eq!(eval(&mut model, &formula), rows, "{formula}");
+        }
+    }
 }

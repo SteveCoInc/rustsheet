@@ -1,0 +1,10 @@
+name = "gen-pivot"
+description = "M16 pivot tables from rustsheet-gen --milestone M16 (T-4132): a covering array over the PV1 pivot dimensions, one pivot per sheet; expectations from the Excel oracle"
+kind = "spec"
+root = "cases"
+include = ["**/*.case.json"]
+license = "Apache-2.0"
+origin = "generated"
+gate = true
+baseline = "cells"
+milestone = ["M16"]

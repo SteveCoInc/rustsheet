@@ -12,42 +12,11 @@
 //! - t4134 I3, t4582, t4585 and t4627: formulas in their sources (T-4152 runs them through the
 //!   engine), and t4582 J3, J4 date items against cached numbers (T-4612).
 
-use std::collections::HashMap;
-
-use serde_json::Value as Json;
-
 use super::*;
-use crate::expressions::token::get_error_by_english_name;
-use crate::pivot::probe_cases::{address, probe_pivot, read, T4634_SHEETS, T4745_SHEETS};
+use crate::pivot::probe_cases::{
+    probe_pivot, read, sidecar_differences, T4634_SHEETS, T4745_SHEETS,
+};
 use crate::pivot::{compute, lay_out, MAX_PIVOT_WORK};
-
-fn rendered(table: &PivotTable, cache: &PivotCache) -> HashMap<String, PivotCell> {
-    let mut work = MAX_PIVOT_WORK;
-    let result = compute(table, cache, &mut work).unwrap();
-    let layout = lay_out(table, cache, &result, &mut work).unwrap();
-    let mut cells = HashMap::new();
-    for cell in render(table, cache, &result, &layout).unwrap() {
-        let at = address(cell.column, cell.row);
-        assert!(
-            cells.insert(at.clone(), cell.value).is_none(),
-            "{at} rendered twice"
-        );
-    }
-    cells
-}
-
-/// A sidecar cell as a rendered one; `None` for an empty cell.
-fn expected(cell: &Json) -> Option<PivotCell> {
-    match cell["t"].as_str().unwrap() {
-        "empty" => None,
-        "s" => Some(PivotCell::Text(cell["v"].as_str().unwrap().to_string())),
-        "n" => Some(PivotCell::Number(cell["v"].as_f64().unwrap())),
-        "e" => Some(PivotCell::Error(
-            get_error_by_english_name(cell["v"].as_str().unwrap()).unwrap(),
-        )),
-        other => panic!("cell type {other}"),
-    }
-}
 
 /// Checks the cells of sheet `name`'s pivot of probe `stem`, leaving out the cells `skip`.
 fn check(stem: &str, name: &str, skip: &[&str]) {
@@ -57,34 +26,9 @@ fn check(stem: &str, name: &str, skip: &[&str]) {
 
 /// The cells of sheet `name`'s pivot of probe `stem` that are not Excel's, but the cells `skip`.
 fn differences(stem: &str, name: &str, skip: &[&str]) -> Vec<String> {
-    let (case, oracle) = (read(stem, "case"), read(stem, "oracle"));
+    let case = read(stem, "case");
     let (cache, table) = probe_pivot(&case, name);
-    let mut actual = rendered(&table, &cache);
-    let pivot = oracle["pivots"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|p| p["sheet"] == name)
-        .unwrap();
-    let mut wrong = Vec::new();
-    for (at, cell) in pivot["cells"].as_object().unwrap() {
-        let mine = actual.remove(at);
-        if skip.contains(&at.as_str()) {
-            continue;
-        }
-        let excel = expected(cell);
-        if mine != excel {
-            wrong.push(format!("{at}: Excel {excel:?}, engine {mine:?}"));
-        }
-    }
-    for (at, cell) in actual {
-        wrong.push(format!("{at}: outside the capture window, engine {cell:?}"));
-    }
-    wrong.sort();
-    wrong
-        .into_iter()
-        .map(|w| format!("{stem} {name} {w}"))
-        .collect()
+    sidecar_differences(stem, name, &cache, &table, None, skip)
 }
 
 fn check_all(stem: &str, sheets: &[&str]) {
