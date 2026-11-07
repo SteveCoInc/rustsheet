@@ -80,3 +80,12 @@ Owns the 19 ungated probes-numeric cells listed in decision 0203 under "Second e
 - `FAR_TAIL_MAX_SHAPE` = 11 rests on 4 train cells near the cut; above shape 11 at 45 < x <= 600 the form beats the accurate kernel (train 88/16, test 35/2), and the unrestricted form beats head on the hold-out (51 vs 43) and sweep (59 vs 52). Place Excel's switch above shape 11 from that evidence instead of keeping the band.
 - `FAR_TAIL_MIN_X`'s tag says shape 2..4 but the cut applies at 1.5..11; cite the fresh-sweep-2 cells at x 27..34, shapes 5..11, or widen the tag.
 - R4.2: commit the frozen code before filling a fresh sweep (the T-3269 freeze could not be proven from git).
+
+## Progress (exponent correction)
+`excel_far_upper` now takes Loader's direct deviance for the prefactor's exponent instead of the ratio form; the
+switch and the shape range are unchanged, so no FITTED cut moves (docs/excel-semantics/statistics.md, "Correction
+(T-3469)"). Per cell, main a300350e against the change: 13 cells fixed, 29 closer, 0 farther. Every cell under "Cells
+this task owns" is now within 15 digits of Excel: A80, A108 and t1049 A28 bit-exact; R!A73 and A75 2 ulp; A165 and
+A166 1 ulp; A183, A184 and caa1eed48b1883fe A59 unchanged (5, 5 and 1 ulp). POISSON passes Gate B (464 to 465/506).
+Of the second extension's 19 cells, still visibly off: t3269-shape6-misses A69 `POISSON(4,42,TRUE)` (6 ulp) and
+t3269-fresh-sweep-2 A173 and A233 (shape 3/2, 17 and 21 ulp), which stay with this task.
