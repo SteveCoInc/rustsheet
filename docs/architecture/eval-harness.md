@@ -19,7 +19,7 @@ side by side.
 | `gate` | part of the CI no-regression gate |
 | `baseline` | `cells` (default), `cases` (large corpora) or `none`; a round-trip suite's `cells` baseline lists fidelity items in the item slot |
 | `milestone` | which milestone(s) the suite measures |
-| `[fetch]` | optional pinned external source: `url` (`https://` or `file://`), exactly one pin (`rev` = 40-hex git commit, or `sha256` of a `.zip`/`.tar*` archive), optional `subdir` and `include` globs |
+| `[fetch]` | optional pinned external source: `url` (`https://` or `file://`), exactly one pin (`rev` = 40-hex git commit, or `sha256` of a `.zip`/`.tar*` archive), optional `subdir` and `include` globs; for a git source, optional `sparse`: non-cone `git sparse-checkout` patterns relative to the repository root (no `..`, no leading `/` or `-`), which make the fetch blob-less (`--filter=blob:none`) so only the matching files are downloaded (T-4131) |
 
 External suites (`[fetch]`) live in `eval/.cache/suites/<name>` (gitignored) after `rustsheet-eval fetch`;
 their `root` is that directory. A suite whose cache is missing or stale (marker `.rustsheet-fetched`
@@ -33,6 +33,9 @@ Current suites:
 - `smoke`: hand-written core semantics.
 - `probes`: Excel-behavior questions awaiting the oracle.
 - `gen-m2`: generator output (30 cases, 12,000 cells), oracle-filled and gated (T-0203).
+- `pivot-corpus-lo`, `pivot-corpus-closedxml`: the pivot-corpus (T-4131), Excel-saved workbooks with pivots from
+  LibreOffice `sc/qa/unit/data` (a sparse fetch) and ClosedXML `ClosedXML.Tests/Resource`, scored against their
+  cached values and each pivot classified fresh or stale (below); `gate = false`, cell baselines.
 
 ## Round-trip suites
 `eval/roundtrip/<name>/suite.toml` (SPEC-0033, T-4172) uses the same manifest with `kind = "roundtrip"`:
@@ -256,8 +259,19 @@ value. Each sidecar pivot's layout is also compared with the engine's, matched b
 - `LinesNotEmitted`: Excel's location, but no `rowItems`/`colItems` from the engine yet (T-4147).
 
 Mismatches are listed in report.md's "Pivot layout" section and in report.json's `pivot_layout` per case.
-xlsx cases' sidecars are not read for pivots yet: their pivot cells are cached constants the importer keeps
-(pivot-corpus, T-4131).
+xlsx cases' sidecars are not read for pivots yet: their pivot cells are cached constants the importer keeps.
+
+Instead, each pivot of an xlsx case whose cached values the suite trusts (`trusts_cached_values`) is
+classified fresh or stale (T-4131, `crates/rustsheet-eval/src/pivot_freshness.rs`). The engine lays the pivot
+out again from its saved definition and cache (`Evaluated::pivot_cells`, the facade's
+`Workbook::pivot_table_cells`, which changes nothing). The pivot is `fresh` when every cell of that layout and of
+Excel's saved area (its location and page rows, as the oracle fill captures it; at most 100,000 cells) equals
+Excel's cached value, and `stale` otherwise, with the first differing cell or why it could not be laid out as its
+reason. report.json lists it per case (`pivot_freshness`); report.md's "Pivot freshness" section counts each
+suite's pivots and lists every stale one. Stale pivots are not scored for render; render scoring of fresh ones
+is T-4906. Until the PV1 renderer reaches parity, stale also covers pivots the engine does not yet lay out as
+Excel did. The pivot files of calipers and poi are classified by their own suites' runs; corpus-bench's are
+not, since that suite does not trust its caches.
 Tools never re-derive case discovery: `rustsheet-eval cases <suite>` prints each case's path,
 sidecar path, formula-cell count and whether the suite trusts its cached values.
 
