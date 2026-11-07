@@ -39,10 +39,11 @@ Earlier-only candidates (decision 0329 item 3). These are cells with an October 
 result inside another formula. Supersede one only after you commit a refill copy of its case (identical sheets, as
 probes/gen-m9-17c110a53924beb8-refill-1106 is; `excel-probe` skill) that shows the November value; otherwise keep it passing:
 - gen-m9/e85daedce5c2675e Calc!A35 (`BESSELJ(COUNT(PIVOTBY(..),Data!B3:B5,Data!D9:D10),0)`, t2625 A26's COUNT);
-- probes/t2436/e85daedce5c2675e Calc!A31, A46 (the same COUNT, bare and inside BESSELJ);
 - gen-m9/81bcdc0bec0c8e6b Calc!A121 (`IRR(SUM(..,PIVOTBY(..,LAMBDA(v,v),..),..))`) and gen-m9/d8f44d556674c2fd Calc!A78
   (`PROB(..,SUM(..,PIVOTBY(..,LAMBDA(y,y),..)),..)`).
 Any other cell that the eval run shows moving is handled the same way, and it is listed here before the run.
+The probe copies of that COUNT, probes/t2436/e85daedce5c2675e A31 and A46, are already off (Excel 142, ours 167). T-2940
+owns them; this task does not change that.
 
 ## Acceptance criteria
 - [ ] Every cell under "fixes" passes; `make eval-show` shows each one.
