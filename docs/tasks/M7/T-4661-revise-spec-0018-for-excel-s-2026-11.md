@@ -3,7 +3,7 @@ id: T-4661
 title: "Revise SPEC-0018 for Excel's 2026-11 nested-cell reads (lifts read an error, SUM is #N/A, COUNT skips)"
 milestone: M7
 lane: research
-status: blocked
+status: in-progress
 priority: P2
 size: S
 tier: opus
@@ -76,7 +76,7 @@ Done 2026-11-07.
 - **Eval delta:** none (docs only).
 
 ## Blocked because
-Blocked because: review-round limit
+Resumed after the review-round limit (step 5c).
 Three review rounds were run on PR #3786. Security and design approved every round. Excel-fidelity asked for changes
 in all three, and each round found further cells the superseded lists had missed:
 - round 1: t2475 P!A64 (October);
