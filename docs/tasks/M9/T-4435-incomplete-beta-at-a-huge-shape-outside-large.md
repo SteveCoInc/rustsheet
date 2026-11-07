@@ -297,3 +297,11 @@ On the whole case (`score.py` after the change), ours is:
   2.3E-13 to 6.2E-14.
 
 **Follow-up:** T-4908 (the 11 cells above).
+
+**After merging origin/main and T-1871's queued `large_prefactor` change (#3953):**
+- T-4435's regions no longer reach `large_prefactor` (the Cephes fallback), so the grid's values are byte-identical,
+  with no point worse.
+- Gate A (`rustsheet-eval accuracy`): 0 failing, 185 known failures (T-1871 removes its own 3).
+- `rustsheet-eval check`: no regression.
+- The family counts are unchanged: 361,553 within 15 digits and 2,372 visibly off.
+- `f_large_shape_tails` moved to large_shape_beta.rs to keep fisher.rs under the 1,000-line limit after the merge.

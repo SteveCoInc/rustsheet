@@ -31,10 +31,11 @@
 //! change does not touch: L140's port in Excel's arithmetic (to 3.7 units of |ln tail| ulp), or a
 //! lower tail with a moderate a0. The expansion's own worst is 1.6E-14, at b of 100 to 200.
 
+use super::bratio::half_complement;
 use super::incomplete_beta::{rlog1, stirling_correction};
 use super::incomplete_gamma::{accurate_gamma_density, gamma_ur};
 use super::loader::stirlerr_exact;
-use crate::x87_exp::{dd_add, dd_exp, dd_mul, dd_neg, two_sum};
+use crate::x87_exp::{dd_add, dd_div, dd_exp, dd_mul, dd_neg, two_sum};
 use crate::x87_log10::{ln_double_double, ln_double_double_pair};
 
 /// The smallest first shape the expansion is used at, from the math alone (T-4435's boundary grid,
@@ -92,6 +93,31 @@ pub(super) fn large_shape_lower(a: f64, b: f64, x: f64, y: f64) -> Option<f64> {
 /// is a relative error of about |ln tail| ulp in the result.
 pub(super) fn large_shape_lower_pair(a: f64, b: f64, x: f64, y: (f64, f64)) -> Option<f64> {
     expansion(a, b, x, y, true)
+}
+
+/// (lower, upper) F tails above the mean in T-4435's regions: the upper tail `I_v(df2/2, df1/2)` by the
+/// large-shape expansion ([`large_shape_lower_pair`]; `fisher.rs` `f_tail` routes it), with its small side
+/// u = df1 x/(df1 x + df2) formed in double-double, since the double u's rounding is multiplied by
+/// about |ln tail| in the tail. On T-4435's grid (docs/research/t4435; 60-digit mpmath at the exact
+/// ratio):
+/// - region 1 (df1 21 to 79, df2 1E4 to 2E6, past L140's 9 bup terms; tails to 1E-200) is within
+///   3.7E-16, against 5.6E-12 by Cephes' fraction and 1.4E-13 by the expansion on the double ratio;
+/// - region 2 (df1 80 to 400, df2 1E5 to 1E10) is within 1.3E-15, against 5.2E-8 by bfrac.
+///
+/// Excel is not this (T-4434's sweep, probes-numeric/t4434-huge-shape-outside-large-shape-beta: a few
+/// units of |ln tail| ulp off the math in region 1, up to 8.5E-9 in region 2, T-4214); this is
+/// decision 0114's `accuracy` stage. `None` below the mean, where the lower tail is the one formed
+/// directly (today's kernel), or outside the expansion's bounds.
+pub(super) fn f_large_shape_tails(df1: f64, df2: f64, x: f64) -> Option<(f64, f64)> {
+    let (a, b) = (df1 / 2.0, df2 / 2.0);
+    let scaled = dd_mul((df1, 0.0), (x, 0.0));
+    let total = dd_add(scaled, (df2, 0.0));
+    let u = dd_div(scaled, total);
+    if u.0.is_nan() || u.0 <= a / (a + b) {
+        return None;
+    }
+    let upper = large_shape_lower_pair(b, a, df2 / total.0, u)?;
+    Some((half_complement(upper), upper))
 }
 
 /// The expansion, with r formed in double-double ([`gamma_power_ratio`]) when `precise`: below
