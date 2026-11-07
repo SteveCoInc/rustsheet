@@ -13,6 +13,10 @@ use crate::{
 impl Model {
     /// `DELTA(number1, [number2])`.
     pub(crate) fn fn_delta(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let args = match self.atp_arguments(args, 1, cell) {
+            Ok(args) => args,
+            Err(error) => return error,
+        };
         self.lift_call(Function::Delta, args, cell, &mut |model, values| {
             model.compare_with_default(values, cell).map_or_else(
                 |error| error,
@@ -23,6 +27,10 @@ impl Model {
 
     /// `GESTEP(number, [step])`.
     pub(crate) fn fn_gestep(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let args = match self.atp_arguments(args, 1, cell) {
+            Ok(args) => args,
+            Err(error) => return error,
+        };
         self.lift_call(Function::Gestep, args, cell, &mut |model, values| {
             model.compare_with_default(values, cell).map_or_else(
                 |error| error,

@@ -392,6 +392,12 @@ impl Model {
         matches!(self.variable_binding(node), Some(Binding::Omitted))
     }
 
+    /// Whether the argument `node` is omitted where it is written: an empty slot (`f(1,)`) or a
+    /// variable that hands an omission on ([`Self::is_omitted_variable`]).
+    pub(crate) fn is_omitted_argument(&self, node: &Node) -> bool {
+        matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node)
+    }
+
     /// Whether `node` is a variable bound to an array of references ([`Binding::Grid`]), which
     /// [`Model::variable_reference`] hands on.
     pub(crate) fn is_grid_variable(&self, node: &Node) -> bool {

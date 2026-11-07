@@ -883,6 +883,12 @@ double-angle form matches too, so the digits are not Mac-only.
 Status: VERIFIED (desktop cached values and excel-graph)
 Tasks: T-0907, T-1966, T-2760, T-2043, T-2044, T-2774
 
+## An empty argument of the ToolPak engineering functions
+Rule: a written-empty required argument of COMPLEX, DELTA, GESTEP, ERF, BESSELJ/BESSELK (and, by the same code, BESSELI/BESSELY), CONVERT and the base conversions with `places` is `#N/A`, as for IMSUB and IMDIV above: `COMPLEX(,1)`, `COMPLEX(1,)`, `COMPLEX(1,,"j")`, `DELTA(,1)`, `GESTEP(,1)`, `BESSELJ(1,)`, `BESSELK(,1)`, `CONVERT(1,,"m")`, `CONVERT(1,"m",)`, `DEC2BIN(,2)`, `HEX2OCT(,3)`, `OCT2BIN(,4)`, and every all-empty form. ERF's optional `upper_limit` is strict too: `ERF(6,)` is `#N/A` (`ERF(6)` is 1). The other optional arguments read as omitted when written empty: `DEC2BIN(5,)` "101", `DEC2BIN(-331,)` "1010110101", `DEC2HEX(34618,)` "873A", `BIN2HEX(1,)` "1", `HEX2OCT("FF",)` "377", `OCT2BIN(17,)` "1111" (places), `DELTA(2,)` 0, `GESTEP(1,)` 1, `GESTEP(-1,)` 0 (step), `COMPLEX(1,1,)` "1+i" (suffix). A LET or LAMBDA name bound to nothing behaves the same way: `LET(e,,COMPLEX(1,e))` and `LAMBDA(a,b,DEC2BIN(a,b))(,2)` are `#N/A`, while `LAMBDA(a,b,DEC2BIN(a,b))(5,)` is "101" and `LET(e,,GESTEP(1,e))` is 1. ERFC and BIN2DEC take one argument, which cannot be written empty. Before T-4872 the engine read every empty argument as 0 or as empty text.
+Evidence: probes/t4872-atp-empty-argument A1:A54 (excel-graph, 2026-11-07). Predictions ("#N/A for every empty argument, optional ones included") were committed before the fill; they were wrong for places, step and suffix.
+Status: VERIFIED (excel-graph); implemented (`atp_arguments` in functions/engineering/mod.rs). BESSELI/BESSELY, DEC2OCT, BIN2OCT, HEX2BIN and OCT2HEX share the code but are unprobed.
+Tasks: T-4872
+
 ## Base conversions read a blank cell and empty text as 0
 Rule: every BIN2*/OCT2*/HEX2* function (with or without `places`) treats a blank cell, `""` and a ref to `=""` as 0: `BIN2DEC("")`, `OCT2DEC(blank)`, `HEX2DEC("")` are 0; the others give "0", or "0000" with `places` 4. None of these is an error.
 Evidence: probes/eng-base-conv-blank (46 cells, excel-graph, 2026-10-18, T-1413); gen-m9/d244411dd90f7fbd Calc!A15 (`VLOOKUP(..)&UPPER(OCT2BIN(Data!E5,2))` = "-0.000100": `OCT2BIN` of a blank is "00", excel-graph, 2026-10-12, T-1289).
