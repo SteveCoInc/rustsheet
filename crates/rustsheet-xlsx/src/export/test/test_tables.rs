@@ -1,9 +1,9 @@
 //! Tables and structured references through the export (SPEC-0016 step 3, T-2196).
 
-use std::fs;
+use std::{fs, time::Instant};
 
 use rustsheet_engine::{
-    types::{CustomFilter, DateGroupItem, Dxf, FilterColumn, FilterCriterion},
+    types::{CustomFilter, DateGroupItem, Dxf, FilterColumn, FilterCriterion, Row},
     Model,
 };
 
@@ -818,4 +818,37 @@ fn a_calculated_column_formula_follows_row_and_column_edits() {
             "{typed} case {index}: {table_xml}"
         );
     }
+}
+
+/// The API-filter scan reads the hidden rows in one pass over the row records, not one scan of them
+/// per data row (T-4748): a 100,000-row table with 50,000 hidden row records, which was ~5e9 steps.
+#[test]
+fn the_api_filter_scan_of_a_big_table_is_not_quadratic() {
+    let mut model = new_empty_model();
+    let rows = 100_000;
+    model.set_user_input(0, 1, 1, "Qty".to_string()).unwrap();
+    model
+        .add_table(0, "Big", (1, 1, rows + 1, 1), true)
+        .unwrap();
+    let records = &mut model.workbook.worksheet_mut(0).unwrap().rows;
+    for r in (2..=rows + 1).step_by(2) {
+        records.push(Row {
+            r,
+            height: 14.0,
+            custom_format: false,
+            custom_height: false,
+            s: 0,
+            hidden: true,
+        });
+    }
+    let table = model.workbook.tables["Big"].clone();
+    let start = Instant::now();
+    let column = super::super::tables::api_filter_column(&model, 0, &table).unwrap();
+    // The one pass takes ~0.1 s even in a debug build; the per-row scan took ~2.6 s.
+    assert!(start.elapsed().as_millis() < 1000, "{:?}", start.elapsed());
+    // Only the visible rows are blank (empty cells), so the criterion is just `blank`.
+    let FilterCriterion::Values { values, blank, .. } = column.criterion else {
+        panic!("not a values criterion");
+    };
+    assert!(values.is_empty() && blank);
 }

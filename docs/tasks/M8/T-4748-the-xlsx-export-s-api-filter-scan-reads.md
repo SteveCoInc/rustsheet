@@ -3,7 +3,7 @@ id: T-4748
 title: "The xlsx export's API-filter scan reads hidden rows in one pass, not one row-record scan per data row (T-4363 review follow-up)"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,3 +31,9 @@ Exporting an API-filtered table costs time linear in the table's rows plus the s
 
 ## Out of scope
 - Other linear `is_row_hidden` callers.
+
+## Outcome
+`api_filter_column` now collects the hidden rows of the table's data range in one pass over `Worksheet::rows` (first record of a
+row decides, as in `is_row_hidden`) and walks the rows against that set. XML unchanged (existing table tests pass). New test
+`the_api_filter_scan_of_a_big_table_is_not_quadratic`: 100,000 rows, 50,000 hidden records, ~0.1 s in debug against ~2.6 s for the
+old scan. Eval: no change. No follow-ups.

@@ -13,6 +13,8 @@
 //! </table>
 //! ```
 
+use std::collections::HashSet;
+
 use rustsheet_engine::{
     expressions::{
         parser::{parse_range, stringify::to_excel_string},
@@ -146,8 +148,21 @@ pub(crate) fn api_filter_column(model: &Model, sheet: u32, table: &Table) -> Opt
     let totals = i32::try_from(table.totals_row_count).ok()?;
     let mut values: Vec<String> = Vec::new();
     let mut blank = false;
-    for row in top.checked_add(1)?..=bottom.checked_sub(totals)? {
-        if model.is_row_hidden(sheet, row).unwrap_or(false) {
+    let first = top.checked_add(1)?;
+    let last = bottom.checked_sub(totals)?;
+    // One pass over the row records, not `Model::is_row_hidden` (a linear scan) per data row, which
+    // is quadratic on a big table (T-4748). The first record of a row decides, as it does there.
+    let mut seen: HashSet<i32> = HashSet::new();
+    let mut hidden: HashSet<i32> = HashSet::new();
+    if let Ok(worksheet) = model.workbook.worksheet(sheet) {
+        for record in &worksheet.rows {
+            if (first..=last).contains(&record.r) && seen.insert(record.r) && record.hidden {
+                hidden.insert(record.r);
+            }
+        }
+    }
+    for row in first..=last {
+        if hidden.contains(&row) {
             continue;
         }
         let text = model
