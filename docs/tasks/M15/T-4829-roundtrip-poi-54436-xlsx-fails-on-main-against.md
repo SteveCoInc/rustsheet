@@ -3,7 +3,7 @@ id: T-4829
 title: "roundtrip-poi/54436.xlsx fails on main against its baseline (78.79% kept, item 296)"
 milestone: M15
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -31,3 +31,7 @@ records, or the case's new failure is explained and ratcheted under the roundtri
 
 ## Out of scope
 - Other roundtrip-poi cases.
+
+## Outcome
+Duplicate of T-4825 (the same regression, bisected to T-4176 #3800), closed by the 2026-11-07 steward PR (#3872) so the
+regression has one owner. Whether PR CI runs round-trip poi is T-4867's question. No change here.

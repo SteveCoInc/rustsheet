@@ -1,5 +1,6 @@
 """Tests for the pivot table API (``Transaction.add_pivot_table``, ``set_pivot_table``,
-``refresh_pivot_table`` and ``Workbook.pivot_table``; SPEC-0032 "API", T-4178)."""
+``refresh_pivot_table``, ``Workbook.pivot_table`` and ``Workbook.pivot_cell_records``; SPEC-0032
+"API", T-4178, T-4184)."""
 
 import pytest
 import rustsheet as rs
@@ -169,3 +170,49 @@ def test_bad_arguments_raise_at_once(wb):
                 rows="Region",
             )
     assert wb.pivot_table("Sheet1", "X") is None
+
+
+# probes/getpivotdata-real-pivot: Excel's GETPIVOTDATA over Sum of Sales by Region and Product on
+# these records gives East/A 14, West/B 7, East 22, A 34 and the grand total 49 (oracle H5, H14,
+# H3, H4, H1), and 0 for West/C, which no record reaches (H13).
+REAL_PIVOT = [
+    ("Region", "Product", "Sales"),
+    ("East", "A", 10),
+    ("West", "A", 20),
+    ("East", "B", 5),
+    ("West", "B", 7),
+    ("East", "C", 3),
+    ("East", "A", 4),
+]
+
+
+def test_pivot_cell_records_are_the_records_behind_a_value_cell():
+    wb = rs.Workbook()
+    with wb.edit() as tx:
+        for r, row in enumerate(REAL_PIVOT, start=1):
+            for col, value in zip("ABC", row):
+                tx[f"Sheet1!{col}{r}"] = value
+        tx.add_pivot_table(
+            "Pv", source="Sheet1!A1:C7", location="Sheet1!E1", row="Region", column="Product", value="Sales"
+        )
+    sales = [row[2] for row in REAL_PIVOT[1:]]
+    # F3 East/A, G4 West/B, I3 East, F5 A, I5 the grand total.
+    for a1, excel, records in [
+        ("F3", 14, [0, 5]),
+        ("G4", 7, [3]),
+        ("I3", 22, [0, 2, 4, 5]),
+        ("Sheet1!F5", 34, [0, 1, 5]),
+        ("I5", 49, [0, 1, 2, 3, 4, 5]),
+    ]:
+        assert wb.pivot_cell_records("Sheet1", "Pv", a1) == records
+        assert sum(sales[i] for i in records) == excel
+        assert wb[f"Sheet1!{a1.split('!')[-1]}"] == excel
+    assert wb.pivot_cell_records("Sheet1", "Pv", "H4") == []
+    # Labels, headers and cells outside the pivot are no value cells.
+    for a1 in ["E3", "F2", "E1", "J3"]:
+        with pytest.raises(rs.EditError, match="value cell"):
+            wb.pivot_cell_records("Sheet1", "Pv", a1)
+    with pytest.raises(rs.EditError, match="Nope"):
+        wb.pivot_cell_records("Sheet1", "Nope", "F3")
+    with pytest.raises(rs.RefError):
+        wb.pivot_cell_records("Nope", "Pv", "F3")

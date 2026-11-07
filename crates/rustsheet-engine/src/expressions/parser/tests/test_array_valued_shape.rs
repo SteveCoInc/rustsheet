@@ -35,19 +35,24 @@ fn an_array_valued_entry_is_unknown_unless_it_lifts() {
     ));
 }
 
-/// Only a reference `if_not_found` makes an XLOOKUP a grid of reference elements
-/// (`NotFound::Range`), so only it gives the call over it the `lookup_value`'s shape (T-4705).
+/// Any XLOOKUP with a lifted `lookup_value` is a grid of its elements in a criteria call, whatever
+/// its `if_not_found`, so the call over it has the `lookup_value`'s shape; a scalar lookup is one
+/// call (T-4705, T-4742; probes/t4742-countif-array-range-arg A10:C25).
 #[test]
-fn an_xlookup_grid_needs_a_reference_if_not_found() {
+fn an_xlookup_grid_has_the_lookup_value_shape() {
     let with = |not_found: &str| {
         shape(&format!(
             "COUNTIF(XLOOKUP({{2;9}},A1:A3,B1:B3,{not_found}),\">0\")"
         ))
     };
     assert!(matches!(with("F1:F2"), StaticResult::Array(2, 1)));
-    assert!(!matches!(with("0"), StaticResult::Array(..)));
-    assert!(!matches!(
+    assert!(matches!(with("0"), StaticResult::Array(2, 1)));
+    assert!(matches!(
         shape("COUNTIF(XLOOKUP({2;9},A1:A3,B1:B3),\">0\")"),
+        StaticResult::Array(2, 1)
+    ));
+    assert!(!matches!(
+        shape("COUNTIF(XLOOKUP(2,A1:A3,B1:B3,\"x\"),\">0\")"),
         StaticResult::Array(..)
     ));
 }

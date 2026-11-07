@@ -20,6 +20,21 @@ pub enum NavigationDirection {
     Down,
 }
 
+impl Row {
+    /// The record of row `r` with the default height and no style, hidden: what hiding a row
+    /// that has no record adds ([`Worksheet::set_row_hidden`]).
+    pub(crate) fn hidden_default(r: i32) -> Row {
+        Row {
+            height: constants::DEFAULT_ROW_HEIGHT / constants::ROW_HEIGHT_FACTOR,
+            r,
+            custom_format: false,
+            custom_height: false,
+            s: 0,
+            hidden: true,
+        }
+    }
+}
+
 impl Worksheet {
     pub fn get_name(&self) -> String {
         self.name.clone()
@@ -403,12 +418,8 @@ impl Worksheet {
             }
         }
         rows.push(Row {
-            height: constants::DEFAULT_ROW_HEIGHT / constants::ROW_HEIGHT_FACTOR,
-            r: row,
-            custom_format: false,
-            custom_height: false,
-            s: 0,
             hidden,
+            ..Row::hidden_default(row)
         });
         Ok(())
     }

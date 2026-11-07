@@ -15,6 +15,24 @@ use crate::{
 };
 
 impl Model {
+    /// The holidays argument of WORKDAY(.INTL) or NETWORKDAYS(.INTL) (argument `holidays_at`), after
+    /// the argument count the four share. A written-empty holidays is omitted
+    /// (`WORKDAY(45000,10,)` is `WORKDAY(45000,10)` and `NETWORKDAYS(45000,45030,)` 23:
+    /// probes/t4870-r2-empty-optional A1, A3, A9, A11, A13; T-4870).
+    pub(super) fn holidays_arg<'a>(
+        &self,
+        args: &'a [Node],
+        holidays_at: usize,
+        cell: CellReferenceIndex,
+    ) -> Result<Option<&'a Node>, CalcResult> {
+        if !(2..=holidays_at + 1).contains(&args.len()) {
+            return Err(CalcResult::new_args_number_error(cell));
+        }
+        Ok(args
+            .get(holidays_at)
+            .filter(|arg| !self.is_empty_argument(arg)))
+    }
+
     /// The serials of a holidays argument, read whole: a range is not intersected
     /// (docs/excel-semantics/dates.md "WORKDAY holidays take the whole range"). Each must be a
     /// date (`#NUM!`); non-number text and booleans are `#VALUE!`, a blank one-cell reference is no

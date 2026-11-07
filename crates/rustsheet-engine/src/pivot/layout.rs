@@ -1,6 +1,7 @@
 //! A pivot's layout: in [`lines`], its layout lines and location (SPEC-0032 stage 7, T-4147),
-//! and in [`render`], the cells they give (T-4149); and the aggregation GETPIVOTDATA reads until
-//! it moves onto the `PivotResult` (T-4154).
+//! in [`render`], the cells they give (T-4149), in [`records_behind`], the records behind one
+//! value cell (T-4184), and in [`chart_data`], what a pivot chart plots (T-4186); and the
+//! aggregation GETPIVOTDATA reads until it moves onto the `PivotResult` (T-4154).
 //!
 //! There is one layout path. A grouped spec pivot (T-4235), which has no rendered cells because
 //! the case builder cannot know Excel's groups, is computed, laid out and rendered by the same
@@ -8,10 +9,14 @@
 //! layout hold it in step (probes/t4228-pivot-range-groups, probes/t4235-pivot-range-rounding,
 //! probes/t4311-pivot-showall-column-and-groups).
 
+mod chart;
 mod lines;
+mod records;
 mod render;
 
+pub use chart::{chart_data, ChartCategory, ChartSeries, PivotChartData, TOTAL_SERIES};
 pub use lines::{lay_out, AxisLine, PivotLayout, MAX_PIVOT_CELLS};
+pub use records::records_behind;
 pub(super) use render::item_text;
 pub use render::{
     render, PivotCell, RenderedCell, ALL_ITEMS, BLANK_ITEM, COLUMN_LABELS, GRAND_TOTAL,

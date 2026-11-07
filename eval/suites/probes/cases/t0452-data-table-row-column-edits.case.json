@@ -1,0 +1,250 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "What row and column edits around a what-if data table do (T-0452). Each sheet has a column table on B4:B6 (formula B3 =D1*10+B1, column input D1, values 1-3 in A4:A6; results 12, 22, 32) read by H1 SUM(B4:B6), H2 FORMULATEXT(B5), H3 =B5 and H4 ISFORMULA(B5), and one edit: R1, R3 and R7 insert a row at 1, 3 (the formula row) and 7 (below); CA and CC insert a column at A (the values column) and C (right); DR1 and DCD delete the input's row 1 and column D; DR27 deletes rows 2-7 and DCAB columns A-B, each the whole table. Excel refuses inserts and deletes that cut through the table's region (A3:B6) and writes into B4:B6; those are recorded by upload in recalc.md.",
+  "tags": [
+    "M11",
+    "data-table",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "R1",
+      "cells": {
+        "D1": 1,
+        "B1": 2,
+        "B3": "=D1*10+B1",
+        "A4": 1,
+        "A5": 2,
+        "A6": 3,
+        "H1": "=SUM(B4:B6)",
+        "H2": "=FORMULATEXT(B5)",
+        "H3": "=B5",
+        "H4": "=ISFORMULA(B5)"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B6",
+          "column_input": "D1"
+        }
+      ]
+    },
+    {
+      "name": "R3",
+      "cells": {
+        "D1": 1,
+        "B1": 2,
+        "B3": "=D1*10+B1",
+        "A4": 1,
+        "A5": 2,
+        "A6": 3,
+        "H1": "=SUM(B4:B6)",
+        "H2": "=FORMULATEXT(B5)",
+        "H3": "=B5",
+        "H4": "=ISFORMULA(B5)"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B6",
+          "column_input": "D1"
+        }
+      ]
+    },
+    {
+      "name": "R7",
+      "cells": {
+        "D1": 1,
+        "B1": 2,
+        "B3": "=D1*10+B1",
+        "A4": 1,
+        "A5": 2,
+        "A6": 3,
+        "H1": "=SUM(B4:B6)",
+        "H2": "=FORMULATEXT(B5)",
+        "H3": "=B5",
+        "H4": "=ISFORMULA(B5)"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B6",
+          "column_input": "D1"
+        }
+      ]
+    },
+    {
+      "name": "CA",
+      "cells": {
+        "D1": 1,
+        "B1": 2,
+        "B3": "=D1*10+B1",
+        "A4": 1,
+        "A5": 2,
+        "A6": 3,
+        "H1": "=SUM(B4:B6)",
+        "H2": "=FORMULATEXT(B5)",
+        "H3": "=B5",
+        "H4": "=ISFORMULA(B5)"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B6",
+          "column_input": "D1"
+        }
+      ]
+    },
+    {
+      "name": "CC",
+      "cells": {
+        "D1": 1,
+        "B1": 2,
+        "B3": "=D1*10+B1",
+        "A4": 1,
+        "A5": 2,
+        "A6": 3,
+        "H1": "=SUM(B4:B6)",
+        "H2": "=FORMULATEXT(B5)",
+        "H3": "=B5",
+        "H4": "=ISFORMULA(B5)"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B6",
+          "column_input": "D1"
+        }
+      ]
+    },
+    {
+      "name": "DR1",
+      "cells": {
+        "D1": 1,
+        "B1": 2,
+        "B3": "=D1*10+B1",
+        "A4": 1,
+        "A5": 2,
+        "A6": 3,
+        "H1": "=SUM(B4:B6)",
+        "H2": "=FORMULATEXT(B5)",
+        "H3": "=B5",
+        "H4": "=ISFORMULA(B5)"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B6",
+          "column_input": "D1"
+        }
+      ]
+    },
+    {
+      "name": "DCD",
+      "cells": {
+        "D1": 1,
+        "B1": 2,
+        "B3": "=D1*10+B1",
+        "A4": 1,
+        "A5": 2,
+        "A6": 3,
+        "H1": "=SUM(B4:B6)",
+        "H2": "=FORMULATEXT(B5)",
+        "H3": "=B5",
+        "H4": "=ISFORMULA(B5)"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B6",
+          "column_input": "D1"
+        }
+      ]
+    },
+    {
+      "name": "DR27",
+      "cells": {
+        "D1": 1,
+        "B1": 2,
+        "B3": "=D1*10+B1",
+        "A4": 1,
+        "A5": 2,
+        "A6": 3,
+        "H1": "=SUM(B4:B6)",
+        "H2": "=FORMULATEXT(B5)",
+        "H3": "=B5",
+        "H4": "=ISFORMULA(B5)"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B6",
+          "column_input": "D1"
+        }
+      ]
+    },
+    {
+      "name": "DCAB",
+      "cells": {
+        "D1": 1,
+        "B1": 2,
+        "B3": "=D1*10+B1",
+        "A4": 1,
+        "A5": 2,
+        "A6": 3,
+        "H1": "=SUM(B4:B6)",
+        "H2": "=FORMULATEXT(B5)",
+        "H3": "=B5",
+        "H4": "=ISFORMULA(B5)"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B6",
+          "column_input": "D1"
+        }
+      ]
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "insert_row",
+      "sheet": "R1",
+      "row": 1
+    },
+    {
+      "op": "insert_row",
+      "sheet": "R3",
+      "row": 3
+    },
+    {
+      "op": "insert_row",
+      "sheet": "R7",
+      "row": 7
+    },
+    {
+      "op": "insert_column",
+      "sheet": "CA",
+      "column": "A"
+    },
+    {
+      "op": "insert_column",
+      "sheet": "CC",
+      "column": "C"
+    },
+    {
+      "op": "delete_row",
+      "sheet": "DR1",
+      "row": 1
+    },
+    {
+      "op": "delete_column",
+      "sheet": "DCD",
+      "column": "D"
+    },
+    {
+      "op": "delete_row",
+      "sheet": "DR27",
+      "row": 2,
+      "count": 6
+    },
+    {
+      "op": "delete_column",
+      "sheet": "DCAB",
+      "column": "A",
+      "count": 2
+    }
+  ],
+  "expected": {}
+}

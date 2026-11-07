@@ -9,7 +9,9 @@ use serde_json::Value as Json;
 
 use super::*;
 use crate::pivot::probe_cases::{probe_model, read, source_cache};
-use crate::pivot::{group_by_dates, refresh, DateGroupBy, DateGroups, MAX_RECORD_VALUES};
+use crate::pivot::{
+    group_by_dates, keep_ungrouped, refresh, DateGroupBy, DateGroups, MAX_RECORD_VALUES,
+};
 
 /// The saved `<groupItems>` of the sidecar's cache field `name` (every pivot of a probe saves the
 /// same cache).
@@ -167,7 +169,8 @@ fn date_cache(case: &Json, oracle: &Json) -> PivotCache {
         let groups = DateGroups::new(by, 43466.0, 44196.0, labels.len()).unwrap();
         group_by_dates(&date, groups, labels).unwrap()
     };
-    cache.fields[0] = level(DateGroupBy::Months, "Date");
+    // Grouped in place, it keeps its own values, as the importer and a refresh keep them.
+    cache.fields[0] = keep_ungrouped(date.clone(), level(DateGroupBy::Months, "Date"));
     for (by, name) in [
         (DateGroupBy::Quarters, "Quarters"),
         (DateGroupBy::Years, "Years"),

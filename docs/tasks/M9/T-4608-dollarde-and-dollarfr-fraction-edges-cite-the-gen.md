@@ -3,7 +3,7 @@ id: T-4608
 title: "DOLLARDE and DOLLARFR fraction edges: probe fractions below 1, non-integer fractions and fractions from 1E9 up (10^k-1, 10^k, 10^k+1), and match"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -43,15 +43,27 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4608-dollarde-doll
 - The same dollars with 10^k - 1, 10^k and 10^k + 1 for k = 9, 10, 12, 15, and with 2^53 - 1, 2^53 and 1E300.
 
 ## Acceptance criteria
-- [ ] probes/t4608-dollarde-dollarfr-fraction-edges is committed with its excel-graph oracle sidecar.
-- [ ] Every probe cell passes, or each visibly-off cell has an owner task. A last-digit-only miss on a power-of-ten
+- [x] probes/t4608-dollarde-dollarfr-fraction-edges is committed with its excel-graph oracle sidecar.
+- [x] Every probe cell passes, or each visibly-off cell has an owner task. A last-digit-only miss on a power-of-ten
       cut is filed as its own `defer: phase-1b` task, not fitted here.
-- [ ] financial.md states the error rule for fractions below 1, the truncation (or not) of a non-integer fraction, and
+- [x] financial.md states the error rule for fractions below 1, the truncation (or not) of a non-integer fraction, and
       the 10^k cut, with the cells. Its "Unprobed" sentence is gone.
-- [ ] If the engine changes, a unit test pins one changed cell (test_fn_financial.rs `fn_dollarde` is the place).
-- [ ] No new known-failure line in eval/baseline/probes.txt, and accuracy/DOLLARDE and accuracy/DOLLARFR still pass
+- [x] If the engine changes, a unit test pins one changed cell (test_fn_financial.rs `fn_dollarde` is the place).
+      n/a: the engine did not change.
+- [x] No new known-failure line in eval/baseline/probes.txt, and accuracy/DOLLARDE and accuracy/DOLLARFR still pass
       (`rustsheet-eval accuracy`).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Argument-kind pairs (T-3780) and the empty-text or error kinds (T-3126).
+
+## Outcome
+Probed with excel-graph (2026-11-07): `probes/t4608-dollarde-dollarfr-fraction-edges`, 192 cells (DOLLARDE and DOLLARFR of
+1.5, -1.5, 0.3 against 12 small fractions and 10^k-1, 10^k, 10^k+1 for k = 9, 10, 12, 15, 2^53-1, 2^53, 1E300, plus computed 1E15+1, 2^53±1, 10^16+1). Ours
+matches every cell, so no engine change. financial.md now states the rule (truncate toward 0; below 0 `#NUM!`; 0 to
+under 1 `#DIV/0!`; exact decimal power cut up to 10^12; D = 10^15 at 10^15+1) and its "Unprobed" sentence is gone. Eval delta: probes +192
+cells, all passing; eval/baseline/probes.txt gains only its case-count line, no known-failure line.
+
+Follow-up: T-4880 (the Gate A math definition differs from Excel at 10^15+1 and 1E300).
+
+Resumed after the review-round limit (step 5c); the full panel approved on re-review.

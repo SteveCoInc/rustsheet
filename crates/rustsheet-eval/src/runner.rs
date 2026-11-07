@@ -17,6 +17,7 @@ use crate::case::{CaseSpec, OraclePivot};
 use crate::case_log;
 use crate::cellref::Addr;
 use crate::engine::Engine;
+use crate::pivot_freshness::{self, PivotFreshness, SavedPivot};
 use crate::pivot_scoring::{self, PivotLayout};
 use crate::poi_m8_subset::ReferenceFormCells;
 use crate::spill_extent::SpillExtent;
@@ -37,6 +38,9 @@ pub enum CaseStatus {
     Timeout,
     /// The case file itself is unreadable or malformed.
     InvalidCase,
+    /// Excel would not open the engine's export (SPEC-0033 `excel-refused`, T-4177): always a
+    /// failure, whatever the engine gives.
+    ExcelRefused,
 }
 
 impl CaseStatus {
@@ -213,6 +217,11 @@ pub struct CaseResult {
     /// The case's pivots whose layout is not Excel's (T-4124; empty without sidecar pivots).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivot_layout: Vec<PivotLayout>,
+    /// An xlsx case's saved pivots, each fresh or stale with its render and refresh scores
+    /// (T-4131, T-4906; empty unless the suite trusts the workbook's cached values). A fresh
+    /// pivot's render cells are among `cells`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivot_freshness: Vec<PivotFreshness>,
     /// The spec case's `pivot_features` catalog ids (T-4126).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivot_features: Vec<String>,
@@ -290,6 +299,7 @@ impl CaseResult {
             arguments: Vec::new(),
             reference_forms: ReferenceFormCells::default(),
             pivot_layout: Vec::new(),
+            pivot_freshness: Vec::new(),
             pivot_features: Vec::new(),
             pivot_cells: crate::pivot_features::PivotCellTally::default(),
         }
@@ -345,9 +355,24 @@ struct PreparedCase {
     reference_forms: ReferenceFormCells,
     /// The sidecar's pivots, whose layout is compared with the engine's (T-4124).
     pivots: Vec<OraclePivot>,
+    /// An xlsx case's pivots as Excel saved them, classified fresh or stale (T-4131).
+    saved_pivots: Vec<SavedPivot>,
     /// The spec case's pivot catalog ids and its sidecar pivot-area cell keys (T-4126).
     pivot_features: Vec<String>,
     pivot_keys: BTreeSet<String>,
+    /// An engine-export case (T-4177): its pivots' `rowItems`/`colItems` are compared with the
+    /// ones the engine saves, Excel's refusal is its verdict, and a note says when the export
+    /// changed since the sidecar's fill.
+    export: Option<ExportOutcome>,
+}
+
+/// What an engine-export case adds to its scoring (T-4177).
+#[derive(Default)]
+struct ExportOutcome {
+    /// Excel's error text, when the sidecar records that it would not open the file.
+    refused: Option<String>,
+    /// Why the result carries a note: the sidecar is of another package than the current one.
+    note: Option<String>,
 }
 
 /// Runs all cases of the given suites in parallel.
@@ -450,6 +475,7 @@ fn run_isolated(
         ..CaseResult::empty(&case.id, &suite.manifest.name, CaseStatus::Pending)
     };
     let pivot_keys = std::mem::take(&mut prepared.pivot_keys);
+    let export = prepared.export.as_mut().map(std::mem::take);
     // Cases without expectations still run: a panic, timeout or load error is a crash we can
     // catch before any oracle value exists (T-0007).
     let engine = Arc::clone(engine);
@@ -484,9 +510,10 @@ fn run_isolated(
                 result.message = Some(e);
             }
         },
-        Ok(Ok((cells, scored, text, arguments, got, layout))) => {
+        Ok(Ok((cells, scored, text, arguments, got, (layout, freshness)))) => {
             check_values = got;
             result.pivot_layout = layout;
+            result.pivot_freshness = freshness;
             result.text = text;
             result.arguments = arguments;
             // Spill-extent cells (after `scored`) all fail but stay out of `checked` (decision 0063).
@@ -510,10 +537,30 @@ fn run_isolated(
             }
         }
     }
+    if let Some(export) = export {
+        apply_export(&mut result, export);
+    }
     CaseValues {
         result,
         check,
         values: check_values,
+    }
+}
+
+/// An engine-export case's refusal and note on its result: a case Excel refused fails as
+/// `excel-refused` unless the engine itself did not run it.
+fn apply_export(result: &mut CaseResult, export: ExportOutcome) {
+    if let Some(why) = export.refused {
+        if !result.status.did_not_run() {
+            result.status = CaseStatus::ExcelRefused;
+            result.message = Some(format!("excel-refused: {why}"));
+        }
+    }
+    if let Some(note) = export.note {
+        result.message = Some(match result.message.take() {
+            Some(m) => format!("{m}; {note}"),
+            None => note,
+        });
     }
 }
 
@@ -557,14 +604,15 @@ pub(crate) fn run_in_worker<T: Send + 'static>(
 const MISSING_SHEET: &str = "<missing sheet>";
 
 /// What a case's worker hands back: its scored cells, how many are expectations, the text
-/// verdicts, the calls seen and the check cells' values.
+/// verdicts, the calls seen, the check cells' values, and its pivots' layout verdicts and
+/// freshness.
 type Evaluation = (
     Vec<CellResult>,
     usize,
     Vec<TextResult>,
     Vec<CallSeen>,
     Vec<Value>,
-    Vec<PivotLayout>,
+    (Vec<PivotLayout>, Vec<PivotFreshness>),
 );
 
 /// Evaluates a prepared case and scores it (on the worker thread, inside the panic isolation);
@@ -580,6 +628,14 @@ fn evaluate_prepared(
         Prepared::Spec { spec } => engine.evaluate_spec(spec, prepared.workbook_name.as_deref()),
     }?;
     let mut cells = score(evaluated.as_ref(), &prepared.expectations, listed);
+    // The fresh pivots' render cells are scored beside the expectations (T-4906); a cell an
+    // expectation already scores keeps that one.
+    let (freshness, render) = match &prepared.input {
+        Prepared::Xlsx { bytes } => pivot_freshness::classify(&prepared.saved_pivots, bytes),
+        Prepared::Spec { .. } => (Vec::new(), Vec::new()),
+    };
+    let taken: BTreeSet<String> = cells.iter().map(CellResult::key).collect();
+    cells.extend(render.into_iter().filter(|c| !taken.contains(&c.key())));
     let scored = cells.len();
     let extent = prepared.extent.iter();
     cells.extend(extent.flat_map(|e| e.unexpected_cells(evaluated.as_ref())));
@@ -599,8 +655,21 @@ fn evaluate_prepared(
     } else {
         Vec::new()
     };
-    let layout = pivot_scoring::compare_layouts(&prepared.pivots, evaluated.as_ref());
-    Ok((cells, scored, text, arguments, check_values, layout))
+    // An export case's engine lines are the ones it would save (T-4177).
+    let lines = match prepared.export {
+        Some(_) => Some(pivot_scoring::saved_lines(evaluated.as_ref())?),
+        None => None,
+    };
+    let layout =
+        pivot_scoring::compare_layouts(&prepared.pivots, evaluated.as_ref(), lines.as_deref());
+    Ok((
+        cells,
+        scored,
+        text,
+        arguments,
+        check_values,
+        (layout, freshness),
+    ))
 }
 
 fn panic_message(p: &(dyn std::any::Any + Send)) -> String {

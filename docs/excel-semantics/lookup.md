@@ -990,6 +990,9 @@ out-of-range index: the T-2273 entry).
       sheet `#VALUE!` (H7, H13), all Data `#N/A` (H8). `MAX` is 50 either order (H11, H12). A mixed XLOOKUP grid has
       a value hit, so only its reference element has a sheet: a reference on the formula's sheet is `#VALUE!` (H14)
       and one on Data `#N/A` (H15). `LARGE(CHOOSE({1;2},A1,Data!G1),1)` makes values, not references: 50 (H10).
+    - A `#REF!` element from a failed INDIRECT (bad sheet name) does not outrank the off-sheet `#N/A`. `LARGE(INDIRECT({"nosuch!A1";"A1";"Data!G1"}),1)`, SMALL and MEDIAN are `#N/A`
+      (probes/t4791-large-small-median-mixed-first-element H4:H6, excel-graph, T-4862), where a `#DIV/0!` element still
+      propagates (t4704). The implementation skips every `#REF!` element by kind; a cell-held `#REF!` (XLOOKUP hit on a `#REF!` cell) beside an off-sheet reference is UNEVIDENCED (follow-up probe task).
     - A first element that is an error or a value (probes/t4791-large-small-median-mixed-first-element, excel-graph
       2026-11-07, T-4791; Local formulas, `INDIRECT` with `nosuch!A1` as the error element): `{"A1";"nosuch!A1";"Data!G1"}`
       (own, error, off) is `#VALUE!` for LARGE, SMALL and MEDIAN (H1:H3), as the first-element rule says. With the error
@@ -1805,9 +1808,18 @@ Per-element readers of a mixed grid: FORMULATEXT gives `#VALUE!` then `#N/A` (A1
 `#VALUE!` (A10:A11), OFFSET a 2x1 of `#VALUE!` (A4:A5, A7:A8; matched since T-4739), RANK, RANK.EQ and RANK.AVG
 `#VALUE!` for the hit and the rank in G1:G2 for the miss (`RANK(60,X)` 1, `RANK(20,X)` `#N/A`, `RANK(50,X)` 2;
 A25:A38; matched since T-4740). COUNTIF and SUMIF over an XLOOKUP with a text if_not_found spill a
-2x1 of `#VALUE!` whether the lookup misses or hits (A64:A74; ours a scalar, T-4742). TAKE and DROP keep the shape
+2x1 of `#VALUE!` whether the lookup misses or hits (A64:A74; matched since T-4742). A lifted XLOOKUP is a grid
+of its elements in every criteria call's range argument, whatever its if_not_found (probes/t4742-countif-array-
+range-arg, excel-graph, 2026-11-07): with no if_not_found `COUNTIF(XLOOKUP({2;9},..),">0")` is `#VALUE!` then the
+miss's `#N/A` (A13:A14) and `{2;3}` `#VALUE!` twice (A10:A11), all hits with a range if_not_found `#VALUE!` twice
+(A16:A17), all misses with "x" too (A19:A20), a 1x1 `{2}` a 1x1 `#VALUE!` (A22:C22), a 1x2 `{2,3}` a 1x2 result
+(A28:C28), and SUMIF's sum_range, COUNTIFS and AVERAGEIF lift the same way (A31:A38). A scalar lookup is the
+reference it picks: `COUNTIF(XLOOKUP(2,..,"x"),">0")` is 1 (A25). An array criterion beside the grid broadcasts,
+2x2 for `{">0",">5"}` (A40:C40; ours a 2x1, T-4826). A workbook with COUNTIF over `SEQUENCE(2)`, `A1:A2+0` or
+`SORT(A1:A2)` as its range failed to open on Excel for the web (createSession 501 unsupportedWorkbook), so those
+forms are not probed: COUNTIF takes no computed array as a range. TAKE and DROP keep the shape
 and match (A13:C22).
-Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742
+Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742, T-4826
 
 ## MATCH match_type that is a reference to an error cell is #REF! (excel-graph)
 Rule: `MATCH(30,A1:A5,M2)` with M2 `=NA()` gives `#REF!` (ERROR.TYPE 4) in Excel for the web, not the #N/A the
