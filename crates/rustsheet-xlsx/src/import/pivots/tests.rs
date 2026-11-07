@@ -9,6 +9,7 @@ use rustsheet_engine::pivot::{
 };
 
 use super::super::package::ImportLimits;
+use super::super::{parse_relationships, xml::XmlNode};
 use super::*;
 
 const REL: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
