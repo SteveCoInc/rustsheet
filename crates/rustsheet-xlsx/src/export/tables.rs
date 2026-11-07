@@ -126,12 +126,6 @@ fn totals_row_metadata(
     }
 }
 
-/// The `<autoFilter>` of a table with a header row, over its header and data rows, as Excel writes
-/// it, with the imported filter columns written back (`Table::filter_columns`). A table that is
-/// filtered with no kept criterion (`Txn::add_table` with `filtered`, which makes every hidden row
-/// of the sheet filtered for SUBTOTAL) is written as a `<filterColumn>` with no criterion:
-/// schema-valid, but how Excel reads it is unprobed (xlsx-storage.md "Table parts in the
-/// export"; T-3081 probes it).
 /// The criterion written for a table filtered through the API with no kept criterion
 /// (`has_filters` and no `filter_columns`): a values filter on its first column that keeps the
 /// formatted text of each visible data row, plus `blank="1"` when a visible one is blank, which
@@ -139,7 +133,7 @@ fn totals_row_metadata(
 /// in the export"). Excel does not re-apply it on load, so a text that is on a visible and a
 /// hidden row (which a re-applied filter would show) changes nothing there. `None` when the
 /// table is not such a table, has no header row or its range does not parse.
-pub(crate) fn api_filter_column(model: &Model, sheet: u32, table: &Table) -> Option<String> {
+pub(crate) fn api_filter_column(model: &Model, sheet: u32, table: &Table) -> Option<FilterColumn> {
     if !table.has_filters || !table.filter_columns.is_empty() || table.header_row_count == 0 {
         return None;
     }
@@ -162,21 +156,29 @@ pub(crate) fn api_filter_column(model: &Model, sheet: u32, table: &Table) -> Opt
     }
     values.sort_unstable();
     values.dedup();
-    let mut filters = String::new();
-    for value in &values {
-        filters.push_str(&format!("<filter val=\"{}\"/>", escape_xml(value)));
-    }
-    let blank = if blank { " blank=\"1\"" } else { "" };
-    Some(format!(
-        "<filterColumn colId=\"0\"><filters{blank}>{filters}</filters></filterColumn>"
-    ))
+    Some(FilterColumn {
+        col_id: 0,
+        criterion: FilterCriterion::Values {
+            values,
+            blank,
+            calendar_type: None,
+            date_groups: Vec::new(),
+        },
+    })
 }
 
+/// The `<autoFilter>` of a table with a header row, over its header and data rows, as Excel writes
+/// it, with the imported filter columns written back (`Table::filter_columns`). A table that is
+/// filtered with no kept criterion (`Txn::add_table` with `filtered`, which makes every hidden row
+/// of the sheet filtered for SUBTOTAL) is written with `api_filter`, the criterion
+/// [`api_filter_column`] lists, which Excel reads as filtered (T-4363); a criterion-less
+/// `<filterColumn>` only when there is none, which Excel reads as not filtered (T-4003;
+/// xlsx-storage.md "Table parts in the export").
 fn auto_filter(
     table: &Table,
     (c1, r1, c2, r2): (i32, i32, i32, i32),
     dxf_count: usize,
-    api_filter: Option<String>,
+    api_filter: Option<&FilterColumn>,
 ) -> String {
     if table.header_row_count == 0 {
         return String::new();
@@ -196,9 +198,12 @@ fn auto_filter(
             .map(|column| filter_column(column, dxf_count))
             .collect()
     } else if table.has_filters {
-        // A criterion-less filterColumn only when the filter could not be listed (unreachable for
-        // a table with a header row, which `api_filter_column` lists).
-        api_filter.unwrap_or_else(|| "<filterColumn colId=\"0\"/>".to_string())
+        // A criterion-less filterColumn only when the filter could not be listed (a reference that
+        // does not parse).
+        api_filter.map_or_else(
+            || "<filterColumn colId=\"0\"/>".to_string(),
+            |column| filter_column(column, dxf_count),
+        )
     } else {
         String::new()
     };
@@ -328,7 +333,7 @@ pub(crate) fn get_table_xml(
     worksheet: &Worksheet,
     parsed_formulas: &[ParsedFormula],
     workbook: &Workbook,
-    api_filter: Option<String>,
+    api_filter: Option<&FilterColumn>,
 ) -> String {
     let dxf_count = workbook.styles.dxfs.len();
     let area = parse_range(&table.reference).unwrap_or((1, 1, 1, 1));

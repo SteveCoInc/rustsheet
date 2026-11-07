@@ -220,6 +220,8 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
         };
         for (table, id) in tables.iter().zip(parts.clone()) {
             zip.start_file(format!("xl/tables/table{id}.xml"), options)?;
+            let sheet = u32::try_from(sheet_index).ok();
+            let api_filter = sheet.and_then(|sheet| tables::api_filter_column(model, sheet, table));
             zip.write_all(
                 tables::get_table_xml(
                     table,
@@ -227,9 +229,7 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
                     worksheet,
                     parsed_formulas,
                     workbook,
-                    u32::try_from(sheet_index)
-                        .ok()
-                        .and_then(|sheet| tables::api_filter_column(model, sheet, table)),
+                    api_filter.as_ref(),
                 )
                 .as_bytes(),
             )?;
