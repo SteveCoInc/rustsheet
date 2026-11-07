@@ -8822,13 +8822,14 @@ are visible, not only last-digit:
   probes/t2475-stat-subexpressions P!A520); the nearly symmetric data amplifies the one-ulp root.
 - The power order: in `KURT({0.1,42,123456789.123,0.1})` z = 1.4999999999999234 and z² rounds twice to one ulp below the
   once-rounded square; the bias subtraction magnifies it and KURT is 3.9999999999979536 (gen-m9/27601819397dd56e A200).
-  `KURT({0.2,7,3.14159,-2.5})` is -0.7628272385808703 (gen-m9/7bd219ec0c0c5e22 A386) and a 9-value KURT
-  0.734384233823282 (gen-m9/c2974c061384fdd9 A20); both separate (z²)² from the chained product.
-Hold-out (T-4328, R4.1): over 651 Excel-valued SKEW, SKEW.P and KURT cells, with a 30% hash hold-out, the rule is
-bit-exact on 190 of 190 hold-out cells against 170 for the correctly rounded binary64 form; it also matches all 204 cells
-of the later adversarial probe probes/t4974-moments-x87-adversarial. An external replay (reported with the fix, not
-re-run here) also ruled out compensated summation, a reciprocal normalization, VAR/STDEV's one-pass variance, raw
-moments and an unstored extended accumulator.
+  `KURT({0.2,7,3.14159,-2.5})` is -0.7628272385808703 (the numbers of gen-m9/7bd219ec0c0c5e22 A279) and a 9-value KURT
+  0.734384233823282 (gen-m9/c2974c061384fdd9 A55); both separate (z²)² from the chained product.
+Hold-out and fresh sweep (T-4328, decision 0188 R4): the fit lab's `moments-skew`, `moments-skew-p` and `moments-kurt`
+fits (rustsheet-fitlab, `rustsheet-fitlab-holdout/v1` split) accept the rule at 100% bit-exact on train and test for all
+three, against 19.0%, 14.8% and 19.4% test bit-exact for the correctly rounded moment; Gate A's fresh log-uniform batches
+eval/accuracy/tables/{SKEW,SKEW.P,KURT}/r4-T-4328 (360 points, filled after the freeze) are 360 of 360 bit-exact. An
+external replay (reported with the fix, not re-run here) also ruled out compensated summation, a reciprocal
+normalization, VAR/STDEV's one-pass variance, raw moments and an unstored extended accumulator.
 Evidence: gen-m9 and probes/t2475-stat-subexpressions (excel-graph); the eval cells of KURT (295 of 295) and SKEW
 (335 of 335).
 Ours: as Excel since T-4328 (`standardized_moment` in count_and_average.rs, shared by `fn_skew`, `fn_skew_p` and
@@ -8845,15 +8846,15 @@ settle these points; each compares Excel with that PR's prototype prediction.
   every cell; ours misses 17 cells visibly until that fix lands.
 - CHISQ.INV.RT above .9999 (t4974-chisq-inv-rt-q-to-p-switch): at df 3, Excel's `CHISQ.INV.RT(p,3)` equals
   `CHISQ.INV(1-p,3)` bit for bit for every p from .9999 + 2E-6 to .99999 (A2:A33 = G2:G33), and differs from it at
-  .9999 and just below (A1, A34:A37, where it is the Q inversion). Within 4 ulps above .9999 (A38:A41) it equals neither,
-  so the cut sits at .9999 but its first ulps behave differently from both solvers.
+  .9999 and just below (A1, A34:A37). Within 4 ulps above .9999 (A38:A41) it equals neither `CHISQ.INV(1-p,3)` nor the
+  prototype. Which solver Excel runs on each side is a hypothesis for T-4996, not settled by these cells.
 - BETA.INV at p near DBL_MIN (t4974-beta-inv-dbl-min-residual): Excel does not flush the first residual. The quantile is
   smooth through DBL_MIN (A6 `BETA.INV(2.22507385850721E-308,16.0270968311551,..)` 3.6855664841262965E-20, A7 at
   2^-1022 3.685566484126281E-20) and its forward CDF (K6, K9) is 3.9074971845766525E-308, not 0. This falsifies the
   prototype's collapse to the start value.
 - BETA.INV round trips at large shapes (t4974-beta-inv-large-shape-round-trip, column F = BETA.INV(BETA.DIST(x)) - x):
-  Excel returns an early iterate in 10 of 123 rows (33, 34, 52, 70, 71, 73, 86, 88, 105, 106) and x itself in the others,
-  including both t3443 audit rows (F122, F123 = 0).
+  F is nonzero in 10 of 123 rows (33, 34, 52, 70, 71, 73, 86, 88, 105, 106) and 0 in the others, including both t3443
+  audit rows (F122, F123). That the nonzero rows are early AS 109 iterates is a hypothesis for T-4994.
 - T.DIST.RT at df 1000 (t4974-t-dist-df1000-central-endpoint): `T.DIST.RT(0.5,1000)` is 0.30859254041693746 and
   `T.DIST.RT(0.8513,1000)` 0.19740326475142156, as the earlier probes gave.
 - The other groups disagree with the prototype only in some cells and settle no rule here: the gamma small-x prefactor

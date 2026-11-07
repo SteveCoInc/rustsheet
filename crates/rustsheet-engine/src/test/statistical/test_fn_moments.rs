@@ -34,10 +34,19 @@ fn kurt_squares_the_square() {
 
 #[test]
 fn kurt_of_four_mixed_values() {
-    // gen-m9/7bd219ec0c0c5e22 A386 (excel-graph).
+    // gen-m9/7bd219ec0c0c5e22 A279 `=KURT(Data!A1:A12)`, whose numbers these are (excel-graph).
     assert_eq!(
         number("=KURT({0.2,7,3.14159,-2.5})"),
         -0.762_827_238_580_870_3
+    );
+}
+
+#[test]
+fn kurt_of_nine_values() {
+    // gen-m9/c2974c061384fdd9 A55 `=KURT(Data!A6:A6,Data!D1:D11)`, whose numbers these are (excel-graph).
+    assert_eq!(
+        number("=KURT(1,0.1,100,100,0.5,0.3,0.3,1E-15,0.5)"),
+        0.734_384_233_823_282
     );
 }
 
