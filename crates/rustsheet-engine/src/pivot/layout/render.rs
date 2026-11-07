@@ -1,7 +1,7 @@
 //! A pivot's cells: the captions, item labels, values and page area its layout lines give
 //! (SPEC-0032 "Rendering and the grid", T-4149). [`render`] is a pure function of the
 //! definition, the cache, the [`PivotResult`] and the [`PivotLayout`]; writing the cells into the
-//! grid and owning the area are T-4151's, and number formats T-4169's.
+//! grid and owning the area are T-4151's.
 //!
 //! Evidence: the `pivots` cells of every probe sidecar in scope (docs/excel-semantics/pivots.md
 //! "Rendered pivot cells", "Caption attributes, empty and error captions...", "Page fields render
@@ -25,11 +25,19 @@
 //! - **Totals.** A default subtotal reads `<item> Total`, a custom one `<item> <Function>` (t4137
 //!   K5, t4622 B1), the grand total `Grand Total` (`grandTotalCaption`), or `Total <data field>`
 //!   with Values on its axis (t4138 G6, t4135 `A_sum`).
+//! - **Repeat item labels.** A field with the x14 `fillDownLabels` shows its label on every line
+//!   below its first, inner subtotal lines included, in tabular and outline form and on columns;
+//!   a cell shared with a deeper level is that level's, so compact form fills nothing
+//!   (probes/t4698-pivot-repeat-labels; pivots.md "Repeat item labels").
 //! - **Items** render as in pivots.md: a number as a number, a boolean as `TRUE`/`FALSE`, an
 //!   error as its text and a blank as `(blank)` (t4134 I2); a Values level item is the data
 //!   field's caption.
 //! - **Values.** An intersection no record reaches is blank, or `missingCaption` with
 //!   `showMissing` (t4137 K2); an error is `errorCaption` with `showError` (K3, t4135 EC).
+//!   Every value cell, subtotals' and grand totals' too, carries its data field's `numFmtId`
+//!   ([`RenderedCell::number_format`]), which the grid writer gives the cell, so its displayed
+//!   text is Excel's (pivots.md "Value cells show their data field's number format",
+//!   probes/t4169-pivot-number-formats).
 //! - **Page fields** take two cells, the field's name and `(All)`, the selected item or
 //!   `(Multiple Items)` when it hides items (t4137 K4), in the `rowPageCount` rows ending one row
 //!   above the location, three columns per page column (t4138 G8).
@@ -44,7 +52,9 @@
 //!   hidden items leave one item, and a selected number, boolean or blank page item (T-4657);
 //! - a subtotal label with Values inside its field (`<item> <data field>`), the grand-total
 //!   caption with Values on its axis, and the header over a Values level in a label column of
-//!   its own (left empty) (T-4650).
+//!   its own (left empty) (T-4650);
+//! - Repeat Item Labels beside an unlabelled deeper level in the same column, on an inner column
+//!   field's subtotal, beside the Values field, and on custom subtotal lines (T-4764).
 
 use crate::expressions::token::Error;
 use crate::number_format::number_to_text;
@@ -80,7 +90,7 @@ pub enum PivotCell {
     Error(Error),
 }
 
-/// One rendered cell: its sheet row and column (0-based) and its value.
+/// One rendered cell: its sheet row and column (0-based), its value and its number format.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RenderedCell {
     /// The cell's row.
@@ -89,6 +99,11 @@ pub struct RenderedCell {
     pub column: u32,
     /// The cell's value.
     pub value: PivotCell,
+    /// The `numFmtId` the cell shows its value in: a value cell's data field's
+    /// ([`DataField::number_format`](super::super::DataField::number_format)); `None` for a
+    /// label, a caption, and a value cell whose data field has none, whose cell format is left
+    /// as it is.
+    pub number_format: Option<u32>,
 }
 
 /// How an item renders as a label (pivots.md "Items show in the order the pivot field lists
@@ -163,6 +178,16 @@ struct Cells<'a> {
 
 impl Cells<'_> {
     fn put(&mut self, row: u32, column: u32, value: PivotCell) {
+        self.put_formatted(row, column, value, None);
+    }
+
+    fn put_formatted(
+        &mut self,
+        row: u32,
+        column: u32,
+        value: PivotCell,
+        number_format: Option<u32>,
+    ) {
         if let PivotCell::Text(text) = &value {
             match self.text_left.checked_sub(text.len()) {
                 Some(left) if !self.over => self.text_left = left,
@@ -170,7 +195,12 @@ impl Cells<'_> {
             }
         }
         if !self.over {
-            self.out.push(RenderedCell { row, column, value });
+            self.out.push(RenderedCell {
+                row,
+                column,
+                value,
+                number_format,
+            });
         }
     }
 
@@ -258,6 +288,9 @@ impl Cells<'_> {
     /// `level`.
     fn lines(&mut self, axis: &Axis<'_>, place: impl Fn(u32, usize) -> Option<(u32, u32)>) {
         for (i, line) in (0u32..).zip(axis.lines) {
+            if self.over {
+                return;
+            }
             // An `insertBlankRow` line is empty (probes/t4168-pivot-layout-options BR, BR2).
             if line.kind == ItemType::Blank {
                 continue;
@@ -267,13 +300,17 @@ impl Cells<'_> {
                 let level = if line.kind == ItemType::Grand {
                     0
                 } else {
-                    end.saturating_sub(1)
+                    // A subtotal line repeats the labels above its own level (t4698 T3R!A6).
+                    let level = end.saturating_sub(1);
+                    self.fill_down(axis, line, level, |l| place(i, l));
+                    level
                 };
                 if let Some((row, column)) = place(i, level) {
                     self.put(row, column, PivotCell::Text(text));
                 }
                 continue;
             }
+            self.fill_down(axis, line, line.repeat as usize, |l| place(i, l));
             for (level, &x) in (line.repeat as usize..).zip(&line.items) {
                 let cell = self.label(axis, line, level, x);
                 // An empty-text item's label cell is left empty (pivots.md "Pivot field names
@@ -287,14 +324,57 @@ impl Cells<'_> {
         }
     }
 
-    /// The value cell of `row` by `column`, or `None` for a blank.
+    /// Repeat Item Labels: on `line`, the label of each level above `below` whose field has
+    /// `fillDownLabels` (the levels the line shares with the line before, which it does not
+    /// label itself), in that level's cell (pivots.md "Repeat item labels",
+    /// probes/t4698-pivot-repeat-labels). A cell belongs to the deepest level of the line placed
+    /// in it, so a level whose column it shares with the next level fills nothing: compact form
+    /// fills nothing down (CF), while a tabular field in a compact field's column does (MX!A6).
+    fn fill_down(
+        &mut self,
+        axis: &Axis<'_>,
+        line: &AxisLine,
+        below: usize,
+        place: impl Fn(usize) -> Option<(u32, u32)>,
+    ) {
+        for level in 0..below {
+            // Past the text limit nothing more is kept, so no more labels are made.
+            if self.over {
+                return;
+            }
+            let Some(Level::Field {
+                field: Some(field), ..
+            }) = axis.levels.get(level)
+            else {
+                continue;
+            };
+            if !field.fill_down_labels {
+                continue;
+            }
+            // Label columns only grow with the level, so the next level is the one that can
+            // share this one's cell.
+            let at = place(level);
+            if at.is_none() || at == place(level + 1) {
+                continue;
+            }
+            let cell = self.label(axis, line, level, 0);
+            // An empty-text item's label stays empty here too, as on its own line.
+            let cell = cell.filter(|c| !matches!(c, PivotCell::Text(t) if t.is_empty()));
+            if let (Some(cell), Some((row, column))) = (cell, at) {
+                self.put(row, column, cell);
+            }
+        }
+    }
+
+    /// The value cell of `row` by `column` and its data field's `numFmtId`, or `None` for a
+    /// blank.
     fn value(
         &self,
         result: &PivotResult,
         [rows, columns]: [&Axis<'_>; 2],
         row: &AxisLine,
         column: &AxisLine,
-    ) -> Option<PivotCell> {
+    ) -> Option<(PivotCell, Option<u32>)> {
         let options = &self.table.options;
         let data = if rows.has_values() {
             row.data_field
@@ -308,7 +388,7 @@ impl Cells<'_> {
             (ItemType::Function(f), _) | (_, ItemType::Function(f)) => f,
             _ => field.function,
         };
-        match result.value_as(row.node, column.node, data as usize, function) {
+        let cell = match result.value_as(row.node, column.node, data as usize, function) {
             None => options
                 .missing_caption
                 .clone()
@@ -319,7 +399,8 @@ impl Cells<'_> {
                 Some(caption) if options.show_error => PivotCell::Text(caption.clone()),
                 _ => PivotCell::Error(error),
             }),
-        }
+        };
+        cell.map(|cell| (cell, field.number_format))
     }
 }
 
@@ -457,8 +538,8 @@ fn render_within(
             .zip(&layout.columns)
             .filter(|(_, l)| l.values)
         {
-            if let Some(value) = cells.value(result, [&rows, &columns], row, column) {
-                cells.put(r, c, value);
+            if let Some((value, format)) = cells.value(result, [&rows, &columns], row, column) {
+                cells.put_formatted(r, c, value, format);
             }
         }
     }

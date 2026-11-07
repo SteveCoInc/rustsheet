@@ -432,7 +432,6 @@ impl Model {
         cell: CellReferenceIndex,
         arrays_are_value_errors: bool,
     ) -> Result<Vec<Option<f64>>, CalcResult> {
-        let by_reference = matches!(*node.ungrouped_at(cell.row), Node::ReferenceKind { .. });
         // The `@` of a non-reference array is its top-left value, which the RANK family takes as
         // it takes the whole array: `#VALUE!`, or the element's error, in one cell
         // (`RANK(5,@IF(A1:B2>0,A1:B2))`, `RANK(5,@{3,4})`; probes/rank-at-if-ref H1, H31, K28).
@@ -462,7 +461,11 @@ impl Model {
                 })
                 .collect();
         }
-        let single = match self.evaluate_reference_arg(node, cell) {
+        // Read in reference context, so a cell a name, INDEX, IF, CHOOSE or parentheses pick is a
+        // range of one cell like the cell itself: `RANK(5,IF(TRUE,Data!A2))` with TRUE in A2 is
+        // `#N/A` and `LARGE(CHOOSE(1,Data!A3),1)` with text in A3 `#NUM!`
+        // (probes/t4310-rank-regression-picked-cells A1:A120, T-4310).
+        let single = match self.evaluate_picked_reference_arg(node, cell) {
             RefArg::Ranges(areas @ Ranges::Areas(_)) => {
                 return self.values_from_areas(&areas, cell)
             }
@@ -471,14 +474,8 @@ impl Model {
             // [`RefGrid::order_statistic_error`]). The RANK family is unprobed and keeps the
             // value view.
             RefArg::Grid(grid) if !arrays_are_value_errors => {
-                match grid.order_statistic_error(cell.sheet) {
-                    Some(error) => {
-                        return Err(CalcResult::new_error(
-                            error,
-                            cell,
-                            "Array of references on another sheet".to_string(),
-                        ))
-                    }
+                match grid.order_statistic_result(cell.sheet, cell) {
+                    Some(error) => return Err(error),
                     None => grid.to_values(),
                 }
             }
@@ -519,13 +516,7 @@ impl Model {
             {
                 unsupported(Error::VALUE)
             }
-            // A cell holding a scalar is a reference the function cannot rank (#NUM!); the same
-            // scalar typed in place is a one-element list.
-            CalcResult::Boolean(_) | CalcResult::Number(_) | CalcResult::String(_)
-                if by_reference =>
-            {
-                unsupported(Error::NUM)
-            }
+            // A scalar typed in place is a one-element list (a cell, however picked, is a range).
             CalcResult::Boolean(value) => Ok(vec![Some(if value { 1.0 } else { 0.0 })]),
             CalcResult::Number(value) => Ok(vec![Some(value)]),
             CalcResult::String(value) => match self.cast_number(&value) {

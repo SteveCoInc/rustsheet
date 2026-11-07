@@ -38,9 +38,11 @@ use super::xml_constants::XML_DECLARATION;
 use crate::error::XlsxError;
 use crate::util::name_to_xlsx;
 
+/// `pivot_caches` is the `<pivotCaches>` element, empty without one (`PivotPlan`).
 pub(crate) fn get_workbook_xml(
     workbook: &Workbook,
     selected_sheet: u32,
+    pivot_caches: &str,
 ) -> Result<String, XlsxError> {
     // sheets
     // <sheet name="Sheet1" sheetId="1" r:id="rId1"/>
@@ -153,5 +155,6 @@ pub(crate) fn get_workbook_xml(
         {defined_names}\
       </definedNames>\
       {calc_pr}\
+      {pivot_caches}\
     </workbook>"))
 }

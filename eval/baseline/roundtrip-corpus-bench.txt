@@ -26,12 +26,12 @@ C	roundtrip-corpus-bench/122-39/1_122-39_input.xlsx	124287
 C	roundtrip-corpus-bench/122-5/1_122-5_input.xlsx	1860
 C	roundtrip-corpus-bench/12307/1_12307_input.xlsx	2101
 C	roundtrip-corpus-bench/124-46/1_124-46_input.xlsx	8292
-C	roundtrip-corpus-bench/124-9/1_124-9_input.xlsx	304999
+C	roundtrip-corpus-bench/124-9/1_124-9_input.xlsx	304865
 C	roundtrip-corpus-bench/127-32/1_127-32_input.xlsx	889
 C	roundtrip-corpus-bench/12864/1_12864_input.xlsx	1211
 C	roundtrip-corpus-bench/13-1/1_13-1_input.xlsx	2736
 C	roundtrip-corpus-bench/130-3/1_130-3_input.xlsx	3231
-C	roundtrip-corpus-bench/130-9/1_130-9_input.xlsx	27929
+C	roundtrip-corpus-bench/130-9/1_130-9_input.xlsx	27909
 C	roundtrip-corpus-bench/131-38/1_131-38_input.xlsx	914
 C	roundtrip-corpus-bench/132-4/1_132-4_input.xlsx	5520
 C	roundtrip-corpus-bench/13284/1_13284_input.xlsx	2605
@@ -54,7 +54,7 @@ C	roundtrip-corpus-bench/151-13/1_151-13_input.xlsx	3762
 C	roundtrip-corpus-bench/1530/1_1530_input.xlsx	11894
 C	roundtrip-corpus-bench/15380/1_15380_input.xlsx	1165
 C	roundtrip-corpus-bench/15387/1_15387_input.xlsx	2226
-C	roundtrip-corpus-bench/156-14/1_156-14_input.xlsx	1297
+C	roundtrip-corpus-bench/156-14/1_156-14_input.xlsx	1284
 C	roundtrip-corpus-bench/156-8/1_156-8_input.xlsx	3464
 C	roundtrip-corpus-bench/1563/1_1563_input.xlsx	1030
 C	roundtrip-corpus-bench/15671/1_15671_input.xlsx	2000
@@ -64,7 +64,7 @@ C	roundtrip-corpus-bench/15825/1_15825_input.xlsx	7655
 C	roundtrip-corpus-bench/15827/1_15827_input.xlsx	2412
 C	roundtrip-corpus-bench/15829/1_15829_input.xlsx	2677
 C	roundtrip-corpus-bench/159-7/1_159-7_input.xlsx	67228
-C	roundtrip-corpus-bench/160-6/1_160-6_input.xlsx	1435
+C	roundtrip-corpus-bench/160-6/1_160-6_input.xlsx	1421
 C	roundtrip-corpus-bench/164-22/1_164-22_input.xlsx	84347
 C	roundtrip-corpus-bench/165-23/1_165-23_input.xlsx	10429
 C	roundtrip-corpus-bench/16511/1_16511_input.xlsx	2134
@@ -96,7 +96,7 @@ C	roundtrip-corpus-bench/188-46/1_188-46_input.xlsx	2299
 C	roundtrip-corpus-bench/188-47/1_188-47_input.xlsx	37442
 C	roundtrip-corpus-bench/189-9/1_189-9_input.xlsx	19850
 C	roundtrip-corpus-bench/18935/1_18935_input.xlsx	1437
-C	roundtrip-corpus-bench/19-16/1_19-16_input.xlsx	54192
+C	roundtrip-corpus-bench/19-16/1_19-16_input.xlsx	53602
 C	roundtrip-corpus-bench/19-7/1_19-7_input.xlsx	115606
 C	roundtrip-corpus-bench/19032/1_19032_input.xlsx	2264
 C	roundtrip-corpus-bench/191-40/1_191-40_input.xlsx	6519
@@ -105,7 +105,7 @@ C	roundtrip-corpus-bench/1925/1_1925_input.xlsx	1994
 C	roundtrip-corpus-bench/193-42/1_193-42_input.xlsx	3055
 C	roundtrip-corpus-bench/194-19/1_194-19_input.xlsx	25619
 C	roundtrip-corpus-bench/196-35/1_196-35_input.xlsx	5042
-C	roundtrip-corpus-bench/200-27/1_200-27_input.xlsx	32703
+C	roundtrip-corpus-bench/200-27/1_200-27_input.xlsx	32043
 C	roundtrip-corpus-bench/2015/1_2015_input.xlsx	917
 C	roundtrip-corpus-bench/203-15/1_203-15_input.xlsx	1528
 C	roundtrip-corpus-bench/203-16/1_203-16_input.xlsx	1375
@@ -118,7 +118,7 @@ C	roundtrip-corpus-bench/21-16/1_21-16_input.xlsx	993
 C	roundtrip-corpus-bench/211-13/1_211-13_input.xlsx	915
 C	roundtrip-corpus-bench/212-20/1_212-20_input.xlsx	1426
 C	roundtrip-corpus-bench/212-40/1_212-40_input.xlsx	1858
-C	roundtrip-corpus-bench/212-45/1_212-45_input.xlsx	1726
+C	roundtrip-corpus-bench/212-45/1_212-45_input.xlsx	1513
 C	roundtrip-corpus-bench/212-7/1_212-7_input.xlsx	1097
 C	roundtrip-corpus-bench/22-12/1_22-12_input.xlsx	1179
 C	roundtrip-corpus-bench/22-47/1_22-47_input.xlsx	1421
@@ -132,7 +132,7 @@ C	roundtrip-corpus-bench/23-28/1_23-28_input.xlsx	3140
 C	roundtrip-corpus-bench/230-16/1_230-16_input.xlsx	896
 C	roundtrip-corpus-bench/234-30/1_234-30_input.xlsx	2092
 C	roundtrip-corpus-bench/236-22/1_236-22_input.xlsx	1081
-C	roundtrip-corpus-bench/237-21/1_237-21_input.xlsx	6515
+C	roundtrip-corpus-bench/237-21/1_237-21_input.xlsx	6344
 C	roundtrip-corpus-bench/239-15/1_239-15_input.xlsx	3062
 C	roundtrip-corpus-bench/239-25/1_239-25_input.xlsx	1444
 C	roundtrip-corpus-bench/24-23/1_24-23_input.xlsx	485996
@@ -150,7 +150,7 @@ C	roundtrip-corpus-bench/263-1/1_263-1_input.xlsx	4768
 C	roundtrip-corpus-bench/267-18/1_267-18_input.xlsx	899
 C	roundtrip-corpus-bench/267-21/1_267-21_input.xlsx	1371
 C	roundtrip-corpus-bench/269-43/1_269-43_input.xlsx	989
-C	roundtrip-corpus-bench/269-44/1_269-44_input.xlsx	849
+C	roundtrip-corpus-bench/269-44/1_269-44_input.xlsx	848
 C	roundtrip-corpus-bench/275-49/1_275-49_input.xlsx	1123
 C	roundtrip-corpus-bench/2768/1_2768_input.xlsx	3314
 C	roundtrip-corpus-bench/279-23/1_279-23_input.xlsx	1296
@@ -158,7 +158,7 @@ C	roundtrip-corpus-bench/28-7/1_28-7_input.xlsx	2364
 C	roundtrip-corpus-bench/280-17/1_280-17_input.xlsx	880
 C	roundtrip-corpus-bench/281-14/1_281-14_input.xlsx	1662
 C	roundtrip-corpus-bench/282-45/1_282-45_input.xlsx	851
-C	roundtrip-corpus-bench/283-32/1_283-32_input.xlsx	3244
+C	roundtrip-corpus-bench/283-32/1_283-32_input.xlsx	3238
 C	roundtrip-corpus-bench/283-7/1_283-7_input.xlsx	1529
 C	roundtrip-corpus-bench/289-3/1_289-3_input.xlsx	1025
 C	roundtrip-corpus-bench/290-1/1_290-1_input.xlsx	1959
@@ -590,7 +590,7 @@ C	roundtrip-corpus-bench/52233/1_52233_input.xlsx	2075
 C	roundtrip-corpus-bench/52292/1_52292_input.xlsx	2010
 C	roundtrip-corpus-bench/52305/1_52305_input.xlsx	2712
 C	roundtrip-corpus-bench/52379/1_52379_input.xlsx	837903
-C	roundtrip-corpus-bench/524-2/1_524-2_input.xlsx	794233
+C	roundtrip-corpus-bench/524-2/1_524-2_input.xlsx	781877
 C	roundtrip-corpus-bench/524-31/1_524-31_input.xlsx	3295
 C	roundtrip-corpus-bench/52450/1_52450_input.xlsx	446677
 C	roundtrip-corpus-bench/52532/1_52532_input.xlsx	2207

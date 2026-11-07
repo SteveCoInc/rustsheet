@@ -1,0 +1,54 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Defined names over the deleted row 4 of Data: a name on A4, on A5, over A3:A5, and a formula name on A6, after delete_row 4. Predictions (names shift as cell references do): A1 #REF!, A2 100, A3 101, A4 2000, A5 FALSE, A6 201. If names did not shift: A1 100, A2 1000, A3 1101, A4 0, A5 TRUE, A6 301. (T-4702)",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=NA1",
+        "A2": "=NB",
+        "A3": "=SUM(NSpan)",
+        "A4": "=NF",
+        "A5": "=ISREF(NA1)",
+        "A6": "=ROWS(NSpan)*100+COLUMNS(NSpan)"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A3": 1,
+        "A4": 10,
+        "A5": 100,
+        "A6": 1000
+      }
+    }
+  ],
+  "names": {
+    "NA1": "=Data!$A$4",
+    "NB": "=Data!$A$5",
+    "NSpan": "=Data!$A$3:$A$5",
+    "NF": "=Data!$A$6*2"
+  },
+  "expected": {},
+  "sheet_ops": [
+    {
+      "op": "delete_row",
+      "sheet": "Data",
+      "row": 4
+    }
+  ],
+  "check": [
+    "Calc!A1",
+    "Calc!A2",
+    "Calc!A3",
+    "Calc!A4",
+    "Calc!A5",
+    "Calc!A6"
+  ]
+}

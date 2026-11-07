@@ -703,7 +703,8 @@ impl Model {
     /// The lift of a call whose result is a reference (SPEC-0014 "Producers"): `kernel` runs
     /// once per element of the broadcast of `lifted`, as [`Self::lift_grids`] runs it, and each
     /// result is kept as a [`RefElement`]: its reference, its error, or its scalar value. The
-    /// shape and the work (`cells` visits per element) are checked before any element runs. A 1x1 grid gives one element too: `TAKE(A1:B3,{2})` is one element, A1:B2
+    /// shape and the work (`cells` visits per element) are checked before any element runs. A
+    /// 1x1 grid gives one element too: `TAKE(A1:B3,{2})` is one element, A1:B2
     /// (probes/m7-lift-take-drop-sortby Sheet1 F13, I13:K13; T-2298).
     pub(crate) fn lift_references(
         &mut self,

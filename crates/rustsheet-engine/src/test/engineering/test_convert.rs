@@ -222,3 +222,29 @@ fn kelvin_prefix_is_dropped_toward_rank_and_reau() {
         assert_eq!(n.to_bits(), expected.to_bits(), "{formula}");
     }
 }
+
+/// Distance factors are in angstroms, Excel's internal base, so the factor ratio rounds as Excel's
+/// does (probes/t4534-bessel-convert-web-values B1, B3; probes/scalar-lift-open-a Z8; T-4630).
+#[test]
+fn convert_distance_rounds_on_the_angstrom_base() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=CONVERT(255,"mi","km")"#);
+    model._set("A2", r#"=CONVERT(255,"in","cm")"#);
+    model._set("A3", r#"=CONVERT(1,"m","ft")"#);
+    model._set("A4", r#"=CONVERT(1,"pica","m")"#);
+    model.evaluate();
+    let number = |cell: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{cell}")) {
+        Ok(CellValue::Number(n)) => n,
+        other => panic!("{cell}: {other:?}"),
+    };
+    assert_eq!(number("A1").to_bits(), 410.38272_f64.to_bits());
+    assert_eq!(number("A2").to_bits(), 647.7_f64.to_bits());
+    assert_eq!(
+        number("A3").to_bits(),
+        3.280_839_895_013_123_5_f64.to_bits()
+    );
+    assert_eq!(
+        number("A4").to_bits(),
+        0.004_233_333_333_333_334_f64.to_bits()
+    );
+}

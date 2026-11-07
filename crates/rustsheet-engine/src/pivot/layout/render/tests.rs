@@ -6,8 +6,6 @@
 //! must lie in the sidecar's capture window.
 //!
 //! Out of scope, and why:
-//! - probes/t4123-pivot-capture T to T4 column D (`Pct`, `showDataAs="percentOfTotal"`): show
-//!   values as is T-4163's; the caption D4 is compared;
 //! - probes/t4128-pivot-spike: S is the `#SPILL!` collapse (T-4151), R's source holds a
 //!   formula the case file does not evaluate (T-4152), G is grouped (T-4171) and K has a
 //!   calculated field, a Top-N filter and a sort (T-4174, T-4165);
@@ -53,6 +51,12 @@ fn expected(cell: &Json) -> Option<PivotCell> {
 
 /// Checks the cells of sheet `name`'s pivot of probe `stem`, leaving out the cells `skip`.
 fn check(stem: &str, name: &str, skip: &[&str]) {
+    let wrong = differences(stem, name, skip);
+    assert!(wrong.is_empty(), "{stem} {name}:\n{}", wrong.join("\n"));
+}
+
+/// The cells of sheet `name`'s pivot of probe `stem` that are not Excel's, but the cells `skip`.
+fn differences(stem: &str, name: &str, skip: &[&str]) -> Vec<String> {
     let (case, oracle) = (read(stem, "case"), read(stem, "oracle"));
     let (cache, table) = probe_pivot(&case, name);
     let mut actual = rendered(&table, &cache);
@@ -77,7 +81,10 @@ fn check(stem: &str, name: &str, skip: &[&str]) {
         wrong.push(format!("{at}: outside the capture window, engine {cell:?}"));
     }
     wrong.sort();
-    assert!(wrong.is_empty(), "{stem} {name}:\n{}", wrong.join("\n"));
+    wrong
+        .into_iter()
+        .map(|w| format!("{stem} {name} {w}"))
+        .collect()
 }
 
 fn check_all(stem: &str, sheets: &[&str]) {
@@ -88,13 +95,64 @@ fn check_all(stem: &str, sheets: &[&str]) {
 
 #[test]
 fn the_capture_probes_cells_are_excels() {
-    check("t4123-pivot-capture", "C", &[]);
-    // Column D is `Pct`, a show-values-as field (T-4163).
-    let pct: Vec<String> = (5..=12).map(|row| format!("D{row}")).collect();
-    let pct: Vec<&str> = pct.iter().map(String::as_str).collect();
-    for sheet in ["T", "T2", "T3", "T4"] {
-        check("t4123-pivot-capture", sheet, &pct);
-    }
+    // T to T4 hold `Pct`, a percentOfTotal field beside Sum and Count (T-4163).
+    check_all("t4123-pivot-capture", &["C", "T", "T2", "T3", "T4"]);
+}
+
+/// The sheets of every show-values-as probe (pivots.md "Show-values-as modes as Excel for the web
+/// renders them", "Show-values-as edge cases (T-4161)").
+const SHOW_AS: &[(&str, &[&str])] = &[
+    (
+        "t4129-pivot-show-as",
+        &["N", "DF", "DP", "PC", "PD", "RT", "PR", "PCo", "PT", "IX"],
+    ),
+    (
+        "t4129-pivot-show-as-x14",
+        &["PP", "PPR", "PPC", "PRT", "RA", "RD"],
+    ),
+    (
+        "t4161-pivot-show-as-base-items",
+        &[
+            "DYP", "DYN", "PYP", "PYN", "QYP", "QYN", "PY1", "DY1", "DPP", "PPN", "QPP", "PPC",
+            "DPC", "QPC", "DRP", "PR0", "QRN",
+        ],
+    ),
+    (
+        "t4161-pivot-show-as-running-rank",
+        &[
+            "RAP", "RDP", "RAR", "RDR", "RDY", "RTR", "RTY", "PTR", "PTY", "RTT",
+        ],
+    ),
+    (
+        "t4161-pivot-show-as-zeros",
+        &[
+            "N", "PC", "PD", "PY", "PR", "PCo", "PT", "IX", "PP", "PPR", "PPC", "PRT", "RA", "RD",
+        ],
+    ),
+    (
+        "t4161-pivot-show-as-edges",
+        &[
+            "D0", "P0", "Q0", "PR", "PCo", "PT", "IX", "PPR", "PPC", "PP", "PRY",
+        ],
+    ),
+    ("t4161-pivot-show-as-running-zero", &["PRY", "PRP"]),
+    (
+        "t4161-pivot-show-as-nested-parent",
+        &["PPR_", "PPP", "PPK", "PPRow", "PPCol", "PPY", "IX3"],
+    ),
+];
+
+#[test]
+fn the_show_values_as_probes_cells_are_excels() {
+    let wrong: Vec<String> = SHOW_AS
+        .iter()
+        .flat_map(|(stem, sheets)| {
+            sheets
+                .iter()
+                .flat_map(|sheet| differences(stem, sheet, &[]))
+        })
+        .collect();
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
 
 #[test]
@@ -140,6 +198,17 @@ fn the_layout_option_probes_cells_are_excels() {
     check_all(
         "t4168-pivot-layout-options",
         &["F1", "F2", "F3", "BR", "BR2", "SD", "SD2"],
+    );
+    // Repeat item labels: per field in tabular (X14F, T3R to TBL), outline (OST, OB, O3), compact
+    // (CF, MX) form and on columns (CC); the table-wide default alone fills nothing (X14, TW,
+    // TWE, OW).
+    check_all("t4129-pivot-layout-flags", &["X14", "X14F"]);
+    check_all(
+        "t4698-pivot-repeat-labels",
+        &[
+            "T3R", "T3P", "T3A", "TND", "TBR", "TSD", "TIN", "TW", "TWE", "OST", "OB", "O3", "OW",
+            "CF", "MX", "CC", "TBL",
+        ],
     );
 }
 
@@ -199,7 +268,8 @@ fn the_cells_text_is_bounded() {
     assert!(cells.contains(&RenderedCell {
         row: 2,
         column: 0,
-        value: PivotCell::Text(long)
+        value: PivotCell::Text(long),
+        number_format: None,
     }));
     assert_eq!(
         render_within(&table, &cache, &result, &layout, bytes),

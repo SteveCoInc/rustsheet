@@ -1,0 +1,543 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "S": {
+   "B1": {
+    "t": "s",
+    "v": "janv.|janvier|j|dim.|dimanche"
+   },
+   "B10": {
+    "t": "s",
+    "v": "oct.|octobre|o|dim.|dimanche"
+   },
+   "B11": {
+    "t": "s",
+    "v": "nov.|novembre|n|mer.|mercredi"
+   },
+   "B12": {
+    "t": "s",
+    "v": "d\u00e9c.|d\u00e9cembre|d|ven.|vendredi"
+   },
+   "B2": {
+    "t": "s",
+    "v": "f\u00e9vr.|f\u00e9vrier|f|mer.|mercredi"
+   },
+   "B3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "B4": {
+    "t": "s",
+    "v": "avr.|avril|a|sam.|samedi"
+   },
+   "B5": {
+    "t": "s",
+    "v": "mai|mai|m|lun.|lundi"
+   },
+   "B6": {
+    "t": "s",
+    "v": "juin|juin|j|jeu.|jeudi"
+   },
+   "B7": {
+    "t": "s",
+    "v": "juil.|juillet|j|sam.|samedi"
+   },
+   "B8": {
+    "t": "s",
+    "v": "ao\u00fbt|ao\u00fbt|a|mar.|mardi"
+   },
+   "B9": {
+    "t": "s",
+    "v": "sept.|septembre|s|ven.|vendredi"
+   },
+   "C1": {
+    "t": "s",
+    "v": "janv.|janvier|j|dim.|dimanche"
+   },
+   "C10": {
+    "t": "s",
+    "v": "oct.|octobre|o|dim.|dimanche"
+   },
+   "C11": {
+    "t": "s",
+    "v": "nov.|novembre|n|mer.|mercredi"
+   },
+   "C12": {
+    "t": "s",
+    "v": "d\u00e9c.|d\u00e9cembre|d|ven.|vendredi"
+   },
+   "C2": {
+    "t": "s",
+    "v": "f\u00e9vr.|f\u00e9vrier|f|mer.|mercredi"
+   },
+   "C3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "C4": {
+    "t": "s",
+    "v": "avr.|avril|a|sam.|samedi"
+   },
+   "C5": {
+    "t": "s",
+    "v": "mai|mai|m|lun.|lundi"
+   },
+   "C6": {
+    "t": "s",
+    "v": "juin|juin|j|jeu.|jeudi"
+   },
+   "C7": {
+    "t": "s",
+    "v": "juil.|juillet|j|sam.|samedi"
+   },
+   "C8": {
+    "t": "s",
+    "v": "ao\u00fbt|ao\u00fbt|a|mar.|mardi"
+   },
+   "C9": {
+    "t": "s",
+    "v": "sept.|septembre|s|ven.|vendredi"
+   },
+   "D1": {
+    "t": "s",
+    "v": "janv.|janvier|j|dim.|dimanche"
+   },
+   "D10": {
+    "t": "s",
+    "v": "oct.|octobre|o|dim.|dimanche"
+   },
+   "D11": {
+    "t": "s",
+    "v": "nov.|novembre|n|mer.|mercredi"
+   },
+   "D12": {
+    "t": "s",
+    "v": "d\u00e9c.|d\u00e9cembre|d|ven.|vendredi"
+   },
+   "D2": {
+    "t": "s",
+    "v": "f\u00e9vr.|f\u00e9vrier|f|mer.|mercredi"
+   },
+   "D3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "D4": {
+    "t": "s",
+    "v": "avr.|avril|a|sam.|samedi"
+   },
+   "D5": {
+    "t": "s",
+    "v": "mai|mai|m|lun.|lundi"
+   },
+   "D6": {
+    "t": "s",
+    "v": "juin|juin|j|jeu.|jeudi"
+   },
+   "D7": {
+    "t": "s",
+    "v": "juil.|juillet|j|sam.|samedi"
+   },
+   "D8": {
+    "t": "s",
+    "v": "ao\u00fbt|ao\u00fbt|a|mar.|mardi"
+   },
+   "D9": {
+    "t": "s",
+    "v": "sept.|septembre|s|ven.|vendredi"
+   },
+   "E1": {
+    "t": "s",
+    "v": "janv.|janvier|j|dim.|dimanche"
+   },
+   "E10": {
+    "t": "s",
+    "v": "oct.|octobre|o|dim.|dimanche"
+   },
+   "E11": {
+    "t": "s",
+    "v": "nov.|novembre|n|mer.|mercredi"
+   },
+   "E12": {
+    "t": "s",
+    "v": "d\u00e9c.|d\u00e9cembre|d|ven.|vendredi"
+   },
+   "E2": {
+    "t": "s",
+    "v": "f\u00e9vr.|f\u00e9vrier|f|mer.|mercredi"
+   },
+   "E3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "E4": {
+    "t": "s",
+    "v": "avr.|avril|a|sam.|samedi"
+   },
+   "E5": {
+    "t": "s",
+    "v": "mai|mai|m|lun.|lundi"
+   },
+   "E6": {
+    "t": "s",
+    "v": "juin|juin|j|jeu.|jeudi"
+   },
+   "E7": {
+    "t": "s",
+    "v": "juil.|juillet|j|sam.|samedi"
+   },
+   "E8": {
+    "t": "s",
+    "v": "ao\u00fbt|ao\u00fbt|a|mar.|mardi"
+   },
+   "E9": {
+    "t": "s",
+    "v": "sept.|septembre|s|ven.|vendredi"
+   },
+   "F1": {
+    "t": "s",
+    "v": "janv.|janvier|j|dim.|dimanche"
+   },
+   "F10": {
+    "t": "s",
+    "v": "oct.|octobre|o|dim.|dimanche"
+   },
+   "F11": {
+    "t": "s",
+    "v": "nov.|novembre|n|mer.|mercredi"
+   },
+   "F12": {
+    "t": "s",
+    "v": "d\u00e9c.|d\u00e9cembre|d|ven.|vendredi"
+   },
+   "F2": {
+    "t": "s",
+    "v": "f\u00e9vr.|f\u00e9vrier|f|mer.|mercredi"
+   },
+   "F3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "F4": {
+    "t": "s",
+    "v": "avr.|avril|a|sam.|samedi"
+   },
+   "F5": {
+    "t": "s",
+    "v": "mai|mai|m|lun.|lundi"
+   },
+   "F6": {
+    "t": "s",
+    "v": "juin|juin|j|jeu.|jeudi"
+   },
+   "F7": {
+    "t": "s",
+    "v": "juil.|juillet|j|sam.|samedi"
+   },
+   "F8": {
+    "t": "s",
+    "v": "ao\u00fbt|ao\u00fbt|a|mar.|mardi"
+   },
+   "F9": {
+    "t": "s",
+    "v": "sept.|septembre|s|ven.|vendredi"
+   },
+   "G1": {
+    "t": "s",
+    "v": "janv.|janvier|j|dim.|dimanche"
+   },
+   "G10": {
+    "t": "s",
+    "v": "oct.|octobre|o|dim.|dimanche"
+   },
+   "G11": {
+    "t": "s",
+    "v": "nov.|novembre|n|mer.|mercredi"
+   },
+   "G12": {
+    "t": "s",
+    "v": "d\u00e9c.|d\u00e9cembre|d|ven.|vendredi"
+   },
+   "G2": {
+    "t": "s",
+    "v": "f\u00e9vr.|f\u00e9vrier|f|mer.|mercredi"
+   },
+   "G3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "G4": {
+    "t": "s",
+    "v": "avr.|avril|a|sam.|samedi"
+   },
+   "G5": {
+    "t": "s",
+    "v": "mai|mai|m|lun.|lundi"
+   },
+   "G6": {
+    "t": "s",
+    "v": "juin|juin|j|jeu.|jeudi"
+   },
+   "G7": {
+    "t": "s",
+    "v": "juil.|juillet|j|sam.|samedi"
+   },
+   "G8": {
+    "t": "s",
+    "v": "ao\u00fbt|ao\u00fbt|a|mar.|mardi"
+   },
+   "G9": {
+    "t": "s",
+    "v": "sept.|septembre|s|ven.|vendredi"
+   },
+   "H1": {
+    "t": "s",
+    "v": "janv.|janvier|j|dim.|dimanche"
+   },
+   "H10": {
+    "t": "s",
+    "v": "oct.|octobre|o|dim.|dimanche"
+   },
+   "H11": {
+    "t": "s",
+    "v": "nov.|novembre|n|mer.|mercredi"
+   },
+   "H12": {
+    "t": "s",
+    "v": "d\u00e9c.|d\u00e9cembre|d|ven.|vendredi"
+   },
+   "H2": {
+    "t": "s",
+    "v": "f\u00e9vr.|f\u00e9vrier|f|mer.|mercredi"
+   },
+   "H3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "H4": {
+    "t": "s",
+    "v": "avr.|avril|a|sam.|samedi"
+   },
+   "H5": {
+    "t": "s",
+    "v": "mai|mai|m|lun.|lundi"
+   },
+   "H6": {
+    "t": "s",
+    "v": "juin|juin|j|jeu.|jeudi"
+   },
+   "H7": {
+    "t": "s",
+    "v": "juil.|juillet|j|sam.|samedi"
+   },
+   "H8": {
+    "t": "s",
+    "v": "ao\u00fbt|ao\u00fbt|a|mar.|mardi"
+   },
+   "H9": {
+    "t": "s",
+    "v": "sept.|septembre|s|ven.|vendredi"
+   },
+   "I1": {
+    "t": "s",
+    "v": "janv.|janvier|j|dim.|dimanche"
+   },
+   "I10": {
+    "t": "s",
+    "v": "oct.|octobre|o|dim.|dimanche"
+   },
+   "I11": {
+    "t": "s",
+    "v": "nov.|novembre|n|mer.|mercredi"
+   },
+   "I12": {
+    "t": "s",
+    "v": "d\u00e9c.|d\u00e9cembre|d|ven.|vendredi"
+   },
+   "I2": {
+    "t": "s",
+    "v": "f\u00e9vr.|f\u00e9vrier|f|mer.|mercredi"
+   },
+   "I3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "I4": {
+    "t": "s",
+    "v": "avr.|avril|a|sam.|samedi"
+   },
+   "I5": {
+    "t": "s",
+    "v": "mai|mai|m|lun.|lundi"
+   },
+   "I6": {
+    "t": "s",
+    "v": "juin|juin|j|jeu.|jeudi"
+   },
+   "I7": {
+    "t": "s",
+    "v": "juil.|juillet|j|sam.|samedi"
+   },
+   "I8": {
+    "t": "s",
+    "v": "ao\u00fbt|ao\u00fbt|a|mar.|mardi"
+   },
+   "I9": {
+    "t": "s",
+    "v": "sept.|septembre|s|ven.|vendredi"
+   },
+   "J1": {
+    "t": "s",
+    "v": "janv.|janvier|j|dim.|dimanche"
+   },
+   "J10": {
+    "t": "s",
+    "v": "oct.|octobre|o|dim.|dimanche"
+   },
+   "J11": {
+    "t": "s",
+    "v": "nov.|novembre|n|mer.|mercredi"
+   },
+   "J12": {
+    "t": "s",
+    "v": "d\u00e9c.|d\u00e9cembre|d|ven.|vendredi"
+   },
+   "J2": {
+    "t": "s",
+    "v": "f\u00e9vr.|f\u00e9vrier|f|mer.|mercredi"
+   },
+   "J3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "J4": {
+    "t": "s",
+    "v": "avr.|avril|a|sam.|samedi"
+   },
+   "J5": {
+    "t": "s",
+    "v": "mai|mai|m|lun.|lundi"
+   },
+   "J6": {
+    "t": "s",
+    "v": "juin|juin|j|jeu.|jeudi"
+   },
+   "J7": {
+    "t": "s",
+    "v": "juil.|juillet|j|sam.|samedi"
+   },
+   "J8": {
+    "t": "s",
+    "v": "ao\u00fbt|ao\u00fbt|a|mar.|mardi"
+   },
+   "J9": {
+    "t": "s",
+    "v": "sept.|septembre|s|ven.|vendredi"
+   },
+   "K1": {
+    "t": "s",
+    "v": "janv.|janvier|j|dim.|dimanche"
+   },
+   "K10": {
+    "t": "s",
+    "v": "oct.|octobre|o|dim.|dimanche"
+   },
+   "K11": {
+    "t": "s",
+    "v": "nov.|novembre|n|mer.|mercredi"
+   },
+   "K12": {
+    "t": "s",
+    "v": "d\u00e9c.|d\u00e9cembre|d|ven.|vendredi"
+   },
+   "K2": {
+    "t": "s",
+    "v": "f\u00e9vr.|f\u00e9vrier|f|mer.|mercredi"
+   },
+   "K3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "K4": {
+    "t": "s",
+    "v": "avr.|avril|a|sam.|samedi"
+   },
+   "K5": {
+    "t": "s",
+    "v": "mai|mai|m|lun.|lundi"
+   },
+   "K6": {
+    "t": "s",
+    "v": "juin|juin|j|jeu.|jeudi"
+   },
+   "K7": {
+    "t": "s",
+    "v": "juil.|juillet|j|sam.|samedi"
+   },
+   "K8": {
+    "t": "s",
+    "v": "ao\u00fbt|ao\u00fbt|a|mar.|mardi"
+   },
+   "K9": {
+    "t": "s",
+    "v": "sept.|septembre|s|ven.|vendredi"
+   },
+   "L1": {
+    "t": "s",
+    "v": "janv.|janvier|j|dim.|dimanche"
+   },
+   "L10": {
+    "t": "s",
+    "v": "oct.|octobre|o|dim.|dimanche"
+   },
+   "L11": {
+    "t": "s",
+    "v": "nov.|novembre|n|mer.|mercredi"
+   },
+   "L12": {
+    "t": "s",
+    "v": "d\u00e9c.|d\u00e9cembre|d|ven.|vendredi"
+   },
+   "L2": {
+    "t": "s",
+    "v": "f\u00e9vr.|f\u00e9vrier|f|mer.|mercredi"
+   },
+   "L3": {
+    "t": "s",
+    "v": "mars|mars|m|mer.|mercredi"
+   },
+   "L4": {
+    "t": "s",
+    "v": "avr.|avril|a|sam.|samedi"
+   },
+   "L5": {
+    "t": "s",
+    "v": "mai|mai|m|lun.|lundi"
+   },
+   "L6": {
+    "t": "s",
+    "v": "juin|juin|j|jeu.|jeudi"
+   },
+   "L7": {
+    "t": "s",
+    "v": "juil.|juillet|j|sam.|samedi"
+   },
+   "L8": {
+    "t": "s",
+    "v": "ao\u00fbt|ao\u00fbt|a|mar.|mardi"
+   },
+   "L9": {
+    "t": "s",
+    "v": "sept.|septembre|s|ven.|vendredi"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "0c13fcb83c840dbd95203fc52fa7d48401c332283cca59def6953907386e7dbe",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-07T01:56:12+00:00",
+  "version": null,
+  "workbook_name": "680e0d9b982284a6daace4cdfcae739d62523aa2635b9ac701a521dd683d58df.xlsx"
+ }
+}

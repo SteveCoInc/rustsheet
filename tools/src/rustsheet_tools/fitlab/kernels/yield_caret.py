@@ -12,8 +12,11 @@ from collections.abc import Callable
 from fractions import Fraction
 from typing import TypeVar
 
+import mpmath
+
 from rustsheet_tools.fitlab.exact import DOUBLE, round_to_bits
 from rustsheet_tools.fitlab.fit import Fit
+from rustsheet_tools.fitlab.holdout import REFERENCE
 from rustsheet_tools.fitlab.kernels import solvers
 from rustsheet_tools.fitlab.score import Candidate, CandidateValue, candidate
 from rustsheet_tools.fitlab.sweep import Arg, Cell
@@ -79,10 +82,53 @@ def hundred_t_minus_qt_yield_start(*args: Arg) -> float:
     return ((rate * years) * 100 + q) / ((100 * years - q * years / 2) - q / 4)
 
 
+def _price_redemption_dsc_first(y: float, bond: solvers.Bond) -> float:
+    """`solvers.price` with the redemption discounted at `(DSC/E + n) - 1`, which rounds otherwise
+    than its `(n - 1) + DSC/E`: the engine's order before T-2788."""
+    rate, red, freq, a, e, dsc, n = bond
+    base, power = 1 + y / freq, solvers.PRICE_POWER.get()
+    flows = sum(100 * rate / freq / power(base, k + dsc / e) for k in range(n))
+    return red / power(base, dsc / e + n - 1) + flows - 100 * rate / freq * a / e
+
+
+def dsc_first_yield(*args: Arg) -> float:
+    """Newton from the `100 T - q T/2` start with the short stop at 1e-10, on
+    `_price_redemption_dsc_first` (T-2788's rejected order; `solvers._newton_yield_short` on it)."""
+    _, bond, pr = solvers._bond_price(args)
+    y = hundred_t_minus_qt_yield_start(*args)
+    for _ in range(100):
+        step = (_price_redemption_dsc_first(y, bond) - pr) / solvers.dprice(y, bond)
+        if abs(step) < 1e-10:
+            return y
+        y -= step
+    raise solvers.NoResultError("Newton did not converge")
+
+
+def correctly_rounded_yield(*args: Arg) -> float:
+    """PRICE's exact root, rounded once: the bond's PRICE (`solvers.price`'s cash flows over the
+    exact day counts and the cell's doubles) solved for the price at 50 digits from the engine's
+    short-stop iterate, then rounded to a double (the hold-out reference of decision 0188 R4.1;
+    Excel stops short of it, T-1592)."""
+    _, bond, pr = solvers._bond_price(args)
+    rate, red, freq, a, e, dsc, n = bond
+    near = caret_priced(solvers._newton_yield_short(hundred_t_minus_qt_yield_start, 1e-10))(*args)
+    with mpmath.workdps(50):
+        coupon, f, t0 = 100 * mpmath.mpf(rate) / freq, mpmath.mpf(freq), mpmath.mpf(dsc) / e
+
+        def residual(y: mpmath.mpf) -> mpmath.mpf:
+            base = 1 + y / f
+            flows = sum(coupon / base ** (k + t0) for k in range(n))
+            return red / base ** (n - 1 + t0) + flows - coupon * a / e - mpmath.mpf(pr)
+
+        return float(mpmath.findroot(residual, mpmath.mpf(near)))
+
+
 def caret_candidates() -> list[Candidate]:
     """Each `yield` candidate, `^`-priced, then Newton from the starts the engine took under
     decisions 0162 (rounded once) and 0166 (`pr T` on the unrounded term) and in T-3215
-    (`100 T - q T/2`), with the short stop at 1e-10 (T-3152)."""
+    (`100 T - q T/2`), with the short stop at 1e-10 (T-3152); the T-3215 one again with the
+    redemption at the engine's pre-T-2788 exponent order, and PRICE's correctly rounded root as the
+    hold-out reference (T-2788)."""
     out = [Candidate(f"{c.name}, ^-priced", _caret_evaluate(c), c.family) for c in solvers.yield_candidates()]
     out += [
         candidate(
@@ -96,6 +142,14 @@ def caret_candidates() -> list[Candidate]:
             ("100T - qT/2", hundred_t_minus_qt_yield_start),
         )
     ]
+    out.append(
+        candidate(
+            "Newton from the 100T - qT/2 start, redemption at (DSC/E + n) - 1, ^-priced",
+            caret_priced(dsc_first_yield),
+            "Newton, fitted start",
+        )
+    )
+    out.append(candidate(REFERENCE, correctly_rounded_yield, "correctly rounded"))
     return out
 
 

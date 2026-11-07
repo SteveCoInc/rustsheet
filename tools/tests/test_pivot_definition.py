@@ -155,6 +155,28 @@ def test_layout_attributes_fields_items_and_raw_slots() -> None:
     assert table.index("<pivotTableStyleInfo") < table.index("<filters")
 
 
+def test_x14_show_as_modes_item_attributes_and_field_extensions() -> None:
+    # T-4129: an Excel 2010 mode is the x14 dataField extension's pivotShowAs, with no showDataAs.
+    ext = '<extLst><ext uri="{2946ED86-A175-432a-8AC1-64E0C546D7DE}"><x14:pivotField/></ext></extLst>'
+    table = _parts(
+        _spec(
+            {
+                "rows": ["Region", "Product"],
+                "data": [{"field": "Sales", "showDataAs": "rankDescending", "baseField": "Product"}],
+                "fields": {"Product": {"item_attrs": {"B": {"d": True}}}, "Region": {"xml": {"extLst": ext}}},
+            }
+        )
+    )["xl/pivotTables/pivotTable1.xml"]
+    assert "showDataAs" not in table
+    assert (
+        '<dataField name="Sum of Sales" fld="2" baseField="1" baseItem="0"><extLst>'
+        '<ext uri="{E15A36E0-9728-4e99-A89B-3F7291B0FE68}"'
+    ) in table
+    assert '<x14:dataField pivotShowAs="rankDescending"/></ext></extLst></dataField>' in table
+    assert '<item x="1" d="1"/>' in table
+    assert f'<item t="default"/></items>{ext}</pivotField>' in table
+
+
 def test_custom_subtotals_use_the_item_type_names() -> None:
     # countA and count are ST_ItemType names (T-4622): countASubtotal="1" and <item t="countA"/>.
     table = _parts(
@@ -249,6 +271,30 @@ def test_calculated_fields_page_fields_and_numeric_groups() -> None:
             "page item 'North'",
         ),
         ({"rows": ["Region"], "data": [{"field": "Sales"}], "wat": 1}, "unknown keys ['wat']"),
+        (
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"item_attrs": {"East": {"h": 1}}}},
+            },
+            "may not set attribute 'h'",
+        ),
+        (
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"item_attrs": {"North": {"d": 1}}}},
+            },
+            "item_attrs item 'North'",
+        ),
+        (
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"xml": {"items": "<items/>"}}},
+            },
+            "are ['autoSortScope', 'extLst']",
+        ),
     ],
 )
 def test_refusals(definition: dict[str, Any], message: str) -> None:
@@ -334,3 +380,73 @@ def test_refresh_on_load_and_area_refusals() -> None:
     # A refreshing pivot still refuses a spec cell at its anchor.
     with pytest.raises(ValueError, match=r"#SPILL!"):
         build_xlsx(_spec({**base, "refresh_on_load": True}, cells={"A3": 1}))
+
+
+def test_sort_scope_page_attributes_and_calculated_items() -> None:
+    # T-4130: a field's raw autoSortScope goes after its items and before its extLst; a page entry's attrs
+    # follow the managed ones; a calculated item is appended to its field's shared items, written f="1"
+    # in the pivotField, and listed in the cache's calculatedItems with Excel's pivotArea.
+    scope = '<autoSortScope><pivotArea dataOnly="0" outline="0" fieldPosition="0"/></autoSortScope>'
+    ext = "<extLst/>"
+    parts = _parts(
+        _spec(
+            {
+                "pages": [{"field": "Region", "item": "West", "attrs": {"cap": "W"}}],
+                "rows": ["Product"],
+                "data": [{"field": "Sales"}],
+                "fields": {
+                    "Product": {
+                        "attrs": {"sortType": "descending"},
+                        "xml": {"autoSortScope": scope, "extLst": ext},
+                    }
+                },
+                "calculated_items": [{"field": "Product", "name": "AB", "formula": "A+B"}],
+            },
+            location="A4",
+        )
+    )
+    table = parts["xl/pivotTables/pivotTable1.xml"]
+    cache = parts["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert '<pageField fld="0" item="1" hier="-1" cap="W"/>' in table
+    assert f'<item x="3" f="1"/><item t="default"/></items>{scope}{ext}</pivotField>' in table
+    assert _shared(cache, "Product").endswith('<s v="C"/><s v="AB"/></sharedItems>')
+    assert (
+        '</cacheFields><calculatedItems count="1"><calculatedItem formula="A+B"><pivotArea cacheIndex="1" outline="0"'
+        ' fieldPosition="0"><references count="1"><reference field="1" count="1" selected="0"><x v="3"/></reference>'
+        "</references></pivotArea></calculatedItem></calculatedItems></pivotCacheDefinition>"
+    ) in cache
+    raw = '<pivotArea outline="0"/>'
+    cache = _parts(
+        _spec(
+            {
+                "rows": ["Product"],
+                "data": [{"field": "Sales"}],
+                "calculated_items": [
+                    {
+                        "field": "Product",
+                        "name": "X",
+                        "formula": "A*2",
+                        "attrs": {"field": 1},
+                        "pivot_area": raw,
+                    }
+                ],
+            }
+        )
+    )["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert f'<calculatedItem formula="A*2" field="1">{raw}</calculatedItem>' in cache
+
+
+@pytest.mark.parametrize(
+    ("items", "message"),
+    [
+        ([{"field": "Product", "name": "A", "formula": "B"}], "needs a source field without that item"),
+        ([{"field": "Product", "name": "X"}], "a calculated item is"),
+        (
+            [{"field": "Product", "name": "X", "formula": "A", "pivot_area": "<references/>"}],
+            "must be one <pivotArea>",
+        ),
+    ],
+)
+def test_calculated_item_refusals(items: list[dict[str, Any]], message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        build_xlsx(_spec({"rows": ["Product"], "data": [{"field": "Sales"}], "calculated_items": items}))

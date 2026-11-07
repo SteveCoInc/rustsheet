@@ -504,15 +504,12 @@ impl UserModel {
                     old_priority,
                     ..
                 } => {
-                    let ws = self.model.workbook.worksheet_mut(*sheet)?;
-                    let i = *index as usize;
-                    if i < ws.conditional_formatting.len() {
-                        ws.conditional_formatting[i] = ConditionalFormatting {
-                            range: old_range.clone(),
-                            cf_rule: *old_rule.clone(),
-                            priority: *old_priority,
-                        };
-                    }
+                    let slot = self.checked_cf_slot(*sheet, *index, old_range)?;
+                    *slot = ConditionalFormatting {
+                        range: old_range.clone(),
+                        cf_rule: *old_rule.clone(),
+                        priority: *old_priority,
+                    };
                     needs_evaluation = true;
                 }
                 Diff::SwapConditionalFormattingPriority {
@@ -976,12 +973,9 @@ impl UserModel {
                     new_rule,
                     ..
                 } => {
-                    let ws = self.model.workbook.worksheet_mut(*sheet)?;
-                    let i = *index as usize;
-                    if i < ws.conditional_formatting.len() {
-                        ws.conditional_formatting[i].range = new_range.clone();
-                        ws.conditional_formatting[i].cf_rule = *new_rule.clone();
-                    }
+                    let slot = self.checked_cf_slot(*sheet, *index, new_range)?;
+                    slot.range = new_range.clone();
+                    slot.cf_rule = *new_rule.clone();
                     needs_evaluation = true;
                 }
                 Diff::SwapConditionalFormattingPriority {

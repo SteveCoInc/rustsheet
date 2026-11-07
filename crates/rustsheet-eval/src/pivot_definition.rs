@@ -51,7 +51,21 @@ const MAX_LIST: usize = 256;
 const SUBTOTALS: [&str; 11] = [
     "sum", "countA", "avg", "max", "min", "product", "count", "stdDev", "stdDevP", "var", "varP",
 ];
-/// `ST_ShowDataAs` plus the Excel 2010 modes the builder accepts (`SHOW_DATA_AS`).
+/// The Excel 2010 show-as modes (`SHOW_AS_X14`), written as the x14 data field extension's
+/// `pivotShowAs` with no `showDataAs`.
+const SHOW_AS_X14: [&str; 6] = [
+    "percentOfParent",
+    "percentOfParentRow",
+    "percentOfParentCol",
+    "percentOfRunningTotal",
+    "rankAscending",
+    "rankDescending",
+];
+const X14_NS: &str = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main";
+/// The x14 dataField extension's uri (`X14_DATA_FIELD_URI`).
+const X14_DATA_FIELD_URI: &str = "{E15A36E0-9728-4e99-A89B-3F7291B0FE68}";
+/// `ST_ShowDataAs`, the modes the builder writes as `showDataAs` (`SHOW_DATA_AS` less
+/// [`SHOW_AS_X14`]).
 const SHOW_DATA_AS: [&str; 9] = [
     "normal",
     "difference",
@@ -214,6 +228,8 @@ struct Field<'a> {
     spec: Option<&'a Map<String, Json>>,
     axis: Option<&'static str>,
     data: bool,
+    /// Keys of its calculated items (`calculated`, T-4130).
+    calculated: std::collections::HashSet<Key>,
 }
 
 impl<'a> Field<'a> {
@@ -231,6 +247,7 @@ impl<'a> Field<'a> {
             spec: None,
             axis: None,
             data: false,
+            calculated: std::collections::HashSet::new(),
         }
     }
 
@@ -373,8 +390,10 @@ struct DefinedPivot<'a> {
     records: usize,
     rows: Vec<i64>,
     columns: Vec<i64>,
-    /// Each page field and the key of its selected item (none: `(All)`).
-    pages: Vec<(usize, Option<Key>)>,
+    /// Each page field, the key of its selected item (none: `(All)`) and its other attributes.
+    pages: Vec<(usize, Option<Key>, String)>,
+    /// Each calculated item's entry, field and shared-item index (`calculated_items`, T-4130).
+    calculated_items: Vec<(&'a Map<String, Json>, usize, usize)>,
     data: Vec<DataEntry<'a>>,
     refresh_on_load: bool,
 }
@@ -410,6 +429,7 @@ impl<'a> DefinedPivot<'a> {
             rows: Vec::new(),
             columns: Vec::new(),
             pages: Vec::new(),
+            calculated_items: Vec::new(),
             data: Vec::new(),
             refresh_on_load: d
                 .get("refresh_on_load")
@@ -428,6 +448,7 @@ impl<'a> DefinedPivot<'a> {
                 target.reorder(order)?;
             }
         }
+        pivot.read_calculated_items()?;
         pivot.rows = pivot.axis("rows", "axisRow")?;
         pivot.columns = pivot.axis("columns", "axisCol")?;
         pivot.read_pages()?;
@@ -483,7 +504,8 @@ impl<'a> DefinedPivot<'a> {
             let item = (page.get("item"))
                 .map(|raw| cached_json(raw).map(|v| key(v.as_ref())))
                 .transpose()?;
-            self.pages.push((i, item));
+            let extra = checks::managed_attrs(page.get("attrs"), &["fld", "item", "hier"])?;
+            self.pages.push((i, item, extra));
         }
         Ok(())
     }
@@ -549,13 +571,23 @@ impl<'a> DefinedPivot<'a> {
             );
         }
         let extra = attrs(self.d.get("cache"))?;
+        let mut calculated = String::new();
+        if !self.calculated_items.is_empty() {
+            let entries = (self.calculated_items.iter())
+                .map(|(raw, field, x)| Self::calculated_item(raw, *field, *x))
+                .collect::<Result<String, String>>()?;
+            calculated = format!(
+                r#"<calculatedItems count="{}">{entries}</calculatedItems>"#,
+                self.calculated_items.len()
+            );
+        }
         let refresh = if self.refresh_on_load {
             r#" refreshOnLoad="1""#
         } else {
             ""
         };
         Ok(format!(
-            r#"<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"{refresh} createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{}"{extra}><cacheSource type="worksheet"><worksheetSource ref="{source_ref}" sheet="{}"/></cacheSource><cacheFields count="{}">{fields}</cacheFields></pivotCacheDefinition>"#,
+            r#"<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"{refresh} createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{}"{extra}><cacheSource type="worksheet"><worksheetSource ref="{source_ref}" sheet="{}"/></cacheSource><cacheFields count="{}">{fields}</cacheFields>{calculated}</pivotCacheDefinition>"#,
             self.records,
             escape(source_sheet),
             self.fields.len()
@@ -624,8 +656,13 @@ impl<'a> DefinedPivot<'a> {
         if hidden.is_some_and(|h| !h.is_empty()) && f.axis == Some("axisPage") {
             head.push_str(r#" multipleItemSelectionAllowed="1""#);
         }
+        let ext = Self::field_ext(f);
         if f.axis.is_none() {
-            return Ok(format!(r#"<pivotField{head} showAll="0"{extra}/>"#));
+            return Ok(if ext.is_empty() {
+                format!(r#"<pivotField{head} showAll="0"{extra}/>"#)
+            } else {
+                format!(r#"<pivotField{head} showAll="0"{extra}>{ext}</pivotField>"#)
+            });
         }
         let values: Vec<Option<Cached>> = if f.group().is_some() {
             (f.group_labels()?.into_iter())
@@ -647,6 +684,33 @@ impl<'a> DefinedPivot<'a> {
                 flags.entry(*k).or_default().push_str(attr);
             }
         }
+        // `item_attrs`: item text to its other `<item>` attributes.
+        if let Some(listed) = f.entry("item_attrs").and_then(Json::as_object) {
+            if listed.len() > MAX_LIST {
+                return Err(format!("item_attrs of {:?}", f.name));
+            }
+            for (text, extra) in listed {
+                let wanted = key(Some(&Cached::Text(text.clone())));
+                let k = keys.get(&wanted).ok_or_else(|| {
+                    format!("item_attrs item {text:?} is not in field {:?}", f.name)
+                })?;
+                flags.entry(*k).or_default().push_str(&attrs(Some(extra))?);
+            }
+        }
+        // A calculated item is `f="1"` unless its item_attrs set `f` (`own_f`).
+        let own_f: std::collections::HashSet<Key> =
+            (f.entry("item_attrs").and_then(Json::as_object))
+                .into_iter()
+                .flatten()
+                .filter(|(_, extra)| extra.get("f").is_some())
+                .map(|(text, _)| key(Some(&Cached::Text(text.clone()))))
+                .collect();
+        for (k, v) in values.iter().enumerate() {
+            let k_key = key(v.as_ref());
+            if f.calculated.contains(&k_key) && !own_f.contains(&k_key) {
+                flags.entry(k).or_default().push_str(r#" f="1""#);
+            }
+        }
         let mut items = (0..values.len()).fold(String::new(), |mut out, k| {
             let flag = flags.get(&k).map_or("", String::as_str);
             let _ = write!(out, r#"<item x="{k}"{flag}/>"#);
@@ -657,20 +721,31 @@ impl<'a> DefinedPivot<'a> {
             let _ = write!(items, r#"<item t="{t}"/>"#);
         }
         Ok(format!(
-            r#"<pivotField{head} showAll="0"{extra}><items count="{}">{items}</items></pivotField>"#,
+            r#"<pivotField{head} showAll="0"{extra}><items count="{}">{items}</items>{ext}</pivotField>"#,
             values.len() + tails.len()
         ))
     }
 
-    fn page_field(&self, field: usize, item: Option<&Key>) -> Result<String, String> {
+    /// The field's raw children after `items` (`_field_ext`: `autoSortScope`, then `extLst`), as
+    /// written.
+    fn field_ext(f: &Field<'_>) -> String {
+        ["autoSortScope", "extLst"]
+            .iter()
+            .filter_map(|slot| f.entry("xml").and_then(|x| x.get(*slot)))
+            .filter_map(Json::as_str)
+            .map(|text| text.trim().to_string())
+            .collect()
+    }
+
+    fn page_field(&self, field: usize, item: Option<&Key>, extra: &str) -> Result<String, String> {
         let Some(wanted) = item else {
-            return Ok(format!(r#"<pageField fld="{field}" hier="-1"/>"#));
+            return Ok(format!(r#"<pageField fld="{field}" hier="-1"{extra}/>"#));
         };
         let k = (self.fields[field].items.iter())
             .position(|v| key(v.as_ref()) == *wanted)
             .ok_or("a page item is not in its field")?;
         Ok(format!(
-            r#"<pageField fld="{field}" item="{k}" hier="-1"/>"#
+            r#"<pageField fld="{field}" item="{k}" hier="-1"{extra}/>"#
         ))
     }
 
@@ -679,11 +754,17 @@ impl<'a> DefinedPivot<'a> {
         if e.subtotal != "sum" {
             let _ = write!(attrs, r#" subtotal="{}""#, e.subtotal);
         }
+        let mut ext = String::new();
         if let Some(show) = e.raw.get("showDataAs").and_then(Json::as_str) {
-            if !SHOW_DATA_AS.contains(&show) {
+            if SHOW_AS_X14.contains(&show) {
+                ext = format!(
+                    r#"<extLst><ext uri="{X14_DATA_FIELD_URI}" xmlns:x14="{X14_NS}"><x14:dataField pivotShowAs="{show}"/></ext></extLst>"#
+                );
+            } else if SHOW_DATA_AS.contains(&show) {
+                let _ = write!(attrs, r#" showDataAs="{show}""#);
+            } else {
                 return Err(format!("showDataAs {show:?}"));
             }
-            let _ = write!(attrs, r#" showDataAs="{show}""#);
         }
         let base = match e.raw.get("baseField") {
             Some(Json::String(name)) => self.index(name)?.to_string(),
@@ -695,7 +776,11 @@ impl<'a> DefinedPivot<'a> {
         if let Some(format) = e.raw.get("numFmtId").and_then(Json::as_i64) {
             let _ = write!(attrs, r#" numFmtId="{format}""#);
         }
-        Ok(format!("<dataField{attrs}/>"))
+        Ok(if ext.is_empty() {
+            format!("<dataField{attrs}/>")
+        } else {
+            format!("<dataField{attrs}>{ext}</dataField>")
+        })
     }
 
     /// The author's XML for `slot`, as written (`_raw`).
@@ -765,7 +850,7 @@ impl<'a> DefinedPivot<'a> {
         }
         if !self.pages.is_empty() {
             let pages = (self.pages.iter())
-                .map(|(field, item)| self.page_field(*field, item.as_ref()))
+                .map(|(field, item, extra)| self.page_field(*field, item.as_ref(), extra))
                 .collect::<Result<String, String>>()?;
             let _ = write!(
                 parts,
@@ -881,5 +966,9 @@ pub(crate) fn parts(
     })
 }
 
+mod calculated_items;
+mod checks;
+#[cfg(test)]
+mod export_tests;
 #[cfg(test)]
 mod tests;

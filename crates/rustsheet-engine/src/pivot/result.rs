@@ -42,6 +42,10 @@
 //!      below its column (t4634 T1, O1 to O4, S1; t4616 S1, S4 to S6; t4135 `A_sum!S6`, S8).
 //!      Any other aggregate beside Sum switches Sum to the records as above (t4634 X1 to X12).
 //!
+//! 4. **Show values as** (stage 6, `pivot::show_as`): a post-pass over the values above that
+//!    replaces each value of a data field with a show-values-as mode by what the mode shows, for
+//!    every cell, leaves, subtotals and grand totals alike (T-4163).
+//!
 //! Stage 7, the layout lines and location, is `pivot::layout::lay_out`, a separate call on the
 //! result, so that a pivot too large to lay out still has its values (T-4147).
 //!
@@ -56,6 +60,7 @@ use thiserror::Error as ThisError;
 use crate::expressions::token::Error;
 
 use super::accumulate::{sum_in_order, Accumulator, CutCount};
+use super::show_as::{show_values_as, Shown};
 use super::{
     Aggregate, Axis, AxisField, CacheItem, ItemType, PageField, PivotCache, PivotField, PivotTable,
 };
@@ -180,6 +185,9 @@ pub struct PivotResult {
     /// field's accumulator.
     cells: HashMap<(u32, u32), u32>,
     accumulators: Vec<Accumulator>,
+    /// Per data field, the values its show-values-as mode shows (`show_as`); `None` for a field
+    /// shown as itself.
+    shown: Vec<Option<Shown>>,
 }
 
 impl PivotResult {
@@ -212,9 +220,32 @@ impl PivotResult {
     }
 
     /// [`PivotResult::value`] under `function` instead, for a custom subtotal line
-    /// (`PivotField::custom_subtotals`).
+    /// (`PivotField::custom_subtotals`). A data field with a show-values-as mode shows the mode's
+    /// value under its own function (`pivot::show_as`), and its plain value under another
+    /// (UNVERIFIED, T-4750).
     #[must_use]
     pub fn value_as(
+        &self,
+        row: u32,
+        column: u32,
+        data_field: usize,
+        function: Aggregate,
+    ) -> Option<Result<f64, Error>> {
+        if let Some(Some(shown)) = self.shown.get(data_field) {
+            if self.functions.get(data_field) == Some(&function) {
+                return shown.get(&(row, column)).cloned();
+            }
+        }
+        self.plain_as(row, column, data_field, function)
+    }
+
+    /// The data fields' functions.
+    pub(super) fn functions(&self) -> &[Aggregate] {
+        &self.functions
+    }
+
+    /// [`PivotResult::value_as`] before show values as: the aggregate of the cell's records.
+    pub(super) fn plain_as(
         &self,
         row: u32,
         column: u32,
@@ -264,7 +295,7 @@ pub(super) fn units(count: usize) -> u64 {
 }
 
 /// Counts `count` more nodes against [`MAX_PIVOT_NODES`].
-fn count_nodes(nodes: &mut usize, count: usize) -> Result<(), PivotComputeError> {
+pub(super) fn count_nodes(nodes: &mut usize, count: usize) -> Result<(), PivotComputeError> {
     *nodes = nodes.saturating_add(count);
     if *nodes > MAX_PIVOT_NODES {
         return Err(PivotComputeError::Limit);
@@ -465,7 +496,7 @@ fn node_index(len: usize) -> Result<u32, PivotComputeError> {
 }
 
 /// The work of sorting `n` keys: `n` times its bit length.
-fn sort_units(n: usize) -> u64 {
+pub(super) fn sort_units(n: usize) -> u64 {
     let n = units(n);
     n.saturating_mul(u64::from(u64::BITS - n.leading_zeros()))
 }
@@ -611,12 +642,14 @@ pub fn compute(
         functions,
         cells: HashMap::new(),
         accumulators: Vec::new(),
+        shown: Vec::new(),
     };
     accumulate(&mut result, &placed, &data, work, &mut nodes)?;
     merge_crossings(&mut result, work)?;
     if result.sum_only {
         sum_children(&mut result, work)?;
     }
+    result.shown = show_values_as(&result, table, work, &mut nodes)?;
     Ok(result)
 }
 

@@ -362,7 +362,7 @@ impl Model {
             // Not the shape the two evaluations give: read it as usual, its cells evaluated.
         }
         let read = read_arg(self);
-        let is_reference = matches!(*arg.ungrouped_at(cell.row), Node::ReferenceKind { .. });
+        let is_reference = arg.is_cell_reference_at(cell.row);
         self.walk_aggregate_read(read, is_reference, cell, walk, visit)
     }
 
@@ -383,12 +383,8 @@ impl Model {
         let items = walk.policy.errors == ErrorRule::Items;
         let read = match read {
             RefArg::Grid(grid) if walk.policy.grids == GridReading::OrderStatistic => {
-                if let Some(error) = grid.order_statistic_error(cell.sheet) {
-                    return Err(CalcResult::new_error(
-                        error,
-                        cell,
-                        "Array of references on another sheet".to_string(),
-                    ));
+                if let Some(error) = grid.order_statistic_result(cell.sheet, cell) {
+                    return Err(error);
                 }
                 RefArg::Grid(grid).into_ranges_or_value()
             }

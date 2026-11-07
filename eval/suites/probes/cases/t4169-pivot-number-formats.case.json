@@ -1,0 +1,145 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4169: data field number formats in rendered pivot cells. Data!A1:D6 has Region, Product, Val and When (date serials, unformatted) over five records: East A 1234.5 45306, East B -250.25 45337, West A 0.125 45366, West B 3000 45397, West B 42.75 45400. P1: builder-v2 pivot at A3, rows Region and Product (compact), six data fields on columns: Cur (sum, numFmtId 7, currency), Pct (average, 10, 0.00%), Latest (max of When, 14, m/d/yyyy), Kg (sum, 164, the workbook's custom format 0.0 \"kg\", which Q!B1 carries so the builder writes it as numFmt 164), N (count, 0, General) and Plain (sum, no numFmtId). P2: rows Region, columns Product, Total Val (sum, numFmtId 4, #,##0.00), for the grand-total column. The pivots' cells and their displayed text (Range.text) are in the sidecar's `pivots` section; Q!A1 makes the case scored and Q!B1's text is read too.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4169",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Val",
+    "D1": "When",
+    "A2": "East",
+    "B2": "A",
+    "C2": 1234.5,
+    "D2": 45306,
+    "A3": "East",
+    "B3": "B",
+    "C3": -250.25,
+    "D3": 45337,
+    "A4": "West",
+    "B4": "A",
+    "C4": 0.125,
+    "D4": 45366,
+    "A5": "West",
+    "B5": "B",
+    "C5": 3000,
+    "D5": 45397,
+    "A6": "West",
+    "B6": "B",
+    "C6": 42.75,
+    "D6": 45400
+   }
+  },
+  {
+   "name": "P1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "Formats",
+     "source": "Data!A1:D6",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Val",
+        "name": "Cur",
+        "numFmtId": 7
+       },
+       {
+        "field": "Val",
+        "name": "Pct",
+        "subtotal": "average",
+        "numFmtId": 10
+       },
+       {
+        "field": "When",
+        "name": "Latest",
+        "subtotal": "max",
+        "numFmtId": 14
+       },
+       {
+        "field": "Val",
+        "name": "Kg",
+        "numFmtId": 164
+       },
+       {
+        "field": "Val",
+        "name": "N",
+        "subtotal": "count",
+        "numFmtId": 0
+       },
+       {
+        "field": "Val",
+        "name": "Plain"
+       }
+      ],
+      "fields": {
+       "Region": {},
+       "Product": {},
+       "Val": {},
+       "When": {}
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "P2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "Cross",
+     "source": "Data!A1:D6",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Val",
+        "name": "Total Val",
+        "numFmtId": 4
+       }
+      ],
+      "fields": {
+       "Region": {},
+       "Product": {},
+       "Val": {},
+       "When": {}
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=SUM(Data!C2:C6)",
+    "B1": 1.5
+   },
+   "number_formats": {
+    "B1": "0.0 \"kg\""
+   }
+  }
+ ],
+ "text": [
+  "Q!B1"
+ ]
+}

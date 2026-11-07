@@ -1,0 +1,565 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4130: does Excel for the web open and apply each caption (label) filter type of a pivot? Data!A1:C9 has Region, Product and Sales: East Apple 10, East Apricot 4, East Banana 5, East Cherry 3, West Apple 20, West Banana 7, West Grape 6, West Cherry 8 (Product sums Apple 30, Apricot 4, Banana 12, Cherry 11, Grape 6). Each sheet is one builder-v2 pivot at A3, rows Product, Sum of Sales, with one `<filter fld=\"1\">` of the type the sheet names, written as Excel writes it (stringValue1/2 and the autoFilter's customFilters, wildcards for begins/ends/contains): CEq captionEqual Cherry; CNe captionNotEqual Cherry; CBw captionBeginsWith Ap; CNb captionNotBeginsWith Ap; CEw captionEndsWith e; CNew captionNotEndsWith e; CCo captionContains an; CNc captionNotContains an; CGt captionGreaterThan Banana; CGe captionGreaterThanOrEqual Banana; CLt captionLessThan Banana; CLe captionLessThanOrEqual Banana; CBt captionBetween B and D; CNbt captionNotBetween B and D; CMix captionEqual whose stringValue1 says Cherry and whose customFilter says Grape; CBwU captionBeginsWith AP, CCoU captionContains AN, CEqL captionEqual banana and CGtU captionGreaterThan BANANA (patterns in another case than the items); CBtI captionBetween Banana and Cherry (bounds that are items). (A filter of type `unknown` makes the web refuse the file: pivots.md.) Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4130",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0058",
+  "PV-0059",
+  "PV-0060",
+  "PV-0061",
+  "PV-0062",
+  "PV-0063",
+  "PV-0064",
+  "PV-0065",
+  "PV-0066",
+  "PV-0067",
+  "PV-0068",
+  "PV-0069",
+  "PV-0070",
+  "PV-0071",
+  "PV-0097",
+  "PV-0900",
+  "PV-0901",
+  "PV-0902",
+  "PV-0904",
+  "PV-0908",
+  "PV-0909",
+  "PV-0910",
+  "PV-0911",
+  "PV-0912",
+  "PV-0941",
+  "PV-0958",
+  "PV-0962",
+  "PV-0963",
+  "PV-0969",
+  "PV-0970",
+  "PV-0971",
+  "PV-0972"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Sales",
+    "A2": "East",
+    "B2": "Apple",
+    "C2": 10,
+    "A3": "East",
+    "B3": "Apricot",
+    "C3": 4,
+    "A4": "East",
+    "B4": "Banana",
+    "C4": 5,
+    "A5": "East",
+    "B5": "Cherry",
+    "C5": 3,
+    "A6": "West",
+    "B6": "Apple",
+    "C6": 20,
+    "A7": "West",
+    "B7": "Banana",
+    "C7": 7,
+    "A8": "West",
+    "B8": "Grape",
+    "C8": 6,
+    "A9": "West",
+    "B9": "Cherry",
+    "C9": 8
+   }
+  },
+  {
+   "name": "CEq",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CEq",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionEqual\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Cherry\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"Cherry\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CNe",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CNe",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionNotEqual\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Cherry\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"Cherry\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CBw",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CBw",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionBeginsWith\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Ap\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"Ap*\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CNb",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CNb",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionNotBeginsWith\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Ap\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"Ap*\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CEw",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CEw",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionEndsWith\" evalOrder=\"-1\" id=\"1\" stringValue1=\"e\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"*e\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CNew",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CNew",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionNotEndsWith\" evalOrder=\"-1\" id=\"1\" stringValue1=\"e\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"*e\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CCo",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CCo",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionContains\" evalOrder=\"-1\" id=\"1\" stringValue1=\"an\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"*an*\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CNc",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CNc",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionNotContains\" evalOrder=\"-1\" id=\"1\" stringValue1=\"an\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"*an*\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CGt",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CGt",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionGreaterThan\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Banana\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThan\" val=\"Banana\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CGe",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CGe",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionGreaterThanOrEqual\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Banana\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThanOrEqual\" val=\"Banana\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CLt",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CLt",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionLessThan\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Banana\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThan\" val=\"Banana\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CLe",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CLe",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionLessThanOrEqual\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Banana\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThanOrEqual\" val=\"Banana\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CBt",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CBt",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionBetween\" evalOrder=\"-1\" id=\"1\" stringValue1=\"B\" stringValue2=\"D\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters and=\"1\"><customFilter operator=\"greaterThanOrEqual\" val=\"B\"/><customFilter operator=\"lessThanOrEqual\" val=\"D\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CNbt",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CNbt",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionNotBetween\" evalOrder=\"-1\" id=\"1\" stringValue1=\"B\" stringValue2=\"D\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThan\" val=\"B\"/><customFilter operator=\"greaterThan\" val=\"D\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CMix",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CMix",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionEqual\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Cherry\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"Grape\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CBwU",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CBwU",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionBeginsWith\" evalOrder=\"-1\" id=\"1\" stringValue1=\"AP\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"AP*\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CCoU",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CCoU",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionContains\" evalOrder=\"-1\" id=\"1\" stringValue1=\"AN\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"*AN*\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CEqL",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CEqL",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionEqual\" evalOrder=\"-1\" id=\"1\" stringValue1=\"banana\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"banana\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CGtU",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CGtU",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionGreaterThan\" evalOrder=\"-1\" id=\"1\" stringValue1=\"BANANA\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThan\" val=\"BANANA\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CBtI",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CBtI",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionBetween\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Banana\" stringValue2=\"Cherry\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters and=\"1\"><customFilter operator=\"greaterThanOrEqual\" val=\"Banana\"/><customFilter operator=\"lessThanOrEqual\" val=\"Cherry\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A20)"
+   }
+  }
+ ],
+ "expected": {}
+}

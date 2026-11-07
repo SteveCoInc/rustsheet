@@ -3,7 +3,7 @@ id: T-4408
 title: "WORKDAY and NETWORKDAYS holiday given as text returned by a formula directly as the argument: probe it"
 milestone: M6
 lane: functions-date
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -38,3 +38,8 @@ ours matches every cell.
 
 ## Out of scope
 - Text literals, cells, arrays and ranges (T-4397).
+
+## Outcome
+Probe `probes/t4408-holiday-formula-text` (132 cells, excel-graph; generator docs/research/t4408/gen_probe.py): formula-returned
+holiday text acts as the serial it reads as, and as a scalar holiday for NETWORKDAYS.INTL's weekend rule. Ours passes
+all 132 cells; no code change. Rule recorded in dates.md. No new known failures; no follow-ups.

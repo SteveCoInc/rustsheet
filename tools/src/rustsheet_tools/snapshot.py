@@ -147,11 +147,13 @@ def pivot_area(pivot: dict[str, Any]) -> tuple[int, int, int, int]:
     return top, left, bottom, right
 
 
-def pivot_areas(snap: dict[str, Any]) -> list[dict[str, Any]]:
+def pivot_areas(snap: dict[str, Any], texts: dict[str, dict[str, str]] | None = None) -> list[dict[str, Any]]:
     """Every pivot Excel saved in `snap` (`rustsheet-eval snapshot`'s `pivots`, T-4123) with `cells`:
     sheet cell A1 -> value for each cell of its area (`pivot_area`), `{"t": "empty"}` for a blank
-    one, so an oracle sidecar records Excel's whole render. A pivot whose area passes
-    `MAX_PIVOT_AREA_CELLS`, or whose location does not parse, is left out."""
+    one, so an oracle sidecar records Excel's whole render. With `texts` (sheet -> A1 -> displayed
+    text, the backend's `pivot_texts`), each pivot also gets `text`: A1 -> Excel's displayed text of
+    each cell of its area that shows any (T-4169); a pivot with none gets no `text`. A pivot whose
+    area passes `MAX_PIVOT_AREA_CELLS`, or whose location does not parse, is left out."""
     by_sheet = {s["name"]: s["cells"] for s in snap["sheets"]}
     out = []
     for pivot in snap.get("pivots", []):
@@ -164,13 +166,16 @@ def pivot_areas(snap: dict[str, Any]) -> list[dict[str, Any]]:
             print(f"PIVOT {pivot['sheet']}!{pivot['name']}: area too large, not captured", file=sys.stderr)
             continue
         cells = by_sheet.get(pivot["sheet"], {})
-        area = {}
+        shown = (texts or {}).get(pivot["sheet"], {})
+        area, text = {}, {}
         for row in range(top, bottom + 1):
             for col in range(left, right + 1):
                 a1 = f"{column_letters(col + 1)}{row + 1}"
                 cell = cells.get(a1)
                 area[a1] = cell["value"] if cell is not None else {"t": "empty"}
-        out.append({**pivot, "cells": area})
+                if shown.get(a1):
+                    text[a1] = shown[a1]
+        out.append({**pivot, "cells": area, **({"text": text} if text else {})})
     return out
 
 

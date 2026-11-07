@@ -3,7 +3,7 @@ id: T-3762
 title: "The merge train merges baseline-only list conflicts as sets instead of ejecting"
 milestone: M2
 lane: harness
-status: todo
+status: dropped
 priority: P2
 size: M
 tier: opus
@@ -37,3 +37,7 @@ format change, one a real code conflict, and one already merged clean.
 
 ## Out of scope
 - Conflicts outside the gated lists.
+
+## Outcome
+Dropped 2026-11-07: the merge train it changes no longer exists. Decision 0247 moved merges to GitHub's merge queue, and
+decision 0252 deleted `scripts/merge_train.py` and its tooling, so there is nothing left to fix or measure.

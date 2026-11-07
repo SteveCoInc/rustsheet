@@ -540,7 +540,7 @@ impl Model {
             if let Some(error) = too_many_visits(visits, cell) {
                 return error;
             }
-            let is_reference = matches!(*arg.ungrouped_at(cell.row), Node::ReferenceKind { .. });
+            let is_reference = arg.is_cell_reference_at(cell.row);
             // The cells of a range the walk hands on: the others are blank.
             let mut referenced: u64 = 0;
             let walked = self.walk_aggregate_read(

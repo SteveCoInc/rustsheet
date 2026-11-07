@@ -1,5 +1,6 @@
 #![allow(clippy::unwrap_used)]
 
+use crate::cell::CellValue;
 use crate::test::util::{new_empty_model, round_trip_value};
 
 #[test]
@@ -462,5 +463,51 @@ fn test_binom_dist_range_from_0_at_a_large_n_is_a_probability() {
             .parse()
             .unwrap_or(f64::NAN);
         assert!((0.0..=1.0).contains(&value), "{formula}: {value}");
+    }
+}
+
+// Past the walk's budget, a range whose lower end is past the mean is the difference of the two
+// upper tails, not the cdf difference, which cancels to 0 here. Excel is within 7E-12 of the
+// math (accuracy/BINOM.DIST.RANGE/s1 A107, A85, excel-graph; statistics.md "BINOM.DIST.RANGE
+// and BINOM.INV at a large n", T-3740).
+#[test]
+fn binom_dist_range_past_the_mean_takes_the_upper_tails() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=BINOM.DIST.RANGE(777228,0.567422582556133,451769,452355)",
+    );
+    model._set(
+        "A2",
+        "=BINOM.DIST.RANGE(130451,0.400874068766277,55775,58062)",
+    );
+    model.evaluate();
+    for (cell, excel) in [
+        ("A1", 1.884_480_688_966_841_3e-134),
+        ("A2", 8.653_790_732_962_652e-86),
+    ] {
+        match model.get_cell_value_by_ref(&format!("Sheet1!{cell}")) {
+            Ok(CellValue::Number(n)) => assert!(((n - excel) / excel).abs() < 1e-11, "{cell}: {n}"),
+            other => panic!("expected number, got {other:?}"),
+        }
+    }
+}
+
+// NEGBINOM.DIST's cdf at one success and a tiny p is I_p(1, f + 1) from p through log1p, Excel's
+// bratio shape-one branch, where fl(1 - p) is 1 (accuracy/NEGBINOM.DIST/r4-T-3576 A125, T-4242).
+#[test]
+fn negbinom_cdf_at_one_success_keeps_a_tiny_p() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=NEGBINOM.DIST(70991230,1,8.02387331627331E-281,TRUE)",
+    );
+    model.evaluate();
+    match model.get_cell_value_by_ref("Sheet1!A1") {
+        Ok(CellValue::Number(n)) => {
+            let excel = 5.696_246_441_102_946e-273;
+            assert!(((n - excel) / excel).abs() < 1e-14, "{n}");
+        }
+        other => panic!("expected number, got {other:?}"),
     }
 }
