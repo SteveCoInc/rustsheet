@@ -7,11 +7,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::*;
+use crate::baseline::Baseline;
 use crate::case::{OraclePivot, ORACLE_FORMAT};
 use crate::engine::{Engine, RustSheetEngine};
 use crate::pivot_scoring::LayoutVerdict;
 use crate::runner::{run_case, CaseResult, CaseStatus};
-use crate::suite::{oracle_sidecar, CaseFile, Suite, SuiteManifest};
+use crate::suite::{oracle_sidecar, BaselineMode, CaseFile, Suite, SuiteManifest};
 use crate::value::Value;
 use crate::xlsx_snapshot::read_snapshot;
 
@@ -202,6 +203,8 @@ fn an_export_case_scores_formulas_pivot_cells_and_lines() {
     assert_eq!(r.tags, ["pivot"]);
     assert!(r.pivot_layout.is_empty(), "{:?}", r.pivot_layout);
     assert!(r.message.is_none());
+    // Its one pivot is compared in full, and no layout line fails (T-4944).
+    assert_eq!(r.layout_checked, Some(1));
 }
 
 #[test]
@@ -215,6 +218,18 @@ fn lines_that_are_not_excel_are_reported() {
     assert_eq!(layout.len(), 1);
     assert_eq!(layout[0].verdict, LayoutVerdict::LinesDiffer);
     assert_eq!(layout[0].engine_lines, Some((3, 1)));
+    // The mismatch is a baseline item: against a baseline where the pivot's layout was Excel's,
+    // the same case with the same pivots is a regression (T-4944).
+    let now = Baseline::from_results(BaselineMode::Cells, &[&r]);
+    let item = (
+        r.id.clone(),
+        format!("{}!{}", layout[0].sheet, layout[0].name),
+    );
+    assert!(now.layout_failing.contains(&item), "{now:?}");
+    let mut before = now.clone();
+    before.layout_failing.clear();
+    let d = crate::baseline::diff(&before, &now);
+    assert_eq!(d.regressions, [format!("{}\tlayout {}", item.0, item.1)]);
 }
 
 #[test]
