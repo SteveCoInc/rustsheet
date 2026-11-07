@@ -3,7 +3,7 @@ id: T-4874
 title: "NUMBERVALUE with a written-empty decimal or group separator follows Excel (probe empty-as-omitted)"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
