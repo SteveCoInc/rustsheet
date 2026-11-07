@@ -424,3 +424,23 @@ fn irr_secant_cap_is_the_same_for_every_call() {
     ]);
     assert_eq!(got[0], got[1]);
 }
+
+#[test]
+fn irr_retries_from_the_discount_seed() {
+    // T-4975 audit 3: where the guess's run and the retry from 0.1 fail, a run from v = 1.1 finds
+    // Excel's digits (probes/irr-fallback-roots P!A12 and P!A22; ironcalc-calc IRR.xlsx General!L17),
+    // which the Newton fallback missed by 37 and 17 ulps.
+    let got = results(&[
+        "=IRR({42,1,1,-1})",
+        "=IRR({42,1,1,-1},0.5)",
+        "=IRR({-400,1,1,1,1,1})",
+        "=IRR({-400,1,1,1,1,1},0.01)",
+    ]);
+    let expected = [
+        -0.746_704_476_653_737_1_f64,
+        -0.746_704_476_653_737_1,
+        -0.673_736_675_180_840_5,
+        -0.673_736_675_180_840_5,
+    ];
+    assert_eq!(got, expected.map(f64::to_bits));
+}

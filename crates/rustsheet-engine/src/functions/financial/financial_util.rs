@@ -373,8 +373,10 @@ fn irr_from_discount(v: f64) -> Option<f64> {
     (x < IRR_FAR_ROOT_BOUND).then_some(x - 1.0)
 }
 
-/// One run of IRR's secant from `guess`, or why it stopped without a root: [`SecantStop::Failed`]
-/// on a flat secant, an iterate that is not a positive discount factor or no stop in 50 steps;
+/// One run of IRR's secant from d = `start`, or why it stopped without a root: [`SecantStop::Failed`]
+/// on a flat secant, a converged discount factor that is not positive or no stop in
+/// [`IRR_SECANT_STEPS`] steps; with `may_stall` false only the residual stop ends the run (the
+/// seed run of [`compute_irr`]);
 /// [`SecantStop::DivZero`] at v = 0 or where NPV cannot be evaluated. The state is
 /// d = 1 - v = r/(1 + r), so from v = 0.5 down the iterates' v = 1 - d sit on Excel's grid of multiples of 2^-53
 /// (probes/t2565-irr-guess-sweeps), and each step is anchored on the newer iterate.
@@ -391,7 +393,7 @@ fn irr_from_discount(v: f64) -> Option<f64> {
 /// FITTED(T-1533, 263 cells, IRR of 2..41 flows, |c| 1E-6..1E+9, guess -0.99..100, roots -0.99..99; T-3478 sweep, 231 Excel roots: 2..148 flows, |c| 2.3E-15..4.0E+12, guess -0.9997..9.8E+7, roots -0.9997..9.0E+5)
 /// The zero-step stop's bound (below):
 /// FITTED(T-3120, 36 cells, IRR of {-2.5,-1,123456789.123} over a guess sweep)
-fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
+fn irr_secant(values: &[f64], start: f64, may_stall: bool) -> Result<f64, SecantStop> {
     // An NPV the run cannot evaluate (a discount power out of the double range, or a sum that is
     // not finite) ends the call with `#DIV/0!`, worksheet NPV's error for the same sum, and without
     // the retry from 0.1: probes/t3406-irr-num-boundary A69-A72 and A84-A94, the 7 long-series
@@ -400,7 +402,7 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     // (financial.md "IRR is #DIV/0! where its secant cannot evaluate NPV", T-3407).
     let npv = |d: f64| irr_npv(values, 1.0 - d).ok_or(SecantStop::DivZero);
     let magnitudes: Vec<f64> = values.iter().map(|c| c.abs()).collect();
-    let mut d0 = extended_quotient(guess, 1.0 + guess);
+    let mut d0 = start;
     let mut f0 = npv(d0)?;
     let mut d1 = d0 - if f0 > 0.0 { 1e-3 } else { -1e-3 };
     let mut f1 = npv(d1)?;
@@ -441,7 +443,8 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
         // The scale is the discounted absolute flows at the iterate, `sum |c_i|·|v|^i`, the size
         // NPV's rounding is relative to, rather than the largest flow, which a deep discount puts
         // far below the sum's own rounding (T-4975 item 11).
-        let stalled = d2 == d1
+        let stalled = may_stall
+            && d2 == d1
             && step < IRR_STALL_STEPS
             && irr_npv(&magnitudes, (1.0 - d2).abs()).is_some_and(|scale| f2.abs() < 1e-7 * scale);
         if (d2 - d1).abs() < 1e-7 && (f2.abs() < 1e-7 || stalled) {
@@ -456,6 +459,11 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     }
     Err(SecantStop::Failed)
 }
+
+/// The discount factor v = 1/(1 + r) IRR's last secant run starts from, after the guess's run and
+/// the retry from 0.1 failed ([`compute_irr`]): r = -1/11. Excel's value, from the two-flow-set
+/// controls that run reproduces bit for bit (addendum 2 of docs/research/excel-parity-findings-2026-11-07.md).
+const IRR_SEED_DISCOUNT: f64 = 1.1;
 
 /// Why a run of [`irr_secant`] stopped without a root.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -472,12 +480,13 @@ const IRR_GUESS_BOUND: f64 = 9_007_199_254_740_992.0;
 /// IRR as Excel computes it: a secant on NPV in d = 1 - v = r/(1 + r), v = 1/(1 + r), from
 /// d0 = guess/(1 + guess) and d1 = d0 -+ 0.001 (toward larger |NPV|), each step anchored on the
 /// newer iterate. It stops at the first iterate with |d2 - d1| < 1e-7 and |NPV| < 1e-7 (or a zero
-/// step, see [`irr_secant`]) and returns 1/(1 - d2) - 1; a run that fails is retried once from 0.1.
+/// step, see [`irr_secant`]) and returns 1/(1 - d2) - 1; a run that fails is retried once from 0.1,
+/// then once from the discount seed v = [`IRR_SEED_DISCOUNT`] (T-4975 audit 3).
 /// Leading zero flows are dropped first. This matches all 263 cells of the fit set
 /// (probes/solver-iteration-traces sheet I, probes-numeric/m9-fin-irr-rate; fit lab `irr`,
 /// `irr_secant_d`, T-3120, T-3205) and 180 of the 181 of probes/t2565-irr-guess-sweeps.
-/// Not Excel facts, kept from the fit: the d >= 1 (v <= 0) guard, no retry when the guess is
-/// already 0.1, and `#NUM!` for flows without a sign change. Where both runs fail,
+/// Not Excel facts, kept from the fit: the v <= 0 check at convergence, no retry when the guess is
+/// already 0.1, and `#NUM!` for flows without a sign change. Where every run fails,
 /// [`irr_fallback`] runs a Newton search from v = 0 (fitted, T-2727). A root with 1 + r at or past
 /// [`IRR_FAR_ROOT_BOUND`] is `#NUM!` from either. A run's step cap is [`IRR_SECANT_STEPS`], 200,
 /// a directive-5 bound too (financial.md "The IRR and XIRR solver caps").
@@ -505,10 +514,20 @@ pub(crate) fn compute_irr(values: &[f64], guess: f64) -> Result<f64, (Error, Str
         .position(|&c| c != 0.0)
         .map_or(values, |first| &values[first..]);
     let div_zero = || (Error::DIV, "Division by zero".to_string());
-    let mut result = irr_secant(values, guess);
+    let mut result = irr_secant(values, extended_quotient(guess, 1.0 + guess), true);
     // A failed run is retried once from the default guess 0.1, unless that was the guess
     if result == Err(SecantStop::Failed) && guess != 0.1 {
-        result = irr_secant(values, 0.1);
+        result = irr_secant(values, extended_quotient(0.1, 1.1), true);
+    }
+    // Then once more from the discount seed v = 1.1 (d = 1 - 1.1), with the residual stop only
+    // (T-4975 audit 3; docs/research addendum 2, "Still open", IRR): `IRR({-400,1,1,1,1,1})` is
+    // Excel's -0.6737366751808405 at that run's step 125 and `IRR({42,1,1,-1})` -0.7467044766537371
+    // at step 47 (probes/irr-fallback-roots P!A12:A15, A22:A24; ironcalc-calc IRR.xlsx L17), where
+    // the Newton fallback was 15 to 35 ulp off. Letting the stalled-step stop end this run too
+    // returns roots of 1E+11-scale flows where Excel is `#NUM!` (probes/t3406-irr-num-boundary
+    // A130, A131; t4844-irr-stage-invariance A24), so it does not.
+    if result == Err(SecantStop::Failed) {
+        result = irr_secant(values, 1.0 - IRR_SEED_DISCOUNT, false);
     }
     match result {
         Ok(root) => Some(root),
@@ -745,7 +764,10 @@ mod tests {
     #[test]
     fn the_flat_secant_div_zero_cut_applies_to_every_run() {
         // From 0.1 the run jumps far (|NPV| 1.8E+278), stalls and goes flat: `#DIV/0!` (T-3347).
-        assert_eq!(irr_secant(&a138(), 0.1), Err(SecantStop::DivZero));
+        assert_eq!(
+            irr_secant(&a138(), 0.1 / 1.1, true),
+            Err(SecantStop::DivZero)
+        );
     }
 
     #[test]

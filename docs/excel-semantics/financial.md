@@ -1843,6 +1843,27 @@ Status: DEVIATION (decision 0014)
 Implemented in: `array_of_numbers_from`, `push_flow` (functions/financial/mod.rs)
 Tasks: T-4976, T-4975
 
+## IRR's third run starts from the discount seed v = 1.1
+Rule: where the guess's secant run and the retry from 0.1 both fail, IRR runs the same secant (200 steps) once more
+from d = 1 - 1.1 (v = 1.1, r = -1/11) before the Newton fallback; that run stops only on the residual (|d2 - d1| < 1e-7
+and |NPV| < 1e-7), not on a stalled zero step. It gives Excel's bits on the fallback controls of
+docs/research addendum 2 ("Still open", IRR): `IRR({-400,1,1,1,1,1})` -0.6737366751808405 at the run's step 125 and
+`IRR({42,1,1,-1})` -0.7467044766537371 at step 47, from every guess (probes/irr-fallback-roots P!A12:A15, A22:A24;
+ironcalc-calc IRR.xlsx General!L17), where the Newton fallback was 15 to 35 ulp off (T-2928). Eval: 278 more cells pass
+than with the fallback (probes 1144 fixed in all against 866 before this rule, gen-m9 17 against 15, ironcalc-calc 16
+against 14), none lost, and 17 Gate A IRR known failures became stale and were removed.
+Tried and not kept (each fails a gate): the seed as the second run in place of 0.1 (20 regressions, among them
+probes/solver-iteration-traces I!B13:B16 and t2657-pv-irr-div0 I!C2:C6, G2:G6, which the retry from 0.1 matches); the
+stalled-step stop in the seed run (probes/t3406-irr-num-boundary A130, A131 and t4844-irr-stage-invariance A24, 1E+11
+scale flows where Excel is `#NUM!`, come back as roots); RATE's flat-secant hold (`|f| < 1e-4` returns the held
+iterate), in every run or in the seed run only: 23 more probe cells and 51 stale Gate A lines, but t3406 A103 regresses
+and 4 Gate A points (r4-T-3411 A296, s1 A230, A219, r4-T-3407 A249: 1E+10 to 1E+11 scale flows, Excel `#NUM!`) leave
+the envelope. Excel's remaining `#DIV/0!` cells are path-dependent (t3406 n = 60, A81-A84) and get no threshold.
+Evidence: the cells above (excel-graph and Excel for Mac's cached ironcalc values); addendum 2.
+Status: VERIFIED (excel-graph) for the cells; the seed's place in the chain is inferred
+Implemented in: `compute_irr`, `IRR_SEED_DISCOUNT`, `irr_secant` (functions/financial/financial_util.rs)
+Tasks: T-4978, T-2928, T-4975
+
 ## RATE: an empty guess is guess 0, not the default 0.1
 Rule: an empty guess argument (`RATE(48,-200,8000,0,1,)`) or a reference to an empty cell behaves as
 guess 0, not the default 0.1: the result has the same bits as an explicit `0` (0.008052981923885287)
