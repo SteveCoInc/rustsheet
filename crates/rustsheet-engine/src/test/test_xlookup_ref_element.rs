@@ -95,6 +95,29 @@ fn order_statistics_are_na_only_for_references_on_another_sheet() {
     }
 }
 
+// Over references on both sheets the first element decides: own sheet first is #VALUE!, another
+// sheet first #N/A (T-4714; t4697 Local!H1:H6, H9, H16, H17).
+#[test]
+fn order_statistics_over_mixed_sheets_follow_the_first_element() {
+    let mut model = data();
+    model.add_sheet("Sheet2").unwrap();
+    let own_first = "{\"Sheet2!A1\";\"Sheet1!G1\"}";
+    let other_first = "{\"Sheet1!G1\";\"Sheet2!A1\"}";
+    model._set("Sheet2!B1", &format!("=LARGE(INDIRECT({own_first}),1)"));
+    model._set("Sheet2!B2", &format!("=SMALL(INDIRECT({own_first}),1)"));
+    model._set("Sheet2!B3", &format!("=MEDIAN(INDIRECT({own_first}))"));
+    model._set("Sheet2!B4", &format!("=LARGE(INDIRECT({other_first}),1)"));
+    model._set(
+        "Sheet2!B5",
+        "=LARGE(INDIRECT({\"Sheet2!A1\";\"Sheet1!G1\";\"Sheet1!G2\"}),1)",
+    );
+    model.evaluate();
+    for cell in ["Sheet2!B1", "Sheet2!B2", "Sheet2!B3", "Sheet2!B5"] {
+        assert_eq!(model._get_text(cell), *"#VALUE!", "{cell}");
+    }
+    assert_eq!(model._get_text("Sheet2!B4"), *"#N/A");
+}
+
 // A lift with no miss builds no grid: the hits are an ordinary array, so ISREF of an element is
 // FALSE (SPEC-0014 amendment "Producer").
 #[test]

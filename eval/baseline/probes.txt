@@ -9823,11 +9823,6 @@ F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B10
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B11
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B9
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!F9
-F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H1
-F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H17
-F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H3
-F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H5
-F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H9
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!A26
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!A29
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!A32
