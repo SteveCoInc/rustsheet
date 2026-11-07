@@ -3,7 +3,7 @@ id: T-4661
 title: "Revise SPEC-0018 for Excel's 2026-11 nested-cell reads (lifts read an error, SUM is #N/A, COUNT skips)"
 milestone: M7
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
