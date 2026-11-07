@@ -273,6 +273,7 @@ probes/t4583-pivot-row-labels.case.json	165
 probes/t4585-pivot-field-names.case.json	8
 probes/t4586-pivot-refresh-on-load.case.json	14
 probes/t4589-pivot-total-order.case.json	80
+probes/t4590-growth-overflow.case.json	20
 probes/t4609-pivot-row-labels-2.case.json	218
 probes/t4612-pivot-date-items-and-casing.case.json	62
 probes/t4614-pivot-total-order-2.case.json	97
@@ -283,6 +284,7 @@ probes/t4625-gamma-dist-ratio-overflow.case.json	4
 probes/t4627-pivot-field-name-collisions.case.json	87
 probes/t4634-pivot-total-order-4.case.json	1376
 probes/t4697-large-small-median-mixed-sheet-refs.case.json	5
+probes/table-edits/t4274-calc-column-delete-row-2.case.json	1
 probes/table-edits/t4274-calc-column-structured-insert-column-a.case.json	1
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1

@@ -29,6 +29,7 @@ C	roundtrip-fixtures/t-d-iso-date-cells.xlsx	700
 C	roundtrip-fixtures/t-d-pre-1900.xlsx	643
 C	roundtrip-fixtures/t-d-time-only.xlsx	643
 C	roundtrip-fixtures/t-d-z-suffix.xlsx	643
+C	roundtrip-fixtures/valueless-cell-forms-ws-index.xlsx	215
 C	roundtrip-fixtures/valueless-cell-forms.xlsx	625
 C	roundtrip-fixtures/workday-intl-legacy-holidays.xlsx	658
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 part /officeDocument[0]/rdRichValueStructure[0] added

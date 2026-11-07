@@ -1247,6 +1247,7 @@ C	probes/sheet-ops/t4272-3d-span-delete-end.case.json	6
 C	probes/sheet-ops/t4272-3d-span-delete-middle.case.json	6
 C	probes/sheet-ops/t4272-3d-span-delete-start.case.json	6
 C	probes/sheet-ops/t4272-3d-span-delete-two-sheet-end.case.json	6
+C	probes/sheet-ops/t4272-3d-span-delete-two-sheet-start.case.json	6
 C	probes/sheet-ops/t4272-3d-span-feb-insert-column.case.json	7
 C	probes/sheet-ops/t4272-3d-span-jan-delete-inner-row.case.json	7
 C	probes/sheet-ops/t4272-3d-span-jan-delete-row.case.json	7
@@ -2575,6 +2576,7 @@ C	probes/t4587-sheet-api-name-name-body.case.json	4
 C	probes/t4587-sheet-api-name-qualified-use-first.case.json	6
 C	probes/t4587-sheet-api-name-sheet-has-names.case.json	5
 C	probes/t4589-pivot-total-order.case.json	95
+C	probes/t4590-growth-overflow.case.json	61
 C	probes/t4594-fraction-tail-point-explore-wide.case.json	648
 C	probes/t4594-fraction-tail-point-explore.case.json	320
 C	probes/t4594-fraction-tail-point-holdout-2.case.json	252
@@ -2641,6 +2643,7 @@ C	probes/t4686-rich-value-option-residue.case.json	44
 C	probes/t4697-large-small-median-mixed-sheet-refs.case.json	17
 C	probes/t4698-pivot-repeat-labels.case.json	651
 C	probes/t4701-index-one-index-ref-grid.case.json	16
+C	probes/t4720-fixed-sign-and-exponent-digits.case.json	37
 C	probes/t4721-im-overflow-residue.case.json	25
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
@@ -2654,6 +2657,7 @@ C	probes/table-edits/t3629-readd-other-area.case.json	6
 C	probes/table-edits/t3629-readd-same-area.case.json	6
 C	probes/table-edits/t3629-save-detached.case.json	6
 C	probes/table-edits/t4274-calc-column-delete-column-b.case.json	4
+C	probes/table-edits/t4274-calc-column-delete-row-2.case.json	6
 C	probes/table-edits/t4274-calc-column-insert-column-a.case.json	4
 C	probes/table-edits/t4274-calc-column-insert-row-1.case.json	4
 C	probes/table-edits/t4274-calc-column-insert-row-3.case.json	5
@@ -9282,6 +9286,26 @@ F	probes/t4579-ttest-paired.case.json	Off!A6
 F	probes/t4579-ttest-paired.case.json	Off!A7
 F	probes/t4579-ttest-paired.case.json	Off!A8
 F	probes/t4579-ttest-paired.case.json	Off!A9
+F	probes/t4590-growth-overflow.case.json	Int!A1
+F	probes/t4590-growth-overflow.case.json	Int!A2
+F	probes/t4590-growth-overflow.case.json	Int!A3
+F	probes/t4590-growth-overflow.case.json	Int!A4
+F	probes/t4590-growth-overflow.case.json	Int!A5
+F	probes/t4590-growth-overflow.case.json	Int!A6
+F	probes/t4590-growth-overflow.case.json	Int!A7
+F	probes/t4590-growth-overflow.case.json	Int!B1
+F	probes/t4590-growth-overflow.case.json	Int!B2
+F	probes/t4590-growth-overflow.case.json	Int!B4
+F	probes/t4590-growth-overflow.case.json	Int!B5
+F	probes/t4590-growth-overflow.case.json	Int!B6
+F	probes/t4590-growth-overflow.case.json	Int!B7
+F	probes/t4590-growth-overflow.case.json	Int!C10
+F	probes/t4590-growth-overflow.case.json	Int!C11
+F	probes/t4590-growth-overflow.case.json	Int!C4
+F	probes/t4590-growth-overflow.case.json	Int!C6
+F	probes/t4590-growth-overflow.case.json	Int!C7
+F	probes/t4590-growth-overflow.case.json	Slope!A4
+F	probes/t4590-growth-overflow.case.json	Slope!A5
 F	probes/t4618-order-after-active-backward.case.json	Q!A1
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B10
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B11
@@ -9292,6 +9316,7 @@ F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H17
 F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H3
 F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H5
 F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H9
+F	probes/table-edits/t4274-calc-column-delete-row-2.case.json	F!A1
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
