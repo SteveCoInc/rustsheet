@@ -219,6 +219,11 @@ Fresh sweep after the factors were frozen (probes-numeric/t4630-convert-distance
 distance units with decimal prefixes on neither, one or both units; 100 are `#N/A`, a prefix on a unit that takes none):
 the angstrom base is exact on all 50 numeric cells, against 33 for both the metre base and the correctly rounded value;
 all 50 are inside Gate A's envelope. ironcalc-calc ENGINEERING/CONVERT.xlsx is unchanged.
+A conversion between metre units goes through the factor too, so it is not an identity or a pure power of ten:
+`CONVERT(7.42716535250082,"m","m")` is 7.427165352500819 and `CONVERT(3.70923578582955,"km","m")` 3709.2357858295504
+(`x*1E10/1E10`, then the prefix; probes-numeric/t4630-convert-metre-identity, excel-graph, 2026-11-07, chosen after the
+freeze: 14 values where the two bases differ for m to m, km to m, m to cm and mm to km all give the angstrom-base value,
+and 4 controls where they agree, A15:A18).
 Overflow: `value * F_from` is not allowed to overflow when the answer is representable:
 `CONVERT(1E290,"m2","m2")` is 1E+290, `CONVERT(1E300,"ha","m2")` 1.0000000000000001E+304,
 `CONVERT(1E302,"J","J")` 1E+302. The engine divides first (`value / F_to * F_from`) when the
@@ -226,8 +231,8 @@ product is infinite; every probed value fits, but whether Excel does this or use
 precision is not distinguishable from the probes.
 Backend: excel-desktop cached values + excel-graph (probes/convert-targets).
 Status: VERIFIED (for the evidenced conversions)
-Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922, T-1297, T-3861)
-Tasks: T-0922, T-1297, T-3861
+Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922, T-1297, T-3861, T-4630)
+Tasks: T-0922, T-1297, T-3861, T-4630
 
 ## CONVERT temperature
 Rule: every temperature pair has its own last-digit form; there is no shared pivot unit. The forms
@@ -331,9 +336,10 @@ with definitions in `tools/src/rustsheet_tools/accuracy/defs/complex_modulus.py`
   with a math sidecar, is that far off.
 - Last digits: the engine is bit-exact with Excel on 119 of 120 IMABS points (the miss,
   `IMABS("2.03246951872072E-05-73.6214006894732i")`, Excel 73.62140068947602, is T-2538's), 120 of 120 IMARGUMENT
-  points and 188 of 200 CONVERT points. Ten CONVERT misses are inside the envelope on both sides (T-2046, T-2047): among
-  them Excel's `CONVERT(484.091427716597,"yd","yd")` is 484.0914277165971 (not the identity, so `yd` to `yd` goes through
-  the factor), while ours keeps `ga` to `ga` and `Ega` to `ga` one ulp off Excel.
+  points and 194 of 200 CONVERT points (188 before T-4630's angstrom distance base). The six CONVERT misses are inside the
+  envelope on both sides (T-2046, T-2047): ym2 to ly^2, Zga to daT, Reau to F, Ega to ga, ly2 to mi2 and ga to ga. Excel's
+  `CONVERT(484.091427716597,"yd","yd")` is 484.0914277165971 (not the identity, so `yd` to `yd` goes through the factor),
+  which ours matches since T-4630.
 Evidence: the three s1 tables (excel-graph, 2026-11-06); `rustsheet-eval accuracy`.
 Status: VERIFIED (excel-graph)
 Tasks: T-4085, T-2538, T-2046, T-2047, T-4615

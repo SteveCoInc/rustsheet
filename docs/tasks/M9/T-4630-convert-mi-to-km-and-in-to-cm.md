@@ -3,7 +3,7 @@ id: T-4630
 title: "CONVERT mi to km and in to cm: Excel for the web is one ulp from the engine (calipers formulas_engineering D26, D27, J26, J27)"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -35,12 +35,12 @@ Cells:
 - [x] The cells above match bit for bit, and no cell of probes/convert-*, probes-numeric/t3861-convert-prefix-sweep,
   probes-numeric/t3975-convert-mixed-prefix-sweep or ironcalc-calc ENGINEERING/CONVERT.xlsx regresses.
 - [x] engineering.md records the refined prefix rule with these cells; the R4 hold-out and fresh sweep are in the Outcome.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The light-year and parsec factors (T-2047), unless the same rule fixes them.
 
-## Blocked because
+## Review-round limit
 Resumed after the review-round limit (step 5c).
 
 The excel-fidelity review's round 3 (adopted by an opus run, 2026-11-06 22:25 UTC, on 8c46dc5f7; c396ece22 adds only
@@ -59,6 +59,10 @@ a `make catch-up` merge) asked for changes. Design and security approved 8c46dc5
   ga/ga, and yd/yd is now exact.
 - [MINOR] The hold-out split and its margin were fixed after scoring (decision 0188 R4.1). The Outcome says so, and
   the blind fresh sweep covers it. Do not repeat this ordering.
+
+Step 5c (2026-11-07): the MAJOR is settled by probes-numeric/t4630-convert-metre-identity (excel-graph, 2026-11-07): 14
+values where the bases differ (m to m, km to m, m to cm, mm to km, the review's two included) all give the angstrom-base
+value, and 4 controls agree. The first MINOR is fixed in engineering.md (194 of 200, the six misses named).
 
 ## Outcome
 - **Cause:** the factors, not the prefix step. Excel keeps distance in angstroms (m = 1E10), as it keeps area in
@@ -106,28 +110,16 @@ a `make catch-up` merge) asked for changes. Design and security approved 8c46dc5
   - Open, unevidenced (fidelity review): with factors 1E10 larger, `value * F_from` overflows from about 1.8E298 for
     m to m, which then takes the divide-first path. The probed round values (1E290, 1E300) pass; a non-round value
     there may be 1 ulp off, as already holds for area in square angstroms.
+- **Metre-to-metre check (step 5c, after the freeze):** probes-numeric/t4630-convert-metre-identity, 18 cells chosen
+  where `x*P` and `x*1E10/1E10*P` differ (A1:A14) plus controls (A15:A18): Excel gives the angstrom-base value in all 18,
+  e.g. `CONVERT(7.42716535250082,"m","m")` 7.427165352500819; the engine passes 18 of 18, the metre base would pass 4.
 - **Eval delta:**
   - The task's 8 probe cells (t4534 B1:B4, D1:D4) are fixed. The 4 calipers cells are the same formulas; calipers was
     not fetched here.
   - Also fixed: m to ft (scalar-lift-open-a Z8:Z10, convert-unit-names B33, eng-convert-boolean-unit), the
     light-year/parsec cells of the T-3861 sweeps, and gen-m9/932b33b1ef8b7608 A14 (in to mi).
   - In all: probes 15 fixed, gen-m9 1 fixed, 0 regressions in every suite.
-  - ironcalc-calc CONVERT.xlsx and Gate A are unchanged.
+  - ironcalc-calc CONVERT.xlsx is unchanged. Gate A: CONVERT 194 of 200 points bit-exact (188 before), no point leaves
+    the envelope.
   - T-2047's m to ft cells now pass; its area cells (`m2` to `ly2`) are untouched.
 - **Follow-ups:** T-4666 (from #3708's review, T-4475); T-4670 (non-round values near the overflow path).
-
-## Landing notes
-State at the landing window's close (2026-11-06 19:45 UTC). PR #3721 is still a draft and is not enqueued. Its head is
-the commit after dd7fc87f0, which adds only these notes.
-- CI: the full run on f888060c6 was in progress at 19:43 and has been superseded by the docs pushes. The run on 2fb008db9
-  showed `rust (fmt, clippy, test)` red only because the shard run was cancelled by the next push
-  (`RESULT: cancelled`), not because a test failed.
-- Reviewers on f888060c6: design APPROVE, security APPROVE. Excel-fidelity REQUEST_CHANGES (round 2), for one blocking
-  item: the Outcome's angstrom hold-out row said 42/44, a scoring-script error. The engine passes all 160 cells, so the
-  row is 44/44. dd7fc87f0 fixes that row, the parsec wording ("Excel's length", not the IAU parsec) and the 1E-8 m
-  figure, and files T-4670 for the overflow-path minor.
-- Next step: wait for green CI on the head, then re-run the reviewers on it. Fidelity must re-check the corrected R4
-  table; design and security only need to confirm the docs-only delta. Then mark the PR ready and enqueue it.
-- Do not repeat: scoring with the Python model in the session scratchpad; it scored the angstrom hold-out wrongly. Use
-  `rustsheet-eval show` or the engine for counts. calipers/formulas_engineering D26, D27, J26, J27 should leave
-  eval/baseline/calipers.txt the next time `make eval-baseline` runs with calipers fetched (never by hand).
