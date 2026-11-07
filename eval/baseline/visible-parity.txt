@@ -308,6 +308,7 @@ probes/t4618-order-after-active-backward.case.json	1
 probes/t4625-gamma-dist-ratio-overflow.case.json	4
 probes/t4697-large-small-median-mixed-sheet-refs.case.json	5
 probes/t4704-mixed-xlookup-grid-readers.case.json	29
+probes/t4713-beta-inv-beta-above-1-cut.case.json	7
 probes/t4742-countif-array-range-arg.case.json	3
 probes/t4755-two-criteria-filtered-table-delete-one.case.json	10
 probes/t4757-later-mark-sheet-names.case.json	1
