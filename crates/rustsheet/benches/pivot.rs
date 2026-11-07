@@ -12,7 +12,9 @@
 //! The same source, as a cache, also times the engine's result tree (`rustsheet_engine::pivot::
 //! compute`, SPEC-0032 stages 1 to 3, T-4142): the filtered records and every accumulator of the
 //! Region by Product pivot, its totals included, with a Sum and an Average data field, and with
-//! a hidden Product item and a page selection on Region.
+//! a hidden Product item and a page selection on Region; and, rows Region then Product, a
+//! captionNotEqual and a count Top-1 filter on the inner Product, ranked within each Region
+//! (`pivot::filter`, T-4165).
 //!
 //! `cargo bench -p rustsheet --bench pivot [-- FILTER...]`
 
@@ -23,8 +25,9 @@ use std::io::Write;
 
 use rustsheet::{Input, PivotFunction, PivotTableInput, Workbook};
 use rustsheet_engine::pivot::{
-    compute, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CellArea, DataField, PageField,
-    PivotCache, PivotField, PivotTable, RecordValue, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
+    compute, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CellArea, DataField,
+    FilterCondition, FilterCriteria, FilterOperator, PageField, PivotCache, PivotField,
+    PivotFilter, PivotFilterKind, PivotTable, RecordValue, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
 };
 
 const RECORDS: u32 = 100_000;
@@ -158,6 +161,47 @@ fn table(cache: &PivotCache, filtered: bool) -> PivotTable {
     table
 }
 
+/// Rows Region then Product, Sum of Sales, with a captionNotEqual `P3` and a count Top-1 filter
+/// on Product: the Top-N ranks each Region's products.
+fn inner_filtered(cache: &PivotCache) -> PivotTable {
+    let mut table = table(cache, false);
+    if let Some(product) = table.fields.get_mut(1) {
+        product.axis = Some(Axis::Row);
+    }
+    table.row_fields = vec![AxisField::Field(0), AxisField::Field(1)];
+    table.column_fields = Vec::new();
+    table.data_fields.truncate(1);
+    let filter = |kind, criteria| PivotFilter {
+        field: 1,
+        kind,
+        measure: 0,
+        eval_order: -1,
+        id: 1,
+        criteria,
+        whole_day: false,
+    };
+    table.filters = vec![
+        filter(
+            PivotFilterKind::Caption,
+            FilterCriteria::Custom {
+                and: false,
+                conditions: vec![FilterCondition {
+                    operator: FilterOperator::NotEqual,
+                    value: "P3".into(),
+                }],
+            },
+        ),
+        filter(
+            PivotFilterKind::Count,
+            FilterCriteria::Top10 {
+                top: true,
+                value: "1".into(),
+            },
+        ),
+    ];
+    table
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let filters: Vec<String> = std::env::args()
         .skip(1)
@@ -174,13 +218,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     let source = cache()?;
     for (name, filtered) in [
-        ("result tree over 100,000 records", false),
-        ("result tree with filters", true),
+        ("result tree over 100,000 records", Some(false)),
+        ("result tree with filters", Some(true)),
+        ("result tree with inner caption and Top-N filters", None),
     ] {
         if !filters.is_empty() && !filters.iter().any(|f| name.contains(f.as_str())) {
             continue;
         }
-        let table = table(&source, filtered);
+        let table = filtered.map_or_else(|| inner_filtered(&source), |f| table(&source, f));
         let t = common::timings(RUNS, || {
             let mut work = MAX_PIVOT_WORK;
             assert!(compute(&table, &source, &mut work).is_ok(), "{name}");

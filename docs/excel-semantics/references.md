@@ -345,6 +345,27 @@ numbers as for a sheet reference, UNVERIFIED).
 Status: VERIFIED (Excel for the web; error name inferred from errorType 10 and ERROR.TYPE 11)
 Tasks: T-0124, T-1381, T-1382, T-1454, T-1487, T-1535, T-1537, T-1546, T-1554
 
+## An Analysis ToolPak argument refuses a multi-cell reference into another workbook
+Rule: a `LiftArrays` argument (EDATE, the IM* functions, COMPLEX, ISEVEN and the other functions
+that lift over an array and refuse a multi-cell range) reads a reference into another workbook
+with no cached data as the reference it is, not as its `#BLOCKED!` cells:
+- **Several cells** are refused like a written range of this workbook. `EDATE(…!A1:B2,1)`,
+  `IMAGINARY(…!A1:B2)`, `IMABS`, `COMPLEX(…,1)` and `ISEVEN` are `#VALUE!` (ERROR.TYPE 3, ROWS
+  `#VALUE!`), with the quoted and the unquoted prefix alike. The bare `…!A1:B2` and `…!A1:B2*1`
+  spill four `#BLOCKED!` instead ("External reference with no cached data", above).
+- **One cell** reads empty, as the cell INDEX picks does: `EDATE(…!A1,1)` is 31,
+  `IMAGINARY(…!A1)` 0, `ISEVEN(…!A1)` TRUE, `COMPLEX(…!A1,1)` "i", and ERROR.TYPE of them `#N/A`.
+  The bare `…!A1` is `#BLOCKED!`.
+
+Evidence: probes/external-ref-no-link-lift-arrays Calc!A1:A16, D1:D13 (excel-graph, 2026-11-07,
+T-4859), with local-range controls D8:D9.
+Ours: matches. A reference into a linked workbook whose cache the workbook holds reads the same
+way: one cell is its cached value (`COMPLEX([1]Defines!$B$2,0)` is "142"), several are refused.
+That case is not probed.
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/functions/lift/call.rs (`evaluate_as_reference`)
+Tasks: T-4859
+
 ## Cached values of a linked workbook (`[n]Sheet!A1`, `[n]!Name`, `[0]!Name`)
 Rule: in xlsx, Excel writes a reference into another workbook with the 1-based index of its
 `externalReference` in `workbook.xml`: `[1]Sheet!$A$1`, a workbook-scoped defined name of that book
@@ -602,7 +623,7 @@ PRODUCT skips a text or boolean cell from a reference, so with no number left it
 LARGE of a one-cell reference with no number is `#NUM!`; RANK of a number absent
 from a one-cell reference is `#N/A` (statistics.md, T-1055). Over `A1:A5` = {"5", TRUE, 7, "9", 3}: MAXA 7, MINA 0,
 AVERAGEA 2.2, PRODUCT 21, LARGE(,1) 7, RANK(3,) 2.
-Probe T-1378 (probes/subtotal-reference-operands-f, excel-graph, 2026-10-11): TAKE and DROP pick cells (SUBTOTAL reads them, AREAS 1, ISREF TRUE) or values (SUBTOTAL and AREAS spill `#VALUE!` per element, ISREF FALSE) according to the arm the IF, CHOOSE, SWITCH or IFS actually selects: `TAKE(IF(TRUE,A1:A4,SEQUENCE(4)),2)`, `TAKE(CHOOSE(1,A1:A4,SEQUENCE(4)),2)` and `TAKE(IFS(TRUE,A1:A4,FALSE,SEQUENCE(4)),2)` are cells, `CHOOSE(2,...)` and `IF(FALSE,A1:A4,SEQUENCE(4))` are values. An array selector lifts the call to values even when every arm is a range: `SUBTOTAL(9,TAKE(SWITCH({1,2},1,H1:H2,2,I1:I2),2))` and `SUBTOTAL(9,TAKE(IFS({TRUE,FALSE},H1:H2,{FALSE,TRUE},I1:I2),2))` spill a 2x2 of `#VALUE!` as `TAKE(CHOOSE({1,2},H1:H2,I1:I2),2)` does, while the IF twin `SUBTOTAL(9,TAKE(IF({TRUE,FALSE},H1:H2,I1:I2),1))` spills 1x2 (probes/subtotal-take-array-selector A20:B20, A30:B31, A40:B41, excel-graph, T-1909; implemented in `lifts_to_values`, T-1914). The array need not be the selector (probes/subtotal-take-array-selector-b, excel-graph, 2026-10-19, T-1984): an array SWITCH case value, `SUBTOTAL(9,TAKE(SWITCH(1,{1,2},H1:H2,I1:I2),2))`, spills a 2x2 of `#VALUE!` (implemented in `switch_pick`, which lifts on an array case value, T-2012). IFS with a first condition TRUE short-circuits and stays cells, `IFS(TRUE,H1:H2,{FALSE,TRUE},I1:I2)` is 7; `IFS({TRUE,FALSE},H1:H2,TRUE,I1:I2)` is a 2x2 `#VALUE!`; `IFS(FALSE,H1:H2,{TRUE,FALSE},I1:I2)` (an earlier FALSE, then an array condition) spills `#VALUE!` in column A and `#N/A` in column B, in both rows. Wrapping does not matter: the SWITCH/IFS array form under `IF(TRUE,...)`, `CHOOSE(1,...)` or `LET(x,...,x)`, and an array LET variable as the selector (SWITCH, IFS, CHOOSE), all spill a 2x2 of `#VALUE!`. A multi-cell range selector, `IF(H1:H2>3,H1:H2,I1:I2)` or `CHOOSE(J1:J2,H1:H2,I1:I2)`, spills a 2x1 (one column) of `#VALUE!`. The one-cell `INDIRECT("K1")` (TRUE) is read as a scalar condition: `SUBTOTAL(9,TAKE(IF(INDIRECT("K1"),H1:H2,I1:I2),2))` is 7 (implemented in `if_pick`, which reads a one-cell range as a scalar condition, T-2012). Every one-cell range condition is read the same way (probes/if-switch-one-cell-selector, excel-graph, 2026-10-20, T-2079): `IF(K1:K1,...)`, `IF(OFFSET(K1,0,0),...)`, `IF(INDEX(K1:K3,1),...)`, `IF(INDIRECT("$K$1"),...)` and `IF(INDIRECT("K1",TRUE),...)` under `SUBTOTAL(9,TAKE(...,2))` are all 7, and `ISREF(IF(K1:K1,H1,I1))` and `ISREF(IF(OFFSET(K1,0,0),H1,I1))` are TRUE; a one-cell condition holding text is `#VALUE!` and one holding `#N/A` is `#N/A`. SWITCH lifts only when it reaches the array case: an earlier match short-circuits and stays cells (`SWITCH(1,1,H1:H2,{1,2},I1:I2)` 7), and an earlier error case value is that error, not a lifted array (`SWITCH(1,NA(),H1:H2,{1,2},I1:I2)` and `SWITCH(1,#N/A,...)` are `#N/A`). LET variable names and LAMBDA parameters are case-insensitive (`LET(x,A1:A4,X)` reads `x`; probes/let-lambda-name-case: `LAMBDA(x,X+1)(2)` 3, `LAMBDA(Ab,aB*2)(4)` 8, `LET(f,LAMBDA(x,x+1),F(2))` 3, and a parameter of another case shadows the LET name, `LET(x,1,LAMBDA(X,x*10)(2))` 20, `LET(x,1,LET(X,5,x))` 5); an inner LET rebinding a name shadows the outer one. FORMULATEXT shows each use of a LET or LAMBDA name, called or not, in the spelling of the innermost declaration that binds it, not as typed: `LET(x,5,X*2)` reads `LET(x,5,x*2)`, `LAMBDA(Ab,aB*2)(4)` reads `LAMBDA(Ab,Ab*2)(4)`, `LET(Ab,LAMBDA(Q,q+1),aB(2))` reads `LET(Ab,LAMBDA(Q,Q+1),Ab(2))`, `LET(x,1,y,X+1,Y)` reads `LET(x,1,y,x+1,y)`, and a shadowing `LET(x,1,LET(X,5,x))` reads `LET(x,1,LET(X,5,X))` (probes/let-name-use-spelling, excel-graph, 2026-10-17, T-1720; implemented in `CallNameSpellings::apply`). A LET or LAMBDA that binds one name twice is refused in any case: Excel for the web refuses (createSession 501 `FileCorruptTryRepair`) a single-cell workbook holding `LET(x,1,x,2,x)`, `LET(x,1,X,2,x)`, `LET(é,1,É,2,é)`, `LAMBDA(x,x,x)(1,2)`, `LAMBDA(x,X,x+X)(1,2)`, `LAMBDA(ä,Ä,ä+Ä)(1,2)` or `LAMBDA(x,[X],x)(1)` (an optional parameter too) (`rustsheet-oracle recalc -b excel-graph`, 2026-10-12, T-1387; refused inputs cannot be committed), while `LET(x,1,LET(X,2,x))` loads and gives 2. The engine gives `#ERROR!` for each (a parse error for LAMBDA, the LET duplicate check). Names may start with a non-ASCII letter, and one-to-one letter pairs fold case (probes/let-name-non-ascii: `LET(é,1,É+1)` 2, `LET(Ä,2,ä*10)` 20, `LET(Ärger,5,äRGER+1)` 6, `LAMBDA(ß,ß*2)(3)` 6, `LET(é,1,LAMBDA(É,é*10)(2))` 20); a fold that changes length does not: `LET(ß,1,ẞ+1)` is 2 but `LET(ß,1,SS+1)` is `#NAME?` (probes/let-name-sharp-s, which stores the use as `_xlpm.SS`: spec2xlsx decides which names are bound with Python `str.lower()`, so a probe of a fold where Python and Excel may differ must write the `_xlpm.` prefix itself). Other scripts follow the same rules (probes/let-name-non-ascii-scripts, excel-graph, 2026-10-18, T-1431): `LET(名前,1,名前+1)` is 2; the Turkish dotless `ı` is its own letter that folds to neither `I` nor `i`, `LET(ı,1,ı+1)` is 2 and `LET(ı,1,I+1)` and `LET(ı,1,i+1)` are `#NAME?`; the letter number `Ⅻ` folds to `ⅻ` (`LET(Ⅻ,1,Ⅻ+1)` and `LET(Ⅻ,1,ⅻ+1)` are 2). T-1431 also recorded refusals of `LET(İ,1,İ+1)`, `LET(İ,1,i+1)`, `LET(Ⓐ,1,Ⓐ+1)` and `LET(Ⓐ,1,ⓐ+1)`; T-1856 found the `İ` ones were spec2xlsx leaving the name without its `_xlpm.` prefix (`LET(_xlpm.İ,1,_xlpm.İ+1)` is 2), while a name starting with `Ⓐ` is refused however it is stored ("Characters of a name" below). The earlier refusal of `LET(é,1,É+1)` was spec2xlsx leaving a non-ASCII name without its `_xlpm.` prefix; before T-1387 the engine also rejected a name whose first letter is non-ASCII, unless it uppercased to ASCII (`ß` → `SS`). The same identifier check (`is_valid_a1_identifier`) validates defined names, so a defined name may now start with a non-ASCII letter too; probes/defined-name-non-ascii (excel-graph, T-1431) confirms it: defined names `é1` and `名前` work (`=é1+1` 6, `=É1+1` 6, `=名前+1` 8).
+Probe T-1378 (probes/subtotal-reference-operands-f, excel-graph, 2026-10-11): TAKE and DROP pick cells (SUBTOTAL reads them, AREAS 1, ISREF TRUE) or values (SUBTOTAL and AREAS spill `#VALUE!` per element, ISREF FALSE) according to the arm the IF, CHOOSE, SWITCH or IFS actually selects: `TAKE(IF(TRUE,A1:A4,SEQUENCE(4)),2)`, `TAKE(CHOOSE(1,A1:A4,SEQUENCE(4)),2)` and `TAKE(IFS(TRUE,A1:A4,FALSE,SEQUENCE(4)),2)` are cells, `CHOOSE(2,...)` and `IF(FALSE,A1:A4,SEQUENCE(4))` are values. An array selector lifts the call to values even when every arm is a range: `SUBTOTAL(9,TAKE(SWITCH({1,2},1,H1:H2,2,I1:I2),2))` and `SUBTOTAL(9,TAKE(IFS({TRUE,FALSE},H1:H2,{FALSE,TRUE},I1:I2),2))` spill a 2x2 of `#VALUE!` as `TAKE(CHOOSE({1,2},H1:H2,I1:I2),2)` does, while the IF twin `SUBTOTAL(9,TAKE(IF({TRUE,FALSE},H1:H2,I1:I2),1))` spills 1x2 (probes/subtotal-take-array-selector A20:B20, A30:B31, A40:B41, excel-graph, T-1909; implemented in `lifts_to_values`, T-1914). The array need not be the selector (probes/subtotal-take-array-selector-b, excel-graph, 2026-10-19, T-1984): an array SWITCH case value, `SUBTOTAL(9,TAKE(SWITCH(1,{1,2},H1:H2,I1:I2),2))`, spills a 2x2 of `#VALUE!` (implemented in `switch_pick`, which lifts on an array case value, T-2012). IFS with a first condition TRUE short-circuits and stays cells, `IFS(TRUE,H1:H2,{FALSE,TRUE},I1:I2)` is 7; `IFS({TRUE,FALSE},H1:H2,TRUE,I1:I2)` is a 2x2 `#VALUE!`; `IFS(FALSE,H1:H2,{TRUE,FALSE},I1:I2)` (an earlier FALSE, then an array condition) spills `#VALUE!` in column A and `#N/A` in column B, in both rows. Wrapping does not matter: the SWITCH/IFS array form under `IF(TRUE,...)`, `CHOOSE(1,...)` or `LET(x,...,x)`, and an array LET variable as the selector (SWITCH, IFS, CHOOSE), all spill a 2x2 of `#VALUE!`. A multi-cell range selector, `IF(H1:H2>3,H1:H2,I1:I2)` or `CHOOSE(J1:J2,H1:H2,I1:I2)`, spills a 2x1 (one column) of `#VALUE!`. The one-cell `INDIRECT("K1")` (TRUE) is read as a scalar condition: `SUBTOTAL(9,TAKE(IF(INDIRECT("K1"),H1:H2,I1:I2),2))` is 7 (implemented in `if_pick`, which reads a one-cell range as a scalar condition, T-2012). Every one-cell range condition is read the same way (probes/if-switch-one-cell-selector, excel-graph, 2026-10-20, T-2079): `IF(K1:K1,...)`, `IF(OFFSET(K1,0,0),...)`, `IF(INDEX(K1:K3,1),...)`, `IF(INDIRECT("$K$1"),...)` and `IF(INDIRECT("K1",TRUE),...)` under `SUBTOTAL(9,TAKE(...,2))` are all 7, and `ISREF(IF(K1:K1,H1,I1))` and `ISREF(IF(OFFSET(K1,0,0),H1,I1))` are TRUE; a one-cell condition holding text is `#VALUE!` and one holding `#N/A` is `#N/A`. SWITCH lifts only when it reaches the array case: an earlier match short-circuits and stays cells (`SWITCH(1,1,H1:H2,{1,2},I1:I2)` 7), and an earlier error case value is that error, not a lifted array (`SWITCH(1,NA(),H1:H2,{1,2},I1:I2)` and `SWITCH(1,#N/A,...)` are `#N/A`). LET variable names and LAMBDA parameters are case-insensitive (`LET(x,A1:A4,X)` reads `x`; probes/let-lambda-name-case: `LAMBDA(x,X+1)(2)` 3, `LAMBDA(Ab,aB*2)(4)` 8, `LET(f,LAMBDA(x,x+1),F(2))` 3, and a parameter of another case shadows the LET name, `LET(x,1,LAMBDA(X,x*10)(2))` 20, `LET(x,1,LET(X,5,x))` 5); an inner LET rebinding a name shadows the outer one. FORMULATEXT shows each use of a LET or LAMBDA name, called or not, in the spelling of the innermost declaration that binds it, not as typed: `LET(x,5,X*2)` reads `LET(x,5,x*2)`, `LAMBDA(Ab,aB*2)(4)` reads `LAMBDA(Ab,Ab*2)(4)`, `LET(Ab,LAMBDA(Q,q+1),aB(2))` reads `LET(Ab,LAMBDA(Q,Q+1),Ab(2))`, `LET(x,1,y,X+1,Y)` reads `LET(x,1,y,x+1,y)`, and a shadowing `LET(x,1,LET(X,5,x))` reads `LET(x,1,LET(X,5,X))` (probes/let-name-use-spelling, excel-graph, 2026-10-17, T-1720; implemented in `CallNameSpellings::apply`). A LET or LAMBDA that binds one name twice is refused in any case: Excel for the web refuses (createSession 501 `FileCorruptTryRepair`) a single-cell workbook holding `LET(x,1,x,2,x)`, `LET(x,1,X,2,x)`, `LET(é,1,É,2,é)`, `LAMBDA(x,x,x)(1,2)`, `LAMBDA(x,X,x+X)(1,2)`, `LAMBDA(ä,Ä,ä+Ä)(1,2)` or `LAMBDA(x,[X],x)(1)` (an optional parameter too) (`rustsheet-oracle recalc -b excel-graph`, 2026-10-12, T-1387; refused inputs cannot be committed), while `LET(x,1,LET(X,2,x))` loads and gives 2. The engine gives `#ERROR!` for each (a parse error for LAMBDA, the LET duplicate check), its stand-in for a form Excel refuses at load (README "Forms Excel refuses at load", T-4781). Names may start with a non-ASCII letter, and one-to-one letter pairs fold case (probes/let-name-non-ascii: `LET(é,1,É+1)` 2, `LET(Ä,2,ä*10)` 20, `LET(Ärger,5,äRGER+1)` 6, `LAMBDA(ß,ß*2)(3)` 6, `LET(é,1,LAMBDA(É,é*10)(2))` 20); a fold that changes length does not: `LET(ß,1,ẞ+1)` is 2 but `LET(ß,1,SS+1)` is `#NAME?` (probes/let-name-sharp-s, which stores the use as `_xlpm.SS`: spec2xlsx decides which names are bound with Python `str.lower()`, so a probe of a fold where Python and Excel may differ must write the `_xlpm.` prefix itself). Other scripts follow the same rules (probes/let-name-non-ascii-scripts, excel-graph, 2026-10-18, T-1431): `LET(名前,1,名前+1)` is 2; the Turkish dotless `ı` is its own letter that folds to neither `I` nor `i`, `LET(ı,1,ı+1)` is 2 and `LET(ı,1,I+1)` and `LET(ı,1,i+1)` are `#NAME?`; the letter number `Ⅻ` folds to `ⅻ` (`LET(Ⅻ,1,Ⅻ+1)` and `LET(Ⅻ,1,ⅻ+1)` are 2). T-1431 also recorded refusals of `LET(İ,1,İ+1)`, `LET(İ,1,i+1)`, `LET(Ⓐ,1,Ⓐ+1)` and `LET(Ⓐ,1,ⓐ+1)`; T-1856 found the `İ` ones were spec2xlsx leaving the name without its `_xlpm.` prefix (`LET(_xlpm.İ,1,_xlpm.İ+1)` is 2), while a name starting with `Ⓐ` is refused however it is stored ("Characters of a name" below). The earlier refusal of `LET(é,1,É+1)` was spec2xlsx leaving a non-ASCII name without its `_xlpm.` prefix; before T-1387 the engine also rejected a name whose first letter is non-ASCII, unless it uppercased to ASCII (`ß` → `SS`). The same identifier check (`is_valid_a1_identifier`) validates defined names, so a defined name may now start with a non-ASCII letter too; probes/defined-name-non-ascii (excel-graph, T-1431) confirms it: defined names `é1` and `名前` work (`=é1+1` 6, `=É1+1` 6, `=名前+1` 8).
 Tasks: T-0216, T-0235, T-0940, T-1003, T-1378, T-1387, T-1431, T-1453, T-1856, T-1984, T-2012, T-2079, T-2831, T-2992
 
 ## Row and column inserts and deletes rewrite defined names
@@ -633,11 +654,19 @@ and `DisplaceData::Column`, with the same displacement as cells.
 The undo of a delete puts back each name and each conditional format the delete changed:
 `UserModel::rewritten_snapshot_diffs` records `old == new` diffs, as `SetMergedCells` does.
 
-How Excel spells a rewritten name in Name Manager is unprobed. The engine stores `#REF!` and
-`S!$C$1:$C$1`, and only values were probed. Also unprobed:
+### Relative references in a name (T-4747)
+Status: VERIFIED (excel-graph, 2026-11-07). Predictions were committed before the fill, and they were wrong.
+- **A relative reference in a name does not move, when the name is used from another sheet.** Name `Rel` = `=Data!A5` (anchored at A1), used from Calc!A1 and
+  Calc!A3, after `insert_row 4` on Data (Data!An = n*10): A1 40, A3 60, the literal addresses A5 and A7. After
+  `delete_row 4`: 60 and 80 (A5, A7 again). The absolute names of T-4702 shift; relative ones are left alone.
+  Evidence: probes/sheet-ops/t4747-name-relative-insert-row and -delete-row.
+- The engine shifts them (50/70 both ways), anchoring the name at A1 of the edited sheet: a mismatch, owned by T-4760.
+
+Still unprobed (T-4761, the harness cannot express them yet):
+- how Excel spells a rewritten name in Name Manager (the engine stores `#REF!` and `S!$C$1:$C$1`);
 - row and column moves, which leave names alone in the engine;
-- relative references in a name, which the engine anchors at A1 of the edited sheet;
-- a name scoped to another sheet.
+- a sheet-scoped name, and an unqualified reference in a name;
+- a relative name used from the edited sheet itself (the using cell moves too), and a no-edit control for the file-text anchoring at A1: run these before T-4760 changes the engine.
 
 ## Characters of a name
 Rule: a name in a formula (a LET or LAMBDA name, or an unbound use) may not start with a mark (`\p{M}`) or an
@@ -674,15 +703,25 @@ fails createSession with 501 `FileCorruptTryRepair` and has no oracle cells, so 
   is referenced unquoted: `=ⓑ!B1` and `='ⓑ'!B1` both read it and FORMULATEXT shows `=ⓑ!B1` for both. A mark after
   the first character needs no quotes: FORMULATEXT of a quoted reference to sheet `a` + U+0301 or `x` + U+20DD shows
   `=á!B1`, `=x⃝!B1` (probes/t4446-defined-name-characters A12:A23). The engine matches: `name_needs_quoting` takes
-  a later mark as a name character (T-4446). Whether INDIRECT text `á!B1` (unquoted, `is_indirect_unquoted_sheet`)
-  reads the sheet is unprobed.
+  a later mark as a name character (T-4446). Every mark class after the first character holds, and INDIRECT agrees
+  (probes/t4757-later-mark-sheet-names, excel-graph, 2026-11-07, T-4757; Sheet1!A1:A20, each prediction committed
+  before the fill held). For sheets `a` + U+0301 (Mn), `क` + U+093E (Mc, alphabetic), `x` + U+0F3E (Mc, not
+  alphabetic) and the cell-shaped `B1` + U+0301:
+  - the quoted reference reads B1, and FORMULATEXT writes the name unquoted (`=का!B1`, `=x༾!B1`, `=B1́!B1`; a cell
+    address followed by a mark is not a cell here either);
+  - INDIRECT of the unquoted text (`INDIRECT("á!B1")`, `"का!B1"`, `"x༾!B1"`, `"B1́!B1"`) and of the quoted text both
+    read B1. Ours matches all of these.
+  The R1C1-shaped `C1` + U+0301 behaves differently. As a sheet name it loads, `='C1́'!B1` reads it, FORMULATEXT keeps
+  the quotes (`='C1́'!B1`), and `INDIRECT("'C1́'!B1")` reads it. But **`INDIRECT("C1́!B1")` unquoted is `#REF!`**
+  (Sheet1!A19). Ours reads 23 (T-4861). Whether every R1C1-shaped unquoted INDIRECT prefix is refused (`C1D!B1`,
+  `R1C1!B1`, `RC!B1` against sheets so named) is unprobed (T-4861, probe first).
 - Table names (T-4446): a table named `Ⓐ`, `ⓐ` or U+0301 + `a` loads while no formula uses it; `SUM(ⓐ[h])` reads it
   (3), while `SUM(Ⓐ[h])` and a structured reference to U+0301 + `a` are refused at load (hand-built workbooks,
   2026-11-07). The engine's table-name check (`is_valid_identifier`, `Model::add_table`) refuses `Ⓐ` and a first mark,
   but its xlsx import does not check the name: a table part named `Ⓐ`, `ⓐ` or U+0301 + `a` loads with the table and
   its cells (T-4753); a loaded `SUM(ⓐ[Year])` reads the table, and `SUM(Ⓐ[Year])` and the U+0301 + `a` twin, which
   Excel refuses at load, load as `#ERROR!` with their text kept (FORMULATEXT `=SUM(Ⓐ[Year])`), the engine's stand-in
-  for every refused name (tests/table_part_names.rs, on tests/example.xlsx's patched table part). spec2xlsx cannot
+  for every refused name (README "Forms Excel refuses at load"; tests/table_part_names.rs, on tests/example.xlsx's patched table part). spec2xlsx cannot
   write these tables (XlsxWriter's `add_table` refuses the names), so they are not in a case. The lexer's `is_alphanumeric` checks after a reference (`lexer/ranges.rs`) were
   left as they are: the B1/B2 + U+0301 cells above pass with them.
 - spec2xlsx writes a defined name that XlsxWriter's Python `\w` check refuses (`ⓐ`, a mark, `नाम`) into workbook.xml
@@ -690,7 +729,8 @@ fails createSession with 501 `FileCorruptTryRepair` and has no oracle cells, so 
   T-4752.
 
 Implemented in: `is_letter_name_start` and `is_mark` (expressions/utils/mod.rs), used by `is_name_text` and the
-lexer's identifier start and `is_name_char`: a refused first character is a parse error (`#ERROR!`). `is_name_text`
+lexer's identifier start and `is_name_char`: a refused first character is a parse error (`#ERROR!`), the stand-in README "Forms Excel refuses at load" sets for every form Excel refuses at load (T-4781): not a
+`DEVIATION`. `is_name_text`
 checks the characters as typed, not their uppercase (before T-1856 `ǰ` and `ΐ` were refused). Unit test
 `names_starting_with_a_mark_or_an_uppercase_circled_letter_are_refused`.
 
@@ -2611,6 +2651,7 @@ identifier such as `A1.B2`, unless an enclosing LET or LAMBDA binds it: `bind_na
 The unknown call `A1.INDEX(...)` keeps its spelling (spelling rule in "Unknown function call names", T-1719).
 Status: VERIFIED (excel-graph)
 Tasks: T-1652, T-1659
+- INDIRECT of an unquoted sheet prefix that is an in-range R1C1 reference followed by more text is `#REF!` (VERIFIED, probes/t4861-indirect-r1c1-shaped-sheet-prefix rows 1-16, excel-graph, 2026-11-07, T-4861): `C1D`, `R1_`, `R1C1D`, `R1CD`, `R1C0D`, `RC1D`, `R1D`, `C1R1`, `R1048576D`, `C16384D` and `C1`+U+0301 (probes/t4757-later-mark-sheet-names A19) all refuse, the exact `is_r1c1_shaped` set minus the bare references. A bare reference or an out-of-range one with a tail still names its sheet: `R`, `C`, `RC`, `R1`, `C1`, `R1C1`, `R0`, `RC1`, `R1C`, `R0D`, `C16385D`, `RC16385D` read their B1. Every quoted form reads (`is_indirect_r1c1_tail_sheet`). Unprobed: a sheet-scoped defined name behind such a prefix (`C1D!Name`).
 
 ## LET and LAMBDA names spelled like a cell
 Rule: a LET name or LAMBDA parameter spelled like a relative A1 cell (`f1`, `add5`, `c1`, `A1`),
@@ -3011,25 +3052,34 @@ description says why). table-convert-cross-sheet-this-row holds only data-row ce
 removed tables (bare `Sales` included) to `#REF!` (`Model::rewrite_table_references`, tables.rs), and an
 undo of the sheet delete (`restore_sheet`, `UserModel` undo) puts the old text back; a reference to a
 missing sheet is displayed with `#REF!` for its sheet (`is_missing_sheet`, stringify/wrong_reference.rs),
-and the lexer reads `#REF!C4:C7` back as `#REF!` (engine choice: whether Excel accepts that text typed in is
-unprobed). A plain reference loses the deleted sheet for good (T-2612, probes/table-edits/t2612-delete-sheet-then-add,
+and that text does not read back: Excel refuses `=SUM(#REF!C4:C7)`, `=#REF!$A$1`, `=ISREF(#REF!A1)` and
+`=SUM(#REF!A:A)` typed in (the cell stays blank, FORMULATEXT `#N/A`) and refuses a workbook storing any of them, or
+`#REF!A1`, `#REF!1:2`, in a dynamic-array or a legacy `<f>`; the bare `=SUM(#REF!)` loads and types in (`#REF!`,
+FORMULATEXT `=SUM(#REF!)`), and `ISREF(#REF!)` is FALSE (probes/t4628-deleted-sheet-reference-text, excel-graph,
+2026-11-07; the stored forms by hand-built workbooks, `rustsheet-oracle recalc`). In typed text the lexer reads `#REF!` alone,
+so the cell or range after it is a parse error and the entry is refused (T-4628). Other text still reads the range as
+`#REF!` (`consume_deleted_sheet_reference`): the engine's own re-entry of its display (a fill or a paste of such a
+cell), an embedder's `set_user_input`, and a loaded file storing it, which Excel for the web refuses as a whole and
+desktop Excel's handling of is unprobed (an engine choice). What Excel's fill or paste of such a cell writes is
+unprobed. A plain reference loses the deleted sheet for good (T-2612, probes/table-edits/t2612-delete-sheet-then-add,
 excel-graph 2026-11-06): after deleting S and adding a new blank S, `SUM(S!C4:C7)`, `S!C4` and `COUNTBLANK(S!C4:C7)`
 stay `#REF!` (a revived reference would read 0, 0 and 4), FORMULATEXT shows `=SUM(#REF!C4:C7)`, `=#REF!C4`, and
 `ISREF(#REF!A1)` (written `ISREF(S!A1)`) is FALSE, while `INDIRECT("S!C4")` reads the new sheet ("|" for a blank).
 The engine rewrites such a reference on the delete (`delete_sheet_in_node`, stringify/sheet_edits.rs) to a wrong
 reference to the internal sheet name `DELETED_SHEET` (`*#REF!`, which no real sheet can take), which the display
-and the xlsx export both print as `#REF!C4:C7` (the file text is inferred from Excel's en-US FORMULATEXT; no
-Excel-saved file was inspected); the undo puts the old text back through `TakenSheet`'s rewritten
+prints as `#REF!C4:C7` and the xlsx export writes as the bare `#REF!` (`=SUM(#REF!)`): Excel for the web refuses a
+file storing `#REF!C4:C7` (above), so the range is lost from the file, as it is from a loaded value (T-4628). What
+desktop Excel writes into its own file for such a reference is unprobed (an M14 desktop question, decision 0039); the undo puts the old text back through `TakenSheet`'s rewritten
 formulas. The xlsx loader refuses a workbook whose sheet name contains `*` (`XlsxError::Workbook`, `load_workbook`,
 T-4655): Excel cannot write one, so no Excel file is lost, and a crafted `*#REF!` sheet could otherwise capture
 references stored under `DELETED_SHEET`. Status: DEVIATION (decision 0014, directive 5: Excel's reaction to such a file
 is unknown, and the sentinel must not collide). Workbook names lose the sheet the same way (probes/table-edits/t2612-delete-sheet-then-add-names,
 excel-graph 2026-11-06): with nm = `S!$C$4` and rng = `S!$C$4:$C$7`, `=nm` and `=SUM(rng)` stay `#REF!` after the new S
-is added and `ISREF(nm)` is FALSE; the engine stores such a name as `#REF!$C$4`. The `#REF!` display also covers a sheet that never existed (a loaded `Nope!A1`), an engine choice with
+is added and `ISREF(nm)` is FALSE; the engine stores such a name as `#REF!$C$4`, which untyped text reads back as `#REF!`, and exports that text as it is. Whether Excel loads a stored `<definedName>` of that form, and how its Name Manager shows the name, is unprobed (T-4628 probed only cell `<f>` forms). The `#REF!` display also covers a sheet that never existed (a loaded `Nope!A1`), an engine choice with
 no evidence; its stored text and export keep the name. The adapter's delete_table clears the whole table range (header, text and Qty columns: COUNTA 0 each)
 and keeps the rows in place: `S!C9` still 99 and `SUM(S!C9:C10)` still 104 with unshifted text
 (T-2341, table-delete-table-cells, excel-graph 2026-10-22).
-Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734, T-3629, T-4020, T-4021, T-2612, T-4655
+Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734, T-3629, T-4020, T-4021, T-2612, T-4655, T-4628
 
 ## Calculated columns: a formula typed into a table column
 Rule (excel-graph `entered` cells, typed one at a time in the case's order, 2026-10-27, T-2957; table `T` A1:C4,
@@ -3269,3 +3319,12 @@ and under ABS, for every area kind: a union (`INDEX((B1:B6,C1:C6),3,1)`, `,3,1,2
 range with row and column, and a name whose body is a range or a cell (`INDEX(Rng,3)`, `INDEX(One,1)`). Values equal the typed
 twins' (3, 30, 3, 3, 3, 3). `INDEX(B1:C6,3)` (row only, two columns) is `#REF!` in all three forms. Evidence:
 probes/t4212-legacy-index-root-area-kinds (excel-graph); the engine matches all 42 cells.
+
+## FORMULATEXT of a reference a delete removed is `#REF!`
+
+`=FORMULATEXT(S!C2)` after a delete removes S!C2 is `#REF!` in Excel (probes/table-edits/t4274-calc-column-delete-row-2
+F!A1, excel-graph, T-4274; S!C2 is a table cell). UNVERIFIED: that a plain cell, same sheet or cross sheet, behaves the
+same (the engine unit tests assume it), and the rewritten formula text `=FORMULATEXT(#REF!)` (the oracle stores values
+only). The engine gave `#ERROR!` ("not a reference"); `fn_formulatext` now returns an evaluated `#REF!` argument
+unchanged (T-4770). That is wider than the evidence: an expression valued `#REF!` (`FORMULATEXT(A1+1)`, A1 `#REF!`)
+also gives `#REF!` and is unprobed. Other literal errors (`FORMULATEXT(#N/A)`) are unevidenced and stay `#ERROR!`.

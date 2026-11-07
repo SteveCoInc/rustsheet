@@ -1,0 +1,90 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "An empty values filter is no criterion (T-4749). Each sheet has a table A1:B7 (Cat a,b,a,c,a,b; Val 1-6) with every data row hidden and D1:D4 = SUBTOTAL 3 and 103 over Cat, 9 and 109 over Val, D5 = AGGREGATE(9,1,..), D6 = AGGREGATE(9,4,..). AllHidden: a \"filter\": true table, which spec2xlsx writes as a values filter on Cat with no value kept, <filters></filters>. Manual: the table has no filter (control).",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "AllHidden",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "A2": "a",
+        "B2": 1,
+        "A3": "b",
+        "B3": 2,
+        "A4": "a",
+        "B4": 3,
+        "A5": "c",
+        "B5": 4,
+        "A6": "a",
+        "B6": 5,
+        "A7": "b",
+        "B7": 6,
+        "D1": "=SUBTOTAL(3,Sales[Cat])",
+        "D2": "=SUBTOTAL(103,Sales[Cat])",
+        "D3": "=SUBTOTAL(9,Sales[Val])",
+        "D4": "=SUBTOTAL(109,Sales[Val])",
+        "D5": "=AGGREGATE(9,1,Sales[Val])",
+        "D6": "=AGGREGATE(9,4,Sales[Val])"
+      },
+      "hidden_rows": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "A1:B7",
+          "filter": true
+        }
+      ]
+    },
+    {
+      "name": "Manual",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "A2": "a",
+        "B2": 1,
+        "A3": "b",
+        "B3": 2,
+        "A4": "a",
+        "B4": 3,
+        "A5": "c",
+        "B5": 4,
+        "A6": "a",
+        "B6": 5,
+        "A7": "b",
+        "B7": 6,
+        "D1": "=SUBTOTAL(3,Sales2[Cat])",
+        "D2": "=SUBTOTAL(103,Sales2[Cat])",
+        "D3": "=SUBTOTAL(9,Sales2[Val])",
+        "D4": "=SUBTOTAL(109,Sales2[Val])",
+        "D5": "=AGGREGATE(9,1,Sales2[Val])",
+        "D6": "=AGGREGATE(9,4,Sales2[Val])"
+      },
+      "hidden_rows": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "tables": [
+        {
+          "name": "Sales2",
+          "ref": "A1:B7"
+        }
+      ]
+    }
+  ],
+  "expected": {}
+}

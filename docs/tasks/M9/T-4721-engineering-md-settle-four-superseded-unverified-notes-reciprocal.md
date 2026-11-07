@@ -3,7 +3,7 @@ id: T-4721
 title: "engineering.md: settle four superseded UNVERIFIED notes (reciprocal IM* kernels past 2^27 on a real argument, the other IM* overflows, T-2420/T-2421's probe-pending status, IMLOG2's T-2044 candidates) and probe what no cell decides"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -64,3 +64,19 @@ settles four other notes of the same file; the two tasks share no note.
 ## Out of scope
 - The four notes T-4604 settles, the large-y note (T-2631), the IMSINH/IMCOSH band cuts (T-2797) and any last-digit
   work (T-2538, T-4001, T-4012).
+
+## Outcome
+New probe probes/t4721-im-overflow-residue (excel-graph, 25 cells, all pass; no engine change, one generated case-count line in eval/baseline/probes.txt (`make eval-baseline`), no
+math sidecar since it has no Gate A one-call cell). Findings: IMSEC/IMCSC/IMTAN of a real argument are numbers at
+134217727.99 and `#NUM!` at 134217728 and 1E+10; IMLN/IMLOG10/IMLOG2 of an argument whose x²+y² overflows (the modulus is finite) are `#NUM!`;
+IMCONJUGATE/IMREAL/IMAGINARY return the largest parts unchanged; the IMDIV cut lies between 1E-308 (`#NUM!`) and
+2.3E-308 (a number). engineering.md notes 1-4 now cite these cells or the entries that settled them. Eval delta: one
+new passing case, 0 regressions.
+
+## Blocked because
+Resumed after the review-round limit (step 5c).
+
+Three fidelity rounds ran (heads bcd6c01a7, 2a81cae4e, 000f53490). Design and security approved bcd6c01a7. The round-3
+findings (T-2044 Status line still calling the candidates UNVERIFIED; T-1827 entry Evidence/Tasks lines; IMDIV cause
+cross-reference) are fixed in the commit that adds this section, with no reviewer run on it. Resume per work-loop step
+5c: `make check-fast`, then the full panel on the current diff.

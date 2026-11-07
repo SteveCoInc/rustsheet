@@ -130,6 +130,18 @@ def _ref(a1: str) -> str:
     return f"{SHEET}!{xl_rowcol_to_cell(row, col, row_abs=True, col_abs=True)}"
 
 
+def corner_ref(source: PivotSource) -> str:
+    """The absolute reference to the top-left cell of `source`'s rendered pivot."""
+    top, left, _, _ = source.box
+    return _ref(xl_rowcol_to_cell(top, left))
+
+
+def whole_ref(source: PivotSource) -> str:
+    """The absolute reference to `source`'s whole rendered pivot."""
+    _, _, bottom, right = source.box
+    return f"{corner_ref(source)}:{_ref(xl_rowcol_to_cell(bottom, right)).split('!')[1]}"
+
+
 def pivot_call(rng: random.Random, source: PivotSource, spelled: str) -> str:
     """One GETPIVOTDATA call against `source` (module docstring), `spelled` as the catalog says."""
     table = source.table
@@ -138,13 +150,11 @@ def pivot_call(rng: random.Random, source: PivotSource, spelled: str) -> str:
     )
     top, left, bottom, right = source.box
     if rng.random() < 0.6:
-        pivot_ref = _ref(xl_rowcol_to_cell(top, left))
+        pivot_ref = corner_ref(source)
     elif rng.random() < 0.5:
         pivot_ref = _ref(xl_rowcol_to_cell(rng.randint(top, bottom), rng.randint(left, right)))
     else:
-        pivot_ref = (
-            f"{_ref(xl_rowcol_to_cell(top, left))}:{_ref(xl_rowcol_to_cell(bottom, right)).split('!')[1]}"
-        )
+        pivot_ref = whole_ref(source)
     # Mostly with pairs: without one every call is the same grand total.
     count = 0 if rng.random() < 0.15 else rng.randint(1, len(source.axis))
     fields = rng.sample(sorted(source.axis), count)

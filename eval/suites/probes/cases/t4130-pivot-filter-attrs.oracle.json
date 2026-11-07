@@ -1,0 +1,1359 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Apricot"
+      },
+      {
+       "t": "s",
+       "v": "Banana"
+      },
+      {
+       "t": "s",
+       "v": "Cherry"
+      },
+      {
+       "t": "s",
+       "v": "Grape"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B4",
+   "name": "P_FIcon",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FIcon",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Grand Total",
+    "B3": "Sum of Sales"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Apricot"
+      },
+      {
+       "t": "s",
+       "v": "Banana"
+      },
+      {
+       "t": "s",
+       "v": "Cherry"
+      },
+      {
+       "t": "s",
+       "v": "Grape"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Cherry"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 11.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_FVals",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FVals",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Cherry",
+    "A5": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "11",
+    "B5": "11"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Apricot"
+      },
+      {
+       "t": "s",
+       "v": "Banana"
+      },
+      {
+       "t": "s",
+       "v": "Cherry"
+      },
+      {
+       "t": "s",
+       "v": "Grape"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B4",
+   "name": "P_FDgi",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FDgi",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Grand Total",
+    "B3": "Sum of Sales"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Apricot"
+      },
+      {
+       "t": "s",
+       "v": "Banana"
+      },
+      {
+       "t": "s",
+       "v": "Cherry"
+      },
+      {
+       "t": "s",
+       "v": "Grape"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Cherry"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 11.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_FBtn",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FBtn",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Cherry",
+    "A5": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "11",
+    "B5": "11"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Apricot"
+      },
+      {
+       "t": "s",
+       "v": "Banana"
+      },
+      {
+       "t": "s",
+       "v": "Cherry"
+      },
+      {
+       "t": "s",
+       "v": "Grape"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Cherry"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 11.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_FSort",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FSort",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Cherry",
+    "A5": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "11",
+    "B5": "11"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Apricot"
+      },
+      {
+       "t": "s",
+       "v": "Banana"
+      },
+      {
+       "t": "s",
+       "v": "Cherry"
+      },
+      {
+       "t": "s",
+       "v": "Grape"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Cherry"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 11.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_FMeta",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FMeta",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Cherry",
+    "A5": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "11",
+    "B5": "11"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Apricot"
+      },
+      {
+       "t": "s",
+       "v": "Banana"
+      },
+      {
+       "t": "s",
+       "v": "Cherry"
+      },
+      {
+       "t": "s",
+       "v": "Grape"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Cherry"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 11.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_FMp",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FMp",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Cherry",
+    "A5": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "11",
+    "B5": "11"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Apricot"
+      },
+      {
+       "t": "s",
+       "v": "Banana"
+      },
+      {
+       "t": "s",
+       "v": "Cherry"
+      },
+      {
+       "t": "s",
+       "v": "Grape"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Cherry"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 11.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_FEo",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FEo",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Cherry",
+    "A5": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "11",
+    "B5": "11"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Apricot"
+      },
+      {
+       "t": "s",
+       "v": "Banana"
+      },
+      {
+       "t": "s",
+       "v": "Cherry"
+      },
+      {
+       "t": "s",
+       "v": "Grape"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Banana"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Cherry"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grape"
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 12.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 11.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 6.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 29.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B7",
+   "name": "P_FMf1",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FMf1",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Banana",
+    "A5": "Cherry",
+    "A6": "Grape",
+    "A7": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "12",
+    "B5": "11",
+    "B6": "6",
+    "B7": "29"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Apricot"
+      },
+      {
+       "t": "s",
+       "v": "Banana"
+      },
+      {
+       "t": "s",
+       "v": "Cherry"
+      },
+      {
+       "t": "s",
+       "v": "Grape"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Banana"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Cherry"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grape"
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 12.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 11.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 6.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 29.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B7",
+   "name": "P_FMf0",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FMf0",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Banana",
+    "A5": "Cherry",
+    "A6": "Grape",
+    "A7": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "12",
+    "B5": "11",
+    "B6": "6",
+    "B7": "29"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Apricot"
+      },
+      {
+       "t": "s",
+       "v": "Banana"
+      },
+      {
+       "t": "s",
+       "v": "Cherry"
+      },
+      {
+       "t": "s",
+       "v": "Grape"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "West"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Banana"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Cherry"
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grape"
+    },
+    "A8": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 21.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 7.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 8.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 6.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 21.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B8",
+   "name": "P_FTwo",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FTwo",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "West",
+    "A5": "Banana",
+    "A6": "Cherry",
+    "A7": "Grape",
+    "A8": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "21",
+    "B5": "7",
+    "B6": "8",
+    "B7": "6",
+    "B8": "21"
+   }
+  }
+ ],
+ "sheets": {
+  "Data": {},
+  "FBtn": {},
+  "FDgi": {},
+  "FEo": {},
+  "FIcon": {},
+  "FMeta": {},
+  "FMf0": {},
+  "FMf1": {},
+  "FMp": {},
+  "FSort": {},
+  "FTwo": {},
+  "FVals": {},
+  "Q": {
+   "A1": {
+    "t": "n",
+    "v": 8.0
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "2ee02b4aa16f39257b4da11c781ac2e7b8417184fc35ccd5d194762e945009ad",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-07T03:06:43+00:00",
+  "version": null,
+  "workbook_name": "58c4f7eaa5125f7bce91f877b550cf9e3ec7624384e8436587b87f9323772cd9.xlsx"
+ }
+}

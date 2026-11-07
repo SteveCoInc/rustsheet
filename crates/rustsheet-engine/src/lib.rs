@@ -49,6 +49,12 @@ pub mod themes;
 pub mod types;
 pub mod worksheet;
 
+/// Seeded generators shared with other crates' tests (T-4756); built for this crate's tests and
+/// behind the `test-support` feature, which only dev-dependencies enable.
+#[cfg(any(test, feature = "test-support"))]
+#[doc(hidden)]
+pub mod test_support;
+
 pub use crate::constants::COLUMN_WIDTH_FACTOR;
 pub use crate::constants::DEFAULT_COLUMN_WIDTH;
 pub use crate::constants::ROW_HEIGHT_FACTOR;
@@ -103,6 +109,7 @@ mod sheet_reads;
 mod spill_shape;
 mod structural_checks;
 mod styles;
+mod subexpressions;
 mod table_edits;
 mod table_types;
 mod tables;
@@ -138,6 +145,7 @@ pub use model::FmtSettings;
 pub use model::Model;
 pub use reference_forms::{ReferenceForms, ReferenceFormsReader};
 pub use sheet_undo::TakenSheet;
+pub use subexpressions::{subexpressions, Subexpression, SubexpressionKind};
 pub use text::Text;
 pub use typed_input::TYPED_FORMULA_DOES_NOT_PARSE;
 pub use user_model::BorderArea;

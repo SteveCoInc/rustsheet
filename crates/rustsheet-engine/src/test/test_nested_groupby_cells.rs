@@ -298,3 +298,17 @@ fn scan_over_a_groupby_call_is_one_cell() {
         assert_eq!(model._get_text(cell), value, "{cell}");
     }
 }
+
+#[test]
+fn lifted_index_reads_a_nested_cell_top_left() {
+    // Rule 4 (probes/t2609-nested-operators-and-lifts A56:A59): a lifted INDEX that selects
+    // nested cells gives each one's top-left, not the `#VALUE!` an element-wise lift reads.
+    let mut model = groups();
+    model._set("F1", &format!("=SUM(INDEX({NESTED},{{2;3}},2))"));
+    model._set("F2", &format!("=SUM(--ISERROR(INDEX({NESTED},{{2;3}},2)))"));
+    model._set("F3", &format!("=INDEX(INDEX({NESTED},{{2;3}},2),1,1)"));
+    model.evaluate();
+    assert_eq!(model._get_text("F1"), "4");
+    assert_eq!(model._get_text("F2"), "0");
+    assert_eq!(model._get_text("F3"), "3");
+}

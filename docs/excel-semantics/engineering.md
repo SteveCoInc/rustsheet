@@ -790,7 +790,13 @@ angle"); cosh and sinh are libm's, except IMSECH's and IMCSCH's (IMSINH's `1/u` 
   `1000000000-1000000000i`; `IMCOT("1E-6i")` is `-999911.107320937i` (only a few digits survive between 1E-8 and 1E-6);
   `IMCSC("1+1E-9i")` is `1.18839510577812-7.6305972223263E-10i` and `IMCOT("1+1E-9i")`
   `0.642092615934331-1.41228292743739E-09i` (a real part of 1 keeps the kernel well conditioned).
-- UNVERIFIED: for |x| ≥ 2^27 (SIN's own `#NUM!` cut) the reciprocal kernels take libm's sine and cosine.
+- Past SIN's own `#NUM!` cut the reciprocal kernels never run on a real argument: `IMSEC`, `IMCSC` and `IMTAN` of the
+  real `"134217727.99"` answer with text (1.56676941765648, -1.29899791407902, -1.20613697733865), and of `"134217728"` and
+  `"1E+10"` are `#NUM!` (probes/t4721-im-overflow-residue B1:D3, excel-graph, 2026-11-07, T-4721). That settles the old
+  note that libm's sine and cosine took over from 2^27 on: Excel returns `#NUM!` there, as the entry "IM* trig and
+  hyperbolic functions past SIN's argument limit (T-3642)" says for a complex argument (IMCOT's real `"134217728"`
+  stays 0, an entry there). probes/t2534-im-trig-real-limit shows `#NUM!` for the real 134217728 and 1E+10 too; the new
+  case adds the 134217727.99 point.
 - IMLOG2 (T-2231, superseding the T-2044 time-box; modulus model replaced by T-3643): `ln` of the logs' doubly
   rounded modulus (above) and the argument (`atan2`),
   both times K = 1.4426950408889636, the double one ulp above log2 e (= `1/ln 2` with the double one ulp below ln 2).
@@ -924,19 +930,25 @@ Not covered here: IMSIN and IMCOS at y = 709.78 are `#NUM!` for every x probed (
 Rule (not implemented, T-2668 and T-2914; widened below by T-3881): IMCSCH keeps normal tiny parts at x = 700, 705 and 709 where ours prints 0 (J134:J149, J153:J168, J172:J176, J180, J183, J184 and J186 of the grid). The real-axis sign is odd: `IMCSCH(COMPLEX(700,0))` and `(700,1E-308)` are 1.97193530875195E-304, `(700,1E-300)`, `(700,1E-200)` and `(700,1E-20)` -1.97193530875195E-304; `(700,1)` -1.06544119434148E-304+1.65932634623297E-304i and `(700,20)` -8.04711426558125E-305+1.80026897486721E-304i are the negation of 2e^-x(cos y, -sin y), while `(700,709.78)` is -1.92443257888109E-304-4.30218678399417E-305i. This settles the "IMCSCH ... unprobed" question of the IM* last-digit sweep entry above.
 Rule (T-3881; probes/t3881-imcsch-overflow-band, -band-edge, -flip-start and -flip-start-negative, excel-graph, 2026-11-03): in a band of large |x|, Excel's IMCSCH of a non-real z is the negation of csch z. Equivalently it is -sgn(x)·IMSECH(z), digit for digit on every non-real cell where both were probed (flip-start-negative has no IMSECH column): `IMCSCH(COMPLEX(355,1))` -7.2297909698426E-155+1.12597323040731E-154i against `IMSECH` 7.2297909698426E-155-1.12597323040731E-154i, and `IMCSCH(COMPLEX(-355,1))` 7.2297909698426E-155+1.12597323040731E-154i, equal to IMSECH there. A real z (y = 0, and a subnormal y such as 1E-308, which counts as real) keeps the true sign, sgn(x)·2e^-|x|: `IMCSCH(COMPLEX(700,0))` 1.97193530875195E-304, `(-700,0)` -1.97193530875195E-304. A tiny normal y is not real: `(700,1E-300)` is -1.97193530875195E-304. The band's start is asymmetric and below both overflow points (cosh 2x near 354.8914, sinh²x near 355.6). For x > 0 it is just past 354.5: 354.5 is correct (1.19199101546952E-154-1.85641601521147E-154i) and 354.501 is negated (-1.19079962025097E-154+1.85456052709499E-154i). For x < 0 it lies in (354, 354.01]: -354 is correct, -354.01 is negated. The probes cover |x| from 354 to 700 (y = 0, ±1E-308, ±1E-300, ±1, ±5.3113, ±20, ±705). Both edges fit one test on 2x: the band is 2x > 709 or 2x < -708, the same cuts as IMCOSH's and IMSINH's log form ("IMCOSH and IMSINH past |x| = 709 work in log space": x > 709 or x < -708, `hyperbolic_log_form`), applied to 2x. probes/t3912-imcsch-band-edges (excel-graph, 2026-11-03, T-3912) narrows both brackets to one step of the 15-digit input grid (1E-12 at |x| = 354): `IMCSCH(COMPLEX(354.500000000001,1))` and `(-354.000000000001,1)` are already negated (A64, A71; column C shows COMPLEX's text keeps the 1E-12 offset), as is every point out to 354.5009 and -354.009 (A1:A36, A64:A77; their IMSECH twins agree), while 354.5 and -354 are the true csch. Nothing between an edge and its next 15-digit neighbour can be typed: `IMREAL("354.50000000000006+i")-354.5`, `"354.5000000000001+i"`, `"354.5000000000005+i"` and the same at -354 are 0 (C37:C42), so complex text drops digits past the 15th, the 16th digit 5 included, and those cells give the edge's own value. So the cut 2x > 709 or 2x < -708 holds to the resolution Excel accepts. The cut is read off those brackets, not scored. Where the sign itself comes from is still open.
 The real-y cut is the smallest normal double, and it comes from the parse: `IMAGINARY(COMPLEX(355,2.2250738585072E-308))` is 0 (that y is just below DBL_MIN, and COMPLEX's text reads it back as 0), while 2.2250738585073E-308 and 2.3E-308 read back as typed (C61:D63). So `IMCSCH(COMPLEX(355,2.2250738585072E-308))` keeps the true sign (1.33810107625323E-154) and 2.2250738585073E-308, 2.3E-308, 3E-308 and 1E-307 to 1E-301 are negated, at -355 too (A43:A60). Ours (T-3881, `in_csch_negated_band` and `imcsch` in complex/trig.rs): inside the band IMCSCH is -sgn(x)·IMSECH(z) for a non-real z and sgn(x)·IMSECH(x) for a real or subnormal-y z, through IMSECH's own parts (`sech_parts`). All 298 IMCSCH cells of the four t3881 cases, im-trig-magnitude-grid and im-trig-argument-cut J16 that T-3881 owned pass, except 14 that carry IMSECH's own last digit: the 12 overflow-band cells whose IMSECH twins are off (T-3883), `IMCSCH(COMPLEX(-354.03,1))` (flip-start-negative A3, ours ...453414E-154i against ...453415E-154i, from IMSECH's finite-t form; T-3883), and `(705,705)` (grid J161, T-3851's cell, as IMSECH I161). T-3883 fixed the 12 band cells and (705,705) (IMSECH's overflowed parts divide by Excel's EXP(|x|)/2); A3 is a sub-ulp midpoint cell (T-3914) and stays with T-4001.
-Inferred, not bracketed: the IMTAN/IMCOT exception starts where cosh 2y overflows (|y| about 355); the grid only shows y = 20 (`#NUM!`) and y = 700 (±i) past the limit.
+Rule (T-4425; probes/t4425-imtan-imcot-switch, excel-graph, 2026-11-06, 192 cells, x = 1E+10, 134217728, -1E+10 and the x = 1 control): the IMTAN/IMCOT exception does not start where cosh 2y overflows (|y| about 354.89 or 355.24, the earlier guess). It starts at 2y > 709 or 2y < -708, IMCSCH's cut ("in_csch_negated_band") on y: past 2^27 `IMTAN(COMPLEX(1E+10,354.5))` is `#NUM!` and `354.500000000001` is i (IMCOT -i), `-354` is `#NUM!` and `-354.000000000001` is -i (IMCOT i); 20, 350, 354 and -350 are `#NUM!` and 354.6 to 700 give ±i for every x. The cut holds for every x: with x = 1, y up to 354.4 gives a tiny real part (2.70275814458766E-308+i at 354.4) and from just above 354.5 exactly i, so ours returns ±i from the same cut (y > 354.5; 354.5 itself still runs `tan_parts`, and its cell passes). Ours: `tan_saturates` in complex/trig.rs.
 Evidence: probes/im-trig-magnitude-grid (4360 cells: 19x19 magnitudes 0, 1E-308 to 1E+300 with 700 to 720 around exp overflow, plus sign variants, columns A:J = the ten functions) and probes/im-trig-argument-cut (190 cells around 2^27), excel-graph, 2026-11-01.
 Status: VERIFIED (excel-graph); implemented (`past_trig_limit`, `inner_trig_overflows`, `reciprocal_flushes` and, for IMCSCH's negated band, `in_csch_negated_band` in complex/trig.rs, T-3881).
-Tasks: T-3642, T-3881, T-3883
+Tasks: T-3642, T-3881, T-3883, T-4425
 
 ## IM* results that overflow (T-1827)
 
 Rule: for IMSUM, IMPRODUCT, IMEXP, IMPOWER and IMDIV (the functions probed), a result that
 overflows or is NaN is an error, never text. IMSUM and IMPRODUCT give `#VALUE!`; IMEXP of a pure
-real number, IMPOWER and IMDIV give `#NUM!`. The other IM* functions are UNVERIFIED.
+real number, IMPOWER and IMDIV give `#NUM!`. IMSIN, IMCOS, IMSINH, IMCOSH, IMSUB and IMSQRT are probed in the
+entries below. Also probed (probes/t4721-im-overflow-residue, excel-graph, 2026-11-07, T-4721): IMLN, IMLOG10 and
+IMLOG2 of an argument whose x²+y² overflows (`"1E307+1E307i"`, `"9.9E307+9.9E307i"`, `"-9E307-9E307i"`; the modulus itself,
+1.41E307 to 1.40E308, is finite) are `#NUM!` (B4:D6): the T-2117 rule of the IMLN/IMLOG10/IMLOG2 bullet above (`#NUM!` when `x²+y²` is infinite), not a modulus overflow.
+IMCONJUGATE, IMREAL and IMAGINARY of `"9.99999999999999E307-9.99999999999999E307i"` return the parts at full size,
+IMCONJUGATE with the imaginary sign flipped (`9.99999999999999E+307+9.99999999999999E+307i`, 9.99999999999999E+307,
+-9.99999999999999E+307; B7:B9).
 Status: VERIFIED (excel-graph); implemented for the five (IMEXP with a nonzero imaginary part: T-2002, T-2060).
-Tasks: T-1827, T-1996, and the follow-ups T-2001 to T-2003.
-Evidence: probes/eng-im-overflow (excel-graph).
+Tasks: T-1827, T-1996, T-4721, and the follow-ups T-2001 to T-2003.
+Evidence: probes/eng-im-overflow, probes/t4721-im-overflow-residue (excel-graph).
 
 - Examples: `IMPRODUCT("1E200","1E200")`, `IMSUM("9E307","9E307")` and
   `IMPRODUCT("1E200","1E200","0")` are `#VALUE!` (A5-A7, A25, A30, A36-A38); `IMEXP("710")`,
@@ -999,8 +1011,10 @@ Evidence: probes/eng-im-overflow (excel-graph).
   sum overflows, the result is `0`, not an error: `IMSQRT("1E154+1E154i")`, `"-1E154-1E154i"`,
   `"1.34E154+1.34E154i"` (probes/eng-imsqrt-large, eng-imsqrt-large-b, excel-graph, T-1996).
   Implemented in `imsqrt`.
-- `IMDIV("1","1E-308")` is `#NUM!` (A20) although results near 1E+308 are text (A46); the cause
-  (subnormal divisor?) is unprobed, ours matches.
+- `IMDIV("1","1E-308")` is `#NUM!` (A20) although results near 1E+308 are text (A46). Placing the cut
+  (probes/t4721-im-overflow-residue B10:E10, excel-graph, T-4721): `IMDIV("1","1E-308")` and `IMDIV("1E-300","1E-308")`
+  are `#NUM!`; `IMDIV("1","2.3E-308")` is `4.34782608695652E+307` and `IMDIV("1","1E-307")` `1E+307`. The cut lies
+  between 1E-308 (a subnormal divisor) and 2.3E-308 (above DBL_MIN, 2.2250738585072014E-308); its exact place stays unprobed, and the cause is probably the parse that reads a subnormal literal as 0 (the entries on subnormal COMPLEX text and on IMCSCH("1E-308")), not a result overflow (E10's result, 1E+8, is small, so the size of the result is not the trigger; the divisor is), and ours matches all four.
 - IMSIN, IMCOS, IMSINH and IMCOSH: a result part that overflows or is NaN is `#NUM!` (`IMCOSH("1000")`,
   `IMSINH("1000")`, `IMSIN("1+1000i")`, `IMCOS("1+1000i")`), as IMEXP of a real number (T-2003).
 - IMSUB: a part that overflows is 0 and the other part stays, no error: `IMSUB("9E307","-9E307")` and the `j` form are "0",
@@ -1067,8 +1081,9 @@ bin_digits, oct_digits, hex_digits, dec_number, places, bessel_x, bessel_order, 
 bit_shift, db_table, db_field and db_criteria), filled through excel-graph on 2026-10-22 and deleted afterwards, as
 the task asked. Every cell had a value (none pending). Ours: 760 of 790 match. The rest are listed here, in
 criteria.md "Database edge-pool smoke check (T-2249)", and the known DEVIATION and last-digit families named above.
-Status: UNVERIFIED (probe pending: T-2420 and T-2421 commit probe cases for the mismatches and the BESSELI
-cap cells; the cells that match are regenerated by the gen-m9 sweep, T-2258)
+Status: the scratch suite stays history. The mismatches are committed and VERIFIED as probes/eng-leading-plus-oct-bool
+(T-2420) and probes/eng-besselk-underflow-bit-shift (T-2421, excel-graph; all 276 cells pass, the order-cap cells included since T-2546);
+the cells that match are regenerated by the gen-m9 sweep, T-2258.
 Tasks: T-2249, T-2420, T-2421, T-2258
 
 ## Engineering functions in the gen-m9 engineering sweep (T-2258)
@@ -1333,11 +1348,9 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   (6.64385618977473, 8.71530997122009, -5.64385618977473, -13.2877123795495+4.53236014182719i) and `IMLOG2("1000+1i")`
   "9.96578500600925+0.00144269455999091i"; `IMABS("0.25-3i")` 3.0103986446980735 (both `sqrt(x²+y²)` and `hypot` give
   3.010398644698074, so on the web too IMABS is neither), `IMABS("-724.227-562.884i")` 917.24759197558,
-  `IMARGUMENT("1.5E+2-2E-3i")` -1.3333333332543209E-05 (= Excel's ATAN2; f64::atan2 ...4321E-05). Candidates the triage
-  checked (UNVERIFIED until T-2044's sweep confirms them): IMLOG2's real part is ln|z| / 0.693147180559945 (ln 2 to 15
-  digits: 5 of 5 real parts here and COMPLEXs.xlsx AH19; the exact ln 2 gives 1 of 5) and its imaginary part ATAN2 / LN(2)
-  (2 of 2); IMCSC is conj(s)/|s|² of sin z built from SIN, COS and the exp-based sinh/cosh (both IMCSC inputs; a Smith
-  reciprocal gives ...112). IMCOT("-1.5+0.5i") is not the double-angle form with Excel's kernels.
+  `IMARGUMENT("1.5E+2-2E-3i")` -1.3333333332543209E-05 (= Excel's ATAN2; f64::atan2 ...4321E-05). The triage's candidates (IMLOG2's real part as ln|z| / 0.693147180559945, IMCSC as conj(s)/|s|²) were
+  superseded: T-2044's sweep fitted IMCSC to `t = sin²x + (cosh 2y − 1)/2` (69/69 finite cells) and the IMLOG2 entry
+  above gives the implemented model (T-2231, T-3643). IMCOT("-1.5+0.5i") is not the double-angle form with Excel's kernels.
 - **IM* log and power modulus.** `IMLN("1E+200")` is 460.517018598809, `IMLOG10("1E+200")` "200", `IMLOG2("1E+200")`
   664.385618977473 (ours `#NUM!` for all three since T-2389; the overflow is still wrong), while `IMLOG10("1E-200+1E-200i")` and `IMLOG10("1E+300+1E+300i")` are
   `#NUM!`: T-2117's rule (on its branch) of a `hypot` modulus that is `#NUM!` when both parts are nonzero and x²+y² overflows
@@ -1452,7 +1465,7 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
 Evidence: gen-m9 cases of seeds 2258, 22580 and 22581 (excel-graph, 2026-10-22/23, T-2258); every value above is an
 Excel cell of eval/suites/gen-m9 with its case id in the owning task. The engine-side formulas (SIN, (EXP(4)-EXP(-4))/2,
 COS(ATAN2(-1,0)/2), ln|z|/0.693147180559945) were evaluated in RustSheet's own worksheet functions, which match Excel.
-Status: VERIFIED (excel-graph) for the observed values. The mechanisms (IM trig of a real as SIN/COS/TAN, exp-based sinh/cosh, IMSQRT through COS and ATAN2) are fitted against RustSheet's own kernels and reproduce every cited cell; T-2534, T-2535 and T-2536 re-confirm them on the cells. The IMLOG2 and IMCSC formulations are UNVERIFIED candidates.
+Status: VERIFIED (excel-graph) for the observed values. The mechanisms (IM trig of a real as SIN/COS/TAN, exp-based sinh/cosh, IMSQRT through COS and ATAN2) are fitted against RustSheet's own kernels and reproduce every cited cell; T-2534, T-2535 and T-2536 re-confirm them on the cells. The IMLOG2 and IMCSC candidate formulations were superseded by the fitted IMCSC kernel (T-2044, "IM* reciprocal kernels, IMABS and IMARGUMENT") and the IMLOG2 entry (T-2231, T-3643); the `ln|z|/0.693147180559945` above is a rejected candidate.
 Tasks: T-2258, T-2532 to T-2551, T-2420, T-2421, T-2335, T-2389, T-2044, T-2117, T-1966, T-4593
 
 ## Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2* (T-2420)

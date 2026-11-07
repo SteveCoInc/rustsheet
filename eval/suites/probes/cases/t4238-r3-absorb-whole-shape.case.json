@@ -1,0 +1,30 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4238 round 3: after round 2's (0.999,7E+17,57.5) was a value, is bfrac's absorbed #NUM! limited to a whole b0 (H_frac) or to x0 away from 1 (H_x)? Predictions in docs/research/t4238/predictions-r3.tsv committed before the fill.",
+  "tags": [
+    "M9",
+    "statistical",
+    "beta",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=BETA.DIST(0.999,6E+17,41,TRUE)",
+        "A2": "=BETA.DIST(0.999,6E+17,41.5,TRUE)",
+        "A3": "=BETA.DIST(0.5,7E+17,57.5,TRUE)",
+        "A4": "=BETA.DIST(0.9,7E+17,57.5,TRUE)",
+        "A5": "=BETA.DIST(0.5,7E+17,57,TRUE)",
+        "A6": "=BETA.DIST(0.999,7E+17,57,TRUE)",
+        "A7": "=BETA.DIST(0.5,6E+17,41.5,TRUE)",
+        "A8": "=BETA.DIST(0.5,6E+17,41.25,TRUE)",
+        "A9": "=BETA.DIST(0.99,6E+17,41,TRUE)",
+        "A10": "=BETA.DIST(0.001,41,6E+17,TRUE)",
+        "A11": "=BETA.DIST(0.5,57.5,7E+17,TRUE)",
+        "A12": "=BETA.DIST(0.5,1E+19,1000.5,TRUE)"
+      }
+    }
+  ],
+  "expected": {}
+}

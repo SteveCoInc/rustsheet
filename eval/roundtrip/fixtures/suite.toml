@@ -5,7 +5,8 @@ root = "../../suites/fixtures/cases"
 include = ["**/*.xlsx", "**/*.xlsm"]
 license = "Apache-2.0"
 origin = "eval/suites/fixtures (hand-built inputs)"
-scenarios = ["R0"]
+# R0, idempotence and every edit of the standard set (SPEC-0033 D1, D8; T-4514).
+scenarios = ["R0", "R0/again", "R1/E1", "R1/E2", "R1/E3", "R1/E4", "R1/E5", "R1/E6", "R1/all"]
 gate = true
 baseline = "cells"
 milestone = ["M15"]

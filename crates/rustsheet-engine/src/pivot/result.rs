@@ -10,6 +10,10 @@
 //!    `item` that names no data item reads as `(All)`, as T-4139's import does, and a hidden item
 //!    on a field off every axis is ignored (both UNVERIFIED, T-4633; docs/excel-semantics/
 //!    pivots.md "Record filters").
+//!
+//!    Then the pivot's `<filters>` and `AutoShow` (`pivot::filter`, T-4165): caption and date
+//!    filters, then value filters and Top-N per parent, each keeping the records of the items it
+//!    keeps, so the totals cover only what is shown.
 //! 2. **Groups** are already the records' items: a grouped field's records index its group items
 //!    (`number_groups`, `date_groups`).
 //! 3. **Accumulate.** Each axis is a tree of item tuples in display order: a field's listed
@@ -60,6 +64,7 @@ use thiserror::Error as ThisError;
 use crate::expressions::token::Error;
 
 use super::accumulate::{sum_in_order, Accumulator, CutCount};
+use super::filter::{apply as apply_filters, FilterContext, Kept};
 use super::show_as::{show_values_as, Shown};
 use super::{
     Aggregate, Axis, AxisField, CacheItem, ItemType, PageField, PivotCache, PivotField, PivotTable,
@@ -162,7 +167,7 @@ impl AxisTree {
     }
 
     /// `node` and its ancestors, the root last.
-    fn ancestors(&self, node: u32) -> impl Iterator<Item = u32> + '_ {
+    pub(crate) fn ancestors(&self, node: u32) -> impl Iterator<Item = u32> + '_ {
         std::iter::successors(Some(node), |&n| {
             self.nodes.get(n as usize).and_then(|n| n.parent)
         })
@@ -306,13 +311,13 @@ pub(super) fn count_nodes(nodes: &mut usize, count: usize) -> Result<(), PivotCo
 /// A field's display order: per cache item its rank, and per rank its cache item. The field's
 /// listed data items come first, in `<items>` order (a repeat or an index past the cache items
 /// is skipped), then the cache items it does not list, in cache order.
-struct Order {
-    rank: Vec<u32>,
+pub(super) struct Order {
+    pub(super) rank: Vec<u32>,
     item: Vec<u32>,
 }
 
 impl Order {
-    fn of(field: Option<&PivotField>, item_count: usize) -> Order {
+    pub(super) fn of(field: Option<&PivotField>, item_count: usize) -> Order {
         let mut rank = vec![u32::MAX; item_count];
         let mut item = Vec::with_capacity(item_count);
         let listed = field
@@ -381,20 +386,25 @@ impl<'a> AxisColumns<'a> {
         })
     }
 
-    /// Under the axis field's `showAll`, interns every item it does not hide, in display
-    /// order, so that an item no kept record holds is shown with blank values (see the module
+    /// Under the axis field's `showAll`, interns every item it does not hide and no filter
+    /// removed, in display order, so that an item no kept record holds is shown with blank values (see the module
     /// documentation).
     fn show_all_keys(
         &self,
         keys: &mut HashMap<Box<[u32]>, u32>,
+        kept: &Kept,
         work: &mut u64,
     ) -> Result<(), PivotComputeError> {
-        let (Some(field), Some(order)) = (self.show_all, self.orders.first()) else {
+        let (Some(field), Some(order), Some(&index)) =
+            (self.show_all, self.orders.first(), self.fields.first())
+        else {
             return Ok(());
         };
         charge(work, units(order.item.len()))?;
         for (rank, &item) in (0u32..).zip(&order.item) {
-            if !field.is_hidden(item) {
+            // Nor an item a filter removed (UNVERIFIED, T-4799: no probe has `showAll` beside a
+            // filter).
+            if !field.is_hidden(item) && !kept.is_removed(index, item) {
                 intern(keys, &[rank])?;
             }
         }
@@ -582,11 +592,27 @@ pub fn compute(
     cache: &PivotCache,
     work: &mut u64,
 ) -> Result<PivotResult, PivotComputeError> {
+    compute_on(table, cache, None, work)
+}
+
+/// [`compute`] on the day `today` (a serial day, as TODAY gives it from the workbook's clock),
+/// which the relative date filters read (`pivot::filter`); with `None` they keep every item.
+///
+/// # Errors
+/// As [`compute`].
+pub fn compute_on(
+    table: &PivotTable,
+    cache: &PivotCache,
+    today: Option<f64>,
+    work: &mut u64,
+) -> Result<PivotResult, PivotComputeError> {
     // Counts in an accumulator are u32s: a cache within MAX_RECORDS keeps them exact.
     if cache.record_count as usize > super::MAX_RECORDS {
         return Err(PivotComputeError::Limit);
     }
     let records = filter(table, cache, work)?;
+    let mut kept = apply_filters(table, cache, records, FilterContext { today }, work)?;
+    let records = std::mem::take(&mut kept.records);
     let rows = AxisColumns::new(table, cache, &table.row_fields, work)?;
     let columns = AxisColumns::new(table, cache, &table.column_fields, work)?;
     charge(
@@ -607,8 +633,8 @@ pub fn compute(
         let column = intern(&mut column_keys, &key)?;
         placed.push((row, column, record));
     }
-    rows.show_all_keys(&mut row_keys, work)?;
-    columns.show_all_keys(&mut column_keys, work)?;
+    rows.show_all_keys(&mut row_keys, &kept, work)?;
+    columns.show_all_keys(&mut column_keys, &kept, work)?;
     let mut nodes = 1;
     let (rows, row_leaves) = rows.tree(row_keys, work, &mut nodes)?;
     let (columns, column_leaves) = columns.tree(column_keys, work, &mut nodes)?;

@@ -122,8 +122,8 @@ fn index_window(
 /// 2, `TYPE` 1: probes/index-one-index-array-shape, docs/excel-semantics/lookup.md "INDEX of an
 /// array: a whole row stays an array"), unless `top_left` asks for its first value only (a lifted
 /// element, which must not copy the selection). One nested GROUPBY or PIVOTBY cell is the array it
-/// holds, charged to `budget` (SPEC-0018 rule 3, `NestedArray::value`); a lifted element keeps the
-/// `#VALUE!` it shows (unprobed). A row or column keeps its nested cells (rule 5).
+/// holds, charged to `budget` (SPEC-0018 rule 3, `NestedArray::value`); a lifted element is the
+/// nested cell's top-left (rule 4). A row or column keeps its nested cells (rule 5).
 fn index_from_array(
     arr: &[Vec<ArrayNode>],
     row_eff: usize,
@@ -150,6 +150,14 @@ fn index_from_array(
     if top_left || (row_eff != 0 && col_eff != 0) {
         return match arr.get(row_start - 1).and_then(|r| r.get(col_start - 1)) {
             Some(ArrayNode::Nested(nested)) if !top_left => nested.value(budget, cell),
+            // A lifted element that selects a nested cell is that cell's top-left: `INDEX(G,{2;3},2)`
+            // is `{3;1}`, SUM 4, with no error (probes/t2609-nested-operators-and-lifts A56:A59).
+            // This is not the `#VALUE!` an element-wise lift reads (`ArrayNode::scalar`, rule 4).
+            // A top-left that is nested again reads as `#VALUE!` (unprobed).
+            Some(ArrayNode::Nested(nested)) => match nested.elements().next() {
+                Some(first) => array_element_value(first, cell),
+                None => CalcResult::new_error(Error::VALUE, cell, String::new()),
+            },
             // A blank element of an array value is the empty value IFERROR gives a blank cell:
             // ISBLANK TRUE, `&` "", yet COUNT counts it (`COUNT(INDEX(HSTACK(Z1:Z2,{1;2}),1,1))`
             // is 1; probes/t2413-blank-in-stacked-arrays A1:A6, arrays.md T-2413 paragraph).

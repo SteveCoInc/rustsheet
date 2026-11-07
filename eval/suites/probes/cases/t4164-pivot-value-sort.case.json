@@ -1,0 +1,410 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4164: how Excel for the web orders ties, errors and blanks when a pivot field is sorted by a value. Data!A1:C9 has Product, Year and Sales: Kiwi 2024 10, Kiwi 2025 20, Fig 2025 30, Plum 2024 5, Plum 2025 25, Apple 2024 50, Date 2024 -1, Date 2025 21. Product sums Kiwi 30, Fig 30, Plum 30 (a three-way tie: cache order Kiwi, Fig, Plum; alphabetical Fig, Kiwi, Plum), Apple 50, Date 20; for 2024 Kiwi 10, Fig blank (no record), Plum 5, Apple 50, Date -1; for 2025 Kiwi 20, Fig 30, Plum 25, Apple blank, Date 21. Each sheet is one builder-v2 pivot at A3, rows Product, Sum of Sales, sorted by the data field (autoSortScope): STd descending; STa ascending; STo descending with the field's `<item>` elements in the order Fig, Date, Plum, Apple, Kiwi (`item_order`; the cache keeps Kiwi, Fig, Plum, Apple, Date); STc and STca descending and ascending with the cache, and the items with it, written Plum, Fig, Kiwi, Apple, Date (`order`; the source order is still Kiwi, Fig, Plum); SCd and SCa descending and ascending by the 2024 column (columns Year, the scope's second reference Year item 0); SC2 descending by the 2025 column (Year item 1). Err!A1:B6 has Item and Amt A 5, B =NA(), C 9, D blank, E 2: SEd and SEa rows Item, Sum of Amt, descending and ascending by value. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4164",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0016",
+  "PV-0017",
+  "PV-1034",
+  "PV-1035",
+  "PV-1038",
+  "PV-1041",
+  "PV-1085"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Product",
+    "B1": "Year",
+    "C1": "Sales",
+    "A2": "Kiwi",
+    "B2": 2024,
+    "C2": 10,
+    "A3": "Kiwi",
+    "B3": 2025,
+    "C3": 20,
+    "A4": "Fig",
+    "B4": 2025,
+    "C4": 30,
+    "A5": "Plum",
+    "B5": 2024,
+    "C5": 5,
+    "A6": "Plum",
+    "B6": 2025,
+    "C6": 25,
+    "A7": "Apple",
+    "B7": 2024,
+    "C7": 50,
+    "A8": "Date",
+    "B8": 2024,
+    "C8": -1,
+    "A9": "Date",
+    "B9": 2025,
+    "C9": 21
+   }
+  },
+  {
+   "name": "Err",
+   "cells": {
+    "A1": "Item",
+    "B1": "Amt",
+    "A2": "A",
+    "B2": 5,
+    "A3": "B",
+    "B3": "=NA()",
+    "A4": "C",
+    "B4": 9,
+    "A5": "D",
+    "A6": "E",
+    "B6": 2
+   }
+  },
+  {
+   "name": "STd",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_STd",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "STa",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_STa",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "ascending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "STo",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_STo",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        },
+        "item_order": [
+         "Fig",
+         "Date",
+         "Plum",
+         "Apple",
+         "Kiwi"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "STc",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_STc",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        },
+        "order": [
+         "Plum",
+         "Fig"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "STca",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_STca",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "ascending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        },
+        "order": [
+         "Plum",
+         "Fig"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SEd",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SEd",
+     "source": "Err!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Item"
+      ],
+      "data": [
+       {
+        "field": "Amt"
+       }
+      ],
+      "fields": {
+       "Item": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SEa",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SEa",
+     "source": "Err!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Item"
+      ],
+      "data": [
+       {
+        "field": "Amt"
+       }
+      ],
+      "fields": {
+       "Item": {
+        "attrs": {
+         "sortType": "ascending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SCd",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SCd",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"2\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference><reference field=\"1\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      },
+      "columns": [
+       "Year"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SCa",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SCa",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "ascending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"2\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference><reference field=\"1\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      },
+      "columns": [
+       "Year"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SC2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SC2",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"2\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference><reference field=\"1\" count=\"1\" selected=\"0\"><x v=\"1\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      },
+      "columns": [
+       "Year"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A40)"
+   }
+  }
+ ],
+ "expected": {}
+}

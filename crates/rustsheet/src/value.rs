@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use rustsheet_engine::expressions::token::Error as EngineError;
+use rustsheet_engine::pivot::PivotCell;
 use rustsheet_engine::types::{Cell, FormulaValue, SpillValue};
 use rustsheet_engine::Text;
 
@@ -244,6 +245,15 @@ impl Value {
     /// See [`CellView::of`] for how engine cells map to values.
     pub(crate) fn from_cell(cell: &Cell, shared_strings: &[String]) -> Self {
         CellView::of(cell, shared_strings).to_value()
+    }
+
+    /// The value of a cell the engine's pivot renderer makes (`rustsheet_engine::pivot::render`).
+    pub(crate) fn from_pivot_cell(cell: PivotCell) -> Self {
+        match cell {
+            PivotCell::Text(text) => Self::Text(text.into()),
+            PivotCell::Number(n) => Self::Number(n),
+            PivotCell::Error(error) => Self::Error(ErrorKind::from_engine(&error).into()),
+        }
     }
 }
 

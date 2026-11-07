@@ -298,6 +298,44 @@ fn a_filtered_table_without_a_criterion_exports_its_visible_values() {
     }
 }
 
+/// With every data row hidden, the API-filtered table is written with a custom filter that keeps
+/// no row: Excel reads the empty `<filters/>` the values form would give as no criterion, and
+/// this one as filtered (excel-graph, T-4749). Our import reads both the same way.
+#[test]
+fn a_filtered_table_with_every_row_hidden_exports_a_filter_that_keeps_none() {
+    let mut model = new_empty_model();
+    for (row, input) in [(1, "Qty"), (2, "1"), (3, "2")] {
+        model.set_user_input(0, row, 1, input.to_string()).unwrap();
+    }
+    model.add_table(0, "Sales", (1, 1, 3, 1), true).unwrap();
+    model.set_row_hidden(0, 2, true).unwrap();
+    model.set_row_hidden(0, 3, true).unwrap();
+    for (row, function) in [(5, 9), (6, 109)] {
+        model
+            .set_user_input(0, row, 3, format!("=SUBTOTAL({function},Sales[Qty])"))
+            .unwrap();
+    }
+    model.evaluate();
+    let temp_file_name = "temp_file_test_filtered_table_all_hidden.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let table_xml = part_text(temp_file_name, "xl/tables/table1.xml");
+    let mut reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+
+    assert!(
+        table_xml.contains(
+            r#"<filterColumn colId="0"><customFilters and="1"><customFilter val="a"/><customFilter operator="notEqual" val="a"/></customFilters></filterColumn>"#
+        ),
+        "{table_xml}"
+    );
+    assert!(reloaded.workbook.tables["Sales"].has_filters);
+    reloaded.evaluate();
+    for row in [5, 6] {
+        assert_eq!(reloaded.get_formatted_cell_value(0, row, 3).unwrap(), "0");
+        assert_eq!(model.get_formatted_cell_value(0, row, 3).unwrap(), "0");
+    }
+}
+
 #[test]
 fn tables_on_two_sheets_get_their_own_parts() {
     let mut model = new_empty_model();
@@ -703,6 +741,45 @@ fn deleting_the_filtered_column_unfilters_the_table() {
     let table_xml = part_text(temp_file_name, "xl/tables/table1.xml");
     fs::remove_file(temp_file_name).unwrap();
     assert!(!table_xml.contains("filterColumn"), "{table_xml}");
+}
+
+/// A table loaded from a file with two criteria (values filters on Cat and Tag) keeps the rows
+/// the kept criterion rejects when a column delete takes the other, and shows the rest, as Excel
+/// does (probes/t4755-two-criteria-filtered-table-delete-one, T-4803).
+#[test]
+fn deleting_one_of_two_criteria_from_a_file_shows_the_rows_it_alone_hid() {
+    let mut model = new_empty_model();
+    let columns = [("Cat", ["a", "b", "a", "c"]), ("Val", ["1", "2", "3", "4"])];
+    for (column, (header, values)) in
+        (1..).zip(columns.iter().chain([&("Tag", ["x", "x", "y", "x"])]))
+    {
+        model
+            .set_user_input(0, 1, column, (*header).to_string())
+            .unwrap();
+        for (row, value) in (2..).zip(values) {
+            model
+                .set_user_input(0, row, column, (*value).to_string())
+                .unwrap();
+        }
+    }
+    model.add_table(0, "Sales", (1, 1, 5, 3), true).unwrap();
+    model.filter_table_column("Sales", 0, &[3]).unwrap();
+    model.filter_table_column("Sales", 2, &[4]).unwrap();
+    for row in [3, 4] {
+        model.set_row_hidden(0, row, true).unwrap();
+    }
+    let temp_file_name = "temp_file_test_two_criteria.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let mut reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+    assert_eq!(reloaded.workbook.tables["Sales"].filter_columns.len(), 2);
+
+    reloaded.delete_columns(0, 1, 1).unwrap();
+    let table = &reloaded.workbook.tables["Sales"];
+    assert!(table.has_filters);
+    assert_eq!(table.filter_columns.len(), 1);
+    assert!(!reloaded.is_row_hidden(0, 3).unwrap());
+    assert!(reloaded.is_row_hidden(0, 4).unwrap());
 }
 
 /// A column edit never makes a table filtered: one whose only filterColumn has no criterion is

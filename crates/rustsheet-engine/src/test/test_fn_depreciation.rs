@@ -307,8 +307,9 @@ fn fn_vdb_fractional_start_bits() {
 }
 
 // Where straight line already wins at period 0, the whole window charges `(cost - salvage)/life`
-// as one product `n·sl`, a fractional start included (financial.md "VDB charge order";
-// accuracy/VDB/s1 and gen-m9/67a4c03afd63f988 A334, excel-graph, T-4111, T-4510).
+// as one product `(end - start)·sl`, whatever the start (financial.md "VDB charge order";
+// accuracy/VDB/s1, gen-m9/67a4c03afd63f988 A334 and probes/t4724-vdb-straight-from-zero W A7, a
+// whole start with a fractional end; excel-graph, T-4111, T-4510, T-4724).
 #[test]
 fn fn_vdb_straight_line_from_period_zero_bits() {
     let mut model = new_empty_model();
@@ -334,6 +335,10 @@ fn fn_vdb_straight_line_from_period_zero_bits() {
         "=VDB(9.95316729348141,4.66310160542375,20,16.3,16.5,0.334748293043145)",
     );
     model._set("A7", "=VDB(86661,45,37,0,6,0.2)");
+    model._set(
+        "A8",
+        "=VDB(4510.05703893478,2761.5898014473,19,14,17.5067437509898,0.236648520946425)",
+    );
     model.evaluate();
     let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
         Ok(CellValue::Number(n)) => n.to_bits(),
@@ -347,6 +352,7 @@ fn fn_vdb_straight_line_from_period_zero_bits() {
     assert_eq!(bits("A5"), 1_430_452.463_775_779_1_f64.to_bits());
     assert_eq!(bits("A6"), 0.052_900_656_880_576_415_f64.to_bits());
     assert_eq!(bits("A7"), 14_045.837_837_837_837_f64.to_bits());
+    assert_eq!(bits("A8"), 322.706_660_993_137_8_f64.to_bits());
 }
 
 // RRI and DURATION use Excel's own operators (financial.md "DURATION and RRI operation order";

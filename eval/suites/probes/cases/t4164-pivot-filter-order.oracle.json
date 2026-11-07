@@ -1,0 +1,1766 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_HT",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "HT",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_HP",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "HP",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_LT1",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "LT1",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_TL1",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "TL1",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_LT0",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "LT0",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_TL0",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "TL0",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_LP1",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "LP1",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_VT",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "VT",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 40.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_TV1",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "TV1",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "40"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_VT0",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "VT0",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 40.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_TV0",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "TV0",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "40"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_PL1",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "PL1",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_LP0",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "LP0",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Kiwi"
+      },
+      {
+       "t": "s",
+       "v": "Apple"
+      },
+      {
+       "t": "s",
+       "v": "Fig"
+      },
+      {
+       "t": "s",
+       "v": "Date"
+      },
+      {
+       "t": "s",
+       "v": "Lime"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "50",
+      "minValue": "10"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Kiwi"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Fig"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 40.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 70.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "P_PL0",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "PL0",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "Kiwi",
+    "A5": "Fig",
+    "A6": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "40",
+    "B5": "30",
+    "B6": "70"
+   }
+  }
+ ],
+ "sheets": {
+  "Data": {},
+  "HP": {},
+  "HT": {},
+  "LP0": {},
+  "LP1": {},
+  "LT0": {},
+  "LT1": {},
+  "PL0": {},
+  "PL1": {},
+  "Q": {
+   "A1": {
+    "t": "n",
+    "v": 5.0
+   }
+  },
+  "TL0": {},
+  "TL1": {},
+  "TV0": {},
+  "TV1": {},
+  "VT": {},
+  "VT0": {}
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "67fbc0c54921bbad2f8f1ce22d366fa398e39b080385955bcab2fd26ff2cb104",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-07T06:56:56+00:00",
+  "version": null,
+  "workbook_name": "aab96a7ee69b31a4664b5556f14d4d2847bd72c279a4d7024b63a412abfe8ee6.xlsx"
+ }
+}

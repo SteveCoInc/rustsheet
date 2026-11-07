@@ -10,6 +10,8 @@
 
 use bitcode::{Decode, Encode};
 
+use super::filter::{AutoShow, PivotFilter};
+
 /// `dataField@baseItem` when absent: no base item (MS-OI29500 §18.10.1.22, §18.10.1.44).
 pub const NO_BASE_ITEM: u32 = 1_048_832;
 
@@ -38,6 +40,10 @@ pub struct PivotTable {
     pub data_fields: Vec<DataField>,
     /// The pivot-wide layout flags and captions.
     pub options: PivotOptions,
+    /// `<filters>`, in file order (`pivot::filter`). The importer reads them from the
+    /// `<filters>` element it keeps in [`PivotTable::opaque`], which is what the export writes
+    /// (T-4165).
+    pub filters: Vec<PivotFilter>,
     /// The definition's elements and attributes the model does not read, verbatim.
     ///
     /// The export (T-4176) writes each entry back into the part as it is, unescaped and
@@ -64,6 +70,7 @@ impl PivotTable {
             page_fields: Vec::new(),
             data_fields: Vec::new(),
             options: PivotOptions::default(),
+            filters: Vec::new(),
             opaque: Vec::new(),
         }
     }
@@ -131,6 +138,11 @@ pub struct PivotOptions {
     pub page_wrap: u32,
     /// `pageOverThenDown` (default off): page fields fill across before down.
     pub page_over_then_down: bool,
+    /// `gridDropZones` (default off): the classic layout, which keeps a column-header row
+    /// above the row fields' header even with no column field, heads that row's empty column
+    /// line `Total`, and puts the data caption at the location's corner
+    /// (docs/excel-semantics/pivots.md "Classic layout (gridDropZones)").
+    pub grid_drop_zones: bool,
 }
 
 impl Default for PivotOptions {
@@ -154,6 +166,7 @@ impl Default for PivotOptions {
             error_caption: None,
             page_wrap: 0,
             page_over_then_down: false,
+            grid_drop_zones: false,
         }
     }
 }
@@ -194,8 +207,18 @@ pub struct PivotField {
     /// export writes (docs/excel-semantics/pivots.md "Repeat item labels",
     /// probes/t4698-pivot-repeat-labels).
     pub fill_down_labels: bool,
+    /// `subtotalCaption`: the label of each of the field's default subtotal lines, in place of
+    /// `<item> Total`, a `?` in it standing for the item (docs/excel-semantics/pivots.md
+    /// "subtotalCaption labels a field's subtotal lines", probes/t4129-pivot-layout-flags SC,
+    /// probes/t4745-pivot-classic-subtotal-caption).
+    pub subtotal_caption: Option<String>,
     /// `<items>`, in file order: the order the field shows its items in.
     pub items: Vec<PivotItem>,
+    /// The legacy `AutoShow` (`autoShow`, `itemPageCount`, `topAutoShow`, `rankBy`), when
+    /// `autoShow` is on: a count Top-N on the field (`pivot::filter`). The importer reads it from
+    /// the field's attributes it keeps in [`PivotTable::opaque`], which is what the export writes
+    /// (T-4165).
+    pub auto_show: Option<AutoShow>,
 }
 
 impl Default for PivotField {
@@ -222,7 +245,9 @@ impl PivotField {
             insert_blank_row: false,
             number_format: None,
             fill_down_labels: false,
+            subtotal_caption: None,
             items: Vec::new(),
+            auto_show: None,
         }
     }
 

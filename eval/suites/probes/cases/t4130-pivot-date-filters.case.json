@@ -1,0 +1,769 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4130: does Excel for the web open and apply each fixed date filter type of a pivot? Data!A1:B14 has Date (m/d/yyyy, DATE formulas, so the builder caches them as missing: with literal dates cached as numbers Excel drops a dateEqual filter, DLit; pivots.md) and Sales: one date per month of 2024 (45306 + 31k, 1/15/2024 to 12/21/2024) with Sales 1 to 12, then 1/10/2025 (45667) with 13. Each sheet is one builder-v2 pivot at A3, rows Date, Sum of Sales, with one `<filter fld=\"0\">`: DEq dateEqual 45399 (4/17/2024); DNe dateNotEqual it; DOld dateOlderThan it; DOldEq dateOlderThanOrEqual it; DNt dateNewerThan 45492 (7/19/2024); DNte dateNewerThanOrEqual it; DBt dateBetween the two; DNbt dateNotBetween them; M1 to M12 the month filters and Q1 to Q4 the quarter filters (dynamicFilter); DWd dateEqual 45399 with the x15 pivotFilter extension useWholeDay 1; DLit dateEqual 45399 over Lit!A1:B14, the same dates as literal numbers (m/d/yyyy), which the builder caches as `<n>` items. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4130",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0042",
+  "PV-0043",
+  "PV-0044",
+  "PV-0045",
+  "PV-0046",
+  "PV-0047",
+  "PV-0048",
+  "PV-0049",
+  "PV-0050",
+  "PV-0051",
+  "PV-0052",
+  "PV-0053",
+  "PV-0054",
+  "PV-0055",
+  "PV-0056",
+  "PV-0057",
+  "PV-0073",
+  "PV-0074",
+  "PV-0075",
+  "PV-0076",
+  "PV-0077",
+  "PV-0078",
+  "PV-0079",
+  "PV-0080",
+  "PV-0913",
+  "PV-0916",
+  "PV-1479",
+  "PV-1480"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Date",
+    "B1": "Sales",
+    "A2": "=DATE(2024,1,15)",
+    "B2": 1,
+    "A3": "=DATE(2024,2,15)",
+    "B3": 2,
+    "A4": "=DATE(2024,3,17)",
+    "B4": 3,
+    "A5": "=DATE(2024,4,17)",
+    "B5": 4,
+    "A6": "=DATE(2024,5,18)",
+    "B6": 5,
+    "A7": "=DATE(2024,6,18)",
+    "B7": 6,
+    "A8": "=DATE(2024,7,19)",
+    "B8": 7,
+    "A9": "=DATE(2024,8,19)",
+    "B9": 8,
+    "A10": "=DATE(2024,9,19)",
+    "B10": 9,
+    "A11": "=DATE(2024,10,20)",
+    "B11": 10,
+    "A12": "=DATE(2024,11,20)",
+    "B12": 11,
+    "A13": "=DATE(2024,12,21)",
+    "B13": 12,
+    "A14": "=DATE(2025,1,10)",
+    "B14": 13
+   },
+   "number_formats": {
+    "A2": "m/d/yyyy",
+    "A3": "m/d/yyyy",
+    "A4": "m/d/yyyy",
+    "A5": "m/d/yyyy",
+    "A6": "m/d/yyyy",
+    "A7": "m/d/yyyy",
+    "A8": "m/d/yyyy",
+    "A9": "m/d/yyyy",
+    "A10": "m/d/yyyy",
+    "A11": "m/d/yyyy",
+    "A12": "m/d/yyyy",
+    "A13": "m/d/yyyy",
+    "A14": "m/d/yyyy"
+   }
+  },
+  {
+   "name": "Lit",
+   "cells": {
+    "A1": "Date",
+    "B1": "Sales",
+    "A2": 45306,
+    "B2": 1,
+    "A3": 45337,
+    "B3": 2,
+    "A4": 45368,
+    "B4": 3,
+    "A5": 45399,
+    "B5": 4,
+    "A6": 45430,
+    "B6": 5,
+    "A7": 45461,
+    "B7": 6,
+    "A8": 45492,
+    "B8": 7,
+    "A9": 45523,
+    "B9": 8,
+    "A10": 45554,
+    "B10": 9,
+    "A11": 45585,
+    "B11": 10,
+    "A12": 45616,
+    "B12": 11,
+    "A13": 45647,
+    "B13": 12,
+    "A14": 45667,
+    "B14": 13
+   },
+   "number_formats": {
+    "A2": "m/d/yyyy",
+    "A3": "m/d/yyyy",
+    "A4": "m/d/yyyy",
+    "A5": "m/d/yyyy",
+    "A6": "m/d/yyyy",
+    "A7": "m/d/yyyy",
+    "A8": "m/d/yyyy",
+    "A9": "m/d/yyyy",
+    "A10": "m/d/yyyy",
+    "A11": "m/d/yyyy",
+    "A12": "m/d/yyyy",
+    "A13": "m/d/yyyy",
+    "A14": "m/d/yyyy"
+   }
+  },
+  {
+   "name": "DEq",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DEq",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"45399\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DNe",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DNe",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateNotEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"45399\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DOld",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DOld",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateOlderThan\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThan\" val=\"45399\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DOldEq",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DOldEq",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateOlderThanOrEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThanOrEqual\" val=\"45399\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DNt",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DNt",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateNewerThan\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThan\" val=\"45492\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DNte",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DNte",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateNewerThanOrEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThanOrEqual\" val=\"45492\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DBt",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DBt",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateBetween\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters and=\"1\"><customFilter operator=\"greaterThanOrEqual\" val=\"45399\"/><customFilter operator=\"lessThanOrEqual\" val=\"45492\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DNbt",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DNbt",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateNotBetween\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThan\" val=\"45399\"/><customFilter operator=\"greaterThan\" val=\"45492\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M1",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M1\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M1\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M2",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M2\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M2\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M3",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M3\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M3\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M4",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M4",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M4\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M4\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M5",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M5",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M5\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M5\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M6",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M6",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M6\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M6\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M7",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M7",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M7\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M7\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M8",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M8",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M8\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M8\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M9",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M9",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M9\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M9\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M10",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M10",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M10\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M10\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M11",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M11",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M11\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M11\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M12",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_M12",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"M12\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"M12\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_Q1",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"Q1\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"Q1\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_Q2",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"Q2\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"Q2\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_Q3",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"Q3\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"Q3\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q4",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_Q4",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"Q4\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"Q4\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DLit",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DLit",
+     "source": "Lit!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"45399\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DWd",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DWd",
+     "source": "Data!A1:B14",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"45399\"/></customFilters></filterColumn></autoFilter><extLst><ext uri=\"{0605FD5F-26C8-4aeb-8148-2DB25E43C511}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:pivotFilter useWholeDay=\"1\"/></ext></extLst></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A20)"
+   }
+  }
+ ],
+ "expected": {}
+}

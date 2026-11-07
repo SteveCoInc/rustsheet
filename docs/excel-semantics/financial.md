@@ -97,10 +97,19 @@ Evidence (excel-graph, 2026-11-04, T-4146; generator, forms and scorer in docs/r
 - probes/t4146-annuity-twice-fresh: 120 calls drawn with a new seed after the form was frozen, committed before
   the fill: twice-rounded 120/120 bit-exact, plain 0, correctly rounded 0.
 - No other FV, PV or RATE oracle cell changed (`make eval-baseline`: probes fixed 1, regressions 0).
-Ours: `compute_future_value` and `fn_pv` with `annuity_factor_rounded` (functions/financial/annuity.rs).
-Status: VERIFIED (excel-graph; integer nper, rate ≠ 0. rate = 0 and non-integer nper keep their forms, unprobed
-here)
-Tasks: T-4146, T-3424
+- Non-integer nper too (T-4244): probes/t4244-fv-pv-nonint-nper, 80 cancelling calls with nper an integer plus a
+  fraction (`gen_probe.py ... nonint`, seed t4244-nonint-1), predictions in `docs/research/t4244/predictions.tsv`
+  committed before the fill (excel-graph, 2026-11-07). Twice-rounded bit-exact on all 80 (FV 24/24 train and 16/16
+  test, PV 29/29 and 11/11), plain doubles 0 (PV within 4 ulp on 6 of 40), the correctly rounded value 0. So P is
+  Excel's `^` of the double `1+r` at a fractional exponent, and the operators are the same as at integer nper.
+  These cancelling calls amplify the rounding: Excel is more than 1e-4 from the 80-digit math on 12 of the 80 (A18
+  `-2.42076...` against -1.64630..., A42, A58), more than 1e-9 on 50. Excel kept as the target (decision 0300): the
+  engine matches Excel there, and no point needs it to leave Excel.
+Ours: `compute_future_value` and `fn_pv` with `annuity_factor_rounded` (functions/financial/annuity.rs), at every nper
+since T-4146.
+Status: VERIFIED (excel-graph; integer and non-integer nper, rate ≠ 0. rate = 0 keeps its own form, `-fv - pmt*nper`,
+unprobed for cancellation here)
+Tasks: T-4146, T-3424, T-4244
 
 ## PMT, IPMT and PPMT are the exact payment
 Rule: Excel's PMT, IPMT and PPMT are within a few ulp of the exact value of the payment on the
@@ -510,16 +519,23 @@ nper + 1 is a value, the split of "IPMT and PPMT split Excel's discounted paymen
 60.5849877072275,1)` 5.466510612214358. At nper + 1 it is `#NUM!`: `PPMT(0.0449398904217299,315,314,-3107.59202412783,
 0,1)`, `PPMT(0.0805588428682658,227,226,16.1638393072709,0,0)` and `IPMT(0.0104741966355263,249,248,340880.668375193,0,0)`;
 so is a period of 0.5 (`IPMT(0.00268654404805728,0.5,11,-557.559050130903,0,0)`), 0 or -1.
-Unprobed: IPMT at a period strictly between nper and nper + 1 (the engine takes PPMT's bound for both). The only IPMT
-cells in that band, probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,1E-300)`, period 1 over nper 1E-10),
-are `#NUM!` for a subnormal `1-Q` ("IPMT is #NUM! where its discounted balance fails"), so they do not settle the band;
-the Gate A definition keeps the closed form there and the cells keep their math value (T-4516).
+IPMT shares PPMT's band (T-4530): at a period strictly between nper and nper + 1 it is a value, the interest half of
+the same discounted split. `IPMT(0.05,12.5,12,-1234.56789,98.7654321,0)` is 8.026614067003484,
+`IPMT(0.05,12.000000001,12,..)` 11.040527695008135 and `IPMT(0.05,(13-2^-49),12,..)`, the double below nper + 1,
+4.938271605000011; rates 0, 1E-10 and -0.5, types 0 and 1 and nper 12.5 alike, with no `#NUM!` anywhere in the band.
+The engine's split was predicted bit for bit on all 160 cells before the fill (H_value, against H_nper: IPMT `#NUM!`
+past nper). probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,1E-300)`, period 1 over nper 1E-10) are
+`#NUM!` for a subnormal `1-Q` ("IPMT is #NUM! where its discounted balance fails"), not for the band; the Gate A
+definition keeps the closed form there and the cells keep their math value (T-4516).
 Evidence: accuracy/PPMT/s1 A112, A118 (values), A128, A137, A139 (`#NUM!`); accuracy/IPMT/s1 A113, A114, A117, A120,
 A123, A139 (`#NUM!`) (excel-graph, 2026-11-06, T-4109); gen-m9 a91bad4e84f49739 A354 `PPMT(1,0.5,323,401723)` and
 c0681a8b150ce301 A375 `PPMT(0.1,9,1.5,404118,62,1)` (`#NUM!`); "Financial edge-pool smoke check" (IPMT 13 of 12).
-Status: VERIFIED (excel-graph) for PPMT; IPMT's band UNVERIFIED
+probes/t4530-ipmt-band A1:J16 (IPMT and PPMT side by side at periods nper, nper + 1E-9, nper + 0.5, nper + 0.999 and
+the double below nper + 1; excel-graph, 2026-11-07; predictions in `docs/research/t4530/predictions.tsv` committed
+before the fill; math values in its `.math.json`).
+Status: VERIFIED (excel-graph) for PPMT and IPMT
 Implemented in: `period_payments` (`period >= period_count + 1.0`, functions/financial/annuity.rs)
-Tasks: T-4109
+Tasks: T-4109, T-4530
 
 ## PDURATION's domain
 Rule: `PDURATION(rate, pv, fv)` is `(LN(fv) - LN(pv)) / LN(1+rate)`, with `1+rate` a double. A rate, pv or fv of 0 or
@@ -946,8 +962,15 @@ steps. IRR's secant takes at most 50 steps per run (200 on the flows where Excel
 at most 50 steps ("IRR's fallback when the secant fails"; Excel's own cap there lies between 29 and 119). A run that reaches its
 cap gives `#NUM!` (or, for IRR, moves on to the next stage). Every oracle cell of the fit sets finishes
 well inside the caps.
-Evidence: none for Excel; this is a resource limit, not an Excel observation. Probing Excel's caps, the
-fallback path and overflowing trial rates is T-1686.
+Evidence: none for Excel's caps themselves; the engine's caps are resource limits, not Excel observations. Probing
+Excel's caps, the fallback path and overflowing trial rates is T-1686. Excel runs past the 50 steps the engine allows
+outside `IRR_LONG_RUN_RANGE` (6..54 flows), on longer series:
+- On 61 flows, the secant from guesses -0.9..-0.5 converges at its 54th to 195th step to Excel's bits on all 18 cells
+  (probes/t4844-irr-guess-ladder P!A393:A401, the annuity t3406-irr-num-boundary A75, 57 to 195 steps; P!A432:A440,
+  A77, 54 to 192 steps). The engine is `#NUM!` there.
+- On t3406 A51 padded to 592 to 928 flows (probes/t4844-irr-pad-ladder P!A32:A34), Excel is `#DIV/0!`: its failing run
+  from 0.1 reaches the step-62 point whose discount underflows. The engine stops at step 50 and is `#NUM!`.
+These 21 cells are T-4839's (excel-graph, 2026-11-07).
 Status: DEVIATION (decision 0014)
 Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`irr_secant_steps`),
 `irr_fallback` (`IRR_FALLBACK_STEPS`) (functions/financial/financial_util.rs)
@@ -4511,9 +4534,13 @@ build the per-period charges differently, so the same inputs give different last
   A187, A188, A189, A200, factors 0.10 to 0.60 and starts 0.5 to 53.25; excel-graph, 2026-11-06), and it changes no
   probe or gen-m9 VDB cell (T-4111 ran it over the 257 literal one-call VDB eval cells with a math value). `(end - start)·(cost - salvage)/life`, rounding
   the product first, is one ulp off at A187 and at gen-m9/67a4c03afd63f988 A334 (`VDB(86661,45,37,0,6,0.2)`,
-  14045.837837837837), a whole start. Implemented (T-4510) for a fractional start only, the six points that
-  show the change. A whole start keeps the schedule, the same `sl` from period 0 (A119). The order with a fractional
-  end there, and factor 0 from a fractional start, are not evidenced yet (T-4724).
+  14045.837837837837), a whole start. The same single product holds for a whole start with a fractional end: 3 of the 30
+  cells of probes/t4724-vdb-straight-from-zero sheet W (A7, A15, A20) tell the schedule (`share = end - start - n`,
+  `share·sl + n·sl`) from the product, by 1 ulp each, and Excel gives the product on all 3; the other 27 agree under
+  both. Factor 0 from a fractional start is T-4111's `(end - start)·(c - s)/life`, not the fractional grid's
+  `/(life - f)` (sheet F, 20 of 20). Both excel-graph, 2026-11-07, predictions in docs/research/t4724. Factor 0 with a
+  whole start and a fractional end is inferred from the two, not probed. Implemented (T-4510, T-4724) for every
+  start.
 Evidence: probes/fin-vdb-schedule (78 cells), fin-vdb-modes, fin-rri-vdb-edges (excel-graph, 2026-10-20, T-1975);
 fin-vdb-fractional-start (45 cells), fin-vdb-fractional-start-edges (14 cells) (excel-graph, 2026-10-28, T-2185);
 fin-vdb-amordegrc-edges A1-A59 (excel-graph, 2026-10-30, T-1978): salvage at or above cost in both modes (switching
@@ -4522,9 +4549,9 @@ equal to cost give 0 everywhere), fractional windows near the end of life (`VDB(
 3.0082099200000414, TRUE 11.061273600000135), and a fractional life 9.5 (an end past it is #NUM!, factor 3 reaches the
 salvage before period 8). The model already matched all 59 cells.
 Status: VERIFIED (excel-graph)
-Implemented (T-1975, T-2185, T-4510): `vdb_no_switch_between` and `vdb_switching_between` in
+Implemented (T-1975, T-2185, T-4510, T-4724): `vdb_no_switch_between` and `vdb_switching_between` in
 functions/financial/financial_depreciation.rs.
-Tasks: T-1975, T-2185, T-3022, T-4111, T-4510
+Tasks: T-1975, T-2185, T-3022, T-4111, T-4510, T-4724
 
 ## AMORDEGRC life bands
 Rule: AMORDEGRC refuses (#NUM!) an asset life `1/rate` of 2 or less, that is a rate of 0.5 or more, and nothing else
@@ -4925,12 +4952,92 @@ the engine's stop. What decides which iterate Excel returns, and when it is `#NU
   docs/research/t3411/gen_sweep.py): Excel returns a number on 104 and `#NUM!` on 46. The branch's engine returned 59
   of the 104 (57 bit-exact) and was `#NUM!` on 45 where Excel returns a root (T-3548's type rule); T-4232 owns the
   visibly-off cells. On main (the stop iterate) the case scores 102 of 150 (56 of the 104 numbers bit-exact).
+- Re-measured on main 22a804e85 (after T-3408's 200-step secant, decision 0320), over all 4,336 IRR cells with an
+  Excel value (3,436 of eval/suites and Gate A's 900), the one-step-past return is still not Excel's rule (T-4213,
+  2026-11-07). It makes 15 cells bit-exact: the 12 above, plus t4213-irr-r4-fresh A95 and Gate A r4-T-3407 A285 and
+  r4-T-3411 A286. Three cells move away from Excel:
+  - t3411-irr-r4-fresh A129 (bit-exact to 2.2E-16 off);
+  - Gate A s1 A275, `-8.620634135425576E-7` in Excel and on main, -8.62063413320513E-7 one step past (2.2E-16 off,
+    still inside the envelope);
+  - t2927-irr-fallback-sweep A46, from 4 ulp to 6 ulp, past the 15th digit.
+
+  On Excel's two stop-iterate cells, the step past is 1 ulp of v, and it lowers |P|: A129 6.1E-5 to 3.05E-5, A275
+  9.5E-7 to 1.2E-7. The same holds on the winners (A44 3.6E-7 to 2.4E-7, -1 ulp). Nothing else separates them either:
+  steps 10 and 21 against 2 to 43 on the winners, flows 5 and 11 against 2 to 14, largest |c| 1E+9 and 1.5E+11.
+  Taking the extra step only when it keeps the stopping step's direction is the one rule found that keeps A129 on the
+  fit lab's train side. It is refuted on the test side: it still loses A275 and drops A286.
 Evidence: the oracle values of the cases above; `python3 -I docs/research/t3411/fallback_iterates.py .` prints the
 counts of the first four points, each iterate's step and stopping step size (an exact replay of the engine's
 secant, then Newton from v = 0). The NPV variants and the Illinois and two-point secants were scratch code.
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
 Ours: `irr_fallback` stops at the first step under 1e-7 max(|v|, 1) within 50 steps; unchanged.
 Tasks: T-3411, T-4213, T-4386
+
+## IRR's second stage ignores the guess and reads only NPV's values (T-4844)
+Rule (partial; the stage's method is still unknown): where IRR's secant from the guess fails, Excel's value does not
+depend on the guess. IRR first runs the secant of "IRR is a secant in d" from the guess. When that run fails, the value comes
+from a stage that sees only the flows' NPV values, and that stage stops on the same absolute |NPV| < 1e-7 test. On
+long level annuities the engine's secant, run without its 50-step cap (the "exact replica" below, capped at 200 or 400
+steps), is Excel's to the bit, the failing runs included. The shipped secant stops at 50 steps on these 55+ flow
+series, outside `IRR_LONG_RUN_RANGE`, and misses 21 cells for that reason alone ("The IRR and XIRR solver caps").
+- **Guess ladder** (probes/t4844-irr-guess-ladder: 12 annuities of probes/t3406-irr-num-boundary, A6 A8 A10 A11 A28 A30
+  A32 A51 A53 A55 A75 A77, 21 to 61 flows, roots -0.06 to -0.22, each from 37 guesses -0.9..0.9 by 0.05).
+  - Every cell is a number. Excel gives the default call's bits on exactly the 227 guess cells where the engine's
+    secant from that guess fails (from about 0.05 up, and on a few lower guesses).
+  - It gives the secant's own bits, bit for bit with the engine's exact replica, on all 214 cells where that run
+    converges. On 3 more, the converged value happens to be the default's.
+  - The fixed point `IRR(flows, X)`, with X the default value passed by reference, is X itself on only 2 of the 12
+    (A118, A313). So X is not where Excel's secant from X stops.
+- **Padding ladder** (probes/t4844-irr-pad-ladder: four of the annuities, A6 A10 A51 A77, padded with trailing zeros to
+  N flows). Each is X up to the N at which the smallest 1 + r of the engine's failing run from 0.1 would underflow its
+  discount (x^(N-1) < 2^-1022): 892, 293, 580 and 183. It is `#DIV/0!` from the next grid point on (+2%: 910, 299,
+  592, 187). So:
+  - Excel's failing run makes the replica's excursions toward r = -1, and reaches at least its 62nd step: A51's
+    smallest x appears at step 62, and a run cut at step 40 would have moved the threshold to 724;
+  - no later stage visits a smaller 1 + r;
+  - "IRR is #DIV/0! where its secant cannot evaluate NPV" holds with trailing zeros, which shows the running product
+    covers the zero flows too.
+- **Path-invariant transforms** (probes/t4844-irr-stage-invariance, the same four annuities):
+  - 1, 2, 5 and 20 trailing zeros never move X. The stage depends on NPV's values, not on the number of flows.
+  - Flows times 2^k (exact; the secant's path in d is unchanged) leave X unchanged until |NPV(X)|·2^k reaches 1e-7,
+    with NPV the engine's `irr_npv`. For A6, |NPV(X)| is 1.37E-10 (crossing at 2^9.5) and X first moves at 2^10. A10's
+    is 8.3E-12 (crossing 2^13.6), and X has not moved by 2^10. A51's is 2.07E-10 (crossing 2^8.9), and X moves at 2^10.
+    A77's is 8.8E-8 (crossing 2^0.18), and X moves at 2^1.
+  - Past the crossing the value is the root to about 1E-15, and at 2^30 (flows near 4E+11) every one is `#NUM!`.
+  - Negating the flows moves X by 1E-13 to 6E-12 relative: the stage is not symmetric in NPV's sign, as the secant's
+    start offset (toward larger |NPV|) is not.
+- **The stage's iterates.** Excel's X sits 1E-17 to 6E-12 from the 50-digit root, with either sign. That is the
+  secant's last-step error under a 1e-7 step test, not bisection's (about 1E-8) or Newton's from above (its stop
+  iterates on these flows are within 1E-15 of the root).
+- **Refuted as the stage** on the 12 annuities and the 4 negated sets, in exact arithmetic with the engine's
+  twice-rounded NPV unless noted. The candidate scans are scratch code. docs/research/irr-2026-11-07/replay.py
+  reproduces the counts above (the 227/214 split, the fixed points, the padding thresholds, the 2^k crossings).
+  - Restarts from the failed run from 0.1: from any single iterate (the first 120), from any ordered pair of them
+    (plain doubles), and chains of up to 8 restarts from the last iterate, the older one, the smallest |NPV|, the
+    farthest point, the last far point or a bracket's midpoint.
+  - The secant from one fixed start, every start in -0.995..0.1 by 0.005. It also fails from starts derived from the
+    flows: (S+/S-)^(1/T) - 1 with T a cash-weighted time, the same with the last flow's index, and two simple-interest
+    forms.
+  - Newton on P(v) from v = 0 (Horner, separate P and P', or ascending powers, each plain or twice-rounded, with the
+    stop iterate or the one after), and the secant restarted from its iterates.
+  - The secant from 0.1 with these changes: anchored on the better point, keeping the best two points, backtracking
+    while |NPV| grows, regula falsi or Illinois once bracketed, a step capped at 0.1 to 1 in d, the VB runtime's
+    flat-secant nudge (three forms), or run in r with the VB pole clamp (r1 - 1)/2 (offsets 1e-3 and 1e-5, NPV as
+    c_i/x^i or worksheet NPV's c_i/x^(i+1)). Also Brent's method on the run's first bracket (in d and in r, tolerances
+    1e-7 to 1e-12). The secant from 0.1 ping-pongs between r of about 0.1 and about -0.5 to -0.9 in d, v, r and x
+    alike.
+- **Across the IRR probe cases** (the 26 of docs/research/irr-2026-11-07/feasibility.py plus these three; plain
+  doubles): 517 cells have both secant runs failing and Excel's value at least 1E-14 relative from the root. On 132 of
+  them, Excel's value is bit for bit an iterate of Newton on P(v) from v = 0 (plain Horner): the engine's stop iterate
+  on 96, the next one on 34, others on 2. Their errors have either sign (73 +, 59 -), so a Newton stage is real on
+  those cells. On the other 385, which include these annuities, it is not.
+Evidence: the three cases above (excel-graph, 2026-11-07), generated by
+docs/research/irr-2026-11-07/probes.py.
+Status: VERIFIED (excel-graph) for the cells and the stage's guess independence, its NPV-only input and its absolute
+1e-7 stop; the stage's method is UNVERIFIED (unknown)
+Ours: the secant, its retry from 0.1, then `irr_fallback` (Newton from v = 0, 50 steps), which is guess-independent
+too but gives the root's digits, not X's, on these annuities.
+Tasks: T-4844, T-4845, T-4836
 
 ## IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more
 Rule (partial; the type rule where both secant runs fail): where Excel's IRR reaches the root by the fallback (the
