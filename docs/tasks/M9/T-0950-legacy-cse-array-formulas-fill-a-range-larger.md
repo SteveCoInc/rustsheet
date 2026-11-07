@@ -3,7 +3,7 @@ id: T-0950
 title: "Legacy (CSE) array formulas fill a range larger than their result (repeat 1x1/row/column, #N/A elsewhere)"
 milestone: M9
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
