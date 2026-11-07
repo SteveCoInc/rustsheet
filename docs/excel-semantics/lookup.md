@@ -990,6 +990,15 @@ out-of-range index: the T-2273 entry).
       sheet `#VALUE!` (H7, H13), all Data `#N/A` (H8). `MAX` is 50 either order (H11, H12). A mixed XLOOKUP grid has
       a value hit, so only its reference element has a sheet: a reference on the formula's sheet is `#VALUE!` (H14)
       and one on Data `#N/A` (H15). `LARGE(CHOOSE({1;2},A1,Data!G1),1)` makes values, not references: 50 (H10).
+    - A first element that is an error or a value (probes/t4791-large-small-median-mixed-first-element, excel-graph
+      2026-11-07, T-4791; Local formulas, `INDIRECT` with `nosuch!A1` as the error element): `{"A1";"nosuch!A1";"Data!G1"}`
+      (own, error, off) is `#VALUE!` for LARGE, SMALL and MEDIAN (H1:H3), as the first-element rule says. With the error
+      first, `{"nosuch!A1";"A1";"Data!G1"}` is `#N/A` (H4:H6), **not** the element's `#REF!`, though a cell error value first
+      propagates (t4704). A value hit first, with the two misses lifted from `INDIRECT({"A1";"A1";"Data!G1"})` (own, off) or
+      `{"A1";"Data!G1";"A1"}` (off, own), is `#VALUE!` either way (H7:H12), so "the first reference element" would give
+      `#N/A` for the second order and is wrong; the lifted if_not_found may not pair by position, so the rule for a
+      value first is unresolved beyond: a value hit with an own-sheet reference is `#VALUE!` (H14 above, H7:H12).
+      Ours: H1:H3 and H7:H12 match; H4:H6 give `#REF!` (T-4862).
     - A text or TRUE hit beside the reference element is read as an array element: SUM, AVERAGE and COUNT skip it
       (50, 50, 0), AVERAGEA counts text as 0 and skips TRUE (25, 50), MAXA and MINA skip both (50, 50), and COUNTA
       is 2 (A50:A63; return C1:C3 or D1:D3 with C2 = "t", D2 = TRUE).

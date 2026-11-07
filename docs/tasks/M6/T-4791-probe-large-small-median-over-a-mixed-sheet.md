@@ -3,7 +3,7 @@ id: T-4791
 title: "Probe LARGE/SMALL/MEDIAN over a mixed-sheet grid whose first element is a value or an error: {own; error; off} and {value; own; off}"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -28,3 +28,12 @@ Code: `RefGrid::order_statistic_error` (crates/rustsheet-engine/src/reference_op
 
 ## Out of scope
 - Other readers (rule 3, rule 4).
+
+## Outcome
+Probe `t4791-large-small-median-mixed-first-element` (12 cells, excel-graph). {own; error; off} is `#VALUE!` and a
+value hit first is `#VALUE!` in both orders: all 9 cells already matched, so `order_statistic_error` is right for them.
+An INDIRECT `#REF!` element first beside an off-sheet reference is `#N/A` (H4:H6, ours `#REF!`); a cell error value
+still propagates (t4704), so the code change is T-4862. Recorded in lookup.md. Caveat: the value-first grids lift
+if_not_found from INDIRECT, which may not pair by position, so the value-first rule stays unresolved beyond
+"an own-sheet reference gives `#VALUE!`". Doc comment of `order_statistic_error` left as is (its error-first text is
+still true for cell errors).
