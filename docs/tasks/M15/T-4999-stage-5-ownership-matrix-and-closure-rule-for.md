@@ -3,7 +3,7 @@ id: T-4999
 title: "Stage 5: ownership matrix and closure rule for regenerated saves (SPEC-0034 D5.1, D5.2, D5.6)"
 milestone: M15
 lane: engine
-status: blocked
+status: in-progress
 priority: P2
 size: M
 tier: opus
@@ -47,8 +47,3 @@ The package plumbing already exists: `PartNames`, `parse_relationships` and `res
 ## Out of scope
 - Writing kept parts (T-5000, T-5002, T-5008 to T-5010).
 - Fragments (T-5001, T-5003).
-
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275): M15 waits until Phase 1 parity exits. Unblock when
-docs/status.md has the line `**Phase 1:** exited <date>`. An owner-directed session may claim it earlier
-(decision 0306).
