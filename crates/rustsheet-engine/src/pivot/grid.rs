@@ -386,6 +386,8 @@ impl Model {
         let area = source.ok_or(PivotCacheError::Source)?.area;
         let rows = (area.bottom - area.top) as usize + 1;
         budget.charge_work(rows.saturating_mul((area.right - area.left) as usize + 1))?;
+        // A field Excel added to group another is derived again over every record (T-4171).
+        budget.charge_work(rows.saturating_mul(old.added_group_count()))?;
         // The record values the other caches hold count against the workbook's limit.
         let others: usize = (0u32..)
             .zip(caches)

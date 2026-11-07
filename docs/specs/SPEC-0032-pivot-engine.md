@@ -134,7 +134,9 @@ success (see the limits). Its rules:
   which T-4141 depends on);
 - items follow the identity rules above, existing items keep their order and new ones are appended;
 - the `sharedItems` flags are recomputed;
-- groups are rebuilt by `number_groups`/`date_groups` and, for manual groups, by T-4171.
+- groups are rebuilt by `number_groups`/`date_groups`; a field Excel added to group another (a date
+  level, a manual group) keeps its base (`CacheField::added_group`) and is derived again from the base's
+  new values before the base is grouped in place (`pivot/added_groups.rs`, T-4171).
 
 A Table or a defined name resolves to its range at refresh (T-4506). `SourceCells` is a trait in
 `pivot/refresh.rs`, implemented by `Model` over the evaluated cell values. It reads values only, so a
