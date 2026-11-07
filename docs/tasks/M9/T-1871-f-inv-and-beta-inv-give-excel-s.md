@@ -3,7 +3,7 @@ id: T-1871
 title: "F.INV and BETA.INV give Excel's values where statrs' inversion saturates, panics or never finishes"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
