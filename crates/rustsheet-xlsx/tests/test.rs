@@ -487,8 +487,12 @@ fn test_pyopenxl_example() {
     let a2 = model.get_formatted_cell_value(0, 2, 1).unwrap();
     assert_eq!(a2, "2");
 
+    // openpyxl stores `CONCAT(...)` bare, without the `_xlfn.` prefix Excel needs for a function
+    // added after Excel 2007 (openpyxl's own docs say such formulas "must be prefixed with
+    // _xlfn. to work"), so Excel loads it as `#NAME?` (xlsx-storage.md "Newer functions need
+    // `_xlfn.` in the file", probes/catalog/function-name-forms A1, T-1089).
     let b1 = model.get_formatted_cell_value(0, 1, 2).unwrap();
-    assert_eq!(b1, "It is what it is");
+    assert_eq!(b1, "#NAME?");
 }
 
 fn assert_eq_ignoring_metadata_and_name(

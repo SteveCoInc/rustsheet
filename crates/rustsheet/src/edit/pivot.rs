@@ -11,10 +11,10 @@
 //! [`ChangeSet`]: super::ChangeSet
 
 use rustsheet_engine::pivot::{
-    read_source, regroup, Aggregate, Axis, AxisField, CacheField, CacheItem, CacheSource, CellArea,
-    DataField, DateGroupError, NumberGroupError, PivotBudget, PivotCache, PivotCacheError,
-    PivotComputeError, PivotField, PivotRefresh, PivotRefreshError, PivotSwap, PivotTable,
-    RangeGrouping, RegroupError, MAX_RECORD_VALUES,
+    keep_ungrouped, read_source, regroup, Aggregate, Axis, AxisField, CacheField, CacheItem,
+    CacheSource, CellArea, DataField, DateGroupError, NumberGroupError, PivotBudget, PivotCache,
+    PivotCacheError, PivotComputeError, PivotField, PivotRefresh, PivotRefreshError, PivotSwap,
+    PivotTable, RangeGrouping, RegroupError, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::Model;
 
@@ -226,8 +226,9 @@ fn pivot_fields(
         .collect()
 }
 
-/// Why a pivot table could not be created, set or refreshed ([`EditError::Pivot`]). The edit
-/// then fails and the workbook is as it was.
+/// Why a pivot table could not be created, set or refreshed ([`EditError::Pivot`]); the edit
+/// then fails and the workbook is as it was. The pivot reads (`Workbook::pivot_table_cells`,
+/// `Workbook::pivot_cell_records`) fail with it too.
 #[derive(thiserror::Error, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum PivotError {
@@ -289,6 +290,12 @@ pub enum PivotError {
     /// be renumbered under parts of its definition kept verbatim.
     #[error(transparent)]
     Refresh(PivotRefreshError),
+    /// [`Workbook::pivot_cell_records`](crate::Workbook::pivot_cell_records) was given a cell
+    /// that is none of the pivot's value cells: a label, a header, a page field, a cell outside
+    /// the pivot or on another sheet, a cell of a line that holds no values, or any cell of a
+    /// pivot with no data field or of one that collapses to `#SPILL!`.
+    #[error("the cell is not a value cell of the pivot table")]
+    NotAValueCell,
     /// Pivot parts the xlsx importer would skip, or past the workbook's pivot limits, and why:
     /// the doc-hidden `Workbook::load_pivot_parts`, harness support for the eval adapter.
     #[error("pivot parts: {0}")]
@@ -673,7 +680,10 @@ impl Txn<'_> {
                 return Err(PivotError::GroupedWithColumn.into());
             }
             if let Some(field) = cache.fields.get_mut(row as usize) {
-                *field = grouped(field, group)?;
+                // Grouped in place, it keeps its own values for the export (T-4734).
+                let base = std::mem::take(field);
+                let regrouped = grouped(&base, group)?;
+                *field = keep_ungrouped(base, regrouped);
             }
         }
         let fields = pivot_fields(&cache, row, column, [input.show_all, input.column_show_all]);

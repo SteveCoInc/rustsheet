@@ -43,6 +43,11 @@ pub(crate) enum CachedBlanks {
 /// data is `#BLOCKED!`").
 #[derive(Encode, Decode, Debug, PartialEq, Clone, Default)]
 pub struct ExternalBook {
+    /// Where the other workbook is: the `TargetMode="External"` target of the `externalBook`'s
+    /// relationship, as the source wrote it (`56737.xlsx`). The export writes it back so the
+    /// link keeps pointing at the same file (T-4143); it is never opened (directive 5). Empty
+    /// for a link that is not to a workbook (DDE, OLE) or whose part is missing.
+    pub target: String,
     /// Its sheet names in `sheetNames` order; a sheet's index here is its `sheetId` in the cache.
     pub sheet_names: Vec<String>,
     /// Its defined names; `sheet_id` is the index in `sheet_names` of a sheet-scoped name's sheet.
@@ -53,6 +58,11 @@ pub struct ExternalBook {
     /// a cell of one that the cache does not hold reads `#REF!`, not `#BLOCKED!`
     /// (`ERROR.TYPE('[1]56737'!$B$2)` is 4; fixtures/external-link-uncached-lookups Refs!B38, T-0472).
     pub refresh_error_sheets: Vec<u32>,
+    /// The sheets the cache holds a `sheetData` element for, an empty one included, in document
+    /// order. Excel writes none for some sheets (fixtures/external-link-uncached-lookups has none
+    /// for sheet 3 and an empty one for sheet 4), and the export writes back the same elements
+    /// (T-4143).
+    pub data_sheets: Vec<u32>,
 }
 
 /// A sheet of a linked workbook that the externalLink cache holds: the index of its book in

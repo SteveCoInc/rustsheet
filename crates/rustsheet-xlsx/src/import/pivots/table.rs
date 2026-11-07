@@ -22,6 +22,7 @@ use rustsheet_engine::pivot::{
 use super::super::package::ImportLimits;
 use super::super::worksheets::parse_range;
 use super::filters::read_filters;
+use super::sort::read_auto_sort;
 use super::{
     at, attribute, index_attribute, local_name, shown, skip, walk, walk_keeping, Skip, Tag,
     MAX_AXIS_FIELDS, MAX_DATA_FIELDS,
@@ -67,30 +68,13 @@ const ROOT_TYPED: [&str; 21] = [
     "gridDropZones",
 ];
 
-/// The custom subtotal functions by their `ST_ItemType` names: an `<item t>` names its subtotal
-/// line so, and a `<pivotField>` asks for it with `<name>Subtotal="1"`. In the schema's order.
-/// `countA` is COUNTA and `count` Count Numbers, as ECMA-376 reads them and Excel computes them;
-/// Excel labels both lines `<item> Count` (`ItemType::Function`). Excel: see
-/// docs/excel-semantics/pivots.md "Which function the countA and count custom subtotals compute"
-/// (probes/t4622-pivot-count-subtotals).
-pub(crate) const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = [
-    ("sum", Aggregate::Sum),
-    ("countA", Aggregate::Count),
-    ("avg", Aggregate::Average),
-    ("max", Aggregate::Max),
-    ("min", Aggregate::Min),
-    ("product", Aggregate::Product),
-    ("count", Aggregate::CountNums),
-    ("stdDev", Aggregate::StdDev),
-    ("stdDevP", Aggregate::StdDevP),
-    ("var", Aggregate::Var),
-    ("varP", Aggregate::VarP),
-];
+/// The custom subtotal functions by their `ST_ItemType` names, in the schema's order: the
+/// engine's one table ([`Aggregate::ITEM_TYPE_NAMES`]).
+pub(crate) const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = Aggregate::ITEM_TYPE_NAMES;
 
 /// The function of the custom subtotal named `name` (`sum`, `countA`, ...).
 fn subtotal_function(name: &str) -> Option<Aggregate> {
-    let mut functions = SUBTOTAL_FUNCTIONS.iter();
-    functions.find(|(n, _)| *n == name).map(|(_, f)| *f)
+    Aggregate::from_item_type_name(name)
 }
 
 /// Whether `key` is a `<pivotField>` custom subtotal attribute (`sumSubtotal`, ...).
@@ -252,14 +236,13 @@ impl TableReader<'_> {
                 self.read_field(cache, element)?;
                 |key| FIELD_TYPED.contains(&key) || is_subtotal_attribute(key)
             }
-            "item" => {
-                if self.read_item(cache, element)? {
-                    |key| matches!(key, "t" | "x" | "sd" | "s" | "h")
-                } else {
-                    // `h` on a line that names no cache item has nowhere typed to go.
-                    |key| matches!(key, "t" | "x" | "sd" | "s")
-                }
-            }
+            "item" => match self.read_item(cache, element)? {
+                Some(true) => |key| matches!(key, "t" | "x" | "sd" | "s" | "h"),
+                // `h` on a line that names no cache item has nowhere typed to go.
+                Some(false) => |key| matches!(key, "t" | "x" | "sd" | "s"),
+                // A dropped item keeps nothing.
+                None => |_| true,
+            },
             "field" => {
                 let axis_field = match attribute(element, "x")?.as_deref() {
                     Some("-2") => AxisField::Values,
@@ -318,19 +301,21 @@ impl TableReader<'_> {
     ///   `fillDownLabelsDefault` is not read: Excel fills no existing field down for it (t4129 X14,
     ///   t4698 TW, TWE, OW).
     /// - The definition's `<filters>` are its typed filters (`filters::read_filters`, T-4165).
+    /// - A `<pivotField>`'s `autoSortScope` is its value sort's scope (`sort::read_auto_sort`,
+    ///   T-4827).
     fn read_extension(&mut self, owner: OpaqueOwner, xml: &str) -> Result<(), Skip> {
         match owner {
             OpaqueOwner::DataField(index) => {
-                let mut mode = None;
-                each_x14_element(xml, "dataField", |element| {
-                    if let Some(name) = attribute(element, "pivotShowAs")? {
-                        mode = Some(show_data_as(&name)?);
-                    }
-                    Ok(())
-                })?;
+                let mode = data_field_x14_show_as(xml).map_err(Skip)?;
                 let data = self.table.data_fields.get_mut(index as usize);
                 if let (Some(mode), Some(data)) = (mode, data) {
                     data.show_data_as = mode;
+                }
+            }
+            OpaqueOwner::Field(index) if element_name(xml) == "autoSortScope" => {
+                let scope = read_auto_sort(xml)?;
+                if let Some(field) = self.table.fields.get_mut(index as usize) {
+                    field.auto_sort = Some(scope);
                 }
             }
             OpaqueOwner::Field(index) => {
@@ -391,6 +376,9 @@ impl TableReader<'_> {
             page_wrap: number(element, "pageWrap")?.unwrap_or(defaults.page_wrap),
             page_over_then_down: flag(element, "pageOverThenDown", defaults.page_over_then_down)?,
             grid_drop_zones: flag(element, "gridDropZones", defaults.grid_drop_zones)?,
+            // Read, and kept verbatim for export (not in the root's typed attributes), as a
+            // field's `autoShow` is (T-4768).
+            custom_list_sort: flag(element, "customListSort", defaults.custom_list_sort)?,
         };
         Ok(())
     }
@@ -446,8 +434,13 @@ impl TableReader<'_> {
         Ok(())
     }
 
-    /// An `<item>` of the last `<pivotField>`'s `<items>`; whether it names a cache item.
-    fn read_item(&mut self, cache: &PivotCache, element: &BytesStart) -> Result<bool, Skip> {
+    /// An `<item>` of the last `<pivotField>`'s `<items>`; whether it names a cache item, or
+    /// `None` when it is dropped.
+    fn read_item(
+        &mut self,
+        cache: &PivotCache,
+        element: &BytesStart,
+    ) -> Result<Option<bool>, Skip> {
         let current = self.table.fields.len().saturating_sub(1);
         let (Some(field), Some(cache_field)) =
             (self.table.fields.last_mut(), cache.fields.get(current))
@@ -461,6 +454,14 @@ impl TableReader<'_> {
         let index = if kind == ItemType::Data {
             let item = index_attribute(element, "x")?;
             if item as usize >= cache_field.items.len() {
+                if cache.refresh_on_load && cache_field.number_groups.is_some() {
+                    // Excel rebuilds a numeric range group's items on refresh and lays the field
+                    // out again, so an item past them is dropped, not refused
+                    // (probes/t4128-pivot-spike G; pivots.md "Numeric and date group labels are
+                    // rewritten by Excel"; T-4171). Date and manual groups are unprobed and still
+                    // refused (T-4802).
+                    return Ok(None);
+                }
                 return skip(format!("item index {item} is past the field's items"));
             }
             Some(item)
@@ -482,7 +483,7 @@ impl TableReader<'_> {
             }
         }
         field.items.push(item);
-        Ok(names_cache_item)
+        Ok(Some(names_cache_item))
     }
 
     /// The typed element that encloses what is at `path`: the innermost one, read last.
@@ -584,6 +585,21 @@ fn each_x14_element(
         }
         Ok(())
     })
+}
+
+/// The x14 `pivotShowAs` mode `xml`, an element kept inside a `<dataField>`, names (the last, if
+/// several), or the reason it cannot be read: an unknown mode or malformed XML. The importer reads
+/// a field's mode with it, and the exporter checks a kept extension against the model (T-4759).
+pub(crate) fn data_field_x14_show_as(xml: &str) -> Result<Option<ShowDataAs>, String> {
+    let mut mode = None;
+    let read = each_x14_element(xml, "dataField", |element| {
+        if let Some(name) = attribute(element, "pivotShowAs")? {
+            mode = Some(show_data_as(&name)?);
+        }
+        Ok(())
+    });
+    read.map_err(|skip| skip.0)?;
+    Ok(mode)
 }
 
 /// A `<dataField>` but its `fld`, which the caller checks against the cache.

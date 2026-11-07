@@ -6,6 +6,13 @@
 C	calipers/default/multi_row_formulas/golden.xlsx	3
 C	calipers/officejs/big_formulas_400/golden.xlsx	400
 C	calipers/officejs/names_formula_local/golden.xlsx	1
+C	calipers/officejs/pivot_count/golden.xlsx	8
+C	calipers/officejs/pivot_filter/golden.xlsx	12
+C	calipers/officejs/pivot_hierarchy_get_item/golden.xlsx	8
+C	calipers/officejs/pivot_name/golden.xlsx	8
+C	calipers/officejs/pivot_row_col_data/golden.xlsx	20
+C	calipers/officejs/pivot_row_data/golden.xlsx	8
+C	calipers/officejs/pivot_two_data/golden.xlsx	15
 C	calipers/officejs/range_formulas_if/golden.xlsx	3
 C	calipers/officejs/range_formulas_lookup/golden.xlsx	1
 C	calipers/officejs/range_formulas_nested/golden.xlsx	2
@@ -62,7 +69,7 @@ C	calipers/pv_goldens/pv23_037/golden.xlsx	4
 C	calipers/pv_goldens/pv23_038/golden.xlsx	890
 C	calipers/pv_goldens/pv23_039/golden.xlsx	977
 C	calipers/pv_goldens/pv23_040/golden.xlsx	890
-C	calipers/pv_goldens/pv23_041/golden.xlsx	446
+C	calipers/pv_goldens/pv23_041/golden.xlsx	586
 C	calipers/pv_goldens/pv23_042/golden.xlsx	121666
 C	calipers/pv_goldens/pv23_043/golden.xlsx	342
 C	calipers/pv_goldens/pv23_044/golden.xlsx	515
@@ -144,7 +151,7 @@ C	calipers/roundtrip/date_cells/golden.xlsx	1
 C	calipers/roundtrip/date_formats/golden.xlsx	45
 C	calipers/roundtrip/excel_tables/golden.xlsx	6
 C	calipers/roundtrip/formula_eval/golden.xlsx	1
-C	calipers/roundtrip/formula_stress_test/golden.xlsx	468
+C	calipers/roundtrip/formula_stress_test/golden.xlsx	664
 C	calipers/roundtrip/formulas/golden.xlsx	5
 C	calipers/roundtrip/formulas_conditional/golden.xlsx	79
 C	calipers/roundtrip/formulas_database/golden.xlsx	408
@@ -170,14 +177,30 @@ C	calipers/roundtrip/lonumbers_2011/golden.xlsx	333
 C	calipers/roundtrip/multi_sheet/golden.xlsx	1
 C	calipers/roundtrip/named_ranges/golden.xlsx	22
 C	calipers/roundtrip/number_formats/golden.xlsx	325
-C	calipers/roundtrip/pivot_named_range/golden.xlsx	80
+C	calipers/roundtrip/pivot_named_range/golden.xlsx	140
 C	calipers/roundtrip/sample_ss/golden.xlsx	1
 C	calipers/roundtrip/shared_formulas/golden.xlsx	40
 C	calipers/roundtrip/structured_refs/golden.xlsx	9
 C	calipers/roundtrip/tables/golden.xlsx	21
 C	calipers/roundtrip/three_charts/golden.xlsx	6
 C	calipers/roundtrip/xlookup/golden.xlsx	5
+C	calipers/scratch/pivot_table/golden.xlsx	8
 C	calipers/scratch/spill/golden.xlsx	4
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!A1
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!A2
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!A3
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!A4
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!A5
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!B1
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!B2
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!B3
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!B4
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!B5
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!C1
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!C2
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!C3
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!C4
+F	calipers/officejs/pivot_two_data/golden.xlsx	Pivot!C5
 F	calipers/pv_goldens/pv23_046/golden.xlsx	Public Comps!F17
 F	calipers/pv_goldens/pv23_046/golden.xlsx	Public Comps!F33
 F	calipers/pv_goldens/pv23_046/golden.xlsx	WACC!E23
@@ -229,7 +252,6 @@ F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B139
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B140
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B15
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B16
-F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B17
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B23
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B24
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B26
@@ -245,10 +267,6 @@ F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B46
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B49
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B50
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B54
-F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B55
-F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B57
-F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B77
-F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!B8
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!D138
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!D139
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!D140
@@ -270,10 +288,6 @@ F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!I139
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!I140
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!I142
 F	calipers/roundtrip/formula_stress_test/golden.xlsx	Statistical!I144
-F	calipers/roundtrip/formulas_engineering/golden.xlsx	Sheet1!D26
-F	calipers/roundtrip/formulas_engineering/golden.xlsx	Sheet1!D27
-F	calipers/roundtrip/formulas_engineering/golden.xlsx	Sheet1!J26
-F	calipers/roundtrip/formulas_engineering/golden.xlsx	Sheet1!J27
 F	calipers/roundtrip/formulas_information/golden.xlsx	Sheet1!E140
 F	calipers/roundtrip/formulas_information/golden.xlsx	Sheet1!E141
 F	calipers/roundtrip/formulas_information/golden.xlsx	Sheet1!E142

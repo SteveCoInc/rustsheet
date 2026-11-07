@@ -1,0 +1,131 @@
+BASE M
+    B2 content="5" value="5"
+    C2 content="x" value="x"
+    B3 content="=B2+1" value="6"
+    C3 content="" value=""
+    merges: MergedCell { row: 2, column: 2, width: 2, height: 2 }
+BASE M observers via formulas: covered read is the import rule (already VERIFIED)
+U1 unmerge M!B2:C3
+    result: Ok(())
+    B2 content="5" value="5"
+    C2 content="x" value="x"
+    B3 content="=B2+1" value="6"
+    C3 content="" value=""
+    merges: 
+U2 clear contents M!B2:C3
+    result: Ok(())
+    B2 content="" value=""
+    C2 content="" value=""
+    B3 content="" value=""
+    C3 content="" value=""
+    merges: MergedCell { row: 2, column: 2, width: 2, height: 2 }
+U2b clear contents M!B2 (anchor only, the merged cell as selected)
+    result: Ok(())
+    B2 content="" value=""
+    C2 content="x" value="x"
+    B3 content="=B2+1" value="1"
+    C3 content="" value=""
+    merges: MergedCell { row: 2, column: 2, width: 2, height: 2 }
+U3 copy M!B2:C3 -> J10
+    paste result: Ok(()) (clipboard range (2, 2, 3, 3))
+    J10 content="5" value="5"
+    K10 content="x" value="x"
+    J11 content="=J10+1" value="6"
+    K11 content="" value=""
+    merges: MergedCell { row: 2, column: 2, width: 2, height: 2 } | MergedCell { row: 10, column: 10, width: 2, height: 2 }
+    B2 content="5" value="5"
+    C2 content="x" value="x"
+    B3 content="=B2+1" value="6"
+    C3 content="" value=""
+    merges: MergedCell { row: 2, column: 2, width: 2, height: 2 } | MergedCell { row: 10, column: 10, width: 2, height: 2 }
+U4 cut M!B2:C3 -> J10
+    paste result: Ok(()) (clipboard range (2, 2, 3, 3))
+    J10 content="5" value="5"
+    K10 content="x" value="x"
+    J11 content="=J10+1" value="6"
+    K11 content="" value=""
+    merges: MergedCell { row: 10, column: 10, width: 2, height: 2 }
+    B2 content="" value=""
+    C2 content="" value=""
+    B3 content="" value=""
+    C3 content="" value=""
+    merges: MergedCell { row: 10, column: 10, width: 2, height: 2 }
+U3b copy M!B2:C3 -> C3 (overlapping its own source)
+    paste result: Ok(()) (clipboard range (2, 2, 3, 3))
+    B2 content="5" value="5"
+    C2 content="x" value="x"
+    D2 content="" value=""
+    B3 content="=B2+1" value="6"
+    C3 content="" value=""
+    D3 content="" value=""
+    B4 content="" value=""
+    C4 content="" value=""
+    D4 content="" value=""
+    merges: MergedCell { row: 2, column: 2, width: 2, height: 2 }
+U5 autofill M!B2:C3 down to row 7
+    result: Ok(())
+    B2 content="5" value="5"
+    C2 content="x" value="x"
+    B3 content="=B2+1" value="6"
+    C3 content="" value=""
+    B4 content="5" value="5"
+    C4 content="x" value="x"
+    B5 content="=B4+1" value="6"
+    C5 content="" value=""
+    B6 content="5" value="5"
+    C6 content="x" value="x"
+    B7 content="=B6+1" value="6"
+    C7 content="" value=""
+    merges: MergedCell { row: 2, column: 2, width: 2, height: 2 } | MergedCell { row: 4, column: 2, width: 2, height: 2 } | MergedCell { row: 6, column: 2, width: 2, height: 2 }
+U5b autofill M!B2:C3 right to column G
+    result: Ok(())
+    B2 content="5" value="5"
+    C2 content="x" value="x"
+    D2 content="5" value="5"
+    E2 content="x" value="x"
+    F2 content="5" value="5"
+    G2 content="x" value="x"
+    B3 content="=B2+1" value="6"
+    C3 content="" value=""
+    D3 content="=D2+1" value="6"
+    E3 content="" value=""
+    F3 content="=F2+1" value="6"
+    G3 content="" value=""
+    merges: MergedCell { row: 2, column: 2, width: 2, height: 2 } | MergedCell { row: 2, column: 4, width: 2, height: 2 } | MergedCell { row: 2, column: 6, width: 2, height: 2 }
+U5c autofill F!B2:C5 down to row 9 (progression with a covered block)
+    result: Ok(())
+    B2 content="1" value="1"
+    C2 content="10" value="10"
+    B3 content="2" value="2"
+    C3 content="20" value="20"
+    B4 content="3" value="3"
+    C4 content="100" value="100"
+    B5 content="200" value="200"
+    C5 content="" value=""
+    B6 content="4" value="4"
+    C6 content="30" value="30"
+    B7 content="5" value="5"
+    C7 content="40" value="40"
+    B8 content="6" value="6"
+    C8 content="100" value="100"
+    B9 content="200" value="200"
+    C9 content="" value=""
+    merges: MergedCell { row: 4, column: 2, width: 2, height: 2 } | MergedCell { row: 8, column: 2, width: 2, height: 2 }
+U6 Ctrl+arrow on N
+  row2 right from A2: from A2 -> active F2 range [2, 6, 2, 6]
+  row2 right from B2 (merge): from B2 -> active F2 range [2, 6, 2, 6]
+  row2 left from F2: from F2 -> active A2 range [2, 1, 2, 1]
+  row8 right from A8: from A8 -> active B8 range [8, 2, 8, 4]
+  row8 left from F8: from F8 -> active B8 range [8, 2, 8, 4]
+  colH down from H1: from H1 -> active H6 range [6, 8, 6, 8]
+  colH up from H6: from H6 -> active H1 range [1, 8, 1, 8]
+  row2 left from G2 (empty): from G2 -> active F2 range [2, 6, 2, 6]
+U7 write into covered W!C2
+    set_user_input C2='y': Err("Cannot edit a cell that is part of a merged cell")
+    B2 content="1" value="1"
+    C2 content="2" value="2"
+    merges: MergedCell { row: 2, column: 2, width: 2, height: 1 }
+    set_user_input B2='9': Ok(())
+    B2 content="9" value="9"
+    C2 content="2" value="2"
+    merges: MergedCell { row: 2, column: 2, width: 2, height: 1 }

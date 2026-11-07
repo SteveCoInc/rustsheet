@@ -36,7 +36,7 @@ use super::refresh::{field_map, refresh, SourceCells};
 use super::result::{compute_on, PivotComputeError, MAX_PIVOT_WORK};
 use super::{
     AxisField, CellArea, OpaqueEntry, PivotCache, PivotCacheError, PivotField, PivotFilter,
-    PivotGeometry, PivotTable, MAX_RECORD_VALUES,
+    PivotGeometry, PivotTable, SortReference, MAX_RECORD_VALUES,
 };
 use crate::expressions::parser::parse_range;
 use crate::expressions::token::Error;
@@ -340,6 +340,26 @@ fn remap(
                 .unwrap_or_else(|| PivotField::new(None, field.items.len()))
         })
         .collect();
+    // A value sort's references follow their fields; a scope naming a field gone from the source
+    // sorts nothing and is dropped (UNVERIFIED, T-4664). As for the filters, a pivot read from a
+    // file keeps its `autoSortScope` verbatim, so only one made through the API gets here with one.
+    for field in &mut out.fields {
+        if let Some(scope) = &mut field.auto_sort {
+            let moved: Option<Vec<SortReference>> = (scope.references.iter())
+                .map(|reference| {
+                    let to = map.get(reference.field as usize).copied().flatten()?;
+                    Some(SortReference {
+                        field: to,
+                        items: reference.items.clone(),
+                    })
+                })
+                .collect();
+            match moved {
+                Some(references) => scope.references = references,
+                None => field.auto_sort = None,
+            }
+        }
+    }
     // What a field owns follows it; what a dropped field owned goes with it.
     out.opaque = (pivot.opaque.iter())
         .filter_map(|entry| match entry.owner.field() {
@@ -386,6 +406,8 @@ impl Model {
         let area = source.ok_or(PivotCacheError::Source)?.area;
         let rows = (area.bottom - area.top) as usize + 1;
         budget.charge_work(rows.saturating_mul((area.right - area.left) as usize + 1))?;
+        // A field Excel added to group another is derived again over every record (T-4171).
+        budget.charge_work(rows.saturating_mul(old.added_group_count()))?;
         // The record values the other caches hold count against the workbook's limit.
         let others: usize = (0u32..)
             .zip(caches)
@@ -691,7 +713,8 @@ impl Model {
     /// Gives the cell the number format `numFmtId` names in the workbook's styles (a built-in
     /// one, or one of its `numFmts`; an id it does not hold is General, as `get_num_fmt` reads
     /// it), keeping the rest of the cell's style: a value cell shows its data field's format
-    /// (pivots.md "Value cells show their data field's number format").
+    /// (pivots.md "Value cells show their data field's number format"), and a date group item's
+    /// label shows m/d/yyyy (pivots.md "Capability matrix 3", T-4957).
     fn set_pivot_number_format(
         &mut self,
         sheet: u32,

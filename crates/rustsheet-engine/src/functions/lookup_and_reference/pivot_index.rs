@@ -82,15 +82,21 @@ struct PivotIndex {
     memo: HashMap<PivotQuery, Result<f64, Error>>,
 }
 
-/// A pivot GETPIVOTDATA can answer from: one data field, shown as itself, no page field, no
-/// hidden item and no filter or `AutoShow` (`pivot::filter`, T-4165: what GETPIVOTDATA answers on a
-/// filtered pivot is unprobed, UNVERIFIED, T-4799). Every other shape is one of SPEC-0015's unknowns (1 and 4), `#REF!` until T-2085
-/// probes it; what GETPIVOTDATA answers for a field shown as a calculation is unprobed (UNVERIFIED,
-/// T-4750; before T-4163 the importer dropped such a pivot, so it was `#REF!` too). Several
-/// fields on an axis (unknown 10) are indexed too, but only their grand total is answered
-/// ([`nested_axis`]).
+/// A pivot GETPIVOTDATA can answer from: one data field, or several with the Values field on an
+/// axis (docs/excel-semantics/web.md "GETPIVOTDATA on other pivot shapes (T-2085)", DF), each
+/// shown as itself, no page field, no hidden item, no slicer or timeline (`pivot::slicer`, T-4188)
+/// and no filter or `AutoShow` (`pivot::filter`, T-4165: what GETPIVOTDATA answers on a filtered
+/// pivot, slicers and timelines included, is unprobed, UNVERIFIED, T-4799). Every other shape is
+/// one of SPEC-0015's unknowns (4), `#REF!`; what GETPIVOTDATA answers for a field shown as a
+/// calculation is unprobed (UNVERIFIED, T-4750; before T-4163 the importer dropped such a pivot,
+/// so it was `#REF!` too). Several fields on an axis (unknown 10) are indexed too, but only their
+/// grand total is answered ([`nested_axis`]). The axis is the cache fields on the rows, then the
+/// columns, the Values field left out.
 fn supported(pivot: &PivotTable) -> Option<Vec<u32>> {
-    if pivot.data_fields.len() != 1
+    let several = pivot.data_fields.len() > 1;
+    if pivot.data_fields.is_empty()
+        || (several && !values_on_axis(pivot))
+        || (!several && values_on_axis(pivot))
         || pivot
             .data_fields
             .iter()
@@ -98,21 +104,35 @@ fn supported(pivot: &PivotTable) -> Option<Vec<u32>> {
         || !pivot.filters.is_empty()
         || pivot.fields.iter().any(|f| {
             f.axis == Some(crate::pivot::Axis::Page)
-                || f.hidden.iter().any(|word| *word != 0)
+                || f.excludes_any()
+                || f.slicer.is_some()
+                || f.timeline.is_some()
                 || f.auto_show.is_some()
         })
     {
         return None;
     }
+    Some(
+        pivot
+            .row_fields
+            .iter()
+            .chain(&pivot.column_fields)
+            .filter_map(|field| match field {
+                AxisField::Field(index) => Some(*index),
+                AxisField::Values => None,
+            })
+            .collect(),
+    )
+}
+
+/// Whether the Values field (`x="-2"`) is on `pivot`'s row or column axis, as it is when the
+/// pivot shows several data fields.
+pub(crate) fn values_on_axis(pivot: &PivotTable) -> bool {
     pivot
         .row_fields
         .iter()
         .chain(&pivot.column_fields)
-        .map(|field| match field {
-            AxisField::Field(index) => Some(*index),
-            AxisField::Values => None,
-        })
-        .collect()
+        .any(|field| matches!(field, AxisField::Values))
 }
 
 /// Whether `pivot` has several fields on its row or its column axis. GETPIVOTDATA answers such a
@@ -359,6 +379,12 @@ impl Model {
                 .get(table.cache as usize)
                 .and_then(|cache| cache.fields.get(data.field as usize))
                 .ok_or(Error::REF)?;
+            // A calculated field has no records to aggregate, so the engine answers `#REF!`.
+            // Excel answers by the field's name or caption (web.md "GETPIVOTDATA on other pivot
+            // shapes (T-2085)", LY G1:G3); implementing that is T-4804.
+            if field.formula.is_some() {
+                return Err(Error::REF);
+            }
             let mut records: Vec<u32> = Vec::new();
             for (tuple, tuple_records) in &index.tuples {
                 if tuple
@@ -395,10 +421,60 @@ mod tests {
                 records: vec![0, 2, 2, 0],
                 number_groups: None,
                 date_groups: None,
+                added_group: None,
+                formula: None,
+                ungrouped: None,
             }],
             record_count: 4,
             refresh_on_load: false,
         }
+    }
+
+    /// A pivot of rows Group and the count of Group: one `supported` answers from.
+    fn plain_pivot() -> PivotTable {
+        let mut table = PivotTable::new(
+            "P".into(),
+            1,
+            crate::pivot::CellArea {
+                top: 0,
+                left: 0,
+                bottom: 3,
+                right: 1,
+            },
+            0,
+        );
+        table.fields = vec![crate::pivot::PivotField::new(
+            Some(crate::pivot::Axis::Row),
+            3,
+        )];
+        table.row_fields = vec![AxisField::Field(0)];
+        table.data_fields = vec![crate::pivot::DataField {
+            caption: "Count of Group".into(),
+            field: 0,
+            function: crate::pivot::Aggregate::Count,
+            show_data_as: crate::pivot::ShowDataAs::Normal,
+            base_field: 0,
+            base_item: 0,
+            number_format: None,
+        }];
+        table
+    }
+
+    /// A slicer or a timeline filters the pivot's records (T-4188), so GETPIVOTDATA does not
+    /// answer from the unfiltered index: the pivot is refused, as one with a hidden item is.
+    #[test]
+    fn a_pivot_driven_by_a_slicer_or_a_timeline_is_not_indexed() {
+        assert_eq!(supported(&plain_pivot()), Some(vec![0]));
+        let mut sliced = plain_pivot();
+        sliced.fields[0].slicer = Some(vec![0]);
+        assert_eq!(supported(&sliced), None, "a slicer selecting every item");
+        let mut sliced = plain_pivot();
+        sliced.fields[0].slicer = Some(vec![0b10]);
+        assert_eq!(supported(&sliced), None);
+        let mut timed = plain_pivot();
+        timed.fields[0].timeline = crate::pivot::DateSpan::from_serials(1.0, 2.0);
+        assert!(timed.fields[0].timeline.is_some());
+        assert_eq!(supported(&timed), None);
     }
 
     #[test]

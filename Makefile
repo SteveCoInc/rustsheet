@@ -6,6 +6,13 @@ UV ?= uv
 EVAL := target/release/rustsheet-eval
 # Long eval runs go through the crash-evidence wrapper (decision 0041, T-1118).
 EVAL_GUARDED := scripts/eval_guard.sh $(EVAL)
+# SPEC-0035 D3, decision 0344: locally the eval targets fetch the gate suites (poi, corpus-bench) whose
+# cache is missing or stale. CI sets EVAL_FETCH empty (its own cached fetch step is the only fetch) and
+# EVAL_GATE_FLAGS=--require-fetched, so a gate suite it failed to fetch fails the run instead of skipping.
+EVAL_FETCH ?= 1
+EVAL_GATE_FLAGS ?=
+# The pre-fetch's failure is ignored (`-`): offline, the gate suites skip as before and CI judges them.
+EVAL_PREFETCH = $(if $(EVAL_FETCH),-$(EVAL_GUARDED) fetch --missing --gates)
 PY := python3
 
 .PHONY: help
@@ -58,29 +65,37 @@ target-dir-guard: ## Refuse a Cargo target directory outside this worktree (make
 	@$(PY) scripts/target_dir_guard.py $(CURDIR)
 
 # ---------------------------------------------------------------- Eval (Excel compatibility)
-.PHONY: eval eval-check eval-gates eval-baseline eval-lower-visible-lock eval-show evidence-floor
+.PHONY: eval eval-check eval-gates eval-fetched-gates eval-baseline eval-lower-visible-lock eval-show evidence-floor
 eval: build ## Run all suites; writes eval/runs/latest/report.{md,json}, then Gate A's eval/runs/accuracy.json (decision 0268)
 	$(PY) scripts/desktop_owned.py --out eval/runs/desktop-owned.tsv
-	$(EVAL_GUARDED) run --desktop-owned
+	$(EVAL_GUARDED) run --desktop-owned $(if $(EVAL_FETCH),--fetch-missing)
 	@# Gate A for the Phase 1 exit verdict and the dashboard (decision 0268). A failing point does not fail
 	@# make eval (make check gates it); a crash leaves no JSON, which both read as not measured.
 	rm -f eval/runs/accuracy.json
 	$(EVAL_GUARDED) accuracy > eval/runs/latest/accuracy.txt 2>&1 || true
 	@grep -m 1 '^accuracy:' eval/runs/latest/accuracy.txt || echo 'accuracy: no summary; see eval/runs/latest/accuracy.txt'
 	@# Round-trip fidelity of eval/roundtrip (SPEC-0033, decision 0307): eval/runs/latest/roundtrip.{json,md}.
-	$(EVAL_GUARDED) roundtrip
+	$(EVAL_GUARDED) roundtrip $(if $(EVAL_FETCH),--fetch-missing)
 
 eval-check: build ## Gate: fail on any regression vs eval/baseline
-	$(EVAL_GUARDED) check
+	$(EVAL_PREFETCH)
+	$(EVAL_GUARDED) check $(EVAL_GATE_FLAGS)
 
 eval-gates: build ## eval-check and evidence-floor from one run of the suites, then Gate A's accuracy check, the round-trip gate and new-case owners (CI, make check; T-2761, decisions 0193, 0245, 0307)
-	$(EVAL_GUARDED) check --evidence-floor
+	$(EVAL_PREFETCH)
+	$(EVAL_GUARDED) check --evidence-floor $(EVAL_GATE_FLAGS)
 	$(EVAL_GUARDED) accuracy
-	$(EVAL_GUARDED) roundtrip --check
+	$(EVAL_GUARDED) roundtrip --check $(EVAL_GATE_FLAGS)
 	@# Cases the branch adds or refills: every visibly-off cell needs an open owner (T-3793, decision 0245).
 	$(PY) scripts/new_case_owners.py --eval $(EVAL)
 
+eval-fetched-gates: build ## The fetched gate suites' cells and round trips: CI's eval (fetched gate suites) job (decision 0344; locally `make eval-gates` covers them)
+	$(EVAL_PREFETCH)
+	$(EVAL_GUARDED) check --suite poi --suite corpus-bench $(EVAL_GATE_FLAGS)
+	$(EVAL_GUARDED) roundtrip --check --suite roundtrip-poi --suite roundtrip-corpus-bench $(EVAL_GATE_FLAGS)
+
 eval-baseline: build ## Ratchet eval/baseline and quality/evidence-floor.json after fixes (refuses regressions); NEW_CASES=<file> lists the only cases new to the visible-parity lock (make catch-up, decision 0217)
+	$(EVAL_PREFETCH)
 	$(EVAL_GUARDED) update-baseline $(if $(NEW_CASES),--new-cases '$(NEW_CASES)')
 	$(EVAL_GUARDED) roundtrip --update-baseline
 	$(EVAL) evidence-floor --update

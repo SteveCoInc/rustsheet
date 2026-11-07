@@ -3,7 +3,7 @@ id: T-4823
 title: "GETPIVOTDATA returns an error in field as is, and a referenced error as data_field is #REF!"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -63,3 +63,9 @@ whole task.
 ## Out of scope
 - Errors in `pivot_table` (typed literals were not generated: a `range` parameter is classified only as a reference).
 - Separating a typed data_field error from a field error (see Context).
+
+## Outcome
+`fn_getpivotdata` now returns a non-referenced `data_field` error first (a typed error; computed errors such as
+`NA()` unprobed, kept as the result), then a `pivot_table` error, then an error in any `field` as is, and a
+*referenced* error as `data_field` falls to `#REF!`. Unit test `error_arguments_follow_the_t4006_order` plus the
+updated `unknown_items_fields_repeats_and_odd_pairs_are_ref`. Eval: gen-m6 baseline -65 failing cells, 0 regressions.

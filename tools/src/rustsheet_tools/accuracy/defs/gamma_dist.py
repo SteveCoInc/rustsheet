@@ -37,8 +37,8 @@ What has no math value (the sampler redraws; the Excel cells stay in the eval su
 - GAMMA.DIST's cdf at a positive x whose x / beta is subnormal in doubles, where the math is above 1E-300. Where the
   ratio underflows to 0, Excel gives 0 at every probed shape (statistics.md line "Where x / beta underflows to 0",
   T-2982: probes/t2982-gamma-inv-huge-shape A117-A122), against a math value up to about 1; the owner ruled to keep
-  Excel's (decision 0300, T-4392), and the math is not cut to match. A nonzero subnormal ratio below shape 1 is
-  unprobed (T-1942). CHISQ.DIST's cdf at a positive x whose x / 2 is subnormal gets the same rule: it is
+  Excel's (decision 0300, T-4392), and the math is not cut to match. A nonzero subnormal ratio at shape 0.5 gives 0 in Excel
+  (probes/t1942-ztest-numeric-edges A6:A7, T-1942); other shapes below 1 are unprobed. CHISQ.DIST's cdf at a positive x whose x / 2 is subnormal gets the same rule: it is
   `GAMMA.DIST(x,df/2,2,TRUE)` (KERNEL_SOURCE), and no cell probes it.
 - GAMMA.DIST's density at x = 0 with shape 1: the math is 1 / beta, but only the chi-squared df-2 value (0.5) is
   evidenced, so GAMMA.DIST there gets no value.

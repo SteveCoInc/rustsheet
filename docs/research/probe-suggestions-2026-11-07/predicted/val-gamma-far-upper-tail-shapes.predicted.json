@@ -1,0 +1,558 @@
+{
+ "format": "rustsheet-prediction/draft",
+ "engine": "rustsheet prototype on 2e192ce48 (release)",
+ "sheets": {
+  "P": {
+   "A1": {
+    "t": "n",
+    "v": 0.029290886534888233,
+    "formula": "=CHISQ.DIST.RT(9.0,3.0)"
+   },
+   "A10": {
+    "t": "n",
+    "v": 5.878230727906912e-13,
+    "formula": "=CHISQ.DIST.RT(60.0,3.0)"
+   },
+   "A11": {
+    "t": "n",
+    "v": 2.1905701192853e-19,
+    "formula": "=CHISQ.DIST.RT(90.0,3.0)"
+   },
+   "A2": {
+    "t": "n",
+    "v": 0.007383160505359769,
+    "formula": "=CHISQ.DIST.RT(12.0,3.0)"
+   },
+   "A3": {
+    "t": "n",
+    "v": 0.000439849652838829,
+    "formula": "=CHISQ.DIST.RT(18.0,3.0)"
+   },
+   "A4": {
+    "t": "n",
+    "v": 2.497997772465201e-05,
+    "formula": "=CHISQ.DIST.RT(24.0,3.0)"
+   },
+   "A5": {
+    "t": "n",
+    "v": 2.852154890952932e-06,
+    "formula": "=CHISQ.DIST.RT(28.5,3.0)"
+   },
+   "A6": {
+    "t": "n",
+    "v": 1.3800570312932547e-06,
+    "formula": "=CHISQ.DIST.RT(30.0,3.0)"
+   },
+   "A7": {
+    "t": "n",
+    "v": 6.670229404992132e-07,
+    "formula": "=CHISQ.DIST.RT(31.5,3.0)"
+   },
+   "A8": {
+    "t": "n",
+    "v": 7.488376948795482e-08,
+    "formula": "=CHISQ.DIST.RT(36.0,3.0)"
+   },
+   "A9": {
+    "t": "n",
+    "v": 2.1294809536033398e-10,
+    "formula": "=CHISQ.DIST.RT(48.0,3.0)"
+   },
+   "C1": {
+    "t": "n",
+    "v": 0.010362337915786437,
+    "formula": "=CHISQ.DIST.RT(15.0,5.0)"
+   },
+   "C10": {
+    "t": "n",
+    "v": 5.2851483609432604e-20,
+    "formula": "=CHISQ.DIST.RT(100.0,5.0)"
+   },
+   "C11": {
+    "t": "n",
+    "v": 1.3351378873003043e-30,
+    "formula": "=CHISQ.DIST.RT(150.0,5.0)"
+   },
+   "C2": {
+    "t": "n",
+    "v": 0.0012497305630313753,
+    "formula": "=CHISQ.DIST.RT(20.0,5.0)"
+   },
+   "C3": {
+    "t": "n",
+    "v": 1.4748581038443052e-05,
+    "formula": "=CHISQ.DIST.RT(30.0,5.0)"
+   },
+   "C4": {
+    "t": "n",
+    "v": 1.4933679000503952e-07,
+    "formula": "=CHISQ.DIST.RT(40.0,5.0)"
+   },
+   "C5": {
+    "t": "n",
+    "v": 4.492572458296845e-09,
+    "formula": "=CHISQ.DIST.RT(47.5,5.0)"
+   },
+   "C6": {
+    "t": "n",
+    "v": 1.3857973367009593e-09,
+    "formula": "=CHISQ.DIST.RT(50.0,5.0)"
+   },
+   "C7": {
+    "t": "n",
+    "v": 4.2599072986163956e-10,
+    "formula": "=CHISQ.DIST.RT(52.5,5.0)"
+   },
+   "C8": {
+    "t": "n",
+    "v": 1.215456977718304e-11,
+    "formula": "=CHISQ.DIST.RT(60.0,5.0)"
+   },
+   "C9": {
+    "t": "n",
+    "v": 8.391825114831632e-16,
+    "formula": "=CHISQ.DIST.RT(80.0,5.0)"
+   },
+   "E1": {
+    "t": "n",
+    "v": 0.0003239934511011699,
+    "formula": "=CHISQ.DIST.RT(36,12)"
+   },
+   "E10": {
+    "t": "n",
+    "v": 1.658476401420725e-44,
+    "formula": "=CHISQ.DIST.RT(240,12)"
+   },
+   "E11": {
+    "t": "n",
+    "v": 1.0872737740536838e-69,
+    "formula": "=CHISQ.DIST.RT(360,12)"
+   },
+   "E2": {
+    "t": "n",
+    "v": 3.12566794755041e-06,
+    "formula": "=CHISQ.DIST.RT(48,12)"
+   },
+   "E3": {
+    "t": "n",
+    "v": 1.3507272658311721e-10,
+    "formula": "=CHISQ.DIST.RT(72,12)"
+   },
+   "E4": {
+    "t": "n",
+    "v": 3.3693492666923377e-15,
+    "formula": "=CHISQ.DIST.RT(96,12)"
+   },
+   "E5": {
+    "t": "n",
+    "v": 9.649581496522493e-19,
+    "formula": "=CHISQ.DIST.RT(114.0,12)"
+   },
+   "E6": {
+    "t": "n",
+    "v": 6.180223580811598e-20,
+    "formula": "=CHISQ.DIST.RT(120,12)"
+   },
+   "E7": {
+    "t": "n",
+    "v": 3.9107449468214866e-21,
+    "formula": "=CHISQ.DIST.RT(126.0,12)"
+   },
+   "E8": {
+    "t": "n",
+    "v": 9.312526885888645e-25,
+    "formula": "=CHISQ.DIST.RT(144,12)"
+   },
+   "E9": {
+    "t": "n",
+    "v": 1.4550510157368817e-34,
+    "formula": "=CHISQ.DIST.RT(192,12)"
+   },
+   "F1": {
+    "t": "n",
+    "v": 0.0003239934511011699,
+    "formula": "=POISSON.DIST(5,18,TRUE)"
+   },
+   "F10": {
+    "t": "n",
+    "v": 1.658476401420725e-44,
+    "formula": "=POISSON.DIST(5,120,TRUE)"
+   },
+   "F11": {
+    "t": "n",
+    "v": 1.0872737740536838e-69,
+    "formula": "=POISSON.DIST(5,180,TRUE)"
+   },
+   "F2": {
+    "t": "n",
+    "v": 3.12566794755041e-06,
+    "formula": "=POISSON.DIST(5,24,TRUE)"
+   },
+   "F3": {
+    "t": "n",
+    "v": 1.3507272658311721e-10,
+    "formula": "=POISSON.DIST(5,36,TRUE)"
+   },
+   "F4": {
+    "t": "n",
+    "v": 3.3693492666923377e-15,
+    "formula": "=POISSON.DIST(5,48,TRUE)"
+   },
+   "F5": {
+    "t": "n",
+    "v": 9.649581496522493e-19,
+    "formula": "=POISSON.DIST(5,57.0,TRUE)"
+   },
+   "F6": {
+    "t": "n",
+    "v": 6.180223580811598e-20,
+    "formula": "=POISSON.DIST(5,60,TRUE)"
+   },
+   "F7": {
+    "t": "n",
+    "v": 3.9107449468214866e-21,
+    "formula": "=POISSON.DIST(5,63.0,TRUE)"
+   },
+   "F8": {
+    "t": "n",
+    "v": 9.312526885888645e-25,
+    "formula": "=POISSON.DIST(5,72,TRUE)"
+   },
+   "F9": {
+    "t": "n",
+    "v": 1.4550510157368817e-34,
+    "formula": "=POISSON.DIST(5,96,TRUE)"
+   },
+   "G1": {
+    "t": "n",
+    "v": 6.567326820001492e-08,
+    "formula": "=CHISQ.DIST.RT(90,30)"
+   },
+   "G10": {
+    "t": "n",
+    "v": 2.96227980133176e-107,
+    "formula": "=CHISQ.DIST.RT(600,30)"
+   },
+   "G11": {
+    "t": "n",
+    "v": 6.105822512850881e-170,
+    "formula": "=CHISQ.DIST.RT(900,30)"
+   },
+   "G2": {
+    "t": "n",
+    "v": 1.0202758541470044e-12,
+    "formula": "=CHISQ.DIST.RT(120,30)"
+   },
+   "G3": {
+    "t": "n",
+    "v": 2.5403414607826455e-23,
+    "formula": "=CHISQ.DIST.RT(180,30)"
+   },
+   "G4": {
+    "t": "n",
+    "v": 1.2768415792656287e-34,
+    "formula": "=CHISQ.DIST.RT(240,30)"
+   },
+   "G5": {
+    "t": "n",
+    "v": 2.347393688758527e-43,
+    "formula": "=CHISQ.DIST.RT(285.0,30)"
+   },
+   "G6": {
+    "t": "n",
+    "v": 2.648048485630878e-46,
+    "formula": "=CHISQ.DIST.RT(300,30)"
+   },
+   "G7": {
+    "t": "n",
+    "v": 2.8858680101297958e-49,
+    "formula": "=CHISQ.DIST.RT(315.0,30)"
+   },
+   "G8": {
+    "t": "n",
+    "v": 3.1285754077501086e-58,
+    "formula": "=CHISQ.DIST.RT(360,30)"
+   },
+   "G9": {
+    "t": "n",
+    "v": 1.5061154223488542e-82,
+    "formula": "=CHISQ.DIST.RT(480,30)"
+   },
+   "H1": {
+    "t": "n",
+    "v": 6.567326820001492e-08,
+    "formula": "=POISSON.DIST(14,45,TRUE)"
+   },
+   "H10": {
+    "t": "n",
+    "v": 2.96227980133176e-107,
+    "formula": "=POISSON.DIST(14,300,TRUE)"
+   },
+   "H11": {
+    "t": "n",
+    "v": 6.105822512850881e-170,
+    "formula": "=POISSON.DIST(14,450,TRUE)"
+   },
+   "H2": {
+    "t": "n",
+    "v": 1.0202758541470044e-12,
+    "formula": "=POISSON.DIST(14,60,TRUE)"
+   },
+   "H3": {
+    "t": "n",
+    "v": 2.5403414607826455e-23,
+    "formula": "=POISSON.DIST(14,90,TRUE)"
+   },
+   "H4": {
+    "t": "n",
+    "v": 1.2768415792656287e-34,
+    "formula": "=POISSON.DIST(14,120,TRUE)"
+   },
+   "H5": {
+    "t": "n",
+    "v": 2.347393688758527e-43,
+    "formula": "=POISSON.DIST(14,142.5,TRUE)"
+   },
+   "H6": {
+    "t": "n",
+    "v": 2.648048485630878e-46,
+    "formula": "=POISSON.DIST(14,150,TRUE)"
+   },
+   "H7": {
+    "t": "n",
+    "v": 2.8858680101297958e-49,
+    "formula": "=POISSON.DIST(14,157.5,TRUE)"
+   },
+   "H8": {
+    "t": "n",
+    "v": 3.1285754077501086e-58,
+    "formula": "=POISSON.DIST(14,180,TRUE)"
+   },
+   "H9": {
+    "t": "n",
+    "v": 1.5061154223488542e-82,
+    "formula": "=POISSON.DIST(14,240,TRUE)"
+   },
+   "I1": {
+    "t": "n",
+    "v": 6.781974852975998e-18,
+    "formula": "=CHISQ.DIST.RT(240,80)"
+   },
+   "I10": {
+    "t": "n",
+    "v": 3.1406175847430387e-281,
+    "formula": "=CHISQ.DIST.RT(1600,80)"
+   },
+   "I11": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=CHISQ.DIST.RT(2400,80)"
+   },
+   "I2": {
+    "t": "n",
+    "v": 1.923892251914451e-30,
+    "formula": "=CHISQ.DIST.RT(320,80)"
+   },
+   "I3": {
+    "t": "n",
+    "v": 2.3151478214546613e-58,
+    "formula": "=CHISQ.DIST.RT(480,80)"
+   },
+   "I4": {
+    "t": "n",
+    "v": 2.973451032758195e-88,
+    "formula": "=CHISQ.DIST.RT(640,80)"
+   },
+   "I5": {
+    "t": "n",
+    "v": 2.0747061387426308e-111,
+    "formula": "=CHISQ.DIST.RT(760.0,80)"
+   },
+   "I6": {
+    "t": "n",
+    "v": 3.143297267321621e-119,
+    "formula": "=CHISQ.DIST.RT(800,80)"
+   },
+   "I7": {
+    "t": "n",
+    "v": 4.321785100346025e-127,
+    "formula": "=CHISQ.DIST.RT(840.0,80)"
+   },
+   "I8": {
+    "t": "n",
+    "v": 6.826339124212651e-151,
+    "formula": "=CHISQ.DIST.RT(960,80)"
+   },
+   "I9": {
+    "t": "n",
+    "v": 1.6226478104559066e-215,
+    "formula": "=CHISQ.DIST.RT(1280,80)"
+   },
+   "J1": {
+    "t": "n",
+    "v": 6.781974852975998e-18,
+    "formula": "=POISSON.DIST(39,120,TRUE)"
+   },
+   "J10": {
+    "t": "n",
+    "v": 3.1406175847426815e-281,
+    "formula": "=POISSON.DIST(39,800,TRUE)"
+   },
+   "J11": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=POISSON.DIST(39,1200,TRUE)"
+   },
+   "J2": {
+    "t": "n",
+    "v": 1.9238922519144237e-30,
+    "formula": "=POISSON.DIST(39,160,TRUE)"
+   },
+   "J3": {
+    "t": "n",
+    "v": 2.315147821454727e-58,
+    "formula": "=POISSON.DIST(39,240,TRUE)"
+   },
+   "J4": {
+    "t": "n",
+    "v": 2.973451032758195e-88,
+    "formula": "=POISSON.DIST(39,320,TRUE)"
+   },
+   "J5": {
+    "t": "n",
+    "v": 2.0747061387426308e-111,
+    "formula": "=POISSON.DIST(39,380.0,TRUE)"
+   },
+   "J6": {
+    "t": "n",
+    "v": 3.143297267321621e-119,
+    "formula": "=POISSON.DIST(39,400,TRUE)"
+   },
+   "J7": {
+    "t": "n",
+    "v": 4.321785100346025e-127,
+    "formula": "=POISSON.DIST(39,420.0,TRUE)"
+   },
+   "J8": {
+    "t": "n",
+    "v": 6.826339124212651e-151,
+    "formula": "=POISSON.DIST(39,480,TRUE)"
+   },
+   "J9": {
+    "t": "n",
+    "v": 1.6226478104559066e-215,
+    "formula": "=POISSON.DIST(39,640,TRUE)"
+   },
+   "K1": {
+    "t": "n",
+    "v": 1.4110215102111596e-41,
+    "formula": "=CHISQ.DIST.RT(600,200)"
+   },
+   "K10": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=CHISQ.DIST.RT(4000,200)"
+   },
+   "K11": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=CHISQ.DIST.RT(6000,200)"
+   },
+   "K2": {
+    "t": "n",
+    "v": 1.0943747087347164e-72,
+    "formula": "=CHISQ.DIST.RT(800,200)"
+   },
+   "K3": {
+    "t": "n",
+    "v": 3.70189475019473e-142,
+    "formula": "=CHISQ.DIST.RT(1200,200)"
+   },
+   "K4": {
+    "t": "n",
+    "v": 1.1418374976052455e-216,
+    "formula": "=CHISQ.DIST.RT(1600,200)"
+   },
+   "K5": {
+    "t": "n",
+    "v": 1.9615992918275848e-274,
+    "formula": "=CHISQ.DIST.RT(1900.0,200)"
+   },
+   "K6": {
+    "t": "n",
+    "v": 6.0358275296307356e-294,
+    "formula": "=CHISQ.DIST.RT(2000,200)"
+   },
+   "K7": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=CHISQ.DIST.RT(2100.0,200)"
+   },
+   "K8": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=CHISQ.DIST.RT(2400,200)"
+   },
+   "K9": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=CHISQ.DIST.RT(3200,200)"
+   },
+   "L1": {
+    "t": "n",
+    "v": 1.4110215102111596e-41,
+    "formula": "=POISSON.DIST(99,300,TRUE)"
+   },
+   "L10": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=POISSON.DIST(99,2000,TRUE)"
+   },
+   "L11": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=POISSON.DIST(99,3000,TRUE)"
+   },
+   "L2": {
+    "t": "n",
+    "v": 1.0943747087347164e-72,
+    "formula": "=POISSON.DIST(99,400,TRUE)"
+   },
+   "L3": {
+    "t": "n",
+    "v": 3.70189475019473e-142,
+    "formula": "=POISSON.DIST(99,600,TRUE)"
+   },
+   "L4": {
+    "t": "n",
+    "v": 1.1418374976053104e-216,
+    "formula": "=POISSON.DIST(99,800,TRUE)"
+   },
+   "L5": {
+    "t": "n",
+    "v": 1.9615992918275848e-274,
+    "formula": "=POISSON.DIST(99,950.0,TRUE)"
+   },
+   "L6": {
+    "t": "n",
+    "v": 6.035827529631422e-294,
+    "formula": "=POISSON.DIST(99,1000,TRUE)"
+   },
+   "L7": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=POISSON.DIST(99,1050.0,TRUE)"
+   },
+   "L8": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=POISSON.DIST(99,1200,TRUE)"
+   },
+   "L9": {
+    "t": "n",
+    "v": 0.0,
+    "formula": "=POISSON.DIST(99,1600,TRUE)"
+   }
+  }
+ }
+}

@@ -1,0 +1,43 @@
+name = "pivot-corpus-closedxml"
+description = "ClosedXML's Excel-saved pivot workbooks (ClosedXML.Tests/Resource): import and formula cells scored against Excel's cached values; each pivot classified fresh or stale (T-4131)"
+kind = "xlsx"
+root = "../../.cache/suites/pivot-corpus-closedxml"
+# The second half of the pivot-corpus (see pivot-corpus-lo, which holds the first).
+license = "MIT"
+origin = "https://github.com/ClosedXML/ClosedXML (ClosedXML.Tests/Resource)"
+use_cached_values = true
+# ClosedXML's own `output` files and every other file it wrote are not Excel's: only the Excel-saved
+# inputs below are fetched, and the docProps check keeps any other file's cache out of scoring.
+require_excel_authored = true
+gate = false
+baseline = "cells"
+milestone = ["M16"]
+
+[fetch]
+url = "https://github.com/ClosedXML/ClosedXML.git"
+rev = "057f5976c788d97e8eac86d1a528bd5411d9386e"
+subdir = "ClosedXML.Tests/Resource"
+sparse = ["ClosedXML.Tests/Resource/**/*.xlsx"]
+# The Excel-saved workbooks with pivots of oss-engines.md §5, 19 files and 45 pivots. Its 19
+# `TryToLoad/LO/` files are copies of pivot-corpus-lo's and are left out.
+include = [
+  "Other/PivotTable/Save/Pivot_table_conditional_format.xlsx",
+  "Other/PivotTable/Sources/PivotTable-AllSources-input.xlsx",
+  "Other/PivotTableReferenceFiles/ChartsheetAndPivotTable.xlsx",
+  "Other/PivotTableReferenceFiles/ClearPivotTableRenderedRangeWhenLoading/inputfile.xlsx",
+  "Other/PivotTableReferenceFiles/PivotCacheWithoutSourceData-input.xlsx",
+  "Other/PivotTableReferenceFiles/PivotMixedDataTypesInTableColumn/input.xlsx",
+  "Other/PivotTableReferenceFiles/PivotSubtotalsSource/input.xlsx",
+  "Other/PivotTableReferenceFiles/PivotTableWithNoneTheme/inputfile.xlsx",
+  "Other/PivotTableReferenceFiles/PivotTableWithoutSourceData-input.xlsx",
+  "Other/PivotTableReferenceFiles/TwoPivotTablesWithSingleSource/input.xlsx",
+  "Other/PivotTableReferenceFiles/VariousDataTypesInTableColumns/input.xlsx",
+  "Other/PivotTableReferenceFiles/VersioningAttributes/inputfile.xlsx",
+  "TryToLoad/DialogSheet.xlsx",
+  "TryToLoad/LoadPivotTables.xlsx",
+  "TryToLoad/PivotTableWithBorder.xlsx",
+  "TryToLoad/PivotTableWithMissingReference.xlsx",
+  "TryToLoad/PivotTableWithTableSource.xlsx",
+  "TryToLoad/SheetsWithoutRelId.xlsx",
+  "TryToLoad/TemplateWithTableSourcePivotTables.xlsx",
+]

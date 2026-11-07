@@ -43,11 +43,19 @@ probes/getpivotdata-real-pivot, excel-graph 2026-10-16; cell ids are sheet P):
 | `pivot_table` is any cell of the pivot or a range covering it; a cell outside every pivot (the source too) is `#REF!` | H11, H16, H12, H20 |
 | an array of items lifts and spills | L1, L5 |
 
-Errors in `pivot_table` or `data_field` propagate before any lookup (web.md "without a pivot
-table"; kept as implemented by T-1703).
+A typed error in `pivot_table` or `data_field` propagates before any lookup (web.md "without a pivot
+table"; kept as implemented by T-1703); a `data_field` error read from a cell is `#REF!` (web.md "GETPIVOTDATA
+error arguments (T-4006)"). A reference to an error cell inside a pivot does not: it picks the pivot
+like any of its cells (web.md "GETPIVOTDATA on other pivot shapes (T-2085)", probes/t2085-getpivotdata-items
+Q!E20:E23; T-4805).
 
-Unknowns. Each is probed by T-2085, and until then T-2083 answers `#REF!` for it (or keeps today's
-T-1703 behavior where one exists), never a guessed value:
+Unknowns. T-2085 probed them (docs/excel-semantics/web.md "GETPIVOTDATA on other pivot shapes (T-2085)"; probes
+t2085-getpivotdata-data-fields, -items and -layouts). Not probed are an array `pivot_table` (in 7), case-variant cache
+items (in 14: Excel for the web refuses the file), calculated items (refused too) and a cache saved without records
+(in 12: the case builder cannot write one). Which pivot a reference overlapping two pivots picks (in 9) is not established: one committed fill
+answered from the top-left pivot and an uncommitted later one from the other, so the engine keeps `#REF!`. T-4804
+implements unknowns 1, 2, 8, 15 and 16 (the resolution rules below). Until T-4805 and T-4806 implement the rest, T-2083 answers `#REF!` for each (or keeps today's T-1703 behavior where one exists), never a
+guessed value:
 1. several data fields: the `"Values"` field, what a blank `data_field` picks, and a source name
    shared by two data fields (Sum and Count of Sales);
 2. an empty intersection of CountNums, Product, Var, VarP, StdDev and StdDevP (Sum, Count, Average, Max and Min are 0, T-2404);
@@ -176,19 +184,25 @@ refers to the list in "Excel behavior to match".
    `location` intersects the reference's range (H11, H16); none is `#REF!` (H12, H20); more than
    one is `#REF!` (unknown 9). A pivot with a page field, or with any hidden item, answers `#REF!`
    (unknown 4).
-2. The data field: an empty-cell `data_field` takes the data field when there is exactly one (J7);
-   `""` keeps T-1703's `#REF!` (unknown 8). Otherwise the data field whose caption, or whose source
-   field name, equals `data_field` ignoring case and untrimmed; none is `#REF!`; a pivot with more
-   than one data field is `#REF!` (unknown 1).
+2. The data field: an empty-cell `data_field` takes the data field when there is exactly one and
+   the cell is inside the pivot's `location` (J7, DF S1!C3); a blank cell outside it, on any sheet,
+   or with several data fields is `#REF!` (DF Q!A6, A15, A17, A20); `""` is `#REF!` (unknown 8, DF
+   Q!A7, A14, A16). Otherwise the first data field whose caption equals `data_field` ignoring case
+   and untrimmed, else the first whose source field name does (a source name two data fields share
+   picks the first, DF Q!A1; T-4804); none is `#REF!`, `"Values"` included (DF Q!A10). Several
+   data fields are answered when the Values field is on the row or column axis (unknown 1).
 3. The pairs: an odd count is `#REF!` (H15); each field name must match (ignoring case) a cache field
    on the row or column axis (H8, J3); each item must match a text item of that field ignoring case
    (H7, H18, J6, J8), or be an omitted argument, which picks the field's blank item (calipers
    pv23_041, T-2662); a number, date or boolean item or field is `#REF!` (unknown 3); the same field
-   twice is `#REF!`, with different items (H17) or the same (unknown 5). A pivot with two fields on
+   twice is `#REF!`, with different items (H17) or the same (unknown 5). With several data fields
+   the Values field is a pair field by its `dataCaption` (`Values`), ignoring case, whose only
+   item is the chosen data field's caption; any other item is `#REF!` (DF Q!A8, A9, A11). A pivot with two fields on
    an axis answers only with no pairs, its grand total (calipers formula_stress_test, T-2662); any
    pair there is `#REF!` (unknown 10).
 4. The value: the data field's aggregate over the records whose fields equal every chosen item. A
-   Sum, Count, Average, Max or Min over no records is 0 (H13, probes/getpivotdata-empty-intersection); any other aggregate over no records is `#REF!` (unknown 2, unprobed). A
+   aggregate over no records is 0 (H13, probes/getpivotdata-empty-intersection; unknown 2, DF
+   Q!B6:J6); Var and StdDev over one record are `#DIV/0!`, VarP and StdDevP 0 (DF Q!G5:J5). A
    record holding an error, a blank or text in the data field makes the answer `#REF!` (unknown 6).
 5. An array of items lifts per SPEC-0011 (L1, L5), each element a scalar call; an array
    `data_field`, `pivot_table` or field name keeps T-1703's single `#REF!` (unknown 7).
@@ -231,9 +245,8 @@ volatile.
   like every lifted function. The import never pre-sizes from a file's `count` attributes.
 - The same cache builder (columnar, interning, counting the limits) serves the xlsx importer and
   `Txn::add_pivot_table`: one definition (directive 3).
-- Results are never NaN or infinite: a non-finite result is `#NUM!`; an aggregate with no defined
-  value (Average, StdDev, Var over too few records) is `#REF!` until T-2085 has Excel's answer,
-  never a division by zero.
+- Results are never NaN or infinite: a non-finite result is `#NUM!` (unknown 16, DF Q!K1:L3); Var
+  and StdDev over one record are `#DIV/0!`, and every aggregate over none is 0 (T-4804).
 
 ### Spec cases in the eval adapter (T-2084)
 A spec case has no xlsx, and its rendered pivot cells exist only in the built file

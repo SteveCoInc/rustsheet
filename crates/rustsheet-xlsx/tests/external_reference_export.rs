@@ -70,3 +70,33 @@ fn external_references_are_saved_as_the_source_stores_them() {
         );
     }
 }
+
+// A structured reference into a table of the linked workbook is `#REF!` (references.md "A
+// structured reference into a linked workbook is `#REF!`") but is saved as written, not as
+// `#REF!` (corpus-bench 33094 Sheet1!B5, the 2026-11-04 round-trip census §2.2; T-4144).
+#[test]
+fn external_structured_references_are_saved_as_written() {
+    let path = "../../eval/suites/fixtures/cases/external-link-cached-lookups.xlsx";
+    let mut model = load_from_xlsx(path, "en", "UTC", "en").unwrap();
+    let formulas = [
+        "VLOOKUP([1]!Table3[[#This Row],[Resource Name]],[1]Uses!E:J,6,0)",
+        "ROWS([1]!Table3[#Data])",
+        "ROWS([1]Defines!Table3[Col])",
+    ];
+    for (row, formula) in (1000..).zip(formulas) {
+        model
+            .set_loaded_user_input(0, row, 1, format!("={formula}"))
+            .unwrap();
+    }
+    model.evaluate();
+    for row in (1000..).take(formulas.len()) {
+        assert_eq!(model.get_formatted_cell_value(0, row, 1).unwrap(), "#REF!");
+    }
+    let saved = save_xlsx_to_writer(&model, Cursor::new(Vec::new()))
+        .unwrap()
+        .into_inner();
+    let saved = external_formulas(saved);
+    for formula in formulas {
+        assert!(saved.contains(formula), "not saved as written: {formula}");
+    }
+}

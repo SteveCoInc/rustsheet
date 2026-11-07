@@ -34,9 +34,11 @@ copied as `eval/suites/probes/cases/t4974-<group>.case.json` (the `val-` prefix 
 ## Outcome
 - The 24 cases are `probes/t4974-<group>.case.json` with excel-graph sidecars (24 filled, no failures) and 23 Gate A
   math sidecars (the moments case has no single-call cell). The merged-range scenarios M1-M6 are not cases (out of scope).
-- Against ours: 5,775 checked cells, 3,256 known-failure lines (mostly last digit: main lacks the prototype fixes the
+- Against ours: 5,775 checked cells, 3,232 known-failure lines (mostly last digit: main lacks the prototype fixes the
   predictions came from), 325 visibly-off cells outside Phase 1b, owned by T-4994, T-4995, T-4996, T-4997 and T-4998.
-  No other suite changed.
+  No other suite changed. Rescored on main 51dd32f9d (after T-4713, T-3469, T-1942 and the merged PR #4002 / #4005):
+  every t4974 known-failure and visibly-off line is unchanged, so none of those fixes closes a cell of these probes.
+  PR #4005's addendum (no residual flush for BETA.INV) agrees with the G22 result.
 - Against the prototype (cells bit-exact / within 5e-15 / visibly off or a different error):
   confirmed outright: moments 204/0/0, LOGNORM density 148/0/0, gamma split complement 205/50/0, AS 109 accuracy
   exponent 322/302/0, F AS 109 cap 139/36/0, Student-t quarter stop 105/7/0 and tiny centre 111/36/0, T.DIST df 1000

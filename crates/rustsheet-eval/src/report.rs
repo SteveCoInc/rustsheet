@@ -307,6 +307,11 @@ pub struct RunReport {
     /// reads the catalog.
     #[serde(default)]
     pub pivot_features: crate::pivot_features::PivotFeatures,
+    /// Per suite with a classified pivot, its fresh and stale pivots, the fresh pivots' render
+    /// scores (check (b)) and the `refreshOnLoad` refresh checks (check (c); T-4906). The M16
+    /// exit row's corpus render measure reads the `pivot-corpus-*` rows.
+    #[serde(default)]
+    pub fresh_pivot_render: Vec<crate::pivot_freshness::FreshRenderSuite>,
     /// The exit measures of decision 0085 per milestone (T-2177); derived from the rows above.
     #[serde(default)]
     pub milestone_exit: Vec<crate::milestone_exit::ExitRow>,
@@ -505,6 +510,7 @@ impl RunReport {
                 .collect(),
             unattributed_off: attribution::unattributed_off(catalog, results),
             attributed_off: attribution::attributed_off(catalog, results),
+            fresh_pivot_render: crate::pivot_freshness::summarize(results),
             // The caller fills the milestone sections, the checkpoint and `run`.
             ..RunReport::default()
         }
@@ -582,7 +588,8 @@ impl RunReport {
             let errors = st(CaseStatus::EngineError)
                 + st(CaseStatus::Panic)
                 + st(CaseStatus::Timeout)
-                + st(CaseStatus::InvalidCase);
+                + st(CaseStatus::InvalidCase)
+                + st(CaseStatus::ExcelRefused);
             let crashes =
                 st(CaseStatus::EngineError) + st(CaseStatus::Panic) + st(CaseStatus::Timeout);
             let _ = writeln!(
@@ -680,6 +687,7 @@ impl RunReport {
                         | CaseStatus::Panic
                         | CaseStatus::Timeout
                         | CaseStatus::InvalidCase
+                        | CaseStatus::ExcelRefused
                 )
             })
             .collect();
@@ -750,6 +758,7 @@ impl RunReport {
             let _ = writeln!(md);
         }
         crate::pivot_scoring::write_markdown(&self.cases, &mut md);
+        crate::pivot_freshness::write_markdown(&self.cases, &mut md);
         self.write_evidence(&mut md);
         catalog_coverage::write_markdown(&self.catalog_coverage, &mut md);
         crate::pivot_features::write_markdown(&self.pivot_features, &mut md);
