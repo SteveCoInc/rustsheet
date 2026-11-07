@@ -104,9 +104,10 @@ fn nested_cells_nest_again() {
 }
 
 #[test]
-fn element_wise_lifts_read_the_top_left() {
-    // Rule 4 (P!C1, P!C33): only a top-left error counts. `{1;#N/A}`, `{3;4}` and the Total
-    // `{1;#N/A;3;4}` hold no top-left error; `{#N/A;2}` and the Total `{#N/A;2;3;4}` do.
+fn element_wise_lifts_read_a_nested_cell_as_value_error() {
+    // Rule 4 (Excel since 2026-11, decision 0329; t2360-refill-1106 P!C1, P!C33): a lift reads
+    // every nested cell as `#VALUE!`, whatever its top-left: a's, b's and the Total's cells count
+    // whether or not they hold an `#N/A`.
     let mut model = groups();
     model._set(
         "F1",
@@ -120,11 +121,17 @@ fn element_wise_lifts_read_the_top_left() {
         "F3",
         "=SUM(--ISERROR(PIVOTBY(A1:A5,D1:D5,C1:C5,LAMBDA(v,v))))",
     );
+    model._set(
+        "F4",
+        "=SUM(--(IFERROR(ERROR.TYPE(GROUPBY(A1:A5,C1:C5,LAMBDA(v,v))),0)=3))",
+    );
     model.evaluate();
-    assert_eq!(model._get_text("F1"), "0");
-    assert_eq!(model._get_text("F2"), "2");
-    // t2311 P!C12: PIVOTBY's nested cells are no errors either.
-    assert_eq!(model._get_text("F3"), "0");
+    assert_eq!(model._get_text("F1"), "3");
+    assert_eq!(model._get_text("F2"), "3");
+    // t2311-refill-1106 P!C12: PIVOTBY's nested cells count too.
+    assert_eq!(model._get_text("F3"), "11");
+    // probes/t4737-nested-cell-lift-error-type A1: the error is `#VALUE!` (type 3).
+    assert_eq!(model._get_text("F4"), "3");
 }
 
 #[test]
@@ -223,7 +230,7 @@ fn aggregates_flatten_or_are_not_available() {
     assert_eq!(model._get_text("F1"), "220");
     assert_eq!(model._get_text("F2"), "16");
     assert_eq!(model._get_text("F3"), "19");
-    assert_eq!(model._get_text("F4"), "#N/A");
+    assert_eq!(model._get_text("F4"), "3");
     assert_eq!(model._get_text("F5"), "#N/A");
     assert_eq!(model._get_text("F6"), "#N/A");
     assert_eq!(model._get_text("F7"), "#CALC!");

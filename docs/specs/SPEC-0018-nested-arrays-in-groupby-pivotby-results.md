@@ -61,7 +61,9 @@ paragraph starting "A LAMBDA array result is shown as `#VALUE!`, but the cell ho
      inner top-left is `#N/A`, ISNA is 0 and ISERROR TRUE (probes/t2609-nested-operators-and-lifts A44:A47, -one-cell A27). It is
      `#VALUE!`: the lifted fallback `"#"&ERROR.TYPE(G)` of `IFERROR(G&"",..)` gives "#3" at every nested cell, 1x1 and
      multi-cell, over a raw GROUPBY and over an INDEXed PIVOTBY row (t2475-stat-subexpressions-refill-1106 P!A64,
-     t2625-nested-consumers-refill-1106 A32). A two-level cell's error type is not probed. Engine task: T-4737.
+     t2625-nested-consumers-refill-1106 A32). Every nested cell reads as `#VALUE!` (ERROR.TYPE 3), one-level, two-level (also when the
+     inner top-left is `#N/A`), reference-body and PIVOTBY alike, and through LEN, ABS, UPPER, ROUND and NOT as through ERROR.TYPE
+     (probes/t4737-nested-cell-lift-error-type A1:A14, 2026-11-07). Landed with T-4737.
    - A lifted INDEX that selects nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4
      (t2609-nested-operators-and-lifts A56:A59). Engine task: T-4738.
    - An operator over the whole result keeps its shape: `&""` gives 3x3 (A13), and each nested cell becomes `#VALUE!`, whatever
@@ -131,11 +133,10 @@ with saturating arithmetic. `new` refuses (returns `None`, and the caller gives 
 They are never recomputed by walking the tree. Elements may themselves be `Nested`, since Excel nests again (rule 8).
 
 **One reader.** `ArrayNode::scalar(&self) -> &ArrayNode` is the one place an element-wise read of a nested element is
-decided. As built (T-2593) it returns, for `Nested`, its top-left element taken recursively (a loop of at most
-`MAX_NESTED_DEPTH` steps), and for a `Reference` the error `#VALUE!` (only INDEX reads its value, rule 7; a lift reads
-`#VALUE!`, probes/t2609-nested-operators-and-lifts A41, A49); otherwise the node itself. Under the November reads (rule 4)
-it returns an error for every `Nested` element, whatever its depth (T-4737), and the lifted INDEX of rule 4 takes the
-top-left by its own read, not through `scalar` (T-4738). Every site that today matches `ArrayNode::Lambda` to
+decided. As built (T-4737, the November reads of rule 4) it returns `#VALUE!` for every `Nested` element, whatever its
+kind or depth (probes/t4737-nested-cell-lift-error-type A1:A14; only INDEX reads a `Reference` cell's value, rule 7),
+and otherwise the node itself; until T-4737 it returned a `Nested` cell's top-left, the October reads. The lifted INDEX of
+rule 4 takes the top-left by its own read, not through `scalar` (T-4738). Every site that today matches `ArrayNode::Lambda` to
 place a non-scalar, and that rule 4 shows to make an element-wise read, goes through it: the element-wise lifts (ISERROR,
 REGEXEXTRACT's return_mode). Every other site keeps today's `#VALUE!` until a rule here covers it, for both kinds (a `Reference` cell included, until T-2594). The inventory is those sites (35 matches in 25 files: cast.rs, arithmetic.rs, functions/util.rs,
 aggregate_args.rs, lift/kinds, text_kernel.rs, spill_functions.rs, ...); each gets an explicit `Nested` arm, either
@@ -204,8 +205,8 @@ That way `Drop`, `PartialEq` and the hash, which recurse through nested elements
 even when the recursion guard is configured differently; `scalar()` is a loop. The cap is per call; the walk budget above is what bounds a whole evaluation once nested results are copied.
 
 **Hash and equality.** `ArrayNode` derives `PartialEq`; `Nested` compares by content, kind included, at most
-`MAX_NESTED_DEPTH` deep. The lifting driver's class hash (functions/lift/driver.rs) hashes the top-left (`scalar()`), the
-value a lifted read sees.
+`MAX_NESTED_DEPTH` deep. The lifting driver's class hash (functions/lift/driver.rs) hashes `scalar()`, the
+value a lifted read sees (`#VALUE!` for every nested cell).
 
 ## Alternatives considered
 - **An id into a side store, as `ArrayNode::Lambda(usize)`.** Needs the store's lifetime managed per evaluation and charged
