@@ -1,0 +1,52 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4800: OFFSET over an all-hit XLOOKUP with a range if_not_found (T-4739 follow-up). Data as probes/t4704. Probe k (row 3k+1, A value, B ROWS, C COLUMNS): 1-2 lifted {2;3} (all hits) with OFFSET(..,0,0) and (..,1,0); 3-4 one-element {2}; 5-6 scalar lookup control. Predictions (committed before the fill): ours is a scalar #VALUE! for 1-4 (1x1); Excel may spill a 2x1 of #VALUE! for 1-2 as COUNTIF/SUMIF do in t4704, a 1x1 for 3-4 and the control OFFSET(20,..) = #VALUE! 1x1 for 5-6.",
+  "tags": [
+    "M6",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": 1,
+        "A2": 2,
+        "A3": 3,
+        "B1": 10,
+        "B2": 20,
+        "B3": 30,
+        "G1": 50,
+        "G2": 60,
+        "H1": 1,
+        "H2": 2,
+        "I1": 5,
+        "I2": "=1/0",
+        "I3": 7
+      }
+    },
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=OFFSET(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),0,0)",
+        "B1": "=ROWS(OFFSET(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),0,0))",
+        "C1": "=COLUMNS(OFFSET(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),0,0))",
+        "A4": "=OFFSET(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),1,0)",
+        "B4": "=ROWS(OFFSET(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),1,0))",
+        "C4": "=COLUMNS(OFFSET(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),1,0))",
+        "A7": "=OFFSET(XLOOKUP({2},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),0,0)",
+        "B7": "=ROWS(OFFSET(XLOOKUP({2},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),0,0))",
+        "C7": "=COLUMNS(OFFSET(XLOOKUP({2},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),0,0))",
+        "A10": "=OFFSET(XLOOKUP({2},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),1,0)",
+        "B10": "=ROWS(OFFSET(XLOOKUP({2},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),1,0))",
+        "C10": "=COLUMNS(OFFSET(XLOOKUP({2},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),1,0))",
+        "A13": "=OFFSET(XLOOKUP(2,Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),0,0)",
+        "B13": "=ROWS(OFFSET(XLOOKUP(2,Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),0,0))",
+        "C13": "=COLUMNS(OFFSET(XLOOKUP(2,Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),0,0))",
+        "A16": "=OFFSET(XLOOKUP(2,Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),1,0)",
+        "B16": "=ROWS(OFFSET(XLOOKUP(2,Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),1,0))",
+        "C16": "=COLUMNS(OFFSET(XLOOKUP(2,Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),1,0))"
+      }
+    }
+  ],
+  "expected": {}
+}

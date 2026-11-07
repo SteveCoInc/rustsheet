@@ -1854,3 +1854,14 @@ match_mode's range check, and match_mode's own cast comes before both. The CHOOS
 the gen-m6 cells only.
 Status: VERIFIED (excel-graph)
 Tasks: T-3667, T-3542, T-4544
+
+## OFFSET over an all-hit lifted XLOOKUP with a range if_not_found (T-4800)
+Rule: `OFFSET(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,Data!$G$1:$G$2),r,0)`, where every lookup hits, is a
+**2x1 spill of `#VALUE!`** (ROWS 2, COLUMNS 1) for `r` of 0 and of 1, like the mixed grid of t4704 and like COUNTIF and
+SUMIF over an all-hit XLOOKUP. With the one-element lookup `{2}` it is a 1x1 `#VALUE!` (ROWS 1, COLUMNS 1). A *scalar*
+lookup is not lifted: `OFFSET(XLOOKUP(2,...),0,0)` is 20 and `,1,0` is 30 (the hit is a reference to B2).
+Evidence: probes/t4800-offset-allhit-xlookup (excel-graph, 2026-11-07, T-4800) Calc!A1:A2, B1, C1 (lifted, 0,0), A4:A5,
+B4, C4 (1,0), A7, B7, C7 (`{2}`, 0,0), A10, B10, C10 (`{2}`, 1,0), A13, A16 (scalar control).
+Status: VERIFIED (excel-graph). Ours: the scalar control and the first cell of each spill match; the spills'
+second cells and every ROWS and COLUMNS are wrong (a scalar `#VALUE!`, so ROWS and COLUMNS are `#VALUE!`): T-4904.
+Tasks: T-4800, T-4904
