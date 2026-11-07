@@ -3,7 +3,7 @@ id: T-4701
 title: "One-index INDEX of a mixed XLOOKUP grid keeps the reference element (t4563 V25:V26)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
