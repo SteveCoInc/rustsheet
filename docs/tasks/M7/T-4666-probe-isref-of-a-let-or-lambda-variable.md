@@ -3,7 +3,7 @@ id: T-4666
 title: "Probe ISREF of a LET or LAMBDA variable bound to a union (incl. negated and empty-intersection operands) and _xleta.COUNT with SCAN/REDUCE initial-value forms"
 milestone: M7
 lane: functions-logic
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -43,3 +43,6 @@ initial-value forms. The engine is matched to every cell.
 
 ## Out of scope
 - REDUCE's returned-reference accumulator (T-4478, done) and the `a:v` parameter ranges (T-4494).
+
+## Outcome
+Added probes/t4666-union-variable-isref (11 cells, excel-graph 2026-11-07). The engine matches every cell: ISREF of union-bound variables TRUE, negated/empty-intersection unions FALSE; `_xleta.COUNT`/`PRODUCT` with the initial-value forms give 1,2,2,2,0,1. references.md and arrays.md updated and the arrays.md pointer fixed. No eval baseline change.
