@@ -256,9 +256,17 @@ impl Model {
     /// shrinks a range that loses an edge and makes a name on a deleted cell `#REF!`
     /// (probes/sheet-ops/t4702-names-*, t4702-name-deleted-cell-*, excel-graph, 2026-11-07).
     /// Moves are left alone (unprobed). Names are stored in English and have no cell of their
-    /// own: A1 of the edited sheet anchors them, which only a relative reference reads (unprobed).
+    /// own, and their relative references stay where they are (`Displacement::keep_relative`,
+    /// T-4760).
     /// A name the edit does not change keeps its text as stored.
     pub(crate) fn displace_defined_names(&mut self, sheet: u32, displacement: Displacement) {
+        // Excel leaves a relative reference in a name where it is, whichever sheet uses the name
+        // (probes/sheet-ops/t4747-name-relative-*, t4760-name-relative-same-sheet-*, excel-graph);
+        // absolute ones shift (T-4702).
+        let displacement = Displacement {
+            keep_relative: true,
+            ..displacement
+        };
         if !matches!(
             displacement.data,
             DisplaceData::Row { .. } | DisplaceData::Column { .. }

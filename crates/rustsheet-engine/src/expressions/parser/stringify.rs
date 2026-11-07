@@ -554,7 +554,16 @@ fn stringify(
             absolute_column,
         } => stringify_reference(
             context,
-            displace_data,
+            match rewrite {
+                Rewrite::Displace(displacement)
+                    if context.is_some_and(|context| {
+                        displacement.keeps(!*absolute_row && !*absolute_column, row + context.row)
+                    }) =>
+                {
+                    &DisplaceData::None
+                }
+                _ => displace_data,
+            },
             &Reference {
                 sheet_name,
                 sheet_index: *sheet_index,

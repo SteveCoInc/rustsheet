@@ -435,6 +435,7 @@ impl Model {
             deleted_columns: &edits.deleted_columns,
             deleted_tables: &edits.deleted_tables,
             moved_tables: &edits.moved_tables,
+            keep_relative: false,
         };
         let column_formulas = self.displaced_column_formulas(displacement);
         let rewritten = self.displace_cells(displacement)?;

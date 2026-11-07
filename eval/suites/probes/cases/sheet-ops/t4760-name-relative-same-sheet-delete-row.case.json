@@ -1,0 +1,70 @@
+{
+  "format": "rustsheet-case/v1",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "description": "T-4760: workbook name Rel = =Data!A5 (relative; file text anchored at A1) used from the edited sheet itself (Data!A1, A3, A20) and from Calc!A1, after delete_row 4 on Data (Data!An = n*10 for the value rows). Prediction: If the name does not move: A1 60 (Data!A5 = old row 6), A3 80 (A7 = old A8), A20 (moved to A19) reads A23 = old A24 240; Calc!A1 60. If it shifts: A1 50, A3 70, A19 230 (old A23), Calc!A1 50.",
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=Rel"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "=Rel",
+        "A3": "=Rel",
+        "A20": "=Rel",
+        "A4": 40,
+        "A5": 50,
+        "A6": 60,
+        "A7": 70,
+        "A8": 80,
+        "A9": 90,
+        "A10": 100,
+        "A11": 110,
+        "A12": 120,
+        "A13": 130,
+        "A14": 140,
+        "A15": 150,
+        "A16": 160,
+        "A17": 170,
+        "A18": 180,
+        "A19": 190,
+        "A21": 210,
+        "A22": 220,
+        "A23": 230,
+        "A24": 240,
+        "A25": 250,
+        "A26": 260,
+        "A27": 270,
+        "A28": 280,
+        "A29": 290,
+        "A30": 300,
+        "A2": 20
+      }
+    }
+  ],
+  "names": {
+    "Rel": "=Data!A5"
+  },
+  "sheet_ops": [
+    {
+      "op": "delete_row",
+      "sheet": "Data",
+      "row": 4
+    }
+  ],
+  "check": [
+    "Calc!A1",
+    "Data!A1",
+    "Data!A3",
+    "Data!A19"
+  ],
+  "expected": {}
+}
