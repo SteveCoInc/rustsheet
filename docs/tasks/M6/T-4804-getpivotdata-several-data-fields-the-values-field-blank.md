@@ -3,7 +3,7 @@ id: T-4804
 title: "GETPIVOTDATA: several data fields, the Values field, blank and empty data_field, one- and no-record aggregates, overflow (T-2085 evidence)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
