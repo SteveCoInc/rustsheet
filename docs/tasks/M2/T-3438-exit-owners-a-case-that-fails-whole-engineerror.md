@@ -3,7 +3,7 @@ id: T-3438
 title: "exit_owners: a case that fails whole (EngineError, Panic, did not run) is owned by the block that lists its cells, and a whole-case name counts per block (amend decision 0159)"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
