@@ -3,7 +3,7 @@ id: T-2789
 title: "Probe COMBINA's number_chosen in (-1, 0) and below -1 against number 0, (0, 1) and 1 (T-2621 follow-up)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -29,3 +29,7 @@ COMBINA(2,-0.5), and the same with COMBIN for comparison; then align the rule an
 
 ## Out of scope
 - COMBINA's number bound (numbers.md "COMBINA is COMBIN(n+k-1, k)").
+
+## Outcome
+Probe `probes/t2789-combina-number-chosen` (48 cells, COMBINA and COMBIN) filled by excel-graph. The engine's rule
+already matched every cell; statistics.md now states it as VERIFIED. No engine change; eval delta: new probe cells pass.

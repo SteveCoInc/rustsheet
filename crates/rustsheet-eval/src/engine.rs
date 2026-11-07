@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 
 use rustsheet::{
-    CellRef, Clock, DateSystem, ErrorKind, Input, LoadOptions, RangeRef, SheetId,
+    CellRef, Clock, DateSystem, ErrorKind, Input, LoadOptions, RangeRef, SaveOptions, SheetId,
     Value as ApiValue, Workbook, WorkbookOptions, XlError,
 };
 
@@ -38,6 +38,14 @@ pub trait Evaluated {
     /// or cannot list them.
     fn pivot_places(&self) -> Vec<rustsheet::PivotPlace> {
         Vec::new()
+    }
+    /// The workbook as the engine's xlsx export saves it now, after the evaluation: an
+    /// engine-export case reads the `rowItems`/`colItems` the engine would save from it (T-4177).
+    ///
+    /// # Errors
+    /// Why the workbook cannot be saved; by default, that the engine cannot save one.
+    fn saved_package(&self) -> Result<Vec<u8>, String> {
+        Err("this engine cannot save a workbook".into())
     }
 }
 
@@ -112,6 +120,18 @@ impl RustSheetEvaluated {
     }
 }
 
+/// A facade value as the harness scores it; text as the facade gives it.
+fn harness_value(value: ApiValue) -> Value {
+    match value {
+        ApiValue::Number(n) => Value::Number(n),
+        ApiValue::Text(s) => Value::Text(s.to_string()),
+        ApiValue::Bool(b) => Value::Bool(b),
+        ApiValue::Error(e) => Value::Error(e.kind.stored_literal().to_string()),
+        // `ApiValue` is non-exhaustive; `Empty` and future variants score as empty.
+        _ => Value::Empty,
+    }
+}
+
 impl Evaluated for RustSheetEvaluated {
     fn pivot_places(&self) -> Vec<rustsheet::PivotPlace> {
         self.workbook.pivot_places()
@@ -121,18 +141,18 @@ impl Evaluated for RustSheetEvaluated {
         self.workbook.sheets().into_iter().map(|s| s.name).collect()
     }
 
+    fn saved_package(&self) -> Result<Vec<u8>, String> {
+        (self.workbook.to_xlsx_bytes(SaveOptions::default())).map_err(|e| e.to_string())
+    }
+
     fn value(&self, sheet: &str, addr: Addr) -> Option<Value> {
         let cell = self.cell(sheet, addr)?;
         Some(match self.workbook.value(cell).ok()? {
-            ApiValue::Number(n) => Value::Number(n),
             ApiValue::Text(s) => Value::Text(match self.workbook.text_utf16(cell) {
                 Ok(Some(units)) => render_lone_units(&units),
                 _ => s.to_string(),
             }),
-            ApiValue::Bool(b) => Value::Bool(b),
-            ApiValue::Error(e) => Value::Error(e.kind.stored_literal().to_string()),
-            // `ApiValue` is non-exhaustive; `Empty` and future variants score as empty.
-            _ => Value::Empty,
+            other => harness_value(other),
         })
     }
 
@@ -187,142 +207,146 @@ impl Engine for RustSheetEngine {
         spec: &CaseSpec,
         name: Option<&str>,
     ) -> Result<Box<dyn Evaluated>, String> {
-        let date_system = match spec.date_system {
-            None | Some(1900) => DateSystem::Excel1900,
-            Some(1904) => DateSystem::Excel1904,
-            Some(other) => return Err(format!("date_system must be 1900 or 1904, not {other}")),
-        };
-        let mut workbook = Workbook::new(&WorkbookOptions {
-            date_system,
-            ..harness_options(name)?
+        Ok(Box::new(RustSheetEvaluated {
+            workbook: build_spec(spec, name)?,
+        }))
+    }
+}
+
+/// The workbook a spec case describes, built and recalculated as [`Engine::evaluate_spec`]
+/// evaluates it; the engine-export cases (T-4177) save it.
+///
+/// # Errors
+/// A human-readable message when the spec cannot be materialized.
+pub(crate) fn build_spec(spec: &CaseSpec, name: Option<&str>) -> Result<Workbook, String> {
+    let date_system = match spec.date_system {
+        None | Some(1900) => DateSystem::Excel1900,
+        Some(1904) => DateSystem::Excel1904,
+        Some(other) => return Err(format!("date_system must be 1900 or 1904, not {other}")),
+    };
+    let mut workbook = Workbook::new(&WorkbookOptions {
+        date_system,
+        ..harness_options(name)?
+    })
+    .map_err(|e| e.to_string())?;
+    // The harness only reads final values: skip the per-edit value diff.
+    workbook.set_track_changes(false);
+    if let Some(c) = spec.calculation.as_ref().filter(|c| c.iterate) {
+        let default = rustsheet::Iteration::default();
+        workbook.set_iteration(Some(rustsheet::Iteration {
+            max_iterations: c.iterate_count.unwrap_or(default.max_iterations),
+            max_change: c.iterate_delta.unwrap_or(default.max_change),
+        }));
+    }
+    let (entered, _) = workbook
+        .edit(|tx| {
+            let mut ids = Vec::with_capacity(spec.sheets.len());
+            for (i, sheet) in spec.sheets.iter().enumerate() {
+                ids.push(if i == 0 {
+                    let first = tx.first_sheet()?;
+                    tx.rename_sheet(first, &sheet.name)?;
+                    first
+                } else {
+                    tx.add_sheet(&sheet.name)?
+                });
+            }
+            // Names need their sheets; each reparses the workbook, so define them before
+            // any cell is set.
+            // `Sheet1!Print_Area` is a name scoped to Sheet1, as xlsxwriter (spec2xlsx)
+            // reads it.
+            define_names(tx, spec, &ids, false)?;
+            // Values first, then tables (they read their headers), then stored formulas (a
+            // structured reference parses only once its table exists). Entered text is kept
+            // for after this edit, the workbook's load ([`type_entries`]).
+            let mut entered = Vec::new();
+            for phase in [Phase::Values, Phase::Stored] {
+                if phase == Phase::Stored {
+                    // Tables before the number formats: a criterion's values filter lists the
+                    // General text spec2xlsx writes, not the formatted text (T-4939,
+                    // probes/t4895-two-criteria-number-format-*).
+                    for (sheet, &id) in spec.sheets.iter().zip(&ids) {
+                        for table in &sheet.tables {
+                            add_table(tx, id, table, &sheet.hidden_rows)?;
+                        }
+                    }
+                    // Before the pivots too: a date-formatted source cell is a date to a
+                    // pivot's refresh (probes/t4287-pivot-group-dates-as-numbers). Set again
+                    // below, as a stored formula's own format replaces it.
+                    for (sheet, &id) in spec.sheets.iter().zip(&ids) {
+                        set_number_formats(tx, sheet, id)?;
+                    }
+                }
+                for (sheet, &id) in spec.sheets.iter().zip(&ids) {
+                    if phase == Phase::Stored {
+                        spec_pivots::add_pivots(tx, spec, &ids, sheet, id)?;
+                    }
+                    if phase == Phase::Values {
+                        spec_pivots::write_rendered(tx, sheet, id, spec_input)?;
+                    }
+                    for (addr, a1, input_spec) in row_major(&sheet.cells)? {
+                        let Some((input, input_phase)) = cell_input(sheet, a1, input_spec) else {
+                            continue;
+                        };
+                        let target = CellRef::new(id, addr.row - 1, addr.col - 1)?;
+                        if input_phase == Phase::Entered {
+                            if phase == Phase::Stored {
+                                entered.push((target, input));
+                            }
+                            continue;
+                        }
+                        if input_phase == phase {
+                            tx.set(target, input)?;
+                        }
+                    }
+                }
+            }
+            // A name with a structured reference parses only once its table exists.
+            define_names(tx, spec, &ids, true)?;
+            for (sheet, &id) in spec.sheets.iter().zip(&ids) {
+                for table in &sheet.data_tables {
+                    let input = |a1: &Option<String>| -> Result<_, rustsheet::EditError> {
+                        let Some(a1) = a1.as_deref() else {
+                            return Ok(None);
+                        };
+                        let addr = Addr::parse(a1).ok_or_else(|| {
+                            rustsheet::EditError::Engine(format!("bad address {a1}"))
+                        })?;
+                        Ok(Some(CellRef::new(id, addr.row - 1, addr.col - 1)?))
+                    };
+                    tx.add_data_table(
+                        range_ref(id, &table.range)?,
+                        input(&table.row_input)?,
+                        input(&table.column_input)?,
+                    )?;
+                }
+                set_number_formats(tx, sheet, id)?;
+                for &row in &sheet.hidden_rows {
+                    let row = row.checked_sub(1).ok_or(rustsheet::RefError::OutOfBounds)?;
+                    tx.set_row_hidden(id, row, true)?;
+                }
+            }
+            Ok(entered)
         })
         .map_err(|e| e.to_string())?;
-        // The harness only reads final values: skip the per-edit value diff.
-        workbook.set_track_changes(false);
-        if let Some(c) = spec.calculation.as_ref().filter(|c| c.iterate) {
-            let default = rustsheet::Iteration::default();
-            workbook.set_iteration(Some(rustsheet::Iteration {
-                max_iterations: c.iterate_count.unwrap_or(default.max_iterations),
-                max_change: c.iterate_delta.unwrap_or(default.max_change),
-            }));
-        }
-        let (entered, _) = workbook
-            .edit(|tx| {
-                let mut ids = Vec::with_capacity(spec.sheets.len());
-                for (i, sheet) in spec.sheets.iter().enumerate() {
-                    ids.push(if i == 0 {
-                        let first = tx.first_sheet()?;
-                        tx.rename_sheet(first, &sheet.name)?;
-                        first
-                    } else {
-                        tx.add_sheet(&sheet.name)?
-                    });
-                }
-                // Names need their sheets; each reparses the workbook, so define them before
-                // any cell is set.
-                // `Sheet1!Print_Area` is a name scoped to Sheet1, as xlsxwriter (spec2xlsx)
-                // reads it.
-                define_names(tx, spec, &ids, false)?;
-                // Values first, then tables (they read their headers), then stored formulas (a
-                // structured reference parses only once its table exists). Entered text is kept
-                // for after this edit, the workbook's load ([`type_entries`]).
-                let mut entered = Vec::new();
-                for phase in [Phase::Values, Phase::Stored] {
-                    if phase == Phase::Stored {
-                        // Before the pivots too: a date-formatted source cell is a date to a
-                        // pivot's refresh (probes/t4287-pivot-group-dates-as-numbers). Set again
-                        // below, as a stored formula's own format replaces it.
-                        for (sheet, &id) in spec.sheets.iter().zip(&ids) {
-                            set_number_formats(tx, sheet, id)?;
-                        }
-                    }
-                    for (sheet, &id) in spec.sheets.iter().zip(&ids) {
-                        if phase == Phase::Stored {
-                            spec_pivots::add_pivots(tx, spec, &ids, sheet, id)?;
-                            for table in &sheet.tables {
-                                let range = range_ref(id, &table.range)?;
-                                tx.add_table_with_rows(
-                                    range,
-                                    &table.name,
-                                    filters_hidden_rows(table, range, &sheet.hidden_rows),
-                                    (table.header_row, table.totals_row),
-                                )?;
-                                for (letter, formula) in &table.calculated {
-                                    let (column, text) =
-                                        calculated_column(&table.range, letter, formula)?;
-                                    tx.set_table_column_formula(&table.name, column, text)?;
-                                }
-                            }
-                        }
-                        if phase == Phase::Values {
-                            spec_pivots::write_rendered(tx, sheet, id, spec_input)?;
-                        }
-                        for (addr, a1, input_spec) in row_major(&sheet.cells)? {
-                            let Some((input, input_phase)) = cell_input(sheet, a1, input_spec)
-                            else {
-                                continue;
-                            };
-                            let target = CellRef::new(id, addr.row - 1, addr.col - 1)?;
-                            if input_phase == Phase::Entered {
-                                if phase == Phase::Stored {
-                                    entered.push((target, input));
-                                }
-                                continue;
-                            }
-                            if input_phase == phase {
-                                tx.set(target, input)?;
-                            }
-                        }
-                    }
-                }
-                // A name with a structured reference parses only once its table exists.
-                define_names(tx, spec, &ids, true)?;
-                for (sheet, &id) in spec.sheets.iter().zip(&ids) {
-                    for table in &sheet.data_tables {
-                        let input = |a1: &Option<String>| -> Result<_, rustsheet::EditError> {
-                            let Some(a1) = a1.as_deref() else {
-                                return Ok(None);
-                            };
-                            let addr = Addr::parse(a1).ok_or_else(|| {
-                                rustsheet::EditError::Engine(format!("bad address {a1}"))
-                            })?;
-                            Ok(Some(CellRef::new(id, addr.row - 1, addr.col - 1)?))
-                        };
-                        tx.add_data_table(
-                            range_ref(id, &table.range)?,
-                            input(&table.row_input)?,
-                            input(&table.column_input)?,
-                        )?;
-                    }
-                    set_number_formats(tx, sheet, id)?;
-                    for &row in &sheet.hidden_rows {
-                        let row = row.checked_sub(1).ok_or(rustsheet::RefError::OutOfBounds)?;
-                        tx.set_row_hidden(id, row, true)?;
-                    }
-                }
-                Ok(entered)
-            })
-            .map_err(|e| e.to_string())?;
-        // Excel opens the built file, calculates and then refreshes its `refreshOnLoad` pivots
-        // before the oracle types any entry.
-        spec_pivots::load_defined(&mut workbook, spec)?;
-        type_entries(&mut workbook, entered)?;
-        apply_sheet_ops(&mut workbook, &spec.sheet_ops)?;
-        if let Some(active) = &spec.active_sheet {
-            let id = workbook
-                .sheet_id(active)
-                .map_err(|e| format!("active_sheet {active}: {e}"))?;
-            workbook
-                .set_active_sheet(id)
-                .map_err(|e| format!("active_sheet {active}: {e}"))?;
-        }
-        define_api_names(&mut workbook, &spec.api_names)?;
-        // The edit calculated once; an iterative case gets the oracle's other calculations.
-        for _ in 1..calculations(spec) {
-            workbook.recalculate();
-        }
-        Ok(Box::new(RustSheetEvaluated { workbook }))
+    // Excel opens the built file, calculates and then refreshes its `refreshOnLoad` pivots
+    // before the oracle types any entry.
+    spec_pivots::load_defined(&mut workbook, spec)?;
+    type_entries(&mut workbook, entered)?;
+    apply_sheet_ops(&mut workbook, &spec.sheet_ops)?;
+    if let Some(active) = &spec.active_sheet {
+        let id = workbook
+            .sheet_id(active)
+            .map_err(|e| format!("active_sheet {active}: {e}"))?;
+        workbook
+            .set_active_sheet(id)
+            .map_err(|e| format!("active_sheet {active}: {e}"))?;
     }
+    define_api_names(&mut workbook, &spec.api_names)?;
+    // The edit calculated once; an iterative case gets the oracle's other calculations.
+    for _ in 1..calculations(spec) {
+        workbook.recalculate();
+    }
+    Ok(workbook)
 }
 
 /// A spec sheet's cells row by row, left to right: the order an xlsx stores them in and Excel
@@ -557,6 +581,40 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
         last.row - 1,
         last.col - 1,
     )?)
+}
+
+/// Adds the spec table `table` on sheet `id`: its range and rows, each of its `criteria` as the
+/// values filter spec2xlsx writes for it, so a column delete that takes one re-applies the
+/// others (T-4803, T-4939), and its calculated columns. It runs before the sheet's number formats
+/// are set, so a filter lists the kept rows' General text, as spec2xlsx writes it. `hidden_rows`
+/// are its sheet's (one-based).
+fn add_table(
+    tx: &mut rustsheet::Txn<'_>,
+    id: SheetId,
+    table: &TableSpec,
+    hidden_rows: &[u32],
+) -> Result<(), rustsheet::EditError> {
+    let range = range_ref(id, &table.range)?;
+    tx.add_table_with_rows(
+        range,
+        &table.name,
+        filters_hidden_rows(table, range, hidden_rows),
+        (table.header_row, table.totals_row),
+    )?;
+    for criterion in &table.criteria {
+        let rejected: Vec<u32> = criterion
+            .hides
+            .iter()
+            .map(|r| r.saturating_sub(1))
+            .collect();
+        let column = usize::try_from(criterion.column).unwrap_or(usize::MAX);
+        tx.filter_table_column(&table.name, column, &rejected)?;
+    }
+    for (letter, formula) in &table.calculated {
+        let (column, text) = calculated_column(&table.range, letter, formula)?;
+        tx.set_table_column_formula(&table.name, column, text)?;
+    }
+    Ok(())
 }
 
 /// Whether the spec table's filter makes its sheet's hidden rows filtered: Excel calls them

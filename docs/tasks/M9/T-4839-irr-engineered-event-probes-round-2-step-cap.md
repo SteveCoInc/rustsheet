@@ -23,3 +23,11 @@ Plan: docs/research/irr-2026-11-07/plan.md (T-4833). Phase 3, items 2 and 5; T-3
 
 ## Out of scope
 - Long series (T-4844).
+
+## Owned cells (T-4844 review)
+Excel's secant runs past the engine's 50-step cap on series longer than `IRR_LONG_RUN_RANGE`'s 54 flows (financial.md
+"The IRR and XIRR solver caps"):
+- probes/t4844-irr-guess-ladder P!A393:A401 and P!A432:A440: 61-flow annuities, converging at steps 54 to 195 in Excel
+  and the uncapped replica, `#NUM!` in the engine.
+- probes/t4844-irr-pad-ladder P!A32:A34: A51 padded to 592..928 flows, `#DIV/0!` in Excel at the step-62 underflow.
+

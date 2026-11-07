@@ -208,11 +208,19 @@ data is `#BLOCKED!`" below), and not a value, with a link part that caches no ta
 `sheetNames` (empty `sheetData`, no `definedNames`).
 Evidence: corpus-bench/58994/1_58994_input.xlsx Sheet1!F8 (excel-graph sidecar, 2026-10-26, gap triage).
 Whether a link part that *does* cache the table's cells changes it is unprobed.
-Ours: the lexer reads `[1]!Table3[#Data]` as a structured reference whose table name keeps the prefix; no such table exists, so a stored formula is `#REF!`. A typed one is refused, as Excel
+The formula keeps its text: Excel stores it back as written, `<f>VLOOKUP([1]!Table3[[#This Row],[Resource Name]],[1]Data!E:J,6,0)</f>`
+(corpus-bench/33094/1_33094_input.xlsx Sheet1!B5, its link part caching the Data sheet's cells but, as every
+externalLink part, no table definition). Its cached value is 20 and the case has no oracle value: the 20 was
+presumably calculated with the other book open (an inference; nothing in the file says so), so whether Excel gives
+`#REF!` for a link part that caches cells, as 33094's does, is unprobed (T-5036). FORMULATEXT of such a cell is
+unprobed.
+Ours: the lexer reads `[1]!Table3[#Data]` as a structured reference whose table name keeps the prefix; no such table
+exists, so a stored formula evaluates to `#REF!` while keeping its text, which the xlsx export writes as written
+(`is_external_table_name`, T-4144). A typed one is refused, as Excel
 refuses it (Graph PATCH 400, probes/t3213-typed-parse-errors A9; T-3213). The sheet-qualified form `[1]Sheet!Table3[Col]` and
 the empty-bracket `[1]!Table3[]` are unprobed (the latter lexes as an external name; T-0482).
-Status: VERIFIED (excel-graph)
-Tasks: T-0482
+Status: VERIFIED (excel-graph; the stored text from the file)
+Tasks: T-0482, T-4144
 
 ## External reference with no cached data is `#BLOCKED!`
 Rule: `SUM('[link-external-workbook-a.xlsx]Sheet0'!A1:B1)` whose externalBook part holds no cached
@@ -356,15 +364,21 @@ with no cached data as the reference it is, not as its `#BLOCKED!` cells:
 - **One cell** reads empty, as the cell INDEX picks does: `EDATE(…!A1,1)` is 31,
   `IMAGINARY(…!A1)` 0, `ISEVEN(…!A1)` TRUE, `COMPLEX(…!A1,1)` "i", and ERROR.TYPE of them `#N/A`.
   The bare `…!A1` is `#BLOCKED!`.
+- **Picked by IF, CHOOSE, INDEX or LET**, the reference reads the same: `EDATE(IF(TRUE,…!A1:B2),1)`,
+  `CHOOSE(1,…!A1:B2)`, `INDEX(…!A1:B2,0,0)` and `LET(a,1,…!A1:B2)` are `#VALUE!` (ERROR.TYPE 3,
+  ROWS `#VALUE!`), and `INDEX(…!A1:B2,1,1)`, `IF(TRUE,…!A1)`, `CHOOSE(1,…!A1)` and `LET(a,1,…!A1)`
+  are 31 (ERROR.TYPE `#N/A`, ROWS 1); IMAGINARY likewise, with 0 for one cell.
 
 Evidence: probes/external-ref-no-link-lift-arrays Calc!A1:A16, D1:D13 (excel-graph, 2026-11-07,
-T-4859), with local-range controls D8:D9.
+T-4859), with local-range controls D8:D9; probes/external-ref-no-link-lift-picked Calc!A1:E46
+(excel-graph, 2026-11-07, T-4878): column A the call, D ROWS of it, E ERROR.TYPE of it.
 Ours: matches. A reference into a linked workbook whose cache the workbook holds reads the same
 way: one cell is its cached value (`COMPLEX([1]Defines!$B$2,0)` is "142"), several are refused.
 That case is not probed.
 Status: VERIFIED (excel-graph)
-Implemented in: crates/rustsheet-engine/src/functions/lift/call.rs (`evaluate_as_reference`)
-Tasks: T-4859
+Implemented in: crates/rustsheet-engine/src/functions/lift/call.rs (`evaluate_as_reference`,
+through `pick_reference` for the picked forms)
+Tasks: T-4859, T-4878
 
 ## Cached values of a linked workbook (`[n]Sheet!A1`, `[n]!Name`, `[0]!Name`)
 Rule: in xlsx, Excel writes a reference into another workbook with the 1-based index of its
@@ -2651,6 +2665,7 @@ identifier such as `A1.B2`, unless an enclosing LET or LAMBDA binds it: `bind_na
 The unknown call `A1.INDEX(...)` keeps its spelling (spelling rule in "Unknown function call names", T-1719).
 Status: VERIFIED (excel-graph)
 Tasks: T-1652, T-1659
+- INDIRECT of an unquoted sheet prefix that is an in-range R1C1 reference followed by more text is `#REF!` (VERIFIED, probes/t4861-indirect-r1c1-shaped-sheet-prefix rows 1-16, excel-graph, 2026-11-07, T-4861): `C1D`, `R1_`, `R1C1D`, `R1CD`, `R1C0D`, `RC1D`, `R1D`, `C1R1`, `R1048576D`, `C16384D` and `C1`+U+0301 (probes/t4757-later-mark-sheet-names A19) all refuse, the exact `is_r1c1_shaped` set minus the bare references. A bare reference or an out-of-range one with a tail still names its sheet: `R`, `C`, `RC`, `R1`, `C1`, `R1C1`, `R0`, `RC1`, `R1C`, `R0D`, `C16385D`, `RC16385D` read their B1. Every quoted form reads (`is_indirect_r1c1_tail_sheet`). Unprobed: a sheet-scoped defined name behind such a prefix (`C1D!Name`).
 
 ## LET and LAMBDA names spelled like a cell
 Rule: a LET name or LAMBDA parameter spelled like a relative A1 cell (`f1`, `add5`, `c1`, `A1`),
@@ -3318,3 +3333,12 @@ and under ABS, for every area kind: a union (`INDEX((B1:B6,C1:C6),3,1)`, `,3,1,2
 range with row and column, and a name whose body is a range or a cell (`INDEX(Rng,3)`, `INDEX(One,1)`). Values equal the typed
 twins' (3, 30, 3, 3, 3, 3). `INDEX(B1:C6,3)` (row only, two columns) is `#REF!` in all three forms. Evidence:
 probes/t4212-legacy-index-root-area-kinds (excel-graph); the engine matches all 42 cells.
+
+## FORMULATEXT of a reference a delete removed is `#REF!`
+
+`=FORMULATEXT(S!C2)` after a delete removes S!C2 is `#REF!` in Excel (probes/table-edits/t4274-calc-column-delete-row-2
+F!A1, excel-graph, T-4274; S!C2 is a table cell). UNVERIFIED: that a plain cell, same sheet or cross sheet, behaves the
+same (the engine unit tests assume it), and the rewritten formula text `=FORMULATEXT(#REF!)` (the oracle stores values
+only). The engine gave `#ERROR!` ("not a reference"); `fn_formulatext` now returns an evaluated `#REF!` argument
+unchanged (T-4770). That is wider than the evidence: an expression valued `#REF!` (`FORMULATEXT(A1+1)`, A1 `#REF!`)
+also gives `#REF!` and is unprobed. Other literal errors (`FORMULATEXT(#N/A)`) are unevidenced and stay `#ERROR!`.

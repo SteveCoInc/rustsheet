@@ -29,6 +29,7 @@ fn linked() -> Model {
         comment: None,
     };
     model.workbook.external_books.push(ExternalBook {
+        target: "other.xlsx".to_string(),
         sheet_names: vec!["Uses".to_string(), "Defines".to_string()],
         defined_names: vec![
             name("NR_Global_B2", "='Defines'!$B$2", None),
@@ -37,6 +38,7 @@ fn linked() -> Model {
         ],
         cells,
         refresh_error_sheets: Vec::new(),
+        data_sheets: Vec::new(),
     });
     model
 }
@@ -138,6 +140,15 @@ fn structured_reference_into_a_linked_workbook_is_ref() {
     model.evaluate();
     for row in 1..=3 {
         assert_eq!(model.get_formatted_cell_value(0, row, 1).unwrap(), "#REF!");
+    }
+    // The formula keeps its text, in the engine and in the file Excel reads back (corpus-bench
+    // 33094 Sheet1!B5; T-4144).
+    for (row, formula) in [
+        (1, "=ROWS([1]!Table3[#Data])"),
+        (2, "=VLOOKUP(1,[1]!Table3[#Data],2,FALSE)"),
+        (3, "=ROWS([1]Defines!Table3[Col])"),
+    ] {
+        assert_eq!(model.get_cell_formula(0, row, 1).unwrap().unwrap(), formula);
     }
     // A typed formula stays a parse error; same-workbook `Sales[[#Data],[Val]]` resolving to its
     // data area is covered by test_structured_references.
@@ -294,6 +305,7 @@ fn cached_ranges_fixture() -> Model {
         ((0, 3, 1), SpillValue::Boolean(true)),
     ]);
     model.workbook.external_books.push(ExternalBook {
+        target: "other.xlsx".to_string(),
         sheet_names: vec!["Uses".to_string()],
         defined_names: vec![DefinedName {
             name: "NR_Range".to_string(),
@@ -304,6 +316,7 @@ fn cached_ranges_fixture() -> Model {
         }],
         cells,
         refresh_error_sheets: Vec::new(),
+        data_sheets: Vec::new(),
     });
     model
 }
@@ -836,4 +849,54 @@ fn lift_arrays_arguments_read_an_external_reference_as_a_reference() {
     let mut model = linked();
     assert_eq!(eval(&mut model, "=COMPLEX([1]Defines!$B$2,0)"), "142");
     assert_eq!(eval(&mut model, "=EDATE([1]Uses!$A$1:$A$3,1)"), "#VALUE!");
+}
+
+/// IF, CHOOSE, INDEX and LET picking a reference into another workbook as a `LiftArrays`
+/// argument read it as the written one does: several cells `#VALUE!`, one cell empty without a
+/// cache. Before T-4878, `IMAGINARY(CHOOSE(1,…!A1:B2))` tripped the scalar-context debug assert
+/// next to a spill, and IF, `INDEX(…,0,0)` and LET lifted over `#BLOCKED!` cells.
+/// Excel: probes/external-ref-no-link-lift-picked.
+#[test]
+fn lift_arrays_arguments_read_a_picked_external_reference_as_a_reference() {
+    let mut model = new_empty_model();
+    // The fuzz model: a spill next to the formula's cell, C3.
+    model._set("B2", "=SEQUENCE(2,2)");
+    model._set("C3", "=IMAGINARY(CHOOSE(1,'[other.xlsx]Sheet1'!A1:B2))");
+    model.evaluate();
+    assert_eq!(model._get_text("C3"), "#VALUE!");
+
+    let x = "'[other.xlsx]Sheet1'!A1:B2";
+    let one = "'[other.xlsx]Sheet1'!A1";
+    for f in ["EDATE", "IMAGINARY"] {
+        let call = |arg: &str| {
+            if f == "EDATE" {
+                format!("EDATE({arg},1)")
+            } else {
+                format!("IMAGINARY({arg})")
+            }
+        };
+        let one_value = if f == "EDATE" { "31" } else { "0" };
+        for (arg, value, error_type) in [
+            (format!("IF(TRUE,{x})"), "#VALUE!", "3"),
+            (format!("CHOOSE(1,{x})"), "#VALUE!", "3"),
+            (format!("INDEX({x},0,0)"), "#VALUE!", "3"),
+            (format!("LET(a,1,{x})"), "#VALUE!", "3"),
+            (format!("INDEX({x},1,1)"), one_value, "#N/A"),
+            (format!("IF(TRUE,{one})"), one_value, "#N/A"),
+            (format!("CHOOSE(1,{one})"), one_value, "#N/A"),
+            (format!("LET(a,1,{one})"), one_value, "#N/A"),
+        ] {
+            let formula = format!("={}", call(&arg));
+            assert_eq!(eval(&mut model, &formula), value, "{formula}");
+            let formula = format!("=ERROR.TYPE({})", call(&arg));
+            assert_eq!(eval(&mut model, &formula), error_type, "{formula}");
+            let rows = if value.starts_with('#') {
+                "#VALUE!"
+            } else {
+                "1"
+            };
+            let formula = format!("=ROWS({})", call(&arg));
+            assert_eq!(eval(&mut model, &formula), rows, "{formula}");
+        }
+    }
 }

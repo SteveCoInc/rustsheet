@@ -39,7 +39,8 @@ Goals:
 3. **Refresh semantics as Excel's:**
    - a pivot refreshes on load when its cache is `refreshOnLoad`, on an explicit API call, and when it is
      created;
-   - never on a source edit (Auto Refresh only as T-4182 evidences) nor on a calculate (probed through
+   - never on a source edit (Excel for the web neither stores nor honours Auto Refresh; T-4182 was dropped,
+     pivots.md) nor on a calculate (probed through
      a Graph write on a refreshOnLoad pivot only; pivots.md lists what is not probed), and a pivot loaded
      without `refreshOnLoad` keeps the cells the file saved, even when its `rowItems`/`colItems`
      disagree with the cache or are absent (probes/t4586-pivot-refresh-on-load, T-4586).
@@ -134,7 +135,9 @@ success (see the limits). Its rules:
   which T-4141 depends on);
 - items follow the identity rules above, existing items keep their order and new ones are appended;
 - the `sharedItems` flags are recomputed;
-- groups are rebuilt by `number_groups`/`date_groups` and, for manual groups, by T-4171.
+- groups are rebuilt by `number_groups`/`date_groups`; a field Excel added to group another (a date
+  level, a manual group) keeps its base (`CacheField::added_group`) and is derived again from the base's
+  new values before the base is grouped in place (`pivot/added_groups.rs`, T-4171).
 
 A Table or a defined name resolves to its range at refresh (T-4506). `SourceCells` is a trait in
 `pivot/refresh.rs`, implemented by `Model` over the evaluated cell values. It reads values only, so a
@@ -151,7 +154,8 @@ refresh is ordered after that calculation.
   pivots unrendered, laying out only a grouped one.
 - The refresh on open plans every marked cache within one shared work and cell budget, and writes
   and recalculates only when at least one plan succeeds.
-- Auto Refresh is added only as T-4182 evidences it.
+- Auto Refresh is not implemented: Excel for the web neither stores nor honours it (pivots.md "PivotTable Auto
+  Refresh is not stored or honoured by Excel for the web"; T-4182, dropped).
 
 ### PivotResult (T-4142, T-4163, T-4165, T-4174, T-4175)
 `fn compute(table: &PivotTable, cache: &PivotCache, work: &mut u64) -> Result<PivotResult, PivotComputeError>`
@@ -237,7 +241,8 @@ lays the pivot out (a render or refresh drops them), then the engine's when its 
 geometry the pivot holds. A cache is held to the import limits, and one with case-variant texts in a field is
 dropped (Excel for the web calls it corrupt). An axis field with no `<items>` gets one per cache
 item plus its subtotal lines (ClosedXML's invariant), a data field's pivot field `dataField="1"`. A grouped cache is
-dropped with its pivots until T-4734; a cache definition's unread rest is T-4735's. The source-preserving tiers
+written with its `<fieldGroup>`s in the shapes Excel saves, from each range-grouped field's kept own values
+(`CacheField::ungrouped`), and dropped with its pivots for any other shape (T-4734); a cache definition's unread rest is T-4735's. The source-preserving tiers
 (SPEC-0034) still keep an unchanged pivot's own parts byte for byte.
 
 ### PivotChart data (T-4186)
@@ -294,6 +299,18 @@ As built (T-4178, `crates/rustsheet/src/edit/pivot.rs`, `crates/rustsheet/src/pi
   items or `showAll`): `Transaction.add_pivot_table(name, **definition)`, `set_pivot_table(sheet, name,
   **definition)`, `refresh_pivot_table(sheet, name)`, `Workbook.pivot_table(sheet, name)` (a dict) and
   `Workbook.pivot_table_cells(sheet, name)` (A1 to value).
+- As built (T-4184, `crates/rustsheet/src/pivot_view.rs`): drill-down is not `PivotView::records`
+  but `Workbook::pivot_cell_records(sheet, name, cell) -> Result<Vec<u32>, PivotError>`, the same shape
+  as the cells: the cache record indices behind a value cell, in record order, from the engine's
+  `pivot::records_behind` (`layout/records.rs`) over the pivot laid out as `pivot_table_cells` lays it
+  out (filters applied; a subtotal's records are those under its item, a grand total's every kept
+  record). A cell that is no value cell (a label, a header, outside the pivot, on another sheet, any cell
+  of a pivot with no data field or collapsed to `#SPILL!`) is `PivotError::NotAValueCell`; a value cell
+  no record reaches gives none. It returns at most `MAX_RECORDS` indices, and its work is one
+  `PivotBudget::default()`, spent on the layout and then on the records. Python:
+  `Workbook.pivot_cell_records(sheet, name, a1) -> list[int]`. Excel's Show Details sheet (its row order
+  and columns) is unprobed (pivots.md "Show Details", T-4879). Top-N, value and label filters are not applied
+  yet (T-4165). The pivot is computed and laid out twice, for the plan and for the records (T-4896).
 
 ### Untrusted-input limits
 Every pivot part comes from an untrusted file (directive 5). The import limits of SPEC-0015 stay (`MAX_RECORDS`,
@@ -366,7 +383,8 @@ introducing it adds:
 - **Probes:** the `pivots` probes (t4123, t4128, t4134, t4137, t4138 and the later probe tasks) score
   every pivot cell and layout through T-4124.
 - **Generated:** `gen-pivot` (T-4132, T-4160) adds covering-array coverage.
-- **Corpora:** fresh pivot-corpus files (T-4131) re-render exactly.
+- **Corpora:** fresh pivot-corpus files (T-4131; fresh when their saved records give their saved values,
+  T-4906) re-render exactly, cell by cell and in their `rowItems`/`colItems`.
 - **Metamorphic** (T-4155):
   - refresh is idempotent;
   - GETPIVOTDATA of each non-empty value cell's tuple equals the cell, when no missing or error caption
@@ -388,7 +406,7 @@ introducing it adds:
 8. T-4154: GETPIVOTDATA over the result.
 9. PV2 and PV3 stages (T-4163, T-4165, T-4168, T-4169, T-4171, T-4174, T-4175), each after its probe
    (T-4161, T-4164, T-4170, T-4505, T-4582, T-4583, T-4584).
-10. Auto Refresh (T-4182), once its evidence lands.
+10. Auto Refresh: dropped (T-4182), since Excel for the web neither stores nor honours it.
 11. Export and API (T-4176–T-4178, T-4184), then PivotChart data and I/O (T-4186, T-4187) and slicers
     (T-4188).
 

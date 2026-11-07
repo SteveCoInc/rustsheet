@@ -174,6 +174,24 @@ Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/iteration.rs (`Model::sweep`)
 Tasks: T-0428, T-0401, T-0429, T-0447
 
+## A converged cycle's value depends on the values it started from
+Rule: with iteration on, a recalculation resumes each cycle from its previous values ("How excel-graph calculates a
+probe workbook" above) and stops at the first sweep whose largest change is below iterateDelta ("iterateDelta stops
+the iterations" above). So two workbooks with the same formulas and inputs can hold different values for a converging
+cycle, each within the delta of the fixed point, if they reached those inputs by different paths. An edited workbook
+evaluated after each edit is not guaranteed to match the same workbook loaded fresh with the same edits and evaluated
+once. Nothing here is a separate quirk: it follows from the two VERIFIED rules above, which the engine implements.
+Evidence: those two rules' probes. The engine shows the effect on calipers pv_goldens/pv23_019 (T-0495), with 25
+edits, each multiplying a numeric constant by 1.5 and adding 1, and one `evaluate()` per edit. At edit 10 the
+`Company1153 3-Statement` cycle through H64 (`=H$121`) and H121 (`=H119+H120`) stops in a different place in the two
+models: in the fresh load H64 trails H121 by about 3E-10, after the edits the two are equal. Then H123 (`=H121-H64`) is exactly 0 after the edits ("$ -" in the accounting format) and 2.9E-10 in the fresh
+load ("$ 0"). With iterateDelta 0 (and the count at its maximum) both models reach the fixed point and all 25 edits
+agree. The unit test `a_converged_cycle_depends_on_the_previous_values` (test_iteration.rs) reproduces it on a
+one-cell cycle. Excel's own values for such an edit sequence are unprobed: the oracle does not replay cell edits
+between calculations.
+Status: follows from VERIFIED rules (excel-graph); the engine matches them.
+Tasks: T-0495
+
 ## Iteration settings outside Excel's range fall back to its defaults
 Rule: Excel's Options dialog takes a Maximum Iterations of 1 to 32,767 and a non-negative Maximum
 Change; what Excel does with an xlsx whose `calcPr@iterateCount` or `iterateDelta` is outside
@@ -277,6 +295,65 @@ value (`scalar_at`). Neither is in probes/data-tables (T-0459).
 Status: VERIFIED (excel-graph) for the rules above; the unprobed choices are not
 Implemented in: crates/rustsheet-engine/src/data_tables.rs, crates/rustsheet-engine/src/data_table_memo.rs, crates/rustsheet-xlsx/src/import/sheet_data.rs (`data_table`), crates/rustsheet-xlsx/src/export/data_tables.rs
 Tasks: T-0428, T-0441, T-0446, T-0453
+
+## Data tables follow row and column edits around them and refuse edits that cut through them
+Rule: Excel treats a data table's region, its result cells with the row above and the column left
+of them, as one block (for the column table B4:B6 with formula B3 and values A4:A6, A3:B6):
+- an insert of rows or columns strictly inside the region is refused: a row at 4 or 5, a column at
+  B, and a cell insert at B5 shifting down;
+- a delete that takes some of the region's rows (columns) but not all is refused: row 3 (the
+  formula row), row 5, rows 4:6 (all the results, not the formula row), column A (the values) or
+  column B;
+- a write into a result cell is refused, a value or a formula, the top-left result cell included,
+  and so is a clear of some but not all of the results (B5, B5:C5); writes beside the results (a
+  value in A5, a new formula in B3, a value in C5) are accepted, and the table recomputes (A5 = 7
+  makes B5 72; B3 `=D1*100` makes B4:B6 100, 200, 300);
+- a clear that covers every result cell deletes the table, whether it covers the results alone
+  (B4:B6), the region (A3:B6, contents or all) or more (A1:H9): the results are blank and their
+  readers see empty cells (`SUM` 0, `FORMULATEXT` `#N/A`);
+- an insert above or left of the region (row 1, row 3, column A) moves the table and its input
+  cell with the cells; one below or right (row 7, column C) leaves the table where it is and moves
+  only an input it passes (column C moves D1 to E1: `{=TABLE(,E1)}`);
+- deleting the input's row or column makes the input `#REF!`: every result is `#REF!` and its
+  FORMULATEXT `{=TABLE(,#REF!)}` (row 1, column D); the table's own formula is `#REF!` too there,
+  as it read D1;
+- deleting every row (rows 3:6, 2:7) or column (A:B) of the region deletes the table; readers of
+  the results are `#REF!`.
+Excel for the web answers each refused edit with a 500 `GeneralException` and leaves the workbook as
+it was. Desktop Excel's wording ("Cannot change part of a data table.") is unprobed; the engine's
+message borrows it.
+Evidence: probes/t0452-data-table-row-column-edits (excel-graph, 2026-11-07) for the accepted row
+and column edits. The rest was probed by upload (excel-graph, 2026-11-07, T-0452): the probes/t0452
+sheet R1 before its edit (file sha256
+da35d6f0e7353fe27a726f1287ba7afaf29e2cfe1d17fcdecc06300829e13301), one upload and one Graph call
+per edit, then a full rebuild and a read of A1:J8:
+- refused (500 `GeneralException`, A1:J8 unchanged): range `insert` Down of `4:4`, `5:5` and `B5`;
+  `insert` Right of `B:B`; `delete` Up of `3:3`, `4:4`, `5:5` and `4:6`; `delete` Left of `A:A`
+  and `B:B`; `PATCH values` 99 into B4 and into B5; `clear` Contents of B5 and of B5:C5;
+- accepted: `insert` Down of `1:1`, `2:2`, `3:3`, `7:7`; `insert` Right of `A:A`, `C:C`;
+  `delete` Up of `1:1`, `3:6`, `2:7`; `delete` Left of `D:D`, `A:B`; `PATCH values` A5 = 7,
+  B3 = `=D1*100`, C5 = 9, D1 = 5; `clear` Contents of B4:B6, A3:B6, A1:H9; `clear` All of A3:B6.
+Ours: matches. `insert_rows`, `delete_rows`, `insert_columns` and `delete_columns` refuse an edit
+that cuts through a region with the message "Cannot change part of a data table" before they
+change anything, and otherwise move each table and its inputs, mark a deleted input `Deleted`, or
+drop a table whose region is deleted. Every cell write the write guard sees
+(`prepare_cell_for_user_input`: typed and stored input, values, single-cell clears) into a
+result cell is refused with the same message, through the engine and the facade, whose edit then
+rolls back. `range_clear_contents` and `range_clear_all` refuse an area over some of a table's
+results and delete a table whose results the area covers. A paste (`paste_from_clipboard`,
+`paste_csv_string`) is refused before it changes anything when its target covers some of a table's
+results; one over every result replaces the table. Unprobed, our choices: a row or column move (`move_rows_action`, `move_columns_action`) that
+shifts any line of a region is refused whole, and so is a cut whose source holds a result cell
+and an autofill whose target holds one, before either changes anything; a
+paste over every result replaces the table as a clear does; a single-cell clear of a one-cell
+table is refused; an insert that would push a table's results past the last row or column deletes
+the table, and one that pushes an input there makes it `#REF!`; copying a sheet copies its tables
+(Graph has no sheet copy to probe it with). T-4947 probes the move, the cut, the fill, the one-cell clear and the copy. The
+`UserModel` undo of a row or column delete moves a table back but does not restore an input the
+delete made `#REF!` or a table it deleted, nor does the undo of a clear that deleted one (T-4940).
+Status: VERIFIED (excel-graph) for the rules above; the unprobed choices are not
+Implemented in: crates/rustsheet-engine/src/data_table_edits.rs, crates/rustsheet-engine/src/actions.rs, crates/rustsheet-engine/src/model.rs (`prepare_cell_for_user_input`, `range_clear_contents`, `range_clear_all`), crates/rustsheet-engine/src/user_model/clipboard.rs (`paste_from_clipboard`, `paste_csv_string`), crates/rustsheet-engine/src/user_model/autofill.rs
+Tasks: T-0452, T-4940, T-4947
 
 ## Data tables re-evaluate the workbook at most 2^25 formulas per recalculation
 Rule: Excel's limit on the work of data tables is unprobed; it is expected to compute every

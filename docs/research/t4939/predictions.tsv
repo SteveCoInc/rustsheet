@@ -1,0 +1,9 @@
+# Visible data rows of S (rows 2-7; F!B<n> = SUBTOTAL(3,S!B<n>) is 1 exactly there), per upload of control.py.
+# Committed before the excel-graph fill. Ext is formatted 0.00 and its kept values filter lists "10.00" .. "60.00".
+# H_display: Excel re-applies the kept criterion to every data row by the text each row displays, case ignored
+#   (T-4895's number-format probe, where the General text "10" .. "60" matched no row and every row was hidden).
+# H_value: the criterion matches the cell's General text (or its number), so "10.00" matches no row.
+# The control has no edit: Excel reads the file's hidden rows (3, 5, 7) under either rule.
+variant	sha256	H_display	H_value
+display-control	f5ad47107cf703977f55cb999bf48f9cbbf32245546775131ff60b9620fa30a4	2,4,6	2,4,6
+display-delete	83bc684c8a9c37536ff784f5d517aedfb572a574192c8d84c852f358c87a69df	2,3,4,6,7	none
