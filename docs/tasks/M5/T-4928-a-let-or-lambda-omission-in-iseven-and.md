@@ -3,7 +3,7 @@ id: T-4928
 title: "A LET or LAMBDA omission in ISEVEN and ISODD follows Excel (probe the ToolPak #N/A rule)"
 milestone: M5
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
