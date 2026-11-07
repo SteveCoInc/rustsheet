@@ -3339,7 +3339,9 @@ plus 10 controls below the mean:
   inside that bracket, not a proven switch.
 - On t3444, 17 of the 21 rows move to within 15 digits. A6 (`BINOM.DIST.RANGE(10000,0.3,3137,3229)`) moves from 2 ulp to
   113 ulp and becomes visibly off. The case's visibly-off Range cells drop from 67 to 52.
-- The Gate A batch r4-T-3740 (200 log-uniform points, drawn after the freeze) is entirely inside the envelope.
+- All 60 sweep rows past the mean are inside the Gate A envelope, the worst 6.2E-12 relative to the math. The Gate A
+  batch r4-T-3740 (200 log-uniform points, drawn after the freeze) is inside the envelope too, but none of its points
+  reaches the branch: a log-uniform p makes n·p about 0.
 Excel's exact form there is still unknown (T-4746).
 Status: VERIFIED (excel-graph, 2026-11-01) for BINOM.INV and the cdf-difference rows. The upper-tail form is VERIFIED
 to 1E-12 past the mean (excel-graph, 2026-11-07), but it is not Excel's algorithm.

@@ -78,14 +78,18 @@ BINOM.DIST.RANGE ranges whose lower end is past the mean are bit-exact with Exce
     | correctly rounded math | 0 / 6 / 8 | 0 / 0 / 0 |
 
     The chosen form leads both alternatives at 4 ulp and at 15 digits on both sets. Its exact rate rises from train
-    to hold-out (0/21 to 7/60).
+    to hold-out (0/21 to 7/60). The fit lab's margin is one-sided (the largest allowed drop from train to test), so
+    the guard holds for any non-negative margin, including the default 5 points. The split is manual, not the fit
+    lab's hash split (T-3360): the form has no tunable parameter, and the hold-out was drawn after the freeze.
   - R4.2 sweep. Batch accuracy/BINOM.DIST.RANGE/r4-T-3740 has 200 points, 100% log-uniform, generated after the
-    freeze and filled from excel-graph. `rustsheet-eval accuracy` reports 0 failing: every point is inside the
-    envelope.
+    freeze and filled from excel-graph. `rustsheet-eval accuracy` reports 0 failing, but none of its 200 points
+    reaches the changed branch: p log-uniform down to 1E-300 makes n·p about 0, and 197 of the points have s1 = 0.
+    So, as in T-4322, the in-region evidence is the post-freeze sweep probes/t3740-binom-range-past-mean-sweep: all 60
+    rows past the mean are inside the Gate A envelope, the worst 6.2E-12 relative to the math.
   - The guard `s1 - 1 > n·p` was fixed before the sweep. The evidence places Excel's own switch somewhere between
     mean - 0.05 sd (the controls are Excel's cdf difference to the bit) and mean + 0.1 sd. 23 of the 60 rows past the
     mean still have Excel's range equal to its cdf difference, so the mean is the cancellation boundary, not Excel's
     proven switch (T-4746).
 - Unit test `binom_dist_range_past_the_mean_takes_the_upper_tails` (Gate A A107, A85).
 - Eval delta: Gate A loses 9 known failures (accuracy/BINOM.DIST.RANGE/s1 A85, A91, A94, A101, A107, A146, A172,
-  A177, A180) and gains the 200-point r4-T-3740 batch, all inside the envelope; `eval-gates` has 0 failing. The new probe case adds 85 known failures, all owned by T-4746.
+  A177, A180) and gains the 200-point r4-T-3740 batch (all inside the envelope, none on the changed branch); `eval-gates` has 0 failing. The new probe case adds 85 known failures, all owned by T-4746.
