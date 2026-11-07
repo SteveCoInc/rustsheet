@@ -3,7 +3,7 @@ id: T-4760
 title: "A relative reference in a defined name does not move under row and column inserts and deletes (T-4747 probes)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
