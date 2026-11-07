@@ -4511,9 +4511,11 @@ build the per-period charges differently, so the same inputs give different last
   A187, A188, A189, A200, factors 0.10 to 0.60 and starts 0.5 to 53.25; excel-graph, 2026-11-06), and it changes no
   probe or gen-m9 VDB cell (T-4111 ran it over the 257 literal one-call VDB eval cells with a math value). `(end - start)·(cost - salvage)/life`, rounding
   the product first, is one ulp off at A187 and at gen-m9/67a4c03afd63f988 A334 (`VDB(86661,45,37,0,6,0.2)`,
-  14045.837837837837), a whole start. Implemented (T-4510) for a fractional start only, the six points that
-  show the change. A whole start keeps the schedule, the same `sl` from period 0 (A119). The order with a fractional
-  end there, and factor 0 from a fractional start, are not evidenced yet (T-4724).
+  14045.837837837837), a whole start. The same single product holds for a whole start with a fractional end, not the
+  schedule's `share·sl + n·sl`, which is up to 432 ulp away (30 of 30 cells), and for factor 0 from a fractional start,
+  where it is T-4111's `(end - start)·(c - s)/life` and not the fractional grid's `/(life - f)` (20 of 20 cells;
+  probes/t4724-vdb-straight-from-zero, excel-graph, 2026-11-07, predictions in docs/research/t4724). Implemented
+  (T-4510, T-4724) for every start.
 Evidence: probes/fin-vdb-schedule (78 cells), fin-vdb-modes, fin-rri-vdb-edges (excel-graph, 2026-10-20, T-1975);
 fin-vdb-fractional-start (45 cells), fin-vdb-fractional-start-edges (14 cells) (excel-graph, 2026-10-28, T-2185);
 fin-vdb-amordegrc-edges A1-A59 (excel-graph, 2026-10-30, T-1978): salvage at or above cost in both modes (switching
@@ -4522,9 +4524,9 @@ equal to cost give 0 everywhere), fractional windows near the end of life (`VDB(
 3.0082099200000414, TRUE 11.061273600000135), and a fractional life 9.5 (an end past it is #NUM!, factor 3 reaches the
 salvage before period 8). The model already matched all 59 cells.
 Status: VERIFIED (excel-graph)
-Implemented (T-1975, T-2185, T-4510): `vdb_no_switch_between` and `vdb_switching_between` in
+Implemented (T-1975, T-2185, T-4510, T-4724): `vdb_no_switch_between` and `vdb_switching_between` in
 functions/financial/financial_depreciation.rs.
-Tasks: T-1975, T-2185, T-3022, T-4111, T-4510
+Tasks: T-1975, T-2185, T-3022, T-4111, T-4510, T-4724
 
 ## AMORDEGRC life bands
 Rule: AMORDEGRC refuses (#NUM!) an asset life `1/rate` of 2 or less, that is a rate of 0.5 or more, and nothing else

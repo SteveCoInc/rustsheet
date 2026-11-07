@@ -118,14 +118,14 @@ fn vdb_switching_between(
     let whole = start.floor();
     let fraction = start - whole;
     let straight_from_zero = (cost - salvage) / life;
-    if fraction > 0.0 && switches && straight_from_zero > cost * rate {
-        // A fractional start where straight line already wins at period 0: every period of the
-        // window charges `(cost - salvage)/life`, the start's share too, with no declining-balance
-        // fraction laid first, and the window is one product `n·sl` like the whole straight-line
-        // periods below (financial.md "VDB charge order"; to the bit on accuracy/VDB/s1 A158,
-        // A183, A187, A188, A189, A200, excel-graph, T-4111). A whole start keeps the schedule,
-        // which charges the same `sl` from period 0 (A119); the order of a fractional end there,
-        // and factor 0 from a fractional start, are unprobed (T-4724).
+    if switches && straight_from_zero > cost * rate {
+        // Straight line already wins at period 0: every period of the window charges
+        // `(cost - salvage)/life`, a fractional start's share too, with no declining-balance
+        // fraction laid first, and the window is one product `(end - start)·sl`, whole start or
+        // not, factor 0 included (financial.md "VDB charge order"; to the bit on accuracy/VDB/s1
+        // A158, A183, A187, A188, A189, A200, T-4111, and on all 50 cells of
+        // probes/t4724-vdb-straight-from-zero, where a whole start's fractional end is not the
+        // schedule's `share·sl + n·sl`, T-4724).
         return (end - start) * straight_from_zero;
     }
     let mut book = cost;
