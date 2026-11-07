@@ -3,7 +3,7 @@ id: T-4232
 title: "IRR on T-4213's near-zero-root sweep: 45 cells #NUM! where Excel returns a root, and A53/A149 at the noise floor (decision 0267)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: blocked
 priority: P2
 size: M
 tier: opus
@@ -78,6 +78,35 @@ Fresh sweeps (drawn after the freeze, filled from excel-graph 2026-11-07):
 - Tried after the freeze and NOT kept (it would make the fresh sweeps training data): use the settled iterate only
   when the fallback ran out of steps, not when it converged and rejected its root. It keeps r4-T-3411 A296 but not
   r4-T-3407 A249 or fresh-2 A39. Patch kept out of the repo.
+
+## Attempt 2 (2026-11-07 05:20-05:50 UTC, opus run): no rule keeps the three Excel #NUM! settled runs
+- Gate A governance settles the open question of attempt 1: `scripts/accuracy_governance.py` lets a new
+  `known-failures.tsv` line name only a point whose batch the same diff adds ("a committed point that fails is a
+  regression"), and has no decision-record bypass. So accuracy/IRR/r4-T-3411 A296 and r4-T-3407 A249 cannot be
+  listed, and a regression decision record (decision 0082's route) does not apply to Gate A. The model can land only
+  with a rule that keeps them `#NUM!`.
+- Measured on the branch head (engine instrumented locally, not committed): every IRR cell of `rustsheet-eval run
+  --filter irr` and of Gate A where the model returns the settled iterate because `irr_fallback` finds no root.
+  137 such cells with an oracle value: Excel returns a number on 134 and is `#NUM!` on 3 (r4-T-3411 A296, r4-T-3407
+  A249, probes-numeric/t3411-irr-r4-fresh-2 A39). For each: the smallest settled |NPV|, the flow count, the largest
+  |flow|, |NPV| over the largest |flow| and over the sum of |flows|, the step it went flat at, the last |NPV|, the
+  run's largest |NPV| and the guess. The three `#NUM!` cells sit inside the numbers' range on every one:
+  - settled |NPV| 3.05E-5, 4.53E-5, 6.53E-5; 28 Excel numbers lie in 3.0E-5..9.73E-5 among them (t3406-irr-num-boundary
+    A124 at the same 3.05E-5 as A296, s1 A260 4.62E-5 and A259 4.86E-5 either side of A249);
+  - flows 3, 114, 44 against 11..146; largest |flow| 3.4E+11, 1.0E+11, 3.9E+10 against up to 7.2E+11;
+  - |NPV|/largest |flow| 8.9E-17, 4.5E-16, 1.7E-15 against 1.8E-17..2.4E-15; flat at step 6, 9, 42 against 5..136.
+  Only "3 flows" isolates A296, and only for that cell: a keep-matched branch (reviewer-excel-fidelity check 7).
+- A lower settled cut (under 3.05E-5) would keep all three, but it would be chosen to avoid those cells, not by score:
+  every cut from 1E-4 down to 3.05E-5 scores better on the cells above (it drops 28 Excel numbers to keep 3). That is
+  a keep-matched cut, so it is not proposed. Excel's own NPV noise near 1E-4 (which the engine does not replicate,
+  T-4213) is the likely separator.
+
+## Blocked because: time-boxed (decision 0056)
+Two attempts recorded. The flat-settled model (pushed on this branch,
+draft PR #3825) fixes about 85 cells but moves two committed Gate A points out of the envelope, which governance does
+not allow; no rule in the flows separates them (attempt 2). Decision 0267 accepts the cells left. Unblocking needs one
+of: an owner ruling that allows listing a regressed committed Gate A point (a change to accuracy_governance.py, a
+protected gate), or a replica of Excel's NPV noise good enough to separate the three settled `#NUM!` runs.
 
 ## Landing notes (2026-11-07 03:05 UTC, opus run, landing window closing)
 Resumed 2026-11-07 05:20 UTC by an opus run (worker step 2, branch idle 2 h).
