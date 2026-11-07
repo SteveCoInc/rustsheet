@@ -466,8 +466,9 @@ impl Default for DataField {
     }
 }
 
-/// A data field's summary function.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+/// A data field's summary function, in `ST_DataConsolidateFunction`'s order: the order Excel
+/// shows custom subtotal lines in (`Ord`; layout/lines.rs `AxisPlan::subtotals`, t4699 CU, CR).
+#[derive(Encode, Decode, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Aggregate {
     /// `sum`.
     Sum,
@@ -509,6 +510,41 @@ const CONSOLIDATE_NAMES: [(&str, Aggregate); 11] = [
 ];
 
 impl Aggregate {
+    /// The custom subtotal functions by their `ST_ItemType` names: an `<item t>` names its
+    /// subtotal line so, a `<rowItems>`/`<colItems>` line's `t` too, and a `<pivotField>` asks for
+    /// it with `<name>Subtotal="1"`. In the schema's order. `countA` is COUNTA and `count` Count
+    /// Numbers, as ECMA-376 reads them and Excel computes them; Excel labels both lines
+    /// `<item> Count` ([`ItemType::Function`]). Excel: see docs/excel-semantics/pivots.md "Which
+    /// function the countA and count custom subtotals compute" (probes/t4622-pivot-count-subtotals).
+    pub const ITEM_TYPE_NAMES: [(&'static str, Aggregate); 11] = [
+        ("sum", Aggregate::Sum),
+        ("countA", Aggregate::Count),
+        ("avg", Aggregate::Average),
+        ("max", Aggregate::Max),
+        ("min", Aggregate::Min),
+        ("product", Aggregate::Product),
+        ("count", Aggregate::CountNums),
+        ("stdDev", Aggregate::StdDev),
+        ("stdDevP", Aggregate::StdDevP),
+        ("var", Aggregate::Var),
+        ("varP", Aggregate::VarP),
+    ];
+
+    /// The custom subtotal function the `ST_ItemType` name `name` (`sum`, `countA`, ...) names.
+    #[must_use]
+    pub fn from_item_type_name(name: &str) -> Option<Self> {
+        let mut names = Self::ITEM_TYPE_NAMES.iter();
+        names.find(|(n, _)| *n == name).map(|(_, f)| *f)
+    }
+
+    /// The `ST_ItemType` name of the function as a custom subtotal (`countA` for
+    /// [`Aggregate::Count`]), what [`Aggregate::from_item_type_name`] reads.
+    #[must_use]
+    pub fn item_type_name(self) -> &'static str {
+        let mut names = Self::ITEM_TYPE_NAMES.iter();
+        names.find(|(_, f)| *f == self).map_or("sum", |(n, _)| *n)
+    }
+
     /// The function a `dataField@subtotal` (`ST_DataConsolidateFunction`) names.
     #[must_use]
     pub fn from_consolidate_name(name: &str) -> Option<Self> {

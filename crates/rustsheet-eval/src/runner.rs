@@ -217,8 +217,9 @@ pub struct CaseResult {
     /// The case's pivots whose layout is not Excel's (T-4124; empty without sidecar pivots).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivot_layout: Vec<PivotLayout>,
-    /// An xlsx case's saved pivots, each fresh or stale (T-4131; empty unless the suite trusts
-    /// the workbook's cached values).
+    /// An xlsx case's saved pivots, each fresh or stale with its render and refresh scores
+    /// (T-4131, T-4906; empty unless the suite trusts the workbook's cached values). A fresh
+    /// pivot's render cells are among `cells`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivot_freshness: Vec<PivotFreshness>,
     /// The spec case's `pivot_features` catalog ids (T-4126).
@@ -627,6 +628,14 @@ fn evaluate_prepared(
         Prepared::Spec { spec } => engine.evaluate_spec(spec, prepared.workbook_name.as_deref()),
     }?;
     let mut cells = score(evaluated.as_ref(), &prepared.expectations, listed);
+    // The fresh pivots' render cells are scored beside the expectations (T-4906); a cell an
+    // expectation already scores keeps that one.
+    let (freshness, render) = match &prepared.input {
+        Prepared::Xlsx { bytes } => pivot_freshness::classify(&prepared.saved_pivots, bytes),
+        Prepared::Spec { .. } => (Vec::new(), Vec::new()),
+    };
+    let taken: BTreeSet<String> = cells.iter().map(CellResult::key).collect();
+    cells.extend(render.into_iter().filter(|c| !taken.contains(&c.key())));
     let scored = cells.len();
     let extent = prepared.extent.iter();
     cells.extend(extent.flat_map(|e| e.unexpected_cells(evaluated.as_ref())));
@@ -653,7 +662,6 @@ fn evaluate_prepared(
     };
     let layout =
         pivot_scoring::compare_layouts(&prepared.pivots, evaluated.as_ref(), lines.as_deref());
-    let freshness = pivot_freshness::classify(&prepared.saved_pivots, evaluated.as_ref());
     Ok((
         cells,
         scored,

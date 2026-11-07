@@ -51,6 +51,10 @@
     as docs/architecture/eval-harness.md "Milestone exit" describes, and `PHASE1_MILESTONES` lists M16.
     The row reads the probes by decision 0083's rule (every visibly-off cell), not decision 0188
     R1(c), which names the earlier milestones only.
+  - T-4952 (2026-11-07) measures item 6's owner criterion: a remaining catalog row is owned when the catalog's
+    hand-filled `owner` column names an open M16 task. scripts/tasks.py `validate` (scripts/pivot_owners.py) fails while
+    an `owner` names a task that is not open or not M16's, as it does for a stale `TODO(T-nnnn)`, because the harness
+    may not read docs/tasks (decision 0066); an `out` row is its scope decision's and never remains.
   - Because M16 comes last in Phase 1's order, workers reach it after the earlier milestones unless the
     owner or the steward puts its lanes on the critical-lane line. The owner works it directly from the
     start.

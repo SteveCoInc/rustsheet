@@ -63,8 +63,10 @@ struct ExportedCache {
     definition: String,
 }
 
-/// One exported pivot table: its worksheet's index, its cache's part number and its part.
+/// One exported pivot table: its model index, its worksheet's index, its cache's part number and
+/// its part.
 struct ExportedTable {
+    index: usize,
     sheet: usize,
     cache_part: usize,
     xml: String,
@@ -107,8 +109,9 @@ impl PivotPlan {
         let mut work = MAX_PIVOT_WORK;
         let mut tables = Vec::new();
         for (sheet, worksheet) in workbook.worksheets.iter().enumerate() {
-            for pivot in (workbook.pivot_tables.iter()).filter(|p| p.sheet_id == worksheet.sheet_id)
-            {
+            let on_sheet = (workbook.pivot_tables.iter().enumerate())
+                .filter(|(_, p)| p.sheet_id == worksheet.sheet_id);
+            for (pivot_index, pivot) in on_sheet {
                 let index = pivot.cache as usize;
                 let (Some(Some(part)), Some(pivot_cache)) =
                     (cache_parts.get(index), workbook.pivot_caches.get(index))
@@ -120,6 +123,7 @@ impl PivotPlan {
                 // At most one cache per model cache, so the id fits.
                 let cache_id = u32::try_from(*part).unwrap_or(u32::MAX);
                 tables.push(ExportedTable {
+                    index: pivot_index,
                     sheet,
                     cache_part: *part,
                     xml: table::table_xml(pivot, pivot_cache, cache_id, lines.as_ref()),
@@ -136,6 +140,11 @@ impl PivotPlan {
             );
         }
         PivotPlan { caches, tables }
+    }
+
+    /// Whether the pivot at `index` in the model's pivot tables is written.
+    pub(super) fn exports_pivot(&self, index: usize) -> bool {
+        self.tables.iter().any(|t| t.index == index)
     }
 
     /// The content-type overrides of the pivot parts.
@@ -260,11 +269,25 @@ impl PivotPlan {
 
 /// A relationships part with one relationship, `rId1`.
 fn relationships(kind: &str, target: &str) -> String {
-    format!(
-        r#"{}
-<Relationships xmlns="{RELATIONSHIPS_NS}"><Relationship Id="rId1" Type="{kind}" Target="{target}"/></Relationships>"#,
+    relationships_xml(&[("rId1", kind, target)])
+}
+
+/// A relationships part holding `relationships`, each (id, type, target), in order; the ids are
+/// escaped, since a kept part's come from its source (`pivot_drawings`).
+pub(super) fn relationships_xml(relationships: &[(&str, &str, &str)]) -> String {
+    let mut xml = format!(
+        "{}\n<Relationships xmlns=\"{RELATIONSHIPS_NS}\">",
         super::xml_constants::XML_DECLARATION
-    )
+    );
+    for (id, kind, target) in relationships {
+        let _ = write!(
+            xml,
+            r#"<Relationship Id="{}" Type="{kind}" Target="{target}"/>"#,
+            super::escape::escape_xml(id)
+        );
+    }
+    xml.push_str("</Relationships>");
+    xml
 }
 
 /// The engine's layout of `pivot`, for a pivot that holds no saved layout lines (the engine laid
@@ -286,10 +309,12 @@ fn layout_lines(
     (layout.location == pivot.location && layout.geometry == pivot.geometry).then_some(layout)
 }
 
-/// Logs a dropped cache or pivot to stderr, as the importer logs a skipped one; the exporter has
-/// no warnings channel. Names come from the file, so they are quoted and cut short.
-fn log_drop(what: &str, name: &str, reason: &str) {
+/// Logs a dropped cache, pivot or drawing (`pivot_drawings`) to stderr, as the importer logs a
+/// skipped one; the exporter has no warnings channel. Names, and reasons that quote an id or a
+/// part name, come from the file, so the name is quoted and both are cut short.
+pub(super) fn log_drop(what: &str, name: &str, reason: &str) {
     const MAX_CHARS: usize = 200;
     let name: String = name.chars().take(MAX_CHARS).collect();
+    let reason: String = reason.chars().take(MAX_CHARS).collect();
     eprintln!("RustSheet: export dropped {what} {name:?}: {reason}");
 }

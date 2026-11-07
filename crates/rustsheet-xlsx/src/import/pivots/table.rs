@@ -71,30 +71,13 @@ const ROOT_TYPED: [&str; 21] = [
     "gridDropZones",
 ];
 
-/// The custom subtotal functions by their `ST_ItemType` names: an `<item t>` names its subtotal
-/// line so, and a `<pivotField>` asks for it with `<name>Subtotal="1"`. In the schema's order.
-/// `countA` is COUNTA and `count` Count Numbers, as ECMA-376 reads them and Excel computes them;
-/// Excel labels both lines `<item> Count` (`ItemType::Function`). Excel: see
-/// docs/excel-semantics/pivots.md "Which function the countA and count custom subtotals compute"
-/// (probes/t4622-pivot-count-subtotals).
-pub(crate) const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = [
-    ("sum", Aggregate::Sum),
-    ("countA", Aggregate::Count),
-    ("avg", Aggregate::Average),
-    ("max", Aggregate::Max),
-    ("min", Aggregate::Min),
-    ("product", Aggregate::Product),
-    ("count", Aggregate::CountNums),
-    ("stdDev", Aggregate::StdDev),
-    ("stdDevP", Aggregate::StdDevP),
-    ("var", Aggregate::Var),
-    ("varP", Aggregate::VarP),
-];
+/// The custom subtotal functions by their `ST_ItemType` names, in the schema's order: the
+/// engine's one table ([`Aggregate::ITEM_TYPE_NAMES`]).
+pub(crate) const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = Aggregate::ITEM_TYPE_NAMES;
 
 /// The function of the custom subtotal named `name` (`sum`, `countA`, ...).
 fn subtotal_function(name: &str) -> Option<Aggregate> {
-    let mut functions = SUBTOTAL_FUNCTIONS.iter();
-    functions.find(|(n, _)| *n == name).map(|(_, f)| *f)
+    Aggregate::from_item_type_name(name)
 }
 
 /// Whether `key` is a `<pivotField>` custom subtotal attribute (`sumSubtotal`, ...).

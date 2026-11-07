@@ -141,6 +141,15 @@ fn structured_reference_into_a_linked_workbook_is_ref() {
     for row in 1..=3 {
         assert_eq!(model.get_formatted_cell_value(0, row, 1).unwrap(), "#REF!");
     }
+    // The formula keeps its text, in the engine and in the file Excel reads back (corpus-bench
+    // 33094 Sheet1!B5; T-4144).
+    for (row, formula) in [
+        (1, "=ROWS([1]!Table3[#Data])"),
+        (2, "=VLOOKUP(1,[1]!Table3[#Data],2,FALSE)"),
+        (3, "=ROWS([1]Defines!Table3[Col])"),
+    ] {
+        assert_eq!(model.get_cell_formula(0, row, 1).unwrap().unwrap(), formula);
+    }
     // A typed formula stays a parse error; same-workbook `Sales[[#Data],[Val]]` resolving to its
     // data area is covered by test_structured_references.
     assert_eq!(eval(&mut model, "=ROWS([1]!Table3[#Data])"), "#ERROR!");

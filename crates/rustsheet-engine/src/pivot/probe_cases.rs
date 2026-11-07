@@ -37,6 +37,17 @@ pub(crate) const T4634_SHEETS: &[&str] = &[
 /// columns (SCC) and with a `?` for the item (SQ).
 pub(crate) const T4745_SHEETS: &[&str] = &["GC", "GV", "G1", "SO", "SB", "SK", "SF", "SCC", "SQ"];
 
+/// The pivot sheets of probes/t4699-pivot-blank-collapsed: `insertBlankRow` on the innermost row
+/// field (BI compact, BI2 tabular), on a column field (BC) and after a collapsed item (BS, BS2);
+/// a collapsed item on columns (CC), under `subtotalTop="0"` (CB), with custom subtotals (CU,
+/// CU2; CR lists all eleven in reverse), in a middle field (CM, CM2) and with Values inside its field (CV, CV2, and past a hidden field
+/// CV3 compact, CV4 tabular); custom subtotals
+/// in plain outline form (OC).
+pub(crate) const T4699_SHEETS: &[&str] = &[
+    "BI", "BI2", "BC", "BS", "BS2", "CC", "CB", "CU", "CU2", "CR", "CM", "CM2", "CV", "CV2", "CV3",
+    "CV4", "OC",
+];
+
 pub(crate) fn read(stem: &str, kind: &str) -> Json {
     let path = format!(
         "{}/../../eval/suites/probes/cases/{stem}.{kind}.json",
@@ -174,14 +185,7 @@ pub(crate) fn aggregate_named(name: &str) -> Aggregate {
 
 /// A custom subtotal line's function by its `item@t`, as the importer reads it.
 pub(crate) fn subtotal_named(name: &str) -> Aggregate {
-    match name {
-        "countA" => Aggregate::Count,
-        "count" => Aggregate::CountNums,
-        "avg" => Aggregate::Average,
-        "stdDevP" => Aggregate::StdDevP,
-        "varP" => Aggregate::VarP,
-        other => aggregate_named(other),
-    }
+    Aggregate::from_item_type_name(name).unwrap_or_else(|| aggregate_named(name))
 }
 
 /// A field's cache item equal to `value`.

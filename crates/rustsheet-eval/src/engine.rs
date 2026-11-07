@@ -39,15 +39,6 @@ pub trait Evaluated {
     fn pivot_places(&self) -> Vec<rustsheet::PivotPlace> {
         Vec::new()
     }
-    /// The cells the engine would write for the pivot `name` on `sheet` if it laid it out again
-    /// from its saved definition and cache, changing nothing (T-4131): by cell, empty ones left
-    /// out.
-    ///
-    /// # Errors
-    /// Why the pivot cannot be laid out; by default, that the engine cannot lay out pivots.
-    fn pivot_cells(&self, _sheet: &str, _name: &str) -> Result<Vec<(Addr, Value)>, String> {
-        Err("this engine cannot lay out a pivot".into())
-    }
     /// The workbook as the engine's xlsx export saves it now, after the evaluation: an
     /// engine-export case reads the `rowItems`/`colItems` the engine would save from it (T-4177).
     ///
@@ -144,21 +135,6 @@ fn harness_value(value: ApiValue) -> Value {
 impl Evaluated for RustSheetEvaluated {
     fn pivot_places(&self) -> Vec<rustsheet::PivotPlace> {
         self.workbook.pivot_places()
-    }
-
-    fn pivot_cells(&self, sheet: &str, name: &str) -> Result<Vec<(Addr, Value)>, String> {
-        let id = self.workbook.sheet_id(sheet).map_err(|e| e.to_string())?;
-        let cells = (self.workbook.pivot_table_cells(id, name)).map_err(|e| e.to_string())?;
-        Ok(cells
-            .into_iter()
-            .map(|(cell, value)| {
-                let at = Addr {
-                    row: cell.row + 1,
-                    col: cell.col + 1,
-                };
-                (at, harness_value(value))
-            })
-            .collect())
     }
 
     fn sheet_names(&self) -> Vec<String> {

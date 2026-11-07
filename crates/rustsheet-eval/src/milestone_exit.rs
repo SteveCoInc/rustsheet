@@ -12,7 +12,7 @@
 //! row with no visibly-off value cell and no failing text item; and M16's (decision 0274, T-4127,
 //! [`pivot`]): gen-pivot and the fetched pivot-corpus suites with nothing visibly off, the M16
 //! probe row with no visibly-off cell but R3 passes and M14-owned ones, per catalog stage the
-//! evidence floor and row owners, layouts, and the corpus re-render (not measured until T-4906).
+//! evidence floor and row owners, layouts, and the corpus re-render (read from `fresh_pivot_render`, T-4971).
 //! Decision 0114 reads them at visible
 //! parity: the generated suite, ironcalc-calc and probes count visibly-off cells, and the bit-level
 //! counts are shown beside them for Phase 1b. Every input is a row the report already computes, so

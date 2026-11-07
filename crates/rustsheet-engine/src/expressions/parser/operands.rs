@@ -19,7 +19,8 @@ use super::super::utils::{
 };
 use super::reference_operators::is_reference_operand;
 use super::structured_reference::{
-    is_unresolved_structured_reference, TableExtent, TABLE_SHEET_NOT_FOUND,
+    is_external_table_name, is_unresolved_structured_reference, TableExtent, TABLE_NOT_FOUND,
+    TABLE_SHEET_NOT_FOUND,
 };
 use super::{
     with_sheet_span, ExpectedTokens, Function, Node, Parser, StructuredReference,
@@ -793,6 +794,7 @@ impl Parser {
             .functions
             .lookup_stored(&name)
             .filter(|_| !self.calls_bound_name(&name))
+            .filter(|kind| !self.needs_stored_prefix(&name, kind))
         {
             self.note_argument_count(&function_kind, &display_name, args.len());
             if self.loaded && function_kind == Function::Let {
@@ -833,6 +835,12 @@ impl Parser {
             args,
             id: None,
         })
+    }
+
+    /// Whether `name`, read from a file ([`Parser::set_file_names`]), calls `kind` without the
+    /// `_xlfn.` prefix Excel needs there: such a call is an unknown name, `#NAME?`.
+    fn needs_stored_prefix(&self, name: &str, kind: &Function) -> bool {
+        self.file_names && !name.starts_with('_') && kind.to_xlsx_string().starts_with("_xlfn.")
     }
 
     /// `TRUE` or `FALSE`, or the calls `TRUE()` and `FALSE()`.
@@ -904,6 +912,21 @@ impl Parser {
                 .and_then(|table| TableExtent::of(table, Some((*data_start, *data_end))));
         }
         if let Node::ParseErrorKind { message, .. } = &lowered {
+            // A table of a linked workbook is `#REF!` (references.md "A structured reference into
+            // a linked workbook is `#REF!`": corpus-bench 58994, a link part caching no cells; with
+            // cached cells it is unprobed, T-5036), but the formula keeps
+            // its text, which Excel stores back as written (corpus-bench 33094 Sheet1!B5,
+            // `VLOOKUP([1]!Table3[[#This Row],[Resource Name]],…)`; T-4144). Typed, it stays a
+            // parse error: Excel refuses it (probes/t3213-typed-parse-errors A9).
+            if is_external_table_name(&reference.table_name)
+                && message.starts_with(TABLE_NOT_FOUND)
+                && (self.loaded || !(self.typed || self.external))
+            {
+                return Node::StructuredReferenceKind {
+                    reference: Box::new(reference),
+                    lowered: Box::new(Node::ErrorKind(token::Error::REF)),
+                };
+            }
             if self.loaded
                 && !message.starts_with(TABLE_SHEET_NOT_FOUND)
                 && is_unresolved_structured_reference(message)

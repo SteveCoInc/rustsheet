@@ -204,6 +204,12 @@ fn get_cell_xfs_xml(styles: &Styles) -> String {
 // <cellStyle xfId="0" name="Normal" builtinId="0"/>
 fn get_cell_styles_xml(styles: &Styles) -> String {
     let cell_styles = &styles.cell_styles;
+    // Excel for the web refuses an empty `<cellStyles count="0"></cellStyles>` (T-4909,
+    // docs/excel-semantics/xlsx-storage.md); a table without named styles writes no element, as
+    // a source without one had none.
+    if cell_styles.is_empty() {
+        return String::new();
+    }
     let mut cell_styles_str: Vec<String> = vec![];
     for cell_style in cell_styles {
         let xf_id = cell_style.xf_id;

@@ -208,11 +208,19 @@ data is `#BLOCKED!`" below), and not a value, with a link part that caches no ta
 `sheetNames` (empty `sheetData`, no `definedNames`).
 Evidence: corpus-bench/58994/1_58994_input.xlsx Sheet1!F8 (excel-graph sidecar, 2026-10-26, gap triage).
 Whether a link part that *does* cache the table's cells changes it is unprobed.
-Ours: the lexer reads `[1]!Table3[#Data]` as a structured reference whose table name keeps the prefix; no such table exists, so a stored formula is `#REF!`. A typed one is refused, as Excel
+The formula keeps its text: Excel stores it back as written, `<f>VLOOKUP([1]!Table3[[#This Row],[Resource Name]],[1]Data!E:J,6,0)</f>`
+(corpus-bench/33094/1_33094_input.xlsx Sheet1!B5, its link part caching the Data sheet's cells but, as every
+externalLink part, no table definition). Its cached value is 20 and the case has no oracle value: the 20 was
+presumably calculated with the other book open (an inference; nothing in the file says so), so whether Excel gives
+`#REF!` for a link part that caches cells, as 33094's does, is unprobed (T-5036). FORMULATEXT of such a cell is
+unprobed.
+Ours: the lexer reads `[1]!Table3[#Data]` as a structured reference whose table name keeps the prefix; no such table
+exists, so a stored formula evaluates to `#REF!` while keeping its text, which the xlsx export writes as written
+(`is_external_table_name`, T-4144). A typed one is refused, as Excel
 refuses it (Graph PATCH 400, probes/t3213-typed-parse-errors A9; T-3213). The sheet-qualified form `[1]Sheet!Table3[Col]` and
 the empty-bracket `[1]!Table3[]` are unprobed (the latter lexes as an external name; T-0482).
-Status: VERIFIED (excel-graph)
-Tasks: T-0482
+Status: VERIFIED (excel-graph; the stored text from the file)
+Tasks: T-0482, T-4144
 
 ## External reference with no cached data is `#BLOCKED!`
 Rule: `SUM('[link-external-workbook-a.xlsx]Sheet0'!A1:B1)` whose externalBook part holds no cached

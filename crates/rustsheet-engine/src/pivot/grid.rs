@@ -707,7 +707,8 @@ impl Model {
     /// Gives the cell the number format `numFmtId` names in the workbook's styles (a built-in
     /// one, or one of its `numFmts`; an id it does not hold is General, as `get_num_fmt` reads
     /// it), keeping the rest of the cell's style: a value cell shows its data field's format
-    /// (pivots.md "Value cells show their data field's number format").
+    /// (pivots.md "Value cells show their data field's number format"), and a date group item's
+    /// label shows m/d/yyyy (pivots.md "Capability matrix 3", T-4957).
     fn set_pivot_number_format(
         &mut self,
         sheet: u32,

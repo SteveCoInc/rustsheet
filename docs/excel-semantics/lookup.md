@@ -990,6 +990,9 @@ out-of-range index: the T-2273 entry).
       sheet `#VALUE!` (H7, H13), all Data `#N/A` (H8). `MAX` is 50 either order (H11, H12). A mixed XLOOKUP grid has
       a value hit, so only its reference element has a sheet: a reference on the formula's sheet is `#VALUE!` (H14)
       and one on Data `#N/A` (H15). `LARGE(CHOOSE({1;2},A1,Data!G1),1)` makes values, not references: 50 (H10).
+    - A `#REF!` element from a failed INDIRECT (bad sheet name) does not outrank the off-sheet `#N/A`. `LARGE(INDIRECT({"nosuch!A1";"A1";"Data!G1"}),1)`, SMALL and MEDIAN are `#N/A`
+      (probes/t4791-large-small-median-mixed-first-element H4:H6, excel-graph, T-4862), where a `#DIV/0!` element still
+      propagates (t4704). The implementation skips every `#REF!` element by kind; a cell-held `#REF!` (XLOOKUP hit on a `#REF!` cell) beside an off-sheet reference is UNEVIDENCED (follow-up probe task).
     - A first element that is an error or a value (probes/t4791-large-small-median-mixed-first-element, excel-graph
       2026-11-07, T-4791; Local formulas, `INDIRECT` with `nosuch!A1` as the error element): `{"A1";"nosuch!A1";"Data!G1"}`
       (own, error, off) is `#VALUE!` for LARGE, SMALL and MEDIAN (H1:H3), as the first-element rule says. With the error
@@ -1814,9 +1817,22 @@ miss's `#N/A` (A13:A14) and `{2;3}` `#VALUE!` twice (A10:A11), all hits with a r
 reference it picks: `COUNTIF(XLOOKUP(2,..,"x"),">0")` is 1 (A25). An array criterion beside the grid broadcasts,
 2x2 for `{">0",">5"}` (A40:C40; ours a 2x1, T-4826). A workbook with COUNTIF over `SEQUENCE(2)`, `A1:A2+0` or
 `SORT(A1:A2)` as its range failed to open on Excel for the web (createSession 501 unsupportedWorkbook), so those
-forms are not probed: COUNTIF takes no computed array as a range. TAKE and DROP keep the shape
+forms are not probed and no cell says what COUNTIF gives for a computed array as its range (desktop question, M14
+Phase 4). A COUNTIF or SUMIF over an XLOOKUP lifted only by match_mode or search_mode gives the same array of
+`#VALUE!` as a lookup_value lift (probes/t4863-xlookup-mode-lift-criteria, excel-graph, 2026-11-07, T-4863):
+`COUNTIF(XLOOKUP(2,A1:A3,B1:B3,"x",{0;1}),">0")` is a 2x1 of `#VALUE!`, `{0,1}` a 1x2, `{0}` a scalar `#VALUE!`;
+a range if_not_found does not lift (`COUNTIF(XLOOKUP(9,..,G1:G2),">0")` 2). Ours is a scalar for the mode-only lifts (T-5037). TAKE and DROP keep the shape
 and match (A13:C22).
-Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742, T-4826
+RANK, RANK.EQ and RANK.AVG over a lifted OFFSET or INDIRECT `ref` (probes/t4801-rank-lifted-offset-indirect, excel-graph,
+2026-11-07, T-4801; Data A1:A3 = 5,8,2, B1:B3 = 9,5,1; 27 probes on the references' own sheet and the same 27 off-sheet,
+identical results, so RANK does not split on that axis as LARGE/SMALL do): each element ranks against its own range.
+`RANK(5,OFFSET(A1,{0;1},0,2))` is `{2;#N/A}` (A1:A2 = 5,8; A2:A3 = 8,2 lacks 5); the 2-D shift `OFFSET(A1,{0;1},{0;1},2)`
+`{2;1}`; `INDIRECT({"A1:A2";"B1:B2"})` `{2;2}`; one-cell references `INDIRECT({"A1";"B1"})` `{1;#N/A}`; a bad address element
+is `#REF!` for that element only (`{2;#REF!}`). A lifted `number` ({5;9}) or `order` ({0;1}) beside the grid gives a
+two-row result (`{2;#N/A}`), but these probes do not show how its elements pair with the grid's: the second element is
+`#N/A` whether it is zipped or the first is broadcast, as A2:A3 holds neither 5 nor 9 (UNVERIFIED, T-4951); an error `number` or `order` gives that error in every element. ROWS is 2 and COLUMNS 1 for each.
+Matches ours in all 217 cells, no fix needed.
+Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742, T-4801, T-4826
 
 ## MATCH match_type that is a reference to an error cell is #REF! (excel-graph)
 Rule: `MATCH(30,A1:A5,M2)` with M2 `=NA()` gives `#REF!` (ERROR.TYPE 4) in Excel for the web, not the #N/A the

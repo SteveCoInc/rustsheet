@@ -29,6 +29,7 @@ use std::{
     io::{BufReader, Cursor, Read, Seek},
 };
 
+pub(crate) use xml::reference_of;
 use xml::XmlNode;
 
 use rustsheet_engine::{
@@ -36,7 +37,7 @@ use rustsheet_engine::{
         parser::{new_parser_english, stringify::to_english_string},
         types::CellReferenceRC,
     },
-    types::{Metadata, Table, Workbook, WorkbookSettings, WorkbookView},
+    types::{Table, Workbook, WorkbookSettings, WorkbookView},
     Model,
 };
 
@@ -57,7 +58,8 @@ pub use workbook::date_system_from_attribute;
 use call_cap::refuse_too_many_calls;
 use external_links::load_external_books;
 use metadata::load_metadata;
-use package::{resolve_target, Package};
+use package::resolve_target;
+pub(crate) use package::{part_folder_and_rels, resolve_relative_target, Package};
 use pivots::{load_pivots, PivotSheet};
 use styles::load_styles;
 use util::get_attribute;
@@ -87,7 +89,7 @@ fn load_relationships<R: Read + Seek>(
 }
 
 /// The relationships of a part in document order; none when the part has no relationships part.
-pub(super) fn part_relationships<R: Read + Seek>(
+pub(crate) fn part_relationships<R: Read + Seek>(
     archive: &mut Package<R>,
     rels_path: &str,
 ) -> Result<Vec<(String, Relationship)>, XlsxError> {
@@ -252,20 +254,7 @@ fn load_package<R: Read + Seek>(
         dn.formula = reparse_formula_hack(&dn.name, &dn.formula, &worksheet_names, &tables)?;
     }
     let external_books = load_external_books(archive, &rels, &workbook.external_references);
-    let metadata = match load_metadata(archive) {
-        Ok(metadata) => metadata,
-        Err(_) => {
-            // In case there is no metadata, add some
-            Metadata {
-                application: "Unknown application".to_string(),
-                app_version: String::new(),
-                creator: String::new(),
-                last_modified_by: String::new(),
-                created: String::new(),
-                last_modified: String::new(),
-            }
-        }
-    };
+    let metadata = load_metadata(archive);
     let mut views = HashMap::new();
     views.insert(
         0,
