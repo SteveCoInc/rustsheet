@@ -54,6 +54,7 @@ a rule backed by a probe, recorded in statistics.md.
   `#NUM!` there. Six cells are known failures owned by T-4824 (r2 A12, A13; r3 A1, A2, A6, A10). r2 A14, B14 are
   close-digit Tier B, also noted in T-4824.
 - Eval: probes/t3576-negbinom-cdf-huge-s A50:A52 pass (88/89; A75 stays Tier B), t3007 A20 fixed and A6 kept,
-  t4238 126/126, r2 34/38, r3 8/12; Gate A unchanged (A181:A183, A190 pass); no regressions.
+  t4238 126/126, r2 34/38, r3 8/12; Gate A: BETADIST s1 A184 (T-4733's, alpha 2.2E+114 absorbing beta 2.0E+66) now
+  passes and leaves known-failures.tsv, A181:A183 and A190 still pass; no regressions.
 - statistics.md "NEGBINOM.DIST's cdf is #NUM! at a huge number_s" records the rule, the orientation, the density and the
   open x0 cut.
