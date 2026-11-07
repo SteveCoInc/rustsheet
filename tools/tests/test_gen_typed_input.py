@@ -1,17 +1,20 @@
-"""`rustsheet-gen --policy typed-input` (T-3462): strata shapes, exclusions, readers and determinism."""
+"""`rustsheet-gen --policy typed-input` (T-3462, T-3463): strata shapes, exclusions, readers and determinism."""
 
 from __future__ import annotations
 
 import random
 import re
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from rustsheet_tools.gen.generator import write_case
+from rustsheet_tools.gen.typed_dates import DATE_STRATA, yearless
 from rustsheet_tools.gen.typed_input import (
     CASES,
+    COUNTS,
     MAX_ENTRY,
     NBSP,
     STRATA,
@@ -45,6 +48,13 @@ SHAPES: dict[str, Callable[[str], bool]] = {
     "fraction": lambda t: "/" in t and re.fullmatch(r"-?\$?[0-9]+( [0-9.]+)?/[0-9]+", t) is not None,
     "spacing": lambda t: t[0] in SPACES or t[-1] in SPACES or "  " in t,
     "near-miss": lambda t: not _is_float(t.replace(",", "")) or t.count(".") > 1 or ",," in t,
+    # A date has a digit and a separator or a word; a clock has a colon and only clock characters.
+    "date": lambda t: (
+        re.fullmatch(r"[A-Za-z0-9 ,./:-]+", t) is not None
+        and any(c.isdigit() for c in t)
+        and (bool(set(t) & set("/-.,")) or re.search(r"[A-Za-z]{3}", t) is not None)
+    ),
+    "clock": lambda t: ":" in t and re.fullmatch(r"[0-9 :.AaPpMmX]+", t) is not None,
 }
 
 
@@ -59,6 +69,36 @@ def test_every_variant_draws_its_stratum_shape(stratum: str) -> None:
         for _ in range(100):
             text = draw(rng)
             assert SHAPES[stratum](text), (stratum, variant, text)
+
+
+@pytest.mark.parametrize("stratum", sorted(DATE_STRATA))
+def test_no_date_or_clock_variant_draws_a_yearless_date(stratum: str) -> None:
+    rng = random.Random(stratum)
+    for variant, draw in STRATA[stratum].items():
+        for _ in range(200):
+            text = draw(rng)
+            assert not yearless(text), (stratum, variant, text)
+
+
+def test_yearless() -> None:
+    for text in [
+        "7/1",
+        "7-1",
+        "Jul-2",
+        "1-Jul",
+        "Feb 29",
+        "July 1",
+        "1 Jul",
+        "12/31",
+        "July",
+        "7/1 10:00",
+        "1Jul",
+    ]:
+        assert yearless(text), text
+        assert excluded(text, "date"), text
+    for text in ["1/2/30", "Jul 1, 29", "Jul-99", "July 2026", "1Jul2026", "10:00", "25:30", "1:2:3.5 PM",
+                 "10:00 XM", "7/1/2026 10:00", "10:00 PM 1-Jan-2026", "1/2/3/4", "Jul 32, 2026"]:  # fmt: skip
+        assert not yearless(text), text
 
 
 def test_exclusions() -> None:
@@ -100,8 +140,11 @@ def test_cases_carry_entries_readers_and_stratum_tags() -> None:
             assert tag.startswith("typed-input/") and stratum in STRATA
             assert SHAPES[stratum](text), (tag, text)
             assert all(case["hypotheses"][f"Sheet1!{c}{i}"] == tag for c in "BCD")
+            assert not excluded(text, stratum), (tag, text)
+        drawn = Counter(case["hypotheses"][f"Sheet1!A{i}"].split("/")[1] for i in range(1, n + 1))
+        assert drawn == COUNTS  # every stratum gets its full share; a failed redraw would shrink it
     assert len(entries) == len(set(entries))  # no entry repeats across the batch
-    assert not any(excluded(t) for t in entries)
+    assert sum(COUNTS[s] for s in DATE_STRATA) * CASES >= 150
     assert not any(t.lstrip().startswith("=") or len(t) > MAX_ENTRY for t in entries)
     tags = {t.split("/")[1] for case in cases for t in case["hypotheses"].values()}
     assert tags == set(STRATA)

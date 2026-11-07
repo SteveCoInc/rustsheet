@@ -3,7 +3,7 @@ id: T-3463
 title: "Typed-input policy, dates and clocks: typed dates with a four-digit or two-digit year, month names, clocks, AM/PM and date-plus-clock entries"
 milestone: M2
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -44,16 +44,35 @@ oracle ran.
   UNVERIFIED in several places).
 
 ## Acceptance criteria
-- [ ] `rustsheet-gen --policy typed-input --seed 0` also writes at least 150 date and clock entries over the
+- [x] `rustsheet-gen --policy typed-input --seed 0` also writes at least 150 date and clock entries over the
       strata above, tagged `typed-input/date/...` and `typed-input/clock/...` in `hypotheses`.
-- [ ] tools/tests: a test that no drawn entry is year-less (a date part without a written year), one per stratum
+- [x] tools/tests: a test that no drawn entry is year-less (a date part without a written year), one per stratum
       that the drawn text has its shape, and the determinism test of T-3462 still passes.
-- [ ] Shown in the PR: `rustsheet-eval run` with the engine standing in for Excel scores the new cases with no
+- [x] Shown in the PR: `rustsheet-eval run` with the engine standing in for Excel scores the new cases with no
       crash, panic or timeout.
-- [ ] docs/architecture/synthetic-generator.md lists the date strata, the shares and the clock-independence rule.
-- [ ] `make py-check` green; `make check` green; reviewers approve.
+- [x] docs/architecture/synthetic-generator.md lists the date strata, the shares and the clock-independence rule.
+- [x] `make py-check` green; `make check` green; reviewers approve.
 
 ## Out of scope
 - Year-less dates and anything else whose value depends on the clock.
 - 1904 workbooks and locales other than en-US.
 - The oracle-filled batch (T-3464) and any engine change.
+
+## Outcome
+- New module `tools/src/rustsheet_tools/gen/typed_dates.py`, which adds `date` and `clock` strata to
+  `--policy typed-input`.
+  - Each case now holds 240 entries: 20 per number stratum and 40 each of dates and clocks. Seed 0 writes 160 dates
+    and clocks across its 2 cases.
+  - Entries are tagged `typed-input/date/<variant>` and `typed-input/clock/<variant>`.
+  - The variants are listed in docs/architecture/synthetic-generator.md §5.5.
+- Clock independence: `yearless` refuses a date part with no written year. `excluded(text, stratum)` applies it to
+  the date and clock strata; the number strata keep T-3462's stricter date-shape rule.
+- Tests (tools/tests/test_gen_typed_input.py):
+  - a shape check per stratum, including date and clock;
+  - no date or clock variant draws a year-less entry (200 draws each);
+  - `yearless` against examples taken from dates.md;
+  - every stratum gets its full count in every case (the design reviewer's MINOR on #3969);
+  - T-3462's determinism test still passes.
+- With the engine standing in for Excel (its own values as the sidecar), `rustsheet-eval run` scores the seed-0
+  batch 1920/1920 cells, about 74 ms per case, with no EngineError, panic or timeout.
+- No cases committed (T-3464 commits the oracle-filled batch). Eval delta: none.

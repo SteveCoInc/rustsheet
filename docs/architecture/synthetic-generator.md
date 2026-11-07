@@ -570,7 +570,30 @@ clock cannot reproduce (dates.md "The en-US date-text grammar"), so bare `n/d` f
 `1 /2` near misses are not drawn; `n/dddd` and `1-2-2026` are. Month names, clocks and dates are T-3463. On
 excel-graph `CELL("format")` is #VALUE! (coercion.md, probes/typed-paren-number-input), so that reader scores
 only on a desktop oracle; the format Excel chose is in excel-graph's `ENTERED` log. The engine standing in for
-Excel scores the seed-0 batch's 1,280 cells with no crash or timeout.
+Excel scored the number-only seed-0 batch's 1,280 cells with no crash or timeout.
+
+**Dates and clocks** (T-3463; module `gen/typed_dates.py`): each case also draws 40 entries from a `date`
+stratum and 40 from a `clock` stratum (twice a number stratum's share), so a case holds 240 entries and the
+seed-0 batch 160 dates and clocks, tagged `typed-input/date/<variant>` and `typed-input/clock/<variant>`:
+- `date`: `m/d/yyyy`, `m-d-yyyy`, `yyyy-m-d` and `yyyy/m/d` (one- or two-digit parts); two-digit years at the
+  29/30 pivot (`28`..`31`, `00`, `99`) and one-digit years; invalid days (`2/30`, `4/31`, `1/32`, `13/1`);
+  1900-02-29 (the leap-year bug) and its neighbours; other leap days (2000, 2023, 2024, 2100, 2400, 1904); year
+  edges (9999, 10000, 1899, `1/0/1900`); month names, full and three-letter in title, lower and upper case, as
+  `d-mmm-yyyy`, `mmm d, yyyy`, `d mmmm yyyy`, `mmm d, yy` and `d/mmm/yy`; month-year with a year
+  (`Jul-99`, `July 2026`); glued forms with a year (`1Jul2026`, `Jul2026`); a date and a clock in both orders
+  with one or two spaces; near misses (`1/2/3/4`, `Jul 32, 2026`, `Ju 1, 2026`, `July 1 2026`, `2026.01.01`,
+  `Jul-1-2026`, a weekday or `1st`);
+- `clock`: `h:mm`, `h:mm:ss`, fractional seconds, hours past 24, minutes and seconds past 59, `AM`/`PM`/`A`/`P`
+  with and without a space and in either case, `0:00 AM`, `12:00 AM`, `13:00 PM`, one-digit parts (`1:2:3`),
+  and near misses (`10:00 XM`, `1:2:3:4`, `10::00`, `:30`, `10:`, `25:00 PM`).
+
+Clock independence: a date part must write its year, since year-less text takes the current year of the
+machine that typed it (dates.md "The en-US date-text grammar"). `typed_dates.yearless` refuses a date or clock
+entry whose date part (what is left once clock tokens are removed) has one or two parts, numbers or a month
+name, with every number at most 31, or a month name alone; three parts, a four-digit number or a month-year
+number above 31 write the year, and a pure clock has no date part. The variants are built never to draw such
+text (a test draws each 200 times), and the policy redraws any that would. The engine standing in for Excel
+scores the seed-0 batch (2 cases, 1,920 cells) with no crash or timeout.
 
 ---
 

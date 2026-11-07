@@ -2,16 +2,18 @@
 
 Every input cell is a typed entry (`{"entered": "..."}`, text as a user types it) drawn from one of
 eight strata of number shapes: plain numbers, sign forms, currency and thousands separators, percent,
-E-notation, fractions and mixed fractions, spacing, and near misses that should stay text. Beside each
+E-notation, fractions and mixed fractions, spacing, and near misses that should stay text; and from the
+`date` and `clock` strata of `typed_dates` (T-3463). Beside each
 entry in `A<n>` are three readers: `=A<n>+0` (the number, or #VALUE! when it stayed text),
 `=ISTEXT(A<n>)` and `=CELL("format",A<n>)`; the entry cell itself is checked too. Each of the four
 cells is tagged in `hypotheses` `typed-input/<stratum>/<variant>`.
 
 The policy draws text only: it never predicts Excel's value (the cases carry no expectations until
 `rustsheet-oracle fill`). It never draws an entry that starts with `=`, is over 255 characters, or
-has a date shape (digit groups joined by `/` or `-`) without a four-digit group: Excel reads a
-year-less date such as `1/2` in the oracle's current year, which the pinned clock cannot reproduce
-(docs/excel-semantics/dates.md "The en-US date-text grammar"). Such a draw is redrawn.
+reads as a year-less date: Excel reads one such as `1/2` in the oracle's current year, which the pinned
+clock cannot reproduce (docs/excel-semantics/dates.md "The en-US date-text grammar"). A number entry with a
+date shape (digit groups joined by `/` or `-`) and no four-digit group, or a date or clock entry that
+`typed_dates.yearless` refuses, is redrawn.
 """
 
 from __future__ import annotations
@@ -22,9 +24,10 @@ from collections.abc import Callable
 from typing import Any
 
 from rustsheet_tools.gen.common import REDRAWS
+from rustsheet_tools.gen.typed_dates import DATE_STRATA, yearless
 
 CASES = 2
-ENTRIES_PER_STRATUM = 20  # per case, so every stratum has an equal 1/8 share of each case's 160 entries
+ENTRIES_PER_STRATUM = 20  # per case and number stratum; `COUNTS` doubles it for the date and clock strata
 MAX_ENTRY = 255
 NBSP = chr(0xA0)  # CHAR(160), the no-break space
 
@@ -190,18 +193,24 @@ STRATA: dict[str, dict[str, Draw]] = {
     "fraction": FRACTION,
     "spacing": SPACING,
     "near-miss": NEAR_MISS,
+    **DATE_STRATA,
 }
+# Entries per stratum in each case: 20 of each number stratum, 40 dates and 40 clocks (T-3463).
+COUNTS = {name: 2 * ENTRIES_PER_STRATUM if name in DATE_STRATA else ENTRIES_PER_STRATUM for name in STRATA}
 
 # Digit groups joined by `/` or `-` (spaces around the separator are ignored, dates.md), optionally
 # after a sign or currency and before a percent sign: a shape Excel may read as a date.
 DATE_SHAPE = re.compile(r"^\s*[-+($]*\s*(\d+)\s*[/-]\s*(\d+)(?:\s*[/-]\s*(\d+))?\s*[)%]*\s*$")
 
 
-def excluded(text: str) -> bool:
-    """True for an entry the policy never draws: a formula, over 255 characters, or a date shape
-    without a four-digit group (a year-less date reads in the oracle's current year)."""
+def excluded(text: str, stratum: str = "") -> bool:
+    """True for an entry the policy never draws: a formula, over 255 characters, or, by stratum, text whose value
+    depends on the clock (a year-less date reads in the oracle's current year). A date or clock entry is refused
+    when `yearless`; any other entry when it has a date shape without a four-digit group."""
     if text.lstrip().startswith("=") or len(text) > MAX_ENTRY:
         return True
+    if stratum in DATE_STRATA:
+        return yearless(text)
     m = DATE_SHAPE.match(text)
     if m is None:
         return False
@@ -215,7 +224,7 @@ def draw_entry(rng: random.Random, stratum: str, seen: set[str]) -> tuple[str, s
     for _ in range(REDRAWS):
         variant = rng.choice(names)
         text = variants[variant](rng)
-        if text not in seen and not excluded(text):
+        if text not in seen and not excluded(text, stratum):
             seen.add(text)
             return variant, text
     return None
@@ -237,7 +246,7 @@ def _case(seed: int, index: int, entries: list[tuple[str, str, str]]) -> dict[st
     return {
         "format": "rustsheet-case/v1",
         "description": (
-            f"typed-input entries seed={seed} case={index}: typed number shapes (T-3462); "
+            f"typed-input entries seed={seed} case={index}: typed number, date and clock shapes (T-3462, T-3463); "
             'each entry\'s value, A+0, ISTEXT and CELL("format")'
         ),
         "tags": ["generated", "M2", "typed-input", "coercion", "CELL", "ISTEXT"],
@@ -249,14 +258,14 @@ def _case(seed: int, index: int, entries: list[tuple[str, str, str]]) -> dict[st
 
 
 def generate_typed_input(seed: int) -> list[dict[str, Any]]:
-    """Return `CASES` specs of `ENTRIES_PER_STRATUM` entries per stratum each, in a seeded order."""
+    """Return `CASES` specs of `COUNTS[stratum]` entries per stratum each, in a seeded order."""
     rng = random.Random(seed)
     seen: set[str] = set()
     cases: list[dict[str, Any]] = []
     for index in range(CASES):
         entries: list[tuple[str, str, str]] = []
         for stratum in STRATA:
-            for _ in range(ENTRIES_PER_STRATUM):
+            for _ in range(COUNTS[stratum]):
                 drawn = draw_entry(rng, stratum, seen)
                 if drawn is not None:
                     entries.append((stratum, *drawn))
