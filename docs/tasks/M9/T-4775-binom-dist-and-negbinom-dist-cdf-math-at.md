@@ -1,6 +1,6 @@
 ---
 id: T-4775
-title: "BINOM.DIST and NEGBINOM.DIST cdf math at a huge n: the 56 counted cells rustsheet-accuracy drops as not converged"
+title: "BINOM.DIST and NEGBINOM.DIST cdf math at a huge n: the 54 counted cells rustsheet-accuracy drops as not converged"
 milestone: M9
 lane: functions-stat
 status: todo
@@ -13,13 +13,13 @@ depends_on: []
 ## Goal
 `rustsheet-accuracy math` gives a 50-digit value for BINOM.DIST and NEGBINOM.DIST cumulative cells at a huge trial or
 failure count (n or number_f from about 1E5 up to 2^31 - 2, and number_f past 1E8 for NEGBINOM.DIST). Today it drops
-them as `not converged`. Once they have a math value, decision 0188 R1(c) can sort the 56 visibly-off cells below
+them as `not converged`. Once they have a math value, decision 0188 R1(c) can sort the 54 visibly-off cells below
 (as Phase 1b evidence where both sides are within 1e-9 of the math). Until then each one counts in the M9 probe row,
 because a cell with no math value counts (decision 0325).
 
 ## Context
 - Gap triage 2026-11-07 (`make eval` on agent/functions/tasks-opus-refill-0307 at b9ae5216f, excel-graph). M9's probe
-  row counts 816 R1(c) cells. 56 of them are BINOM.DIST or NEGBINOM.DIST cdf cells that the math sidecar lists under
+  row counts 816 R1(c) cells. 54 of them are BINOM.DIST or NEGBINOM.DIST cdf cells that the math sidecar lists under
   `skipped` with `why: not converged`.
 - Root cause (checked): `tools/src/rustsheet_tools/accuracy/defs/discrete.py` `binom_cdf` and `negbinom_cdf` call
   `mpmath.betainc(n - k, k + 1, 0, 1 - p, regularized=True)` and `mpmath.betainc(s, f + 1, 0, p, ...)` directly.
@@ -58,12 +58,11 @@ because a cell with no math value counts (decision 0325).
   lists the t3960 and t3352 cells, and T-3959, T-3774 and T-3198 name the t3352 cases. This task only attaches the math.
   If both sides then sit within 1e-9 (as the table suggests), the cells become Phase 1b evidence, and T-3961's
   visible stage should be re-read against decision 0325. Record that in the Outcome; do not edit T-3961 here.
-  probes/t3444-binom-range-inv-large-n Range!B49 and B53 had no open owner (`make unowned-off ALL=1`), so they are
-  owned here.
+  probes/t3444-binom-range-inv-large-n Range!B49 and B53 are T-4773's (filed in parallel); this task's method should
+  make them converge too, but T-4773 attaches their math.
 
 Cells this task owns for their math value (shared with T-3961, T-3959, T-3774 and T-3198 as above):
 - probes/t3352-binom-negbinom-large-n.case.json (1): Calc!A52
-- probes/t3444-binom-range-inv-large-n.case.json (2): Range!B49, Range!B53
 - probes-numeric/t3352-binom-negbinom-sweep.case.json (2): Calc!A184, Calc!A208
 - probes-numeric/t3960-binom-negbinom-small-p-cdf-hold.case.json (17): Calc!A1, Calc!A3, Calc!A23, Calc!A46, Calc!A47, Calc!A54, Calc!A55, Calc!A66, Calc!A68, Calc!A101, Calc!A121, Calc!A141, Calc!A152, Calc!A165, Calc!A177, Calc!A182, Calc!A194
 - probes-numeric/t3960-binom-negbinom-small-p-cdf.case.json (34): Calc!A8, Calc!A29, Calc!A31, Calc!A35, Calc!A37, Calc!A44, Calc!A62, Calc!A68, Calc!A94, Calc!A97, Calc!A106, Calc!A109, Calc!A126, Calc!A135, Calc!A201, Calc!A207, Calc!A229, Calc!A233, Calc!A268, Calc!A300, Calc!A303, Calc!A324, Calc!A342, Calc!A381, Calc!A382, Calc!A404, Calc!A405, Calc!A406, Calc!A426, Calc!A428, Calc!A429, Calc!A430, Calc!A436, Calc!A437
@@ -77,10 +76,10 @@ visibly off today, but the same change should give them values.
       at least four of them against an independent 60-digit reference: the pmf-sum for a small k, and a second method
       for NEGBINOM.DIST at number_f 1.65E8.
 - [ ] `cd tools && uv run rustsheet-accuracy math --suite probes` and `--suite probes-numeric` regenerate the four
-      sidecars, and none of the 56 cells is under `skipped`. `rustsheet-accuracy math --check` passes.
+      sidecars, and none of the 54 cells is under `skipped`. `rustsheet-accuracy math --check` passes.
       `rustsheet-accuracy verify BINOM.DIST` and `verify NEGBINOM.DIST` show no change on the existing Gate A
       tables (accuracy/BINOM.DIST, accuracy/NEGBINOM.DIST), or each change is explained in the Outcome.
-- [ ] After `make eval`, each of the 56 cells is Phase 1b evidence in `report.json` `r1c_left_out` or is listed in the
+- [ ] After `make eval`, each of the 54 cells is Phase 1b evidence in `report.json` `r1c_left_out` or is listed in the
       Outcome with its Excel-minus-math and ours-minus-math. The M9 probe row's R1(c) count drops by the Phase 1b
       ones. `eval/baseline/` gains no new line (this task changes no engine value).
 - [ ] The point budget stays deterministic (no clock), and `make check` is green; reviewers approve.
