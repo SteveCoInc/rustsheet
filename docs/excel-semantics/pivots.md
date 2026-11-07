@@ -2221,8 +2221,56 @@ Evidence: probes/t4130-pivot-chart-cache (excel-graph, 2026-11-07, T-4130): the 
 download of that run (input sha256 c78d1952…), not a committed file (the sidecars do not record charts). The charts
 are written by tools/src/rustsheet_tools/pivot_chart.py. Consequence for plan.md §7: Excel-saved chart caches are an
 oracle for PivotChartData (T-4186), read from a downloaded file.
-Status: VERIFIED (excel-graph, cached download) for a one-series column chart over a one-field pivot. Several series,
-column fields and multi-level categories (`c:multiLvlStrCache`) are T-4186's to probe; the export is T-4187.
+Status: VERIFIED (excel-graph, cached download) for a one-series column chart over a one-field pivot, but the download
+is not committed, so as repository evidence it is UNVERIFIED until a committed file records the chart's caches
+(T-4187, whose criteria include that record). T-4186 checked `PivotChartData` against the pivot cells of the sidecar
+(East 18, West 27) and against two Excel-saved corpus files ("A PivotChart plots the pivot's item lines" below).
+
+## A PivotChart plots the pivot's item lines
+Rule: a chart bound to a pivot (`c:pivotSource`) plots one category per row leaf and one series per column line, and
+leaves out the grand totals. The two Excel-saved corpus charts show:
+- one category per row leaf, labelled outer level first; Values on rows is the inner level, so the categories form
+  a `c:multiLvlStrCache` whose levels are listed innermost first, each outer label only at the first point of its
+  run (WithChartSheet.xlsx: Year then Values on rows, `lvl` 1 holds 2005, 2006, 2007 at points 0, 2, 4, `lvl` 0 the
+  data fields at every point);
+- the grand-total row and column lines left out (both files);
+- with no column field and Values not on columns, one series named `Total`, whatever the cell above the values
+  holds (WithChartSheet.xlsx `c:tx` `Sheet2!$C$3`, cached `Total`);
+- a collapsed (`sd="0"`) column item as one series, named by its item alone, though its `c:tx` reference spans every
+  header row (forum-mso-de-104083.xlsx: `Tabelle1!$B$3:$B$6` cached `2015`);
+- no `c:pt` for a cell no record reaches (forum-mso-de-104083.xlsx: `ptCount` 53 with 51 points for 2015, 30 for
+  2017);
+- a number item's label in the field's number format: forum-mso-de-104083.xlsx's KW field (items 1 to 53, `numFmtId`
+  165 `"KW "00` on both the pivot field and the cache field) is cached `KW 01` to `KW 53`, while the pivot's own cells
+  hold the numbers.
+
+Evidence: POI `test-data/spreadsheet/WithChartSheet.xlsx` (the `poi` suite at 9958a2a2, sha256 792b9f21…, Excel 12):
+`xl/charts/chart1.xml` over `Sheet2!PivotTable2` (pivotTable5, `cacheId` 1: `pivotCacheDefinition2`; tabular,
+`dataOnRows`, grand totals on); LibreOffice `sc/qa/unit/data/xlsx/forum-mso-de-104083.xlsx` (the `pivot-corpus-lo`
+suite at b1653ced, sha256 c7182682…, Excel 16): `xl/charts/chart1.xml` over `Tabelle1!PivotTable2` (one row field,
+three date-group column fields, every year collapsed). Both files are fetched, not committed, so their pivots and
+chart caches are transcribed into crates/rustsheet-engine/src/pivot/layout/chart/tests.rs, which always runs (the
+LibreOffice file's 2,303 records reduced to the per-week, year, quarter and month sums the chart reads);
+crates/rustsheet-xlsx/tests/pivot_chart_corpus.rs also checks the files themselves when they are fetched.
+Status: VERIFIED (corpus files, T-4186) for the shapes above. UNVERIFIED (T-4938), the engine's reading: leaving out
+subtotal lines, an item's line with `subtotalTop` above its children, an outline item's own line and `insertBlankRow`
+lines (neither corpus chart has one: WithChartSheet.xlsx has item and grand-total lines only, forum-mso-de-104083.xlsx
+one row field); plotting show-as values as shown; leaving out filtered and hidden items; the name of a series with
+several labels (the engine gives none); the levels when categories differ in depth (a collapsed outer row item beside
+expanded ones); a date item's label; whether the pivot field's or the cache field's `numFmtId` formats a label; the
+category of a pivot with no row level; and a pivot with no data field. The engine's chart tests also check every
+plotted point of 30 probe pivots against the cells Excel rendered, which shows the values at the lines it plots are
+Excel's pivot cells, not that Excel's chart plots those lines. Writing the caches back on export, and a pivot
+collapsed to `#SPILL!`, are T-4187's.
+
+## A PivotChart's value cache format code differs by Excel version
+Rule: a pivot chart's `c:numCache` `c:formatCode` is the data field's `numFmtId` code in an Excel 16 file and
+`General` in an Excel 12 one, even where the pivot field carries a format.
+Evidence: forum-mso-de-104083.xlsx (Excel 16): every series' `c:formatCode` is format 168
+(`_-* #,##0\ _€_-;…`), the data field Summe's `numFmtId="168"`; WithChartSheet.xlsx (Excel 12): `c:formatCode`
+`General`, though pivotTable5's Cost field is `numFmtId="6"` (its data fields carry none).
+Status: VERIFIED (corpus files) as what the two files hold; which format current Excel writes, and from which
+attribute, is the export's to settle (T-4187).
 
 ## GETPIVOTDATA against a pivot collapsed to #SPILL!
 Rule: GETPIVOTDATA whose pivot reference is the anchor of a pivot collapsed to `#SPILL!` returns:
