@@ -21,6 +21,7 @@ pub(crate) mod collation;
 pub(crate) mod collation_tables;
 mod pairwise_order;
 pub(crate) use pairwise_order::{coalesce_equal_lines, sort_indices_pairwise};
+pub(crate) mod empty_args;
 mod existing_walk;
 
 pub(crate) use existing_walk::StoredWalk;

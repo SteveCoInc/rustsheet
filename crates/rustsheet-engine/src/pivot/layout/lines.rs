@@ -105,6 +105,22 @@ pub struct PivotLayout {
     pub geometry: PivotGeometry,
 }
 
+impl PivotLayout {
+    /// The 0-based (row, column) of the first value cell: the location's top-left cell moved by
+    /// `firstDataRow` and `firstDataCol`. Row line `i` holds its values in row `i` past it, column
+    /// line `j` in column `j` past it.
+    pub(crate) fn data_origin(&self) -> (u32, u32) {
+        (
+            self.location
+                .top
+                .saturating_add(self.geometry.first_data_row),
+            self.location
+                .left
+                .saturating_add(self.geometry.first_data_column),
+        )
+    }
+}
+
 /// One level of an axis: a field of the result's tree, or the Values field.
 #[derive(Debug, Clone, Copy)]
 pub(super) enum Level<'a> {

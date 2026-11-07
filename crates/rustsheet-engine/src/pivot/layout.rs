@@ -1,5 +1,6 @@
 //! A pivot's layout: in [`lines`], its layout lines and location (SPEC-0032 stage 7, T-4147),
-//! and in [`render`], the cells they give (T-4149); and the aggregation GETPIVOTDATA reads until
+//! in [`render`], the cells they give (T-4149), and in [`records_behind`], the records behind one
+//! value cell (T-4184); and the aggregation GETPIVOTDATA reads until
 //! it moves onto the `PivotResult` (T-4154).
 //!
 //! There is one layout path. A grouped spec pivot (T-4235), which has no rendered cells because
@@ -9,9 +10,12 @@
 //! probes/t4311-pivot-showall-column-and-groups).
 
 mod lines;
+mod records;
 mod render;
 
 pub use lines::{lay_out, AxisLine, PivotLayout, MAX_PIVOT_CELLS};
+pub use records::records_behind;
+pub(super) use render::item_text;
 pub use render::{
     render, PivotCell, RenderedCell, ALL_ITEMS, BLANK_ITEM, COLUMN_LABELS, GRAND_TOTAL,
     MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS, VALUES,

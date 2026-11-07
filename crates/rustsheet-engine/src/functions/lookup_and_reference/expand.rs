@@ -59,12 +59,18 @@ impl Model {
                     Ok(data) => data,
                     Err(error) => return error.clone(),
                 };
-                let target_rows = match model.cast_number_or(values.get(1), 0.0, cell) {
-                    Ok(n) => n,
-                    Err(e) => return e,
+                // A written-empty rows or columns keeps the array's own size, as an omitted columns
+                // does: `ROWS(EXPAND(A1:A2,,3,0))` is 2 and `COLUMNS(EXPAND(A1:B1,3,,0))` 2
+                // (probes/t4871-empty-mode-args E21:E31, T-4871), not 0's `#VALUE!`.
+                let target_rows = match values.get(1) {
+                    Some(CalcResult::EmptyArg) => src_rows as f64,
+                    value => match model.cast_number_or(value, 0.0, cell) {
+                        Ok(n) => n,
+                        Err(e) => return e,
+                    },
                 };
                 let target_cols = match values.get(2) {
-                    None => src_cols as f64,
+                    None | Some(CalcResult::EmptyArg) => src_cols as f64,
                     Some(value) => match model.cast_number_ref(value, cell) {
                         Ok(n) => n,
                         Err(e) => return e,

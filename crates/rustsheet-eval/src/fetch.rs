@@ -30,17 +30,33 @@ fn run(cmd: &mut Command) -> Result<()> {
 
 fn fetch_git(spec: &FetchSpec, rev: &str, dest: &Path) -> Result<()> {
     fs::create_dir_all(dest)?;
+    let git = || {
+        let mut cmd = Command::new("git");
+        cmd.arg("-C").arg(dest);
+        cmd
+    };
     run(Command::new("git").args(["init", "-q"]).arg(dest))?;
-    run(Command::new("git")
-        .arg("-C")
-        .arg(dest)
-        .args(["fetch", "-q", "--depth", "1", "--", &spec.url, rev]))?;
-    run(Command::new("git").arg("-C").arg(dest).args([
-        "checkout",
-        "-q",
-        "--detach",
-        "FETCH_HEAD",
-    ]))?;
+    if spec.sparse.is_empty() {
+        run(git().args(["fetch", "-q", "--depth", "1", "--", &spec.url, rev]))?;
+    } else {
+        // Blob-less: the commit and its trees only. The checkout below then downloads just the
+        // blobs the sparse patterns select (never `git ls-tree -l`, which fetches every blob).
+        run(git().args(["remote", "add", "origin", "--", &spec.url]))?;
+        run(git().args([
+            "fetch",
+            "-q",
+            "--depth",
+            "1",
+            "--filter=blob:none",
+            "origin",
+            rev,
+        ]))?;
+        // `validate` refused option-like patterns, so none reaches git as a flag.
+        run(git()
+            .args(["sparse-checkout", "set", "--no-cone", "--"])
+            .args(&spec.sparse))?;
+    }
+    run(git().args(["checkout", "-q", "--detach", "FETCH_HEAD"]))?;
     fs::remove_dir_all(dest.join(".git"))?;
     Ok(())
 }
@@ -308,6 +324,70 @@ mod tests {
         let s = suite(&dir, &format!("file://{}", zip.display()), &sha);
         assert!(fetch_suite(&s).is_err());
         assert!(!dir.join("evil.case.json").exists());
+        fs::remove_dir_all(&dir).expect("cleanup");
+    }
+
+    /// A one-commit git repository at `dir` holding `files`, serving partial clones; its commit id.
+    fn git_repo(dir: &Path, files: &[&str]) -> String {
+        let git = |args: &[&str]| {
+            let out = Command::new("git")
+                .arg("-C")
+                .arg(dir)
+                .args(["-c", "user.name=t", "-c", "user.email=t@t"])
+                .args(args)
+                .output()
+                .expect("git");
+            assert!(out.status.success(), "git {args:?}: {out:?}");
+            String::from_utf8_lossy(&out.stdout).trim().to_string()
+        };
+        fs::create_dir_all(dir).expect("mkdir");
+        git(&["init", "-q"]);
+        git(&["config", "uploadpack.allowFilter", "true"]);
+        for f in files {
+            let path = dir.join(f);
+            fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
+            fs::write(&path, f.as_bytes()).expect("write");
+        }
+        git(&["add", "-A"]);
+        git(&["commit", "-q", "-m", "fixture"]);
+        git(&["rev-parse", "HEAD"])
+    }
+
+    #[test]
+    fn sparse_git_fetch_checks_out_only_the_matching_paths() {
+        let dir = scratch("sparse");
+        let repo = dir.join("repo");
+        let rev = git_repo(
+            &repo,
+            &[
+                "data/a/x.xlsx",
+                "data/a/notes.txt",
+                "data/b/y.xlsx",
+                "src/big.bin",
+            ],
+        );
+        let text = format!(
+            "name = \"ext\"\nkind = \"xlsx\"\nlicense = \"MIT\"\n[fetch]\nurl = \"file://{}\"\nrev = \"{rev}\"\nsubdir = \"data\"\ninclude = [\"**/*.xlsx\"]\nsparse = [\"data/a/*\"]\n",
+            repo.display()
+        );
+        let s = Suite {
+            manifest: toml::from_str::<SuiteManifest>(&text).expect("manifest"),
+            dir: dir.join("suite"),
+            cache_dir: dir.join("cache/ext"),
+        };
+        s.manifest
+            .fetch
+            .as_ref()
+            .expect("fetch")
+            .validate()
+            .expect("valid");
+        assert_eq!(fetch_suite(&s).expect("fetch"), 1);
+        assert_eq!(s.fetch_state(), FetchState::Fetched);
+        assert!(s.cache_dir.join("a/x.xlsx").is_file());
+        // Outside the sparse patterns: never checked out, so never selected.
+        assert!(!s.cache_dir.join("b/y.xlsx").exists());
+        // Inside them but not `include`d.
+        assert!(!s.cache_dir.join("a/notes.txt").exists());
         fs::remove_dir_all(&dir).expect("cleanup");
     }
 

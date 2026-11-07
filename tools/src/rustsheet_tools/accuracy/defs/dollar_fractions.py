@@ -10,8 +10,8 @@ the eval cells: probes/fin-argument-modes H109, H113 and probes/scalar-lift-open
 `DOLLARFR(0.2,12)` 0.024000000000000004 (a few ulps from the math). financial.md "Financial function argument modes"
 and arrays.md list their argument lifting; the table's calls are scalar.
 Not drawn and given no math value (`NoValueError`), as no evidence names Excel's result: a fraction below 1 (Microsoft's
-documentation names `#NUM!` below 0 and `#DIV/0!` from 0 to 1, but no eval cell probes either). A fraction past 1E9 is
-not drawn either: there a double log10 of 10^k + 1 can round to k, so Excel's D may be a tenth of the math's. Negative
+documentation names `#NUM!` below 0 and `#DIV/0!` from 0 to 1, probes/t4608-dollarde-dollarfr-fraction-edges now does; the table does not draw them yet). A fraction past 1E9 is
+not drawn either: the t4608 probe shows D exact at 10^k + 1 for k up to 12, but a tenth of the math's at 10^15 + 1. Negative
 dollars are drawn with the integer part toward 0, which the table confirms: financial.md "DOLLARDE and DOLLARFR scale
 the fraction by the next power of ten (T-4110)" records it with the table's points.
 """

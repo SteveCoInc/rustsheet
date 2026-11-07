@@ -24,6 +24,9 @@ T-3577 left pass.
   at a shape near the double range ... bpser is #NUM! once 1/B overflows (T-3007)" may be the rule: B(a, b) at these
   shapes is far below DBL_MIN, so 1/B overflows. T-3104 owns that entry's other off cells. Check whether this is the
   same rule and the same owner first.
+- T-4238 fixed A184: bfrac with an oriented first shape that absorbs the second is `#NUM!` (statistics.md "NEGBINOM.DIST's
+  cdf is #NUM! at a huge number_s"). A186 is the other orientation (the first shape absorbed), which T-4238 found is a
+  value elsewhere (Gate A BETA.DIST s1 A183), so it needs its own rule.
 - Use the excel-probe skill if the two points do not settle which form cuts (predictions committed before the fill).
 
 ## Acceptance criteria

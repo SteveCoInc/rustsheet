@@ -711,7 +711,14 @@ probes/t2352-time-text-trailing-colon, T-2352). A decimal separator that is a di
 `NUMBERVALUE(0.3,"0.2")` and `NUMBERVALUE(0.1,"0.3x","ABCFALSE")` are `#VALUE!` (ours 0.3 and 0.1). Text that is empty, or
 empty once the group separator is removed, is 0: a blank cell, `""` from MID, RIGHT, T or REPT, and
 `NUMBERVALUE("A","0","ABC?b#N/A")` (ours `#VALUE!`). An empty group separator (a blank cell) is `#VALUE!`:
-`NUMBERVALUE(" 42 ","#N/A",<blank>)` (ours 42).
+`NUMBERVALUE(" 42 ","#N/A",<blank>)` (ours 42). **A written-empty separator is that empty value, not an omitted one**
+(T-4874, probes/t4874-numbervalue-empty-separator, 69 cells, excel-graph 2026-11-07): `NUMBERVALUE("1.5",,",")`,
+`NUMBERVALUE("1,234.5",".",)`, `NUMBERVALUE("2,5",,)` and `NUMBERVALUE("1:30",",",)` are `#VALUE!` on every text tried
+("1.5", "1,234.5", "1.234,5", "2,5", "50%", "1:30"), as the blank-cell and `""` forms are, while the same calls with the
+argument left out are 1.5, 1234.5, 25, 0.5 and 0.0625. A LET name bound to nothing is the same: `LET(e,,NUMBERVALUE("1.5",e))`
+is `#VALUE!`. So NUMBERVALUE does not follow the "empty = omitted" rule of TEXTBEFORE/TEXTAFTER/TEXTSPLIT, TAKE/DROP and SORT,
+though it is a 2013 function; the prediction "empty = omitted" committed before the fill was wrong. The engine matches
+(`fn_numbervalue` casts the empty argument to "" and refuses it).
 Evidence (excel-graph, 2026-10-20, T-2114): gen-m5/033e65b92653f425 Calc!A161, gen-m5/ae9ed30812c4d62c Calc!A285,
 gen-m5/109fc90dceb50ba9 Calc!A144, gen-m5/1962de140dae0111 Calc!A80, gen-m5/6b831f5e2a20bc34 Calc!A227, gen-m5/4d099bea7898ebf1 Calc!A261,
 gen-m5/38b1b8e51dbad326 Calc!A340, gen-m5/34f69d858a39f497 Calc!A227, gen-m5/b237245054b4fedb Calc!A128, gen-m5/eb942f4a59b1c004 Calc!A115 (T-2151);

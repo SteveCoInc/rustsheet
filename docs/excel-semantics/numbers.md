@@ -2353,8 +2353,9 @@ Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-
 `SUBTOTAL(3,..[Cat])` = `SUBTOTAL(103,..)` = 3; a criterion-less filterColumn (on column 0 or on column 1) with rows 3
 and 5 hidden gives SUBTOTAL 9 21 and 109 15, SUBTOTAL 3 6 and 103 4, the same as the table with no filter; the values
 filter under `colId` 5 of the 2-column table with rows 3, 5, 7 hidden gives 21 and 9, 6 and 3. The xlsx import decides
-this per table (`has_active_criterion`, crates/rustsheet-xlsx/src/import/tables.rs); an empty `<filters/>` counts as a
-criterion there (unprobed). Decided where Excel shows nothing: the API's `Txn::add_table(.., filtered: true)` means a
+this per table (`has_active_criterion`, crates/rustsheet-xlsx/src/import/tables.rs); an empty values filter (`<filters/>`,
+`<filters></filters>`, `<filters blank="0"/>`) is no criterion, as Excel reads it, and `<filters blank="1"/>` is one
+(excel-graph, 2026-11-07, T-4749; xlsx-storage.md "Table parts in the export"). Decided where Excel shows nothing: the API's `Txn::add_table(.., filtered: true)` means a
 table whose filter has a criterion that hides its hidden rows (what spec2xlsx writes and Excel reads as filtered), so it
 stays filtered in the engine, and its xlsx export writes a values filter on the first column keeping the visible rows'
 text, which Excel and our import read as filtered (T-4363; xlsx-storage.md "Table parts in the export"). **A column delete in the application that takes the table's only criterion unfilters the table and shows the rows
@@ -2375,13 +2376,19 @@ engine matches both. **A delete that leaves another criterion shows only the row
 (T-4755, probes/t4755-two-criteria-filtered-table-*): with a values filter on `Cat` keeping "a" and "c" (rows 3, 7)
 and one on `Ext` rejecting 40 (row 5), the control gives 3 = 103 = 3 and 9 = 109 = 9; deleting column A gives
 3 = 103 = 5 and 9 = 109 = 17: rows 3 and 7 are visible again, row 5 stays hidden and still filtered
-(`SUBTOTAL(3,..)` of it is 0). The engine shows all six rows (10 cells off; T-4803 owns them): its eval adapter adds
-the table through the API with no criteria, and by its code a table read from a file keeps every row hidden after such a delete (untested).
+(`SUBTOTAL(3,..)` of it is 0). The engine matches (T-4803): after a column delete that takes a criterion and leaves
+another inside the table, it shows each hidden data row that every kept criterion keeps, by the text the row's cell
+displays in that criterion's column (`rows_kept_by_criteria`, crates/rustsheet-engine/src/table_edits.rs), for a table read
+from a file and for one given its criteria with `Txn::filter_table_column` (the eval adapter's spec `"criteria"`). Rule
+(ours, T-4803): only a values filter without date groups is evaluated (blank rows by `blank`, other rows by their text
+among `values`, ignoring case); a row with any other kept criterion stays hidden. A row hidden in the file that the kept
+criteria keep is shown too, as the one-criterion delete shows it (above); with two criteria that is unprobed, as are
+case differences and number formats in the kept column.
 A manual hide made in the application inside a filtered table, and hidden rows outside the table (the engine keeps
 them hidden), are unprobed. A worksheet autoFilter (no table) and an autoFilter holding only a
 `<sortState>` are unprobed; ours reads the latter as not filtered.
 Status: VERIFIED
-Engine gaps: a delete that leaves another criterion (T-4803). SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
+Engine gaps: SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
 `Node::contains_function`).
 **Which formulas count as a nested SUBTOTAL or AGGREGATE (T-4194):** the cell's formula text, not what it evaluated. A
 call anywhere in the formula's own tree counts even when it never runs: `=IF(FALSE,SUBTOTAL(9,A1:A2),4)`,
@@ -2831,6 +2838,48 @@ SERIESSUM's coefficients (`SERIESSUM(2,0,1,Sheet1:Sheet2!A1)`; ours was `#REF!` 
 as written) and is `#VALUE!` (probes/quotient-factdouble-seriessum-3d-legacy C1-C8, excel-graph, 2026-10-19, T-1832).
 Status: VERIFIED (excel-graph)
 Tasks: T-1777, T-1802, T-1832
+
+## A written-empty argument of a ToolPak function is #N/A (T-4873)
+Rule: QUOTIENT's two arguments and SERIESSUM's `x`, `n`, `m` and coefficients are `#N/A` when written empty, as MROUND's,
+RANDBETWEEN's and IMSUB's are: `QUOTIENT(,5)`, `QUOTIENT(7,)`, `QUOTIENT(,)`, `QUOTIENT(-7.5,)`, `QUOTIENT(,-2)`,
+`SERIESSUM(,1,1,{1,2})`, `SERIESSUM(2,,1,{1,2})`, `SERIESSUM(2,1,,{1,2})`, `SERIESSUM(2,1,1,)` and `SERIESSUM(,,,)` are all
+`#N/A` (A1:A6, B1:B7), where most numeric functions read an empty argument as 0. An error or a boolean in an earlier
+argument wins: `QUOTIENT(1/0,)` is `#DIV/0!`, `QUOTIENT(TRUE,)` `#VALUE!` (A9:A10). A LET value or LAMBDA parameter left
+empty hands the emptiness on: `LET(e,,QUOTIENT(7,e))`, `LET(e,,QUOTIENT(e,2))`, `LAMBDA(a,b,QUOTIENT(a,b))(7,)` and
+`LET(e,,SERIESSUM(2,e,1,{1,2}))` are `#N/A` (-let-lambda A1:A4). Only the argument as written counts: a formula that
+gives a blank (an IFERROR or VLOOKUP of an empty cell) is read as 0, not `#N/A` (gen-m5/6efa59fc1257c475 Calc!A229,
+gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). UNVERIFIED: where empty coefficients rank against an `x`,
+`n` or `m` error (ours checks them after, as every coefficient error).
+The one-argument SQRTPI and FACTDOUBLE can be given an empty argument only through LET or LAMBDA, and they follow
+the same rule (T-4923). `LET(e,,SQRTPI(e))`, `LAMBDA(a,b,SQRTPI(b))(1,)`, `LET(e,,FACTDOUBLE(e))` and
+`LAMBDA(a,b,FACTDOUBLE(b))(1,)` are `#N/A`. An operator over the omission reads it as 0: `LET(e,,SQRTPI(e+0))` is 0
+and `LET(e,,FACTDOUBLE(e+0))` is 1. So does a blank cell: `SQRTPI(Z1)` is 0 and `FACTDOUBLE(Z1)` is 1. An IF that
+lifts it is still an array: `ROWS(LET(e,,SQRTPI(IF({1;1},e))))` is 2.
+Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!A1:B8, probes/t4873-empty-arg-let-lambda Calc!A1:A4 (excel-graph,
+2026-11-07, T-4873; predictions committed before the fill); probes/t4923-sqrtpi-factdouble-omitted A1:A13 (excel-graph,
+2026-11-07; H_na 13/13, H_zero, the omission as 0, 9/13; predictions committed before the fill).
+Ours: `Model::atp_number` (functions/lift/mod.rs) reads MROUND's, QUOTIENT's, SERIESSUM's and SQRTPI's numbers, told
+which arguments are empty by `Model::empty_arguments` (functions/util/empty_args.rs). FACTDOUBLE swaps its argument
+through `written_empty_or`, and `series_coefficients` refuses empty coefficients. Before T-4873 QUOTIENT and SERIESSUM
+read an empty argument as 0, and before T-4923 SQRTPI and FACTDOUBLE read the omission as 0.
+Status: VERIFIED (excel-graph)
+Tasks: T-4873, T-4923
+
+## An empty significance of the 2010+ roundings is omitted (T-4873)
+Rule: CEILING.MATH, FLOOR.MATH (Excel 2013), CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING (Excel 2010) read a written-empty
+`significance` or `mode` as omitted, so the significance is 1: `CEILING.MATH(2.675,)` 3, `CEILING.MATH(-2.5,)` -2,
+`CEILING.MATH(-2.5,,1)` -3, `FLOOR.MATH(-2.5,)` -3, `FLOOR.MATH(-2.5,,1)` -2, `CEILING.PRECISE(2.675,)` 3,
+`FLOOR.PRECISE(-2.5,)` -3, `ISO.CEILING(2.675,)` 3 (C1:G3). An empty number is still 0 (`CEILING.MATH(,1)`, `FLOOR.PRECISE(,)`:
+0; C8, D8, E4:G4). The legacy CEILING and FLOOR keep empty = 0: `CEILING(2.5,)` and `CEILING(-2.5,)` are 0, `FLOOR(2.5,)`
+and `FLOOR(-2.5,)` `#DIV/0!`, `FLOOR(,)` 0 (H1:H5). A LET value or LAMBDA parameter left empty reads the same way
+(`LET(e,,CEILING.MATH(2.675,e))` 3, `LAMBDA(a,b,FLOOR.PRECISE(a,b))(-2.5,)` -3, `LET(e,,CEILING(2.5,e))` 0; -let-lambda
+A5:A11). The same split as SORT's and TAKE's empty optionals (arrays.md) against the older functions' empty = 0.
+Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!C1:H5, probes/t4873-empty-arg-let-lambda Calc!A5:A11 (excel-graph,
+2026-11-07, T-4873; predictions committed before the fill).
+Ours: the five go through `numbers_fn_empty_omitted` (mathematical.rs), which keeps an empty argument's default. Before
+T-4873 they read it as 0 (`CEILING.MATH(2.675,)` was 0).
+Status: VERIFIED (excel-graph)
+Tasks: T-4873
 
 ## ECMA.CEILING
 Rule: `ECMA.CEILING(number, significance)` is a real Excel function with exactly the two-argument `CEILING` semantics (rounds away from zero for negative `number` with negative `significance`; `#NUM!` when `number` is positive and `significance` negative; zero significance gives 0; number text `"2.5"` and `TRUE` are read as numbers; text significance is `#VALUE!`). It is stored in a file as `_xlfn.ECMA.CEILING`, and `FORMULATEXT` prints it as `=ECMA.CEILING(2.5,2)` (no prefix). Written bare (`ECMA.CEILING(...)`) in a file, Graph rejects the whole workbook (`createSession` 501 `unsupportedWorkbook`); the one-argument form `_xlfn.ECMA.CEILING(2.5)` is rejected the same way (arity is exactly 2, like CEILING).

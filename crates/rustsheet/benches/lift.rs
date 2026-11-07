@@ -59,6 +59,11 @@
 //!   on a sheet whose only data cell is J1048576 (no rows of data), so the used area is every
 //!   row: the walks visit the stored cells, not the 10,485,760 positions of A:J.
 //!
+//! - LARGE (T-1812, the T-1772 paths over a filled column A): lifted,
+//!   `=SUM(LARGE(A1:A1000000,SEQUENCE(200)))` (one read, one sort, 200 O(1) elements), and the
+//!   scalar `=LARGE(A1:A100000,2)` (the unlifted call, which goes through `lift_with_sorted_data`
+//!   and sorts on its one element).
+//!
 //! `cargo bench -p rustsheet --bench lift [-- FILTER...]` (only the cases whose name contains a
 //! FILTER, e.g. `SWITCH`)
 //!
@@ -230,6 +235,7 @@ fn cases() -> Vec<(&'static str, u32, &'static str)> {
     .chain(hypgeom_cases())
     .chain(lambda_cases())
     .chain(coupon_cases())
+    .chain(large_cases())
     .collect()
 }
 
@@ -285,6 +291,22 @@ fn lambda_cases() -> Vec<(&'static str, u32, &'static str)> {
             "LAMBDA, MAP over an escaped closure that captured 10,000 cells",
             1,
             "=LET(mk,LAMBDA(r,LAMBDA(i,IF(i<0,INDEX(r,1),i))),f,mk(SEQUENCE(10000)),SUM(MAP(SEQUENCE(10000),f)))",
+        ),
+    ]
+}
+
+/// The LARGE cases (T-1812), apart to keep `cases` short.
+fn large_cases() -> Vec<(&'static str, u32, &'static str)> {
+    vec![
+        (
+            "LARGE, lifted over 200 ranks of 1,000,000 cells",
+            1_000_000,
+            "=SUM(LARGE(A1:A1000000,SEQUENCE(200)))",
+        ),
+        (
+            "LARGE, scalar call over 100,000 cells",
+            100_000,
+            "=LARGE(A1:A100000,2)",
         ),
     ]
 }

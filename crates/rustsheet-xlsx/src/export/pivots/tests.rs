@@ -6,9 +6,9 @@ use std::io::{Cursor, Read};
 
 use rustsheet_engine::expressions::token::Error;
 use rustsheet_engine::pivot::{
-    Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea, DataField, NumberGroups,
-    OpaqueEntry, OpaqueNode, PivotBudget, PivotCache, PivotField, PivotTable, RecordValue,
-    MAX_PIVOT_WORK, MAX_RECORDS, MAX_RECORD_VALUES,
+    Axis, AxisField, CacheBuilder, CacheField, CacheItem, CacheSource, CellArea, DataField,
+    NumberGroups, OpaqueEntry, OpaqueNode, PivotBudget, PivotCache, PivotField, PivotTable,
+    RecordValue, MAX_PIVOT_WORK, MAX_RECORDS, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 use rustsheet_engine::Model;
@@ -17,19 +17,19 @@ use super::layout_lines;
 use crate::export::save_xlsx_to_writer;
 use crate::import::{load_from_xlsx, load_from_xlsx_bytes};
 
-fn export(model: &Model) -> Vec<u8> {
+pub(super) fn export(model: &Model) -> Vec<u8> {
     save_xlsx_to_writer(model, Cursor::new(Vec::new()))
         .unwrap()
         .into_inner()
 }
 
-fn round_trip(model: &Model) -> Model {
+pub(super) fn round_trip(model: &Model) -> Model {
     let workbook = load_from_xlsx_bytes(&export(model), "back", "en", "UTC").unwrap();
     Model::from_workbook(workbook, "en").unwrap()
 }
 
 /// The part `name` of the package `bytes`.
-fn part(bytes: &[u8], name: &str) -> String {
+pub(super) fn part(bytes: &[u8], name: &str) -> String {
     let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).unwrap();
     let mut text = String::new();
     archive
@@ -42,7 +42,7 @@ fn part(bytes: &[u8], name: &str) -> String {
 
 /// `tables` without their kept `rowItems` and `colItems`, as the engine leaves a pivot it lays out
 /// again.
-fn without_lines(tables: &[PivotTable]) -> Vec<PivotTable> {
+pub(super) fn without_lines(tables: &[PivotTable]) -> Vec<PivotTable> {
     let mut tables = tables.to_vec();
     for table in &mut tables {
         table.opaque.retain(|entry| !entry.is_layout_lines());
@@ -64,7 +64,7 @@ fn an_excel_saved_pivot_round_trips() {
     assert_eq!(cache.source_name.as_deref(), Some("Table1"));
     let mut work = MAX_PIVOT_WORK;
     assert!(
-        layout_lines(&saved[0], cache, &mut work).is_none(),
+        layout_lines(&saved[0], cache, None, &mut work).is_none(),
         "a pivot the engine has not laid out keeps its saved lines"
     );
     let back = round_trip(&model);
@@ -241,6 +241,55 @@ fn an_api_pivot_round_trips_and_reaches_a_fixed_point() {
     assert_eq!(again.workbook.pivot_caches, back.workbook.pivot_caches);
 }
 
+/// A calculated field is written as the builder and Excel write it, with its formula as read and
+/// no record values, and reads back equal (T-4174); one after it, or one whose formula the import
+/// refuses, drops the cache.
+#[test]
+fn a_calculated_field_round_trips() {
+    let mut cache = mixed_cache();
+    cache.fields.push(CacheField {
+        name: "Dbl \"x\"".into(),
+        formula: Some("V*2+'K'+LEN(\"a\")".into()),
+        ..CacheField::default()
+    });
+    let mut model = model_with(cache);
+    let pivot = &mut model.workbook.pivot_tables[0];
+    pivot.fields.push(PivotField::new(None, 0));
+    pivot.data_fields.push(DataField {
+        caption: "Sum of Dbl".into(),
+        field: 3,
+        ..DataField::default()
+    });
+    let bytes = export(&model);
+    let definition = part(&bytes, "xl/pivotCache/pivotCacheDefinition1.xml");
+    assert!(
+        definition.contains(
+            r#"<cacheFields count="4">"#
+        ) && definition.contains(
+            r#"<cacheField name="Dbl &quot;x&quot;" numFmtId="0" formula="V*2+&apos;K&apos;+LEN(&quot;a&quot;)" databaseField="0"/></cacheFields>"#
+        ),
+        "{definition}"
+    );
+    let records = part(&bytes, "xl/pivotCache/pivotCacheRecords1.xml");
+    assert!(
+        records.contains(r#"<r><x v="0"/><x v="0"/><x v="0"/></r>"#),
+        "{records}"
+    );
+    let back = round_trip(&model);
+    assert_eq!(back.workbook.pivot_caches, model.workbook.pivot_caches);
+    assert_eq!(
+        back.workbook.pivot_tables[0].data_fields,
+        model.workbook.pivot_tables[0].data_fields
+    );
+
+    let formula = model.workbook.pivot_caches[0].fields[3].formula.take();
+    model.workbook.pivot_caches[0].fields[3].formula = Some("NOW()".into());
+    assert!(round_trip(&model).workbook.pivot_caches.is_empty());
+    model.workbook.pivot_caches[0].fields[3].formula = formula;
+    model.workbook.pivot_caches[0].fields.swap(2, 3);
+    assert!(round_trip(&model).workbook.pivot_caches.is_empty());
+}
+
 /// Classic layout and a field's subtotal caption are written and read back (pivots.md "Classic
 /// layout (gridDropZones)", "subtotalCaption labels a field's subtotal lines").
 #[test]
@@ -268,10 +317,11 @@ fn classic_layout_and_subtotal_captions_round_trip() {
     assert!(!plain.contains("gridDropZones") && !plain.contains("subtotalCaption"));
 }
 
-/// A grouped cache is dropped with its pivots: the import keeps no base values to write the
-/// group back from (T-4734).
+/// A range grouping whose field keeps no values of its own (built through the API without
+/// `group_by_numbers`) has nothing to write the shared items from: the cache is dropped with its
+/// pivots (T-4734).
 #[test]
-fn a_grouped_cache_is_dropped_with_its_pivots() {
+fn a_range_group_without_its_own_values_is_dropped_with_its_pivots() {
     let mut cache = mixed_cache();
     cache.fields[2].number_groups = Some(NumberGroups {
         start: 0.0,
@@ -374,4 +424,42 @@ fn dates_follow_the_date_system() {
     );
     let back = round_trip(&model);
     assert_eq!(back.workbook.pivot_caches, model.workbook.pivot_caches);
+}
+
+/// Seeds of the fixed-point property: T-4155's 48, so it sees the same pivots its engine
+/// properties do.
+const FIXED_POINT_SEEDS: u64 = 48;
+
+/// Import, export and import is a fixed point over generated pivots (T-4756; plan §6 layer 5 of
+/// docs/research/pivot-tables-2026-11-04/plan.md): for each seed, a second save and reload gives
+/// the same pivot caches, pivot tables and rendered Sheet1 cells as the first reload.
+#[test]
+fn import_export_import_is_a_fixed_point_over_generated_pivots() {
+    use rustsheet_engine::test_support::{add_sum_pivot, pivot_records, pivot_sheet_text};
+    for seed in 0..FIXED_POINT_SEEDS {
+        let empty = Model::new_empty("model", "en", "UTC", "en").unwrap();
+        let model = add_sum_pivot(empty, &pivot_records(seed)).unwrap();
+        let once = round_trip(&model);
+        let twice = round_trip(&once);
+        // Not vacuous: the reload keeps the pivot and its rendered report.
+        assert_eq!(once.workbook.pivot_tables.len(), 1, "seed {seed}");
+        assert_eq!(
+            pivot_sheet_text(&once).unwrap(),
+            pivot_sheet_text(&model).unwrap(),
+            "seed {seed}: the first reload renders what was saved"
+        );
+        assert_eq!(
+            twice.workbook.pivot_caches, once.workbook.pivot_caches,
+            "seed {seed}: caches"
+        );
+        assert_eq!(
+            twice.workbook.pivot_tables, once.workbook.pivot_tables,
+            "seed {seed}: tables"
+        );
+        assert_eq!(
+            pivot_sheet_text(&twice).unwrap(),
+            pivot_sheet_text(&once).unwrap(),
+            "seed {seed}: rendered cells"
+        );
+    }
 }
