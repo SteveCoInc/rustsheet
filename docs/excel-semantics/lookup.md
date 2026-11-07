@@ -1005,7 +1005,15 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
   references where a reference is taken, so `INDEX(that,1,1)` hands the range back (t4563 V25:V26; T-4701). The same
   holds over a lifted OFFSET or INDIRECT, and `SUM` of the one-index INDEX reads only the element's **top-left cell**
   (`SUM(INDEX(OFFSET(Data!A1,{0;1},0,2),2))` is 2 over Data!A2:A3 = 2, 4; over the XLOOKUP grid's range element
-  Data!A1:A2 it is 1; probes/t4701-index-one-index-ref-grid A5, B5, C3, excel-graph 2026-11-07). Unprobed and ours:
+  Data!A1:A2 it is 1; probes/t4701-index-one-index-ref-grid A5, B5, C3, excel-graph 2026-11-07). ISREF of the nested
+  `INDEX(INDEX(..,2),1,1)` is TRUE (t4701 A4). The other aggregates read the top-left cell too, and COUNT counts
+  nothing (VERIFIED, excel-graph 2026-11-07, probes/t4762-index-one-index-readers, 27 cells, T-4762; element 2 is
+  Data!A2:A3 = 2, 4 for the lifted OFFSET and INDIRECT, Data!A1:A2 = 1, 2 for the XLOOKUP grid): AVERAGE, MAX and
+  PRODUCT of `INDEX(r,2)` are 2, 2, 2 (1, 1, 1 over the XLOOKUP grid), MIN over the descending G2:G3 = 5, 3 is 5 for
+  all three grids, and `COUNT(INDEX(r,2))` is **0** even though that top-left cell is a number (A5:C5). ROWS and
+  COLUMNS of the nested `INDEX(INDEX(r,2),1,1)` are 2 and 1 (the whole element, as its spill shows), and one index
+  into the 1x1 array of references hands the whole element back: `SUM(INDEX(INDEX(r,2),1))` is 6 (3 over the
+  XLOOKUP grid) and its ROWS 2 (A8:C9). Ours matches every cell (no code change). Unprobed and ours:
   a whole-column key (`SUM(XLOOKUP(A:A,..,H1))`) builds the grid in
   full, as the keyed head-and-tail reading (SPEC-0020 Amendment 2) holds values only.
   ADDRESS's sheet_text lifts like its other arguments: `ADDRESS(1,1,1,TRUE,{"S1";"S2"})` is 2x1 `'S1'!$A$1`,

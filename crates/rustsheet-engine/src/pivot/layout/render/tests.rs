@@ -199,6 +199,17 @@ fn the_layout_option_probes_cells_are_excels() {
         "t4168-pivot-layout-options",
         &["F1", "F2", "F3", "BR", "BR2", "SD", "SD2"],
     );
+    // Repeat item labels: per field in tabular (X14F, T3R to TBL), outline (OST, OB, O3), compact
+    // (CF, MX) form and on columns (CC); the table-wide default alone fills nothing (X14, TW,
+    // TWE, OW).
+    check_all("t4129-pivot-layout-flags", &["X14", "X14F"]);
+    check_all(
+        "t4698-pivot-repeat-labels",
+        &[
+            "T3R", "T3P", "T3A", "TND", "TBR", "TSD", "TIN", "TW", "TWE", "OST", "OB", "O3", "OW",
+            "CF", "MX", "CC", "TBL",
+        ],
+    );
 }
 
 #[test]
