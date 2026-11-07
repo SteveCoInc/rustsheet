@@ -65,3 +65,29 @@ The acceptance cases poi ref-56737 (1 book, `56737.xlsx`) and corpus-bench 59932
 UNC targets) were checked locally: a reload gives equal books and the same value in every cell. Both are fetched,
 not vendored, so the committed test reads only the fixtures. Both are already clean in the round-trip baselines
 (`C` lines with no `F`), before and after this change.
+
+## Landing notes
+- PR #3958, head 2bd7e4729 (reviewed). Every reviewer APPROVEd on that head: design, security, excel-fidelity.
+  Their MINOR findings are filed as T-4935 and T-4936 in task-only PR #3959, which is enqueued.
+- CI is red on 2bd7e4729 (run https://github.com/SteveCoInc/rustsheet/actions/runs/42373326436). `rust (test 3/3)`
+  fails `test::test_iteration_settings::fuzz_reproducers_sweep_excel_default_count`: `Model::from_bytes(&NIGHT_ONE)`
+  gives "Error parsing workbook: EOF". The cause is this PR: `NIGHT_ONE` and `NIGHT_TWO` are bitcode-encoded
+  `Workbook` bytes (fuzz reproducers), and the two new `ExternalBook` fields (`target`, `cached_sheets`) change the
+  bitcode layout, even with `external_books` empty. It is the only test with literal workbook bytes
+  (`rg "const [A-Z_]*: \[u8; [0-9]" crates`). `rust (fmt, clippy, test)` is the aggregate of the shards.
+- What I tried, so it is not repeated: on origin/main, decoding and re-encoding each night gives the canonical
+  old-layout bytes (370 and 376 bytes; the stored arrays are 377 and 388, so they are not canonical). Pushing one
+  default book first changes the bytes at offset 367 (night one) and 361 (night two). On this branch, I tried
+  inserting 1 to 6 bytes at one point near that offset, and then 0 to 3 zero bytes at each of two points: no
+  candidate decoded. Blind splicing is the wrong approach.
+- Next step: rebuild the two fixtures with the new layout, keeping each decoded workbook the same. One way: on
+  origin/main, decode the night, change nothing, and print the decoded `Workbook` with `{:?}`. Then on this branch
+  build the same `Workbook`, either by hand (it is tiny: one sheet, a few cells, `settings.iteration` with the raw
+  out-of-range count and delta) or with a temporary mirror struct of the old `ExternalBook`. Encode it, and
+  replace the arrays (and their sizes) with the result. The doc comment above `NIGHT_ONE` must then say the bytes
+  are a re-encoding of the 2026-11-02 reproducer under the T-4143 layout. Keep the test's assertions unchanged:
+  they hold for the decoded values, not for the byte form. Another option is a decision on whether old
+  `.icalc` bytes must stay decodable. Nothing in docs/decisions promises it (I searched for "bitcode" and
+  "compat"); if that is in doubt, ask in the PR.
+- After the fixture fix, the push needs `make check-fast` and the reviewers the change concerns (design, maybe
+  security). Then wait for green CI and enqueue with `enable_pr_auto_merge` (SQUASH).
