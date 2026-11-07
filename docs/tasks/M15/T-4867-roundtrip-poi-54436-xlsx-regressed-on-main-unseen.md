@@ -11,9 +11,8 @@ depends_on: []
 ---
 
 ## Goal
-`make check` is green on main again: `rustsheet-eval roundtrip --check` passes with the poi cache
-fetched. A future regression in a fetched-cache round-trip suite is caught before its PR merges,
-not after.
+A future regression in a fetched-cache round-trip suite is caught before its PR merges, not after. (Fixing
+roundtrip-poi/54436.xlsx itself is T-4825's, the one owner of that regression.)
 
 ## Context
 Found while running `make check` for T-4830 on main at c2917a626 (2026-11-07), with the poi cache
@@ -35,12 +34,13 @@ packages), T-4176, T-4148 and T-4355. Bisect with
 `rustsheet-eval roundtrip --suite roundtrip-poi --filter 54436`.
 
 ## Acceptance criteria
-- [ ] The commit that regressed `roundtrip-poi/54436.xlsx` is found, and the loss is fixed, or
-      recorded under a decision record if it is intended.
 - [ ] A change in PR CI, or an equivalent, keeps a fetched-cache round-trip regression from merging
       unseen. Either PR CI fetches the poi cache for the round-trip gate, or the gap is written
       down with its owner.
-- [ ] `make check` green on main with the poi cache fetched.
+- [ ] `make check` green.
 
 ## Out of scope
+- The 54436 fix: T-4825 (P0). It was bisected to T-4176 (#3800, cd0c355ad), and #3892 (a2bae4dec) since recorded it as
+  `F	roundtrip-poi/54436.xlsx	* 296 2cd19df138a87ec5`, so `roundtrip --check` passes on main today and is no longer the
+  symptom to clear (2026-11-07 steward follow-up).
 - Other round-trip losses already in the baseline.

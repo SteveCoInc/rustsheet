@@ -4,7 +4,7 @@ title: "Source-preserving export keeps an imported pivot's cache and records unc
 milestone: M16
 lane: engine
 status: todo
-priority: P1
+priority: P0
 size: S
 tier: opus
 depends_on: []
@@ -28,8 +28,19 @@ fetched now refuses this regression. Code paths: `crates/rustsheet-xlsx/src/expo
 patch-or-rewrite decision in the xlsx export; reproduce with
 `rustsheet-eval roundtrip --check --suite roundtrip-poi`.
 
+Raised to P0 by the 2026-11-07 steward PR (#3872), which bisected the same regression (e7f6fbb0b T-4363 keeps 100.00%,
+cd0c355ad T-4176 keeps 78.79%) and makes this task its one owner (T-4829 closed as a duplicate; the PR-gate question is
+T-4867's). New fact: #3892 (T-4514, a2bae4dec, round-trip R1) re-recorded `eval/baseline/roundtrip-poi.txt` with 332
+new `F` lines, among them `F	roundtrip-poi/54436.xlsx	* 296 2cd19df138a87ec5` (and `C	roundtrip-poi/54436.xlsx	1990`,
+995 before it), citing no decision for that line. So `roundtrip --check` now passes on `main` with the regression
+recorded, the nightly gate no longer reports it, and a passing check is no evidence of a fix.
+
 ## Acceptance criteria
-- [ ] `roundtrip-poi/54436.xlsx` passes again (no `F` line for it in `eval/baseline/roundtrip-poi.txt`).
+- [ ] With the poi corpus fetched, `rustsheet-eval roundtrip --suite roundtrip-poi --filter 54436` keeps 100.00% with
+      0 failing, and the PR removes the `F	roundtrip-poi/54436.xlsx` line from `eval/baseline/roundtrip-poi.txt` by
+      re-recording the fix (never by hand, no `--allow-regressions`).
+- [ ] The PR checks whether any other `F` line #3892 added is a regression from #3800 rather than a new R1 finding,
+      and files a task for each one that is.
 - [ ] A unit or fixture test pins that an unedited imported pivot's cache, records and cacheId survive export.
 - [ ] `make check` green; reviewers approve.
 
