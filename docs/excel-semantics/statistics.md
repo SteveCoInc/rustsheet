@@ -5154,6 +5154,39 @@ expansion covers every a >= 1E6 and b < 40. Over its 640-point grid (docs/resear
 On t4017, 59 cells move toward Excel: 8 to bit-exact and 5 more to within 4 ulp. The 3 others are Excel's exact zeros
 (T-4045). What is left there is mostly Excel's own 1E-14 error. BETA.DIST at the same shapes also improves: on a
 145-point grid the worst error goes from 4.9E-10 to 4.9E-15.
+
+**Outside large_shape_beta's bounds (T-4434)**, probes-numeric/t4434-huge-shape-outside-large-shape-beta (900 cells,
+excel-graph, 2026-11-07; docs/research/t4434, seed 4434; every Excel cell a number, no `#NUM!` and no 0). A1:A300 is
+F.DIST.RT in region 1 (df1 3 to 79, df2 1E4 to 2E6, tails 1E-200 to 0.5). B1:B300 is F.DIST.RT in region 2 (df1 80 to
+400, df2 1E5 to 1E10, x 0.7 to 3 times the mean). C1:C150 is F.DIST(.., TRUE) at B's points, and D1:D150 is
+`BETA.DIST(x,a,b,TRUE)` at a 20 to 200, b 5E4 to 5E9, x 0.7 to 1.5 times a/b. `score.py` scores the cells against
+60-digit math (a positive-term 2F1 sum, `mathref.py`; for F at the exact ratio d1 x/(d2 + d1 x)). Excel's accuracy
+per region:
+- **Region 1, the upper F tail at a0 = df2/2 of 5E3 to 1E6 and b0 = df1/2 below 40 (bratio's L140 bup+bgrat): Excel is
+  as accurate as double arithmetic allows.** Its relative error is at most 1.3E-13 and has a median of 121 ulp. In
+  units of |ln tail|·2^-53, though, it is a median of 0.9 and at most 9.5, uniform over the three decades of a0. A
+  double kernel ends in exp(-L) with L = |ln tail| up to 460 here, and an ulp of L alone is L ulp of the tail. The
+  error does not come from rounding the F ratio: against the math at the double ratio fl(d1 x/(d1 x + d2)), Excel's
+  median is still 117 ulp. Ours (Cephes' fraction where the L140 port stops, df1 of 21 and up) reaches 7,870 of those
+  units and 1.4E-11 relative at a0 of 1E5 to 1E6. This region is T-4435's `accuracy` target. Excel's digits are its
+  own, though: the correctly rounded math is within 15 digits of Excel on only 22 of the 300 cells. At df1 of 20 or less,
+  where ours is T-3754's L140 port in Excel's arithmetic, ours matches Excel on 158 of 170 cells.
+- **Region 2 above the mean from a0 of 1E5 up, and BETA.DIST above the mean at a >= 40: Excel is off the math,
+  increasingly with a0** (at a0 of 5E4 to 1E5, 9 of the 10 F.DIST.RT cells above the mean are within 1E-13).
+  These cells take bfrac with b0 >= 40, after bratio's swap where it applies. For F.DIST.RT the worst relative error
+  per decade of a0 = df2/2 is 1.4E-13 (5E4 to 1E5), 3.4E-12 (1E5 to 1E6), 5.8E-11, 1.7E-10, 7.7E-9 and 8.5E-9 (1E9 to
+  5E9). BETA.DIST reaches 3.5E-9 at b of 1E8 to 1E9. This is T-4214's subject, Excel's own bfrac arithmetic. Ours is
+  also off there, up to 1.4E-7.
+- **Below the mean, Excel is near correctly rounded in both regions.** These are the F upper tails near 1 and BETA.DIST
+  at x below a/b. There bfrac (or basym) runs unswapped, with the moderate shape as a0. So is BETA.DIST above the mean
+  at a < 40 (L140 bup+bgrat after the swap). Below the mean every cell is within 23 units of |ln value|·2^-53 (1.1E-14
+  relative); above the mean at a < 40 within 47 units (5.2E-15). So Excel's large errors are where bfrac's own a0 is the
+  huge shape. F.DIST, the lower tail at B's points, inherits the upper tail's error where it is 1 minus that tail.
+  Ours is as close below the mean, but above the mean at a < 40 it reaches 1.6E-12 (Cephes' fraction again), which
+  T-4435 owns too.
+- Per decade, the counts within 1E-15 / 1E-14 / 1E-12 relative and the worst cells are in T-4434's Outcome. The case
+  adds no `#NUM!` band: T-4044's band is at df1 61 to 79 and df2 1E10, outside both regions.
+
 Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209, T-4053 (df1 = 2; decision 0267).
 
 ## F-distribution df limit (T-1530)
