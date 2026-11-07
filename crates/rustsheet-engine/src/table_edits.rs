@@ -439,6 +439,7 @@ impl Model {
         let column_formulas = self.displaced_column_formulas(displacement);
         let rewritten = self.displace_cells(displacement)?;
         self.displace_cf_ranges(sheet, displacement);
+        self.displace_defined_names(sheet, displacement);
         let resized: Vec<String> = edits.resized.iter().map(|(name, _)| name.clone()).collect();
         self.resize_tables(sheet, edits.resized)?;
         self.set_displaced_column_formulas(column_formulas);

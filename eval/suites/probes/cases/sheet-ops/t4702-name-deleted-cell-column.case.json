@@ -1,0 +1,49 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "A defined name on the deleted cell D1 of Data (Gone) and one whose range ends on it (Edge, C1:D1), after delete_column D. Predictions: A1 #REF!, A2 FALSE, A3 TRUE, A4 1, A5 101 (Edge shrinks to C1). Alternative: Edge #REF! (A4, A5 #REF!). (T-4702; t4702-names-delete-column's NA1 read cell NA1, not the name)",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=Gone",
+        "A2": "=ISREF(Gone)",
+        "A3": "=ISERROR(Gone)",
+        "A4": "=SUM(Edge)",
+        "A5": "=ROWS(Edge)*100+COLUMNS(Edge)"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "C1": 1,
+        "D1": 10,
+        "E1": 100
+      }
+    }
+  ],
+  "names": {
+    "Gone": "=Data!$D$1",
+    "Edge": "=Data!$C$1:$D$1"
+  },
+  "expected": {},
+  "sheet_ops": [
+    {
+      "op": "delete_column",
+      "sheet": "Data",
+      "column": "D"
+    }
+  ],
+  "check": [
+    "Calc!A1",
+    "Calc!A2",
+    "Calc!A3",
+    "Calc!A4",
+    "Calc!A5"
+  ]
+}

@@ -1252,6 +1252,12 @@ C	probes/sheet-ops/t4272-3d-span-jan-delete-inner-row.case.json	7
 C	probes/sheet-ops/t4272-3d-span-jan-delete-row.case.json	7
 C	probes/sheet-ops/t4272-3d-span-jan-insert-row.case.json	7
 C	probes/sheet-ops/t4272-3d-span-move-two-sheet-start-last.case.json	6
+C	probes/sheet-ops/t4702-name-deleted-cell-column.case.json	5
+C	probes/sheet-ops/t4702-name-deleted-cell-row.case.json	5
+C	probes/sheet-ops/t4702-names-delete-column.case.json	6
+C	probes/sheet-ops/t4702-names-delete-row.case.json	6
+C	probes/sheet-ops/t4702-names-insert-column.case.json	4
+C	probes/sheet-ops/t4702-names-insert-row.case.json	4
 C	probes/sheet-qualified-both-corners.case.json	9
 C	probes/sheet-qualified-corner-order.case.json	13
 C	probes/sheet-qualified-ref-error-forms.case.json	10
