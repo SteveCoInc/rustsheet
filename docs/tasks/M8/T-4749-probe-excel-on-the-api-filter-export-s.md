@@ -3,7 +3,7 @@ id: T-4749
 title: "Probe Excel on the API-filter export's empty filters (every data row hidden) and blank=1 forms (T-4363 review follow-up)"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -25,11 +25,27 @@ blank data row) and an empty `<filters></filters>` (every data row hidden).
   3/103 over the table.
 
 ## Acceptance criteria
-- [ ] Both forms uploaded; whether Excel opens them without repair and reads them as filtered is recorded in
+- [x] Both forms uploaded; whether Excel opens them without repair and reads them as filtered is recorded in
       xlsx-storage.md with the input sha256.
-- [ ] If Excel reads either as not filtered or refuses it, the export writes a form it reads as filtered (or a task
+- [x] If Excel reads either as not filtered or refuses it, the export writes a form it reads as filtered (or a task
       is filed for it).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Re-applying filters.
+
+## Outcome
+- Probed (excel-graph, 2026-11-07, eight uploads; sha256 of each in xlsx-storage.md "Table parts in the export"):
+  Excel opens our `<filters blank="1">` exports (a blank beside values, and blank alone) and reads them as filtered,
+  as ours. It reads the empty `<filters></filters>` our export wrote for a table with every data row hidden as **no
+  criterion** (SUBTOTAL 9 21, 109 0), where we read 0, and the same for `<filters/>` and `<filters blank="0"/>`;
+  `<filter val=""/>` makes it refuse the file; a values filter of the hidden rows' text and the custom filter
+  "equals a and does not equal a" read as filtered.
+- Export: an API-filtered table with no visible data row is written with that custom filter, which keeps no row if
+  re-applied (`export::tables::api_filter_column`; test
+  `a_filtered_table_with_every_row_hidden_exports_a_filter_that_keeps_none`).
+- Import: a `<filters>` with no element inside and no true `blank` is no criterion (`is_criterion`, also in the
+  dangling-color re-decision), as Excel reads it; unit cases in `only_a_criterion_inside_the_table_filters` and
+  `dangling_color_filter_dxf_is_no_criterion`.
+- Docs: xlsx-storage.md ("Table parts in the export") and numbers.md (which filter makes a table filtered).
+- No probe case: a spec case cannot express an API filter (as T-4363). Eval delta: see the PR.

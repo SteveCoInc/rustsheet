@@ -541,8 +541,29 @@ a,b,a,c,a,b and `Val` 1-6, added with `filtered: true` and rows 3 and 5 hidden, 
 `<filters><filter val="a"/><filter val="b"/></filters>`, "b" also on hidden row 3): `SUBTOTAL(9,Sales[Val])` and
 `109` both 15, `SUBTOTAL(3,Sales[Cat])` and `103` both 4, the engine's values before the export, and our re-import
 keeps the table filtered (`a_filtered_table_without_a_criterion_exports_its_visible_values`). Excel does not
-re-apply the filter on load, so a text on a visible and a hidden row changes nothing there. A table with every data
-row hidden gets an empty `<filters/>`, which our import reads as a criterion (unprobed in Excel).
+re-apply the filter on load, so a text on a visible and a hidden row changes nothing there. Excel also reads the
+`blank="1"` forms as filtered and an empty values filter as not (excel-graph uploads of our export, 2026-11-07, T-4749;
+same `Sales` shape, `filtered: true`, SUBTOTAL 9, 109, 3, 103, 2, 102 read from Excel, every file opened without
+repair):
+- `Cat` a,b,(blank),c,a,b with rows 3 and 6 hidden, exported as `<filters blank="1"><filter val="a"/><filter val="b"/>
+  <filter val="c"/></filters>` (input sha256 `dcb798ae88f44239595fe305cf9e909602faa77685bd247a170d6bcba82615d8`):
+  14, 14, 3, 3, 4, 4, filtered, as ours;
+- `Cat` (blank),b,(blank),c,(blank),b with rows 3, 5 and 7 hidden (only blanks visible), exported as
+  `<filters blank="1"></filters>` (`a2018a38db40b36725a4470a1537b1a4ba9c631c97f48bb25f9c9c71da52eb4b`): 9, 9, 0, 0, 3,
+  3, filtered, as ours;
+- every data row hidden, exported before T-4749 as `<filters></filters>`
+  (`7ae67c477d0072ee5bd4c6b131a7439e2d311a0e84944eaca4919b107787022a`): 21, 0, 6, 0, 6, 0, **not filtered**, where the
+  engine and our import then gave 0 throughout. The same file with `<filters/>`
+  (`4a21a4b32ca9f8110d72df3cef6000f0582cd83f10fca33619197341e4975efb`) or `<filters blank="0"></filters>`
+  (`3584008b4af9e3a00c162bd3a1d8c4d11ca02174f527ccf598698f0ed25a9654`) reads the same, not filtered; with
+  `<filters><filter val=""/></filters>` (`cd63953b7eda56d22bdf6c76b014b6308fb5cfcf89c2d13778db50438bee78ab`) Excel
+  refuses the file (`FileCorruptTryRepair`); with a values filter listing the hidden rows' text
+  (`be41612037aa55ecd2ef1353dcb69e616f7cdc6bc3819bb44f0573db0e9d1fbd`) or with `<customFilters and="1"><customFilter
+  val="a"/><customFilter operator="notEqual" val="a"/></customFilters>`
+  (`a2838913b0e16de165c1f47ea5878614e996b0edda29bca43205d3c99414e5ea`) it reads 0 throughout, filtered.
+Rule (ours, T-4749): the import reads a `<filters>` with no element inside and no true `blank` as no criterion
+(`is_criterion`); the export writes an API-filtered table with no visible data row as that custom filter, which keeps
+no row if re-applied (a values filter of the hidden rows' text would show them again).
 Excel keeps the kept criteria's meaning after our round trip (excel-graph, 2026-11-05, T-4004): on `Sales`-shaped
 tables (A1:B7, `Cat` a,b,a,c,a,b and `Val` 1-6, rows hidden as the filter would, no re-application) an
 openpyxl-written file and our import-then-export of it give the same `SUBTOTAL(3,[Cat])`, `SUBTOTAL(103,[Cat])`,
