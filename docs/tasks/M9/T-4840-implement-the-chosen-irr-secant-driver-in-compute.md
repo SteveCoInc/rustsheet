@@ -32,3 +32,4 @@ only NPV's values"). The 21 step-cap cells of these cases are T-4839's, listed t
 - probes/t4844-irr-guess-ladder
 - probes/t4844-irr-pad-ladder
 - probes/t4844-irr-stage-invariance
+- probes/t4838-irr-pole-runon (T-4888: the cells where the run-on secant does not converge or converges past the pole)
