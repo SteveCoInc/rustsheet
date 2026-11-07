@@ -645,6 +645,9 @@ formula (VERIFIED, excel-graph 2026-11-06, the `xl/tables/table1.xml` of the cac
 probes/table-edits/t4274-calc-column-*, T on A1:C4 with C2 typed `=A2*2`): `B2*2` after insert_column A (table
 B1:D4), `A2*2` after delete_column B (a column it does not read; table A1:B4), `A3*2` after insert_row 1 (table
 A2:C5), and `A2*2` after insert_row 3 inside the data rows (table A1:C5; the cells below read `=A4*2`, `=A5*2`).
+A delete of the first data row saves the next row's formula moved up: `A2*2` after delete_row 2 (table A1:C3, cells
+`<f t="shared" ref="C2:C3">A2*2</f>`), not `#REF!*2` (t4274-calc-column-delete-row-2, carried from #3739 by T-4769;
+its FORMULATEXT of the deleted `S!C2` from another sheet is `#REF!`, F!A1, ours `#ERROR!`, T-4770).
 A structured column formula keeps its text: `T[[#This Row],[Col]]*2` after insert_column A, with FORMULATEXT
 `=[@Col]*2` in the moved cells and their values 2, 4, 8 (t4274-calc-column-structured-insert-column-a). The row that
 insert_row 3 adds inside the data rows gets the column's formula (its Calc cell is 0, the oracle's S!C3).
@@ -664,7 +667,8 @@ is displaced (`Model::displaced_column_formulas`), read where that cell moved an
 data row (so an insert at the first data row keeps `A2*2`), and a row insert fills the stored formula into the rows it
 adds to a table's data rows (`Model::fill_inserted_data_rows`), each cell keeping its own style (Excel's `s="1"` is
 not matched; moot, nothing observable differs, T-4744); a text with a `[`
-(a structured reference) keeps its text, and so does one whose first data cell the edit deletes (unprobed). Moves and
+(a structured reference) keeps its text, and so does one whose first data cell the edit deletes (which matches
+Excel's `A2*2` after delete_row 2; a delete of a cell the formula reads is unprobed, T-4771). Moves and
 cell shifts leave the text as it is (unprobed). Ours read their rows too since T-4680 (before, the moved `[@Col]` cells were `#ERROR!`). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
 `array="1"` attribute is dropped on import (export writes the plain element): engine choices, what Excel does with
 either is unprobed.
@@ -673,7 +677,7 @@ Evidence: the saved `xl/tables/table1.xml` and `xl/worksheets/sheet1.xml` of pro
 (the eval/.cache/oracle/excel-graph/<input_sha256>.xlsx of each sidecar).
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-xlsx/src/import/tables.rs, crates/rustsheet-xlsx/src/export/tables.rs, crates/rustsheet-engine/src/calculated_columns.rs
-Tasks: T-2957, T-2958, T-2969, T-3033, T-4274, T-4680, T-4692
+Tasks: T-2957, T-2958, T-2969, T-3033, T-4274, T-4680, T-4692, T-4769
 
 ## Excel does not fill a calculated column on load
 Rule: a table part whose `<tableColumn>` holds `<calculatedColumnFormula>` does not make Excel fill the
