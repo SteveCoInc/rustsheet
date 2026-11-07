@@ -56,8 +56,10 @@ Eval delta: the formula suites are unchanged (no F line moves). Round trip (`mak
 - roundtrip-corpus-bench: 8 files' failing items 6200 -> 4082.
 - roundtrip-poi: 63934 and link-external-workbook-b 337 -> 289.
 
-roundtrip-calipers is unchanged at nightly's `--timeout 300`. Under the default 60 s, pv26_002 and pv26_2_002 time
-out on this 4-CPU box (155 s each), and no external link is involved.
+roundtrip-calipers is not re-recorded. Under the default 60 s, pv26_002 and pv26_2_002 time out on this 4-CPU box.
+Alone, pv26_002 takes 155 s and is fully kept; it has no external link. The nightly gate runs calipers at
+`--timeout 300`. A full local `--check --timeout 300` was OOM-killed, so the nightly run is the check for the rest of
+calipers.
 
 The acceptance cases poi ref-56737 (1 book, `56737.xlsx`) and corpus-bench 59932 (2 books, `file:///\\NAS...`
 UNC targets) were checked locally: a reload gives equal books and the same value in every cell. Both are fetched,
