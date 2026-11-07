@@ -82,6 +82,28 @@ def hundred_t_minus_qt_yield_start(*args: Arg) -> float:
     return ((rate * years) * 100 + q) / ((100 * years - q * years / 2) - q / 4)
 
 
+def _price_redemption_dsc_first(y: float, bond: solvers.Bond) -> float:
+    """`solvers.price` with the redemption discounted at `(DSC/E + n) - 1`, which rounds otherwise
+    than its `(n - 1) + DSC/E`: the engine's order before T-2788."""
+    rate, red, freq, a, e, dsc, n = bond
+    base, power = 1 + y / freq, solvers.PRICE_POWER.get()
+    flows = sum(100 * rate / freq / power(base, k + dsc / e) for k in range(n))
+    return red / power(base, dsc / e + n - 1) + flows - 100 * rate / freq * a / e
+
+
+def dsc_first_yield(*args: Arg) -> float:
+    """Newton from the `100 T - q T/2` start with the short stop at 1e-10, on
+    `_price_redemption_dsc_first` (T-2788's rejected order; `solvers._newton_yield_short` on it)."""
+    _, bond, pr = solvers._bond_price(args)
+    y = hundred_t_minus_qt_yield_start(*args)
+    for _ in range(100):
+        step = (_price_redemption_dsc_first(y, bond) - pr) / solvers.dprice(y, bond)
+        if abs(step) < 1e-10:
+            return y
+        y -= step
+    raise solvers.NoResultError("Newton did not converge")
+
+
 def correctly_rounded_yield(*args: Arg) -> float:
     """PRICE's exact root, rounded once: the bond's PRICE (`solvers.price`'s cash flows over the
     exact day counts and the cell's doubles) solved for the price at 50 digits from the engine's
@@ -123,11 +145,7 @@ def caret_candidates() -> list[Candidate]:
     out.append(
         candidate(
             "Newton from the 100T - qT/2 start, redemption at (DSC/E + n) - 1, ^-priced",
-            caret_priced(
-                solvers._newton_yield_short(
-                    hundred_t_minus_qt_yield_start, 1e-10, solvers.price_redemption_dsc_first
-                )
-            ),
+            caret_priced(dsc_first_yield),
             "Newton, fitted start",
         )
     )

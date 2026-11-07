@@ -478,9 +478,7 @@ def test_yield_redemption_exponent_order_moves_b67() -> None:
     args = (71650.0, 72136.0, 0.05, 98.0, 100.5, 1.0, 0.0)
     start = yield_caret.hundred_t_minus_qt_yield_start
     chosen = yield_caret.caret_priced(solvers._newton_yield_short(start, 1e-10))
-    old = yield_caret.caret_priced(
-        solvers._newton_yield_short(start, 1e-10, solvers.price_redemption_dsc_first)
-    )
+    old = yield_caret.caret_priced(yield_caret.dsc_first_yield)
     assert chosen(*args) == 0.06966784545910434
     assert old(*args) == 0.06966784545910445
     assert yield_caret.correctly_rounded_yield(*args) > chosen(*args)

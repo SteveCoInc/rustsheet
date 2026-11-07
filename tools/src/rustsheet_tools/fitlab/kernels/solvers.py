@@ -607,21 +607,11 @@ PRICE_POWER: ContextVar[Callable[[float, float], float]] = ContextVar("price_pow
 
 
 def price(y: float, bond: Bond) -> float:
-    """PRICE with N > 1 coupons left (documented form, DSC = E - A), the redemption discounted at
-    `(n - 1) + DSC/E` (the engine's order since T-2788)."""
+    """PRICE with N > 1 coupons left (documented form, DSC = E - A)."""
     rate, red, freq, a, e, dsc, n = bond
     base, power = 1 + y / freq, PRICE_POWER.get()
     coupons = sum(100 * rate / freq / power(base, k - 1 + dsc / e) for k in range(1, n + 1))
     return red / power(base, n - 1 + dsc / e) + coupons - 100 * rate / freq * a / e
-
-
-def price_redemption_dsc_first(y: float, bond: Bond) -> float:
-    """`price` with the redemption discounted at `(DSC/E + n) - 1`, which rounds differently: the
-    engine's order before T-2788."""
-    rate, red, freq, a, e, dsc, n = bond
-    base, power = 1 + y / freq, PRICE_POWER.get()
-    coupons = sum(100 * rate / freq / power(base, k - 1 + dsc / e) for k in range(1, n + 1))
-    return red / power(base, dsc / e + n - 1) + coupons - 100 * rate / freq * a / e
 
 
 def dprice(y: float, bond: Bond) -> float:
@@ -636,16 +626,12 @@ def dprice(y: float, bond: Bond) -> float:
     return total - t * red / power(base, t + 1) / freq
 
 
-def _bond_price(
-    args: tuple[Arg, ...], kernel: Callable[[float, Bond], float] | None = None
-) -> tuple[Callable[[float], float], Bond, float]:
-    """The cell's PRICE(y) function in its day-count basis (`kernel`, default `price`), its bond
-    tuple and the target price."""
+def _bond_price(args: tuple[Arg, ...]) -> tuple[Callable[[float], float], Bond, float]:
+    """The cell's PRICE(y) function in its day-count basis, its bond tuple and the target price."""
     settle, maturity, rate, pr, red, freq, basis = _bond(args)
     a, e, _, dsc, n = day_counts(settle, maturity, freq, basis, period_e=False)
     bond: Bond = (rate, red, freq, a, e, dsc, n)
-    fn = kernel or price
-    return (lambda y: fn(y, bond)), bond, pr
+    return partial(price, bond=bond), bond, pr
 
 
 def _newton_yield(start: float, tol: float) -> Callable[..., float]:
@@ -804,15 +790,12 @@ def fitted_yield_start(*args: Arg) -> float:
     return (100 * rate + (100 - pr) / years) / ((100 + pr) / 2 - (100 - pr) / (4 * years))
 
 
-def _newton_yield_short(
-    start: Callable[..., float], tol: float, kernel: Callable[[float, Bond], float] | None = None
-) -> Callable[..., float]:
+def _newton_yield_short(start: Callable[..., float], tol: float) -> Callable[..., float]:
     """Analytic Newton from `start(*cell_args)` that returns the iterate whose next step is below
-    `tol`, without taking that step (T-1592: Excel's values stop short of PRICE's root), on the
-    PRICE `kernel` (default `price`)."""
+    `tol`, without taking that step (T-1592: Excel's values stop short of PRICE's root)."""
 
     def call(*args: Arg) -> float:
-        price_of, bond, pr = _bond_price(args, kernel)
+        price_of, bond, pr = _bond_price(args)
         y = start(*args)
         for _ in range(100):
             step = (price_of(y) - pr) / dprice(y, bond)
