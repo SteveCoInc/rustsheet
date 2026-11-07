@@ -6,7 +6,8 @@ and on Ext rejecting 40 (row 5), as probes/t4755-two-criteria-filtered-table-*. 
 103, 9 and 109 over Sales[Val] and per data row. Variants:
 - hand-hidden: row 4 ("a", 30), which both criteria keep, is also written hidden (control, and delete_column A);
 - number-format: Ext shows as 0.00 (10.00 .. 60.00) while spec2xlsx's Ext filter lists the General text
-  "10", "20", "30", "50", "60" (delete_column A).
+  "10", "20", "30", "50", "60" (control, and delete_column A).
+A6 (COLUMNS) and the number-format control were added after the first fill (second predictions commit).
 Predictions (docs/research/t4895/predictions.tsv) are the engine's values, committed before the excel-graph fill.
 Run: python3 docs/research/t4895/gen.py (writes eval/suites/probes/cases/t4895-*.case.json)
 """
@@ -26,6 +27,7 @@ def readers() -> dict[str, str]:
         "A3": "=SUBTOTAL(9,Sales[Val])",
         "A4": "=SUBTOTAL(109,Sales[Val])",
         "A5": "=ROWS(Sales)",
+        "A6": "=COLUMNS(Sales)",
     }
     for row in range(2, 8):
         cells |= {f"B{row}": f"=SUBTOTAL(3,S!B{row})", f"C{row}": f"=SUBTOTAL(103,S!B{row})"}
@@ -63,7 +65,7 @@ def case(description: str, hidden: list[int], ops: list[dict[str, str]], formats
 
 BASE = (
     "Table Sales on S!A1:C7 (Cat a,b,a,c,a,b; Val 1-6; Ext 10-60); values filters on Cat keeping a and c (rows 3, 7) "
-    "and on Ext rejecting 40 (row 5). F!A1:A4 SUBTOTAL 3, 103, 9, 109 over Sales[Val], A5 ROWS(Sales), "
+    "and on Ext rejecting 40 (row 5). F!A1:A4 SUBTOTAL 3, 103, 9, 109 over Sales[Val], A5 ROWS(Sales), A6 COLUMNS(Sales), "
     "B2:B7 SUBTOTAL(3,S!Bn) and C2:C7 SUBTOTAL(103,S!Bn) per data row. "
 )
 SPECS = {
@@ -76,6 +78,13 @@ SPECS = {
         [3, 4, 5, 7],
         DELETE_A,
         {},
+    ),
+    "t4895-two-criteria-number-format-control": case(
+        BASE + "Ext is formatted 0.00 (shows 10.00 .. 60.00) while its filter lists the General text 10, 20, 30, 50, "
+        "60. No edit.",
+        [3, 5, 7],
+        [],
+        {f"C{r}": "0.00" for r in range(2, 8)},
     ),
     "t4895-two-criteria-number-format-delete-one": case(
         BASE + "Ext is formatted 0.00 (shows 10.00 .. 60.00) while its filter lists the General text 10, 20, 30, 50, "

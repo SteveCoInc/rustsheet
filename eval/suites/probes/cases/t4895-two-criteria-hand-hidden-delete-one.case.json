@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "Table Sales on S!A1:C7 (Cat a,b,a,c,a,b; Val 1-6; Ext 10-60); values filters on Cat keeping a and c (rows 3, 7) and on Ext rejecting 40 (row 5). F!A1:A4 SUBTOTAL 3, 103, 9, 109 over Sales[Val], A5 ROWS(Sales), B2:B7 SUBTOTAL(3,S!Bn) and C2:C7 SUBTOTAL(103,S!Bn) per data row. Row 4 (a, 30), which both criteria keep, is also written hidden. The edit: delete_column at A deletes Cat; the Ext criterion stays. (T-4895)",
+  "description": "Table Sales on S!A1:C7 (Cat a,b,a,c,a,b; Val 1-6; Ext 10-60); values filters on Cat keeping a and c (rows 3, 7) and on Ext rejecting 40 (row 5). F!A1:A4 SUBTOTAL 3, 103, 9, 109 over Sales[Val], A5 ROWS(Sales), A6 COLUMNS(Sales), B2:B7 SUBTOTAL(3,S!Bn) and C2:C7 SUBTOTAL(103,S!Bn) per data row. Row 4 (a, 30), which both criteria keep, is also written hidden. The edit: delete_column at A deletes Cat; the Ext criterion stays. (T-4895)",
   "tags": [
     "M8",
     "tables",
@@ -69,6 +69,7 @@
         "A3": "=SUBTOTAL(9,Sales[Val])",
         "A4": "=SUBTOTAL(109,Sales[Val])",
         "A5": "=ROWS(Sales)",
+        "A6": "=COLUMNS(Sales)",
         "B2": "=SUBTOTAL(3,S!B2)",
         "C2": "=SUBTOTAL(103,S!B2)",
         "B3": "=SUBTOTAL(3,S!B3)",
@@ -91,6 +92,7 @@
     "F!A3",
     "F!A4",
     "F!A5",
+    "F!A6",
     "F!B2",
     "F!C2",
     "F!B3",
