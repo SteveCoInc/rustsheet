@@ -3,7 +3,7 @@ id: T-3464
 title: "gen-m2 typed-input batch: oracle-filled typed entries from --policy typed-input, every failing cell owned"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
