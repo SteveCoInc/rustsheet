@@ -481,6 +481,39 @@ class ExitOwners(TaskDir):
         self.assertNotIn(f"{PROBE}!P!B2", listed)
         self.assertNotIn(f"{PROBE}!P!B3", listed)
 
+    def test_a_case_that_fails_whole_is_owned_by_a_cell_list_naming_it(self) -> None:
+        # The T-3338 shape (decision 0333): one bullet wraps over several lines naming cases that
+        # fail whole, and its last line carries `: S!A1, S!B1`. Every case it names is owned,
+        # the ones on the last line too; a case named in no block is not.
+        cases = [f"probes/t3266-nested-{n}.case.json" for n in ("a", "b", "c", "d")]
+        called = exit_owners.case_names(cases)
+        text = (
+            "- Engine errors: probes/t3266-nested-a, probes/t3266-nested-b,\n"
+            "  probes/t3266-nested-c: S!A1, S!B1"
+        )
+        whole = [exit_owners.ExitCell("probes", c, exit_owners.WHOLE_CASE, "") for c in cases]
+        self.assertEqual(
+            [exit_owners.owned(c, [text], called[c.case]) for c in whole],
+            [True, True, True, False],
+        )
+        # Its cell-level failures keep decision 0159's rule: the listed cells beside the case on
+        # the last line, every cell of a case on a line without one, nothing of a case it omits.
+        cell_of = {c: exit_owners.ExitCell("probes", c, "S!C9", "") for c in cases}
+        self.assertTrue(exit_owners.owned(cell_of[cases[0]], [text], called[cases[0]]))
+        self.assertFalse(exit_owners.owned(cell_of[cases[2]], [text], called[cases[2]]))
+        listed = exit_owners.ExitCell("probes", cases[2], "S!B1", "")
+        self.assertTrue(exit_owners.owned(listed, [text], called[cases[2]]))
+
+    def test_a_whole_case_owner_does_not_leak_cells_to_another_case(self) -> None:
+        # Decision 0159's leak test with a whole-case failure beside it: the task owns the probe's
+        # crash, but a cell-level failure of the probe still needs its A1 name beside the probe.
+        text = "- gen-m5/1d22a002d4f380b3: Calc!A107, B2\n- probes/index-reference-args: P!B3"
+        called = exit_owners.case_names([GEN, PROBE])
+        crash = exit_owners.ExitCell("probes", PROBE, exit_owners.WHOLE_CASE, "")
+        self.assertTrue(exit_owners.owned(crash, [text], called[PROBE]))
+        b2 = exit_owners.ExitCell("probes", PROBE, "P!B2", "")
+        self.assertFalse(exit_owners.owned(b2, [text], called[PROBE]))
+
     def test_a_new_line_bullet_row_or_blank_line_opens_a_block(self) -> None:
         for body in (
             "probes/index-reference-args P!B3\nB2",
