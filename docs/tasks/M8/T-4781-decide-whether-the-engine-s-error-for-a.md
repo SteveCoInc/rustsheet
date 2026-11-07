@@ -3,7 +3,7 @@ id: T-4781
 title: "Decide whether the engine's #ERROR! for a name Excel refuses at load needs a DEVIATION entry"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
