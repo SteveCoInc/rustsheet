@@ -3,7 +3,7 @@ id: T-4858
 title: "D* computed criteria on another sheet: ROW() and COLUMN() with no argument are the criteria cell's, a structured [@Col] reads its own table row (probes/t3002 B7:E9, B13:E13)"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
