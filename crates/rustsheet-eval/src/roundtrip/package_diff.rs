@@ -80,3 +80,65 @@ pub fn package_diff(ours: &[u8], theirs: &[u8], name: &str) -> anyhow::Result<(V
     };
     Ok(score(scenarios::R0, &sides, theirs))
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Cursor, Read as _, Write as _};
+
+    use super::super::Verdict;
+    use super::package_diff;
+
+    const NAME: &str = "merged-covered-values.xlsx";
+
+    fn fixture() -> Vec<u8> {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../eval/suites/fixtures/cases");
+        std::fs::read(root.join(NAME)).expect("fixture")
+    }
+
+    /// `bytes` with the zip entry `part` left out.
+    fn without(bytes: &[u8], part: &str) -> Vec<u8> {
+        let mut zip = zip::ZipArchive::new(Cursor::new(bytes)).expect("zip");
+        let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        for i in 0..zip.len() {
+            let mut entry = zip.by_index(i).expect("entry");
+            let name = entry.name().expect("name").to_string();
+            if name == part {
+                continue;
+            }
+            let mut data = Vec::new();
+            entry.read_to_end(&mut data).expect("read");
+            out.start_file(name, zip::write::SimpleFileOptions::default())
+                .expect("start");
+            out.write_all(&data).expect("write");
+        }
+        out.finish().expect("finish").into_inner()
+    }
+
+    /// Two packages are compared, not our engine against one: a workbook against itself is kept
+    /// whole, even where our engine computes other values than its cache holds (merged covered
+    /// cells).
+    #[test]
+    fn a_workbook_against_itself_finds_nothing() {
+        let bytes = fixture();
+        let (items, checked) = package_diff(&bytes, &bytes, NAME).expect("diff");
+        let failing: Vec<_> = items
+            .iter()
+            .filter(|i| i.verdict != Verdict::Kept)
+            .collect();
+        assert!(checked > 0 && failing.is_empty(), "{failing:?}");
+    }
+
+    #[test]
+    fn a_part_the_other_save_dropped_is_lost() {
+        let bytes = fixture();
+        let (items, _) =
+            package_diff(&bytes, &without(&bytes, "docProps/app.xml"), NAME).expect("diff");
+        assert!(
+            items.iter().any(|i| i.kind == "part"
+                && i.verdict == Verdict::Lost
+                && i.key.contains("extended-properties")),
+            "{items:?}"
+        );
+    }
+}

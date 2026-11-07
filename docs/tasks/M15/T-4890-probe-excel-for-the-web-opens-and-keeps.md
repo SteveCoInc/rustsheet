@@ -55,13 +55,18 @@ keeps the source's hints") to VERIFIED, or to a fix.
 - **Probe** (docs/research/xlsx-round-trip/excel-resave-probe-2026-11-07.md, reproducible with `resave_probe.py`).
   Excel for the web opened all 104 patched saves: the fixtures R0, R1/E6 and R1/all, and a 24-case corpus sample R0
   and R1/all. 51 of the 52 R0 saves match the source after Excel's save. All 9 refusals are regenerated saves:
-  - 8 drop the external-link parts. The existing T-4143 now has this evidence.
-  - 1 writes an empty `dcterms:created`. Filed as T-4909.
+  - 7 (the fixtures external-link-*) drop the external-link parts. This was isolated with a positive and a negative
+    control. The existing T-4143 now has this evidence.
+  - 1 writes an empty `dcterms:created`.
+  - 1 writes an empty `<cellStyles count="0">`.
+  - The last two are filed together as T-4909.
 - **Semantics.** docs/excel-semantics/xlsx-storage.md:
   - "A patched package keeps the source's hints" is now VERIFIED for every hint that was exercised.
-  - New: "An empty W3CDTF date makes Excel refuse the package".
+  - New: "An empty `dcterms:created` makes Excel refuse the package".
+  - New: "An empty `cellStyles` makes Excel refuse the package".
   - New: "A [n] reference without its externalLink part makes Excel refuse the package".
 - **Follow-ups.**
-  - T-4909: core.xml omits an empty created date and escapes the creator.
+  - T-4909: the regenerating export writes neither an empty `created` nor an empty `cellStyles`, and escapes the
+    creator.
   - T-4910: importer diagnostics go to stderr. Today they break `package-diff --json` on some files.
   - Still unexercised: a dropped calcChain, emptied rows, desktop Excel.

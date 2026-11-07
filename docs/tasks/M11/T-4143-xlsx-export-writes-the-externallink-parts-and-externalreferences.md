@@ -25,8 +25,9 @@ writes no part (`crates/rustsheet-xlsx/src/export/mod.rs`). This task models the
 generic preservation of unmodelled parts is M15 (decision 0275).
 
 - Excel for the web refuses such a save outright (`FileCorruptTryRepair`; T-4890, docs/excel-semantics/xlsx-storage.md
-  "A [n] reference without its externalLink part makes Excel refuse the package"). Every regenerated save of a linked
-  workbook is therefore unopenable, not merely lossy.
+  "A [n] reference without its externalLink part makes Excel refuse the package"). This was isolated on fixtures
+  external-link-cached-text: adding the parts back makes the save open. Every regenerated save of a linked workbook
+  is therefore unopenable, not merely lossy.
 
 ## Acceptance criteria
 - [ ] Load, then save, then load again of every fixtures `external-link-*` case, poi ref-56737 and corpus-bench 59932

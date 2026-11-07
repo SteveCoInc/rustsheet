@@ -35,17 +35,50 @@ def source_of(save: Path, root: Path) -> Path:
 
 
 def package_diff(exe: str, a: Path, b: Path) -> list[dict[str, object]]:
-    out = subprocess.run(
-        [exe, "package-diff", str(a), str(b), "--json"], capture_output=True, text=True
-    ).stdout
+    run = subprocess.run([exe, "package-diff", str(a), str(b), "--json"], capture_output=True, text=True)
+    if run.returncode != 0:
+        raise SystemExit(f"package-diff {a} {b}: {run.stderr.strip()}")
     # The importer still prints some diagnostics on stdout (T-4910): the JSON is the last line.
-    return list(json.loads(out.strip().splitlines()[-1]))
+    return list(json.loads(run.stdout.strip().splitlines()[-1]))
+
+
+def col(ref: str) -> int:
+    n = 0
+    for ch in re.match(r"[A-Z]+", ref).group():  # type: ignore[union-attr]
+        n = n * 26 + ord(ch) - 64
+    return n
+
+
+def hints(src: zipfile.ZipFile, ours: zipfile.ZipFile) -> set[str]:
+    """Which of the patched-package hints (xlsx-storage.md) a patched save exercises."""
+    a, b = set(src.namelist()), set(ours.namelist())
+    found = set()
+    for n in sorted(a & b):
+        if not n.startswith("xl/worksheets/sheet") or src.read(n) == ours.read(n):
+            continue
+        found.add("rewrote a worksheet")
+        x, y = src.read(n).decode("utf8", "replace"), ours.read(n).decode("utf8", "replace")
+        dim = re.compile(r'<dimension ref="([^"]+)"')
+        if (m := dim.search(x)) and (k := dim.search(y)) and m[1] != k[1]:
+            found.add("changed a dimension")
+        for row in re.finditer(r'<row [^>]*spans="(\d+):(\d+)"[^>]*>(.*?)</row>', y):
+            if any(not int(row[1]) <= col(c) <= int(row[2]) for c in re.findall(r'<c r="([A-Z]+)\d+"', row[3])):
+                found.add("a cell outside its row's spans")
+    if "xl/calcChain.xml" in a:
+        found.add("copied a calcChain" if "xl/calcChain.xml" in b else "dropped a calcChain")
+    if "xl/metadata.xml" in b - a:
+        found.add("added the metadata parts")
+    for part, what in [("xl/styles.xml", "appended styles"), ("xl/sharedStrings.xml", "appended shared strings")]:
+        if part in a & b and src.read(part) != ours.read(part):
+            found.add(what)
+    return found
 
 
 def main() -> None:
     root, exe = Path(sys.argv[1]), sys.argv[2]
     status = json.loads((root / "ours-excel/resave.json").read_text())
     tally: collections.Counter[tuple[str, str, str]] = collections.Counter()
+    exercised: collections.Counter[str] = collections.Counter()
     for save in sorted((root / "ours").iterdir()):
         label = save.name[: -len(".xlsx")].rsplit(".", 1)[1]
         src = zipfile.ZipFile(source_of(save, root))
@@ -53,9 +86,14 @@ def main() -> None:
         patched = "xl/workbook.xml" in src.namelist() and ours.read("xl/workbook.xml") == src.read(
             "xl/workbook.xml"
         )
-        tally[(label, "patched" if patched else "regenerated", status[save.name]["status"])] += 1
+        opened = status[save.name]["status"]
+        tally[(label, "patched" if patched else "regenerated", opened)] += 1
+        if patched and opened == "saved":
+            exercised.update(hints(src, ours))
     for key, n in sorted(tally.items()):
         print(n, *key)
+    for hint, n in sorted(exercised.items()):
+        print(f"{n} opened patched saves {hint}")
     for save in sorted((root / "ours").glob("*.R0.xlsx")):
         src = source_of(save, root)
         real = [

@@ -804,8 +804,8 @@ opens the result without a repair:
   regenerated save writes.
 
 Evidence: oracle excel-graph, 2026-11-07, T-4890 (docs/research/xlsx-round-trip/excel-resave-probe-2026-11-07.md).
-Excel for the web opened and saved all 104 patched saves of the fixtures and a 24-case corpus sample: R0, R1/E6 and
-R1/all. Among them:
+Excel for the web opened and saved all 104 patched saves of the fixtures and of 23 of the 24 sampled corpus cases (the
+24th, an `.xlsm`, Graph cannot open even as the source): R0, R1/E6 and R1/all. Among them:
 - 79 rewrote a worksheet;
 - 38 grew a `<dimension>`;
 - 2 hold a cell outside its row's `spans`;
@@ -820,34 +820,57 @@ Status: VERIFIED (Excel for the web; desktop not observed) for the spans, the di
 metadata parts, and appended styles and strings. UNVERIFIED (not exercised by the standard edits): a dropped calcChain and
 rows emptied by clearing. Tasks: T-4560, T-4561, T-4623, T-4890, T-4180.
 
-## An empty W3CDTF date makes Excel refuse the package
+## An empty `dcterms:created` makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose `docProps/core.xml` holds an empty
-`<dcterms:created xsi:type="dcterms:W3CDTF"></dcterms:created>`. Graph reports `FileCorruptTryRepair`. The same
-package without that element opens.
-Evidence: oracle excel-graph, 2026-11-07, T-4890. Source: the fixtures valueless-cell-forms R1/E5 save, sha256
-788ba5e3c8c07445a3803a461175c6dfda052a56a564dbf7d2958b346625b0a9, which is refused.
-- With only the empty `created` element removed (0120e27f60475870c510a84d458730052173d6aa1c3d59a75800ccdd8c984a74),
-  it opens.
-- With core.xml removed (ff7146f3fc2236882167360b238ddbe76c875bb77d73fd7409374a849e94c24a), it opens.
-- Each of these other changes leaves it refused:
+`<dcterms:created xsi:type="dcterms:W3CDTF"></dcterms:created>`. Graph reports createSession 501
+`FileCorruptTryRepair`. The same package without that one element opens.
+Evidence: oracle excel-graph, 2026-11-07, T-4890 (docs/research/xlsx-round-trip/excel-resave-probe-2026-11-07.md §3).
+- The fixtures valueless-cell-forms R1/E5 save (sha256 788ba5e3c8c07445a3803a461175c6dfda052a56a564dbf7d2958b346625b0a9)
+  is refused.
+- Removing only that element (0120e27f60475870c510a84d458730052173d6aa1c3d59a75800ccdd8c984a74) makes it open.
+- Removing core.xml (ff7146f3fc2236882167360b238ddbe76c875bb77d73fd7409374a849e94c24a) makes it open.
+- Each of these one-part changes leaves it refused:
   - metadata.xml removed;
   - theme removed;
-  - the source's workbook.xml or styles.xml;
+  - the source's workbook.xml;
+  - the source's styles.xml;
   - `<t></t>` written as `<t/>`.
 
-Whether an empty `modified` or another malformed W3CDTF value is refused is not probed.
-Status: VERIFIED (Excel for the web); not implemented. The regenerating export writes the empty element when the source
-records no creation date (`export/doc_props.rs` `get_core_xml`). Tasks: T-4909.
+An empty `modified`, or another malformed W3CDTF value, is not probed.
+Ours: the regenerating export writes the empty element whenever the source records no creation date
+(`export/doc_props.rs` `get_core_xml`).
+Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4909).
+
+## An empty `cellStyles` makes Excel refuse the package
+Rule: Excel for the web refuses to open a package whose `xl/styles.xml` holds `<cellStyles count="0"></cellStyles>`,
+an empty CT_CellStyles. Graph reports `FileCorruptTryRepair`. The same package opens when the element is removed,
+and also when it holds the Normal style (`<cellStyle name="Normal" xfId="0" builtinId="0"/>`).
+Evidence: oracle excel-graph, 2026-11-07, T-4890.
+- The poi link-external-workbook-a R1/all save (814c986a989f7227691ef5feae2077925ec1886d55c1dcc7ea2eb29044af4cb6) is
+  refused. Its core.xml has a real `created` date, and it has no `[n]` references.
+- With the element removed (5d941486ce51b2b3b71561c55f7615141666e81748e116d8885e1f7c41ab1310), it opens.
+- With the Normal style added (73e6065fe084b0a5d3b3e189dcfb2bf4de950cf2509a5edc10af9ce3a61fdb0a), it opens.
+
+Ours: the regenerating export writes the element with the table's count, even when the count is 0
+(`export/styles.rs`, the `cellStyles` section).
+Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4909).
 
 ## A [n] reference without its externalLink part makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose formulas use `[1]Sheet!A1` while the package has no
 `xl/externalLinks/externalLink1.xml` and no `<externalReferences>`. Graph reports `FileCorruptTryRepair`.
-Evidence: oracle excel-graph, 2026-11-07, T-4890. The regenerated R1/all saves of the 7 fixtures external-link-* and of
-poi link-external-workbook-a were all refused. external-link-cached-text R1/E5
-(c0f37b44e23c00d7534d6e636d0b7f6592c43fcdd5399e763d615bd17520b602) is refused, and also refused without core.xml
-(10d86a140c85baeb8a985410bab20e33980c91523ab8455a499269055973ea65). Their patched R0 and R1/E6 saves keep the parts and
-open.
-Status: VERIFIED (Excel for the web); not implemented. The regenerating export drops the parts. Tasks: T-4143.
+Evidence: oracle excel-graph, 2026-11-07, T-4890. Both directions were isolated on packages that do not have the empty
+`created` element:
+- **The part removed.** external-link-cached-text R1/E5 without that element
+  (9b892ce5f3c370a5689191d44a07bcd4db327e375424caee63d4f425760f0d65) is refused. The same package with the source's
+  externalLink part, its relationship, its override and `<externalReferences>` added back
+  (299381fbc90f67fc3aace3ec4b50dc6f440e77cda96e6bb6dee3a5e4b861f5e5) opens.
+- **The reference added.** valueless-cell-forms R1/E5 without the empty `created` opens. The same package with one
+  `[1]Uses!$A$1` formula added (dbeb46a9ad85d763e6930dc0b2eff226684dcacc8943805549ff9ded3d46c6c7) is refused.
+
+The R1/all refusals of the other six fixtures external-link-* also carry the empty `created` element, so they confirm
+neither rule on their own.
+Ours: the regenerating export drops the parts and keeps the formulas.
+Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4143).
 
 ## Shared-string index with surrounding whitespace (T-4145)
 A `t="s"` cell whose `<v>` holds its index with surrounding whitespace (`<v>2 </v>`) is read as that

@@ -385,7 +385,7 @@ def main() -> None:
     p.set_defaults(fn=cmd_calibrate)
     p = sub.add_parser("resave", help="have the backend open and save each workbook of a directory")
     p.add_argument("-b", "--backend", required=True)
-    p.add_argument("input", type=Path, help="directory of .xlsx files")
+    p.add_argument("input", type=Path, help="directory of .xlsx and .xlsm files")
     p.add_argument("--out", type=Path, required=True, help="where the backend's saves go")
     p.add_argument("--limit", type=int, default=0)
     p.set_defaults(fn=cmd_resave)

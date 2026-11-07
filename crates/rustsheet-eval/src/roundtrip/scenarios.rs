@@ -234,3 +234,25 @@ fn run_r1(
     let found = r1::violations(label, plain, items, &delta);
     Ok((Some((found, checked)), outcome, Some(out)))
 }
+
+/// The file name `--save-dir` gives a case's output of scenario `label`: `<case id>.<label>.xlsx`,
+/// with each path separator of the id as `__` and each `/` of the label as `-`, so the file lands in
+/// the directory itself (T-4890's `resave_probe.py` parses these names back).
+pub(super) fn save_name(case_id: &str, label: &str) -> String {
+    format!(
+        "{}.{}.xlsx",
+        case_id.replace(['/', '\\'], "__"),
+        label.replace('/', "-")
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn a_save_name_has_no_path_separator() {
+        assert_eq!(
+            super::save_name("roundtrip-poi/a\\b.xlsx", "R1/all"),
+            "roundtrip-poi__a__b.xlsx.R1-all.xlsx"
+        );
+    }
+}

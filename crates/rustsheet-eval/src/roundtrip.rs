@@ -212,11 +212,7 @@ fn run_case(
     let mut unsaved = Vec::new();
     if let (Some(dir), Ok(Ok(run))) = (save_dir, &outcome) {
         for (label, bytes) in &run.outputs {
-            let file = format!(
-                "{}.{}.xlsx",
-                case.id.replace('/', "__"),
-                label.replace('/', "-")
-            );
+            let file = scenarios::save_name(&case.id, label);
             if let Err(e) = std::fs::write(dir.join(&file), bytes) {
                 unsaved.push(format!("{file}: {e}"));
             }
@@ -247,7 +243,11 @@ fn run_case(
     };
     result.millis = millis;
     if !unsaved.is_empty() {
-        result.message = Some(format!("not saved: {}", unsaved.join("; ")));
+        let note = format!("not saved: {}", unsaved.join("; "));
+        result.message = Some(match result.message.take() {
+            Some(m) => format!("{m}; {note}"),
+            None => note,
+        });
     }
     result
 }

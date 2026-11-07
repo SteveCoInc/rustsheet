@@ -209,22 +209,6 @@ fn v6_repeated_and_invalid_sheet_names() {
     assert_eq!(found, vec!["V6", "V6", "V6"]);
 }
 
-/// `package-diff` compares packages: a workbook against itself is kept whole, even where our engine
-/// computes other values than its cache holds (merged covered cells, T-4890).
-#[test]
-fn a_package_diff_of_a_workbook_against_itself_finds_nothing() {
-    let root =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../eval/suites/fixtures/cases");
-    let bytes = std::fs::read(root.join("merged-covered-values.xlsx")).expect("fixture");
-    let (items, checked) =
-        package_diff(&bytes, &bytes, "merged-covered-values.xlsx").expect("diff");
-    let failing: Vec<_> = items
-        .iter()
-        .filter(|i| i.verdict != Verdict::Kept)
-        .collect();
-    assert!(checked > 0 && failing.is_empty(), "{failing:?}");
-}
-
 #[test]
 fn v8_and_r0_run_on_a_real_workbook() {
     let root =
