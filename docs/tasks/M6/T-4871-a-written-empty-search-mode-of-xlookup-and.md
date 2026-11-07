@@ -3,7 +3,7 @@ id: T-4871
 title: "A written-empty search_mode of XLOOKUP and XMATCH and an empty rows or columns of EXPAND follow Excel (probe empty-as-omitted)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
