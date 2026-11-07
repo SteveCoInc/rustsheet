@@ -355,9 +355,10 @@ pub struct DataField {
     /// `baseItem`: the item it compares against; [`NO_BASE_ITEM`] for none, 1048828 for
     /// (previous) and 1048829 for (next) (MS-OI29500 §18.10.1.22).
     pub base_item: u32,
-    /// `numFmtId` of the values; absent is the application's default (MS-OI29500
-    /// §18.10.1.22 d, as docs/research/pivot-tables-2026-11-04/excel-docs.md §1 quotes it; not
-    /// probed).
+    /// `numFmtId` of the values, which their cells show them in; absent is the application's
+    /// default (MS-OI29500 §18.10.1.22 d, as docs/research/pivot-tables-2026-11-04/excel-docs.md
+    /// §1 quotes it), General for a data field over numbers (pivots.md "Value cells show their
+    /// data field's number format", probes/t4169-pivot-number-formats).
     pub number_format: Option<u32>,
 }
 
