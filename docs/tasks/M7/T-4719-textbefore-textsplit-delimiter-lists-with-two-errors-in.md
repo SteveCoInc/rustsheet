@@ -3,7 +3,7 @@ id: T-4719
 title: "TEXTBEFORE/TEXTSPLIT delimiter lists with two errors in a 2-D list, a final sigma with nothing before it, and a negative REGEX occurrence over a split surrogate pair: probe the text.md UNVERIFIED notes and match"
 milestone: M7
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -46,22 +46,25 @@ in place of the UNVERIFIED wording.
      probe is needed unless the rewording claims something the cells do not show.
 
 ## Acceptance criteria
-- [ ] A probe case `probes/t4719-text-unverified-residue.case.json` is committed with excel-graph oracle values and
+- [x] A probe case `probes/t4719-text-unverified-residue.case.json` is committed with excel-graph oracle values and
       holds at least: for item 1, TEXTSPLIT and TEXTBEFORE with the 2x2 delimiter arrays `{"x",#N/A;#DIV/0!,"y"}` and
       `{"x",#DIV/0!;#N/A,"y"}` and with a 2x2 delimiter range holding the same errors, plus a 3x1 and a 1x3 control;
       for item 2, the eight sigma texts above through LOWER and through TEXTBEFORE's case-insensitive match; for
       item 3, REGEXREPLACE with occurrence -1 and -2 and REGEXEXTRACT's all-matches mode over `"a"&UNICHAR(128512)&"b"`
       with the empty pattern and with `x*`, and the same with a pattern that never splits the pair (`b`) as control.
       Surrogate texts are built with UNICHAR, as the existing probe does.
-- [ ] Every probe cell passes, or each cell that does not is listed in a new functions-text task (`campaign:
+- [x] Every probe cell passes, or each cell that does not is listed in a new functions-text task (`campaign:
       semantics` with a `## Visible-parity stage` section) filed with `make new-task` that names the case and its
       cells, and those known failures are recorded with `make eval-baseline`.
-- [ ] text.md: items 1-3 state the observed result and cite the probe cells; item 4 cites references.md's fractional
+- [x] text.md: items 1-3 state the observed result and cite the probe cells; item 4 cites references.md's fractional
       height rule and t2414 A141:A171 in place of "UNVERIFIED mechanism".
-- [ ] Any engine change has a unit test that pins a probed result.
-- [ ] `make check-fast` green; no new known-failure line in eval/baseline/ other than those owned as above; reviewers
+- [x] Any engine change has a unit test that pins a probed result.
+- [x] `make check-fast` green; no new known-failure line in eval/baseline/ other than those owned as above; reviewers
       approve.
 
 ## Out of scope
 - Locales other than en-US and the other case-fold exceptions (İ, Kelvin, Angstrom, ẞ: VERIFIED).
 - REGEX pattern features (T-1972, T-2356) and the regex nesting limit.
+
+## Outcome
+Probe `probes/t4719-text-unverified-residue` (excel-graph 2026-11-07, 44 cells) passes on the engine with no code change. Results: the delimiter-list error scan is row-major (array and range); a `Σ` is final in `LOWER` whatever precedes it (nothing, space, digit, letter); a negative REGEX occurrence and all-matches over a split surrogate pair are `#VALUE!` for the empty pattern and `x*`, and fine for `b`. text.md states each as VERIFIED with the cells; item 4 cites references.md's fractional-height rule and t2414 A141:A171. Eval delta: one new case, 44/44; no known failures added.
