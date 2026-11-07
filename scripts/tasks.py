@@ -48,6 +48,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import milestone_order
+import pivot_owners
 
 ROOT = Path(__file__).resolve().parent.parent
 TASKS = ROOT / "docs" / "tasks"
@@ -235,8 +236,10 @@ def dependency_cycles(tasks: list[dict[str, object]]) -> list[list[str]]:
 
 
 def check(tasks: list[dict[str, object]]) -> list[str]:
-    """Every error `validate` reports: the task schema and dependencies, then stale TODOs."""
-    return validate(tasks) + stale_todos(tasks, code_files())
+    """Every error `validate` reports: the task schema and dependencies, stale TODOs, then stale
+    pivot catalog owners (scripts/pivot_owners.py)."""
+    owners = pivot_owners.stale(tasks, pivot_owners.catalog(ROOT), OPEN)
+    return validate(tasks) + stale_todos(tasks, code_files()) + owners
 
 
 def stale_todos(tasks: list[dict[str, object]], files: dict[str, str]) -> list[str]:

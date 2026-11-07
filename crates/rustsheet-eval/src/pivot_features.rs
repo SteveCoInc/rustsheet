@@ -4,6 +4,10 @@
 //! list. Every scored sidecar pivot-area cell of the case (T-4124) counts toward each listed id, the
 //! way the function catalog's coverage counts a cell toward the functions its formula calls. A row
 //! in scope with no cell is uncovered. Gating on these rows is the M16 exit row's task, not this one.
+//!
+//! A row's `owner` column names the open M16 task that owns it (T-4952), which the exit row's owner
+//! criterion reads. That the task is open is `scripts/tasks.py validate`'s (`make hygiene`), as for a
+//! `TODO(T-nnnn)`: the harness reads no task file (decision 0066).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -34,6 +38,8 @@ pub struct CatalogRow {
     pub stage: String,
     /// `todo`, `done`, `retired`...
     pub status: String,
+    /// The open M16 task that owns the row (`T-nnnn`), hand-filled; empty when none does (T-4952).
+    pub owner: String,
 }
 
 /// Whether a catalog row is in M16's scope: `in` and not retired (decision 0274 item 3). The one
@@ -49,6 +55,9 @@ impl CatalogRow {
 }
 
 /// Reads the catalog under `root`; an absent file is an empty catalog (a test root has none).
+///
+/// # Errors
+/// An unreadable or malformed catalog, or an `owner` that is not `T-<digits>`.
 pub fn load(root: &Path) -> Result<Vec<CatalogRow>> {
     let path = root.join(CATALOG_PATH);
     if !path.exists() {
@@ -62,7 +71,16 @@ fn parse(text: &str) -> Result<Vec<CatalogRow>> {
     let mut lines = text.lines();
     let header: Vec<&str> = lines.next().unwrap_or_default().split('\t').collect();
     let col = |name: &str| header.iter().position(|h| *h == name);
-    let (Some(id), Some(family), Some(ooxml), Some(web), Some(scope), Some(stage), Some(status)) = (
+    let (
+        Some(id),
+        Some(family),
+        Some(ooxml),
+        Some(web),
+        Some(scope),
+        Some(stage),
+        Some(status),
+        Some(owner),
+    ) = (
         col("id"),
         col("family"),
         col("ooxml"),
@@ -70,8 +88,12 @@ fn parse(text: &str) -> Result<Vec<CatalogRow>> {
         col("scope"),
         col("stage"),
         col("status"),
-    ) else {
-        bail!("the pivot catalog header lacks id, family, ooxml, web, scope, stage or status");
+        col("owner"),
+    )
+    else {
+        bail!(
+            "the pivot catalog header lacks id, family, ooxml, web, scope, stage, status or owner"
+        );
     };
     lines
         .filter(|l| !l.is_empty())
@@ -84,6 +106,11 @@ fn parse(text: &str) -> Result<Vec<CatalogRow>> {
                     .map(|s| (*s).to_string())
                     .with_context(|| format!("line {}: too few cells", n + 2))
             };
+            let owner = get(owner)?;
+            if !owner.is_empty() {
+                crate::exit_exceptions::check_task(&owner)
+                    .map_err(|why| anyhow::anyhow!("line {}: owner: {why}", n + 2))?;
+            }
             Ok(CatalogRow {
                 id: get(id)?,
                 family: get(family)?,
@@ -92,6 +119,7 @@ fn parse(text: &str) -> Result<Vec<CatalogRow>> {
                 scope: get(scope)?,
                 stage: get(stage)?,
                 status: get(status)?,
+                owner,
             })
         })
         .collect()
@@ -111,6 +139,9 @@ pub struct FeatureRow {
     /// The catalog's `status` column.
     #[serde(default)]
     pub status: String,
+    /// The catalog's `owner` column: the open M16 task that owns the row, or empty.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub owner: String,
     /// Excel-evidence pivot cells of the cases that name this id.
     pub cells: usize,
     /// Of those, the passing ones.
@@ -195,6 +226,7 @@ pub fn summarize(catalog: &[CatalogRow], cases: &[CaseResult]) -> PivotFeatures 
                 scope: r.scope.clone(),
                 stage: r.stage.clone(),
                 status: r.status.clone(),
+                owner: r.owner.clone(),
                 cells: tally.cells,
                 passed: tally.passed,
                 cases,
@@ -290,10 +322,10 @@ mod tests {
     use super::*;
     use crate::runner::CaseStatus;
 
-    const TSV: &str = "id\tfamily\tooxml\tdefault\taffects\tweb\tscope\tstage\tstatus\tevidence\n\
-        PV-0001\tlayout\tpivotTableDefinition@compact\ttrue\tlayout\tunknown\tin\tPV1\ttodo\t\n\
-        PV-0002\taggregation\tST_DataConsolidateFunction=sum\t\tvalues\tunknown\tin\tPV1\ttodo\t\n\
-        PV-0003\tformatting\tpivotTableStyleInfo@name\t\tnone\tunknown\tround-trip only (decision 0274)\tround-trip\ttodo\t\n";
+    const TSV: &str = "id\tfamily\tooxml\tdefault\taffects\tweb\tscope\tstage\tstatus\tevidence\towner\n\
+        PV-0001\tlayout\tpivotTableDefinition@compact\ttrue\tlayout\tunknown\tin\tPV1\ttodo\t\tT-0001\n\
+        PV-0002\taggregation\tST_DataConsolidateFunction=sum\t\tvalues\tunknown\tin\tPV1\ttodo\t\tT-0002\n\
+        PV-0003\tformatting\tpivotTableStyleInfo@name\t\tnone\tunknown\tround-trip only (decision 0274)\tround-trip\ttodo\t\t\n";
 
     fn case(id: &str, features: &[&str], cells: usize, passed: usize) -> CaseResult {
         let mut c = CaseResult::empty(id, "probes", CaseStatus::Fail);
@@ -376,6 +408,20 @@ mod tests {
     #[test]
     fn a_header_without_the_columns_is_refused() {
         assert!(parse("id\tfamily\n").is_err());
+        // An owner must be a task id.
+        assert!(parse(&TSV.replace("T-0002", "someone")).is_err());
+    }
+
+    #[test]
+    fn a_row_carries_its_owner_into_the_report() {
+        let catalog = parse(TSV).expect("catalog");
+        let owners: Vec<&str> = catalog.iter().map(|r| r.owner.as_str()).collect();
+        assert_eq!(owners, vec!["T-0001", "T-0002", ""]);
+        let got = summarize(&catalog, &[]);
+        assert_eq!(
+            (got.rows[0].owner.as_str(), got.rows[2].owner.as_str()),
+            ("T-0001", "")
+        );
     }
 
     #[test]

@@ -14,7 +14,7 @@
 
 use super::*;
 use crate::pivot::probe_cases::{
-    probe_pivot, read, sidecar_differences, T4634_SHEETS, T4745_SHEETS,
+    probe_pivot, read, sidecar_differences, T4634_SHEETS, T4699_SHEETS, T4745_SHEETS,
 };
 use crate::pivot::{compute, lay_out, MAX_PIVOT_WORK};
 
@@ -143,6 +143,12 @@ fn the_layout_option_probes_cells_are_excels() {
         "t4168-pivot-layout-options",
         &["F1", "F2", "F3", "BR", "BR2", "SD", "SD2"],
     );
+    // Blank rows and collapsed items beyond an outer row field (pivots.md "Layout lines").
+    for &sheet in T4699_SHEETS.iter().filter(|&&s| s != "CV4") {
+        check("t4699-pivot-blank-collapsed", sheet, &[]);
+    }
+    // CV4!C3 is the Values field's `Values` header in tabular form (T-4914).
+    check("t4699-pivot-blank-collapsed", "CV4", &["C3"]);
     // Repeat item labels: per field in tabular (X14F, T3R to TBL), outline (OST, OB, O3), compact
     // (CF, MX) form and on columns (CC); the table-wide default alone fills nothing (X14, TW,
     // TWE, OW).

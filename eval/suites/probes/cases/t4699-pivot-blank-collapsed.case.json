@@ -1,0 +1,751 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4699: pivot blank rows and collapsed items beyond an outer row field. Data!A1:D9 has Region, Product, Size and Val over eight records: East A S 10, East A L 4, East B S 5, East B L 2, West A S 7, West B S 3, West B L 1, West C L 6 (numbers only). Each sheet is one builder-v2 pivot at A3, data Sum of Val unless noted; compact form unless noted, tabular means outline 0 and compact 0 on the table and every field. BI and BI2: rows Region, Product with insertBlankRow on the innermost Product, compact and tabular. BC: rows Region, columns Product, Size with insertBlankRow on the column field Product. BS and BS2: rows Region, Product with insertBlankRow on Region and East collapsed (item sd=0), compact and tabular. CC: rows Region, columns Product, Size with Product A collapsed. CB: East collapsed on a Region with subtotalTop 0. CU and CU2: East collapsed on a Region with custom subtotals count and max, compact and tabular. CR: Region with all eleven custom subtotals listed in reverse (varP, var, stdDevP, stdDev, count, product, min, max, avg, countA, sum), compact. CM and CM2: rows Region, Product, Size with Product A collapsed (a middle field), compact and tabular. CV: rows Region, Values with Sum of Val and Count of Val and East collapsed; CV2 the same with Product inside Values; CV3 rows Region, Product, Values (Values inside the field inside the collapsed item); CV4 is CV3 in tabular form. OC: plain outline form (compact 0 on the table and fields, outline on), Region with custom subtotals sum and count. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+  "tags": [
+    "probe",
+    "pivot",
+    "T-4699",
+    "M16"
+  ],
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "Region",
+        "B1": "Product",
+        "C1": "Size",
+        "D1": "Val",
+        "A2": "East",
+        "B2": "A",
+        "C2": "S",
+        "D2": 10,
+        "A3": "East",
+        "B3": "A",
+        "C3": "L",
+        "D3": 4,
+        "A4": "East",
+        "B4": "B",
+        "C4": "S",
+        "D4": 5,
+        "A5": "East",
+        "B5": "B",
+        "C5": "L",
+        "D5": 2,
+        "A6": "West",
+        "B6": "A",
+        "C6": "S",
+        "D6": 7,
+        "A7": "West",
+        "B7": "B",
+        "C7": "S",
+        "D7": 3,
+        "A8": "West",
+        "B8": "B",
+        "C8": "L",
+        "D8": 1,
+        "A9": "West",
+        "B9": "C",
+        "C9": "L",
+        "D9": 6
+      }
+    },
+    {
+      "name": "BI",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "BlankInner",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {},
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Product": {
+                "attrs": {
+                  "insertBlankRow": true
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BI2",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "BlankInnerTab",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {
+              "outline": false,
+              "outlineData": false,
+              "compact": false,
+              "compactData": false
+            },
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Product": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false,
+                  "insertBlankRow": true
+                }
+              },
+              "Val": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BC",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "BlankCol",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {},
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product",
+              "Size"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Product": {
+                "attrs": {
+                  "insertBlankRow": true
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BS",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "BlankCollapsed",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {},
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "attrs": {
+                  "insertBlankRow": true
+                },
+                "collapsed": [
+                  "East"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BS2",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "BlankCollapsedTab",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {
+              "outline": false,
+              "outlineData": false,
+              "compact": false,
+              "compactData": false
+            },
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false,
+                  "insertBlankRow": true
+                },
+                "collapsed": [
+                  "East"
+                ]
+              },
+              "Product": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Val": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CC",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "CollapsedCol",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {},
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product",
+              "Size"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Product": {
+                "collapsed": [
+                  "A"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CB",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "CollapsedBottom",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {},
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "attrs": {
+                  "subtotalTop": false
+                },
+                "collapsed": [
+                  "East"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CU",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "CollapsedCustom",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {},
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "subtotals": [
+                  "count",
+                  "max"
+                ],
+                "collapsed": [
+                  "East"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CU2",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "CollapsedCustomTab",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {
+              "outline": false,
+              "outlineData": false,
+              "compact": false,
+              "compactData": false
+            },
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "subtotals": [
+                  "count",
+                  "max"
+                ],
+                "collapsed": [
+                  "East"
+                ],
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Product": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Val": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CR",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "CustomReversed",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {},
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "subtotals": [
+                  "varP",
+                  "var",
+                  "stdDevP",
+                  "stdDev",
+                  "count",
+                  "product",
+                  "min",
+                  "max",
+                  "avg",
+                  "countA",
+                  "sum"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CM",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "CollapsedMiddle",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {},
+            "rows": [
+              "Region",
+              "Product",
+              "Size"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Product": {
+                "collapsed": [
+                  "A"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CM2",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "CollapsedMiddleTab",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {
+              "outline": false,
+              "outlineData": false,
+              "compact": false,
+              "compactData": false
+            },
+            "rows": [
+              "Region",
+              "Product",
+              "Size"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Product": {
+                "collapsed": [
+                  "A"
+                ],
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Size": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Val": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CV",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "CollapsedValues",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {},
+            "rows": [
+              "Region",
+              "Values"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              },
+              {
+                "field": "Val",
+                "subtotal": "count",
+                "name": "Count of Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "collapsed": [
+                  "East"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CV2",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "CollapsedValuesInner",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {},
+            "rows": [
+              "Region",
+              "Values",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              },
+              {
+                "field": "Val",
+                "subtotal": "count",
+                "name": "Count of Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "collapsed": [
+                  "East"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CV3",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "CollapsedValuesDeep",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {},
+            "rows": [
+              "Region",
+              "Product",
+              "Values"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              },
+              {
+                "field": "Val",
+                "subtotal": "count",
+                "name": "Count of Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "collapsed": [
+                  "East"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CV4",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "CollapsedValuesDeepTab",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {
+              "outline": false,
+              "outlineData": false,
+              "compact": false,
+              "compactData": false
+            },
+            "rows": [
+              "Region",
+              "Product",
+              "Values"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              },
+              {
+                "field": "Val",
+                "subtotal": "count",
+                "name": "Count of Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "collapsed": [
+                  "East"
+                ],
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Product": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Val": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OC",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "OutlineCustom",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "table": {
+              "compact": false,
+              "compactData": false
+            },
+            "rows": [
+              "Region",
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Val"
+              }
+            ],
+            "fields": {
+              "Region": {
+                "attrs": {
+                  "compact": false
+                },
+                "subtotals": [
+                  "sum",
+                  "count"
+                ]
+              },
+              "Product": {
+                "attrs": {
+                  "compact": false
+                }
+              },
+              "Val": {
+                "attrs": {
+                  "compact": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Q",
+      "cells": {
+        "A1": "=SUM(Data!D2:D9)"
+      }
+    }
+  ]
+}

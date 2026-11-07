@@ -22,7 +22,8 @@
 //! on rows as the inner level, `Total`, a collapsed column item as one series, no point for an
 //! empty cell, formatted number items and no grand totals; leaving out subtotal, `subtotalTop`,
 //! outline-item and blank lines, show-as values and filtered or hidden items are the engine's
-//! reading (UNVERIFIED, T-4938). Writing the chart part's caches is the export's (T-4187).
+//! reading (UNVERIFIED, T-4938), as is the empty label of a field level a collapsed item hides.
+//! Writing the chart part's caches is the export's (T-4187).
 //!
 //! The work is charged before it is done: one unit per line, per tuple level and per point; and
 //! the labels' formatted text counts against [`MAX_PIVOT_TEXT_BYTES`], so the data is bounded by
@@ -34,7 +35,7 @@ use crate::types::NumFmt;
 
 use super::super::result::{charge, units, AxisTree, PivotComputeError, PivotResult};
 use super::super::{CacheItem, ItemType, PivotCache, PivotTable};
-use super::lines::{levels, AxisLine, Level, PivotLayout};
+use super::lines::{levels, AxisLine, Level, PivotLayout, HIDDEN};
 use super::render::{item_text, MAX_PIVOT_TEXT_BYTES};
 
 /// The name Excel's chart cache gives the one series of a pivot with no column field and no
@@ -161,6 +162,12 @@ impl Plotted<'_> {
     fn label(&self, path: &[Option<u32>], level: usize, x: u32) -> Option<String> {
         match self.levels.get(level)? {
             Level::Values => Some(self.table.data_fields.get(x as usize)?.caption.clone()),
+            // A field a collapsed item hides above the Values level (t4699 CV3, CV4): the line's
+            // node is above it, so it has no item and an empty label, the engine's reading
+            // (UNVERIFIED, T-4938).
+            Level::Field { depth, .. } if x == HIDDEN && *depth >= path.len() => {
+                Some(String::new())
+            }
             Level::Field { depth, field } => {
                 let item = (*path.get(*depth)?)?;
                 let cache_field = self
@@ -194,7 +201,9 @@ impl Plotted<'_> {
                 tuple.clear();
                 continue;
             }
-            tuple.truncate(line.repeat as usize);
+            // A line may repeat more levels than the line before it has: the levels a collapsed
+            // item hides (t4699 CV3, `r="2"` after `East`'s own line).
+            tuple.resize(line.repeat as usize, HIDDEN);
             tuple.extend_from_slice(&line.items);
             // A line followed by one of its descendants (which repeats all of its tuple) is an
             // item's line above its children, not a point.
