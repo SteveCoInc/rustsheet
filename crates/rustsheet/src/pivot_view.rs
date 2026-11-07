@@ -1,9 +1,11 @@
 //! [`Workbook::pivot_table`]: a read-only view of one pivot table (SPEC-0032 "API", T-4178), its
-//! place, its source and its fields; and [`Workbook::pivot_table_cells`], the cells the engine's
-//! grid writer would write for it. The view reads metadata only, so it costs no layout.
+//! place, its source and its fields; [`Workbook::pivot_table_cells`], the cells the engine's
+//! grid writer would write for it; and [`Workbook::pivot_cell_records`], the source records
+//! behind one of its value cells (T-4184). The view reads metadata only, so it costs no layout.
 
 use rustsheet_engine::pivot::{
-    AxisField, PivotBudget, PivotComputeError, PivotTable, SourceCells, VALUES,
+    compute, lay_out, records_behind, AxisField, PivotBudget, PivotComputeError, PivotTable,
+    SourceCells, VALUES,
 };
 use rustsheet_engine::types::Workbook as EngineWorkbook;
 
@@ -166,5 +168,57 @@ impl Workbook {
         }
         cells.sort_by_key(|(cell, _)| (cell.row, cell.col));
         Ok(cells)
+    }
+
+    /// The source records behind the value cell `cell` of the pivot `name` on `sheet` (the
+    /// drill-down of Excel's Show Details), as cache record indices (0 for the source's first
+    /// record, the row below its header), in record order. A data cell's are the records the
+    /// pivot's filters keep (page selections and hidden items) whose items are its row's and
+    /// column's; a subtotal's, those under its item; a grand total's, every record kept. A value
+    /// cell no record reaches has none. The pivot is laid out as
+    /// [`Workbook::pivot_table_cells`] lays it out now, so a loaded pivot not yet refreshed is
+    /// read from its cache, not its saved cells. The set is checked against Excel's values of
+    /// the cells; the sheet Excel's Show Details creates, its row order and its columns, is
+    /// unprobed (docs/excel-semantics/pivots.md "Show Details", T-4879). Top-N, value and label
+    /// filters are not applied yet (T-4165), so for a pivot with one the records include some
+    /// that Excel's totals leave out.
+    ///
+    /// There are at most `MAX_RECORDS` records, and the work is bounded by one pivot's
+    /// `PivotBudget`, spent on the layout and then on the records, so a pivot near the limit
+    /// can pass it here and not in [`Workbook::pivot_table_cells`]: the pivot is computed and laid
+    /// out twice, once for the plan and once for the records (T-4896 removes the second).
+    ///
+    /// # Errors
+    /// [`PivotError::UnknownPivot`] when the sheet has no pivot of that name,
+    /// [`PivotError::NotAValueCell`] when `cell` is none of its value cells (a label, a header,
+    /// a cell outside it or on another sheet, or any cell of a pivot that collapses to
+    /// `#SPILL!`), and the errors of [`Workbook::pivot_table_cells`].
+    pub fn pivot_cell_records(
+        &self,
+        sheet: SheetId,
+        name: &str,
+        cell: CellRef,
+    ) -> Result<Vec<u32>, PivotError> {
+        let workbook = &self.model.workbook;
+        let table = pivot_position(workbook, sheet, name)
+            .ok_or_else(|| PivotError::UnknownPivot(name.to_string()))?;
+        if cell.sheet != sheet {
+            return Err(PivotError::NotAValueCell);
+        }
+        // The plan says whether the pivot fits or collapses to `#SPILL!`; it keeps neither its
+        // result nor its layout, so both are made again below (T-4896).
+        let mut budget = PivotBudget::default();
+        let plan = (self.model).plan_pivot_render(table, &mut budget)?;
+        let placement = (plan.placements.into_iter().next())
+            .filter(|placement| !placement.spilled)
+            .ok_or(PivotError::NotAValueCell)?;
+        let pivot = &placement.pivot;
+        let cache = (workbook.pivot_caches.get(pivot.cache as usize))
+            .ok_or(PivotError::Compute(PivotComputeError::Malformed))?;
+        let work = &mut budget.work;
+        let result = compute(pivot, cache, work)?;
+        let layout = lay_out(pivot, cache, &result, work)?;
+        records_behind(pivot, cache, &result, &layout, cell.row, cell.col, work)?
+            .ok_or(PivotError::NotAValueCell)
     }
 }

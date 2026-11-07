@@ -1,17 +1,18 @@
 //! The pivot table API of the facade (SPEC-0032 "API", T-4178) for Python: the transaction's
-//! `add_pivot_table`, `set_pivot_table` and `refresh_pivot_table` ops, and the dictionaries
-//! `Workbook.pivot_table` and `Workbook.pivot_table_cells` return.
+//! `add_pivot_table`, `set_pivot_table` and `refresh_pivot_table` ops, the dictionaries
+//! `Workbook.pivot_table` and `Workbook.pivot_table_cells` return, and the records
+//! `Workbook.pivot_cell_records` returns (T-4184).
 
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use rustsheet::{
-    parse_range, resolve_sheet_by_name, CellRef, EditError, PivotFunction, PivotTableInput,
-    PivotView, SheetId, Txn, Value,
+    parse_cell, parse_range, resolve_sheet_by_name, CellRef, EditError, PivotFunction,
+    PivotTableInput, PivotView, SheetId, Txn, Value, Workbook,
 };
 
-use crate::facade::{find_sheet, name_of, sheet_pairs, value_to_py};
+use crate::facade::{find_sheet, name_of, sheet_names, sheet_pairs, value_to_py};
 
 /// A pivot as the Python call gives it: ranges in A1, the function by name.
 pub(crate) struct PivotSpec {
@@ -148,4 +149,32 @@ pub(crate) fn cells_to_py<'py>(
         out.set_item(cell.to_a1_in(&sheet), value_to_py(py, value)?)?;
     }
     Ok(out)
+}
+
+/// A pivot's cells, as `Workbook.pivot_table_cells` reads them.
+type Cells = Vec<(CellRef, Value)>;
+
+/// `Workbook.pivot_table_cells`'s read: the pivot's cells and the workbook's sheets.
+pub(crate) fn cells(
+    wb: &Workbook,
+    sheet: &str,
+    name: &str,
+) -> Result<(Cells, Vec<(SheetId, String)>), EditError> {
+    let cells = wb.pivot_table_cells(wb.sheet_id(sheet)?, name)?;
+    Ok((cells, sheet_names(wb)))
+}
+
+/// `Workbook.pivot_cell_records`: `a1` on `sheet` unless it names its own sheet.
+pub(crate) fn cell_records(
+    wb: &Workbook,
+    sheet: &str,
+    name: &str,
+    a1: &str,
+) -> Result<Vec<u32>, EditError> {
+    let id = wb.sheet_id(sheet)?;
+    let cell = parse_cell(a1, |on| match on {
+        None => Some(id),
+        Some(on) => wb.sheet_id(on).ok(),
+    })?;
+    Ok(wb.pivot_cell_records(id, name, cell)?)
 }

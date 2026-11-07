@@ -226,8 +226,9 @@ fn pivot_fields(
         .collect()
 }
 
-/// Why a pivot table could not be created, set or refreshed ([`EditError::Pivot`]). The edit
-/// then fails and the workbook is as it was.
+/// Why a pivot table could not be created, set or refreshed ([`EditError::Pivot`]); the edit
+/// then fails and the workbook is as it was. The pivot reads (`Workbook::pivot_table_cells`,
+/// `Workbook::pivot_cell_records`) fail with it too.
 #[derive(thiserror::Error, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum PivotError {
@@ -289,6 +290,12 @@ pub enum PivotError {
     /// be renumbered under parts of its definition kept verbatim.
     #[error(transparent)]
     Refresh(PivotRefreshError),
+    /// [`Workbook::pivot_cell_records`](crate::Workbook::pivot_cell_records) was given a cell
+    /// that is none of the pivot's value cells: a label, a header, a page field, a cell outside
+    /// the pivot or on another sheet, a cell of a line that holds no values, or any cell of a
+    /// pivot with no data field or of one that collapses to `#SPILL!`.
+    #[error("the cell is not a value cell of the pivot table")]
+    NotAValueCell,
     /// Pivot parts the xlsx importer would skip, or past the workbook's pivot limits, and why:
     /// the doc-hidden `Workbook::load_pivot_parts`, harness support for the eval adapter.
     #[error("pivot parts: {0}")]
