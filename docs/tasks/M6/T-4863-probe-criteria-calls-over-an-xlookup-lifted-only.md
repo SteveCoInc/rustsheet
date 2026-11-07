@@ -3,7 +3,7 @@ id: T-4863
 title: "Probe criteria calls over an XLOOKUP lifted only by match_mode or search_mode, and settle the COUNTIF-over-a-computed-array wording"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -24,3 +24,6 @@ Excel evidence decides what `COUNTIF(XLOOKUP(2,A1:A3,B1:B3,"x",{0;1}),">0")` and
 
 ## Out of scope
 - The array-criterion broadcast (T-4826).
+
+## Outcome
+Probe `probes/t4863-xlookup-mode-lift-criteria` (excel-graph, 2026-11-07; 129 cells): a match_mode or search_mode array over a scalar lookup_value lifts XLOOKUP to a grid (ROWS 2, COLUMNS 1 for `{0;1}`; 1x2 for `{0,1}`), and COUNTIF and SUMIF (range or sum_range) over it give an array of `#VALUE!`, exactly as for a lookup_value lift; a 1x1 `{0}` mode is a scalar `#VALUE!`; a range if_not_found does not lift (COUNTIF 2, SUMIF 110). Ours matched all but the spill shape of the mode-only lifts (12 cells, a scalar statically instead of a grid): filed as T-5037. lookup.md's COUNTIF sentence is reworded to the evidence (the web-failed workbook was not a probe of COUNTIF's range argument). Eval: new probe case, 117 of 129 cells pass; no baseline change.
