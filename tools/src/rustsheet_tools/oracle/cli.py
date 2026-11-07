@@ -5,7 +5,7 @@
   rustsheet-oracle recalc -b BACKEND in.xlsx      recalc one workbook, print formula values as JSON
   rustsheet-oracle fill -b BACKEND --suite S      write <case>.oracle.json for cases lacking one
   rustsheet-oracle calibrate -b BACKEND --suite S compare the oracle with an xlsx suite's cached values
-  rustsheet-oracle resave -b BACKEND DIR --out OUT have the backend open and save each DIR/*.xlsx (T-4890)
+  rustsheet-oracle resave -b BACKEND DIR --out OUT have the backend open and save each DIR/*.xlsx and *.xlsm (T-4890)
 
 Every workbook is sent with an embedded canary sheet (oracle/canary.py) whose poisoned cached
 values must come back recalculated; otherwise that workbook's results are refused.
@@ -344,7 +344,7 @@ def resave_all(backend: Any, inputs: list[Path], out: Path) -> dict[str, dict[st
 
 def cmd_resave(args: argparse.Namespace) -> int:
     backend = _backend(args.backend)
-    inputs = sorted(args.input.glob("*.xlsx"))
+    inputs = sorted(p for p in args.input.iterdir() if p.suffix in (".xlsx", ".xlsm"))
     if args.limit:
         inputs = inputs[: args.limit]
     results = resave_all(backend, inputs, args.out)
