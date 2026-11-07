@@ -206,10 +206,11 @@ fn map_and_reduce_hand_the_lambda_each_nested_cell() {
 }
 
 #[test]
-fn aggregates_flatten_or_are_not_available() {
-    // probes/t2592-nested-groupby-cells A6:A10, probes/t2594-nested-aggregates (T-2594): SUM,
-    // COUNT and COUNTA flatten the nested cells; AVERAGE, MIN, MAX and PRODUCT are `#N/A`;
-    // ARRAYTOTEXT is `#CALC!`.
+fn aggregates_read_nested_cells_as_errors() {
+    // Excel's 2026-11-06 reads (decision 0329, T-4736): SUM is `#N/A`, COUNT skips the nested
+    // cells and COUNTA counts each as one value (probes/t2592-nested-groupby-cells-refill-1106
+    // A6:A8, t2594-nested-aggregates-refill-1106 A26); AVERAGE, MIN, MAX and PRODUCT are `#N/A`;
+    // ARRAYTOTEXT is `#CALC!` (probes/t2594-nested-aggregates).
     let mut model = groups();
     model._set("F1", &format!("=SUM({NESTED})"));
     model._set("F2", &format!("=COUNT({NESTED})"));
@@ -220,21 +221,22 @@ fn aggregates_flatten_or_are_not_available() {
     model._set("F7", &format!("=ARRAYTOTEXT({NESTED})"));
     model._set("F8", &format!("=SUM(1,{NESTED},2)"));
     model.evaluate();
-    assert_eq!(model._get_text("F1"), "220");
-    assert_eq!(model._get_text("F2"), "16");
-    assert_eq!(model._get_text("F3"), "19");
+    assert_eq!(model._get_text("F1"), "#N/A");
+    assert_eq!(model._get_text("F2"), "0");
+    assert_eq!(model._get_text("F3"), "9");
     assert_eq!(model._get_text("F4"), "#N/A");
     assert_eq!(model._get_text("F5"), "#N/A");
     assert_eq!(model._get_text("F6"), "#N/A");
     assert_eq!(model._get_text("F7"), "#CALC!");
-    assert_eq!(model._get_text("F8"), "223");
+    assert_eq!(model._get_text("F8"), "#N/A");
 }
 
 #[test]
-fn flattening_and_handing_over_copies_is_bounded() {
-    // SUM over 200 free copies of a 1,048,512-cell nested cell, and REDUCE handing each copy to
-    // its LAMBDA, pass the walk budget (2^27 cells) at the 129th copy: `#ERROR!`, in time bounded
-    // by the budget (DEVIATION, arrays.md "Nested GROUPBY and PIVOTBY cells: bounds").
+fn handing_over_copies_is_bounded() {
+    // REDUCE handing each of 200 free copies of a 1,048,512-cell nested cell to its LAMBDA passes
+    // the walk budget (2^27 cells) at the 129th copy: `#ERROR!`, in time bounded by the budget
+    // (DEVIATION, arrays.md "Nested GROUPBY and PIVOTBY cells: bounds"). SUM no longer reads a
+    // nested cell's contents (T-4736): it is `#N/A` at once, however large the copies.
     let mut model = groups();
     // The walk budget under test, not the formula work budget, which the reads now also charge.
     model.area_budget.limit = u64::MAX;
@@ -242,16 +244,16 @@ fn flattening_and_handing_over_copies_is_bounded() {
                   CHOOSECOLS(CHOOSEROWS(r,SEQUENCE(200)^0),2))";
     model._set("F1", &format!("=SUM({copies})"));
     model._set("G1", &format!("=REDUCE(0,{copies},LAMBDA(a,x,a+1))"));
-    // Within the budget, every copy is read in full.
+    // Within the budget too, SUM reads no copy.
     model._set(
         "H1",
         "=SUM(CHOOSECOLS(CHOOSEROWS(GROUPBY(A2,C2,LAMBDA(v,SEQUENCE(1000)),0,0),\
          SEQUENCE(200)^0),2))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("F1"), "#ERROR!");
+    assert_eq!(model._get_text("F1"), "#N/A");
     assert_eq!(model._get_text("G1"), "#ERROR!");
-    assert_eq!(model._get_text("H1"), "100100000");
+    assert_eq!(model._get_text("H1"), "#N/A");
 }
 
 #[test]
