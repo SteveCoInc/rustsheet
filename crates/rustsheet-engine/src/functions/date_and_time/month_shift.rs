@@ -48,10 +48,7 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         };
         let na = written_empty_na(cell);
-        let (start, months) = (
-            written_empty_or(start, 0, empty, &na),
-            written_empty_or(months, 1, empty, &na),
-        );
+        let [start, months] = written_empty_or([start, months], empty, &na);
         let serial_number = match self.cast_number_no_bools_ref(start, cell) {
             Ok(c) => c.floor() as i64,
             Err(s) => return s,
@@ -89,14 +86,11 @@ impl Model {
         empty: &[usize],
         cell: CellReferenceIndex,
     ) -> CalcResult {
+        let na = written_empty_na(cell);
         let [start, months] = values else {
             return CalcResult::new_args_number_error(cell);
         };
-        let na = written_empty_na(cell);
-        let (start, months) = (
-            written_empty_or(start, 0, empty, &na),
-            written_empty_or(months, 1, empty, &na),
-        );
+        let [start, months] = written_empty_or([start, months], empty, &na);
         let serial_number = match self.cast_number_no_bools_ref(start, cell) {
             Ok(c) if c.floor() < 0.0 => return num_error(cell),
             Ok(c) => c.floor() as i64,

@@ -176,7 +176,7 @@ impl Model {
             _ => return CalcResult::new_args_number_error(cell),
         };
         let na = written_empty_na(cell);
-        let serial = written_empty_or(serial, 0, empty, &na);
+        let [serial] = written_empty_or([serial], empty, &na);
         // A boolean serial is #VALUE!, before the return_type is read (`WEEKNUM(<FALSE cell>,1)`;
         // dates.md "WEEKNUM of a boolean serial is #VALUE!", gen-m6, T-2276); WEEKDAY and
         // ISOWEEKNUM read it as 1. A typed or array-constant boolean is `#VALUE!` too

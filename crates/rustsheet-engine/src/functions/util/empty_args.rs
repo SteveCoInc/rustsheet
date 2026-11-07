@@ -31,8 +31,8 @@ impl Model {
     }
 }
 
-/// The Analysis `ToolPak` rule for a written-empty required argument (T-4870): argument `index`'s
-/// value, or `na` where that argument is written empty (`empty` from
+/// The Analysis `ToolPak` rule for a written-empty required argument (T-4870): the first arguments'
+/// values, each replaced by `na` where that argument is written empty (`empty` from
 /// [`Model::written_empty_required`]). A kernel swaps its arguments through this before reading them
 /// in Excel's order, so it meets the `#N/A` at that argument's turn and a lifted call gives it per
 /// element, as MROUND and GCD read theirs (arrays.md "MROUND keeps its scalar rules", coercion.md):
@@ -40,17 +40,17 @@ impl Model {
 /// (basis is read first) and `ROWS(EDATE({1;2},))` 2 (probes/t4870-empty-date-args,
 /// t4870-r3-order-and-lift). Nothing is copied: the other arguments, holidays included, are read
 /// where they are.
-pub(crate) fn written_empty_or<'a>(
-    value: &'a CalcResult,
-    index: usize,
+pub(crate) fn written_empty_or<'a, const N: usize>(
+    values: [&'a CalcResult; N],
     empty: &[usize],
     na: &'a CalcResult,
-) -> &'a CalcResult {
-    if empty.contains(&index) {
-        na
-    } else {
-        value
-    }
+) -> [&'a CalcResult; N] {
+    let mut index = 0;
+    values.map(|value| {
+        let swapped = if empty.contains(&index) { na } else { value };
+        index += 1;
+        swapped
+    })
 }
 
 /// The `#N/A` [`written_empty_or`] hands a kernel.

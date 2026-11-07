@@ -152,10 +152,7 @@ impl Model {
             return Err(CalcResult::new_args_number_error(cell));
         };
         let na = written_empty_na(cell);
-        let (start, days) = (
-            written_empty_or(start, 0, empty, &na),
-            written_empty_or(days, 1, empty, &na),
-        );
+        let [start, days] = written_empty_or([start, days], empty, &na);
         let start = self.cast_number_no_bools_ref(start, cell)?.floor() as i64;
         let date = self.excel_date(start, cell)?;
         let days = self.cast_number_no_bools_ref(days, cell)?.floor() as i32;

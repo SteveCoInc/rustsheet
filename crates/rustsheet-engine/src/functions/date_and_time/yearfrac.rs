@@ -48,10 +48,7 @@ impl Model {
             _ => return CalcResult::new_args_number_error(cell),
         };
         let na = written_empty_na(cell);
-        let (start, end) = (
-            written_empty_or(start, 0, empty, &na),
-            written_empty_or(end, 1, empty, &na),
-        );
+        let [start, end] = written_empty_or([start, end], empty, &na);
         // Excel reads `basis` first and range-checks it, then the start date, then the end date:
         // `YEARFRAC(1/0,45000,NA())` is #N/A and `YEARFRAC(NA(),45000,5)` is #NUM!
         // (probes/scalar-lift-open-d W1-W7, probes/yearfrac-basis-order; dates.md "Date

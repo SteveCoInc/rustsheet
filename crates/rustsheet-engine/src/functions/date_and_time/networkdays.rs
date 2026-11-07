@@ -83,10 +83,7 @@ impl Model {
             return Err(CalcResult::new_args_number_error(cell));
         };
         let na = written_empty_na(cell);
-        let (start, end) = (
-            written_empty_or(start, 0, empty, &na),
-            written_empty_or(end, 1, empty, &na),
-        );
+        let [start, end] = written_empty_or([start, end], empty, &na);
         // NETWORKDAYS.INTL reads the weekend before the dates: `NETWORKDAYS.INTL(NA(),45030,99)` is
         // `#NUM!` and `NETWORKDAYS.INTL(1/0,45030,NA())` `#VALUE!` (probes/date-text-weekend-3d
         // Q2, Q32, Q33).
