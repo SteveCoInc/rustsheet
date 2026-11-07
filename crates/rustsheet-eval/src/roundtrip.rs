@@ -432,14 +432,15 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
 }
 
 /// Scores `theirs`, another writer's save of `ours`, as R0 scores an output against its source:
-/// validator problems, parts, elements and attributes, then the semantic facts, with our values
-/// as the saved side. Returns the items and how many of ours were compared (T-4890).
+/// validator problems, parts, elements and attributes, then the semantic facts, with our cached
+/// values as the saved side (not recalculated: two packages are compared, not our engine against
+/// one). Returns the items and how many of ours were compared (T-4890).
 ///
 /// # Errors
 /// When `ours` is not a readable package or does not load.
 pub fn package_diff(ours: &[u8], theirs: &[u8], name: &str) -> anyhow::Result<(Vec<Item>, usize)> {
     let source = Package::read(ours)?;
-    let saved = scenarios::load(ours, Some(name)).map_err(|e| match e {
+    let saved = scenarios::load_stored(ours, Some(name)).map_err(|e| match e {
         scenarios::R0Error::Source(e) | scenarios::R0Error::Engine(e) => anyhow::anyhow!(e),
     })?;
     let sides = Sides {

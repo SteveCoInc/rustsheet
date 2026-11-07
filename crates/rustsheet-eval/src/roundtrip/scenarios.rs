@@ -162,6 +162,14 @@ fn again(out: &[u8], name: Option<&str>, label: &'static str) -> Result<Scored, 
 
 /// Loads `bytes` with the harness clock and recalculates, as every scenario starts.
 pub(super) fn load(bytes: &[u8], name: Option<&str>) -> Result<Workbook, R0Error> {
+    let mut workbook = load_stored(bytes, name)?;
+    workbook.recalculate();
+    Ok(workbook)
+}
+
+/// The workbook as `bytes` store it, with the harness clock and no recalculation: its values are
+/// the cached ones (`package-diff`, T-4890, compares two packages, not our engine against one).
+pub(super) fn load_stored(bytes: &[u8], name: Option<&str>) -> Result<Workbook, R0Error> {
     let opts = LoadOptions {
         recalc: false,
         workbook: harness_options(name).map_err(R0Error::Engine)?,
@@ -170,7 +178,6 @@ pub(super) fn load(bytes: &[u8], name: Option<&str>) -> Result<Workbook, R0Error
     let mut workbook = Workbook::from_xlsx_bytes(bytes, &opts)
         .map_err(|e| R0Error::Engine(format!("import failed: {e}")))?;
     workbook.pin_clock_from_metadata();
-    workbook.recalculate();
     Ok(workbook)
 }
 
