@@ -351,14 +351,18 @@ record placement, Excel's own labels whatever the file lists, whole-number label
 relabel order, and groupings dropped over blanks or dates. probes/t4128-pivot-spike G (`45000-45100`,
 `45100-45200`, `45300-45400` for fractional data, empty groups hidden) agrees with it.
 
-Excel also tolerates group items it does not rebuild. The case builder's numeric labels (`group_labels`,
+Excel also tolerates numeric range-group items it does not rebuild. The case builder's numeric labels (`group_labels`,
 `while lo <= end`) write one bin past `endNum`: t4128 G's `<fieldGroup>` lists 7 `groupItems`
 (`<45000`, five bins up to `45400-45500`, `>45400`) where Excel's own grouping of startNum 45000, endNum
 45400, interval 100 has 6 (`<45000`, four bins, `>45400`), and its pivotField lists 7 `<item x>`. Excel
-opens the file (refreshOnLoad), rebuilds the groups and renders its own items without error. The
-xlsx importer instead refuses the pivot (`item index 6 is past the field's items`,
-crates/rustsheet-xlsx/src/import/pivots/table.rs), so it is not rendered (T-4171).
+opens the file (refreshOnLoad), rebuilds the groups and renders its own items without error.
 Status: VERIFIED (excel-graph; evidence in web.md, the tolerance by t4128 G's sidecar)
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`read_item`): on a `refreshOnLoad`
+cache an `<item x>` of a numeric range group past its rebuilt groups is dropped, and the refresh lays
+the field out again; without `refreshOnLoad`, on a date or manual group, or on an ungrouped field, the
+pivot is still refused (T-4171; t4128 G renders Excel's 6 items). UNVERIFIED (T-4802): whether Excel
+tolerates such an item without `refreshOnLoad`, or on a date group or a manual group (whose labels Excel
+does not rebuild).
 
 ## Manual groups and date levels as Excel for the web renders them
 Rule (manual groups, probes/t4170-pivot-manual-groups): Excel for the web opens and renders a refreshOnLoad pivot
@@ -425,8 +429,18 @@ dates, blanks or errors, a group field on the columns or pages, days,
 hours, minutes or seconds beside other levels, levels that skip one, the base field off the axes with only added
 levels shown, the shape without `par`, and `showAll="1"` on a level.
 Implemented in: the case builder (tools/src/rustsheet_tools/pivot_groups.py, the `discrete` and `date_group` field
-entries; Rust mirror crates/rustsheet-eval/src/pivot_definition/groups.rs). The engine renders none of the pivots but
-DM (T-4171: the importer skips the manual-group cache, and the load-time refresh loses the added date fields).
+entries; Rust mirror crates/rustsheet-eval/src/pivot_definition/groups.rs). The engine renders every pivot of both
+probes (T-4171): the importer reads the source field's bare `<fieldGroup par>` as naming its group field, not as a
+group, only when `par` names an added field whose `base` is that field, the shape evidenced here; any other bare
+`<fieldGroup>` still skips the cache (crates/rustsheet-xlsx/src/import/pivots/groups.rs `apply_groups`), and keeps each added field's base
+(`AddedGroup`); a refresh derives every added field again from its base's new values, before the base is grouped in
+place, by the M6 rules (`regroup` for a date level, `group_by_discrete` for a manual group;
+crates/rustsheet-engine/src/pivot/added_groups.rs), so the pivot's fields remap by name and the layout stages lay the
+group fields out in every form. The engine's own readings, UNVERIFIED (T-4802): a base item new to the source becomes a
+group item of its own, labelled with the item, after the old ones; the refresh is refused (the pivot keeps its saved
+cells) when that label equals a group's ignoring case, when a date level's base gains a blank (where a refresh drops an
+in-place grouping, web.md), or when the source gains a column named as an added field; an added field whose base left
+the source goes with it. GETPIVOTDATA on these pivots: web.md "GETPIVOTDATA on manual groups and date levels".
 
 ## A pivot that would meet a foreign cell collapses to #SPILL!
 Rule: when a pivot's layout would overwrite cells it does not own, Excel for the web renders nothing
@@ -818,11 +832,11 @@ lines (T-4147):
 Not compared in these engine unit tests, because their harness cannot rebuild the cache or tree
 yet: t4128 R, t4134 I3, t4582 J1, J2 and t4585 N1 have formulas in their sources, which the case
 file does not evaluate; t4582 J3 and J4 depend on date items against cached numbers (T-4612);
-t4128 G is grouped (T-4171) and t4128 K has a calculated field, a Top-N filter and a descending
+t4128 G is grouped and t4128 K has a calculated field, a Top-N filter and a descending
 sort (T-4174, T-4165). The eval scores them all through the engine since T-4152: t4128 R, t4134 I3
 and t4582 J1 to J4 pass there, as do t4585 N1 and the t4627 P_ pivots since T-4694, whose renamed
-fields renumber (the grid writer's unit tests compare them against their sidecars); t4128 G and K
-do not load (T-4171, T-4174).
+fields renumber (the grid writer's unit tests compare them against their sidecars); t4128 G passes
+there since T-4171, and K does not load (T-4174).
 
 The engine's own readings, not probed:
 - `subtotalTop="0"` on an outline row field: the item's own line holds no values and a `default` line

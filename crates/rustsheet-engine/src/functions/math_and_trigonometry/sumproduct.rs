@@ -36,6 +36,14 @@ enum Factors {
 /// sign never shows: adding it leaves SUMPRODUCT's total as it is, and the total is never -0).
 /// Its first error element, row by row, is its cell's error, or else the first in operator order
 /// of the masks' errors at its row and column, as `*` picks the left operand's error first.
+///
+/// An operand may also be a weight ([`Weight`], T-3725): a cached block as tall as the block or
+/// one row, as wide or one column, but not one cell (calipers `pv26_002`'s
+/// `block*header_mask*amount_column`). Where the masks are TRUE the element is the cell's number
+/// times each weight's at its row and column, rounded and flushed as `*` rounds and flushes each
+/// product (`times`: `extended_product`, then a subnormal is 0); a mask that is FALSE makes a
+/// zero, before or after a weight, since no product overflows (the bound, below). A weight's
+/// errors stand at its positions like a mask's.
 struct MaskedBlock {
     numbers: Arc<BlockNumbers>,
     rows: usize,
@@ -43,20 +51,78 @@ struct MaskedBlock {
     /// Whether every row mask is TRUE at each row, every column mask at each column.
     row_on: Vec<bool>,
     column_on: Vec<bool>,
+    /// The weights, in operator order.
+    weights: Vec<Weight>,
+    /// The product of the block's and each weight's largest magnitude: below
+    /// [`MaskedBlock::BOUND`], no element's product overflows into `*`'s `#NUM!`.
+    bound: f64,
     /// The first error element, row by row: its position and error.
     error: Option<(usize, Error)>,
+}
+
+/// A weight of a [`MaskedBlock`]: a cached block of `rows` x `columns`, each 1 or the block's.
+struct Weight {
+    numbers: Arc<BlockNumbers>,
+    rows: usize,
+    columns: usize,
+}
+
+impl Weight {
+    /// Its number at the block's row `i`, column `j`: a one-row or one-column weight repeats.
+    fn get(&self, i: usize, j: usize) -> f64 {
+        let i = if self.rows == 1 { 0 } else { i };
+        let j = if self.columns == 1 { 0 } else { j };
+        let index = i.saturating_mul(self.columns).saturating_add(j);
+        self.numbers.values.get(index).copied().unwrap_or(0.0)
+    }
 }
 
 impl MaskedBlock {
     fn new(numbers: Arc<BlockNumbers>, rows: usize, columns: usize) -> MaskedBlock {
         MaskedBlock {
             error: numbers.first_error.clone(),
+            bound: numbers.largest,
             numbers,
             rows,
             columns,
             row_on: vec![true; rows],
             column_on: vec![true; columns],
+            weights: Vec::new(),
         }
+    }
+
+    /// Products of magnitudes below this are finite, with room for `*`'s rounding.
+    const BOUND: f64 = f64::MAX / 2.0;
+
+    /// Multiplies the block by a cached block `rows` x `columns` when it is a weight (type docs);
+    /// false, leaving the block as it was, when it is not one or its products could overflow.
+    fn weigh(&mut self, numbers: Arc<BlockNumbers>, rows: usize, columns: usize) -> bool {
+        let shaped = (rows == self.rows || rows == 1) && (columns == self.columns || columns == 1);
+        let bound = self.bound * numbers.largest;
+        // `bound` is never NaN: finite magnitudes, stored only below the bound.
+        if !shaped || rows * columns == 1 || bound >= Self::BOUND {
+            return false;
+        }
+        // Its error at index k (row by row) is first met at its row and column of the block; the
+        // map keeps the order, so its first error is first there too.
+        if let Some((index, error)) = &numbers.first_error {
+            let (i, j) = (index / columns, index % columns);
+            let position = i.saturating_mul(self.columns).saturating_add(j);
+            if self
+                .error
+                .as_ref()
+                .is_none_or(|(first, _)| position < *first)
+            {
+                self.error = Some((position, error.clone()));
+            }
+        }
+        self.bound = bound;
+        self.weights.push(Weight {
+            numbers,
+            rows,
+            columns,
+        });
+        true
     }
 
     /// Multiplies the block by `value` when it is a mask (type docs); false, leaving the block as
@@ -107,7 +173,16 @@ impl MaskedBlock {
             && self.column_on.get(j).copied().unwrap_or(false);
         if on {
             let index = i.saturating_mul(self.columns).saturating_add(j);
-            self.numbers.values.get(index).copied().unwrap_or(0.0)
+            // At least one `*` multiplies every cell, and `*` flushes each product below the
+            // smallest normal double to 0 (`times`; numbers.md "Subnormal results become 0"): a
+            // kept subnormal times TRUE is 0, and so is a product that underflows before a
+            // weight would grow it back.
+            let number = self.numbers.values.get(index).copied().unwrap_or(0.0);
+            self.weights
+                .iter()
+                .fold(flush_subnormal(number), |product, weight| {
+                    flush_subnormal(extended_product(product, weight.get(i, j)))
+                })
         } else {
             0.0
         }
@@ -402,7 +477,7 @@ impl Model {
             // Every link is a `*` (checked above), so it has a right operand.
             let (_, right) = value_operands(link)?;
             let right = self.evaluate_node_in_context(right, cell);
-            let is_mask = masked.multiply(&right);
+            let is_mask = masked.multiply(&right) || self.weigh_masked(masked, &right);
             operands.push(right);
             if is_mask {
                 continue;
@@ -426,5 +501,20 @@ impl Model {
             }
             None => MaskedRead::Value(self.charged(value, cell)),
         })
+    }
+
+    /// Multiplies `block` by `operand` when it is a range whose cells are cached and that is a
+    /// weight of it ([`MaskedBlock::weigh`]); reading a cached range evaluates nothing.
+    fn weigh_masked(&mut self, block: &mut MaskedBlock, operand: &CalcResult) -> bool {
+        let CalcResult::Range { left, right } = operand else {
+            return false;
+        };
+        let rows = usize::try_from(right.row - left.row + 1).unwrap_or(0);
+        let columns = usize::try_from(right.column - left.column + 1).unwrap_or(0);
+        if rows > block.rows || columns > block.columns {
+            return false;
+        }
+        self.block_numbers(*left, *right)
+            .is_some_and(|numbers| block.weigh(numbers, rows, columns))
     }
 }
