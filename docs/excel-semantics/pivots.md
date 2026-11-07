@@ -271,8 +271,8 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
   Beta (all formulas the cache records as missing) after the listed M. Excel shows M, Alpha, Zed, Beta
   (J2!A4:A7), which is source order, not ascending (Alpha, Beta, Zed) and not descending.
 
-The default order of a newly created pivot (ascending, by type) is a UI action and not reachable from a
-file.
+The order of a newly created pivot is a UI action and not reachable from a file: Excel's UI may sort its
+items ascending (by type), unprobed (T-4869).
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader`)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`item_cell`: how an item renders; T-4149)
@@ -1325,6 +1325,24 @@ Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`MAX_PIVOT_CELLS`, `location`; T-4147)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`MAX_PIVOT_TEXT_BYTES`; T-4149)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`PivotBudget`; T-4151)
+Implemented in: crates/rustsheet/src/edit/pivot.rs (`PivotError::Limit`: a pivot the API creates, sets
+or refreshes past a limit is not added or changed, and nothing is written; T-4178)
+
+## A pivot created through the API
+Rule: `Txn::add_pivot_table` builds the cache from the source as Excel's refresh reads it and lays the
+pivot out from the top-left cell of its location, with no `<items>` on its fields, so each axis shows its
+items in source order (first appearance) and a blank as `(blank)`, as a refreshed file pivot does ("Items
+show in the order the pivot field lists them"). Excel's UI may sort the items of a pivot it creates
+ascending (by type); unprobed (T-4869). Three rules are the API's own choices, not Excel's evidenced
+behavior: a sheet's pivot names are unique (`PivotError::DuplicateName`), `Txn::set_pivot_table` edits
+a pivot where it is (`PivotError::Moved`), and a new pivot replaces whatever its anchor cell holds (what
+Excel's UI does with a non-empty destination is unprobed). Past its anchor, a layout that meets a stored
+value or formula collapses to `#SPILL!` at the anchor ("A pivot that would meet a foreign cell collapses
+to #SPILL!"), and one that meets a Table, a merged range or another pivot, or passes the sheet's edge,
+collapses the same way ("The grid writer's own readings", UNVERIFIED).
+Evidence: none for a pivot Excel creates (T-4869); the rest follows the refresh entries above.
+Status: UNVERIFIED (probe pending: T-4869)
+Implemented in: crates/rustsheet/src/edit/pivot.rs (`Txn::add_pivot_table`, `Txn::set_pivot_table`; T-4178)
 
 ## Pivots without refreshOnLoad keep their saved cells; a source edit does not re-render
 Rule: Excel for the web does not re-render a pivot whose cache lacks `refreshOnLoad` when it opens the
@@ -1353,7 +1371,7 @@ stored or honoured by Excel for the web"). Not probed:
 desktop Excel (M14). In (c) the range write is the session's first call, so it lands after the load's
 refresh: East 5 shows that refresh read the blank B2.
 Status: VERIFIED (excel-graph)
-Implemented in: crates/rustsheet/src/edit/pivot.rs (`Workbook::refresh_pivots_on_load`, `Txn::refresh_pivot_table`; T-4151)
+Implemented in: crates/rustsheet/src/edit/pivot.rs (`Workbook::refresh_pivots_on_load`, `Txn::refresh_pivot_table`; T-4151, public since T-4178)
 
 ## Pivot field names for duplicate and blank source headers
 Rule: on refresh Excel names each cache field after its source header, made unique ignoring case:

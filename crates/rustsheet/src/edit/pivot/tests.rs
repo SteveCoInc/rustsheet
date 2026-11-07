@@ -98,6 +98,7 @@ fn unused_items_follow_the_records_items_and_show_all_is_the_row_fields() {
     assert_eq!(pivot.fields[0].hidden.len(), 1);
     // On a grouped row field their place among the group items is unprobed: refused.
     let grouped = PivotTableInput {
+        name: "Grouped".into(),
         group: Some(PivotRangeGroup {
             by: None,
             start: 0.0,
