@@ -37,13 +37,14 @@ FORMULATEXT of the loaded file is unprobed: it may keep `=SUM(#REF!C4:C7)`.
   (blank cell, FORMULATEXT `#N/A`), while the bare `=SUM(#REF!)`, stored or typed, is `#REF!` with FORMULATEXT
   `=SUM(#REF!)`, and `ISREF(#REF!)` is FALSE. Stored in a file (hand-built workbooks, dynamic-array and legacy `<f>`),
   every `#REF!<ref>` form makes Excel for the web refuse the workbook (createSession 501), so they cannot be committed.
-- Engine: in typed, external and loaded text the lexer no longer swallows the cell or range after `#REF!`, so that text
-  is a parse error, refused when typed, as in Excel; the engine's own text (a fill or paste re-entering the display)
-  still reads it as `#REF!` (`consume_deleted_sheet_reference`, gated on `engine_text`; review round 1 found autofill
-  giving `#ERROR!` without the gate; test `fill_and_paste_of_a_deleted_sheet_reference_stay_ref`). The xlsx export writes a reference to a deleted sheet as
+- Engine: in typed text only, the lexer no longer swallows the cell or range after `#REF!`, so a typed `#REF!C4:C7`
+  is refused, as in Excel. Every other text still reads it as `#REF!` (`consume_deleted_sheet_reference`, skipped when
+  the lexer is `typed`): a fill or paste re-entering the display (review round 1 found autofill giving `#ERROR!`;
+  test `fill_and_paste_of_a_deleted_sheet_reference_stay_ref`), `set_user_input`, and a loaded file (review round 2:
+  no evidence for changing load; desktop Excel's file form is an M14 question). The xlsx export writes a reference to a deleted sheet as
   the bare `#REF!` (`is_exported_deleted_sheet`, wrong_reference.rs) instead of `#REF!C4:C7`, which Excel for the web
   refused to load; the display still prints `#REF!C4:C7` as Excel's FORMULATEXT does. Tests updated
-  (`a_displayed_deleted_sheet_reference_does_not_parse`, deleted_sheet_reference_export.rs). The refused workbooks
+  (`a_typed_deleted_sheet_reference_does_not_parse`, deleted_sheet_reference_export.rs). The refused workbooks
   were built with spec2xlsx from one-cell specs (`=SUM(#REF!C4:C7)`, `=#REF!$A$1`, `=ISREF(#REF!A1)`, `=SUM(#REF!A:A)`,
   `=SUM(#REF!1:2)`, `=#REF!A1`, each with `=FORMULATEXT(A1)` in A2; and `legacy_formulas: ["A1"]` for the legacy form)
   and `rustsheet-oracle recalc -b excel-graph`. A defined name over the
@@ -51,3 +52,14 @@ FORMULATEXT of the loaded file is unprobed: it may keep `=SUM(#REF!C4:C7)`.
 - references.md "A deleted table or sheet" records it; desktop Excel's own file form is an M14 question.
 - Follow-up filed: T-4757 (T-4446 review MINOR: sheet names with a later mark, INDIRECT and Mc).
 - Eval delta: +9 passing cells (new case); no regressions.
+
+## Landing notes
+- PR #3823, branch agent/engine/T-4628-loaded-ref-range. State when the session's landing window closed (2026-11-07
+  03:22): round 3 pushed (this commit) with `make check-fast` green and `cargo test -p rustsheet_engine -p rustsheet_xlsx
+  -p rustsheet` passing locally; CI not yet run on this head; the reviewer panel has not run on it.
+- Review history: round 1 (head 2b41b538): security, design APPROVE; excel-fidelity REQUEST_CHANGES (autofill/paste of a
+  deleted-sheet reference became `#ERROR!`). Round 2 (head c1e38624): security, design APPROVE; excel-fidelity
+  REQUEST_CHANGES (loaded-file text changed without evidence). Round 3 narrows the lexer refusal to typed text only
+  (`Lexer::typed`), which is what the round-2 finding asked for.
+- Next step: run all three reviewers on this head (round 3 of 3, work-loop step 5), wait for green CI, then enqueue.
+  Do not widen the refusal to loaded or external text again without desktop-Excel evidence (M14).

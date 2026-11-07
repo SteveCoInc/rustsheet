@@ -1112,10 +1112,9 @@ fn a_table_delete_makes_its_references_ref_errors_for_good() {
 }
 
 #[test]
-fn a_displayed_deleted_sheet_reference_does_not_parse() {
+fn a_typed_deleted_sheet_reference_does_not_parse() {
     // Excel displays `S!C4:C7` as `#REF!C4:C7` once S is deleted (T-2340), but refuses that text
-    // typed in or stored in a file (probes/t4628-deleted-sheet-reference-text, T-4628); the bare
-    // `#REF!` parses.
+    // typed in (probes/t4628-deleted-sheet-reference-text, T-4628); the bare `#REF!` parses.
     let mut model = model();
     let inputs = [
         "=SUM(#REF!A1:A3)",
@@ -1124,16 +1123,25 @@ fn a_displayed_deleted_sheet_reference_does_not_parse() {
         "=SUM(#REF!A:A)",
         "=SUM(#REF!)",
     ];
-    for (row, input) in inputs.iter().enumerate() {
-        model
-            .set_user_input(1, row as i32 + 30, 1, (*input).to_string())
-            .unwrap();
+    for input in &inputs[..4] {
+        assert!(
+            model
+                .set_typed_user_input(1, 30, 1, (*input).to_string())
+                .is_err(),
+            "{input}"
+        );
     }
+    model
+        .set_typed_user_input(1, 34, 1, inputs[4].to_string())
+        .unwrap();
+    // Untyped text (a loaded file, an embedder's `set_user_input`) still reads it as `#REF!`.
+    model
+        .set_user_input(1, 35, 1, inputs[0].to_string())
+        .unwrap();
     model.evaluate();
-    for row in 30..34 {
-        assert_eq!(value(&model, 1, row, 1), "#ERROR!", "row {row}");
-    }
+    assert_eq!(value(&model, 1, 30, 1), "");
     assert_eq!(value(&model, 1, 34, 1), "#REF!");
+    assert_eq!(value(&model, 1, 35, 1), "#REF!");
 }
 
 #[test]
