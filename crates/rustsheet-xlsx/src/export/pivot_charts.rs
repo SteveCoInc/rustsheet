@@ -49,6 +49,7 @@ use rustsheet_engine::types::NumFmt;
 
 use super::escape::escape_xml_text;
 use super::worksheets::saved_number;
+use crate::import::reference_of;
 
 use super::patch::MAX_DEPTH;
 
@@ -459,6 +460,69 @@ fn series_xml(
         }
     }
     out.push(&format!("</{p}ser>"))
+}
+
+/// The sheet and the name of the pivot a chart part is bound to, as its `c:pivotSource` names it
+/// (`[file]Sheet!Name`; Excel writes its own file name in the brackets, t4187); `None` when the
+/// part names none or does not parse. A sheet written in quotes, `'My sheet'!Name`, is read with
+/// its doubled quotes undone (UNVERIFIED: the evidence's names, `C!P_C`, are bare; T-4991).
+pub(super) fn pivot_source(chart_xml: &str) -> Option<(String, String)> {
+    let mut reader = Reader::from_str(chart_xml);
+    let mut depth = 0usize;
+    // Whether the open element is `c:pivotSource` (depth 2) or its `c:name` (depth 3).
+    let (mut in_source, mut in_name) = (false, false);
+    let mut name = String::new();
+    loop {
+        match reader.read_event().ok()? {
+            Event::Start(e) => {
+                depth += 1;
+                if depth >= MAX_DEPTH {
+                    return None;
+                }
+                let local = e.local_name();
+                in_source |= depth == 2 && local.as_ref() == "pivotSource";
+                in_name = in_source && depth == 3 && local.as_ref() == "name";
+            }
+            Event::End(_) => {
+                if in_name {
+                    return split_pivot_source(&name);
+                }
+                in_source &= depth != 2;
+                depth = depth.saturating_sub(1);
+            }
+            Event::Text(t) if in_name => {
+                name.push_str(&t.xml_content(quick_xml::XmlVersion::Implicit1_0));
+            }
+            Event::GeneralRef(r) if in_name => name.push_str(&reference_of(&r).ok()?),
+            Event::Eof => return None,
+            _ => {}
+        }
+    }
+}
+
+/// `[file]Sheet!Name` as (sheet, name).
+fn split_pivot_source(source: &str) -> Option<(String, String)> {
+    let rest = match source.strip_prefix('[') {
+        Some(bracketed) => bracketed.split_once(']')?.1,
+        None => source,
+    };
+    let Some(quoted) = rest.strip_prefix('\'') else {
+        let (sheet, name) = rest.split_once('!')?;
+        return Some((sheet.to_string(), name.to_string()));
+    };
+    let mut sheet = String::new();
+    let mut chars = quoted.char_indices().peekable();
+    while let Some((at, c)) = chars.next() {
+        if c != '\'' {
+            sheet.push(c);
+        } else if chars.next_if(|&(_, next)| next == '\'').is_some() {
+            sheet.push('\'');
+        } else {
+            let name = quoted.get(at + 1..)?.strip_prefix('!')?;
+            return Some((sheet, name.to_string()));
+        }
+    }
+    None
 }
 
 /// `chart_xml`, a chart part bound to the pivot of `frame`, with its series written from the

@@ -709,7 +709,7 @@ F	roundtrip-poi/51470.xlsx#R1/all	* 229 25d4c634e83e5e06
 F	roundtrip-poi/51585.xlsx#R1/all	* 10029 4a6a92815a1993e5
 F	roundtrip-poi/51710.xlsx#R1/all	* 26583 e88515258f72eb33
 F	roundtrip-poi/51963.xlsx#R1/all	* 229 783d881e59445c1c
-F	roundtrip-poi/52348.xlsx#R1/all	* 334 7c0d3f75e58c2ad8
+F	roundtrip-poi/52348.xlsx#R1/all	* 331 cb6b2ec73c4008a8
 F	roundtrip-poi/52425.xlsx#R1/all	* 163 055d2c301b145c52
 F	roundtrip-poi/52575_main.xlsx#R0	* 221 ae22a0d85f904dad
 F	roundtrip-poi/53101.xlsx#R1/all	* 270 bb9492a29aae2109
