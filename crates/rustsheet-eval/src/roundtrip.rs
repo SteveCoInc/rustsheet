@@ -8,6 +8,7 @@
 
 mod exceptions;
 mod package;
+mod package_diff;
 mod r1;
 pub(crate) mod scenarios;
 mod semantic;
@@ -32,6 +33,7 @@ use crate::suite::{BaselineMode, CaseFile, Suite};
 use crate::xlsx_snapshot::read_snapshot;
 
 use package::{validate, Package, Problem};
+pub use package_diff::{package_diff, PackageDiff};
 
 /// What happened to one fidelity item (SPEC-0033 D2). This slice gives only the verdicts a
 /// part-level comparison can reach.
@@ -431,27 +433,6 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
     (items, checked)
 }
 
-/// Scores `theirs`, another writer's save of `ours`, as R0 scores an output against its source:
-/// validator problems, parts, elements and attributes, then the semantic facts, with our cached
-/// values as the saved side (not recalculated: two packages are compared, not our engine against
-/// one). Returns the items and how many of ours were compared (T-4890).
-///
-/// # Errors
-/// When `ours` is not a readable package or does not load.
-pub fn package_diff(ours: &[u8], theirs: &[u8], name: &str) -> anyhow::Result<(Vec<Item>, usize)> {
-    let source = Package::read(ours)?;
-    let saved = scenarios::load_stored(ours, Some(name)).map_err(|e| match e {
-        scenarios::R0Error::Source(e) | scenarios::R0Error::Engine(e) => anyhow::anyhow!(e),
-    })?;
-    let sides = Sides {
-        source: &source,
-        source_bytes: ours,
-        saved: &saved,
-        name,
-    };
-    Ok(score(scenarios::R0, &sides, theirs))
-}
-
 /// The share of a run's source items that were kept (SPEC-0033 D2): the source items compared,
 /// less those the failing items cover ([`Item::weight`]: a lost subtree counts every element and
 /// attribute in it), over the items compared. `added` items and validator failures cover no source item, so
@@ -770,9 +751,9 @@ pub fn command(
     suites: &[Suite],
     filter: Option<&str>,
     timeout: Duration,
-    mode: Mode,
-    save_dir: Option<&Path>,
+    flags: &Flags,
 ) -> anyhow::Result<(bool, Vec<String>)> {
+    let (mode, save_dir) = (flags.mode(), flags.save_dir.as_deref());
     if filter.is_some() && mode != Mode::Report {
         anyhow::bail!(
             "--filter is not allowed for baseline operations (partial runs look like regressions)"

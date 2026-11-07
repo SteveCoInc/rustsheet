@@ -173,22 +173,12 @@ enum Cmd {
         cached: PathBuf,
         recalculated: PathBuf,
     },
+    /// Score another writer's save of a workbook against ours (T-4890, the Excel re-save probe).
+    PackageDiff(roundtrip::PackageDiff),
     /// Round-trip fidelity (SPEC-0033): load and save each workbook of the suites under
     /// eval/roundtrip, validate the output and score what it kept; writes
     /// eval/runs/latest/roundtrip.{json,md}. `--check` gates the baselines, `--update-baseline`
     /// ratchets them (refusing regressions).
-    /// Score another writer's save of a workbook against our own (SPEC-0033's differ, as R0
-    /// scores an output against its source). T-4890's Excel re-save probe compares each patched
-    /// save with Excel's re-save of it.
-    PackageDiff {
-        /// Our package (the source side).
-        ours: PathBuf,
-        /// The other writer's save of it.
-        theirs: PathBuf,
-        /// Print the items as JSON instead of one line each.
-        #[arg(long)]
-        json: bool,
-    },
     Roundtrip {
         #[command(flatten)]
         sel: Selection,
@@ -696,11 +686,7 @@ fn cmd_check(
             failed = true;
         }
     }
-    Ok(if failed {
-        ExitCode::FAILURE
-    } else {
-        ExitCode::SUCCESS
-    })
+    Ok(ExitCode::from(u8::from(failed)))
 }
 
 fn cmd_lift_kinds(root: &Path, write: bool) -> Result<ExitCode> {
@@ -844,11 +830,7 @@ fn cmd_accuracy(root: &Path, json: Option<PathBuf>, timeout: u64) -> Result<Exit
     let check = accuracy::run(root, &engine, Duration::from_secs(timeout))?;
     print!("{}", check.render());
     check.write_json(&json)?;
-    Ok(if check.passes() {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::FAILURE
-    })
+    Ok(ExitCode::from(u8::from(!check.passes())))
 }
 
 fn load_snapshot(path: &Path) -> Result<WorkbookSnapshot> {
@@ -871,8 +853,11 @@ fn run() -> Result<ExitCode> {
         println!("{}", serde_json::to_string(&comparison)?);
         return Ok(ExitCode::SUCCESS);
     }
-    if let Cmd::PackageDiff { ours, theirs, json } = &cli.cmd {
-        return cmd_package_diff(ours, theirs, *json);
+    if let Cmd::PackageDiff(diff) = &cli.cmd {
+        let (items, summary) = diff.report()?;
+        print!("{items}");
+        eprintln!("{summary}");
+        return Ok(ExitCode::SUCCESS);
     }
     let root = find_root(cli.root)?;
     match cli.cmd {
@@ -965,8 +950,8 @@ fn run() -> Result<ExitCode> {
         }),
         Cmd::Cases { suite } => cmd_cases(&root, &suite),
         Cmd::Accuracy { json, timeout } => cmd_accuracy(&root, json, timeout),
-        Cmd::Roundtrip { sel, flags } => cmd_roundtrip(&root, &sel, flags),
-        Cmd::Snapshot { .. } | Cmd::Compare { .. } | Cmd::PackageDiff { .. } => {
+        Cmd::Roundtrip { sel, flags } => cmd_roundtrip(&root, &sel, &flags),
+        Cmd::Snapshot { .. } | Cmd::Compare { .. } | Cmd::PackageDiff(_) => {
             unreachable!("handled above")
         }
     }
@@ -991,60 +976,14 @@ fn cmd_suites(root: &Path) -> Result<ExitCode> {
 }
 
 /// `rustsheet-eval roundtrip` (SPEC-0033): the gate suites with `--check`, else the selection.
-fn cmd_roundtrip(root: &Path, sel: &Selection, flags: roundtrip::Flags) -> Result<ExitCode> {
+fn cmd_roundtrip(root: &Path, sel: &Selection, flags: &roundtrip::Flags) -> Result<ExitCode> {
     let suites = select_from(Suite::load_roundtrip(root)?, sel, flags.check)?;
-    let mode = flags.mode();
     let timeout = Duration::from_secs(sel.timeout);
-    let (ok, lines) = roundtrip::command(
-        root,
-        &suites,
-        sel.filter.as_deref(),
-        timeout,
-        mode,
-        flags.save_dir.as_deref(),
-    )?;
+    let (ok, lines) = roundtrip::command(root, &suites, sel.filter.as_deref(), timeout, flags)?;
     for line in lines {
         println!("{line}");
     }
-    Ok(if ok {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::FAILURE
-    })
-}
-
-/// `rustsheet-eval package-diff`: the failing items of `theirs` against `ours`, then a summary.
-fn cmd_package_diff(ours: &Path, theirs: &Path, json: bool) -> Result<ExitCode> {
-    let read = |p: &Path| std::fs::read(p).with_context(|| p.display().to_string());
-    let name = ours.file_name().map(|n| n.to_string_lossy().into_owned());
-    let (items, checked) = roundtrip::package_diff(
-        &read(ours)?,
-        &read(theirs)?,
-        name.as_deref().unwrap_or("workbook"),
-    )?;
-    let failing: Vec<&roundtrip::Item> = items
-        .iter()
-        .filter(|i| i.verdict != roundtrip::Verdict::Kept)
-        .collect();
-    if json {
-        println!("{}", serde_json::to_string(&failing)?);
-    } else {
-        for i in &failing {
-            println!(
-                "{} {} {} {}",
-                i.verdict.label(),
-                i.kind,
-                i.key,
-                i.detail.as_deref().unwrap_or("")
-            );
-        }
-    }
-    let lost: usize = failing.iter().map(|i| i.weight).sum();
-    eprintln!(
-        "{checked} items compared, {lost} not kept, {} failing",
-        failing.len()
-    );
-    Ok(ExitCode::SUCCESS)
+    Ok(ExitCode::from(u8::from(!ok)))
 }
 
 fn main() -> ExitCode {
