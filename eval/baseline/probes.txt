@@ -2491,6 +2491,7 @@ C	probes/t4430-legacy-at-name-body-rest.case.json	181
 C	probes/t4437-beta-t-zero-bracket.case.json	333
 C	probes/t4437-beta-zero-fresh.case.json	102
 C	probes/t4437-beta-zero-fresh2.case.json	220
+C	probes/t4440-union-overlap-error-text-trimmean-percentile.case.json	64
 C	probes/t4444-dfunction-text-equal-one.case.json	52
 C	probes/t4446-defined-name-characters.case.json	26
 C	probes/t4447-sort-fractional-keys.case.json	84
