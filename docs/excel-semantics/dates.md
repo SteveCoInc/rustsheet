@@ -801,6 +801,52 @@ and `Model::lift_call` (functions/lift/call.rs), with the kernels `edate_of`, `e
 (functions/date_and_time/month_shift.rs), `weeknum_of` (date_and_time/weeknum.rs) and `yearfrac_of` (date_and_time/yearfrac.rs).
 Tasks: T-1090 (generator modes: every date parameter is `value`, holidays `array`), follow-ups below
 
+## A written-empty argument of the ToolPak date functions: required is `#N/A`, optional is omitted (T-4870)
+Rule: in EDATE, EOMONTH, WORKDAY, NETWORKDAYS, WEEKNUM, YEARFRAC, WORKDAY.INTL and NETWORKDAYS.INTL, a required
+argument that is written empty (`F(,x)`, `F(x,)`) is `#N/A`. So is a required argument that is a LET or LAMBDA
+variable bound to nothing. A blank cell is still a value.
+- The `#N/A` comes at that argument's own turn in the function's read order. An earlier argument's error wins:
+  `EDATE(1/0,)` is `#DIV/0!`, `EDATE("x",)` `#VALUE!`, `EOMONTH(-1,)` and `NETWORKDAYS(-1,)` `#NUM!`.
+- Arguments the function reads first also win: YEARFRAC reads its basis first (`YEARFRAC(,1,9)` is `#NUM!`), and
+  NETWORKDAYS.INTL its weekend (`NETWORKDAYS.INTL(1,,99)` is `#NUM!`).
+- A later argument's error loses: `EDATE(,1/0)` and `WORKDAY(,1/0)` are `#N/A`, and so is `WORKDAY(1,,1/0)`, whose
+  holidays come last.
+- Over an array the empty argument lifts per element: `ROWS(EDATE({1;2},))` and `ROWS(EOMONTH(,{1;2}))` are 2, each
+  element `#N/A`. An element's own earlier error still wins: `INDEX(EDATE({1;"x"},),2)` is `#VALUE!`.
+- A written-empty optional argument (holidays, return_type, basis) is omitted.
+
+Examples:
+- `#N/A`: `EDATE(,1)`, `EDATE(1,)`, `EOMONTH(40000,)`, `WORKDAY(,1)`, `NETWORKDAYS(1,)`, `WEEKNUM(,1)`, `YEARFRAC(1,)`,
+  `WORKDAY.INTL(1,,1)`, `NETWORKDAYS.INTL(,10,1)`, `LET(e,,EDATE(1,e))`, `LAMBDA(a,b,EDATE(a,b))(1,)`.
+- Omitted (the same value as the call without the comma): `WORKDAY(1,5,)` is 6, `WORKDAY(45000,10,)` 45014,
+  `NETWORKDAYS(45000,45030,)` 23, `WEEKNUM(45000,)` 11 (type 1), `YEARFRAC(13816,16816,)` 8.21111111111111,
+  `WORKDAY.INTL(45000,10,11,)` 45012, `NETWORKDAYS.INTL(45000,45030,11,)` 27, `LET(h,,WORKDAY(45000,10,h))` 45014.
+- Not ToolPak, so unchanged: `DAYS(10,)` is 10 and `WEEKDAY(45000,)` is `#NUM!`.
+
+This is the same left-to-right reading and per-element lifting as MROUND and GCD (arrays.md "MROUND keeps its scalar
+rules", coercion.md), and the optional-argument rule of the dynamic-array functions (lookup.md, T-4871).
+
+The rule is about the formula's text, not about values. An argument that only evaluates to nothing is read as
+before: `EDATE(<#VALUE! start>,IFNA(<blank cell>,..))` stays the start's `#VALUE!` (gen-m6/b54448af3fde07ca A297).
+
+The empty `weekend` of the .INTL pair belongs to T-2591.
+
+Evidence (excel-graph, 2026-11-07), three rounds, each with predictions committed in `docs/research/t4870/` before
+its fill:
+- Round 1, probes/t4870-empty-date-args A1:A31: H_na_req 26/31, H_na_all 25/31, H_zero 3/31. No hypothesis predicted
+  the optional cells.
+- Round 2, probes/t4870-r2-empty-optional A1:A14: "an empty optional argument is omitted", 14/14.
+- Round 3, probes/t4870-r3-order-and-lift A1:A24, run after the fidelity review: H_order 23/24, H_first (`#N/A`
+  before everything, one scalar) 6/24. The miss, A18, was a slip in the hand-written TSV. H_order's stated rule reads
+  the start first and so gives `#VALUE!`, as A2 does.
+
+Ours: `Model::empty_arguments` and `written_empty_or` (functions/util/empty_args.rs). The written-empty
+arguments are found once from the nodes, then read as `#N/A` inside each per-element kernel.
+`Model::holidays_arg` (date_and_time/holidays.rs) drops an empty holidays argument, and WEEKNUM drops an empty
+return_type.
+Status: VERIFIED (excel-graph)
+Tasks: T-4870
+
 ## DATEDIF and DAYS360 error order with a bad unit or method
 Rule (probes/datedif-days360-error-order, excel-graph, 2026-10-19, T-1430): both functions read every argument's
 value first, left to right, and only then check the dates' range. An error or non-date text in a date argument

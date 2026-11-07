@@ -2707,6 +2707,9 @@ C	probes/t4844-irr-pad-ladder.case.json	48
 C	probes/t4844-irr-stage-invariance.case.json	60
 C	probes/t4860-fraction-tail-no-pre-point-lacking.case.json	24
 C	probes/t4861-indirect-r1c1-shaped-sheet-prefix.case.json	42
+C	probes/t4870-empty-date-args.case.json	31
+C	probes/t4870-r2-empty-optional.case.json	14
+C	probes/t4870-r3-order-and-lift.case.json	24
 C	probes/t4871-empty-mode-args.case.json	31
 C	probes/t4873-empty-arg-let-lambda.case.json	11
 C	probes/t4873-empty-arg-quotient-ceiling.case.json	55
