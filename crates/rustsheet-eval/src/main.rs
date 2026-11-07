@@ -34,7 +34,7 @@ use rustsheet_eval::deviations;
 use rustsheet_eval::engine::{Engine, RustSheetEngine};
 use rustsheet_eval::evidence_floor::{self, Lock, EVIDENCE_FLOOR, LOCK_PATH};
 use rustsheet_eval::exit_exceptions::ExitExceptions;
-use rustsheet_eval::fetch::{fetch_missing, fetch_suite};
+use rustsheet_eval::fetch::fetch_suite;
 use rustsheet_eval::lift_kinds;
 use rustsheet_eval::milestone_exit;
 use rustsheet_eval::milestone_lists::{self, MilestoneList};
@@ -46,6 +46,7 @@ use rustsheet_eval::report::RunReport;
 use rustsheet_eval::roundtrip;
 use rustsheet_eval::run_meta::RunMeta;
 use rustsheet_eval::runner::{run_suites, CaseResult, RunOptions};
+use rustsheet_eval::select::{to_fetch, Selection};
 use rustsheet_eval::suite::{BaselineMode, FetchState, Suite, ACCURACY_DIR};
 use rustsheet_eval::text_expect;
 use rustsheet_eval::v15_checkpoint;
@@ -65,23 +66,6 @@ struct Cli {
     cmd: Cmd,
 }
 
-#[derive(clap::Args, Clone)]
-struct Selection {
-    /// Restrict to these suites (repeatable). Default: all suites (or gate suites for check).
-    #[arg(long = "suite")]
-    suites: Vec<String>,
-    /// Only cases whose id contains this substring.
-    #[arg(long)]
-    filter: Option<String>,
-    /// Per-case timeout in seconds.
-    #[arg(long, default_value_t = 60)]
-    timeout: u64,
-    /// Fetch each selected external suite whose cache is missing or stale before scoring it,
-    /// instead of skipping it. A failed fetch skips that suite and the run continues.
-    #[arg(long)]
-    fetch_missing: bool,
-}
-
 #[derive(Subcommand)]
 enum Cmd {
     /// List suites and case counts.
@@ -91,6 +75,12 @@ enum Cmd {
         /// Suites to fetch (repeatable). Default: every external suite.
         #[arg(long = "suite")]
         suites: Vec<String>,
+        /// Only suites whose cache is missing or stale; a current cache is left alone.
+        #[arg(long)]
+        missing: bool,
+        /// Only gate suites (`gate = true`); never calipers (SPEC-0035 D3).
+        #[arg(long)]
+        gates: bool,
     },
     /// Run suites and write the report to eval/runs/latest.
     Run {
@@ -221,48 +211,47 @@ fn find_root(explicit: Option<PathBuf>) -> Result<PathBuf> {
     }
 }
 
+/// `rustsheet-eval fetch`: downloads the external suites [`to_fetch`] picks. Every suite is
+/// tried; the run fails at the end, naming each that failed (T-4725).
+fn cmd_fetch(root: &Path, suites: &[String], missing: bool, gates: bool) -> Result<ExitCode> {
+    let all = Suite::load_all(&root.join("eval/suites"))?;
+    let (fetch, current) = to_fetch(&all, suites, missing, gates);
+    if fetch.is_empty() && current.is_empty() {
+        bail!("no matching external suites");
+    }
+    for s in current {
+        println!("{} is current", s.manifest.name);
+    }
+    let mut failed = Vec::new();
+    for s in fetch {
+        match fetch_suite(s) {
+            Ok(files) => println!(
+                "fetched {} ({files} files) -> {}",
+                s.manifest.name,
+                s.cache_dir.display()
+            ),
+            Err(e) => {
+                eprintln!("fetching {} failed: {e:#}", s.manifest.name);
+                failed.push(s.manifest.name.as_str());
+            }
+        }
+    }
+    if !failed.is_empty() {
+        bail!("fetch failed: {}", failed.join(", "));
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
 fn select(root: &Path, sel: &Selection, gate_only: bool) -> Result<Vec<Suite>> {
     select_from(Suite::load_all(&root.join("eval/suites"))?, sel, gate_only)
 }
 
-/// [`select`] over a given list of suites (the round-trip suites use it too).
+/// [`rustsheet_eval::select::select_from`], printing its fetched and skipped lines.
 fn select_from(all: Vec<Suite>, sel: &Selection, gate_only: bool) -> Result<Vec<Suite>> {
-    let chosen: Vec<Suite> = all
-        .into_iter()
-        .filter(|s| {
-            let selected = if sel.suites.is_empty() {
-                !gate_only || s.manifest.gate
-            } else {
-                sel.suites.contains(&s.manifest.name)
-            };
-            if s.fetch_state() == FetchState::NotFetched {
-                if sel.fetch_missing && selected {
-                    return match fetch_missing(s) {
-                        Ok(files) => {
-                            println!("fetched {} ({files} files)", s.manifest.name);
-                            true
-                        }
-                        Err(skip) => {
-                            eprintln!("{skip}");
-                            false
-                        }
-                    };
-                }
-                // A round-trip suite over a cell suite's cache is fetched as that suite.
-                let fetch_as = s.manifest.cases_of.as_ref().unwrap_or(&s.manifest.name);
-                eprintln!(
-                    "skipping {}: not fetched (run `rustsheet-eval fetch --suite {fetch_as}`)",
-                    s.manifest.name
-                );
-                return false;
-            }
-            selected
-        })
-        .collect();
-    if chosen.is_empty() {
-        bail!("no suites selected");
-    }
-    Ok(chosen)
+    let chosen = rustsheet_eval::select::select_from(all, sel, gate_only)?;
+    chosen.fetched.iter().for_each(|line| println!("{line}"));
+    chosen.skipped.iter().for_each(|line| eprintln!("{line}"));
+    Ok(chosen.suites)
 }
 
 fn execute(suites: &[Suite], sel: &Selection) -> Vec<CaseResult> {
@@ -663,7 +652,7 @@ fn cmd_evidence_floor(root: &Path, update: bool, allow_increase: bool) -> Result
             .collect(),
         filter: None,
         timeout: 60,
-        fetch_missing: false,
+        ..Selection::default()
     };
     let suites = select(root, &sel, false)?;
     let catalog = Catalog::load(root)?;
@@ -737,7 +726,7 @@ fn cmd_show(root: &Path, case_id: &str, all: bool) -> Result<ExitCode> {
         suites: vec![suite_name.to_string()],
         filter: Some(case_id.to_string()),
         timeout: 120,
-        fetch_missing: false,
+        ..Selection::default()
     };
     // `load_named` also finds Gate A's tables, which `select` (eval/suites only) never lists.
     let suite = Suite::load_named(root, suite_name)?;
@@ -830,27 +819,11 @@ fn run() -> Result<ExitCode> {
     let root = find_root(cli.root)?;
     match cli.cmd {
         Cmd::Suites => cmd_suites(&root),
-        Cmd::Fetch { suites } => {
-            let all = Suite::load_all(&root.join("eval/suites"))?;
-            let mut fetched = 0;
-            for s in all.iter().filter(|s| {
-                s.manifest.fetch.is_some()
-                    && (suites.is_empty() || suites.contains(&s.manifest.name))
-            }) {
-                let files =
-                    fetch_suite(s).with_context(|| format!("fetching {}", s.manifest.name))?;
-                println!(
-                    "fetched {} ({files} files) -> {}",
-                    s.manifest.name,
-                    s.cache_dir.display()
-                );
-                fetched += 1;
-            }
-            if fetched == 0 {
-                bail!("no matching external suites");
-            }
-            Ok(ExitCode::SUCCESS)
-        }
+        Cmd::Fetch {
+            suites,
+            missing,
+            gates,
+        } => cmd_fetch(&root, &suites, missing, gates),
         Cmd::Run {
             sel,
             out,
