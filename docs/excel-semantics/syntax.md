@@ -122,6 +122,7 @@ Status: VERIFIED (excel-graph); desktop unprobed.
 Rule: Excel for the web refuses a whole workbook holding a formula of more than 8,192 stored characters (ASCII; non-BMP text below; the
 `<f>` text without the leading `=`; createSession 501 `FileCorruptTryRepair`). A formula of 8,192 characters loads.
 RustSheet's xlsx importer refuses the same workbooks with `XlsxError::Workbook` (decision 0047).
+For the other forms Excel refuses at load, the engine's stand-in is a cell-level `#ERROR!` (README "Forms Excel refuses at load", T-4781).
 Evidence: T-1091, probe `operator-chain-limit` (T-1060), probes `formula-length-nonbmp-33pieces` and `name-body-length-*` (T-1386; two more inputs were dropped after the run because Excel cannot load them, so no sidecar can exist: LEN of 34 `&`-joined 120-emoji literals, and an 8,192-character `1+1+...+11` name body), all excel-graph; see "Formula nesting depth cap" below.
 Non-BMP text: Excel counts UTF-16 code units (an emoji is two). A formula holding 33 concatenated 120-emoji literals loads
 (4,063 Unicode scalars, 8,023 units) and one holding 34 is refused (4,186 scalars, 8,266 units; createSession 501). Boundary

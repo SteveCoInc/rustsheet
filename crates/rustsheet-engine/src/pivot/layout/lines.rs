@@ -49,7 +49,10 @@
 //! columns (a row field in compact form, `compact` and `outline` both on, shares its column with
 //! the next level: t4583 R1; either off gives the next level its own, t4609 L3 and L4; Values with
 //! `compactData` and `outlineData`), 1 with no row level but a column field, 0 with neither; the
-//! location is the lines plus those offsets from the anchor. Page fields fill `pageWrap` per
+//! location is the lines plus those offsets from the anchor. Classic layout (`gridDropZones`)
+//! with no column level adds one row and puts `firstHeaderRow` on the first data row (t4129 GZ,
+//! probes/t4745-pivot-classic-subtotal-caption G1; compact and outline form are the engine's
+//! reading, UNVERIFIED, T-4785). Page fields fill `pageWrap` per
 //! column (`rowPageCount` rows), or per row with `pageOverThenDown` (t4137 K4, t4138 G8; the other
 //! orders are T-4650's).
 //!
@@ -100,6 +103,22 @@ pub struct PivotLayout {
     pub location: CellArea,
     /// The rest of `<location>`.
     pub geometry: PivotGeometry,
+}
+
+impl PivotLayout {
+    /// The 0-based (row, column) of the first value cell: the location's top-left cell moved by
+    /// `firstDataRow` and `firstDataCol`. Row line `i` holds its values in row `i` past it, column
+    /// line `j` in column `j` past it.
+    pub(crate) fn data_origin(&self) -> (u32, u32) {
+        (
+            self.location
+                .top
+                .saturating_add(self.geometry.first_data_row),
+            self.location
+                .left
+                .saturating_add(self.geometry.first_data_column),
+        )
+    }
 }
 
 /// One level of an axis: a field of the result's tree, or the Values field.
@@ -551,9 +570,16 @@ fn geometry(table: &PivotTable, rows: &AxisPlan<'_>, columns: &AxisPlan<'_>) -> 
     } else {
         (wrap, across)
     };
+    // Classic layout (`gridDropZones`) keeps a column-header row with no column level, and its
+    // `firstHeaderRow` is then the first data row (t4129 GZ, t4745 G1: 2 and 2); with a column
+    // level its geometry is the plain one (t4745 GC, GV).
+    let classic = options.grid_drop_zones && columns.levels.is_empty();
+    let first_data_row = count(columns.levels.len())
+        .saturating_add(1)
+        .saturating_add(u32::from(classic));
     PivotGeometry {
-        first_header_row: 1,
-        first_data_row: count(columns.levels.len()).saturating_add(1),
+        first_header_row: if classic { first_data_row } else { 1 },
+        first_data_row,
         first_data_column: count(label_columns),
         row_page_count: count(row_pages),
         column_page_count: count(column_pages),

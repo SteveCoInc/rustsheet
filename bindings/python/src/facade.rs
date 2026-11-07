@@ -15,6 +15,8 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyBytes, PyDict, PyInt, PyList};
 use pyo3::{create_exception, IntoPyObjectExt};
 
+use crate::pivots::{self, PivotOp};
+
 use rustsheet::{
     parse_cell, parse_range, resolve_sheet_by_name, ChangeSet, Clock, DateSystem, EditError,
     ErrorKind, Input, Iteration, LoadError, LoadOptions, Password, RangeRef, RefError, SaveOptions,
@@ -180,7 +182,7 @@ fn lone_cells(wb: &Workbook, r: &str, arr: &rustsheet::Array) -> Result<LoneCell
     Ok(lone)
 }
 
-fn value_to_py(py: Python<'_>, value: Value) -> PyResult<Py<PyAny>> {
+pub(crate) fn value_to_py(py: Python<'_>, value: Value) -> PyResult<Py<PyAny>> {
     match value {
         Value::Empty => Ok(py.None()),
         Value::Number(n) => n.into_py_any(py),
@@ -361,11 +363,11 @@ impl PyWorkbook {
 }
 
 /// The name of `id` in a `(id, name)` list.
-fn name_of(names: &[(SheetId, String)], id: SheetId) -> Option<&String> {
+pub(crate) fn name_of(names: &[(SheetId, String)], id: SheetId) -> Option<&String> {
     names.iter().find(|(i, _)| *i == id).map(|(_, n)| n)
 }
 
-fn sheet_names(wb: &Workbook) -> Vec<(SheetId, String)> {
+pub(crate) fn sheet_names(wb: &Workbook) -> Vec<(SheetId, String)> {
     wb.sheets().into_iter().map(|s| (s.id, s.name)).collect()
 }
 
@@ -637,6 +639,53 @@ impl PyWorkbook {
         }
     }
 
+    /// The pivot table `name` on `sheet` as a dict (`name`, `sheet`, `location`, `source`,
+    /// `row_fields`, `column_fields`, `data_fields`), or `None` when the sheet has no such
+    /// pivot. It reads the definition only; `pivot_table_cells` computes the layout.
+    fn pivot_table<'py>(
+        &self,
+        py: Python<'py>,
+        sheet: &str,
+        name: &str,
+    ) -> PyResult<Option<Bound<'py, PyDict>>> {
+        let (view, names) = self
+            .read(py, |wb| {
+                let id = wb.sheet_id(sheet)?;
+                Ok((wb.pivot_table(id, name), sheet_names(wb)))
+            })
+            .map_err(|e: RefError| ref_err(&e))?;
+        view.map(|v| pivots::view_to_py(py, &v, &names)).transpose()
+    }
+
+    /// The cells a layout of the pivot `name` on `sheet` would write now, A1 to value: its
+    /// layout's, or `#SPILL!` at its anchor when it would meet a cell it does not own. Computed
+    /// on each call, bounded as a refresh is. An unknown pivot or one past a limit raises
+    /// `EditError`, an unknown sheet `RefError`.
+    fn pivot_table_cells<'py>(
+        &self,
+        py: Python<'py>,
+        sheet: &str,
+        name: &str,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let (cells, names) =
+            (self.read(py, |wb| pivots::cells(wb, sheet, name))).map_err(|e| edit_err(&e))?;
+        pivots::cells_to_py(py, cells, &names)
+    }
+
+    /// The source records behind the value cell `a1` (`B5`, or `Sheet!B5`) of the pivot `name` on
+    /// `sheet`, as record indices in record order (0 for the row below the source's header).
+    /// A cell that is no value cell, an unknown pivot or one past a limit raises `EditError`.
+    fn pivot_cell_records(
+        &self,
+        py: Python<'_>,
+        sheet: &str,
+        name: &str,
+        a1: &str,
+    ) -> PyResult<Vec<u32>> {
+        let records = self.read(py, |wb| pivots::cell_records(wb, sheet, name, a1));
+        records.map_err(|e| edit_err(&e))
+    }
+
     /// The change set of the last edit as `{"inputs": [...], "values": [...], "sheets": [...]}`;
     /// retained until the next edit (the Rust `Workbook` stores none), `None` before any edit.
     #[getter]
@@ -658,6 +707,8 @@ enum Op {
     RowHidden(String, u32, bool),
     /// A1 range, table name, filtered, totals row.
     AddTable(String, String, bool, bool),
+    /// A pivot table op (`add_pivot_table`, `set_pivot_table`, `refresh_pivot_table`).
+    Pivot(PivotOp),
 }
 
 /// Buffers edits and applies them as one atomic `Workbook::edit` when the `with` block exits
@@ -683,11 +734,11 @@ impl PyTransaction {
 /// Position of `name` in `sheets`, resolved with the facade's own case-insensitive rule. The
 /// facade's `Workbook::sheet_id` cannot be used because the transaction's ops are not applied
 /// yet, so sheets added or renamed earlier in the same block exist only in this list.
-fn sheet_pairs(sheets: &[(SheetId, String)]) -> Vec<(SheetId, &str)> {
+pub(crate) fn sheet_pairs(sheets: &[(SheetId, String)]) -> Vec<(SheetId, &str)> {
     sheets.iter().map(|(id, n)| (*id, n.as_str())).collect()
 }
 
-fn find_sheet(sheets: &[(SheetId, String)], name: &str) -> Result<usize, EditError> {
+pub(crate) fn find_sheet(sheets: &[(SheetId, String)], name: &str) -> Result<usize, EditError> {
     resolve_sheet_by_name(&sheet_pairs(sheets), Some(name))
         .and_then(|id| sheets.iter().position(|(i, _)| *i == id))
         .ok_or_else(|| EditError::Ref(RefError::UnknownSheet(name.to_owned())))
@@ -734,6 +785,7 @@ fn apply(
                 txn.delete_sheet(sheets[i].0)?;
                 sheets.remove(i);
             }
+            Op::Pivot(op) => pivots::apply(txn, op, &sheets)?,
             Op::DefineName(name, formula, None) => txn.define_name(&name, &formula)?,
             Op::DefineName(name, formula, Some(sheet)) => {
                 let i = find_sheet(&sheets, &sheet)?;
@@ -845,6 +897,44 @@ impl PyTransaction {
             filtered,
             totals_row,
         ))
+    }
+
+    /// Creates the pivot table `name` and lays it out from the top-left cell of `location`.
+    /// Keywords: `source` (an A1 range, field names in its first row), `location`, `row` and
+    /// `value` (field names), and optionally `column`, `function` (`"sum"`, the default,
+    /// `"count"`, `"average"`, `"max"`, `"min"`) and `caption` (by default `<Function> of
+    /// <field>`, `"Sum of Sales"`, the case builder's; Excel's own default is unprobed, T-2327).
+    /// A missing or unknown keyword raises `TypeError` and an unknown function
+    /// `ValueError` at once; a bad field, a taken name or a pivot past a limit raises
+    /// `EditError`, and an unknown sheet `RefError`, when the block exits.
+    #[pyo3(signature = (name, **definition))]
+    fn add_pivot_table(
+        &mut self,
+        name: String,
+        definition: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<()> {
+        let spec = pivots::spec(name, definition)?;
+        self.push(Op::Pivot(PivotOp::Add(spec)))
+    }
+
+    /// Replaces the fields and options of the pivot `name` on `sheet`, in place, with the
+    /// keywords of `add_pivot_table`; `location` must keep the pivot's anchor. Cells it no longer
+    /// covers are cleared. Errors as `add_pivot_table`, and `EditError` for an unknown pivot.
+    #[pyo3(signature = (sheet, name, **definition))]
+    fn set_pivot_table(
+        &mut self,
+        sheet: String,
+        name: String,
+        definition: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<()> {
+        let spec = pivots::spec(name.clone(), definition)?;
+        self.push(Op::Pivot(PivotOp::Set(sheet, name, spec)))
+    }
+
+    /// Refreshes the pivot `name` on `sheet` from its source as it holds now (editing the
+    /// source does not). An unknown pivot raises `EditError` when the block exits.
+    fn refresh_pivot_table(&mut self, sheet: String, name: String) -> PyResult<()> {
+        self.push(Op::Pivot(PivotOp::Refresh(sheet, name)))
     }
 
     /// Adds a sheet at the end.

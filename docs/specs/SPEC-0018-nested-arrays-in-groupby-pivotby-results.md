@@ -65,7 +65,7 @@ paragraph starting "A LAMBDA array result is shown as `#VALUE!`, but the cell ho
      inner top-left is `#N/A`), reference-body and PIVOTBY alike, and through LEN, ABS, UPPER, ROUND and NOT as through ERROR.TYPE
      (probes/t4737-nested-cell-lift-error-type A1:A14, 2026-11-07). Landed with T-4737.
    - A lifted INDEX that selects nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4
-     (t2609-nested-operators-and-lifts A56:A59). Engine task: T-4738.
+     (t2609-nested-operators-and-lifts A56:A59). Landed with T-4738 (`index_from_array`, index.rs).
    - An operator over the whole result keeps its shape: `&""` gives 3x3 (A13), and each nested cell becomes `#VALUE!`, whatever
      its size, kind or depth and whatever the operator (`+ - * / ^ % & =`, unary minus, against a scalar, a constant, a range or
      another result): probes/t2609-nested-operators-and-lifts A1:A30, -one-cell A1:A26, A28:A30 and -d04 A1:A17 (excel-graph,

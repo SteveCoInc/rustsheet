@@ -49,7 +49,8 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     text, and no value may be both kept and hidden. `"filter_column": {"col_id": 5}` writes that values
     filter under `colId` 5, which must be 0 or past the table's last column, and `"criterion": false` there
     writes `<filterColumn colId="N"/>` with no criterion; Excel reads neither as filtered, and the
-    engine adapter loads such a table unfiltered (T-4003). The engine adapter loads both. With
+    engine adapter loads such a table unfiltered (T-4003). The engine adapter loads both. `"criteria"` writes
+    one values filter per table column instead (`spec_tables._criteria_columns`, T-4755). With
     `"totals_row": true` the last row of `ref` is the totals row: its cells (labels or formulas) are
     written with the table's totals metadata (T-1607). `"calculated": {"C": "T[[#This Row],[Col]]*2"}`
     writes a `<calculatedColumnFormula>` for column C (T-2969), leaving the data cells as the spec has them. Structured references are stored in their file

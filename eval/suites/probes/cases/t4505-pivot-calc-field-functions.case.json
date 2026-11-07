@@ -1,0 +1,422 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4505: worksheet functions, a text constant and references between calculated fields in a calculated field, as Excel for the web shows them. Data!A1:G7 has Region, Product, Units, Price, Zero, Unit Cost and Bob's: East A 2 10 0 3 1, East A 3 20 0 4 2, East B 1 5 0 2 3, West A 4 10 0 1 4, West B 5 6 0 2 5, West C 0 7 0 1 6 (Units: East A 5, East B 1, West A 4, West B 5, West C 0; Price: East A 30, East B 5, West A 10, West B 6, West C 7). Each sheet is one builder-v2 pivot at A3, rows Product: FX Sum of Units and Sum of fx = INDEX(Units,1); FR Sum of Units and Sum of fr = ROWS(Units); FL Sum of Units and Sum of fl = LOOKUP(Units,Price); FK Sum of Units and Sum of fk = LOOKUP(Price,Units); FM Sum of Units and Sum of fm = MATCH(Units,Units,0); FN Sum of Units and Sum of fn = MATCH(Units,Units); FV Sum of Units and Sum of fv = VLOOKUP(Units,Units,1,FALSE); ET Sum of Units and Sum of et = \"a\"; EC Ca = Cb+1 and Cb = Ca+1 (a cycle); ES Sum of Units and Cs = Cs+1 (a self reference); EF Fw = Fx*2 and Fx = Units+1 (a reference to a later calculated field). The shapes Excel for the web refuses (NOW, TODAY, RAND, INDIRECT, an array constant, a cell reference, an unknown name) cannot be in a filled case; pivots.md lists them. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored. Q!A2:A8 ask the same functions over plain numbers on the worksheet: MATCH(9,9,0), MATCH(9,9), VLOOKUP(9,9,1,FALSE), LOOKUP(40,9), LOOKUP(9,40), INDEX(9,1), ROWS(9).",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4505",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0355",
+  "PV-0356"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Units",
+    "D1": "Price",
+    "E1": "Zero",
+    "F1": "Unit Cost",
+    "G1": "Bob's",
+    "A2": "East",
+    "B2": "A",
+    "C2": 2,
+    "D2": 10,
+    "E2": 0,
+    "F2": 3,
+    "G2": 1,
+    "A3": "East",
+    "B3": "A",
+    "C3": 3,
+    "D3": 20,
+    "E3": 0,
+    "F3": 4,
+    "G3": 2,
+    "A4": "East",
+    "B4": "B",
+    "C4": 1,
+    "D4": 5,
+    "E4": 0,
+    "F4": 2,
+    "G4": 3,
+    "A5": "West",
+    "B5": "A",
+    "C5": 4,
+    "D5": 10,
+    "E5": 0,
+    "F5": 1,
+    "G5": 4,
+    "A6": "West",
+    "B6": "B",
+    "C6": 5,
+    "D6": 6,
+    "E6": 0,
+    "F6": 2,
+    "G6": 5,
+    "A7": "West",
+    "B7": "C",
+    "C7": 0,
+    "D7": 7,
+    "E7": 0,
+    "F7": 1,
+    "G7": 6
+   }
+  },
+  {
+   "name": "FX",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_FX",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "fx",
+        "formula": "INDEX(Units,1)"
+       }
+      ],
+      "data": [
+       {
+        "field": "Units"
+       },
+       {
+        "field": "fx"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "FR",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_FR",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "fr",
+        "formula": "ROWS(Units)"
+       }
+      ],
+      "data": [
+       {
+        "field": "Units"
+       },
+       {
+        "field": "fr"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "FL",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_FL",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "fl",
+        "formula": "LOOKUP(Units,Price)"
+       }
+      ],
+      "data": [
+       {
+        "field": "Units"
+       },
+       {
+        "field": "fl"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "FK",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_FK",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "fk",
+        "formula": "LOOKUP(Price,Units)"
+       }
+      ],
+      "data": [
+       {
+        "field": "Units"
+       },
+       {
+        "field": "fk"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "FM",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_FM",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "fm",
+        "formula": "MATCH(Units,Units,0)"
+       }
+      ],
+      "data": [
+       {
+        "field": "Units"
+       },
+       {
+        "field": "fm"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "FN",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_FN",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "fn",
+        "formula": "MATCH(Units,Units)"
+       }
+      ],
+      "data": [
+       {
+        "field": "Units"
+       },
+       {
+        "field": "fn"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "FV",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_FV",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "fv",
+        "formula": "VLOOKUP(Units,Units,1,FALSE)"
+       }
+      ],
+      "data": [
+       {
+        "field": "Units"
+       },
+       {
+        "field": "fv"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "ET",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_ET",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "et",
+        "formula": "\"a\""
+       }
+      ],
+      "data": [
+       {
+        "field": "Units"
+       },
+       {
+        "field": "et"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "EC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_EC",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "Ca",
+        "formula": "Cb+1"
+       },
+       {
+        "name": "Cb",
+        "formula": "Ca+1"
+       }
+      ],
+      "data": [
+       {
+        "field": "Ca"
+       },
+       {
+        "field": "Cb"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "ES",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_ES",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "Cs",
+        "formula": "Cs+1"
+       }
+      ],
+      "data": [
+       {
+        "field": "Units"
+       },
+       {
+        "field": "Cs"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "EF",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_EF",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "Fw",
+        "formula": "Fx*2"
+       },
+       {
+        "name": "Fx",
+        "formula": "Units+1"
+       }
+      ],
+      "data": [
+       {
+        "field": "Fw"
+       },
+       {
+        "field": "Fx"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A20)",
+    "A2": "=MATCH(9,9,0)",
+    "A3": "=MATCH(9,9)",
+    "A4": "=VLOOKUP(9,9,1,FALSE)",
+    "A5": "=LOOKUP(40,9)",
+    "A6": "=LOOKUP(9,40)",
+    "A7": "=INDEX(9,1)",
+    "A8": "=ROWS(9)"
+   }
+  }
+ ],
+ "expected": {}
+}

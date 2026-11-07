@@ -158,6 +158,9 @@ enum Cmd {
         #[arg(long)]
         all: bool,
     },
+    /// Write a probe case of every subexpression of `cell` of a spec case, or with `--culprit`
+    /// print the innermost visibly-off node of a filled one (T-3333).
+    SubexprCase(rustsheet_eval::subexpr_case::Args),
     /// Print the stored formulas/values of an xlsx as JSON.
     Snapshot { path: PathBuf },
     /// Print one suite's cases as JSON, as the harness discovers them: case and sidecar paths
@@ -941,6 +944,10 @@ fn run() -> Result<ExitCode> {
         } => cmd_evidence_floor(&root, update, allow_increase),
         Cmd::LiftKinds { write } => cmd_lift_kinds(&root, write),
         Cmd::Show { case_id, all } => cmd_show(&root, &case_id, all),
+        Cmd::SubexprCase(args) => rustsheet_eval::subexpr_case::run(&root, args).map(|text| {
+            print!("{text}");
+            ExitCode::SUCCESS
+        }),
         Cmd::Cases { suite } => cmd_cases(&root, &suite),
         Cmd::Accuracy { json, timeout } => cmd_accuracy(&root, json, timeout),
         Cmd::Roundtrip { sel, flags } => cmd_roundtrip(&root, &sel, flags),

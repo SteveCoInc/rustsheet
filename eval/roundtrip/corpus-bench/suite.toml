@@ -6,7 +6,9 @@ cases_of = "corpus-bench"
 include = ["**/1_*_input.xlsx"]
 license = "CC-BY-SA-4.0"
 origin = "https://github.com/RUCKBReasoning/SpreadsheetBench"
-scenarios = ["R0"]
+# R0 and the standard edits together (SPEC-0033 D1, T-4514). Every scenario reruns every case, so the
+# per-edit scenarios run on the fixtures; `R1/all` measures the corpus with all six edits at once.
+scenarios = ["R0", "R1/all"]
 # Gated like the cell suite: `make check` holds it wherever its cache is fetched (T-4629).
 gate = true
 baseline = "cases"

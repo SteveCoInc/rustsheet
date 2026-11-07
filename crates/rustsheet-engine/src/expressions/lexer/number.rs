@@ -53,7 +53,7 @@ impl Lexer {
         // The exponent marker: `E`, or `**` in typed text.
         let marker = match self.chars.get(position..) {
             Some(['e' | 'E', ..]) => 1,
-            Some(['*', '*', ..]) if self.double_star_exponent => 2,
+            Some(['*', '*', ..]) if self.typed => 2,
             _ => 0,
         };
         if marker > 0 && position + marker < len {

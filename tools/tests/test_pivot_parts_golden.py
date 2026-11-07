@@ -28,7 +28,8 @@ GOLDEN = Path(__file__).resolve().parent / "pivot_parts_golden"
 # raw `filters` slot, a pivot saved without refreshOnLoad with `area` and raw layout lines, an item order
 # over mixed types, show-values-as with a number format, `cache_names`, an x14 show-as mode (the data field's
 # extLst), `item_attrs`, a pivotField's raw extLst (T-4129), and a raw autoSortScope, a calculated item with a raw
-# pivotArea and its own `f`, and page-field attributes (T-4130).
+# pivotArea and its own `f`, and page-field attributes (T-4130), an `item_order` beside an `order` (T-4164), and a
+# discrete group with custom subtotals on its added field and three date levels (T-4170).
 PIVOTS = [
     ("t4128-pivot-spike", "G"),
     ("t4622-pivot-count-subtotals", "B1"),
@@ -44,6 +45,9 @@ PIVOTS = [
     ("t4130-pivot-sort", "SVC"),
     ("t4130-pivot-calc-items", "CIA0"),
     ("t4130-pivot-field-filters", "PC"),
+    ("t4164-pivot-item-order", "IOO"),
+    ("t4170-pivot-manual-groups", "MS"),
+    ("t4170-pivot-date-levels", "DS"),
 ]
 
 

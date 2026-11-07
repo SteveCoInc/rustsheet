@@ -82,8 +82,9 @@ struct PivotIndex {
     memo: HashMap<PivotQuery, Result<f64, Error>>,
 }
 
-/// A pivot GETPIVOTDATA can answer from: one data field, shown as itself, no page field and no
-/// hidden item. Every other shape is one of SPEC-0015's unknowns (1 and 4), `#REF!` until T-2085
+/// A pivot GETPIVOTDATA can answer from: one data field, shown as itself, no page field, no
+/// hidden item and no filter or `AutoShow` (`pivot::filter`, T-4165: what GETPIVOTDATA answers on a
+/// filtered pivot is unprobed, UNVERIFIED, T-4799). Every other shape is one of SPEC-0015's unknowns (1 and 4), `#REF!` until T-2085
 /// probes it; what GETPIVOTDATA answers for a field shown as a calculation is unprobed (UNVERIFIED,
 /// T-4750; before T-4163 the importer dropped such a pivot, so it was `#REF!` too). Several
 /// fields on an axis (unknown 10) are indexed too, but only their grand total is answered
@@ -94,8 +95,11 @@ fn supported(pivot: &PivotTable) -> Option<Vec<u32>> {
             .data_fields
             .iter()
             .any(|d| d.show_data_as != crate::pivot::ShowDataAs::Normal)
+        || !pivot.filters.is_empty()
         || pivot.fields.iter().any(|f| {
-            f.axis == Some(crate::pivot::Axis::Page) || f.hidden.iter().any(|word| *word != 0)
+            f.axis == Some(crate::pivot::Axis::Page)
+                || f.hidden.iter().any(|word| *word != 0)
+                || f.auto_show.is_some()
         })
     {
         return None;
@@ -391,6 +395,7 @@ mod tests {
                 records: vec![0, 2, 2, 0],
                 number_groups: None,
                 date_groups: None,
+                added_group: None,
             }],
             record_count: 4,
             refresh_on_load: false,

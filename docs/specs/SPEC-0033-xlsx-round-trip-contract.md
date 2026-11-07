@@ -86,6 +86,22 @@ docProps and `NOW()` are reproducible.
 the sheet's stored dimension. An edit with no target (for example, no numeric constant) is skipped and reported as
 `n/a` for that case.
 
+As implemented (T-4514):
+- The edits act on the first sheet in tab order, because the facade does not expose visibility yet.
+- The dimension is the model's used range.
+- Each edit is its own transaction, and `R1/all` applies them one after another.
+- E1 and E2 skip spill and array members, which hold an anchor's result and no input of their own. A write the
+  engine refuses because of its target moves E1 and E2 on to their next candidate (64 at most). Any other edit
+  with no valid target is `n/a`. The CLI line counts refused writes and `n/a` edits.
+- `Δ(E)` keeps two cell sets. Written cells explain their input, formula, computed flag and value, and their style
+  only under E6. Value-changed cells explain their value only. Appended style records and the style counts are
+  explained only under E6, and the shared-string counts only under E5. `dimension@ref` is explained only on the
+  edited sheet.
+- An R0 item excuses the same R1 item only up to its weight, so a larger `<truncated>` tail is still a violation.
+  Validator items also match on their detail.
+- A scenario that fails to run is one `scenario error` item. The case's R0 items still count.
+- `Δ(E)` is the union of the edits' change sets: the cells they wrote and the cells whose values changed.
+
 | Id | Edit |
 |---|---|
 | E1 | The first numeric constant cell gets its value plus 1 |
@@ -226,6 +242,11 @@ Any other item is a **delta violation**, scored as the item's verdict (`added`, 
 however lossy R0 is. That makes it measurable today and gives the owner's "only the change I made" guarantee
 directly. A delta violation always fails, even when the same item is in the R0 baseline.
 
+As implemented (T-4514, decision 0336): violations take the case's baseline like any other item, with scenario `R1/E<n>` or
+`R1/all`, so a new violation is a regression and a fixed one is a fix. They cannot fail outright while E6 makes every
+save regenerate (T-4623). Once the patch tier writes new styles, the remaining known violations can be burnt down,
+and the rule can become absolute.
+
 **Byte stability**, which is M15 exit criterion 8, is the stronger form scored with R1. A part that `Δ(E)` does not
 touch must be byte-identical to the source part. It is measured from T-4172 and gated only once SPEC-0034's verbatim
 tier lands. Until then it is reported.
@@ -363,6 +384,18 @@ milestone = ["M15"]
 - **Exceptions.** `exceptions.toml` holds narrow, per-case tokens in Calipers' style. Each token names the decision
   or task that owns it and the items it excuses (`volatile`, `candidate-N4`, …). A self-test runs every case with
   its exceptions removed and checks that each exception still excuses something. Stale exceptions fail.
+
+  As implemented (T-4514): the manifest's `exceptions` key names the file. Each `[[exception]]` has three fields:
+  - `case`, the case id;
+  - `item`, one baseline line's item, such as `R1/E6 element /officeDocument[0]/theme[0]:… lost`;
+  - `owner`, either `T-<n>` or `decision <nnnn>`.
+
+  Excused items are removed before the baseline and the rates are computed. An exception that excuses nothing fails
+  `--check` and `--update-baseline`, and is listed by a report run. No suite has exceptions yet.
+- **Scenario rates.** Each scenario family has its own kept rate: `R0`, the `R1/` edits together (their violations
+  over the items they compared), and `R0/again` (idempotence). The CLI line and the report give each one a suite
+  ran. Every listed scenario reruns every case, so the corpus suites list `R0` and `R1/all`, and the fixtures list
+  all nine scenarios.
 - **Report.** `make eval` gains a fidelity section:
   - verdict counts by scenario and by kind;
   - the top lost features by number of files, as in the 2026-11-04 census table;

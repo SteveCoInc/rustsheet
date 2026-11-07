@@ -14,13 +14,14 @@ use std::io::BufRead;
 use quick_xml::events::BytesStart;
 use rustsheet_engine::expressions::utils::{is_valid_column_number, is_valid_row};
 use rustsheet_engine::pivot::{
-    Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry, OpaqueNode,
-    OpaqueOwner, PageField, PivotCache, PivotField, PivotGeometry, PivotItem, PivotOptions,
-    PivotTable, ShowDataAs, SortType, NO_BASE_ITEM,
+    element_name, Aggregate, AutoShow, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry,
+    OpaqueNode, OpaqueOwner, PageField, PivotCache, PivotField, PivotGeometry, PivotItem,
+    PivotOptions, PivotTable, ShowDataAs, SortType, NO_BASE_ITEM,
 };
 
 use super::super::package::ImportLimits;
 use super::super::worksheets::parse_range;
+use super::filters::read_filters;
 use super::{
     at, attribute, index_attribute, local_name, shown, skip, walk, walk_keeping, Skip, Tag,
     MAX_AXIS_FIELDS, MAX_DATA_FIELDS,
@@ -42,7 +43,7 @@ const UNREAD_LOCATION: CellArea = CellArea {
 const MAX_EXTRA_ITEMS: usize = 14;
 
 /// The root attributes the model types.
-const ROOT_TYPED: [&str; 20] = [
+const ROOT_TYPED: [&str; 21] = [
     "name",
     "cacheId",
     "compact",
@@ -63,6 +64,7 @@ const ROOT_TYPED: [&str; 20] = [
     "errorCaption",
     "pageWrap",
     "pageOverThenDown",
+    "gridDropZones",
 ];
 
 /// The custom subtotal functions by their `ST_ItemType` names: an `<item t>` names its subtotal
@@ -100,7 +102,7 @@ fn is_subtotal_attribute(key: &str) -> bool {
 
 /// The `<pivotField>` attributes the model types, besides the custom subtotals
 /// ([`is_subtotal_attribute`]).
-const FIELD_TYPED: [&str; 9] = [
+const FIELD_TYPED: [&str; 10] = [
     "axis",
     "showAll",
     "compact",
@@ -110,6 +112,7 @@ const FIELD_TYPED: [&str; 9] = [
     "sortType",
     "insertBlankRow",
     "numFmtId",
+    "subtotalCaption",
 ];
 
 /// The `<location>` attributes the model types.
@@ -249,14 +252,13 @@ impl TableReader<'_> {
                 self.read_field(cache, element)?;
                 |key| FIELD_TYPED.contains(&key) || is_subtotal_attribute(key)
             }
-            "item" => {
-                if self.read_item(cache, element)? {
-                    |key| matches!(key, "t" | "x" | "sd" | "s" | "h")
-                } else {
-                    // `h` on a line that names no cache item has nowhere typed to go.
-                    |key| matches!(key, "t" | "x" | "sd" | "s")
-                }
-            }
+            "item" => match self.read_item(cache, element)? {
+                Some(true) => |key| matches!(key, "t" | "x" | "sd" | "s" | "h"),
+                // `h` on a line that names no cache item has nowhere typed to go.
+                Some(false) => |key| matches!(key, "t" | "x" | "sd" | "s"),
+                // A dropped item keeps nothing.
+                None => |_| true,
+            },
             "field" => {
                 let axis_field = match attribute(element, "x")?.as_deref() {
                     Some("-2") => AxisField::Values,
@@ -314,6 +316,7 @@ impl TableReader<'_> {
     ///   item labels", probes/t4698-pivot-repeat-labels). The definition's own
     ///   `fillDownLabelsDefault` is not read: Excel fills no existing field down for it (t4129 X14,
     ///   t4698 TW, TWE, OW).
+    /// - The definition's `<filters>` are its typed filters (`filters::read_filters`, T-4165).
     fn read_extension(&mut self, owner: OpaqueOwner, xml: &str) -> Result<(), Skip> {
         match owner {
             OpaqueOwner::DataField(index) => {
@@ -338,6 +341,11 @@ impl TableReader<'_> {
                 if let (Some(fill), Some(field)) = (fill, self.table.fields.get_mut(index as usize))
                 {
                     field.fill_down_labels = fill;
+                }
+            }
+            OpaqueOwner::Definition if element_name(xml) == "filters" => {
+                if let Some(cache) = self.cache {
+                    self.table.filters = read_filters(xml, cache, self.limits)?;
                 }
             }
             _ => {}
@@ -381,6 +389,7 @@ impl TableReader<'_> {
             error_caption: text("errorCaption")?,
             page_wrap: number(element, "pageWrap")?.unwrap_or(defaults.page_wrap),
             page_over_then_down: flag(element, "pageOverThenDown", defaults.page_over_then_down)?,
+            grid_drop_zones: flag(element, "gridDropZones", defaults.grid_drop_zones)?,
         };
         Ok(())
     }
@@ -416,13 +425,33 @@ impl TableReader<'_> {
             Some(other) => return skip(format!("unknown sortType {:?}", shown(other))),
         };
         field.insert_blank_row = flag(element, "insertBlankRow", field.insert_blank_row)?;
+        // Read, and kept verbatim for export (they are not in FIELD_TYPED), as `fillDownLabels`
+        // is (T-4165).
+        if flag(element, "autoShow", false)? {
+            field.auto_show = Some(AutoShow {
+                count: number(element, "itemPageCount")?.unwrap_or(10),
+                top: flag(element, "topAutoShow", true)?,
+                measure: number::<i64>(element, "rankBy")?
+                    .and_then(|m| u32::try_from(m).ok())
+                    .unwrap_or(0),
+            });
+        }
         field.number_format = number(element, "numFmtId")?;
+        field.subtotal_caption = attribute(element, "subtotalCaption")?;
+        if let Some(caption) = &field.subtotal_caption {
+            self.limits.check_text(caption)?;
+        }
         self.table.fields.push(field);
         Ok(())
     }
 
-    /// An `<item>` of the last `<pivotField>`'s `<items>`; whether it names a cache item.
-    fn read_item(&mut self, cache: &PivotCache, element: &BytesStart) -> Result<bool, Skip> {
+    /// An `<item>` of the last `<pivotField>`'s `<items>`; whether it names a cache item, or
+    /// `None` when it is dropped.
+    fn read_item(
+        &mut self,
+        cache: &PivotCache,
+        element: &BytesStart,
+    ) -> Result<Option<bool>, Skip> {
         let current = self.table.fields.len().saturating_sub(1);
         let (Some(field), Some(cache_field)) =
             (self.table.fields.last_mut(), cache.fields.get(current))
@@ -436,6 +465,14 @@ impl TableReader<'_> {
         let index = if kind == ItemType::Data {
             let item = index_attribute(element, "x")?;
             if item as usize >= cache_field.items.len() {
+                if cache.refresh_on_load && cache_field.number_groups.is_some() {
+                    // Excel rebuilds a numeric range group's items on refresh and lays the field
+                    // out again, so an item past them is dropped, not refused
+                    // (probes/t4128-pivot-spike G; pivots.md "Numeric and date group labels are
+                    // rewritten by Excel"; T-4171). Date and manual groups are unprobed and still
+                    // refused (T-4802).
+                    return Ok(None);
+                }
                 return skip(format!("item index {item} is past the field's items"));
             }
             Some(item)
@@ -457,7 +494,7 @@ impl TableReader<'_> {
             }
         }
         field.items.push(item);
-        Ok(names_cache_item)
+        Ok(Some(names_cache_item))
     }
 
     /// The typed element that encloses what is at `path`: the innermost one, read last.
