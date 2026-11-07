@@ -33,8 +33,9 @@
 
 use super::incomplete_beta::{rlog1, stirling_correction};
 use super::incomplete_gamma::{accurate_gamma_density, gamma_ur};
-use crate::x87_exp::{dd_add, dd_mul, two_sum};
-use crate::x87_log10::ln_double_double_pair;
+use super::loader::stirlerr_exact;
+use crate::x87_exp::{dd_add, dd_exp, dd_mul, dd_neg, two_sum};
+use crate::x87_log10::{ln_double_double, ln_double_double_pair};
 
 /// The smallest first shape the expansion is used at, from the math alone (T-4435's boundary grid,
 /// docs/research/t4435/boundary.py: `BETA.DIST` at a = 100 to 2E4 and b = 1.5 to 200 against 60-digit
@@ -47,6 +48,10 @@ use crate::x87_log10::ln_double_double_pair;
 /// out: there the terms in 1/nu are not small (`BETA.DIST(0.997,3.366,3.43E-18,TRUE)` is 1.43E-17 in
 /// Excel, probes-numeric/t2464-r2-bpser-small-tiny A10, and 4E-13 by it).
 const MIN_SHAPE: f64 = 2000.0;
+
+/// The expansion's lower bound on a before T-4435 (T-2528, T-4119). The F tails from it up keep the
+/// double ratio and the double density: T-4017's sweep has Excel's bits there on that arithmetic.
+pub(super) const T4119_MIN_SHAPE: f64 = 1e6;
 
 /// The largest second shape the expansion is used at: T-4435's region 2 (b0 = df1/2 of 40 to 200,
 /// df1 up to 400), the range T-4434's sweep and T-4435's grids cover. Past it TOMS 708's other
@@ -68,7 +73,7 @@ const SERIES_TOLERANCE: f64 = 1e-17;
 /// and 0 < x, y < 1; `None` elsewhere or where a step is not finite, and the caller keeps its
 /// kernel.
 pub(super) fn large_shape_lower(a: f64, b: f64, x: f64, y: f64) -> Option<f64> {
-    large_shape_lower_pair(a, b, x, (y, 0.0))
+    expansion(a, b, x, (y, 0.0), false)
 }
 
 /// [`large_shape_lower`] with y = 1 - x given as a double-double (head, tail), for a caller that
@@ -76,6 +81,13 @@ pub(super) fn large_shape_lower(a: f64, b: f64, x: f64, y: f64) -> Option<f64> {
 /// `f_large_shape_tails`, T-4435). Near x = 1 the expansion reads only y, and nu times y's rounding
 /// is a relative error of about |ln tail| ulp in the result.
 pub(super) fn large_shape_lower_pair(a: f64, b: f64, x: f64, y: (f64, f64)) -> Option<f64> {
+    expansion(a, b, x, y, true)
+}
+
+/// The expansion, with r formed in double-double ([`gamma_power_ratio`]) when `precise`. Only T-4435's
+/// F calls take that ([`large_shape_lower_pair`]); every other caller keeps the double density, the
+/// arithmetic T-2528's and T-4119's cells were measured on (t4017's bit-exact cells track it).
+fn expansion(a: f64, b: f64, x: f64, y: (f64, f64), precise: bool) -> Option<f64> {
     if !(a >= MIN_SHAPE
         && a.is_finite()
         && b > 0.0
@@ -104,7 +116,11 @@ pub(super) fn large_shape_lower_pair(a: f64, b: f64, x: f64, y: (f64, f64)) -> O
         return Some(0.0);
     }
     // r = z^b e^-z / Gamma(b) = z times the gamma density at z.
-    let r = accurate_gamma_density(b, z, 1.0).map_or(0.0, |density| density * z);
+    let r = if precise {
+        gamma_power_ratio(b, z)
+    } else {
+        accurate_gamma_density(b, z, 1.0).map_or(0.0, |density| density * z)
+    };
     if !(r.is_finite() && scale.is_finite()) {
         return None;
     }
@@ -118,6 +134,28 @@ pub(super) fn large_shape_lower_pair(a: f64, b: f64, x: f64, y: (f64, f64)) -> O
     let series = correction_series(b, z, ln_x.0, nu, j0);
     let value = scale * r * ((j0 - z_lo / z) + series);
     (value.is_finite() && value >= 0.0).then_some(value.min(1.0))
+}
+
+/// Below this exponent of r, [`gamma_power_ratio`] keeps the double density (`dd_exp` is not used
+/// near the double range's floor).
+const MIN_RATIO_EXPONENT: f64 = -700.0;
+
+/// r = z^b e^-z / Gamma(b), z times the gamma density at z, with its exponent in double-double:
+/// exp(b ln(z/b) - (z - b) - stirlerr(b)) sqrt(b / 2 pi), from ln Gamma(b) = (b - 1/2) ln b - b +
+/// ln sqrt(2 pi) + stirlerr(b). The double density rounds the deviance z - b - b ln(z/b), several
+/// hundred at a deep tail, and that is a relative error of about |ln tail| ulp in the result. On
+/// T-4435's grid (docs/research/t4435) the F tails at df1 20 to 79, df2 1E4 to 2E6 and tails near
+/// 1E-200 go from 2 such units off the 60-digit math to 0.1. Past [`MIN_RATIO_EXPONENT`] the double
+/// density.
+fn gamma_power_ratio(b: f64, z: f64) -> f64 {
+    let ln_ratio = dd_add(ln_double_double(z), dd_neg(ln_double_double(b)));
+    let exponent = dd_add(dd_mul((b, 0.0), ln_ratio), dd_neg(two_sum(z, -b)));
+    let exponent = dd_add(exponent, dd_neg(stirlerr_exact(b)));
+    if !(exponent.0 > MIN_RATIO_EXPONENT) {
+        return accurate_gamma_density(b, z, 1.0).map_or(0.0, |density| density * z);
+    }
+    let power = dd_exp(exponent);
+    (power.0 + power.1) * (b / (2.0 * std::f64::consts::PI)).sqrt()
 }
 
 /// Q(b, z) / r with r = z^b e^-z / Gamma(b): for z of b + 1 or more Legendre's continued fraction
