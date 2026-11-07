@@ -2005,11 +2005,12 @@ how many elements return one:
   `SCAN(0,A1:A3,LAMBDA(a,v,IF(v=2,B1:B3,v)))` and its `v=3` form are each one `#CALC!`, and so are ROWS, ARRAYTOTEXT and
   `INDEX(..,1)` of them (ERROR.TYPE 14; probes/t4476-lambda-range-results D1:H13);
 - an all-blank range is no exception: `MAP(A1:A2,LAMBDA(r,Z1:Z3))` and `SCAN(0,A1:A2,LAMBDA(a,v,Z1:Z3))` are `#CALC!` (D17:H21),
-  while the one-cell blank `Z1:Z1` gives 0, 0 (D25:G29).
+  while the one-cell blank `Z1:Z1` keeps blank elements: ARRAYTOTEXT is ", " (F25, F29), shown as 0 only when spilled
+  (D25:D30) and through `INDEX(..,1)` (G25, G29), not the number 0.
 A one-cell range is the control: its value is the element (`MAP(A1:A2,LAMBDA(r,J1:J1))` is 4, 4).
 REDUCE is not one of them: its last accumulator is its result, a multi-cell range included, so `REDUCE(0,A1:A2,LAMBDA(a,v,B1:B3))`
-spills "x", "y", "z" (ROWS 3, ARRAYTOTEXT "x, y, z", D33:G35) and ISREF of it is TRUE (D53); an all-blank range spills 0, 0, 0
-(D37:G39); a range handed on as the accumulator is a reference to the next step (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(v=1,B1:B3,
+spills "x", "y", "z" (ROWS 3, ARRAYTOTEXT "x, y, z", D33:G35) and ISREF of it is TRUE (D53); an all-blank range keeps its blanks (`Z1:Z3`: ARRAYTOTEXT ", , ", F37), shown as 0 when
+spilled (D37:D39) and through `INDEX(..,1)` (G37), not the number 0; a range handed on as the accumulator is a reference to the next step (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(v=1,B1:B3,
 COUNTA(a))))` is 3, D41); `J1:J1` is 4 and ISREF TRUE (D45, E53), and the array `{1;2}` spills (D49).
 Evidence: probes/map-scan-range-result (excel-graph 2026-10-18); probes/t4476-lambda-range-results (excel-graph, 2026-11-07,
 T-4476).
