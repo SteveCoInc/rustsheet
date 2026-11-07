@@ -3,7 +3,7 @@ id: T-4940
 title: "UserModel undo of a row or column edit restores the data table inputs and tables it deleted"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
