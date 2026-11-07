@@ -228,6 +228,8 @@ struct Field<'a> {
     spec: Option<&'a Map<String, Json>>,
     axis: Option<&'static str>,
     data: bool,
+    /// Keys of its calculated items (`calculated`, T-4130).
+    calculated: std::collections::HashSet<Key>,
 }
 
 impl<'a> Field<'a> {
@@ -245,6 +247,7 @@ impl<'a> Field<'a> {
             spec: None,
             axis: None,
             data: false,
+            calculated: std::collections::HashSet::new(),
         }
     }
 
@@ -387,8 +390,10 @@ struct DefinedPivot<'a> {
     records: usize,
     rows: Vec<i64>,
     columns: Vec<i64>,
-    /// Each page field and the key of its selected item (none: `(All)`).
-    pages: Vec<(usize, Option<Key>)>,
+    /// Each page field, the key of its selected item (none: `(All)`) and its other attributes.
+    pages: Vec<(usize, Option<Key>, String)>,
+    /// Each calculated item's entry, field and shared-item index (`calculated_items`, T-4130).
+    calculated_items: Vec<(&'a Map<String, Json>, usize, usize)>,
     data: Vec<DataEntry<'a>>,
     refresh_on_load: bool,
 }
@@ -424,6 +429,7 @@ impl<'a> DefinedPivot<'a> {
             rows: Vec::new(),
             columns: Vec::new(),
             pages: Vec::new(),
+            calculated_items: Vec::new(),
             data: Vec::new(),
             refresh_on_load: d
                 .get("refresh_on_load")
@@ -442,6 +448,7 @@ impl<'a> DefinedPivot<'a> {
                 target.reorder(order)?;
             }
         }
+        pivot.read_calculated_items()?;
         pivot.rows = pivot.axis("rows", "axisRow")?;
         pivot.columns = pivot.axis("columns", "axisCol")?;
         pivot.read_pages()?;
@@ -497,7 +504,8 @@ impl<'a> DefinedPivot<'a> {
             let item = (page.get("item"))
                 .map(|raw| cached_json(raw).map(|v| key(v.as_ref())))
                 .transpose()?;
-            self.pages.push((i, item));
+            let extra = checks::managed_attrs(page.get("attrs"), &["fld", "item", "hier"])?;
+            self.pages.push((i, item, extra));
         }
         Ok(())
     }
@@ -563,13 +571,23 @@ impl<'a> DefinedPivot<'a> {
             );
         }
         let extra = attrs(self.d.get("cache"))?;
+        let mut calculated = String::new();
+        if !self.calculated_items.is_empty() {
+            let entries = (self.calculated_items.iter())
+                .map(|(raw, field, x)| Self::calculated_item(raw, *field, *x))
+                .collect::<Result<String, String>>()?;
+            calculated = format!(
+                r#"<calculatedItems count="{}">{entries}</calculatedItems>"#,
+                self.calculated_items.len()
+            );
+        }
         let refresh = if self.refresh_on_load {
             r#" refreshOnLoad="1""#
         } else {
             ""
         };
         Ok(format!(
-            r#"<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"{refresh} createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{}"{extra}><cacheSource type="worksheet"><worksheetSource ref="{source_ref}" sheet="{}"/></cacheSource><cacheFields count="{}">{fields}</cacheFields></pivotCacheDefinition>"#,
+            r#"<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"{refresh} createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{}"{extra}><cacheSource type="worksheet"><worksheetSource ref="{source_ref}" sheet="{}"/></cacheSource><cacheFields count="{}">{fields}</cacheFields>{calculated}</pivotCacheDefinition>"#,
             self.records,
             escape(source_sheet),
             self.fields.len()
@@ -679,6 +697,20 @@ impl<'a> DefinedPivot<'a> {
                 flags.entry(*k).or_default().push_str(&attrs(Some(extra))?);
             }
         }
+        // A calculated item is `f="1"` unless its item_attrs set `f` (`own_f`).
+        let own_f: std::collections::HashSet<Key> =
+            (f.entry("item_attrs").and_then(Json::as_object))
+                .into_iter()
+                .flatten()
+                .filter(|(_, extra)| extra.get("f").is_some())
+                .map(|(text, _)| key(Some(&Cached::Text(text.clone()))))
+                .collect();
+        for (k, v) in values.iter().enumerate() {
+            let k_key = key(v.as_ref());
+            if f.calculated.contains(&k_key) && !own_f.contains(&k_key) {
+                flags.entry(k).or_default().push_str(r#" f="1""#);
+            }
+        }
         let mut items = (0..values.len()).fold(String::new(), |mut out, k| {
             let flag = flags.get(&k).map_or("", String::as_str);
             let _ = write!(out, r#"<item x="{k}"{flag}/>"#);
@@ -694,22 +726,26 @@ impl<'a> DefinedPivot<'a> {
         ))
     }
 
-    /// The field's raw `extLst` (`_field_ext`), as written.
+    /// The field's raw children after `items` (`_field_ext`: `autoSortScope`, then `extLst`), as
+    /// written.
     fn field_ext(f: &Field<'_>) -> String {
-        (f.entry("xml").and_then(|x| x.get("extLst")))
-            .and_then(Json::as_str)
-            .map_or_else(String::new, |text| text.trim().to_string())
+        ["autoSortScope", "extLst"]
+            .iter()
+            .filter_map(|slot| f.entry("xml").and_then(|x| x.get(*slot)))
+            .filter_map(Json::as_str)
+            .map(|text| text.trim().to_string())
+            .collect()
     }
 
-    fn page_field(&self, field: usize, item: Option<&Key>) -> Result<String, String> {
+    fn page_field(&self, field: usize, item: Option<&Key>, extra: &str) -> Result<String, String> {
         let Some(wanted) = item else {
-            return Ok(format!(r#"<pageField fld="{field}" hier="-1"/>"#));
+            return Ok(format!(r#"<pageField fld="{field}" hier="-1"{extra}/>"#));
         };
         let k = (self.fields[field].items.iter())
             .position(|v| key(v.as_ref()) == *wanted)
             .ok_or("a page item is not in its field")?;
         Ok(format!(
-            r#"<pageField fld="{field}" item="{k}" hier="-1"/>"#
+            r#"<pageField fld="{field}" item="{k}" hier="-1"{extra}/>"#
         ))
     }
 
@@ -814,7 +850,7 @@ impl<'a> DefinedPivot<'a> {
         }
         if !self.pages.is_empty() {
             let pages = (self.pages.iter())
-                .map(|(field, item)| self.page_field(*field, item.as_ref()))
+                .map(|(field, item, extra)| self.page_field(*field, item.as_ref(), extra))
                 .collect::<Result<String, String>>()?;
             let _ = write!(
                 parts,
@@ -930,6 +966,8 @@ pub(crate) fn parts(
     })
 }
 
+mod calculated_items;
+mod checks;
 #[cfg(test)]
 mod export_tests;
 #[cfg(test)]

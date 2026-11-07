@@ -42,7 +42,7 @@ const UNREAD_LOCATION: CellArea = CellArea {
 const MAX_EXTRA_ITEMS: usize = 14;
 
 /// The root attributes the model types.
-const ROOT_TYPED: [&str; 20] = [
+const ROOT_TYPED: [&str; 21] = [
     "name",
     "cacheId",
     "compact",
@@ -63,6 +63,7 @@ const ROOT_TYPED: [&str; 20] = [
     "errorCaption",
     "pageWrap",
     "pageOverThenDown",
+    "gridDropZones",
 ];
 
 /// The custom subtotal functions by their `ST_ItemType` names: an `<item t>` names its subtotal
@@ -100,7 +101,7 @@ fn is_subtotal_attribute(key: &str) -> bool {
 
 /// The `<pivotField>` attributes the model types, besides the custom subtotals
 /// ([`is_subtotal_attribute`]).
-const FIELD_TYPED: [&str; 9] = [
+const FIELD_TYPED: [&str; 10] = [
     "axis",
     "showAll",
     "compact",
@@ -110,6 +111,7 @@ const FIELD_TYPED: [&str; 9] = [
     "sortType",
     "insertBlankRow",
     "numFmtId",
+    "subtotalCaption",
 ];
 
 /// The `<location>` attributes the model types.
@@ -381,6 +383,7 @@ impl TableReader<'_> {
             error_caption: text("errorCaption")?,
             page_wrap: number(element, "pageWrap")?.unwrap_or(defaults.page_wrap),
             page_over_then_down: flag(element, "pageOverThenDown", defaults.page_over_then_down)?,
+            grid_drop_zones: flag(element, "gridDropZones", defaults.grid_drop_zones)?,
         };
         Ok(())
     }
@@ -417,6 +420,10 @@ impl TableReader<'_> {
         };
         field.insert_blank_row = flag(element, "insertBlankRow", field.insert_blank_row)?;
         field.number_format = number(element, "numFmtId")?;
+        field.subtotal_caption = attribute(element, "subtotalCaption")?;
+        if let Some(caption) = &field.subtotal_caption {
+            self.limits.check_text(caption)?;
+        }
         self.table.fields.push(field);
         Ok(())
     }

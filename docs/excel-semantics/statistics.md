@@ -3376,6 +3376,13 @@ same amount (up to 4.4E-12 from Excel, T-3447).
   57 train cells, 0 and 20 hold-out cells. The math sidecars skip 174 of 440 train and 84 of 200 hold-out cells ("not converged or too slow"), so the counts use `docs/research/t3960/score.py`: the sidecar value where it exists, else an
   outward pmf sum at 45 digits at the double nearest p (NEGBINOM.DIST as 1 - BINOM.DIST(r - 1, f + r, p)), which
   agrees with the sidecar to 1E-12 relative on every overlapping cell, which the script asserts. The error is not confined to the 11 owned cells. The model is T-3961's.
+- probes/t3444-binom-range-inv-large-n Inv shows the same at p = 0.001 (gap triage 2026-11-07, math from a direct pmf
+  sum at 40 digits). Columns C and D are BINOM.DIST's cdf at BINOM.INV's count and one below, at n 1E5, 1E6 and 1E7.
+  Excel is 2.5E-13 to 1.3E-12 below the math there: C36 `BINOM.DIST(95,100000,0.001,TRUE)` is 0.3311016442530485
+  against 0.33110164425313579, and D67 `BINOM.DIST(9999,10000000,0.001,TRUE)` is 0.4986681958001577 against
+  0.49866819580081081. Ours is within about 1E-14. At the median count (C31, C49, C67, BINOM.INV's alpha 0.5) Excel
+  is within 2E-15, so the error is not uniform in k. These cells have no sidecar math yet (T-4773; the other not-converged skips are
+  T-4775's), and T-4774 owns their last digits.
 Evidence: probes/t3352-binom-negbinom-large-n (excel-graph), probes-numeric/t3352-binom-negbinom-sweep (excel-graph,
 scored against 50-digit mpmath; T-3352's Outcome), probes-numeric/t3960-binom-negbinom-small-p-cdf and -hold (excel-graph).
 Implemented in: `crates/rustsheet-engine/src/functions/statistical/bratio/basym.rs`, `bratio::ported_tails`, and
@@ -3383,7 +3390,7 @@ Implemented in: `crates/rustsheet-engine/src/functions/statistical/bratio/basym.
 Status: VERIFIED (excel-graph) to 1E-11 of the math for p of 0.001 and above (the t3352 cases; at p below 0.01 with n
 1E5 or more or r 10 or more Excel is up to 1.1E-10 off, T-3960); last digits UNVERIFIED (Excel's arithmetic in basym and in Loader's
 kernel at a large n not identified)
-Tasks: T-3352, T-3447, T-3443, T-3444, T-2586, T-2146, T-3960, T-3961
+Tasks: T-3352, T-3447, T-3443, T-3444, T-2586, T-2146, T-3960, T-3961, T-4773, T-4774, T-4775
 
 ## BINOM.DIST.RANGE and BINOM.INV at a large n sit on BINOM.DIST's own cdf (T-3444)
 Rule: Excel's BINOM.INV (and CRITBINOM, equal on every probe row) is the smallest k whose BINOM.DIST(k, n, p, TRUE) is
@@ -7270,34 +7277,45 @@ Ours: as described; T-2006 (the solve). A104 passes since T-4590.
 Status: VERIFIED (excel-graph) for the table points and A104's cause (T-4590)
 Tasks: T-4096, T-2006, T-4590, T-2569
 
-## GROWTH is #NUM! once LOGEST's b overflows; it can be 0 where the slopes' factor is subnormal (T-4590)
-Rule: GROWTH with const TRUE is `#NUM!` exactly when LOGEST's b = e^intercept overflows, that is when the intercept is
-past ln(DBL_MAX) = 709.7827, even where the prediction itself is finite.
-- For y = e^(c - c/2·x) at x = 1, 2, 3 (prediction about 1 at x = 2), GROWTH is a number for c up to 709.7827 and
-  `#NUM!` from 709.7828 to 1290. LOGEST's own b, `INDEX(LOGEST(..),1,2)`, is `#NUM!` from the same cut.
-- LOGEST's m = e^slope past the double range is not an error in GROWTH. With const FALSE and y = e^(m·x) at x = 0.3,
-  0.4, 0.5, GROWTH at 0.4 is a number for every m up to 1400, while LOGEST's m is `#NUM!` from 709.79. In those rows
-  the slopes' factor at the new x, e^(0.4·m), never overflows. What GROWTH does when that factor itself overflows is
-  unprobed.
-- The Gate A point GROWTH s1 A104 (intercept 1289.95) is `#NUM!` by this rule.
-- Observed, not implemented: GROWTH is 0 where the slopes' factor e^(Σ m_j x_j) at the new x is subnormal, though the
-  prediction is about 1. In the Int rows above, c = 709 to 709.7827 gives 0 (factor e^(-709) or below), and c = 700
-  gives 1 (factor e^(-700), a normal double). That fits Excel forming the two factors as doubles and flushing a
-  subnormal one, but the evidence covers only const TRUE, one x and a slope sum in [-709.78, -709].
-  - The cut between -700 and -709 is not pinned.
-  - Several x (one summed factor or one factor per variable), a subnormal b with a normal slopes' factor, const FALSE,
-    and a slopes' factor that overflows are all unprobed (T-4765).
-  - The product of the two factors is one ulp off Excel on ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the
-    single exponential is exact, so how Excel combines them between the edges is not identified.
-Evidence: probes/t4590-growth-overflow (excel-graph, 2026-11-07; Int 15 rows, Slope 8 rows). The predictions in
-docs/research/t4590 were committed before the fill. H1 (`#NUM!` only when b overflows) holds on 23 of 23 GROWTH
-cells. H2 (`#NUM!` when b or LOGEST's m overflows) fails on the 5 Slope rows past 709.79. The zeros at c = 709 to
-709.7827 were not predicted.
-Status: VERIFIED (excel-graph) for the `#NUM!` rule. The zero is an observation (UNVERIFIED as a rule, T-4765). The
-probe's least-squares digits (14 cells, 5E-14 to 3E-13 off) are T-4763's.
-Ours (T-4590): `growth_prediction` in functions/statistical/trend.rs applies the `#NUM!` rule. Int A2:A7 stay
-known failures (ours about 1, Excel 0), owned by T-4765.
-Tasks: T-4590, T-4763, T-4765
+## GROWTH is #NUM! once LOGEST's b or a slope's factor overflows, and 0 once a partial product or the result is subnormal (T-4590, T-4765, T-4793)
+Rule: GROWTH's prediction is e^(intercept + Σ m_j x_j), except at the edges of LOGEST's factors. Those factors are
+b = e^intercept and one factor per variable, e^(m_j x_j) at the new x. Excel multiplies the variables' factors left
+to right in doubles, and flushes each partial product to 0 once it is subnormal. A factor itself is used as it is,
+even when subnormal.
+- `#NUM!` where b overflows, meaning the intercept is past ln(DBL_MAX) = 709.7827: 709.7828 to 1290 are `#NUM!` and
+  709.7827 is a number. LOGEST's own b, `INDEX(LOGEST(..),1,2)`, is `#NUM!` from the same cut. The Gate A point
+  GROWTH s1 A104 (intercept 1289.95) is `#NUM!` by this rule.
+- `#NUM!` where a factor overflows, though the prediction may be finite (probes/t4765-growth-factor-edges Over A1:
+  b = e^-700, factor e^1400; SmallB A4: b = e^-720, factor e^720).
+- `#NUM!` where a partial product that was flushed to 0 meets an overflowing factor, giving 0·∞
+  (probes/t4793-growth-several-x Multi A1:A3: factors e^-720 then e^720, and so on up to ±800. That is `#NUM!`, not
+  e^0, so the factors are not one summed factor; the ±200 control, A4, gives e^1).
+- 0 where a partial product is subnormal.
+  - With one x the first factor is the product. A slope term of -708.39 gives 1 and -708.4 gives 0 (t4765 Cut), which
+    is the cut ln(DBL_MIN) = -708.396. With const FALSE the result is 0 too (NoConst A2, A3).
+  - With two x the order matters (probes/t4793-growth-one-factor-underflow).
+    - A first factor of e^-720 or e^-709 gives 0, though the sum is normal (One A1, A3).
+    - A first factor of e^600 times a later e^-720 gives a number (One A2). Excel's 2.0842828425754287E-52 is 3E-12
+      below e^(sum), which is the precision of the subnormal factor carried into the product.
+- 0 where the prediction itself is subnormal, though b and every factor are normal (t4793 SubProd A2:A4, A6:
+  b = e^-400 with factors e^-309 to e^-320, and b = e^-300 with e^-410). This is numbers.md "Subnormal results become
+  0".
+- A subnormal b with a normal factor is neither an error nor a zero. c = -709 with an offsetting slope gives
+  0.9999999999999999 (t4765 SmallB A3), which again shows a subnormal carried into a product.
+- LOGEST's m = e^slope past the double range is not an error in GROWTH (t4590 Slope).
+Between the edges the engine gives the single exponential. The product of the factors is one ulp off Excel on
+ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the single exponential is exact. How Excel rounds the product
+between the edges, including One A2's lossy digits, is not identified (T-4763).
+Evidence: probes/t4590-growth-overflow (Int 15, Slope 8); probes/t4765-growth-factor-edges (Cut 10, SmallB 4,
+NoConst 4, Over 3); probes/t4793-growth-several-x (Multi 4, SubProd 6); probes/t4793-growth-one-factor-underflow
+(One 4). All excel-graph, 2026-11-07, with predictions in docs/research/t4590, t4765 and t4793 committed before each
+fill.
+Status: VERIFIED (excel-graph) for the edges, for one and two x. Not probed: three or more x; a zero partial product
+meeting a later factor below 1 but normal; and a later partial product that turns subnormal from two normal factors
+before b lifts it (factors e^-360 and e^-360, intercept 700). The last two are inferred 0. The probes' least-squares
+and product digits are T-4763's.
+Ours (T-4590, T-4765, T-4793): `growth_prediction` in functions/statistical/trend.rs.
+Tasks: T-4590, T-4763, T-4765, T-4793
 
 ## TRIMMEAN: an error percent before data with no number (T-1742)
 Rule: TRIMMEAN returns an error-valued percent before it reports data with no number: `TRIMMEAN(Data!E11:E11,<#N/A>)`
@@ -7563,7 +7581,7 @@ QUARTILE*, PERCENTILE* and TRIMMEAN are `#NUM!` (`QUARTILE(Data!E2,3)` with E2 =
 44a8841352dc48e9 A52). This answers T-2344's single-cell question and T-2066's (`QUARTILE` of one text cell).
 Evidence: gen-m9 (excel-graph, 2026-10-23, T-2256); 72 cells in T-2344.
 Ours: since T-2429 a cell holding text or a boolean is no number in QUARTILE*, PERCENTILE* and PERCENTRANK* ("A single cell holding a boolean is no number in the PERCENTILE and QUARTILE data"), and since T-2621 a cell holding nothing, text or a boolean in TRIMMEAN.
-T-2344 probed the same data given as a defined name, INDEX, OFFSET, IF or CHOOSE result (probes/t2344-percentile-name-index-data A1-A30, excel-graph, 2026-10-27): a reference of any of these forms holding one text (also numeric text "1") or boolean cell is no number, `#NUM!` for QUARTILE*/PERCENTILE* and `#N/A` for PERCENTRANK*, after quart's own error (`QUARTILE(INDEX(..),NA())` `#N/A`); ours since T-2344 (`percentile_numbers` reads the argument once in reference context). T-2883 probed the same data given as a defined name, an INDEX result or an IF result, for 14 statistical functions (probes/t2883-stat-name-index-data A1-A168, excel-graph, 2026-11-05): TRIMMEAN and Z.TEST read such a lone text, boolean or numeric-text cell as a plain reference does (TRIMMEAN `#NUM!`, Z.TEST `#N/A`; MODE, MODE.SNGL, CORREL, COVARIANCE.P, SLOPE, FORECAST, CHISQ.TEST, STDEV.S, VAR.P, AVERAGE, LARGE and RANK already did); ours since T-2883 (TRIMMEAN's data and Z.TEST's read the argument once with `evaluate_picked_reference_arg`, as `percentile_numbers`). LET, IFS, SWITCH, LAMBDA and OFFSET/CHOOSE picks of these functions are unprobed, and so is a union. A 3-D reference (`Sheet1:Data!A4:A6`) and a union (`(A1:A2,A4:A6)`) as the data of TRIMMEAN, Z.TEST, PERCENTILE, PERCENTILE.INC/.EXC, QUARTILE, QUARTILE.INC/.EXC and PERCENTRANK, PERCENTRANK.INC/.EXC are accepted, as in LARGE and SMALL: the areas are read as written (a 3-D range reads every sheet of its span, probed; an overlap counting twice, an error cell and text or boolean cells are by analogy with LARGE and SMALL, unprobed for these functions), e.g. `TRIMMEAN(Sheet1:Data!A4:A6,0.2)` 4, `Z.TEST((A1:A2,A4:A6),4,1)` 0.98732634066, `PERCENTILE((A1:A2,A4:A6),0.5)` 3, `PERCENTRANK.EXC(Sheet1:Data!A4:A6,3)` 0.142 (probes/t4309-3d-union-trimmean-percentile H1:H22, excel-graph, 2026-11-06, T-4309). Ours since T-4309 (`RefArg::into_areas_or_single`, `area_numbers`); it was `#VALUE!` after T-2883 (and `#REF!` for a 3-D reference before).
+T-2344 probed the same data given as a defined name, INDEX, OFFSET, IF or CHOOSE result (probes/t2344-percentile-name-index-data A1-A30, excel-graph, 2026-10-27): a reference of any of these forms holding one text (also numeric text "1") or boolean cell is no number, `#NUM!` for QUARTILE*/PERCENTILE* and `#N/A` for PERCENTRANK*, after quart's own error (`QUARTILE(INDEX(..),NA())` `#N/A`); ours since T-2344 (`percentile_numbers` reads the argument once in reference context). T-2883 probed the same data given as a defined name, an INDEX result or an IF result, for 14 statistical functions (probes/t2883-stat-name-index-data A1-A168, excel-graph, 2026-11-05): TRIMMEAN and Z.TEST read such a lone text, boolean or numeric-text cell as a plain reference does (TRIMMEAN `#NUM!`, Z.TEST `#N/A`; MODE, MODE.SNGL, CORREL, COVARIANCE.P, SLOPE, FORECAST, CHISQ.TEST, STDEV.S, VAR.P, AVERAGE, LARGE and RANK already did); ours since T-2883 (TRIMMEAN's data and Z.TEST's read the argument once with `evaluate_picked_reference_arg`, as `percentile_numbers`). LET, IFS, SWITCH, LAMBDA and OFFSET/CHOOSE picks of these functions are unprobed, and so is a union. A 3-D reference (`Sheet1:Data!A4:A6`) and a union (`(A1:A2,A4:A6)`) as the data of TRIMMEAN, Z.TEST, PERCENTILE, PERCENTILE.INC/.EXC, QUARTILE, QUARTILE.INC/.EXC and PERCENTRANK, PERCENTRANK.INC/.EXC are accepted, as in LARGE and SMALL: the areas are read as written (a 3-D range reads every sheet of its span, probed; an overlap counts twice, text and boolean cells are skipped, and the first error in area order wins, `(D2,D1,A1:A2)` `#N/A` but `(D1,D2,A1:A2)` `#DIV/0!`, all probed for TRIMMEAN, Z.TEST, PERCENTILE, QUARTILE.EXC, PERCENTRANK and PERCENTRANK.EXC in probes/t4440-union-overlap-error-text-trimmean-percentile H1:M10, excel-graph, 2026-11-07, T-4440; engine already matched), e.g. `TRIMMEAN(Sheet1:Data!A4:A6,0.2)` 4, `Z.TEST((A1:A2,A4:A6),4,1)` 0.98732634066, `PERCENTILE((A1:A2,A4:A6),0.5)` 3, `PERCENTRANK.EXC(Sheet1:Data!A4:A6,3)` 0.142 (probes/t4309-3d-union-trimmean-percentile H1:H22, excel-graph, 2026-11-06, T-4309). Ours since T-4309 (`RefArg::into_areas_or_single`, `area_numbers`); it was `#VALUE!` after T-2883 (and `#REF!` for a 3-D reference before).
 Status: VERIFIED (excel-graph)
 
 ## COVARIANCE: a boolean scalar is one value (T-2436)

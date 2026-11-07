@@ -169,6 +169,7 @@ probes/linest-modes.case.json	42
 probes/logest-modes.case.json	51
 probes/stat-argument-modes.case.json	9
 probes/stat-quantile-lift.case.json	9
+probes/subexpr-05d44f6dd6cfc567-calc-a178.case.json	1
 probes/subnormal-saved-negative-and-array.case.json	1
 probes/t2311-pivotby-value-columns-error-refill-1106.case.json	1
 probes/t2360-array-lambda-holidays-refill-1106.case.json	5
@@ -234,6 +235,15 @@ probes/t4128-pivot-spike.case.json	60
 probes/t4129-pivot-layout-flags.case.json	32
 probes/t4129-pivot-show-as-x14.case.json	138
 probes/t4129-pivot-show-as.case.json	278
+probes/t4130-pivot-calc-items.case.json	16
+probes/t4130-pivot-date-filters.case.json	161
+probes/t4130-pivot-field-filters.case.json	10
+probes/t4130-pivot-filter-attrs.case.json	54
+probes/t4130-pivot-label-filters.case.json	94
+probes/t4130-pivot-relative-date-filters.case.json	49
+probes/t4130-pivot-sort.case.json	66
+probes/t4130-pivot-spill-getpivotdata.case.json	4
+probes/t4130-pivot-value-filters.case.json	74
 probes/t4134-pivot-items.case.json	54
 probes/t4135-pivot-aggregates.case.json	852
 probes/t4137-pivot-captions.case.json	120
@@ -262,6 +272,8 @@ probes/t4437-beta-zero-fresh.case.json	30
 probes/t4437-beta-zero-fresh2.case.json	66
 probes/t4456-beta-t-zero-cut.case.json	43
 probes/t4456-beta-t-zero-reach.case.json	29
+probes/t4505-pivot-calc-field-functions.case.json	176
+probes/t4505-pivot-calc-fields.case.json	274
 probes/t4515-fraction-tail-holdout.case.json	1
 probes/t4515-fresh-sweep.case.json	25
 probes/t4543-xlookup-not-found-address-sheet-lift.case.json	2
@@ -284,6 +296,10 @@ probes/t4625-gamma-dist-ratio-overflow.case.json	4
 probes/t4627-pivot-field-name-collisions.case.json	87
 probes/t4634-pivot-total-order-4.case.json	1376
 probes/t4697-large-small-median-mixed-sheet-refs.case.json	5
+probes/t4704-mixed-xlookup-grid-readers.case.json	29
+probes/t4765-growth-factor-edges.case.json	4
+probes/t4793-growth-one-factor-underflow.case.json	1
+probes/t4793-growth-several-x.case.json	2
 probes/table-edits/t4274-calc-column-delete-row-2.case.json	1
 probes/table-edits/t4274-calc-column-structured-insert-column-a.case.json	1
 probes/yield-below-par-sweep.case.json	3

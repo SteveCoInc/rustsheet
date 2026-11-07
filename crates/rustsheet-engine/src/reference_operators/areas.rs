@@ -319,6 +319,28 @@ impl RefGrid {
         &self.elements
     }
 
+    /// The grid of the elements' row-major indices, as numbers: how a per-element caller hands
+    /// its elements to the lift driver, whose lifted arguments hold values only (OFFSET over a
+    /// grid, the RANK family's `ref`). [`Self::element_at`] reads an index back.
+    pub(crate) fn index_array(&self) -> Vec<Vec<ArrayNode>> {
+        (0..self.rows)
+            .map(|row| {
+                (0..self.columns)
+                    .map(|column| ArrayNode::Number((row * self.columns + column) as f64))
+                    .collect()
+            })
+            .collect()
+    }
+
+    /// The element an [`Self::index_array`] value names; `None` for anything else.
+    pub(crate) fn element_at(&self, index: &CalcResult) -> Option<&RefElement> {
+        match index {
+            // The index is a whole number below the grid's length, as `index_array` builds it.
+            CalcResult::Number(index) => self.elements.get(*index as usize),
+            _ => None,
+        }
+    }
+
     /// Whether any element is a reference, not an error: what makes a lifted OFFSET or
     /// INDIRECT carry the ERROR.TYPE/CELL mark (`number_mark.rs`; statistics.md "An array of
     /// references is #NUM! in the paired functions").
@@ -338,8 +360,16 @@ impl RefGrid {
     /// than `sheet`, the formula's (`LARGE(OFFSET(Data!G1,{0;1},0),1)` is `#N/A` from Calc,
     /// `LARGE(OFFSET(Local!A1,{0;1},0),1)` `#VALUE!` from Local; probes/t4569-xlookup-ref-element-
     /// max-min Calc!A31, A40, Local!E1:E5, F1:F8). An error element comes first, as it does for
-    /// the other aggregates (unprobed). A grid with references on both sheets is `#N/A` (unprobed).
+    /// the other aggregates (unprobed). A grid with references on both sheets is decided by its
+    /// first element when that is a reference: `#VALUE!` from an own-sheet one, `#N/A` from an
+    /// off-sheet one (probes/t4697-large-small-median-mixed-sheet-refs H1:H6, H9, H16, H17; a
+    /// first element that is a value or an error keeps the any-off-sheet rule, H14, H15).
     pub(crate) fn order_statistic_error(&self, sheet: u32) -> Option<Error> {
+        if let Some(RefElement::Reference(first)) = self.elements.first() {
+            if first.left.sheet == sheet {
+                return None;
+            }
+        }
         let off_sheet = self.elements.iter().any(
             |element| matches!(element, RefElement::Reference(range) if range.left.sheet != sheet),
         );

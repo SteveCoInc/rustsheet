@@ -8,7 +8,7 @@ use serde_json::Value as Json;
 
 use super::*;
 use crate::pivot::probe_cases::{
-    address, diagonal, probe_pivot, read, subtotal_named, T4634_SHEETS,
+    address, diagonal, probe_pivot, read, subtotal_named, T4634_SHEETS, T4745_SHEETS,
 };
 use crate::pivot::{
     compute, Aggregate, Axis, CacheBuilder, CacheItem, DataField, PageField, PivotItem,
@@ -159,6 +159,10 @@ fn the_layout_option_probes_lines_and_locations_are_excels() {
         "t4168-pivot-layout-options",
         &["F1", "F2", "F3", "BR", "BR2", "SD", "SD2"],
     );
+    // Classic layout and subtotalCaption: the lines are the plain ones; classic layout moves
+    // the header and data rows down (pivots.md "Classic layout (gridDropZones)").
+    check_all("t4129-pivot-layout-flags", &["GZ", "SC"]);
+    check_all("t4745-pivot-classic-subtotal-caption", T4745_SHEETS);
     // Repeat item labels change no line (pivots.md "Repeat item labels").
     check_all(
         "t4698-pivot-repeat-labels",
