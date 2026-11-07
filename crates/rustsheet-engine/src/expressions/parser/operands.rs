@@ -896,8 +896,9 @@ impl Parser {
                 .and_then(|table| TableExtent::of(table, Some((*data_start, *data_end))));
         }
         if let Node::ParseErrorKind { message, .. } = &lowered {
-            // A table of a linked workbook is `#REF!` whatever the link caches (references.md
-            // "A structured reference into a linked workbook is `#REF!`"), but the formula keeps
+            // A table of a linked workbook is `#REF!` (references.md "A structured reference into
+            // a linked workbook is `#REF!`": corpus-bench 58994, a link part caching no cells; with
+            // cached cells it is unprobed, T-5036), but the formula keeps
             // its text, which Excel stores back as written (corpus-bench 33094 Sheet1!B5,
             // `VLOOKUP([1]!Table3[[#This Row],[Resource Name]],…)`; T-4144). Typed, it stays a
             // parse error: Excel refuses it (probes/t3213-typed-parse-errors A9).

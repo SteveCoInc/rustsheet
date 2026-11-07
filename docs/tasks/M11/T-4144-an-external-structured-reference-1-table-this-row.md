@@ -42,11 +42,13 @@ skill for how Excel evaluates it against the cached external values, and record 
   (references.md, VERIFIED on corpus-bench 58994) and prints and saves as written. Typed, it is still refused.
   33094 B5 now reads `=VLOOKUP([1]!Table3[@[Resource Name]],[1]Data!E:J,6,0)` and saves
   `[1]!Table3[[#This Row],[Resource Name]]`.
-- Value: `#REF!` by the existing VERIFIED rule (the link part caches cells but, as every externalLink part, no table
-  definition); 33094's cached 20 is from a desktop calculation with the other book open, and the case has no oracle
-  values (Pending). FORMULATEXT of such a cell stays unprobed (noted in references.md).
+- Value: `#REF!` as before, by the rule VERIFIED for a link part caching no cells (58994). 33094's link part caches
+  cells, its cached value is 20 and it has no oracle value, so that shape is unprobed: filed T-5036 (research, sonnet)
+  to probe it. FORMULATEXT of such a cell stays unprobed (noted in references.md).
 - Tests: test_external_links `structured_reference_into_a_linked_workbook_is_ref` checks the kept text;
   rustsheet-xlsx tests/external_reference_export.rs `external_structured_references_are_saved_as_written` (33094's
   formula over the committed external-link-cached-lookups fixture) checks value and saved text. Both fail on main.
 - Eval delta: cell suites unchanged; roundtrip-corpus-bench fewer failing items in 3 cases (132-4 217 → 216,
-  248-48 359 → 349, 575-15 963 → 962), re-recorded by `make eval-baseline`.
+  248-48 359 → 349, 575-15 963 → 962), re-recorded by `make eval-baseline`; after #4007 these are the `#R1/all` keys
+  (216 → 215, 358 → 348, 963 → 962), re-recorded by `rustsheet-eval roundtrip --update-baseline`.
+- Follow-up: T-5036.
