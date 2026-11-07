@@ -682,8 +682,18 @@ fails createSession with 501 `FileCorruptTryRepair` and has no oracle cells, so 
   is referenced unquoted: `=ⓑ!B1` and `='ⓑ'!B1` both read it and FORMULATEXT shows `=ⓑ!B1` for both. A mark after
   the first character needs no quotes: FORMULATEXT of a quoted reference to sheet `a` + U+0301 or `x` + U+20DD shows
   `=á!B1`, `=x⃝!B1` (probes/t4446-defined-name-characters A12:A23). The engine matches: `name_needs_quoting` takes
-  a later mark as a name character (T-4446). Whether INDIRECT text `á!B1` (unquoted, `is_indirect_unquoted_sheet`)
-  reads the sheet is unprobed.
+  a later mark as a name character (T-4446). Every mark class after the first character holds, and INDIRECT agrees
+  (probes/t4757-later-mark-sheet-names, excel-graph, 2026-11-07, T-4757; Sheet1!A1:A20, each prediction committed
+  before the fill held). For sheets `a` + U+0301 (Mn), `क` + U+093E (Mc, alphabetic), `x` + U+0F3E (Mc, not
+  alphabetic) and the cell-shaped `B1` + U+0301:
+  - the quoted reference reads B1, and FORMULATEXT writes the name unquoted (`=का!B1`, `=x༾!B1`, `=B1́!B1`; a cell
+    address followed by a mark is not a cell here either);
+  - INDIRECT of the unquoted text (`INDIRECT("á!B1")`, `"का!B1"`, `"x༾!B1"`, `"B1́!B1"`) and of the quoted text both
+    read B1. Ours matches all of these.
+  The R1C1-shaped `C1` + U+0301 behaves differently. As a sheet name it loads, `='C1́'!B1` reads it, FORMULATEXT keeps
+  the quotes (`='C1́'!B1`), and `INDIRECT("'C1́'!B1")` reads it. But **`INDIRECT("C1́!B1")` unquoted is `#REF!`**
+  (Sheet1!A19). Ours reads 23 (T-4861). Whether every R1C1-shaped unquoted INDIRECT prefix is refused (`C1D!B1`,
+  `R1C1!B1`, `RC!B1` against sheets so named) is unprobed (T-4861, probe first).
 - Table names (T-4446): a table named `Ⓐ`, `ⓐ` or U+0301 + `a` loads while no formula uses it; `SUM(ⓐ[h])` reads it
   (3), while `SUM(Ⓐ[h])` and a structured reference to U+0301 + `a` are refused at load (hand-built workbooks,
   2026-11-07). The engine's table-name check (`is_valid_identifier`, `Model::add_table`) refuses `Ⓐ` and a first mark,
