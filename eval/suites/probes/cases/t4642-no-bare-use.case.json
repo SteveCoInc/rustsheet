@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4642: probes/t4618-order-after-active-backward (tabs P, Q, R; R active; P's =N, Q's =P!N; N = =1 added through the API scoped to P) has Q!A1 #NAME?, while -wraps-after-active's qualified use reads 1. One variable changed: P holds no use of N (=1+1), so Q's =P!N is the only use. Does it read 1?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "R",
+ "sheets": [
+  {
+   "name": "P",
+   "cells": {
+    "A1": "=1+1"
+   }
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=P!N"
+   }
+  },
+  {
+   "name": "R",
+   "cells": {
+    "A1": "=1+1"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "P!A1",
+  "Q!A1",
+  "R!A1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "P"
+  }
+ ]
+}

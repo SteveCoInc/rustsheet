@@ -396,9 +396,21 @@ the order Excel loads the workbook and on what each use of N met first. Every ba
   t4618-order-after-active-backward and -wraps-after-active). Workbook adds earlier in the session, a constant body
   and a body naming a name the sheet defines change nothing (t4618-workbook-add-before, -sheet-add-constant-body,
   -body-names-own-sheet-name, -body-names-dup-name, -only-sheet-add).
-- A qualified use reads the new name in every probe but one: t4618-order-after-active-backward Q!A1 (tabs P, Q, R, R
-  active, P's `=N` then Q's `=P!N`) is `#NAME?`, where -wraps-after-active R!A1 (Q active, P's `=N` then R's `=P!N`) is
-  1. Unexplained; T-4642 owns the cell.
+- A qualified use reads the new name in every probe. The one exception, t4618-order-after-active-backward Q!A1 (tabs P,
+  Q, R, R active, P's `=N` then Q's `=P!N`; `#NAME?` on 2026-11-06 15:57 UTC), does not reproduce. Two copies with
+  identical sheets (the same input sha256 f800e58a…) refilled on 2026-11-07 read 1 there: probes/t4642-backward-refill
+  and -refill-b. Both were filled from one upload, with the same timestamp, so they are one fill scored twice. Every one-variable variant reads 1 too
+  (excel-graph, 2026-11-07, T-4642):
+  - Q after the active R (t4642-qualified-after-active);
+  - a fourth tab Z after R (t4642-fourth-tab-before);
+  - the qualified use on Z after R (t4642-fourth-tab-after);
+  - the same use also typed before the add (t4642-qualified-entered, Q!A1 and Q!A2);
+  - no bare use on P (t4642-no-bare-use).
+
+  So the cell is variation between fills of the same bytes, not a rule: one rule would also have to explain why identical bytes now read 1, and the variants found none. Ours reads 1, the
+  reproduced value. The 2026-11-06 sidecar stays committed until T-3610 decides how such cells are scored, and its Q!A1 stays a known failure. T-3610 owns it, as a
+  cell whose Excel value varies between fills. P's bare uses stay `#NAME?` in every variant that has them, as the model
+  predicts: the later qualified use fixes P's provisional place. The qualified use itself reads the new name.
 Ours since T-4618: `Model::loaded_uses_take_sheet_place` (name_load_order.rs) replays the model over the formulas as
 they stand when the add comes, with the active sheet then (`Model::active_sheet`), and `Model::bind_added_sheet_name`
 pins S's uses only when the add does not fill their place. UNVERIFIED: a use typed after the load is replayed where
