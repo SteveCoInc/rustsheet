@@ -2381,9 +2381,24 @@ another inside the table, it shows each hidden data row that every kept criterio
 displays in that criterion's column (`rows_kept_by_criteria`, crates/rustsheet-engine/src/table_edits.rs), for a table read
 from a file and for one given its criteria with `Txn::filter_table_column` (the eval adapter's spec `"criteria"`). Rule
 (ours, T-4803): only a values filter without date groups is evaluated (blank rows by `blank`, other rows by their text
-among `values`, ignoring case); a row with any other kept criterion stays hidden. A row hidden in the file that the kept
-criteria keep is shown too, as the one-criterion delete shows it (above); with two criteria that is unprobed, as are
-case differences and number formats in the kept column.
+among `values`, ignoring case); a row with any other kept criterion stays hidden. **Excel re-applies the kept criteria
+to every data row** (T-4895, excel-graph 2026-11-07; predictions committed before each fill in docs/research/t4895/):
+- A row hidden in the file that both criteria keep is shown by the delete too (probes/t4895-two-criteria-hand-hidden-*:
+  row 4, "a" and 30, also written hidden; the control gives `SUBTOTAL(3,S!B4)` = 0, the delete 1 and 3 = 103 = 5,
+  9 = 109 = 17, as the engine). One earlier fill of the delete case without its `COLUMNS(Sales)` reader returned the
+  control's values; two later fills with the reader (`COLUMNS` = 2, so the delete ran) reproduced the result above,
+  and the first fill's sidecars are kept in docs/research/t4895/first-fill/.
+- The kept criterion is matched against the text each row displays, and visible rows it rejects are hidden
+  (probes/t4895-two-criteria-number-format-*): with `Ext` formatted `0.00` (10.00 .. 60.00) and its kept values
+  filter listing the General text 10, 20, 30, 50, 60, the control reads the file's hidden rows (3 = 103 = 3) but the
+  delete of `Cat` hides **every** data row, rows 2, 4 and 6 that were visible included (3 = 103 = 9 = 109 = 0; two
+  fills). The engine leaves rows 2-4, 6 and 7 visible: a gap owned by T-4939.
+- Uploads of patched spec2xlsx workbooks (Cat keeps a and c, Ext rejects 40, delete_column C; sha256 of each in
+  docs/research/t4895/predictions-uploads.tsv): kept values "A" and "C" over cells a and c keep them (case is
+  ignored); a visible row whose kept cell is blank stays visible under `blank="1"` and is hidden without it; a kept
+  custom filter (equals a, or equals c) shows row 5, which only the deleted criterion hid. The engine matches the
+  first two and differs on the last two (it leaves the blank row visible and keeps row 5 hidden; T-4939).
+Kept top10, dynamic, date-group and color criteria are unprobed.
 A manual hide made in the application inside a filtered table, and hidden rows outside the table (the engine keeps
 them hidden), are unprobed. A worksheet autoFilter (no table) and an autoFilter holding only a
 `<sortState>` are unprobed; ours reads the latter as not filtered.

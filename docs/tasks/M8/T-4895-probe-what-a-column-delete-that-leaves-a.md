@@ -3,7 +3,7 @@ id: T-4895
 title: "Probe what a column delete that leaves a filter criterion does to hand-hidden, visible, case-differing and formatted rows"
 milestone: M8
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -35,10 +35,35 @@ filtered rows"), so the engine follows the evidence there too.
   be needed for the other kinds; record their sha256 values as T-4749 did.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-graph) for each unprobed point above that spec2xlsx can write, with the engine's predictions
+- [x] A probes case (excel-graph) for each unprobed point above that spec2xlsx can write, with the engine's predictions
       committed before the fill. The other points are probed by upload, with their sha256 recorded.
-- [ ] numbers.md states each result. Every visibly-off cell has an owner task, or is fixed here if it is size S.
-- [ ] `make check` green; reviewers approve.
+- [x] numbers.md states each result. Every visibly-off cell has an owner task, or is fixed here if it is size S.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Re-applying filters after a value edit; worksheet autoFilters.
+
+## Outcome
+- Finding (excel-graph, 2026-11-07): a column delete that takes one criterion and leaves another makes Excel
+  **re-apply the kept criteria to every data row**, matching each row by the text it displays and ignoring case.
+  The predictions were committed before each fill and upload (docs/research/t4895/).
+- Probe cases (4 cases, 72 cells):
+  - `probes/t4895-two-criteria-hand-hidden-{control,delete-one}`: a hand-hidden row that both criteria keep is shown
+    by the delete. The engine matches, 36/36.
+  - `probes/t4895-two-criteria-number-format-control`: the engine matches, 18/18.
+  - `probes/t4895-two-criteria-number-format-delete-one`: a kept values filter listing General text over a `0.00`
+    column hides every row, including the visible ones. The engine passes 4/18; the other 14 cells are owned by T-4939.
+  - An earlier fill of the hand-hidden delete case, before the `COLUMNS` reader was added, did not reproduce. Its
+    sidecars are kept in docs/research/t4895/first-fill/.
+- Uploads (5 patched workbooks, sha256 values in docs/research/t4895/predictions-uploads.tsv). The re-apply model
+  predicts all 5; the engine's current rule predicts 3.
+  - Matching the engine: kept values that differ in case from the cells, and a blank kept cell under `blank="1"`.
+  - Differing from the engine (owned by T-4939): a visible blank row with no `blank="1"` is hidden, and a kept custom
+    filter shows a row that only the deleted criterion hid.
+  - Kept top10, dynamic, date-group and color criteria stay unprobed.
+- Not done: the adapter's every-row-hidden rule (`filters_hidden_rows`) for `"criteria"` tables. No probe here has a
+  criterion that hides every row, so that rule is still unprobed and the adapter is unchanged.
+- numbers.md ("SUBTOTAL and AGGREGATE over hidden and filtered rows") records the rule. Follow-up: T-4939 (engine,
+  opus).
+- Eval delta: probes +4 cases (72 cells, 58 pass). New known failures: 14 cells of
+  t4895-two-criteria-number-format-delete-one, owned by T-4939. Fixed 0, regressions 0.
