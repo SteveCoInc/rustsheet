@@ -3,7 +3,7 @@ id: T-4800
 title: "Probe OFFSET over an all-hit lifted XLOOKUP with a range if_not_found (T-4739 follow-up)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,3 +31,8 @@ every lookup hits, e.g. `OFFSET(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,Data
 
 ## Out of scope
 - Fixing a mismatch (its own task).
+
+## Outcome
+Probe `probes/t4800-offset-allhit-xlookup` filled on excel-graph (predictions in its description, written before the fill).
+Finding: lifted all-hit OFFSET spills 2x1 `#VALUE!` (1x1 for `{2}`); a scalar lookup gives 20 / 30; ours matches only the
+scalar control and the first spill cells. Recorded in lookup.md and SPEC-0014; fix task T-4904 names the 10 cells.

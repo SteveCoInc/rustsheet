@@ -86,6 +86,8 @@ b2; E1 holds the formula):
   `SUMSQ` 2 (top-left, not row intersection: `SUMSQ(OFFSET(A2,0,0,{1;2}))` in E1 is 20000); AVERAGEA/MAXA: text 0, blank and TRUE skipped, unlike a reference argument where TRUE is 1; docs/excel-semantics/lookup.md).
 - Per-element callers (rule 6), each spilling one value per element: `COUNTIFS(OFFSET(A1,{0;1},0),">0")` 1, 1;
   `AVERAGEIF(OFFSET(A1,0,0,{1;2}),">0")` 1, 50.5; `MAXIFS(OFFSET(A1,{0;1},0),OFFSET(A1,{0;1},0),">0")` 1, 100.
+- OFFSET over an all-hit lifted XLOOKUP with a range if_not_found is a 2x1 spill of `#VALUE!` (a 1x1 for `{2}`); a scalar lookup
+  gives the hit's value (T-4800, docs/excel-semantics/lookup.md; ours: scalar `#VALUE!`, T-4904).
 - `CONCAT(OFFSET(A1,{0;1},0))` is `#VALUE!` (a value view, as TEXTJOIN in rule 2).
 - `AVERAGEA(OFFSET(A4,{0;1;2},0))` and `MAXA(..)` are 0 with A4 the text "5", A5 blank and A6 TRUE: the
   result is 0: not 5 and not 1, but which elements count is open, as the data holds no number (follow-up task).
