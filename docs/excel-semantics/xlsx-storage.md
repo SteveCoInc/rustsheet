@@ -592,9 +592,19 @@ B1:D4), `A2*2` after delete_column B (a column it does not read; table A1:B4), `
 A2:C5), and `A2*2` after insert_row 3 inside the data rows (table A1:C5; the cells below read `=A4*2`, `=A5*2`).
 A structured column formula keeps its text: `T[[#This Row],[Col]]*2` after insert_column A, with FORMULATEXT
 `=[@Col]*2` in the moved cells and their values 2, 4, 8 (t4274-calc-column-structured-insert-column-a). The row that
-insert_row 3 adds inside the data rows gets the column's formula (its Calc cell is 0, the oracle's S!C3, unscored).
-Ours (T-4274): the row and column insert and delete rewrite the stored text as the first data cell's formula is
-displaced (`Model::displaced_column_formulas`), printed in file form at the new first data cell; a text with a `[`
+insert_row 3 adds inside the data rows gets the column's formula (its Calc cell is 0, the oracle's S!C3).
+A row a row insert adds to the data rows gets the column formula filled down, and the stored text is the formula of
+the first data row (VERIFIED, excel-graph 2026-11-06, probes/table-edits/t4692-*, scored through
+`FORMULATEXT(INDEX(S!C:C,n))` and the cached `table1.xml`): insert_row 3 inside the data rows writes `<f>A3*2</f>`
+into C3 (and twice gives `A3*2`, `A4*2`); insert_row 2 at the first data row writes `A2*2` into the new C2 and saves
+`calculatedColumnFormula` `A2*2` (not the moved cell's `A3*2`); insert_row 5 at the totals row of A1:C5 writes `A5*2`
+into the new data row; a structured column fills `T[[#This Row],[Col]]*2`. Each filled cell is saved with its own
+`s="1"` style (unscored).
+Ours (T-4274, T-4692): the row and column insert and delete rewrite the stored text as the first data cell's formula
+is displaced (`Model::displaced_column_formulas`), read where that cell moved and printed in file form at the new first
+data row (so an insert at the first data row keeps `A2*2`), and a row insert fills the stored formula into the rows it
+adds to a table's data rows (`Model::fill_inserted_data_rows`), each cell keeping its own style (Excel's `s="1"` is
+not matched, unscored); a text with a `[`
 (a structured reference) keeps its text, and so does one whose first data cell the edit deletes (unprobed). Moves and
 cell shifts leave the text as it is (unprobed). Ours read their rows too since T-4680 (before, the moved `[@Col]` cells were `#ERROR!`). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
 `array="1"` attribute is dropped on import (export writes the plain element): engine choices, what Excel does with
@@ -604,7 +614,7 @@ Evidence: the saved `xl/tables/table1.xml` and `xl/worksheets/sheet1.xml` of pro
 (the eval/.cache/oracle/excel-graph/<input_sha256>.xlsx of each sidecar).
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-xlsx/src/import/tables.rs, crates/rustsheet-xlsx/src/export/tables.rs, crates/rustsheet-engine/src/calculated_columns.rs
-Tasks: T-2957, T-2958, T-2969, T-3033, T-4274, T-4680
+Tasks: T-2957, T-2958, T-2969, T-3033, T-4274, T-4680, T-4692
 
 ## Excel does not fill a calculated column on load
 Rule: a table part whose `<tableColumn>` holds `<calculatedColumnFormula>` does not make Excel fill the

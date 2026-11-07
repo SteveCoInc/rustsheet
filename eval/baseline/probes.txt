@@ -2607,6 +2607,11 @@ C	probes/table-edits/t4274-calc-column-insert-column-a.case.json	4
 C	probes/table-edits/t4274-calc-column-insert-row-1.case.json	4
 C	probes/table-edits/t4274-calc-column-insert-row-3.case.json	5
 C	probes/table-edits/t4274-calc-column-structured-insert-column-a.case.json	4
+C	probes/table-edits/t4692-insert-row-first-data.case.json	12
+C	probes/table-edits/t4692-insert-row-inside.case.json	12
+C	probes/table-edits/t4692-insert-row-totals.case.json	12
+C	probes/table-edits/t4692-insert-rows-inside.case.json	12
+C	probes/table-edits/t4692-structured-insert-row-inside.case.json	12
 C	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	8
 C	probes/table-edits/table-column-range-delete-both-ends.case.json	8
 C	probes/table-edits/table-column-range-delete-end.case.json	8
