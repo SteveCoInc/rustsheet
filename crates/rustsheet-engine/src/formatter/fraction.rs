@@ -24,8 +24,8 @@
 // LINT-DEBT-END
 
 use super::parser::{NumberPart, TextToken};
-use crate::decimal_round::{round_decimal, RoundMode};
-use crate::number_format::{group_thousands, to_precision};
+use crate::decimal_round::{cut_to_15_digits, round_decimal, RoundMode};
+use crate::number_format::group_thousands;
 
 /// Where a fraction sits among a number section's `tokens`: the digit placeholders before
 /// `numerator_start` are the integer part, those from it up to `numerator_end` the numerator.
@@ -67,7 +67,7 @@ pub(super) fn format_fraction(
     if part.comma > 0 {
         // The scaled value is cut to 15 significant digits: `?/?,,` on 1E-251 is "0/1", where the
         // double product (0.10000000000000002) would pick 1/9 (probes/fraction-overflow-scaled A65).
-        value = to_precision(value * fraction_scale(part.comma), 15);
+        value = cut_to_15_digits(value * fraction_scale(part.comma), false);
     }
     // A scaled value past f64's range would print past 255 characters, which Excel cannot show.
     if !value.is_finite() {
@@ -159,7 +159,7 @@ pub(super) fn format_fraction(
         (true, _) => String::new(),
         // Past 15 significant digits Excel prints zeros, as for any number format.
         (false, _) => {
-            let digits = format!("{}", to_precision(integer, 15));
+            let digits = format!("{}", cut_to_15_digits(integer, false));
             if part.use_thousands {
                 group_thousands(&digits, group_separator)
             } else {

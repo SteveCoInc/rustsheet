@@ -9,7 +9,7 @@ use super::{
     flush_subnormal,
 };
 use crate::{
-    expressions::token::Error, number_format::to_excel_precision, x87_exp::excel_exp,
+    decimal_round::cut_to_15_digits, expressions::token::Error, x87_exp::excel_exp,
     x87_log10::excel_ln,
 };
 
@@ -230,6 +230,7 @@ fn is_one_over_an_odd_integer(y: f64) -> bool {
     if inverse.abs() >= LIMIT || (inverse - inverse.round()).abs() > inverse.abs() * 1e-12 {
         return false;
     }
-    let inverse = to_excel_precision(inverse, 15);
+    // No exact 16th-digit tie lies within 1e-12 of an integer below 2^31, so the tie rule is moot.
+    let inverse = cut_to_15_digits(inverse, false);
     inverse.fract() == 0.0 && inverse.abs() < LIMIT && inverse % 2.0 != 0.0
 }

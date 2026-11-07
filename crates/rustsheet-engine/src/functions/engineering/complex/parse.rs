@@ -3,7 +3,8 @@
 // LINT-DEBT-END
 use std::fmt;
 
-use crate::number_format::{complex_part_to_text, to_precision};
+use crate::decimal_round::cut_to_15_digits;
+use crate::number_format::complex_part_to_text;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub(super) enum Suffix {
@@ -50,7 +51,8 @@ impl fmt::Display for Complex {
         // A154), and `IMSEC("1.5+711i")` "0".
         let round15 = |v: f64| {
             let v = if v.is_subnormal() { 0.0 } else { v };
-            Some(to_precision(v, 15))
+            // A 16th-digit tie goes toward zero, as number-to-text cuts (T-4848).
+            Some(cut_to_15_digits(v, false))
                 .filter(|r| r.is_finite())
                 .unwrap_or(v)
         };

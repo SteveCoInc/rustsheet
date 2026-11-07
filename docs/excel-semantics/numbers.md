@@ -950,6 +950,27 @@ Evidence: probes-numeric/99bc3137b5869417 `compare-tolerance/*` (648 cells). Ora
 Status: VERIFIED
 Implemented in: `cmp_excel_precision` (number_format.rs), used by `compare_values` (functions/util.rs) and `Ord for CalcResult` (calc_result.rs). Tasks: T-0989, T-0180
 
+## A 16th-digit tie splits by use (T-4848)
+Rule: an exact tie at the 16th significant digit (the double's exact decimal is 15 digits, then 5, then zeros) is cut
+**away from zero** by the comparisons and **toward zero** by text. Comparisons: `=`, `<` and COUNTIF on
+`1E+15+25` equal `1E+15+30`, not `1E+15+20` (ties to even would give 20); `-(1E+15+15)` equals `-(1E+15+20)`;
+`1E+14+1.5` equals `1E+14+2` and `1E+14+2.5` equals `1E+14+3`, and `1E+15+15<1E+15+20` is FALSE. Text: `&`, `TEXT(x,"0.0")`
+and EXACT cut the same values toward zero: `EXACT(1E+15+15,1E+15+10)` is TRUE and `EXACT(1E+15+15,1E+15+20)`
+FALSE, so EXACT and `=` disagree on such a pair; `TEXT(1E+15+25,"0.0")` is "1000000000000020.0" and
+`TEXT(1E+14+2.5,"0.0")` "100000000000002.0". `MATCH(lo,B,0)` and `MATCH(hi,B,0)` over a one-cell range holding the tie
+are both `#N/A` for every tie probed, so MATCH's exact mode does not use the comparison cut there (it matches the
+non-tie rows 6 and 7). A typed 16-digit literal is truncated on entry ("15-digit literal parsing"), so
+`=12345678901234.75` already stores 12345678901234.7 and is no tie (rows 6, 7).
+Evidence: probes/t4848-sixteenth-digit-ties (98 cells over 7 values; B = value, C:D `=` against the lower and upper
+neighbour, E `<` upper, F:G COUNTIF, H:I EXACT, J:K MATCH, M `TEXT(,"0.0")`, N `&""`, O `EXACT(B,B&"")`; excel-graph,
+2026-11-07).
+UNVERIFIED: the tie direction of conditional-format Equal (it shares `cmp_excel_precision`), of the scientific-format
+mantissa, the fraction formats, the IM* part text, and pivot number-group quotients (these use the toward-zero cut).
+Status: VERIFIED (the probed operations)
+Implemented in: `cut_to_15_digits` (decimal_round.rs), the one 15-digit cut: away from zero in `cmp_excel_precision`
+(number_format.rs), toward zero in `to_excel_precision_str`, EXACT (`exact_element`, functions/text/common.rs), the
+number formatter and every other caller; `number_to_text` keeps `significant_15` directly. Tasks: T-4848
+
 ## 15-digit literal parsing
 Rule: numeric literals, `"text"+0` and `VALUE("text")` keep only 15 significant digits;
 digits 16+ are **truncated**, not rounded: `VALUE("9307149050110945.41")` = 9307149050110940,
