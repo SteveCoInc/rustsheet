@@ -3,7 +3,7 @@ id: T-1599
 title: "SORT: compare keys without a CalcResult per comparison and move rows instead of cloning"
 milestone: M2
 lane: perf
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
