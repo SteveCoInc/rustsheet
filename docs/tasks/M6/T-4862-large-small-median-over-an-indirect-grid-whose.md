@@ -3,7 +3,7 @@ id: T-4862
 title: "LARGE/SMALL/MEDIAN over an INDIRECT grid whose first element is a #REF! (bad sheet name) is #N/A beside an off-sheet reference, where a cell error value propagates"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
