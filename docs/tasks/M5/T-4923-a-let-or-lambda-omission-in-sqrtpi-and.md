@@ -3,7 +3,7 @@ id: T-4923
 title: "A LET or LAMBDA omission in SQRTPI and FACTDOUBLE follows Excel (probe the ToolPak #N/A rule)"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
