@@ -3,7 +3,7 @@ id: T-4702
 title: "Undo of a row or column delete puts back conditional formats and defined names it rewrote"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
