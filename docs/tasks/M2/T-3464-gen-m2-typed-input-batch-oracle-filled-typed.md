@@ -45,10 +45,13 @@ T-3463 dates and clocks), and every Excel cell of it the engine fails is owned b
 `rustsheet-gen --policy typed-input --seed 0` wrote 2 gen-m2 cases, `7d9ef4824d1c5286` (seed 0, case 0) and
 `361fd843151f1560` (case 1), with 240 entries each in A:D. `rustsheet-oracle fill -b excel-graph --suite gen-m2` filled
 both sidecars: 0 failures, 0 skipped. Excel for the web refused 0 entries (no PATCH 400). The engine passes 1,424 of the
-1,444 scored cells. Column D, `CELL("format")`, is `#VALUE!` on excel-graph and is not scored.
+1,444 scored cells. Column D, `CELL("format")`, is scored, but carries no format evidence: Graph returns `#VALUE!` for all
+of it. The sidecars record formula cells only, so typed constants in A are not scored. The four column-A cells that are
+scored are the doubled-sign entries, which Excel stores as formulas.
 
 Visibly-off cells per stratum (20 in all):
-- `sign/double-sign`, 12 cells: 4 entries (`+-122`, `+-0.7`, `-+584.17`, `++78.2218`) × A:C. Owner: T-5017 (new).
+- `sign/double-sign`, 12 cells: 4 entries (`+-122`, `+-0.7`, `-+584.17`, `++78.2218`) × A:C. Excel stores each as a formula
+  (`=+-122`). Owner: T-5017 (new).
 - `spacing/spaced`, 5 cells: B of `\t-3`, CHAR(160)`0`, `\t\t-701.80`, `-92598\t\t` and `-2.88\t`. Owner: T-5016 (new).
 - `e-notation/star-star`, 2 cells: B and C of `39**9`. Owner: T-5017.
 - `clock/near-miss`, 1 cell: C of `10:`. Owner: T-5017.
@@ -56,6 +59,6 @@ No other stratum (plain, currency, percent, fraction, the other e-notation and n
 a visibly-off cell.
 
 New quirks, recorded in coercion.md: "Number text padded with a TAB or CHAR(160) is not a number (T-3464)", and
-"Typed entries: a doubled sign, a `**` exponent and `10:` are numbers (T-3464)". The failing cells are `F` lines in
+"Typed entries: a doubled sign is a formula; a `**` exponent and `10:` are numbers (T-3464)". The failing cells are `F` lines in
 eval/baseline/gen-m2.txt (`make eval-baseline`, 0 regressions), and `make exit-owners MILESTONE=M2` reports 0.
 Tasks filed: T-5016 (P2, sonnet) and T-5017 (P2, sonnet). None extended.

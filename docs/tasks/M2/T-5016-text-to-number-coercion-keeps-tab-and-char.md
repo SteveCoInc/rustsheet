@@ -32,6 +32,9 @@ CHAR(160), as Excel does: `0+(CHAR(9)&"-3")` and `0+(CHAR(160)&"0")` are `#VALUE
   - gen-m2/361fd843151f1560 Sheet1!B77, Sheet1!B219, Sheet1!B221
 
 ## Acceptance criteria
+- [ ] Before the trim changes, a probe case filled on excel-graph pins `0+(CHAR(9)&"-3")`, `0+(CHAR(160)&"0")`, `0+("-2.88"&CHAR(9))`,
+      VALUE of the same texts, and the space-padded controls. The rule above is inferred from typed cells whose stored text the
+      fill does not record.
 - [ ] The cells above pass, and no other case regresses (`make eval-baseline`).
 - [ ] A unit test pins `0+` of TAB- and CHAR(160)-padded plain number text as `#VALUE!` and space padding as a number.
 - [ ] coercion.md's entry says what the engine now does ("Ours").

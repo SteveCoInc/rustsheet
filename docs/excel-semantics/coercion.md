@@ -1406,16 +1406,23 @@ CHAR(160) does not read as a number. Typed into a cell, it stays text (ISTEXT TR
 one between digit groups (`6  66,659,118` is text).
 Evidence: gen-m2/7d9ef4824d1c5286 and gen-m2/361fd843151f1560, the 40 `typed-input/spacing/spaced` rows, A:C
 (excel-graph, 2026-11-07, T-3464).
+The rule for `+0` is inferred from `=A1+0` over the typed cell. Excel's stored text for these entries is not recorded,
+because the fill records formula cells only. A direct `0+(CHAR(9)&"-3")` probe is part of T-5016.
 Ours: typed entry keeps every one as text. `+0` reads the 5 plain or signed numbers among them
 (B47 and B211 of the first case, B77, B219 and B221 of the second), because `Model::cast_number_in` (cast.rs)
 trims with `str::trim`, which strips TAB and U+00A0. Owned by T-5016.
 Status: VERIFIED (excel-graph); engine differs (T-5016).
 Tasks: T-3464, T-5016
 
-## Typed entries: a doubled sign, a `**` exponent and `10:` are numbers (T-3464)
+## Typed entries: a doubled sign is a formula; a `**` exponent and `10:` are numbers (T-3464)
 Rule (en-US, text typed into a cell):
-- A doubled sign before a number is read with the signs combined: `+-122` is -122, `+-0.7` is -0.7, `-+584.17` is
-  -584.17 and `++78.2218` is 78.2218 (ISTEXT FALSE, `A1+0` the same number).
+- A doubled sign before a number makes the entry a formula: `+-122` is stored as the formula `=+-122` (value -122),
+  and likewise `+-0.7` (-0.7), `-+584.17` (-584.17) and `++78.2218` (78.2218). ISTEXT is FALSE and `A1+0` is the
+  same number. The evidence that these are formulas: the excel-graph fill records only formula cells
+  (`formula_values`, tools/src/rustsheet_tools/snapshot.py), and these four are the only column-A cells in the two
+  sidecars. Sign-led entries that read as one typed number stay constants (`  -3`, `-  92`). So the rule seems to
+  be: an entry led by a sign is a formula unless the whole entry reads as a typed number. Excel does not strip
+  one sign and test the rest. UNVERIFIED by ISFORMULA or FORMULATEXT (T-5017 probes them).
 - `**` stands for the exponent marker in a typed value, as it does in a typed formula (syntax.md "`**` in a typed
   number is `E`"): `39**9` is 39000000000.
 - A clock with an hour and a colon but no minutes is a time: `10:` is 10:00 (0.416666…). `:30` and `1:2:3:4` stay
@@ -1424,7 +1431,9 @@ Evidence: gen-m2/7d9ef4824d1c5286 A196:C196 and C172; gen-m2/361fd843151f1560 A7
 B27:C27 (excel-graph, 2026-11-07, T-3464).
 UNVERIFIED: `--` before a number (not drawn), doubled signs before currency, a percent or E-notation, and whether
 `0+"+-1"` or VALUE read a doubled sign the way typed entry does.
-Ours: typed entry keeps all three shapes as text. `0+"10:"` is already 10:00. Owned by T-5017.
+Ours: typed entry keeps all three shapes as text. For a doubled sign, `Model::formula_without_prefix` (model.rs)
+strips one sign, finds that the rest (`-122`) is a number, and so does not make the entry a formula. `0+"10:"` is
+already 10:00. Owned by T-5017.
 Status: VERIFIED for the forms listed (excel-graph); engine differs (T-5017).
 Tasks: T-3464, T-5017
 
