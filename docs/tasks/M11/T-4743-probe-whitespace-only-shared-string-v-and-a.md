@@ -3,7 +3,7 @@ id: T-4743
 title: "Probe whitespace-only shared-string <v> and a bare <is/>; fix the clear_covered_cells doc comment"
 milestone: M11
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -30,10 +30,13 @@ To probe, extend the raw-XML generator described in eval/suites/fixtures/README.
 rows in a new fixture, then run `rustsheet-oracle fill -b excel-graph --suite fixtures`.
 
 ## Acceptance criteria
-- [ ] A fixture probes both forms (ISBLANK, ISTEXT, COUNTA, LEN, TYPE), and its oracle sidecar is committed.
-- [ ] The importer and the snapshot reader match the evidence. The snapshot test's F1 assertion cites it or is changed.
-- [ ] The xlsx-storage.md entry lists both forms, and the `clear_covered_cells` comment is corrected.
-- [ ] `make check` green; reviewers approve.
+- [x] A fixture probes both forms (ISBLANK, ISTEXT, COUNTA, LEN, TYPE), and its oracle sidecar is committed.
+- [x] The importer and the snapshot reader match the evidence. The snapshot test's F1 assertion cites it or is changed.
+- [x] The xlsx-storage.md entry lists both forms, and the `clear_covered_cells` comment is corrected.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Keeping covered content (T-4722).
+
+## Outcome
+Fixture `valueless-cell-forms-ws-index` (excel-graph 2026-11-07): a whitespace-only `<v> </v>` shared-string index is blank; a bare `<is/>` is the empty string (ISTEXT TRUE, COUNTA 1, LEN 0). Both match the importer and the snapshot reader, so no code change; the snapshot test's F1 cites the evidence. xlsx-storage.md and the fixtures README list both forms; the `clear_covered_cells` comment now says the clearing differs from Excel (T-4722). Eval delta: 1 new case, 18/18 pass.

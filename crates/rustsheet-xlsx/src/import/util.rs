@@ -1,5 +1,3 @@
-#![allow(clippy::unwrap_used)]
-
 use super::xml::XmlNode;
 use rustsheet_engine::colors::get_indexed_color;
 
@@ -40,6 +38,17 @@ pub(super) fn get_value_or_default(node: &XmlNode, tag_name: &str, default: &str
     }
 }
 
+/// The RGB digits of a colour value: an 8-digit ARGB value (`FF4472C4`) without its alpha byte,
+/// anything else as written. The value is untrusted text, so only an ASCII one is cut at byte 2:
+/// cutting a non-ASCII one there could split a character and panic (T-4830).
+pub(super) fn strip_alpha(raw: &str) -> &str {
+    if raw.len() == 8 && raw.is_ascii() {
+        raw.get(2..).unwrap_or(raw)
+    } else {
+        raw
+    }
+}
+
 pub(super) fn get_color(node: &XmlNode, theme: &Theme) -> Result<Color, XlsxError> {
     get_color_indexed(node, theme, None)
 }
@@ -55,17 +64,13 @@ pub(super) fn get_color_indexed(
     indexed: Option<&[String]>,
 ) -> Result<Color, XlsxError> {
     // 18.3.1.15 color (Data Bar Color)
-    if node.has_attribute("rgb") {
-        let raw = node.attribute("rgb").unwrap();
-        // Strip leading alpha byte from ARGB (e.g. "FF4472C4" → "#4472C4")
-        let hex = if raw.len() == 8 {
-            format!("#{}", raw[2..].to_ascii_uppercase())
-        } else {
-            format!("#{}", raw.to_ascii_uppercase())
-        };
-        Ok(Color::Rgb(hex))
-    } else if node.has_attribute("indexed") {
-        let index = node.attribute("indexed").unwrap().parse::<i32>()?;
+    if let Some(raw) = node.attribute("rgb") {
+        Ok(Color::Rgb(format!(
+            "#{}",
+            strip_alpha(raw).to_ascii_uppercase()
+        )))
+    } else if let Some(index) = node.attribute("indexed") {
+        let index = index.parse::<i32>()?;
         if index == 64 {
             // 64 is "transparent" in OOXML, but we don't have a good way to represent that, so we'll just ignore it
             return Ok(Color::None);
@@ -88,8 +93,8 @@ pub(super) fn get_color_indexed(
             })
             .unwrap_or_else(|| get_indexed_color(index));
         Ok(Color::Rgb(rgb))
-    } else if node.has_attribute("theme") {
-        let theme_index = node.attribute("theme").unwrap().parse::<i32>()?;
+    } else if let Some(theme_index) = node.attribute("theme") {
+        let theme_index = theme_index.parse::<i32>()?;
         let tint = match node.attribute("tint") {
             Some(t) => t.parse::<f64>().unwrap_or(0.0),
             None => 0.0,
@@ -228,6 +233,23 @@ mod tests {
         assert!(get_bool(node, "empty"));
         assert!(get_bool(node, "yes"));
         assert!(get_bool(node, "other"));
+    }
+
+    /// An `rgb` attribute is untrusted text: one of 8 bytes that is not ASCII (`"Aé12345"`, byte 2
+    /// inside the `é`) must not be cut at byte 2, which panicked the importer (T-4830). An
+    /// ASCII ARGB value still drops its alpha byte, and anything else is kept as written.
+    #[test]
+    fn rgb_colours_are_never_cut_inside_a_character() {
+        let colour = |rgb: &str| {
+            let doc = XmlNode::parse_str(&format!(r#"<color rgb="{rgb}"/>"#)).unwrap();
+            get_color(&doc, &Theme::default()).unwrap()
+        };
+        assert_eq!(colour("FF4472c4"), Color::Rgb("#4472C4".to_string()));
+        assert_eq!(colour("4472c4"), Color::Rgb("#4472C4".to_string()));
+        assert_eq!(colour("Aé12345"), Color::Rgb("#Aé12345".to_string()));
+        assert_eq!(colour("ééééé"), Color::Rgb("#ééééé".to_string()));
+        assert_eq!(strip_alpha("FFé12"), "FFé12");
+        assert_eq!(strip_alpha("8 bytes!"), "bytes!");
     }
 
     #[test]

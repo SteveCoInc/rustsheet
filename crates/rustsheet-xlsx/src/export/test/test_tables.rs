@@ -815,11 +815,14 @@ fn a_calculated_column_keeps_its_column_formula() {
 #[test]
 fn a_calculated_column_formula_follows_row_and_column_edits() {
     type Edit = fn(&mut rustsheet_engine::UserModel) -> Result<(), String>;
-    let cases: [(&str, Edit, &str); 5] = [
+    let cases: [(&str, Edit, &str); 6] = [
         ("=A2*2", |u| u.insert_columns(0, 1, 1), "B2*2"),
         ("=A2*2", |u| u.delete_columns(0, 2, 1), "A2*2"),
         ("=A2*2", |u| u.insert_rows(0, 1, 1), "A3*2"),
         ("=A2*2", |u| u.insert_rows(0, 3, 1), "A2*2"),
+        // A delete of the first data row: the next row's formula moved up, not `#REF!*2`
+        // (t4274-calc-column-delete-row-2, T-4769).
+        ("=A2*2", |u| u.delete_rows(0, 2, 1), "A2*2"),
         (
             "=[@Col]*2",
             |u| u.insert_columns(0, 1, 1),

@@ -97,10 +97,19 @@ Evidence (excel-graph, 2026-11-04, T-4146; generator, forms and scorer in docs/r
 - probes/t4146-annuity-twice-fresh: 120 calls drawn with a new seed after the form was frozen, committed before
   the fill: twice-rounded 120/120 bit-exact, plain 0, correctly rounded 0.
 - No other FV, PV or RATE oracle cell changed (`make eval-baseline`: probes fixed 1, regressions 0).
-Ours: `compute_future_value` and `fn_pv` with `annuity_factor_rounded` (functions/financial/annuity.rs).
-Status: VERIFIED (excel-graph; integer nper, rate ≠ 0. rate = 0 and non-integer nper keep their forms, unprobed
-here)
-Tasks: T-4146, T-3424
+- Non-integer nper too (T-4244): probes/t4244-fv-pv-nonint-nper, 80 cancelling calls with nper an integer plus a
+  fraction (`gen_probe.py ... nonint`, seed t4244-nonint-1), predictions in `docs/research/t4244/predictions.tsv`
+  committed before the fill (excel-graph, 2026-11-07). Twice-rounded bit-exact on all 80 (FV 24/24 train and 16/16
+  test, PV 29/29 and 11/11), plain doubles 0 (PV within 4 ulp on 6 of 40), the correctly rounded value 0. So P is
+  Excel's `^` of the double `1+r` at a fractional exponent, and the operators are the same as at integer nper.
+  These cancelling calls amplify the rounding: Excel is more than 1e-4 from the 80-digit math on 12 of the 80 (A18
+  `-2.42076...` against -1.64630..., A42, A58), more than 1e-9 on 50. Excel kept as the target (decision 0300): the
+  engine matches Excel there, and no point needs it to leave Excel.
+Ours: `compute_future_value` and `fn_pv` with `annuity_factor_rounded` (functions/financial/annuity.rs), at every nper
+since T-4146.
+Status: VERIFIED (excel-graph; integer and non-integer nper, rate ≠ 0. rate = 0 keeps its own form, `-fv - pmt*nper`,
+unprobed for cancellation here)
+Tasks: T-4146, T-3424, T-4244
 
 ## PMT, IPMT and PPMT are the exact payment
 Rule: Excel's PMT, IPMT and PPMT are within a few ulp of the exact value of the payment on the
@@ -510,16 +519,23 @@ nper + 1 is a value, the split of "IPMT and PPMT split Excel's discounted paymen
 60.5849877072275,1)` 5.466510612214358. At nper + 1 it is `#NUM!`: `PPMT(0.0449398904217299,315,314,-3107.59202412783,
 0,1)`, `PPMT(0.0805588428682658,227,226,16.1638393072709,0,0)` and `IPMT(0.0104741966355263,249,248,340880.668375193,0,0)`;
 so is a period of 0.5 (`IPMT(0.00268654404805728,0.5,11,-557.559050130903,0,0)`), 0 or -1.
-Unprobed: IPMT at a period strictly between nper and nper + 1 (the engine takes PPMT's bound for both). The only IPMT
-cells in that band, probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,1E-300)`, period 1 over nper 1E-10),
-are `#NUM!` for a subnormal `1-Q` ("IPMT is #NUM! where its discounted balance fails"), so they do not settle the band;
-the Gate A definition keeps the closed form there and the cells keep their math value (T-4516).
+IPMT shares PPMT's band (T-4530): at a period strictly between nper and nper + 1 it is a value, the interest half of
+the same discounted split. `IPMT(0.05,12.5,12,-1234.56789,98.7654321,0)` is 8.026614067003484,
+`IPMT(0.05,12.000000001,12,..)` 11.040527695008135 and `IPMT(0.05,(13-2^-49),12,..)`, the double below nper + 1,
+4.938271605000011; rates 0, 1E-10 and -0.5, types 0 and 1 and nper 12.5 alike, with no `#NUM!` anywhere in the band.
+The engine's split was predicted bit for bit on all 160 cells before the fill (H_value, against H_nper: IPMT `#NUM!`
+past nper). probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,1E-300)`, period 1 over nper 1E-10) are
+`#NUM!` for a subnormal `1-Q` ("IPMT is #NUM! where its discounted balance fails"), not for the band; the Gate A
+definition keeps the closed form there and the cells keep their math value (T-4516).
 Evidence: accuracy/PPMT/s1 A112, A118 (values), A128, A137, A139 (`#NUM!`); accuracy/IPMT/s1 A113, A114, A117, A120,
 A123, A139 (`#NUM!`) (excel-graph, 2026-11-06, T-4109); gen-m9 a91bad4e84f49739 A354 `PPMT(1,0.5,323,401723)` and
 c0681a8b150ce301 A375 `PPMT(0.1,9,1.5,404118,62,1)` (`#NUM!`); "Financial edge-pool smoke check" (IPMT 13 of 12).
-Status: VERIFIED (excel-graph) for PPMT; IPMT's band UNVERIFIED
+probes/t4530-ipmt-band A1:J16 (IPMT and PPMT side by side at periods nper, nper + 1E-9, nper + 0.5, nper + 0.999 and
+the double below nper + 1; excel-graph, 2026-11-07; predictions in `docs/research/t4530/predictions.tsv` committed
+before the fill; math values in its `.math.json`).
+Status: VERIFIED (excel-graph) for PPMT and IPMT
 Implemented in: `period_payments` (`period >= period_count + 1.0`, functions/financial/annuity.rs)
-Tasks: T-4109
+Tasks: T-4109, T-4530
 
 ## PDURATION's domain
 Rule: `PDURATION(rate, pv, fv)` is `(LN(fv) - LN(pv)) / LN(1+rate)`, with `1+rate` a double. A rate, pv or fv of 0 or
@@ -4511,9 +4527,13 @@ build the per-period charges differently, so the same inputs give different last
   A187, A188, A189, A200, factors 0.10 to 0.60 and starts 0.5 to 53.25; excel-graph, 2026-11-06), and it changes no
   probe or gen-m9 VDB cell (T-4111 ran it over the 257 literal one-call VDB eval cells with a math value). `(end - start)·(cost - salvage)/life`, rounding
   the product first, is one ulp off at A187 and at gen-m9/67a4c03afd63f988 A334 (`VDB(86661,45,37,0,6,0.2)`,
-  14045.837837837837), a whole start. Implemented (T-4510) for a fractional start only, the six points that
-  show the change. A whole start keeps the schedule, the same `sl` from period 0 (A119). The order with a fractional
-  end there, and factor 0 from a fractional start, are not evidenced yet (T-4724).
+  14045.837837837837), a whole start. The same single product holds for a whole start with a fractional end: 3 of the 30
+  cells of probes/t4724-vdb-straight-from-zero sheet W (A7, A15, A20) tell the schedule (`share = end - start - n`,
+  `share·sl + n·sl`) from the product, by 1 ulp each, and Excel gives the product on all 3; the other 27 agree under
+  both. Factor 0 from a fractional start is T-4111's `(end - start)·(c - s)/life`, not the fractional grid's
+  `/(life - f)` (sheet F, 20 of 20). Both excel-graph, 2026-11-07, predictions in docs/research/t4724. Factor 0 with a
+  whole start and a fractional end is inferred from the two, not probed. Implemented (T-4510, T-4724) for every
+  start.
 Evidence: probes/fin-vdb-schedule (78 cells), fin-vdb-modes, fin-rri-vdb-edges (excel-graph, 2026-10-20, T-1975);
 fin-vdb-fractional-start (45 cells), fin-vdb-fractional-start-edges (14 cells) (excel-graph, 2026-10-28, T-2185);
 fin-vdb-amordegrc-edges A1-A59 (excel-graph, 2026-10-30, T-1978): salvage at or above cost in both modes (switching
@@ -4522,9 +4542,9 @@ equal to cost give 0 everywhere), fractional windows near the end of life (`VDB(
 3.0082099200000414, TRUE 11.061273600000135), and a fractional life 9.5 (an end past it is #NUM!, factor 3 reaches the
 salvage before period 8). The model already matched all 59 cells.
 Status: VERIFIED (excel-graph)
-Implemented (T-1975, T-2185, T-4510): `vdb_no_switch_between` and `vdb_switching_between` in
+Implemented (T-1975, T-2185, T-4510, T-4724): `vdb_no_switch_between` and `vdb_switching_between` in
 functions/financial/financial_depreciation.rs.
-Tasks: T-1975, T-2185, T-3022, T-4111, T-4510
+Tasks: T-1975, T-2185, T-3022, T-4111, T-4510, T-4724
 
 ## AMORDEGRC life bands
 Rule: AMORDEGRC refuses (#NUM!) an asset life `1/rate` of 2 or less, that is a rate of 0.5 or more, and nothing else
@@ -4925,6 +4945,20 @@ the engine's stop. What decides which iterate Excel returns, and when it is `#NU
   docs/research/t3411/gen_sweep.py): Excel returns a number on 104 and `#NUM!` on 46. The branch's engine returned 59
   of the 104 (57 bit-exact) and was `#NUM!` on 45 where Excel returns a root (T-3548's type rule); T-4232 owns the
   visibly-off cells. On main (the stop iterate) the case scores 102 of 150 (56 of the 104 numbers bit-exact).
+- Re-measured on main 22a804e85 (after T-3408's 200-step secant, decision 0320), over all 4,336 IRR cells with an
+  Excel value (3,436 of eval/suites and Gate A's 900), the one-step-past return is still not Excel's rule (T-4213,
+  2026-11-07). It makes 15 cells bit-exact: the 12 above, plus t4213-irr-r4-fresh A95 and Gate A r4-T-3407 A285 and
+  r4-T-3411 A286. Three cells move away from Excel:
+  - t3411-irr-r4-fresh A129 (bit-exact to 2.2E-16 off);
+  - Gate A s1 A275, `-8.620634135425576E-7` in Excel and on main, -8.62063413320513E-7 one step past (2.2E-16 off,
+    still inside the envelope);
+  - t2927-irr-fallback-sweep A46, from 4 ulp to 6 ulp, past the 15th digit.
+
+  On Excel's two stop-iterate cells, the step past is 1 ulp of v, and it lowers |P|: A129 6.1E-5 to 3.05E-5, A275
+  9.5E-7 to 1.2E-7. The same holds on the winners (A44 3.6E-7 to 2.4E-7, -1 ulp). Nothing else separates them either:
+  steps 10 and 21 against 2 to 43 on the winners, flows 5 and 11 against 2 to 14, largest |c| 1E+9 and 1.5E+11.
+  Taking the extra step only when it keeps the stopping step's direction is the one rule found that keeps A129 on the
+  fit lab's train side. It is refuted on the test side: it still loses A275 and drops A286.
 Evidence: the oracle values of the cases above; `python3 -I docs/research/t3411/fallback_iterates.py .` prints the
 counts of the first four points, each iterate's step and stopping step size (an exact replay of the engine's
 secant, then Newton from v = 0). The NPV variants and the Illinois and two-point secants were scratch code.

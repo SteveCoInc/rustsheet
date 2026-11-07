@@ -47,6 +47,7 @@ pub mod run_meta;
 pub mod runner;
 mod spec_pivots;
 mod spill_extent;
+pub mod subexpr_case;
 pub mod suite;
 pub mod text_expect;
 pub mod v15_checkpoint;

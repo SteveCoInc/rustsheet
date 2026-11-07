@@ -241,6 +241,33 @@ fn an_api_pivot_round_trips_and_reaches_a_fixed_point() {
     assert_eq!(again.workbook.pivot_caches, back.workbook.pivot_caches);
 }
 
+/// Classic layout and a field's subtotal caption are written and read back (pivots.md "Classic
+/// layout (gridDropZones)", "subtotalCaption labels a field's subtotal lines").
+#[test]
+fn classic_layout_and_subtotal_captions_round_trip() {
+    let mut model = model_with(mixed_cache());
+    let pivot = &mut model.workbook.pivot_tables[0];
+    pivot.options.grid_drop_zones = true;
+    pivot.fields[0].subtotal_caption = Some("Tot <&>".into());
+    let table = part(&export(&model), "xl/pivotTables/pivotTable1.xml");
+    assert!(table.contains(r#" gridDropZones="1""#), "{table}");
+    assert!(
+        table.contains(r#" subtotalCaption="Tot &lt;&amp;&gt;""#),
+        "{table}"
+    );
+    let back = round_trip(&model);
+    let pivot = &back.workbook.pivot_tables[0];
+    assert!(pivot.options.grid_drop_zones);
+    assert_eq!(pivot.fields[0].subtotal_caption.as_deref(), Some("Tot <&>"));
+    assert_eq!(pivot.fields[1].subtotal_caption, None);
+    // Neither is written when off.
+    let plain = part(
+        &export(&model_with(mixed_cache())),
+        "xl/pivotTables/pivotTable1.xml",
+    );
+    assert!(!plain.contains("gridDropZones") && !plain.contains("subtotalCaption"));
+}
+
 /// A grouped cache is dropped with its pivots: the import keeps no base values to write the
 /// group back from (T-4734).
 #[test]

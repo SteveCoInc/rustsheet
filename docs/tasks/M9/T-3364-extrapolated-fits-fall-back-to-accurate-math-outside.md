@@ -3,7 +3,7 @@ id: T-3364
 title: "Extrapolated fits fall back to accurate math outside their measured range: GAMMA.INV Wilson-Hilferty spread, F density Stirling error past df 56, Student-t df bands"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus

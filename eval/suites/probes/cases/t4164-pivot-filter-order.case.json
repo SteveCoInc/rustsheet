@@ -1,0 +1,431 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4164: in what order Excel for the web applies several filters on one field. Data!A1:B6 has Product and Sales in source order Kiwi 40, Apple 50, Fig 30, Date 20, Lime 10 (total 150, no ties). Each sheet is one builder-v2 pivot at A3, rows Product, Sum of Sales: HT Apple hidden (item h) and a count top 2 filter; HP Apple hidden and a percent top 50 filter; LT1 a captionNotEqual Apple filter then a count top 2 filter (in that order in `<filters>`), multipleFieldFilters 1; TL1 the same two filters in the other order; LT0 and TL0 the same with multipleFieldFilters 0; LP1 captionNotEqual Apple then percent top 50, multipleFieldFilters 1; VT a valueLessThan 45 filter then a count top 2 filter, multipleFieldFilters 1; TV1 the VT filters in the other order; VT0 and TV0 the same two orders with multipleFieldFilters 0; PL1 LP1's filters in the other order; LP0 and PL0 the same two orders with multipleFieldFilters 0. Top-N first would keep Apple and Kiwi before Apple is removed (Kiwi alone); Apple removed first leaves Kiwi and Fig. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4164",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0071",
+  "PV-0072",
+  "PV-0089",
+  "PV-0102",
+  "PV-0972",
+  "PV-1079",
+  "PV-1221"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Product",
+    "B1": "Sales",
+    "A2": "Kiwi",
+    "B2": 40,
+    "A3": "Apple",
+    "B3": 50,
+    "A4": "Fig",
+    "B4": 30,
+    "A5": "Date",
+    "B5": 20,
+    "A6": "Lime",
+    "B6": 10
+   }
+  },
+  {
+   "name": "HT",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_HT",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"2\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "fields": {
+       "Product": {
+        "hidden": [
+         "Apple"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "HP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_HP",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"percent\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 percent=\"1\" val=\"50\" filterVal=\"50\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "fields": {
+       "Product": {
+        "hidden": [
+         "Apple"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "LT1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_LT1",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"captionNotEqual\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Apple\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"Apple\"/></customFilters></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"2\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"2\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TL1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TL1",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"2\"/></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"captionNotEqual\" evalOrder=\"-1\" id=\"2\" stringValue1=\"Apple\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"Apple\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "LT0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_LT0",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"captionNotEqual\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Apple\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"Apple\"/></customFilters></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"2\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"2\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TL0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TL0",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"2\"/></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"captionNotEqual\" evalOrder=\"-1\" id=\"2\" stringValue1=\"Apple\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"Apple\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "LP1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_LP1",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"captionNotEqual\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Apple\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"Apple\"/></customFilters></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"percent\" evalOrder=\"-1\" id=\"2\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 percent=\"1\" val=\"50\" filterVal=\"50\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "VT",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_VT",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"valueLessThan\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThan\" val=\"45\"/></customFilters></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"2\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"2\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TV1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TV1",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"2\"/></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"valueLessThan\" evalOrder=\"-1\" id=\"2\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThan\" val=\"45\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "VT0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_VT0",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"valueLessThan\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThan\" val=\"45\"/></customFilters></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"2\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"2\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TV0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TV0",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"2\"/></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"valueLessThan\" evalOrder=\"-1\" id=\"2\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThan\" val=\"45\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "PL1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PL1",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"percent\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 percent=\"1\" val=\"50\" filterVal=\"50\"/></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"captionNotEqual\" evalOrder=\"-1\" id=\"2\" stringValue1=\"Apple\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"Apple\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "LP0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_LP0",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"captionNotEqual\" evalOrder=\"-1\" id=\"1\" stringValue1=\"Apple\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"Apple\"/></customFilters></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"percent\" evalOrder=\"-1\" id=\"2\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 percent=\"1\" val=\"50\" filterVal=\"50\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "PL0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PL0",
+     "source": "Data!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"2\"><filter fld=\"0\" type=\"percent\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 percent=\"1\" val=\"50\" filterVal=\"50\"/></filterColumn></autoFilter></filter><filter fld=\"0\" type=\"captionNotEqual\" evalOrder=\"-1\" id=\"2\" stringValue1=\"Apple\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"Apple\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "multipleFieldFilters": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A40)"
+   }
+  }
+ ],
+ "expected": {}
+}

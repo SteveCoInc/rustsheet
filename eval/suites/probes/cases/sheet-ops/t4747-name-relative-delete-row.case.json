@@ -1,0 +1,51 @@
+{
+  "format": "rustsheet-case/v1",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "description": "T-4747: as t4747-name-relative-insert-row but delete_row 4 on Data. Prediction if the name shifts (A5 -> A4 after the delete): A1 50 (old row 5), A3 70 (Data!A6 = old row 7). Not shifting: A1 60, A3 80.",
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=Rel",
+        "A3": "=Rel"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A1": 10,
+        "A2": 20,
+        "A3": 30,
+        "A4": 40,
+        "A5": 50,
+        "A6": 60,
+        "A7": 70,
+        "A8": 80,
+        "A9": 90,
+        "A10": 100,
+        "A11": 110,
+        "A12": 120
+      }
+    }
+  ],
+  "names": {
+    "Rel": "=Data!A5"
+  },
+  "sheet_ops": [
+    {
+      "op": "delete_row",
+      "sheet": "Data",
+      "row": 4
+    }
+  ],
+  "check": [
+    "Calc!A1",
+    "Calc!A3"
+  ],
+  "expected": {}
+}

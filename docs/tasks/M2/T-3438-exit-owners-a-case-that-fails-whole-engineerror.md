@@ -3,7 +3,7 @@ id: T-3438
 title: "exit_owners: a case that fails whole (EngineError, Panic, did not run) is owned by the block that lists its cells, and a whole-case name counts per block (amend decision 0159)"
 milestone: M2
 lane: harness
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -44,16 +44,27 @@ failure, wherever in the bullet the case name falls. The rule is written down as
   it; the two changes do not overlap.
 
 ## Acceptance criteria
-- [ ] A decision record amends decision 0159 with the rule chosen. Decision 0159 is not edited; the new record
+- [x] A decision record amends decision 0159 with the rule chosen. Decision 0159 is not edited; the new record
       names it in its Status line.
-- [ ] scripts/test_exit_owners.py has tests with the T-3338 shape. A bullet wrapped over several lines names cases
+- [x] scripts/test_exit_owners.py has tests with the T-3338 shape. A bullet wrapped over several lines names cases
       that fail whole, and its last line carries `: S!A1, S!B1`: every case it names is owned. A case that fails whole
       and is named in no block is unowned. A cell-level failure beside another case's cell list is still unowned
       (decision 0159's leak test keeps passing).
-- [ ] `make exit-owners` and `make unowned-off ALL=1` on a fresh `make eval` report no newly unowned cell. The PR body
+- [x] `make exit-owners` and `make unowned-off ALL=1` on a fresh `make eval` report no newly unowned cell. The PR body
       lists any cell that changes from unowned to owned, or the other way, with the task that owns it now.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Changing how cells are attributed to functions, or the colon- and hyphen-span rules (decision 0136).
 - Rewriting existing tasks' cell lists beyond what a newly unowned cell needs.
+
+## Outcome
+- Decision 0333 amends 0159: a case that fails whole (`WHOLE_CASE`) is owned by any block of an open task that names
+  it, beside a cell list or not (proposed rule 2). Proposed rule 1 (read the 0096 whole-case rule per block) is
+  rejected: on `make eval` at 42d9bdaa (with T-4739's OFFSET change, which moves no owner) it would leave 17 cells newly unowned (t3271-cdf-cut, t3316-gamma-cdf-huge-shape),
+  whose owners name the case on a line of its own and list cells on a continuation line. Rule 3 is unchanged.
+- `owned` in scripts/exit_owners.py: one early return for `WHOLE_CASE`. Two tests in scripts/test_exit_owners.py
+  (the T-3338 shape; 0159's leak test with a crash beside it), both failing before the change.
+- Ownership delta on that report, comparing old and new `owned` over `make exit-owners` for every milestone,
+  `make unowned-off ALL=1` and `--unattributed`: no cell changes owner (no whole-case failure is unowned today).
+- Eval delta: none (scripts only).

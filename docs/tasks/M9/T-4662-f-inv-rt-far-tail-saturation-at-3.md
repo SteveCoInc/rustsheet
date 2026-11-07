@@ -33,6 +33,8 @@ Code: crates/rustsheet-engine/src/functions/statistical/fisher.rs `f_quantile`.
 Cells (known failures):
 - probes/t2435-dist-extremes S!A77, A79, A115:A118 and their column-B companions B77, B79, B115:B118
 - gen-m9/abc2939ebd1e2365 Calc!A11 `=CHIDIST(F.INV.RT(1E-200,1,1.999),10)`: Excel 0, ours #NUM!
+- probes/t2436/abc2939ebd1e2365 Calc!A1, A16, T1, T16, U1, U16 (`F.INV.RT(1E-200,1,1.999)` and the CHIDIST of it, with
+  their ROWS/COLUMNS; Excel 3.696066238512854E+150, 0 and 1, ours #NUM!; T-2940)
 - gen-m9/a612e89321a6df9c Calc!A23 `=GAMMALN.PRECISE(F.INV.RT(1E-20,3,9))`: Excel 1087085.7102783846, ours ...853
 - gen-m9/01523d247594952e Calc!A377 `=SYD(15023,(AVEDEV(Data!A11:A11,{1;2;3;4;5})*F.INV.RT(1E-20,9,3)),33,1)`
 - probes/t2435-dist-extremes A78, A80, A81 (df2 = 2, df1 = df2 = 1, F.INV at 1 - 1E-16) are numerically close
