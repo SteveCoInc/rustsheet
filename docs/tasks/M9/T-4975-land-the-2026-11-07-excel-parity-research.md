@@ -21,7 +21,9 @@ model and its text/lookup/database audit) and the audit findings.
 Owner ruling (2026-11-07): land all items in **one PR** under this one task, overriding the
 one-task-one-lane and S/M size rules (CLAUDE.md directive 4) for this hand-off only. Second ruling (2026-11-07): trust the research findings as written, and
 fix every one of them in this session (including the addendum and the audit section) rather than
-filing them as separate tasks; T-4976–T-4979 are closed by this PR. The size
+filing them as separate tasks; T-4976–T-4979 are closed by this PR. Third ruling (2026-11-07):
+a few gated regressions are accepted where the net gain is large (item 8's two t4541 cells; item
+12's 49 cells and one Gate A point), recorded by a decision record rather than reworked. The size
 field says M because `scripts/tasks.py` refuses L; the real size is L.
 
 ## Context
