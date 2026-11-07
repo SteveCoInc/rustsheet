@@ -3,7 +3,7 @@ id: T-4882
 title: "F.TEST and FTEST with an omitted sample are #VALUE!, not #DIV/0!"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -23,9 +23,15 @@ depends_on: []
 Cells (probes/t4857-f-kinds): A605:A606, A659:A660
 
 ## Acceptance criteria
-- [ ] The four cells match Excel; no other t4857-f-kinds or t2455 cell changes.
-- [ ] statistics.md's "F.TEST of a single value" entry drops "unprobed" for the omitted sample; a unit test.
-- [ ] `make check` green; reviewers approve.
+- [x] The four cells match Excel; no other t4857-f-kinds or t2455 cell changes.
+- [x] statistics.md's "F.TEST of a single value" entry drops "unprobed" for the omitted sample; a unit test.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other paired functions with an omitted argument (statistics.md lists them as unprobed).
+
+## Outcome
+`f_test_sample` (fisher.rs) reports an omitted sample as `#VALUE!` before the blank-cell check, in either position, so
+`F.TEST`/`FTEST` A605, A606, A659 and A660 of probes/t4857-f-kinds match Excel. Unit test
+`test_f_test_omitted_sample_is_value_error`; statistics.md's entries updated. Eval delta: 4 probes known-failure
+lines fixed (eval/baseline/probes.txt), 0 regressions.
