@@ -72,8 +72,8 @@ Any other cell that the eval run shows moving is handled the same way, and it is
 - Baseline, under decision 0329 item 3, with the owner's go-ahead (2026-11-07) for the `--allow-regressions` run:
   - after merging main (b54e1c1 and later), `update-baseline --suite probes --suite gen-m9 --allow-regressions` fixed 13
     cells and added F lines for 14 superseded cells. These are t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26,
-    and t2436/e85daedce5c2675e A31, A46. The list's gen-m9/e85daedce5c2675e A35 is already a known failure on main, so
-    it needs no new line;
+    and t2436/e85daedce5c2675e A31, A46. The 15th, gen-m9/e85daedce5c2675e Calc!A35, got its F line in eval/baseline/
+    gen-m9.txt from this branch's first run. Against main, the PR adds F lines for exactly the 15 superseded cells;
   - the unrestricted `update-baseline --allow-regressions` run then raised exactly the five visible-parity lines by their
     superseded counts: gen-m9/e85daedce5c2675e +1, t2436/e85daedce5c2675e +2, t2592 +3, t2594 +4, t2625 1 -> 6. Every
     other suite reports 0 regressions;
