@@ -14,7 +14,7 @@ use super::bratio::{
 };
 use super::discrete::{binomial_cdf, binomial_pmf, binomial_range, odds, times_ratio};
 use super::incomplete_beta::{closed_form_tails, closed_or_shape_one_tails};
-use super::loader::excel_dbinom_exponent;
+use super::loader::{excel_dbinom_exponent, LoaderExponent};
 
 use crate::arithmetic::flush_subnormal;
 use crate::expressions::types::CellReferenceIndex;
@@ -449,7 +449,7 @@ fn excel_binom_pmf(n: u64, p: f64, k: u64) -> Option<f64> {
     // is not bit-exact, but it beats the exact walk on every sweep, the fresh one included
     // (statistics.md "BINOM.DIST and NEGBINOM.DIST pmfs take Loader's kernel everywhere"). The walk
     // is left for points where a piece of the kernel is not finite (an n p that underflows).
-    loader_pmf(k as f64, n as f64, p)
+    loader_pmf(k as f64, n as f64, p, LoaderExponent::Probability)
         .or_else(|| binomial_pmf(n, odds(p), k).map(|pmf| flush_subnormal(pmf.to_f64())))
 }
 
@@ -468,7 +468,7 @@ fn excel_negbinom_pmf(f: f64, r: f64, p: f64) -> Option<f64> {
     let kernel = if r == 1.0 {
         Some(excel_exp(f * excel_ln_one_minus(p)))
     } else {
-        loader_pmf(r - 1.0, f + r - 1.0, p)
+        loader_pmf(r - 1.0, f + r - 1.0, p, LoaderExponent::ScaledProbability)
     }?;
     let pmf = p * kernel;
     pmf.is_finite().then(|| flush_subnormal(pmf))
@@ -526,8 +526,8 @@ fn binom_cdf_or_statrs(dist: &Binomial, p: f64, k: u64) -> f64 {
 /// exponent ([`excel_dbinom_exponent`], the kernel BETA.DIST's density shares; statistics.md
 /// "BINOM.DIST pmf: closed forms at k = 0 and k = n, and one kernel with BETA.DIST"), a subnormal
 /// result flushed to 0 as Excel's interior pmf is. `None` where a piece is not finite.
-fn loader_pmf(k: f64, n: f64, p: f64) -> Option<f64> {
-    let exponent = excel_dbinom_exponent(k, n, n - k, p, 1.0 - p)?;
+fn loader_pmf(k: f64, n: f64, p: f64, kind: LoaderExponent) -> Option<f64> {
+    let exponent = excel_dbinom_exponent(k, n, n - k, p, 1.0 - p, kind)?;
     let pmf = excel_exp_extended(Register::from_double_double(exponent));
     pmf.is_finite().then(|| flush_subnormal(pmf))
 }

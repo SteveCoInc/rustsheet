@@ -1,4 +1,4 @@
-use super::regression::{independent_columns, known_points, layout, Grid};
+use super::regression::{known_points, layout, solve_units, Grid};
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{LiftCost, LiftOptions};
@@ -6,104 +6,12 @@ use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
 
-// ─── Matrix helpers ──────────────────────────────────────────────────────────
+// ─── Least-squares solve ─────────────────────────────────────────────────────
 
-/// Gauss-Jordan elimination: solves A·x = b in-place on the augmented [A|b] matrix.
-/// Returns None if the matrix is singular (pivot < eps).
-fn solve_system(a: &[Vec<f64>], b: &[f64]) -> Option<Vec<f64>> {
-    let k = a.len();
-    let mut m: Vec<Vec<f64>> = (0..k)
-        .map(|i| {
-            let mut row = a[i].clone();
-            row.push(b[i]);
-            row
-        })
-        .collect();
-
-    for col in 0..k {
-        // partial pivoting
-        let pivot_row = (col..k)
-            .max_by(|&r1, &r2| {
-                m[r1][col]
-                    .abs()
-                    .partial_cmp(&m[r2][col].abs())
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
-            .unwrap_or(col);
-        m.swap(col, pivot_row);
-
-        let pivot = m[col][col];
-        if pivot.abs() < 1e-12 {
-            return None;
-        }
-
-        for val in &mut m[col][col..=k] {
-            *val /= pivot;
-        }
-
-        let col_slice: Vec<f64> = m[col][col..=k].to_vec();
-        for (row, mrow) in m.iter_mut().enumerate() {
-            if row != col {
-                let factor = mrow[col];
-                for (offset, &v) in col_slice.iter().enumerate() {
-                    mrow[col + offset] -= factor * v;
-                }
-            }
-        }
-    }
-
-    Some((0..k).map(|i| m[i][k]).collect())
-}
-
-/// Inverts a square matrix via Gauss-Jordan on [A|I].
-/// Returns None if singular.
-fn invert_matrix(a: &[Vec<f64>]) -> Option<Vec<Vec<f64>>> {
-    let k = a.len();
-    let mut m: Vec<Vec<f64>> = (0..k)
-        .map(|i| {
-            let mut row = a[i].clone();
-            for j in 0..k {
-                row.push(if i == j { 1.0 } else { 0.0 });
-            }
-            row
-        })
-        .collect();
-
-    for col in 0..k {
-        let pivot_row = (col..k)
-            .max_by(|&r1, &r2| {
-                m[r1][col]
-                    .abs()
-                    .partial_cmp(&m[r2][col].abs())
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
-            .unwrap_or(col);
-        m.swap(col, pivot_row);
-
-        let pivot = m[col][col];
-        if pivot.abs() < 1e-12 {
-            return None;
-        }
-
-        for val in &mut m[col][col..2 * k] {
-            *val /= pivot;
-        }
-
-        let col_slice: Vec<f64> = m[col][col..2 * k].to_vec();
-        for (row, mrow) in m.iter_mut().enumerate() {
-            if row != col {
-                let factor = mrow[col];
-                for (offset, &v) in col_slice.iter().enumerate() {
-                    mrow[col + offset] -= factor * v;
-                }
-            }
-        }
-    }
-
-    Some((0..k).map(|i| m[i][k..].to_vec()).collect())
-}
-
-// ─── Regression core ─────────────────────────────────────────────────────────
+/// A column whose remaining norm, once the columns kept before it are reflected out, is at most
+/// this fraction of its own norm is collinear and dropped. The value is carried over from the
+/// Gram-Schmidt filter the QR solve replaced; Excel's own cut-off is unprobed: TODO(T-2569).
+const COLLINEAR_CUT: f64 = 1e-10;
 
 /// Result of the core linear regression.
 pub(super) struct RegResult {
@@ -120,12 +28,149 @@ pub(super) struct RegResult {
     ss_res: Option<f64>,
 }
 
-/// Linear regression for any number of predictors, as LINEST: when the normal equations are
-/// singular (or there are fewer points than parameters), the collinear x columns
-/// ([`independent_columns`]) are dropped with coefficient 0 and standard error 0, and the degrees
-/// of freedom count only the kept ones (`LINEST(B2:B9,A2:E9,TRUE,TRUE)`: A's coefficient and se 0,
-/// df 3; one point `LINEST(B15,A15,TRUE,TRUE)` is `{0,9; 0,0; 1,0; #NUM!,0; 0,0}`, linest-modes
-/// K106, K141). `None` is `#NUM!`.
+/// A centered, column-pivoted Householder QR of the design: the kept columns in pivot order,
+/// the upper-triangular factor over them and `Qᵀy`.
+struct Factored {
+    /// Indices of the kept x columns, in pivot order.
+    kept: Vec<usize>,
+    /// `r[i][j]`: row i of the triangular factor at pivot column j (j >= i).
+    r: Vec<Vec<f64>>,
+    /// `Qᵀy`: its first `kept.len()` entries are the fitted part, the rest the residual.
+    qty: Vec<f64>,
+}
+
+/// The sum of squares of `values` in order.
+fn sum_of_squares(values: &[f64]) -> f64 {
+    values.iter().map(|v| v * v).sum()
+}
+
+/// The position in `remaining` of the column whose rows from `step` on have the largest sum of
+/// squares, the later one on a tie.
+fn largest_remaining(columns: &[Vec<f64>], remaining: &[usize], step: usize) -> Option<usize> {
+    remaining
+        .iter()
+        .enumerate()
+        .map(|(position, &j)| (position, sum_of_squares(&columns[j][step..])))
+        .fold(
+            None,
+            |best: Option<(usize, f64)>, (position, norm)| match best {
+                Some((_, best_norm)) if best_norm > norm => best,
+                _ => Some((position, norm)),
+            },
+        )
+        .map(|(position, _)| position)
+}
+
+/// Householder QR with column pivoting of the n x p `columns` against `y`. `first`, when given,
+/// is reflected first (the constant's column of ones); after it each step takes the remaining
+/// column of largest norm (the later one on a tie) and drops every remaining column whose rest is
+/// collinear ([`COLLINEAR_CUT`]). The reflector `v = x - alpha e1`, `alpha = -sign(head)·|x|`, has
+/// `|v|² = new_head² + tail` with the unchanged tail summed on its own (not `|x|²` less the head's
+/// square, which loses an exact fit's exact cancellation: logest-modes K170:K172, residual 0 and
+/// F `#NUM!`), and reflects each target as `t -= (v·t)·(2/|v|²)·v`, the dot product summed in
+/// row order from the head. These knobs are the structural fit of T-4975 (statistics.md "LINEST
+/// and LOGEST solve by a centered, pivoted Householder QR (T-2690)").
+fn householder_qr(mut columns: Vec<Vec<f64>>, mut y: Vec<f64>, first: Option<usize>) -> Factored {
+    let n = y.len();
+    let norms: Vec<f64> = columns.iter().map(|c| sum_of_squares(c).sqrt()).collect();
+    let mut remaining: Vec<usize> = (0..columns.len()).collect();
+    let mut kept = Vec::new();
+    let mut r: Vec<Vec<f64>> = Vec::new();
+    for step in 0..n {
+        remaining.retain(|&j| {
+            let rest = sum_of_squares(&columns[j][step..]).sqrt();
+            norms[j] > 0.0 && rest > COLLINEAR_CUT * norms[j]
+        });
+        let forced = first
+            .filter(|_| step == 0)
+            .and_then(|f| remaining.iter().position(|&j| j == f));
+        let Some(position) = forced.or_else(|| largest_remaining(&columns, &remaining, step))
+        else {
+            break;
+        };
+        let pivot = remaining.remove(position);
+        let head = columns[pivot][step];
+        // The reflector's unchanged tail, summed on its own.
+        let tail = sum_of_squares(&columns[pivot][step + 1..]);
+        let alpha = -(head * head + tail).sqrt().copysign(head);
+        let new_head = head - alpha;
+        let v_norm = new_head * new_head + tail;
+        if v_norm == 0.0 {
+            break;
+        }
+        let v_tail = columns[pivot][step + 1..].to_vec();
+        let reflect = |target: &mut [f64]| {
+            let dot = v_tail
+                .iter()
+                .zip(&target[1..])
+                .fold(new_head * target[0], |sum, (a, b)| sum + a * b);
+            let scale = dot * (2.0 / v_norm);
+            target[0] -= scale * new_head;
+            for (value, vi) in target[1..].iter_mut().zip(&v_tail) {
+                *value -= scale * vi;
+            }
+        };
+        // The pivot column is reflected too: its new head, not alpha, is R's diagonal, so a y
+        // proportional to it gives the exact ratio (`LINEST(A12:A13,B12:B13)` is exactly
+        // 0.5, -1.5, linest-modes K134:L134).
+        reflect(&mut columns[pivot][step..]);
+        let mut row = vec![0.0; columns.len()];
+        row[pivot] = columns[pivot][step];
+        for &j in &remaining {
+            reflect(&mut columns[j][step..]);
+            row[j] = columns[j][step];
+        }
+        reflect(&mut y[step..]);
+        kept.push(pivot);
+        r.push(row);
+    }
+    let r = r
+        .iter()
+        .map(|row| kept.iter().map(|&j| row[j]).collect())
+        .collect();
+    Factored { kept, r, qty: y }
+}
+
+/// Solves `R z = b` for the upper-triangular `r`, back to front.
+fn back_substitute(r: &[Vec<f64>], b: &[f64]) -> Vec<f64> {
+    let k = r.len();
+    let mut z = vec![0.0; k];
+    for i in (0..k).rev() {
+        let partial: f64 = (i + 1..k).map(|j| r[i][j] * z[j]).sum();
+        z[i] = (b[i] - partial) / r[i][i];
+    }
+    z
+}
+
+/// Solves `Rᵀ w = b` for the upper-triangular `r`, front to back.
+fn forward_substitute(r: &[Vec<f64>], b: &[f64]) -> Vec<f64> {
+    let k = r.len();
+    let mut w = vec![0.0; k];
+    for i in 0..k {
+        let partial: f64 = (0..i).map(|j| r[j][i] * w[j]).sum();
+        w[i] = (b[i] - partial) / r[i][i];
+    }
+    w
+}
+
+/// The mean of `values`, `Σx/n` in doubles.
+fn mean(values: &[f64]) -> f64 {
+    values.iter().sum::<f64>() / values.len() as f64
+}
+
+/// Linear regression for any number of predictors, as LINEST: a centered, column-pivoted
+/// Householder QR (Microsoft documents LINEST as a QR since Excel 2003; findings
+/// docs/research/excel-parity-findings-2026-11-07.md item 12). With a constant term the columns
+/// and y are centered on their means and the intercept is `ȳ - Σ βj x̄j`. The pivot keeps the
+/// largest-norm column first, so a collinear column is dropped with coefficient 0 and standard
+/// error 0 and the degrees of freedom count only the kept ones: with E = 2A,
+/// `LINEST(B2:B9,A2:E9,TRUE,TRUE)` keeps E and drops A (A's se 0, df 3, linest-modes K106), one
+/// point drops its x (`LINEST(B15,A15,TRUE,TRUE)` is `{0,9; 0,0; 1,0; #NUM!,0; 0,0}`, K141), and
+/// one point of four variables without a constant keeps its largest (285d87cea1aaa73c A293).
+/// The statistics come from the transformed residual and the triangular factor: the residual
+/// sum of squares is that of `Qᵀy` past the rank, and the regression sum is the total less it
+/// (`LINEST(B2:B9,A2:A9,TRUE,TRUE)` gives 167.60023809523813, linest-modes K12, where the fitted
+/// part of `Qᵀy` gives ...238). `None` is `#NUM!` (no point).
 pub(super) fn linear_regression(
     y: &[f64],
     x: &[Vec<f64>],
@@ -133,80 +178,53 @@ pub(super) fn linear_regression(
     const_term: bool,
     compute_stats: bool,
 ) -> Option<RegResult> {
-    if y.len() >= p + usize::from(const_term) {
-        if let Some(reg) = regress(y, x, p, const_term, compute_stats) {
-            return Some(reg);
-        }
-    }
-    let kept = independent_columns(x, p, const_term);
-    let reduced: Vec<Vec<f64>> = x
-        .iter()
-        .map(|row| kept.iter().map(|&j| row[j]).collect())
-        .collect();
-    let mut reg = regress(y, &reduced, kept.len(), const_term, compute_stats)?;
-    reg.coeffs = expand_kept(&reg.coeffs, &kept, p);
-    reg.std_errors = reg.std_errors.map(|se| expand_kept(&se, &kept, p));
-    Some(reg)
-}
-
-/// Values of a fit over the `kept` columns (Excel order: the last x column first, the intercept
-/// last) spread over all `p` columns, 0 for a dropped one.
-fn expand_kept(values: &[f64], kept: &[usize], p: usize) -> Vec<f64> {
-    let mut out = vec![0.0; p + 1];
-    for (i, &j) in kept.iter().enumerate() {
-        out[p - 1 - j] = values[kept.len() - 1 - i];
-    }
-    out[p] = values[kept.len()];
-    out
-}
-
-/// The least-squares fit of the normal equations, `None` when they are singular.
-/// Design matrix columns: [1, `x_1`, `x_2`, ..., `x_p`] (or [`x_1`, ..., `x_p`] if !`const_term`).
-fn regress(
-    y: &[f64],
-    x: &[Vec<f64>],
-    p: usize,
-    const_term: bool,
-    compute_stats: bool,
-) -> Option<RegResult> {
     let n = y.len();
-    let k = p + const_term as usize; // number of parameters
-
-    // Build D'D (k×k) and D'Y (k×1)
-    let mut dtd = vec![vec![0.0_f64; k]; k];
-    let mut dty = vec![0.0_f64; k];
-
-    for i in 0..n {
-        // Build design row d[i]: length k
-        let d: Vec<f64> = if const_term {
-            let mut row = vec![1.0_f64];
-            row.extend_from_slice(&x[i]);
-            row
-        } else {
-            x[i].clone()
-        };
-
-        for r in 0..k {
-            dty[r] += d[r] * y[i];
-            for c in 0..k {
-                dtd[r][c] += d[r] * d[c];
-            }
+    if n == 0 {
+        return None;
+    }
+    let mut columns: Vec<Vec<f64>> = (0..p)
+        .map(|j| x.iter().map(|row| row[j]).collect())
+        .collect();
+    let x_means: Vec<f64> = if const_term {
+        columns.iter().map(|c| mean(c)).collect()
+    } else {
+        vec![0.0; p]
+    };
+    let y_mean = if const_term { mean(y) } else { 0.0 };
+    for (column, &m) in columns.iter_mut().zip(&x_means) {
+        for v in column.iter_mut() {
+            *v -= m;
         }
     }
-
-    // Solve (D'D) β = D'Y
-    let beta = solve_system(&dtd, &dty)?;
-    // beta[0] = β_0 (intercept if const), beta[1..] = β_1..β_p
-
-    // Excel output order: reverse x coefficients, intercept last.
-    // When const=FALSE the intercept is forced to 0, but Excel still outputs a
-    // p+1 wide array with 0 in the intercept column.
-    let coeffs: Vec<f64> = {
-        let x_part: Vec<f64> = beta[const_term as usize..].iter().rev().cloned().collect();
-        let mut out = x_part;
-        out.push(if const_term { beta[0] } else { 0.0 });
-        out
+    let centered_y: Vec<f64> = y.iter().map(|v| v - y_mean).collect();
+    // With a constant the first reflector is the column of ones, against the centered columns
+    // and y (logest-modes and growth-modes one-variable fits; statistics.md "LINEST and LOGEST
+    // solve by a centered, pivoted Householder QR (T-2690)").
+    let (kept, r, qty) = if const_term {
+        let mut design = vec![vec![1.0; n]];
+        design.extend(columns);
+        let Factored { kept, r, qty } = householder_qr(design, centered_y.clone(), Some(0));
+        let kept: Vec<usize> = kept.iter().skip(1).map(|j| j - 1).collect();
+        let r: Vec<Vec<f64>> = r.iter().skip(1).map(|row| row[1..].to_vec()).collect();
+        (kept, r, qty[1..].to_vec())
+    } else {
+        let Factored { kept, r, qty } = householder_qr(columns, centered_y.clone(), None);
+        (kept, r, qty)
     };
+    let rank = kept.len();
+    let z = back_substitute(&r, &qty[..rank]);
+    let mut beta = vec![0.0; p];
+    for (&j, &b) in kept.iter().zip(&z) {
+        beta[j] = b;
+    }
+    let intercept = if const_term {
+        y_mean - beta.iter().zip(&x_means).map(|(b, m)| b * m).sum::<f64>()
+    } else {
+        0.0
+    };
+    // Excel output order: the last x column first, the intercept last (0 when const=FALSE).
+    let mut coeffs: Vec<f64> = beta.iter().rev().copied().collect();
+    coeffs.push(intercept);
 
     if !compute_stats {
         return Some(RegResult {
@@ -221,74 +239,43 @@ fn regress(
         });
     }
 
-    // Compute fitted values and residuals
-    let fitted: Vec<f64> = (0..n)
-        .map(|i| {
-            let d: Vec<f64> = if const_term {
-                let mut row = vec![1.0_f64];
-                row.extend_from_slice(&x[i]);
-                row
-            } else {
-                x[i].clone()
-            };
-            d.iter().zip(beta.iter()).map(|(di, bi)| di * bi).sum()
-        })
-        .collect();
-
-    let ss_res: f64 = y
-        .iter()
-        .zip(fitted.iter())
-        .map(|(yi, fi)| (yi - fi).powi(2))
-        .sum();
-    let df = n as f64 - k as f64;
-
-    let ss_tot = if const_term {
-        let mean = y.iter().sum::<f64>() / n as f64;
-        y.iter().map(|yi| (yi - mean).powi(2)).sum()
-    } else {
-        y.iter().map(|yi| yi.powi(2)).sum::<f64>()
-    };
-
+    let ss_res = sum_of_squares(&qty[rank..]);
+    let ss_tot = sum_of_squares(&centered_y);
     let ss_reg = ss_tot - ss_res;
+    let df = (n - rank - usize::from(const_term)) as f64;
     let r_sq = if ss_tot > 0.0 {
-        1.0 - ss_res / ss_tot
+        (1.0 - ss_res / ss_tot).clamp(0.0, 1.0)
     } else {
         1.0
     };
-    let r_sq = r_sq.clamp(0.0, 1.0);
-
     // An exact fit with no degree of freedom left has se_y and standard errors 0
     // (`LINEST(A12:A13,B12:B13,TRUE,TRUE)`, two points, linest-modes K134:L138).
     let var_y = if df > 0.0 { ss_res / df } else { 0.0 };
     let se_y = var_y.sqrt();
-
     // F is `#NUM!` (not finite) for an exact fit or no degree of freedom (linest-modes K137,
     // K144, K249).
-    let df_model = p as f64; // number of x predictors (not counting intercept)
     let f_stat = if df > 0.0 {
-        (ss_reg / df_model) / (ss_res / df)
+        (ss_reg / rank as f64) / (ss_res / df)
     } else {
         f64::NAN
     };
-
-    // Standard errors: sqrt(se_y² · (D'D)^{-1}_{j,j})
-    let se_beta: Vec<f64> = {
-        let inv = invert_matrix(&dtd)?;
-        (0..k).map(|j| (var_y * inv[j][j]).sqrt()).collect()
-    };
-
-    // Reorder standard errors to match coefficients output order.
-    // const=FALSE: intercept se is #N/A (represented as NaN here).
-    let std_errors: Vec<f64> = {
-        let x_part: Vec<f64> = se_beta[const_term as usize..]
-            .iter()
-            .rev()
-            .cloned()
-            .collect();
-        let mut out = x_part;
-        out.push(if const_term { se_beta[0] } else { f64::NAN });
-        out
-    };
+    // se(βj)² = var_y·((RᵀR)⁻¹)jj, the squared norm of row j of R⁻¹; the intercept's adds
+    // var_y·(1/n + |R⁻ᵀ x̄|²).
+    let mut se = vec![0.0; p];
+    for (i, &j) in kept.iter().enumerate() {
+        let mut unit = vec![0.0; rank];
+        unit[i] = 1.0;
+        let row = forward_substitute(&r, &unit);
+        se[j] = (var_y * sum_of_squares(&row)).sqrt();
+    }
+    let mut std_errors: Vec<f64> = se.iter().rev().copied().collect();
+    std_errors.push(if const_term {
+        let kept_means: Vec<f64> = kept.iter().map(|&j| x_means[j]).collect();
+        let w = forward_substitute(&r, &kept_means);
+        (var_y * (1.0 / n as f64 + sum_of_squares(&w))).sqrt()
+    } else {
+        f64::NAN
+    });
 
     Some(RegResult {
         coeffs,
@@ -406,6 +393,9 @@ impl Model {
             Ok(data) => data,
             Err(error) => return error,
         };
+        if let Err(error) = self.spend_work(solve_units(&data.0, &data.1), cell) {
+            return error;
+        }
         // An omitted flag is an empty argument: its default.
         let mut flag_arg = |index: usize| match args.get(index) {
             Some(node) => flag_input(self, node, cell),
@@ -590,4 +580,35 @@ pub(super) fn predict(beta: &[f64], x_row: &[f64], const_term: bool) -> f64 {
         }
     }
     pred
+}
+
+#[cfg(test)]
+mod tests {
+    use super::linear_regression;
+
+    // Excel's values (probes/linest-modes, excel-graph): the QR solve's exact zeros and noise.
+    #[test]
+    fn linest_solves_by_centered_pivoted_qr() {
+        // K134:L134, `LINEST(A12:A13,B12:B13,TRUE,TRUE)`: the two-point fit is exactly 0.5, -1.5.
+        let reg = linear_regression(&[1.0, 2.0], &[vec![5.0], vec![7.0]], 1, true, true);
+        assert_eq!(reg.map(|r| r.coeffs), Some(vec![0.5, -1.5]));
+        // K183:L183, `LINEST(D2:D9,A2:A9,TRUE,TRUE)`.
+        let x: Vec<Vec<f64>> = (1..=8).map(|v| vec![f64::from(v)]).collect();
+        let y = [3.0, 5.5, 9.0, 16.0, 27.0, 50.0, 88.0, 160.0];
+        let reg = linear_regression(&y, &x, 1, true, true);
+        assert_eq!(
+            reg.map(|r| r.coeffs),
+            Some(vec![19.589_285_714_285_71, -43.339_285_714_285_71])
+        );
+        // ironcalc-calc LINEST_LOGEST.xlsx D2:E2 (Excel-cached), `LINEST(A2:A6,B2:B6)`.
+        let x: Vec<Vec<f64>> = [1.1, 1.9, 3.1, 4.05, 5.0]
+            .iter()
+            .map(|&v| vec![v])
+            .collect();
+        let reg = linear_regression(&[0.2, 0.41, 0.62, 0.8, 1.1], &x, 1, true, false);
+        assert_eq!(
+            reg.map(|r| r.coeffs),
+            Some(vec![0.219_288_879_935_535_92, -0.038_445_306_204_673_68])
+        );
+    }
 }

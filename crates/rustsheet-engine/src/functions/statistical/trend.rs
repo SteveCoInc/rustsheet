@@ -3,7 +3,7 @@
 
 use super::linest::{flag_range_value, linear_regression, predict, reconstruct_beta};
 use super::regression::{
-    given, known_points, layout, shape_error, Element, Grid, KnownPoints, Layout,
+    given, known_points, layout, shape_error, solve_units, Element, Grid, KnownPoints, Layout,
 };
 use crate::arithmetic::flush_subnormal;
 use crate::expressions::parser::ArrayNode;
@@ -184,6 +184,19 @@ impl Model {
             grids: self.read_trend_grids(args, cell),
             growth,
         };
+        if let Ok(grids) = &data.grids {
+            let counting;
+            let x = match &grids.x {
+                Some(x) => x,
+                None => {
+                    counting = Grid::counting(grids.y.rows, grids.y.cols);
+                    &counting
+                }
+            };
+            if let Err(error) = self.spend_work(solve_units(&grids.y, x), cell) {
+                return error;
+            }
+        }
         let Some(const_node) = args.get(3) else {
             return data.predictions(Const::Value(Ok(true)), cell);
         };
