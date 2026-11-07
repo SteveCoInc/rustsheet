@@ -6,7 +6,10 @@
 //! same content type. Element and attribute items (T-4509), semantic items (T-4513) and R1
 //! (T-4514) build on the same results.
 
+mod exceptions;
 mod package;
+mod r1;
+pub(crate) mod scenarios;
 mod semantic;
 #[cfg(test)]
 mod tests;
@@ -19,12 +22,11 @@ use std::path::Path;
 use std::time::Duration;
 
 use rayon::prelude::*;
-use rustsheet::{LoadOptions, SaveOptions, Workbook};
+use rustsheet::{LoadOptions, Workbook};
 use serde::Serialize;
 use sha2::{Digest as _, Sha256};
 
 use crate::baseline::{self as ratchet, Baseline};
-use crate::engine::harness_options;
 use crate::runner::{run_in_worker, CaseStatus};
 use crate::suite::{BaselineMode, CaseFile, Suite};
 use crate::xlsx_snapshot::read_snapshot;
@@ -112,8 +114,15 @@ pub struct CaseResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     pub millis: u64,
-    /// Source items compared: parts, elements and attributes (the baseline's checked count).
+    /// Source items compared: parts, elements and attributes (the baseline's checked count),
+    /// summed over the scenarios the case ran.
     pub checked: usize,
+    /// The items each scenario compared, so each scenario's rate can be told apart.
+    pub scenarios: BTreeMap<&'static str, usize>,
+    /// For each R1 scenario that ran: the writes the engine refused, and the edits that had no
+    /// target (SPEC-0033 D1's `n/a`).
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub skipped: BTreeMap<&'static str, (usize, usize)>,
     /// The part items, and every element, attribute and validator item that did not pass.
     pub items: Vec<Item>,
 }
@@ -127,6 +136,8 @@ impl CaseResult {
             message,
             millis: 0,
             checked: 0,
+            scenarios: BTreeMap::new(),
+            skipped: BTreeMap::new(),
             items: Vec::new(),
         }
     }
@@ -147,6 +158,8 @@ pub fn run_suites(suites: &[&Suite], filter: Option<&str>, timeout: Duration) ->
                 message: Some(e.to_string()),
                 millis: 0,
                 checked: 0,
+                scenarios: BTreeMap::new(),
+                skipped: BTreeMap::new(),
                 items: Vec::new(),
             }),
         }
@@ -175,26 +188,29 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
         .path
         .file_name()
         .map(|n| n.to_string_lossy().into_owned());
+    let scenarios = suite.manifest.scenarios.clone();
     let (outcome, millis) = run_in_worker(format!("roundtrip:{}", case.id), timeout, move || {
-        r0(&bytes, name.as_deref())
+        scenarios::run_scenarios(&bytes, name.as_deref(), &scenarios)
     });
     let mut result = match outcome {
         Err((status, message)) => CaseResult::new(case, suite, status, Some(message)),
-        Ok(Err(R0Error::Source(e))) => {
+        Ok(Err(scenarios::R0Error::Source(e))) => {
             CaseResult::new(case, suite, CaseStatus::InvalidCase, Some(e))
         }
-        Ok(Err(R0Error::Engine(e))) => {
+        Ok(Err(scenarios::R0Error::Engine(e))) => {
             CaseResult::new(case, suite, CaseStatus::EngineError, Some(e))
         }
-        Ok(Ok((items, checked))) => {
-            let status = if items.iter().all(|i| i.verdict.passes()) {
+        Ok(Ok(run)) => {
+            let status = if run.items.iter().all(|i| i.verdict.passes()) {
                 CaseStatus::Pass
             } else {
                 CaseStatus::Fail
             };
             CaseResult {
-                checked,
-                items,
+                checked: run.checked.values().sum(),
+                scenarios: run.checked,
+                skipped: run.skipped,
+                items: run.items,
                 ..CaseResult::new(case, suite, status, None)
             }
         }
@@ -203,41 +219,9 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
     result
 }
 
-enum R0Error {
-    /// The source package itself cannot be read: the case is unusable.
-    Source(String),
-    /// The engine refused to load or save it.
-    Engine(String),
-}
-
-/// Scenario R0 (SPEC-0033 D1): load with the harness clock, recalculate, save; then validate the
-/// output and score the source's parts, elements and attributes.
-fn r0(bytes: &[u8], name: Option<&str>) -> Result<(Vec<Item>, usize), R0Error> {
-    let source = Package::read(bytes).map_err(|e| R0Error::Source(e.to_string()))?;
-    let opts = LoadOptions {
-        recalc: false,
-        workbook: harness_options(name).map_err(R0Error::Engine)?,
-        ..LoadOptions::default()
-    };
-    let mut workbook = Workbook::from_xlsx_bytes(bytes, &opts)
-        .map_err(|e| R0Error::Engine(format!("import failed: {e}")))?;
-    workbook.pin_clock_from_metadata();
-    workbook.recalculate();
-    let out = workbook
-        .to_xlsx_bytes(SaveOptions::default())
-        .map_err(|e| R0Error::Engine(format!("save failed: {e}")))?;
-    let sides = Sides {
-        source: &source,
-        source_bytes: bytes,
-        saved: &workbook,
-        name: name.unwrap_or("workbook"),
-    };
-    Ok(score("R0", &sides, &out))
-}
-
 /// What a scenario's output is compared with: the source package and bytes, and the workbook
 /// that was saved (its recalculated values, D3.1).
-struct Sides<'a> {
+pub(super) struct Sides<'a> {
     source: &'a Package,
     source_bytes: &'a [u8],
     saved: &'a Workbook,
@@ -246,7 +230,7 @@ struct Sides<'a> {
 
 /// The items of one scenario and the number of source items compared: validator problems of
 /// `out`, the source's parts with what differs inside them, then the semantic items.
-fn score(scenario: &'static str, sides: &Sides<'_>, out: &[u8]) -> (Vec<Item>, usize) {
+pub(super) fn score(scenario: &'static str, sides: &Sides<'_>, out: &[u8]) -> (Vec<Item>, usize) {
     let mut items = Vec::new();
     let problem = |p: Problem| Item {
         scenario,
@@ -432,17 +416,34 @@ pub struct KeptRate {
 }
 
 impl KeptRate {
-    /// The rate over `results`.
+    /// The rate over `results`, every scenario together.
     #[must_use]
     pub fn of(results: &[&CaseResult]) -> KeptRate {
+        KeptRate::of_scenarios(results, |_| true)
+    }
+
+    /// The rate of the scenarios `which` selects (`R0`, the `R1/` edits, `R0/again`): the items
+    /// those scenarios compared, less the weight of their failing items.
+    #[must_use]
+    pub fn of_scenarios(results: &[&CaseResult], which: impl Fn(&str) -> bool) -> KeptRate {
         let mut rate = KeptRate::default();
         for r in results {
             if !matches!(r.status, CaseStatus::Pass | CaseStatus::Fail) {
                 rate.unscored += 1;
                 continue;
             }
-            rate.checked += r.checked;
-            rate.not_kept += r.items.iter().map(|i| i.weight).sum::<usize>();
+            rate.checked += r
+                .scenarios
+                .iter()
+                .filter(|(s, _)| which(s))
+                .map(|(_, n)| n)
+                .sum::<usize>();
+            rate.not_kept += r
+                .items
+                .iter()
+                .filter(|i| which(i.scenario))
+                .map(|i| i.weight)
+                .sum::<usize>();
         }
         rate
     }
@@ -456,6 +457,34 @@ impl KeptRate {
         }
         100.0 * (self.checked.saturating_sub(self.not_kept)) as f64 / self.checked as f64
     }
+}
+
+/// Each scenario family's kept rate, in run order: R0, the R1 edits together (their delta
+/// violations over the items they compared), and `R0/again` (idempotence), when the cases ran it.
+/// R1 also says how many writes the engine refused and how many edits had no target.
+fn rates_line(results: &[&CaseResult]) -> String {
+    use scenarios::Family;
+    let mut parts = Vec::new();
+    for (label, family) in [
+        ("R0", Family::R0),
+        ("R1", Family::R1),
+        ("R0/again", Family::Again),
+    ] {
+        let which = |s: &str| scenarios::family(s) == Some(family);
+        if !results.iter().any(|r| r.scenarios.keys().any(|s| which(s))) {
+            continue;
+        }
+        let rate = KeptRate::of_scenarios(results, which);
+        parts.push(format!("{label} {:.2}% kept", rate.percent()));
+        if family == Family::R1 {
+            let (refused, missing) = results
+                .iter()
+                .flat_map(|r| r.skipped.values())
+                .fold((0, 0), |(a, b), (r, m)| (a + r, b + m));
+            parts.push(format!("{refused} R1 writes refused, {missing} edits n/a"));
+        }
+    }
+    parts.join(", ")
 }
 
 /// The results as a baseline (SPEC-0033 D8). A case that did not run is one `!Status` failure,
@@ -603,9 +632,9 @@ pub fn report_markdown(results: &[CaseResult]) -> String {
         let rate = KeptRate::of(&cases);
         let _ = writeln!(
             md,
-            "## {suite}\n\n{} cases: {status:?}\n\nKept {:.2}% of {} source items ({} not kept; {} cases not scored)\n\nItems by verdict: {verdicts:?}\n",
+            "## {suite}\n\n{} cases: {status:?}\n\n{} ({} source items compared over all scenarios, {} not kept; {} cases not scored)\n\nItems by verdict: {verdicts:?}\n",
             cases.len(),
-            rate.percent(),
+            rates_line(&cases),
             rate.checked,
             rate.not_kept,
             rate.unscored
@@ -708,7 +737,32 @@ pub fn command(
             s.root().display()
         ));
     }
-    let results = run_suites(&suites, filter, timeout);
+    let mut results = run_suites(&suites, filter, timeout);
+    let mut ok = true;
+    for suite in &suites {
+        let excused = exceptions::load(suite)?;
+        let mut mine: Vec<&mut CaseResult> = results
+            .iter_mut()
+            .filter(|r| r.suite == suite.manifest.name)
+            .collect();
+        let (stale, count) = exceptions::apply(&mut mine, &excused);
+        if count > 0 {
+            lines.push(format!(
+                "[{}] {count} items excused by {} exceptions",
+                suite.manifest.name,
+                excused.len()
+            ));
+        }
+        for stale in stale {
+            if mode != Mode::Report && filter.is_none() {
+                ok = false;
+            }
+            lines.push(format!(
+                "  STALE EXCEPTION {} `{}` ({}): it excuses nothing; remove it",
+                stale.case, stale.item, stale.owner
+            ));
+        }
+    }
     let out = root.join("eval/runs/latest");
     std::fs::create_dir_all(&out)?;
     std::fs::write(
@@ -716,18 +770,17 @@ pub fn command(
         serde_json::to_string_pretty(&results)?,
     )?;
     std::fs::write(out.join("roundtrip.md"), report_markdown(&results))?;
-    let mut ok = true;
     for suite in suites {
         let name = &suite.manifest.name;
         let mine: Vec<&CaseResult> = results.iter().filter(|r| &r.suite == name).collect();
         let rate = KeptRate::of(&mine);
         let current = baseline(&mine, suite.manifest.baseline);
         lines.push(format!(
-            "[{name}] {} cases ({} not scored), {} items, {:.2}% kept, {} failing",
+            "[{name}] {} cases ({} not scored), {} items, {}, {} failing",
             mine.len(),
             rate.unscored,
             rate.checked,
-            rate.percent(),
+            rates_line(&mine),
             current.failing.len()
         ));
         if mode == Mode::Report {

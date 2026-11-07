@@ -345,6 +345,27 @@ numbers as for a sheet reference, UNVERIFIED).
 Status: VERIFIED (Excel for the web; error name inferred from errorType 10 and ERROR.TYPE 11)
 Tasks: T-0124, T-1381, T-1382, T-1454, T-1487, T-1535, T-1537, T-1546, T-1554
 
+## An Analysis ToolPak argument refuses a multi-cell reference into another workbook
+Rule: a `LiftArrays` argument (EDATE, the IM* functions, COMPLEX, ISEVEN and the other functions
+that lift over an array and refuse a multi-cell range) reads a reference into another workbook
+with no cached data as the reference it is, not as its `#BLOCKED!` cells:
+- **Several cells** are refused like a written range of this workbook. `EDATE(…!A1:B2,1)`,
+  `IMAGINARY(…!A1:B2)`, `IMABS`, `COMPLEX(…,1)` and `ISEVEN` are `#VALUE!` (ERROR.TYPE 3, ROWS
+  `#VALUE!`), with the quoted and the unquoted prefix alike. The bare `…!A1:B2` and `…!A1:B2*1`
+  spill four `#BLOCKED!` instead ("External reference with no cached data", above).
+- **One cell** reads empty, as the cell INDEX picks does: `EDATE(…!A1,1)` is 31,
+  `IMAGINARY(…!A1)` 0, `ISEVEN(…!A1)` TRUE, `COMPLEX(…!A1,1)` "i", and ERROR.TYPE of them `#N/A`.
+  The bare `…!A1` is `#BLOCKED!`.
+
+Evidence: probes/external-ref-no-link-lift-arrays Calc!A1:A16, D1:D13 (excel-graph, 2026-11-07,
+T-4859), with local-range controls D8:D9.
+Ours: matches. A reference into a linked workbook whose cache the workbook holds reads the same
+way: one cell is its cached value (`COMPLEX([1]Defines!$B$2,0)` is "142"), several are refused.
+That case is not probed.
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/functions/lift/call.rs (`evaluate_as_reference`)
+Tasks: T-4859
+
 ## Cached values of a linked workbook (`[n]Sheet!A1`, `[n]!Name`, `[0]!Name`)
 Rule: in xlsx, Excel writes a reference into another workbook with the 1-based index of its
 `externalReference` in `workbook.xml`: `[1]Sheet!$A$1`, a workbook-scoped defined name of that book

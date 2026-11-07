@@ -21,7 +21,10 @@ use rustsheet_engine::{
         types::CellReferenceRC,
         utils::number_to_column,
     },
-    types::{Cell, DateGroupItem, FilterColumn, FilterCriterion, Table, Workbook, Worksheet},
+    types::{
+        Cell, CustomFilter, DateGroupItem, FilterColumn, FilterCriterion, Table, Workbook,
+        Worksheet,
+    },
     Model, ParsedFormula,
 };
 
@@ -138,8 +141,11 @@ fn totals_row_metadata(
 /// formatted text of each visible data row, plus `blank="1"` when a visible one is blank, which
 /// is the form spec2xlsx writes and Excel reads as filtered (T-4363; xlsx-storage.md, "Table parts
 /// in the export"). Excel does not re-apply it on load, so a text that is on a visible and a
-/// hidden row (which a re-applied filter would show) changes nothing there. `None` when the
-/// table is not such a table, has no header row or its range does not parse.
+/// hidden row (which a re-applied filter would show) changes nothing there. With no visible
+/// data row, that values filter would be an empty `<filters/>`, which Excel reads as no criterion
+/// (manual hides), so it is the custom filter "equals a and does not equal a" instead, which keeps
+/// no row and which Excel reads as filtered (excel-graph, T-4749). `None` when the table is not
+/// such a table, has no header row or its range does not parse.
 pub(crate) fn api_filter_column(model: &Model, sheet: u32, table: &Table) -> Option<FilterColumn> {
     if !table.has_filters || !table.filter_columns.is_empty() || table.header_row_count == 0 {
         return None;
@@ -173,6 +179,19 @@ pub(crate) fn api_filter_column(model: &Model, sheet: u32, table: &Table) -> Opt
         } else {
             values.push(text);
         }
+    }
+    if values.is_empty() && !blank {
+        let condition = |operator: Option<&str>| CustomFilter {
+            operator: operator.map(str::to_string),
+            val: "a".to_string(),
+        };
+        return Some(FilterColumn {
+            col_id: 0,
+            criterion: FilterCriterion::Custom {
+                and: true,
+                conditions: vec![condition(None), condition(Some("notEqual"))],
+            },
+        });
     }
     values.sort_unstable();
     values.dedup();

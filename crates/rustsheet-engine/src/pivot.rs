@@ -25,6 +25,7 @@ use crate::types::sheet_names_match;
 
 mod accumulate;
 mod date_groups;
+mod filter;
 mod grid;
 pub(crate) mod layout;
 mod model;
@@ -36,6 +37,10 @@ mod result;
 mod show_as;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
+pub use filter::{
+    AutoShow, DateGroupItem, DynamicDate, FilterCondition, FilterCriteria, FilterOperator,
+    PivotFilter, PivotFilterKind, RelativeUnit,
+};
 pub use grid::{PivotBudget, PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};
 pub use layout::{
     lay_out, render, AxisLine, PivotCell, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM,
@@ -53,7 +58,8 @@ pub use refresh::{
     SourceCells,
 };
 pub use result::{
-    compute, AxisNode, AxisTree, PivotComputeError, PivotResult, MAX_PIVOT_NODES, MAX_PIVOT_WORK,
+    compute, compute_on, AxisNode, AxisTree, PivotComputeError, PivotResult, MAX_PIVOT_NODES,
+    MAX_PIVOT_WORK,
 };
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
