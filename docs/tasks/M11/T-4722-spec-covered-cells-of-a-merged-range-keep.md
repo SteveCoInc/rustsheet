@@ -3,7 +3,7 @@ id: T-4722
 title: "Spec: covered cells of a merged range keep their stored values and formulas, as Excel does"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
