@@ -3,7 +3,7 @@ id: T-4476
 title: "MAP, SCAN and REDUCE whose LAMBDA returns a multi-cell range for some elements only, an all-blank range, or as REDUCE's last accumulator: probe and match"
 milestone: M7
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
