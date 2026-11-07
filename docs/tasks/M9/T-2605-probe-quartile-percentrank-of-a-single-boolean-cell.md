@@ -3,7 +3,7 @@ id: T-2605
 title: "Probe QUARTILE/PERCENTRANK of a single boolean cell and a bad significance on empty data"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
