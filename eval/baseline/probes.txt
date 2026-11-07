@@ -2687,6 +2687,7 @@ C	probes/t4720-fixed-sign-and-exponent-digits.case.json	37
 C	probes/t4721-im-overflow-residue.case.json	25
 C	probes/t4724-vdb-straight-from-zero.case.json	50
 C	probes/t4745-pivot-classic-subtotal-caption.case.json	254
+C	probes/t4749-empty-values-filter.case.json	12
 C	probes/t4755-hand-hidden-filtered-table-control.case.json	22
 C	probes/t4755-hand-hidden-filtered-table-delete-filtered-column.case.json	22
 C	probes/t4755-two-criteria-filtered-table-control.case.json	22

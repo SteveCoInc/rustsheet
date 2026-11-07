@@ -2353,8 +2353,9 @@ Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-
 `SUBTOTAL(3,..[Cat])` = `SUBTOTAL(103,..)` = 3; a criterion-less filterColumn (on column 0 or on column 1) with rows 3
 and 5 hidden gives SUBTOTAL 9 21 and 109 15, SUBTOTAL 3 6 and 103 4, the same as the table with no filter; the values
 filter under `colId` 5 of the 2-column table with rows 3, 5, 7 hidden gives 21 and 9, 6 and 3. The xlsx import decides
-this per table (`has_active_criterion`, crates/rustsheet-xlsx/src/import/tables.rs); an empty `<filters/>` counts as a
-criterion there (unprobed). Decided where Excel shows nothing: the API's `Txn::add_table(.., filtered: true)` means a
+this per table (`has_active_criterion`, crates/rustsheet-xlsx/src/import/tables.rs); an empty values filter (`<filters/>`,
+`<filters></filters>`, `<filters blank="0"/>`) is no criterion, as Excel reads it, and `<filters blank="1"/>` is one
+(excel-graph, 2026-11-07, T-4749; xlsx-storage.md "Table parts in the export"). Decided where Excel shows nothing: the API's `Txn::add_table(.., filtered: true)` means a
 table whose filter has a criterion that hides its hidden rows (what spec2xlsx writes and Excel reads as filtered), so it
 stays filtered in the engine, and its xlsx export writes a values filter on the first column keeping the visible rows'
 text, which Excel and our import read as filtered (T-4363; xlsx-storage.md "Table parts in the export"). **A column delete in the application that takes the table's only criterion unfilters the table and shows the rows
