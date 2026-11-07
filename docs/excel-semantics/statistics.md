@@ -7348,14 +7348,26 @@ probes/t2435-dist-extremes A100:A102. A workbook of 34 cdf and density cells at 
 A cdf that is not 0 keeps its value: at a shape of 1E+300, x = 1E+300 is 0.5 (probes/incomplete-gamma-cap E3), and a huge
 x at a huge shape keeps its density of 0 (`GAMMA.DIST(1E+307,1E+10,0.5,FALSE)` is 0, t2435-dist-extremes A31).
 `GAMMA.DIST(1E+10,1E+10,1,TRUE)` is Excel's 0.5000013298076014 since T-1891 (Temme's expansion).
-Ours: rule 1 exactly (T-3316). For rule 2 the engine keeps T-3271's shape cut of 1.85E+76 for the cdf of a positive x and,
-since T-3316, for the density at an x/beta below 1 as well; it replaces T-3271's (shape - 1)·(-LN(x/beta)) density cut,
-which the fit audit refuted. Below 1.85E+76 the engine is 0 where Excel is `#NUM!` (and, from there up, `#NUM!` where Excel
-is 0 at beta = 1).
+Rule 2's edges, from the same cells (113 probed points at a shape from 1E+40, T-4975 audit 2):
+- at an x/beta of 1 or more Excel is 0 at all 16 probed points (shapes 1E+56 to 1E+200), so the `#NUM!` needs
+  x/beta below 1 in the cdf as well as in the density;
+- below 1E+56 every probed point is 0 (6);
+- at an x/beta below 1 Excel is still `#NUM!` at 1.853468349736796E+76 (x/beta 2E-10: gen-m9/40425341c5034eed A265,
+  `GAMMADIST(2,123456789.123*42^42,10000000000.5,TRUE)`) and 0 at 1E+100 and 1E+200 (x/beta 1E-100: fit-audit A36,
+  A39), so the upper edge is in (1.8535E+76, 1E+100), unprobed inside;
+- inside [1E+56, 1.85E+76], at an x/beta below 1, 47 of the 89 points are `#NUM!` and 42 are 0, unexplained.
+Ours: rule 1 exactly (T-3316). For rule 2 the engine returns `#NUM!` for a computed 0 of the cdf or the density at an
+x/beta below 1 and a shape in [1E+56, 1E+77] (`HUGE_SHAPE_NUM_BAND`, T-4975 audit 2; 1E+77 is a choice inside the
+upper bracket). That is right at 72 of the 114 points (the 113 probed and gen-m9 A265): all 24 outside the band or at an
+x/beta of 1 or more and 48 inside it, where Excel's 0 points stay wrong until T-3855 finds the arithmetic. T-3271's
+interim cut, `#NUM!` for every cdf of a positive x from 1.85E+76 up and for the density there at an x/beta below 1, was
+right at 60: it gave 0 at all 87 points of the band below 1.85E+76 and `#NUM!` at the 9 zeros past it or at an
+x/beta of 1 or more (fit-audit A28, A29, A32, A34:A39). It had replaced T-3271's (shape - 1)·(-LN(x/beta)) density cut,
+which the fit audit refuted.
 Status: VERIFIED (excel-graph) for rule 1, its cut pinned to 2 parts in 1E+5; rule 2 VERIFIED at the probed cells, its
 mechanism UNVERIFIED
 Tasks: T-2435, T-1891, T-2982, T-3271, T-3316, T-3530, T-3855
-Implemented in: `gamma_dist_of` (rule 1), `huge_shape_num_error` and `HUGE_SHAPE_CDF_CUT` (rule 2, interim)
+Implemented in: `gamma_dist_of` (rule 1), `huge_shape_num_error` and `HUGE_SHAPE_NUM_BAND` (rule 2, interim)
 (crates/rustsheet-engine/src/functions/statistical/gamma.rs)
 
 ## LINEST and LOGEST: shapes, one point, collinear columns, exact fits and check order (T-1741)
