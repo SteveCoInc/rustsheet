@@ -3,7 +3,7 @@ id: T-4836
 title: "IRR hypothesis bank scored offline: flat, pole and cap handlers (H1-H12)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
