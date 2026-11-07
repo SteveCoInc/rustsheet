@@ -3,7 +3,7 @@ id: T-4738
 title: "A lifted INDEX of nested GROUPBY cells gives each cell's top-left (INDEX(G,{2;3},2) is {3;1})"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
