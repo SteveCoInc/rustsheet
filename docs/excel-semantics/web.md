@@ -164,7 +164,8 @@ Cell ids are sheet Q of each case. The cases are probes/t2085-getpivotdata-data-
 **Aggregates over one record or none.** An empty intersection is 0 for every aggregate: CountNums, Product, StdDev,
 StdDevp, Var and Varp join Sum, Count, Average, Max and Min (DF C6:J6). One record is `#DIV/0!` for StdDev and Var
 and 0 for StdDevp and Varp (DF G5, I5, H5, J5). Totals and intersections of Count, CountNums, Max, Min, Product,
-StdDev, StdDevp, Var and Varp equal the engine's folds (DF B1:J6).
+StdDev, StdDevp, Var and Varp over two or more records equal the engine's folds (DF B1:J4, plus the one-record
+cells of Count, CountNums, Max, Min and Product).
 
 **Overflow.** A Sum or Product past the double range is `#NUM!`: 1E308+1E308, and 1E200·1E200 (DF K1:K2, L1:L3).
 A total that fits is the value: West Sum 2E200 (DF K3).
@@ -206,13 +207,15 @@ rule for a pivot_table with no pivot), which is wrong inside a pivot.
 - A hidden row item C: the totals leave it out (grand total 44, East 19), and the pair `"Product","C"` is
   `#REF!` (A9:A12).
 
-**A range over two pivots** answers from one of them, and which one is not stable. TW holds Left (rows Region, at
-A3) and Right (rows Product, at F3), and `TW!$A$1:$J$12` covers both. Two fills of the same sheet disagreed. The first
-(commit 82ab72cda of this PR's history) answered from Left: Region East 21, Product A `#REF!`. A later fill answered
-from Right: Region East `#REF!`, Product A 30. Each time, the pivot Excel listed first in its PivotTables collection
-(the sidecar's `pivots` order) was the one that answered, and that order flipped between the two loads. The case no
-longer asks it, since no expected value is stable; a cell of one pivot (`TW!$F$3`) picks that pivot (A15).
-Status: UNVERIFIED which pivot a two-pivot range picks (load order, not position). The engine's `#REF!` stays. Left is also first in the file, so which of the two
+**A range over two pivots.** TW holds Left (rows Region, at A3) and Right (rows Product, at F3), and
+`TW!$A$1:$J$12` covers both. The committed fill that asked it (commit 82ab72cda of this PR's history, produced
+2026-11-07T07:29:43) answered from Left: the grand total 46 (both pivots total 46), Region East 21, Product A
+`#REF!`. A later fill of an edited workbook, not committed, answered from Right instead: Region East `#REF!`,
+Product A 30. That one observation is unrecorded, so whether the pick is stable, and what decides it, is not
+established. The sidecar's `pivots` order (the saved parts' order) does not explain it: the committed fill lists
+Right first, yet Left answered. The case no longer asks it. A cell of one pivot (`TW!$F$3`) picks that pivot (A15).
+Status: UNVERIFIED which pivot a range over two pivots picks; a probe that records several fills is needed. The
+engine's `#REF!` stays. Left is also first in the file, so which of the two
 decides is UNVERIFIED.
 
 **Two row fields** Region and Product, the same in compact, tabular and outline form. The TB and OL pivots set

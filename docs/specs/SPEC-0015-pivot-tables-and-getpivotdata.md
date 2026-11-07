@@ -44,13 +44,15 @@ probes/getpivotdata-real-pivot, excel-graph 2026-10-16; cell ids are sheet P):
 | an array of items lifts and spills | L1, L5 |
 
 Errors in `pivot_table` or `data_field` propagate before any lookup (web.md "without a pivot
-table"; kept as implemented by T-1703).
+table"; kept as implemented by T-1703). A reference to an error cell inside a pivot does not: it picks the pivot
+like any of its cells (web.md "GETPIVOTDATA on other pivot shapes (T-2085)", probes/t2085-getpivotdata-items
+Q!E20:E23; T-4805).
 
 Unknowns. T-2085 probed them (docs/excel-semantics/web.md "GETPIVOTDATA on other pivot shapes (T-2085)"; probes
 t2085-getpivotdata-data-fields, -items and -layouts). Not probed are an array `pivot_table` (in 7), case-variant cache
 items (in 14: Excel for the web refuses the file), calculated items (refused too) and a cache saved without records
-(in 12: the case builder cannot write one). A reference overlapping two pivots (in 9) has no stable answer: Excel's
-pick changed between two loads, so the engine keeps `#REF!`. Until T-4804, T-4805 and T-4806
+(in 12: the case builder cannot write one). Which pivot a reference overlapping two pivots picks (in 9) is not established: one committed fill
+answered from the top-left pivot and an uncommitted later one from the other, so the engine keeps `#REF!`. Until T-4804, T-4805 and T-4806
 implement the evidence, T-2083 answers `#REF!` for each (or keeps today's T-1703 behavior where one exists), never a
 guessed value:
 1. several data fields: the `"Values"` field, what a blank `data_field` picks, and a source name
