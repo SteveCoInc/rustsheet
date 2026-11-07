@@ -843,9 +843,8 @@ Engine (T-1929): the wrappers compute through the same compositions, so each ide
   (m9-gamma-dist-a1 A21 from 1 to 4 ulp off, m9-gamma-dist-a9 A21 closer, t1048-gammadist A11/B11 from 19 to 27 ulp
   off). Against an exact P(a, x/b) the twice-rounded x/b gives Excel's value at shapes 1 and 2 (A21), so the
   remaining error is the generic kernel's, not the scaling's. An x/b that underflows to 0 or overflows keeps
-  the port's branches (`GAMMA.DIST(1E300,1,1E-10,TRUE)` stays #NUM!, probes/incomplete-gamma-cap E6). Unprobed
-  (T-1942): a subnormal x/b is kept, not flushed like a worksheet `/` result, so `GAMMA.DIST(2E-300,0.5,1E8,TRUE)`
-  is about 1.6E-154 (0 before); and the tiny-x lower tail at shape 0.5 moved with the identity
+  the port's branches (`GAMMA.DIST(1E300,1,1E-10,TRUE)` stays #NUM!, probes/incomplete-gamma-cap E6). Probed (T-1942, probes/t1942-ztest-numeric-edges A6:A7, excel-graph): a subnormal x/b is flushed to 0 like a
+  worksheet `/` result, so `GAMMA.DIST(2E-300,0.5,1E8,TRUE)` and `GAMMA.DIST(1E-300,0.5,1E10,TRUE)` are 0; and the tiny-x lower tail at shape 0.5 moved with the identity
   (`GAMMA.DIST(3E-308,0.5,1,TRUE)` and `CHISQ.DIST(3E-308,1,TRUE)` about 1.4E-154 to 2E-154, 0 before; T-1891).
 - Z.TEST is `NORM.S.DIST(-z,TRUE)`, not `1-NORM.S.DIST(z,TRUE)`: 120 of 120 cells of
   probes-numeric/t1916-erf-wrappers column I (`Z.TEST(HSTACK(a,a),0,SQRT(2))`) against 19, and column J likewise.
@@ -8524,3 +8523,11 @@ keeps the df; all-numeric: 0.997224951291803). 3x3 ranges with a blank, text or 
 give 0.8616386653047765 (all-numeric 0.8444645822929768); different shapes are `#N/A` (`A21:C23` with `E21:F23`, with
 `E21:G24`). The engine matches 23 of 24 cells; F!A1 is 1 ulp off (a numeric ulp, baselined). The unit test
 `chisq_test_over_whole_columns_counts_every_cell` is consistent with the 1-D and 2-D whole-column cells.
+
+### Z.TEST numeric edges (T-1942)
+
+probes/t1942-ztest-numeric-edges (excel-graph, 2026-11-07): `Z.TEST({1,2},1,2^-1074)` and `Z.TEST({1,2},1,2024*2^-1074)`
+(subnormal sigma, built by arithmetic because a subnormal literal makes Excel refuse the workbook), `Z.TEST({1,2},0,1E-308)`
+(z overflows), an omitted sigma with a data sum that overflows (9E307, 9E307, 1) and one that overflows to infinity (9E307,
+8E307 against x = -9E307) are all `#NUM!`, as `z_test.rs` computes. 36 held-out cells (random data, n not a perfect square,
+sigma given and omitted, x zero and not) match the z formula of "Engine (T-1929)" at the p level.

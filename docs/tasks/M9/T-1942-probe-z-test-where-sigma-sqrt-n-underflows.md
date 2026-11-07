@@ -3,7 +3,7 @@ id: T-1942
 title: "Probe Z.TEST where sigma/sqrt(n) underflows or the data sum overflows"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -35,3 +35,9 @@ docs/excel-semantics/statistics.md (the T-1778 section, "Engine (T-1929)").
 
 ## Out of scope
 - Z.TEST argument coercion (T-1813).
+
+## Outcome
+Probe `probes/t1942-ztest-numeric-edges` filled from excel-graph (43 cells, all pass). Z.TEST edges (subnormal sigma, z
+overflow, overflowing sums) are all `#NUM!`, already what the engine returns; 36 held-out z cells matched with no change.
+GAMMA.DIST with a subnormal x/b flushes to 0 (was ~1.6E-154): fixed in `gamma.rs`. Eval: probes +43 cells, 0 regressions,
+baseline updated. Rules recorded in statistics.md.

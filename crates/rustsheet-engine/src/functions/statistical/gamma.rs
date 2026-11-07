@@ -140,6 +140,12 @@ pub(super) fn log_form_density(alpha: f64, x: f64, beta: f64) -> Option<f64> {
 /// (probes/incomplete-gamma-cap E6, E7).
 fn gamma_dist_cdf(dist: &Gamma, x: f64, beta: f64) -> f64 {
     let scaled = extended_quotient(x, beta);
+    // A subnormal x / beta flushes to 0, so the cdf is 0: `GAMMA.DIST(2E-300,0.5,1E8,TRUE)` and
+    // `GAMMA.DIST(1E-300,0.5,1E10,TRUE)` are 0 (probes/t1942-ztest-numeric-edges A6:A7;
+    // excel-graph, T-1942).
+    if scaled > 0.0 && scaled < f64::MIN_POSITIVE {
+        return 0.0;
+    }
     if !(scaled > 0.0 && scaled.is_finite()) {
         return gamma_cdf(dist, x);
     }
