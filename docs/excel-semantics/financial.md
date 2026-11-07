@@ -97,10 +97,19 @@ Evidence (excel-graph, 2026-11-04, T-4146; generator, forms and scorer in docs/r
 - probes/t4146-annuity-twice-fresh: 120 calls drawn with a new seed after the form was frozen, committed before
   the fill: twice-rounded 120/120 bit-exact, plain 0, correctly rounded 0.
 - No other FV, PV or RATE oracle cell changed (`make eval-baseline`: probes fixed 1, regressions 0).
-Ours: `compute_future_value` and `fn_pv` with `annuity_factor_rounded` (functions/financial/annuity.rs).
-Status: VERIFIED (excel-graph; integer nper, rate ≠ 0. rate = 0 and non-integer nper keep their forms, unprobed
-here)
-Tasks: T-4146, T-3424
+- Non-integer nper too (T-4244): probes/t4244-fv-pv-nonint-nper, 80 cancelling calls with nper an integer plus a
+  fraction (`gen_probe.py ... nonint`, seed t4244-nonint-1), predictions in `docs/research/t4244/predictions.tsv`
+  committed before the fill (excel-graph, 2026-11-07). Twice-rounded bit-exact on all 80 (FV 24/24 train and 16/16
+  test, PV 29/29 and 11/11), plain doubles 0 (PV within 4 ulp on 6 of 40), the correctly rounded value 0. So P is
+  Excel's `^` of the double `1+r` at a fractional exponent, and the operators are the same as at integer nper.
+  These cancelling calls amplify the rounding: Excel is more than 1e-4 from the 80-digit math on 12 of the 80 (A18
+  `-2.42076...` against -1.64630..., A42, A58), more than 1e-9 on 50. Excel kept as the target (decision 0300): the
+  engine matches Excel there, and no point needs it to leave Excel.
+Ours: `compute_future_value` and `fn_pv` with `annuity_factor_rounded` (functions/financial/annuity.rs), at every nper
+since T-4146.
+Status: VERIFIED (excel-graph; integer and non-integer nper, rate ≠ 0. rate = 0 keeps its own form, `-fv - pmt*nper`,
+unprobed for cancellation here)
+Tasks: T-4146, T-3424, T-4244
 
 ## PMT, IPMT and PPMT are the exact payment
 Rule: Excel's PMT, IPMT and PPMT are within a few ulp of the exact value of the payment on the
