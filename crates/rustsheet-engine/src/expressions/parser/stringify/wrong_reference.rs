@@ -19,9 +19,9 @@ pub(crate) const DELETED_SHEET: &str = "*#REF!";
 
 /// A reference to a sheet that does not exist (a deleted one) is displayed as `#REF!` before the
 /// cell or range, as Excel prints `=SUM(#REF!C4:C7)` for `S!C4:C7` once S is deleted (T-2340,
-/// probes/table-edits/table-delete-sheet); the lexer reads that text back as `#REF!`. A sheet
-/// delete rewrites its references to [`DELETED_SHEET`], which the export writes as `#REF!` too, as
-/// Excel's file holds `#REF!C4:C7`; other missing sheets (a loaded `Nope!A1`) keep their name in
+/// probes/table-edits/table-delete-sheet); Excel refuses that text typed in, and so does the lexer
+/// (T-4628). A sheet delete rewrites its references to [`DELETED_SHEET`], which the export writes
+/// as the bare `#REF!` ([`is_exported_deleted_sheet`]); other missing sheets (a loaded `Nope!A1`) keep their name in
 /// the stored text and the export. An external reference (`[1]Uses!A1`) is not a missing sheet.
 fn is_missing_sheet(
     sheet_name: Option<&str>,
@@ -33,6 +33,14 @@ fn is_missing_sheet(
         Some(name) => !name.starts_with('[') && context.is_some() && !export_to_excel,
         None => false,
     }
+}
+
+/// Whether the export writes a reference to a deleted sheet as the bare `#REF!`: Excel for the web
+/// refuses a workbook that stores `SUM(#REF!C4:C7)`, `#REF!$A$1` or `#REF!A:A`, and loads
+/// `SUM(#REF!)` (probes/t4628-deleted-sheet-reference-text, hand-built workbooks, excel-graph,
+/// 2026-11-07, T-4628). The value is `#REF!` either way; the range is lost from the file.
+fn is_exported_deleted_sheet(sheet_name: Option<&str>, export_to_excel: bool) -> bool {
+    export_to_excel && sheet_name == Some(DELETED_SHEET)
 }
 
 /// `#REF!` written for a deleted reference, after the sheet prefix Excel keeps (`S!#REF!`) when
@@ -98,6 +106,9 @@ pub(super) fn text(
             absolute_row,
             absolute_column,
         } => {
+            if is_exported_deleted_sheet(sheet_name.as_deref(), export_to_excel) {
+                return Error::REF.to_string();
+            }
             let (prefix, sheet_name) = if missing(sheet_name) {
                 ("#REF!", NO_SHEET)
             } else {
@@ -125,6 +136,9 @@ pub(super) fn text(
             absolute_row2,
             absolute_column2,
         } => {
+            if is_exported_deleted_sheet(sheet_name.as_deref(), export_to_excel) {
+                return Error::REF.to_string();
+            }
             let (full_row, full_column) = open_range_flags(
                 (*absolute_row1, *row1, *absolute_row2, *row2),
                 (*absolute_column1, *column1, *absolute_column2, *column2),

@@ -1112,22 +1112,28 @@ fn a_table_delete_makes_its_references_ref_errors_for_good() {
 }
 
 #[test]
-fn a_displayed_deleted_sheet_reference_reads_back_as_ref() {
-    // Excel displays `S!C4:C7` as `#REF!C4:C7` once S is deleted (T-2340); typed back, that
-    // text is the #REF! error, not a parse error.
+fn a_displayed_deleted_sheet_reference_does_not_parse() {
+    // Excel displays `S!C4:C7` as `#REF!C4:C7` once S is deleted (T-2340), but refuses that text
+    // typed in or stored in a file (probes/t4628-deleted-sheet-reference-text, T-4628); the bare
+    // `#REF!` parses.
     let mut model = model();
-    for (row, input) in ["=SUM(#REF!A1:A3)", "=#REF!$B$2", "=COUNTA(#REF!A1)"]
-        .iter()
-        .enumerate()
-    {
+    let inputs = [
+        "=SUM(#REF!A1:A3)",
+        "=#REF!$B$2",
+        "=COUNTA(#REF!A1)",
+        "=SUM(#REF!A:A)",
+        "=SUM(#REF!)",
+    ];
+    for (row, input) in inputs.iter().enumerate() {
         model
             .set_user_input(1, row as i32 + 30, 1, (*input).to_string())
             .unwrap();
     }
     model.evaluate();
-    assert_eq!(value(&model, 1, 30, 1), "#REF!");
-    assert_eq!(value(&model, 1, 31, 1), "#REF!");
-    assert_eq!(value(&model, 1, 32, 1), "1");
+    for row in 30..34 {
+        assert_eq!(value(&model, 1, row, 1), "#ERROR!", "row {row}");
+    }
+    assert_eq!(value(&model, 1, 34, 1), "#REF!");
 }
 
 #[test]
