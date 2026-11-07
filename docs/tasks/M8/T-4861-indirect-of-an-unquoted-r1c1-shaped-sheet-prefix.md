@@ -3,7 +3,7 @@ id: T-4861
 title: "INDIRECT of an unquoted R1C1-shaped sheet prefix with a later mark (C1+U+0301!B1) is #REF! (probe the boundary first)"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -30,13 +30,16 @@ Excel, and the rule's boundary across other R1C1-shaped unquoted prefixes is pro
   shows. Do not refuse more than it shows.
 
 ## Acceptance criteria
-- [ ] The probe case is committed with its excel-graph oracle, and references.md records its rule.
-- [ ] probes/t4757-later-mark-sheet-names Sheet1!A19 passes, and the new probe's cells pass (`make eval-baseline`,
+- [x] The probe case is committed with its excel-graph oracle, and references.md records its rule.
+- [x] probes/t4757-later-mark-sheet-names Sheet1!A19 passes, and the new probe's cells pass (`make eval-baseline`,
       0 regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Every cell this task owns has Excel's value or error (decision 0083).
 
 ## Out of scope
 - Quoting of these names in formula text (already matched, T-1657/T-4446).
+
+## Outcome
+Probe `probes/t4861-indirect-r1c1-shaped-sheet-prefix` (excel-graph): INDIRECT of an unquoted R1C1-shaped prefix with more text (`C1D`, `R1_`) is `#REF!`; bare `R`, `C`, `RC`, `R1`, `C1`, `R1C1`, `R0` read their sheet; quoted forms all read. Rule in references.md, implemented as `is_indirect_r1c1_tail_sheet`. t4757 A19 now passes; the new probe is 16/16.

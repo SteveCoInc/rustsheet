@@ -2630,6 +2630,7 @@ identifier such as `A1.B2`, unless an enclosing LET or LAMBDA binds it: `bind_na
 The unknown call `A1.INDEX(...)` keeps its spelling (spelling rule in "Unknown function call names", T-1719).
 Status: VERIFIED (excel-graph)
 Tasks: T-1652, T-1659
+- INDIRECT of an unquoted R1C1-shaped prefix with more text after the reference is `#REF!` (`INDIRECT("C1D!B1")`, `"R1_!B1"`, `"C1\u0301!B1"` with the mark U+0301), while a bare R1C1 reference or an out-of-range one still names its sheet (`R`, `C`, `RC`, `R1`, `C1`, `R1C1`, `R0`: all read their B1), and the quoted forms of every one read it (probes/t4861-indirect-r1c1-shaped-sheet-prefix, excel-graph, 2026-11-07, T-4861; probes/t4757-later-mark-sheet-names A19). `RC1` and `R1C` are not probed and are not refused (`is_indirect_r1c1_tail_sheet`).
 
 ## LET and LAMBDA names spelled like a cell
 Rule: a LET name or LAMBDA parameter spelled like a relative A1 cell (`f1`, `add5`, `c1`, `A1`),
