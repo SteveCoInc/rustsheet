@@ -3282,11 +3282,15 @@ A formula literal is read at 15 significant digits (numbers.md), so the literals
 9007199254740991 and 9007199254740992 (A25:B26, both read as 9007199254740990) do not probe 10^15 + 1 or 2^53 ± 1.
 The computed arguments do (A82:B96): at `1E15+1` (equally `10^15+1`) Excel's D is 10^15, the lower cut, a double
 `log10` of 10^15 + 1 rounding to 15: `DOLLARDE(1.5,1E15+1)` 1.4999999999999996 and `DOLLARFR` 1.5000000000000004; at
-`10^16+1` D is 10^16 and both are 1.5. `2^53-1` and `2^53` give the same cells, 1.5551115123125783 and
-1.4503599627370496 (the double sequence 1 + 0.5·F/D with D = 10^16, not the correctly rounded value). At `1E300` Excel
-returns the dollar unchanged (A27:B27), so its D is 10^300; the Gate A math definition takes D = 10^301 there from the
-double above 10^300, which its sidecar shows (T-4608 follow-up). The same holds for the negative and the 0.3 dollar
-(mirror and scaled values, A28:B96). Ours matches every cell.
+`10^16+1` (the double 10^16, as 10^16 + 1 is not representable) D is 10^16 and both are 1.5. `2^53-1` and `2^53` give
+the same cells for the 1.5 dollar, 1.5551115123125783 and 1.4503599627370496, the correctly rounded math with D = 10^16
+(A83:B84). For the 0.3 dollar they differ (A93 0.333066907387547, A94 0.33306690738754696; B93 0.2702159776422297, B94
+0.27021597764222977) and A93 is not the correctly rounded value, which is 0.33306690738754696. At `1E300` Excel returns
+the dollar unchanged (A27:B27), so its D is 10^300; the Gate A math definition takes D = 10^301 there from the double
+above 10^300, which its sidecar shows (T-4880). The errors, truncation and D rules hold for the negative dollar, whose
+cells are the exact mirror (A28:B54, A55:B96 for the 0.3 dollar), but the 0.3 dollar's last digits are not always the
+correctly rounded math: A76 `DOLLARDE(0.3,999999999999999)` is 0.3000000000000003 (correctly rounded 0.30000000000000027),
+and A69, B69, A73, A75 and A80 are an ulp off it too. Ours matches every cell.
 Ours: `fn_dollarde` and `fn_dollarfr` (functions/financial/rate_conversions.rs), bit-exact on all 240 points and the 192 fraction-edge cells.
 Status: VERIFIED (excel-graph)
 Tasks: T-4110, T-4608

@@ -16,7 +16,8 @@ The Gate A math definition for DOLLARDE and DOLLARFR (tools/src/rustsheet_tools/
 ## Context
 - T-4608 (financial.md "DOLLARDE and DOLLARFR scale the fraction...") found that Excel's D is 10^15 at `1E15+1` (a double
   `log10` rounds to 15) and 10^300 at 1E300, where the math definition takes the next power of ten above the double
-  (10^301 for 1E300). The committed t4608 math sidecar therefore differs from Excel at A27:B27, A54:B54 and A81:B81.
+  (10^301 for 1E300). The committed t4608 math sidecar therefore differs from Excel at A27:B27, A54:B54 and A81:B81 (1E300) and at every 1E15+1 / 10^15+1 row (A82:B82, A85:B85,
+  A87:B87, A90:B90, A92:B92, A95:B95; sidecar A82 is 5.999999999999995 against Excel's 1.4999999999999996).
   Ours matches Excel (192/192).
 - The defs' `NoValueError` for fractions below 1 and past 1E9 is now stale: the probe supplies the evidence.
 
