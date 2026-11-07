@@ -3,7 +3,7 @@ id: T-4530
 title: "IPMT at a period strictly between nper and nper + 1: probe whether it is a value like PPMT's band or #NUM!, and match"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
