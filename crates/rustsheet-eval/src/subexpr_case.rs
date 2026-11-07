@@ -13,8 +13,8 @@ use anyhow::{bail, Context, Result};
 use rustsheet_engine::{subexpressions, Subexpression, SubexpressionKind};
 use serde_json::{json, Value as Json};
 
-use crate::case::{split_qualified, CaseSpec};
-use crate::cellref::Addr;
+use crate::case::{split_qualified, CaseSpec, CellInput};
+use crate::cellref::{parse_range, Addr};
 use crate::closeness::Visible;
 use crate::engine::{Engine, RustSheetEngine};
 use crate::probe_milestones::parse_milestone;
@@ -80,11 +80,7 @@ pub fn build(source_id: &str, stem: &str, source: &str, cell: &str) -> Result<Pr
     else {
         bail!("{source_id}: no sheet {sheet}");
     };
-    let Some(formula) = sheet_spec
-        .cells
-        .get(&address)
-        .and_then(crate::case::CellInput::formula)
-    else {
+    let Some(formula) = sheet_spec.cells.get(&address).and_then(CellInput::formula) else {
         bail!("{source_id}: {cell} holds no formula");
     };
     if spec
@@ -151,7 +147,11 @@ pub fn build(source_id: &str, stem: &str, source: &str, cell: &str) -> Result<Pr
     for key in ["expected_source", "invariant", "text"] {
         object.remove(key);
     }
+    let read = read_ranges(&tree);
     if let Some(sheets) = object.get_mut("sheets").and_then(Json::as_array_mut) {
+        for sheet in sheets.iter_mut() {
+            drop_unread_formulas(sheet, &read);
+        }
         sheets.push(sheet_json);
     }
     Ok(ProbeCase {
@@ -163,6 +163,48 @@ pub fn build(source_id: &str, stem: &str, source: &str, cell: &str) -> Result<Pr
         json,
         lines,
     })
+}
+
+/// The ranges (sheet, corners) the formula's references read.
+fn read_ranges(tree: &[Subexpression]) -> Vec<(String, Addr, Addr)> {
+    tree.iter()
+        .filter(|node| node.kind == SubexpressionKind::Reference)
+        .filter_map(|node| {
+            let (sheet, range) = split_qualified(&node.text)?;
+            let (first, last) = parse_range(&range)?;
+            Some((sheet, first, last))
+        })
+        .collect()
+}
+
+/// Removes from the spec sheet `sheet` every formula cell the formula does not read (one level:
+/// a formula cell it reads keeps its own formula, whatever that reads), so the probe case checks
+/// the localized formula's inputs and nothing else of its source.
+fn drop_unread_formulas(sheet: &mut Json, read: &[(String, Addr, Addr)]) {
+    let name = sheet["name"].as_str().unwrap_or_default().to_string();
+    let Some(cells) = sheet.get_mut("cells").and_then(Json::as_object_mut) else {
+        return;
+    };
+    cells.retain(|at, input| {
+        let input: Option<CellInput> = serde_json::from_value(input.clone()).ok();
+        if input.as_ref().and_then(CellInput::formula).is_none() {
+            return true;
+        }
+        Addr::parse(at).is_some_and(|addr| {
+            read.iter().any(|(s, first, last)| {
+                s.eq_ignore_ascii_case(&name)
+                    && (first.row..=last.row).contains(&addr.row)
+                    && (first.col..=last.col).contains(&addr.col)
+            })
+        })
+    });
+    let kept: BTreeSet<String> = cells.keys().cloned().collect();
+    if let Some(legacy) = sheet
+        .get_mut("legacy_formulas")
+        .and_then(Json::as_array_mut)
+    {
+        legacy.retain(|at| at.as_str().is_some_and(|at| kept.contains(at)));
+    }
 }
 
 /// The innermost visibly-off subexpressions of the probe case `probe` (its JSON text), given the
@@ -182,11 +224,7 @@ pub fn culprits(probe: &str, cells: &[CellResult]) -> Result<Vec<String>> {
         .filter_map(|(at, input)| input.formula().map(|f| (f, at.as_str())))
         .collect();
     let last = format!("A{}", sheet.cells.len());
-    let Some(root) = sheet
-        .cells
-        .get(&last)
-        .and_then(crate::case::CellInput::formula)
-    else {
+    let Some(root) = sheet.cells.get(&last).and_then(CellInput::formula) else {
         bail!("not a subexpr case: {SHEET}!{last} holds no formula");
     };
     let names: Vec<String> = spec.sheets.iter().map(|s| s.name.clone()).collect();
@@ -346,6 +384,13 @@ mod tests {
         assert!(pos("=SQRT(Data!$A$1)") < pos("=SQRT(Data!$A$1)+ABS(Calc!$B$6)"));
         // The source's inputs, the milestone tag and a check list of the new cells.
         assert_eq!(case.json["sheets"][0]["cells"]["A1"], 4);
+        // Formula cells the formula does not read are dropped; constants stay.
+        let calc = &case.json["sheets"][1]["cells"];
+        assert!(
+            calc.get("C5").is_none() && calc.get("C6").is_none(),
+            "{calc}"
+        );
+        assert_eq!(calc["C7"], 3);
         assert_eq!(case.json["tags"], json!(["M9", "probe", "subexpr"]));
         assert_eq!(case.json["check"].as_array().unwrap().len(), cells.len());
         assert_eq!(case.json["expected"], json!({}));

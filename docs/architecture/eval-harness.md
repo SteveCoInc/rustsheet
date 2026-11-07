@@ -571,7 +571,7 @@ rustsheet-eval suites | fetch [--suite S] | run [--suite S] [--filter X] | check
 
 `subexpr-case` (T-3333; synthetic-generator.md §11 stage 1) localizes a visibly-off cell whose formula nests several
 calls. It writes `eval/suites/probes/cases/subexpr-<source stem>-<sheet>-<cell>.case.json`: the source spec case's
-sheets and inputs, plus a sheet `Subexpr` holding, from A1 down, one cell per distinct subexpression of the formula,
+sheets with their constant cells and only the formula cells the formula reads (one level), plus a sheet `Subexpr` holding, from A1 down, one cell per distinct subexpression of the formula,
 children first and the whole formula last, every reference absolute and sheet-qualified (the engine's
 `subexpressions` hook prints them, so relative references keep their targets). Literals, bare references, nodes that
 read a LET or LAMBDA name, volatile nodes (`volatile::is_volatile`) and nodes that depend on their own cell (`ROW()`,
