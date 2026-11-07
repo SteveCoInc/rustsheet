@@ -857,8 +857,6 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
 
     let merged_cells = load_merge_cells(ws)?;
 
-    merged_cells::clear_covered_cells(&mut sheet_data, &merged_cells);
-
     let links = load_hyperlinks(ws, &settings.hyperlink_rels)?;
 
     let conditional_formatting = load_conditional_formatting(ws, theme, dxfs)?;

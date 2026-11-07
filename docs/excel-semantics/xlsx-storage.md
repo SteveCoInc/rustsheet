@@ -79,11 +79,10 @@ shared string, `=B1` is "x", `=C1` 7, `=ISBLANK(B1)` FALSE, `=ISTEXT(D1)` TRUE, 
 (`=ISBLANK(B2)` TRUE, `=COUNTA(A2:B2)` 1). A covered formula `=A1+1` in B1 of A1:B1 is recalculated
 (2), `=B1` is 2, ISFORMULA TRUE and `=COUNT(A1:B1)` 2. This is the file-level form of the
 "merge with Format Painter keeps the hidden values" behaviour.
-Ours: the importer empties every covered cell (`clear_covered_cells`) because covered cells holding
-no content is an engine invariant (merge, autofill and clipboard rely on it), so these cells are
-visibly off and poi/bug66675.xlsx and other census files lose covered values on a round trip.
+Ours: the importer keeps covered cells as stored (T-5044; before it emptied them, `clear_covered_cells`), so
+references, ranges and recalculation see them and a round trip keeps them.
 Evidence: fixtures/merged-covered-values, fixtures/merged-covered-formula (excel-graph, 2026-11-06, T-4148).
-Status: VERIFIED (excel-graph); not implemented (T-5044 owns the fixtures' off cells).
+Status: VERIFIED (excel-graph); implemented (T-5044).
 What Excel's UI merge then does with such a range (unmerge, edit, paste, autofill, a delete of the anchor's row) is
 UNVERIFIED; docs/specs/SPEC-0036-merged-covered-content.md states our rule for each operation and which probe (T-5048)
 settles it.
