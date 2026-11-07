@@ -83,12 +83,13 @@ Fresh sweeps (drawn after the freeze, filled from excel-graph 2026-11-07):
 - Branch agent/functions-financial/T-4232-irr-near-zero-root; draft PR #3825, head c22b9bbc5 (CI expected red until the gaps below are closed). Not enqueued, no
   reviewer has run.
 - Not done yet: the hold-out table (fit lab split, `tools/src/rustsheet_tools/fitlab/holdout.py`, margin 5 points)
-  for the chosen candidate, main and the correctly rounded root; probes-numeric/t4232-irr-r4-fresh.math.json
-  (`cd tools && uv run rustsheet-accuracy math --suite probes-numeric --function IRR`, commit only the t4232
-  sidecar); `known-failures.tsv` lines owned by T-4232 for the 10 r4-T-4232 points outside the envelope and removal
+  for the chosen candidate, main and the correctly rounded root; `known-failures.tsv` lines owned by T-4232 for the 10 r4-T-4232 points outside the envelope and removal
   of the 22 stale lines; `make eval-baseline` (CI's eval gate will report fresh-2 A39 as a regression); a
   financial.md entry under "IRR's returns where the secant fails are Newton iterates"; the unit test for one cell
   (e.g. t4213-irr-r4-fresh A54, Excel `0.00039315942751105837`).
+- Done after the notes: probes-numeric/t4232-irr-r4-fresh.math.json is committed (`rustsheet-accuracy math --suite
+  probes-numeric --function IRR`, which also rewrote t3347-irr-conventional-sweep.math.json: reverted, the check
+  passes on the committed one); `make eval-math-check` is current.
 - Next step: decide the two Gate A points moved out. Look for a rule in the flows that separates r4-T-3411 A296,
   r4-T-3407 A249 and fresh-2 A39 (all Excel `#NUM!`, settled under 1E-4) from the 31+ settled Excel numbers, on
   a fresh hold-out; if none, a regression decision record (`make new-decision`) for 3 lost cells against about 85
