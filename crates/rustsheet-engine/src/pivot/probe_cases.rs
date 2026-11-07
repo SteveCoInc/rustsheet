@@ -402,6 +402,9 @@ pub(crate) fn probe_pivot_nth(
         pivot_field.subtotal_top = flag(&attrs["subtotalTop"], pivot_field.subtotal_top);
         pivot_field.insert_blank_row = flag(&attrs["insertBlankRow"], pivot_field.insert_blank_row);
         pivot_field.subtotal_caption = attrs["subtotalCaption"].as_str().map(str::to_string);
+        pivot_field.number_format = attrs["numFmtId"]
+            .as_u64()
+            .map(|id| u32::try_from(id).unwrap());
         // The field's raw `extLst` (`xml.extLst`), whose x14 `fillDownLabels` the importer types.
         // The match is deliberately narrow: the probes write the flag as `fillDownLabels="1"`
         // only (t4129 X14F, t4698); the importer's own reading is tested in
@@ -508,7 +511,7 @@ fn rendered(
     let result = compute_on(table, cache, today, &mut work).unwrap();
     let layout = lay_out(table, cache, &result, &mut work).unwrap();
     let mut cells = HashMap::new();
-    for cell in render(table, cache, &result, &layout).unwrap() {
+    for cell in render(table, cache, &result, &layout, &[]).unwrap() {
         let at = address(cell.column, cell.row);
         assert!(
             cells.insert(at.clone(), cell.value).is_none(),

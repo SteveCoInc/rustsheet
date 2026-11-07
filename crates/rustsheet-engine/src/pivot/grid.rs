@@ -496,7 +496,13 @@ impl Model {
         let owned = owned_areas(pivot.location, &pivot.geometry);
         let mut fits = None;
         if let Some(layout) = layout {
-            let cells = render(&pivot, cache, &result, &layout)?;
+            let cells = render(
+                &pivot,
+                cache,
+                &result,
+                &layout,
+                &self.workbook.styles.num_fmts,
+            )?;
             budget.charge_cells(cells.len())?;
             let new = owned_areas(layout.location, &layout.geometry);
             let areas = [&owned, &new];

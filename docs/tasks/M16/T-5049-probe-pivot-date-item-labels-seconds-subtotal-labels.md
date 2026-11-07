@@ -17,7 +17,8 @@ Excel's shown text of a pivot date item's label is evidenced on the edges T-4807
 T-4807 (PR #3952) gives a date item's label `m/d/yyyy`, with ` h:mm` for a time part (pivots.md "Item casing when cache
 and source disagree, and date items"). Its reviewers listed what no probe covers yet:
 - a time part with seconds (`4/17/2024 8:00:30`: does Excel show `8:00` or the seconds?);
-- an ungrouped date field over a non-`m/d/yyyy` source (`yyyy-mm-dd`, `d-mmm-yy`, a time-only `h:mm` source);
+- an ungrouped date field over a non-`m/d/yyyy` source (`yyyy-mm-dd`, `d-mmm-yy`, a time-only `h:mm` source); the
+  `yyyy-mm-dd` one is answered: probes/t4717-pivot-cell-formats L5 reads `1/15/2024` (T-4717);
 - a date item's subtotal label (`<item> Total`) with the date as an outer row field;
 - a selected date page item (the page field's shown item);
 - a 1900-system item below 1 (serial 0.5, a time-only value). The 1904 workbook's serial 0 shows `12:00:00 AM`

@@ -731,6 +731,49 @@ fn a_renamed_field_renders_the_pivot_under_its_unread_parts() {
     }
 }
 
+/// The cells of pivot `name` of probe `stem` whose displayed text differs from the sidecar's
+/// `text`, as `A1: Excel .., engine ..` lines; the model is rendered by a refresh.
+fn wrong_texts(model: &Model, stem: &str, name: &str) -> Vec<String> {
+    let oracle = read(stem, "oracle");
+    let pivots = oracle["pivots"].as_array().unwrap();
+    let pivot = pivots.iter().find(|p| p["sheet"] == name).unwrap();
+    let sheet = sheet_of(model, name);
+    let mut wrong = Vec::new();
+    for (at, expected) in pivot["text"].as_object().unwrap() {
+        let (column, row) = position(at);
+        let (row, column) = (
+            i32::try_from(row + 1).unwrap(),
+            i32::try_from(column + 1).unwrap(),
+        );
+        let mine = model.get_formatted_cell_value(sheet, row, column).unwrap();
+        if mine != expected.as_str().unwrap() {
+            wrong.push(format!("{at}: Excel {expected}, engine {mine:?}"));
+        }
+    }
+    wrong
+}
+
+#[test]
+fn pivot_cells_take_their_fields_formats_over_the_cells_own() {
+    // probes/t4717-pivot-cell-formats (pivots.md "A refresh gives pivot cells their fields'
+    // number formats"): a refresh shows a number label in its pivot field's `numFmtId`
+    // (row, column and page fields, subtotal labels too) or General, and a value in its data
+    // field's or General, whatever format the cell had (R1-R4, S1: blank cells formatted
+    // before the render), under preserveFormatting on and off, for a showDataAs field, and
+    // whatever the source cells' format (S2, L4). L5 (a date item with no `numFmtId`) is
+    // T-4807's.
+    const STEM: &str = "t4717-pivot-cell-formats";
+    for name in [
+        "R1", "R2", "R3", "R4", "S1", "S2", "L1", "L2", "L3", "L4", "L6", "L7",
+    ] {
+        let mut model = probe_in_model(STEM, name);
+        model.evaluate();
+        refreshed(&mut model);
+        let wrong = wrong_texts(&model, STEM, name);
+        assert!(wrong.is_empty(), "{name}:\n{}", wrong.join("\n"));
+    }
+}
+
 #[test]
 fn value_cells_show_their_data_fields_number_format() {
     // probes/t4169-pivot-number-formats: every cell of each pivot's area shows Excel's displayed
@@ -738,7 +781,6 @@ fn value_cells_show_their_data_fields_number_format() {
     // percent (10), date (14), the workbook's custom 164, General (0) and none, on item,
     // subtotal and grand-total lines and the grand-total column.
     const STEM: &str = "t4169-pivot-number-formats";
-    let oracle = read(STEM, "oracle");
     for name in ["P1", "P2"] {
         let mut model = probe_in_model(STEM, name);
         // Q!B1 carries the case's one custom format, which the builder writes as numFmt 164.
@@ -748,21 +790,7 @@ fn value_cells_show_their_data_fields_number_format() {
         model.set_cell_style(q, 1, 2, &style).unwrap();
         model.evaluate();
         refreshed(&mut model);
-        let pivots = oracle["pivots"].as_array().unwrap();
-        let pivot = pivots.iter().find(|p| p["sheet"] == name).unwrap();
-        let sheet = sheet_of(&model, name);
-        let mut wrong = Vec::new();
-        for (at, expected) in pivot["text"].as_object().unwrap() {
-            let (column, row) = position(at);
-            let (row, column) = (
-                i32::try_from(row + 1).unwrap(),
-                i32::try_from(column + 1).unwrap(),
-            );
-            let mine = model.get_formatted_cell_value(sheet, row, column).unwrap();
-            if mine != expected.as_str().unwrap() {
-                wrong.push(format!("{at}: Excel {expected}, engine {mine:?}"));
-            }
-        }
+        let wrong = wrong_texts(&model, STEM, name);
         assert!(wrong.is_empty(), "{name}:\n{}", wrong.join("\n"));
     }
 }

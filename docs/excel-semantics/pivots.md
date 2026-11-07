@@ -270,7 +270,9 @@ Rule:
   cells' format but a fixed short date: `m/d/yyyy`, with ` h:mm` when the item has a time part. On
   probes/t2085-getpivotdata-items sheet D (rows When over serials formatted m/d/yyyy) the sidecar's pivot `text`
   shows 1/1/2024, 1/2/2024 and 2/1/2024 (D!A4:A6), as t4130-pivot-date-filters does (source m/d/yyyy, e.g.
-  DLit!A4 `1/15/2024`). On probes/t4164-pivot-date-times, whose source is `m/d/yyyy h:mm`, midnight shows
+  DLit!A4 `1/15/2024`), and a `yyyy-mm-dd` source reads the same (probes/t4717-pivot-cell-formats L5!A4
+  `1/15/2024`; a pivot field `numFmtId` wins, L6!A4 `15-Jan-24`, "A refresh gives pivot cells their fields' number
+  formats"). On probes/t4164-pivot-date-times, whose source is `m/d/yyyy h:mm`, midnight shows
   `4/17/2024` (WEq1!A4), not the source format's `4/17/2024 0:00`, and 8 a.m. shows `4/17/2024 8:00` (WEq1!A5).
   The rendered rowItems point at the `<n>` items 45292, 45293 and 45323 (x = 3, 4, 5), while the `<d>` items are
   listed first. The engine matches (T-4807: a date item's label cell gets that format). An item below 1 is the
@@ -278,8 +280,9 @@ Rule:
   (pivot-export/t4177-cache-dates-1904-refresh P!A4, excel-graph, 2026-11-07; serials 1 to 1462 of the same pivot show
   `1/2/1904` ... `1/2/1908`). VERIFIED for that cell only; the engine still shows `1/1/1904` there (T-4943). Without
   `refreshOnLoad` (t4177-cache-dates-1904 P!A4) Excel keeps the label cell's exported format and shows `1/1/1904`.
-  UNVERIFIED: a 1900-system item below 1, a time part with seconds (taken as `h:mm`), a date item's subtotal label
-  (`<item> Total`) and a selected date page item, which keep their earlier rendering.
+  UNVERIFIED (owner T-5049): a 1900-system item below 1, a time part with seconds (taken as `h:mm`), and a date
+  item's subtotal label (`<item> Total`), which keeps its earlier rendering; a selected date page item, which the
+  engine shows as an axis date item since T-4717.
   The saved cache field (`containsMixedTypes="1"`, count 6) carries `minDate="2024-01-01T00:00:00"` but
   `maxDate="1900-01-01T12:51:04"`, below its own minDate; nothing reads these attributes, so the quirk is recorded only.
 - **Saved order.** In the saved cache Excel lists the shared items in source order first and the
@@ -1458,16 +1461,58 @@ Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`RenderedCell::number_format`),
 crates/rustsheet-engine/src/pivot/grid.rs (`Model::set_pivot_number_format`), and
 crates/rustsheet-engine/src/number_format.rs (id 14, and new custom ids from 164 by convention; T-4169).
-UNVERIFIED (T-4169, owner T-4717): the engine only sets a value cell's format when its data field has a
-`numFmtId`, and leaves other cells' formats alone. Not probed: whether Excel resets a cell's format
-when it stops being a value cell after a refresh, or when the data field has no `numFmtId` (the
-"preserve cell formatting" option), and whether a showDataAs field or a page, row or column field's
-`numFmtId` changes the text.
+What a refresh does to a cell's own format, a data field with no `numFmtId`, a showDataAs field and an
+axis or page field's `numFmtId` are in "A refresh gives pivot cells their fields' number formats" (T-4717).
 UNVERIFIED (eval-harness, T-4169, owner T-4730): the Kg cells (E5:E11) pass only because the case has
 one custom format, which the builder (XlsxWriter) and the spec adapter (`set_number_formats`, by sheet
 then address order) each number 164. With two or more custom formats the two numberings can differ, so
 a definition's `numFmtId` could name another code in the engine than in Excel. The engine's unit test
 hand-sets Q!B1 for the same reason.
+
+## A refresh gives pivot cells their fields' number formats
+Rule: when Excel renders a pivot (a `refreshOnLoad` open), every number cell it writes takes its field's number
+format, whatever format the cell had:
+- a value cell shows in its data field's `numFmtId`, and in General when the field has none or `numFmtId="0"`,
+  under `preserveFormatting` on (the default) and off alike. A showDataAs field is no exception: percentOfTotal and
+  index with no `numFmtId` show General (`0.755594872`, `1`), and only a `numFmtId` makes them percentages
+  (`75.56%` with 10). A source-formatted field's format does not reach its values (Sum of a `0.00` column shows
+  `3.5`, Max of a `yyyy-mm-dd` date column `45337`);
+- a number item's label shows in its pivot field's `numFmtId` (`<pivotField numFmtId>`) on rows, columns and page
+  fields alike, and so does the item in its subtotal label (`7.00 Total`). With no `numFmtId` it shows General: a
+  cell formatted `$#,##0.00` or `0.0%` before the render reads `7` and `12`, and a source formatted `0.00` reads
+  `1`, `2.5`, `4`. The field's format wins over the source's (`100.00%` for 1 with `numFmtId` 10 over `0.00`);
+- a date item's label shows in its pivot field's `numFmtId` when it has one (`15-Jan-24` with 15), else the fixed
+  short date of "Item casing when cache and source disagree, and date items": a `yyyy-mm-dd` source reads
+  `1/15/2024`.
+Evidence: probes/t4717-pivot-cell-formats (excel-graph, 2026-11-07, T-4717), from each pivot's displayed text
+(`Range.text`, the sidecar pivots' `text`). Data has Region, Qty (formatted `0.00`), When (dates formatted
+`yyyy-mm-dd`), Val and Code over five records; each pivot sits at A3 of its sheet, and the R and S sheets format
+blank cells of the area before Excel renders it:
+- R1, rows Code, Sum of Val with `numFmtId` 4: A4 (`$#,##0.00`) and A5 (`0.0%`) read `7` and `12`, B4 (`0.0%`)
+  `984.25`, B5 `3,000.13`.
+- R2 (`preserveFormatting` default), R3 (`preserveFormatting="0"`), R4 (`numFmtId="0"`), rows Region, Sum of Val:
+  B4 (`$#,##0.00`) reads `984.25` and B5 (`0.0`) `3042.875` on all three.
+- S1, Pct (percentOfTotal), Pct10 (percentOfTotal, 10), Idx (index): B6 (`0.0%`) `0.755594872`, C6 `75.56%`,
+  D6 (`0.00`) `1`, B7 `1`, C7 `100.00%`. S2: Sum of Qty B5 `3.5`, Max of When C5 `45337`.
+- L1, tabular rows Code (`numFmtId` 2) and Region: A4 `7.00`, A5 `7.00 Total`, A10 `Grand Total`. L2, columns
+  Code (2): B4:D4 `7.00`, `12.00`, `30.00`. L3, page Code = 12 (2): B1 `12.00`. L4, rows Qty: A4:A6 `1`, `2.5`, `4`.
+  L5, rows When: A4 `1/15/2024`. L6, rows When (15): A4 `15-Jan-24`. L7, rows Qty (10): A4 `100.00%`.
+Consequences: `preserveFormatting` does not keep a format the cell carries in the file (what it keeps, the pivot's `<formats>`
+list, is not probed); the format a data field or a pivot field carries is the only one a refreshed pivot shows. A
+probe cannot read a cell's format directly on Excel for the web (CELL("format") is `#VALUE!` there,
+probes/t3011-cell-format-info-types), so a format only shows through a number's text.
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`item_format`, `item_text_in`, `Cells::value`,
+the page area; the PivotChart categories share `item_text_in`) and crates/rustsheet-engine/src/pivot/grid.rs
+(`Model::set_pivot_number_format`; T-4717).
+UNVERIFIED (T-4717, owner T-5058): a cell a refresh empties keeps its format in the engine (no text shows it); a
+caption or text label keeps its cell's format (visible only under a format with a text section); the pivot's
+`<formats>` are kept but not applied; a non-zero `cacheField@numFmtId`; a pivot field `numFmtId` on a grouped field
+(the engine applies it before a date group item's m/d/yyyy); a pivot field `numFmtId="0"` on an ungrouped date
+field, which the engine reads as the field's format and so shows General in place of the fixed short date; a custom
+(164 and up) pivot field `numFmtId`; and a caption filter over a formatted number item, which compares the General
+text. UNVERIFIED (T-4717, owner T-5049): a selected date page item with no field format, which the engine shows as
+an axis date item.
 
 ## A Count total over an error field is the error when the pivot mixes aggregates
 Rule: Count and CountNums never show an error in an item's cell. When the pivot's data fields mix
@@ -2411,7 +2456,7 @@ names its set. The date items show as `m/d/yyyy h:mm` text (`4/17/2024 8:00`, an
 Status: VERIFIED (excel-graph) for these types over DATE+TIME formulas (cached as missing). Over dates the file caches
 as numbers a date filter is dropped (DLit, "Pivot sorts and filters as Excel for the web renders them").
 Implemented in: crates/rustsheet-engine/src/pivot/filter.rs (`date_holds`; T-4165). The date items' label text is
-T-4717's.
+"Item casing when cache and source disagree, and date items" (T-4807).
 
 ## Pivot filters: the engine's own readings
 Rule: none probed; these are what the engine (`pivot::filter`, T-4165) does where the probes are silent. Each is
@@ -2788,8 +2833,9 @@ VERIFIED (excel-graph) for the shapes cited; wider claims are marked. Each has a
 - **A collapsed item with the Values field inside it** keeps one line per data field under the item
   (gen-pivot/36996978427905b2 P05!L6:L8). T-4927. The rule is probed in full by probes/t4699-pivot-blank-collapsed CV to CV4 and implemented
   in lines.rs since T-4699 ("Blank rows and collapsed items beyond an outer row field").
-- Date items show in the source cells' date format, as on probes/t2085-getpivotdata-items D: T-4807 owns the gen-pivot
-  cells too.
+- Date items show as a fixed short date, as on probes/t2085-getpivotdata-items D, not in the source cells' format
+  (probes/t4717-pivot-cell-formats L5; "Item casing when cache and source disagree, and date items"): T-4807 fixed the
+  gen-pivot cells too.
 
 Status: VERIFIED (excel-graph) for the cells cited; the unprobed extensions above are UNVERIFIED.
 
