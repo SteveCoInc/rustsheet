@@ -3,11 +3,11 @@ id: T-5064
 title: "T-4736 follow-ups: correct the nested-cell bounds entry and SPEC-0018, and probe PERCENTOF over a nested cell"
 milestone: M7
 lane: engine
-status: in-progress
+status: blocked
 priority: P2
 size: S
 tier: sonnet
-depends_on: []
+depends_on: [T-4736]
 ---
 
 ## Goal
@@ -36,3 +36,9 @@ Excel-fidelity review of PR #3859 (T-4736, 2026-11-07), three MINOR findings lef
 
 ## Out of scope
 - The SUM, COUNT and COUNTA reads themselves (T-4736, done).
+
+## Blocked because
+Blocked because: T-4736 (PR #3859) is not merged. origin/main still has `NestedReading::Flatten` for SUM, COUNT and
+COUNTA (`functions/statistical/count.rs`) and the test `flattening_and_handing_over_copies_is_bounded`, so the docs this
+task would correct are accurate for main today, and PERCENTOF's `#N/A` change does not exist yet. Resume when #3859
+has merged (set `depends_on: [T-4736]` then).
