@@ -74,7 +74,9 @@ them as cases.
 Implemented in: crates/rustsheet-xlsx/src/export/pivots.rs, pivots/cache.rs, pivots/table.rs (T-4176). The export
 writes a pivot's saved `rowItems`/`colItems` back as read until the engine lays it out again (a render or refresh
 drops them, `OpaqueEntry::is_layout_lines`), then the engine's; and it drops, with a log line, a cache whose field
-holds two texts that differ only in case (next entry).
+holds two texts that differ only in case (next entry). A render that collapses to `#SPILL!` drops the saved lines
+too, and the export then writes the definition with no `rowItems`/`colItems`; what Excel saves for a collapsed
+pivot is UNVERIFIED (probe pending: T-4177).
 
 ## Case-variant text items make Excel for the web call the file corrupt
 Rule: a cache field whose shared items list two texts that differ only in case (`East`, `east`) makes
@@ -87,6 +89,8 @@ Status: the refusal is a builder observation (T-4122 runs), not committable as a
 nothing for a file it refuses
 Implemented in: crates/rustsheet-xlsx/src/export/pivots/cache.rs (`check`: the export drops such a cache with
 its pivots and a log line, `CacheField::has_case_variant_texts`; T-4176)
+The check folds case as the text functions do (`ItemKey::identity`); the refusal was observed for ASCII only, so
+whether Excel's corrupt-file check folds non-ASCII text the same way (`ß`/`SS`, dotted I) is UNVERIFIED (T-4640).
 
 ## Which function the countA and count custom subtotals compute
 Rule: a pivot field's `countASubtotal` (subtotal line `item t="countA"`) is COUNTA: it counts every
