@@ -420,30 +420,29 @@ impl Model {
         values: impl IntoIterator<Item = CalcResult>,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        self.call_lambda_caller_bound(
-            caller,
-            values
-                .into_iter()
-                .map(|value| (Binding::Value(value), false)),
-            cell,
-        )
+        let values = values
+            .into_iter()
+            .map(|value| (Binding::Value(value), false));
+        self.call_lambda_caller_binding(caller, values, cell)
+            .into_single_area(cell)
     }
 
-    /// [`Self::call_lambda_caller`] with the parameters' bindings and their ERROR.TYPE marks, as
-    /// [`Model::bind_argument`] gives them, so that one may be a union or an array of references:
-    /// SCAN's and REDUCE's `initial_value` (`Model::lambda_initial_value`).
-    pub(crate) fn call_lambda_caller_bound(
+    /// [`Self::call_lambda_caller`] with each parameter's binding and its ERROR.TYPE mark given,
+    /// as [`Model::bind_argument`] gives them (so one may be a union or an array of references:
+    /// SCAN's and REDUCE's `initial_value`, `Model::lambda_initial_value`), and the areas of a
+    /// union a reference-keeping `caller` returns kept: REDUCE's step
+    /// ([`Model::reduce_reference`]).
+    pub(crate) fn call_lambda_caller_binding(
         &mut self,
         caller: &mut LambdaCaller,
         bindings: impl IntoIterator<Item = (Binding, bool)>,
         cell: CellReferenceIndex,
-    ) -> CalcResult {
+    ) -> RefArg {
         // `call_prepared` binds the parameters in order, so the i-th call takes the i-th binding.
         let mut bindings = bindings.into_iter();
         self.call_prepared(caller, cell, |_, _| {
             bindings.next().unwrap_or((Binding::Omitted, false))
         })
-        .into_single_area(cell)
     }
 
     /// One call of `caller` with argument nodes evaluated in the calling cell, as `call_lambda`

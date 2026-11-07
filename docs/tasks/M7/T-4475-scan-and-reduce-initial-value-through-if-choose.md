@@ -79,7 +79,7 @@ Done 2026-11-06 (resumed from the landing notes below).
   bind_argument's OFFSET/INDIRECT/grid-variable/picked-reference producers with no second copy. It reads a 3-D span as
   its `#VALUE!` and keeps an empty slot as before (T-2670). A new `call_lambda_caller_bound` (lambda.rs), which
   `call_lambda_caller` now wraps, hands that binding to REDUCE's and SCAN's first call. ISREF of a variable bound to a
-  union is TRUE (`Model::is_union_variable`, let.rs; information/mod.rs).
+  union is TRUE (`Model::is_areas_variable`, let.rs; information/mod.rs).
 - **Eval delta:** the new case passes 64/64 (main before this change: 33). D11 and F11, REDUCE keeping a returned
   reference, pass through T-4478, which merged while this PR was in review; the merge of `origin/main` combines the two
   (REDUCE's reference-keeping caller with the bound first call, and T-2766's ERROR.TYPE mark carried with the binding).
@@ -89,6 +89,12 @@ Done 2026-11-06 (resumed from the landing notes below).
 - **Tests:** `scan_reduce_initial_value_forms_bind_as_lambda_arguments` (test_fn_map_reduce.rs) pins
   `REDUCE(IF(TRUE,A2),A3,LAMBDA(a,v,COUNT(a)))` at 0, plus the IFERROR, XLOOKUP, LET/OFFSET, union and span forms.
   The test uses the LAMBDA form the probe evidences.
+- **Adopted 2026-11-07 (orphan, work-loop step 0.3):** T-4494 merged a second REDUCE union path while the PR waited
+  (`call_lambda_caller_binding`, `lambda_initial_reference`, `is_areas_variable`). The merge of `origin/main` keeps one
+  of each: `call_lambda_caller_binding` takes `(Binding, bool)` (the ERROR.TYPE mark) and replaces
+  `call_lambda_caller_bound`; REDUCE's first call takes `lambda_initial_value`'s binding, which already keeps a union's
+  areas, so `lambda_initial_reference` goes; ISREF uses main's `is_areas_variable` and `is_union_variable` goes.
+  Calc!H17 was fixed on main by T-4494 already; the eval delta of this PR is the new case (64/64), 0 regressions.
 - docs/excel-semantics/arrays.md: the "Unprobed initial values" list and the accumulator "unprobed" clause are
   replaced by the probed rules.
 

@@ -96,7 +96,7 @@ A point is one cell `Calc!A<n>` of a batch, with its id `accuracy/<FUNCTION>/<ba
 | arguments | case `hypotheses` | `gate-a/<stratum>/<arg1>,<arg2>,...` (the hypotheses map's existing convention) |
 | math value | math sidecar | `{"t":"n","v":"-40.260...e0"}`: 50 significant digits as text (`mpmath.nstr(v, 50)`) |
 | math domain error | math sidecar | `{"t":"e","why":"p outside (0,1)"}`: no error code, Excel's code is the target |
-| stratum | math sidecar | `"s": "typical" \| "tail" \| "edge" \| "extreme" \| "log-uniform"` |
+| stratum | math sidecar | `"s": "typical" \| "tail" \| "edge" \| "extreme" \| "log-uniform" \| "aimed"` |
 | Excel value | oracle sidecar | the existing `{"t":"n","v":...}` / `{"t":"e","v":"#NUM!"}` |
 | fill metadata | oracle sidecar `source` | backend, application, `produced_at`, `input_sha256` (unchanged) |
 | R3 mark | `math-over-excel.tsv` | `<point id>\t<file>.md#<anchor>` of a `Status: MATH-OVER-EXCEL` entry |
@@ -146,6 +146,10 @@ tools/ only (pure Python, BSD; the engine and the bindings never depend on it).
     the largest value Excel accepts; x where the result nears the double's overflow or underflow).
   - **log-uniform, 10%:** every parameter log-uniform (sign uniform for a signed one) over its whole valid domain:
     R4.2's sweep, and the shape of every `r4-*` batch (100% log-uniform).
+  - **aimed, 0% (T-4059):** a definition's own draw of one region the strata miss (`Definition.aimed`), only by
+    `generate --stratum aimed`, for an `e-T-XXXX` batch: an investigation's evidence inside the region it studies
+    (CUMPRINC's underflowed short ranges, `e-T-4059`). It is never in the default split, so adding one moves no
+    committed batch, and it is never an R4.2 sweep: that stays a full-domain `r4-*` batch, drawn after the freeze.
   - A drawn point whose math value overflows the double range is redrawn (at most 20 tries, then dropped); a math
     underflow (|v| < 1e-300) is kept, since the floor makes it a check of the result's sign and type.
 - **Counts.** A first batch has 120 points for a function of up to two numeric parameters (48/36/24/12), 200 for three or
@@ -251,7 +255,12 @@ same mirroring for a fetched suite), attaches math values to the cells of any ev
   arguments read another formula cell, or that the reader leaves unparsed, gets no math value. Strata do not apply (`"s"` absent). A candidate the
   generator drops (no single value, not converged) is listed under an optional top-level `"skipped"` map (sheet → A1
   → `{"f","why"}`), which the runner ignores and `rustsheet-accuracy math --check` (`make eval-math-check`, decision
-  0243) reads to tell it from a cell whose sidecar is missing or stale.
+  0243) reads to tell it from a cell whose sidecar is missing or stale. The sidecar's `source` also records what its
+  values were computed from (T-4231, `accuracy/fingerprint.py`): `definitions` (function → a hash of the code of its
+  definition's module and the `rustsheet_tools` modules it imports, docstrings and comments left out) and
+  `arguments_sha256` (a hash of every computable candidate's arguments as the reader gives them). `math --check`
+  recomputes both without mpmath and fails on a definition whose code changed (naming it, to regenerate with
+  `--function`), on arguments the reader now reads otherwise, and on another generator `version`.
 - The runner reads the sidecar when present and puts the math value on the cell's `CellResult` (an optional field,
   absent from the JSON when none), dropping a stale one. R1(c) counts a visibly-off numeric cell as inside the envelope
   when `envelope` says so; a cell with no math value counts as outside (decision 0188 R1(c)), so nothing reads as met

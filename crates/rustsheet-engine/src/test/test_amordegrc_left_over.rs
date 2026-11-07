@@ -82,6 +82,21 @@ fn what_each_call_leaves() {
 }
 
 #[test]
+fn a_salvage_equal_to_the_cost_leaves_the_value_and_reads_none() {
+    // Both functions, at any period, leave the value as it was, and an AMORDEGRC below period 1
+    // is 0 rather than the value (probes/amor-salvage-equal-cost F1 to F8, T-4504).
+    assert_eq!(above("=AMORDEGRC(2400,39679,39813,2400,1,0.15,1)"), "485");
+    assert_eq!(above("=AMORDEGRC(2400,39679,39813,2400,0,0.15,1)"), "485");
+    assert_eq!(above("=AMORLINC(2400,39679,39813,2400,1,0.15,1)"), "485");
+    assert_eq!(above("=AMORLINC(2400,39679,39813,2400,0,0.15,1)"), "485");
+    let model = evaluated(&[
+        ("A1", "=AMORDEGRC(2400,39679,39813,2400,0.5,0.15,1)"),
+        ("A2", CHARGE_485),
+    ]);
+    assert_eq!(model._get_text("A1"), "0");
+}
+
+#[test]
 fn lifted_over_an_array_it_is_0() {
     // probes/amordegrc-fraction-state-x.
     let model = evaluated(&[

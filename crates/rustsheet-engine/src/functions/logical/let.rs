@@ -392,15 +392,17 @@ impl Model {
         matches!(self.variable_binding(node), Some(Binding::Omitted))
     }
 
-    /// Whether `node` is a variable bound to the areas of a union ([`Binding::Areas`]).
-    pub(crate) fn is_union_variable(&self, node: &Node) -> bool {
-        self.variable_binding(node)
-            .is_some_and(|binding| binding.held_areas() > 0)
-    }
-
     /// Whether `node` is a variable bound to an array of references ([`Binding::Grid`]), which
     /// [`Model::variable_reference`] hands on.
     pub(crate) fn is_grid_variable(&self, node: &Node) -> bool {
         matches!(self.variable_binding(node), Some(Binding::Grid(_)))
+    }
+
+    /// Whether `node` is a LET variable or LAMBDA parameter bound to a union's areas.
+    pub(crate) fn is_areas_variable(&self, node: &Node) -> bool {
+        matches!(
+            self.variable_binding(node).map(Binding::resolved),
+            Some(Binding::Areas(_))
+        )
     }
 }

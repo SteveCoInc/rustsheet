@@ -4,7 +4,12 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "b181dec128578dc4dd5a73831cff44bc48164bae14f2d7d368001bd8689d4958"
+  "input_sha256": "b181dec128578dc4dd5a73831cff44bc48164bae14f2d7d368001bd8689d4958",
+  "definitions": {
+   "NORM.INV": "8e4045d7b4e4bcab",
+   "NORMINV": "8e4045d7b4e4bcab"
+  },
+  "arguments_sha256": "29aa57eee7a0868b754d0db8ea4ff24e4432947c274550fa1fd6f17ef1357679"
  },
  "sheets": {
   "Calc": {

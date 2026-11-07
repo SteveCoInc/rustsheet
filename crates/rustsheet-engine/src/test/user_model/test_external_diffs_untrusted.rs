@@ -274,6 +274,7 @@ fn crafted_diffs_are_refused() {
                 count: BIG,
                 old_data: vec![],
                 tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -283,6 +284,8 @@ fn crafted_diffs_are_refused() {
                 column: 1,
                 count: BIG,
                 old_data: vec![],
+                tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -296,6 +299,7 @@ fn crafted_diffs_are_refused() {
                     data: HashMap::new(),
                 }],
                 tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -309,6 +313,7 @@ fn crafted_diffs_are_refused() {
                     data: HashMap::from([(BIG, number(0))]),
                 }],
                 tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -322,6 +327,7 @@ fn crafted_diffs_are_refused() {
                     data: HashMap::new(),
                 }],
                 tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -341,6 +347,8 @@ fn crafted_diffs_are_refused() {
                     }),
                     data: HashMap::new(),
                 }],
+                tables: vec![],
+                rewritten: vec![],
             },
         ),
         (
@@ -635,7 +643,37 @@ fn a_restored_table_extent_naming_no_table_is_refused() {
             reference: "A1:B9".to_string(),
             totals_row_count: 0,
         }],
+        rewritten: vec![],
     };
     let error = assert_refused(&mut model, &one(DiffType::Undo, restore), "table extent");
+    assert!(error.contains("No table"), "{error}");
+}
+
+/// A peer's undo of a column delete that restores a table the sheet has none of is refused
+/// before it re-inserts any column (T-4671).
+#[test]
+fn a_restored_table_naming_no_table_is_refused_before_columns_return() {
+    let mut model = model();
+    let restore = Diff::DeleteColumns {
+        sheet: 0,
+        column: 2,
+        count: 1,
+        old_data: vec![ColumnData {
+            column: None,
+            data: HashMap::new(),
+        }],
+        tables: vec![(
+            "Nope".to_string(),
+            crate::types::Table::new(
+                "Nope",
+                "Sheet1",
+                "A1:B3",
+                (1, 0),
+                ["a".to_string(), "b".to_string()],
+            ),
+        )],
+        rewritten: vec![],
+    };
+    let error = assert_refused(&mut model, &one(DiffType::Undo, restore), "table restore");
     assert!(error.contains("No table"), "{error}");
 }

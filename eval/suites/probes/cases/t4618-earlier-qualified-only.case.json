@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4618: probes/t4618-last-of-three-tabs (tabs First, S2, Last, the earlier two holding only =Last!N) reads 1 from =N on Last after N = =1 is added through the API scoped to Last, where the same book with a bare =N on the earlier tabs too (probes/t4618-last-of-three-first-active, t4618-last-of-three-last-active) and every case with the scoped sheet first leave it #NAME?. Tabs T, S (T first and active): T holds only =S!N, S the bare uses, N scoped to S. probes/t4587-sheet-api-name-qualified-use-first without its T!A2 =N. Do S's uses see N?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "T",
+   "cells": {
+    "A1": "=S!N"
+   }
+  },
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "A3": {
+     "entered": "=N"
+    },
+    "B1": "=FORMULATEXT(A1)"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "T!A1",
+  "S!A1",
+  "S!A2",
+  "S!A3",
+  "S!B1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "S"
+  }
+ ]
+}

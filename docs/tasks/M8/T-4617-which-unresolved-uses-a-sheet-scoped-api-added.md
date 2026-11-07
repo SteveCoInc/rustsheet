@@ -3,7 +3,7 @@ id: T-4617
 title: "Which unresolved uses a sheet-scoped API-added name re-binds: Excel re-binds in most books but not in T-4049's or T-4353's, with no isolated cause"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -44,11 +44,17 @@ exactly as Excel does. That needs a rule the evidence supports, and T-4391's pro
   - probes/t4391-api-rebind-last-qualified-first-add (3): S2!A1:A2, Last!A1
 
 ## Acceptance criteria
-- [ ] A rule that holds across every probe above and the T-4049/T-4014 cases is found and recorded in syntax.md,
+- [x] A rule that holds across every probe above and the T-4049/T-4014 cases is found and recorded in syntax.md,
       and implemented in `Model::bind_added_sheet_name`. Otherwise the cells stay known failures and the
       bisection's result is recorded.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Uses inside API-added name bodies (T-4587).
 - Typing cells after the add (T-4348).
+
+## Outcome
+Met by T-4618's PR. T-4618's load-order place model (docs/excel-semantics/syntax.md "Which place a loaded use took")
+holds across every probe above and the T-4049/T-4014 cases. `Model::loaded_uses_take_sheet_place`, called from
+`Model::bind_added_sheet_name`, implements it, and every owned cell passes. The one non-repeating fill of
+t4391-api-rebind-first (commit 681082d1a) stays unexplained.

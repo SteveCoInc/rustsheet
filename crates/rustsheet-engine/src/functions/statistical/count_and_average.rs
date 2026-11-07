@@ -316,7 +316,8 @@ impl Model {
         }
 
         let mut values: Vec<f64> = Vec::new();
-        if let Err(e) = self.for_each_value(args, cell, |f| values.push(f)) {
+        let grids = GridReading::OrderStatistic;
+        if let Err(e) = self.for_each_value_with(args, grids, cell, |f| values.push(f)) {
             return e;
         }
 
