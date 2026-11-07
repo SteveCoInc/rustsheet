@@ -17,6 +17,7 @@ use crate::case::{split_qualified, CaseSpec};
 use crate::cellref::Addr;
 use crate::closeness::Visible;
 use crate::engine::{Engine, RustSheetEngine};
+use crate::probe_milestones::parse_milestone;
 use crate::runner::{run_suites, CellResult, RunOptions};
 use crate::suite::{Suite, SuiteKind};
 use crate::volatile::is_volatile;
@@ -123,7 +124,7 @@ pub fn build(source_id: &str, stem: &str, source: &str, cell: &str) -> Result<Pr
     let milestones: Vec<String> = spec
         .tags
         .iter()
-        .filter(|t| is_milestone_tag(t))
+        .filter(|t| parse_milestone(t).is_some())
         .cloned()
         .collect();
     let mut tags = milestones;
@@ -162,16 +163,6 @@ pub fn build(source_id: &str, stem: &str, source: &str, cell: &str) -> Result<Pr
         json,
         lines,
     })
-}
-
-/// `M9`, `M8a`: a milestone tag (decision 0051), which the probe case keeps so it scores in its
-/// source case's milestone.
-fn is_milestone_tag(tag: &str) -> bool {
-    let Some(rest) = tag.strip_prefix('M') else {
-        return false;
-    };
-    let digits = rest.trim_end_matches(|c: char| c.is_ascii_lowercase());
-    !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit())
 }
 
 /// The innermost visibly-off subexpressions of the probe case `probe` (its JSON text), given the
