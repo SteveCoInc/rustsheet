@@ -297,6 +297,41 @@ fn image_sizing_height_and_width_are_validated() {
             "#BLOCKED!",
         ),
         (
+            "1 with width only",
+            r#"=IMAGE("https://x.invalid/a.png","alt",1,,10)"#,
+            "#VALUE!",
+        ),
+        (
+            "2 with width only",
+            r#"=IMAGE("https://x.invalid/a.png","alt",2,,10)"#,
+            "#VALUE!",
+        ),
+        (
+            "2 with width 0",
+            r#"=IMAGE("https://x.invalid/a.png","alt",2,,0)"#,
+            "#VALUE!",
+        ),
+        (
+            "height percent text",
+            r#"=IMAGE("https://x.invalid/a.png","alt",3,"10%")"#,
+            "#BLOCKED!",
+        ),
+        (
+            "height currency text",
+            r#"=IMAGE("https://x.invalid/a.png","alt",3,"$10")"#,
+            "#BLOCKED!",
+        ),
+        (
+            "width percent text",
+            r#"=IMAGE("https://x.invalid/a.png","alt",3,,"10%")"#,
+            "#BLOCKED!",
+        ),
+        (
+            "array option numeric text",
+            r#"=INDEX(IMAGE("https://x.invalid/a.png","alt",{"1","a"}),1,1)"#,
+            "#BLOCKED!",
+        ),
+        (
             "sizing empty text",
             r#"=IMAGE("https://x.invalid/a.png","alt","")"#,
             "#VALUE!",

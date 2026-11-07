@@ -48,7 +48,13 @@
         "D5": "=ERROR.TYPE(INDEX(FIELDVALUE({1;2;3},{\"a\";\"b\"}),3,1))",
         "E5": "=ERROR.TYPE(INDEX(FIELDVALUE({1;2;3},{\"a\";\"b\"}),3,2))",
         "D6": "=ERROR.TYPE(INDEX(FIELDVALUE({1;2;3},{\"a\";\"b\"}),4,1))",
-        "E6": "=ERROR.TYPE(INDEX(FIELDVALUE({1;2;3},{\"a\";\"b\"}),4,2))"
+        "E6": "=ERROR.TYPE(INDEX(FIELDVALUE({1;2;3},{\"a\";\"b\"}),4,2))",
+        "A16": "=ERROR.TYPE(IMAGE(\"https://example.invalid/a.png\",\"alt\",1,,10))",
+        "A17": "=ERROR.TYPE(IMAGE(\"https://example.invalid/a.png\",\"alt\",2,,10))",
+        "A18": "=ERROR.TYPE(IMAGE(\"https://example.invalid/a.png\",\"alt\",2,,0))",
+        "A19": "=ERROR.TYPE(IMAGE(\"https://example.invalid/a.png\",\"alt\",3,\"10%\"))",
+        "A20": "=ERROR.TYPE(IMAGE(\"https://example.invalid/a.png\",\"alt\",3,\"$10\"))",
+        "A21": "=ERROR.TYPE(IMAGE(\"https://example.invalid/a.png\",\"alt\",3,,\"10%\"))"
       }
     }
   ],
@@ -91,6 +97,12 @@
     "Sheet1!D5",
     "Sheet1!E5",
     "Sheet1!D6",
-    "Sheet1!E6"
+    "Sheet1!E6",
+    "Sheet1!A16",
+    "Sheet1!A17",
+    "Sheet1!A18",
+    "Sheet1!A19",
+    "Sheet1!A20",
+    "Sheet1!A21"
   ]
 }

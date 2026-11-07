@@ -62,15 +62,15 @@ the UNVERIFIED lists.
 - STOCKHISTORY's other arguments beyond the empty-cell `stock`, and IMAGE's URL classification (T-1189's bullets).
 
 ## Outcome
-Probe case `probes/t4686-rich-value-option-residue` (38 cells, excel-graph 2026-11-06) holds every form of items 1-4
-and passes in full. Nine cells differed from the engine and are fixed in `offline_errors.rs`:
-- IMAGE `sizing` truncates toward zero before the 0..3 check (-0.5, -0.9 are valid) and numeric text is a number for
-  `sizing`, `height` and `width`.
+Probe case `probes/t4686-rich-value-option-residue` (44 cells, excel-graph 2026-11-06) holds every form of items 1-4
+and passes in full. Nine of the first 38 cells differed from the engine (and the percent and currency text cells added after the fidelity review), all fixed in `offline_errors.rs`:
+- IMAGE `sizing` truncates toward zero before the 0..3 check (-0.5, -0.9 are valid) and text that ordinary number
+  coercion reads (`"1"`, `"10%"`, `"$10"`) is that number for `sizing`, `height` and `width` (`Model::cast_number`).
 - `sizing` 0, 1 and 2 all refuse a `height` and a `width` (2 was unchecked); `sizing` 3 needs a nonzero `height` or
   `width` (a width alone is enough).
 - STOCKHISTORY of an empty-cell `stock` or `start_date` is `#VALUE!`, not `#CONNECT!`.
 Items 2 (error order) and 4 (FIELDVALUE row-axis, 3x1 of `#FIELD!`, `#FIELD!`, `#N/A`) already matched. Unit tests in
 `test_fn_offline_errors.rs` pin the probed results; `information.md` replaces the UNVERIFIED lists with the observed
 values ("STOCKHISTORY and IMAGE residue (T-4686)"). Still UNVERIFIED and noted there: an empty-cell `height`/`width`
-under `sizing` 0..2, date or currency text as an IMAGE number, and an empty `end_date` or array element of STOCKHISTORY.
-No new known failures; the baseline gains the 38 passing cells.
+under `sizing` 0..2, date text as an IMAGE number, and an empty `end_date`, array element or array `stock` with an empty `start_date` in STOCKHISTORY.
+No new known failures; the baseline gains the 44 passing cells.

@@ -5,14 +5,13 @@
 
 use crate::{
     calc_result::CalcResult,
-    cast::{calc_result_to_array_node, number_text_too_long},
+    cast::calc_result_to_array_node,
     expressions::{
         parser::{ArrayNode, Node},
         token::Error,
         types::CellReferenceIndex,
     },
     model::Model,
-    number_format::parse_excel_number,
 };
 
 use crate::functions::lift::{LiftCost, LiftOptions, LiftedArg};
@@ -38,16 +37,15 @@ fn is_url(text: &str) -> bool {
 }
 
 /// The number IMAGE reads from a `sizing`, `height` or `width` argument: a number, or a boolean
-/// (TRUE is 1: `IMAGE(url,"alt",TRUE)` is not `#VALUE!`), or numeric text (`"1"` as `sizing`, a
-/// text `"10"` as `height` and `width` reach the fetch), or an empty cell as 0. Other text, `""`
-/// included, and an omitted argument have none (probes/t4686-rich-value-option-residue A8:A10).
-/// Only plain number text counts: a date or currency text is UNVERIFIED.
+/// (TRUE is 1: `IMAGE(url,"alt",TRUE)` is not `#VALUE!`), or an empty cell as 0. Text was already
+/// turned into a number by [`Model::coerce_image_option_text`] where ordinary coercion reads it
+/// as one; other text, `""` included, and an omitted argument have none
+/// (probes/t4686-rich-value-option-residue A8:A10, A19:A21).
 fn image_number(value: &CalcResult) -> Option<f64> {
     match value {
         CalcResult::Number(n) => Some(*n),
         CalcResult::Boolean(b) => Some(f64::from(u8::from(*b))),
         CalcResult::EmptyCell => Some(0.0),
-        CalcResult::String(text) if !number_text_too_long(text) => parse_excel_number(text.trim()),
         _ => None,
     }
 }
@@ -56,9 +54,9 @@ fn image_number(value: &CalcResult) -> Option<f64> {
 /// valid; an invalid set makes IMAGE `#VALUE!` even for a URL source. Excel (probes/rich-errors-
 /// image-sizing, excel-graph, 2026-10-11, T-1345; probes/t4686-rich-value-option-residue,
 /// 2026-11-06, T-4686): `sizing` truncates toward zero to 0 to 3 (-0.5 and -0.9 are 0, 3.5 is 3;
-/// -1, 4, 9, text, "" and an omitted `IMAGE(url,"alt",)` are `#VALUE!`); sizing 3 needs a
+/// -1, 4, 9, non-numeric text, "" and an omitted `IMAGE(url,"alt",)` are `#VALUE!`); sizing 3 needs a
 /// nonzero `height` or `width`, `height` and `width` are not negative; sizing 0, 1 and 2 refuse
-/// a `height` and a `width` (`0,,10` and `2,10` are `#VALUE!`). An array-valued option is
+/// a `height` and a `width` (`0,,10`, `1,,10`, `2,,10` and `2,10` are `#VALUE!`). An array-valued option is
 /// validated element by element by [`image_element`].
 fn image_options_valid(options: &[CalcResult]) -> bool {
     let Some(sizing) = options.first() else {
@@ -120,6 +118,42 @@ fn image_element(element: &[CalcResult], cell: CellReferenceIndex) -> CalcResult
 }
 
 impl Model {
+    /// `options` (`alt_text`, `sizing`, `height`, `width`) with each text after `alt_text` that
+    /// ordinary number coercion reads as a number (`"1"`, `"10%"`, `"$10"`) replaced by it, in
+    /// array options too: Excel takes such text as the number (probes/t4686-rich-value-option-
+    /// residue A9, A10, A19:A21). Other text stays text.
+    fn coerce_image_option_text(&self, options: Vec<CalcResult>) -> Vec<CalcResult> {
+        options
+            .into_iter()
+            .enumerate()
+            .map(|(index, option)| {
+                if index == 0 {
+                    return option;
+                }
+                match option {
+                    CalcResult::String(text) => self
+                        .cast_number(&text)
+                        .map_or(CalcResult::String(text), CalcResult::Number),
+                    CalcResult::Array(rows) => CalcResult::Array(
+                        rows.into_iter()
+                            .map(|row| {
+                                row.into_iter()
+                                    .map(|node| match node {
+                                        ArrayNode::String(text) => self
+                                            .cast_number(&text)
+                                            .map_or(ArrayNode::String(text), ArrayNode::Number),
+                                        other => other,
+                                    })
+                                    .collect()
+                            })
+                            .collect(),
+                    ),
+                    other => other,
+                }
+            })
+            .collect()
+    }
+
     /// An array of `error` with the shape of `values`; with `keep_errors` an element that is
     /// already an error stays.
     fn error_grid(
@@ -208,7 +242,10 @@ impl Model {
         if args.is_empty() || args.len() > 5 {
             return CalcResult::new_args_number_error(cell);
         }
-        match self.offline_args(args, cell, true) {
+        match self
+            .offline_args(args, cell, true)
+            .map(|(source, options)| (source, self.coerce_image_option_text(options)))
+        {
             Err(error) => error,
             Ok((LiftedArg::Scalar(source), options)) if !has_array_option(&options) => {
                 let valid = image_options_valid(options.get(1..).unwrap_or_default());

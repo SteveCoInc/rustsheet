@@ -161,7 +161,7 @@ The engine lifts over array and range `source`/`stock`/`value`/`field_name` and 
 - IMAGE option validation (probes/rich-errors-image-sizing, T-1345; every case wrapped in ERROR.TYPE, 11 = `#BLOCKED!`, 3 = `#VALUE!`):
   `sizing` 0, 1, 2, 1.5 (truncated) and TRUE reach the fetch; -1, 4, 9, text, `""` and an omitted `IMAGE(url,"alt",)` are
   `#VALUE!`. `sizing` 3 alone, or `IMAGE(url,,3)`, is `#VALUE!`; with a `height` (`3,10`), or `3,0,10`, `3,10,0` and `3,1.5,10.5`, it reaches the
-  fetch; `3,0,0`, a negative `height` or `width` and a text `height` are `#VALUE!`. `sizing` 0 or 1 with a `height` (`0,10`, `1,10,10`) is
+  fetch; `3,0,0`, a negative `height` or `width` and a non-numeric text `height` are `#VALUE!`. `sizing` 0 or 1 with a `height` (`0,10`, `1,10,10`) is
   `#VALUE!`. The residue is settled in "STOCKHISTORY and IMAGE residue (T-4686)" below.
 - IMAGE with an array `sizing`, `height` or `width` lifts: the source and those options broadcast against each other and each
   element is checked on its own (`IMAGE({url,url},"alt",{0,9})` is `#BLOCKED!`, `#VALUE!`; `{9;0}` with a 1x2 source is 2x2;
@@ -554,16 +554,16 @@ Rule: IMAGE option validation, all via `ERROR.TYPE` (11 = `#BLOCKED!`, 3 = `#VAL
 (excel-graph, 2026-11-06):
 - `sizing` truncates toward zero before the 0..3 check: `-0.5` and `-0.9` reach the fetch (A6, A14), `3.5` with `10,10` does too (A7), `2.9` too (A13).
   A numeric-text `sizing` (`"1"`) is read as that number (A9); `""` and `"a"` stay `#VALUE!` (probes/rich-errors-image-sizing). An empty cell is 0 (A8).
-- `sizing` 0, 1 and 2 refuse a `height` and a `width`: `IMAGE(u,"alt",0,,10)` (A1), `(2,10)` (A4) and `(0,N1)` with N1 the text "10" (A11) are `#VALUE!`.
+- `sizing` 0, 1 and 2 refuse a `height` and a `width`: `IMAGE(u,"alt",0,,10)` (A1), `(1,,10)` (A16), `(2,,10)` (A17), `(2,,0)` (A18), `(2,10)` (A4) and `(0,N1)` with N1 the text "10" (A11) are `#VALUE!`.
 - `sizing` 3 needs a nonzero `height` or `width`: `(3,,10)` (A2), `(3,N1,N1)` (A10), `(3,Z1,10)` with Z1 blank (A12) and `(3,10,Z1)` (A15) reach the
-  fetch, `(3,0)` (A5) is `#VALUE!`. Numeric text counts as a number for `height` and `width` (A10).
+  fetch, `(3,0)` (A5) is `#VALUE!`. Text that ordinary number coercion reads counts as that number for `height` and `width`: `"10"` (A10), `"10%"` (A19, A21) and `"$10"` (A20) reach the fetch.
 - Error order: the first error in argument order wins, for every position of an invalid option too. `IMAGE(u,NA(),1/0)` is `#N/A` (B1), `IMAGE(u,"alt",NA(),1/0)`
   `#N/A` (B2), `IMAGE(u,1/0,"x")` `#DIV/0!` (B3), `IMAGE(NA(),1/0)` `#N/A` (B4), `IMAGE(u,"alt",1/0,NA())` `#DIV/0!` (B5), `IMAGE(u,"alt",0,NA(),1/0)` `#N/A` (B6),
   `IMAGE(u,"alt",9,1/0)` `#DIV/0!` (B7: the error wins over the invalid `sizing`), `IMAGE(u,NA(),9)` `#N/A` (B8), `IMAGE(u,1/0,NA())` `#DIV/0!` (B9).
 - STOCKHISTORY: an empty-cell `stock` or `start_date` is `#VALUE!` (ERROR.TYPE 3), not `#CONNECT!`: `STOCKHISTORY(Z1,DATE(2020,1,2))` (C1),
   `STOCKHISTORY("QZXQZXQ",Z1)` (C2) and `STOCKHISTORY(Z1,Z1)` (C4); an error argument still wins (`STOCKHISTORY(Z1,1/0)` is `#DIV/0!`, C3).
-  UNVERIFIED: an empty-cell `end_date` or later argument, an empty element of an array `stock`, and a text or boolean `start_date`.
+  UNVERIFIED: an empty-cell `end_date` or later argument, an empty element of an array `stock` (and an empty-cell `start_date` beside an array `stock`; the engine gives `#CONNECT!` elements), and a text or boolean `start_date`.
 - FIELDVALUE row-axis broadcast: `FIELDVALUE({1;2;3},{"a";"b"})` is 3 rows by 1 column, `#FIELD!` (ERROR.TYPE 13), `#FIELD!`, `#N/A` (D1:D5).
 Status: VERIFIED (excel-graph); implemented (`image_options_valid`, `image_number` and `fn_stockhistory` in offline_errors.rs). Empty-cell height/width with `sizing` 0..2
-and date or currency text as an IMAGE number stay UNVERIFIED.
+and date text as an IMAGE number stay UNVERIFIED.
 Tasks: T-4686
