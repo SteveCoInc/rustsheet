@@ -3,7 +3,7 @@ id: T-4440
 title: "Probe overlapping unions and error, text and boolean cells in 3-D and union data of TRIMMEAN, Z.TEST and the PERCENTILE family"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
