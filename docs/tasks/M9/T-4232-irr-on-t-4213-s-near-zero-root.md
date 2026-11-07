@@ -80,7 +80,7 @@ Fresh sweeps (drawn after the freeze, filled from excel-graph 2026-11-07):
   r4-T-3407 A249 or fresh-2 A39. Patch kept out of the repo.
 
 ## Landing notes (2026-11-07 03:05 UTC, opus run, landing window closing)
-- Branch agent/functions-financial/T-4232-irr-near-zero-root; draft PR #3825, head c22b9bbc5 (CI expected red until the gaps below are closed). Not enqueued, no
+- Branch agent/functions-financial/T-4232-irr-near-zero-root; draft PR #3825, head 820a8a987 plus this notes commit (CI expected red until the gaps below are closed). Not enqueued, no
   reviewer has run.
 - Not done yet: the hold-out table (fit lab split, `tools/src/rustsheet_tools/fitlab/holdout.py`, margin 5 points)
   for the chosen candidate, main and the correctly rounded root; `known-failures.tsv` lines owned by T-4232 for the 10 r4-T-4232 points outside the envelope and removal
