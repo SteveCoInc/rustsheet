@@ -3,7 +3,7 @@ id: T-4762
 title: "Probe the readers of a one-index INDEX over a column of references (AVERAGE, MAX, ROWS of the nested INDEX, SUM of INDEX(INDEX(r,2),1))"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -27,10 +27,19 @@ probe did not cover, and the engine following it.
 - Also name the ISREF TRUE result (t4701 A4) in docs/excel-semantics/lookup.md's entry.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-graph) covers AVERAGE, MAX, MIN and PRODUCT of the one-index INDEX, ROWS and COLUMNS of the
+- [x] A probes case (excel-graph) covers AVERAGE, MAX, MIN and PRODUCT of the one-index INDEX, ROWS and COLUMNS of the
       nested INDEX, and `SUM(INDEX(INDEX(r,2),1))`, over the three grid kinds.
-- [ ] lookup.md records the results; the engine passes the case, or an owner task is filed for each failing cell.
+- [x] lookup.md records the results; the engine passes the case, or an owner task is filed for each failing cell.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - One index into a grid of several columns.
+
+## Outcome
+Added probes/t4762-index-one-index-readers (27 cells, excel-graph 2026-11-07): AVERAGE, MAX, MIN, PRODUCT and COUNT of
+the one-index INDEX, ROWS and COLUMNS of the nested `INDEX(..,1,1)`, and SUM and ROWS of `INDEX(INDEX(r,2),1)`, over
+the lifted OFFSET, lifted INDIRECT and mixed XLOOKUP grids, with data chosen so top-left and whole-element reads
+differ (a descending column for MIN). Excel reads the top-left cell for AVERAGE/MAX/MIN/PRODUCT, counts nothing with
+COUNT (0, a quirk), and the nested one-index INDEX hands the whole element back (SUM 6, ROWS 2). Ours matches all 27
+cells with no code change; lookup.md records the results and names t4701's ISREF TRUE. Eval delta: +1 case, 27 new
+passing cells, 0 regressions.
