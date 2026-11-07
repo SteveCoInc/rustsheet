@@ -16,6 +16,9 @@ use crate::import::{
     ImportLimits, Package,
 };
 
+/// The namespace of `r:id`.
+const R_NS: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+
 /// What a regenerated save does with a part, by the relationship type that reaches it (D5.1).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Policy {
@@ -132,6 +135,8 @@ pub(super) const MAX_CLOSURE_SIZE: usize = 1_000;
 /// One internal relationship of a part.
 #[derive(Clone, Debug)]
 struct Edge {
+    /// Its `Id`.
+    id: String,
     /// The last segment of its type.
     kind: String,
     /// The target's part key.
@@ -151,6 +156,8 @@ pub(super) struct Graph {
     content_types: HashMap<String, String>,
     /// The workbook part's key.
     workbook: Option<String>,
+    /// The relationship ids of the workbook's `<sheet>` elements, in `<sheets>` order.
+    sheet_ids: Vec<String>,
 }
 
 impl Graph {
@@ -170,7 +177,7 @@ impl Graph {
             };
             let owner = part_key(&owner);
             let mut out = Vec::new();
-            for (_, rel) in relationships.into_iter().filter(|(_, r)| !r.external) {
+            for (id, rel) in relationships.into_iter().filter(|(_, r)| !r.external) {
                 let kind = rel
                     .rel_type
                     .rsplit('/')
@@ -185,9 +192,20 @@ impl Graph {
                     .reached
                     .entry(target.clone())
                     .or_insert_with(|| (owner.clone(), kind.clone()));
-                out.push(Edge { kind, target });
+                out.push(Edge { id, kind, target });
             }
             graph.edges.insert(owner, out);
+        }
+        if let Some(workbook) = graph.workbook.clone() {
+            if let Ok(doc) = package
+                .open(&workbook)
+                .and_then(crate::import::XmlNode::parse)
+            {
+                graph.sheet_ids = (doc.descendants())
+                    .filter(|n| n.has_tag_name("sheet"))
+                    .filter_map(|n| n.attribute_ns(R_NS, "id").map(str::to_string))
+                    .collect();
+            }
         }
         if let Ok(types) = package.open("[Content_Types].xml") {
             if let Ok(doc) = crate::import::XmlNode::parse(types) {
@@ -265,9 +283,16 @@ impl Graph {
         let mut seen = BTreeSet::new();
         while let Some((part, id)) = queue.pop_front() {
             let mut ordinal: HashMap<&str, usize> = HashMap::new();
+            let workbook = self.workbook.as_deref() == Some(part.as_str());
             for edge in self.edges.get(&part).into_iter().flatten() {
                 let n = ordinal.entry(edge.kind.as_str()).or_default();
-                let child = format!("{id}/{}[{n}]", edge.kind);
+                // A sheet is labelled by its place in `<sheets>`, which a save keeps, not by where
+                // its relationship sits in a `.rels` (a source may list them in any order).
+                let label = match self.sheet_ids.iter().position(|s| *s == edge.id) {
+                    Some(at) if workbook && edge.kind == "worksheet" => format!("sheet {at}"),
+                    _ => n.to_string(),
+                };
+                let child = format!("{id}/{}[{label}]", edge.kind);
                 *n += 1;
                 if seen.insert(edge.target.clone()) {
                     ids.insert(edge.target.clone(), child.clone());
@@ -473,7 +498,9 @@ mod tests {
     use std::collections::BTreeSet;
     use std::io::{Cursor, Write as _};
 
-    use super::{policy_of, regenerated, Graph, Policy, Reach, MAX_CLOSURE_DEPTH};
+    use super::{
+        policy_of, regenerated, Graph, Policy, Reach, MAX_CLOSURE_DEPTH, MAX_CLOSURE_SIZE,
+    };
     use crate::export::report::DropReason;
     use crate::import::ImportLimits;
 
@@ -664,6 +691,35 @@ mod tests {
         let deep = package(&[("rId9", "next", "../x/p0.xml", false)], &[], &parts);
         let graph = Graph::read(&deep, &limits()).expect("reads");
         assert_eq!(graph.closure("x/p0.xml"), Err("closure depth"));
+        // A root fanning out to more parts than the size limit.
+        let fan: Vec<(String, String)> = (0..=MAX_CLOSURE_SIZE)
+            .map(|n| (format!("x/q{n}.xml"), "<q/>".to_string()))
+            .collect();
+        let edges: Vec<(String, String)> = (0..=MAX_CLOSURE_SIZE)
+            .map(|n| (format!("rId{n}"), format!("q{n}.xml")))
+            .collect();
+        let edge_refs: Vec<(&str, &str, &str, bool)> = (edges.iter())
+            .map(|(id, t)| (id.as_str(), "next", t.as_str(), false))
+            .collect();
+        let mut parts: Vec<(&str, String)> =
+            fan.iter().map(|(n, t)| (n.as_str(), t.clone())).collect();
+        parts.push(("x/root.xml", "<r/>".into()));
+        let edge_xml = rels(&edge_refs);
+        parts.push(("x/_rels/root.xml.rels", edge_xml));
+        let wide = package(&[("rId9", "next", "../x/root.xml", false)], &[], &parts);
+        let graph = Graph::read(&wide, &limits()).expect("reads");
+        assert_eq!(graph.closure("x/root.xml"), Err("closure size"));
+        let got = drops(&wide, &package(&[], &[], &[]));
+        assert!(
+            got.contains(&(
+                "x/root.xml".to_string(),
+                DropReason::LimitExceeded {
+                    limit: "closure size".into()
+                }
+            )),
+            "{:?}",
+            &got[..3.min(got.len())]
+        );
     }
 
     #[test]
