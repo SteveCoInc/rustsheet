@@ -229,7 +229,10 @@ to its i-th `<x v>`. A blank base value goes in item 0 (the `(blank)` label abov
 bullets: a refresh drops such a grouping, so no probe can show it). The importer skips the cache
 (logged) for a day group of more than one day, a date group in a 1904 workbook, an item count other than the layout's
 (checked when the grouping is read, so even over a base field that holds no date; since T-4246),
-a range group over text, a database field after a grouping field, and a base that is not a database field.
+a range group over text, a database field after a grouping field, and a base that is not a database field. A source
+field's bare `<fieldGroup par>` beside a manual group (probes/t4170-pivot-manual-groups) only names the field Excel
+added, so it groups nothing (accepted only when `par` names an added field whose `base` is that field); each added field keeps its base, and a refresh derives it again (T-4171; pivots.md
+"Manual groups and date levels as Excel for the web renders them").
 Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228):
 - Rule: a value below `startNum` goes in the first item and one past `endNum` in the last. A value equal to `endNum`
   goes in the last inner group (1 in `0.9-1` by 0.1 from 0 to 1; 9 in `6-9` by 3 from 0 to 9). Any other value goes in
@@ -426,7 +429,8 @@ Status: VERIFIED (excel-graph) for these pivots only. That an inner item alone a
 outer item fits both cases, but each probes one pivot, so as a general rule it is UNVERIFIED (T-4154's two-fields-per-
 axis shapes, SPEC-0015 unknown 10). `#REF!` for an item of a field with custom subtotals only is seen on grouped fields
 alone; on an ungrouped field it is UNVERIFIED (T-4802). Implemented in: nothing yet. The engine answers the grand
-totals and DX's pair, `#REF!` for every item on DC (T-4154), and nothing on the manual groups (T-4171).
+totals, DX's pair and MG's and MB's items (the manual-group pivots render since T-4171), and `#REF!` for every item on
+DC, MC, MT and MS, whose rows hold two fields (SPEC-0015 unknown 10, T-4154).
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
 Rule: an omitted item argument picks the field's blank item, the `(blank)` row of records whose value is missing (`<m/>`):
