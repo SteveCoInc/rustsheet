@@ -14,7 +14,7 @@ gen-m9/0620505280d2ea6e.case.json	2
 gen-m9/06b4e8f5de409d5e.case.json	2
 gen-m9/09b47629f54b9817.case.json	2
 gen-m9/09e6a8028f5acfae.case.json	1
-gen-m9/0a614cfe974b59c3.case.json	5
+gen-m9/0a614cfe974b59c3.case.json	6
 gen-m9/0a9226016e8f5f33.case.json	5
 gen-m9/0a957119475760c5.case.json	1
 gen-m9/0bbab6206b5c9a07.case.json	1
@@ -47,7 +47,7 @@ gen-m9/44a8841352dc48e9.case.json	1
 gen-m9/46ac3ef5e61583ca.case.json	2
 gen-m9/4ab2ba98d26c8a5e.case.json	3
 gen-m9/4bad303d32cc3f46.case.json	4
-gen-m9/4e55500bb8ad3cd8.case.json	1
+gen-m9/4e55500bb8ad3cd8.case.json	2
 gen-m9/530c636749a85209.case.json	2
 gen-m9/5389dd4d5b5739d2.case.json	2
 gen-m9/5395b8a427764a3f.case.json	1
@@ -71,7 +71,7 @@ gen-m9/775d053de498b8c7.case.json	1
 gen-m9/787ba8d801105a60.case.json	2
 gen-m9/7980ffb6095a340d.case.json	2
 gen-m9/79d87fc527927626.case.json	1
-gen-m9/7bd219ec0c0c5e22.case.json	2
+gen-m9/7bd219ec0c0c5e22.case.json	3
 gen-m9/7c20351562a2d71d.case.json	7
 gen-m9/7f7ca726c3f68554.case.json	1
 gen-m9/7fd0a98183c6babf.case.json	1
@@ -94,7 +94,7 @@ gen-m9/9bc247733a1ca9fa.case.json	4
 gen-m9/9cca17438a7e6f8a.case.json	2
 gen-m9/9d9ceba257f8001b.case.json	1
 gen-m9/9e2225ead8a6a07b.case.json	2
-gen-m9/a013a45a8fbcab4f.case.json	1
+gen-m9/a013a45a8fbcab4f.case.json	2
 gen-m9/a2262ea466fcc142.case.json	2
 gen-m9/a4090567758520df.case.json	2
 gen-m9/a5342a7e24fd803e.case.json	1
@@ -126,7 +126,7 @@ gen-m9/cde551ea787f713a.case.json	3
 gen-m9/ce312817dc9c7f0b.case.json	1
 gen-m9/d208bbafc3bc1997.case.json	2
 gen-m9/d5fd9e05e9e6f466.case.json	2
-gen-m9/d8266bc15533702a.case.json	1
+gen-m9/d8266bc15533702a.case.json	2
 gen-m9/d8f44d556674c2fd.case.json	1
 gen-m9/d910f000b60e2eac.case.json	1
 gen-m9/d912671baa1364aa.case.json	1
@@ -198,6 +198,7 @@ probes/t2753-gamma-density-ratio-sweep.case.json	6
 probes/t2829-ftest-a306-shapes.case.json	8
 probes/t2829-ftest-ln-beta-grid.case.json	24
 probes/t2982-gamma-inv-huge-shape.case.json	2
+probes/t3002-db-computed-criteria-absolute-mixed.case.json	16
 probes/t3007-beta-dist-ln-x-overflow.case.json	5
 probes/t3012-gamma-dist-at-quantile.case.json	3
 probes/t3012-gamma-inv-small-shape.case.json	4
@@ -266,6 +267,10 @@ probes/t4164-pivot-filter-totals.case.json	54
 probes/t4164-pivot-item-order.case.json	10
 probes/t4164-pivot-top-n.case.json	55
 probes/t4164-pivot-value-sort.case.json	97
+probes/t4170-pivot-date-levels.case.json	276
+probes/t4170-pivot-manual-groups.case.json	180
+probes/t4238-r2-absorb-orientation.case.json	2
+probes/t4238-r3-absorb-whole-shape.case.json	4
 probes/t4254-beta-t-l140-zero-cut.case.json	49
 probes/t4254-beta-t-zero-wide.case.json	15
 probes/t4255-gamma-window-exact-ratio.case.json	1
@@ -310,9 +315,14 @@ probes/t4634-pivot-total-order-4.case.json	1376
 probes/t4697-large-small-median-mixed-sheet-refs.case.json	5
 probes/t4704-mixed-xlookup-grid-readers.case.json	29
 probes/t4755-two-criteria-filtered-table-delete-one.case.json	10
+probes/t4757-later-mark-sheet-names.case.json	1
 probes/t4765-growth-factor-edges.case.json	4
+probes/t4791-large-small-median-mixed-first-element.case.json	3
 probes/t4793-growth-one-factor-underflow.case.json	1
 probes/t4793-growth-several-x.case.json	2
+probes/t4844-irr-guess-ladder.case.json	269
+probes/t4844-irr-pad-ladder.case.json	31
+probes/t4844-irr-stage-invariance.case.json	56
 probes/table-edits/t4274-calc-column-delete-row-2.case.json	1
 probes/table-edits/t4274-calc-column-structured-insert-column-a.case.json	1
 probes/yield-below-par-sweep.case.json	3

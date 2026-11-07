@@ -7,7 +7,7 @@
 use std::io::Cursor;
 use std::path::Path;
 
-use rustsheet_engine::pivot::{OpaqueNode, PivotTable, MAX_RECORD_VALUES};
+use rustsheet_engine::pivot::{CacheField, OpaqueNode, PivotTable, MAX_RECORD_VALUES};
 use rustsheet_engine::types::DateSystem;
 use rustsheet_engine::Model;
 use rustsheet_xlsx::export::save_xlsx_to_writer;
@@ -66,8 +66,8 @@ fn every_probe_pivot_round_trips_through_the_export() {
                     not_loaded += 1;
                     continue;
                 };
-                let is_grouped = (cache.fields.iter())
-                    .any(|f| f.number_groups.is_some() || f.date_groups.is_some());
+                // A manual group's added field counts too (T-4171).
+                let is_grouped = cache.fields.iter().any(CacheField::is_grouped);
                 model.workbook.pivot_caches.push(cache);
                 model.workbook.pivot_tables.extend(tables);
                 let bytes = save_xlsx_to_writer(&model, Cursor::new(Vec::new()))

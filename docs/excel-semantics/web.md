@@ -59,7 +59,12 @@ A pivot is also dropped when its field lists more `<item>`s than its cache field
 other `ST_ItemType`), or when the parts of its definition the model keeps verbatim (SPEC-0032 "Model", T-4139) would
 pass what is left of the workbook's verbatim budget: 32 MiB (`MAX_OPAQUE_BYTES`), or the package's inflate limit
 (`ImportLimits::max_uncompressed_bytes`) when that is lower, each kept entry charged its text plus its own size. A
-pivot is also skipped for an unknown `axis`, `sortType`, `showDataAs`, data field `subtotal` or `item@t`; a malformed
+pivot is also skipped for an unknown `axis`, `sortType`, `showDataAs`, data field `subtotal` or `item@t`, for a
+`<filters>` entry it cannot type (T-4165: a `filter@fld` past the cache's fields, a `customFilter@operator` or a
+`dateGroupItem@dateTimeGrouping` it does not know; before T-4165 these pivots loaded with their filters kept verbatim
+and unapplied; UNVERIFIED, T-4799, what Excel does with one), and past the filter caps (more than 2,048 filters, more
+than two `customFilter`s in one filter, more than 1,000,000 values in one values list: DEVIATION, docs/excel-semantics/
+pivots.md "Pivot filters past the import limits"); a malformed
 boolean, and a malformed number the model only keeps (`dataPosition`, `pageWrap`, `numFmtId`, `baseField`,
 `baseItem`, a page field's `item` or `hier`), reads as the schema's default instead.
 The limits are totals counted while parsing, before anything past them is allocated (CLAUDE.md directive 5).
@@ -106,15 +111,17 @@ whose cache record is stale shows the source's value (probes/t4128-pivot-spike R
 docs/excel-semantics/pivots.md). That pivot's area held no cells, though. UNVERIFIED: whether Excel overwrites
 rendered constants the original builder writes inside the pivot's own area, which this probe relies on; it needs a
 control with stale rendered cells (T-2327).
-Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081). Not probed: several data fields (the
-`Values` field), two row fields and their subtotals, filters, hidden items, dates and numbers as items, and
-pivots in tabular or outline form.
+Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081). Not probed here: several data fields (the
+`Values` field), two row fields and their subtotals, hidden items, dates and numbers as items, and
+pivots in tabular or outline form. Filters are probed in docs/excel-semantics/pivots.md (T-4130, T-4164) and applied
+by the engine since T-4165.
 Engine (SPEC-0015): the workbook model holds pivot caches and pivot tables (`pivot.rs`, T-2081), read from xlsx by
 `crates/rustsheet-xlsx/src/import/pivots.rs` (T-2082). The importer skips, whole and logged, a cache with an OLAP,
 external, consolidation or scenario source, a calculated field, no records part
 (`saveData="0"`), a bad index, or a value it cannot read (an unknown error name, a `<d>` date before 1900, which
 includes time-only dates if Excel writes them so), and a pivot whose `showDataAs` or x14 `pivotShowAs` is unknown,
-whose index points past its cache, whose `axis` or `subtotal` is unknown, which has
+whose index points past its cache, whose `axis` or `subtotal` is unknown, whose `<filters>` it cannot type or that
+passes the filter caps (T-4165, above), which has
 no `location` or not one `pivotField` per cache field, or whose parts are reached outside the package (absolute,
 escaping or External targets), twice, or through a duplicate `cacheId`: GETPIVOTDATA against it is `#REF!`. A pivot
 whose data field is shown as a calculation loads and renders since T-4163; GETPIVOTDATA against it stays `#REF!`
@@ -126,7 +133,8 @@ the 1904 epoch in a `date1904` workbook has no serial there and skips the cache 
 GETPIVOTDATA (T-2083, `functions/lookup_and_reference/getpivotdata.rs`, `pivot_index.rs`) aggregates the cache records the
 pairs pick, in cache order, rather than reading the rendered cell, and passes every cell of probes/getpivotdata-real-pivot.
 Until T-2085 probes them it answers `#REF!` for SPEC-0015's unknowns, never a guess: several data fields, page fields or
-hidden items, a pair on a pivot with two fields on one axis, a reference meeting two pivots, `""` or an omitted
+hidden items, a filter or AutoShow (`pivot_index.rs` `supported`, T-4165; UNVERIFIED, T-4799: before T-4165 it answered
+from the unfiltered records, so a pair naming an item the filter shows was a number and is now `#REF!`), a pair on a pivot with two fields on one axis, a reference meeting two pivots, `""` or an omitted
 data_field, a number, date or
 boolean as an item (or an item that matches two cache items differing only in case), the same field twice with the same
 item, an error in a field/item pair, an empty intersection of any aggregate but Sum, a picked record whose data-field value
@@ -221,7 +229,10 @@ to its i-th `<x v>`. A blank base value goes in item 0 (the `(blank)` label abov
 bullets: a refresh drops such a grouping, so no probe can show it). The importer skips the cache
 (logged) for a day group of more than one day, a date group in a 1904 workbook, an item count other than the layout's
 (checked when the grouping is read, so even over a base field that holds no date; since T-4246),
-a range group over text, a database field after a grouping field, and a base that is not a database field.
+a range group over text, a database field after a grouping field, and a base that is not a database field. A source
+field's bare `<fieldGroup par>` beside a manual group (probes/t4170-pivot-manual-groups) only names the field Excel
+added, so it groups nothing (accepted only when `par` names an added field whose `base` is that field); each added field keeps its base, and a refresh derives it again (T-4171; pivots.md
+"Manual groups and date levels as Excel for the web renders them").
 Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228):
 - Rule: a value below `startNum` goes in the first item and one past `endNum` in the last. A value equal to `endNum`
   goes in the last inner group (1 in `0.9-1` by 0.1 from 0 to 1; 9 in `6-9` by 3 from 0 to 9). Any other value goes in
@@ -389,6 +400,37 @@ crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`, `group_by_nu
 (`DateGroups`, `group_by_dates`), pivot/layout/render.rs (`item_cell`, T-4149),
 functions/lookup_and_reference/pivot_index.rs (`pivot_number_item`, `shown_group`, `pivot_blank_text`).
 Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253, T-4260, T-4261, T-4287, T-4316
+Manual (discrete) groups and several date levels on one field: pivots.md "Manual groups and date levels as Excel for
+the web renders them" and "GETPIVOTDATA on manual groups and date levels (T-4170)" below.
+
+## GETPIVOTDATA on manual groups and date levels (T-4170)
+Rule: GETPIVOTDATA addresses a discrete group's added field and each date level by its field name and label, as the
+M6 groups above, on the pivots of pivots.md "Manual groups and date levels as Excel for the web renders them" (S
+values distinct powers of two, so each total names its records).
+- Manual groups (probes/t4170-pivot-manual-groups Calc, against MC: rows Product2, Product): a group label is its
+  total (`"Product2","Group2"` 67, `"Group1"` 140, the group of one `"North"` 16), case-folded (`"group1"` 140) but
+  not respaced (`"Group 1"` is `#REF!`); an ungrouped item is an item of the group field (`"Product2","F"` 32); a
+  source item is not (`"Product2","A"` is `#REF!`). The inner field alone works for an item that sits under one
+  group (`"Product","A"` 65, `"Product","E"` 16); a pair works where the item is in the group (`"Group2"`, `"A"` 65;
+  `"F"`, `"F"` 32) and is `#REF!` where it is not (`"Group1"`, `"A"`); the grand total is 255. On the tabular MT
+  `"Product2","Group1"` is 140 (Calc!B14), and on MG (Product2 alone) `"Product2","Group2"` is 67 (Calc!B16); a field not in the pivot is `#REF!` (MG `"Product","A"`, MB
+  `"Product2","Group2"`), and so is a group label on MS, whose Product2 has custom subtotals sum and count only.
+- Date levels (probes/t4170-pivot-date-levels Calc, against DC: rows Years, Quarters, Date): `"Years","2019"` and the
+  number 2019 are 286, `"2020"` 96; pairs and the triple work (`"2019"` and `"Qtr1"` 262, `"2020"` and `"Qtr1"` 32,
+  `"2020"` and `"Jan"` 32, `"2019"`, `"Qtr1"`, `"Jan"` 258); `"2019"` with `"Jul"`, a month with no 2019 record, is
+  `#REF!`. An inner label alone that sits under both years is `#REF!` (`"Quarters","Qtr1"`, `"Date","Jan"`), while
+  each level's `<1/1/2019` alone is 1 (it sits under `<1/1/2019` only), `"Years",">12/31/2020"` 128, `"Years","2021"`
+  and `"Date",DATE(2019,1,10)` `#REF!`, and the grand total 511. With Date alone on the rows (DM) `"Date","Jan"` is
+  290 and `"Years","2019"`, a field off the axes, `#REF!`; with Years on the columns (DX) the pair `"2019"`, `"Qtr1"`
+  is 262; on DS, whose Years has custom subtotals sum and count only, `"Years","2019"` is `#REF!`.
+Evidence: probes/t4170-pivot-manual-groups Calc!B1:B19 and probes/t4170-pivot-date-levels Calc!B1:B21 (excel-graph,
+2026-11-07, T-4170).
+Status: VERIFIED (excel-graph) for these pivots only. That an inner item alone answers exactly when it sits under one
+outer item fits both cases, but each probes one pivot, so as a general rule it is UNVERIFIED (T-4154's two-fields-per-
+axis shapes, SPEC-0015 unknown 10). `#REF!` for an item of a field with custom subtotals only is seen on grouped fields
+alone; on an ungrouped field it is UNVERIFIED (T-4802). Implemented in: nothing yet. The engine answers the grand
+totals, DX's pair and MG's and MB's items (the manual-group pivots render since T-4171), and `#REF!` for every item on
+DC, MC, MT and MS, whose rows hold two fields (SPEC-0015 unknown 10, T-4154).
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
 Rule: an omitted item argument picks the field's blank item, the `(blank)` row of records whose value is missing (`<m/>`):

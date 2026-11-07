@@ -1,0 +1,43 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4791: LARGE/SMALL/MEDIAN over mixed-sheet grids whose first element is not a plain reference. Local!A1=1,A2=100; Data!G1=50,G2=60. H1:H3 {own; error; off} via INDIRECT({\"A1\";\"nosuch!A1\";\"Data!G1\"}); H4:H6 the same with the error first; H7:H9 {value; own; off} via XLOOKUP({1;9;8},Data!A1:A3,Data!B1:B3,INDIRECT({\"A1\";\"A1\";\"Data!G1\"})) (hit 10, misses lifted by position); H10:H12 {value; off; own}.",
+  "tags": [
+    "M6",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "G1": 50,
+        "G2": 60,
+        "A1": 1,
+        "A2": 2,
+        "A3": 3,
+        "B1": 10,
+        "B2": 20,
+        "B3": 30
+      }
+    },
+    {
+      "name": "Local",
+      "cells": {
+        "A1": 1,
+        "A2": 100,
+        "H1": "=LARGE(INDIRECT({\"A1\";\"nosuch!A1\";\"Data!G1\"}),1)",
+        "H2": "=SMALL(INDIRECT({\"A1\";\"nosuch!A1\";\"Data!G1\"}),1)",
+        "H3": "=MEDIAN(INDIRECT({\"A1\";\"nosuch!A1\";\"Data!G1\"}))",
+        "H4": "=LARGE(INDIRECT({\"nosuch!A1\";\"A1\";\"Data!G1\"}),1)",
+        "H5": "=SMALL(INDIRECT({\"nosuch!A1\";\"A1\";\"Data!G1\"}),1)",
+        "H6": "=MEDIAN(INDIRECT({\"nosuch!A1\";\"A1\";\"Data!G1\"}))",
+        "H7": "=LARGE(XLOOKUP({1;9;8},Data!A1:A3,Data!B1:B3,INDIRECT({\"A1\";\"A1\";\"Data!G1\"})),1)",
+        "H8": "=SMALL(XLOOKUP({1;9;8},Data!A1:A3,Data!B1:B3,INDIRECT({\"A1\";\"A1\";\"Data!G1\"})),1)",
+        "H9": "=MEDIAN(XLOOKUP({1;9;8},Data!A1:A3,Data!B1:B3,INDIRECT({\"A1\";\"A1\";\"Data!G1\"})))",
+        "H10": "=LARGE(XLOOKUP({1;9;8},Data!A1:A3,Data!B1:B3,INDIRECT({\"A1\";\"Data!G1\";\"A1\"})),1)",
+        "H11": "=SMALL(XLOOKUP({1;9;8},Data!A1:A3,Data!B1:B3,INDIRECT({\"A1\";\"Data!G1\";\"A1\"})),1)",
+        "H12": "=MEDIAN(XLOOKUP({1;9;8},Data!A1:A3,Data!B1:B3,INDIRECT({\"A1\";\"Data!G1\";\"A1\"})))"
+      }
+    }
+  ],
+  "expected": {}
+}

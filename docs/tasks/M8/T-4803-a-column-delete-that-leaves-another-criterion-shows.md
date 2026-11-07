@@ -3,7 +3,7 @@ id: T-4803
 title: "A column delete that leaves another criterion shows only the rows the deleted criterion hid"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P3
 size: M
 tier: opus
@@ -32,9 +32,27 @@ Excel does.
   facade would need a way to give a table its criteria for the adapter to load the spec's.
 
 ## Acceptance criteria
-- [ ] probes/t4755-two-criteria-filtered-table-delete-one passes; the other t4755 and t4371 cases still pass.
-- [ ] A unit test covers the same edit on a table loaded from a file with two criteria.
-- [ ] `make check` green; reviewers approve.
+- [x] probes/t4755-two-criteria-filtered-table-delete-one passes; the other t4755 and t4371 cases still pass.
+- [x] A unit test covers the same edit on a table loaded from a file with two criteria.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Re-applying filters after a value edit, and worksheet-level autoFilters.
+
+## Outcome
+- A column delete that takes one of a filtered table's criteria and leaves another inside it now re-applies the kept
+  criteria to the table's hidden data rows: a row every kept criterion keeps is shown, the others stay hidden
+  (`Model::rows_kept_by_criteria` in `resize_tables`, crates/rustsheet-engine/src/table_edits.rs). Only a values filter
+  without date groups is evaluated (`FilterCriterion::keeps_text`: blank rows by `blank`, others by displayed text among
+  `values`, ignoring case); any other kept criterion keeps its rows hidden. The undo hides the shown rows again (the
+  existing `row_shown` diffs).
+- `Model::filter_table_column` / `Txn::filter_table_column` (crates/rustsheet/src/edit/table_filter.rs) give a filtered table a values filter that rejects exactly
+  the given data rows (kept text of the other rows, as spec2xlsx writes `"criteria"`); the eval adapter uses it for spec
+  `"criteria"`, so the criteria reach the engine and the export.
+- Tests: engine `test_filtered_table_edits` (two criteria, undo, a hand-hidden row, an unevaluable criterion, the
+  derived values filter and its refusals), xlsx `deleting_one_of_two_criteria_from_a_file_shows_the_rows_it_alone_hid`
+  (saved and reloaded file), facade `filter_table_column_needs_a_filtered_table_and_its_data_rows`.
+- Docs: numbers.md "SUBTOTAL and AGGREGATE over hidden and filtered rows" (the engine now matches; the rule's unprobed
+  parts recorded as ours).
+- Eval delta: probes 10 known failures fixed (probes/t4755-two-criteria-filtered-table-delete-one now 22/22); every other
+  suite fixed 0 / regressions 0; the other t4755 and t4371 cases still pass.

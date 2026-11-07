@@ -1,0 +1,14 @@
+cell	formula	H_frac	H_x
+A1	=BETA.DIST(0.999,6E+17,41,TRUE)	#NUM!	value
+A2	=BETA.DIST(0.999,6E+17,41.5,TRUE)	value	value
+A3	=BETA.DIST(0.5,7E+17,57.5,TRUE)	value	#NUM!
+A4	=BETA.DIST(0.9,7E+17,57.5,TRUE)	value	#NUM!
+A5	=BETA.DIST(0.5,7E+17,57,TRUE)	#NUM!	#NUM!
+A6	=BETA.DIST(0.999,7E+17,57,TRUE)	#NUM!	value
+A7	=BETA.DIST(0.5,6E+17,41.5,TRUE)	value	#NUM!
+A8	=BETA.DIST(0.5,6E+17,41.25,TRUE)	value	#NUM!
+A9	=BETA.DIST(0.99,6E+17,41,TRUE)	#NUM!	?
+A10	=BETA.DIST(0.001,41,6E+17,TRUE)	#NUM!	value
+A11	=BETA.DIST(0.5,57.5,7E+17,TRUE)	value	#NUM!
+A12	=BETA.DIST(0.5,1E+19,1000.5,TRUE)	value	#NUM!
+# H_x leaves the x0 cut unknown ('?' at 0.99); 'value' means a number, not #NUM!.
