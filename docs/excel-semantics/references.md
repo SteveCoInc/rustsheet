@@ -3019,25 +3019,34 @@ description says why). table-convert-cross-sheet-this-row holds only data-row ce
 removed tables (bare `Sales` included) to `#REF!` (`Model::rewrite_table_references`, tables.rs), and an
 undo of the sheet delete (`restore_sheet`, `UserModel` undo) puts the old text back; a reference to a
 missing sheet is displayed with `#REF!` for its sheet (`is_missing_sheet`, stringify/wrong_reference.rs),
-and the lexer reads `#REF!C4:C7` back as `#REF!` (engine choice: whether Excel accepts that text typed in is
-unprobed). A plain reference loses the deleted sheet for good (T-2612, probes/table-edits/t2612-delete-sheet-then-add,
+and that text does not read back: Excel refuses `=SUM(#REF!C4:C7)`, `=#REF!$A$1`, `=ISREF(#REF!A1)` and
+`=SUM(#REF!A:A)` typed in (the cell stays blank, FORMULATEXT `#N/A`) and refuses a workbook storing any of them, or
+`#REF!A1`, `#REF!1:2`, in a dynamic-array or a legacy `<f>`; the bare `=SUM(#REF!)` loads and types in (`#REF!`,
+FORMULATEXT `=SUM(#REF!)`), and `ISREF(#REF!)` is FALSE (probes/t4628-deleted-sheet-reference-text, excel-graph,
+2026-11-07; the stored forms by hand-built workbooks, `rustsheet-oracle recalc`). In typed text the lexer reads `#REF!` alone,
+so the cell or range after it is a parse error and the entry is refused (T-4628). Other text still reads the range as
+`#REF!` (`consume_deleted_sheet_reference`): the engine's own re-entry of its display (a fill or a paste of such a
+cell), an embedder's `set_user_input`, and a loaded file storing it, which Excel for the web refuses as a whole and
+desktop Excel's handling of is unprobed (an engine choice). What Excel's fill or paste of such a cell writes is
+unprobed. A plain reference loses the deleted sheet for good (T-2612, probes/table-edits/t2612-delete-sheet-then-add,
 excel-graph 2026-11-06): after deleting S and adding a new blank S, `SUM(S!C4:C7)`, `S!C4` and `COUNTBLANK(S!C4:C7)`
 stay `#REF!` (a revived reference would read 0, 0 and 4), FORMULATEXT shows `=SUM(#REF!C4:C7)`, `=#REF!C4`, and
 `ISREF(#REF!A1)` (written `ISREF(S!A1)`) is FALSE, while `INDIRECT("S!C4")` reads the new sheet ("|" for a blank).
 The engine rewrites such a reference on the delete (`delete_sheet_in_node`, stringify/sheet_edits.rs) to a wrong
 reference to the internal sheet name `DELETED_SHEET` (`*#REF!`, which no real sheet can take), which the display
-and the xlsx export both print as `#REF!C4:C7` (the file text is inferred from Excel's en-US FORMULATEXT; no
-Excel-saved file was inspected); the undo puts the old text back through `TakenSheet`'s rewritten
+prints as `#REF!C4:C7` and the xlsx export writes as the bare `#REF!` (`=SUM(#REF!)`): Excel for the web refuses a
+file storing `#REF!C4:C7` (above), so the range is lost from the file, as it is from a loaded value (T-4628). What
+desktop Excel writes into its own file for such a reference is unprobed (an M14 desktop question, decision 0039); the undo puts the old text back through `TakenSheet`'s rewritten
 formulas. The xlsx loader refuses a workbook whose sheet name contains `*` (`XlsxError::Workbook`, `load_workbook`,
 T-4655): Excel cannot write one, so no Excel file is lost, and a crafted `*#REF!` sheet could otherwise capture
 references stored under `DELETED_SHEET`. Status: DEVIATION (decision 0014, directive 5: Excel's reaction to such a file
 is unknown, and the sentinel must not collide). Workbook names lose the sheet the same way (probes/table-edits/t2612-delete-sheet-then-add-names,
 excel-graph 2026-11-06): with nm = `S!$C$4` and rng = `S!$C$4:$C$7`, `=nm` and `=SUM(rng)` stay `#REF!` after the new S
-is added and `ISREF(nm)` is FALSE; the engine stores such a name as `#REF!$C$4`. The `#REF!` display also covers a sheet that never existed (a loaded `Nope!A1`), an engine choice with
+is added and `ISREF(nm)` is FALSE; the engine stores such a name as `#REF!$C$4`, which untyped text reads back as `#REF!`, and exports that text as it is. Whether Excel loads a stored `<definedName>` of that form, and how its Name Manager shows the name, is unprobed (T-4628 probed only cell `<f>` forms). The `#REF!` display also covers a sheet that never existed (a loaded `Nope!A1`), an engine choice with
 no evidence; its stored text and export keep the name. The adapter's delete_table clears the whole table range (header, text and Qty columns: COUNTA 0 each)
 and keeps the rows in place: `S!C9` still 99 and `SUM(S!C9:C10)` still 104 with unshifted text
 (T-2341, table-delete-table-cells, excel-graph 2026-10-22).
-Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734, T-3629, T-4020, T-4021, T-2612, T-4655
+Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734, T-3629, T-4020, T-4021, T-2612, T-4655, T-4628
 
 ## Calculated columns: a formula typed into a table column
 Rule (excel-graph `entered` cells, typed one at a time in the case's order, 2026-10-27, T-2957; table `T` A1:C4,
