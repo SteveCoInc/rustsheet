@@ -7277,33 +7277,44 @@ Ours: as described; T-2006 (the solve). A104 passes since T-4590.
 Status: VERIFIED (excel-graph) for the table points and A104's cause (T-4590)
 Tasks: T-4096, T-2006, T-4590, T-2569
 
-## GROWTH is #NUM! once LOGEST's b or slopes' factor overflows, and 0 once the slopes' factor is subnormal (T-4590, T-4765)
-Rule: GROWTH's prediction is e^(intercept + Σ m_j x_j), except at the edges of LOGEST's two factors, b = e^intercept and
-the slopes' factor F = e^(Σ m_j x_j) at the new x:
-- `#NUM!` where b overflows. The intercept is then past ln(DBL_MAX) = 709.7827: 709.7828 to 1290 are `#NUM!` and 709.7827
-  is a number. LOGEST's own b, `INDEX(LOGEST(..),1,2)`, is `#NUM!` from the same cut. The Gate A point GROWTH s1 A104
-  (intercept 1289.95) is `#NUM!` by this rule.
-- `#NUM!` where F overflows, though b keeps the prediction finite (probes/t4765-growth-factor-edges Over A1: b =
-  e^-700, F = e^1400, prediction e^700; SmallB A4: b = e^-720, subnormal, F = e^720, prediction about 1).
-- 0 where F is below DBL_MIN, with const TRUE or FALSE. With const TRUE the prediction is about 1: a slope sum of
-  -708.39 gives 1 and -708.4 gives 0 (Cut), at the DBL_MIN cut ln(DBL_MIN) = -708.396 (numbers.md "Subnormal results
-  become 0"). With const FALSE a subnormal factor gives 0 (NoConst A2, A3).
-- A subnormal b with a normal F is neither an error nor a zero: c = -709 with an offsetting slope gives
-  0.9999999999999999 (SmallB A3), which fits b·F with an unflushed subnormal b that has lost a bit.
+## GROWTH is #NUM! once LOGEST's b or a slope's factor overflows, and 0 once a partial product or the result is subnormal (T-4590, T-4765, T-4793)
+Rule: GROWTH's prediction is e^(intercept + Σ m_j x_j), except at the edges of LOGEST's factors. Those factors are
+b = e^intercept and one factor per variable, e^(m_j x_j) at the new x. Excel multiplies the variables' factors left
+to right in doubles, and flushes each partial product to 0 once it is subnormal. A factor itself is used as it is,
+even when subnormal.
+- `#NUM!` where b overflows, meaning the intercept is past ln(DBL_MAX) = 709.7827: 709.7828 to 1290 are `#NUM!` and
+  709.7827 is a number. LOGEST's own b, `INDEX(LOGEST(..),1,2)`, is `#NUM!` from the same cut. The Gate A point
+  GROWTH s1 A104 (intercept 1289.95) is `#NUM!` by this rule.
+- `#NUM!` where a factor overflows, though the prediction may be finite (probes/t4765-growth-factor-edges Over A1:
+  b = e^-700, factor e^1400; SmallB A4: b = e^-720, factor e^720).
+- `#NUM!` where a partial product that was flushed to 0 meets an overflowing factor, giving 0·∞
+  (probes/t4793-growth-several-x Multi A1:A3: factors e^-720 then e^720, and so on up to ±800. That is `#NUM!`, not
+  e^0, so the factors are not one summed factor; the ±200 control, A4, gives e^1).
+- 0 where a partial product is subnormal.
+  - With one x the first factor is the product. A slope term of -708.39 gives 1 and -708.4 gives 0 (t4765 Cut), which
+    is the cut ln(DBL_MIN) = -708.396. With const FALSE the result is 0 too (NoConst A2, A3).
+  - With two x the order matters (probes/t4793-growth-one-factor-underflow).
+    - A first factor of e^-720 or e^-709 gives 0, though the sum is normal (One A1, A3).
+    - A first factor of e^600 times a later e^-720 gives a number (One A2). Excel's 2.0842828425754287E-52 is 3E-12
+      below e^(sum), which is the precision of the subnormal factor carried into the product.
+- 0 where the prediction itself is subnormal, though b and every factor are normal (t4793 SubProd A2:A4, A6:
+  b = e^-400 with factors e^-309 to e^-320, and b = e^-300 with e^-410). This is numbers.md "Subnormal results become
+  0".
+- A subnormal b with a normal factor is neither an error nor a zero. c = -709 with an offsetting slope gives
+  0.9999999999999999 (t4765 SmallB A3), which again shows a subnormal carried into a product.
 - LOGEST's m = e^slope past the double range is not an error in GROWTH (t4590 Slope).
-Away from these edges the engine gives the single exponential. A subnormal product of two normal factors (b = e^-400, F
-= e^-310) is unprobed: the engine returns the subnormal, and Excel may return 0 (T-4793). The product of the two factors
-is one ulp off Excel on ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the single exponential is exact, so how
-Excel combines the factors between the edges is not identified. Several x are unprobed: the Multi rows of the t4765
-probe were `#REF!` (the shapes of known_y and known_x disagreed). Whether F is one summed factor or one factor per
-variable is therefore open.
-Evidence: probes/t4590-growth-overflow (Int 15 rows, Slope 8) and probes/t4765-growth-factor-edges (Cut 10, SmallB 4,
-NoConst 4, Over 3; excel-graph, 2026-11-07). The predictions in docs/research/t4590 and docs/research/t4765 were
-committed before each fill.
-Status: VERIFIED (excel-graph) for one x: b overflow, F overflow, F below DBL_MIN, and a subnormal b. UNVERIFIED
-(inferred, T-4793): several x (summed F against one factor per variable) and a subnormal product of normal factors.
-The probes' least-squares digits (5E-14 to 3E-13 off) are T-4763's.
-Ours (T-4590, T-4765): `growth_prediction` in functions/statistical/trend.rs.
+Between the edges the engine gives the single exponential. The product of the factors is one ulp off Excel on
+ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the single exponential is exact. How Excel rounds the product
+between the edges, including One A2's lossy digits, is not identified (T-4763).
+Evidence: probes/t4590-growth-overflow (Int 15, Slope 8); probes/t4765-growth-factor-edges (Cut 10, SmallB 4,
+NoConst 4, Over 3); probes/t4793-growth-several-x (Multi 4, SubProd 6); probes/t4793-growth-one-factor-underflow
+(One 4). All excel-graph, 2026-11-07, with predictions in docs/research/t4590, t4765 and t4793 committed before each
+fill.
+Status: VERIFIED (excel-graph) for the edges, for one and two x. Not probed: three or more x; a zero partial product
+meeting a later factor below 1 but normal; and a later partial product that turns subnormal from two normal factors
+before b lifts it (factors e^-360 and e^-360, intercept 700). The last two are inferred 0. The probes' least-squares
+and product digits are T-4763's.
+Ours (T-4590, T-4765, T-4793): `growth_prediction` in functions/statistical/trend.rs.
 Tasks: T-4590, T-4763, T-4765, T-4793
 
 ## TRIMMEAN: an error percent before data with no number (T-1742)

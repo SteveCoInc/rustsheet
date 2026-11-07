@@ -18,7 +18,8 @@ lie near the double range. Today they are 5E-14 to 3E-13 relative off, the least
 - T-4590 implemented GROWTH's overflow edge from this probe; the zero is T-4765's. Its remaining cells are digits, not
   edges.
 - Owned cells: probes/t4590-growth-overflow Int! A1, B1, B2, B4, B5, B6, B7, C4, C6, C7, C10, C11 and Slope! A4,
-  A5; probes/t4765-growth-factor-edges Cut! A1, A5 and SmallB! A1, A3. For example, Int!A1 `GROWTH({1.00709088702808e+152,1,9.92959039626498e-153},{1,2,3},2,TRUE)` is 1 in Excel
+  A5; probes/t4765-growth-factor-edges Cut! A1, A5 and SmallB! A1, A3; probes/t4793-growth-several-x Multi! A4, SubProd! A5; probes/t4793-growth-one-factor-underflow One! A2 (Excel's
+  product carries a subnormal factor's precision there, 3E-12 below e^(sum); not a least-squares digit). For example, Int!A1 `GROWTH({1.00709088702808e+152,1,9.92959039626498e-153},{1,2,3},2,TRUE)` is 1 in Excel
   and 1.0000000000001137 in ours.
 - The ln fit's coefficients come from the least-squares kernel that T-2006 owns (Excel's evaluation order for
   LINEST, LOGEST, TREND and GROWTH). This task should follow T-2006 and check whether its kernel clears these cells.

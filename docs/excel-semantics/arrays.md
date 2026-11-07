@@ -999,7 +999,8 @@ excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is
   Consistent with it, an element-wise lift reads a two-level cell as an error that is not `#N/A`, even when the inner top-left is `#N/A`
   (`SUM(--ISERROR(G2))` 6, `ISTEXT` 3, `ISNA` over the `#N/A` form 0, `ISERROR` 3; and-lifts A44:A47; one-cell A27), and a reference-body
   cell as `#VALUE!` (`SUM(--ISERROR(..))` 6, `ISNUMBER` 0, REGEXEXTRACT `#VALUE!` per cell; A41, A42, A49).
-- A lifted INDEX of nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4, no error (and-lifts A56:A59; ours `#VALUE!`).
+- A lifted INDEX of nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4, no error (and-lifts A56:A59; ours matches since T-4738, `index_from_array` in index.rs). A top-left that is nested
+  again is unprobed; ours reads it as `#VALUE!`.
 - A reference-body result: SUM reads each cell as its value (`SUM(GROUPBY(..,LAMBDA(x,D!D2)))` 60, A50), COUNT is 0 and COUNTA 9 (A51,
   A52); INDEX of a cell whose body points at a blank cell is a true blank (TYPE 1, `&""` "", A53) and at an `#N/A` cell `#N/A` (A54).
 - The November reads are the target (decision 0329: a behavior change, reproduced on byte-identical copies). SPEC-0018 rule 4 states them

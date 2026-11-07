@@ -131,6 +131,11 @@ pub struct PivotOptions {
     pub page_wrap: u32,
     /// `pageOverThenDown` (default off): page fields fill across before down.
     pub page_over_then_down: bool,
+    /// `gridDropZones` (default off): the classic layout, which keeps a column-header row
+    /// above the row fields' header even with no column field, heads that row's empty column
+    /// line `Total`, and puts the data caption at the location's corner
+    /// (docs/excel-semantics/pivots.md "Classic layout (gridDropZones)").
+    pub grid_drop_zones: bool,
 }
 
 impl Default for PivotOptions {
@@ -154,6 +159,7 @@ impl Default for PivotOptions {
             error_caption: None,
             page_wrap: 0,
             page_over_then_down: false,
+            grid_drop_zones: false,
         }
     }
 }
@@ -194,6 +200,11 @@ pub struct PivotField {
     /// export writes (docs/excel-semantics/pivots.md "Repeat item labels",
     /// probes/t4698-pivot-repeat-labels).
     pub fill_down_labels: bool,
+    /// `subtotalCaption`: the label of each of the field's default subtotal lines, in place of
+    /// `<item> Total`, a `?` in it standing for the item (docs/excel-semantics/pivots.md
+    /// "subtotalCaption labels a field's subtotal lines", probes/t4129-pivot-layout-flags SC,
+    /// probes/t4745-pivot-classic-subtotal-caption).
+    pub subtotal_caption: Option<String>,
     /// `<items>`, in file order: the order the field shows its items in.
     pub items: Vec<PivotItem>,
 }
@@ -222,6 +233,7 @@ impl PivotField {
             insert_blank_row: false,
             number_format: None,
             fill_down_labels: false,
+            subtotal_caption: None,
             items: Vec::new(),
         }
     }

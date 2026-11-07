@@ -285,7 +285,54 @@ the formula over the sum of Sales, not the sum of the formula over the records. 
 4) shows 28.1, not 28.2.
 Evidence: probes/t4128-pivot-spike K!D6 28.1, K!D7 38.1 (East Total, 19*2+0.1) and K!D11 92.1 (Grand
 Total, 46*2+0.1) (excel-graph, 2026-11-06, T-4128).
-Status: VERIFIED (excel-graph); edge cases (errors, Count pivots, non-value references) in T-4505
+Status: VERIFIED (excel-graph); the edge cases are the next entry's (T-4505)
+
+## Calculated fields as Excel for the web renders them
+Rule, per shape (each its own pivot at A3, Sum data fields unless said; Data has Region, Product, Units, Price,
+Zero, Unit Cost and Bob's, six records, the sums in the case description):
+- **Every level computes the formula over that cell's sums**, row and column totals included. Rev = Units*Price
+  shows East Total 210 = 6×35 (not the rows' 150+5, nor the records' 85), West Total 207 = 9×23 and Grand Total
+  870 = 15×58 (LV). With Region on columns, the Grand Total column of A is 360 = 9×40, not 150+40 (LC).
+- **Operands need not be data fields**: LC shows only Sum of Rev, NV's Ut = Units*2 shows A 18 with no Units data
+  field.
+- **The summary function of a data field over a calculated field is ignored**: Count, Average, Max and Min of Rev
+  each show what Sum shows (A 360, B 66, C 0, Grand Total 870), under captions that keep the verb (`Count of Rev`).
+  Count of Units beside them counts records (A 3) (CNT). Other functions (StdDev, Product, ...) were not tried.
+- **An error shows only where the sums produce it, and does not reach the totals**: PerUnit = Price/Units is
+  #DIV/0! at West/C (Units 0) only, West Total 2.555555556 (23/9); Sq = SQRT(Units-3) is #NUM! at East/B and
+  West/C, East Total 1.732050808 (√3); Ratio = Price/Zero is #DIV/0! at every level (DZ). The sidecar holds the
+  errors as error values.
+- **A text field enters as 0**: Rt = Region*2+1 is 1 at every level and Rs = Region+Units equals Sum of Units
+  (NV).
+- **Constants** show at every level, totals included: 5, -2.5, and #DIV/0! for 1/0 (K). A text constant `"a"`
+  shows #VALUE! at every level (ET).
+- **The functions tried see each field as one number, its sum** (on item and grand-total levels; a subtotal level was not tried with functions): IF(Units>3,1,0) is 1 for A (9), 0 for C (0) and 1 for the
+  Grand Total; AND(Units>0,Price>10) shows 1 and 0, saved as numbers, not TRUE and FALSE; SUM(Units,Price) is 49
+  for A; CHOOSE(2,Units,Price) is Price's sum; ROUND(Price/Units,1) is 4.4 for A (40/9), #DIV/0! for C and 3.9
+  for the Grand Total (FA). INDEX(Units,1) is Units' sum and ROWS(Units) is 1 (both of which [MS-OI29500] and
+  CALC list as not allowed: the web opens and evaluates them); LOOKUP(Price,Units) is Units' sum; LOOKUP(Units,
+  Price), MATCH(Units,Units,0), MATCH(Units,Units) and VLOOKUP(Units,Units,1,FALSE) are #N/A at every level.
+  Each matches the worksheet function over plain numbers in Q!A2:A8 (MATCH(9,9,0), MATCH(9,9) and
+  VLOOKUP(9,9,1,FALSE) #N/A, LOOKUP(40,9) 9, LOOKUP(9,40) #N/A, INDEX(9,1) 9, ROWS(9) 1).
+- **Names**: a source field with a space is written quoted, `'Unit Cost'*2` (A 16 = 2×8), and one with an
+  apostrophe doubles it, `'Bob''s'+1` (A 8 = 7+1); a calculated field named `My Calc` shows as `Sum of My Calc`
+  (NM). The oracle's cached download (not a committed file) saves these formulas as written.
+- **A calculated field over a calculated field** evaluates the inner one at the same level first: Rev2 = Rev*2 is
+  420 for East (2×210) and Mg = Rev-Units 204 (210-6); Grand Total 1740 and 855 (CC). A reference to a calculated
+  field listed after it works: Fw = Fx*2 with Fx = Units+1 is 20 for A (EF).
+- **A cycle is #NAME?**: Ca = Cb+1 with Cb = Ca+1, and Cs = Cs+1, show #NAME? at every level (EC, ES). The
+  oracle's cached download (not a committed file) saves each of those formulas as `#NAME?+1`.
+- **Several data fields** (three in LV, DZ, NV, K, NM and CC, five in FA and CNT) each compute on their own.
+
+Formulas that make Excel for the web refuse the whole file are in "Pivot flags Excel for the web refuses".
+Evidence: probes/t4505-pivot-calc-fields LV, LC, CNT, DZ, NV, K, FA, NM, CC and
+probes/t4505-pivot-calc-field-functions FX, FR, FL, FK, FM, FN, FV, ET, EC, ES, EF and Q!A2:A8 (excel-graph,
+2026-11-07, T-4505); the sidecars' `pivots` sections hold every cell.
+Status: VERIFIED (excel-graph) for these shapes: rows Product, or Region and Product, LC with columns Region, Sum
+data fields but in CNT. The two saved-formula observations rest only on the oracle's cached downloads (input sha256
+1ad2d4d1… and d8291cc3…), not committed files, so they are UNVERIFIED; they matter only to what the engine's export
+writes, which is T-4174's (no probe can commit them: a sidecar holds cells, not the saved parts). Not probed: a calculated field with a number format, under show-values-as, on a
+grouped field, with a filter or Top-N by it, or referenced by GETPIVOTDATA. Implemented in: nothing yet (T-4174).
 
 ## A Top-N filter changes the subtotals and grand totals
 Rule: with a `top10 val="2"` count filter on Product by Sum of Sales, each region shows only its two
@@ -1363,6 +1410,9 @@ Rule: Excel for the web refuses to open a workbook (createSession 501 `FileCorru
 - (T-4130) a pivotField with `hideNewItems="1"` or with `hiddenLevel="1"`;
 - (T-4130) a tuple list (`<tpls>`) under a cache shared item of any type (`s`, `n`, `m`, `e`). Under a record value
   (`pivotCacheRecords/r/*`) it opens.
+- (T-4505) a calculated field (`cacheField@formula`) whose formula calls NOW(), TODAY(), RAND() or
+  INDIRECT("A1"), holds an array constant (`SUM({1,2})+Units`) or a cell reference (`Data!C2*2`, `A1*2`), or
+  names no field (`Foo*2`: the file is refused, it does not show #NAME?).
 
 `allDrilled="1"` and `defaultAttributeDrillState="1"` on the same field open.
 Evidence: T-4129 runs (excel-graph, 2026-11-06), one pivot per flag, bisected from the FA sheet of
@@ -1373,6 +1423,12 @@ with one `<tpls c="1"><tpl fld="0" hier="0" item="0"/></tpls>` added: on the sha
 number of rows Sales (refused; control without it opens), on a blank Product item (refused; control opens), on an
 error item (refused; control opens), and on the first record's Sales value as `n`, `m`, `e` or `s` (all open: input
 sha256 743d27d3…, 155006e8…, 06b87095…, 4eecedac…).
+T-4505 runs (excel-graph, 2026-11-07): one scratch file per formula, each a pivot at A3 on the Data sheet of
+probes/t4505-pivot-calc-fields, rows Product, Sum of Units and Sum of the calculated field (input sha256 440c1e4c…
+NOW, aa406971… TODAY, d53c648d… RAND, c500f97a… INDIRECT, 4f4dea18… the array constant, 4e950356… Data!C2,
+88cd70f0… A1, 15b96cd7… Foo). VLOOKUP(1,{1,2},2) and GETPIVOTDATA("Units",A3) were refused too, but each also
+holds an array constant or a cell reference, so neither refusal is the function's; a similar shape (rows Product, the calculated fields only) with INDEX,
+ROWS, LOOKUP, MATCH, VLOOKUP over fields, a text constant and a cycle opens (probes/t4505-pivot-calc-field-functions).
 Status: a builder observation, not committable as a probe: Excel saves nothing for a file it refuses.
 What desktop Excel does is out of scope (decision 0266). The case builder does not refuse these
 flags; a case that sets one cannot be filled.
@@ -1578,7 +1634,8 @@ Rule, per flag (each one on its own pivot of rows Region and Product with Sum of
 - `subtotalTop="0"` on Region in outline form (ST): the East row is left empty, and an `East Total` row
   follows its products.
 - `subtotalCaption="Tot"` on Region in tabular form (SC): **the subtotal label is `Tot` alone, with no
-  item name**. Both East's and West's subtotal rows read `Tot`.
+  item name**. Both East's and West's subtotal rows read `Tot`. More shapes: "subtotalCaption labels
+  a field's subtotal lines" below.
 - `subtotalHiddenItems="1"` with Product C hidden (SH): with the flag set, the hidden C is left out of
   East's subtotal (27, without C's 3) and of the Grand Total (60). The flag-off control is T-4164's,
   so whether the flag changes anything is not evidenced here.
@@ -1587,7 +1644,7 @@ Rule, per flag (each one on its own pivot of rows Region and Product with Sum of
   change.
 - `gridDropZones="1"`, tabular (GZ): the data caption `Sum of Sales` is at A3. `Row Labels` and
   `Product` head the row fields on row 4, and the value column's header reads `Total` (C4).
-  `firstHeaderRow` is 2.
+  `firstHeaderRow` is 2. More shapes: "Classic layout (gridDropZones)" below.
 - `numFmtId="3"` on the Year row field (NF): it renders. The saved labels are numbers; their display
   format is not captured.
 - x14 pivotTableDefinition `fillDownLabelsDefault="1"` (X14): **existing fields are not filled down**,
@@ -1608,7 +1665,8 @@ under a cache shared item, and every calculated item (its item `f="1"`). That co
 value (caption, value, Top-N count/percent/sum, fixed date, M1–M12, Q1–Q4 and every relative date), every
 `autoFilter` child, `filter`, `pageField` and pivotField filter attribute, the x15 `pivotFilter` extension, every
 ST_FieldSortType value, `autoSortScope` with every pivotArea and reference attribute, `nonAutoSortDefault`,
-`customListSort`, and calculated fields. The catalog's `web` column (eval/catalog/pivot-features.tsv) records the
+`customListSort`, and calculated fields, except the formulas listed in "Pivot flags Excel for the web refuses"
+(T-4505). The catalog's `web` column (eval/catalog/pivot-features.tsv) records the
 answer per row, and its `evidence` column names the probe and sheet: 146 filtering rows yes, 11 no and 4 `unknown`
 (below), 42 sorting rows yes, 2 calculated rows (the calculated field) yes and 40 (calculated items) no. The grouping
 and slicers-timelines rows are T-4767's.
@@ -1692,8 +1750,15 @@ refusals are T-4130 runs bisected from that case's first sheets (CI, CIR, CIC, C
 `f="1"`) and scratch variants of CI. The builder writes the calculated item with Excel's pivotArea (`cacheIndex="1"`,
 the reference naming the item); no Excel-saved file with a calculated item has been opened on the web.
 Status: VERIFIED (excel-graph) for the builder's shape. Whether an Excel-saved calculated item opens on the web is
-UNVERIFIED (probe pending: T-4505, with a desktop-saved file from a corpus); until then calculated items have no web
-evidence and their rows are `no`. What desktop Excel computes is out of scope (decision 0266).
+UNVERIFIED (probe pending: T-4792): T-4505 found no Excel-saved file with one. The surveyed corpora have none
+(docs/research/pivot-tables-2026-11-04/oss-engines.md §5), a GitHub code search for `calculatedItem` (2026-11-07)
+found only schema documentation, no way to create one was found in the web UI (2026-11-07), and `rustsheet-oracle status` offers no other
+golden backend (excel-desktop n/a, out of scope by decision 0266; LibreOffice is approximate and does not support
+calculated items, libreoffice.md). So nothing about what a calculated item computes can be probed today, and
+every rule of excel-docs.md quirks 5–7 is UNVERIFIED (probe pending: T-4792): the formula over items per record,
+solve order, item references (`Region[North]`, positional `Region[-1]`, #REF! out of range), the restrictions
+(no subtotal or summary-function change, no grouping), and how they meet several data fields. T-4175 depends on
+T-4792. The catalog's calculated-item rows stay `no`.
 
 ## PivotTable Auto Refresh is not stored or honoured by Excel for the web
 Rule: Excel for the web does not refresh a pivot after a Graph range write to its source: after the oracle types 100 into the
@@ -1744,3 +1809,59 @@ Evidence: probes/t4130-pivot-spill-getpivotdata Q!A1:B8 (excel-graph, 2026-11-07
 Status: VERIFIED (excel-graph). When the pivot recovers (the blocker removed and a refresh) is not probed. The engine
 is T-4154: it gives `#SPILL!` for the grand total (by either name) and for the unknown item, and 27 for the range
 reference; the named item (`#SPILL!`) and the non-anchor cell (`#REF!`) already agree.
+
+## Classic layout (gridDropZones)
+Rule: `gridDropZones="1"` (classic layout), on a tabular pivot with row fields and one data field
+(Values on no axis), changes the layout only when no field is on columns. It then keeps a
+column-header row
+anyway: the location grows by one row, `firstDataRow` and `firstHeaderRow` are both 2, the data
+field's caption sits at the location's corner (GZ!A3, G1!A3), the row fields' header row is the
+second row (`Row Labels`, then each further label column's field name: GZ!A4:B4, G1!A4), and the
+value column's header there reads `Total` (GZ!C4, G1!B4). The rows below, and `rowItems` and
+`colItems` (one empty `<i/>` column line), are the plain layout's. With a column field (GC: rows
+Region and Product, columns Year) or with two data fields on columns (GV), cells, lines and
+geometry are the plain tabular layout's (GC: `firstHeaderRow` 1, `firstDataRow` 2; `Sum of Sales`
+at A3 and `Column Labels` at C3, as the unflagged tabular pivot of the same shape shows them:
+probes/t4609-pivot-row-labels-2 L1, `firstHeaderRow` 1, `firstDataRow` 2, L1!A3 `Sum of Sales`,
+L1!C3 `Column Labels`).
+Evidence: probes/t4129-pivot-layout-flags GZ (T-4129); probes/t4745-pivot-classic-subtotal-caption
+GC, GV, G1 (excel-graph, 2026-11-07, T-4745).
+The engine's own readings, not probed (UNVERIFIED, T-4785). The engine applies the rule to every
+pivot with no column level:
+- compact or outline form (the same rule);
+- no row field; `colGrandTotals="0"`; a `grandTotalCaption` (the engine always writes `Total`);
+- two or more data fields with Values on rows (`dataOnRows`): the engine adds the header row and
+  writes `Total` but leaves the corner empty;
+- row fields with no data field: the engine adds the header row and writes `Total`;
+- page fields beside classic layout: the page area is placed above the grown location as usual.
+Status: VERIFIED (excel-graph) for tabular pivots with row fields, one data field and Values on
+no axis (GZ, G1), and for the unchanged shapes GC and GV; UNVERIFIED (T-4785) for the readings
+above.
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`read_root`: the typed
+`PivotOptions::grid_drop_zones`; T-4745)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`geometry`; T-4745)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`render_within`,
+`CLASSIC_TOTAL`; T-4745)
+
+## subtotalCaption labels a field's subtotal lines
+Rule: a pivot field's `subtotalCaption` is the whole label of each of its default subtotal lines,
+with no item name: `Tot` where the line would read `East Total`, for every item of the field. It
+holds in tabular form (t4129 SC!A7, A10), in outline form with subtotals at the bottom (SB!A8,
+A12), in compact form with subtotals at the bottom (SK!A8, A12), and on columns (SCC!E4, H4).
+**A `?` in the caption stands for the subtotalled item**: `? Tot` reads `East Tot` and `West Tot`
+(SQ!A7, A10), not the field's name (MS-OI29500's note on `subtotalCaption` says the field name;
+Excel for the web writes the item; whether desktop Excel agrees is unconfirmed, T-4785).
+With subtotals at the top (outline form, SO) the subtotal shares the item's own line, which
+reads the item (`East`, SO!A4) as without the caption. Custom subtotal lines keep `<item>
+<Function>` (SF!A7:A8 `East Sum`, `East Count`): the caption does not replace them. `rowItems`
+and `colItems` do not change.
+Evidence: probes/t4129-pivot-layout-flags SC (T-4129); probes/t4745-pivot-classic-subtotal-caption
+SO, SB, SK, SF, SCC, SQ (excel-graph, 2026-11-07, T-4745).
+The engine's own readings, not probed (UNVERIFIED, T-4785): a subtotalCaption on a field with
+Values inside it (the engine keeps `<item> <data field>`), an empty `subtotalCaption=""` (the
+engine writes it, an empty label), and a caption with several `?` (the engine replaces each).
+Status: VERIFIED (excel-graph) for the shapes listed; UNVERIFIED (T-4785) for the readings above.
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`read_field`: the typed
+`PivotField::subtotal_caption`; T-4745)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::total_label`;
+T-4745)

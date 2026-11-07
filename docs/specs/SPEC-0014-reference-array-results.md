@@ -279,7 +279,7 @@ an array value. In detail:
     (reference first) gives `#N/A` (A49:C49, A58:C58). Ours puts an error first always (T-4741).
   - Per-element callers (`ref_lift.rs`): `Value(v)` calls the scalar function with `v` as a value argument. That is
     `#VALUE!` where a reference is required, and N reads the value. `put_back` keeps the result.
-    Probed (probes/t4704, T-4704): OFFSET over a mixed grid spills a 2x1 of `#VALUE!` (A4:C8; ours a scalar, T-4739);
+    Probed (probes/t4704, T-4704): OFFSET over a mixed grid spills a 2x1 of `#VALUE!` (A4:C8; matched by T-4739, which reads XLOOKUP in its reference form in `offset_source`);
     FORMULATEXT (`#VALUE!`, `#N/A`) and INDIRECT (`#REF!`, `#VALUE!`) match; COUNTIF and SUMIF over an XLOOKUP with a
     text if_not_found spill a 2x1 of `#VALUE!`, with a miss or all hits (A64:C74; ours a scalar, T-4742).
   - ROWS/COLUMNS, ISREF and the pass-throughs (IF, CHOOSE, LET, VSTACK, TAKE, DROP) need no change: they handle
@@ -325,8 +325,9 @@ Where the implementation departs from the text above, or settles what it left op
   INDIRECT as the argument read ahead; one that gives no grid is put back as its reference form's result. The
   static analysis gives such a call the lookup_value's shape, so `COUNTIF(X(r),">0")` spills (t4569 A26). VSTACK's
   reference form keeps OFFSET and INDIRECT only.
-- **Order statistics.** `RefGrid::order_statistic_error` is the one scan: the first error element, else `#N/A`, when
-  any reference element is on another sheet (T-4714: the first one). LARGE and SMALL read it in their data reader (`numbers_from_ranked_arg`;
+- **Order statistics.** `RefGrid::order_statistic_error` is the one scan: `None` (the value view, `#VALUE!`) when
+  the first element is a reference on the formula's own sheet, else the first error element, else `#N/A`, when any
+  reference element is on another sheet (T-4714). LARGE and SMALL read it in their data reader (`numbers_from_ranked_arg`;
   the RANK family keeps the value view), MEDIAN through `GridReading::OrderStatistic`.
 
 ### Test plan and rollout
