@@ -8079,13 +8079,19 @@ CHISQ.DIST.RT and stay `#NUM!` in Excel; CHIINV
 and CHISQ.INV.RT from 2E13 to 1E15 degrees of freedom), probes/t2982-gamma-inv-huge-shape A7-A23 (`GAMMA.INV(0.5,a,1)`
 for a = 1E13 to 1E300), A92 and A93 (`CHIINV(0.5,2E13)`, `CHISQ.INV.RT(0.5,2E13)`), all excel-graph; the factor is
 measured against the accurate cdf (`GAMMA.DIST(1E12,1E12,1,TRUE)` correctly rounded, probes/incomplete-gamma-cap E9).
-The 50-digit math values for these cells are committed with T-3364 before the engine changes. Gate A's huge-shape
+The 50-digit math values for these cells are committed in the probe cases' math sidecars (T-4329), and their 214
+probe cells from shape 1E9 are marked R3 in eval/accuracy/math-over-excel.tsv (T-3364, decision 0337). Below shape
+1E9 (`CHISQ.INV.RT(1E-300,df)` for df 5E6 to 1E9, probes/t3350-chisq-inv-huge-df A205-A289) the start also underflows
+and Excel is also 2.63e-4 off the math, but the owner ruled (T-3409) that R3 is not widened there: Excel's start is the
+target (T-4205). Gate A's huge-shape
 batch accuracy/{GAMMA.INV,CHISQ.INV.RT}/e-T-3863 (excel-graph, 2026-11-05; math from Temme's expansion) has 131 of
 its points on this branch, every one 2.66e-4 off the math, from shape 3.9E9 (`CHISQ.INV.RT(2.49485828580513E-180,7716643211)`,
 A21, where the right tail's start already underflows) to 7E293; they are marked R3 (decision 0289).
 Status: MATH-OVER-EXCEL (decision 0188)
-Ours: today the engine matches Excel with a fitted closed form (incomplete_gamma/huge_shape.rs,
-`WILSON_HILFERTY_SPREAD`, fitted at 1E13 and applied from 2E10); T-3364 moves the branch to the math.
+Ours: from T-3364 the engine returns the true quantile where the start underflows (incomplete_gamma/huge_shape.rs
+`huge_shape_quantile`): the math from shape 1E9, and below it the nearer value until T-4205 finds Excel's start
+digits. The fitted start (`WILSON_HILFERTY_SPREAD` and its terms) only picks the branch. Five gen-m9 multi-call cells on the branch have no math value yet and count as visibly off
+(decision 0337).
 Tasks: T-3364, T-3358
 
 ## F.DIST at a tiny x with a huge d2: Excel is within 1.5e-13 of the math, and so is RustSheet (T-3354)

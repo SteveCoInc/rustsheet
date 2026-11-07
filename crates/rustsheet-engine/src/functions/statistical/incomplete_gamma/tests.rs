@@ -562,10 +562,12 @@ fn huge_shape_quantile_has_excels_three_regimes() {
         ((ours - 5_118_069.301_773_226) / ours).abs() <= 1e-14,
         "{ours}"
     );
-    // A371 `CHISQ.INV.RT(1E-100,1E10)`: the right tail's closed form at shape 5E9.
+    // A371 `CHISQ.INV.RT(1E-100,1E10)`, on the closed-form branch: Excel is its start
+    // 10005667524.015223, 2.66e-4 off the math, so ours is the true quantile, the 50-digit value of
+    // probes/t3070-gamma-inv-band.math.json (decision 0188 R3, T-3364).
     let ours = huge_shape_quantile(5e9, 2.0, 1e-100, Tail::Upper, 21.273_453_560_965_32);
     assert!(
-        ((ours - 10_005_667_524.015_223) / ours).abs() <= 1e-14,
+        ((ours - 10_003_008_821.701_774) / ours).abs() <= 1e-14,
         "{ours}"
     );
 }
