@@ -10447,7 +10447,6 @@ F	probes/t4844-irr-stage-invariance.case.json	P!A6
 F	probes/t4844-irr-stage-invariance.case.json	P!A60
 F	probes/t4844-irr-stage-invariance.case.json	P!A7
 F	probes/t4844-irr-stage-invariance.case.json	P!A8
-F	probes/table-edits/t4274-calc-column-delete-row-2.case.json	F!A1
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10

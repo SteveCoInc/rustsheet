@@ -3,7 +3,7 @@ id: T-4770
 title: "FORMULATEXT of a cell reference a row delete removed is #REF!, not #ERROR!"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -28,3 +28,9 @@ depends_on: []
 
 ## Out of scope
 - The table's stored column formula (T-4274).
+
+## Outcome
+`fn_formulatext` returns a `#REF!` argument (the displaced reference of a deleted cell) as `#REF!` instead of the
+"not a reference" `#ERROR!`. Unit tests cover same-sheet and cross-sheet cells (no table needed). Eval: probes
+table-edits/t4274-calc-column-delete-row-2 F!A1 now passes (baseline -1 line). Other literal errors in FORMULATEXT
+are unevidenced and unchanged.
