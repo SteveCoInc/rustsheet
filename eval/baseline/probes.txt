@@ -549,6 +549,7 @@ C	probes/external-ref-no-link-index.case.json	54
 C	probes/external-ref-no-link-let-index.case.json	7
 C	probes/external-ref-no-link-let.case.json	20
 C	probes/external-ref-no-link-lift-arrays.case.json	19
+C	probes/external-ref-no-link-lift-picked.case.json	48
 C	probes/external-ref-no-link-shapes.case.json	20
 C	probes/external-ref-no-link.case.json	10
 C	probes/fact-large-arguments.case.json	18
