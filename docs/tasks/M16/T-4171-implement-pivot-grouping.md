@@ -26,6 +26,19 @@ Owner of these visibly-off pivot cells (decision 0245; moved from T-4152): probe
   are rewritten by Excel"). The builders keep their bin count: changing it changes the built file
   and its oracle input hash.
 
+Owner of these visibly-off pivot cells (decision 0245; T-4170, pivots.md "Manual groups and date levels as Excel for
+the web renders them"). Cause: the importer skips a cache whose source field carries Excel's `par`-only
+`<fieldGroup par="2"/>` beside a discrete group (`a fieldGroup without groupItems`,
+crates/rustsheet-xlsx/src/import/pivots/groups.rs `group_field`), so no pivot of the case loads:
+- probes/t4170-pivot-manual-groups MC!A3:B14, MO!A3:C14, MT!A3:C14, MS!A3:C18, MG!A3:B8, MB!A3:B10, MP!A3:B14, Calc!B1:B5,
+  Calc!B8:B10, Calc!B12:B14, Calc!B16, Calc!B18
+
+Owner of these visibly-off pivot cells (decision 0245; T-4170). Cause: the load-time refresh reads the source fields
+only, so it has no Quarters or Years field (the fields a date group adds) and `remap` fails; each pivot over one keeps
+its saved cells, which the builder leaves empty (`plan_pivot_refresh`, crates/rustsheet-engine/src/pivot/grid.rs;
+`refresh`, pivot/refresh.rs). The import itself works: DM (Date alone) renders, and GETPIVOTDATA on DX answers:
+- probes/t4170-pivot-date-levels DC!A3:B23, DO!A3:D23, DT!A3:D23, DS!A3:D27, DY!A3:B16, DX!A3:F11
+
 ## Acceptance criteria
 - [ ] The importer accepts a `refreshOnLoad` cache's pivotField `<item x>` entries past its rebuilt groups (the refresh lays the field out again), so probes/t4128-pivot-spike G renders Excel's 6 items.
 - [ ] T-4170 probes pass; the M6 grouping probes keep passing; corpus group pivots re-render.
