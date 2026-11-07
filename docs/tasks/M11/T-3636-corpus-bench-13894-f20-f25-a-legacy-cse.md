@@ -3,7 +3,7 @@ id: T-3636
 title: "corpus-bench 13894 F20:F25: a legacy CSE array formula's cells past its 6-row result are #N/A (M11 owner of T-0950's corpus cells)"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
