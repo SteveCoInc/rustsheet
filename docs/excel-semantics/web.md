@@ -59,7 +59,12 @@ A pivot is also dropped when its field lists more `<item>`s than its cache field
 other `ST_ItemType`), or when the parts of its definition the model keeps verbatim (SPEC-0032 "Model", T-4139) would
 pass what is left of the workbook's verbatim budget: 32 MiB (`MAX_OPAQUE_BYTES`), or the package's inflate limit
 (`ImportLimits::max_uncompressed_bytes`) when that is lower, each kept entry charged its text plus its own size. A
-pivot is also skipped for an unknown `axis`, `sortType`, `showDataAs`, data field `subtotal` or `item@t`; a malformed
+pivot is also skipped for an unknown `axis`, `sortType`, `showDataAs`, data field `subtotal` or `item@t`, for a
+`<filters>` entry it cannot type (T-4165: a `filter@fld` past the cache's fields, a `customFilter@operator` or a
+`dateGroupItem@dateTimeGrouping` it does not know; before T-4165 these pivots loaded with their filters kept verbatim
+and unapplied; UNVERIFIED, T-4799, what Excel does with one), and past the filter caps (more than 2,048 filters, more
+than two `customFilter`s in one filter, more than 1,000,000 values in one values list: DEVIATION, docs/excel-semantics/
+pivots.md "Pivot filters past the import limits"); a malformed
 boolean, and a malformed number the model only keeps (`dataPosition`, `pageWrap`, `numFmtId`, `baseField`,
 `baseItem`, a page field's `item` or `hier`), reads as the schema's default instead.
 The limits are totals counted while parsing, before anything past them is allocated (CLAUDE.md directive 5).
@@ -106,15 +111,17 @@ whose cache record is stale shows the source's value (probes/t4128-pivot-spike R
 docs/excel-semantics/pivots.md). That pivot's area held no cells, though. UNVERIFIED: whether Excel overwrites
 rendered constants the original builder writes inside the pivot's own area, which this probe relies on; it needs a
 control with stale rendered cells (T-2327).
-Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081). Not probed: several data fields (the
-`Values` field), two row fields and their subtotals, filters, hidden items, dates and numbers as items, and
-pivots in tabular or outline form.
+Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081). Not probed here: several data fields (the
+`Values` field), two row fields and their subtotals, hidden items, dates and numbers as items, and
+pivots in tabular or outline form. Filters are probed in docs/excel-semantics/pivots.md (T-4130, T-4164) and applied
+by the engine since T-4165.
 Engine (SPEC-0015): the workbook model holds pivot caches and pivot tables (`pivot.rs`, T-2081), read from xlsx by
 `crates/rustsheet-xlsx/src/import/pivots.rs` (T-2082). The importer skips, whole and logged, a cache with an OLAP,
 external, consolidation or scenario source, a calculated field, no records part
 (`saveData="0"`), a bad index, or a value it cannot read (an unknown error name, a `<d>` date before 1900, which
 includes time-only dates if Excel writes them so), and a pivot whose `showDataAs` or x14 `pivotShowAs` is unknown,
-whose index points past its cache, whose `axis` or `subtotal` is unknown, which has
+whose index points past its cache, whose `axis` or `subtotal` is unknown, whose `<filters>` it cannot type or that
+passes the filter caps (T-4165, above), which has
 no `location` or not one `pivotField` per cache field, or whose parts are reached outside the package (absolute,
 escaping or External targets), twice, or through a duplicate `cacheId`: GETPIVOTDATA against it is `#REF!`. A pivot
 whose data field is shown as a calculation loads and renders since T-4163; GETPIVOTDATA against it stays `#REF!`
@@ -126,7 +133,8 @@ the 1904 epoch in a `date1904` workbook has no serial there and skips the cache 
 GETPIVOTDATA (T-2083, `functions/lookup_and_reference/getpivotdata.rs`, `pivot_index.rs`) aggregates the cache records the
 pairs pick, in cache order, rather than reading the rendered cell, and passes every cell of probes/getpivotdata-real-pivot.
 Until T-2085 probes them it answers `#REF!` for SPEC-0015's unknowns, never a guess: several data fields, page fields or
-hidden items, a pair on a pivot with two fields on one axis, a reference meeting two pivots, `""` or an omitted
+hidden items, a filter or AutoShow (`pivot_index.rs` `supported`, T-4165; UNVERIFIED, T-4799: before T-4165 it answered
+from the unfiltered records, so a pair naming an item the filter shows was a number and is now `#REF!`), a pair on a pivot with two fields on one axis, a reference meeting two pivots, `""` or an omitted
 data_field, a number, date or
 boolean as an item (or an item that matches two cache items differing only in case), the same field twice with the same
 item, an error in a field/item pair, an empty intersection of any aggregate but Sum, a picked record whose data-field value
