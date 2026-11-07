@@ -323,12 +323,13 @@ the importer's model without a recalculation, so every pivot holds the definitio
   evidence and captured the pivot's area (`rustsheet-oracle fill`, which reads Excel's render of the workbook it
   opened), the refresh is compared with that area instead, whatever the pivot's freshness, and the cells are
   **scored** cells of the case, ratcheted by the cell baseline. A refresh that fails scores the area against nothing
-  (`failed`, with every cell compared). The same pivot's check (b) cells are reported with `render_unscored` and not
+  (`failed`, with every cell compared), and so does a pivot the importer does not load. The same pivot's check (b) cells are reported with `render_unscored` and not
   scored. The fetched corpus cannot hold sidecars beside its files, so the vendored gated suite `pivot-on-open`
   holds byte-for-byte copies of the four pivot-corpus-closedxml workbooks with a `refreshOnLoad` cache, with their
-  excel-graph sidecars. pivot-corpus-lo has none. On 2026-11-07 its 8 importable `refreshOnLoad` pivots score 377
-  cells, and 118 pass: the empty cells. The engine refreshes none of them. 7 read a Table or a name (T-4506), and 1
-  meets its own merged cells (T-4677), so the other 259 are known failures. In the two corpus suites themselves
+  excel-graph sidecars. pivot-corpus-lo has none. On 2026-11-07 its 20 `refreshOnLoad` pivots score 597 cells,
+  and 224 pass: the empty cells. The engine refreshes none of them. 7 read a Table or a name (T-4506), 1 meets its
+  own merged cells (T-4677), and the importer does not load 12, whose caches were saved without records (T-5065), so
+  the others are known failures. In the two corpus suites themselves
   check (c) is still reported as above.
 
 report.json lists each pivot per case (`pivot_freshness`) and the counts per suite in `fresh_pivot_render`

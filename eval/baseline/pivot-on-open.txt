@@ -6,7 +6,7 @@
 C	pivot-on-open/PivotMixedDataTypesInTableColumn.xlsx	237
 C	pivot-on-open/PivotSubtotalsSource.xlsx	84
 C	pivot-on-open/PivotTableWithNoneTheme.xlsx	24
-C	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	1502
+C	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	1721
 F	pivot-on-open/PivotMixedDataTypesInTableColumn.xlsx	pvt1!A1
 F	pivot-on-open/PivotMixedDataTypesInTableColumn.xlsx	pvt1!A2
 F	pivot-on-open/PivotMixedDataTypesInTableColumn.xlsx	pvt1!A3
@@ -249,6 +249,90 @@ F	pivot-on-open/PivotTableWithNoneTheme.xlsx	pvt!C4
 F	pivot-on-open/PivotTableWithNoneTheme.xlsx	pvt!C5
 F	pivot-on-open/PivotTableWithNoneTheme.xlsx	pvt!C6
 F	pivot-on-open/PivotTableWithNoneTheme.xlsx	pvt!C7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Final liability!A1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Final liability!A2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Final liability!A4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Final liability!A5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Final liability!A6
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Final liability!B1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Final liability!B2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Final liability!B4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Final liability!C4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!A34
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!A36
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!A37
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!A38
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!A5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!A7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!A8
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!B34
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!B37
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!B38
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!B5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!B7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!B8
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!C36
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!C37
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!C7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!D7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - ILB!E7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!A5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!A50
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!A52
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!A53
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!A54
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!A7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!A8
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!B5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!B50
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!B53
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!B54
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!B7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!B8
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!C52
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!C53
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!C7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!D7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Hedge detail - Nominal!E7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	HedgeSummary!A1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	HedgeSummary!A2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	HedgeSummary!A3
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	HedgeSummary!A4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	HedgeSummary!B1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	HedgeSummary!B2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	HedgeSummary!C1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	HedgeSummary!C2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	HedgeSummary!D1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	HedgeSummary!E1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Liability Detail!A1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Liability Detail!A3
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Liability Detail!A4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Liability Detail!A5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Liability Detail!A6
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Liability Detail!B1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Liability Detail!B3
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	Liability Detail!B4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	LiabilityChanges!A1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	LiabilityChanges!A2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	LiabilityChanges!A5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	LiabilityChanges!A6
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	LiabilityChanges!B1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	LiabilityChanges!B2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	LiabilityChanges!B5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	LiabilityChanges!C4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	LiabilityChanges!D4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	LiabilityChanges!E4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	LiabilityChanges!F4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	ShockedCurvePivot!A1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	ShockedCurvePivot!A2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	ShockedCurvePivot!A4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	ShockedCurvePivot!A6
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	ShockedCurvePivot!A7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	ShockedCurvePivot!B1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	ShockedCurvePivot!B2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	ShockedCurvePivot!B4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	ShockedCurvePivot!B5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	ShockedCurvePivot!B6
 F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedAssetsPivot!A1
 F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedAssetsPivot!A2
 F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedAssetsPivot!A6
@@ -266,3 +350,32 @@ F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedAssetsPivot!D5
 F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedAssetsPivot!D6
 F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedAssetsPivot!D7
 F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedAssetsPivot!D8
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!A1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!A2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!A4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!A5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!A6
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!A7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!B1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!B2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!B5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!B6
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!C4
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedLiabilityPivot!C5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!A1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!A2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!A3
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!A5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!A6
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!A7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!B1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!B2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!B3
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!B6
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!B7
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!C5
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvePivot!C6
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvesFull!C1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvesFull!C2
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvesFull!D1
+F	pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	StressedYieldCurvesFull!D2

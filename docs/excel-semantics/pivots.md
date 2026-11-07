@@ -2789,7 +2789,7 @@ Status: UNVERIFIED (Excel-saved corpus files; probe pending: T-4966, T-4967, T-4
 Rule: for the 21 pivots of the four pivot-corpus workbooks with a `refreshOnLoad` cache, Excel for the web's render on
 open is the saved render. 20 of the pivots are over a `refreshOnLoad` cache; StressedHedgesPvt!PivotTable5 is not. For
 each, every cell of the area (its location and the page rows above it) holds the value the file saved, and the
-`location` is the saved one. This holds for the 8 pivots the importer loads, which are check (c)'s subjects, and the
+`location` is the saved one. Check (c) scores all 20, and the
 reading needs the file to be unchanged since Excel saved it. So for these files the saved cells and the on-open render
 are the same evidence. A source edited after the save would differ ("Excel for the web re-renders a refreshOnLoad
 pivot when it opens the file").
@@ -2813,4 +2813,4 @@ pivot-corpus-closedxml's `TryToLoad/TemplateWithTableSourcePivotTables.xlsx`,
 cell. The rebuilt caches are TemplateWithTableSourcePivotTables's sidecar `cache_fields` against the copy's.
 Status: VERIFIED (excel-graph), for these files. Which items are dropped is UNVERIFIED.
 Implemented in: crates/rustsheet-eval/src/pivot_freshness.rs (check (c) scores each refresh against the sidecar's
-area; T-4972). The engine refreshes none of the 8 (T-4506, T-4677).
+area; T-4972). The engine refreshes none of the 20 (T-4506, T-4677, T-5065).

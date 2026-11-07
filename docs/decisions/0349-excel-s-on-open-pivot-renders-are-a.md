@@ -22,15 +22,17 @@
   - The suite `pivot-on-open` is vendored and gated (`gate = true`, `baseline = "cells"`). When a case's sidecar is
     Excel evidence and holds a pivot's area, check (c) compares the engine's refresh of that pivot with the area,
     whatever the pivot's freshness, and scores the cells. A refresh that fails scores the area against nothing,
-    as check (b) does for a pivot the engine does not lay out. Check (b)'s cells for the same pivot are reported
+    as check (b) does for a pivot the engine does not lay out; so does a pivot the importer does not load, which
+    the engine cannot refresh. Check (b)'s cells for the same pivot are reported
     and not scored.
   - `rustsheet-oracle fill` fills an xlsx case that has pivots but no formula cell (`rustsheet-eval cases` lists
     `pivots`). The suite trusts its cached values, so a refill passes `--include-cached`.
 - **Consequences:**
   - This adds a gate and weakens none. `make eval-baseline` generates the baseline
     `eval/baseline/pivot-on-open.txt`, and it may only shrink. The cells the engine does not refresh today are
-    known failures with owners (decision 0245): T-4506 owns the 7 pivots over a Table or a name, and T-4677 owns
-    the pivot that meets its own merged cells.
+    known failures with owners (decision 0245): T-4506 owns the 7 loaded pivots over a Table or a name, T-4677
+    owns the pivot that meets its own merged cells, and T-5065 owns the 12 pivots over a cache saved without
+    records (`saveData="0"`), which the importer does not load.
   - The copies keep the ClosedXML authors' names that their docProps hold, as published upstream, so that each
     file stays byte for byte the pinned upstream file. They hold no other personal data.
   - When the corpus pins move, or a new corpus file gains a `refreshOnLoad` cache, its copy and sidecar are added
