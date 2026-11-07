@@ -14,7 +14,9 @@ depends_on: []
 Every root cause in `docs/research/excel-parity-findings-2026-11-07.md` items 1–13 is fixed on
 main, with the evidence cells the file cites passing, Gate A unchanged or improved, and no eval
 regressions; likewise the addendum (`docs/research/excel-parity-findings-2026-11-07-addendum.md`,
-PR #4005, sections A–D, which supersede the "Held" section) and the audit findings.
+PR #4005, sections A–D, which supersede the "Held" section), addendum 2
+(`docs/research/excel-parity-findings-2026-11-07-addendum-2.md`, PR #4030: sections F, G, its IRR
+model and its text/lookup/database audit) and the audit findings.
 
 Owner ruling (2026-11-07): land all items in **one PR** under this one task, overriding the
 one-task-one-lane and S/M size rules (CLAUDE.md directive 4) for this hand-off only. Second ruling (2026-11-07): trust the research findings as written, and
@@ -48,7 +50,8 @@ this PR closes):
 - [ ] Each item's evidence cells (as listed in the findings file) match Excel, demonstrated by a
       unit test or eval case per item; items that do not reproduce on current main are recorded
       in the Outcome with the measurement.
-- [ ] Addendum sections A–D and audit findings 1–6 are fixed the same way.
+- [ ] Addendum sections A–D, addendum-2 sections F–G and IRR model, and both audit sections are
+      fixed the same way.
 - [ ] Each item's Excel quirk has a `docs/excel-semantics/` entry.
 - [ ] `rustsheet-eval check` shows no new regressions; `eval/baseline/` updated via
       `make eval-baseline`; Gate A (`rustsheet-eval accuracy`) has no new failures.
@@ -56,4 +59,5 @@ this PR closes):
 
 ## Out of scope
 - Addendum section E (an alternative to item 8 + section B; one definition is kept: item 8 + B).
-- The suggested probe groups.
+- The suggested probe groups, and addendum-2 "Still open" items without a described fix (F.INV,
+  HYPGEOMDIST, FVSCHEDULE overflow, NORM.S.INV centre).
