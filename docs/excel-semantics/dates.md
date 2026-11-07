@@ -823,7 +823,7 @@ Evidence: probes/t4870-empty-date-args A1:A31 (excel-graph, 2026-11-07), with pr
 H_na_req scored 26/31, H_na_all 25/31 and H_zero 3/31. No hypothesis predicted the optional cells A10, A14, A16, A24
 and A27, which act as omitted. Round 2, probes/t4870-r2-empty-optional A1:A14, tested that rule at fresh arguments
 with H_omitted committed before its fill: 14/14.
-Ours: `Model::is_written_empty` and `Model::toolpak_empty_required` (functions/empty_args.rs), applied to the argument
+Ours: `Model::is_written_empty` and `Model::toolpak_empty_required` (functions/util/empty_args.rs), applied to the argument
 nodes before lifting. `Model::holidays_arg` (date_and_time/holidays.rs) does this for the WORKDAY and NETWORKDAYS pairs.
 WEEKNUM drops a written-empty return_type.
 Status: VERIFIED (excel-graph)

@@ -10,7 +10,6 @@ pub(crate) mod binary_search;
 pub(crate) mod criteria;
 mod database;
 pub(crate) mod date_and_time;
-mod empty_args;
 mod engineering;
 mod financial;
 pub(crate) mod information;
