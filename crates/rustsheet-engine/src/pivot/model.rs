@@ -144,6 +144,13 @@ pub struct PivotOptions {
     /// line `Total`, and puts the data caption at the location's corner
     /// (docs/excel-semantics/pivots.md "Classic layout (gridDropZones)").
     pub grid_drop_zones: bool,
+    /// `customListSort` (default on): a label sort orders the names of Excel's built-in custom
+    /// lists (the day and month names) by the list, not the alphabet
+    /// (docs/excel-semantics/pivots.md "Pivot sorts and filters as Excel for the web renders
+    /// them", probes/t4130-pivot-sort CL1, CL0; `pivot::sort::labels`). The importer reads it from
+    /// the definition's attributes it keeps in [`PivotTable::opaque`], which is what the export
+    /// writes (T-4768).
+    pub custom_list_sort: bool,
 }
 
 impl Default for PivotOptions {
@@ -168,6 +175,7 @@ impl Default for PivotOptions {
             page_wrap: 0,
             page_over_then_down: false,
             grid_drop_zones: false,
+            custom_list_sort: true,
         }
     }
 }

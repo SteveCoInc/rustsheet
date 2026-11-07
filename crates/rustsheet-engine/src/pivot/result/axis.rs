@@ -1,12 +1,13 @@
-//! The axis trees of a pivot result (T-4142; value sorts T-4827): each axis's fields, their
-//! display orders (`Order`, a value sort of an outermost field folded in) and the keys whose
+//! The axis trees of a pivot result (T-4142; value sorts T-4827, label sorts T-4768): each axis's
+//! fields, their display orders (`Order`, a label sort or a value sort of an outermost field
+//! folded in) and the keys whose
 //! sorted distinct values make the tree ([`KeyPart`]: narrow unless an inner field is
 //! value-sorted).
 
 use std::collections::HashMap;
 
 use super::super::filter::Kept;
-use super::super::sort::Placing;
+use super::super::sort::{display_order, Placing};
 use super::super::{AxisField, ItemType, PivotCache, PivotField, PivotTable};
 use super::PivotComputeError;
 use super::{charge, count_nodes, node_index, sort_units, units, AxisNode, AxisTree};
@@ -40,9 +41,9 @@ impl Order {
         Order { rank, item }
     }
 
-    /// The order a value sort of an outermost field gives (`pivot::sort`): per cache item its
-    /// position, which must be a permutation of the items.
-    fn permuted(positions: Vec<u32>) -> Result<Order, PivotComputeError> {
+    /// The order a value sort of an outermost field or a label sort gives (`pivot::sort`): per
+    /// cache item its position, which must be a permutation of the items.
+    pub(in crate::pivot) fn permuted(positions: Vec<u32>) -> Result<Order, PivotComputeError> {
         let mut item = vec![u32::MAX; positions.len()];
         for (index, &position) in (0u32..).zip(&positions) {
             match item.get_mut(position as usize) {
@@ -131,12 +132,9 @@ impl<'a> AxisColumns<'a> {
                 .fields
                 .get(field as usize)
                 .ok_or(PivotComputeError::Malformed)?;
-            let pivot_field = table.fields.get(field as usize);
-            let listed = pivot_field.map_or(0, |f| f.items.len());
-            charge(work, units(cache_field.items.len().saturating_add(listed)))?;
             columns.push(AxisColumn {
                 records: cache_field.records.as_slice(),
-                order: Order::of(pivot_field, cache_field.items.len()),
+                order: display_order(table, cache_field, field, work)?,
                 placed: None,
             });
         }

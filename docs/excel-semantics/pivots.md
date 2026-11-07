@@ -407,6 +407,8 @@ Evidence: probes/t4128-pivot-spike K!A5:C11 (excel-graph, 2026-11-06, T-4128): E
 19; West B 7, A 20, Total 27; Grand Total 46.
 Status: VERIFIED (excel-graph); ties, percent and sum Top-N, filter order and inner-field Top-N per parent:
 "Top-N filters at their edges" and the two entries after it (T-4164)
+Implemented in: crates/rustsheet-engine/src/pivot/sort/labels.rs (`display_order`; T-4768) (the label sort of the inner
+Product: every cell of K passes)
 
 ## Numeric and date group labels are rewritten by Excel
 Rule: verified and recorded by the M6 grouping work. See web.md "Grouped pivot fields import as their
@@ -1925,7 +1927,11 @@ t4130-pivot-label-filters, value-filters, date-filters, relative-date-filters, f
 in value)
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/filters.rs (`read_filters`, DLit's dropped date filter; T-4165)
 Implemented in: crates/rustsheet-engine/src/pivot/sort.rs (`value_sorts`; T-4827) (the value sorts SV, SVA, SVC, SVR,
-SXA, SXR and SV2 pass; the label sorts SA, SD, NA, CL1 and CL0 are T-4768's)
+SXA, SXR and SV2 pass)
+Implemented in: crates/rustsheet-engine/src/pivot/sort/labels.rs (`display_order`; T-4768) and
+crates/rustsheet-xlsx/src/import/pivots/table.rs (`customListSort`, read from the kept definition attributes) (the
+label sorts SA, SD, NA, SM, CL1 and CL0 pass; the engine's own readings around them are "Label sorts: the engine's own
+readings")
 
 ## Top-N filters at their edges: ties, N past the end, exact thresholds, signs
 Rule, per shape (rows one field, Sum of one data field, one `top10` filter):
@@ -1936,7 +1942,8 @@ Rule, per shape (rows one field, Sum of one data field, one `top10` filter):
   running sum reaches the threshold (the percentage of the grand total, or the `val`): reaching exactly stops (sum
   50 keeps Apple 50 alone, TS50; sum 110 keeps Apple, Kiwi and Fig, TS110; sum 3 keeps 2 and 1, not the 0 after them,
   NS3). **They keep no ties**: of two tied items only the one first in the field's `<items>` order is taken, in
-  either direction. TP40 (percent 40 of 150) and TS60 (sum 60) keep Apple and Kiwi, not Fig; TPb5 (bottom 5 percent)
+  either direction (under a label sort the engine uses the sorted order instead, UNVERIFIED: "Label sorts: the
+  engine's own readings", T-4799). TP40 (percent 40 of 150) and TS60 (sum 60) keep Apple and Kiwi, not Fig; TPb5 (bottom 5 percent)
   and TSb10 (bottom sum 10) keep Pear, not Lime: there the `<items>`, the cache and the source all list Kiwi and Pear
   first. With only the `<item>` elements listing Fig and Lime first (`item_order`; the cache and the source keep Kiwi
   and Pear first), TP40i keeps Fig and TSb10i Lime; with the cache, and the items with it, listing them first
@@ -2044,6 +2051,29 @@ Implemented in: crates/rustsheet-engine/src/pivot/sort.rs (`value_sorts`; T-4827
 SEa, SCd, SCa and SC2, and t4130-pivot-sort SV, SVA, SVC, SVR, SXA, SXR and SV2, pass)
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/sort.rs (`read_auto_sort`; T-4827)
 
+## Label sorts: the engine's own readings
+Rule: none probed; these are what the engine (`pivot::sort::labels`, T-4768) does where the probes are silent (every
+probe's sorted field holds three texts). Each is UNVERIFIED (probe pending: T-4799):
+- a field of mixed item types sorts ascending numbers and dates (by value) first, then the names of the built-in
+  custom lists, then the other texts, then booleans (FALSE first), then errors, as the worksheet's SORT puts numbers
+  before text; descending reverses all of it; a blank item (`(blank)`) sorts last both ways;
+- texts the collation ties (`apple` and `Apple` in one cache) and errors keep the cache order ascending and the reverse
+  descending;
+- under `customListSort`, a name matches a built-in list ignoring ASCII case, and the listed names sort before every
+  other text, by list (abbreviated days, days, abbreviated months, months: the Custom Lists dialog's order) and then
+  by position; only the abbreviated day names are evidenced (CL1), the other three lists are Excel's other built-in
+  lists, unprobed;
+- a field grouped by ranges of numbers or dates sorts its groups in their own order (the cache's), reversed descending,
+  not by their labels' text; a manually grouped field sorts its group labels as texts;
+- a field with an `autoSortScope` is never label-sorted, also when its scope sorts nothing ("Value sorts: ties, blanks
+  and errors"), so it then keeps its `<items>` order;
+- a Top-N filter breaks its ties by the field's display order, the label sort's under one (the `<items>` order with
+  none, "Top-N filters at their edges");
+- a label sort applies to a column field as to a row field, and to an inner field across every parent (K is a row
+  field).
+Evidence: none (engine readings).
+Status: UNVERIFIED (probe pending: T-4799)
+
 ## A field shows its items in the `<items>` order, not the cache's, until a sort applies
 Rule: with no sort (`sortType` absent or `manual`) a field shows its items in the order of its `<item>` elements,
 whatever order the cache lists the shared items in. A label sort or a value sort replaces that order.
@@ -2059,8 +2089,8 @@ Evidence: probes/t4164-pivot-item-order (excel-graph, 2026-11-07, T-4164); `item
 `<item>` elements in an order of their own (T-4164). IOD (`descending`) shows Cat, Bee, Ant, which is also its items
 order, so it does not tell the two apart.
 Status: VERIFIED (excel-graph) for these shapes.
-Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (the items order: IO, IOM and IOO pass); the
-label sorts are T-4768's (IOA)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (the items order: IO, IOM and IOO pass)
+Implemented in: crates/rustsheet-engine/src/pivot/sort/labels.rs (`display_order`; T-4768) (IOA and IOD pass)
 Implemented in: crates/rustsheet-engine/src/pivot/sort.rs (`value_sorts`; T-4827) (IOV passes)
 
 ## useWholeDay: a date filter compares the item's day, not the criterion's

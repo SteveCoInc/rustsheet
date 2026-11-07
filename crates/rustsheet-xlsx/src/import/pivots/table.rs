@@ -399,6 +399,9 @@ impl TableReader<'_> {
             page_wrap: number(element, "pageWrap")?.unwrap_or(defaults.page_wrap),
             page_over_then_down: flag(element, "pageOverThenDown", defaults.page_over_then_down)?,
             grid_drop_zones: flag(element, "gridDropZones", defaults.grid_drop_zones)?,
+            // Read, and kept verbatim for export (not in the root's typed attributes), as a
+            // field's `autoShow` is (T-4768).
+            custom_list_sort: flag(element, "customListSort", defaults.custom_list_sort)?,
         };
         Ok(())
     }
