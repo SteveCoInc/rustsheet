@@ -23,21 +23,19 @@ ctl | LET(e,,TYPE(e))
 ctl | ISEVEN(Z1)
 ctl | ISODD(Z1)
 """
-TAGGED = [tuple(part.strip() for part in line.split(" | ")) for line in ROWS.strip().splitlines()]
+# The formula of each row, in row order (the tag before ` | ` only documents its hypothesis class).
+ROW_FORMULAS = [line.split(" | ", 1)[1].strip() for line in ROWS.strip().splitlines()]
+DESCRIPTION = (
+    "ISEVEN and ISODD of a LET value or LAMBDA parameter bound to nothing (T-4928), with operator and lifted "
+    "forms and non-ToolPak controls (Z1 blank). Predictions in docs/research/t4928/predictions.tsv committed "
+    "before the excel-graph fill: H_na (#N/A for the rule rows) against H_zero (the engine before T-4928)."
+)
 
 
 def main() -> None:
-    case = {
-        "format": "rustsheet-case/v1",
-        "description": (
-            "ISEVEN and ISODD of a LET value or LAMBDA parameter bound to nothing (T-4928), with operator and lifted "
-            "forms and non-ToolPak controls (Z1 blank). Predictions in docs/research/t4928/predictions.tsv committed "
-            "before the excel-graph fill: H_na (#N/A for the rule rows) against H_zero (the engine before T-4928)."
-        ),
-        "tags": ["M5", "information", "probe"],
-        "expected": {},
-        "sheets": [{"name": "Calc", "cells": {f"A{i}": f"={f}" for i, (_, f) in enumerate(TAGGED, start=1)}}],
-    }
+    cells = {f"A{row}": "=" + formula for row, formula in enumerate(ROW_FORMULAS, start=1)}
+    case = {"format": "rustsheet-case/v1", "description": DESCRIPTION, "tags": ["M5", "information", "probe"]}
+    case |= {"expected": {}, "sheets": [{"name": "Calc", "cells": cells}]}
     sys.stdout.write(json.dumps(case, indent=2) + "\n")
 
 

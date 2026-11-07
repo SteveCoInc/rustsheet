@@ -365,8 +365,8 @@ impl Model {
         even: bool,
     ) -> CalcResult {
         // A LET or LAMBDA omission is the `ToolPak` `#N/A`, while an operator over it reads 0
-        // (`LET(e,,ISEVEN(e))` and `LET(e,,ISEVEN(e+0))` TRUE; probes/t4928-iseven-isodd-omitted
-        // A1:A6; T-4928).
+        // (`LET(e,,ISEVEN(e))` is #N/A, `LET(e,,ISEVEN(e+0))` TRUE; probes/t4928-iseven-isodd-omitted
+        // A1:A12; T-4928).
         let empty = self.empty_arguments::<1>(args);
         self.lift_call(kind, args, cell, &mut |model, values| {
             let [value] = values else {
