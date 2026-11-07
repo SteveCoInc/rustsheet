@@ -3,7 +3,7 @@ id: T-4701
 title: "One-index INDEX of a mixed XLOOKUP grid keeps the reference element (t4563 V25:V26)"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -26,9 +26,23 @@ one-element array of references, so `INDEX(INDEX(X(r),2),1,1)` hands the range b
   unprobed: probe it first (excel-probe skill), since the change would reach them too.
 
 ## Acceptance criteria
-- [ ] t4563 V25:V26 pass, with no regression (reference-lift-consumers-b1d E109 and t2577 A100 keep passing).
-- [ ] SPEC-0014 rule 3 and the amendment's INDEX bullet say what is implemented.
-- [ ] `make check` green; reviewers approve.
+- [x] t4563 V25:V26 pass, with no regression (reference-lift-consumers-b1d E109 and t2577 A100 keep passing).
+- [x] SPEC-0014 rule 3 and the amendment's INDEX bullet say what is implemented.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - One index into a grid of several columns (still `#VALUE!`).
+
+## Outcome
+- Probed first, as asked (excel-graph 2026-11-07, probes/t4701-index-one-index-ref-grid, 16 cells). Over a lifted OFFSET,
+  a lifted INDIRECT and the mixed XLOOKUP grid alike, one-index `INDEX(r,2)` is `#VALUE!` as a value, ROWS 1. Where a
+  reference is taken it stays one: `INDEX(INDEX(r,2),1,1)` spills the element's range and its ISREF is TRUE.
+  `SUM(INDEX(r,2))` reads only the element's top-left cell (2 over A2:A3 = 2, 4).
+- Engine: `index_impl`'s body moved into `index_arg` (`functions/lookup_and_reference/index.rs`), which returns a
+  `RefArg`. When one index picks a reference element of a one-column grid, the result is a 1x1 `RefGrid`
+  (`column_element`). `index_impl` reads it by its value view, as before. `evaluate_reference_arg`'s INDEX arm now
+  calls `index_reference_arg`. Value and error elements stay a 1x1 value array.
+- SPEC-0014 rule 3 and the "INDEX, one index" amendment bullet say what is implemented; lookup.md records the
+  top-left SUM quirk.
+- Eval delta: fixed 2 (t4563 Calc!V25:V26) / new-coverage 16 passing cells (1 new case) / regressions 0.
+  reference-lift-consumers-b1d E109 and t2577 A100 still pass.
