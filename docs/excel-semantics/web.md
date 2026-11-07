@@ -168,8 +168,8 @@ data_field 16b67941f34e0346 Calc!A34, A562; referenced data_field 37eb2ebaf9386a
 Calc!A37; field 2963992505456e99 Calc!A175 and 16b67941f34e0346 Calc!A97; item 37eb2ebaf9386ade Calc!A298; order
 2963992505456e99 Calc!A223, A226, ccc550562ee5fd06 Calc!A16, A13 and 37eb2ebaf9386ade Calc!A88; other classes
 16b67941f34e0346 Calc!A4 to A43.
-Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081). Ours: the field and referenced-data_field
-rules are T-4823 (65 cells); the rest matches.
+Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081). Ours: all rules implemented (T-4823; a computed
+error such as NA() as data_field is unprobed and treated as typed).
 
 ## GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)
 Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists "North" as a shared item no record uses
