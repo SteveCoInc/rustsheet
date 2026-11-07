@@ -1944,11 +1944,20 @@ LN, EXP and GAMMALN are Excel's own (`x87_log10.rs`, `x87_exp.rs`, `gammaln.rs`)
   `campaign: visible`; the cdf evidence is mixed (T-3269).
 - Inputs: Excel reads at most 15 significant digits of a typed number, so a probe of `POISSON.DIST(7,1.0999999999999999,FALSE)`
   is a probe at a different mean (the 17-digit cells were dropped from the t2055 probes).
+- The k = 2..5 constants are not Excel's stirlerr, but the exact value is not Excel's pmf either (T-4975 audit 1,
+  engine eval on main 317e3567f plus items 5 and 6). With `stirlerr_exact` at every count, `POISSON.DIST(4,4.8,FALSE)`
+  (t2055-poisson-pmf-sweep A48) becomes Excel's double, but 48 other pmf cells move 1 to 4 ulp
+  off, 46 of them from bit-exact). 9 are gated, the cells listed in `POISSON_STIRLERR_2_TO_5`'s comment: gen-m9 b9a32ce9a1fd0d71 A183,
+  5cebac1f02bf30f2 A362, c7664e494e418395 A370, 91e167cd8d7eb652 A260, 7fd0a98183c6babf A107, a5342a7e24fd803e A47,
+  5919660b7bb4d195 A50, 1b31092a0d79e5f1 A358 and ironcalc-calc POISSON.xlsx D9. A GAMMALN-based Stirling error
+  `GAMMALN(k+1) - (k+0.5)*LN(k) + k - LN(SQRT(2*PI()))` in seven operation orders, on the engine's x87 GAMMALN and LN,
+  is 9 to 458 ulp from the exact value at k = 2 to 6, nowhere near the constants' -13, -12, -29 and -34. So the
+  constants stay until T-3247 finds the cause.
 Evidence: probes-numeric/t2055-poisson-pmf-sweep, t2055-poisson-pmf-switch, t1048-poisson (excel-graph, 2026-10-30 and
 2026-10-14); gen-m9 POISSON and POISSON.DIST cells (excel-graph); ironcalc-calc STATISTICAL/POISSON.xlsx (Excel-cached).
 Ours: `statistical/poisson.rs` `excel_poisson_pmf`, on `loader.rs` `excel_bd0` and `stirlerr_exact`.
 Status: VERIFIED (excel-graph) for the two forms and the switch; the k = 2..5 stirlerr is a fitted proxy
-Tasks: T-2055
+Tasks: T-2055, T-4975
 
 ## Overflowing arguments, PERMUT's limit and argument error order (T-1290)
 Rule: an F.DIST, F.DIST.RT or FDIST call whose `deg_freedom1 * x` overflows a double is `#DIV/0!` for the cdf and the
