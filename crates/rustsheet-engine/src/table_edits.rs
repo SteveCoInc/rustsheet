@@ -5,7 +5,7 @@
 //! text. Every other edit that crosses a table leaves it
 //! as it is (the *fallback*): its references print the displaced area, as before SPEC-0016.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::parser::parse_range;
@@ -14,7 +14,7 @@ use crate::expressions::types::Area;
 use crate::expressions::utils::number_to_column;
 use crate::formula_rewrite::RewrittenCell;
 use crate::model::Model;
-use crate::types::{FilterColumn, Table, TableColumn};
+use crate::types::{FilterColumn, FilterCriterion, Row, Table, TableColumn};
 
 /// What a structural edit does to the tables of the edited sheet.
 #[derive(Debug, Default, PartialEq)]
@@ -369,13 +369,15 @@ fn edit_filter_columns(filters: &mut Vec<FilterColumn>, edit: ColumnEdit) {
 /// here too. The caller only ever clears the flag with this: a table the import left unfiltered
 /// (a criterion-less or out-of-range filterColumn) stays so. A criterion-less column counts here,
 /// since [`crate::types::FilterCriterion::Other`] also holds a criterion the import read but could
-/// not check. Excel unfilters the table when a delete in the application takes the filtered
-/// column, and shows the rows it hid (probes/t4371-filtered-table-delete-filtered-column, T-4371).
+/// not check. An empty values filter does not count: Excel reads the `<filters/>` the export
+/// writes for it as no criterion (T-4749). Excel unfilters the table when a delete in the
+/// application takes the filtered column, and shows the rows it hid
+/// (probes/t4371-filtered-table-delete-filtered-column, T-4371).
 fn kept_filter_inside(table: &Table) -> bool {
-    table
-        .filter_columns
-        .iter()
-        .any(|f| usize::try_from(f.col_id).is_ok_and(|id| id < table.columns.len()))
+    table.filter_columns.iter().any(|f| {
+        usize::try_from(f.col_id).is_ok_and(|id| id < table.columns.len())
+            && !f.criterion.is_empty_values()
+    })
 }
 
 /// Appends one column to `columns` and returns its name: `name` when no column of the table has
@@ -598,6 +600,7 @@ impl Model {
         }
         let mut headers = Vec::new();
         let mut shown = Vec::new();
+        let mut reapplied = Vec::new();
         for (name, resized) in resized {
             if let Some(table) = self.workbook.tables.get_mut(&name) {
                 table.reference = resized.reference;
@@ -612,8 +615,12 @@ impl Model {
                         // first column (T-4363), so deleting that column takes the filter.
                         table.has_filters &= edit.delta >= 0 || edit.index > 0;
                     } else {
+                        let criteria = table.filter_columns.len();
                         edit_filter_columns(&mut table.filter_columns, edit);
                         table.has_filters &= kept_filter_inside(table);
+                        if filtered && table.has_filters && table.filter_columns.len() < criteria {
+                            reapplied.push(name.clone());
+                        }
                     }
                     if filtered && !table.has_filters {
                         // Excel shows the rows the filter hid once a delete in the application takes
@@ -625,21 +632,94 @@ impl Model {
                 }
             }
         }
-        if !shown.is_empty() {
+        let mut decided = HashMap::new();
+        for name in reapplied {
+            if let Some(table) = self.workbook.tables.get(&name) {
+                decided.extend(self.rows_decided_by_criteria(sheet, table)?);
+            }
+        }
+        if !shown.is_empty() || !decided.is_empty() {
             // One pass over the sheet's stored rows: a table may span a million rows.
             let rows = &mut self.workbook.worksheet_mut(sheet)?.rows;
-            for row in rows
-                .iter_mut()
-                .filter(|r| shown.iter().any(|&(a, b)| (a..=b).contains(&r.r)))
-            {
-                row.hidden = false;
+            let mut stored = HashSet::new();
+            for row in rows.iter_mut() {
+                stored.insert(row.r);
+                if let Some(&hidden) = decided.get(&row.r) {
+                    row.hidden = hidden;
+                } else if shown.iter().any(|&(a, b)| (a..=b).contains(&row.r)) {
+                    row.hidden = false;
+                }
             }
+            // A row the kept criteria reject that has no record yet gets one, hidden.
+            let mut new: Vec<i32> = (decided.iter())
+                .filter(|&(r, &hidden)| hidden && !stored.contains(r))
+                .map(|(&r, _)| r)
+                .collect();
+            new.sort_unstable();
+            rows.extend(new.into_iter().map(Row::hidden_default));
         }
         for (row, column, name) in headers {
             self.update_cell_with_text(sheet, row, column, &name)?;
         }
         self.reset_tables();
         Ok(())
+    }
+
+    /// Whether each data row of the filtered table `table` on `sheet` is hidden once its kept
+    /// criteria inside it are re-applied, by the text each row's cell displays in the
+    /// criterion's column. Excel re-applies them to every data row once a column delete takes one
+    /// of the table's criteria and leaves another: a hidden row they all keep is shown
+    /// (probes/t4755-two-criteria-filtered-table-delete-one, rows 3 and 7; T-4803) and a visible
+    /// row one rejects is hidden (probes/t4895-two-criteria-number-format-delete-one, every row:
+    /// the General text "10" matches no "10.00"; docs/research/t4939, the display-text control
+    /// shows the rows its "10.00" .. "60.00" keep; T-4939). A row that a criterion
+    /// [`FilterCriterion::keeps_text`] cannot tell keeps does not appear unless another one
+    /// rejects it. The first record of a row decides its current state, as in
+    /// [`Model::is_row_hidden`]; only rows whose state changes are returned.
+    fn rows_decided_by_criteria(
+        &self,
+        sheet: u32,
+        table: &Table,
+    ) -> Result<Vec<(i32, bool)>, String> {
+        let Some(bounds) = bounds(table) else {
+            return Ok(Vec::new());
+        };
+        let columns: Vec<(i32, &FilterCriterion)> = (table.filter_columns.iter())
+            .filter_map(|f| {
+                let offset = i32::try_from(f.col_id).ok()?;
+                let column = bounds.left.checked_add(offset)?;
+                (column <= bounds.right).then_some((column, &f.criterion))
+            })
+            .collect();
+        let (first, last) = bounds.data;
+        let mut hidden_now = HashMap::new();
+        for record in &self.workbook.worksheet(sheet)?.rows {
+            if (first..=last).contains(&record.r) {
+                hidden_now.entry(record.r).or_insert(record.hidden);
+            }
+        }
+        let mut decided = Vec::new();
+        for row in first..=last {
+            let mut verdict = Some(true);
+            for &(column, criterion) in &columns {
+                let text = self.get_formatted_cell_value(sheet, row, column)?;
+                match criterion.keeps_text(&text) {
+                    Some(false) => {
+                        verdict = Some(false);
+                        break;
+                    }
+                    None => verdict = None,
+                    Some(true) => {}
+                }
+            }
+            let was_hidden = hidden_now.get(&row).copied().unwrap_or(false);
+            if let Some(keeps) = verdict {
+                if keeps == was_hidden {
+                    decided.push((row, !keeps));
+                }
+            }
+        }
+        Ok(decided)
     }
 
     /// Refuses the insert of `count` rows at `row` on `sheet` that would push a table off the sheet
@@ -691,9 +771,10 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::{
-        append_column, column_span, edit_columns, edit_filter_columns, row_span, ColumnEdit, Span,
+        append_column, column_span, edit_columns, edit_filter_columns, kept_filter_inside,
+        row_span, ColumnEdit, Span,
     };
-    use crate::types::{FilterColumn, FilterCriterion, TableColumn};
+    use crate::types::{FilterColumn, FilterCriterion, Table, TableColumn, TableStyleInfo};
 
     /// Header row 3, data rows 4-7, no totals row.
     fn rows(at: i32, delta: i32) -> Span {
@@ -827,6 +908,45 @@ mod tests {
             },
         );
         assert_eq!(names(&columns), [(3, "Price")]);
+    }
+
+    /// An empty values filter is no kept criterion: Excel reads its `<filters/>` as none (T-4749).
+    #[test]
+    fn an_empty_values_filter_is_no_kept_criterion() {
+        let values = |values: &[&str], blank| FilterCriterion::Values {
+            values: values.iter().map(|v| (*v).to_string()).collect(),
+            blank,
+            calendar_type: None,
+            date_groups: Vec::new(),
+        };
+        let table = |criterion| Table {
+            name: "T".to_string(),
+            display_name: "T".to_string(),
+            reference: "A1:B3".to_string(),
+            totals_row_count: 0,
+            header_row_count: 1,
+            header_row_dxf_id: None,
+            data_dxf_id: None,
+            totals_row_dxf_id: None,
+            columns: named(&["Cat", "Val"]),
+            style_info: TableStyleInfo {
+                name: None,
+                show_first_column: false,
+                show_last_column: false,
+                show_row_stripes: true,
+                show_column_stripes: false,
+            },
+            has_filters: true,
+            filter_columns: vec![FilterColumn {
+                col_id: 1,
+                criterion,
+            }],
+            sheet_name: "S".to_string(),
+        };
+        assert!(!kept_filter_inside(&table(values(&[], false))));
+        assert!(kept_filter_inside(&table(values(&[], true))));
+        assert!(kept_filter_inside(&table(values(&["a"], false))));
+        assert!(kept_filter_inside(&table(FilterCriterion::Other)));
     }
 
     /// Kept filter criteria follow their columns through an insert and a delete (T-2838).

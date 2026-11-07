@@ -98,6 +98,7 @@ fn unused_items_follow_the_records_items_and_show_all_is_the_row_fields() {
     assert_eq!(pivot.fields[0].hidden.len(), 1);
     // On a grouped row field their place among the group items is unprobed: refused.
     let grouped = PivotTableInput {
+        name: "Grouped".into(),
         group: Some(PivotRangeGroup {
             by: None,
             start: 0.0,
@@ -377,6 +378,12 @@ fn show_all_lays_out_and_answers_the_empty_groups() {
     assert_eq!(wb.value("G1").unwrap(), 0.0.into());
     assert_eq!(wb.value("G2").unwrap(), 0.0.into());
     assert_eq!(wb.value("G3").unwrap(), 6.0.into());
+    // Grouped in place, N keeps the values it was read with, which the xlsx export writes back
+    // as its shared items (T-4734).
+    let own = wb.model.workbook.pivot_caches[0].fields[0]
+        .ungrouped
+        .as_ref();
+    assert_eq!(own.map(|own| own.items.len()), Some(4));
 }
 
 /// A column field's unused items are appended to its cache items and it takes

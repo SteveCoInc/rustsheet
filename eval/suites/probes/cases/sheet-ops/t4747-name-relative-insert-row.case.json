@@ -1,0 +1,51 @@
+{
+  "format": "rustsheet-case/v1",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "description": "T-4747: workbook name Rel = =Data!A5 (relative; file text is anchored at A1) used from Calc!A1 and Calc!A3, after insert_row 4 on Data (Data!An = n*10). Prediction if the name shifts and stays relative to the using cell: A1 50 (Data!A6 = old row 5), A3 70 (Data!A8 = old row 7). If it does not shift: A1 40, A3 60.",
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=Rel",
+        "A3": "=Rel"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A1": 10,
+        "A2": 20,
+        "A3": 30,
+        "A4": 40,
+        "A5": 50,
+        "A6": 60,
+        "A7": 70,
+        "A8": 80,
+        "A9": 90,
+        "A10": 100,
+        "A11": 110,
+        "A12": 120
+      }
+    }
+  ],
+  "names": {
+    "Rel": "=Data!A5"
+  },
+  "sheet_ops": [
+    {
+      "op": "insert_row",
+      "sheet": "Data",
+      "row": 4
+    }
+  ],
+  "check": [
+    "Calc!A1",
+    "Calc!A3"
+  ],
+  "expected": {}
+}

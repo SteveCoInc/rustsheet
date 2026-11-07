@@ -5,11 +5,12 @@ use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, value_error};
 use crate::functions::statistical::beta_density::beta_density_small_shape;
 use crate::functions::statistical::bratio::{
-    beta_dist_cdf, beta_search_tails, dispatch, l140_overflows, Branch,
+    beta_dist_cdf, beta_search_tails, bfrac_shapes_absorbed, dispatch, first_shape_absorbs,
+    l140_overflows, Branch,
 };
 use crate::functions::statistical::incomplete_beta::beta_density;
 use crate::functions::statistical::inverse_beta::{beta_inverse_cdf, beta_quantile_crossing};
-use crate::functions::statistical::loader::excel_beta_density;
+use crate::functions::statistical::loader::{beta_density_counts_vanish, excel_beta_density};
 use crate::functions::statistical::special::{ln_gamma, nearest_crossing_from, refine_increasing};
 use crate::functions::Function;
 use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
@@ -36,7 +37,7 @@ const BETA_QUANTILE_STATRS_P_MIN: f64 = 1e-15;
 /// as for F.INV (T-0974). At most 512 Newton steps and 129 cdfs, or 65 cdfs without a start. A
 /// shape above 1E5 takes T-1538's crossing instead (above).
 fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
-    if first_shape_square_overflows(alpha, beta, p) {
+    if first_shape_square_overflows(alpha, beta, p) || newton_density_vanishes(alpha, beta, p) {
         return f64::NAN;
     }
     if alpha > BETA_QUANTILE_STATRS_SHAPE_MAX || beta > BETA_QUANTILE_STATRS_SHAPE_MAX {
@@ -88,6 +89,23 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
 fn first_shape_square_overflows(alpha: f64, beta: f64, p: f64) -> bool {
     let first = if p > 0.5 { beta } else { alpha };
     (first * first).is_infinite()
+}
+
+/// Whether AS 109's Newton step has no density: Excel's BETA.DIST density at the shapes after the
+/// flip (alpha, beta for p up to 1/2; beta, alpha above it) is `#NUM!` at every x
+/// ([`beta_density_counts_vanish`]), and BETA.INV and BETAINV are `#NUM!` on exactly those
+/// shapes, whatever p: `BETA.INV(0.1,1E+16,2)` is `#NUM!` while `BETA.INV(0.1,9.44060876285923E+15,2)`
+/// and `BETA.INV(0.1,1.81970085860999E+16,2)` around it are numbers, and the flipped
+/// `BETA.INV(0.9,a,2)` is a number at every a from 1E+15 to 1E+16, on 469 of the 469 BETA.INV cells
+/// with both shapes above 1 of probes/t4713-beta-inv-cut-pieces, t4713-beta-inv-beta-above-1-cut
+/// and the two t3862 cases (docs/excel-semantics/statistics.md "BETA.INV and BETA.DIST's density
+/// are #NUM! where Loader's n - k is not positive (T-4713)").
+fn newton_density_vanishes(alpha: f64, beta: f64, p: f64) -> bool {
+    if p > 0.5 {
+        beta_density_counts_vanish(beta, alpha)
+    } else {
+        beta_density_counts_vanish(alpha, beta)
+    }
 }
 
 /// Whether the x with `I_x(alpha, beta) = p` lies below the smallest normal double, where the
@@ -250,7 +268,9 @@ impl Model {
             // A subnormal cdf is kept only at beta = 1, the closed form t^alpha, and is 0 at any
             // other beta, 1.0000001 included (`(x)=0` FALSE at B2, B3, B6, B7, B11, B12 of
             // probes/t2737-subnormal-cdf-shapes, TRUE at B1, B4, B5, B8:B10; T-2737).
-            if l140_overflows(alpha, beta_param, t, 1.0 - t) {
+            if l140_overflows(alpha, beta_param, t, 1.0 - t)
+                || bfrac_shapes_absorbed(alpha, beta_param, t, 1.0 - t)
+            {
                 return Err(num_error(cell));
             }
             let cdf = beta_dist_cdf(t, 1.0 - t, alpha, beta_param);
@@ -260,6 +280,20 @@ impl Model {
                 flush_subnormal(cdf)
             }
         } else {
+            // On the Loader branch (both shapes above 1) the density is #NUM! where alpha absorbs
+            // beta, as the cdf is on bfrac: `BETA.DIST(0.32..,6E+17,41,FALSE)`
+            // and `BETA.DIST(0.1,1E+200,2,FALSE)` are #NUM! (probes/t4238-negbinom-bfrac-huge-s,
+            // t3007-beta-dist-ln-x-overflow A20; T-4238), while `BETA.DIST(0.1,1E+290,0.5,FALSE)`,
+            // off that branch, is 0 (t3007 A6).
+            // It is #NUM! as well wherever Loader's count n - k is not positive, at every x
+            // (`BETA.DIST(1-2^-51,1E+16,2,FALSE)`, probes/t4713-beta-inv-cut-pieces H11; T-4713).
+            if alpha > 1.0
+                && beta_param > 1.0
+                && (first_shape_absorbs(alpha, beta_param)
+                    || beta_density_counts_vanish(alpha, beta_param))
+            {
+                return Err(num_error(cell));
+            }
             // general-interval beta pdf: f_X(x) = f_T(t) / (B - A), t=(x-A)/(B-A). A subnormal
             // density is 0, as in Excel (`(x)=0` TRUE: probes-numeric/t2513-r3-m1-residual-hold E863,
             // E875, E957; docs/excel-semantics/numbers.md "Distribution densities"). Both shapes
@@ -348,6 +382,18 @@ impl Model {
 mod tests {
     use super::beta_quantile;
     use crate::functions::statistical::bratio::beta_dist_lower_tail;
+
+    // Excel's BETA.INV is #NUM! exactly where Loader's n - k vanishes at the flipped shapes
+    // (probes/t4713-beta-inv-beta-above-1-cut A40, A41, E41; t4713-beta-inv-cut-pieces A1, K37;
+    // T-4713): 9.44E+15 and 1.82E+16 keep a number, 1E+16 is #NUM!, and p above 1/2 takes
+    // (beta, alpha), whose count is positive.
+    #[test]
+    fn quantile_is_nan_where_loader_count_vanishes() {
+        assert!(beta_quantile(1e16, 2.0, 0.1).is_nan());
+        assert!(beta_quantile(9.440_608_762_859_23e15, 2.0, 0.1) < 1.0);
+        assert!(beta_quantile(1.819_700_858_609_99e16, 2.0, 0.1) < 1.0);
+        assert!(!beta_quantile(1.5e15, 2.0, 0.9).is_nan());
+    }
 
     #[test]
     fn quantile_is_the_crossing_of_beta_dist_own_cdf() {

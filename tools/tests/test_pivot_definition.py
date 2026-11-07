@@ -293,7 +293,7 @@ def test_calculated_fields_page_fields_and_numeric_groups() -> None:
                 "data": [{"field": "Sales"}],
                 "fields": {"Region": {"xml": {"items": "<items/>"}}},
             },
-            "are ['autoSortScope', 'extLst']",
+            "are ['autoSortScope', 'extLst', 'groupItems']",
         ),
     ],
 )
@@ -450,3 +450,39 @@ def test_sort_scope_page_attributes_and_calculated_items() -> None:
 def test_calculated_item_refusals(items: list[dict[str, Any]], message: str) -> None:
     with pytest.raises(ValueError, match=message):
         build_xlsx(_spec({"rows": ["Product"], "data": [{"field": "Sales"}], "calculated_items": items}))
+
+
+def test_item_order_orders_the_items_but_not_the_cache() -> None:
+    # T-4164: `item_order` permutes the `<item>` elements only, so the cache keeps first-seen order.
+    parts = _parts(
+        _spec(
+            {
+                "rows": ["Product"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Product": {"item_order": ["C", "A"]}},
+            }
+        )
+    )
+    table = parts["xl/pivotTables/pivotTable1.xml"]
+    assert '<items count="4"><item x="2"/><item x="0"/><item x="1"/><item t="default"/></items>' in table
+    cache = parts["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert '<s v="A"/><s v="B"/><s v="C"/>' in cache
+
+
+@pytest.mark.parametrize(
+    ("item_order", "message"),
+    [
+        ("A", "is a list of items"),
+        (["Z"], "is not in field"),
+        (["A", "A"], "repeats an item"),
+    ],
+)
+def test_item_order_refusals(item_order: object, message: str) -> None:
+    # T-4164: the refusals the Rust builder mirrors (pivot_definition/item_order.rs).
+    definition = {
+        "rows": ["Product"],
+        "data": [{"field": "Sales"}],
+        "fields": {"Product": {"item_order": item_order}},
+    }
+    with pytest.raises(ValueError, match=message):
+        _parts(_spec(definition))

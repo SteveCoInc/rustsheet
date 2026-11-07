@@ -173,23 +173,19 @@ impl PartialEq for NestedArray {
 }
 
 impl ArrayNode {
-    /// The value an element-wise lift reads of this element: a `Nested` cell's top-left,
-    /// taken again while that is nested (assumed for two levels, T-2609), `#VALUE!` for a
-    /// `Reference` cell (unprobed, T-2609); any other element itself (SPEC-0018 "One reader",
-    /// rule 4: `SUM(--ISERROR(GROUPBY(..)))` counts only top-left errors, probes/t2360 P!C33).
+    /// The value an element-wise lift reads of this element: `#VALUE!` for any nested cell,
+    /// whatever its kind, depth or top-left; any other element itself (SPEC-0018 "One reader",
+    /// rule 4). Excel since 2026-11 (decision 0329): `ERROR.TYPE` lifted over a GROUPBY is 3 at
+    /// every nested cell, one-level, two-level (also when the inner top-left is `#N/A`),
+    /// reference-body and PIVOTBY alike, and LEN, ABS, UPPER, ROUND and NOT give `#VALUE!` there
+    /// (probes/t4737-nested-cell-lift-error-type A1:A14; t2360-refill-1106 P!C33,
+    /// t2609-nested-operators-and-lifts A44:A47). Lifts not probed follow the same read, generalized
+    /// from the probed ones (docs/excel-semantics/arrays.md).
     pub(crate) fn scalar(&self) -> &ArrayNode {
-        let mut node = self;
-        // Each step goes one level down, so this ends within `MAX_NESTED_DEPTH` steps.
-        while let ArrayNode::Nested(nested) = node {
-            if nested.kind == NestedKind::Reference {
-                return &VALUE_ERROR;
-            }
-            match nested.rows.first().and_then(|row| row.first()) {
-                Some(first) => node = first,
-                None => return &VALUE_ERROR,
-            }
+        match self {
+            ArrayNode::Nested(_) => &VALUE_ERROR,
+            other => other,
         }
-        node
     }
 }
 
@@ -261,10 +257,11 @@ mod tests {
     }
 
     #[test]
-    fn scalar_reads_the_top_left_through_two_levels() {
+    fn scalar_reads_any_nested_cell_as_value_error() {
         let inner = nested(vec![vec![ArrayNode::Error(Error::NA)], vec![number(3.0)]]);
-        let outer = nested(vec![vec![inner], vec![number(4.0)]]);
-        assert_eq!(outer.scalar(), &ArrayNode::Error(Error::NA));
+        let outer = nested(vec![vec![inner.clone()], vec![number(4.0)]]);
+        assert_eq!(outer.scalar(), &ArrayNode::Error(Error::VALUE));
+        assert_eq!(inner.scalar(), &ArrayNode::Error(Error::VALUE));
         assert_eq!(number(5.0).scalar(), &number(5.0));
         let reference = ArrayNode::Nested(Arc::new(
             NestedArray::new(vec![vec![number(10.0)]], NestedKind::Reference).unwrap(),

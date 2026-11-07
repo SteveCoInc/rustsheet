@@ -1,0 +1,110 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "What a column edit made in the application does to the hidden rows of a filtered table. Table Sales on S!A1:C7 (Cat a,b,a,c,a,b; Val 1-6; Ext 10-60). Sheet F: A1:A4 SUBTOTAL 3, 103, 9, 109 over Sales[Val]; A5:A8 the same over Sales[Ext]; A9 ROWS(Sales); A10 COLUMNS(Sales); B2:B7 SUBTOTAL(3,S!Bn) and C2:C7 SUBTOTAL(103,S!Bn) per data row (they follow the delete). SUBTOTAL 3 skips filtered rows and counts rows hidden by hand, 103 skips both (T-4371). A values filter on Cat keeps \"a\" and \"c\" (rows 3 and 7 filtered) and row 4 (\"a\", kept by the filter) is hidden by hand. No edit (control for the delete case). (T-4755)",
+  "tags": [
+    "M8",
+    "tables",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "C1": "Ext",
+        "A2": "a",
+        "B2": 1,
+        "C2": 10,
+        "A3": "b",
+        "B3": 2,
+        "C3": 20,
+        "A4": "a",
+        "B4": 3,
+        "C4": 30,
+        "A5": "c",
+        "B5": 4,
+        "C5": 40,
+        "A6": "a",
+        "B6": 5,
+        "C6": 50,
+        "A7": "b",
+        "B7": 6,
+        "C7": 60
+      },
+      "hidden_rows": [
+        3,
+        4,
+        7
+      ],
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "A1:C7",
+          "filter": true,
+          "criteria": [
+            {
+              "column": 0,
+              "hides": [
+                3,
+                7
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUBTOTAL(3,Sales[Val])",
+        "A2": "=SUBTOTAL(103,Sales[Val])",
+        "A3": "=SUBTOTAL(9,Sales[Val])",
+        "A4": "=SUBTOTAL(109,Sales[Val])",
+        "A5": "=SUBTOTAL(3,Sales[Ext])",
+        "A6": "=SUBTOTAL(103,Sales[Ext])",
+        "A7": "=SUBTOTAL(9,Sales[Ext])",
+        "A8": "=SUBTOTAL(109,Sales[Ext])",
+        "A9": "=ROWS(Sales)",
+        "A10": "=COLUMNS(Sales)",
+        "B2": "=SUBTOTAL(3,S!B2)",
+        "C2": "=SUBTOTAL(103,S!B2)",
+        "B3": "=SUBTOTAL(3,S!B3)",
+        "C3": "=SUBTOTAL(103,S!B3)",
+        "B4": "=SUBTOTAL(3,S!B4)",
+        "C4": "=SUBTOTAL(103,S!B4)",
+        "B5": "=SUBTOTAL(3,S!B5)",
+        "C5": "=SUBTOTAL(103,S!B5)",
+        "B6": "=SUBTOTAL(3,S!B6)",
+        "C6": "=SUBTOTAL(103,S!B6)",
+        "B7": "=SUBTOTAL(3,S!B7)",
+        "C7": "=SUBTOTAL(103,S!B7)"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4",
+    "F!A5",
+    "F!A6",
+    "F!A7",
+    "F!A8",
+    "F!A9",
+    "F!A10",
+    "F!B2",
+    "F!C2",
+    "F!B3",
+    "F!C3",
+    "F!B4",
+    "F!C4",
+    "F!B5",
+    "F!C5",
+    "F!B6",
+    "F!C6",
+    "F!B7",
+    "F!C7"
+  ]
+}

@@ -582,7 +582,8 @@ impl RunReport {
             let errors = st(CaseStatus::EngineError)
                 + st(CaseStatus::Panic)
                 + st(CaseStatus::Timeout)
-                + st(CaseStatus::InvalidCase);
+                + st(CaseStatus::InvalidCase)
+                + st(CaseStatus::ExcelRefused);
             let crashes =
                 st(CaseStatus::EngineError) + st(CaseStatus::Panic) + st(CaseStatus::Timeout);
             let _ = writeln!(
@@ -680,6 +681,7 @@ impl RunReport {
                         | CaseStatus::Panic
                         | CaseStatus::Timeout
                         | CaseStatus::InvalidCase
+                        | CaseStatus::ExcelRefused
                 )
             })
             .collect();
@@ -750,6 +752,7 @@ impl RunReport {
             let _ = writeln!(md);
         }
         crate::pivot_scoring::write_markdown(&self.cases, &mut md);
+        crate::pivot_freshness::write_markdown(&self.cases, &mut md);
         self.write_evidence(&mut md);
         catalog_coverage::write_markdown(&self.catalog_coverage, &mut md);
         crate::pivot_features::write_markdown(&self.pivot_features, &mut md);

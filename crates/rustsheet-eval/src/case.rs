@@ -137,6 +137,16 @@ pub struct SheetSpec {
     /// `rendered` cells and registers the pivot over its source (T-2084).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivot_tables: Vec<PivotTableSpec>,
+    /// Slicers, each on a field of a defined pivot or a table column, written by spec2xlsx
+    /// (`tools/src/rustsheet_tools/pivot_slicers.py`, T-4767), as the builder's JSON. The engine
+    /// adapter loads a pivot slicer's cache part with the pivot it drives (T-4188); a table
+    /// slicer is not modelled.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub slicers: Vec<serde_json::Value>,
+    /// Timelines, each on a date field of a defined pivot (`pivot_slicers.py`, T-4767); the
+    /// engine adapter loads each one's cache part with its pivot (T-4188).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub timelines: Vec<serde_json::Value>,
     /// A1 address → number format code (`"[h]:mm"`), applied to that cell whatever it holds
     /// (T-1268). spec2xlsx writes it as the cell's `numFmt`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -183,6 +193,11 @@ pub struct TableSpec {
     /// under `colId` 0.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub filter_column: Option<FilterColumnSpec>,
+    /// spec2xlsx's per-column values filters (T-4755): each rejects exactly its `hides` rows, and a
+    /// hidden data row none hides is one the filters keep. The engine adapter gives the table each
+    /// criterion with `Txn::filter_table_column`, which derives the same values filter (T-4803).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub criteria: Vec<CriterionSpec>,
     /// The last row of `range` is the table's totals row (T-1607; the engine adapter adds it with
     /// `Txn::add_table_with_totals`, T-1671).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -198,6 +213,16 @@ pub struct TableSpec {
     /// each with `Txn::set_table_column_formula` (T-3033).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub calculated: BTreeMap<String, String>,
+}
+
+/// One values filter of a spec table's `criteria` (T-4755).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CriterionSpec {
+    /// The filtered column, 0-based in the table.
+    pub column: u32,
+    /// The 1-based sheet rows the filter rejects; each must be one of the sheet's `hidden_rows`.
+    pub hides: Vec<u32>,
 }
 
 /// The `<filterColumn>` of a filtered spec table (T-4003): Excel calls the hidden rows filtered
@@ -598,6 +623,10 @@ pub struct OracleFile {
     /// T-4124.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivots: Vec<OraclePivot>,
+    /// Excel's error text when it would not open the workbook (an engine-export case, T-4177):
+    /// SPEC-0033's `excel-refused` verdict, which always fails. `sheets` is then empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refused: Option<String>,
 }
 
 /// A pivot of an oracle sidecar: Excel's saved definition (location, layout lines, group labels)

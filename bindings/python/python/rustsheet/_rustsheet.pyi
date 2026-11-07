@@ -4,7 +4,7 @@ The extension also defines the deprecated legacy classes; their stubs live in
 ``legacy.pyi`` (SPEC-0026) and are re-exported here.
 """
 
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 from rustsheet.legacy import CellType as CellType
 from rustsheet.legacy import Model as Model
@@ -41,6 +41,16 @@ class Formula:
 
 CellValue = float | str | bool | XlError | None
 EditValue = float | str | bool | XlError | Formula | None
+PivotFunction = Literal["sum", "count", "average", "max", "min"]
+
+class PivotTable(TypedDict):
+    name: str
+    sheet: str
+    location: str
+    source: str | None
+    row_fields: list[str]
+    column_fields: list[str]
+    data_fields: list[str]
 
 class Transaction:
     def __enter__(self) -> Transaction: ...
@@ -67,6 +77,49 @@ class Transaction:
 
         EditError (invalid or taken name, overlap, no data row, bad header) or RefError (unknown
         sheet) surfaces when the `with` block exits and rolls the block back.
+        """
+    def add_pivot_table(
+        self,
+        name: str,
+        *,
+        source: str,
+        location: str,
+        row: str,
+        value: str,
+        column: str | None = None,
+        function: PivotFunction = "sum",
+        caption: str | None = None,
+    ) -> None:
+        """Create the pivot table `name` and lay it out from the top-left cell of `location`.
+
+        `function` of the field `value` per item of `row` (and of `column`); `caption` defaults to
+        `<Function> of <field>` (`"Sum of Sales"`, the case builder's; Excel's own is unprobed,
+        T-2327). A missing or unknown keyword raises TypeError and an unknown
+        function ValueError at once; EditError (bad field, taken name, a limit) or RefError
+        (unknown sheet) surfaces when the `with` block exits and rolls the block back.
+        """
+    def set_pivot_table(
+        self,
+        sheet: str,
+        name: str,
+        *,
+        source: str,
+        location: str,
+        row: str,
+        value: str,
+        column: str | None = None,
+        function: PivotFunction = "sum",
+        caption: str | None = None,
+    ) -> None:
+        """Replace the fields and options of the pivot `name` on `sheet` in place.
+
+        `location` must keep the pivot's anchor; cells it no longer covers are cleared. Errors as
+        `add_pivot_table`, and EditError for an unknown pivot.
+        """
+    def refresh_pivot_table(self, sheet: str, name: str) -> None:
+        """Refresh the pivot `name` on `sheet` from its source (a source edit does not).
+
+        EditError for an unknown pivot surfaces when the `with` block exits.
         """
     def add_sheet(self, name: str) -> None: ...
     def rename_sheet(self, name: str, new_name: str) -> None: ...
@@ -148,6 +201,25 @@ class Workbook:
     def set_track_changes(self, on: bool) -> None: ...
     def set(self, ref: str, value: EditValue) -> None: ...
     def edit(self) -> Transaction: ...
+    def pivot_table(self, sheet: str, name: str) -> PivotTable | None:
+        """The pivot table `name` on `sheet`, or None; RefError for an unknown sheet.
+
+        It reads the definition only; `pivot_table_cells` computes the layout.
+        """
+    def pivot_table_cells(self, sheet: str, name: str) -> dict[str, CellValue]:
+        """The cells a layout of the pivot would write now, A1 to value (computed on each call).
+
+        `#SPILL!` at the anchor when the layout would meet a cell the pivot does not own.
+        EditError for an unknown pivot or one past a limit, RefError for an unknown sheet.
+        """
+    def pivot_cell_records(self, sheet: str, name: str, a1: str) -> list[int]:
+        """The source records behind the value cell `a1` (`"B5"` or `"Sheet!B5"`) of the pivot.
+
+        Record indices in record order, 0 for the row below the source's header: a data cell's
+        records, a subtotal's or a grand total's, after the pivot's filters; a value cell no
+        record reaches has none. EditError for a cell that is no value cell (a label, a header,
+        outside the pivot), an unknown pivot or one past a limit; RefError for an unknown sheet.
+        """
     @property
     def changes(self) -> dict[str, list[dict[str, Any]]] | None: ...
 

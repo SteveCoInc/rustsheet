@@ -10,6 +10,10 @@
 
 use bitcode::{Decode, Encode};
 
+use super::filter::{AutoShow, PivotFilter};
+use super::slicer::DateSpan;
+use super::sort::AutoSortScope;
+
 /// `dataField@baseItem` when absent: no base item (MS-OI29500 §18.10.1.22, §18.10.1.44).
 pub const NO_BASE_ITEM: u32 = 1_048_832;
 
@@ -38,6 +42,10 @@ pub struct PivotTable {
     pub data_fields: Vec<DataField>,
     /// The pivot-wide layout flags and captions.
     pub options: PivotOptions,
+    /// `<filters>`, in file order (`pivot::filter`). The importer reads them from the
+    /// `<filters>` element it keeps in [`PivotTable::opaque`], which is what the export writes
+    /// (T-4165).
+    pub filters: Vec<PivotFilter>,
     /// The definition's elements and attributes the model does not read, verbatim.
     ///
     /// The export (T-4176) writes each entry back into the part as it is, unescaped and
@@ -64,6 +72,7 @@ impl PivotTable {
             page_fields: Vec::new(),
             data_fields: Vec::new(),
             options: PivotOptions::default(),
+            filters: Vec::new(),
             opaque: Vec::new(),
         }
     }
@@ -136,6 +145,13 @@ pub struct PivotOptions {
     /// line `Total`, and puts the data caption at the location's corner
     /// (docs/excel-semantics/pivots.md "Classic layout (gridDropZones)").
     pub grid_drop_zones: bool,
+    /// `customListSort` (default on): a label sort orders the names of Excel's built-in custom
+    /// lists (the day and month names) by the list, not the alphabet
+    /// (docs/excel-semantics/pivots.md "Pivot sorts and filters as Excel for the web renders
+    /// them", probes/t4130-pivot-sort CL1, CL0; `pivot::sort::labels`). The importer reads it from
+    /// the definition's attributes it keeps in [`PivotTable::opaque`], which is what the export
+    /// writes (T-4768).
+    pub custom_list_sort: bool,
 }
 
 impl Default for PivotOptions {
@@ -160,6 +176,7 @@ impl Default for PivotOptions {
             page_wrap: 0,
             page_over_then_down: false,
             grid_drop_zones: false,
+            custom_list_sort: true,
         }
     }
 }
@@ -207,6 +224,24 @@ pub struct PivotField {
     pub subtotal_caption: Option<String>,
     /// `<items>`, in file order: the order the field shows its items in.
     pub items: Vec<PivotItem>,
+    /// The legacy `AutoShow` (`autoShow`, `itemPageCount`, `topAutoShow`, `rankBy`), when
+    /// `autoShow` is on: a count Top-N on the field (`pivot::filter`). The importer reads it from
+    /// the field's attributes it keeps in [`PivotTable::opaque`], which is what the export writes
+    /// (T-4165).
+    pub auto_show: Option<AutoShow>,
+    /// The `autoSortScope`: under an ascending or descending `sortType`, the field shows its items
+    /// ordered by the value this scope names (`pivot::sort`). The importer reads it from the
+    /// element it keeps in [`PivotTable::opaque`], which is what the export writes (T-4827).
+    pub auto_sort: Option<AutoSortScope>,
+    /// A slicer's selection on the field (T-4188), when a slicer drives it: a bitset over the
+    /// cache field's `items`, bit `i` set when the slicer leaves item `i` unselected. It replaces
+    /// [`PivotField::hidden`] in what the pivot shows ([`PivotField::excludes`]), on an axis or
+    /// not; `hidden` stays the `item@h` the export writes. The importer reads it from the
+    /// workbook's slicer caches, whose parts a save keeps verbatim (`pivot::slicer`).
+    pub slicer: Option<Vec<u64>>,
+    /// A timeline's selection on the field (T-4188): only records whose day is in it are kept,
+    /// and the pivot's own `<filters>` on the field are not applied (`pivot::slicer`).
+    pub timeline: Option<DateSpan>,
 }
 
 impl Default for PivotField {
@@ -235,6 +270,10 @@ impl PivotField {
             fill_down_labels: false,
             subtotal_caption: None,
             items: Vec::new(),
+            auto_show: None,
+            auto_sort: None,
+            slicer: None,
+            timeline: None,
         }
     }
 
@@ -248,9 +287,27 @@ impl PivotField {
     /// Whether item `item` is hidden; an item past the bitset reads as not hidden.
     #[must_use]
     pub fn is_hidden(&self, item: u32) -> bool {
-        self.hidden
-            .get(item as usize / 64)
-            .is_some_and(|word| word & (1 << (item % 64)) != 0)
+        bit(&self.hidden, item)
+    }
+
+    /// Whether the pivot leaves item `item` out: the slicer's selection when a slicer drives the
+    /// field (an item the slicer selects shows even when hidden, probes/t4767-pivot-slicers SX),
+    /// its hidden items otherwise. An item past the bitset reads as shown.
+    #[must_use]
+    pub fn excludes(&self, item: u32) -> bool {
+        bit(self.excluded_words(), item)
+    }
+
+    /// Whether [`PivotField::excludes`] leaves any item out.
+    #[must_use]
+    pub fn excludes_any(&self) -> bool {
+        self.excluded_words().iter().any(|word| *word != 0)
+    }
+
+    /// The bitset [`PivotField::excludes`] reads: the slicer's when a slicer drives the field,
+    /// the hidden items otherwise.
+    pub(super) fn excluded_words(&self) -> &[u64] {
+        self.slicer.as_deref().unwrap_or(&self.hidden)
     }
 
     /// `item@h` of a listed item: whether the cache item it names is hidden. An item that names
@@ -259,6 +316,12 @@ impl PivotField {
     pub fn item_hidden(&self, item: &PivotItem) -> bool {
         item.kind == ItemType::Data && item.index.is_some_and(|x| self.is_hidden(x))
     }
+}
+
+/// Bit `item` of the bitset `bits`; one past its size reads as clear.
+pub(super) fn bit(bits: &[u64], item: u32) -> bool {
+    bits.get(item as usize / 64)
+        .is_some_and(|word| word & (1 << (item % 64)) != 0)
 }
 
 /// One `<item>` of a pivot field's `<items>`.
@@ -482,7 +545,9 @@ impl Aggregate {
 /// the calculation a data field shows instead of its plain values. Excel writes an x14 mode as
 /// `pivotShowAs` alone, with no `showDataAs` (docs/excel-semantics/pivots.md "Show-values-as
 /// modes as Excel for the web renders them"). The importer reads it from the extension, which it
-/// keeps verbatim, so a writer gives `showDataAs` only the ECMA modes ([`ShowDataAs::is_x14`]).
+/// keeps verbatim, so a writer gives `showDataAs` only the ECMA modes ([`ShowDataAs::is_x14`]) and
+/// writes an x14 one as the kept extension, or as [`ShowDataAs::x14_data_field_extension`] when no
+/// kept one names it (T-4759).
 /// The engine is `pivot::show_as` (T-4163).
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ShowDataAs {
@@ -569,7 +634,31 @@ impl ShowDataAs {
                 | Self::RankDescending
         )
     }
+
+    /// An x14 mode's `<ext>` of a `<dataField>`'s `extLst`, as Excel writes it: `pivotShowAs`
+    /// alone in the x14 dataField extension (pivots.md "Show-values-as modes as Excel for the web
+    /// renders them"; the uri is [MS-XLSX] 2.2.4.4's). `prefix` is the list's own (`x:` for
+    /// `<x:extLst>`, empty for none), so the `ext` is in the list's namespace. `None` for an ECMA
+    /// mode, which `showDataAs` names. The name is one of the table's, so it needs no escaping.
+    ///
+    /// OOXML markup in the engine is a deliberate exception: this is the one place the xlsx
+    /// exporter and the eval spec builder can both reach, so the shape has one definition
+    /// (CLAUDE.md directive 3).
+    #[must_use]
+    pub fn x14_data_field_extension(self, prefix: &str) -> Option<String> {
+        self.is_x14().then(|| {
+            format!(
+                r#"<{prefix}ext uri="{X14_DATA_FIELD_URI}" xmlns:x14="{X14_NS}"><x14:dataField pivotShowAs="{}"/></{prefix}ext>"#,
+                self.name()
+            )
+        })
+    }
 }
+
+/// The x14 (Excel 2010) SpreadsheetML namespace.
+const X14_NS: &str = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main";
+/// The x14 dataField extension's `ext@uri` ([MS-XLSX] 2.2.4.4).
+const X14_DATA_FIELD_URI: &str = "{E15A36E0-9728-4e99-A89B-3F7291B0FE68}";
 
 /// Where in the definition an [`OpaqueEntry`] was read: the typed element it belongs to.
 /// Indices count the elements of that kind in file order.
@@ -796,4 +885,80 @@ fn names_a_field(xml: &str, attributes: bool, allowed: impl Fn(&str) -> bool) ->
         }
     }
     quote.is_some() || in_tag != attributes
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ShowDataAs, SHOW_DATA_AS_NAMES};
+
+    /// The mode after `mode` in declaration order, `None` after the last. The match is
+    /// exhaustive, so a new variant does not compile until it is chained in here.
+    fn next(mode: ShowDataAs) -> Option<ShowDataAs> {
+        use ShowDataAs as S;
+        match mode {
+            S::Normal => Some(S::Difference),
+            S::Difference => Some(S::Percent),
+            S::Percent => Some(S::PercentDiff),
+            S::PercentDiff => Some(S::RunTotal),
+            S::RunTotal => Some(S::PercentOfRow),
+            S::PercentOfRow => Some(S::PercentOfColumn),
+            S::PercentOfColumn => Some(S::PercentOfTotal),
+            S::PercentOfTotal => Some(S::Index),
+            S::Index => Some(S::PercentOfParentRow),
+            S::PercentOfParentRow => Some(S::PercentOfParentColumn),
+            S::PercentOfParentColumn => Some(S::PercentOfParent),
+            S::PercentOfParent => Some(S::PercentOfRunningTotal),
+            S::PercentOfRunningTotal => Some(S::RankAscending),
+            S::RankAscending => Some(S::RankDescending),
+            S::RankDescending => None,
+        }
+    }
+
+    /// Every mode is in the name table: `name` would otherwise fall back to `"normal"`, and the
+    /// mode would read back as `Normal` (T-4759).
+    #[test]
+    fn every_show_data_as_mode_round_trips_through_its_name() {
+        let every: Vec<ShowDataAs> =
+            std::iter::successors(Some(ShowDataAs::Normal), |m| next(*m)).collect();
+        assert_eq!(every.len(), SHOW_DATA_AS_NAMES.len());
+        for mode in &every {
+            assert_eq!(ShowDataAs::from_name(mode.name()), Some(*mode), "{mode:?}");
+        }
+        let x14: Vec<&str> = (every.iter().filter(|m| m.is_x14()))
+            .map(|m| m.name())
+            .collect();
+        assert_eq!(
+            x14,
+            [
+                "percentOfParentRow",
+                "percentOfParentCol",
+                "percentOfParent",
+                "percentOfRunningTotal",
+                "rankAscending",
+                "rankDescending"
+            ]
+        );
+        assert_eq!(ShowDataAs::from_name("percentOfNothing"), None);
+    }
+
+    /// An x14 mode's dataField extension is Excel's (pivots.md "Show-values-as modes as Excel
+    /// for the web renders them"); an ECMA mode has none.
+    #[test]
+    fn only_an_x14_mode_has_a_data_field_extension() {
+        let rank = ShowDataAs::RankAscending.x14_data_field_extension("");
+        assert_eq!(
+            rank.as_deref(),
+            Some(
+                r#"<ext uri="{E15A36E0-9728-4e99-A89B-3F7291B0FE68}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"><x14:dataField pivotShowAs="rankAscending"/></ext>"#
+            )
+        );
+        let prefixed = ShowDataAs::PercentOfParent.x14_data_field_extension("x:");
+        let prefixed = prefixed.unwrap_or_default();
+        assert!(prefixed.starts_with("<x:ext uri=") && prefixed.ends_with("</x:ext>"));
+        assert_eq!(ShowDataAs::Normal.x14_data_field_extension(""), None);
+        assert_eq!(
+            ShowDataAs::PercentOfTotal.x14_data_field_extension(""),
+            None
+        );
+    }
 }

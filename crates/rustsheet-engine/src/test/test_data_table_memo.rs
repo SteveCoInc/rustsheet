@@ -143,10 +143,22 @@ fn a_volatile_formula_always_recomputes() {
     assert!(edit(&mut model, "Z9", "1"));
 }
 
+/// A result cell changed beneath the write guard, which refuses a write into the results (T-0452),
+/// as a stored edit could change it, is recomputed.
 #[test]
 fn an_overwritten_result_is_recomputed() {
     let mut model = column_table(&[("B1", "=A1*2")]);
-    assert!(edit(&mut model, "B3", "99"));
+    assert!(model.set_user_input(0, 3, 2, "99".to_string()).is_err());
+    let before = model.evaluation.data_tables_recomputed;
+    let cell = crate::types::Cell::NumberCell { v: 99.0, s: 0 };
+    model
+        .workbook
+        .worksheet_mut(0)
+        .unwrap()
+        .sheet_data
+        .set_cell(3, 2, cell);
+    model.evaluate();
+    assert_ne!(model.evaluation.data_tables_recomputed, before);
     assert_eq!(results(&model), ["2", "4", "6", "12"]);
 }
 

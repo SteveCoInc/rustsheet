@@ -7,11 +7,12 @@
 //! sqrt(a / 2 pi) exp(-B - correction(a)) ([`stirling_prefactor`]), whose exponent, rounded to a
 //! double, carries an ulp of a number near ln Q into the result. B is Loader's direct deviance
 //! a ln(a/x) + (x - a) ([`direct_deviance`]), not the ratio form a ln(x/a) + (a - x) T-3269 first
-//! took: the two round x/a and a/x differently, which put the ratio form 25 to 189 ulp off at the
-//! cells T-3469 owns (shape 6 at x = 38 and 42, x / a = 10). Over the 32 adjacent doubles of `POISSON(2,100+j*2^-46,TRUE)` Excel jumps
-//! by 64 ulp exactly where that exponent's rounding does. The continued fraction it multiplies is
-//! taken accurately ([`accurate_fraction`]); the correction is the exact Stirling error
-//! ([`stirlerr_exact`]), since TOMS's series is only good from 8.
+//! took: the two round x/a and a/x differently, which put the ratio form 25 to 189 ulp off at
+//! the cells T-3469 owns (shape 6 at x = 38 and 42, x / a = 10). Over the 32 adjacent doubles of
+//! `POISSON(2,100+j*2^-46,TRUE)` Excel jumps by 64 ulp exactly where that exponent's rounding
+//! does. The continued fraction it multiplies is taken accurately ([`accurate_fraction`]); the
+//! correction is the exact Stirling error ([`stirlerr_exact`]), since TOMS's series is only good
+//! from 8.
 //!
 //! The form is applied only where it was measured (decision 0188 R4.3): x in
 //! ([`FAR_TAIL_MIN_X`], [`FAR_TAIL_MAX_X`]] at the multiples of 1/2 up to [`FAR_TAIL_MAX_SHAPE`].

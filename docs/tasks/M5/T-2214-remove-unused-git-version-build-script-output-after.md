@@ -3,7 +3,7 @@ id: T-2214
 title: "Remove unused GIT_VERSION build script output after INFO became #VALUE!"
 milestone: M5
 lane: quality
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -22,3 +22,6 @@ From T-2190 review: INFO("release") was the only consumer of `GIT_VERSION` (crat
 
 ## Out of scope
 -
+
+## Outcome
+Removed crates/rustsheet-engine/build.rs: its only output, the GIT_VERSION env var, had no consumer left (INFO("release") became #VALUE!, T-2190). No eval change.

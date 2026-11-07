@@ -1,0 +1,389 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4164: do Excel for the web's pivot date filters compare whole days or date-times, and what does the x15 pivotFilter useWholeDay change? Data!A1:B7 has Date (DATE+TIME formulas, m/d/yyyy h:mm, so the builder caches them as missing) and Sales, powers of two so a sum names its set: 4/16/2024 12:00 1, 4/17/2024 0:00 2, 4/17/2024 8:00 4, 4/17/2024 18:00 8, 4/18/2024 0:00 16, 4/18/2024 6:00 32. Each sheet is one builder-v2 pivot at A3, rows Date, Sum of Sales, with one `<filter fld=\"0\">`; the suffix is the useWholeDay the filter's x15 extension carries (N: no extension): WEqN, WEq0, WEq1 dateEqual 45399 (4/17/2024); WEqT0, WEqT1 dateEqual 45399.5 (4/17/2024 12:00); WNt0, WNt1 dateNewerThan 45399; WOe0, WOe1 dateOlderThanOrEqual 45399; WBt0, WBt1 dateBetween 45399.25 and 45399.5; WNtN, WOeN, WBtN the dateNewerThan, dateOlderThanOrEqual and dateBetween filters with no extension. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4164",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0073",
+  "PV-0074",
+  "PV-0075",
+  "PV-0080",
+  "PV-1480"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Date",
+    "B1": "Sales",
+    "A2": "=DATE(2024,4,16)+TIME(12,0,0)",
+    "B2": 1,
+    "A3": "=DATE(2024,4,17)",
+    "B3": 2,
+    "A4": "=DATE(2024,4,17)+TIME(8,0,0)",
+    "B4": 4,
+    "A5": "=DATE(2024,4,17)+TIME(18,0,0)",
+    "B5": 8,
+    "A6": "=DATE(2024,4,18)",
+    "B6": 16,
+    "A7": "=DATE(2024,4,18)+TIME(6,0,0)",
+    "B7": 32
+   },
+   "number_formats": {
+    "A2": "m/d/yyyy h:mm",
+    "A3": "m/d/yyyy h:mm",
+    "A4": "m/d/yyyy h:mm",
+    "A5": "m/d/yyyy h:mm",
+    "A6": "m/d/yyyy h:mm",
+    "A7": "m/d/yyyy h:mm"
+   }
+  },
+  {
+   "name": "WEqN",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WEqN",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"45399\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WEq0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WEq0",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"45399\"/></customFilters></filterColumn></autoFilter><extLst><ext uri=\"{0605FD5F-26C8-4aeb-8148-2DB25E43C511}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:pivotFilter useWholeDay=\"0\"/></ext></extLst></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WEq1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WEq1",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"45399\"/></customFilters></filterColumn></autoFilter><extLst><ext uri=\"{0605FD5F-26C8-4aeb-8148-2DB25E43C511}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:pivotFilter useWholeDay=\"1\"/></ext></extLst></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WEqT0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WEqT0",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"45399.5\"/></customFilters></filterColumn></autoFilter><extLst><ext uri=\"{0605FD5F-26C8-4aeb-8148-2DB25E43C511}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:pivotFilter useWholeDay=\"0\"/></ext></extLst></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WEqT1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WEqT1",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"45399.5\"/></customFilters></filterColumn></autoFilter><extLst><ext uri=\"{0605FD5F-26C8-4aeb-8148-2DB25E43C511}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:pivotFilter useWholeDay=\"1\"/></ext></extLst></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WNt0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WNt0",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateNewerThan\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThan\" val=\"45399\"/></customFilters></filterColumn></autoFilter><extLst><ext uri=\"{0605FD5F-26C8-4aeb-8148-2DB25E43C511}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:pivotFilter useWholeDay=\"0\"/></ext></extLst></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WNt1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WNt1",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateNewerThan\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThan\" val=\"45399\"/></customFilters></filterColumn></autoFilter><extLst><ext uri=\"{0605FD5F-26C8-4aeb-8148-2DB25E43C511}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:pivotFilter useWholeDay=\"1\"/></ext></extLst></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WOe0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WOe0",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateOlderThanOrEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThanOrEqual\" val=\"45399\"/></customFilters></filterColumn></autoFilter><extLst><ext uri=\"{0605FD5F-26C8-4aeb-8148-2DB25E43C511}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:pivotFilter useWholeDay=\"0\"/></ext></extLst></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WOe1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WOe1",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateOlderThanOrEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThanOrEqual\" val=\"45399\"/></customFilters></filterColumn></autoFilter><extLst><ext uri=\"{0605FD5F-26C8-4aeb-8148-2DB25E43C511}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:pivotFilter useWholeDay=\"1\"/></ext></extLst></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WBt0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WBt0",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateBetween\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters and=\"1\"><customFilter operator=\"greaterThanOrEqual\" val=\"45399.25\"/><customFilter operator=\"lessThanOrEqual\" val=\"45399.5\"/></customFilters></filterColumn></autoFilter><extLst><ext uri=\"{0605FD5F-26C8-4aeb-8148-2DB25E43C511}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:pivotFilter useWholeDay=\"0\"/></ext></extLst></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WBt1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WBt1",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateBetween\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters and=\"1\"><customFilter operator=\"greaterThanOrEqual\" val=\"45399.25\"/><customFilter operator=\"lessThanOrEqual\" val=\"45399.5\"/></customFilters></filterColumn></autoFilter><extLst><ext uri=\"{0605FD5F-26C8-4aeb-8148-2DB25E43C511}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:pivotFilter useWholeDay=\"1\"/></ext></extLst></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WNtN",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WNtN",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateNewerThan\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThan\" val=\"45399\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WOeN",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WOeN",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateOlderThanOrEqual\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThanOrEqual\" val=\"45399\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "WBtN",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_WBtN",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"dateBetween\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters and=\"1\"><customFilter operator=\"greaterThanOrEqual\" val=\"45399.25\"/><customFilter operator=\"lessThanOrEqual\" val=\"45399.5\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A40)"
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -7,7 +7,7 @@
 use std::io::Cursor;
 use std::path::Path;
 
-use rustsheet_engine::pivot::{OpaqueNode, PivotTable, MAX_RECORD_VALUES};
+use rustsheet_engine::pivot::{CacheField, OpaqueNode, PivotTable, MAX_RECORD_VALUES};
 use rustsheet_engine::types::DateSystem;
 use rustsheet_engine::Model;
 use rustsheet_xlsx::export::save_xlsx_to_writer;
@@ -55,6 +55,7 @@ fn every_probe_pivot_round_trips_through_the_export() {
                         cache_definition: built.cache_definition.as_bytes(),
                         cache_records: built.cache_records.as_bytes(),
                         cache_id: 1,
+                        slicer_caches: &[],
                     },
                     &[table],
                     0,
@@ -66,20 +67,14 @@ fn every_probe_pivot_round_trips_through_the_export() {
                     not_loaded += 1;
                     continue;
                 };
-                let is_grouped = (cache.fields.iter())
-                    .any(|f| f.number_groups.is_some() || f.date_groups.is_some());
+                // A manual group's added field counts too (T-4171).
+                let is_grouped = cache.fields.iter().any(CacheField::is_grouped);
                 model.workbook.pivot_caches.push(cache);
                 model.workbook.pivot_tables.extend(tables);
                 let bytes = save_xlsx_to_writer(&model, Cursor::new(Vec::new()))
                     .unwrap()
                     .into_inner();
                 let back = load_from_xlsx_bytes(&bytes, "back", "en", "UTC").unwrap();
-                if is_grouped {
-                    // Dropped with its pivots until grouped fields export (T-4734).
-                    assert!(back.pivot_tables.is_empty(), "{what}");
-                    grouped += 1;
-                    continue;
-                }
                 assert_eq!(back.pivot_caches, model.workbook.pivot_caches, "{what}");
                 let tables =
                     |t: &[PivotTable]| t.iter().cloned().map(without_lines).collect::<Vec<_>>();
@@ -89,11 +84,14 @@ fn every_probe_pivot_round_trips_through_the_export() {
                     "{what}"
                 );
                 checked += 1;
+                // Grouped fields export with their groups (T-4734).
+                grouped += usize::from(is_grouped);
             }
         }
     }
     eprintln!(
-        "{checked} probe pivots round-trip, {grouped} grouped dropped, {not_loaded} not loaded"
+        "{checked} probe pivots round-trip, {grouped} of them grouped, {not_loaded} not loaded"
     );
     assert!(checked >= 100, "only {checked} probe pivots checked");
+    assert!(grouped >= 15, "only {grouped} grouped probe pivots checked");
 }

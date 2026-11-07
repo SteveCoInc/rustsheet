@@ -20,7 +20,10 @@ use crate::{
     formula_rewrite::{RewrittenCell, RewrittenFormula},
     model::Model,
     table_edits::{bounds, Bounds},
-    types::{Cell, Table, TableColumn, TableExtent, TableStyleInfo, Worksheet},
+    types::{
+        Cell, FilterColumn, FilterCriterion, Table, TableColumn, TableExtent, TableStyleInfo,
+        Worksheet,
+    },
 };
 
 /// Gives every formula cell of `worksheet` whose shared formula is one of `by_row` (index, parsed
@@ -120,6 +123,9 @@ impl Table {
 
 /// Tables by name, as they were before an edit changed them: what its undo puts back.
 pub(crate) type KeptTables = Vec<(String, Table)>;
+
+/// The rows a column delete showed or hid, each with its new hidden state (T-4939).
+pub(crate) type ToggledRows = Vec<(i32, bool)>;
 
 impl Model {
     /// Adds a table on sheet `sheet` over rows `top..=bottom` and columns `left..=right`
@@ -252,6 +258,79 @@ impl Model {
         self.workbook.tables.insert(name.to_string(), table);
         self.reset_tables();
         Ok(())
+    }
+
+    /// Gives the filtered table `name` a values filter on its column `column` (0-based) that
+    /// rejects exactly the data rows `rejected` (1-based sheet rows): it keeps the text every other
+    /// data row displays, plus blank rows when one of them is blank, the filter Excel writes when
+    /// those rows' values are unchecked in its filter menu (spec2xlsx's `"criteria"`, T-4755). The
+    /// criterion is kept as an imported one is (`Table::filter_columns`, replacing one already on
+    /// that column), so a column edit treats it the same way (T-4803); no row is hidden here (hide
+    /// the rejected rows with [`Model::set_row_hidden`]). Returns the table as it was before, which
+    /// [`Model::restore_table`] puts back.
+    ///
+    /// # Errors
+    /// There is no table with that exact name, it is not filtered, `column` is outside it, a
+    /// rejected row is not one of its data rows, or a rejected row displays the same text
+    /// (ignoring case) as a kept one, which no values filter can tell apart.
+    pub fn filter_table_column(
+        &mut self,
+        name: &str,
+        column: u32,
+        rejected: &[i32],
+    ) -> Result<Table, String> {
+        let table = (self.workbook.tables.get(name)).ok_or_else(|| format!("No table '{name}'"))?;
+        let before = table.clone();
+        if !table.has_filters {
+            return Err(format!("Table '{name}' is not filtered"));
+        }
+        let b = bounds(table).ok_or_else(|| format!("Table '{name}' has no range"))?;
+        let at = i32::try_from(column)
+            .ok()
+            .and_then(|c| b.left.checked_add(c))
+            .filter(|&c| c <= b.right)
+            .ok_or_else(|| format!("Column {column} is outside table '{name}'"))?;
+        if let Some(row) = rejected
+            .iter()
+            .find(|r| !(b.data.0..=b.data.1).contains(*r))
+        {
+            return Err(format!("Row {row} is not a data row of table '{name}'"));
+        }
+        let sheet = (self.get_sheet_index_by_name(&table.sheet_name))
+            .ok_or_else(|| format!("No sheet '{}'", table.sheet_name))?;
+        let rejected: HashSet<i32> = rejected.iter().copied().collect();
+        let mut kept = Vec::new();
+        let mut dropped = HashSet::new();
+        for row in b.data.0..=b.data.1 {
+            let text = self.get_formatted_cell_value(sheet, row, at)?;
+            if rejected.contains(&row) {
+                dropped.insert(text.to_lowercase());
+            } else {
+                kept.push(text);
+            }
+        }
+        if let Some(text) = kept.iter().find(|t| dropped.contains(&t.to_lowercase())) {
+            return Err(format!("'{text}' is both kept and rejected"));
+        }
+        let blank = kept.iter().any(String::is_empty);
+        kept.retain(|t| !t.is_empty());
+        kept.sort_unstable();
+        kept.dedup();
+        let criterion = FilterCriterion::Values {
+            values: kept,
+            blank,
+            calendar_type: None,
+            date_groups: Vec::new(),
+        };
+        if let Some(table) = self.workbook.tables.get_mut(name) {
+            table.filter_columns.retain(|f| f.col_id != column);
+            table.filter_columns.push(FilterColumn {
+                col_id: column,
+                criterion,
+            });
+            table.filter_columns.sort_by_key(|f| f.col_id);
+        }
+        Ok(before)
     }
 
     /// Removes the table `name` (the undo of [`Model::add_table`]); its cells stay.
@@ -441,18 +520,19 @@ impl Model {
     /// the tables it changed but kept, as they were before: what its undo restores (T-4652). A
     /// column delete can drop table columns, with their names, formulas and filters, so the
     /// whole table is kept, not only its [`TableExtent`]. Also returns the formula cells it
-    /// rewrote past what re-inserting the columns undoes (T-4668), and the rows it showed: a
-    /// delete that takes a filtered table's last criterion shows the rows the filter hid (T-4371),
-    /// which the undo hides again.
+    /// rewrote past what re-inserting the columns undoes (T-4668), and the rows whose hidden
+    /// state it changed, with that state: a delete that takes a filtered table's last criterion
+    /// shows the rows the filter hid (T-4371), one that leaves another re-applies it and may show
+    /// or hide rows (T-4939), and the undo puts each back.
     pub(crate) fn delete_columns_keeping_tables(
         &mut self,
         sheet: u32,
         column: i32,
         count: i32,
-    ) -> Result<(KeptTables, Vec<RewrittenCell>, Vec<i32>), String> {
+    ) -> Result<(KeptTables, Vec<RewrittenCell>, ToggledRows), String> {
         let worksheet = self.workbook.worksheet(sheet)?;
         let sheet_name = worksheet.get_name();
-        let hidden: Vec<i32> = (worksheet.rows.iter())
+        let hidden: HashSet<i32> = (worksheet.rows.iter())
             .filter(|r| r.hidden)
             .map(|r| r.r)
             .collect();
@@ -460,15 +540,15 @@ impl Model {
         let rewritten = self.delete_columns_rewriting(sheet, column, count)?;
         let rows = &self.workbook.worksheet(sheet)?.rows;
         let still: HashSet<i32> = rows.iter().filter(|r| r.hidden).map(|r| r.r).collect();
-        let shown = hidden
-            .into_iter()
-            .filter(|row| !still.contains(row))
+        let mut toggled: Vec<(i32, bool)> = (hidden.symmetric_difference(&still))
+            .map(|&row| (row, still.contains(&row)))
             .collect();
+        toggled.sort_unstable();
         let tables = &self.workbook.tables;
         let changed = (before.into_iter())
             .filter(|(name, table)| tables.get(name).is_some_and(|now| now != table))
             .collect();
-        Ok((changed, rewritten, shown))
+        Ok((changed, rewritten, toggled))
     }
 
     /// Checks everything about `tables` that [`Model::restore_tables_of_sheet`] needs except the

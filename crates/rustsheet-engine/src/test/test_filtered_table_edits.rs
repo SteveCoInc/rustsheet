@@ -95,3 +95,173 @@ fn undo_of_the_delete_hides_the_rows_and_refilters() {
     assert_eq!(hidden_rows(m), Vec::<i32>::new());
     assert_eq!(counts(m, 4), ("6".to_string(), "6".to_string()));
 }
+
+/// [`filtered`] with two criteria: a values filter on Cat keeping "a" and "c" (rows 3 and 7) and
+/// one on Ext rejecting 40 (row 5), probes/t4755-two-criteria-filtered-table-* (T-4755).
+fn two_criteria() -> Model {
+    let mut m = filtered();
+    m.filter_table_column("Sales", 0, &[3, 7]).unwrap();
+    m.filter_table_column("Sales", 2, &[5]).unwrap();
+    m
+}
+
+/// A delete of one criterion's column shows only the rows the kept criterion keeps
+/// (probes/t4755-two-criteria-filtered-table-delete-one: rows 3 and 7 shown, row 5 still hidden;
+/// T-4803), and the undo hides them again.
+#[test]
+fn deleting_one_of_two_criteria_shows_only_the_rows_it_alone_hid() {
+    let mut user = UserModel::from_model(two_criteria());
+    user.delete_columns(0, 1, 1).unwrap();
+    let m = user.get_model();
+    assert!(m.workbook.tables["Sales"].has_filters);
+    assert_eq!(hidden_rows(m), vec![5]);
+    assert_eq!(counts(m, 4), ("5".to_string(), "5".to_string()));
+    user.undo().unwrap();
+    assert_eq!(hidden_rows(user.get_model()), vec![3, 5, 7]);
+}
+
+/// A row the kept criterion keeps but that was hidden on its own is shown too, as the one-
+/// criterion delete shows it (probes/t4755-hand-hidden-filtered-table-delete-filtered-column);
+/// a delete of a column with no criterion re-applies nothing.
+#[test]
+fn the_kept_criterion_decides_every_hidden_data_row() {
+    let mut m = two_criteria();
+    m.set_row_hidden(0, 4, true).unwrap();
+    m.delete_columns(0, 2, 1).unwrap();
+    assert_eq!(hidden_rows(&m), vec![3, 4, 5, 7]);
+    m.delete_columns(0, 1, 1).unwrap();
+    assert_eq!(hidden_rows(&m), vec![5]);
+}
+
+/// A kept criterion that nothing here evaluates keeps every hidden row hidden.
+#[test]
+fn a_kept_criterion_that_cannot_be_told_keeps_the_rows_hidden() {
+    let mut m = two_criteria();
+    if let Some(table) = m.workbook.tables.get_mut("Sales") {
+        table.filter_columns[1].criterion = crate::types::FilterCriterion::Other;
+    }
+    m.delete_columns(0, 1, 1).unwrap();
+    assert_eq!(hidden_rows(&m), vec![3, 5, 7]);
+}
+
+/// The values filter keeps the displayed text of the other data rows, and refuses a rejected
+/// row whose text a kept row shows (no values filter tells them apart) or a row off the data.
+#[test]
+fn filter_table_column_derives_the_values_filter() {
+    let m = two_criteria();
+    let criterion = |i: usize| m.workbook.tables["Sales"].filter_columns[i].clone();
+    assert_eq!(criterion(0).col_id, 0);
+    assert_eq!(
+        criterion(1).criterion,
+        crate::types::FilterCriterion::Values {
+            values: ["10", "20", "30", "50", "60"].map(String::from).to_vec(),
+            blank: false,
+            calendar_type: None,
+            date_groups: Vec::new(),
+        }
+    );
+    let mut m = filtered();
+    assert!(m.filter_table_column("Sales", 0, &[2]).is_err());
+    assert!(m.filter_table_column("Sales", 0, &[1]).is_err());
+    assert!(m.filter_table_column("Sales", 3, &[5]).is_err());
+    assert!(m.filter_table_column("Nope", 0, &[5]).is_err());
+}
+
+/// Excel re-applies the kept criterion to every data row, so a visible row it rejects is hidden
+/// too. With Ext formatted `0.00`, a kept values filter listing the General text "10" .. "60"
+/// keeps no row (probes/t4895-two-criteria-number-format-delete-one: every row hidden), and one
+/// listing the displayed "10.00" .. "60.00" keeps all but row 5 (docs/research/t4939/uploads/
+/// display-delete). The undo puts every row back. Row 2 has no row record before the delete.
+#[test]
+fn the_kept_criterion_is_matched_by_display_text_and_hides_visible_rows() {
+    for (values, hidden) in [
+        (["10", "20", "30", "50", "60"], vec![2, 3, 4, 5, 6, 7]),
+        (["10.00", "20.00", "30.00", "50.00", "60.00"], vec![5]),
+    ] {
+        let mut m = two_criteria();
+        for row in 2..=7 {
+            let mut style = m.get_style_for_cell(0, row, 3).unwrap();
+            style.num_fmt = "0.00".to_string();
+            m.set_cell_style(0, row, 3, &style).unwrap();
+        }
+        if let Some(table) = m.workbook.tables.get_mut("Sales") {
+            table.filter_columns[1].criterion = crate::types::FilterCriterion::Values {
+                values: values.map(String::from).to_vec(),
+                blank: false,
+                calendar_type: None,
+                date_groups: Vec::new(),
+            };
+        }
+        assert!(m
+            .workbook
+            .worksheet(0)
+            .unwrap()
+            .rows
+            .iter()
+            .all(|r| r.r != 2));
+        let mut user = UserModel::from_model(m);
+        user.delete_columns(0, 1, 1).unwrap();
+        assert_eq!(hidden_rows(user.get_model()), hidden, "{values:?}");
+        user.undo().unwrap();
+        assert_eq!(hidden_rows(user.get_model()), vec![3, 5, 7], "{values:?}");
+    }
+}
+
+/// [`two_criteria`] with Cat in A6 (a visible "a") cleared: without `blank` the kept Cat filter
+/// rejects the blank row, which the delete of Ext hides; with `blank` it stays visible
+/// (docs/research/t4895/uploads/blank-rejected and blank-kept: rows 2, 4, 5 and 2, 4, 5, 6
+/// visible; T-4939).
+#[test]
+fn a_kept_values_filter_hides_a_blank_row_unless_it_keeps_blanks() {
+    for (blank, hidden) in [(false, vec![3, 6, 7]), (true, vec![3, 7])] {
+        let mut m = two_criteria();
+        m.set_user_input(0, 6, 1, String::new()).unwrap();
+        if let Some(table) = m.workbook.tables.get_mut("Sales") {
+            if let crate::types::FilterCriterion::Values { blank: b, .. } =
+                &mut table.filter_columns[0].criterion
+            {
+                *b = blank;
+            }
+        }
+        m.delete_columns(0, 3, 1).unwrap();
+        assert_eq!(hidden_rows(&m), hidden, "blank {blank}");
+    }
+}
+
+/// A kept custom filter (equals a, or equals c) is evaluated: row 5, which only the deleted Ext
+/// criterion hid, is shown (docs/research/t4895/uploads/custom: rows 2, 4, 5 and 6 visible;
+/// T-4939). An operator nothing here evaluates keeps the rows as they are.
+#[test]
+fn a_kept_custom_equal_filter_is_re_applied() {
+    use crate::types::{CustomFilter, FilterCriterion};
+    let equal = |operator: Option<&str>, val: &str| CustomFilter {
+        operator: operator.map(String::from),
+        val: val.to_string(),
+    };
+    for (operator, hidden) in [
+        (None, vec![3, 7]),
+        (Some("equal"), vec![3, 7]),
+        (Some("greaterThan"), vec![3, 5, 7]),
+    ] {
+        let mut m = two_criteria();
+        if let Some(table) = m.workbook.tables.get_mut("Sales") {
+            table.filter_columns[0].criterion = FilterCriterion::Custom {
+                and: false,
+                conditions: vec![equal(operator, "a"), equal(operator, "c")],
+            };
+        }
+        m.delete_columns(0, 3, 1).unwrap();
+        assert_eq!(hidden_rows(&m), hidden, "{operator:?}");
+    }
+    let condition = |op: Option<&str>, val: &str, text: &str| equal(op, val).keeps_text(text);
+    assert_eq!(condition(None, "A", "a"), Some(true));
+    assert_eq!(condition(None, "a", ""), Some(false));
+    assert_eq!(condition(None, "a*", "ab"), None);
+    assert_eq!(condition(None, "10", "10"), None);
+    assert_eq!(condition(Some("notEqual"), "a", "b"), None);
+    let both = FilterCriterion::Custom {
+        and: true,
+        conditions: vec![equal(None, "a"), equal(None, "b")],
+    };
+    assert_eq!(both.keeps_text("a"), Some(false));
+}

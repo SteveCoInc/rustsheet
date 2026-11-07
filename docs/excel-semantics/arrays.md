@@ -291,9 +291,11 @@ refuses MAKEARRAY's columns with `#VALUE!` only from 2^31, as its rows, and the 
 (DEVIATION, decision 0113). Unprobed: where between 16,385 and 123,456,789 columns SEQUENCE's own `#VALUE!` starts, and where
 between 1,048,577 and 1E15 (rows) or 2^31 (columns) MAKEARRAY's does. The lifting
 driver's broadcast (`lift::driver::broadcast_shape`) checks the cell count only (`check_array_cells`), so B26 is the
-spill's `#SPILL!`. A237 is `#ERROR!`: its 206,552 BETAINV elements pass the quantile's lift cost cap (statistics.md), T-2607.
+spill's `#SPILL!`. So is A237: each of its 206,552 BETAINV elements is refused before the quantile search (a
+probability past 1, an alpha of -1, an error), and a refused element is charged 1 against the lift cost cap rather
+than the search's flat weight (`ValueWork::BetaQuantile`, T-2607); it was `#ERROR!` before.
 Status: VERIFIED (excel-graph)
-Tasks: T-2579, T-2600, T-2452
+Tasks: T-2579, T-2600, T-2452, T-2607
 
 ## Array results above 1,048,576 cells are #ERROR!
 Rule: Excel builds any array that fits the grid: `ROWS(SEQUENCE(1000,1001))` = 1000,
@@ -517,6 +519,8 @@ H66:J68 has row 68 `#N/A` (47 `#N/A` fill cells in H46:J136). corpus-bench/13894
 cache) Sheet1!F14:F25: an IFERROR-wrapped legacy array formula whose result is 6x1 (`ROW(INDIRECT("1:"&ROWS(ucode)))`
 over the 6-cell `ucode`) leaves F20:F25 `#N/A`: the fill is not an error IFERROR can catch.
 Status: VERIFIED (Excel-cached)
+Implemented in: `Model::set_cells_with_result` (model.rs), CSE branch, through `arithmetic::bcast_get`; unit tests
+test/array_formulas/test_cse_larger_range.rs (T-0950).
 Tasks: T-0950
 
 ## FILTER: an array `if_empty` spills as an array
@@ -999,15 +1003,28 @@ excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is
   Consistent with it, an element-wise lift reads a two-level cell as an error that is not `#N/A`, even when the inner top-left is `#N/A`
   (`SUM(--ISERROR(G2))` 6, `ISTEXT` 3, `ISNA` over the `#N/A` form 0, `ISERROR` 3; and-lifts A44:A47; one-cell A27), and a reference-body
   cell as `#VALUE!` (`SUM(--ISERROR(..))` 6, `ISNUMBER` 0, REGEXEXTRACT `#VALUE!` per cell; A41, A42, A49).
+  The two-level cell's error is `#VALUE!` too, and so is every other nested cell under every lift probed: ERROR.TYPE lifted
+  over a one-level, a two-level (inner top-left "a" or `#N/A`), a reference-body GROUPBY and a PIVOTBY is 3 at each nested
+  cell and `#N/A` at each key (`SUM(--ISERR(G3))` 3), LEN, ABS, UPPER, ROUND and NOT give `#VALUE!` at each nested cell
+  (LEN and UPPER still read the keys: `1;#3;#3;1;#3;#3;5;#3;#3`), ISLOGICAL counts none, and ERROR.TYPE of `INDEX(G,0,2)` or
+  of an INDEXed two-level cell is 3 at each of its nested cells (probes/t4737-nested-cell-lift-error-type A1:A14, excel-graph,
+  2026-11-07; ours matches since T-4737, `ArrayNode::scalar` in nested_array.rs). Other lifts (N, T, ISBLANK, ISREF, ISEVEN, IFERROR's value, ...)
+  are not probed: the engine reads them the same way, generalized from the thirteen probed ones. REGEXEXTRACT's return_mode read through a
+  nested cell is `#VALUE!` per cell as well: probes/gen-m7-21b4eef18424ce94-refill-1107, a copy of gen-m7/21b4eef18424ce94
+  refilled on 2026-11-07, gives `#VALUE!` at the 26 spill cells of Calc!A1504 where the October fill had "" (B1505, B1506,
+  B1510, B1512, B1513, C1505, C1507:C1511, C1514, D1505, D1507, D1509:D1511, D1513, E1505:E1507, E1509:E1513), and the
+  October fill at every other cell.
 - A lifted INDEX of nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4, no error (and-lifts A56:A59; ours matches since T-4738, `index_from_array` in index.rs). A top-left that is nested
   again is unprobed; ours reads it as `#VALUE!`.
 - A reference-body result: SUM reads each cell as its value (`SUM(GROUPBY(..,LAMBDA(x,D!D2)))` 60, A50), COUNT is 0 and COUNTA 9 (A51,
   A52); INDEX of a cell whose body points at a blank cell is a true blank (TYPE 1, `&""` "", A53) and at an `#N/A` cell `#N/A` (A54).
 - The November reads are the target (decision 0329: a behavior change, reproduced on byte-identical copies). SPEC-0018 rule 4 states them
-  (T-4661). The engine still follows the October reads, so the refilled cells above are known failures until T-4736 (SUM, COUNT,
-  COUNTA, and SUM over a reference body), T-4737 (lifts read an error; `&""` over an INDEXed row) and T-4738 (the lifted INDEX top-left)
-  land. Each of them turns its share of the October cells (t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26, A32, t2360
-  P!C1, C9, C17, C25, C33, t2311 P!C12, t2475 P!A64; and October-only cells such as gen-m9/e85daedce5c2675e Calc!A35, once a refill confirms each, decision 0329 item 3) into superseded known failures, with the October sidecars kept (decision 0329 item 3).
+  (T-4661). T-4737 moved the lifts to them: it superseded t2360 P!C1, C9, C17, C25, C33, t2311 P!C12, t2625 A32, t2475
+  P!A64 and the 26 gen-m7/21b4eef18424ce94 cells listed above (the refills t2360-refill-1106, t2311-refill-1106, t2625-refill-1106,
+  t2475-refill-1106 and gen-m7-21b4eef18424ce94-refill-1107 replace them). For the rest the engine still follows the October reads, so
+  the refilled cells above are known failures until T-4736 (SUM, COUNT,
+  COUNTA, and SUM over a reference body) and T-4738 (the lifted INDEX top-left)
+  land. Each of them turns its share of the October cells (t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26; and October-only cells such as gen-m9/e85daedce5c2675e Calc!A35, once a refill confirms each, decision 0329 item 3) into superseded known failures, with the October sidecars kept (decision 0329 item 3).
 Aggregates over nested GROUPBY and PIVOTBY cells (probes/t2594-nested-aggregates, excel-graph, 2026-10-24, T-2594, over the T-2592
 data): (October fills; by 2026-11-06 SUM is `#N/A` and COUNT skips nested cells, see the T-2609 list above) SUM, COUNT and COUNTA flatten a nested cell (SUM 220, COUNT 16, COUNTA 19 over GROUPBY; over PIVOTBY SUM 220, COUNT 16,
 COUNTA 32; `SUM(1,GROUPBY(..),2)` 223; A26:A29). Every other aggregate tried is `#N/A`: MIN, MAX, MINA, MAXA, AVERAGEA, PRODUCT,
@@ -2274,6 +2291,18 @@ applies the same rule.
 Ours: `Placement::checked_totals` (pivot_placement.rs) takes the dropped writes of `Placement::written_cells`.
 Status: VERIFIED (excel-graph)
 Tasks: T-2311, T-2578, T-2606, T-2967
+
+## EXPAND with a written-empty rows or columns keeps the array's size (T-4871)
+Rule: a written-empty `rows` or `columns` of EXPAND is the array's own row or column count, as an omitted `columns`
+is, not 0 (which is `#VALUE!` below the array's size). With A1:A2 and A1:B1 holding numbers:
+`ROWS(EXPAND(A1:B1,3,,0))` is 3 and `COLUMNS(..)` 2; `ROWS(EXPAND(A1:A2,,3,0))` is 2 and `COLUMNS(..)` 3;
+`EXPAND(A1:A2,,,0)` is 2x1; `ROWS(EXPAND(5,,,0))` is 1; `ROWS(EXPAND(A1:B1,,))` is 1. Padding still applies where a
+size is given: `INDEX(EXPAND(A1:B1,3,,"p"),3,2)` is "p", and without pad_with `INDEX(EXPAND(A1:A2,,3),2,3)` and
+`INDEX(EXPAND(A1:B1,3,),3,1)` are `#N/A`.
+Evidence: probes/t4871-empty-mode-args E21:E31 (excel-graph, 2026-11-07; predictions committed before the fill).
+Ours: `fn_expand` (functions/lookup_and_reference/expand.rs), the `CalcResult::EmptyArg` arms, as TAKE and DROP do.
+Status: VERIFIED (excel-graph)
+Tasks: T-4871
 
 ## EXPAND, WRAPROWS and WRAPCOLS: scalar arguments lift, EXPAND's pad_with does not
 Rule (probes/m7-argument-modes F7:H8, G42, K5-K7, excel-graph 2026-10-09; probes/m7-lift-take-drop-sortby rows 20-23,

@@ -74,6 +74,22 @@ Non-goals:
 - **Time budget.** The `eval` job may grow by at most 90 s on the runner, about 5 min 17 s to under 7 min. T-4726
   states the measured time of its first CI run. If the job exceeds 7 min, T-4726 does not land as written; it goes
   back to this spec.
+- **Amended (decision 0344, T-4726): two parallel jobs.**
+  - **Why:** the one-job design measured over budget in T-4726's CI runs (PR #3999).
+    - The `eval` job took 8 min 30 s on a cache miss and 8 min 19 s on a hit, against 5 min 36 s on main the
+      same day.
+    - The added work is the corpora's round trips, which R1 (T-4514) doubled after this spec was measured (+82
+      s), and their cells (+28 s).
+    - That made `eval` the PR's slowest job by about 3 min; the rust shards took 5 min 31 s.
+  - **The jobs:** CI now runs the gate as two parallel jobs.
+    - `eval (vendored suites)` is the job as it was.
+    - `eval (fetched gate suites)` does D2's cache and fetch, then `make eval-fetched-gates`.
+    - `eval (Excel-compatibility gate)` is a summary job, as decision 0122's `rust (fmt, clippy, test)` is. It
+      keeps the required check name, passes only when both jobs passed or both were skipped on purpose, and
+      fails otherwise.
+  - **The release build:** the second job's release build is the cost this section weighed against one job. It
+    costs runner time, not PR wall time, because each job takes about as long as the one job used to.
+  - **The budget now:** each of the two jobs stays under 7 min. T-4726's Outcome records their times.
 
 ### D2. Cache key and fetch failure
 - **Cache.** `actions/cache` restores `eval/.cache/suites/poi` and `eval/.cache/suites/corpus-bench`. The key is
