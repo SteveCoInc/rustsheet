@@ -3,7 +3,7 @@ id: T-4829
 title: "roundtrip-poi/54436.xlsx fails on main against its baseline (78.79% kept, item 296)"
 milestone: M15
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
