@@ -247,7 +247,10 @@ fn test_timevalue_function_formats() {
 
     // Date-time formats
     assert_eq!(model._get_text("C1"), *TIME_14_30);
-    assert_eq!(model._get_text("C2"), *TIME_14_30);
+    // The ISO `T` separator is #VALUE!, as in VALUE and DATEVALUE, since TIMEVALUE reads date
+    // text with their date-clock reader (docs/excel-semantics/dates.md, probes/
+    // datevalue-separator-spaces rows 5-6; audit 2 item 4, T-4975).
+    assert_eq!(model._get_text("C2"), *"#VALUE!");
 
     // Whitespace
     assert_eq!(model._get_text("D1"), *TIME_14_30);
@@ -506,8 +509,8 @@ fn test_timevalue_malformed_but_parseable() {
         "12:00:01 AM should be very close to 0.0"
     );
 
-    // ISO 8601 format with "T" separator should be parsed correctly
-    assert_eq!(model._get_text("C1"), *TIME_23_59_59); // 23:59:59 → almost midnight
+    // The ISO `T` separator is #VALUE!, as in VALUE and DATEVALUE (see above).
+    assert_eq!(model._get_text("C1"), *"#VALUE!");
     assert_eq!(model._get_text("C2"), *TIME_00_00_01); // 00:00:01 → one second past midnight
 
     // Time parser normalizes edge cases to midnight (Excel compatibility)

@@ -22,8 +22,8 @@ use crate::functions::lift::{BroadcastArg, LiftCost, LiftOptions, LiftedArg};
 use index_arg::LookupIndexArg;
 use lookup_each::LookupSearch;
 use lookup_table::SearchVector;
-pub(crate) use ref_lift::lifts_into_reference_elements;
 use ref_lift::lifts_one_by_one;
+pub(crate) use ref_lift::{lifts_into_reference_elements, range_node};
 
 pub(crate) use drop_take::Edge;
 
