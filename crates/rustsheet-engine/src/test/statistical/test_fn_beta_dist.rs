@@ -189,7 +189,7 @@ fn test_fn_beta_inv_upper_quantile_rounding_to_one() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, excel)) in cases.iter().enumerate() {
@@ -197,7 +197,7 @@ fn test_fn_beta_inv_upper_quantile_rounding_to_one() {
         let value = round_trip_value(&model, &cell);
         match excel.parse::<f64>() {
             Ok(x) => assert_eq!(value.parse::<f64>().ok(), Some(x), "{formula}: {value}"),
-            Err(_) => assert_eq!(model._get_text(&cell), *excel, "{formula}"),
+            Err(_) => assert_eq!(model.get_text_a1(&cell), *excel, "{formula}"),
         }
     }
 }
