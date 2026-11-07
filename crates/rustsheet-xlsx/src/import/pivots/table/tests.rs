@@ -434,6 +434,40 @@ fn an_x14_show_values_as_mode_is_read_from_the_kept_extension() {
 }
 
 #[test]
+fn repeat_item_labels_are_read_from_the_kept_field_extension() {
+    // As Excel and the case builder write it (pivots.md "Repeat item labels",
+    // probes/t4698-pivot-repeat-labels): `fillDownLabels` in the x14 pivotField extension.
+    let ext = r#"<extLst><ext uri="{2946ED86-A175-432a-8AC1-64E0C546D7DE}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"><x14:pivotField fillDownLabels="1"/></ext></extLst>"#;
+    let xml = TABULAR_PERCENT.replacen(
+        "</items></pivotField>",
+        &format!("</items>{ext}</pivotField>"),
+        1,
+    );
+    let pivot = read(&xml, &[2, 3, 6]);
+    assert!(pivot.fields[0].fill_down_labels);
+    assert!(!pivot.fields[1].fill_down_labels);
+    // The extension is still kept verbatim, for export.
+    assert_eq!(kept(&pivot, OpaqueOwner::Field(0)), ext);
+    // Off and malformed read as the default; the definition-wide default fills no field
+    // (t4698 TW, TWE).
+    for value in ["0", "yes"] {
+        let off = xml.replace(
+            r#"fillDownLabels="1""#,
+            &format!(r#"fillDownLabels="{value}""#),
+        );
+        assert!(!read(&off, &[2, 3, 6]).fields[0].fill_down_labels);
+    }
+    let table = r#"<extLst><ext uri="{962EF5D1-5CA2-4c93-8EF4-DBF5C05439D2}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"><x14:pivotTableDefinition fillDownLabelsDefault="1"/></ext></extLst>"#;
+    let wide = TABULAR_PERCENT.replace(
+        "</pivotTableDefinition>",
+        &format!("{table}</pivotTableDefinition>"),
+    );
+    let pivot = read(&wide, &[2, 3, 6]);
+    assert!(pivot.fields.iter().all(|f| !f.fill_down_labels));
+    assert!(kept(&pivot, OpaqueOwner::Definition).contains(table));
+}
+
+#[test]
 fn the_opaque_budget_is_charged_and_never_passed() {
     let (pivot, left) = read_with(CORPUS, cache(&[3, 3, 3, 2]), 1 << 20);
     let pivot = pivot.unwrap();

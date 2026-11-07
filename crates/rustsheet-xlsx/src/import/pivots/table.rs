@@ -181,9 +181,7 @@ pub(super) fn read_pivot_table<B: BufRead>(
             Tag::Open(element) => reader.open(path, element),
             Tag::Kept(xml) => {
                 let owner = reader.owner(path)?;
-                if let OpaqueOwner::DataField(index) = owner {
-                    reader.read_data_extension(index, &xml)?;
-                }
+                reader.read_extension(owner, &xml)?;
                 reader.keep(owner, OpaqueNode::Element(xml))
             }
             Tag::Close(_) => Ok(()),
@@ -307,25 +305,49 @@ impl TableReader<'_> {
         self.keep_attributes(owner, element, typed)
     }
 
-    /// An element kept whole inside `<dataField>` number `index`: its x14 extension's
-    /// `pivotShowAs` is the field's mode (an Excel 2010 mode is written there alone, with no
-    /// `showDataAs`: pivots.md "Show-values-as modes as Excel for the web renders them"). Beside a
-    /// `showDataAs`, the x14 mode wins (UNVERIFIED, T-4750). The element stays kept verbatim for
-    /// export.
-    fn read_data_extension(&mut self, index: u32, xml: &str) -> Result<(), Skip> {
-        let mut mode = None;
+    /// An element kept whole inside the typed element `owner`: the x14 extension attributes the
+    /// model types are read from it, and it stays kept verbatim for export.
+    /// - In `<dataField>`, `pivotShowAs` is the field's mode (an Excel 2010 mode is written there
+    ///   alone, with no `showDataAs`: pivots.md "Show-values-as modes as Excel for the web renders
+    ///   them"). Beside a `showDataAs`, the x14 mode wins (UNVERIFIED, T-4750).
+    /// - In `<pivotField>`, `fillDownLabels` is the field's Repeat Item Labels (pivots.md "Repeat
+    ///   item labels", probes/t4698-pivot-repeat-labels). The definition's own
+    ///   `fillDownLabelsDefault` is not read: Excel fills no existing field down for it (t4129 X14,
+    ///   t4698 TW, TWE, OW).
+    fn read_extension(&mut self, owner: OpaqueOwner, xml: &str) -> Result<(), Skip> {
+        let wanted = match owner {
+            OpaqueOwner::DataField(_) => ("dataField", "pivotShowAs"),
+            OpaqueOwner::Field(_) => ("pivotField", "fillDownLabels"),
+            _ => return Ok(()),
+        };
+        let mut value = None;
         walk(xml.as_bytes(), |path, tag| {
             if let Tag::Open(element) = tag {
-                if at(path, &["extLst", "ext"]) && local_name(element) == "dataField" {
-                    if let Some(name) = attribute(element, "pivotShowAs")? {
-                        mode = Some(show_data_as(&name)?);
+                if at(path, &["extLst", "ext"]) && local_name(element) == wanted.0 {
+                    if let Some(text) = attribute(element, wanted.1)? {
+                        value = Some(text);
                     }
                 }
             }
             Ok(())
         })?;
-        if let (Some(mode), Some(data)) = (mode, self.table.data_fields.get_mut(index as usize)) {
-            data.show_data_as = mode;
+        let Some(value) = value else {
+            return Ok(());
+        };
+        match owner {
+            OpaqueOwner::DataField(index) => {
+                let mode = show_data_as(&value)?;
+                if let Some(data) = self.table.data_fields.get_mut(index as usize) {
+                    data.show_data_as = mode;
+                }
+            }
+            OpaqueOwner::Field(index) => {
+                if let Some(field) = self.table.fields.get_mut(index as usize) {
+                    // A malformed boolean reads as the default, as [`flag`] reads one.
+                    field.fill_down_labels = matches!(value.as_str(), "1" | "true");
+                }
+            }
+            _ => {}
         }
         Ok(())
     }

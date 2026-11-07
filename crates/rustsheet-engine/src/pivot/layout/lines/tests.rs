@@ -159,6 +159,14 @@ fn the_layout_option_probes_lines_and_locations_are_excels() {
         "t4168-pivot-layout-options",
         &["F1", "F2", "F3", "BR", "BR2", "SD", "SD2"],
     );
+    // Repeat item labels change no line (pivots.md "Repeat item labels").
+    check_all(
+        "t4698-pivot-repeat-labels",
+        &[
+            "T3R", "T3P", "T3A", "TND", "TBR", "TSD", "TIN", "TW", "TWE", "OST", "OB", "O3", "OW",
+            "CF", "MX", "CC", "TBL",
+        ],
+    );
 }
 
 #[test]
