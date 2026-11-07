@@ -1,0 +1,523 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4130: does Excel for the web open and apply each pivot sort setting? Data!A1:D10 has Region, Product, Year and Sales: East Bee 2024 10, East Bee 2025 1, East Ant 2024 2, East Ant 2025 6, East Cat 2024 5, West Bee 2024 3, West Ant 2025 20, West Cat 2024 4, West Cat 2025 9 (Product sums Ant 28, Bee 14, Cat 18; for 2024 Ant 2, Bee 13, Cat 9). The cache lists Product in source order Bee, Ant, Cat. Each sheet is one builder-v2 pivot at A3, rows Product, Sum of Sales: SA sortType ascending; SD descending; SM manual with the items listed Cat, Ant, Bee; SV descending by Sum of Sales (autoSortScope on the data field); SVA the same ascending; SVC descending by the 2024 column (columns Year; the autoSortScope references the data field and Year item 0); SVR rows Region then Product sorted descending by value; SXA SV with every pivotArea attribute written (type normal, labelOnly, grandRow, grandCol, cacheIndex, collapsedLevelsAreSubtotals 0, axis axisRow, field 1, offset A1); SXR SV with every reference attribute written (byPosition, relative and each *Subtotal 0); SV2 two data fields, sorted descending by the second (Max of Sales: Ant 20, Bee 10, Cat 9, an order neither Sum order gives); NA descending with nonAutoSortDefault 1. Days!A1:B4 has Day and Sales Wed 1, Mon 2, Fri 3: CL1 Day ascending (customListSort on, the default); CL0 the same with customListSort 0. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4130",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0016",
+  "PV-0017",
+  "PV-0018",
+  "PV-1034",
+  "PV-1035",
+  "PV-1037",
+  "PV-1038",
+  "PV-1040",
+  "PV-1041",
+  "PV-1042",
+  "PV-1043",
+  "PV-1044",
+  "PV-1045",
+  "PV-1046",
+  "PV-1047",
+  "PV-1048",
+  "PV-1049",
+  "PV-1050",
+  "PV-1051",
+  "PV-1052",
+  "PV-1053",
+  "PV-1054",
+  "PV-1055",
+  "PV-1056",
+  "PV-1057",
+  "PV-1058",
+  "PV-1059",
+  "PV-1060",
+  "PV-1061",
+  "PV-1062",
+  "PV-1063",
+  "PV-1064",
+  "PV-1065",
+  "PV-1066",
+  "PV-1067",
+  "PV-1068",
+  "PV-1069",
+  "PV-1070",
+  "PV-1071",
+  "PV-1114",
+  "PV-1125",
+  "PV-1199"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Year",
+    "D1": "Sales",
+    "A2": "East",
+    "B2": "Bee",
+    "C2": 2024,
+    "D2": 10,
+    "A3": "East",
+    "B3": "Bee",
+    "C3": 2025,
+    "D3": 1,
+    "A4": "East",
+    "B4": "Ant",
+    "C4": 2024,
+    "D4": 2,
+    "A5": "East",
+    "B5": "Ant",
+    "C5": 2025,
+    "D5": 6,
+    "A6": "East",
+    "B6": "Cat",
+    "C6": 2024,
+    "D6": 5,
+    "A7": "West",
+    "B7": "Bee",
+    "C7": 2024,
+    "D7": 3,
+    "A8": "West",
+    "B8": "Ant",
+    "C8": 2025,
+    "D8": 20,
+    "A9": "West",
+    "B9": "Cat",
+    "C9": 2024,
+    "D9": 4,
+    "A10": "West",
+    "B10": "Cat",
+    "C10": 2025,
+    "D10": 9
+   }
+  },
+  {
+   "name": "Days",
+   "cells": {
+    "A1": "Day",
+    "B1": "Sales",
+    "A2": "Wed",
+    "B2": 1,
+    "A3": "Mon",
+    "B3": 2,
+    "A4": "Fri",
+    "B4": 3
+   }
+  },
+  {
+   "name": "SA",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SA",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "ascending"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SD",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SD",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SM",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SM",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "manual"
+        },
+        "order": [
+         "Cat",
+         "Ant",
+         "Bee"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SV",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SV",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SVA",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SVA",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "ascending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SVC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SVC",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"2\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference><reference field=\"2\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      },
+      "columns": [
+       "Year"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SVR",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SVR",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SXA",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SXA",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\" type=\"normal\" labelOnly=\"0\" grandRow=\"0\" grandCol=\"0\" cacheIndex=\"0\" collapsedLevelsAreSubtotals=\"0\" axis=\"axisRow\" field=\"1\" offset=\"A1\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SXR",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SXR",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\" byPosition=\"0\" relative=\"0\" defaultSubtotal=\"0\" sumSubtotal=\"0\" countASubtotal=\"0\" avgSubtotal=\"0\" maxSubtotal=\"0\" minSubtotal=\"0\" productSubtotal=\"0\" countSubtotal=\"0\" stdDevSubtotal=\"0\" stdDevPSubtotal=\"0\" varSubtotal=\"0\" varPSubtotal=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SV2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SV2",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Sales",
+        "subtotal": "max"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"1\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "NA",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_NA",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "sortType": "descending",
+         "nonAutoSortDefault": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CL1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CL1",
+     "source": "Days!A1:B4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Day"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Day": {
+        "attrs": {
+         "sortType": "ascending"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CL0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CL0",
+     "source": "Days!A1:B4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Day"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Day": {
+        "attrs": {
+         "sortType": "ascending"
+        }
+       }
+      },
+      "table": {
+       "customListSort": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A20)"
+   }
+  }
+ ],
+ "expected": {}
+}
