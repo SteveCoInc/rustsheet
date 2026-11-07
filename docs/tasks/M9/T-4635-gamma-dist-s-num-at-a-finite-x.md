@@ -38,3 +38,6 @@ oracle evidence brackets, and the Gate A definition gives those points a value o
 - The overflowing x / beta rule (T-4625; the engine already matches it).
 - The overflowing x / beta rule's low end: below shape 0.01 only the cdf is evidenced (GAMMADIST/s1 A182); a density
   cell there would settle it, but that is not this task's.
+
+## Progress
+- 2026-11-07: resumed by an opus run (branch idle 4 h, no PR); first fill in, second bracket probe next.
