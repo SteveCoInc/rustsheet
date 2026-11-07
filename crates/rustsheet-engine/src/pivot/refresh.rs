@@ -11,7 +11,9 @@
 //!   follow in source order ([`FieldReader`]);
 //! - the `sharedItems` flags are derived from the items ([`SharedItemsFlags`]), so they always
 //!   agree with them;
-//! - a field's saved range grouping is built again over the new values ([`regroup`]).
+//! - a field's saved range grouping is built again over the new values ([`regroup`]), and a
+//!   field Excel added to group another (a date level, a manual group) is derived again from its
+//!   base (`added_groups`, T-4171).
 //!
 //! A source is a worksheet range; a defined name or a Table source resolves to its range in
 //! T-4506 and refreshes as [`PivotCacheError::Source`] until then.
@@ -20,6 +22,7 @@ use std::collections::{HashMap, HashSet};
 
 use thiserror::Error as ThisError;
 
+use super::added_groups::derive_added;
 use super::{
     group_by_dates, group_by_numbers, ungroup_dates, CacheBuilder, CacheField, CacheItem,
     CacheSource, CellArea, DateGroupBy, DateGroupError, DateGroups, ItemKey, NumberGroupError,
@@ -127,17 +130,19 @@ impl Model {
 }
 
 /// `cache` refreshed from `source`: the cache [`read_source`] reads, each field whose old
-/// version had a range grouping grouped again ([`regroup`]). `workbook_values_left` is how many
-/// record values the workbook may still hold without this cache's old ones. The caller swaps the
-/// result in only on success.
+/// version had a range grouping grouped again ([`regroup`]), then each field Excel added to group
+/// another derived again from its base's new values, in the old order (`derive_added`, T-4171).
+/// `workbook_values_left` is how many record values the workbook may still hold without this
+/// cache's old ones. The caller swaps the result in only on success.
 ///
-/// The fields are in source order, whatever order `cache` had them in, and a pivot table's field
-/// indices into `cache` are not remapped: the caller that swaps the cache in (T-4151) must remap
-/// them by name.
+/// The fields are in source order (the added ones after), whatever order `cache` had them in,
+/// and a pivot table's field indices into `cache` are not remapped: the caller that swaps the
+/// cache in (T-4151) must remap them by name.
 ///
 /// # Errors
-/// [`read_source`]'s, and [`PivotCacheError::Group`] when a field's new values do not fit its
-/// grouping (UNVERIFIED what Excel does then; grouped fields are PV3).
+/// [`read_source`]'s, [`PivotCacheError::Group`] when a field's new values do not fit its
+/// grouping (UNVERIFIED what Excel does then; grouped fields are PV3) or an added field cannot be
+/// derived again (`derive_added`, UNVERIFIED, T-4802), and the cache limits over the added fields.
 pub fn refresh(
     cache: &PivotCache,
     source: &dyn SourceCells,
@@ -146,27 +151,22 @@ pub fn refresh(
     let mut fresh = read_source(cache, source, workbook_values_left)?.finish();
     fresh.refresh_on_load = cache.refresh_on_load;
     fresh.source_name.clone_from(&cache.source_name);
+    // The fields Excel added (`Quarters`, `Years`, a manual group field) read their base's own
+    // values, so they are derived before any field is grouped in place, as the importer does.
+    let added = derive_added(cache, &fresh, workbook_values_left.min(MAX_RECORD_VALUES))?;
     let old = fields_by_name(cache);
     for field in &mut fresh.fields {
         let Some(prior) = old.get(&fold_case(&field.name)) else {
             continue;
         };
-        let grouping = match (&prior.number_groups, prior.date_groups) {
-            (Some(g), _) => RangeGrouping::Numbers {
-                start: g.start,
-                end: g.end,
-                interval: g.interval,
-            },
-            (None, Some(g)) => {
-                let (by, start, end) = g.bounds();
-                RangeGrouping::Dates { by, start, end }
-            }
-            (None, None) => continue,
+        let Some(grouping) = RangeGrouping::of(prior) else {
+            continue;
         };
         // A grouped field's items are its labels, in cache order, which `NumberGroups::new`
         // and `group_by_dates` take back unchanged.
         *field = regroup(field, &grouping, &prior.items).map_err(|_| PivotCacheError::Group)?;
     }
+    fresh.fields.extend(added);
     Ok(fresh)
 }
 
@@ -451,6 +451,26 @@ pub enum RangeGrouping {
         /// `endDate`, as a serial.
         end: f64,
     },
+}
+
+impl RangeGrouping {
+    /// The range grouping `field` holds (its `number_groups` or `date_groups`), to build again
+    /// over refreshed values ([`regroup`]); `None` for a field without one.
+    #[must_use]
+    pub fn of(field: &CacheField) -> Option<RangeGrouping> {
+        match (&field.number_groups, field.date_groups) {
+            (Some(g), _) => Some(RangeGrouping::Numbers {
+                start: g.start,
+                end: g.end,
+                interval: g.interval,
+            }),
+            (None, Some(g)) => {
+                let (by, start, end) = g.bounds();
+                Some(RangeGrouping::Dates { by, start, end })
+            }
+            (None, None) => None,
+        }
+    }
 }
 
 /// Why [`regroup`] cannot group a field.

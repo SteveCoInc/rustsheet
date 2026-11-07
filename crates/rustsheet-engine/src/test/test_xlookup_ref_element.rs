@@ -101,6 +101,36 @@ fn offset_lifts_over_a_mixed_grid() {
     }
 }
 
+// The RANK family lifts over the elements of a mixed grid: the hit (a value) is #VALUE!, the miss
+// ranks against its range G1:G2 = 50, 60 (probes/t4704-mixed-xlookup-grid-readers A25:C38,
+// T-4740).
+#[test]
+fn rank_lifts_over_a_mixed_grid() {
+    let mut model = data();
+    model._set("K1", &format!("=RANK(60,{X_G})"));
+    model._set("K4", &format!("=RANK.EQ(60,{X_G})"));
+    model._set("K7", &format!("=RANK.AVG(60,{X_G})"));
+    model._set("K10", &format!("=RANK(20,{X_G})"));
+    model._set("K13", &format!("=RANK(50,{X_G})"));
+    model._set("L1", &format!("=ROWS(RANK(60,{X_G}))"));
+    model.evaluate();
+    for (cell, expected) in [
+        ("K1", "#VALUE!"),
+        ("K2", "1"),
+        ("K4", "#VALUE!"),
+        ("K5", "1"),
+        ("K7", "#VALUE!"),
+        ("K8", "1"),
+        ("K10", "#VALUE!"),
+        ("K11", "#N/A"),
+        ("K13", "#VALUE!"),
+        ("K14", "2"),
+        ("L1", "2"),
+    ] {
+        assert_eq!(model._get_text(cell), expected, "{cell}");
+    }
+}
+
 // LARGE, SMALL and MEDIAN over references on another sheet are #N/A, on the formula's own sheet
 // the value view's #VALUE! (t4569 A12, A13, A22, A31, A43, Local!E1:E3).
 #[test]
@@ -147,6 +177,40 @@ fn order_statistics_over_mixed_sheets_follow_the_first_element() {
         assert_eq!(model._get_text(cell), *"#VALUE!", "{cell}");
     }
     assert_eq!(model._get_text("Sheet2!B4"), *"#N/A");
+}
+
+// Over an error element beside an off-sheet reference the first element decides: the reference
+// first is #N/A for LARGE, SMALL and MEDIAN, the error first is the error; MAX takes the error
+// either way (T-4741; t4704 Calc!A46:A61, A88, A91).
+#[test]
+fn order_statistics_over_an_error_and_a_reference_follow_the_first_element() {
+    let mut model = data();
+    model._set("I1", "5");
+    model._set("I2", "=1/0");
+    model._set("I3", "7");
+    model.add_sheet("Sheet2").unwrap();
+    let grid =
+        |keys: &str| format!("XLOOKUP({keys},Sheet1!$A$1:$A$3,Sheet1!$I$1:$I$3,Sheet1!$G$1:$G$2)");
+    let (reference_first, error_first) = (grid("{9;2}"), grid("{2;9}"));
+    for (row, grid) in [(1, &reference_first), (2, &error_first)] {
+        model._set(&format!("Sheet2!A{row}"), &format!("=LARGE({grid},1)"));
+        model._set(&format!("Sheet2!B{row}"), &format!("=SMALL({grid},1)"));
+        model._set(&format!("Sheet2!C{row}"), &format!("=MEDIAN({grid})"));
+        model._set(&format!("Sheet2!D{row}"), &format!("=MAX({grid})"));
+    }
+    model.evaluate();
+    for cell in ["Sheet2!A1", "Sheet2!B1", "Sheet2!C1"] {
+        assert_eq!(model._get_text(cell), *"#N/A", "{cell}");
+    }
+    for cell in [
+        "Sheet2!D1",
+        "Sheet2!A2",
+        "Sheet2!B2",
+        "Sheet2!C2",
+        "Sheet2!D2",
+    ] {
+        assert_eq!(model._get_text(cell), *"#DIV/0!", "{cell}");
+    }
 }
 
 // A lift with no miss builds no grid: the hits are an ordinary array, so ISREF of an element is

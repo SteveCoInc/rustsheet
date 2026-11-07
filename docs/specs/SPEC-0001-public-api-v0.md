@@ -154,6 +154,8 @@ impl From<f64>/From<bool>/From<&str> /* = Parse */ /* for Input */;
 impl Workbook {
     pub fn edit<T>(&mut self, f: impl FnOnce(&mut Txn<'_>) -> Result<T, EditError>) -> Result<(T, ChangeSet), EditError>;
     pub fn set(&mut self, r: impl Into<Target>, input: impl Into<Input>) -> Result<ChangeSet, EditError>; // one-cell edit()
+    pub fn pivot_table(&self, sheet: SheetId, name: &str) -> Option<PivotView>; // read-only view; SPEC-0032 "API", T-4178
+    pub fn pivot_table_cells(&self, sheet: SheetId, name: &str) -> Result<Vec<(CellRef, Value)>, PivotError>; // computed on call; T-4178
 }
 impl Txn<'_> {
     pub fn set(&mut self, r: impl Into<Target>, input: impl Into<Input>) -> Result<(), EditError>;
@@ -165,6 +167,9 @@ impl Txn<'_> {
     pub fn define_sheet_name(&mut self, sheet: SheetId, name: &str, formula: &str) -> Result<(), EditError>; // sheet scope; T-1193
     pub fn set_row_hidden(&mut self, sheet: SheetId, row: u32, hidden: bool) -> Result<(), EditError>; // 0-based row, manual hide; T-1168
     pub fn add_table(&mut self, range: RangeRef, name: &str, filtered: bool) -> Result<(), EditError>; // header row first; T-1036
+    pub fn add_pivot_table(&mut self, input: &PivotTableInput) -> Result<(), EditError>; // laid out from its anchor; SPEC-0032 "API", T-4178
+    pub fn set_pivot_table(&mut self, sheet: SheetId, name: &str, input: &PivotTableInput) -> Result<(), EditError>; // in place, stale cells cleared; T-4178
+    pub fn refresh_pivot_table(&mut self, sheet: SheetId, name: &str) -> Result<(), EditError>; // from the source as it is; T-4151, T-4178
 }
 pub struct ChangeSet { pub inputs: Vec<InputChange>, pub values: Vec<ValueChange>, pub sheets: Vec<SheetChange> }
 pub struct InputChange { pub cell: CellRef, pub before: Option<String>, pub after: Option<String> } // formula or literal text as the user sees it
