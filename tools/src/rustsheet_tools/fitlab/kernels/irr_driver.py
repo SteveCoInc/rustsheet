@@ -174,7 +174,9 @@ def secant(flows: list[float], guess: float, opts: Options) -> Run:
         run.event, run.error = e.event, e.error
     except _DivZeroError:
         run.error, run.event = "#DIV/0!", OVERFLOW
-    except (ZeroDivisionError, OverflowError):
+    except (ZeroDivisionError, OverflowError, ValueError):
+        # ValueError: an exact operator (`X87`) met an infinite operand, where plain doubles would carry the inf
+        # into a non-finite step (feasibility.py's failure, then the retry).
         run.event = NOT_FINITE
     return run
 
