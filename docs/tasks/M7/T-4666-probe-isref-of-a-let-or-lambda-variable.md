@@ -3,7 +3,7 @@ id: T-4666
 title: "Probe ISREF of a LET or LAMBDA variable bound to a union (incl. negated and empty-intersection operands) and _xleta.COUNT with SCAN/REDUCE initial-value forms"
 milestone: M7
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
