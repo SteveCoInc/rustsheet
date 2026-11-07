@@ -132,20 +132,33 @@ def test_regeneration_keeps_ids_and_hand_filled_columns(tmp_path: Path) -> None:
     row = table["pivotTableDefinition/location@ref"]
     text = tsv.read_text().replace(
         "\t".join(row[h] for h in HEADER),
-        "\t".join({**row, "web": "yes", "status": "done", "evidence": "probes/x"}[h] for h in HEADER),
+        "\t".join(
+            {**row, "web": "yes", "status": "done", "evidence": "probes/x", "owner": "T-0001"}[h]
+            for h in HEADER
+        ),
     )
     tsv.write_text(text)
     write(xsd, out)
     again = read_table(tsv)["pivotTableDefinition/location@ref"]
-    assert (again["id"], again["web"], again["status"], again["evidence"]) == (
+    assert (again["id"], again["web"], again["status"], again["evidence"], again["owner"]) == (
         row["id"],
         "yes",
         "done",
         "probes/x",
+        "T-0001",
     )
     added = rows([*walk(xsd), Node("ST_Axis=axisCol")], read_table(tsv))
     new = next(r for r in added if r["ooxml"] == "ST_Axis=axisCol")
     assert new["id"] == f"PV-{len(table) + 1:04d}"
+
+
+def test_a_table_without_the_owner_column_regenerates_with_it_empty(tmp_path: Path) -> None:
+    xsd = _schemas(tmp_path / "xsd")
+    previous = {r["ooxml"]: {k: v for k, v in r.items() if k != "owner"} for r in rows(walk(xsd), {})}
+    gone = next(iter(previous))
+    again = rows([n for n in walk(xsd) if n.path != gone], previous)
+    assert {r["owner"] for r in again} == {""}
+    assert next(r for r in again if r["ooxml"] == gone)["status"] == "retired"
 
 
 def test_a_dropped_node_keeps_its_row_retired_and_its_id_is_not_reused(tmp_path: Path) -> None:

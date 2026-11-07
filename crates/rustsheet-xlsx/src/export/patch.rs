@@ -47,8 +47,9 @@ mod tag;
 #[cfg(test)]
 mod tests;
 
-/// Deepest element nesting the patcher reads in a worksheet (directive 5).
-const MAX_DEPTH: usize = 256;
+/// Deepest element nesting the patcher reads in a worksheet, and the `PivotChart` rewrite in a chart
+/// part (`pivot_charts`, T-4187) (directive 5).
+pub(super) const MAX_DEPTH: usize = 256;
 
 /// The styles part, as the importer reads it.
 const STYLES_PART: &str = "xl/styles.xml";
@@ -252,8 +253,8 @@ fn cells_carry(xml: &str, keys: &[&str]) -> bool {
 }
 
 /// Why the workbook's structure differs between `model` and `pristine`, if it does: everything
-/// the patcher does not rewrite must be equal (SPEC-0034 D2.1). Each [`Worksheet`] field is named,
-/// with no `..`, so a field added to the model is a compile error here until it is classified.
+/// the patcher does not rewrite must be equal (SPEC-0034 D2.1), each sheet's by
+/// [`sheet_structure_same`].
 fn structure_differs(model: &Model, pristine: &Model) -> Option<String> {
     let (a, b) = (&model.workbook, &pristine.workbook);
     let workbook_fields = [
@@ -275,48 +276,55 @@ fn structure_differs(model: &Model, pristine: &Model) -> Option<String> {
         return Some(format!("the workbook's {what} changed"));
     }
     for (x, y) in a.worksheets.iter().zip(&b.worksheets) {
-        let Worksheet {
-            dimension: _,
-            cols,
-            rows,
-            name,
-            sheet_data: _,
-            shared_formulas: _,
-            sheet_id,
-            load_rank,
-            state,
-            color,
-            merged_cells,
-            comments,
-            frozen_rows,
-            frozen_columns,
-            views,
-            show_grid_lines,
-            conditional_formatting,
-            links,
-            data_tables,
-        } = x;
-        let same = *cols == y.cols
-            && *rows == y.rows
-            && *name == y.name
-            && *sheet_id == y.sheet_id
-            && *load_rank == y.load_rank
-            && *state == y.state
-            && *color == y.color
-            && *merged_cells == y.merged_cells
-            && *comments == y.comments
-            && *frozen_rows == y.frozen_rows
-            && *frozen_columns == y.frozen_columns
-            && *views == y.views
-            && *show_grid_lines == y.show_grid_lines
-            && *conditional_formatting == y.conditional_formatting
-            && *links == y.links
-            && *data_tables == y.data_tables;
-        if !same {
-            return Some(format!("sheet {name}'s structure changed"));
+        if !sheet_structure_same(x, y) {
+            return Some(format!("sheet {}'s structure changed", x.name));
         }
     }
     None
+}
+
+/// Whether the worksheets `x` and `y` are the same but for their cells: everything the patcher
+/// does not rewrite, which is also what a structural edit moves (the kept `PivotChart` drawings,
+/// `pivot_drawings`, T-4950). Each [`Worksheet`] field is named, with no `..`, so a field added
+/// to the model is a compile error here until it is classified.
+pub(super) fn sheet_structure_same(x: &Worksheet, y: &Worksheet) -> bool {
+    let Worksheet {
+        dimension: _,
+        cols,
+        rows,
+        name,
+        sheet_data: _,
+        shared_formulas: _,
+        sheet_id,
+        load_rank,
+        state,
+        color,
+        merged_cells,
+        comments,
+        frozen_rows,
+        frozen_columns,
+        views,
+        show_grid_lines,
+        conditional_formatting,
+        links,
+        data_tables,
+    } = x;
+    *cols == y.cols
+        && *rows == y.rows
+        && *name == y.name
+        && *sheet_id == y.sheet_id
+        && *load_rank == y.load_rank
+        && *state == y.state
+        && *color == y.color
+        && *merged_cells == y.merged_cells
+        && *comments == y.comments
+        && *frozen_rows == y.frozen_rows
+        && *frozen_columns == y.frozen_columns
+        && *views == y.views
+        && *show_grid_lines == y.show_grid_lines
+        && *conditional_formatting == y.conditional_formatting
+        && *links == y.links
+        && *data_tables == y.data_tables
 }
 
 /// The cells of `sheet` that differ from `before`, as (row, column).

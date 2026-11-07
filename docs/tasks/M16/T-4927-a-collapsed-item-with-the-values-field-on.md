@@ -3,7 +3,7 @@ id: T-4927
 title: "A collapsed item with the Values field on rows keeps one line per data field"
 milestone: M16
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -26,9 +26,18 @@ Owner of these visibly-off cells (decision 0245), 48 values and texts on 1 sheet
 - gen-pivot/36996978427905b2 P05!L6:M31
 
 ## Acceptance criteria
-- [ ] The cells above pass (`rustsheet-eval run --suite gen-pivot`), and no other case regresses (`make eval-baseline`).
-- [ ] The pivots.md entry says the engine now matches, with the implementing code path.
-- [ ] `make check` green; reviewers approve.
+- [x] The cells above pass (`rustsheet-eval run --suite gen-pivot`), and no other case regresses (`make eval-baseline`).
+- [x] The pivots.md entry says the engine now matches, with the implementing code path.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- Done by T-4699, which probed the rule in full (probes/t4699-pivot-blank-collapsed CV to CV4) and
+  implemented it in crates/rustsheet-engine/src/pivot/layout/lines.rs (`AxisPlan::lines`,
+  `values_from`, `HIDDEN`): every owned cell, gen-pivot/36996978427905b2 P05!L6:M31, now passes, and
+  `make eval-baseline` removed them from eval/baseline/gen-pivot.txt with no regression. pivots.md
+  "What the gen-pivot batch found (T-4132)" points to the entry "Blank rows and collapsed items
+  beyond an outer row field".
+

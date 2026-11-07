@@ -12,8 +12,8 @@ use crate::pivot::probe_cases::{
     address, diagonal, position, probe_pivot, read, subtotal_named, T4634_SHEETS,
 };
 use crate::pivot::{
-    AxisField, CacheBuilder, CellArea, DataField, ItemType, PageField, PivotItem, RecordValue,
-    MAX_RECORD_VALUES,
+    AxisField, CacheBuilder, CellArea, DataField, ItemType, PageField, PivotField, PivotItem,
+    RecordValue, MAX_RECORD_VALUES,
 };
 
 /// One line of a sidecar's `rowItems`/`colItems`: the cache items of its real fields, its data

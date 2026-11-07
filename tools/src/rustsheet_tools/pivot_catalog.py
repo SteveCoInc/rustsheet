@@ -8,9 +8,11 @@ Excel 2010 (x14) and 2013 (x15) extension schemas, from the pivot parts' root ty
 
 Every row carries a family, what it `affects` (values, layout, text or none, with the reason for none),
 its scope (in, or out by decision 0274) and its M16 stage. A row that later work fills (web support,
-status, evidence) starts `unknown` or `todo`. The schema files are not vendored. They come from a
-pinned docx4j checkout (`SCHEMA_SOURCE`); docx4j is Apache-2.0 and the schemas are ECMA-376's. The node
-list is committed, so the coverage test (every node has a row) runs without them.
+status, evidence, owner) starts `unknown`, `todo` or empty; `owner` names the open M16 task that owns
+the row for the M16 exit row (T-4952, docs/architecture/eval-harness.md "Milestone exit"). The schema
+files are not vendored. They come from a pinned docx4j checkout (`SCHEMA_SOURCE`); docx4j is Apache-2.0
+and the schemas are ECMA-376's. The node list is committed, so the coverage test (every node has a row)
+runs without them.
 """
 
 from __future__ import annotations
@@ -87,7 +89,19 @@ MAX_NODES = 100_000
 # Namespaces whose types the walk does not enter: XML Schema built-ins, the shared simple types, and
 # the drawing and formula types a pivot part never holds.
 NOT_WALKED = {"xsd", "s", "xdr", "xm"}
-HEADER = ("id", "family", "ooxml", "default", "affects", "web", "scope", "stage", "status", "evidence")
+HEADER = (
+    "id",
+    "family",
+    "ooxml",
+    "default",
+    "affects",
+    "web",
+    "scope",
+    "stage",
+    "status",
+    "evidence",
+    "owner",
+)
 
 
 @dataclass(frozen=True)
@@ -284,7 +298,7 @@ def classify(node: Node) -> tuple[str, str, str, str]:
 
 
 # Columns later work fills by hand (probes, implementations); regeneration keeps them, and the id.
-KEPT = ("web", "status", "evidence")
+KEPT = ("web", "status", "evidence", "owner")
 # The status of a row whose node left the schema walk. The row is kept so its id is never reused.
 RETIRED = "retired"
 
@@ -329,14 +343,16 @@ def rows(nodes: list[Node], previous: dict[str, dict[str, str]]) -> list[dict[st
             "stage": stage,
             "status": "todo",
             "evidence": "",
+            "owner": "",
         }
         if old is not None:
-            row.update({k: old[k] for k in KEPT})
+            # A table written before a kept column existed (`owner`, T-4952) leaves it at its default.
+            row.update({k: old.get(k, row[k]) for k in KEPT})
             if row["status"] == RETIRED:  # the node came back
                 row["status"] = "todo"
         out.append(row)
     live = {n.path for n in nodes}
-    out += [{**r, "status": RETIRED} for p, r in sorted(previous.items()) if p not in live]
+    out += [{"owner": "", **r, "status": RETIRED} for p, r in sorted(previous.items()) if p not in live]
     return out
 
 

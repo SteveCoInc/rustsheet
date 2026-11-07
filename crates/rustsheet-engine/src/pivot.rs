@@ -37,6 +37,7 @@ mod probe_cases;
 mod refresh;
 mod result;
 mod show_as;
+mod slicer;
 mod sort;
 
 pub use added_groups::{group_by_discrete, AddedGroup};
@@ -51,9 +52,10 @@ pub use filter::{
 };
 pub use grid::{PivotBudget, PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};
 pub use layout::{
-    chart_data, lay_out, records_behind, render, AxisLine, ChartCategory, ChartSeries, PivotCell,
-    PivotChartData, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM, COLUMN_LABELS, GRAND_TOTAL,
-    MAX_PIVOT_CELLS, MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS, TOTAL_SERIES, VALUES,
+    chart_data, lay_out, records_behind, render, AxisLine, CellFormat, ChartCategory, ChartSeries,
+    PivotCell, PivotChartData, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM, COLUMN_LABELS,
+    GRAND_TOTAL, MAX_PIVOT_CELLS, MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS, TOTAL_SERIES,
+    VALUES,
 };
 pub use model::{
     element_name, Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry,
@@ -69,6 +71,7 @@ pub use result::{
     compute, compute_on, AxisNode, AxisTree, PivotComputeError, PivotResult, MAX_PIVOT_NODES,
     MAX_PIVOT_WORK,
 };
+pub use slicer::DateSpan;
 pub use sort::{AutoSortScope, SortReference, DATA_FIELD_REFERENCE};
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").

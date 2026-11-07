@@ -11,6 +11,7 @@
 use bitcode::{Decode, Encode};
 
 use super::filter::{AutoShow, PivotFilter};
+use super::slicer::DateSpan;
 use super::sort::AutoSortScope;
 
 /// `dataField@baseItem` when absent: no base item (MS-OI29500 §18.10.1.22, §18.10.1.44).
@@ -232,6 +233,15 @@ pub struct PivotField {
     /// ordered by the value this scope names (`pivot::sort`). The importer reads it from the
     /// element it keeps in [`PivotTable::opaque`], which is what the export writes (T-4827).
     pub auto_sort: Option<AutoSortScope>,
+    /// A slicer's selection on the field (T-4188), when a slicer drives it: a bitset over the
+    /// cache field's `items`, bit `i` set when the slicer leaves item `i` unselected. It replaces
+    /// [`PivotField::hidden`] in what the pivot shows ([`PivotField::excludes`]), on an axis or
+    /// not; `hidden` stays the `item@h` the export writes. The importer reads it from the
+    /// workbook's slicer caches, whose parts a save keeps verbatim (`pivot::slicer`).
+    pub slicer: Option<Vec<u64>>,
+    /// A timeline's selection on the field (T-4188): only records whose day is in it are kept,
+    /// and the pivot's own `<filters>` on the field are not applied (`pivot::slicer`).
+    pub timeline: Option<DateSpan>,
 }
 
 impl Default for PivotField {
@@ -262,6 +272,8 @@ impl PivotField {
             items: Vec::new(),
             auto_show: None,
             auto_sort: None,
+            slicer: None,
+            timeline: None,
         }
     }
 
@@ -275,9 +287,27 @@ impl PivotField {
     /// Whether item `item` is hidden; an item past the bitset reads as not hidden.
     #[must_use]
     pub fn is_hidden(&self, item: u32) -> bool {
-        self.hidden
-            .get(item as usize / 64)
-            .is_some_and(|word| word & (1 << (item % 64)) != 0)
+        bit(&self.hidden, item)
+    }
+
+    /// Whether the pivot leaves item `item` out: the slicer's selection when a slicer drives the
+    /// field (an item the slicer selects shows even when hidden, probes/t4767-pivot-slicers SX),
+    /// its hidden items otherwise. An item past the bitset reads as shown.
+    #[must_use]
+    pub fn excludes(&self, item: u32) -> bool {
+        bit(self.excluded_words(), item)
+    }
+
+    /// Whether [`PivotField::excludes`] leaves any item out.
+    #[must_use]
+    pub fn excludes_any(&self) -> bool {
+        self.excluded_words().iter().any(|word| *word != 0)
+    }
+
+    /// The bitset [`PivotField::excludes`] reads: the slicer's when a slicer drives the field,
+    /// the hidden items otherwise.
+    pub(super) fn excluded_words(&self) -> &[u64] {
+        self.slicer.as_deref().unwrap_or(&self.hidden)
     }
 
     /// `item@h` of a listed item: whether the cache item it names is hidden. An item that names
@@ -286,6 +316,12 @@ impl PivotField {
     pub fn item_hidden(&self, item: &PivotItem) -> bool {
         item.kind == ItemType::Data && item.index.is_some_and(|x| self.is_hidden(x))
     }
+}
+
+/// Bit `item` of the bitset `bits`; one past its size reads as clear.
+pub(super) fn bit(bits: &[u64], item: u32) -> bool {
+    bits.get(item as usize / 64)
+        .is_some_and(|word| word & (1 << (item % 64)) != 0)
 }
 
 /// One `<item>` of a pivot field's `<items>`.
@@ -427,8 +463,9 @@ impl Default for DataField {
     }
 }
 
-/// A data field's summary function.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+/// A data field's summary function, in `ST_DataConsolidateFunction`'s order: the order Excel
+/// shows custom subtotal lines in (`Ord`; layout/lines.rs `AxisPlan::subtotals`, t4699 CU, CR).
+#[derive(Encode, Decode, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Aggregate {
     /// `sum`.
     Sum,
@@ -470,6 +507,41 @@ const CONSOLIDATE_NAMES: [(&str, Aggregate); 11] = [
 ];
 
 impl Aggregate {
+    /// The custom subtotal functions by their `ST_ItemType` names: an `<item t>` names its
+    /// subtotal line so, a `<rowItems>`/`<colItems>` line's `t` too, and a `<pivotField>` asks for
+    /// it with `<name>Subtotal="1"`. In the schema's order. `countA` is COUNTA and `count` Count
+    /// Numbers, as ECMA-376 reads them and Excel computes them; Excel labels both lines
+    /// `<item> Count` ([`ItemType::Function`]). Excel: see docs/excel-semantics/pivots.md "Which
+    /// function the countA and count custom subtotals compute" (probes/t4622-pivot-count-subtotals).
+    pub const ITEM_TYPE_NAMES: [(&'static str, Aggregate); 11] = [
+        ("sum", Aggregate::Sum),
+        ("countA", Aggregate::Count),
+        ("avg", Aggregate::Average),
+        ("max", Aggregate::Max),
+        ("min", Aggregate::Min),
+        ("product", Aggregate::Product),
+        ("count", Aggregate::CountNums),
+        ("stdDev", Aggregate::StdDev),
+        ("stdDevP", Aggregate::StdDevP),
+        ("var", Aggregate::Var),
+        ("varP", Aggregate::VarP),
+    ];
+
+    /// The custom subtotal function the `ST_ItemType` name `name` (`sum`, `countA`, ...) names.
+    #[must_use]
+    pub fn from_item_type_name(name: &str) -> Option<Self> {
+        let mut names = Self::ITEM_TYPE_NAMES.iter();
+        names.find(|(n, _)| *n == name).map(|(_, f)| *f)
+    }
+
+    /// The `ST_ItemType` name of the function as a custom subtotal (`countA` for
+    /// [`Aggregate::Count`]), what [`Aggregate::from_item_type_name`] reads.
+    #[must_use]
+    pub fn item_type_name(self) -> &'static str {
+        let mut names = Self::ITEM_TYPE_NAMES.iter();
+        names.find(|(_, f)| *f == self).map_or("sum", |(n, _)| *n)
+    }
+
     /// The function a `dataField@subtotal` (`ST_DataConsolidateFunction`) names.
     #[must_use]
     pub fn from_consolidate_name(name: &str) -> Option<Self> {

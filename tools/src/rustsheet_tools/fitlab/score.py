@@ -47,13 +47,19 @@ def within_fifteen_digits(expected: float, actual: float) -> bool:
     an expected 0 only matches 0, and non-finite values never match. The half unit is the double
     nearest `5e(E-15)` for the decimal exponent `E` of the shortest round-trip digits of `expected`.
     """
+    return within_digits(expected, actual)
+
+
+def within_digits(expected: float, actual: float, digits: int = 15) -> bool:
+    """`within_fifteen_digits` at `digits` significant digits: the half unit is the double nearest
+    `5e(E-digits)` (13 is decision 0267's bar for the incomplete-beta family)."""
     if not (math.isfinite(expected) and math.isfinite(actual)):
         return False
     gap = abs(actual - expected)
     if expected == 0.0:
         return gap == 0.0
     exponent = Decimal(repr(abs(expected))).adjusted()
-    return gap <= float(f"5e{exponent - 15}")
+    return gap <= float(f"5e{exponent - digits}")
 
 
 # What a candidate computes for a cell: a number, or on a complex-text cell the IM* text or a complex.

@@ -79,6 +79,17 @@ Owner of these visibly-off cells (decision 0245), 90 values and texts on 56 shee
 - gen-pivot/f9e7edbb5b74011a P06!O5:P5
 - gen-pivot/f9e7edbb5b74011a P10!L5
 - gen-pivot/f9e7edbb5b74011a P11!L5:N7
+- probes/t4699-pivot-blank-collapsed CV4!C3 (the Values field's `Values` header in tabular form; T-4699)
+
+Also owner of these pivot-corpus render cells (T-4906, Excel-saved files: docs/excel-semantics/pivots.md "What the Excel-saved pivot corpus shows (T-4906)"), 8 render cells of 8 fresh pivots:
+- pivot-corpus-closedxml/TryToLoad/TemplateWithTableSourcePivotTables.xlsx StressedAssetsPivot!D4
+- pivot-corpus-lo/xlsx/pivot/Pivot3_Column_Grand_Subtotals.xlsx Sheet2!C3
+- pivot-corpus-lo/xlsx/pivot/Pivot4_Column_Grand_Subtotals_SortDescending.xlsx Sheet2!C3
+- pivot-corpus-lo/xlsx/pivot-table/PivotTableCellFormatsTest_1_DataFieldInRow_RowLabelColor.xlsx Sheet1!G5
+- pivot-corpus-lo/xlsx/pivot-table/PivotTableCellFormatsTest_2_DataFieldInRow_ColumnLabelColor.xlsx Sheet1!G5
+- pivot-corpus-lo/xlsx/pivot-table/PivotTableCellFormatsTest_7_TwoRowTwoColumnFields_DataColor.xlsx Sheet1!J4
+- pivot-corpus-lo/xlsx/pivot-table/PivotTableCellFormatsTest_8_DataFieldInRow_DataColor.xlsx Sheet1!G5
+- pivot-corpus-lo/xlsx/pivot-table/PivotTableFormatsSubTotals.xlsx Sheet2!E3
 
 ## Acceptance criteria
 - [ ] The cells above pass (`rustsheet-eval run --suite gen-pivot`), and no other case regresses (`make eval-baseline`).

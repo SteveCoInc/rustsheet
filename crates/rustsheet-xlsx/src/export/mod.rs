@@ -8,6 +8,8 @@ mod dxfs_styles;
 mod escape;
 mod external_links;
 mod patch;
+mod pivot_charts;
+mod pivot_drawings;
 mod pivots;
 mod preserving;
 mod rich_errors;
@@ -19,6 +21,9 @@ mod theme;
 mod workbook;
 mod workbook_xml_rels;
 mod worksheets;
+pub use pivot_charts::{
+    rewrite_pivot_chart, PivotChartError, PivotChartFrame, MAX_CHART_PART_BYTES,
+};
 pub use preserving::{save_preserving, SaveTier};
 pub(crate) use rich_errors::rich_error_vm;
 pub(crate) use worksheets::exported_error_literal;
@@ -34,6 +39,7 @@ use rustsheet_engine::expressions::utils::number_to_column;
 use rustsheet_engine::types::Workbook;
 use rustsheet_engine::Model;
 
+use self::pivot_drawings::DrawingPlan;
 use self::pivots::PivotPlan;
 use self::xml_constants::XML_DECLARATION;
 
@@ -48,6 +54,7 @@ fn get_content_types_xml(
     rich: bool,
     table_parts: usize,
     pivots: &PivotPlan,
+    drawings: &DrawingPlan,
 ) -> String {
     // A list of all files in the zip
     let mut content = vec![
@@ -70,6 +77,7 @@ fn get_content_types_xml(
         ));
     }
     content.extend(pivots.content_types());
+    content.extend(drawings.content_types());
     content.extend(external_links::content_types(workbook));
     content.push(
         r#"<Override PartName="/xl/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>"#.to_string(),
@@ -114,6 +122,26 @@ pub fn save_to_xlsx(model: &Model, file_name: &str) -> Result<(), XlsxError> {
 /// Writes `model` as an xlsx package, its pivot caches and pivot tables included ([`pivots`]:
 /// the ones it cannot write faithfully are dropped and logged).
 pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<W, XlsxError> {
+    write_package(model, writer, None)
+}
+
+/// Writes `model` as [`save_xlsx_to_writer`] does, also keeping the `PivotChart` drawings of the
+/// package `source` it was loaded from ([`pivot_drawings`], T-4950); `pristine` is `source` as
+/// imported (SPEC-0034 D2). The regenerated tier of [`save_preserving`].
+pub(super) fn save_regenerated<W: Write + Seek>(
+    model: &Model,
+    pristine: &Model,
+    source: &[u8],
+    writer: W,
+) -> Result<W, XlsxError> {
+    write_package(model, writer, Some((pristine, source)))
+}
+
+fn write_package<W: Write + Seek>(
+    model: &Model,
+    writer: W,
+    source: Option<(&Model, &[u8])>,
+) -> Result<W, XlsxError> {
     let workbook = &model.workbook;
     let selected_sheet = match workbook.views.get(&0) {
         Some(view) => view.sheet,
@@ -130,6 +158,9 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
         next_part += tables.len();
     }
     let pivots = PivotPlan::new(workbook, model.pivot_today());
+    let drawings = source.map_or_else(DrawingPlan::default, |(pristine, bytes)| {
+        DrawingPlan::new(model, pristine, bytes, &pivots)
+    });
     // The workbook relates to its sheets as `rId1`..., then to its pivot caches.
     let first_cache_id = workbook_xml_rels::first_pivot_cache_id(workbook);
     let mut zip = zip::ZipWriter::new(writer);
@@ -138,7 +169,9 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
 
     // root folder
     zip.start_file(crate::import::CONTENT_TYPES_PART, options)?;
-    zip.write_all(get_content_types_xml(workbook, rich, next_part - 1, &pivots).as_bytes())?;
+    zip.write_all(
+        get_content_types_xml(workbook, rich, next_part - 1, &pivots, &drawings).as_bytes(),
+    )?;
 
     zip.add_directory("docProps", options)?;
     zip.start_file("docProps/app.xml", options)?;
@@ -192,10 +225,20 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
     zip.add_directory("xl/worksheets", options)?;
     // sheet rels parts (one per sheet with external hyperlinks)
     let mut has_worksheet_rels = false;
+    // Each sheet's relationship id to its kept drawing, numbered after its pivot tables.
+    let mut drawing_ids = vec![None; workbook.worksheets.len()];
     for (sheet_index, worksheet) in workbook.worksheets.iter().enumerate() {
         let parts = table_parts.get(sheet_index).cloned().unwrap_or(0..0);
-        let pivot_tables = |first_id| pivots.sheet_relationships(sheet_index, first_id);
-        if let Some(rels_xml) = worksheets::get_worksheet_xml_rels(worksheet, parts, pivot_tables) {
+        let first_id = worksheets::first_id_after_tables(worksheet, parts.len());
+        let mut after_tables = pivots.sheet_relationships(sheet_index, first_id);
+        let drawing_id = first_id + after_tables.len();
+        if let Some(relationship) = drawings.sheet_relationship(sheet_index, drawing_id) {
+            after_tables.push(relationship);
+            if let Some(slot) = drawing_ids.get_mut(sheet_index) {
+                *slot = Some(format!("rId{drawing_id}"));
+            }
+        }
+        if let Some(rels_xml) = worksheets::get_worksheet_xml_rels(worksheet, parts, after_tables) {
             if !has_worksheet_rels {
                 zip.add_directory("xl/worksheets/_rels", options)?;
                 has_worksheet_rels = true;
@@ -228,6 +271,7 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
                 sheet_dimension_str,
                 is_sheet_selected,
                 tables_by_sheet.get(sheet_index).map_or(0, Vec::len),
+                drawing_ids.get(sheet_index).and_then(Option::as_deref),
             )
             .as_bytes(),
         )?;
@@ -263,6 +307,7 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
     }
 
     pivots.write(workbook, &mut zip, options)?;
+    drawings.write(&mut zip, options)?;
 
     for (index, book) in workbook.external_books.iter().enumerate() {
         zip.start_file(external_links::external_link_part(index), options)?;
