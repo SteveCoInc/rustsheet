@@ -82,16 +82,21 @@ struct PivotIndex {
     memo: HashMap<PivotQuery, Result<f64, Error>>,
 }
 
-/// A pivot GETPIVOTDATA can answer from: one data field, shown as itself, no page field, no
-/// hidden item, no slicer or timeline (`pivot::slicer`, T-4188) and no filter or `AutoShow`
-/// (`pivot::filter`, T-4165: what GETPIVOTDATA answers on a filtered pivot, slicers and timelines
-/// included, is unprobed, UNVERIFIED, T-4799). Every other shape is one of SPEC-0015's unknowns (1 and 4), `#REF!` until T-2085
-/// probes it; what GETPIVOTDATA answers for a field shown as a calculation is unprobed (UNVERIFIED,
-/// T-4750; before T-4163 the importer dropped such a pivot, so it was `#REF!` too). Several
-/// fields on an axis (unknown 10) are indexed too, but only their grand total is answered
-/// ([`nested_axis`]).
+/// A pivot GETPIVOTDATA can answer from: one data field, or several with the Values field on an
+/// axis (docs/excel-semantics/web.md "GETPIVOTDATA on other pivot shapes (T-2085)", DF), each
+/// shown as itself, no page field, no hidden item, no slicer or timeline (`pivot::slicer`, T-4188)
+/// and no filter or `AutoShow` (`pivot::filter`, T-4165: what GETPIVOTDATA answers on a filtered
+/// pivot, slicers and timelines included, is unprobed, UNVERIFIED, T-4799). Every other shape is
+/// one of SPEC-0015's unknowns (4), `#REF!`; what GETPIVOTDATA answers for a field shown as a
+/// calculation is unprobed (UNVERIFIED, T-4750; before T-4163 the importer dropped such a pivot,
+/// so it was `#REF!` too). Several fields on an axis (unknown 10) are indexed too, but only their
+/// grand total is answered ([`nested_axis`]). The axis is the cache fields on the rows, then the
+/// columns, the Values field left out.
 fn supported(pivot: &PivotTable) -> Option<Vec<u32>> {
-    if pivot.data_fields.len() != 1
+    let several = pivot.data_fields.len() > 1;
+    if pivot.data_fields.is_empty()
+        || (several && !values_on_axis(pivot))
+        || (!several && values_on_axis(pivot))
         || pivot
             .data_fields
             .iter()
@@ -107,15 +112,27 @@ fn supported(pivot: &PivotTable) -> Option<Vec<u32>> {
     {
         return None;
     }
+    Some(
+        pivot
+            .row_fields
+            .iter()
+            .chain(&pivot.column_fields)
+            .filter_map(|field| match field {
+                AxisField::Field(index) => Some(*index),
+                AxisField::Values => None,
+            })
+            .collect(),
+    )
+}
+
+/// Whether the Values field (`x="-2"`) is on `pivot`'s row or column axis, as it is when the
+/// pivot shows several data fields.
+pub(crate) fn values_on_axis(pivot: &PivotTable) -> bool {
     pivot
         .row_fields
         .iter()
         .chain(&pivot.column_fields)
-        .map(|field| match field {
-            AxisField::Field(index) => Some(*index),
-            AxisField::Values => None,
-        })
-        .collect()
+        .any(|field| matches!(field, AxisField::Values))
 }
 
 /// Whether `pivot` has several fields on its row or its column axis. GETPIVOTDATA answers such a
