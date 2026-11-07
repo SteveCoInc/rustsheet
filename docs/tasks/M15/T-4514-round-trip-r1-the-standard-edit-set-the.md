@@ -3,7 +3,7 @@ id: T-4514
 title: "Round-trip R1: the standard edit set, the expected-delta rule, idempotence and per-case exceptions (SPEC-0033 D1, D5, D8)"
 milestone: M15
 lane: harness
-status: blocked
+status: in-progress
 priority: P1
 size: M
 tier: opus
@@ -33,8 +33,3 @@ each naming its decision or task, and a self-test fails on an exception that exc
 ## Out of scope
 - R2 (M4).
 - Excel goldens (T-4180).
-
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275, 0306): M15 waits until Phase 1 parity exits, except for the task the
-owner-directed session claims. Unblock when docs/status.md has the line `**Phase 1:** exited <date>`, or by claiming
-it in that session.
