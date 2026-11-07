@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-4861: INDIRECT of an unquoted R1C1-shaped sheet prefix. Sheets C1D, R1C1, RC, R1_, R0, C1, R1, R (B1 100..107). Column A is INDIRECT of the unquoted text, column B of the quoted text. Predictions, committed before the fill: the quoted column reads every B1; the unquoted column is #REF! for the names that are R1C1 references or prefixes (R1C1, RC, R0, C1, R1, R) and reads the sheet for C1D and R1_ (not R1C1 syntax).",
+ "description": "T-4861: INDIRECT of an unquoted R1C1-shaped sheet prefix. Sheets C1D, R1C1, RC, R1_, R0, C1, R1, R (B1 100..107). Column A is INDIRECT of the unquoted text, column B of the quoted text. Predictions, committed before the fill: the quoted column reads every B1; the unquoted column is #REF! for the names that are R1C1 references or prefixes (R1C1, RC, R0, C1, R1, R) and reads the sheet for C1D and R1_ (not R1C1 syntax). Extension (round 2, predictions committed before the refill): the unprobed tails R1C1D, R1CD, R1C0D, RC1D, R1D, C1R1, R1048576D and C16384D (rows 9-16) are #REF! like C1D and R1_; the bare RC1 and R1C and the out-of-range-with-tail R0D, C16385D and RC16385D (rows 17-21) read their sheet. The rule is kept only as far as the oracle confirms it.",
  "tags": [
   "M8",
   "references",
@@ -25,7 +25,33 @@
     "A7": "=INDIRECT(\"R1!B1\")",
     "B7": "=INDIRECT(\"'R1'!B1\")",
     "A8": "=INDIRECT(\"R!B1\")",
-    "B8": "=INDIRECT(\"'R'!B1\")"
+    "B8": "=INDIRECT(\"'R'!B1\")",
+    "A9": "=INDIRECT(\"R1C1D!B1\")",
+    "B9": "=INDIRECT(\"'R1C1D'!B1\")",
+    "A10": "=INDIRECT(\"R1CD!B1\")",
+    "B10": "=INDIRECT(\"'R1CD'!B1\")",
+    "A11": "=INDIRECT(\"R1C0D!B1\")",
+    "B11": "=INDIRECT(\"'R1C0D'!B1\")",
+    "A12": "=INDIRECT(\"RC1D!B1\")",
+    "B12": "=INDIRECT(\"'RC1D'!B1\")",
+    "A13": "=INDIRECT(\"R1D!B1\")",
+    "B13": "=INDIRECT(\"'R1D'!B1\")",
+    "A14": "=INDIRECT(\"C1R1!B1\")",
+    "B14": "=INDIRECT(\"'C1R1'!B1\")",
+    "A15": "=INDIRECT(\"R1048576D!B1\")",
+    "B15": "=INDIRECT(\"'R1048576D'!B1\")",
+    "A16": "=INDIRECT(\"C16384D!B1\")",
+    "B16": "=INDIRECT(\"'C16384D'!B1\")",
+    "A17": "=INDIRECT(\"RC1!B1\")",
+    "B17": "=INDIRECT(\"'RC1'!B1\")",
+    "A18": "=INDIRECT(\"R1C!B1\")",
+    "B18": "=INDIRECT(\"'R1C'!B1\")",
+    "A19": "=INDIRECT(\"R0D!B1\")",
+    "B19": "=INDIRECT(\"'R0D'!B1\")",
+    "A20": "=INDIRECT(\"C16385D!B1\")",
+    "B20": "=INDIRECT(\"'C16385D'!B1\")",
+    "A21": "=INDIRECT(\"RC16385D!B1\")",
+    "B21": "=INDIRECT(\"'RC16385D'!B1\")"
    }
   },
   {
@@ -74,6 +100,84 @@
    "name": "R",
    "cells": {
     "B1": 107
+   }
+  },
+  {
+   "name": "R1C1D",
+   "cells": {
+    "B1": 200
+   }
+  },
+  {
+   "name": "R1CD",
+   "cells": {
+    "B1": 201
+   }
+  },
+  {
+   "name": "R1C0D",
+   "cells": {
+    "B1": 202
+   }
+  },
+  {
+   "name": "RC1D",
+   "cells": {
+    "B1": 203
+   }
+  },
+  {
+   "name": "R1D",
+   "cells": {
+    "B1": 204
+   }
+  },
+  {
+   "name": "C1R1",
+   "cells": {
+    "B1": 205
+   }
+  },
+  {
+   "name": "R1048576D",
+   "cells": {
+    "B1": 206
+   }
+  },
+  {
+   "name": "C16384D",
+   "cells": {
+    "B1": 207
+   }
+  },
+  {
+   "name": "RC1",
+   "cells": {
+    "B1": 208
+   }
+  },
+  {
+   "name": "R1C",
+   "cells": {
+    "B1": 209
+   }
+  },
+  {
+   "name": "R0D",
+   "cells": {
+    "B1": 210
+   }
+  },
+  {
+   "name": "C16385D",
+   "cells": {
+    "B1": 211
+   }
+  },
+  {
+   "name": "RC16385D",
+   "cells": {
+    "B1": 212
    }
   }
  ],
