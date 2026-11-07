@@ -1095,7 +1095,9 @@ Two readings are the engine's own, not probed:
 
 Status: VERIFIED (excel-graph) for a page field's selection and hidden items (K4) only. UNVERIFIED
 (probe pending: T-4164): hidden items of a row or column field, and the totals over them (SPEC-0032
-stage 5 leaves filters and totals to T-4164). UNVERIFIED (probe pending: T-4633): the two readings
+stage 5 leaves filters and totals to T-4164). Partial evidence for a hidden row item:
+probes/t4129-pivot-layout-flags SH (Product C hidden, with `subtotalHiddenItems="1"`) leaves C's records
+out of East's subtotal (27) and the Grand Total (60); the flag-off control is T-4164's. UNVERIFIED (probe pending: T-4633): the two readings
 above.
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`filter`)
 
@@ -1247,7 +1249,8 @@ Evidence: these cases, all excel-graph, 2026-11-06, T-4129:
 - for the other rows, the earlier probes the catalog cites (t4123, t4135, t4137, t4138, t4168, t4586,
   t4622, t4311).
 
-Also seen in Excel's saved files (T-4129 runs, from the oracle's cached downloads):
+Also seen in Excel's saved files (T-4129 runs, from the oracle's cached downloads). No committed file
+evidences these; the sidecars do not record definitions:
 - Excel keeps every probed attribute and both x14 extensions as written, with three exceptions:
   - it drops an item's `m="1"`;
   - it drops `e="1"`, which is the default;
@@ -1273,8 +1276,9 @@ What desktop Excel does is out of scope (decision 0266). The case builder does n
 flags; a case that sets one cannot be filled.
 
 ## Show-values-as modes as Excel for the web renders them
-Rule: every ECMA `showDataAs` mode and every x14 `pivotShowAs` mode renders on open. Excel saves an
-x14 mode as written: the dataField extension's `pivotShowAs`, with no `showDataAs` on the dataField.
+Rule: every ECMA `showDataAs` mode and every x14 `pivotShowAs` mode renders on open. Observed in the
+oracle's cached downloads, not in a committed file (the sidecars do not record definitions): Excel saves
+an x14 mode as written, as the dataField extension's `pivotShowAs` with no `showDataAs` on the dataField.
 What each mode showed in one pivot is listed below. The pivot has rows Region (outer) and Product,
 columns Year, and Sum of Sales. The data are East A 10/4, B 5/8, C 3/– and West A 20/6, B –/7, for
 2024/2025. West/B/2024 and East/C/2025 are empty intersections.
@@ -1315,9 +1319,9 @@ Rule, per flag (each one on its own pivot of rows Region and Product with Sum of
   follows its products.
 - `subtotalCaption="Tot"` on Region in tabular form (SC): **the subtotal label is `Tot` alone, with no
   item name**. Both East's and West's subtotal rows read `Tot`.
-- `subtotalHiddenItems="1"` with Product C hidden (SH): **no effect**. East's subtotal is still 27,
-  without C's 3, and the Grand Total is 60. (Excel's UI offers "include filtered items in totals" for
-  OLAP sources only.)
+- `subtotalHiddenItems="1"` with Product C hidden (SH): with the flag set, the hidden C is left out of
+  East's subtotal (27, without C's 3) and of the Grand Total (60). The flag-off control is T-4164's,
+  so whether the flag changes anything is not evidenced here.
 - `showItems="0"` (SI), `allDrilled` and `defaultAttributeDrillState` (FA), `dataPosition="0"` with
   the Values field on columns (DPo), and `hideValuesRow="1"` with one data field (X14): no visible
   change.
@@ -1327,7 +1331,7 @@ Rule, per flag (each one on its own pivot of rows Region and Product with Sum of
 - `numFmtId="3"` on the Year row field (NF): it renders. The saved labels are numbers; their display
   format is not captured.
 - x14 pivotTableDefinition `fillDownLabelsDefault="1"` (X14): **existing fields are not filled down**.
-  The setting is a default for fields added later. A field's own x14 `fillDownLabels="1"` (X14F)
+  (Our reading, not evidenced: the setting is a default for fields added later.) A field's own x14 `fillDownLabels="1"` (X14F)
   repeats its labels: `East` on every East product row.
 - A `formats` entry whose pivotArea has `axis="axisValues"` (AV): it renders.
 

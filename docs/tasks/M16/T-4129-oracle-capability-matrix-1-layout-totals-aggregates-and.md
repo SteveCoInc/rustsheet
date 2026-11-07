@@ -29,7 +29,7 @@ All 143 catalog rows of the layout, totals, aggregation and show-values-as famil
 cites a probe and sheet in `evidence`: 140 are `yes` and 3 are `no`.
 - **Render (yes).** These rows render:
   - every ST_DataConsolidateFunction, ST_ItemType and ST_ShowDataAs value;
-  - all six x14 ST_PivotShowAs modes; Excel saves them as written, as the x14 dataField `pivotShowAs` with no
+  - all six x14 ST_PivotShowAs modes; the cached downloads (not a committed file) show Excel saves them as written, as the x14 dataField `pivotShowAs` with no
     `showDataAs`;
   - every location, axis and totals attribute;
   - the x14 pivotTableDefinition and pivotField extensions.
@@ -50,7 +50,7 @@ Their findings are in pivots.md under four new entries (capability matrix, refus
 flags). The show-as sidecars are evidence for T-4161 and T-4163. Among the findings:
 - `#NULL!` for an empty intersection under % Of and % Difference From;
 - `subtotalCaption` replaces the whole label;
-- `subtotalHiddenItems` has no effect;
+- with `subtotalHiddenItems` set, a hidden row item is left out of its subtotal and the grand total (flag-off control: T-4164);
 - `fillDownLabelsDefault` leaves existing fields alone.
 
 Harness changes:

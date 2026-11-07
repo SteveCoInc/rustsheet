@@ -1118,7 +1118,7 @@ PV-1116	layout	pivotTableDefinition/pivotFields/pivotField@outline	true	layout	y
 PV-1117	totals	pivotTableDefinition/pivotFields/pivotField@productSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1118	filtering	pivotTableDefinition/pivotFields/pivotField@rankBy		values	unknown	in	PV2	todo	
 PV-1119	olap-datamodel	pivotTableDefinition/pivotFields/pivotField@serverField	false	none	unknown	out (decision 0274)	out	todo	
-PV-1120	layout	pivotTableDefinition/pivotFields/pivotField@showAll	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture C (showAll 0); probes/t4311-pivot-showall-column-and-groups P (showAll 1)
+PV-1120	layout	pivotTableDefinition/pivotFields/pivotField@showAll	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture C (showAll 0); probes/t4311-pivot-showall-column-and-groups Calc B (GETPIVOTDATA on P!A13, showAll 1)
 PV-1121	ui	pivotTableDefinition/pivotFields/pivotField@showDropDowns	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1122	ui	pivotTableDefinition/pivotFields/pivotField@showPropAsCaption	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1123	ui	pivotTableDefinition/pivotFields/pivotField@showPropCell	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
