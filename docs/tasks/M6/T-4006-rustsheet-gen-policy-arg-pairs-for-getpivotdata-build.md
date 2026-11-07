@@ -3,7 +3,7 @@ id: T-4006
 title: "rustsheet-gen --policy arg-pairs for GETPIVOTDATA: build the case pivot so its unseen argument-class pairs get oracle-filled gen-m6 cells"
 milestone: M6
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
