@@ -75,5 +75,8 @@ Any other cell that the eval run shows moving is handled the same way, and it is
   regression run raise these lines. The `--suite`-restricted run did not touch eval/baseline/visible-parity.txt. A second,
   unrestricted `update-baseline --allow-regressions` run was refused by this session's sandbox permission check, so do it
   in a session where it is allowed, and check that its visible-parity diff is only those 5 lines.
-- Then: `make check-fast`, the `cargo test -p rustsheet-engine` unit tests that touch nested aggregates (not run to the end
-  here), the review panel (design, security, excel-fidelity), set `status: done` with an Outcome, and open the PR.
+- Unit tests: test_nested_groupby_cells.rs moved to the November reads (`aggregates_read_nested_cells_as_errors`; the bound
+  test keeps REDUCE's `#ERROR!` and now expects SUM `#N/A`). `cargo test -p rustsheet_engine`: 5687 passed, 0 failed;
+  clippy and fmt clean.
+- Then: raise the visible-parity lines as above, `make check-fast`, the review panel (design, security, excel-fidelity),
+  set `status: done` with an Outcome, and open the PR. Do not re-fill or edit the October sidecars (decision 0329).
