@@ -90,8 +90,16 @@ As implemented (T-4514):
 - The edits act on the first sheet in tab order, because the facade does not expose visibility yet.
 - The dimension is the model's used range.
 - Each edit is its own transaction, and `R1/all` applies them one after another.
-- An edit the engine refuses, such as a target inside a spill, has no valid target and is skipped like an `n/a`
-  edit.
+- E1 and E2 skip spill and array members, which hold an anchor's result and no input of their own. A write the
+  engine refuses because of its target moves E1 and E2 on to their next candidate (64 at most). Any other edit
+  with no valid target is `n/a`. The CLI line counts refused writes and `n/a` edits.
+- `Δ(E)` keeps two cell sets. Written cells explain their input, formula, computed flag and value, and their style
+  only under E6. Value-changed cells explain their value only. Appended style records and the style counts are
+  explained only under E6, and the shared-string counts only under E5. `dimension@ref` is explained only on the
+  edited sheet.
+- An R0 item excuses the same R1 item only up to its weight, so a larger `<truncated>` tail is still a violation.
+  Validator items also match on their detail.
+- A scenario that fails to run is one `scenario error` item. The case's R0 items still count.
 - `Δ(E)` is the union of the edits' change sets: the cells they wrote and the cells whose values changed.
 
 | Id | Edit |
@@ -234,7 +242,7 @@ Any other item is a **delta violation**, scored as the item's verdict (`added`, 
 however lossy R0 is. That makes it measurable today and gives the owner's "only the change I made" guarantee
 directly. A delta violation always fails, even when the same item is in the R0 baseline.
 
-As implemented (T-4514): violations take the case's baseline like any other item, with scenario `R1/E<n>` or
+As implemented (T-4514, decision 0336): violations take the case's baseline like any other item, with scenario `R1/E<n>` or
 `R1/all`, so a new violation is a regression and a fixed one is a fix. They cannot fail outright while E6 makes every
 save regenerate (T-4623). Once the patch tier writes new styles, the remaining known violations can be burnt down,
 and the rule can become absolute.

@@ -27,6 +27,9 @@ content-type override, instead of regenerating the package.
       `uniqueCount` are 1, and the relationship and override match what the regenerating export writes
       (integration test).
 - [ ] Inline strings the model interned still fall back, as T-4560 rules (unit test).
+- [ ] R1's delta rule explains the added `sharedStrings.xml` part, its `[Content_Types]` override and its workbook
+      relationship under E5 (crates/rustsheet-eval/src/roundtrip/r1.rs, `explained`), so a clean E5 save reports no
+      violation (unit test).
 - [ ] The round-trip baselines are rerecorded, and R1/E5 violations only shrink.
 - [ ] `make check` green; reviewers approve.
 

@@ -192,12 +192,6 @@ pub const ACCURACY_DIR: &str = "eval/accuracy";
 /// `eval/suites/`, so no cell report or milestone measure counts them.
 pub const ROUNDTRIP_DIR: &str = "eval/roundtrip";
 
-/// The round-trip scenarios the harness implements (SPEC-0033 D1, D8; R1 since T-4514).
-pub const ROUNDTRIP_SCENARIOS: &[&str] = &[
-    "R0", // Saving our own R0 output again (SPEC-0033 D8, idempotence).
-    "R0/again", "R1/E1", "R1/E2", "R1/E3", "R1/E4", "R1/E5", "R1/E6", "R1/all",
-];
-
 /// File inside a fetched suite recording the pin it was fetched at.
 pub const FETCH_MARKER: &str = ".rustsheet-fetched";
 
@@ -310,7 +304,7 @@ impl Suite {
                 suite.manifest.fetch = Some(fetch);
                 suite.cache_dir.clone_from(&cells.cache_dir);
             }
-            let unknown = |s: &&String| !ROUNDTRIP_SCENARIOS.contains(&s.as_str());
+            let unknown = |s: &&String| crate::roundtrip::scenarios::find(s).is_none();
             if let Some(s) = suite.manifest.scenarios.iter().find(unknown) {
                 bail!("{at}: scenario {s} is not implemented (SPEC-0033 D1; R2 is M4)");
             }

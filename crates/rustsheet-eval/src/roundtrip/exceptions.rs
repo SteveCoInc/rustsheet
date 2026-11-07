@@ -34,6 +34,16 @@ pub(super) fn load(suite: &Suite) -> anyhow::Result<Vec<Exception>> {
     let Some(file) = &suite.manifest.exceptions else {
         return Ok(Vec::new());
     };
+    // A file next to the manifest, never one outside the suite.
+    let inside = std::path::Path::new(file)
+        .components()
+        .all(|c| matches!(c, std::path::Component::Normal(_)));
+    if !inside {
+        bail!(
+            "{}: exceptions must name a file inside the suite directory",
+            suite.dir.display()
+        );
+    }
     let path = suite.dir.join(file);
     let text = std::fs::read_to_string(&path).with_context(|| path.display().to_string())?;
     let parsed: File = toml::from_str(&text).with_context(|| path.display().to_string())?;
@@ -61,12 +71,14 @@ fn owned(owner: &str) -> bool {
 }
 
 /// Removes from `results` the items `exceptions` excuse (a case whose every item then passes is
-/// `Pass`), and returns the exceptions that excused nothing, which are stale.
+/// `Pass`). Returns the exceptions that excused nothing, which are stale, and how many items were
+/// excused, which the run reports so that an exception is never silent.
 pub(super) fn apply<'a>(
     results: &mut [&mut CaseResult],
     exceptions: &'a [Exception],
-) -> Vec<&'a Exception> {
+) -> (Vec<&'a Exception>, usize) {
     let mut used = vec![false; exceptions.len()];
+    let mut excused = 0;
     for r in results.iter_mut() {
         let before = r.items.len();
         r.items.retain(|item| {
@@ -76,6 +88,7 @@ pub(super) fn apply<'a>(
                 .position(|e| e.case == r.id && e.item == key);
             if let Some(i) = hit {
                 used[i] = true;
+                excused += 1;
             }
             hit.is_none()
         });
@@ -86,10 +99,11 @@ pub(super) fn apply<'a>(
             r.status = CaseStatus::Pass;
         }
     }
-    exceptions
+    let stale = exceptions
         .iter()
         .zip(used)
         .filter(|(_, used)| !used)
         .map(|(e, _)| e)
-        .collect()
+        .collect();
+    (stale, excused)
 }

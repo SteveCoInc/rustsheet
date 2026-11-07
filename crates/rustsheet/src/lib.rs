@@ -10,6 +10,7 @@ mod error;
 mod pivot_read;
 mod refs;
 mod source;
+mod spill;
 mod value;
 mod workbook;
 

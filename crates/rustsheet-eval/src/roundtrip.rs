@@ -9,6 +9,7 @@
 mod exceptions;
 mod package;
 mod r1;
+pub(crate) mod scenarios;
 mod semantic;
 #[cfg(test)]
 mod tests;
@@ -21,12 +22,11 @@ use std::path::Path;
 use std::time::Duration;
 
 use rayon::prelude::*;
-use rustsheet::{LoadOptions, SaveOptions, Workbook};
+use rustsheet::{LoadOptions, Workbook};
 use serde::Serialize;
 use sha2::{Digest as _, Sha256};
 
 use crate::baseline::{self as ratchet, Baseline};
-use crate::engine::harness_options;
 use crate::runner::{run_in_worker, CaseStatus};
 use crate::suite::{BaselineMode, CaseFile, Suite};
 use crate::xlsx_snapshot::read_snapshot;
@@ -119,6 +119,10 @@ pub struct CaseResult {
     pub checked: usize,
     /// The items each scenario compared, so each scenario's rate can be told apart.
     pub scenarios: BTreeMap<&'static str, usize>,
+    /// For each R1 scenario that ran: the writes the engine refused, and the edits that had no
+    /// target (SPEC-0033 D1's `n/a`).
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub skipped: BTreeMap<&'static str, (usize, usize)>,
     /// The part items, and every element, attribute and validator item that did not pass.
     pub items: Vec<Item>,
 }
@@ -133,6 +137,7 @@ impl CaseResult {
             millis: 0,
             checked: 0,
             scenarios: BTreeMap::new(),
+            skipped: BTreeMap::new(),
             items: Vec::new(),
         }
     }
@@ -154,6 +159,7 @@ pub fn run_suites(suites: &[&Suite], filter: Option<&str>, timeout: Duration) ->
                 millis: 0,
                 checked: 0,
                 scenarios: BTreeMap::new(),
+                skipped: BTreeMap::new(),
                 items: Vec::new(),
             }),
         }
@@ -184,26 +190,27 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
         .map(|n| n.to_string_lossy().into_owned());
     let scenarios = suite.manifest.scenarios.clone();
     let (outcome, millis) = run_in_worker(format!("roundtrip:{}", case.id), timeout, move || {
-        run_scenarios(&bytes, name.as_deref(), &scenarios)
+        scenarios::run_scenarios(&bytes, name.as_deref(), &scenarios)
     });
     let mut result = match outcome {
         Err((status, message)) => CaseResult::new(case, suite, status, Some(message)),
-        Ok(Err(R0Error::Source(e))) => {
+        Ok(Err(scenarios::R0Error::Source(e))) => {
             CaseResult::new(case, suite, CaseStatus::InvalidCase, Some(e))
         }
-        Ok(Err(R0Error::Engine(e))) => {
+        Ok(Err(scenarios::R0Error::Engine(e))) => {
             CaseResult::new(case, suite, CaseStatus::EngineError, Some(e))
         }
-        Ok(Ok((items, scenarios))) => {
-            let status = if items.iter().all(|i| i.verdict.passes()) {
+        Ok(Ok(run)) => {
+            let status = if run.items.iter().all(|i| i.verdict.passes()) {
                 CaseStatus::Pass
             } else {
                 CaseStatus::Fail
             };
             CaseResult {
-                checked: scenarios.values().sum(),
-                scenarios,
-                items,
+                checked: run.checked.values().sum(),
+                scenarios: run.checked,
+                skipped: run.skipped,
+                items: run.items,
                 ..CaseResult::new(case, suite, status, None)
             }
         }
@@ -212,120 +219,9 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
     result
 }
 
-enum R0Error {
-    /// The source package itself cannot be read: the case is unusable.
-    Source(String),
-    /// The engine refused to load or save it.
-    Engine(String),
-}
-
-/// Runs R0 and then each further scenario of `scenarios` on one case. Returns the items (R0's,
-/// then each scenario's failures) and how many source items each scenario compared.
-fn run_scenarios(
-    bytes: &[u8],
-    name: Option<&str>,
-    scenarios: &[String],
-) -> Result<(Vec<Item>, BTreeMap<&'static str, usize>), R0Error> {
-    let (mut items, checked, out) = r0(bytes, name)?;
-    let mut counts = BTreeMap::from([("R0", checked)]);
-    let plain = items.clone();
-    for scenario in scenarios {
-        let Some(label) = crate::suite::ROUNDTRIP_SCENARIOS
-            .iter()
-            .copied()
-            .find(|s| s == scenario)
-        else {
-            continue;
-        };
-        if label == "R0/again" {
-            // Idempotence (D8): our own R0 output, saved again, keeps every item.
-            let (again, checked, _) = r0(&out, name)?;
-            counts.insert(label, checked);
-            items.extend(
-                again
-                    .into_iter()
-                    .filter(|i| !i.verdict.passes())
-                    .map(|i| Item {
-                        scenario: label,
-                        ..i
-                    }),
-            );
-        } else if let Some(edits) = r1::edits_for(label) {
-            let Some((edited, checked)) = run_r1(bytes, name, label, edits, &plain)? else {
-                continue;
-            };
-            counts.insert(label, checked);
-            items.extend(edited);
-        }
-    }
-    Ok((items, counts))
-}
-
-/// Loads `bytes` with the harness clock and recalculates, as every scenario starts.
-fn load(bytes: &[u8], name: Option<&str>) -> Result<Workbook, R0Error> {
-    let opts = LoadOptions {
-        recalc: false,
-        workbook: harness_options(name).map_err(R0Error::Engine)?,
-        ..LoadOptions::default()
-    };
-    let mut workbook = Workbook::from_xlsx_bytes(bytes, &opts)
-        .map_err(|e| R0Error::Engine(format!("import failed: {e}")))?;
-    workbook.pin_clock_from_metadata();
-    workbook.recalculate();
-    Ok(workbook)
-}
-
-fn save(workbook: &Workbook) -> Result<Vec<u8>, R0Error> {
-    workbook
-        .to_xlsx_bytes(SaveOptions::default())
-        .map_err(|e| R0Error::Engine(format!("save failed: {e}")))
-}
-
-/// Scenario R0 (SPEC-0033 D1): load with the harness clock, recalculate, save; then validate the
-/// output and score the source's parts, elements and attributes. Returns the items, the number
-/// of source items compared and the saved package.
-fn r0(bytes: &[u8], name: Option<&str>) -> Result<(Vec<Item>, usize, Vec<u8>), R0Error> {
-    let source = Package::read(bytes).map_err(|e| R0Error::Source(e.to_string()))?;
-    let workbook = load(bytes, name)?;
-    let out = save(&workbook)?;
-    let sides = Sides {
-        source: &source,
-        source_bytes: bytes,
-        saved: &workbook,
-        name: name.unwrap_or("workbook"),
-    };
-    let (items, checked) = score("R0", &sides, &out);
-    Ok((items, checked, out))
-}
-
-/// One R1 scenario (D1, D5): load, recalculate, apply `edits`, save, score, and keep the delta
-/// violations against the plain save's items. `None` when no edit had a target (`n/a`).
-fn run_r1(
-    bytes: &[u8],
-    name: Option<&str>,
-    label: &'static str,
-    edits: &[r1::Edit],
-    plain: &[Item],
-) -> Result<Option<(Vec<Item>, usize)>, R0Error> {
-    let source = Package::read(bytes).map_err(|e| R0Error::Source(e.to_string()))?;
-    let mut workbook = load(bytes, name)?;
-    let Some(delta) = r1::apply(&mut workbook, edits).map_err(R0Error::Engine)? else {
-        return Ok(None);
-    };
-    let out = save(&workbook)?;
-    let sides = Sides {
-        source: &source,
-        source_bytes: bytes,
-        saved: &workbook,
-        name: name.unwrap_or("workbook"),
-    };
-    let (items, checked) = score(label, &sides, &out);
-    Ok(Some((r1::violations(label, plain, items, &delta), checked)))
-}
-
 /// What a scenario's output is compared with: the source package and bytes, and the workbook
 /// that was saved (its recalculated values, D3.1).
-struct Sides<'a> {
+pub(super) struct Sides<'a> {
     source: &'a Package,
     source_bytes: &'a [u8],
     saved: &'a Workbook,
@@ -334,7 +230,7 @@ struct Sides<'a> {
 
 /// The items of one scenario and the number of source items compared: validator problems of
 /// `out`, the source's parts with what differs inside them, then the semantic items.
-fn score(scenario: &'static str, sides: &Sides<'_>, out: &[u8]) -> (Vec<Item>, usize) {
+pub(super) fn score(scenario: &'static str, sides: &Sides<'_>, out: &[u8]) -> (Vec<Item>, usize) {
     let mut items = Vec::new();
     let problem = |p: Problem| Item {
         scenario,
@@ -520,19 +416,10 @@ pub struct KeptRate {
 }
 
 impl KeptRate {
-    /// The rate over `results`.
+    /// The rate over `results`, every scenario together.
     #[must_use]
     pub fn of(results: &[&CaseResult]) -> KeptRate {
-        let mut rate = KeptRate::default();
-        for r in results {
-            if !matches!(r.status, CaseStatus::Pass | CaseStatus::Fail) {
-                rate.unscored += 1;
-                continue;
-            }
-            rate.checked += r.checked;
-            rate.not_kept += r.items.iter().map(|i| i.weight).sum::<usize>();
-        }
-        rate
+        KeptRate::of_scenarios(results, |_| true)
     }
 
     /// The rate of the scenarios `which` selects (`R0`, the `R1/` edits, `R0/again`): the items
@@ -572,28 +459,32 @@ impl KeptRate {
     }
 }
 
-/// A scenario family as the rates line reports it: its label and which scenarios it holds.
-type Family = (&'static str, fn(&str) -> bool);
-
-/// Each scenario family's kept rate, in run order: `R0`, the `R1/` edits together (their delta
+/// Each scenario family's kept rate, in run order: R0, the R1 edits together (their delta
 /// violations over the items they compared), and `R0/again` (idempotence), when the cases ran it.
+/// R1 also says how many writes the engine refused and how many edits had no target.
 fn rates_line(results: &[&CaseResult]) -> String {
-    let families: [Family; 3] = [
-        ("R0", |s| s == "R0"),
-        ("R1", |s| s.starts_with("R1/")),
-        ("R0/again", |s| s == "R0/again"),
-    ];
-    families
-        .iter()
-        .filter(|(_, which)| results.iter().any(|r| r.scenarios.keys().any(|s| which(s))))
-        .map(|(label, which)| {
-            format!(
-                "{label} {:.2}% kept",
-                KeptRate::of_scenarios(results, which).percent()
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(", ")
+    use scenarios::Family;
+    let mut parts = Vec::new();
+    for (label, family) in [
+        ("R0", Family::R0),
+        ("R1", Family::R1),
+        ("R0/again", Family::Again),
+    ] {
+        let which = |s: &str| scenarios::family(s) == Some(family);
+        if !results.iter().any(|r| r.scenarios.keys().any(|s| which(s))) {
+            continue;
+        }
+        let rate = KeptRate::of_scenarios(results, which);
+        parts.push(format!("{label} {:.2}% kept", rate.percent()));
+        if family == Family::R1 {
+            let (refused, missing) = results
+                .iter()
+                .flat_map(|r| r.skipped.values())
+                .fold((0, 0), |(a, b), (r, m)| (a + r, b + m));
+            parts.push(format!("{refused} R1 writes refused, {missing} edits n/a"));
+        }
+    }
+    parts.join(", ")
 }
 
 /// The results as a baseline (SPEC-0033 D8). A case that did not run is one `!Status` failure,
@@ -854,7 +745,15 @@ pub fn command(
             .iter_mut()
             .filter(|r| r.suite == suite.manifest.name)
             .collect();
-        for stale in exceptions::apply(&mut mine, &excused) {
+        let (stale, count) = exceptions::apply(&mut mine, &excused);
+        if count > 0 {
+            lines.push(format!(
+                "[{}] {count} items excused by {} exceptions",
+                suite.manifest.name,
+                excused.len()
+            ));
+        }
+        for stale in stale {
             if mode != Mode::Report && filter.is_none() {
                 ok = false;
             }
