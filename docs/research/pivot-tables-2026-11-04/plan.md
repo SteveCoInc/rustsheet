@@ -226,6 +226,10 @@ exits when:
   from listed deviations;
 - every remaining row has a task, or an `out` scope with its decision.
 
+The M16 exit row (report.json `milestone_exit`, T-4127) measures these. The fresh-corpus cells are its
+`corpus_render_met`, read from `fresh_pivot_render` (T-4906, T-4971), and the owners are its `owners_met`,
+read from the catalog's `owner` column (T-4952).
+
 The eval report gains a "Pivot features" table with one row per catalog row (cells, pass rate, evidence
 depth), as the function catalog has.
 

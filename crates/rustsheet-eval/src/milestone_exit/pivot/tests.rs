@@ -3,7 +3,7 @@ use crate::catalog::Catalog;
 use crate::closeness::Closeness;
 use crate::milestone_exit::{summarize, write_markdown, ExitRow};
 use crate::pivot_features::{PivotCellTally, PivotFeatures};
-use crate::pivot_freshness::PivotFreshness;
+use crate::pivot_freshness::{FreshRenderSuite, PivotFreshness};
 use crate::pivot_scoring::PivotLayout;
 use crate::probe_milestones::MilestoneRow;
 use crate::report::SuiteSummary;
@@ -148,7 +148,7 @@ fn every_measure_but_the_unmeasured_corpus_render_holds() {
         (Some(true), Some(true), Some(true))
     );
     assert_eq!((p.corpus_fresh, p.corpus_stale), (Some(0), Some(1)));
-    // Plan check (b) waits on a renderer-independent freshness test (T-4906), so nothing meets M16.
+    // No `fresh_pivot_render` row for the corpus suites: plan check (b) is not measured (T-4971).
     assert_eq!(p.corpus_render_met, None);
     assert!(!p.met && !row.exit, "{row:?}");
     assert!(all_met(&PivotExit {
@@ -363,4 +363,35 @@ fn only_m16_carries_the_pivot_measures() {
         .iter()
         .filter(|r| r.milestone != "M16")
         .all(|r| r.pivot.is_none()));
+}
+
+fn fresh_render(suite: &str, cells: usize, visibly_off: usize) -> FreshRenderSuite {
+    FreshRenderSuite {
+        suite: suite.into(),
+        render_cells: cells,
+        render_passed: cells - visibly_off,
+        render_visibly_off: visibly_off,
+        ..FreshRenderSuite::default()
+    }
+}
+
+#[test]
+fn the_corpus_render_measure_reads_both_corpus_suites_fresh_render_scores() {
+    let mut r = met();
+    // Both suites scored, none visibly off: met.
+    r.fresh_pivot_render = vec![
+        fresh_render(CORPUS_SUITES[0], 40, 0),
+        fresh_render(CORPUS_SUITES[1], 9, 0),
+    ];
+    assert_eq!(measure(&r).corpus_render_met, Some(true));
+    // A visibly-off render cell in either suite: not met.
+    r.fresh_pivot_render[1] = fresh_render(CORPUS_SUITES[1], 9, 2);
+    assert_eq!(measure(&r).corpus_render_met, Some(false));
+    // A suite that ran but scored no render cell is not evidence: not met.
+    r.fresh_pivot_render[1] = fresh_render(CORPUS_SUITES[1], 0, 0);
+    assert_eq!(measure(&r).corpus_render_met, Some(false));
+    // A fetched suite that is absent measures nothing: not measured, never met.
+    r.fresh_pivot_render.truncate(1);
+    assert_eq!(measure(&r).corpus_render_met, None);
+    assert!(!measure(&r).met);
 }
