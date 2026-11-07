@@ -2664,6 +2664,7 @@ C	probes/t4704-mixed-xlookup-grid-readers.case.json	103
 C	probes/t4719-text-unverified-residue.case.json	44
 C	probes/t4720-fixed-sign-and-exponent-digits.case.json	37
 C	probes/t4721-im-overflow-residue.case.json	25
+C	probes/t4724-vdb-straight-from-zero.case.json	50
 C	probes/t4745-pivot-classic-subtotal-caption.case.json	254
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/t4765-growth-factor-edges.case.json	24
