@@ -1,4 +1,4 @@
---- `#This Row` cell evaluation after a column insert (T-4680).
+---
 id: T-5052
 title: "A stored calculated-column formula mixing structured and A1 references follows column and row edits (T-4693 split)"
 milestone: M8
@@ -8,7 +8,7 @@ priority: P2
 size: S
 tier: opus
 depends_on: []
---- `#This Row` cell evaluation after a column insert (T-4680).
+---
 
 ## Goal
 A stored `calculatedColumnFormula` that mixes a structured reference with A1 references follows row and column edits
@@ -29,4 +29,5 @@ like a plain one (its A1 part displaced, its structured part kept).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
+- `#This Row` cell evaluation after a column insert (T-4680).
 - `#This Row` cell evaluation after a column insert (T-4680).

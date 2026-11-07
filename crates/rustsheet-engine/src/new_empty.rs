@@ -127,7 +127,7 @@ impl Model {
             language,
             ..
         } = self;
-        crate::model::with_default_locale(parser, locale, language, |parser| {
+        parser.with_default_locale(locale, language, |parser| {
             parser.set_lexer_mode(LexerMode::R1C1);
             // The lookup of the shared formulas follows the parsed formulas: both
             // are made from the lists of the sheets, here.

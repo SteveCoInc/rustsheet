@@ -9,7 +9,7 @@ use crate::expressions::parser::stringify::{DisplaceData, Displacement};
 use crate::expressions::parser::{stringify::to_excel_string, Node};
 use crate::expressions::types::CellReferenceRC;
 use crate::expressions::utils::number_to_column;
-use crate::model::{with_default_locale, Model};
+use crate::model::Model;
 use crate::table_edits::{append_column, bounds, Bounds};
 use crate::types::{Cell, Table};
 
@@ -511,7 +511,7 @@ impl Model {
             language,
             ..
         } = self;
-        with_default_locale(parser, locale, language, |parser| {
+        parser.with_default_locale(locale, language, |parser| {
             let mut displaced = Vec::new();
             for (name, table) in &workbook.tables {
                 let Some(b) = bounds(table) else {
@@ -567,7 +567,7 @@ impl Model {
             language,
             ..
         } = self;
-        with_default_locale(parser, locale, language, |parser| {
+        parser.with_default_locale(locale, language, |parser| {
             for DisplacedColumnFormula {
                 table,
                 id,

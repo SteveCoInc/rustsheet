@@ -25,7 +25,7 @@ use crate::{
     },
     implicit_intersection::implicit_intersection,
     language::{get_default_language, get_language, Language},
-    locale::{get_default_locale, get_locale, Locale},
+    locale::{get_locale, Locale},
     types::*,
     utils as common,
 };
@@ -239,23 +239,6 @@ pub struct CellIndex {
     pub row: i32,
     /// Column index
     pub column: i32,
-}
-
-/// Runs `run` on `parser` switched to the default locale and language, then puts `locale` and
-/// `language` (the active ones) back. For callers that also borrow other fields of the model
-/// ([`Model::with_default_parser`] is this on the model's own parser).
-pub(crate) fn with_default_locale<R>(
-    parser: &mut Parser,
-    locale: &'static Locale,
-    language: &'static Language,
-    run: impl FnOnce(&mut Parser) -> R,
-) -> R {
-    parser.set_locale(get_default_locale());
-    parser.set_language(get_default_language());
-    let result = run(parser);
-    parser.set_locale(locale);
-    parser.set_language(language);
-    result
 }
 
 impl Model {
@@ -484,7 +467,7 @@ impl Model {
     /// that switch is made (T-4693).
     pub(crate) fn with_default_parser<R>(&mut self, run: impl FnOnce(&mut Parser) -> R) -> R {
         let (locale, language) = (self.locale, self.language);
-        with_default_locale(&mut self.parser, locale, language, run)
+        self.parser.with_default_locale(locale, language, run)
     }
 
     /// Returns completion information for a formula being edited in a cell.
