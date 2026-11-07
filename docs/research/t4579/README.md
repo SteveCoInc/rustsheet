@@ -1,7 +1,8 @@
 # T-4579: paired T.TEST, probe predictions
 
 `gen.py` (seed 457920261107) builds probes/t4579-ttest-paired and `predictions.tsv`, both committed before the
-excel-graph fill. Every input is a 15-digit literal, and the predictions are computed on the doubles Excel reads.
+excel-graph fill. Every input is a 15-digit literal. The predictions use Python's nearest doubles. These equal Excel's x87 literal reads
+except for one literal in Div!A21, which leaves its differences unchanged.
 
 - **Div** (27 rows): 2 to 4 pairs with near-constant differences. Rows are classified by the one-pass variance
   `(Σd² - (Σd)²/n)/(n-1)` of the double differences:
@@ -20,3 +21,6 @@ excel-graph fill. Every input is a 15-digit literal, and the predictions are com
 - **Rev**: the reversed argument orders the task names, recorded as found.
 
 Nothing is tuned to the fill. Each hypothesis is kept or rejected by the cells.
+
+Run (from the repository root; mpmath comes from the tools venv):
+`cd tools && uv run python -I ../docs/research/t4579/gen.py ../eval/suites/probes/cases/t4579-ttest-paired.case.json ../docs/research/t4579/predictions.tsv`

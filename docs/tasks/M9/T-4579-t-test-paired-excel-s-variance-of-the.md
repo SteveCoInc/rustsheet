@@ -1,19 +1,26 @@
 ---
 id: T-4579
-title: "T.TEST paired: Excel's variance of the differences (a negative one-pass variance is #DIV/0!, offset pairs keep their digits)"
+title: "T.TEST paired: identify Excel's paired-test algorithm (its #DIV/0! and its offset-sample values), then implement it"
 milestone: M9
 lane: functions-stat
 status: todo
 priority: P2
-size: S
+size: M
 tier: opus
 depends_on: []
 ---
 
 ## Goal
-The engine's paired T.TEST and TTEST (type 1) give Excel's result on the two Gate A points they miss,
-`accuracy/TTEST/s1` A136 (Excel `#DIV/0!`) and A101 (Excel within 1e-15 of the math, ours 1.6e-9 off), with no other
-point of the T.TEST and TTEST tables leaving the envelope; the rule is probed before it is implemented.
+Identify the algorithm behind Excel's paired T.TEST and TTEST (type 1), then implement it. Two things need explaining:
+when it returns `#DIV/0!` on near-constant differences, and its values on offset samples, where it can be far from
+the math. Once that is done, `accuracy/TTEST/s1` A136 (Excel `#DIV/0!`) and A101 (Excel within 1E-15 of the math,
+ours 1.6E-9 off) should pass, along with the visibly-off cells of probes/t4579-ttest-paired, with no other T.TEST or
+TTEST point leaving the envelope.
+
+The first probe (2026-11-07) refuted the original hypothesis, that a negative one-pass variance gives `#DIV/0!`.
+No simple form fits the probe either, so what is left is kernel research first (see Context). If the research shows
+that no double-precision form reproduces Excel, the Outcome ranks the forms tried and leaves the cells to a
+decision.
 
 ## Context
 - Found by T-4097 (the T and F test tables, excel-graph 2026-11-06). Both points are in
@@ -32,9 +39,10 @@ point of the T.TEST and TTEST tables leaving the envelope; the rule is probed be
   3E-11 against deviations of about 1E-4, and the tail magnifies that; Excel keeps the exact differences' digits (x87
   differences, or deviations taken per sample before subtracting: to be found).
 - Code: `t_test_p` in crates/rustsheet-engine/src/functions/statistical/t_dist.rs (the `TTestType::Paired` arm).
-
+- Excel stays the target (decision 0300) on the probe's cells more than 1E-4 off the math (13 Off numbers, 5 Div
+  numbers).
 - Probe 1 (T-4579, 2026-11-07): probes/t4579-ttest-paired refutes A136's one-pass hypothesis and shows that Excel's
-  paired test is erratic on offset samples: `#DIV/0!` or up to 1E5 off the math, see statistics.md "Paired T.TEST is
+  paired test is erratic on offset samples: `#DIV/0!` or up to 5.4E11 relative off the math, see statistics.md "Paired T.TEST is
   erratic ...". No simple form fits, so the next step is research into Excel's algorithm, not a guard. Also owns the
   probe's visibly-off cells: probes/t4579-ttest-paired Div! A1, A3, A4, A5, A6, A8, A9, A10, A11, A12, A13, A14, A15,
   A16, A17, A18, A20, A21, A22, A23, A24, A25, A26, A27; Off! A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13,
@@ -48,8 +56,11 @@ point of the T.TEST and TTEST tables leaving the envelope; the rule is probed be
       607e85cfee83a689 A132) and the overflowing `{1E+200,1E+200,-1E+200}` sample first for T.TEST type 2 and F.TEST
       (`T.TEST({1E+200,1E+200,-1E+200},{1,2,4},1,2)`, `F.TEST({1E+200,1E+200,-1E+200},{1,2,4})`). Where Excel's
       answer is an error, `sample_tests.py`'s rules widen to it.
-- [ ] TTEST/s1 A136 and A101 inside the envelope, their known-failure lines removed; no other T.TEST or TTEST table
-      point or eval cell regresses.
+- [ ] A model of Excel's paired test, found with the excel-kernel playbook (docs/research/excel-kernel-playbook.md)
+      and scored on probes/t4579-ttest-paired with an R4 hold-out and a fresh sweep, or an Outcome that ranks the forms
+      tried and shows that none fits.
+- [ ] If a model is found: TTEST/s1 A136 and A101 inside the envelope, their known-failure lines removed; no other
+      T.TEST or TTEST table point or eval cell regresses.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
