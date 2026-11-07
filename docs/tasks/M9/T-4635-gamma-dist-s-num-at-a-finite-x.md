@@ -24,7 +24,7 @@ oracle evidence brackets, and the Gate A definition gives those points a value o
 - Engine: crates/rustsheet-engine/src/functions/statistical/gamma.rs `gamma_dist_of`.
 
 - Probe 1 (2026-11-07, excel-graph). Predictions were committed before the fill (d17d413e8). The case and oracle are
-  on branch agent/functions-stat/T-4635-gamma-dist-huge-ratio at 3a5d849c6 (`eval/suites/probes/cases/
+  on branch research/t4635-probe-data at 3a5d849c6 (`eval/suites/probes/cases/
   t4635-gamma-dist-huge-ratio.*`, `docs/research/t4635`). They were not landed in eval: their 106 `#NUM!` cells would
   be new known failures that no rule found so far can pass. The cells are GAMMA.DIST(x, a, 1E-8, ..) at
   x / beta = 1E216, 1E258, 1E298, 1E306, 1E307, 1E308, 1.5E308 and 1.7E308.
