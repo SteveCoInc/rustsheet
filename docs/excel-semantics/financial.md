@@ -2933,7 +2933,7 @@ it is valid: `AMORLINC(2400,1,1,300,1,0.15,1)` is 360). Only then the basis is r
 comes next (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is `#N/A`). Last, a salvage *equal* to a positive cost is 0 at
 every period, with no charge computed:
 - AMORDEGRC is 0 at periods 0, 1 to 8 and 1.5 (A1-A10), AMORLINC at 0, 0.0001, 0.5, 1, 2, 3, 5, 7, 8 and 1.5 (B1-B10;
-  periods 4 and 6 are unprobed), both with a full first period (C1-C7, C17-C18) and at rates 0.25 and 0.4 (C8-C16),
+  periods 4 and 6 are unprobed), with a full first period (AMORDEGRC C1-C7, AMORLINC C17-C18) and AMORDEGRC at rates 0.25 and 0.4 (C8-C16),
   AMORDEGRC's half period and the rest periods after it included; AMORDEGRC at the fractional periods 0.0001 and 0.5 is
   evidenced only through F1, F7 and F8 (the 485 + 0 sums), and AMORLINC at rates 0.5, 1 and 2 by E7-E9
   (probes/amor-salvage-equal-cost; also `AMORLINC(99977.707698474,42751,42993,99977.707698474,2,
@@ -2950,13 +2950,17 @@ every period, with no charge computed:
   leaves its first charge): 485 + the call + a fraction is 970 for each (F2-F6), and an AMORDEGRC below period 1
   with a salvage equal to the cost is 0, not the 485 left before it (F1, F7, F8).
 - The boundary of the equality, probed in probes/amor-salvage-ulp (13 cells, excel-graph, 2026-11-07, T-4683; the
-  engine already matches all 13): with a cost of 2400, a salvage typed as `2400.0000000000005` (one ulp above) or
-  `2400.0000000000001` is 0 for both functions, not `#NUM!` (B1-B4); with a cost of `0.1+0.2` and a salvage of 0.3 both
-  are 0 (B5, B6), the reverse (cost 0.3, salvage `0.1+0.2`) `#NUM!` (B7, B8). A salvage typed as `2399.9999999999995`
-  (about one ulp below 2400) is not the early 0: AMORDEGRC period 1 is 900, AMORLINC period 1 is 0 and AMORLINC
-  period 0 is `1.0004E-11` (A1, A4, A5); AMORDEGRC periods 0 and 5 are 0 (A2, A3). Whether Excel reads a typed 17-digit
-  literal as the double it names is not established here, so the exact-equality boundary is only partly probed: one
-  ulp is tested through typed literals and through `0.1+0.2` vs 0.3, not through other arithmetic.
+  engine already matches all 13). Typed literals are cut to 15 significant digits ("Formula number literals are read at
+  15 significant digits", numbers.md), so with a cost of 2400 the salvage literals `2400.0000000000005` and
+  `2400.0000000000001` are exactly 2400 (plain salvage == cost: 0 for both functions, B1-B4), and `2399.9999999999995`
+  is 2399.99999999999, 22 ulp (1e-11) below the cost: not the early 0. AMORDEGRC period 1 is 900, AMORLINC period 1 is
+  0 and AMORLINC period 0 is `1.0004E-11` (that gap, A5); AMORDEGRC periods 0 and 5 are 0 (A1, A4, A5, A2, A3). Only
+  arithmetic reaches a true one-ulp gap, and only B7 and B8 settle anything: cost 0.3 with a salvage of `0.1+0.2`
+  (one ulp above) is `#NUM!`, so the "salvage above the cost" check compares exactly, with no 15-digit tolerance and no
+  rounding of the sum. B5 and B6 (cost `0.1+0.2`, salvage 0.3, one ulp below) are 0 for both functions, which fits the
+  early 0 and equally the ordinary walk (AMORDEGRC's charge rounds to 0; AMORLINC at period 1 is already 0 after its
+  period-0 charge, as A4), so whether a salvage one ulp below the cost gets the early 0 is unprobed. AMORLINC at rates
+  0.25 and 0.4 is unprobed (C8-C16 are AMORDEGRC), E7-E9 are period 1 only and C1-C7 skip period 2.
 Evidence: probes/amor-salvage-equal-cost (81 cells, excel-graph, 2026-11-06, T-4504; predictions committed before the
 fill: the early 0 was the alternative, `remain <= salvage` the pick). A purchase date below 1 is serial 0, the day before
 serial 1: `AMORDEGRC(2400,0,366,300,1,0.15,1)` is 562 (366 days), `AMORDEGRC(2400,0,1,..)` 899, `AMORDEGRC(2400,1,366,..)` 563,
