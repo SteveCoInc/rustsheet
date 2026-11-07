@@ -3,7 +3,7 @@ id: T-2214
 title: "Remove unused GIT_VERSION build script output after INFO became #VALUE!"
 milestone: M5
 lane: quality
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
