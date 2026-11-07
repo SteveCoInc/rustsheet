@@ -1,0 +1,61 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-2605: QUARTILE/PERCENTILE/PERCENTRANK of a single TRUE (A1) / FALSE (A2) cell, and PERCENTRANK of an empty (A3) / text (A4) cell with significance 0 and 2.",
+ "tags": [
+  "M2",
+  "probe",
+  "T-2605"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": true,
+    "A2": false,
+    "A4": " x ",
+    "B1": "=QUARTILE(A1,1)",
+    "B2": "=QUARTILE(A1,0)",
+    "B3": "=QUARTILE(A1,4)",
+    "B4": "=QUARTILE(A1,7)",
+    "B5": "=QUARTILE.INC(A1,2)",
+    "B6": "=QUARTILE.EXC(A1,1)",
+    "B7": "=PERCENTILE(A1,7)",
+    "B8": "=PERCENTILE(A1,0)",
+    "B9": "=PERCENTILE.INC(A1,0)",
+    "B10": "=PERCENTILE.INC(A1,1)",
+    "B11": "=PERCENTILE.EXC(A1,0.5)",
+    "B12": "=PERCENTRANK(A1,1)",
+    "B13": "=PERCENTRANK(A1,0)",
+    "B14": "=PERCENTRANK.INC(A1,1)",
+    "B15": "=PERCENTRANK.EXC(A1,1)",
+    "B16": "=QUARTILE(A2,1)",
+    "B17": "=QUARTILE(A2,0)",
+    "B18": "=QUARTILE(A2,4)",
+    "B19": "=QUARTILE(A2,7)",
+    "B20": "=QUARTILE.INC(A2,2)",
+    "B21": "=QUARTILE.EXC(A2,1)",
+    "B22": "=PERCENTILE(A2,7)",
+    "B23": "=PERCENTILE(A2,0)",
+    "B24": "=PERCENTILE.INC(A2,0)",
+    "B25": "=PERCENTILE.INC(A2,1)",
+    "B26": "=PERCENTILE.EXC(A2,0.5)",
+    "B27": "=PERCENTRANK(A2,1)",
+    "B28": "=PERCENTRANK(A2,0)",
+    "B29": "=PERCENTRANK.INC(A2,1)",
+    "B30": "=PERCENTRANK.EXC(A2,1)",
+    "B31": "=PERCENTRANK(A3,2,0)",
+    "B32": "=PERCENTRANK(A3,2,2)",
+    "B33": "=PERCENTRANK(A3,2)",
+    "B34": "=PERCENTRANK.INC(A3,2,0)",
+    "B35": "=PERCENTRANK.EXC(A3,2,0)",
+    "B36": "=PERCENTRANK(A4,2,0)",
+    "B37": "=PERCENTRANK(A4,2,2)",
+    "B38": "=PERCENTRANK(A4,2)",
+    "B39": "=PERCENTRANK.INC(A4,2,0)",
+    "B40": "=PERCENTRANK.EXC(A4,2,0)",
+    "B41": "=PERCENTILE(A1,7)>=1"
+   }
+  }
+ ]
+}

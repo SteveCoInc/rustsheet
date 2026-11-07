@@ -6822,6 +6822,7 @@ error (`QUARTILE.EXC(A1,NA())` `#N/A`, `QUARTILE.EXC(A1,1/0)` `#DIV/0!`, `QUARTI
 TRUE stays the one value 1 ("QUARTILE(TRUE,1)", but `QUARTILE.EXC(TRUE,1)` is `#NUM!` for one value). PERCENTRANK of it is
 `#N/A` and `MEDIAN(A1)` `#NUM!`. So `QUARTILE.EXC(Data!D7,HYPGEOMDIST(2,3,7,2^32))` with D7 TRUE is `#NUM!`
 (gen-m9/38e4fc309fe199ea A5).
+T-2605 (probes/t2605-single-boolean-cell, excel-graph, 2026-11-07, 41 cells) confirms FALSE reads the same as TRUE, and for every quart/k tried (`QUARTILE(A1,0/1/4/7)`, `PERCENTILE(A1,0/7)`, `PERCENTILE.EXC(A1,0.5)`): `#NUM!`. PERCENTRANK, `.INC` and `.EXC` of a boolean, an empty or a text cell are `#N/A` with significance 0, 2 or omitted: empty data comes before the significance check.
 Evidence: probes/t2429-quartile-exc-no-number A1-A24 (excel-graph, 2026-10-25).
 Ours: since T-2429 (`percentile_numbers`); `#VALUE!` before.
 Status: VERIFIED (excel-graph)
