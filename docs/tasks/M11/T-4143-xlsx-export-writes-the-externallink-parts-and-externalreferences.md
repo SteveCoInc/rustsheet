@@ -3,7 +3,7 @@ id: T-4143
 title: "xlsx export writes the externalLink parts and externalReferences that [n] references need"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
