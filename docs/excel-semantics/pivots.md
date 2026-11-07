@@ -2192,3 +2192,19 @@ parent; totals never count what a filter removes").
 Status: UNVERIFIED (probe pending: T-4879) for the Show Details sheet; the record set is checked as above.
 Implemented in: crates/rustsheet-engine/src/pivot/layout/records.rs (`records_behind`, T-4184);
 crates/rustsheet/src/pivot_view.rs (`Workbook::pivot_cell_records`, T-4184).
+
+## A non-English Excel saves its own UI language's default captions
+Rule: the default captions (`Row Labels`, `Column Labels`, `(Multiple Items)`) are not stored in
+the pivot definition: the saved cells hold them in the saving Excel's UI language, with no
+`rowHeaderCaption` or `colHeaderCaption`. The `Values` caption is stored, in that language, as
+`dataCaption`. The en-US engine renders the English captions, so the pivot-corpus classifies such a pivot stale
+(T-4131). That an en-US Excel refresh of such a file writes the English captions is an inference from
+the captions not being stored, not observed (UNVERIFIED).
+Evidence (Excel-saved desktop files, cached cells and pivotTable parts): pivot-corpus-lo
+`xlsx/pivot-table/shared-numgroup.xlsx` (Hungarian, A3 `Sorcímkék`, `dataCaption="Értékek"`),
+`xlsx/pivottable_invalid_formats.xlsx` (German, B3 `Spaltenbeschriftungen`, `dataCaption="Werte"`),
+`xlsx/tdf122471.xlsx` (Hungarian, B3 `Oszlopcímkék`), poi `ExcelPivotTableSample.xlsx` (German, B3
+`Spaltenbeschriftungen`, and its page field's multiple-items caption in German at B1).
+These are non-en-US desktop workbooks, so they are no evidence for what en-US Excel writes
+(decision 0030): the English captions stay the ones the en-US probes give ("Caption attributes...").
+Status: VERIFIED (Excel-saved files) as a storage fact; no rule for the engine follows from it.

@@ -1,0 +1,98 @@
+name = "pivot-corpus-lo"
+description = "LibreOffice's Excel-saved pivot workbooks (sc/qa/unit/data): import and formula cells scored against Excel's cached values; each pivot classified fresh or stale (T-4131)"
+kind = "xlsx"
+root = "../../.cache/suites/pivot-corpus-lo"
+# The pivot-corpus (docs/research/pivot-tables-2026-11-04/plan.md, checks (a) and (b)) is two
+# suites, one per fetched source, since a suite has one `[fetch]`: this one and
+# pivot-corpus-closedxml. The pivot files of calipers, poi and corpus-bench are covered by
+# reference: those suites' own runs classify their pivots too (report.md "Pivot freshness").
+license = "MPL-2.0"
+origin = "https://github.com/LibreOffice/core (sc/qa/unit/data)"
+use_cached_values = true
+# Only the files Excel saved (docProps Application Microsoft Excel or Excel Online) are evidence;
+# the fetch list below is the Excel-saved ones of docs/research/pivot-tables-2026-11-04/oss-engines.md §5.
+require_excel_authored = true
+# Not in `make check` until the corpus is shown fast and stable in CI: `rustsheet-eval check --suite
+# pivot-corpus-lo` gates it and `rustsheet-eval update-baseline --suite pivot-corpus-lo` ratchets it.
+gate = false
+baseline = "cells"
+milestone = ["M16"]
+
+[fetch]
+url = "https://github.com/LibreOffice/core.git"
+rev = "b1653ced6208ca71c4e0defd572fb43cb65050fc"
+subdir = "sc/qa/unit/data"
+# LibreOffice core is far too large to fetch whole: a blob-less fetch of the commit, then only the
+# xlsx test files of these directories (about 9 MB).
+sparse = [
+  "sc/qa/unit/data/xlsx/*.xlsx",
+  "sc/qa/unit/data/xlsx/pivot/*.xlsx",
+  "sc/qa/unit/data/xlsx/pivot-table/*.xlsx",
+]
+# The Excel-saved workbooks with pivots, 64 files and 87 pivots (oss-engines.md §5).
+include = [
+  "xlsx/PivotTable_CachedDefinitionAndDataInSync.xlsx",
+  "xlsx/PivotTable_CachedDefinitionAndDataNotInSync_SheetColumnsRemoved_WithCacheData.xlsx",
+  "xlsx/PivotTable_CachedDefinitionAndDataNotInSync_SheetColumnsRemoved_WithoutCacheData.xlsx",
+  "xlsx/column-style-autofilter.xlsx",
+  "xlsx/forum-mso-de-104083.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_10_FormatDefinitionNotMatchingPivotTable.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_11_WholeDataColumnSelected.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_12_WholeLabelColumnSelected.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_13_SelectionInLabelAndData.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_14_TwoRowsDataFieldInColumn_LabelColor.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_15_TwoDataFieldColumns_WholeDataColumnSelected.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_1_DataFieldInRow_RowLabelColor.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_2_DataFieldInRow_ColumnLabelColor.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_3_DataFieldInColumn_ColumnLabelColor.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_4_DataFieldInColumn_DataColor.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_5_DataFieldInColumnAndTwoRowFields_DataColor.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_6_SingleDataFieldInColumn_DataColor.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_7_TwoRowTwoColumnFields_DataColor.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_8_DataFieldInRow_DataColor.xlsx",
+  "xlsx/pivot-table/PivotTableCellFormatsTest_9_MultipleSelections.xlsx",
+  "xlsx/pivot-table/PivotTableFormatsGrandTotal.xlsx",
+  "xlsx/pivot-table/PivotTableFormatsSubTotals.xlsx",
+  "xlsx/pivot-table/PivotTableWithNoSourceData.xlsx",
+  "xlsx/pivot-table/Pivot_Table_with_Cell_Protection.xlsx",
+  "xlsx/pivot-table/first_header_row_zero.xlsx",
+  "xlsx/pivot-table/many-fields-in-cache.xlsx",
+  "xlsx/pivot-table/pivot_calcfield_nameerror.xlsx",
+  "xlsx/pivot-table/pivotcompact.xlsx",
+  "xlsx/pivot-table/shared-dategroup.xlsx",
+  "xlsx/pivot-table/shared-group-field.xlsx",
+  "xlsx/pivot-table/shared-nested-dategroup.xlsx",
+  "xlsx/pivot-table/shared-numgroup.xlsx",
+  "xlsx/pivot-table/tdf126858-1.xlsx",
+  "xlsx/pivot-table/test_diff_aggregation.xlsx",
+  "xlsx/pivot-table/two-data-fields.xlsx",
+  "xlsx/pivot-table/with-strings-integers-and-dates.xlsx",
+  "xlsx/pivot/Pivot1_Row.xlsx",
+  "xlsx/pivot/Pivot1_Row_Grand.xlsx",
+  "xlsx/pivot/Pivot1_Row_Grand_Subtotals.xlsx",
+  "xlsx/pivot/Pivot2_Row.xlsx",
+  "xlsx/pivot/Pivot2_Row_Compact.xlsx",
+  "xlsx/pivot/Pivot2_Row_Grand.xlsx",
+  "xlsx/pivot/Pivot2_Row_Grand_Subtotals.xlsx",
+  "xlsx/pivot/Pivot2_Row_Subtotals.xlsx",
+  "xlsx/pivot/Pivot2_Row_Subtotals_SortDescendingAll.xlsx",
+  "xlsx/pivot/Pivot3_Column_Grand_Subtotals.xlsx",
+  "xlsx/pivot/Pivot4_Column_Grand_Subtotals_SortDescending.xlsx",
+  "xlsx/pivot_dark1.xlsx",
+  "xlsx/pivottable_1s_difference.xlsx",
+  "xlsx/pivottable_bool_field_filter.xlsx",
+  "xlsx/pivottable_date_field_filter.xlsx",
+  "xlsx/pivottable_double_field_filter.xlsx",
+  "xlsx/pivottable_duplicated_member_filter.xlsx",
+  "xlsx/pivottable_error_item_filter.xlsx",
+  "xlsx/pivottable_invalid_formats.xlsx",
+  "xlsx/pivottable_long_text.xlsx",
+  "xlsx/pivottable_outline_mode.xlsx",
+  "xlsx/pivottable_rowcolpage_field_filter.xlsx",
+  "xlsx/pivottable_string_field_filter.xlsx",
+  "xlsx/pivottable_tabular_mode.xlsx",
+  "xlsx/tdf112106.xlsx",
+  "xlsx/tdf112936.xlsx",
+  "xlsx/tdf122471.xlsx",
+  "xlsx/tdf89139_pivot_table.xlsx",
+]
