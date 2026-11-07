@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss)]
+// LINT-DEBT-END
 use crate::formatter::dates::convert_to_serial_number;
 
 #[derive(Clone)]
@@ -31,7 +34,7 @@ pub(crate) fn excel_serial_for_now(tz: &Tz, millis: i64) -> Option<f64> {
         let seconds =
             f64::from(local.num_seconds_from_midnight()) + millis.rem_euclid(1000) as f64 / 1000.0;
         let fraction = seconds / (60.0 * 60.0 * 24.0);
-        days as f64 + fraction
+        f64::from(days) + fraction
     })
 }
 

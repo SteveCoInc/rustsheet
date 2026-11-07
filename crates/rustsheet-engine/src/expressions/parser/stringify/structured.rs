@@ -1,4 +1,7 @@
 //! Printing a structured reference (SPEC-0016 "Printing" and "Structural edits").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use super::{stringify, DisplaceData, Displacement, Rewrite, NO_REWRITE};
 use crate::expressions::parser::move_formula::ref_is_in_area;

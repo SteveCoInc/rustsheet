@@ -3,6 +3,9 @@
 //! each axis with its own subtotals. Excel:
 //! docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY", evidence probes/groupby-pivotby sheet P,
 //! its follow-ups (T-1328) and probes/pivotby-followup (excel-graph, 2026-10-16, T-1326).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::needless_pass_by_value)]
+// LINT-DEBT-END
 
 use super::group_functions::{Aggregate, Functions, Shape};
 use super::groupby::{

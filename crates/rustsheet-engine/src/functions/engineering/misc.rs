@@ -1,6 +1,9 @@
 //! DELTA and GESTEP. Both arguments lift over an array and refuse a multi-cell range
 //! (`ArgKind::LiftArrays`, SPEC-0011; probes/scalar-lift-shapes H10,
 //! probes/eng-later-argument-lift H17, H18).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use crate::{
     calc_result::CalcResult,

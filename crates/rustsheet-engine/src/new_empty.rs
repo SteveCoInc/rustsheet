@@ -1,3 +1,13 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::assigning_clones,
+    clippy::cast_possible_truncation,
+    clippy::default_trait_access,
+    clippy::items_after_statements,
+    clippy::manual_let_else,
+    clippy::match_same_arms
+)]
+// LINT-DEBT-END
 use chrono::DateTime;
 
 use std::collections::HashMap;
@@ -195,8 +205,7 @@ impl Model {
                         .workbook
                         .worksheets
                         .first()
-                        .map(|ws| ws.get_name())
-                        .unwrap_or_else(|| "Sheet1".to_string()),
+                        .map_or_else(|| "Sheet1".to_string(), super::types::Worksheet::get_name),
                     row: 1,
                     column: 1,
                 };
@@ -799,7 +808,10 @@ impl Model {
             pivot_tables: Vec::new(),
         };
         let worksheets = &workbook.worksheets;
-        let worksheet_names = worksheets.iter().map(|s| s.get_name()).collect();
+        let worksheet_names = worksheets
+            .iter()
+            .map(super::types::Worksheet::get_name)
+            .collect();
         let parser = Parser::new(worksheet_names, vec![], HashMap::new(), locale, language);
 
         let mut model = Model::unparsed(

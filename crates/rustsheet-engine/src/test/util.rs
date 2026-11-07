@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::cell::CellValue;
@@ -74,7 +77,7 @@ pub fn round_trip_value(model: &Model, cell: &str) -> String {
         Ok(CellValue::Number(number)) => format!("{number:?}"),
         Ok(CellValue::Boolean(true)) => "TRUE".to_string(),
         Ok(CellValue::Boolean(false)) => "FALSE".to_string(),
-        _ => model._get_text(cell),
+        _ => model.get_text_a1(cell),
     }
 }
 
@@ -94,16 +97,16 @@ pub fn check_cells_with_numbers(
 ) {
     let mut model = new_empty_model();
     for (cell, number) in numbers {
-        let reference = model._parse_reference(cell);
+        let reference = model.parse_a1(cell);
         model
             .update_cell_with_number(reference.sheet, reference.row, reference.column, *number)
             .unwrap();
     }
     for (cell, input) in inputs {
-        model._set(cell, input);
+        model.set_a1(cell, input);
     }
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
@@ -133,7 +136,7 @@ pub fn balanced_union(leaf: &str, leaves: usize) -> String {
 }
 
 impl Model {
-    pub fn _parse_reference(&self, cell: &str) -> CellReferenceIndex {
+    pub fn parse_a1(&self, cell: &str) -> CellReferenceIndex {
         if cell.contains('!') {
             self.parse_reference(cell).unwrap()
         } else {
@@ -142,49 +145,49 @@ impl Model {
                 .unwrap()
         }
     }
-    pub fn _set(&mut self, cell: &str, value: &str) {
-        let cell_reference = self._parse_reference(cell);
+    pub fn set_a1(&mut self, cell: &str, value: &str) {
+        let cell_reference = self.parse_a1(cell);
         let column = cell_reference.column;
         let row = cell_reference.row;
         self.set_user_input(cell_reference.sheet, row, column, value.to_string())
             .unwrap();
     }
-    pub fn _has_formula(&self, cell: &str) -> bool {
-        self._get_formula_opt(cell).is_some()
+    pub fn has_formula_a1(&self, cell: &str) -> bool {
+        self.get_formula_opt_a1(cell).is_some()
     }
-    pub fn _get_formula(&self, cell: &str) -> String {
-        self._get_formula_opt(cell).unwrap_or_default()
+    pub fn get_formula_a1(&self, cell: &str) -> String {
+        self.get_formula_opt_a1(cell).unwrap_or_default()
     }
-    fn _get_formula_opt(&self, cell: &str) -> Option<String> {
-        let cell_reference = self._parse_reference(cell);
+    fn get_formula_opt_a1(&self, cell: &str) -> Option<String> {
+        let cell_reference = self.parse_a1(cell);
         let column = cell_reference.column;
         let row = cell_reference.row;
         self.get_cell_formula(cell_reference.sheet, row, column)
             .unwrap()
     }
-    pub fn _get_text_at(&self, sheet: u32, row: i32, column: i32) -> String {
+    pub fn get_text_by_index(&self, sheet: u32, row: i32, column: i32) -> String {
         self.get_formatted_cell_value(sheet, row, column).unwrap()
     }
-    pub fn _get_text(&self, cell: &str) -> String {
-        let CellReferenceIndex { sheet, row, column } = self._parse_reference(cell);
-        self._get_text_at(sheet, row, column)
+    pub fn get_text_a1(&self, cell: &str) -> String {
+        let CellReferenceIndex { sheet, row, column } = self.parse_a1(cell);
+        self.get_text_by_index(sheet, row, column)
     }
     /// Whether `cell`, or the anchor of the array it is part of, is on a loop or reads one in
     /// the last evaluation: it then holds 0 (recalc.md "A circular reference without
     /// iteration is 0").
-    pub fn _is_circular(&self, cell: &str) -> bool {
-        let CellReferenceIndex { sheet, row, column } = self._parse_reference(cell);
-        let (row_a, column_a) = match self._get_cell(cell) {
+    pub fn is_circular_a1(&self, cell: &str) -> bool {
+        let CellReferenceIndex { sheet, row, column } = self.parse_a1(cell);
+        let (row_a, column_a) = match self.get_cell_a1(cell) {
             Cell::SpillCell { a, .. } => *a,
             _ => (row, column),
         };
-        self._get_text_at(sheet, row, column) == "0"
+        self.get_text_by_index(sheet, row, column) == "0"
             && self.evaluation.circular.contains(&(sheet, row_a, column_a))
     }
     /// The message of the error in formula cell `cell`, which tells the engine's caps apart
     /// from a plain error of the same kind.
-    pub fn _get_error_message(&self, cell: &str) -> String {
-        match self._get_cell(cell) {
+    pub fn get_error_message_a1(&self, cell: &str) -> String {
+        match self.get_cell_a1(cell) {
             Cell::CellFormula {
                 v: FormulaValue::Error { m, .. },
                 ..
@@ -196,20 +199,15 @@ impl Model {
             other => format!("not an error: {other:?}"),
         }
     }
-    pub fn _get_cell(&self, cell: &str) -> &Cell {
-        let cell_reference = self._parse_reference(cell);
+    pub fn get_cell_a1(&self, cell: &str) -> &Cell {
+        let cell_reference = self.parse_a1(cell);
         let worksheet = self.workbook.worksheet(cell_reference.sheet).unwrap();
         worksheet
             .cell(cell_reference.row, cell_reference.column)
             .unwrap()
     }
 
-    pub fn _cell_clear_contents(
-        &mut self,
-        sheet: u32,
-        row: i32,
-        column: i32,
-    ) -> Result<(), String> {
+    pub fn clear_contents_at(&mut self, sheet: u32, row: i32, column: i32) -> Result<(), String> {
         let area = Area {
             sheet,
             row,
@@ -220,7 +218,7 @@ impl Model {
         self.range_clear_contents(&area)
     }
 
-    pub fn _cell_clear_all(&mut self, sheet: u32, row: i32, column: i32) -> Result<(), String> {
+    pub fn clear_all_at(&mut self, sheet: u32, row: i32, column: i32) -> Result<(), String> {
         let area = Area {
             sheet,
             row,

@@ -8,6 +8,9 @@
 //! Evidence: `eval/suites/ironcalc-calc/ENGINEERING/BESSEL.xlsx` (Excel-cached) and the
 //! `probes-numeric/m9-bessel` sweep (T-1004), every cell of which these formulas reproduce exactly
 //! (`docs/excel-semantics/engineering.md`, T-0908).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::manual_midpoint)]
+// LINT-DEBT-END
 
 use crate::arithmetic::{extended_product, extended_sum};
 use crate::functions::math_and_trigonometry::{excel_sin_cos, EXCEL_INNER_TRIG_LIMIT};

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::inline_always)]
+// LINT-DEBT-END
 use crate::arithmetic::{extended_quotient, extended_sum, flush_subnormal};
 use crate::cast::number_text_too_long;
 use crate::constants::{LAST_COLUMN, LAST_ROW};

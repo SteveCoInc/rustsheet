@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::float_cmp, clippy::unreadable_literal))]
+// LINT-DEBT-END
 use crate::functions::engineering::transcendental::bessel_k;
 
 use super::bessel_i::bessel_i;

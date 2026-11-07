@@ -1,3 +1,7 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::print_stdout)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use super::xml::XmlNode;

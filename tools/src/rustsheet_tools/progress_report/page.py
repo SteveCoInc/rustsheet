@@ -136,7 +136,7 @@ METHOD = f"""## Method
   parameters' modes expect by rule, those some Excel-evidence cell passes, a literal as written
   and a single-cell reference by the referenced cell's value. Indicative only.
 - **Codebase health.** Counts read from quality/lint-debt.json (allow entries: the lints listed
-  per manifest), quality/duplication.json (`duplicated_lines`), quality/oversized-files.json (one
+  per file, decision 0335), quality/duplication.json (`duplicated_lines`), quality/oversized-files.json (one
   entry per file), quality/evidence-floor.json (`below_floor`), docs/decisions/0*.md (files) and
   docs/excel-semantics/*.md (lines). The change is against the last complete history row that has
   a `codebase` object.

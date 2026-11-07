@@ -2,6 +2,9 @@
 //! the calendar each date token of a tagged section reads. Evidence: probes/t1923-calendar-digits
 //! A85:A213, t2779-hebrew-saka-names, t2779-hebrew-saka-more (excel-graph, 2026-10-26/27,
 //! T-2779); number-formats.md "Calendars of a locale tag".
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use chrono::{Datelike, Duration, NaiveDate};
 
@@ -131,10 +134,8 @@ fn hebrew_new_year(year: i64) -> i64 {
     );
     let delay = if after - this == 356 {
         2
-    } else if this - before == 382 {
-        1
     } else {
-        0
+        i64::from(this - before == 382)
     };
     HEBREW_EPOCH + this + delay
 }

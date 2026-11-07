@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_precision_loss,
+    clippy::needless_pass_by_value,
+    clippy::unnecessary_wraps,
+    clippy::unused_self
+)]
+// LINT-DEBT-END
 use crate::arithmetic::{extended_product, extended_quotient, extended_sqrt, extended_sum};
 use crate::functions::statistical::special::normal_cdf;
 

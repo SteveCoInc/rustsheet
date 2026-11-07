@@ -5,34 +5,34 @@ use crate::test::util::new_empty_model;
 #[test]
 fn test_fn_z_test_smoke() {
     let mut model = new_empty_model();
-    model._set("A2", "3");
-    model._set("A3", "6");
-    model._set("A4", "7");
-    model._set("A5", "8");
-    model._set("A6", "6");
-    model._set("A7", "5");
-    model._set("A8", "4");
-    model._set("A9", "2");
-    model._set("A10", "1");
-    model._set("A11", "9");
+    model.set_a1("A2", "3");
+    model.set_a1("A3", "6");
+    model.set_a1("A4", "7");
+    model.set_a1("A5", "8");
+    model.set_a1("A6", "6");
+    model.set_a1("A7", "5");
+    model.set_a1("A8", "4");
+    model.set_a1("A9", "2");
+    model.set_a1("A10", "1");
+    model.set_a1("A11", "9");
 
-    model._set("G1", "=Z.TEST(A2:A11, 4)");
-    model._set("G2", "=Z.TEST(A2:A11, 6)");
+    model.set_a1("G1", "=Z.TEST(A2:A11, 4)");
+    model.set_a1("G2", "=Z.TEST(A2:A11, 6)");
     model.evaluate();
 
-    assert_eq!(model._get_text("G1"), *"0.090574197");
-    assert_eq!(model._get_text("G2"), *"0.863043389");
+    assert_eq!(model.get_text_a1("G1"), *"0.090574197");
+    assert_eq!(model.get_text_a1("G2"), *"0.863043389");
 }
 
 #[test]
 fn arrays() {
     let mut model = new_empty_model();
-    model._set("D1", "=Z.TEST({5,2,3,4}, 4, 123)");
-    model._set("D2", "=Z.TEST({5,2,3,4}, 4)");
+    model.set_a1("D1", "=Z.TEST({5,2,3,4}, 4, 123)");
+    model.set_a1("D2", "=Z.TEST({5,2,3,4}, 4)");
     model.evaluate();
 
-    assert_eq!(model._get_text("D1"), *"0.503243397");
-    assert_eq!(model._get_text("D2"), *"0.780710987");
+    assert_eq!(model.get_text_a1("D1"), *"0.503243397");
+    assert_eq!(model.get_text_a1("D2"), *"0.780710987");
 }
 
 /// A data sum that overflows makes the omitted sigma NaN; the result is an error, never a NaN
@@ -40,13 +40,13 @@ fn arrays() {
 #[test]
 fn overflowing_data_is_an_error() {
     let mut model = new_empty_model();
-    model._set("A1", "9E307");
-    model._set("A2", "9E307");
-    model._set("A3", "1");
-    model._set("D1", "=Z.TEST(A1:A3,0)");
+    model.set_a1("A1", "9E307");
+    model.set_a1("A2", "9E307");
+    model.set_a1("A3", "1");
+    model.set_a1("D1", "=Z.TEST(A1:A3,0)");
     model.evaluate();
 
-    assert_eq!(model._get_text("D1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("D1"), *"#NUM!");
 }
 
 /// With sigma given, a z past the double range is `#NUM!` when the mean is above x and 0.5 when
@@ -55,14 +55,14 @@ fn overflowing_data_is_an_error() {
 #[test]
 fn an_overflowing_z_with_sigma_given() {
     let mut model = new_empty_model();
-    model._set("A1", "=Z.TEST({1,2,3},-1E+300,1E-300)");
-    model._set("A2", "=Z.TEST({1,2,3},1E+300,1E-300)");
-    model._set("A3", "=ZTEST({1,2,3},-1E+300,1E-300)");
+    model.set_a1("A1", "=Z.TEST({1,2,3},-1E+300,1E-300)");
+    model.set_a1("A2", "=Z.TEST({1,2,3},1E+300,1E-300)");
+    model.set_a1("A3", "=ZTEST({1,2,3},-1E+300,1E-300)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("A2"), *"0.5");
-    assert_eq!(model._get_text("A3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A2"), *"0.5");
+    assert_eq!(model.get_text_a1("A3"), *"#NUM!");
 }
 
 /// A data argument that is an error value comes first in every element; an error inside a range
@@ -70,8 +70,8 @@ fn an_overflowing_z_with_sigma_given() {
 #[test]
 fn an_error_data_value_comes_before_x() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "=NA()");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "=NA()");
     for (cell, formula) in [
         ("D1", "=Z.TEST(NA(),1/0)"),
         ("D2", "=Z.TEST(NA(),\"a\")"),
@@ -80,16 +80,16 @@ fn an_error_data_value_comes_before_x() {
         ("D5", "=COLUMNS(Z.TEST(NA(),{1,2}))"),
         ("D6", "=INDEX(Z.TEST(NA(),{1,2}),1,2)"),
     ] {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
 
-    assert_eq!(model._get_text("D1"), *"#N/A");
-    assert_eq!(model._get_text("D2"), *"#N/A");
-    assert_eq!(model._get_text("D3"), *"#DIV/0!");
-    assert_eq!(model._get_text("D4"), *"#DIV/0!");
-    assert_eq!(model._get_text("D5"), *"2");
-    assert_eq!(model._get_text("D6"), *"#N/A");
+    assert_eq!(model.get_text_a1("D1"), *"#N/A");
+    assert_eq!(model.get_text_a1("D2"), *"#N/A");
+    assert_eq!(model.get_text_a1("D3"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("D4"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("D5"), *"2");
+    assert_eq!(model.get_text_a1("D6"), *"#N/A");
 }
 
 /// A one-value data argument is `#DIV/0!` before a bad sigma; a lone cell reference without a
@@ -97,10 +97,10 @@ fn an_error_data_value_comes_before_x() {
 #[test]
 fn lone_values_and_cells() {
     let mut model = new_empty_model();
-    model._set("A1", "x");
-    model._set("B1", "5");
+    model.set_a1("A1", "x");
+    model.set_a1("B1", "5");
     for (i, v) in [3, 4, 5, 6].iter().enumerate() {
-        model._set(&format!("C{}", i + 1), &v.to_string());
+        model.set_a1(&format!("C{}", i + 1), &v.to_string());
     }
     for (cell, formula) in [
         ("D1", "=Z.TEST(1/0,\"x\")"),
@@ -111,7 +111,7 @@ fn lone_values_and_cells() {
         ("D6", "=Z.TEST(Z9,1)"),
         ("D7", "=Z.TEST(B1,3,-1)"),
     ] {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, want) in [
@@ -123,7 +123,7 @@ fn lone_values_and_cells() {
         ("D6", "#N/A"),
         ("D7", "#DIV/0!"),
     ] {
-        assert_eq!(model._get_text(cell), *want, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *want, "{cell}");
     }
 }
 
@@ -132,14 +132,14 @@ fn lone_values_and_cells() {
 #[test]
 fn direct_numeric_text_is_one_value() {
     let mut model = new_empty_model();
-    model._set("A1", "=ZTEST(\"3\",3)");
-    model._set("A2", "=Z.TEST(\"\",3)");
-    model._set("A3", "=Z.TEST(\"abc\",3)");
-    model._set("A4", "=ZTEST(0,3)");
+    model.set_a1("A1", "=ZTEST(\"3\",3)");
+    model.set_a1("A2", "=Z.TEST(\"\",3)");
+    model.set_a1("A3", "=Z.TEST(\"abc\",3)");
+    model.set_a1("A4", "=ZTEST(0,3)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#DIV/0!");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
-    assert_eq!(model._get_text("A3"), *"#VALUE!");
-    assert_eq!(model._get_text("A4"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A1"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), *"#DIV/0!");
 }

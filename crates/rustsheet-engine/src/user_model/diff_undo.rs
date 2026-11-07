@@ -196,14 +196,14 @@ impl UserModel {
         sheet: u32,
         old_merged_cells: Vec<MergedCell>,
     ) -> Result<Vec<Diff>, String> {
-        if self.model.get_merged_cells(sheet)? != old_merged_cells.as_slice() {
+        if self.model.get_merged_cells(sheet)? == old_merged_cells.as_slice() {
+            Ok(vec![])
+        } else {
             Ok(vec![Diff::SetMergedCells {
                 sheet,
                 old_value: old_merged_cells.clone(),
                 new_value: old_merged_cells,
             }])
-        } else {
-            Ok(vec![])
         }
     }
 

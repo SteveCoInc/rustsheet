@@ -5,6 +5,9 @@
 //! written with a start and an end tag, a root of another name, an id or part name already taken,
 //! a calcChain relationship pointing elsewhere) is `None`, and the caller regenerates. The zip is
 //! read within the import's byte budget and rewritten with every untouched entry copied raw.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string, clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{Cursor, Read, Seek, Write};

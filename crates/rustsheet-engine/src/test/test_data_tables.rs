@@ -51,7 +51,7 @@ fn tables_substitute_their_inputs_and_readers_see_the_results() {
         ("H11", "=FORMULATEXT(B4)"),
         ("H12", "=FORMULATEXT(C12)"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
         .add_data_table(0, table((4, 2, 6, 2), None, Some((1, 1))))
@@ -67,7 +67,12 @@ fn tables_substitute_their_inputs_and_readers_see_the_results() {
         .unwrap();
     model.evaluate();
 
-    let texts = |cells: &[&str]| cells.iter().map(|c| model._get_text(c)).collect::<Vec<_>>();
+    let texts = |cells: &[&str]| {
+        cells
+            .iter()
+            .map(|c| model.get_text_a1(c))
+            .collect::<Vec<_>>()
+    };
     assert_eq!(texts(&["B4", "B5", "B6"]), ["12", "22", "32"]);
     assert_eq!(texts(&["D8", "E8", "F8"]), ["12", "22", "32"]);
     assert_eq!(
@@ -83,31 +88,31 @@ fn tables_substitute_their_inputs_and_readers_see_the_results() {
         texts(&["H10", "H11", "H12"]),
         ["TRUE", "{=TABLE(,A1)}", "{=TABLE(B1,A1)}"]
     );
-    assert_eq!(model._get_text("A1"), "1", "the input keeps its value");
+    assert_eq!(model.get_text_a1("A1"), "1", "the input keeps its value");
 }
 
 /// A result recomputes when the model changes, and text and error values substitute too.
 #[test]
 fn results_follow_edits_and_carry_any_value_type() {
     let mut model = new_empty_model();
-    model._set("A1", "x");
-    model._set("C1", "=LEN(A1)&\"/\"&ISERROR(A1)");
-    model._set("B2", "abc");
-    model._set("B3", "=1/0");
+    model.set_a1("A1", "x");
+    model.set_a1("C1", "=LEN(A1)&\"/\"&ISERROR(A1)");
+    model.set_a1("B2", "abc");
+    model.set_a1("B3", "=1/0");
     model
         .add_data_table(0, table((2, 3, 3, 3), None, Some((1, 1))))
         .unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("C2"), "3/FALSE");
+    assert_eq!(model.get_text_a1("C2"), "3/FALSE");
     assert_eq!(
-        model._get_text("C3"),
+        model.get_text_a1("C3"),
         "#DIV/0!",
         "an error input propagates"
     );
-    model._set("C1", "=A1&\"!\"");
+    model.set_a1("C1", "=A1&\"!\"");
     model.evaluate();
-    assert_eq!(model._get_text("C2"), "abc!");
-    assert_eq!(model._get_text("C3"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("C2"), "abc!");
+    assert_eq!(model.get_text_a1("C3"), "#DIV/0!");
 }
 
 /// A deleted input cell (`del1`) makes every result `#REF!`; a table needs an input, a row above
@@ -115,7 +120,7 @@ fn results_follow_edits_and_carry_any_value_type() {
 #[test]
 fn invalid_tables_are_refused_and_a_deleted_input_is_ref() {
     let mut model = new_empty_model();
-    model._set("B1", "=1");
+    model.set_a1("B1", "=1");
     let deleted = DataTable {
         range: (2, 2, 2, 2),
         row_input: None,
@@ -123,7 +128,7 @@ fn invalid_tables_are_refused_and_a_deleted_input_is_ref() {
     };
     model.add_data_table(0, deleted).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("B2"), "#REF!");
+    assert_eq!(model.get_text_a1("B2"), "#REF!");
     assert!(model
         .add_data_table(0, table((1, 2, 2, 2), None, Some((1, 1))))
         .is_err());

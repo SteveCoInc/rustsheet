@@ -1,6 +1,9 @@
 //! The result shapes of the reference-returning OFFSET, INDIRECT, CHOOSE and MATCH, and whether an
 //! argument evaluates to cells ([`yields_cells`], shared by `aggregate` and `lifted`). Moved out
 //! of `static_analysis.rs` (T-1770, T-1874, T-1882) to keep it under its size lock.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use super::broadcast::broadcast_shapes;
 use super::{run_static_analysis_on_node, Node, StaticResult};

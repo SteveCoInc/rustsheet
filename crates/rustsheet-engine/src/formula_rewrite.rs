@@ -1,6 +1,9 @@
 //! Rewriting the stored text of every formula and defined name for a workbook edit (a table or
 //! sheet delete, a sheet move), keeping what changed so the undo can put it back; and the formula
 //! cells a row or column delete rewrote past what re-inserting them undoes.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use std::collections::HashMap;
 

@@ -41,6 +41,15 @@
 //! assert_eq!(lexer.next_token(), TokenType::Compare(OpCompare::Equal));
 //! assert!(matches!(lexer.next_token(), TokenType::Reference { .. }));
 //! ```
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::needless_pass_by_value,
+    clippy::redundant_else,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 
 use std::mem;
 
@@ -52,7 +61,7 @@ use crate::language::Language;
 use crate::locale::Locale;
 
 use super::token::{starts_with_getting_data, Error, TokenType};
-use super::types::*;
+use super::types::{ParsedRange, ParsedReference};
 use super::utils;
 use peek::Peeked;
 
@@ -497,15 +506,14 @@ impl Lexer {
                                                     left,
                                                     right,
                                                 };
-                                            } else {
-                                                return TokenType::Reference {
-                                                    sheet: None,
-                                                    column: left.column,
-                                                    row: left.row,
-                                                    absolute_row: left.absolute_row,
-                                                    absolute_column: left.absolute_column,
-                                                };
                                             }
+                                            return TokenType::Reference {
+                                                sheet: None,
+                                                column: left.column,
+                                                row: left.row,
+                                                absolute_row: left.absolute_row,
+                                                absolute_column: left.absolute_column,
+                                            };
                                         }
                                         Err(error) => {
                                             // This could be the range operator: ":"
@@ -546,11 +554,10 @@ impl Lexer {
                                         ));
                                     }
                                     return TokenType::Ident(name);
-                                } else {
-                                    return TokenType::Illegal(
-                                        self.set_error("Invalid identifier (A1)", self.position),
-                                    );
                                 }
+                                return TokenType::Illegal(
+                                    self.set_error("Invalid identifier (A1)", self.position),
+                                );
                             } else {
                                 let pos = self.position;
                                 self.position = position - 1;
@@ -562,15 +569,11 @@ impl Lexer {
                                             self.position = pos;
                                             if is_valid_r1c1_identifier(&name, self.peek_char()) {
                                                 return TokenType::Ident(name);
-                                            } else {
-                                                self.position = self.len;
-                                                return TokenType::Illegal(
-                                                    self.set_error(
-                                                        "Invalid identifier (R1C1)",
-                                                        pos,
-                                                    ),
-                                                );
                                             }
+                                            self.position = self.len;
+                                            return TokenType::Illegal(
+                                                self.set_error("Invalid identifier (R1C1)", pos),
+                                            );
                                         }
                                         // An uppercase `R0C1` or `R1048577C1` is no cell but a
                                         // name Excel never resolves (`#NAME?`, T-1657); reading it
@@ -587,15 +590,14 @@ impl Lexer {
                                                 left,
                                                 right,
                                             };
-                                        } else {
-                                            return TokenType::Reference {
-                                                sheet: None,
-                                                column: left.column,
-                                                row: left.row,
-                                                absolute_row: left.absolute_row,
-                                                absolute_column: left.absolute_column,
-                                            };
                                         }
+                                        return TokenType::Reference {
+                                            sheet: None,
+                                            column: left.column,
+                                            row: left.row,
+                                            absolute_row: left.absolute_row,
+                                            absolute_column: left.absolute_column,
+                                        };
                                     }
                                     Err(error) => {
                                         self.position = position - 1;
@@ -617,12 +619,11 @@ impl Lexer {
                                         }
                                         if is_valid_r1c1_identifier(&name, self.peek_char()) {
                                             return TokenType::Ident(name);
-                                        } else {
-                                            return TokenType::Illegal(self.set_error(
-                                                &format!("Invalid identifier (R1C1): {name}"),
-                                                error.position,
-                                            ));
                                         }
+                                        return TokenType::Illegal(self.set_error(
+                                            &format!("Invalid identifier (R1C1): {name}"),
+                                            error.position,
+                                        ));
                                     }
                                 }
                             }
@@ -754,13 +755,13 @@ impl Lexer {
                     success = true;
                     break;
                 }
-                if self.chars[position] != '\'' {
-                    success = true;
-                    break;
-                } else {
+                if self.chars[position] == '\'' {
                     // In Excel we escape "'" with "''"
                     needs_escape = true;
                     position += 1;
+                } else {
+                    success = true;
+                    break;
                 }
             }
         }

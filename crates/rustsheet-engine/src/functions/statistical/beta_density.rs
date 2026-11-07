@@ -15,6 +15,10 @@
 //! correctly rounded (T-2513: 12,799 of w1's 12,800 probe cells within 15 digits, against 10,375
 //! bit-exact for the extended-exponent model M1 it replaces). The engine's GAMMALN differs from
 //! Excel's at some shapes below 1 (T-2122), which moves last bits, not the 15 digits.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::many_single_char_names)]
+#![cfg_attr(test, expect(clippy::match_same_arms))]
+// LINT-DEBT-END
 
 use super::gammaln::excel_gammaln;
 use crate::arithmetic::{extended_product, extended_sum};

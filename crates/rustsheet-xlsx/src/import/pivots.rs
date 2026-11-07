@@ -8,6 +8,15 @@
 //! logged and dropped whole, never truncated or guessed, so GETPIVOTDATA on it is `#REF!` and the
 //! rest of the workbook loads as usual (docs/excel-semantics/web.md "GETPIVOTDATA against a pivot
 //! table"). A grouped field imports as its group items ([`groups`], T-4225).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::float_cmp,
+    clippy::print_stderr,
+    clippy::too_many_lines,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 
 mod groups;
 mod table;

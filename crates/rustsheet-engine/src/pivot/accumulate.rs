@@ -9,6 +9,9 @@
 //! and errors", "Summation order of Sum, Average and Product totals" and "A Count total over an
 //! error field is the error when the pivot mixes aggregates" (probes/t4135-pivot-aggregates,
 //! t4589-pivot-total-order, t4614-pivot-total-order-2, t4616-pivot-total-order-3).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::unreadable_literal))]
+// LINT-DEBT-END
 
 use crate::expressions::token::Error;
 

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, clippy::panic, reason = "tests")]
 
 //! Metamorphic and property tests over generated pivots (T-4155; plan §6 layer 5 of
@@ -69,13 +72,13 @@ fn pivot_model(records: &[Record]) -> Model {
     let mut model = new_empty_model();
     model.add_sheet("Data").unwrap();
     for (column, header) in ["A", "B", "C"].iter().zip(["Region", "Product", "Sales"]) {
-        model._set(&format!("Data!{column}1"), header);
+        model.set_a1(&format!("Data!{column}1"), header);
     }
     for (i, (region, product, sales)) in records.iter().enumerate() {
         let row = i + 2;
-        model._set(&format!("Data!A{row}"), region);
-        model._set(&format!("Data!B{row}"), product);
-        model._set(&format!("Data!C{row}"), &sales.to_string());
+        model.set_a1(&format!("Data!A{row}"), region);
+        model.set_a1(&format!("Data!B{row}"), product);
+        model.set_a1(&format!("Data!C{row}"), &sales.to_string());
     }
     model.evaluate();
     let source = PivotCache {
@@ -128,7 +131,7 @@ fn refresh_pivot(model: &mut Model) {
 fn sheet_text(model: &Model) -> Vec<String> {
     (1..=60)
         .flat_map(|row| (1..=26).map(move |column| (row, column)))
-        .map(|(row, column)| model._get_text_at(0, row, column))
+        .map(|(row, column)| model.get_text_by_index(0, row, column))
         .collect()
 }
 
@@ -159,9 +162,9 @@ fn value_cells(model: &Model) -> Vec<ValueCell> {
             cells.push(ValueCell {
                 row,
                 column,
-                region: model._get_text_at(0, row, left),
-                product: model._get_text_at(0, labels_row, column),
-                text: model._get_text_at(0, row, column),
+                region: model.get_text_by_index(0, row, left),
+                product: model.get_text_by_index(0, labels_row, column),
+                text: model.get_text_by_index(0, row, column),
             });
         }
     }
@@ -247,13 +250,13 @@ fn getpivotdata_of_each_value_cell_returns_the_cell() {
                 }
             }
             formula.push(')');
-            model._set(&format!("AB{}", i + 1), &formula);
+            model.set_a1(&format!("AB{}", i + 1), &formula);
         }
         model.evaluate();
         for (i, cell) in cells.iter().enumerate() {
             let row = i32::try_from(i + 1).unwrap();
             assert_eq!(
-                model._get_text_at(0, row, 28),
+                model.get_text_by_index(0, row, 28),
                 cell.text,
                 "seed {seed}: {} / {} at R{}C{}",
                 cell.region,

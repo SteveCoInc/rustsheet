@@ -572,7 +572,7 @@ mod tests {
     fn test_load_languages() {
         let languages = get_languages();
         assert!(!languages.is_empty());
-        for (code, language) in languages.iter() {
+        for (code, language) in languages {
             assert_eq!(code, &language.code);
         }
     }

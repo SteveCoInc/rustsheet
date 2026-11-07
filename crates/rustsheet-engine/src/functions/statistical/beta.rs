@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 use statrs::distribution::{Beta, Continuous};
 
 use crate::arithmetic::flush_subnormal;

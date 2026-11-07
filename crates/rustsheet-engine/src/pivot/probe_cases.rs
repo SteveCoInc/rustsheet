@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::too_many_lines))]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, clippy::panic, reason = "tests")]
 //! The probe harness the pivot stage tests share: a probe's case file (its source cells and the
 //! case builder's pivot definition) read back into the cache and definition Excel refreshed, and its

@@ -42,9 +42,9 @@ fn linked() -> Model {
 }
 
 fn eval(model: &mut Model, formula: &str) -> String {
-    model._set("C1", formula);
+    model.set_a1("C1", formula);
     model.evaluate();
-    model._get_text("C1")
+    model.get_text_a1("C1")
 }
 
 #[test]
@@ -162,9 +162,9 @@ fn defined_names_read_the_cache() {
     assert_eq!(eval(&mut model, "=ISREF([1]!Span)"), "TRUE");
     assert_eq!(eval(&mut model, "=INDEX([1]!Span,2,2)"), "142");
     // The formula text keeps the external prefix.
-    model._set("C1", "=[1]Defines!NR_To_A1&[1]!NR_Global_B2");
+    model.set_a1("C1", "=[1]Defines!NR_To_A1&[1]!NR_Global_B2");
     assert_eq!(
-        model._get_formula("C1"),
+        model.get_formula_a1("C1"),
         "=[1]Defines!NR_To_A1&[1]!NR_Global_B2"
     );
 }
@@ -173,7 +173,7 @@ fn defined_names_read_the_cache() {
 #[test]
 fn book_zero_is_this_workbook() {
     let mut model = linked();
-    model._set("A1", "42");
+    model.set_a1("A1", "42");
     model
         .new_defined_name("Answer", None, "Sheet1!$A$1")
         .unwrap();
@@ -192,25 +192,25 @@ fn book_zero_is_this_workbook() {
 fn sheet_qualified_defined_name() {
     let mut model = new_empty_model();
     model.add_sheet("Sheet 2").unwrap();
-    model._set("B1", "7");
+    model.set_a1("B1", "7");
     model
         .new_defined_name("Local", Some(1), "Sheet1!$B$1")
         .unwrap();
-    model._set("A1", "=Sheet1!B1");
-    model._set("A2", "='Sheet 2'!Local+1");
-    model._set("A3", "=ISREF('Sheet 2'!Local)");
-    model._set("A4", "=Sheet1!Nope");
+    model.set_a1("A1", "=Sheet1!B1");
+    model.set_a1("A2", "='Sheet 2'!Local+1");
+    model.set_a1("A3", "=ISREF('Sheet 2'!Local)");
+    model.set_a1("A4", "=Sheet1!Nope");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "7");
-    assert_eq!(model._get_formula("A2"), "='Sheet 2'!Local+1");
-    assert_eq!(model._get_text("A2"), "8");
-    assert_eq!(model._get_text("A3"), "TRUE");
-    assert_eq!(model._get_text("A4"), "#NAME?");
+    assert_eq!(model.get_text_a1("A1"), "7");
+    assert_eq!(model.get_formula_a1("A2"), "='Sheet 2'!Local+1");
+    assert_eq!(model.get_text_a1("A2"), "8");
+    assert_eq!(model.get_text_a1("A3"), "TRUE");
+    assert_eq!(model.get_text_a1("A4"), "#NAME?");
     // A rename keeps the prefix as typed.
     model
         .update_defined_name("Local", Some(1), "Renamed", Some(1), "Sheet1!$B$1")
         .unwrap();
-    assert_eq!(model._get_formula("A2"), "='Sheet 2'!Renamed+1");
+    assert_eq!(model.get_formula_a1("A2"), "='Sheet 2'!Renamed+1");
 }
 
 // `[0]!Name` resolves at parse time like `Name`, so ISREF and a rename see it (T-1459); it shows
@@ -218,24 +218,24 @@ fn sheet_qualified_defined_name() {
 #[test]
 fn book_zero_name_is_resolved_at_parse_time() {
     let mut model = new_empty_model();
-    model._set("B1", "7");
+    model.set_a1("B1", "7");
     model
         .new_defined_name("CellName", None, "Sheet1!$B$1")
         .unwrap();
-    model._set("A1", "=ISREF([0]!CellName)");
+    model.set_a1("A1", "=ISREF([0]!CellName)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "TRUE");
+    assert_eq!(model.get_text_a1("A1"), "TRUE");
     model
         .update_defined_name("CellName", None, "Other", None, "Sheet1!$B$1")
         .unwrap();
-    assert_eq!(model._get_formula("A1"), "=ISREF(model.xlsx!Other)");
+    assert_eq!(model.get_formula_a1("A1"), "=ISREF(model.xlsx!Other)");
 }
 
 // A local name never answers for a linked workbook's name of the same spelling (T-1459).
 #[test]
 fn local_name_does_not_shadow_a_linked_name() {
     let mut model = linked();
-    model._set("A1", "42");
+    model.set_a1("A1", "42");
     model
         .new_defined_name("NR_Global_B2", None, "Sheet1!$A$1")
         .unwrap();
@@ -245,11 +245,11 @@ fn local_name_does_not_shadow_a_linked_name() {
     assert_eq!(eval(&mut model, "=SUM([1]!NR_Global_B2)"), "142");
     assert_eq!(eval(&mut model, "=ISREF([1]!Missing)"), "FALSE");
     assert_eq!(eval(&mut model, "=SUM([1]!Missing)"), "#BLOCKED!");
-    model._set("C1", "=[1]!Missing");
+    model.set_a1("C1", "=[1]!Missing");
     model
         .update_defined_name("Missing", None, "Renamed", None, "Sheet1!$A$1")
         .unwrap();
-    assert_eq!(model._get_formula("C1"), "=[1]!Missing");
+    assert_eq!(model.get_formula_a1("C1"), "=[1]!Missing");
 }
 
 // A sparse cache (A1 and the last row) makes a whole column span the grid: a union of such
@@ -271,13 +271,13 @@ fn union_of_sparse_whole_columns_is_bounded() {
 #[test]
 fn lifted_index_reads_each_picked_cell_from_the_cache() {
     let mut model = linked();
-    model._set("C1", "=INDEX([1]Uses!$A$1:$B$2,{1,2},1)");
-    model._set("C2", "=INDEX([1]Uses!$A$1:$B$2,{0,2},1)");
+    model.set_a1("C1", "=INDEX([1]Uses!$A$1:$B$2,{1,2},1)");
+    model.set_a1("C2", "=INDEX([1]Uses!$A$1:$B$2,{0,2},1)");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "Hello!");
-    assert_eq!(model._get_text("D1"), "TRUE");
-    assert_eq!(model._get_text("C2"), "Hello!");
-    assert_eq!(model._get_text("D2"), "TRUE");
+    assert_eq!(model.get_text_a1("C1"), "Hello!");
+    assert_eq!(model.get_text_a1("D1"), "TRUE");
+    assert_eq!(model.get_text_a1("C2"), "Hello!");
+    assert_eq!(model.get_text_a1("D2"), "TRUE");
 }
 
 // Book `[1]` caches what fixtures/external-link-cached-ranges does: `Uses` A1 "Hello!", B1 10,
@@ -384,13 +384,13 @@ fn blank_skipping_aggregates_read_a_tall_area_from_the_cache() {
 
 /// `formula` set in `cell` as a legacy (pre-dynamic-array) formula, as xlsx import reads one.
 fn eval_legacy(model: &mut Model, cell: &str, formula: &str) -> String {
-    let reference = model._parse_reference(cell);
+    let reference = model.parse_a1(cell);
     let text = model
         .legacy_formula_text(reference.sheet, reference.row, reference.column, formula)
         .unwrap();
-    model._set(cell, &text);
+    model.set_a1(cell, &text);
     model.evaluate();
-    model._get_text(cell)
+    model.get_text_a1(cell)
 }
 
 // A legacy formula implicitly intersects a cached range as it does a range of this workbook
@@ -460,8 +460,8 @@ fn let_body_picking_an_external_reference_is_that_reference() {
 #[test]
 fn let_body_picking_an_external_reference_or_another_argument() {
     let mut model = new_empty_model();
-    model._set("D1", "1");
-    model._set("D2", "x");
+    model.set_a1("D1", "1");
+    model.set_a1("D2", "x");
     let ext = "'[other.xlsx]Sheet1'!";
     for (formula, expected) in [
         (format!("=ISREF(OFFSET(LET(c,TRUE,{ext}A1),1,1))"), "FALSE"),
@@ -553,12 +553,18 @@ fn span_of_cached_sheets_round_trips() {
     let mut model = cached_span_fixture();
     // Printed bare, as the fixture holds it and as a span of this workbook is (T-4140); the quoted
     // spelling reads the same.
-    model._set("C1", "=SUM([1]Uses:Defines!$A$1:$B$2)");
-    assert_eq!(model._get_formula("C1"), "=SUM([1]Uses:Defines!$A$1:$B$2)");
-    model._set("C1", "=SUM('[1]Uses:Defines'!$A$1:$B$2)");
-    assert_eq!(model._get_formula("C1"), "=SUM([1]Uses:Defines!$A$1:$B$2)");
+    model.set_a1("C1", "=SUM([1]Uses:Defines!$A$1:$B$2)");
+    assert_eq!(
+        model.get_formula_a1("C1"),
+        "=SUM([1]Uses:Defines!$A$1:$B$2)"
+    );
+    model.set_a1("C1", "=SUM('[1]Uses:Defines'!$A$1:$B$2)");
+    assert_eq!(
+        model.get_formula_a1("C1"),
+        "=SUM([1]Uses:Defines!$A$1:$B$2)"
+    );
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "157");
+    assert_eq!(model.get_text_a1("C1"), "157");
 }
 
 // A span over many cached sheets walks the cache once, not once per sheet (CLAUDE.md
@@ -575,9 +581,9 @@ fn span_of_many_cached_sheets_is_one_walk() {
     assert_eq!(eval(&mut model, "=COUNTA([1]Uses:P99999x!$A:$C)"), "10");
     assert_eq!(eval(&mut model, "=SUM([1]Uses:Nope!$B$2)"), "#BLOCKED!");
     for formula in ["=[1]A:!B1", "=[1]:B!A1", "=[1]A:B:C!A1"] {
-        model._set("C1", formula);
+        model.set_a1("C1", formula);
         model.evaluate();
-        assert_eq!(model._get_text("C1"), "#ERROR!", "{formula}");
+        assert_eq!(model.get_text_a1("C1"), "#ERROR!", "{formula}");
     }
 }
 
@@ -710,12 +716,12 @@ fn whole_column_lookups_keep_full_length() {
         ]);
     }
     for (i, key) in (1..).zip(keys) {
-        model._set(&format!("H{i}"), &key.to_string());
-        model._set(&format!("I{i}"), &(key * 10.0).to_string());
+        model.set_a1(&format!("H{i}"), &key.to_string());
+        model.set_a1(&format!("I{i}"), &(key * 10.0).to_string());
     }
     for (column, key) in ["A", "B", "C", "D", "E"].into_iter().zip(keys) {
-        model._set(&format!("{column}10"), &key.to_string());
-        model._set(&format!("{column}11"), &(key * 10.0).to_string());
+        model.set_a1(&format!("{column}10"), &key.to_string());
+        model.set_a1(&format!("{column}11"), &(key * 10.0).to_string());
     }
     let pairs = [
         ("VLOOKUP(1,{t}!$A:$C,2,TRUE)", "VLOOKUP(1,$H:$J,2,TRUE)"),
@@ -757,21 +763,21 @@ fn whole_column_lookups_share_the_cached_vector() {
     book.cells.clear();
     book.cells
         .extend((1..=100).map(|row| ((0, row, 1), SpillValue::Number(f64::from(row) * 2.0))));
-    model._set("C1", "=MATCH(40,[1]Uses!$A:$A,0)");
-    model._set("C2", "=MATCH(41,[1]Uses!$A:$A)");
-    model._set("C3", "=VLOOKUP(200,[1]Uses!$A:$B,1,FALSE)");
-    model._set("C4", "=MATCH(1,[1]Uses!$A:$A,0)");
-    model._set("C5", "=MATCH(1,[1]Uses!$C:$C,0)");
-    model._set("C6", "=VLOOKUP(1,[1]Uses!$C:$D,2)");
-    model._set("C7", "=MATCH(2,[1]Uses!$1:$1,0)");
+    model.set_a1("C1", "=MATCH(40,[1]Uses!$A:$A,0)");
+    model.set_a1("C2", "=MATCH(41,[1]Uses!$A:$A)");
+    model.set_a1("C3", "=VLOOKUP(200,[1]Uses!$A:$B,1,FALSE)");
+    model.set_a1("C4", "=MATCH(1,[1]Uses!$A:$A,0)");
+    model.set_a1("C5", "=MATCH(1,[1]Uses!$C:$C,0)");
+    model.set_a1("C6", "=VLOOKUP(1,[1]Uses!$C:$D,2)");
+    model.set_a1("C7", "=MATCH(2,[1]Uses!$1:$1,0)");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "20");
-    assert_eq!(model._get_text("C2"), "20");
-    assert_eq!(model._get_text("C3"), "200");
-    assert_eq!(model._get_text("C4"), "#N/A");
-    assert_eq!(model._get_text("C5"), "#N/A");
-    assert_eq!(model._get_text("C6"), "#N/A");
-    assert_eq!(model._get_text("C7"), "1");
+    assert_eq!(model.get_text_a1("C1"), "20");
+    assert_eq!(model.get_text_a1("C2"), "20");
+    assert_eq!(model.get_text_a1("C3"), "200");
+    assert_eq!(model.get_text_a1("C4"), "#N/A");
+    assert_eq!(model.get_text_a1("C5"), "#N/A");
+    assert_eq!(model.get_text_a1("C6"), "#N/A");
+    assert_eq!(model.get_text_a1("C7"), "1");
 }
 
 // Each cached sheet has its own extent, a sheet without cells is uncached, and a changed cache is

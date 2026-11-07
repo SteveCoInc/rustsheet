@@ -7,6 +7,9 @@
 //! .69, .73; docs/research/pivot-tables-2026-11-04/excel-docs.md §7). Everything else in the part
 //! is kept verbatim in [`PivotTable::opaque`] for export (T-4176); the importer counts it toward
 //! its limits.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_excessive_bools)]
+// LINT-DEBT-END
 
 use bitcode::{Decode, Encode};
 

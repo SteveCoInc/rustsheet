@@ -1,4 +1,7 @@
 //! Reading and validating the VLOOKUP/HLOOKUP index argument.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use crate::{
     calc_result::CalcResult,

@@ -295,6 +295,6 @@ mod tests {
         assert_eq!(read(bad_year), None);
         let unknown = r#"<filters><dateGroupItem year="2024" dateTimeGrouping="week"/></filters>"#;
         assert_eq!(read(unknown), None);
-        assert_eq!(read(r#"<filters><other/></filters>"#), None);
+        assert_eq!(read(r"<filters><other/></filters>"), None);
     }
 }

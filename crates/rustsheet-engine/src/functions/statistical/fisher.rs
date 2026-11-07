@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_precision_loss,
+    clippy::float_cmp,
+    clippy::many_single_char_names
+)]
+#![cfg_attr(test, expect(clippy::unreadable_literal))]
+// LINT-DEBT-END
 use statrs::distribution::FisherSnedecor;
 
 use crate::arithmetic::{extended_quotient, flush_subnormal};

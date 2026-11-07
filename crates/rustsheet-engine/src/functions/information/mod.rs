@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::match_same_arms)]
+// LINT-DEBT-END
 mod isomitted;
 mod offline_errors;
 
@@ -526,7 +529,7 @@ impl Model {
         }
         if arg_count == 0 {
             // Sheets are 0-indexed`
-            return CalcResult::Number(cell.sheet as f64 + 1.0);
+            return CalcResult::Number(f64::from(cell.sheet) + 1.0);
         }
         // The arg could be a defined name or a table
         match args[0].ungrouped() {
@@ -557,14 +560,13 @@ impl Model {
                             };
                         }
                     }
-                } else {
-                    // This should never happen
-                    return CalcResult::Error {
-                        error: Error::ERROR,
-                        origin: cell,
-                        message: "Invalid name".to_string(),
-                    };
                 }
+                // This should never happen
+                return CalcResult::Error {
+                    error: Error::ERROR,
+                    origin: cell,
+                    message: "Invalid name".to_string(),
+                };
             }
             // A name no LET or LAMBDA binds. A bound one is read as what it is bound to, below.
             Node::NamedVariableKind { name, id: None } => {
@@ -582,7 +584,7 @@ impl Model {
                 match self.evaluate_reference_arg(arg, cell) {
                     RefArg::Ranges(ranges) => {
                         if let Some(first) = ranges.first() {
-                            return CalcResult::Number(first.left.sheet as f64 + 1.0);
+                            return CalcResult::Number(f64::from(first.left.sheet) + 1.0);
                         }
                     }
                     // An array of references is neither lifted nor read as a value: one #N/A
@@ -625,7 +627,7 @@ impl Model {
                     Err(e) => return e,
                 };
                 if let Some(sheet_index) = self.get_sheet_index_by_name(&sheet_name) {
-                    return CalcResult::Number(sheet_index as f64 + 1.0);
+                    return CalcResult::Number(f64::from(sheet_index) + 1.0);
                 }
             }
         }
@@ -882,7 +884,7 @@ impl Model {
                 }
                 CalcResult::String(format!("{prefix}{}", addresses.join(", ")).into())
             }
-            "COL" => CalcResult::Number(reference.column as f64),
+            "COL" => CalcResult::Number(f64::from(reference.column)),
             "COLOR" | "FORMAT" | "PARENTHESES" | "PREFIX" | "PROTECT" | "WIDTH" => {
                 CalcResult::Error {
                     error: Error::VALUE,
@@ -908,7 +910,7 @@ impl Model {
                 origin: cell,
                 message: "CELL(\"filename\") is #VALUE! in Excel for the web".to_string(),
             },
-            "ROW" => CalcResult::Number(reference.row as f64),
+            "ROW" => CalcResult::Number(f64::from(reference.row)),
             // Like "contents", "type" reads the top-left cell on the sheet the reference names
             // (`CELL("type",Data!A7)` is "l" for text in Data!A7 although Calc!A7 is blank;
             // probes/info-cell-legacy-range J1:K3, excel-graph re-filled 2026-10-28, T-3030).

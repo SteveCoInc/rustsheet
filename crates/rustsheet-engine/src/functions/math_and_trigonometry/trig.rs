@@ -18,6 +18,14 @@
 //! ([`Series::fast`]). When every value within that bound rounds to the same double (Ziv's
 //! rounding test, [`rounds_safely`]), that double is the rounding of the full sum too, so the full
 //! sum runs only for a remainder close to a rounding boundary (about 1 call in 500; T-1637).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::float_cmp,
+    clippy::inline_always
+)]
+#![cfg_attr(test, expect(clippy::cast_precision_loss))]
+// LINT-DEBT-END
 
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 use std::ops::Neg;

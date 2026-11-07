@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::unreadable_literal)]
+// LINT-DEBT-END
 use super::bessel_excel::{EXCEL_MAX_ORDER, MAX_ORDER};
 use crate::arithmetic::flush_subnormal;
 
@@ -108,7 +111,7 @@ pub(crate) fn bessel_k(n: i32, x: f64) -> f64 {
     // K2 = K0 (probes-numeric/m9-besselk-underflow; engineering.md "BESSELK near the bottom of the
     // double range").
     for j in 1..n {
-        (bkm, bk) = (bk, bkm + flush_subnormal((j as f64) * tox * bk));
+        (bkm, bk) = (bk, bkm + flush_subnormal(f64::from(j) * tox * bk));
     }
     bk
 }

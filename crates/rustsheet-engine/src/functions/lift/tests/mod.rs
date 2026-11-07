@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, clippy::panic)]
 
 //! Unit tests of the lifting driver (SPEC-0011 Test plan): the read phase and `lift_call` with
@@ -30,7 +33,7 @@ const AT: CellReferenceIndex = CellReferenceIndex {
 fn model_with(cells: &[(&str, &str)]) -> Model {
     let mut model = new_empty_model();
     for (cell, value) in cells {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model.evaluate();
     model
@@ -173,7 +176,7 @@ fn a_one_cell_range_is_its_value_and_does_not_lift() {
         matches!(read.values.as_slice(), [CalcResult::Number(a), CalcResult::Number(b)] if *a == 45000.0 && *b == 45000.0)
     );
     // probes/scalar-lift-shapes H4.
-    assert_eq!(model._get_text("B1"), "45031");
+    assert_eq!(model.get_text_a1("B1"), "45031");
 }
 
 #[test]
@@ -184,8 +187,8 @@ fn a_wrong_count_is_the_count_error_before_anything_is_read() {
     assert!(is_error(&result, &Error::ERROR));
     assert_eq!(calls, 0);
     let model = model_with(&[("A1", "=EDATE(1)"), ("A2", "=WEEKNUM(1,2,3)")]);
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("A2"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), "#ERROR!");
 }
 
 // ---------------------------------------------------------------- the number shortcut (T-1932)
@@ -289,11 +292,11 @@ fn positions_past_a_shorter_array_are_na_in_1d_and_2d() {
         ("A4", "=INDEX(EDATE({45000,45031;45061,45092},{0,0,0}),2,2)"),
         ("A5", "=ROWS(EDATE({45000;45031;45061},{1;2}))"),
     ]);
-    assert_eq!(model._get_text("A1"), "#N/A");
-    assert_eq!(model._get_text("A2"), "45092");
-    assert_eq!(model._get_text("A3"), "#N/A");
-    assert_eq!(model._get_text("A4"), "45092");
-    assert_eq!(model._get_text("A5"), "3");
+    assert_eq!(model.get_text_a1("A1"), "#N/A");
+    assert_eq!(model.get_text_a1("A2"), "45092");
+    assert_eq!(model.get_text_a1("A3"), "#N/A");
+    assert_eq!(model.get_text_a1("A4"), "45092");
+    assert_eq!(model.get_text_a1("A5"), "3");
 }
 
 #[test]
@@ -427,10 +430,10 @@ fn an_element_error_stays_in_its_position() {
         ("A3", "=INDEX(EDATE({TRUE;45000},1),1)"),
         ("A4", "=INDEX(EDATE({TRUE;45000},1),2)"),
     ]);
-    assert_eq!(model._get_text("A1"), "45031");
-    assert_eq!(model._get_text("A2"), "#NUM!");
-    assert_eq!(model._get_text("A3"), "#VALUE!");
-    assert_eq!(model._get_text("A4"), "45031");
+    assert_eq!(model.get_text_a1("A1"), "45031");
+    assert_eq!(model.get_text_a1("A2"), "#NUM!");
+    assert_eq!(model.get_text_a1("A3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), "45031");
 }
 
 #[test]
@@ -442,10 +445,10 @@ fn a_scalar_error_and_scalar_text_broadcast() {
         ("A3", "=ROWS(EDATE(\"x\",{1;2}))"),
         ("A4", "=INDEX(EDATE(\"x\",{1;2}),2)"),
     ]);
-    assert_eq!(model._get_text("A1"), "2");
-    assert_eq!(model._get_text("A2"), "#N/A");
-    assert_eq!(model._get_text("A3"), "2");
-    assert_eq!(model._get_text("A4"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "2");
+    assert_eq!(model.get_text_a1("A2"), "#N/A");
+    assert_eq!(model.get_text_a1("A3"), "2");
+    assert_eq!(model.get_text_a1("A4"), "#VALUE!");
 }
 
 #[test]
@@ -454,8 +457,8 @@ fn the_kernel_check_order_decides_the_error_per_element() {
         ("A1", "=INDEX(YEARFRAC({1;#N/A},{#DIV/0!;#NUM!}),1)"),
         ("A2", "=INDEX(YEARFRAC({1;#N/A},{#DIV/0!;#NUM!}),2)"),
     ]);
-    assert_eq!(model._get_text("A1"), "#DIV/0!");
-    assert_eq!(model._get_text("A2"), "#N/A");
+    assert_eq!(model.get_text_a1("A1"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A2"), "#N/A");
 }
 
 #[test]
@@ -514,7 +517,7 @@ fn yearfrac_checks_basis_then_start_then_end() {
         ("A21", "#N/A"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), value, "{cell}");
     }
 }
 
@@ -573,8 +576,8 @@ fn kernel_element_errors_carry_no_message() {
         ("A4", "=YEARFRAC(1,2,9)"),
     ]);
     for cell in ["A1", "A2", "A3", "A4"] {
-        assert_eq!(model._get_text(cell), "#NUM!", "{cell}");
-        assert_eq!(model._get_error_message(cell), "", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#NUM!", "{cell}");
+        assert_eq!(model.get_error_message_a1(cell), "", "{cell}");
     }
 }
 
@@ -632,12 +635,12 @@ fn references_returned_by_functions_are_refused_and_one_cell_ones_are_values() {
         ("B5", "=ROWS(EDATE(A1:A3+0,1))"),
         ("B6", "=ROWS(EDATE(TAKE(A1:A3,2)+0,1))"),
     ]);
-    assert_eq!(model._get_text("B1"), "#VALUE!");
-    assert_eq!(model._get_text("B2"), "#VALUE!");
-    assert_eq!(model._get_text("B3"), "#VALUE!");
-    assert_eq!(model._get_text("B4"), "45032");
-    assert_eq!(model._get_text("B5"), "3");
-    assert_eq!(model._get_text("B6"), "2");
+    assert_eq!(model.get_text_a1("B1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B4"), "45032");
+    assert_eq!(model.get_text_a1("B5"), "3");
+    assert_eq!(model.get_text_a1("B6"), "2");
 }
 
 #[test]
@@ -653,11 +656,11 @@ fn the_four_functions_lift_over_arrays_and_refuse_ranges() {
         ("C6", "=YEARFRAC(45000,46000,A1:A2)"),
         ("C7", "=ROWS(EDATE(45000,A1:A2))"),
     ]);
-    assert_eq!(model._get_text("C1"), "45046");
-    assert_eq!(model._get_text("C2"), "16");
-    assert_eq!(model._get_text("C3"), "2");
+    assert_eq!(model.get_text_a1("C1"), "45046");
+    assert_eq!(model.get_text_a1("C2"), "16");
+    assert_eq!(model.get_text_a1("C3"), "2");
     for cell in ["C4", "C5", "C6", "C7"] {
-        assert_eq!(model._get_text(cell), "#VALUE!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
     }
 }
 
@@ -740,9 +743,9 @@ fn an_output_above_the_array_bound_is_refused_before_any_element() {
     );
     assert_eq!(calls, 0);
     assert!(is_error(&result, &Error::ERROR));
-    model._set("D1", "=ROWS(EDATE(A1:A1048576+0,A1:B1+0))");
+    model.set_a1("D1", "=ROWS(EDATE(A1:A1048576+0,A1:B1+0))");
     model.evaluate();
-    assert_eq!(model._get_text("D1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("D1"), "#ERROR!");
 }
 
 #[test]
@@ -868,13 +871,13 @@ fn args_read_as_grids_for_arrays_and_ranges() {
 fn a_3d_range_is_value_in_lift_arrays_and_ref_in_lift() {
     let mut model = new_empty_model();
     model.add_sheet("Sheet2").unwrap();
-    model._set("A1", "45000");
-    model._set("B1", "=EDATE(Sheet1:Sheet2!A1,1)");
-    model._set("B2", "=EDATE(Sheet1:Sheet2!A1:A2,1)");
+    model.set_a1("A1", "45000");
+    model.set_a1("B1", "=EDATE(Sheet1:Sheet2!A1,1)");
+    model.set_a1("B2", "=EDATE(Sheet1:Sheet2!A1:A2,1)");
     model.evaluate();
     // probes/scalar-lift-open-b W2-W11, -d W17-W29 (T-1777).
-    assert_eq!(model._get_text("B1"), "#VALUE!");
-    assert_eq!(model._get_text("B2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B2"), "#VALUE!");
     let (result, calls) = run_counting(
         &mut model,
         &LIFT_ALL,
@@ -899,10 +902,10 @@ fn one_cell_3d_range_and_reference_forms_in_lift_arrays() {
     let mut model = new_empty_model();
     model.add_sheet("Sheet2").unwrap();
     for (row, value) in [(1, 45000), (2, 45001), (3, 45002)] {
-        model._set(&format!("A{row}"), &value.to_string());
-        model._set(&format!("D{row}"), &row.to_string());
+        model.set_a1(&format!("A{row}"), &value.to_string());
+        model.set_a1(&format!("D{row}"), &row.to_string());
     }
-    model._set("E1", "2");
+    model.set_a1("E1", "2");
     let formulas = [
         ("=INDEX(EDATE(Sheet1:Sheet2!A1,{1;2}),2)", "#VALUE!"),
         ("=ROWS(EDATE(Sheet1:Sheet2!A1,{1;2}))", "2"),
@@ -919,12 +922,12 @@ fn one_cell_3d_range_and_reference_forms_in_lift_arrays() {
         ("=EDATE(XLOOKUP(1,D1:E1,A1:B1),1)", "45031"),
     ];
     for (row, (formula, _)) in formulas.iter().enumerate() {
-        model._set(&format!("G{}", row + 1), formula);
+        model.set_a1(&format!("G{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in formulas.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("G{}", row + 1)),
+            model.get_text_a1(&format!("G{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -946,6 +949,6 @@ fn reversed_basis_1_dates_swap() {
         ("A5", "=YEARFRAC(45100,45000,1)=YEARFRAC(45000,45100,1)"),
     ]);
     for cell in ["A1", "A2", "A3", "A4", "A5"] {
-        assert_eq!(model._get_text(cell), "TRUE", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "TRUE", "{cell}");
     }
 }

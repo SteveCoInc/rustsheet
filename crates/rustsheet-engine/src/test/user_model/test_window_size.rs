@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::float_cmp
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::{
@@ -25,5 +32,5 @@ fn basic_test() {
     let view = model.get_selected_view();
     assert_eq!(view.row, 1 + row_count);
     let scroll_y = model.get_scroll_y().unwrap();
-    assert_eq!(scroll_y, (row_count as f64) * DEFAULT_ROW_HEIGHT);
+    assert_eq!(scroll_y, f64::from(row_count) * DEFAULT_ROW_HEIGHT);
 }

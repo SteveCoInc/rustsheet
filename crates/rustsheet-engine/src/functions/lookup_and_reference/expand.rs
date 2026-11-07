@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 use crate::{
     calc_result::CalcResult,
     expressions::{
@@ -132,7 +139,7 @@ fn expand_kernel(
     cell: CellReferenceIndex,
 ) -> CalcResult {
     let src_rows = data.len();
-    let src_cols = data.first().map(|r| r.len()).unwrap_or(0);
+    let src_cols = data.first().map_or(0, std::vec::Vec::len);
     if target_rows < src_rows {
         return CalcResult::new_error(
             Error::VALUE,

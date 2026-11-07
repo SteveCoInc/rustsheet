@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::test::util::new_empty_model;
@@ -5,24 +8,24 @@ use crate::test::util::new_empty_model;
 #[test]
 fn fn_arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "=EXP()");
-    model._set("A2", "=SIGN()");
+    model.set_a1("A1", "=EXP()");
+    model.set_a1("A2", "=SIGN()");
 
-    model._set("A3", "=EXP(0)");
-    model._set("A4", "=SIGN(-10)");
+    model.set_a1("A3", "=EXP(0)");
+    model.set_a1("A4", "=SIGN(-10)");
 
-    model._set("A5", "=EXP(1, 2)");
-    model._set("A6", "=SIGN(1, 2)");
+    model.set_a1("A5", "=EXP(1, 2)");
+    model.set_a1("A6", "=SIGN(1, 2)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
 
-    assert_eq!(model._get_text("A3"), *"1");
-    assert_eq!(model._get_text("A4"), *"-1");
+    assert_eq!(model.get_text_a1("A3"), *"1");
+    assert_eq!(model.get_text_a1("A4"), *"-1");
 
-    assert_eq!(model._get_text("A5"), *"#ERROR!");
-    assert_eq!(model._get_text("A6"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A6"), *"#ERROR!");
 }
 
 /// The number in column A of `row`, or NaN (which fails every comparison) when it holds none.
@@ -46,7 +49,7 @@ fn exp_is_excels_x87_evaluation() {
         (3, -12.612_401_543_239_944),
     ] {
         model.update_cell_with_number(0, row, 2, a).unwrap();
-        model._set(&format!("A{row}"), &format!("=EXP(B{row})"));
+        model.set_a1(&format!("A{row}"), &format!("=EXP(B{row})"));
     }
     model.evaluate();
     assert_eq!(number(&model, 1), 0.127_359_500_990_096_19);
@@ -59,12 +62,12 @@ fn exp_is_excels_x87_evaluation() {
 #[test]
 fn exp_keeps_subnormal_results() {
     let mut model = new_empty_model();
-    model._set("A1", "=EXP(-745)=0");
-    model._set("A2", "=EXP(-720)=0");
-    model._set("A3", "=EXP(-720)");
+    model.set_a1("A1", "=EXP(-745)=0");
+    model.set_a1("A2", "=EXP(-720)=0");
+    model.set_a1("A3", "=EXP(-720)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"FALSE");
-    assert_eq!(model._get_text("A2"), *"FALSE");
+    assert_eq!(model.get_text_a1("A1"), *"FALSE");
+    assert_eq!(model.get_text_a1("A2"), *"FALSE");
     let tiny = number(&model, 3);
     assert!(tiny > 0.0 && tiny < f64::MIN_POSITIVE);
 }

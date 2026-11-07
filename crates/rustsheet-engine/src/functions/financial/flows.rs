@@ -233,11 +233,11 @@ impl Model {
                 // serial as given.
                 FlowElement::Number(date)
                     if (index == 0
-                        && (date.floor() < MINIMUM_DATE_SERIAL_NUMBER as f64
-                            || date.floor() > MAXIMUM_DATE_SERIAL_NUMBER as f64))
+                        && (date.floor() < f64::from(MINIMUM_DATE_SERIAL_NUMBER)
+                            || date.floor() > f64::from(MAXIMUM_DATE_SERIAL_NUMBER)))
                         || (index > 0
                             && (date.floor() < first_day
-                                || *date > MAXIMUM_DATE_SERIAL_NUMBER as f64)) =>
+                                || *date > f64::from(MAXIMUM_DATE_SERIAL_NUMBER))) =>
                 {
                     return error(Error::NUM)
                 }
@@ -400,7 +400,7 @@ fn xnpv_dates(values: &[f64], dates: &[f64]) -> Result<Vec<f64>, Error> {
     if dates
         .iter()
         .skip(1)
-        .any(|date| *date > MAXIMUM_DATE_SERIAL_NUMBER as f64)
+        .any(|date| *date > f64::from(MAXIMUM_DATE_SERIAL_NUMBER))
     {
         return Err(Error::NUM);
     }
@@ -412,8 +412,8 @@ fn xnpv_dates(values: &[f64], dates: &[f64]) -> Result<Vec<f64>, Error> {
         // text, FALSE and an empty cell as a later date are `#NUM!` too, in a range, an array
         // constant and a computed array alike (probes/t3815-xnpv-element-reading rows 13-18).
         if date.is_nan()
-            || *date < MINIMUM_DATE_SERIAL_NUMBER as f64
-            || *date > MAXIMUM_DATE_SERIAL_NUMBER as f64
+            || *date < f64::from(MINIMUM_DATE_SERIAL_NUMBER)
+            || *date > f64::from(MAXIMUM_DATE_SERIAL_NUMBER)
             || *date < first_date
         {
             return Err(Error::NUM);
@@ -428,7 +428,7 @@ fn xnpv_dates(values: &[f64], dates: &[f64]) -> Result<Vec<f64>, Error> {
 fn xirr_date_error(date: f64) -> Option<Error> {
     if date.is_nan() {
         Some(Error::VALUE)
-    } else if date.floor() < 0.0 || date.floor() > MAXIMUM_DATE_SERIAL_NUMBER as f64 {
+    } else if date.floor() < 0.0 || date.floor() > f64::from(MAXIMUM_DATE_SERIAL_NUMBER) {
         Some(Error::NUM)
     } else {
         None
@@ -451,7 +451,7 @@ fn xirr_dates(values: &[f64], dates: &[f64]) -> Result<Vec<f64>, Error> {
     let first_value_is_zero = values.first() == Some(&0.0);
     if dates
         .iter()
-        .any(|date| *date < 0.0 || *date > MAXIMUM_DATE_SERIAL_NUMBER as f64)
+        .any(|date| *date < 0.0 || *date > f64::from(MAXIMUM_DATE_SERIAL_NUMBER))
         || (!first_value_is_zero && !dates.iter().any(|date| *date > first_date))
     {
         return Err(Error::NUM);

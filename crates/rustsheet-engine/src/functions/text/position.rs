@@ -1,5 +1,13 @@
 //! FIND and SEARCH positions, counted in UTF-16 code units (docs/excel-semantics/text.md "Text
 //! positions count UTF-16 code units, except in LEFT and RIGHT").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::items_after_statements
+)]
+// LINT-DEBT-END
 
 use std::borrow::Cow;
 
@@ -71,7 +79,7 @@ pub(super) fn find_element(
         find(&find_text, &within_text, start_num)
     };
     match position {
-        Some(p) => Ok(ArrayNode::Number(p as f64)),
+        Some(p) => Ok(ArrayNode::Number(f64::from(p))),
         // Text not found
         None => Err(Error::VALUE),
     }

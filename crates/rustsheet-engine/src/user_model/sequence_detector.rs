@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 use std::collections::HashMap;
 
 use crate::locale::Locale;
@@ -11,9 +18,9 @@ enum DateCaseStyle {
 impl DateCaseStyle {
     fn new(case_seed: &str) -> Self {
         let case_seed = case_seed.trim_matches(['.', ' ']);
-        if case_seed.chars().all(|c| c.is_uppercase()) {
+        if case_seed.chars().all(char::is_uppercase) {
             Self::Uppercase
-        } else if case_seed.chars().next().is_some_and(|c| c.is_uppercase()) {
+        } else if case_seed.chars().next().is_some_and(char::is_uppercase) {
             Self::Capitalized
         } else {
             Self::Lowercase
@@ -194,7 +201,7 @@ impl SequenceDetector for NumericProgressionDetector {
             .split_once('.')
             .map_or(decimal_format.as_str(), |(int, _)| int)
             .split(',')
-            .map(|group| group.len())
+            .map(str::len)
             .collect::<Vec<_>>();
 
         let primary = groups_len.last().unwrap_or(&3);
@@ -251,11 +258,7 @@ struct SuffixedNumberDetector {
 
 impl SuffixedNumberDetector {
     fn suffix_index(value: &str) -> usize {
-        let digits = value
-            .chars()
-            .rev()
-            .take_while(|c| c.is_ascii_digit())
-            .count();
+        let digits = value.chars().rev().take_while(char::is_ascii_digit).count();
         if digits == value.len() {
             0
         } else {

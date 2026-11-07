@@ -8,6 +8,9 @@
 //! (docs/excel-semantics/pivots.md "Shared-item flags Excel accepts for mixed fields"). The root's
 //! version attributes are the case builder's, which every filled pivot probe opened with
 //! (`tools/src/rustsheet_tools/pivot_definition.py`).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use std::fmt::Write as _;
 

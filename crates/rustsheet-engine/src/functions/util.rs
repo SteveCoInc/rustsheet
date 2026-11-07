@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 pub(crate) mod near_integer;
 
 use crate::external_reference::PickedReference;
@@ -168,10 +171,8 @@ pub(crate) fn compare_values(left: &CalcResult, right: &CalcResult) -> i32 {
             let r2 = error_sort_rank(e2);
             if r1 < r2 {
                 -1
-            } else if r1 > r2 {
-                1
             } else {
-                0
+                i32::from(r1 > r2)
             }
         }
         (CalcResult::Error { .. }, _) => 1,
@@ -853,7 +854,7 @@ impl Model {
                 for column in left.column..=column2 {
                     f(
                         self,
-                        AreaStep::Position(CellReferenceIndex { sheet, row, column }),
+                        AreaStep::Position(CellReferenceIndex { sheet, column, row }),
                     )?;
                 }
             }

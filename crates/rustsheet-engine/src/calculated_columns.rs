@@ -2,6 +2,9 @@
 //! (docs/excel-semantics/references.md, "Calculated columns: a formula typed into a table
 //! column"; T-2957, T-2958), and one typed just right of a table grows it by a column (T-2968),
 //! as a constant does (T-3218); either typed just below it grows it by a row (T-3273).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use crate::actions::displace_cf_formula_str;
 use crate::constants::{LAST_COLUMN, LAST_ROW};
@@ -505,7 +508,11 @@ impl Model {
             _ => return Vec::new(),
         };
         let deleted = |index: i32| delta < 0 && (at..at.saturating_sub(delta)).contains(&index);
-        let edited_sheet = self.workbook.worksheet(sheet).map(|w| w.get_name()).ok();
+        let edited_sheet = self
+            .workbook
+            .worksheet(sheet)
+            .map(super::types::Worksheet::get_name)
+            .ok();
         let (locale, language) = (self.locale, self.language);
         self.parser.set_locale(get_default_locale());
         self.parser.set_language(get_default_language());

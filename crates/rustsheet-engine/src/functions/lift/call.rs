@@ -1,5 +1,8 @@
 //! `lift_call` and its read phase (SPEC-0011 "The driver"): each argument is read once, by its
 //! kind in the table, and the kernel runs once (nothing lifted) or once per element.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::needless_pass_by_value)]
+// LINT-DEBT-END
 
 use std::mem::ManuallyDrop;
 

@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::match_same_arms,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 use crate::calc_result::Range;
 // new implementation gcd_lcm.rs
 use crate::expressions::parser::ArrayNode;
@@ -27,11 +35,11 @@ fn lcm_i64(a: i64, b: i64) -> Option<i64> {
         return Some(0);
     }
     let g = gcd_i64(a, b);
-    let a_div_g = (a / g) as i128;
+    let a_div_g = i128::from(a / g);
     // The limit applies to the rounded double: a product of 2^53+1 reads as 2^53 and is accepted
     // (probes/lcm-result-edge C1), while 2^53+2 is `#NUM!`.
-    let prod = ((a_div_g * (b as i128)) as f64) as i128;
-    if prod > MAX_LCM_GCD as i128 {
+    let prod = ((a_div_g * i128::from(b)) as f64) as i128;
+    if prod > i128::from(MAX_LCM_GCD) {
         None
     } else {
         Some(prod as i64)
@@ -119,13 +127,14 @@ impl Model {
                 return None;
             }
             acc = Some(match acc {
-                Some(cur) => match combine(cur, n) {
-                    Some(v) => v,
-                    None => {
+                Some(cur) => {
+                    if let Some(v) = combine(cur, n) {
+                        v
+                    } else {
                         result_too_large.set(true);
                         return None;
                     }
-                },
+                }
                 None => n,
             });
             None

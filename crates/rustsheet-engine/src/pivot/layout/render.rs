@@ -66,6 +66,9 @@
 //!   corner left empty), with no data field, beside page fields, and beside
 //!   `grandTotalCaption` (always `Total`); a subtotalCaption with Values inside its field (kept
 //!   `<item> <data field>`), empty, or with several `?` (each replaced) (T-4785).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::unused_self)]
+// LINT-DEBT-END
 
 use crate::expressions::token::Error;
 use crate::number_format::number_to_text;

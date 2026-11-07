@@ -246,11 +246,11 @@ fn load_package<R: Read + Seek>(
             // In case there is no metadata, add some
             Metadata {
                 application: "Unknown application".to_string(),
-                app_version: "".to_string(),
-                creator: "".to_string(),
-                last_modified_by: "".to_string(),
-                created: "".to_string(),
-                last_modified: "".to_string(),
+                app_version: String::new(),
+                creator: String::new(),
+                last_modified_by: String::new(),
+                created: String::new(),
+                last_modified: String::new(),
             }
         }
     };

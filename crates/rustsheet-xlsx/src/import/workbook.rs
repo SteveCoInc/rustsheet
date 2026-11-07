@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_field_names)]
+// LINT-DEBT-END
 use std::io::Read;
 
 use super::package::Package;

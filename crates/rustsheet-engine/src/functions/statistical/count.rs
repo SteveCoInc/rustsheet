@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::match_same_arms)]
+// LINT-DEBT-END
 use crate::calc_result::Range;
 use crate::expressions::parser::is_span_or_if_of_span;
 use crate::expressions::token::Error;
@@ -255,7 +258,7 @@ impl Model {
                 // probes/index-lifted-edge-cases H131, excel-graph 2026-10-13, T-1437).
                 CalcResult::Array(values) => return not_a_reference_array(values),
                 _ => return countblank_needs_reference(cell),
-            };
+            }
         }
         CalcResult::Number(result)
     }

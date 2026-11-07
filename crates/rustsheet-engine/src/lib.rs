@@ -1,17 +1,10 @@
-//! # `IronCalcBase` engine API
+//! RustSheet calculation engine core: parser, evaluator, functions and storage.
 //!
-//! This is the documentation for the base engine API.
-//!
-//! # Basic usage
-//!
-//! Add the dependency in Cargo.toml:
-//!
-//! ```toml
-//! [dependencies]
-//! rustsheet_engine = { git = "https://github.com/ironcalc/IronCalc" }
-//! ```
-//!
-//! <small> until version 1.0.0 you should use the git dependencies as stated </small>
+//! This crate is internal. Its `Model` API is inherited from the IronCalc fork and has no
+//! stability promise, load limits or typed errors; applications use the `rustsheet` crate
+//! (`rustsheet::Workbook`, SPEC-0001), which wraps it. The other workspace crates
+//! (`rustsheet_xlsx`, `rustsheet_eval`, the Python binding's deprecated `rustsheet.legacy`
+//! module) are its only intended direct users.
 //!
 //! In this example we use the excel function `CONCAT` to concatenate strings in cells `A1` and `B1`:
 //!

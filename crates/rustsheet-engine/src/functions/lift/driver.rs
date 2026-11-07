@@ -1,6 +1,9 @@
 //! The lifting driver's broadcasting core (SPEC-0011 "The driver"), moved from
 //! `statistical/if_ifs.rs` by T-1784 with no result change; T-1770 adds the spec's cost model,
 //! the in-place single-grid path and the text budget.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms, clippy::needless_pass_by_value)]
+// LINT-DEBT-END
 
 use super::arg_buf::ArgBuf;
 use super::kinds::{ArgKinds, ArgValue, CallResult, KernelWork, ValueWork};

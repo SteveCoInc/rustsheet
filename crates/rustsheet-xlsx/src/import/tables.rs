@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::too_many_lines)]
+// LINT-DEBT-END
 use std::collections::HashMap;
 use std::io::Read;
 
@@ -196,7 +199,7 @@ fn parse_table(document: &XmlNode, sheet_name: &str) -> Result<Table, XlsxError>
         .collect::<Vec<&XmlNode>>();
     let style_info = match table_info.first() {
         Some(node) => {
-            let name = node.attribute("name").map(|s| s.to_string());
+            let name = node.attribute("name").map(std::string::ToString::to_string);
             TableStyleInfo {
                 name,
                 show_first_column: get_bool_false(node, "showFirstColumn"),
@@ -382,7 +385,7 @@ mod tests {
         )));
         assert!(!active("<autoFilter/>"));
         // T-4404: a color filter with no dxfId is no criterion; with one it is.
-        for color in [r#"<colorFilter/>"#, r#"<colorFilter cellColor="0"/>"#] {
+        for color in [r"<colorFilter/>", r#"<colorFilter cellColor="0"/>"#] {
             let column = format!(
                 r#"<autoFilter><filterColumn colId="1">{color}</filterColumn></autoFilter>"#
             );

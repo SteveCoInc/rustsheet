@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::needless_pass_by_value
+)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 use super::lambda::LambdaCaller;
 use crate::cast::calc_result_to_element;
 use crate::functions::spill_functions::reject_empty_value;

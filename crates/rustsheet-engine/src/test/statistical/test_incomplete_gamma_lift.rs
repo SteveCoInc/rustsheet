@@ -35,12 +35,12 @@ const ARRAY_CALLS: &[&str] = &[
 fn every_entered_function_lifts_over_an_array() {
     let mut model = new_empty_model();
     for (row, formula) in ARRAY_CALLS.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), &format!("=ROWS({formula})"));
+        model.set_a1(&format!("A{}", row + 1), &format!("=ROWS({formula})"));
     }
     model.evaluate();
     for (row, formula) in ARRAY_CALLS.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *"2",
             "ROWS({formula})"
         );
@@ -59,20 +59,20 @@ fn the_last_argument_lifts_over_a_range_on_its_own_rows() {
         ("G5", "3"),
         ("G6", "4"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("A1", "=ROWS(CHISQ.DIST(1.5,5,G1:G2))");
-    model._set("A2", "=ROUND(INDEX(CHISQ.DIST(1.5,5,G1:G2),2),12)");
-    model._set("A3", "=ROUND(INDEX(CHIDIST(1.5,G3:G4),2),12)");
-    model._set("A4", "=ROUND(INDEX(CHISQ.INV(0.4,G3:G4),2),12)");
-    model._set("A5", "=ROUND(INDEX(CHIINV(0.4,G3:G4),2),12)");
-    model._set("A6", "=ROUND(INDEX(GAMMADIST(1.5,2,3,G1:G2),2),12)");
-    model._set("A7", "=ROUND(INDEX(GAMMA.INV(0.4,2,G5:G6),2),12)");
-    model._set("A8", "=ROUND(INDEX(POISSON(5,1,G1:G2),2),12)");
+    model.set_a1("A1", "=ROWS(CHISQ.DIST(1.5,5,G1:G2))");
+    model.set_a1("A2", "=ROUND(INDEX(CHISQ.DIST(1.5,5,G1:G2),2),12)");
+    model.set_a1("A3", "=ROUND(INDEX(CHIDIST(1.5,G3:G4),2),12)");
+    model.set_a1("A4", "=ROUND(INDEX(CHISQ.INV(0.4,G3:G4),2),12)");
+    model.set_a1("A5", "=ROUND(INDEX(CHIINV(0.4,G3:G4),2),12)");
+    model.set_a1("A6", "=ROUND(INDEX(GAMMADIST(1.5,2,3,G1:G2),2),12)");
+    model.set_a1("A7", "=ROUND(INDEX(GAMMA.INV(0.4,2,G5:G6),2),12)");
+    model.set_a1("A8", "=ROUND(INDEX(POISSON(5,1,G1:G2),2),12)");
     // Off the range's rows too: a lift, not an intersection.
-    model._set("A20", "=ROWS(POISSON.DIST(5,1,G1:G2))");
+    model.set_a1("A20", "=ROWS(POISSON.DIST(5,1,G1:G2))");
     // A one-cell range is its value (probes/incomplete-gamma-cap L18).
-    model._set("A21", "=ROUND(CHISQ.DIST.RT(1.5,G3:G3),12)");
+    model.set_a1("A21", "=ROUND(CHISQ.DIST.RT(1.5,G3:G3),12)");
     model.evaluate();
     let expected = [
         ("A1", "2"),
@@ -87,7 +87,7 @@ fn the_last_argument_lifts_over_a_range_on_its_own_rows() {
         ("A21", "0.913069815"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }
 
@@ -95,33 +95,33 @@ fn the_last_argument_lifts_over_a_range_on_its_own_rows() {
 fn each_element_is_the_scalar_call_with_its_own_error() {
     // probes/incomplete-gamma-cap L1-L17.
     let mut model = new_empty_model();
-    model._set("A1", "=INDEX(GAMMA.DIST({1.5;\"x\"},2,3,TRUE),2)");
-    model._set(
+    model.set_a1("A1", "=INDEX(GAMMA.DIST({1.5;\"x\"},2,3,TRUE),2)");
+    model.set_a1(
         "A2",
         "=ROUND(INDEX(GAMMA.DIST({1.5;\"1.5\"},2,3,TRUE),2),12)",
     );
-    model._set("A3", "=ROUND(INDEX(CHISQ.DIST({1.5;TRUE},5,TRUE),2),12)");
-    model._set("A4", "=INDEX(CHISQ.DIST(1.5,{5;0.5},TRUE),2)");
-    model._set("A5", "=INDEX(POISSON({5;-1},1,TRUE),2)");
-    model._set("A6", "=INDEX(CHISQ.INV.RT({0.4;#N/A},5),2)");
+    model.set_a1("A3", "=ROUND(INDEX(CHISQ.DIST({1.5;TRUE},5,TRUE),2),12)");
+    model.set_a1("A4", "=INDEX(CHISQ.DIST(1.5,{5;0.5},TRUE),2)");
+    model.set_a1("A5", "=INDEX(POISSON({5;-1},1,TRUE),2)");
+    model.set_a1("A6", "=INDEX(CHISQ.INV.RT({0.4;#N/A},5),2)");
     // Every argument is read before any is checked: an error wins over a bad probability.
-    model._set("A7", "=GAMMA.INV(2,NA(),1)");
-    model._set("A8", "=CHISQ.INV(2,NA())");
-    model._set("A9", "=POISSON(-1,NA(),TRUE)");
-    model._set("A10", "=ROWS(GAMMA.INV({0.1;0.2;0.3},{2,3},1))");
-    model._set("A11", "=COLUMNS(GAMMA.INV({0.1;0.2;0.3},{2,3},1))");
-    model._set(
+    model.set_a1("A7", "=GAMMA.INV(2,NA(),1)");
+    model.set_a1("A8", "=CHISQ.INV(2,NA())");
+    model.set_a1("A9", "=POISSON(-1,NA(),TRUE)");
+    model.set_a1("A10", "=ROWS(GAMMA.INV({0.1;0.2;0.3},{2,3},1))");
+    model.set_a1("A11", "=COLUMNS(GAMMA.INV({0.1;0.2;0.3},{2,3},1))");
+    model.set_a1(
         "A12",
         "=ROUND(INDEX(GAMMA.DIST(1.5,2,3,{\"TRUE\";\"FALSE\"}),2),12)",
     );
-    model._set("A13", "=INDEX(GAMMA.DIST(1.5,2,3,{TRUE;\"x\"}),2)");
-    model._set(
+    model.set_a1("A13", "=INDEX(GAMMA.DIST(1.5,2,3,{TRUE;\"x\"}),2)");
+    model.set_a1(
         "A14",
         "=ROUND(INDEX(POISSON({5.9;5},1,{FALSE;FALSE}),1),12)",
     );
-    model._set("A15", "=INDEX(CHIDIST({1.5;-1},5),2)");
-    model._set("A16", "=INDEX(GAMMAINV({0.4;1},2,3),2)");
-    model._set("A17", "=ROUND(INDEX(CHIINV({0.4;1},5),2),12)");
+    model.set_a1("A15", "=INDEX(CHIDIST({1.5;-1},5),2)");
+    model.set_a1("A16", "=INDEX(GAMMAINV({0.4;1},2,3),2)");
+    model.set_a1("A17", "=ROUND(INDEX(CHIINV({0.4;1},5),2),12)");
     model.evaluate();
     let expected = [
         ("A1", "#VALUE!"),
@@ -143,7 +143,7 @@ fn each_element_is_the_scalar_call_with_its_own_error() {
         ("A17", "0"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }
 
@@ -156,25 +156,25 @@ fn incomplete_gammas_that_hung_or_panicked_are_bounded() {
     // work, so those cdfs are Excel's numbers (E1-E4, E8, E9; T-1891). The inversion at a shape
     // of 1E300 is Excel's closed form, 1.0002658235505755 (E5; T-2982).
     let mut model = new_empty_model();
-    model._set("C1", "1E300");
-    model._set("C2", "1.0000001E300");
-    model._set("C3", "1E-300");
-    model._set("A1", "=GAMMA.DIST(1E16,1E16,1,TRUE)");
-    model._set("A2", "=POISSON(1E16,1E16,TRUE)");
-    model._set("A3", "=GAMMA.DIST(C1,C1,1,TRUE)");
-    model._set("A4", "=GAMMA.DIST(C2,C1,1,TRUE)");
-    model._set("A5", "=GAMMA.INV(0.5,1E300,1E-300)");
-    model._set("A6", "=GAMMA.DIST(C1,1,1E-10,TRUE)");
-    model._set("A7", "=GAMMA.DIST(C3,2,1E100,TRUE)");
-    model._set("A8", "=GAMMA.DIST(1E10,1E10,1,TRUE)");
-    model._set("A9", "=POISSON(1E12,1E12,TRUE)");
-    model._set("A10", "=CHISQ.DIST.RT(C2,2)");
+    model.set_a1("C1", "1E300");
+    model.set_a1("C2", "1.0000001E300");
+    model.set_a1("C3", "1E-300");
+    model.set_a1("A1", "=GAMMA.DIST(1E16,1E16,1,TRUE)");
+    model.set_a1("A2", "=POISSON(1E16,1E16,TRUE)");
+    model.set_a1("A3", "=GAMMA.DIST(C1,C1,1,TRUE)");
+    model.set_a1("A4", "=GAMMA.DIST(C2,C1,1,TRUE)");
+    model.set_a1("A5", "=GAMMA.INV(0.5,1E300,1E-300)");
+    model.set_a1("A6", "=GAMMA.DIST(C1,1,1E-10,TRUE)");
+    model.set_a1("A7", "=GAMMA.DIST(C3,2,1E100,TRUE)");
+    model.set_a1("A8", "=GAMMA.DIST(1E10,1E10,1,TRUE)");
+    model.set_a1("A9", "=POISSON(1E12,1E12,TRUE)");
+    model.set_a1("A10", "=CHISQ.DIST.RT(C2,2)");
     // The largest chi-squared shape: Excel's 0.5000018806319452 (probes/incomplete-gamma-cap
     // E16), which statrs' series missed (0.499998213; T-0971).
-    model._set("A11", "=CHISQ.DIST(1E10,1E10,TRUE)");
-    model._set("A12", "=INDEX(GAMMA.DIST({1.5;1E16},{2;1E16},1,TRUE),2)");
+    model.set_a1("A11", "=CHISQ.DIST(1E10,1E10,TRUE)");
+    model.set_a1("A12", "=INDEX(GAMMA.DIST({1.5;1E16},{2;1E16},1,TRUE),2)");
     // A 16-digit literal keeps 15 digits, so x is the shape: P(1E15, 1E15).
-    model._set("A13", "=GAMMA.DIST(1000000000000001,1E15,1,TRUE)");
+    model.set_a1("A13", "=GAMMA.DIST(1000000000000001,1E15,1,TRUE)");
     model.evaluate();
     let expected = [
         ("A1", "0.500000001"),
@@ -192,19 +192,19 @@ fn incomplete_gammas_that_hung_or_panicked_are_bounded() {
         ("A13", "0.500000004"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }
 
 /// `=ROWS(call)` with `#` replaced by `n`, evaluated alone.
 fn rows_of(call: &str, n: u32) -> String {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         &format!("=ROWS({})", call.replace('#', &n.to_string())),
     );
     model.evaluate();
-    model._get_text("A1")
+    model.get_text_a1("A1")
 }
 
 #[test]
@@ -250,18 +250,18 @@ fn incomplete_gamma_kernels_are_charged_their_weight() {
 #[test]
 fn unlifted_calls_are_the_scalar_calls() {
     let mut model = new_empty_model();
-    model._set("A1", "=CHISQ.DIST(1.5,5,TRUE)");
-    model._set("A2", "=CHISQ.DIST.RT(1.5,5)");
-    model._set("A3", "=CHIDIST(1.5,5)");
-    model._set("A4", "=CHISQ.INV(0.4,5)");
-    model._set("A5", "=CHISQ.INV.RT(0.4,5)");
-    model._set("A6", "=GAMMA.DIST(1.5,2,3,TRUE)");
-    model._set("A7", "=GAMMAINV(0.4,2,3)");
-    model._set("A8", "=POISSON.DIST(5,1,TRUE)");
-    model._set("A9", "=POISSON(5,0,FALSE)");
-    model._set("A10", "=GAMMA.INV(0.4,2)");
-    model._set("A11", "=CHISQ.DIST(1.5,10000000001,TRUE)");
-    model._set("A12", "=GAMMAINV(0,2,1)");
+    model.set_a1("A1", "=CHISQ.DIST(1.5,5,TRUE)");
+    model.set_a1("A2", "=CHISQ.DIST.RT(1.5,5)");
+    model.set_a1("A3", "=CHIDIST(1.5,5)");
+    model.set_a1("A4", "=CHISQ.INV(0.4,5)");
+    model.set_a1("A5", "=CHISQ.INV.RT(0.4,5)");
+    model.set_a1("A6", "=GAMMA.DIST(1.5,2,3,TRUE)");
+    model.set_a1("A7", "=GAMMAINV(0.4,2,3)");
+    model.set_a1("A8", "=POISSON.DIST(5,1,TRUE)");
+    model.set_a1("A9", "=POISSON(5,0,FALSE)");
+    model.set_a1("A10", "=GAMMA.INV(0.4,2)");
+    model.set_a1("A11", "=CHISQ.DIST(1.5,10000000001,TRUE)");
+    model.set_a1("A12", "=GAMMAINV(0,2,1)");
     model.evaluate();
     let expected = [
         ("A1", "0.086930185"),
@@ -278,6 +278,6 @@ fn unlifted_calls_are_the_scalar_calls() {
         ("A12", "0"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }

@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::comparison_chain
+)]
+// LINT-DEBT-END
 use crate::arithmetic::bcast_get;
 use crate::cast::NumberOrArray;
 use crate::expressions::parser::ArrayNode;
@@ -498,7 +507,7 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         }
         if args.is_empty() {
-            return CalcResult::Number(if by_row { cell.row } else { cell.column } as f64);
+            return CalcResult::Number(f64::from(if by_row { cell.row } else { cell.column }));
         }
         // `ROW(IF(TRUE,…!B3))` is 3 (probes/external-ref-no-link-ifchoose A25).
         // A value IF, CHOOSE or LET gives here is no reference, an error that error:

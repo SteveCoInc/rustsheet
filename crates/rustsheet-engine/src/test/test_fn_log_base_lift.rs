@@ -5,9 +5,9 @@ use crate::test::util::new_empty_model;
 #[test]
 fn log_decimal_base_atan2_arabic_lift_over_arrays_and_ranges() {
     let mut model = new_empty_model();
-    model._set("D1", "1");
-    model._set("D2", "2");
-    model._set("D3", "3");
+    model.set_a1("D1", "1");
+    model.set_a1("D2", "2");
+    model.set_a1("D3", "3");
     let cases = [
         ("=SUM(LOG({100,1000}))", "5"),
         ("=SUM(LOG(8,{2,8}))", "4"),
@@ -28,12 +28,12 @@ fn log_decimal_base_atan2_arabic_lift_over_arrays_and_ranges() {
         ),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", i + 1)),
+            model.get_text_a1(&format!("A{}", i + 1)),
             *expected,
             "{formula}"
         );
@@ -43,13 +43,13 @@ fn log_decimal_base_atan2_arabic_lift_over_arrays_and_ranges() {
 #[test]
 fn a_lifted_result_spills_or_is_spill_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=BASE({5;6},2)");
-    model._set("B1", "=LOG({1;10})");
-    model._set("B2", "x");
+    model.set_a1("A1", "=BASE({5;6},2)");
+    model.set_a1("B1", "=LOG({1;10})");
+    model.set_a1("B2", "x");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"101");
-    assert_eq!(model._get_text("A2"), *"110");
-    assert_eq!(model._get_text("B1"), *"#SPILL!");
+    assert_eq!(model.get_text_a1("A1"), *"101");
+    assert_eq!(model.get_text_a1("A2"), *"110");
+    assert_eq!(model.get_text_a1("B1"), *"#SPILL!");
 }
 
 /// The scalar rules the functions had before they moved onto the driver.
@@ -79,12 +79,12 @@ fn log_decimal_base_atan2_arabic_keep_their_scalar_rules() {
         ("=ARABIC(\"\")", "0"),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", i + 1)),
+            model.get_text_a1(&format!("A{}", i + 1)),
             *expected,
             "{formula}"
         );
@@ -95,37 +95,37 @@ fn log_decimal_base_atan2_arabic_keep_their_scalar_rules() {
 #[test]
 fn roman_lifts_over_arrays() {
     let mut model = new_empty_model();
-    model._set("A1", "=CONCAT(ROMAN(561,{0,1,4}))");
-    model._set(
+    model.set_a1("A1", "=CONCAT(ROMAN(561,{0,1,4}))");
+    model.set_a1(
         "A2",
         "=ROWS(ROMAN(561,{0,1,4,5}))&COLUMNS(ROMAN(561,{0,1,4,5}))",
     );
-    model._set("A3", "=INDEX(ROMAN(561,{0,1,4,5}),1,4)");
-    model._set("A4", "=CONCAT(ROMAN({1;4},0))");
-    model._set("A5", "=ROWS(ROMAN({1;4},0))");
-    model._set("A6", "=ROMAN(4,FALSE)");
+    model.set_a1("A3", "=INDEX(ROMAN(561,{0,1,4,5}),1,4)");
+    model.set_a1("A4", "=CONCAT(ROMAN({1;4},0))");
+    model.set_a1("A5", "=ROWS(ROMAN({1;4},0))");
+    model.set_a1("A6", "=ROMAN(4,FALSE)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "DLXIDLXIDLXI");
-    assert_eq!(model._get_text("A2"), "14");
-    assert_eq!(model._get_text("A3"), "#VALUE!");
-    assert_eq!(model._get_text("A4"), "IIV");
-    assert_eq!(model._get_text("A5"), "2");
-    assert_eq!(model._get_text("A6"), "IV");
+    assert_eq!(model.get_text_a1("A1"), "DLXIDLXIDLXI");
+    assert_eq!(model.get_text_a1("A2"), "14");
+    assert_eq!(model.get_text_a1("A3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), "IIV");
+    assert_eq!(model.get_text_a1("A5"), "2");
+    assert_eq!(model.get_text_a1("A6"), "IV");
 }
 
 /// COMBINA lifts over array arguments (numbers.md "COMBINA lifts over arrays", T-2453).
 #[test]
 fn combina_lifts_over_arrays() {
     let mut model = new_empty_model();
-    model._set("A1", "=ROWS(COMBINA({7;1},4))");
-    model._set("A2", "=INDEX(COMBINA({7;1},4),2)");
-    model._set("A3", "=INDEX(COMBINA(4,{1;2}),2)");
-    model._set("A4", "=INDEX(COMBINA({0;7},4),1)");
-    model._set("A5", "=COMBINA(7,4)");
+    model.set_a1("A1", "=ROWS(COMBINA({7;1},4))");
+    model.set_a1("A2", "=INDEX(COMBINA({7;1},4),2)");
+    model.set_a1("A3", "=INDEX(COMBINA(4,{1;2}),2)");
+    model.set_a1("A4", "=INDEX(COMBINA({0;7},4),1)");
+    model.set_a1("A5", "=COMBINA(7,4)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "2");
-    assert_eq!(model._get_text("A2"), "1");
-    assert_eq!(model._get_text("A3"), "10");
-    assert_eq!(model._get_text("A4"), "#NUM!");
-    assert_eq!(model._get_text("A5"), "210");
+    assert_eq!(model.get_text_a1("A1"), "2");
+    assert_eq!(model.get_text_a1("A2"), "1");
+    assert_eq!(model.get_text_a1("A3"), "10");
+    assert_eq!(model.get_text_a1("A4"), "#NUM!");
+    assert_eq!(model.get_text_a1("A5"), "210");
 }

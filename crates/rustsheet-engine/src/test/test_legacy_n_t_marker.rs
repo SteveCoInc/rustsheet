@@ -53,9 +53,9 @@ fn top_kind(node: &Node) -> Option<Function> {
 fn stored_in_a1(stored: &str, cells: &[(&str, &str)]) -> Model {
     let mut model = new_empty_model();
     for (cell, value) in cells {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("A1", "=N(0)");
+    model.set_a1("A1", "=N(0)");
     let worksheet = model.workbook.worksheet_mut(0).unwrap();
     worksheet.shared_formulas = vec![stored.to_string()];
     model.reset_parsed_structures();
@@ -79,9 +79,9 @@ fn the_spelling_is_the_marker_in_r1c1_and_a_cell_in_a1() {
         assert!(matches!(typed, Node::LambdaCallKind { .. }), "{typed:?}");
         assert!(!is_marked(&to_rc_format(&typed)), "{formula}");
         let mut model = new_empty_model();
-        model._set("A1", &format!("={formula}"));
+        model.set_a1("A1", &format!("={formula}"));
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "#REF!", "{formula}");
+        assert_eq!(model.get_text_a1("A1"), "#REF!", "{formula}");
     }
 }
 
@@ -103,10 +103,10 @@ fn only_the_storage_text_prints_the_spelling() {
         assert_eq!(to_excel_array_formula_string(&node, &context()), shown);
     }
     let mut model = stored_in_a1("NLG1(IF(1,{2;3}))", &[]);
-    model._set("B1", "=FORMULATEXT(A1)");
+    model.set_a1("B1", "=FORMULATEXT(A1)");
     model.evaluate();
-    assert_eq!(model._get_formula("A1"), "=N(IF(1,{2;3}))");
-    assert_eq!(model._get_text("B1"), "=N(IF(1,{2;3}))");
+    assert_eq!(model.get_formula_a1("A1"), "=N(IF(1,{2;3}))");
+    assert_eq!(model.get_text_a1("B1"), "=N(IF(1,{2;3}))");
 }
 
 // SPEC-0012 rule 3: an array argument is `#VALUE!` whatever its shape, a range is its top-left
@@ -127,15 +127,15 @@ fn a_marked_n_or_t_reads_an_array_as_value_error() {
         ("TLG1(\"a\")", "a"),
     ] {
         let model = stored_in_a1(stored, &cells);
-        assert_eq!(model._get_text("A1"), value, "{stored}");
+        assert_eq!(model.get_text_a1("A1"), value, "{stored}");
         // A scalar cell: no spill below it.
-        assert_eq!(model._get_text("A2"), "", "{stored}");
+        assert_eq!(model.get_text_a1("A2"), "", "{stored}");
     }
     // Unmarked, the formula keeps today's reading: N lifts.
     let mut model = new_empty_model();
-    model._set("A1", "=N(IF(1,{2;3}))");
+    model.set_a1("A1", "=N(IF(1,{2;3}))");
     model.evaluate();
-    assert_eq!(model._get_text("A2"), "3");
+    assert_eq!(model.get_text_a1("A2"), "3");
 }
 
 // A marked formula's static result is a scalar, so its cell is a plain formula, never a dynamic
@@ -152,7 +152,7 @@ fn a_marked_formula_is_a_scalar_cell() {
     model.evaluate();
     let cell = model.workbook.worksheet(0).unwrap().cell(1, 1);
     assert!(matches!(cell, Some(Cell::CellFormula { .. })), "{cell:?}");
-    assert_eq!(model._get_text("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
     let stored = &model.workbook.worksheet(0).unwrap().shared_formulas;
     assert_eq!(stored, &["NLG1(IF(1,{2;3}))".to_string()]);
 }
@@ -166,21 +166,21 @@ fn a_typed_call_of_the_old_spelling_calls_the_name() {
     for name in ["_RS_LEGACY_N", "_RS_LEGACY_T"] {
         model.define_name(name, None, "=LAMBDA(x,x*10+7)").unwrap();
     }
-    model._set("A1", "=_RS_LEGACY_N(1)");
-    model._set("B1", "=_RS_LEGACY_T(1)");
-    model._set("C1", "=N(1)");
+    model.set_a1("A1", "=_RS_LEGACY_N(1)");
+    model.set_a1("B1", "=_RS_LEGACY_T(1)");
+    model.set_a1("C1", "=N(1)");
     model.evaluate();
     let mut reloaded = Model::from_bytes(&model.to_bytes(), "en").unwrap();
     reloaded.evaluate();
     for model in [&mut model, &mut reloaded] {
-        assert_eq!(model._get_formula("A1"), "=_RS_LEGACY_N(1)");
-        assert_eq!(model._get_text("A1"), "17");
-        assert_eq!(model._get_text("B1"), "17");
-        assert_eq!(model._get_text("C1"), "1");
+        assert_eq!(model.get_formula_a1("A1"), "=_RS_LEGACY_N(1)");
+        assert_eq!(model.get_text_a1("A1"), "17");
+        assert_eq!(model.get_text_a1("B1"), "17");
+        assert_eq!(model.get_text_a1("C1"), "1");
         model.rename_sheet("Sheet1", "Other").unwrap();
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "17");
-        assert_eq!(model._get_text("B1"), "17");
+        assert_eq!(model.get_text_a1("A1"), "17");
+        assert_eq!(model.get_text_a1("B1"), "17");
     }
 }
 
@@ -191,23 +191,23 @@ fn a_typed_call_of_the_old_spelling_calls_the_name() {
 #[test]
 fn the_old_spelling_is_an_unknown_name_without_a_definition() {
     let mut model = new_empty_model();
-    model._set("A1", "=_RS_LEGACY_N(1)");
-    model._set("B1", "=_RS_LEGACY_T(\"a\")");
+    model.set_a1("A1", "=_RS_LEGACY_N(1)");
+    model.set_a1("B1", "=_RS_LEGACY_T(\"a\")");
     model.evaluate();
     let mut reloaded = Model::from_bytes(&model.to_bytes(), "en").unwrap();
     reloaded.evaluate();
     for model in [&mut model, &mut reloaded] {
         for _ in 0..2 {
-            assert_eq!(model._get_formula("A1"), "=_RS_LEGACY_N(1)");
-            assert_eq!(model._get_text("A1"), "#NAME?");
-            assert_eq!(model._get_text("B1"), "#NAME?");
+            assert_eq!(model.get_formula_a1("A1"), "=_RS_LEGACY_N(1)");
+            assert_eq!(model.get_text_a1("A1"), "#NAME?");
+            assert_eq!(model.get_text_a1("B1"), "#NAME?");
             let name = model.workbook.worksheet(0).unwrap().get_name();
             model.rename_sheet(&name, &format!("{name}x")).unwrap();
             model.evaluate();
         }
     }
     let stored = stored_in_a1("_RS_LEGACY_N(IF(1,{2;3}))", &[]);
-    assert_eq!(stored._get_text("A1"), "#NAME?");
+    assert_eq!(stored.get_text_a1("A1"), "#NAME?");
 }
 
 // The new spelling is the marker in stored text whatever names exist, and the old one is a name.
@@ -227,12 +227,12 @@ fn the_stored_spellings_ignore_defined_names() {
 #[test]
 fn an_unparsed_formula_with_the_spelling_stays_a_parse_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=NLG1(IF(1,{2;3}))+R[1]C");
+    model.set_a1("A1", "=NLG1(IF(1,{2;3}))+R[1]C");
     model.evaluate();
     let mut reloaded = Model::from_bytes(&model.to_bytes(), "en").unwrap();
     reloaded.evaluate();
-    assert_eq!(reloaded._get_formula("A1"), "=NLG1(IF(1,{2;3}))+R[1]C");
-    assert_eq!(reloaded._get_text("A1"), "#ERROR!");
+    assert_eq!(reloaded.get_formula_a1("A1"), "=NLG1(IF(1,{2;3}))+R[1]C");
+    assert_eq!(reloaded.get_text_a1("A1"), "#ERROR!");
 }
 
 // The matcher is exact: a case or `_xlfn.` variant is an unknown name in both modes, and never
@@ -262,10 +262,10 @@ fn spelling_variants_are_no_marker() {
             );
         }
         let mut model = new_empty_model();
-        model._set("A1", &format!("={formula}"));
+        model.set_a1("A1", &format!("={formula}"));
         model.rename_sheet("Sheet1", "Other").unwrap();
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "#NAME?", "{formula}");
+        assert_eq!(model.get_text_a1("A1"), "#NAME?", "{formula}");
     }
     // A case variant of the new spelling is a name in R1C1 text (in A1 text it is the cell).
     for variant in ["nlg1", "Tlg1"] {
@@ -415,7 +415,7 @@ fn the_legacy_rewrite_marks_n_and_t_over_an_array_valued_call() {
     }
     // A dynamic formula is never rewritten, so never marked.
     let mut model = new_empty_model();
-    model._set("A1", "=N(IF(A2,1,2))");
+    model.set_a1("A1", "=N(IF(A2,1,2))");
     let stored = &model.workbook.worksheet(0).unwrap().shared_formulas;
     assert_eq!(stored, &["N(IF(R[1]C[0],1,2))".to_string()]);
 }
@@ -440,16 +440,16 @@ fn a_legacy_cell_reads_n_and_t_over_an_array_as_value_error() {
         ("=N(CHOOSE({1;2},{2;3},{4;5}))", "#VALUE!", "2"),
     ] {
         let mut model = new_empty_model();
-        model._set("Z1", "7");
-        model._set("Z2", "8");
+        model.set_a1("Z1", "7");
+        model.set_a1("Z2", "8");
         model
             .set_cell_with_legacy_formula(0, 1, 1, formula)
             .unwrap();
-        model._set("B1", formula);
+        model.set_a1("B1", formula);
         model.evaluate();
-        assert_eq!(model._get_text("A1"), legacy, "legacy {formula}");
-        assert_eq!(model._get_text("A2"), "", "legacy {formula} spills");
-        assert_eq!(model._get_text("B1"), dynamic, "dynamic {formula}");
+        assert_eq!(model.get_text_a1("A1"), legacy, "legacy {formula}");
+        assert_eq!(model.get_text_a1("A2"), "", "legacy {formula} spills");
+        assert_eq!(model.get_text_a1("B1"), dynamic, "dynamic {formula}");
     }
 }
 
@@ -506,7 +506,7 @@ fn the_legacy_rewrite_is_idempotent_over_the_probes_legacy_cells() {
     assert!(cells.len() > 400, "{}", cells.len());
     let mut marked = 0;
     for (names, sheet, row, column, body) in cells {
-        let context = CellReferenceRC { sheet, row, column };
+        let context = CellReferenceRC { sheet, column, row };
         let mut parser = new_parser(names, vec![], HashMap::new());
         let mut once = parser.parse(&body, &context);
         add_implicit_intersection(&mut once, true);
@@ -536,10 +536,10 @@ fn cell_spelled_name_loads_and_reads_the_cell() {
     model
         .define_loaded_name("NLG1", None, "LAMBDA(x,x*10+7)")
         .unwrap();
-    model._set("A1", "5");
-    model._set("B1", "=SUM(NLG1)");
-    model._set("B2", "=ISREF(NLG1)");
+    model.set_a1("A1", "5");
+    model.set_a1("B1", "=SUM(NLG1)");
+    model.set_a1("B2", "=ISREF(NLG1)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "0");
-    assert_eq!(model._get_text("B2"), "TRUE");
+    assert_eq!(model.get_text_a1("B1"), "0");
+    assert_eq!(model.get_text_a1("B2"), "TRUE");
 }

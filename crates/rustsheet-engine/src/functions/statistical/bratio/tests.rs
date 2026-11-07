@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::float_cmp, clippy::unreadable_literal))]
+// LINT-DEBT-END
 use super::{
     beta_dist_l140_zero, beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement,
     l140_bup_prefactor_underflows, l140_overflows, l140_zero_tails, Branch,

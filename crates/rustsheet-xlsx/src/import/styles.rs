@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::dbg_macro,
+    clippy::match_same_arms,
+    clippy::print_stdout,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 use std::{collections::HashMap, io::Read};
 
 use super::package::Package;
@@ -337,7 +345,7 @@ pub(super) fn load_styles<R: Read + std::io::Seek>(
         // many Excel/LibreOffice files omit it). Default to 0 when absent.
         let xf_id = xfs
             .attribute("xfId")
-            .map(|s| s.parse::<i32>())
+            .map(str::parse::<i32>)
             .transpose()?
             .unwrap_or(0);
         let num_fmt_id = get_number(xfs, "numFmtId");

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::manual_let_else)]
+// LINT-DEBT-END
 use chrono::DateTime;
 use rustsheet_engine::{
     new_empty::{APPLICATION, APP_VERSION, IRONCALC_USER},
@@ -29,9 +32,9 @@ pub(crate) fn get_app_xml(_: &Workbook) -> String {
 pub(crate) fn get_core_xml(workbook: &Workbook, milliseconds: i64) -> Result<String, XlsxError> {
     // contains the name of the creator, last modified and date
     let metadata = &workbook.metadata;
-    let creator = metadata.creator.to_string();
+    let creator = metadata.creator.clone();
     let last_modified_by = IRONCALC_USER.to_string();
-    let created = metadata.created.to_string();
+    let created = metadata.created.clone();
     // FIXME add now
 
     let seconds = milliseconds / 1000;

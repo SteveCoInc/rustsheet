@@ -10,6 +10,9 @@
 //! `Model::evaluate` and whenever pivots are dropped: pivots and caches change only between
 //! evaluations, so an index never outlives the pivot it was built from, and the memo holds at
 //! most one entry per call made in one evaluation.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
 
@@ -132,14 +135,13 @@ fn build(cache: &PivotCache, axis: Vec<u32>) -> Option<PivotIndex> {
         for column in &columns {
             key.push(*column.get(record as usize)?);
         }
-        match tuples.get_mut(key.as_slice()) {
-            Some(records) => records.push(record),
-            None => {
-                for (items, item) in occupied.iter_mut().zip(&key) {
-                    items.insert(*item);
-                }
-                tuples.insert(key.as_slice().into(), vec![record]);
+        if let Some(records) = tuples.get_mut(key.as_slice()) {
+            records.push(record);
+        } else {
+            for (items, item) in occupied.iter_mut().zip(&key) {
+                items.insert(*item);
             }
+            tuples.insert(key.as_slice().into(), vec![record]);
         }
     }
     Some(PivotIndex {

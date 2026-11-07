@@ -4,35 +4,35 @@ use crate::test::util::new_empty_model;
 #[test]
 fn fn_convert() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=CONVERT(1, "lbm", "kg")"#);
-    model._set("A2", r#"=CONVERT(68, "F", "C")"#);
-    model._set("A3", r#"=CONVERT(2.5, "ft", "sec")"#);
-    model._set("A4", r#"=CONVERT(CONVERT(100,"ft","m"),"ft","m""#);
+    model.set_a1("A1", r#"=CONVERT(1, "lbm", "kg")"#);
+    model.set_a1("A2", r#"=CONVERT(68, "F", "C")"#);
+    model.set_a1("A3", r#"=CONVERT(2.5, "ft", "sec")"#);
+    model.set_a1("A4", r#"=CONVERT(CONVERT(100,"ft","m"),"ft","m""#);
 
-    model._set("B1", "6");
+    model.set_a1("B1", "6");
 
-    model._set("A5", r#"=CONVERT(B1,"C","F")"#);
-    model._set("A6", r#"=CONVERT(B1,"tsp","tbs")"#);
-    model._set("A7", r#"=CONVERT(B1,"gal","l")"#);
-    model._set("A8", r#"=CONVERT(B1,"mi","km")"#);
-    model._set("A9", r#"=CONVERT(B1,"km","mi")"#);
-    model._set("A10", r#"=CONVERT(B1,"in","ft")"#);
-    model._set("A11", r#"=CONVERT(B1,"cm","in")"#);
+    model.set_a1("A5", r#"=CONVERT(B1,"C","F")"#);
+    model.set_a1("A6", r#"=CONVERT(B1,"tsp","tbs")"#);
+    model.set_a1("A7", r#"=CONVERT(B1,"gal","l")"#);
+    model.set_a1("A8", r#"=CONVERT(B1,"mi","km")"#);
+    model.set_a1("A9", r#"=CONVERT(B1,"km","mi")"#);
+    model.set_a1("A10", r#"=CONVERT(B1,"in","ft")"#);
+    model.set_a1("A11", r#"=CONVERT(B1,"cm","in")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "0.45359237");
-    assert_eq!(model._get_text("A2"), "20");
-    assert_eq!(model._get_text("A3"), "#N/A");
-    assert_eq!(model._get_text("A4"), "9.290304");
+    assert_eq!(model.get_text_a1("A1"), "0.45359237");
+    assert_eq!(model.get_text_a1("A2"), "20");
+    assert_eq!(model.get_text_a1("A3"), "#N/A");
+    assert_eq!(model.get_text_a1("A4"), "9.290304");
 
-    assert_eq!(model._get_text("A5"), "42.8");
-    assert_eq!(model._get_text("A6"), "2");
-    assert_eq!(model._get_text("A7"), "22.7124707"); //22.71741274");
-    assert_eq!(model._get_text("A8"), "9.656064");
-    assert_eq!(model._get_text("A9"), "3.728227153");
-    assert_eq!(model._get_text("A10"), "0.5");
-    assert_eq!(model._get_text("A11"), "2.362204724");
+    assert_eq!(model.get_text_a1("A5"), "42.8");
+    assert_eq!(model.get_text_a1("A6"), "2");
+    assert_eq!(model.get_text_a1("A7"), "22.7124707"); //22.71741274");
+    assert_eq!(model.get_text_a1("A8"), "9.656064");
+    assert_eq!(model.get_text_a1("A9"), "3.728227153");
+    assert_eq!(model.get_text_a1("A10"), "0.5");
+    assert_eq!(model.get_text_a1("A11"), "2.362204724");
 }
 
 #[test]
@@ -40,18 +40,18 @@ fn convert_matches_excel_bits() {
     // Excel-cached values: ironcalc-calc ENGINEERING/CONVERT.xlsx (docs/excel-semantics/
     // engineering.md "CONVERT constants and evaluation order").
     let mut model = new_empty_model();
-    model._set("A1", r#"=CONVERT(1,"sg","g")"#); // Weight!C3
-    model._set("A2", r#"=CONVERT(0.05,"Mu","g")"#); // Weight!G5
-    model._set("A3", r#"=CONVERT(4,"parsec","m")"#); // distance!G11
-    model._set("A4", r#"=CONVERT(1,"pica","m")"#); // distance!C15
-    model._set("A5", r#"=CONVERT(0.0002,"Mang3","m3")"#); // Volume!J17
-    model._set("A6", r#"=CONVERT(0.0002,"Muk_pt","m3")"#); // Volume!J9
-    model._set("A7", r#"=CONVERT(5,"cal","J")"#); // Energy!G5
-    model._set("A8", r#"=CONVERT(5,"eV","J")"#); // Energy!G6
-    model._set("A9", r#"=CONVERT(0.05,"Mdyn","N")"#); // Force!J3
-    model._set("A10", r#"=CONVERT(1,"Picapt2","m2")"#); // Area!C21
-    model._set("A11", r#"=CONVERT(1,"F","K")"#); // Temperature!C4
-    model._set("A12", r#"=CONVERT(0.004,"Mm/h","m/s")"#); // Speed!J4
+    model.set_a1("A1", r#"=CONVERT(1,"sg","g")"#); // Weight!C3
+    model.set_a1("A2", r#"=CONVERT(0.05,"Mu","g")"#); // Weight!G5
+    model.set_a1("A3", r#"=CONVERT(4,"parsec","m")"#); // distance!G11
+    model.set_a1("A4", r#"=CONVERT(1,"pica","m")"#); // distance!C15
+    model.set_a1("A5", r#"=CONVERT(0.0002,"Mang3","m3")"#); // Volume!J17
+    model.set_a1("A6", r#"=CONVERT(0.0002,"Muk_pt","m3")"#); // Volume!J9
+    model.set_a1("A7", r#"=CONVERT(5,"cal","J")"#); // Energy!G5
+    model.set_a1("A8", r#"=CONVERT(5,"eV","J")"#); // Energy!G6
+    model.set_a1("A9", r#"=CONVERT(0.05,"Mdyn","N")"#); // Force!J3
+    model.set_a1("A10", r#"=CONVERT(1,"Picapt2","m2")"#); // Area!C21
+    model.set_a1("A11", r#"=CONVERT(1,"F","K")"#); // Temperature!C4
+    model.set_a1("A12", r#"=CONVERT(0.004,"Mm/h","m/s")"#); // Speed!J4
     model.evaluate();
     let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
         Ok(CellValue::Number(n)) => n.to_bits(),
@@ -77,14 +77,14 @@ fn convert_matches_excel_bits() {
 #[test]
 fn prefixes_are_one_power_of_ten() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=CONVERT(1,"m","nm")"#); // convert-unit-names, 1/1E-9 is 999999999.9999999
-    model._set("A2", r#"=CONVERT(1,"dm2","m2")"#); // 0.1 x 0.1 is 0.010000000000000002
-    model._set("A3", r#"=CONVERT(1,"cm3","l")"#); // 0.01^3 x 1000 is 0.0010000000000000002
-    model._set("A4", r#"=CONVERT(1,"Pm3","l")"#); // 1E15^3 x 1000 is 1E48
-    model._set("A5", r#"=CONVERT(0.0002,"m3","Mm3")"#); // x 1E-18, not / 1E18
-    model._set("A6", r#"=CONVERT(1E290,"Ym","Ym")"#); // ov00: 1E24 x 1E-24 is 1 - 2^-53
-    model._set("A7", r#"=CONVERT(1E300,"Ym","Zm")"#); // ov20
-    model._set("A8", r#"=CONVERT(1E300,"Ym","m")"#); // ov02: overflows
+    model.set_a1("A1", r#"=CONVERT(1,"m","nm")"#); // convert-unit-names, 1/1E-9 is 999999999.9999999
+    model.set_a1("A2", r#"=CONVERT(1,"dm2","m2")"#); // 0.1 x 0.1 is 0.010000000000000002
+    model.set_a1("A3", r#"=CONVERT(1,"cm3","l")"#); // 0.01^3 x 1000 is 0.0010000000000000002
+    model.set_a1("A4", r#"=CONVERT(1,"Pm3","l")"#); // 1E15^3 x 1000 is 1E48
+    model.set_a1("A5", r#"=CONVERT(0.0002,"m3","Mm3")"#); // x 1E-18, not / 1E18
+    model.set_a1("A6", r#"=CONVERT(1E290,"Ym","Ym")"#); // ov00: 1E24 x 1E-24 is 1 - 2^-53
+    model.set_a1("A7", r#"=CONVERT(1E300,"Ym","Zm")"#); // ov20
+    model.set_a1("A8", r#"=CONVERT(1E300,"Ym","m")"#); // ov02: overflows
     model.evaluate();
     let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
         Ok(CellValue::Number(n)) => n.to_bits(),
@@ -97,7 +97,7 @@ fn prefixes_are_one_power_of_ten() {
     assert_eq!(bits("A5"), 2.000_000_000_000_000_3e-22_f64.to_bits());
     assert_eq!(bits("A6"), 1e290_f64.to_bits());
     assert_eq!(bits("A7"), 1e303_f64.to_bits());
-    assert_eq!(model._get_text("A8"), "#NUM!");
+    assert_eq!(model.get_text_a1("A8"), "#NUM!");
 }
 
 /// Excel: a boolean number is `#VALUE!`, before an unknown unit's `#N/A`
@@ -105,16 +105,16 @@ fn prefixes_are_one_power_of_ten() {
 #[test]
 fn boolean_number_is_value_error() {
     let mut model = new_empty_model();
-    model._set("B1", "TRUE");
-    model._set("A1", r#"=CONVERT(TRUE,"m","ft")"#);
-    model._set("A2", r#"=CONVERT(B1,"xyz","m")"#);
-    model._set("A3", r#"=INDEX(CONVERT({TRUE;1},"m","m"),1)"#);
-    model._set("A4", r#"=CONVERT("2.5","ft","xyz")"#);
+    model.set_a1("B1", "TRUE");
+    model.set_a1("A1", r#"=CONVERT(TRUE,"m","ft")"#);
+    model.set_a1("A2", r#"=CONVERT(B1,"xyz","m")"#);
+    model.set_a1("A3", r#"=INDEX(CONVERT({TRUE;1},"m","m"),1)"#);
+    model.set_a1("A4", r#"=CONVERT("2.5","ft","xyz")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
-    assert_eq!(model._get_text("A3"), *"#VALUE!");
-    assert_eq!(model._get_text("A4"), *"#N/A");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), *"#N/A");
 }
 
 /// Excel: a boolean unit read from a cell is `#VALUE!`, not an unknown unit (T-2793;
@@ -122,18 +122,18 @@ fn boolean_number_is_value_error() {
 #[test]
 fn boolean_unit_cell_is_value_error() {
     let mut model = new_empty_model();
-    model._set("B1", "TRUE");
-    model._set("B2", "FALSE");
-    model._set("A1", r#"=CONVERT(1,B1,"m")"#);
-    model._set("A2", r#"=CONVERT(1,B2,"mm")"#);
-    model._set("A3", r#"=CONVERT(1,"C",B1)"#);
-    model._set("A4", r#"=CONVERT(1,"C",B2)"#);
+    model.set_a1("B1", "TRUE");
+    model.set_a1("B2", "FALSE");
+    model.set_a1("A1", r#"=CONVERT(1,B1,"m")"#);
+    model.set_a1("A2", r#"=CONVERT(1,B2,"mm")"#);
+    model.set_a1("A3", r#"=CONVERT(1,"C",B1)"#);
+    model.set_a1("A4", r#"=CONVERT(1,"C",B2)"#);
     model.evaluate();
-    model._set("A5", r#"=CONVERT(1,NA(),B1)"#);
+    model.set_a1("A5", r"=CONVERT(1,NA(),B1)");
     model.evaluate();
-    assert_eq!(model._get_text("A5"), *"#N/A");
+    assert_eq!(model.get_text_a1("A5"), *"#N/A");
     for cell in ["A1", "A2", "A3", "A4"] {
-        assert_eq!(model._get_text(cell), *"#VALUE!");
+        assert_eq!(model.get_text_a1(cell), *"#VALUE!");
     }
 }
 
@@ -162,12 +162,12 @@ fn unit_names_follow_excel() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -180,7 +180,7 @@ fn convert_mixed_binary_decimal_prefixes() {
     // A52 (T-3975). With a binary prefix on either unit, a decimal prefix on the target enters as
     // the rounded reciprocal of its constant (× 2^30 × (1/1E-21), not × 2^30 × 1E21).
     let mut model = new_empty_model();
-    model._set("A1", r#"=CONVERT(4.73E-10,"Gibyte","zbyte")"#);
+    model.set_a1("A1", r#"=CONVERT(4.73E-10,"Gibyte","zbyte")"#);
     model.evaluate();
     let CellValue::Number(n) = model.get_cell_value_by_ref("Sheet1!A1").unwrap() else {
         panic!("A1 is not a number");
@@ -209,7 +209,7 @@ fn kelvin_prefix_is_dropped_toward_rank_and_reau() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
@@ -228,10 +228,10 @@ fn kelvin_prefix_is_dropped_toward_rank_and_reau() {
 #[test]
 fn convert_distance_rounds_on_the_angstrom_base() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=CONVERT(255,"mi","km")"#);
-    model._set("A2", r#"=CONVERT(255,"in","cm")"#);
-    model._set("A3", r#"=CONVERT(1,"m","ft")"#);
-    model._set("A4", r#"=CONVERT(1,"pica","m")"#);
+    model.set_a1("A1", r#"=CONVERT(255,"mi","km")"#);
+    model.set_a1("A2", r#"=CONVERT(255,"in","cm")"#);
+    model.set_a1("A3", r#"=CONVERT(1,"m","ft")"#);
+    model.set_a1("A4", r#"=CONVERT(1,"pica","m")"#);
     model.evaluate();
     let number = |cell: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{cell}")) {
         Ok(CellValue::Number(n)) => n,

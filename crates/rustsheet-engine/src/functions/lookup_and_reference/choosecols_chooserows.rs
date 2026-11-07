@@ -1,4 +1,7 @@
 //! CHOOSECOLS and CHOOSEROWS: the columns or rows of an array picked by a list of indexes.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use crate::functions::spill_functions::one_cell_error_ref_as_array;
 use crate::functions::util::array_node_to_calc_result;

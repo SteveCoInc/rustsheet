@@ -1,4 +1,12 @@
 //! Area and reference-argument types of the reference operators, and their error helpers.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::needless_pass_by_value
+)]
+// LINT-DEBT-END
 
 use std::{ops::Deref, sync::Arc};
 

@@ -15,12 +15,12 @@ use crate::test::util::new_empty_model;
 //    3    ║       |   5   | "x"   |
 fn sample() -> crate::Model {
     let mut model = new_empty_model();
-    model._set("A1", "2");
-    model._set("B1", "1");
-    model._set("A2", "3");
-    model._set("C2", "4");
-    model._set("B3", "5");
-    model._set("C3", "x");
+    model.set_a1("A1", "2");
+    model.set_a1("B1", "1");
+    model.set_a1("A2", "3");
+    model.set_a1("C2", "4");
+    model.set_a1("B3", "5");
+    model.set_a1("C3", "x");
     // The formulas sit on the second sheet, outside the whole-sheet ranges.
     model.new_sheet();
     model
@@ -28,8 +28,8 @@ fn sample() -> crate::Model {
 
 fn same_as_used_area(function: &str, whole: &str, used: &str) {
     let mut model = sample();
-    model._set("Sheet2!E1", &format!("={function}(Sheet1!{whole})"));
-    model._set("Sheet2!E2", &format!("={function}(Sheet1!{used})"));
+    model.set_a1("Sheet2!E1", &format!("={function}(Sheet1!{whole})"));
+    model.set_a1("Sheet2!E2", &format!("={function}(Sheet1!{used})"));
     let start = Instant::now();
     model.evaluate();
     assert!(
@@ -37,8 +37,8 @@ fn same_as_used_area(function: &str, whole: &str, used: &str) {
         "{function}({whole}) was not clipped"
     );
     assert_eq!(
-        model._get_text("Sheet2!E1"),
-        model._get_text("Sheet2!E2"),
+        model.get_text_a1("Sheet2!E1"),
+        model.get_text_a1("Sheet2!E2"),
         "{function}({whole})"
     );
 }
@@ -51,16 +51,16 @@ fn multinomial_over_whole_rows() {
 #[test]
 fn networkdays_holidays_over_whole_column() {
     let mut model = new_empty_model();
-    model._set("A1", "45300");
-    model._set("A2", "45301");
+    model.set_a1("A1", "45300");
+    model.set_a1("A2", "45301");
     model.new_sheet();
-    model._set("Sheet2!C1", "=NETWORKDAYS(45292,45330,Sheet1!A:A)");
-    model._set("Sheet2!C2", "=NETWORKDAYS(45292,45330,Sheet1!A1:A2)");
+    model.set_a1("Sheet2!C1", "=NETWORKDAYS(45292,45330,Sheet1!A:A)");
+    model.set_a1("Sheet2!C2", "=NETWORKDAYS(45292,45330,Sheet1!A1:A2)");
     let start = Instant::now();
     model.evaluate();
     assert!(start.elapsed() < Duration::from_secs(10));
-    assert_eq!(model._get_text("Sheet2!C1"), "27");
-    assert_eq!(model._get_text("Sheet2!C2"), "27");
+    assert_eq!(model.get_text_a1("Sheet2!C1"), "27");
+    assert_eq!(model.get_text_a1("Sheet2!C2"), "27");
 }
 
 #[test]
@@ -74,14 +74,14 @@ fn count_family_over_whole_sheet_ranges() {
 #[test]
 fn countblank_counts_the_clipped_cells() {
     let mut model = sample();
-    model._set("Sheet2!E1", "=COUNTBLANK(Sheet1!A:A)");
-    model._set("Sheet2!E2", "=COUNTBLANK(Sheet1!1:1)");
-    model._set("Sheet2!E3", "=COUNTBLANK(Sheet1!A1:C3)");
+    model.set_a1("Sheet2!E1", "=COUNTBLANK(Sheet1!A:A)");
+    model.set_a1("Sheet2!E2", "=COUNTBLANK(Sheet1!1:1)");
+    model.set_a1("Sheet2!E3", "=COUNTBLANK(Sheet1!A1:C3)");
     model.evaluate();
     // Column A holds two values; row 1 holds two values; A1:C3 holds six.
-    assert_eq!(model._get_text("Sheet2!E1"), "1048574");
-    assert_eq!(model._get_text("Sheet2!E2"), "16382");
-    assert_eq!(model._get_text("Sheet2!E3"), "3");
+    assert_eq!(model.get_text_a1("Sheet2!E1"), "1048574");
+    assert_eq!(model.get_text_a1("Sheet2!E2"), "16382");
+    assert_eq!(model.get_text_a1("Sheet2!E3"), "3");
 }
 
 // Clipping costs O(1) per walk, not a visit of every cell of the sheet
@@ -110,7 +110,7 @@ fn whole_column_walks_do_not_scan_the_sheet() {
         start.elapsed() < Duration::from_secs(10),
         "a whole-column walk scanned the sheet"
     );
-    assert_eq!(model._get_text("Sheet2!A10000"), "10");
+    assert_eq!(model.get_text_a1("Sheet2!A10000"), "10");
 }
 
 #[test]
@@ -119,8 +119,8 @@ fn used_area_end_over_approximates_and_follows_writes() {
     let end = |model: &crate::Model| model.workbook.worksheet(0).unwrap().used_area_end();
     // An empty sheet ends at A1, as `dimension` says.
     assert_eq!(end(&model), (1, 1));
-    model._set("C7", "1");
-    model._set("E2", "1");
+    model.set_a1("C7", "1");
+    model.set_a1("E2", "1");
     assert_eq!(end(&model), (7, 5));
     let dimension = model.workbook.worksheet(0).unwrap().dimension();
     assert_eq!(end(&model), (dimension.max_row, dimension.max_column));
@@ -141,9 +141,9 @@ fn concat_over_whole_sheet_ranges() {
     same_as_used_area("CONCAT", "1:1", "A1:C1");
     same_as_used_area("CONCAT", "A:XFD", "A1:C3");
     let mut model = sample();
-    model._set("Sheet2!E1", "=CONCAT(Sheet1!A:XFD)");
+    model.set_a1("Sheet2!E1", "=CONCAT(Sheet1!A:XFD)");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!E1"), "21345x");
+    assert_eq!(model.get_text_a1("Sheet2!E1"), "21345x");
 }
 
 // AND, OR and XOR ignore empty cells (T-0230). Sheet1 holds no logical values but
@@ -163,12 +163,12 @@ fn and_or_xor_over_whole_sheet_and_columns() {
 #[test]
 fn and_over_whole_column_sees_later_cell() {
     let mut model = sample();
-    model._set("Sheet2!E1", "=AND(Sheet1!B:B)");
+    model.set_a1("Sheet2!E1", "=AND(Sheet1!B:B)");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!E1"), *"TRUE");
-    model._set("Sheet1!B1000", "FALSE");
+    assert_eq!(model.get_text_a1("Sheet2!E1"), *"TRUE");
+    model.set_a1("Sheet1!B1000", "FALSE");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!E1"), *"FALSE");
+    assert_eq!(model.get_text_a1("Sheet2!E1"), *"FALSE");
 }
 
 // The order statistics, MODE, FREQUENCY and the one-list tests keep only the numbers of a range,
@@ -254,14 +254,14 @@ fn paired_functions_keep_size_mismatch_and_late_errors() {
     // SUMXMY2 checks the counts before any error inside a range (coercion.md "SUMX2MY2 / SUMX2PY2
     // / SUMXMY2 pairing", probes/sumx-blank-text-error-order G7, G23).
     let mut model = sample();
-    model._set("A9", "=1/0");
-    model._set("Sheet2!E1", "=SUMXMY2(Sheet1!A:A,Sheet1!B1:B3)");
-    model._set("Sheet2!E2", "=T.TEST(Sheet1!A:A,Sheet1!B1:B3,2,2)");
-    model._set("Sheet2!E3", "=T.TEST(Sheet1!B1:B3,Sheet1!A:A,2,2)");
+    model.set_a1("A9", "=1/0");
+    model.set_a1("Sheet2!E1", "=SUMXMY2(Sheet1!A:A,Sheet1!B1:B3)");
+    model.set_a1("Sheet2!E2", "=T.TEST(Sheet1!A:A,Sheet1!B1:B3,2,2)");
+    model.set_a1("Sheet2!E3", "=T.TEST(Sheet1!B1:B3,Sheet1!A:A,2,2)");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!E1"), "#N/A");
+    assert_eq!(model.get_text_a1("Sheet2!E1"), "#N/A");
     for cell in ["Sheet2!E2", "Sheet2!E3"] {
-        assert_eq!(model._get_text(cell), "#DIV/0!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#DIV/0!", "{cell}");
     }
 }
 
@@ -269,7 +269,7 @@ fn paired_functions_keep_size_mismatch_and_late_errors() {
 #[test]
 fn percentrank_over_thousands_of_whole_columns_is_bounded() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
+    model.set_a1("A1", "1");
     for formula in [
         "=PERCENTRANK.INC(SE:RCH,\"\u{130}\u{130}x\",2)",
         "=PERCENTRANK.INC(SE:RCH,2)",
@@ -278,7 +278,7 @@ fn percentrank_over_thousands_of_whole_columns_is_bounded() {
         "=COVARIANCE.P(SE:RCH,SF:RCI)",
         "=CHISQ.TEST(SE:RCH,SE:RCH)",
     ] {
-        model._set("C3", formula);
+        model.set_a1("C3", formula);
         let start = Instant::now();
         model.evaluate();
         assert!(
@@ -299,12 +299,12 @@ fn same_formula_as_used_area(formula: &str, whole: &str, used: &str) {
 /// Evaluates two formulas over the sample sheet, quickly, and checks they agree.
 fn same_as(formula: &str, expected: &str) {
     let mut model = sample();
-    model._set("Sheet2!Z1", "7");
-    model._set("Sheet2!Z2", "8");
-    model._set("Sheet2!Z3", "6");
-    model._set("Sheet2!Z9", "x");
-    model._set("Sheet2!E1", &format!("={formula}"));
-    model._set("Sheet2!E2", &format!("={expected}"));
+    model.set_a1("Sheet2!Z1", "7");
+    model.set_a1("Sheet2!Z2", "8");
+    model.set_a1("Sheet2!Z3", "6");
+    model.set_a1("Sheet2!Z9", "x");
+    model.set_a1("Sheet2!E1", &format!("={formula}"));
+    model.set_a1("Sheet2!E2", &format!("={expected}"));
     let start = Instant::now();
     model.evaluate();
     assert!(
@@ -312,8 +312,8 @@ fn same_as(formula: &str, expected: &str) {
         "{formula} was not clipped"
     );
     assert_eq!(
-        model._get_text("Sheet2!E1"),
-        model._get_text("Sheet2!E2"),
+        model.get_text_a1("Sheet2!E1"),
+        model.get_text_a1("Sheet2!E2"),
         "{formula}"
     );
 }
@@ -324,7 +324,7 @@ fn same_as(formula: &str, expected: &str) {
 #[test]
 fn a_far_cell_does_not_stretch_the_lists() {
     let mut model = sample();
-    model._set("CV5000", "x");
+    model.set_a1("CV5000", "x");
     for (formula, expected) in [
         ("SUMXMY2(A:CV,B:CW)", "SUMXMY2(A1:C3,B1:D3)"),
         ("SUMXMY2(1:5000,1:5000)", "SUMXMY2(A1:C3,A1:C3)"),
@@ -333,8 +333,8 @@ fn a_far_cell_does_not_stretch_the_lists() {
         ("T.TEST(A:CV,B:CW,2,1)", "T.TEST(A1:C3,B1:D3,2,1)"),
         ("PERCENTILE.INC(A:CV,0.5)", "PERCENTILE.INC(A1:C3,0.5)"),
     ] {
-        model._set("Sheet2!E1", &format!("={}", qualify(formula)));
-        model._set("Sheet2!E2", &format!("={}", qualify(expected)));
+        model.set_a1("Sheet2!E1", &format!("={}", qualify(formula)));
+        model.set_a1("Sheet2!E2", &format!("={}", qualify(expected)));
         let start = Instant::now();
         model.evaluate();
         assert!(
@@ -342,8 +342,8 @@ fn a_far_cell_does_not_stretch_the_lists() {
             "{formula} was not bounded"
         );
         assert_eq!(
-            model._get_text("Sheet2!E1"),
-            model._get_text("Sheet2!E2"),
+            model.get_text_a1("Sheet2!E1"),
+            model.get_text_a1("Sheet2!E2"),
             "{formula}"
         );
     }
@@ -374,8 +374,8 @@ fn fifty_sheets() -> crate::Model {
         model.new_sheet();
     }
     for index in 1..=50 {
-        model._set(&format!("Sheet{index}!A2"), &index.to_string());
-        model._set(&format!("Sheet{index}!Z3"), "1");
+        model.set_a1(&format!("Sheet{index}!A2"), &index.to_string());
+        model.set_a1(&format!("Sheet{index}!Z3"), "1");
     }
     model.add_sheet("Out").unwrap();
     model
@@ -386,20 +386,20 @@ fn fifty_sheets() -> crate::Model {
 #[test]
 fn three_d_walks_cost_the_data_of_each_sheet() {
     let mut model = fifty_sheets();
-    model._set("Out!A1", "=SUM(Sheet1:Sheet50!A:A)");
-    model._set("Out!A2", "=SUM(Sheet1:Sheet50!A2:Z1048575)");
-    model._set("Out!A3", "=COUNTA(Sheet1:Sheet50!B1:Z1048576)");
-    model._set("Out!A4", "=COUNTBLANK(Sheet1!A1:Z1048576)");
+    model.set_a1("Out!A1", "=SUM(Sheet1:Sheet50!A:A)");
+    model.set_a1("Out!A2", "=SUM(Sheet1:Sheet50!A2:Z1048575)");
+    model.set_a1("Out!A3", "=COUNTA(Sheet1:Sheet50!B1:Z1048576)");
+    model.set_a1("Out!A4", "=COUNTBLANK(Sheet1!A1:Z1048576)");
     let start = Instant::now();
     model.evaluate();
     assert!(
         start.elapsed() < Duration::from_secs(10),
         "a 3-D block walk was not clipped"
     );
-    assert_eq!(model._get_text("Out!A1"), "1275");
-    assert_eq!(model._get_text("Out!A2"), "1325");
-    assert_eq!(model._get_text("Out!A3"), "50");
-    assert_eq!(model._get_text("Out!A4"), "27262974");
+    assert_eq!(model.get_text_a1("Out!A1"), "1275");
+    assert_eq!(model.get_text_a1("Out!A2"), "1325");
+    assert_eq!(model.get_text_a1("Out!A3"), "50");
+    assert_eq!(model.get_text_a1("Out!A4"), "27262974");
 }
 
 // A block that lies wholly past the used area walks nothing, and its cells are on record as
@@ -408,16 +408,16 @@ fn three_d_walks_cost_the_data_of_each_sheet() {
 #[test]
 fn block_past_the_used_area_sees_later_cells() {
     let mut model = sample();
-    model._set("Sheet2!E1", "=SUM(Sheet1!D5:F2000)");
-    model._set("Sheet2!E2", "=SUM(Sheet1!B2:D2000)");
+    model.set_a1("Sheet2!E1", "=SUM(Sheet1!D5:F2000)");
+    model.set_a1("Sheet2!E2", "=SUM(Sheet1!B2:D2000)");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!E1"), "0");
-    assert_eq!(model._get_text("Sheet2!E2"), "9");
-    model._set("Sheet1!F2000", "7");
-    model._set("Sheet1!D1999", "1");
+    assert_eq!(model.get_text_a1("Sheet2!E1"), "0");
+    assert_eq!(model.get_text_a1("Sheet2!E2"), "9");
+    model.set_a1("Sheet1!F2000", "7");
+    model.set_a1("Sheet1!D1999", "1");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!E1"), "8");
-    assert_eq!(model._get_text("Sheet2!E2"), "10");
+    assert_eq!(model.get_text_a1("Sheet2!E1"), "8");
+    assert_eq!(model.get_text_a1("Sheet2!E2"), "10");
 }
 
 // A spill into the clipped part of a block restarts the walk's formula: D1's spill is written
@@ -425,10 +425,10 @@ fn block_past_the_used_area_sees_later_cells() {
 #[test]
 fn spill_into_a_clipped_block_is_seen() {
     let mut model = new_empty_model();
-    model._set("A1", "=SUM(D1:D2000)");
-    model._set("D1", "=SEQUENCE(10)");
+    model.set_a1("A1", "=SUM(D1:D2000)");
+    model.set_a1("D1", "=SEQUENCE(10)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "55");
+    assert_eq!(model.get_text_a1("A1"), "55");
 }
 
 // The walkers that read a blank cell still see the blanks past the used area of an explicit
@@ -437,15 +437,15 @@ fn spill_into_a_clipped_block_is_seen() {
 #[test]
 fn walkers_reading_blanks_see_the_whole_block() {
     let mut model = sample();
-    model._set("Sheet2!E1", "=LCM(Sheet1!A1:A5)");
-    model._set("Sheet2!E2", "=GCD(Sheet1!A1:A5)");
-    model._set("Sheet2!E3", "=TEXTJOIN(\",\",FALSE,Sheet1:Sheet1!A1:A5)");
-    model._set("Sheet2!E4", "=TEXTJOIN(\",\",FALSE,Sheet1!A1:A5)");
+    model.set_a1("Sheet2!E1", "=LCM(Sheet1!A1:A5)");
+    model.set_a1("Sheet2!E2", "=GCD(Sheet1!A1:A5)");
+    model.set_a1("Sheet2!E3", "=TEXTJOIN(\",\",FALSE,Sheet1:Sheet1!A1:A5)");
+    model.set_a1("Sheet2!E4", "=TEXTJOIN(\",\",FALSE,Sheet1!A1:A5)");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!E1"), "0");
-    assert_eq!(model._get_text("Sheet2!E2"), "1");
-    assert_eq!(model._get_text("Sheet2!E3"), "2,3,,,");
-    assert_eq!(model._get_text("Sheet2!E4"), "2,3,,,");
+    assert_eq!(model.get_text_a1("Sheet2!E1"), "0");
+    assert_eq!(model.get_text_a1("Sheet2!E2"), "1");
+    assert_eq!(model.get_text_a1("Sheet2!E3"), "2,3,,,");
+    assert_eq!(model.get_text_a1("Sheet2!E4"), "2,3,,,");
 }
 
 // Short blocks past the used area are walked cell by cell, not recorded as rectangles: a LAMBDA
@@ -453,13 +453,13 @@ fn walkers_reading_blanks_see_the_whole_block() {
 #[test]
 fn many_short_blocks_do_not_reach_the_seen_range_cap() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set(
+    model.set_a1("A1", "1");
+    model.set_a1(
         "C1",
         "=SUM(MAKEARRAY(70000,1,LAMBDA(r,c,SUM(OFFSET($A$1,r,0,2,2)))))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "0");
+    assert_eq!(model.get_text_a1("C1"), "0");
 }
 
 // One cell at XFD1048576 stretches the used area to the whole sheet, 1.7e10 positions. A single
@@ -468,7 +468,7 @@ fn many_short_blocks_do_not_reach_the_seen_range_cap() {
 #[test]
 fn a_far_cell_does_not_stretch_single_range_walks() {
     let mut model = sample();
-    model._set("XFD1048576", "10");
+    model.set_a1("XFD1048576", "10");
     for (formula, expected) in [
         ("SUM(Sheet1!A:XFD)", "SUM(Sheet1!A1:C3)+10"),
         ("COUNT(Sheet1!A:XFD)", "COUNT(Sheet1!A1:C3)+1"),
@@ -484,8 +484,8 @@ fn a_far_cell_does_not_stretch_single_range_walks() {
         ("LCM(Sheet1!A:XFD)", "LCM(Sheet1!A1:C3,0)"),
         ("CONCAT(Sheet1!A:XFD)", "CONCAT(Sheet1!A1:C3)&10"),
     ] {
-        model._set("Sheet2!E1", &format!("={formula}"));
-        model._set("Sheet2!E2", &format!("={expected}"));
+        model.set_a1("Sheet2!E1", &format!("={formula}"));
+        model.set_a1("Sheet2!E2", &format!("={expected}"));
         let start = Instant::now();
         model.evaluate();
         assert!(
@@ -493,8 +493,8 @@ fn a_far_cell_does_not_stretch_single_range_walks() {
             "{formula} was not bounded"
         );
         assert_eq!(
-            model._get_text("Sheet2!E1"),
-            model._get_text("Sheet2!E2"),
+            model.get_text_a1("Sheet2!E1"),
+            model.get_text_a1("Sheet2!E2"),
             "{formula}"
         );
     }
@@ -505,13 +505,13 @@ fn a_far_cell_does_not_stretch_single_range_walks() {
 #[test]
 fn a_sparse_single_range_finds_the_first_error_in_row_major_order() {
     let mut model = sample();
-    model._set("XFD1048576", "10");
+    model.set_a1("XFD1048576", "10");
     // Column-major order would meet B5 first.
-    model._set("B5", "=1/0");
-    model._set("Z4", "=NA()");
-    model._set("Sheet2!E1", "=SUM(Sheet1!A:XFD)");
+    model.set_a1("B5", "=1/0");
+    model.set_a1("Z4", "=NA()");
+    model.set_a1("Sheet2!E1", "=SUM(Sheet1!A:XFD)");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!E1"), "#N/A");
+    assert_eq!(model.get_text_a1("Sheet2!E1"), "#N/A");
 }
 
 // A single range walked over its existing cells does not draw on the formula's union walk budget
@@ -521,16 +521,16 @@ fn a_sparse_single_range_finds_the_first_error_in_row_major_order() {
 fn a_repeated_sparse_single_range_does_not_spend_the_union_budget() {
     let mut model = new_empty_model();
     for row in 1..=100_000 {
-        model._set(&format!("A{row}"), "1");
+        model.set_a1(&format!("A{row}"), "1");
     }
-    model._set("Z1", "1");
+    model.set_a1("Z1", "1");
     model.new_sheet();
-    model._set(
+    model.set_a1(
         "Sheet2!A1",
         "=SUM(BYROW(SEQUENCE(200),LAMBDA(r,SUM(Sheet1!A:Z))))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!A1"), "20000200");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), "20000200");
 }
 
 // Either side of the size at which a mostly blank single range is walked over its existing cells
@@ -539,16 +539,16 @@ fn a_repeated_sparse_single_range_does_not_spend_the_union_budget() {
 fn single_ranges_either_side_of_the_sparse_walk_size_agree() {
     let mut model = sample();
     // 256 rows by 256 columns is 65,536 positions; one row fewer is 65,280.
-    model._set("IV256", "10");
-    model._set("Sheet2!E1", "=SUM(Sheet1!A1:IV256)");
-    model._set("Sheet2!E2", "=SUM(Sheet1!A1:IV255)");
-    model._set("Sheet2!E3", "=COUNTA(Sheet1!A1:IV256)");
-    model._set("Sheet2!E4", "=COUNTA(Sheet1!A1:IV255)");
+    model.set_a1("IV256", "10");
+    model.set_a1("Sheet2!E1", "=SUM(Sheet1!A1:IV256)");
+    model.set_a1("Sheet2!E2", "=SUM(Sheet1!A1:IV255)");
+    model.set_a1("Sheet2!E3", "=COUNTA(Sheet1!A1:IV256)");
+    model.set_a1("Sheet2!E4", "=COUNTA(Sheet1!A1:IV255)");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!E1"), "25");
-    assert_eq!(model._get_text("Sheet2!E2"), "15");
-    assert_eq!(model._get_text("Sheet2!E3"), "7");
-    assert_eq!(model._get_text("Sheet2!E4"), "6");
+    assert_eq!(model.get_text_a1("Sheet2!E1"), "25");
+    assert_eq!(model.get_text_a1("Sheet2!E2"), "15");
+    assert_eq!(model.get_text_a1("Sheet2!E3"), "7");
+    assert_eq!(model.get_text_a1("Sheet2!E4"), "6");
 }
 
 // The regression functions read every cell of a data range (a blank is `#VALUE!`), so a huge
@@ -556,23 +556,23 @@ fn single_ranges_either_side_of_the_sparse_walk_size_agree() {
 #[test]
 fn regression_functions_bound_huge_ranges() {
     let mut model = sample();
-    model._set("Sheet2!E1", "=LINEST(Sheet1!A:A,Sheet1!B:B)");
-    model._set("Sheet2!E2", "=LINEST(Sheet1!A1:A3,Sheet1!B1:B3)");
-    model._set(
+    model.set_a1("Sheet2!E1", "=LINEST(Sheet1!A:A,Sheet1!B:B)");
+    model.set_a1("Sheet2!E2", "=LINEST(Sheet1!A1:A3,Sheet1!B1:B3)");
+    model.set_a1(
         "Sheet2!E3",
         "=TREND(Sheet1!A1:XFD1048576,Sheet1!A1:XFD1048576)",
     );
-    model._set("Sheet2!E4", "=GROWTH(Sheet1!A1:XFD1048576)");
-    model._set("Sheet2!E5", "=LOGEST(Sheet1!A1:XFD1048576)");
+    model.set_a1("Sheet2!E4", "=GROWTH(Sheet1!A1:XFD1048576)");
+    model.set_a1("Sheet2!E5", "=LOGEST(Sheet1!A1:XFD1048576)");
     let start = Instant::now();
     model.evaluate();
     assert!(start.elapsed() < Duration::from_secs(10), "not bounded");
     // A:A has blanks, so it is #VALUE!, as the used rows with a blank are.
-    assert_eq!(model._get_text("Sheet2!E1"), "#VALUE!");
-    assert_eq!(model._get_text("Sheet2!E2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("Sheet2!E1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("Sheet2!E2"), "#VALUE!");
     for cell in ["E3", "E4", "E5"] {
         assert_eq!(
-            model._get_text(&format!("Sheet2!{cell}")),
+            model.get_text_a1(&format!("Sheet2!{cell}")),
             "#ERROR!",
             "{cell}"
         );

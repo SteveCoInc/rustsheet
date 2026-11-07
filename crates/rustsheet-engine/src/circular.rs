@@ -46,12 +46,9 @@ impl Model {
     /// whose earlier spill no evidence covers.
     pub(crate) fn circular_value(&self, at: CellReferenceIndex) -> CalcResult {
         match self.fetch_cell(at) {
-            Some(cell @ Cell::CellFormula { v, .. })
-            | Some(cell @ Cell::ArrayFormula { v, r: (1, 1), .. })
-                if *v != FormulaValue::Unevaluated =>
-            {
-                self.get_cell_value(cell, at)
-            }
+            Some(
+                cell @ (Cell::CellFormula { v, .. } | Cell::ArrayFormula { v, r: (1, 1), .. }),
+            ) if *v != FormulaValue::Unevaluated => self.get_cell_value(cell, at),
             _ => circular_reference(),
         }
     }

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 use std::collections::HashMap;
 
 use crate::expressions::parser::move_formula::{move_formula as mf, MoveContext};

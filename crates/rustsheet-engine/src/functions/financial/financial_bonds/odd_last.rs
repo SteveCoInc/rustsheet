@@ -1,5 +1,8 @@
 //! The odd-last-period kernel of ODDLPRICE and ODDLYIELD, a port of `oddLFunc` from
 //! `ExcelFinancialFunctions` `oddbonds.fs`.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_wrap)]
+// LINT-DEBT-END
 
 use chrono::NaiveDate;
 
@@ -32,14 +35,14 @@ pub(super) fn odd_l_func(
     basis: u32,
     is_l_price: bool,
 ) -> Result<f64, String> {
-    let m = frequency as f64;
+    let m = f64::from(frequency);
     let num_months = (12 / frequency) as i32;
 
     let settlement_d = from_excel_date(settlement)?;
     let maturity_d = from_excel_date(maturity)?;
     let last_interest_d = from_excel_date(last_interest)?;
 
-    let nc = coupon_count(last_interest, maturity, frequency)? as i64;
+    let nc = i64::from(coupon_count(last_interest, maturity, frequency)?);
 
     let mut early_coupon = last_interest_d;
     let mut dcnl = 0.0_f64;

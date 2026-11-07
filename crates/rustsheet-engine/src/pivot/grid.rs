@@ -108,15 +108,12 @@ impl Default for PivotBudget {
 
 impl PivotBudget {
     fn charge_work(&mut self, units: usize) -> Result<(), PivotRefreshError> {
-        match u64::try_from(units).ok().filter(|&u| u <= self.work) {
-            Some(units) => {
-                self.work -= units;
-                Ok(())
-            }
-            None => {
-                self.work = 0;
-                Err(PivotComputeError::Limit.into())
-            }
+        if let Some(units) = u64::try_from(units).ok().filter(|&u| u <= self.work) {
+            self.work -= units;
+            Ok(())
+        } else {
+            self.work = 0;
+            Err(PivotComputeError::Limit.into())
         }
     }
 
@@ -454,26 +451,23 @@ impl Model {
         // Laid out again, the pivot's saved layout lines no longer describe its cells; the
         // export writes the engine's in their place (T-4176).
         pivot.opaque.retain(|entry| !entry.is_layout_lines());
-        let cells = match fits {
-            Some((layout, cells)) => {
-                pivot.location = layout.location;
-                pivot.geometry = layout.geometry;
-                cells
-            }
-            None => {
-                // The page counts are zeroed with the rest: evidenced only for a pivot with no
-                // page field (t4128 S; UNVERIFIED with page fields, T-4664).
-                pivot.location.bottom = pivot.location.top;
-                pivot.location.right = pivot.location.left;
-                pivot.geometry = PivotGeometry::default();
-                budget.charge_cells(1)?;
-                vec![RenderedCell {
-                    row: pivot.location.top,
-                    column: pivot.location.left,
-                    value: PivotCell::Error(Error::SPILL),
-                    number_format: None,
-                }]
-            }
+        let cells = if let Some((layout, cells)) = fits {
+            pivot.location = layout.location;
+            pivot.geometry = layout.geometry;
+            cells
+        } else {
+            // The page counts are zeroed with the rest: evidenced only for a pivot with no
+            // page field (t4128 S; UNVERIFIED with page fields, T-4664).
+            pivot.location.bottom = pivot.location.top;
+            pivot.location.right = pivot.location.left;
+            pivot.geometry = PivotGeometry::default();
+            budget.charge_cells(1)?;
+            vec![RenderedCell {
+                row: pivot.location.top,
+                column: pivot.location.left,
+                value: PivotCell::Error(Error::SPILL),
+                number_format: None,
+            }]
         };
         let written: HashSet<(u32, u32)> = cells.iter().map(|c| (c.row, c.column)).collect();
         // The two owned areas are disjoint, so no place is cleared twice. An array formula's

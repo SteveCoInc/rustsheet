@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_sign_loss,
+    clippy::mut_mut,
+    clippy::too_many_lines,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 use crate::cf_types::{CfRule, Cfvo};
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::cut_paste::cf_sqref_anchor;
@@ -370,7 +378,7 @@ impl Model {
             .workbook
             .worksheet(sheet)?
             .cell(row, column)
-            .and_then(|c| c.get_formula())
+            .and_then(super::types::Cell::get_formula)
         {
             let node = &Node::clone(self.parsed_formulas[sheet as usize][f as usize].written());
             let cell_reference = CellReferenceRC {
@@ -409,7 +417,7 @@ impl Model {
                     self.update_cell_with_formula(sheet, row, column, text)?;
                 }
                 return Ok(before);
-            };
+            }
         }
         Ok(None)
     }
@@ -720,7 +728,7 @@ impl Model {
         let worksheet = &mut self.workbook.worksheet_mut(sheet)?;
 
         let mut new_columns = Vec::new();
-        for col in worksheet.cols.iter_mut() {
+        for col in &mut worksheet.cols {
             // range under study
             let min = col.min;
             let max = col.max;
@@ -865,7 +873,7 @@ impl Model {
 
         // deletes all the column styles
         let mut new_columns = Vec::new();
-        for col in worksheet.cols.iter_mut() {
+        for col in &mut worksheet.cols {
             // range under study
             let min = col.min;
             let max = col.max;
@@ -1323,7 +1331,7 @@ impl Model {
                     .set_column_width_and_style(c - 1, w, h, s)?;
             }
         } else {
-            for c in (target_column..=column - 1).rev() {
+            for c in (target_column..column).rev() {
                 let refs = self.workbook.worksheet(sheet)?.column_cell_references(c)?;
                 for r in refs {
                     self.move_cell(sheet, (r.row, c), (r.row, c + 1), &[])?;
@@ -1456,7 +1464,7 @@ impl Model {
                 }
             }
         } else {
-            for r in (target_row..=row - 1).rev() {
+            for r in (target_row..row).rev() {
                 let cols = self.get_columns_for_row(sheet, r, false)?;
                 for c in cols {
                     self.move_cell(sheet, (r, c), (r + 1, c), &[])?;
@@ -1475,7 +1483,7 @@ impl Model {
         }
         let worksheet = &mut self.workbook.worksheet_mut(sheet)?;
         let mut new_rows = Vec::new();
-        for r in worksheet.rows.iter() {
+        for r in &worksheet.rows {
             if r.r == row {
                 let mut nr = r.clone();
                 nr.r = target_row;

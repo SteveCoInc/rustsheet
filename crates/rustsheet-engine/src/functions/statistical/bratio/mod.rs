@@ -6,6 +6,9 @@
 //! ([`bup`]), and basym ([`basym`]) for two shapes above 100 near the mean. The line-by-line
 //! model is `docs/research/t2464/r2-bratio/bratio_excel.py` `kernel`; every branch not ported yet
 //! keeps today's kernel (`incomplete_beta.rs`, SPEC-0025's migration).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 mod basym;
 mod bfrac;

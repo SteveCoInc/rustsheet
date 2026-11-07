@@ -287,10 +287,10 @@ pub(super) fn args_signature_textsplit(arg_count: usize) -> Vec<Signature> {
 }
 
 pub(super) fn args_signature_textafter(arg_count: usize) -> Vec<Signature> {
-    if !(2..=6).contains(&arg_count) {
-        vec![Signature::Scalar; arg_count]
-    } else {
+    if (2..=6).contains(&arg_count) {
         vec![Signature::Error; arg_count]
+    } else {
+        vec![Signature::Scalar; arg_count]
     }
 }
 

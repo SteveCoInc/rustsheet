@@ -5,6 +5,13 @@
 //! group items, and GETPIVOTDATA picks a group by its calendar value. The rule is Excel's own,
 //! probed with excel-graph (probes/t4236-pivot-date-groups-no-blank;
 //! docs/excel-semantics/web.md "Grouped pivot fields import as their group items").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 
 use std::collections::HashMap;
 
@@ -283,20 +290,19 @@ pub fn ungroup_dates(base: &CacheField) -> Result<CacheField, DateGroupError> {
         let key = *rounded
             .get(record as usize)
             .ok_or(DateGroupError::BadRecord)?;
-        let index = match seen.get(&key) {
-            Some(&index) => index,
-            None => {
-                // At most one item per base item, so the index fits a u32 as theirs do.
-                let index = u32::try_from(items.len()).map_err(|_| DateGroupError::BadRecord)?;
-                items.push(match key {
-                    None => CacheItem::Missing,
-                    Some((day, seconds)) => {
-                        CacheItem::Date(day as f64 + seconds as f64 / SECONDS_PER_DAY)
-                    }
-                });
-                seen.insert(key, index);
-                index
-            }
+        let index = if let Some(&index) = seen.get(&key) {
+            index
+        } else {
+            // At most one item per base item, so the index fits a u32 as theirs do.
+            let index = u32::try_from(items.len()).map_err(|_| DateGroupError::BadRecord)?;
+            items.push(match key {
+                None => CacheItem::Missing,
+                Some((day, seconds)) => {
+                    CacheItem::Date(day as f64 + seconds as f64 / SECONDS_PER_DAY)
+                }
+            });
+            seen.insert(key, index);
+            index
         };
         records.push(index);
     }

@@ -1,6 +1,9 @@
 //! Text with a carriage return, a tab, a control character or a literal `_x000D_` keeps its value
 //! through load and save (T-4150), and an inline string's `_xHHHH_` escapes decode like a shared
 //! string's (poi/60289.xlsx TABLE!B2 stores `Rich Text_x000d_\nTest` inline).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+// LINT-DEBT-END
 
 use std::error::Error;
 use std::io::{Cursor, Read, Write};

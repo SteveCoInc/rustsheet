@@ -557,7 +557,11 @@ impl Model {
         &mut self,
         sheet_index: u32,
     ) -> (Vec<(String, Table)>, Vec<RewrittenFormula>) {
-        let Ok(sheet_name) = self.workbook.worksheet(sheet_index).map(|w| w.get_name()) else {
+        let Ok(sheet_name) = self
+            .workbook
+            .worksheet(sheet_index)
+            .map(super::types::Worksheet::get_name)
+        else {
             return (Vec::new(), Vec::new());
         };
         let lowercase = self.table_names_on_sheet(&sheet_name);

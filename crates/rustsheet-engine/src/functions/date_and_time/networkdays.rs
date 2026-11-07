@@ -1,6 +1,9 @@
 //! NETWORKDAYS and NETWORKDAYS.INTL: count the working days between two dates. The dates lift
 //! over arrays and refuse a range, the weekend lifts over both, and the holidays are read once
 //! per call (`Function::arg_kinds`, SPEC-0011; T-1236).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// LINT-DEBT-END
 
 use chrono::Datelike;
 

@@ -115,15 +115,12 @@ pub(super) struct Spent;
 
 /// Takes `units` from `work`; spent once they do not fit.
 pub(super) fn charge(work: &mut u64, units: u64) -> Result<(), Spent> {
-    match work.checked_sub(units) {
-        Some(left) => {
-            *work = left;
-            Ok(())
-        }
-        None => {
-            *work = 0;
-            Err(Spent)
-        }
+    if let Some(left) = work.checked_sub(units) {
+        *work = left;
+        Ok(())
+    } else {
+        *work = 0;
+        Err(Spent)
     }
 }
 

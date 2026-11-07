@@ -7,6 +7,9 @@
 //! stages as any other pivot (the facade's `lay_out_grouped`); oracle reads of Excel's own
 //! layout hold it in step (probes/t4228-pivot-range-groups, probes/t4235-pivot-range-rounding,
 //! probes/t4311-pivot-showall-column-and-groups).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss)]
+// LINT-DEBT-END
 
 mod lines;
 mod render;

@@ -1,4 +1,7 @@
 //! Malformed workbooks are untrusted input: import must return an error, never panic (T-0118).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 
 use std::error::Error;
 use std::io::{Cursor, Read, Write};

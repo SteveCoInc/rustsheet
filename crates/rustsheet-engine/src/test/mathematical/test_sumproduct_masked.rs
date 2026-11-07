@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 //! SUMPRODUCT's `block*mask*...` argument read from the cached block (T-3230) gives what the
@@ -16,7 +19,7 @@ fn fill(model: &mut Model) {
     model.new_sheet();
     model.new_sheet();
     for (index, column) in ["B", "C", "D", "E", "F", "G"].iter().enumerate() {
-        model._set(&format!("Sheet2!{column}1"), &format!("h{}", index % 3));
+        model.set_a1(&format!("Sheet2!{column}1"), &format!("h{}", index % 3));
     }
     for (index, column) in ["I", "J", "K", "L", "M", "N"].iter().enumerate() {
         let header = if *column == "L" {
@@ -24,16 +27,16 @@ fn fill(model: &mut Model) {
         } else {
             format!("h{}", index % 3)
         };
-        model._set(&format!("Sheet2!{column}1"), &header);
+        model.set_a1(&format!("Sheet2!{column}1"), &header);
     }
     for row in 2..=41 {
-        model._set(&format!("Sheet2!A{row}"), &format!("k{}", row % 5));
+        model.set_a1(&format!("Sheet2!A{row}"), &format!("k{}", row % 5));
         let key = if row == 30 {
             "=1/0".to_string()
         } else {
             format!("k{}", row % 5)
         };
-        model._set(&format!("Sheet2!P{row}"), &key);
+        model.set_a1(&format!("Sheet2!P{row}"), &key);
         for (index, (clean, dirty)) in ["B", "C", "D", "E", "F", "G"]
             .iter()
             .zip(["I", "J", "K", "L", "M", "N"])
@@ -45,15 +48,15 @@ fn fill(model: &mut Model) {
                 7 => "'7".to_string(),
                 _ => format!("{}", (row as f64 * (index as f64 + 1.0) - 50.0) / 8.0),
             };
-            model._set(&format!("Sheet2!{clean}{row}"), &value);
+            model.set_a1(&format!("Sheet2!{clean}{row}"), &value);
             let dirty_value = match (row, dirty) {
                 (10, "J") => "abc".to_string(),
                 (35, "M") => "=1/0".to_string(),
                 (5, "N") => "=SQRT(-1)".to_string(),
                 _ => value.clone(),
             };
-            model._set(&format!("Sheet2!{dirty}{row}"), &dirty_value);
-            model._set(
+            model.set_a1(&format!("Sheet2!{dirty}{row}"), &dirty_value);
+            model.set_a1(
                 &format!("Sheet3!{clean}{row}"),
                 &format!("=Sheet2!{clean}{row}*2"),
             );
@@ -74,7 +77,7 @@ fn fill_meeting_errors(model: &mut Model) {
         } else {
             format!("h{}", index % 3)
         };
-        model._set(&format!("Sheet2!{column}1"), &header);
+        model.set_a1(&format!("Sheet2!{column}1"), &header);
     }
     for row in 2..=41 {
         let key = if row == 2 {
@@ -82,7 +85,7 @@ fn fill_meeting_errors(model: &mut Model) {
         } else {
             format!("k{}", row % 5)
         };
-        model._set(&format!("Sheet2!O{row}"), &key);
+        model.set_a1(&format!("Sheet2!O{row}"), &key);
         for (index, (q, x)) in columns
             .iter()
             .zip(["X", "Y", "Z", "AA", "AB", "AC"])
@@ -100,8 +103,8 @@ fn fill_meeting_errors(model: &mut Model) {
             } else {
                 &number
             };
-            model._set(&format!("Sheet2!{q}{row}"), q_value);
-            model._set(&format!("Sheet2!{x}{row}"), x_value);
+            model.set_a1(&format!("Sheet2!{q}{row}"), q_value);
+            model.set_a1(&format!("Sheet2!{x}{row}"), x_value);
         }
     }
 }
@@ -146,7 +149,7 @@ fn cached_and_walked_at(
         model.evaluation.no_pass_caches = no_pass_caches;
         fill(&mut model);
         for (index, formula) in formulas.iter().enumerate() {
-            model._set(&format!("{column}{}", index + 1), formula);
+            model.set_a1(&format!("{column}{}", index + 1), formula);
         }
         model.evaluate();
         let texts: Vec<String> = (1..=formulas.len())
@@ -162,7 +165,7 @@ fn cached_and_walked_at(
                     .contains(&crate::evaluation::key(at));
                 format!(
                     "{} circular={circular}",
-                    model._get_text(&format!("{column}{row}"))
+                    model.get_text_a1(&format!("{column}{row}"))
                 )
             })
             .collect();
@@ -253,7 +256,7 @@ fn operands_that_are_no_masks() {
 fn a_cycle_through_the_block() {
     let with_cycle = |model: &mut Model| {
         fill(model);
-        model._set("Sheet2!D20", "=Sheet1!A1");
+        model.set_a1("Sheet2!D20", "=Sheet1!A1");
     };
     let formulas: Vec<String> = (0..3)
         .map(|_| {
@@ -270,7 +273,7 @@ fn a_cycle_through_the_block() {
 fn a_masked_sum_by_hand() {
     let mut model = new_empty_model();
     fill(&mut model);
-    model._set(
+    model.set_a1(
         "A1",
         "=SUMPRODUCT(Sheet2!$B$2:$G$41*(Sheet2!$B$1:$G$1=\"h2\")*(Sheet2!$A$2:$A$41=\"k0\"))",
     );
@@ -285,7 +288,7 @@ fn a_masked_sum_by_hand() {
             _ => f64::from(row * (index + 1) - 50) / 8.0,
         })
         .sum();
-    assert_eq!(model._get_text("A1"), format!("{expected}"));
+    assert_eq!(model.get_text_a1("A1"), format!("{expected}"));
     assert_eq!(model.evaluation.ifs_cache.masked, 1);
 }
 
@@ -294,9 +297,9 @@ fn a_masked_sum_by_hand() {
 #[test]
 fn a_block_past_the_array_limit() {
     let fill = |model: &mut Model| {
-        model._set("A1", "h");
-        model._set("B1", "k");
-        model._set("A600000", "3");
+        model.set_a1("A1", "h");
+        model.set_a1("B1", "k");
+        model.set_a1("A600000", "3");
     };
     let formulas = [
         "=SUMPRODUCT(Sheet1!$A$1:$B$600000*(Sheet1!$A$1:$B$1=\"h\")*(Sheet1!$A$1:$A$600000=3))"

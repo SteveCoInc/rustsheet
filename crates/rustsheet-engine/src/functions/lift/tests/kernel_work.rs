@@ -3,6 +3,9 @@
 //! with its fixed cap named below, so no family task can enter one as `Constant` silently. A
 //! family task that enters a value-dependent function adds it here. The check does not see a
 //! `Weighted` kernel's own per-call cap; its table entry's doc comment cites it.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::needless_pass_by_value)]
+// LINT-DEBT-END
 
 use super::super::kinds::{KernelWork, ValueWork};
 use crate::functions::Function;
@@ -772,9 +775,9 @@ fn amortization_elements_refused_before_the_walk_are_charged_one() {
     let text = || ArrayNode::String("x".into());
     let error = |formula: &str| {
         let mut model = new_empty_model();
-        model._set("A1", formula);
+        model.set_a1("A1", formula);
         model.evaluate();
-        let value = model._get_text("A1");
+        let value = model.get_text_a1("A1");
         assert!(value.starts_with('#'), "{formula} is {value}, not refused");
     };
     for function in [Function::Amordegrc, Function::Amorlinc] {

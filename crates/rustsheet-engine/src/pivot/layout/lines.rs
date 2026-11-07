@@ -59,6 +59,9 @@
 //! Every line is charged to the work budget as it is made, and a layout past the sheet or past
 //! [`MAX_PIVOT_CELLS`] cells has no result (pivots.md "A pivot result is bounded in work and
 //! nodes", DEVIATION). The walk keeps its own stack, so an untrusted axis depth never recurses.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_field_names)]
+// LINT-DEBT-END
 
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 

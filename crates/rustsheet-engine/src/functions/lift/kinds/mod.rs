@@ -7,6 +7,14 @@
 //! to its entries: `general.rs` (dates, information, lookup, math), `financial.rs`,
 //! `statistical.rs`, `engineering.rs` and `text.rs`. The argument shapes several families share
 //! are here.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 
 mod engineering;
 mod financial;

@@ -1,3 +1,9 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(
+    test,
+    expect(clippy::cast_possible_truncation, clippy::format_push_string)
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use std::io::{Cursor, Write};
@@ -524,7 +530,7 @@ fn the_pivot_limits_drop_the_pivot() {
     );
     let data = r#"<dataField name="Sum of Sales" fld="2"/>"#;
     let many_data = TABLE_BODY.replace(
-        r#"<dataFields>"#,
+        r"<dataFields>",
         &format!("<dataFields>{}", data.repeat(MAX_DATA_FIELDS)),
     );
     assert_no_pivot(&with(parts(), TABLE_PART, table(&many_data)));
