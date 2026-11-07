@@ -3,7 +3,7 @@ id: T-4807
 title: "Pivot date items show in the source field's date number format"
 milestone: M16
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
