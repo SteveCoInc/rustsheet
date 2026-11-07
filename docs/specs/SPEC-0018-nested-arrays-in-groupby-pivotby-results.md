@@ -67,7 +67,9 @@ paragraph starting "A LAMBDA array result is shown as `#VALUE!`, but the cell ho
    - An operator over the whole result keeps its shape: `&""` gives 3x3 (A13), and each nested cell becomes `#VALUE!`, whatever
      its size, kind or depth and whatever the operator (`+ - * / ^ % & =`, unary minus, against a scalar, a constant, a range or
      another result): probes/t2609-nested-operators-and-lifts A1:A30, -one-cell A1:A26, A28:A30 and -d04 A1:A17 (excel-graph,
-     2026-11-06, T-2609). Ours does that (`own_error`, `array_node_to_number`); this did not change in November.
+     2026-11-06, T-2609). Ours does that (`own_error`, `array_node_to_number`). The October fills read operators differently: t2475 P!A62 and
+     gen-m9/17c110a53924beb8 Calc!A300 were `#N/A`, and t2475 P!A63 was `?`. Ours already gives the November values there
+     (decision 0329 item 4).
    - An operator on one nested cell taken out by INDEX works on its array: `+0`, `--` and `&""` leave `64|2x1|3` (A16:A18).
    - SUM over a result that holds nested cells is `#N/A`, with other arguments too (`SUM(1,GROUPBY(..),2)`); COUNT skips the nested
      cells (0 over GROUPBY, 90 over the t2625 PIVOTBY, whose scalar cells it counts); COUNTA counts each nested cell as one value

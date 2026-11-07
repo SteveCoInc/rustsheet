@@ -46,9 +46,14 @@ Cells this task supersedes (decision 0329 item 3):
 Earlier-only candidates (decision 0329 item 3). These are cells with an October fill only that read a nested cell through a
 lift. Supersede one only after you commit a refill copy of its case that shows the November value; otherwise keep it
 passing:
-- gen-m7/21b4eef18424ce94 Calc!A1504 and gen-m7/b24ce74f08d3f91a Calc!A1826 (REGEXEXTRACT reads its return_mode through a
-  nested cell);
-- probes/rich-errors-regex-group Calc!A23, K23, L23 (the same, with `LAMBDA(acc,acc)`).
+- gen-m7/21b4eef18424ce94, whose REGEXEXTRACT reads its return_mode through a nested cell. A simulation of this change
+  (T-4661 review round 3: `scalar` returning `#VALUE!`) leaves A1504 alone but moves 26 of its spill cells:
+  Calc!B1505, B1506, B1510, B1512, B1513, C1505, C1507:C1511, C1514, D1505, D1507, D1509:D1511, D1513, E1505:E1507 and
+  E1509:E1512.
+- The same simulation leaves gen-m7/b24ce74f08d3f91a A1826 and probes/rich-errors-regex-group A23, K23, L23 unmoved.
+- The lift driver reads every lifted function's elements through `scalar()` (functions/lift/driver.rs,
+  `LiftedArg::element`), so this change reaches every element-wise lift. The November evidence covers ISERROR, ISNA,
+  ISTEXT, ISNUMBER, ERROR.TYPE and REGEXEXTRACT only.
 Any other cell that the eval run shows moving is handled the same way, and it is listed here before the run.
 
 ## Acceptance criteria

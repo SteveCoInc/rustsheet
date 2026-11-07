@@ -42,8 +42,9 @@ probes/gen-m9-17c110a53924beb8-refill-1106 is; `excel-probe` skill) that shows t
 - gen-m9/81bcdc0bec0c8e6b Calc!A121 (`IRR(SUM(..,PIVOTBY(..,LAMBDA(v,v),..),..))`) and gen-m9/d8f44d556674c2fd Calc!A78
   (`PROB(..,SUM(..,PIVOTBY(..,LAMBDA(y,y),..)),..)`).
 Any other cell that the eval run shows moving is handled the same way, and it is listed here before the run.
-The probe copies of that COUNT, probes/t2436/e85daedce5c2675e A31 and A46, are already off (Excel 142, ours 167). T-2940
-owns them; this task does not change that.
+- probes/t2436/e85daedce5c2675e Calc!A31 and A46: the same COUNT, bare and inside BESSELJ. Both pass today against their
+  2026-10-24 fill (A31 142), so refill probes/t2436/e85daedce5c2675e first. T-2940's "ours 167" note for them is stale
+  (review round 3 of T-4661).
 
 ## Acceptance criteria
 - [ ] Every cell under "fixes" passes; `make eval-show` shows each one.

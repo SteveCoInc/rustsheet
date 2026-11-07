@@ -18,7 +18,9 @@
       `INDEX(PIVOTBY(..),4,0)` (t2625-refill-1106 A32). In October the fallback ERROR.TYPE read the cell's non-error
       top-left and gave `#N/A`, so A32 was one `#N/A` and A64 a `?` listing.
   - The t2592 and t2594 copies were refilled twice on 2026-11-06, and the two fills are identical (one refill of each
-    is committed; the second is not, as in decision 0284). One rule explains every changed cell across six probes.
+    is committed; the second is not, as in decision 0284). One rule explains the changed SUM, COUNT, COUNTA and lift cells across six probes. The operator
+    cells t2475 P!A62, A63 and gen-m9/17c110a53924beb8 Calc!A300 changed too: they were `#N/A` and `?` in October and are
+    `#VALUE!` per nested cell in November, which ours already gives.
     The new T-2609 probes, written to test it and filled the same day, agree with it
     (t2609-nested-operators-and-lifts A44:A47, -one-cell A27). So this is a behavior change, not variation between
     fills.
@@ -53,7 +55,8 @@
      - When the engine moves to the later value, the implementing task records each superseded cell as a known
        failure. It runs `rustsheet-eval update-baseline --allow-regressions` once, for exactly the cells this record
        or its semantics entry lists, as decision 0284 did. Reviewers confirm that the baseline diff adds no other F
-       line.
+       line. The same run raises each such case's line in eval/baseline/visible-parity.txt by exactly its superseded-cell
+       count, and this record allows that rise; reviewers check the count case by case.
      - The semantics entry lists the superseded cells next to the refill cells that replace them.
      - No one re-fills or edits the earlier sidecar to clear them.
      - An earlier-only cell is a cell with no later fill that the change moves (it holds a changed read inside another
@@ -85,7 +88,7 @@
     the t2475 refill's P!A64 (superseding the October t2475 P!A64). T-4738 owns the lifted INDEX top-left (t2609 A56:A59). Each task's PR
     makes the one allowed regression run for the superseded cells it lists.
   - Known failures fall by the refill cells each task fixes and rise by the October cells it supersedes; the gap
-    list shows both. No gate or script changes.
+    list shows both. No gate or script changes; the visible-parity rises of item 3 are the only lock changes.
   - A later change of the same kind follows items 1–3 with no new decision record. It needs a semantics entry that
     lists the superseded cells, and the implementing task cites this record for its allowed regressions.
   - T-3610 keeps the variance case (a cell whose value differs with no rule behind it). If it chooses to exclude

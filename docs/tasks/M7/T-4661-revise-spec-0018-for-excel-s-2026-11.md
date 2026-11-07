@@ -3,7 +3,7 @@ id: T-4661
 title: "Revise SPEC-0018 for Excel's 2026-11 nested-cell reads (lifts read an error, SUM is #N/A, COUNT skips)"
 milestone: M7
 lane: research
-status: done
+status: blocked
 priority: P2
 size: S
 tier: opus
@@ -74,3 +74,17 @@ Done 2026-11-07.
   - T-4738: the lifted INDEX top-left, t2609 A56:A59.
   Each task lists the cells it fixes and the cells it supersedes.
 - **Eval delta:** none (docs only).
+
+## Blocked because
+Blocked because: review-round limit
+Three review rounds were run on PR #3786. Security and design approved every round. Excel-fidelity asked for changes
+in all three, and each round found further cells the superseded lists had missed:
+- round 1: t2475 P!A64 (October);
+- round 2: gen-m9/e85daedce5c2675e Calc!A35;
+- round 3 (head 2233e0623): probes/t2436/e85daedce5c2675e A31 and A46, which pass today and which T-4736 had wrongly
+  called already off. Round 3 also found that SPEC-0018 rule 4 wrongly said operators did not change, that
+  gen-m7/21b4eef18424ce94's moving cells are 26 of its spill cells rather than A1504, and that the visible-parity rises
+  need authorizing.
+The commit that carries this block also carries the round-3 fixes. They have not been reviewed. A step-5c re-review
+starts from that commit and needs the full panel. The round-3 reviewer simulated T-4736 and T-4737 in scratch builds;
+re-running those simulations is the fastest way to check that the lists are complete.
