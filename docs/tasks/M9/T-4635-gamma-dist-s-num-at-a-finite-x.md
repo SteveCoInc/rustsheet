@@ -61,5 +61,8 @@ oracle evidence brackets, and the Gate A definition gives those points a value o
   0.97 and 1.03 of the predicted cut). The answer is a domain error or 1 / 0, so the bit-exact / 4-ulp / 15-digit
   counts are all equal to the cell counts, and the correctly rounded candidate (no `#NUM!` at a finite y) scores
   0 of the `#NUM!` cells. Gate A envelope: the fresh sweep's points are domain errors or 1 / 0 by rule R, all inside.
-  `HUGE_RATIO_POWER_SHAPE_MAX` = 1.1 is a cut inside its evidence bracket [1.1, 1.11), tagged FITTED.
+  `HUGE_RATIO_POWER_SHAPE_MAX` = 1.1 is a cut inside its evidence bracket [1.1, 1.11), tagged FITTED (fitted lock
+  96 -> 97 by `check_fitted.py --update`): its hold-out is the first fill (1.1 at 1E298 and 1.25 to 2.51 below 1E308,
+  fixed before the cut was placed, all as the cut predicts) and its fresh check the Cut sheet of gen3 (shapes 1.11 to
+  1.14, 16 of 16 numbers where y^a overflows).
 - Eval delta: +1,230 passing probe cells in the four new cases; probes/t4625-gamma-dist-ratio-overflow 58 -> 62 of 62.
