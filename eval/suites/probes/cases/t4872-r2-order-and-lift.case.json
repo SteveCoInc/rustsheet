@@ -1,0 +1,47 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4872 round 2: how the #N/A of a written-empty required ToolPak engineering argument meets another argument's error (which comes first) and an array in another argument (does it lift per element), as T-4870's date rule (dates.md) does. Predictions in docs/research/t4872/predictions-r2.tsv, committed before the fill.",
+  "tags": [
+    "M9",
+    "engineering",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=COMPLEX(1/0,)",
+        "A2": "=COMPLEX(,1/0)",
+        "A3": "=ERF(1/0,)",
+        "A4": "=ERF(NA(),)",
+        "A5": "=BESSELJ(\"x\",)",
+        "A6": "=CONVERT(1/0,\"m\",)",
+        "A7": "=DELTA(1/0,)",
+        "A8": "=DEC2BIN(,1/0)",
+        "A9": "=ROWS(COMPLEX({1;2},))",
+        "A10": "=INDEX(COMPLEX({1;2},),1)",
+        "A11": "=INDEX(BESSELJ({1;\"x\"},),2)",
+        "A12": "=ROWS(DEC2BIN(,{1;2}))",
+        "A13": "=ROWS(ERF({1;2},))",
+        "A14": "=INDEX(ERF({1;2},),2)"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Calc!A1",
+    "Calc!A2",
+    "Calc!A3",
+    "Calc!A4",
+    "Calc!A5",
+    "Calc!A6",
+    "Calc!A7",
+    "Calc!A8",
+    "Calc!A9",
+    "Calc!A10",
+    "Calc!A11",
+    "Calc!A12",
+    "Calc!A13",
+    "Calc!A14"
+  ]
+}

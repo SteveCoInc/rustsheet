@@ -16,7 +16,7 @@ use crate::{
 impl Model {
     /// `DELTA(number1, [number2])`.
     pub(crate) fn fn_delta(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Delta, args, cell, &mut |model, values| {
+        self.atp_lift_call(Function::Delta, args, (1, 2), cell, &mut |model, values| {
             model.compare_with_default(values, cell).map_or_else(
                 |error| error,
                 |(a, b)| CalcResult::Number(f64::from(a == b)),
@@ -26,12 +26,18 @@ impl Model {
 
     /// `GESTEP(number, [step])`.
     pub(crate) fn fn_gestep(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Gestep, args, cell, &mut |model, values| {
-            model.compare_with_default(values, cell).map_or_else(
-                |error| error,
-                |(a, b)| CalcResult::Number(f64::from(a >= b)),
-            )
-        })
+        self.atp_lift_call(
+            Function::Gestep,
+            args,
+            (1, 2),
+            cell,
+            &mut |model, values| {
+                model.compare_with_default(values, cell).map_or_else(
+                    |error| error,
+                    |(a, b)| CalcResult::Number(f64::from(a >= b)),
+                )
+            },
+        )
     }
 
     /// The two numbers DELTA and GESTEP compare, to 16 significant digits: the first, and the

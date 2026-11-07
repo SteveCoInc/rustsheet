@@ -45,6 +45,9 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
     if first_shape_square_overflows(alpha, beta, p) || newton_density_vanishes(alpha, beta, p) {
         return f64::NAN;
     }
+    if let Some(capped) = shape_one_quantile_cap(alpha, beta, p) {
+        return capped;
+    }
     if alpha > BETA_QUANTILE_STATRS_SHAPE_MAX || beta > BETA_QUANTILE_STATRS_SHAPE_MAX {
         return beta_quantile_crossing(alpha, beta, p);
     }
@@ -109,6 +112,23 @@ fn upper_quantile_near_one(alpha: f64, beta: f64, p: f64) -> Option<f64> {
         )
     };
     (f64::MIN_POSITIVE..0.5).contains(&y).then_some(1.0 - y)
+}
+
+/// Excel's BETA.INV at beta 1 where the quantile p^(1/alpha) rounds to 1 (p up to 1/2, so no
+/// flip): 0.999999 = 1 - 1E-6, not the largest double below 1. probes/t4713-beta-inv-beta-above-1-cut
+/// F12:F17, `BETA.INV(0.1,a,1)` for a = 5.62E+16 to 1E+18, are 0.999999, while F1:F11 (a = 1E+14 to
+/// 3.16E+16), where the closed form is still below 1, are that closed form (0.9999999999999999 at
+/// F10 and F11). 1 - 1E-6 is the cap T-4700 sees at a tiny beta (docs/excel-semantics/statistics.md
+/// "BETA.INV at beta 1 caps at 0.999999 where its quantile rounds to 1 (T-4958)"); AS 109's start
+/// for a second shape of at most 1 is that close to 1 here, so this looks like a clamped start the
+/// search cannot move. Only beta = 1 is evidenced; other shapes keep their search.
+const SHAPE_ONE_QUANTILE_CAP: f64 = 0.999_999;
+
+/// [`SHAPE_ONE_QUANTILE_CAP`] where it applies: beta 1, p at most 1/2 and `p^(1/alpha)` (as
+/// [`beta_quantile_shape_one`] computes it) rounding to 1, which needs alpha above about 1E+16.
+fn shape_one_quantile_cap(alpha: f64, beta: f64, p: f64) -> Option<f64> {
+    (beta == 1.0 && alpha > 1.0 && p <= 0.5 && (p.ln() / alpha).exp() >= 1.0)
+        .then_some(SHAPE_ONE_QUANTILE_CAP)
 }
 
 /// Whether the square of AS 109's first shape overflows a double: alpha for p up to 1/2, and beta
@@ -438,6 +458,31 @@ mod tests {
         assert!(beta_quantile(9.440_608_762_859_23e15, 2.0, 0.1) < 1.0);
         assert!(beta_quantile(1.819_700_858_609_99e16, 2.0, 0.1) < 1.0);
         assert!(!beta_quantile(1.5e15, 2.0, 0.9).is_nan());
+    }
+
+    // probes/t4713-beta-inv-beta-above-1-cut F1:F17, `BETA.INV(0.1,a,1)` (excel-graph, T-4958):
+    // the closed form while it is below 1, 0.999999 once it rounds to 1.
+    #[test]
+    fn beta_one_quantile_caps_at_0_999999_where_it_rounds_to_1() {
+        for (alpha, excel) in [
+            (1e14, 0.999_999_999_999_977),
+            (1e16, 0.999_999_999_999_999_8),
+            (1.778_279_410_038_92e16, 0.999_999_999_999_999_9),
+            (3.162_277_660_168_38e16, 0.999_999_999_999_999_9),
+            (5.623_413_251_903_49e16, 0.999_999),
+            (1e17, 0.999_999),
+            (1e18, 0.999_999),
+        ] {
+            assert_eq!(
+                beta_quantile(alpha, 1.0, 0.1),
+                excel,
+                "BETA.INV(0.1,{alpha},1)"
+            );
+        }
+        // Above p = 1/2 the flip keeps 1 (statistics.md "BETA.INV where the quantile rounds to
+        // 1 (T-3351)"); a beta other than 1 keeps its search.
+        assert_eq!(super::shape_one_quantile_cap(1e18, 1.0, 0.9), None);
+        assert_eq!(super::shape_one_quantile_cap(1e18, 0.5, 0.1), None);
     }
 
     #[test]

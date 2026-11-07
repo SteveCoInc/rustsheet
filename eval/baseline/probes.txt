@@ -2738,6 +2738,8 @@ C	probes/t4870-empty-date-args.case.json	31
 C	probes/t4870-r2-empty-optional.case.json	14
 C	probes/t4870-r3-order-and-lift.case.json	24
 C	probes/t4871-empty-mode-args.case.json	31
+C	probes/t4872-atp-empty-argument.case.json	54
+C	probes/t4872-r2-order-and-lift.case.json	14
 C	probes/t4873-empty-arg-let-lambda.case.json	11
 C	probes/t4873-empty-arg-quotient-ceiling.case.json	55
 C	probes/t4874-numbervalue-empty-separator.case.json	69
@@ -9529,12 +9531,6 @@ F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!E38
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!E39
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!E40
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!E7
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F12
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F13
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F14
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F15
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F16
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F17
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F2
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F3
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F7

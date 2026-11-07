@@ -193,9 +193,13 @@ impl Model {
     /// multi-cell range (`ArgKind::LiftArrays`, SPEC-0011; probes/eng-argument-modes B14:E14,
     /// probes/scalar-lift-open-a Y8-Y10).
     pub(crate) fn fn_convert(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Convert, args, cell, &mut |model, values| {
-            model.convert_of(values, cell)
-        })
+        self.atp_lift_call(
+            Function::Convert,
+            args,
+            (3, 3),
+            cell,
+            &mut |model, values| model.convert_of(values, cell),
+        )
     }
 
     /// CONVERT of one element: the number, then the two units, read in order.

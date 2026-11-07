@@ -368,6 +368,24 @@ impl Parser {
         self.lexer.set_language(language);
     }
 
+    /// Runs `run` with the parser switched to the default locale and language, then puts
+    /// `locale` and `language` (the active ones) back. For callers that also borrow other fields
+    /// of the model ([`Model::with_default_parser`](crate::model::Model::with_default_parser) is this on the model's
+    /// own parser); the one place that switch is made (T-4693).
+    pub(crate) fn with_default_locale<R>(
+        &mut self,
+        locale: &'static Locale,
+        language: &'static Language,
+        run: impl FnOnce(&mut Parser) -> R,
+    ) -> R {
+        self.set_locale(get_default_locale());
+        self.set_language(get_default_language());
+        let result = run(self);
+        self.set_locale(locale);
+        self.set_language(language);
+        result
+    }
+
     pub fn set_worksheets_and_names(
         &mut self,
         worksheets: Vec<String>,

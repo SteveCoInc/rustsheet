@@ -39,7 +39,7 @@ use crate::{
     },
     implicit_intersection::implicit_intersection,
     language::{get_default_language, get_language, Language},
-    locale::{get_default_locale, get_locale, Locale},
+    locale::{get_locale, Locale},
     types::{
         ArrayKind, Cell, CellType, Color, FormulaValue, Link, SheetProperties, SheetState,
         SpillValue, Style, Theme, Workbook,
@@ -476,18 +476,15 @@ impl Model {
     /// the English language and locale regardless of the user's active
     /// language. This temporarily switches the parser, parses, and restores it.
     pub(crate) fn parse_internal_formula(&mut self, body: &str, context: &CellReferenceRC) -> Node {
-        self.parse_internal_with(|parser| parser.parse(body, context))
+        self.with_default_parser(|parser| parser.parse(body, context))
     }
 
-    fn parse_internal_with(&mut self, parse: impl FnOnce(&mut Parser) -> Node) -> Node {
-        let locale = self.locale;
-        let language = self.language;
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        let node = parse(&mut self.parser);
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
-        node
+    /// Runs `run` with the parser switched to the default locale and language (formulas kept
+    /// outside of cells are stored in English), then restores the active ones. The one place
+    /// that switch is made (T-4693).
+    pub(crate) fn with_default_parser<R>(&mut self, run: impl FnOnce(&mut Parser) -> R) -> R {
+        let (locale, language) = (self.locale, self.language);
+        self.parser.with_default_locale(locale, language, run)
     }
 
     /// Returns completion information for a formula being edited in a cell.
@@ -1166,10 +1163,7 @@ impl Model {
         cell: &Cell,
         cell_reference: CellReferenceIndex,
     ) -> CalcResult {
-        use Cell::{
-            ArrayFormula, BooleanCell, CellFormula, EmptyCell, ErrorCell, NumberCell, SharedString,
-            SpillCell,
-        };
+        use Cell::*;
         match cell {
             EmptyCell { .. } => CalcResult::EmptyCell,
             BooleanCell { v, .. } => CalcResult::Boolean(*v),
