@@ -267,3 +267,29 @@ fn small_beta_tail_is_excels_newton_iterate() {
     assert_eq!(two_tailed(1e-100, 3.0), 2.804_294_253_254_7e33);
     assert_eq!(two_tailed(1e-300, 9.0), 5.561_703_982_474_574e33);
 }
+
+/// T.TEST type 2's p-value of literal samples, as `t_test_p` forms it: the pooled statistic, then
+/// the tail at y = fl(df/fl(df + t^2)).
+fn pooled_t_test(first: &[f64], second: &[f64], tails: f64) -> f64 {
+    use crate::functions::statistical::student_t::student_t_tail_at;
+    let (n1, n2) = (first.len() as f64, second.len() as f64);
+    let df = n1 + n2 - 2.0;
+    let pooled =
+        ((n1 - 1.0) * super::sample_var(first) + (n2 - 1.0) * super::sample_var(second)) / df;
+    let t = (super::mean(first) - super::mean(second)) / (pooled * (1.0 / n1 + 1.0 / n2)).sqrt();
+    tails * student_t_tail_at(df / (df + t * t), df)
+}
+
+#[test]
+fn t_test_inside_one_at_df_13_to_16_is_the_kernel_call() {
+    // probes/stat-argument-modes H536 `T.TEST({1,2,4,3,7,5,8,6},{2,3,5,4,9,6,9,8},1,2)`
+    // (excel-graph): df 14, t inside 1. The series scaled by Excel's GAMMALN normalization
+    // gave 0.17488420899295326 (5 ulp); the ported kernel K(7, 1/2, y, 1 - y) is Excel's bits
+    // (T-3730).
+    let first = [1.0, 2.0, 4.0, 3.0, 7.0, 5.0, 8.0, 6.0];
+    let second = [2.0, 3.0, 5.0, 4.0, 9.0, 6.0, 9.0, 8.0];
+    assert_eq!(
+        pooled_t_test(&first, &second, 1.0),
+        0.174_884_208_992_953_04
+    );
+}

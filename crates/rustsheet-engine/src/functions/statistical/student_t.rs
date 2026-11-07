@@ -319,9 +319,21 @@ struct TailArguments {
     series: Option<SeriesArguments>,
 }
 
-/// L from its [`TailArguments`] (module doc).
+/// L from its [`TailArguments`] (module doc). Inside t = 1 where Excel's 1/B(n/2, 1/2) is a sum of
+/// GAMMALNs ([`log_gamma_ratio`], df 13 to 16, Welch's fractional df among them) the tail is one
+/// call into the ported kernel, K(n/2, 1/2, y, z), as T.DIST's from df 3 ([`kernel_tail`]): the
+/// series there scaled the tail by that normalization, which belongs to the central probability
+/// before it is taken from one, and T.TEST's p-values were 5 to 19 ulp off Excel (gen-m9
+/// 928d08e3e1eecb5f A393 `T.TEST(Data!B3:C11,Data!B4:E6,2,2)` = 0.7772031601919551, ce312817dc9c7f0b
+/// A228, 9bc247733a1ca9fa A139, A254; T-3730). Elsewhere (beyond t = 1, or no GAMMALN form) the
+/// evidenced elementary series and fractions stay.
 fn tail_from(args: &TailArguments, n: f64) -> f64 {
     let (z, y) = (args.z, args.y);
+    if args.inside_one && log_gamma_ratio(0.5 * n).is_some() {
+        if let Some((w, _)) = t_kernel_tails(0.5 * n, y, z) {
+            return 0.5 * w;
+        }
+    }
     let Some(ratio) = gamma_ratio(n) else {
         return 0.5 * beta_reg_upper(z, y, 0.5, 0.5 * n);
     };
