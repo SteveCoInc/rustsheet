@@ -41,7 +41,6 @@ impl Model {
         holidays_at: usize,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        let empty = self.written_empty_required(args, 2);
         let holidays_arg = match self.holidays_arg(args, holidays_at, cell) {
             Ok(arg) => arg,
             Err(error) => return error,
@@ -54,6 +53,7 @@ impl Model {
             None => Ok(Holidays::none()),
         };
         let read = holidays.as_ref().map_or(0, |holidays| holidays.read);
+        let empty = self.written_empty_required(args, 2);
         self.lift_call_costed(
             kind,
             args,

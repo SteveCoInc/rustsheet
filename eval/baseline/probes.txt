@@ -2696,6 +2696,7 @@ C	probes/t4793-growth-one-factor-underflow.case.json	4
 C	probes/t4793-growth-several-x.case.json	10
 C	probes/t4870-empty-date-args.case.json	31
 C	probes/t4870-r2-empty-optional.case.json	14
+C	probes/t4870-r3-order-and-lift.case.json	24
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10

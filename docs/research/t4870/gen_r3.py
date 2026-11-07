@@ -13,33 +13,34 @@ Run: python3 docs/research/t4870/gen_r3.py [predictions] > eval/suites/probes/ca
 import json
 import sys
 
-# (formula, H_order, H_first)
-ROWS = [
-    ("EDATE(1/0,)", "#DIV/0!", "#N/A"),
-    ('EDATE("x",)', "#VALUE!", "#N/A"),
-    ("EDATE(,1/0)", "#N/A", "#N/A"),
-    ('EDATE(,"x")', "#N/A", "#N/A"),
-    ("EOMONTH(-1,)", "#NUM!", "#N/A"),
-    ("WORKDAY(1/0,)", "#DIV/0!", "#N/A"),
-    ("WORKDAY(,1/0)", "#N/A", "#N/A"),
-    ("WORKDAY(1,,1/0)", "#N/A", "#N/A"),
-    ("NETWORKDAYS(1/0,)", "#DIV/0!", "#N/A"),
-    ("NETWORKDAYS(-1,)", "#NUM!", "#N/A"),
-    ("NETWORKDAYS.INTL(1,,99)", "#NUM!", "#N/A"),
-    ("YEARFRAC(1/0,)", "#DIV/0!", "#N/A"),
-    ("YEARFRAC(,1,9)", "#NUM!", "#N/A"),
-    ("YEARFRAC(1,,9)", "#NUM!", "#N/A"),
-    ("LAMBDA(a,b,EDATE(a,b))(1/0,)", "#DIV/0!", "#N/A"),
-    ("ROWS(EDATE({1;2},))", "2", "#N/A"),
-    ("INDEX(EDATE({1;2},),2)", "#N/A", "#N/A"),
-    ('INDEX(EDATE({1;"x"},),2)', "#N/A", "#N/A"),
-    ("ROWS(EOMONTH(,{1;2}))", "2", "#N/A"),
-    ("ROWS(WEEKNUM(,{1;2}))", "2", "#N/A"),
-    ("ROWS(YEARFRAC({1;2},))", "2", "#N/A"),
-    ("INDEX(YEARFRAC({1;2},),1)", "#N/A", "#N/A"),
-    ("ROWS(WORKDAY({1;2},))", "2", "#N/A"),
-    ("ROWS(NETWORKDAYS(,{1;2}))", "2", "#N/A"),
-]
+# formula | H_order | H_first, one row per line
+TABLE = """
+EDATE(1/0,) | #DIV/0! | #N/A
+EDATE("x",) | #VALUE! | #N/A
+EDATE(,1/0) | #N/A | #N/A
+EDATE(,"x") | #N/A | #N/A
+EOMONTH(-1,) | #NUM! | #N/A
+WORKDAY(1/0,) | #DIV/0! | #N/A
+WORKDAY(,1/0) | #N/A | #N/A
+WORKDAY(1,,1/0) | #N/A | #N/A
+NETWORKDAYS(1/0,) | #DIV/0! | #N/A
+NETWORKDAYS(-1,) | #NUM! | #N/A
+NETWORKDAYS.INTL(1,,99) | #NUM! | #N/A
+YEARFRAC(1/0,) | #DIV/0! | #N/A
+YEARFRAC(,1,9) | #NUM! | #N/A
+YEARFRAC(1,,9) | #NUM! | #N/A
+LAMBDA(a,b,EDATE(a,b))(1/0,) | #DIV/0! | #N/A
+ROWS(EDATE({1;2},)) | 2 | #N/A
+INDEX(EDATE({1;2},),2) | #N/A | #N/A
+INDEX(EDATE({1;"x"},),2) | #N/A | #N/A
+ROWS(EOMONTH(,{1;2})) | 2 | #N/A
+ROWS(WEEKNUM(,{1;2})) | 2 | #N/A
+ROWS(YEARFRAC({1;2},)) | 2 | #N/A
+INDEX(YEARFRAC({1;2},),1) | #N/A | #N/A
+ROWS(WORKDAY({1;2},)) | 2 | #N/A
+ROWS(NETWORKDAYS(,{1;2})) | 2 | #N/A
+"""
+ROWS = [tuple(part.strip() for part in line.split(" | ")) for line in TABLE.strip().splitlines()]
 
 
 def main() -> None:
