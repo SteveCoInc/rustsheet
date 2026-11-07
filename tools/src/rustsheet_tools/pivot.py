@@ -519,12 +519,14 @@ def pivot_tables(spec: dict[str, Any], write: Callable[[int, int, int, Cell], No
     a spec cell or another pivot."""
     out = PivotParts()
     cache_id = 0
+    # The defined pivots' caches by pivot name, for a later pivot's `shared_cache` (T-4506).
+    caches: dict[str, _Cache] = {}
     for number, sheet in enumerate(spec["sheets"], start=1):
         taken = {xlsxwriter.utility.xl_cell_to_rowcol(a1) for a1 in sheet["cells"]}
         for raw in sheet.get("pivot_tables", ()):
             if "definition" in raw:
                 cache_id += 1
-                _defined(spec, sheet, raw, number=number, n=cache_id, taken=taken, out=out)
+                _defined(spec, sheet, raw, number=number, n=cache_id, taken=taken, out=out, caches=caches)
                 continue
             pivot = _Pivot(spec, sheet, raw)
             cells = pivot.cells()
@@ -553,7 +555,8 @@ def _link(
     out: PivotParts, *, number: int, n: int, definition_xml: str, records_xml: str, table_xml: str
 ) -> None:
     """Adds pivot `n`'s cache definition, records and table parts to `out`, linked from the workbook,
-    sheet `number` and the content types."""
+    sheet `number` and the content types. The parts go in this order, which fixes the built bytes and so
+    every sidecar's `input_sha256`."""
     definition = f"xl/pivotCache/pivotCacheDefinition{n}.xml"
     records = f"xl/pivotCache/pivotCacheRecords{n}.xml"
     table = f"xl/pivotTables/pivotTable{n}.xml"
@@ -563,22 +566,51 @@ def _link(
     out.parts[f"xl/pivotCache/_rels/pivotCacheDefinition{n}.xml.rels"] = relationships_xml(
         _relationship("rId1", "pivotCacheRecords", f"pivotCacheRecords{n}.xml")
     )
-    out.parts[f"xl/pivotTables/_rels/pivotTable{n}.xml.rels"] = relationships_xml(
-        _relationship("rId1", "pivotCacheDefinition", f"../pivotCache/pivotCacheDefinition{n}.xml")
-    )
+    out.parts[f"xl/pivotTables/_rels/pivotTable{n}.xml.rels"] = _table_rels(n)
     out.workbook_caches.append(f'<pivotCache cacheId="{n}" r:id="rIdPivotCache{n}"/>')
     out.workbook_rels.append(
         _relationship(f"rIdPivotCache{n}", "pivotCacheDefinition", f"pivotCache/pivotCacheDefinition{n}.xml")
     )
-    out.sheet_rels.setdefault(number, []).append(
-        _relationship(f"rIdPivotTable{n}", "pivotTable", f"../pivotTables/pivotTable{n}.xml")
-    )
+    out.sheet_rels.setdefault(number, []).append(_sheet_table_rel(n))
     for part, kind in (
         (definition, "pivotCacheDefinition"),
         (records, "pivotCacheRecords"),
         (table, "pivotTable"),
     ):
         out.content_types.append(f'<Override PartName="/{part}" ContentType="{_CONTENT_TYPE.format(kind)}"/>')
+
+
+def _link_table(out: PivotParts, *, number: int, n: int, cache: int, table_xml: str) -> None:
+    """Adds table part `n`, over the cache definition part `cache`, to `out`, linked from sheet `number`
+    and the content types: a pivot sharing another's cache (T-4506) links its table only."""
+    table = f"xl/pivotTables/pivotTable{n}.xml"
+    out.parts[table] = xml_part(table_xml)
+    out.parts[f"xl/pivotTables/_rels/pivotTable{n}.xml.rels"] = _table_rels(cache)
+    out.sheet_rels.setdefault(number, []).append(_sheet_table_rel(n))
+    out.content_types.append(
+        f'<Override PartName="/{table}" ContentType="{_CONTENT_TYPE.format("pivotTable")}"/>'
+    )
+
+
+def _table_rels(cache: int) -> bytes:
+    """A pivot table's relationships part: its cache definition, part `cache`."""
+    return relationships_xml(
+        _relationship("rId1", "pivotCacheDefinition", f"../pivotCache/pivotCacheDefinition{cache}.xml")
+    )
+
+
+def _sheet_table_rel(n: int) -> str:
+    """The sheet's relationship to table part `n`."""
+    return _relationship(f"rIdPivotTable{n}", "pivotTable", f"../pivotTables/pivotTable{n}.xml")
+
+
+@dataclass(frozen=True)
+class _Cache:
+    """A defined pivot's cache as written: its part number (and `cacheId`) and its two parts."""
+
+    n: int
+    definition_xml: str
+    records_xml: str
 
 
 def _defined(
@@ -590,8 +622,11 @@ def _defined(
     n: int,
     taken: set[tuple[int, int]],
     out: PivotParts,
+    caches: dict[str, _Cache],
 ) -> None:
-    """Adds a pivot with a `definition` (pivot_definition.py): parts only, Excel renders it on open."""
+    """Adds a pivot with a `definition` (pivot_definition.py): parts only, Excel renders it on open. One
+    with `shared_cache` adds its table only, over the named earlier pivot's cache, which must be the cache
+    it would write itself (T-4506)."""
     source_sheet, source_ref, rows = _source(spec, sheet["name"], str(raw["source"]), strict=False)
     pivot = DefinedPivot(raw, rows[0], rows[1:])
     top, left = xlsxwriter.utility.xl_cell_to_rowcol(str(raw["location"]).replace("$", ""))
@@ -601,11 +636,26 @@ def _defined(
         msg = f"pivot {pivot.name} needs empty cells at {sorted(overlap)} (Excel shows #SPILL! otherwise)"
         raise ValueError(msg)
     taken |= cells
+    own = _Cache(n, pivot.cache_definition(source_sheet, source_ref), pivot.cache_records())
+    if pivot.shared_cache is not None:
+        shared = caches.get(pivot.shared_cache)
+        if shared is None:
+            msg = f"pivot {pivot.name}: shared_cache {pivot.shared_cache!r} is no earlier defined pivot"
+            raise ValueError(msg)
+        if (shared.definition_xml, shared.records_xml) != (own.definition_xml, own.records_xml):
+            msg = f"pivot {pivot.name}: its cache differs from {pivot.shared_cache}'s, which it shares"
+            raise ValueError(msg)
+        _link_table(
+            out, number=number, n=n, cache=shared.n, table_xml=pivot.table_definition(shared.n, top, left)
+        )
+        caches[pivot.name] = shared
+        return
+    caches[pivot.name] = own
     _link(
         out,
         number=number,
         n=n,
-        definition_xml=pivot.cache_definition(source_sheet, source_ref),
-        records_xml=pivot.cache_records(),
+        definition_xml=own.definition_xml,
+        records_xml=own.records_xml,
         table_xml=pivot.table_definition(n, top, left),
     )

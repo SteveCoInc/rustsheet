@@ -14,9 +14,11 @@
 //!   T-4664; Microsoft documents the merged cells, Tables and the edge, excel-docs.md PSPILL);
 //!   one in the plan's earlier pivots' new areas collapses too. A merged range in the pivot's own
 //!   area refuses the refresh instead ([`PivotRefreshError::MergedArea`]);
-//! - a refresh rebuilds the cache from the source ([`refresh`]) and lays out again every pivot
-//!   over it (UNVERIFIED that Excel refreshes the other pivots of a shared cache, T-4664); a
-//!   pivot's field indices follow its fields by name ([`field_map`]);
+//! - a refresh rebuilds the cache from the source ([`refresh`]), a Table or defined name
+//!   resolved as it stands then ([`Model::pivot_source_area`]), and lays out again every pivot
+//!   over it, as Excel for the web does on open (pivots.md "Every pivot over a refreshOnLoad
+//!   cache is refreshed on open", probes/t4506-pivot-shared-cache); a pivot's field indices
+//!   follow its fields by name ([`field_map`]);
 //! - who refreshes and when is the caller's: the facade refreshes `refreshOnLoad` caches after a
 //!   loaded workbook's first recalculation and on `Txn::refresh_pivot_table`, never on a source
 //!   edit or a recalculation; a pivot without `refreshOnLoad` keeps its saved cells (pivots.md
@@ -32,7 +34,7 @@ use std::collections::HashSet;
 use thiserror::Error as ThisError;
 
 use super::layout::{lay_out, render, PivotCell, RenderedCell, MAX_PIVOT_CELLS};
-use super::refresh::{field_map, refresh, SourceCells};
+use super::refresh::{field_map, refresh, ResolvedSource};
 use super::result::{compute_on, PivotComputeError, MAX_PIVOT_WORK};
 use super::{
     AxisField, CellArea, OpaqueEntry, PivotCache, PivotCacheError, PivotField, PivotFilter,
@@ -387,23 +389,30 @@ impl Model {
     }
 
     /// The plan that refreshes the cache at `cache_index` from its source and lays out again
-    /// every pivot over it, within `budget`. Changes nothing.
+    /// every pivot over it, within `budget`. It changes no pivot and writes no new value to a
+    /// cell. It is `&mut` because a defined-name source's body is evaluated, as a formula
+    /// outside a cell is ([`Model::pivot_source_area`], T-4506). That evaluation may compute the
+    /// cached value of a formula cell it reads, as any formula read does.
+    ///
+    /// The body's work is bounded by its own area budget (`MAX_FORMULA_WORK`), not by `budget`:
+    /// a load that plans N named caches spends at most N times that on their names, beside what
+    /// `budget` bounds. N is at most the importer's pivot cap.
     ///
     /// # Errors
     /// [`PivotRefreshError`]: the cache does not refresh, a pivot over it does not lay out, or
     /// the plan passes `budget`.
     pub fn plan_pivot_refresh(
-        &self,
+        &mut self,
         cache_index: u32,
         budget: &mut PivotBudget,
     ) -> Result<PivotRefresh, PivotRefreshError> {
+        let resolved = self.pivot_source_area(cache_index);
         let caches = &self.workbook.pivot_caches;
         let old = caches
             .get(cache_index as usize)
             .ok_or(PivotRefreshError::Missing)?;
         // The source cells are charged before they are read.
-        let source = old.source.as_ref().and_then(|source| self.resolve(source));
-        let area = source.ok_or(PivotCacheError::Source)?.area;
+        let area = resolved.ok_or(PivotCacheError::Source)?.area;
         let rows = (area.bottom - area.top) as usize + 1;
         budget.charge_work(rows.saturating_mul((area.right - area.left) as usize + 1))?;
         // A field Excel added to group another is derived again over every record (T-4171).
@@ -414,7 +423,11 @@ impl Model {
             .filter(|&(i, _)| i != cache_index)
             .map(|(_, c)| (c.record_count as usize).saturating_mul(c.fields.len()))
             .fold(0, usize::saturating_add);
-        let new = refresh(old, self, MAX_RECORD_VALUES.saturating_sub(others))?;
+        let source = ResolvedSource {
+            cells: self,
+            area: resolved,
+        };
+        let new = refresh(old, &source, MAX_RECORD_VALUES.saturating_sub(others))?;
         let mut blockers = Blockers::new(self, budget)?;
         let mut placements = Vec::new();
         for (table, pivot) in self.workbook.pivot_tables.iter().enumerate() {
@@ -759,5 +772,7 @@ impl Model {
     }
 }
 
+#[cfg(test)]
+mod source_tests;
 #[cfg(test)]
 mod tests;

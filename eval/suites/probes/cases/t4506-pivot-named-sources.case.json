@@ -1,0 +1,207 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4506: does Excel for the web refresh a refreshOnLoad pivot whose cache source is a defined name or a Table (worksheetSource name=, no ref or sheet)? Data!A1:B6 is Region/Sales with East =1000 (a formula the case builder caches as missing), West 20, East 5, North 7, South 3. Each pivot's saved cache is built from Data!A1:B4 only (East missing and 5, West 20), so a render from the cache shows East 5, West 20, total 25, and a refresh through the name shows East 1005, West 20, North 7, South 3, total 1035. N: StaticSrc = Data!$A$1:$B$6. O: OffsetSrc = OFFSET(Data!$A$1,0,0,COUNTA(Data!$A:$A),2). I: IndexSrc = INDEX(Data!$A:$A,1):INDEX(Data!$B:$B,COUNTA(Data!$A:$A)) (the `Data!$A$1:INDEX(...)` form is t4506-pivot-index-name-corner's, which the engine does not parse). T: the Table SalesT over TData!A1:B6 (the same cells). Q reads each pivot's A3:B9 and the names' sizes. The pivot cells are also in the sidecar's `pivots` section.",
+  "tags": [
+    "probe",
+    "pivot",
+    "T-4506",
+    "M16"
+  ],
+  "pivot_features": [
+    "PV-0441"
+  ],
+  "names": {
+    "StaticSrc": "=Data!$A$1:$B$6",
+    "OffsetSrc": "=OFFSET(Data!$A$1,0,0,COUNTA(Data!$A:$A),2)",
+    "IndexSrc": "=INDEX(Data!$A:$A,1):INDEX(Data!$B:$B,COUNTA(Data!$A:$A))"
+  },
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "Region",
+        "B1": "Sales",
+        "A2": "East",
+        "B2": "=1000",
+        "A3": "West",
+        "B3": 20,
+        "A4": "East",
+        "B4": 5,
+        "A5": "North",
+        "B5": 7,
+        "A6": "South",
+        "B6": 3
+      }
+    },
+    {
+      "name": "TData",
+      "cells": {
+        "A1": "Region",
+        "B1": "Sales",
+        "A2": "East",
+        "B2": "=1000",
+        "A3": "West",
+        "B3": 20,
+        "A4": "East",
+        "B4": 5,
+        "A5": "North",
+        "B5": 7,
+        "A6": "South",
+        "B6": 3
+      },
+      "tables": [
+        {
+          "name": "SalesT",
+          "ref": "A1:B6"
+        }
+      ]
+    },
+    {
+      "name": "N",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "PvStatic",
+          "source": "Data!A1:B4",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "data": [
+              {
+                "field": "Sales"
+              }
+            ],
+            "source_name": "StaticSrc"
+          }
+        }
+      ]
+    },
+    {
+      "name": "O",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "PvOffset",
+          "source": "Data!A1:B4",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "data": [
+              {
+                "field": "Sales"
+              }
+            ],
+            "source_name": "OffsetSrc"
+          }
+        }
+      ]
+    },
+    {
+      "name": "I",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "PvIndex",
+          "source": "Data!A1:B4",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "data": [
+              {
+                "field": "Sales"
+              }
+            ],
+            "source_name": "IndexSrc"
+          }
+        }
+      ]
+    },
+    {
+      "name": "T",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "PvTable",
+          "source": "TData!A1:B4",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "data": [
+              {
+                "field": "Sales"
+              }
+            ],
+            "source_name": "SalesT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Q",
+      "cells": {
+        "A1": "=N!A4",
+        "B1": "=N!B4",
+        "C1": "=N!A5",
+        "D1": "=N!B5",
+        "E1": "=N!A6",
+        "F1": "=N!B6",
+        "G1": "=N!A7",
+        "H1": "=N!B7",
+        "I1": "=N!A8",
+        "J1": "=N!B8",
+        "K1": "=N!A9",
+        "L1": "=N!B9",
+        "A2": "=O!A4",
+        "B2": "=O!B4",
+        "C2": "=O!A5",
+        "D2": "=O!B5",
+        "E2": "=O!A6",
+        "F2": "=O!B6",
+        "G2": "=O!A7",
+        "H2": "=O!B7",
+        "I2": "=O!A8",
+        "J2": "=O!B8",
+        "K2": "=O!A9",
+        "L2": "=O!B9",
+        "A3": "=I!A4",
+        "B3": "=I!B4",
+        "C3": "=I!A5",
+        "D3": "=I!B5",
+        "E3": "=I!A6",
+        "F3": "=I!B6",
+        "G3": "=I!A7",
+        "H3": "=I!B7",
+        "I3": "=I!A8",
+        "J3": "=I!B8",
+        "K3": "=I!A9",
+        "L3": "=I!B9",
+        "A4": "=T!A4",
+        "B4": "=T!B4",
+        "C4": "=T!A5",
+        "D4": "=T!B5",
+        "E4": "=T!A6",
+        "F4": "=T!B6",
+        "G4": "=T!A7",
+        "H4": "=T!B7",
+        "I4": "=T!A8",
+        "J4": "=T!B8",
+        "K4": "=T!A9",
+        "L4": "=T!B9",
+        "A5": "=ROWS(StaticSrc)",
+        "B5": "=ROWS(OffsetSrc)",
+        "C5": "=ROWS(IndexSrc)",
+        "D5": "=ROWS(SalesT[#All])",
+        "E5": "=SUM(Data!B2:B6)"
+      }
+    }
+  ],
+  "expected": {}
+}

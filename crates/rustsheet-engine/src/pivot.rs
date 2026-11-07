@@ -92,7 +92,8 @@ pub struct PivotCache {
     /// The `worksheetSource`, kept for a later refresh; `None` for other sources.
     pub source: Option<CacheSource>,
     /// `worksheetSource@name`: the defined name or Table the cache was read from, kept so the
-    /// export writes the source back (T-4176). A refresh does not resolve it yet (T-4506).
+    /// export writes the source back (T-4176). A refresh reads it again
+    /// (`Model::pivot_source_area`, T-4506).
     pub source_name: Option<String>,
     /// The cache's fields, in cache order.
     pub fields: Vec<CacheField>,
@@ -194,8 +195,9 @@ pub enum PivotCacheError {
     /// A field index, a shared-item index or a record's length does not match the cache.
     #[error("a pivot cache record does not match its fields")]
     BadRecord,
-    /// A refresh found no source: the cache has none, or it names a sheet or range the workbook
-    /// does not hold (`refresh`; a defined name or a Table is T-4506's).
+    /// A refresh found no source: the cache has none, or it names a sheet, range, Table or
+    /// defined name that is no worksheet range of the workbook (`refresh`,
+    /// `Model::pivot_source_area`).
     #[error("a pivot cache's source is not a worksheet range of this workbook")]
     Source,
     /// A refresh found a source header (0-based `column` within the source) that is a number, a

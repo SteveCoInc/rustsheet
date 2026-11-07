@@ -26,6 +26,52 @@ crates/rustsheet/src/edit/pivot.rs (`refresh_pivots_on_load`; T-4151)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`Model::plan_pivot_refresh`,
 `apply_pivot_refresh`; tested on t4128 R in `pivot/grid/tests.rs`; T-4151)
 
+## A pivot over a defined name or a Table reads it again at the refresh
+Rule: a `refreshOnLoad` cache whose source is `<worksheetSource name="..."/>` (no `ref` or `sheet`) is refreshed
+on open from the range the name stands for then, not from the range the cache was saved from. That holds for a
+defined name bound to a static range, for a dynamic name whose body is an `OFFSET` or an `INDEX` range evaluated
+after the load's calculation, and for an Excel Table name, which reads the Table's header row and body.
+Evidence: probes/t4506-pivot-named-sources (excel-graph, 2026-11-07, T-4506). Data!A1:B6 holds East `=1000` (a
+formula the builder caches as missing), West 20, East 5, North 7, South 3, and each cache was saved from
+Data!A1:B4 only (three records, no North or South). Every pivot renders the five records: Row Labels, East 1005,
+West 20, North 7, South 3, Grand Total 1035 (A3:B8, location A3:B8):
+- N, `StaticSrc` = `Data!$A$1:$B$6`;
+- O, `OffsetSrc` = `OFFSET(Data!$A$1,0,0,COUNTA(Data!$A:$A),2)`;
+- I, `IndexSrc` = `INDEX(Data!$A:$A,1):INDEX(Data!$B:$B,COUNTA(Data!$A:$A))`;
+- T, the Table `SalesT` over TData!A1:B6 (no totals row).
+Q!A5:D5 confirm each name stands for six rows. probes/t4506-pivot-index-name-corner shows the same for the common
+idiom `Data!$A$1:INDEX(Data!$B:$B,COUNTA(Data!$A:$A))`, a sheet-qualified corner joined to INDEX by `:`, which the
+engine does not parse yet. It refuses the defined name, so the case is an engine error (T-5035).
+Not probed, all UNVERIFIED (T-5034):
+- which source Excel reads when `worksheetSource` has both a `ref` and a `name` (the engine reads the range);
+- a Table with a totals row (the engine leaves the totals row out) or without a header row (the engine does not
+  refresh it);
+- a name whose body is relative (the engine reads it as if used in the first sheet's A1);
+- a sheet-scoped name (`Sheet!Name`); a name that is not one range of one sheet (a value, a union, a name that
+  refers to itself); a name whose body is an error; a name or Table removed or renamed between the save and the
+  load. The engine refreshes none of these and keeps the pivot's saved cells.
+What Excel saves back as the cache's source is not captured either.
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (`Model::pivot_source_area`: a Table by name,
+ignoring case, then a workbook-scope defined name read in reference context from the first sheet's A1; the
+attribute is only looked up as a name, never parsed as a formula; the body runs under the defined-name depth and
+evaluation caps and its own area budget, and the record limits refuse a whole-sheet `OFFSET` before any cell is
+read) and grid.rs (`Model::plan_pivot_refresh`; tested in `pivot/grid/source_tests.rs`; T-4506)
+
+## Every pivot over a refreshOnLoad cache is refreshed on open
+Rule: when several pivots share one `refreshOnLoad` cache (one `pivotCacheDefinition`, the same `cacheId`),
+Excel for the web refreshes the cache on open and renders every pivot over it from the refreshed records,
+on the cache's own sheet and on other sheets alike.
+Evidence: probes/t4506-pivot-shared-cache (excel-graph, 2026-11-07, T-4506; answers T-4664 (c) for the load).
+Data!A1:B4 holds East `=1000` (cached as missing), West 20, East 5. PS1 (S1!A3, Sum) shows East 1005, West 20,
+Grand Total 1025. PS2 (S1!E3, Max, sharing PS1's cache) shows East 1000, West 20, Grand Total 1000. PS3 (S2!A3,
+Count) shows East 2, West 1, Grand Total 3. A render from the saved cache would show East 5, 5 and 1.
+Not probed: refreshing one of the pivots through a refresh call after the load, with the source changed in
+between. That is the rest of T-4664 (c).
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`Model::plan_pivot_refresh` lays out again every
+pivot over the refreshed cache; tested in `pivot/grid/source_tests.rs`; T-4151, T-4506)
+
 ## Excel for the web renders authored pivot definitions
 Rule: a definition written into the file renders in full on open, with no `rowItems`/`colItems` and a
 `location` of any size. Excel computes the layout, the values, the group items and the location. It
@@ -558,7 +604,9 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
 - On a collapse the location becomes the anchor and the geometry, page counts included, becomes
   zero. That is evidenced only for a pivot with no page field (t4128 S).
 - A refresh reads the cache again and lays out every pivot over that cache, each from its
-  anchor (the location's top-left cell).
+  anchor (the location's top-left cell). Excel does so on open ("Every pivot over a
+  refreshOnLoad cache is refreshed on open", probes/t4506-pivot-shared-cache); a refresh
+  call on one of them is T-4664's.
 - A pivot's field indices follow its fields by case-folded name. A field new to the source joins
   on no axis. A field the pivot shows (row, column, page or data) that left the source refuses the
   refresh, and the pivot keeps its cells. So does a renumbering of a pivot that keeps a verbatim
@@ -579,8 +627,8 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   not laid out keeps the saved ones, written back as read (T-4176). A field's own parts (its attributes, its items') follow its new index, and a dropped
   field's go with it (T-4694). A data field's base field that left the source falls back to the
   first field.
-- A refresh that cannot be planned (a source that does not resolve, such as a Table or defined
-  name until T-4506; a field gone; past the shared budget) leaves the pivot and its cells as they
+- A refresh that cannot be planned (a source that does not resolve, such as an unknown or
+  sheet-scoped name, T-5034; a field gone; past the shared budget) leaves the pivot and its cells as they
   were. On load each cache is planned on its own, so a cache that does not plan keeps only its own
   pivots' saved cells. The caches are refreshed one after another in workbook order, each planned
   against the grid the ones before it wrote, so a later cache reads their new cells and meets

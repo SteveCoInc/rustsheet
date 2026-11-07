@@ -15,8 +15,10 @@
 //!   field Excel added to group another (a date level, a manual group) is derived again from its
 //!   base (`added_groups`, T-4171).
 //!
-//! A source is a worksheet range; a defined name or a Table source resolves to its range in
-//! T-4506 and refreshes as [`PivotCacheError::Source`] until then.
+//! A source is a worksheet range, a Table or a defined name. [`Model::pivot_source_area`]
+//! resolves the last two to their range as they stand at the refresh, a dynamic name's OFFSET or
+//! INDEX body included (pivots.md "A pivot over a defined name or a Table reads it again at the
+//! refresh", probes/t4506-pivot-named-sources; T-4506).
 
 use std::collections::{HashMap, HashSet};
 
@@ -31,12 +33,13 @@ use super::{
 };
 use crate::calc_result::CalcResult;
 use crate::constants::{LAST_COLUMN, LAST_ROW};
-use crate::expressions::parser::parse_range;
+use crate::expressions::parser::{parse_range, Node};
 use crate::expressions::types::CellReferenceIndex;
 use crate::formatter::lexer::is_likely_date_number_format;
 use crate::functions::util::collation::{fold_case, fold_char};
 use crate::model::Model;
 use crate::number_format::get_num_fmt;
+use crate::table_types::table_named;
 
 /// The cells a cache's source names, as values: what a refresh reads. An implementation reads
 /// stored values only, never evaluating a formula and never reaching a file or the network
@@ -45,6 +48,14 @@ pub trait SourceCells {
     /// The area `source` names, or `None` when it names nothing this workbook holds (an unknown
     /// sheet, a range that is not one).
     fn resolve(&self, source: &CacheSource) -> Option<SourceArea>;
+
+    /// The area a refresh of `cache` reads: its worksheet range ([`SourceCells::resolve`]); `None`
+    /// for a cache without one. A Table or defined-name source resolves through
+    /// [`Model::pivot_source_area`], which evaluates a name's body, and a plan reads it through
+    /// [`ResolvedSource`].
+    fn source_area(&self, cache: &PivotCache) -> Option<SourceArea> {
+        self.resolve(cache.source.as_ref()?)
+    }
 
     /// The value of the 0-based cell (`row`, `column`) of sheet `sheet`, typed as a cache holds
     /// it: an empty cell is [`CacheItem::Missing`] and a number shown in a date format is a
@@ -61,13 +72,12 @@ pub struct SourceArea {
     pub area: CellArea,
 }
 
-/// `Model` reads the evaluated cell values (SPEC-0032 "Refresh").
-impl SourceCells for Model {
-    fn resolve(&self, source: &CacheSource) -> Option<SourceArea> {
-        let sheet = self.get_sheet_index_by_name(&source.sheet_name)?;
-        let (c1, r1, c2, r2) = parse_range(&source.range).ok()?;
-        // 1-based and inside the sheet, or no area.
+impl SourceArea {
+    /// The area between the 1-based corners (`row`, `column`) `first` and `last` of `sheet`, or
+    /// `None` when a corner is outside the sheet.
+    fn between(sheet: u32, first: (i32, i32), last: (i32, i32)) -> Option<SourceArea> {
         let line = |n: i32, last: i32| (1..=last).contains(&n).then(|| n.unsigned_abs() - 1);
+        let ((r1, c1), (r2, c2)) = (first, last);
         let (top, bottom) = (line(r1.min(r2), LAST_ROW)?, line(r1.max(r2), LAST_ROW)?);
         let (left, right) = (
             line(c1.min(c2), LAST_COLUMN)?,
@@ -82,6 +92,38 @@ impl SourceCells for Model {
                 right,
             },
         })
+    }
+}
+
+/// A source already resolved to `area` ([`Model::pivot_source_area`]), its cells read from
+/// `cells`: what a plan refreshes a Table or defined-name source through.
+pub(super) struct ResolvedSource<'a> {
+    /// The workbook's cells.
+    pub(super) cells: &'a dyn SourceCells,
+    /// The area the cache's source stands for.
+    pub(super) area: Option<SourceArea>,
+}
+
+impl SourceCells for ResolvedSource<'_> {
+    fn resolve(&self, source: &CacheSource) -> Option<SourceArea> {
+        self.cells.resolve(source)
+    }
+
+    fn source_area(&self, _cache: &PivotCache) -> Option<SourceArea> {
+        self.area
+    }
+
+    fn value(&self, sheet: u32, row: u32, column: u32) -> CacheItem {
+        self.cells.value(sheet, row, column)
+    }
+}
+
+/// `Model` reads the evaluated cell values (SPEC-0032 "Refresh").
+impl SourceCells for Model {
+    fn resolve(&self, source: &CacheSource) -> Option<SourceArea> {
+        let sheet = self.get_sheet_index_by_name(&source.sheet_name)?;
+        let (c1, r1, c2, r2) = parse_range(&source.range).ok()?;
+        SourceArea::between(sheet, (r1, c1), (r2, c2))
     }
 
     fn value(&self, sheet: u32, row: u32, column: u32) -> CacheItem {
@@ -113,6 +155,66 @@ impl SourceCells for Model {
 }
 
 impl Model {
+    /// The area the cache at `cache_index` reads on a refresh, as the workbook stands now
+    /// (pivots.md "A pivot over a defined name or a Table reads it again at the refresh",
+    /// probes/t4506-pivot-named-sources N, O, I, T; T-4506):
+    /// - its worksheet range (`worksheetSource@ref` and `@sheet`), when it has one, even beside a
+    ///   name (UNVERIFIED which one Excel reads then, T-5034);
+    /// - else the Table `worksheetSource@name` names (any case): its header row and body, without
+    ///   its totals row (UNVERIFIED, T-5034); a Table without a header row has no area;
+    /// - else the workbook-scope defined name it names, read in reference context from the first
+    ///   sheet's A1, as a formula reads a name: a static range, or a dynamic `OFFSET` or
+    ///   `INDEX` body evaluated now. A relative body is read as if used in that A1, so
+    ///   `=Data!A1:B6` stands for Data!A1:B6 (UNVERIFIED, T-5034). A name that is not one range
+    ///   of one sheet, and a sheet-scoped name (`Sheet!Name`, or a name only a sheet defines),
+    ///   have no area (UNVERIFIED, T-5034).
+    ///
+    /// The attribute is only ever looked up as a name, never parsed as a formula, and the body
+    /// evaluates as a formula outside a cell does: under the name depth and evaluation caps
+    /// (`within_defined_name`), its own area budget of at most `MAX_FORMULA_WORK` units, and
+    /// with no I/O (directive 5). Like any formula read, it may compute the value of a formula
+    /// cell it reads that is not yet calculated. An `OFFSET` can stand for a whole sheet, which
+    /// the refresh's record limits refuse before reading it.
+    pub fn pivot_source_area(&mut self, cache_index: u32) -> Option<SourceArea> {
+        let cache = self.workbook.pivot_caches.get(cache_index as usize)?;
+        if let Some(source) = &cache.source {
+            return self.resolve(source);
+        }
+        let name = cache.source_name.clone()?;
+        if let Some(table) = table_named(&self.workbook.tables, &name) {
+            if table.header_row_count == 0 {
+                return None;
+            }
+            let source = CacheSource {
+                sheet_name: table.sheet_name.clone(),
+                range: table.reference.clone(),
+            };
+            let totals = table.totals_row_count;
+            let mut resolved = self.resolve(&source)?;
+            resolved.area.bottom = resolved.area.bottom.checked_sub(totals)?;
+            return (resolved.area.bottom >= resolved.area.top).then_some(resolved);
+        }
+        // A bare name only: `!` would name a sheet's scope, and a name holds no other mark.
+        if name.contains('!') {
+            return None;
+        }
+        self.parsed_defined_name(&name, None)?;
+        let context = CellReferenceIndex {
+            sheet: 0,
+            row: 1,
+            column: 1,
+        };
+        let node = Node::DefinedNameKind((name, None, String::new()));
+        match self.evaluate_reference_outside_cell(&node, context) {
+            CalcResult::Range { left, right } if left.sheet == right.sheet => SourceArea::between(
+                left.sheet,
+                (left.row, left.column),
+                (right.row, right.column),
+            ),
+            _ => None,
+        }
+    }
+
     /// Whether the cell style at `index` shows numbers as dates (`is_likely_date_number_format`),
     /// which Excel caches as dates: probes/t4582-pivot-item-edges J3 and J4 (`m/d/yyyy`,
     /// `m/d/yyyy h:mm`) do not match the cached number items, and a time-only `h:mm` and an
@@ -198,8 +300,7 @@ pub fn read_source(
     source: &dyn SourceCells,
     workbook_values_left: usize,
 ) -> Result<CacheBuilder, PivotCacheError> {
-    let spec = cache.source.as_ref().ok_or(PivotCacheError::Source)?;
-    let SourceArea { sheet, area } = source.resolve(spec).ok_or(PivotCacheError::Source)?;
+    let SourceArea { sheet, area } = (source.source_area(cache)).ok_or(PivotCacheError::Source)?;
     let (Some(width), Some(height)) = (
         area.right.checked_sub(area.left),
         area.bottom.checked_sub(area.top),

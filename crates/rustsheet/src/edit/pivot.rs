@@ -715,8 +715,9 @@ impl Workbook {
     /// Refreshes the `refreshOnLoad` pivots of a loaded workbook (`Workbook::recalculate`), one
     /// cache after another in workbook order, within one [`PivotBudget`] for them all. Each cache
     /// is planned against the grid as the caches before it left it, so its source reads their
-    /// pivots' new cells and its pivots meet their new areas. A cache whose plan fails (a Table
-    /// or named source, T-4506; a limit; a field gone) keeps its pivots' saved cells. Until a
+    /// pivots' new cells and its pivots meet their new areas. A cache whose plan fails (a source
+    /// that does not resolve, such as a sheet-scoped name, T-5034; a limit; a field gone) keeps
+    /// its pivots' saved cells. Until a
     /// plan succeeds nothing is edited; from the first one on, the writes are one edit with no
     /// value diff, which recalculates once more.
     pub(crate) fn refresh_pivots_on_load(&mut self) {

@@ -209,7 +209,17 @@ pub(crate) fn probe_pivot_over(
     name: &str,
     cache: PivotCache,
 ) -> (PivotCache, PivotTable) {
-    let spec = &sheet(case, name)["pivot_tables"][0];
+    probe_pivot_nth(case, name, 0, cache)
+}
+
+/// [`probe_pivot_over`] for the `nth` pivot of sheet `name` (0 for the first).
+pub(crate) fn probe_pivot_nth(
+    case: &Json,
+    name: &str,
+    nth: usize,
+    cache: PivotCache,
+) -> (PivotCache, PivotTable) {
+    let spec = &sheet(case, name)["pivot_tables"][nth];
     let definition = &spec["definition"];
     // The builder writes each calculated field after the source fields, with its formula and
     // `databaseField="0"` (`pivot_definition.py` `cache_definition`).
