@@ -79,12 +79,12 @@ fn queue_undo_redo_multiple() {
     assert_eq!(model1.get_column_width(0, 7), Ok(DEFAULT_COLUMN_WIDTH));
     assert_eq!(
         model1.get_formatted_cell_value(0, 55, 55),
-        Ok("".to_string())
+        Ok(String::new())
     );
     assert_eq!(model1.get_row_height(0, 23), Ok(DEFAULT_ROW_HEIGHT));
     assert_eq!(
         model1.get_formatted_cell_value(0, 57, 55),
-        Ok("".to_string())
+        Ok(String::new())
     );
     assert_eq!(model1.get_row_height(0, 25), Ok(DEFAULT_ROW_HEIGHT));
 
@@ -118,14 +118,8 @@ fn queue_undo_redo_multiple() {
         Ok("2".to_string())
     );
 
-    assert_eq!(
-        model2.get_formatted_cell_value(0, 3, 17),
-        Ok("".to_string())
-    );
-    assert_eq!(
-        model2.get_formatted_cell_value(0, 4, 17),
-        Ok("".to_string())
-    );
+    assert_eq!(model2.get_formatted_cell_value(0, 3, 17), Ok(String::new()));
+    assert_eq!(model2.get_formatted_cell_value(0, 4, 17), Ok(String::new()));
 
     assert_eq!(
         model2.get_formatted_cell_value(0, 5, 17),

@@ -6,18 +6,18 @@ fn test_yearfrac_basis_2_actual_360() {
     let mut model = new_empty_model();
 
     // Non-leap span of exactly 360 days should result in 1.0
-    model._set("A1", "=YEARFRAC(44561,44921,2)");
+    model.set_a1("A1", "=YEARFRAC(44561,44921,2)");
 
     // Leap-year span of 366 days: Jan 1 2020 → Jan 1 2021
-    model._set("A2", "=YEARFRAC(43831,44197,2)");
+    model.set_a1("A2", "=YEARFRAC(43831,44197,2)");
 
     // Reverse order should yield negative value
-    model._set("A3", "=YEARFRAC(44921,44561,2)");
+    model.set_a1("A3", "=YEARFRAC(44921,44561,2)");
 
     model.evaluate();
 
     // 360/360
-    assert_eq!(model._get_text("A1"), *"1");
+    assert_eq!(model.get_text_a1("A1"), *"1");
 
     // 366/360 ≈ 1.0166666667 (tolerance 1e-10)
     if let Ok(CellValue::Number(v)) = model.get_cell_value_by_ref("Sheet1!A2") {
@@ -27,7 +27,7 @@ fn test_yearfrac_basis_2_actual_360() {
     }
 
     // always positive A1
-    assert_eq!(model._get_text("A3"), *"1");
+    assert_eq!(model.get_text_a1("A3"), *"1");
 }
 
 #[test]
@@ -35,18 +35,18 @@ fn test_yearfrac_basis_3_actual_365() {
     let mut model = new_empty_model();
 
     // Non-leap span of exactly 365 days should result in 1.0
-    model._set("B1", "=YEARFRAC(44561,44926,3)");
+    model.set_a1("B1", "=YEARFRAC(44561,44926,3)");
 
     // Leap-year span of 366 days
-    model._set("B2", "=YEARFRAC(43831,44197,3)");
+    model.set_a1("B2", "=YEARFRAC(43831,44197,3)");
 
     // Same date should be 0
-    model._set("B3", "=YEARFRAC(44561,44561,3)");
+    model.set_a1("B3", "=YEARFRAC(44561,44561,3)");
 
     model.evaluate();
 
     // 365/365
-    assert_eq!(model._get_text("B1"), *"1");
+    assert_eq!(model.get_text_a1("B1"), *"1");
 
     // 366/365 ≈ 1.002739726 (tolerance 1e-10)
     if let Ok(CellValue::Number(v)) = model.get_cell_value_by_ref("Sheet1!B2") {
@@ -56,7 +56,7 @@ fn test_yearfrac_basis_3_actual_365() {
     }
 
     // Same date
-    assert_eq!(model._get_text("B3"), *"0");
+    assert_eq!(model.get_text_a1("B3"), *"0");
 }
 
 #[test]
@@ -64,11 +64,11 @@ fn test_yearfrac_basis_3_actual_365() {
 fn test_yearfrac_reversed_dates_swap_for_every_basis() {
     let mut model = new_empty_model();
     for basis in 0..=4 {
-        model._set(
+        model.set_a1(
             &format!("A{}", basis + 1),
             &format!("=YEARFRAC(24708,52874,{basis})"),
         );
-        model._set(
+        model.set_a1(
             &format!("B{}", basis + 1),
             &format!("=YEARFRAC(52874,24708,{basis})"),
         );
@@ -76,8 +76,8 @@ fn test_yearfrac_reversed_dates_swap_for_every_basis() {
     model.evaluate();
     for row in 1..=5 {
         assert_eq!(
-            model._get_text(&format!("A{row}")),
-            model._get_text(&format!("B{row}"))
+            model.get_text_a1(&format!("A{row}")),
+            model.get_text_a1(&format!("B{row}"))
         );
     }
     // gen-m7/c263b43217a5898b Calc!A38 (Excel oracle)
@@ -87,7 +87,7 @@ fn test_yearfrac_reversed_dates_swap_for_every_basis() {
     assert!((v - 77.112_951_912_951_91).abs() < 1e-12);
 
     // Day 31 edge: the reversed basis-0 pair is 76/360, not 75/360 (probes/yearfrac-reversed-bases E1).
-    model._set("D1", "=YEARFRAC(DATE(2024,3,31),DATE(2024,1,15),0)*360");
+    model.set_a1("D1", "=YEARFRAC(DATE(2024,3,31),DATE(2024,1,15),0)*360");
     model.evaluate();
     let Ok(CellValue::Number(v)) = model.get_cell_value_by_ref("Sheet1!D1") else {
         panic!("Expected numeric value in D1");
@@ -100,23 +100,23 @@ fn test_yearfrac_reversed_dates_swap_for_every_basis() {
 #[test]
 fn test_yearfrac_basis_0_serial_0_and_negative_serial() {
     let mut model = new_empty_model();
-    model._set("A1", "=YEARFRAC(33752,0)=33268/360");
-    model._set("A2", "=YEARFRAC(0,33752)=33268/360");
-    model._set("A3", "=YEARFRAC(33752,0.5)=33268/360");
-    model._set("A4", "=YEARFRAC(0,0)");
-    model._set("A5", "=((0.3+YEARFRAC(33752,0))^SUM((-0.0001)))");
-    model._set("A6", "=YEARFRAC(-0.5,33752)");
-    model._set("B1", "=YEARFRAC(31,0)=YEARFRAC(0,31)");
-    model._set("B2", "=YEARFRAC(59,0)=YEARFRAC(0,59)");
+    model.set_a1("A1", "=YEARFRAC(33752,0)=33268/360");
+    model.set_a1("A2", "=YEARFRAC(0,33752)=33268/360");
+    model.set_a1("A3", "=YEARFRAC(33752,0.5)=33268/360");
+    model.set_a1("A4", "=YEARFRAC(0,0)");
+    model.set_a1("A5", "=((0.3+YEARFRAC(33752,0))^SUM((-0.0001)))");
+    model.set_a1("A6", "=YEARFRAC(-0.5,33752)");
+    model.set_a1("B1", "=YEARFRAC(31,0)=YEARFRAC(0,31)");
+    model.set_a1("B2", "=YEARFRAC(59,0)=YEARFRAC(0,59)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), *"TRUE");
-    assert_eq!(model._get_text("B2"), *"TRUE");
-    assert_eq!(model._get_text("A1"), *"TRUE");
-    assert_eq!(model._get_text("A2"), *"TRUE");
-    assert_eq!(model._get_text("A3"), *"TRUE");
-    assert_eq!(model._get_text("A4"), *"0");
-    assert_eq!(model._get_text("A5"), *"0.999547154");
-    assert_eq!(model._get_text("A6"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B1"), *"TRUE");
+    assert_eq!(model.get_text_a1("B2"), *"TRUE");
+    assert_eq!(model.get_text_a1("A1"), *"TRUE");
+    assert_eq!(model.get_text_a1("A2"), *"TRUE");
+    assert_eq!(model.get_text_a1("A3"), *"TRUE");
+    assert_eq!(model.get_text_a1("A4"), *"0");
+    assert_eq!(model.get_text_a1("A5"), *"0.999547154");
+    assert_eq!(model.get_text_a1("A6"), *"#NUM!");
 }
 
 /// The numeric value of `cell`, panicking otherwise.
@@ -161,7 +161,7 @@ fn test_yearfrac_serial_0_and_1900_02_29_on_every_basis() {
         ("A16", "=DISC(0,366,95,100,1)", 0.049_863_387_978_142_12),
     ];
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
@@ -178,21 +178,21 @@ fn test_negative_basis_is_num_error() {
     // Excel: any basis below 0 is #NUM!, even -1E-300 or -0.5, while 4.9 truncates to 4
     // (probes/fin-bond-negative-basis).
     let mut model = new_empty_model();
-    model._set("A1", "=YEARFRAC(39083,39448,-0.5)");
-    model._set("A2", "=YEARFRAC(39083,39448,-1E-300)");
-    model._set("A3", "=YEARFRAC(39083,39448,4.9)");
-    model._set("A4", "=COUPDAYS(39448,43831,2,-0.5)");
-    model._set("A5", "=PRICE(39448,43831,0.0575,0.065,100,2,-1E-300)");
-    model._set("A6", "=ODDLYIELD(39448,39630,39264,0.08,98,100,2,-0.5)");
-    model._set("A7", "=COUPDAYS(39448,43831,2,4.9)");
-    model._set("A8", "=AMORLINC(2400,39679,39813,300,1,0.15,-0.5)");
-    model._set("A9", "=ACCRINT(39083,39264,39448,0.08,1000,2,-1E-300)");
+    model.set_a1("A1", "=YEARFRAC(39083,39448,-0.5)");
+    model.set_a1("A2", "=YEARFRAC(39083,39448,-1E-300)");
+    model.set_a1("A3", "=YEARFRAC(39083,39448,4.9)");
+    model.set_a1("A4", "=COUPDAYS(39448,43831,2,-0.5)");
+    model.set_a1("A5", "=PRICE(39448,43831,0.0575,0.065,100,2,-1E-300)");
+    model.set_a1("A6", "=ODDLYIELD(39448,39630,39264,0.08,98,100,2,-0.5)");
+    model.set_a1("A7", "=COUPDAYS(39448,43831,2,4.9)");
+    model.set_a1("A8", "=AMORLINC(2400,39679,39813,300,1,0.15,-0.5)");
+    model.set_a1("A9", "=ACCRINT(39083,39264,39448,0.08,1000,2,-1E-300)");
     model.evaluate();
     for cell in ["A1", "A2", "A4", "A5", "A6", "A8", "A9"] {
-        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#NUM!", "{cell}");
     }
-    assert_eq!(model._get_text("A3"), *"1");
-    assert_eq!(model._get_text("A7"), *"180");
+    assert_eq!(model.get_text_a1("A3"), *"1");
+    assert_eq!(model.get_text_a1("A7"), *"180");
 }
 
 // Serials 1-60 on bases 0 and 1: basis 0 reads the displayed date (serial 60 is 29 February, with
@@ -215,7 +215,7 @@ fn test_yearfrac_serials_1_to_60_on_bases_0_and_1() {
         ("A10", "=YEARFRAC(60,1520,1)", 3.997_809_419_496_166_4),
     ];
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_sign_loss, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 use crate::arithmetic::flush_subnormal;
 use crate::external_reference::{one_external_area, ExternalArea, PickedReference};
 use crate::formatter::date_text::CurrentYear;
@@ -108,7 +111,7 @@ pub(crate) fn array_node_to_string(node: &ArrayNode) -> Result<String, Error> {
         } else {
             "FALSE".to_string()
         }),
-        ArrayNode::Empty => Ok("".to_string()),
+        ArrayNode::Empty => Ok(String::new()),
         ArrayNode::Error(e) => Err(e.clone()),
         ArrayNode::Lambda(_) | ArrayNode::Nested(_) => Err(Error::VALUE),
     }
@@ -311,17 +314,16 @@ impl Model {
         if number_text_too_long(s) {
             return None;
         }
-        match parse_excel_number(s.trim()) {
-            Some(f) => Some(f),
-            _ => {
-                let currencies = self.coercion_currencies();
-                self.parse_number_text(s, &currencies, current_year)
-                    .or_else(|| {
-                        // Not `coercion_currencies`: the mixed-fraction grammar reads `$` and `€`
-                        // only, not the locale's own symbol (unchanged here).
-                        mixed_fraction(&ascii_script_digits(s.trim_matches(' ')), &["$", "€"])
-                    })
-            }
+        if let Some(f) = parse_excel_number(s.trim()) {
+            Some(f)
+        } else {
+            let currencies = self.coercion_currencies();
+            self.parse_number_text(s, &currencies, current_year)
+                .or_else(|| {
+                    // Not `coercion_currencies`: the mixed-fraction grammar reads `$` and `€`
+                    // only, not the locale's own symbol (unchanged here).
+                    mixed_fraction(&ascii_script_digits(s.trim_matches(' ')), &["$", "€"])
+                })
         }
     }
 

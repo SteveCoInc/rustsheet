@@ -1,6 +1,9 @@
 Objects
 -------
 
+The objects on this page belong to the deprecated ``rustsheet.legacy`` classes, except
+``WorkbookError``.
+
 ``WorkbookError``
 ^^^^^^^^^^^^^^^^^
 Exceptions of type ``WorkbookError`` are raised whenever there is a problem
@@ -25,8 +28,8 @@ and ``CompoundData``. Returned by ``get_cell_type``.
 Style dictionaries
 ^^^^^^^^^^^^^^^^^^
 Complex values (styles, conditional formatting rules, themes, borders, ...)
-cross the Rust/Python boundary as plain dictionaries and lists, with exactly
-the same shapes used by the IronCalc wasm bindings and web application.
+cross the Rust/Python boundary as plain dictionaries and lists, in the shapes
+shown below.
 
 A cell style looks like this:
 

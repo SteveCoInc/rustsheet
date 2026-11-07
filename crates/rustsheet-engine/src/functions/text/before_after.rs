@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::float_cmp)]
+// LINT-DEBT-END
 use super::{
     lifted::COMPARED_BYTES_PER_VISIT,
     util::{text_after, text_before, utf16_len, Case, Delimiters},

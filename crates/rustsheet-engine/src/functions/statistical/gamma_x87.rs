@@ -14,6 +14,14 @@
 //!
 //! G on [1, 2) is the kernel K1, `fl(N/D)` (`gamma_kernels.rs`): Excel's structure with the best
 //! known coefficients, not yet bit-exact (T-2122).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::many_single_char_names
+)]
+// LINT-DEBT-END
 
 use super::gamma_kernels::{K1_D, K1_N};
 use crate::arithmetic::{

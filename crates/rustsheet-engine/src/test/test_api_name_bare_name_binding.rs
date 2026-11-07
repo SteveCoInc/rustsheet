@@ -16,8 +16,8 @@ fn three_sheet_model() -> crate::Model {
     model.rename_sheet("Sheet2", "S2").unwrap();
     model.rename_sheet("Sheet3", "Last").unwrap();
     for (sheet, b1, b2) in [("First", 1, 10), ("S2", 7, 70), ("Last", 9, 90)] {
-        model._set(&format!("{sheet}!B1"), &b1.to_string());
-        model._set(&format!("{sheet}!B2"), &b2.to_string());
+        model.set_a1(&format!("{sheet}!B1"), &b1.to_string());
+        model.set_a1(&format!("{sheet}!B2"), &b2.to_string());
     }
     model
 }
@@ -39,10 +39,10 @@ fn bound_values(scopes: &[Option<u32>], active: u32) -> [String; 3] {
     model.set_active_sheet(active).unwrap();
     model.define_name("W", None, "=Dup").unwrap();
     for sheet in ["First", "S2", "Last"] {
-        model._set(&format!("{sheet}!D1"), "=W");
+        model.set_a1(&format!("{sheet}!D1"), "=W");
     }
     model.evaluate();
-    ["First", "S2", "Last"].map(|sheet| model._get_text(&format!("{sheet}!D1")))
+    ["First", "S2", "Last"].map(|sheet| model.get_text_a1(&format!("{sheet}!D1")))
 }
 
 #[test]
@@ -92,9 +92,9 @@ fn bound_body_is_qualified_and_follows_a_sheet_rename() {
     model.define_name("Dup", Some(2), "=Last!$B$2").unwrap();
     // Sheet-scoped too: Last's own `LD` = `=Dup` reads Last's (probes/t4554-api-name-local-name-body).
     model.define_name("LD", Some(2), "=Dup+1").unwrap();
-    model._set("First!D1", "=Last!LD");
+    model.set_a1("First!D1", "=Last!LD");
     model.evaluate();
-    assert_eq!(model._get_text("First!D1"), "91");
+    assert_eq!(model.get_text_a1("First!D1"), "91");
     model.rename_sheet("Last", "Final").unwrap();
     model.evaluate();
     let body = model
@@ -103,7 +103,7 @@ fn bound_body_is_qualified_and_follows_a_sheet_rename() {
         .find(|(name, ..)| name == "LD")
         .map(|(_, _, body)| body);
     assert_eq!(body.as_deref(), Some("=Final!Dup+1"));
-    assert_eq!(model._get_text("First!D1"), "91");
+    assert_eq!(model.get_text_a1("First!D1"), "91");
 }
 
 #[test]
@@ -111,9 +111,9 @@ fn a_let_variable_is_not_bound_to_a_sheet_name() {
     let mut model = three_sheet_model();
     model.define_name("x", Some(2), "=Last!$B$2").unwrap();
     model.define_name("W", None, "=LET(x,3,x*2)").unwrap();
-    model._set("First!D1", "=W");
+    model.set_a1("First!D1", "=W");
     model.evaluate();
-    assert_eq!(model._get_text("First!D1"), "6");
+    assert_eq!(model.get_text_a1("First!D1"), "6");
 }
 
 #[test]
@@ -121,9 +121,9 @@ fn a_lambda_parameter_is_not_bound_to_a_sheet_name() {
     let mut model = three_sheet_model();
     model.define_name("x", Some(2), "=Last!$B$2").unwrap();
     model.define_name("W", None, "=LAMBDA(x,x*2)(4)").unwrap();
-    model._set("First!D1", "=W");
+    model.set_a1("First!D1", "=W");
     model.evaluate();
-    assert_eq!(model._get_text("First!D1"), "8");
+    assert_eq!(model.get_text_a1("First!D1"), "8");
 }
 
 // The name order ignores letter case and puts `_` before the letters
@@ -139,7 +139,7 @@ fn sheet_name_order_ignores_case_and_puts_underscore_first() {
         model
             .rename_sheet(&format!("Sheet{}", index + 1), sheet)
             .unwrap();
-        model._set(&format!("{sheet}!B1"), &(index + 1).to_string());
+        model.set_a1(&format!("{sheet}!B1"), &(index + 1).to_string());
     }
     // Each name's two defining sheets, by tab index.
     let pairs: [(&str, [u32; 2]); 4] = [
@@ -159,9 +159,9 @@ fn sheet_name_order_ignores_case_and_puts_underscore_first() {
         model
             .define_name(&alias, None, &format!("={name}"))
             .unwrap();
-        model._set(&format!("Z!D{}", row + 1), &format!("={alias}"));
+        model.set_a1(&format!("Z!D{}", row + 1), &format!("={alias}"));
     }
     model.evaluate();
-    let values = ["Z!D1", "Z!D2", "Z!D3", "Z!D4"].map(|cell| model._get_text(cell));
+    let values = ["Z!D1", "Z!D2", "Z!D3", "Z!D4"].map(|cell| model.get_text_a1(cell));
     assert_eq!(values, ["3", "4", "4", "3"]);
 }

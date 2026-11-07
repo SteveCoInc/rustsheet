@@ -52,12 +52,12 @@ fn statistical_domain_errors_and_extreme_values() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -69,15 +69,15 @@ fn statistical_domain_errors_and_extreme_values() {
 #[test]
 fn trimmean_error_percent_beats_data_with_no_number() {
     let mut model = new_empty_model();
-    model._set("B1", "=TRUE");
-    model._set("A1", "=TRIMMEAN(B1,NA())");
-    model._set("A2", "=TRIMMEAN(B1,0.1)");
-    model._set(
+    model.set_a1("B1", "=TRUE");
+    model.set_a1("A1", "=TRIMMEAN(B1,NA())");
+    model.set_a1("A2", "=TRIMMEAN(B1,0.1)");
+    model.set_a1(
         "A3",
         "=TRIMMEAN(B1,COVARIANCE.P(A5:B6,A8:A10)-LOGEST(A1,1E+15,\"\"))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#N/A");
-    assert_eq!(model._get_text("A2"), "#NUM!");
-    assert_eq!(model._get_text("A3"), "#N/A");
+    assert_eq!(model.get_text_a1("A1"), "#N/A");
+    assert_eq!(model.get_text_a1("A2"), "#NUM!");
+    assert_eq!(model.get_text_a1("A3"), "#N/A");
 }

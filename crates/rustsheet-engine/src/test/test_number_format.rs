@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::unreadable_literal)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::number_format::{format_number, parse_excel_number};
@@ -172,19 +175,19 @@ fn parse_excel_number_tiny_magnitudes() {
 fn number_text_longer_than_255_characters_is_value_error() {
     let mut model = new_empty_model();
     let text = |len: usize| format!("0.{}1", "0".repeat(len - 3));
-    model._set("A1", &format!("'{}", text(255)));
-    model._set("A2", &format!("'{}", text(256)));
-    model._set("A3", &format!("'1{}", " ".repeat(254)));
-    model._set("A4", &format!("'1{}", " ".repeat(255)));
+    model.set_a1("A1", &format!("'{}", text(255)));
+    model.set_a1("A2", &format!("'{}", text(256)));
+    model.set_a1("A3", &format!("'1{}", " ".repeat(254)));
+    model.set_a1("A4", &format!("'1{}", " ".repeat(255)));
     for row in 1..=4 {
-        model._set(&format!("B{row}"), &format!("=0+A{row}"));
-        model._set(&format!("C{row}"), &format!("=VALUE(A{row})"));
+        model.set_a1(&format!("B{row}"), &format!("=0+A{row}"));
+        model.set_a1(&format!("C{row}"), &format!("=VALUE(A{row})"));
     }
     model.evaluate();
     for (row, expected) in [(1, "1E-253"), (2, "#VALUE!"), (3, "1"), (4, "#VALUE!")] {
-        assert_eq!(model._get_text(&format!("B{row}")), expected, "0+A{row}");
+        assert_eq!(model.get_text_a1(&format!("B{row}")), expected, "0+A{row}");
         assert_eq!(
-            model._get_text(&format!("C{row}")),
+            model.get_text_a1(&format!("C{row}")),
             expected,
             "VALUE(A{row})"
         );
@@ -195,11 +198,11 @@ fn number_text_longer_than_255_characters_is_value_error() {
 #[test]
 fn numbervalue_text_longer_than_255_characters_is_value_error() {
     let mut model = new_empty_model();
-    model._set("A1", &format!("=NUMBERVALUE(\"0.{}1\")", "0".repeat(252)));
-    model._set("A2", &format!("=NUMBERVALUE(\"0.{}1\")", "0".repeat(253)));
+    model.set_a1("A1", &format!("=NUMBERVALUE(\"0.{}1\")", "0".repeat(252)));
+    model.set_a1("A2", &format!("=NUMBERVALUE(\"0.{}1\")", "0".repeat(253)));
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1E-253");
-    assert_eq!(model._get_text("A2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "1E-253");
+    assert_eq!(model.get_text_a1("A2"), "#VALUE!");
 }
 
 // T-0980: a wide fixed-decimal format prints the value rounded to 15 significant digits, then zeros

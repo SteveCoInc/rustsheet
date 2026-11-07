@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::manual_let_else)]
+// LINT-DEBT-END
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::{
     token::TokenType,
@@ -427,135 +430,132 @@ impl Lexer {
     pub(super) fn consume_range_a1(&mut self) -> Result<ParsedRange> {
         // first let's try to parse a cell
         let mut position = self.position;
-        match self.scan_reference_a1() {
-            Ok((cell, end)) => {
-                self.position = end;
-                if let Some(cell2) = self.consume_dotted_corner() {
-                    return Ok(ParsedRange {
-                        left: cell,
-                        right: Some(cell2),
-                    });
-                }
-                // `Data!B8:Data!E12`: when the second corner carries a sheet prefix the token ends at
-                // the first corner. The colon is lexed as the range operator and the parser joins
-                // the two references (references.md "Range corners may both carry the sheet prefix").
-                if self.peek_char() == Some(':') && !self.sheet_prefix_after_colon() {
-                    // It's a range
-                    let colon = self.position;
-                    self.position += 1;
-                    if let Ok(cell2) = self.consume_reference_a1() {
-                        Ok(ParsedRange {
-                            left: cell,
-                            right: Some(cell2),
-                        })
-                    } else {
-                        // An off-grid second corner is a name joined by the range operator:
-                        // `A1:B0` and `Data!A1:B1048577` are `#NAME?`, not references
-                        // (probes/off-grid-corners, excel-graph, T-0296).
-                        self.position = colon + 1;
-                        if self.consume_off_grid_cell_as_name().is_some() {
-                            self.position = colon;
-                            return Ok(ParsedRange {
-                                left: cell,
-                                right: None,
-                            });
-                        }
-                        Err(self.set_error("Expecting reference in range", self.position))
-                    }
-                } else {
-                    // just a reference
+        if let Ok((cell, end)) = self.scan_reference_a1() {
+            self.position = end;
+            if let Some(cell2) = self.consume_dotted_corner() {
+                return Ok(ParsedRange {
+                    left: cell,
+                    right: Some(cell2),
+                });
+            }
+            // `Data!B8:Data!E12`: when the second corner carries a sheet prefix the token ends at
+            // the first corner. The colon is lexed as the range operator and the parser joins
+            // the two references (references.md "Range corners may both carry the sheet prefix").
+            if self.peek_char() == Some(':') && !self.sheet_prefix_after_colon() {
+                // It's a range
+                let colon = self.position;
+                self.position += 1;
+                if let Ok(cell2) = self.consume_reference_a1() {
                     Ok(ParsedRange {
                         left: cell,
-                        right: None,
+                        right: Some(cell2),
                     })
-                }
-            }
-            Err(_) => {
-                self.position = position;
-                // It's either a row range or a column range (or not a range at all)
-                let len = self.len;
-                let mut absolute_left = false;
-                if position < len && self.chars[position] == '$' {
-                    absolute_left = true;
-                    position += 1;
-                }
-                let left_start = position;
-                let left = self.corner_parts(position);
-                position = left.end;
-                if position >= len || self.chars[position] != ':' {
-                    return Err(self.set_error("Expecting reference in range", self.position));
-                }
-                position += 1;
-                let mut absolute_right = false;
-                if position < len && self.chars[position] == '$' {
-                    absolute_right = true;
-                    position += 1;
-                }
-                let right_start = position;
-                let right = self.corner_parts(position);
-                position = right.end;
-                self.position = position;
-                // At this point either the columns are the empty string or the rows are the empty string
-                if left.digits > 0 {
-                    // It is a row range 23:56
-                    if right.digits == 0 || left.letters > 0 || right.letters > 0 {
-                        return Err(self.set_error("Error parsing Range", position));
+                } else {
+                    // An off-grid second corner is a name joined by the range operator:
+                    // `A1:B0` and `Data!A1:B1048577` are `#NAME?`, not references
+                    // (probes/off-grid-corners, excel-graph, T-0296).
+                    self.position = colon + 1;
+                    if self.consume_off_grid_cell_as_name().is_some() {
+                        self.position = colon;
+                        return Ok(ParsedRange {
+                            left: cell,
+                            right: None,
+                        });
                     }
-                    // Note that row numbers can start with 0
-                    let Some(row_left) = left.row else {
-                        let text = self.corner_digits(left_start, left.end);
-                        return Err(self.set_error(&format!("Failed parsing row {text}"), position));
-                    };
-                    let Some(row_right) = right.row else {
-                        let text = self.corner_digits(right_start, right.end);
-                        return Err(self.set_error(&format!("Failed parsing row {text}"), position));
-                    };
-                    if row_left > LAST_ROW {
-                        return Err(self.set_error("Row too large in reference", position));
-                    }
-                    if row_right > LAST_ROW {
-                        return Err(self.set_error("Row too large in reference", position));
-                    }
-                    return Ok(ParsedRange {
-                        left: ParsedReference {
-                            row: row_left,
-                            absolute_row: absolute_left,
-                            column: 1,
-                            absolute_column: true,
-                        },
-                        right: Some(ParsedReference {
-                            row: row_right,
-                            absolute_row: absolute_right,
-                            column: LAST_COLUMN,
-                            absolute_column: true,
-                        }),
-                    });
+                    Err(self.set_error("Expecting reference in range", self.position))
                 }
-                // It is a column range
-                if right.letters == 0 || right.digits > 0 {
-                    return Err(self.set_error("Error parsing Range", position));
-                }
-                let column_left = left
-                    .column_number()
-                    .map_err(|error| self.set_error(error, position))?;
-                let column_right = right
-                    .column_number()
-                    .map_err(|error| self.set_error(error, position))?;
+            } else {
+                // just a reference
                 Ok(ParsedRange {
-                    left: ParsedReference {
-                        row: 1,
-                        absolute_row: true,
-                        column: column_left,
-                        absolute_column: absolute_left,
-                    },
-                    right: Some(ParsedReference {
-                        row: LAST_ROW,
-                        absolute_row: true,
-                        column: column_right,
-                        absolute_column: absolute_right,
-                    }),
+                    left: cell,
+                    right: None,
                 })
             }
+        } else {
+            self.position = position;
+            // It's either a row range or a column range (or not a range at all)
+            let len = self.len;
+            let mut absolute_left = false;
+            if position < len && self.chars[position] == '$' {
+                absolute_left = true;
+                position += 1;
+            }
+            let left_start = position;
+            let left = self.corner_parts(position);
+            position = left.end;
+            if position >= len || self.chars[position] != ':' {
+                return Err(self.set_error("Expecting reference in range", self.position));
+            }
+            position += 1;
+            let mut absolute_right = false;
+            if position < len && self.chars[position] == '$' {
+                absolute_right = true;
+                position += 1;
+            }
+            let right_start = position;
+            let right = self.corner_parts(position);
+            position = right.end;
+            self.position = position;
+            // At this point either the columns are the empty string or the rows are the empty string
+            if left.digits > 0 {
+                // It is a row range 23:56
+                if right.digits == 0 || left.letters > 0 || right.letters > 0 {
+                    return Err(self.set_error("Error parsing Range", position));
+                }
+                // Note that row numbers can start with 0
+                let Some(row_left) = left.row else {
+                    let text = self.corner_digits(left_start, left.end);
+                    return Err(self.set_error(&format!("Failed parsing row {text}"), position));
+                };
+                let Some(row_right) = right.row else {
+                    let text = self.corner_digits(right_start, right.end);
+                    return Err(self.set_error(&format!("Failed parsing row {text}"), position));
+                };
+                if row_left > LAST_ROW {
+                    return Err(self.set_error("Row too large in reference", position));
+                }
+                if row_right > LAST_ROW {
+                    return Err(self.set_error("Row too large in reference", position));
+                }
+                return Ok(ParsedRange {
+                    left: ParsedReference {
+                        row: row_left,
+                        absolute_row: absolute_left,
+                        column: 1,
+                        absolute_column: true,
+                    },
+                    right: Some(ParsedReference {
+                        row: row_right,
+                        absolute_row: absolute_right,
+                        column: LAST_COLUMN,
+                        absolute_column: true,
+                    }),
+                });
+            }
+            // It is a column range
+            if right.letters == 0 || right.digits > 0 {
+                return Err(self.set_error("Error parsing Range", position));
+            }
+            let column_left = left
+                .column_number()
+                .map_err(|error| self.set_error(error, position))?;
+            let column_right = right
+                .column_number()
+                .map_err(|error| self.set_error(error, position))?;
+            Ok(ParsedRange {
+                left: ParsedReference {
+                    row: 1,
+                    absolute_row: true,
+                    column: column_left,
+                    absolute_column: absolute_left,
+                },
+                right: Some(ParsedReference {
+                    row: LAST_ROW,
+                    absolute_row: true,
+                    column: column_right,
+                    absolute_column: absolute_right,
+                }),
+            })
         }
     }
 

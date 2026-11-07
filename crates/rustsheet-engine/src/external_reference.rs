@@ -2,6 +2,9 @@
 //! workbook is never opened, directive 5): their shape, and what their cells read through INDEX,
 //! the reference operators, aggregates and spill. Excel: docs/excel-semantics/references.md
 //! "External reference with no cached data is `#BLOCKED!`".
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::needless_pass_by_value)]
+// LINT-DEBT-END
 
 use crate::{
     calc_result::CalcResult,

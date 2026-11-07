@@ -122,13 +122,13 @@ fn xlookup_binary_search_over_a_whole_column() {
         ("B6", "f"),
         ("C9", "x"), // used area past the data must not change the answer
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("D1", "=XLOOKUP(99,A:A,B:B,\"nf\",-1,2)");
-    model._set("D2", "=XLOOKUP(99,A:A,B:B,\"nf\",1,2)");
-    model._set("D3", "=XMATCH(99,A:A,-1,2)");
+    model.set_a1("D1", "=XLOOKUP(99,A:A,B:B,\"nf\",-1,2)");
+    model.set_a1("D2", "=XLOOKUP(99,A:A,B:B,\"nf\",1,2)");
+    model.set_a1("D3", "=XMATCH(99,A:A,-1,2)");
     model.evaluate();
-    assert_eq!(model._get_text("D1"), "a");
-    assert_eq!(model._get_text("D2"), "b");
-    assert_eq!(model._get_text("D3"), "1");
+    assert_eq!(model.get_text_a1("D1"), "a");
+    assert_eq!(model.get_text_a1("D2"), "b");
+    assert_eq!(model.get_text_a1("D3"), "1");
 }

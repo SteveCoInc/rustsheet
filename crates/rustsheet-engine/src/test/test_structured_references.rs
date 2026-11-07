@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 //! Structured references kept in the parsed formula (SPEC-0016 step 1, T-2195).
 //!
@@ -1225,7 +1228,7 @@ fn convert_to_range_turns_an_off_row_this_row_into_ref() {
     check(&model, (1, 2, 4), "=#REF!");
     let Some(index) = model.workbook.worksheets[0]
         .cell(6, 5)
-        .and_then(|cell| cell.get_formula())
+        .and_then(super::super::types::Cell::get_formula)
     else {
         panic!("no formula at E6");
     };

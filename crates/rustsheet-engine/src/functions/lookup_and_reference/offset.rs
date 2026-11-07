@@ -1,5 +1,8 @@
 //! OFFSET: a reference moved and resized from another, lifted into an array of references when
 //! rows, cols, height or width is an array or a multi-cell range (SPEC-0014; T-1956).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use super::ref_lift::{lifts_one_by_one, may_hand_on_grid};
 use crate::calc_result::{CalcResult, Range};

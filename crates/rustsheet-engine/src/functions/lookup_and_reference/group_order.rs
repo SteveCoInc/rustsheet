@@ -1,6 +1,9 @@
 //! How GROUPBY and PIVOTBY compare two keys or two aggregates when they sort the groups
 //! (`Grouping::sort_by_keys`, `Grouping::sort_by_aggregate` in grouping.rs). Excel:
 //! docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY".
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 use std::cmp::Ordering;
 

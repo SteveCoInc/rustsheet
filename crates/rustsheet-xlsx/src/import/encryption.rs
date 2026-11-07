@@ -22,6 +22,9 @@
 //! is returned. The password's UTF-16 bytes and every derived key live in zeroized buffers. The
 //! primitives are the `RustCrypto` crates (`aes`, `cbc`, `ecb`, `sha1`, `sha2`, `hmac`): no hand-rolled
 //! cryptography.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use aes::cipher::generic_array::GenericArray;
 use aes::cipher::typenum::U16;

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::manual_let_else)]
+// LINT-DEBT-END
 use crate::types::{BorderItem, Color};
 
 fn parse_color(s: &str) -> Option<(u8, u8, u8)> {
@@ -22,9 +25,9 @@ fn parse_color(s: &str) -> Option<(u8, u8, u8)> {
 
 fn compute_luminance(r: u8, g: u8, b: u8) -> f64 {
     // Normalize RGB values to [0, 1]
-    let r = r as f64 / 255.0;
-    let g = g as f64 / 255.0;
-    let b = b as f64 / 255.0;
+    let r = f64::from(r) / 255.0;
+    let g = f64::from(g) / 255.0;
+    let b = f64::from(b) / 255.0;
     // Calculate luminance using the Rec. 601 formula
     0.299 * r + 0.587 * g + 0.114 * b
 }

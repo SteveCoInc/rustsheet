@@ -10,16 +10,16 @@ fn fixed_and_dollar_with_huge_decimals_are_value_errors() {
     let mut model = new_empty_model();
     model.new_sheet();
     model.rename_sheet("Sheet2", "Data").expect("rename");
-    model._set("Data!E9", "1.5");
-    model._set("Data!D3", "a");
-    model._set("Data!C2", "b");
-    model._set(
+    model.set_a1("Data!E9", "1.5");
+    model.set_a1("Data!D3", "a");
+    model.set_a1("Data!C2", "b");
+    model.set_a1(
         "A1",
         "=ENCODEURL(CONCATENATE(FIXED(Data!E9,123456789.123,TRUE),(Data!D3&Data!$C2)))",
     );
-    model._set("A2", "=DOLLAR(0,123456789)");
+    model.set_a1("A2", "=DOLLAR(0,123456789)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
 }

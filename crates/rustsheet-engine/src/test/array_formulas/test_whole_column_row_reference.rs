@@ -6,32 +6,32 @@ use crate::test::util::new_empty_model;
 #[test]
 fn full_column_reference_yields_spill_error() {
     let mut model = new_empty_model();
-    model._set("A1", "10");
-    model._set("A2", "20");
-    model._set("A3", "30");
+    model.set_a1("A1", "10");
+    model.set_a1("A2", "20");
+    model.set_a1("A3", "30");
 
-    model._set("C3", "=A:A");
+    model.set_a1("C3", "=A:A");
     model.evaluate();
 
     assert_eq!(
-        model._get_text("C3"),
+        model.get_text_a1("C3"),
         "#SPILL!",
         "=A:A must produce #SPILL! because the spill overflows the sheet"
     );
     // No SpillCells should have been written; neighbouring cells stay empty.
-    assert_eq!(model._get_text("C4"), "");
-    assert_eq!(model._get_text("C5"), "");
+    assert_eq!(model.get_text_a1("C4"), "");
+    assert_eq!(model.get_text_a1("C5"), "");
 }
 
 #[test]
 fn full_column_reference_in_empty_column_yields_spill_error() {
     let mut model = new_empty_model();
 
-    model._set("C3", "=A:A");
+    model.set_a1("C3", "=A:A");
     model.evaluate();
 
     assert_eq!(
-        model._get_text("C3"),
+        model.get_text_a1("C3"),
         "#SPILL!",
         "=A:A on an empty column must also produce #SPILL!"
     );
@@ -40,29 +40,29 @@ fn full_column_reference_in_empty_column_yields_spill_error() {
 #[test]
 fn full_row_reference_yields_spill_error() {
     let mut model = new_empty_model();
-    model._set("A1", "100");
-    model._set("B1", "200");
-    model._set("C1", "300");
+    model.set_a1("A1", "100");
+    model.set_a1("B1", "200");
+    model.set_a1("C1", "300");
 
-    model._set("C3", "=1:1");
+    model.set_a1("C3", "=1:1");
     model.evaluate();
 
     assert_eq!(
-        model._get_text("C3"),
+        model.get_text_a1("C3"),
         "#SPILL!",
         "=1:1 must produce #SPILL! because the spill overflows the sheet"
     );
     // No SpillCells should be written; adjacent cells in the same row stay empty.
-    assert_eq!(model._get_text("D3"), "");
-    assert_eq!(model._get_text("E3"), "");
+    assert_eq!(model.get_text_a1("D3"), "");
+    assert_eq!(model.get_text_a1("E3"), "");
 }
 
 #[test]
 fn column_spill_overflowing_last_row_yields_spill_error() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
 
     let anchor_row = LAST_ROW - 8;
     model
@@ -71,20 +71,20 @@ fn column_spill_overflowing_last_row_yields_spill_error() {
     model.evaluate();
 
     assert_eq!(
-        model._get_text_at(0, anchor_row, 1),
+        model.get_text_by_index(0, anchor_row, 1),
         "#SPILL!",
         "=A1:A10 near the bottom border must produce #SPILL!"
     );
     // The row below the anchor must be empty — no stray SpillCells.
-    assert_eq!(model._get_text_at(0, anchor_row + 1, 1), "");
+    assert_eq!(model.get_text_by_index(0, anchor_row + 1, 1), "");
 }
 
 #[test]
 fn column_spill_fitting_exactly_at_last_row_succeeds() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
 
     let anchor_row = LAST_ROW - 9;
     model
@@ -92,9 +92,9 @@ fn column_spill_fitting_exactly_at_last_row_succeeds() {
         .unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text_at(0, anchor_row, 1), "1");
-    assert_eq!(model._get_text_at(0, anchor_row + 1, 1), "2");
-    assert_eq!(model._get_text_at(0, anchor_row + 2, 1), "3");
+    assert_eq!(model.get_text_by_index(0, anchor_row, 1), "1");
+    assert_eq!(model.get_text_by_index(0, anchor_row + 1, 1), "2");
+    assert_eq!(model.get_text_by_index(0, anchor_row + 2, 1), "3");
 }
 
 #[test]
@@ -112,12 +112,12 @@ fn row_spill_overflowing_last_column_yields_spill_error() {
     model.evaluate();
 
     assert_eq!(
-        model._get_text_at(0, 3, anchor_col),
+        model.get_text_by_index(0, 3, anchor_col),
         "#SPILL!",
         "=A1:J1 near the right border must produce #SPILL!"
     );
     // The column to the right of the anchor must be empty — no stray SpillCells.
-    assert_eq!(model._get_text_at(0, 3, anchor_col + 1), "");
+    assert_eq!(model.get_text_by_index(0, 3, anchor_col + 1), "");
 }
 
 #[test]
@@ -133,9 +133,9 @@ fn row_spill_fitting_exactly_at_last_column_succeeds() {
         .unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text_at(0, 3, anchor_col), "1");
-    assert_eq!(model._get_text_at(0, 3, anchor_col + 1), "2");
-    assert_eq!(model._get_text_at(0, 3, anchor_col + 2), "3");
+    assert_eq!(model.get_text_by_index(0, 3, anchor_col), "1");
+    assert_eq!(model.get_text_by_index(0, 3, anchor_col + 1), "2");
+    assert_eq!(model.get_text_by_index(0, 3, anchor_col + 2), "3");
 }
 
 // ── SEQUENCE / RANDARRAY near the sheet border ────────────────────────────────
@@ -153,12 +153,12 @@ fn sequence_spill_overflowing_last_row_yields_spill_error() {
     model.evaluate();
 
     assert_eq!(
-        model._get_text_at(0, anchor_row, 1),
+        model.get_text_by_index(0, anchor_row, 1),
         "#SPILL!",
         "SEQUENCE(10) near the bottom border must produce #SPILL!, not #ERROR!"
     );
     // No partial spill cells should have been written.
-    assert_eq!(model._get_text_at(0, anchor_row + 1, 1), "");
+    assert_eq!(model.get_text_by_index(0, anchor_row + 1, 1), "");
 }
 
 #[test]
@@ -172,9 +172,9 @@ fn sequence_spill_fitting_exactly_at_last_row_succeeds() {
         .unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text_at(0, anchor_row, 1), "1");
-    assert_eq!(model._get_text_at(0, anchor_row + 1, 1), "2");
-    assert_eq!(model._get_text_at(0, anchor_row + 9, 1), "10");
+    assert_eq!(model.get_text_by_index(0, anchor_row, 1), "1");
+    assert_eq!(model.get_text_by_index(0, anchor_row + 1, 1), "2");
+    assert_eq!(model.get_text_by_index(0, anchor_row + 9, 1), "10");
 }
 
 #[test]
@@ -190,10 +190,10 @@ fn randarray_spill_overflowing_last_column_yields_spill_error() {
     model.evaluate();
 
     assert_eq!(
-        model._get_text_at(0, 3, anchor_col),
+        model.get_text_by_index(0, 3, anchor_col),
         "#SPILL!",
         "RANDARRAY(1,10) near the right border must produce #SPILL!, not #ERROR!"
     );
     // No partial spill cells should have been written.
-    assert_eq!(model._get_text_at(0, 3, anchor_col + 1), "");
+    assert_eq!(model.get_text_by_index(0, 3, anchor_col + 1), "");
 }

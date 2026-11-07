@@ -4,7 +4,7 @@ The extension also defines the deprecated legacy classes; their stubs live in
 ``legacy.pyi`` (SPEC-0026) and are re-exported here.
 """
 
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, TypedDict, overload
 
 from rustsheet.legacy import CellType as CellType
 from rustsheet.legacy import Model as Model
@@ -175,7 +175,11 @@ class Workbook:
         name: str | None = None,
         password: str | None = None,
     ) -> Workbook: ...
-    def save_xlsx(self, path: str) -> None: ...
+    @overload
+    def save_xlsx(self, path: str, report: Literal[False] = False) -> None: ...
+    @overload
+    def save_xlsx(self, path: str, report: Literal[True]) -> list[tuple[str, str]]:
+        """With report=True: what the save left out, as (part name, reason) pairs."""
     def to_xlsx_bytes(self) -> bytes: ...
     def recalculate(self) -> None: ...
     @property

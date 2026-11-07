@@ -2,6 +2,9 @@
 //! docs/excel-semantics/information.md). Excel fetches an image or quotes and reads linked data
 //! types; RustSheet does neither (CLAUDE.md directive 5, decision 0027), so each evaluates to the
 //! error Excel gives when the fetch or the data type is not there.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+// LINT-DEBT-END
 
 use crate::{
     calc_result::CalcResult,

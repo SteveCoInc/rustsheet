@@ -17,10 +17,10 @@ fn model_with_values() -> Model {
         ("B2", "2"),
         ("C3", "16"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("Data!A1", "10");
-    model._set("Data!B2", "20");
+    model.set_a1("Data!A1", "10");
+    model.set_a1("Data!B2", "20");
     model
 }
 
@@ -55,7 +55,7 @@ fn dotted_ranges_read_and_print_as_colon_ranges() {
         ("=ROWS(A1.B2:C3)", "=ROWS(A1:B2:C3)", "3"),
     ];
     for (row, (formula, ..)) in cases.iter().enumerate() {
-        model._set(&format!("F{}", row + 1), formula);
+        model.set_a1(&format!("F{}", row + 1), formula);
     }
     model.evaluate();
     let mut reloaded = Model::from_bytes(&model.to_bytes(), "en").unwrap();
@@ -63,8 +63,8 @@ fn dotted_ranges_read_and_print_as_colon_ranges() {
     for (row, (formula, text, value)) in cases.iter().enumerate() {
         let cell = format!("F{}", row + 1);
         for m in [&model, &reloaded] {
-            assert_eq!(m._get_formula(&cell), *text, "{formula}");
-            assert_eq!(m._get_text(&cell), *value, "{formula}");
+            assert_eq!(m.get_formula_a1(&cell), *text, "{formula}");
+            assert_eq!(m.get_text_a1(&cell), *value, "{formula}");
         }
     }
 }
@@ -79,14 +79,14 @@ fn dots_and_whitespace_without_a_second_cell_keep_the_old_reading() {
         ("F2", "=SUM(A1. )"),
         ("F3", "=A1. +1"),
     ] {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
-    assert_eq!(model._get_text("F1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("F1"), "#ERROR!");
     // `A1.` stays a name here, so the trailing-dot forms are #NAME? (the task text expected #ERROR!).
-    assert_eq!(model._get_text("F2"), "#NAME?");
-    assert_eq!(model._get_text("F3"), "#NAME?");
-    assert_eq!(model._get_formula("F3"), "=A1. +1");
+    assert_eq!(model.get_text_a1("F2"), "#NAME?");
+    assert_eq!(model.get_text_a1("F3"), "#NAME?");
+    assert_eq!(model.get_formula_a1("F3"), "=A1. +1");
 }
 
 // probes/lotus-dot-range-{column,column-dotdot,number,offgrid,trailing-letter,name-second}:
@@ -104,13 +104,13 @@ fn other_dotted_names_stay_names() {
         "=SUM(A1.B2.C3)",
     ];
     for (row, formula) in formulas.iter().enumerate() {
-        model._set(&format!("F{}", row + 1), formula);
+        model.set_a1(&format!("F{}", row + 1), formula);
     }
     model.evaluate();
     for (row, formula) in formulas.iter().enumerate() {
         let cell = format!("F{}", row + 1);
-        assert_eq!(model._get_text(&cell), "#NAME?", "{formula}");
-        assert_eq!(model._get_formula(&cell), *formula);
+        assert_eq!(model.get_text_a1(&cell), "#NAME?", "{formula}");
+        assert_eq!(model.get_formula_a1(&cell), *formula);
     }
 }
 
@@ -118,16 +118,16 @@ fn other_dotted_names_stay_names() {
 #[test]
 fn a_dotted_range_shadows_a_defined_name() {
     let mut model = new_empty_model();
-    model._set("B1", "7");
+    model.set_a1("B1", "7");
     model.define_name("R1.C1", None, "=Sheet1!$B$1").unwrap();
     model.define_name("C1.C1", None, "=Sheet1!$B$1").unwrap();
-    model._set("A1", "=R1.C1*1");
-    model._set("A3", "=C1.C1*1");
-    model._set("A4", "=ISREF(R1.C1)");
+    model.set_a1("A1", "=R1.C1*1");
+    model.set_a1("A3", "=C1.C1*1");
+    model.set_a1("A4", "=ISREF(R1.C1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#SPILL!");
-    assert_eq!(model._get_text("A3"), "0");
-    assert_eq!(model._get_text("A4"), "TRUE");
+    assert_eq!(model.get_text_a1("A1"), "#SPILL!");
+    assert_eq!(model.get_text_a1("A3"), "0");
+    assert_eq!(model.get_text_a1("A4"), "TRUE");
 }
 
 // probes/r1c1-let-name-r1-c1, lotus-dot-name-*: a LET or LAMBDA binding the name makes it the variable within the
@@ -149,7 +149,7 @@ fn let_and_lambda_names_spelled_like_dotted_ranges_are_variables_in_scope() {
         ("=LAMBDA(x,LAMBDA(A1.B2,A1.B2+x)(1)+SUM(A1:B2))(2)", "18"),
     ];
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("F{}", row + 1), formula);
+        model.set_a1(&format!("F{}", row + 1), formula);
     }
     model.evaluate();
     let mut reloaded = Model::from_bytes(&model.to_bytes(), "en").unwrap();
@@ -157,8 +157,8 @@ fn let_and_lambda_names_spelled_like_dotted_ranges_are_variables_in_scope() {
     for (row, (formula, value)) in cases.iter().enumerate() {
         let cell = format!("F{}", row + 1);
         for m in [&model, &reloaded] {
-            assert_eq!(m._get_text(&cell), *value, "{formula}");
-            assert_eq!(m._get_formula(&cell), *formula);
+            assert_eq!(m.get_text_a1(&cell), *value, "{formula}");
+            assert_eq!(m.get_formula_a1(&cell), *formula);
         }
     }
 }

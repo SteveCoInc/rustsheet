@@ -6,6 +6,9 @@
 //! Operator chains (`=A1+A2+...`) are walked in a loop, not recursively
 //! (T-0128, `chain.rs`), so their links add no depth; their length is bounded
 //! by [`MAX_VALUE_OPERATORS`] instead.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_sign_loss)]
+// LINT-DEBT-END
 
 use crate::expressions::lexer::STRING_LITERAL_TOO_LONG_MESSAGE;
 use crate::expressions::parser::{value_operands, ExpectedTokens, Node, Parser, Run};

@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_precision_loss,
+    clippy::float_cmp,
+    clippy::manual_midpoint
+)]
+// LINT-DEBT-END
 use super::chisq::RankData;
 use super::sorted_data::{DataOrder, SortedNumbers};
 use crate::calc_result::Range;

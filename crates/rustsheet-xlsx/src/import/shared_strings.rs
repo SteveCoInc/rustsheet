@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::needless_pass_by_value)]
+// LINT-DEBT-END
 use std::collections::HashMap;
 use std::io::Read;
 
@@ -84,8 +87,7 @@ fn read_shared_strings_from_xml(
                 _ => Vec::new(),
             })
             .map(|n| decode_xlsx_escapes(n.text().unwrap_or("")))
-            .collect::<Vec<String>>()
-            .join("");
+            .collect::<String>();
         limits.check_text(&text)?;
         shared_strings.push(text);
     }

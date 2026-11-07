@@ -36,14 +36,14 @@ fn results_independent_of_used_area(
     let evaluate = |formula: &str, fill: bool| {
         let mut model = new_empty_model();
         for (cell, value) in data {
-            model._set(cell, value);
+            model.set_a1(cell, value);
         }
         if fill {
-            model._set(filler, "filler");
+            model.set_a1(filler, "filler");
         }
-        model._set(at, formula);
+        model.set_a1(at, formula);
         model.evaluate();
-        model._get_text(at)
+        model.get_text_a1(at)
     };
     formulas
         .iter()

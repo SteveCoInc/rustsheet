@@ -34,6 +34,15 @@
 //!
 //! Every loop is bounded: [`SERIES_MAX_DF`] / 2 series terms, [`TAYLOR_TERMS`] Taylor terms and
 //! [`MAX_POWER_SERIES_TERMS`] power-series terms a call.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::manual_midpoint,
+    clippy::many_single_char_names
+)]
+// LINT-DEBT-END
 
 use super::bratio::t_kernel_tails;
 use super::gammaln::excel_gammaln;
@@ -790,7 +799,7 @@ mod tests {
     #[test]
     fn ratio_paths_agree() {
         // The asymptotic series and the integer product meet at n = 170.
-        let product = integer_ratio(170.0).map(|r| r.0).unwrap_or(f64::NAN);
+        let product = integer_ratio(170.0).map_or(f64::NAN, |r| r.0);
         let asymptotic = gamma_ratio(170.0).unwrap_or(f64::NAN);
         assert!(ulps(product, asymptotic) <= 1, "{product} {asymptotic}");
     }

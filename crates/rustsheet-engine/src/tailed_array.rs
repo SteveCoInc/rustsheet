@@ -28,6 +28,9 @@
 //! evaluated and records nothing new. Should the used area grow while the head is evaluated (a
 //! spill evaluated on the way), the head is too short: the argument is then evaluated the
 //! ordinary way, its cells already evaluated.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::unused_self)]
+// LINT-DEBT-END
 
 use crate::calc_result::CalcResult;
 use crate::expressions::parser::{ArrayNode, Node};

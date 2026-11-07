@@ -11,7 +11,7 @@ use crate::test::util::new_empty_model;
 /// as wide as the first, and nothing below it.
 fn assert_spill(formula: &str, expected: &[&str]) {
     let mut model = records();
-    model._set("G1", formula);
+    model.set_a1("G1", formula);
     model.evaluate();
     let width = expected.first().map_or(1, |first| first.split('|').count());
     let last = char::from(b'G' + u8::try_from(width).unwrap() - 1);
@@ -27,11 +27,11 @@ fn assert_spill(formula: &str, expected: &[&str]) {
 fn values(formulas: &[&str]) -> Vec<String> {
     let mut model = records();
     for (i, formula) in formulas.iter().enumerate() {
-        model._set(&format!("G{}", i + 1), formula);
+        model.set_a1(&format!("G{}", i + 1), formula);
     }
     model.evaluate();
     (1..=formulas.len())
-        .map(|r| model._get_text(&format!("G{r}")))
+        .map(|r| model.get_text_a1(&format!("G{r}")))
         .collect()
 }
 
@@ -302,22 +302,22 @@ fn subtotal_rows_count_toward_the_output_size() {
     // subtotals would double the output past the array bound, so GROUPBY is refused before any
     // LAMBDA call; half as many fit with their subtotals.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=GROUPBY(HSTACK(SEQUENCE(200000),SEQUENCE(200000)),SEQUENCE(200000),LAMBDA(x,SUM(x)),,2)",
     );
-    model._set(
+    model.set_a1(
         "B1",
         "=ROWS(GROUPBY(HSTACK(SEQUENCE(100000),SEQUENCE(100000)),SEQUENCE(100000),LAMBDA(x,SUM(x)),,2))",
     );
-    model._set(
+    model.set_a1(
         "C1",
         "=PIVOTBY(HSTACK(SEQUENCE(200000),SEQUENCE(200000)),SEQUENCE(200000,,0,0),SEQUENCE(200000),LAMBDA(x,SUM(x)),,2,,0)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("B1"), "200001");
-    assert_eq!(model._get_text("C1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), "200001");
+    assert_eq!(model.get_text_a1("C1"), "#ERROR!");
 }
 
 #[test]
@@ -520,7 +520,7 @@ fn pivot_column_subtotals() {
 /// The spill at G1 of the records, `height` rows by `width` columns, as texts.
 fn texts(formula: &str, height: usize, width: u8) -> Vec<Vec<String>> {
     let mut model = records();
-    model._set("G1", formula);
+    model.set_a1("G1", formula);
     model.evaluate();
     let last = char::from(b'G' + width - 1);
     (1..=height).map(|r| row(&model, r, 'G', last)).collect()

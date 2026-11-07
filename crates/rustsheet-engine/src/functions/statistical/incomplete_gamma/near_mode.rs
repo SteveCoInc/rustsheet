@@ -15,6 +15,9 @@
 //!   (x - a)/a - ln(x/a) from [`temme_phi`] and mu Binet's function ([`stirlerr_exact`]);
 //! - the power series for P below x = a + 1, and [`accurate_fraction`] for Q from it on;
 //! - the other tail as 1 minus it, in double-double.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use super::super::f_density::HALF_LN_TWO_PI;
 use super::super::loader::stirlerr_exact;

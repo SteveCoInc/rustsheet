@@ -11,15 +11,15 @@ fn whole_columns_with_many_distinct_values_are_not_refused() {
     // distinct lookups over whole columns stay far below the visit cap.
     let mut model = new_empty_model();
     for row in 1..=300 {
-        model._set(&format!("A{row}"), &row.to_string());
-        model._set(&format!("B{row}"), &row.to_string());
-        model._set(&format!("C{row}"), &(row * 2).to_string());
+        model.set_a1(&format!("A{row}"), &row.to_string());
+        model.set_a1(&format!("B{row}"), &row.to_string());
+        model.set_a1(&format!("C{row}"), &(row * 2).to_string());
     }
-    model._set("E1", "=SUM(XLOOKUP(A1:A300,B:B,C:C))");
-    model._set("E2", "=SUM(XLOOKUP(A:A,B:B,C:C))");
+    model.set_a1("E1", "=SUM(XLOOKUP(A1:A300,B:B,C:C))");
+    model.set_a1("E2", "=SUM(XLOOKUP(A:A,B:B,C:C))");
     model.evaluate();
-    assert_eq!(model._get_text("E1"), *"90300");
-    assert_eq!(model._get_text("E2"), *"90300");
+    assert_eq!(model.get_text_a1("E1"), *"90300");
+    assert_eq!(model.get_text_a1("E2"), *"90300");
 }
 
 #[test]
@@ -28,12 +28,12 @@ fn lifted_lookup_over_a_computed_array_hits_the_visit_cap() {
     // 2^20 lookups over a 2^20-element array would be ~10^12 comparisons. DEVIATION
     // (decision 0014): Excel computes it; we refuse past the shared cell-visit cap.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ROWS(XLOOKUP(SEQUENCE(1048576),SEQUENCE(1048576),SEQUENCE(1048576)))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
 }
 
 #[test]
@@ -47,27 +47,27 @@ fn modes_and_argument_errors_lift_per_element() {
         ("B2", "two"),
         ("B3", "three"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     // match_mode and search_mode lift pairwise with lookup_value (A49, A52).
-    model._set("D1", "=XLOOKUP({2.5;2.5},A1:A3,B1:B3,,{0;-1})");
-    model._set("E1", "=XLOOKUP({1;1},{1;1},{\"f\";\"l\"},,0,{1;-1})");
+    model.set_a1("D1", "=XLOOKUP({2.5;2.5},A1:A3,B1:B3,,{0;-1})");
+    model.set_a1("E1", "=XLOOKUP({1;1},{1;1},{\"f\";\"l\"},,0,{1;-1})");
     // An argument error is repeated per element, after a lookup_value error (A3, A64).
-    model._set("F1", "=XLOOKUP({2;#N/A},A1:A3,B1:B3,,5)");
+    model.set_a1("F1", "=XLOOKUP({2;#N/A},A1:A3,B1:B3,,5)");
     // An array if_not_found gives its first element, a reference #VALUE! (A27, A58).
-    model._set("G1", "=XLOOKUP({2;9},A1:A3,B1:B3,{\"x\";\"y\"})");
-    model._set("H1", "=XLOOKUP({9;2},A1:A3,B1:B3,A1)");
+    model.set_a1("G1", "=XLOOKUP({2;9},A1:A3,B1:B3,{\"x\";\"y\"})");
+    model.set_a1("H1", "=XLOOKUP({9;2},A1:A3,B1:B3,A1)");
     model.evaluate();
-    assert_eq!(model._get_text("D1"), *"#N/A");
-    assert_eq!(model._get_text("D2"), *"two");
-    assert_eq!(model._get_text("E1"), *"f");
-    assert_eq!(model._get_text("E2"), *"l");
-    assert_eq!(model._get_text("F1"), *"#VALUE!");
-    assert_eq!(model._get_text("F2"), *"#N/A");
-    assert_eq!(model._get_text("G1"), *"two");
-    assert_eq!(model._get_text("G2"), *"x");
-    assert_eq!(model._get_text("H1"), *"#VALUE!");
-    assert_eq!(model._get_text("H2"), *"two");
+    assert_eq!(model.get_text_a1("D1"), *"#N/A");
+    assert_eq!(model.get_text_a1("D2"), *"two");
+    assert_eq!(model.get_text_a1("E1"), *"f");
+    assert_eq!(model.get_text_a1("E2"), *"l");
+    assert_eq!(model.get_text_a1("F1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("F2"), *"#N/A");
+    assert_eq!(model.get_text_a1("G1"), *"two");
+    assert_eq!(model.get_text_a1("G2"), *"x");
+    assert_eq!(model.get_text_a1("H1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("H2"), *"two");
 }
 
 #[test]
@@ -82,15 +82,15 @@ fn row_lookup_with_a_taller_return_range_gives_the_matched_column() {
         ("A3", "100"),
         ("B3", "200"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("D1", "=XLOOKUP(\"b\",A1:B1,A2:B3)");
-    model._set("E1", "=XLOOKUP({\"b\";\"a\"},A1:B1,A2:B3)");
+    model.set_a1("D1", "=XLOOKUP(\"b\",A1:B1,A2:B3)");
+    model.set_a1("E1", "=XLOOKUP({\"b\";\"a\"},A1:B1,A2:B3)");
     model.evaluate();
-    assert_eq!(model._get_text("D1"), *"20");
-    assert_eq!(model._get_text("D2"), *"200");
-    assert_eq!(model._get_text("E1"), *"20");
-    assert_eq!(model._get_text("E2"), *"10");
+    assert_eq!(model.get_text_a1("D1"), *"20");
+    assert_eq!(model.get_text_a1("D2"), *"200");
+    assert_eq!(model.get_text_a1("E1"), *"20");
+    assert_eq!(model.get_text_a1("E2"), *"10");
 }
 
 #[test]
@@ -99,15 +99,15 @@ fn an_error_mode_wins_over_an_unknown_mode_and_a_mismatched_return_array() {
     // range with one index is #REF!, and that search_mode beats match_mode 101 and a return
     // array one row longer than the lookup array, each of which is #VALUE! alone.
     let mut model = new_empty_model();
-    model._set("A1", "=XLOOKUP(1,B1:B5,C1:C6,0,101,INDEX(D1:E8,0))");
-    model._set("A2", "=XLOOKUP(1,B1:B5,C1:C6,0,101)");
+    model.set_a1("A1", "=XLOOKUP(1,B1:B5,C1:C6,0,101,INDEX(D1:E8,0))");
+    model.set_a1("A2", "=XLOOKUP(1,B1:B5,C1:C6,0,101)");
     // A text or error match_mode is read first, so it beats an error search_mode
     // (probes/lookup-t2278-followups A6, A7).
-    model._set("A3", "=XLOOKUP(1,B1:B5,C1:C5,0,\"x\",1/0)");
-    model._set("A4", "=XLOOKUP(1,B1:B5,C1:C5,0,NA(),1/0)");
+    model.set_a1("A3", "=XLOOKUP(1,B1:B5,C1:C5,0,\"x\",1/0)");
+    model.set_a1("A4", "=XLOOKUP(1,B1:B5,C1:C5,0,NA(),1/0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#REF!");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
-    assert_eq!(model._get_text("A3"), *"#VALUE!");
-    assert_eq!(model._get_text("A4"), *"#N/A");
+    assert_eq!(model.get_text_a1("A1"), *"#REF!");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), *"#N/A");
 }

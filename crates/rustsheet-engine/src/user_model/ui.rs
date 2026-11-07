@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::manual_let_else,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 #![deny(missing_docs)]
 
 use serde::{Deserialize, Serialize};
@@ -386,7 +394,7 @@ impl UserModel {
         // single keystroke crosses the whole merged range
         let focus_merge = worksheet
             .merged_cell_containing(focus_row, focus_column)
-            .cloned();
+            .copied();
 
         let mut new_focus_row = focus_row;
         let mut new_focus_column = focus_column;
@@ -523,14 +531,14 @@ impl UserModel {
     pub fn set_window_width(&mut self, window_width: f64) {
         if let Some(view) = self.model.workbook.views.get_mut(&self.model.view_id) {
             view.window_width = window_width as i64;
-        };
+        }
     }
 
     /// Gets the width of the window
     pub fn get_window_width(&mut self) -> Result<i64, String> {
         if let Some(view) = self.model.workbook.views.get_mut(&self.model.view_id) {
             return Ok(view.window_width);
-        };
+        }
         Err("View not found".to_string())
     }
 
@@ -538,14 +546,14 @@ impl UserModel {
     pub fn set_window_height(&mut self, window_height: f64) {
         if let Some(view) = self.model.workbook.views.get_mut(&self.model.view_id) {
             view.window_height = window_height as i64;
-        };
+        }
     }
 
     /// Gets the height of the window
     pub fn get_window_height(&mut self) -> Result<i64, String> {
         if let Some(view) = self.model.workbook.views.get_mut(&self.model.view_id) {
             return Ok(view.window_height);
-        };
+        }
         Err("View not found".to_string())
     }
 

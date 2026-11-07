@@ -17,11 +17,11 @@ fn a_name_defined_through_the_api_takes_65_nested_calls_and_not_66() {
         .define_name("Deeper", None, &nested_abs(66))
         .unwrap_err();
     assert!(refused.contains(TOO_MANY_NESTED_CALLS_MESSAGE), "{refused}");
-    model._set("A1", "=Deep");
-    model._set("A2", "=Deeper");
+    model.set_a1("A1", "=Deep");
+    model.set_a1("A2", "=Deeper");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"1");
-    assert_eq!(model._get_text("A2"), *"#NAME?");
+    assert_eq!(model.get_text_a1("A1"), *"1");
+    assert_eq!(model.get_text_a1("A2"), *"#NAME?");
 }
 
 // A loaded body is held to the cap by the importer, which refuses the workbook (T-3143), so the
@@ -41,9 +41,9 @@ fn a_cells_calls_and_its_names_do_not_add_up() {
     let mut model = new_empty_model();
     model.define_name("N", None, &nested_abs(65)).unwrap();
     let cell = format!("={}N{}", "ABS(".repeat(65), ")".repeat(65));
-    model._set("A1", &cell);
+    model.set_a1("A1", &cell);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"1");
+    assert_eq!(model.get_text_a1("A1"), *"1");
 }
 
 // Graph's `worksheets('S')/names/add` holds a sheet-scoped name to the same cap: 65 calls are
@@ -57,9 +57,9 @@ fn a_sheet_scoped_name_takes_65_nested_calls_and_not_66() {
         .define_name("Deeper", Some(0), &nested_abs(66))
         .unwrap_err();
     assert!(refused.contains(TOO_MANY_NESTED_CALLS_MESSAGE), "{refused}");
-    model._set("Sheet2!A1", "=Sheet1!Deep");
-    model._set("Sheet2!A2", "=Sheet1!Deeper");
+    model.set_a1("Sheet2!A1", "=Sheet1!Deep");
+    model.set_a1("Sheet2!A2", "=Sheet1!Deeper");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!A1"), *"1");
-    assert_eq!(model._get_text("Sheet2!A2"), *"#NAME?");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), *"1");
+    assert_eq!(model.get_text_a1("Sheet2!A2"), *"#NAME?");
 }

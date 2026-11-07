@@ -139,21 +139,17 @@ pub(super) fn patch(xml: &str, pristine: &Styles, added: &Appended<'_>) -> Resul
                 let tag = xml
                     .get(start..end)
                     .ok_or("styles.xml: a tag off a char boundary")?;
-                match f.end {
-                    Some(close) => {
-                        edits.push((close, 0, records));
-                        edits.push((start, end - start, set_attr(tag, "count", |_| total)));
-                    }
-                    None => {
-                        // `<name .../>`: written out with its records.
-                        let open =
-                            set_attr(tag.trim_end_matches("/>").trim_end(), "count", |_| total);
-                        edits.push((
-                            start,
-                            end - start,
-                            format!("{open}>{records}</{}>", section.name),
-                        ));
-                    }
+                if let Some(close) = f.end {
+                    edits.push((close, 0, records));
+                    edits.push((start, end - start, set_attr(tag, "count", |_| total)));
+                } else {
+                    // `<name .../>`: written out with its records.
+                    let open = set_attr(tag.trim_end_matches("/>").trim_end(), "count", |_| total);
+                    edits.push((
+                        start,
+                        end - start,
+                        format!("{open}>{records}</{}>", section.name),
+                    ));
                 }
             }
             // A workbook with only built-in number formats has no `numFmts`: it is the first

@@ -1,6 +1,9 @@
 //! The PCRE2 pattern grammar (SPEC-0013 section 1): hand-written, iterative over groups (an
 //! explicit frame stack), and failing closed: every construct it does not know is
 //! [`Invalid`]. Brackets nest and recurse, but under the same [`NEST_LIMIT`] as groups.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::needless_pass_by_value, clippy::struct_excessive_bools)]
+// LINT-DEBT-END
 
 use regex_syntax::hir::{ClassUnicode, ClassUnicodeRange};
 

@@ -14,6 +14,15 @@
 //!
 //! So `ROUND(1.005,2)` is 1.01 (1.00499999999999989… becomes 1.00500000000000 first) and
 //! `ROUNDDOWN(123456789.123,-5)` is exactly 123400000.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+#![cfg_attr(test, expect(clippy::manual_midpoint))]
+// LINT-DEBT-END
 
 use crate::arithmetic::{flush_subnormal, TINY_SUBNORMAL_BELOW};
 use crate::constants::EXCEL_PRECISION;

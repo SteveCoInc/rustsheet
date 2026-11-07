@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use core::cmp::max;
@@ -24,18 +27,18 @@ pub fn rgb_to_hsl(rgb: [i32; 3]) -> [i32; 3] {
     let r = rgb[0];
     let g = rgb[1];
     let b = rgb[2];
-    let red = r as f64 / 255.0;
-    let green = g as f64 / 255.0;
-    let blue = b as f64 / 255.0;
+    let red = f64::from(r) / 255.0;
+    let green = f64::from(g) / 255.0;
+    let blue = f64::from(b) / 255.0;
     let max_color = max(max(r, g), b);
     let min_color = min(min(r, g), b);
-    let chroma = (max_color - min_color) as f64 / 255.0;
+    let chroma = f64::from(max_color - min_color) / 255.0;
     if chroma == 0.0 {
         return [0, 0, (red * 100.0).round() as i32];
     }
 
     let hue;
-    let luminosity = (max_color + min_color) as f64 / (255.0 * 2.0);
+    let luminosity = f64::from(max_color + min_color) / (255.0 * 2.0);
     let saturation = if luminosity > 0.5 {
         0.5 * chroma / (1.0 - luminosity)
     } else {
@@ -68,20 +71,20 @@ fn hue_to_rgb(p: f64, q: f64, t: f64) -> f64 {
     }
     if c < 1.0 / 6.0 {
         return p + (q - p) * 6.0 * c;
-    };
+    }
     if c < 0.5 {
         return q;
-    };
+    }
     if c < 2.0 / 3.0 {
         return p + (q - p) * (2.0 / 3.0 - c) * 6.0;
-    };
+    }
     p
 }
 
 pub fn hsl_to_rgb(hsl: [i32; 3]) -> [i32; 3] {
-    let hue = (hsl[0] as f64) / 360.0;
-    let saturation = (hsl[1] as f64) / 100.0;
-    let luminosity = (hsl[2] as f64) / 100.0;
+    let hue = f64::from(hsl[0]) / 360.0;
+    let saturation = f64::from(hsl[1]) / 100.0;
+    let luminosity = f64::from(hsl[2]) / 100.0;
 
     let (red, green, blue) = if saturation == 0.0 {
         // achromatic
@@ -113,7 +116,7 @@ pub fn hex_with_tint_to_rgb(hex: &str, tint: f64) -> String {
         return hex.to_string();
     }
     let mut hsl = rgb_to_hsl(hex_to_rgb(hex));
-    let l = hsl[2] as f64;
+    let l = f64::from(hsl[2]);
     if tint < 0.0 {
         // Lum’ = Lum * (1.0 + tint)
         hsl[2] = (l * (1.0 + tint)).round() as i32;
@@ -121,7 +124,7 @@ pub fn hex_with_tint_to_rgb(hex: &str, tint: f64) -> String {
         // HLSMAX here would be 100, for Excel 255
         // Lum‘ = Lum * (1.0-tint) + (HLSMAX – HLSMAX * (1.0-tint))
         hsl[2] = (l + (100.0 - l) * tint).round() as i32;
-    };
+    }
     rgb_to_hex(hsl_to_rgb(hsl))
 }
 
@@ -217,7 +220,7 @@ mod tests {
                 hsl: [330, 31, 45],
             },
         ];
-        for color in color_tests.iter() {
+        for color in &color_tests {
             let rgb = color.rgb;
             let hsl = color.hsl;
             assert_eq!(rgb, hex_to_rgb(&color.hex));

@@ -13,7 +13,7 @@ use crate::test::util::new_empty_model;
 fn probe_model(formulas: &[(&str, &str)]) -> Model {
     let mut model = new_empty_model();
     for (row, value) in [1, 2, 4, 3, 7, 5, 8, 6].iter().enumerate() {
-        model._set(&format!("A{}", row + 1), &value.to_string());
+        model.set_a1(&format!("A{}", row + 1), &value.to_string());
     }
     for (cell, value) in [
         ("B1", "3"),
@@ -27,10 +27,10 @@ fn probe_model(formulas: &[(&str, &str)]) -> Model {
         ("G5", "1"),
         ("G6", "2"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (cell, formula) in formulas {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     model
@@ -46,7 +46,7 @@ fn assert_cells(cases: &[(&str, &str)]) {
     let formulas: Vec<(&str, &str)> = cells.iter().map(|(c, f)| (c.as_str(), *f)).collect();
     let model = probe_model(&formulas);
     for ((cell, formula), (_, expected)) in cells.iter().zip(cases) {
-        assert_eq!(model._get_text(cell), *expected, "{formula}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{formula}");
     }
 }
 
@@ -177,20 +177,20 @@ fn filled_column_model() -> Model {
 #[test]
 fn a_sorted_column_against_many_elements_runs_and_the_bound_holds() {
     let mut model = filled_column_model();
-    model._set("C1", "=ROWS(LARGE(A1:A1000000,SEQUENCE(200)))");
-    model._set("C2", "=INDEX(LARGE(A1:A1000000,SEQUENCE(200)),200)");
-    model._set("C3", "=INDEX(SMALL(A1:A1000000,SEQUENCE(200)),200)");
-    model._set("C4", "=ROWS(PERCENTILE(A1:A1000000,SEQUENCE(200)/200))");
-    model._set(
+    model.set_a1("C1", "=ROWS(LARGE(A1:A1000000,SEQUENCE(200)))");
+    model.set_a1("C2", "=INDEX(LARGE(A1:A1000000,SEQUENCE(200)),200)");
+    model.set_a1("C3", "=INDEX(SMALL(A1:A1000000,SEQUENCE(200)),200)");
+    model.set_a1("C4", "=ROWS(PERCENTILE(A1:A1000000,SEQUENCE(200)/200))");
+    model.set_a1(
         "C5",
         "=ROWS(PERCENTRANK(A1:A1000000,SEQUENCE(1100),SEQUENCE(1,1000)))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "200");
-    assert_eq!(model._get_text("C2"), "999801");
-    assert_eq!(model._get_text("C3"), "200");
-    assert_eq!(model._get_text("C4"), "200");
-    assert_eq!(model._get_text("C5"), "#ERROR!");
+    assert_eq!(model.get_text_a1("C1"), "200");
+    assert_eq!(model.get_text_a1("C2"), "999801");
+    assert_eq!(model.get_text_a1("C3"), "200");
+    assert_eq!(model.get_text_a1("C4"), "200");
+    assert_eq!(model.get_text_a1("C5"), "#ERROR!");
 }
 
 /// TRIMMEAN averages the kept values per element, so it is charged elements × cells and a
@@ -198,11 +198,11 @@ fn a_sorted_column_against_many_elements_runs_and_the_bound_holds() {
 #[test]
 fn trimmean_is_charged_per_element() {
     let mut model = filled_column_model();
-    model._set("C1", "=ROWS(TRIMMEAN(A1:A1000000,SEQUENCE(200)/1000))");
-    model._set("C2", "=ROWS(TRIMMEAN(A1:A1000,SEQUENCE(200)/1000))");
+    model.set_a1("C1", "=ROWS(TRIMMEAN(A1:A1000000,SEQUENCE(200)/1000))");
+    model.set_a1("C2", "=ROWS(TRIMMEAN(A1:A1000,SEQUENCE(200)/1000))");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "#ERROR!");
-    assert_eq!(model._get_text("C2"), "200");
+    assert_eq!(model.get_text_a1("C1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("C2"), "200");
 }
 
 /// Kernel errors carry no message, so a failing element allocates nothing.
@@ -217,8 +217,8 @@ fn element_errors_carry_no_message() {
         ("W6", "=TRIMMEAN(A1:A8,1)"),
     ]);
     for cell in ["W1", "W2", "W3", "W4", "W5", "W6"] {
-        assert!(model._get_text(cell).starts_with('#'), "{cell}");
-        assert_eq!(model._get_error_message(cell), "", "{cell}");
+        assert!(model.get_text_a1(cell).starts_with('#'), "{cell}");
+        assert_eq!(model.get_error_message_a1(cell), "", "{cell}");
     }
 }
 

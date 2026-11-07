@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::match_same_arms
+)]
+// LINT-DEBT-END
 use std::sync::Arc;
 
 use crate::arithmetic::{extended_sum, flush_subnormal};
@@ -562,7 +569,7 @@ impl Model {
                     message: "Arrays not supported yet".to_string(),
                 })
             }
-            CalcResult::EmptyCell | CalcResult::EmptyArg => "".to_string(),
+            CalcResult::EmptyCell | CalcResult::EmptyArg => String::new(),
             CalcResult::Array(_) | CalcResult::Lambda(_) => {
                 return Err(CalcResult::Error {
                     error: Error::NIMPL,
@@ -604,7 +611,7 @@ impl Model {
     fn db_criteria_columns(&mut self, query: &DbQuery) -> Vec<Option<i32>> {
         let (c_left, c_right) = query.criteria;
         let header_text = |model: &mut Model, row: i32, sheet: u32, column: i32| {
-            let value = model.evaluate_cell(CellReferenceIndex { sheet, row, column });
+            let value = model.evaluate_cell(CellReferenceIndex { sheet, column, row });
             match value {
                 CalcResult::EmptyCell | CalcResult::EmptyArg => None,
                 value => Model::cast_string_ref(&value, query.left)
@@ -653,28 +660,25 @@ impl Model {
                     if matches!(condition, CalcResult::EmptyCell | CalcResult::EmptyArg) {
                         return true;
                     }
-                    match db_column {
-                        Some(db_column) => {
-                            let value = self.evaluate_cell(CellReferenceIndex {
-                                sheet: query.left.sheet,
-                                row,
-                                column: *db_column,
-                            });
-                            self.criteria_cell_matches(&value, &condition)
-                        }
-                        None => {
-                            let condition = self.db_computed_condition(
-                                query,
-                                row,
-                                CellReferenceIndex {
-                                    sheet: c_left.sheet,
-                                    row: criteria_row,
-                                    column,
-                                },
-                                condition,
-                            );
-                            computed_criterion_holds(&condition)
-                        }
+                    if let Some(db_column) = db_column {
+                        let value = self.evaluate_cell(CellReferenceIndex {
+                            sheet: query.left.sheet,
+                            row,
+                            column: *db_column,
+                        });
+                        self.criteria_cell_matches(&value, &condition)
+                    } else {
+                        let condition = self.db_computed_condition(
+                            query,
+                            row,
+                            CellReferenceIndex {
+                                sheet: c_left.sheet,
+                                row: criteria_row,
+                                column,
+                            },
+                            condition,
+                        );
+                        computed_criterion_holds(&condition)
                     }
                 })
         })

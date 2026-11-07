@@ -5,15 +5,15 @@ use crate::test::util::new_empty_model;
 #[test]
 fn arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "=SUMSQ()");
-    model._set("A2", "=SUMSQ(2)");
-    model._set("A3", "=SUMSQ(1, 2)");
+    model.set_a1("A1", "=SUMSQ()");
+    model.set_a1("A2", "=SUMSQ(2)");
+    model.set_a1("A3", "=SUMSQ(1, 2)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"4");
-    assert_eq!(model._get_text("A3"), *"5");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"4");
+    assert_eq!(model.get_text_a1("A3"), *"5");
 }
 
 // ── whole-column range and a spill beyond the used area ─────────────────────
@@ -25,29 +25,29 @@ fn arguments() {
 #[test]
 fn whole_column_sees_a_spill_beyond_the_used_area() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1,1,SUMSQ(D:D))");
-    model._set("C1", "=SEQUENCE(3,1,10)");
-    model._set("D1", "=SEQUENCE(5)");
+    model.set_a1("A1", "=SEQUENCE(1,1,SUMSQ(D:D))");
+    model.set_a1("C1", "=SEQUENCE(3,1,10)");
+    model.set_a1("D1", "=SEQUENCE(5)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "55");
+    assert_eq!(model.get_text_a1("A1"), "55");
     assert_eq!(model.evaluation.restarts_in_last_evaluation, 1);
 
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "55");
+    assert_eq!(model.get_text_a1("A1"), "55");
     assert_eq!(model.evaluation.restarts_in_last_evaluation, 0);
 }
 
 #[test]
 fn typed_text_and_booleans_count_but_range_ones_do_not() {
     let mut model = new_empty_model();
-    model._set("A1", "=SUMSQ(TRUE,TRUE,FALSE)");
-    model._set("A2", "=SUMSQ(\"2\",\"3\",4)");
-    model._set("B1", "=TRUE");
-    model._set("B2", "x");
-    model._set("B3", "5");
-    model._set("A3", "=SUMSQ(B1:B3)");
+    model.set_a1("A1", "=SUMSQ(TRUE,TRUE,FALSE)");
+    model.set_a1("A2", "=SUMSQ(\"2\",\"3\",4)");
+    model.set_a1("B1", "=TRUE");
+    model.set_a1("B2", "x");
+    model.set_a1("B3", "5");
+    model.set_a1("A3", "=SUMSQ(B1:B3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"2");
-    assert_eq!(model._get_text("A2"), *"29");
-    assert_eq!(model._get_text("A3"), *"25");
+    assert_eq!(model.get_text_a1("A1"), *"2");
+    assert_eq!(model.get_text_a1("A2"), *"29");
+    assert_eq!(model.get_text_a1("A3"), *"25");
 }

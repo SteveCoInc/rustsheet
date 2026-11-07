@@ -1,4 +1,7 @@
 //! The LET variables and LAMBDA parameters in scope, and what each is bound to.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

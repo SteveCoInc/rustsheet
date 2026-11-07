@@ -129,5 +129,5 @@ pub(super) fn remove_redundant_legacy_intersection(node: &mut Node, add: bool, a
                 remove_redundant_legacy_intersection(arg, child_add, arrays);
             }
         }
-    };
+    }
 }

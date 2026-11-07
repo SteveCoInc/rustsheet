@@ -199,7 +199,7 @@ impl Model {
                 let sheet = range.left.sheet;
                 for row in range.left.row..=row2 {
                     for column in range.left.column..=column2 {
-                        f(self, CellReferenceIndex { sheet, row, column })?;
+                        f(self, CellReferenceIndex { sheet, column, row })?;
                     }
                 }
                 Ok(())
@@ -287,7 +287,7 @@ impl Model {
             // search of the row.
             self.spend_walk(budget, (columns.len() as u64).max(1), cell)?;
             for &column in columns.iter() {
-                f(self, CellReferenceIndex { sheet, row, column })?;
+                f(self, CellReferenceIndex { sheet, column, row })?;
             }
             from = row + 1;
         }
@@ -375,7 +375,7 @@ impl Model {
             let merge = batches.len().div_ceil(4);
             self.spend_walk(budget, row_columns.len().max(merge) as u64, cell)?;
             for &column in &row_columns {
-                f(self, CellReferenceIndex { sheet, row, column })?;
+                f(self, CellReferenceIndex { sheet, column, row })?;
             }
             from = row + 1;
         }

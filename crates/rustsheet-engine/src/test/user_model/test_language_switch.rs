@@ -42,7 +42,7 @@ fn defined_name_created_in_spanish_undo_redo() {
         .new_defined_name("MiSi", None, "=LAMBDA(x, SI(x>0, 1, 2))")
         .unwrap();
     model.set_user_input(0, 1, 1, "=MiSi(5)").unwrap();
-    assert_eq!(model.model._get_text("A1"), *"1");
+    assert_eq!(model.model.get_text_a1("A1"), *"1");
 
     // Stored in English, displayed in Spanish.
     assert_eq!(
@@ -67,7 +67,7 @@ fn defined_name_created_in_spanish_undo_redo() {
         "=LAMBDA(x, IF(x>0, 1, 2))"
     );
     model.redo().unwrap(); // redo the A1 input
-    assert_eq!(model.model._get_text("A1"), *"1");
+    assert_eq!(model.model.get_text_a1("A1"), *"1");
 }
 
 // ---------------------------------------------------------------------------

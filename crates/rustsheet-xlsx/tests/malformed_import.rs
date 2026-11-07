@@ -1,4 +1,7 @@
 //! Malformed workbooks are untrusted input: import must return an error, never panic (T-0118).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 
 use std::error::Error;
 use std::io::{Cursor, Read, Write};
@@ -842,12 +845,12 @@ fn many_merged_ranges_import_quickly_and_keep_the_first_of_intersecting_ones() -
     Ok(())
 }
 
-/// Whole-column merged ranges, a thousand of them: clearing their covered cells walks the cells
-/// stored, not the 2^30 cells the ranges name, and still empties the ones covered (T-3442). It
+/// Whole-column merged ranges, a thousand of them: importing them walks the ranges, not the 2^30 cells they name, and keeps the stored content of
+/// the covered cells (T-3442, SPEC-0036 I1). It
 /// takes about 0.1 s; the bound of 10 s leaves room for a slow runner, while the old walk, about
 /// 10^9 lookups, took minutes.
 #[test]
-fn many_whole_column_merges_import_quickly_and_clear_covered_cells() -> TestResult {
+fn many_whole_column_merges_import_quickly_and_keep_covered_cells() -> TestResult {
     let refs: Vec<String> = (1..=1000)
         .map(|column| {
             let name = number_to_column(column).unwrap_or_default();
@@ -865,7 +868,7 @@ fn many_whole_column_merges_import_quickly_and_clear_covered_cells() -> TestResu
     );
     let model = Model::from_workbook(workbook, "en")?;
     assert_eq!(model.get_formatted_cell_value(0, 1, 1)?, "1");
-    assert_eq!(model.get_formatted_cell_value(0, 500_000, 1)?, "");
-    assert_eq!(model.get_formatted_cell_value(0, 500_000, 2)?, "");
+    assert_eq!(model.get_formatted_cell_value(0, 500_000, 1)?, "2");
+    assert_eq!(model.get_formatted_cell_value(0, 500_000, 2)?, "3");
     Ok(())
 }

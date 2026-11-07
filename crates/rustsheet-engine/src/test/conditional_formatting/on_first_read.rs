@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_sign_loss)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 //! Conditional formats are evaluated on the first style read after a load, an `evaluate()` or
@@ -136,7 +139,7 @@ fn a_read_computes_a_formula_written_since_evaluate() {
     model.evaluate();
     model.set_user_input(0, 3, 1, "=7*1".to_string()).unwrap();
     assert!(red(&mut model, 3));
-    assert_eq!(model._get_text("A3"), "7");
+    assert_eq!(model.get_text_a1("A3"), "7");
 }
 
 /// A cell's styles read alone (only the rules over it evaluated, T-0476) are the styles the

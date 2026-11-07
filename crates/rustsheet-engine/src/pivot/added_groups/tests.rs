@@ -1,4 +1,8 @@
 #![allow(clippy::unwrap_used, clippy::panic, reason = "tests")]
+#![expect(
+    clippy::float_cmp,
+    reason = "each total is compared bit-exact with the one Excel rendered"
+)]
 //! Tests of the added group fields a refresh derives again (T-4171), against the sidecars of
 //! probes/t4170-pivot-manual-groups and probes/t4170-pivot-date-levels: each old cache is the one
 //! the importer builds from the case builder's parts (the saved group items are the sidecar's

@@ -14,34 +14,34 @@ fn fn_disc_example() {
     // 142 actual days / 366 (2008 leap year) = 0.38798 yearfrac
     // DISC = (1 - 97.975/100) / 0.38798 ≈ 0.052193662
     let mut model = new_empty_model();
-    model._set("A1", "=DISC(39472, 39614, 97.975, 100, 1)");
+    model.set_a1("A1", "=DISC(39472, 39614, 97.975, 100, 1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0.052193662");
+    assert_eq!(model.get_text_a1("A1"), *"0.052193662");
 }
 
 #[test]
 fn fn_disc_default_basis() {
     let mut model = new_empty_model();
-    model._set("A1", "=DISC(39472, 39614, 97.975, 100)");
+    model.set_a1("A1", "=DISC(39472, 39614, 97.975, 100)");
     model.evaluate();
     // basis 0: days360(39472,39614)/360
-    assert!(model._get_text("A1").starts_with("0.05"));
+    assert!(model.get_text_a1("A1").starts_with("0.05"));
 }
 
 #[test]
 fn fn_disc_error_pr_zero() {
     let mut model = new_empty_model();
-    model._set("A1", "=DISC(39472, 39614, 0, 100, 1)");
+    model.set_a1("A1", "=DISC(39472, 39614, 0, 100, 1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 #[test]
 fn fn_disc_error_settlement_after_maturity() {
     let mut model = new_empty_model();
-    model._set("A1", "=DISC(39614, 39472, 97.975, 100, 1)");
+    model.set_a1("A1", "=DISC(39614, 39472, 97.975, 100, 1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 // =============================================================================
@@ -52,38 +52,38 @@ fn fn_disc_error_settlement_after_maturity() {
 fn fn_fvschedule_example() {
     // principal=1, schedule={0.09, 0.11, 0.1}
     let mut model = new_empty_model();
-    model._set("B1", "0.09");
-    model._set("B2", "0.11");
-    model._set("B3", "0.1");
-    model._set("A1", "=FVSCHEDULE(1, B1:B3)");
+    model.set_a1("B1", "0.09");
+    model.set_a1("B2", "0.11");
+    model.set_a1("B3", "0.1");
+    model.set_a1("A1", "=FVSCHEDULE(1, B1:B3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"1.33089");
+    assert_eq!(model.get_text_a1("A1"), *"1.33089");
 }
 
 #[test]
 fn fn_fvschedule_single_rate() {
     let mut model = new_empty_model();
-    model._set("B1", "0.05");
-    model._set("A1", "=FVSCHEDULE(1000, B1:B1)");
+    model.set_a1("B1", "0.05");
+    model.set_a1("A1", "=FVSCHEDULE(1000, B1:B1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"1050");
+    assert_eq!(model.get_text_a1("A1"), *"1050");
 }
 
 #[test]
 fn fn_fvschedule_error_rate_too_low() {
     let mut model = new_empty_model();
-    model._set("B1", "-1.5");
-    model._set("A1", "=FVSCHEDULE(1000, B1:B1)");
+    model.set_a1("B1", "-1.5");
+    model.set_a1("A1", "=FVSCHEDULE(1000, B1:B1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"-500");
+    assert_eq!(model.get_text_a1("A1"), *"-500");
 }
 
 #[test]
 fn fn_fvschedule_more() {
     let mut model = new_empty_model();
-    model._set("A1", "=FVSCHEDULE(120, {0.2, 0.4, 0.6, 0.8})");
+    model.set_a1("A1", "=FVSCHEDULE(120, {0.2, 0.4, 0.6, 0.8})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"580.608");
+    assert_eq!(model.get_text_a1("A1"), *"580.608");
 }
 
 // =============================================================================
@@ -95,17 +95,17 @@ fn fn_intrate_example() {
     // settlement=2008-02-15 (39493), maturity=2008-05-15 (39583)
     // investment=1000000, redemption=1014420, basis=2
     let mut model = new_empty_model();
-    model._set("A1", "=INTRATE(39493, 39583, 1000000, 1014420, 2)");
+    model.set_a1("A1", "=INTRATE(39493, 39583, 1000000, 1014420, 2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0.05768");
+    assert_eq!(model.get_text_a1("A1"), *"0.05768");
 }
 
 #[test]
 fn fn_intrate_error_investment_zero() {
     let mut model = new_empty_model();
-    model._set("A1", "=INTRATE(39493, 39583, 0, 1014420, 2)");
+    model.set_a1("A1", "=INTRATE(39493, 39583, 0, 1014420, 2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 // =============================================================================
@@ -119,17 +119,17 @@ fn fn_pricedisc_example() {
     // 14 actual days / 360 → yearfrac=0.038889
     // PRICEDISC = 100 * (1 - 0.0525 * 0.038889) ≈ 99.795833333
     let mut model = new_empty_model();
-    model._set("A1", "=PRICEDISC(39494, 39508, 0.0525, 100, 2)");
+    model.set_a1("A1", "=PRICEDISC(39494, 39508, 0.0525, 100, 2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"99.79583333");
+    assert_eq!(model.get_text_a1("A1"), *"99.79583333");
 }
 
 #[test]
 fn fn_pricedisc_error_discount_zero() {
     let mut model = new_empty_model();
-    model._set("A1", "=PRICEDISC(39494, 39508, 0, 100, 2)");
+    model.set_a1("A1", "=PRICEDISC(39494, 39508, 0, 100, 2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 // =============================================================================
@@ -142,17 +142,17 @@ fn fn_pricemat_example() {
     // issue=2007-11-11 (39397), rate=0.0610, yld=0.0625, basis=0 (US 30/360)
     // par * [(1 + rate * dim) / (1 + yld * dsm) - rate * dis]
     let mut model = new_empty_model();
-    model._set("A1", "=PRICEMAT(39493, 39551, 39397, 0.0610, 0.0625, 0)");
+    model.set_a1("A1", "=PRICEMAT(39493, 39551, 39397, 0.0610, 0.0625, 0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"99.96019575");
+    assert_eq!(model.get_text_a1("A1"), *"99.96019575");
 }
 
 #[test]
 fn fn_pricemat_error_settlement_after_maturity() {
     let mut model = new_empty_model();
-    model._set("A1", "=PRICEMAT(39551, 39493, 39397, 0.061, 0.0625, 0)");
+    model.set_a1("A1", "=PRICEMAT(39551, 39493, 39397, 0.061, 0.0625, 0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 // =============================================================================
@@ -166,17 +166,17 @@ fn fn_received_example() {
     // 90 days / 360 = 0.25 yearfrac
     // RECEIVED = 1000000 / (1 - 0.0575 * 0.25) ≈ 1014584.654
     let mut model = new_empty_model();
-    model._set("A1", "=RECEIVED(39493, 39583, 1000000, 0.0575, 2)");
+    model.set_a1("A1", "=RECEIVED(39493, 39583, 1000000, 0.0575, 2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"1014584.654");
+    assert_eq!(model.get_text_a1("A1"), *"1014584.654");
 }
 
 #[test]
 fn fn_received_error_investment_zero() {
     let mut model = new_empty_model();
-    model._set("A1", "=RECEIVED(39493, 39583, 0, 0.0575, 2)");
+    model.set_a1("A1", "=RECEIVED(39493, 39583, 0, 0.0575, 2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 // =============================================================================
@@ -190,17 +190,17 @@ fn fn_yielddisc_example() {
     // 14 actual days / 360 → yearfrac=0.038889
     // YIELDDISC = (100/97.975 - 1) / 0.038889 ≈ 0.531476689
     let mut model = new_empty_model();
-    model._set("A1", "=YIELDDISC(39494, 39508, 97.975, 100, 2)");
+    model.set_a1("A1", "=YIELDDISC(39494, 39508, 97.975, 100, 2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0.531476689");
+    assert_eq!(model.get_text_a1("A1"), *"0.531476689");
 }
 
 #[test]
 fn fn_yielddisc_error_pr_zero() {
     let mut model = new_empty_model();
-    model._set("A1", "=YIELDDISC(39494, 39508, 0, 100, 2)");
+    model.set_a1("A1", "=YIELDDISC(39494, 39508, 0, 100, 2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 // =============================================================================
@@ -213,17 +213,17 @@ fn fn_yieldmat_example() {
     // issue=2007-11-08 (39394), rate=0.0625, price=100.0123, basis=0 (US 30/360)
     // YIELDMAT = [(1 + rate*dim) / (price/100 + rate*dis) - 1] / dsm
     let mut model = new_empty_model();
-    model._set("A1", "=YIELDMAT(39522, 39755, 39394, 0.0625, 100.0123, 0)");
+    model.set_a1("A1", "=YIELDMAT(39522, 39755, 39394, 0.0625, 100.0123, 0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0.060954334");
+    assert_eq!(model.get_text_a1("A1"), *"0.060954334");
 }
 
 #[test]
 fn fn_yieldmat_error_settlement_after_maturity() {
     let mut model = new_empty_model();
-    model._set("A1", "=YIELDMAT(39755, 39522, 39394, 0.0625, 100.0123, 0)");
+    model.set_a1("A1", "=YIELDMAT(39755, 39522, 39394, 0.0625, 100.0123, 0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 // Settlement serial 0: INTRATE, PRICEDISC and YIELDDISC compute, RECEIVED is #NUM! (T-1757;
@@ -231,25 +231,25 @@ fn fn_yieldmat_error_settlement_after_maturity() {
 #[test]
 fn discount_security_settlement_zero() {
     let mut model = new_empty_model();
-    model._set("A1", "=INTRATE(0,43466,1000,1100)");
-    model._set("A2", "=PRICEDISC(0,43466,0.05,100)");
-    model._set("A3", "=YIELDDISC(0,43466,95,100)");
-    model._set("A4", "=RECEIVED(0,43466,1000,0.05)");
+    model.set_a1("A1", "=INTRATE(0,43466,1000,1100)");
+    model.set_a1("A2", "=PRICEDISC(0,43466,0.05,100)");
+    model.set_a1("A3", "=YIELDDISC(0,43466,95,100)");
+    model.set_a1("A4", "=RECEIVED(0,43466,1000,0.05)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0.000840317");
-    assert_eq!(model._get_text("A2"), *"-495.0138889");
-    assert_eq!(model._get_text("A3"), *"0.000442272");
-    assert_eq!(model._get_text("A4"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"0.000840317");
+    assert_eq!(model.get_text_a1("A2"), *"-495.0138889");
+    assert_eq!(model.get_text_a1("A3"), *"0.000442272");
+    assert_eq!(model.get_text_a1("A4"), *"#NUM!");
 }
 
 #[test]
 fn fn_fvschedule_boolean_principal_is_value_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=FVSCHEDULE(TRUE, {0.1})");
-    model._set("A2", "=FVSCHEDULE(\"1000\", {0.1})");
+    model.set_a1("A1", "=FVSCHEDULE(TRUE, {0.1})");
+    model.set_a1("A2", "=FVSCHEDULE(\"1000\", {0.1})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"1100");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"1100");
 }
 
 #[test]
@@ -293,7 +293,7 @@ fn discount_securities_divide_by_day_count_over_year_length() {
     ];
     let mut model = new_empty_model();
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, excel) in cases {
@@ -316,7 +316,7 @@ fn effect_and_nominal_use_excels_power() {
         ("A3", "=EFFECT(0.05,4)", 0.050_945_336_914_062_445),
     ];
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cases {
@@ -333,12 +333,12 @@ fn effect_and_nominal_overflow_is_num_error() {
     // probes/effect-overflow-power-of-ten (excel-graph): an overflowing `^` is #NUM!, and
     // EFFECT(270,30) is 1E30 (T-2241).
     let mut model = new_empty_model();
-    model._set("A1", "=EFFECT(1E300,2)");
-    model._set("A2", "=NOMINAL(1E300,0.5)");
-    model._set("A3", "=EFFECT(270,30)");
+    model.set_a1("A1", "=EFFECT(1E300,2)");
+    model.set_a1("A2", "=NOMINAL(1E300,0.5)");
+    model.set_a1("A3", "=EFFECT(270,30)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
     assert_eq!(
         model.get_cell_value_by_ref("Sheet1!A3"),
         Ok(CellValue::Number(1e30))
@@ -354,19 +354,19 @@ fn effect_and_nominal_overflow_is_num_error() {
 #[test]
 fn financial_argument_order_and_booleans() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=RECEIVED(37025,2.5,1E+300,1/0,"abc")"#);
-    model._set("A2", r#"=DISC(37025,2.5,1/0,100,"abc")"#);
-    model._set("A3", "=ACCRINTM(34825,37622,1E-9,TRUE,4)");
-    model._set("A4", "=ACCRINT(TRUE,SQRT(-1),1e-15,100,9984,2,1.9)");
-    model._set("A5", "=AMORDEGRC(90812,36624,38707,453,3,TRUE,4)");
-    model._set("A6", "=AMORDEGRC(70537,36888,7E13,46,12,TRUE,0)");
+    model.set_a1("A1", r#"=RECEIVED(37025,2.5,1E+300,1/0,"abc")"#);
+    model.set_a1("A2", r#"=DISC(37025,2.5,1/0,100,"abc")"#);
+    model.set_a1("A3", "=ACCRINTM(34825,37622,1E-9,TRUE,4)");
+    model.set_a1("A4", "=ACCRINT(TRUE,SQRT(-1),1e-15,100,9984,2,1.9)");
+    model.set_a1("A5", "=AMORDEGRC(90812,36624,38707,453,3,TRUE,4)");
+    model.set_a1("A6", "=AMORDEGRC(70537,36888,7E13,46,12,TRUE,0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_text("A2"), "#VALUE!");
-    assert_eq!(model._get_text("A3"), "#VALUE!");
-    assert_eq!(model._get_text("A4"), "#VALUE!");
-    assert_eq!(model._get_text("A5"), "#VALUE!");
-    assert_eq!(model._get_text("A6"), "#NUM!");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A5"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A6"), "#NUM!");
 }
 
 // The discount securities read the basis first (ACCRINTM last), a date off the calendar is #NUM!
@@ -405,12 +405,12 @@ fn discount_securities_check_order() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -445,12 +445,12 @@ fn amortization_check_order_and_early_purchase() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *expected,
             "{formula}"
         );

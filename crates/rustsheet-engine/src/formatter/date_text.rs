@@ -3,6 +3,9 @@
 //!
 //! Excel: see docs/excel-semantics/dates.md ("Date text is parsed month-first"); evidence
 //! probes/date-text-grammar and probes/date-text-locale (excel-graph, en-US).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use crate::{
     constants::{MAXIMUM_DATE_SERIAL_NUMBER, MINIMUM_DATE_SERIAL_NUMBER},

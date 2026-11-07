@@ -4,6 +4,7 @@ use std::io::Cursor;
 use std::path::Path;
 
 use rustsheet_xlsx::error::XlsxError;
+use rustsheet_xlsx::export::SaveReport;
 
 use super::{SaveOptions, Workbook};
 use crate::error::SaveError;
@@ -16,14 +17,26 @@ impl Workbook {
     ///
     /// # Errors
     /// [`SaveError::Engine`] when the engine cannot export the workbook.
-    pub fn to_xlsx_bytes(&self, _opts: SaveOptions) -> Result<Vec<u8>, SaveError> {
+    pub fn to_xlsx_bytes(&self, opts: SaveOptions) -> Result<Vec<u8>, SaveError> {
+        self.to_xlsx_bytes_with_report(opts).map(|(bytes, _)| bytes)
+    }
+
+    /// [`Self::to_xlsx_bytes`], also saying how the package was written and what it left out
+    /// (SPEC-0033 D7, SPEC-0034 D4).
+    ///
+    /// # Errors
+    /// As [`Self::to_xlsx_bytes`].
+    pub fn to_xlsx_bytes_with_report(
+        &self,
+        _opts: SaveOptions,
+    ) -> Result<(Vec<u8>, SaveReport), SaveError> {
         let engine = |e: XlsxError| SaveError::Engine(e.to_string());
         let Some(source) = &self.source else {
             return rustsheet_xlsx::export::save_xlsx_to_writer(
                 &self.model,
                 Cursor::new(Vec::new()),
             )
-            .map(Cursor::into_inner)
+            .map(|w| (w.into_inner(), SaveReport::without_source()))
             .map_err(engine);
         };
         // What changed since the load is the difference from the source imported again the same
@@ -36,9 +49,10 @@ impl Workbook {
             &self.model,
             &pristine,
             &source.bytes,
+            &source.limits,
             Cursor::new(Vec::new()),
         )
-        .map(|(w, _tier)| w.into_inner())
+        .map(|(w, report)| (w.into_inner(), report))
         .map_err(engine)
     }
 
@@ -49,8 +63,20 @@ impl Workbook {
     /// # Errors
     /// [`SaveError::Io`] if the file cannot be written, otherwise as [`Self::to_xlsx_bytes`].
     pub fn save_xlsx(&self, path: impl AsRef<Path>, opts: SaveOptions) -> Result<(), SaveError> {
-        let bytes = self.to_xlsx_bytes(opts)?;
+        self.save_xlsx_with_report(path, opts).map(|_| ())
+    }
+
+    /// [`Self::save_xlsx`], also returning the [`SaveReport`].
+    ///
+    /// # Errors
+    /// As [`Self::save_xlsx`].
+    pub fn save_xlsx_with_report(
+        &self,
+        path: impl AsRef<Path>,
+        opts: SaveOptions,
+    ) -> Result<SaveReport, SaveError> {
+        let (bytes, report) = self.to_xlsx_bytes_with_report(opts)?;
         std::fs::write(path, bytes)?;
-        Ok(())
+        Ok(report)
     }
 }
