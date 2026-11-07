@@ -5,7 +5,7 @@
 //! `Patched` when only cells changed (`patch`, T-4560), `Regenerated` otherwise, which keeps the
 //! source's `PivotChart` drawings (`pivot_drawings`, T-4950).
 
-use std::io::{Seek, Write};
+use std::io::{Cursor, Seek, Write};
 
 use rustsheet_engine::Model;
 
@@ -65,8 +65,12 @@ pub fn save_preserving<W: Write + Seek>(
         }
         Err(reason) => reason,
     };
-    let (writer, kept) = save_regenerated(model, pristine, source, writer)?;
-    let dropped = report::regenerated(source, &kept, limits);
+    // Written to memory first: the report compares the saved package's own inventory with the
+    // source's (SPEC-0034 D5.1, T-4999).
+    let (buffer, kept) = save_regenerated(model, pristine, source, Cursor::new(Vec::new()))?;
+    let bytes = buffer.into_inner();
+    writer.write_all(&bytes)?;
+    let dropped = report::regenerated(source, &bytes, &kept, limits);
     Ok((
         writer,
         SaveReport::new(SaveTier::Regenerated { reason }, dropped),
