@@ -153,7 +153,7 @@ as Excel does, with one data field (the T-2085 section's "Overflow" paragraph; i
 are `#REF!` until T-4804). Count pivots of an all-numeric field match
 Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674; they cannot tell COUNT from COUNTA).
 Max, Min, Product, Var and StdDev pivots: see the T-2085 section's "Aggregates over one record or none" paragraph.
-Structural edits: see "Pivot tables and structural edits" below. xlsx export writes pivots (T-4176; pivots.md "Excel for the web opens engine-exported pivot parts"), except a grouped cache, dropped with its pivots (T-4734).
+Structural edits: see "Pivot tables and structural edits" below. xlsx export writes pivots (T-4176; pivots.md "Excel for the web opens engine-exported pivot parts"), grouped caches included (T-4734; pivots.md "Excel for the web opens engine-exported grouped pivot caches").
 
 ## GETPIVOTDATA on other pivot shapes (T-2085)
 Rule: GETPIVOTDATA answers the value the pivot shows, for every shape SPEC-0015 left unprobed. It reads the shown

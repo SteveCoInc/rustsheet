@@ -71,7 +71,11 @@ pub use result::{
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
 pub const MAX_RECORDS: usize = 1_048_576;
-/// Most record values (records x fields) in one cache, and over the whole workbook.
+/// Most record values (records x fields) in one cache, and over the whole workbook. A field
+/// grouped in place also keeps its own records ([`CacheField::ungrouped`]), which this count
+/// leaves out: at most one such copy per field, so a cache holds at most twice the record values
+/// counted here. That factor of two is an accepted bound on memory (directive 5), not an Excel
+/// limit (T-4734).
 pub const MAX_RECORD_VALUES: usize = 10_000_000;
 /// Most items over all fields of one cache.
 pub const MAX_ITEMS: usize = 1_000_000;
@@ -129,6 +133,25 @@ pub struct CacheField {
     /// every other field of the cache, and is only a data field: its value in each cell is the
     /// formula over that cell's sums (`calculated`, T-4174).
     pub formula: Option<String>,
+    /// For a field grouped in place by a range ([`CacheField::number_groups`],
+    /// [`CacheField::date_groups`]), its own values before the grouping: the file keeps them as
+    /// the field's shared items and record values and derives the groups from them, so the export
+    /// writes them back (T-4734). Set by [`keep_ungrouped`] where a field is grouped in place.
+    /// `None` for an ungrouped field and for a field Excel added, whose values are its base
+    /// field's.
+    pub ungrouped: Option<UngroupedValues>,
+}
+
+/// A range-grouped field's own items and records ([`CacheField::ungrouped`]): what the field
+/// held before [`group_by_numbers`] or [`group_by_dates`] grouped it. At most one copy per
+/// field, so a cache holds at most twice the record values it counts against
+/// [`MAX_RECORD_VALUES`] (directive 5).
+#[derive(Encode, Decode, Debug, PartialEq, Clone, Default)]
+pub struct UngroupedValues {
+    /// The field's distinct values, as [`CacheField::items`] held them.
+    pub items: Vec<CacheItem>,
+    /// Per record, an index into `items`.
+    pub records: Vec<u32>,
 }
 
 /// One value of a cache field.
@@ -243,6 +266,34 @@ impl PivotCache {
     }
 }
 
+/// `grouped`, the range grouping of `base` that replaces it in place ([`group_by_numbers`],
+/// [`group_by_dates`], [`regroup`]), keeping `base`'s items and records as its
+/// [`CacheField::ungrouped`] values, moved rather than copied; `grouped` as it is when it holds no
+/// range grouping (a refresh that dropped one). The one step every in-place grouping takes (the
+/// xlsx importer, [`refresh`], `Txn::add_pivot_table`), so the export can write the field's own
+/// values back (T-4734). A field Excel added is not grouped in place and keeps none.
+#[must_use]
+pub fn keep_ungrouped(base: CacheField, mut grouped: CacheField) -> CacheField {
+    if grouped.number_groups.is_some() || grouped.date_groups.is_some() {
+        grouped.ungrouped = Some(UngroupedValues {
+            items: base.items,
+            records: base.records,
+        });
+    }
+    grouped
+}
+
+/// Whether two of `items`' texts differ only in case (folded as a refresh finds an item,
+/// [`ItemKey::identity`]): [`CacheField::has_case_variant_texts`] over any list of items, such
+/// as a grouped field's own values (T-4734).
+#[must_use]
+pub fn has_case_variant_texts(items: &[CacheItem]) -> bool {
+    let mut seen = HashSet::new();
+    (items.iter())
+        .filter(|item| matches!(item, CacheItem::Text(_)))
+        .any(|item| !seen.insert(ItemKey::identity(item)))
+}
+
 impl CacheField {
     /// Whether the field's items are group items a refresh builds again: a range grouping, or a
     /// field Excel added to group another ([`AddedGroup`]).
@@ -258,10 +309,7 @@ impl CacheField {
     /// file corrupt"), so the export (T-4176) does not write one.
     #[must_use]
     pub fn has_case_variant_texts(&self) -> bool {
-        let mut seen = HashSet::new();
-        (self.items.iter())
-            .filter(|item| matches!(item, CacheItem::Text(_)))
-            .any(|item| !seen.insert(ItemKey::identity(item)))
+        has_case_variant_texts(&self.items)
     }
 }
 
