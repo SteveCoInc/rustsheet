@@ -55,7 +55,7 @@ Open PRs: 20 at 06:35 UTC (24 last run), 12 of them drafts.
 
 Queues:
 - `make ready-tasks LANE=functions` printed 16 (≥ 3), so the gap-triager did not run.
-- Current-milestone lanes (M6): every failing M6 exit cell is owned. engine, the critical lane, had 1 ready task, so I ran the planner for engine Phase 1 exit work (see the PR). api had 4 ready, harness 19, quality 9 and research 165.
+- Current-milestone lanes (M6): every failing M6 exit cell is owned. engine, the critical lane, printed 1 ready, so I ran the planner for engine Phase 1 exit work. It filed nothing. Every exit cell from M6 to M11 has an open owner. The engine count is low because T-4736, T-4737 and T-4738 hold its three opus slots, and about ten more ready M7–M11 engine tasks sit behind them (decision 0332). api had 4 ready, harness 19, quality 9 and research 165.
 - `TIER=sonnet` printed 220 (≥ 10).
 
 Upstream IronCalc: `scripts/upstream-log.sh` listed no commits after the last triaged one, so there was nothing to file.
