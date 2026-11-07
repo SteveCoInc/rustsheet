@@ -3,7 +3,7 @@ id: T-4421
 title: "Export a dynamic-array value spilled into a table totals cell in a form Excel loads; reword xlsx-storage.md's constant-totals sentence"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
