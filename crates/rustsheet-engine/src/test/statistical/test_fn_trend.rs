@@ -189,8 +189,8 @@ fn growth_slopes_factor_edges() {
     assert_eq!(model._get_text("A3"), "#NUM!");
 }
 
-// GROWTH forms each variable's factor e^(m_j x_j) on its own: factors e^-720 and e^720 are #NUM!,
-// not e^0; and a subnormal prediction from normal factors is 0 (probes/t4793-growth-several-x
+// GROWTH multiplies each variable's factor e^(m_j x_j) left to right, flushing each partial
+// product: factors e^-720 then e^720 are #NUM! (0·inf), not e^0; and a subnormal prediction from normal factors is 0 (probes/t4793-growth-several-x
 // Multi A1, SubProd A2; statistics.md "GROWTH is #NUM! once LOGEST's b or a slope's factor
 // overflows ...", T-4793).
 #[test]
