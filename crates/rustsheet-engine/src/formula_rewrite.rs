@@ -8,11 +8,16 @@ use crate::{
     expressions::{
         lexer::LexerMode,
         parser::{
-            stringify::{to_english_string, to_rc_format, to_string_displaced, DisplaceData},
+            stringify::{
+                to_english_string, to_rc_format, to_string_displaced, to_string_displaced_keeping,
+                DisplaceData, Displacement,
+            },
             Node,
         },
         types::CellReferenceRC,
     },
+    language::get_default_language,
+    locale::get_default_locale,
     model::Model,
     types::Cell,
 };
@@ -231,4 +236,56 @@ enum FormulaPlace {
     Shared { sheet_id: u32, index: usize },
     /// A defined name, by its index in the workbook's list.
     DefinedName(usize),
+}
+
+impl Model {
+    /// Rewrites every defined name's formula for a row or column insert or delete on `sheet`, as a
+    /// cell formula's references are rewritten: Excel shifts a name over the lines after the edit,
+    /// shrinks a range that loses an edge and makes a name on a deleted cell `#REF!`
+    /// (probes/sheet-ops/t4702-names-*, t4702-name-deleted-cell-*, excel-graph, 2026-11-07).
+    /// Moves are left alone (unprobed). Names are stored in English and have no cell of their
+    /// own: A1 of the edited sheet anchors them, which only a relative reference reads (unprobed).
+    /// A name the edit does not change keeps its text as stored.
+    pub(crate) fn displace_defined_names(&mut self, sheet: u32, displacement: Displacement) {
+        if !matches!(
+            displacement.data,
+            DisplaceData::Row { .. } | DisplaceData::Column { .. }
+        ) {
+            return;
+        }
+        let Some(worksheet) = self.workbook.worksheets.get(sheet as usize) else {
+            return;
+        };
+        let context = CellReferenceRC {
+            sheet: worksheet.get_name(),
+            row: 1,
+            column: 1,
+        };
+        let (locale, language) = (self.locale, self.language);
+        self.parser.set_locale(get_default_locale());
+        self.parser.set_language(get_default_language());
+        let mut changed = false;
+        for defined_name in &mut self.workbook.defined_names {
+            let stored = defined_name.formula.trim_start();
+            let (eq, body) = stored.strip_prefix('=').map_or(("", stored), |b| ("=", b));
+            let node = self.parser.parse(body, &context);
+            let displaced = to_string_displaced_keeping(
+                &node,
+                &context,
+                displacement,
+                get_default_locale(),
+                get_default_language(),
+            );
+            if displaced != to_english_string(&node, &context) {
+                defined_name.formula = format!("{eq}{displaced}");
+                changed = true;
+            }
+        }
+        self.parser.set_locale(locale);
+        self.parser.set_language(language);
+        if changed {
+            // Evaluation reads the parsed names, not the stored text.
+            self.parse_defined_names();
+        }
+    }
 }
