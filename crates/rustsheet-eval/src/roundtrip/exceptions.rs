@@ -52,7 +52,7 @@ pub(super) fn load(suite: &Suite) -> anyhow::Result<Vec<Exception>> {
 /// `T-<digits>` or `decision <4 digits>`.
 fn owned(owner: &str) -> bool {
     let digits = |s: &str, n: Option<usize>| {
-        !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()) && n.map_or(true, |n| s.len() == n)
+        !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()) && n.is_none_or(|n| s.len() == n)
     };
     owner.strip_prefix("T-").is_some_and(|d| digits(d, None))
         || owner

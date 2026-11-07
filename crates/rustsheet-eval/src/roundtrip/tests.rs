@@ -215,7 +215,7 @@ fn v8_and_r0_run_on_a_real_workbook() {
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../eval/suites/fixtures/cases");
     let path = root.join("circular-keeps-cached-values.xlsx");
     let bytes = std::fs::read(&path).expect("fixture");
-    let Ok((items, _)) = r0(&bytes, Some("circular-keeps-cached-values.xlsx")) else {
+    let Ok((items, _, _)) = r0(&bytes, Some("circular-keeps-cached-values.xlsx")) else {
         panic!("R0 runs on a fixture");
     };
     assert!(items.iter().all(|i| i.kind != "package"), "{items:?}");
@@ -246,6 +246,7 @@ fn a_new_loss_in_an_unchanged_case_is_a_regression() {
         message: None,
         millis: 0,
         checked: items.len(),
+        scenarios: std::collections::BTreeMap::from([("R0", items.len())]),
         items,
     };
     let before = case(vec![
@@ -284,6 +285,7 @@ fn lossy(checked: usize, lost: &[(&str, usize)]) -> CaseResult {
         message: None,
         millis: 0,
         checked,
+        scenarios: std::collections::BTreeMap::from([("R0", checked)]),
         items: lost
             .iter()
             .map(|(key, weight)| Item {

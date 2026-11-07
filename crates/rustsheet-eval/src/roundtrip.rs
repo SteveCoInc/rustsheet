@@ -572,10 +572,13 @@ impl KeptRate {
     }
 }
 
+/// A scenario family as the rates line reports it: its label and which scenarios it holds.
+type Family = (&'static str, fn(&str) -> bool);
+
 /// Each scenario family's kept rate, in run order: `R0`, the `R1/` edits together (their delta
 /// violations over the items they compared), and `R0/again` (idempotence), when the cases ran it.
 fn rates_line(results: &[&CaseResult]) -> String {
-    let families: [(&str, fn(&str) -> bool); 3] = [
+    let families: [Family; 3] = [
         ("R0", |s| s == "R0"),
         ("R1", |s| s.starts_with("R1/")),
         ("R0/again", |s| s == "R0/again"),
