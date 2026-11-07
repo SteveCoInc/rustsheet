@@ -8549,3 +8549,29 @@ Ours: as Excel since T-4328 (`standardized_moment` in count_and_average.rs, shar
 `fn_kurt`; tests in test_fn_moments.rs). The zero or overflowing m2 stays `#DIV/0!` ("Overflowing squares (T-2432)").
 Status: VERIFIED (excel-graph)
 Tasks: T-4328
+
+## The PR 4002 validation probes (T-4974)
+Rule: the 24 probe groups PR #4002 proposed for the 2026-11-07 Excel-parity fixes (probes/t4974-*, excel-graph, 2026-11-07)
+settle these points; each compares Excel with that PR's prototype prediction.
+- SKEW, SKEW.P and KURT on adversarial data (t4974-moments-x87-adversarial, 204 cells): Excel equals the stored-x87 rule bit
+  for bit in every cell ("Standardized moments use stored x87 operations (T-4328)"), and so does ours.
+- LOGNORM.DIST's density holdout (t4974-lognorm-density-holdout, 148 cells): Excel equals the prototype's four-term chain in
+  every cell; ours misses 17 cells visibly until that fix lands.
+- CHISQ.INV.RT above .9999 (t4974-chisq-inv-rt-q-to-p-switch): at df 3, Excel's `CHISQ.INV.RT(p,3)` equals
+  `CHISQ.INV(1-p,3)` bit for bit for every p from .9999 + 2E-6 to .99999 (A2:A33 = G2:G33), and differs from it at
+  .9999 and just below (A1, A34:A37, where it is the Q inversion). Within 4 ulps above .9999 (A38:A41) it equals neither,
+  so the cut sits at .9999 but its first ulps behave differently from both solvers.
+- BETA.INV at p near DBL_MIN (t4974-beta-inv-dbl-min-residual): Excel does not flush the first residual. The quantile is
+  smooth through DBL_MIN (A6 `BETA.INV(2.22507385850721E-308,16.0270968311551,..)` 3.6855664841262965E-20, A7 at
+  2^-1022 3.685566484126281E-20) and its forward CDF (K6, K9) is 3.9074971845766525E-308, not 0. This falsifies the
+  prototype's collapse to the start value.
+- BETA.INV round trips at large shapes (t4974-beta-inv-large-shape-round-trip, column F = BETA.INV(BETA.DIST(x)) - x):
+  Excel returns an early iterate in 10 of 123 rows (33, 34, 52, 70, 71, 73, 86, 88, 105, 106) and x itself in the others,
+  including both t3443 audit rows (F122, F123 = 0).
+- T.DIST.RT at df 1000 (t4974-t-dist-df1000-central-endpoint): `T.DIST.RT(0.5,1000)` is 0.30859254041693746 and
+  `T.DIST.RT(0.8513,1000)` 0.19740326475142156, as the earlier probes gave.
+Evidence: probes/t4974-* (excel-graph, 2026-11-07). The visibly-off cells against ours are owned by T-4994 (BETA.INV),
+T-4995 (F.INV), T-4996 (CHISQ.INV), T-4997 (IRR) and T-4998 (T.INV.2T).
+Ours: matches every SKEW/SKEW.P/KURT cell; the other groups are known failures (eval/baseline/probes.txt).
+Status: VERIFIED (excel-graph)
+Tasks: T-4974

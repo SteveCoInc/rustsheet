@@ -3,7 +3,7 @@ id: T-4974
 title: "Fill the 2026-11-07 probe suggestions (PR 4002) with excel-graph"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P1
 size: M
 tier: opus
@@ -21,12 +21,27 @@ Loader store chain, SKEW/KURT x87 rounding (T-4328), IRR caps, BETA.INV boundari
 copied as `eval/suites/probes/cases/t4974-<group>.case.json` (the `val-` prefix dropped), unchanged otherwise.
 
 ## Acceptance criteria
-- [ ] The 24 cases have excel-graph `.oracle.json` and Gate A `.math.json` sidecars.
-- [ ] Their failing cells are baselined (`make eval-baseline`) and every visibly-off cell has an owner task.
-- [ ] The per-group outcome (which inferred rules Excel confirms or falsifies) is in the Outcome note.
+- [x] The 24 cases have excel-graph `.oracle.json` and Gate A `.math.json` sidecars.
+- [x] Their failing cells are baselined (`make eval-baseline`) and every visibly-off cell has an owner task.
+- [x] The per-group outcome (which inferred rules Excel confirms or falsifies) is in the Outcome note.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The merged-range scenarios M1-M6: they are operation scripts, not cases (`sheet_ops` has no unmerge, clear,
   paste, autofill or edge op); excel-graph cannot run copy, autofill or edge navigation.
 - Fixing the engine where a probe falsifies a rule (owner tasks).
+
+## Outcome
+- The 24 cases are `probes/t4974-<group>.case.json` with excel-graph sidecars (24 filled, no failures) and 23 Gate A
+  math sidecars (the moments case has no single-call cell). The merged-range scenarios M1-M6 are not cases (out of scope).
+- Against ours: 5,775 checked cells, 3,256 known-failure lines (mostly last digit: main lacks the prototype fixes the
+  predictions came from), 325 visibly-off cells outside Phase 1b, owned by T-4994, T-4995, T-4996, T-4997 and T-4998.
+  No other suite changed.
+- Against the prototype (cells bit-exact / within 5e-15 / visibly off or a different error):
+  confirmed outright: moments 204/0/0, LOGNORM density 148/0/0, gamma split complement 205/50/0, AS 109 accuracy
+  exponent 322/302/0, F AS 109 cap 139/36/0, Student-t quarter stop 105/7/0 and tiny centre 111/36/0, T.DIST df 1000
+  83/115/0, NORM.S.INV 82/144/0 (research data). Disagree visibly in some cells (a rule falsified at least there): BETA.INV DBL_MIN residual 30/12/90 (Excel
+  does not flush), tiny-shape `#NUM!` boundary 192/0/80, endpoint saturation 228/23/29, large-shape round trip 670/156/35,
+  gamma small-x prefactor 163/142/55, far upper tail 21/72/17, F tiny tail 75/6/9, F back-transform 286/86/12, Student-t
+  joint stop 92/11/7, IRR 51/8/4, Loader 65/166/3, unit-x .5 220/151/4, small-beta tails 45/14/1. The CHISQ.INV.RT switch
+  is at .9999 at df 3, with Excel's RT equal to CHISQ.INV(1-p) above it (statistics.md "The PR 4002 validation probes").
