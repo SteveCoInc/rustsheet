@@ -46,6 +46,7 @@ pub mod report;
 pub mod roundtrip;
 pub mod run_meta;
 pub mod runner;
+pub mod select;
 mod spec_pivots;
 mod spill_extent;
 pub mod subexpr_case;
