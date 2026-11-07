@@ -36,6 +36,9 @@ ignoring case, and it evaluates a kept custom filter as well as a values filter.
 
 ## Acceptance criteria
 - [ ] probes/t4895-two-criteria-number-format-delete-one passes (its baseline failure line goes).
+- [ ] First a positive control, probed with predictions committed before the fill: the same `0.00` column with its kept
+      filter listing the displayed text ("10.00" .. "60.00"), deleting Cat. The display-text rule rests on one probe
+      where nothing matched, so this control must show the rows the filter keeps before the engine implements it.
 - [ ] Unit tests, in the engine's table-edit tests, for the `blank-rejected` and `custom` uploads (rebuild them with
       docs/research/t4895/uploads.py) and for a rejected visible row with no stored row record.
 - [ ] numbers.md's rule is restated as Excel's re-apply, with the gaps removed.

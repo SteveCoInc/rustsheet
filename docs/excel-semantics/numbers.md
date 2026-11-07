@@ -2387,7 +2387,8 @@ to every data row** (T-4895, excel-graph 2026-11-07; predictions committed befor
   row 4, "a" and 30, also written hidden; the control gives `SUBTOTAL(3,S!B4)` = 0, the delete 1 and 3 = 103 = 5,
   9 = 109 = 17, as the engine). One earlier fill of the delete case without its `COLUMNS(Sales)` reader returned the
   control's values; two later fills with the reader (`COLUMNS` = 2, so the delete ran) reproduced the result above,
-  and the first fill's sidecars are kept in docs/research/t4895/first-fill/.
+  (the 13:36 fill is kept in docs/research/t4895/second-fill/, the 13:37 one is the case's sidecar), and the first
+  fill's sidecars are kept in docs/research/t4895/first-fill/.
 - The kept criterion is matched against the text each row displays, and visible rows it rejects are hidden
   (probes/t4895-two-criteria-number-format-*): with `Ext` formatted `0.00` (10.00 .. 60.00) and its kept values
   filter listing the General text 10, 20, 30, 50, 60, the control reads the file's hidden rows (3 = 103 = 3) but the
