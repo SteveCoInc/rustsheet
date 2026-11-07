@@ -105,7 +105,11 @@ const BINOM_INV_WEIGHT: u32 = 1 << 14;
 /// and those same fractions elsewhere, 0.41 ms the slowest timed, T-3398; every bpser branch has a
 /// term ratio of at most 0.7 and settles in about 110 terms, not its 2,000-term cap), or, at
 /// a huge shape or df, a crossing of at most 67 of those cdfs (`inverse_beta::beta_quantile_crossing`,
-/// T-1538: 0.5 ms), so the full Newton search plus refinement (2.5 ms) is the bound.
+/// T-1538: 0.5 ms), so the full Newton search plus refinement (2.5 ms) is the bound; where that
+/// quantile rounds to 1 at p above 1/2, one more crossing on the flipped tail without a start
+/// (`beta.rs` `upper_quantile_near_one`, T-3351: at most 67 such cdfs, 0.5 ms) makes it 3.0 ms.
+/// 512 elements at 3.0 ms is 1.5 s of kernel time, still under the 1.7 s stated next, so the
+/// weight is unchanged.
 /// The weight caps a lifted call at 2^27 / 2^18 = 512 elements: 1.7 s at the bound (a DEVIATION,
 /// statistics.md). The cases measured cost much less (over 8,192 elements in release: 167 us for
 /// `BETA.INV(1E-300,0.5,1E6)`, a full bisection of fast cdfs; 105 us for the longest Newton search

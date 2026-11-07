@@ -8,7 +8,9 @@ use crate::functions::statistical::bratio::{
     beta_dist_cdf, beta_search_tails, dispatch, l140_overflows, Branch,
 };
 use crate::functions::statistical::incomplete_beta::beta_density;
-use crate::functions::statistical::inverse_beta::{beta_inverse_cdf, beta_quantile_crossing};
+use crate::functions::statistical::inverse_beta::{
+    beta_inverse_cdf, beta_lower_crossing, beta_quantile_crossing,
+};
 use crate::functions::statistical::loader::excel_beta_density;
 use crate::functions::statistical::special::{ln_gamma, nearest_crossing_from, refine_increasing};
 use crate::functions::Function;
@@ -71,6 +73,42 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
         )
     };
     flush_subnormal(t)
+}
+
+/// BETA.INV's quantile for p above 1/2 where the upper-tail search of [`beta_quantile`] rounds to
+/// 1: Excel's AS 109 structure, `1 - y` with y the lower quantile of Beta(beta, alpha) at the exact
+/// `1 - p` (the flip of docs/excel-semantics/statistics.md "BETA.INV at a huge shape is AS 109's
+/// Newton search (T-1538)"), so exactly 1 wherever y is below half an ulp of 1. Excel answers that
+/// at all 124 evidenced points where y is a normal double (`BETA.INV(1-1E-8,2,0.1)` = 1 at
+/// y = 3.9E-81, `BETA.INV(1-1E-16,2,1)` = 1 at y = 5E-17; 1 - 2^-53 where y is above 2^-54,
+/// accuracy/BETA.INV/s1 A123), and `#NUM!` at 154 of the 162 where y is 0 or subnormal
+/// (`BETA.INV(1-1E-10,2,0.03)`, y = 1.7E-334). There it stays `None` (`#NUM!`), as it was before
+/// T-3351: the 8 cells where Excel still answers 1 (probes/t3351-beta-inv-p-near-1 A199, A209-A211,
+/// C199; probes-numeric/t3351-beta-inv-sweep A88, A89, A122) follow no cut in y or p found so far
+/// (statistics.md "BETA.INV where the quantile rounds to 1 (T-3351)"), so no threshold is chosen.
+///
+/// y is the crossing of the search's own lower tail (`bratio::beta_search_tails`) over the whole
+/// of [0, 1], at most 65 cdfs and no statrs start (lift/kinds/statistical.rs `QUANTILE_WEIGHT`
+/// charges it); at a shape above 1E5 it is T-1538's crossing (`inverse_beta::beta_lower_crossing`),
+/// as [`beta_quantile`] takes there. `lower_quantile_underflows` finds a y below the normal doubles
+/// without a search, as for p of 1/2 or less.
+fn upper_quantile_near_one(alpha: f64, beta: f64, p: f64) -> Option<f64> {
+    // 1 - p is exact for p in (1/2, 1).
+    let q = 1.0 - p;
+    let y = if alpha > BETA_QUANTILE_STATRS_SHAPE_MAX || beta > BETA_QUANTILE_STATRS_SHAPE_MAX {
+        beta_lower_crossing(beta, alpha, q)
+    } else if lower_quantile_underflows(beta, alpha, q) {
+        0.0
+    } else {
+        refine_increasing(
+            |x| beta_search_tails(x, 1.0 - x, beta, alpha).0,
+            q,
+            f64::NAN,
+            0.0,
+            1.0,
+        )
+    };
+    (f64::MIN_POSITIVE..0.5).contains(&y).then_some(1.0 - y)
 }
 
 /// Whether the square of AS 109's first shape overflows a double: alpha for p up to 1/2, and beta
@@ -312,13 +350,21 @@ impl Model {
         if alpha <= 0.0 || beta_param <= 0.0 || p <= 0.0 || p >= 1.0 || b <= a {
             return Err(num_error(cell));
         }
-        // A quantile that underflows to 0 or rounds to 1 is #NUM! (`BETAINV(0.025,1E-15,2.5)`,
-        // `BETAINV(0.05,0.002,1)`, `BETAINV(1-1E-16,2,0.01)`; statistics.md "Scalar distributions
-        // at extreme arguments (T-2255)", probes/t2475-stat-subexpressions P!A127).
+        // A quantile that rounds to 1 at p above 1/2 is `upper_quantile_near_one`'s: 1, or #NUM!
+        // where the flipped tail's y underflows (`BETAINV(1-1E-16,2,0.01)`, T-3351). Otherwise a
+        // quantile that underflows to 0 or rounds to 1 is #NUM! (`BETAINV(0.025,1E-15,2.5)`,
+        // `BETAINV(0.05,0.002,1)`; statistics.md "Scalar distributions at extreme arguments
+        // (T-2255)", probes/t2475-stat-subexpressions P!A127). Excel is #NUM! at some of those and
+        // 1 - 2^-53 or 2^-53 at others with no rule found yet (statistics.md "BETA.INV where the
+        // quantile rounds to 1 (T-3351)"), so they keep the #NUM!.
         let t = beta_quantile(alpha, beta_param, p);
-        if !(t > 0.0 && t < 1.0) {
+        let t = if p > 0.5 && t >= 1.0 {
+            upper_quantile_near_one(alpha, beta_param, p).ok_or_else(|| num_error(cell))?
+        } else if t > 0.0 && t < 1.0 {
+            t
+        } else {
             return Err(num_error(cell));
-        }
+        };
         // Map back from [0,1] to [A,B]
         Ok(a + t * (b - a))
     }

@@ -4854,7 +4854,7 @@ Evidence: probes-numeric cases `m9-legacy-betadist`, `-betainv`, `-binomdist`, `
 Status: VERIFIED (excel-graph)
 Gate A tables (T-4104, excel-graph 2026-11-06): accuracy/CHIDIST, CHIINV, BETADIST and BETAINV s1 take their modern
 function's definition, and every Excel value and error there (typical, tail, edge, extreme and log-uniform points) is the
-modern rule. The points outside the envelope are the modern siblings' known behaviours: BETAINV T-3351, T-2808 and
+modern rule. The points outside the envelope are the modern siblings' known behaviours: BETAINV T-4865, T-2808 and
 T-3862; BETADIST T-3577; CHIINV A93 T-3364 (R3 case 3, decision 0318).
 Tasks: T-1047
 
@@ -6758,10 +6758,52 @@ FALSE)` and `GAMMADIST(2,1.85E+76,1E+10,"TRUE")` are `#NUM!` (2801c1c11c21e134 A
 Ours: matches since T-2435, except the GAMMA.DIST density and cdf at a huge shape (T-2982) and the
 F.INV.RT far tail (T-2808); the rules T-2435 settled are the four sections below. A negative
 BINOM.DIST/BINOMDIST number_s, one in (-1, 0) included (`BINOM.DIST(-0.0125,10,1E-16,FALSE)`), is `#NUM!` since T-2700 (the sign
-is checked before truncation). Since T-2621 a BETA.INV quantile of 0 or 1 is `#NUM!`, which settles
+is checked before truncation). Since T-2621 a BETA.INV quantile of 0 or 1 is `#NUM!` (since T-3351 one that rounds to 1 at
+p above 1/2 is 1 where the flipped tail's y is a normal double: "BETA.INV where the quantile rounds to 1 (T-3351)"), which settles
 `BETAINV(0.025,1E-15,2.5)`, `BETAINV(0.05,0.002,1)`, `BETAINV(1E-200,0.1,1E+5)` and `BETAINV(1-1E-16,2,0.01)`;
 `BETAINV(1E-20,1E-300,30)` stays a number (ours 3.333333333333333E-302, the search's floor rather than an underflow to 0).
 Status: VERIFIED (excel-graph), one cell each
+
+## BETA.INV where the quantile rounds to 1 (T-3351)
+Rule: for p above 1/2, BETA.INV(p, alpha, beta) is 1 - y, y the lower quantile of Beta(beta, alpha) at 1 - p (AS 109's
+flip). Where y is a normal double below half an ulp of 1 the answer is exactly 1, not `#NUM!`: `BETA.INV(1-1E-8,2,0.1)`
+= 1 (y = 3.9E-81), `BETA.INV(1-1E-6,0.5,0.3)` = 1, `BETA.INV(1-1E-16,2,1)` = 1 (y = 5E-17), and 1 - 2^-53 where y is
+above 2^-54 (`BETA.INV(0.999999999999999,6.87566761020923,0.991674132119787)`, accuracy/BETA.INV/s1 A123). Excel
+answers 1 - y at all 124 evidenced points with a normal y and `#NUM!` at none. Where y is 0 or subnormal Excel is
+`#NUM!` at 154 points (`BETA.INV(1-1E-8,2,0.01)`, y = 3.7E-801; `BETA.INV(1-1E-10,2,0.03)`, y = 1.7E-334;
+`BETAINV(1-1E-16,2,0.01)`) and still 1 at 8: `BETA.INV(1-6E-10,2,0.03)` (y = 1.5E-308), `BETA.INV(1-5E-10,0.5,0.03)` to
+`BETA.INV(1-3E-10,0.5,0.03)` (y down to 1.4E-317), `BETA.INV(1-6E-10,10,0.03)` (y = 2.4E-309) and three sweep points
+with y far below the subnormals (`BETA.INV(1-4.7838841265984E-10,2.52340266710761,0.0133219075721009)`, y about 1E-700).
+With beta = 0.03 the `#NUM!` starts at 1 - 5E-10 for alpha 2 and 10 but below 1 - 3E-10 for alpha 0.5; no cut in y or
+p separates the two sets. The lower-tail mirror has the same shape: `BETA.INV(6E-10,0.03,2)` is 0 (a subnormal
+quantile shown as 0) and `BETA.INV(5E-10,0.03,2)` `#NUM!`. y values are from 50-digit mpmath.
+At the two other ends Excel is not consistent either:
+- p of 1/2 or less where the quantile rounds to 1 (no flip): Excel is the largest double below 1, 0.9999999999999999,
+  at `BETA.INV(0.5,2,1E-3)`, `BETA.INV(0.1,2,1E-3)`, `BETA.INV(0.5,2,1E-4)` (the root about 1 - 1E-3011),
+  `BETA.INV(0.4998,0.01,1E-4)` and at 13 Gate A points with b from 1.7E-15 to 1.2E-3, but `#NUM!` at
+  `BETA.INV(0.120463618823915,4.85116218981846,3.81506961561941E-15)` and five more Gate A points with b from 3.8E-15
+  to 1.6E-8 (accuracy/BETA.INV/s1 A89, A92, A95, A109; BETAINV/s1 A83, A91).
+- p above 1/2 where the quantile underflows (a tiny alpha): Excel is 2^-53 = 1 - (1 - 2^-53) at
+  `BETA.INV(0.9,1E-4,0.01)`, `BETA.INV(0.862607485568315,2.03167397803437E-09,0.419185520132239)` and 11 more points,
+  but `#NUM!` at `BETA.INV(0.540825862774324,2.11840621275937E-15,0.719272803854574)` (s1 A94, A105; BETAINV/s1 A82).
+- So `BETA.INV(0.51,2,1E-3)` is `#NUM!` (flipped, y = 1E-310) while `BETA.INV(0.49,2,1E-3)` is 0.9999999999999999: the
+  result is not monotone across p = 1/2.
+Neither shape, p nor the root's distance from the end separates the end values from the `#NUM!`s. A simulation of AS
+109 as revised (statrs' port: its start, step control and accuracy exponent) on the ported BETA.DIST kernel ends at
+1 - 2^-53 or 2^-53 at most of Excel's `#NUM!` points, so it does not explain them either; the outcome looks decided by
+the rounding of Excel's own Newton steps next to 0 and 1 (T-4865).
+Evidence: probes/t3351-beta-inv-p-near-1 (254 cells: alpha 0.5, 2 and 10, beta 1E-3 to 1, p = 1 - 1E-6 to 1 - 1E-16,
+the underflow boundary at beta 0.03 in A197-A214 with the lower-tail mirror in column B and alpha 10 in C197-C204, p
+at or below 1/2 in D197-D210), probes-numeric/t3351-beta-inv-sweep (200 points, seed 3351), probes-numeric/
+t3566-beta-inv-tiny-shape-and-range, accuracy/BETA.INV/s1 and BETAINV/s1 (excel-graph)
+Ours: until T-3351 every quantile at an end of the doubles in (0, 1) was `#NUM!` (statrs' search stopped near y = 1E-17
+whatever the true y, and the refinement on the upper tail landed on 1). Since T-3351, when the upper-tail search at p
+above 1/2 rounds to 1, the flipped tail is solved on the search's own kernel (`beta.rs` `upper_quantile_near_one`) and
+the answer is 1 - y for a normal y; a y of 0 or a subnormal one stays `#NUM!`, as before (no threshold chosen, so no
+fit). The 8 points above where Excel is 1 at such a y, the two inconsistent classes and the lower-tail mirror stay as
+they were: `#NUM!` (T-4865).
+Status: VERIFIED (excel-graph); the reason for the `#NUM!`s UNVERIFIED
+Tasks: T-3351, T-4865
 
 ## BINOM.DIST's pmf at k = 0 is #NUM! when p = 1 (T-2435)
 Rule: `BINOM.DIST(0,n,1,FALSE)` and `BINOMDIST(0,n,1,FALSE)` are `#NUM!` from one trial on, while the
@@ -6892,7 +6934,7 @@ classes (A123 is listed separately after them), all where the quantile is at or 
   holds only for p up to 1/2.
 - A123 (`BETA.INV(0.999999999999999,6.87566761020923,0.991674132119787)`) is not in the first class: its math
   0.99999999999999989157 rounds to 1 - 2^-53, so Excel's 0.9999999999999999 is the correctly rounded quantile and only
-  the engine's `#NUM!` near 1 fails (T-3351).
+  the engine's `#NUM!` near 1 failed; it matches since T-3351 ("BETA.INV where the quantile rounds to 1").
 - With either shape 2.22507385850721E-308 (DBL_MIN), Excel is exactly 0.5 at p from 0.0023 to 0.82 (A115, A118, A125,
   A128, A138): the midpoint of [0, 1], as at alpha 1E-300 in "BETAINV is #NUM! where its quantile underflows", here
   also for a tiny beta and for p below 1/2.
@@ -6900,9 +6942,9 @@ classes (A123 is listed separately after them), all where the quantile is at or 
   math is exactly 1; A180, A181, A187, A188, A190, A191, A192, A193, A194, A196, A197, A198). Every one has alpha above
   sqrt(DBL_MAX): see "BETA.INV is #NUM! once the square of AS 109's first shape overflows (T-3862)" below.
 Evidence: eval/accuracy/tables/BETA.INV/s1 (oracle and 50-digit math sidecars; `rustsheet-eval accuracy`)
-Ours: `#NUM!` in the first three classes and, since T-3862, in the fourth
+Ours: `#NUM!` in the first three classes (A123 matches since T-3351) and, since T-3862, in the fourth
 Status: VERIFIED (excel-graph) for the cells; the reasons (flip, start) UNVERIFIED
-Tasks: T-3578, T-3351 (classes 1 and 2), T-4663 (class 3, after T-2808), T-3862 (class 4)
+Tasks: T-3578, T-3351 (A123), T-4865 (classes 1 and 2), T-4663 (class 3, after T-2808), T-3862 (class 4)
 
 ## BETA.INV is #NUM! once the square of AS 109's first shape overflows (T-3862)
 Rule: BETA.INV and BETAINV are `#NUM!` exactly where fl(pp*pp) overflows a double, pp AS 109's first shape after its
