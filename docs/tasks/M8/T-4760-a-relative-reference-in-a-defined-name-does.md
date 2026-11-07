@@ -21,6 +21,7 @@ probes/sheet-ops/t4747-name-relative-insert-row.case.json Calc!A1 and Calc!A3; p
 Calc!A1 and Calc!A3. Code: `displace_defined_names` in crates/rustsheet-engine/src/formula_rewrite.rs. Rule: docs/excel-semantics/references.md.
 
 ## Acceptance criteria
+- [ ] First probe a relative name used from the edited sheet itself (see references.md); the rule so far covers another sheet only.
 - [ ] The four cells above pass; absolute names (t4702-*) still shift.
 - [ ] `make check` green; reviewers approve.
 

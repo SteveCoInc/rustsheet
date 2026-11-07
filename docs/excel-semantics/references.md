@@ -633,7 +633,7 @@ The undo of a delete puts back each name and each conditional format the delete 
 
 ### Relative references in a name (T-4747)
 Status: VERIFIED (excel-graph, 2026-11-07). Predictions were committed before the fill, and they were wrong.
-- **A relative reference in a name does not move.** Name `Rel` = `=Data!A5` (anchored at A1), used from Calc!A1 and
+- **A relative reference in a name does not move, when the name is used from another sheet.** Name `Rel` = `=Data!A5` (anchored at A1), used from Calc!A1 and
   Calc!A3, after `insert_row 4` on Data (Data!An = n*10): A1 40, A3 60, the literal addresses A5 and A7. After
   `delete_row 4`: 60 and 80 (A5, A7 again). The absolute names of T-4702 shift; relative ones are left alone.
   Evidence: probes/sheet-ops/t4747-name-relative-insert-row and -delete-row.
@@ -642,7 +642,8 @@ Status: VERIFIED (excel-graph, 2026-11-07). Predictions were committed before th
 Still unprobed (T-4761, the harness cannot express them yet):
 - how Excel spells a rewritten name in Name Manager (the engine stores `#REF!` and `S!$C$1:$C$1`);
 - row and column moves, which leave names alone in the engine;
-- a sheet-scoped name, and an unqualified reference in a name.
+- a sheet-scoped name, and an unqualified reference in a name;
+- a relative name used from the edited sheet itself (the using cell moves too), and a no-edit control for the file-text anchoring at A1: run these before T-4760 changes the engine.
 
 ## Characters of a name
 Rule: a name in a formula (a LET or LAMBDA name, or an unbound use) may not start with a mark (`\p{M}`) or an

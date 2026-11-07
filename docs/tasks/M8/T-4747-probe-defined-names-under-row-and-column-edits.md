@@ -26,7 +26,7 @@ docs/excel-semantics/references.md) that are still unprobed, and an engine chang
 - Avoid names that are cell addresses (`NA1` is column NA, row 1; references.md "Probe trap").
 
 ## Acceptance criteria
-- [x] Probe cases (excel-probe skill, predictions committed before the fill) cover each item above. For the spelling,
+- [x] (relative-reference item only; the other items are deferred to T-4761) Probe cases (excel-probe skill, predictions committed before the fill) cover each item above. For the spelling,
       use a round trip of the saved workbook's definedName text.
 - [x] references.md records the results. Each mismatch is fixed here if it is S-sized, or gets an owner task.
 - [x] `make check` green; reviewers approve.
