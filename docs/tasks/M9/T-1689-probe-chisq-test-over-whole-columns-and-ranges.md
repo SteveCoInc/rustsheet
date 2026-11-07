@@ -35,7 +35,9 @@ Probe these with the `excel-probe` skill:
 - CHISQ.INV and CHISQ.DIST accuracy.
 
 ## Outcome
-- Probe `probes/t1689-chisq-test-blanks-text-booleans` (15 cells, excel-graph 2026-11-07): the engine matches 14 cells and
-  is 1 ulp off in A15 (a numeric ulp, not visibly off); no engine change. The unit test's expectation agrees with the
-  evidence (the comment there now cites it). Recorded in statistics.md.
+- Probe `probes/t1689-chisq-test-blanks-text-booleans` (24 cells, excel-graph 2026-11-07), formulas on their own sheet so
+  no referenced whole column holds a formula (a first layout was circular and propagated an `#N/A`; review caught it).
+  Whole columns, 1-D and 2-D ranges with a blank, text or boolean in either range, mismatched shapes: the engine matches
+  23 cells and is 1 ulp off in F!A1 (a numeric ulp, baselined). No engine change; the pinned unit test agrees with the
+  whole-column cells and its comment cites them. Recorded in statistics.md.
 - Eval delta: new case only, regressions 0 (baseline written by `make eval-baseline`).
