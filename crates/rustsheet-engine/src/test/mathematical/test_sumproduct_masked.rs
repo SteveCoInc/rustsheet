@@ -525,3 +525,37 @@ fn underflowing_products_flush_as_the_operators_do() {
         "every SUMPRODUCT read a masked block"
     );
 }
+
+/// Masked-off positions are skipped only when no product can overflow (T-3732): a grid argument
+/// before a masked one whose product is past the double range at a masked-off position is
+/// `#NUM!` there (inf times the mask's 0; numbers.md "Overflow in `+ - * /` is #NUM! where it
+/// happens"), as the operators give it. With the masked argument first, the masked-off products
+/// are 0 before any large factor and stay finite. Sheet4!B2:G41 holds 1 where the mask keeps a
+/// cell and 1E+200 elsewhere.
+#[test]
+fn an_overflow_at_a_masked_off_position_is_not_skipped() {
+    let with_big = |model: &mut Model| {
+        fill(model);
+        model.new_sheet();
+        for (index, column) in ["B", "C", "D", "E", "F", "G"].iter().enumerate() {
+            for row in 2..=41 {
+                let kept = index % 3 == 1 && row % 5 == 2;
+                let value = if kept { "1" } else { "1E+200" };
+                model._set(&format!("Sheet4!{column}{row}"), value);
+            }
+        }
+    };
+    let masked = "Sheet2!$B$2:$G$41*(Sheet2!$B$1:$G$1=\"h1\")*(Sheet2!$A$2:$A$41=\"k2\")";
+    let big = "Sheet4!$B$2:$G$41";
+    let formulas = vec![
+        format!("=SUMPRODUCT({big},{big},{masked})"),
+        format!("=SUMPRODUCT({big},{masked})"),
+        format!("=SUMPRODUCT({masked},{big},{big})"),
+    ];
+    let (results, masked_count) = cached_and_walked(&with_big, &formulas);
+    for ((cached, walked), formula) in results.iter().zip(&formulas) {
+        assert_eq!(cached, walked, "{formula}");
+    }
+    assert!(results[0].0.starts_with("#NUM!"), "{}", results[0].0);
+    assert_eq!(masked_count, formulas.len());
+}
