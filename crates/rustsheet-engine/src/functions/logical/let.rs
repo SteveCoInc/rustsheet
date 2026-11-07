@@ -280,7 +280,7 @@ impl Model {
         // An empty slot, `(1,)` or `(,2)`, is omitted like a missing argument (arrays.md
         // ISOMITTED, A24-A25 and A34), and a variable bound to an omitted parameter hands the
         // omission on, so ISOMITTED of a LET name for it stays TRUE as before T-2649.
-        if matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node) {
+        if self.is_omitted_argument(node) {
             return Binding::Omitted;
         }
         let is_span = matches!(node, Node::SheetSpanKind { .. });
@@ -390,6 +390,12 @@ impl Model {
     /// Whether `node` is a variable bound to an omitted LAMBDA parameter ([`Binding::Omitted`]).
     pub(crate) fn is_omitted_variable(&self, node: &Node) -> bool {
         matches!(self.variable_binding(node), Some(Binding::Omitted))
+    }
+
+    /// Whether the argument `node` is omitted where it is written: an empty slot (`f(1,)`) or a
+    /// variable that hands an omission on ([`Self::is_omitted_variable`]).
+    pub(crate) fn is_omitted_argument(&self, node: &Node) -> bool {
+        matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node)
     }
 
     /// Whether `node` is a variable bound to an array of references ([`Binding::Grid`]), which

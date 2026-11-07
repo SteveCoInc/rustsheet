@@ -190,6 +190,10 @@ impl Model {
     /// multi-cell range (`ArgKind::LiftArrays`, SPEC-0011; probes/eng-argument-modes B14:E14,
     /// probes/scalar-lift-open-a Y8-Y10).
     pub(crate) fn fn_convert(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let args = match self.atp_arguments(args, (3, 3), cell) {
+            Ok(args) => args,
+            Err(error) => return error,
+        };
         self.lift_call(Function::Convert, args, cell, &mut |model, values| {
             model.convert_of(values, cell)
         })

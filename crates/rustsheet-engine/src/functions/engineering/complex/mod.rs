@@ -192,10 +192,7 @@ impl Model {
         // probes/eng-imsub-imdiv-blank-j A3, A4, B3, B4. A variable bound to an omitted LAMBDA
         // parameter or an empty LET value hands the omission on: `LAMBDA(a,b,IMSUB(a,b))("1",)`,
         // `LET(e,,IMSUB("1",e))` (probes/eng-imsub-imdiv-lambda-let-empty A1:A4, A12).
-        if args
-            .iter()
-            .any(|arg| matches!(arg, Node::EmptyArgKind) || self.is_omitted_variable(arg))
-        {
+        if args.iter().any(|arg| self.is_omitted_argument(arg)) {
             return Err(CalcResult::new_error(Error::NA, cell, String::new()));
         }
         let first = self.complex_of(first, EmptyText::ZeroIfBlank, cell)?;
@@ -210,6 +207,10 @@ impl Model {
     /// multi-cell range (probes/eng-argument-modes B13:E13, probes/scalar-lift-open-a Y11,
     /// probes/eng-later-argument-lift H16).
     pub(crate) fn fn_complex(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let args = match self.atp_arguments(args, (2, 3), cell) {
+            Ok(args) => args,
+            Err(error) => return error,
+        };
         self.lift_call(Function::Complex, args, cell, &mut |model, values| {
             let (x, y, suffix) = match values {
                 [x, y] => (x, y, None),
