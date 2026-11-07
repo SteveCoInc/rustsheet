@@ -2008,8 +2008,12 @@ What the web renders (sidecar `pivots` sections):
 - **A group item renders as its type.** `<b v="1">` shows the text TRUE; `<d v="2020-01-01T00:00:00">` the number
   43831, displayed 1/1/2020; `<e v="#N/A">` the error #N/A; `<m/>` the text (blank); `<n v="7">` the number 7. The
   saved cache keeps the item's type for `b`, `e`, `m` and `n` (the sidecar's `group_items`); it cannot tell a saved
-  `d` from an `s`, as the snapshot reads both as text. The engine shows the `d` item as 43831, not 1/1/2020
-  (GD!A6, GDA!A6; owner T-4957).
+  `d` from an `s`, as the snapshot reads both as text. The `d` item's format comes from its type alone, not from the
+  source field (Product is text): its cell is the serial shown m/d/yyyy (the engine writes built-in `numFmtId` 14, its choice for that
+  text: the sidecar records the text, not the id; T-5013 confirms the id), which the engine now matches (GD!A6, GDA!A6). Only that is evidenced: one midnight date as a row label of a manual group. The engine's
+  own readings are UNVERIFIED (probe pending: T-5013): a time part (still m/d/yyyy, the time not shown), the item as
+  a column label or repeated label (m/d/yyyy), as a page field's selection (the serial, no format), in its subtotal
+  label (`43831 Total`), in a range group's groupItems (m/d/yyyy), and a manual group over a date field.
 - **Date levels below a day** label as T-4170's `date_labels` writes them: seconds and minutes `:00`, `:01`, ...;
   hours `12 AM`, `6 AM`, `12 PM`, `6 PM`; days `15-Mar`. Only items with data are shown.
 - **A tuple under a record value changes nothing**: the cache is refreshed on load, and the pivot renders the source
@@ -2050,7 +2054,8 @@ fld="2"><x:autoFilter ref="A1"/></timelinePivotFilter>` (4a33fad9…), the autoF
 Status: VERIFIED (excel-graph) for opening and for what the pivot renders. Whether an Excel-saved timeline cache with
 a `timelinePivotFilter` opens on the web is UNVERIFIED (probe pending: T-4955): the web never saved one in these
 runs, and no Excel-saved file with one is in the surveyed corpora. Out of scope: desktop Excel (decision 0266).
-Implemented in: grouping is T-4171's (the date group item's text is T-4957's). Slicers and timelines: T-4188, see
+Implemented in: grouping is T-4171's; a date group item's m/d/yyyy is crates/rustsheet-engine/src/pivot/layout/render.rs
+(`item_format`, T-4957; the GD!A6 and GDA!A6 texts pass). Slicers and timelines: T-4188, see
 "Slicers and timelines filter the pivot they drive".
 
 ## Slicers and timelines filter the pivot they drive

@@ -14,7 +14,8 @@
 
 use super::*;
 use crate::pivot::probe_cases::{
-    probe_pivot, read, sidecar_differences, T4634_SHEETS, T4699_SHEETS, T4745_SHEETS,
+    probe_pivot, probe_pivot_over, read, sidecar_differences, T4634_SHEETS, T4699_SHEETS,
+    T4745_SHEETS,
 };
 use crate::pivot::{compute, lay_out, MAX_PIVOT_WORK};
 
@@ -261,4 +262,76 @@ fn a_subtotal_captions_item_copies_are_bounded_before_they_are_made() {
         render_within(&table, &cache, &result, &layout, 999),
         Err(PivotComputeError::Limit)
     );
+}
+
+/// probes/t4767-pivot-group-items GD and GDA: the manual group Product2 of Product (Group2 = A,
+/// B; Group1 = C, D; E alone; F ungrouped) with the group item of E written `<d
+/// v="2020-01-01T00:00:00"/>`. The sidecar cannot tell a saved `d` from an `s` (its
+/// `group_items` read both as text), so the date item is the case's, as the serial Excel's A6
+/// holds; its label cell is that number shown in m/d/yyyy, as Excel's A6 text reads.
+#[test]
+fn a_date_group_item_shows_as_a_date() {
+    use crate::number_format::{format_number, get_num_fmt};
+    use crate::pivot::{group_by_discrete, probe_cases::source_cache, AddedGroup};
+
+    let case = read("t4767-pivot-group-items", "case");
+    let oracle = read("t4767-pivot-group-items", "oracle");
+    for sheet in ["GD", "GDA"] {
+        let pivot = (oracle["pivots"].as_array().unwrap().iter())
+            .find(|p| p["sheet"] == sheet)
+            .unwrap();
+        let serial = pivot["cells"]["A6"]["v"].as_f64().unwrap();
+        let mut cache = source_cache(&case, "Groups!A1:B9");
+        let labels = ["F", "Group2", "Group1"]
+            .map(|t| CacheItem::Text(t.to_string()))
+            .into_iter()
+            .chain([CacheItem::Date(serial)])
+            .collect();
+        let discrete: Vec<u32> = (cache.fields[0].items.iter())
+            .map(|item| match item {
+                CacheItem::Text(t) if t == "A" || t == "B" => 1,
+                CacheItem::Text(t) if t == "C" || t == "D" => 2,
+                CacheItem::Text(t) if t == "E" => 3,
+                _ => 0,
+            })
+            .collect();
+        let mut added = group_by_discrete(&cache.fields[0], &discrete, labels).unwrap();
+        added.name = "Product2".to_string();
+        added.added_group = Some(AddedGroup {
+            base: 0,
+            discrete: Some(discrete),
+        });
+        cache.fields.push(added);
+        let (cache, table) = probe_pivot_over(&case, sheet, cache);
+        let mut work = MAX_PIVOT_WORK;
+        let result = compute(&table, &cache, &mut work).unwrap();
+        let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
+        let cells = render(&table, &cache, &result, &layout).unwrap();
+        let label = (cells.iter())
+            .find(|c| c.column == 0 && c.value == PivotCell::Number(serial))
+            .unwrap();
+        let id = i32::try_from(label.number_format.unwrap()).unwrap();
+        let text = format_number(serial, &get_num_fmt(id, &[]), "en").text;
+        assert_eq!(text, pivot["text"]["A6"].as_str().unwrap(), "{sheet}");
+        // Every other label is text, and keeps its cell's format.
+        assert!((cells.iter())
+            .filter(|c| c.column == 0 && c != &label)
+            .all(|c| matches!(c.value, PivotCell::Text(_)) && c.number_format.is_none()));
+    }
+}
+
+/// An ungrouped field's date item keeps its cell's format: which format Excel shows it in is the
+/// source cells' (T-4807), not a group item's.
+#[test]
+fn an_ungrouped_date_item_takes_no_group_item_format() {
+    let (mut cache, table) = crate::pivot::probe_cases::diagonal(3, true);
+    cache.fields[0].items[0] = CacheItem::Date(43831.0);
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute(&table, &cache, &mut work).unwrap();
+    let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
+    let cells = render(&table, &cache, &result, &layout).unwrap();
+    let label = (cells.iter())
+        .find(|c| c.value == PivotCell::Number(43831.0))
+        .unwrap();
+    assert_eq!(label.number_format, None);
 }

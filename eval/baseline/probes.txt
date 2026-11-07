@@ -10313,5 +10313,3 @@ TF	probes/t4164-pivot-date-times.case.json	WOe1!A7
 TF	probes/t4164-pivot-date-times.case.json	WOeN!A4
 TF	probes/t4164-pivot-date-times.case.json	WOeN!A5
 TF	probes/t4699-pivot-blank-collapsed.case.json	CV4!C3
-TF	probes/t4767-pivot-group-items.case.json	GD!A6
-TF	probes/t4767-pivot-group-items.case.json	GDA!A6
