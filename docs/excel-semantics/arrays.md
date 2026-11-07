@@ -1994,22 +1994,35 @@ Tasks: T-1627, T-1630, T-1632
 Rule: when the LAMBDA of MAP or SCAN returns a multi-cell reference (`MAP(A1:A2,LAMBDA(r,B1:B3))`,
 a row range, a range holding an error cell), Excel gives the whole call one `#CALC!` (a scalar, not a
 `#CALC!` per element: `ROWS` of it is `#CALC!` too), as BYROW and BYCOL do. It does not depend on
-what the range holds (numbers, an error cell among numbers, an error cell among blanks, text and booleans all alike; an all-blank range and a LAMBDA that returns a range for only some elements are unprobed). A one-cell
-range is the control: its value is the element (`MAP(A1:A2,LAMBDA(r,J1:J1))` is 4, 4).
-Evidence: probes/map-scan-range-result (excel-graph 2026-10-18).
+what the range holds (numbers, an error cell among numbers, an error cell among blanks, text and booleans all alike), nor on
+how many elements return one:
+- a range for one element only is enough: `MAP(A1:A3,LAMBDA(r,IF(r=2,B1:B3,r)))`, the same at the last element (`r=3`), and
+  `SCAN(0,A1:A3,LAMBDA(a,v,IF(v=2,B1:B3,v)))` and its `v=3` form are each one `#CALC!`, and so are ROWS, ARRAYTOTEXT and
+  `INDEX(..,1)` of them (ERROR.TYPE 14; probes/t4476-lambda-range-results D1:H13);
+- an all-blank range is no exception: `MAP(A1:A2,LAMBDA(r,Z1:Z3))` and `SCAN(0,A1:A2,LAMBDA(a,v,Z1:Z3))` are `#CALC!` (D17:H21),
+  while the one-cell blank `Z1:Z1` gives 0, 0 (D25:G29).
+A one-cell range is the control: its value is the element (`MAP(A1:A2,LAMBDA(r,J1:J1))` is 4, 4).
+REDUCE is not one of them: its last accumulator is its result, a multi-cell range included, so `REDUCE(0,A1:A2,LAMBDA(a,v,B1:B3))`
+spills "x", "y", "z" (ROWS 3, ARRAYTOTEXT "x, y, z", D33:G35) and ISREF of it is TRUE (D53); an all-blank range spills 0, 0, 0
+(D37:G39); a range handed on as the accumulator is a reference to the next step (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(v=1,B1:B3,
+COUNTA(a))))` is 3, D41); `J1:J1` is 4 and ISREF TRUE (D45, E53), and the array `{1;2}` spills (D49).
+Evidence: probes/map-scan-range-result (excel-graph 2026-10-18); probes/t4476-lambda-range-results (excel-graph, 2026-11-07,
+T-4476).
 Implemented in: `Model::lambda_result_value`, which still reads the range's existing cells (a cycle
 through it is 0, recalc.md). Tasks: T-1792, T-1769.
 The same holds for a multi-cell array value, not only a range: `MAP(Data!C4:D12,Data!A8:B12,LAMBDA(x,acc,HSTACK(acc,Data!A7:D11,acc)))`
 (gen-m7/611ce3bbfab27cef Calc!A944), `SCAN(Data!B8,Data!B6:E11,LAMBDA(acc,v,HSTACK(..)))` (b24ce74f08d3f91a A430), a SCAN step that is a FILTER
 result (7307132bb8820f17 A619) or a TRIMRANGE (2c5ea078f25443a2 A1717), a MAP step raising to a BYROW column (7307132bb8820f17 A1324) and a SCAN
 whose array initial value is returned as the accumulator (9359f03972e94026 A1705) are each one `#CALC!` with nothing spilled (excel-graph,
-2026-10-21, T-2225). Ours: implemented (T-2306, T-2309): a multi-cell array step of MAP or SCAN is the one `#CALC!` of a multi-cell range (`lambda_result_value`); REDUCE does not go through it.
+2026-10-21, T-2225). Ours: implemented (T-2306, T-2309): a multi-cell array step of MAP or SCAN is the one `#CALC!` of a multi-cell range (`lambda_result_value`); REDUCE does not go through it
+(`Model::fn_reduce` returns its last accumulator as `Model::reduce_reference` keeps it; a whole-column result such as
+`REDUCE(0,A1:A2,LAMBDA(a,v,C:C))` stays a reference, and a read that would build more than 1,048,576 cells is `#ERROR!`, T-4476).
 A 1x1 array step is its one value, as in BYROW: `MAP(Data!B5:E6,..,LAMBDA(w,x,TRANSPOSE(w)))` is the cells' values (gen-m7/b2078b5d702c691a
 Calc!A2162; f7e94a817e5385ac A842), `SCAN(..,LAMBDA(w,acc,HSTACK(PROPER(acc))))` "True", "0.3", "0" (7ea6ef6ceabacafd A87) and
 `SCAN(..,LAMBDA(w,x,BYROW(w,_xleta.COUNT)))` 0, 1, 1, 1 (2d9b48c6363e7a16 A2954); so is a 1x1 array initial_value of SCAN:
 `SCAN(MINVERSE(Data!C7),..)` (23b5367c18059af2 A74) and `SCAN(LEN(WRAPROWS("Hello World",4,0.3)),Data!A7:D7,LAMBDA(z,y,z*y))`, 22, 2.2E+16,
 6.6E+15, 0 (7ea6ef6ceabacafd A3615) (excel-graph, 2026-10-22, T-2254 triage). Ours: implemented (T-2407): `lambda_result_value` reads a 1x1 array as its one value.
-Tasks: T-2309, T-2306, T-2407
+Tasks: T-2309, T-2306, T-2407, T-4476
 
 ## SCAN and REDUCE keep errors in the LAMBDA
 Rule: SCAN and REDUCE do not stop at an error. An error initial_value, an error accumulator and an error element are handed
