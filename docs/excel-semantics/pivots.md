@@ -161,8 +161,12 @@ Rule:
   new items for them, saved as date items (`<d v="2023-03-15T00:00:00"/>`). A date with a time part is
   its own item: 45000 and 45000.5 are two items under both formats probed. A date and an equal plain
   number in one field are two items as well. A time-only `h:mm` and an elapsed `[h]:mm` format count
-  as dates. The appended items render as their serials, as number cells. Their displayed format is
-  not captured by the sidecar (displayed text, T-4169).
+  as dates. The appended items render as their serials, as number cells. Their shown text is the source
+  cells' date format: on probes/t2085-getpivotdata-items sheet D (rows When over serials formatted m/d/yyyy) the
+  sidecar's pivot `text` shows 1/1/2024, 1/2/2024 and 2/1/2024 (D!A4:A6). The rendered rowItems point at the `<n>`
+  items 45292, 45293 and 45323 (x = 3, 4, 5), while the `<d>` items are listed first. The engine shows the serials
+  (T-4807). The saved cache field (`containsMixedTypes="1"`, count 6) carries `minDate="2024-01-01T00:00:00"` but
+  `maxDate="1900-01-01T12:51:04"`, below its own minDate; nothing reads these attributes, so the quirk is recorded only.
 - **Saved order.** In the saved cache Excel lists the shared items in source order first and the
   stale ones (old items no record holds) after them, while the pivot field's items keep the old order
   with the new ones appended: `rowItems` index the pivot field's order. See T-4654.
