@@ -407,8 +407,8 @@ the order Excel loads the workbook and on what each use of N met first. Every ba
   - the same use also typed before the add (t4642-qualified-entered, Q!A1 and Q!A2);
   - no bare use on P (t4642-no-bare-use).
 
-  So the cell is variation between fills of the same bytes, not a rule (decision 0329 item 1). Ours reads 1, the
-  reproduced value. The 2026-11-06 sidecar stays committed, and its Q!A1 stays a known failure. T-3610 owns it, as a
+  So the cell is variation between fills of the same bytes, not a rule: one rule would also have to explain why identical bytes now read 1, and the variants found none. Ours reads 1, the
+  reproduced value. The 2026-11-06 sidecar stays committed until T-3610 decides how such cells are scored, and its Q!A1 stays a known failure. T-3610 owns it, as a
   cell whose Excel value varies between fills. P's bare uses stay `#NAME?` in every variant that has them, as the model
   predicts: the later qualified use fixes P's provisional place. The qualified use itself reads the new name.
 Ours since T-4618: `Model::loaded_uses_take_sheet_place` (name_load_order.rs) replays the model over the formulas as

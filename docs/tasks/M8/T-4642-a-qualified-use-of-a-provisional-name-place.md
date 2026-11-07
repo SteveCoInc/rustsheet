@@ -48,7 +48,7 @@ Done 2026-11-07. The cell does not reproduce, so there is no engine change.
     - t4642-no-bare-use.
   - P's bare uses stay `#NAME?` wherever the model says they should.
 - **Finding:** the 2026-11-06 `#NAME?` at t4618-order-after-active-backward Q!A1 is variation between fills of the
-  same bytes. No rule explains it (decision 0329 item 1). The original sidecar stays committed (T-3610's draft rule),
+  same bytes. No rule explains it: identical bytes now read 1, and every variant agrees. The original sidecar stays committed until T-3610 decides how such cells are scored,
   and Q!A1 stays a known failure. It is handed to T-3610 as a third variance cell (its Context and acceptance
   criteria list it). syntax.md "Which place a loaded use took" records the finding.
 - **Eval delta:** probes gain 7 cases (all passing), known failures 6311 → 6311, 0 regressions.
