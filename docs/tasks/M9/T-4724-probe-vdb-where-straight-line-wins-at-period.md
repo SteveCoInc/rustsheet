@@ -3,7 +3,7 @@ id: T-4724
 title: "Probe VDB where straight line wins at period 0: a whole start with a fractional end, and factor 0 from a fractional start"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
