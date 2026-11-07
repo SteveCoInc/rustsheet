@@ -931,7 +931,7 @@ two other kinds:
   arithmetic (`discounted_sum`): its fit (annuity-npv, 470 cells) cannot tell plain from twice-rounded, and the
   twice-rounded form also gives gen-m9 9d9ceba257f8001b Calc!A85 `NPV(1E-10,Data!A8,{-100,50,60,0,0},{0,0,0})`
   = 9.999999981999995 and gen-m9 81bcdc0bec0c8e6b Calc!A268 `IRR(Data!A8:D9)` = 1.9999999999999996, which
-  plain doubles missed. Still open: whether (P!C157 was fixed by T-4888's run-on past the pole) dropping leading zero flows holds for a root far
+  plain doubles missed. P!C157 was fixed by T-4888's run-on past the pole. Still open: whether dropping leading zero flows holds for a root far
   from 0.1 (T-3120's review; unprobed).
 Status: VERIFIED for the method (secant in d, offset, both stop tests, retry, leading zeros dropped, NPV
 twice-rounded; 263/263 bit-exact); UNVERIFIED for the zero-step stop's bound and the step cap
@@ -947,10 +947,10 @@ so the call goes on to the retry from 0.1 and then the fallback.
   excel-graph, 2026-11-07; 160 series of 3 to 6 flows, seed "T-4838/pole", docs/research/irr-2026-11-07/replay.py,
   predictions in its `.predictions.tsv`). Every series' secant from 0.1 crosses the pole. On all 130 cells where the run-on secant
   converges (in 200 steps), Excel's value is the run-on secant's, bit for bit:
-  - A1:A70: the engine's Newton fallback returns different digits;
-  - A71:A115: the fallback is `#NUM!`;
+  - A1:A70: the replay's model of the old fallback (Newton on P(v) from v = 0, `replay.py`) returns different digits;
+  - A71:A115: that model is `#NUM!`;
   - A146:A160: the fallback agrees.
-- The fallback alone gets 15 of those 130 bit for bit. On the earlier sweep the run-on secant gives Excel's bits on 65
+- That Newton model gets 15 of those 130 bit for bit. On the earlier sweep the run-on secant gives Excel's bits on 65
   cells of probes-numeric/t2927-irr-fallback-sweep and probes/irr-fallback-roots, where the T-2928 fallback fit was 15
   to 35 ulp off.
 - Where the run-on secant does not converge in 200 steps (A116:A145), Excel is `#NUM!` on 22 and returns on 8. The run
@@ -958,7 +958,7 @@ so the call goes on to the retry from 0.1 and then the fallback.
   oscillate, and on A127, which converges at a higher cap.
 - Converging past the pole: A118, A131 and A144 converge to v < 0 (r = -5.38, -1.78, -1.81), and Excel returns a root
   above -1 (-0.246, -0.293, -0.412) that no stage of the engine finds yet. The engine gives 9.77, `#NUM!` and 5.86 there.
-  The old fallback found A131's root to 2 ulp (-0.29311038982819526). A124 converges past the pole too
+  On A131 the engine on main is `#NUM!` too; the replay's Newton model is 2 ulp off (-0.29311038982819526). A124 converges past the pole too
   (r = -1.63), and A129 only after about 1,000 steps (to -0.458); Excel is `#NUM!` on both.
 - Long runs on short series: twelve of the cells (A11, A25, A51, A67, A80, A87, A88, A90, A96, A97, A105 and A113;
   4 and 5 flows) need 52 to 197 steps. Excel's values are the run's own, so the engine's 200-step cap now covers 4 and
@@ -969,7 +969,7 @@ so the call goes on to the retry from 0.1 and then the fallback.
     (`IRR({0.2,-0.0001,1e-15,-1,0.1,0.5,0.2,1.005,2.5,123456789.123,-2.5,2.5,0.2})`, no root) creeps to d = 1, where
     NPV levels off at the first flow, 0.2, and stalls there. That is 1.6E-9 of its largest flow, and Excel is `#NUM!`.
   - The fresh sweep probes/t4888-irr-stall-sweep (excel-graph 2026-11-07, seed "T-4888/stall", drawn after the 1e-4
-    bound was frozen) holds 199 stalls: 8 per decade of the largest flow from 1E-9 to 1E+14, and A283's flows times
+    bound was frozen) holds 199 stalls: 8 per decade of the scale from 1E-9 to 1E+14 (largest flows 1.3E-7 to 5.5E+17), and A283's flows times
     10^-14..1.
   - Excel holds 17 of the 199. Every held stall is at |NPV| 1.04E-7 to 8.75E-5 and at most 2.8E-16 of the largest
     flow, on flows of 1E+9 to 1E+12.
@@ -980,7 +980,19 @@ so the call goes on to the retry from 0.1 and then the fallback.
     absolute bound alone gets 174, the relative 1e-7 bound 171, no stall stop 182.
   - The engine scores 147 of the case's 207 cells (135 with the absolute bound alone). Most of the other 60 are
     long-series second-stage cells (T-4840).
-  - Outside largest flows of 1.3E-7 to 1.3E+14 (the sweep and t2565-irr-guess-sweeps' 1.23E+14) a zero step is no stop.
+  - The rule was then frozen, and two fresh sets were drawn after it, their predictions committed before the fill:
+    - probes/t4888-irr-stall-sweep-2 (240 stalls, seed "T-4888/stall-2"; guesses -0.9 to 10, 3 to 150 flows, largest
+      flows 2.1E-7 to 2.2E+22). Excel holds 14 and the engine's rule gives its hold-or-not on 236 ("no stall stop"
+      226). Two stalls past the pole count among the 236, because the run fails there anyway. On the 4 others
+      (A9, A35, A68, A109) the rule holds where Excel goes on, 1 to 4 ulp from Excel's value.
+    - Gate A's accuracy/IRR/r4-T-4888 (300 extreme-stratum points, 50 to 200 flows): 40 points outside the envelope,
+      against 81 for the engine on main; no point is outside with this change and inside on main. The 40 are T-4840's.
+  - Envelope counts on the fresh probe sweeps (within 15 digits of Excel, or 1e-9 of the 50-digit math), this change
+    against main: t4838-irr-pole-runon 144/160 against 59/160, t4888-irr-stall-sweep 151/207 against 129/207,
+    t4888-irr-stall-sweep-2 174/240 against 143/240; no point is outside only with this change.
+  - The stop applies on 3 to 200 flows with the largest flow 1.3E-7 to 1.3E+14 (`IRR_STALL_FLOWS`). Excel holds no
+    stall above 1.3E+14 on either sweep, and the held ones run 9.7E+8 to 9.8E+12. No 2-flow stall is probed. Outside
+    that range a zero step is no stop.
   - Gate A's reference tables, which no fit reads, agree: 16 IRR points of flows near 1E+11 to 1E+14
     (accuracy/IRR/s1, r4-T-3411, r4-T-3407) are in the envelope with the absolute half. With the relative 1e-7 bound
     and the run-on, they fail: Excel is `#NUM!` where the run stalls.

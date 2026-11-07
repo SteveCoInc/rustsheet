@@ -168,7 +168,7 @@ def pole_case() -> int:
         "description": (
             "T-4838: IRR on 160 fresh short series (3 to 6 flows, seed 'T-4838/pole') whose secant from 0.1 crosses the "
             "pole (an iterate at d >= 1). Stratified by whether the run-on secant (continued past d = 1) and the "
-            "engine's Newton fallback from v = 0 return, and whether their digits agree: A1:A70 both return, digits "
+            "replay's model of the engine's old fallback (Newton from v = 0) return, and whether their digits agree: A1:A70 both return, digits "
             "differ; A71:A115 run-on only; A116:A145 Newton only; A146:A160 both, same digits. Predictions in "
             f"{POLE_CASE}.predictions.tsv. docs/research/irr-2026-11-07/replay.py."
         ),

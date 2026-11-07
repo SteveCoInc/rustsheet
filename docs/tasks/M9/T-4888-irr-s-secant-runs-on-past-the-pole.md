@@ -3,7 +3,7 @@ id: T-4888
 title: "IRR's secant runs on past the pole: continue the run at d > 1 instead of failing, with an absolute stall bound"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P1
 size: S
 tier: opus
@@ -51,21 +51,25 @@ Evidence (decision 0188 R4):
 - The engine now passes 134 of the 160. The other 26 are mostly where the run-on fails; T-4840 owns them. On A131 the
   engine is `#NUM!`, as on main. The 2-ulp value of the predictions file is the replay's Newton model, not the engine.
 - The cap widening is measured on the same fresh sweep: its 12 cells were predicted with a 200-step cap.
-- The stall rule (review round 2 asked for a fresh sweep after its freeze):
-  - It was chosen on one eval cell (gen-m9/fec39efaba9284c3 Calc!A283).
-  - Gate A's tables, which no fit reads, put 16 accuracy/IRR points (s1, r4-T-3411, r4-T-3407; flows near 1E+11 to
-    1E+14) in the envelope with an absolute 1e-4 bound. With the relative 1e-7 bound and the run-on they fail.
-  - The fresh sweep probes/t4888-irr-stall-sweep (207 cells, seed "T-4888/stall", drawn after the 1e-4 freeze) has 199
-    stalls over largest flows of 1E-9 to 1E+14. It confirms the frozen 1e-4: Excel holds a stall at 8.75E-5 and
-    rejects one at 1.28E-4.
-  - It also shows the absolute bound alone is wrong on small flows: Excel rejects stalls far from any root (relative
-    0.95 to 1.05) that the absolute bound would hold. So the rule became two-part: |NPV| < 1e-4 and |NPV| < 1e-12 of
-    the largest flow, the relative half bracketed in 2.8E-16..1.6E-9.
-  - The two-part rule matches Excel's hold-or-not on 195 of 199: 132/135 train, 63/64 test by the fit lab's split
-    (margin 5 points, so no drop). The absolute alone gets 174, the relative 1e-7 171, no stall stop 182.
-  - Applied only on largest flows of 1.3E-7 to 1.3E+14 (`IRR_STALL_FLOWS`, the sweep and t2565's 1.23E+14); outside
-    it a zero step is no stop.
-  - The engine passes 147 of the case's 207 cells; most of the other 60 are long-series second-stage cells (T-4840).
+- The stall rule (two review rounds asked for fresh evidence after each freeze):
+  - It was chosen on one eval cell (gen-m9/fec39efaba9284c3 Calc!A283) with an absolute 1e-4 bound.
+  - The first fresh sweep, probes/t4888-irr-stall-sweep (207 cells, seed "T-4888/stall", drawn after the 1e-4 freeze),
+    confirms 1e-4: Excel holds a stall at 8.75E-5 and rejects one at 1.28E-4. It also shows an absolute bound alone
+    holds far-from-root stalls on small flows that Excel rejects.
+  - So the rule became two-part: |NPV| < 1e-4 and < 1e-12 of the largest flow. The relative half is bracketed in
+    2.8E-16..1.6E-9. On that sweep it scores 195/199 (132/135 train, 63/64 test), but it was shaped on that sweep.
+  - Frozen again (commit 67ea7250, pushed before any fill), it was measured on two sets drawn after that:
+    - probes/t4888-irr-stall-sweep-2 (240 stalls, seed "T-4888/stall-2"; guesses -0.9..10, 3..150 flows, largest flows
+      2.1E-7..2.2E+22), predictions in its `.predictions.tsv`. Excel holds 14; the engine's rule gives its hold-or-not
+      on 236 of 240 ("no stall stop" 226). On the 4 others the rule holds 1 to 4 ulp from Excel's later value.
+    - Gate A's accuracy/IRR/r4-T-4888 (300 extreme-stratum points, 50..200 flows): 40 outside the envelope against 81
+      on main, none outside only with this change. The 40 are known failures owned by T-4840.
+  - Envelope counts (within 15 digits of Excel or 1e-9 of the math), this change against main:
+    t4838-irr-pole-runon 144/160 vs 59/160, t4888-irr-stall-sweep 151/207 vs 129/207, t4888-irr-stall-sweep-2 174/240
+    vs 143/240; none outside only with this change.
+  - Range (R4.3): `irr_stall_stops` applies on 3..200 flows and largest flows 1.3E-7..1.3E+14, the evidence of the
+    sweeps and the fresh Gate A batch; guesses -0.9..10. A 150-flow cap was tried and moved 11 Gate A points out.
+    Outside the range a zero step is no stop.
 - Attribution, from scratch builds: the run-on alone gives the t4838 bits and the 4 eval fixes below; the stall bound's
   absolute half alone gives the 16 Gate A points.
 
@@ -74,10 +78,11 @@ gen-m9/a91bad4e84f49739 Calc!A369, probes/irr-guess-edges P!A28 and P!A29, and p
 the outlier T-2565 and T-3120 left. IRR cells off Excel outside t4838 and t4844 go from 727 to 663 (ulp 34 -> 18,
 visibly-off numbers 113 -> 73). Also: the three t4844 math sidecars were stale (their case descriptions changed after
 the sidecars were written, in #3910) and are regenerated.
-Follow-ups: none new. T-4840 owns t4838's 26 cells and t4888-irr-stall-sweep's 60; the flat secant stays T-4838's.
+Follow-ups: none new. T-4840 owns t4838's 26 cells, the stall sweeps' remaining cells and the 40 r4-T-4888 Gate A points; the flat secant stays T-4838's.
 
-## Blocked because
-Resumed after the review-round limit (step 5c).
+## Review-round history
+Resumed after the review-round limit (step 5c). The findings below are addressed on the resumed branch: two fresh
+sets after the freeze, Gate A envelope counts, the range enforced in code (flows and largest flow), and the wording.
 
 The excel-fidelity reviewer's round-3 findings on head 7e0d968f are still open. Security and design approved that head.
 - MAJOR: the stall rule's relative half (`IRR_STALL_RELATIVE` = 1e-12) and the two-part form were shaped after seeing

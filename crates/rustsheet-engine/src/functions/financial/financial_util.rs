@@ -440,7 +440,6 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     // the t3411 fresh sweeps are `#DIV/0!` in Excel exactly where the secant's step lands there
     // (financial.md "IRR is #DIV/0! where its secant cannot evaluate NPV", T-3407).
     let npv = |d: f64| irr_npv(values, 1.0 - d).ok_or(SecantStop::DivZero);
-    let peak = largest_flow(values);
     let mut d0 = extended_quotient(guess, 1.0 + guess);
     let mut f0 = npv(d0)?;
     let mut d1 = d0 - if f0 > 0.0 { 1e-3 } else { -1e-3 };
@@ -475,19 +474,18 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
         // t2927-irr-fallback-sweep; financial.md "IRR's secant runs on past the pole" (T-4888).
         let f2 = npv(d2)?;
         largest_npv = largest_npv.max(f2.abs());
-        // A zero step also stops when |NPV| is under 1e-4: on the 2^-53 grid
-        // `IRR({-2500000,-1000000,123456789123000})` cannot get NPV under 1e-7 (1.2E-6 at
-        // Excel's 7026.083663633989), yet Excel returns it (probes/t2565-irr-guess-sweeps
-        // A107-C141). T-3120 found any bound from 1E-20 to 1E-7 of the largest flow, or an absolute
-        // one from 1E-5 to 0.1, scores the same there. The bound is absolute, RATE's 1e-4 for a
-        // held flat secant ("RATE holds on a flat secant"): a relative one returns
-        // gen-m9/fec39efaba9284c3 Calc!A283, whose run on past the pole (T-4888) stalls at
-        // |NPV| = 0.2 (1.6E-9 of its largest flow) where no root exists and Excel is `#NUM!`.
-        // Excel's other stops are absolute too (financial.md "IRR's second stage ignores the guess").
+        // A zero step also stops a run at the flows' rounding noise ([`irr_stall_stops`]: |NPV| under
+        // 1e-4 and under 1e-12 of the largest flow). On the 2^-53 grid
+        // `IRR({-2500000,-1000000,123456789123000})` cannot get NPV under 1e-7 (1.2E-6 at Excel's
+        // 7026.083663633989), yet Excel returns it (probes/t2565-irr-guess-sweeps A107-C141). With
+        // only the relative 1e-7-of-the-largest-flow bound of T-3120, gen-m9/fec39efaba9284c3 Calc!A283
+        // stalls at |NPV| = 0.2 after its run goes on past the pole (T-4888) and returns where Excel is
+        // `#NUM!`; with only an absolute bound, small flows hold stalls far from any root that Excel
+        // rejects (probes/t4888-irr-stall-sweep A1:A32).
         // Past [`IRR_SHORT_RUN_STEPS`] a stalled zero step is no stop: the run goes flat on its
         // next step and fails. Excel is `#NUM!` on all 6 stalled stops in eval and Gate A between the
         // 41st step and its cap; all of them lie outside [`IRR_LONG_RUN_RANGE`] (T-3408).
-        let stalled = d2 == d1 && irr_stall_stops(f2.abs(), peak) && step < IRR_SHORT_RUN_STEPS;
+        let stalled = d2 == d1 && irr_stall_stops(f2.abs(), values) && step < IRR_SHORT_RUN_STEPS;
         if (d2 - d1).abs() < 1e-7 && (f2.abs() < 1e-7 || stalled) {
             // A root past the pole (v <= 0, r <= -1) is no result: the run fails and the call goes
             // on to the retry and the fallback (t4838-irr-pole-runon A118, A131 and A144 converge
@@ -514,30 +512,40 @@ enum SecantStop {
 /// The |NPV| under which a zero step (d2 = d1) stops an IRR secant run that has not reached the
 /// 1e-7 residual stop, with [`IRR_STALL_RELATIVE`]: Excel holds a stalled step only at the flows'
 /// rounding noise, both under 1e-4 absolute and under 1e-12 of the largest flow (financial.md
-/// "IRR's secant runs on past the pole", T-4888). 1e-4 is RATE's bound for a held flat secant,
-/// frozen before the fresh sweep T-4888's own fresh sweep was drawn: probes/t4888-irr-stall-sweep (199
-/// stalls over largest flows 1E-9..1E+14) brackets it between 8.75E-5 (held) and 1.28E-4 (not).
-/// Gate A's tables, which no fit reads, agree: 16 accuracy/IRR points of flows near 1E+11..1E+14
-/// move into the envelope with it.
-/// FITTED(T-4888, 199 cells, IRR zero-step stalls of 3..40 flows, largest |c| 1.3E-7..1.3E+14 (t2565 1.23E+14 rounded out); absolute bracket 8.75E-5..1.28E-4, relative bracket 2.8E-16..1.6E-9)
+/// "IRR's secant runs on past the pole", T-4888). 1e-4 is RATE's bound for a held flat secant. It
+/// was frozen before probes/t4888-irr-stall-sweep was drawn, and that sweep brackets it between
+/// 8.75E-5 (held) and 1.28E-4 (not). The two-part rule was then frozen before
+/// probes/t4888-irr-stall-sweep-2 and Gate A's accuracy/IRR/r4-T-4888 were drawn (their
+/// predictions were committed before the fill).
+/// FITTED(T-4888, 739 cells, IRR zero-step stalls of 3..200 flows, largest |c| 1.3E-7..1.3E+14, guess -0.9..10; absolute bracket 8.75E-5..1.28E-4, relative bracket 2.8E-16..1.6E-9)
 const IRR_STALL_RESIDUAL: f64 = 1e-4;
 
 /// [`IRR_STALL_RESIDUAL`]'s relative half: a stall stops only at |NPV| under this fraction of the
-/// largest |flow|. The fresh stall sweep holds every stall at 2.8E-16 of the largest flow or less
-/// (A147, A161) and rejects gen-m9 fec39efaba9284c3 Calc!A283's no-root flows times 10^k at
-/// 1.6E-9 (A201:A204) and every stall far from a root on small flows (relative 0.95..1.05); T-3120's
-/// t2565 cells need at least 1E-20. The round value in 2.8E-16..1.6E-9 is taken. Train/test (fit
-/// lab split): the two-part rule matches Excel's hold-or-not on 132 of 135 and 63 of 64.
+/// largest |flow|. The first stall sweep holds every stall at 2.8E-16 of the largest flow or less
+/// (A147, A161). It rejects gen-m9 fec39efaba9284c3 Calc!A283's no-root flows times 10^k at 1.6E-9
+/// (A201:A204), and every stall far from a root on small flows (relative 0.95..1.05). T-3120's
+/// t2565 cells need at least 1E-20. The round value in 2.8E-16..1.6E-9 is taken. On the second
+/// sweep, drawn after the freeze, the engine's rule gives Excel's hold-or-not on 236 of 240
+/// ("no stall stop" 226). Two stalls past the pole count among the 236, because the run fails there
+/// anyway. On the other 4 the rule holds where Excel goes on, 1 to 4 ulp from Excel's value.
 const IRR_STALL_RELATIVE: f64 = 1e-12;
 
-/// The largest |flow| range the stall stop is evidenced on (t4888-irr-stall-sweep's stalls and
-/// t2565-irr-guess-sweeps): outside it a zero step is no stop (decision 0188 R4.3).
-const IRR_STALL_FLOWS: (f64, f64) = (1.3e-7, 1.3e14);
+/// The calls the stall stop is evidenced on (decision 0188 R4.3): 3..200 flows and a largest |flow|
+/// of 1.3E-7..1.3E+14. The flow counts come from the two stall sweeps (3..150) and Gate A's
+/// accuracy/IRR/r4-T-4888 (50..200), all drawn after the freeze; no 2-flow stall is probed. A
+/// 150-flow cap moves 8 of that batch's points and 3 committed ones (s1 A234, A269, r4-T-3411 A260)
+/// out of the envelope. That is the first sweep's
+/// smallest stalled series up to t2565-irr-guess-sweeps' 1.23E+14 rounded out. Excel holds no stall
+/// above that on either sweep (the second reaches 2.2E+22), and held ones run 9.7E+8..9.8E+12.
+/// Outside the range a zero step is no stop.
+const IRR_STALL_FLOWS: (usize, usize, f64, f64) = (3, 200, 1.3e-7, 1.3e14);
 
-/// Whether a zero step with |NPV| = `residual` stops a run on flows whose largest |c| is `peak`.
-fn irr_stall_stops(residual: f64, peak: f64) -> bool {
-    let (smallest, largest) = IRR_STALL_FLOWS;
-    (smallest..=largest).contains(&peak)
+/// Whether a zero step with |NPV| = `residual` stops a run on `values` ([`IRR_STALL_FLOWS`]).
+fn irr_stall_stops(residual: f64, values: &[f64]) -> bool {
+    let (fewest, most, smallest, largest) = IRR_STALL_FLOWS;
+    let peak = largest_flow(values);
+    (fewest..=most).contains(&values.len())
+        && (smallest..=largest).contains(&peak)
         && residual < IRR_STALL_RESIDUAL
         && residual < IRR_STALL_RELATIVE * peak
 }
