@@ -254,7 +254,7 @@ const F_QUANTILE_REFINE_P_MIN: f64 = 1e-15;
 /// Where the search converged its cdf misses by its rounding noise: at most 2E-13 on every such
 /// estimate of the eval suites' literal-argument calls (23 distinct, p 1E-20 to 1.1E-15; T-1871).
 /// A guard between the two, not a fit: every value from 2E-13 to 5E-12 keeps and drops the same
-/// estimates. It only shrinks the keep region of the FITTED(T-0974) cut [`F_QUANTILE_REFINE_P_MIN`]:
+/// estimates. It only shrinks the keep region of T-0974's fitted cut [`F_QUANTILE_REFINE_P_MIN`]:
 /// a dropped estimate takes the accurate crossing, so a converged estimate that misses by more
 /// (possible at a large df1, where the cdf's own rounding grows) loses nothing but the start.
 const F_QUANTILE_ESTIMATE_RESIDUAL_MAX: f64 = 1e-12;
