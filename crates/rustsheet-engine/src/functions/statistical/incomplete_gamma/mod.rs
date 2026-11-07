@@ -532,12 +532,24 @@ fn excel_leading_factor(a: f64, exponent: f64) -> f64 {
 /// 33 and 21; from shape 20 (fit-audit-t2638-ratio-min, t3252-gamma-prefactor-window and others)
 /// at 128 of 158 against 96, 1 over 4 ulp against 61. The orders tried (the factor times a / x
 /// last, or (e^-y a) / x, or y and the scale in place of x) are 47 to 56 of the 128 train cells.
-/// `None` elsewhere and where the result is not a normal double.
+/// On its fresh sweep (probes-numeric/t3412-density-sweep, 120 cells, shapes 1 to 160, taken after
+/// the freeze) it is bit-exact at 76 cells and over 4 ulp off at 1, where the log forms were at
+/// 33 and 54.
+///
+/// That one cell is the factor's flush: Excel's `GAMMA.DIST(4.57398E-12,24.55,2,FALSE)` is 0 where
+/// the factor is a subnormal 3E-311 and a / x (5E12) would bring the density back to 2.5E-298, so
+/// a subnormal factor is 0 here, as a subnormal operand is elsewhere in Excel (numbers.md "A
+/// subnormal divisor is zero"). Only that cell shows it (UNVERIFIED, TODO(T-3412)). `None` elsewhere
+/// and where the density is not a normal double.
 pub(crate) fn excel_lower_density(a: f64, x: f64, y: f64) -> Option<f64> {
     if !(a > 1.0 && y >= f64::MIN_POSITIVE && y <= 1.0 && x > 0.0) {
         return None;
     }
-    let density = excel_leading_factor(a, a * excel_ln(y)) * excel_exp(-y) * (a / x);
+    let factor = excel_leading_factor(a, a * excel_ln(y));
+    if factor < f64::MIN_POSITIVE {
+        return Some(0.0);
+    }
+    let density = factor * excel_exp(-y) * (a / x);
     density.is_normal().then_some(density)
 }
 

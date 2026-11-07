@@ -7,10 +7,14 @@ has at most 6 significant digits, so Excel's 15-digit cut of a literal does not 
 
     python3 docs/research/t3412/fresh_sweep.py > eval/suites/probes-numeric/cases/t3412-fresh-sweep.case.json
     python3 docs/research/t3412/fresh_sweep.py 2 > eval/suites/probes-numeric/cases/t3412-fresh-sweep-2.case.json
+    python3 docs/research/t3412/fresh_sweep.py 3 > eval/suites/probes-numeric/cases/t3412-density-sweep.case.json
 
 Sweep 2 (seed 20261108), after the form was widened to every shape above 1 and frozen (commit
 56bf7cc5): GAMMA.DIST and CHISQ.DIST cdf at shapes 20 to 170, x/scale up
 to 1, plus 20 cells just past x/scale = 1 there.
+
+Sweep 3 (seed 20261110), after the leading-factor density was frozen: GAMMA.DIST and CHISQ.DIST
+densities at shapes 1 to 160 and x/scale up to 1.
 """
 
 import json
@@ -41,7 +45,26 @@ def sweep_2() -> list[tuple[str, str]]:
     return cells
 
 
+def sweep_3() -> list[tuple[str, str]]:
+    rng = random.Random(20261110)
+    cells: list[tuple[str, str]] = []
+    for _ in range(80):
+        a = sig(10 ** rng.uniform(0.0, 2.2), 4)
+        b = rng.choice(["1", "2", "0.5", "3.7"])
+        y = 10 ** rng.uniform(-12, 0)
+        cells.append((f"=GAMMA.DIST({sig(y * float(b))},{a},{b},FALSE)", f"gdd/a={a}/b={b}"))
+    for _ in range(40):
+        df = rng.randint(3, 300)
+        cells.append((f"=CHISQ.DIST({sig(2 * 10 ** rng.uniform(-10, 0))},{df},FALSE)", f"cdd/df={df}"))
+    return cells
+
+
 def main() -> None:
+    if sys.argv[1:] == ["3"]:
+        emit(sweep_3(), "T-3412 density fresh sweep after the leading-factor density was frozen (decision 0188 R4.2):"
+             " GAMMA.DIST and CHISQ.DIST densities at shapes 1 to 160 and x/scale up to 1"
+             " (docs/research/t3412/fresh_sweep.py 3, seed 20261110).")
+        return
     if sys.argv[1:] == ["2"]:
         emit(sweep_2(), "T-3412 second fresh sweep after the leading-factor form was widened to every shape above 1"
              " and frozen (decision 0188 R4.2): GAMMA.DIST and CHISQ.DIST cdf at shapes 20 to 170, x/scale up to 1,"
