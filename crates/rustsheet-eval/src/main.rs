@@ -177,10 +177,8 @@ enum Cmd {
     Roundtrip {
         #[command(flatten)]
         sel: Selection,
-        #[arg(long, conflicts_with = "update")]
-        check: bool,
-        #[arg(long = "update-baseline")]
-        update: bool,
+        #[command(flatten)]
+        flags: roundtrip::Flags,
     },
     /// Gate A (SPEC-0029, decision 0188 R2): fail when a reference-table point of eval/accuracy
     /// is outside the envelope, a known-failure line is stale, an R3 mark lacks evidence or a
@@ -945,7 +943,7 @@ fn run() -> Result<ExitCode> {
         Cmd::Show { case_id, all } => cmd_show(&root, &case_id, all),
         Cmd::Cases { suite } => cmd_cases(&root, &suite),
         Cmd::Accuracy { json, timeout } => cmd_accuracy(&root, json, timeout),
-        Cmd::Roundtrip { sel, check, update } => cmd_roundtrip(&root, &sel, check, update),
+        Cmd::Roundtrip { sel, flags } => cmd_roundtrip(&root, &sel, flags),
         Cmd::Snapshot { .. } | Cmd::Compare { .. } => unreachable!("handled above"),
     }
 }
@@ -969,13 +967,9 @@ fn cmd_suites(root: &Path) -> Result<ExitCode> {
 }
 
 /// `rustsheet-eval roundtrip` (SPEC-0033): the gate suites with `--check`, else the selection.
-fn cmd_roundtrip(root: &Path, sel: &Selection, check: bool, update: bool) -> Result<ExitCode> {
-    let suites = select_from(Suite::load_roundtrip(root)?, sel, check)?;
-    let mode = match (check, update) {
-        (true, _) => roundtrip::Mode::Check,
-        (_, true) => roundtrip::Mode::Update,
-        _ => roundtrip::Mode::Report,
-    };
+fn cmd_roundtrip(root: &Path, sel: &Selection, flags: roundtrip::Flags) -> Result<ExitCode> {
+    let suites = select_from(Suite::load_roundtrip(root)?, sel, flags.check)?;
+    let mode = flags.mode();
     let timeout = Duration::from_secs(sel.timeout);
     let (ok, lines) = roundtrip::command(root, &suites, sel.filter.as_deref(), timeout, mode)?;
     for line in lines {

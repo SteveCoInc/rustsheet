@@ -39,6 +39,11 @@ pub struct PivotTable {
     /// The pivot-wide layout flags and captions.
     pub options: PivotOptions,
     /// The definition's elements and attributes the model does not read, verbatim.
+    ///
+    /// The export (T-4176) writes each entry back into the part as it is, unescaped and
+    /// unchecked, so an entry must be XML the importer captured from a definition part (or a
+    /// copy of one): well-formed, with its values already escaped. Nothing else may add one; a
+    /// pivot made through the API holds none.
     pub opaque: Vec<OpaqueEntry>,
 }
 
@@ -183,6 +188,12 @@ pub struct PivotField {
     pub insert_blank_row: bool,
     /// `numFmtId` of the item labels; MS-OI29500 §18.10.1.69 reads absent as 0.
     pub number_format: Option<u32>,
+    /// The x14 extension's `fillDownLabels` (default off; "Repeat Item Labels"): the field's
+    /// item label shows on every line of its children, not on its first line only. It is read
+    /// from the field's kept `extLst`, which stays in [`PivotTable::opaque`] and is what the
+    /// export writes (docs/excel-semantics/pivots.md "Repeat item labels",
+    /// probes/t4698-pivot-repeat-labels).
+    pub fill_down_labels: bool,
     /// `<items>`, in file order: the order the field shows its items in.
     pub items: Vec<PivotItem>,
 }
@@ -210,6 +221,7 @@ impl PivotField {
             sort_type: SortType::Manual,
             insert_blank_row: false,
             number_format: None,
+            fill_down_labels: false,
             items: Vec::new(),
         }
     }
@@ -348,16 +360,17 @@ pub struct DataField {
     pub field: u32,
     /// `subtotal`: how it summarizes.
     pub function: Aggregate,
-    /// `showDataAs`.
+    /// `showDataAs`, or the x14 extension's `pivotShowAs` ([`ShowDataAs`]).
     pub show_data_as: ShowDataAs,
     /// `baseField`: the field a show-values-as calculation compares against; -1 for none.
     pub base_field: i32,
     /// `baseItem`: the item it compares against; [`NO_BASE_ITEM`] for none, 1048828 for
     /// (previous) and 1048829 for (next) (MS-OI29500 §18.10.1.22).
     pub base_item: u32,
-    /// `numFmtId` of the values; absent is the application's default (MS-OI29500
-    /// §18.10.1.22 d, as docs/research/pivot-tables-2026-11-04/excel-docs.md §1 quotes it; not
-    /// probed).
+    /// `numFmtId` of the values, which their cells show them in; absent is the application's
+    /// default (MS-OI29500 §18.10.1.22 d, as docs/research/pivot-tables-2026-11-04/excel-docs.md
+    /// §1 quotes it), General for a data field over numbers (pivots.md "Value cells show their
+    /// data field's number format", probes/t4169-pivot-number-formats).
     pub number_format: Option<u32>,
 }
 
@@ -402,24 +415,35 @@ pub enum Aggregate {
     VarP,
 }
 
+/// `ST_DataConsolidateFunction`'s names of the functions, in the schema's order.
+const CONSOLIDATE_NAMES: [(&str, Aggregate); 11] = [
+    ("sum", Aggregate::Sum),
+    ("count", Aggregate::Count),
+    ("average", Aggregate::Average),
+    ("max", Aggregate::Max),
+    ("min", Aggregate::Min),
+    ("product", Aggregate::Product),
+    ("countNums", Aggregate::CountNums),
+    ("stdDev", Aggregate::StdDev),
+    ("stdDevp", Aggregate::StdDevP),
+    ("var", Aggregate::Var),
+    ("varp", Aggregate::VarP),
+];
+
 impl Aggregate {
     /// The function a `dataField@subtotal` (`ST_DataConsolidateFunction`) names.
     #[must_use]
     pub fn from_consolidate_name(name: &str) -> Option<Self> {
-        Some(match name {
-            "sum" => Self::Sum,
-            "count" => Self::Count,
-            "average" => Self::Average,
-            "max" => Self::Max,
-            "min" => Self::Min,
-            "product" => Self::Product,
-            "countNums" => Self::CountNums,
-            "stdDev" => Self::StdDev,
-            "stdDevp" => Self::StdDevP,
-            "var" => Self::Var,
-            "varp" => Self::VarP,
-            _ => return None,
-        })
+        let mut names = CONSOLIDATE_NAMES.iter();
+        names.find(|(n, _)| *n == name).map(|(_, f)| *f)
+    }
+
+    /// The `dataField@subtotal` name of the function, what [`Aggregate::from_consolidate_name`]
+    /// reads.
+    #[must_use]
+    pub fn consolidate_name(self) -> &'static str {
+        let mut names = CONSOLIDATE_NAMES.iter();
+        names.find(|(_, f)| *f == self).map_or("sum", |(n, _)| *n)
     }
 
     /// Excel's word for the function: a new data field's caption starts with it (`Sum of Sales`,
@@ -442,7 +466,12 @@ impl Aggregate {
     }
 }
 
-/// `ST_ShowDataAs`: the calculation a data field shows instead of its plain values.
+/// `ST_ShowDataAs`, and the six Excel 2010 modes of the x14 dataField extension's `pivotShowAs`:
+/// the calculation a data field shows instead of its plain values. Excel writes an x14 mode as
+/// `pivotShowAs` alone, with no `showDataAs` (docs/excel-semantics/pivots.md "Show-values-as
+/// modes as Excel for the web renders them"). The importer reads it from the extension, which it
+/// keeps verbatim, so a writer gives `showDataAs` only the ECMA modes ([`ShowDataAs::is_x14`]).
+/// The engine is `pivot::show_as` (T-4163).
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ShowDataAs {
     /// `normal`: the plain values.
@@ -463,11 +492,76 @@ pub enum ShowDataAs {
     PercentOfTotal,
     /// `index`.
     Index,
+    // The x14 modes, appended so the encoded indices of the ECMA ones stay valid.
+    /// x14 `percentOfParentRow`.
+    PercentOfParentRow,
+    /// x14 `percentOfParentCol`.
+    PercentOfParentColumn,
+    /// x14 `percentOfParent`.
+    PercentOfParent,
+    /// x14 `percentOfRunningTotal`.
+    PercentOfRunningTotal,
+    /// x14 `rankAscending`.
+    RankAscending,
+    /// x14 `rankDescending`.
+    RankDescending,
+}
+
+/// The modes' names, the ECMA nine in `ST_ShowDataAs`'s order, then the six x14 ones.
+const SHOW_DATA_AS_NAMES: [(&str, ShowDataAs); 15] = [
+    ("normal", ShowDataAs::Normal),
+    ("difference", ShowDataAs::Difference),
+    ("percent", ShowDataAs::Percent),
+    ("percentDiff", ShowDataAs::PercentDiff),
+    ("runTotal", ShowDataAs::RunTotal),
+    ("percentOfRow", ShowDataAs::PercentOfRow),
+    ("percentOfCol", ShowDataAs::PercentOfColumn),
+    ("percentOfTotal", ShowDataAs::PercentOfTotal),
+    ("index", ShowDataAs::Index),
+    ("percentOfParentRow", ShowDataAs::PercentOfParentRow),
+    ("percentOfParentCol", ShowDataAs::PercentOfParentColumn),
+    ("percentOfParent", ShowDataAs::PercentOfParent),
+    ("percentOfRunningTotal", ShowDataAs::PercentOfRunningTotal),
+    ("rankAscending", ShowDataAs::RankAscending),
+    ("rankDescending", ShowDataAs::RankDescending),
+];
+
+impl ShowDataAs {
+    /// The mode a `dataField@showDataAs` or x14 `pivotShowAs` names (an x14 one only in
+    /// `pivotShowAs`: the importer checks [`ShowDataAs::is_x14`]).
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        let mut names = SHOW_DATA_AS_NAMES.iter();
+        names.find(|(n, _)| *n == name).map(|(_, s)| *s)
+    }
+
+    /// The mode's name, what [`ShowDataAs::from_name`] reads.
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        let mut names = SHOW_DATA_AS_NAMES.iter();
+        names
+            .find(|(_, s)| *s == self)
+            .map_or("normal", |(n, _)| *n)
+    }
+
+    /// Whether the mode is one of the six only the x14 extension's `pivotShowAs` can name.
+    #[must_use]
+    pub fn is_x14(self) -> bool {
+        matches!(
+            self,
+            Self::PercentOfParentRow
+                | Self::PercentOfParentColumn
+                | Self::PercentOfParent
+                | Self::PercentOfRunningTotal
+                | Self::RankAscending
+                | Self::RankDescending
+        )
+    }
 }
 
 /// Where in the definition an [`OpaqueEntry`] was read: the typed element it belongs to.
 /// Indices count the elements of that kind in file order.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum OpaqueOwner {
     /// The `pivotTableDefinition` root.
     Definition,
@@ -528,6 +622,17 @@ pub struct OpaqueEntry {
 }
 
 impl OpaqueEntry {
+    /// Whether the entry is the definition's saved `rowItems` or `colItems`: the lines of the
+    /// layout the file's cells show. They describe a pivot only until the engine lays it out
+    /// again, which drops them ([`crate::model::Model::plan_pivot_render`] and the refresh); the
+    /// export (T-4176) writes the engine's lines for a pivot without them.
+    #[must_use]
+    pub fn is_layout_lines(&self) -> bool {
+        self.owner == OpaqueOwner::Definition
+            && matches!(&self.node, OpaqueNode::Element(xml)
+                if matches!(element_name(xml), "rowItems" | "colItems"))
+    }
+
     /// The bytes the entry holds, counted toward the import limits: its text and its own size.
     #[must_use]
     pub fn cost(&self) -> usize {
@@ -536,4 +641,147 @@ impl OpaqueEntry {
         };
         text.saturating_add(std::mem::size_of::<OpaqueEntry>())
     }
+
+    /// Whether the entry may hold a cache field index, which a refresh that renumbers the fields
+    /// cannot remap (T-4694; how Excel remaps them is T-4712's). An element holds one when any
+    /// attribute in it is named like a field index: `field`, `fld` or a name ending in either,
+    /// ignoring case and prefix. ECMA-376's are `pivotArea@field` and `reference@field` (in
+    /// `formats`, `conditionalFormats`, `chartFormats` and a field's `autoSortScope`),
+    /// `filter@fld`, `@mpFld` and `@iMeasureFld`, and `mp@field` (`pivotHierarchies`); an
+    /// unknown attribute so named counts too, and so does anything the scan cannot read to its
+    /// end (an open quote, tag, comment, CDATA section or processing instruction, or a
+    /// declaration). `rowItems` and `colItems` hold none (`x@v` are item indices of the axis's
+    /// n-th field, `i@i` a data field's). Kept attributes hold none either: of the attributes
+    /// the schema gives the typed elements (eval/catalog/pivot-schema-nodes.txt), the ones so
+    /// named are `pageField@fld` and `dataField@fld`/`@baseField`, which the importer types,
+    /// and `pivotField@dataField` and `@serverField`, two flags, allowed on a field's own
+    /// attributes; the name rule still catches one the schema does not have.
+    #[must_use]
+    pub fn holds_field_index(&self) -> bool {
+        match &self.node {
+            OpaqueNode::Element(xml) => names_a_field(xml, false, |_| false),
+            OpaqueNode::Attributes(xml) => {
+                let field = matches!(self.owner, OpaqueOwner::Field(_));
+                names_a_field(xml, true, |name| {
+                    field && matches!(name, "dataField" | "serverField")
+                })
+            }
+        }
+    }
+}
+
+impl OpaqueOwner {
+    /// The pivot field the owner belongs to: a `<pivotField>`, its `<items>` or one of them.
+    #[must_use]
+    pub fn field(self) -> Option<u32> {
+        match self {
+            OpaqueOwner::Field(field)
+            | OpaqueOwner::Items(field)
+            | OpaqueOwner::Item { field, .. } => Some(field),
+            _ => None,
+        }
+    }
+
+    /// The owner moved to pivot field `to`, when it belongs to one ([`OpaqueOwner::field`]).
+    #[must_use]
+    pub fn with_field(self, to: u32) -> Self {
+        match self {
+            OpaqueOwner::Field(_) => OpaqueOwner::Field(to),
+            OpaqueOwner::Items(_) => OpaqueOwner::Items(to),
+            OpaqueOwner::Item { item, .. } => OpaqueOwner::Item { field: to, item },
+            other => other,
+        }
+    }
+}
+
+/// The local name of verbatim element `xml`'s tag: `rowItems` for `<x:rowItems count="1">`.
+#[must_use]
+pub fn element_name(xml: &str) -> &str {
+    let tag = xml.strip_prefix('<').unwrap_or(xml);
+    let end = tag
+        .find(|c: char| c.is_whitespace() || c == '/' || c == '>')
+        .unwrap_or(tag.len());
+    let name = tag.get(..end).unwrap_or_default();
+    name.rsplit(':').next().unwrap_or(name)
+}
+
+/// Whether verbatim `xml` has an attribute whose local name is `field` or `fld` or ends in one,
+/// ignoring case, other than one `allowed` names, or cannot be read to its end. `attributes` is
+/// whether the text is a kept attribute list, which starts and ends inside a tag; an element's
+/// text must end outside one. One pass, so linear in the text (directive 5): a value is skipped by
+/// its quotes, a comment, CDATA section or processing instruction to its end, and text between
+/// tags is not read. An unterminated one, an open quote or tag, or a declaration (`<!DOCTYPE`,
+/// which the importer never keeps) is refused (`true`): a scan that fails reads as a field index.
+fn names_a_field(xml: &str, attributes: bool, allowed: impl Fn(&str) -> bool) -> bool {
+    let is_name =
+        |b: u8| b.is_ascii_alphanumeric() || matches!(b, b':' | b'_' | b'-' | b'.') || b >= 0x80;
+    let bytes = xml.as_bytes();
+    let mut in_tag = attributes;
+    let mut quote = None;
+    // The last name read in the tag, as a byte range, and whether the previous byte was in it.
+    let mut name: Option<(usize, usize)> = None;
+    let mut in_name = false;
+    let mut at = 0;
+    while let Some(&b) = bytes.get(at) {
+        at += 1;
+        if let Some(q) = quote {
+            if b == q {
+                quote = None;
+            }
+            continue;
+        }
+        let was_in_name = std::mem::replace(&mut in_name, false);
+        if !in_tag {
+            if b == b'<' {
+                let rest = xml.get(at..).unwrap_or_default();
+                let skipped = [("!--", "-->"), ("![CDATA[", "]]>"), ("?", "?>")]
+                    .into_iter()
+                    .find(|(open, _)| rest.starts_with(open))
+                    .map(|(open, close)| {
+                        let body = rest.get(open.len()..).unwrap_or_default();
+                        body.find(close).map(|end| open.len() + end + close.len())
+                    });
+                match skipped {
+                    Some(Some(len)) => at += len,
+                    // Unterminated.
+                    Some(None) => return true,
+                    None if rest.starts_with('!') => return true,
+                    None => {
+                        in_tag = true;
+                        name = None;
+                    }
+                }
+            }
+            continue;
+        }
+        match b {
+            b'"' | b'\'' => quote = Some(b),
+            b'>' => {
+                in_tag = false;
+                name = None;
+            }
+            b'=' => {
+                let local = name
+                    .and_then(|(start, end)| xml.get(start..end))
+                    .map(|n| n.rsplit(':').next().unwrap_or(n));
+                if let Some(local) = local {
+                    let lower = local.to_ascii_lowercase();
+                    if (lower.ends_with("field") || lower.ends_with("fld")) && !allowed(local) {
+                        return true;
+                    }
+                }
+                name = None;
+            }
+            b if is_name(b) => {
+                in_name = true;
+                name = match name {
+                    Some((start, _)) if was_in_name => Some((start, at)),
+                    _ => Some((at - 1, at)),
+                };
+            }
+            b if b.is_ascii_whitespace() => {}
+            _ => name = None,
+        }
+    }
+    quote.is_some() || in_tag != attributes
 }

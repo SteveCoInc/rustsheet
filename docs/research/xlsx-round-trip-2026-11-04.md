@@ -264,9 +264,9 @@ One table maps every part pattern and relationship type to an owner and a policy
 
 | Policy | Meaning | Examples |
 |---|---|---|
-| `Modelled` | Regenerated from the typed model | workbook, worksheets, styles, sharedStrings, tables, theme (once modelled whole), metadata |
-| `Replay` | Written back verbatim while its owner exists and its closure is intact | customXml, custom.xml, webextensions, printerSettings, thumbnail, charts, drawings and media until modelled, chartsheets, pivots until SPEC-0015 grows export, externalLinks |
-| `ReplayIfClean` | Verbatim only if no edit touched what it depends on; otherwise dropped with a diagnostic | drawings anchored to cells after a structural edit, pivot caches whose source range was edited (caches carry their own refresh flag, RQ4) |
+| `Modelled` | Regenerated from the typed model | workbook, worksheets, styles, sharedStrings, tables, theme (once modelled whole), metadata, pivot caches, records and tables (T-4176; grouped caches T-4734) |
+| `Replay` | Written back verbatim while its owner exists and its closure is intact | customXml, custom.xml, webextensions, printerSettings, thumbnail, charts, drawings and media until modelled, chartsheets, externalLinks (pivots moved to `Modelled`, T-4176) |
+| `ReplayIfClean` | Verbatim only if no edit touched what it depends on; otherwise dropped with a diagnostic | drawings anchored to cells after a structural edit (pivot caches are `Modelled` since T-4176: a changed cache is written from the model, `refreshOnLoad` included) |
 | `Active` | Verbatim bytes, only into .xlsm/.xltm; never interpreted | vbaProject.bin, ActiveX |
 | `Drop` | Never written | calcChain, digital signatures, revisions (with a diagnostic) |
 | **unknown** | Default for any relationship type not in the table: `Replay` if its closure reaches no `Modelled` part, otherwise `Drop` plus a diagnostic | whatever Excel ships next |

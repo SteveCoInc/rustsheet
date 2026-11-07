@@ -249,22 +249,30 @@ impl Model {
 
         units.insert("weight", weight);
 
+        // Distance factors are in angstroms (m = 1e10), Excel's internal base, as area's are in
+        // square angstroms: the factor ratio then rounds as Excel's does. `CONVERT(255,"mi","km")`
+        // is 410.38272 and `CONVERT(255,"in","cm")` 647.7 (probes/t4534-bessel-convert-web-values
+        // B1:B4, D1:D4; in metres they are 410.38272000000006 and 647.6999999999999), and
+        // `CONVERT(1,"m","ft")` 3.2808398950131235. The pica is 1/6 inch and the point 1/72 inch,
+        // each the nearest double to its exact length in angstroms (probes/convert-unit-names
+        // A105, B105). docs/excel-semantics/engineering.md "CONVERT constants and evaluation
+        // order" (T-4630).
         let distance = HashMap::from([
-            ("m", 1.0),
-            ("mi", 1609.344),
-            ("Nmi", 1852.0),
-            ("in", 0.0254),
-            ("ft", 0.3048),
-            ("yd", 0.9144),
-            ("ang", 0.0000000001),
-            ("ell", 1.143),
-            ("ly", 9460730472580800.0),
-            ("parsec", 3.0856775812815532e+16),
-            ("pc", 3.0856775812815532e+16),
-            ("Picapt", 0.0003527777777777778),
-            ("Pica", 0.0003527777777777778),
-            ("pica", 0.004233333333333334),
-            ("survey_mi", 1609.3472186944373),
+            ("m", 1e10),
+            ("mi", 16093440000000.0),
+            ("Nmi", 18520000000000.0),
+            ("in", 254000000.0),
+            ("ft", 3048000000.0),
+            ("yd", 9144000000.0),
+            ("ang", 1.0),
+            ("ell", 11430000000.0),
+            ("ly", 9.4607304725808e+25),
+            ("parsec", 3.0856775812815533e+26),
+            ("pc", 3.0856775812815533e+26),
+            ("Picapt", 3527777.777777778),
+            ("Pica", 3527777.777777778),
+            ("pica", 42333333.333333336),
+            ("survey_mi", 16093472186944.373),
         ]);
         units.insert("distance", distance);
         let time = HashMap::from([

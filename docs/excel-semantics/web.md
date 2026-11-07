@@ -63,11 +63,14 @@ pivot is also skipped for an unknown `axis`, `sortType`, `showDataAs`, data fiel
 boolean, and a malformed number the model only keeps (`dataPosition`, `pageWrap`, `numFmtId`, `baseField`,
 `baseItem`, a page field's `item` or `hier`), reads as the schema's default instead.
 The limits are totals counted while parsing, before anything past them is allocated (CLAUDE.md directive 5).
+The xlsx export holds each pivot cache to the same totals (records, record values per cache and across the
+workbook's caches, shared items) and drops a cache past them, with its pivots and a log line, as it does a cache
+with a non-finite number or an out-of-range record index (T-4176).
 Part names that differ only by case or by `\` against `/` are one part, so a pivot or cache reached twice that way is skipped like any other. A
 sheet that loses pivots to a cap logs one line with the count, not one per pivot.
 Evidence: none for Excel; this is a resource limit (SPEC-0015 "Untrusted-input limits").
 Status: DEVIATION (decision 0014)
-Implemented in: crates/rustsheet-engine/src/pivot.rs (`CacheBuilder`, `MAX_*`), crates/rustsheet-xlsx/src/import/pivots.rs, crates/rustsheet-xlsx/src/import/pivots/table.rs (`MAX_EXTRA_ITEMS`, `OpaqueEntry::cost`; `MAX_OPAQUE_BYTES` in pivots.rs)
+Implemented in: crates/rustsheet-engine/src/pivot.rs (`CacheBuilder`, `MAX_*`), crates/rustsheet-xlsx/src/import/pivots.rs, crates/rustsheet-xlsx/src/import/pivots/table.rs (`MAX_EXTRA_ITEMS`, `OpaqueEntry::cost`; `MAX_OPAQUE_BYTES` in pivots.rs), crates/rustsheet-xlsx/src/export/pivots/cache.rs (`check`)
 
 ## GETPIVOTDATA against a pivot table (T-1705)
 Rule: against a compact-form pivot (one row field, an optional column field, one data field), GETPIVOTDATA
@@ -110,10 +113,12 @@ Engine (SPEC-0015): the workbook model holds pivot caches and pivot tables (`piv
 `crates/rustsheet-xlsx/src/import/pivots.rs` (T-2082). The importer skips, whole and logged, a cache with an OLAP,
 external, consolidation or scenario source, a calculated field, no records part
 (`saveData="0"`), a bad index, or a value it cannot read (an unknown error name, a `<d>` date before 1900, which
-includes time-only dates if Excel writes them so), and a pivot whose data field is shown as a calculation
-(`showDataAs`, such as % of total), whose index points past its cache, whose `axis` or `subtotal` is unknown, which has
+includes time-only dates if Excel writes them so), and a pivot whose `showDataAs` or x14 `pivotShowAs` is unknown,
+whose index points past its cache, whose `axis` or `subtotal` is unknown, which has
 no `location` or not one `pivotField` per cache field, or whose parts are reached outside the package (absolute,
-escaping or External targets), twice, or through a duplicate `cacheId`: GETPIVOTDATA against it is `#REF!`.
+escaping or External targets), twice, or through a duplicate `cacheId`: GETPIVOTDATA against it is `#REF!`. A pivot
+whose data field is shown as a calculation loads and renders since T-4163; GETPIVOTDATA against it stays `#REF!`
+(UNVERIFIED, T-4750: pivots.md "Show-values-as edge cases (T-4161)").
 The fuzz target `pivot_import` feeds hostile pivot parts to this importer and GETPIVOTDATA (T-4133, decision 0312).
 UNVERIFIED: what Excel answers for each of these (presumably it computes them, refreshing a cache saved without
 records); a known gap, not a deviation. A cache `<d>` date is converted to the workbook's date system (T-2393); one before
@@ -130,7 +135,7 @@ lifts). An error in a single-cell pivot_table propagates even inside a pivot, an
 (both unprobed, SPEC-0015 unknowns 13 and 16). Count pivots of an all-numeric field match
 Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674; they cannot tell COUNT from COUNTA).
 Max, Min, Product, Var and StdDev pivots are unprobed (UNVERIFIED: the worksheet functions' algorithms over the picked numbers).
-Structural edits: see "Pivot tables and structural edits" below. xlsx export drops pivots.
+Structural edits: see "Pivot tables and structural edits" below. xlsx export writes pivots (T-4176; pivots.md "Excel for the web opens engine-exported pivot parts"), except a grouped cache, dropped with its pivots (T-4734).
 
 ## GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)
 Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists "North" as a shared item no record uses

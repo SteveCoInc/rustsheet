@@ -15,7 +15,7 @@ use crate::{
     model::{FmtSettings, Model},
     types::{
         Alignment, ArrayKind, BorderItem, Cell, CellType, Col, Color, HorizontalAlignment,
-        MergedCell, SheetProperties, SheetState, Style, Theme, VerticalAlignment,
+        SheetProperties, SheetState, Style, Theme, VerticalAlignment,
     },
 };
 
@@ -1153,11 +1153,13 @@ impl UserModel {
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
         let old_tables = self.model.table_extents(sheet)?;
+        let snapshot = self.rewrite_snapshot(sheet)?;
         let rewritten = self.model.delete_rows_rewriting(sheet, row, row_count)?;
         let tables = self.model.changed_table_extents(sheet, old_tables)?;
 
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
         diff_list.extend(link_diffs);
+        diff_list.extend(self.rewritten_snapshot_diffs(sheet, snapshot)?);
         diff_list.push(Diff::DeleteRows {
             sheet,
             row,
@@ -1180,7 +1182,6 @@ impl UserModel {
     ) -> Result<(), String> {
         let worksheet = self.model.workbook.worksheet(sheet)?;
         let mut old_data = Vec::new();
-        // Collect data for all columns to be deleted
         for c in column..column + column_count {
             let mut column_data = None;
             for col in &worksheet.cols {
@@ -1230,10 +1231,12 @@ impl UserModel {
         })?;
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
-        let (tables, rewritten) =
+        let snapshot = self.rewrite_snapshot(sheet)?;
+        let (tables, rewritten, shown) =
             (self.model).delete_columns_keeping_tables(sheet, column, column_count)?;
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
         diff_list.extend(link_diffs);
+        diff_list.extend(self.rewritten_snapshot_diffs(sheet, snapshot)?);
         diff_list.push(Diff::DeleteColumns {
             sheet,
             column,
@@ -1242,6 +1245,7 @@ impl UserModel {
             tables,
             rewritten,
         });
+        diff_list.extend(shown.into_iter().map(|row| Diff::row_shown(sheet, row)));
         self.push_diff_list(diff_list);
         self.evaluate_if_not_paused();
         Ok(())
@@ -2267,32 +2271,6 @@ impl UserModel {
     }
 
     // **** Private methods ****** //
-
-    /// Returns a snapshot diff of the merged cells of the sheet when the
-    /// current list differs from `old_merged_cells`, and nothing otherwise.
-    ///
-    /// Structural actions (insert, delete or move of rows and columns) displace
-    /// merged ranges on their own when they are (re)played, but their undo
-    /// cannot always reconstruct the original ranges (a fully deleted merge is
-    /// gone, deleting rows above a merge and re-inserting them displaces it).
-    /// The snapshot has `old_value == new_value` — a no-op when applied — and
-    /// must go *before* the structural diff in the list, so that on undo
-    /// (replayed in reverse) it runs last and restores the exact original list.
-    pub(super) fn merged_cells_snapshot_diffs(
-        &self,
-        sheet: u32,
-        old_merged_cells: Vec<MergedCell>,
-    ) -> Result<Vec<Diff>, String> {
-        if self.model.get_merged_cells(sheet)? != old_merged_cells.as_slice() {
-            Ok(vec![Diff::SetMergedCells {
-                sheet,
-                old_value: old_merged_cells.clone(),
-                new_value: old_merged_cells,
-            }])
-        } else {
-            Ok(vec![])
-        }
-    }
 
     pub(crate) fn push_diff_list(&mut self, diff_list: DiffList) {
         self.send_queue.push(QueueDiffs {

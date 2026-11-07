@@ -1,4 +1,4 @@
-use super::reference_operators::{at_outside, wrong_range_shape};
+use super::reference_operators::{at_outside, is_reference_operand, wrong_range_shape};
 use super::{for_each_chain_operand_mut, Node};
 use crate::functions::lift::lifting_table_functions;
 use crate::functions::lookup_and_reference::lifts_into_reference_elements;
@@ -429,11 +429,15 @@ fn criteria_and_grid_static_result(kind: &Function, args: &[Node], first: usize)
             return None;
         }
         match arg.ungrouped() {
-            // An XLOOKUP's grid has its lookup_value's shape; one cell gives none.
+            // An XLOOKUP's grid has its lookup_value's shape, one cell gives none, and only a
+            // reference `if_not_found` builds it (the engine's `NotFound::Range`).
             Node::FunctionKind {
                 kind: Function::Xlookup,
                 args,
             } => {
+                if !args.get(3).is_some_and(is_reference_operand) {
+                    return None;
+                }
                 let (rows, columns) = run_static_analysis_on_node(args.first()?).counts()?;
                 ((rows, columns) != (1, 1)).then_some(StaticResult::Array(rows, columns))
             }

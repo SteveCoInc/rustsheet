@@ -3,7 +3,7 @@ id: T-3824
 title: "make next-task offers a current-milestone task over a lane busy only with later-milestone work"
 milestone: M2
 lane: harness
-status: todo
+status: done
 priority: P1
 size: S
 tier: opus
@@ -39,19 +39,32 @@ flight per tier, so the bypass adds at most one branch per lane and tier.
   T-3584 example.
 
 ## Acceptance criteria
-- [ ] A decision record states the rule and its inputs, and amends decision 0022 by reference.
-- [ ] With M2 current, `python3 scripts/tasks.py next --lane research --tier opus` offers a ready M2 research task
+- [x] A decision record states the rule and its inputs, and amends decision 0022 by reference.
+- [x] With M2 current, `python3 scripts/tasks.py next --lane research --tier opus` offers a ready M2 research task
       when the lane's only in-flight opus branch is an M9 task's. Tests in scripts/test_tasks.py cover five cases:
       a later-milestone branch with current-milestone and later-milestone candidates (only the current one is
       offered), an M0 branch (nothing offered), a current-milestone branch (nothing offered), a missing snapshot
       heading (nothing offered), and the bypass already taken by a second branch (nothing offered).
-- [ ] `ready` matches `next`. T-3558's `lane ... busy` message is printed only when no bypass applies.
-- [ ] docs/process/agent-workflow.md and the worker prompts' busy-lane sentence in docs/process/routines.md describe
+- [x] `ready` matches `next`. T-3558's `lane ... busy` message is printed only when no bypass applies.
+- [x] docs/process/agent-workflow.md and the worker prompts' busy-lane sentence in docs/process/routines.md describe
       the rule, and docs/status.md "Needs owner" asks for the routines to be re-applied (or extends T-3821's line if it
       is still open).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Ordering candidates by phase instead of milestone number in general (file a follow-up if the decision wants it).
 - The steward's critical-lane line and how it is computed.
 - P0 tasks (T-3558) and the tier split (T-3821).
+
+## Outcome
+- `scripts/milestone_order.py` (new, stdlib): reads the phase order from the `## Phase order` table in
+  docs/milestones.md and the current milestone from the docs/status.md snapshot heading.
+  `passes_later_work` is the rule. `scripts/tasks.py` `available()` offers a current-milestone task in a busy lane and
+  tier when every in-flight branch filling it works a later-milestone task; `next`, `ready` and the `lane L busy`
+  message share it. tasks.py stays under the 1000-line limit (994).
+- `scripts/test_tasks_next.py` `CurrentMilestonePassesLaterWork`: the five cases of the acceptance criteria (a
+  later branch with current and later candidates, an M0 branch, a current-milestone branch, no snapshot heading, the
+  pass already taken), plus a branch whose task is not on main.
+- Decision 0332 (amends 0022). agent-workflow.md and both worker prompts in routines.md describe the rule.
+  T-3821's "Needs owner" line in docs/status.md is extended.
+- Eval delta: none (scripts and docs only).

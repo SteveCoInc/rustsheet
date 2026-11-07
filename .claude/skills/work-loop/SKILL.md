@@ -16,7 +16,7 @@ Read `docs/process/agent-workflow.md` once per session if you have not.
    branch from `origin/main` instead (decision 0055).
 2. Resume first: if an open PR or branch `agent/<lane>/*` exists for this lane (check with the
    GitHub tools) and its task is your tier, continue it (go to step 4/6) instead of starting new
-   work. One task in flight per lane, three in `engine` (decision 0269). A task handed off to `opus` (it has a `## Handoff` section)
+   work. One task in flight per lane and tier, three per tier in `engine` (decisions 0269, 0331). A task handed off to `opus` (it has a `## Handoff` section)
    is resumed by an opus run from its pushed branch, starting from the handoff notes.
 3. **Step 0.3, adopt orphans** (opus runs only, decisions 0248, 0253): before picking a new task,
    look for open PRs that the `steward` skill's "Orphaned agent PRs" rule calls orphans (an
@@ -30,7 +30,10 @@ Read `docs/process/agent-workflow.md` once per session if you have not.
 ## 1. Pick
 `make next-task LANE=<lane> TIER=<tier>` (P0 tasks first, then handed-off tasks; decision 0023). If
 the line it prints ends with `resume <branch>: blocked at the review-round limit (work-loop step 5c)`,
-do not branch: resume that branch per step 5c (decision 0095). If none is ready, first check the lane's blocked tasks
+do not branch: resume that branch per step 5c (decision 0095). If it prints
+`lane <lane> busy: <task id> in flight on <branch>`, the lane has ready tasks waiting behind work in
+flight: do not launch the planner or the gap-triager for it; treat the lane as having no task for you
+now and move on (a ready P0 is offered even in a busy lane; decision 0330). If none is ready, first check the lane's blocked tasks
 (`make tasks LANE=<lane> STATUS=blocked`): if a blocker is gone (e.g. `rustsheet-oracle status`
 now shows `excel-graph OK`), unblock it per the "Unblocking is an agent's job" rule under Task lifecycle in
 `docs/process/agent-workflow.md` and

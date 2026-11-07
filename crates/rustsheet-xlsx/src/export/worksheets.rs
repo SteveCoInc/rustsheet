@@ -48,14 +48,15 @@ use super::{
     xml_constants::XML_DECLARATION,
 };
 
-/// The number written to a cell's `<v>`: a positive kept subnormal is saved as 0, as Excel for the web
+/// The number written to a cell's `<v>`: a kept subnormal of either sign is saved as 0, as Excel for the web
 /// does (`EXP(-745)` is saved `<v>0</v>` while `(EXP(-745))=0` stays FALSE in memory; numbers.md
 /// "Worksheet EXP (T-1931)", decision 0089, probes/subnormal-saved-as-zero). Only the evidenced domain is
-/// flushed: the spill and array arms follow the formula-cell evidence by inference; a negative kept
-/// subnormal and desktop Excel's save are unprobed (T-4355), and `-0.0` keeps its spelling. A stored positive constant is already 0 once loaded (numbers.md "A subnormal cell constant
+/// flushed: negative and spilled/array kept subnormals are saved as 0 too (T-4355,
+/// probes/subnormal-saved-negative-and-array); desktop Excel's save is unprobed, and `-0.0` keeps
+/// its spelling. A stored positive constant is already 0 once loaded (numbers.md "A subnormal cell constant
 /// reads as 0"), so the constant arm changes nothing observable.
 fn saved_number(v: f64) -> f64 {
-    if v > 0.0 && v < f64::MIN_POSITIVE {
+    if v != 0.0 && v.abs() < f64::MIN_POSITIVE {
         0.0
     } else {
         v
@@ -180,9 +181,12 @@ fn external_link_count(worksheet: &Worksheet) -> usize {
 /// The rels part of the worksheet (`xl/worksheets/_rels/sheetN.xml.rels`) holding one
 /// relationship per external link, then one per table part (`tables` are the part numbers of
 /// the sheet's tables), or `None` if the worksheet has neither.
+/// `pivot_tables` are the sheet's relationships to its pivot tables, numbered after its other
+/// ones from the id it is given (`PivotPlan::sheet_relationships`).
 pub(crate) fn get_worksheet_xml_rels(
     worksheet: &Worksheet,
     tables: std::ops::Range<usize>,
+    pivot_tables: impl FnOnce(usize) -> Vec<String>,
 ) -> Option<String> {
     let mut relationships_str: Vec<String> = vec![];
     let mut rel_id = 0;
@@ -201,6 +205,7 @@ pub(crate) fn get_worksheet_xml_rels(
             "<Relationship Id=\"rId{rel_id}\" Type=\"{TABLE_RELATIONSHIP}\" Target=\"../tables/table{table}.xml\"/>"
         ));
     }
+    relationships_str.extend(pivot_tables(rel_id + 1));
     if relationships_str.is_empty() {
         return None;
     }
@@ -804,12 +809,13 @@ pub(crate) fn cell_xml(
 mod tests {
     use super::*;
 
-    /// Only the evidenced positive domain is flushed (T-2211); the rest is unprobed (T-4355).
+    /// Subnormals of either sign are flushed (T-2211, T-4355); `-0.0` keeps its spelling.
     #[test]
-    fn saved_number_flushes_only_positive_subnormals() {
+    fn saved_number_flushes_subnormals_of_either_sign() {
         assert_eq!(saved_number(f64::from_bits(1)), 0.0);
         assert_eq!(saved_number(f64::MIN_POSITIVE), f64::MIN_POSITIVE);
-        assert_eq!(saved_number(-f64::from_bits(1)), -f64::from_bits(1));
+        assert_eq!(saved_number(-f64::from_bits(1)), 0.0);
+        assert_eq!(saved_number(-f64::MIN_POSITIVE), -f64::MIN_POSITIVE);
         assert!(saved_number(-0.0).is_sign_negative());
     }
 

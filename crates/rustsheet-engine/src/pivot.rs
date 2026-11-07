@@ -12,7 +12,7 @@
 //! split one ([`Model::move_pivots`]; T-2401; docs/excel-semantics/web.md "Pivot tables and
 //! structural edits").
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bitcode::{Decode, Encode};
 use thiserror::Error as ThisError;
@@ -33,6 +33,7 @@ mod number_groups;
 mod probe_cases;
 mod refresh;
 mod result;
+mod show_as;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
 pub use grid::{PivotBudget, PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};
@@ -42,9 +43,9 @@ pub use layout::{
     VALUES,
 };
 pub use model::{
-    Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry, OpaqueNode,
-    OpaqueOwner, PageField, PivotField, PivotGeometry, PivotItem, PivotOptions, PivotTable,
-    ShowDataAs, SortType, NO_BASE_ITEM,
+    element_name, Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry,
+    OpaqueNode, OpaqueOwner, PageField, PivotField, PivotGeometry, PivotItem, PivotOptions,
+    PivotTable, ShowDataAs, SortType, NO_BASE_ITEM,
 };
 pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
 pub use refresh::{
@@ -69,6 +70,9 @@ pub const MAX_FIELDS: usize = 16_384;
 pub struct PivotCache {
     /// The `worksheetSource`, kept for a later refresh; `None` for other sources.
     pub source: Option<CacheSource>,
+    /// `worksheetSource@name`: the defined name or Table the cache was read from, kept so the
+    /// export writes the source back (T-4176). A refresh does not resolve it yet (T-4506).
+    pub source_name: Option<String>,
     /// The cache's fields, in cache order.
     pub fields: Vec<CacheField>,
     /// How many records; every [`CacheField::records`] has this length.
@@ -199,6 +203,21 @@ impl ItemKey {
             CacheItem::Text(s) => ItemKey::Text(crate::functions::util::collation::fold_case(s)),
             other => ItemKey::of(other),
         }
+    }
+}
+
+impl CacheField {
+    /// Whether two of the field's text items differ only in case (folded as a refresh finds an
+    /// item, [`ItemKey::identity`]). The import interns inline values exactly, so a file can
+    /// yield such a field, but Excel for the web calls a file whose shared items hold one corrupt
+    /// (docs/excel-semantics/pivots.md "Case-variant text items make Excel for the web call the
+    /// file corrupt"), so the export (T-4176) does not write one.
+    #[must_use]
+    pub fn has_case_variant_texts(&self) -> bool {
+        let mut seen = HashSet::new();
+        (self.items.iter())
+            .filter(|item| matches!(item, CacheItem::Text(_)))
+            .any(|item| !seen.insert(ItemKey::identity(item)))
     }
 }
 

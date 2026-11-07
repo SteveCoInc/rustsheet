@@ -324,6 +324,23 @@ pub(super) fn find_or_add_formula(
     index
 }
 
+/// Whether a constant (formula-less) cell of type `cell_type` stores no value: no `<v>`, an empty
+/// `<v>` for a shared string (an index of nothing), or no `<is>` for an inline string. A `t="str"`
+/// cell with an empty `<v>` does store one, the empty string (fixtures/valueless-cell-forms A3), and
+/// `t="d"` keeps its own rule.
+fn is_valueless_constant(
+    cell_type: &str,
+    cell_value: Option<&str>,
+    rich_text_inline: Option<&str>,
+) -> bool {
+    match cell_type {
+        "b" | "n" | "e" | "str" => cell_value.is_none(),
+        "s" => cell_value.is_none_or(|v| v.trim().is_empty()),
+        "inlineStr" => rich_text_inline.is_none(),
+        _ => false,
+    }
+}
+
 pub(super) enum CellArrayKind {
     None,
     DynamicArray(i32, i32),
@@ -356,6 +373,15 @@ pub(super) fn get_cell_from_excel(
     //   s (Shared String)
     //   str (String)
 
+    if formula_index == -1
+        && anchor_cell.is_none()
+        && is_valueless_constant(cell_type, cell_value, rich_text_inline.as_deref())
+    {
+        // Excel reads a constant cell that stores no value as blank whatever its `t`: ISBLANK is
+        // TRUE, COUNTA skips it and TYPE is 1 (fixtures/valueless-cell-forms; T-4148,
+        // docs/excel-semantics/xlsx-storage.md "A cell that stores no value is blank").
+        return Cell::EmptyCell { s: cell_style };
+    }
     if formula_index == -1 {
         match cell_type {
             "b" => {
@@ -435,7 +461,9 @@ pub(super) fn get_cell_from_excel(
                 None => Cell::EmptyCell { s: cell_style },
             },
             "inlineStr" => {
-                let s = rich_text_inline.unwrap_or_default();
+                // An inline string's `_xHHHH_` escapes decode like a shared string's (poi/60289.xlsx
+                // TABLE!B2 stores `Rich Text_x000d_` inline; T-4150).
+                let s = decode_xlsx_escapes(&rich_text_inline.unwrap_or_default());
                 let si = shared_strings.intern(&s) as i32;
 
                 Cell::SharedString { si, s: cell_style }
@@ -505,7 +533,7 @@ pub(super) fn get_cell_from_excel(
             "inlineStr" => {
                 // NB: This is untested, I don't know of any engine that uses inline strings in formulas
                 make_cell(FormulaValue::Text(
-                    rich_text_inline.unwrap_or("".to_string()).into(),
+                    decode_xlsx_escapes(&rich_text_inline.unwrap_or_default()).into(),
                 ))
             }
             _ => {

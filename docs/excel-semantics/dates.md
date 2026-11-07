@@ -1212,6 +1212,13 @@ YEARFRAC floors both dates on all five bases, basis 4 included: `YEARFRAC(59-0.4
 N = 45020 above (W1:Z18).
 Evidence: probes/t4574-feb29-near-midnight-date-args A1:Z25 (N = 59, 60, 61 minus 0.4 s, 2^-22+2^-33, 0.6 s,
 `fl(N-0.5/86400)` and one ulp below it, and N; excel-graph, 2026-11-06, T-4574).
+Two further probes, salvaged from the duplicate PR #3637 (T-4673), agree with this rule on every cell: "read each
+date rounded to the nearest second" there is the same cut as the half-second carry here (`fl(N-0.5/86400)` reads day N,
+one ulp lower day N-1). probes/t4574-near-midnight-calendar-units (112 cells, N = 45017: `DATEDIF(44927,45017-0.5/86400,"m")`
+is 3, one ulp lower and N-0.6 s are 2) and probes/t4574-near-midnight-serial-60 (234 cells, rows 59, 60 and 61).
+"Y" is not told apart by them (every probed cell gives one value either way); T-4624 probes it
+(`DATEDIF(44927,45292-0.4/86400,"y")`: 0 floored, 1 carried), and the reversed-order and past-the-calendar cases
+beyond A20:F25 above.
 Ours: matches, all 504 cells (`datedif_value` floors for "D" and the order check and reads the calendar units and the
 calendar check through `carried_day`; YEARFRAC basis 4's
 `days360_eu` takes the floored dates, T-4574). Before T-4574 we floored DATEDIF's calendar units and its calendar check (73 cells off) and rounded basis 4 to
@@ -1599,6 +1606,8 @@ Rule (excel-graph, gen-m6, 2026-10-21):
   range the all-weekend `#VALUE!` wins.
 Ours: implemented (T-2270, T-2272): a blank one-cell reference is no holiday; a cell holding number text is a holiday that acts as the serial it reads as (probes/t4397-holiday-text-forms, T-4397). A holiday given as text is read the same way in every form: a text literal, a cell holding the text, a one-element array of it, or a range holding it beside a number. Number text (`"45001"`), date text (`"3/16/2023"`, `"March 16, 2023"`), currency text (`"$45,001"`) and percent text (`"4500100%"`) each act as the serial they read as, in WORKDAY, WORKDAY.INTL, NETWORKDAYS and NETWORKDAYS.INTL (probes/t4397-holiday-text-forms rows 3:22 and 24:43, excel-graph; T-4397). A text literal is a scalar holiday for the NETWORKDAYS.INTL weekend rule below: `NETWORKDAYS.INTL(45000,45010,13,"3/18/2023")` drops the Saturday and is 10, as the number 45003 is, while the same text in a cell or `{"3/18/2023"}` is subtracted and gives 9 (G23:G43). Other text is `#VALUE!` as before. The order is `Model::workday_of` and `Model::networkdays_of`, with `HolidaysError::before_weekend` for step (4) (crates/rustsheet-engine/src/functions/date_and_time/). A single holiday that is number text off the calendar (`"-1"`, `"3000000"`, `"-0.5"`; a literal, a cell or a one-element array alike) is step (6), after the weekend: `WORKDAY.INTL(45000,5,"1111111",h)` is `#VALUE!` (the weekend's error wins) while the same holiday with weekend 1 or 99 gives `#NUM!`; ours matches (probes/t4600-holiday-number-text-off-calendar, columns C:E and K:M, excel-graph; T-4600).
 Status: VERIFIED
+Formula-returned text (T-4408): text that a formula returns directly as the holiday argument (`TEXT(d,"0")`, `TEXT(d,"m/d/yyyy")`, `d&""`, `IF(TRUE,"3/16/2023")`) acts exactly like the same value as a number and like a text literal. It is a holiday of that serial, and for NETWORKDAYS.INTL it is a scalar holiday that ignores the weekend argument: with 45003 (Sat) and weekend 13 every form gives 10, as the number does, not 9 (probes/t4408-holiday-formula-text G3 and G8:G11 against G2 and G4:G7, excel-graph, 2026-11-07; 132 cells). WORKDAY, WORKDAY.INTL and NETWORKDAYS agree on all four forms for 45001 and 45003 (B:F rows 4:11). Ours matches every cell, no code change.
+
 Tasks: T-2270, T-2272
 
 ## WORKDAY.INTL and NETWORKDAYS.INTL: weekend number coercion (T-2271)

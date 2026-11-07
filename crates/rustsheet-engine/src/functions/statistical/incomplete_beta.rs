@@ -140,9 +140,7 @@ fn reg_tails(x: f64, y: f64, a: f64, b: f64, kernel: Kernel) -> (f64, f64) {
     if y <= 0.0 {
         return (1.0, 0.0);
     }
-    closed_form_tails(x, y, a, b)
-        .or_else(|| shape_one_tails(x, y, a, b))
-        .unwrap_or_else(|| beta_tails(x, y, a, b, kernel))
+    closed_or_shape_one_tails(x, y, a, b).unwrap_or_else(|| beta_tails(x, y, a, b, kernel))
 }
 
 /// Excel's closed forms of the incomplete beta, (`I_x(a, b)`, 1 - `I_x(a, b)`), for 0 < x, y < 1
@@ -188,6 +186,12 @@ pub(crate) fn closed_form_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, 
 /// of decision 0112 is Phase 1b work (decision 0188 R4.4, R5; T-3886).
 pub(crate) fn half_half_cdf(x: f64, y: f64) -> f64 {
     2.0 * (x.sqrt() / y.sqrt()).atan() / std::f64::consts::PI
+}
+
+/// Excel's closed forms ([`closed_form_tails`]), else bratio's shape-one branch
+/// ([`shape_one_tails`]); `None` where neither applies and the caller picks its kernel.
+pub(crate) fn closed_or_shape_one_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
+    closed_form_tails(x, y, a, b).or_else(|| shape_one_tails(x, y, a, b))
 }
 
 /// (`I_x(a, b)`, 1 - `I_x(a, b)`) at a shape of 1 where [`closed_form_tails`] does not apply, for

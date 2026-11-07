@@ -47,7 +47,12 @@ cell is told from its sum. Cell ids are the consumers case's unless named.
 3. **Reference view: INDEX.** `INDEX(r,i,j)` is element (i,j) itself: one cell is its value with ISREF
    TRUE (E81), a multi-cell one spills or is `#SPILL!` (reference-lift-elements); `SUM(INDEX(..,2,1))`
    reads the whole element (101, E177). With one index over a column of elements, `INDEX(r,2)` is
-   `#VALUE!` (b1d E109). `ISREF` of the whole result is FALSE, through LET too (E209, b2 E209).
+   `#VALUE!` (b1d E109): it is a 1x1 array of references holding element 2, shown by its value view, and where a
+   reference is taken it stays one, so `INDEX(INDEX(OFFSET(A1,{0;1},0,2),2),1,1)` spills A2:A3, ROWS of the one-index
+   INDEX is 1, ISREF of the nested INDEX TRUE, and `SUM` of the one-index INDEX reads only the element's top-left
+   cell, as rule 4 does (2, not 6); INDIRECT and the mixed XLOOKUP grid alike (probes/t4701-index-one-index-ref-grid,
+   T-4701; `index_reference_arg`, `column_element`). `ISREF` of the whole result is FALSE, through LET too (E209, b2
+   E209).
 4. **Reference view: top-left aggregates.** SUM, AVERAGE, MIN, MAX and PRODUCT read each element's
    **top-left cell** as a range cell: text, booleans and blanks are skipped
    (`SUM(OFFSET(A1,0,0,{1;2}))` 2, `SUM(OFFSET(A1,0,0,{2;3}))` 2, `SUM(OFFSET(A2,0,0,{1;2}))` 200,
@@ -216,7 +221,8 @@ an array value. In detail:
    (A25, V25:W25). Rule 3's "`INDEX(r,2)` over a column of elements is `#VALUE!`" is this case seen through the value
    view.
 3. **Top-left aggregates** (rule 4, extended). SUM, AVERAGE, AVERAGEA, MIN, MAX, MINA, MAXA, PRODUCT, SUMSQ and STDEV.S read
-   the reference element's top-left cell as a range cell and the value element as an array value: SUM 23 = 20 + F1,
+   the reference element's top-left cell as the reader's `GridReading` reads a top-left cell, and the value element
+   as an array value: SUM 23 = 20 + F1,
    25 = 20 + E1 (A73, A109); over G1:G2 = 50, 60 MAX 50, AVERAGE 35, SUM 70, STDEV.S 21.2132…; over H1:H2 = 1, 2
    PRODUCT 20, SUMSQ 401 (t4569 A1-A15, A20, A23). MIN and MINA there are 1 under either reading, so they confirm
    nothing. A text or TRUE value element is read as `TopLeftElements` reads a top-left cell, that is as an array
@@ -231,9 +237,11 @@ an array value. In detail:
    t2065, same fill), however the reference is written: sheet-qualified absolute `Local!$A$1`, qualified relative
    `Local!A1`, unqualified absolute `$A$1`, or INDIRECT of unqualified texts (t4569 Local!F1:F5), and for a mixed grid
    read on its own sheet, unqualified or qualified (Local!F7:F8). So it is the referenced sheet, not the written
-   qualifier, that decides (round 4, predictions in docs/research/t4569/predictions.md). A mixed grid on its own
-   sheet keeps rule 3 for the top-left aggregates: `MAX` is 100, the reference's top-left cell (Local!F9).
-   Unprobed: a grid with references on both sheets.
+   qualifier, that decides (t4569 Local!F1:F9, predictions in docs/research/t4569/predictions.md). A mixed grid on
+   its own sheet keeps rule 3 for the top-left aggregates: `MAX` is 100, the reference's top-left cell (Local!F9).
+   A grid with references on both sheets: the sheet of its first element decides, `#VALUE!` when that is the
+   formula's own sheet, `#N/A` when it is another (t4697 Local!H1:H9, H16, H17; `{"A1";"Data!G1"}` is `#VALUE!`,
+   `{"Data!G1";"A1"}` is `#N/A`). A mixed XLOOKUP grid has one reference element, so its sheet decides (H14, H15).
 6. **Per-element callers** (rule 6). They lift over every element. A value element is passed as the scalar
    non-reference argument it is: ROW, AREAS, COUNTIF, SUBTOTAL, COUNTBLANK and CELL give `#VALUE!` for it, and N
    gives 20. The reference element is the call on the range: ROW 1, AREAS 1, COUNTIF 2, N 50, SUBTOTAL 110,
@@ -263,10 +271,10 @@ an array value. In detail:
     booleans, AVERAGEA counts text as 0 and skips TRUE, and MAXA and MINA skip both (rule 3, t4569 A50:A63).
     `NotANumber` counts a number value for COUNT and reads it for SUMPRODUCT.
   - Order statistics (rule 5): LARGE, SMALL and MEDIAN given a `RefArg::Grid` with a reference element return
-    `#N/A` if any reference element is on a sheet other than the formula's, and keep today's `#VALUE!` when every
-    one is on the formula's own sheet (probed, rule 5).
-    This is one scan of the elements in their argument reader. A grid with references on both sheets is unprobed;
-    the rule above gives it `#N/A`, a fallback, not evidence. A probe before T-4570 lands can amend that. An error element comes first, as
+    `#N/A` if the first reference element is on a sheet other than the formula's, and `#VALUE!` if it is on the
+    formula's own sheet (probed, rule 5; t4697 H1:H6, H9, H16, H17 separate the first element from the last, any and
+    the majority). T-4570 implemented "any reference element on another sheet"; T-4714 changes it to the first.
+    This is one scan of the elements in their argument reader. An error element comes first, as
     for the other aggregates; this is unprobed and follows rule 4.
   - Per-element callers (`ref_lift.rs`): `Value(v)` calls the scalar function with `v` as a value argument. That is
     `#VALUE!` where a reference is required, and N reads the value. `put_back` keeps the result.
@@ -287,7 +295,7 @@ an array value. In detail:
   `Value(String)` holds a text the kernel already built, so there is no extra allocation beyond today's
   `ArrayNode`.
 - **What changes.** XLOOKUP under a lifted lookup_value with a range if_not_found, and LARGE, SMALL and MEDIAN over
-  a grid whose references are on another sheet (`#N/A` replaces today's `#VALUE!`). Their same-sheet `#VALUE!` (the
+  a grid whose first reference is on another sheet (`#N/A` replaces today's `#VALUE!`). Their same-sheet `#VALUE!` (the
   t2065 cells, which pass today) stays. Nothing else.
 
 ### As implemented (T-4570)
@@ -302,15 +310,17 @@ Where the implementation departs from the text above, or settles what it left op
 - **Keyed lookups.** An XLOOKUP whose `if_not_found` is a reference is not a keyed lookup (SPEC-0020 Amendment 2,
   `tailed_array.rs keyed_lookup`): its misses are references, which the head-and-tail reading cannot hold, so a
   whole-column key builds its grid in full.
-- **INDEX, one index.** One index into a one-column grid is a 1x1 array of the element's value view, not a 1x1
-  sub-grid: its own cells match (t4563 A25, T25:U25, W25:Z25), but `INDEX(INDEX(X(r),2),1,1)` gives `#VALUE!`, not
-  the range (V25:V26). T-4701 keeps the reference. One index into a grid of several columns stays `#VALUE!`.
+- **INDEX, one index.** One index into a one-column grid that picks a reference element is a 1x1 sub-grid where a
+  reference is taken (`Model::index_reference_arg`, `column_element`; T-4701), so `INDEX(INDEX(X(r),2),1,1)` hands
+  the range back (t4563 V25:V26), and its value view everywhere else (A25, T25:U25, W25:Z25). A picked value or
+  error element stays a 1x1 value array (`INDEX(INDEX(X(r),1),1,1)` is 20, t4701 C4). One index into a grid of
+  several columns stays `#VALUE!`.
 - **Per-element callers.** `lifts_into_reference_elements` adds an XLOOKUP with an `if_not_found` to OFFSET and
   INDIRECT as the argument read ahead; one that gives no grid is put back as its reference form's result. The
   static analysis gives such a call the lookup_value's shape, so `COUNTIF(X(r),">0")` spills (t4569 A26). VSTACK's
   reference form keeps OFFSET and INDIRECT only.
 - **Order statistics.** `RefGrid::order_statistic_error` is the one scan: the first error element, else `#N/A`, when
-  any reference element is on another sheet. LARGE and SMALL read it in their data reader (`numbers_from_ranked_arg`;
+  any reference element is on another sheet (T-4714: the first one). LARGE and SMALL read it in their data reader (`numbers_from_ranked_arg`;
   the RANK family keeps the value view), MEDIAN through `GridReading::OrderStatistic`.
 
 ### Test plan and rollout

@@ -266,6 +266,17 @@ fn dotted_a1_ranges_are_quoted() {
 }
 
 #[test]
+fn sheet_names_quote_a_first_mark_or_circled_capital_but_not_a_later_mark() {
+    // probes/t4446-defined-name-characters A13, A15, A20, A22 (excel-graph, T-4446).
+    for name in ["a\u{301}", "x\u{20dd}", "\u{24d1}"] {
+        assert!(!name_needs_quoting(name), "{name}");
+    }
+    for name in ["\u{24b6}", "\u{301}a", "\u{20dd}a"] {
+        assert!(name_needs_quoting(name), "{name}");
+    }
+}
+
+#[test]
 fn test_names() {
     assert!(is_valid_identifier("hola1"));
     assert!(is_valid_identifier("hola_1"));

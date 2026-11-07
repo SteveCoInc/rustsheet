@@ -954,7 +954,7 @@ fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase, String> {
         tags: spec.tags.clone(),
         pivot_features: spec.pivot_features.clone(),
         pivot_keys,
-        text: text_expect::expectations(&spec, case)?,
+        text: text_expect::with_pivot_text(text_expect::expectations(&spec, case)?, &pivots),
         defined_names: BTreeMap::new(),
         reference_forms: ReferenceFormCells::default(),
         pivots,
