@@ -54,6 +54,7 @@ FORMULATEXT of the loaded file is unprobed: it may keep `=SUM(#REF!C4:C7)`.
 - Eval delta: +9 passing cells (new case); no regressions.
 
 ## Landing notes
+Resumed 2026-11-07 05:55 UTC by an opus run (worker step 2, branch idle 2 h): round 3 reviewers next.
 - PR #3823, branch agent/engine/T-4628-loaded-ref-range. State when the session's landing window closed (2026-11-07
   03:22): round 3 pushed (this commit) with `make check-fast` green and `cargo test -p rustsheet_engine -p rustsheet_xlsx
   -p rustsheet` passing locally; CI not yet run on this head; the reviewer panel has not run on it.
