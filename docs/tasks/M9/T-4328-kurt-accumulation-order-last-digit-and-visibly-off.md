@@ -82,7 +82,7 @@ Cells:
 - [x] `make check` green; reviewers approve.
 
 ## Out of scope
-- DEVSQ (T-1749), SKEW.
+- DEVSQ (T-1749). SKEW and SKEW.P were in scope only as callers of the shared standardized moment (Outcome).
 
 ## Outcome
 - SKEW, SKEW.P and KURT share one `standardized_moment(values, divisor, fourth)` (count_and_average.rs), built from the
