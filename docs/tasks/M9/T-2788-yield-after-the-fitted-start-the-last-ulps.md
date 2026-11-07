@@ -3,7 +3,7 @@ id: T-2788
 title: "YIELD after the fitted start: the last ulps at the root (3 regressed probe cells, 9 lab cells)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
