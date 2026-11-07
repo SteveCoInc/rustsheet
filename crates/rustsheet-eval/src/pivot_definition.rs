@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::fmt::Write as _;
 
 use quick_xml::escape::escape;
-use rustsheet_engine::pivot::{Aggregate, MAX_RECORD_VALUES};
+use rustsheet_engine::pivot::{Aggregate, ShowDataAs, MAX_RECORD_VALUES};
 use serde_json::{Map, Value as Json};
 
 use crate::case::{split_qualified, CaseSpec, CellInput, PivotTableSpec, SheetSpec};
@@ -51,33 +51,6 @@ const MAX_LIST: usize = 256;
 const SUBTOTALS: [&str; 11] = [
     "sum", "countA", "avg", "max", "min", "product", "count", "stdDev", "stdDevP", "var", "varP",
 ];
-/// The Excel 2010 show-as modes (`SHOW_AS_X14`), written as the x14 data field extension's
-/// `pivotShowAs` with no `showDataAs`.
-const SHOW_AS_X14: [&str; 6] = [
-    "percentOfParent",
-    "percentOfParentRow",
-    "percentOfParentCol",
-    "percentOfRunningTotal",
-    "rankAscending",
-    "rankDescending",
-];
-const X14_NS: &str = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main";
-/// The x14 dataField extension's uri (`X14_DATA_FIELD_URI`).
-const X14_DATA_FIELD_URI: &str = "{E15A36E0-9728-4e99-A89B-3F7291B0FE68}";
-/// `ST_ShowDataAs`, the modes the builder writes as `showDataAs` (`SHOW_DATA_AS` less
-/// [`SHOW_AS_X14`]).
-const SHOW_DATA_AS: [&str; 9] = [
-    "normal",
-    "difference",
-    "percent",
-    "percentDiff",
-    "runTotal",
-    "percentOfRow",
-    "percentOfCol",
-    "percentOfTotal",
-    "index",
-];
-
 /// The three parts of a defined pivot: its cache definition and records, and its table.
 pub(crate) struct Parts {
     pub(crate) cache_definition: String,
@@ -696,15 +669,15 @@ impl<'a> DefinedPivot<'a> {
             let _ = write!(attrs, r#" subtotal="{}""#, e.subtotal);
         }
         let mut ext = String::new();
+        // The builder's `SHOW_DATA_AS` is the engine's one name table: an x14 mode
+        // (`SHOW_AS_X14`) is the x14 dataField extension's `pivotShowAs`, with no `showDataAs`.
         if let Some(show) = e.raw.get("showDataAs").and_then(Json::as_str) {
-            if SHOW_AS_X14.contains(&show) {
-                ext = format!(
-                    r#"<extLst><ext uri="{X14_DATA_FIELD_URI}" xmlns:x14="{X14_NS}"><x14:dataField pivotShowAs="{show}"/></ext></extLst>"#
-                );
-            } else if SHOW_DATA_AS.contains(&show) {
-                let _ = write!(attrs, r#" showDataAs="{show}""#);
-            } else {
-                return Err(format!("showDataAs {show:?}"));
+            let mode = ShowDataAs::from_name(show).ok_or_else(|| format!("showDataAs {show:?}"))?;
+            match mode.x14_data_field_extension("") {
+                Some(extension) => ext = format!("<extLst>{extension}</extLst>"),
+                None => {
+                    let _ = write!(attrs, r#" showDataAs="{}""#, mode.name());
+                }
             }
         }
         let base = match e.raw.get("baseField") {

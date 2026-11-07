@@ -82,6 +82,9 @@ class Candidate:
     # Optional: the iterates the candidate walks through on the cell, in order (it may stop early
     # by raising). The score reports which one equals Excel's value.
     trace: Callable[[Cell], list[float]] | None = None
+    # Optional: how the candidate's computation ended on the cell, such as a solver's terminal event and
+    # its step ("converged@7"). The score lists it per cell (`events` in the JSON).
+    event: Callable[[Cell], str] | None = None
 
 
 def candidate(
@@ -132,9 +135,11 @@ class Score:
     close: int = 0  # within 1e-9 relative, ulp included
     digits15: int = 0  # within 15 significant digits, ulp included (decision 0088)
     errors: int = 0
+    typed: int = 0  # cells whose outcome type is Excel's: a number where Excel has one, or Excel's error
     exact_keys: set[str] = field(default_factory=set)
     traced: int = 0  # cells where the candidate exposed iterates
     iterate_hits: dict[str, int] = field(default_factory=dict)  # "case cell" -> matching iterate
+    events: dict[str, str] = field(default_factory=dict)  # "case cell" -> the candidate's event there
     incomparable: int = 0  # cells with no finite distance (errors, non-finite values)
     largest: int = 0  # the largest finite ulp distance
     results: list[CellResult] = field(default_factory=list)  # the worst cells only (see `score`)
@@ -164,8 +169,10 @@ class Score:
             "within_1e-9": self.close,
             "within_15_digits": self.digits15,
             "errors": self.errors,
+            "typed": self.typed,
             "traced": self.traced,
             "iterate_hits": self.iterate_hits,
+            "events": self.events,
             "max_ulps": self.max_ulps,
             "worst": [r.to_json() for r in self.worst(worst)],
         }
@@ -245,6 +252,21 @@ def _iterate(cell: Cell, cand: Candidate) -> int | None:
     return next((i for i, v in enumerate(steps) if v == cell.expected), None)
 
 
+def _event(cell: Cell, event: Callable[[Cell], str]) -> str:
+    """The candidate's event on the cell, or why it gave none."""
+    try:
+        return event(cell)
+    except (ArithmeticError, ValueError, TypeError, KeyError, IndexError, RecursionError) as e:
+        return f"raised {type(e).__name__}"
+
+
+def _typed(cell: Cell, r: CellResult) -> bool:
+    """Whether the candidate's outcome type is Excel's: a number for a number, the same error for an error."""
+    if cell.error is None:
+        return r.actual is not None
+    return r.error == cell.error
+
+
 def score(cells: list[Cell], cand: Candidate, keep: int = 10) -> Score:
     """Runs `cand` on every cell; a candidate that raises on a cell scores a miss there. Only the
     `keep` worst cells are kept, so scoring thousands of candidates stays small."""
@@ -256,6 +278,10 @@ def score(cells: list[Cell], cand: Candidate, keep: int = 10) -> Score:
             r.iterate = _iterate(cell, cand)
             if r.iterate is not None:
                 s.iterate_hits[f"{cell.case} {cell.key}"] = r.iterate
+        if cand.event is not None:
+            s.events[f"{cell.case} {cell.key}"] = _event(cell, cand.event)
+        if _typed(cell, r):
+            s.typed += 1
         s.results.append(r)
         if r.actual is None and r.error is None:
             s.errors += 1
@@ -292,9 +318,11 @@ def merged(a: Score, b: Score, keep: int = 10) -> Score:
         close=a.close + b.close,
         digits15=a.digits15 + b.digits15,
         errors=a.errors + b.errors,
+        typed=a.typed + b.typed,
         exact_keys=a.exact_keys | b.exact_keys,
         traced=a.traced + b.traced,
         iterate_hits={**a.iterate_hits, **b.iterate_hits},
+        events={**a.events, **b.events},
         incomparable=a.incomparable + b.incomparable,
         largest=max(a.largest, b.largest),
         results=a.results + b.results,

@@ -14,8 +14,8 @@
 //! (docs/excel-semantics/web.md "Grouped pivot fields import as their group items").
 
 use rustsheet_engine::pivot::{
-    group_by_dates, group_by_numbers, CacheField, CacheItem, DateGroupBy, DateGroups, PivotCache,
-    PivotCacheError, MAX_ITEMS, MAX_RECORD_VALUES,
+    group_by_dates, group_by_discrete, group_by_numbers, keep_ungrouped, AddedGroup, CacheField,
+    CacheItem, DateGroupBy, DateGroups, PivotCache, PivotCacheError, MAX_ITEMS, MAX_RECORD_VALUES,
 };
 
 use super::{skip, Skip};
@@ -37,11 +37,24 @@ pub(super) struct FieldGroup {
     pub(super) field: u32,
     /// The database field its values come from.
     pub(super) base: u32,
+    /// Its `par`: the index of the field Excel added to group this one (`None` without one, or
+    /// when it is not an index).
+    pub(super) par: Option<u32>,
     pub(super) range: Option<RangeGroup>,
     /// `<discretePr>`: per base shared item, its group index; `None` without one.
     pub(super) discrete: Option<Vec<u32>>,
     /// `<groupItems>`.
     pub(super) items: Vec<CacheItem>,
+}
+
+impl FieldGroup {
+    /// Whether the group is a bare `<fieldGroup par>`: no range, no list and no items.
+    fn is_par_only(&self) -> bool {
+        self.par.is_some()
+            && self.range.is_none()
+            && self.discrete.is_none()
+            && self.items.is_empty()
+    }
 }
 
 /// Turns the grouped fields of `cache` (its database fields only, as the records part holds them)
@@ -59,8 +72,21 @@ pub(super) fn apply_groups(
     if (cache.record_count as usize).saturating_mul(total) > values_left.min(MAX_RECORD_VALUES) {
         return Err(PivotCacheError::TooManyRecordValues.into());
     }
+    // A source field's `<fieldGroup par="K"/>` with nothing else only names the field Excel added
+    // to group it (probes/t4170-pivot-manual-groups: Product beside its group field Product2); the
+    // field itself is not grouped (T-4171). Only that shape is accepted: K an added field whose
+    // `base` is this field. Any other bare group is kept, and refused below.
+    let names_its_group = |g: &FieldGroup| {
+        g.is_par_only()
+            && (g.field as usize) < database_fields
+            && g.par.is_some_and(|k| {
+                k as usize >= database_fields
+                    && groups.iter().any(|h| h.field == k && h.base == g.field)
+            })
+    };
+    let groups: Vec<&FieldGroup> = (groups.iter()).filter(|g| !names_its_group(g)).collect();
     let mut grouped = vec![false; total];
-    for group in groups {
+    for group in &groups {
         let Some(seen) = grouped.get_mut(group.field as usize) else {
             return skip("a fieldGroup past the cache's fields");
         };
@@ -82,7 +108,17 @@ pub(super) fn apply_groups(
         let Some(base) = cache.fields.get(group.base as usize) else {
             return skip("a fieldGroup whose base is not a database field");
         };
-        let field = group_field(base, group)?;
+        let mut field = group_field(base, group)?;
+        // An added field keeps its base, so a refresh derives it again (`AddedGroup`): a list
+        // only as long as the base's items, so an item new to the source finds no stale entry.
+        if group.field as usize >= database_fields {
+            let discrete = (group.discrete.as_ref())
+                .map(|d| d.iter().take(base.items.len()).copied().collect());
+            field.added_group = Some(AddedGroup {
+                base: group.base,
+                discrete,
+            });
+        }
         items = items.saturating_add(field.items.len());
         if items > MAX_ITEMS {
             return Err(PivotCacheError::TooManyItems.into());
@@ -93,10 +129,9 @@ pub(super) fn apply_groups(
     let mut names = grouping_fields.into_iter();
     for (index, field) in derived {
         if let Some(existing) = cache.fields.get_mut(index) {
-            existing.items = field.items;
-            existing.records = field.records;
-            existing.number_groups = field.number_groups;
-            existing.date_groups = field.date_groups;
+            // Grouped in place: it keeps its own values, moved, for the export (T-4734).
+            let base = std::mem::take(existing);
+            *existing = keep_ungrouped(base, field);
         } else {
             // Sorted, and every grouping field has exactly one group, so this is the next one.
             let Some(name) = names.next() else {
@@ -117,39 +152,17 @@ fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip
     // A range: Excel's own rule for numbers, which writes its own labels whatever the
     // `<groupItems>` list says rather than refusing it (`group_by_numbers`;
     // probes/t4249-pivot-range-group-edges), and for dates (`group_by_dates`, T-4236).
-    match (&group.range, &group.discrete) {
-        (Some(range), None) => {
-            return Ok(match range.by {
-                None => {
-                    group_by_numbers(base, [range.start, range.end, range.interval], &group.items)?
-                }
-                Some(by) => {
-                    let groups = DateGroups::new(by, range.start, range.end, count)?;
-                    group_by_dates(base, groups, group.items.clone())?
-                }
-            });
-        }
+    // A list: each base item's group, the rule a refresh derives the field by again
+    // (`group_by_discrete`, T-4171).
+    Ok(match (&group.range, &group.discrete) {
+        (Some(range), None) => match range.by {
+            None => group_by_numbers(base, [range.start, range.end, range.interval], &group.items)?,
+            Some(by) => {
+                let groups = DateGroups::new(by, range.start, range.end, count)?;
+                group_by_dates(base, groups, group.items.clone())?
+            }
+        },
         (_, None) => return skip("a fieldGroup without rangePr or discretePr"),
-        (_, Some(_)) => {}
-    }
-    let mut map = Vec::with_capacity(base.items.len());
-    for index in 0..base.items.len() {
-        let target = match group.discrete.as_ref().and_then(|d| d.get(index)) {
-            Some(&k) if (k as usize) < count => k,
-            _ => return skip("a base item without a valid discrete group"),
-        };
-        map.push(target);
-    }
-    let records = base
-        .records
-        .iter()
-        .map(|&i| map.get(i as usize).copied())
-        .collect::<Option<Vec<u32>>>()
-        .ok_or(PivotCacheError::BadRecord)?;
-    Ok(CacheField {
-        name: String::new(),
-        items: group.items.clone(),
-        records,
-        ..CacheField::default()
+        (_, Some(discrete)) => group_by_discrete(base, discrete, group.items.clone())?,
     })
 }

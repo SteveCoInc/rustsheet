@@ -9,7 +9,7 @@ use crate::{
     cut_paste::cf_sqref_anchor,
     expressions::{parser::DefinedNameS, utils::check_block},
     formula_rewrite::RewrittenCell,
-    types::{ArrayKind, Cell, MergedCell, Style},
+    types::{ArrayKind, Cell, DataTable, MergedCell, Style},
     user_model::history::{ColumnData, Diff, RowData},
     workbook_check::{check_cell, check_row_record, check_style},
     UserModel,
@@ -205,6 +205,25 @@ impl UserModel {
         } else {
             Ok(vec![])
         }
+    }
+
+    /// Returns a snapshot diff of the data tables of the sheet when the edit changed them from
+    /// `old_tables` (taken before it), and nothing otherwise. Like
+    /// [`Self::merged_cells_snapshot_diffs`] it has `old_value == new_value` and goes *before*
+    /// the edit's diff, so that undo restores the exact tables (T-4940).
+    pub(super) fn data_tables_snapshot_diffs(
+        &self,
+        sheet: u32,
+        old_tables: Vec<DataTable>,
+    ) -> Result<Vec<Diff>, String> {
+        if self.model.workbook.worksheet(sheet)?.data_tables == old_tables {
+            return Ok(vec![]);
+        }
+        Ok(vec![Diff::SetDataTables {
+            sheet,
+            old_value: old_tables.clone(),
+            new_value: old_tables,
+        }])
     }
 
     /// What a row or column delete on `sheet` is about to rewrite past what re-inserting the lines

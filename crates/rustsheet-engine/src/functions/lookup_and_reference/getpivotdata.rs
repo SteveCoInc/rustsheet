@@ -13,9 +13,11 @@ fn no_answer(cell: CellReferenceIndex) -> CalcResult {
 
 impl Model {
     /// `=GETPIVOTDATA(data_field, pivot_table, [field1, item1, ...])` (SPEC-0015 "GETPIVOTDATA",
-    /// docs/excel-semantics/web.md "GETPIVOTDATA against a pivot table", T-2083). An error in
-    /// `data_field` or `pivot_table` is the result (`data_field` first; which wins is unprobed,
-    /// T-1703). Then the pivot whose location meets the reference, its data field by caption or
+    /// docs/excel-semantics/web.md "GETPIVOTDATA against a pivot table", T-2083). Error
+    /// arguments (T-4006 gen-m6 cells, T-4823), in order: a typed error literal as `data_field`
+    /// (`#NULL!,...,2,"C"` is `#NULL!`), an error in `pivot_table`, an error in any `field` as is
+    /// (`..,#NAME?,2` is `#NAME?`), then a *referenced* error as `data_field` is `#REF!`, as is an
+    /// error in `item`. Then the pivot whose location meets the reference, its data field by caption or
     /// source name, and the items of the pairs pick the records the data field's aggregate runs
     /// over. Everything else is `#REF!`: no pivot or several, a pivot shape or argument SPEC-0015
     /// lists as unknown, a name that matches nothing. An array of items lifts (L1, L5); any
@@ -32,7 +34,9 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         }
         let data_field = self.evaluate_node_in_context(&args[0], cell);
-        if data_field.is_error() {
+        // A typed error (a literal; a computed one is unprobed) is the result; a referenced one waits behind the field errors
+        // and is then `#REF!` (T-4823). Typed-vs-field order is unprobed: typed goes first.
+        if data_field.is_error() && !self.is_reference(&args[0], cell) {
             return data_field;
         }
         let pivot = match self.evaluate_node_with_reference(&args[1], cell) {
@@ -48,6 +52,14 @@ impl Model {
             value if value.is_error() => return value,
             _ => None,
         };
+        // An error in `field` is the result as is, before any item error or referenced
+        // data_field error (T-4823).
+        for pair in args[2..].chunks_exact(2) {
+            let field = self.evaluate_node_in_context(&pair[0], cell);
+            if field.is_error() {
+                return field;
+            }
+        }
         let Some(pivot) = pivot else {
             return no_answer(cell);
         };

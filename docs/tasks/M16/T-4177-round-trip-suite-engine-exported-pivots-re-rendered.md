@@ -25,6 +25,12 @@ docs/research/pivot-tables-2026-11-04/plan.md §6 layer 4. Program: docs/researc
   1904 workbook's cache (docs/excel-semantics/xlsx-storage.md "Pivot cache dates below serial 61 use the
   1899-12-30 epoch"). The three T-4176 scratch runs (pivots.md "Excel for the web opens engine-exported pivot
   parts") become committed cases.
+- [ ] Cases for T-4734's grouped-cache export (pivots.md "Excel for the web opens engine-exported grouped pivot
+  caches"): its scratch runs become committed cases. They are the engine exports of probes/t4170-pivot-manual-groups,
+  t4170-pivot-date-levels, t4236-pivot-date-groups-no-blank, t4228-pivot-range-groups and t4128-pivot-spike (G),
+  plus the API-built cache: Amount by tens, Date by months with Quarters and Years, and Product2 as a manual group.
+  Add one more case for a date field grouped in place whose `sharedItems` carry no `containsNonDate`,
+  `minDate` or `maxDate`. It commits the "flags needed" result: Excel's refresh dropped the months.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

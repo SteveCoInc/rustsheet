@@ -3,6 +3,7 @@ use crate::value::{ErrorKind, XlError};
 use crate::WorkbookOptions;
 
 mod calculated_column;
+mod data_table;
 mod name_binding;
 mod typed_entry;
 
@@ -797,6 +798,34 @@ fn filtered_table_rows_are_skipped_by_subtotal_9() {
     .unwrap();
     assert_eq!(wb.value(cell(&wb, "D1")).unwrap(), Value::Number(7.0));
     assert_eq!(wb.value(cell(&wb, "D2")).unwrap(), Value::Number(5.0));
+}
+
+/// `filter_table_column` gives a filtered table a values filter (T-4803) and refuses a table
+/// that is not filtered, a column outside it, a header row and a rejected row a kept one matches.
+#[test]
+fn filter_table_column_needs_a_filtered_table_and_its_data_rows() {
+    let mut wb = keyed_book();
+    let range = wb.range_ref("A1:B4").unwrap();
+    wb.edit(|tx| {
+        tx.add_table(range, "Data", true)?;
+        tx.filter_table_column("Data", 1, &[2])
+    })
+    .unwrap();
+    for (column, rows) in [(2, vec![2]), (0, vec![0]), (0, vec![u32::MAX])] {
+        let err = wb.edit(|tx| tx.filter_table_column("Data", column, &rows));
+        assert!(err.is_err(), "{column} {rows:?}");
+    }
+    let other = wb.range_ref("D1:E4").unwrap();
+    wb.edit(|tx| {
+        tx.set("D1", "K")?;
+        tx.set("E1", "V")?;
+        tx.add_table(other, "Plain", false)
+    })
+    .unwrap();
+    let err = wb
+        .edit(|tx| tx.filter_table_column("Plain", 0, &[1]))
+        .unwrap_err();
+    assert!(matches!(err, EditError::Table(_)));
 }
 
 #[test]

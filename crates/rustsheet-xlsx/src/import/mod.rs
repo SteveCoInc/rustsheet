@@ -48,7 +48,7 @@ pub use encryption::{
 pub use iso_date::{iso8601_to_date_system_serial, iso8601_to_serial};
 pub use ole::{classify_ole_compound_file, decrypt_ole_package};
 pub use package::{is_ole_compound_file, part_key, ImportLimits, PartNames};
-pub(crate) use pivots::SUBTOTAL_FUNCTIONS as PIVOT_SUBTOTAL_FUNCTIONS;
+pub(crate) use pivots::{data_field_x14_show_as, SUBTOTAL_FUNCTIONS as PIVOT_SUBTOTAL_FUNCTIONS};
 pub use pivots::{read_pivot_parts, PivotParts, MAX_PIVOTS};
 pub use shared_strings::decode_xlsx_escapes;
 use shared_strings::read_shared_strings;
@@ -84,6 +84,17 @@ fn load_relationships<R: Read + Seek>(
     Ok(parse_relationships(&XmlNode::parse(file)?)?
         .into_iter()
         .collect())
+}
+
+/// The relationships of a part in document order; none when the part has no relationships part.
+pub(super) fn part_relationships<R: Read + Seek>(
+    archive: &mut Package<R>,
+    rels_path: &str,
+) -> Result<Vec<(String, Relationship)>, XlsxError> {
+    match archive.open_optional(rels_path)? {
+        Some(file) => parse_relationships(&XmlNode::parse(file)?),
+        None => Ok(Vec::new()),
+    }
 }
 
 /// The `<Relationship>` elements of a relationships part with their `Id`s, in document order.

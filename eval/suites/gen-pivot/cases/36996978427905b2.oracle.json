@@ -1,0 +1,10081 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      }
+     ]
+    },
+    {
+     "name": "Channel",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Web"
+      },
+      {
+       "t": "s",
+       "v": "Store"
+      }
+     ]
+    },
+    {
+     "name": "Rep"
+    },
+    {
+     "name": "Tier",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsMixedTypes": "1",
+      "containsNumber": "1",
+      "count": "7",
+      "maxValue": "1",
+      "minValue": "1"
+     },
+     "shared_items": [
+      {
+       "t": "b",
+       "v": "1"
+      },
+      {
+       "t": "s",
+       "v": "Bronze"
+      },
+      {
+       "t": "s",
+       "v": "Gold"
+      },
+      {
+       "t": "s",
+       "v": "Silver"
+      },
+      {
+       "t": "b",
+       "v": "0"
+      },
+      {
+       "t": "n",
+       "v": "1"
+      },
+      {
+       "t": "s",
+       "v": "1"
+      }
+     ]
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "9999-12-31T00:00:00",
+      "minDate": "2023-01-31T00:00:00"
+     }
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "6",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Score",
+     "shared_flags": {
+      "containsMixedTypes": "1",
+      "containsNumber": "1",
+      "maxValue": "8",
+      "minValue": "0"
+     }
+    }
+   ],
+   "cells": {
+    "L10": {
+     "t": "empty"
+    },
+    "L11": {
+     "t": "empty"
+    },
+    "L12": {
+     "t": "empty"
+    },
+    "L13": {
+     "t": "empty"
+    },
+    "L14": {
+     "t": "empty"
+    },
+    "L15": {
+     "t": "empty"
+    },
+    "L16": {
+     "t": "empty"
+    },
+    "L17": {
+     "t": "empty"
+    },
+    "L18": {
+     "t": "s",
+     "v": "Average of Sales"
+    },
+    "L19": {
+     "t": "empty"
+    },
+    "L20": {
+     "t": "empty"
+    },
+    "L21": {
+     "t": "empty"
+    },
+    "L22": {
+     "t": "empty"
+    },
+    "L23": {
+     "t": "empty"
+    },
+    "L24": {
+     "t": "empty"
+    },
+    "L25": {
+     "t": "empty"
+    },
+    "L26": {
+     "t": "empty"
+    },
+    "L27": {
+     "t": "empty"
+    },
+    "L28": {
+     "t": "empty"
+    },
+    "L29": {
+     "t": "empty"
+    },
+    "L3": {
+     "t": "s",
+     "v": "Product"
+    },
+    "L4": {
+     "t": "empty"
+    },
+    "L5": {
+     "t": "s",
+     "v": "Values"
+    },
+    "L6": {
+     "t": "s",
+     "v": "Average of Score"
+    },
+    "L7": {
+     "t": "empty"
+    },
+    "L8": {
+     "t": "empty"
+    },
+    "L9": {
+     "t": "empty"
+    },
+    "M10": {
+     "t": "empty"
+    },
+    "M11": {
+     "t": "empty"
+    },
+    "M12": {
+     "t": "empty"
+    },
+    "M13": {
+     "t": "empty"
+    },
+    "M14": {
+     "t": "s",
+     "v": "Store"
+    },
+    "M15": {
+     "t": "empty"
+    },
+    "M16": {
+     "t": "empty"
+    },
+    "M17": {
+     "t": "empty"
+    },
+    "M18": {
+     "t": "empty"
+    },
+    "M19": {
+     "t": "s",
+     "v": "Web"
+    },
+    "M20": {
+     "t": "empty"
+    },
+    "M21": {
+     "t": "empty"
+    },
+    "M22": {
+     "t": "empty"
+    },
+    "M23": {
+     "t": "empty"
+    },
+    "M24": {
+     "t": "empty"
+    },
+    "M25": {
+     "t": "empty"
+    },
+    "M26": {
+     "t": "s",
+     "v": "Store"
+    },
+    "M27": {
+     "t": "empty"
+    },
+    "M28": {
+     "t": "empty"
+    },
+    "M29": {
+     "t": "empty"
+    },
+    "M3": {
+     "t": "s",
+     "v": "(All)"
+    },
+    "M4": {
+     "t": "empty"
+    },
+    "M5": {
+     "t": "s",
+     "v": "Channel"
+    },
+    "M6": {
+     "t": "empty"
+    },
+    "M7": {
+     "t": "s",
+     "v": "Web"
+    },
+    "M8": {
+     "t": "empty"
+    },
+    "M9": {
+     "t": "empty"
+    },
+    "N10": {
+     "t": "s",
+     "v": "Gold"
+    },
+    "N11": {
+     "t": "s",
+     "v": "Silver"
+    },
+    "N12": {
+     "t": "s",
+     "v": "FALSE"
+    },
+    "N13": {
+     "t": "n",
+     "v": 1.0
+    },
+    "N14": {
+     "t": "empty"
+    },
+    "N15": {
+     "t": "s",
+     "v": "TRUE"
+    },
+    "N16": {
+     "t": "s",
+     "v": "Silver"
+    },
+    "N17": {
+     "t": "s",
+     "v": "1"
+    },
+    "N18": {
+     "t": "empty"
+    },
+    "N19": {
+     "t": "empty"
+    },
+    "N20": {
+     "t": "s",
+     "v": "TRUE"
+    },
+    "N21": {
+     "t": "s",
+     "v": "Bronze"
+    },
+    "N22": {
+     "t": "s",
+     "v": "Gold"
+    },
+    "N23": {
+     "t": "s",
+     "v": "Silver"
+    },
+    "N24": {
+     "t": "s",
+     "v": "FALSE"
+    },
+    "N25": {
+     "t": "n",
+     "v": 1.0
+    },
+    "N26": {
+     "t": "empty"
+    },
+    "N27": {
+     "t": "s",
+     "v": "TRUE"
+    },
+    "N28": {
+     "t": "s",
+     "v": "Silver"
+    },
+    "N29": {
+     "t": "s",
+     "v": "1"
+    },
+    "N3": {
+     "t": "empty"
+    },
+    "N4": {
+     "t": "empty"
+    },
+    "N5": {
+     "t": "s",
+     "v": "Tier"
+    },
+    "N6": {
+     "t": "empty"
+    },
+    "N7": {
+     "t": "empty"
+    },
+    "N8": {
+     "t": "s",
+     "v": "TRUE"
+    },
+    "N9": {
+     "t": "s",
+     "v": "Bronze"
+    },
+    "O10": {
+     "t": "n",
+     "v": 2.875
+    },
+    "O11": {
+     "t": "n",
+     "v": 8.0
+    },
+    "O12": {
+     "t": "s",
+     "v": "ERR"
+    },
+    "O13": {
+     "t": "n",
+     "v": 0.5
+    },
+    "O14": {
+     "t": "s",
+     "v": "ERR"
+    },
+    "O15": {
+     "t": "n",
+     "v": 0.5
+    },
+    "O16": {
+     "t": "s",
+     "v": "ERR"
+    },
+    "O17": {
+     "t": "s",
+     "v": "ERR"
+    },
+    "O18": {
+     "t": "empty"
+    },
+    "O19": {
+     "t": "n",
+     "v": 21.106026785714285
+    },
+    "O20": {
+     "t": "n",
+     "v": 12.0
+    },
+    "O21": {
+     "t": "n",
+     "v": 10.0
+    },
+    "O22": {
+     "t": "n",
+     "v": 2.5
+    },
+    "O23": {
+     "t": "n",
+     "v": 2.25
+    },
+    "O24": {
+     "t": "n",
+     "v": 7.5
+    },
+    "O25": {
+     "t": "n",
+     "v": 7.0
+    },
+    "O26": {
+     "t": "n",
+     "v": 81.33333333333334
+    },
+    "O27": {
+     "t": "n",
+     "v": 20.0
+    },
+    "O28": {
+     "t": "n",
+     "v": 12.0
+    },
+    "O29": {
+     "t": "n",
+     "v": 2.0
+    },
+    "O3": {
+     "t": "empty"
+    },
+    "O4": {
+     "t": "empty"
+    },
+    "O5": {
+     "t": "empty"
+    },
+    "O6": {
+     "t": "empty"
+    },
+    "O7": {
+     "t": "n",
+     "v": 10.9875
+    },
+    "O8": {
+     "t": "s",
+     "v": "ERR"
+    },
+    "O9": {
+     "t": "n",
+     "v": 0.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 3,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "L5:O29",
+   "name": "PvP01",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      5
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      6
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 1,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      5
+     ]
+    },
+    {
+     "i": 1,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      6
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "P01",
+   "text": {
+    "L18": "Average of Sales",
+    "L3": "Product",
+    "L5": "Values",
+    "L6": "Average of Score",
+    "M14": "Store",
+    "M19": "Web",
+    "M26": "Store",
+    "M3": "(All)",
+    "M5": "Channel",
+    "M7": "Web",
+    "N10": "Gold",
+    "N11": "Silver",
+    "N12": "FALSE",
+    "N13": "1",
+    "N15": "TRUE",
+    "N16": "Silver",
+    "N17": "1",
+    "N20": "TRUE",
+    "N21": "Bronze",
+    "N22": "Gold",
+    "N23": "Silver",
+    "N24": "FALSE",
+    "N25": "1",
+    "N27": "TRUE",
+    "N28": "Silver",
+    "N29": "1",
+    "N5": "Tier",
+    "N8": "TRUE",
+    "N9": "Bronze",
+    "O10": "2.875",
+    "O11": "8",
+    "O12": "ERR",
+    "O13": "0.5",
+    "O14": "ERR",
+    "O15": "0.5",
+    "O16": "ERR",
+    "O17": "ERR",
+    "O19": "21.10602679",
+    "O20": "12",
+    "O21": "10",
+    "O22": "2.5",
+    "O23": "2.25",
+    "O24": "7.5",
+    "O25": "7",
+    "O26": "81.33333333",
+    "O27": "20",
+    "O28": "12",
+    "O29": "2",
+    "O7": "10.9875",
+    "O8": "ERR",
+    "O9": "0"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "4"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "North"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      },
+      {
+       "t": "s",
+       "v": "South"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "C"
+      },
+      {
+       "t": "s",
+       "v": "A"
+      }
+     ]
+    },
+    {
+     "name": "Channel",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Web"
+      },
+      {
+       "t": "s",
+       "v": "Store"
+      }
+     ]
+    },
+    {
+     "name": "Rep",
+     "shared_flags": {
+      "count": "4"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Cy"
+      },
+      {
+       "t": "s",
+       "v": "Di"
+      },
+      {
+       "t": "s",
+       "v": "Bo"
+      },
+      {
+       "t": "s",
+       "v": "Ann"
+      }
+     ]
+    },
+    {
+     "name": "Tier",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Gold"
+      },
+      {
+       "t": "s",
+       "v": "Silver"
+      },
+      {
+       "t": "s",
+       "v": "Bronze"
+      }
+     ]
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "14",
+      "maxDate": "1900-01-01T19:51:04",
+      "minDate": "1900-12-30T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2024-02-29T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-12-30T06:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-12-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-04-01T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-12-30T18:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-03-31T06:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-02-29T06:00:00"
+      },
+      {
+       "t": "n",
+       "v": "45351"
+      },
+      {
+       "t": "n",
+       "v": "365.25"
+      },
+      {
+       "t": "n",
+       "v": "365"
+      },
+      {
+       "t": "n",
+       "v": "45382.999999990003"
+      },
+      {
+       "t": "n",
+       "v": "365.75"
+      },
+      {
+       "t": "n",
+       "v": "45382.25"
+      },
+      {
+       "t": "n",
+       "v": "45351.25"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "12",
+      "minValue": "-4"
+     }
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "8",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Score",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "8",
+      "minValue": "-1"
+     }
+    }
+   ],
+   "cells": {
+    "AA10": {
+     "t": "empty"
+    },
+    "AA11": {
+     "t": "empty"
+    },
+    "AA12": {
+     "t": "empty"
+    },
+    "AA13": {
+     "t": "empty"
+    },
+    "AA14": {
+     "t": "empty"
+    },
+    "AA15": {
+     "t": "empty"
+    },
+    "AA16": {
+     "t": "empty"
+    },
+    "AA17": {
+     "t": "n",
+     "v": 2.0
+    },
+    "AA18": {
+     "t": "n",
+     "v": 2.0
+    },
+    "AA19": {
+     "t": "n",
+     "v": 2.0
+    },
+    "AA20": {
+     "t": "empty"
+    },
+    "AA21": {
+     "t": "empty"
+    },
+    "AA22": {
+     "t": "empty"
+    },
+    "AA23": {
+     "t": "empty"
+    },
+    "AA24": {
+     "t": "empty"
+    },
+    "AA25": {
+     "t": "empty"
+    },
+    "AA26": {
+     "t": "empty"
+    },
+    "AA27": {
+     "t": "empty"
+    },
+    "AA28": {
+     "t": "empty"
+    },
+    "AA29": {
+     "t": "empty"
+    },
+    "AA3": {
+     "t": "empty"
+    },
+    "AA30": {
+     "t": "empty"
+    },
+    "AA31": {
+     "t": "empty"
+    },
+    "AA32": {
+     "t": "empty"
+    },
+    "AA33": {
+     "t": "empty"
+    },
+    "AA34": {
+     "t": "empty"
+    },
+    "AA35": {
+     "t": "empty"
+    },
+    "AA36": {
+     "t": "empty"
+    },
+    "AA37": {
+     "t": "empty"
+    },
+    "AA38": {
+     "t": "empty"
+    },
+    "AA39": {
+     "t": "empty"
+    },
+    "AA4": {
+     "t": "empty"
+    },
+    "AA40": {
+     "t": "empty"
+    },
+    "AA41": {
+     "t": "empty"
+    },
+    "AA42": {
+     "t": "empty"
+    },
+    "AA43": {
+     "t": "empty"
+    },
+    "AA44": {
+     "t": "empty"
+    },
+    "AA45": {
+     "t": "empty"
+    },
+    "AA5": {
+     "t": "empty"
+    },
+    "AA6": {
+     "t": "s",
+     "v": "Silver Max of Units"
+    },
+    "AA7": {
+     "t": "empty"
+    },
+    "AA8": {
+     "t": "empty"
+    },
+    "AA9": {
+     "t": "empty"
+    },
+    "AB10": {
+     "t": "empty"
+    },
+    "AB11": {
+     "t": "empty"
+    },
+    "AB12": {
+     "t": "empty"
+    },
+    "AB13": {
+     "t": "empty"
+    },
+    "AB14": {
+     "t": "empty"
+    },
+    "AB15": {
+     "t": "empty"
+    },
+    "AB16": {
+     "t": "empty"
+    },
+    "AB17": {
+     "t": "n",
+     "v": 3.0
+    },
+    "AB18": {
+     "t": "n",
+     "v": 3.0
+    },
+    "AB19": {
+     "t": "n",
+     "v": 3.0
+    },
+    "AB20": {
+     "t": "empty"
+    },
+    "AB21": {
+     "t": "empty"
+    },
+    "AB22": {
+     "t": "empty"
+    },
+    "AB23": {
+     "t": "empty"
+    },
+    "AB24": {
+     "t": "empty"
+    },
+    "AB25": {
+     "t": "empty"
+    },
+    "AB26": {
+     "t": "empty"
+    },
+    "AB27": {
+     "t": "empty"
+    },
+    "AB28": {
+     "t": "empty"
+    },
+    "AB29": {
+     "t": "empty"
+    },
+    "AB3": {
+     "t": "empty"
+    },
+    "AB30": {
+     "t": "empty"
+    },
+    "AB31": {
+     "t": "empty"
+    },
+    "AB32": {
+     "t": "empty"
+    },
+    "AB33": {
+     "t": "empty"
+    },
+    "AB34": {
+     "t": "empty"
+    },
+    "AB35": {
+     "t": "empty"
+    },
+    "AB36": {
+     "t": "empty"
+    },
+    "AB37": {
+     "t": "empty"
+    },
+    "AB38": {
+     "t": "empty"
+    },
+    "AB39": {
+     "t": "empty"
+    },
+    "AB4": {
+     "t": "empty"
+    },
+    "AB40": {
+     "t": "empty"
+    },
+    "AB41": {
+     "t": "empty"
+    },
+    "AB42": {
+     "t": "empty"
+    },
+    "AB43": {
+     "t": "empty"
+    },
+    "AB44": {
+     "t": "empty"
+    },
+    "AB45": {
+     "t": "empty"
+    },
+    "AB5": {
+     "t": "empty"
+    },
+    "AB6": {
+     "t": "s",
+     "v": "Silver Average of Sales"
+    },
+    "AB7": {
+     "t": "empty"
+    },
+    "AB8": {
+     "t": "empty"
+    },
+    "AB9": {
+     "t": "empty"
+    },
+    "AC10": {
+     "t": "empty"
+    },
+    "AC11": {
+     "t": "empty"
+    },
+    "AC12": {
+     "t": "empty"
+    },
+    "AC13": {
+     "t": "empty"
+    },
+    "AC14": {
+     "t": "empty"
+    },
+    "AC15": {
+     "t": "empty"
+    },
+    "AC16": {
+     "t": "empty"
+    },
+    "AC17": {
+     "t": "empty"
+    },
+    "AC18": {
+     "t": "empty"
+    },
+    "AC19": {
+     "t": "empty"
+    },
+    "AC20": {
+     "t": "empty"
+    },
+    "AC21": {
+     "t": "empty"
+    },
+    "AC22": {
+     "t": "empty"
+    },
+    "AC23": {
+     "t": "empty"
+    },
+    "AC24": {
+     "t": "empty"
+    },
+    "AC25": {
+     "t": "empty"
+    },
+    "AC26": {
+     "t": "empty"
+    },
+    "AC27": {
+     "t": "n",
+     "v": 1.0
+    },
+    "AC28": {
+     "t": "n",
+     "v": 1.0
+    },
+    "AC29": {
+     "t": "n",
+     "v": 1.0
+    },
+    "AC3": {
+     "t": "empty"
+    },
+    "AC30": {
+     "t": "empty"
+    },
+    "AC31": {
+     "t": "empty"
+    },
+    "AC32": {
+     "t": "empty"
+    },
+    "AC33": {
+     "t": "empty"
+    },
+    "AC34": {
+     "t": "empty"
+    },
+    "AC35": {
+     "t": "empty"
+    },
+    "AC36": {
+     "t": "empty"
+    },
+    "AC37": {
+     "t": "empty"
+    },
+    "AC38": {
+     "t": "empty"
+    },
+    "AC39": {
+     "t": "empty"
+    },
+    "AC4": {
+     "t": "empty"
+    },
+    "AC40": {
+     "t": "empty"
+    },
+    "AC41": {
+     "t": "empty"
+    },
+    "AC42": {
+     "t": "empty"
+    },
+    "AC43": {
+     "t": "empty"
+    },
+    "AC44": {
+     "t": "empty"
+    },
+    "AC45": {
+     "t": "empty"
+    },
+    "AC5": {
+     "t": "empty"
+    },
+    "AC6": {
+     "t": "s",
+     "v": "Bronze"
+    },
+    "AC7": {
+     "t": "s",
+     "v": "East"
+    },
+    "AC8": {
+     "t": "s",
+     "v": "Max of Units"
+    },
+    "AC9": {
+     "t": "empty"
+    },
+    "AD10": {
+     "t": "empty"
+    },
+    "AD11": {
+     "t": "empty"
+    },
+    "AD12": {
+     "t": "empty"
+    },
+    "AD13": {
+     "t": "empty"
+    },
+    "AD14": {
+     "t": "empty"
+    },
+    "AD15": {
+     "t": "empty"
+    },
+    "AD16": {
+     "t": "empty"
+    },
+    "AD17": {
+     "t": "empty"
+    },
+    "AD18": {
+     "t": "empty"
+    },
+    "AD19": {
+     "t": "empty"
+    },
+    "AD20": {
+     "t": "empty"
+    },
+    "AD21": {
+     "t": "empty"
+    },
+    "AD22": {
+     "t": "empty"
+    },
+    "AD23": {
+     "t": "empty"
+    },
+    "AD24": {
+     "t": "empty"
+    },
+    "AD25": {
+     "t": "empty"
+    },
+    "AD26": {
+     "t": "empty"
+    },
+    "AD27": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AD28": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AD29": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AD3": {
+     "t": "empty"
+    },
+    "AD30": {
+     "t": "empty"
+    },
+    "AD31": {
+     "t": "empty"
+    },
+    "AD32": {
+     "t": "empty"
+    },
+    "AD33": {
+     "t": "empty"
+    },
+    "AD34": {
+     "t": "empty"
+    },
+    "AD35": {
+     "t": "empty"
+    },
+    "AD36": {
+     "t": "empty"
+    },
+    "AD37": {
+     "t": "empty"
+    },
+    "AD38": {
+     "t": "empty"
+    },
+    "AD39": {
+     "t": "empty"
+    },
+    "AD4": {
+     "t": "empty"
+    },
+    "AD40": {
+     "t": "empty"
+    },
+    "AD41": {
+     "t": "empty"
+    },
+    "AD42": {
+     "t": "empty"
+    },
+    "AD43": {
+     "t": "empty"
+    },
+    "AD44": {
+     "t": "empty"
+    },
+    "AD45": {
+     "t": "empty"
+    },
+    "AD5": {
+     "t": "empty"
+    },
+    "AD6": {
+     "t": "empty"
+    },
+    "AD7": {
+     "t": "empty"
+    },
+    "AD8": {
+     "t": "s",
+     "v": "Average of Sales"
+    },
+    "AD9": {
+     "t": "empty"
+    },
+    "AE10": {
+     "t": "empty"
+    },
+    "AE11": {
+     "t": "empty"
+    },
+    "AE12": {
+     "t": "n",
+     "v": 4.0
+    },
+    "AE13": {
+     "t": "n",
+     "v": 4.0
+    },
+    "AE14": {
+     "t": "n",
+     "v": 4.0
+    },
+    "AE15": {
+     "t": "empty"
+    },
+    "AE16": {
+     "t": "empty"
+    },
+    "AE17": {
+     "t": "empty"
+    },
+    "AE18": {
+     "t": "empty"
+    },
+    "AE19": {
+     "t": "empty"
+    },
+    "AE20": {
+     "t": "empty"
+    },
+    "AE21": {
+     "t": "empty"
+    },
+    "AE22": {
+     "t": "empty"
+    },
+    "AE23": {
+     "t": "empty"
+    },
+    "AE24": {
+     "t": "empty"
+    },
+    "AE25": {
+     "t": "empty"
+    },
+    "AE26": {
+     "t": "empty"
+    },
+    "AE27": {
+     "t": "empty"
+    },
+    "AE28": {
+     "t": "empty"
+    },
+    "AE29": {
+     "t": "empty"
+    },
+    "AE3": {
+     "t": "empty"
+    },
+    "AE30": {
+     "t": "empty"
+    },
+    "AE31": {
+     "t": "empty"
+    },
+    "AE32": {
+     "t": "empty"
+    },
+    "AE33": {
+     "t": "empty"
+    },
+    "AE34": {
+     "t": "empty"
+    },
+    "AE35": {
+     "t": "empty"
+    },
+    "AE36": {
+     "t": "empty"
+    },
+    "AE37": {
+     "t": "empty"
+    },
+    "AE38": {
+     "t": "empty"
+    },
+    "AE39": {
+     "t": "empty"
+    },
+    "AE4": {
+     "t": "empty"
+    },
+    "AE40": {
+     "t": "empty"
+    },
+    "AE41": {
+     "t": "empty"
+    },
+    "AE42": {
+     "t": "empty"
+    },
+    "AE43": {
+     "t": "empty"
+    },
+    "AE44": {
+     "t": "empty"
+    },
+    "AE45": {
+     "t": "empty"
+    },
+    "AE5": {
+     "t": "empty"
+    },
+    "AE6": {
+     "t": "empty"
+    },
+    "AE7": {
+     "t": "s",
+     "v": "West"
+    },
+    "AE8": {
+     "t": "s",
+     "v": "Max of Units"
+    },
+    "AE9": {
+     "t": "empty"
+    },
+    "AF10": {
+     "t": "empty"
+    },
+    "AF11": {
+     "t": "empty"
+    },
+    "AF12": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AF13": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AF14": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AF15": {
+     "t": "empty"
+    },
+    "AF16": {
+     "t": "empty"
+    },
+    "AF17": {
+     "t": "empty"
+    },
+    "AF18": {
+     "t": "empty"
+    },
+    "AF19": {
+     "t": "empty"
+    },
+    "AF20": {
+     "t": "empty"
+    },
+    "AF21": {
+     "t": "empty"
+    },
+    "AF22": {
+     "t": "empty"
+    },
+    "AF23": {
+     "t": "empty"
+    },
+    "AF24": {
+     "t": "empty"
+    },
+    "AF25": {
+     "t": "empty"
+    },
+    "AF26": {
+     "t": "empty"
+    },
+    "AF27": {
+     "t": "empty"
+    },
+    "AF28": {
+     "t": "empty"
+    },
+    "AF29": {
+     "t": "empty"
+    },
+    "AF3": {
+     "t": "empty"
+    },
+    "AF30": {
+     "t": "empty"
+    },
+    "AF31": {
+     "t": "empty"
+    },
+    "AF32": {
+     "t": "empty"
+    },
+    "AF33": {
+     "t": "empty"
+    },
+    "AF34": {
+     "t": "empty"
+    },
+    "AF35": {
+     "t": "empty"
+    },
+    "AF36": {
+     "t": "empty"
+    },
+    "AF37": {
+     "t": "empty"
+    },
+    "AF38": {
+     "t": "empty"
+    },
+    "AF39": {
+     "t": "empty"
+    },
+    "AF4": {
+     "t": "empty"
+    },
+    "AF40": {
+     "t": "empty"
+    },
+    "AF41": {
+     "t": "empty"
+    },
+    "AF42": {
+     "t": "empty"
+    },
+    "AF43": {
+     "t": "empty"
+    },
+    "AF44": {
+     "t": "empty"
+    },
+    "AF45": {
+     "t": "empty"
+    },
+    "AF5": {
+     "t": "empty"
+    },
+    "AF6": {
+     "t": "empty"
+    },
+    "AF7": {
+     "t": "empty"
+    },
+    "AF8": {
+     "t": "s",
+     "v": "Average of Sales"
+    },
+    "AF9": {
+     "t": "empty"
+    },
+    "AG10": {
+     "t": "empty"
+    },
+    "AG11": {
+     "t": "empty"
+    },
+    "AG12": {
+     "t": "n",
+     "v": 4.0
+    },
+    "AG13": {
+     "t": "n",
+     "v": 4.0
+    },
+    "AG14": {
+     "t": "n",
+     "v": 4.0
+    },
+    "AG15": {
+     "t": "empty"
+    },
+    "AG16": {
+     "t": "empty"
+    },
+    "AG17": {
+     "t": "empty"
+    },
+    "AG18": {
+     "t": "empty"
+    },
+    "AG19": {
+     "t": "empty"
+    },
+    "AG20": {
+     "t": "empty"
+    },
+    "AG21": {
+     "t": "empty"
+    },
+    "AG22": {
+     "t": "empty"
+    },
+    "AG23": {
+     "t": "empty"
+    },
+    "AG24": {
+     "t": "empty"
+    },
+    "AG25": {
+     "t": "empty"
+    },
+    "AG26": {
+     "t": "empty"
+    },
+    "AG27": {
+     "t": "n",
+     "v": 1.0
+    },
+    "AG28": {
+     "t": "n",
+     "v": 1.0
+    },
+    "AG29": {
+     "t": "n",
+     "v": 1.0
+    },
+    "AG3": {
+     "t": "empty"
+    },
+    "AG30": {
+     "t": "empty"
+    },
+    "AG31": {
+     "t": "empty"
+    },
+    "AG32": {
+     "t": "empty"
+    },
+    "AG33": {
+     "t": "empty"
+    },
+    "AG34": {
+     "t": "empty"
+    },
+    "AG35": {
+     "t": "empty"
+    },
+    "AG36": {
+     "t": "empty"
+    },
+    "AG37": {
+     "t": "empty"
+    },
+    "AG38": {
+     "t": "empty"
+    },
+    "AG39": {
+     "t": "empty"
+    },
+    "AG4": {
+     "t": "empty"
+    },
+    "AG40": {
+     "t": "empty"
+    },
+    "AG41": {
+     "t": "empty"
+    },
+    "AG42": {
+     "t": "empty"
+    },
+    "AG43": {
+     "t": "empty"
+    },
+    "AG44": {
+     "t": "empty"
+    },
+    "AG45": {
+     "t": "empty"
+    },
+    "AG5": {
+     "t": "empty"
+    },
+    "AG6": {
+     "t": "s",
+     "v": "Bronze Max of Units"
+    },
+    "AG7": {
+     "t": "empty"
+    },
+    "AG8": {
+     "t": "empty"
+    },
+    "AG9": {
+     "t": "empty"
+    },
+    "AH10": {
+     "t": "empty"
+    },
+    "AH11": {
+     "t": "empty"
+    },
+    "AH12": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AH13": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AH14": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AH15": {
+     "t": "empty"
+    },
+    "AH16": {
+     "t": "empty"
+    },
+    "AH17": {
+     "t": "empty"
+    },
+    "AH18": {
+     "t": "empty"
+    },
+    "AH19": {
+     "t": "empty"
+    },
+    "AH20": {
+     "t": "empty"
+    },
+    "AH21": {
+     "t": "empty"
+    },
+    "AH22": {
+     "t": "empty"
+    },
+    "AH23": {
+     "t": "empty"
+    },
+    "AH24": {
+     "t": "empty"
+    },
+    "AH25": {
+     "t": "empty"
+    },
+    "AH26": {
+     "t": "empty"
+    },
+    "AH27": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AH28": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AH29": {
+     "t": "n",
+     "v": -4.0
+    },
+    "AH3": {
+     "t": "empty"
+    },
+    "AH30": {
+     "t": "empty"
+    },
+    "AH31": {
+     "t": "empty"
+    },
+    "AH32": {
+     "t": "empty"
+    },
+    "AH33": {
+     "t": "empty"
+    },
+    "AH34": {
+     "t": "empty"
+    },
+    "AH35": {
+     "t": "empty"
+    },
+    "AH36": {
+     "t": "empty"
+    },
+    "AH37": {
+     "t": "empty"
+    },
+    "AH38": {
+     "t": "empty"
+    },
+    "AH39": {
+     "t": "empty"
+    },
+    "AH4": {
+     "t": "empty"
+    },
+    "AH40": {
+     "t": "empty"
+    },
+    "AH41": {
+     "t": "empty"
+    },
+    "AH42": {
+     "t": "empty"
+    },
+    "AH43": {
+     "t": "empty"
+    },
+    "AH44": {
+     "t": "empty"
+    },
+    "AH45": {
+     "t": "empty"
+    },
+    "AH5": {
+     "t": "empty"
+    },
+    "AH6": {
+     "t": "s",
+     "v": "Bronze Average of Sales"
+    },
+    "AH7": {
+     "t": "empty"
+    },
+    "AH8": {
+     "t": "empty"
+    },
+    "AH9": {
+     "t": "empty"
+    },
+    "L10": {
+     "t": "n",
+     "v": 45351.0
+    },
+    "L11": {
+     "t": "n",
+     "v": 45351.0
+    },
+    "L12": {
+     "t": "n",
+     "v": 45351.0
+    },
+    "L13": {
+     "t": "n",
+     "v": 45351.0
+    },
+    "L14": {
+     "t": "s",
+     "v": "2/29/2024 Total"
+    },
+    "L15": {
+     "t": "n",
+     "v": 365.25
+    },
+    "L16": {
+     "t": "n",
+     "v": 365.25
+    },
+    "L17": {
+     "t": "n",
+     "v": 365.25
+    },
+    "L18": {
+     "t": "n",
+     "v": 365.25
+    },
+    "L19": {
+     "t": "s",
+     "v": "12/30/1900 6:00 Total"
+    },
+    "L20": {
+     "t": "n",
+     "v": 365.0
+    },
+    "L21": {
+     "t": "n",
+     "v": 365.0
+    },
+    "L22": {
+     "t": "n",
+     "v": 365.0
+    },
+    "L23": {
+     "t": "n",
+     "v": 365.0
+    },
+    "L24": {
+     "t": "s",
+     "v": "12/30/1900 Total"
+    },
+    "L25": {
+     "t": "n",
+     "v": 45383.0
+    },
+    "L26": {
+     "t": "n",
+     "v": 45383.0
+    },
+    "L27": {
+     "t": "n",
+     "v": 45383.0
+    },
+    "L28": {
+     "t": "n",
+     "v": 45383.0
+    },
+    "L29": {
+     "t": "s",
+     "v": "4/1/2024 Total"
+    },
+    "L3": {
+     "t": "s",
+     "v": "Rep"
+    },
+    "L30": {
+     "t": "n",
+     "v": 365.75
+    },
+    "L31": {
+     "t": "n",
+     "v": 365.75
+    },
+    "L32": {
+     "t": "n",
+     "v": 365.75
+    },
+    "L33": {
+     "t": "n",
+     "v": 365.75
+    },
+    "L34": {
+     "t": "n",
+     "v": 365.75
+    },
+    "L35": {
+     "t": "s",
+     "v": "12/30/1900 18:00 Total"
+    },
+    "L36": {
+     "t": "n",
+     "v": 45382.25
+    },
+    "L37": {
+     "t": "n",
+     "v": 45382.25
+    },
+    "L38": {
+     "t": "n",
+     "v": 45382.25
+    },
+    "L39": {
+     "t": "n",
+     "v": 45382.25
+    },
+    "L4": {
+     "t": "empty"
+    },
+    "L40": {
+     "t": "s",
+     "v": "3/31/2024 6:00 Total"
+    },
+    "L41": {
+     "t": "n",
+     "v": 45351.25
+    },
+    "L42": {
+     "t": "n",
+     "v": 45351.25
+    },
+    "L43": {
+     "t": "n",
+     "v": 45351.25
+    },
+    "L44": {
+     "t": "n",
+     "v": 45351.25
+    },
+    "L45": {
+     "t": "s",
+     "v": "2/29/2024 6:00 Total"
+    },
+    "L5": {
+     "t": "empty"
+    },
+    "L6": {
+     "t": "empty"
+    },
+    "L7": {
+     "t": "empty"
+    },
+    "L8": {
+     "t": "s",
+     "v": "When"
+    },
+    "L9": {
+     "t": "n",
+     "v": 45351.0
+    },
+    "M10": {
+     "t": "s",
+     "v": "Web"
+    },
+    "M11": {
+     "t": "empty"
+    },
+    "M12": {
+     "t": "empty"
+    },
+    "M13": {
+     "t": "s",
+     "v": "Web Total"
+    },
+    "M14": {
+     "t": "empty"
+    },
+    "M15": {
+     "t": "empty"
+    },
+    "M16": {
+     "t": "s",
+     "v": "Store"
+    },
+    "M17": {
+     "t": "empty"
+    },
+    "M18": {
+     "t": "s",
+     "v": "Store Total"
+    },
+    "M19": {
+     "t": "empty"
+    },
+    "M20": {
+     "t": "empty"
+    },
+    "M21": {
+     "t": "s",
+     "v": "Web"
+    },
+    "M22": {
+     "t": "empty"
+    },
+    "M23": {
+     "t": "s",
+     "v": "Web Total"
+    },
+    "M24": {
+     "t": "empty"
+    },
+    "M25": {
+     "t": "empty"
+    },
+    "M26": {
+     "t": "s",
+     "v": "Store"
+    },
+    "M27": {
+     "t": "empty"
+    },
+    "M28": {
+     "t": "s",
+     "v": "Store Total"
+    },
+    "M29": {
+     "t": "empty"
+    },
+    "M3": {
+     "t": "s",
+     "v": "(All)"
+    },
+    "M30": {
+     "t": "empty"
+    },
+    "M31": {
+     "t": "s",
+     "v": "Web"
+    },
+    "M32": {
+     "t": "empty"
+    },
+    "M33": {
+     "t": "empty"
+    },
+    "M34": {
+     "t": "s",
+     "v": "Web Total"
+    },
+    "M35": {
+     "t": "empty"
+    },
+    "M36": {
+     "t": "empty"
+    },
+    "M37": {
+     "t": "s",
+     "v": "Store"
+    },
+    "M38": {
+     "t": "empty"
+    },
+    "M39": {
+     "t": "s",
+     "v": "Store Total"
+    },
+    "M4": {
+     "t": "empty"
+    },
+    "M40": {
+     "t": "empty"
+    },
+    "M41": {
+     "t": "empty"
+    },
+    "M42": {
+     "t": "s",
+     "v": "Store"
+    },
+    "M43": {
+     "t": "empty"
+    },
+    "M44": {
+     "t": "s",
+     "v": "Store Total"
+    },
+    "M45": {
+     "t": "empty"
+    },
+    "M5": {
+     "t": "empty"
+    },
+    "M6": {
+     "t": "empty"
+    },
+    "M7": {
+     "t": "empty"
+    },
+    "M8": {
+     "t": "s",
+     "v": "Channel"
+    },
+    "M9": {
+     "t": "empty"
+    },
+    "N10": {
+     "t": "empty"
+    },
+    "N11": {
+     "t": "s",
+     "v": "C"
+    },
+    "N12": {
+     "t": "s",
+     "v": "A"
+    },
+    "N13": {
+     "t": "empty"
+    },
+    "N14": {
+     "t": "empty"
+    },
+    "N15": {
+     "t": "empty"
+    },
+    "N16": {
+     "t": "empty"
+    },
+    "N17": {
+     "t": "s",
+     "v": "A"
+    },
+    "N18": {
+     "t": "empty"
+    },
+    "N19": {
+     "t": "empty"
+    },
+    "N20": {
+     "t": "empty"
+    },
+    "N21": {
+     "t": "empty"
+    },
+    "N22": {
+     "t": "s",
+     "v": "A"
+    },
+    "N23": {
+     "t": "empty"
+    },
+    "N24": {
+     "t": "empty"
+    },
+    "N25": {
+     "t": "empty"
+    },
+    "N26": {
+     "t": "empty"
+    },
+    "N27": {
+     "t": "s",
+     "v": "A"
+    },
+    "N28": {
+     "t": "empty"
+    },
+    "N29": {
+     "t": "empty"
+    },
+    "N3": {
+     "t": "empty"
+    },
+    "N30": {
+     "t": "empty"
+    },
+    "N31": {
+     "t": "empty"
+    },
+    "N32": {
+     "t": "s",
+     "v": "C"
+    },
+    "N33": {
+     "t": "s",
+     "v": "A"
+    },
+    "N34": {
+     "t": "empty"
+    },
+    "N35": {
+     "t": "empty"
+    },
+    "N36": {
+     "t": "empty"
+    },
+    "N37": {
+     "t": "empty"
+    },
+    "N38": {
+     "t": "s",
+     "v": "C"
+    },
+    "N39": {
+     "t": "empty"
+    },
+    "N4": {
+     "t": "empty"
+    },
+    "N40": {
+     "t": "empty"
+    },
+    "N41": {
+     "t": "empty"
+    },
+    "N42": {
+     "t": "empty"
+    },
+    "N43": {
+     "t": "s",
+     "v": "C"
+    },
+    "N44": {
+     "t": "empty"
+    },
+    "N45": {
+     "t": "empty"
+    },
+    "N5": {
+     "t": "empty"
+    },
+    "N6": {
+     "t": "empty"
+    },
+    "N7": {
+     "t": "empty"
+    },
+    "N8": {
+     "t": "s",
+     "v": "Product"
+    },
+    "N9": {
+     "t": "empty"
+    },
+    "O10": {
+     "t": "empty"
+    },
+    "O11": {
+     "t": "n",
+     "v": 8.0
+    },
+    "O12": {
+     "t": "empty"
+    },
+    "O13": {
+     "t": "n",
+     "v": 8.0
+    },
+    "O14": {
+     "t": "n",
+     "v": 8.0
+    },
+    "O15": {
+     "t": "empty"
+    },
+    "O16": {
+     "t": "empty"
+    },
+    "O17": {
+     "t": "empty"
+    },
+    "O18": {
+     "t": "empty"
+    },
+    "O19": {
+     "t": "empty"
+    },
+    "O20": {
+     "t": "empty"
+    },
+    "O21": {
+     "t": "empty"
+    },
+    "O22": {
+     "t": "empty"
+    },
+    "O23": {
+     "t": "empty"
+    },
+    "O24": {
+     "t": "empty"
+    },
+    "O25": {
+     "t": "empty"
+    },
+    "O26": {
+     "t": "empty"
+    },
+    "O27": {
+     "t": "empty"
+    },
+    "O28": {
+     "t": "empty"
+    },
+    "O29": {
+     "t": "empty"
+    },
+    "O3": {
+     "t": "empty"
+    },
+    "O30": {
+     "t": "empty"
+    },
+    "O31": {
+     "t": "empty"
+    },
+    "O32": {
+     "t": "n",
+     "v": 8.0
+    },
+    "O33": {
+     "t": "empty"
+    },
+    "O34": {
+     "t": "n",
+     "v": 8.0
+    },
+    "O35": {
+     "t": "n",
+     "v": 8.0
+    },
+    "O36": {
+     "t": "empty"
+    },
+    "O37": {
+     "t": "empty"
+    },
+    "O38": {
+     "t": "empty"
+    },
+    "O39": {
+     "t": "empty"
+    },
+    "O4": {
+     "t": "empty"
+    },
+    "O40": {
+     "t": "empty"
+    },
+    "O41": {
+     "t": "empty"
+    },
+    "O42": {
+     "t": "empty"
+    },
+    "O43": {
+     "t": "empty"
+    },
+    "O44": {
+     "t": "empty"
+    },
+    "O45": {
+     "t": "empty"
+    },
+    "O5": {
+     "t": "s",
+     "v": "Tier"
+    },
+    "O6": {
+     "t": "s",
+     "v": "Gold"
+    },
+    "O7": {
+     "t": "s",
+     "v": "East"
+    },
+    "O8": {
+     "t": "s",
+     "v": "Max of Units"
+    },
+    "O9": {
+     "t": "empty"
+    },
+    "P10": {
+     "t": "empty"
+    },
+    "P11": {
+     "t": "n",
+     "v": 2.0
+    },
+    "P12": {
+     "t": "empty"
+    },
+    "P13": {
+     "t": "n",
+     "v": 2.0
+    },
+    "P14": {
+     "t": "n",
+     "v": 2.0
+    },
+    "P15": {
+     "t": "empty"
+    },
+    "P16": {
+     "t": "empty"
+    },
+    "P17": {
+     "t": "empty"
+    },
+    "P18": {
+     "t": "empty"
+    },
+    "P19": {
+     "t": "empty"
+    },
+    "P20": {
+     "t": "empty"
+    },
+    "P21": {
+     "t": "empty"
+    },
+    "P22": {
+     "t": "empty"
+    },
+    "P23": {
+     "t": "empty"
+    },
+    "P24": {
+     "t": "empty"
+    },
+    "P25": {
+     "t": "empty"
+    },
+    "P26": {
+     "t": "empty"
+    },
+    "P27": {
+     "t": "empty"
+    },
+    "P28": {
+     "t": "empty"
+    },
+    "P29": {
+     "t": "empty"
+    },
+    "P3": {
+     "t": "empty"
+    },
+    "P30": {
+     "t": "empty"
+    },
+    "P31": {
+     "t": "empty"
+    },
+    "P32": {
+     "t": "n",
+     "v": 1.0
+    },
+    "P33": {
+     "t": "empty"
+    },
+    "P34": {
+     "t": "n",
+     "v": 1.0
+    },
+    "P35": {
+     "t": "n",
+     "v": 1.0
+    },
+    "P36": {
+     "t": "empty"
+    },
+    "P37": {
+     "t": "empty"
+    },
+    "P38": {
+     "t": "empty"
+    },
+    "P39": {
+     "t": "empty"
+    },
+    "P4": {
+     "t": "empty"
+    },
+    "P40": {
+     "t": "empty"
+    },
+    "P41": {
+     "t": "empty"
+    },
+    "P42": {
+     "t": "empty"
+    },
+    "P43": {
+     "t": "empty"
+    },
+    "P44": {
+     "t": "empty"
+    },
+    "P45": {
+     "t": "empty"
+    },
+    "P5": {
+     "t": "s",
+     "v": "Region"
+    },
+    "P6": {
+     "t": "empty"
+    },
+    "P7": {
+     "t": "empty"
+    },
+    "P8": {
+     "t": "s",
+     "v": "Average of Sales"
+    },
+    "P9": {
+     "t": "empty"
+    },
+    "Q10": {
+     "t": "empty"
+    },
+    "Q11": {
+     "t": "empty"
+    },
+    "Q12": {
+     "t": "empty"
+    },
+    "Q13": {
+     "t": "empty"
+    },
+    "Q14": {
+     "t": "empty"
+    },
+    "Q15": {
+     "t": "empty"
+    },
+    "Q16": {
+     "t": "empty"
+    },
+    "Q17": {
+     "t": "empty"
+    },
+    "Q18": {
+     "t": "empty"
+    },
+    "Q19": {
+     "t": "empty"
+    },
+    "Q20": {
+     "t": "empty"
+    },
+    "Q21": {
+     "t": "empty"
+    },
+    "Q22": {
+     "t": "empty"
+    },
+    "Q23": {
+     "t": "empty"
+    },
+    "Q24": {
+     "t": "empty"
+    },
+    "Q25": {
+     "t": "empty"
+    },
+    "Q26": {
+     "t": "empty"
+    },
+    "Q27": {
+     "t": "empty"
+    },
+    "Q28": {
+     "t": "empty"
+    },
+    "Q29": {
+     "t": "empty"
+    },
+    "Q3": {
+     "t": "empty"
+    },
+    "Q30": {
+     "t": "empty"
+    },
+    "Q31": {
+     "t": "empty"
+    },
+    "Q32": {
+     "t": "empty"
+    },
+    "Q33": {
+     "t": "empty"
+    },
+    "Q34": {
+     "t": "empty"
+    },
+    "Q35": {
+     "t": "empty"
+    },
+    "Q36": {
+     "t": "empty"
+    },
+    "Q37": {
+     "t": "empty"
+    },
+    "Q38": {
+     "t": "n",
+     "v": 5.0
+    },
+    "Q39": {
+     "t": "n",
+     "v": 5.0
+    },
+    "Q4": {
+     "t": "empty"
+    },
+    "Q40": {
+     "t": "n",
+     "v": 5.0
+    },
+    "Q41": {
+     "t": "empty"
+    },
+    "Q42": {
+     "t": "empty"
+    },
+    "Q43": {
+     "t": "empty"
+    },
+    "Q44": {
+     "t": "empty"
+    },
+    "Q45": {
+     "t": "empty"
+    },
+    "Q5": {
+     "t": "s",
+     "v": "Values"
+    },
+    "Q6": {
+     "t": "empty"
+    },
+    "Q7": {
+     "t": "s",
+     "v": "North"
+    },
+    "Q8": {
+     "t": "s",
+     "v": "Max of Units"
+    },
+    "Q9": {
+     "t": "empty"
+    },
+    "R10": {
+     "t": "empty"
+    },
+    "R11": {
+     "t": "empty"
+    },
+    "R12": {
+     "t": "empty"
+    },
+    "R13": {
+     "t": "empty"
+    },
+    "R14": {
+     "t": "empty"
+    },
+    "R15": {
+     "t": "empty"
+    },
+    "R16": {
+     "t": "empty"
+    },
+    "R17": {
+     "t": "empty"
+    },
+    "R18": {
+     "t": "empty"
+    },
+    "R19": {
+     "t": "empty"
+    },
+    "R20": {
+     "t": "empty"
+    },
+    "R21": {
+     "t": "empty"
+    },
+    "R22": {
+     "t": "empty"
+    },
+    "R23": {
+     "t": "empty"
+    },
+    "R24": {
+     "t": "empty"
+    },
+    "R25": {
+     "t": "empty"
+    },
+    "R26": {
+     "t": "empty"
+    },
+    "R27": {
+     "t": "empty"
+    },
+    "R28": {
+     "t": "empty"
+    },
+    "R29": {
+     "t": "empty"
+    },
+    "R3": {
+     "t": "empty"
+    },
+    "R30": {
+     "t": "empty"
+    },
+    "R31": {
+     "t": "empty"
+    },
+    "R32": {
+     "t": "empty"
+    },
+    "R33": {
+     "t": "empty"
+    },
+    "R34": {
+     "t": "empty"
+    },
+    "R35": {
+     "t": "empty"
+    },
+    "R36": {
+     "t": "empty"
+    },
+    "R37": {
+     "t": "empty"
+    },
+    "R38": {
+     "t": "n",
+     "v": 10.0
+    },
+    "R39": {
+     "t": "n",
+     "v": 10.0
+    },
+    "R4": {
+     "t": "empty"
+    },
+    "R40": {
+     "t": "n",
+     "v": 10.0
+    },
+    "R41": {
+     "t": "empty"
+    },
+    "R42": {
+     "t": "empty"
+    },
+    "R43": {
+     "t": "empty"
+    },
+    "R44": {
+     "t": "empty"
+    },
+    "R45": {
+     "t": "empty"
+    },
+    "R5": {
+     "t": "empty"
+    },
+    "R6": {
+     "t": "empty"
+    },
+    "R7": {
+     "t": "empty"
+    },
+    "R8": {
+     "t": "s",
+     "v": "Average of Sales"
+    },
+    "R9": {
+     "t": "empty"
+    },
+    "S10": {
+     "t": "empty"
+    },
+    "S11": {
+     "t": "empty"
+    },
+    "S12": {
+     "t": "empty"
+    },
+    "S13": {
+     "t": "empty"
+    },
+    "S14": {
+     "t": "empty"
+    },
+    "S15": {
+     "t": "empty"
+    },
+    "S16": {
+     "t": "empty"
+    },
+    "S17": {
+     "t": "empty"
+    },
+    "S18": {
+     "t": "empty"
+    },
+    "S19": {
+     "t": "empty"
+    },
+    "S20": {
+     "t": "empty"
+    },
+    "S21": {
+     "t": "empty"
+    },
+    "S22": {
+     "t": "n",
+     "v": 1.0
+    },
+    "S23": {
+     "t": "n",
+     "v": 1.0
+    },
+    "S24": {
+     "t": "n",
+     "v": 1.0
+    },
+    "S25": {
+     "t": "empty"
+    },
+    "S26": {
+     "t": "empty"
+    },
+    "S27": {
+     "t": "empty"
+    },
+    "S28": {
+     "t": "empty"
+    },
+    "S29": {
+     "t": "empty"
+    },
+    "S3": {
+     "t": "empty"
+    },
+    "S30": {
+     "t": "empty"
+    },
+    "S31": {
+     "t": "empty"
+    },
+    "S32": {
+     "t": "empty"
+    },
+    "S33": {
+     "t": "empty"
+    },
+    "S34": {
+     "t": "empty"
+    },
+    "S35": {
+     "t": "empty"
+    },
+    "S36": {
+     "t": "empty"
+    },
+    "S37": {
+     "t": "empty"
+    },
+    "S38": {
+     "t": "empty"
+    },
+    "S39": {
+     "t": "empty"
+    },
+    "S4": {
+     "t": "empty"
+    },
+    "S40": {
+     "t": "empty"
+    },
+    "S41": {
+     "t": "empty"
+    },
+    "S42": {
+     "t": "empty"
+    },
+    "S43": {
+     "t": "n",
+     "v": 2.0
+    },
+    "S44": {
+     "t": "n",
+     "v": 2.0
+    },
+    "S45": {
+     "t": "n",
+     "v": 2.0
+    },
+    "S5": {
+     "t": "empty"
+    },
+    "S6": {
+     "t": "empty"
+    },
+    "S7": {
+     "t": "s",
+     "v": "West"
+    },
+    "S8": {
+     "t": "s",
+     "v": "Max of Units"
+    },
+    "S9": {
+     "t": "empty"
+    },
+    "T10": {
+     "t": "empty"
+    },
+    "T11": {
+     "t": "empty"
+    },
+    "T12": {
+     "t": "empty"
+    },
+    "T13": {
+     "t": "empty"
+    },
+    "T14": {
+     "t": "empty"
+    },
+    "T15": {
+     "t": "empty"
+    },
+    "T16": {
+     "t": "empty"
+    },
+    "T17": {
+     "t": "empty"
+    },
+    "T18": {
+     "t": "empty"
+    },
+    "T19": {
+     "t": "empty"
+    },
+    "T20": {
+     "t": "empty"
+    },
+    "T21": {
+     "t": "empty"
+    },
+    "T22": {
+     "t": "n",
+     "v": -4.0
+    },
+    "T23": {
+     "t": "n",
+     "v": -4.0
+    },
+    "T24": {
+     "t": "n",
+     "v": -4.0
+    },
+    "T25": {
+     "t": "empty"
+    },
+    "T26": {
+     "t": "empty"
+    },
+    "T27": {
+     "t": "empty"
+    },
+    "T28": {
+     "t": "empty"
+    },
+    "T29": {
+     "t": "empty"
+    },
+    "T3": {
+     "t": "empty"
+    },
+    "T30": {
+     "t": "empty"
+    },
+    "T31": {
+     "t": "empty"
+    },
+    "T32": {
+     "t": "empty"
+    },
+    "T33": {
+     "t": "empty"
+    },
+    "T34": {
+     "t": "empty"
+    },
+    "T35": {
+     "t": "empty"
+    },
+    "T36": {
+     "t": "empty"
+    },
+    "T37": {
+     "t": "empty"
+    },
+    "T38": {
+     "t": "empty"
+    },
+    "T39": {
+     "t": "empty"
+    },
+    "T4": {
+     "t": "empty"
+    },
+    "T40": {
+     "t": "empty"
+    },
+    "T41": {
+     "t": "empty"
+    },
+    "T42": {
+     "t": "empty"
+    },
+    "T43": {
+     "t": "n",
+     "v": 10.0
+    },
+    "T44": {
+     "t": "n",
+     "v": 10.0
+    },
+    "T45": {
+     "t": "n",
+     "v": 10.0
+    },
+    "T5": {
+     "t": "empty"
+    },
+    "T6": {
+     "t": "empty"
+    },
+    "T7": {
+     "t": "empty"
+    },
+    "T8": {
+     "t": "s",
+     "v": "Average of Sales"
+    },
+    "T9": {
+     "t": "empty"
+    },
+    "U10": {
+     "t": "empty"
+    },
+    "U11": {
+     "t": "empty"
+    },
+    "U12": {
+     "t": "empty"
+    },
+    "U13": {
+     "t": "empty"
+    },
+    "U14": {
+     "t": "empty"
+    },
+    "U15": {
+     "t": "empty"
+    },
+    "U16": {
+     "t": "empty"
+    },
+    "U17": {
+     "t": "empty"
+    },
+    "U18": {
+     "t": "empty"
+    },
+    "U19": {
+     "t": "empty"
+    },
+    "U20": {
+     "t": "empty"
+    },
+    "U21": {
+     "t": "empty"
+    },
+    "U22": {
+     "t": "empty"
+    },
+    "U23": {
+     "t": "empty"
+    },
+    "U24": {
+     "t": "empty"
+    },
+    "U25": {
+     "t": "empty"
+    },
+    "U26": {
+     "t": "empty"
+    },
+    "U27": {
+     "t": "empty"
+    },
+    "U28": {
+     "t": "empty"
+    },
+    "U29": {
+     "t": "empty"
+    },
+    "U3": {
+     "t": "empty"
+    },
+    "U30": {
+     "t": "empty"
+    },
+    "U31": {
+     "t": "empty"
+    },
+    "U32": {
+     "t": "empty"
+    },
+    "U33": {
+     "t": "n",
+     "v": 6.0
+    },
+    "U34": {
+     "t": "n",
+     "v": 6.0
+    },
+    "U35": {
+     "t": "n",
+     "v": 6.0
+    },
+    "U36": {
+     "t": "empty"
+    },
+    "U37": {
+     "t": "empty"
+    },
+    "U38": {
+     "t": "empty"
+    },
+    "U39": {
+     "t": "empty"
+    },
+    "U4": {
+     "t": "empty"
+    },
+    "U40": {
+     "t": "empty"
+    },
+    "U41": {
+     "t": "empty"
+    },
+    "U42": {
+     "t": "empty"
+    },
+    "U43": {
+     "t": "empty"
+    },
+    "U44": {
+     "t": "empty"
+    },
+    "U45": {
+     "t": "empty"
+    },
+    "U5": {
+     "t": "empty"
+    },
+    "U6": {
+     "t": "empty"
+    },
+    "U7": {
+     "t": "s",
+     "v": "South"
+    },
+    "U8": {
+     "t": "s",
+     "v": "Max of Units"
+    },
+    "U9": {
+     "t": "empty"
+    },
+    "V10": {
+     "t": "empty"
+    },
+    "V11": {
+     "t": "empty"
+    },
+    "V12": {
+     "t": "empty"
+    },
+    "V13": {
+     "t": "empty"
+    },
+    "V14": {
+     "t": "empty"
+    },
+    "V15": {
+     "t": "empty"
+    },
+    "V16": {
+     "t": "empty"
+    },
+    "V17": {
+     "t": "empty"
+    },
+    "V18": {
+     "t": "empty"
+    },
+    "V19": {
+     "t": "empty"
+    },
+    "V20": {
+     "t": "empty"
+    },
+    "V21": {
+     "t": "empty"
+    },
+    "V22": {
+     "t": "empty"
+    },
+    "V23": {
+     "t": "empty"
+    },
+    "V24": {
+     "t": "empty"
+    },
+    "V25": {
+     "t": "empty"
+    },
+    "V26": {
+     "t": "empty"
+    },
+    "V27": {
+     "t": "empty"
+    },
+    "V28": {
+     "t": "empty"
+    },
+    "V29": {
+     "t": "empty"
+    },
+    "V3": {
+     "t": "empty"
+    },
+    "V30": {
+     "t": "empty"
+    },
+    "V31": {
+     "t": "empty"
+    },
+    "V32": {
+     "t": "empty"
+    },
+    "V33": {
+     "t": "n",
+     "v": 12.0
+    },
+    "V34": {
+     "t": "n",
+     "v": 12.0
+    },
+    "V35": {
+     "t": "n",
+     "v": 12.0
+    },
+    "V36": {
+     "t": "empty"
+    },
+    "V37": {
+     "t": "empty"
+    },
+    "V38": {
+     "t": "empty"
+    },
+    "V39": {
+     "t": "empty"
+    },
+    "V4": {
+     "t": "empty"
+    },
+    "V40": {
+     "t": "empty"
+    },
+    "V41": {
+     "t": "empty"
+    },
+    "V42": {
+     "t": "empty"
+    },
+    "V43": {
+     "t": "empty"
+    },
+    "V44": {
+     "t": "empty"
+    },
+    "V45": {
+     "t": "empty"
+    },
+    "V5": {
+     "t": "empty"
+    },
+    "V6": {
+     "t": "empty"
+    },
+    "V7": {
+     "t": "empty"
+    },
+    "V8": {
+     "t": "s",
+     "v": "Average of Sales"
+    },
+    "V9": {
+     "t": "empty"
+    },
+    "W10": {
+     "t": "empty"
+    },
+    "W11": {
+     "t": "n",
+     "v": 8.0
+    },
+    "W12": {
+     "t": "empty"
+    },
+    "W13": {
+     "t": "n",
+     "v": 8.0
+    },
+    "W14": {
+     "t": "n",
+     "v": 8.0
+    },
+    "W15": {
+     "t": "empty"
+    },
+    "W16": {
+     "t": "empty"
+    },
+    "W17": {
+     "t": "empty"
+    },
+    "W18": {
+     "t": "empty"
+    },
+    "W19": {
+     "t": "empty"
+    },
+    "W20": {
+     "t": "empty"
+    },
+    "W21": {
+     "t": "empty"
+    },
+    "W22": {
+     "t": "n",
+     "v": 1.0
+    },
+    "W23": {
+     "t": "n",
+     "v": 1.0
+    },
+    "W24": {
+     "t": "n",
+     "v": 1.0
+    },
+    "W25": {
+     "t": "empty"
+    },
+    "W26": {
+     "t": "empty"
+    },
+    "W27": {
+     "t": "empty"
+    },
+    "W28": {
+     "t": "empty"
+    },
+    "W29": {
+     "t": "empty"
+    },
+    "W3": {
+     "t": "empty"
+    },
+    "W30": {
+     "t": "empty"
+    },
+    "W31": {
+     "t": "empty"
+    },
+    "W32": {
+     "t": "n",
+     "v": 8.0
+    },
+    "W33": {
+     "t": "n",
+     "v": 6.0
+    },
+    "W34": {
+     "t": "n",
+     "v": 8.0
+    },
+    "W35": {
+     "t": "n",
+     "v": 8.0
+    },
+    "W36": {
+     "t": "empty"
+    },
+    "W37": {
+     "t": "empty"
+    },
+    "W38": {
+     "t": "n",
+     "v": 5.0
+    },
+    "W39": {
+     "t": "n",
+     "v": 5.0
+    },
+    "W4": {
+     "t": "empty"
+    },
+    "W40": {
+     "t": "n",
+     "v": 5.0
+    },
+    "W41": {
+     "t": "empty"
+    },
+    "W42": {
+     "t": "empty"
+    },
+    "W43": {
+     "t": "n",
+     "v": 2.0
+    },
+    "W44": {
+     "t": "n",
+     "v": 2.0
+    },
+    "W45": {
+     "t": "n",
+     "v": 2.0
+    },
+    "W5": {
+     "t": "empty"
+    },
+    "W6": {
+     "t": "s",
+     "v": "Gold Max of Units"
+    },
+    "W7": {
+     "t": "empty"
+    },
+    "W8": {
+     "t": "empty"
+    },
+    "W9": {
+     "t": "empty"
+    },
+    "X10": {
+     "t": "empty"
+    },
+    "X11": {
+     "t": "n",
+     "v": 2.0
+    },
+    "X12": {
+     "t": "empty"
+    },
+    "X13": {
+     "t": "n",
+     "v": 2.0
+    },
+    "X14": {
+     "t": "n",
+     "v": 2.0
+    },
+    "X15": {
+     "t": "empty"
+    },
+    "X16": {
+     "t": "empty"
+    },
+    "X17": {
+     "t": "empty"
+    },
+    "X18": {
+     "t": "empty"
+    },
+    "X19": {
+     "t": "empty"
+    },
+    "X20": {
+     "t": "empty"
+    },
+    "X21": {
+     "t": "empty"
+    },
+    "X22": {
+     "t": "n",
+     "v": -4.0
+    },
+    "X23": {
+     "t": "n",
+     "v": -4.0
+    },
+    "X24": {
+     "t": "n",
+     "v": -4.0
+    },
+    "X25": {
+     "t": "empty"
+    },
+    "X26": {
+     "t": "empty"
+    },
+    "X27": {
+     "t": "empty"
+    },
+    "X28": {
+     "t": "empty"
+    },
+    "X29": {
+     "t": "empty"
+    },
+    "X3": {
+     "t": "empty"
+    },
+    "X30": {
+     "t": "empty"
+    },
+    "X31": {
+     "t": "empty"
+    },
+    "X32": {
+     "t": "n",
+     "v": 1.0
+    },
+    "X33": {
+     "t": "n",
+     "v": 12.0
+    },
+    "X34": {
+     "t": "n",
+     "v": 6.5
+    },
+    "X35": {
+     "t": "n",
+     "v": 6.5
+    },
+    "X36": {
+     "t": "empty"
+    },
+    "X37": {
+     "t": "empty"
+    },
+    "X38": {
+     "t": "n",
+     "v": 10.0
+    },
+    "X39": {
+     "t": "n",
+     "v": 10.0
+    },
+    "X4": {
+     "t": "empty"
+    },
+    "X40": {
+     "t": "n",
+     "v": 10.0
+    },
+    "X41": {
+     "t": "empty"
+    },
+    "X42": {
+     "t": "empty"
+    },
+    "X43": {
+     "t": "n",
+     "v": 10.0
+    },
+    "X44": {
+     "t": "n",
+     "v": 10.0
+    },
+    "X45": {
+     "t": "n",
+     "v": 10.0
+    },
+    "X5": {
+     "t": "empty"
+    },
+    "X6": {
+     "t": "s",
+     "v": "Gold Average of Sales"
+    },
+    "X7": {
+     "t": "empty"
+    },
+    "X8": {
+     "t": "empty"
+    },
+    "X9": {
+     "t": "empty"
+    },
+    "Y10": {
+     "t": "empty"
+    },
+    "Y11": {
+     "t": "empty"
+    },
+    "Y12": {
+     "t": "empty"
+    },
+    "Y13": {
+     "t": "empty"
+    },
+    "Y14": {
+     "t": "empty"
+    },
+    "Y15": {
+     "t": "empty"
+    },
+    "Y16": {
+     "t": "empty"
+    },
+    "Y17": {
+     "t": "n",
+     "v": 2.0
+    },
+    "Y18": {
+     "t": "n",
+     "v": 2.0
+    },
+    "Y19": {
+     "t": "n",
+     "v": 2.0
+    },
+    "Y20": {
+     "t": "empty"
+    },
+    "Y21": {
+     "t": "empty"
+    },
+    "Y22": {
+     "t": "empty"
+    },
+    "Y23": {
+     "t": "empty"
+    },
+    "Y24": {
+     "t": "empty"
+    },
+    "Y25": {
+     "t": "empty"
+    },
+    "Y26": {
+     "t": "empty"
+    },
+    "Y27": {
+     "t": "empty"
+    },
+    "Y28": {
+     "t": "empty"
+    },
+    "Y29": {
+     "t": "empty"
+    },
+    "Y3": {
+     "t": "empty"
+    },
+    "Y30": {
+     "t": "empty"
+    },
+    "Y31": {
+     "t": "empty"
+    },
+    "Y32": {
+     "t": "empty"
+    },
+    "Y33": {
+     "t": "empty"
+    },
+    "Y34": {
+     "t": "empty"
+    },
+    "Y35": {
+     "t": "empty"
+    },
+    "Y36": {
+     "t": "empty"
+    },
+    "Y37": {
+     "t": "empty"
+    },
+    "Y38": {
+     "t": "empty"
+    },
+    "Y39": {
+     "t": "empty"
+    },
+    "Y4": {
+     "t": "empty"
+    },
+    "Y40": {
+     "t": "empty"
+    },
+    "Y41": {
+     "t": "empty"
+    },
+    "Y42": {
+     "t": "empty"
+    },
+    "Y43": {
+     "t": "empty"
+    },
+    "Y44": {
+     "t": "empty"
+    },
+    "Y45": {
+     "t": "empty"
+    },
+    "Y5": {
+     "t": "empty"
+    },
+    "Y6": {
+     "t": "s",
+     "v": "Silver"
+    },
+    "Y7": {
+     "t": "s",
+     "v": "North"
+    },
+    "Y8": {
+     "t": "s",
+     "v": "Max of Units"
+    },
+    "Y9": {
+     "t": "empty"
+    },
+    "Z10": {
+     "t": "empty"
+    },
+    "Z11": {
+     "t": "empty"
+    },
+    "Z12": {
+     "t": "empty"
+    },
+    "Z13": {
+     "t": "empty"
+    },
+    "Z14": {
+     "t": "empty"
+    },
+    "Z15": {
+     "t": "empty"
+    },
+    "Z16": {
+     "t": "empty"
+    },
+    "Z17": {
+     "t": "n",
+     "v": 3.0
+    },
+    "Z18": {
+     "t": "n",
+     "v": 3.0
+    },
+    "Z19": {
+     "t": "n",
+     "v": 3.0
+    },
+    "Z20": {
+     "t": "empty"
+    },
+    "Z21": {
+     "t": "empty"
+    },
+    "Z22": {
+     "t": "empty"
+    },
+    "Z23": {
+     "t": "empty"
+    },
+    "Z24": {
+     "t": "empty"
+    },
+    "Z25": {
+     "t": "empty"
+    },
+    "Z26": {
+     "t": "empty"
+    },
+    "Z27": {
+     "t": "empty"
+    },
+    "Z28": {
+     "t": "empty"
+    },
+    "Z29": {
+     "t": "empty"
+    },
+    "Z3": {
+     "t": "empty"
+    },
+    "Z30": {
+     "t": "empty"
+    },
+    "Z31": {
+     "t": "empty"
+    },
+    "Z32": {
+     "t": "empty"
+    },
+    "Z33": {
+     "t": "empty"
+    },
+    "Z34": {
+     "t": "empty"
+    },
+    "Z35": {
+     "t": "empty"
+    },
+    "Z36": {
+     "t": "empty"
+    },
+    "Z37": {
+     "t": "empty"
+    },
+    "Z38": {
+     "t": "empty"
+    },
+    "Z39": {
+     "t": "empty"
+    },
+    "Z4": {
+     "t": "empty"
+    },
+    "Z40": {
+     "t": "empty"
+    },
+    "Z41": {
+     "t": "empty"
+    },
+    "Z42": {
+     "t": "empty"
+    },
+    "Z43": {
+     "t": "empty"
+    },
+    "Z44": {
+     "t": "empty"
+    },
+    "Z45": {
+     "t": "empty"
+    },
+    "Z5": {
+     "t": "empty"
+    },
+    "Z6": {
+     "t": "empty"
+    },
+    "Z7": {
+     "t": "empty"
+    },
+    "Z8": {
+     "t": "s",
+     "v": "Average of Sales"
+    },
+    "Z9": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      3,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "default",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      1,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "default",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2,
+      0,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "default",
+     "x": [
+      2
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 3,
+   "first_data_row": 4,
+   "first_header_row": 1,
+   "location": "L5:AH45",
+   "name": "PvP02",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      7
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      7
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      8
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      8
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      9
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      9
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      10
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      10
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      11
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      11
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      12
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      12
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      13
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      13
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "P02",
+   "text": {
+    "AA17": "2",
+    "AA18": "2",
+    "AA19": "2",
+    "AA6": "Silver Max of Units",
+    "AB17": "3",
+    "AB18": "3",
+    "AB19": "3",
+    "AB6": "Silver Average of Sales",
+    "AC27": "1",
+    "AC28": "1",
+    "AC29": "1",
+    "AC6": "Bronze",
+    "AC7": "East",
+    "AC8": "Max of Units",
+    "AD27": "-4",
+    "AD28": "-4",
+    "AD29": "-4",
+    "AD8": "Average of Sales",
+    "AE12": "4",
+    "AE13": "4",
+    "AE14": "4",
+    "AE7": "West",
+    "AE8": "Max of Units",
+    "AF12": "-4",
+    "AF13": "-4",
+    "AF14": "-4",
+    "AF8": "Average of Sales",
+    "AG12": "4",
+    "AG13": "4",
+    "AG14": "4",
+    "AG27": "1",
+    "AG28": "1",
+    "AG29": "1",
+    "AG6": "Bronze Max of Units",
+    "AH12": "-4",
+    "AH13": "-4",
+    "AH14": "-4",
+    "AH27": "-4",
+    "AH28": "-4",
+    "AH29": "-4",
+    "AH6": "Bronze Average of Sales",
+    "L10": "2/29/2024",
+    "L11": "2/29/2024",
+    "L12": "2/29/2024",
+    "L13": "2/29/2024",
+    "L14": "2/29/2024 Total",
+    "L15": "12/30/1900 6:00",
+    "L16": "12/30/1900 6:00",
+    "L17": "12/30/1900 6:00",
+    "L18": "12/30/1900 6:00",
+    "L19": "12/30/1900 6:00 Total",
+    "L20": "12/30/1900",
+    "L21": "12/30/1900",
+    "L22": "12/30/1900",
+    "L23": "12/30/1900",
+    "L24": "12/30/1900 Total",
+    "L25": "4/1/2024",
+    "L26": "4/1/2024",
+    "L27": "4/1/2024",
+    "L28": "4/1/2024",
+    "L29": "4/1/2024 Total",
+    "L3": "Rep",
+    "L30": "12/30/1900 18:00",
+    "L31": "12/30/1900 18:00",
+    "L32": "12/30/1900 18:00",
+    "L33": "12/30/1900 18:00",
+    "L34": "12/30/1900 18:00",
+    "L35": "12/30/1900 18:00 Total",
+    "L36": "3/31/2024 6:00",
+    "L37": "3/31/2024 6:00",
+    "L38": "3/31/2024 6:00",
+    "L39": "3/31/2024 6:00",
+    "L40": "3/31/2024 6:00 Total",
+    "L41": "2/29/2024 6:00",
+    "L42": "2/29/2024 6:00",
+    "L43": "2/29/2024 6:00",
+    "L44": "2/29/2024 6:00",
+    "L45": "2/29/2024 6:00 Total",
+    "L8": "When",
+    "L9": "2/29/2024",
+    "M10": "Web",
+    "M13": "Web Total",
+    "M16": "Store",
+    "M18": "Store Total",
+    "M21": "Web",
+    "M23": "Web Total",
+    "M26": "Store",
+    "M28": "Store Total",
+    "M3": "(All)",
+    "M31": "Web",
+    "M34": "Web Total",
+    "M37": "Store",
+    "M39": "Store Total",
+    "M42": "Store",
+    "M44": "Store Total",
+    "M8": "Channel",
+    "N11": "C",
+    "N12": "A",
+    "N17": "A",
+    "N22": "A",
+    "N27": "A",
+    "N32": "C",
+    "N33": "A",
+    "N38": "C",
+    "N43": "C",
+    "N8": "Product",
+    "O11": "8",
+    "O13": "8",
+    "O14": "8",
+    "O32": "8",
+    "O34": "8",
+    "O35": "8",
+    "O5": "Tier",
+    "O6": "Gold",
+    "O7": "East",
+    "O8": "Max of Units",
+    "P11": "2",
+    "P13": "2",
+    "P14": "2",
+    "P32": "1",
+    "P34": "1",
+    "P35": "1",
+    "P5": "Region",
+    "P8": "Average of Sales",
+    "Q38": "5",
+    "Q39": "5",
+    "Q40": "5",
+    "Q5": "Values",
+    "Q7": "North",
+    "Q8": "Max of Units",
+    "R38": "10",
+    "R39": "10",
+    "R40": "10",
+    "R8": "Average of Sales",
+    "S22": "1",
+    "S23": "1",
+    "S24": "1",
+    "S43": "2",
+    "S44": "2",
+    "S45": "2",
+    "S7": "West",
+    "S8": "Max of Units",
+    "T22": "-4",
+    "T23": "-4",
+    "T24": "-4",
+    "T43": "10",
+    "T44": "10",
+    "T45": "10",
+    "T8": "Average of Sales",
+    "U33": "6",
+    "U34": "6",
+    "U35": "6",
+    "U7": "South",
+    "U8": "Max of Units",
+    "V33": "12",
+    "V34": "12",
+    "V35": "12",
+    "V8": "Average of Sales",
+    "W11": "8",
+    "W13": "8",
+    "W14": "8",
+    "W22": "1",
+    "W23": "1",
+    "W24": "1",
+    "W32": "8",
+    "W33": "6",
+    "W34": "8",
+    "W35": "8",
+    "W38": "5",
+    "W39": "5",
+    "W40": "5",
+    "W43": "2",
+    "W44": "2",
+    "W45": "2",
+    "W6": "Gold Max of Units",
+    "X11": "2",
+    "X13": "2",
+    "X14": "2",
+    "X22": "-4",
+    "X23": "-4",
+    "X24": "-4",
+    "X32": "1",
+    "X33": "12",
+    "X34": "6.5",
+    "X35": "6.5",
+    "X38": "10",
+    "X39": "10",
+    "X40": "10",
+    "X43": "10",
+    "X44": "10",
+    "X45": "10",
+    "X6": "Gold Average of Sales",
+    "Y17": "2",
+    "Y18": "2",
+    "Y19": "2",
+    "Y6": "Silver",
+    "Y7": "North",
+    "Y8": "Max of Units",
+    "Z17": "3",
+    "Z18": "3",
+    "Z19": "3",
+    "Z8": "Average of Sales"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "4"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      },
+      {
+       "t": "s",
+       "v": "South"
+      },
+      {
+       "t": "s",
+       "v": "North"
+      }
+     ]
+    },
+    {
+     "name": "Product"
+    },
+    {
+     "name": "Channel",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Store"
+      },
+      {
+       "t": "s",
+       "v": "Web"
+      }
+     ]
+    },
+    {
+     "name": "Rep",
+     "shared_flags": {
+      "count": "4"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Bo"
+      },
+      {
+       "t": "s",
+       "v": "Di"
+      },
+      {
+       "t": "s",
+       "v": "Cy"
+      },
+      {
+       "t": "s",
+       "v": "Ann"
+      }
+     ]
+    },
+    {
+     "name": "Tier",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Silver"
+      },
+      {
+       "t": "s",
+       "v": "Gold"
+      },
+      {
+       "t": "s",
+       "v": "Bronze"
+      }
+     ]
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "17",
+      "maxDate": "1900-01-09T21:59:04",
+      "minDate": "1900-01-30T23:59:59"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "1900-12-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-01-30T23:59:59"
+      },
+      {
+       "t": "d",
+       "v": "1900-12-31T18:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-12-31T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-12-31T06:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-12-30T18:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-12-30T23:59:59"
+      },
+      {
+       "t": "d",
+       "v": "1900-12-30T06:00:00"
+      },
+      {
+       "t": "n",
+       "v": "365"
+      },
+      {
+       "t": "n",
+       "v": "31.999988426000002"
+      },
+      {
+       "t": "n",
+       "v": "366.75"
+      },
+      {
+       "t": "n",
+       "v": "366"
+      },
+      {
+       "t": "n",
+       "v": "366.25"
+      },
+      {
+       "t": "n",
+       "v": "365.75"
+      },
+      {
+       "t": "n",
+       "v": "365.99998842600002"
+      },
+      {
+       "t": "n",
+       "v": "365.99999998999999"
+      },
+      {
+       "t": "n",
+       "v": "365.25"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "100",
+      "minValue": "-4"
+     }
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "7",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Score",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "8",
+      "minValue": "-1"
+     }
+    }
+   ],
+   "cells": {
+    "L10": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "L11": {
+     "t": "s",
+     "v": "12/31/1900 Sum of Score"
+    },
+    "L12": {
+     "t": "s",
+     "v": "12/31/1900 Sum of Sales"
+    },
+    "L13": {
+     "t": "s",
+     "v": "Cy Sum of Score"
+    },
+    "L14": {
+     "t": "s",
+     "v": "Cy Sum of Sales"
+    },
+    "L15": {
+     "t": "s",
+     "v": "Ann"
+    },
+    "L16": {
+     "t": "n",
+     "v": 366.25
+    },
+    "L17": {
+     "t": "s",
+     "v": "Store"
+    },
+    "L18": {
+     "t": "s",
+     "v": "Sum of Score"
+    },
+    "L19": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "L2": {
+     "t": "s",
+     "v": "Region"
+    },
+    "L20": {
+     "t": "s",
+     "v": "12/31/1900 6:00 Sum of Score"
+    },
+    "L21": {
+     "t": "s",
+     "v": "12/31/1900 6:00 Sum of Sales"
+    },
+    "L22": {
+     "t": "s",
+     "v": "Ann Sum of Score"
+    },
+    "L23": {
+     "t": "s",
+     "v": "Ann Sum of Sales"
+    },
+    "L24": {
+     "t": "s",
+     "v": "Total Sum of Score"
+    },
+    "L25": {
+     "t": "s",
+     "v": "Total Sum of Sales"
+    },
+    "L3": {
+     "t": "s",
+     "v": "Tier"
+    },
+    "L4": {
+     "t": "empty"
+    },
+    "L5": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "L6": {
+     "t": "s",
+     "v": "Cy"
+    },
+    "L7": {
+     "t": "n",
+     "v": 366.0
+    },
+    "L8": {
+     "t": "s",
+     "v": "Store"
+    },
+    "L9": {
+     "t": "s",
+     "v": "Sum of Score"
+    },
+    "M10": {
+     "t": "n",
+     "v": 0.0
+    },
+    "M11": {
+     "t": "n",
+     "v": 1.5
+    },
+    "M12": {
+     "t": "n",
+     "v": 0.0
+    },
+    "M13": {
+     "t": "n",
+     "v": 1.5
+    },
+    "M14": {
+     "t": "n",
+     "v": 0.0
+    },
+    "M15": {
+     "t": "empty"
+    },
+    "M16": {
+     "t": "empty"
+    },
+    "M17": {
+     "t": "empty"
+    },
+    "M18": {
+     "t": "n",
+     "v": 2.0
+    },
+    "M19": {
+     "t": "n",
+     "v": 10.0
+    },
+    "M2": {
+     "t": "s",
+     "v": "South"
+    },
+    "M20": {
+     "t": "n",
+     "v": 2.0
+    },
+    "M21": {
+     "t": "n",
+     "v": 10.0
+    },
+    "M22": {
+     "t": "n",
+     "v": 2.0
+    },
+    "M23": {
+     "t": "n",
+     "v": 10.0
+    },
+    "M24": {
+     "t": "n",
+     "v": 3.5
+    },
+    "M25": {
+     "t": "n",
+     "v": 10.0
+    },
+    "M3": {
+     "t": "s",
+     "v": "(All)"
+    },
+    "M4": {
+     "t": "empty"
+    },
+    "M5": {
+     "t": "empty"
+    },
+    "M6": {
+     "t": "empty"
+    },
+    "M7": {
+     "t": "empty"
+    },
+    "M8": {
+     "t": "empty"
+    },
+    "M9": {
+     "t": "n",
+     "v": 1.5
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "L5:M25",
+   "name": "PvP03",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      12
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 3,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 3,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      12
+     ]
+    },
+    {
+     "i": 1,
+     "r": 1,
+     "t": "default",
+     "x": [
+      12
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "default",
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      13
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 3,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 3,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      13
+     ]
+    },
+    {
+     "i": 1,
+     "r": 1,
+     "t": "default",
+     "x": [
+      13
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "default",
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 2,
+   "sheet": "P03",
+   "text": {
+    "L10": "Sum of Sales",
+    "L11": "12/31/1900 Sum of Score",
+    "L12": "12/31/1900 Sum of Sales",
+    "L13": "Cy Sum of Score",
+    "L14": "Cy Sum of Sales",
+    "L15": "Ann",
+    "L16": "12/31/1900 6:00",
+    "L17": "Store",
+    "L18": "Sum of Score",
+    "L19": "Sum of Sales",
+    "L2": "Region",
+    "L20": "12/31/1900 6:00 Sum of Score",
+    "L21": "12/31/1900 6:00 Sum of Sales",
+    "L22": "Ann Sum of Score",
+    "L23": "Ann Sum of Sales",
+    "L24": "Total Sum of Score",
+    "L25": "Total Sum of Sales",
+    "L3": "Tier",
+    "L5": "Row Labels",
+    "L6": "Cy",
+    "L7": "12/31/1900",
+    "L8": "Store",
+    "L9": "Sum of Score",
+    "M10": "0",
+    "M11": "1.5",
+    "M12": "0",
+    "M13": "1.5",
+    "M14": "0",
+    "M18": "2",
+    "M19": "10",
+    "M2": "South",
+    "M20": "2",
+    "M21": "10",
+    "M22": "2",
+    "M23": "10",
+    "M24": "3.5",
+    "M25": "10",
+    "M3": "(All)",
+    "M9": "1.5"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      }
+     ]
+    },
+    {
+     "name": "Channel"
+    },
+    {
+     "name": "Rep",
+     "shared_flags": {
+      "count": "4"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Cy"
+      },
+      {
+       "t": "s",
+       "v": "Bo"
+      },
+      {
+       "t": "s",
+       "v": "Ann"
+      },
+      {
+       "t": "s",
+       "v": "Di"
+      }
+     ]
+    },
+    {
+     "name": "Tier",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsMixedTypes": "1",
+      "containsNumber": "1",
+      "count": "5",
+      "maxValue": "1",
+      "minValue": "1"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Gold"
+      },
+      {
+       "t": "s",
+       "v": "Silver"
+      },
+      {
+       "t": "n",
+       "v": "1"
+      },
+      {
+       "t": "b",
+       "v": "1"
+      },
+      {
+       "t": "s",
+       "v": "Bronze"
+      }
+     ]
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "6",
+      "maxDate": "1900-01-01T15:51:04",
+      "minDate": "1900-02-28T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2022-12-31T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-02-28T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-02-29T00:00:00"
+      },
+      {
+       "t": "n",
+       "v": "44926"
+      },
+      {
+       "t": "n",
+       "v": "60"
+      },
+      {
+       "t": "n",
+       "v": "45351"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "100",
+      "minValue": "3"
+     }
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "9",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Score",
+     "shared_flags": {
+      "containsMixedTypes": "1",
+      "containsNumber": "1",
+      "maxValue": "4.25",
+      "minValue": "-1"
+     }
+    }
+   ],
+   "cells": {
+    "L10": {
+     "t": "s",
+     "v": "12/31/2022 Sum of Units"
+    },
+    "L11": {
+     "t": "s",
+     "v": "12/31/2022 Varp of Score"
+    },
+    "L12": {
+     "t": "s",
+     "v": "12/31/2022 Varp of Units"
+    },
+    "L13": {
+     "t": "n",
+     "v": 60.0
+    },
+    "L14": {
+     "t": "empty"
+    },
+    "L15": {
+     "t": "empty"
+    },
+    "L16": {
+     "t": "empty"
+    },
+    "L17": {
+     "t": "empty"
+    },
+    "L18": {
+     "t": "empty"
+    },
+    "L19": {
+     "t": "s",
+     "v": "2/29/1900 Sum of Score"
+    },
+    "L20": {
+     "t": "s",
+     "v": "2/29/1900 Sum of Units"
+    },
+    "L21": {
+     "t": "s",
+     "v": "2/29/1900 Varp of Score"
+    },
+    "L22": {
+     "t": "s",
+     "v": "2/29/1900 Varp of Units"
+    },
+    "L23": {
+     "t": "n",
+     "v": 45351.0
+    },
+    "L24": {
+     "t": "empty"
+    },
+    "L25": {
+     "t": "empty"
+    },
+    "L26": {
+     "t": "empty"
+    },
+    "L27": {
+     "t": "s",
+     "v": "2/29/2024 Sum of Score"
+    },
+    "L28": {
+     "t": "s",
+     "v": "2/29/2024 Sum of Units"
+    },
+    "L29": {
+     "t": "s",
+     "v": "2/29/2024 Varp of Score"
+    },
+    "L3": {
+     "t": "s",
+     "v": "Rep"
+    },
+    "L30": {
+     "t": "s",
+     "v": "2/29/2024 Varp of Units"
+    },
+    "L4": {
+     "t": "empty"
+    },
+    "L5": {
+     "t": "empty"
+    },
+    "L6": {
+     "t": "s",
+     "v": "When"
+    },
+    "L7": {
+     "t": "n",
+     "v": 44926.0
+    },
+    "L8": {
+     "t": "empty"
+    },
+    "L9": {
+     "t": "s",
+     "v": "12/31/2022 Sum of Score"
+    },
+    "M10": {
+     "t": "empty"
+    },
+    "M11": {
+     "t": "empty"
+    },
+    "M12": {
+     "t": "empty"
+    },
+    "M13": {
+     "t": "s",
+     "v": "Silver"
+    },
+    "M14": {
+     "t": "empty"
+    },
+    "M15": {
+     "t": "n",
+     "v": 1.0
+    },
+    "M16": {
+     "t": "empty"
+    },
+    "M17": {
+     "t": "s",
+     "v": "Bronze"
+    },
+    "M18": {
+     "t": "empty"
+    },
+    "M19": {
+     "t": "empty"
+    },
+    "M20": {
+     "t": "empty"
+    },
+    "M21": {
+     "t": "empty"
+    },
+    "M22": {
+     "t": "empty"
+    },
+    "M23": {
+     "t": "s",
+     "v": "Gold shown"
+    },
+    "M24": {
+     "t": "empty"
+    },
+    "M25": {
+     "t": "s",
+     "v": "TRUE"
+    },
+    "M26": {
+     "t": "empty"
+    },
+    "M27": {
+     "t": "empty"
+    },
+    "M28": {
+     "t": "empty"
+    },
+    "M29": {
+     "t": "empty"
+    },
+    "M3": {
+     "t": "s",
+     "v": "(All)"
+    },
+    "M30": {
+     "t": "empty"
+    },
+    "M4": {
+     "t": "empty"
+    },
+    "M5": {
+     "t": "empty"
+    },
+    "M6": {
+     "t": "s",
+     "v": "Tier"
+    },
+    "M7": {
+     "t": "s",
+     "v": "Gold shown"
+    },
+    "M8": {
+     "t": "empty"
+    },
+    "M9": {
+     "t": "empty"
+    },
+    "N10": {
+     "t": "empty"
+    },
+    "N11": {
+     "t": "empty"
+    },
+    "N12": {
+     "t": "empty"
+    },
+    "N13": {
+     "t": "s",
+     "v": "Varp of Score"
+    },
+    "N14": {
+     "t": "s",
+     "v": "Count of Units"
+    },
+    "N15": {
+     "t": "s",
+     "v": "Varp of Score"
+    },
+    "N16": {
+     "t": "s",
+     "v": "Count of Units"
+    },
+    "N17": {
+     "t": "s",
+     "v": "Varp of Score"
+    },
+    "N18": {
+     "t": "s",
+     "v": "Count of Units"
+    },
+    "N19": {
+     "t": "empty"
+    },
+    "N20": {
+     "t": "empty"
+    },
+    "N21": {
+     "t": "empty"
+    },
+    "N22": {
+     "t": "empty"
+    },
+    "N23": {
+     "t": "s",
+     "v": "Varp of Score"
+    },
+    "N24": {
+     "t": "s",
+     "v": "Count of Units"
+    },
+    "N25": {
+     "t": "s",
+     "v": "Varp of Score"
+    },
+    "N26": {
+     "t": "s",
+     "v": "Count of Units"
+    },
+    "N27": {
+     "t": "empty"
+    },
+    "N28": {
+     "t": "empty"
+    },
+    "N29": {
+     "t": "empty"
+    },
+    "N3": {
+     "t": "empty"
+    },
+    "N30": {
+     "t": "empty"
+    },
+    "N4": {
+     "t": "empty"
+    },
+    "N5": {
+     "t": "empty"
+    },
+    "N6": {
+     "t": "s",
+     "v": "Values"
+    },
+    "N7": {
+     "t": "s",
+     "v": "Varp of Score"
+    },
+    "N8": {
+     "t": "s",
+     "v": "Count of Units"
+    },
+    "N9": {
+     "t": "empty"
+    },
+    "O10": {
+     "t": "n",
+     "v": 9.0
+    },
+    "O11": {
+     "t": "n",
+     "v": 0.0
+    },
+    "O12": {
+     "t": "n",
+     "v": 0.0
+    },
+    "O13": {
+     "t": "n",
+     "v": 0.0
+    },
+    "O14": {
+     "t": "n",
+     "v": 1.0
+    },
+    "O15": {
+     "t": "empty"
+    },
+    "O16": {
+     "t": "empty"
+    },
+    "O17": {
+     "t": "empty"
+    },
+    "O18": {
+     "t": "empty"
+    },
+    "O19": {
+     "t": "n",
+     "v": 0.0
+    },
+    "O20": {
+     "t": "n",
+     "v": 4.0
+    },
+    "O21": {
+     "t": "n",
+     "v": 0.0
+    },
+    "O22": {
+     "t": "n",
+     "v": 0.0
+    },
+    "O23": {
+     "t": "empty"
+    },
+    "O24": {
+     "t": "empty"
+    },
+    "O25": {
+     "t": "empty"
+    },
+    "O26": {
+     "t": "empty"
+    },
+    "O27": {
+     "t": "empty"
+    },
+    "O28": {
+     "t": "empty"
+    },
+    "O29": {
+     "t": "empty"
+    },
+    "O3": {
+     "t": "empty"
+    },
+    "O30": {
+     "t": "empty"
+    },
+    "O4": {
+     "t": "empty"
+    },
+    "O5": {
+     "t": "s",
+     "v": "Product"
+    },
+    "O6": {
+     "t": "s",
+     "v": "A"
+    },
+    "O7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "O8": {
+     "t": "n",
+     "v": 1.0
+    },
+    "O9": {
+     "t": "n",
+     "v": 0.0
+    },
+    "P10": {
+     "t": "empty"
+    },
+    "P11": {
+     "t": "empty"
+    },
+    "P12": {
+     "t": "empty"
+    },
+    "P13": {
+     "t": "n",
+     "v": 0.0
+    },
+    "P14": {
+     "t": "n",
+     "v": 1.0
+    },
+    "P15": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "P16": {
+     "t": "n",
+     "v": 1.0
+    },
+    "P17": {
+     "t": "n",
+     "v": 0.0
+    },
+    "P18": {
+     "t": "n",
+     "v": 1.0
+    },
+    "P19": {
+     "t": "n",
+     "v": 3.5
+    },
+    "P20": {
+     "t": "n",
+     "v": 19.0
+    },
+    "P21": {
+     "t": "n",
+     "v": 0.0625
+    },
+    "P22": {
+     "t": "n",
+     "v": 2.888888888888889
+    },
+    "P23": {
+     "t": "n",
+     "v": 1.0
+    },
+    "P24": {
+     "t": "n",
+     "v": 3.0
+    },
+    "P25": {
+     "t": "n",
+     "v": 0.0
+    },
+    "P26": {
+     "t": "n",
+     "v": 1.0
+    },
+    "P27": {
+     "t": "n",
+     "v": 5.0
+    },
+    "P28": {
+     "t": "n",
+     "v": 22.0
+    },
+    "P29": {
+     "t": "n",
+     "v": 1.5555555555555556
+    },
+    "P3": {
+     "t": "empty"
+    },
+    "P30": {
+     "t": "n",
+     "v": 6.25
+    },
+    "P4": {
+     "t": "empty"
+    },
+    "P5": {
+     "t": "empty"
+    },
+    "P6": {
+     "t": "s",
+     "v": "C"
+    },
+    "P7": {
+     "t": "empty"
+    },
+    "P8": {
+     "t": "empty"
+    },
+    "P9": {
+     "t": "empty"
+    },
+    "Q10": {
+     "t": "n",
+     "v": 1.0
+    },
+    "Q11": {
+     "t": "n",
+     "v": 0.0
+    },
+    "Q12": {
+     "t": "n",
+     "v": 0.0
+    },
+    "Q13": {
+     "t": "n",
+     "v": 6.890625
+    },
+    "Q14": {
+     "t": "n",
+     "v": 2.0
+    },
+    "Q15": {
+     "t": "empty"
+    },
+    "Q16": {
+     "t": "empty"
+    },
+    "Q17": {
+     "t": "empty"
+    },
+    "Q18": {
+     "t": "empty"
+    },
+    "Q19": {
+     "t": "n",
+     "v": 3.25
+    },
+    "Q20": {
+     "t": "n",
+     "v": 10.0
+    },
+    "Q21": {
+     "t": "n",
+     "v": 6.890625
+    },
+    "Q22": {
+     "t": "n",
+     "v": 4.0
+    },
+    "Q23": {
+     "t": "empty"
+    },
+    "Q24": {
+     "t": "empty"
+    },
+    "Q25": {
+     "t": "empty"
+    },
+    "Q26": {
+     "t": "empty"
+    },
+    "Q27": {
+     "t": "empty"
+    },
+    "Q28": {
+     "t": "empty"
+    },
+    "Q29": {
+     "t": "empty"
+    },
+    "Q3": {
+     "t": "empty"
+    },
+    "Q30": {
+     "t": "empty"
+    },
+    "Q4": {
+     "t": "empty"
+    },
+    "Q5": {
+     "t": "empty"
+    },
+    "Q6": {
+     "t": "s",
+     "v": "B"
+    },
+    "Q7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "Q8": {
+     "t": "n",
+     "v": 1.0
+    },
+    "Q9": {
+     "t": "n",
+     "v": 0.5
+    },
+    "R10": {
+     "t": "n",
+     "v": 10.0
+    },
+    "R11": {
+     "t": "n",
+     "v": 0.0625
+    },
+    "R12": {
+     "t": "n",
+     "v": 16.0
+    },
+    "R13": {
+     "t": "n",
+     "v": 4.04296875
+    },
+    "R14": {
+     "t": "n",
+     "v": 4.0
+    },
+    "R15": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "R16": {
+     "t": "n",
+     "v": 1.0
+    },
+    "R17": {
+     "t": "n",
+     "v": 0.0
+    },
+    "R18": {
+     "t": "n",
+     "v": 1.0
+    },
+    "R19": {
+     "t": "n",
+     "v": 6.75
+    },
+    "R20": {
+     "t": "n",
+     "v": 33.0
+    },
+    "R21": {
+     "t": "n",
+     "v": 3.24
+    },
+    "R22": {
+     "t": "n",
+     "v": 3.5833333333333335
+    },
+    "R23": {
+     "t": "n",
+     "v": 1.0
+    },
+    "R24": {
+     "t": "n",
+     "v": 3.0
+    },
+    "R25": {
+     "t": "n",
+     "v": 0.0
+    },
+    "R26": {
+     "t": "n",
+     "v": 1.0
+    },
+    "R27": {
+     "t": "n",
+     "v": 5.0
+    },
+    "R28": {
+     "t": "n",
+     "v": 22.0
+    },
+    "R29": {
+     "t": "n",
+     "v": 1.5555555555555556
+    },
+    "R3": {
+     "t": "empty"
+    },
+    "R30": {
+     "t": "n",
+     "v": 6.25
+    },
+    "R4": {
+     "t": "empty"
+    },
+    "R5": {
+     "t": "empty"
+    },
+    "R6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "R7": {
+     "t": "n",
+     "v": 0.0625
+    },
+    "R8": {
+     "t": "n",
+     "v": 2.0
+    },
+    "R9": {
+     "t": "n",
+     "v": 0.5
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 3,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "L5:R30",
+   "name": "PvP04",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3,
+      0,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "varP",
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "varP",
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      4,
+      1,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      4,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "varP",
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "varP",
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      5,
+      0,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      3,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      5
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "sum",
+     "x": [
+      5
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "varP",
+     "x": [
+      5
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "varP",
+     "x": [
+      5
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "P04",
+   "text": {
+    "L10": "12/31/2022 Sum of Units",
+    "L11": "12/31/2022 Varp of Score",
+    "L12": "12/31/2022 Varp of Units",
+    "L13": "2/29/1900",
+    "L19": "2/29/1900 Sum of Score",
+    "L20": "2/29/1900 Sum of Units",
+    "L21": "2/29/1900 Varp of Score",
+    "L22": "2/29/1900 Varp of Units",
+    "L23": "2/29/2024",
+    "L27": "2/29/2024 Sum of Score",
+    "L28": "2/29/2024 Sum of Units",
+    "L29": "2/29/2024 Varp of Score",
+    "L3": "Rep",
+    "L30": "2/29/2024 Varp of Units",
+    "L6": "When",
+    "L7": "12/31/2022",
+    "L9": "12/31/2022 Sum of Score",
+    "M13": "Silver",
+    "M15": "1",
+    "M17": "Bronze",
+    "M23": "Gold shown",
+    "M25": "TRUE",
+    "M3": "(All)",
+    "M6": "Tier",
+    "M7": "Gold shown",
+    "N13": "Varp of Score",
+    "N14": "Count of Units",
+    "N15": "Varp of Score",
+    "N16": "Count of Units",
+    "N17": "Varp of Score",
+    "N18": "Count of Units",
+    "N23": "Varp of Score",
+    "N24": "Count of Units",
+    "N25": "Varp of Score",
+    "N26": "Count of Units",
+    "N6": "Values",
+    "N7": "Varp of Score",
+    "N8": "Count of Units",
+    "O10": "9",
+    "O11": "0",
+    "O12": "0",
+    "O13": "0",
+    "O14": "1",
+    "O19": "0",
+    "O20": "4",
+    "O21": "0",
+    "O22": "0",
+    "O5": "Product",
+    "O6": "A",
+    "O7": "0",
+    "O8": "1",
+    "O9": "0",
+    "P13": "0",
+    "P14": "1",
+    "P15": "#DIV/0!",
+    "P16": "1",
+    "P17": "0",
+    "P18": "1",
+    "P19": "3.5",
+    "P20": "19",
+    "P21": "0.0625",
+    "P22": "2.888888889",
+    "P23": "1",
+    "P24": "3",
+    "P25": "0",
+    "P26": "1",
+    "P27": "5",
+    "P28": "22",
+    "P29": "1.555555556",
+    "P30": "6.25",
+    "P6": "C",
+    "Q10": "1",
+    "Q11": "0",
+    "Q12": "0",
+    "Q13": "6.890625",
+    "Q14": "2",
+    "Q19": "3.25",
+    "Q20": "10",
+    "Q21": "6.890625",
+    "Q22": "4",
+    "Q6": "B",
+    "Q7": "0",
+    "Q8": "1",
+    "Q9": "0.5",
+    "R10": "10",
+    "R11": "0.0625",
+    "R12": "16",
+    "R13": "4.04296875",
+    "R14": "4",
+    "R15": "#DIV/0!",
+    "R16": "1",
+    "R17": "0",
+    "R18": "1",
+    "R19": "6.75",
+    "R20": "33",
+    "R21": "3.24",
+    "R22": "3.583333333",
+    "R23": "1",
+    "R24": "3",
+    "R25": "0",
+    "R26": "1",
+    "R27": "5",
+    "R28": "22",
+    "R29": "1.555555556",
+    "R30": "6.25",
+    "R6": "Grand Total",
+    "R7": "0.0625",
+    "R8": "2",
+    "R9": "0.5"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "4"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "West"
+      },
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "North"
+      },
+      {
+       "t": "s",
+       "v": "South"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "C"
+      },
+      {
+       "t": "s",
+       "v": "A"
+      }
+     ]
+    },
+    {
+     "name": "Channel"
+    },
+    {
+     "name": "Rep",
+     "shared_flags": {
+      "count": "4"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Ann"
+      },
+      {
+       "t": "s",
+       "v": "Cy"
+      },
+      {
+       "t": "s",
+       "v": "Di"
+      },
+      {
+       "t": "s",
+       "v": "Bo"
+      }
+     ]
+    },
+    {
+     "name": "Tier"
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2100-01-01T00:00:00",
+      "minDate": "1901-01-01T00:00:00"
+     }
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "7",
+      "minValue": "0.5"
+     }
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "9",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Score",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "2",
+      "minValue": "0"
+     }
+    }
+   ],
+   "cells": {
+    "L10": {
+     "t": "s",
+     "v": "Cy"
+    },
+    "L11": {
+     "t": "s",
+     "v": "C"
+    },
+    "L12": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "L13": {
+     "t": "s",
+     "v": "Count of Score"
+    },
+    "L14": {
+     "t": "s",
+     "v": "Bo"
+    },
+    "L15": {
+     "t": "s",
+     "v": "A"
+    },
+    "L16": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "L17": {
+     "t": "s",
+     "v": "Count of Score"
+    },
+    "L18": {
+     "t": "s",
+     "v": "North"
+    },
+    "L19": {
+     "t": "s",
+     "v": "Di"
+    },
+    "L20": {
+     "t": "s",
+     "v": "C"
+    },
+    "L21": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "L22": {
+     "t": "s",
+     "v": "Count of Score"
+    },
+    "L23": {
+     "t": "s",
+     "v": "Bo"
+    },
+    "L24": {
+     "t": "s",
+     "v": "C"
+    },
+    "L25": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "L26": {
+     "t": "s",
+     "v": "Count of Score"
+    },
+    "L27": {
+     "t": "s",
+     "v": "South"
+    },
+    "L28": {
+     "t": "s",
+     "v": "Ann"
+    },
+    "L29": {
+     "t": "s",
+     "v": "C"
+    },
+    "L30": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "L31": {
+     "t": "s",
+     "v": "Count of Score"
+    },
+    "L5": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "L6": {
+     "t": "s",
+     "v": "West"
+    },
+    "L7": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "L8": {
+     "t": "s",
+     "v": "Count of Score"
+    },
+    "L9": {
+     "t": "s",
+     "v": "East"
+    },
+    "M10": {
+     "t": "empty"
+    },
+    "M11": {
+     "t": "empty"
+    },
+    "M12": {
+     "t": "n",
+     "v": 3.0
+    },
+    "M13": {
+     "t": "n",
+     "v": 1.0
+    },
+    "M14": {
+     "t": "empty"
+    },
+    "M15": {
+     "t": "empty"
+    },
+    "M16": {
+     "t": "n",
+     "v": 3.0
+    },
+    "M17": {
+     "t": "n",
+     "v": 1.0
+    },
+    "M18": {
+     "t": "empty"
+    },
+    "M19": {
+     "t": "empty"
+    },
+    "M20": {
+     "t": "empty"
+    },
+    "M21": {
+     "t": "n",
+     "v": 9.0
+    },
+    "M22": {
+     "t": "n",
+     "v": 2.0
+    },
+    "M23": {
+     "t": "empty"
+    },
+    "M24": {
+     "t": "empty"
+    },
+    "M25": {
+     "t": "n",
+     "v": 0.5
+    },
+    "M26": {
+     "t": "n",
+     "v": 1.0
+    },
+    "M27": {
+     "t": "empty"
+    },
+    "M28": {
+     "t": "empty"
+    },
+    "M29": {
+     "t": "empty"
+    },
+    "M30": {
+     "t": "n",
+     "v": 5.0
+    },
+    "M31": {
+     "t": "n",
+     "v": 1.0
+    },
+    "M5": {
+     "t": "empty"
+    },
+    "M6": {
+     "t": "empty"
+    },
+    "M7": {
+     "t": "n",
+     "v": 3.0
+    },
+    "M8": {
+     "t": "n",
+     "v": 2.0
+    },
+    "M9": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "L5:M31",
+   "name": "PvP05",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 3,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 3,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 3,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 3,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 3,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 3,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 3,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 3,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 3,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 3,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 3,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 3,
+     "x": [
+      1
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P05",
+   "text": {
+    "L10": "Cy",
+    "L11": "C",
+    "L12": "Sum of Sales",
+    "L13": "Count of Score",
+    "L14": "Bo",
+    "L15": "A",
+    "L16": "Sum of Sales",
+    "L17": "Count of Score",
+    "L18": "North",
+    "L19": "Di",
+    "L20": "C",
+    "L21": "Sum of Sales",
+    "L22": "Count of Score",
+    "L23": "Bo",
+    "L24": "C",
+    "L25": "Sum of Sales",
+    "L26": "Count of Score",
+    "L27": "South",
+    "L28": "Ann",
+    "L29": "C",
+    "L30": "Sum of Sales",
+    "L31": "Count of Score",
+    "L5": "Row Labels",
+    "L6": "West",
+    "L7": "Sum of Sales",
+    "L8": "Count of Score",
+    "L9": "East",
+    "M12": "3",
+    "M13": "1",
+    "M16": "3",
+    "M17": "1",
+    "M21": "9",
+    "M22": "2",
+    "M25": "0.5",
+    "M26": "1",
+    "M30": "5",
+    "M31": "1",
+    "M7": "3",
+    "M8": "2"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "4"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "West"
+      },
+      {
+       "t": "s",
+       "v": "South"
+      },
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "North"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "C"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "A"
+      }
+     ]
+    },
+    {
+     "name": "Channel",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Web"
+      },
+      {
+       "t": "s",
+       "v": "Store"
+      }
+     ]
+    },
+    {
+     "name": "Rep",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Bo"
+      },
+      {
+       "t": "s",
+       "v": "Cy"
+      },
+      {
+       "t": "s",
+       "v": "Di"
+      }
+     ]
+    },
+    {
+     "name": "Tier",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Silver"
+      },
+      {
+       "t": "s",
+       "v": "Gold"
+      },
+      {
+       "t": "s",
+       "v": "Bronze"
+      }
+     ]
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "14",
+      "maxDate": "1900-01-01T08:51:04",
+      "minDate": "1899-12-31T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "1901-01-01T18:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-01-01T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1899-12-31T12:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1899-12-31T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1901-01-01T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1899-12-31T06:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2023-12-31T12:00:00"
+      },
+      {
+       "t": "n",
+       "v": "367.75"
+      },
+      {
+       "t": "n",
+       "v": "45291.999999990003"
+      },
+      {
+       "t": "n",
+       "v": "1.5"
+      },
+      {
+       "t": "n",
+       "v": "1"
+      },
+      {
+       "t": "n",
+       "v": "367"
+      },
+      {
+       "t": "n",
+       "v": "1.25"
+      },
+      {
+       "t": "n",
+       "v": "45291.5"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "100",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "9",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Score",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "8",
+      "minValue": "-1"
+     }
+    }
+   ],
+   "cells": {
+    "L10": {
+     "t": "empty"
+    },
+    "L11": {
+     "t": "empty"
+    },
+    "L12": {
+     "t": "empty"
+    },
+    "L13": {
+     "t": "empty"
+    },
+    "L14": {
+     "t": "empty"
+    },
+    "L15": {
+     "t": "s",
+     "v": "Varp of Units"
+    },
+    "L16": {
+     "t": "empty"
+    },
+    "L17": {
+     "t": "empty"
+    },
+    "L18": {
+     "t": "empty"
+    },
+    "L19": {
+     "t": "empty"
+    },
+    "L2": {
+     "t": "s",
+     "v": "Channel"
+    },
+    "L20": {
+     "t": "empty"
+    },
+    "L21": {
+     "t": "empty"
+    },
+    "L22": {
+     "t": "s",
+     "v": "Total Average of Score"
+    },
+    "L23": {
+     "t": "s",
+     "v": "Total Varp of Units"
+    },
+    "L3": {
+     "t": "s",
+     "v": "Region"
+    },
+    "L4": {
+     "t": "empty"
+    },
+    "L5": {
+     "t": "empty"
+    },
+    "L6": {
+     "t": "empty"
+    },
+    "L7": {
+     "t": "s",
+     "v": "Values"
+    },
+    "L8": {
+     "t": "s",
+     "v": "Average of Score"
+    },
+    "L9": {
+     "t": "empty"
+    },
+    "M10": {
+     "t": "s",
+     "v": "C"
+    },
+    "M11": {
+     "t": "s",
+     "v": "C"
+    },
+    "M12": {
+     "t": "s",
+     "v": "C"
+    },
+    "M13": {
+     "t": "s",
+     "v": "B"
+    },
+    "M14": {
+     "t": "s",
+     "v": "B"
+    },
+    "M15": {
+     "t": "empty"
+    },
+    "M16": {
+     "t": "s",
+     "v": "C"
+    },
+    "M17": {
+     "t": "s",
+     "v": "C"
+    },
+    "M18": {
+     "t": "s",
+     "v": "C"
+    },
+    "M19": {
+     "t": "s",
+     "v": "C"
+    },
+    "M2": {
+     "t": "s",
+     "v": "Store"
+    },
+    "M20": {
+     "t": "s",
+     "v": "B"
+    },
+    "M21": {
+     "t": "s",
+     "v": "B"
+    },
+    "M22": {
+     "t": "empty"
+    },
+    "M23": {
+     "t": "empty"
+    },
+    "M3": {
+     "t": "s",
+     "v": "(All)"
+    },
+    "M4": {
+     "t": "empty"
+    },
+    "M5": {
+     "t": "empty"
+    },
+    "M6": {
+     "t": "empty"
+    },
+    "M7": {
+     "t": "s",
+     "v": "Product"
+    },
+    "M8": {
+     "t": "empty"
+    },
+    "M9": {
+     "t": "s",
+     "v": "C"
+    },
+    "N10": {
+     "t": "n",
+     "v": 45292.0
+    },
+    "N11": {
+     "t": "n",
+     "v": 1.0
+    },
+    "N12": {
+     "t": "n",
+     "v": 1.25
+    },
+    "N13": {
+     "t": "empty"
+    },
+    "N14": {
+     "t": "n",
+     "v": 1.5
+    },
+    "N15": {
+     "t": "empty"
+    },
+    "N16": {
+     "t": "empty"
+    },
+    "N17": {
+     "t": "n",
+     "v": 45292.0
+    },
+    "N18": {
+     "t": "n",
+     "v": 1.0
+    },
+    "N19": {
+     "t": "n",
+     "v": 1.25
+    },
+    "N2": {
+     "t": "empty"
+    },
+    "N20": {
+     "t": "empty"
+    },
+    "N21": {
+     "t": "n",
+     "v": 1.5
+    },
+    "N22": {
+     "t": "empty"
+    },
+    "N23": {
+     "t": "empty"
+    },
+    "N3": {
+     "t": "empty"
+    },
+    "N4": {
+     "t": "empty"
+    },
+    "N5": {
+     "t": "empty"
+    },
+    "N6": {
+     "t": "empty"
+    },
+    "N7": {
+     "t": "s",
+     "v": "When"
+    },
+    "N8": {
+     "t": "empty"
+    },
+    "N9": {
+     "t": "empty"
+    },
+    "O10": {
+     "t": "empty"
+    },
+    "O11": {
+     "t": "n",
+     "v": 4.25
+    },
+    "O12": {
+     "t": "empty"
+    },
+    "O13": {
+     "t": "empty"
+    },
+    "O14": {
+     "t": "empty"
+    },
+    "O15": {
+     "t": "empty"
+    },
+    "O16": {
+     "t": "empty"
+    },
+    "O17": {
+     "t": "empty"
+    },
+    "O18": {
+     "t": "n",
+     "v": 0.0
+    },
+    "O19": {
+     "t": "empty"
+    },
+    "O2": {
+     "t": "empty"
+    },
+    "O20": {
+     "t": "empty"
+    },
+    "O21": {
+     "t": "empty"
+    },
+    "O22": {
+     "t": "n",
+     "v": 4.25
+    },
+    "O23": {
+     "t": "n",
+     "v": 0.0
+    },
+    "O3": {
+     "t": "empty"
+    },
+    "O4": {
+     "t": "empty"
+    },
+    "O5": {
+     "t": "s",
+     "v": "Rep"
+    },
+    "O6": {
+     "t": "s",
+     "v": "Bo"
+    },
+    "O7": {
+     "t": "s",
+     "v": "Silver"
+    },
+    "O8": {
+     "t": "empty"
+    },
+    "O9": {
+     "t": "empty"
+    },
+    "P10": {
+     "t": "n",
+     "v": 4.75
+    },
+    "P11": {
+     "t": "empty"
+    },
+    "P12": {
+     "t": "empty"
+    },
+    "P13": {
+     "t": "empty"
+    },
+    "P14": {
+     "t": "empty"
+    },
+    "P15": {
+     "t": "empty"
+    },
+    "P16": {
+     "t": "empty"
+    },
+    "P17": {
+     "t": "n",
+     "v": 9.0
+    },
+    "P18": {
+     "t": "empty"
+    },
+    "P19": {
+     "t": "empty"
+    },
+    "P2": {
+     "t": "empty"
+    },
+    "P20": {
+     "t": "empty"
+    },
+    "P21": {
+     "t": "empty"
+    },
+    "P22": {
+     "t": "n",
+     "v": 4.75
+    },
+    "P23": {
+     "t": "n",
+     "v": 9.0
+    },
+    "P3": {
+     "t": "empty"
+    },
+    "P4": {
+     "t": "empty"
+    },
+    "P5": {
+     "t": "s",
+     "v": "Tier"
+    },
+    "P6": {
+     "t": "s",
+     "v": "Cy"
+    },
+    "P7": {
+     "t": "s",
+     "v": "Silver"
+    },
+    "P8": {
+     "t": "empty"
+    },
+    "P9": {
+     "t": "empty"
+    },
+    "Q10": {
+     "t": "empty"
+    },
+    "Q11": {
+     "t": "empty"
+    },
+    "Q12": {
+     "t": "empty"
+    },
+    "Q13": {
+     "t": "empty"
+    },
+    "Q14": {
+     "t": "n",
+     "v": 2.0
+    },
+    "Q15": {
+     "t": "empty"
+    },
+    "Q16": {
+     "t": "empty"
+    },
+    "Q17": {
+     "t": "empty"
+    },
+    "Q18": {
+     "t": "empty"
+    },
+    "Q19": {
+     "t": "empty"
+    },
+    "Q2": {
+     "t": "empty"
+    },
+    "Q20": {
+     "t": "empty"
+    },
+    "Q21": {
+     "t": "n",
+     "v": 0.0
+    },
+    "Q22": {
+     "t": "n",
+     "v": 2.0
+    },
+    "Q23": {
+     "t": "n",
+     "v": 0.0
+    },
+    "Q3": {
+     "t": "empty"
+    },
+    "Q4": {
+     "t": "empty"
+    },
+    "Q5": {
+     "t": "empty"
+    },
+    "Q6": {
+     "t": "empty"
+    },
+    "Q7": {
+     "t": "s",
+     "v": "Gold"
+    },
+    "Q8": {
+     "t": "empty"
+    },
+    "Q9": {
+     "t": "empty"
+    },
+    "R10": {
+     "t": "empty"
+    },
+    "R11": {
+     "t": "empty"
+    },
+    "R12": {
+     "t": "n",
+     "v": 2.0
+    },
+    "R13": {
+     "t": "empty"
+    },
+    "R14": {
+     "t": "empty"
+    },
+    "R15": {
+     "t": "empty"
+    },
+    "R16": {
+     "t": "empty"
+    },
+    "R17": {
+     "t": "empty"
+    },
+    "R18": {
+     "t": "empty"
+    },
+    "R19": {
+     "t": "n",
+     "v": 0.0
+    },
+    "R2": {
+     "t": "empty"
+    },
+    "R20": {
+     "t": "empty"
+    },
+    "R21": {
+     "t": "empty"
+    },
+    "R22": {
+     "t": "n",
+     "v": 2.0
+    },
+    "R23": {
+     "t": "n",
+     "v": 0.0
+    },
+    "R3": {
+     "t": "empty"
+    },
+    "R4": {
+     "t": "empty"
+    },
+    "R5": {
+     "t": "empty"
+    },
+    "R6": {
+     "t": "s",
+     "v": "Di"
+    },
+    "R7": {
+     "t": "s",
+     "v": "Bronze"
+    },
+    "R8": {
+     "t": "empty"
+    },
+    "R9": {
+     "t": "empty"
+    },
+    "S10": {
+     "t": "n",
+     "v": 4.75
+    },
+    "S11": {
+     "t": "n",
+     "v": 4.25
+    },
+    "S12": {
+     "t": "n",
+     "v": 2.0
+    },
+    "S13": {
+     "t": "empty"
+    },
+    "S14": {
+     "t": "n",
+     "v": 2.0
+    },
+    "S15": {
+     "t": "empty"
+    },
+    "S16": {
+     "t": "empty"
+    },
+    "S17": {
+     "t": "n",
+     "v": 9.0
+    },
+    "S18": {
+     "t": "n",
+     "v": 0.0
+    },
+    "S19": {
+     "t": "n",
+     "v": 0.0
+    },
+    "S2": {
+     "t": "empty"
+    },
+    "S20": {
+     "t": "empty"
+    },
+    "S21": {
+     "t": "n",
+     "v": 0.0
+    },
+    "S22": {
+     "t": "n",
+     "v": 3.55
+    },
+    "S23": {
+     "t": "n",
+     "v": 7.36
+    },
+    "S3": {
+     "t": "empty"
+    },
+    "S4": {
+     "t": "empty"
+    },
+    "S5": {
+     "t": "empty"
+    },
+    "S6": {
+     "t": "s",
+     "v": "All"
+    },
+    "S7": {
+     "t": "empty"
+    },
+    "S8": {
+     "t": "empty"
+    },
+    "S9": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2,
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 3,
+   "first_data_row": 3,
+   "first_header_row": 1,
+   "location": "L5:S23",
+   "name": "PvP06",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      8
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      10
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      12
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      9
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 1,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      8
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      10
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      12
+     ]
+    },
+    {
+     "i": 1,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      9
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 2,
+   "sheet": "P06",
+   "text": {
+    "L15": "Varp of Units",
+    "L2": "Channel",
+    "L22": "Total Average of Score",
+    "L23": "Total Varp of Units",
+    "L3": "Region",
+    "L7": "Values",
+    "L8": "Average of Score",
+    "M10": "C",
+    "M11": "C",
+    "M12": "C",
+    "M13": "B",
+    "M14": "B",
+    "M16": "C",
+    "M17": "C",
+    "M18": "C",
+    "M19": "C",
+    "M2": "Store",
+    "M20": "B",
+    "M21": "B",
+    "M3": "(All)",
+    "M7": "Product",
+    "M9": "C",
+    "N10": "1/1/2024",
+    "N11": "1/1/1900",
+    "N12": "1/1/1900 6:00",
+    "N14": "1/1/1900 12:00",
+    "N17": "1/1/2024",
+    "N18": "1/1/1900",
+    "N19": "1/1/1900 6:00",
+    "N21": "1/1/1900 12:00",
+    "N7": "When",
+    "O11": "4.25",
+    "O18": "0",
+    "O22": "4.25",
+    "O23": "0",
+    "O5": "Rep",
+    "O6": "Bo",
+    "O7": "Silver",
+    "P10": "4.75",
+    "P17": "9",
+    "P22": "4.75",
+    "P23": "9",
+    "P5": "Tier",
+    "P6": "Cy",
+    "P7": "Silver",
+    "Q14": "2",
+    "Q21": "0",
+    "Q22": "2",
+    "Q23": "0",
+    "Q7": "Gold",
+    "R12": "2",
+    "R19": "0",
+    "R22": "2",
+    "R23": "0",
+    "R6": "Di",
+    "R7": "Bronze",
+    "S10": "4.75",
+    "S11": "4.25",
+    "S12": "2",
+    "S14": "2",
+    "S17": "9",
+    "S18": "0",
+    "S19": "0",
+    "S21": "0",
+    "S22": "3.55",
+    "S23": "7.36",
+    "S6": "All"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "West"
+      },
+      {
+       "t": "s",
+       "v": "South"
+      }
+     ]
+    },
+    {
+     "name": "Product"
+    },
+    {
+     "name": "Channel",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Store"
+      },
+      {
+       "t": "s",
+       "v": "Web"
+      }
+     ]
+    },
+    {
+     "name": "Rep",
+     "shared_flags": {
+      "count": "4"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Ann"
+      },
+      {
+       "t": "s",
+       "v": "Bo"
+      },
+      {
+       "t": "s",
+       "v": "Di"
+      },
+      {
+       "t": "s",
+       "v": "Cy"
+      }
+     ]
+    },
+    {
+     "name": "Tier",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Bronze"
+      },
+      {
+       "t": "s",
+       "v": "Gold"
+      },
+      {
+       "t": "s",
+       "v": "Silver"
+      }
+     ]
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "1900-01-01T08:51:04",
+      "minDate": "1900-02-27T06:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "1904-01-01T23:59:59"
+      },
+      {
+       "t": "d",
+       "v": "1904-01-01T06:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2023-12-31T23:59:59"
+      },
+      {
+       "t": "d",
+       "v": "1900-02-27T06:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1904-01-01T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-02-28T00:00:00"
+      },
+      {
+       "t": "n",
+       "v": "1462.9999884260001"
+      },
+      {
+       "t": "n",
+       "v": "1462.25"
+      },
+      {
+       "t": "n",
+       "v": "45291.999988426003"
+      },
+      {
+       "t": "n",
+       "v": "59.25"
+      },
+      {
+       "t": "n",
+       "v": "1462"
+      },
+      {
+       "t": "n",
+       "v": "59.999999989999999"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "0.5"
+     }
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "9",
+      "minValue": "2"
+     }
+    },
+    {
+     "name": "Score",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "8",
+      "minValue": "-1"
+     }
+    }
+   ],
+   "cells": {
+    "L5": {
+     "t": "s",
+     "v": "Measure 1"
+    },
+    "L6": {
+     "t": "empty"
+    },
+    "L7": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "L8": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "M5": {
+     "t": "s",
+     "v": "Column Labels"
+    },
+    "M6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "M7": {
+     "t": "empty"
+    },
+    "M8": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 3,
+   "first_header_row": 1,
+   "location": "L5:M8",
+   "name": "PvP07",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P07",
+   "text": {
+    "L5": "Measure 1",
+    "L7": "Row Labels",
+    "L8": "Grand Total",
+    "M5": "Column Labels",
+    "M6": "Grand Total"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "C"
+      },
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      }
+     ]
+    },
+    {
+     "name": "Channel",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Store"
+      },
+      {
+       "t": "s",
+       "v": "Web"
+      }
+     ]
+    },
+    {
+     "name": "Rep"
+    },
+    {
+     "name": "Tier",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Silver"
+      },
+      {
+       "t": "s",
+       "v": "Bronze"
+      },
+      {
+       "t": "s",
+       "v": "Gold"
+      },
+      {
+       "t": "b",
+       "v": "0"
+      },
+      {
+       "t": "s",
+       "v": "1"
+      }
+     ]
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "6",
+      "maxDate": "1900-01-01T08:51:04",
+      "minDate": "1900-01-30T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2023-12-31T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-01-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-12-31T00:00:00"
+      },
+      {
+       "t": "n",
+       "v": "45291"
+      },
+      {
+       "t": "n",
+       "v": "31"
+      },
+      {
+       "t": "n",
+       "v": "366"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "100",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "9",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Score",
+     "shared_flags": {
+      "containsMixedTypes": "1",
+      "containsNumber": "1",
+      "maxValue": "8",
+      "minValue": "-1"
+     }
+    }
+   ],
+   "cells": {
+    "AA10": {
+     "t": "empty"
+    },
+    "AA11": {
+     "t": "n",
+     "v": 5.0
+    },
+    "AA12": {
+     "t": "empty"
+    },
+    "AA13": {
+     "t": "empty"
+    },
+    "AA14": {
+     "t": "empty"
+    },
+    "AA15": {
+     "t": "empty"
+    },
+    "AA16": {
+     "t": "empty"
+    },
+    "AA17": {
+     "t": "empty"
+    },
+    "AA18": {
+     "t": "empty"
+    },
+    "AA19": {
+     "t": "n",
+     "v": 5.0
+    },
+    "AA5": {
+     "t": "empty"
+    },
+    "AA6": {
+     "t": "empty"
+    },
+    "AA7": {
+     "t": "empty"
+    },
+    "AA8": {
+     "t": "s",
+     "v": "B"
+    },
+    "AA9": {
+     "t": "empty"
+    },
+    "AB10": {
+     "t": "empty"
+    },
+    "AB11": {
+     "t": "n",
+     "v": 7.0
+    },
+    "AB12": {
+     "t": "empty"
+    },
+    "AB13": {
+     "t": "n",
+     "v": 7.0
+    },
+    "AB14": {
+     "t": "empty"
+    },
+    "AB15": {
+     "t": "empty"
+    },
+    "AB16": {
+     "t": "empty"
+    },
+    "AB17": {
+     "t": "empty"
+    },
+    "AB18": {
+     "t": "empty"
+    },
+    "AB19": {
+     "t": "n",
+     "v": 14.0
+    },
+    "AB5": {
+     "t": "empty"
+    },
+    "AB6": {
+     "t": "empty"
+    },
+    "AB7": {
+     "t": "n",
+     "v": 31.0
+    },
+    "AB8": {
+     "t": "s",
+     "v": "C"
+    },
+    "AB9": {
+     "t": "empty"
+    },
+    "AC10": {
+     "t": "empty"
+    },
+    "AC11": {
+     "t": "n",
+     "v": 9.0
+    },
+    "AC12": {
+     "t": "empty"
+    },
+    "AC13": {
+     "t": "empty"
+    },
+    "AC14": {
+     "t": "n",
+     "v": 8.0
+    },
+    "AC15": {
+     "t": "empty"
+    },
+    "AC16": {
+     "t": "n",
+     "v": 4.0
+    },
+    "AC17": {
+     "t": "empty"
+    },
+    "AC18": {
+     "t": "empty"
+    },
+    "AC19": {
+     "t": "n",
+     "v": 21.0
+    },
+    "AC5": {
+     "t": "empty"
+    },
+    "AC6": {
+     "t": "empty"
+    },
+    "AC7": {
+     "t": "empty"
+    },
+    "AC8": {
+     "t": "s",
+     "v": "A"
+    },
+    "AC9": {
+     "t": "empty"
+    },
+    "AD10": {
+     "t": "empty"
+    },
+    "AD11": {
+     "t": "empty"
+    },
+    "AD12": {
+     "t": "empty"
+    },
+    "AD13": {
+     "t": "empty"
+    },
+    "AD14": {
+     "t": "empty"
+    },
+    "AD15": {
+     "t": "empty"
+    },
+    "AD16": {
+     "t": "empty"
+    },
+    "AD17": {
+     "t": "empty"
+    },
+    "AD18": {
+     "t": "n",
+     "v": 1.0
+    },
+    "AD19": {
+     "t": "n",
+     "v": 1.0
+    },
+    "AD5": {
+     "t": "empty"
+    },
+    "AD6": {
+     "t": "empty"
+    },
+    "AD7": {
+     "t": "n",
+     "v": 366.0
+    },
+    "AD8": {
+     "t": "s",
+     "v": "A"
+    },
+    "AD9": {
+     "t": "empty"
+    },
+    "AE10": {
+     "t": "n",
+     "v": 1.0
+    },
+    "AE11": {
+     "t": "n",
+     "v": 11.0
+    },
+    "AE12": {
+     "t": "empty"
+    },
+    "AE13": {
+     "t": "n",
+     "v": 7.0
+    },
+    "AE14": {
+     "t": "n",
+     "v": 3.0
+    },
+    "AE15": {
+     "t": "empty"
+    },
+    "AE16": {
+     "t": "n",
+     "v": 0.0
+    },
+    "AE17": {
+     "t": "empty"
+    },
+    "AE18": {
+     "t": "s",
+     "v": "ERR"
+    },
+    "AE19": {
+     "t": "s",
+     "v": "ERR"
+    },
+    "AE5": {
+     "t": "empty"
+    },
+    "AE6": {
+     "t": "s",
+     "v": "Total Sum of Score"
+    },
+    "AE7": {
+     "t": "empty"
+    },
+    "AE8": {
+     "t": "empty"
+    },
+    "AE9": {
+     "t": "empty"
+    },
+    "AF10": {
+     "t": "n",
+     "v": 1.0
+    },
+    "AF11": {
+     "t": "n",
+     "v": 45.507020215444655
+    },
+    "AF12": {
+     "t": "empty"
+    },
+    "AF13": {
+     "t": "n",
+     "v": 8.875
+    },
+    "AF14": {
+     "t": "n",
+     "v": 0.0
+    },
+    "AF15": {
+     "t": "empty"
+    },
+    "AF16": {
+     "t": "n",
+     "v": 0.0
+    },
+    "AF17": {
+     "t": "empty"
+    },
+    "AF18": {
+     "t": "n",
+     "v": 0.0
+    },
+    "AF19": {
+     "t": "n",
+     "v": 37.969593097635375
+    },
+    "AF5": {
+     "t": "empty"
+    },
+    "AF6": {
+     "t": "s",
+     "v": "Total StdDevp of Sales"
+    },
+    "AF7": {
+     "t": "empty"
+    },
+    "AF8": {
+     "t": "empty"
+    },
+    "AF9": {
+     "t": "empty"
+    },
+    "AG10": {
+     "t": "n",
+     "v": 8.0
+    },
+    "AG11": {
+     "t": "n",
+     "v": 21.0
+    },
+    "AG12": {
+     "t": "empty"
+    },
+    "AG13": {
+     "t": "n",
+     "v": 9.0
+    },
+    "AG14": {
+     "t": "n",
+     "v": 8.0
+    },
+    "AG15": {
+     "t": "empty"
+    },
+    "AG16": {
+     "t": "n",
+     "v": 4.0
+    },
+    "AG17": {
+     "t": "empty"
+    },
+    "AG18": {
+     "t": "n",
+     "v": 1.0
+    },
+    "AG19": {
+     "t": "n",
+     "v": 51.0
+    },
+    "AG5": {
+     "t": "empty"
+    },
+    "AG6": {
+     "t": "s",
+     "v": "Total Sum of Units"
+    },
+    "AG7": {
+     "t": "empty"
+    },
+    "AG8": {
+     "t": "empty"
+    },
+    "AG9": {
+     "t": "empty"
+    },
+    "L10": {
+     "t": "s",
+     "v": "Store"
+    },
+    "L11": {
+     "t": "s",
+     "v": "Web"
+    },
+    "L12": {
+     "t": "s",
+     "v": "Gold"
+    },
+    "L13": {
+     "t": "s",
+     "v": "Store"
+    },
+    "L14": {
+     "t": "s",
+     "v": "Web"
+    },
+    "L15": {
+     "t": "s",
+     "v": "FALSE"
+    },
+    "L16": {
+     "t": "s",
+     "v": "Web"
+    },
+    "L17": {
+     "t": "s",
+     "v": "1"
+    },
+    "L18": {
+     "t": "s",
+     "v": "Web"
+    },
+    "L19": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "L5": {
+     "t": "empty"
+    },
+    "L6": {
+     "t": "empty"
+    },
+    "L7": {
+     "t": "empty"
+    },
+    "L8": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "L9": {
+     "t": "s",
+     "v": "Silver"
+    },
+    "M10": {
+     "t": "n",
+     "v": 1.0
+    },
+    "M11": {
+     "t": "empty"
+    },
+    "M12": {
+     "t": "empty"
+    },
+    "M13": {
+     "t": "empty"
+    },
+    "M14": {
+     "t": "empty"
+    },
+    "M15": {
+     "t": "empty"
+    },
+    "M16": {
+     "t": "empty"
+    },
+    "M17": {
+     "t": "empty"
+    },
+    "M18": {
+     "t": "empty"
+    },
+    "M19": {
+     "t": "n",
+     "v": 1.0
+    },
+    "M5": {
+     "t": "s",
+     "v": "Column Labels"
+    },
+    "M6": {
+     "t": "s",
+     "v": "Sum of Score"
+    },
+    "M7": {
+     "t": "n",
+     "v": 45291.0
+    },
+    "M8": {
+     "t": "s",
+     "v": "C"
+    },
+    "M9": {
+     "t": "empty"
+    },
+    "N10": {
+     "t": "empty"
+    },
+    "N11": {
+     "t": "empty"
+    },
+    "N12": {
+     "t": "empty"
+    },
+    "N13": {
+     "t": "n",
+     "v": -1.0
+    },
+    "N14": {
+     "t": "empty"
+    },
+    "N15": {
+     "t": "empty"
+    },
+    "N16": {
+     "t": "empty"
+    },
+    "N17": {
+     "t": "empty"
+    },
+    "N18": {
+     "t": "empty"
+    },
+    "N19": {
+     "t": "n",
+     "v": -1.0
+    },
+    "N5": {
+     "t": "empty"
+    },
+    "N6": {
+     "t": "empty"
+    },
+    "N7": {
+     "t": "empty"
+    },
+    "N8": {
+     "t": "s",
+     "v": "A"
+    },
+    "N9": {
+     "t": "empty"
+    },
+    "O10": {
+     "t": "empty"
+    },
+    "O11": {
+     "t": "n",
+     "v": 1.5
+    },
+    "O12": {
+     "t": "empty"
+    },
+    "O13": {
+     "t": "empty"
+    },
+    "O14": {
+     "t": "empty"
+    },
+    "O15": {
+     "t": "empty"
+    },
+    "O16": {
+     "t": "empty"
+    },
+    "O17": {
+     "t": "empty"
+    },
+    "O18": {
+     "t": "empty"
+    },
+    "O19": {
+     "t": "n",
+     "v": 1.5
+    },
+    "O5": {
+     "t": "empty"
+    },
+    "O6": {
+     "t": "empty"
+    },
+    "O7": {
+     "t": "empty"
+    },
+    "O8": {
+     "t": "s",
+     "v": "B"
+    },
+    "O9": {
+     "t": "empty"
+    },
+    "P10": {
+     "t": "empty"
+    },
+    "P11": {
+     "t": "n",
+     "v": 1.5
+    },
+    "P12": {
+     "t": "empty"
+    },
+    "P13": {
+     "t": "n",
+     "v": 8.0
+    },
+    "P14": {
+     "t": "empty"
+    },
+    "P15": {
+     "t": "empty"
+    },
+    "P16": {
+     "t": "empty"
+    },
+    "P17": {
+     "t": "empty"
+    },
+    "P18": {
+     "t": "empty"
+    },
+    "P19": {
+     "t": "n",
+     "v": 9.5
+    },
+    "P5": {
+     "t": "empty"
+    },
+    "P6": {
+     "t": "empty"
+    },
+    "P7": {
+     "t": "n",
+     "v": 31.0
+    },
+    "P8": {
+     "t": "s",
+     "v": "C"
+    },
+    "P9": {
+     "t": "empty"
+    },
+    "Q10": {
+     "t": "empty"
+    },
+    "Q11": {
+     "t": "n",
+     "v": 8.0
+    },
+    "Q12": {
+     "t": "empty"
+    },
+    "Q13": {
+     "t": "empty"
+    },
+    "Q14": {
+     "t": "n",
+     "v": 3.0
+    },
+    "Q15": {
+     "t": "empty"
+    },
+    "Q16": {
+     "t": "n",
+     "v": 0.0
+    },
+    "Q17": {
+     "t": "empty"
+    },
+    "Q18": {
+     "t": "empty"
+    },
+    "Q19": {
+     "t": "n",
+     "v": 11.0
+    },
+    "Q5": {
+     "t": "empty"
+    },
+    "Q6": {
+     "t": "empty"
+    },
+    "Q7": {
+     "t": "empty"
+    },
+    "Q8": {
+     "t": "s",
+     "v": "A"
+    },
+    "Q9": {
+     "t": "empty"
+    },
+    "R10": {
+     "t": "empty"
+    },
+    "R11": {
+     "t": "empty"
+    },
+    "R12": {
+     "t": "empty"
+    },
+    "R13": {
+     "t": "empty"
+    },
+    "R14": {
+     "t": "empty"
+    },
+    "R15": {
+     "t": "empty"
+    },
+    "R16": {
+     "t": "empty"
+    },
+    "R17": {
+     "t": "empty"
+    },
+    "R18": {
+     "t": "s",
+     "v": "ERR"
+    },
+    "R19": {
+     "t": "s",
+     "v": "ERR"
+    },
+    "R5": {
+     "t": "empty"
+    },
+    "R6": {
+     "t": "empty"
+    },
+    "R7": {
+     "t": "n",
+     "v": 366.0
+    },
+    "R8": {
+     "t": "s",
+     "v": "A"
+    },
+    "R9": {
+     "t": "empty"
+    },
+    "S10": {
+     "t": "n",
+     "v": 1.0
+    },
+    "S11": {
+     "t": "empty"
+    },
+    "S12": {
+     "t": "empty"
+    },
+    "S13": {
+     "t": "empty"
+    },
+    "S14": {
+     "t": "empty"
+    },
+    "S15": {
+     "t": "empty"
+    },
+    "S16": {
+     "t": "empty"
+    },
+    "S17": {
+     "t": "empty"
+    },
+    "S18": {
+     "t": "empty"
+    },
+    "S19": {
+     "t": "n",
+     "v": 1.0
+    },
+    "S5": {
+     "t": "empty"
+    },
+    "S6": {
+     "t": "s",
+     "v": "StdDevp of Sales"
+    },
+    "S7": {
+     "t": "n",
+     "v": 45291.0
+    },
+    "S8": {
+     "t": "s",
+     "v": "C"
+    },
+    "S9": {
+     "t": "empty"
+    },
+    "T10": {
+     "t": "empty"
+    },
+    "T11": {
+     "t": "empty"
+    },
+    "T12": {
+     "t": "empty"
+    },
+    "T13": {
+     "t": "n",
+     "v": 0.0
+    },
+    "T14": {
+     "t": "empty"
+    },
+    "T15": {
+     "t": "empty"
+    },
+    "T16": {
+     "t": "empty"
+    },
+    "T17": {
+     "t": "empty"
+    },
+    "T18": {
+     "t": "empty"
+    },
+    "T19": {
+     "t": "n",
+     "v": 0.0
+    },
+    "T5": {
+     "t": "empty"
+    },
+    "T6": {
+     "t": "empty"
+    },
+    "T7": {
+     "t": "empty"
+    },
+    "T8": {
+     "t": "s",
+     "v": "A"
+    },
+    "T9": {
+     "t": "empty"
+    },
+    "U10": {
+     "t": "empty"
+    },
+    "U11": {
+     "t": "n",
+     "v": 0.0
+    },
+    "U12": {
+     "t": "empty"
+    },
+    "U13": {
+     "t": "empty"
+    },
+    "U14": {
+     "t": "empty"
+    },
+    "U15": {
+     "t": "empty"
+    },
+    "U16": {
+     "t": "empty"
+    },
+    "U17": {
+     "t": "empty"
+    },
+    "U18": {
+     "t": "empty"
+    },
+    "U19": {
+     "t": "n",
+     "v": 0.0
+    },
+    "U5": {
+     "t": "empty"
+    },
+    "U6": {
+     "t": "empty"
+    },
+    "U7": {
+     "t": "empty"
+    },
+    "U8": {
+     "t": "s",
+     "v": "B"
+    },
+    "U9": {
+     "t": "empty"
+    },
+    "V10": {
+     "t": "empty"
+    },
+    "V11": {
+     "t": "n",
+     "v": 0.0
+    },
+    "V12": {
+     "t": "empty"
+    },
+    "V13": {
+     "t": "n",
+     "v": 0.0
+    },
+    "V14": {
+     "t": "empty"
+    },
+    "V15": {
+     "t": "empty"
+    },
+    "V16": {
+     "t": "empty"
+    },
+    "V17": {
+     "t": "empty"
+    },
+    "V18": {
+     "t": "empty"
+    },
+    "V19": {
+     "t": "n",
+     "v": 0.125
+    },
+    "V5": {
+     "t": "empty"
+    },
+    "V6": {
+     "t": "empty"
+    },
+    "V7": {
+     "t": "n",
+     "v": 31.0
+    },
+    "V8": {
+     "t": "s",
+     "v": "C"
+    },
+    "V9": {
+     "t": "empty"
+    },
+    "W10": {
+     "t": "empty"
+    },
+    "W11": {
+     "t": "n",
+     "v": 0.0
+    },
+    "W12": {
+     "t": "empty"
+    },
+    "W13": {
+     "t": "empty"
+    },
+    "W14": {
+     "t": "n",
+     "v": 0.0
+    },
+    "W15": {
+     "t": "empty"
+    },
+    "W16": {
+     "t": "n",
+     "v": 0.0
+    },
+    "W17": {
+     "t": "empty"
+    },
+    "W18": {
+     "t": "empty"
+    },
+    "W19": {
+     "t": "n",
+     "v": 45.44548015663017
+    },
+    "W5": {
+     "t": "empty"
+    },
+    "W6": {
+     "t": "empty"
+    },
+    "W7": {
+     "t": "empty"
+    },
+    "W8": {
+     "t": "s",
+     "v": "A"
+    },
+    "W9": {
+     "t": "empty"
+    },
+    "X10": {
+     "t": "empty"
+    },
+    "X11": {
+     "t": "empty"
+    },
+    "X12": {
+     "t": "empty"
+    },
+    "X13": {
+     "t": "empty"
+    },
+    "X14": {
+     "t": "empty"
+    },
+    "X15": {
+     "t": "empty"
+    },
+    "X16": {
+     "t": "empty"
+    },
+    "X17": {
+     "t": "empty"
+    },
+    "X18": {
+     "t": "n",
+     "v": 0.0
+    },
+    "X19": {
+     "t": "n",
+     "v": 0.0
+    },
+    "X5": {
+     "t": "empty"
+    },
+    "X6": {
+     "t": "empty"
+    },
+    "X7": {
+     "t": "n",
+     "v": 366.0
+    },
+    "X8": {
+     "t": "s",
+     "v": "A"
+    },
+    "X9": {
+     "t": "empty"
+    },
+    "Y10": {
+     "t": "n",
+     "v": 8.0
+    },
+    "Y11": {
+     "t": "empty"
+    },
+    "Y12": {
+     "t": "empty"
+    },
+    "Y13": {
+     "t": "empty"
+    },
+    "Y14": {
+     "t": "empty"
+    },
+    "Y15": {
+     "t": "empty"
+    },
+    "Y16": {
+     "t": "empty"
+    },
+    "Y17": {
+     "t": "empty"
+    },
+    "Y18": {
+     "t": "empty"
+    },
+    "Y19": {
+     "t": "n",
+     "v": 8.0
+    },
+    "Y5": {
+     "t": "empty"
+    },
+    "Y6": {
+     "t": "s",
+     "v": "Sum of Units"
+    },
+    "Y7": {
+     "t": "n",
+     "v": 45291.0
+    },
+    "Y8": {
+     "t": "s",
+     "v": "C"
+    },
+    "Y9": {
+     "t": "empty"
+    },
+    "Z10": {
+     "t": "empty"
+    },
+    "Z11": {
+     "t": "empty"
+    },
+    "Z12": {
+     "t": "empty"
+    },
+    "Z13": {
+     "t": "n",
+     "v": 2.0
+    },
+    "Z14": {
+     "t": "empty"
+    },
+    "Z15": {
+     "t": "empty"
+    },
+    "Z16": {
+     "t": "empty"
+    },
+    "Z17": {
+     "t": "empty"
+    },
+    "Z18": {
+     "t": "empty"
+    },
+    "Z19": {
+     "t": "n",
+     "v": 2.0
+    },
+    "Z5": {
+     "t": "empty"
+    },
+    "Z6": {
+     "t": "empty"
+    },
+    "Z7": {
+     "t": "empty"
+    },
+    "Z8": {
+     "t": "s",
+     "v": "A"
+    },
+    "Z9": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      3,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      4,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      5,
+      1
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1,
+      3,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 1,
+     "r": 1,
+     "x": [
+      4,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 1,
+     "r": 1,
+     "x": [
+      5,
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2,
+      3,
+      0
+     ]
+    },
+    {
+     "i": 2,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 2,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 2,
+     "r": 1,
+     "x": [
+      4,
+      0
+     ]
+    },
+    {
+     "i": 2,
+     "r": 2,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 1,
+     "x": [
+      5,
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 4,
+   "first_header_row": 1,
+   "location": "L5:AG19",
+   "name": "PvP08",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P08",
+   "text": {
+    "AA11": "5",
+    "AA19": "5",
+    "AA8": "B",
+    "AB11": "7",
+    "AB13": "7",
+    "AB19": "14",
+    "AB7": "1/31/1900",
+    "AB8": "C",
+    "AC11": "9",
+    "AC14": "8",
+    "AC16": "4",
+    "AC19": "21",
+    "AC8": "A",
+    "AD18": "1",
+    "AD19": "1",
+    "AD7": "12/31/1900",
+    "AD8": "A",
+    "AE10": "100.00%",
+    "AE11": "1100.00%",
+    "AE13": "700.00%",
+    "AE14": "300.00%",
+    "AE16": "0.00%",
+    "AE18": "ERR",
+    "AE19": "ERR",
+    "AE6": "Total Sum of Score",
+    "AF10": "1",
+    "AF11": "45.50702022",
+    "AF13": "8.875",
+    "AF14": "0",
+    "AF16": "0",
+    "AF18": "0",
+    "AF19": "37.9695931",
+    "AF6": "Total StdDevp of Sales",
+    "AG10": "8",
+    "AG11": "21",
+    "AG13": "9",
+    "AG14": "8",
+    "AG16": "4",
+    "AG18": "1",
+    "AG19": "51",
+    "AG6": "Total Sum of Units",
+    "L10": "Store",
+    "L11": "Web",
+    "L12": "Gold",
+    "L13": "Store",
+    "L14": "Web",
+    "L15": "FALSE",
+    "L16": "Web",
+    "L17": "1",
+    "L18": "Web",
+    "L19": "Grand Total",
+    "L8": "Row Labels",
+    "L9": "Silver",
+    "M10": "100.00%",
+    "M19": "100.00%",
+    "M5": "Column Labels",
+    "M6": "Sum of Score",
+    "M7": "12/31/2023",
+    "M8": "C",
+    "N13": "-100.00%",
+    "N19": "-100.00%",
+    "N8": "A",
+    "O11": "150.00%",
+    "O19": "150.00%",
+    "O8": "B",
+    "P11": "150.00%",
+    "P13": "800.00%",
+    "P19": "950.00%",
+    "P7": "1/31/1900",
+    "P8": "C",
+    "Q11": "800.00%",
+    "Q14": "300.00%",
+    "Q16": "0.00%",
+    "Q19": "1100.00%",
+    "Q8": "A",
+    "R18": "ERR",
+    "R19": "ERR",
+    "R7": "12/31/1900",
+    "R8": "A",
+    "S10": "1",
+    "S19": "1",
+    "S6": "StdDevp of Sales",
+    "S7": "12/31/2023",
+    "S8": "C",
+    "T13": "0",
+    "T19": "0",
+    "T8": "A",
+    "U11": "0",
+    "U19": "0",
+    "U8": "B",
+    "V11": "0",
+    "V13": "0",
+    "V19": "0.125",
+    "V7": "1/31/1900",
+    "V8": "C",
+    "W11": "0",
+    "W14": "0",
+    "W16": "0",
+    "W19": "45.44548016",
+    "W8": "A",
+    "X18": "0",
+    "X19": "0",
+    "X7": "12/31/1900",
+    "X8": "A",
+    "Y10": "8",
+    "Y19": "8",
+    "Y6": "Sum of Units",
+    "Y7": "12/31/2023",
+    "Y8": "C",
+    "Z13": "2",
+    "Z19": "2",
+    "Z8": "A"
+   }
+  }
+ ],
+ "sheets": {
+  "P01": {
+   "I5": {
+    "t": "e",
+    "v": "#REF!"
+   }
+  },
+  "P02": {},
+  "P03": {},
+  "P04": {},
+  "P05": {},
+  "P06": {},
+  "P07": {},
+  "P08": {
+   "I14": {
+    "t": "e",
+    "v": "#NULL!"
+   }
+  },
+  "Q": {
+   "A1": {
+    "t": "n",
+    "v": 12.0
+   },
+   "A2": {
+    "t": "n",
+    "v": 10.0
+   },
+   "A3": {
+    "t": "n",
+    "v": 12.0
+   },
+   "A4": {
+    "t": "n",
+    "v": 13.0
+   },
+   "A5": {
+    "t": "n",
+    "v": 9.0
+   },
+   "A6": {
+    "t": "n",
+    "v": 10.0
+   },
+   "A7": {
+    "t": "n",
+    "v": 9.0
+   },
+   "A8": {
+    "t": "n",
+    "v": 14.0
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "613b5cacba64a5f5b52955b6bfc9739984414ad227e72dbc48ea2c20fd226341",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-07T12:10:47+00:00",
+  "version": null,
+  "workbook_name": "fddd82dbe2a9c17c970036a53a73a822aea28bcb5ff524e1610251d9641e4ba7.xlsx"
+ }
+}

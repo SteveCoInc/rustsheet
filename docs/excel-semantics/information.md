@@ -408,6 +408,21 @@ Status: VERIFIED (excel-graph, desktop Excel not checked) for the cells cited, i
 text, boolean, error or blank cell and over an OFFSET/INDIRECT result (T-2262). ISEVEN/ISODD implemented (T-2165);
 CELL's range info_type implemented (T-2161, `fn_cell`); TYPE of a one-cell range implemented (T-2156, `fn_type`).
 
+## ISEVEN and ISODD of a LET or LAMBDA omission are #N/A (T-4928)
+Rule: ISEVEN and ISODD are Analysis ToolPak functions, and they follow the ToolPak rule for an empty argument
+(numbers.md "A written-empty argument of a ToolPak function is #N/A"). Their one argument can be empty only as a LET
+value or a LAMBDA parameter bound to nothing, and then the result is `#N/A`: `LET(e,,ISEVEN(e))`, `LET(e,,ISODD(e))`,
+`LAMBDA(a,b,ISEVEN(b))(1,)` and `LAMBDA(a,b,ISODD(b))(1,)` are all `#N/A`. An operator over the omission reads it as 0,
+as a blank cell does: `LET(e,,ISEVEN(e+0))` is TRUE, `ISEVEN(Z1)` is TRUE and `ISODD(Z1)` is FALSE. An IF that lifts
+the omission still gives an array: `ROWS(LET(e,,ISEVEN(IF({1;1},e))))` is 2. The non-ToolPak IS functions read the
+omission as a blank: `LET(e,,ISNUMBER(e))` is FALSE, `LET(e,,ISBLANK(e))` is TRUE and `LET(e,,TYPE(e))` is 1.
+Evidence: probes/t4928-iseven-isodd-omitted A1:A12, filled on excel-graph on 2026-11-07, with predictions committed
+before the fill. H_na matched 12/12; H_zero, the engine before this change, matched 8/12.
+Ours: `lifted_parity` (functions/information/mod.rs) swaps an empty argument through `written_empty_or`, using the flag
+from `Model::empty_arguments::<1>`.
+Status: VERIFIED (excel-graph)
+Tasks: T-4928
+
 ## ISEVEN of a value just below an integer (T-2382)
 Rule: ISEVEN and ISODD take the parity of `TRUNC(ABS(x) + 1E-10)`: a value no more than 1E-10 below an integer counts as that
 integer, whatever its size, with the same window for negatives (on the absolute value). `ISODD(7-1E-10)`,
