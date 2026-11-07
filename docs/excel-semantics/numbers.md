@@ -2891,7 +2891,7 @@ argument wins: `QUOTIENT(1/0,)` is `#DIV/0!`, `QUOTIENT(TRUE,)` `#VALUE!` (A9:A1
 empty hands the emptiness on: `LET(e,,QUOTIENT(7,e))`, `LET(e,,QUOTIENT(e,2))`, `LAMBDA(a,b,QUOTIENT(a,b))(7,)` and
 `LET(e,,SERIESSUM(2,e,1,{1,2}))` are `#N/A` (-let-lambda A1:A4). Only the argument as written counts: a formula that
 gives a blank (an IFERROR or VLOOKUP of an empty cell) is read as 0, not `#N/A` (gen-m5/6efa59fc1257c475 Calc!A229,
-gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). Empty coefficients rank after `x`, `n` and `m`: with the
+gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). MROUND itself reads it so too (`MROUND(VLOOKUP("x",C1:D1,2,FALSE),1)` and `MROUND(5,INDEX(D1:D2,1))` are 0, `CEILING.MATH(2.675,INDEX(D1:D2,1))` 0, `FLOOR.PRECISE(-2.5,INDEX(D1:D2,1))` 0: probes/t4901-mround-blank-let-lambda-roundings A1, A2, A8, A9, excel-graph, 2026-11-07, T-4901). A LET value or LAMBDA parameter left empty is an omission in CEILING.MATH (3, A4:A5) and FLOOR.PRECISE (-3, A6:A7). But a call that returns its own *written-empty* branch hands the omission on: `MROUND(IF(TRUE,),1)`, `MROUND(IF(FALSE,1,),1)`, `MROUND(CHOOSE(1,,2),1)`, `MROUND(IFERROR(,1),1)`, `MROUND(5,IF(TRUE,))` and `QUOTIENT(IF(TRUE,),1)` are `#N/A` and `CEILING.MATH(2.675,IF(TRUE,))` is 3 (A3, A10, A12:A16); `MROUND(IF(FALSE,1),1)` is `#VALUE!` (A11, FALSE). Ours reads the IF/CHOOSE/IFERROR forms as 0 (T-4912). Empty coefficients rank after `x`, `n` and `m`: with the
 coefficients empty, `SERIESSUM(1/0,1,1,)` is `#DIV/0!`, `SERIESSUM(2,"x",1,)` `#VALUE!` and `SERIESSUM(2,1,NA(),)` `#N/A`
 (t4903 B1:B3), and an `m` error that is not `#N/A` also beats them: `SERIESSUM(2,1,1/0,)` is `#DIV/0!`,
 `SERIESSUM(2,1,"x",)` `#VALUE!` (B4:B5; B3 alone could not tell, as empty coefficients are `#N/A` themselves). Ours checks
@@ -2912,7 +2912,7 @@ which arguments are empty by `Model::empty_arguments` (functions/util/empty_args
 through `written_empty_or`, and `series_coefficients` refuses empty coefficients. Before T-4873 QUOTIENT and SERIESSUM
 read an empty argument as 0, and before T-4923 SQRTPI and FACTDOUBLE read the omission as 0.
 Status: VERIFIED (excel-graph)
-Tasks: T-4873, T-4903, T-4923
+Tasks: T-4873, T-4901, T-4903, T-4912, T-4923
 
 ## An empty significance of the 2010+ roundings is omitted (T-4873)
 Rule: CEILING.MATH, FLOOR.MATH (Excel 2013), CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING (Excel 2010) read a written-empty
@@ -2925,6 +2925,7 @@ and `FLOOR(-2.5,)` `#DIV/0!`, `FLOOR(,)` 0 (H1:H5). A LET value or LAMBDA parame
 A5:A11). The same split as SORT's and TAKE's empty optionals (arrays.md) against the older functions' empty = 0.
 Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!C1:H5, probes/t4873-empty-arg-let-lambda Calc!A5:A11 (excel-graph,
 2026-11-07, T-4873; predictions committed before the fill).
+A written-empty IF/CHOOSE/IFERROR branch as the significance is also omitted (`CEILING.MATH(2.675,IF(TRUE,))` is 3; T-4901, T-4912, see "A written-empty argument of a ToolPak function is #N/A" below).
 Ours: the five go through `numbers_fn_empty_omitted` (mathematical.rs), which keeps an empty argument's default. Before
 T-4873 they read it as 0 (`CEILING.MATH(2.675,)` was 0).
 Status: VERIFIED (excel-graph)
