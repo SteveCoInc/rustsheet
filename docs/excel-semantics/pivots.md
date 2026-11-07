@@ -1747,8 +1747,9 @@ is T-4154: it gives `#SPILL!` for the grand total (by either name) and for the u
 reference; the named item (`#SPILL!`) and the non-anchor cell (`#REF!`) already agree.
 
 ## Classic layout (gridDropZones)
-Rule: `gridDropZones="1"` (classic layout) changes a tabular pivot only when its column axis has
-no level at all (no column field and Values not on columns). It then keeps a column-header row
+Rule: `gridDropZones="1"` (classic layout), on a tabular pivot with row fields and one data field
+(Values on no axis), changes the layout only when no field is on columns. It then keeps a
+column-header row
 anyway: the location grows by one row, `firstDataRow` and `firstHeaderRow` are both 2, the data
 field's caption sits at the location's corner (GZ!A3, G1!A3), the row fields' header row is the
 second row (`Row Labels`, then each further label column's field name: GZ!A4:B4, G1!A4), and the
@@ -1756,14 +1757,22 @@ value column's header there reads `Total` (GZ!C4, G1!B4). The rows below, and `r
 `colItems` (one empty `<i/>` column line), are the plain layout's. With a column field (GC: rows
 Region and Product, columns Year) or with two data fields on columns (GV), cells, lines and
 geometry are the plain tabular layout's (GC: `firstHeaderRow` 1, `firstDataRow` 2; `Sum of Sales`
-at A3 and `Column Labels` at C3 as without the flag).
+at A3 and `Column Labels` at C3, as the unflagged tabular pivot of the same shape shows them:
+probes/t4609-pivot-row-labels-2 L1, `firstHeaderRow` 1, `firstDataRow` 2, L1!A3 `Sum of Sales`,
+L1!C3 `Column Labels`).
 Evidence: probes/t4129-pivot-layout-flags GZ (T-4129); probes/t4745-pivot-classic-subtotal-caption
 GC, GV, G1 (excel-graph, 2026-11-07, T-4745).
-The engine's own readings, not probed (UNVERIFIED, T-4785): classic layout in compact or outline
-form (the engine applies the same rule), with no row field, with `colGrandTotals="0"`, and
-whether `grandTotalCaption` replaces the `Total` header (the engine always writes `Total`).
-Status: VERIFIED (excel-graph) for tabular pivots with row fields; UNVERIFIED (T-4785) for the
-readings above.
+The engine's own readings, not probed (UNVERIFIED, T-4785). The engine applies the rule to every
+pivot with no column level:
+- compact or outline form (the same rule);
+- no row field; `colGrandTotals="0"`; a `grandTotalCaption` (the engine always writes `Total`);
+- two or more data fields with Values on rows (`dataOnRows`): the engine adds the header row and
+  writes `Total` but leaves the corner empty;
+- row fields with no data field: the engine adds the header row and writes `Total`;
+- page fields beside classic layout: the page area is placed above the grown location as usual.
+Status: VERIFIED (excel-graph) for tabular pivots with row fields, one data field and Values on
+no axis (GZ, G1), and for the unchanged shapes GC and GV; UNVERIFIED (T-4785) for the readings
+above.
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`read_root`: the typed
 `PivotOptions::grid_drop_zones`; T-4745)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`geometry`; T-4745)
@@ -1777,7 +1786,7 @@ holds in tabular form (t4129 SC!A7, A10), in outline form with subtotals at the 
 A12), in compact form with subtotals at the bottom (SK!A8, A12), and on columns (SCC!E4, H4).
 **A `?` in the caption stands for the subtotalled item**: `? Tot` reads `East Tot` and `West Tot`
 (SQ!A7, A10), not the field's name (MS-OI29500's note on `subtotalCaption` says the field name;
-Excel for the web writes the item).
+Excel for the web writes the item; whether desktop Excel agrees is unconfirmed, T-4785).
 With subtotals at the top (outline form, SO) the subtotal shares the item's own line, which
 reads the item (`East`, SO!A4) as without the caption. Custom subtotal lines keep `<item>
 <Function>` (SF!A7:A8 `East Sum`, `East Count`): the caption does not replace them. `rowItems`

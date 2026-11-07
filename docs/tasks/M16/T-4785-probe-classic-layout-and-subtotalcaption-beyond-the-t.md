@@ -23,9 +23,16 @@ render.rs `render_within` and `Cells::total_label`). Engine readings left UNVERI
   corner data caption and the `Total` header as in tabular form);
 - classic layout with no row field, with `colGrandTotals="0"`, and with a `grandTotalCaption` (does it replace the
   `Total` header? the engine always writes `Total`);
+- classic layout with two or more data fields and Values on rows (`dataOnRows`): the engine adds the header row,
+  writes `Total` and leaves the corner empty;
+- classic layout with row fields and no data field: the engine adds the header row and writes `Total`;
+- classic layout beside page fields: the engine places the page area above the grown location as usual;
 - a `subtotalCaption` on a field with the Values field inside it (the engine keeps `<item> <data field>`), and an
   empty `subtotalCaption=""` (the engine writes an empty label), and a caption with several `?` (the engine
   replaces each with the item).
+- whether desktop Excel also reads a `?` in `subtotalCaption` as the item (t4745 SQ shows the web does;
+  MS-OI29500 says the field name, so the two may differ). This needs desktop Excel: put it in M14, Phase 4
+  (decision 0039) if no desktop backend is available.
 Write `probes/t4785-...` with the case builder and fill it with the excel-graph oracle.
 
 ## Acceptance criteria

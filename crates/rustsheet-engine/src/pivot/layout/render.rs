@@ -62,7 +62,8 @@
 //!   its own (left empty) (T-4650);
 //! - Repeat Item Labels beside an unlabelled deeper level in the same column, on an inner column
 //!   field's subtotal, beside the Values field, and on custom subtotal lines (T-4764).
-//! - classic layout in compact or outline form, with no row field, and beside
+//! - classic layout in compact or outline form, with no row field, with Values on rows (the
+//!   corner left empty), with no data field, beside page fields, and beside
 //!   `grandTotalCaption` (always `Total`); a subtotalCaption with Values inside its field (kept
 //!   `<item> <data field>`), empty, or with several `?` (each replaced) (T-4785).
 
@@ -253,8 +254,7 @@ impl Cells<'_> {
 
     /// The item a subtotal `line` of `axis` totals, as text.
     fn line_item(&self, axis: &Axis<'_>, line: &AxisLine) -> Option<String> {
-        let depth = (line.repeat as usize + line.items.len()).checked_sub(1)?;
-        match axis.levels.get(depth)? {
+        match axis.levels.get(line_depth(line)?)? {
             Level::Field { depth: d, .. } => {
                 let (field, item) = axis.item(line.node, *d)?;
                 Some(item_text(self.cache_item(field, item)?))
@@ -274,7 +274,7 @@ impl Cells<'_> {
         line: &AxisLine,
     ) -> Result<Option<String>, PivotComputeError> {
         let options = &self.table.options;
-        let depth = (line.repeat as usize + line.items.len()).checked_sub(1);
+        let depth = line_depth(line);
         let item = || self.line_item(axis, line);
         // Values inside the subtotalled field: one line per data field (T-4650).
         let values_inside = || {
@@ -306,15 +306,7 @@ impl Cells<'_> {
             // (t4745 SF).
             ItemType::Default => match self.subtotal_caption(axis, depth) {
                 Some(caption) if caption.contains('?') => match item() {
-                    Some(item) => {
-                        let marks = caption.matches('?').count();
-                        let bytes = (caption.len() - marks)
-                            .saturating_add(marks.saturating_mul(item.len()));
-                        if bytes > self.text_left {
-                            return Err(PivotComputeError::Limit);
-                        }
-                        Some(caption.replace('?', &item))
-                    }
+                    Some(item) => Some(expand_caption(caption, &item, self.text_left)?),
                     None => None,
                 },
                 Some(caption) => Some(caption.to_string()),
@@ -349,6 +341,7 @@ impl Cells<'_> {
                 continue;
             }
             let end = line.repeat as usize + line.items.len();
+            // A label past the text limit fails the render, as [`Cells::put`] does.
             let Ok(label) = self.total_label(axis, line) else {
                 self.over = true;
                 return;
@@ -614,6 +607,30 @@ fn render_within(
         return Err(PivotComputeError::Limit);
     }
     Ok(cells.out)
+}
+
+/// The level of `line`'s own (last) `x`: the level a subtotal line totals.
+fn line_depth(line: &AxisLine) -> Option<usize> {
+    (line.repeat as usize + line.items.len()).checked_sub(1)
+}
+
+/// A `subtotalCaption` with each `?` replaced by `item` (probes/t4745-pivot-classic-subtotal-caption
+/// SQ), its size checked against `text_left` before the copies are made.
+///
+/// # Errors
+/// [`PivotComputeError::Limit`] when the label would pass `text_left`.
+fn expand_caption(
+    caption: &str,
+    item: &str,
+    text_left: usize,
+) -> Result<String, PivotComputeError> {
+    let marks = caption.matches('?').count();
+    // Each `?` is one byte.
+    let bytes = (caption.len() - marks).saturating_add(marks.saturating_mul(item.len()));
+    if bytes > text_left {
+        return Err(PivotComputeError::Limit);
+    }
+    Ok(caption.replace('?', item))
 }
 
 /// Every line's node is in its axis's tree.

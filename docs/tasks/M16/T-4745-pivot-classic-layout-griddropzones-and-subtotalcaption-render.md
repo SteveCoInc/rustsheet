@@ -30,7 +30,7 @@ web renders.
 
 ## Acceptance criteria
 - [x] The engine renders GZ and SC as the sidecar shows (unit tests against the sidecar, and the cells pass in the eval).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Classic layout's UI-only drag-and-drop behaviour.
@@ -51,5 +51,6 @@ Evidence: t4129 GZ and SC, plus a new probe, probes/t4745-pivot-classic-subtotal
 pivots: GC, GV, G1, SO, SB, SK, SF, SCC, SQ). Every cell, line and location passes in the render and lines unit
 tests, and the t4129 GZ and SC cells pass in the eval (baseline updated). pivots.md has new sections, "Classic
 layout (gridDropZones)" and "subtotalCaption labels a field's subtotal lines". The unprobed readings (classic
-layout in compact or outline form, with no row field, beside colGrandTotals="0" or grandTotalCaption;
+layout in compact or outline form, with no row field, beside colGrandTotals="0" or grandTotalCaption, with Values
+on rows, with no data field, beside page fields;
 subtotalCaption with Values inside, empty, or with several `?`) are UNVERIFIED and go to T-4785.
