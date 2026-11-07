@@ -3,7 +3,7 @@ id: T-3002
 title: "Probe D* computed criteria with mixed absolute references and evaluation-time references (T-2617 leftovers)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
