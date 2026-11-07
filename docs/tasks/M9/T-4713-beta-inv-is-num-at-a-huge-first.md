@@ -3,7 +3,7 @@ id: T-4713
 title: "BETA.INV is #NUM! at a huge first shape with a second shape above 1 from about 1E+16 (T-3862 split)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
