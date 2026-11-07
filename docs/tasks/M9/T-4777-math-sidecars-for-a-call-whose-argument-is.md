@@ -58,7 +58,7 @@ Cells this task owns for their math value:
       skip reason the record names (for example `inputs differ`). `rustsheet-accuracy math --check` passes. If the
       value reads the oracle, the sidecar fingerprint changes when the referenced oracle value changes, and a test
       shows it.
-- [ ] After `make eval`, the Outcome gives the counts: how many of the 192 cells are Phase 1b evidence, how many still
+- [ ] After `make eval`, the Outcome gives the counts: how many of the 177 cells are Phase 1b evidence, how many still
       count (and why), and the M9 probe row's R1(c) count before and after. `eval/baseline/` gains no new line.
 - [ ] `make check` green; reviewers approve (excel-fidelity included).
 
