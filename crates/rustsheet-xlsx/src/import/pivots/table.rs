@@ -181,9 +181,7 @@ pub(super) fn read_pivot_table<B: BufRead>(
             Tag::Open(element) => reader.open(path, element),
             Tag::Kept(xml) => {
                 let owner = reader.owner(path)?;
-                if let OpaqueOwner::DataField(index) = owner {
-                    reader.read_data_extension(index, &xml)?;
-                }
+                reader.read_extension(owner, &xml)?;
                 reader.keep(owner, OpaqueNode::Element(xml))
             }
             Tag::Close(_) => Ok(()),
@@ -307,25 +305,42 @@ impl TableReader<'_> {
         self.keep_attributes(owner, element, typed)
     }
 
-    /// An element kept whole inside `<dataField>` number `index`: its x14 extension's
-    /// `pivotShowAs` is the field's mode (an Excel 2010 mode is written there alone, with no
-    /// `showDataAs`: pivots.md "Show-values-as modes as Excel for the web renders them"). Beside a
-    /// `showDataAs`, the x14 mode wins (UNVERIFIED, T-4750). The element stays kept verbatim for
-    /// export.
-    fn read_data_extension(&mut self, index: u32, xml: &str) -> Result<(), Skip> {
-        let mut mode = None;
-        walk(xml.as_bytes(), |path, tag| {
-            if let Tag::Open(element) = tag {
-                if at(path, &["extLst", "ext"]) && local_name(element) == "dataField" {
+    /// An element kept whole inside the typed element `owner`: the x14 extension attributes the
+    /// model types are read from it, and it stays kept verbatim for export.
+    /// - In `<dataField>`, `pivotShowAs` is the field's mode (an Excel 2010 mode is written there
+    ///   alone, with no `showDataAs`: pivots.md "Show-values-as modes as Excel for the web renders
+    ///   them"). Beside a `showDataAs`, the x14 mode wins (UNVERIFIED, T-4750).
+    /// - In `<pivotField>`, `fillDownLabels` is the field's Repeat Item Labels (pivots.md "Repeat
+    ///   item labels", probes/t4698-pivot-repeat-labels). The definition's own
+    ///   `fillDownLabelsDefault` is not read: Excel fills no existing field down for it (t4129 X14,
+    ///   t4698 TW, TWE, OW).
+    fn read_extension(&mut self, owner: OpaqueOwner, xml: &str) -> Result<(), Skip> {
+        match owner {
+            OpaqueOwner::DataField(index) => {
+                let mut mode = None;
+                each_x14_element(xml, "dataField", |element| {
                     if let Some(name) = attribute(element, "pivotShowAs")? {
                         mode = Some(show_data_as(&name)?);
                     }
+                    Ok(())
+                })?;
+                let data = self.table.data_fields.get_mut(index as usize);
+                if let (Some(mode), Some(data)) = (mode, data) {
+                    data.show_data_as = mode;
                 }
             }
-            Ok(())
-        })?;
-        if let (Some(mode), Some(data)) = (mode, self.table.data_fields.get_mut(index as usize)) {
-            data.show_data_as = mode;
+            OpaqueOwner::Field(index) => {
+                let mut fill = None;
+                each_x14_element(xml, "pivotField", |element| {
+                    fill = Some(flag(element, "fillDownLabels", false)?);
+                    Ok(())
+                })?;
+                if let (Some(fill), Some(field)) = (fill, self.table.fields.get_mut(index as usize))
+                {
+                    field.fill_down_labels = fill;
+                }
+            }
+            _ => {}
         }
         Ok(())
     }
@@ -527,6 +542,23 @@ impl TableReader<'_> {
         self.table.opaque.push(entry);
         Ok(())
     }
+}
+
+/// Calls `read` on each extension element named `name` (`<extLst><ext><x14:name>`) of `xml`, an
+/// element kept whole (already bounded by the opaque budget).
+fn each_x14_element(
+    xml: &str,
+    name: &str,
+    mut read: impl FnMut(&BytesStart) -> Result<(), Skip>,
+) -> Result<(), Skip> {
+    walk(xml.as_bytes(), |path, tag| {
+        if let Tag::Open(element) = tag {
+            if at(path, &["extLst", "ext"]) && local_name(element) == name {
+                read(element)?;
+            }
+        }
+        Ok(())
+    })
 }
 
 /// A `<dataField>` but its `fld`, which the caller checks against the cache.

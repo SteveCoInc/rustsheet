@@ -3,7 +3,7 @@ id: T-4698
 title: "Pivot repeat item labels (fillDownLabels): model, layout and render"
 milestone: M16
 lane: engine
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -23,13 +23,41 @@ for the web renders them"). The case builder now has a per-field `xml.extLst` sl
 - X14: the table's `x14:pivotTableDefinition fillDownLabelsDefault="1"` (with `hideValuesRow="1"`). It fills nothing
   down for existing fields; the cells match the plain tabular render.
 
-Owner of these visibly-off pivot cells (decision 0245):
-- probes/t4129-pivot-layout-flags X14F!A5:A6, X14F!A9
-
 ## Acceptance criteria
-- [ ] A filled probe case covers repeat labels in tabular and outline form, table-wide and per field, and pivots.md records the result with the evidence cells.
-- [ ] The model reads the flag(s) typed (round trip kept), and the render passes the probe in unit tests against the sidecar.
-- [ ] `make check` green; reviewers approve.
+- [x] A filled probe case covers repeat labels in tabular and outline form, table-wide and per field, and pivots.md records the result with the evidence cells.
+- [x] The model reads the flag(s) typed (round trip kept), and the render passes the probe in unit tests against the sidecar.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Styles and indentation.
+
+## Outcome
+Done (2026-11-07). New probe probes/t4698-pivot-repeat-labels (excel-graph, 17 pivots) records the
+findings in pivots.md "Repeat item labels":
+- A field's x14 `fillDownLabels` repeats its label on every line of its children, inner
+  subtotal lines included (T3R!A6). This holds in tabular and outline form (OST, OB, O3) and on
+  columns (CC!B4:D4).
+- It is per field, not inherited (T3P), and does nothing on the innermost field (TIN).
+- Blank lines, collapsed lines and the field's own subtotal and grand lines are unchanged.
+- Compact form fills nothing (CF). A cell belongs to the deepest level placed in it, as MX!A6
+  shows.
+- `(blank)` repeats (TBL).
+- The table-wide `fillDownLabelsDefault` fills no existing field (TW, TWE, OW).
+- `rowItems` and `colItems` do not change.
+
+Changes:
+- The importer reads the flag typed into `PivotField::fill_down_labels` from the field's kept
+  `extLst`, through the one x14 extension reader (`read_extension`, formerly
+  `read_data_extension` for `pivotShowAs`). The extension stays verbatim for export.
+- `Cells::fill_down` renders it.
+- The eval adapter already wrote the field's `extLst`, so it needed no change.
+- Unit tests compare all 17 pivots and t4129 X14/X14F against the sidecars.
+
+Eval: probes known failures went from 6301 to 6298 (t4129 X14F!A5, A6, A9 fixed). There were
+0 regressions, and the new case passes in full.
+
+The baseline's new `C` and `TC` lines for probes/t4698-pivot-repeat-labels are the new case's
+generated count lines (its cells, all passing), not known failures. Unprobed readings are filed as
+T-4764. `make check-fast` is green locally. In review, security and fidelity approved, and
+the changes design requested are applied: one x14 extension walker, and `flag` for the boolean.
+

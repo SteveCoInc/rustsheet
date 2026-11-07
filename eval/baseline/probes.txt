@@ -1295,6 +1295,7 @@ C	probes/subnormal-flush-edges.case.json	50
 C	probes/subnormal-function-boundaries.case.json	30
 C	probes/subnormal-function-results.case.json	129
 C	probes/subnormal-saved-as-zero.case.json	11
+C	probes/subnormal-saved-negative-and-array.case.json	12
 C	probes/subnormal-sumsq-sumproduct-edges.case.json	24
 C	probes/subnormal-text-and-tail-companions.case.json	30
 C	probes/substitute-boolean-instance.case.json	14
@@ -2388,6 +2389,7 @@ C	probes/t4299-typed-xlpm-extrapolations.case.json	22
 C	probes/t4302-poisson-cdf-beside-pmf.case.json	336
 C	probes/t4302-poisson-cdf-holdout-2.case.json	48
 C	probes/t4309-3d-union-trimmean-percentile.case.json	22
+C	probes/t4310-rank-regression-picked-cells.case.json	156
 C	probes/t4311-pivot-showall-column-and-groups.case.json	68
 C	probes/t4314-ipmt-balance-overflow.case.json	35
 C	probes/t4316-pivot-group-dates-alone-frac.case.json	25
@@ -2559,6 +2561,8 @@ C	probes/t4563-xlookup-not-found-ref-element.case.json	245
 C	probes/t4565-sheet-sheets-lambda-omitted-array.case.json	16
 C	probes/t4569-xlookup-ref-element-max-min.case.json	111
 C	probes/t4574-feb29-near-midnight-date-args.case.json	504
+C	probes/t4574-near-midnight-calendar-units.case.json	112
+C	probes/t4574-near-midnight-serial-60.case.json	234
 C	probes/t4578-prob-sum-tolerance.case.json	24
 C	probes/t4579-ttest-paired.case.json	54
 C	probes/t4582-pivot-item-edges.case.json	45
@@ -2635,8 +2639,10 @@ C	probes/t4666-union-variable-isref.case.json	11
 C	probes/t4667-ifs-second-pair-and-num-value-error.case.json	76
 C	probes/t4686-rich-value-option-residue.case.json	44
 C	probes/t4697-large-small-median-mixed-sheet-refs.case.json	17
+C	probes/t4698-pivot-repeat-labels.case.json	651
 C	probes/t4701-index-one-index-ref-grid.case.json	16
 C	probes/t4721-im-overflow-residue.case.json	25
+C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -4502,6 +4508,8 @@ F	probes/stat-test-lift.case.json	Sheet1!P65
 F	probes/stat-test-lift.case.json	Sheet1!P66
 F	probes/stat-test-lift.case.json	Sheet1!P67
 F	probes/stats-evidence-floor-t1623.case.json	S!Q36
+F	probes/subnormal-saved-negative-and-array.case.json	S!A3
+F	probes/subnormal-saved-negative-and-array.case.json	S!D1
 F	probes/t2311-pivotby-value-columns-error-refill-1106.case.json	P!C12
 F	probes/t2360-array-lambda-holidays-refill-1106.case.json	P!C1
 F	probes/t2360-array-lambda-holidays-refill-1106.case.json	P!C17
@@ -7860,9 +7868,6 @@ F	probes/t4129-pivot-layout-flags.case.json	GZ!C8
 F	probes/t4129-pivot-layout-flags.case.json	GZ!C9
 F	probes/t4129-pivot-layout-flags.case.json	SC!A10
 F	probes/t4129-pivot-layout-flags.case.json	SC!A7
-F	probes/t4129-pivot-layout-flags.case.json	X14F!A5
-F	probes/t4129-pivot-layout-flags.case.json	X14F!A6
-F	probes/t4129-pivot-layout-flags.case.json	X14F!A9
 F	probes/t4222-regression-flag-ranges.case.json	Calc!A1
 F	probes/t4222-regression-flag-ranges.case.json	Calc!A101
 F	probes/t4222-regression-flag-ranges.case.json	Calc!A103
@@ -9348,4 +9353,5 @@ TC	probes/t4161-pivot-show-as-running-rank.case.json	349
 TC	probes/t4161-pivot-show-as-running-zero.case.json	40
 TC	probes/t4161-pivot-show-as-zeros.case.json	434
 TC	probes/t4169-pivot-number-formats.case.json	76
+TC	probes/t4698-pivot-repeat-labels.case.json	510
 TC	probes/typed-mixed-fraction-number-format.case.json	31

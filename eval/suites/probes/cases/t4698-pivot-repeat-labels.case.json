@@ -1,0 +1,870 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4698: repeat item labels (fillDownLabels). Data!A1:D9 has Region, Product, Year and Sales over eight records: East A 2024 10, East A 2025 4, East B 2024 5, East B 2025 8, East C 2024 3, West A 2024 20, West A 2025 6, West B 2025 7. Data2!A1:D7 has blank items: East A 2024 10, East (blank) 2024 5, (blank) A 2024 2, (blank) B 2025 3, West A 2024 20, West B 2025 6. Each sheet is one builder-v2 pivot at A3, data Sum of Sales; 'flag' is the field's x14 pivotField extension fillDownLabels 1, 'table-wide' the x14 pivotTableDefinition extension fillDownLabelsDefault 1. Tabular: T3R rows Region, Product, Year with the flag on Region only; T3P on Product only; T3A on Region and Product; TND Region flagged with no subtotals (subtotals [], defaultSubtotal 0); TBR Region flagged with insertBlankRow; TSD Region flagged with East collapsed; TIN the flag on the inner Product only; TW table-wide only; TWE table-wide with an empty x14 pivotField extension on each field. Outline (compact 0, outline 1): OST Region flagged, subtotals at the top; OB Region flagged with subtotalTop 0; O3 rows Region, Product, Year with Region flagged; OW table-wide only. Compact: CF Region flagged; MX Region compact and flagged over tabular Product (flagged) and Year. CC: columns Region, Product (tabular) with Region flagged and no row field. TBL: tabular over Data2 with Region flagged (blank items). Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4698",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Year",
+    "D1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": 2024,
+    "D2": 10,
+    "A3": "East",
+    "B3": "A",
+    "C3": 2025,
+    "D3": 4,
+    "A4": "East",
+    "B4": "B",
+    "C4": 2024,
+    "D4": 5,
+    "A5": "East",
+    "B5": "B",
+    "C5": 2025,
+    "D5": 8,
+    "A6": "East",
+    "B6": "C",
+    "C6": 2024,
+    "D6": 3,
+    "A7": "West",
+    "B7": "A",
+    "C7": 2024,
+    "D7": 20,
+    "A8": "West",
+    "B8": "A",
+    "C8": 2025,
+    "D8": 6,
+    "A9": "West",
+    "B9": "B",
+    "C9": 2025,
+    "D9": 7
+   }
+  },
+  {
+   "name": "Data2",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Year",
+    "D1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": 2024,
+    "D2": 10,
+    "A3": "East",
+    "C3": 2024,
+    "D3": 5,
+    "B4": "A",
+    "C4": 2024,
+    "D4": 2,
+    "B5": "B",
+    "C5": 2025,
+    "D5": 3,
+    "A6": "West",
+    "B6": "A",
+    "C6": 2024,
+    "D6": 20,
+    "A7": "West",
+    "B7": "B",
+    "C7": 2025,
+    "D7": 6
+   }
+  },
+  {
+   "name": "T3R",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_T3R",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Year"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Year": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "T3P",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_T3P",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Year"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Year": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "T3A",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_T3A",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Year"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Year": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "TND",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TND",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "subtotals": [],
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "TBR",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TBR",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false,
+         "insertBlankRow": true
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "TSD",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TSD",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "collapsed": [
+         "East"
+        ],
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "TIN",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TIN",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "TW",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TW",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "extLst": "<extLst><ext uri=\"{962EF5D1-5CA2-4c93-8EF4-DBF5C05439D2}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotTableDefinition fillDownLabelsDefault=\"1\"/></ext></extLst>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TWE",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TWE",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField/></ext></extLst>"
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "extLst": "<extLst><ext uri=\"{962EF5D1-5CA2-4c93-8EF4-DBF5C05439D2}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotTableDefinition fillDownLabelsDefault=\"1\"/></ext></extLst>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "OST",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_OST",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "OB",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_OB",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "subtotalTop": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "O3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_O3",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Year"
+      ],
+      "table": {
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Year": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "OW",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_OW",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "extLst": "<extLst><ext uri=\"{962EF5D1-5CA2-4c93-8EF4-DBF5C05439D2}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotTableDefinition fillDownLabelsDefault=\"1\"/></ext></extLst>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CF",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CF",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {},
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {}
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "MX",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_MX",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Year"
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {},
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Year": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "CC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CC",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [],
+      "columns": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "TBL",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TBL",
+     "source": "Data2!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=SUM(Data!D2:D9)"
+   }
+  }
+ ]
+}

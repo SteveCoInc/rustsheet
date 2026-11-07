@@ -169,6 +169,7 @@ probes/linest-modes.case.json	42
 probes/logest-modes.case.json	51
 probes/stat-argument-modes.case.json	9
 probes/stat-quantile-lift.case.json	9
+probes/subnormal-saved-negative-and-array.case.json	1
 probes/t2311-pivotby-value-columns-error-refill-1106.case.json	1
 probes/t2360-array-lambda-holidays-refill-1106.case.json	5
 probes/t2429-hypgeom-huge-count.case.json	2
