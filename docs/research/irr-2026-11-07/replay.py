@@ -10,6 +10,7 @@ tools' `fitlab` exact arithmetic) without its 50-step cap, over the three t4844 
 
     cd tools && uv run python -I ../docs/research/irr-2026-11-07/replay.py          # the T-4844 counts
     cd tools && uv run python -I ../docs/research/irr-2026-11-07/replay.py pole     # T-4888's case: write or check
+    cd tools && uv run python -I ../docs/research/irr-2026-11-07/replay.py stall    # T-4888's stall sweep
 
 `pole` draws short series (3 to 6 flows, 6 significant digits, seed "T-4838/pole") whose secant from 0.1 crosses the
 pole (an iterate at d >= 1), and keeps them by how two models answer: the secant run on past the pole (`secant(...,
@@ -179,6 +180,107 @@ def pole_case() -> int:
     return 0
 
 
+STALL_CASE = "t4888-irr-stall-sweep"
+STALL_PER_DECADE = 8
+NO_ROOT = [
+    0.2,
+    -0.0001,
+    1e-15,
+    -1.0,
+    0.1,
+    0.5,
+    0.2,
+    1.005,
+    2.5,
+    123456789.123,
+    -2.5,
+    2.5,
+    0.2,
+]  # gen-m9 fec39efa A283
+
+
+def stall(values: list[float], guess: float = 0.1) -> tuple[int, float] | None:
+    """The first zero step (d2 = d1) whose |NPV| is 1e-7 or more, within the run's first 50 steps, of the secant from
+    `guess` run on past the pole: (step, |NPV|), or None when the run never stalls so."""
+    try:
+        d0 = X87.div(guess, 1 + guess)
+        f0 = _npv_v_running(values, 1.0 - d0)
+        d1 = d0 - (1e-3 if f0 > 0 else -1e-3)
+        f1 = _npv_v_running(values, 1.0 - d1)
+        for step in range(50):
+            if f1 == f0:
+                return None
+            d2 = d1 - X87.div(f1 * (d1 - d0), f1 - f0)
+            if d2 == 1:
+                return None
+            f2 = _npv_v_running(values, 1.0 - d2)
+            if abs(d2 - d1) < 1e-7 and abs(f2) < 1e-7:
+                return None
+            if d2 == d1:
+                return step, abs(f2)
+            d0, f0, d1, f1 = d1, f1, d2, f2
+    except NoResultError:
+        return None
+    return None
+
+
+def stall_rows() -> list[tuple[list[float], float, int, float]]:
+    """(flows, scale, stall step, |NPV| at the stall): random series whose run from 0.1 stalls, STALL_PER_DECADE per
+    decade of the largest flow from 1E-9 to 1E+14, then gen-m9 A283's no-root flows times 10^k, k = -14..0."""
+    rng = random.Random("T-4888/stall")
+    per: defaultdict[int, list[tuple[list[float], float, int, float]]] = defaultdict(list)
+    while any(len(per[e]) < STALL_PER_DECADE for e in range(-9, 15)):
+        n = rng.choice([3, 4, 6, 10, 20, 40])
+        root = rng.uniform(-0.3, 0.5)
+        flows = [rng.uniform(0.2, 1.0) * rng.choice([1, 1, 1, -1]) for _ in range(n - 1)]
+        outlay = -sum(c / (1 + root) ** (i + 1) for i, c in enumerate(flows))
+        decade = rng.randint(-9, 14)
+        scale = 10.0**decade
+        values = [float(f"{c * scale:.6g}") for c in [outlay, *flows]]
+        if len(per[decade]) >= STALL_PER_DECADE or all(c >= 0 for c in values) or all(c <= 0 for c in values):
+            continue
+        hit = stall(values)
+        if hit is not None:
+            per[decade].append((values, scale, *hit))
+    rows = [row for e in range(-9, 15) for row in per[e]]
+    for k in range(-14, 1):
+        values = [float(f"{c * 10.0**k:.6g}") for c in NO_ROOT]
+        hit = stall(values) or (-1, math.nan)
+        rows.append((values, 10.0**k, *hit))
+    return rows
+
+
+def stall_case() -> int:
+    rows = stall_rows()
+    cells = {f"A{i}": "=IRR({" + ",".join(map(repr, v)) + "})" for i, (v, _, _, _) in enumerate(rows, 1)}
+    path = CASES / f"{STALL_CASE}.case.json"
+    with (CASES / f"{STALL_CASE}.stalls.tsv").open("w") as out:
+        out.write("cell\tscale\tstall step\t|NPV| at the stall\n")
+        for i, (_, scale, step, residual) in enumerate(rows, 1):
+            out.write(f"A{i}\t{scale:g}\t{step}\t{residual:.6g}\n")
+    if path.exists():
+        same = json.loads(path.read_text())["sheets"] == [{"name": "P", "cells": cells}]
+        print(f"{STALL_CASE}: {'up to date' if same else 'differs from the generator'}")
+        return 0 if same else 1
+    per = STALL_PER_DECADE * 24
+    case = {
+        "format": "rustsheet-case/v1",
+        "description": (
+            f"T-4888: fresh sweep for IRR's zero-step stall bound, drawn after the bound was frozen (seed 'T-4888/stall'). "
+            f"A1:A{per}: random series of 3 to 40 flows whose secant from 0.1 reaches a zero step at |NPV| >= 1e-7 within "
+            f"50 steps, {STALL_PER_DECADE} per decade of the largest flow from 1E-9 to 1E+14. A{per + 1}:A{per + 15}: "
+            "gen-m9 fec39efaba9284c3 Calc!A283's no-root flows times 10^k, k = -14..0. Each stall's step and |NPV| in "
+            f"{STALL_CASE}.stalls.tsv. docs/research/irr-2026-11-07/replay.py stall."
+        ),
+        "tags": ["M9", "probe", "financial", "irr"],
+        "sheets": [{"name": "P", "cells": cells}],
+        "expected": {},
+    }
+    path.write_text(json.dumps(case, indent=2) + "\n")
+    print(f"wrote {path.name}: {len(rows)} cells")
+    return 0
+
+
 def main() -> None:
     cells, oracle = load("t4844-irr-guess-ladder")
     split: Counter[tuple[str, str]] = Counter()
@@ -217,4 +319,6 @@ def main() -> None:
 if __name__ == "__main__":
     if sys.argv[1:] == ["pole"]:
         sys.exit(pole_case())
+    if sys.argv[1:] == ["stall"]:
+        sys.exit(stall_case())
     main()

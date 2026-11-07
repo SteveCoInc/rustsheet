@@ -431,8 +431,7 @@ fn irr_from_discount(v: f64) -> Option<f64> {
 /// Excel come from the step cap, the fallback, the residual's absolute scale and Excel errors not
 /// yet explained (T-3548).
 /// FITTED(T-1533, 263 cells, IRR of 2..41 flows, |c| 1E-6..1E+9, guess -0.99..100, roots -0.99..99; T-3478 sweep, 231 Excel roots: 2..148 flows, |c| 2.3E-15..4.0E+12, guess -0.9997..9.8E+7, roots -0.9997..9.0E+5)
-/// The zero-step stop's bound ([`IRR_STALL_RESIDUAL`]):
-/// FITTED(T-3120, 36 cells, IRR of {-2.5,-1,123456789.123} over a guess sweep; absolute bracket 1E-5..0.1, RATE's 1e-4 taken, T-4888; held out: Gate A's 16 extreme-flow IRR points)
+/// The zero-step stop's bound: [`irr_stall_stops`] (FITTED there, T-3120 and T-4888).
 fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     // An NPV the run cannot evaluate (a discount power out of the double range, or a sum that is
     // not finite) ends the call with `#DIV/0!`, worksheet NPV's error for the same sum, and without
@@ -441,6 +440,7 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     // the t3411 fresh sweeps are `#DIV/0!` in Excel exactly where the secant's step lands there
     // (financial.md "IRR is #DIV/0! where its secant cannot evaluate NPV", T-3407).
     let npv = |d: f64| irr_npv(values, 1.0 - d).ok_or(SecantStop::DivZero);
+    let peak = largest_flow(values);
     let mut d0 = extended_quotient(guess, 1.0 + guess);
     let mut f0 = npv(d0)?;
     let mut d1 = d0 - if f0 > 0.0 { 1e-3 } else { -1e-3 };
@@ -471,7 +471,7 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
         // Past the pole (d > 1, so v < 0 and 1 + r < 0) the run goes on: NPV is evaluated at
         // the negative v and the secant carries on, as RATE's does below -1. Excel's value is the
         // run-on secant's, bit for bit, on all 130 cells of a fresh sweep where it converges
-        // (probes/t4838-irr-pole-runon, predictions committed before the fill) and on 65 of
+        // (probes/t4838-irr-pole-runon, predictions generated from its seed before the fill) and on 65 of
         // t2927-irr-fallback-sweep; financial.md "IRR's secant runs on past the pole" (T-4888).
         let f2 = npv(d2)?;
         largest_npv = largest_npv.max(f2.abs());
@@ -487,7 +487,7 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
         // Past [`IRR_SHORT_RUN_STEPS`] a stalled zero step is no stop: the run goes flat on its
         // next step and fails. Excel is `#NUM!` on all 6 stalled stops in eval and Gate A between the
         // 41st step and its cap; all of them lie outside [`IRR_LONG_RUN_RANGE`] (T-3408).
-        let stalled = d2 == d1 && f2.abs() < IRR_STALL_RESIDUAL && step < IRR_SHORT_RUN_STEPS;
+        let stalled = d2 == d1 && irr_stall_stops(f2.abs(), peak) && step < IRR_SHORT_RUN_STEPS;
         if (d2 - d1).abs() < 1e-7 && (f2.abs() < 1e-7 || stalled) {
             // A root past the pole (v <= 0, r <= -1) is no result: the run fails and the call goes
             // on to the retry and the fallback (t4838-irr-pole-runon A118, A131 and A144 converge
@@ -512,12 +512,35 @@ enum SecantStop {
 }
 
 /// The |NPV| under which a zero step (d2 = d1) stops an IRR secant run that has not reached the
-/// 1e-7 residual stop: RATE's 1e-4 bound for a held flat secant (financial.md "RATE holds on a
-/// flat secant"), inside the absolute 1E-5..0.1 bracket T-3120 found on t2565-irr-guess-sweeps.
-/// Measured on held-out data (T-4888): Gate A's reference tables, which no fit reads, put 16 IRR
-/// points of flows near 1E+11 to 1E+14 (accuracy/IRR/s1, r4-T-3411, r4-T-3407) in the envelope with
-/// this bound and outside it with the relative one, where Excel is `#NUM!` and the run stalls.
+/// 1e-7 residual stop, with [`IRR_STALL_RELATIVE`]: Excel holds a stalled step only at the flows'
+/// rounding noise, both under 1e-4 absolute and under 1e-12 of the largest flow (financial.md
+/// "IRR's secant runs on past the pole", T-4888). 1e-4 is RATE's bound for a held flat secant,
+/// frozen before the fresh sweep T-4888's own fresh sweep was drawn: probes/t4888-irr-stall-sweep (199
+/// stalls over largest flows 1E-9..1E+14) brackets it between 8.75E-5 (held) and 1.28E-4 (not).
+/// Gate A's tables, which no fit reads, agree: 16 accuracy/IRR points of flows near 1E+11..1E+14
+/// move into the envelope with it.
+/// FITTED(T-4888, 199 cells, IRR zero-step stalls of 3..40 flows, largest |c| 1.3E-7..1.3E+14 (t2565 1.23E+14 rounded out); absolute bracket 8.75E-5..1.28E-4, relative bracket 2.8E-16..1.6E-9)
 const IRR_STALL_RESIDUAL: f64 = 1e-4;
+
+/// [`IRR_STALL_RESIDUAL`]'s relative half: a stall stops only at |NPV| under this fraction of the
+/// largest |flow|. The fresh stall sweep holds every stall at 2.8E-16 of the largest flow or less
+/// (A147, A161) and rejects gen-m9 fec39efaba9284c3 Calc!A283's no-root flows times 10^k at
+/// 1.6E-9 (A201:A204) and every stall far from a root on small flows (relative 0.95..1.05); T-3120's
+/// t2565 cells need at least 1E-20. The round value in 2.8E-16..1.6E-9 is taken. Train/test (fit
+/// lab split): the two-part rule matches Excel's hold-or-not on 132 of 135 and 63 of 64.
+const IRR_STALL_RELATIVE: f64 = 1e-12;
+
+/// The largest |flow| range the stall stop is evidenced on (t4888-irr-stall-sweep's stalls and
+/// t2565-irr-guess-sweeps): outside it a zero step is no stop (decision 0188 R4.3).
+const IRR_STALL_FLOWS: (f64, f64) = (1.3e-7, 1.3e14);
+
+/// Whether a zero step with |NPV| = `residual` stops a run on flows whose largest |c| is `peak`.
+fn irr_stall_stops(residual: f64, peak: f64) -> bool {
+    let (smallest, largest) = IRR_STALL_FLOWS;
+    (smallest..=largest).contains(&peak)
+        && residual < IRR_STALL_RESIDUAL
+        && residual < IRR_STALL_RELATIVE * peak
+}
 
 /// The smallest guess IRR refuses as too large: 2^53.
 const IRR_GUESS_BOUND: f64 = 9_007_199_254_740_992.0;
