@@ -9,7 +9,9 @@ use crate::functions::statistical::bratio::{
     l140_overflows, Branch,
 };
 use crate::functions::statistical::incomplete_beta::beta_density;
-use crate::functions::statistical::inverse_beta::{beta_inverse_cdf, beta_quantile_crossing};
+use crate::functions::statistical::inverse_beta::{
+    beta_inverse_cdf, beta_lower_crossing, beta_quantile_crossing,
+};
 use crate::functions::statistical::loader::{beta_density_counts_vanish, excel_beta_density};
 use crate::functions::statistical::special::{ln_gamma, nearest_crossing_from, refine_increasing};
 use crate::functions::Function;
@@ -72,6 +74,38 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
         )
     };
     flush_subnormal(t)
+}
+
+/// BETA.INV's quantile for p above 1/2 where the upper-tail search of [`beta_quantile`] rounds to
+/// 1: Excel's AS 109 flip, `1 - y` with y the lower quantile of Beta(beta, alpha) at the exact
+/// `1 - p` (statistics.md "BETA.INV at a huge shape is AS 109's Newton search (T-1538)"), so 1
+/// wherever y is a normal double below half an ulp of 1 (`BETA.INV(1-1E-8,2,0.1)`, y = 3.9E-81).
+/// A y of 0 or a subnormal one stays `None` (`#NUM!`), as before T-3351: Excel is `#NUM!` at most
+/// such points and 1 at a few that no cut found so far separates, so no threshold is chosen. The
+/// evidence and its counts are in statistics.md "BETA.INV where the quantile rounds to 1 (T-3351)".
+///
+/// y is the crossing of the search's own lower tail (`bratio::beta_search_tails`) over [0, 1], at
+/// most 65 cdfs and no statrs start (lift/kinds/statistical.rs `QUANTILE_WEIGHT` charges it); at a
+/// shape above 1E5 it is T-1538's crossing (`inverse_beta::beta_lower_crossing`), as
+/// [`beta_quantile`] takes there (no evidenced cell reaches that branch yet: TODO(T-4865)).
+/// `lower_quantile_underflows` finds a y below the normal doubles without a search.
+fn upper_quantile_near_one(alpha: f64, beta: f64, p: f64) -> Option<f64> {
+    // 1 - p is exact for p in (1/2, 1).
+    let q = 1.0 - p;
+    let y = if alpha > BETA_QUANTILE_STATRS_SHAPE_MAX || beta > BETA_QUANTILE_STATRS_SHAPE_MAX {
+        beta_lower_crossing(beta, alpha, q)
+    } else if lower_quantile_underflows(beta, alpha, q) {
+        0.0
+    } else {
+        refine_increasing(
+            |x| beta_search_tails(x, 1.0 - x, beta, alpha).0,
+            q,
+            f64::NAN,
+            0.0,
+            1.0,
+        )
+    };
+    (f64::MIN_POSITIVE..0.5).contains(&y).then_some(1.0 - y)
 }
 
 /// Whether the square of AS 109's first shape overflows a double: alpha for p up to 1/2, and beta
@@ -346,13 +380,21 @@ impl Model {
         if alpha <= 0.0 || beta_param <= 0.0 || p <= 0.0 || p >= 1.0 || b <= a {
             return Err(num_error(cell));
         }
-        // A quantile that underflows to 0 or rounds to 1 is #NUM! (`BETAINV(0.025,1E-15,2.5)`,
-        // `BETAINV(0.05,0.002,1)`, `BETAINV(1-1E-16,2,0.01)`; statistics.md "Scalar distributions
-        // at extreme arguments (T-2255)", probes/t2475-stat-subexpressions P!A127).
+        // A quantile that rounds to 1 at p above 1/2 is `upper_quantile_near_one`'s: 1, or #NUM!
+        // where the flipped tail's y underflows (`BETAINV(1-1E-16,2,0.01)`, T-3351). Otherwise a
+        // quantile that underflows to 0 or rounds to 1 is #NUM! (`BETAINV(0.025,1E-15,2.5)`,
+        // `BETAINV(0.05,0.002,1)`; statistics.md "Scalar distributions at extreme arguments
+        // (T-2255)", probes/t2475-stat-subexpressions P!A127). Excel is #NUM! at some of those and
+        // 1 - 2^-53 or 2^-53 at others with no rule found yet (statistics.md "BETA.INV where the
+        // quantile rounds to 1 (T-3351)"), so they keep the #NUM!.
         let t = beta_quantile(alpha, beta_param, p);
-        if !(t > 0.0 && t < 1.0) {
+        let t = if p > 0.5 && t >= 1.0 {
+            upper_quantile_near_one(alpha, beta_param, p).ok_or_else(|| num_error(cell))?
+        } else if t > 0.0 && t < 1.0 {
+            t
+        } else {
             return Err(num_error(cell));
-        }
+        };
         // Map back from [0,1] to [A,B]
         Ok(a + t * (b - a))
     }
