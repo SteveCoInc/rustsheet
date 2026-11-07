@@ -10,8 +10,8 @@
   - The evidence is committed before the engine change, as R3 requires. The probe cases' 50-digit math sidecars
     (probes/t2982-gamma-inv-huge-shape, t3070-gamma-inv-band, t3350-chisq-inv-huge-df, incomplete-gamma-cap) hold
     every cell on the branch. Excel is 2.63e-4 to 2.66e-4 off the math on each of them, from shape 2.5E6
-    (`CHISQ.INV.RT(1E-300,5E6)`) to 1E300. Gate A's huge-shape batch e-T-3863 holds 132 points on the branch, marked
-    R3 by decision 0289.
+    (`CHISQ.INV.RT(1E-300,5E6)`) to 1E300. Gate A holds 132 points on the branch: 131 in the huge-shape batch
+    e-T-3863, marked R3 by decision 0289, and accuracy/CHIINV/s1 A93 (T-4104, decision 0318).
   - Until now the engine returned Excel's start there from shape 1E9 (`START_SHAPE_MIN`), and the true quantile
     below it. R3's case 3 starts at shape 1E9. Below it (probes/t3350-chisq-inv-huge-df A205-A289,
     `CHISQ.INV.RT(1E-300,df)` for df 5E6 to 1E9) Excel is 2.63e-4 off the math too, but the owner ruled (2026-10-31,
