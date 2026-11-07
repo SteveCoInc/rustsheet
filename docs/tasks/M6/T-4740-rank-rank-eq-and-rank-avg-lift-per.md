@@ -3,7 +3,7 @@ id: T-4740
 title: "RANK, RANK.EQ and RANK.AVG lift per element over a mixed XLOOKUP grid (probes/t4704 A26, A29, A32, A35, A38)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
