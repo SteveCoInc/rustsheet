@@ -517,6 +517,8 @@ H66:J68 has row 68 `#N/A` (47 `#N/A` fill cells in H46:J136). corpus-bench/13894
 cache) Sheet1!F14:F25: an IFERROR-wrapped legacy array formula whose result is 6x1 (`ROW(INDIRECT("1:"&ROWS(ucode)))`
 over the 6-cell `ucode`) leaves F20:F25 `#N/A`: the fill is not an error IFERROR can catch.
 Status: VERIFIED (Excel-cached)
+Implemented in: `Model::set_cells_with_result` (model.rs), CSE branch, through `arithmetic::bcast_get`; unit tests
+test/array_formulas/test_cse_larger_range.rs (T-0950).
 Tasks: T-0950
 
 ## FILTER: an array `if_empty` spills as an array
@@ -2274,6 +2276,18 @@ applies the same rule.
 Ours: `Placement::checked_totals` (pivot_placement.rs) takes the dropped writes of `Placement::written_cells`.
 Status: VERIFIED (excel-graph)
 Tasks: T-2311, T-2578, T-2606, T-2967
+
+## EXPAND with a written-empty rows or columns keeps the array's size (T-4871)
+Rule: a written-empty `rows` or `columns` of EXPAND is the array's own row or column count, as an omitted `columns`
+is, not 0 (which is `#VALUE!` below the array's size). With A1:A2 and A1:B1 holding numbers:
+`ROWS(EXPAND(A1:B1,3,,0))` is 3 and `COLUMNS(..)` 2; `ROWS(EXPAND(A1:A2,,3,0))` is 2 and `COLUMNS(..)` 3;
+`EXPAND(A1:A2,,,0)` is 2x1; `ROWS(EXPAND(5,,,0))` is 1; `ROWS(EXPAND(A1:B1,,))` is 1. Padding still applies where a
+size is given: `INDEX(EXPAND(A1:B1,3,,"p"),3,2)` is "p", and without pad_with `INDEX(EXPAND(A1:A2,,3),2,3)` and
+`INDEX(EXPAND(A1:B1,3,),3,1)` are `#N/A`.
+Evidence: probes/t4871-empty-mode-args E21:E31 (excel-graph, 2026-11-07; predictions committed before the fill).
+Ours: `fn_expand` (functions/lookup_and_reference/expand.rs), the `CalcResult::EmptyArg` arms, as TAKE and DROP do.
+Status: VERIFIED (excel-graph)
+Tasks: T-4871
 
 ## EXPAND, WRAPROWS and WRAPCOLS: scalar arguments lift, EXPAND's pad_with does not
 Rule (probes/m7-argument-modes F7:H8, G42, K5-K7, excel-graph 2026-10-09; probes/m7-lift-take-drop-sortby rows 20-23,

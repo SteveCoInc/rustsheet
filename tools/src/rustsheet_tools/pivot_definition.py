@@ -20,6 +20,7 @@ oracle-spike.md runs 1, 4-6). The definition maps one-to-one onto `pivotTableDef
                               "hidden": ["C"], "collapsed": ["A"],   # item h="1" / sd="0"
                               "subtotals": ["sum", "count"],         # custom subtotals (none: [])
                               "group": {"start": 0, "end": 100, "interval": 10},   # numeric fieldGroup
+                              "discrete": {"name": "Product2", "groups": [...]},  # manual groups (T-4170)
                               "item_attrs": {"B": {"d": True}},          # other `<item>` attributes
                               "item_order": ["C", "A"],              # `<item>` order only (T-4164)
                               "xml": {"autoSortScope": "<autoSortScope>...</autoSortScope>",  # raw children
@@ -34,7 +35,8 @@ oracle-spike.md runs 1, 4-6). The definition maps one-to-one onto `pivotTableDef
        "area": "A3:B6"}}                                        # the <location> ref (default A3:B4)
 
 Field indices (`fld` in raw XML, `baseField`) count the source columns left to right, then the calculated
-fields in order. Excel for the web refuses a package whose parts disagree with each other (run 2:
+fields in order, or the fields that discrete and date-level groups add (pivot_groups.py, T-4170: `discrete`
+and `date_group` field entries). Excel for the web refuses a package whose parts disagree with each other (run 2:
 `OpenWorkbookBlockedWorkbook`), so the builder derives everything that must agree (shared items, records,
 `<items>`, counts) from the source cells and refuses what Excel would refuse or crash on (ClosedXML's
 invariants, docs/research/pivot-tables-2026-11-04/oss-engines.md §4). It does not need to agree with what
@@ -68,8 +70,9 @@ from xml.sax.saxutils import quoteattr
 
 import xlsxwriter.utility
 
+from rustsheet_tools import pivot_groups
 from rustsheet_tools.excel_errors import ERRORS
-from rustsheet_tools.pivot_xml import MAIN_NS, REL_NS, number_text
+from rustsheet_tools.pivot_xml import MAIN_NS, REL_NS, date_shared_items, iso_date, number_text
 
 VALUES = "Values"  # the Σ (data) field on an axis: `<field x="-2"/>`
 _KEYS = {"name", "source", "location", "definition"}
@@ -93,11 +96,11 @@ _FIELD_KEYS = {
     "hidden",
     "collapsed",
     "subtotals",
-    "group",
     "order",
     "item_order",
     "item_attrs",
     "xml",
+    *pivot_groups.GROUPINGS,
 }
 # `<item>` attributes the builder writes itself (`x`, and `h`/`sd` from `hidden`/`collapsed`), which
 # `item_attrs` may not set; `t` marks a subtotal item, not a value item.
@@ -238,6 +241,13 @@ def cached_value(raw: Any) -> Value:
     raise ValueError(f"pivot source cell {raw!r} is not a value the builder can cache")
 
 
+def fold(text: str) -> str:
+    """How the builder compares texts without regard to case (item identity, field names): `str.lower`, as the
+    Rust mirror's `to_lowercase`, so both builders agree past ASCII: `SS` is `ss`, but `ß` is not `ss` (casefold
+    would make it so, and the mirror would not)."""
+    return text.lower()
+
+
 def _key(value: Value) -> tuple[str, str]:
     """Identity of a cache item for the builder's shared-items list. Texts that differ only in case are
     one item: Excel for the web refuses a cache listing both as corrupt (T-4122 runs). Excel rebuilds the
@@ -248,7 +258,7 @@ def _key(value: Value) -> tuple[str, str]:
         return ("n", repr(value))
     if isinstance(value, tuple):
         return ("e", value[1])
-    return ("m", "") if value is None else ("s", value.casefold())
+    return ("m", "") if value is None else ("s", fold(value))
 
 
 def _item_xml(value: Value) -> str:
@@ -275,6 +285,13 @@ class _Field:
     axis: str | None = None  # axisRow, axisCol, axisPage
     data: bool = False
     calculated: set[tuple[str, str]] = field(default_factory=set)  # keys of its calculated items
+    # Discrete and date-level groups (pivot_groups.py, T-4170).
+    added: bool = False  # a field a group adds (`databaseField="0"`)
+    labels: list[Value] | None = None  # the group items its pivotField indexes
+    item_order: list[int] | None = None  # its pivotField's item order (indices into `labels`)
+    field_group: str = ""  # its `<fieldGroup>`, after its shared items
+    dates: bool = False  # grouped by date: cached as dates
+    discrete_base: bool = False  # the base of a discrete group: its shared items are listed
 
     def __post_init__(self) -> None:
         seen: set[tuple[str, str]] = set()
@@ -306,6 +323,15 @@ class _Field:
         return group if isinstance(group, dict) else None
 
     def shared_items(self) -> str:
+        """A date-grouped field writes Excel's date flags instead (`date_shared_items`, as pivot.py's)."""
+        if self.dates:
+            numbers = [v for v in self.values if isinstance(v, float)]
+            if not numbers:
+                raise ValueError(f"pivot field {self.name!r}: a date group needs a date")
+            return date_shared_items(numbers, blank=len(numbers) < len(self.values))
+        return self._shared_items()
+
+    def _shared_items(self) -> str:
         """`<sharedItems>`: the flags always, the list when records refer to it by index. The flags follow
         Excel-saved caches (LibreOffice and ClosedXML fixtures, oss-engines.md §5): booleans and errors count
         as strings; `containsSemiMixedTypes` is 0 only with no string and no blank; `containsMixedTypes` marks
@@ -336,8 +362,11 @@ class _Field:
     @property
     def listed(self) -> bool:
         """Whether records refer to the shared items by index (`<x v>`): every field except an all-number
-        field that is not on an axis or is grouped numerically (Excel's own shape)."""
-        return not (self.numeric_only and (self.axis is None or self.group is not None))
+        field that is not on an axis or is grouped numerically or by date (Excel's own shape). A discrete
+        group's base is always listed: its `<discretePr>` indexes the shared items."""
+        if self.discrete_base:
+            return True
+        return not (self.numeric_only and (self.axis is None or self.group is not None or self.dates))
 
     def group_labels(self) -> list[str]:
         """Numeric group items as the builder writes them; Excel relabels them on open (run 6)."""
@@ -369,9 +398,7 @@ class DefinedPivot:
             if not isinstance(cache_names, list) or len(cache_names) != len(header):
                 raise ValueError(f"pivot {self.name}: cache_names needs one name per source column")
             header = cache_names
-        if not all(isinstance(h, str) and h for h in header) or len({h.casefold() for h in header}) != len(
-            header
-        ):
+        if not all(isinstance(h, str) and h for h in header) or len({fold(h) for h in header}) != len(header):
             raise ValueError(f"pivot {self.name}: source header {header!r} must be distinct non-empty texts")
         self.fields = [_Field(h, [cached_value(r[i]) for r in rows]) for i, h in enumerate(header)]
         self.records = len(rows)
@@ -379,17 +406,10 @@ class DefinedPivot:
             if not isinstance(calc, dict) or set(calc) != {"name", "formula"}:
                 raise ValueError(f"pivot {self.name}: a calculated field is {{name, formula}}")
             self.fields.append(_Field(str(calc["name"]), [], formula=str(calc["formula"])))
-        names = [f.name.casefold() for f in self.fields]
+        names = [fold(f.name) for f in self.fields]
         if len(set(names)) != len(names):
             raise ValueError(f"pivot {self.name}: calculated field names must differ from the source fields")
-        for name, entry in (definition.get("fields") or {}).items():
-            if not isinstance(entry, dict) or (unknown := set(entry) - _FIELD_KEYS):
-                raise ValueError(
-                    f"pivot {self.name}: field {name!r} entry has unknown keys {sorted(unknown or [])}"
-                )
-            target = self.fields[self._index(name)]
-            target.spec = entry
-            target.reorder(entry.get("order", []), self.name)
+        self._read_fields(definition.get("fields") or {})
         self.calculated_items = self._calculated_items(definition.get("calculated_items", []))
         self.rows = self._axis(definition.get("rows", []), "axisRow")
         self.columns = self._axis(definition.get("columns", []), "axisCol")
@@ -407,6 +427,88 @@ class DefinedPivot:
                 raise ValueError(
                     f"pivot {self.name}: grouped field {f.name!r} must be numbers on the row or column axis"
                 )
+
+    def _read_fields(self, entries: Any) -> None:
+        """The `fields` entries: a source field's first (with its `order`), then the groups, then the
+        entries of the fields they add."""
+        if not isinstance(entries, dict):
+            raise ValueError(f"pivot {self.name}: fields maps field names to entries")
+        added: list[tuple[str, dict[str, Any]]] = []  # entries of fields a group adds
+        for name, entry in entries.items():
+            if not isinstance(entry, dict) or (unknown := set(entry) - _FIELD_KEYS):
+                raise ValueError(
+                    f"pivot {self.name}: field {name!r} entry has unknown keys {sorted(unknown or [])}"
+                )
+            if (i := self._find(name)) is None:
+                added.append((name, entry))
+                continue
+            target = self.fields[i]
+            target.spec = entry
+            target.reorder(entry.get("order", []), self.name)
+        self._add_groups()
+        for name, entry in added:
+            target = self.fields[self._index(name)]
+            if not target.added or set(entry) - pivot_groups.ADDED_FIELD_KEYS:
+                raise ValueError(
+                    f"pivot {self.name}: an added group field's entry takes only "
+                    f"{sorted(pivot_groups.ADDED_FIELD_KEYS)}: {name!r}"
+                )
+            target.spec = entry
+
+    def _add_groups(self) -> None:
+        """Discrete and date-level groups (pivot_groups.py): each groups its field and appends the fields
+        it adds, in source-field order."""
+        for i, f in enumerate(list(self.fields)):
+            kinds = [k for k in pivot_groups.GROUPINGS if k in f.spec]
+            if len(kinds) > 1:
+                raise ValueError(
+                    f"pivot {self.name}: field {f.name!r} takes one of {list(pivot_groups.GROUPINGS)}"
+                )
+            if kinds in ([], ["group"]):
+                continue
+            if self.d.get("calculated") or self.d.get("calculated_items"):
+                raise ValueError(
+                    f"pivot {self.name}: calculated fields and items do not combine with discrete or date groups"
+                )
+            where = f"pivot {self.name} field {f.name!r}"
+            if kinds == ["discrete"]:
+                group = pivot_groups.discrete(f.spec["discrete"], f.items, _key, cached_value, where)
+                f.discrete_base = True
+                f.field_group = f'<fieldGroup par="{len(self.fields)}"/>'
+                self.fields.append(
+                    _Field(
+                        group.name,
+                        [],
+                        items=list(group.labels),
+                        added=True,
+                        labels=list(group.labels),
+                        item_order=group.order,
+                        field_group=pivot_groups.discrete_xml(i, group, _item_xml),
+                    )
+                )
+                continue
+            dates = pivot_groups.date_group(f.spec["date_group"], where)
+            if not f.numeric_only:
+                raise ValueError(f"{where}: a date group's field holds date serials")
+            f.dates = True
+            first, *more = dates.levels
+            f.labels = list(pivot_groups.date_labels(first, dates.start, dates.end))
+            for by in more:
+                labels: list[Value] = list(pivot_groups.date_labels(by, dates.start, dates.end))
+                self.fields.append(
+                    _Field(
+                        pivot_groups.LEVEL_NAMES[by],
+                        [],
+                        items=list(labels),
+                        added=True,
+                        labels=labels,
+                        field_group=pivot_groups.date_xml(by, dates, i, None),
+                    )
+                )
+            f.field_group = pivot_groups.date_xml(first, dates, i, len(self.fields) - 1 if more else None)
+        names = [fold(f.name) for f in self.fields]
+        if len(set(names)) != len(names):
+            raise ValueError(f"pivot {self.name}: group field names must differ from the other fields")
 
     def _calculated_items(self, raw: Any) -> list[dict[str, Any]]:
         """Calculated items (T-4130): each is appended to its field's shared items, so its `<item>` and its
@@ -435,11 +537,17 @@ class DefinedPivot:
             out.append({**entry, "fld": i, "x": len(f.items) - 1})
         return out
 
-    def _index(self, name: Any) -> int:
+    def _find(self, name: Any) -> int | None:
         for i, f in enumerate(self.fields):
-            if isinstance(name, str) and f.name.casefold() == name.casefold():
+            if isinstance(name, str) and fold(f.name) == fold(name):
                 return i
-        raise ValueError(f"pivot {self.name}: no field {name!r}")
+        return None
+
+    def _index(self, name: Any) -> int:
+        i = self._find(name)
+        if i is None:
+            raise ValueError(f"pivot {self.name}: no field {name!r}")
+        return i
 
     def _axis(self, names: Any, axis: str) -> list[int]:
         if not isinstance(names, list):
@@ -470,8 +578,10 @@ class DefinedPivot:
             ):
                 raise ValueError(f"pivot {self.name}: a page is {{field, item?, attrs?}}")
             i = self._index(page["field"])
-            if self.fields[i].axis is not None or self.fields[i].formula is not None:
-                raise ValueError(f"pivot {self.name}: page field {page['field']!r} is already used")
+            if self.fields[i].axis is not None or self.fields[i].formula is not None or self.fields[i].dates:
+                raise ValueError(
+                    f"pivot {self.name}: page field {page['field']!r} is already used or date-grouped"
+                )
             self.fields[i].axis = "axisPage"
             item = cached_value(page["item"]) if "item" in page else None
             if "item" in page and _key(item) not in {_key(v) for v in self.fields[i].items}:
@@ -494,6 +604,8 @@ class DefinedPivot:
                     f"pivot {self.name}: a data field is {{field, ...}} without {sorted(unknown or [])}"
                 )
             i = self._index(entry["field"])
+            if self.fields[i].added:
+                raise ValueError(f"pivot {self.name}: group field {entry['field']!r} is not a data field")
             subtotal = str(entry.get("subtotal", "sum"))
             if subtotal not in AGGREGATES:
                 raise ValueError(
@@ -507,7 +619,7 @@ class DefinedPivot:
             self.fields[i].data = True
             name = str(entry.get("name") or f"{AGGREGATES[subtotal]} of {self.fields[i].name}")
             out.append({**entry, "fld": i, "subtotal": subtotal, "name": name})
-        names = [e["name"].casefold() for e in out]
+        names = [fold(e["name"]) for e in out]
         if len(set(names)) != len(names):
             raise ValueError(f"pivot {self.name}: data field names must differ")
         return out
@@ -543,7 +655,12 @@ class DefinedPivot:
                     ' databaseField="0"/>'
                 )
                 continue
-            group = ""
+            if f.added:
+                fields.append(
+                    f'<cacheField name={quoteattr(f.name)} numFmtId="0" databaseField="0">{f.field_group}</cacheField>'
+                )
+                continue
+            group = f.field_group
             if f.group is not None:
                 g = f.group
                 labels = f.group_labels()
@@ -586,14 +703,19 @@ class DefinedPivot:
         return f"<calculatedItem formula={quoteattr(str(e['formula']))}{attrs}>{area}</calculatedItem>"
 
     def cache_records(self) -> str:
-        database = [f for f in self.fields if f.formula is None]
+        database = [f for f in self.fields if f.formula is None and not f.added]
         index = [{_key(v): k for k, v in enumerate(f.items)} for f in database]
         rows = []
         for r in range(self.records):
             cells = []
             for f, at in zip(database, index, strict=True):
                 v = f.values[r]
-                cells.append(f'<x v="{at[_key(v)]}"/>' if f.listed else _item_xml(v))
+                if f.listed:
+                    cells.append(f'<x v="{at[_key(v)]}"/>')
+                elif f.dates and isinstance(v, float):
+                    cells.append(f'<d v="{iso_date(v)}"/>')
+                else:
+                    cells.append(_item_xml(v))
             rows.append(f"<r>{''.join(cells)}</r>")
         return (
             f'<pivotCacheRecords xmlns="{MAIN_NS}" count="{self.records}">{"".join(rows)}</pivotCacheRecords>'
@@ -618,14 +740,17 @@ class DefinedPivot:
             head += ' defaultSubtotal="0"' + "".join(f' {s}Subtotal="1"' for s in subtotals)
         if len(f.spec.get("hidden", [])) and f.axis == "axisPage":
             head += ' multipleItemSelectionAllowed="1"'
-        if f.axis is None:
+        if f.axis is None and f.labels is None:
             ext = self._field_ext(f)
             return (
                 f'<pivotField{head} showAll="0"{attrs}>{ext}</pivotField>'
                 if ext
                 else f'<pivotField{head} showAll="0"{attrs}/>'
             )
-        values: list[Value] = [*f.group_labels()] if f.group is not None else f.items
+        if f.labels is not None:
+            values: list[Value] = f.labels
+        else:
+            values = [*f.group_labels()] if f.group is not None else f.items
         keys = {_key(v): k for k, v in enumerate(values)}
         flags: dict[int, str] = {}
         for kind, attr in (("hidden", 'h="1"'), ("collapsed", 'sd="0"')):
@@ -662,8 +787,9 @@ class DefinedPivot:
 
     def _item_order(self, f: _Field, keys: dict[Any, int], count: int) -> list[int]:
         """The order of the field's `<item>` elements: the items `item_order` lists first, in that order,
-        then the rest by index. Unlike `order` it leaves the cache's shared items as they are, so a case can
-        ask whether Excel shows the `<items>` order or the cache order (T-4164)."""
+        then the rest by index, or for a field a group adds, in its own order (its `item_order` attribute,
+        pivot_groups.py). Unlike `order` it leaves the cache's shared items as they are, so a case can ask whether
+        Excel shows the `<items>` order or the cache order (T-4164), or a group field's (T-4170)."""
         listed = f.spec.get("item_order", [])
         if not isinstance(listed, list):
             raise ValueError(f"pivot {self.name}: item_order of {f.name!r} is a list of items")
@@ -675,7 +801,8 @@ class DefinedPivot:
             if k in first:
                 raise ValueError(f"pivot {self.name}: item_order of {f.name!r} repeats an item")
             first.append(k)
-        return first + [k for k in range(count) if k not in first]
+        rest = f.item_order if f.item_order is not None else range(count)
+        return first + [k for k in rest if k not in first]
 
     def _field_ext(self, f: _Field) -> str:
         """The field's raw children after `items` (its `xml` slots `autoSortScope` and `extLst`), in

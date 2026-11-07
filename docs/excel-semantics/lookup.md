@@ -990,6 +990,15 @@ out-of-range index: the T-2273 entry).
       sheet `#VALUE!` (H7, H13), all Data `#N/A` (H8). `MAX` is 50 either order (H11, H12). A mixed XLOOKUP grid has
       a value hit, so only its reference element has a sheet: a reference on the formula's sheet is `#VALUE!` (H14)
       and one on Data `#N/A` (H15). `LARGE(CHOOSE({1;2},A1,Data!G1),1)` makes values, not references: 50 (H10).
+    - A first element that is an error or a value (probes/t4791-large-small-median-mixed-first-element, excel-graph
+      2026-11-07, T-4791; Local formulas, `INDIRECT` with `nosuch!A1` as the error element): `{"A1";"nosuch!A1";"Data!G1"}`
+      (own, error, off) is `#VALUE!` for LARGE, SMALL and MEDIAN (H1:H3), as the first-element rule says. With the error
+      first, `{"nosuch!A1";"A1";"Data!G1"}` is `#N/A` (H4:H6), **not** the element's `#REF!`, though a cell error value first
+      propagates (t4704). A value hit first, with the two misses lifted from `INDIRECT({"A1";"A1";"Data!G1"})` (own, off) or
+      `{"A1";"Data!G1";"A1"}` (off, own), is `#VALUE!` either way (H7:H12), so "the first reference element" would give
+      `#N/A` for the second order and is wrong; the lifted if_not_found may not pair by position, so the rule for a
+      value first is unresolved beyond: a value hit with an own-sheet reference is `#VALUE!` (H14 above, H7:H12).
+      Ours: H1:H3 and H7:H12 match; H4:H6 give `#REF!` (T-4862).
     - A text or TRUE hit beside the reference element is read as an array element: SUM, AVERAGE and COUNT skip it
       (50, 50, 0), AVERAGEA counts text as 0 and skips TRUE (25, 50), MAXA and MINA skip both (50, 50), and COUNTA
       is 2 (A50:A63; return C1:C3 or D1:D3 with C2 = "t", D2 = TRUE).
@@ -1257,6 +1266,22 @@ Tasks: T-1352
 `XMATCH(1,{1,2,3},)` (omitted match_mode) is 1 and `XMATCH(,{0,1,2})` (omitted lookup_value) is #N/A in this array (VERIFIED, probes/counta-empty-value D20-D21, excel-graph, T-1294). `SORT({3;1;2},,)` sorts ascending (`INDEX(...,1)` = 1, three elements) and `INDEX(SORT({3;1;2},,-1),1)` = 3 (D22-D24); the engine differs on the omitted-argument forms, see T-1394. (A bare `=SORT({3;1;2},,-1)` in D24 first read #SPILL! only because D25 and D26 were occupied; the probe was changed to INDEX.)
 Status: VERIFIED (excel-graph; excel-desktop unprobed)
 Tasks: T-1394
+
+## XLOOKUP and XMATCH read a written-empty mode as omitted (T-4871)
+Rule: a written-empty `match_mode` or `search_mode` of XLOOKUP or XMATCH, or a LET variable bound to nothing in that
+place, takes the argument's default (match_mode 0, search_mode 1). It is not read as 0, which as a search_mode is
+`#VALUE!`. With A1:A3 = 1..3, B1:B3 = 10..30 and C1:C3 = 3..1:
+- `XLOOKUP(2,A1:A3,B1:B3,,,)` is 20, `XLOOKUP(5,A1:A3,B1:B3,,,)` `#N/A`, `XLOOKUP(2,A1:A3,B1:B3,"nf",0,)` 20.
+- `XLOOKUP(2.5,A1:A3,B1:B3,,-1,)` is 20 and `(..,,1,)` 30; `XLOOKUP(2.5,A1:A3,B1:B3,"nf",,-1)` is "nf".
+- `XMATCH(2,A1:A3,0,)` is 2, `XMATCH(2.5,A1:A3,-1,)` 2, `XMATCH(2.5,C1:C3,1,)` 1, `XMATCH(2,C1:C3,,)` 2, and
+  `LET(e,,XMATCH(2,A1:A3,0,e))` 2.
+An empty `if_not_found` is the default too (`XLOOKUP(5,A1:A3,B1:B3,)` is `#N/A`), and an empty match_mode was already
+the default because the default is 0. The legacy lookups are unprobed here (T-4871 out of scope).
+Evidence: probes/t4871-empty-mode-args E1:E20 (excel-graph, 2026-11-07; predictions in
+`docs/research/t4871/predictions.tsv` committed before the fill: H_omitted 31/31, H_zero, the empty argument as 0, 9/31).
+Ours: `mode_or_default` (functions/lookup_and_reference/xmatch.rs), used by `fn_xmatch` and `xlookup_read`.
+Status: VERIFIED (excel-graph)
+Tasks: T-4871
 
 ## CHOOSE over an index array broadcasts its value arguments
 Rule: with an array (or range) index, CHOOSE lifts like IF over an array condition. Every value argument is
@@ -1772,7 +1797,8 @@ Mixed XLOOKUP grids (probes/t4704-mixed-xlookup-grid-readers, excel-graph, 2026-
 `XLOOKUP({2;9},Data!A1:A3,Data!B1:B3,Data!G1:G2)`: element 1 the hit 20, element 2 the reference G1:G2): the first
 element decides between an error and an off-sheet reference. With a `#DIV/0!` hit and the reference second,
 LARGE, SMALL, MEDIAN and MAX give `#DIV/0!` (A46, A52, A55, A61 with the grid `{2;9}`); with the reference first
-LARGE and MEDIAN give `#N/A` (A49, A58). SMALL and MAX with the reference first are not probed (they share the reader). Ours puts the error first (T-4741). A grid with references on both the
+LARGE, SMALL and MEDIAN give `#N/A` (A49, A58, A88) while MAX still gives `#DIV/0!` (A91): MAX takes the error
+wherever it is, the order statistics stop at the off-sheet reference. Matched since T-4741. A grid with references on both the
 formula's sheet and another cannot be built from XLOOKUP (every miss is the one if_not_found reference); see
 probes/t4697 for the INDIRECT form.
 Per-element readers of a mixed grid: FORMULATEXT gives `#VALUE!` then `#N/A` (A1:A2), INDIRECT `#REF!` then

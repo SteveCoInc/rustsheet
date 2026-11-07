@@ -21,8 +21,10 @@ cell's number format (`m/d/yyyy h:mm`, and `4/17/2024` at midnight; pivots.md "u
 (`45398.5`). These cells are off in their text only:
 - probes/t4164-pivot-date-times WOe0!A4:A5, WOe1!A4:A7, WOeN!A4:A5
 
-The other date-times label cells are also off in value (the filters, T-4165's), and their text follows once both are
-fixed.
+These date label cells were also off in value until T-4165 applied the filters; they are now off in their text only
+(moved from T-4165):
+- probes/t4164-pivot-date-times WBt0!A4, WBtN!A4, WEq0!A4, WEq1!A4:A6, WEqN!A4, WNt0!A4:A7, WNt1!A4:A5, WNtN!A4:A7
+- probes/t4130-pivot-date-filters DLit!A4:A16, DOld!A4:A6, DOldEq!A4:A7, DNe!A4:A6, DNbt!A4:A6, M1!A4, Q1!A4:A6, DBt!A4:A7, DEq!A4, DNbt!A7:A12, DNe!A7:A15, DNt!A4:A9, DNte!A4:A10, DWd!A4, M1!A5, M10!A4, M11!A4, M12!A4, M2!A4, M3!A4, M4!A4, M5!A4, M6!A4, M7!A4, M8!A4, M9!A4, Q1!A7, Q2!A4:A6, Q3!A4:A6, Q4!A4:A6
 
 ## Acceptance criteria
 - [ ] A probe filled with the excel-graph oracle covers (1)-(4); its findings are in pivots.md.

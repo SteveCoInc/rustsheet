@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-4704: readers of a mixed XLOOKUP grid (SPEC-0014 'Mixed grids') that T-4570 implemented by fallback. Data: A1:A3=1,2,3; B1:B3=10,20,30; G1:G2=50,60; I1:I3 = 5,#DIV/0!,7. Calc column A: the formula, B its ROWS, C its COLUMNS, one probe per three rows (row 3k+1 holds probe k+1, so a spill has room). Probes 1-8: FORMULATEXT, OFFSET, INDIRECT, TAKE, DROP over the grid {2;9} (hit 20, miss = Data!G1:G2). 9-15: RANK family, LARGE, SMALL. 16-21: grids with an error element (hit returns the #DIV/0! of I2) beside an off-sheet reference, either order, under LARGE/SMALL/MEDIAN/MAX. 22-29: per-element callers of an XLOOKUP whose if_not_found is text, with a miss (XS) and all hits (XH). A grid with references on both the formula's sheet and another cannot be built from XLOOKUP (a miss is always the one if_not_found reference); probes/t4697 covers it with INDIRECT.",
+ "description": "T-4704: readers of a mixed XLOOKUP grid (SPEC-0014 'Mixed grids') that T-4570 implemented by fallback. Data: A1:A3=1,2,3; B1:B3=10,20,30; G1:G2=50,60; I1:I3 = 5,#DIV/0!,7. Calc column A: the formula, B its ROWS, C its COLUMNS, one probe per three rows (row 3k+1 holds probe k+1, so a spill has room). Probes 1-8: FORMULATEXT, OFFSET, INDIRECT, TAKE, DROP over the grid {2;9} (hit 20, miss = Data!G1:G2). 9-15: RANK family, LARGE, SMALL. 16-21: grids with an error element (hit returns the #DIV/0! of I2) beside an off-sheet reference, either order, under LARGE/SMALL/MEDIAN/MAX. 22-29: per-element callers of an XLOOKUP whose if_not_found is text, with a miss (XS) and all hits (XH). 30-31 (T-4741): SMALL and MAX over the reference-first grid {9;2} of probes 16-21. A grid with references on both the formula's sheet and another cannot be built from XLOOKUP (a miss is always the one if_not_found reference); probes/t4697 covers it with INDIRECT.",
  "tags": [
   "M6",
   "probe"
@@ -113,7 +113,13 @@
     "C82": "=COLUMNS(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"))",
     "A85": "=XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\")",
     "B85": "=ROWS(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"))",
-    "C85": "=COLUMNS(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"))"
+    "C85": "=COLUMNS(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"))",
+    "A88": "=SMALL(XLOOKUP({9;2},Data!$A$1:$A$3,Data!$I$1:$I$3,Data!$G$1:$G$2),1)",
+    "B88": "=ROWS(SMALL(XLOOKUP({9;2},Data!$A$1:$A$3,Data!$I$1:$I$3,Data!$G$1:$G$2),1))",
+    "C88": "=COLUMNS(SMALL(XLOOKUP({9;2},Data!$A$1:$A$3,Data!$I$1:$I$3,Data!$G$1:$G$2),1))",
+    "A91": "=MAX(XLOOKUP({9;2},Data!$A$1:$A$3,Data!$I$1:$I$3,Data!$G$1:$G$2))",
+    "B91": "=ROWS(MAX(XLOOKUP({9;2},Data!$A$1:$A$3,Data!$I$1:$I$3,Data!$G$1:$G$2)))",
+    "C91": "=COLUMNS(MAX(XLOOKUP({9;2},Data!$A$1:$A$3,Data!$I$1:$I$3,Data!$G$1:$G$2)))"
    }
   }
  ],

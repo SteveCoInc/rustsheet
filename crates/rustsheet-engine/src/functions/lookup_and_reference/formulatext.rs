@@ -100,6 +100,17 @@ impl Model {
                 rows.push(values);
             }
             CalcResult::Array(rows)
+        } else if matches!(
+            &reference,
+            CalcResult::Error {
+                error: Error::REF,
+                ..
+            }
+        ) {
+            // A reference a row or column delete removed is the literal `#REF!` in the formula
+            // (`=FORMULATEXT(#REF!)`), and FORMULATEXT of it is `#REF!`, not `#ERROR!`
+            // (probes/table-edits/t4274-calc-column-delete-row-2 F!A1, excel-graph, T-4770).
+            reference
         } else {
             not_a_reference(cell)
         }

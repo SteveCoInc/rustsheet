@@ -64,7 +64,7 @@ fn an_excel_saved_pivot_round_trips() {
     assert_eq!(cache.source_name.as_deref(), Some("Table1"));
     let mut work = MAX_PIVOT_WORK;
     assert!(
-        layout_lines(&saved[0], cache, &mut work).is_none(),
+        layout_lines(&saved[0], cache, None, &mut work).is_none(),
         "a pivot the engine has not laid out keeps its saved lines"
     );
     let back = round_trip(&model);
