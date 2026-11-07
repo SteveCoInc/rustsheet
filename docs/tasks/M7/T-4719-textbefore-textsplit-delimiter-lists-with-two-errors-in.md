@@ -3,7 +3,7 @@ id: T-4719
 title: "TEXTBEFORE/TEXTSPLIT delimiter lists with two errors in a 2-D list, a final sigma with nothing before it, and a negative REGEX occurrence over a split surrogate pair: probe the text.md UNVERIFIED notes and match"
 milestone: M7
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
