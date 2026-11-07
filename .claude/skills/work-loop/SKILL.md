@@ -30,7 +30,10 @@ Read `docs/process/agent-workflow.md` once per session if you have not.
 ## 1. Pick
 `make next-task LANE=<lane> TIER=<tier>` (P0 tasks first, then handed-off tasks; decision 0023). If
 the line it prints ends with `resume <branch>: blocked at the review-round limit (work-loop step 5c)`,
-do not branch: resume that branch per step 5c (decision 0095). If none is ready, first check the lane's blocked tasks
+do not branch: resume that branch per step 5c (decision 0095). If it prints
+`lane <lane> busy: <task id> in flight on <branch>`, the lane has ready tasks waiting behind work in
+flight: do not launch the planner or the gap-triager for it; treat the lane as having no task for you
+now and move on (a ready P0 is offered even in a busy lane; decision 0330). If none is ready, first check the lane's blocked tasks
 (`make tasks LANE=<lane> STATUS=blocked`): if a blocker is gone (e.g. `rustsheet-oracle status`
 now shows `excel-graph OK`), unblock it per the "Unblocking is an agent's job" rule under Task lifecycle in
 `docs/process/agent-workflow.md` and
