@@ -2675,6 +2675,10 @@ C	probes/t4720-fixed-sign-and-exponent-digits.case.json	37
 C	probes/t4721-im-overflow-residue.case.json	25
 C	probes/t4724-vdb-straight-from-zero.case.json	50
 C	probes/t4745-pivot-classic-subtotal-caption.case.json	254
+C	probes/t4755-hand-hidden-filtered-table-control.case.json	22
+C	probes/t4755-hand-hidden-filtered-table-delete-filtered-column.case.json	22
+C	probes/t4755-two-criteria-filtered-table-control.case.json	22
+C	probes/t4755-two-criteria-filtered-table-delete-one.case.json	22
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/t4765-growth-factor-edges.case.json	24
 C	probes/t4772-blank-y-offset-indirect-let-xlookup.case.json	32
@@ -10631,6 +10635,16 @@ F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C64
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C67
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C70
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C73
+F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!A1
+F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!A2
+F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!A3
+F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!A4
+F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!A5
+F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!A6
+F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!A7
+F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!A8
+F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!B5
+F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!C5
 F	probes/t4765-growth-factor-edges.case.json	Cut!A1
 F	probes/t4765-growth-factor-edges.case.json	Cut!A5
 F	probes/t4765-growth-factor-edges.case.json	SmallB!A1
