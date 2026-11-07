@@ -1,0 +1,30 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4683: AMORLINC and AMORDEGRC with a salvage one ulp below the cost (A), one ulp above and a literal that rounds to the cost (B1-B4), and equality or inequality reached by arithmetic (B5-B8). Predictions: A charges (not the early 0); B1/B2 #NUM!; B3/B4 0 (same double as 2400); B5/B6 charge; B7/B8 #NUM!.",
+  "tags": [
+    "M9",
+    "financial",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=AMORDEGRC(2400,39679,39813,2399.9999999999995,1,0.15,1)",
+        "A2": "=AMORDEGRC(2400,39679,39813,2399.9999999999995,0,0.15,1)",
+        "A3": "=AMORDEGRC(2400,39679,39813,2399.9999999999995,5,0.15,1)",
+        "A4": "=AMORLINC(2400,39679,39813,2399.9999999999995,1,0.15,1)",
+        "A5": "=AMORLINC(2400,39679,39813,2399.9999999999995,0,0.15,1)",
+        "B1": "=AMORDEGRC(2400,39679,39813,2400.0000000000005,1,0.15,1)",
+        "B2": "=AMORLINC(2400,39679,39813,2400.0000000000005,1,0.15,1)",
+        "B3": "=AMORDEGRC(2400,39679,39813,2400.0000000000001,1,0.15,1)",
+        "B4": "=AMORLINC(2400,39679,39813,2400.0000000000001,1,0.15,1)",
+        "B5": "=AMORDEGRC(0.1+0.2,39679,39813,0.3,1,0.15,1)",
+        "B6": "=AMORLINC(0.1+0.2,39679,39813,0.3,1,0.15,1)",
+        "B7": "=AMORDEGRC(0.3,39679,39813,0.1+0.2,1,0.15,1)",
+        "B8": "=AMORLINC(0.3,39679,39813,0.1+0.2,1,0.15,1)"
+      }
+    }
+  ],
+  "expected": {}
+}

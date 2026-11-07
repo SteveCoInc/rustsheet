@@ -1,0 +1,83 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "328dc21e5286559ff460cd5acabf7e593b6b36bc8c591a456c06ce3d3b918167",
+  "definitions": {
+   "AMORDEGRC": "46fbe91b5f5b4f82",
+   "AMORLINC": "46fbe91b5f5b4f82"
+  },
+  "arguments_sha256": "8dcefb65a06c6c085f66c99895e497e3303758336b76920840df5e9d96aba09d"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A2": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=AMORDEGRC(2400,39679,39813,2399.9999999999995,0,0.15,1)"
+   },
+   "A3": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=AMORDEGRC(2400,39679,39813,2399.9999999999995,5,0.15,1)"
+   },
+   "A5": {
+    "t": "n",
+    "v": "0.0000000000100044417195022106170654296875",
+    "f": "=AMORLINC(2400,39679,39813,2399.9999999999995,0,0.15,1)"
+   },
+   "B1": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=AMORDEGRC(2400,39679,39813,2400.0000000000005,1,0.15,1)"
+   },
+   "B2": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=AMORLINC(2400,39679,39813,2400.0000000000005,1,0.15,1)"
+   },
+   "B3": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=AMORDEGRC(2400,39679,39813,2400.0000000000001,1,0.15,1)"
+   },
+   "B4": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=AMORLINC(2400,39679,39813,2400.0000000000001,1,0.15,1)"
+   },
+   "B7": {
+    "t": "e",
+    "why": "a cost of 0 or less, a negative salvage, or a salvage above the cost: #NUM!",
+    "f": "=AMORDEGRC(0.3,39679,39813,0.1+0.2,1,0.15,1)"
+   },
+   "B8": {
+    "t": "e",
+    "why": "a cost of 0 or less, a negative salvage, or a salvage above the cost: #NUM!",
+    "f": "=AMORLINC(0.3,39679,39813,0.1+0.2,1,0.15,1)"
+   }
+  }
+ },
+ "skipped": {
+  "Sheet1": {
+   "A1": {
+    "f": "=AMORDEGRC(2400,39679,39813,2399.9999999999995,1,0.15,1)",
+    "why": "no single value"
+   },
+   "A4": {
+    "f": "=AMORLINC(2400,39679,39813,2399.9999999999995,1,0.15,1)",
+    "why": "no single value"
+   },
+   "B5": {
+    "f": "=AMORDEGRC(0.1+0.2,39679,39813,0.3,1,0.15,1)",
+    "why": "no single value"
+   },
+   "B6": {
+    "f": "=AMORLINC(0.1+0.2,39679,39813,0.3,1,0.15,1)",
+    "why": "no single value"
+   }
+  }
+ }
+}
