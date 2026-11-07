@@ -1,0 +1,307 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-2085 (SPEC-0015 unknowns 3, 5, 6, 7, 13, 14): GETPIVOTDATA item and argument kinds on builder-v2 pivots Excel renders on open. Items!A1:E5: Num (1, 2.5, 1, 10), When (date serials 45292, 45293, 45292, 45323 as m/d/yyyy), Flag (TRUE, FALSE, TRUE, FALSE), Code (\u00c9t\u00e9, \u00d8st, \u00c9t\u00e9, \u00c4rger) and Sales (1, 2, 4, 8, so a sum names its records). N, D, B, U pivot each of those fields as rows with Sum of Sales; Q columns A:D ask them with a number, a text, a date, a reference and other spellings, and U with non-ASCII case variants. T (rows Region, columns Product over Data): Q!E1:E10 ask the same field twice (same item, case variants), an error as field or item, a number, boolean or referenced number (Q!Z2 = 1) as data_field, an array data_field and an array field name. E pivots Odd!A1:B7 (Val: East 5 and \"abc\", West 7, Mid #N/A, Nord 3 and a blank) with Sum of Val; Q!E11:E19 ask a single error-holding pivot cell and a range holding it as pivot_table, and Val per region (text, error and blank records), and read E!B6 itself.",
+  "tags": [
+    "probe",
+    "getpivotdata",
+    "pivot",
+    "T-2085",
+    "M6"
+  ],
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "Region",
+        "B1": "Product",
+        "C1": "Sales",
+        "D1": "Units",
+        "A2": "East",
+        "B2": "A",
+        "C2": 10,
+        "D2": 1,
+        "A3": "East",
+        "B3": "A",
+        "C3": 4,
+        "D3": 2,
+        "A4": "East",
+        "B4": "B",
+        "C4": 5,
+        "D4": 3,
+        "A5": "West",
+        "B5": "A",
+        "C5": 7,
+        "D5": 4,
+        "A6": "West",
+        "B6": "B",
+        "C6": 3,
+        "D6": 5,
+        "A7": "West",
+        "B7": "B",
+        "C7": 6,
+        "D7": 6,
+        "A8": "East",
+        "B8": "C",
+        "C8": 2,
+        "D8": 7,
+        "A9": "West",
+        "B9": "A",
+        "C9": 9,
+        "D9": 8
+      }
+    },
+    {
+      "name": "Items",
+      "cells": {
+        "A1": "Num",
+        "B1": "When",
+        "C1": "Flag",
+        "D1": "Code",
+        "E1": "Sales",
+        "A2": 1,
+        "B2": 45292,
+        "C2": true,
+        "D2": "\u00c9t\u00e9",
+        "E2": 1,
+        "A3": 2.5,
+        "B3": 45293,
+        "C3": false,
+        "D3": "\u00d8st",
+        "E3": 2,
+        "A4": 1,
+        "B4": 45292,
+        "C4": true,
+        "D4": "\u00c9t\u00e9",
+        "E4": 4,
+        "A5": 10,
+        "B5": 45323,
+        "C5": false,
+        "D5": "\u00c4rger",
+        "E5": 8
+      },
+      "number_formats": {
+        "B2": "m/d/yyyy",
+        "B3": "m/d/yyyy",
+        "B4": "m/d/yyyy",
+        "B5": "m/d/yyyy"
+      }
+    },
+    {
+      "name": "Odd",
+      "cells": {
+        "A1": "Region",
+        "B1": "Val",
+        "A2": "East",
+        "B2": 5,
+        "A3": "East",
+        "B3": "abc",
+        "A4": "West",
+        "B4": 7,
+        "A5": "Mid",
+        "B5": {
+          "t": "e",
+          "v": "#N/A"
+        },
+        "A6": "Nord",
+        "B6": 3,
+        "A7": "Nord"
+      }
+    },
+    {
+      "name": "N",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "PN",
+          "source": "Items!A1:E5",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Num"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "sum",
+                "name": "Sum of Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "D",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "PD",
+          "source": "Items!A1:E5",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "When"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "sum",
+                "name": "Sum of Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "PB",
+          "source": "Items!A1:E5",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Flag"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "sum",
+                "name": "Sum of Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "U",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "PU",
+          "source": "Items!A1:E5",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Code"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "sum",
+                "name": "Sum of Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "Two",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "sum",
+                "name": "Sum of Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "E",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "Odd",
+          "source": "Odd!A1:B7",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "data": [
+              {
+                "field": "Val",
+                "subtotal": "sum",
+                "name": "Sum of Val"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Q",
+      "cells": {
+        "A1": "=GETPIVOTDATA(\"Sales\",N!$A$3,\"Num\",1)",
+        "A2": "=GETPIVOTDATA(\"Sales\",N!$A$3,\"Num\",\"1\")",
+        "A3": "=GETPIVOTDATA(\"Sales\",N!$A$3,\"Num\",2.5)",
+        "A4": "=GETPIVOTDATA(\"Sales\",N!$A$3,\"Num\",\"2.5\")",
+        "A5": "=GETPIVOTDATA(\"Sales\",N!$A$3,\"Num\",1.0)",
+        "A6": "=GETPIVOTDATA(\"Sales\",N!$A$3,\"Num\",Items!$A$2)",
+        "A7": "=GETPIVOTDATA(\"Sales\",N!$A$3,\"Num\",TRUE)",
+        "A8": "=GETPIVOTDATA(\"Sales\",N!$A$3,\"Num\",10)",
+        "A9": "=GETPIVOTDATA(\"Sales\",N!$A$3,\"Num\",\"10\")",
+        "B1": "=GETPIVOTDATA(\"Sales\",D!$A$3,\"When\",45292)",
+        "B2": "=GETPIVOTDATA(\"Sales\",D!$A$3,\"When\",DATE(2024,1,1))",
+        "B3": "=GETPIVOTDATA(\"Sales\",D!$A$3,\"When\",\"1/1/2024\")",
+        "B4": "=GETPIVOTDATA(\"Sales\",D!$A$3,\"When\",\"2024-01-01\")",
+        "B5": "=GETPIVOTDATA(\"Sales\",D!$A$3,\"When\",Items!$B$2)",
+        "B6": "=GETPIVOTDATA(\"Sales\",D!$A$3,\"When\",\"45292\")",
+        "B7": "=GETPIVOTDATA(\"Sales\",D!$A$3,\"When\",45292.5)",
+        "C1": "=GETPIVOTDATA(\"Sales\",B!$A$3,\"Flag\",TRUE)",
+        "C2": "=GETPIVOTDATA(\"Sales\",B!$A$3,\"Flag\",\"TRUE\")",
+        "C3": "=GETPIVOTDATA(\"Sales\",B!$A$3,\"Flag\",FALSE)",
+        "C4": "=GETPIVOTDATA(\"Sales\",B!$A$3,\"Flag\",1)",
+        "C5": "=GETPIVOTDATA(\"Sales\",B!$A$3,\"Flag\",\"true\")",
+        "D1": "=GETPIVOTDATA(\"Sales\",U!$A$3,\"Code\",\"\u00e9t\u00e9\")",
+        "D2": "=GETPIVOTDATA(\"Sales\",U!$A$3,\"Code\",\"\u00c9T\u00c9\")",
+        "D3": "=GETPIVOTDATA(\"Sales\",U!$A$3,\"Code\",\"\u00f8st\")",
+        "D4": "=GETPIVOTDATA(\"Sales\",U!$A$3,\"Code\",\"\u00d8ST\")",
+        "D5": "=GETPIVOTDATA(\"Sales\",U!$A$3,\"Code\",\"\u00e4rger\")",
+        "D6": "=GETPIVOTDATA(\"Sales\",U!$A$3,\"Code\",\"\u00c4RGER\")",
+        "D7": "=GETPIVOTDATA(\"SUM OF SALES\",U!$A$3)",
+        "D8": "=GETPIVOTDATA(\"Sales\",U!$A$3,\"CODE\",\"\u00c9t\u00e9\")",
+        "E1": "=GETPIVOTDATA(\"Sales\",T!$A$3,\"Region\",\"East\",\"Region\",\"East\")",
+        "E2": "=GETPIVOTDATA(\"Sales\",T!$A$3,\"Region\",\"East\",\"region\",\"EAST\")",
+        "E3": "=GETPIVOTDATA(\"Sales\",T!$A$3,NA(),\"East\")",
+        "E4": "=GETPIVOTDATA(\"Sales\",T!$A$3,\"Region\",NA())",
+        "E5": "=GETPIVOTDATA(\"Sales\",T!$A$3,\"Region\",1/0)",
+        "E6": "=GETPIVOTDATA(1,T!$A$3)",
+        "E7": "=GETPIVOTDATA(TRUE,T!$A$3)",
+        "E8": "=GETPIVOTDATA(Q!$Z$2,T!$A$3)",
+        "E9": "=GETPIVOTDATA({\"Sales\",\"Units\"},T!$A$3)",
+        "E10": "=GETPIVOTDATA(\"Sales\",T!$A$3,{\"Region\",\"Product\"},\"A\")",
+        "E11": "=GETPIVOTDATA(\"Val\",E!$B$6)",
+        "E12": "=GETPIVOTDATA(\"Val\",E!$A$3:$B$9)",
+        "E13": "=GETPIVOTDATA(\"Val\",E!$A$3,\"Region\",\"East\")",
+        "E14": "=GETPIVOTDATA(\"Val\",E!$A$3,\"Region\",\"Mid\")",
+        "E15": "=GETPIVOTDATA(\"Val\",E!$A$3,\"Region\",\"Nord\")",
+        "E16": "=GETPIVOTDATA(\"Val\",E!$A$3,\"Region\",\"West\")",
+        "E17": "=GETPIVOTDATA(\"Val\",E!$A$3)",
+        "E18": "=E!$B$6",
+        "E19": "=ISERROR(E!$B$6)",
+        "Z2": 1
+      }
+    }
+  ],
+  "expected": {}
+}

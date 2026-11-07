@@ -46,8 +46,11 @@ probes/getpivotdata-real-pivot, excel-graph 2026-10-16; cell ids are sheet P):
 Errors in `pivot_table` or `data_field` propagate before any lookup (web.md "without a pivot
 table"; kept as implemented by T-1703).
 
-Unknowns. Each is probed by T-2085, and until then T-2083 answers `#REF!` for it (or keeps today's
-T-1703 behavior where one exists), never a guessed value:
+Unknowns. T-2085 probed them (docs/excel-semantics/web.md "GETPIVOTDATA on other pivot shapes (T-2085)"; probes
+t2085-getpivotdata-data-fields, -items and -layouts). Not probed are an array `pivot_table` (in 7), case-variant cache
+items (in 14: Excel for the web refuses the file) and calculated items (refused too). Until T-4804, T-4805 and T-4806
+implement the evidence, T-2083 answers `#REF!` for each (or keeps today's T-1703 behavior where one exists), never a
+guessed value:
 1. several data fields: the `"Values"` field, what a blank `data_field` picks, and a source name
    shared by two data fields (Sum and Count of Sales);
 2. an empty intersection of CountNums, Product, Var, VarP, StdDev and StdDevP (Sum, Count, Average, Max and Min are 0, T-2404);
