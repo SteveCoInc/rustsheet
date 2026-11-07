@@ -3,7 +3,7 @@ id: T-3462
 title: "rustsheet-gen --policy typed-input: draw typed number, currency, percent, fraction and E-notation entries (entered cells) with value, type and format readers for gen-m2"
 milestone: M2
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -58,19 +58,35 @@ it was fitted on.
   `arg-pairs`; reuse `common.py`'s draw helpers and `quoted`).
 
 ## Acceptance criteria
-- [ ] `rustsheet-gen --policy typed-input --seed 0` writes at least 2 cases of at least 150 entries each under
+- [x] `rustsheet-gen --policy typed-input --seed 0` writes at least 2 cases of at least 150 entries each under
       gen-m2, every entry with the three readers above, each cell tagged in `hypotheses` with its stratum
       (`typed-input/<stratum>/...`). No case is committed with oracle sidecars here (T-3464 does that).
-- [ ] tools/tests: a test per stratum that its drawn texts match the stratum's shape, a test that no entry
+- [x] tools/tests: a test per stratum that its drawn texts match the stratum's shape, a test that no entry
       starts with `=`, none is a year-less date and none is over 255 characters, and a determinism test
       (two runs with one seed give identical files).
-- [ ] Shown in the PR: `rustsheet-eval run` with the engine standing in for Excel scores the generated
+- [x] Shown in the PR: `rustsheet-eval run` with the engine standing in for Excel scores the generated
       cases with no crash, panic or timeout (an `EngineError` case is a bug to fix before merging).
-- [ ] docs/architecture/synthetic-generator.md documents the policy, its strata and shares, and the exclusions.
-- [ ] `make py-check` green; `make check` green; reviewers approve.
+- [x] docs/architecture/synthetic-generator.md documents the policy, its strata and shares, and the exclusions.
+- [x] `make py-check` green; `make check` green; reviewers approve.
 
 ## Out of scope
 - Typed dates, clocks and month names (T-3463).
 - Committing an oracle-filled batch and owning its failures (T-3464).
 - Displayed text of typed entries (gen-m10's `number-formats` policy) and R1C1 typed formulas.
 - Any engine change.
+
+## Outcome
+New policy `rustsheet-gen --policy typed-input` (tools/src/rustsheet_tools/gen/typed_input.py, registered in
+cli.py; suite gen-m2). `--seed 0` writes 2 cases of 160 typed entries each (`{"entered": ...}` in `A<n>`), each
+with the readers `=A<n>+0`, `=ISTEXT(A<n>)` and `=CELL("format",A<n>)`; all four cells are checked and tagged
+`typed-input/<stratum>/<variant>`. Eight strata (plain, sign, currency, percent, e-notation, fraction, spacing,
+near-miss) get an equal 20 entries per case; the variants and the exclusions are in
+docs/architecture/synthetic-generator.md §5.5. Exclusions: a leading `=`, over 255 characters, and any date
+shape (digit groups joined by `/` or `-`, spaces around the separator ignored) without a four-digit group, so
+bare `n/d` fractions and the `1/0` and `1 /2` near misses in the task's list are not drawn (year-less dates
+read in the oracle's year). CELL("format") is #VALUE! on excel-graph (coercion.md), so that reader only scores
+on a desktop oracle. cli.py's six seed-only policies now share one `FIXED_POLICIES` table (ruff PLR0911).
+Tests: tools/tests/test_gen_typed_input.py (a shape check per stratum over every variant, the exclusions, the
+readers and tags, determinism). With the engine standing in for Excel (its own values as the sidecar),
+`rustsheet-eval run` scores the seed-0 batch 1280/1280 cells, about 32 ms per case, no EngineError, panic or
+timeout. No cases committed (T-3464 commits the oracle-filled batch). Eval delta: none.
