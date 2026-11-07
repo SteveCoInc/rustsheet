@@ -1,9 +1,16 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::unused_self
+)]
+// LINT-DEBT-END
 use super::trig::{excel_cos, excel_sin, excel_tan, EXCEL_TRIG_LIMIT};
 use crate::arithmetic::{divide, extended_quotient, extended_sqrt, flush_subnormal, power};
 use crate::cast::NumberOrArray;
 use crate::decimal_round::{round_decimal, round_function, RoundMode};
 use crate::expressions::types::CellReferenceIndex;
-use crate::functions::lift::{div_error, num_error, number_result, value_error};
+use crate::functions::lift::{div_error, num_error, number_result};
 use crate::functions::statistical::IfsShape;
 use crate::functions::util::aggregate_args::{
     AggregatePolicy, ArgReading, ErrorRule, GridReading, NestedReading, NumberRules,
@@ -135,6 +142,15 @@ pub(crate) fn excel_atan2(x: f64, y: f64) -> Result<f64, Error> {
     } else {
         a
     })
+}
+
+/// How [`Model::numbers_fn_reading`] reads a written-empty argument.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum EmptyOptional {
+    /// As 0, the rule of the older functions (`ROUND(2.5,)`, `CEILING(2.5,)`).
+    Zero,
+    /// As omitted: the argument takes its default.
+    Default,
 }
 
 impl Model {
@@ -277,6 +293,39 @@ impl Model {
         cell: CellReferenceIndex,
         op: impl Fn([f64; N]) -> Result<f64, Error>,
     ) -> CalcResult {
+        self.numbers_fn_reading(kind, args, defaults, EmptyOptional::Zero, cell, op)
+    }
+
+    /// [`Model::numbers_fn`] for the roundings added in Excel 2010 and 2013 (CEILING.MATH,
+    /// FLOOR.MATH, CEILING.PRECISE, FLOOR.PRECISE, ISO.CEILING): a written-empty argument, or a
+    /// LET value or LAMBDA parameter left empty, takes its default as an omitted one does, so
+    /// `CEILING.MATH(2.675,)` is 3 where the legacy `CEILING(2.5,)` is 0
+    /// (probes/t4873-empty-arg-quotient-ceiling Calc!C1:G4, H1:H5; docs/excel-semantics/numbers.md
+    /// "An empty significance of the 2010+ roundings is omitted").
+    pub(crate) fn numbers_fn_empty_omitted<const N: usize>(
+        &mut self,
+        kind: Function,
+        args: &[Node],
+        defaults: [f64; N],
+        cell: CellReferenceIndex,
+        op: impl Fn([f64; N]) -> Result<f64, Error>,
+    ) -> CalcResult {
+        self.numbers_fn_reading(kind, args, defaults, EmptyOptional::Default, cell, op)
+    }
+
+    fn numbers_fn_reading<const N: usize>(
+        &mut self,
+        kind: Function,
+        args: &[Node],
+        defaults: [f64; N],
+        empty: EmptyOptional,
+        cell: CellReferenceIndex,
+        op: impl Fn([f64; N]) -> Result<f64, Error>,
+    ) -> CalcResult {
+        let omitted = match empty {
+            EmptyOptional::Zero => [false; N],
+            EmptyOptional::Default => self.empty_arguments::<N>(args),
+        };
         // The driver's shortcut (T-1932): the arguments written, all numbers, then the defaults.
         let shortcut = |present: &[f64]| {
             let mut numbers = defaults;
@@ -289,9 +338,13 @@ impl Model {
             let mut numbers = defaults;
             for (index, slot) in numbers.iter_mut().enumerate() {
                 // A number, the usual argument, skips the coercion chain (T-1785 bench).
-                if let Some(CalcResult::Number(number)) = values.get(index) {
-                    *slot = *number;
-                    continue;
+                match values.get(index) {
+                    Some(CalcResult::Number(number)) => {
+                        *slot = *number;
+                        continue;
+                    }
+                    _ if omitted[index] => continue,
+                    _ => {}
                 }
                 match model.kernel_number_or(values.get(index), *slot, cell) {
                     Ok(number) => *slot = number,
@@ -355,11 +408,22 @@ impl Model {
     /// `QUOTIENT(numerator, denominator)`, an Analysis `ToolPak` function: both arguments lift
     /// over an array and refuse a multi-cell range (probes/math-atp-array-lift C1-C2, C7-C8, C27-C28;
     /// scalar-lift-open-a Y19-Y20), and a boolean is `#VALUE!` (math-atp-array-lift C21, -b E11-E13).
-    /// Within one element the numerator's error wins (C29-C30).
+    /// Within one element the numerator's error wins (C29-C30). A written-empty argument, or a
+    /// LET value or LAMBDA parameter left empty, is `#N/A`, after an earlier argument's error
+    /// (probes/t4873-empty-arg-quotient-ceiling Calc!A1:A6, A9:A10, t4873-empty-arg-let-lambda
+    /// Calc!A1:A3).
     pub(crate) fn fn_quotient(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let [value_empty, divisor_empty] = self.empty_arguments(args);
         self.lift_call(Function::Quotient, args, cell, &mut |model, values| {
-            let (value, divisor) = match model.two_numbers(values, cell) {
-                Ok(pair) => pair,
+            let [value, divisor] = values else {
+                return CalcResult::new_args_number_error(cell);
+            };
+            let value = match model.atp_number(value, value_empty, cell) {
+                Ok(number) => number,
+                Err(error) => return error,
+            };
+            let divisor = match model.atp_number(divisor, divisor_empty, cell) {
+                Ok(number) => number,
                 Err(error) => return error,
             };
             if divisor == 0.0 {
@@ -374,6 +438,7 @@ impl Model {
     /// it lifts over an array and refuses a multi-cell range (probes/ceiling-floor-mround-array-lift
     /// A21, A43:A49, A55, date-math-lift-driver-edges G19-G20).
     pub(crate) fn fn_mround(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let empty: [bool; 2] = self.empty_arguments(args);
         self.lift_call(Function::Mround, args, cell, &mut |model, values| {
             // Excel: the arguments are judged left to right. A missing one is #N/A and a boolean
             // #VALUE!, unlike most numeric functions (an array element and a referenced cell too);
@@ -383,15 +448,8 @@ impl Model {
             // lift A19:A20, A23, A27:A42, date-math-lift-driver-edges G44-G47, G51-G52;
             // docs/excel-semantics/arrays.md).
             let mut numbers = [0.0; 2];
-            for (slot, value) in numbers.iter_mut().zip(values) {
-                let number = match value {
-                    CalcResult::EmptyArg => {
-                        Err(CalcResult::new_error(Error::NA, cell, String::new()))
-                    }
-                    CalcResult::Boolean(_) => Err(value_error(cell)),
-                    other => model.kernel_number(other, cell),
-                };
-                match number {
+            for ((slot, value), empty) in numbers.iter_mut().zip(values).zip(empty) {
+                match model.atp_number(value, empty, cell) {
                     Ok(number) => *slot = number,
                     Err(error) => return error,
                 }
@@ -536,10 +594,12 @@ impl Model {
     /// while numeric text is read (probes/radians-sqrtpi-munit, docs/excel-semantics/numbers.md
     /// "RADIANS, SQRTPI and MUNIT", T-1282).
     pub(crate) fn fn_sqrtpi(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        // A LET or LAMBDA omission is the `ToolPak` `#N/A` (`LET(e,,SQRTPI(e))`;
+        // probes/t4923-sqrtpi-factdouble-omitted A1, A2; T-4923).
+        let [empty] = self.empty_arguments::<1>(args);
         self.lift_call(Function::Sqrtpi, args, cell, &mut |model, values| {
             let number = match values {
-                [CalcResult::Boolean(_)] => return value_error(cell),
-                [value] => model.kernel_number(value, cell),
+                [value] => model.atp_number(value, empty, cell),
                 _ => return CalcResult::new_args_number_error(cell),
             };
             match number {

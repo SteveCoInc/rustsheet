@@ -5,6 +5,14 @@
 //! bound). The rule is Excel's own, probed with excel-graph (probes/t4228-pivot-range-groups,
 //! t4253-*, t4249-*; docs/excel-semantics/web.md "Grouped pivot fields import as their group
 //! items").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+// LINT-DEBT-END
 
 use std::collections::HashMap;
 
@@ -261,9 +269,10 @@ pub enum NumberGroupError {
 /// Field `base` grouped by numbers from `start` to `end` in steps of `interval`, `labels` being
 /// the `<groupItems>` labels: the grouped field's items are Excel's own labels, in the order
 /// [`NumberGroups::new`] gives, and each record's item is the group its value falls in
-/// ([`NumberGroups::layout_index`]). A blank value goes in the `<start` item, as the importer's
-/// other groups put it (web.md; UNVERIFIED, T-4236). The one grouping step for numbers, shared by
-/// the xlsx importer (`apply_groups`) and `Txn::add_pivot_table`.
+/// ([`NumberGroups::layout_index`]); a caller grouping `base` in place keeps its values
+/// with [`keep_ungrouped`](super::keep_ungrouped) (T-4734). A blank value goes in the `<start`
+/// item, as the importer's other groups put it (web.md; UNVERIFIED, T-4236). The one grouping
+/// step for numbers, shared by the xlsx importer (`apply_groups`) and `Txn::add_pivot_table`.
 ///
 /// # Errors
 /// [`NumberGroupError`] for a bad range, a value that is not a number, or a bad record.
@@ -310,6 +319,9 @@ pub fn group_by_numbers(
         records,
         number_groups: Some(groups),
         date_groups: None,
+        added_group: None,
+        formula: None,
+        ungrouped: None,
     })
 }
 

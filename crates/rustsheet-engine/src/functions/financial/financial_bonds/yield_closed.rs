@@ -23,7 +23,7 @@ pub(super) fn yield_one_period(bond: &BondArgs, schedule: &CouponSchedule) -> Re
     if dsr == 0.0 {
         return Ok(0.0);
     }
-    let f = bond.frequency as f64;
+    let f = f64::from(bond.frequency);
     let (rate, pr, red) = (bond.rate, bond.yld_or_pr, bond.redemption);
     let result = ((red / 100.0 + rate / f) - (pr / 100.0 + schedule.a / e * rate / f))
         / (pr / 100.0 + (schedule.a / e) * (rate / f))

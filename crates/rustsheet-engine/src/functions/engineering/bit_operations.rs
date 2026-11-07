@@ -3,6 +3,14 @@
 //! probes/scalar-lift-shapes H7, probes/eng-later-argument-lift H12:H15, H20; engineering.md
 //! "Engineering function argument modes"): each kernel below is the scalar function of one
 //! element, and builds its own errors with empty messages.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::float_cmp,
+    clippy::unreadable_literal
+)]
+// LINT-DEBT-END
 
 use crate::functions::lift::num_error;
 use crate::{

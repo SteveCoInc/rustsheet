@@ -76,10 +76,10 @@ pub(crate) fn binary_search_by<T, S: Sequence<T> + ?Sized>(
             Ordering::Less => smaller = Some(mid),
             Ordering::Greater => larger = Some(mid),
         }
-        if (ordering == Ordering::Less) != descending {
-            lo = mid + 1;
-        } else {
+        if (ordering == Ordering::Less) == descending {
             hi = mid;
+        } else {
+            lo = mid + 1;
         }
     }
     if equal.is_some() {

@@ -1,5 +1,8 @@
 //! DECIMAL: text in a radix to a number (docs/excel-semantics/engineering.md, "DECIMAL of
 //! unreadable text").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+// LINT-DEBT-END
 
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{num_error, value_error};

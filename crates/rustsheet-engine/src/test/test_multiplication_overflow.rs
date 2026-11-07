@@ -7,31 +7,31 @@ use crate::test::util::new_empty_model;
 #[test]
 fn overflowing_product_is_num_inside_formulas() {
     let mut model = new_empty_model();
-    model._set("A1", "=CONCAT(1e307*100)");
-    model._set("A2", "=(1e307*100)&\"\"");
-    model._set("A3", "=TEXT(1e307*100,\"0.000000000000000000\")");
-    model._set("A4", "=LEN((1e307*100)&\"\")");
-    model._set("A5", "=10^308*10");
-    model._set("A6", "=1E+307*10-10^308");
-    model._set("A7", "=-1e307*100");
+    model.set_a1("A1", "=CONCAT(1e307*100)");
+    model.set_a1("A2", "=(1e307*100)&\"\"");
+    model.set_a1("A3", "=TEXT(1e307*100,\"0.000000000000000000\")");
+    model.set_a1("A4", "=LEN((1e307*100)&\"\")");
+    model.set_a1("A5", "=10^308*10");
+    model.set_a1("A6", "=1E+307*10-10^308");
+    model.set_a1("A7", "=-1e307*100");
     model.evaluate();
 
     for cell in ["A1", "A2", "A3", "A4", "A5", "A7"] {
-        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#NUM!", "{cell}");
     }
-    assert_eq!(model._get_text("A6"), *"0");
+    assert_eq!(model.get_text_a1("A6"), *"0");
 }
 
 /// The array path shares the closure: only the overflowing element is an error.
 #[test]
 fn overflow_in_an_array_product_is_per_element() {
     let mut model = new_empty_model();
-    model._set("A1", "=INDEX({1e307,1}*100,1,1)");
-    model._set("B1", "=INDEX({1e307,1}*100,1,2)");
+    model.set_a1("A1", "=INDEX({1e307,1}*100,1,1)");
+    model.set_a1("B1", "=INDEX({1e307,1}*100,1,2)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("B1"), *"100");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B1"), *"100");
 }
 
 /// `+`, `-` and `/` overflow like `*`; a subnormal divisor is zero
@@ -51,11 +51,11 @@ fn overflowing_sum_and_quotient_are_num_and_a_subnormal_divisor_is_zero() {
         ("A9", "=1/(2^-1022)>1E+307", "TRUE"),
     ];
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, _, expected) in cases {
-        assert_eq!(model._get_text(cell), *expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell}");
     }
 }
 
@@ -63,16 +63,16 @@ fn overflowing_sum_and_quotient_are_num_and_a_subnormal_divisor_is_zero() {
 #[test]
 fn subnormal_results_become_zero() {
     let mut model = new_empty_model();
-    model._set("A1", "=2^-1074");
-    model._set("A2", "=1E-307/10");
-    model._set("A3", "=1E-160*1E-160");
-    model._set("A4", "=2^-1022*2^1022");
+    model.set_a1("A1", "=2^-1074");
+    model.set_a1("A2", "=1E-307/10");
+    model.set_a1("A3", "=1E-160*1E-160");
+    model.set_a1("A4", "=2^-1022*2^1022");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0");
-    assert_eq!(model._get_text("A2"), *"0");
-    assert_eq!(model._get_text("A3"), *"0");
+    assert_eq!(model.get_text_a1("A1"), *"0");
+    assert_eq!(model.get_text_a1("A2"), *"0");
+    assert_eq!(model.get_text_a1("A3"), *"0");
     // The smallest normal double itself is kept.
-    assert_eq!(model._get_text("A4"), *"1");
+    assert_eq!(model.get_text_a1("A4"), *"1");
 }
 
 /// SUM beyond the double range is `#NUM!` (ERROR.TYPE 6), not infinity
@@ -80,15 +80,15 @@ fn subnormal_results_become_zero() {
 #[test]
 fn overflowing_sum_function_is_num() {
     let mut model = new_empty_model();
-    model._set("A1", "=(SUM(9E+307,9E+307))&\"\"");
-    model._set("A2", "=ISERROR(SUM(9E+307,9E+307))");
-    model._set("A3", "=IFERROR(ERROR.TYPE(SUM(9E+307,9E+307)),0)");
-    model._set("A4", "=SUM(9E+307,1E+307)");
+    model.set_a1("A1", "=(SUM(9E+307,9E+307))&\"\"");
+    model.set_a1("A2", "=ISERROR(SUM(9E+307,9E+307))");
+    model.set_a1("A3", "=IFERROR(ERROR.TYPE(SUM(9E+307,9E+307)),0)");
+    model.set_a1("A4", "=SUM(9E+307,1E+307)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("A2"), *"TRUE");
-    assert_eq!(model._get_text("A3"), *"6");
-    assert_eq!(model._get_text("A4"), *"1E+308");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A2"), *"TRUE");
+    assert_eq!(model.get_text_a1("A3"), *"6");
+    assert_eq!(model.get_text_a1("A4"), *"1E+308");
 }
 
 /// PRODUCT, SUMPRODUCT, SUMSQ and AVERAGE flush a subnormal result to a true 0, while SUM keeps
@@ -107,11 +107,11 @@ fn multiplying_functions_flush_subnormal_results() {
         ("A6", "=SUM(3E-308,-2.5E-308)*1E+300*1E+300", "5E+291"),
     ];
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, _, expected) in cases {
-        assert_eq!(model._get_text(cell), *expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell}");
     }
 }
 
@@ -120,8 +120,8 @@ fn multiplying_functions_flush_subnormal_results() {
 #[test]
 fn subnormal_flush_per_step_and_in_every_average() {
     let mut model = new_empty_model();
-    model._set("F1", "=3E-308");
-    model._set("F2", "=-2.9E-308");
+    model.set_a1("F1", "=3E-308");
+    model.set_a1("F2", "=-2.9E-308");
     let cases = [
         ("A1", "=PRODUCT(1E-200,1E-110,1E+300)", "0"),
         ("A2", "=SUMPRODUCT({1E-200,1},{1E-110,1E-300})*1E+300", "1"),
@@ -134,11 +134,11 @@ fn subnormal_flush_per_step_and_in_every_average() {
         ("A9", "=AGGREGATE(1,6,F1:F2)*1E+300*1E+300", "0"),
     ];
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, _, expected) in cases {
-        assert_eq!(model._get_text(cell), *expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell}");
     }
 }
 
@@ -154,11 +154,11 @@ fn sumsq_flushes_each_square_and_sumproduct_each_factor() {
         ("A4", "=SUMPRODUCT({1E-200},{1E+300},{1E-110})*1E+10", "1"),
     ];
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, _, expected) in cases {
-        assert_eq!(model._get_text(cell), *expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell}");
     }
 }
 
@@ -173,7 +173,7 @@ fn overflowing_aggregates_are_num() {
         ("F3", "1E+200"),
         ("F4", "1E+200"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (cell, formula) in [
         ("A1", "=SUMPRODUCT({1E+200},{1E+200})"),
@@ -187,11 +187,11 @@ fn overflowing_aggregates_are_num() {
         ("A9", "=SUBTOTAL(1,F1:F2)"),
         ("A10", "=SUBTOTAL(6,F3:F4)"),
     ] {
-        model._set(cell, &format!("=IFERROR(ERROR.TYPE({}),0)", &formula[1..]));
+        model.set_a1(cell, &format!("=IFERROR(ERROR.TYPE({}),0)", &formula[1..]));
     }
     model.evaluate();
     for row in 1..=10 {
-        assert_eq!(model._get_text(&format!("A{row}")), *"6", "A{row}");
+        assert_eq!(model.get_text_a1(&format!("A{row}")), *"6", "A{row}");
     }
 }
 
@@ -201,10 +201,10 @@ fn overflowing_aggregates_are_num() {
 fn overflowing_conditional_and_dispersion_aggregates_are_num() {
     let mut model = new_empty_model();
     for (cell, value) in [("F1", "9E+307"), ("F2", "9E+307"), ("F3", "-9E+307")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("F5", "1E+200");
-    model._set("F6", "1E+200");
+    model.set_a1("F5", "1E+200");
+    model.set_a1("F6", "1E+200");
     for (cell, formula) in [
         ("A1", "SUMIF(F1:F3,\">0\")"),
         ("A2", "SUMIFS(F1:F3,F1:F3,\">0\")"),
@@ -215,11 +215,11 @@ fn overflowing_conditional_and_dispersion_aggregates_are_num() {
         ("A7", "VAR(F5:F6)"),
         ("A8", "INDEX(SUMIF(F1:F3,{\">0\",\"<0\"}),1,1)"),
     ] {
-        model._set(cell, &format!("=IFERROR(ERROR.TYPE({formula}),0)"));
+        model.set_a1(cell, &format!("=IFERROR(ERROR.TYPE({formula}),0)"));
     }
     model.evaluate();
     for row in 1..=8 {
-        assert_eq!(model._get_text(&format!("A{row}")), *"6", "A{row}");
+        assert_eq!(model.get_text_a1(&format!("A{row}")), *"6", "A{row}");
     }
 }
 
@@ -228,17 +228,17 @@ fn overflowing_conditional_and_dispersion_aggregates_are_num() {
 #[test]
 fn tiny_values_compare_unequal_to_zero_but_subnormal_literals_are_zero() {
     let mut model = new_empty_model();
-    model._set("A1", "=EXP(-708)=0");
-    model._set("A2", "=EXP(-708)<>0");
-    model._set("A3", "=1E-308=0");
-    model._set("A4", "=1E-300=0");
-    model._set("A5", "=1E-20>0");
+    model.set_a1("A1", "=EXP(-708)=0");
+    model.set_a1("A2", "=EXP(-708)<>0");
+    model.set_a1("A3", "=1E-308=0");
+    model.set_a1("A4", "=1E-300=0");
+    model.set_a1("A5", "=1E-20>0");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"FALSE");
-    assert_eq!(model._get_text("A2"), *"TRUE");
-    assert_eq!(model._get_text("A3"), *"TRUE");
-    assert_eq!(model._get_text("A4"), *"FALSE");
-    assert_eq!(model._get_text("A5"), *"TRUE");
+    assert_eq!(model.get_text_a1("A1"), *"FALSE");
+    assert_eq!(model.get_text_a1("A2"), *"TRUE");
+    assert_eq!(model.get_text_a1("A3"), *"TRUE");
+    assert_eq!(model.get_text_a1("A4"), *"FALSE");
+    assert_eq!(model.get_text_a1("A5"), *"TRUE");
 }
 
 /// probes/subnormal-function-results C69 and text-number-words H6 (excel-graph; T-1027):
@@ -246,15 +246,15 @@ fn tiny_values_compare_unequal_to_zero_but_subnormal_literals_are_zero() {
 #[test]
 fn sums_keep_subnormals_and_number_text_flushes_them() {
     let mut model = new_empty_model();
-    model._set("A1", "=(3E-308-2.5E-308)=0");
-    model._set("A2", "=(3E-308+-2.5E-308)=0");
-    model._set("A4", "=(\"1e-308\"+0)=0");
-    model._set("A5", "=(3E-308*0.5)=0");
+    model.set_a1("A1", "=(3E-308-2.5E-308)=0");
+    model.set_a1("A2", "=(3E-308+-2.5E-308)=0");
+    model.set_a1("A4", "=(\"1e-308\"+0)=0");
+    model.set_a1("A5", "=(3E-308*0.5)=0");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"FALSE");
-    assert_eq!(model._get_text("A2"), *"FALSE");
-    assert_eq!(model._get_text("A4"), *"TRUE");
-    assert_eq!(model._get_text("A5"), *"TRUE");
+    assert_eq!(model.get_text_a1("A1"), *"FALSE");
+    assert_eq!(model.get_text_a1("A2"), *"FALSE");
+    assert_eq!(model.get_text_a1("A4"), *"TRUE");
+    assert_eq!(model.get_text_a1("A5"), *"TRUE");
 }
 
 /// `-x` of a tiny subnormal (below 2^-1026) is +x (numbers.md "Unary minus of a tiny
@@ -268,12 +268,12 @@ fn unary_minus_of_a_tiny_subnormal_through_groups() {
     let tiny = "(2^-1022*(1+12345*2^-52)-2^-1022)";
     for (x, negative) in [(format!("={tiny}"), false), (format!("=0-{tiny}"), true)] {
         let mut model = new_empty_model();
-        model._set("A1", &x);
-        model._set("B1", &format!("={tiny}*2^100"));
-        model._set("B2", &format!("=(0-{tiny})*2^100"));
+        model.set_a1("A1", &x);
+        model.set_a1("B1", &format!("={tiny}*2^100"));
+        model.set_a1("B2", &format!("=(0-{tiny})*2^100"));
         // Evidenced: `-x` of a positive tiny inline expression is +x
         // (probes/t2771-roundup-subnormal-sign-controls B1).
-        model._set("C1", &format!("=-{tiny}*2^100"));
+        model.set_a1("C1", &format!("=-{tiny}*2^100"));
         // Ours, unprobed (TODO(T-2942)): a cell reference, a tiny negative operand, `--x` and
         // groups between the signs. Each `-x` of a tiny x is +|x| and a later one keeps it.
         let shapes = [
@@ -286,16 +286,16 @@ fn unary_minus_of_a_tiny_subnormal_through_groups() {
             "=-(--A1)",
         ];
         for (row, shape) in (1..).zip(shapes) {
-            model._set(&format!("D{row}"), &format!("={}*2^100", &shape[1..]));
+            model.set_a1(&format!("D{row}"), &format!("={}*2^100", &shape[1..]));
         }
         model.evaluate();
-        let positive = model._get_text("B1");
-        let negated = model._get_text("B2");
+        let positive = model.get_text_a1("B1");
+        let negated = model.get_text_a1("B2");
         assert!(
             positive.contains("E-") && negated == format!("-{positive}"),
             "{positive} {negated}"
         );
-        assert_eq!(model._get_text("C1"), positive);
+        assert_eq!(model.get_text_a1("C1"), positive);
         for (row, shape) in (1..).zip(shapes) {
             // Only `--x` of a tiny negative x stays negative: an even run applies no `-x`.
             let expected = if negative && shape == "=--A1" {
@@ -304,7 +304,7 @@ fn unary_minus_of_a_tiny_subnormal_through_groups() {
                 &positive
             };
             assert_eq!(
-                &model._get_text(&format!("D{row}")),
+                &model.get_text_a1(&format!("D{row}")),
                 expected,
                 "{x} {shape}"
             );

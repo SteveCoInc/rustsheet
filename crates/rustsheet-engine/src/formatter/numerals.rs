@@ -3,6 +3,13 @@
 //! theirs). Evidence: probes/t1925-numeral-digits, t3532-numeral-digit-fields,
 //! t3532-numeral-digit-general (excel-graph); docs/excel-semantics/number-formats.md
 //! "Numeral-system digits".
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::match_same_arms,
+    clippy::struct_excessive_bools
+)]
+// LINT-DEBT-END
 
 /// The digits a section prints under its locale tag's numeral byte.
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Default)]

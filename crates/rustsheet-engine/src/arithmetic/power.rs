@@ -1,5 +1,8 @@
 //! `x^y` as POWER and the operator `^` compute it: integer exponents by square-and-multiply,
 //! others as `exp(y·ln x)` with Excel's own LN and EXP kernels (docs/excel-semantics/numbers.md).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use super::{
     extended_product, extended_quotient, extended_sqrt, finite_or_num, finite_or_overflow,

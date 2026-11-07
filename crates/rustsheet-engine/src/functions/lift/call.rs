@@ -1,5 +1,8 @@
 //! `lift_call` and its read phase (SPEC-0011 "The driver"): each argument is read once, by its
 //! kind in the table, and the kernel runs once (nothing lifted) or once per element.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::needless_pass_by_value)]
+// LINT-DEBT-END
 
 use std::mem::ManuallyDrop;
 
@@ -9,6 +12,7 @@ use super::kinds::{ArgKind, ArgKinds, KernelWork};
 use super::number_result;
 use crate::expressions::parser::is_multi_sheet_span;
 use crate::expressions::types::CellReferenceIndex;
+use crate::external_reference::{may_be_external, PickedReference};
 use crate::functions::Function;
 use crate::limits::{check_range_size, too_many_visits, MAX_LIFTED_CELL_VISITS};
 use crate::{
@@ -65,7 +69,38 @@ impl Model {
     /// `EDATE(Sheet1:Sheet2!A1,1)` (scalar-lift-open-e W1-W9). A DROP, TRIMRANGE or XLOOKUP that
     /// returns several cells is refused like TAKE, INDEX and IF (scalar-lift-open-e W10-W15, W20,
     /// W22), and one that returns one cell is its value (W16-W19, W21; T-1801).
+    /// A reference into another workbook is a reference too: several cells are refused,
+    /// `EDATE('[other.xlsx]Sheet1'!A1:B2,1)` is `#VALUE!`, and one cell is the value INDEX picks,
+    /// empty without a cache (`EDATE(…!A1,1)` is 31; probes/external-ref-no-link-lift-arrays).
+    /// Read as a value, the range would be an array of `#BLOCKED!` that the call lifts over, a
+    /// shape the cell's static analysis does not allow for (T-4859).
+    /// IF, CHOOSE, INDEX and LET picking such a reference ([`Model::pick_reference`]) give what
+    /// the written one gives: `EDATE(IF(TRUE,…!A1:B2),1)`, `CHOOSE(1,…)`, `INDEX(…,0,0)` and
+    /// `LET(a,1,…)` are `#VALUE!`, and over one cell (`INDEX(…!A1:B2,1,1)`, `LET(a,1,…!A1)`) 31
+    /// (probes/external-ref-no-link-lift-picked; T-4878).
     fn evaluate_as_reference(&mut self, node: &Node, cell: CellReferenceIndex) -> CalcResult {
+        let node = node.ungrouped();
+        if !may_be_external(node) {
+            return self.evaluate_local_as_reference(node, cell);
+        }
+        match self.pick_reference(node, cell) {
+            PickedReference::External(areas) => match areas.as_deref() {
+                Ok([area]) if area.extent() == (1, 1) => self.external_picked_value(*area, cell),
+                Ok(_) => refused_range(cell),
+                Err(error) => error.clone(),
+            },
+            PickedReference::Value(value) => value,
+            // What a LET body picked instead, read while its names were bound: a reference
+            // there is refused below as a written one is.
+            PickedReference::Read(read) => read.into_single_sheet_area(cell),
+            PickedReference::Node(picked) => self.evaluate_local_as_reference(picked, cell),
+        }
+    }
+
+    /// [`Model::evaluate_as_reference`] for an argument that is no reference into another
+    /// workbook, or names one without being one: a call that returns a reference is read as
+    /// one, and a 3-D range is refused.
+    fn evaluate_local_as_reference(&mut self, node: &Node, cell: CellReferenceIndex) -> CalcResult {
         match node.ungrouped() {
             Node::FunctionKind { kind, args } => {
                 if let Some(result) = self.evaluate_reference_form(kind, args, cell) {

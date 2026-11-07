@@ -6,6 +6,9 @@
 //! Evidence: probes/fin-argument-modes, probes/fin-later-argument-ranges K1-K25 and
 //! probes/scalar-lift-shapes H13-H48 (docs/excel-semantics/financial.md "Financial function
 //! argument modes"). Moved out of `financial/mod.rs` (T-1372).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use super::financial_util::compute_rate;
 use super::{formula_error, number_or_error};
@@ -23,9 +26,9 @@ use crate::{
 
 /// `P = (1+r)^n` as Excel's PV and FV compute it: `1+r` with Excel's `+` and the power with its `^`
 /// (right-to-left square-and-multiply for an integer `n`). With [`annuity_factor_rounded`] this
-/// matches all
-/// 308 PV and 308 FV cells of probes-numeric/m9-fin-pv-fv (docs/excel-semantics/financial.md
-/// "Annuity evaluation order"; fit lab `annuity-pv`, `annuity-fv`, T-1524).
+/// matches all 308 PV and 308 FV cells of probes-numeric/m9-fin-pv-fv
+/// (docs/excel-semantics/financial.md "Annuity evaluation order"; fit lab `annuity-pv`,
+/// `annuity-fv`, T-1524).
 pub(super) fn annuity_power(rate: f64, nper: f64) -> Result<f64, Error> {
     power(extended_sum(1.0, rate), nper)
 }
@@ -496,7 +499,7 @@ fn payment_pair(rate: f64, nper: f64, pv: f64, fv: f64, period_start: bool) -> R
     }
     if rate <= -1.0 {
         return Err(Error::NUM);
-    };
+    }
     let rate_nper = payment_growth(rate, nper);
     // A `(1+rate)^nper` so small that its reciprocal overflows (0 or 2^-1070) is #NUM!, whatever
     // fv and type are, for PMT and so IPMT, PPMT and CUMIPMT (`PMT(-0.5,2000,1)`,
@@ -824,7 +827,7 @@ impl Model {
         // A rate of -1 is `#NUM!`: ln(1+rate) is LN(0) (`NPER(-1,-31,1)`, gen-m9/3c06f9298f65a3ba A50).
         if rate <= -1.0 {
             return Err(num_error(cell));
-        };
+        }
         // NPER = ln((pmt*k - fv*r)/(pmt*k + pv*r)) / ln(1+r), with plain logarithms of
         // the double 1+r, not log1p: all 95 numeric cells of probes-numeric/m9-fin-nper-npv, where
         // log1p gives 11 (financial.md "Annuity evaluation order"; fit lab `annuity-nper`, T-1524).

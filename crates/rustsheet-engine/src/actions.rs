@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_sign_loss,
+    clippy::mut_mut,
+    clippy::too_many_lines,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 use crate::cf_types::{CfRule, Cfvo};
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::cut_paste::cf_sqref_anchor;
@@ -370,7 +378,7 @@ impl Model {
             .workbook
             .worksheet(sheet)?
             .cell(row, column)
-            .and_then(|c| c.get_formula())
+            .and_then(super::types::Cell::get_formula)
         {
             let node = &Node::clone(self.parsed_formulas[sheet as usize][f as usize].written());
             let cell_reference = CellReferenceRC {
@@ -409,7 +417,7 @@ impl Model {
                     self.update_cell_with_formula(sheet, row, column, text)?;
                 }
                 return Ok(before);
-            };
+            }
         }
         Ok(None)
     }
@@ -463,23 +471,24 @@ impl Model {
         // Phase 2: displace formula fields (requires &mut self.parser) then write back.
         // CF formulas are stored in English, so parse them with the default
         // locale/language regardless of the active ones.
-        let locale = self.locale;
-        let language = self.language;
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        for (idx, new_range, rule, anchor_row, anchor_col) in phase1 {
-            let context = CellReferenceRC {
-                sheet: sheet_name.clone(),
-                row: anchor_row,
-                column: anchor_col,
-            };
-            let new_rule =
-                displace_cf_rule_formulas(&mut self.parser, rule, &context, displacement);
+        let displaced: Vec<_> = self.with_default_parser(|parser| {
+            phase1
+                .into_iter()
+                .map(|(idx, new_range, rule, anchor_row, anchor_col)| {
+                    let context = CellReferenceRC {
+                        sheet: sheet_name.clone(),
+                        row: anchor_row,
+                        column: anchor_col,
+                    };
+                    let new_rule = displace_cf_rule_formulas(parser, rule, &context, displacement);
+                    (idx, new_range, new_rule)
+                })
+                .collect()
+        });
+        for (idx, new_range, new_rule) in displaced {
             self.workbook.worksheets[sheet as usize].conditional_formatting[idx].range = new_range;
             self.workbook.worksheets[sheet as usize].conditional_formatting[idx].cf_rule = new_rule;
         }
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
     }
 
     /// The columns of the cells in `row` of `sheet`, ascending (descending if `descending`); an
@@ -646,6 +655,7 @@ impl Model {
             );
         }
         self.refuse_table_off_sheet(sheet, column, column_count, false)?;
+        self.refuse_data_table_split(sheet, false, column, column_count)?;
         // Written so it cannot overflow: `column_count` can be any `i32` (T-2896).
         let max_column = self.workbook.worksheet(sheet)?.dimension().max_column;
         if !utils::is_valid_column_number(column) || column_count > LAST_COLUMN - max_column {
@@ -656,9 +666,7 @@ impl Model {
         }
         self.displace_pivots(sheet, PivotLines::Columns, column, column_count)?;
         self.reset_dynamic_array_spills(sheet)?;
-        // Merged ranges are remapped at the end; take them out so the cell moves
-        // (which go through `set_user_input`) do not trip the covered-cell guard.
-        let merged_cells = std::mem::take(&mut self.workbook.worksheet_mut(sheet)?.merged_cells);
+        let guards = self.take_write_guards(sheet)?;
         let kept = self.column_edit_kept(sheet, column, column_count);
         let worksheet = self.workbook.worksheet(sheet)?;
         let all_rows = worksheet.sheet_data.rows();
@@ -684,7 +692,7 @@ impl Model {
         });
 
         // Merged ranges shift right or grow when columns are inserted inside them
-        self.workbook.worksheet_mut(sheet)?.merged_cells = merged_cells;
+        self.restore_write_guards(sheet, guards, (false, column, column_count))?;
         displace_merged_cells(
             self.workbook.worksheet_mut(sheet)?,
             |first_row, first_column, last_row, last_column| {
@@ -720,7 +728,7 @@ impl Model {
         let worksheet = &mut self.workbook.worksheet_mut(sheet)?;
 
         let mut new_columns = Vec::new();
-        for col in worksheet.cols.iter_mut() {
+        for col in &mut worksheet.cols {
             // range under study
             let min = col.min;
             let max = col.max;
@@ -782,11 +790,10 @@ impl Model {
                 "Cannot delete columns because that would break an array formula".to_string(),
             );
         }
+        self.refuse_data_table_split(sheet, false, column, -column_count)?;
         self.displace_pivots(sheet, PivotLines::Columns, column, -column_count)?;
         self.reset_dynamic_array_spills(sheet)?;
-        // Merged ranges are remapped at the end; take them out so the cell moves
-        // (which go through `set_user_input`) do not trip the covered-cell guard.
-        let merged_cells = std::mem::take(&mut self.workbook.worksheet_mut(sheet)?.merged_cells);
+        let guards = self.take_write_guards(sheet)?;
         // first column being deleted
         let column_start = column;
         // last column being deleted
@@ -828,7 +835,7 @@ impl Model {
         });
 
         // Merged ranges shrink or shift left; fully deleted ones are removed
-        self.workbook.worksheet_mut(sheet)?.merged_cells = merged_cells;
+        self.restore_write_guards(sheet, guards, (false, column, -column_count))?;
         displace_merged_cells(
             self.workbook.worksheet_mut(sheet)?,
             |first_row, first_column, last_row, last_column| {
@@ -865,7 +872,7 @@ impl Model {
 
         // deletes all the column styles
         let mut new_columns = Vec::new();
-        for col in worksheet.cols.iter_mut() {
+        for col in &mut worksheet.cols {
             // range under study
             let min = col.min;
             let max = col.max;
@@ -1009,6 +1016,7 @@ impl Model {
             return Err("Cannot insert rows because that would break an array formula".to_string());
         }
         self.refuse_table_row_insert(sheet, row, row_count)?;
+        self.refuse_data_table_split(sheet, true, row, row_count)?;
         // Written so it cannot overflow: `row_count` can be any `i32` (T-2896).
         let max_row = self.workbook.worksheet(sheet)?.dimension().max_row;
         if !utils::is_valid_row(row) || row_count > LAST_ROW - max_row {
@@ -1020,9 +1028,7 @@ impl Model {
         let (disp, kept) = self.row_edit(sheet, row, row_count);
         self.displace_pivots(sheet, PivotLines::Rows, row, row_count)?;
         self.reset_dynamic_array_spills(sheet)?;
-        // Merged ranges are remapped at the end; take them out so the cell moves
-        // (which go through `set_user_input`) do not trip the covered-cell guard.
-        let merged_cells = std::mem::take(&mut self.workbook.worksheet_mut(sheet)?.merged_cells);
+        let guards = self.take_write_guards(sheet)?;
         // Move cells
         let worksheet = &self.workbook.worksheet(sheet)?;
         let mut all_rows = worksheet.sheet_data.rows();
@@ -1065,7 +1071,7 @@ impl Model {
         });
 
         // Merged ranges shift down or grow when rows are inserted inside them
-        self.workbook.worksheet_mut(sheet)?.merged_cells = merged_cells;
+        self.restore_write_guards(sheet, guards, (true, row, row_count))?;
         displace_merged_cells(
             self.workbook.worksheet_mut(sheet)?,
             |first_row, first_column, last_row, last_column| {
@@ -1112,6 +1118,7 @@ impl Model {
         row_count: i32,
     ) -> Result<Vec<RewrittenCell>, String> {
         self.check_delete_rows(sheet, row, row_count)?;
+        self.refuse_data_table_split(sheet, true, row, -row_count)?;
         if let Some(area) = self.kept_data_row(sheet, row, row_count) {
             // A table keeps its first data row, cleared, and loses its other data rows
             // (Model::kept_data_row, T-2338, T-3259; `UserModel::delete_rows` records the same two
@@ -1127,9 +1134,7 @@ impl Model {
         let (disp, kept) = self.row_edit(sheet, row, -row_count);
         self.displace_pivots(sheet, PivotLines::Rows, row, -row_count)?;
         self.reset_dynamic_array_spills(sheet)?;
-        // Merged ranges are remapped at the end; take them out so the cell moves
-        // (which go through `set_user_input`) do not trip the covered-cell guard.
-        let merged_cells = std::mem::take(&mut self.workbook.worksheet_mut(sheet)?.merged_cells);
+        let guards = self.take_write_guards(sheet)?;
         // Move cells
         let worksheet = &self.workbook.worksheet(sheet)?;
         let all_rows = worksheet.sheet_data.rows();
@@ -1181,7 +1186,7 @@ impl Model {
         });
 
         // Merged ranges shrink or shift up; fully deleted ones are removed
-        self.workbook.worksheet_mut(sheet)?.merged_cells = merged_cells;
+        self.restore_write_guards(sheet, guards, (true, row, -row_count))?;
         displace_merged_cells(
             self.workbook.worksheet_mut(sheet)?,
             |first_row, first_column, last_row, last_column| {
@@ -1323,7 +1328,7 @@ impl Model {
                     .set_column_width_and_style(c - 1, w, h, s)?;
             }
         } else {
-            for c in (target_column..=column - 1).rev() {
+            for c in (target_column..column).rev() {
                 let refs = self.workbook.worksheet(sheet)?.column_cell_references(c)?;
                 for r in refs {
                     self.move_cell(sheet, (r.row, c), (r.row, c + 1), &[])?;
@@ -1456,7 +1461,7 @@ impl Model {
                 }
             }
         } else {
-            for r in (target_row..=row - 1).rev() {
+            for r in (target_row..row).rev() {
                 let cols = self.get_columns_for_row(sheet, r, false)?;
                 for c in cols {
                     self.move_cell(sheet, (r, c), (r + 1, c), &[])?;
@@ -1475,7 +1480,7 @@ impl Model {
         }
         let worksheet = &mut self.workbook.worksheet_mut(sheet)?;
         let mut new_rows = Vec::new();
-        for r in worksheet.rows.iter() {
+        for r in &worksheet.rows {
             if r.r == row {
                 let mut nr = r.clone();
                 nr.r = target_row;
@@ -1705,6 +1710,7 @@ impl Model {
         {
             return Err("Cannot move columns because that would split a merged cell".to_string());
         }
+        self.refuse_data_table_move(sheet, false, (column, group_end, delta))?;
         self.move_pivots(sheet, PivotLines::Columns, column, group_end, delta)?;
         self.reset_dynamic_array_spills(sheet)?;
 
@@ -1779,6 +1785,7 @@ impl Model {
         {
             return Err("Cannot move rows because that would split a merged cell".to_string());
         }
+        self.refuse_data_table_move(sheet, true, (row, group_end, delta))?;
         self.move_pivots(sheet, PivotLines::Rows, row, group_end, delta)?;
         self.reset_dynamic_array_spills(sheet)?;
 

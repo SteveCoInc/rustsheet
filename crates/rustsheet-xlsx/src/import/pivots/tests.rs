@@ -1,16 +1,24 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(
+    test,
+    expect(clippy::cast_possible_truncation, clippy::format_push_string)
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use std::io::{Cursor, Write};
 
 use rustsheet_engine::expressions::token::Error;
 use rustsheet_engine::pivot::{
-    Aggregate, Axis, AxisField, CellArea, DataField, ShowDataAs, MAX_FIELDS, MAX_ITEMS, MAX_RECORDS,
+    Aggregate, Axis, AxisField, CellArea, DataField, OpaqueNode, ShowDataAs, MAX_FIELDS, MAX_ITEMS,
+    MAX_RECORDS,
 };
 
 use super::super::package::ImportLimits;
+use super::super::{parse_relationships, xml::XmlNode};
 use super::*;
 
-const REL: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+pub(super) const REL: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
 fn rels(entries: &[(&str, &str, &str)]) -> String {
     let mut body = String::new();
@@ -47,7 +55,7 @@ fn table(body: &str) -> String {
 const TABLE_BODY: &str = r#"<location ref="A3:E7" firstHeaderRow="1"/><pivotFields count="3"><pivotField axis="axisRow"><items><item x="0"/><item x="1" h="1"/><item t="default"/></items></pivotField><pivotField axis="axisCol"/><pivotField dataField="1"/></pivotFields><rowFields><field x="0"/></rowFields><colFields><field x="1"/><field x="-2"/></colFields><dataFields><dataField name="Sum of Sales" fld="2" baseField="0" baseItem="0"/></dataFields>"#;
 
 /// The parts of a workbook with one cache (cacheId 1) and one pivot on sheet1.
-fn parts() -> Vec<(String, String)> {
+pub(super) fn parts() -> Vec<(String, String)> {
     vec![
         (
             "xl/_rels/workbook.xml.rels".into(),
@@ -75,7 +83,11 @@ fn parts() -> Vec<(String, String)> {
 }
 
 /// `parts` with the part `name` replaced (or added) by `content`.
-fn with(mut parts: Vec<(String, String)>, name: &str, content: String) -> Vec<(String, String)> {
+pub(super) fn with(
+    mut parts: Vec<(String, String)>,
+    name: &str,
+    content: String,
+) -> Vec<(String, String)> {
     parts.retain(|(n, _)| n != name);
     parts.push((name.to_string(), content));
     parts
@@ -86,7 +98,7 @@ fn without(mut parts: Vec<(String, String)>, name: &str) -> Vec<(String, String)
     parts
 }
 
-fn package(parts: &[(String, String)]) -> Package<Cursor<Vec<u8>>> {
+pub(super) fn package(parts: &[(String, String)]) -> Package<Cursor<Vec<u8>>> {
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
     for (name, content) in parts {
         zip.start_file(name.as_str(), zip::write::SimpleFileOptions::default())
@@ -97,7 +109,7 @@ fn package(parts: &[(String, String)]) -> Package<Cursor<Vec<u8>>> {
     Package::new(Cursor::new(bytes), ImportLimits::default()).unwrap()
 }
 
-fn workbook_rels(parts: &[(String, String)]) -> HashMap<String, Relationship> {
+pub(super) fn workbook_rels(parts: &[(String, String)]) -> HashMap<String, Relationship> {
     let (_, xml) = parts
         .iter()
         .find(|(n, _)| n == "xl/_rels/workbook.xml.rels")
@@ -108,7 +120,7 @@ fn workbook_rels(parts: &[(String, String)]) -> HashMap<String, Relationship> {
         .collect()
 }
 
-fn caches(list: &[(&str, &str)]) -> Vec<(Option<String>, Option<String>)> {
+pub(super) fn caches(list: &[(&str, &str)]) -> Vec<(Option<String>, Option<String>)> {
     list.iter()
         .map(|(id, rel)| (Some((*id).to_string()), Some((*rel).to_string())))
         .collect()
@@ -134,6 +146,7 @@ fn load_in(
         &mut package(parts),
         &workbook_rels(parts),
         &caches(list),
+        &[],
         &sheets,
         date_system,
     )
@@ -287,16 +300,12 @@ fn olap_and_other_sources_are_skipped() {
 }
 
 #[test]
-fn a_group_without_items_and_calculated_fields_are_skipped() {
+fn a_group_without_items_is_skipped() {
     let grouped = definition(FIELDS).replace(
         "<sharedItems/></cacheField>",
         r#"<sharedItems/><fieldGroup base="1"/></cacheField>"#,
     );
     assert_no_cache(&with(parts(), DEFINITION_PART, grouped));
-    let calculated = definition(&format!(
-        r#"{FIELDS}<cacheField name="Double" formula="Sales*2" databaseField="0"/>"#
-    ));
-    assert_no_cache(&with(parts(), DEFINITION_PART, calculated));
 }
 
 #[test]
@@ -524,7 +533,7 @@ fn the_pivot_limits_drop_the_pivot() {
     );
     let data = r#"<dataField name="Sum of Sales" fld="2"/>"#;
     let many_data = TABLE_BODY.replace(
-        r#"<dataFields>"#,
+        r"<dataFields>",
         &format!("<dataFields>{}", data.repeat(MAX_DATA_FIELDS)),
     );
     assert_no_pivot(&with(parts(), TABLE_PART, table(&many_data)));
@@ -589,6 +598,7 @@ fn pivots_past_the_workbook_cap_are_dropped() {
         &mut package(&many),
         &workbook_rels(&many),
         &caches(&[("1", "rIdC1")]),
+        &[],
         &sheets,
         DateSystem::Excel1900,
     );
@@ -826,3 +836,122 @@ fn show_all_is_on_unless_written_off() {
         assert!(pivot.fields[1].show_all, "{attribute:?}");
     }
 }
+
+/// A source field's bare `<fieldGroup par>` only names the field Excel added to group it, as Excel
+/// saves a manual group (probes/t4170-pivot-manual-groups: Product beside Product2): the field
+/// keeps its own items, and each added field keeps its base so a refresh derives it again (T-4171).
+#[test]
+fn a_par_only_field_group_groups_nothing_and_added_fields_keep_their_base() {
+    let definition = grouped_definition().replacen(
+        r#"<s v="North"/></sharedItems></cacheField>"#,
+        r#"<s v="North"/></sharedItems><fieldGroup par="6"/></cacheField>"#,
+        1,
+    );
+    let (caches, pivots) = load(&grouped_parts(definition));
+    assert_eq!((caches.len(), pivots.len()), (1, 1));
+    let fields = &caches[0].fields;
+    assert_eq!(fields[2].items, [text("East"), text("West"), text("North")]);
+    assert_eq!(fields[2].records, [0, 1, 2, 0]);
+    assert!(!fields[2].is_grouped());
+    // Date is grouped in place, so it is no added field; Quarters and Years derive from it.
+    assert_eq!(fields[0].added_group, None);
+    let base = |field: usize| fields[field].added_group.as_ref().map(|g| g.base);
+    assert_eq!(
+        [base(3), base(4), base(5), base(6)],
+        [Some(0), Some(0), Some(1), Some(2)]
+    );
+    assert_eq!(fields[3].added_group.as_ref().unwrap().discrete, None);
+    assert_eq!(
+        fields[6].added_group.as_ref().unwrap().discrete,
+        Some(vec![0, 1, 0])
+    );
+    // A bare `par` that names no added field grouping this one is refused: an added field with
+    // another base (Quarters, base Date), a database field, a field past the cache, no index.
+    for par in ["3", "1", "9", "x"] {
+        let definition = grouped_definition().replacen(
+            r#"<s v="North"/></sharedItems></cacheField>"#,
+            &format!(r#"<s v="North"/></sharedItems><fieldGroup par="{par}"/></cacheField>"#),
+            1,
+        );
+        assert_no_cache(&grouped_parts(definition));
+    }
+    // A bare group without `par` is still refused (`a_group_without_items_...`), and so is a
+    // `par` beside nothing on an added field.
+    let added = grouped_definition().replacen(
+        r#"<fieldGroup base="2"><discretePr count="3"><x v="0"/><x v="1"/><x v="0"/></discretePr>"#,
+        r#"<fieldGroup par="2"><discretePr count="0">"#,
+        1,
+    );
+    assert_no_cache(&grouped_parts(added));
+}
+
+/// A `refreshOnLoad` cache's numeric range group may list `<item x>` past the groups the
+/// importer rebuilds: Excel rebuilds them on open and lays the field out again, so the item is
+/// dropped (probes/t4128-pivot-spike G; pivots.md "Numeric and date group labels are rewritten by
+/// Excel"). Without `refreshOnLoad`, on a date or manual group (unprobed, T-4802) or on an
+/// ungrouped field, it is still refused (T-4171).
+#[test]
+fn an_item_past_the_rebuilt_groups_is_dropped_on_a_refresh_on_load_cache() {
+    // Bands (field 5) groups Amount by tens into 5 items.
+    let stale = GROUPED_TABLE.replacen(
+        "<pivotField/><pivotField/></pivotFields>",
+        r#"<pivotField><items count="3"><item x="1"/><item x="5" n="Stale"/><item x="0"/></items></pivotField><pivotField/></pivotFields>"#,
+        1,
+    );
+    let on_load = |definition: String| {
+        definition.replacen(r#" r:id="rId1">"#, r#" r:id="rId1" refreshOnLoad="1">"#, 1)
+    };
+    let parts = with(
+        grouped_parts(on_load(grouped_definition())),
+        TABLE_PART,
+        table(&stale),
+    );
+    let (caches, pivots) = load(&parts);
+    assert!(caches[0].refresh_on_load);
+    assert!(caches[0].fields[5].number_groups.is_some());
+    let [pivot] = &pivots[..] else {
+        panic!("one pivot");
+    };
+    let indices: Vec<Option<u32>> = pivot.fields[5].items.iter().map(|i| i.index).collect();
+    assert_eq!(indices, [Some(1), Some(0)]);
+    // The dropped item's `n` is kept nowhere.
+    assert!(pivot.opaque.iter().all(|e| match &e.node {
+        OpaqueNode::Attributes(xml) | OpaqueNode::Element(xml) => !xml.contains("Stale"),
+    }));
+    assert_no_pivot(&with(
+        grouped_parts(grouped_definition()),
+        TABLE_PART,
+        table(&stale),
+    ));
+    // Date (14 month items) and Zone (2 manual groups) refuse an item past theirs.
+    let date = GROUPED_TABLE.replacen(
+        r#"<item x="0"/></items></pivotField><pivotField dataField="1"/>"#,
+        r#"<item x="0"/><item x="14"/></items></pivotField><pivotField dataField="1"/>"#,
+        1,
+    );
+    let zone = GROUPED_TABLE.replacen(
+        "<pivotField/></pivotFields>",
+        r#"<pivotField><items count="1"><item x="2"/></items></pivotField></pivotFields>"#,
+        1,
+    );
+    for body in [date, zone] {
+        let parts = with(
+            grouped_parts(on_load(grouped_definition())),
+            TABLE_PART,
+            table(&body),
+        );
+        assert_no_pivot(&parts);
+    }
+    let ungrouped = TABLE_BODY.replacen(r#"<item x="0"/>"#, r#"<item x="0"/><item x="2"/>"#, 1);
+    let parts = with(parts_on_load(), TABLE_PART, table(&ungrouped));
+    assert_no_pivot(&parts);
+}
+
+/// [`parts`] with a `refreshOnLoad` cache.
+fn parts_on_load() -> Vec<(String, String)> {
+    let definition =
+        definition(FIELDS).replacen(r#" r:id="rId1">"#, r#" r:id="rId1" refreshOnLoad="1">"#, 1);
+    with(parts(), DEFINITION_PART, definition)
+}
+
+mod calculated;

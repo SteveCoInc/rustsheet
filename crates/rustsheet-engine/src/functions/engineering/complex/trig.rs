@@ -1,4 +1,8 @@
 //! The circular and hyperbolic IM* functions (IMSIN … IMCOT, IMSINH … IMCSCH), of a parsed number.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::manual_midpoint)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use super::super::ENGINEERING_EXP_CUT;
 use super::{complex_result, finite_complex_result, ComplexParts, Suffix};

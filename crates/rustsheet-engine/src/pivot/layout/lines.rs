@@ -22,9 +22,12 @@
 //!   children (t4138 G5);
 //! - a field has subtotal lines only when a field other than Values is inside it: a field whose
 //!   only inner level is Values has none (t4138 G6, t4135 `A_sum`). The lines are one `default`
-//!   line, or one line per custom subtotal function in the field's order (t4137 K5 `sum`, `count`;
-//!   t4168 F1 all eleven), after the children in compact form too (t4168 F2; plain outline form,
-//!   `compact` off, is the engine's reading: UNVERIFIED, T-4699);
+//!   line, or one line per custom subtotal function in the functions' fixed order, whatever the
+//!   field's: in `ST_ItemType` names sum, countA, avg, max, min, product, count (Count Numbers),
+//!   stdDev, stdDevP, var, varP, which is [`Aggregate`](super::super::Aggregate)'s order (t4137 K5
+//!   `sum`, `count`; t4168 F1 all eleven; probes/t4699-pivot-blank-collapsed CU, CU2 `max` before
+//!   `count`, CR all eleven listed in reverse), after the children in compact and plain outline
+//!   form too (t4168 F2; t4699 OC);
 //! - the grand total is one `t="grand"` line `<x/>` per data field when Values is on the axis
 //!   (`i` the data field), one otherwise, and none on an axis with no field but Values (t4138 G6,
 //!   G9; t4135 `A_sum`, `EC`). `rowGrandTotals` gives the row axis's line and `colGrandTotals` the
@@ -32,11 +35,16 @@
 //! - an axis with no level at all has one empty line `<i/>` (t4138 G1, G7, G9; t4137 K4);
 //! - a row field with `insertBlankRow` has a `t="blank"` line after each item, below its
 //!   subtotals, with the item's tuple and no values (probes/t4168-pivot-layout-options BR
-//!   tabular, BR2 compact);
+//!   tabular, BR2 compact), a collapsed item's too (t4699 BS, BS2); the innermost row field and
+//!   a column field have none (t4699 BI, BI2, BC);
 //! - a collapsed item (`item@sd="0"`) has one line, its own tuple, with its values and no
-//!   children or subtotal lines, in compact and tabular form (t4168 SD, SD2). On columns, and on
-//!   a field with Values inside it (one line, no data field chosen, so the first data field's
-//!   values), it is the engine's reading (UNVERIFIED, T-4699).
+//!   children or subtotal lines, in compact and tabular form (t4168 SD, SD2), on columns (t4699
+//!   CC), in a middle field (CM, CM2) and whatever its field's subtotals (`subtotalTop="0"` CB,
+//!   custom CU, CU2: the data field's own aggregate). The Values level inside it stays: one line
+//!   per data field, each with the item's values, and still no subtotal lines (CV, CV2), also
+//!   past a field the item hides, whose `x` is then `1048832` (CV3 compact, CV4 tabular). An
+//!   item with a line of its own above its children (compact, outline) keeps it, with no values;
+//!   in tabular form its first data field line is its line (CV4).
 //!
 //! The engine's own readings where no probe shows Excel's (pivots.md "Layout lines", UNVERIFIED):
 //! subtotals at the bottom (`subtotalTop="0"`), `defaultSubtotal="0"` with no custom subtotal,
@@ -59,6 +67,11 @@
 //! Every line is charged to the work budget as it is made, and a layout past the sheet or past
 //! [`MAX_PIVOT_CELLS`] cells has no result (pivots.md "A pivot result is bounded in work and
 //! nodes", DEVIATION). The walk keeps its own stack, so an untrusted axis depth never recurses.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_field_names)]
+// LINT-DEBT-END
+
+use std::ops::Range;
 
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 
@@ -103,6 +116,22 @@ pub struct PivotLayout {
     pub location: CellArea,
     /// The rest of `<location>`.
     pub geometry: PivotGeometry,
+}
+
+impl PivotLayout {
+    /// The 0-based (row, column) of the first value cell: the location's top-left cell moved by
+    /// `firstDataRow` and `firstDataCol`. Row line `i` holds its values in row `i` past it, column
+    /// line `j` in column `j` past it.
+    pub(crate) fn data_origin(&self) -> (u32, u32) {
+        (
+            self.location
+                .top
+                .saturating_add(self.geometry.first_data_row),
+            self.location
+                .left
+                .saturating_add(self.geometry.first_data_column),
+        )
+    }
 }
 
 /// One level of an axis: a field of the result's tree, or the Values field.
@@ -158,6 +187,15 @@ fn positions(field: Option<&PivotField>, item_count: usize) -> Vec<u32> {
     at
 }
 
+/// The `x` Excel writes for a field level a collapsed item hides between it and the Values level
+/// inside it: `<x v="1048832"/>` (probes/t4699-pivot-blank-collapsed CV4, tabular). In compact
+/// form the lines below the item's own line count it as repeated, so it is not written (CV3).
+/// Only written, never read as a position: which levels are hidden is [`Visit::hidden`], and a
+/// reader of the lines tells a hidden level by the line's node being above it, so a real item
+/// at this position (past [`MAX_ITEMS`](super::super::MAX_ITEMS) items, which a cache cannot
+/// hold) would not be mistaken for one.
+pub(super) const HIDDEN: u32 = 1_048_832;
+
 /// The step of the walk over an axis.
 enum Step {
     /// Emit a node's lines and queue its children.
@@ -173,6 +211,11 @@ struct Visit {
     level: usize,
     data: Option<u32>,
     tuple: Vec<u32>,
+    /// Whether the node is a collapsed item or the Values level inside one: its next field
+    /// level is hidden and it has no subtotal lines ([`AxisPlan::collapsed`]).
+    folded: bool,
+    /// The positions of `tuple` that are [`HIDDEN`] levels.
+    hidden: Range<usize>,
 }
 
 /// One axis's lines, as the walk makes them.
@@ -197,11 +240,12 @@ impl Lines<'_> {
             return Err(PivotComputeError::Limit);
         }
         let (tuple, grand) = (&visit.tuple, kind == ItemType::Grand);
-        let shared = self
-            .previous
+        // A hidden level counts as repeated: the first data field line under a collapsed `East`
+        // over a hidden `Product` is `r="2"` after `East`'s own line (t4699 CV3).
+        let shared = tuple
             .iter()
-            .zip(tuple)
-            .take_while(|(a, b)| a == b)
+            .enumerate()
+            .take_while(|&(at, x)| visit.hidden.contains(&at) || self.previous.get(at) == Some(x))
             .count();
         let repeat = if grand {
             0
@@ -232,6 +276,8 @@ struct AxisPlan<'a> {
     /// Per tree field, its [`positions`].
     positions: Vec<Vec<u32>>,
     data_fields: u32,
+    /// The level of the Values field, if it is on the axis.
+    values_level: Option<usize>,
     rows: bool,
     grand: bool,
 }
@@ -263,9 +309,12 @@ impl<'a> AxisPlan<'a> {
             charge(work, units(item_count.saturating_add(listed)))?;
             at.push(positions(pivot_field, item_count));
         }
+        let levels = levels(table, axis);
+        let values_level = levels.iter().position(|l| matches!(l, Level::Values));
         Ok(AxisPlan {
             tree,
-            levels: levels(table, axis),
+            values_level,
+            levels,
             positions: at,
             data_fields: u32::try_from(table.data_fields.len())
                 .map_err(|_| PivotComputeError::Limit)?,
@@ -303,15 +352,21 @@ impl<'a> AxisPlan<'a> {
     }
 
     /// The field's subtotal lines: `default`, or its custom functions when it has no default
-    /// subtotal (a field with both is read as the default alone: UNVERIFIED, T-4649).
+    /// subtotal (a field with both is read as the default alone: UNVERIFIED, T-4649). The custom
+    /// lines come in the functions' fixed order ([`Aggregate`](super::super::Aggregate)'s, which
+    /// is `ST_DataConsolidateFunction`'s: sum, count, average, max, min, product, countNums,
+    /// stdDev, stdDevp, var, varp; in `ST_ItemType` names sum, countA, avg, max, min, product,
+    /// count, stdDev, stdDevP, var, varP, so `countA` is Count and `count` Count Numbers), not the
+    /// field's: Excel shows `max` before `count` (Count Numbers) whatever order the field lists
+    /// them in (t4699 CU, CU2), and all eleven in that order when listed in reverse (CR).
     fn subtotals(&self, level: usize) -> Vec<ItemType> {
         match self.levels.get(level) {
             Some(Level::Field { field, .. }) if self.has_subtotals(level) => match field {
-                Some(f) if !f.default_subtotal => f
-                    .custom_subtotals
-                    .iter()
-                    .map(|a| ItemType::Function(*a))
-                    .collect(),
+                Some(f) if !f.default_subtotal => {
+                    let mut functions = f.custom_subtotals.clone();
+                    functions.sort_unstable();
+                    functions.into_iter().map(ItemType::Function).collect()
+                }
                 _ => vec![ItemType::Default],
             },
             _ => Vec::new(),
@@ -347,27 +402,42 @@ impl<'a> AxisPlan<'a> {
             level: 0,
             data: None,
             tuple: Vec::new(),
+            folded: false,
+            hidden: 0..0,
         })];
         while let Some(step) = stack.pop() {
             match step {
-                Step::Enter(visit) => {
+                Step::Enter(mut visit) => {
                     let level = visit.level;
                     let Some(&inner) = self.levels.get(level) else {
                         out.push(ItemType::Data, &visit, visit.data, true)?;
                         continue;
                     };
                     if let Some(own) = level.checked_sub(1) {
-                        if self.collapsed(own, &visit) {
+                        visit.folded = visit.folded || self.collapsed(own, &visit);
+                    }
+                    // A collapsed item hides the field levels inside it but not the Values
+                    // level: its data fields keep their lines, each with the item's values, even
+                    // under a hidden field (t4699 CV, CV2, CV3).
+                    let mut inner_level = level;
+                    if visit.folded && matches!(inner, Level::Field { .. }) {
+                        if let Some(values) = self.values_from(level) {
+                            inner_level = values;
+                        } else {
                             out.push(ItemType::Data, &visit, visit.data, true)?;
-                            self.blank_line(own, &visit, &mut out)?;
+                            if let Some(own) = level.checked_sub(1) {
+                                self.blank_line(own, &visit, &mut out)?;
+                            }
                             continue;
                         }
+                    }
+                    if let Some(own) = level.checked_sub(1) {
                         if self.own_line(own, options) {
                             let values = self.subtotal_on_top(own, options);
                             out.push(ItemType::Data, &visit, visit.data, values)?;
                         }
                     }
-                    let children = self.children(&visit, inner, out.work)?;
+                    let children = self.children(&visit, inner_level, out.work)?;
                     stack.push(Step::Close(visit));
                     stack.extend(children.into_iter().rev().map(Step::Enter));
                 }
@@ -377,22 +447,40 @@ impl<'a> AxisPlan<'a> {
         Ok(out.lines)
     }
 
-    /// The children of `visit` at its inner level, in display order.
+    /// The Values field's level when it is `level` or inside it.
+    fn values_from(&self, level: usize) -> Option<usize> {
+        self.values_level.filter(|&values| values >= level)
+    }
+
+    /// The children of `visit` at level `inner_level` (its inner level, or a deeper one whose
+    /// levels in between a collapsed item hides: [`HIDDEN`] in their tuples), in display order.
     fn children(
         &self,
         visit: &Visit,
-        inner: Level<'_>,
+        inner_level: usize,
         work: &mut u64,
     ) -> Result<Vec<Visit>, PivotComputeError> {
+        let Some(&inner) = self.levels.get(inner_level) else {
+            return Err(PivotComputeError::Malformed);
+        };
+        let hidden = inner_level.saturating_sub(visit.level);
+        let hidden_at = if hidden == 0 {
+            visit.hidden.clone()
+        } else {
+            visit.tuple.len()..visit.tuple.len() + hidden
+        };
         let child = |node, data, x| {
-            let mut tuple = Vec::with_capacity(visit.tuple.len() + 1);
+            let mut tuple = Vec::with_capacity(visit.tuple.len() + hidden + 1);
             tuple.extend_from_slice(&visit.tuple);
+            tuple.extend(std::iter::repeat_n(HIDDEN, hidden));
             tuple.push(x);
             Visit {
                 node,
-                level: visit.level + 1,
+                level: inner_level + 1,
                 data,
                 tuple,
+                folded: visit.folded,
+                hidden: hidden_at.clone(),
             }
         };
         // Charged before any child is made: the tree counts them without allocating.
@@ -400,7 +488,10 @@ impl<'a> AxisPlan<'a> {
             Level::Values => self.data_fields as usize,
             Level::Field { .. } => self.tree.children(visit.node).count(),
         };
-        charge(work, units(count.saturating_mul(visit.tuple.len() + 1)))?;
+        charge(
+            work,
+            units(count.saturating_mul(visit.tuple.len() + hidden + 1)),
+        )?;
         let children: Vec<Visit> = match inner {
             Level::Values => (0..self.data_fields)
                 .map(|d| child(visit.node, Some(d), d))
@@ -444,7 +535,7 @@ impl<'a> AxisPlan<'a> {
             }
             return Ok(());
         };
-        if !self.subtotal_on_top(own, options) {
+        if !visit.folded && !self.subtotal_on_top(own, options) {
             for kind in self.subtotals(own) {
                 for data in per_data(self.values_inside(own)) {
                     out.push(kind, visit, data, true)?;
@@ -456,8 +547,9 @@ impl<'a> AxisPlan<'a> {
 
     /// The `t="blank"` line after an item of a row field with `insertBlankRow`, below its
     /// subtotals, the item's own tuple and no values (probes/t4168-pivot-layout-options BR,
-    /// BR2). Only an outer field is probed: on the innermost row field, whose items have no
-    /// children, the engine adds none (UNVERIFIED, T-4699).
+    /// BR2), after a collapsed item too (probes/t4699-pivot-blank-collapsed BS, BS2). The
+    /// innermost row field, whose items have no children, and a column field have none (t4699
+    /// BI, BI2, BC).
     fn blank_line(
         &self,
         level: usize,
@@ -476,7 +568,8 @@ impl<'a> AxisPlan<'a> {
 
     /// Whether `visit`'s item, at field level `level`, is collapsed (`item@sd="0"`): its line
     /// stands alone, with the item's values and none of its children or subtotal lines
-    /// (probes/t4168-pivot-layout-options SD compact, SD2 tabular).
+    /// (probes/t4168-pivot-layout-options SD compact, SD2 tabular; probes/t4699-pivot-blank-collapsed
+    /// CC on columns, CM and CM2 a middle field), but for the Values level inside it (CV, CV2).
     fn collapsed(&self, level: usize, visit: &Visit) -> bool {
         let Some(Level::Field {
             depth,

@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::dbg_macro,
+    clippy::match_same_arms,
+    clippy::print_stdout,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 use std::{collections::HashMap, io::Read};
 
 use super::package::Package;
@@ -10,7 +18,9 @@ use super::xml::XmlNode;
 
 use crate::error::XlsxError;
 
-use super::util::{get_attribute, get_bool, get_bool_false, get_color_indexed, get_number};
+use super::util::{
+    get_attribute, get_bool, get_bool_false, get_color_indexed, get_number, strip_alpha,
+};
 
 /// The first `<tag>` child of the stylesheet root; a file without one is malformed input, so
 /// it is a typed error rather than an index panic (T-0118, poi 47889 and friends).
@@ -45,12 +55,9 @@ fn parse_indexed_colors(style_sheet: &XmlNode) -> Option<Vec<String>> {
         .children()
         .filter(|n| n.has_tag_name("rgbColor"))
         .map(|n| match n.attribute("rgb") {
-            // ARGB (drop the alpha byte) or bare RGB; `is_ascii` guards the byte slice.
-            Some(raw) if raw.len() == 8 && raw.is_ascii() => {
-                format!("#{}", raw[2..].to_ascii_uppercase())
-            }
-            Some(raw) if raw.len() == 6 && raw.is_ascii() => {
-                format!("#{}", raw.to_ascii_uppercase())
+            // ARGB (drop the alpha byte) or bare RGB.
+            Some(raw) if matches!(raw.len(), 6 | 8) && raw.is_ascii() => {
+                format!("#{}", strip_alpha(raw).to_ascii_uppercase())
             }
             _ => String::new(),
         })
@@ -337,7 +344,7 @@ pub(super) fn load_styles<R: Read + std::io::Seek>(
         // many Excel/LibreOffice files omit it). Default to 0 when absent.
         let xf_id = xfs
             .attribute("xfId")
-            .map(|s| s.parse::<i32>())
+            .map(str::parse::<i32>)
             .transpose()?
             .unwrap_or(0);
         let num_fmt_id = get_number(xfs, "numFmtId");

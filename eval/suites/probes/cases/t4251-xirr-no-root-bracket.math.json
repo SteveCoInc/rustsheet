@@ -1,0 +1,62 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "a5112f19f6b6e8b4e17fa48c9667bac1d2db697b95aa7ccd2b9d11f5ec6cc969",
+  "definitions": {
+   "XIRR": "77573120311e2d70"
+  },
+  "arguments_sha256": "a0a4d142bcdd738e2678430d6b9067ddb1097b09d8a83dba7c1e85535cccd2ee"
+ },
+ "sheets": {
+  "Calc": {
+   "A17": {
+    "t": "e",
+    "why": "flows of one sign: no rate",
+    "f": "=XIRR({-1,-2},{1,2})"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "A1": {
+    "f": "=XIRR({-100,200,-300},{1,2,3})",
+    "why": "no single value"
+   },
+   "A10": {
+    "f": "=XIRR({-100,200,-300},{0,3650,7300})",
+    "why": "no single value"
+   },
+   "A11": {
+    "f": "=XIRR({-100,50,-300},{1,2,3})",
+    "why": "no single value"
+   },
+   "A12": {
+    "f": "=XIRR({-100,1,-100},{1,2,3})",
+    "why": "no single value"
+   },
+   "A14": {
+    "f": "=XIRR({-300,200,-100},{1,2,3})",
+    "why": "no single value"
+   },
+   "A15": {
+    "f": "=XIRR({-100,300,-300},{1,2,3})",
+    "why": "no single value"
+   },
+   "A16": {
+    "f": "=XIRR({-100,350,-300},{0,365,730})",
+    "why": "no single value"
+   },
+   "A8": {
+    "f": "=XIRR({100,-200,300},{1,2,3})",
+    "why": "no single value"
+   },
+   "A9": {
+    "f": "=XIRR({-100,200,-300},{0,365,730})",
+    "why": "no single value"
+   }
+  }
+ }
+}

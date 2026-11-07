@@ -5,60 +5,60 @@ use crate::test::util::new_empty_model;
 #[test]
 fn test_textsplit_basic() {
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"a,b,c\",\",\")");
+    model.set_a1("A1", "=TEXTSPLIT(\"a,b,c\",\",\")");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
-    assert_eq!(model._get_text("C1"), "c");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
+    assert_eq!(model.get_text_a1("C1"), "c");
 }
 
 #[test]
 fn test_textsplit_row_delimiter() {
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"a,b|c,d\",\",\",\"|\")");
+    model.set_a1("A1", "=TEXTSPLIT(\"a,b|c,d\",\",\",\"|\")");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
-    assert_eq!(model._get_text("A2"), "c");
-    assert_eq!(model._get_text("B2"), "d");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
+    assert_eq!(model.get_text_a1("A2"), "c");
+    assert_eq!(model.get_text_a1("B2"), "d");
 }
 
 #[test]
 fn test_textsplit_ignore_empty() {
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"a,,b\",\",\",,TRUE)");
+    model.set_a1("A1", "=TEXTSPLIT(\"a,,b\",\",\",,TRUE)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
 }
 
 #[test]
 fn test_textsplit_case_insensitive() {
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"aXbXc\",\"x\",,FALSE,1)");
+    model.set_a1("A1", "=TEXTSPLIT(\"aXbXc\",\"x\",,FALSE,1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
-    assert_eq!(model._get_text("C1"), "c");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
+    assert_eq!(model.get_text_a1("C1"), "c");
 }
 
 #[test]
 fn test_textsplit_pad_with() {
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"a,b|c\",\",\",\"|\",,,\"X\")");
+    model.set_a1("A1", "=TEXTSPLIT(\"a,b|c\",\",\",\"|\",,,\"X\")");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
-    assert_eq!(model._get_text("A2"), "c");
-    assert_eq!(model._get_text("B2"), "X");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
+    assert_eq!(model.get_text_a1("A2"), "c");
+    assert_eq!(model.get_text_a1("B2"), "X");
 }
 
 #[test]
 fn test_textsplit_wrong_arg_count() {
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"a\")");
+    model.set_a1("A1", "=TEXTSPLIT(\"a\")");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
 }
 
 // ── TEXTSPLIT with array col_delimiter ────────────────────────────────────────
@@ -67,86 +67,86 @@ fn test_textsplit_wrong_arg_count() {
 fn test_textsplit_array_col_delim_inline() {
     // Inline array of two column delimiters: "," and ";"
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"a,b;c\",{\",\",\";\"},)");
+    model.set_a1("A1", "=TEXTSPLIT(\"a,b;c\",{\",\",\";\"},)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
-    assert_eq!(model._get_text("C1"), "c");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
+    assert_eq!(model.get_text_a1("C1"), "c");
 }
 
 #[test]
 fn test_textsplit_array_col_delim_from_range() {
     // Column delimiter list in a range A10:A11
     let mut model = new_empty_model();
-    model._set("A10", ",");
-    model._set("A11", ";");
-    model._set("A1", "=TEXTSPLIT(\"a,b;c\",A10:A11)");
+    model.set_a1("A10", ",");
+    model.set_a1("A11", ";");
+    model.set_a1("A1", "=TEXTSPLIT(\"a,b;c\",A10:A11)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
-    assert_eq!(model._get_text("C1"), "c");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
+    assert_eq!(model.get_text_a1("C1"), "c");
 }
 
 #[test]
 fn test_textsplit_array_col_delim_three_delimiters() {
     // Three delimiters: comma, semicolon, pipe
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"a,b;c|d\",{\",\",\";\",\"|\"})");
+    model.set_a1("A1", "=TEXTSPLIT(\"a,b;c|d\",{\",\",\";\",\"|\"})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
-    assert_eq!(model._get_text("C1"), "c");
-    assert_eq!(model._get_text("D1"), "d");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
+    assert_eq!(model.get_text_a1("C1"), "c");
+    assert_eq!(model.get_text_a1("D1"), "d");
 }
 
 #[test]
 fn test_textsplit_array_col_delim_with_row_delim() {
     // Array col delimiters + single row delimiter
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"a,b;c|d,e;f\",{\",\",\";\"},\"|\")");
+    model.set_a1("A1", "=TEXTSPLIT(\"a,b;c|d,e;f\",{\",\",\";\"},\"|\")");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
-    assert_eq!(model._get_text("C1"), "c");
-    assert_eq!(model._get_text("A2"), "d");
-    assert_eq!(model._get_text("B2"), "e");
-    assert_eq!(model._get_text("C2"), "f");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
+    assert_eq!(model.get_text_a1("C1"), "c");
+    assert_eq!(model.get_text_a1("A2"), "d");
+    assert_eq!(model.get_text_a1("B2"), "e");
+    assert_eq!(model.get_text_a1("C2"), "f");
 }
 
 #[test]
 fn test_textsplit_array_row_delim() {
     // Array of two row delimiters: "|" and "#"
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"a,b|c,d#e,f\",\",\",{\"|\",\"#\"})");
+    model.set_a1("A1", "=TEXTSPLIT(\"a,b|c,d#e,f\",\",\",{\"|\",\"#\"})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
-    assert_eq!(model._get_text("A2"), "c");
-    assert_eq!(model._get_text("B2"), "d");
-    assert_eq!(model._get_text("A3"), "e");
-    assert_eq!(model._get_text("B3"), "f");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
+    assert_eq!(model.get_text_a1("A2"), "c");
+    assert_eq!(model.get_text_a1("B2"), "d");
+    assert_eq!(model.get_text_a1("A3"), "e");
+    assert_eq!(model.get_text_a1("B3"), "f");
 }
 
 #[test]
 fn test_textsplit_array_col_delim_preserves_order() {
     // When multiple delimiters are present, the earliest one in the text wins
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"hello;world,foo\",{\",\",\";\"},)");
+    model.set_a1("A1", "=TEXTSPLIT(\"hello;world,foo\",{\",\",\";\"},)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "hello");
-    assert_eq!(model._get_text("B1"), "world");
-    assert_eq!(model._get_text("C1"), "foo");
+    assert_eq!(model.get_text_a1("A1"), "hello");
+    assert_eq!(model.get_text_a1("B1"), "world");
+    assert_eq!(model.get_text_a1("C1"), "foo");
 }
 
 #[test]
 fn test_textsplit_array_col_delim_case_insensitive() {
     // Array delimiter with case-insensitive matching
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"aXbYc\",{\"x\",\"y\"},,FALSE,1)");
+    model.set_a1("A1", "=TEXTSPLIT(\"aXbYc\",{\"x\",\"y\"},,FALSE,1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
-    assert_eq!(model._get_text("C1"), "c");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
+    assert_eq!(model.get_text_a1("C1"), "c");
 }
 
 // T-1794: match_mode 1 once located delimiters in `to_lowercase()` of the text and sliced the
@@ -154,23 +154,23 @@ fn test_textsplit_array_col_delim_case_insensitive() {
 #[test]
 fn test_textsplit_case_insensitive_non_ascii_length_change() {
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"İİİ,a\",\",\",,,1)");
+    model.set_a1("A1", "=TEXTSPLIT(\"İİİ,a\",\",\",,,1)");
     // Kelvin sign (3 bytes) lowercases to ASCII k (1 byte), shifting offsets the other way.
-    model._set("A3", "=TEXTSPLIT(\"\u{212A}\u{212A},b\",\",\",,,1)");
-    model._set("A5", "=TEXTSPLIT(\"İ|İ,c\",\",\",\"|\",,1)");
-    model._set("A8", "=TEXTSPLIT(\"ÄxäyÄ\",\"ä\",,,1)");
+    model.set_a1("A3", "=TEXTSPLIT(\"\u{212A}\u{212A},b\",\",\",,,1)");
+    model.set_a1("A5", "=TEXTSPLIT(\"İ|İ,c\",\",\",\"|\",,1)");
+    model.set_a1("A8", "=TEXTSPLIT(\"ÄxäyÄ\",\"ä\",,,1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "İİİ");
-    assert_eq!(model._get_text("B1"), "a");
-    assert_eq!(model._get_text("A3"), "\u{212A}\u{212A}");
-    assert_eq!(model._get_text("B3"), "b");
-    assert_eq!(model._get_text("A5"), "İ");
-    assert_eq!(model._get_text("A6"), "İ");
-    assert_eq!(model._get_text("B6"), "c");
-    assert_eq!(model._get_text("A8"), "");
-    assert_eq!(model._get_text("B8"), "x");
-    assert_eq!(model._get_text("C8"), "y");
-    assert_eq!(model._get_text("D8"), "");
+    assert_eq!(model.get_text_a1("A1"), "İİİ");
+    assert_eq!(model.get_text_a1("B1"), "a");
+    assert_eq!(model.get_text_a1("A3"), "\u{212A}\u{212A}");
+    assert_eq!(model.get_text_a1("B3"), "b");
+    assert_eq!(model.get_text_a1("A5"), "İ");
+    assert_eq!(model.get_text_a1("A6"), "İ");
+    assert_eq!(model.get_text_a1("B6"), "c");
+    assert_eq!(model.get_text_a1("A8"), "");
+    assert_eq!(model.get_text_a1("B8"), "x");
+    assert_eq!(model.get_text_a1("C8"), "y");
+    assert_eq!(model.get_text_a1("D8"), "");
 }
 
 // Excel (probes/textsplit-casefold-length): İ matches "i", Kelvin sign does not match "k",
@@ -178,17 +178,17 @@ fn test_textsplit_case_insensitive_non_ascii_length_change() {
 #[test]
 fn test_textsplit_case_insensitive_matches_excel_folding() {
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"aİbİc\",\"i\",,,1)");
-    model._set("A2", "=TEXTSPLIT(\"a\u{212A}bkc\",\"k\",,,1)");
-    model._set("A3", "=TEXTSPLIT(\"aßbSSc\",\"ss\",,,1)");
+    model.set_a1("A1", "=TEXTSPLIT(\"aİbİc\",\"i\",,,1)");
+    model.set_a1("A2", "=TEXTSPLIT(\"a\u{212A}bkc\",\"k\",,,1)");
+    model.set_a1("A3", "=TEXTSPLIT(\"aßbSSc\",\"ss\",,,1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "b");
-    assert_eq!(model._get_text("C1"), "c");
-    assert_eq!(model._get_text("A2"), "a\u{212A}b");
-    assert_eq!(model._get_text("B2"), "c");
-    assert_eq!(model._get_text("A3"), "aßb");
-    assert_eq!(model._get_text("B3"), "c");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "b");
+    assert_eq!(model.get_text_a1("C1"), "c");
+    assert_eq!(model.get_text_a1("A2"), "a\u{212A}b");
+    assert_eq!(model.get_text_a1("B2"), "c");
+    assert_eq!(model.get_text_a1("A3"), "aßb");
+    assert_eq!(model.get_text_a1("B3"), "c");
 }
 
 // T-4473 (probes/t4473-textsplit-fold-gaps A14:A19, A27, A63): TEXTSPLIT folds sigma by
@@ -197,20 +197,20 @@ fn test_textsplit_case_insensitive_matches_excel_folding() {
 #[test]
 fn test_textsplit_case_insensitive_sigma_angstrom_and_digraph() {
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT(\"aΣbςcσd\",\"σ\",,,1)");
-    model._set("A2", "=TEXTSPLIT(\"aΣbςcσd\",\"Σ\",,,1)");
-    model._set("A3", "=TEXTSPLIT(\"a\u{212B}b\",\"å\",,,1)");
-    model._set("A4", "=TEXTSPLIT(\"aǅb\",\"Ǆ\",,,1)");
+    model.set_a1("A1", "=TEXTSPLIT(\"aΣbςcσd\",\"σ\",,,1)");
+    model.set_a1("A2", "=TEXTSPLIT(\"aΣbςcσd\",\"Σ\",,,1)");
+    model.set_a1("A3", "=TEXTSPLIT(\"a\u{212B}b\",\"å\",,,1)");
+    model.set_a1("A4", "=TEXTSPLIT(\"aǅb\",\"Ǆ\",,,1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "a");
-    assert_eq!(model._get_text("B1"), "bςc");
-    assert_eq!(model._get_text("C1"), "d");
-    assert_eq!(model._get_text("A2"), "aΣb");
-    assert_eq!(model._get_text("B2"), "cσd");
-    assert_eq!(model._get_text("A3"), "a\u{212B}b");
-    assert_eq!(model._get_text("B3"), "");
-    assert_eq!(model._get_text("A4"), "a");
-    assert_eq!(model._get_text("B4"), "b");
+    assert_eq!(model.get_text_a1("A1"), "a");
+    assert_eq!(model.get_text_a1("B1"), "bςc");
+    assert_eq!(model.get_text_a1("C1"), "d");
+    assert_eq!(model.get_text_a1("A2"), "aΣb");
+    assert_eq!(model.get_text_a1("B2"), "cσd");
+    assert_eq!(model.get_text_a1("A3"), "a\u{212B}b");
+    assert_eq!(model.get_text_a1("B3"), "");
+    assert_eq!(model.get_text_a1("A4"), "a");
+    assert_eq!(model.get_text_a1("B4"), "b");
 }
 
 // T-1272: a lifted element keeps the first value of its array without building it; an empty
@@ -218,20 +218,20 @@ fn test_textsplit_case_insensitive_sigma_angstrom_and_digraph() {
 #[test]
 fn lifted_element_keeps_the_first_value() {
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTSPLIT({\",;a\";\"b,c\"},\",\",\";\",TRUE)");
-    model._set(
+    model.set_a1("A1", "=TEXTSPLIT({\",;a\";\"b,c\"},\",\",\";\",TRUE)");
+    model.set_a1(
         "B1",
         "=TEXTSPLIT({\",;a\";\"b,c\"},\",\",\";\",TRUE,0,\"p\")",
     );
-    model._set("C1", "=TEXTSPLIT(\",;a\",\",\",\";\",TRUE)");
+    model.set_a1("C1", "=TEXTSPLIT(\",;a\",\",\",\";\",TRUE)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#N/A");
-    assert_eq!(model._get_text("A2"), *"b");
-    assert_eq!(model._get_text("B1"), *"p");
-    assert_eq!(model._get_text("B2"), *"b");
+    assert_eq!(model.get_text_a1("A1"), *"#N/A");
+    assert_eq!(model.get_text_a1("A2"), *"b");
+    assert_eq!(model.get_text_a1("B1"), *"p");
+    assert_eq!(model.get_text_a1("B2"), *"b");
     // Unlifted, the same text is the whole padded array.
-    assert_eq!(model._get_text("C1"), *"#N/A");
-    assert_eq!(model._get_text("C2"), *"a");
+    assert_eq!(model.get_text_a1("C1"), *"#N/A");
+    assert_eq!(model.get_text_a1("C2"), *"a");
 }
 
 // Each delimiter's search moves forward through the text: many pieces with a delimiter that
@@ -239,16 +239,16 @@ fn lifted_element_keeps_the_first_value() {
 #[test]
 fn many_pieces_with_an_absent_delimiter() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=COLUMNS(TEXTSPLIT(REPT(\"a,\",16000),{\",\",\"zz\"}))",
     );
-    model._set("A2", "=TEXTSPLIT(\"a-b,c\",{\",\",\"-\"})");
+    model.set_a1("A2", "=TEXTSPLIT(\"a-b,c\",{\",\",\"-\"})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"16001");
-    assert_eq!(model._get_text("A2"), *"a");
-    assert_eq!(model._get_text("B2"), *"b");
-    assert_eq!(model._get_text("C2"), *"c");
+    assert_eq!(model.get_text_a1("A1"), *"16001");
+    assert_eq!(model.get_text_a1("A2"), *"a");
+    assert_eq!(model.get_text_a1("B2"), *"b");
+    assert_eq!(model.get_text_a1("C2"), *"c");
 }
 
 // A 1x1 array lifts the call like a larger one, so the element keeps its first value
@@ -257,13 +257,13 @@ fn many_pieces_with_an_absent_delimiter() {
 #[test]
 fn one_by_one_array_lifts() {
     let mut model = new_empty_model();
-    model._set("A1", "=COLUMNS(TEXTSPLIT({\"a,b\"},\",\"))");
-    model._set("A2", "=COLUMNS(REGEXEXTRACT({\"a1b2\"},\"[0-9]\",1))");
-    model._set("A3", "=COLUMNS(TEXTSPLIT(\"a,b\",\",\"))");
+    model.set_a1("A1", "=COLUMNS(TEXTSPLIT({\"a,b\"},\",\"))");
+    model.set_a1("A2", "=COLUMNS(REGEXEXTRACT({\"a1b2\"},\"[0-9]\",1))");
+    model.set_a1("A3", "=COLUMNS(TEXTSPLIT(\"a,b\",\",\"))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"1");
-    assert_eq!(model._get_text("A2"), *"1");
-    assert_eq!(model._get_text("A3"), *"2");
+    assert_eq!(model.get_text_a1("A1"), *"1");
+    assert_eq!(model.get_text_a1("A2"), *"1");
+    assert_eq!(model.get_text_a1("A3"), *"2");
 }
 
 // T-1272 performance review: each delimiter has one searcher per call, so a long delimiter that
@@ -272,18 +272,18 @@ fn one_by_one_array_lifts() {
 #[test]
 fn long_delimiter_matching_everywhere() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=COLUMNS(TEXTSPLIT(REPT(\"a\",2000),HSTACK(\"a\",REPT(\"a\",1000))))",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=ROWS(TEXTSPLIT(REPT(\"a\",32767)&SEQUENCE(16),HSTACK(\"a\",REPT(\"a\",16000))))",
     );
     model.evaluate();
     // The longest delimiter wins at each position (T-1824): 1000 + 1000 + the empty end.
-    assert_eq!(model._get_text("A1"), *"3");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"3");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
 }
 
 // T-1361: a delimiter range of any shape is a list; a blank cell in the column delimiter range
@@ -292,28 +292,28 @@ fn long_delimiter_matching_everywhere() {
 #[test]
 fn delimiter_ranges_are_lists() {
     let mut model = new_empty_model();
-    model._set("D1", "x");
-    model._set("E1", "y");
-    model._set("D2", "z");
-    model._set("E2", ",");
-    model._set("D3", "TRUE");
-    model._set("E3", "q");
-    model._set("E4", "b");
-    model._set("D5", "=1/0");
-    model._set("E5", "b");
-    model._set("A1", "=ARRAYTOTEXT(TEXTSPLIT(\"a,b\",D1:E2),1)");
-    model._set("A2", "=ARRAYTOTEXT(TEXTSPLIT(\"aTRUEb\",D3:E3),1)");
-    model._set("A3", "=ARRAYTOTEXT(TEXTSPLIT(\"aTRUEb\",\",\",D3:E3),1)");
-    model._set("A4", "=TEXTSPLIT(\"abc\",D4:E4)");
-    model._set("A5", "=TEXTSPLIT(\"abc\",D5:E5)");
-    model._set("A6", "=ARRAYTOTEXT(TEXTSPLIT(\"aTRUEb\",{TRUE,\"q\"}),1)");
+    model.set_a1("D1", "x");
+    model.set_a1("E1", "y");
+    model.set_a1("D2", "z");
+    model.set_a1("E2", ",");
+    model.set_a1("D3", "TRUE");
+    model.set_a1("E3", "q");
+    model.set_a1("E4", "b");
+    model.set_a1("D5", "=1/0");
+    model.set_a1("E5", "b");
+    model.set_a1("A1", "=ARRAYTOTEXT(TEXTSPLIT(\"a,b\",D1:E2),1)");
+    model.set_a1("A2", "=ARRAYTOTEXT(TEXTSPLIT(\"aTRUEb\",D3:E3),1)");
+    model.set_a1("A3", "=ARRAYTOTEXT(TEXTSPLIT(\"aTRUEb\",\",\",D3:E3),1)");
+    model.set_a1("A4", "=TEXTSPLIT(\"abc\",D4:E4)");
+    model.set_a1("A5", "=TEXTSPLIT(\"abc\",D5:E5)");
+    model.set_a1("A6", "=ARRAYTOTEXT(TEXTSPLIT(\"aTRUEb\",{TRUE,\"q\"}),1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"{\"a\",\"b\"}");
-    assert_eq!(model._get_text("A2"), *"{\"a\",\"b\"}");
-    assert_eq!(model._get_text("A3"), *"{\"a\";\"b\"}");
-    assert_eq!(model._get_text("A4"), *"#VALUE!");
-    assert_eq!(model._get_text("A5"), *"#DIV/0!");
-    assert_eq!(model._get_text("A6"), *"{\"a\",\"b\"}");
+    assert_eq!(model.get_text_a1("A1"), *"{\"a\",\"b\"}");
+    assert_eq!(model.get_text_a1("A2"), *"{\"a\",\"b\"}");
+    assert_eq!(model.get_text_a1("A3"), *"{\"a\";\"b\"}");
+    assert_eq!(model.get_text_a1("A4"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A5"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A6"), *"{\"a\",\"b\"}");
 }
 
 // T-1412: an empty delimiter is `#VALUE!` in either list, as a "" string, a blank cell or an
@@ -321,18 +321,18 @@ fn delimiter_ranges_are_lists() {
 #[test]
 fn empty_row_delimiter_is_value_error() {
     let mut model = new_empty_model();
-    model._set("D2", ";");
-    model._set("A1", "=TEXTSPLIT(\"abc\",\"b\",\"\")");
-    model._set("A2", "=TEXTSPLIT(\"abc\",\"b\",{\",\",\"\"})");
-    model._set("A3", "=TEXTSPLIT(\"a,b\",\",\",D1)");
-    model._set("A4", "=TEXTSPLIT(\"a,b\",\",\",C2:D2)");
-    model._set("A5", "=TEXTSPLIT(\"a,b\",D1,\",\")");
-    model._set("A6", "=ARRAYTOTEXT(TEXTSPLIT(\"a,b\",\",\",,TRUE),1)");
+    model.set_a1("D2", ";");
+    model.set_a1("A1", "=TEXTSPLIT(\"abc\",\"b\",\"\")");
+    model.set_a1("A2", "=TEXTSPLIT(\"abc\",\"b\",{\",\",\"\"})");
+    model.set_a1("A3", "=TEXTSPLIT(\"a,b\",\",\",D1)");
+    model.set_a1("A4", "=TEXTSPLIT(\"a,b\",\",\",C2:D2)");
+    model.set_a1("A5", "=TEXTSPLIT(\"a,b\",D1,\",\")");
+    model.set_a1("A6", "=ARRAYTOTEXT(TEXTSPLIT(\"a,b\",\",\",,TRUE),1)");
     model.evaluate();
     for cell in ["A1", "A2", "A3", "A4", "A5"] {
-        assert_eq!(model._get_text(cell), *"#VALUE!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#VALUE!", "{cell}");
     }
-    assert_eq!(model._get_text("A6"), *"{\"a\",\"b\"}");
+    assert_eq!(model.get_text_a1("A6"), *"{\"a\",\"b\"}");
 }
 
 // T-1824: the longest delimiter wins where several match at one position, whatever the list
@@ -341,21 +341,21 @@ fn empty_row_delimiter_is_value_error() {
 #[test]
 fn lift_guesses_settled() {
     let mut model = new_empty_model();
-    model._set("A1", "=ARRAYTOTEXT(TEXTSPLIT(\"abcd\",{\"ab\",\"abc\"}),1)");
-    model._set("A2", "=ARRAYTOTEXT(TEXTSPLIT(\"abcd\",{\"abc\",\"ab\"}),1)");
-    model._set("A3", "=TEXTAFTER(\"abcd\",{\"ab\",\"abc\"})");
-    model._set("A4", "=TEXTAFTER(\"abcd\",{\"abc\",\"ab\"},-1)");
-    model._set("A5", "=TEXTSPLIT(\"a,b;c\",\",\",\";\",,,{\"x\";\"y\"})");
-    model._set("A6", "=TEXTSPLIT(\"a,b,c\",\",\",,,,{\"x\"})");
-    model._set("A7", "=ARRAYTOTEXT(TEXTSPLIT(\"a TRUE b\",TRUE),1)");
+    model.set_a1("A1", "=ARRAYTOTEXT(TEXTSPLIT(\"abcd\",{\"ab\",\"abc\"}),1)");
+    model.set_a1("A2", "=ARRAYTOTEXT(TEXTSPLIT(\"abcd\",{\"abc\",\"ab\"}),1)");
+    model.set_a1("A3", "=TEXTAFTER(\"abcd\",{\"ab\",\"abc\"})");
+    model.set_a1("A4", "=TEXTAFTER(\"abcd\",{\"abc\",\"ab\"},-1)");
+    model.set_a1("A5", "=TEXTSPLIT(\"a,b;c\",\",\",\";\",,,{\"x\";\"y\"})");
+    model.set_a1("A6", "=TEXTSPLIT(\"a,b,c\",\",\",,,,{\"x\"})");
+    model.set_a1("A7", "=ARRAYTOTEXT(TEXTSPLIT(\"a TRUE b\",TRUE),1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"{\"\",\"d\"}");
-    assert_eq!(model._get_text("A2"), *"{\"\",\"d\"}");
-    assert_eq!(model._get_text("A3"), *"d");
-    assert_eq!(model._get_text("A4"), *"d");
-    assert_eq!(model._get_text("A5"), *"#VALUE!");
-    assert_eq!(model._get_text("A6"), *"#VALUE!");
-    assert_eq!(model._get_text("A7"), *"{\"a \",\" b\"}");
+    assert_eq!(model.get_text_a1("A1"), *"{\"\",\"d\"}");
+    assert_eq!(model.get_text_a1("A2"), *"{\"\",\"d\"}");
+    assert_eq!(model.get_text_a1("A3"), *"d");
+    assert_eq!(model.get_text_a1("A4"), *"d");
+    assert_eq!(model.get_text_a1("A5"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A6"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A7"), *"{\"a \",\" b\"}");
 }
 
 // T-2315: an error ignore_empty or match_mode beats TEXTSPLIT's own #VALUE! for a blank delimiter
@@ -368,32 +368,32 @@ fn lift_guesses_settled() {
 fn argument_errors_first_and_an_all_empty_result() {
     let mut model = new_empty_model();
     // Z1 is blank: an empty delimiter.
-    model._set("A1", "=TEXTSPLIT(\"ABC\",Z1,\",\",-1,1/0)");
-    model._set("A2", "=TEXTSPLIT(\"\",\"-\",Z1,NA())");
-    model._set("A3", "=TEXTSPLIT(\"ABC\",Z1)");
-    model._set("A4", "=TEXTSPLIT(\"100\",{\"1.005\",\"100\"},\"a\",TRUE)");
-    model._set("A5", "=TEXTSPLIT({\"x\";\"y,z\"},\",\",,,,{1,2})");
-    model._set("A7", "=TEXTSPLIT({\"a,b\"}&NA(),\",\",,,,{1,2})");
-    model._set("A8", "=TEXTSPLIT(\"a,,b\",\",\",,TRUE)");
+    model.set_a1("A1", "=TEXTSPLIT(\"ABC\",Z1,\",\",-1,1/0)");
+    model.set_a1("A2", "=TEXTSPLIT(\"\",\"-\",Z1,NA())");
+    model.set_a1("A3", "=TEXTSPLIT(\"ABC\",Z1)");
+    model.set_a1("A4", "=TEXTSPLIT(\"100\",{\"1.005\",\"100\"},\"a\",TRUE)");
+    model.set_a1("A5", "=TEXTSPLIT({\"x\";\"y,z\"},\",\",,,,{1,2})");
+    model.set_a1("A7", "=TEXTSPLIT({\"a,b\"}&NA(),\",\",,,,{1,2})");
+    model.set_a1("A8", "=TEXTSPLIT(\"a,,b\",\",\",,TRUE)");
     // A delimiter that is an error comes first, an error element of a list after ignore_empty
     // (probes/textsplit-error-order A1, A3).
-    model._set("A9", "=TEXTSPLIT(\"abc\",\",\",NA(),1/0)");
-    model._set("A10", "=TEXTSPLIT(\"abc\",{\",\",#N/A},,1/0)");
-    model._set("A11", "=TEXTSPLIT(\"abc\",\",\",,\"x\",NA())");
+    model.set_a1("A9", "=TEXTSPLIT(\"abc\",\",\",NA(),1/0)");
+    model.set_a1("A10", "=TEXTSPLIT(\"abc\",{\",\",#N/A},,1/0)");
+    model.set_a1("A11", "=TEXTSPLIT(\"abc\",\",\",,\"x\",NA())");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#DIV/0!");
-    assert_eq!(model._get_text("A2"), *"#N/A");
-    assert_eq!(model._get_text("A3"), *"#VALUE!");
-    assert_eq!(model._get_text("A4"), *"#CALC!");
+    assert_eq!(model.get_text_a1("A1"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A2"), *"#N/A");
+    assert_eq!(model.get_text_a1("A3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), *"#CALC!");
     // The array pad_with does not lift: the 2x1 text lifts, each element #VALUE! (A6 is A5's
     // spill, B5 stays empty).
-    assert_eq!(model._get_text("A5"), *"#VALUE!");
-    assert_eq!(model._get_text("A6"), *"#VALUE!");
-    assert_eq!(model._get_text("B5"), *"");
-    assert_eq!(model._get_text("A7"), *"#N/A");
-    assert_eq!(model._get_text("A8"), *"a");
-    assert_eq!(model._get_text("B8"), *"b");
-    assert_eq!(model._get_text("A9"), *"#N/A");
-    assert_eq!(model._get_text("A10"), *"#DIV/0!");
-    assert_eq!(model._get_text("A11"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A5"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A6"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("B5"), *"");
+    assert_eq!(model.get_text_a1("A7"), *"#N/A");
+    assert_eq!(model.get_text_a1("A8"), *"a");
+    assert_eq!(model.get_text_a1("B8"), *"b");
+    assert_eq!(model.get_text_a1("A9"), *"#N/A");
+    assert_eq!(model.get_text_a1("A10"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A11"), *"#VALUE!");
 }

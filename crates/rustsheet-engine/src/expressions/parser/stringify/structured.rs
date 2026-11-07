@@ -1,7 +1,11 @@
 //! Printing a structured reference (SPEC-0016 "Printing" and "Structural edits").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use super::{stringify, DisplaceData, Displacement, Rewrite, NO_REWRITE};
 use crate::expressions::parser::move_formula::ref_is_in_area;
+use crate::expressions::parser::structured_reference::is_external_table_name;
 use crate::expressions::parser::{Node, StructuredReference};
 use crate::expressions::token::{self, TableReference, TableSpecifier};
 use crate::expressions::types::CellReferenceRC;
@@ -142,7 +146,11 @@ pub(super) fn reference_text(
     // the `ErrorKind` arm below writes it as `#VALUE!`.
     if export_to_excel {
         return match lowered {
-            Node::ErrorKind(_) if reference.specifier != Some(TableSpecifier::Totals) => {
+            // A linked workbook's table lowers to `#REF!` but is stored as written (T-4144).
+            Node::ErrorKind(_)
+                if reference.specifier != Some(TableSpecifier::Totals)
+                    && !is_external_table_name(&reference.table_name) =>
+            {
                 print(lowered, rewrite)
             }
             _ => reference.file_text(),

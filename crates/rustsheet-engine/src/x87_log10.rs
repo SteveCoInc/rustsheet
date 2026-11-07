@@ -7,6 +7,14 @@
 //! LN matches 2,887,521 of the 2,887,551 T-1941 `kmyst-gam-*` LN cells (the misses are FYL2X
 //! near-ties, see [`excel_ln`]). LOG10, one-argument LOG and MULTINOMIAL's `log10(k)` terms use [`excel_log10`];
 //! the worksheet LN uses [`excel_ln`].
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+// LINT-DEBT-END
 
 use crate::arithmetic::significand_and_exponent;
 use crate::x87_exp::{

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 // Property test: the state of a workbook must not depend on how it got there.
@@ -143,15 +146,15 @@ fn apply(model: &mut UserModel, edit: &Edit) -> Option<((u32, i32, i32), Option<
         Edit::Set(sheet, row, column, value) => model
             .set_user_input(*sheet, *row, *column, value)
             .ok()
-            .map(|_| ((*sheet, *row, *column), Some(Content::Input(value.clone())))),
+            .map(|()| ((*sheet, *row, *column), Some(Content::Input(value.clone())))),
         Edit::Clear(sheet, row, column) => model
             .set_user_input(*sheet, *row, *column, "")
             .ok()
-            .map(|_| ((*sheet, *row, *column), None)),
+            .map(|()| ((*sheet, *row, *column), None)),
         Edit::Cse(sheet, row, column, width, height, formula) => model
             .set_user_array_formula(*sheet, *row, *column, *width, *height, formula)
             .ok()
-            .map(|_| {
+            .map(|()| {
                 (
                     (*sheet, *row, *column),
                     Some(Content::Cse(*width, *height, formula.clone())),
@@ -187,7 +190,7 @@ fn snapshot(model: &Model) -> Vec<String> {
     for sheet in 0..2 {
         for row in 1..=(ROWS + 6) {
             for column in 1..=(COLS + 6) {
-                let text = model._get_text_at(sheet, row, column);
+                let text = model.get_text_by_index(sheet, row, column);
                 if !text.is_empty() {
                     lines.push(format!("{sheet}:{}: {text}", cell_name(row, column)));
                 }

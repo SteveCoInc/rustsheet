@@ -11,10 +11,10 @@ use crate::test::util::new_empty_model;
 #[test]
 fn a_group_gives_the_value_of_the_bare_form() {
     let mut model = new_empty_model();
-    model._set("A1", "text");
-    model._set("A2", "2");
-    model._set("A3", "4");
-    model._set("B1", "1");
+    model.set_a1("A1", "text");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "4");
+    model.set_a1("B1", "1");
     let pairs = [
         ("COUNT((A1))", "COUNT(A1)"),
         ("COUNTA(((A1)))", "COUNTA(A1)"),
@@ -32,15 +32,15 @@ fn a_group_gives_the_value_of_the_bare_form() {
         ("-(A2)", "-A2"),
     ];
     for (row, (grouped, bare)) in (1..).zip(pairs) {
-        model._set(&format!("D{row}"), &format!("={grouped}"));
-        model._set(&format!("E{row}"), &format!("={bare}"));
+        model.set_a1(&format!("D{row}"), &format!("={grouped}"));
+        model.set_a1(&format!("E{row}"), &format!("={bare}"));
     }
     model.evaluate();
     for (row, (grouped, _)) in (1..).zip(pairs) {
-        let value = model._get_text(&format!("D{row}"));
-        assert_eq!(value, model._get_text(&format!("E{row}")), "{grouped}");
+        let value = model.get_text_a1(&format!("D{row}"));
+        assert_eq!(value, model.get_text_a1(&format!("E{row}")), "{grouped}");
         assert_eq!(
-            model._get_formula(&format!("D{row}")),
+            model.get_formula_a1(&format!("D{row}")),
             format!("={grouped}")
         );
     }
@@ -49,11 +49,11 @@ fn a_group_gives_the_value_of_the_bare_form() {
 #[test]
 fn edits_keep_the_written_groups() {
     let mut model = new_empty_model();
-    model._set("A1", "=((B1+C1)+D1)*(E1)");
+    model.set_a1("A1", "=((B1+C1)+D1)*(E1)");
     model.evaluate();
     model.insert_rows(0, 1, 1).unwrap();
     model.rename_sheet("Sheet1", "Renamed").unwrap();
-    assert_eq!(model._get_formula("A2"), "=((B2+C2)+D2)*(E2)");
+    assert_eq!(model.get_formula_a1("A2"), "=((B2+C2)+D2)*(E2)");
     let cell = |row, column| CellReferenceIndex {
         sheet: 0,
         row,

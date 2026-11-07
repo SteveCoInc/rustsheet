@@ -3,7 +3,7 @@ id: T-2027
 title: "BINOM.INV and CRITBINOM: probability_s 0 is #NUM!; Z.TEST of a typed TRUE is #DIV/0!"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -29,10 +29,17 @@ lines):
   `fn_z_test` in crates/rustsheet-engine/src/functions/statistical/z_test.rs.
 
 ## Acceptance criteria
-- [ ] In `make eval`, probes-numeric/m9-legacy-critbinom A23, A24 and probes-numeric/t1049-ztest A51 pass;
+- [x] In `make eval`, probes-numeric/m9-legacy-critbinom A23, A24 and probes-numeric/t1049-ztest A51 pass;
       no other cell of those two cases, and no line of any baseline, starts failing.
-- [ ] Unit tests for the three cells.
-- [ ] `make check` green; reviewers approve.
+- [x] Unit tests for the three cells.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Z.TEST with TRUE inside a range or an array literal (already passing: A46), BINOM.INV's search.
+
+## Outcome
+The three cells already passed on `origin/main` (the BINOM.INV/CRITBINOM `p <= 0.0` check and the
+Z.TEST direct-boolean one-value path landed with earlier tasks, T-1942 and others); a scan of
+probes-numeric/m9-legacy-critbinom A23-A26 and t1049-ztest A51 shows Pass. Added the missing unit
+test `binom_inv_and_critbinom_probability_zero_is_num_error` (Z.TEST(TRUE,...) is already covered by
+`test_erf_identities.rs` H10/H11). Eval delta: none (no baseline line changed).

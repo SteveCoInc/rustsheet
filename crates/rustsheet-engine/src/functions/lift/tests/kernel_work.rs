@@ -3,6 +3,9 @@
 //! with its fixed cap named below, so no family task can enter one as `Constant` silently. A
 //! family task that enters a value-dependent function adds it here. The check does not see a
 //! `Weighted` kernel's own per-call cap; its table entry's doc comment cites it.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::needless_pass_by_value)]
+// LINT-DEBT-END
 
 use super::super::kinds::{KernelWork, ValueWork};
 use crate::functions::Function;
@@ -772,9 +775,9 @@ fn amortization_elements_refused_before_the_walk_are_charged_one() {
     let text = || ArrayNode::String("x".into());
     let error = |formula: &str| {
         let mut model = new_empty_model();
-        model._set("A1", formula);
+        model.set_a1("A1", formula);
         model.evaluate();
-        let value = model._get_text("A1");
+        let value = model.get_text_a1("A1");
         assert!(value.starts_with('#'), "{formula} is {value}, not refused");
     };
     for function in [Function::Amordegrc, Function::Amorlinc] {
@@ -821,4 +824,102 @@ fn amortization_elements_refused_before_the_walk_are_charged_one() {
         amortization_units(Function::Amordegrc, text(), nan_period, one()),
         513
     );
+}
+
+/// BETA.INV's `ByValue` charge (T-2607): an element `Model::beta_inv_of` refuses before its search
+/// is charged 1, so `BETAINV(1+2^-52,-1,..)` over 4 x 51,638 elements (gen-m9/4250f880ab640c49
+/// A237) fits under `MAX_LIFTED_CELL_VISITS`, while 513 elements it would search are charged the
+/// flat bound and so do not.
+#[test]
+fn beta_inv_refused_elements_are_charged_one() {
+    use super::super::driver::{kernel_units, LiftedArg};
+    use crate::calc_result::CalcResult;
+    use crate::expressions::parser::ArrayNode;
+    use crate::limits::MAX_LIFTED_CELL_VISITS;
+
+    let Some(work @ KernelWork::ByValue(ValueWork::BetaQuantile { .. })) =
+        Function::BetaInv.arg_kinds().map(|kinds| kinds.work)
+    else {
+        panic!("BETAINV is not charged by its values");
+    };
+    let number = |n: f64| LiftedArg::Scalar(CalcResult::Number(n));
+    let grid = |rows: usize, columns: usize| {
+        LiftedArg::Grid(vec![vec![ArrayNode::Number(0.5); columns]; rows])
+    };
+    let units = |args: &[LiftedArg], rows: usize, columns: usize| {
+        kernel_units(
+            work,
+            args,
+            rows,
+            columns,
+            (rows * columns) as u64,
+            &read_number,
+        )
+    };
+    // Refused before the search: a probability past 1, an alpha below 0, an error, B <= A.
+    let refused = [number(1.0 + f64::EPSILON), number(-1.0), grid(4, 51_638)];
+    assert_eq!(units(&refused, 4, 51_638), 4 * 51_638);
+    let errors = LiftedArg::Grid(vec![
+        vec![
+            ArrayNode::Error(
+                crate::expressions::token::Error::NA
+            );
+            51_638
+        ];
+        4
+    ]);
+    assert_eq!(
+        units(&[number(0.5), number(2.0), errors], 4, 51_638),
+        4 * 51_638
+    );
+    let bounds = [
+        number(0.5),
+        number(2.0),
+        number(3.0),
+        number(1.0),
+        grid(4, 51_638),
+    ];
+    assert_eq!(units(&bounds, 4, 51_638), 4 * 51_638);
+    // A logical probability reads as 1 (refused); a text may read as any number (searched).
+    let logical = [
+        LiftedArg::Scalar(CalcResult::Boolean(true)),
+        number(2.0),
+        grid(1, 513),
+    ];
+    assert_eq!(units(&logical, 1, 513), 513);
+    let text = [
+        LiftedArg::Scalar(CalcResult::String("0.5".into())),
+        number(2.0),
+        grid(1, 513),
+    ];
+    assert!(units(&text, 1, 513) > MAX_LIFTED_CELL_VISITS);
+    let searched = [number(0.5), number(2.0), grid(1, 513)];
+    assert!(units(&searched, 1, 513) > MAX_LIFTED_CELL_VISITS);
+    // The boundaries are refused as the kernel refuses them: p of 0 or 1, an alpha of 0, B == A,
+    // and a blank B (0, so B <= A = 0); a NaN reads as no known number and is searched.
+    for refused in [
+        [number(0.0), number(2.0), grid(1, 513)],
+        [number(1.0), number(2.0), grid(1, 513)],
+        [number(0.5), number(0.0), grid(1, 513)],
+    ] {
+        assert_eq!(units(&refused, 1, 513), 513);
+    }
+    let equal_bounds = [
+        number(0.5),
+        number(2.0),
+        number(3.0),
+        number(1.0),
+        number(1.0),
+    ];
+    assert_eq!(units(&equal_bounds, 1, 1), 1);
+    let blank_b = [
+        number(0.5),
+        number(2.0),
+        grid(1, 513),
+        number(0.0),
+        LiftedArg::Scalar(CalcResult::EmptyCell),
+    ];
+    assert_eq!(units(&blank_b, 1, 513), 513);
+    let nan = [number(f64::NAN), number(2.0), grid(1, 513)];
+    assert!(units(&nan, 1, 513) > MAX_LIFTED_CELL_VISITS);
 }

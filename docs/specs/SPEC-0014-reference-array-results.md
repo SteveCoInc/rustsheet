@@ -276,12 +276,15 @@ an array value. In detail:
     the majority). T-4570 implemented "any reference element on another sheet"; T-4714 changes it to the first.
     This is one scan of the elements in their argument reader. Probed (probes/t4704 A46:C61, T-4704): the
     first element in order decides, an error or a reference, so `{2;9}` (error first) gives the error and `{9;2}`
-    (reference first) gives `#N/A` (A49:C49, A58:C58). Ours puts an error first always (T-4741).
+    (reference first) gives `#N/A` (A49:C49, A58:C58, SMALL A88:C88); MAX takes the error in either order
+    (A91:C91). Implemented by T-4741.
   - Per-element callers (`ref_lift.rs`): `Value(v)` calls the scalar function with `v` as a value argument. That is
     `#VALUE!` where a reference is required, and N reads the value. `put_back` keeps the result.
     Probed (probes/t4704, T-4704): OFFSET over a mixed grid spills a 2x1 of `#VALUE!` (A4:C8; matched by T-4739, which reads XLOOKUP in its reference form in `offset_source`);
     FORMULATEXT (`#VALUE!`, `#N/A`) and INDIRECT (`#REF!`, `#VALUE!`) match; COUNTIF and SUMIF over an XLOOKUP with a
-    text if_not_found spill a 2x1 of `#VALUE!`, with a miss or all hits (A64:C74; ours a scalar, T-4742).
+    text if_not_found spill a 2x1 of `#VALUE!`, with a miss or all hits (A64:C74). So does any lifted XLOOKUP,
+    with or without an if_not_found (probes/t4742-countif-array-range-arg): a value element is `#VALUE!`, an error element
+    its error. Implemented by T-4742 (`Model::xlookup_reference_elements`).
   - ROWS/COLUMNS, ISREF and the pass-throughs (IF, CHOOSE, LET, VSTACK, TAKE, DROP) need no change: they handle
     elements without reading them.
   - **Readers already on the walker, unprobed for mixed grids.** VAR.S, VAR.P, STDEV.P (`GridReading::TopLeft`,
@@ -332,8 +335,8 @@ Where the implementation departs from the text above, or settles what it left op
 - **RANK family (T-4740).** `numbers_from_rank_ref_arg` hands any array of references back whole
   (`RankData::PerElement`), and `rank_per_element` lifts over its elements as OFFSET over a grid does
   (`RefGrid::index_array`): a reference element ranks against its own range, a value element is `#VALUE!`, an
-  error element is itself. This covers a lifted OFFSET or INDIRECT as `ref` too, which is unprobed (it was the
-  value view, `#VALUE!` per element; T-4801 probes it).
+  error element is itself. This covers a lifted OFFSET or INDIRECT as `ref` too, verified by
+  probes/t4801-rank-lifted-offset-indirect (before T-4740 it was the value view, `#VALUE!` per element).
 
 ### Test plan and rollout
 T-4570 implements it: the t4543 W45:W46, t4563 and t4569 cells it owns leave eval/baseline. Unit tests: a mixed

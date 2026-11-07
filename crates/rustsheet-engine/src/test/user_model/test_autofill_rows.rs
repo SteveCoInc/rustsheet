@@ -737,7 +737,7 @@ fn styles() {
     model.undo().unwrap();
 
     // A4
-    assert_eq!(model.get_cell_content(0, 4, 1), Ok("".to_string()));
+    assert_eq!(model.get_cell_content(0, 4, 1), Ok(String::new()));
     // Check that cell A5 does NOT have A2 style
     let style = model.get_cell_style(0, 5, 1).unwrap();
     assert!(!style.font.i);
@@ -1007,9 +1007,9 @@ fn extend_down_completely_covers_cse() {
         .unwrap();
 
     // CSE is gone — C5:E5 are overwritten with the fill value (empty from C2:E2).
-    assert_eq!(model.get_formatted_cell_value(0, 5, 3), Ok("".to_string()));
-    assert_eq!(model.get_formatted_cell_value(0, 5, 4), Ok("".to_string()));
-    assert_eq!(model.get_formatted_cell_value(0, 5, 5), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 5, 3), Ok(String::new()));
+    assert_eq!(model.get_formatted_cell_value(0, 5, 4), Ok(String::new()));
+    assert_eq!(model.get_formatted_cell_value(0, 5, 5), Ok(String::new()));
 }
 
 // When the fill target only partially covers a CSE array formula the operation must
@@ -1111,4 +1111,40 @@ fn failed_autofill_rows_does_not_corrupt_cse() {
         model.get_formatted_cell_value(0, 4, 5),
         Ok("30".to_string())
     );
+}
+
+#[test]
+fn fill_and_paste_of_a_deleted_sheet_reference_stay_ref() {
+    // The display `=SUM(#REF!C4:C7)` of a reference to a deleted sheet is re-entered by a fill
+    // or paste as the engine's own text, which reads back as `#REF!`; only typed text refuses
+    // it, as Excel does (probes/t4628-deleted-sheet-reference-text, T-4628).
+    let mut model = UserModel::from_model(new_empty_model());
+    model.new_sheet().unwrap();
+    model.set_user_input(0, 1, 1, "=SUM(Sheet2!C4:C7)").unwrap();
+    model.delete_sheet(1).unwrap();
+    model
+        .auto_fill_rows(
+            &Area {
+                sheet: 0,
+                row: 1,
+                column: 1,
+                width: 1,
+                height: 1,
+            },
+            2,
+        )
+        .unwrap();
+    model.set_selected_range(1, 1, 1, 1).unwrap();
+    let copied = model.copy_to_clipboard().unwrap();
+    model.set_selected_cell(5, 1).unwrap();
+    model
+        .paste_from_clipboard(0, (1, 1, 1, 1), &copied.data, false)
+        .unwrap();
+    for row in [1, 2, 5] {
+        assert_eq!(
+            model.get_formatted_cell_value(0, row, 1),
+            Ok("#REF!".to_string()),
+            "row {row}"
+        );
+    }
 }

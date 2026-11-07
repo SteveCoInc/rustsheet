@@ -19,6 +19,9 @@
 //!   returns `None`);
 //! - a `,` right after the denominator scales the value up ([`fraction_scale`]), and a fixed
 //!   denominator past 32768 is replaced by a picked one ([`LARGE_FIXED_MAX_DENOMINATOR`]).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms, clippy::too_many_lines)]
+// LINT-DEBT-END
 
 use super::parser::{NumberPart, TextToken};
 use crate::decimal_round::{round_decimal, RoundMode};
@@ -109,22 +112,21 @@ pub(super) fn format_fraction(
         }
         Denominator::Placeholders(kinds) => kinds.clone(),
     };
-    let (mut numerator, denominator) = match fixed {
-        Some(denominator) => (
+    let (mut numerator, denominator) = if let Some(denominator) = fixed {
+        (
             round_numerator((value - integer) * denominator),
             denominator,
-        ),
-        None => {
-            let max_denominator = match &fraction.denominator {
-                Denominator::Fixed(_) => LARGE_FIXED_MAX_DENOMINATOR,
-                // Past 15 digits 10^n - 1 is no longer exact in a double; no such bound can bind.
-                Denominator::Placeholders(kinds) => {
-                    let digits = i32::try_from(kinds.len()).unwrap_or(i32::MAX).min(15);
-                    10.0_f64.powi(digits) - 1.0
-                }
-            };
-            last_convergent(value - integer, max_denominator)
-        }
+        )
+    } else {
+        let max_denominator = match &fraction.denominator {
+            Denominator::Fixed(_) => LARGE_FIXED_MAX_DENOMINATOR,
+            // Past 15 digits 10^n - 1 is no longer exact in a double; no such bound can bind.
+            Denominator::Placeholders(kinds) => {
+                let digits = i32::try_from(kinds.len()).unwrap_or(i32::MAX).min(15);
+                10.0_f64.powi(digits) - 1.0
+            }
+        };
+        last_convergent(value - integer, max_denominator)
     };
     let overflows = match fixed {
         Some(_) => numerator > MAX_FIXED_NUMERATOR,
@@ -228,11 +230,11 @@ pub(super) fn format_fraction(
         .iter()
         .rposition(|t| matches!(t, TextToken::Digit(_)))
         .filter(|end| *end >= fraction.denominator_at);
-    let mut trailing = trailing_end
-        .map_or_else(Vec::new, |end| {
-            trailing_digits(&tokens[fraction.denominator_at..=end], handed_on)
-        })
-        .into_iter();
+    let (trailing, mut before_point) = trailing_end.map_or_else(
+        || (Vec::new(), String::new()),
+        |end| trailing_digits(&tokens[fraction.denominator_at..=end], handed_on),
+    );
+    let mut trailing = trailing.into_iter();
     for (index, token) in tokens.iter().enumerate() {
         if index == fraction.denominator_at {
             push_denominator(&mut text, &denominator_text, blank, blank_spaces);
@@ -271,7 +273,12 @@ pub(super) fn format_fraction(
             TextToken::Digit(_) if in_trailing => {
                 text.push_str(&part.numerals.digits(&trailing.next().unwrap_or_default()));
             }
-            TextToken::Period if in_trailing => text.push('.'),
+            TextToken::Period if in_trailing => {
+                // The spilled digits no placeholder before the point took print right before it
+                // (T-4703; number-formats.md "Placeholders after a fraction").
+                text.push_str(&part.numerals.digits(&std::mem::take(&mut before_point)));
+                text.push('.');
+            }
             TextToken::Literal(c) => text.push(*c),
             TextToken::Text(t) => text.push_str(t),
             TextToken::Ghost(_) => text.push(' '),
@@ -386,7 +393,7 @@ fn picked_denominator(code: &str, picked: &str, question_numerator: bool) -> (St
 /// " 123/7|0000.0", `.0#` " 123/7|0000.00", `# ?/7|0.0#` " 123/7|00000.0"
 /// (probes/t4594-fraction-tail-point-explore rows 3, 6, 2, 22; number-formats.md "Placeholders
 /// after a fraction").
-fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
+fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> (Vec<String>, String) {
     let HandedOn {
         spilled,
         mut lacking,
@@ -486,7 +493,14 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
         };
         printed.push(text);
     }
-    printed
+    // With no placeholder before the point the spilled digits print right before it, all of them
+    // (`# ?/7 .0` on 0.0123 is " 123/7 0000.0"; probes/t4703-fraction-tail-no-pre-point-and-two-points).
+    let before_point = if takes_all.is_none() && point.is_some() {
+        spilled.collect()
+    } else {
+        String::new()
+    };
+    (printed, before_point)
 }
 
 /// How the literals between a fraction's integer part and its numerator print.

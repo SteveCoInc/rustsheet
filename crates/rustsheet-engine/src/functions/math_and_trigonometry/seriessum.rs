@@ -1,8 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss)]
+// LINT-DEBT-END
 use crate::{
     arithmetic::{flush_subnormal, power},
     calc_result::CalcResult,
     expressions::{
         parser::{is_multi_sheet_span, ArrayNode, Node},
+        token::Error,
         types::CellReferenceIndex,
     },
     functions::{
@@ -39,12 +43,13 @@ impl Model {
             let count = rows.iter().map(Vec::len).sum::<usize>().max(1);
             u64::try_from(count).unwrap_or(u64::MAX)
         });
+        let empty = self.empty_arguments::<3>(args);
         self.lift_call_costed(
             Function::Seriessum,
             args,
             LiftCost::Cells(cells),
             cell,
-            &mut |model, values| model.seriessum_of(values, &coefficients, cell),
+            &mut |model, values| model.seriessum_of(values, empty, &coefficients, cell),
         )
     }
 
@@ -58,6 +63,12 @@ impl Model {
         // T-1832).
         if is_multi_sheet_span(node) {
             return Err(value_error(cell));
+        }
+        // Excel: written-empty coefficients are `#N/A`, as an empty x, n or m is
+        // (probes/t4873-empty-arg-quotient-ceiling Calc!B4:B5). Reported after the x, n and m
+        // checks, as every coefficient error is.
+        if self.is_empty_argument(node) {
+            return Err(CalcResult::new_error(Error::NA, cell, String::new()));
         }
         let result = self.evaluate_node_in_context(node, cell);
         let is_single = match &result {
@@ -82,6 +93,7 @@ impl Model {
     fn seriessum_of(
         &self,
         values: &[CalcResult],
+        empty: [bool; 3],
         coefficients: &Coefficients,
         cell: CellReferenceIndex,
     ) -> CalcResult {
@@ -89,15 +101,15 @@ impl Model {
         let [x, n, m, _] = values else {
             return CalcResult::new_args_number_error(cell);
         };
-        let x = match self.cast_number_no_bools_ref(x, cell) {
+        let x = match self.atp_number(x, empty[0], cell) {
             Ok(v) => v,
             Err(e) => return e,
         };
-        let n = match self.cast_number_no_bools_ref(n, cell) {
+        let n = match self.atp_number(n, empty[1], cell) {
             Ok(v) => v,
             Err(e) => return e,
         };
-        let m = match self.cast_number_no_bools_ref(m, cell) {
+        let m = match self.atp_number(m, empty[2], cell) {
             Ok(v) => v,
             Err(e) => return e,
         };

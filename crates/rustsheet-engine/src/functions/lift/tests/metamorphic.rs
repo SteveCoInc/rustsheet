@@ -60,8 +60,8 @@ fn mismatches(function: &Function, kinds: &ArgKinds, checked: &mut Vec<usize>) -
     }
     let mut model = new_empty_model();
     for (row, (scalar, lifted)) in (1..).step_by(3).zip(&calls) {
-        model._set(&format!("A{row}"), lifted);
-        model._set(&format!("C{row}"), scalar);
+        model.set_a1(&format!("A{row}"), lifted);
+        model.set_a1(&format!("C{row}"), scalar);
     }
     model.evaluate();
     (1..)

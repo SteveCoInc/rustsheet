@@ -7,53 +7,53 @@ fn test_fn_hyp_geom_dist_smoke() {
     let mut model = new_empty_model();
 
     // Valid: PDF (non-cumulative)
-    model._set("A1", "=HYPGEOM.DIST(1, 4, 12, 20, FALSE)");
+    model.set_a1("A1", "=HYPGEOM.DIST(1, 4, 12, 20, FALSE)");
 
     // Valid: CDF (cumulative)
-    model._set("A2", "=HYPGEOM.DIST(1, 4, 12, 20, TRUE)");
+    model.set_a1("A2", "=HYPGEOM.DIST(1, 4, 12, 20, TRUE)");
 
     // Wrong number of arguments -> #ERROR!
-    model._set("A3", "=HYPGEOM.DIST(1, 4, 12, 20)");
-    model._set("A4", "=HYPGEOM.DIST(1, 4, 12, 20, TRUE, FALSE)");
+    model.set_a1("A3", "=HYPGEOM.DIST(1, 4, 12, 20)");
+    model.set_a1("A4", "=HYPGEOM.DIST(1, 4, 12, 20, TRUE, FALSE)");
 
     // sample_s > number_sample -> 1 for the cdf (t1049-hypgeomdist A35)
-    model._set("A5", "=HYPGEOM.DIST(5, 4, 12, 20, TRUE)");
+    model.set_a1("A5", "=HYPGEOM.DIST(5, 4, 12, 20, TRUE)");
 
     // Domain errors:
 
     // population_s > number_pop -> #NUM!
-    model._set("A6", "=HYPGEOM.DIST(1, 4, 25, 20, TRUE)");
+    model.set_a1("A6", "=HYPGEOM.DIST(1, 4, 25, 20, TRUE)");
 
     // number_sample > number_pop -> #NUM!
-    model._set("A7", "=HYPGEOM.DIST(1, 25, 12, 20, TRUE)");
+    model.set_a1("A7", "=HYPGEOM.DIST(1, 25, 12, 20, TRUE)");
 
     model.evaluate();
 
     // PDF: P(X = 1)
-    assert_eq!(model._get_text("A1"), *"0.13869969");
+    assert_eq!(model.get_text_a1("A1"), *"0.13869969");
 
     // CDF: P(X <= 1)
-    assert_eq!(model._get_text("A2"), *"0.153147575");
+    assert_eq!(model.get_text_a1("A2"), *"0.153147575");
 
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
-    assert_eq!(model._get_text("A5"), *"1");
-    assert_eq!(model._get_text("A6"), *"#NUM!");
-    assert_eq!(model._get_text("A7"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), *"1");
+    assert_eq!(model.get_text_a1("A6"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A7"), *"#NUM!");
 }
 
 #[test]
 fn hyp_geom_dist_domain_edges_and_boolean_sample() {
     let mut model = new_empty_model();
     // probes-numeric/t1048-hypgeomdist and t1049-hypgeomdist cells.
-    model._set("A1", "=HYPGEOM.DIST(5,4,8,20,FALSE)");
-    model._set("A2", "=HYPGEOM.DIST(1,0,8,20,FALSE)");
-    model._set("A3", "=HYPGEOM.DIST(0,0,8,20,FALSE)");
-    model._set("A4", "=HYPGEOM.DIST(0,4,0,20,FALSE)");
-    model._set("A5", "=HYPGEOM.DIST(-0.5,4,8,20,TRUE)");
-    model._set("A6", "=HYPGEOM.DIST(TRUE,4,8,20,TRUE)");
-    model._set("A7", "=HYPGEOMDIST(TRUE,4,8,20)");
-    model._set("A8", "=HYPGEOM.DIST(1,TRUE,8,20,TRUE)");
+    model.set_a1("A1", "=HYPGEOM.DIST(5,4,8,20,FALSE)");
+    model.set_a1("A2", "=HYPGEOM.DIST(1,0,8,20,FALSE)");
+    model.set_a1("A3", "=HYPGEOM.DIST(0,0,8,20,FALSE)");
+    model.set_a1("A4", "=HYPGEOM.DIST(0,4,0,20,FALSE)");
+    model.set_a1("A5", "=HYPGEOM.DIST(-0.5,4,8,20,TRUE)");
+    model.set_a1("A6", "=HYPGEOM.DIST(TRUE,4,8,20,TRUE)");
+    model.set_a1("A7", "=HYPGEOMDIST(TRUE,4,8,20)");
+    model.set_a1("A8", "=HYPGEOM.DIST(1,TRUE,8,20,TRUE)");
     model.evaluate();
     let expected = [
         ("A1", "0"),
@@ -67,7 +67,7 @@ fn hyp_geom_dist_domain_edges_and_boolean_sample() {
         ("A8", "1"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }
 
@@ -95,12 +95,12 @@ fn a_negative_or_huge_count_is_num() {
         ("=HYPGEOM.DIST(1,2,3,10,\"true\")", "0.933333333"),
     ];
     for (row, (formula, _)) in cells.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, value)) in cells.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *value,
             "{formula}"
         );
@@ -127,12 +127,12 @@ fn an_empty_population_and_a_pmf_past_the_walk() {
         ),
     ];
     for (row, (formula, _)) in cells.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, value)) in cells.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *value,
             "{formula}"
         );
@@ -153,12 +153,12 @@ fn a_sample_below_the_possible_range_is_zero() {
         ("=HYPGEOMDIST(1,3,8,7)", "#NUM!"),
     ];
     for (row, (formula, _)) in cells.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, value)) in cells.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *value,
             "{formula}"
         );

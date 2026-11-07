@@ -3,6 +3,15 @@
 //! system: financial day counts read a 1904 serial as the 1900 serial + 2 * 1462").
 //! Also the coupon functions' day counts per basis and the coupon schedule Excel breaks in a 1904
 //! workbook (`Model::coupon_schedule_breaks`).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::unused_self
+)]
+// LINT-DEBT-END
 
 use chrono::{Datelike, NaiveDate};
 
@@ -288,7 +297,7 @@ pub(crate) fn days_30_360_us_ymd(d1: (i32, u32, u32), d2: (i32, u32, u32)) -> f6
     if start_is_feb_last {
         day1 = 30;
     }
-    (360 * (y2 - y1) + 30 * (m2 - m1) + (day2 - day1)) as f64
+    f64::from(360 * (y2 - y1) + 30 * (m2 - m1) + (day2 - day1))
 }
 
 // Days d1→d2 via US 30/360 with the `ModifyBothDates` rule — the "PSA hack"
@@ -325,7 +334,7 @@ pub(super) fn days_30_360_us_both_ymd(d1: (i32, u32, u32), d2: (i32, u32, u32)) 
     if start_is_feb_last {
         day1 = 30;
     }
-    (360 * (y2 - y1) + 30 * (m2 - m1) + (day2 - day1)) as f64
+    f64::from(360 * (y2 - y1) + 30 * (m2 - m1) + (day2 - day1))
 }
 
 // Days d1→d2 via the EU 30/360 convention (basis 4).
@@ -342,7 +351,7 @@ pub(super) fn days_30_360_eu_ymd(d1: (i32, u32, u32), d2: (i32, u32, u32)) -> f6
     let (y2, m2, day2) = d2;
     let day1 = day1.min(30) as i32;
     let day2 = day2.min(30) as i32;
-    (360 * (y2 - y1) + 30 * (m2 as i32 - m1 as i32) + (day2 - day1)) as f64
+    f64::from(360 * (y2 - y1) + 30 * (m2 as i32 - m1 as i32) + (day2 - day1))
 }
 
 pub(super) fn actual_days(d1: NaiveDate, d2: NaiveDate) -> f64 {

@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "8690c352a6890b6d5b859fa130d0eec6714f23d3a85c8f14c4ada1e15143ee6d",
+  "definitions": {
+   "SERIESSUM": "6e26060e67fa2d13"
+  },
+  "arguments_sha256": "703b6588a1868df8978538b09a8f07237216263096ec9ce84425afa15fc43624"
+ },
+ "sheets": {
+  "Calc": {
+   "B8": {
+    "t": "n",
+    "v": "10.0",
+    "f": "=SERIESSUM(2,1,1,{1,2})"
+   }
+  }
+ }
+}

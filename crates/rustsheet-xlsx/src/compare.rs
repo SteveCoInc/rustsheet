@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::format_push_string,
+    clippy::match_same_arms,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, clippy::panic)]
 
 use std::path::Path;
@@ -5,7 +12,7 @@ use std::path::Path;
 use rustsheet_engine::cell::CellValue;
 use rustsheet_engine::clock::Clock;
 use rustsheet_engine::expressions::token::Error;
-use rustsheet_engine::types::*;
+use rustsheet_engine::types::{Cell, FormulaValue, SpillValue};
 use rustsheet_engine::{expressions::utils::number_to_column, Model};
 
 use crate::export::{exported_error_literal, rich_error_vm, save_to_xlsx};

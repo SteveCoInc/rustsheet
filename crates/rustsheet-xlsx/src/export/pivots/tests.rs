@@ -6,9 +6,9 @@ use std::io::{Cursor, Read};
 
 use rustsheet_engine::expressions::token::Error;
 use rustsheet_engine::pivot::{
-    Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea, DataField, NumberGroups,
-    OpaqueEntry, OpaqueNode, PivotBudget, PivotCache, PivotField, PivotTable, RecordValue,
-    MAX_PIVOT_WORK, MAX_RECORDS, MAX_RECORD_VALUES,
+    Axis, AxisField, CacheBuilder, CacheField, CacheItem, CacheSource, CellArea, DataField,
+    NumberGroups, OpaqueEntry, OpaqueNode, OpaqueOwner, PivotBudget, PivotCache, PivotField,
+    PivotTable, RecordValue, ShowDataAs, MAX_PIVOT_WORK, MAX_RECORDS, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 use rustsheet_engine::Model;
@@ -17,19 +17,19 @@ use super::layout_lines;
 use crate::export::save_xlsx_to_writer;
 use crate::import::{load_from_xlsx, load_from_xlsx_bytes};
 
-fn export(model: &Model) -> Vec<u8> {
+pub(super) fn export(model: &Model) -> Vec<u8> {
     save_xlsx_to_writer(model, Cursor::new(Vec::new()))
         .unwrap()
         .into_inner()
 }
 
-fn round_trip(model: &Model) -> Model {
+pub(super) fn round_trip(model: &Model) -> Model {
     let workbook = load_from_xlsx_bytes(&export(model), "back", "en", "UTC").unwrap();
     Model::from_workbook(workbook, "en").unwrap()
 }
 
 /// The part `name` of the package `bytes`.
-fn part(bytes: &[u8], name: &str) -> String {
+pub(super) fn part(bytes: &[u8], name: &str) -> String {
     let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).unwrap();
     let mut text = String::new();
     archive
@@ -42,7 +42,7 @@ fn part(bytes: &[u8], name: &str) -> String {
 
 /// `tables` without their kept `rowItems` and `colItems`, as the engine leaves a pivot it lays out
 /// again.
-fn without_lines(tables: &[PivotTable]) -> Vec<PivotTable> {
+pub(super) fn without_lines(tables: &[PivotTable]) -> Vec<PivotTable> {
     let mut tables = tables.to_vec();
     for table in &mut tables {
         table.opaque.retain(|entry| !entry.is_layout_lines());
@@ -51,9 +51,9 @@ fn without_lines(tables: &[PivotTable]) -> Vec<PivotTable> {
 }
 
 /// The Excel-saved pivot of `tests/example.xlsx` comes back equal, its saved `rowItems` and
-/// `colItems` included, whether they are written back as read (the engine has not laid it out)
-/// or from the engine's layout once it has: the engine's lines for it are Excel's, written as
-/// Excel writes them.
+/// `colItems` included, whether they are written back as read (the engine has not laid it out, or
+/// laid it out to the cells it already shows) or from the engine's layout without them: the
+/// engine's lines for it are Excel's, written as Excel writes them.
 #[test]
 fn an_excel_saved_pivot_round_trips() {
     let mut model = load_from_xlsx("tests/example.xlsx", "en", "UTC", "en").unwrap();
@@ -64,19 +64,26 @@ fn an_excel_saved_pivot_round_trips() {
     assert_eq!(cache.source_name.as_deref(), Some("Table1"));
     let mut work = MAX_PIVOT_WORK;
     assert!(
-        layout_lines(&saved[0], cache, &mut work).is_none(),
+        layout_lines(&saved[0], cache, None, &mut work).is_none(),
         "a pivot the engine has not laid out keeps its saved lines"
     );
     let back = round_trip(&model);
     assert_eq!(back.workbook.pivot_caches, model.workbook.pivot_caches);
     assert_eq!(back.workbook.pivot_tables, saved);
 
-    // Laid out by the engine, it holds no saved lines and gets the engine's, equal to Excel's.
+    // Laid out again by the engine over the same cache, where it already shows the same cells,
+    // it keeps its saved lines (T-4825): nothing changed, so the source-preserving export can
+    // keep its parts.
     let placed = model
         .plan_pivot_render(0, &mut PivotBudget::default())
         .unwrap();
-    let pivot = placed.placements.into_iter().next().unwrap().pivot;
-    assert!(!pivot.opaque.iter().any(OpaqueEntry::is_layout_lines));
+    let mut pivot = placed.placements.into_iter().next().unwrap().pivot;
+    assert_eq!(
+        pivot, saved[0],
+        "an unchanged layout leaves the pivot as read"
+    );
+    // Without saved lines, it gets the engine's, equal to Excel's.
+    pivot.opaque.retain(|entry| !entry.is_layout_lines());
     model.workbook.pivot_tables = vec![pivot];
     let back = round_trip(&model);
     assert_eq!(back.workbook.pivot_tables, saved);
@@ -89,6 +96,34 @@ fn an_excel_saved_pivot_round_trips() {
     let style = table.find("<pivotTableStyleInfo").unwrap();
     let extensions = table.find("<extLst>").unwrap();
     assert!(table.find("<colItems").unwrap() < data && data < style && style < extensions);
+}
+
+/// Laid out again where the sheet no longer shows the pivot's cells, the pivot drops its saved
+/// lines: they no longer describe what the layout writes, so the export writes the engine's
+/// (T-4176). Only an unchanged layout keeps them (T-4825).
+#[test]
+fn a_changed_layout_drops_the_saved_lines() {
+    let mut model = load_from_xlsx("tests/example.xlsx", "en", "UTC", "en").unwrap();
+    let saved = model.workbook.pivot_tables[0].clone();
+    assert!(saved.opaque.iter().any(OpaqueEntry::is_layout_lines));
+    let sheet = model
+        .workbook
+        .worksheets
+        .iter()
+        .position(|w| w.sheet_id == saved.sheet_id)
+        .unwrap();
+    let sheet = u32::try_from(sheet).unwrap();
+    let row = i32::try_from(saved.location.bottom + 1).unwrap();
+    let column = i32::try_from(saved.location.right + 1).unwrap();
+    model
+        .set_user_input(sheet, row, column, "edited".to_string())
+        .unwrap();
+    let placed = model
+        .plan_pivot_render(0, &mut PivotBudget::default())
+        .unwrap();
+    let pivot = placed.placements.into_iter().next().unwrap().pivot;
+    assert!(!pivot.opaque.iter().any(OpaqueEntry::is_layout_lines));
+    assert_eq!(without_lines(&[pivot]), without_lines(&[saved]));
 }
 
 /// The case builder's pivots of `tests/pivot_tables.xlsx` (probes/getpivotdata-real-pivot) come
@@ -241,6 +276,55 @@ fn an_api_pivot_round_trips_and_reaches_a_fixed_point() {
     assert_eq!(again.workbook.pivot_caches, back.workbook.pivot_caches);
 }
 
+/// A calculated field is written as the builder and Excel write it, with its formula as read and
+/// no record values, and reads back equal (T-4174); one after it, or one whose formula the import
+/// refuses, drops the cache.
+#[test]
+fn a_calculated_field_round_trips() {
+    let mut cache = mixed_cache();
+    cache.fields.push(CacheField {
+        name: "Dbl \"x\"".into(),
+        formula: Some("V*2+'K'+LEN(\"a\")".into()),
+        ..CacheField::default()
+    });
+    let mut model = model_with(cache);
+    let pivot = &mut model.workbook.pivot_tables[0];
+    pivot.fields.push(PivotField::new(None, 0));
+    pivot.data_fields.push(DataField {
+        caption: "Sum of Dbl".into(),
+        field: 3,
+        ..DataField::default()
+    });
+    let bytes = export(&model);
+    let definition = part(&bytes, "xl/pivotCache/pivotCacheDefinition1.xml");
+    assert!(
+        definition.contains(
+            r#"<cacheFields count="4">"#
+        ) && definition.contains(
+            r#"<cacheField name="Dbl &quot;x&quot;" numFmtId="0" formula="V*2+&apos;K&apos;+LEN(&quot;a&quot;)" databaseField="0"/></cacheFields>"#
+        ),
+        "{definition}"
+    );
+    let records = part(&bytes, "xl/pivotCache/pivotCacheRecords1.xml");
+    assert!(
+        records.contains(r#"<r><x v="0"/><x v="0"/><x v="0"/></r>"#),
+        "{records}"
+    );
+    let back = round_trip(&model);
+    assert_eq!(back.workbook.pivot_caches, model.workbook.pivot_caches);
+    assert_eq!(
+        back.workbook.pivot_tables[0].data_fields,
+        model.workbook.pivot_tables[0].data_fields
+    );
+
+    let formula = model.workbook.pivot_caches[0].fields[3].formula.take();
+    model.workbook.pivot_caches[0].fields[3].formula = Some("NOW()".into());
+    assert!(round_trip(&model).workbook.pivot_caches.is_empty());
+    model.workbook.pivot_caches[0].fields[3].formula = formula;
+    model.workbook.pivot_caches[0].fields.swap(2, 3);
+    assert!(round_trip(&model).workbook.pivot_caches.is_empty());
+}
+
 /// Classic layout and a field's subtotal caption are written and read back (pivots.md "Classic
 /// layout (gridDropZones)", "subtotalCaption labels a field's subtotal lines").
 #[test]
@@ -268,10 +352,233 @@ fn classic_layout_and_subtotal_captions_round_trip() {
     assert!(!plain.contains("gridDropZones") && !plain.contains("subtotalCaption"));
 }
 
-/// A grouped cache is dropped with its pivots: the import keeps no base values to write the
-/// group back from (T-4734).
+/// The x14 dataField extension as Excel writes it (pivots.md "Show-values-as modes as Excel for
+/// the web renders them").
+const X14_EXT: &str = r#"<ext uri="{E15A36E0-9728-4e99-A89B-3F7291B0FE68}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main">"#;
+
+/// `model`'s first data field with show-as `mode` over base field 0, and `kept` as its kept
+/// elements.
+fn with_show_as(model: &mut Model, mode: ShowDataAs, kept: &[&str]) {
+    let pivot = &mut model.workbook.pivot_tables[0];
+    pivot.data_fields[0].show_data_as = mode;
+    pivot.data_fields[0].base_field = 0;
+    pivot.opaque.extend(kept.iter().map(|xml| OpaqueEntry {
+        owner: OpaqueOwner::DataField(0),
+        node: OpaqueNode::Element((*xml).into()),
+    }));
+}
+
+/// An x14 mode set through the API, with no kept extension, is written as Excel writes it,
+/// `pivotShowAs` alone in the x14 dataField extension with no `showDataAs`, and reads back; the
+/// reloaded field, whose extension is now kept, writes it back verbatim and once (T-4759).
 #[test]
-fn a_grouped_cache_is_dropped_with_its_pivots() {
+fn an_x14_show_as_mode_without_a_kept_extension_round_trips() {
+    let mut model = model_with(mixed_cache());
+    with_show_as(&mut model, ShowDataAs::RankDescending, &[]);
+    let table = part(&export(&model), "xl/pivotTables/pivotTable1.xml");
+    let written = format!(
+        r#"<dataField name="Sum of V" fld="2" baseField="0"><extLst>{X14_EXT}<x14:dataField pivotShowAs="rankDescending"/></ext></extLst></dataField>"#
+    );
+    assert!(table.contains(&written), "{table}");
+    assert!(!table.contains("showDataAs"), "{table}");
+
+    let back = round_trip(&model);
+    let data = &back.workbook.pivot_tables[0].data_fields;
+    assert_eq!(data, &model.workbook.pivot_tables[0].data_fields);
+    // Imported: the extension is kept, and written back as read, not a second time.
+    let again = part(&export(&back), "xl/pivotTables/pivotTable1.xml");
+    assert!(again.contains(&written), "{again}");
+    assert_eq!(again.matches("pivotShowAs").count(), 1, "{again}");
+    assert_eq!(
+        round_trip(&back).workbook.pivot_tables,
+        back.workbook.pivot_tables
+    );
+}
+
+/// An imported field's kept extension that names its mode is written back verbatim, as read.
+#[test]
+fn a_kept_x14_show_as_extension_is_written_back_verbatim() {
+    let kept = r#"<extLst><ext xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main" uri="{E15A36E0-9728-4e99-A89B-3F7291B0FE68}"><x14:dataField pivotShowAs="percentOfParent" /></ext></extLst>"#;
+    let mut model = model_with(mixed_cache());
+    with_show_as(&mut model, ShowDataAs::PercentOfParent, &[kept]);
+    let table = part(&export(&model), "xl/pivotTables/pivotTable1.xml");
+    assert!(
+        table.contains(&format!(r#"baseField="0">{kept}</dataField>"#)),
+        "{table}"
+    );
+    assert_eq!(table.matches("pivotShowAs").count(), 1, "{table}");
+    let back = round_trip(&model);
+    assert_eq!(
+        back.workbook.pivot_tables[0].data_fields[0].show_data_as,
+        ShowDataAs::PercentOfParent
+    );
+}
+
+/// A kept `extLst` that does not name the field's x14 mode gains the x14 dataField extension as
+/// its last child: a data field holds one extension list.
+#[test]
+fn an_x14_show_as_mode_joins_a_kept_extension_list() {
+    let other = r#"<ext uri="{00000000-0000-0000-0000-000000000000}"><y:other xmlns:y="urn:y" a="&amp;"/></ext>"#;
+    let mut model = model_with(mixed_cache());
+    with_show_as(
+        &mut model,
+        ShowDataAs::RankAscending,
+        &[&format!("<extLst>{other}</extLst>")],
+    );
+    let table = part(&export(&model), "xl/pivotTables/pivotTable1.xml");
+    let written = format!(
+        r#"<extLst>{other}{X14_EXT}<x14:dataField pivotShowAs="rankAscending"/></ext></extLst></dataField>"#
+    );
+    assert!(table.contains(&written), "{table}");
+    assert_eq!(table.matches("<extLst>").count(), 1, "{table}");
+    let back = round_trip(&model);
+    assert_eq!(
+        back.workbook.pivot_tables[0].data_fields[0].show_data_as,
+        ShowDataAs::RankAscending
+    );
+    // An ECMA mode is still `showDataAs`, with the kept list as it was.
+    with_show_as(&mut model, ShowDataAs::PercentOfTotal, &[]);
+    let table = part(&export(&model), "xl/pivotTables/pivotTable1.xml");
+    assert!(
+        table.contains(&format!(
+            r#" showDataAs="percentOfTotal" baseField="0"><extLst>{other}</extLst></dataField>"#
+        )),
+        "{table}"
+    );
+}
+
+const X14_NS: &str = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main";
+
+/// The pivot table part `model` exports.
+fn table_part(model: &Model) -> String {
+    part(&export(model), "xl/pivotTables/pivotTable1.xml")
+}
+
+/// `model`'s data fields reload as they are.
+fn reloads_equal(model: &Model) {
+    assert_eq!(
+        round_trip(model).workbook.pivot_tables[0].data_fields,
+        model.workbook.pivot_tables[0].data_fields
+    );
+}
+
+/// The model's mode is the truth: a kept extension naming another x14 mode has its `pivotShowAs`
+/// rewritten in place, the other extension in the list kept as it was.
+#[test]
+fn a_stale_kept_x14_mode_is_rewritten_to_the_models() {
+    let other =
+        r#"<ext uri="{00000000-0000-0000-0000-000000000000}"><y:other xmlns:y="urn:y"/></ext>"#;
+    let kept = format!(
+        r#"<extLst>{other}<ext uri="{{E15A36E0-9728-4e99-A89B-3F7291B0FE68}}" xmlns:x14="{X14_NS}"><x14:dataField pivotShowAs="percentOfParent" /></ext></extLst>"#
+    );
+    let mut model = model_with(mixed_cache());
+    with_show_as(&mut model, ShowDataAs::RankAscending, &[&kept]);
+    let table = table_part(&model);
+    let written = format!(
+        r#"baseField="0"><extLst>{other}{X14_EXT}<x14:dataField pivotShowAs="rankAscending"/></ext></extLst></dataField>"#
+    );
+    assert!(table.contains(&written), "{table}");
+    assert_eq!(table.matches("pivotShowAs").count(), 1, "{table}");
+    assert!(!table.contains("showDataAs"), "{table}");
+    reloads_equal(&model);
+}
+
+/// A kept x14 mode under an ECMA mode or `normal` in the model loses its `pivotShowAs`; the mode
+/// is `showDataAs`, or nothing, and reloads as the model holds it.
+#[test]
+fn a_kept_x14_mode_under_an_ecma_mode_is_dropped() {
+    let kept = format!(
+        r#"<extLst><ext uri="{{E15A36E0-9728-4e99-A89B-3F7291B0FE68}}" xmlns:x14="{X14_NS}"><x14:dataField pivotShowAs="rankDescending"/></ext></extLst>"#
+    );
+    for (mode, show) in [
+        (
+            ShowDataAs::PercentOfTotal,
+            r#" showDataAs="percentOfTotal""#,
+        ),
+        (ShowDataAs::Normal, ""),
+    ] {
+        let mut model = model_with(mixed_cache());
+        with_show_as(&mut model, mode, &[&kept]);
+        let table = table_part(&model);
+        let written = format!(
+            r#"<dataField name="Sum of V" fld="2"{show} baseField="0"><extLst>{X14_EXT}<x14:dataField/></ext></extLst></dataField>"#
+        );
+        assert!(table.contains(&written), "{mode:?}: {table}");
+        assert!(!table.contains("pivotShowAs"), "{mode:?}: {table}");
+        assert_eq!(table.matches("showDataAs").count(), show.len().min(1));
+        reloads_equal(&model);
+    }
+}
+
+/// A kept x14 `dataField` with no `pivotShowAs` takes the mode as an attribute: one extension of
+/// that uri, not a second one.
+#[test]
+fn an_x14_mode_merges_into_a_kept_x14_data_field() {
+    let kept = format!(
+        r#"<extLst><ext uri="{{E15A36E0-9728-4e99-A89B-3F7291B0FE68}}" xmlns:x14="{X14_NS}"><x14:dataField sourceField='a"b'/></ext></extLst>"#
+    );
+    let mut model = model_with(mixed_cache());
+    with_show_as(&mut model, ShowDataAs::RankAscending, &[&kept]);
+    let table = table_part(&model);
+    let written = format!(
+        r#"<extLst>{X14_EXT}<x14:dataField sourceField="a&quot;b" pivotShowAs="rankAscending"/></ext></extLst></dataField>"#
+    );
+    assert!(table.contains(&written), "{table}");
+    assert_eq!(table.matches("E15A36E0").count(), 1, "{table}");
+    reloads_equal(&model);
+}
+
+/// A kept list in a prefixed main namespace gains the extension under its own prefix, empty or
+/// not, and reloads with the mode.
+#[test]
+fn an_x14_mode_joins_a_prefixed_kept_list() {
+    let main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+    let ext = format!(
+        r#"<x:ext uri="{{E15A36E0-9728-4e99-A89B-3F7291B0FE68}}" xmlns:x14="{X14_NS}"><x14:dataField pivotShowAs="rankDescending"/></x:ext>"#
+    );
+    let other = r#"<x:ext uri="{00000000-0000-0000-0000-000000000000}"/>"#;
+    for (kept, written) in [
+        (
+            format!(r#"<x:extLst xmlns:x="{main}">{other}</x:extLst>"#),
+            format!(r#"<x:extLst xmlns:x="{main}">{other}{ext}</x:extLst></dataField>"#),
+        ),
+        (
+            format!(r#"<x:extLst xmlns:x="{main}" />"#),
+            format!(r#"<x:extLst xmlns:x="{main}">{ext}</x:extLst></dataField>"#),
+        ),
+    ] {
+        let mut model = model_with(mixed_cache());
+        with_show_as(&mut model, ShowDataAs::RankDescending, &[&kept]);
+        let table = table_part(&model);
+        assert!(table.contains(&written), "{table}");
+        reloads_equal(&model);
+    }
+}
+
+/// Kept XML the rewrite cannot read, or would rewrite only in part (a prefixed `pivotShowAs`), is
+/// written as kept, with nothing added.
+#[test]
+fn unreadable_kept_extensions_are_written_as_kept() {
+    for kept in [
+        "<extLst><ext>",
+        r#"<extLst><ext><y:dataField xmlns:y="urn:y" y:pivotShowAs="rankAscending"/></ext></extLst>"#,
+    ] {
+        let mut model = model_with(mixed_cache());
+        with_show_as(&mut model, ShowDataAs::RankDescending, &[kept]);
+        let table = table_part(&model);
+        assert!(
+            table.contains(&format!(r#"baseField="0">{kept}</dataField>"#)),
+            "{table}"
+        );
+        assert!(!table.contains("rankDescending"), "{table}");
+    }
+}
+
+/// A range grouping whose field keeps no values of its own (built through the API without
+/// `group_by_numbers`) has nothing to write the shared items from: the cache is dropped with its
+/// pivots (T-4734).
+#[test]
+fn a_range_group_without_its_own_values_is_dropped_with_its_pivots() {
     let mut cache = mixed_cache();
     cache.fields[2].number_groups = Some(NumberGroups {
         start: 0.0,
@@ -374,4 +681,42 @@ fn dates_follow_the_date_system() {
     );
     let back = round_trip(&model);
     assert_eq!(back.workbook.pivot_caches, model.workbook.pivot_caches);
+}
+
+/// Seeds of the fixed-point property: T-4155's 48, so it sees the same pivots its engine
+/// properties do.
+const FIXED_POINT_SEEDS: u64 = 48;
+
+/// Import, export and import is a fixed point over generated pivots (T-4756; plan §6 layer 5 of
+/// docs/research/pivot-tables-2026-11-04/plan.md): for each seed, a second save and reload gives
+/// the same pivot caches, pivot tables and rendered Sheet1 cells as the first reload.
+#[test]
+fn import_export_import_is_a_fixed_point_over_generated_pivots() {
+    use rustsheet_engine::test_support::{add_sum_pivot, pivot_records, pivot_sheet_text};
+    for seed in 0..FIXED_POINT_SEEDS {
+        let empty = Model::new_empty("model", "en", "UTC", "en").unwrap();
+        let model = add_sum_pivot(empty, &pivot_records(seed)).unwrap();
+        let once = round_trip(&model);
+        let twice = round_trip(&once);
+        // Not vacuous: the reload keeps the pivot and its rendered report.
+        assert_eq!(once.workbook.pivot_tables.len(), 1, "seed {seed}");
+        assert_eq!(
+            pivot_sheet_text(&once).unwrap(),
+            pivot_sheet_text(&model).unwrap(),
+            "seed {seed}: the first reload renders what was saved"
+        );
+        assert_eq!(
+            twice.workbook.pivot_caches, once.workbook.pivot_caches,
+            "seed {seed}: caches"
+        );
+        assert_eq!(
+            twice.workbook.pivot_tables, once.workbook.pivot_tables,
+            "seed {seed}: tables"
+        );
+        assert_eq!(
+            pivot_sheet_text(&twice).unwrap(),
+            pivot_sheet_text(&once).unwrap(),
+            "seed {seed}: rendered cells"
+        );
+    }
 }

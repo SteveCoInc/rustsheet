@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, clippy::panic)]
 
 // Known gaps of the two-phase ordering algorithm.
@@ -27,19 +30,19 @@ use crate::Model;
 fn transitive_dependency_through_regular_cell() {
     let mut model = new_empty_model();
 
-    model._set("B1", "=A5:A6");
-    model._set("A5", "=C2*2");
-    model._set("A6", "=C3*2");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("B1", "=A5:A6");
+    model.set_a1("A5", "=C2*2");
+    model.set_a1("A6", "=C3*2");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("C2"), "2");
-    assert_eq!(model._get_text("C3"), "3");
-    assert_eq!(model._get_text("A5"), "4");
-    assert_eq!(model._get_text("A6"), "6");
-    assert_eq!(model._get_text("B1"), "4");
-    assert_eq!(model._get_text("B2"), "6");
+    assert_eq!(model.get_text_a1("C2"), "2");
+    assert_eq!(model.get_text_a1("C3"), "3");
+    assert_eq!(model.get_text_a1("A5"), "4");
+    assert_eq!(model.get_text_a1("A6"), "6");
+    assert_eq!(model.get_text_a1("B1"), "4");
+    assert_eq!(model.get_text_a1("B2"), "6");
 }
 
 //         ║    B    |      C       |
@@ -59,14 +62,14 @@ fn transitive_dependency_through_regular_cell() {
 fn spill_range_operator_before_anchor() {
     let mut model = new_empty_model();
 
-    model._set("B1", "=C1#");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("B1", "=C1#");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("B1"), "1");
-    assert_eq!(model._get_text("B2"), "2");
-    assert_eq!(model._get_text("B3"), "3");
+    assert_eq!(model.get_text_a1("B1"), "1");
+    assert_eq!(model.get_text_a1("B2"), "2");
+    assert_eq!(model.get_text_a1("B3"), "3");
 }
 
 //         ║    A    |            B            |      D       |
@@ -86,16 +89,16 @@ fn spill_range_operator_before_anchor() {
 fn computed_reference_into_spill_area() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=B1:B1");
-    model._set("B1", "=SUM(OFFSET(D1,1,0,2,1))");
-    model._set("D1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=B1:B1");
+    model.set_a1("B1", "=SUM(OFFSET(D1,1,0,2,1))");
+    model.set_a1("D1", "=SEQUENCE(3)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("D2"), "2");
-    assert_eq!(model._get_text("D3"), "3");
-    assert_eq!(model._get_text("B1"), "5");
-    assert_eq!(model._get_text("A1"), "5");
+    assert_eq!(model.get_text_a1("D2"), "2");
+    assert_eq!(model.get_text_a1("D3"), "3");
+    assert_eq!(model.get_text_a1("B1"), "5");
+    assert_eq!(model.get_text_a1("A1"), "5");
 }
 
 //         ║    A    |    B    |        C        |
@@ -113,10 +116,10 @@ fn computed_reference_into_spill_area() {
 fn transitive_dependency_on_volatile_spill_is_consistent() {
     let mut model = new_empty_model();
 
-    model._set("B1", "=A5:A6");
-    model._set("A5", "=C2*2");
-    model._set("A6", "=C3*2");
-    model._set("C1", "=RANDARRAY(3,1)");
+    model.set_a1("B1", "=A5:A6");
+    model.set_a1("A5", "=C2*2");
+    model.set_a1("A6", "=C3*2");
+    model.set_a1("C1", "=RANDARRAY(3,1)");
 
     model.evaluate();
 
@@ -143,12 +146,12 @@ fn transitive_dependency_on_volatile_spill_is_consistent() {
 fn sum_of_spill_range_before_anchor() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=SUM(C1#)");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SUM(C1#)");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "6");
+    assert_eq!(model.get_text_a1("A1"), "6");
 }
 
 // The spill range operator on a cell whose shape depends on itself is a cycle.
@@ -156,11 +159,11 @@ fn sum_of_spill_range_before_anchor() {
 fn spill_range_operator_on_itself_is_circular() {
     let mut model = new_empty_model();
 
-    model._set("C1", "=SEQUENCE(ROWS(C1#)+1)");
+    model.set_a1("C1", "=SEQUENCE(ROWS(C1#)+1)");
 
     model.evaluate();
 
-    assert!(model._is_circular("C1"));
+    assert!(model.is_circular_a1("C1"));
 }
 
 // ── 5.4: cycles through a spill area ────────────────────────────────────────
@@ -180,14 +183,14 @@ fn spill_range_operator_on_itself_is_circular() {
 fn spill_cycle_through_reader_is_circular() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=B2+2");
-    model._set("B1", "=SEQUENCE(A1)");
+    model.set_a1("A1", "=B2+2");
+    model.set_a1("B1", "=SEQUENCE(A1)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert!(model._is_circular("B1"));
-        assert_eq!(model._get_text("B2"), "");
-        assert_eq!(model._get_text("A1"), "2");
+        assert!(model.is_circular_a1("B1"));
+        assert_eq!(model.get_text_a1("B2"), "");
+        assert_eq!(model.get_text_a1("A1"), "2");
     }
 }
 
@@ -209,15 +212,15 @@ fn spill_cycle_through_reader_is_circular() {
 fn spill_contention_on_a_fresh_sheet_goes_to_the_first_anchor() {
     let mut model = new_empty_model();
 
-    model._set("B1", "=SEQUENCE(3)");
-    model._set("A2", "=SEQUENCE(1,2)");
+    model.set_a1("B1", "=SEQUENCE(3)");
+    model.set_a1("A2", "=SEQUENCE(1,2)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("B1"), "1");
-        assert_eq!(model._get_text("B2"), "2");
-        assert_eq!(model._get_text("B3"), "3");
-        assert_eq!(model._get_text("A2"), "#SPILL!");
+        assert_eq!(model.get_text_a1("B1"), "1");
+        assert_eq!(model.get_text_a1("B2"), "2");
+        assert_eq!(model.get_text_a1("B3"), "3");
+        assert_eq!(model.get_text_a1("A2"), "#SPILL!");
     }
 }
 
@@ -235,17 +238,17 @@ fn spill_contention_on_a_fresh_sheet_goes_to_the_first_anchor() {
 fn spill_contention_existing_spill_keeps_its_cells() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=SEQUENCE(A2)");
-    model._set("A2", "=SEQUENCE(1,2)");
-    model._set("B1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(A2)");
+    model.set_a1("A2", "=SEQUENCE(1,2)");
+    model.set_a1("B1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A2"), "1");
-        assert_eq!(model._get_text("B2"), "2");
-        assert_eq!(model._get_text("B1"), "#SPILL!");
-        assert_eq!(model._get_text("B3"), "");
-        assert_eq!(model._get_text("A1"), "1");
+        assert_eq!(model.get_text_a1("A2"), "1");
+        assert_eq!(model.get_text_a1("B2"), "2");
+        assert_eq!(model.get_text_a1("B1"), "#SPILL!");
+        assert_eq!(model.get_text_a1("B3"), "");
+        assert_eq!(model.get_text_a1("A1"), "1");
     }
 }
 
@@ -264,16 +267,16 @@ fn spill_contention_existing_spill_keeps_its_cells() {
 fn dependent_of_blocked_spill_sees_the_error() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=SEQUENCE(B1)");
-    model._set("B1", "=C1+1");
-    model._set("C1", "=SEQUENCE(3)");
-    model._set("C2", "7");
+    model.set_a1("A1", "=SEQUENCE(B1)");
+    model.set_a1("B1", "=C1+1");
+    model.set_a1("C1", "=SEQUENCE(3)");
+    model.set_a1("C2", "7");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("C1"), "#SPILL!");
-    assert_eq!(model._get_text("B1"), "#SPILL!");
-    assert_eq!(model._get_text("A1"), "#SPILL!");
+    assert_eq!(model.get_text_a1("C1"), "#SPILL!");
+    assert_eq!(model.get_text_a1("B1"), "#SPILL!");
+    assert_eq!(model.get_text_a1("A1"), "#SPILL!");
 }
 
 // ── Cycle members all report #CIRC! ─────────────────────────────────────────
@@ -292,14 +295,14 @@ fn dependent_of_blocked_spill_sees_the_error() {
 fn every_member_of_a_cycle_reports_circ() {
     let mut model = new_empty_model();
 
-    model._set("C1", "=C4:C6");
-    model._set("C2", "1");
-    model._set("C4", "=SEQUENCE(C1)");
+    model.set_a1("C1", "=C4:C6");
+    model.set_a1("C2", "1");
+    model.set_a1("C4", "=SEQUENCE(C1)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert!(model._is_circular("C1"));
-        assert!(model._is_circular("C4"));
+        assert!(model.is_circular_a1("C1"));
+        assert!(model.is_circular_a1("C4"));
     }
 }
 
@@ -308,13 +311,13 @@ fn every_member_of_a_cycle_reports_circ() {
 fn iferror_does_not_hide_a_cycle() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=IFERROR(B1,0)");
-    model._set("B1", "=A1");
+    model.set_a1("A1", "=IFERROR(B1,0)");
+    model.set_a1("B1", "=A1");
 
     model.evaluate();
 
-    assert!(model._is_circular("A1"));
-    assert!(model._is_circular("B1"));
+    assert!(model.is_circular_a1("A1"));
+    assert!(model.is_circular_a1("B1"));
 }
 
 // ── Stale read edges of a retracted cell are ignored ────────────────────────
@@ -332,17 +335,17 @@ fn iferror_does_not_hide_a_cycle() {
 fn retracted_reader_of_forwarded_spill_is_not_a_cycle() {
     let mut model = new_empty_model();
 
-    model._set("B2", "=SEQUENCE(C5)");
-    model._set("C4", "=E5:E7");
-    model._set("E4", "=SEQUENCE(3)");
+    model.set_a1("B2", "=SEQUENCE(C5)");
+    model.set_a1("C4", "=E5:E7");
+    model.set_a1("E4", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("C4"), "2");
-        assert_eq!(model._get_text("C5"), "3");
-        assert_eq!(model._get_text("B2"), "1");
-        assert_eq!(model._get_text("B3"), "2");
-        assert_eq!(model._get_text("B4"), "3");
+        assert_eq!(model.get_text_a1("C4"), "2");
+        assert_eq!(model.get_text_a1("C5"), "3");
+        assert_eq!(model.get_text_a1("B2"), "1");
+        assert_eq!(model.get_text_a1("B3"), "2");
+        assert_eq!(model.get_text_a1("B4"), "3");
     }
 }
 
@@ -361,16 +364,16 @@ fn retracted_reader_of_forwarded_spill_is_not_a_cycle() {
 fn reading_spill_position_before_its_anchor_is_not_a_cycle() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=SEQUENCE(B2+B1)");
-    model._set("B1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(B2+B1)");
+    model.set_a1("B1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("B1"), "1");
-        assert_eq!(model._get_text("B2"), "2");
-        assert_eq!(model._get_text("B3"), "3");
-        assert_eq!(model._get_text("A1"), "1");
-        assert_eq!(model._get_text("A2"), "2");
-        assert_eq!(model._get_text("A3"), "3");
+        assert_eq!(model.get_text_a1("B1"), "1");
+        assert_eq!(model.get_text_a1("B2"), "2");
+        assert_eq!(model.get_text_a1("B3"), "3");
+        assert_eq!(model.get_text_a1("A1"), "1");
+        assert_eq!(model.get_text_a1("A2"), "2");
+        assert_eq!(model.get_text_a1("A3"), "3");
     }
 }

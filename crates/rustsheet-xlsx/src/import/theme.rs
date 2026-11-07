@@ -1,6 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::print_stderr)]
+// LINT-DEBT-END
 use std::io::Read;
 
 use super::package::Package;
+use super::util::strip_alpha;
 
 use super::xml::XmlNode;
 use rustsheet_engine::types::Theme;
@@ -103,18 +107,23 @@ fn read_color(slot: &XmlNode) -> Option<String> {
 }
 
 fn format_hex(raw: &str) -> String {
-    let trimmed = raw.trim_start_matches('#');
-    let rgb = if trimmed.len() == 8 {
-        &trimmed[2..]
-    } else {
-        trimmed
-    };
+    let rgb = strip_alpha(raw.trim_start_matches('#'));
     format!("#{}", rgb.to_ascii_uppercase())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A theme colour's `val` or `lastClr` is untrusted text: one of 8 bytes that is not ASCII is
+    /// kept whole, not cut at byte 2 inside a character, which panicked the importer (T-4830).
+    #[test]
+    fn hex_values_are_never_cut_inside_a_character() {
+        assert_eq!(format_hex("FF4472c4"), "#4472C4");
+        assert_eq!(format_hex("#4472c4"), "#4472C4");
+        assert_eq!(format_hex("Aé12345"), "#Aé12345");
+        assert_eq!(format_hex("#Aé12345"), "#Aé12345");
+    }
 
     #[test]
     fn resolve_default_palette_matches_legacy_array() {

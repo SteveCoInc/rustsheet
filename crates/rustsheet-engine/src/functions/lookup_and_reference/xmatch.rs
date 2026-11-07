@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// LINT-DEBT-END
 use crate::cast::calc_scalar_to_string;
 use crate::expressions::types::CellReferenceIndex;
 use crate::{
@@ -12,6 +15,17 @@ use crate::functions::{
     text::{LookupPattern, LookupRegexes},
     util::near_integer::near_integer_whole,
 };
+
+/// A `match_mode` or `search_mode` of XMATCH or XLOOKUP, or `default` where the argument is
+/// written empty or is a LET variable bound to nothing: Excel reads it as omitted, not as 0
+/// (`XMATCH(2,A1:A3,0,)` is 2 and `XLOOKUP(2,A1:A3,B1:B3,,,)` 20, where a `search_mode` of 0 is
+/// `#VALUE!`; probes/t4871-empty-mode-args E5:E20, T-4871).
+pub(crate) fn mode_or_default(value: CalcResult, default: f64) -> CalcResult {
+    match value {
+        CalcResult::EmptyArg => CalcResult::Number(default),
+        other => other,
+    }
+}
 
 #[derive(PartialEq)]
 enum SearchMode {
@@ -238,11 +252,11 @@ impl Model {
 
         let lookup_value = self.lookup_value_arg(&args[0], cell);
         let match_mode = match args.get(2) {
-            Some(node) => self.lookup_value_arg(node, cell),
+            Some(node) => mode_or_default(self.lookup_value_arg(node, cell), 0.0),
             None => CalcResult::Number(0.0),
         };
         let search_mode = match args.get(3) {
-            Some(node) => self.lookup_value_arg(node, cell),
+            Some(node) => mode_or_default(self.lookup_value_arg(node, cell), 1.0),
             None => CalcResult::Number(1.0),
         };
         // An error lookup_value that nothing lifts is the result: lookup_array is not read.
@@ -414,7 +428,7 @@ impl Model {
             CalcResult::Array(rows) => {
                 // An array constant must be a single row or single column.
                 let n_rows = rows.len();
-                let n_cols = rows.first().map(|r| r.len()).unwrap_or(0);
+                let n_cols = rows.first().map_or(0, std::vec::Vec::len);
                 let is_row_vec = n_rows == 1;
                 let is_col_vec = n_cols == 1;
                 if n_rows == 0 || n_cols == 0 || (!is_row_vec && !is_col_vec) {

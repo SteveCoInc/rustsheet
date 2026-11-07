@@ -22,12 +22,12 @@ const ARRAY_CALLS: &[&str] = &[
 fn every_argument_lifts_over_an_array() {
     let mut model = new_empty_model();
     for (row, formula) in ARRAY_CALLS.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), &format!("=ROWS({formula})"));
+        model.set_a1(&format!("A{}", row + 1), &format!("=ROWS({formula})"));
     }
     model.evaluate();
     for (row, formula) in ARRAY_CALLS.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *"2",
             "ROWS({formula})"
         );
@@ -48,18 +48,18 @@ fn ranges_lift_on_their_own_rows() {
         ("G53", "10"),
         ("G54", "12"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("A1", "=ROWS(HYPGEOM.DIST(G1:G2,3,5,10,TRUE))");
-    model._set("A2", "=ROWS(HYPGEOMDIST(G1:G2,3,5,10))");
-    model._set("A3", "=ROWS(HYPGEOM.DIST(2,3,5,10,G51:G52))");
-    model._set("A4", "=ROUND(INDEX(HYPGEOM.DIST(2,3,5,10,G51:G52),1),12)");
-    model._set("A5", "=ROUND(INDEX(HYPGEOM.DIST(2,3,5,10,G51:G52),2),12)");
-    model._set("A6", "=ROWS(HYPGEOMDIST(2,3,5,G53:G54))");
-    model._set("A7", "=ROUND(INDEX(HYPGEOMDIST(2,3,5,G53:G54),1),12)");
-    model._set("A8", "=ROUND(INDEX(HYPGEOMDIST(2,3,5,G53:G54),2),12)");
+    model.set_a1("A1", "=ROWS(HYPGEOM.DIST(G1:G2,3,5,10,TRUE))");
+    model.set_a1("A2", "=ROWS(HYPGEOMDIST(G1:G2,3,5,10))");
+    model.set_a1("A3", "=ROWS(HYPGEOM.DIST(2,3,5,10,G51:G52))");
+    model.set_a1("A4", "=ROUND(INDEX(HYPGEOM.DIST(2,3,5,10,G51:G52),1),12)");
+    model.set_a1("A5", "=ROUND(INDEX(HYPGEOM.DIST(2,3,5,10,G51:G52),2),12)");
+    model.set_a1("A6", "=ROWS(HYPGEOMDIST(2,3,5,G53:G54))");
+    model.set_a1("A7", "=ROUND(INDEX(HYPGEOMDIST(2,3,5,G53:G54),1),12)");
+    model.set_a1("A8", "=ROUND(INDEX(HYPGEOMDIST(2,3,5,G53:G54),2),12)");
     // A one-cell range is its value.
-    model._set("A9", "=ROUND(HYPGEOMDIST(2,3,5,G53:G53),12)");
+    model.set_a1("A9", "=ROUND(HYPGEOMDIST(2,3,5,G53:G53),12)");
     model.evaluate();
     let expected = [
         ("A1", "2"),
@@ -73,7 +73,7 @@ fn ranges_lift_on_their_own_rows() {
         ("A9", "0.416666667"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }
 
@@ -82,20 +82,20 @@ fn each_element_is_the_scalar_call_with_its_own_error() {
     let mut model = new_empty_model();
     // A boolean count reads as 1 (T-1849), as in the scalar call (hand-written value, no oracle cell);
     // an error element is its error.
-    model._set("A1", "=INDEX(HYPGEOMDIST(2,{3;TRUE},5,10),2)");
-    model._set("A2", "=INDEX(HYPGEOM.DIST({2;#N/A},3,5,10,TRUE),2)");
+    model.set_a1("A1", "=INDEX(HYPGEOMDIST(2,{3;TRUE},5,10),2)");
+    model.set_a1("A2", "=INDEX(HYPGEOM.DIST({2;#N/A},3,5,10,TRUE),2)");
     // Each element is checked alone: sample_s above number_sample is 1.
-    model._set("A3", "=INDEX(HYPGEOM.DIST({2;4},3,5,10,TRUE),2)");
-    model._set("A4", "=ROUND(INDEX(HYPGEOM.DIST({2;4},3,5,10,TRUE),1),12)");
+    model.set_a1("A3", "=INDEX(HYPGEOM.DIST({2;4},3,5,10,TRUE),2)");
+    model.set_a1("A4", "=ROUND(INDEX(HYPGEOM.DIST({2;4},3,5,10,TRUE),1),12)");
     // `cumulative` per element, the text "TRUE" and "FALSE" too.
-    model._set(
+    model.set_a1(
         "A5",
         "=ROUND(INDEX(HYPGEOM.DIST(2,3,5,10,{\"TRUE\";\"FALSE\"}),2),12)",
     );
-    model._set("A6", "=INDEX(HYPGEOM.DIST(2,3,5,10,{TRUE;\"x\"}),2)");
+    model.set_a1("A6", "=INDEX(HYPGEOM.DIST(2,3,5,10,{TRUE;\"x\"}),2)");
     // Broadcasting is the operators'.
-    model._set("A7", "=ROWS(HYPGEOMDIST({1;2;3},3,{5,6},10))");
-    model._set("A8", "=COLUMNS(HYPGEOMDIST({1;2;3},3,{5,6},10))");
+    model.set_a1("A7", "=ROWS(HYPGEOMDIST({1;2;3},3,{5,6},10))");
+    model.set_a1("A8", "=COLUMNS(HYPGEOMDIST({1;2;3},3,{5,6},10))");
     model.evaluate();
     let expected = [
         ("A1", "0"),
@@ -108,7 +108,7 @@ fn each_element_is_the_scalar_call_with_its_own_error() {
         ("A8", "2"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }
 
@@ -121,18 +121,18 @@ fn a_cdf_sum_is_bounded() {
     // with more than 2^18 terms left is #NUM! (the widest distribution at the largest population
     // Excel takes, 2^31 - 2, x about 43 standard deviations above the mode): a DEVIATION.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=HYPGEOM.DIST(25000000,50000000,50000000,100000000,TRUE)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=HYPGEOM.DIST(537370912,1073741823,1073741823,2147483646,TRUE)",
     );
     model.evaluate();
     let expected = [("A1", "0.500079788"), ("A2", "#NUM!")];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }
 
@@ -164,11 +164,11 @@ fn hypgeom_dist_is_charged_its_weight() {
     ];
     for (row, (call, most)) in calls.iter().enumerate() {
         let row = row + 1;
-        model._set(
+        model.set_a1(
             &format!("A{row}"),
             &format!("=ROWS({})", call.replace('#', &most.to_string())),
         );
-        model._set(
+        model.set_a1(
             &format!("B{row}"),
             &format!("=ROWS({})", call.replace('#', &(most + 1).to_string())),
         );
@@ -177,26 +177,26 @@ fn hypgeom_dist_is_charged_its_weight() {
     for (row, (call, most)) in calls.iter().enumerate() {
         let row = row + 1;
         assert_eq!(
-            model._get_text(&format!("A{row}")),
+            model.get_text_a1(&format!("A{row}")),
             most.to_string(),
             "{call}"
         );
-        assert_eq!(model._get_text(&format!("B{row}")), *"#ERROR!", "{call}");
+        assert_eq!(model.get_text_a1(&format!("B{row}")), *"#ERROR!", "{call}");
     }
 }
 
 #[test]
 fn unlifted_calls_are_the_scalar_calls() {
     let mut model = new_empty_model();
-    model._set("A1", "=HYPGEOM.DIST(2,3,5,10,TRUE)");
-    model._set("A2", "=HYPGEOMDIST(2,3,5,10)");
-    model._set("A3", "=HYPGEOMDIST(2,3,5)");
-    model._set("A4", "=HYPGEOMDIST(2,3,5,10,FALSE)");
-    model._set("A5", "=HYPGEOM.DIST(2,3,5,10)");
-    model._set("A6", "=HYPGEOM.DIST(2.9,3.9,5.9,10.9,TRUE)");
-    model._set("A7", "=HYPGEOM.DIST(0,3,5,10,TRUE)");
-    model._set("A8", "=HYPGEOM.DIST(3,3,5,10,TRUE)");
-    model._set("A9", "=HYPGEOM.DIST(0,6,5,10,TRUE)");
+    model.set_a1("A1", "=HYPGEOM.DIST(2,3,5,10,TRUE)");
+    model.set_a1("A2", "=HYPGEOMDIST(2,3,5,10)");
+    model.set_a1("A3", "=HYPGEOMDIST(2,3,5)");
+    model.set_a1("A4", "=HYPGEOMDIST(2,3,5,10,FALSE)");
+    model.set_a1("A5", "=HYPGEOM.DIST(2,3,5,10)");
+    model.set_a1("A6", "=HYPGEOM.DIST(2.9,3.9,5.9,10.9,TRUE)");
+    model.set_a1("A7", "=HYPGEOM.DIST(0,3,5,10,TRUE)");
+    model.set_a1("A8", "=HYPGEOM.DIST(3,3,5,10,TRUE)");
+    model.set_a1("A9", "=HYPGEOM.DIST(0,6,5,10,TRUE)");
     model.evaluate();
     let expected = [
         ("A1", "0.916666667"),
@@ -211,6 +211,6 @@ fn unlifted_calls_are_the_scalar_calls() {
         ("A9", "0"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }

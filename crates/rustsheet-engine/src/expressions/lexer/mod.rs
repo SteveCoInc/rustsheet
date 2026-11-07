@@ -41,6 +41,15 @@
 //! assert_eq!(lexer.next_token(), TokenType::Compare(OpCompare::Equal));
 //! assert!(matches!(lexer.next_token(), TokenType::Reference { .. }));
 //! ```
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::needless_pass_by_value,
+    clippy::redundant_else,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 
 use std::mem;
 
@@ -52,7 +61,7 @@ use crate::language::Language;
 use crate::locale::Locale;
 
 use super::token::{starts_with_getting_data, Error, TokenType};
-use super::types::*;
+use super::types::{ParsedRange, ParsedReference};
 use super::utils;
 use peek::Peeked;
 
@@ -113,6 +122,10 @@ pub enum LexerMode {
 
 /// Tokenize an input
 #[derive(Clone)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent lexing modes, each set by its own setter"
+)]
 pub struct Lexer {
     position: usize,
     next_token_position: Option<usize>,
@@ -127,9 +140,10 @@ pub struct Lexer {
     /// reads the column as no column, as Excel does, and refuses the prefix (see
     /// [`Lexer::set_engine_text`]).
     engine_text: bool,
-    /// Whether `**` is a number's exponent marker, as `E` is: text a user types, which Excel
-    /// reads so (`=2**3` stores `=2000`; see [`Lexer::set_typed`]).
-    double_star_exponent: bool,
+    /// Whether the formula is text a user types ([`Lexer::set_typed`]): then `**` is a number's
+    /// exponent marker, as `E` is (`=2**3` stores `=2000`), and `#REF!` followed by a cell or
+    /// range is refused (T-4628, see `consume_deleted_sheet_reference`).
+    typed: bool,
     /// Whether whitespace between tokens of the formula last set held a TAB or an NBSP, which
     /// Excel refuses in typed text ([`Lexer::skipped_refused_whitespace`]).
     refused_whitespace: bool,
@@ -142,6 +156,8 @@ pub struct Lexer {
     /// The text of the number being read, reused from number to number (T-3384); it holds
     /// nothing between tokens.
     number_text: String,
+    /// Whether a quoted name not followed by `!` is a name ([`Lexer::set_quoted_names`]).
+    quoted_names: bool,
 }
 
 impl Lexer {
@@ -163,20 +179,32 @@ impl Lexer {
             locale,
             language,
             engine_text: true,
-            double_star_exponent: false,
+            typed: false,
             refused_whitespace: false,
             peeked: None,
             number_text: String::new(),
+            quoted_names: false,
         }
+    }
+
+    /// Whether the next formulas read a quoted text not followed by `!` as a name, its doubled
+    /// quotes undone: a pivot calculated field's formula names a field with a space or an
+    /// apostrophe so, `'Unit Cost'*2`, `'Bob''s'+1` (docs/excel-semantics/pivots.md "Calculated
+    /// fields as Excel for the web renders them", probes/t4505-pivot-calc-fields NM, T-4174).
+    /// Off (the default), such text is a sheet prefix and must be followed by `!`.
+    pub(crate) fn set_quoted_names(&mut self, quoted_names: bool) {
+        self.quoted_names = quoted_names;
+        self.peeked = None;
     }
 
     /// Whether the next formulas are text a user types, where Excel reads `**` in a number as
     /// its exponent marker `E`: `=2**3` is `=2000`, `=1.5**2` `=150`, `=2**-1` `=0.2`; `**` not
     /// written where an `E` would be (after a reference or `)`, before a space, a fraction or a
     /// second exponent) is refused (syntax.md "`**` in a typed number is `E`",
-    /// probes/t3283-typed-double-star, t3213-typed-parse-errors A5).
+    /// probes/t3283-typed-double-star, t3213-typed-parse-errors A5), and where `#REF!` before a
+    /// cell or range is refused (probes/t4628-deleted-sheet-reference-text).
     pub(crate) fn set_typed(&mut self, typed: bool) {
-        self.double_star_exponent = typed;
+        self.typed = typed;
         self.peeked = None;
     }
 
@@ -373,7 +401,7 @@ impl Lexer {
                     }
                     '#' => {
                         let error = self.consume_error();
-                        if error == TokenType::Error(Error::REF) {
+                        if error == TokenType::Error(Error::REF) && !self.typed {
                             self.consume_deleted_sheet_reference();
                         }
                         error
@@ -497,15 +525,14 @@ impl Lexer {
                                                     left,
                                                     right,
                                                 };
-                                            } else {
-                                                return TokenType::Reference {
-                                                    sheet: None,
-                                                    column: left.column,
-                                                    row: left.row,
-                                                    absolute_row: left.absolute_row,
-                                                    absolute_column: left.absolute_column,
-                                                };
                                             }
+                                            return TokenType::Reference {
+                                                sheet: None,
+                                                column: left.column,
+                                                row: left.row,
+                                                absolute_row: left.absolute_row,
+                                                absolute_column: left.absolute_column,
+                                            };
                                         }
                                         Err(error) => {
                                             // This could be the range operator: ":"
@@ -546,11 +573,10 @@ impl Lexer {
                                         ));
                                     }
                                     return TokenType::Ident(name);
-                                } else {
-                                    return TokenType::Illegal(
-                                        self.set_error("Invalid identifier (A1)", self.position),
-                                    );
                                 }
+                                return TokenType::Illegal(
+                                    self.set_error("Invalid identifier (A1)", self.position),
+                                );
                             } else {
                                 let pos = self.position;
                                 self.position = position - 1;
@@ -562,15 +588,11 @@ impl Lexer {
                                             self.position = pos;
                                             if is_valid_r1c1_identifier(&name, self.peek_char()) {
                                                 return TokenType::Ident(name);
-                                            } else {
-                                                self.position = self.len;
-                                                return TokenType::Illegal(
-                                                    self.set_error(
-                                                        "Invalid identifier (R1C1)",
-                                                        pos,
-                                                    ),
-                                                );
                                             }
+                                            self.position = self.len;
+                                            return TokenType::Illegal(
+                                                self.set_error("Invalid identifier (R1C1)", pos),
+                                            );
                                         }
                                         // An uppercase `R0C1` or `R1048577C1` is no cell but a
                                         // name Excel never resolves (`#NAME?`, T-1657); reading it
@@ -587,15 +609,14 @@ impl Lexer {
                                                 left,
                                                 right,
                                             };
-                                        } else {
-                                            return TokenType::Reference {
-                                                sheet: None,
-                                                column: left.column,
-                                                row: left.row,
-                                                absolute_row: left.absolute_row,
-                                                absolute_column: left.absolute_column,
-                                            };
                                         }
+                                        return TokenType::Reference {
+                                            sheet: None,
+                                            column: left.column,
+                                            row: left.row,
+                                            absolute_row: left.absolute_row,
+                                            absolute_column: left.absolute_column,
+                                        };
                                     }
                                     Err(error) => {
                                         self.position = position - 1;
@@ -617,12 +638,11 @@ impl Lexer {
                                         }
                                         if is_valid_r1c1_identifier(&name, self.peek_char()) {
                                             return TokenType::Ident(name);
-                                        } else {
-                                            return TokenType::Illegal(self.set_error(
-                                                &format!("Invalid identifier (R1C1): {name}"),
-                                                error.position,
-                                            ));
                                         }
+                                        return TokenType::Illegal(self.set_error(
+                                            &format!("Invalid identifier (R1C1): {name}"),
+                                            error.position,
+                                        ));
                                     }
                                 }
                             }
@@ -754,13 +774,13 @@ impl Lexer {
                     success = true;
                     break;
                 }
-                if self.chars[position] != '\'' {
-                    success = true;
-                    break;
-                } else {
+                if self.chars[position] == '\'' {
                     // In Excel we escape "'" with "''"
                     needs_escape = true;
                     position += 1;
+                } else {
+                    success = true;
+                    break;
                 }
             }
         }
@@ -883,15 +903,21 @@ impl Lexer {
                 return TokenType::Illegal(error);
             }
         };
+        if self.quoted_names && self.peek_char() != Some('!') {
+            return TokenType::Ident(sheet_name);
+        }
         if self.next_token() != TokenType::Bang {
             return TokenType::Illegal(self.set_error("Expected '!'", self.position));
         }
         self.consume_range(Some(sheet_name))
     }
 
-    /// Skips the cell or range after a `#REF!` in A1 (`#REF!C4:C7`): Excel displays a reference
-    /// to a deleted sheet that way, and the whole is the #REF! error (T-2340,
-    /// probes/table-edits/table-delete-sheet), so the displayed text reads back as what it was.
+    /// Skips the cell or range after a `#REF!` in A1 (`#REF!C4:C7`), except in typed text: the
+    /// display of a reference to a deleted sheet (T-2340), which a fill or paste re-enters, and a
+    /// file's stored text read back as the #REF! error. Excel refuses that text typed in
+    /// (probes/t4628-deleted-sheet-reference-text, T-4628), so typed text leaves the cell or
+    /// range to the parser, which refuses it. Excel for the web refuses a file storing it; what
+    /// desktop Excel does is unprobed, so loaded text keeps reading it (an engine choice).
     fn consume_deleted_sheet_reference(&mut self) {
         if self.mode != LexerMode::A1
             || !matches!(self.peek_char(), Some(c) if c.is_ascii_alphabetic() || c == '$')

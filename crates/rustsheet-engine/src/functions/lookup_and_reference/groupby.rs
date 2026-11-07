@@ -3,6 +3,14 @@
 //! `field_relationship`, T-1324).
 //! Excel: docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY", evidence probes/groupby-pivotby
 //! sheet G (excel-graph, T-1276) and its follow-ups (T-1328).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::needless_pass_by_value
+)]
+// LINT-DEBT-END
 
 use super::group_functions::{Aggregate, Element, Functions};
 use super::grouping::{

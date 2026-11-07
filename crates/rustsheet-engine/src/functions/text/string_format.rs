@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 // DOLLAR, FIXED, NUMBERVALUE, PROPER, REPLACE, ARRAYTOTEXT
 
 use crate::{
@@ -233,7 +240,8 @@ impl Model {
 
         // Only the first character of each separator counts, and an empty one is #VALUE!
         // (docs/excel-semantics/text.md "NUMBERVALUE reads text as VALUE does"; gen-m5/5704666097cbc5b2
-        // Calc!A261, gen-m5/a6fec430ac350c1a Calc!A32).
+        // Calc!A261, gen-m5/a6fec430ac350c1a Calc!A32), a written-empty argument too, not the
+        // default an omitted one takes (probes/t4874-numbervalue-empty-separator, T-4874).
         let (Some(decimal_sep), Some(group_sep)) =
             (decimal_sep.chars().next(), group_sep.chars().next())
         else {

@@ -6,7 +6,7 @@ use super::ArgKind::{
     Lift, LiftArrays, LiftArraysRangeWhole, ReferenceByCaller, Whole, WholeByCaller,
 };
 use super::KernelWork::{ByValue, Constant, Weighted};
-use super::ValueWork::{HypergeometricSum, IncompleteGamma};
+use super::ValueWork::{BetaQuantile, HypergeometricSum, IncompleteGamma};
 use super::{
     ArgKinds, GammaShape, KernelWork, LIFT_1, LIFT_2, LIFT_3, LIFT_3_OF_5, LIFT_4, LIFT_4_OF_6,
 };
@@ -105,7 +105,11 @@ const BINOM_INV_WEIGHT: u32 = 1 << 14;
 /// and those same fractions elsewhere, 0.41 ms the slowest timed, T-3398; every bpser branch has a
 /// term ratio of at most 0.7 and settles in about 110 terms, not its 2,000-term cap), or, at
 /// a huge shape or df, a crossing of at most 67 of those cdfs (`inverse_beta::beta_quantile_crossing`,
-/// T-1538: 0.5 ms), so the full Newton search plus refinement (2.5 ms) is the bound.
+/// T-1538: 0.5 ms), so the full Newton search plus refinement (2.5 ms) is the bound; where that
+/// quantile rounds to 1 at p above 1/2, one more crossing on the flipped tail without a start
+/// (`beta.rs` `upper_quantile_near_one`, T-3351: at most 67 such cdfs, 0.5 ms) makes it 3.0 ms.
+/// 512 elements at 3.0 ms is 1.5 s of kernel time, still under the 1.7 s stated next, so the
+/// weight is unchanged.
 /// The weight caps a lifted call at 2^27 / 2^18 = 512 elements: 1.7 s at the bound (a DEVIATION,
 /// statistics.md). The cases measured cost much less (over 8,192 elements in release: 167 us for
 /// `BETA.INV(1E-300,0.5,1E6)`, a full bisection of fast cdfs; 105 us for the longest Newton search
@@ -113,10 +117,13 @@ const BINOM_INV_WEIGHT: u32 = 1 << 14;
 /// `BETA.INV(0.4,2,3)`).
 const QUANTILE_WEIGHT: u32 = 1 << 18;
 /// `BETA.INV(probability, alpha, beta, [A], [B])` and BETAINV.
+/// An element the kernel refuses before its search is charged 1 (`ValueWork::BetaQuantile`, T-2607).
 const BETA_INV: ArgKinds = ArgKinds::fixed(
     3,
     &[Lift, Lift, Lift, Lift, Lift],
-    Weighted(QUANTILE_WEIGHT),
+    ByValue(BetaQuantile {
+        weight: QUANTILE_WEIGHT,
+    }),
 );
 /// `F.INV(probability, deg_freedom1, deg_freedom2)`, F.INV.RT and FINV.
 const F_INV: ArgKinds = ArgKinds::fixed(3, &[Lift, Lift, Lift], Weighted(QUANTILE_WEIGHT));

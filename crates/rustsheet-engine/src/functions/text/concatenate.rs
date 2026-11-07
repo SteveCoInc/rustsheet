@@ -523,7 +523,7 @@ impl Model {
                 }
                 CalcResult::EmptyCell => {
                     if !ignore_empty {
-                        values.push("".to_string());
+                        values.push(String::new());
                     }
                 }
                 CalcResult::EmptyArg => {}
@@ -542,7 +542,7 @@ impl Model {
                     }
                 }
                 CalcResult::Lambda(_) => return lambda_text_error(cell),
-            };
+            }
         }
         if over_limit || size.exceeds(&values) {
             return text_limit_error(cell);

@@ -5,37 +5,37 @@ use crate::test::util::new_empty_model;
 #[test]
 fn arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "=MROUND()");
-    model._set("A2", "=MROUND(10)");
-    model._set("A3", "=MROUND(10, 3)");
-    model._set("A4", "=MROUND(10, 3, 1)");
+    model.set_a1("A1", "=MROUND()");
+    model.set_a1("A2", "=MROUND(10)");
+    model.set_a1("A3", "=MROUND(10, 3)");
+    model.set_a1("A4", "=MROUND(10, 3, 1)");
 
-    model._set("A5", "=TRUNC()");
-    model._set("A6", "=TRUNC(10)");
-    model._set("A7", "=TRUNC(10.22, 1)");
-    model._set("A8", "=TRUNC(10, 3, 1)");
+    model.set_a1("A5", "=TRUNC()");
+    model.set_a1("A6", "=TRUNC(10)");
+    model.set_a1("A7", "=TRUNC(10.22, 1)");
+    model.set_a1("A8", "=TRUNC(10, 3, 1)");
 
-    model._set("A9", "=INT()");
-    model._set("A10", "=INT(10.22)");
-    model._set("A11", "=INT(10.22, 1)");
-    model._set("A12", "=INT(10.22, 1, 2)");
+    model.set_a1("A9", "=INT()");
+    model.set_a1("A10", "=INT(10.22)");
+    model.set_a1("A11", "=INT(10.22, 1)");
+    model.set_a1("A12", "=INT(10.22, 1, 2)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
-    assert_eq!(model._get_text("A3"), *"9");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A3"), *"9");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
 
-    assert_eq!(model._get_text("A5"), *"#ERROR!");
-    assert_eq!(model._get_text("A6"), *"10");
-    assert_eq!(model._get_text("A7"), *"10.2");
-    assert_eq!(model._get_text("A8"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A6"), *"10");
+    assert_eq!(model.get_text_a1("A7"), *"10.2");
+    assert_eq!(model.get_text_a1("A8"), *"#ERROR!");
 
-    assert_eq!(model._get_text("A9"), *"#ERROR!");
-    assert_eq!(model._get_text("A10"), *"10");
-    assert_eq!(model._get_text("A11"), *"#ERROR!");
-    assert_eq!(model._get_text("A12"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A9"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A10"), *"10");
+    assert_eq!(model.get_text_a1("A11"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A12"), *"#ERROR!");
 }
 
 /// TRUNC is ROUNDDOWN: a 15-digit decimal cut first, and the same huge `num_digits` wrap
@@ -52,16 +52,16 @@ fn trunc_rounds_down_in_decimal_like_rounddown() {
         ("A6", "=TRUNC(2^1023*(2-2^-52),0)"),
         ("A7", "=TRUNC(-0.5)&\"\""),
     ] {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "-0.8");
-    assert_eq!(model._get_text("A2"), "1");
-    assert_eq!(model._get_text("A3"), "123400000");
-    assert_eq!(model._get_text("A4"), "0");
-    assert_eq!(model._get_text("A5"), "123.4");
-    assert_eq!(model._get_text("A6"), "#NUM!");
-    assert_eq!(model._get_text("A7"), "0");
+    assert_eq!(model.get_text_a1("A1"), "-0.8");
+    assert_eq!(model.get_text_a1("A2"), "1");
+    assert_eq!(model.get_text_a1("A3"), "123400000");
+    assert_eq!(model.get_text_a1("A4"), "0");
+    assert_eq!(model.get_text_a1("A5"), "123.4");
+    assert_eq!(model.get_text_a1("A6"), "#NUM!");
+    assert_eq!(model.get_text_a1("A7"), "0");
 }
 
 /// INT cuts to 15 significant digits before rounding down (gen-m5/0362d48f56108faa Calc!A364,
@@ -77,13 +77,13 @@ fn int_cuts_to_15_digits_first() {
         ("A5", "=INT(-3)&\"\""),
         ("A6", "=INT(0.5)&\"\""),
     ] {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "-1");
-    assert_eq!(model._get_text("A3"), "-11");
-    assert_eq!(model._get_text("A4"), "10");
-    assert_eq!(model._get_text("A5"), "-3");
-    assert_eq!(model._get_text("A6"), "0");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "-1");
+    assert_eq!(model.get_text_a1("A3"), "-11");
+    assert_eq!(model.get_text_a1("A4"), "10");
+    assert_eq!(model.get_text_a1("A5"), "-3");
+    assert_eq!(model.get_text_a1("A6"), "0");
 }

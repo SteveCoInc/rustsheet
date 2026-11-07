@@ -6,6 +6,9 @@
 //! formula is evaluated on demand, and the inputs are put back. The caller then evaluates the
 //! workbook again, so the cells that read the results see them. A table nothing it read has
 //! changed for since its last recomputation keeps its results (`data_table_memo.rs`, T-0453).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use crate::{
     calc_result::CalcResult,
@@ -97,7 +100,7 @@ impl Model {
         budget: &mut usize,
     ) -> Vec<(CellReferenceIndex, ArrayNode)> {
         let (top, left, bottom, right) = table.range;
-        let at = |row, column| CellReferenceIndex { sheet, row, column };
+        let at = |row, column| CellReferenceIndex { sheet, column, row };
         // The header values as the workbook has them now: an earlier table's substitutions are
         // undone, so its readers are evaluated afresh.
         self.reset_on_demand_evaluation();

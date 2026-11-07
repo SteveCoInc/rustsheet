@@ -5,6 +5,9 @@
 //! far away to stretch the used area, so the lists must not hold an entry per cell (T-1681,
 //! directive 5). They hold an entry for each position where either argument has a non-blank
 //! cell: a position blank in both is a pair every paired caller treats as no data.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 use crate::calc_result::{CalcResult, Range};
 use crate::expressions::parser::{ArrayNode, Node};

@@ -2,6 +2,9 @@
 //! `bfrac.rs`), with Excel's beta density times x·y as its prefactor. On the region T-3571 probed
 //! ([`lentz_region`]) the fraction is evaluated as Excel does, by Numerical Recipes' modified Lentz
 //! loop on closed-form terms ([`lentz_fraction`]); elsewhere by TOMS's own recurrence.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 use super::super::loader::excel_beta_density;
 use super::Dispatch;

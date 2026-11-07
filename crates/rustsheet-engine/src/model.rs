@@ -1,3 +1,17 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::inline_always,
+    clippy::manual_let_else,
+    clippy::match_same_arms,
+    clippy::needless_pass_by_value,
+    clippy::too_many_lines,
+    clippy::unused_self
+)]
+#![cfg_attr(not(test), expect(clippy::enum_glob_use))]
+// LINT-DEBT-END
 #![deny(missing_docs)]
 
 use std::collections::HashMap;
@@ -16,7 +30,7 @@ use crate::{
             ArrayNode, CallNameSpellings, CompletionContext, Node, Parser,
         },
         token::{get_error_by_name, Error},
-        types::*,
+        types::{Area, CellReferenceIndex, CellReferenceRC},
         utils::{self, check_block, is_valid_column_number, is_valid_row},
     },
     formatter::{
@@ -25,11 +39,15 @@ use crate::{
     },
     implicit_intersection::implicit_intersection,
     language::{get_default_language, get_language, Language},
-    locale::{get_default_locale, get_locale, Locale},
-    types::*,
+    locale::{get_locale, Locale},
+    types::{
+        ArrayKind, Cell, CellType, Color, FormulaValue, Link, SheetProperties, SheetState,
+        SpillValue, Style, Theme, Workbook,
+    },
     utils as common,
 };
 
+use crate::arithmetic::bcast_get;
 use crate::evaluation::{CellKey, Evaluation, FormulaCell, Seen};
 use crate::limits::{spill_past_grid_error, spills_past_grid};
 use crate::number_mark::MarkCarrier;
@@ -458,18 +476,15 @@ impl Model {
     /// the English language and locale regardless of the user's active
     /// language. This temporarily switches the parser, parses, and restores it.
     pub(crate) fn parse_internal_formula(&mut self, body: &str, context: &CellReferenceRC) -> Node {
-        self.parse_internal_with(|parser| parser.parse(body, context))
+        self.with_default_parser(|parser| parser.parse(body, context))
     }
 
-    fn parse_internal_with(&mut self, parse: impl FnOnce(&mut Parser) -> Node) -> Node {
-        let locale = self.locale;
-        let language = self.language;
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        let node = parse(&mut self.parser);
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
-        node
+    /// Runs `run` with the parser switched to the default locale and language (formulas kept
+    /// outside of cells are stored in English), then restores the active ones. The one place
+    /// that switch is made (T-4693).
+    pub(crate) fn with_default_parser<R>(&mut self, run: impl FnOnce(&mut Parser) -> R) -> R {
+        let (locale, language) = (self.locale, self.language);
+        self.parser.with_default_locale(locale, language, run)
     }
 
     /// Returns completion information for a formula being edited in a cell.
@@ -520,7 +535,7 @@ impl Model {
             .workbook
             .worksheets
             .iter()
-            .map(|s| s.get_name())
+            .map(super::types::Worksheet::get_name)
             .collect();
         let defined_names = self.workbook.get_defined_names_with_scope();
         let mut parser =
@@ -706,19 +721,24 @@ impl Model {
                     };
                 }
                 Some((false, (original_width, original_height))) => {
-                    // CSE array formula: fill the declared range with the array values.
-                    // Use relative indices for get_value_from_array (1-based).
+                    // CSE array formula: fill the declared range with the array values. A
+                    // range larger than the result broadcasts a one-row or one-column result
+                    // and is `#N/A` past it (arrays.md "Legacy (CSE) array formula over a
+                    // larger range": poi/MatrixFormulaEvalTestData.xlsx H46:J136,
+                    // corpus-bench/13894 F20:F25, Excel-cached).
                     for r in row..row + original_height {
                         for c in column..column + original_width {
-                            let rel_row = r - row + 1;
-                            let rel_col = c - column + 1;
-                            let value = self.get_value_from_array(array, rel_row, rel_col);
+                            let value = usize::try_from(r - row)
+                                .ok()
+                                .zip(usize::try_from(c - column).ok())
+                                .and_then(|(i, j)| bcast_get(array, i, j))
+                                .cloned();
                             let new_cell = if r == row && c == column {
                                 let fv = match value {
                                     Some(node) => array_node_to_formula_value(node),
                                     None => FormulaValue::Error {
                                         ei: Error::NIMPL,
-                                        o: "".to_string(),
+                                        o: String::new(),
                                         m: "Unexpected array result".to_string(),
                                     },
                                 };
@@ -732,7 +752,7 @@ impl Model {
                             } else {
                                 let sv = match value {
                                     Some(node) => array_node_to_spill_value(node),
-                                    None => SpillValue::Error(Error::VALUE),
+                                    None => SpillValue::Error(Error::NA),
                                 };
                                 let existing_style =
                                     self.workbook.worksheets[sheet as usize].get_style(r, c);
@@ -764,7 +784,7 @@ impl Model {
                             Some(node) => array_node_to_formula_value(node),
                             None => FormulaValue::Error {
                                 ei: Error::VALUE,
-                                o: "".to_string(),
+                                o: String::new(),
                                 m: "Unexpected array result".to_string(),
                             },
                         }
@@ -784,7 +804,7 @@ impl Model {
                         );
                         FormulaValue::Error {
                             ei: Error::VALUE,
-                            o: "".to_string(),
+                            o: String::new(),
                             m: "Array result in scalar context".to_string(),
                         }
                     };
@@ -811,7 +831,7 @@ impl Model {
                         &CalcResult::Error {
                             error: Error::NUM,
                             origin: cell_reference,
-                            message: "".to_string(),
+                            message: String::new(),
                         },
                     );
                 }
@@ -824,14 +844,11 @@ impl Model {
                 origin,
                 message,
             } => {
-                let o = match self.cell_reference_to_string(origin) {
-                    Ok(s) => s,
-                    Err(_) => "".to_string(),
-                };
+                let o = self.cell_reference_to_string(origin).unwrap_or_default();
                 FormulaValue::Error {
                     ei: error.clone(),
                     o,
-                    m: message.to_string(),
+                    m: message.clone(),
                 }
             }
             CalcResult::Range { .. } => {
@@ -1323,7 +1340,10 @@ impl Model {
         workbook.rebuild_derived_state();
         let worksheets = &workbook.worksheets;
 
-        let worksheet_names = worksheets.iter().map(|s| s.get_name()).collect();
+        let worksheet_names = worksheets
+            .iter()
+            .map(super::types::Worksheet::get_name)
+            .collect();
 
         let defined_names = workbook.get_defined_names_with_scope();
         let locale =
@@ -1343,7 +1363,7 @@ impl Model {
         );
         let mut shared_strings = HashMap::new();
         for (index, s) in workbook.shared_strings.iter().enumerate() {
-            shared_strings.insert(s.to_string(), index);
+            shared_strings.insert(s.clone(), index);
         }
 
         let mut model = Model::unparsed(
@@ -1381,9 +1401,9 @@ impl Model {
     /// ```
     pub fn parse_reference(&self, s: &str) -> Option<CellReferenceIndex> {
         let bytes = s.as_bytes();
-        let mut sheet_name = "".to_string();
-        let mut column = "".to_string();
-        let mut row = "".to_string();
+        let mut sheet_name = String::new();
+        let mut column = String::new();
+        let mut row = String::new();
         let mut state = "sheet"; // "sheet", "col", "row"
         for &byte in bytes {
             match state {
@@ -1427,7 +1447,7 @@ impl Model {
             Err(_) => return None,
         };
 
-        Some(CellReferenceIndex { sheet, row, column })
+        Some(CellReferenceIndex { sheet, column, row })
     }
 
     /// Moves the formula `value` from `source` (in `area`) to `target`.
@@ -1479,7 +1499,7 @@ impl Model {
             .get_name();
         if let Some(formula) = self.formula_without_prefix(value) {
             let cell_reference = CellReferenceRC {
-                sheet: source_sheet_name.to_owned(),
+                sheet: source_sheet_name.clone(),
                 row: source.row,
                 column: source.column,
             };
@@ -1552,7 +1572,7 @@ impl Model {
                     )
                 }
             },
-            None => "".to_string(),
+            None => String::new(),
         };
         Ok(result)
     }
@@ -1598,7 +1618,7 @@ impl Model {
 
         if let Some(formula_str) = self.formula_without_prefix(value) {
             let cell_reference = CellReferenceRC {
-                sheet: source_sheet_name.to_string(),
+                sheet: source_sheet_name.clone(),
                 row: source.row,
                 column: source.column,
             };
@@ -1855,6 +1875,8 @@ impl Model {
         if self.workbook.worksheet(sheet)?.is_covered_cell(row, column) {
             return Err("Cannot edit a cell that is part of a merged cell".to_string());
         }
+        // Excel refuses any write into a data table's results (T-0452, recalc.md).
+        self.refuse_data_table_write(sheet, row, column)?;
         match self.get_cell_structure(sheet, row, column)? {
             CellStructure::SingleCell => {
                 // noop
@@ -1918,7 +1940,7 @@ impl Model {
                     }
                 }
             }
-        };
+        }
         Ok(())
     }
 
@@ -1990,21 +2012,18 @@ impl Model {
                     rejected_clock_text_format(&value, &currencies, self.locale, &year, ds);
                 let upper = value.to_uppercase();
                 let worksheet = self.workbook.worksheet_mut(sheet)?;
-                match get_error_by_name(&upper, self.language) {
-                    Some(error) => {
-                        worksheet.set_cell_with_error(row, column, error, new_style_index)?;
+                if let Some(error) = get_error_by_name(&upper, self.language) {
+                    worksheet.set_cell_with_error(row, column, error, new_style_index)?;
+                } else {
+                    if let Some(num_fmt) = rejected_format {
+                        new_style_index =
+                            self.style_with_typed_format(new_style_index, &num_fmt)?;
                     }
-                    None => {
-                        if let Some(num_fmt) = rejected_format {
-                            new_style_index =
-                                self.style_with_typed_format(new_style_index, &num_fmt)?;
-                        }
-                        self.set_cell_with_string(sheet, row, column, &value, new_style_index)?;
-                        // If the input looks like an URL or an email address a link is
-                        // attached to the cell, the same way other inputs change the
-                        // number format. Note that a quote prefix prevents this.
-                        self.auto_link_cell(sheet, row, column, &value)?;
-                    }
+                    self.set_cell_with_string(sheet, row, column, &value, new_style_index)?;
+                    // If the input looks like an URL or an email address a link is
+                    // attached to the cell, the same way other inputs change the
+                    // number format. Note that a quote prefix prevents this.
+                    self.auto_link_cell(sheet, row, column, &value)?;
                 }
             }
         }
@@ -2105,7 +2124,7 @@ impl Model {
                 )?;
 
                 // Update the style if needed
-                let cell = CellReferenceIndex { sheet, row, column };
+                let cell = CellReferenceIndex { sheet, column, row };
                 let parsed_formula =
                     &self.parsed_formulas[sheet as usize][formula_index as usize].evaluated;
 
@@ -2239,26 +2258,23 @@ impl Model {
         value: &str,
         style: i32,
     ) -> Result<(), String> {
-        match self.shared_strings.get(value) {
-            Some(string_index) => {
-                self.workbook.worksheet_mut(sheet)?.set_cell_with_string(
-                    row,
-                    column,
-                    *string_index as i32,
-                    style,
-                )?;
-            }
-            None => {
-                let string_index = self.workbook.shared_strings.len();
-                self.workbook.shared_strings.push(value.to_string());
-                self.shared_strings.insert(value.to_string(), string_index);
-                self.workbook.worksheet_mut(sheet)?.set_cell_with_string(
-                    row,
-                    column,
-                    string_index as i32,
-                    style,
-                )?;
-            }
+        if let Some(string_index) = self.shared_strings.get(value) {
+            self.workbook.worksheet_mut(sheet)?.set_cell_with_string(
+                row,
+                column,
+                *string_index as i32,
+                style,
+            )?;
+        } else {
+            let string_index = self.workbook.shared_strings.len();
+            self.workbook.shared_strings.push(value.to_string());
+            self.shared_strings.insert(value.to_string(), string_index);
+            self.workbook.worksheet_mut(sheet)?.set_cell_with_string(
+                row,
+                column,
+                string_index as i32,
+                style,
+            )?;
         }
         Ok(())
     }
@@ -2397,7 +2413,7 @@ impl Model {
         column: i32,
     ) -> Result<String, String> {
         let Some(cell) = self.workbook.worksheet(sheet_index)?.cell(row, column) else {
-            return Ok("".to_string());
+            return Ok(String::new());
         };
         let format = self.get_style_for_cell(sheet_index, row, column)?.num_fmt;
         Ok(cell.formatted_value(
@@ -2431,52 +2447,47 @@ impl Model {
         let worksheet = self.workbook.worksheet(sheet)?;
         let cell = match worksheet.cell(row, column) {
             Some(c) => c,
-            None => return Ok("".to_string()),
+            None => return Ok(String::new()),
         };
-        match cell.get_formula() {
-            Some(formula_index) => {
-                let formula =
-                    self.parsed_formulas[sheet as usize][formula_index as usize].written();
-                let cell_ref = CellReferenceRC {
-                    sheet: worksheet.get_name(),
-                    row,
-                    column,
-                };
+        if let Some(formula_index) = cell.get_formula() {
+            let formula = self.parsed_formulas[sheet as usize][formula_index as usize].written();
+            let cell_ref = CellReferenceRC {
+                sheet: worksheet.get_name(),
+                row,
+                column,
+            };
+            Ok(format!(
+                "={}",
+                to_localized_string(formula, &cell_ref, self.locale, self.language)
+            ))
+        } else {
+            let style_index = cell.get_style();
+            let style = self.workbook.styles.get_style(style_index)?;
+            if style.quote_prefix {
                 Ok(format!(
-                    "={}",
-                    to_localized_string(formula, &cell_ref, self.locale, self.language)
-                ))
-            }
-            None => {
-                let style_index = cell.get_style();
-                let style = self.workbook.styles.get_style(style_index)?;
-                if style.quote_prefix {
-                    Ok(format!(
-                        "'{}",
-                        cell.get_localized_text(
-                            &self.workbook.shared_strings,
-                            self.locale,
-                            self.language,
-                        )
-                    ))
-                } else {
-                    // If it is a date formatted cell we try to format it as date, if it fails we return the raw value
-                    if is_likely_date_number_format(&style.num_fmt) {
-                        let value = cell.value(&self.workbook.shared_strings, self.language);
-                        if let CellValue::Number(n) = value {
-                            let formatted =
-                                format_number(n, &style.num_fmt, &self.format_context());
-                            if formatted.error.is_none() {
-                                return Ok(formatted.text);
-                            }
-                        }
-                    }
-                    Ok(cell.get_localized_text(
+                    "'{}",
+                    cell.get_localized_text(
                         &self.workbook.shared_strings,
                         self.locale,
                         self.language,
-                    ))
+                    )
+                ))
+            } else {
+                // If it is a date formatted cell we try to format it as date, if it fails we return the raw value
+                if is_likely_date_number_format(&style.num_fmt) {
+                    let value = cell.value(&self.workbook.shared_strings, self.language);
+                    if let CellValue::Number(n) = value {
+                        let formatted = format_number(n, &style.num_fmt, &self.format_context());
+                        if formatted.error.is_none() {
+                            return Ok(formatted.text);
+                        }
+                    }
                 }
+                Ok(cell.get_localized_text(
+                    &self.workbook.shared_strings,
+                    self.locale,
+                    self.language,
+                ))
             }
         }
     }
@@ -2531,6 +2542,8 @@ impl Model {
         if !self.can_clear_range(range)? {
             return Err("Cannot clear the range because it contains array formulas".to_string());
         }
+        // A clear over every result of a data table deletes it; over some of them it is refused.
+        self.clear_data_tables(range)?;
         let sheet = range.sheet;
         let ws = self.workbook.worksheet_mut(sheet)?;
         // Only the cells that exist, since an absent cell has no contents to clear, and the area
@@ -2644,6 +2657,7 @@ impl Model {
         if !self.can_clear_range(area)? {
             return Err("Cannot clear the range because it contains array formulas".to_string());
         }
+        self.clear_data_tables(area)?;
         let worksheet = self.workbook.worksheet_mut(area.sheet)?;
 
         let sheet_data = &mut worksheet.sheet_data;
@@ -2740,28 +2754,27 @@ impl Model {
         // First check the cell, then row, the column
         let cell = self.workbook.worksheet(sheet)?.cell(row, column);
 
-        match cell {
-            Some(cell) => Ok(cell.get_style()),
-            None => {
-                let rows = &self.workbook.worksheet(sheet)?.rows;
-                for r in rows {
-                    if r.r == row {
-                        if r.custom_format {
-                            return Ok(r.s);
-                        }
-                        break;
+        if let Some(cell) = cell {
+            Ok(cell.get_style())
+        } else {
+            let rows = &self.workbook.worksheet(sheet)?.rows;
+            for r in rows {
+                if r.r == row {
+                    if r.custom_format {
+                        return Ok(r.s);
                     }
+                    break;
                 }
-                let cols = &self.workbook.worksheet(sheet)?.cols;
-                for c in cols.iter() {
-                    let min = c.min;
-                    let max = c.max;
-                    if column >= min && column <= max {
-                        return Ok(c.style.unwrap_or(0));
-                    }
-                }
-                Ok(0)
             }
+            let cols = &self.workbook.worksheet(sheet)?.cols;
+            for c in cols {
+                let min = c.min;
+                let max = c.max;
+                if column >= min && column <= max {
+                    return Ok(c.style.unwrap_or(0));
+                }
+            }
+            Ok(0)
         }
     }
 
@@ -2818,10 +2831,10 @@ impl Model {
 
         let mut rows = Vec::new();
 
-        for row in 1..(dimension.max_row + 1) {
+        for row in 1..=dimension.max_row {
             let mut row_markup: Vec<String> = Vec::new();
 
-            for column in 1..(dimension.max_column + 1) {
+            for column in 1..=dimension.max_column {
                 let mut cell_markup = match self.get_cell_formula(sheet, row, column)? {
                     Some(formula) => formula,
                     None => self.get_formatted_cell_value(sheet, row, column)?,
@@ -3183,8 +3196,8 @@ mod tests {
     #[test]
     fn test_get_cell() {
         let mut model = new_empty_model();
-        model._set("A1", "35");
-        model._set("A2", "");
+        model.set_a1("A1", "35");
+        model.set_a1("A2", "");
         let worksheet = model.workbook.worksheet(0).expect("Invalid sheet");
 
         assert_eq!(
@@ -3213,6 +3226,6 @@ mod tests {
         let update_result = model.update_cell_with_formula(0, 1, 1, "-A2*2".to_string());
         model.evaluate();
         assert_eq!(update_result, Ok(()));
-        assert_eq!(model._get_formula("A1"), *"=-A2*2");
+        assert_eq!(model.get_formula_a1("A1"), *"=-A2*2");
     }
 }

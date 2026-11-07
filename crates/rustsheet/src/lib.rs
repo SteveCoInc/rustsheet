@@ -8,24 +8,29 @@
 mod edit;
 mod error;
 mod pivot_read;
+mod pivot_view;
 mod refs;
 mod source;
+mod spill;
 mod value;
 mod workbook;
 
-pub use edit::{ChangeSet, Input, InputChange, SheetChange, Txn, ValueChange};
 #[doc(hidden)]
+pub use edit::PivotParts;
 pub use edit::{
-    PivotDateGroupBy, PivotError, PivotFunction, PivotParts, PivotRangeGroup, PivotTableInput,
+    ChangeSet, Input, InputChange, PivotDateGroupBy, PivotError, PivotFunction, PivotRangeGroup,
+    PivotTableInput, SheetChange, Txn, ValueChange,
 };
 pub use error::{EditError, LoadError, RefError, SaveError, UnsupportedKind};
 #[doc(hidden)]
 pub use pivot_read::PivotPlace;
+pub use pivot_view::PivotView;
 pub use refs::{
     parse_cell, parse_range, resolve_sheet_by_name, CellRef, RangeRef, SheetId, Target,
 };
 pub use rustsheet_engine::clock::{Clock, ClockError};
 pub use rustsheet_engine::types::{DateSystem, Iteration};
+pub use rustsheet_xlsx::export::{DropReason, Dropped, SaveReport, SaveTier};
 pub use value::{Array, ArrayShapeError, ErrorKind, ParseErrorKindError, Value, XlError};
 pub use workbook::{
     CellInfo, LoadOptions, Password, SaveOptions, SheetMeta, Workbook, WorkbookOptions,

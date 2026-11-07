@@ -1,5 +1,8 @@
 //! The CEILING/FLOOR family on the SPEC-0011 driver (T-1773): CEILING, ECMA.CEILING, FLOOR,
 //! CEILING.MATH, CEILING.PRECISE, ISO.CEILING, FLOOR.MATH and FLOOR.PRECISE.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use crate::arithmetic::flush_subnormal;
 use crate::decimal_round::cut_to_15_digits;
@@ -91,7 +94,7 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        self.numbers_fn(
+        self.numbers_fn_empty_omitted(
             Function::CeilingMath,
             args,
             [0.0, 1.0, 0.0],
@@ -118,7 +121,7 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        self.numbers_fn(
+        self.numbers_fn_empty_omitted(
             Function::CeilingPrecise,
             args,
             [0.0, 1.0],
@@ -139,7 +142,7 @@ impl Model {
     }
 
     pub(crate) fn fn_floor_math(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.numbers_fn(
+        self.numbers_fn_empty_omitted(
             Function::FloorMath,
             args,
             [0.0, 1.0, 0.0],
@@ -165,7 +168,7 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        self.numbers_fn(
+        self.numbers_fn_empty_omitted(
             Function::FloorPrecise,
             args,
             [0.0, 1.0],

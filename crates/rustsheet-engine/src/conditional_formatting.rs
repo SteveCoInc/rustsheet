@@ -1,3 +1,13 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::manual_let_else,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -77,9 +87,9 @@ fn interpolate_color(v: f64, thresholds: &[f64], colors: &[String]) -> String {
 fn lerp_color(c1: &str, c2: &str, t: f64) -> String {
     let (r1, g1, b1) = parse_hex_color(c1);
     let (r2, g2, b2) = parse_hex_color(c2);
-    let r = (r1 as f64 + (r2 as f64 - r1 as f64) * t).round() as u8;
-    let g = (g1 as f64 + (g2 as f64 - g1 as f64) * t).round() as u8;
-    let b = (b1 as f64 + (b2 as f64 - b1 as f64) * t).round() as u8;
+    let r = (f64::from(r1) + (f64::from(r2) - f64::from(r1)) * t).round() as u8;
+    let g = (f64::from(g1) + (f64::from(g2) - f64::from(g1)) * t).round() as u8;
+    let b = (f64::from(b1) + (f64::from(b2) - f64::from(b1)) * t).round() as u8;
     format!("#{r:02X}{g:02X}{b:02X}")
 }
 
@@ -429,15 +439,15 @@ impl Model {
     /// Resolves a Cfvo threshold to a concrete f64 value.
     fn resolve_cfvo(&mut self, cfvo: &Cfvo, values: &[f64], sheet: u32) -> f64 {
         match cfvo {
-            Cfvo::Min => values.iter().cloned().fold(f64::INFINITY, f64::min),
-            Cfvo::Max => values.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
+            Cfvo::Min => values.iter().copied().fold(f64::INFINITY, f64::min),
+            Cfvo::Max => values.iter().copied().fold(f64::NEG_INFINITY, f64::max),
             Cfvo::Number(n) => *n,
             Cfvo::Percent(p) => {
                 if values.is_empty() {
                     return 0.0;
                 }
-                let min = values.iter().cloned().fold(f64::INFINITY, f64::min);
-                let max = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+                let min = values.iter().copied().fold(f64::INFINITY, f64::min);
+                let max = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
                 let p = *p;
                 min + (max - min) * p / 100.0
             }
@@ -518,11 +528,11 @@ impl Model {
         }
         let min_val = match min {
             Some(cfvo) => self.resolve_cfvo(cfvo, &values, sheet),
-            None => values.iter().cloned().fold(0.0_f64, f64::min),
+            None => values.iter().copied().fold(0.0_f64, f64::min),
         };
         let max_val = match max {
             Some(cfvo) => self.resolve_cfvo(cfvo, &values, sheet),
-            None => values.iter().cloned().fold(0.0_f64, f64::max),
+            None => values.iter().copied().fold(0.0_f64, f64::max),
         };
         let span = max_val - min_val;
         if span.abs() < f64::EPSILON {
@@ -759,7 +769,7 @@ impl Model {
             return;
         }
         let n = if percent {
-            ((rank as f64 / 100.0) * values.len() as f64).ceil() as usize
+            ((f64::from(rank) / 100.0) * values.len() as f64).ceil() as usize
         } else {
             rank as usize
         }
@@ -881,7 +891,7 @@ impl Model {
         for &(r1, c1, r2, c2) in &self.cf.visited(ranges) {
             for row in r1..=r2 {
                 for column in c1..=c2 {
-                    let ctx = CellReferenceIndex { sheet, row, column };
+                    let ctx = CellReferenceIndex { sheet, column, row };
                     let matches = match self.evaluate_outside_cell(&node, ctx) {
                         CalcResult::Number(n) => n != 0.0,
                         CalcResult::Boolean(b) => b,
@@ -954,7 +964,7 @@ impl Model {
         };
 
         let serial_of = |d: NaiveDate| -> f64 {
-            date_to_serial_number(d.day(), d.month(), d.year()).unwrap_or(0) as f64
+            f64::from(date_to_serial_number(d.day(), d.month(), d.year()).unwrap_or(0))
         };
 
         let range: (f64, f64) = match period {
@@ -970,20 +980,20 @@ impl Model {
             PeriodType::Last7Days => (today_serial as f64 - 6.0, today_serial as f64),
             PeriodType::Next7Days => (today_serial as f64, today_serial as f64 + 6.0),
             PeriodType::LastWeek => {
-                let dow = today.weekday().num_days_from_monday() as i64;
+                let dow = i64::from(today.weekday().num_days_from_monday());
                 let this_mon = today - Duration::days(dow);
                 let last_mon = this_mon - Duration::days(7);
                 let last_sun = this_mon - Duration::days(1);
                 (serial_of(last_mon), serial_of(last_sun))
             }
             PeriodType::ThisWeek => {
-                let dow = today.weekday().num_days_from_monday() as i64;
+                let dow = i64::from(today.weekday().num_days_from_monday());
                 let this_mon = today - Duration::days(dow);
                 let this_sun = this_mon + Duration::days(6);
                 (serial_of(this_mon), serial_of(this_sun))
             }
             PeriodType::NextWeek => {
-                let dow = today.weekday().num_days_from_monday() as i64;
+                let dow = i64::from(today.weekday().num_days_from_monday());
                 let next_mon = today - Duration::days(dow) + Duration::days(7);
                 let next_sun = next_mon + Duration::days(6);
                 (serial_of(next_mon), serial_of(next_sun))
@@ -1327,7 +1337,7 @@ impl Model {
             .workbook
             .worksheets
             .get(sheet as usize)
-            .map(|w| w.get_name())
+            .map(super::types::Worksheet::get_name)
             .unwrap_or_default();
         CellReferenceRC {
             sheet: sheet_name,
@@ -1541,8 +1551,7 @@ impl Model {
             .iter()
             .map(|cf| cf.priority)
             .max()
-            .map(|m| m + 1)
-            .unwrap_or(1);
+            .map_or(1, |m| m + 1);
         ws.conditional_formatting.push(ConditionalFormatting {
             range: range.to_string(),
             cf_rule: final_rule,

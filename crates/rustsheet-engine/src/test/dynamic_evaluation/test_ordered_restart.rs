@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::many_single_char_names,
+    clippy::unused_self
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 // Tests aimed at the mechanics of the evaluation algorithm in
@@ -15,7 +23,7 @@ fn anchor_order(model: &Model) -> Vec<String> {
         .evaluation
         .anchor_order
         .iter()
-        .map(|a| model._cell_name(*a))
+        .map(|a| model.reference_name(*a))
         .collect()
 }
 
@@ -24,7 +32,7 @@ fn restarts(model: &Model) -> u32 {
 }
 
 impl Model {
-    fn _cell_name(&self, cell: CellReferenceIndex) -> String {
+    fn reference_name(&self, cell: CellReferenceIndex) -> String {
         let column = (b'A' + (cell.column - 1) as u8) as char;
         format!("{column}{}", cell.row)
     }
@@ -43,19 +51,19 @@ impl Model {
 #[test]
 fn a_reversed_chain_restarts_once_per_link_then_never_again() {
     let mut model = new_empty_model();
-    model._set("A1", "=B2:B3");
-    model._set("B1", "=C2:C3");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=B2:B3");
+    model.set_a1("B1", "=C2:C3");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     // C1:C3 = 1,2,3; B1:B2 = C2:C3 = 2,3; A1:A2 = B2:B3 = 3,0.
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "3");
-    assert_eq!(model._get_text("A2"), "0");
+    assert_eq!(model.get_text_a1("A1"), "3");
+    assert_eq!(model.get_text_a1("A2"), "0");
     assert_eq!(restarts(&model), 2);
     assert_eq!(anchor_order(&model), ["C1", "B1", "A1"]);
 
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "3");
     assert_eq!(restarts(&model), 0);
     assert_eq!(anchor_order(&model), ["C1", "B1", "A1"]);
 }
@@ -64,12 +72,12 @@ fn a_reversed_chain_restarts_once_per_link_then_never_again() {
 #[test]
 fn a_chain_in_the_right_order_needs_no_restart() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(3)");
-    model._set("B1", "=A2:A3");
-    model._set("C1", "=B2:B3");
+    model.set_a1("A1", "=SEQUENCE(3)");
+    model.set_a1("B1", "=A2:A3");
+    model.set_a1("C1", "=B2:B3");
 
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "3");
+    assert_eq!(model.get_text_a1("C1"), "3");
     assert_eq!(restarts(&model), 0);
     assert_eq!(anchor_order(&model), ["A1", "B1", "C1"]);
 }
@@ -79,12 +87,12 @@ fn a_chain_in_the_right_order_needs_no_restart() {
 #[test]
 fn reading_the_anchor_evaluates_it_on_demand_without_a_restart() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:B3");
-    model._set("B1", "=C1:C3");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=B1:B3");
+    model.set_a1("B1", "=C1:C3");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     model.evaluate();
-    assert_eq!(model._get_text("A3"), "3");
+    assert_eq!(model.get_text_a1("A3"), "3");
     assert_eq!(restarts(&model), 0);
     assert_eq!(anchor_order(&model), ["A1", "B1", "C1"]);
 }
@@ -94,20 +102,20 @@ fn reading_the_anchor_evaluates_it_on_demand_without_a_restart() {
 #[test]
 fn the_anchor_order_follows_edits() {
     let mut model = new_empty_model();
-    model._set("A1", "=B2:B3");
-    model._set("B1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=B2:B3");
+    model.set_a1("B1", "=SEQUENCE(3)");
     model.evaluate();
     assert_eq!(anchor_order(&model), ["B1", "A1"]);
 
-    model._set("D1", "=SEQUENCE(2)");
+    model.set_a1("D1", "=SEQUENCE(2)");
     model.evaluate();
     assert_eq!(anchor_order(&model), ["B1", "A1", "D1"]);
     assert_eq!(restarts(&model), 0);
 
-    model._set("B1", "");
+    model.set_a1("B1", "");
     model.evaluate();
     assert_eq!(anchor_order(&model), ["A1", "D1"]);
-    assert_eq!(model._get_text("A1"), "0");
+    assert_eq!(model.get_text_a1("A1"), "0");
 }
 
 // A structural change moves the anchors; the order is rebuilt from what exists
@@ -115,11 +123,11 @@ fn the_anchor_order_follows_edits() {
 #[test]
 fn the_anchor_order_survives_a_row_insertion() {
     let mut model = new_empty_model();
-    model._set("A1", "=B3:B4");
-    model._set("B2", "=SEQUENCE(3)");
+    model.set_a1("A1", "=B3:B4");
+    model.set_a1("B2", "=SEQUENCE(3)");
     model.evaluate();
     assert_eq!(anchor_order(&model), ["B2", "A1"]);
-    assert_eq!(model._get_text("A2"), "3");
+    assert_eq!(model.get_text_a1("A2"), "3");
 
     // The anchors are now at A2 and B3. Nothing is known about the moved
     // positions, so the order is rebuilt from natural order and repaired by a
@@ -127,9 +135,9 @@ fn the_anchor_order_survives_a_row_insertion() {
     model.insert_rows(0, 1, 1).unwrap();
     model.evaluate();
     assert_eq!(anchor_order(&model), ["B3", "A2"]);
-    assert_eq!(model._get_text("A2"), "2");
-    assert_eq!(model._get_text("A3"), "3");
-    assert_eq!(model._get_text("B5"), "3");
+    assert_eq!(model.get_text_a1("A2"), "2");
+    assert_eq!(model.get_text_a1("A3"), "3");
+    assert_eq!(model.get_text_a1("B5"), "3");
     assert_eq!(super::oracle::violations(&mut model), Vec::<String>::new());
 }
 
@@ -145,16 +153,16 @@ fn the_anchor_order_survives_a_row_insertion() {
 #[test]
 fn a_leftover_spill_cell_is_never_read_before_its_anchor_runs() {
     let mut model = new_empty_model();
-    model._set("A5", "3");
-    model._set("B1", "=SEQUENCE(A5)");
-    model._set("A1", "=B3*2");
+    model.set_a1("A5", "3");
+    model.set_a1("B1", "=SEQUENCE(A5)");
+    model.set_a1("A1", "=B3*2");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "6");
+    assert_eq!(model.get_text_a1("A1"), "6");
 
-    model._set("A5", "2");
+    model.set_a1("A5", "2");
     model.evaluate();
-    assert_eq!(model._get_text("B3"), "");
-    assert_eq!(model._get_text("A1"), "0");
+    assert_eq!(model.get_text_a1("B3"), "");
+    assert_eq!(model.get_text_a1("A1"), "0");
     assert_eq!(super::oracle::violations(&mut model), Vec::<String>::new());
 }
 
@@ -163,16 +171,16 @@ fn a_leftover_spill_cell_is_never_read_before_its_anchor_runs() {
 #[test]
 fn a_stale_read_by_an_earlier_anchor_moves_the_anchor_first() {
     let mut model = new_empty_model();
-    model._set("A5", "3");
-    model._set("B1", "=SEQUENCE(A5)");
-    model._set("A1", "=SEQUENCE(1,1,B3)");
+    model.set_a1("A5", "3");
+    model.set_a1("B1", "=SEQUENCE(A5)");
+    model.set_a1("A1", "=SEQUENCE(1,1,B3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "3");
     assert_eq!(anchor_order(&model), ["B1", "A1"]);
 
-    model._set("A5", "2");
+    model.set_a1("A5", "2");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "0");
+    assert_eq!(model.get_text_a1("A1"), "0");
     assert_eq!(restarts(&model), 0);
 }
 
@@ -188,18 +196,18 @@ fn a_stale_read_by_an_earlier_anchor_moves_the_anchor_first() {
 #[test]
 fn a_shrinking_spill_frees_the_array_it_blocked() {
     let mut model = new_empty_model();
-    model._set("A1", "3");
-    model._set("B1", "=SEQUENCE(A1)");
-    model._set("A2", "=SEQUENCE(1,2)");
+    model.set_a1("A1", "3");
+    model.set_a1("B1", "=SEQUENCE(A1)");
+    model.set_a1("A2", "=SEQUENCE(1,2)");
     model.evaluate();
-    assert_eq!(model._get_text("A2"), "#SPILL!");
+    assert_eq!(model.get_text_a1("A2"), "#SPILL!");
 
-    model._set("A1", "1");
+    model.set_a1("A1", "1");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "1");
-    assert_eq!(model._get_text("A2"), "1");
-    assert_eq!(model._get_text("B2"), "2");
-    assert_eq!(model._get_text("B3"), "");
+    assert_eq!(model.get_text_a1("B1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "1");
+    assert_eq!(model.get_text_a1("B2"), "2");
+    assert_eq!(model.get_text_a1("B3"), "");
     assert_eq!(super::oracle::violations(&mut model), Vec::<String>::new());
 }
 
@@ -218,18 +226,18 @@ fn a_shrinking_spill_frees_the_array_it_blocked() {
 #[test]
 fn an_anchor_contradicted_by_its_own_inputs_is_circular_wherever_it_is_in_the_order() {
     let mut model = new_empty_model();
-    model._set("D1", "=A3:A5");
-    model._set("A2", "=SEQUENCE(2)");
-    model._set("A4", "=SUM(D2:E4)+D5");
-    model._set("D4", "=SEQUENCE(3)");
+    model.set_a1("D1", "=A3:A5");
+    model.set_a1("A2", "=SEQUENCE(2)");
+    model.set_a1("A4", "=SUM(D2:E4)+D5");
+    model.set_a1("D4", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert!(model._is_circular("D1"));
-        assert_eq!(model._get_text("A2"), "1");
-        assert_eq!(model._get_text("A3"), "2");
-        assert_eq!(model._get_text("D4"), "1");
-        assert_eq!(model._get_text("D6"), "3");
+        assert!(model.is_circular_a1("D1"));
+        assert_eq!(model.get_text_a1("A2"), "1");
+        assert_eq!(model.get_text_a1("A3"), "2");
+        assert_eq!(model.get_text_a1("D4"), "1");
+        assert_eq!(model.get_text_a1("D6"), "3");
         assert_eq!(super::oracle::violations(&mut model), Vec::<String>::new());
     }
 }
@@ -243,15 +251,15 @@ fn an_anchor_contradicted_by_its_own_inputs_is_circular_wherever_it_is_in_the_or
 #[test]
 fn anchors_reading_each_others_areas_are_all_circular() {
     let mut model = new_empty_model();
-    model._set("A1", "=B2:B3");
-    model._set("B1", "=A2:A3");
+    model.set_a1("A1", "=B2:B3");
+    model.set_a1("B1", "=A2:A3");
 
     for _ in 0..2 {
         model.evaluate();
-        assert!(model._is_circular("A1"));
-        assert!(model._is_circular("B1"));
-        assert_eq!(model._get_text("A2"), "");
-        assert_eq!(model._get_text("B2"), "");
+        assert!(model.is_circular_a1("A1"));
+        assert!(model.is_circular_a1("B1"));
+        assert_eq!(model.get_text_a1("A2"), "");
+        assert_eq!(model.get_text_a1("B2"), "");
     }
 }
 
@@ -261,20 +269,20 @@ fn anchors_reading_each_others_areas_are_all_circular() {
 #[test]
 fn a_bystander_of_a_loop_is_not_blamed() {
     let mut model = new_empty_model();
-    model._set("A1", "=B2:B3");
-    model._set("B1", "=C2:C3");
-    model._set("C1", "=A2:A3");
-    model._set("E1", "=A1:A3");
+    model.set_a1("A1", "=B2:B3");
+    model.set_a1("B1", "=C2:C3");
+    model.set_a1("C1", "=A2:A3");
+    model.set_a1("E1", "=A1:A3");
 
     for _ in 0..2 {
         model.evaluate();
-        assert!(model._is_circular("A1"));
-        assert!(model._is_circular("B1"));
-        assert!(model._is_circular("C1"));
-        assert!(model._is_circular("E1"));
+        assert!(model.is_circular_a1("A1"));
+        assert!(model.is_circular_a1("B1"));
+        assert!(model.is_circular_a1("C1"));
+        assert!(model.is_circular_a1("E1"));
         assert!(!model.evaluation.circular_anchors.contains(&(0, 1, 5)));
-        assert_eq!(model._get_text("E2"), "");
-        assert_eq!(model._get_text("E3"), "");
+        assert_eq!(model.get_text_a1("E2"), "");
+        assert_eq!(model.get_text_a1("E3"), "");
     }
 }
 
@@ -288,8 +296,8 @@ fn a_bystander_of_a_loop_is_not_blamed() {
 #[test]
 fn evaluating_outside_a_pass_reads_spill_cells_through_their_anchor() {
     let mut model = new_empty_model();
-    model._set("A5", "3");
-    model._set("B1", "=SEQUENCE(A5)");
+    model.set_a1("A5", "3");
+    model.set_a1("B1", "=SEQUENCE(A5)");
     model.evaluate();
     assert_eq!(model.evaluate_formula("=B3*2", 0), Some(6.0));
 
@@ -322,42 +330,42 @@ fn evaluating_outside_a_pass_reads_spill_cells_through_their_anchor() {
 #[test]
 fn a_blocking_cell_read_as_empty_before_the_scan_keeps_both_records() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set(
+    model.set_a1("A1", "1");
+    model.set_a1(
         "B2",
         "=IF(A1=1,SEQUENCE(2,2),IF(AND(C2=\"\",C3=\"\"),IF(ISERROR(C1),5,6),7))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("C3"), "4");
+    assert_eq!(model.get_text_a1("C3"), "4");
 
-    model._set("A1", "0");
-    model._set("C1", "=SEQUENCE(3)");
-    assert_eq!(model._get_text("C2"), "2");
+    model.set_a1("A1", "0");
+    model.set_a1("C1", "=SEQUENCE(3)");
+    assert_eq!(model.get_text_a1("C2"), "2");
     model.evaluate();
     let violations = crate::test::dynamic_evaluation::oracle::violations(&mut model);
     assert!(violations.is_empty(), "{violations:?}");
-    assert_eq!(model._get_text("B2"), "7");
-    assert_eq!(model._get_text("C1"), "1");
-    assert_eq!(model._get_text("C3"), "3");
+    assert_eq!(model.get_text_a1("B2"), "7");
+    assert_eq!(model.get_text_a1("C1"), "1");
+    assert_eq!(model.get_text_a1("C3"), "3");
     assert_eq!(restarts(&model), 2);
     assert_eq!(anchor_order(&model), ["C1", "B2"]);
 
     // The verdict is a fact about the sheet: the next evaluation agrees, and
     // so does a fresh model with the same contents.
     model.evaluate();
-    assert_eq!(model._get_text("B2"), "7");
+    assert_eq!(model.get_text_a1("B2"), "7");
     assert_eq!(restarts(&model), 0);
 
     let mut fresh = new_empty_model();
-    fresh._set("A1", "0");
-    fresh._set(
+    fresh.set_a1("A1", "0");
+    fresh.set_a1(
         "B2",
         "=IF(A1=1,SEQUENCE(2,2),IF(AND(C2=\"\",C3=\"\"),IF(ISERROR(C1),5,6),7))",
     );
-    fresh._set("C1", "=SEQUENCE(3)");
+    fresh.set_a1("C1", "=SEQUENCE(3)");
     fresh.evaluate();
-    assert_eq!(fresh._get_text("B2"), "7");
-    assert_eq!(fresh._get_text("C3"), "3");
+    assert_eq!(fresh.get_text_a1("B2"), "7");
+    assert_eq!(fresh.get_text_a1("C3"), "3");
 }
 
 //         ║   A   |                 B                  |       C        |
@@ -374,29 +382,29 @@ fn a_blocking_cell_read_as_empty_before_the_scan_keeps_both_records() {
 fn a_shrunk_anchor_does_not_get_its_leftovers_back() {
     let formula = "=IF(A1=1,SEQUENCE(2,2),IF(ISERROR(C1),5,SEQUENCE(2,2)))";
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("B2", formula);
+    model.set_a1("A1", "1");
+    model.set_a1("B2", formula);
     model.evaluate();
-    assert_eq!(model._get_text("C3"), "4");
+    assert_eq!(model.get_text_a1("C3"), "4");
 
-    model._set("A1", "0");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "0");
+    model.set_a1("C1", "=SEQUENCE(3)");
     model.evaluate();
     let violations = crate::test::dynamic_evaluation::oracle::violations(&mut model);
     assert!(violations.is_empty(), "{violations:?}");
-    assert_eq!(model._get_text("B2"), "#SPILL!");
-    assert_eq!(model._get_text("C1"), "1");
-    assert_eq!(model._get_text("C3"), "3");
-    assert_eq!(model._get_text("B3"), "");
+    assert_eq!(model.get_text_a1("B2"), "#SPILL!");
+    assert_eq!(model.get_text_a1("C1"), "1");
+    assert_eq!(model.get_text_a1("C3"), "3");
+    assert_eq!(model.get_text_a1("B3"), "");
     assert_eq!(restarts(&model), 1);
 
     let mut fresh = new_empty_model();
-    fresh._set("A1", "0");
-    fresh._set("B2", formula);
-    fresh._set("C1", "=SEQUENCE(3)");
+    fresh.set_a1("A1", "0");
+    fresh.set_a1("B2", formula);
+    fresh.set_a1("C1", "=SEQUENCE(3)");
     fresh.evaluate();
-    assert_eq!(fresh._get_text("B2"), "#SPILL!");
-    assert_eq!(fresh._get_text("C3"), "3");
+    assert_eq!(fresh.get_text_a1("B2"), "#SPILL!");
+    assert_eq!(fresh.get_text_a1("C3"), "3");
     assert_eq!(restarts(&fresh), 0);
 }
 
@@ -442,11 +450,11 @@ fn a_cycle_free_cascade_is_not_marked_circular() {
     let x: Vec<usize> = (2 * m..2 * m + k).collect();
     let mut model = new_empty_model();
     for &c in &z {
-        model._set(&format!("{}1", column(c)), "=SEQUENCE(2)");
+        model.set_a1(&format!("{}1", column(c)), "=SEQUENCE(2)");
     }
     let z_cells: Vec<String> = z.iter().map(|&c| format!("{}2", column(c))).collect();
     for &c in &y {
-        model._set(
+        model.set_a1(
             &format!("{}1", column(c)),
             &format!("=SEQUENCE(2)+{}", z_cells.join("+")),
         );
@@ -457,7 +465,7 @@ fn a_cycle_free_cascade_is_not_marked_circular() {
             Some(&n) => format!("+{}2", column(n)),
             None => String::new(),
         };
-        model._set(
+        model.set_a1(
             &format!("{}1", column(c)),
             &format!("=SEQUENCE(2)+{}{}", y_cells.join("+"), next),
         );
@@ -469,17 +477,17 @@ fn a_cycle_free_cascade_is_not_marked_circular() {
     // 1 + 10*22, 2 + 10*22; the one before it adds the last X's 222.
     let circular: Vec<String> = (0..2 * m + k)
         .map(|c| format!("{}1", column(c)))
-        .filter(|cell| model._is_circular(cell))
+        .filter(|cell| model.is_circular_a1(cell))
         .collect();
     assert_eq!(
         circular,
         Vec::<String>::new(),
         "cycle-free anchors marked circular"
     );
-    assert_eq!(model._get_text("A2"), "2");
-    assert_eq!(model._get_text("K1"), "21");
-    assert_eq!(model._get_text("AD1"), "221");
-    assert_eq!(model._get_text("AC1"), "443");
+    assert_eq!(model.get_text_a1("A2"), "2");
+    assert_eq!(model.get_text_a1("K1"), "21");
+    assert_eq!(model.get_text_a1("AD1"), "221");
+    assert_eq!(model.get_text_a1("AC1"), "443");
     assert_eq!(super::oracle::violations(&mut model), Vec::<String>::new());
     assert_eq!(restarts(&model), 9);
 }

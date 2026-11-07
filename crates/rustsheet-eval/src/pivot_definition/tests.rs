@@ -62,6 +62,46 @@ fn an_order_lists_its_items_first() {
 }
 
 #[test]
+fn an_item_order_orders_the_items_but_not_the_cache() {
+    let parts = parts_of(&case(
+        r#"{"rows": ["K"], "data": [{"field": "V"}], "fields": {"K": {"item_order": [true, "east"]}}}"#,
+    ));
+    assert!(parts
+        .cache_definition
+        .contains(r#"count="3"><s v="east"/><m/><b v="1"/>"#));
+    assert!(
+        parts.table.contains(
+            r#"<items count="4"><item x="2"/><item x="0"/><item x="1"/><item t="default"/>"#
+        ),
+        "{}",
+        parts.table
+    );
+}
+
+#[test]
+fn an_item_order_refuses_what_the_python_builder_refuses() {
+    // T-4164: `_item_order`'s refusals (not a list, not in the field, repeated), and the
+    // `MAX_LIST` bound every list of a definition has.
+    for (bad, message) in [
+        (r#""east""#, "is a list of items"),
+        (r#"["north"]"#, "is not in field"),
+        (r#"["east", "east"]"#, "repeats an item"),
+    ] {
+        let definition = format!(
+            r#"{{"rows": ["K"], "data": [{{"field": "V"}}], "fields": {{"K": {{"item_order": {bad}}}}}}}"#
+        );
+        let error = try_parts(&definition).err().unwrap();
+        assert!(error.contains(message), "{bad}: {error}");
+    }
+    let many = serde_json::to_string(&vec!["east"; MAX_LIST + 1]).unwrap();
+    let definition = format!(
+        r#"{{"rows": ["K"], "data": [{{"field": "V"}}], "fields": {{"K": {{"item_order": {many}}}}}}}"#
+    );
+    let error = try_parts(&definition).err().unwrap();
+    assert!(error.contains("more than"), "{error}");
+}
+
+#[test]
 fn the_table_gets_the_builders_defaults_and_names() {
     let parts = parts_of(&case(
         r#"{"rows": ["K"], "data": [{"field": "V", "subtotal": "count"}, {"field": "V"}],
@@ -120,7 +160,7 @@ fn an_empty_text_items_label_is_an_empty_cell() {
 /// `canonical` of `tools/tests/test_pivot_parts_golden.py`: one line per element, depth-indented,
 /// its local name and its attributes by local name, sorted, values unescaped, namespace
 /// declarations left out; non-blank text on its own `#text` line.
-fn canonical(xml: &str) -> String {
+pub(super) fn canonical(xml: &str) -> String {
     use quick_xml::events::{BytesStart, Event};
     use quick_xml::XmlVersion;
     let local = |name: &str| name.rsplit(':').next().unwrap().to_string();

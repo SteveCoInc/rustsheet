@@ -12,42 +12,12 @@
 //! - t4134 I3, t4582, t4585 and t4627: formulas in their sources (T-4152 runs them through the
 //!   engine), and t4582 J3, J4 date items against cached numbers (T-4612).
 
-use std::collections::HashMap;
-
-use serde_json::Value as Json;
-
 use super::*;
-use crate::expressions::token::get_error_by_english_name;
-use crate::pivot::probe_cases::{address, probe_pivot, read, T4634_SHEETS, T4745_SHEETS};
+use crate::pivot::probe_cases::{
+    probe_pivot, probe_pivot_over, read, sidecar_differences, T4634_SHEETS, T4699_SHEETS,
+    T4745_SHEETS,
+};
 use crate::pivot::{compute, lay_out, MAX_PIVOT_WORK};
-
-fn rendered(table: &PivotTable, cache: &PivotCache) -> HashMap<String, PivotCell> {
-    let mut work = MAX_PIVOT_WORK;
-    let result = compute(table, cache, &mut work).unwrap();
-    let layout = lay_out(table, cache, &result, &mut work).unwrap();
-    let mut cells = HashMap::new();
-    for cell in render(table, cache, &result, &layout).unwrap() {
-        let at = address(cell.column, cell.row);
-        assert!(
-            cells.insert(at.clone(), cell.value).is_none(),
-            "{at} rendered twice"
-        );
-    }
-    cells
-}
-
-/// A sidecar cell as a rendered one; `None` for an empty cell.
-fn expected(cell: &Json) -> Option<PivotCell> {
-    match cell["t"].as_str().unwrap() {
-        "empty" => None,
-        "s" => Some(PivotCell::Text(cell["v"].as_str().unwrap().to_string())),
-        "n" => Some(PivotCell::Number(cell["v"].as_f64().unwrap())),
-        "e" => Some(PivotCell::Error(
-            get_error_by_english_name(cell["v"].as_str().unwrap()).unwrap(),
-        )),
-        other => panic!("cell type {other}"),
-    }
-}
 
 /// Checks the cells of sheet `name`'s pivot of probe `stem`, leaving out the cells `skip`.
 fn check(stem: &str, name: &str, skip: &[&str]) {
@@ -57,34 +27,9 @@ fn check(stem: &str, name: &str, skip: &[&str]) {
 
 /// The cells of sheet `name`'s pivot of probe `stem` that are not Excel's, but the cells `skip`.
 fn differences(stem: &str, name: &str, skip: &[&str]) -> Vec<String> {
-    let (case, oracle) = (read(stem, "case"), read(stem, "oracle"));
+    let case = read(stem, "case");
     let (cache, table) = probe_pivot(&case, name);
-    let mut actual = rendered(&table, &cache);
-    let pivot = oracle["pivots"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|p| p["sheet"] == name)
-        .unwrap();
-    let mut wrong = Vec::new();
-    for (at, cell) in pivot["cells"].as_object().unwrap() {
-        let mine = actual.remove(at);
-        if skip.contains(&at.as_str()) {
-            continue;
-        }
-        let excel = expected(cell);
-        if mine != excel {
-            wrong.push(format!("{at}: Excel {excel:?}, engine {mine:?}"));
-        }
-    }
-    for (at, cell) in actual {
-        wrong.push(format!("{at}: outside the capture window, engine {cell:?}"));
-    }
-    wrong.sort();
-    wrong
-        .into_iter()
-        .map(|w| format!("{stem} {name} {w}"))
-        .collect()
+    sidecar_differences(stem, name, &cache, &table, None, skip)
 }
 
 fn check_all(stem: &str, sheets: &[&str]) {
@@ -199,6 +144,12 @@ fn the_layout_option_probes_cells_are_excels() {
         "t4168-pivot-layout-options",
         &["F1", "F2", "F3", "BR", "BR2", "SD", "SD2"],
     );
+    // Blank rows and collapsed items beyond an outer row field (pivots.md "Layout lines").
+    for &sheet in T4699_SHEETS.iter().filter(|&&s| s != "CV4") {
+        check("t4699-pivot-blank-collapsed", sheet, &[]);
+    }
+    // CV4!C3 is the Values field's `Values` header in tabular form (T-4914).
+    check("t4699-pivot-blank-collapsed", "CV4", &["C3"]);
     // Repeat item labels: per field in tabular (X14F, T3R to TBL), outline (OST, OB, O3), compact
     // (CF, MX) form and on columns (CC); the table-wide default alone fills nothing (X14, TW,
     // TWE, OW).
@@ -311,4 +262,79 @@ fn a_subtotal_captions_item_copies_are_bounded_before_they_are_made() {
         render_within(&table, &cache, &result, &layout, 999),
         Err(PivotComputeError::Limit)
     );
+}
+
+/// probes/t4767-pivot-group-items GD and GDA: the manual group Product2 of Product (Group2 = A,
+/// B; Group1 = C, D; E alone; F ungrouped) with the group item of E written `<d
+/// v="2020-01-01T00:00:00"/>`. The sidecar cannot tell a saved `d` from an `s` (its
+/// `group_items` read both as text), so the date item is the case's, as the serial Excel's A6
+/// holds; its label cell is that number shown in m/d/yyyy, as Excel's A6 text reads.
+#[test]
+fn a_date_group_item_shows_as_a_date() {
+    use crate::number_format::{format_number, get_num_fmt};
+    use crate::pivot::{group_by_discrete, probe_cases::source_cache, AddedGroup};
+
+    let case = read("t4767-pivot-group-items", "case");
+    let oracle = read("t4767-pivot-group-items", "oracle");
+    for sheet in ["GD", "GDA"] {
+        let pivot = (oracle["pivots"].as_array().unwrap().iter())
+            .find(|p| p["sheet"] == sheet)
+            .unwrap();
+        let serial = pivot["cells"]["A6"]["v"].as_f64().unwrap();
+        let mut cache = source_cache(&case, "Groups!A1:B9");
+        let labels = ["F", "Group2", "Group1"]
+            .map(|t| CacheItem::Text(t.to_string()))
+            .into_iter()
+            .chain([CacheItem::Date(serial)])
+            .collect();
+        let discrete: Vec<u32> = (cache.fields[0].items.iter())
+            .map(|item| match item {
+                CacheItem::Text(t) if t == "A" || t == "B" => 1,
+                CacheItem::Text(t) if t == "C" || t == "D" => 2,
+                CacheItem::Text(t) if t == "E" => 3,
+                _ => 0,
+            })
+            .collect();
+        let mut added = group_by_discrete(&cache.fields[0], &discrete, labels).unwrap();
+        added.name = "Product2".to_string();
+        added.added_group = Some(AddedGroup {
+            base: 0,
+            discrete: Some(discrete),
+        });
+        cache.fields.push(added);
+        let (cache, table) = probe_pivot_over(&case, sheet, cache);
+        let mut work = MAX_PIVOT_WORK;
+        let result = compute(&table, &cache, &mut work).unwrap();
+        let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
+        let cells = render(&table, &cache, &result, &layout).unwrap();
+        let label = (cells.iter())
+            .find(|c| c.column == 0 && c.value == PivotCell::Number(serial))
+            .unwrap();
+        let Some(CellFormat::Id(id)) = label.number_format else {
+            panic!("{sheet}: a date group item's label has a numFmtId");
+        };
+        let id = i32::try_from(id).unwrap();
+        let text = format_number(serial, &get_num_fmt(id, &[]), "en").text;
+        assert_eq!(text, pivot["text"]["A6"].as_str().unwrap(), "{sheet}");
+        // Every other label is text, and keeps its cell's format.
+        assert!((cells.iter())
+            .filter(|c| c.column == 0 && c != &label)
+            .all(|c| matches!(c.value, PivotCell::Text(_)) && c.number_format.is_none()));
+    }
+}
+
+/// An ungrouped field's date item takes a short-date format code (T-4807: m/d/yyyy whatever the
+/// source cells' format), not a group item's `numFmtId`.
+#[test]
+fn an_ungrouped_date_item_takes_no_group_item_format() {
+    let (mut cache, table) = crate::pivot::probe_cases::diagonal(3, true);
+    cache.fields[0].items[0] = CacheItem::Date(43831.0);
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute(&table, &cache, &mut work).unwrap();
+    let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
+    let cells = render(&table, &cache, &result, &layout).unwrap();
+    let label = (cells.iter())
+        .find(|c| c.value == PivotCell::Number(43831.0))
+        .unwrap();
+    assert_eq!(label.number_format, Some(CellFormat::Code("m/d/yyyy")));
 }

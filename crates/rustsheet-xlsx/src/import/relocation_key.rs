@@ -51,6 +51,9 @@
 //! row's other formulas between: the lexer keeps the last template of each column, at most
 //! `KeyLexer::TEMPLATES` of them, and tries the cell's column first, then the last template kept
 //! (a fill along the row; T-3574).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::single_match_else, clippy::too_many_lines)]
+// LINT-DEBT-END
 
 use rustsheet_engine::expressions::lexer::{Lexer, LexerMode};
 use rustsheet_engine::expressions::parser::Node;

@@ -10,10 +10,11 @@ use std::io::{Cursor, Read, Write};
 
 use rustsheet_engine::expressions::types::Area;
 use rustsheet_engine::Model;
-use rustsheet_xlsx::export::{save_preserving, save_xlsx_to_writer, SaveTier};
-use rustsheet_xlsx::import::load_from_xlsx_bytes;
+use rustsheet_xlsx::export::{save_preserving, save_xlsx_to_writer, SaveReport, SaveTier};
+use rustsheet_xlsx::import::{load_from_xlsx_bytes, ImportLimits};
 
 const SHEET: &str = "xl/worksheets/sheet1.xml";
+const STYLES: &str = "xl/styles.xml";
 const STRINGS: &str = "xl/sharedStrings.xml";
 const RELS: &str = "xl/_rels/workbook.xml.rels";
 const TYPES: &str = "[Content_Types].xml";
@@ -42,8 +43,15 @@ fn save_after(bytes: &[u8], edit: impl FnOnce(&mut Model)) -> (Vec<u8>, SaveTier
     let mut model = load(bytes);
     edit(&mut model);
     model.evaluate();
-    let (out, tier) = save_preserving(&model, &pristine, bytes, Cursor::new(Vec::new())).unwrap();
-    (out.into_inner(), tier)
+    let (out, report) = save_preserving(
+        &model,
+        &pristine,
+        bytes,
+        &ImportLimits::default(),
+        Cursor::new(Vec::new()),
+    )
+    .unwrap();
+    (out.into_inner(), report.tier)
 }
 
 /// Every entry of a package, decompressed.
@@ -390,17 +398,6 @@ fn what_the_patcher_will_not_do_exactly_regenerates() {
         },
         "a new sheet",
     );
-    // A new style: the style table changed (T-4561).
-    regenerated(
-        &src,
-        |m| {
-            m.set_user_input(0, 1, 1, "5".into()).unwrap();
-            let mut style = m.get_style_for_cell(0, 1, 1).unwrap();
-            style.font.b = true;
-            m.set_cell_style(0, 1, 1, &style).unwrap();
-        },
-        "a new style",
-    );
     // Rows the source stores out of order.
     let sheet = part(&src, SHEET);
     let (row1, row2) = (row(&sheet, 1), row(&sheet, 2));
@@ -447,4 +444,166 @@ fn a_changed_formula_in_a_shared_group_regenerates() {
     let (out, tier) = save_after(&shared, |m| m.set_user_input(0, 1, 1, "5".into()).unwrap());
     assert_patched(&tier);
     assert!(part(&out, SHEET).contains(r#"<f t="shared" ref="A2:A2" si="0">A1*3</f><v>15</v>"#));
+}
+
+/// The `count` of the `<name>` section of a styles part, and how many `<record` elements it holds.
+fn section(styles: &str, name: &str, record: &str) -> (usize, usize) {
+    let start = styles.find(&format!("<{name} ")).unwrap();
+    let end = styles[start..].find(&format!("</{name}>")).unwrap() + start;
+    let body = &styles[start..end];
+    let count = body
+        .split("count=\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap();
+    let records =
+        body.matches(&format!("<{record}>")).count() + body.matches(&format!("<{record} ")).count();
+    (count.parse().unwrap(), records)
+}
+
+#[test]
+fn a_new_number_format_and_a_new_font_are_appended_to_the_source_styles() {
+    let src = source();
+    let before = part(&src, STYLES);
+    let (xfs, _) = section(&before, "cellXfs", "xf");
+    let (fonts, _) = section(&before, "fonts", "font");
+    let (out, tier) = save_after(&src, |m| {
+        m.set_user_input(0, 4, 1, "0.5".into()).unwrap();
+        let mut style = m.get_style_for_cell(0, 4, 1).unwrap();
+        style.num_fmt = "0.000".into();
+        m.set_cell_style(0, 4, 1, &style).unwrap();
+        let mut bold = m.get_style_for_cell(0, 1, 1).unwrap();
+        bold.font.b = true;
+        m.set_cell_style(0, 1, 1, &bold).unwrap();
+    });
+    assert_patched(&tier);
+    assert_eq!(
+        changed(&src, &out),
+        BTreeSet::from([SHEET.into(), STYLES.into()])
+    );
+    let after = part(&out, STYLES);
+    // The source's records keep their indexes, so every `s=` in the package still names its
+    // style.
+    assert_eq!(
+        section(&after, "cellXfs", "xf"),
+        (xfs + 2, xfs + 2),
+        "{after}"
+    );
+    assert_eq!(
+        section(&after, "fonts", "font"),
+        (fonts + 1, fonts + 1),
+        "{after}"
+    );
+    assert!(after.contains(r#"formatCode="0.000""#), "{after}");
+    // Each section's source records are its first records, byte for byte.
+    for name in ["fonts", "cellXfs"] {
+        let body = |s: &str| {
+            let open = s.find(&format!("<{name} ")).unwrap();
+            let open = s[open..].find('>').unwrap() + open + 1;
+            let close = s[open..].find(&format!("</{name}>")).unwrap() + open;
+            s[open..close].to_string()
+        };
+        assert!(body(&after).starts_with(&body(&before)), "{name}: {after}");
+    }
+    assert_eq!(value(&out, (4, 1)), "0.500");
+    let reloaded = load(&out);
+    assert!(reloaded.get_style_for_cell(0, 1, 1).unwrap().font.b);
+    assert_eq!(value(&out, (3, 1)), "x");
+}
+
+/// Saves `bytes` after `edit` as `save_after` does, returning the save report (T-4562).
+fn report_after(bytes: &[u8], edit: impl FnOnce(&mut Model)) -> SaveReport {
+    let pristine = load(bytes);
+    let mut model = load(bytes);
+    edit(&mut model);
+    model.evaluate();
+    save_preserving(
+        &model,
+        &pristine,
+        bytes,
+        &ImportLimits::default(),
+        Cursor::new(Vec::new()),
+    )
+    .unwrap()
+    .1
+}
+
+/// The report's drops as (item, reason name) pairs.
+fn drops(report: &SaveReport) -> Vec<(String, &'static str)> {
+    (report.dropped.iter())
+        .map(|d| (d.item.clone(), d.reason.name()))
+        .collect()
+}
+
+#[test]
+fn the_save_report_names_what_each_tier_left_out() {
+    let custom = r#"<root xmlns="urn:x"/>"#;
+    let chain = r#"<calcChain xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><c r="A2" i="1"/></calcChain>"#;
+    let src = with_entry(&source(), "customXml/item1.xml", custom);
+    let src = with_entry(&src, "xl/calcChain.xml", chain);
+    let src = rezip(
+        &src,
+        RELS,
+        "</Relationships>",
+        r#"<Relationship Id="rIdCC" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/calcChain" Target="calcChain.xml"/><Relationship Id="rIdCX" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml" Target="../customXml/item1.xml"/></Relationships>"#,
+    );
+    let src = rezip(
+        &src,
+        TYPES,
+        "</Types>",
+        r#"<Override PartName="/xl/calcChain.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.calcChain+xml"/></Types>"#,
+    );
+    // Unchanged: the source, byte for byte, nothing dropped.
+    let report = report_after(&src, |_| {});
+    assert_eq!(report.tier, SaveTier::Verbatim);
+    assert!(report.dropped.is_empty());
+    // A cell edit that keeps the formula cells: patched, the chain kept.
+    let report = report_after(&src, |m| m.set_user_input(0, 1, 1, "5".into()).unwrap());
+    assert!(
+        matches!(report.tier, SaveTier::Patched { .. }),
+        "{report:?}"
+    );
+    assert!(report.dropped.is_empty(), "{report:?}");
+    // A formula replaced by a constant: patched, the chain dropped by policy.
+    let report = report_after(&src, |m| m.set_user_input(0, 2, 1, "9".into()).unwrap());
+    assert!(
+        matches!(report.tier, SaveTier::Patched { .. }),
+        "{report:?}"
+    );
+    assert_eq!(drops(&report), [("xl/calcChain.xml".to_string(), "Policy")]);
+    // A renamed sheet regenerates: the unmodelled custom XML is not preserved, the chain is
+    // dropped by policy, and no modelled part is named.
+    let report = report_after(&src, |m| m.workbook.worksheets[0].name = "Renamed".into());
+    assert!(
+        matches!(report.tier, SaveTier::Regenerated { .. }),
+        "{report:?}"
+    );
+    let mut got = drops(&report);
+    got.sort();
+    assert_eq!(
+        got,
+        [
+            ("customXml/item1.xml".to_string(), "NotPreserved"),
+            ("xl/calcChain.xml".to_string(), "Policy"),
+        ]
+    );
+}
+
+/// The report reads the source within the limits it was loaded with (directive 5): over them it
+/// says so, rather than reporting that nothing was dropped.
+#[test]
+fn a_source_the_report_cannot_read_within_the_load_limits_is_reported() {
+    let src = source();
+    let pristine = load(&src);
+    let mut model = load(&src);
+    model.workbook.worksheets[0].name = "Renamed".into();
+    let tight = ImportLimits {
+        max_zip_entries: 1,
+        ..ImportLimits::default()
+    };
+    let (_, report) =
+        save_preserving(&model, &pristine, &src, &tight, Cursor::new(Vec::new())).unwrap();
+    assert_eq!(drops(&report), [(String::new(), "LimitExceeded")]);
 }

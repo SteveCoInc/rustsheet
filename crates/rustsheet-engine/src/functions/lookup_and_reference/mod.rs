@@ -1,8 +1,19 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::comparison_chain
+)]
+// LINT-DEBT-END
 use crate::arithmetic::bcast_get;
 use crate::cast::NumberOrArray;
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
-use crate::expressions::utils::{indirect_reference_text, quote_digit_leading_sheet};
+use crate::expressions::utils::{
+    indirect_r1c1_tail_sheet_prefix, indirect_reference_text, quote_digit_leading_sheet,
+};
 use crate::external_reference::{one_external_area, PickedReference};
 use crate::functions::util::array_node_to_calc_result;
 use crate::functions::Function;
@@ -498,7 +509,7 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         }
         if args.is_empty() {
-            return CalcResult::Number(if by_row { cell.row } else { cell.column } as f64);
+            return CalcResult::Number(f64::from(if by_row { cell.row } else { cell.column }));
         }
         // `ROW(IF(TRUE,…!B3))` is 3 (probes/external-ref-no-link-ifchoose A25).
         // A value IF, CHOOSE or LET gives here is no reference, an error that error:
@@ -837,6 +848,11 @@ impl Model {
         // allowed"). The name and structured-reference fallbacks still see the text as written.
         let parsed_reference = match indirect_reference_text(&ref_text) {
             None => Err("Invalid reference. Whitespace is not allowed there.".to_string()),
+            // An unquoted R1C1-shaped prefix with more text (`C1D!B1`) names no sheet
+            // (probes/t4861-indirect-r1c1-shaped-sheet-prefix, excel-graph, T-4861).
+            Some(reference_text) if a1 && indirect_r1c1_tail_sheet_prefix(&reference_text) => {
+                Err("Invalid reference. R1C1-shaped sheet prefix.".to_string())
+            }
             Some(reference_text) if a1 => {
                 // The lexer takes no unquoted sheet name that starts with a digit; INDIRECT text
                 // does (`INDIRECT("2024!B1")` reads sheet `2024`; probes/indirect-sheet-scoped-name

@@ -15,9 +15,11 @@ use rustsheet_xlsx::{export::save_to_icalc, import::load_from_xlsx};
 
 fn main() {
     let args: Vec<_> = std::env::args().collect();
-    if args.len() != 2 && args.len() != 3 {
-        panic!("Usage: {} <file.xlsx> [output.icalc]", args[0]);
-    }
+    assert!(
+        !(args.len() != 2 && args.len() != 3),
+        "Usage: {} <file.xlsx> [output.icalc]",
+        args[0]
+    );
     // first test the file
     let file_name = &args[1];
 

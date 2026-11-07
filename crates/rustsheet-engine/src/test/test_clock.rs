@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 //! The per-model clock (SPEC-0008 test plan, engine part).
@@ -35,7 +38,7 @@ fn two_models_on_one_thread_keep_their_own_clock() {
     let mut epoch = model_at("UTC", 0);
     let mut next_day = model_at("UTC", DAY_MS);
     for model in [&mut epoch, &mut next_day] {
-        model._set("A1", "=NOW()");
+        model.set_a1("A1", "=NOW()");
         model.evaluate();
     }
     assert_eq!(number(&epoch, 1), 25569.0);
@@ -46,7 +49,7 @@ fn two_models_on_one_thread_keep_their_own_clock() {
 fn default_clock_is_the_system_time() {
     let mut model = Model::new_empty("model", "en", "UTC", "en").unwrap();
     assert_eq!(model.clock(), Clock::system());
-    model._set("A1", "=NOW()");
+    model.set_a1("A1", "=NOW()");
     model.evaluate();
     let host_ms = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -60,7 +63,7 @@ fn default_clock_is_the_system_time() {
 #[test]
 fn set_clock_does_not_evaluate() {
     let mut model = model_at("UTC", 0);
-    model._set("A1", "=NOW()");
+    model.set_a1("A1", "=NOW()");
     model.evaluate();
     model.set_clock(fixed_clock(DAY_MS));
     assert_eq!(number(&model, 1), 25569.0);
@@ -77,9 +80,9 @@ fn today_numbers_early_1900_days_as_date_does() {
         (MIN_MS + 59 * DAY_MS, "DATE(1900,3,1)", 61.0),
     ] {
         let mut model = model_at("UTC", ms);
-        model._set("A1", "=TODAY()");
-        model._set("A2", &format!("={date}"));
-        model._set("A3", "=NOW()");
+        model.set_a1("A1", "=TODAY()");
+        model.set_a1("A2", &format!("={date}"));
+        model.set_a1("A3", "=NOW()");
         model.evaluate();
         assert_eq!(number(&model, 1), serial, "{date}");
         assert_eq!(number(&model, 2), serial, "{date}");
@@ -90,16 +93,16 @@ fn today_numbers_early_1900_days_as_date_does() {
 #[test]
 fn now_and_today_at_the_bounds_in_utc() {
     let mut model = model_at("UTC", MAX_MS);
-    model._set("A1", "=TODAY()");
-    model._set("A2", "=NOW()");
+    model.set_a1("A1", "=TODAY()");
+    model.set_a1("A2", "=NOW()");
     model.evaluate();
     assert_eq!(number(&model, 1), 2_958_465.0);
     assert!(number(&model, 2) < 2_958_466.0);
     assert!(number(&model, 2) > 2_958_465.999);
 
     let mut model = model_at("UTC", MIN_MS);
-    model._set("A1", "=TODAY()");
-    model._set("A2", "=NOW()");
+    model.set_a1("A1", "=TODAY()");
+    model.set_a1("A2", "=NOW()");
     model.evaluate();
     assert_eq!(number(&model, 1), 1.0);
     assert_eq!(number(&model, 2), 1.0);
@@ -122,8 +125,8 @@ fn now_and_today_at_the_bounds_in_far_timezones() {
     ];
     for (tz, ms, today) in cases {
         let mut model = model_at(tz, ms);
-        model._set("A1", "=TODAY()");
-        model._set("A2", "=NOW()");
+        model.set_a1("A1", "=TODAY()");
+        model.set_a1("A2", "=NOW()");
         model.evaluate();
         assert_eq!(value(&model, 1), today, "TODAY() in {tz} at {ms}");
         let now = number(&model, 2);
@@ -146,7 +149,7 @@ fn year_less_text_reads_the_clock_year() {
         (model_at("UTC", TEST_CLOCK_MS), 2022.0),
         (model_at("UTC", in_2030), 2030.0),
     ] {
-        model._set("A1", "=YEAR(\"7/1\"+0)");
+        model.set_a1("A1", "=YEAR(\"7/1\"+0)");
         model.evaluate();
         assert_eq!(number(&model, 1), year);
     }

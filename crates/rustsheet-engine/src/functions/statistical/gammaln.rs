@@ -20,6 +20,10 @@
 //!
 //! The four rational kernels' coefficients are in `gamma_kernels.rs`: they have Excel's structure
 //! and the best known coefficients, and are not yet bit-exact (T-2122).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::many_single_char_names)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use super::gamma_kernels::{K2_CAND9_D, K2_CAND9_N, K2_D, K2_N, K3_D, K3_N, R15_D, R15_N};
 use crate::arithmetic::{extended_product, extended_quotient, extended_sum};

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 //! `Text` against a `Vec<u16>` model of Excel text (SPEC-0010).
@@ -296,7 +299,7 @@ fn decode_rejects_bad_bytes_without_panicking() {
     }
     let mut rng = Rng(0x1234_5678_9ABC_DEF1);
     for _ in 0..2_000 {
-        let garbage: Vec<u8> = (0..rng.below(24)).map(|_| rng.next() as u8).collect();
+        let garbage: Vec<u8> = (0..rng.below(24)).map(|_| rng.next_u64() as u8).collect();
         // Any outcome but a panic; a decoded value is normalized.
         if let Ok(texts) = bitcode::decode::<Vec<Text>>(&garbage) {
             for text in texts {
@@ -310,9 +313,9 @@ fn decode_rejects_bad_bytes_without_panicking() {
 /// Evaluates `formula` in A1 and returns its text.
 fn eval_text(formula: &str) -> String {
     let mut model = crate::test::util::new_empty_model();
-    model._set("A1", formula);
+    model.set_a1("A1", formula);
     model.evaluate();
-    model._get_text("A1")
+    model.get_text_a1("A1")
 }
 
 #[test]

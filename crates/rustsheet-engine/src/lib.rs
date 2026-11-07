@@ -1,17 +1,10 @@
-//! # `IronCalcBase` engine API
+//! RustSheet calculation engine core: parser, evaluator, functions and storage.
 //!
-//! This is the documentation for the base engine API.
-//!
-//! # Basic usage
-//!
-//! Add the dependency in Cargo.toml:
-//!
-//! ```toml
-//! [dependencies]
-//! rustsheet_engine = { git = "https://github.com/ironcalc/IronCalc" }
-//! ```
-//!
-//! <small> until version 1.0.0 you should use the git dependencies as stated </small>
+//! This crate is internal. Its `Model` API is inherited from the IronCalc fork and has no
+//! stability promise, load limits or typed errors; applications use the `rustsheet` crate
+//! (`rustsheet::Workbook`, SPEC-0001), which wraps it. The other workspace crates
+//! (`rustsheet_xlsx`, `rustsheet_eval`, the Python binding's deprecated `rustsheet.legacy`
+//! module) are its only intended direct users.
 //!
 //! In this example we use the excel function `CONCAT` to concatenate strings in cells `A1` and `B1`:
 //!
@@ -49,6 +42,12 @@ pub mod themes;
 pub mod types;
 pub mod worksheet;
 
+/// Seeded generators shared with other crates' tests (T-4756); built for this crate's tests and
+/// behind the `test-support` feature, which only dev-dependencies enable.
+#[cfg(any(test, feature = "test-support"))]
+#[doc(hidden)]
+pub mod test_support;
+
 pub use crate::constants::COLUMN_WIDTH_FACTOR;
 pub use crate::constants::DEFAULT_COLUMN_WIDTH;
 pub use crate::constants::ROW_HEIGHT_FACTOR;
@@ -65,6 +64,7 @@ mod circular;
 mod conditional_formatting;
 mod constants;
 mod cut_paste;
+mod data_table_edits;
 mod data_table_memo;
 mod data_table_types;
 mod data_tables;

@@ -5,6 +5,9 @@
 //! pattern with `$` or `\Z` over a text the automata cannot read it on runs on the backtracker's
 //! memoized mode (T-2355), as do the retries after an empty match of every regular pattern
 //! (T-1899).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 
 mod ast;
 mod backtrack;

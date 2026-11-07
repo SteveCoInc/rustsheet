@@ -1,11 +1,15 @@
 //! The shared-string part of a patched save (SPEC-0034 D3.3): new strings appended after the
 //! source's, with `uniqueCount` set and `count` moved by the change in references.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use rustsheet_engine::types::{Cell, Workbook};
 
 use super::super::escape::escape_xml;
+use super::tag::set_attr;
 use super::MAX_DEPTH;
 
 /// The `<si>` elements directly under the shared-string part's root.
@@ -73,17 +77,12 @@ pub(super) fn set_count(head: &str, name: &str, value: impl Fn(usize) -> usize) 
         return head.to_string();
     };
     let tag = &head[sst..sst + tag_len];
-    let needle = format!(" {name}=\"");
-    let Some(at) = tag.find(&needle).map(|i| sst + i + needle.len()) else {
-        return head.to_string();
-    };
-    let Some(len) = head[at..sst + tag_len].find('"') else {
-        return head.to_string();
-    };
-    let Ok(old) = head[at..at + len].parse::<usize>() else {
-        return head.to_string();
-    };
-    format!("{}{}{}", &head[..at], value(old), &head[at + len..])
+    format!(
+        "{}{}{}",
+        &head[..sst],
+        set_attr(tag, name, value),
+        &head[sst + tag_len..]
+    )
 }
 
 /// The number of cells holding a shared string, as the `count` of `sharedStrings.xml` counts

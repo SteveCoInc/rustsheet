@@ -5,6 +5,13 @@
 //! group items, and GETPIVOTDATA picks a group by its calendar value. The rule is Excel's own,
 //! probed with excel-graph (probes/t4236-pivot-date-groups-no-blank;
 //! docs/excel-semantics/web.md "Grouped pivot fields import as their group items").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 
 use std::collections::HashMap;
 
@@ -48,6 +55,21 @@ impl DateGroupBy {
             "years" => DateGroupBy::Years,
             _ => return None,
         })
+    }
+
+    /// The `groupBy` attribute's value, which [`DateGroupBy::parse`] reads back (the xlsx
+    /// export, T-4734).
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            DateGroupBy::Seconds => "seconds",
+            DateGroupBy::Minutes => "minutes",
+            DateGroupBy::Hours => "hours",
+            DateGroupBy::Days => "days",
+            DateGroupBy::Months => "months",
+            DateGroupBy::Quarters => "quarters",
+            DateGroupBy::Years => "years",
+        }
     }
 
     /// How many group items the grouping has: the in-range ones plus the `<start` and `>end`
@@ -214,7 +236,9 @@ fn in_range(value: f64, low: f64, high: f64) -> Option<usize> {
 
 /// Field `base` grouped by `groups`, `labels` being its `<groupItems>` labels: the grouped
 /// field's items are the labels and each record's item is the group its date falls in
-/// ([`DateGroups::item`]). A blank value goes in item 0, the label 59932 gives `(blank)`.
+/// ([`DateGroups::item`]); a caller grouping `base` in place keeps its values with
+/// [`keep_ungrouped`](super::keep_ungrouped) (T-4734). A blank value goes in item 0, the label
+/// 59932 gives `(blank)`.
 /// Which item Excel uses is UNVERIFIED: a refresh drops the date grouping of a field holding a
 /// blank (T-4236), so no probe can say. The one grouping step for dates, shared by the xlsx
 /// importer (`apply_groups`) and `Txn::add_pivot_table`.
@@ -253,6 +277,9 @@ pub fn group_by_dates(
         records,
         number_groups: None,
         date_groups: Some(groups),
+        added_group: None,
+        formula: None,
+        ungrouped: None,
     })
 }
 
@@ -283,20 +310,19 @@ pub fn ungroup_dates(base: &CacheField) -> Result<CacheField, DateGroupError> {
         let key = *rounded
             .get(record as usize)
             .ok_or(DateGroupError::BadRecord)?;
-        let index = match seen.get(&key) {
-            Some(&index) => index,
-            None => {
-                // At most one item per base item, so the index fits a u32 as theirs do.
-                let index = u32::try_from(items.len()).map_err(|_| DateGroupError::BadRecord)?;
-                items.push(match key {
-                    None => CacheItem::Missing,
-                    Some((day, seconds)) => {
-                        CacheItem::Date(day as f64 + seconds as f64 / SECONDS_PER_DAY)
-                    }
-                });
-                seen.insert(key, index);
-                index
-            }
+        let index = if let Some(&index) = seen.get(&key) {
+            index
+        } else {
+            // At most one item per base item, so the index fits a u32 as theirs do.
+            let index = u32::try_from(items.len()).map_err(|_| DateGroupError::BadRecord)?;
+            items.push(match key {
+                None => CacheItem::Missing,
+                Some((day, seconds)) => {
+                    CacheItem::Date(day as f64 + seconds as f64 / SECONDS_PER_DAY)
+                }
+            });
+            seen.insert(key, index);
+            index
         };
         records.push(index);
     }
@@ -306,6 +332,9 @@ pub fn ungroup_dates(base: &CacheField) -> Result<CacheField, DateGroupError> {
         records,
         number_groups: None,
         date_groups: None,
+        added_group: None,
+        formula: None,
+        ungrouped: None,
     })
 }
 
@@ -455,6 +484,9 @@ mod tests {
             records: vec![2, 0, 1, 3, 4, 2],
             number_groups: None,
             date_groups: None,
+            added_group: None,
+            formula: None,
+            ungrouped: None,
         };
         let field = ungroup_dates(&base).unwrap();
         assert_eq!(

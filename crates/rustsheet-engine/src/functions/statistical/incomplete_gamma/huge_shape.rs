@@ -18,14 +18,6 @@ use super::{gamma_density, gamma_quantile, temme_pair, Tail, QUANTILE_TEMME_SHAP
 /// here. Not a fit: below it the step limit changes no probed cell (T-3409).
 pub(crate) const HUGE_SHAPE_MIN: f64 = QUANTILE_TEMME_SHAPE_MIN;
 
-/// From this shape on, Excel's start is its value where the start's density underflows
-/// ([`huge_shape_quantile`]). Below it Excel does the same (`CHISQ.INV.RT(1E-300,df)` from df 5E6,
-/// probes/t3350-chisq-inv-huge-df A205-A289), but the start's fitted higher terms are 1E-9 to
-/// 3.4E-9 off there, so the true quantile stays in the Gate A envelope and the start would not
-/// (TODO(T-4205)). At 1E9 the start is already Excel's value at p = 1E-300 in the upper tail.
-/// FITTED(T-3070, 2 cells, shape 1E9 at p 1E-300 and 1E-100; no cell discriminates from 1E8 up)
-const START_SHAPE_MIN: f64 = 1e9;
-
 /// The offset Excel adds to the Wilson-Hilferty cube root: (1.0002658235505755)^(1/3) - 1 is
 /// 0.0000886 to 13 digits (probes/t2982-gamma-inv-huge-shape A7-A23).
 /// FITTED(T-2982, 17 cells, shape 2E10..1E300, p 0.5)
@@ -91,19 +83,24 @@ const SEARCH_STEP_LIMIT: u32 = 207;
 /// 1E-8 and 3E-16 (quadratic convergence), and 1E-8 is well above the noise of a double cdf.
 const SEARCH_STEP_TOLERANCE: f64 = 1e-8;
 
-/// Excel's quantile of the gamma distribution of `shape` (at least [`HUGE_SHAPE_MIN`]) and
-/// `scale` where the probability of `tail` is `p` in (0, 1), and `z` the standard normal quantile
-/// of the lower tail's probability (for the upper tail, minus that of `p`, so a tiny `p` keeps its
-/// digits: `CHISQ.INV.RT(1E-100,1E10)` = 10005667524.015223, probes/t3070-gamma-inv-band A371).
+/// The quantile of the gamma distribution of `shape` (at least [`HUGE_SHAPE_MIN`]) and `scale`
+/// where the probability of `tail` is `p` in (0, 1), and `z` the standard normal quantile of the
+/// lower tail's probability (for the upper tail, minus that of `p`, so a tiny `p` keeps its
+/// digits: Excel's start for `CHISQ.INV.RT(1E-100,1E10)` is 10005667524.015223, probes/t3070-gamma-inv-band A371).
 /// NaN where Excel is `#NUM!`.
 ///
-/// - From [`START_SHAPE_MIN`], where the density at the start ([`wilson_hilferty_quantile`]) is
-///   below the smallest normal double, the start times the scale: the closed form from shape
-///   2E10 at p = 0.5. The cut picks exactly the 197 probed start cells from shape 1E5 (below 1E9,
-///   `CHISQ.INV.RT(1E-300,df)` from df 5E6, T-4205) and no other cell (ln density -708.54 at
-///   `GAMMA.INV(0.999999,1.5E10,1)`, t3070 A110, the start; -701.60 at `GAMMA.INV(0.5,1.95E10,1)`,
-///   A210, `#NUM!`; ln of the smallest normal double is -708.40).
-/// - Else, where [`search_converges`], the true quantile ([`gamma_quantile`]):
+/// - Where the density at Excel's start ([`wilson_hilferty_quantile`]) is below the smallest
+///   normal double, the true quantile ([`gamma_quantile`]). Excel returns the start there, about
+///   2.66e-4 above the true quantile, past decision 0188's G = 1e-4, so the engine follows the
+///   math (R3; statistics.md "GAMMA.INV at a huge shape, closed-form branch"; T-3364). R3's case
+///   starts at shape 1E9; below it Excel's start is the target (owner ruling, T-3409), but the
+///   start's fitted terms are 1E-9 to 3.4E-9 off there, so the true quantile stays the nearer
+///   value (TODO(T-4205)). The test picks exactly the 197 probed start cells from shape 1E5
+///   (`CHISQ.INV.RT(1E-300,df)` from df 5E6, probes/t3350-chisq-inv-huge-df A205-A289; the
+///   closed form from shape 2E10 at p = 0.5) and no other cell (ln density -708.54 at `GAMMA.INV(0.999999,1.5E10,1)`, t3070 A110, the
+///   start; -701.60 at `GAMMA.INV(0.5,1.95E10,1)`, A210, `#NUM!`; ln of the smallest normal double
+///   is -708.40).
+/// - Else, where [`search_converges`], the true quantile ([`gamma_quantile`]), Excel's value:
 ///   `GAMMA.INV(0.5,5E9,1)` = 4999999999.666667, `CHISQ.INV(1E-100,6E9)` = 5997669910.951994.
 /// - Else NaN: `GAMMA.INV(0.5,6E9,1)` (A65), `GAMMA.INV(1E-300,6E+8,1)` (probes-numeric/
 ///   fit-audit-t3070-shape-min A19), `GAMMA.INV(p,1.2E10,1)` at every probed p (A85-A98).
@@ -113,11 +110,23 @@ pub(crate) fn huge_shape_quantile(shape: f64, scale: f64, p: f64, tail: Tail, z:
     let start = wilson_hilferty_quantile(shape, z);
     let underflows =
         gamma_density(shape, start, 1.0).is_none_or(|density| density < f64::MIN_POSITIVE);
-    if underflows && shape >= START_SHAPE_MIN {
-        return start * scale;
+    // On the closed-form branch (an underflowing start) Excel returns the start, about 2.66e-4
+    // above the true quantile: the engine returns the math there (decision 0188 R3, T-3364). The
+    // start and its fitted terms still pick the branches, so `#NUM!` stays where Excel's is. Below
+    // shape 1E9, outside R3's case, Excel's start is the target (TODO(T-4205)).
+    if underflows {
+        // Excel's value here is its start, so where the start times the scale overflows Excel is
+        // `#NUM!` even if the true quantile fits (`GAMMA.INV(0.5,1E300,1.7975E8)`): R3 never trades
+        // an error for a number, and this keeps main's guard.
+        if !(start * scale).is_finite() {
+            return f64::NAN;
+        }
+        // The unit quantile times the scale: refined at the scale itself, a quantile near
+        // f64::MAX (`GAMMAINV(0.5,1E300,1E8)`) is lost, where Excel's start is 1.000266E308.
+        let x = gamma_quantile(shape, 1.0, p, tail) * scale;
+        return if x.is_finite() { x } else { f64::NAN };
     }
-    // Below `START_SHAPE_MIN` an underflowing start keeps the true quantile (TODO(T-4205)).
-    if underflows || search_converges(shape, start, p, tail) {
+    if search_converges(shape, start, p, tail) {
         gamma_quantile(shape, scale, p, tail)
     } else {
         f64::NAN

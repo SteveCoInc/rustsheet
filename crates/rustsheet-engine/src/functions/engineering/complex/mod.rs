@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::needless_pass_by_value, clippy::too_many_lines)]
+// LINT-DEBT-END
 use crate::arithmetic::{extended_sqrt, power};
 use crate::cast::number_text_too_long;
 use crate::functions::lift::{num_error, value_error};
@@ -192,10 +195,7 @@ impl Model {
         // probes/eng-imsub-imdiv-blank-j A3, A4, B3, B4. A variable bound to an omitted LAMBDA
         // parameter or an empty LET value hands the omission on: `LAMBDA(a,b,IMSUB(a,b))("1",)`,
         // `LET(e,,IMSUB("1",e))` (probes/eng-imsub-imdiv-lambda-let-empty A1:A4, A12).
-        if args
-            .iter()
-            .any(|arg| matches!(arg, Node::EmptyArgKind) || self.is_omitted_variable(arg))
-        {
+        if args.iter().any(|arg| self.is_empty_argument(arg)) {
             return Err(CalcResult::new_error(Error::NA, cell, String::new()));
         }
         let first = self.complex_of(first, EmptyText::ZeroIfBlank, cell)?;
@@ -210,32 +210,38 @@ impl Model {
     /// multi-cell range (probes/eng-argument-modes B13:E13, probes/scalar-lift-open-a Y11,
     /// probes/eng-later-argument-lift H16).
     pub(crate) fn fn_complex(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Complex, args, cell, &mut |model, values| {
-            let (x, y, suffix) = match values {
-                [x, y] => (x, y, None),
-                [x, y, suffix] => (x, y, Some(suffix)),
-                _ => return CalcResult::new_args_number_error(cell),
-            };
-            // Excel reads the suffix before the numbers, so a bad or error suffix wins over an
-            // error in real_num or i_num (T-2532; engineering.md, gen-m9 COMPLEX cells).
-            let suffix = match suffix.map(|suffix| Self::cast_string_ref(suffix, cell)) {
-                None => Suffix::I,
-                Some(Ok(s)) if s == "i" || s.is_empty() => Suffix::I,
-                Some(Ok(s)) if s == "j" => Suffix::J,
-                Some(Ok(_)) => return value_error(cell),
-                Some(Err(s)) => return s,
-            };
-            // A boolean is `#VALUE!`: `COMPLEX(TRUE,1)` (probes/eng-imsum-improduct-whole C12).
-            let x = match model.cast_number_no_bools_ref(x, cell) {
-                Ok(s) => s,
-                Err(s) => return s,
-            };
-            let y = match model.cast_number_no_bools_ref(y, cell) {
-                Ok(s) => s,
-                Err(s) => return s,
-            };
-            complex_result(x, y, suffix)
-        })
+        self.atp_lift_call(
+            Function::Complex,
+            args,
+            (2, 3),
+            cell,
+            &mut |model, values| {
+                let (x, y, suffix) = match values {
+                    [x, y] => (x, y, None),
+                    [x, y, suffix] => (x, y, Some(suffix)),
+                    _ => return CalcResult::new_args_number_error(cell),
+                };
+                // Excel reads the suffix before the numbers, so a bad or error suffix wins over an
+                // error in real_num or i_num (T-2532; engineering.md, gen-m9 COMPLEX cells).
+                let suffix = match suffix.map(|suffix| Self::cast_string_ref(suffix, cell)) {
+                    None => Suffix::I,
+                    Some(Ok(s)) if s == "i" || s.is_empty() => Suffix::I,
+                    Some(Ok(s)) if s == "j" => Suffix::J,
+                    Some(Ok(_)) => return value_error(cell),
+                    Some(Err(s)) => return s,
+                };
+                // A boolean is `#VALUE!`: `COMPLEX(TRUE,1)` (probes/eng-imsum-improduct-whole C12).
+                let x = match model.cast_number_no_bools_ref(x, cell) {
+                    Ok(s) => s,
+                    Err(s) => return s,
+                };
+                let y = match model.cast_number_no_bools_ref(y, cell) {
+                    Ok(s) => s,
+                    Err(s) => return s,
+                };
+                complex_result(x, y, suffix)
+            },
+        )
     }
 
     pub(crate) fn fn_imabs(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {

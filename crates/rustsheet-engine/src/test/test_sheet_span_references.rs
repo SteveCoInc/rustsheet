@@ -16,20 +16,20 @@ fn sample() -> Model {
     for name in ["Data1", "Data2", "Data3", "Q 4"] {
         model.add_sheet(name).unwrap();
     }
-    model._set("Data1!A1", "1");
-    model._set("Data1!A2", "5x");
-    model._set("Data1!A3", "TRUE");
-    model._set("Data2!A1", "10");
-    model._set("Data3!A1", "100");
-    model._set("Data3!A2", "2");
-    model._set("Q 4!A1", "1000");
+    model.set_a1("Data1!A1", "1");
+    model.set_a1("Data1!A2", "5x");
+    model.set_a1("Data1!A3", "TRUE");
+    model.set_a1("Data2!A1", "10");
+    model.set_a1("Data3!A1", "100");
+    model.set_a1("Data3!A2", "2");
+    model.set_a1("Q 4!A1", "1000");
     model
 }
 
 fn eval(model: &mut Model, formula: &str) -> String {
-    model._set("A1", formula);
+    model.set_a1("A1", formula);
     model.evaluate();
-    model._get_text("A1")
+    model.get_text_a1("A1")
 }
 
 #[test]
@@ -52,36 +52,36 @@ fn span_order_and_quoting() {
     assert_eq!(eval(&mut model, "=SUM('Data2:Q 4'!A1)"), "1110");
     // The formula's own sheet may be in the span: a loop, so 0 (recalc.md).
     assert_eq!(eval(&mut model, "=SUM(Sheet1:Data2!A1)"), "0");
-    model._set("B1", "=SUM(Sheet1:Data2!A1)");
-    model._set("A1", "7");
+    model.set_a1("B1", "=SUM(Sheet1:Data2!A1)");
+    model.set_a1("A1", "7");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "18");
+    assert_eq!(model.get_text_a1("B1"), "18");
 }
 
 #[test]
 fn formula_text_round_trips() {
     let mut model = sample();
-    model._set("A1", "=SUM(Data1:Data3!A1:B2)");
-    model._set("A2", "=SUM('Data2:Q 4'!$A$1)");
-    assert_eq!(model._get_formula("A1"), "=SUM(Data1:Data3!A1:B2)");
-    assert_eq!(model._get_formula("A2"), "=SUM('Data2:Q 4'!$A$1)");
+    model.set_a1("A1", "=SUM(Data1:Data3!A1:B2)");
+    model.set_a1("A2", "=SUM('Data2:Q 4'!$A$1)");
+    assert_eq!(model.get_formula_a1("A1"), "=SUM(Data1:Data3!A1:B2)");
+    assert_eq!(model.get_formula_a1("A2"), "=SUM('Data2:Q 4'!$A$1)");
     model.rename_sheet("Data3", "Last").unwrap();
-    assert_eq!(model._get_formula("A1"), "=SUM(Data1:Last!A1:B2)");
+    assert_eq!(model.get_formula_a1("A1"), "=SUM(Data1:Last!A1:B2)");
 }
 
 #[test]
 fn a_one_sheet_span_reads_back_as_the_plain_reference() {
     let mut model = sample();
-    model._set("A1", "=ABS(Data1:Data1!A1:A3)");
-    model._set("A2", "=SUM('Q 4:Q 4'!$A$1)");
-    assert_eq!(model._get_formula("A1"), "=ABS(Data1!A1:A3)");
-    assert_eq!(model._get_formula("A2"), "=SUM('Q 4'!$A$1)");
+    model.set_a1("A1", "=ABS(Data1:Data1!A1:A3)");
+    model.set_a1("A2", "=SUM('Q 4:Q 4'!$A$1)");
+    assert_eq!(model.get_formula_a1("A1"), "=ABS(Data1!A1:A3)");
+    assert_eq!(model.get_formula_a1("A2"), "=SUM('Q 4'!$A$1)");
 }
 
 #[test]
 fn an_error_cell_in_the_span_wins() {
     let mut model = sample();
-    model._set("Data2!B1", "=1/0");
+    model.set_a1("Data2!B1", "=1/0");
     assert_eq!(eval(&mut model, "=SUM(Data1:Data3!B1)"), "#DIV/0!");
 }
 
@@ -116,7 +116,7 @@ fn whole_columns_walk_only_the_used_area() {
     for index in 0..20 {
         model.add_sheet(&format!("Extra{index}")).unwrap();
     }
-    model._set("Extra19!A5", "3");
+    model.set_a1("Extra19!A5", "3");
     let start = Instant::now();
     assert_eq!(eval(&mut model, "=SUM(Data1:Extra19!A:C)"), "1116");
     assert!(start.elapsed() < Duration::from_secs(10));
@@ -262,13 +262,13 @@ fn sheets_of_an_unquoted_span_over_cell_like_sheet_names() {
     model.rename_sheet("Sheet1", "S1").unwrap();
     for (name, value) in [("S2", "5"), ("S3", "7")] {
         model.add_sheet(name).unwrap();
-        model._set(&format!("{name}!A1"), value);
+        model.set_a1(&format!("{name}!A1"), value);
     }
-    model._set("S1!B1", "1");
+    model.set_a1("S1!B1", "1");
     let mut eval = |formula: &str| {
-        model._set("S1!A1", formula);
+        model.set_a1("S1!A1", formula);
         model.evaluate();
-        model._get_text("S1!A1")
+        model.get_text_a1("S1!A1")
     };
     assert_eq!(eval("=SUM(S1:S3!B1)"), "#VALUE!");
     assert_eq!(eval("=SHEETS(S1:S3!A1)"), "#VALUE!");
@@ -331,20 +331,20 @@ fn a_one_sheet_span_range_lifts_like_the_plain_range() {
         ("=DATEVALUE(Data1:Data1!A1:A3)", "=DATEVALUE(Data1!A1:A3)"),
     ] {
         let mut model = sample();
-        model._set("D4", span);
-        model._set("D8", plain);
+        model.set_a1("D4", span);
+        model.set_a1("D8", plain);
         model.evaluate();
-        let spilled = model._get_text("D4");
-        let expected = model._get_text("D8");
+        let spilled = model.get_text_a1("D4");
+        let expected = model.get_text_a1("D8");
         assert_eq!(spilled, expected, "{span}");
-        assert_eq!(model._get_text("E4"), model._get_text("E8"), "{span}");
-        assert_eq!(model._get_text("D5"), model._get_text("D9"), "{span}");
+        assert_eq!(model.get_text_a1("E4"), model.get_text_a1("E8"), "{span}");
+        assert_eq!(model.get_text_a1("D5"), model.get_text_a1("D9"), "{span}");
     }
     // The values themselves (probes/3d-ref-one-sheet-span-lift A1:A3 holds 1, 5, #VALUE! over
     // other data; here Data1!A1:A3 is 1, "5x", TRUE).
     let mut model = sample();
-    model._set("D4", "=ABS(Data1:Data1!A1:A3)");
+    model.set_a1("D4", "=ABS(Data1:Data1!A1:A3)");
     model.evaluate();
-    assert_eq!(model._get_text("D4"), "1");
-    assert_eq!(model._get_text("D5"), "#VALUE!");
+    assert_eq!(model.get_text_a1("D4"), "1");
+    assert_eq!(model.get_text_a1("D5"), "#VALUE!");
 }

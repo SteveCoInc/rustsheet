@@ -1,10 +1,11 @@
 //! The patch tier of the source-preserving export (SPEC-0034 D3): a workbook whose structure is
 //! unchanged since its load is written as its source, with only the changed `<c>` elements
-//! rewritten and new shared strings appended. Every other byte, part and relationship is copied.
+//! rewritten and new shared strings and style records appended. Every other byte, part and
+//! relationship is copied.
 //!
 //! The patch never guesses. Anything it does not handle exactly is a fallback reason, and the
 //! caller regenerates instead:
-//! - a structural change, or a style table that changed (T-4623);
+//! - a structural change, or a style table that changed other than by appending records;
 //! - out-of-order rows or cells, a cell without `r`, or a prefixed worksheet;
 //! - a changed formula, or a cleared cell, in a shared-formula group;
 //! - a rich value or dynamic array that needs value or cell metadata (`vm`, `cm`) in a source that
@@ -20,6 +21,13 @@
 //! What the patch leaves as the source had it is listed in docs/excel-semantics/xlsx-storage.md
 //! ("A patched package keeps the source's hints"): row `spans`, a `<dimension>` that only grows,
 //! and a `<row>` emptied by clearing its cells.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::format_push_string,
+    clippy::too_many_lines,
+    clippy::unnecessary_wraps
+)]
+// LINT-DEBT-END
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Cursor;
@@ -41,11 +49,17 @@ use strings::{append_strings, count_si, shared_refs};
 
 mod package;
 mod strings;
+mod styles;
+mod tag;
 #[cfg(test)]
 mod tests;
 
-/// Deepest element nesting the patcher reads in a worksheet (directive 5).
-const MAX_DEPTH: usize = 256;
+/// Deepest element nesting the patcher reads in a worksheet, and the `PivotChart` rewrite in a chart
+/// part (`pivot_charts`, T-4187) (directive 5).
+pub(super) const MAX_DEPTH: usize = 256;
+
+/// The styles part, as the importer reads it.
+const STYLES_PART: &str = "xl/styles.xml";
 
 /// The calculation chain, which lists every formula cell (SPEC-0034 E2).
 const CALC_CHAIN_PART: &str = "xl/calcChain.xml";
@@ -149,6 +163,17 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
             .ok_or("the shared-string part has no closing </sst>")?;
         replaced.insert(entry, text.into_bytes());
     }
+    if live.styles != base.styles {
+        let added = styles::appended(&base.styles, &live.styles)
+            .ok_or("the style table changed other than by appending")?;
+        let entry = names
+            .entry(STYLES_PART)
+            .ok_or("new styles need a styles part the source lacks")?
+            .to_string();
+        let xml = read_entry(&mut archive, &entry)?;
+        let text = styles::patch(&xml, &base.styles, &added)?;
+        replaced.insert(entry, text.into_bytes());
+    }
     // Only a source with no metadata of its own takes the export's; one that has its own keeps
     // it, and its cells' `vm`/`cm` were checked against it while splicing.
     let mut needs_metadata = false;
@@ -235,13 +260,14 @@ fn cells_carry(xml: &str, keys: &[&str]) -> bool {
 }
 
 /// Why the workbook's structure differs between `model` and `pristine`, if it does: everything
-/// the patcher does not rewrite must be equal (SPEC-0034 D2.1). Each [`Worksheet`] field is named,
-/// with no `..`, so a field added to the model is a compile error here until it is classified.
+/// the patcher does not rewrite must be equal (SPEC-0034 D2.1), each sheet's by
+/// [`sheet_structure_same`].
 fn structure_differs(model: &Model, pristine: &Model) -> Option<String> {
     let (a, b) = (&model.workbook, &pristine.workbook);
     let workbook_fields = [
         ("defined names", a.defined_names == b.defined_names),
-        ("styles", a.styles == b.styles),
+        // A table that only appended records keeps every `s=` index; `styles::patch` writes it.
+        ("styles", styles::appended(&b.styles, &a.styles).is_some()),
         ("settings", a.settings == b.settings),
         ("metadata", a.metadata == b.metadata),
         ("tables", a.tables == b.tables),
@@ -257,48 +283,55 @@ fn structure_differs(model: &Model, pristine: &Model) -> Option<String> {
         return Some(format!("the workbook's {what} changed"));
     }
     for (x, y) in a.worksheets.iter().zip(&b.worksheets) {
-        let Worksheet {
-            dimension: _,
-            cols,
-            rows,
-            name,
-            sheet_data: _,
-            shared_formulas: _,
-            sheet_id,
-            load_rank,
-            state,
-            color,
-            merged_cells,
-            comments,
-            frozen_rows,
-            frozen_columns,
-            views,
-            show_grid_lines,
-            conditional_formatting,
-            links,
-            data_tables,
-        } = x;
-        let same = *cols == y.cols
-            && *rows == y.rows
-            && *name == y.name
-            && *sheet_id == y.sheet_id
-            && *load_rank == y.load_rank
-            && *state == y.state
-            && *color == y.color
-            && *merged_cells == y.merged_cells
-            && *comments == y.comments
-            && *frozen_rows == y.frozen_rows
-            && *frozen_columns == y.frozen_columns
-            && *views == y.views
-            && *show_grid_lines == y.show_grid_lines
-            && *conditional_formatting == y.conditional_formatting
-            && *links == y.links
-            && *data_tables == y.data_tables;
-        if !same {
-            return Some(format!("sheet {name}'s structure changed"));
+        if !sheet_structure_same(x, y) {
+            return Some(format!("sheet {}'s structure changed", x.name));
         }
     }
     None
+}
+
+/// Whether the worksheets `x` and `y` are the same but for their cells: everything the patcher
+/// does not rewrite, which is also what a structural edit moves (the kept `PivotChart` drawings,
+/// `pivot_drawings`, T-4950). Each [`Worksheet`] field is named, with no `..`, so a field added
+/// to the model is a compile error here until it is classified.
+pub(super) fn sheet_structure_same(x: &Worksheet, y: &Worksheet) -> bool {
+    let Worksheet {
+        dimension: _,
+        cols,
+        rows,
+        name,
+        sheet_data: _,
+        shared_formulas: _,
+        sheet_id,
+        load_rank,
+        state,
+        color,
+        merged_cells,
+        comments,
+        frozen_rows,
+        frozen_columns,
+        views,
+        show_grid_lines,
+        conditional_formatting,
+        links,
+        data_tables,
+    } = x;
+    *cols == y.cols
+        && *rows == y.rows
+        && *name == y.name
+        && *sheet_id == y.sheet_id
+        && *load_rank == y.load_rank
+        && *state == y.state
+        && *color == y.color
+        && *merged_cells == y.merged_cells
+        && *comments == y.comments
+        && *frozen_rows == y.frozen_rows
+        && *frozen_columns == y.frozen_columns
+        && *views == y.views
+        && *show_grid_lines == y.show_grid_lines
+        && *conditional_formatting == y.conditional_formatting
+        && *links == y.links
+        && *data_tables == y.data_tables
 }
 
 /// The cells of `sheet` that differ from `before`, as (row, column).
@@ -606,28 +639,33 @@ fn patch_value(old: &str, new: &str, export_vm: bool) -> Option<String> {
 
 /// `<c ...` (without its closing `>`) with `t` set to the given value in its place (or removed,
 /// or added last), every other attribute kept in its order and spelling. With `vm` given, `vm` is
-/// set the same way; without it, the source's `vm` is kept. A value is re-quoted with `"`, so one
-/// that held a `"` inside `'...'` gets it as `&quot;`. `None` for a malformed attribute.
+/// set the same way; without it, the source's `vm` is kept. `None` for a malformed attribute.
 fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>, vm: Vm<'_>) -> Option<String> {
-    let mut out = String::from("<c");
-    // `Some(new)` is an attribute to rewrite (`new` its value, or `None` to remove it); `None`
-    // leaves the source's as it is.
-    let mut t = Some(t.map(|t| escape_xml(t).into_owned()));
-    let mut vm = match vm {
-        Vm::Keep => None,
-        Vm::Set(v) => Some(v.map(|v| escape_xml(v).into_owned())),
-    };
+    match vm {
+        Vm::Keep => rewrite_tag(e, "c", &[("t", t)]),
+        Vm::Set(vm) => rewrite_tag(e, "c", &[("t", t), ("vm", vm)]),
+    }
+}
+
+/// The start tag `e` as `<name ...` (without its closing `>`), each attribute `changes` names set
+/// to its value (escaped here) in its place, or removed for `None`, or added last when absent;
+/// every other attribute kept in its order and spelling. A kept value is re-quoted with `"`, so
+/// one that held a `"` inside `'...'` gets it as `&quot;`. `None` for a malformed attribute.
+pub(crate) fn rewrite_tag(
+    e: &BytesStart<'_>,
+    name: &str,
+    changes: &[(&str, Option<&str>)],
+) -> Option<String> {
+    let mut out = format!("<{name}");
+    // `Some(new)` is a change still to place (`new` its value, or `None` to remove it).
+    let mut pending: Vec<(&str, Option<Option<String>>)> = (changes.iter())
+        .map(|(key, value)| (*key, Some(value.map(|v| escape_xml(v).into_owned()))))
+        .collect();
     for a in e.attributes() {
         let a = a.ok()?;
         let key = a.key.as_ref();
-        // `t` and a given `vm` are rewritten where the source had them.
-        let slot = match key {
-            "t" => Some(&mut t),
-            "vm" if vm.is_some() => Some(&mut vm),
-            _ => None,
-        };
-        let value = match slot {
-            Some(slot) => match slot.take().flatten() {
+        let value = match pending.iter_mut().find(|(k, _)| *k == key) {
+            Some((_, slot)) => match slot.take().flatten() {
                 Some(value) => value,
                 None => continue,
             },
@@ -635,7 +673,7 @@ fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>, vm: Vm<'_>) -> Option<
         };
         out.push_str(&format!(" {key}=\"{value}\""));
     }
-    for (key, value) in [("t", t), ("vm", vm)] {
+    for (key, value) in pending {
         if let Some(Some(value)) = value {
             out.push_str(&format!(" {key}=\"{value}\""));
         }
@@ -825,51 +863,47 @@ fn insert_cells(
     let mut tail_rows = String::new();
     for (row, cells) in inserts {
         let at_row = (row, 0);
-        match find_row(&index.rows, row) {
-            Some(r) => match r.insert_at {
-                Some(close) => {
-                    for (column, text) in cells {
-                        let next = r.cells.partition_point(|c| c.column < column);
-                        let at = r.cells.get(next).map_or(close, |c| c.start);
-                        edits.push(Edit {
-                            at,
-                            remove: 0,
-                            key: (row, column),
-                            text,
-                        });
-                    }
-                }
-                None => {
-                    // `<row .../>`: written out once as a full row.
-                    let open = xml[r.start..r.end].trim_end_matches("/>");
-                    let body: String = cells.into_iter().map(|(_, t)| t).collect();
+        if let Some(r) = find_row(&index.rows, row) {
+            if let Some(close) = r.insert_at {
+                for (column, text) in cells {
+                    let next = r.cells.partition_point(|c| c.column < column);
+                    let at = r.cells.get(next).map_or(close, |c| c.start);
                     edits.push(Edit {
-                        at: r.start,
-                        remove: r.end - r.start,
-                        key: at_row,
-                        text: format!("{open}>{body}</row>"),
+                        at,
+                        remove: 0,
+                        key: (row, column),
+                        text,
                     });
                 }
-            },
-            None => {
+            } else {
+                // `<row .../>`: written out once as a full row.
+                let open = xml[r.start..r.end].trim_end_matches("/>");
                 let body: String = cells.into_iter().map(|(_, t)| t).collect();
-                let text = format!(r#"<row r="{row}">{body}</row>"#);
-                let next = index.rows.partition_point(|r| r.r < row);
-                match (index.rows.get(next), &index.tail) {
-                    (Some(next), _) => edits.push(Edit {
-                        at: next.start,
-                        remove: 0,
-                        key: at_row,
-                        text,
-                    }),
-                    (None, Tail::Before(at)) => edits.push(Edit {
-                        at: *at,
-                        remove: 0,
-                        key: at_row,
-                        text,
-                    }),
-                    (None, Tail::Empty(..)) => tail_rows.push_str(&text),
-                }
+                edits.push(Edit {
+                    at: r.start,
+                    remove: r.end - r.start,
+                    key: at_row,
+                    text: format!("{open}>{body}</row>"),
+                });
+            }
+        } else {
+            let body: String = cells.into_iter().map(|(_, t)| t).collect();
+            let text = format!(r#"<row r="{row}">{body}</row>"#);
+            let next = index.rows.partition_point(|r| r.r < row);
+            match (index.rows.get(next), &index.tail) {
+                (Some(next), _) => edits.push(Edit {
+                    at: next.start,
+                    remove: 0,
+                    key: at_row,
+                    text,
+                }),
+                (None, Tail::Before(at)) => edits.push(Edit {
+                    at: *at,
+                    remove: 0,
+                    key: at_row,
+                    text,
+                }),
+                (None, Tail::Empty(..)) => tail_rows.push_str(&text),
             }
         }
     }

@@ -16,16 +16,16 @@ use crate::test::util::new_empty_model;
 fn wrong_order() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=C2*4");
-    model._set("B1", "4");
-    model._set("B2", "5");
-    model._set("C1", "=B1:B2");
+    model.set_a1("A1", "=C2*4");
+    model.set_a1("B1", "4");
+    model.set_a1("B2", "5");
+    model.set_a1("C1", "=B1:B2");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("C1"), "4");
-    assert_eq!(model._get_text("C2"), "5");
-    assert_eq!(model._get_text("A1"), "20");
+    assert_eq!(model.get_text_a1("C1"), "4");
+    assert_eq!(model.get_text_a1("C2"), "5");
+    assert_eq!(model.get_text_a1("A1"), "20");
 }
 
 //         ║    A     |    B    |    D    |   E   |
@@ -43,17 +43,17 @@ fn wrong_order() {
 fn dependency_chain() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=B2+D2");
-    model._set("B1", "=D1:D2");
-    model._set("D1", "=E1:E2");
-    model._set("E1", "10");
-    model._set("E2", "20");
+    model.set_a1("A1", "=B2+D2");
+    model.set_a1("B1", "=D1:D2");
+    model.set_a1("D1", "=E1:E2");
+    model.set_a1("E1", "10");
+    model.set_a1("E2", "20");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("D1"), "10");
-    assert_eq!(model._get_text("D2"), "20");
-    assert_eq!(model._get_text("B1"), "10");
-    assert_eq!(model._get_text("B2"), "20");
-    assert_eq!(model._get_text("A1"), "40");
+    assert_eq!(model.get_text_a1("D1"), "10");
+    assert_eq!(model.get_text_a1("D2"), "20");
+    assert_eq!(model.get_text_a1("B1"), "10");
+    assert_eq!(model.get_text_a1("B2"), "20");
+    assert_eq!(model.get_text_a1("A1"), "40");
 }

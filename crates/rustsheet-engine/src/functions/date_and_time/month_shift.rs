@@ -1,6 +1,9 @@
 //! EDATE and EOMONTH: a date shifted by whole months, and the last day of that month. Both lift
 //! over arrays and refuse a multi-cell range (`ArgKind::LiftArrays`, SPEC-0011): the scalar
 //! function is the kernel `lift_call` runs per element. Moved out of `date_and_time.rs` (T-1770).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// LINT-DEBT-END
 
 use chrono::Datelike;
 
@@ -12,31 +15,43 @@ use crate::{
     formatter::dates::{
         excel_serial_to_ymd, real_date_to_serial, shift_displayed_date, shift_months,
     },
-    functions::Function,
+    functions::{
+        util::empty_args::{written_empty_na, written_empty_or},
+        Function,
+    },
     model::Model,
 };
 
 impl Model {
     /// `EDATE(start_date, months)`.
     pub(crate) fn fn_edate(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let empty = self.empty_arguments::<2>(args);
         self.lift_call(Function::Edate, args, cell, &mut |model, values| {
-            model.edate_of(values, cell)
+            model.edate_of(values, empty, cell)
         })
     }
 
     /// `EOMONTH(start_date, months)`.
     pub(crate) fn fn_eomonth(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let empty = self.empty_arguments::<2>(args);
         self.lift_call(Function::Eomonth, args, cell, &mut |model, values| {
-            model.eomonth_of(values, cell)
+            model.eomonth_of(values, empty, cell)
         })
     }
 
     /// EDATE of one element. A boolean date or month count is `#VALUE!` (`{TRUE;45000}` gives
     /// `#VALUE!`, 45031: docs/excel-semantics/arrays.md "Scalar arguments lift").
-    fn edate_of(&self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+    fn edate_of(
+        &self,
+        values: &[CalcResult],
+        empty: [bool; 2],
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
         let [start, months] = values else {
             return CalcResult::new_args_number_error(cell);
         };
+        let na = written_empty_na(cell);
+        let [start, months] = written_empty_or([start, months], empty, &na);
         let serial_number = match self.cast_number_no_bools_ref(start, cell) {
             Ok(c) => c.floor() as i64,
             Err(s) => return s,
@@ -68,10 +83,17 @@ impl Model {
     }
 
     /// EOMONTH of one element. A negative date is `#NUM!`; a boolean is `#VALUE!`, as for EDATE.
-    fn eomonth_of(&self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+    fn eomonth_of(
+        &self,
+        values: &[CalcResult],
+        empty: [bool; 2],
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
+        let na = written_empty_na(cell);
         let [start, months] = values else {
             return CalcResult::new_args_number_error(cell);
         };
+        let [start, months] = written_empty_or([start, months], empty, &na);
         let serial_number = match self.cast_number_no_bools_ref(start, cell) {
             Ok(c) if c.floor() < 0.0 => return num_error(cell),
             Ok(c) => c.floor() as i64,

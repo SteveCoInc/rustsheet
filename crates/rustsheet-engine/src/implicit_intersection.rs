@@ -61,7 +61,7 @@ mod tests {
     use super::*;
 
     fn at(sheet: u32, row: i32, column: i32) -> CellReferenceIndex {
-        CellReferenceIndex { sheet, row, column }
+        CellReferenceIndex { sheet, column, row }
     }
 
     #[test]

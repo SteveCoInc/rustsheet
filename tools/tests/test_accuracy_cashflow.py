@@ -34,6 +34,12 @@ def test_irr_matches_microsofts_examples() -> None:
     assert irr(-100, 50, 50) == 0  # the flows sum to 0: the root is exactly 0
 
 
+def test_irr_guess_does_not_change_the_math_value() -> None:
+    # T-4778: a call's guess only picks among several roots, and a point here has one
+    flows = tuple(mp(f) for f in (42, 1, 1, -1))
+    assert IRR.evaluate([flows, mp("0.5")]) == IRR.evaluate([flows])
+
+
 def test_irr_domain_one_sign_and_several_sign_changes() -> None:
     with pytest.raises(DomainError):
         irr(100, 50, 20)

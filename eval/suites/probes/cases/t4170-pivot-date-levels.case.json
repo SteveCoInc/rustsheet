@@ -1,0 +1,429 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4170: one date field grouped by months, quarters and years together, as Excel saves it: Date grouped in place by months (<fieldGroup par base>, rangePr groupBy months) and two added cacheFields Quarters and Years (databaseField=0, <fieldGroup base>), each rangePr from 2019-01-01 to 2020-12-31 with autoStart and autoEnd off. Data!A1:B10 is Date (yyyy-mm-dd) and S over nine records 2018-12-15 1 (before startDate), 2019-01-10 2, 2019-02-20 4, 2019-04-05 8, 2019-11-30 16, 2020-01-10 32, 2020-07-04 64, 2021-01-15 128 (past endDate), 2019-01-25 256; S distinct powers of two, so a sum names its records, and January holds records of both years. One builder-v2 pivot per sheet: DC compact rows Years, Quarters, Date; DO outline form; DT tabular; DS tabular with Years' subtotals sum and count; DY rows Years, Date (Quarters off the axes); DM rows Date alone; DX rows Quarters, columns Years. Calc: GETPIVOTDATA on each level's labels alone and in pairs, the <start and >end items of each level, a year as a number, a date serial, an empty combination and a year past endDate. Pivot cells are in the sidecar's pivots section.",
+ "tags": [
+  "probe",
+  "pivot",
+  "getpivotdata",
+  "T-4170",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Date",
+    "B1": "S",
+    "A2": 43449.0,
+    "B2": 1,
+    "A3": 43475.0,
+    "B3": 2,
+    "A4": 43516.0,
+    "B4": 4,
+    "A5": 43560.0,
+    "B5": 8,
+    "A6": 43799.0,
+    "B6": 16,
+    "A7": 43840.0,
+    "B7": 32,
+    "A8": 44016.0,
+    "B8": 64,
+    "A9": 44211.0,
+    "B9": 128,
+    "A10": 43490.0,
+    "B10": 256
+   },
+   "number_formats": {
+    "A2": "yyyy-mm-dd",
+    "A3": "yyyy-mm-dd",
+    "A4": "yyyy-mm-dd",
+    "A5": "yyyy-mm-dd",
+    "A6": "yyyy-mm-dd",
+    "A7": "yyyy-mm-dd",
+    "A8": "yyyy-mm-dd",
+    "A9": "yyyy-mm-dd",
+    "A10": "yyyy-mm-dd"
+   }
+  },
+  {
+   "name": "DC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "Compact",
+     "source": "Data!A1:B10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Years",
+       "Quarters",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Date": {
+        "date_group": {
+         "levels": [
+          "months",
+          "quarters",
+          "years"
+         ],
+         "start": 43466.0,
+         "end": 44196.0
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DO",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "Outline",
+     "source": "Data!A1:B10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Years",
+       "Quarters",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Date": {
+        "date_group": {
+         "levels": [
+          "months",
+          "quarters",
+          "years"
+         ],
+         "start": 43466.0,
+         "end": 44196.0
+        },
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Quarters": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Years": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "S": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      },
+      "table": {
+       "compact": false,
+       "compactData": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DT",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "Tabular",
+     "source": "Data!A1:B10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Years",
+       "Quarters",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Date": {
+        "date_group": {
+         "levels": [
+          "months",
+          "quarters",
+          "years"
+         ],
+         "start": 43466.0,
+         "end": 44196.0
+        },
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Quarters": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Years": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "S": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DS",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "TabularSubtotals",
+     "source": "Data!A1:B10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Years",
+       "Quarters",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Date": {
+        "date_group": {
+         "levels": [
+          "months",
+          "quarters",
+          "years"
+         ],
+         "start": 43466.0,
+         "end": 44196.0
+        },
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Quarters": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Years": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "subtotals": [
+         "sum",
+         "count"
+        ]
+       },
+       "S": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DY",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "YearsMonths",
+     "source": "Data!A1:B10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Years",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Date": {
+        "date_group": {
+         "levels": [
+          "months",
+          "quarters",
+          "years"
+         ],
+         "start": 43466.0,
+         "end": 44196.0
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DM",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "MonthsOnly",
+     "source": "Data!A1:B10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Date": {
+        "date_group": {
+         "levels": [
+          "months",
+          "quarters",
+          "years"
+         ],
+         "start": 43466.0,
+         "end": 44196.0
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "DX",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "QuartersByYears",
+     "source": "Data!A1:B10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Quarters"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Date": {
+        "date_group": {
+         "levels": [
+          "months",
+          "quarters",
+          "years"
+         ],
+         "start": 43466.0,
+         "end": 44196.0
+        }
+       }
+      },
+      "columns": [
+       "Years"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "DC Years 2019",
+    "B1": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Years\",\"2019\")",
+    "A2": "DC Years 2019 (number)",
+    "B2": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Years\",2019)",
+    "A3": "DC Years 2020",
+    "B3": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Years\",\"2020\")",
+    "A4": "DC Quarters Qtr1 (both years)",
+    "B4": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Quarters\",\"Qtr1\")",
+    "A5": "DC Years 2019, Quarters Qtr1",
+    "B5": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Years\",\"2019\",\"Quarters\",\"Qtr1\")",
+    "A6": "DC Years 2020, Quarters Qtr1",
+    "B6": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Years\",\"2020\",\"Quarters\",\"Qtr1\")",
+    "A7": "DC Date Jan (both years)",
+    "B7": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Date\",\"Jan\")",
+    "A8": "DC Years 2020, Date Jan",
+    "B8": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Years\",\"2020\",\"Date\",\"Jan\")",
+    "A9": "DC Years 2019, Quarters Qtr1, Date Jan",
+    "B9": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Years\",\"2019\",\"Quarters\",\"Qtr1\",\"Date\",\"Jan\")",
+    "A10": "DC Years 2019, Date Jul (no record)",
+    "B10": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Years\",\"2019\",\"Date\",\"Jul\")",
+    "A11": "DC Years <1/1/2019",
+    "B11": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Years\",\"<1/1/2019\")",
+    "A12": "DC Quarters <1/1/2019",
+    "B12": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Quarters\",\"<1/1/2019\")",
+    "A13": "DC Date <1/1/2019",
+    "B13": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Date\",\"<1/1/2019\")",
+    "A14": "DC Years >12/31/2020",
+    "B14": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Years\",\">12/31/2020\")",
+    "A15": "DC Years 2021 (past endDate)",
+    "B15": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Years\",\"2021\")",
+    "A16": "DC Date 2019-01-10 (a date serial)",
+    "B16": "=GETPIVOTDATA(\"S\",DC!$A$3,\"Date\",DATE(2019,1,10))",
+    "A17": "DC grand total",
+    "B17": "=GETPIVOTDATA(\"S\",DC!$A$3)",
+    "A18": "DM Date Jan (months alone)",
+    "B18": "=GETPIVOTDATA(\"S\",DM!$A$3,\"Date\",\"Jan\")",
+    "A19": "DM Years 2019 (Years off the axes)",
+    "B19": "=GETPIVOTDATA(\"S\",DM!$A$3,\"Years\",\"2019\")",
+    "A20": "DX Years 2019, Quarters Qtr1 (Years on columns)",
+    "B20": "=GETPIVOTDATA(\"S\",DX!$A$3,\"Years\",\"2019\",\"Quarters\",\"Qtr1\")",
+    "A21": "DS Years 2019 (sum and count subtotals)",
+    "B21": "=GETPIVOTDATA(\"S\",DS!$A$3,\"Years\",\"2019\")"
+   }
+  }
+ ],
+ "expected": {}
+}

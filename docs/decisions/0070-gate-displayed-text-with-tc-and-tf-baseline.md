@@ -24,3 +24,11 @@
   `--allow-regressions` and a decision record, as a value regression does. The summary line of
   `eval-check` reports text known failures beside value ones. This amends decision 0068's "text
   results never change the baselines or the gate".
+- **Consequences (T-4944):** a pivot's layout is gated the same way on two more line kinds, read
+  only by the layout ratchet: `LC<TAB>case<TAB>n` (the sidecar pivots a case compares in full,
+  location and saved `rowItems`/`colItems`: today an engine-export case, `kind = "export"`) and
+  `LF<TAB>case<TAB>Sheet!Pivot` (one whose layout is not Excel's, whatever its verdict, so a fixed
+  location that reveals wrong lines is no new failure). Their labels carry a `layout ` prefix.
+  Other suites only report their pivot layouts. `C` and `F` keep their meaning, so the milestone
+  lists and probe rows that count `F` items are unchanged. The round-trip goldens of SPEC-0033 X3
+  (T-4180) may fill the same lines for the pivots of a saved package.

@@ -73,6 +73,15 @@ static EN: DateNames = DateNames {
     pm: "PM",
 };
 
+/// Excel's built-in custom lists (en-US), in the engine's chosen order (UNVERIFIED, T-4799): the
+/// abbreviated day names, the day names, the abbreviated month names, the month names, each from
+/// Sunday or January. A pivot's label sort under `customListSort` orders a field's names by them
+/// (`pivot::sort::labels`; docs/excel-semantics/pivots.md "Pivot sorts and filters as Excel for the
+/// web renders them": the abbreviated day names, probes/t4130-pivot-sort CL1). The other three
+/// lists, and the order between lists, are UNVERIFIED (unprobed, T-4799).
+pub(crate) static BUILT_IN_CUSTOM_LISTS: [&[&str]; 4] =
+    [&EN.days_short, &EN.days, &EN.months_short, &EN.months];
+
 impl DateNames {
     /// One name set from a table line's fields, `None` if it is malformed.
     fn from_fields(fields: &[&'static str]) -> Option<DateNames> {

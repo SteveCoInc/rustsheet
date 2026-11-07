@@ -6,6 +6,9 @@
 //! ([`bup`]), and basym ([`basym`]) for two shapes above 100 near the mean. The line-by-line
 //! model is `docs/research/t2464/r2-bratio/bratio_excel.py` `kernel`; every branch not ported yet
 //! keeps today's kernel (`incomplete_beta.rs`, SPEC-0025's migration).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 mod basym;
 mod bfrac;
@@ -172,6 +175,26 @@ pub(crate) fn l140_overflows(a: f64, b: f64, x: f64, y: f64) -> bool {
         matches!(d.branch, Branch::L140BupBpser | Branch::L140BupBgrat)
             && l140_bup_sum_overflows(d.a0, d.b0, d.x0, d.y0)
     })
+}
+
+/// Whether the first shape absorbs the second in doubles (fl(a + b) is a): b is below half an ulp
+/// of a. Only this orientation is Excel's error: where the first shape is the one absorbed, Excel
+/// answers (`BETA.DIST(2.84921687181174E-198,25002804469.8703,7.87993781085058E+38,TRUE)` and
+/// `BETA.DIST(2.63749596488496E-295,664.598766737767,4.73696273024973E+93,FALSE)` are 0, Gate A
+/// accuracy/BETA.DIST/s1 A183, A190; T-4238).
+pub(crate) fn first_shape_absorbs(a: f64, b: f64) -> bool {
+    a + b == a
+}
+
+/// Whether Excel's incomplete beta K(a, b, x, y) is `#NUM!` on bratio's bfrac branch because the
+/// oriented first shape absorbs the second ([`first_shape_absorbs`] on a0, b0):
+/// `NEGBINOM.DIST(40,1E+20,0.32..,TRUE)` and `BETA.DIST(0.32..,6E+17,41,TRUE)` are `#NUM!` while
+/// `(..,5E+17,41,..)` is 0, the cut where fl(a + 41) = a (probes/t4238-negbinom-bfrac-huge-s;
+/// statistics.md "NEGBINOM.DIST's cdf is #NUM! at a huge `number_s`"; T-4238). Only BETA.DIST's
+/// and NEGBINOM.DIST's cdfs are probed there.
+pub(crate) fn bfrac_shapes_absorbed(a: f64, b: f64, x: f64, y: f64) -> bool {
+    dispatch(a, b, x, y)
+        .is_some_and(|d| d.branch == Branch::Bfrac && first_shape_absorbs(d.a0, d.b0))
 }
 
 /// bratio's branch for min(a, b) <= 1 on the oriented point (x0 <= 0.5).

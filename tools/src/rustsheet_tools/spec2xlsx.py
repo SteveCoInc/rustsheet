@@ -49,7 +49,8 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     text, and no value may be both kept and hidden. `"filter_column": {"col_id": 5}` writes that values
     filter under `colId` 5, which must be 0 or past the table's last column, and `"criterion": false` there
     writes `<filterColumn colId="N"/>` with no criterion; Excel reads neither as filtered, and the
-    engine adapter loads such a table unfiltered (T-4003). The engine adapter loads both. With
+    engine adapter loads such a table unfiltered (T-4003). The engine adapter loads both. `"criteria"` writes
+    one values filter per table column instead (`spec_tables._criteria_columns`, T-4755). With
     `"totals_row": true` the last row of `ref` is the totals row: its cells (labels or formulas) are
     written with the table's totals metadata (T-1607). `"calculated": {"C": "T[[#This Row],[Col]]*2"}`
     writes a `<calculatedColumnFormula>` for column C (T-2969), leaving the data cells as the spec has them. Structured references are stored in their file
@@ -69,7 +70,7 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     "column": "Product", "value": "Sales"}]` writes pivots with rendered cells (pivot.py, T-1705; `"rendered"`, by
     `rustsheet-spec bake-pivots`, must equal them, T-2084); with a `"definition"` (pivot_definition.py, T-4122)
     only the parts, and Excel renders it on open. A sheet's `"pivot_charts"` adds column charts bound to a pivot,
-    with the caches the spec gives (pivot_chart.py, T-4130).
+    with the caches the spec gives (pivot_chart.py, T-4130); `"slicers"`/`"timelines"`: pivot_slicers.py (T-4767).
   * Future functions get their `_xlfn.` prefixes from the builder's own table (the engine exporter's
     list plus `_BUILDER_ONLY_PREFIXES`), never from XlsxWriter's `use_future_functions`, which skips a
     whole formula once any call in it is prefixed (T-0052); LET/LAMBDA names are written as `_xlpm.x`.
@@ -112,6 +113,7 @@ from rustsheet_tools.custom_properties import json_properties, set_json_property
 from rustsheet_tools.oracle.package import patch_parts, read_parts
 from rustsheet_tools.pivot import PivotParts, pivot_tables, relationships_xml
 from rustsheet_tools.pivot_chart import write_pivot_charts
+from rustsheet_tools.pivot_slicers import write_slicers
 from rustsheet_tools.sheetop import column_number, sheet_op
 from rustsheet_tools.spec_names import define_name
 from rustsheet_tools.spec_sheet_extras import activate_sheet, add_range_formulas, set_column_widths
@@ -494,7 +496,7 @@ def _patch_package(xlsx: bytes, spec: dict[str, Any], patches: _Patches) -> byte
     xlsx = _calculated_tables(xlsx, patches.calculated) if any(c for _, c in patches.calculated) else xlsx
     # Data tables and calculation settings are no-ops when the spec has none (T-0428).
     xlsx = _write_calculation(_write_data_tables(xlsx, patches.data_tables), spec.get("calculation"))
-    xlsx = write_pivot_charts(_write_pivots(xlsx, patches.pivots), spec)
+    xlsx = write_slicers(write_pivot_charts(_write_pivots(xlsx, patches.pivots), spec), spec)
     return _store_numbers(xlsx, patches.lossy) if patches.lossy else xlsx
 
 

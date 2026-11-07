@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 use super::annuity::{annuity_factor_rounded, annuity_power};
 use crate::{
     arithmetic::{extended_product, extended_quotient, extended_sum, flush_subnormal},

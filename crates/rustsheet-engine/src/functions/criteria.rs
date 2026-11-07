@@ -1,6 +1,9 @@
 //! Excel criteria and wildcard matching: the one place that parses `COUNTIF`-style
 //! criteria strings (operators, wildcards, `~` escapes, number/date/bool/error
 //! literals) and wildcard text patterns used by MATCH/XMATCH/XLOOKUP and D-functions.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use crate::{
     calc_result::CalcResult,
@@ -337,10 +340,7 @@ type CriteriaMatcher<'a> = Box<dyn Fn(&CalcResult) -> bool + 'a>;
 /// Excel: `<TRUE`, `>TRUE`, `<#N/A` and `>#N/A` match nothing, while `<=` and `>=` behave as
 /// equality (`COUNTIF` over 10, "abc", TRUE, #N/A, "abd", 5 gives 0 for `>TRUE`/`<TRUE`/`>#N/A`/
 /// `<#N/A` and 1 for `>=TRUE`/`<=TRUE`/`>=#N/A`/`<=#N/A`; probes/criteria-operands C1-C8).
-fn bool_or_error_operand_matcher<'a>(
-    operand: &'a str,
-    inclusive: bool,
-) -> Option<CriteriaMatcher<'a>> {
+fn bool_or_error_operand_matcher(operand: &str, inclusive: bool) -> Option<CriteriaMatcher<'_>> {
     if let Ok(b) = operand.to_lowercase().parse::<bool>() {
         Some(if inclusive {
             Box::new(move |x| result_is_equal_to_bool(x, b))

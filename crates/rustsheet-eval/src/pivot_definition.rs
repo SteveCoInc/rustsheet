@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::fmt::Write as _;
 
 use quick_xml::escape::escape;
-use rustsheet_engine::pivot::{Aggregate, MAX_RECORD_VALUES};
+use rustsheet_engine::pivot::{Aggregate, ShowDataAs, MAX_RECORD_VALUES};
 use serde_json::{Map, Value as Json};
 
 use crate::case::{split_qualified, CaseSpec, CellInput, PivotTableSpec, SheetSpec};
@@ -51,33 +51,6 @@ const MAX_LIST: usize = 256;
 const SUBTOTALS: [&str; 11] = [
     "sum", "countA", "avg", "max", "min", "product", "count", "stdDev", "stdDevP", "var", "varP",
 ];
-/// The Excel 2010 show-as modes (`SHOW_AS_X14`), written as the x14 data field extension's
-/// `pivotShowAs` with no `showDataAs`.
-const SHOW_AS_X14: [&str; 6] = [
-    "percentOfParent",
-    "percentOfParentRow",
-    "percentOfParentCol",
-    "percentOfRunningTotal",
-    "rankAscending",
-    "rankDescending",
-];
-const X14_NS: &str = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main";
-/// The x14 dataField extension's uri (`X14_DATA_FIELD_URI`).
-const X14_DATA_FIELD_URI: &str = "{E15A36E0-9728-4e99-A89B-3F7291B0FE68}";
-/// `ST_ShowDataAs`, the modes the builder writes as `showDataAs` (`SHOW_DATA_AS` less
-/// [`SHOW_AS_X14`]).
-const SHOW_DATA_AS: [&str; 9] = [
-    "normal",
-    "difference",
-    "percent",
-    "percentDiff",
-    "runTotal",
-    "percentOfRow",
-    "percentOfCol",
-    "percentOfTotal",
-    "index",
-];
-
 /// The three parts of a defined pivot: its cache definition and records, and its table.
 pub(crate) struct Parts {
     pub(crate) cache_definition: String,
@@ -109,7 +82,7 @@ enum Key {
 fn key(value: Option<&Cached>) -> Key {
     match value {
         None => Key::Missing,
-        // Python's `casefold`; `to_lowercase` differs from it only past ASCII (`ß`).
+        // The builder's `fold`, Python's `str.lower`: `ß` stays apart from `ss`.
         Some(Cached::Text(text)) => Key::Text(text.to_lowercase()),
         Some(Cached::Number(n)) => Key::Number(n.to_bits()),
         Some(Cached::Bool(b)) => Key::Bool(*b),
@@ -230,6 +203,28 @@ struct Field<'a> {
     data: bool,
     /// Keys of its calculated items (`calculated`, T-4130).
     calculated: std::collections::HashSet<Key>,
+    /// Its part in a discrete or date group (`groups.rs`, T-4170).
+    role: Role,
+    /// The group items its pivotField indexes, when grouped by a discrete or date group.
+    labels: Option<Vec<Option<Cached>>>,
+    /// Its pivotField's item order (indices into `labels`), when not their own.
+    item_order: Option<Vec<usize>>,
+    /// Its `<fieldGroup>`, written after its shared items.
+    group_xml: String,
+}
+
+/// A field's part in a discrete or date group (`pivot_groups.py`'s `added`, `dates` and
+/// `discrete_base`, which exclude each other).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Role {
+    /// Not grouped by one.
+    Plain,
+    /// A field a group adds (`databaseField="0"`).
+    Added,
+    /// Grouped by date in place: cached as dates.
+    Dates,
+    /// The base of a discrete group: its shared items are listed.
+    DiscreteBase,
 }
 
 impl<'a> Field<'a> {
@@ -248,6 +243,10 @@ impl<'a> Field<'a> {
             axis: None,
             data: false,
             calculated: std::collections::HashSet::new(),
+            role: Role::Plain,
+            labels: None,
+            item_order: None,
+            group_xml: String::new(),
         }
     }
 
@@ -285,11 +284,21 @@ impl<'a> Field<'a> {
 
     /// Whether records refer to the shared items by index (`listed`).
     fn listed(&self) -> bool {
-        !(self.numeric_only() && (self.axis.is_none() || self.group().is_some()))
+        self.role == Role::DiscreteBase
+            || !(self.numeric_only()
+                && (self.axis.is_none() || self.group().is_some() || self.role == Role::Dates))
     }
 
-    /// `<sharedItems>` (`shared_items`): the flags always, the list when records refer to it.
-    fn shared_items(&self) -> String {
+    /// `<sharedItems>` (`shared_items`): the flags always, the list when records refer to it; a
+    /// date-grouped field's date flags (`date_shared_items`).
+    fn shared_items(&self) -> Result<String, String> {
+        if self.role == Role::Dates {
+            return groups::date_shared_items(&self.values);
+        }
+        Ok(self.plain_shared_items())
+    }
+
+    fn plain_shared_items(&self) -> String {
         let strings = (self.values.iter()).any(|v| {
             matches!(
                 v,
@@ -436,18 +445,7 @@ impl<'a> DefinedPivot<'a> {
                 .and_then(Json::as_bool)
                 .unwrap_or(true),
         };
-        let entries = d.get("fields").and_then(Json::as_object);
-        if entries.is_some_and(|e| e.len() > MAX_LIST) {
-            return Err(format!("pivot {name}: more than {MAX_LIST} fields entries"));
-        }
-        for (field, entry) in entries.into_iter().flatten() {
-            let index = pivot.index(field)?;
-            let target = &mut pivot.fields[index];
-            target.spec = entry.as_object();
-            if let Some(order) = target.entry("order").and_then(Json::as_array) {
-                target.reorder(order)?;
-            }
-        }
+        pivot.read_fields()?;
         pivot.read_calculated_items()?;
         pivot.rows = pivot.axis("rows", "axisRow")?;
         pivot.columns = pivot.axis("columns", "axisCol")?;
@@ -461,10 +459,13 @@ impl<'a> DefinedPivot<'a> {
         Ok(pivot)
     }
 
-    fn index(&self, name: &str) -> Result<usize, String> {
+    fn find(&self, name: &str) -> Option<usize> {
         let folded = name.to_lowercase();
-        (self.fields.iter())
-            .position(|f| f.name.to_lowercase() == folded)
+        (self.fields.iter()).position(|f| f.name.to_lowercase() == folded)
+    }
+
+    fn index(&self, name: &str) -> Result<usize, String> {
+        self.find(name)
             .ok_or_else(|| format!("pivot {}: no field {name:?}", self.name))
     }
 
@@ -500,6 +501,12 @@ impl<'a> DefinedPivot<'a> {
                 .and_then(Json::as_str)
                 .ok_or("a page names a field")?;
             let i = self.index(field)?;
+            if self.fields[i].role == Role::Dates {
+                return Err(format!(
+                    "pivot {}: page field {field:?} is date-grouped",
+                    self.name
+                ));
+            }
             self.fields[i].axis = Some("axisPage");
             let item = (page.get("item"))
                 .map(|raw| cached_json(raw).map(|v| key(v.as_ref())))
@@ -518,6 +525,12 @@ impl<'a> DefinedPivot<'a> {
                 .and_then(Json::as_str)
                 .ok_or("a data field names a field")?;
             let i = self.index(field)?;
+            if self.fields[i].role == Role::Added {
+                return Err(format!(
+                    "pivot {}: group field {field:?} is not a data field",
+                    self.name
+                ));
+            }
             let subtotal = raw.get("subtotal").and_then(Json::as_str).unwrap_or("sum");
             let verb = Aggregate::from_consolidate_name(subtotal)
                 .ok_or_else(|| format!("subtotal {subtotal:?}"))?
@@ -549,7 +562,15 @@ impl<'a> DefinedPivot<'a> {
                 );
                 continue;
             }
-            let mut group = String::new();
+            if f.role == Role::Added {
+                let _ = write!(
+                    fields,
+                    r#"<cacheField name="{name}" numFmtId="0" databaseField="0">{}</cacheField>"#,
+                    raw_cache::group_items(f, &f.group_xml)?
+                );
+                continue;
+            }
+            let mut group = f.group_xml.clone();
             if let Some(g) = f.group() {
                 let labels = f.group_labels()?;
                 let items = labels.iter().fold(String::new(), |mut out, label| {
@@ -566,8 +587,9 @@ impl<'a> DefinedPivot<'a> {
             }
             let _ = write!(
                 fields,
-                r#"<cacheField name="{name}" numFmtId="0">{}{group}</cacheField>"#,
-                f.shared_items()
+                r#"<cacheField name="{name}" numFmtId="0">{}{}</cacheField>"#,
+                f.shared_items()?,
+                raw_cache::group_items(f, &group)?
             );
         }
         let extra = attrs(self.d.get("cache"))?;
@@ -594,9 +616,10 @@ impl<'a> DefinedPivot<'a> {
         ))
     }
 
-    fn cache_records(&self) -> String {
-        let database: Vec<&Field<'_>> =
-            self.fields.iter().filter(|f| f.formula.is_none()).collect();
+    fn cache_records(&self) -> Result<String, String> {
+        let database: Vec<&Field<'_>> = (self.fields.iter())
+            .filter(|f| f.formula.is_none() && f.role != Role::Added)
+            .collect();
         // A listed field's records refer to its items by index; the others hold values inline.
         let index: Vec<Option<HashMap<Key, usize>>> = (database.iter())
             .map(|f| {
@@ -608,133 +631,29 @@ impl<'a> DefinedPivot<'a> {
                 f.listed().then(|| keys.collect())
             })
             .collect();
+        let names: Vec<&str> = database.iter().map(|f| f.name.as_str()).collect();
+        let raw = self.records_xml(&names)?;
         let mut rows = String::new();
         for r in 0..self.records {
             rows.push_str("<r>");
-            for (f, at) in database.iter().zip(&index) {
+            for (k, (f, at)) in database.iter().zip(&index).enumerate() {
                 let value = f.values.get(r).and_then(Option::as_ref);
-                if let Some(k) = at.as_ref().and_then(|at| at.get(&key(value))) {
+                if let Some(xml) = raw.get(&(r, k)) {
+                    rows.push_str(xml);
+                } else if let Some(k) = at.as_ref().and_then(|at| at.get(&key(value))) {
                     let _ = write!(rows, r#"<x v="{k}"/>"#);
+                } else if let (true, Some(Cached::Number(n))) = (f.role == Role::Dates, value) {
+                    let _ = write!(rows, r#"<d v="{}"/>"#, groups::iso_date(*n)?);
                 } else {
                     rows.push_str(&item_xml(value));
                 }
             }
             rows.push_str("</r>");
         }
-        format!(
+        Ok(format!(
             r#"<pivotCacheRecords xmlns="{MAIN_NS}" count="{}">{rows}</pivotCacheRecords>"#,
             self.records
-        )
-    }
-
-    fn pivot_field(f: &Field<'_>) -> Result<String, String> {
-        let extra = attrs(f.entry("attrs"))?;
-        let mut head = String::new();
-        if let Some(axis) = f.axis {
-            let _ = write!(head, r#" axis="{axis}""#);
-        }
-        if f.data {
-            head.push_str(r#" dataField="1""#);
-        }
-        if f.formula.is_some() {
-            head.push_str(r#" dragToRow="0" dragToCol="0" dragToPage="0""#);
-        }
-        let subtotals: Option<Vec<&str>> = f
-            .entry("subtotals")
-            .and_then(Json::as_array)
-            .map(|s| s.iter().filter_map(Json::as_str).collect());
-        if let Some(subtotals) = &subtotals {
-            if subtotals.len() > MAX_LIST || subtotals.iter().any(|s| !SUBTOTALS.contains(s)) {
-                return Err(format!("subtotals of {:?}", f.name));
-            }
-            head.push_str(r#" defaultSubtotal="0""#);
-            for s in subtotals {
-                let _ = write!(head, r#" {s}Subtotal="1""#);
-            }
-        }
-        let hidden = f.entry("hidden").and_then(Json::as_array);
-        if hidden.is_some_and(|h| !h.is_empty()) && f.axis == Some("axisPage") {
-            head.push_str(r#" multipleItemSelectionAllowed="1""#);
-        }
-        let ext = Self::field_ext(f);
-        if f.axis.is_none() {
-            return Ok(if ext.is_empty() {
-                format!(r#"<pivotField{head} showAll="0"{extra}/>"#)
-            } else {
-                format!(r#"<pivotField{head} showAll="0"{extra}>{ext}</pivotField>"#)
-            });
-        }
-        let values: Vec<Option<Cached>> = if f.group().is_some() {
-            (f.group_labels()?.into_iter())
-                .map(|label| Some(Cached::Text(label)))
-                .collect()
-        } else {
-            f.items.clone()
-        };
-        let keys: HashMap<Key, usize> = (values.iter().enumerate())
-            .map(|(k, v)| (key(v.as_ref()), k))
-            .collect();
-        let mut flags: HashMap<usize, String> = HashMap::new();
-        for (kind, attr) in [("hidden", r#" h="1""#), ("collapsed", r#" sd="0""#)] {
-            let listed = f.entry(kind).and_then(Json::as_array);
-            for raw in bounded(listed.map_or(&[], Vec::as_slice), kind)? {
-                let k = keys
-                    .get(&key(cached_json(raw)?.as_ref()))
-                    .ok_or_else(|| format!("{kind} item {raw} is not in field {:?}", f.name))?;
-                flags.entry(*k).or_default().push_str(attr);
-            }
-        }
-        // `item_attrs`: item text to its other `<item>` attributes.
-        if let Some(listed) = f.entry("item_attrs").and_then(Json::as_object) {
-            if listed.len() > MAX_LIST {
-                return Err(format!("item_attrs of {:?}", f.name));
-            }
-            for (text, extra) in listed {
-                let wanted = key(Some(&Cached::Text(text.clone())));
-                let k = keys.get(&wanted).ok_or_else(|| {
-                    format!("item_attrs item {text:?} is not in field {:?}", f.name)
-                })?;
-                flags.entry(*k).or_default().push_str(&attrs(Some(extra))?);
-            }
-        }
-        // A calculated item is `f="1"` unless its item_attrs set `f` (`own_f`).
-        let own_f: std::collections::HashSet<Key> =
-            (f.entry("item_attrs").and_then(Json::as_object))
-                .into_iter()
-                .flatten()
-                .filter(|(_, extra)| extra.get("f").is_some())
-                .map(|(text, _)| key(Some(&Cached::Text(text.clone()))))
-                .collect();
-        for (k, v) in values.iter().enumerate() {
-            let k_key = key(v.as_ref());
-            if f.calculated.contains(&k_key) && !own_f.contains(&k_key) {
-                flags.entry(k).or_default().push_str(r#" f="1""#);
-            }
-        }
-        let mut items = (0..values.len()).fold(String::new(), |mut out, k| {
-            let flag = flags.get(&k).map_or("", String::as_str);
-            let _ = write!(out, r#"<item x="{k}"{flag}/>"#);
-            out
-        });
-        let tails = subtotals.unwrap_or_else(|| vec!["default"]);
-        for t in &tails {
-            let _ = write!(items, r#"<item t="{t}"/>"#);
-        }
-        Ok(format!(
-            r#"<pivotField{head} showAll="0"{extra}><items count="{}">{items}</items>{ext}</pivotField>"#,
-            values.len() + tails.len()
         ))
-    }
-
-    /// The field's raw children after `items` (`_field_ext`: `autoSortScope`, then `extLst`), as
-    /// written.
-    fn field_ext(f: &Field<'_>) -> String {
-        ["autoSortScope", "extLst"]
-            .iter()
-            .filter_map(|slot| f.entry("xml").and_then(|x| x.get(*slot)))
-            .filter_map(Json::as_str)
-            .map(|text| text.trim().to_string())
-            .collect()
     }
 
     fn page_field(&self, field: usize, item: Option<&Key>, extra: &str) -> Result<String, String> {
@@ -755,15 +674,15 @@ impl<'a> DefinedPivot<'a> {
             let _ = write!(attrs, r#" subtotal="{}""#, e.subtotal);
         }
         let mut ext = String::new();
+        // The builder's `SHOW_DATA_AS` is the engine's one name table: an x14 mode
+        // (`SHOW_AS_X14`) is the x14 dataField extension's `pivotShowAs`, with no `showDataAs`.
         if let Some(show) = e.raw.get("showDataAs").and_then(Json::as_str) {
-            if SHOW_AS_X14.contains(&show) {
-                ext = format!(
-                    r#"<extLst><ext uri="{X14_DATA_FIELD_URI}" xmlns:x14="{X14_NS}"><x14:dataField pivotShowAs="{show}"/></ext></extLst>"#
-                );
-            } else if SHOW_DATA_AS.contains(&show) {
-                let _ = write!(attrs, r#" showDataAs="{show}""#);
-            } else {
-                return Err(format!("showDataAs {show:?}"));
+            let mode = ShowDataAs::from_name(show).ok_or_else(|| format!("showDataAs {show:?}"))?;
+            match mode.x14_data_field_extension("") {
+                Some(extension) => ext = format!("<extLst>{extension}</extLst>"),
+                None => {
+                    let _ = write!(attrs, r#" showDataAs="{}""#, mode.name());
+                }
             }
         }
         let base = match e.raw.get("baseField") {
@@ -961,7 +880,7 @@ pub(crate) fn parts(
     let source_ref = format!("{from}:{to}");
     Ok(Parts {
         cache_definition: built.cache_definition(&source_sheet, &source_ref)?,
-        cache_records: built.cache_records(),
+        cache_records: built.cache_records()?,
         table: built.table_definition(cache_id, anchor)?,
     })
 }
@@ -970,5 +889,10 @@ mod calculated_items;
 mod checks;
 #[cfg(test)]
 mod export_tests;
+mod groups;
+mod item_order;
+mod pivot_field;
+mod raw_cache;
+pub(crate) mod slicers;
 #[cfg(test)]
 mod tests;

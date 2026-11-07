@@ -20,6 +20,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use rustsheet::{Value, Workbook};
+use rustsheet_engine::clock::Clock;
 use rustsheet_engine::language::get_default_language;
 use rustsheet_engine::types::Cell;
 use rustsheet_engine::Model;
@@ -48,9 +49,17 @@ fn a1(row: i32, column: i32) -> String {
 /// # Errors
 /// When the importer refuses the package.
 pub(crate) fn load_model(bytes: &[u8], name: &str) -> Result<Model, String> {
+    load_model_on(bytes, name, Clock::system())
+}
+
+/// [`load_model`] on `clock` (the pivot freshness test reads the harness clock, T-4906).
+///
+/// # Errors
+/// As [`load_model`].
+pub(crate) fn load_model_on(bytes: &[u8], name: &str, clock: Clock) -> Result<Model, String> {
     let workbook = rustsheet_xlsx::import::load_from_xlsx_bytes(bytes, name, "en", "UTC")
         .map_err(|e| e.to_string())?;
-    Model::from_workbook(workbook, "en")
+    Model::from_workbook_with_clock(workbook, "en", clock)
 }
 
 /// The input, style and structure facts of a loaded model (D3.1–D3.5).

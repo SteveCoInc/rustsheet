@@ -61,12 +61,12 @@ const ARRAY_CALLS: &[&str] = &[
 fn every_entered_function_lifts_over_an_array() {
     let mut model = new_empty_model();
     for (row, formula) in ARRAY_CALLS.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), &format!("=ROWS({formula})"));
+        model.set_a1(&format!("A{}", row + 1), &format!("=ROWS({formula})"));
     }
     model.evaluate();
     for (row, formula) in ARRAY_CALLS.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *"2",
             "ROWS({formula})"
         );
@@ -77,77 +77,77 @@ fn every_entered_function_lifts_over_an_array() {
 fn later_arguments_lift_over_a_range_on_their_own_rows() {
     let mut model = new_empty_model();
     // G1:G2 = TRUE, FALSE; G3:G4 = 2, 3 (probes/stat-later-argument-lift H, I, J).
-    model._set("G1", "TRUE");
-    model._set("G2", "FALSE");
-    model._set("G3", "2");
-    model._set("G4", "3");
-    model._set("A1", "=ROWS(NORM.DIST(1.5,1,2,G1:G2))");
-    model._set("A2", "=INDEX(NORM.DIST(1.5,1,2,G1:G2),2)");
-    model._set("A3", "=INDEX(BETA.DIST(1.5,2,3,TRUE,1,G3:G4),2)");
-    model._set("A4", "=INDEX(PERMUT(5,G3:G4),2)");
-    model._set("A5", "=INDEX(TDIST(1.5,5,G3:G4),1)");
+    model.set_a1("G1", "TRUE");
+    model.set_a1("G2", "FALSE");
+    model.set_a1("G3", "2");
+    model.set_a1("G4", "3");
+    model.set_a1("A1", "=ROWS(NORM.DIST(1.5,1,2,G1:G2))");
+    model.set_a1("A2", "=INDEX(NORM.DIST(1.5,1,2,G1:G2),2)");
+    model.set_a1("A3", "=INDEX(BETA.DIST(1.5,2,3,TRUE,1,G3:G4),2)");
+    model.set_a1("A4", "=INDEX(PERMUT(5,G3:G4),2)");
+    model.set_a1("A5", "=INDEX(TDIST(1.5,5,G3:G4),1)");
     // Off the range's rows too: a lift, not an intersection.
-    model._set("A10", "=ROWS(LOGNORM.INV(0.4,1,G3:G4))");
+    model.set_a1("A10", "=ROWS(LOGNORM.INV(0.4,1,G3:G4))");
     // A one-cell range is its value, also as BETA.DIST's cumulative (L11).
-    model._set("A11", "=BETA.DIST(0.5,2,3,G1:G1)");
+    model.set_a1("A11", "=BETA.DIST(0.5,2,3,G1:G1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"2");
-    assert_eq!(model._get_text("A2"), *"0.193334058");
-    assert_eq!(model._get_text("A3"), *"0.26171875");
-    assert_eq!(model._get_text("A4"), *"60");
-    assert_eq!(model._get_text("A5"), *"0.19390368");
-    assert_eq!(model._get_text("A10"), *"2");
-    assert_eq!(model._get_text("A11"), *"0.6875");
+    assert_eq!(model.get_text_a1("A1"), *"2");
+    assert_eq!(model.get_text_a1("A2"), *"0.193334058");
+    assert_eq!(model.get_text_a1("A3"), *"0.26171875");
+    assert_eq!(model.get_text_a1("A4"), *"60");
+    assert_eq!(model.get_text_a1("A5"), *"0.19390368");
+    assert_eq!(model.get_text_a1("A10"), *"2");
+    assert_eq!(model.get_text_a1("A11"), *"0.6875");
 }
 
 #[test]
 fn each_element_is_the_scalar_call_with_its_own_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=INDEX(PERMUT({5;#N/A},2),2)");
-    model._set("A2", "=INDEX(PERMUT({5;5},{2;6}),2)");
-    model._set("A3", "=INDEX(NORM.DIST({1;\"x\"},0,1,TRUE),2)");
-    model._set("A4", "=INDEX(NORM.DIST({1;\"1\"},0,1,TRUE),2)");
-    model._set("A5", "=INDEX(GAMMA({1.5;-1}),2)");
-    model._set("A6", "=INDEX(BINOM.INV({5;5},0.4,{0.4;0.9}),2)");
-    model._set("A7", "=INDEX(TDIST({-1;1.5},5,1),1)");
-    model._set("A8", "=INDEX(TDIST({1.5;1.5},5,{3;2}),1)");
-    model._set("A9", "=INDEX(BETA.DIST(0.5,2,3,{\"TRUE\";1}),1)");
-    model._set("A10", "=ROWS(NORM.DIST({1;2;3},{0,1},1,TRUE))");
-    model._set("A11", "=COLUMNS(NORM.DIST({1;2;3},{0,1},1,TRUE))");
+    model.set_a1("A1", "=INDEX(PERMUT({5;#N/A},2),2)");
+    model.set_a1("A2", "=INDEX(PERMUT({5;5},{2;6}),2)");
+    model.set_a1("A3", "=INDEX(NORM.DIST({1;\"x\"},0,1,TRUE),2)");
+    model.set_a1("A4", "=INDEX(NORM.DIST({1;\"1\"},0,1,TRUE),2)");
+    model.set_a1("A5", "=INDEX(GAMMA({1.5;-1}),2)");
+    model.set_a1("A6", "=INDEX(BINOM.INV({5;5},0.4,{0.4;0.9}),2)");
+    model.set_a1("A7", "=INDEX(TDIST({-1;1.5},5,1),1)");
+    model.set_a1("A8", "=INDEX(TDIST({1.5;1.5},5,{3;2}),1)");
+    model.set_a1("A9", "=INDEX(BETA.DIST(0.5,2,3,{\"TRUE\";1}),1)");
+    model.set_a1("A10", "=ROWS(NORM.DIST({1;2;3},{0,1},1,TRUE))");
+    model.set_a1("A11", "=COLUMNS(NORM.DIST({1;2;3},{0,1},1,TRUE))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#N/A");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
-    assert_eq!(model._get_text("A3"), *"#VALUE!");
-    assert_eq!(model._get_text("A4"), *"0.841344746");
-    assert_eq!(model._get_text("A5"), *"#NUM!");
-    assert_eq!(model._get_text("A6"), *"3");
-    assert_eq!(model._get_text("A7"), *"#NUM!");
-    assert_eq!(model._get_text("A8"), *"#NUM!");
-    assert_eq!(model._get_text("A9"), *"0.6875");
-    assert_eq!(model._get_text("A10"), *"3");
-    assert_eq!(model._get_text("A11"), *"2");
+    assert_eq!(model.get_text_a1("A1"), *"#N/A");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), *"0.841344746");
+    assert_eq!(model.get_text_a1("A5"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A6"), *"3");
+    assert_eq!(model.get_text_a1("A7"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A8"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A9"), *"0.6875");
+    assert_eq!(model.get_text_a1("A10"), *"3");
+    assert_eq!(model.get_text_a1("A11"), *"2");
 }
 
 #[test]
 fn each_kernel_keeps_its_own_error_order() {
     let mut model = new_empty_model();
     // T.DIST.2T reads both arguments before it checks x: a df error wins over x < 0.
-    model._set("A1", "=T.DIST.2T(-1,NA())");
-    model._set("A2", "=INDEX(T.DIST.2T({-1;1},{#N/A;5}),1)");
+    model.set_a1("A1", "=T.DIST.2T(-1,NA())");
+    model.set_a1("A2", "=INDEX(T.DIST.2T({-1;1},{#N/A;5}),1)");
     // TDIST reads all three arguments before it checks any (probes/stat-overflow-arguments F2,
     // F3, F6).
-    model._set("A3", "=TDIST(-1,NA(),1)");
-    model._set("A4", "=INDEX(TDIST({-1;1},{#N/A;5},1),1)");
-    model._set("A5", "=INDEX(TDIST(1,NA(),{1;2}),2)");
+    model.set_a1("A3", "=TDIST(-1,NA(),1)");
+    model.set_a1("A4", "=INDEX(TDIST({-1;1},{#N/A;5},1),1)");
+    model.set_a1("A5", "=INDEX(TDIST(1,NA(),{1;2}),2)");
     // Leftmost first for the rest.
-    model._set("A6", "=INDEX(NORM.DIST({#DIV/0!;1},NA(),1,TRUE),1)");
+    model.set_a1("A6", "=INDEX(NORM.DIST({#DIV/0!;1},NA(),1,TRUE),1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#N/A");
-    assert_eq!(model._get_text("A2"), *"#N/A");
-    assert_eq!(model._get_text("A3"), *"#N/A");
-    assert_eq!(model._get_text("A4"), *"#N/A");
-    assert_eq!(model._get_text("A5"), *"#N/A");
-    assert_eq!(model._get_text("A6"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A1"), *"#N/A");
+    assert_eq!(model.get_text_a1("A2"), *"#N/A");
+    assert_eq!(model.get_text_a1("A3"), *"#N/A");
+    assert_eq!(model.get_text_a1("A4"), *"#N/A");
+    assert_eq!(model.get_text_a1("A5"), *"#N/A");
+    assert_eq!(model.get_text_a1("A6"), *"#DIV/0!");
 }
 
 #[test]
@@ -155,15 +155,15 @@ fn permut_stops_once_its_product_is_infinite() {
     // 10^15 factors before the cap; now at most 171, and a product past f64::MAX is #NUM!
     // (probes/stat-overflow-arguments A13-A15).
     let mut model = new_empty_model();
-    model._set("A1", "=PERMUT(1E9,1E9)");
-    model._set("A2", "=PERMUT(200,180)");
-    model._set("A3", "=PERMUT(20,5)");
-    model._set("A4", "=PERMUT(170,170)");
+    model.set_a1("A1", "=PERMUT(1E9,1E9)");
+    model.set_a1("A2", "=PERMUT(200,180)");
+    model.set_a1("A3", "=PERMUT(20,5)");
+    model.set_a1("A4", "=PERMUT(170,170)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
-    assert_eq!(model._get_text("A3"), *"1860480");
-    assert_eq!(model._get_text("A4"), *"7.2574E+306");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"1860480");
+    assert_eq!(model.get_text_a1("A4"), *"7.2574E+306");
 }
 
 #[test]
@@ -172,40 +172,40 @@ fn weighted_kernels_are_charged_their_weight() {
     // T-3444): 2^27 / 16384 = 8,192 elements, so a lifted call of 10,000 is refused before it runs
     // and one of 8,000 runs; PERMUT and PERMUTATIONA (`Constant`) run over 800,000 elements.
     let mut model = new_empty_model();
-    model._set("A1", "=ROWS(BINOM.INV(5,0.4,SEQUENCE(10000)/10001))");
-    model._set("A2", "=ROWS(BINOM.INV(5,0.4,SEQUENCE(8000)/8001))");
-    model._set("A3", "=ROWS(CRITBINOM(5,0.4,SEQUENCE(10000)/10001))");
-    model._set("A4", "=ROWS(PERMUT(5,SEQUENCE(800000)))");
-    model._set("A5", "=ROWS(PERMUTATIONA(5,SEQUENCE(800000)))");
+    model.set_a1("A1", "=ROWS(BINOM.INV(5,0.4,SEQUENCE(10000)/10001))");
+    model.set_a1("A2", "=ROWS(BINOM.INV(5,0.4,SEQUENCE(8000)/8001))");
+    model.set_a1("A3", "=ROWS(CRITBINOM(5,0.4,SEQUENCE(10000)/10001))");
+    model.set_a1("A4", "=ROWS(PERMUT(5,SEQUENCE(800000)))");
+    model.set_a1("A5", "=ROWS(PERMUTATIONA(5,SEQUENCE(800000)))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"8000");
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"800000");
-    assert_eq!(model._get_text("A5"), *"800000");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"8000");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"800000");
+    assert_eq!(model.get_text_a1("A5"), *"800000");
 }
 
 #[test]
 fn unlifted_calls_are_the_scalar_calls() {
     let mut model = new_empty_model();
-    model._set("A1", "=NORM.DIST(1.5,1,2,TRUE)");
-    model._set("A2", "=BETADIST(1.5,2,3,1,3)");
-    model._set("A3", "=NORMSDIST(0.5)");
-    model._set("A4", "=NEGBINOMDIST(2,5,0.4)");
-    model._set("A5", "=LOGNORMDIST(1.5,1,2)");
-    model._set("A6", "=BINOM.DIST.RANGE(5,0.4,1)");
-    model._set("A7", "=NORM.DIST(1.5,1,2)");
-    model._set("A8", "=STANDARDIZE(TRUE,1,2)");
+    model.set_a1("A1", "=NORM.DIST(1.5,1,2,TRUE)");
+    model.set_a1("A2", "=BETADIST(1.5,2,3,1,3)");
+    model.set_a1("A3", "=NORMSDIST(0.5)");
+    model.set_a1("A4", "=NEGBINOMDIST(2,5,0.4)");
+    model.set_a1("A5", "=LOGNORMDIST(1.5,1,2)");
+    model.set_a1("A6", "=BINOM.DIST.RANGE(5,0.4,1)");
+    model.set_a1("A7", "=NORM.DIST(1.5,1,2)");
+    model.set_a1("A8", "=STANDARDIZE(TRUE,1,2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0.598706326");
-    assert_eq!(model._get_text("A2"), *"0.26171875");
-    assert_eq!(model._get_text("A3"), *"0.691462461");
-    assert_eq!(model._get_text("A4"), *"0.055296");
-    assert_eq!(model._get_text("A5"), *"0.383131167");
-    assert_eq!(model._get_text("A6"), *"0.2592");
-    assert_eq!(model._get_text("A7"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"0.598706326");
+    assert_eq!(model.get_text_a1("A2"), *"0.26171875");
+    assert_eq!(model.get_text_a1("A3"), *"0.691462461");
+    assert_eq!(model.get_text_a1("A4"), *"0.055296");
+    assert_eq!(model.get_text_a1("A5"), *"0.383131167");
+    assert_eq!(model.get_text_a1("A6"), *"0.2592");
+    assert_eq!(model.get_text_a1("A7"), *"#ERROR!");
     // Excel reads the TRUE as 1 (probes/stats-evidence-floor-t1623 Q58, stat-later-argument-lift L14): (1-1)/2.
-    assert_eq!(model._get_text("A8"), *"0");
+    assert_eq!(model.get_text_a1("A8"), *"0");
 }
 
 #[test]
@@ -215,40 +215,40 @@ fn overflowing_arguments_are_excels_errors_not_panics() {
     // probes/stat-overflow-arguments, where 1E308 sits in numeric cells (a literal 1E308 is
     // `#ERROR!` in a formula here, and "1e308" typed into a cell is not read as a number here).
     let mut model = new_empty_model();
-    model._set("C1", "=1E+307*10");
-    model._set("C2", "=-1E+307*10");
-    model._set("C3", "=1E+29*10");
-    model._set("B1", "=ISNUMBER(C1)");
-    model._set("A1", "=F.DIST(C1,2,3,TRUE)");
-    model._set("A2", "=F.DIST(C1,2,3,FALSE)");
-    model._set("A3", "=F.DIST.RT(C1,2,3)");
-    model._set("A4", "=FDIST(C1,2,3)");
-    model._set("A5", "=F.DIST(C1,1,3,TRUE)");
-    model._set("B2", "=F.DIST(C1,1,3,FALSE)");
+    model.set_a1("C1", "=1E+307*10");
+    model.set_a1("C2", "=-1E+307*10");
+    model.set_a1("C3", "=1E+29*10");
+    model.set_a1("B1", "=ISNUMBER(C1)");
+    model.set_a1("A1", "=F.DIST(C1,2,3,TRUE)");
+    model.set_a1("A2", "=F.DIST(C1,2,3,FALSE)");
+    model.set_a1("A3", "=F.DIST.RT(C1,2,3)");
+    model.set_a1("A4", "=FDIST(C1,2,3)");
+    model.set_a1("A5", "=F.DIST(C1,1,3,TRUE)");
+    model.set_a1("B2", "=F.DIST(C1,1,3,FALSE)");
     // The overflow threshold (stat-overflow-arguments-b A5-A8): 2*8E307 is finite.
-    model._set("C5", "=8E+306*10");
-    model._set("B3", "=F.DIST(C5,2,3,TRUE)");
-    model._set("B4", "=F.DIST(C5,2,3,FALSE)");
-    model._set("B5", "=F.DIST.RT(C5,2,3)");
+    model.set_a1("C5", "=8E+306*10");
+    model.set_a1("B3", "=F.DIST(C5,2,3,TRUE)");
+    model.set_a1("B4", "=F.DIST(C5,2,3,FALSE)");
+    model.set_a1("B5", "=F.DIST.RT(C5,2,3)");
     // Large degrees of freedom: Loader's form, to the digit shown (T-1864; the exact densities
     // are in test_fn_f_pdf_large_df.rs).
-    model._set("B6", "=F.DIST(1,1000,1000,FALSE)");
-    model._set("B7", "=F.DIST(20,100,3,FALSE)");
-    model._set("B8", "=TDIST(-1,5,NA())");
-    model._set("B9", "=BETA.DIST(C2,2,3,FALSE,C2,C1)");
-    model._set("A6", "=BETA.DIST(C1,2,3,TRUE,C2,C1)");
-    model._set("A7", "=BETA.DIST(C1,2,3,FALSE,C2,C1)");
-    model._set("A8", "=BETADIST(C1,2,3,C2,C1)");
-    model._set("A9", "=BETA.DIST(0,2,3,TRUE,C2,C1)");
-    model._set("A10", "=BETA.DIST(C2,2,3,TRUE,C2,C1)");
-    model._set("A11", "=PERMUT(C3,0)");
-    model._set("A12", "=PERMUT(2147483646,1)");
-    model._set("A13", "=PERMUT(2147483647,1)");
-    model._set("A14", "=PERMUT(171,171)");
-    model._set("A15", "=PERMUT(2147483646,0)");
+    model.set_a1("B6", "=F.DIST(1,1000,1000,FALSE)");
+    model.set_a1("B7", "=F.DIST(20,100,3,FALSE)");
+    model.set_a1("B8", "=TDIST(-1,5,NA())");
+    model.set_a1("B9", "=BETA.DIST(C2,2,3,FALSE,C2,C1)");
+    model.set_a1("A6", "=BETA.DIST(C1,2,3,TRUE,C2,C1)");
+    model.set_a1("A7", "=BETA.DIST(C1,2,3,FALSE,C2,C1)");
+    model.set_a1("A8", "=BETADIST(C1,2,3,C2,C1)");
+    model.set_a1("A9", "=BETA.DIST(0,2,3,TRUE,C2,C1)");
+    model.set_a1("A10", "=BETA.DIST(C2,2,3,TRUE,C2,C1)");
+    model.set_a1("A11", "=PERMUT(C3,0)");
+    model.set_a1("A12", "=PERMUT(2147483646,1)");
+    model.set_a1("A13", "=PERMUT(2147483647,1)");
+    model.set_a1("A14", "=PERMUT(171,171)");
+    model.set_a1("A15", "=PERMUT(2147483646,0)");
     // Lifted: every element is its own scalar call, none panics.
-    model._set("A16", "=INDEX(F.DIST({1.5;0},2,3,TRUE)*C1,2)");
-    model._set("A17", "=INDEX(F.DIST(C1,{1;2},3,TRUE),2)");
+    model.set_a1("A16", "=INDEX(F.DIST({1.5;0},2,3,TRUE)*C1,2)");
+    model.set_a1("A17", "=INDEX(F.DIST(C1,{1;2},3,TRUE),2)");
     model.evaluate();
     let expected = [
         ("B1", "TRUE"),
@@ -279,7 +279,7 @@ fn overflowing_arguments_are_excels_errors_not_panics() {
         ("A17", "#DIV/0!"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }
 
@@ -289,7 +289,7 @@ fn the_f_pdf_takes_an_underflow_from_its_log_form() {
     // (probes/stat-overflow-arguments E11, -b A6); a positive one is Loader's form (T-1864,
     // test_fn_f_pdf_large_df.rs).
     let mut model = new_empty_model();
-    model._set("A4", "=F.DIST(8E+307,2,3,FALSE)");
+    model.set_a1("A4", "=F.DIST(8E+307,2,3,FALSE)");
     model.evaluate();
-    assert_eq!(model._get_text("A4"), *"0");
+    assert_eq!(model.get_text_a1("A4"), *"0");
 }

@@ -6,18 +6,20 @@
 //! trivially (nothing was applied).
 
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::{Mutex, MutexGuard};
 
 use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyBytes, PyDict, PyInt, PyList};
+use pyo3::types::{PyBool, PyDict, PyInt, PyList};
 use pyo3::{create_exception, IntoPyObjectExt};
+
+use crate::lone::{lone_cells, lone_str_to_py, may_hold_lone_surrogate};
+use crate::pivots::{self, PivotOp};
 
 use rustsheet::{
     parse_cell, parse_range, resolve_sheet_by_name, ChangeSet, Clock, DateSystem, EditError,
-    ErrorKind, Input, Iteration, LoadError, LoadOptions, Password, RangeRef, RefError, SaveOptions,
+    ErrorKind, Input, Iteration, LoadError, LoadOptions, Password, RefError, SaveOptions,
     SheetChange, SheetId, Txn, Value, Workbook, WorkbookOptions, XlError,
 };
 
@@ -129,58 +131,7 @@ impl PyFormula {
     }
 }
 
-/// The little-endian UTF-16 bytes of `units`, which Python decodes with `surrogatepass`.
-fn utf16_le_bytes(units: &[u16]) -> Vec<u8> {
-    units.iter().flat_map(|u| u.to_le_bytes()).collect()
-}
-
-/// A Python `str` holding exactly `units`, lone surrogates included (`str` can, `String` cannot).
-fn lone_str_to_py(py: Python<'_>, units: &[u16]) -> PyResult<Py<PyAny>> {
-    let bytes = PyBytes::new(py, &utf16_le_bytes(units));
-    Ok(bytes
-        .call_method1("decode", ("utf-16-le", "surrogatepass"))?
-        .unbind())
-}
-
-/// Cheap guard: a lone surrogate always shows as U+FFFD in the lossy text.
-fn may_hold_lone_surrogate(text: &str) -> bool {
-    text.contains('\u{FFFD}')
-}
-
-/// Exact UTF-16 units of lone-surrogate cells, keyed by (row, column) offset in a range.
-type LoneCells = HashMap<(usize, usize), std::sync::Arc<[u16]>>;
-
-/// The exact UTF-16 units of every lone-surrogate text cell of `arr`, the values of range `r`,
-/// keyed by (row, column) offset in the range.
-fn lone_cells(wb: &Workbook, r: &str, arr: &rustsheet::Array) -> Result<LoneCells, RefError> {
-    let range = wb.range_ref(r)?;
-    let mut lone = HashMap::new();
-    for row in 0..arr.rows() {
-        for col in 0..arr.cols() {
-            let Some(Value::Text(s)) = arr.get(row, col) else {
-                continue;
-            };
-            if !may_hold_lone_surrogate(s) {
-                continue;
-            }
-            let at = |origin: u32, offset: usize| {
-                u32::try_from(offset)
-                    .ok()
-                    .and_then(|o| origin.checked_add(o))
-            };
-            let (Some(rr), Some(cc)) = (at(range.top, row), at(range.left, col)) else {
-                continue;
-            };
-            let cell = RangeRef::new(range.sheet, rr, cc, rr, cc)?;
-            if let Some(units) = wb.text_utf16(cell)? {
-                lone.insert((row, col), units);
-            }
-        }
-    }
-    Ok(lone)
-}
-
-fn value_to_py(py: Python<'_>, value: Value) -> PyResult<Py<PyAny>> {
+pub(crate) fn value_to_py(py: Python<'_>, value: Value) -> PyResult<Py<PyAny>> {
     match value {
         Value::Empty => Ok(py.None()),
         Value::Number(n) => n.into_py_any(py),
@@ -361,11 +312,11 @@ impl PyWorkbook {
 }
 
 /// The name of `id` in a `(id, name)` list.
-fn name_of(names: &[(SheetId, String)], id: SheetId) -> Option<&String> {
+pub(crate) fn name_of(names: &[(SheetId, String)], id: SheetId) -> Option<&String> {
     names.iter().find(|(i, _)| *i == id).map(|(_, n)| n)
 }
 
-fn sheet_names(wb: &Workbook) -> Vec<(SheetId, String)> {
+pub(crate) fn sheet_names(wb: &Workbook) -> Vec<(SheetId, String)> {
     wb.sheets().into_iter().map(|s| (s.id, s.name)).collect()
 }
 
@@ -458,10 +409,24 @@ impl PyWorkbook {
         Ok(Self::wrap(wb))
     }
 
-    /// Saves to an xlsx file (the GIL is released while saving).
-    fn save_xlsx(&self, py: Python<'_>, path: &str) -> PyResult<()> {
-        py.detach(|| lock(&self.wb).save_xlsx(path, SaveOptions::default()))
-            .map_err(|e| PySaveError::new_err(e.to_string()))
+    /// Saves to an xlsx file (the GIL is released while saving). With `report`, returns what the
+    /// save left out as `(item, reason)` pairs (SPEC-0033 D7): the source part's name and the
+    /// reason's name (`NotPreserved`, `Policy`, ...).
+    #[pyo3(signature = (path, report=false))]
+    fn save_xlsx(
+        &self,
+        py: Python<'_>,
+        path: &str,
+        report: bool,
+    ) -> PyResult<Option<Vec<(String, String)>>> {
+        let saved = py
+            .detach(|| lock(&self.wb).save_xlsx_with_report(path, SaveOptions::default()))
+            .map_err(|e| PySaveError::new_err(e.to_string()))?;
+        Ok(report.then(|| {
+            (saved.dropped.into_iter())
+                .map(|d| (d.item, d.reason.name().to_string()))
+                .collect()
+        }))
     }
 
     /// Returns the workbook as xlsx bytes.
@@ -637,6 +602,53 @@ impl PyWorkbook {
         }
     }
 
+    /// The pivot table `name` on `sheet` as a dict (`name`, `sheet`, `location`, `source`,
+    /// `row_fields`, `column_fields`, `data_fields`), or `None` when the sheet has no such
+    /// pivot. It reads the definition only; `pivot_table_cells` computes the layout.
+    fn pivot_table<'py>(
+        &self,
+        py: Python<'py>,
+        sheet: &str,
+        name: &str,
+    ) -> PyResult<Option<Bound<'py, PyDict>>> {
+        let (view, names) = self
+            .read(py, |wb| {
+                let id = wb.sheet_id(sheet)?;
+                Ok((wb.pivot_table(id, name), sheet_names(wb)))
+            })
+            .map_err(|e: RefError| ref_err(&e))?;
+        view.map(|v| pivots::view_to_py(py, &v, &names)).transpose()
+    }
+
+    /// The cells a layout of the pivot `name` on `sheet` would write now, A1 to value: its
+    /// layout's, or `#SPILL!` at its anchor when it would meet a cell it does not own. Computed
+    /// on each call, bounded as a refresh is. An unknown pivot or one past a limit raises
+    /// `EditError`, an unknown sheet `RefError`.
+    fn pivot_table_cells<'py>(
+        &self,
+        py: Python<'py>,
+        sheet: &str,
+        name: &str,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let (cells, names) =
+            (self.read(py, |wb| pivots::cells(wb, sheet, name))).map_err(|e| edit_err(&e))?;
+        pivots::cells_to_py(py, cells, &names)
+    }
+
+    /// The source records behind the value cell `a1` (`B5`, or `Sheet!B5`) of the pivot `name` on
+    /// `sheet`, as record indices in record order (0 for the row below the source's header).
+    /// A cell that is no value cell, an unknown pivot or one past a limit raises `EditError`.
+    fn pivot_cell_records(
+        &self,
+        py: Python<'_>,
+        sheet: &str,
+        name: &str,
+        a1: &str,
+    ) -> PyResult<Vec<u32>> {
+        let records = self.read(py, |wb| pivots::cell_records(wb, sheet, name, a1));
+        records.map_err(|e| edit_err(&e))
+    }
+
     /// The change set of the last edit as `{"inputs": [...], "values": [...], "sheets": [...]}`;
     /// retained until the next edit (the Rust `Workbook` stores none), `None` before any edit.
     #[getter]
@@ -658,6 +670,8 @@ enum Op {
     RowHidden(String, u32, bool),
     /// A1 range, table name, filtered, totals row.
     AddTable(String, String, bool, bool),
+    /// A pivot table op (`add_pivot_table`, `set_pivot_table`, `refresh_pivot_table`).
+    Pivot(PivotOp),
 }
 
 /// Buffers edits and applies them as one atomic `Workbook::edit` when the `with` block exits
@@ -683,11 +697,11 @@ impl PyTransaction {
 /// Position of `name` in `sheets`, resolved with the facade's own case-insensitive rule. The
 /// facade's `Workbook::sheet_id` cannot be used because the transaction's ops are not applied
 /// yet, so sheets added or renamed earlier in the same block exist only in this list.
-fn sheet_pairs(sheets: &[(SheetId, String)]) -> Vec<(SheetId, &str)> {
+pub(crate) fn sheet_pairs(sheets: &[(SheetId, String)]) -> Vec<(SheetId, &str)> {
     sheets.iter().map(|(id, n)| (*id, n.as_str())).collect()
 }
 
-fn find_sheet(sheets: &[(SheetId, String)], name: &str) -> Result<usize, EditError> {
+pub(crate) fn find_sheet(sheets: &[(SheetId, String)], name: &str) -> Result<usize, EditError> {
     resolve_sheet_by_name(&sheet_pairs(sheets), Some(name))
         .and_then(|id| sheets.iter().position(|(i, _)| *i == id))
         .ok_or_else(|| EditError::Ref(RefError::UnknownSheet(name.to_owned())))
@@ -734,6 +748,7 @@ fn apply(
                 txn.delete_sheet(sheets[i].0)?;
                 sheets.remove(i);
             }
+            Op::Pivot(op) => pivots::apply(txn, op, &sheets)?,
             Op::DefineName(name, formula, None) => txn.define_name(&name, &formula)?,
             Op::DefineName(name, formula, Some(sheet)) => {
                 let i = find_sheet(&sheets, &sheet)?;
@@ -847,6 +862,44 @@ impl PyTransaction {
         ))
     }
 
+    /// Creates the pivot table `name` and lays it out from the top-left cell of `location`.
+    /// Keywords: `source` (an A1 range, field names in its first row), `location`, `row` and
+    /// `value` (field names), and optionally `column`, `function` (`"sum"`, the default,
+    /// `"count"`, `"average"`, `"max"`, `"min"`) and `caption` (by default `<Function> of
+    /// <field>`, `"Sum of Sales"`, the case builder's; Excel's own default is unprobed, T-2327).
+    /// A missing or unknown keyword raises `TypeError` and an unknown function
+    /// `ValueError` at once; a bad field, a taken name or a pivot past a limit raises
+    /// `EditError`, and an unknown sheet `RefError`, when the block exits.
+    #[pyo3(signature = (name, **definition))]
+    fn add_pivot_table(
+        &mut self,
+        name: String,
+        definition: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<()> {
+        let spec = pivots::spec(name, definition)?;
+        self.push(Op::Pivot(PivotOp::Add(spec)))
+    }
+
+    /// Replaces the fields and options of the pivot `name` on `sheet`, in place, with the
+    /// keywords of `add_pivot_table`; `location` must keep the pivot's anchor. Cells it no longer
+    /// covers are cleared. Errors as `add_pivot_table`, and `EditError` for an unknown pivot.
+    #[pyo3(signature = (sheet, name, **definition))]
+    fn set_pivot_table(
+        &mut self,
+        sheet: String,
+        name: String,
+        definition: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<()> {
+        let spec = pivots::spec(name.clone(), definition)?;
+        self.push(Op::Pivot(PivotOp::Set(sheet, name, spec)))
+    }
+
+    /// Refreshes the pivot `name` on `sheet` from its source as it holds now (editing the
+    /// source does not). An unknown pivot raises `EditError` when the block exits.
+    fn refresh_pivot_table(&mut self, sheet: String, name: String) -> PyResult<()> {
+        self.push(Op::Pivot(PivotOp::Refresh(sheet, name)))
+    }
+
     /// Adds a sheet at the end.
     fn add_sheet(&mut self, name: &str) -> PyResult<()> {
         self.push(Op::AddSheet(name.to_owned()))
@@ -894,14 +947,4 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     m.add("WrongPasswordError", py.get_type::<PyWrongPasswordError>())?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::utf16_le_bytes;
-
-    #[test]
-    fn lone_units_become_little_endian_bytes() {
-        assert_eq!(utf16_le_bytes(&[0x61, 0xDE00]), [0x61, 0x00, 0x00, 0xDE]);
-    }
 }

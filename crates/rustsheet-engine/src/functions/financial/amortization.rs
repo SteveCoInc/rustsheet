@@ -18,6 +18,15 @@
 //!
 //! Port of the depreciation calculations as implemented in the `ExcelFinancialFunctions` library
 //! (depreciation.fs), see <https://github.com/fsprojects/ExcelFinancialFunctions>.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::unnecessary_wraps
+)]
+// LINT-DEBT-END
 
 use chrono::{Datelike, NaiveDate};
 
@@ -674,7 +683,7 @@ mod tests {
 
     /// A double in [0, 1) from the seeded test generator.
     fn spread(rng: &mut Rng) -> f64 {
-        (rng.next() >> 11) as f64 / (1u64 << 53) as f64
+        (rng.next_u64() >> 11) as f64 / (1u64 << 53) as f64
     }
 
     #[test]
