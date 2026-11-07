@@ -3169,10 +3169,24 @@ Ours: `incomplete_beta.rs::shape_one_tails` (w = `x87_exp::excel_one_minus_exp`(
     not Excel's form.
   - It does make all 47 t3568-r5-bup column-B cells bit-exact (T-3764), plus 24 t4017-f-huge-df2 cells. Its wins and
     losses both span b0 from 1/2 to 1E10, so no shape cut separates them.
+- NEGBINOM.DIST's cdf at number_s 1 (p <= 1/2, so bratio's a0 is r = 1) takes the same branch, I_p(1, f + 1) from p
+  through log1p (T-4242). Every number_s 1 Gate A point now matches Excel to the bit:
+  - accuracy/NEGBINOM.DIST/r4-T-3576 A125: `NEGBINOM.DIST(70991230,1,8.02387331627331E-281,TRUE)` = 5.696246441102946E-273,
+    where fl(1 - p) is 1;
+  - r4-T-3576 A31 = 1.5750950518407722E-189;
+  - r4-T-2146 A152 = 4.9192873262661245E-261;
+  - s1 A124: `NEGBINOM.DIST(1,1,0.0434735949326795,TRUE)` = 0.0850572364089883. This is Excel's bits, one ulp from the
+    correctly rounded value, so it shows Excel's own shape-one arithmetic, not just accurate math.
+
+  r4-T-3576 A4, s1 A187 and gen-m9/1b31092a0d79e5f1 A37 already passed and still do. On the swapped side (number_f 0,
+  p > 0.9, where a0 = f + 1 = 1) NEGBINOM.DIST does not take this branch: `NEGBINOM.DIST(0,2,0.999,TRUE)` is 0.998001
+  and `NEGBINOM.DIST(0,10,0.999,TRUE)` is 0.9900448802097482 (probes-numeric/t2145-negbinom-sweep A420, A1080), and
+  `NEGBINOM.DIST(0,4,0.97176398482672,TRUE)` is 0.8917501630679979 (accuracy/NEGBINOM.DIST/s1 A107). The branch puts
+  all three an ulp low, while the engine's walk matches them.
 Status: VERIFIED (excel-graph) for the complement down to w1 of about 1E-16, and for w at |z| >= 1 (T-3764); w's form
 below |z| = 1 PARTIAL (71 cells for it, 6 contrary cells with no form, T-3886); below 2^-53 UNVERIFIED but for the
 four t3568 cells
-Tasks: T-3007, T-2511, T-3150, T-3170, T-3886, T-3764
+Tasks: T-3007, T-2511, T-3150, T-3170, T-3886, T-3764, T-4242
 
 ## Excel's log1p is a 14-term atanh series in alnrel's variable (T-2464)
 Rule: for ln(1 + a) with -0.375 <= a < 0, i.e. ln(1 - x) at x <= 0.375 (the beta density, BINOM.DIST(0,n,p), bgrat's
@@ -7248,8 +7262,8 @@ accuracy/defs/array_regression.py) solves the normal equations in rational arith
   FALSE, match the exact value, so Excel does not multiply by an underflowed multiplier.
 - GROWTH s1 A104 is `#NUM!` where the prediction is 8.13890815167933E-18: two variables (x1 near 7.3E+7, x2 near
   77.9407 with a spread of 2E-4), whose ln fit's intercept is 1289.95, so b = e^1289.95 is past the double range. It
-  is the only table point with an intercept past ln(max double); unexplained, the intercept's overflow is the lead
-  (T-4590). Ours is 8.138904702791959E-18.
+  is the only table point with an intercept past ln(max double). The cause is that overflow: see "GROWTH is #NUM! once
+  LOGEST's b overflows" below (T-4590).
 - Excel off the exact value: LINEST s1 A197 (`INDEX(LINEST(<4 points from 1E-48 to 6E+20>,<2 variables>,FALSE,TRUE),5,1)`,
   ss_reg) is 0 where the exact value is 1.19E-52, the cancellation of ss_tot (3.9E+41) and ss_resid: more than 1E-4
   off, kept as the target under decision 0300; ours is 0 too. LINEST A184 (an intercept over data from 1E-44 to
@@ -7259,9 +7273,38 @@ accuracy/defs/array_regression.py) solves the normal equations in rational arith
   spread, mixed magnitudes) it is from 2E-9 to 20 relative off where Excel is within 2E-8, and TREND A193 (data from
   1E-45 to 1E+49) is `#NUM!` where Excel and the math are -1.3025416638036628E+49 (T-2006, known failures).
 Evidence: eval/accuracy/tables/{LINEST,LOGEST,TREND,GROWTH}/s1 (excel-graph, 2026-11-06, T-4096).
-Ours: as described; T-2006 (the solve), T-4590 (A104).
-Status: VERIFIED (excel-graph) for the table points; A104's cause UNVERIFIED
+Ours: as described; T-2006 (the solve). A104 passes since T-4590.
+Status: VERIFIED (excel-graph) for the table points and A104's cause (T-4590)
 Tasks: T-4096, T-2006, T-4590, T-2569
+
+## GROWTH is #NUM! once LOGEST's b overflows; it can be 0 where the slopes' factor is subnormal (T-4590)
+Rule: GROWTH with const TRUE is `#NUM!` exactly when LOGEST's b = e^intercept overflows, that is when the intercept is
+past ln(DBL_MAX) = 709.7827, even where the prediction itself is finite.
+- For y = e^(c - c/2·x) at x = 1, 2, 3 (prediction about 1 at x = 2), GROWTH is a number for c up to 709.7827 and
+  `#NUM!` from 709.7828 to 1290. LOGEST's own b, `INDEX(LOGEST(..),1,2)`, is `#NUM!` from the same cut.
+- LOGEST's m = e^slope past the double range is not an error in GROWTH. With const FALSE and y = e^(m·x) at x = 0.3,
+  0.4, 0.5, GROWTH at 0.4 is a number for every m up to 1400, while LOGEST's m is `#NUM!` from 709.79. In those rows
+  the slopes' factor at the new x, e^(0.4·m), never overflows. What GROWTH does when that factor itself overflows is
+  unprobed.
+- The Gate A point GROWTH s1 A104 (intercept 1289.95) is `#NUM!` by this rule.
+- Observed, not implemented: GROWTH is 0 where the slopes' factor e^(Σ m_j x_j) at the new x is subnormal, though the
+  prediction is about 1. In the Int rows above, c = 709 to 709.7827 gives 0 (factor e^(-709) or below), and c = 700
+  gives 1 (factor e^(-700), a normal double). That fits Excel forming the two factors as doubles and flushing a
+  subnormal one, but the evidence covers only const TRUE, one x and a slope sum in [-709.78, -709].
+  - The cut between -700 and -709 is not pinned.
+  - Several x (one summed factor or one factor per variable), a subnormal b with a normal slopes' factor, const FALSE,
+    and a slopes' factor that overflows are all unprobed (T-4765).
+  - The product of the two factors is one ulp off Excel on ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the
+    single exponential is exact, so how Excel combines them between the edges is not identified.
+Evidence: probes/t4590-growth-overflow (excel-graph, 2026-11-07; Int 15 rows, Slope 8 rows). The predictions in
+docs/research/t4590 were committed before the fill. H1 (`#NUM!` only when b overflows) holds on 23 of 23 GROWTH
+cells. H2 (`#NUM!` when b or LOGEST's m overflows) fails on the 5 Slope rows past 709.79. The zeros at c = 709 to
+709.7827 were not predicted.
+Status: VERIFIED (excel-graph) for the `#NUM!` rule. The zero is an observation (UNVERIFIED as a rule, T-4765). The
+probe's least-squares digits (14 cells, 5E-14 to 3E-13 off) are T-4763's.
+Ours (T-4590): `growth_prediction` in functions/statistical/trend.rs applies the `#NUM!` rule. Int A2:A7 stay
+known failures (ours about 1, Excel 0), owned by T-4765.
+Tasks: T-4590, T-4763, T-4765
 
 ## TRIMMEAN: an error percent before data with no number (T-1742)
 Rule: TRIMMEAN returns an error-valued percent before it reports data with no number: `TRIMMEAN(Data!E11:E11,<#N/A>)`
@@ -8399,3 +8442,18 @@ Ours: matches every cell cited (the engine is bit-exact with Excel on 777 of the
 the Gate A envelope).
 Status: VERIFIED (excel-graph) for the cells cited; the regions marked UNVERIFIED are not probed
 Tasks: T-4091
+
+## RANK, LARGE, SMALL and the regression functions: a cell picked by a name, INDEX, IF, CHOOSE or parentheses is the cell (T-4310)
+Rule: a one-cell argument reached through a defined name, `INDEX(range,k)`, `IF(TRUE,ref)`, `CHOOSE(1,ref)` or
+parentheses behaves exactly like the plain reference. With Data!A1 = 5, A2 = TRUE, A3 = "7" and A4 blank:
+- RANK, RANK.EQ and RANK.AVG of 5 over the cell are 1 for A1 and `#N/A` for A2, A3 and A4 in all six forms (a cell
+  holding a boolean or numeric text is no number, not `#NUM!`).
+- LARGE and SMALL of it with k = 1 are 5 for A1 and `#NUM!` for A2, A3 and A4 in all six forms.
+- LINEST, LOGEST, TREND and GROWTH with the blank A4 as `known_y` and `1/0` as `known_x` are `#DIV/0!` in all six forms
+  (the blank reference waits for x's error), and LINEST and TREND of it alone `#VALUE!`; only a computed blank such as
+  `IFERROR(B10,1)` is `#VALUE!` at once (the T-2455 entry).
+Evidence: probes/t4310-rank-regression-picked-cells A1:A156 (excel-graph, 2026-11-07).
+Ours: matches all 156 cells since T-4310 (the name, INDEX, IF and parenthesized blank y of the regression functions were
+`#VALUE!` before, 16 cells).
+Status: VERIFIED (excel-graph)
+Tasks: T-4310

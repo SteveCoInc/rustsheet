@@ -123,8 +123,10 @@ impl TrendData {
                 if point.iter().any(|v| v.is_nan()) {
                     return ArrayNode::Error(Error::VALUE);
                 }
-                let fitted = predict(&beta, &point, const_term);
-                ArrayNode::Number(if self.growth { fitted.exp() } else { fitted })
+                if !self.growth {
+                    return ArrayNode::Number(predict(&beta, &point, const_term));
+                }
+                growth_prediction(&beta, &point, const_term)
             })
             .collect();
         CalcResult::Array(
@@ -249,4 +251,15 @@ impl Model {
     pub(crate) fn fn_growth(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.trend_or_growth(args, true, cell)
     }
+}
+
+/// GROWTH's prediction `e^(intercept + Σ m_j x_j)`, `#NUM!` where LOGEST's `b = e^intercept`
+/// overflows though the prediction may be finite (statistics.md "GROWTH is #NUM! once LOGEST's b
+/// overflows"; probes/t4590-growth-overflow Int!, accuracy/GROWTH/s1 A104). `beta` holds the
+/// intercept first when `const_term`, as for [`predict`].
+fn growth_prediction(beta: &[f64], point: &[f64], const_term: bool) -> ArrayNode {
+    if const_term && beta[0].exp().is_infinite() {
+        return ArrayNode::Error(Error::NUM);
+    }
+    ArrayNode::Number(predict(beta, point, const_term).exp())
 }

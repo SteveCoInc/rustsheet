@@ -139,8 +139,9 @@ fn for_each_node(first: i32, last: i32, mut visit: impl FnMut(usize, bool)) {
 }
 
 /// Empties the cells that `merged_cells` cover (all but each range's top left cell), keeping their
-/// styles: covered cells must not hold content (an engine invariant), and Excel leaves them empty
-/// while third-party producers sometimes leave values behind.
+/// styles: covered cells must not hold content (an engine invariant). This differs from Excel, which keeps
+/// covered content (fixtures/merged-covered-values; docs/excel-semantics/xlsx-storage.md "A merged
+/// range keeps the values of its covered cells"; owner T-4722).
 ///
 /// One sweep over the stored cells, in row order, with the ranges whose rows are open kept by first
 /// column: a range can name the whole sheet in a few bytes, so walking each one's area would cost

@@ -29,6 +29,7 @@ C	fixtures/t-d-iso-date-cells.xlsx	8
 C	fixtures/t-d-pre-1900.xlsx	2
 C	fixtures/t-d-time-only.xlsx	2
 C	fixtures/t-d-z-suffix.xlsx	2
+C	fixtures/valueless-cell-forms-ws-index.xlsx	18
 C	fixtures/valueless-cell-forms.xlsx	72
 C	fixtures/workday-intl-legacy-holidays.xlsx	6
 F	fixtures/merged-covered-formula.xlsx	Sheet1!A3

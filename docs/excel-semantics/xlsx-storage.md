@@ -62,8 +62,11 @@ Rule: a constant (formula-less) cell that stores no value reads as blank in Exce
 stores the empty string is text: `t="s"` to an empty shared string, `<c t="str"><v></v></c>` (an empty
 `<v>`, unlike a missing one) and `<is><t></t></is>` give ISBLANK FALSE, ISTEXT TRUE, COUNTA 1, LEN 0
 and TYPE 2. So a missing `<v>` and an empty `<v>` differ for `t="str"` but not for `t="s"` (an empty
-index names no string; it is not shared string 0).
-Evidence: fixtures/valueless-cell-forms (excel-graph, 2026-11-06, T-4148).
+index names no string; it is not shared string 0). A whitespace-only index, `<c t="s"><v> </v></c>`, is
+blank too (ISBLANK TRUE, COUNTA 0, TYPE 1), and a bare `<c t="inlineStr"><is/></c>` (an `<is>` with no `<t>`)
+is the empty string, as `<is><t></t></is>` is (ISBLANK FALSE, ISTEXT TRUE, COUNTA 1, LEN 0, TYPE 2).
+Evidence: fixtures/valueless-cell-forms (excel-graph, 2026-11-06, T-4148) and
+fixtures/valueless-cell-forms-ws-index (excel-graph, 2026-11-07, T-4743).
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-xlsx/src/import/worksheets.rs (`is_valueless_constant`). A spill
 member's cached value and `t="d"` keep their own rules.
@@ -650,13 +653,17 @@ the first data row (VERIFIED, excel-graph 2026-11-06, probes/table-edits/t4692-*
 `FORMULATEXT(INDEX(S!C:C,n))` and the cached `table1.xml`): insert_row 3 inside the data rows writes `<f>A3*2</f>`
 into C3 (and twice gives `A3*2`, `A4*2`); insert_row 2 at the first data row writes `A2*2` into the new C2 and saves
 `calculatedColumnFormula` `A2*2` (not the moved cell's `A3*2`); insert_row 5 at the totals row of A1:C5 writes `A5*2`
-into the new data row; a structured column fills `T[[#This Row],[Col]]*2`. Each filled cell is saved with its own
-`s="1"` style (unscored).
+into the new data row; a structured column fills `T[[#This Row],[Col]]*2`. Each filled cell is saved with `s="1"`,
+and that xf shows nothing (VERIFIED, excel-graph 2026-11-07, `xl/styles.xml` of t4692-insert-row-inside's cached
+workbook, T-4744): cellXfs 1 is `numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"`,
+xf 0 with only the apply flag added, and the Calc column's `dataDxfId="0"` is a dxf of `numFmt` 0 "General". Its
+number format, font, fill and border are xf 0's, so no CELL("format"), number format or TEXT of the value can tell
+the two apart. Whether a column whose dataDxf has another number format fills cells in that format is unprobed.
 Ours (T-4274, T-4692): the row and column insert and delete rewrite the stored text as the first data cell's formula
 is displaced (`Model::displaced_column_formulas`), read where that cell moved and printed in file form at the new first
 data row (so an insert at the first data row keeps `A2*2`), and a row insert fills the stored formula into the rows it
 adds to a table's data rows (`Model::fill_inserted_data_rows`), each cell keeping its own style (Excel's `s="1"` is
-not matched, unscored); a text with a `[`
+not matched; moot, nothing observable differs, T-4744); a text with a `[`
 (a structured reference) keeps its text, and so does one whose first data cell the edit deletes (unprobed). Moves and
 cell shifts leave the text as it is (unprobed). Ours read their rows too since T-4680 (before, the moved `[@Col]` cells were `#ERROR!`). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
 `array="1"` attribute is dropped on import (export writes the plain element): engine choices, what Excel does with

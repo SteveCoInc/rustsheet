@@ -246,6 +246,7 @@ fn valueless_str_and_inline_constants_are_blank() {
     assert_eq!(get("C1"), Some(Value::Text(String::new())));
     assert_eq!(get("D1"), None);
     assert_eq!(get("E1"), Some(Value::Text(String::new())));
+    // A bare `<is/>` is the empty string in Excel (fixtures/valueless-cell-forms-ws-index A2, T-4743).
     assert_eq!(get("F1"), Some(Value::Text(String::new())));
     assert_eq!(get("G1"), Some(Value::Text("q".into())));
 }

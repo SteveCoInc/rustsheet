@@ -112,6 +112,19 @@ Owned gen-m9 cells (T-2487, excel-graph, 2026-10-25): 1 known-failure line in ev
 Cells:
 - gen-m9/e8d55ec393460bb7.case.json (1): Calc!A91
 
+Added by gap triage 2026-11-07 (`make eval` on origin/main b9ae5216, excel-graph). These last-digit cells are not
+visibly off, and no open task listed them. They are this task's base values reached another way:
+- The intersected CUMPRINC controls of probes/fin-remaining-later-argument-ranges repeat base row H80
+  `CUMPRINC(0.01,360,100000,1,12,0)` (Excel -362.8793467231, ours -362.8793467230999). The hyphen span "I65-I84" in
+  Context above names only its ends (decision 0136), so these were unowned.
+- DURATION and MDURATION at frequency 4 on the coupon walk's bounds.
+- Two gen-m9 YIELD calls, 1 ulp off.
+Cells:
+- probes/fin-remaining-later-argument-ranges.case.json (5): Sheet1!I75, I77, I79, I81, I83
+- probes/fin-coupon-walk-bounds-c.case.json (4): Sheet1!I13, K13, I14, K14
+- gen-m9/9a1fa5366bc50918.case.json (1): Calc!A231
+- gen-m9/bc04c1f478c9896c.case.json (1): Calc!A23
+
 ## Acceptance criteria
 - [ ] Visible parity (gen-m9, T-2257): the 6 visibly-off known-failure lines listed under "T-2257 sweep" in Context disappear
       from eval/baseline/gen-m9.txt (`make eval-baseline`), with no new known-failure lines in any baseline.
