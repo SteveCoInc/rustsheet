@@ -124,6 +124,9 @@ impl Table {
 /// Tables by name, as they were before an edit changed them: what its undo puts back.
 pub(crate) type KeptTables = Vec<(String, Table)>;
 
+/// The rows a column delete showed or hid, each with its new hidden state (T-4939).
+pub(crate) type ToggledRows = Vec<(i32, bool)>;
+
 impl Model {
     /// Adds a table on sheet `sheet` over rows `top..=bottom` and columns `left..=right`
     /// (1-based). The first row is the header row: its cells name the columns, so they must be
@@ -517,18 +520,19 @@ impl Model {
     /// the tables it changed but kept, as they were before: what its undo restores (T-4652). A
     /// column delete can drop table columns, with their names, formulas and filters, so the
     /// whole table is kept, not only its [`TableExtent`]. Also returns the formula cells it
-    /// rewrote past what re-inserting the columns undoes (T-4668), and the rows it showed: a
-    /// delete that takes a filtered table's last criterion shows the rows the filter hid (T-4371),
-    /// which the undo hides again.
+    /// rewrote past what re-inserting the columns undoes (T-4668), and the rows whose hidden
+    /// state it changed, with that state: a delete that takes a filtered table's last criterion
+    /// shows the rows the filter hid (T-4371), one that leaves another re-applies it and may show
+    /// or hide rows (T-4939), and the undo puts each back.
     pub(crate) fn delete_columns_keeping_tables(
         &mut self,
         sheet: u32,
         column: i32,
         count: i32,
-    ) -> Result<(KeptTables, Vec<RewrittenCell>, Vec<i32>), String> {
+    ) -> Result<(KeptTables, Vec<RewrittenCell>, ToggledRows), String> {
         let worksheet = self.workbook.worksheet(sheet)?;
         let sheet_name = worksheet.get_name();
-        let hidden: Vec<i32> = (worksheet.rows.iter())
+        let hidden: HashSet<i32> = (worksheet.rows.iter())
             .filter(|r| r.hidden)
             .map(|r| r.r)
             .collect();
@@ -536,15 +540,15 @@ impl Model {
         let rewritten = self.delete_columns_rewriting(sheet, column, count)?;
         let rows = &self.workbook.worksheet(sheet)?.rows;
         let still: HashSet<i32> = rows.iter().filter(|r| r.hidden).map(|r| r.r).collect();
-        let shown = hidden
-            .into_iter()
-            .filter(|row| !still.contains(row))
+        let mut toggled: Vec<(i32, bool)> = (hidden.symmetric_difference(&still))
+            .map(|&row| (row, still.contains(&row)))
             .collect();
+        toggled.sort_unstable();
         let tables = &self.workbook.tables;
         let changed = (before.into_iter())
             .filter(|(name, table)| tables.get(name).is_some_and(|now| now != table))
             .collect();
-        Ok((changed, rewritten, shown))
+        Ok((changed, rewritten, toggled))
     }
 
     /// Checks everything about `tables` that [`Model::restore_tables_of_sheet`] needs except the

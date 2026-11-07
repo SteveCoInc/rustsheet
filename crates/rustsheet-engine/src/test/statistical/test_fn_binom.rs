@@ -511,3 +511,18 @@ fn negbinom_cdf_at_one_success_keeps_a_tiny_p() {
         other => panic!("expected number, got {other:?}"),
     }
 }
+
+// BINOM.INV and CRITBINOM with probability_s 0 are #NUM!, as probability 1 is, unlike BINOM.DIST
+// (probes-numeric/m9-legacy-critbinom A23-A26, T-2027).
+#[test]
+fn binom_inv_and_critbinom_probability_zero_is_num_error() {
+    let mut model = new_empty_model();
+    model._set("A1", "=CRITBINOM(10,0,0.5)");
+    model._set("A2", "=BINOM.INV(10,0,0.5)");
+    model._set("A3", "=CRITBINOM(10,1,0.5)");
+    model._set("A4", "=BINOM.INV(10,1,0.5)");
+    model.evaluate();
+    for cell in ["A1", "A2", "A3", "A4"] {
+        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
+    }
+}

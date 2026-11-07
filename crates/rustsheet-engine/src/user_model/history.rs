@@ -6,8 +6,8 @@ use crate::{
     cf_types::CfRule,
     formula_rewrite::{RewrittenCell, RewrittenFormula},
     types::{
-        Cell, Col, Color, Link, MergedCell, Row, SheetState, Style, StyleIncludes, Table,
-        TableExtent, Theme, Worksheet,
+        Cell, Col, Color, DataTable, Link, MergedCell, Row, SheetState, Style, StyleIncludes,
+        Table, TableExtent, Theme, Worksheet,
     },
 };
 
@@ -24,14 +24,15 @@ pub(crate) struct ColumnData {
 }
 
 impl Diff {
-    /// A `SetRowHidden` that shows a hidden row. A column delete's diff list ends with these
-    /// for the rows it showed (T-4371), so an undo hides them before it restores the filter.
-    pub(crate) fn row_shown(sheet: u32, row: i32) -> Self {
+    /// A `SetRowHidden` that sets row `row` to `hidden` from the other state. A column delete's
+    /// diff list ends with these for the rows it showed or hid (T-4371, T-4939), so an undo puts
+    /// them back before it restores the filter.
+    pub(crate) fn row_hidden_toggled(sheet: u32, row: i32, hidden: bool) -> Self {
         Diff::SetRowHidden {
             sheet,
             row,
-            new_value: false,
-            old_value: true,
+            new_value: hidden,
+            old_value: !hidden,
         }
     }
 
@@ -378,6 +379,16 @@ pub(crate) enum Diff {
         sheet: u32,
         old_value: Vec<MergedCell>,
         new_value: Vec<MergedCell>,
+    },
+    /// Sets the full list of data tables of a sheet: apply installs `new_value`, undo installs
+    /// `old_value`. Row and column deletes and range clears move or delete data tables in ways
+    /// their undo cannot reconstruct (an input made `#REF!`, a deleted table), so they push this
+    /// diff with `old_value == new_value` (a no-op on apply) before the edit, as
+    /// [`Diff::SetMergedCells`] does (T-4940).
+    SetDataTables {
+        sheet: u32,
+        old_value: Vec<DataTable>,
+        new_value: Vec<DataTable>,
     },
     // FIXME: we are missing SetViewDiffs
 }

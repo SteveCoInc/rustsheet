@@ -1,5 +1,7 @@
+use super::util::collation::cmp_text_pairwise;
 use crate::functions::util::array_node_to_calc_result;
 use crate::functions::util::near_integer::near_integer_whole;
+use crate::number_format::cmp_excel_precision;
 use std::cmp::Ordering;
 
 use crate::{
@@ -45,9 +47,20 @@ pub(crate) fn sort_key_cmp(
         (true, false) => Ordering::Greater,
         (false, true) => Ordering::Less,
         (false, false) => {
-            let key_a = array_node_to_calc_result(a, cell);
-            let key_b = array_node_to_calc_result(b, cell);
-            let cmp = compare_values_pairwise(&key_a, &key_b);
+            // The common pairs compare in place (what `compare_values_pairwise` does for them), so
+            // a comparison clones no text and builds no `CalcResult` (T-1599).
+            let cmp = match (a, b) {
+                (ArrayNode::Number(x), ArrayNode::Number(y)) => match cmp_excel_precision(*x, *y) {
+                    Ordering::Less => -1,
+                    Ordering::Equal => 0,
+                    Ordering::Greater => 1,
+                },
+                (ArrayNode::String(x), ArrayNode::String(y)) => cmp_text_pairwise(x, y) as i32,
+                _ => compare_values_pairwise(
+                    &array_node_to_calc_result(a, cell),
+                    &array_node_to_calc_result(b, cell),
+                ),
+            };
             if ascending {
                 cmp.cmp(&0)
             } else {

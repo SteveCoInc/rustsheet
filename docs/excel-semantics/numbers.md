@@ -2376,14 +2376,41 @@ engine matches both. **A delete that leaves another criterion shows only the row
 (T-4755, probes/t4755-two-criteria-filtered-table-*): with a values filter on `Cat` keeping "a" and "c" (rows 3, 7)
 and one on `Ext` rejecting 40 (row 5), the control gives 3 = 103 = 3 and 9 = 109 = 9; deleting column A gives
 3 = 103 = 5 and 9 = 109 = 17: rows 3 and 7 are visible again, row 5 stays hidden and still filtered
-(`SUBTOTAL(3,..)` of it is 0). The engine matches (T-4803): after a column delete that takes a criterion and leaves
-another inside the table, it shows each hidden data row that every kept criterion keeps, by the text the row's cell
-displays in that criterion's column (`rows_kept_by_criteria`, crates/rustsheet-engine/src/table_edits.rs), for a table read
-from a file and for one given its criteria with `Txn::filter_table_column` (the eval adapter's spec `"criteria"`). Rule
-(ours, T-4803): only a values filter without date groups is evaluated (blank rows by `blank`, other rows by their text
-among `values`, ignoring case); a row with any other kept criterion stays hidden. A row hidden in the file that the kept
-criteria keep is shown too, as the one-criterion delete shows it (above); with two criteria that is unprobed, as are
-case differences and number formats in the kept column.
+(`SUBTOTAL(3,..)` of it is 0). **Excel re-applies the kept criteria to every data row** (T-4895, T-4939, excel-graph
+2026-11-07; predictions committed before each fill in docs/research/t4895/ and docs/research/t4939/): a row every
+kept criterion keeps is visible afterwards and a row one rejects is hidden, whatever its state before, matched by the
+text the row's cell displays in that criterion's column, ignoring case:
+- A row hidden in the file that both criteria keep is shown by the delete too (probes/t4895-two-criteria-hand-hidden-*:
+  row 4, "a" and 30, also written hidden; the control gives `SUBTOTAL(3,S!B4)` = 0, the delete 1 and 3 = 103 = 5,
+  9 = 109 = 17). One earlier fill of the delete case without its `COLUMNS(Sales)` reader returned the
+  control's values; two later fills with the reader (`COLUMNS` = 2, so the delete ran) reproduced the result above,
+  (the 13:36 fill is kept in docs/research/t4895/second-fill/, the 13:37 one is the case's sidecar), and the first
+  fill's sidecars are kept in docs/research/t4895/first-fill/.
+- Visible rows the kept criterion rejects are hidden, and the match is by displayed text
+  (probes/t4895-two-criteria-number-format-*): with `Ext` formatted `0.00` (10.00 .. 60.00) and its kept values
+  filter listing the General text 10, 20, 30, 50, 60, the control reads the file's hidden rows (3 = 103 = 3) but the
+  delete of `Cat` hides **every** data row, rows 2, 4 and 6 that were visible included (3 = 103 = 9 = 109 = 0; two
+  fills). The positive control (docs/research/t4939/control.py, its uploads and predictions beside it) lists the
+  displayed text 10.00, 20.00, 30.00, 50.00, 60.00 instead: the control still reads rows 3, 5 and 7 hidden, and the
+  delete shows rows 2-4, 6 and 7 and hides row 5 (3 = 103 = 5, 9 = 109 = 17), so the displayed text matches and the
+  General text does not.
+- Uploads of patched spec2xlsx workbooks (Cat keeps a and c, Ext rejects 40, delete_column C; sha256 of each in
+  docs/research/t4895/predictions-uploads.tsv, the recalculated values in docs/research/t4895/uploads/): kept values
+  "A" and "C" over cells a and c keep them (case is ignored); a visible row whose kept cell is blank stays visible
+  under `blank="1"` and is hidden without it; a kept custom filter (equals a, or equals c) shows row 5, which only the
+  deleted criterion hid.
+
+The engine follows this (T-4803, T-4939): after a column delete that takes a criterion and leaves another inside the
+table, `rows_decided_by_criteria` (crates/rustsheet-engine/src/table_edits.rs) re-applies the kept criteria to each
+data row, rows without a row record included, by `FilterCriterion::keeps_text` (table_types.rs), for a table read from
+a file and for one given its criteria with `Txn::filter_table_column`. The eval adapter's spec `"criteria"` lists the
+kept rows' General text, as spec2xlsx writes it (`add_table` in crates/rustsheet-eval/src/engine.rs runs before the
+number formats are set). Rule (ours where unprobed): a values filter without date groups is evaluated (blank rows by
+`blank`, other rows by their text among `values`), and a custom filter whose conditions all have the `equal` operator
+(or none) and a text operand without a wildcard (`*`, `?`, `~`), combined by `and`. A row whose verdict hangs on any
+other kept criterion (a custom filter with another operator or a numeric operand, top 10, dynamic, date groups, color)
+keeps its state, unless an evaluated criterion rejects it. The undo puts back every row the delete showed or hid.
+Kept top10, dynamic, date-group and color criteria are unprobed.
 A manual hide made in the application inside a filtered table, and hidden rows outside the table (the engine keeps
 them hidden), are unprobed. A worksheet autoFilter (no table) and an autoFilter holding only a
 `<sortState>` are unprobed; ours reads the latter as not filtered.
@@ -2848,15 +2875,28 @@ argument wins: `QUOTIENT(1/0,)` is `#DIV/0!`, `QUOTIENT(TRUE,)` `#VALUE!` (A9:A1
 empty hands the emptiness on: `LET(e,,QUOTIENT(7,e))`, `LET(e,,QUOTIENT(e,2))`, `LAMBDA(a,b,QUOTIENT(a,b))(7,)` and
 `LET(e,,SERIESSUM(2,e,1,{1,2}))` are `#N/A` (-let-lambda A1:A4). Only the argument as written counts: a formula that
 gives a blank (an IFERROR or VLOOKUP of an empty cell) is read as 0, not `#N/A` (gen-m5/6efa59fc1257c475 Calc!A229,
-gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). UNVERIFIED: where empty coefficients rank against an `x`,
-`n` or `m` error (ours checks them after, as every coefficient error).
+gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). Empty coefficients rank after `x`, `n` and `m`: with the
+coefficients empty, `SERIESSUM(1/0,1,1,)` is `#DIV/0!`, `SERIESSUM(2,"x",1,)` `#VALUE!` and `SERIESSUM(2,1,NA(),)` `#N/A`
+(t4903 B1:B3), and an `m` error that is not `#N/A` also beats them: `SERIESSUM(2,1,1/0,)` is `#DIV/0!`,
+`SERIESSUM(2,1,"x",)` `#VALUE!` (B4:B5; B3 alone could not tell, as empty coefficients are `#N/A` themselves). Ours checks
+the coefficients after, as every coefficient error. An empty argument beside an array lifts element by element:
+`ROWS(QUOTIENT(,{2;4}))` is 2 and `COLUMNS(QUOTIENT({7,8},))` is 2, with `INDEX(QUOTIENT({7,8},),1,2)` `#N/A` (t4903
+A1:A3; the t4873 A7:A8 spills showed only `#SPILL!`).
+The one-argument SQRTPI and FACTDOUBLE can be given an empty argument only through LET or LAMBDA, and they follow
+the same rule (T-4923). `LET(e,,SQRTPI(e))`, `LAMBDA(a,b,SQRTPI(b))(1,)`, `LET(e,,FACTDOUBLE(e))` and
+`LAMBDA(a,b,FACTDOUBLE(b))(1,)` are `#N/A`. An operator over the omission reads it as 0: `LET(e,,SQRTPI(e+0))` is 0
+and `LET(e,,FACTDOUBLE(e+0))` is 1. So does a blank cell: `SQRTPI(Z1)` is 0 and `FACTDOUBLE(Z1)` is 1. An IF that
+lifts it is still an array: `ROWS(LET(e,,SQRTPI(IF({1;1},e))))` is 2.
 Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!A1:B8, probes/t4873-empty-arg-let-lambda Calc!A1:A4 (excel-graph,
-2026-11-07, T-4873; predictions committed before the fill).
-Ours: `Model::atp_number` (functions/lift/mod.rs) reads MROUND's, QUOTIENT's and SERIESSUM's numbers, told which
-arguments are empty by `Model::empty_arguments` (logical/let.rs); `series_coefficients`
-refuses empty coefficients. Before T-4873 QUOTIENT and SERIESSUM read an empty argument as 0.
+2026-11-07, T-4873; predictions committed before the fill); probes/t4903-empty-arg-quotient-seriessum-lift Calc!A1:B5
+(excel-graph, 2026-11-07, T-4903; predictions committed before the fill, 8/8 held); probes/t4923-sqrtpi-factdouble-omitted A1:A13 (excel-graph,
+2026-11-07; H_na 13/13, H_zero, the omission as 0, 9/13; predictions committed before the fill).
+Ours: `Model::atp_number` (functions/lift/mod.rs) reads MROUND's, QUOTIENT's, SERIESSUM's and SQRTPI's numbers, told
+which arguments are empty by `Model::empty_arguments` (functions/util/empty_args.rs). FACTDOUBLE swaps its argument
+through `written_empty_or`, and `series_coefficients` refuses empty coefficients. Before T-4873 QUOTIENT and SERIESSUM
+read an empty argument as 0, and before T-4923 SQRTPI and FACTDOUBLE read the omission as 0.
 Status: VERIFIED (excel-graph)
-Tasks: T-4873
+Tasks: T-4873, T-4903, T-4923
 
 ## An empty significance of the 2010+ roundings is omitted (T-4873)
 Rule: CEILING.MATH, FLOOR.MATH (Excel 2013), CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING (Excel 2010) read a written-empty

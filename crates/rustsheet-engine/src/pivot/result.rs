@@ -4,21 +4,26 @@
 //!
 //! [`compute`] is a pure function of the definition and the cache:
 //! 1. **Record filter.** A page field's selected item keeps only its records, and a hidden item
-//!    (`item@h`, [`PivotField::is_hidden`]) of a field on an axis drops its records. Only a page
+//!    (`item@h`, [`PivotField::is_hidden`](super::PivotField::is_hidden)) of a field on an axis drops its records. Only a page
 //!    field's selection and hidden items are evidenced (probes/t4137-pivot-captions K4); hidden
 //!    items of a row or column field, and the totals over them, are UNVERIFIED (T-4164). A page
 //!    `item` that names no data item reads as `(All)`, as T-4139's import does, and a hidden item
 //!    on a field off every axis is ignored (both UNVERIFIED, T-4633; docs/excel-semantics/
-//!    pivots.md "Record filters").
+//!    pivots.md "Record filters"). A slicer's selection replaces its field's hidden items, on an
+//!    axis or not, and a timeline keeps only the records whose day its selection spans
+//!    (`pivot::slicer`, T-4188; probes/t4767-pivot-slicers, probes/t4767-pivot-timelines).
 //!
 //!    Then the pivot's `<filters>` and `AutoShow` (`pivot::filter`, T-4165): caption and date
 //!    filters, then value filters and Top-N per parent, each keeping the records of the items it
-//!    keeps, so the totals cover only what is shown.
+//!    keeps, so the totals cover only what is shown. Then the value sorts (`pivot::sort`,
+//!    T-4827) place each sorted field's items within their parent by the value its
+//!    `autoSortScope` names, over the records the filters kept.
 //! 2. **Groups** are already the records' items: a grouped field's records index its group items
 //!    (`number_groups`, `date_groups`).
 //! 3. **Accumulate.** Each axis is a tree of item tuples in display order: a field's listed
 //!    items in `<items>` order, then the cache items it does not list, in cache order (pivots.md
-//!    "Items show in the order the pivot field lists them"). Records are fed to every
+//!    "Items show in the order the pivot field lists them"), a value-sorted field's items first by
+//!    their sort position within their parent. Records are fed to every
 //!    accumulator that covers them in one order: by row leaf, then column leaf, in display
 //!    order, and in record order within a leaf. So an item cell accumulates in record order, and
 //!    a total accumulates item by item in the display order of the field it totals, in record
@@ -61,6 +66,7 @@
 
 mod calculate;
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use thiserror::Error as ThisError;
@@ -69,12 +75,17 @@ use crate::expressions::token::Error;
 
 use super::accumulate::{sum_in_order, Accumulator, CutCount};
 use super::calculated::Plan;
-use super::filter::{apply as apply_filters, FilterContext, Kept};
+use super::filter::{apply as apply_filters, FilterContext};
+use super::model::bit;
 use super::show_as::{show_values_as, Shown};
-use super::{
-    Aggregate, Axis, AxisField, CacheItem, ItemType, PageField, PivotCache, PivotField, PivotTable,
-};
+use super::sort::value_sorts;
+use super::{Aggregate, Axis, CacheItem, ItemType, PageField, PivotCache, PivotTable};
 use calculate::calculate;
+
+mod axis;
+
+pub(super) use axis::{axis_fields, Order};
+use axis::{place, AxisColumns};
 
 /// Most nodes one pivot result holds: axis nodes, plus one accumulator per (row node, column
 /// node, data field) that some record reaches (SPEC-0032 "Untrusted-input limits").
@@ -315,6 +326,14 @@ impl PivotResult {
         {
             return Some(accumulator.cut_count(function, self.counts_mixed));
         }
+        // A Sum over records that are all blank shows blank, as an intersection no record
+        // reaches does (docs/excel-semantics/pivots.md "Aggregates over text, blanks, booleans
+        // and errors": probes/t4164-pivot-value-sort SEd B7, SEa B4). A Sum total covering only
+        // such records is blank too, and the other aggregates over them keep the worksheet
+        // functions' answers (both UNVERIFIED, T-4633).
+        if function == Aggregate::Sum && accumulator.is_blank() {
+            return None;
+        }
         let sum = (function == Aggregate::Sum && total && self.sum_only)
             .then(|| accumulator.children_sum());
         Some(accumulator.finish(function, total, self.counts_mixed, sum))
@@ -349,198 +368,6 @@ pub(super) fn count_nodes(nodes: &mut usize, count: usize) -> Result<(), PivotCo
     Ok(())
 }
 
-/// A field's display order: per cache item its rank, and per rank its cache item. The field's
-/// listed data items come first, in `<items>` order (a repeat or an index past the cache items
-/// is skipped), then the cache items it does not list, in cache order.
-pub(super) struct Order {
-    pub(super) rank: Vec<u32>,
-    item: Vec<u32>,
-}
-
-impl Order {
-    pub(super) fn of(field: Option<&PivotField>, item_count: usize) -> Order {
-        let mut rank = vec![u32::MAX; item_count];
-        let mut item = Vec::with_capacity(item_count);
-        let listed = field
-            .into_iter()
-            .flat_map(|f| &f.items)
-            .filter(|i| i.kind == ItemType::Data)
-            .filter_map(|i| i.index);
-        // The cache holds at most MAX_ITEMS items, so every index and rank fits a u32.
-        for index in listed.chain(0..u32::try_from(item_count).unwrap_or(u32::MAX)) {
-            if let Some(slot) = rank.get_mut(index as usize) {
-                if *slot == u32::MAX {
-                    *slot = u32::try_from(item.len()).unwrap_or(u32::MAX);
-                    item.push(index);
-                }
-            }
-        }
-        Order { rank, item }
-    }
-}
-
-/// One axis's fields with their records and display orders.
-struct AxisColumns<'a> {
-    fields: Vec<u32>,
-    records: Vec<&'a [u32]>,
-    orders: Vec<Order>,
-    /// The axis's one field when it has `showAll` on: its items with no record are shown too.
-    show_all: Option<&'a PivotField>,
-}
-
-impl<'a> AxisColumns<'a> {
-    fn new(
-        table: &'a PivotTable,
-        cache: &'a PivotCache,
-        axis: &[AxisField],
-        work: &mut u64,
-    ) -> Result<Self, PivotComputeError> {
-        let fields: Vec<u32> = axis
-            .iter()
-            .filter_map(|f| match f {
-                AxisField::Field(index) => Some(*index),
-                AxisField::Values => None,
-            })
-            .collect();
-        let mut records = Vec::with_capacity(fields.len());
-        let mut orders = Vec::with_capacity(fields.len());
-        for &field in &fields {
-            let cache_field = cache
-                .fields
-                .get(field as usize)
-                .ok_or(PivotComputeError::Malformed)?;
-            let pivot_field = table.fields.get(field as usize);
-            let listed = pivot_field.map_or(0, |f| f.items.len());
-            charge(work, units(cache_field.items.len().saturating_add(listed)))?;
-            records.push(cache_field.records.as_slice());
-            orders.push(Order::of(pivot_field, cache_field.items.len()));
-        }
-        let show_all = match fields.as_slice() {
-            [field] => table.fields.get(*field as usize).filter(|f| f.show_all),
-            _ => None,
-        };
-        Ok(AxisColumns {
-            fields,
-            records,
-            orders,
-            show_all,
-        })
-    }
-
-    /// Under the axis field's `showAll`, interns every item it does not hide and no filter
-    /// removed, in display order, so that an item no kept record holds is shown with blank values (see the module
-    /// documentation).
-    fn show_all_keys(
-        &self,
-        keys: &mut HashMap<Box<[u32]>, u32>,
-        kept: &Kept,
-        work: &mut u64,
-    ) -> Result<(), PivotComputeError> {
-        let (Some(field), Some(order), Some(&index)) =
-            (self.show_all, self.orders.first(), self.fields.first())
-        else {
-            return Ok(());
-        };
-        charge(work, units(order.item.len()))?;
-        for (rank, &item) in (0u32..).zip(&order.item) {
-            // Nor an item a filter removed (UNVERIFIED, T-4799: no probe has `showAll` beside a
-            // filter).
-            if !field.is_hidden(item) && !kept.is_removed(index, item) {
-                intern(keys, &[rank])?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Writes the display ranks of `record`'s items into `key`.
-    fn key(&self, record: u32, key: &mut Vec<u32>) -> Result<(), PivotComputeError> {
-        key.clear();
-        for (column, order) in self.records.iter().zip(&self.orders) {
-            let item = column
-                .get(record as usize)
-                .ok_or(PivotComputeError::Malformed)?;
-            let rank = order
-                .rank
-                .get(*item as usize)
-                .ok_or(PivotComputeError::Malformed)?;
-            key.push(*rank);
-        }
-        Ok(())
-    }
-
-    /// The tree of the distinct `keys` (display ranks), and per key id its leaf node.
-    fn tree(
-        self,
-        keys: HashMap<Box<[u32]>, u32>,
-        work: &mut u64,
-        nodes: &mut usize,
-    ) -> Result<(AxisTree, Vec<u32>), PivotComputeError> {
-        let mut sorted: Vec<(Box<[u32]>, u32)> = keys.into_iter().collect();
-        charge(work, sort_units(sorted.len()))?;
-        sorted.sort_unstable();
-        let mut tree = vec![AxisNode {
-            parent: None,
-            item: None,
-            depth: 0,
-            end: 0,
-        }];
-        let mut leaves = vec![0; sorted.len()];
-        // The open nodes, root first.
-        let mut path: Vec<u32> = vec![0];
-        let mut previous: Option<&[u32]> = None;
-        for (key, id) in &sorted {
-            let common = previous.map_or(0, |p| {
-                p.iter().zip(key.iter()).take_while(|(a, b)| a == b).count()
-            });
-            while path.len() > common + 1 {
-                close(&mut tree, path.pop())?;
-            }
-            let depth_new = key.len().saturating_sub(common);
-            count_nodes(nodes, depth_new)?;
-            charge(work, units(depth_new))?;
-            for (depth, &rank) in key.iter().enumerate().skip(common) {
-                let item = self
-                    .orders
-                    .get(depth)
-                    .and_then(|o| o.item.get(rank as usize))
-                    .copied()
-                    .ok_or(PivotComputeError::Malformed)?;
-                let index = node_index(tree.len())?;
-                tree.push(AxisNode {
-                    parent: path.last().copied(),
-                    item: Some(item),
-                    depth: u32::try_from(depth + 1).map_err(|_| PivotComputeError::Limit)?,
-                    end: 0,
-                });
-                path.push(index);
-            }
-            if let Some(leaf) = leaves.get_mut(*id as usize) {
-                *leaf = path.last().copied().unwrap_or(0);
-            }
-            previous = Some(key);
-        }
-        while let Some(open) = path.pop() {
-            close(&mut tree, Some(open))?;
-        }
-        Ok((
-            AxisTree {
-                fields: self.fields,
-                nodes: tree,
-            },
-            leaves,
-        ))
-    }
-}
-
-/// Ends the subtree of the open node `node` at the tree's current length.
-fn close(tree: &mut [AxisNode], node: Option<u32>) -> Result<(), PivotComputeError> {
-    let end = node_index(tree.len())?;
-    if let Some(n) = node.and_then(|n| tree.get_mut(n as usize)) {
-        n.end = end;
-    }
-    Ok(())
-}
-
 /// A node or accumulator index; within [`MAX_PIVOT_NODES`], so it fits a u32.
 fn node_index(len: usize) -> Result<u32, PivotComputeError> {
     u32::try_from(len).map_err(|_| PivotComputeError::Limit)
@@ -558,8 +385,15 @@ fn filter(
     cache: &PivotCache,
     work: &mut u64,
 ) -> Result<Vec<u32>, PivotComputeError> {
-    // (the field's records, the one item it keeps or None, its hidden items)
-    let mut tests: Vec<(&[u32], Option<u32>, Option<&PivotField>)> = Vec::new();
+    /// What one field asks of a record's item.
+    enum Test<'a> {
+        /// The page field's one selected item.
+        Page(u32),
+        /// No item of this bitset over the field's cache items: the slicer's selection or the
+        /// hidden items (borrowed), or the items a timeline's span leaves out (built once).
+        Out(Cow<'a, [u64]>),
+    }
+    let mut tests: Vec<(&[u32], Test<'_>)> = Vec::new();
     let column = |field: u32| {
         cache
             .fields
@@ -569,9 +403,8 @@ fn filter(
     };
     for page in &table.page_fields {
         let records = column(page.field)?;
-        let selected = page_selection(table, page);
-        if selected.is_some() {
-            tests.push((records, selected, None));
+        if let Some(selected) = page_selection(table, page) {
+            tests.push((records, Test::Page(selected)));
         }
     }
     for (field, pivot_field) in (0u32..).zip(&table.fields) {
@@ -579,19 +412,43 @@ fn filter(
             pivot_field.axis,
             Some(Axis::Row | Axis::Column | Axis::Page)
         );
-        if on_axis && pivot_field.hidden.iter().any(|word| *word != 0) {
-            tests.push((column(field)?, None, Some(pivot_field)));
+        // A slicer filters its field whether or not the field is on an axis (UNVERIFIED,
+        // T-4962: only a row field is probed), hidden items only a field on one.
+        let slicer = pivot_field.slicer.is_some();
+        if (slicer || on_axis) && pivot_field.excludes_any() {
+            let words = Cow::Borrowed(pivot_field.excluded_words());
+            tests.push((column(field)?, Test::Out(words)));
+        }
+        if let Some(span) = pivot_field.timeline {
+            let items = cache
+                .fields
+                .get(field as usize)
+                .map(|f| f.items.as_slice())
+                .ok_or(PivotComputeError::Malformed)?;
+            // Each cache item tested once, not each record.
+            charge(work, units(items.len()))?;
+            let mut out = vec![0_u64; items.len().div_ceil(64)];
+            for (index, item) in items.iter().enumerate() {
+                if let (false, Some(word)) = (span.keeps(item), out.get_mut(index / 64)) {
+                    *word |= 1 << (index % 64);
+                }
+            }
+            tests.push((column(field)?, Test::Out(Cow::Owned(out))));
         }
     }
     let count = cache.record_count as usize;
     charge(work, units(count.saturating_mul(tests.len().max(1))))?;
     let mut kept = Vec::with_capacity(count);
     'records: for record in 0..cache.record_count {
-        for (records, selected, hidden) in &tests {
+        for (records, test) in &tests {
             let item = *records
                 .get(record as usize)
                 .ok_or(PivotComputeError::Malformed)?;
-            if selected.is_some_and(|s| s != item) || hidden.is_some_and(|f| f.is_hidden(item)) {
+            let keeps = match test {
+                Test::Page(selected) => *selected == item,
+                Test::Out(words) => !bit(words, item),
+            };
+            if !keeps {
                 continue 'records;
             }
         }
@@ -609,16 +466,6 @@ pub(super) fn page_selection(table: &PivotTable, page: &PageField) -> Option<u32
         .and_then(|f| f.items.get(page.item? as usize))
         .filter(|item| item.kind == ItemType::Data)
         .and_then(|item| item.index)
-}
-
-/// The id of `key` in `keys`, adding it when new.
-fn intern(keys: &mut HashMap<Box<[u32]>, u32>, key: &[u32]) -> Result<u32, PivotComputeError> {
-    if let Some(&id) = keys.get(key) {
-        return Ok(id);
-    }
-    let id = node_index(keys.len())?;
-    keys.insert(key.into(), id);
-    Ok(id)
 }
 
 /// Computes the result of `table` over `cache`, spending at most `work` units ([`MAX_PIVOT_WORK`]
@@ -653,9 +500,18 @@ pub fn compute_on(
     }
     let records = filter(table, cache, work)?;
     let mut kept = apply_filters(table, cache, records, FilterContext { today }, work)?;
+    let mut rows = AxisColumns::new(table, cache, &table.row_fields, work)?;
+    let mut columns = AxisColumns::new(table, cache, &table.column_fields, work)?;
+    let [row_sorts, column_sorts] = value_sorts(
+        table,
+        cache,
+        &kept,
+        [&rows.orders(), &columns.orders()],
+        work,
+    )?;
+    rows.sort(row_sorts, work)?;
+    columns.sort(column_sorts, work)?;
     let records = std::mem::take(&mut kept.records);
-    let rows = AxisColumns::new(table, cache, &table.row_fields, work)?;
-    let columns = AxisColumns::new(table, cache, &table.column_fields, work)?;
     charge(
         work,
         units(
@@ -664,25 +520,7 @@ pub fn compute_on(
                 .saturating_mul(rows.fields.len() + columns.fields.len() + 1),
         ),
     )?;
-    let (mut row_keys, mut column_keys) = (HashMap::new(), HashMap::new());
-    let mut key = Vec::new();
-    let mut placed = Vec::with_capacity(records.len());
-    for &record in &records {
-        rows.key(record, &mut key)?;
-        let row = intern(&mut row_keys, &key)?;
-        columns.key(record, &mut key)?;
-        let column = intern(&mut column_keys, &key)?;
-        placed.push((row, column, record));
-    }
-    rows.show_all_keys(&mut row_keys, &kept, work)?;
-    columns.show_all_keys(&mut column_keys, &kept, work)?;
-    let mut nodes = 1;
-    let (rows, row_leaves) = rows.tree(row_keys, work, &mut nodes)?;
-    let (columns, column_leaves) = columns.tree(column_keys, work, &mut nodes)?;
-    for (row, column, _) in &mut placed {
-        *row = row_leaves.get(*row as usize).copied().unwrap_or(0);
-        *column = column_leaves.get(*column as usize).copied().unwrap_or(0);
-    }
+    let (rows, columns, mut placed, mut nodes) = place(rows, columns, &records, &kept, work)?;
     charge(work, sort_units(placed.len()))?;
     placed.sort_unstable();
 

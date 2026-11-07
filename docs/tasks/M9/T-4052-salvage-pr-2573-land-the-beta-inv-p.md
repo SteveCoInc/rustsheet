@@ -3,7 +3,7 @@ id: T-4052
 title: "Salvage PR 2573: land the BETA.INV p-near-1 probe and sweep, then re-measure"
 milestone: M9
 lane: functions-stat
-status: todo
+status: dropped
 priority: P2
 size: S
 tier: opus
@@ -29,3 +29,9 @@ Closed as a stale draft on 2026-11-04 (decision 0264, steward skill "Stale draft
 
 ## Out of scope
 - Porting the branch's engine change. A fix, if one is still needed, is a later task written against current `beta.rs`.
+
+## Outcome
+Dropped: fully covered by T-3351 (PR #3911). That PR lands both cases byte-identical to PR #2573's
+(`probes/t3351-beta-inv-p-near-1`, `probes-numeric/t3351-beta-inv-sweep`, with math sidecars), the statistics.md entry
+"BETA.INV where the quantile rounds to 1 (T-3351)" reconciled with T-3578's and T-3566's, the baselines, and an owner
+for every still-failing cell (T-3351, T-4865, T-4866; new ids, not T-3430 or T-3431).

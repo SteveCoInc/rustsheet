@@ -14,6 +14,8 @@
 
 mod filters;
 mod groups;
+mod slicers;
+mod sort;
 mod table;
 
 use std::cell::Cell;
@@ -31,14 +33,16 @@ use rustsheet_engine::pivot::{
 use rustsheet_engine::types::DateSystem;
 
 use self::groups::{apply_groups, FieldGroup, RangeGroup};
-pub(crate) use self::table::SUBTOTAL_FUNCTIONS;
+pub(crate) use self::slicers::MAX_SLICER_CACHES;
+use self::slicers::{apply_slicer_cache, load_slicer_caches, pivots_by_name, read_slicer_cache};
+pub(crate) use self::table::{data_field_x14_show_as, SUBTOTAL_FUNCTIONS};
 use self::table::{flag, read_pivot_table};
 use super::iso_date::pivot_cache_date_serial;
 use super::package::{
     part_folder_and_rels, part_key, resolve_relative_target, ImportLimits, Package,
 };
-use super::xml::{find_start_attribute, start_attribute, XmlNode};
-use super::{parse_relationships, Relationship};
+use super::xml::{find_start_attribute, start_attribute};
+use super::{part_relationships, Relationship};
 use crate::error::XlsxError;
 
 /// Most pivot fields on one axis of a pivot (SPEC-0015 "Untrusted-input limits").
@@ -120,11 +124,14 @@ pub(super) struct PivotSheet {
 }
 
 /// The pivot caches listed in the workbook (`caches`: each `<pivotCache>`'s `cacheId` and
-/// `r:id`, resolved through the workbook relationships `rels`) and the pivot tables of `sheets`.
+/// `r:id`, resolved through the workbook relationships `rels`) and the pivot tables of `sheets`,
+/// filtered by the slicer and timeline caches the workbook's extension list names
+/// (`slicer_caches`: their `r:id`s; [`slicers`], T-4188).
 pub(super) fn load_pivots<R: Read + Seek>(
     archive: &mut Package<R>,
     rels: &HashMap<String, Relationship>,
     caches: &[(Option<String>, Option<String>)],
+    slicer_caches: &[String],
     sheets: &[PivotSheet],
     date_system: DateSystem,
 ) -> (Vec<PivotCache>, Vec<PivotTable>) {
@@ -185,6 +192,14 @@ pub(super) fn load_pivots<R: Read + Seek>(
             Err(reason) => log_skip("pivot table", part, &reason),
         }
     }
+    load_slicer_caches(
+        archive,
+        rels,
+        slicer_caches,
+        &mut pivot_tables,
+        &pivot_caches,
+        date_system,
+    );
     (pivot_caches, pivot_tables)
 }
 
@@ -341,6 +356,9 @@ pub struct PivotParts<'a> {
     pub cache_records: &'a [u8],
     /// The `cacheId` the tables name the cache by.
     pub cache_id: u32,
+    /// The slicer and timeline cache parts that drive the tables (T-4188), each applied to the
+    /// tables it names as a package's are.
+    pub slicer_caches: &'a [&'a [u8]],
 }
 
 /// Reads `parts` as the importer reads a package's: the cache, then each `pivotTableDefinition`
@@ -364,6 +382,7 @@ pub fn read_pivot_parts(
 ) -> Result<(PivotCache, Vec<PivotTable>), XlsxError> {
     let limits = ImportLimits::default();
     let size = (tables.iter().map(|(_, part)| part.len()))
+        .chain(parts.slicer_caches.iter().map(|part| part.len()))
         .chain([parts.cache_definition.len(), parts.cache_records.len()])
         .fold(0_u64, |total, len| total.saturating_add(len as u64));
     if size > limits.max_uncompressed_bytes {
@@ -396,24 +415,21 @@ pub fn read_pivot_parts(
     );
     let mut pivots = Vec::with_capacity(tables.len());
     for &(sheet_id, part) in tables.iter().take(MAX_PIVOTS_PER_SHEET) {
-        let mut pivot = read_pivot_table(part, sheet_id, &caches, &ids, &limits, &left)
+        let pivot = read_pivot_table(part, sheet_id, &caches, &ids, &limits, &left)
             .map_err(|Skip(reason)| XlsxError::Workbook(reason))?;
-        pivot.cache = cache_index;
         pivots.push(pivot);
+    }
+    let by_name = pivots_by_name(&pivots);
+    for &part in parts.slicer_caches.iter().take(MAX_SLICER_CACHES) {
+        let cache = read_slicer_cache(part, &limits, date_system)
+            .map_err(|Skip(reason)| XlsxError::Workbook(reason))?;
+        apply_slicer_cache(&cache, &mut pivots, &by_name, &caches);
+    }
+    for pivot in &mut pivots {
+        pivot.cache = cache_index;
     }
     let [cache] = caches;
     Ok((cache, pivots))
-}
-
-/// The relationships of a part in document order; none when the part has no relationships part.
-fn part_relationships<R: Read + Seek>(
-    archive: &mut Package<R>,
-    rels_path: &str,
-) -> Result<Vec<(String, Relationship)>, XlsxError> {
-    match archive.open_optional(rels_path)? {
-        Some(file) => parse_relationships(&XmlNode::parse(file)?),
-        None => Ok(Vec::new()),
-    }
 }
 
 /// The pivot table parts of the worksheet part `sheet`, in relationship order.

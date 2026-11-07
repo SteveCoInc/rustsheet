@@ -3,7 +3,7 @@ id: T-4827
 title: "Sort pivot fields by value (autoSortScope) as Excel does"
 milestone: M16
 lane: engine
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -31,14 +31,62 @@ items in the order Excel for the web shows them, within each outer item, by the 
   (`pivot::filter`), and charges the shared `PivotBudget`. Label sorts are T-4768's.
 - Open points: T-4799 (a blank against a real 0, several errors, inner-field ties).
 
-Owner of these visibly-off pivot cells (decision 0245; moved from T-4165):
-- probes/t4130-pivot-sort SV!A4:A6, SV!B4:B6, SV2!A5:A6, SV2!B5:B6, SV2!C5:C6, SVA!A5:A6, SVA!B5:B6, SVC!A6:A7, SVC!B6:B7, SVC!C6:C7, SVC!D6:D7, SVR!A9:A11, SVR!B9:B11, SXA!A4:A6, SXA!B4:B6, SXR!A4:A6, SXR!B4:B6
-- probes/t4164-pivot-value-sort SC2!A5:A9, SC2!B5:B9, SC2!C5:C9, SC2!D7:D9, SCa!A5, SCa!A8:A9, SCa!B5, SCa!B8:B9, SCa!C5, SCa!C8:C9, SCa!D5, SCa!D8:D9, SCd!A5:A6, SCd!A8, SCd!B5:B6, SCd!B8, SCd!C5:C6, SCd!C8, SCd!D5, SCd!D8, SEa!A4:A8, SEa!B4:B8, SEd!A4:A6, SEd!A8, SEd!B4:B8, STa!A4:A8, STa!B4, STa!B7:B8, STc!A4:A7, STc!B4, STc!B7, STca!A4:A8, STca!B4, STca!B7:B8, STd!A4:A7, STd!B4, STd!B7, STo!A4:A8, STo!B4:B5, STo!B7:B8
-- probes/t4164-pivot-item-order IOV!A4:A6, IOV!B4:B6
-
 ## Acceptance criteria
-- [ ] Unit tests against the probe sidecars, and the owned cells pass in the eval.
-- [ ] `make check` green; reviewers approve.
+- [x] Unit tests against the probe sidecars, and the owned cells pass in the eval.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Label sorts and custom lists (T-4768).
+
+## Outcome
+Done. Every cell this task owned passes; its owner lines are removed.
+
+- **Model.** `PivotField::auto_sort` (`pivot::AutoSortScope`): the data field (the first `x` of the reference whose
+  `field` is 4294967294) and the other references with their `x`s. The importer reads it from the field's
+  `autoSortScope`, which it keeps verbatim, so the export's round trip is unchanged
+  (crates/rustsheet-xlsx/src/import/pivots/sort.rs). A refresh that renumbers the fields remaps the references of an
+  API-made pivot and drops a scope whose field is gone.
+- **Engine.** `pivot::sort::value_sorts` runs in `compute_on` after the filters, over the records they keep. It gives
+  each sorted field's items a position within their parent. An outermost field's positions become its display
+  `Order`, so its axis keeps the narrow u32 keys. Only an axis with a value-sorted inner field widens its keys to u64,
+  with the position before the display rank (`result::axis::KeyPart`), so `AxisColumns::tree` orders each parent's
+  children by value. An outermost sort orders only the items the kept records hold, plus a `showAll` axis's items
+  as 0. The values come from
+  T-4165's `ValueStep`, split into `ValueStep::cells` (the per-parent cell values, now also used by the value
+  filters) and `run`. A `within` list restricts the values to the scope's column items. Descending ties keep the
+  file's cache order, and ascending is its exact reverse. A cell with no value sorts as 0, and errors go last both
+  ways. All the work is charged to the pivot budget first, and a unit test runs every budget below the cost and sees
+  `Limit`.
+- **Also found.** A Sum cell whose records are all blank renders blank, not 0 (SEd B7, SEa B4, owned here). This is
+  added to pivots.md "Aggregates over text, blanks, booleans and errors" and implemented in
+  `PivotResult::plain_as` for Sum only. The other aggregates are left to T-4633.
+- **Evidence and readings.** pivots.md "Value sorts: ties, blanks and errors" lists the engine's own readings as
+  UNVERIFIED (T-4799):
+  - a blank against a real 0;
+  - several errors;
+  - inner-field ties;
+  - `reference@x` read as an index into the field's `<items>`, and only its first `x` read;
+  - references to a field off the other axis (on no axis, on the sorted field's own axis, or past the cache) being
+    ignored;
+  - scopes that name nothing, or that sit under `sortType="manual"`, which sort nothing;
+  - `showAll` items, which sort as 0;
+  - a sort on a column field;
+  - a Count or Average item with no number in the scope, which sorts as its cell shows it.
+
+  Also under T-4633: show-values-as modes read an all-blank Sum cell as empty, not 0.
+- **Performance.** `cargo bench -p rustsheet --bench pivot -- "result tree"`, base dd67308d3 (this commit's parent)
+  against HEAD. Each figure is the middle of three interleaved runs' medians, on a shared 4-core container:
+  - over 100,000 records: 10.84 -> 11.09 ms;
+  - with filters: 10.07 -> 9.88 ms;
+  - with inner caption and Top-N filters: 4.20 -> 4.92 ms;
+  - with outer and inner value sorts (new): 23.5 ms.
+
+  The first review version, with u64 keys everywhere, measured 11.4, 10.3 and 4.4 ms. The narrow keys bring the first
+  two cases back to base. The inner-filter case is about 0.7 ms slower in wall clock, but callgrind, cachegrind and
+  branch simulation give it the same instruction, cache-miss and mispredict counts as the u64 version. The version
+  differs from base by about 3.4M instructions per compute, from splitting `ValueStep::cells` out of
+  `filter::apply`. Rebuilding with only filter.rs reverted moves the case by 0.3 ms, so the rest looks like
+  code-layout sensitivity. Forcing alignment, pinning malloc thresholds and restoring the single row-and-column
+  pass did not close it.
+- **Eval.** probes known failures 6978 -> 6833 and text 280 -> 142 (fixed 283, REGRESSIONS 0), on b48104e92. The cells left in
+  t4130-pivot-sort and t4164-pivot-item-order are the label sorts (SA, SD, NA, CL0, CL1, IOA), which are T-4768's.

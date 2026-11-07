@@ -289,6 +289,46 @@ class ExitOwners(TaskDir):
             ],
         )
 
+    def test_a_row_without_an_r1c_count_lists_every_visibly_off_probe_cell(self) -> None:
+        # M16 (decision 0274) reads its probe row by decision 0083's rule, not R1(c): its exit row
+        # has a null `probe_r1c_off`, so every visibly-off probe cell is an exit cell.
+        r = report()
+        r["milestone_exit"] = [
+            {
+                "milestone": "M16",
+                "gen_suite": "",
+                "calc_met": None,
+                "probe_row": "M16",
+                "probe_r1c_off": None,
+                "pivot": {},
+            }
+        ]
+        r["probe_milestones"][0]["milestone"] = "M16"  # type: ignore[index]
+        r["probe_milestones"][0]["r1c_off_cells"] = [f"{PROBE}!P!B2"]  # type: ignore[index]
+        self.assertEqual(criteria_cells(r, "M16"), [("probes", f"{PROBE}!P!B2"), ("probes", f"{PROBE}!P!B3")])
+
+    def test_m16_leaves_out_r3_passes_and_m14_owned_probe_cells_only(self) -> None:
+        # Decision 0274 item 5 and decision 0188 R3: an M14-owned or R3-pass cell never blocks
+        # M16; a Phase 1b cell, R1(c)'s leave-out, still does.
+        r = report()
+        r["milestone_exit"] = [{"milestone": "M16", "gen_suite": "", "calc_met": None, "probe_row": "M16", "pivot": {}}]
+        r["probe_milestones"][0]["milestone"] = "M16"  # type: ignore[index]
+        off = [f"{PROBE}!P!B2", f"{PROBE}!P!B3", f"{PROBE}!P!B4"]
+        r["probe_milestones"][0]["visibly_off_cells"] = off  # type: ignore[index]
+        r["r1c_left_out"] = {f"{PROBE}!P!B2": "r3_pass", f"{PROBE}!P!B3": "m14_owned", f"{PROBE}!P!B4": "phase1b"}
+        self.assertEqual(criteria_cells(r, "M16"), [("probes", f"{PROBE}!P!B4")])
+
+    def test_a_null_r1c_count_without_a_pivot_measure_keeps_the_r1c_cells(self) -> None:
+        # A row with no probe summary also serializes a null `probe_r1c_off`; only the `pivot`
+        # measure (M16) widens the list to every visibly-off probe cell.
+        r = report()
+        r["milestone_exit"] = [
+            {"milestone": "M16", "gen_suite": "", "calc_met": None, "probe_row": "M16", "probe_r1c_off": None}
+        ]
+        r["probe_milestones"][0]["milestone"] = "M16"  # type: ignore[index]
+        r["probe_milestones"][0]["r1c_off_cells"] = [f"{PROBE}!P!B2"]  # type: ignore[index]
+        self.assertEqual(criteria_cells(r, "M16"), [("probes", f"{PROBE}!P!B2")])
+
     def test_cases_that_did_not_run_are_listed_whole(self) -> None:
         # Decision 0174: a gen or ironcalc-calc case that did not run fails its measure.
         gen2, calc = "gen-m2/abc.case.json", "ironcalc-calc/BIG.xlsx"
@@ -763,6 +803,17 @@ class AllOff(TaskDir):
             "---\nid: T-9100\nmilestone: M5\nstatus: todo\ndefer: phase-1b\n---\n\nindex-reference-args B2\n"
         )
         self.assertIn(("BETA.DIST", "P!B2", True), self.listed())
+
+    def test_a_pivot_layout_item_is_no_cell(self) -> None:
+        # T-4944: an export case's layout items are baseline items, not visibly-off cells; only
+        # new_case_owners reads them.
+        r = self.report()
+        r["cases"][0]["layout_checked"] = 1  # type: ignore[index]
+        r["cases"][0]["pivot_layout"] = [  # type: ignore[index]
+            {"sheet": "K", "name": "Top", "excel_location": "A3:D11", "verdict": "lines_differ"}
+        ]
+        self.assertEqual(exit_owners.all_off_cells(r), exit_owners.all_off_cells(self.report()))
+        self.assertEqual(exit_owners.unowned_off(r, self.tasks), exit_owners.unowned_off(self.report(), self.tasks))
 
     def test_output_function_filter_and_strict(self) -> None:
         path = self.tasks / "report.json"

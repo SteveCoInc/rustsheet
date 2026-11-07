@@ -6,11 +6,13 @@
 //! same content type. Element and attribute items (T-4509), semantic items (T-4513) and R1
 //! (T-4514) build on the same results.
 
+mod by_scenario;
 mod exceptions;
 mod package;
+mod package_diff;
 mod r1;
 pub(crate) mod scenarios;
-mod semantic;
+pub(crate) mod semantic;
 #[cfg(test)]
 mod tests;
 mod xmldiff;
@@ -32,6 +34,7 @@ use crate::suite::{BaselineMode, CaseFile, Suite};
 use crate::xlsx_snapshot::read_snapshot;
 
 use package::{validate, Package, Problem};
+pub use package_diff::{package_diff, PackageDiff};
 
 /// What happened to one fidelity item (SPEC-0033 D2). This slice gives only the verdicts a
 /// part-level comparison can reach.
@@ -51,7 +54,9 @@ impl Verdict {
         self == Verdict::Kept
     }
 
-    pub(crate) fn label(self) -> &'static str {
+    /// The verdict as a baseline line spells it.
+    #[must_use]
+    pub fn label(self) -> &'static str {
         match self {
             Verdict::Kept => "kept",
             Verdict::Changed => "changed",
@@ -145,7 +150,12 @@ impl CaseResult {
 
 /// Runs every case of `suites` in parallel, each isolated against panics and `timeout`.
 #[must_use]
-pub fn run_suites(suites: &[&Suite], filter: Option<&str>, timeout: Duration) -> Vec<CaseResult> {
+pub fn run_suites(
+    suites: &[&Suite],
+    filter: Option<&str>,
+    timeout: Duration,
+    save_dir: Option<&Path>,
+) -> Vec<CaseResult> {
     let mut jobs = Vec::new();
     let mut failed = Vec::new();
     for suite in suites {
@@ -169,14 +179,19 @@ pub fn run_suites(suites: &[&Suite], filter: Option<&str>, timeout: Duration) ->
     }
     let mut results: Vec<CaseResult> = jobs
         .par_iter()
-        .map(|(suite, case)| run_case(suite, case, timeout))
+        .map(|(suite, case)| run_case(suite, case, timeout, save_dir))
         .collect();
     results.extend(failed);
     results
 }
 
 /// Runs one case: R0 in an isolated worker, so a panic or a hang is a verdict, not a crash.
-fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
+fn run_case(
+    suite: &Suite,
+    case: &CaseFile,
+    timeout: Duration,
+    save_dir: Option<&Path>,
+) -> CaseResult {
     let limit = LoadOptions::default().max_uncompressed_bytes;
     let mut bytes = Vec::new();
     let read = std::fs::File::open(&case.path)
@@ -189,9 +204,21 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
         .file_name()
         .map(|n| n.to_string_lossy().into_owned());
     let scenarios = suite.manifest.scenarios.clone();
+    let keep = save_dir.is_some();
     let (outcome, millis) = run_in_worker(format!("roundtrip:{}", case.id), timeout, move || {
-        scenarios::run_scenarios(&bytes, name.as_deref(), &scenarios)
+        scenarios::run_scenarios(&bytes, name.as_deref(), &scenarios, keep)
     });
+    // A save that cannot be written is only lost from the probe: the case is still scored, and
+    // its message says which file failed.
+    let mut unsaved = Vec::new();
+    if let (Some(dir), Ok(Ok(run))) = (save_dir, &outcome) {
+        for (label, bytes) in &run.outputs {
+            let file = scenarios::save_name(&case.id, label);
+            if let Err(e) = std::fs::write(dir.join(&file), bytes) {
+                unsaved.push(format!("{file}: {e}"));
+            }
+        }
+    }
     let mut result = match outcome {
         Err((status, message)) => CaseResult::new(case, suite, status, Some(message)),
         Ok(Err(scenarios::R0Error::Source(e))) => {
@@ -216,6 +243,13 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
         }
     };
     result.millis = millis;
+    if !unsaved.is_empty() {
+        let note = format!("not saved: {}", unsaved.join("; "));
+        result.message = Some(match result.message.take() {
+            Some(m) => format!("{m}; {note}"),
+            None => note,
+        });
+    }
     result
 }
 
@@ -659,8 +693,12 @@ pub fn report_markdown(results: &[CaseResult]) -> String {
 }
 
 /// The mode flags of `rustsheet-eval roundtrip`.
-#[derive(clap::Args, Debug, Clone, Copy)]
+#[derive(clap::Args, Debug, Clone)]
 pub struct Flags {
+    /// Also write each case's saves (R0 and each further scenario) into this directory, as
+    /// `<case>.<scenario>.xlsx` (T-4890, for the Excel re-save probe). Never with a baseline mode.
+    #[arg(long, value_name = "DIR", conflicts_with_all = ["check", "update"])]
+    pub save_dir: Option<std::path::PathBuf>,
     /// Fail when a suite's baseline is out of date or regressed.
     #[arg(long, conflicts_with = "update")]
     pub check: bool,
@@ -676,7 +714,7 @@ pub struct Flags {
 impl Flags {
     /// The [`Mode`] these flags ask for.
     #[must_use]
-    pub fn mode(self) -> Mode {
+    pub fn mode(&self) -> Mode {
         match (self.check, self.update) {
             (true, _) => Mode::Check,
             (_, true) => Mode::Update {
@@ -714,8 +752,9 @@ pub fn command(
     suites: &[Suite],
     filter: Option<&str>,
     timeout: Duration,
-    mode: Mode,
+    flags: &Flags,
 ) -> anyhow::Result<(bool, Vec<String>)> {
+    let (mode, save_dir) = (flags.mode(), flags.save_dir.as_deref());
     if filter.is_some() && mode != Mode::Report {
         anyhow::bail!(
             "--filter is not allowed for baseline operations (partial runs look like regressions)"
@@ -737,7 +776,10 @@ pub fn command(
             s.root().display()
         ));
     }
-    let mut results = run_suites(&suites, filter, timeout);
+    if let Some(dir) = save_dir {
+        std::fs::create_dir_all(dir)?;
+    }
+    let mut results = run_suites(&suites, filter, timeout, save_dir);
     let mut ok = true;
     for suite in &suites {
         let excused = exceptions::load(suite)?;
@@ -774,7 +816,10 @@ pub fn command(
         let name = &suite.manifest.name;
         let mine: Vec<&CaseResult> = results.iter().filter(|r| &r.suite == name).collect();
         let rate = KeptRate::of(&mine);
-        let current = baseline(&mine, suite.manifest.baseline);
+        // Written and judged per case and scenario (T-4961). A committed baseline still in the
+        // per-case form is judged per case once, so the re-record that migrates it accepts no
+        // regression the old rule refused.
+        let current = by_scenario::baseline(&mine, suite.manifest.baseline);
         lines.push(format!(
             "[{name}] {} cases ({} not scored), {} items, {}, {} failing",
             mine.len(),
@@ -788,7 +833,11 @@ pub fn command(
         }
         let path = root.join("eval/baseline").join(format!("{name}.txt"));
         let old = Baseline::read(&path)?;
-        let delta = diff(&old, &current);
+        let delta = if by_scenario::is_legacy(&old) {
+            diff(&old, &baseline(&mine, suite.manifest.baseline))
+        } else {
+            diff(&old, &current)
+        };
         lines.extend(
             delta
                 .regressions

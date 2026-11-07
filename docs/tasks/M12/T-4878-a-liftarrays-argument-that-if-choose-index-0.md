@@ -3,7 +3,7 @@ id: T-4878
 title: "A LiftArrays argument that IF, CHOOSE, INDEX(...,0,0) or LET picks a reference into another workbook through: CHOOSE still trips the scalar-context debug_assert"
 milestone: M12
 lane: engine
-status: todo
+status: done
 priority: P0
 size: S
 tier: opus
@@ -44,13 +44,32 @@ refuse" helper for `evaluate_as_reference`, the INDEX call sites (index.rs) and
 `external_areas_value`, if it stays small.
 
 ## Acceptance criteria
-- [ ] A probe case filled on excel-graph covers the forms above. Its finding is recorded in
+- [x] A probe case filled on excel-graph covers the forms above. Its finding is recorded in
       references.md.
-- [ ] A debug-build unit test enters `=IMAGINARY(CHOOSE(1,'[other.xlsx]Sheet1'!A1:B2))` next to a
+- [x] A debug-build unit test enters `=IMAGINARY(CHOOSE(1,'[other.xlsx]Sheet1'!A1:B2))` next to a
       spill without a panic, with Excel's value.
-- [ ] The probed forms match Excel; the assert stays.
-- [ ] `make check` green; reviewers approve.
+- [x] The probed forms match Excel; the assert stays.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - An oracle check of cached linked ranges, unless a fixtures workbook with an externalLink cache
   can be built for the probe.
+
+## Outcome
+Probe probes/external-ref-no-link-lift-picked (excel-graph, 2026-11-07): EDATE and IMAGINARY over IF(TRUE,…),
+CHOOSE(1,…), INDEX(…,0,0), INDEX(…,1,1) and LET(a,1,…) of `'[other.xlsx]Sheet1'!A1:B2` and `…!A1`, each bare, in ROWS
+and in ERROR.TYPE (48 cells). Excel reads a picked reference exactly as the written one: several cells `#VALUE!`
+(ERROR.TYPE 3, ROWS `#VALUE!`), one cell empty (EDATE 31, IMAGINARY 0). Before: IF, INDEX(…,0,0) and LET lifted over
+`#BLOCKED!` cells (ROWS 2), LET over one cell was `#BLOCKED!`, and CHOOSE tripped the scalar-context debug assert.
+`evaluate_as_reference` (functions/lift/call.rs) now sends an argument that may stand for an external reference through
+`pick_reference`, the helper ROWS, ISREF and COUNTA already use, and the local path is split out as
+`evaluate_local_as_reference`; no new pick helper was needed. Unit test
+`lift_arrays_arguments_read_a_picked_external_reference_as_a_reference` (test_external_links.rs) panics on the old code
+in a debug build next to a SEQUENCE spill and passes now. references.md "An Analysis ToolPak argument refuses a
+multi-cell reference into another workbook" records the picked forms. The assert stays.
+
+Eval delta: one new probes case, 48/48 passing; 0 fixed, 0 regressions elsewhere. Also carries follow-up task T-4933
+(from T-4807's review, PR #3952).
+
+## Resumed
+Resumed by an opus run at 2026-11-07 12:20 UTC (branch idle since 09:33 with only its claim; work-loop step 2).

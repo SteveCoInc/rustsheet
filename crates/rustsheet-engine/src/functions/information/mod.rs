@@ -12,7 +12,10 @@ use crate::{
         types::CellReferenceIndex,
         utils::number_to_column,
     },
-    functions::Function,
+    functions::{
+        util::empty_args::{written_empty_na, written_empty_or},
+        Function,
+    },
     limits::check_range_size,
     model::Model,
     reference_operators::{Ranges, RefArg},
@@ -361,10 +364,16 @@ impl Model {
         cell: CellReferenceIndex,
         even: bool,
     ) -> CalcResult {
+        // A LET or LAMBDA omission is the `ToolPak` `#N/A`, while an operator over it reads 0
+        // (`LET(e,,ISEVEN(e))` is #N/A, `LET(e,,ISEVEN(e+0))` TRUE; probes/t4928-iseven-isodd-omitted
+        // A1:A12; T-4928).
+        let empty = self.empty_arguments::<1>(args);
         self.lift_call(kind, args, cell, &mut |model, values| {
             let [value] = values else {
                 return CalcResult::new_args_number_error(cell);
             };
+            let na = written_empty_na(cell);
+            let [value] = written_empty_or([value], empty, &na);
             model.parity_of(value.clone(), even, cell)
         })
     }

@@ -19,7 +19,8 @@ use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 /// and 0.5 when it is negative, not Phi(-z)'s 0 and 1: `Z.TEST({1,2,3},-1E+300,1E-300)` and
 /// `Z.TEST({1,2,3},1E+300,1E-300)` (probes/t4098-tests-prob-domains A48, A49; statistics.md
 /// "CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)"). With sigma omitted it is unprobed and
-/// keeps Phi(-z).
+/// keeps Phi(-z). A subnormal sigma, an overflowing z and an overflowing data sum are `#NUM!`
+/// (probes/t1942-ztest-numeric-edges A1:A5, excel-graph, T-1942).
 fn z_test_p(mean: f64, x: f64, n: f64, sigma: f64, sigma_given: bool) -> Option<f64> {
     let z = extended_quotient(
         extended_product(extended_sum(mean, -x), extended_sqrt(n)),
@@ -192,14 +193,11 @@ fn z_test_element(
         return error(Error::NUM);
     }
     let n = data.count as f64;
-    // A sigma/sqrt(n) that underflows is #DIV/0! (not probed; kept from the fork, TODO(T-1942)).
-    // The guard keeps the fork's plain-double test so it fires exactly where main's did; the
-    // result itself takes Excel's x87 steps (`z_test_p`), which never divide by this quotient.
-    if sigma / n.sqrt() == 0.0 {
-        return error(Error::DIV);
-    }
+    // No sigma/sqrt(n) guard: a sigma whose quotient by sqrt(n) underflows (2^-1074 with n = 4, 5, 9)
+    // is #NUM!, not #DIV/0! (probes/t1942-ztest-numeric-edges
+    // A8:A10, excel-graph, T-1942), and `z_test_p` already gives that.
     // A NaN p (an omitted sigma over data whose sum overflows) is #NUM!, not a NaN number
-    // (not probed, TODO(T-1942)).
+    // (probes/t1942-ztest-numeric-edges A4:A5).
     match z_test_p(data.mean, x, n, sigma, sigma_given) {
         Some(p) if p.is_finite() => CalcResult::Number(p),
         _ => error(Error::NUM),
